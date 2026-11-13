@@ -1,0 +1,14 @@
+[package]
+name = "fo4-material"
+description = "Fallout 4 BGSM and BGEM material readers with preserved provenance"
+repository.workspace = true
+keywords = ["fallout4", "bethesda", "parser", "rendering"]
+categories = ["parser-implementations", "game-development", "rendering"]
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+fo4-core.workspace = true
+serde.workspace = true

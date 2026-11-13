@@ -1,0 +1,16 @@
+[package]
+name = "fo4-core"
+description = "Checked I/O, resource budgets and explicit Fallout 4 installation manifests"
+repository.workspace = true
+keywords = ["fallout4", "bethesda", "parser", "rendering"]
+categories = ["parser-implementations", "game-development", "rendering"]
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+flate2.workspace = true
+sha2.workspace = true

@@ -1,0 +1,37 @@
+[workspace]
+members = ["crates/*"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+rust-version = "1.88"
+repository = "https://github.com/patodois/osp-fo4"
+
+[workspace.dependencies]
+fo4-render = { path = "crates/fo4-render" }
+fo4-scene = { path = "crates/fo4-scene" }
+fo4-nif = { path = "crates/fo4-nif" }
+fo4-material = { path = "crates/fo4-material" }
+fo4-texture = { path = "crates/fo4-texture" }
+bcn-decode = "=0.1.0"
+fo4-core = { path = "crates/fo4-core" }
+fo4-archive = { path = "crates/fo4-archive" }
+fo4-vfs = { path = "crates/fo4-vfs" }
+fo4-plugin = { path = "crates/fo4-plugin" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
+sha2 = "0.10"
+lz4_flex = { version = "=0.14.0", default-features = false, features = ["std", "safe-encode", "safe-decode", "frame"] }
+twox-hash = { version = "=2.1.5", default-features = false, features = ["xxhash32"] }
+
+[profile.dev]
+# Keep local test/check caches within the workspace disk budget.
+debug = 0
+incremental = false
+
+[profile.test]
+debug = 0
+incremental = false

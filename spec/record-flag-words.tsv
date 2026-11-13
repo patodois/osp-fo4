@@ -1,0 +1,116 @@
+# pair	raw_u32_hex	printed_labels	fully_named	checked_records_in_ficha
+CELL.XCLL	00000000	(no printed value)	true	1194
+CELL.XCLL	00000060	Directional Rotation, Directional Fade	true	1194
+CELL.XCLL	00000062	Directional Color, Directional Rotation, Directional Fade	true	1194
+CELL.XCLL	000000eb	Ambient Color, Directional Color, Fog Near, Directional Rotation, Directional Fade, Clip Distance	true	1194
+CELL.XCLL	00000390	Fog Far, Clip Distance, Fog Power, Fog Max	true	1194
+CELL.XCLL	00000460	Directional Rotation, Directional Fade, Light Fade Distances	true	1194
+CELL.XCLL	00000463	Ambient Color, Directional Color, Directional Rotation, Directional Fade, Light Fade Distances	true	1194
+CELL.XCLL	000004a0	Directional Rotation, Clip Distance, Light Fade Distances	true	1194
+CELL.XCLL	000004e0	Directional Rotation, Directional Fade, Clip Distance, Light Fade Distances	true	1194
+CELL.XCLL	000004e2	Directional Color, Directional Rotation, Directional Fade, Clip Distance, Light Fade Distances	true	1194
+CELL.XCLL	000004e7	Ambient Color, Directional Color, Fog Color, Directional Rotation, Directional Fade, Clip Distance, Light Fade Distances	true	1194
+CELL.XCLL	000004e8	Fog Near, Directional Rotation, Directional Fade, Clip Distance, Light Fade Distances	true	1194
+CELL.XCLL	000004ea	Directional Color, Fog Near, Directional Rotation, Directional Fade, Clip Distance, Light Fade Distances	true	1194
+CELL.XCLL	000004eb	Ambient Color, Directional Color, Fog Near, Directional Rotation, Directional Fade, Clip Distance, Light Fade Distances	true	1194
+CELL.XCLL	000004ec	Fog Color, Fog Near, Directional Rotation, Directional Fade, Clip Distance, Light Fade Distances	true	1194
+CELL.XCLL	000004ee	Directional Color, Fog Color, Fog Near, Directional Rotation, Directional Fade, Clip Distance, Light Fade Distances	true	1194
+CELL.XCLL	000004ef	Ambient Color, Directional Color, Fog Color, Fog Near, Directional Rotation, Directional Fade, Clip Distance, Light Fade Distances	true	1194
+CELL.XCLL	000004f2	Directional Color, Fog Far, Directional Rotation, Directional Fade, Clip Distance, Light Fade Distances	true	1194
+CELL.XCLL	000004fa	Directional Color, Fog Near, Fog Far, Directional Rotation, Directional Fade, Clip Distance, Light Fade Distances	true	1194
+CELL.XCLL	000004fc	Fog Color, Fog Near, Fog Far, Directional Rotation, Directional Fade, Clip Distance, Light Fade Distances	true	1194
+CELL.XCLL	000004fe	Directional Color, Fog Color, Fog Near, Fog Far, Directional Rotation, Directional Fade, Clip Distance, Light Fade Distances	true	1194
+CELL.XCLL	0000056a	Directional Color, Fog Near, Directional Rotation, Directional Fade, Fog Power, Light Fade Distances	true	1194
+CELL.XCLL	000005ea	Directional Color, Fog Near, Directional Rotation, Directional Fade, Clip Distance, Fog Power, Light Fade Distances	true	1194
+CELL.XCLL	000005f0	Fog Far, Directional Rotation, Directional Fade, Clip Distance, Fog Power, Light Fade Distances	true	1194
+CELL.XCLL	000005fe	Directional Color, Fog Color, Fog Near, Fog Far, Directional Rotation, Directional Fade, Clip Distance, Fog Power, Light Fade Distances	true	1194
+CELL.XCLL	0000066a	Directional Color, Fog Near, Directional Rotation, Directional Fade, Fog Max, Light Fade Distances	true	1194
+CELL.XCLL	00000688	Fog Near, Clip Distance, Fog Max, Light Fade Distances	true	1194
+CELL.XCLL	00000694	Fog Color, Fog Far, Clip Distance, Fog Max, Light Fade Distances	true	1194
+CELL.XCLL	0000069c	Fog Color, Fog Near, Fog Far, Clip Distance, Fog Max, Light Fade Distances	true	1194
+CELL.XCLL	000006e2	Directional Color, Directional Rotation, Directional Fade, Clip Distance, Fog Max, Light Fade Distances	true	1194
+CELL.XCLL	000006e4	Fog Color, Directional Rotation, Directional Fade, Clip Distance, Fog Max, Light Fade Distances	true	1194
+CELL.XCLL	000006e6	Directional Color, Fog Color, Directional Rotation, Directional Fade, Clip Distance, Fog Max, Light Fade Distances	true	1194
+CELL.XCLL	000006e7	Ambient Color, Directional Color, Fog Color, Directional Rotation, Directional Fade, Clip Distance, Fog Max, Light Fade Distances	true	1194
+CELL.XCLL	000006ea	Directional Color, Fog Near, Directional Rotation, Directional Fade, Clip Distance, Fog Max, Light Fade Distances	true	1194
+CELL.XCLL	000006eb	Ambient Color, Directional Color, Fog Near, Directional Rotation, Directional Fade, Clip Distance, Fog Max, Light Fade Distances	true	1194
+CELL.XCLL	000006ee	Directional Color, Fog Color, Fog Near, Directional Rotation, Directional Fade, Clip Distance, Fog Max, Light Fade Distances	true	1194
+CELL.XCLL	000006f0	Fog Far, Directional Rotation, Directional Fade, Clip Distance, Fog Max, Light Fade Distances	true	1194
+CELL.XCLL	000006f8	Fog Near, Fog Far, Directional Rotation, Directional Fade, Clip Distance, Fog Max, Light Fade Distances	true	1194
+CELL.XCLL	000006fa	Directional Color, Fog Near, Fog Far, Directional Rotation, Directional Fade, Clip Distance, Fog Max, Light Fade Distances	true	1194
+CELL.XCLL	000006fb	Ambient Color, Directional Color, Fog Near, Fog Far, Directional Rotation, Directional Fade, Clip Distance, Fog Max, Light Fade Distances	true	1194
+CELL.XCLL	000006fc	Fog Color, Fog Near, Fog Far, Directional Rotation, Directional Fade, Clip Distance, Fog Max, Light Fade Distances	true	1194
+CELL.XCLL	000006fe	Directional Color, Fog Color, Fog Near, Fog Far, Directional Rotation, Directional Fade, Clip Distance, Fog Max, Light Fade Distances	true	1194
+CELL.XCLL	000006ff	Ambient Color, Directional Color, Fog Color, Fog Near, Fog Far, Directional Rotation, Directional Fade, Clip Distance, Fog Max, Light Fade Distances	true	1194
+CELL.XCLL	0000078f	Ambient Color, Directional Color, Fog Color, Fog Near, Clip Distance, Fog Power, Fog Max, Light Fade Distances	true	1194
+CELL.XCLL	0000079c	Fog Color, Fog Near, Fog Far, Clip Distance, Fog Power, Fog Max, Light Fade Distances	true	1194
+CELL.XCLL	0000079f	Ambient Color, Directional Color, Fog Color, Fog Near, Fog Far, Clip Distance, Fog Power, Fog Max, Light Fade Distances	true	1194
+CELL.XCLL	000007c8	Fog Near, Directional Fade, Clip Distance, Fog Power, Fog Max, Light Fade Distances	true	1194
+CELL.XCLL	000007e2	Directional Color, Directional Rotation, Directional Fade, Clip Distance, Fog Power, Fog Max, Light Fade Distances	true	1194
+CELL.XCLL	000007e4	Fog Color, Directional Rotation, Directional Fade, Clip Distance, Fog Power, Fog Max, Light Fade Distances	true	1194
+CELL.XCLL	000007e6	Directional Color, Fog Color, Directional Rotation, Directional Fade, Clip Distance, Fog Power, Fog Max, Light Fade Distances	true	1194
+CELL.XCLL	000007ea	Directional Color, Fog Near, Directional Rotation, Directional Fade, Clip Distance, Fog Power, Fog Max, Light Fade Distances	true	1194
+CELL.XCLL	000007eb	Ambient Color, Directional Color, Fog Near, Directional Rotation, Directional Fade, Clip Distance, Fog Power, Fog Max, Light Fade Distances	true	1194
+CELL.XCLL	000007ef	Ambient Color, Directional Color, Fog Color, Fog Near, Directional Rotation, Directional Fade, Clip Distance, Fog Power, Fog Max, Light Fade Distances	true	1194
+CELL.XCLL	000007f2	Directional Color, Fog Far, Directional Rotation, Directional Fade, Clip Distance, Fog Power, Fog Max, Light Fade Distances	true	1194
+CELL.XCLL	000007f3	Ambient Color, Directional Color, Fog Far, Directional Rotation, Directional Fade, Clip Distance, Fog Power, Fog Max, Light Fade Distances	true	1194
+CELL.XCLL	000007f6	Directional Color, Fog Color, Fog Far, Directional Rotation, Directional Fade, Clip Distance, Fog Power, Fog Max, Light Fade Distances	true	1194
+CELL.XCLL	000007fa	Directional Color, Fog Near, Fog Far, Directional Rotation, Directional Fade, Clip Distance, Fog Power, Fog Max, Light Fade Distances	true	1194
+CELL.XCLL	000007fb	Ambient Color, Directional Color, Fog Near, Fog Far, Directional Rotation, Directional Fade, Clip Distance, Fog Power, Fog Max, Light Fade Distances	true	1194
+CELL.XCLL	000007fe	Directional Color, Fog Color, Fog Near, Fog Far, Directional Rotation, Directional Fade, Clip Distance, Fog Power, Fog Max, Light Fade Distances	true	1194
+CELL.XCLL	000007ff	Ambient Color, Directional Color, Fog Color, Fog Near, Fog Far, Directional Rotation, Directional Fade, Clip Distance, Fog Power, Fog Max, Light Fade Distances	true	1194
+LIGH.DATA	00000000	(no printed value)	true	801
+LIGH.DATA	00000001	Unknown 0	false	801
+LIGH.DATA	00000008	Flicker	true	801
+LIGH.DATA	00000009	Unknown 0, Flicker	false	801
+LIGH.DATA	00000021	Unknown 0, Off By Default	false	801
+LIGH.DATA	00000081	Unknown 0, Pulse	false	801
+LIGH.DATA	00000401	Unknown 0, Shadow Spotlight	false	801
+LIGH.DATA	00000409	Unknown 0, Flicker, Shadow Spotlight	false	801
+LIGH.DATA	00000481	Unknown 0, Pulse, Shadow Spotlight	false	801
+LIGH.DATA	00000801	Unknown 0, Shadow Hemisphere	false	801
+LIGH.DATA	00000809	Unknown 0, Flicker, Shadow Hemisphere	false	801
+LIGH.DATA	00001001	Unknown 0, Shadow OmniDirectional	false	801
+LIGH.DATA	00001009	Unknown 0, Flicker, Shadow OmniDirectional	false	801
+LIGH.DATA	00001081	Unknown 0, Pulse, Shadow OmniDirectional	false	801
+LIGH.DATA	00002001	Unknown 0, Unknown 13	false	801
+LIGH.DATA	00002009	Unknown 0, Flicker, Unknown 13	false	801
+LIGH.DATA	00002081	Unknown 0, Pulse, Unknown 13	false	801
+LIGH.DATA	00002401	Unknown 0, Shadow Spotlight, Unknown 13	false	801
+LIGH.DATA	00002409	Unknown 0, Flicker, Shadow Spotlight, Unknown 13	false	801
+LIGH.DATA	00002801	Unknown 0, Shadow Hemisphere, Unknown 13	false	801
+LIGH.DATA	00002809	Unknown 0, Flicker, Shadow Hemisphere, Unknown 13	false	801
+LIGH.DATA	00003001	Unknown 0, Shadow OmniDirectional, Unknown 13	false	801
+LIGH.DATA	00003009	Unknown 0, Flicker, Shadow OmniDirectional, Unknown 13	false	801
+LIGH.DATA	00003081	Unknown 0, Pulse, Shadow OmniDirectional, Unknown 13	false	801
+LIGH.DATA	00004001	Unknown 0, NonShadow Spotlight	false	801
+LIGH.DATA	00004009	Unknown 0, Flicker, NonShadow Spotlight	false	801
+LIGH.DATA	00004021	Unknown 0, Off By Default, NonShadow Spotlight	false	801
+LIGH.DATA	00008000	Non Specular	true	801
+LIGH.DATA	00008001	Unknown 0, Non Specular	false	801
+LIGH.DATA	00008009	Unknown 0, Flicker, Non Specular	false	801
+LIGH.DATA	00008021	Unknown 0, Off By Default, Non Specular	false	801
+LIGH.DATA	00008081	Unknown 0, Pulse, Non Specular	false	801
+LIGH.DATA	00008409	Unknown 0, Flicker, Shadow Spotlight, Non Specular	false	801
+LIGH.DATA	0000c001	Unknown 0, NonShadow Spotlight, Non Specular	false	801
+LIGH.DATA	00018401	Unknown 0, Shadow Spotlight, Non Specular, Attenuation Only	false	801
+LIGH.DATA	00041009	Unknown 0, Flicker, Shadow OmniDirectional, Ignore Roughness	false	801
+LIGH.DATA	00044009	Unknown 0, Flicker, NonShadow Spotlight, Ignore Roughness	false	801
+LIGH.DATA	00048001	Unknown 0, Non Specular, Ignore Roughness	false	801
+LIGH.DATA	00048009	Unknown 0, Flicker, Non Specular, Ignore Roughness	false	801
+LIGH.DATA	0004c009	Unknown 0, Flicker, NonShadow Spotlight, Non Specular, Ignore Roughness	false	801
+LIGH.DATA	00080001	Unknown 0, No Rim Lighting	false	801
+LIGH.DATA	00080009	Unknown 0, Flicker, No Rim Lighting	false	801
+LIGH.DATA	00088001	Unknown 0, Non Specular, No Rim Lighting	false	801
+LIGH.DATA	00088009	Unknown 0, Flicker, Non Specular, No Rim Lighting	false	801
+LIGH.DATA	00088081	Unknown 0, Pulse, Non Specular, No Rim Lighting	false	801
+LIGH.DATA	0008c001	Unknown 0, NonShadow Spotlight, Non Specular, No Rim Lighting	false	801
+LIGH.DATA	000c0001	Unknown 0, Ignore Roughness, No Rim Lighting	false	801
+LIGH.DATA	000c8001	Unknown 0, Non Specular, Ignore Roughness, No Rim Lighting	false	801
+LIGH.DATA	000c8008	Flicker, Non Specular, Ignore Roughness, No Rim Lighting	true	801
+LIGH.DATA	000c8009	Unknown 0, Flicker, Non Specular, Ignore Roughness, No Rim Lighting	false	801
+LIGH.DATA	000d8001	Unknown 0, Non Specular, Attenuation Only, Ignore Roughness, No Rim Lighting	false	801
+LIGH.DATA	000d8009	Unknown 0, Flicker, Non Specular, Attenuation Only, Ignore Roughness, No Rim Lighting	false	801
+LIGH.DATA	001c8001	Unknown 0, Non Specular, Ignore Roughness, No Rim Lighting, Ambient Only	false	801
+LIGH.DATA	001c8009	Unknown 0, Flicker, Non Specular, Ignore Roughness, No Rim Lighting, Ambient Only	false	801
+LIGH.DATA	00200401	Unknown 0, Shadow Spotlight, Unknown 21	false	801

@@ -1,0 +1,275 @@
+# RECORD.TAG	label	offset	bytes	type	verified_sizes	checked_records	state
+STAT.DNAM	"Max Angle (30-120)"	0	4	f32 LE	8,16	19367	fechado
+STAT.DNAM	"Material"	4	4	FormID, u32 LE; somente hex	8,16	19367	fechado
+STAT.DNAM	"Leaf Amplitude"	8	4	f32 LE	16	19367	fechado
+STAT.DNAM	"Leaf Frequency"	12	4	f32 LE	16	19367	fechado
+STAT.MNAM	LOD #0 (Level 0) / "Mesh"	0	260	texto em campo de 260 bytes; até NUL	1040	3436	fechado
+STAT.MNAM	LOD #1 (Level 1) / "Mesh"	260	260	texto em campo de 260 bytes; até NUL	1040	3436	fechado
+STAT.MNAM	LOD #2 (Level 2) / "Mesh"	520	260	texto em campo de 260 bytes; até NUL	1040	3436	fechado
+STAT.MNAM	LOD #3 (Level 3) / "Mesh"	780	260	texto em campo de 260 bytes; até NUL	1040	3436	fechado
+MISC.DATA	"Value"	0	4	u32 LE	8	2176	fechado
+MISC.DATA	"Weight"	4	4	f32 LE	8	2176	fechado
+MISC.PTRN	"PTRN - Preview Transform"	0	4	FormID, u32 LE; somente hex	4	2053	fechado
+CELL.XCLL	"Ambient Color"	0	4	RGB: 3 u8 + byte "Unused"	92,128,136	1194	parcial
+CELL.XCLL	"Directional Color"	4	4	RGB: 3 u8 + byte "Unused"	92,128,136	1194	parcial
+CELL.XCLL	"Fog Color Near"	8	4	RGB: 3 u8 + byte "Unused"	92,128,136	1194	parcial
+CELL.XCLL	"Fog Near"	12	4	f32 LE	92,128,136	1194	parcial
+CELL.XCLL	"Fog Far"	16	4	f32 LE	92,128,136	1194	parcial
+CELL.XCLL	"Directional Rotation XY"	20	4	i32 LE	92,128,136	1194	parcial
+CELL.XCLL	"Directional Rotation Z"	24	4	i32 LE	92,128,136	1194	parcial
+CELL.XCLL	"Directional Fade"	28	4	f32 LE	92,128,136	1194	parcial
+CELL.XCLL	"Fog Clip Distance"	32	4	f32 LE	92,128,136	1194	parcial
+CELL.XCLL	"Fog Power"	36	4	f32 LE	92,128,136	1194	parcial
+CELL.XCLL	Directional Ambient Lighting Colors/Directional / "X+"	40	4	RGB: 3 u8 + byte "Unused"	92,128,136	1194	parcial
+CELL.XCLL	Directional Ambient Lighting Colors/Directional / "X-"	44	4	RGB: 3 u8 + byte "Unused"	92,128,136	1194	parcial
+CELL.XCLL	Directional Ambient Lighting Colors/Directional / "Y+"	48	4	RGB: 3 u8 + byte "Unused"	92,128,136	1194	parcial
+CELL.XCLL	Directional Ambient Lighting Colors/Directional / "Y-"	52	4	RGB: 3 u8 + byte "Unused"	92,128,136	1194	parcial
+CELL.XCLL	Directional Ambient Lighting Colors/Directional / "Z+"	56	4	RGB: 3 u8 + byte "Unused"	92,128,136	1194	parcial
+CELL.XCLL	Directional Ambient Lighting Colors/Directional / "Z-"	60	4	RGB: 3 u8 + byte "Unused"	92,128,136	1194	parcial
+CELL.XCLL	Directional Ambient Lighting Colors / "Specular"	64	4	RGB: 3 u8 + byte "Unused"	92,128,136	1194	parcial
+CELL.XCLL	Directional Ambient Lighting Colors / "Scale"	68	4	f32 LE	92,128,136	1194	parcial
+CELL.XCLL	"Fog Color Far"	72	4	RGB: 3 u8 + byte "Unused"	92,128,136	1194	parcial
+CELL.XCLL	"Fog Max"	76	4	f32 LE	92,128,136	1194	parcial
+CELL.XCLL	"Light Fade Begin"	80	4	f32 LE	92,128,136	1194	parcial
+CELL.XCLL	"Light Fade End"	84	4	f32 LE	92,128,136	1194	parcial
+CELL.XCLL	"Inherits"	88	4	u32 LE; correlação de nomes abaixo	92,128,136	1194	parcial
+CELL.XCLL	"Near Height Mid"	92	4	f32 LE	128,136	1194	parcial
+CELL.XCLL	"Near Height Range"	96	4	f32 LE	128,136	1194	parcial
+CELL.XCLL	"Fog Color High Near"	100	4	RGB: 3 u8 + byte "Unused"	128,136	1194	parcial
+CELL.XCLL	"Fog Color High Far"	104	4	RGB: 3 u8 + byte "Unused"	128,136	1194	parcial
+CELL.XCLL	"High Density Scale"	108	4	f32 LE	128,136	1194	parcial
+CELL.XCLL	"Fog Near Scale"	112	4	f32 LE	128,136	1194	parcial
+CELL.XCLL	"Fog Far Scale"	116	4	f32 LE	128,136	1194	parcial
+CELL.XCLL	"Fog High Near Scale"	120	4	f32 LE	128,136	1194	parcial
+CELL.XCLL	"Fog High Far Scale"	124	4	f32 LE	128,136	1194	parcial
+CELL.XCLL	"Far Height Mid"	128	4	f32 LE	136	1194	parcial
+CELL.XCLL	"Far Height Range"	132	4	f32 LE	136	1194	parcial
+LGTM.DATA	"Ambient Color"	0	4	RGB: 3 u8 + byte "Unused"	92,128,136	66	fechado
+LGTM.DATA	"Directional Color"	4	4	RGB: 3 u8 + byte "Unused"	92,128,136	66	fechado
+LGTM.DATA	"Fog Color Near"	8	4	RGB: 3 u8 + byte "Unused"	92,128,136	66	fechado
+LGTM.DATA	"Fog Near"	12	4	f32 LE	92,128,136	66	fechado
+LGTM.DATA	"Fog Far"	16	4	f32 LE	92,128,136	66	fechado
+LGTM.DATA	"Directional Rotation XY"	20	4	i32 LE	92,128,136	66	fechado
+LGTM.DATA	"Directional Rotation Z"	24	4	i32 LE	92,128,136	66	fechado
+LGTM.DATA	"Directional Fade"	28	4	f32 LE	92,128,136	66	fechado
+LGTM.DATA	"Fog Clip Distance"	32	4	f32 LE	92,128,136	66	fechado
+LGTM.DATA	"Fog Power"	36	4	f32 LE	92,128,136	66	fechado
+LGTM.DATA	"Unused"	40	32	bytes, na ordem impressa	92,128,136	66	fechado
+LGTM.DATA	"Fog Color Far"	72	4	RGB: 3 u8 + byte "Unused"	92,128,136	66	fechado
+LGTM.DATA	"Fog Max"	76	4	f32 LE	92,128,136	66	fechado
+LGTM.DATA	"Light Fade Begin"	80	4	f32 LE	92,128,136	66	fechado
+LGTM.DATA	"Light Fade End"	84	4	f32 LE	92,128,136	66	fechado
+LGTM.DATA	"Unused" (ocorrência 2)	88	4	bytes, na ordem impressa	92,128,136	66	fechado
+LGTM.DATA	"Near Height Mid"	92	4	f32 LE	128,136	66	fechado
+LGTM.DATA	"Near Height Range"	96	4	f32 LE	128,136	66	fechado
+LGTM.DATA	"Fog Color High Near"	100	4	RGB: 3 u8 + byte "Unused"	128,136	66	fechado
+LGTM.DATA	"Fog Color High Far"	104	4	RGB: 3 u8 + byte "Unused"	128,136	66	fechado
+LGTM.DATA	"High Density Scale"	108	4	f32 LE	128,136	66	fechado
+LGTM.DATA	"Fog Near Scale"	112	4	f32 LE	128,136	66	fechado
+LGTM.DATA	"Fog Far Scale"	116	4	f32 LE	128,136	66	fechado
+LGTM.DATA	"Fog High Near Scale"	120	4	f32 LE	128,136	66	fechado
+LGTM.DATA	"Fog High Far Scale"	124	4	f32 LE	128,136	66	fechado
+LGTM.DATA	"Far Height Mid"	128	4	f32 LE	136	66	fechado
+LGTM.DATA	"Far Height Range"	132	4	f32 LE	136	66	fechado
+CELL.XCLW	"XCLW - Water Height"	0	4	f32 LE; sentinela observada abaixo	4	1204	fechado
+LIGH.DATA	"Time"	0	4	i32 LE	48,60,64	801	parcial
+LIGH.DATA	"Radius"	4	4	u32 LE	48,60,64	801	parcial
+LIGH.DATA	"Color"	8	4	RGB: 3 u8 + byte "Unused"	48,60,64	801	parcial
+LIGH.DATA	"Flags"	12	4	u32 LE; correlação de nomes abaixo	48,60,64	801	parcial
+LIGH.DATA	"Falloff Exponent"	16	4	f32 LE	48,60,64	801	parcial
+LIGH.DATA	"FOV"	20	4	f32 LE	48,60,64	801	parcial
+LIGH.DATA	"Near Clip"	24	4	f32 LE	48,60,64	801	parcial
+LIGH.DATA	Flicker Effect / "Period"	28	4	f32 LE	48,60,64	801	parcial
+LIGH.DATA	Flicker Effect / "Intensity Amplitude"	32	4	f32 LE	48,60,64	801	parcial
+LIGH.DATA	Flicker Effect / "Movement Amplitude"	36	4	f32 LE	48,60,64	801	parcial
+LIGH.DATA	"Constant"	40	4	f32 LE	48,60,64	801	parcial
+LIGH.DATA	"Scalar"	44	4	f32 LE	48,60,64	801	parcial
+LIGH.DATA	"Exponent"	48	4	f32 LE	60,64	801	parcial
+LIGH.DATA	"God Rays - Near Clip"	52	4	f32 LE	60,64	801	parcial
+LIGH.DATA	"Value"	56	4	u32 LE	60,64	801	parcial
+LIGH.DATA	"Weight"	60	4	f32 LE	64	801	parcial
+STAT.MODC	"MODC - Color Remapping Index"	0	4	f32 LE	4	89	fechado
+MSTT.MODC	"MODC - Color Remapping Index"	0	4	f32 LE	4	55	fechado
+ACTI.CIS1	"CIS1 - Parameter #1"	0	13	texto em campo de 13 bytes; até NUL	13	5	fechado
+ACTI.CIS2	"CIS2 - Parameter #2"	0	26	texto em campo de 26 bytes; até NUL	26	5	fechado
+ACTI.CITC	"CITC - Condition Count"	0	4	u32 LE	4	36	fechado
+ACTI.DSTA	"DSTA - Sequence Name"	0	8	texto em campo de 8 bytes; até NUL	8	14	fechado
+ACTI.DSTA	"DSTA - Sequence Name"	0	5	texto em campo de 5 bytes; até NUL	5	14	fechado
+ACTI.DSTA	"DSTA - Sequence Name"	0	13	texto em campo de 13 bytes; até NUL	13	14	fechado
+ACTI.FTYP	"FTYP - Forced Loc Ref Type"	0	4	FormID, u32 LE; somente hex	4	7	fechado
+ACTI.NTRM	"NTRM - Native Terminal"	0	4	FormID, u32 LE; somente hex	4	28	fechado
+ACTI.SNAM	"SNAM - Sound - Looping"	0	4	FormID, u32 LE; somente hex	4	2	fechado
+ACTI.STCP	"STCP - Animation Sound"	0	4	FormID, u32 LE; somente hex	4	6	fechado
+ACTI.VNAM	"VNAM - Sound - Activation"	0	4	FormID, u32 LE; somente hex	4	21	fechado
+ACTI.WNAM	"WNAM - Water Type"	0	4	FormID, u32 LE; somente hex	4	45	fechado
+CELL.TVDT	"TVDT - Unknown"	0	4	bytes, na ordem impressa	4	1	o programa também não sabe
+CELL.XCCM	"XCCM - Sky/Weather from Region"	0	4	FormID, u32 LE; somente hex	4	79	fechado
+CELL.XCLR	"XCLR - Regions"	0	4	FormID, u32 LE; somente hex	4	10	fechado
+CELL.XCLR	"Region #0"	0	4	FormID, u32 LE; somente hex	8,12,16,20,24,28,32	10	fechado
+CELL.XCLR	"Region #1"	4	4	FormID, u32 LE; somente hex	8,12,16,20,24,28,32	10	fechado
+CELL.XCLR	"Region #2"	8	4	FormID, u32 LE; somente hex	12,16,20,24,28,32	10	fechado
+CELL.XCLR	"Region #3"	12	4	FormID, u32 LE; somente hex	16,20,24,28,32	10	fechado
+CELL.XCLR	"Region #4"	16	4	FormID, u32 LE; somente hex	20,24,28,32	10	fechado
+CELL.XCLR	"Region #5"	20	4	FormID, u32 LE; somente hex	24,28,32	10	fechado
+CELL.XCLR	"Region #6"	24	4	FormID, u32 LE; somente hex	28,32	10	fechado
+CELL.XCLR	"Region #7"	28	4	FormID, u32 LE; somente hex	32	10	fechado
+CELL.XILL	"XILL - Lock List"	0	4	FormID, u32 LE; somente hex	4	21	fechado
+CELL.XRNK	"XRNK - Owner Faction Rank"	0	4	u32 LE	4	6	fechado
+CELL.XWCN	"XWCN - Unknown"	0	4	bytes, na ordem impressa	4	1	o programa também não sabe
+DOOR.ANAM	"ANAM - Sound - Close"	0	4	FormID, u32 LE; somente hex	4	257	fechado
+DOOR.NTRM	"NTRM - Native Terminal"	0	4	FormID, u32 LE; somente hex	4	59	fechado
+DOOR.SNAM	"SNAM - Sound - Open"	0	4	FormID, u32 LE; somente hex	4	261	fechado
+FURN.CITC	"CITC - Condition Count"	0	4	u32 LE	4	1	fechado
+FURN.COCT	"COCT - Count"	0	4	u32 LE	4	73	fechado
+FURN.ENAM	"ENAM - Marker Index"	0	4	i32 LE	4	32	fechado
+FURN.FTYP	"FTYP - Forced Loc Ref Type"	0	4	FormID, u32 LE; somente hex	4	2	fechado
+FURN.NAM1	"NAM1 - Associated Form"	0	4	FormID, u32 LE; somente hex	4	2	fechado
+FURN.OBTE	"OBTE - Count"	0	4	u32 LE	4	65	fechado
+FURN.PNAM	"PNAM - Unknown"	0	4	bytes, na ordem impressa	4	598	o programa também não sabe
+FURN.STOP	"STOP - Marker"	0	0	presença sem bytes	0	65	fechado
+FURN.XMRK	"XMRK - Marker Model"	0	28	texto em campo de 28 bytes; até NUL	28	463	fechado
+FURN.XMRK	"XMRK - Marker Model"	0	21	texto em campo de 21 bytes; até NUL	21	463	fechado
+FURN.XMRK	"XMRK - Marker Model"	0	30	texto em campo de 30 bytes; até NUL	30	463	fechado
+FURN.XMRK	"XMRK - Marker Model"	0	61	texto em campo de 61 bytes; até NUL	61	463	fechado
+FURN.XMRK	"XMRK - Marker Model"	0	26	texto em campo de 26 bytes; até NUL	26	463	fechado
+FURN.XMRK	"XMRK - Marker Model"	0	38	texto em campo de 38 bytes; até NUL	38	463	fechado
+FURN.XMRK	"XMRK - Marker Model"	0	29	texto em campo de 29 bytes; até NUL	29	463	fechado
+FURN.XMRK	"XMRK - Marker Model"	0	33	texto em campo de 33 bytes; até NUL	33	463	fechado
+FURN.XMRK	"XMRK - Marker Model"	0	36	texto em campo de 36 bytes; até NUL	36	463	fechado
+FURN.XMRK	"XMRK - Marker Model"	0	25	texto em campo de 25 bytes; até NUL	25	463	fechado
+FURN.XMRK	"XMRK - Marker Model"	0	35	texto em campo de 35 bytes; até NUL	35	463	fechado
+FURN.XMRK	"XMRK - Marker Model"	0	37	texto em campo de 37 bytes; até NUL	37	463	fechado
+FURN.XMRK	"XMRK - Marker Model"	0	50	texto em campo de 50 bytes; até NUL	50	463	fechado
+FURN.XMRK	"XMRK - Marker Model"	0	31	texto em campo de 31 bytes; até NUL	31	463	fechado
+FURN.XMRK	"XMRK - Marker Model"	0	42	texto em campo de 42 bytes; até NUL	42	463	fechado
+FURN.XMRK	"XMRK - Marker Model"	0	34	texto em campo de 34 bytes; até NUL	34	463	fechado
+FURN.XMRK	"XMRK - Marker Model"	0	24	texto em campo de 24 bytes; até NUL	24	463	fechado
+FURN.XMRK	"XMRK - Marker Model"	0	32	texto em campo de 32 bytes; até NUL	32	463	fechado
+FURN.XMRK	"XMRK - Marker Model"	0	27	texto em campo de 27 bytes; até NUL	27	463	fechado
+FURN.XMRK	"XMRK - Marker Model"	0	40	texto em campo de 40 bytes; até NUL	40	463	fechado
+FURN.XMRK	"XMRK - Marker Model"	0	41	texto em campo de 41 bytes; até NUL	41	463	fechado
+FURN.XMRK	"XMRK - Marker Model"	0	44	texto em campo de 44 bytes; até NUL	44	463	fechado
+FURN.XMRK	"XMRK - Marker Model"	0	45	texto em campo de 45 bytes; até NUL	45	463	fechado
+FURN.XMRK	"XMRK - Marker Model"	0	39	texto em campo de 39 bytes; até NUL	39	463	fechado
+FURN.XMRK	"XMRK - Marker Model"	0	47	texto em campo de 47 bytes; até NUL	47	463	fechado
+FURN.XMRK	"XMRK - Marker Model"	0	22	texto em campo de 22 bytes; até NUL	22	463	fechado
+FURN.XMRK	"XMRK - Marker Model"	0	43	texto em campo de 43 bytes; até NUL	43	463	fechado
+FURN.XMRK	"XMRK - Marker Model"	0	48	texto em campo de 48 bytes; até NUL	48	463	fechado
+FURN.XMRK	"XMRK - Marker Model"	0	23	texto em campo de 23 bytes; até NUL	23	463	fechado
+FURN.XMRK	"XMRK - Marker Model"	0	57	texto em campo de 57 bytes; até NUL	57	463	fechado
+FURN.XMRK	"XMRK - Marker Model"	0	17	texto em campo de 17 bytes; até NUL	17	463	fechado
+FURN.XMRK	"XMRK - Marker Model"	0	59	texto em campo de 59 bytes; até NUL	59	463	fechado
+FURN.XMRK	"XMRK - Marker Model"	0	60	texto em campo de 60 bytes; até NUL	60	463	fechado
+FURN.XMRK	"XMRK - Marker Model"	0	54	texto em campo de 54 bytes; até NUL	54	463	fechado
+FURN.XMRK	"XMRK - Marker Model"	0	55	texto em campo de 55 bytes; até NUL	55	463	fechado
+FURN.XMRK	"XMRK - Marker Model"	0	49	texto em campo de 49 bytes; até NUL	49	463	fechado
+FURN.XMRK	"XMRK - Marker Model"	0	53	texto em campo de 53 bytes; até NUL	53	463	fechado
+LGTM.DALC	Directional Ambient Lighting Colors/Directional / "X+"	0	4	RGB: 3 u8 + byte "Unused"	32	66	fechado
+LGTM.DALC	Directional Ambient Lighting Colors/Directional / "X-"	4	4	RGB: 3 u8 + byte "Unused"	32	66	fechado
+LGTM.DALC	Directional Ambient Lighting Colors/Directional / "Y+"	8	4	RGB: 3 u8 + byte "Unused"	32	66	fechado
+LGTM.DALC	Directional Ambient Lighting Colors/Directional / "Y-"	12	4	RGB: 3 u8 + byte "Unused"	32	66	fechado
+LGTM.DALC	Directional Ambient Lighting Colors/Directional / "Z+"	16	4	RGB: 3 u8 + byte "Unused"	32	66	fechado
+LGTM.DALC	Directional Ambient Lighting Colors/Directional / "Z-"	20	4	RGB: 3 u8 + byte "Unused"	32	66	fechado
+LGTM.DALC	Directional Ambient Lighting Colors / "Specular"	24	4	RGB: 3 u8 + byte "Unused"	32	66	fechado
+LGTM.DALC	Directional Ambient Lighting Colors / "Scale"	28	4	f32 LE	32	66	fechado
+LIGH.FNAM	"FNAM - Fade value"	0	4	f32 LE	4	801	fechado
+LIGH.LNAM	"LNAM - Lens"	0	4	FormID, u32 LE; somente hex	4	76	fechado
+LIGH.NAM0	"NAM0 - Gobo"	0	50	texto em campo de 50 bytes; até NUL	50	115	fechado
+LIGH.NAM0	"NAM0 - Gobo"	0	56	texto em campo de 56 bytes; até NUL	56	115	fechado
+LIGH.NAM0	"NAM0 - Gobo"	0	45	texto em campo de 45 bytes; até NUL	45	115	fechado
+LIGH.NAM0	"NAM0 - Gobo"	0	51	texto em campo de 51 bytes; até NUL	51	115	fechado
+LIGH.NAM0	"NAM0 - Gobo"	0	43	texto em campo de 43 bytes; até NUL	43	115	fechado
+LIGH.NAM0	"NAM0 - Gobo"	0	48	texto em campo de 48 bytes; até NUL	48	115	fechado
+LIGH.NAM0	"NAM0 - Gobo"	0	54	texto em campo de 54 bytes; até NUL	54	115	fechado
+LIGH.NAM0	"NAM0 - Gobo"	0	38	texto em campo de 38 bytes; até NUL	38	115	fechado
+LIGH.NAM0	"NAM0 - Gobo"	0	36	texto em campo de 36 bytes; até NUL	36	115	fechado
+LIGH.NAM0	"NAM0 - Gobo"	0	49	texto em campo de 49 bytes; até NUL	49	115	fechado
+LIGH.NAM0	"NAM0 - Gobo"	0	35	texto em campo de 35 bytes; até NUL	35	115	fechado
+LIGH.NAM0	"NAM0 - Gobo"	0	71	texto em campo de 71 bytes; até NUL	71	115	fechado
+LIGH.NAM0	"NAM0 - Gobo"	0	75	texto em campo de 75 bytes; até NUL	75	115	fechado
+LIGH.NAM0	"NAM0 - Gobo"	0	46	texto em campo de 46 bytes; até NUL	46	115	fechado
+LIGH.WGDR	"WGDR - God Rays"	0	4	FormID, u32 LE; somente hex	4	20	fechado
+MSTT.DMDS	"DMDS - Material Swap"	0	4	FormID, u32 LE; somente hex	4	12	fechado
+MSTT.DSTA	"DSTA - Sequence Name"	0	7	texto em campo de 7 bytes; até NUL	7	56	fechado
+MSTT.SNAM	"SNAM - Looping Sound"	0	4	FormID, u32 LE; somente hex	4	21	fechado
+REFR.INAM	"INAM - Idle"	0	4	FormID, u32 LE; somente hex	4	2	fechado
+REFR.LNAM	"LNAM - Lighting Template"	0	4	FormID, u32 LE; somente hex	4	1	fechado
+REFR.MNAM	"MNAM - Comments"	0	13	texto em campo de 13 bytes; até NUL	13	5	fechado
+REFR.MNAM	"MNAM - Comments"	0	26	texto em campo de 26 bytes; até NUL	26	5	fechado
+REFR.MNAM	"MNAM - Comments"	0	51	texto em campo de 51 bytes; até NUL	51	5	fechado
+REFR.MNAM	"MNAM - Comments"	0	49	texto em campo de 49 bytes; até NUL	49	5	fechado
+REFR.MNAM	"MNAM - Comments"	0	52	texto em campo de 52 bytes; até NUL	52	5	fechado
+REFR.ONAM	"ONAM - Open by Default"	0	0	presença sem bytes	0	1	fechado
+REFR.XAMC	"XAMC - Ammo Count"	0	4	u32 LE	4	1	fechado
+REFR.XASP	"XASP - Acoustic Restriction"	0	4	FormID, u32 LE; somente hex	4	1	fechado
+REFR.XATP	"XATP - Activation Point"	0	0	presença sem bytes	0	1	fechado
+REFR.XATR	"XATR - Attach Ref"	0	4	FormID, u32 LE; somente hex	4	1	fechado
+REFR.XCNT	"XCNT - Item Count"	0	4	u32 LE	4	2	fechado
+REFR.XCVL	"XCVL - Unknown"	0	12	bytes, na ordem impressa	12	1	o programa também não sabe
+REFR.XCVR	"XCVR - Unknown"	0	12	bytes, na ordem impressa	12	1	o programa também não sabe
+REFR.XCZA	"XCZA - Unknown"	0	4	bytes, na ordem impressa	4	1	o programa também não sabe
+REFR.XCZC	"XCZC - Current Zone Cell"	0	4	FormID, u32 LE; somente hex	4	1	fechado
+REFR.XEMI	"XEMI - Emittance"	0	4	FormID, u32 LE; somente hex	4	6	fechado
+REFR.XEZN	"XEZN - Encounter Zone"	0	4	FormID, u32 LE; somente hex	4	1	fechado
+REFR.XFVC	"XFVC - Favor Cost"	0	4	f32 LE	4	1	fechado
+REFR.XHLT	"XHLT - Health %"	0	4	u32 LE	4	1	fechado
+REFR.XHTW	"XHTW - Head-Tracking Weight"	0	4	f32 LE	4	1	fechado
+REFR.XIS2	"XIS2 - Ignored by Sandbox"	0	0	presença sem bytes	0	1	fechado
+REFR.XLIB	"XLIB - Leveled Item Base Object"	0	4	FormID, u32 LE; somente hex	4	2	fechado
+REFR.XLKT	"XLKT - Linked Ref Transient"	0	0	presença sem bytes	0	1	fechado
+REFR.XLRM	"XLRM - Linked Room #0"	0	4	FormID, u32 LE; somente hex	4	1	fechado
+REFR.XLRT	"XLRT - Location Ref Type"	0	4	FormID, u32 LE; somente hex	4	2	fechado
+REFR.XLRT	"Ref #0"	0	4	FormID, u32 LE; somente hex	8	2	fechado
+REFR.XLRT	"Ref #1"	4	4	FormID, u32 LE; somente hex	8	2	fechado
+REFR.XLYR	"XLYR - Layer"	0	4	FormID, u32 LE; somente hex	4	19	fechado
+REFR.XMBR	"XMBR - MultiBound Reference"	0	4	FormID, u32 LE; somente hex	4	1	fechado
+REFR.XMRK	"XMRK - Map Marker Data"	0	0	presença sem bytes	0	1	fechado
+REFR.XPPA	"XPPA - Patrol Script Marker"	0	0	presença sem bytes	0	2	fechado
+REFR.XPRD	"XPRD - Idle Time"	0	4	f32 LE	4	2	fechado
+REFR.XRDS	"XRDS - Radius"	0	4	f32 LE	4	5	parcial
+REFR.XRFG	"XRFG - Reference Group"	0	4	FormID, u32 LE; somente hex	4	4	fechado
+REFR.XRNK	"XRNK - Owner Faction Rank"	0	4	u32 LE	4	1	fechado
+REFR.XSPC	"XSPC - Spawn Container"	0	4	FormID, u32 LE; somente hex	4	1	fechado
+REFR.XTNM	"XTNM - Teleport Loc Name"	0	4	FormID, u32 LE; somente hex	4	1	fechado
+REFR.XTRI	"XTRI - Collision Layer"	0	4	u32 LE	4	3	fechado
+REFR.XWCN	"XWCN - Unknown"	0	4	bytes, na ordem impressa	4	1	o programa também não sabe
+REFR.XWPG	"XWPG - Count"	0	4	u32 LE	4	1	fechado
+SCOL.FLTR	"FLTR - Filter"	0	31	texto em campo de 31 bytes; até NUL	31	2244	fechado
+SCOL.FLTR	"FLTR - Filter"	0	10	texto em campo de 10 bytes; até NUL	10	2244	fechado
+SCOL.FLTR	"FLTR - Filter"	0	11	texto em campo de 11 bytes; até NUL	11	2244	fechado
+SCOL.FLTR	"FLTR - Filter"	0	15	texto em campo de 15 bytes; até NUL	15	2244	fechado
+SCOL.FLTR	"FLTR - Filter"	0	27	texto em campo de 27 bytes; até NUL	27	2244	fechado
+SCOL.FLTR	"FLTR - Filter"	0	32	texto em campo de 32 bytes; até NUL	32	2244	fechado
+SCOL.FLTR	"FLTR - Filter"	0	38	texto em campo de 38 bytes; até NUL	38	2244	fechado
+SCOL.FLTR	"FLTR - Filter"	0	22	texto em campo de 22 bytes; até NUL	22	2244	fechado
+SCOL.FLTR	"FLTR - Filter"	0	39	texto em campo de 39 bytes; até NUL	39	2244	fechado
+SCOL.FLTR	"FLTR - Filter"	0	14	texto em campo de 14 bytes; até NUL	14	2244	fechado
+SCOL.FLTR	"FLTR - Filter"	0	21	texto em campo de 21 bytes; até NUL	21	2244	fechado
+SCOL.FLTR	"FLTR - Filter"	0	20	texto em campo de 20 bytes; até NUL	20	2244	fechado
+SCOL.FLTR	"FLTR - Filter"	0	6	texto em campo de 6 bytes; até NUL	6	2244	fechado
+SCOL.FLTR	"FLTR - Filter"	0	3	texto em campo de 3 bytes; até NUL	3	2244	fechado
+SCOL.FLTR	"FLTR - Filter"	0	35	texto em campo de 35 bytes; até NUL	35	2244	fechado
+SCOL.FLTR	"FLTR - Filter"	0	19	texto em campo de 19 bytes; até NUL	19	2244	fechado
+SCOL.FLTR	"FLTR - Filter"	0	5	texto em campo de 5 bytes; até NUL	5	2244	fechado
+SCOL.FLTR	"FLTR - Filter"	0	4	texto em campo de 4 bytes; até NUL	4	2244	fechado
+SCOL.FLTR	"FLTR - Filter"	0	7	texto em campo de 7 bytes; até NUL	7	2244	fechado
+SCOL.FLTR	"FLTR - Filter"	0	24	texto em campo de 24 bytes; até NUL	24	2244	fechado
+SCOL.FLTR	"FLTR - Filter"	0	8	texto em campo de 8 bytes; até NUL	8	2244	fechado
+SCOL.FLTR	"FLTR - Filter"	0	26	texto em campo de 26 bytes; até NUL	26	2244	fechado
+SCOL.FLTR	"FLTR - Filter"	0	23	texto em campo de 23 bytes; até NUL	23	2244	fechado
+SCOL.FLTR	"FLTR - Filter"	0	28	texto em campo de 28 bytes; até NUL	28	2244	fechado
+SCOL.FLTR	"FLTR - Filter"	0	30	texto em campo de 30 bytes; até NUL	30	2244	fechado
+SCOL.FLTR	"FLTR - Filter"	0	33	texto em campo de 33 bytes; até NUL	33	2244	fechado
+SCOL.FLTR	"FLTR - Filter"	0	37	texto em campo de 37 bytes; até NUL	37	2244	fechado
+SCOL.FLTR	"FLTR - Filter"	0	29	texto em campo de 29 bytes; até NUL	29	2244	fechado
+SCOL.FLTR	"FLTR - Filter"	0	17	texto em campo de 17 bytes; até NUL	17	2244	fechado
+SCOL.FLTR	"FLTR - Filter"	0	25	texto em campo de 25 bytes; até NUL	25	2244	fechado
+SCOL.FLTR	"FLTR - Filter"	0	16	texto em campo de 16 bytes; até NUL	16	2244	fechado
+SCOL.FLTR	"FLTR - Filter"	0	18	texto em campo de 18 bytes; até NUL	18	2244	fechado
+SCOL.FLTR	"FLTR - Filter"	0	40	texto em campo de 40 bytes; até NUL	40	2244	fechado
+SCOL.FLTR	"FLTR - Filter"	0	34	texto em campo de 34 bytes; até NUL	34	2244	fechado
+SCOL.FLTR	"FLTR - Filter"	0	36	texto em campo de 36 bytes; até NUL	36	2244	fechado
+SCOL.FLTR	"FLTR - Filter"	0	43	texto em campo de 43 bytes; até NUL	43	2244	fechado
+SCOL.FLTR	"FLTR - Filter"	0	12	texto em campo de 12 bytes; até NUL	12	2244	fechado
+SCOL.FLTR	"FLTR - Filter"	0	13	texto em campo de 13 bytes; até NUL	13	2244	fechado
+STAT.FTYP	"FTYP - Forced Loc Ref Type"	0	4	FormID, u32 LE; somente hex	4	2	fechado

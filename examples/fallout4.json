@@ -1,0 +1,111 @@
+{
+  "root": ".",
+  "language": "english",
+  "build": "explicit base-game archive profile",
+  "plugins": [
+    {
+      "name": "Fallout4.esm",
+      "path": "Fallout4.esm"
+    }
+  ],
+  "required_masters": [
+    "Fallout4.esm"
+  ],
+  "mounts": [
+    {
+      "kind": "archive",
+      "path": "Fallout4 - Materials.ba2",
+      "plugin": null
+    },
+    {
+      "kind": "archive",
+      "path": "Fallout4 - Meshes.ba2",
+      "plugin": null
+    },
+    {
+      "kind": "archive",
+      "path": "Fallout4 - MeshesExtra.ba2",
+      "plugin": null
+    },
+    {
+      "kind": "archive",
+      "path": "Fallout4 - Misc.ba2",
+      "plugin": null
+    },
+    {
+      "kind": "archive",
+      "path": "Fallout4 - Textures1.ba2",
+      "plugin": null
+    },
+    {
+      "kind": "archive",
+      "path": "Fallout4 - Textures2.ba2",
+      "plugin": null
+    },
+    {
+      "kind": "archive",
+      "path": "Fallout4 - Textures3.ba2",
+      "plugin": null
+    },
+    {
+      "kind": "archive",
+      "path": "Fallout4 - Textures4.ba2",
+      "plugin": null
+    },
+    {
+      "kind": "archive",
+      "path": "Fallout4 - Textures5.ba2",
+      "plugin": null
+    },
+    {
+      "kind": "archive",
+      "path": "Fallout4 - Textures6.ba2",
+      "plugin": null
+    },
+    {
+      "kind": "archive",
+      "path": "Fallout4 - Textures7.ba2",
+      "plugin": null
+    },
+    {
+      "kind": "archive",
+      "path": "Fallout4 - Textures8.ba2",
+      "plugin": null
+    },
+    {
+      "kind": "archive",
+      "path": "Fallout4 - Textures9.ba2",
+      "plugin": null
+    }
+  ],
+  "limits": {
+    "max_records": 20000000,
+    "max_subrecords": 200000000,
+    "max_entries": 5000000,
+    "max_memory": 536870912,
+    "max_vfs_memory": 1073741824,
+    "max_override_memory": 2147483648,
+    "max_report_bytes": 402653184,
+    "max_payload": 536870912
+  },
+  "excluded": [
+    "Fallout4 - TexturesPatch.ba2",
+    "ccBGSFO4115-X02 - Main.ba2",
+    "ccBGSFO4115-X02 - Textures.ba2",
+    "ccBGSFO4116-HeavyFlamer - Main.ba2",
+    "ccBGSFO4116-HeavyFlamer - Textures.ba2",
+    "ccBGSFO4110-WS_Enclave - Main.ba2",
+    "ccBGSFO4110-WS_Enclave - Textures.ba2",
+    "ccBGSFO4096-AS_Enclave - Main.ba2",
+    "ccBGSFO4096-AS_Enclave - Textures.ba2",
+    "ccFSVFO4007-Halloween - Main.ba2",
+    "ccFSVFO4007-Halloween - Textures.ba2",
+    "ccBGSFO4046-TesCan - Main.ba2",
+    "ccBGSFO4046-TesCan - Textures.ba2",
+    "ccSBJFO4003-Grenade - Main.ba2",
+    "ccSBJFO4003-Grenade - Textures.ba2",
+    "ccOTMFO4001-Remnants - Main.ba2",
+    "ccOTMFO4001-Remnants - Textures.ba2"
+  ],
+  "game": "fallout4"
+}

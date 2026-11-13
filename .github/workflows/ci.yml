@@ -1,0 +1,28 @@
+name: Rust
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  synthetic:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      CARGO_HOME: ${{ github.workspace }}/.cargo-home
+      CARGO_TARGET_DIR: ${{ github.workspace }}/target
+      CARGO_INCREMENTAL: 0
+      RUST_TEST_THREADS: 4
+    steps:
+      # https://docs.github.com/en/actions/tutorials/build-and-test-code/rust
+      - uses: actions/checkout@v6
+      - name: Toolchain
+        run: rustup toolchain install stable --profile minimal --component rustfmt --component clippy
+      - name: Cache dependencies locally for offline checks
+        run: cargo +stable fetch --locked
+      - name: Formatting
+        run: cargo +stable fmt --check
+      - name: Clippy
+        run: cargo +stable clippy --workspace --all-targets --locked --offline -j 4 -- -D warnings
+      - name: Synthetic tests (no installation or measurement files)
+        run: cargo +stable test --workspace --locked --offline -j 4

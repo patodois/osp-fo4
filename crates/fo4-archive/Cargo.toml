@@ -1,0 +1,19 @@
+[package]
+name = "fo4-archive"
+description = "Bounded range readers for Bethesda BA2 and BSA archives"
+repository.workspace = true
+keywords = ["fallout4", "bethesda", "parser", "rendering"]
+categories = ["parser-implementations", "game-development", "rendering"]
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+flate2.workspace = true
+fo4-core.workspace = true
+serde.workspace = true
+lz4_flex.workspace = true
+twox-hash.workspace = true
+
+

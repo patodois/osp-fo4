@@ -1,0 +1,15 @@
+[package]
+name = "fo4-texture"
+description = "Bounded DDS and block-compressed texture decoding"
+repository.workspace = true
+keywords = ["fallout4", "bethesda", "parser", "rendering"]
+categories = ["parser-implementations", "game-development", "rendering"]
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+fo4-core.workspace = true
+serde.workspace = true
+bcn-decode.workspace = true

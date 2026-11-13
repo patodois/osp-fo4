@@ -1,0 +1,14 @@
+[package]
+name = "fo4-nif"
+description = "Safe structural readers for the Fallout 4 NIF subset"
+repository.workspace = true
+keywords = ["fallout4", "bethesda", "parser", "rendering"]
+categories = ["parser-implementations", "game-development", "rendering"]
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+fo4-core.workspace = true
+serde.workspace = true

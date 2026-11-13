@@ -1,0 +1,1031 @@
+#![forbid(unsafe_code)]
+//! Read-only CELL dependency closure, in Bethesda coordinates. No renderer or runtime.
+mod assets;
+pub mod bounds;
+pub mod camera;
+pub mod hypotheses;
+pub mod lighting;
+pub mod model_policy;
+pub mod paths;
+pub mod transform;
+pub use assets::{Asset, AssetKind, Assets, Cycle, CycleEdge, DecodedAsset};
+use fo4_core::{limit, AllocationKind, Budget, Error, Result, SourceSpan};
+use fo4_plugin::{typed::*, FormKey, Record};
+use fo4_vfs::Vfs;
+use paths::Citation;
+use serde::Serialize;
+
+#[derive(Debug, Clone, Copy, Default, Serialize, PartialEq, Eq)]
+pub enum PathPolicy {
+    #[default]
+    Strict,
+    UnderHypotheses,
+}
+/// Candidate transformations deliberately exist only in the census module/CLI.
+#[derive(Debug, Serialize)]
+pub struct Declaration {
+    pub signature: [u8; 4],
+    pub subrecord: usize,
+    pub bytes: std::ops::Range<usize>,
+}
+#[derive(Debug, Serialize, Default)]
+pub struct Visibility {
+    pub precombine: Vec<Declaration>,
+    pub previs: Vec<Declaration>,
+}
+#[derive(Debug, Serialize)]
+pub struct Part {
+    pub declared: ScolPart,
+    pub resolved: Option<Base>,
+}
+#[derive(Debug, Serialize)]
+pub struct Base {
+    pub editor_marker: bool,
+    pub frame_role: fo4_plugin::still::Class,
+    pub key: FormKey,
+    pub record: Record,
+    pub common: Common,
+    pub parts: Vec<Part>,
+    pub light: Option<LightData>,
+    pub material_swap: Option<Loaded<Mswp>>,
+    pub texture_set: Option<Loaded<Txst>>,
+    pub assets: Vec<usize>,
+}
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum State {
+    Ready,
+    ReadyUnderHypotheses { hypotheses: Vec<&'static str> },
+    Blocked,
+    Outside,
+}
+impl State {
+    pub fn drawable_readiness(&self) -> bool {
+        matches!(self, Self::Ready | Self::ReadyUnderHypotheses { .. })
+    }
+    pub fn hypotheses(&self) -> &[&'static str] {
+        match self {
+            Self::ReadyUnderHypotheses { hypotheses } => hypotheses,
+            _ => &[],
+        }
+    }
+}
+#[derive(Debug, Serialize)]
+pub struct Instance {
+    pub editor_marker: bool,
+    pub visibility_hypotheses: Vec<&'static str>,
+    pub reference: Loaded<Refr>,
+    pub base: Option<Base>,
+    pub material_swap: Option<Loaded<Mswp>>,
+    pub visibility: Visibility,
+    pub state: State,
+    pub blockers: Vec<Error>,
+    pub assets: Vec<usize>,
+}
+#[derive(Debug, Serialize)]
+pub struct Exclusion {
+    pub code: &'static str,
+    pub child: Child,
+    pub diagnostics: Vec<Error>,
+}
+#[derive(Debug, Serialize)]
+pub struct Scene {
+    pub lighting_data: lighting::LightingData,
+    pub cell: Loaded<Cell>,
+    pub kind: Option<CellKind>,
+    pub name: Option<String>,
+    pub lighting_template: Option<Loaded<Lgtm>>,
+    pub visibility: Visibility,
+    pub instances: Vec<Instance>,
+    pub deleted: Vec<Child>,
+    pub disabled: Vec<Child>,
+    pub exclusions: Vec<Exclusion>,
+    pub diagnostics: Vec<Error>,
+    pub shared_diagnostic_count: usize,
+    pub assets: Vec<usize>,
+    pub path_policy: PathPolicy,
+}
+#[derive(Debug, Serialize)]
+pub struct BaseInspection {
+    pub base: Base,
+    pub assets: Vec<usize>,
+    pub blockers: Vec<Error>,
+    pub state: State,
+}
+pub const BASE_TYPES: [[u8; 4]; 17] = [
+    *b"STAT", *b"SCOL", *b"MSTT", *b"ACTI", *b"DOOR", *b"FURN", *b"LIGH", *b"MISC", *b"CONT",
+    *b"ALCH", *b"BOOK", *b"AMMO", *b"KEYM", *b"NOTE", *b"FLOR", *b"TERM", *b"TACT",
+];
+pub struct Loader<'a> {
+    pub plugins: &'a Store,
+    pub assets: Assets<'a>,
+    vfs: &'a Vfs,
+    pub path_policy: PathPolicy,
+    language: &'a str,
+}
+impl<'a> Loader<'a> {
+    pub fn new(
+        plugins: &'a Store,
+        vfs: &'a Vfs,
+        language: &'a str,
+        path_policy: PathPolicy,
+        cache: &Budget,
+    ) -> Self {
+        Self {
+            plugins,
+            assets: Assets::with_policy(vfs, cache, path_policy),
+            vfs,
+            path_policy,
+            language,
+        }
+    }
+    /// Drop decoded asset state while retaining the explicit path interpretation policy.
+    pub fn reset_asset_cache(&mut self, cache: &Budget) {
+        self.assets = Assets::with_policy(self.vfs, cache, self.path_policy);
+    }
+    fn resolve_path(
+        &self,
+        c: Citation,
+        raw: &[u8],
+        source: &SourceSpan,
+        blockers: &mut Vec<Error>,
+        b: &Budget,
+    ) -> Result<Vec<u8>> {
+        let resolved = paths::resolve_with(c, raw, self.vfs, self.path_policy, b)?;
+        for e in resolved.diagnostics(&source.file, source.offset, b)? {
+            push_error(blockers, e, b)?;
+        }
+        Ok(resolved.key)
+    }
+    pub fn by_editor_id(&mut self, id: &str, b: &Budget) -> Result<Scene> {
+        let key = self
+            .plugins
+            .find_cell(id, b)?
+            .ok_or_else(|| Error::new("MissingCellEditorId", "plugins", 0, "CELL EditorID", id))?;
+        self.cell(&key, b)
+    }
+    pub fn cell(&mut self, key: &FormKey, b: &Budget) -> Result<Scene> {
+        b.measure(AllocationKind::CellContext, || self.cell_impl(key, b))
+    }
+    fn cell_impl(&mut self, key: &FormKey, b: &Budget) -> Result<Scene> {
+        let cell = self.plugins.get::<Cell>(key, b)?.ok_or_else(|| {
+            Error::new("MissingCell", &key.plugin, 0, "CELL winner", key.object_id)
+        })?;
+        let mut diagnostics = Vec::new();
+        if cell.record.deleted() {
+            return Err(Error::new(
+                "DeletedCell",
+                &cell.record.source.file,
+                cell.record.source.offset,
+                "nondeleted CELL",
+                key.object_id,
+            ));
+        }
+        unhandled(&cell.record, &cell.data.common, &mut diagnostics, b)?;
+        runtime(&cell.record, &mut diagnostics, b)?;
+        let name = match &cell.data.common.full_name {
+            Some(FullName::Inline(text)) => {
+                b.charge(
+                    text.len() as u64,
+                    &cell.record.source.file,
+                    cell.record.source.offset,
+                )?;
+                Some(text.clone())
+            }
+            Some(FullName::Localized(id)) => {
+                let plugin = &self.plugins.order().headers()[cell.plugin_index].name;
+                match fo4_plugin::resolve_string(
+                    self.vfs,
+                    plugin,
+                    self.language,
+                    fo4_plugin::StringKind::Strings,
+                    *id,
+                    b,
+                ) {
+                    Ok(s) => Some(s),
+                    Err(e) => {
+                        push_error(&mut diagnostics, e, b)?;
+                        None
+                    }
+                }
+            }
+            _ => None,
+        };
+        let lighting_template = match cell
+            .data
+            .lighting_template
+            .as_ref()
+            .and_then(|r| r.key.as_ref())
+        {
+            Some(key) => match self.plugins.get::<Lgtm>(key, b) {
+                Ok(Some(v)) => Some(v),
+                Ok(None) => {
+                    push_error(
+                        &mut diagnostics,
+                        Error::new(
+                            "MissingLightingTemplate",
+                            &key.plugin,
+                            0,
+                            "LGTM winner",
+                            key.object_id,
+                        ),
+                        b,
+                    )?;
+                    None
+                }
+                Err(e) => {
+                    push_error(&mut diagnostics, e, b)?;
+                    None
+                }
+            },
+            None => None,
+        };
+        if let Some(template) = &lighting_template {
+            if template.record.deleted() {
+                push_error(
+                    &mut diagnostics,
+                    error(
+                        "DeletedLightingTemplate",
+                        &template.record.source,
+                        "nondeleted LGTM winner",
+                        "deleted",
+                    ),
+                    b,
+                )?;
+            }
+            unhandled(&template.record, &template.data.common, &mut diagnostics, b)?;
+        }
+        let children = b.measure(AllocationKind::Children, || self.plugins.children(key, b))?;
+        let visibility = visibility(&cell.record, b)?;
+        let kind = self.plugins.kind(key);
+        let mut scene = Scene {
+            lighting_data: lighting::LightingData::default(),
+            cell,
+            kind,
+            name,
+            lighting_template,
+            visibility,
+            instances: Vec::new(),
+            deleted: children.deleted,
+            disabled: children.disabled,
+            exclusions: Vec::new(),
+            shared_diagnostic_count: diagnostics.len(),
+            diagnostics,
+            assets: Vec::new(),
+            path_policy: self.path_policy,
+        };
+        for child in children.excluded {
+            b.reserve(
+                &mut scene.exclusions,
+                1,
+                &child.source.file,
+                child.source.offset,
+            )?;
+            scene.exclusions.push(Exclusion {
+                code: if child.group_kind == 10 {
+                    "UnsupportedDistantReferenceGroup"
+                } else {
+                    "UnsupportedPlacedRecordType"
+                },
+                child,
+                diagnostics: Vec::new(),
+            });
+        }
+        for child in children.active {
+            let attempt = self.instance(&child.key, b);
+            match attempt {
+                Ok(instance) => {
+                    b.reserve(
+                        &mut scene.assets,
+                        instance.assets.len(),
+                        &child.source.file,
+                        child.source.offset,
+                    )?;
+                    scene.assets.extend_from_slice(&instance.assets);
+                    b.reserve(
+                        &mut scene.instances,
+                        1,
+                        &child.source.file,
+                        child.source.offset,
+                    )?;
+                    scene.instances.push(instance);
+                }
+                Err(e) => {
+                    let mut diagnostics = Vec::new();
+                    push_error(&mut diagnostics, e, b)?;
+                    b.reserve(
+                        &mut scene.exclusions,
+                        1,
+                        &child.source.file,
+                        child.source.offset,
+                    )?;
+                    scene.exclusions.push(Exclusion {
+                        code: "UnreadableReference",
+                        child,
+                        diagnostics,
+                    });
+                }
+            }
+        }
+        scene.assets.sort_unstable();
+        scene.assets.dedup();
+        scene.lighting_data = lighting::describe(&scene, self.plugins, b)?;
+        Ok(scene)
+    }
+    fn instance(&mut self, key: &FormKey, b: &Budget) -> Result<Instance> {
+        let reference = b
+            .measure(AllocationKind::Reference, || {
+                self.plugins.get::<Refr>(key, b)
+            })?
+            .ok_or_else(|| {
+                Error::new(
+                    "MissingReference",
+                    &key.plugin,
+                    0,
+                    "REFR winner",
+                    key.object_id,
+                )
+            })?;
+        let mut blockers = Vec::new();
+        let src = &reference.record.source;
+        if reference.data.transform.is_none() {
+            push_error(
+                &mut blockers,
+                error("MissingPlacementTransform", src, "REFR.DATA", "absent"),
+                b,
+            )?;
+        }
+        if reference.data.enable_parent.is_some() {
+            push_error(
+                &mut blockers,
+                error(
+                    "RuntimeEnableParent",
+                    src,
+                    "runtime-independent placement",
+                    "XESP",
+                ),
+                b,
+            )?;
+        }
+        b.measure(AllocationKind::Diagnostics, || {
+            runtime(&reference.record, &mut blockers, b)?;
+            unhandled(&reference.record, &reference.data.common, &mut blockers, b)
+        })?;
+        let mut ancestry = Vec::new();
+        let base = match reference.data.base.as_ref().and_then(|r| r.key.as_ref()) {
+            Some(key) => match b.measure(AllocationKind::BaseAssets, || {
+                self.base(key, b, &mut ancestry, 0, &mut blockers)
+            }) {
+                Ok(v) => Some(v),
+                Err(e) => {
+                    push_error(&mut blockers, e, b)?;
+                    None
+                }
+            },
+            None => {
+                push_error(
+                    &mut blockers,
+                    error("MissingBaseForm", src, "non-null NAME", "absent/null"),
+                    b,
+                )?;
+                None
+            }
+        };
+        let material_swap = self.swap(reference.data.material_swap.as_ref(), &mut blockers, b)?;
+        let mut roots = Vec::new();
+        if let Some(base) = &base {
+            collect_base_assets(base, &mut roots, b)?;
+        }
+        if let Some(swap) = &material_swap {
+            self.swap_assets(swap, &mut roots, &mut blockers, b)?;
+        }
+        let assets = b.measure(AllocationKind::AssetGraph, || {
+            self.assets.closure(&roots, b)
+        })?;
+        for i in &assets {
+            for e in &self.assets.nodes[*i].blockers {
+                b.measure(AllocationKind::Diagnostics, || {
+                    push_error(&mut blockers, e.clone(), b)
+                })?;
+            }
+        }
+        if base
+            .as_ref()
+            .is_some_and(|v| v.frame_role == fo4_plugin::still::Class::Used)
+            && reference
+                .data
+                .transform
+                .as_ref()
+                .is_some_and(|t| t[3..].iter().any(|a| *a != 0.))
+        {
+            push_error(
+                &mut blockers,
+                error(
+                    "UnverifiedEulerRotation",
+                    src,
+                    "live world-matrix measurement",
+                    "nonzero REFR.DATA Euler angles",
+                ),
+                b,
+            )?;
+        }
+        if reference.data.scale.is_none()
+            && base
+                .as_ref()
+                .is_some_and(|v| v.frame_role == fo4_plugin::still::Class::Used)
+        {
+            push_error(
+                &mut blockers,
+                error(
+                    "MissingDocumentedReferenceScale",
+                    src,
+                    "explicit XSCL or measured absence semantics",
+                    "XSCL absent; no default asserted",
+                ),
+                b,
+            )?;
+        }
+        let state = hypotheses::classify(
+            &blockers,
+            base.as_ref()
+                .is_some_and(|v| v.frame_role == fo4_plugin::still::Class::Outside),
+            b,
+        )?;
+        let editor_marker = base.as_ref().is_some_and(|v| v.editor_marker);
+        let mut visibility_hypotheses = Vec::new();
+        if editor_marker {
+            b.reserve(&mut visibility_hypotheses, 1, &src.file, src.offset)?;
+            visibility_hypotheses.push(hypotheses::MARKER);
+        }
+        if state.hypotheses().contains(&hypotheses::NAMED_MARKER) {
+            b.reserve(&mut visibility_hypotheses, 1, &src.file, src.offset)?;
+            visibility_hypotheses.push(hypotheses::NAMED_MARKER);
+        }
+        let visibility = visibility(&reference.record, b)?;
+        Ok(Instance {
+            editor_marker,
+            visibility_hypotheses,
+            reference,
+            base,
+            material_swap,
+            visibility,
+            state,
+            blockers,
+            assets,
+        })
+    }
+    fn swap(
+        &self,
+        reference: Option<&FormRef>,
+        blockers: &mut Vec<Error>,
+        b: &Budget,
+    ) -> Result<Option<Loaded<Mswp>>> {
+        let Some(key) = reference.and_then(|r| r.key.as_ref()) else {
+            return Ok(None);
+        };
+        match self.plugins.get::<Mswp>(key, b) {
+            Ok(Some(v)) => {
+                if v.record.deleted() {
+                    push_error(
+                        blockers,
+                        error(
+                            "DeletedMaterialSwap",
+                            &v.record.source,
+                            "nondeleted MSWP",
+                            "deleted",
+                        ),
+                        b,
+                    )?;
+                }
+                Ok(Some(v))
+            }
+            Ok(None) => {
+                push_error(
+                    blockers,
+                    Error::new(
+                        "MissingMaterialSwap",
+                        &key.plugin,
+                        0,
+                        "MSWP winner",
+                        key.object_id,
+                    ),
+                    b,
+                )?;
+                Ok(None)
+            }
+            Err(e) => {
+                push_error(blockers, e, b)?;
+                Ok(None)
+            }
+        }
+    }
+    pub fn inspect_base(&mut self, key: &FormKey, b: &Budget) -> Result<BaseInspection> {
+        let mut blockers = Vec::new();
+        let mut ancestry = Vec::new();
+        let base = self.base(key, b, &mut ancestry, 0, &mut blockers)?;
+        let mut roots = Vec::new();
+        collect_base_assets(&base, &mut roots, b)?;
+        let assets = self.assets.closure(&roots, b)?;
+        for id in &assets {
+            for e in &self.assets.nodes[*id].blockers {
+                push_error(&mut blockers, e.clone(), b)?;
+            }
+        }
+        let state = hypotheses::classify(
+            &blockers,
+            base.frame_role == fo4_plugin::still::Class::Outside,
+            b,
+        )?;
+        Ok(BaseInspection {
+            base,
+            assets,
+            blockers,
+            state,
+        })
+    }
+    fn base(
+        &mut self,
+        key: &FormKey,
+        b: &Budget,
+        ancestry: &mut Vec<FormKey>,
+        depth: u64,
+        blockers: &mut Vec<Error>,
+    ) -> Result<Base> {
+        limit(depth, self.plugins.limits.max_depth, &key.plugin, 0)?;
+        if ancestry.contains(key) {
+            return Err(Error::new(
+                "ScolCycle",
+                &key.plugin,
+                0,
+                "acyclic SCOL parts",
+                key.object_id,
+            ));
+        }
+        b.reserve(ancestry, 1, &key.plugin, 0)?;
+        b.charge(key.plugin.len() as u64, &key.plugin, 0)?;
+        ancestry.push(key.clone());
+        let w = self.plugins.overrides().winner(key).ok_or_else(|| {
+            Error::new(
+                "MissingBaseForm",
+                &key.plugin,
+                0,
+                "base winner",
+                key.object_id,
+            )
+        })?;
+        let signature = w.signature;
+        let (record, common, declared, light, texture_set) = match &signature {
+            b"SCOL" => {
+                let v = required(self.plugins.get::<Scol>(key, b)?, key)?;
+                (v.record, v.data.common, v.data.parts, None, None)
+            }
+            b"LIGH" => {
+                let v = required(self.plugins.get::<Ligh>(key, b)?, key)?;
+                (v.record, v.data.common, Vec::new(), v.data.light, None)
+            }
+            b"STAT" => {
+                let v = required(self.plugins.get::<Stat>(key, b)?, key)?;
+                (v.record, v.data.common, Vec::new(), None, None)
+            }
+            b"MSTT" => {
+                let v = required(self.plugins.get::<Mstt>(key, b)?, key)?;
+                (v.record, v.data.common, Vec::new(), None, None)
+            }
+            b"ACTI" => {
+                let v = required(self.plugins.get::<Acti>(key, b)?, key)?;
+                (v.record, v.data.common, Vec::new(), None, None)
+            }
+            b"DOOR" => {
+                let v = required(self.plugins.get::<Door>(key, b)?, key)?;
+                (v.record, v.data.common, Vec::new(), None, None)
+            }
+            b"FURN" => {
+                let v = required(self.plugins.get::<Furn>(key, b)?, key)?;
+                (v.record, v.data.common, Vec::new(), None, None)
+            }
+            b"MISC" => {
+                let v = required(self.plugins.get::<Misc>(key, b)?, key)?;
+                (v.record, v.data.common, Vec::new(), None, None)
+            }
+            b"CONT" => {
+                let v = required(self.plugins.get::<Cont>(key, b)?, key)?;
+                (v.record, v.data.common, Vec::new(), None, None)
+            }
+            b"ALCH" => {
+                let v = required(self.plugins.get::<Alch>(key, b)?, key)?;
+                (v.record, v.data.common, Vec::new(), None, None)
+            }
+            b"BOOK" => {
+                let v = required(self.plugins.get::<Book>(key, b)?, key)?;
+                (v.record, v.data.common, Vec::new(), None, None)
+            }
+            b"AMMO" => {
+                let v = required(self.plugins.get::<Ammo>(key, b)?, key)?;
+                (v.record, v.data.common, Vec::new(), None, None)
+            }
+            b"KEYM" => {
+                let v = required(self.plugins.get::<Keym>(key, b)?, key)?;
+                (v.record, v.data.common, Vec::new(), None, None)
+            }
+            b"NOTE" => {
+                let v = required(self.plugins.get::<Note>(key, b)?, key)?;
+                (v.record, v.data.common, Vec::new(), None, None)
+            }
+            b"FLOR" => {
+                let v = required(self.plugins.get::<Flor>(key, b)?, key)?;
+                (v.record, v.data.common, Vec::new(), None, None)
+            }
+            b"TERM" => {
+                let v = required(self.plugins.get::<Term>(key, b)?, key)?;
+                (v.record, v.data.common, Vec::new(), None, None)
+            }
+            b"TACT" => {
+                let v = required(self.plugins.get::<Tact>(key, b)?, key)?;
+                (v.record, v.data.common, Vec::new(), None, None)
+            }
+            b"IDLM" => {
+                let v = required(self.plugins.get::<Idlm>(key, b)?, key)?;
+                (v.record, v.data.common, Vec::new(), None, None)
+            }
+            b"SOUN" => {
+                let v = required(self.plugins.get::<Soun>(key, b)?, key)?;
+                (v.record, v.data.common, Vec::new(), None, None)
+            }
+            b"ASPC" => {
+                let v = required(self.plugins.get::<Aspc>(key, b)?, key)?;
+                (v.record, v.data.common, Vec::new(), None, None)
+            }
+            _ => {
+                return Err(Error::new(
+                    "BaseTypeOutsideSlice",
+                    &self.plugins.order().headers()[w.plugin].source.file,
+                    w.offset,
+                    "STAT/SCOL/MSTT/ACTI/DOOR/FURN/LIGH",
+                    String::from_utf8_lossy(&signature),
+                ))
+            }
+        };
+        if record.deleted() {
+            push_error(
+                blockers,
+                error(
+                    "DeletedBaseForm",
+                    &record.source,
+                    "nondeleted base",
+                    "deleted",
+                ),
+                b,
+            )?;
+        }
+        if matches!(&signature, b"IDLM" | b"SOUN" | b"ASPC") {
+            return Ok(Base {
+                editor_marker: false,
+                frame_role: fo4_plugin::still::Class::Outside,
+                key: key.clone(),
+                record,
+                common,
+                parts: Vec::new(),
+                light: None,
+                material_swap: None,
+                texture_set: None,
+                assets: Vec::new(),
+            });
+        }
+        runtime(&record, blockers, b)?;
+        unhandled(&record, &common, blockers, b)?;
+        let material_swap = self.swap(common.model.material_swap.as_ref(), blockers, b)?;
+        let mut assets = Vec::new();
+        if let Some(path) = &common.model.path {
+            b.reserve(&mut assets, 1, &record.source.file, record.source.offset)?;
+            let temporary = b.child();
+            match self.resolve_path(
+                Citation::RecordModel,
+                path.as_bytes(),
+                &record.source,
+                blockers,
+                &temporary,
+            ) {
+                Ok(key) => assets.push(self.assets.load(AssetKind::Model, &key, &temporary)?),
+                Err(mut e) => {
+                    e.source = Box::new(record.source.clone());
+                    push_error(blockers, e, b)?;
+                }
+            }
+        } else if signature != *b"SCOL" && signature != *b"LIGH" {
+            push_error(
+                blockers,
+                error("MissingModelPath", &record.source, "MODL", "absent"),
+                b,
+            )?;
+        }
+        if signature == *b"LIGH" && light.is_none() {
+            push_error(
+                blockers,
+                error(
+                    "UnsupportedLightData",
+                    &record.source,
+                    "supported LIGH.DATA",
+                    "raw/absent",
+                ),
+                b,
+            )?;
+        }
+        if let Some(swap) = &material_swap {
+            self.swap_assets(swap, &mut assets, blockers, b)?;
+        }
+        if signature == *b"SCOL" && !declared.is_empty() {
+            push_error(
+                blockers,
+                error(
+                    "UnverifiedScolGeometrySource",
+                    &record.source,
+                    "measured generated MODL versus constituent equivalence",
+                    "ONAM/DATA parts; generated MODL retained raw",
+                ),
+                b,
+            )?;
+        }
+        let mut parts = Vec::new();
+        for part in declared {
+            if part
+                .placements
+                .as_ref()
+                .is_some_and(|v| v.iter().any(|p| p[3..6].iter().any(|a| *a != 0.)))
+            {
+                push_error(
+                    blockers,
+                    error(
+                        "UnverifiedEulerRotation",
+                        &record.source,
+                        "live world-matrix measurement",
+                        "nonzero SCOL.DATA Euler angles",
+                    ),
+                    b,
+                )?;
+            }
+            let resolved = match part.base.as_ref().and_then(|r| r.key.as_ref()) {
+                Some(key) => {
+                    let len = ancestry.len();
+                    let result = self.base(key, b, ancestry, depth + 1, blockers);
+                    ancestry.truncate(len);
+                    match result {
+                        Ok(v) => Some(v),
+                        Err(e) => {
+                            push_error(blockers, e, b)?;
+                            None
+                        }
+                    }
+                }
+                None => {
+                    push_error(
+                        blockers,
+                        error("MissingScolPartBase", &record.source, "ONAM", "absent/null"),
+                        b,
+                    )?;
+                    None
+                }
+            };
+            if part.placements.is_none() {
+                push_error(
+                    blockers,
+                    error(
+                        "MissingScolPlacements",
+                        &record.source,
+                        "SCOL.DATA",
+                        "absent",
+                    ),
+                    b,
+                )?;
+            }
+            b.reserve(&mut parts, 1, &record.source.file, record.source.offset)?;
+            parts.push(Part {
+                declared: part,
+                resolved,
+            });
+        }
+        ancestry.pop();
+        b.charge(key.plugin.len() as u64, &key.plugin, record.source.offset)?;
+        Ok(Base {
+            editor_marker: matches!(&record.signature, b"STAT" | b"ACTI" | b"DOOR")
+                && record.flags & 0x0080_0000 != 0,
+            frame_role: fo4_plugin::still::Class::Used,
+            key: key.clone(),
+            record,
+            common,
+            parts,
+            light,
+            material_swap,
+            texture_set,
+            assets,
+        })
+    }
+    fn swap_assets(
+        &mut self,
+        swap: &Loaded<Mswp>,
+        assets: &mut Vec<usize>,
+        blockers: &mut Vec<Error>,
+        b: &Budget,
+    ) -> Result<()> {
+        for e in &swap.data.entries {
+            if matches!(&e.signature, b"BNAM" | b"SNAM") {
+                if let SwapValue::Path(path) = &e.value {
+                    b.reserve(
+                        assets,
+                        1,
+                        &swap.record.source.file,
+                        swap.record.source.offset,
+                    )?;
+                    match self.resolve_path(
+                        Citation::SwapMaterial,
+                        path.as_bytes(),
+                        &swap.record.source,
+                        blockers,
+                        b,
+                    ) {
+                        Ok(key) => assets.push(self.assets.load(AssetKind::Material, &key, b)?),
+                        Err(mut e) => {
+                            e.source = Box::new(swap.record.source.clone());
+                            push_error(blockers, e, b)?;
+                        }
+                    }
+                }
+            }
+        }
+        if swap.data.entries.iter().any(|e| e.signature == *b"FNAM") {
+            push_error(
+                blockers,
+                error(
+                    "RuntimeMaterialSwapFilter",
+                    &swap.record.source,
+                    "unconditional material swap",
+                    "FNAM",
+                ),
+                b,
+            )?;
+        }
+        Ok(())
+    }
+    /// Explicit TXST resolution for consumers holding a documented TXST reference.
+    /// Unknown model companions are never guessed to be FormIDs.
+    pub fn texture_set(&mut self, key: &FormKey, b: &Budget) -> Result<(Loaded<Txst>, Vec<usize>)> {
+        let value = required(self.plugins.get::<Txst>(key, b)?, key)?;
+        let mut assets = Vec::new();
+        for path in value.data.textures.iter().flatten() {
+            b.reserve(
+                &mut assets,
+                1,
+                &value.record.source.file,
+                value.record.source.offset,
+            )?;
+            let key = paths::resolve(Citation::TextureSetTexture, path.as_bytes(), b).map_err(
+                |mut e| {
+                    *e.source = value.record.source.clone();
+                    e
+                },
+            )?;
+            assets.push(self.assets.load(AssetKind::Texture, &key, b)?);
+        }
+        if let Some(path) = &value.data.material {
+            b.reserve(
+                &mut assets,
+                1,
+                &value.record.source.file,
+                value.record.source.offset,
+            )?;
+            let key = paths::resolve(Citation::TextureSetMaterial, path.as_bytes(), b).map_err(
+                |mut e| {
+                    *e.source = value.record.source.clone();
+                    e
+                },
+            )?;
+            assets.push(self.assets.load(AssetKind::Material, &key, b)?);
+        }
+        Ok((value, assets))
+    }
+}
+fn required<T>(v: Option<T>, key: &FormKey) -> Result<T> {
+    v.ok_or_else(|| {
+        Error::new(
+            "MissingRecord",
+            &key.plugin,
+            0,
+            "winning record",
+            key.object_id,
+        )
+    })
+}
+fn error(code: &str, src: &SourceSpan, expected: &str, found: &str) -> Error {
+    let mut e = Error::new(code, &src.file, src.offset, expected, found);
+    e.source = Box::new(src.clone());
+    e
+}
+fn push_error(v: &mut Vec<Error>, e: Error, b: &Budget) -> Result<()> {
+    b.charge(
+        (e.code.len() + e.expected.len() + e.found.len() + e.source.file.len() + 128) as u64,
+        &e.source.file,
+        e.source.offset,
+    )?;
+    b.reserve(v, 1, &e.source.file, e.source.offset)?;
+    v.push(e);
+    Ok(())
+}
+fn runtime(record: &Record, blockers: &mut Vec<Error>, b: &Budget) -> Result<()> {
+    for s in &record.subrecords {
+        if matches!(&s.signature, b"VMAD" | b"CTDA") {
+            push_error(
+                blockers,
+                error(
+                    "RuntimeCondition",
+                    &record.source,
+                    "runtime-independent instance",
+                    &String::from_utf8_lossy(&s.signature),
+                ),
+                b,
+            )?;
+        }
+    }
+    Ok(())
+}
+fn unhandled(
+    record: &Record,
+    common: &Common,
+    blockers: &mut Vec<Error>,
+    b: &Budget,
+) -> Result<()> {
+    for raw in &common.uninterpreted {
+        if matches!(
+            &raw.signature,
+            b"PCMB" | b"XCRI" | b"VISI" | b"RVIS" | b"XPRI" | b"VMAD" | b"CTDA"
+        ) {
+            continue;
+        }
+        use fo4_plugin::still::{classify_size, Class};
+        let class = classify_size(
+            &record.signature,
+            &raw.signature,
+            record.data(&record.subrecords[raw.subrecord]).len(),
+        );
+        if class == Class::Outside {
+            continue;
+        }
+        let s = &record.subrecords[raw.subrecord];
+        let mut e = error(
+            match class {
+                Class::State => "RuntimeRecordState",
+                Class::Used => "UnsupportedUsedFieldLayout",
+                _ => "UninterpretedVisualSubrecord",
+            },
+            &record.source,
+            "interpreted required visual data",
+            &format!(
+                "{}.{}{}{}",
+                String::from_utf8_lossy(&record.signature),
+                String::from_utf8_lossy(&raw.signature),
+                if raw.open_field.is_some() { "." } else { "" },
+                raw.open_field.unwrap_or("")
+            ),
+        );
+        if record.payload_is_decompressed {
+            e.source.decompressed_offset = Some(s.offset);
+        } else {
+            e.source.offset = s.offset;
+        }
+        push_error(blockers, e, b)?;
+    }
+    Ok(())
+}
+fn visibility(r: &Record, b: &Budget) -> Result<Visibility> {
+    let mut result = Visibility::default();
+    for (i, s) in r.subrecords.iter().enumerate() {
+        let target = match &s.signature {
+            b"XCRI" | b"PCMB" => &mut result.precombine,
+            b"RVIS" | b"VISI" | b"XPRI" => &mut result.previs,
+            _ => continue,
+        };
+        b.reserve(target, 1, &r.source.file, s.offset)?;
+        target.push(Declaration {
+            signature: s.signature,
+            subrecord: i,
+            bytes: s.data.clone(),
+        });
+    }
+    Ok(result)
+}
+fn collect_base_assets(base: &Base, out: &mut Vec<usize>, b: &Budget) -> Result<()> {
+    b.reserve(
+        out,
+        base.assets.len(),
+        &base.record.source.file,
+        base.record.source.offset,
+    )?;
+    out.extend_from_slice(&base.assets);
+    for part in &base.parts {
+        if let Some(base) = &part.resolved {
+            collect_base_assets(base, out, b)?;
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests;

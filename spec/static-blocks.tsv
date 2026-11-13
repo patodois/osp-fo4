@@ -1,0 +1,171 @@
+# block	class	source	reason	layout_prefix
+BSBehaviorGraphExtraData	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Behavior graph associado a animacao; sem executar o grafo, permanece bloqueado.	
+BSBlastNode	used	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Dados do fechamento visual; decoder existente. Nao ha conversao para renderer.	
+BSBoneLODExtraData	unknown	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Payload opaco ou finalidade descrita como Unknown; estrutura parcial nao estabelece contribuicao visual.	
+BSBound	outside	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Payload de colisao/fisica ou volume limite sem geometria drawable; nao executar fisica/culling.	
+BSConnectPoint::Children	used	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Dados do fechamento visual; decoder existente. Nao ha conversao para renderer.	
+BSConnectPoint::Parents	used	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Dados do fechamento visual; decoder existente. Nao ha conversao para renderer.	
+BSDamageStage	used	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Dados do fechamento visual; decoder existente. Nao ha conversao para renderer.	
+BSDynamicTriShape	used	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Dados do fechamento visual; decoder existente. Nao ha conversao para renderer.	
+BSEffectShaderProperty	used	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Dados do fechamento visual; decoder existente. Nao ha conversao para renderer.	
+BSEffectShaderPropertyColorController	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+BSEffectShaderPropertyFloatController	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+BSEyeCenterExtraData	used	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Dados do fechamento visual; decoder existente. Nao ha conversao para renderer.	
+BSFadeNode	used	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Dados do fechamento visual; decoder existente. Nao ha conversao para renderer.	
+BSFrustumFOVController	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+BSFurnitureMarker	outside	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Dados de preview/inventario/posicionamento de ator; quadro sem menus nem atores.	
+BSFurnitureMarkerNode	outside	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Dados de preview/inventario/posicionamento de ator; quadro sem menus nem atores.	
+BSInvMarker	outside	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Dados de preview/inventario/posicionamento de ator; quadro sem menus nem atores.	
+BSKeyframeController	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+BSLagBoneController	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+BSLeafAnimNode	used	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Dados do fechamento visual; decoder existente. Nao ha conversao para renderer.	
+BSLightingShaderProperty	used	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Dados do fechamento visual; decoder existente. Nao ha conversao para renderer.	
+BSLightingShaderPropertyColorController	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+BSLightingShaderPropertyFloatController	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+BSLightingShaderPropertyUShortController	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+BSMaterialEmittanceMultController	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+BSMeshLODTriShape	used	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Dados do fechamento visual; decoder existente. Nao ha conversao para renderer.	
+BSMultiBound	outside	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Payload de colisao/fisica ou volume limite sem geometria drawable; nao executar fisica/culling.	
+BSMultiBoundAABB	outside	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Payload de colisao/fisica ou volume limite sem geometria drawable; nao executar fisica/culling.	
+BSMultiBoundNode	used	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Dados do fechamento visual; decoder existente. Nao ha conversao para renderer.	
+BSMultiBoundOBB	outside	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Payload de colisao/fisica ou volume limite sem geometria drawable; nao executar fisica/culling.	
+BSMultiBoundSphere	outside	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Payload de colisao/fisica ou volume limite sem geometria drawable; nao executar fisica/culling.	
+BSNiAlphaPropertyTestRefController	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+BSOrderedNode	used	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Dados do fechamento visual; decoder existente. Nao ha conversao para renderer.	
+BSPSysMultiTargetEmitterCtlr	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+BSPackedCombinedSharedGeomDataExtra	used	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Dados do fechamento visual; decoder existente. Nao ha conversao para renderer.	
+BSPositionData	unknown	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Payload opaco ou finalidade descrita como Unknown; estrutura parcial nao estabelece contribuicao visual.	
+BSProceduralLightningController	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+BSRangeNode	used	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Dados do fechamento visual; decoder existente. Nao ha conversao para renderer.	
+BSRefractionFirePeriodController	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+BSRefractionStrengthController	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+BSShaderTextureSet	used	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Dados do fechamento visual; decoder existente. Nao ha conversao para renderer.	
+BSSkin::Instance	unknown	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Pele/luz/agua embutida sem fechamento interpretado; bloqueio por tipo preservado.	
+BSSubIndexTriShape	used	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Dados do fechamento visual; decoder existente. Nao ha conversao para renderer.	
+BSTreeNode	used	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Dados do fechamento visual; decoder existente. Nao ha conversao para renderer.	
+BSTriShape	used	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Dados do fechamento visual; decoder existente. Nao ha conversao para renderer.	
+BSValueNode	used	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Dados do fechamento visual; decoder existente. Nao ha conversao para renderer.	
+BSWaterShaderProperty	unknown	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Pele/luz/agua embutida sem fechamento interpretado; bloqueio por tipo preservado.	
+BSXFlags	used	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Dados do fechamento visual; decoder existente. Nao ha conversao para renderer.	
+NiAlphaController	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiAlphaProperty	used	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Dados do fechamento visual; decoder existente. Nao ha conversao para renderer.	
+NiBSBoneLODController	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiBSPArrayController	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiBillboardNode	used	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Dados do fechamento visual; decoder existente. Nao ha conversao para renderer.	
+NiBinaryExtraData	unknown	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Payload opaco ou finalidade descrita como Unknown; estrutura parcial nao estabelece contribuicao visual.	
+NiBlendBoolInterpolator	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	
+NiBlendFloatInterpolator	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	
+NiBlendPoint3Interpolator	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	
+NiBoneLODController	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiBoolData	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	
+NiBoolInterpController	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiBoolInterpolator	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	
+NiBoolTimelineInterpolator	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	
+NiBooleanExtraData	used	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Dados do fechamento visual; decoder existente. Nao ha conversao para renderer.	
+NiCollisionObject	outside	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Payload de colisao/fisica ou volume limite sem geometria drawable; nao executar fisica/culling.	
+NiColorExtraDataController	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiControllerManager	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiControllerSequence	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	
+NiDefaultAVObjectPalette	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	
+NiExtraDataController	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiFlipController	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiFloatData	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	
+NiFloatExtraData	used	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Dados do fechamento visual; decoder existente. Nao ha conversao para renderer.	
+NiFloatExtraDataController	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiFloatInterpController	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiFloatInterpolator	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	
+NiFloatsExtraData	used	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Dados do fechamento visual; decoder existente. Nao ha conversao para renderer.	
+NiFloatsExtraDataController	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiFloatsExtraDataPoint3Controller	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiFurSpringController	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiGeomMorpherController	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiIntegerExtraData	used	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Dados do fechamento visual; decoder existente. Nao ha conversao para renderer.	
+NiIntegersExtraData	used	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Dados do fechamento visual; decoder existente. Nao ha conversao para renderer.	
+NiInterpController	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiKeyframeController	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiLightColorController	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiLightDimmerController	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiLightIntensityController	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiLightRadiusController	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiLookAtController	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiMaterialColorController	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiMorphController	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiMorphWeightsController	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiMorpherController	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiMultiTargetTransformController	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiNode	used	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Dados do fechamento visual; decoder existente. Nao ha conversao para renderer.	
+NiPSEmitParticlesCtlr	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiPSEmitterCtlr	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiPSEmitterDeclinationCtlr	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiPSEmitterDeclinationVarCtlr	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiPSEmitterFloatCtlr	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiPSEmitterLifeSpanCtlr	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiPSEmitterPlanarAngleCtlr	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiPSEmitterPlanarAngleVarCtlr	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiPSEmitterRadiusCtlr	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiPSEmitterRotAngleCtlr	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiPSEmitterRotAngleVarCtlr	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiPSEmitterRotSpeedCtlr	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiPSEmitterRotSpeedVarCtlr	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiPSEmitterSpeedCtlr	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiPSFieldAttenuationCtlr	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiPSFieldMagnitudeCtlr	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiPSFieldMaxDistanceCtlr	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiPSForceActiveCtlr	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiPSForceBoolCtlr	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiPSForceCtlr	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiPSForceFloatCtlr	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiPSGravityStrengthCtlr	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiPSResetOnLoopCtlr	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26Full
+NiPSysAirFieldAirFrictionCtlr	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiPSysAirFieldInheritVelocityCtlr	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiPSysAirFieldSpreadCtlr	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiPSysEmitterCtlr	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiPSysEmitterDeclinationCtlr	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiPSysEmitterDeclinationVarCtlr	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiPSysEmitterInitialRadiusCtlr	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiPSysEmitterLifeSpanCtlr	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiPSysEmitterPlanarAngleCtlr	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiPSysEmitterPlanarAngleVarCtlr	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiPSysEmitterSpeedCtlr	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiPSysFieldAttenuationCtlr	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiPSysFieldMagnitudeCtlr	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiPSysFieldMaxDistanceCtlr	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiPSysGravityStrengthCtlr	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiPSysInitialRotAngleCtlr	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiPSysInitialRotAngleVarCtlr	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiPSysInitialRotSpeedCtlr	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiPSysInitialRotSpeedVarCtlr	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiPSysModifierActiveCtlr	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiPSysModifierBoolCtlr	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiPSysModifierCtlr	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiPSysModifierFloatCtlr	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiPSysResetOnLoopCtlr	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26Full
+NiPSysUpdateCtlr	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26Full
+NiParticleSystem	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Sistema de particulas requer avaliacao; permanece bloqueado.	
+NiParticleSystemController	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiPathController	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiPathInterpolator	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	
+NiPoint3InterpController	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiPoint3Interpolator	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	
+NiPointLight	unknown	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Pele/luz/agua embutida sem fechamento interpretado; bloqueio por tipo preservado.	
+NiPosData	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	
+NiRollController	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiSingleInterpController	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiSkinningLODController	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiStringExtraData	used	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Dados do fechamento visual; decoder existente. Nao ha conversao para renderer.	
+NiStringsExtraData	used	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Dados do fechamento visual; decoder existente. Nao ha conversao para renderer.	
+NiSwitchNode	used	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Dados do fechamento visual; decoder existente. Nao ha conversao para renderer.	
+NiTextKeyExtraData	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	
+NiTextureTransformController	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiTimeController	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26Full
+NiTransformController	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiTransformData	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	
+NiTransformInterpolator	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	
+NiTriShape	used	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Dados do fechamento visual; decoder existente. Nao ha conversao para renderer.	
+NiTriShapeData	used	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Dados do fechamento visual; decoder existente. Nao ha conversao para renderer.	
+NiTriShapeSkinController	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiUVController	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+NiVisController	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
+bhkBlendController	outside	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Payload de colisao/fisica ou volume limite sem geometria drawable; nao executar fisica/culling.	NiTimeController26
+bhkNPCollisionObject	outside	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Payload de colisao/fisica ou volume limite sem geometria drawable; nao executar fisica/culling.	
