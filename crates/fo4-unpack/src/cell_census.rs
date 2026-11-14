@@ -4,7 +4,7 @@ use fo4_plugin::{
     typed::{CellKind, Store},
     FormKey,
 };
-use fo4_scene::{AssetKind, Loader, PathPolicy, Scene, State};
+use fo4_scene::{AssetKind, Loader, RuleLevel, Scene, State};
 use fo4_vfs::{Candidate, Vfs};
 use serde::Serialize;
 use std::collections::{BTreeMap, BTreeSet};
@@ -41,9 +41,12 @@ pub struct CellTotals {
     pub unknown_kind: u64,
     pub ready: u64,
     pub under_hypotheses: BTreeMap<String, u64>,
+    /// Ready with registered rules that are all supported by measurement.
+    pub measured: BTreeMap<String, u64>,
     pub editor_markers: u64,
     pub strict_drawable: u64,
     pub hypothesis_drawable: BTreeMap<String, u64>,
+    pub measured_drawable: BTreeMap<String, u64>,
     pub blocked: u64,
     pub outside: u64,
     pub deleted: u64,
@@ -84,9 +87,12 @@ pub struct CellRow {
     pub own_instances: u64,
     pub ready: u64,
     pub under_hypotheses: BTreeMap<String, u64>,
+    /// Ready with registered rules that are all supported by measurement.
+    pub measured: BTreeMap<String, u64>,
     pub editor_markers: u64,
     pub strict_drawable: u64,
     pub hypothesis_drawable: BTreeMap<String, u64>,
+    pub measured_drawable: BTreeMap<String, u64>,
     pub blocked: u64,
     pub outside: u64,
     pub deleted: u64,
@@ -117,9 +123,12 @@ pub struct NearCell {
     pub own_instances: u64,
     pub ready: u64,
     pub under_hypotheses: BTreeMap<String, u64>,
+    /// Ready with registered rules that are all supported by measurement.
+    pub measured: BTreeMap<String, u64>,
     pub editor_markers: u64,
     pub strict_drawable: u64,
     pub hypothesis_drawable: BTreeMap<String, u64>,
+    pub measured_drawable: BTreeMap<String, u64>,
     pub blocked: u64,
     pub outside: u64,
     pub lights: u64,
@@ -147,9 +156,11 @@ impl NearCell {
             own_instances: row.own_instances,
             ready: row.ready,
             under_hypotheses: row.under_hypotheses.clone(),
+            measured: row.measured.clone(),
             editor_markers: row.editor_markers,
             strict_drawable: row.strict_drawable,
             hypothesis_drawable: row.hypothesis_drawable.clone(),
+            measured_drawable: row.measured_drawable.clone(),
             blocked: row.blocked,
             outside: row.outside,
             lights: row.lights,
@@ -244,7 +255,7 @@ pub fn cells(m: &Manifest, r: &mut Reports) -> Result<()> {
     const CACHE_CELLS: u64 = 32;
     r.summary.cell_census.cache_batch_cells = CACHE_CELLS;
     let cache = Budget::new(m.limits.max_memory);
-    let mut loader = Loader::new(&store, &v, &m.language, PathPolicy::Strict, &cache);
+    let mut loader = Loader::new(&store, &v, &m.language, RuleLevel::Facts, &cache);
     let mut batch_cells = 0;
     let mut renew = false;
     let mut all_models = BTreeSet::new();
@@ -430,6 +441,12 @@ pub fn cells(m: &Manifest, r: &mut Reports) -> Result<()> {
                 for (set, n) in &row.under_hypotheses {
                     count(&mut total.under_hypotheses, set, *n, &aggregate)?;
                 }
+                for (set, n) in &row.measured {
+                    count(&mut total.measured, set, *n, &aggregate)?;
+                }
+                for (set, n) in &row.measured_drawable {
+                    count(&mut total.measured_drawable, set, *n, &aggregate)?;
+                }
                 for (set, n) in &row.hypothesis_drawable {
                     count(&mut total.hypothesis_drawable, set, *n, &aggregate)?;
                 }
@@ -527,6 +544,8 @@ fn cell_row(scene: &Scene, loader: &Loader<'_>, b: &Budget) -> Result<CellRow> {
     let mut blockers = BTreeMap::new();
     let mut ready = 0;
     let mut under_hypotheses = BTreeMap::new();
+    let mut measured = BTreeMap::new();
+    let mut measured_drawable = BTreeMap::new();
     let mut editor_markers = 0;
     let mut strict_drawable = 0;
     let mut hypothesis_drawable = BTreeMap::new();
@@ -547,6 +566,16 @@ fn cell_row(scene: &Scene, loader: &Loader<'_>, b: &Budget) -> Result<CellRow> {
                         .any(|id| loader.assets.nodes[*id].shapes > 0)
                 {
                     strict_drawable += 1;
+                }
+            }
+            State::ReadyMeasured { rules } => {
+                count(&mut measured, &rules.join("+"), 1, b)?;
+                if !i.editor_marker
+                    && i.assets
+                        .iter()
+                        .any(|id| loader.assets.nodes[*id].shapes > 0)
+                {
+                    count(&mut measured_drawable, &rules.join("+"), 1, b)?;
                 }
             }
             State::ReadyUnderHypotheses { hypotheses } => {
@@ -673,6 +702,8 @@ fn cell_row(scene: &Scene, loader: &Loader<'_>, b: &Budget) -> Result<CellRow> {
             + scene.exclusions.len()) as u64,
         ready,
         under_hypotheses,
+        measured,
+        measured_drawable,
         editor_markers,
         strict_drawable,
         hypothesis_drawable,

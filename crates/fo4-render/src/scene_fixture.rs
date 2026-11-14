@@ -1,7 +1,7 @@
 //! Fully synthetic SCOL: an untextured generated alternative and two textured parts.
 use crate::draw::{build, BuildOptions};
 use fo4_core::{Budget, Game, Limits, Manifest, Mount, PluginSpec, TestDir};
-use fo4_scene::{Loader, PathPolicy};
+use fo4_scene::{Loader, RuleLevel};
 fn sub(tag: &[u8; 4], data: &[u8]) -> Vec<u8> {
     [tag.as_slice(), &(data.len() as u16).to_le_bytes(), data].concat()
 }
@@ -231,7 +231,7 @@ fn scol_hypothesis_draws_two_textured_parts_without_the_generated_alternative() 
     let b = Budget::new(32 << 20);
     let store = fo4_plugin::typed::Store::open(&m, &b).unwrap();
     let vfs = fo4_vfs::Vfs::mount(&m, &b).unwrap();
-    let mut loader = Loader::new(&store, &vfs, "english", PathPolicy::Strict, &b);
+    let mut loader = Loader::new(&store, &vfs, "english", RuleLevel::Facts, &b);
     let mut scene = loader.by_editor_id("SyntheticScolCell", &b).unwrap();
     assert!(
         scene.instances[0]
@@ -248,6 +248,7 @@ fn scol_hypothesis_draws_two_textured_parts_without_the_generated_alternative() 
         BuildOptions {
             max_texture_dimension: 16,
             max_texture_bytes: 1024,
+            level: fo4_scene::RuleLevel::Hypotheses,
         },
         &Budget::new(32 << 20),
     )
@@ -261,6 +262,7 @@ fn scol_hypothesis_draws_two_textured_parts_without_the_generated_alternative() 
         BuildOptions {
             max_texture_dimension: 16,
             max_texture_bytes: 1 << 20,
+            level: fo4_scene::RuleLevel::Hypotheses,
         },
         &b,
     )
@@ -288,6 +290,7 @@ fn scol_hypothesis_draws_two_textured_parts_without_the_generated_alternative() 
         BuildOptions {
             max_texture_dimension: 16,
             max_texture_bytes: 1 << 20,
+            level: fo4_scene::RuleLevel::Hypotheses,
         },
         true,
         &Budget::new(32 << 20),
@@ -310,6 +313,7 @@ fn scol_hypothesis_draws_two_textured_parts_without_the_generated_alternative() 
         BuildOptions {
             max_texture_dimension: 16,
             max_texture_bytes: 1 << 20,
+            level: fo4_scene::RuleLevel::Hypotheses,
         },
         &b,
     )
@@ -335,6 +339,7 @@ fn scol_hypothesis_draws_two_textured_parts_without_the_generated_alternative() 
         BuildOptions {
             max_texture_dimension: 256,
             max_texture_bytes: 1 << 20,
+            level: fo4_scene::RuleLevel::Hypotheses,
         },
         &Budget::new(32 << 20),
     )
@@ -352,6 +357,7 @@ fn scol_hypothesis_draws_two_textured_parts_without_the_generated_alternative() 
         BuildOptions {
             max_texture_dimension: 16,
             max_texture_bytes: 1 << 20,
+            level: fo4_scene::RuleLevel::Hypotheses,
         },
         &b,
     )
@@ -422,7 +428,7 @@ fn untextured_effect_requires_hypothesis_and_refuses_unhandled_features() {
         let b = Budget::new(32 << 20);
         let store = fo4_plugin::typed::Store::open(&m, &b).unwrap();
         let vfs = fo4_vfs::Vfs::mount(&m, &b).unwrap();
-        let mut loader = Loader::new(&store, &vfs, "english", PathPolicy::Strict, &b);
+        let mut loader = Loader::new(&store, &vfs, "english", RuleLevel::Facts, &b);
         let mut scene = loader.by_editor_id("EffectCell", &b).unwrap();
         assert!(
             scene.instances[0]
@@ -435,6 +441,7 @@ fn untextured_effect_requires_hypothesis_and_refuses_unhandled_features() {
         let options = BuildOptions {
             max_texture_dimension: 16,
             max_texture_bytes: 1024,
+            level: fo4_scene::RuleLevel::Hypotheses,
         };
         let output = build(&scene, &loader, &m.limits, options, &b).unwrap();
         if let Some(code) = expected_error {

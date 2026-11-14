@@ -15,11 +15,18 @@ use fo4_vfs::Vfs;
 use paths::Citation;
 use serde::Serialize;
 
+/// How much the caller accepts beyond documented format facts.
 #[derive(Debug, Clone, Copy, Default, Serialize, PartialEq, Eq)]
-pub enum PathPolicy {
+pub enum RuleLevel {
+    /// Documented format facts only.
     #[default]
-    Strict,
-    UnderHypotheses,
+    #[serde(rename = "Strict")]
+    Facts,
+    /// Facts plus rules the registry marks `supported` by measurement of the running game.
+    Measured,
+    /// Also rules that are registered but still pending measurement.
+    #[serde(rename = "UnderHypotheses")]
+    Hypotheses,
 }
 /// Candidate transformations deliberately exist only in the census module/CLI.
 #[derive(Debug, Serialize)]
@@ -54,17 +61,37 @@ pub struct Base {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum State {
+    /// Every input is covered by documented format facts.
     Ready,
-    ReadyUnderHypotheses { hypotheses: Vec<&'static str> },
+    /// Also needs registered rules, all of them supported by measurement.
+    ReadyMeasured {
+        rules: Vec<&'static str>,
+    },
+    /// Needs at least one registered rule that is still pending. `hypotheses`
+    /// lists every rule relied on, measured ones included.
+    ReadyUnderHypotheses {
+        hypotheses: Vec<&'static str>,
+    },
     Blocked,
     Outside,
 }
 impl State {
     pub fn drawable_readiness(&self) -> bool {
-        matches!(self, Self::Ready | Self::ReadyUnderHypotheses { .. })
+        self.ready_at(RuleLevel::Hypotheses)
     }
+    /// Whether an instance in this state may be used at the given level.
+    pub fn ready_at(&self, level: RuleLevel) -> bool {
+        match self {
+            Self::Ready => true,
+            Self::ReadyMeasured { .. } => level != RuleLevel::Facts,
+            Self::ReadyUnderHypotheses { .. } => level == RuleLevel::Hypotheses,
+            Self::Blocked | Self::Outside => false,
+        }
+    }
+    /// Every registered rule this state relies on, measured or pending.
     pub fn hypotheses(&self) -> &[&'static str] {
         match self {
+            Self::ReadyMeasured { rules } => rules,
             Self::ReadyUnderHypotheses { hypotheses } => hypotheses,
             _ => &[],
         }
@@ -103,7 +130,7 @@ pub struct Scene {
     pub diagnostics: Vec<Error>,
     pub shared_diagnostic_count: usize,
     pub assets: Vec<usize>,
-    pub path_policy: PathPolicy,
+    pub path_policy: RuleLevel,
 }
 #[derive(Debug, Serialize)]
 pub struct BaseInspection {
@@ -120,7 +147,7 @@ pub struct Loader<'a> {
     pub plugins: &'a Store,
     pub assets: Assets<'a>,
     vfs: &'a Vfs,
-    pub path_policy: PathPolicy,
+    pub path_policy: RuleLevel,
     language: &'a str,
 }
 impl<'a> Loader<'a> {
@@ -128,7 +155,7 @@ impl<'a> Loader<'a> {
         plugins: &'a Store,
         vfs: &'a Vfs,
         language: &'a str,
-        path_policy: PathPolicy,
+        path_policy: RuleLevel,
         cache: &Budget,
     ) -> Self {
         Self {

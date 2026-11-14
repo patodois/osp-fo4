@@ -52,6 +52,8 @@ pub struct Build {
 pub struct BuildOptions {
     pub max_texture_dimension: u32,
     pub max_texture_bytes: u64,
+    /// Instances whose state is not ready at this level are omitted with a cause.
+    pub level: fo4_scene::RuleLevel,
 }
 fn error(code: &str, file: &str, offset: u64, found: impl std::fmt::Display) -> Error {
     Error::new(code, file, offset, "documented unlit draw binding", found)
@@ -1150,12 +1152,12 @@ pub fn build_with_marker_visibility(
                     fo4_scene::hypotheses::MARKER,
                 ));
             }
-            if !i.state.drawable_readiness() {
+            if !i.state.ready_at(options.level) {
                 return Err(error(
                     "SceneInstanceNotDrawable",
                     &src.file,
                     src.offset,
-                    format!("{:?}", i.state),
+                    format!("{:?} at rule level {:?}", i.state, options.level),
                 ));
             }
             let base = i

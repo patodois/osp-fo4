@@ -1,13 +1,13 @@
 use crate::Reports;
 use fo4_core::{Budget, Error, Manifest, Result};
 use fo4_plugin::typed::Store;
-use fo4_scene::{Loader, PathPolicy, State};
+use fo4_scene::{Loader, RuleLevel};
 use fo4_vfs::Vfs;
 pub fn run(
     m: &Manifest,
     editor_id: &str,
     reports: &mut Reports,
-    under_hypotheses: bool,
+    level: RuleLevel,
     overlay: Option<&std::path::Path>,
 ) -> Result<()> {
     reports.items_enabled = true;
@@ -19,30 +19,19 @@ pub fn run(
     vfs.check_complete()?;
     reports.summary.fingerprint = Some(vfs.fingerprint()?.to_owned());
     let budget = Budget::new(m.limits.max_memory);
-    let mut loader = Loader::new(
-        &store,
-        &vfs,
-        &m.language,
-        if under_hypotheses {
-            PathPolicy::UnderHypotheses
-        } else {
-            PathPolicy::Strict
-        },
-        &budget,
-    );
+    let mut loader = Loader::new(&store, &vfs, &m.language, level, &budget);
     let scene = loader.by_editor_id(editor_id, &budget)?;
     // The command's strict contract is instance readiness. CELL/LGTM causes
     // remain explicitly reported; they do not certify a renderer or lighting.
     reports.item(&serde_json::json!({"kind":"cell_context", "cell":scene.cell.key,"causes":scene.diagnostics,"deleted":scene.deleted,"disabled":scene.disabled,"exclusions":scene.exclusions}))?;
     for instance in &scene.instances {
-        let readiness_cause = (!(matches!(instance.state, State::Ready)
-            || under_hypotheses && instance.state.drawable_readiness()))
-        .then(|| {
+        let accepted = instance.state.ready_at(level);
+        let readiness_cause = (!accepted).then(|| {
             Error::new(
                 "CellInstanceNotReady",
                 &instance.reference.record.source.file,
                 instance.reference.record.source.offset,
-                "Ready",
+                format!("ready at rule level {level:?}"),
                 format!("{:?}", instance.state),
             )
         });
@@ -50,9 +39,7 @@ pub fn run(
         reports.item(&row)?;
         println!("{row}");
         reports.summary.files_attempted += 1;
-        if matches!(instance.state, State::Ready)
-            || under_hypotheses && instance.state.drawable_readiness()
-        {
+        if accepted {
             reports.summary.files_valid += 1;
         } else {
             reports.summary.files_blocked += 1;

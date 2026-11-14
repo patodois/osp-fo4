@@ -6,7 +6,7 @@ use fo4_plugin::{
     typed::{CellKind, Refr, Store},
     FormKey,
 };
-use fo4_scene::{AssetKind, Base, Loader, PathPolicy, State};
+use fo4_scene::{AssetKind, Base, Loader, RuleLevel, State};
 use fo4_vfs::Vfs;
 use serde::Serialize;
 use std::collections::{BTreeMap, BTreeSet};
@@ -15,6 +15,8 @@ pub struct TypeCounts {
     pub attempted: u64,
     pub ready: u64,
     pub under_hypotheses: BTreeMap<String, ReadinessCounts>,
+    /// Ready with registered rules that are all supported by measurement.
+    pub measured: BTreeMap<String, ReadinessCounts>,
     pub blocked: u64,
     pub failed: u64,
     pub ready_references: u64,
@@ -50,12 +52,15 @@ pub struct Summary {
     pub selected_bases: Option<u64>,
     pub strict_drawable: ReadinessCounts,
     pub hypothesis_drawable: BTreeMap<String, ReadinessCounts>,
+    pub measured_drawable: BTreeMap<String, ReadinessCounts>,
     pub editor_markers: ReadinessCounts,
     pub strict_ready_editor_markers: ReadinessCounts,
     pub refused_families: BTreeMap<String, Cause>,
     pub attempted: u64,
     pub ready: u64,
     pub under_hypotheses: BTreeMap<String, ReadinessCounts>,
+    /// Ready with registered rules that are all supported by measurement.
+    pub measured: BTreeMap<String, ReadinessCounts>,
     pub blocked: u64,
     pub failed: u64,
     pub complete_index: bool,
@@ -246,7 +251,7 @@ pub fn sweep(m: &Manifest, r: &mut Reports, selected: Option<&[FormKey]>) -> Res
         }
     }
     let cache = Budget::new(m.limits.max_memory);
-    let mut loader = Loader::new(&store, &v, &m.language, PathPolicy::UnderHypotheses, &cache);
+    let mut loader = Loader::new(&store, &v, &m.language, RuleLevel::Hypotheses, &cache);
     let mut components: BTreeMap<String, BTreeSet<Vec<u8>>> = BTreeMap::new();
     let mut cycles = BTreeSet::new();
     let mut all_models = BTreeSet::new();
@@ -532,6 +537,18 @@ pub fn sweep(m: &Manifest, r: &mut Reports, selected: Option<&[FormKey]>) -> Res
                                 .or_default()
                                 .include(refs)?;
                         }
+                        State::ReadyMeasured { rules } => {
+                            let set = rules.join("+");
+                            if !r.summary.base_census.measured_drawable.contains_key(&set) {
+                                aggregate.charge(set.len() as u64 + 256, "drawable bases", 0)?;
+                            }
+                            r.summary
+                                .base_census
+                                .measured_drawable
+                                .entry(set)
+                                .or_default()
+                                .include(refs)?;
+                        }
                         _ => {}
                     }
                 }
@@ -570,6 +587,25 @@ pub fn sweep(m: &Manifest, r: &mut Reports, selected: Option<&[FormKey]>) -> Res
                         "ready references",
                         0,
                     )?;
+                } else if let State::ReadyMeasured { rules } = &inspect.state {
+                    let set = rules.join("+");
+                    if !counts.measured.contains_key(&set) {
+                        aggregate.charge(set.len() as u64 + 256, "hypothesis census", 0)?;
+                    }
+                    counts
+                        .measured
+                        .entry(set.clone())
+                        .or_default()
+                        .include(refs)?;
+                    if !r.summary.base_census.measured.contains_key(&set) {
+                        aggregate.charge(set.len() as u64 + 256, "hypothesis census", 0)?;
+                    }
+                    r.summary
+                        .base_census
+                        .measured
+                        .entry(set)
+                        .or_default()
+                        .include(refs)?;
                 } else if let State::ReadyUnderHypotheses { hypotheses } = &inspect.state {
                     let set = hypotheses.join("+");
                     if !counts.under_hypotheses.contains_key(&set) {

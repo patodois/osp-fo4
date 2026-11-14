@@ -4,18 +4,21 @@
 #[path = "support/mod.rs"]
 mod files;
 use fo4_core::{Budget, Manifest};
-use fo4_scene::{camera::Camera, Loader, PathPolicy};
+use fo4_scene::{camera::Camera, Loader, RuleLevel};
 use std::path::Path;
 type AnyResult<T> = Result<T, Box<dyn std::error::Error>>;
 fn run() -> AnyResult<()> {
     let args: Vec<_> = std::env::args().skip(1).collect();
-    if args.len() != 5 {
-        return Err("usage: render MANIFEST DATA_DIRECTORY CELL_EDITOR_ID build/OUTPUT --under-hypotheses|--strict".into());
+    if !(4..=5).contains(&args.len()) {
+        return Err("usage: render MANIFEST DATA_DIRECTORY CELL_EDITOR_ID build/OUTPUT [--strict|--measured|--under-hypotheses]".into());
     }
-    let policy = match args[4].as_str() {
-        "--under-hypotheses" => PathPolicy::UnderHypotheses,
-        "--strict" => PathPolicy::Strict,
-        _ => return Err("ExplicitPathPolicyRequired".into()),
+    // Default: documented facts plus rules measured on the running game.
+    let level_name = args.get(4).map_or("--measured", String::as_str);
+    let policy = match level_name {
+        "--under-hypotheses" => RuleLevel::Hypotheses,
+        "--measured" => RuleLevel::Measured,
+        "--strict" => RuleLevel::Facts,
+        _ => return Err("UnknownRuleLevel".into()),
     };
     files::memory()?;
     if std::env::var_os("FO4_MIN_FREE_PERCENT").is_some() {
@@ -49,6 +52,7 @@ fn run() -> AnyResult<()> {
         fo4_render::draw::BuildOptions {
             max_texture_dimension: 256,
             max_texture_bytes: 96 << 20,
+            level: policy,
         },
         &budget,
     )?;
@@ -104,7 +108,7 @@ fn run() -> AnyResult<()> {
     files::output_bytes(&out.join("frame.png"), &frame.png(&budget)?)?;
     files::json(
         &out.join("summary.json"),
-        &serde_json::json!({"camera":camera,"camera_kind":"authored_bounds_overview","cell":scene.cell.key,"instances":built.instances,"omitted":built.omitted,"statistics":frame.statistics,"hypothesis_policy":args[4],"renderer":"CPU unlit diffuse, no runtime controllers or lighting","memory":budget.measurements()}),
+        &serde_json::json!({"camera":camera,"camera_kind":"authored_bounds_overview","cell":scene.cell.key,"instances":built.instances,"omitted":built.omitted,"statistics":frame.statistics,"hypothesis_policy":level_name,"renderer":"CPU unlit diffuse, no runtime controllers or lighting","memory":budget.measurements()}),
     )?;
     println!("{}", out.join("frame.png").display());
     Ok(())

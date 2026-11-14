@@ -217,7 +217,7 @@ pub fn resolve_with(
     c: Citation,
     raw: &[u8],
     v: &fo4_vfs::Vfs,
-    policy: crate::PathPolicy,
+    policy: crate::RuleLevel,
     b: &Budget,
 ) -> Result<ResolvedPath> {
     fo4_core::limit(raw.len() as u64, v.limits().max_string, "citation path", 0)?;
@@ -232,7 +232,7 @@ pub fn resolve_with(
         Err(e) if e.code == "RejectedVfsPath" => e,
         Err(e) => return Err(e),
     };
-    if policy == crate::PathPolicy::Strict {
+    if policy == crate::RuleLevel::Facts {
         return Err(original);
     }
     let proposal = match candidate(c, raw, b) {
@@ -247,6 +247,14 @@ pub fn resolve_with(
         }
         Err(_) => return Err(original),
     };
+    if policy == crate::RuleLevel::Measured
+        && !proposal
+            .hypotheses
+            .iter()
+            .all(|h| crate::hypotheses::status(h) == Some(crate::hypotheses::Status::Supported))
+    {
+        return Err(original);
+    }
     // No basename search, arbitrary disk access, or fallback to a shadowed candidate.
     if v.winner_bytes(&proposal.key).is_err() {
         return Err(original);

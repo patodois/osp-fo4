@@ -27,7 +27,8 @@ use std::{
 
 #[derive(Debug)]
 pub struct Options {
-    pub under_hypotheses: bool,
+    /// Which rules beyond documented facts `check-cell` accepts.
+    pub level: fo4_scene::RuleLevel,
     pub overlay_plugin: Option<PathBuf>,
     pub command: String,
     pub manifest: PathBuf,
@@ -44,7 +45,7 @@ impl Options {
             let manifest = args.next().ok_or_else(usage)?.into();
             let path = Some(args.next().ok_or_else(usage)?);
             let mut out = PathBuf::from("reports/check-cell");
-            let mut under_hypotheses = false;
+            let mut level = None;
             let mut overlay_plugin = None;
             let mut out_seen = false;
             while let Some(arg) = args.next() {
@@ -56,12 +57,15 @@ impl Options {
                     "--overlay-plugin" if overlay_plugin.is_none() => {
                         overlay_plugin = Some(PathBuf::from(args.next().ok_or_else(usage)?))
                     }
-                    "--under-hypotheses" if !under_hypotheses => under_hypotheses = true,
+                    "--under-hypotheses" if level.is_none() => {
+                        level = Some(fo4_scene::RuleLevel::Hypotheses)
+                    }
+                    "--strict" if level.is_none() => level = Some(fo4_scene::RuleLevel::Facts),
                     _ => return Err(usage()),
                 }
             }
             return Ok(Self {
-                under_hypotheses,
+                level: level.unwrap_or(fo4_scene::RuleLevel::Measured),
                 overlay_plugin,
                 command,
                 manifest,
@@ -136,7 +140,7 @@ impl Options {
             return Err(usage());
         }
         Ok(Self {
-            under_hypotheses: false,
+            level: fo4_scene::RuleLevel::Measured,
             overlay_plugin: None,
             command,
             items,
@@ -148,7 +152,7 @@ impl Options {
     }
 }
 fn usage() -> Error {
-    Error::new("Usage","CLI",0,"inventory|resolve|sweep --manifest PROFILE.json --out DIR [--scope archives|records|nif|materials|textures|cells|bases|shader-citations|unread|paths|roots] [--all|--path ASSET] [--items]; check-cell PROFILE.json EditorID [--out DIR] [--under-hypotheses] [--overlay-plugin FILE]","invalid or missing argument")
+    Error::new("Usage","CLI",0,"inventory|resolve|sweep --manifest PROFILE.json --out DIR [--scope archives|records|nif|materials|textures|cells|bases|shader-citations|unread|paths|roots] [--all|--path ASSET] [--items]; check-cell PROFILE.json EditorID [--out DIR] [--strict|--under-hypotheses] [--overlay-plugin FILE]","invalid or missing argument")
 }
 #[derive(Default, Serialize)]
 pub struct Summary {
@@ -171,6 +175,8 @@ pub struct Summary {
     pub unread: cell_census::Unread,
     pub schema: u32,
     pub under_hypotheses: bool,
+    /// Facts only, facts plus measured rules (default), or pending hypotheses too.
+    pub rule_level: fo4_scene::RuleLevel,
     pub overlay_plugin: Option<PathBuf>,
     pub command: String,
     pub scope: Option<String>,
@@ -547,7 +553,8 @@ impl Reports {
                 schema: 3,
                 max_report_bytes: m.limits.max_report_bytes,
                 archive_invalidation: m.archive_invalidation.clone(),
-                under_hypotheses: o.under_hypotheses,
+                under_hypotheses: o.level == fo4_scene::RuleLevel::Hypotheses,
+                rule_level: o.level,
                 overlay_plugin: o.overlay_plugin.clone(),
                 command: o.command.clone(),
                 scope: o.scope.clone(),
@@ -894,7 +901,7 @@ fn run_selected(o: &Options, keys: Option<&[fo4_plugin::FormKey]>) -> Result<u8>
             &m,
             o.path.as_deref().ok_or_else(usage)?,
             &mut r,
-            o.under_hypotheses,
+            o.level,
             o.overlay_plugin.as_deref(),
         ),
         "sweep" => match o.scope.as_deref() {

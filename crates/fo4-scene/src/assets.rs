@@ -84,7 +84,7 @@ pub enum DecodedAsset<'a> {
 }
 pub struct Assets<'a> {
     pub nodes: Vec<Asset>,
-    pub path_policy: crate::PathPolicy,
+    pub path_policy: crate::RuleLevel,
     index: HashMap<Vec<u8>, usize>,
     vfs: &'a Vfs,
     allocation: Budget,
@@ -93,9 +93,9 @@ pub struct Assets<'a> {
 }
 impl<'a> Assets<'a> {
     pub fn new(vfs: &'a Vfs, b: &Budget) -> Self {
-        Self::with_policy(vfs, b, crate::PathPolicy::Strict)
+        Self::with_policy(vfs, b, crate::RuleLevel::Facts)
     }
-    pub fn with_policy(vfs: &'a Vfs, b: &Budget, path_policy: crate::PathPolicy) -> Self {
+    pub fn with_policy(vfs: &'a Vfs, b: &Budget, path_policy: crate::RuleLevel) -> Self {
         Self {
             path_policy,
             nodes: Vec::new(),

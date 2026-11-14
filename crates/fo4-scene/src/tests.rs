@@ -129,7 +129,7 @@ fn cell_by_id_transform_origin_visibility_and_exclusions() {
     let store = Store::open(&f.manifest, &index).unwrap();
     let v = Vfs::mount(&f.manifest, &Budget::new(8 << 20)).unwrap();
     let cache = Budget::new(8 << 20);
-    let mut loader = Loader::new(&store, &v, "english", PathPolicy::Strict, &cache);
+    let mut loader = Loader::new(&store, &v, "english", RuleLevel::Facts, &cache);
     let b = Budget::new(8 << 20);
     let scene = loader.by_editor_id("SyntheticRoom", &b).unwrap();
     assert_eq!(scene.name.as_deref(), Some("Room Name"));
@@ -141,7 +141,8 @@ fn cell_by_id_transform_origin_visibility_and_exclusions() {
     assert_eq!(scene.visibility.precombine.len(), 1);
     let inst = &scene.instances[0];
     assert!(
-        matches!(inst.state, State::ReadyUnderHypotheses { ref hypotheses } if hypotheses == &[crate::hypotheses::ROTATION])
+        inst.state.ready_at(crate::RuleLevel::Hypotheses)
+            && inst.state.hypotheses() == [crate::hypotheses::ROTATION]
     );
     assert_eq!(
         inst.reference.data.transform,
@@ -165,7 +166,7 @@ fn reached_unknown_and_runtime_are_named_and_budgeted() {
         &store,
         &v,
         "english",
-        PathPolicy::Strict,
+        RuleLevel::Facts,
         &Budget::new(8 << 20),
     );
     let s = loader
@@ -383,7 +384,7 @@ fn scol_parts_swaps_and_explicit_texture_set_keep_their_records() {
         &store,
         &v,
         "english",
-        PathPolicy::Strict,
+        RuleLevel::Facts,
         &Budget::new(8 << 20),
     );
     let b = Budget::new(8 << 20);
@@ -462,7 +463,7 @@ fn deleted_lighting_template_is_retained_but_not_certified() {
         &store,
         &v,
         "english",
-        PathPolicy::Strict,
+        RuleLevel::Facts,
         &Budget::new(8 << 20),
     );
     let scene = loader
@@ -506,7 +507,7 @@ fn cell_causes_are_separate_from_own_instance_readiness() {
     let store = Store::open(&f.manifest, &Budget::new(8 << 20)).unwrap();
     let v = Vfs::mount(&f.manifest, &Budget::new(8 << 20)).unwrap();
     let cache = Budget::new(8 << 20);
-    let mut loader = Loader::new(&store, &v, "english", PathPolicy::Strict, &cache);
+    let mut loader = Loader::new(&store, &v, "english", RuleLevel::Facts, &cache);
     let scene = loader
         .by_editor_id("SyntheticRoom", &Budget::new(8 << 20))
         .unwrap();
@@ -516,7 +517,10 @@ fn cell_causes_are_separate_from_own_instance_readiness() {
         .iter()
         .all(|e| e.code == "UnverifiedEulerRotation"));
     assert!(
-        matches!(scene.instances[0].state, State::ReadyUnderHypotheses { ref hypotheses } if hypotheses == &[crate::hypotheses::ROTATION])
+        scene.instances[0]
+            .state
+            .ready_at(crate::RuleLevel::Hypotheses)
+            && scene.instances[0].state.hypotheses() == [crate::hypotheses::ROTATION]
     );
 }
 #[test]
@@ -525,7 +529,7 @@ fn documented_audio_stays_raw_and_does_not_block_the_frame() {
     let store = Store::open(&f.manifest, &Budget::new(8 << 20)).unwrap();
     let v = Vfs::mount(&f.manifest, &Budget::new(8 << 20)).unwrap();
     let cache = Budget::new(8 << 20);
-    let mut loader = Loader::new(&store, &v, "english", PathPolicy::Strict, &cache);
+    let mut loader = Loader::new(&store, &v, "english", RuleLevel::Facts, &cache);
     let scene = loader
         .by_editor_id("SyntheticRoom", &Budget::new(8 << 20))
         .unwrap();
@@ -538,7 +542,10 @@ fn documented_audio_stays_raw_and_does_not_block_the_frame() {
         .any(|s| s.signature == *b"XCAS"));
     assert!(scene.diagnostics.is_empty());
     assert!(
-        matches!(scene.instances[0].state, State::ReadyUnderHypotheses { ref hypotheses } if hypotheses == &[crate::hypotheses::ROTATION])
+        scene.instances[0]
+            .state
+            .ready_at(crate::RuleLevel::Hypotheses)
+            && scene.instances[0].state.hypotheses() == [crate::hypotheses::ROTATION]
     );
 }
 
@@ -738,7 +745,7 @@ fn new_visible_types_keep_their_models_and_audio_markers_are_outside() {
         &store,
         &v,
         "english",
-        PathPolicy::Strict,
+        RuleLevel::Facts,
         &Budget::new(8 << 20),
     );
     for j in 0..types.len() {
@@ -830,7 +837,7 @@ fn misc_preview_and_keywords_stay_raw_without_blocking_its_model() {
         &store,
         &v,
         "english",
-        PathPolicy::Strict,
+        RuleLevel::Facts,
         &Budget::new(8 << 20),
     );
     let inspect = loader
@@ -994,7 +1001,7 @@ fn explicit_overlay_and_marker_visibility_keep_data_readiness_separate() {
     assert_eq!(store.order().headers().len(), 2);
     let v = Vfs::mount(&f.manifest, &Budget::new(8 << 20)).unwrap();
     let cache = Budget::new(8 << 20);
-    let mut l = Loader::new(&store, &v, "english", PathPolicy::Strict, &cache);
+    let mut l = Loader::new(&store, &v, "english", RuleLevel::Facts, &cache);
     let s = l
         .by_editor_id("SyntheticRoom", &Budget::new(8 << 20))
         .unwrap();
@@ -1002,7 +1009,8 @@ fn explicit_overlay_and_marker_visibility_keep_data_readiness_separate() {
     assert!(i.editor_marker);
     assert_eq!(i.visibility_hypotheses, [crate::hypotheses::MARKER]);
     assert!(
-        matches!(&i.state,State::ReadyUnderHypotheses{hypotheses} if hypotheses==&[crate::hypotheses::MODT,crate::hypotheses::ROTATION])
+        i.state.ready_at(crate::RuleLevel::Hypotheses)
+            && i.state.hypotheses() == [crate::hypotheses::MODT, crate::hypotheses::ROTATION]
     );
     assert!(i.blockers.iter().any(|e| e.found.contains("STAT.MODT")));
     assert_eq!(
@@ -1040,7 +1048,7 @@ fn absent_scale_stays_absent_and_is_only_usable_under_its_hypothesis() {
     let store = Store::open(&f.manifest, &Budget::new(8 << 20)).unwrap();
     let v = Vfs::mount(&f.manifest, &Budget::new(8 << 20)).unwrap();
     let cache = Budget::new(8 << 20);
-    let mut l = Loader::new(&store, &v, "english", PathPolicy::Strict, &cache);
+    let mut l = Loader::new(&store, &v, "english", RuleLevel::Facts, &cache);
     let s = l
         .by_editor_id("SyntheticRoom", &Budget::new(8 << 20))
         .unwrap();
@@ -1051,7 +1059,8 @@ fn absent_scale_stays_absent_and_is_only_usable_under_its_hypothesis() {
         .iter()
         .any(|e| e.code == "MissingDocumentedReferenceScale"));
     assert!(
-        matches!(&i.state,State::ReadyUnderHypotheses{hypotheses} if hypotheses==&[crate::hypotheses::SCALE,crate::hypotheses::ROTATION])
+        i.state.ready_at(crate::RuleLevel::Hypotheses)
+            && i.state.hypotheses() == [crate::hypotheses::SCALE, crate::hypotheses::ROTATION]
     );
     // Coverage never replaces the raw Option with 1.
     let e = i
@@ -1111,8 +1120,8 @@ fn path_hypotheses_require_a_unique_existing_winner_and_preserve_strictness() {
             vec![hypotheses::PATH_STRIP, hypotheses::PATH_ROOT],
         ),
     ] {
-        assert!(resolve_with(c, raw, &v, PathPolicy::Strict, &b).is_err());
-        let r = resolve_with(c, raw, &v, PathPolicy::UnderHypotheses, &b).unwrap();
+        assert!(resolve_with(c, raw, &v, RuleLevel::Facts, &b).is_err());
+        let r = resolve_with(c, raw, &v, RuleLevel::Hypotheses, &b).unwrap();
         assert_eq!(r.key, key);
         assert_eq!(r.hypotheses, hs);
         assert_eq!(
@@ -1120,10 +1129,8 @@ fn path_hypotheses_require_a_unique_existing_winner_and_preserve_strictness() {
             "RejectedVfsPath"
         );
         let errors = r.diagnostics("synthetic", 17, &b).unwrap();
-        assert!(matches!(
-            hypotheses::classify(&errors, false, &b).unwrap(),
-            State::ReadyUnderHypotheses { .. }
-        ));
+        let state = hypotheses::classify(&errors, false, &b).unwrap();
+        assert!(!state.hypotheses().is_empty() && !state.ready_at(crate::RuleLevel::Facts));
     }
     for raw in [
         b"missing.dds".as_slice(),
@@ -1134,14 +1141,7 @@ fn path_hypotheses_require_a_unique_existing_winner_and_preserve_strictness() {
         b"/a.dds",
         b"materials/a.dds",
     ] {
-        assert!(resolve_with(
-            Citation::NifTexture,
-            raw,
-            &v,
-            PathPolicy::UnderHypotheses,
-            &b
-        )
-        .is_err());
+        assert!(resolve_with(Citation::NifTexture, raw, &v, RuleLevel::Hypotheses, &b).is_err());
     }
     assert!(candidate(Citation::NifTexture, b"a.dds", &Budget::new(0)).is_err());
 }
@@ -1175,13 +1175,13 @@ fn asset_cache_reset_preserves_explicit_path_hypotheses_and_strict_refusal() {
     let store = Store::open(&f.manifest, &b).unwrap();
     let vfs = Vfs::mount(&f.manifest, &b).unwrap();
     let raw = b"C:\\Build\\Data\\meshes\\a.nif";
-    for policy in [PathPolicy::Strict, PathPolicy::UnderHypotheses] {
+    for policy in [RuleLevel::Facts, RuleLevel::Hypotheses] {
         let mut loader = Loader::new(&store, &vfs, "english", policy, &b);
         for _ in 0..3 {
             let resolved = loader
                 .assets
                 .resolve_path(paths::Citation::RecordModel, raw, &b);
-            if policy == PathPolicy::Strict {
+            if policy == RuleLevel::Facts {
                 assert!(resolved.is_err());
             } else {
                 let resolved = resolved.unwrap();
@@ -1199,19 +1199,14 @@ fn data_relative_path_is_explicit_unique_and_strict_stays_rejected() {
     let b = Budget::new(8 << 20);
     let v = Vfs::mount(&f.manifest, &b).unwrap();
     let raw = b"DaTa\\Meshes\\a.nif";
-    assert!(paths::resolve_with(
-        paths::Citation::RecordModel,
-        raw,
-        &v,
-        PathPolicy::Strict,
-        &b
-    )
-    .is_err());
+    assert!(
+        paths::resolve_with(paths::Citation::RecordModel, raw, &v, RuleLevel::Facts, &b).is_err()
+    );
     let r = paths::resolve_with(
         paths::Citation::RecordModel,
         raw,
         &v,
-        PathPolicy::UnderHypotheses,
+        RuleLevel::Hypotheses,
         &b,
     )
     .unwrap();
@@ -1230,7 +1225,7 @@ fn data_relative_path_is_explicit_unique_and_strict_stays_rejected() {
             paths::Citation::RecordModel,
             raw,
             &v,
-            PathPolicy::UnderHypotheses,
+            RuleLevel::Hypotheses,
             &b
         )
         .is_err());
@@ -1254,7 +1249,7 @@ fn shared_model_without_bit_does_not_inherit_marker_visibility() {
     let store = Store::open(&f.manifest, &b).unwrap();
     assert_eq!(store.marker_models, [b"a.nif".to_vec()]);
     let v = Vfs::mount(&f.manifest, &b).unwrap();
-    let mut loader = Loader::new(&store, &v, "english", PathPolicy::Strict, &b);
+    let mut loader = Loader::new(&store, &v, "english", RuleLevel::Facts, &b);
     let ordinary = loader
         .inspect_base(
             &FormKey {
@@ -1314,7 +1309,7 @@ fn placed_lights_expose_data_and_keep_unknown_type_and_modifiers() {
             &store,
             &v,
             "english",
-            PathPolicy::Strict,
+            RuleLevel::Facts,
             &Budget::new(8 << 20),
         );
         let scene = loader

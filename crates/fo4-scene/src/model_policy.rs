@@ -33,13 +33,13 @@ pub enum MaterialStatus {
     Unknown,
 }
 pub fn material_status(n: &Nif<'_>, index: usize, v: &Vfs, b: &Budget) -> Result<MaterialStatus> {
-    material_status_with(n, index, v, crate::PathPolicy::Strict, b)
+    material_status_with(n, index, v, crate::RuleLevel::Facts, b)
 }
 fn material_status_with(
     n: &Nif<'_>,
     index: usize,
     v: &Vfs,
-    policy: crate::PathPolicy,
+    policy: crate::RuleLevel,
     b: &Budget,
 ) -> Result<MaterialStatus> {
     let Some(data) = &n.blocks[index].decoded else {
@@ -90,12 +90,12 @@ pub struct ModelPolicy {
 }
 impl ModelPolicy {
     pub fn inspect(n: &Nif<'_>, v: &Vfs, b: &Budget) -> Result<Self> {
-        Self::inspect_with(n, v, crate::PathPolicy::Strict, b)
+        Self::inspect_with(n, v, crate::RuleLevel::Facts, b)
     }
     pub fn inspect_with(
         n: &Nif<'_>,
         v: &Vfs,
-        policy: crate::PathPolicy,
+        policy: crate::RuleLevel,
         b: &Budget,
     ) -> Result<Self> {
         let mut p = Self {
