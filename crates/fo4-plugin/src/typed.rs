@@ -371,6 +371,11 @@ macro_rules! model_type {
         }
     };
 }
+/// Record types whose typed view is only their common fields.
+pub const MODEL_TYPES: [[u8; 4]; 18] = [
+    *b"STAT", *b"MSTT", *b"ACTI", *b"DOOR", *b"FURN", *b"MISC", *b"CONT", *b"ALCH", *b"BOOK",
+    *b"AMMO", *b"KEYM", *b"NOTE", *b"FLOR", *b"TERM", *b"TACT", *b"IDLM", *b"SOUN", *b"ASPC",
+];
 model_type!(Stat, b"STAT");
 model_type!(Mstt, b"MSTT");
 model_type!(Acti, b"ACTI");
@@ -1092,15 +1097,38 @@ impl Store {
         Ok(Some(record))
     }
     pub fn get<T: Typed>(&self, key: &FormKey, b: &Budget) -> Result<Option<Loaded<T>>> {
+        self.load(key, T::SIGNATURE, b, T::decode)
+    }
+    /// The common fields of a winning record of the given type, for record types
+    /// whose typed view is exactly `Common` (see `MODEL_TYPES`).
+    pub fn get_common(
+        &self,
+        key: &FormKey,
+        signature: [u8; 4],
+        b: &Budget,
+    ) -> Result<Option<Loaded<Common>>> {
+        self.load(key, signature, b, |d| {
+            let mut common = d.common()?;
+            d.finish(&mut common)?;
+            Ok(common)
+        })
+    }
+    fn load<D>(
+        &self,
+        key: &FormKey,
+        signature: [u8; 4],
+        b: &Budget,
+        decode: impl FnOnce(&mut Decoder<'_>) -> Result<D>,
+    ) -> Result<Option<Loaded<D>>> {
         let Some(w) = self.overrides.winner(key) else {
             return Ok(None);
         };
-        if w.signature != T::SIGNATURE {
+        if w.signature != signature {
             return Err(Error::new(
                 "RecordTypeMismatch",
                 &self.order.headers()[w.plugin].source.file,
                 w.offset,
-                String::from_utf8_lossy(&T::SIGNATURE),
+                String::from_utf8_lossy(&signature),
                 String::from_utf8_lossy(&w.signature),
             ));
         }
@@ -1148,7 +1176,7 @@ impl Store {
             localized: self.order.headers()[w.plugin].flags & crate::LOCALIZED != 0,
             limits: &self.limits,
         };
-        let data = T::decode(&mut d).map_err(|mut e| {
+        let data = decode(&mut d).map_err(|mut e| {
             if record.payload_is_decompressed
                 && e.source.decompressed_offset.is_none()
                 && (e.source.offset != record.source.offset

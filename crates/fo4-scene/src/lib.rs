@@ -583,77 +583,9 @@ impl<'a> Loader<'a> {
                 let v = required(self.plugins.get::<Ligh>(key, b)?, key)?;
                 (v.record, v.data.common, Vec::new(), v.data.light, None)
             }
-            b"STAT" => {
-                let v = required(self.plugins.get::<Stat>(key, b)?, key)?;
-                (v.record, v.data.common, Vec::new(), None, None)
-            }
-            b"MSTT" => {
-                let v = required(self.plugins.get::<Mstt>(key, b)?, key)?;
-                (v.record, v.data.common, Vec::new(), None, None)
-            }
-            b"ACTI" => {
-                let v = required(self.plugins.get::<Acti>(key, b)?, key)?;
-                (v.record, v.data.common, Vec::new(), None, None)
-            }
-            b"DOOR" => {
-                let v = required(self.plugins.get::<Door>(key, b)?, key)?;
-                (v.record, v.data.common, Vec::new(), None, None)
-            }
-            b"FURN" => {
-                let v = required(self.plugins.get::<Furn>(key, b)?, key)?;
-                (v.record, v.data.common, Vec::new(), None, None)
-            }
-            b"MISC" => {
-                let v = required(self.plugins.get::<Misc>(key, b)?, key)?;
-                (v.record, v.data.common, Vec::new(), None, None)
-            }
-            b"CONT" => {
-                let v = required(self.plugins.get::<Cont>(key, b)?, key)?;
-                (v.record, v.data.common, Vec::new(), None, None)
-            }
-            b"ALCH" => {
-                let v = required(self.plugins.get::<Alch>(key, b)?, key)?;
-                (v.record, v.data.common, Vec::new(), None, None)
-            }
-            b"BOOK" => {
-                let v = required(self.plugins.get::<Book>(key, b)?, key)?;
-                (v.record, v.data.common, Vec::new(), None, None)
-            }
-            b"AMMO" => {
-                let v = required(self.plugins.get::<Ammo>(key, b)?, key)?;
-                (v.record, v.data.common, Vec::new(), None, None)
-            }
-            b"KEYM" => {
-                let v = required(self.plugins.get::<Keym>(key, b)?, key)?;
-                (v.record, v.data.common, Vec::new(), None, None)
-            }
-            b"NOTE" => {
-                let v = required(self.plugins.get::<Note>(key, b)?, key)?;
-                (v.record, v.data.common, Vec::new(), None, None)
-            }
-            b"FLOR" => {
-                let v = required(self.plugins.get::<Flor>(key, b)?, key)?;
-                (v.record, v.data.common, Vec::new(), None, None)
-            }
-            b"TERM" => {
-                let v = required(self.plugins.get::<Term>(key, b)?, key)?;
-                (v.record, v.data.common, Vec::new(), None, None)
-            }
-            b"TACT" => {
-                let v = required(self.plugins.get::<Tact>(key, b)?, key)?;
-                (v.record, v.data.common, Vec::new(), None, None)
-            }
-            b"IDLM" => {
-                let v = required(self.plugins.get::<Idlm>(key, b)?, key)?;
-                (v.record, v.data.common, Vec::new(), None, None)
-            }
-            b"SOUN" => {
-                let v = required(self.plugins.get::<Soun>(key, b)?, key)?;
-                (v.record, v.data.common, Vec::new(), None, None)
-            }
-            b"ASPC" => {
-                let v = required(self.plugins.get::<Aspc>(key, b)?, key)?;
-                (v.record, v.data.common, Vec::new(), None, None)
+            s if MODEL_TYPES.contains(s) => {
+                let v = required(self.plugins.get_common(key, signature, b)?, key)?;
+                (v.record, v.data, Vec::new(), None, None)
             }
             _ => {
                 return Err(Error::new(
