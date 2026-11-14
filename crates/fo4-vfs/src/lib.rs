@@ -13,7 +13,11 @@ pub struct MountedArchive {
     pub path: String,
     pub source: Arc<FileSource>,
     pub index: GameArchive,
-    pub sha256: String,
+}
+/// A content digest the mount stamp refers to but has not computed yet.
+enum PendingDigest {
+    Archive(Arc<FileSource>),
+    Loose(PathBuf),
 }
 #[derive(Debug, Clone, Serialize)]
 #[serde(tag = "kind", rename_all = "lowercase")]
@@ -43,7 +47,10 @@ pub struct Vfs {
     pub archives: Vec<MountedArchive>,
     pub candidates: Vec<Candidate>,
     pub inactive_mounts: Vec<usize>,
-    pub fingerprint: String,
+    /// Mount stamp with zeroed 64-byte slots for the content digests in `pending`.
+    stamp: Vec<u8>,
+    pending: Vec<(usize, PendingDigest)>,
+    fingerprint: std::cell::OnceCell<String>,
     limits: Limits,
 }
 impl Vfs {
@@ -60,7 +67,9 @@ impl Vfs {
             archives: Vec::new(),
             candidates: Vec::new(),
             inactive_mounts: Vec::new(),
-            fingerprint: String::new(),
+            stamp: Vec::new(),
+            pending: Vec::new(),
+            fingerprint: std::cell::OnceCell::new(),
             limits: l.clone(),
             allocation: b.child(),
         };
@@ -96,14 +105,16 @@ impl Vfs {
                     let archive_allocation = b.child();
                     let attempt = (|| -> Result<_> {
                         let source = Arc::new(FileSource::open(&within(&m.root, path)?)?);
-                        let sha256 = digest(source.as_ref())?;
                         append(&mut stamp, path.as_bytes(), b)?;
-                        append(&mut stamp, sha256.as_bytes(), b)?;
+                        let slot = append_digest_slot(&mut stamp, b)?;
+                        b.reserve(&mut v.pending, 1, path, 0)?;
+                        v.pending
+                            .push((slot, PendingDigest::Archive(Arc::clone(&source))));
                         let index =
                             GameArchive::read(m.game, source.as_ref(), l, &archive_allocation)?;
-                        Ok((source, index, sha256))
+                        Ok((source, index))
                     })();
-                    let (source, index, sha256) = match attempt {
+                    let (source, index) = match attempt {
                         Ok(value) => value,
                         Err(error) => {
                             drop(archive_allocation);
@@ -160,7 +171,6 @@ impl Vfs {
                         path: path.clone(),
                         source,
                         index,
-                        sha256,
                     });
                 }
                 Mount::Loose { base, files, .. } => {
@@ -179,15 +189,18 @@ impl Vfs {
                     b.reserve(&mut v.candidates, files.len(), "manifest", 0)?;
                     for path in files {
                         let resolved = within(&layer_root, path)?;
-                        let source = FileSource::open(&resolved)?;
-                        let hash = digest(&source)?;
+                        // Opening validates the declared file now; its bytes are hashed on demand.
+                        FileSource::open(&resolved)?;
                         append(&mut stamp, path.as_bytes(), b)?;
-                        append(&mut stamp, hash.as_bytes(), b)?;
+                        let slot = append_digest_slot(&mut stamp, b)?;
                         b.charge(
-                            (path.len() * 2 + resolved.as_os_str().len()) as u64,
+                            (path.len() * 2 + resolved.as_os_str().len() * 2) as u64,
                             path,
                             0,
                         )?;
+                        b.reserve(&mut v.pending, 1, path, 0)?;
+                        v.pending
+                            .push((slot, PendingDigest::Loose(resolved.clone())));
                         v.candidates.push(Candidate {
                             key: Some(path_key_bytes(path.as_bytes())?),
                             blocked: false,
@@ -236,9 +249,30 @@ impl Vfs {
         if let Some(source) = &v.incomplete_source {
             append(&mut stamp, source.file.as_bytes(), b)?;
         }
-        v.fingerprint = digest_bytes(&stamp);
+        v.stamp = stamp;
         v.allocation = allocation;
         Ok(v)
+    }
+    /// SHA-256 over the mount stamp: game, invalidation, language, plugin names, mount
+    /// order and the content digest of every mounted archive and loose file.
+    ///
+    /// Hashing reads every mounted byte, so it runs on first use, not at mount time.
+    pub fn fingerprint(&self) -> Result<&str> {
+        if let Some(value) = self.fingerprint.get() {
+            return Ok(value);
+        }
+        let work = self.allocation.child();
+        let mut stamp = Vec::new();
+        work.reserve(&mut stamp, self.stamp.len(), "manifest", 0)?;
+        stamp.extend_from_slice(&self.stamp);
+        for (slot, pending) in &self.pending {
+            let hex = match pending {
+                PendingDigest::Archive(source) => digest(source.as_ref())?,
+                PendingDigest::Loose(path) => digest(&FileSource::open(path)?)?,
+            };
+            stamp[*slot..*slot + DIGEST_HEX].copy_from_slice(hex.as_bytes());
+        }
+        Ok(self.fingerprint.get_or_init(|| digest_bytes(&stamp)))
     }
     pub fn check_complete(&self) -> Result<()> {
         if self.incomplete {
@@ -339,7 +373,7 @@ impl Vfs {
     pub fn records_fingerprint(&self, plugins: &[(String, String)], b: &Budget) -> Result<String> {
         let mut stamp = Vec::new();
         append(&mut stamp, b"assets+plugins:8", b)?;
-        append(&mut stamp, self.fingerprint.as_bytes(), b)?;
+        append(&mut stamp, self.fingerprint()?.as_bytes(), b)?;
         for (name, hash) in plugins {
             append(&mut stamp, name.as_bytes(), b)?;
             append(&mut stamp, hash.as_bytes(), b)?;
@@ -452,6 +486,12 @@ impl Vfs {
     pub fn limits(&self) -> &Limits {
         &self.limits
     }
+}
+const DIGEST_HEX: usize = 64;
+/// Reserves a framed slot for a hex SHA-256 and returns the offset of its 64 bytes.
+fn append_digest_slot(v: &mut Vec<u8>, b: &Budget) -> Result<usize> {
+    append(v, &[0; DIGEST_HEX], b)?;
+    Ok(v.len() - DIGEST_HEX)
 }
 fn append(v: &mut Vec<u8>, bytes: &[u8], b: &Budget) -> Result<()> {
     let n = bytes

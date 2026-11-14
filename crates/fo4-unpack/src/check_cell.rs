@@ -17,7 +17,7 @@ pub fn run(
     }
     let vfs = Vfs::mount(m, &Budget::new(m.limits.max_vfs_memory))?;
     vfs.check_complete()?;
-    reports.summary.fingerprint = Some(vfs.fingerprint.clone());
+    reports.summary.fingerprint = Some(vfs.fingerprint()?.to_owned());
     let budget = Budget::new(m.limits.max_memory);
     let mut loader = Loader::new(
         &store,

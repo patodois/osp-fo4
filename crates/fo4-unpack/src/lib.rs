@@ -1090,7 +1090,7 @@ fn resolve(m: &Manifest, o: &Options, r: &mut Reports) -> Result<()> {
     for diagnostic in &v.diagnostics {
         r.error(diagnostic)?;
     }
-    r.summary.fingerprint = Some(v.fingerprint.clone());
+    r.summary.fingerprint = Some(v.fingerprint()?.to_owned());
     r.summary.fingerprint_scope = Some("assets".into());
     r.summary.inactive_mounts = v.inactive_mounts.len() as u64;
     if let Err(error) = v.check_complete() {

@@ -10,7 +10,7 @@ pub(super) fn sweep(m: &Manifest, r: &mut Reports, scope: &str) -> Result<()> {
     }
     v.check_complete()?;
     r.summary.vfs_memory = v.memory_used();
-    r.summary.fingerprint = Some(v.fingerprint.clone());
+    r.summary.fingerprint = Some(v.fingerprint()?.to_owned());
     r.summary.fingerprint_scope = Some("assets".into());
     let mut references = Census::new(m.limits.max_entries, m.limits.max_memory / 4);
     let mut pos = 0;

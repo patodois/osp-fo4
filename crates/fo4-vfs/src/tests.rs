@@ -80,7 +80,7 @@ fn two_archives_two_loose_layers_and_inversion() {
         v.read("meshes/a.bin", &Budget::new(1 << 20)).unwrap(),
         b"loose two"
     );
-    let before = v.fingerprint.clone();
+    let before = v.fingerprint().unwrap().to_owned();
     m.mounts[..2].reverse();
     m.mounts[2..].reverse();
     let w = Vfs::mount(&m, &Budget::new(1 << 20)).unwrap();
@@ -88,7 +88,7 @@ fn two_archives_two_loose_layers_and_inversion() {
         w.read("meshes/a.bin", &Budget::new(1 << 20)).unwrap(),
         b"loose one"
     );
-    assert_ne!(before, w.fingerprint);
+    assert_ne!(before, w.fingerprint().unwrap());
     assert_eq!(
         v.hash(&v.chain("meshes/a.bin").unwrap()[0]).unwrap(),
         digest_bytes(b"archive a")
@@ -172,9 +172,17 @@ fn loose_symlink_outside_root_is_rejected() {
 #[test]
 fn review_n8_asset_fingerprint_ignores_plugin_content() {
     let (m, _dir) = installation();
-    let first = Vfs::mount(&m, &Budget::new(1 << 20)).unwrap().fingerprint;
+    let first = Vfs::mount(&m, &Budget::new(1 << 20))
+        .unwrap()
+        .fingerprint()
+        .unwrap()
+        .to_owned();
     std::fs::write(m.root.join("A.esm"), b"changed plugin").unwrap();
-    let second = Vfs::mount(&m, &Budget::new(1 << 20)).unwrap().fingerprint;
+    let second = Vfs::mount(&m, &Budget::new(1 << 20))
+        .unwrap()
+        .fingerprint()
+        .unwrap()
+        .to_owned();
     assert_eq!(first, second);
 }
 #[test]
@@ -408,11 +416,48 @@ fn stage8_game_profile_is_part_of_asset_fingerprint() {
     let a = Vfs::mount(&m, &Budget::new(1 << 20)).unwrap();
     m.game = fo4_core::Game::SkyrimSe;
     let b = Vfs::mount(&m, &Budget::new(1 << 20)).unwrap();
-    assert_ne!(a.fingerprint, b.fingerprint);
+    assert_ne!(a.fingerprint().unwrap(), b.fingerprint().unwrap());
     assert_eq!(
         a.read("meshes/a.bin", &Budget::new(1 << 20)).unwrap(),
         b.read("meshes/a.bin", &Budget::new(1 << 20)).unwrap()
     );
     assert_eq!(m.game.creation_list(), "Skyrim.ccc");
     assert_eq!(m.game.fixed_masters().len(), 5);
+}
+
+#[test]
+fn deferred_fingerprint_equals_the_eagerly_assembled_stamp() {
+    fn frame(stamp: &mut Vec<u8>, bytes: &[u8]) {
+        stamp.extend_from_slice(&(bytes.len() as u64).to_le_bytes());
+        stamp.extend_from_slice(bytes);
+    }
+    let (m, _dir) = installation();
+    let file = |relative: &str| digest_bytes(&std::fs::read(m.root.join(relative)).unwrap());
+    let mut stamp = Vec::new();
+    stamp.extend_from_slice(b"bethesda-vfs:assets:8\0");
+    frame(&mut stamp, b"fallout4");
+    frame(&mut stamp, &[1]);
+    frame(&mut stamp, b"english");
+    frame(&mut stamp, b"A.esm");
+    for (layer, archive) in ["a.ba2", "b.ba2"].into_iter().enumerate() {
+        frame(&mut stamp, &layer.to_le_bytes());
+        frame(&mut stamp, archive.as_bytes());
+        frame(&mut stamp, file(archive).as_bytes());
+    }
+    for (layer, base) in [(2usize, "one"), (3, "two")] {
+        frame(&mut stamp, &layer.to_le_bytes());
+        frame(&mut stamp, base.as_bytes());
+        frame(&mut stamp, b"meshes/a.bin");
+        frame(&mut stamp, file(&format!("{base}/meshes/a.bin")).as_bytes());
+    }
+    frame(&mut stamp, &[0]);
+    let v = Vfs::mount(&m, &Budget::new(1 << 20)).unwrap();
+    assert_eq!(v.fingerprint().unwrap(), digest_bytes(&stamp));
+    // Cached: the same value without rereading, even after the bytes change on disk.
+    let first = v.fingerprint().unwrap().to_owned();
+    std::fs::write(m.root.join("two/meshes/a.bin"), b"loose 2!!").unwrap();
+    assert_eq!(v.fingerprint().unwrap(), first);
+    // A new mount sees the changed content.
+    let w = Vfs::mount(&m, &Budget::new(1 << 20)).unwrap();
+    assert_ne!(w.fingerprint().unwrap(), first);
 }

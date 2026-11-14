@@ -224,7 +224,7 @@ fn mount(m: &Manifest, r: &mut Reports) -> Result<Vfs> {
     }
     v.check_complete()?;
     r.summary.vfs_memory = v.memory_used();
-    r.summary.fingerprint = Some(v.fingerprint.clone());
+    r.summary.fingerprint = Some(v.fingerprint()?.to_owned());
     Ok(v)
 }
 pub fn cells(m: &Manifest, r: &mut Reports) -> Result<()> {

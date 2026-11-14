@@ -227,7 +227,7 @@ pub fn sweep(m: &Manifest, r: &mut Reports) -> Result<()> {
     r.items_enabled = true;
     let v = Vfs::mount(m, &Budget::new(m.limits.max_vfs_memory))?;
     v.check_complete()?;
-    r.summary.fingerprint = Some(v.fingerprint.clone());
+    r.summary.fingerprint = Some(v.fingerprint()?.to_owned());
     r.summary.fingerprint_scope = Some("assets".into());
     r.summary.vfs_memory = v.memory_used();
     let mut c = Census::new(m);

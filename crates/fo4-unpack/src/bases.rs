@@ -186,7 +186,7 @@ pub fn sweep(m: &Manifest, r: &mut Reports, selected: Option<&[FormKey]>) -> Res
         r.error(e)?;
     }
     v.check_complete()?;
-    r.summary.fingerprint = Some(v.fingerprint.clone());
+    r.summary.fingerprint = Some(v.fingerprint()?.to_owned());
     r.summary.vfs_memory = v.memory_used();
     let aggregate = Budget::new(m.limits.max_memory);
     let mut interior = BTreeSet::new();

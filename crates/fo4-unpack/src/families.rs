@@ -36,7 +36,7 @@ pub fn sweep(m: &Manifest, r: &mut Reports) -> Result<()> {
     }
     v.check_complete()?;
     r.summary.vfs_memory = v.memory_used();
-    r.summary.fingerprint = Some(v.fingerprint.clone());
+    r.summary.fingerprint = Some(v.fingerprint()?.to_owned());
     let aggregate = Budget::new(m.limits.max_memory);
     let mut distinct: BTreeMap<String, BTreeSet<Vec<u8>>> = BTreeMap::new();
     for chain in v.candidates.chunk_by(|a, b| a.key == b.key) {
