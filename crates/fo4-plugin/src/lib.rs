@@ -8,8 +8,8 @@ mod strings;
 pub mod typed;
 pub mod writer;
 use fo4_core::{
-    add, limit, range, read_bytes, zlib, Budget, Cursor, Error, Limits, ReadAt, Result,
-    SliceSource, SourceSpan,
+    add, limit, range, read_bytes_inside_operation, zlib, Budget, Cursor, Error, Limits, ReadAt,
+    Result, SliceSource, SourceSpan,
 };
 pub use semantics::{Field, Value, PHASE1_TYPES};
 use serde::Serialize;
@@ -157,7 +157,9 @@ impl Header {
         l: &Limits,
         b: &Budget,
     ) -> Result<Self> {
+        source.check_stable()?;
         let r = record_at(source, 0, source.len(), l, b)?;
+        source.check_stable()?;
         if r.signature != *b"TES4" || r.form_id != 0 || r.payload_is_decompressed {
             return Err(Error::new(
                 "InvalidPluginHeader",
@@ -353,6 +355,7 @@ pub(crate) fn zstring<'a>(data: &'a [u8], l: &Limits, file: &str, o: u64) -> Res
         )
     })
 }
+/// Reads one record. Callers check the source's stability around their operation.
 fn record_at(source: &dyn ReadAt, o: u64, end: u64, l: &Limits, b: &Budget) -> Result<Record> {
     let mut c = Cursor::at(source, o, end)?;
     let signature = c.take::<4>()?;
@@ -363,7 +366,7 @@ fn record_at(source: &dyn ReadAt, o: u64, end: u64, l: &Limits, b: &Budget) -> R
     let version = c.u16()?;
     let unknown = c.u16()?;
     range(c.pos, size, end, source.name())?;
-    let raw = read_bytes(source, c.pos, size, l, b)?;
+    let raw = read_bytes_inside_operation(source, c.pos, size, l, b)?;
     let compressed = flags & COMPRESSED != 0;
     let payload = if compressed {
         let s = SliceSource {
@@ -494,6 +497,8 @@ pub fn scan_bounded(
     b: &Budget,
     mut visit: impl FnMut(Record, &[Group], &Budget) -> Result<()>,
 ) -> Result<ScanStats> {
+    // One stability check around the whole scan, not two per record.
+    source.check_stable()?;
     let mut c = Cursor::at(source, h.end, source.len())?;
     let mut stack: Vec<Group> = Vec::new();
     let mut stats = ScanStats::default();
@@ -591,6 +596,7 @@ pub fn scan_bounded(
             "EOF",
         ));
     }
+    source.check_stable()?;
     stats.count_matches = stats.groups + stats.records == h.declared_records as u64;
     Ok(stats)
 }
@@ -1092,7 +1098,10 @@ impl Overrides {
                 source.name(),
             ));
         }
-        Ok(Some(record_at(*source, w.offset, source.len(), l, b)?))
+        source.check_stable()?;
+        let record = record_at(*source, w.offset, source.len(), l, b)?;
+        source.check_stable()?;
+        Ok(Some(record))
     }
     pub fn form_key(&self, key: u64, order: &LoadOrder) -> FormKey {
         FormKey {

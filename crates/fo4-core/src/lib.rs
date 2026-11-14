@@ -531,7 +531,10 @@ pub fn read_bytes(
     source.check_stable()?;
     Ok(bytes)
 }
-fn read_bytes_inside_operation(
+/// `read_bytes` without the stability checks. The caller brackets its whole
+/// operation with `ReadAt::check_stable`, once before the first read and once
+/// after the last, instead of paying two metadata lookups per read.
+pub fn read_bytes_inside_operation(
     source: &dyn ReadAt,
     offset: u64,
     size: u64,
