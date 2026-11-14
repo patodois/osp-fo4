@@ -3,3 +3,6 @@
 /build/
 /reports/
 *.local.toml
+
+# Private secondary Git directory used by a local workflow.
+/.progress-git/
