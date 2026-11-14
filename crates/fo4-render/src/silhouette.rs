@@ -213,7 +213,8 @@ fn opening(
     to_engine: &[f32],
     to_photo: &[f32],
 ) -> Result<OpeningAcceptance> {
-    let [x0, x1, y0, y1] = rect;
+    // Same convention as `persistent::opening`: [left, top, right, bottom], inclusive.
+    let [x0, y0, x1, y1] = rect;
     if x0 >= x1 || y0 >= y1 || x1 >= size[0] || y1 >= size[1] {
         return Err(err("InvalidAcceptanceRectangle", format!("{rect:?}")));
     }
@@ -538,5 +539,27 @@ mod tests {
             &Budget::new(0)
         )
         .is_err());
+    }
+}
+
+#[cfg(test)]
+mod opening_tests {
+    use super::*;
+    #[test]
+    fn opening_rectangle_is_left_top_right_bottom() {
+        let size = [8u32, 6];
+        let n = 48;
+        let near = vec![0.5f32; n];
+        let mut engine = vec![false; n];
+        // One engine edge pixel on the top side of the rectangle.
+        engine[2 * 8 + 3] = true;
+        // 6 columns by 3 rows: a non-square rectangle distinguishes the orders.
+        let a = opening([1, 2, 6, 4], size, &engine, &near, &near).unwrap();
+        assert_eq!(a.rectangle, [1, 2, 6, 4]);
+        assert_eq!(a.perimeter_pixels, 14);
+        assert_eq!(a.engine_edge_pixels_in_band, 1);
+        // Read as [x0, x1, y0, y1] these numbers would not even be ordered.
+        assert!(opening([1, 6, 2, 4], size, &engine, &near, &near).is_err());
+        assert!(opening([1, 2, 8, 4], size, &engine, &near, &near).is_err());
     }
 }

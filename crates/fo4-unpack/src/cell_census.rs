@@ -255,6 +255,7 @@ pub fn cells(m: &Manifest, r: &mut Reports) -> Result<()> {
     const CACHE_CELLS: u64 = 32;
     r.summary.cell_census.cache_batch_cells = CACHE_CELLS;
     let cache = Budget::new(m.limits.max_memory);
+    r.summary.rule_level = Some(RuleLevel::Facts);
     let mut loader = Loader::new(&store, &v, &m.language, RuleLevel::Facts, &cache);
     let mut batch_cells = 0;
     let mut renew = false;

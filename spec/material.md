@@ -1,6 +1,6 @@
 # BGSM/BGEM — port atribuído da MaterialLib (MIT)
 
-reviewed measurement decision autoriza expressamente a referência Material Editor para BGSM/BGEM,
+Decisão do projeto autoriza expressamente a referência Material Editor para BGSM/BGEM,
 com crédito. Essa decisão substitui a restrição da validação do leitor somente para este
 formato. O histórico da pesquisa da validação do leitor está em [material-research.md](material-research.md).
 Não é mais correto chamar `fo4-material` de sala limpa: é um **port atribuído
@@ -94,13 +94,13 @@ conserva o offset. Cadeias e classes são medidas, sem fabricar herança de shad
 
 ## validação do leitor — decisão do revisor e fatores crus
 
-reviewed measurement decision ativa `bgsm_self_wetness_template_stop_v1` exclusivamente no self-parent
+Decisão do projeto ativa `bgsm_self_wetness_template_stop_v1` exclusivamente no self-parent
 MaterialParent de comprimento um. Decisão do revisor: o fechamento é conjunto
 de arquivos; a aresta não adiciona bytes. Não é observação do consumo pelo motor.
 A cadeia/offset é conservada e a dependência de regra é exposta; ciclos maiores bloqueiam.
 
 `bgsm_blend_disabled_factors_ignored_v1`: enabled==0 não exige semântica dos fatores.
-Fonte da decisão: reviewed measurement decision §4. A tupla e alpha-test permanecem tipados na cena;
+Fonte da decisão: decisão do projeto §4. A tupla e alpha-test permanecem tipados na cena;
 mode é apenas conveniência. enabled!=0 usa causa contendo a tupla crua até haver
 fonte para a numeração. As tabelas NIF/Direct3D não provam a correspondência BGSM.
 Pesquisa em documentação pública CK/UESP/Beyond Skyrim não encontrou essa ligação;

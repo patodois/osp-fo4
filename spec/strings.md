@@ -24,7 +24,7 @@ Fontes dos codecs, consultadas somente como fatos de mapeamento:
 - https://www.unicode.org/Public/MAPPINGS/VENDORS/MICSFT/WINDOWS/CP1252.TXT — tabela pública de dados Microsoft/Unicode, CP1252 para Unicode: base para a tabela de 128 posições altas escrita no leitor. 0x81, 0x8D, 0x8F, 0x90 e 0x9D estão indefinidos e geram `InvalidStringEncoding`. ASCII é identidade; não há substituição desses cinco bytes por controles ou U+FFFD.
 - https://www.unicode.org/versions/Unicode17.0.0/core-spec/chapter-3/#G7404 — definição de UTF-8 e sequências bem formadas. Usamos `str::from_utf8` estrito da biblioteca padrão.
 
-Decisão explícita de decisão de medição revisada: `en` usa Windows-1252; os outros idiomas usam
+Decisão do projeto: `en` usa Windows-1252; os outros idiomas usam
 UTF-8 estrito conforme a tabela do xTranslator. `english` é alias de configuração
 para `en`, mantido para os manifests sintéticos anteriores. Na validação do leitor, tenta o nome
 explicitamente solicitado `_english` e, se a chave não existir, o alias `_en`,
@@ -55,7 +55,7 @@ FULL via STRINGS; diálogo fora da fase 1 permanece envelope.
 ## Observações de bytes por idioma (validação do leitor)
 
 - https://www.unicode.org/faq/utf_bom.html — seção “Byte Order Mark (BOM) FAQ”, tabela de bytes por encoding: `EF BB BF` é a representação UTF-8 de U+FEFF. Esta é a assinatura observada; não autoriza remover bytes ou trocar o codec.
-- decisão de medição revisada/R5 e Observação exigem contadores, mantendo a decisão de codificação anterior.
+- decisão do projeto/R5 e Observação exigem contadores, mantendo a decisão de codificação anterior.
 
 Cada tabela conta durante sua única indexação, por entrada do diretório com
 fronteiras de texto válidas (comprimento, NUL final, sem NUL embutido), **antes**
@@ -85,7 +85,7 @@ liberadas, sem cache de todas as traduções. Não há descoberta de plugins ou
 inferência de load order. `strings_by_language` inclui `tables`; os decoded e
 undecoded referem-se a entradas das tabelas, não ao número de FULL resolvidos.
 Idiomas observados fora da tabela histórica do xTranslator seguem a decisão
-explícita de decisão de medição revisada para os demais tokens: UTF-8 estrito, sem palpite adicional.
+explícita do projeto para os demais tokens: UTF-8 estrito, sem palpite adicional.
 
 ## Skyrim SE (validação do leitor)
 

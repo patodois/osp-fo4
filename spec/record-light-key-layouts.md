@@ -1,6 +1,6 @@
 # Fontes e limites — validação do leitor
 
-decisão de medição revisada contém apenas estes novos vereditos: bit IsMarker supported com
+Decisão do projeto contém apenas estes novos vereditos: bit IsMarker supported com
 uma amostra STAT; ocultação por nome pendente; MODT pendente com evidência de
 baixo poder. Os números/analysis dos pacotes não são usados para fechar hipótese.
 Separar a antiga regra combinada em bit e nome não introduz comportamento novo.

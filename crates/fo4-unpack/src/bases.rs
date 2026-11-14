@@ -251,6 +251,8 @@ pub fn sweep(m: &Manifest, r: &mut Reports, selected: Option<&[FormKey]>) -> Res
         }
     }
     let cache = Budget::new(m.limits.max_memory);
+    // Classify at the widest level; the summary buckets separate facts, measured and pending.
+    r.summary.rule_level = Some(RuleLevel::Hypotheses);
     let mut loader = Loader::new(&store, &v, &m.language, RuleLevel::Hypotheses, &cache);
     let mut components: BTreeMap<String, BTreeSet<Vec<u8>>> = BTreeMap::new();
     let mut cycles = BTreeSet::new();

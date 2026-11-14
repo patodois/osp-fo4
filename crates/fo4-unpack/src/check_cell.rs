@@ -11,6 +11,7 @@ pub fn run(
     overlay: Option<&std::path::Path>,
 ) -> Result<()> {
     reports.items_enabled = true;
+    reports.summary.rule_level = Some(level);
     let store = Store::open_overlay(m, overlay, &Budget::new(m.limits.max_override_memory))?;
     for error in &store.diagnostics {
         reports.error(error)?;
@@ -24,6 +25,19 @@ pub fn run(
     // The command's strict contract is instance readiness. CELL/LGTM causes
     // remain explicitly reported; they do not certify a renderer or lighting.
     reports.item(&serde_json::json!({"kind":"cell_context", "cell":scene.cell.key,"causes":scene.diagnostics,"deleted":scene.deleted,"disabled":scene.disabled,"exclusions":scene.exclusions}))?;
+    // A reference that could not be read is a failure of this check, not an
+    // exclusion by design like an unsupported placed record type.
+    for exclusion in scene
+        .exclusions
+        .iter()
+        .filter(|e| e.code == "UnreadableReference")
+    {
+        reports.summary.files_attempted += 1;
+        reports.summary.files_blocked += 1;
+        for error in &exclusion.diagnostics {
+            reports.error(error)?;
+        }
+    }
     for instance in &scene.instances {
         let accepted = instance.state.ready_at(level);
         let readiness_cause = (!accepted).then(|| {

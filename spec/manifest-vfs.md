@@ -1,6 +1,6 @@
 # Manifest e VFS: contrato explícito
 
-Fonte de requisitos: contrato explícito do projeto, seções 2.2/2.3/2.5, e decisão de medição revisada.
+Fonte de requisitos: contrato explícito do projeto, seções 2.2/2.3/2.5, e decisão do projeto.
 Não se pretende deduzir regras do executável. JSON estrito, raiz relativa ao
 manifest ou absoluta, idioma explícito, plugins em ordem de carga e mounts em
 prioridade explícita dentro de cada classe de recurso. Com archive invalidation
@@ -75,7 +75,7 @@ e exige tamanho/checksum/fim/consumo exatos; declaração alta não força aloca
 JSON de configuração tem teto de 1 MiB. Contas não são um medidor de RSS.
 
 - https://themidnightride.moddinglinked.com/lod.html : guia FO4, seção “BA2 Usage Information”: loose vence BA2 **com Archive Invalidation**. Não importamos descoberta/ordenação alfanumérica de archives: paths/ordem continuam entrada explícita.
-- decisão de medição revisada exige modelar essa condição: `archive_invalidation` é opcional, com `enabled` booleano e `origin`. Perfil artificial explícito usa `{"kind":"explicit_profile"}`. Perfil derivado de instalação deve registrar `{"kind":"ini","file":"Fallout4Custom.ini","line":7}` (linha começa em 1; arquivo não vazio). A origem é declarada pelo autor do perfil, preservada no summary; o leitor não descobre nem lê INIs. Declarar um mount loose não liga invalidação. Com campo ausente ou disabled, colisão loose/BA2 produz `UnsupportedMountRule` e nenhum winner; chaves sem colisão continuam consultáveis.
+- decisão do projeto exige modelar essa condição: `archive_invalidation` é opcional, com `enabled` booleano e `origin`. Perfil artificial explícito usa `{"kind":"explicit_profile"}`. Perfil derivado de instalação deve registrar `{"kind":"ini","file":"Fallout4Custom.ini","line":7}` (linha começa em 1; arquivo não vazio). A origem é declarada pelo autor do perfil, preservada no summary; o leitor não descobre nem lê INIs. Declarar um mount loose não liga invalidação. Com campo ausente ou disabled, colisão loose/BA2 produz `UnsupportedMountRule` e nenhum winner; chaves sem colisão continuam consultáveis.
 
 ## Integridade, fingerprint e relatórios (validação do leitor)
 
@@ -83,7 +83,7 @@ Candidato BA2 com diagnóstico continua no índice como `blocked`, na prioridade
 original. Topo bloqueado produz `WinnerUnsupported`, com archive, entrada e
 offset; nunca promove o perdedor. Nomes sem chave em bytes válida ficam preservados
 como candidatos sem chave, bloqueados e enumerados; **também tornam o VFS
-inteiro incompleto** (decisão de medição revisada/R4), pois seu nome utilizável é desconhecido.
+inteiro incompleto** (decisão do projeto/R4), pois seu nome utilizável é desconhecido.
 Falha estrutural/ausência de archive declarado tem o mesmo efeito:
 `chain`, `winner`, `read`, `read_candidate` e `hash` recusam com `VfsIncomplete`,
 pois os nomes faltantes são desconhecidos. `resolve` enumera os candidatos
@@ -114,7 +114,7 @@ novos diretórios intermediários, são recusados antes da criação. Identidade
 também cobrem aliases/firmlinks. Link quebrado ou erro de metadata é erro de I/O,
 sem adivinhar um destino alternativo.
 
-Limite explícito (decisão de medição revisada/Q1): as conferências e operações são por **caminho**,
+Limite explícito (decisão do projeto/Q1): as conferências e operações são por **caminho**,
 não relativas a descritores de diretório abertos. Quem puder escrever num
 ancestral de `--out` enquanto o comando roda pode, em tese, trocar componentes
 entre uma conferência e a operação seguinte e desviar a criação, inclusive para
@@ -139,7 +139,7 @@ não uma promessa de persistência contra queda de energia ou transação de tod
 a varredura. Use diretório novo por execução.
 
 As tags internas de fingerprint passam a `fo4-vfs:assets:7` e `assets+plugins:7`
-para invalidar chaves anteriores à identidade em bytes (decisão de medição revisada). O achado
+para invalidar chaves anteriores à identidade em bytes (decisão do projeto). O achado
 real em `Fallout4 - Voices.ba2`, build 24564252, está detalhado em spec/ba2.md:
 três nomes físicos com ED/E1 deixam de invalidar todo o VFS. API str usa os bytes
 UTF-8 do argumento, sem conversão implícita para CP1252; `chain_bytes`,

@@ -547,3 +547,33 @@ fn effect_color_is_perspective_correct_across_near_clipping() {
     assert_eq!(clipped.instances[2], 7);
     assert!((clipped.color[2][0] - full.color[2][0]).abs() < 1e-6);
 }
+
+#[test]
+fn snapshot_writer_refuses_what_the_reader_would_reject() {
+    let limits = Limits::default();
+    let budget = Budget::new(8 << 20);
+    for two_sided in [None, Some(0), Some(1)] {
+        let mut ok = list();
+        ok.draws[0].sidedness.material_two_sided = two_sided;
+        let mut bytes = Vec::new();
+        snapshot::write(&ok, &mut bytes, &limits).unwrap();
+        let parsed = snapshot::read(&bytes, &limits, &budget).unwrap();
+        assert_eq!(parsed.draws[0].sidedness.material_two_sided, two_sided);
+    }
+    for raw in [2u8, 254, 255] {
+        let mut bad = list();
+        bad.draws[0].sidedness.material_two_sided = Some(raw);
+        let mut bytes = Vec::new();
+        assert_eq!(
+            snapshot::write(&bad, &mut bytes, &limits).unwrap_err().code,
+            "SnapshotSidedness"
+        );
+    }
+    let mut bad = list();
+    bad.draws[0].uv_scale[1] = f64::NAN;
+    let mut bytes = Vec::new();
+    assert_eq!(
+        snapshot::write(&bad, &mut bytes, &limits).unwrap_err().code,
+        "SnapshotNonFinite"
+    );
+}

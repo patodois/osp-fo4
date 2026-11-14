@@ -1,6 +1,6 @@
 # Inventário de formatos sem leitor (validação do leitor)
 
-Sem semântica binária de HKX/animtextdata. decisão de medição revisada §5 define as medidas.
+Sem semântica binária de HKX/animtextdata. Decisão do projeto §5 define as medidas.
 Tamanho é lógico declarado (DX10 inclui os 148 bytes DDS reconstruídos);
 quantidade/bytes são de vencedores, sem incluir losers. Nome recusado é contado
 separadamente. Falha de tamanho não é byte zero: é sizes_failed e diagnóstico.

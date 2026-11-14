@@ -1,6 +1,6 @@
 # Materiais JSON do Startup: limite da referência permitida
 
-Na retomada de reviewed measurement decision, os cinco arquivos de Materials/Interface que davam
+Numa etapa posterior, os cinco arquivos de Materials/Interface que davam
 InvalidMaterialMagic foram lidos novamente pelo VFS, somente do archive
 Fallout4 - Startup.ba2 identificado como vencedor na corrida integral.
 Uma ferramenta local própria, offline, verificou o JSON genérico em memória;

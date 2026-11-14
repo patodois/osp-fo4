@@ -232,7 +232,7 @@ Scene e diagnósticos retidos continuam cobrados. Budget::metered mede créditos
 vivos, cargas cumulativas e pico por fase; não é medidor de RSS. Os limites não
 foram aumentados para contornar a célula grande.
 
-reviewed measurement decision ativa `bgsm_self_wetness_template_stop_v1`, por decisão explícita do
+Decisão do projeto ativa `bgsm_self_wetness_template_stop_v1`, por decisão explícita do
 revisor: uma aresta MaterialParent para o mesmo arquivo não acrescenta bytes ao
 conjunto do fechamento. Não se afirma semântica medida de herança de wetness.
 A aresta/offset permanece na auditoria de ciclos; a dependência terminal não

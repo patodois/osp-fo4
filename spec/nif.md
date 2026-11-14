@@ -1,6 +1,6 @@
 # NIF — dados de cena e geometria da fase 2
 
-Fonte de formato: [niftools/nifxml, nif.xml](https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml), consultado como **especificação de dados**, conforme decisão de medição revisada. A cópia consultada tem SHA-256 `752c79786ceb217641fd7e94be4033898c97e9aa38025bf05f2cbee9cffbbf0d`, XML version 0.10.0.0. O [LICENSE](https://github.com/niftools/nifxml/blob/develop/LICENSE) declara GPLv3. Não se incorporou XML, parser, gerador, funções ou código de outro leitor; os fatos de disposição dos campos orientam este leitor próprio MIT OR Apache-2.0. A cópia de consulta fica somente nos relatórios locais ignorados. Não foram lidos nifly/NifSkope/PyNifly/OpenMW/ByroRedux ou outro leitor.
+Fonte de formato: [niftools/nifxml, nif.xml](https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml), consultado como **especificação de dados**, conforme decisão do projeto. A cópia consultada tem SHA-256 `752c79786ceb217641fd7e94be4033898c97e9aa38025bf05f2cbee9cffbbf0d`, XML version 0.10.0.0. O [LICENSE](https://github.com/niftools/nifxml/blob/develop/LICENSE) declara GPLv3. Não se incorporou XML, parser, gerador, funções ou código de outro leitor; os fatos de disposição dos campos orientam este leitor próprio MIT OR Apache-2.0. A cópia de consulta fica somente nos relatórios locais ignorados. Não foram lidos nifly/NifSkope/PyNifly/OpenMW/ByroRedux ou outro leitor.
 
 Elementos da especificação que sustentam os campos implementados:
 
@@ -21,7 +21,7 @@ A leitura real revelou a presença de BS 83 em um NIF do SSE. A versão `V20_2_0
 
 Extensões de cobertura com a mesma fonte: `BSPackedCombinedSharedGeomDataExtra`, `BSPackedGeomObject`, `BSPackedSharedGeomData`, `BSPackedGeomDataCombined` (contagens, offsets, vertex desc, transformações/bounds; flags desconhecidas cruas); `BSConnectPoint::Parents/Children`, `BSConnectPoint`, `BSEyeCenterExtraData`, `BSBoneLODExtraData`, `BoneLOD`, `BSFurnitureMarker(Node)`, `FurniturePosition`; `BSValueNode`, `BSBlastNode`, `BSDamageStage`, `BSTreeNode`; `NiControllerManager`, `NiControllerSequence`/`NiSequence`/`ControlledBlock`, `NiMultiTargetTransformController`, `NiDefaultAVObjectPalette`/`AVObject`, interpolators de transform/float/point3/bool/timeline e controllers de alpha/FOV/luz. Os interpolators armazenam valores/sentinelas e links, sem avaliar keyframes ou animação.
 
-Política numérica (reviewed measurement decision, substitui a da validação do leitor): NaN/inf são dados IEEE,
+Política numérica (decisão do projeto, substitui a da validação do leitor): NaN/inf são dados IEEE,
 sem rejeitar o bloco. Cada Mesh expõe NonFiniteCounts por posição, UV, normal,
 tangente, bitangente, cor float, eye, dynamic position e campos de metadados.
 Nif::non_finite agrega as malhas e os FloatBits dos nós/propriedades lidos.

@@ -1,6 +1,6 @@
 # Hipóteses de caminho, só no censo
 
-Fonte do contrato VFS: manifest-vfs.md e decisão de medição revisada §3. Estas transformações são
+Fonte do contrato VFS: manifest-vfs.md e decisão do projeto §3. Estas transformações são
 hipóteses de resolução registradas, NÃO fatos sobre como o Fallout resolve paths.
 Nenhuma nova regra de formato ou regra do engine foi inferida delas.
 

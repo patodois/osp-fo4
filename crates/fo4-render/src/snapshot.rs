@@ -76,6 +76,30 @@ pub fn write(list: &DrawList, writer: &mut impl Write, l: &Limits) -> Result<u64
         bytes: 0,
         limits: l,
     };
+    for d in &list.draws {
+        if d.sidedness.material_two_sided.is_some_and(|v| v > 1) {
+            return Err(Error::new(
+                "SnapshotSidedness",
+                "snapshot",
+                0,
+                "material two-sided byte 0 or 1",
+                format!("{:?}", d.sidedness.material_two_sided),
+            ));
+        }
+        if d.uv_offset
+            .iter()
+            .chain(&d.uv_scale)
+            .any(|v| !v.is_finite())
+        {
+            return Err(Error::new(
+                "SnapshotNonFinite",
+                "snapshot",
+                0,
+                "finite UV offset and scale",
+                format!("{:?}/{:?}", d.uv_offset, d.uv_scale),
+            ));
+        }
+    }
     w.bytes(b"F4RL0003")?;
     w.count(list.meshes.len())?;
     w.count(list.textures.len())?;

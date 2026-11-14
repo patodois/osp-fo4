@@ -1,6 +1,6 @@
 # BGSM/BGEM: encerramento da pesquisa permitida
 
-Registro histórico da validação do leitor. reviewed measurement decision autorizou depois a MaterialLib MIT com
+Registro histórico da validação do leitor. Decisão do projeto autorizou depois a MaterialLib MIT com
 crédito; o [leitor atribuído da validação do leitor](material.md) substitui a limitação de
 implementação descrita aqui. As tentativas abaixo permanecem como histórico.
 

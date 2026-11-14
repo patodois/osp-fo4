@@ -143,7 +143,18 @@ pub fn header(model: &HeaderModel<'_>, l: &Limits, b: &Budget) -> Result<Vec<u8>
     raw.append(&model.declared_records.to_le_bytes())?;
     raw.append(&model.next_object_id.to_le_bytes())?;
     for master in model.masters {
-        if master.name.is_empty() || master.name.as_bytes().contains(&0) {
+        // Same rules as the reader: an ASCII basename, unique ignoring case.
+        if master.name.is_empty()
+            || master.name.as_bytes().contains(&0)
+            || !master.name.is_ascii()
+            || master.name.contains(['/', '\\'])
+            || model
+                .masters
+                .iter()
+                .filter(|other| other.name.eq_ignore_ascii_case(master.name))
+                .count()
+                != 1
+        {
             return Err(Error::new(
                 "WriterMasterName",
                 "plugin writer",
@@ -253,6 +264,16 @@ fn record(
     Ok(out.bytes)
 }
 pub fn encode_record(model: &RecordModel<'_>, l: &Limits, b: &Budget) -> Result<Vec<u8>> {
+    // The reader treats these two signatures as a group and as the file header.
+    if matches!(&model.signature, b"GRUP" | b"TES4") {
+        return Err(Error::new(
+            "WriterRecordSignature",
+            "plugin writer",
+            0,
+            "a record signature other than GRUP or TES4",
+            String::from_utf8_lossy(&model.signature),
+        ));
+    }
     let scratch = b.child();
     let raw = payload(model.subrecords, l, &scratch)?;
     record(

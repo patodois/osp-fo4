@@ -33,7 +33,7 @@ e permanece no denominador de não interpretados; não se afirma iluminação co
 ## Correções da revisão (validação do leitor)
 
 - https://github.com/Ortham/esplugin/blob/master/CHANGELOG.md : somente o CHANGELOG foi consultado, nunca a implementação. As entradas 3.3.0 e 4.1.1 sustentam os limites FO4 light: HEDR <1.0 usa 0x800–0xFFF; HEDR >=1.0 usa 0x001–0xFFF. Tanto remap quanto runtime_id aplicam a versão do plugin **definidor**, inclusive quando referenciado por outro plugin.
-- Requisitos explícitos de decisão de medição revisada: master-first, injected records válidos, divergência de contagem HEDR sem falha estrutural. Isso não depende de supor conteúdo retail. Injected mantém o namespace do master e a origem física do plugin que o criou; overrides posteriores continuam a cadeia. O índice guarda números de plugin/offset/length e IDs compactos; nomes e paths são reconstruídos pelos headers, sem repetição por record.
+- Requisitos explícitos de decisão do projeto: master-first, injected records válidos, divergência de contagem HEDR sem falha estrutural. Isso não depende de supor conteúdo retail. Injected mantém o namespace do master e a origem física do plugin que o criou; overrides posteriores continuam a cadeia. O índice guarda números de plugin/offset/length e IDs compactos; nomes e paths são reconstruídos pelos headers, sem repetição por record.
 - A definição declarativa FO4 de LIGH citada acima sustenta os 64 bytes completos. Nenhuma regra para campos ausentes de variantes 48/52/56/60 foi estabelecida: essas variantes agora são Raw, sem preenchimento ou interpretação de prefixos opcionais.
 - As definições dos placed references em wbDefinitionsFO4.pas / sigReferences sustentam bit 11 como Initially Disabled em REFR, ACHR, PGRE, PMIS, PHZD, PARW, PBAR, PBEA, PCON e PFLA. Esses tipos permanecem envelopes se fora da fase 1; a flag é contada independentemente da semântica do payload.
 
@@ -43,7 +43,7 @@ e permanece no denominador de não interpretados; não se afirma iluminação co
 
 `Header::is_master/is_light` calculam o tipo efetivo a partir dessas regras;
 `Header.flags` preserva os bits originais. A partição master-first, os slots e a
-validação/remapeamento light usam o tipo efetivo. Correção R2 (decisão de medição revisada): o
+validação/remapeamento light usam o tipo efetivo. Correção R2 (decisão do projeto): o
 bit light isolado **não** torna `.esm` light; light master exige `.esl` ou os
 dois bits master+light. Light nonmaster exige `.esp` e bit light. Matriz
 sintética conferida em slots/runtime ID e faixa de objeto, com flags cruas
@@ -107,7 +107,7 @@ Achado do corpus SSE: `Skyrim.esm` contém um GMST com FormID cujo índice de ma
 
 ## Valores IEEE (validação do leitor)
 
-A decisão de reviewed measurement decision substitui a rejeição anterior de floats não finitos:
+A decisão do projeto substitui a rejeição anterior de floats não finitos:
 Cursor::f32 conserva todos os bits. Campos Float/Transform, Light, posições
 SCOL e prefixos de iluminação preservam NaN/inf. Cada Field possui
 non_finite_values; o CLI soma por record/plugin e emite NonFiniteRecordValues

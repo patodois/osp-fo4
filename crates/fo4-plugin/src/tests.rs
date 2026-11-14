@@ -2519,3 +2519,52 @@ fn envelope_scan_matches_the_full_scan_without_reading_payloads() {
     )
     .is_err());
 }
+
+#[test]
+fn writer_refuses_what_the_reader_would_reject() {
+    use crate::writer::{self, HeaderModel, Master, RecordModel};
+    let limits = Limits::default();
+    let budget = Budget::new(1 << 20);
+    for signature in [*b"GRUP", *b"TES4"] {
+        let model = RecordModel {
+            signature,
+            flags: 0,
+            form_id: 0x800,
+            revision: 0,
+            version: 131,
+            unknown: 0,
+            subrecords: &[],
+            compress: false,
+        };
+        assert_eq!(
+            writer::encode_record(&model, &limits, &budget)
+                .unwrap_err()
+                .code,
+            "WriterRecordSignature"
+        );
+    }
+    let data = [0u8; 8];
+    for names in [
+        &["dir/A.esm"][..],
+        &["dir\\A.esm"],
+        &["\u{e9}.esm"],
+        &["A.esm", "a.ESM"],
+    ] {
+        let masters: Vec<Master<'_>> = names.iter().map(|name| Master { name, data }).collect();
+        let model = HeaderModel {
+            flags: 0,
+            revision: 0,
+            version: 131,
+            unknown: 0,
+            hedr_version: 1.0,
+            declared_records: 0,
+            next_object_id: 0x800,
+            masters: &masters,
+        };
+        assert_eq!(
+            writer::header(&model, &limits, &budget).unwrap_err().code,
+            "WriterMasterName",
+            "{names:?}"
+        );
+    }
+}

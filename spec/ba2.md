@@ -2,7 +2,7 @@
 
 Implementação independente; nenhuma implementação de leitor foi incorporada.
 
-- https://miere.ru/posts/ba2-archive-format/ : LE, sem alinhamento; prefixo de 24 bytes; GNRL de 36; DX10 de 24 com chunks de 24; tamanhos packed/unpacked; packed zero indica raw; payload zlib; offsets absolutos; nomes com comprimento u16. O typo “BDTX” dessa página é corrigido pelo magic BTDX da fonte abaixo. O comprimento u16 delimita os bytes; a política de nomes da validação do leitor abaixo rejeita NUL, inclusive final, conforme decisão de medição revisada, sem procurar além desse comprimento. Hashes, flags e byte desconhecido são preservados sem semântica.
+- https://miere.ru/posts/ba2-archive-format/ : LE, sem alinhamento; prefixo de 24 bytes; GNRL de 36; DX10 de 24 com chunks de 24; tamanhos packed/unpacked; packed zero indica raw; payload zlib; offsets absolutos; nomes com comprimento u16. O typo “BDTX” dessa página é corrigido pelo magic BTDX da fonte abaixo. O comprimento u16 delimita os bytes; a política de nomes da validação do leitor abaixo rejeita NUL, inclusive final, conforme decisão do projeto, sem procurar além desse comprimento. Hashes, flags e byte desconhecido são preservados sem semântica.
 - https://f76.world/modding/ : prefixo BTDX, versões FO4 7/8 conservam a estrutura/chunks/compressão da 1.
 - https://baddogskyrim.github.io/BethesdaLibrary/game-specific/starfield/plugins/#33-file-records-chunks : campos isCubemap/tileMode, stride 0x18, sentinel 0xBAADF00D, dimensões/mips/DXGI. Usamos apenas a estrutura FO4 descrita; não a heurística packed==unpacked. Cube 0/1 e tileMode 8 constituem o perfil PC. Outros valores: UnsupportedTextureLayout.
 
@@ -51,7 +51,7 @@ São três nomes físicos, visitados duas vezes porque esse archive aparece nos
 mounts 13 e 40 do manifest do usuário. Evidência completa, hex e exibição Windows-1252 permanecem em relatórios
 locais não distribuídos. Nenhum payload de voz foi copiado.
 
-decisão de medição revisada define a nova política: os bytes altos não exigem UTF-8 nem são
+Decisão do projeto define a nova política: os bytes altos não exigem UTF-8 nem são
 convertidos para construir a chave. `Entry.original_name` conserva cada byte;
 `key_hex` é a chave serializada em hex, com slash/backslash normalizados e dobra
 **somente A–Z**. ED não vira C3 AD; C0 e E0 continuam diferentes. Exibição separada:

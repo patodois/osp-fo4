@@ -175,8 +175,8 @@ pub struct Summary {
     pub unread: cell_census::Unread,
     pub schema: u32,
     pub under_hypotheses: bool,
-    /// Facts only, facts plus measured rules (default), or pending hypotheses too.
-    pub rule_level: fo4_scene::RuleLevel,
+    /// The rule level the command applied, for the commands that classify readiness.
+    pub rule_level: Option<fo4_scene::RuleLevel>,
     pub overlay_plugin: Option<PathBuf>,
     pub command: String,
     pub scope: Option<String>,
@@ -554,7 +554,7 @@ impl Reports {
                 max_report_bytes: m.limits.max_report_bytes,
                 archive_invalidation: m.archive_invalidation.clone(),
                 under_hypotheses: o.level == fo4_scene::RuleLevel::Hypotheses,
-                rule_level: o.level,
+                rule_level: None,
                 overlay_plugin: o.overlay_plugin.clone(),
                 command: o.command.clone(),
                 scope: o.scope.clone(),
@@ -863,13 +863,26 @@ fn check_output_identity(out: &Path, root: &Path) -> Result<()> {
     }
     #[cfg(not(unix))]
     {
-        Err(Error::new(
-            "UnsupportedOutputIdentity",
-            &out.to_string_lossy(),
-            0,
-            "directory identity check for this platform",
-            root.display(),
-        ))
+        // No stable device/inode pair here: compare canonical paths instead.
+        let data = fs::canonicalize(root).map_err(|e| io_error(&root.to_string_lossy(), 0, e))?;
+        let resolved = resolve_output_path(out)?;
+        for ancestor in resolved.ancestors() {
+            let canonical = match fs::canonicalize(ancestor) {
+                Ok(path) => path,
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound => continue,
+                Err(e) => return Err(io_error(&ancestor.to_string_lossy(), 0, e)),
+            };
+            if canonical == data {
+                return Err(Error::new(
+                    "OutputInsideData",
+                    &out.to_string_lossy(),
+                    0,
+                    "different directory from Data and descendants",
+                    root.display(),
+                ));
+            }
+        }
+        Ok(())
     }
 }
 pub fn run(o: &Options) -> Result<u8> {
