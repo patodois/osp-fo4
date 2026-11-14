@@ -9,16 +9,32 @@ use std::path::Path;
 type AnyResult<T> = Result<T, Box<dyn std::error::Error>>;
 fn run() -> AnyResult<()> {
     let args: Vec<_> = std::env::args().skip(1).collect();
-    if !(4..=5).contains(&args.len()) {
-        return Err("usage: render MANIFEST DATA_DIRECTORY CELL_EDITOR_ID build/OUTPUT [--strict|--measured|--under-hypotheses]".into());
+    const USAGE: &str = "usage: render MANIFEST DATA_DIRECTORY CELL_EDITOR_ID build/OUTPUT [--strict|--measured|--under-hypotheses] [--eye X,Y,Z --look X,Y,Z]";
+    if args.len() < 4 {
+        return Err(USAGE.into());
     }
     // Default: documented facts plus rules measured on the running game.
-    let level_name = args.get(4).map_or("--measured", String::as_str);
+    let mut level_name = "--measured";
+    let mut eye = None;
+    let mut look = None;
+    let mut rest = args[4..].iter();
+    while let Some(arg) = rest.next() {
+        match arg.as_str() {
+            "--strict" | "--measured" | "--under-hypotheses" => level_name = arg,
+            "--eye" | "--look" => {
+                let point = point(rest.next().ok_or(USAGE)?)?;
+                *(if arg == "--eye" { &mut eye } else { &mut look }) = Some(point);
+            }
+            _ => return Err(USAGE.into()),
+        }
+    }
+    if eye.is_some() != look.is_some() {
+        return Err(USAGE.into());
+    }
     let policy = match level_name {
         "--under-hypotheses" => RuleLevel::Hypotheses,
         "--measured" => RuleLevel::Measured,
-        "--strict" => RuleLevel::Facts,
-        _ => return Err("UnknownRuleLevel".into()),
+        _ => RuleLevel::Facts,
     };
     files::memory()?;
     if std::env::var_os("FO4_MIN_FREE_PERCENT").is_some() {
@@ -73,24 +89,35 @@ fn run() -> AnyResult<()> {
     if min.iter().chain(&max).any(|v| !v.is_finite()) {
         return Err("NoDrawableGeometry".into());
     }
-    // An authored overview, not a reconstruction of a measured player camera.
-    let center: [f64; 3] = std::array::from_fn(|i| (min[i] + max[i]) * 0.5);
-    let radius = (0..3)
-        .map(|i| (max[i] - min[i]).powi(2))
-        .sum::<f64>()
-        .sqrt()
-        .max(1.)
-        * 0.5;
     let right = (40f64.to_radians()).tan();
     let top = right * 720. / 1280.;
-    let distance = radius / top * 1.2 + radius;
-    let camera = Camera {
-        rotation: [[0., 1., 0.], [0., 0., 1.], [1., 0., 0.]],
-        translation: [center[0], center[1] - distance, center[2]],
-        scale: 1.,
-        frustum: [-right, right, top, -top, 0.1, distance + radius * 3.],
-        viewport: [0., 1., 1., 0.],
-        size: [1280, 720],
+    let (camera, camera_kind) = match (eye, look) {
+        (Some(eye), Some(look)) => (
+            look_at(eye, look, [-right, right, top, -top, 15., 12000.])?,
+            "explicit_eye_and_look",
+        ),
+        _ => {
+            // An overview from outside the bounds, not a reconstruction of a player camera.
+            let center: [f64; 3] = std::array::from_fn(|i| (min[i] + max[i]) * 0.5);
+            let radius = (0..3)
+                .map(|i| (max[i] - min[i]).powi(2))
+                .sum::<f64>()
+                .sqrt()
+                .max(1.)
+                * 0.5;
+            let distance = radius / top * 1.2 + radius;
+            (
+                Camera {
+                    rotation: [[0., 1., 0.], [0., 0., 1.], [1., 0., 0.]],
+                    translation: [center[0], center[1] - distance, center[2]],
+                    scale: 1.,
+                    frustum: [-right, right, top, -top, 0.1, distance + radius * 3.],
+                    viewport: [0., 1., 1., 0.],
+                    size: [1280, 720],
+                },
+                "authored_bounds_overview",
+            )
+        }
     };
     let frame = fo4_render::render(
         &built.list,
@@ -108,10 +135,49 @@ fn run() -> AnyResult<()> {
     files::output_bytes(&out.join("frame.png"), &frame.png(&budget)?)?;
     files::json(
         &out.join("summary.json"),
-        &serde_json::json!({"camera":camera,"camera_kind":"authored_bounds_overview","cell":scene.cell.key,"instances":built.instances,"omitted":built.omitted,"statistics":frame.statistics,"hypothesis_policy":level_name,"renderer":"CPU unlit diffuse, no runtime controllers or lighting","memory":budget.measurements()}),
+        &serde_json::json!({"camera":camera,"camera_kind":camera_kind,"cell":scene.cell.key,"instances":built.instances,"omitted":built.omitted,"statistics":frame.statistics,"hypothesis_policy":level_name,"renderer":"CPU unlit diffuse, no runtime controllers or lighting","memory":budget.measurements()}),
     )?;
     println!("{}", out.join("frame.png").display());
     Ok(())
+}
+fn point(text: &str) -> AnyResult<[f64; 3]> {
+    let mut values = text.split(',').map(str::parse::<f64>);
+    let mut out = [0.; 3];
+    for v in &mut out {
+        *v = values.next().ok_or("ExpectedThreeCoordinates")??;
+    }
+    if values.next().is_some() || out.iter().any(|v| !v.is_finite()) {
+        return Err("ExpectedThreeCoordinates".into());
+    }
+    Ok(out)
+}
+/// Z-up camera at `eye` facing `look`: rows are forward, up and right.
+fn look_at(eye: [f64; 3], look: [f64; 3], frustum: [f64; 6]) -> AnyResult<Camera> {
+    let unit = |v: [f64; 3]| -> AnyResult<[f64; 3]> {
+        let n = v.iter().map(|x| x * x).sum::<f64>().sqrt();
+        if n < 1e-9 {
+            return Err("DegenerateCameraDirection".into());
+        }
+        Ok(v.map(|x| x / n))
+    };
+    let cross = |a: [f64; 3], b: [f64; 3]| {
+        [
+            a[1] * b[2] - a[2] * b[1],
+            a[2] * b[0] - a[0] * b[2],
+            a[0] * b[1] - a[1] * b[0],
+        ]
+    };
+    let forward = unit(std::array::from_fn(|i| look[i] - eye[i]))?;
+    let right = unit(cross(forward, [0., 0., 1.]))?;
+    let up = cross(right, forward);
+    Ok(Camera {
+        rotation: [forward, up, right],
+        translation: eye,
+        scale: 1.,
+        frustum,
+        viewport: [0., 1., 1., 0.],
+        size: [1280, 720],
+    })
 }
 fn main() {
     if let Err(e) = run() {
