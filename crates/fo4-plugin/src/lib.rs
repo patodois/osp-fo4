@@ -495,6 +495,55 @@ pub fn scan_bounded(
     h: &Header,
     l: &Limits,
     b: &Budget,
+    visit: impl FnMut(Record, &[Group], &Budget) -> Result<()>,
+) -> Result<ScanStats> {
+    scan_with(source, h, l, b, true, visit)
+}
+/// Like `scan_bounded`, but reads only the 24-byte record headers.
+///
+/// Each visited `Record` has an empty payload and no subrecords, and compressed
+/// payloads are not inflated, so payload errors are not detected here. Use it to
+/// index identities, flags and group membership; reread a record with
+/// `Store::raw` or a full scan when its fields are needed. `ScanStats` counts
+/// no subrecords.
+pub fn scan_envelopes(
+    source: &dyn ReadAt,
+    h: &Header,
+    l: &Limits,
+    b: &Budget,
+    visit: impl FnMut(Record, &[Group], &Budget) -> Result<()>,
+) -> Result<ScanStats> {
+    scan_with(source, h, l, b, false, visit)
+}
+fn envelope_at(source: &dyn ReadAt, o: u64, end: u64) -> Result<Record> {
+    let mut c = Cursor::at(source, o, end)?;
+    let signature = c.take::<4>()?;
+    let size = c.u32()? as u64;
+    let flags = c.u32()?;
+    let form_id = c.u32()?;
+    let revision = c.u32()?;
+    let version = c.u16()?;
+    let unknown = c.u16()?;
+    range(c.pos, size, end, source.name())?;
+    Ok(Record {
+        signature,
+        flags,
+        form_id,
+        revision,
+        version,
+        unknown,
+        source: SourceSpan::new(source.name(), o, add(24, size, source.name(), o)?),
+        payload: Vec::new(),
+        subrecords: Vec::new(),
+        payload_is_decompressed: false,
+    })
+}
+fn scan_with(
+    source: &dyn ReadAt,
+    h: &Header,
+    l: &Limits,
+    b: &Budget,
+    payloads: bool,
     mut visit: impl FnMut(Record, &[Group], &Budget) -> Result<()>,
 ) -> Result<ScanStats> {
     // One stability check around the whole scan, not two per record.
@@ -554,7 +603,11 @@ pub fn scan_bounded(
                 o,
             )?;
             let record_budget = b.child();
-            let record = record_at(source, o, c.end, l, &record_budget)?;
+            let record = if payloads {
+                record_at(source, o, c.end, l, &record_budget)?
+            } else {
+                envelope_at(source, o, c.end)?
+            };
             if record.signature == *b"TES4" {
                 return Err(Error::new(
                     "UnexpectedTes4",
@@ -573,7 +626,7 @@ pub fn scan_bounded(
                 o,
             )?;
             limit(stats.subrecords, l.max_subrecords, source.name(), o)?;
-            if record.payload_is_decompressed {
+            if record.flags & COMPRESSED != 0 {
                 stats.compressed += 1;
             }
             if !PHASE1_TYPES.contains(&record.signature) {

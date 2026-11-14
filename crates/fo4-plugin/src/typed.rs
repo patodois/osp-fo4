@@ -844,12 +844,14 @@ impl Store {
         for (plugin, (_, s)) in sources.iter().enumerate() {
             let mut complete = true;
             let scan_budget = Budget::new(limits.max_memory);
-            let result = crate::scan_bounded(
+            // The index needs identities, flags and group membership only, so the
+            // payloads stay on disk; the few flagged marker bases are reread below.
+            let result = crate::scan_envelopes(
                 s.as_ref(),
                 &order.headers()[plugin],
                 &limits,
                 &scan_budget,
-                |r, groups, _| {
+                |r, groups, record_budget| {
                     if !record_types.contains_key(&r.signature) {
                         allocation.charge(96, s.name(), r.source.offset)?;
                     }
@@ -863,8 +865,15 @@ impl Store {
                     if matches!(&r.signature, b"STAT" | b"ACTI" | b"DOOR")
                         && r.flags & 0x0080_0000 != 0
                     {
-                        for sub in r.subrecords.iter().filter(|s| s.signature == *b"MODL") {
-                            let raw = r.data(sub);
+                        let full = crate::record_at(
+                            s.as_ref(),
+                            r.source.offset,
+                            s.len(),
+                            &limits,
+                            record_budget,
+                        )?;
+                        for sub in full.subrecords.iter().filter(|s| s.signature == *b"MODL") {
+                            let raw = full.data(sub);
                             if let Some(path) = raw.strip_suffix(&[0]) {
                                 if let Ok(path) = fo4_core::path_key_bytes(path) {
                                     allocation.charge(

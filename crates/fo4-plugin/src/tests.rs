@@ -2412,3 +2412,107 @@ fn stage18_equal_zlib_lengths_preserve_different_payloads_without_new_fields() {
     }
     assert_eq!(sizes.len(), 100);
 }
+
+#[test]
+fn envelope_scan_matches_the_full_scan_without_reading_payloads() {
+    let stat = record(b"STAT", 0x800, COMPRESSED, &sub(b"EDID", b"A\0"));
+    let mut broken = record(b"STAT", 0x801, COMPRESSED | DELETED, &sub(b"EDID", b"B\0"));
+    // Corrupt the zlib stream only; the 24-byte header still delimits the record.
+    let last = broken.len() - 1;
+    broken[last] ^= 0xff;
+    let refr = record(
+        b"REFR",
+        0x802,
+        DISABLED,
+        &sub(b"NAME", &0x800u32.to_le_bytes()),
+    );
+    let mut body = group(0, *b"STAT", &stat);
+    body.extend(group(0, *b"REFR", &refr));
+    let good = plugin(0, &[], 4, &body);
+    let h = header("synthetic.esp", &good).unwrap();
+    let source = SliceSource {
+        name: "synthetic.esp",
+        bytes: &good,
+    };
+    let limits = Limits::default();
+    let identity = |r: &Record, groups: &[Group]| {
+        (
+            r.signature,
+            r.form_id,
+            r.flags,
+            r.source.offset,
+            r.source.length,
+            r.deleted(),
+            r.disabled(),
+            groups.len(),
+        )
+    };
+    let mut full = Vec::new();
+    let full_stats = scan_bounded(&source, &h, &limits, &Budget::new(1 << 20), |r, g, _| {
+        assert!(!r.subrecords.is_empty());
+        full.push(identity(&r, g));
+        Ok(())
+    })
+    .unwrap();
+    let mut envelopes = Vec::new();
+    let stats = scan_envelopes(&source, &h, &limits, &Budget::new(1 << 20), |r, g, _| {
+        assert!(r.payload.is_empty() && r.subrecords.is_empty() && !r.payload_is_decompressed);
+        envelopes.push(identity(&r, g));
+        Ok(())
+    })
+    .unwrap();
+    assert_eq!(envelopes, full);
+    assert_eq!(
+        (
+            stats.groups,
+            stats.records,
+            stats.compressed,
+            stats.count_matches
+        ),
+        (
+            full_stats.groups,
+            full_stats.records,
+            full_stats.compressed,
+            full_stats.count_matches
+        )
+    );
+    assert_eq!(stats.subrecords, 0);
+
+    let mut body = group(0, *b"STAT", &[stat, broken].concat());
+    body.extend(group(0, *b"REFR", &refr));
+    let bad = plugin(0, &[], 5, &body);
+    let h = header("synthetic.esp", &bad).unwrap();
+    let source = SliceSource {
+        name: "synthetic.esp",
+        bytes: &bad,
+    };
+    assert!(scan_bounded(
+        &source,
+        &h,
+        &limits,
+        &Budget::new(1 << 20),
+        |_, _, _| Ok(())
+    )
+    .is_err());
+    let mut seen = Vec::new();
+    scan_envelopes(&source, &h, &limits, &Budget::new(1 << 20), |r, _, _| {
+        seen.push((r.form_id, r.deleted()));
+        Ok(())
+    })
+    .unwrap();
+    assert_eq!(seen, [(0x800, false), (0x801, true), (0x802, false)]);
+    // Truncating a header is still a structural error for the envelope scan.
+    let cut = &bad[..bad.len() - refr.len() + 10];
+    let source = SliceSource {
+        name: "synthetic.esp",
+        bytes: cut,
+    };
+    assert!(scan_envelopes(
+        &source,
+        &h,
+        &limits,
+        &Budget::new(1 << 20),
+        |_, _, _| Ok(())
+    )
+    .is_err());
+}
