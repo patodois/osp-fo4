@@ -57,7 +57,7 @@ the registry.
 | `scol_parts_static_frame_v1` | pending | Compare loaded SCOL geometry, material bindings and world matrices with transformed constituent NIFs; any visual or geometric difference rejects equivalence. |
 | `asset_path_data_prefix_strip_v1` | supported | Controlled object with an absolute Data-prefixed citation appears textured. |
 | `asset_path_missing_root_v1` | supported | Weak sample: rootless-citation specimen is only available in an unqualified cropped capture. |
-| `nif_backface_cull_v1` | pending | Only one tiny plate is visible in current views; closer front/back captures are required. |
+| `nif_backface_cull_v1` | pending | Single-sided sign photographed close from both sides in one launch, in two placements: drawn from the front, absent from the back. The two-sided case is unmeasured: the glass specimen was invisible from both sides. |
 | `nif_editor_marker_export_suffix_v1` | supported | One mixed ordinary/helper model photographed and drawn with and without the suffixed subtree: the photograph matches the drawing without it. |
 | `refr_rotation_zyx_v2` | supported | Fourteen measured roots; unique among 24 order/sense/storage candidates below 1e-5; max error 2.1e-7, runner-up 1.43. |
 | `asset_path_data_relative_strip_v1` | supported | Controlled object with a Data-relative citation appears textured. |
