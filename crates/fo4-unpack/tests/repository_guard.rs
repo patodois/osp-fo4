@@ -181,13 +181,13 @@ fn only_the_five_generated_root_directories_are_skipped() {
     fs::create_dir_all(root.join("crates/target")).unwrap();
     fs::write(root.join("crates/target/generated.ba2"), []).unwrap();
     fs::create_dir(root.join(".hidden")).unwrap();
-    fs::write(root.join(".hidden/.sol-copy.esm"), []).unwrap();
+    fs::write(root.join(".hidden/.shadow-copy.esm"), []).unwrap();
     fs::write(root.join("data.local.toml"), b"BTDX").unwrap();
     assert_eq!(
         scan_repository(&root).unwrap(),
         vec![
             Violation {
-                path: ".hidden/.sol-copy.esm".into(),
+                path: ".hidden/.shadow-copy.esm".into(),
                 reason: Reason::Extension("esm")
             },
             Violation {
