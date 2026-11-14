@@ -2148,13 +2148,13 @@ fn teleport_door_prefix_is_partial_and_only_for_observed_size() {
         let fields: Vec<_> = r
             .data
             .common
-            .ficha_fields
+            .layout_fields
             .iter()
             .filter(|f| f.label == "\"Door\"")
             .collect();
         assert_eq!(fields.len(), usize::from(size == 36));
         if size == 36 {
-            assert!(matches!(&fields[0].value,fo4_plugin::ficha::Value::Form(v) if v.raw==0x900));
+            assert!(matches!(&fields[0].value,fo4_plugin::layout::Value::Form(v) if v.raw==0x900));
         }
         assert!(r
             .data

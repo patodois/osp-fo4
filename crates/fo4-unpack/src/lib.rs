@@ -1251,10 +1251,10 @@ fn records(m: &Manifest, r: &mut Reports) -> Result<()> {
                     String::from_utf8_lossy(&subrecord.signature)
                 ))?;
             }
-            let phase1 = m.game == fo4_core::Game::Fallout4
-                && fo4_plugin::PHASE1_TYPES.contains(&record.signature);
-            let reads_full = phase1 || m.game == fo4_core::Game::SkyrimSe;
-            if !phase1 {
+            let interpreted = m.game == fo4_core::Game::Fallout4
+                && fo4_plugin::INTERPRETED_TYPES.contains(&record.signature);
+            let reads_full = interpreted || m.game == fo4_core::Game::SkyrimSe;
+            if !interpreted {
                 r.summary.envelope_records += 1;
             }
             r.hist(format!(

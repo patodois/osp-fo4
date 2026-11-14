@@ -3,7 +3,7 @@ use crate::{typed::FormRef, LoadOrder, Record};
 use fo4_core::{Budget, Limits, Result};
 use serde::Serialize;
 use std::ops::Range;
-#[path = "ficha_data.rs"]
+#[path = "layout_data.rs"]
 mod data;
 enum Kind {
     Float,
@@ -152,7 +152,8 @@ pub(crate) fn decode(
             continue;
         };
         if schema.closed
-            && crate::still::classify(&r.signature, &s.signature) != crate::still::Class::Used
+            && crate::static_frame::classify(&r.signature, &s.signature)
+                != crate::static_frame::Class::Used
         {
             continue;
         }
@@ -183,7 +184,7 @@ pub(crate) fn decode(
             let word = || -> Result<[u8; 4]> {
                 bytes.try_into().map_err(|_| {
                     fo4_core::Error::new(
-                        "FichaFieldWidth",
+                        "LayoutFieldWidth",
                         &r.source.file,
                         field_offset,
                         "4 bytes",
@@ -266,7 +267,7 @@ pub(crate) fn decode(
 mod tests {
     use super::*;
     #[test]
-    fn every_ficha_offset_fits_only_its_verified_variants() {
+    fn every_layout_offset_fits_only_its_verified_variants() {
         for schema in data::SCHEMAS {
             let record = schema.pair.as_bytes()[..4].try_into().unwrap();
             let tag = schema.pair.as_bytes()[5..].try_into().unwrap();
@@ -412,7 +413,7 @@ mod tests {
         assert!(decode(&r, &order, 0, &Budget::new(0), &Limits::default()).is_err());
     }
     #[test]
-    fn ficha_pair_index_has_no_duplicates() {
+    fn layout_pair_index_has_no_duplicates() {
         assert!(INDEX.windows(2).all(|w| w[0].0 < w[1].0));
     }
     #[test]

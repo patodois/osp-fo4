@@ -5,10 +5,10 @@ ZYX is supported as a convention; exact arithmetic remains open. Both
 EditorMarker name rules remain pending. The optional fixture replay uses
 FO4_TRANSFORM_FIXTURE and covers only its recorded scope.
 
-XTEL: fonte primária autorizada `field-measurements/fichas/REFR.XTEL.md`
+XTEL: fonte primária autorizada `field-measurements/layouts/REFR.XTEL.md`
 e `saida/valores-conferidos.json`, chave pairs.REFR.XTEL.examples. No exemplar
 publicado de tamanho 36, o primeiro u32 LE reproduz o FormID impresso como Door.
-A ficha documenta 968 ocorrências de 36 bytes, três testemunhos xDump e nenhum
+A layout documenta 968 ocorrências de 36 bytes, três testemunhos xDump e nenhum
 layout completo estabelecido. Só esse prefixo de quatro bytes passa a ser lido
 para a seleção de interiores. Não se deduz posição, rotação, flags nem o campo
 final. O envelope inteiro permanece cru e bloqueante na Scene. Usar o remapeador

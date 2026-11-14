@@ -1,8 +1,8 @@
-# Fichas de layout — validação do leitor
+# Layouts de layout — validação do leitor
 
 Fonte autorizada: xEdit 4.1.5f, executado como caixa-preta; conferido N de N no Fallout4.esm.
-N, offsets, rótulos, variantes e estado de cada par constam em [record-fichas.tsv](record-fichas.tsv).
-Origem local: `field-measurements/fichas/INDICE.tsv` e `fichas/RECORD.TAG.md`;
+N, offsets, rótulos, variantes e estado de cada par constam em [record-layouts.tsv](record-layouts.tsv).
+Origem local: `field-measurements/layouts/INDICE.tsv` e `layouts/RECORD.TAG.md`;
 fonte e scripts do programa não foram abertos. Os exemplos de conteúdo não são publicados.
 URL do produto (identificação, não evidência dos offsets): https://tes5edit.github.io/ .
 Não se transfere layout entre pares nem a tamanhos exclusivos de DLC.
@@ -311,14 +311,14 @@ STAT.MODC: used. 89 de 89 conferidos.
 ## LIGH.DATA parcial
 
 Layout físico conferido 801 de 801 no Fallout4.esm (48/60/64). As palavras de flags
-0x00000000, 0x00000008, 0x00008000, 0x000c8008 são as quatro impressões da ficha
+0x00000000, 0x00000008, 0x00008000, 0x000c8008 são as quatro impressões da layout
 sem rótulo Unknown; aceitas exatamente, sem derivar máscara combinável. Outras
 palavras continuam Flags.Unknown_0_13_21_and_unmapped_bits. O byte de cor marcado
 Unused fica preservado; não recebe um papel visual. Campos Value/Weight são valor/peso.
 
 ## cell-xcll
 
-CELL.XCLL: físico conferido 1194 de 1194 no Fallout4.esm. A ficha mantém o estado
+CELL.XCLL: físico conferido 1194 de 1194 no Fallout4.esm. A layout mantém o estado
 parcial porque não atribui posições de bits aos nomes. [record-flag-words.tsv](record-flag-words.tsv)
 transcreve somente correspondências observadas entre palavras inteiras e listas
 impressas, também para LIGH.DATA; não calcula máscaras por XOR ou analogia.
@@ -327,4 +327,4 @@ imprime Unknown continua bloqueada; ausência de valor impresso fica Option::Non
 Nos casos completamente nomeados a parte restante são bytes rotulados Unused,
 preservados nos campos RGB e no record cru. Não recebem papel visual.
 
-O gerador recebe a pasta autorizada como argumento: `python3 scripts/field_specs.py "$XDUMP_FICHAS"`. Nenhum caminho de usuário fica embutido.
+O gerador recebe a pasta autorizada como argumento: `python3 scripts/field_specs.py "$XDUMP_LAYOUTS"`. Nenhum caminho de usuário fica embutido.

@@ -163,7 +163,7 @@ continuam identificadas como falhas de orçamento, sem reinterpretar bytes.
 ## Contrato de quadro parado (validação do leitor)
 
 A classificação factual por RECORD.TAG está em
-[static-records.tsv](static-records.tsv), compartilhada com `fo4_plugin::still`;
+[static-records.tsv](static-records.tsv), compartilhada com `fo4_plugin::static_frame`;
 [scene.md](scene.md) define o enquadramento. As fontes de cada exclusão estão na
 própria linha. Os layouts anteriores acima não foram reabertos em código de
 xEdit nesta etapa. CELL.XCIM e XGDR passam pelo mesmo contrato FormID LE de
@@ -227,7 +227,7 @@ os bytes de subrecords das nove cópias, exceto MODT, são comparados separadame
 
 ## Prefixo parcial REFR.XTEL (validação do leitor)
 
-As observações autorizadas da ficha REFR.XTEL, tamanho 36, sustentam somente
+As observações autorizadas da layout REFR.XTEL, tamanho 36, sustentam somente
 o primeiro u32 LE como FormID Door. Remapear pelos masters explícitos. O restante
 do envelope permanece cru e bloqueante; outros tamanhos não herdam esse campo.
 Evidências, limites da observação e testes estão em

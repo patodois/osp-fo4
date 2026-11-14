@@ -7,9 +7,9 @@ Separar a antiga regra combinada em bit e nome não introduz comportamento novo.
 
 ## MSTT.DATA
 
-Dados autorizados: `field-measurements/fichas/MSTT.DATA.md` e
+Dados autorizados: `field-measurements/layouts/MSTT.DATA.md` e
 `saida/valores-conferidos.json`, `pairs.MSTT.DATA.examples[1]`: o byte 00 é
-impresso como “On Local Map: False”. A ficha abrange 961 ocorrências de 1 byte.
+impresso como “On Local Map: False”. A layout abrange 961 ocorrências de 1 byte.
 Na conferência das cinco colocações MSTT, os três exemplares correspondentes de
 `saida/complementos.parsed.jsonl` imprimem “On Local Map: True”, e os respectivos
 payloads crus têm byte01. Fecham-se somente 00=False e 01=True; 02..FF continuam
@@ -20,7 +20,7 @@ https://tes5edit.github.io/ (a prova de valor/offset é o dado, não a ferrament
 
 ## REFR.XLIG parcial
 
-A ficha REFR.XLIG e as palavras completas dos exemplos de 16/20/24 bytes na
+A layout REFR.XLIG e as palavras completas dos exemplos de 16/20/24 bytes na
 mesma saída sustentam Fade no offset4 somente nas variantes16/20 e Shadow Depth Bias no
 offset12 nas variantes16/20/24, f32 LE.
 Nos exemplares 16/20, seus valores não zero distinguem esses offsets dos demais;
@@ -32,8 +32,8 @@ conferidos com tolerância de arredondamento 0,5e-6, não substituem os bits.
 
 ## Luz já documentada
 
-LIGH.DATA, CELL.XCLL e os demais pares usam as fichas e variantes já sustentadas
-em record-fichas.md/tsv. A Scene publica valores, ranges de payload, record de
+LIGH.DATA, CELL.XCLL e os demais pares usam as layouts e variantes já sustentadas
+em record-layouts.md/tsv. A Scene publica valores, ranges de payload, record de
 origem e se o payload é descomprimido. Flags Unknown e tipos sem declaração
 ficam lacunas nomeadas; nenhuma curva, unidade fotométrica ou default é deduzido.
 Os campos de emissão e os da célula são descritos separadamente, sem sombrear.

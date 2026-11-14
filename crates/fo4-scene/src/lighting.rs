@@ -2,7 +2,7 @@
 use crate::Scene;
 use fo4_core::{Budget, Result, SourceSpan};
 use fo4_plugin::{
-    ficha,
+    layout,
     typed::{Common, Ligh, LightData, Loaded, Refr, Store},
     FormKey, Record,
 };
@@ -10,7 +10,7 @@ use serde::Serialize;
 use std::ops::Range;
 #[derive(Debug, Serialize)]
 pub struct NamedField {
-    pub field: ficha::Field,
+    pub field: layout::Field,
     pub record_source: SourceSpan,
     pub payload_is_decompressed: bool,
 }
@@ -61,14 +61,14 @@ pub struct LightingData {
 }
 fn fields(record: &Record, common: &Common, b: &Budget) -> Result<Vec<NamedField>> {
     let mut out = Vec::new();
-    for f in &common.ficha_fields {
+    for f in &common.layout_fields {
         b.charge(
             record.source.file.len() as u64
                 + record.source.archive_entry.as_ref().map_or(0, |s| s.len()) as u64,
             "light field source",
             record.source.offset,
         )?;
-        if let ficha::Value::Form(v) = &f.value {
+        if let layout::Value::Form(v) = &f.value {
             if let Some(k) = &v.key {
                 b.charge(
                     k.plugin.len() as u64,
@@ -119,11 +119,11 @@ fn raw_gaps(out: &mut Vec<Gap>, record: &Record, common: &Common, b: &Budget) ->
             (b"CELL", b"XCLL") | (b"LGTM", b"DATA") | (b"REFR", b"XLIG")
         ) || (record.signature != *b"CELL"
             && record.signature != *b"LGTM"
-            && fo4_plugin::still::classify_size(
+            && fo4_plugin::static_frame::classify_size(
                 &record.signature,
                 &raw.signature,
                 raw.bytes.len(),
-            ) != fo4_plugin::still::Class::Outside);
+            ) != fo4_plugin::static_frame::Class::Outside);
         if relevant {
             gap(
                 out,
@@ -379,11 +379,11 @@ fn placed(reference: &Loaded<Refr>, base: LightBase<'_>, b: &Budget) -> Result<P
             b,
         )?;
     }
-    for f in &base.common.ficha_fields {
+    for f in &base.common.layout_fields {
         if base.record.subrecords[f.subrecord].signature != *b"DATA" {
             continue;
         }
-        if let ficha::Value::Flags {
+        if let layout::Value::Flags {
             printed_labels: Some(labels),
             fully_named,
             ..
@@ -426,11 +426,11 @@ fn placed(reference: &Loaded<Refr>, base: LightBase<'_>, b: &Budget) -> Result<P
             "Flags contain no sourced type declaration; no point-light default",
             *b"DATA",
             base.common
-                .ficha_fields
+                .layout_fields
                 .iter()
                 .find(|f| {
                     base.record.subrecords[f.subrecord].signature == *b"DATA"
-                        && matches!(f.value, ficha::Value::Flags { .. })
+                        && matches!(f.value, layout::Value::Flags { .. })
                 })
                 .map_or(0..0, |f| f.bytes.clone()),
             base.record,

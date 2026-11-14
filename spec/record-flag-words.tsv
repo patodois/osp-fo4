@@ -1,4 +1,4 @@
-# pair	raw_u32_hex	printed_labels	fully_named	checked_records_in_ficha
+# pair	raw_u32_hex	printed_labels	fully_named	checked_records_in_layout
 CELL.XCLL	00000000	(no printed value)	true	1194
 CELL.XCLL	00000060	Directional Rotation, Directional Fade	true	1194
 CELL.XCLL	00000062	Directional Color, Directional Rotation, Directional Fade	true	1194

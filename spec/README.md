@@ -23,8 +23,8 @@ and measurement datasets are not distributed.
 | [path-census.md](path-census.md) | Path accounting and independent candidate-resolution comparisons. |
 | [photo-metrics.md](photo-metrics.md) | Prospective forward silhouette and persistent reverse-photo metrics, with explicit limits. |
 | [plugin.md](plugin.md) | Plugin envelopes, groups, subrecords, compression, FormIDs, overrides and flags. |
-| [record-fichas.md](record-fichas.md) | Provenance and scope of independently checked typed-record field measurements. |
-| [record-fichas.tsv](record-fichas.tsv) | Typed subrecord layouts tied to field/byte observations and raw preservation. |
+| [record-layouts.md](record-layouts.md) | Provenance and scope of independently checked typed-record field measurements. |
+| [record-layouts.tsv](record-layouts.tsv) | Typed subrecord layouts tied to field/byte observations and raw preservation. |
 | [record-flag-words.tsv](record-flag-words.tsv) | Observed record flag words with the supported, outside and unknown bit partitions. |
 | [record-light-key-layouts.md](record-light-key-layouts.md) | Measured record/light fields and schema-backed animation-key structure only. |
 | [reference-image-formats.md](reference-image-formats.md) | Camera, DDS/PNG and image-comparison data contracts. |

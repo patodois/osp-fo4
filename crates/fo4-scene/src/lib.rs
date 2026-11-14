@@ -41,7 +41,7 @@ pub struct Part {
 #[derive(Debug, Serialize)]
 pub struct Base {
     pub editor_marker: bool,
-    pub frame_role: fo4_plugin::still::Class,
+    pub frame_role: fo4_plugin::static_frame::Class,
     pub key: FormKey,
     pub record: Record,
     pub common: Common,
@@ -411,7 +411,7 @@ impl<'a> Loader<'a> {
         }
         if base
             .as_ref()
-            .is_some_and(|v| v.frame_role == fo4_plugin::still::Class::Used)
+            .is_some_and(|v| v.frame_role == fo4_plugin::static_frame::Class::Used)
             && reference
                 .data
                 .transform
@@ -432,7 +432,7 @@ impl<'a> Loader<'a> {
         if reference.data.scale.is_none()
             && base
                 .as_ref()
-                .is_some_and(|v| v.frame_role == fo4_plugin::still::Class::Used)
+                .is_some_and(|v| v.frame_role == fo4_plugin::static_frame::Class::Used)
         {
             push_error(
                 &mut blockers,
@@ -448,7 +448,7 @@ impl<'a> Loader<'a> {
         let state = hypotheses::classify(
             &blockers,
             base.as_ref()
-                .is_some_and(|v| v.frame_role == fo4_plugin::still::Class::Outside),
+                .is_some_and(|v| v.frame_role == fo4_plugin::static_frame::Class::Outside),
             b,
         )?;
         let editor_marker = base.as_ref().is_some_and(|v| v.editor_marker);
@@ -533,7 +533,7 @@ impl<'a> Loader<'a> {
         }
         let state = hypotheses::classify(
             &blockers,
-            base.frame_role == fo4_plugin::still::Class::Outside,
+            base.frame_role == fo4_plugin::static_frame::Class::Outside,
             b,
         )?;
         Ok(BaseInspection {
@@ -680,7 +680,7 @@ impl<'a> Loader<'a> {
         if matches!(&signature, b"IDLM" | b"SOUN" | b"ASPC") {
             return Ok(Base {
                 editor_marker: false,
-                frame_role: fo4_plugin::still::Class::Outside,
+                frame_role: fo4_plugin::static_frame::Class::Outside,
                 key: key.clone(),
                 record,
                 common,
@@ -808,7 +808,7 @@ impl<'a> Loader<'a> {
         Ok(Base {
             editor_marker: matches!(&record.signature, b"STAT" | b"ACTI" | b"DOOR")
                 && record.flags & 0x0080_0000 != 0,
-            frame_role: fo4_plugin::still::Class::Used,
+            frame_role: fo4_plugin::static_frame::Class::Used,
             key: key.clone(),
             record,
             common,
@@ -959,7 +959,7 @@ fn unhandled(
         ) {
             continue;
         }
-        use fo4_plugin::still::{classify_size, Class};
+        use fo4_plugin::static_frame::{classify_size, Class};
         let class = classify_size(
             &record.signature,
             &raw.signature,

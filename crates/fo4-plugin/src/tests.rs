@@ -750,8 +750,8 @@ fn localized_tables_resolved_through_vfs_without_language_fallback() {
     );
 }
 #[test]
-fn all_phase1_types_offer_partial_fields_unknown_records_stay_raw() {
-    for ty in PHASE1_TYPES {
+fn all_interpreted_types_offer_partial_fields_unknown_records_stay_raw() {
+    for ty in INTERPRETED_TYPES {
         let bytes = plugin(
             0,
             &[],
@@ -827,7 +827,7 @@ fn two_plugin_cycle_and_aggregate_record_allocations_are_rejected() {
 }
 
 #[test]
-fn phase1_typed_fields_and_uninterpreted_lighting_tail() {
+fn interpreted_typed_fields_and_uninterpreted_lighting_tail() {
     let mut transform = Vec::new();
     for f in [1., -2., 3., 0.25, 0.5, -0.75, 1.5] {
         transform.extend(f32::to_le_bytes(f));
@@ -2253,7 +2253,7 @@ fn static_cell_references_are_decoded_not_guessed_or_defaulted() {
 
 #[test]
 fn contract_covers_every_case12_cause_once_with_evidence_or_gap() {
-    use crate::still::{rule, Class, TABLE};
+    use crate::static_frame::{rule, Class, TABLE};
     let keys = include_str!("../../../spec/static-record-keys.txt");
     let mut n = 0;
     for key in keys
@@ -2278,12 +2278,15 @@ fn contract_covers_every_case12_cause_once_with_evidence_or_gap() {
         );
     }
     assert_eq!(n, 191);
-    assert_eq!(crate::still::classify(b"STAT", b"ZZZZ"), Class::Unknown);
+    assert_eq!(
+        crate::static_frame::classify(b"STAT", b"ZZZZ"),
+        Class::Unknown
+    );
 }
 
 #[test]
 fn common_outside_tags_cover_the_new_visible_types() {
-    use crate::still::{classify, Class};
+    use crate::static_frame::{classify, Class};
     for record in [
         b"MISC", b"CONT", b"ALCH", b"BOOK", b"AMMO", b"KEYM", b"NOTE", b"FLOR", b"TERM", b"TACT",
     ] {

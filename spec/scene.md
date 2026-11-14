@@ -112,7 +112,7 @@ seleção dinâmica de materiais. `ready` continua sendo fechamento de dados,
 não equivalência fotométrica com o executável.
 
 A tabela canônica de RECORD.TAG é [static-records.tsv](static-records.tsv),
-incorporada literalmente em `fo4_plugin::still`. Cada linha tem uma das quatro
+incorporada literalmente em `fo4_plugin::static_frame`. Cada linha tem uma das quatro
 classes `used`, `outside`, `state`, `unknown`, layout, fonte e justificativa.
 [static-record-keys.txt](static-record-keys.txt) fixa os 191 pares que motivaram
 a revisão; o teste exige cobertura única de todos eles. A tabela inclui também
@@ -240,10 +240,10 @@ aponta ao próprio ready bit. Duas ou mais identidades ainda geram
 AssetDependencyCycle. Testes sintéticos com BGSM completos provam publicação
 ready no auto-parentesco e bloqueio de uma cadeia de dois arquivos.
 
-validação do leitor entrega campos das fichas em Common.ficha_fields: nomes e tipos, FormRef
+validação do leitor entrega campos das layouts em Common.layout_fields: nomes e tipos, FormRef
 remapeado, campos opcionais ausentes e ranges de textos/bytes no record original.
 Somente os tamanhos conferidos são aceitos. As partes abertas conservam causas
-no segundo nível. Palavras inteiras de flags observadas na ficha expõem os rótulos
+no segundo nível. Palavras inteiras de flags observadas na layout expõem os rótulos
 impressos; nenhum bit é inferido. Palavras não observadas/Unknown bloqueiam. STAT.MNAM é usado e exposto como quatro nomes de LOD; não foi
 promovido a Outside por analogia com Skyrim.
 

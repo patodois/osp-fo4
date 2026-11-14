@@ -874,7 +874,7 @@ fn additional_controller_prefixes_keep_targets_and_opaque_bodies() {
             .unwrap();
         assert_eq!(
             model_policy::block_class(ty),
-            fo4_plugin::still::Class::State
+            fo4_plugin::static_frame::Class::State
         );
         assert_eq!(a.nodes[id].animations[0].target, Some(0));
         assert_eq!(a.nodes[id].animations[0].target_in_visual, Some(true));

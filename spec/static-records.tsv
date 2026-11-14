@@ -1,20 +1,20 @@
 # RECORD.TAG	class	layout	source	reason	pending_live_proof
 ACTI.ATTX	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
-ACTI.CIS1	state	ficha_verified_sizes_only	spec/record-fichas.md#acti-cis1	Label documents gameplay, condition, inventory, activation or animation state.	-
-ACTI.CIS2	state	ficha_verified_sizes_only	spec/record-fichas.md#acti-cis2	Label documents gameplay, condition, inventory, activation or animation state.	-
-ACTI.CITC	state	ficha_verified_sizes_only	spec/record-fichas.md#acti-citc	Label documents gameplay, condition, inventory, activation or animation state.	-
+ACTI.CIS1	state	layout_verified_sizes_only	spec/record-layouts.md#acti-cis1	Label documents gameplay, condition, inventory, activation or animation state.	-
+ACTI.CIS2	state	layout_verified_sizes_only	spec/record-layouts.md#acti-cis2	Label documents gameplay, condition, inventory, activation or animation state.	-
+ACTI.CITC	state	layout_verified_sizes_only	spec/record-layouts.md#acti-citc	Label documents gameplay, condition, inventory, activation or animation state.	-
 ACTI.CTDA	state	raw	https://falloutck.uesp.net/wiki/Papyrus|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/CTDA.html	Comportamento ou condicao dependente de estado/script; nao executar.	-
 ACTI.DAMC	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
 ACTI.DEST	outside	raw	https://falloutck.uesp.net/wiki/Destructible_Object_Data|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/Destruction.html	Estagios de dano futuro; estados de dano explicitos de referencias continuam bloqueando.	-
 ACTI.DMDL	outside	raw	https://falloutck.uesp.net/wiki/Destructible_Object_Data|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/Destruction.html	Estagios de dano futuro; estados de dano explicitos de referencias continuam bloqueando.	-
 ACTI.DMDS	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
 ACTI.DMDT	outside	raw	https://falloutck.uesp.net/wiki/Destructible_Object_Data|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/Destruction.html	Estagios de dano futuro; estados de dano explicitos de referencias continuam bloqueando.	-
-ACTI.DSTA	state	ficha_verified_sizes_only	spec/record-fichas.md#acti-dsta	Label documents gameplay, condition, inventory, activation or animation state.	-
+ACTI.DSTA	state	layout_verified_sizes_only	spec/record-layouts.md#acti-dsta	Label documents gameplay, condition, inventory, activation or animation state.	-
 ACTI.DSTD	outside	raw	https://falloutck.uesp.net/wiki/Destructible_Object_Data|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/Destruction.html	Estagios de dano futuro; estados de dano explicitos de referencias continuam bloqueando.	-
 ACTI.DSTF	outside	raw	https://falloutck.uesp.net/wiki/Destructible_Object_Data|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/Destruction.html	Estagios de dano futuro; estados de dano explicitos de referencias continuam bloqueando.	-
 ACTI.EDID	outside	existing	https://raw.githubusercontent.com/TES5Edit/TES5Edit/dev-4.1.6/Core/wbDefinitionsFO4.pas|https://falloutck.uesp.net/wiki/Activator|https://redsavstudios.com/fallout-mods/modding-notes/mat-swaps/	Layout anterior documentado em spec/plugin.md; identificacao textual fora da imagem; MODL/MODS/OBND conservados tipados.	-
 ACTI.FNAM	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
-ACTI.FTYP	state	ficha_verified_sizes_only	spec/record-fichas.md#acti-ftyp	Label documents gameplay, condition, inventory, activation or animation state.	-
+ACTI.FTYP	state	layout_verified_sizes_only	spec/record-layouts.md#acti-ftyp	Label documents gameplay, condition, inventory, activation or animation state.	-
 ACTI.FULL	outside	existing	https://raw.githubusercontent.com/TES5Edit/TES5Edit/dev-4.1.6/Core/wbDefinitionsFO4.pas|https://falloutck.uesp.net/wiki/Activator|https://redsavstudios.com/fallout-mods/modding-notes/mat-swaps/	Layout anterior documentado em spec/plugin.md; identificacao textual fora da imagem; MODL/MODS/OBND conservados tipados.	-
 ACTI.KSIZ	outside	raw	https://falloutck.uesp.net/wiki/Keyword|https://www.nexusmods.com/fallout4/mods/46676?tab=posts	Metadados de palavras-chave para outros sistemas; sem executar scripts ou interacoes no quadro.	-
 ACTI.KWDA	outside	raw	https://falloutck.uesp.net/wiki/Keyword|https://www.nexusmods.com/fallout4/mods/46676?tab=posts	Metadados de palavras-chave para outros sistemas; sem executar scripts ou interacoes no quadro.	-
@@ -22,18 +22,18 @@ ACTI.MODC	unknown	missing	https://forums.nexusmods.com/topic/5730837-colorizing-
 ACTI.MODL	used	existing	https://raw.githubusercontent.com/TES5Edit/TES5Edit/dev-4.1.6/Core/wbDefinitionsFO4.pas|https://falloutck.uesp.net/wiki/Activator|https://redsavstudios.com/fallout-mods/modding-notes/mat-swaps/	Layout anterior documentado em spec/plugin.md; identificacao textual fora da imagem; MODL/MODS/OBND conservados tipados.	-
 ACTI.MODS	used	existing	https://raw.githubusercontent.com/TES5Edit/TES5Edit/dev-4.1.6/Core/wbDefinitionsFO4.pas|https://falloutck.uesp.net/wiki/Activator|https://redsavstudios.com/fallout-mods/modding-notes/mat-swaps/	Layout anterior documentado em spec/plugin.md; identificacao textual fora da imagem; MODL/MODS/OBND conservados tipados.	-
 ACTI.MODT	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
-ACTI.NTRM	state	ficha_verified_sizes_only	spec/record-fichas.md#acti-ntrm	Label documents gameplay, condition, inventory, activation or animation state.	-
+ACTI.NTRM	state	layout_verified_sizes_only	spec/record-layouts.md#acti-ntrm	Label documents gameplay, condition, inventory, activation or animation state.	-
 ACTI.NVNM	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
 ACTI.OBND	used	existing	https://raw.githubusercontent.com/TES5Edit/TES5Edit/dev-4.1.6/Core/wbDefinitionsFO4.pas|https://falloutck.uesp.net/wiki/Activator|https://redsavstudios.com/fallout-mods/modding-notes/mat-swaps/	Layout anterior documentado em spec/plugin.md; identificacao textual fora da imagem; MODL/MODS/OBND conservados tipados.	-
 ACTI.PNAM	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
 ACTI.PRPS	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
 ACTI.PTRN	outside	raw	https://falloutck.uesp.net/wiki/Transform|https://www.nexusmods.com/fallout4/articles/2799	Preview de editor/inventario; nao transforma a referencia autorada na celula.	-
 ACTI.RADR	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
-ACTI.SNAM	outside	ficha_verified_sizes_only	spec/record-fichas.md#acti-snam	Label documents audio, editor metadata, collision or item value/weight outside static image.	-
-ACTI.STCP	outside	ficha_verified_sizes_only	spec/record-fichas.md#acti-stcp	Label documents audio, editor metadata, collision or item value/weight outside static image.	-
+ACTI.SNAM	outside	layout_verified_sizes_only	spec/record-layouts.md#acti-snam	Label documents audio, editor metadata, collision or item value/weight outside static image.	-
+ACTI.STCP	outside	layout_verified_sizes_only	spec/record-layouts.md#acti-stcp	Label documents audio, editor metadata, collision or item value/weight outside static image.	-
 ACTI.VMAD	state	raw	https://falloutck.uesp.net/wiki/Papyrus|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/CTDA.html	Comportamento ou condicao dependente de estado/script; nao executar.	-
-ACTI.VNAM	outside	ficha_verified_sizes_only	spec/record-fichas.md#acti-vnam	Label documents audio, editor metadata, collision or item value/weight outside static image.	-
-ACTI.WNAM	used	ficha_verified_sizes_only	spec/record-fichas.md#acti-wnam	Visual field; typed labeled values exposed in Common.ficha_fields.	-
+ACTI.VNAM	outside	layout_verified_sizes_only	spec/record-layouts.md#acti-vnam	Label documents audio, editor metadata, collision or item value/weight outside static image.	-
+ACTI.WNAM	used	layout_verified_sizes_only	spec/record-layouts.md#acti-wnam	Visual field; typed labeled values exposed in Common.layout_fields.	-
 ALCH.CTDA	state	raw	https://falloutck.uesp.net/wiki/Papyrus|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/CTDA.html	Comportamento ou condicao dependente de estado/script; nao executar.	-
 ALCH.CUSD	unknown	none		Semantica/layout FO4 nao sustentado pelas fontes permitidas consultadas; fallback Unknown observado no censo.	-
 ALCH.DATA	unknown	none		Semantica/layout FO4 nao sustentado pelas fontes permitidas consultadas; fallback Unknown observado no censo.	-
@@ -114,21 +114,21 @@ CELL.MHDT	outside	raw	https://www.nexusmods.com/fallout4/articles/4762	Alturas p
 CELL.TVDT	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
 CELL.VMAD	state	raw	https://falloutck.uesp.net/wiki/Papyrus|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/CTDA.html	Comportamento ou condicao dependente de estado/script; nao executar.	-
 CELL.XCAS	outside	raw	https://www.nexusmods.com/fallout4/articles/4762|https://falloutck.uesp.net/wiki/Acoustic_Space	Configuracao de audio, sem alterar a imagem parada.	-
-CELL.XCCM	used	ficha_verified_sizes_only	spec/record-fichas.md#cell-xccm	Visual field; typed labeled values exposed in Common.ficha_fields.	-
+CELL.XCCM	used	layout_verified_sizes_only	spec/record-layouts.md#cell-xccm	Visual field; typed labeled values exposed in Common.layout_fields.	-
 CELL.XCIM	used	form	https://www.nexusmods.com/fallout4/articles/4762|https://falloutck.uesp.net/wiki/Cell	Referencia de ImageSpace/God Rays: conservar FormID e remap; nao avaliar o efeito.	-
 CELL.XCLC	used	existing	https://raw.githubusercontent.com/TES5Edit/TES5Edit/dev-4.1.6/Core/wbDefinitionsFO4.pas|https://falloutck.uesp.net/wiki/Reference	Contrato tipado anterior preservado; coordenadas e FormIDs sem defaults.	-
-CELL.XCLL	used	ficha_verified_partial_observed_words	spec/record-fichas.md#cell-xcll	Typed physical layout; observed whole Inherits words expose printed labels without bit inference. Unseen words remain open; color Unused bytes preserved.	-
-CELL.XCLR	used	ficha_verified_sizes_only	spec/record-fichas.md#cell-xclr	Visual field; typed labeled values exposed in Common.ficha_fields.	-
-CELL.XCLW	used	ficha_verified_sizes_only	spec/record-fichas.md#cell-xclw	Visual field; typed labeled values exposed in Common.ficha_fields.	-
+CELL.XCLL	used	layout_verified_partial_observed_words	spec/record-layouts.md#cell-xcll	Typed physical layout; observed whole Inherits words expose printed labels without bit inference. Unseen words remain open; color Unused bytes preserved.	-
+CELL.XCLR	used	layout_verified_sizes_only	spec/record-layouts.md#cell-xclr	Visual field; typed labeled values exposed in Common.layout_fields.	-
+CELL.XCLW	used	layout_verified_sizes_only	spec/record-layouts.md#cell-xclw	Visual field; typed labeled values exposed in Common.layout_fields.	-
 CELL.XCMO	outside	raw	https://www.nexusmods.com/fallout4/articles/4762|https://falloutck.uesp.net/wiki/Music_Type	Configuracao de audio, sem alterar a imagem parada.	-
 CELL.XCWT	used	existing	https://raw.githubusercontent.com/TES5Edit/TES5Edit/dev-4.1.6/Core/wbDefinitionsFO4.pas|https://falloutck.uesp.net/wiki/Reference	Contrato tipado anterior preservado; coordenadas e FormIDs sem defaults.	-
 CELL.XEZN	outside	raw	https://www.nexusmods.com/fallout4/articles/4762|https://falloutck.uesp.net/wiki/Encounter_Zone	Zona de encontros; sem atores/encontros executados no quadro.	-
 CELL.XGDR	used	form	https://www.nexusmods.com/fallout4/articles/4762|https://falloutck.uesp.net/wiki/Cell	Referencia de ImageSpace/God Rays: conservar FormID e remap; nao avaliar o efeito.	-
-CELL.XILL	state	ficha_verified_sizes_only	spec/record-fichas.md#cell-xill	Label documents gameplay, condition, inventory, activation or animation state.	-
+CELL.XILL	state	layout_verified_sizes_only	spec/record-layouts.md#cell-xill	Label documents gameplay, condition, inventory, activation or animation state.	-
 CELL.XILW	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
 CELL.XLCN	used	existing	https://raw.githubusercontent.com/TES5Edit/TES5Edit/dev-4.1.6/Core/wbDefinitionsFO4.pas|https://falloutck.uesp.net/wiki/Reference	Contrato tipado anterior preservado; coordenadas e FormIDs sem defaults.	-
 CELL.XOWN	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
-CELL.XRNK	state	ficha_verified_sizes_only	spec/record-fichas.md#cell-xrnk	Label documents gameplay, condition, inventory, activation or animation state.	-
+CELL.XRNK	state	layout_verified_sizes_only	spec/record-layouts.md#cell-xrnk	Label documents gameplay, condition, inventory, activation or animation state.	-
 CELL.XWCN	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
 CELL.XWCU	unknown	partial_or_missing	https://www.nexusmods.com/fallout4/articles/4762	Velocidade da agua conhecida; falta layout de todos os componentes FO4.	-
 CONT.CNTO	unknown	none		Semantica/layout FO4 nao sustentado pelas fontes permitidas consultadas; fallback Unknown observado no censo.	-
@@ -157,7 +157,7 @@ CONT.QNAM	unknown	none		Semantica/layout FO4 nao sustentado pelas fontes permiti
 CONT.SNAM	unknown	none		Semantica/layout FO4 nao sustentado pelas fontes permitidas consultadas; fallback Unknown observado no censo.	-
 CONT.TNAM	unknown	none		Semantica/layout FO4 nao sustentado pelas fontes permitidas consultadas; fallback Unknown observado no censo.	-
 CONT.VMAD	state	raw	https://falloutck.uesp.net/wiki/Papyrus|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/CTDA.html	Comportamento ou condicao dependente de estado/script; nao executar.	-
-DOOR.ANAM	outside	ficha_verified_sizes_only	spec/record-fichas.md#door-anam	Label documents audio, editor metadata, collision or item value/weight outside static image.	-
+DOOR.ANAM	outside	layout_verified_sizes_only	spec/record-layouts.md#door-anam	Label documents audio, editor metadata, collision or item value/weight outside static image.	-
 DOOR.CNAM	unknown	none		Semantica/layout FO4 nao sustentado pelas fontes permitidas consultadas; fallback Unknown observado no censo.	-
 DOOR.CTDA	state	raw	https://falloutck.uesp.net/wiki/Papyrus|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/CTDA.html	Comportamento ou condicao dependente de estado/script; nao executar.	-
 DOOR.DEST	outside	raw	https://falloutck.uesp.net/wiki/Destructible_Object_Data|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/Destruction.html	Estagios de dano futuro; estados de dano explicitos de referencias continuam bloqueando.	-
@@ -173,11 +173,11 @@ DOOR.KWDA	outside	raw	https://falloutck.uesp.net/wiki/Keyword|https://www.nexusm
 DOOR.MODL	used	existing	https://raw.githubusercontent.com/TES5Edit/TES5Edit/dev-4.1.6/Core/wbDefinitionsFO4.pas|https://falloutck.uesp.net/wiki/Door|https://redsavstudios.com/fallout-mods/modding-notes/mat-swaps/	Layout anterior documentado em spec/plugin.md; identificacao textual fora da imagem; MODL/MODS/OBND conservados tipados.	-
 DOOR.MODS	used	existing	https://raw.githubusercontent.com/TES5Edit/TES5Edit/dev-4.1.6/Core/wbDefinitionsFO4.pas|https://falloutck.uesp.net/wiki/Door|https://redsavstudios.com/fallout-mods/modding-notes/mat-swaps/	Layout anterior documentado em spec/plugin.md; identificacao textual fora da imagem; MODL/MODS/OBND conservados tipados.	-
 DOOR.MODT	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
-DOOR.NTRM	state	ficha_verified_sizes_only	spec/record-fichas.md#door-ntrm	Label documents gameplay, condition, inventory, activation or animation state.	-
+DOOR.NTRM	state	layout_verified_sizes_only	spec/record-layouts.md#door-ntrm	Label documents gameplay, condition, inventory, activation or animation state.	-
 DOOR.OBND	used	existing	https://raw.githubusercontent.com/TES5Edit/TES5Edit/dev-4.1.6/Core/wbDefinitionsFO4.pas|https://falloutck.uesp.net/wiki/Door|https://redsavstudios.com/fallout-mods/modding-notes/mat-swaps/	Layout anterior documentado em spec/plugin.md; identificacao textual fora da imagem; MODL/MODS/OBND conservados tipados.	-
 DOOR.ONAM	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
 DOOR.PTRN	outside	raw	https://falloutck.uesp.net/wiki/Transform|https://www.nexusmods.com/fallout4/articles/2799	Preview de editor/inventario; nao transforma a referencia autorada na celula.	-
-DOOR.SNAM	outside	ficha_verified_sizes_only	spec/record-fichas.md#door-snam	Label documents audio, editor metadata, collision or item value/weight outside static image.	-
+DOOR.SNAM	outside	layout_verified_sizes_only	spec/record-layouts.md#door-snam	Label documents audio, editor metadata, collision or item value/weight outside static image.	-
 DOOR.VMAD	state	raw	https://falloutck.uesp.net/wiki/Papyrus|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/CTDA.html	Comportamento ou condicao dependente de estado/script; nao executar.	-
 FLOR.ATTX	unknown	none		Semantica/layout FO4 nao sustentado pelas fontes permitidas consultadas; fallback Unknown observado no censo.	-
 FLOR.CTDA	state	raw	https://falloutck.uesp.net/wiki/Papyrus|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/CTDA.html	Comportamento ou condicao dependente de estado/script; nao executar.	-
@@ -204,9 +204,9 @@ FLOR.SNAM	unknown	none		Semantica/layout FO4 nao sustentado pelas fontes permiti
 FLOR.VMAD	state	raw	https://falloutck.uesp.net/wiki/Papyrus|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/CTDA.html	Comportamento ou condicao dependente de estado/script; nao executar.	-
 FURN.APPR	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
 FURN.ATTX	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
-FURN.CITC	state	ficha_verified_sizes_only	spec/record-fichas.md#furn-citc	Label documents gameplay, condition, inventory, activation or animation state.	-
+FURN.CITC	state	layout_verified_sizes_only	spec/record-layouts.md#furn-citc	Label documents gameplay, condition, inventory, activation or animation state.	-
 FURN.CNTO	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
-FURN.COCT	state	ficha_verified_sizes_only	spec/record-fichas.md#furn-coct	Label documents gameplay, condition, inventory, activation or animation state.	-
+FURN.COCT	state	layout_verified_sizes_only	spec/record-layouts.md#furn-coct	Label documents gameplay, condition, inventory, activation or animation state.	-
 FURN.CTDA	state	raw	https://falloutck.uesp.net/wiki/Papyrus|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/CTDA.html	Comportamento ou condicao dependente de estado/script; nao executar.	-
 FURN.DEST	outside	raw	https://falloutck.uesp.net/wiki/Destructible_Object_Data|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/Destruction.html	Estagios de dano futuro; estados de dano explicitos de referencias continuam bloqueando.	-
 FURN.DMDL	outside	raw	https://falloutck.uesp.net/wiki/Destructible_Object_Data|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/Destruction.html	Estagios de dano futuro; estados de dano explicitos de referencias continuam bloqueando.	-
@@ -215,10 +215,10 @@ FURN.DSTA	unknown	none		Semantica/layout FO4 nao sustentado pelas fontes permiti
 FURN.DSTD	outside	raw	https://falloutck.uesp.net/wiki/Destructible_Object_Data|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/Destruction.html	Estagios de dano futuro; estados de dano explicitos de referencias continuam bloqueando.	-
 FURN.DSTF	outside	raw	https://falloutck.uesp.net/wiki/Destructible_Object_Data|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/Destruction.html	Estagios de dano futuro; estados de dano explicitos de referencias continuam bloqueando.	-
 FURN.EDID	outside	existing	https://raw.githubusercontent.com/TES5Edit/TES5Edit/dev-4.1.6/Core/wbDefinitionsFO4.pas|https://falloutck.uesp.net/wiki/Furniture|https://redsavstudios.com/fallout-mods/modding-notes/mat-swaps/	Layout anterior documentado em spec/plugin.md; identificacao textual fora da imagem; MODL/MODS/OBND conservados tipados.	-
-FURN.ENAM	state	ficha_verified_sizes_only	spec/record-fichas.md#furn-enam	Label documents gameplay, condition, inventory, activation or animation state.	-
+FURN.ENAM	state	layout_verified_sizes_only	spec/record-layouts.md#furn-enam	Label documents gameplay, condition, inventory, activation or animation state.	-
 FURN.FNAM	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
 FURN.FNPR	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
-FURN.FTYP	state	ficha_verified_sizes_only	spec/record-fichas.md#furn-ftyp	Label documents gameplay, condition, inventory, activation or animation state.	-
+FURN.FTYP	state	layout_verified_sizes_only	spec/record-layouts.md#furn-ftyp	Label documents gameplay, condition, inventory, activation or animation state.	-
 FURN.FULL	outside	existing	https://raw.githubusercontent.com/TES5Edit/TES5Edit/dev-4.1.6/Core/wbDefinitionsFO4.pas|https://falloutck.uesp.net/wiki/Furniture|https://redsavstudios.com/fallout-mods/modding-notes/mat-swaps/	Layout anterior documentado em spec/plugin.md; identificacao textual fora da imagem; MODL/MODS/OBND conservados tipados.	-
 FURN.KSIZ	outside	raw	https://falloutck.uesp.net/wiki/Keyword|https://www.nexusmods.com/fallout4/mods/46676?tab=posts	Metadados de palavras-chave para outros sistemas; sem executar scripts ou interacoes no quadro.	-
 FURN.KWDA	outside	raw	https://falloutck.uesp.net/wiki/Keyword|https://www.nexusmods.com/fallout4/mods/46676?tab=posts	Metadados de palavras-chave para outros sistemas; sem executar scripts ou interacoes no quadro.	-
@@ -228,20 +228,20 @@ FURN.MODL	used	existing	https://raw.githubusercontent.com/TES5Edit/TES5Edit/dev-
 FURN.MODS	used	existing	https://raw.githubusercontent.com/TES5Edit/TES5Edit/dev-4.1.6/Core/wbDefinitionsFO4.pas|https://falloutck.uesp.net/wiki/Furniture|https://redsavstudios.com/fallout-mods/modding-notes/mat-swaps/	Layout anterior documentado em spec/plugin.md; identificacao textual fora da imagem; MODL/MODS/OBND conservados tipados.	-
 FURN.MODT	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
 FURN.NAM0	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
-FURN.NAM1	state	ficha_verified_sizes_only	spec/record-fichas.md#furn-nam1	Label documents gameplay, condition, inventory, activation or animation state.	-
+FURN.NAM1	state	layout_verified_sizes_only	spec/record-layouts.md#furn-nam1	Label documents gameplay, condition, inventory, activation or animation state.	-
 FURN.NTRM	unknown	none		Semantica/layout FO4 nao sustentado pelas fontes permitidas consultadas; fallback Unknown observado no censo.	-
 FURN.NVNM	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
 FURN.OBND	used	existing	https://raw.githubusercontent.com/TES5Edit/TES5Edit/dev-4.1.6/Core/wbDefinitionsFO4.pas|https://falloutck.uesp.net/wiki/Furniture|https://redsavstudios.com/fallout-mods/modding-notes/mat-swaps/	Layout anterior documentado em spec/plugin.md; identificacao textual fora da imagem; MODL/MODS/OBND conservados tipados.	-
-FURN.OBTE	state	ficha_verified_sizes_only	spec/record-fichas.md#furn-obte	Label documents gameplay, condition, inventory, activation or animation state.	-
+FURN.OBTE	state	layout_verified_sizes_only	spec/record-layouts.md#furn-obte	Label documents gameplay, condition, inventory, activation or animation state.	-
 FURN.OBTS	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
 FURN.PNAM	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
 FURN.PRPS	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
 FURN.PTRN	outside	raw	https://falloutck.uesp.net/wiki/Transform|https://www.nexusmods.com/fallout4/articles/2799	Preview de editor/inventario; nao transforma a referencia autorada na celula.	-
 FURN.SNAM	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
-FURN.STOP	outside	ficha_verified_sizes_only	spec/record-fichas.md#furn-stop	Label documents audio, editor metadata, collision or item value/weight outside static image.	-
+FURN.STOP	outside	layout_verified_sizes_only	spec/record-layouts.md#furn-stop	Label documents audio, editor metadata, collision or item value/weight outside static image.	-
 FURN.VMAD	state	raw	https://falloutck.uesp.net/wiki/Papyrus|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/CTDA.html	Comportamento ou condicao dependente de estado/script; nao executar.	-
 FURN.WBDT	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
-FURN.XMRK	outside	ficha_verified_sizes_only	spec/record-fichas.md#furn-xmrk	Label documents audio, editor metadata, collision or item value/weight outside static image.	-
+FURN.XMRK	outside	layout_verified_sizes_only	spec/record-layouts.md#furn-xmrk	Label documents audio, editor metadata, collision or item value/weight outside static image.	-
 KEYM.CTDA	state	raw	https://falloutck.uesp.net/wiki/Papyrus|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/CTDA.html	Comportamento ou condicao dependente de estado/script; nao executar.	-
 KEYM.DATA	unknown	none		Semantica/layout FO4 nao sustentado pelas fontes permitidas consultadas; fallback Unknown observado no censo.	-
 KEYM.DEST	outside	raw	https://falloutck.uesp.net/wiki/Destructible_Object_Data|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/Destruction.html	Estagios de dano futuro; estados de dano explicitos de referencias continuam bloqueando.	-
@@ -260,36 +260,36 @@ KEYM.OBND	used	existing	https://raw.githubusercontent.com/TES5Edit/TES5Edit/dev-
 KEYM.PTRN	outside	raw	https://falloutck.uesp.net/wiki/Transform|https://www.nexusmods.com/fallout4/articles/2799	Preview de editor/inventario; nao transforma a referencia autorada na celula.	-
 KEYM.VMAD	state	raw	https://falloutck.uesp.net/wiki/Papyrus|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/CTDA.html	Comportamento ou condicao dependente de estado/script; nao executar.	-
 LGTM.CTDA	state	raw	https://falloutck.uesp.net/wiki/Papyrus|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/CTDA.html	Comportamento ou condicao dependente de estado/script; nao executar.	-
-LGTM.DALC	used	ficha_verified_sizes_only	spec/record-fichas.md#lgtm-dalc	Visual field; typed labeled values exposed in Common.ficha_fields.	-
-LGTM.DATA	used	ficha_verified_sizes_only	spec/record-fichas.md#lgtm-data	Visual field; typed labeled values exposed in Common.ficha_fields.	-
+LGTM.DALC	used	layout_verified_sizes_only	spec/record-layouts.md#lgtm-dalc	Visual field; typed labeled values exposed in Common.layout_fields.	-
+LGTM.DATA	used	layout_verified_sizes_only	spec/record-layouts.md#lgtm-data	Visual field; typed labeled values exposed in Common.layout_fields.	-
 LGTM.VMAD	state	raw	https://falloutck.uesp.net/wiki/Papyrus|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/CTDA.html	Comportamento ou condicao dependente de estado/script; nao executar.	-
 LGTM.WGDR	used	existing	https://raw.githubusercontent.com/TES5Edit/TES5Edit/dev-4.1.6/Core/wbDefinitionsFO4.pas|https://falloutck.uesp.net/wiki/Reference	Contrato tipado anterior preservado; coordenadas e FormIDs sem defaults.	-
 LIGH.CTDA	state	raw	https://falloutck.uesp.net/wiki/Papyrus|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/CTDA.html	Comportamento ou condicao dependente de estado/script; nao executar.	-
-LIGH.DATA	used	ficha_verified_partial	spec/record-fichas.md	Typed physical layout for 48/60/64; only four exact observed flag words without Unknown labels close; other Flags remain named open.	-
+LIGH.DATA	used	layout_verified_partial	spec/record-layouts.md	Typed physical layout for 48/60/64; only four exact observed flag words without Unknown labels close; other Flags remain named open.	-
 LIGH.DEST	outside	raw	https://falloutck.uesp.net/wiki/Destructible_Object_Data|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/Destruction.html	Estagios de dano futuro; estados de dano explicitos de referencias continuam bloqueando.	-
 LIGH.DMDL	outside	raw	https://falloutck.uesp.net/wiki/Destructible_Object_Data|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/Destruction.html	Estagios de dano futuro; estados de dano explicitos de referencias continuam bloqueando.	-
 LIGH.DMDT	outside	raw	https://falloutck.uesp.net/wiki/Destructible_Object_Data|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/Destruction.html	Estagios de dano futuro; estados de dano explicitos de referencias continuam bloqueando.	-
 LIGH.DSTD	outside	raw	https://falloutck.uesp.net/wiki/Destructible_Object_Data|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/Destruction.html	Estagios de dano futuro; estados de dano explicitos de referencias continuam bloqueando.	-
 LIGH.DSTF	outside	raw	https://falloutck.uesp.net/wiki/Destructible_Object_Data|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/Destruction.html	Estagios de dano futuro; estados de dano explicitos de referencias continuam bloqueando.	-
 LIGH.EDID	outside	existing	https://raw.githubusercontent.com/TES5Edit/TES5Edit/dev-4.1.6/Core/wbDefinitionsFO4.pas|https://falloutck.uesp.net/wiki/Light|https://redsavstudios.com/fallout-mods/modding-notes/mat-swaps/	Layout anterior documentado em spec/plugin.md; identificacao textual fora da imagem; MODL/MODS/OBND conservados tipados.	-
-LIGH.FNAM	used	ficha_verified_sizes_only	spec/record-fichas.md#ligh-fnam	Visual field; typed labeled values exposed in Common.ficha_fields.	-
+LIGH.FNAM	used	layout_verified_sizes_only	spec/record-layouts.md#ligh-fnam	Visual field; typed labeled values exposed in Common.layout_fields.	-
 LIGH.FULL	outside	existing	https://raw.githubusercontent.com/TES5Edit/TES5Edit/dev-4.1.6/Core/wbDefinitionsFO4.pas|https://falloutck.uesp.net/wiki/Light|https://redsavstudios.com/fallout-mods/modding-notes/mat-swaps/	Layout anterior documentado em spec/plugin.md; identificacao textual fora da imagem; MODL/MODS/OBND conservados tipados.	-
 LIGH.KSIZ	outside	raw	https://falloutck.uesp.net/wiki/Keyword|https://www.nexusmods.com/fallout4/mods/46676?tab=posts	Metadados de palavras-chave para outros sistemas; sem executar scripts ou interacoes no quadro.	-
 LIGH.KWDA	outside	raw	https://falloutck.uesp.net/wiki/Keyword|https://www.nexusmods.com/fallout4/mods/46676?tab=posts	Metadados de palavras-chave para outros sistemas; sem executar scripts ou interacoes no quadro.	-
-LIGH.LNAM	used	ficha_verified_sizes_only	spec/record-fichas.md#ligh-lnam	Visual field; typed labeled values exposed in Common.ficha_fields.	-
+LIGH.LNAM	used	layout_verified_sizes_only	spec/record-layouts.md#ligh-lnam	Visual field; typed labeled values exposed in Common.layout_fields.	-
 LIGH.MODL	used	existing	https://raw.githubusercontent.com/TES5Edit/TES5Edit/dev-4.1.6/Core/wbDefinitionsFO4.pas|https://falloutck.uesp.net/wiki/Light|https://redsavstudios.com/fallout-mods/modding-notes/mat-swaps/	Layout anterior documentado em spec/plugin.md; identificacao textual fora da imagem; MODL/MODS/OBND conservados tipados.	-
 LIGH.MODS	used	existing	https://raw.githubusercontent.com/TES5Edit/TES5Edit/dev-4.1.6/Core/wbDefinitionsFO4.pas|https://falloutck.uesp.net/wiki/Light|https://redsavstudios.com/fallout-mods/modding-notes/mat-swaps/	Layout anterior documentado em spec/plugin.md; identificacao textual fora da imagem; MODL/MODS/OBND conservados tipados.	-
 LIGH.MODT	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
-LIGH.NAM0	used	ficha_verified_sizes_only	spec/record-fichas.md#ligh-nam0	Visual field; typed labeled values exposed in Common.ficha_fields.	-
+LIGH.NAM0	used	layout_verified_sizes_only	spec/record-layouts.md#ligh-nam0	Visual field; typed labeled values exposed in Common.layout_fields.	-
 LIGH.OBND	used	existing	https://raw.githubusercontent.com/TES5Edit/TES5Edit/dev-4.1.6/Core/wbDefinitionsFO4.pas|https://falloutck.uesp.net/wiki/Light|https://redsavstudios.com/fallout-mods/modding-notes/mat-swaps/	Layout anterior documentado em spec/plugin.md; identificacao textual fora da imagem; MODL/MODS/OBND conservados tipados.	-
 LIGH.PRPS	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
 LIGH.PTRN	outside	raw	https://falloutck.uesp.net/wiki/Transform|https://www.nexusmods.com/fallout4/articles/2799	Preview de editor/inventario; nao transforma a referencia autorada na celula.	-
 LIGH.VMAD	state	raw	https://falloutck.uesp.net/wiki/Papyrus|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/CTDA.html	Comportamento ou condicao dependente de estado/script; nao executar.	-
-LIGH.WGDR	used	ficha_verified_sizes_only	spec/record-fichas.md#ligh-wgdr	Visual field; typed labeled values exposed in Common.ficha_fields.	-
+LIGH.WGDR	used	layout_verified_sizes_only	spec/record-layouts.md#ligh-wgdr	Visual field; typed labeled values exposed in Common.layout_fields.	-
 MISC.CDIX	unknown	none		Semantica/layout FO4 nao sustentado pelas fontes permitidas consultadas; fallback Unknown observado no censo.	-
 MISC.CTDA	state	raw	https://falloutck.uesp.net/wiki/Papyrus|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/CTDA.html	Comportamento ou condicao dependente de estado/script; nao executar.	-
 MISC.CVPA	unknown	none		Semantica/layout FO4 nao sustentado pelas fontes permitidas consultadas; fallback Unknown observado no censo.	-
-MISC.DATA	outside	ficha_verified_sizes_only	spec/record-fichas.md#misc-data	Label documents audio, editor metadata, collision or item value/weight outside static image.	-
+MISC.DATA	outside	layout_verified_sizes_only	spec/record-layouts.md#misc-data	Label documents audio, editor metadata, collision or item value/weight outside static image.	-
 MISC.DEST	outside	raw	https://falloutck.uesp.net/wiki/Destructible_Object_Data|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/Destruction.html	Estagios de dano futuro; estados de dano explicitos de referencias continuam bloqueando.	-
 MISC.DMDL	outside	raw	https://falloutck.uesp.net/wiki/Destructible_Object_Data|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/Destruction.html	Estagios de dano futuro; estados de dano explicitos de referencias continuam bloqueando.	-
 MISC.DMDT	outside	raw	https://falloutck.uesp.net/wiki/Destructible_Object_Data|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/Destruction.html	Estagios de dano futuro; estados de dano explicitos de referencias continuam bloqueando.	-
@@ -309,26 +309,26 @@ MISC.VMAD	state	raw	https://falloutck.uesp.net/wiki/Papyrus|https://tes5edit.git
 MISC.YNAM	unknown	none		Semantica/layout FO4 nao sustentado pelas fontes permitidas consultadas; fallback Unknown observado no censo.	-
 MISC.ZNAM	unknown	none		Semantica/layout FO4 nao sustentado pelas fontes permitidas consultadas; fallback Unknown observado no censo.	-
 MSTT.CTDA	state	raw	https://falloutck.uesp.net/wiki/Papyrus|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/CTDA.html	Comportamento ou condicao dependente de estado/script; nao executar.	-
-MSTT.DATA	used	ficha	measured-field-dump:MSTT.DATA|spec/record-light-key-layouts.md	On Local Map raw00=False and raw01=True observed; named map declaration, no geometry/runtime evaluation. Other bytes remain uninterpreted.	-
+MSTT.DATA	used	layout	measured-field-dump:MSTT.DATA|spec/record-light-key-layouts.md	On Local Map raw00=False and raw01=True observed; named map declaration, no geometry/runtime evaluation. Other bytes remain uninterpreted.	-
 MSTT.DEST	outside	raw	https://falloutck.uesp.net/wiki/Destructible_Object_Data|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/Destruction.html	Estagios de dano futuro; estados de dano explicitos de referencias continuam bloqueando.	-
 MSTT.DMDL	outside	raw	https://falloutck.uesp.net/wiki/Destructible_Object_Data|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/Destruction.html	Estagios de dano futuro; estados de dano explicitos de referencias continuam bloqueando.	-
-MSTT.DMDS	used	ficha_verified_sizes_only	spec/record-fichas.md#mstt-dmds	Visual field; typed labeled values exposed in Common.ficha_fields.	-
+MSTT.DMDS	used	layout_verified_sizes_only	spec/record-layouts.md#mstt-dmds	Visual field; typed labeled values exposed in Common.layout_fields.	-
 MSTT.DMDT	outside	raw	https://falloutck.uesp.net/wiki/Destructible_Object_Data|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/Destruction.html	Estagios de dano futuro; estados de dano explicitos de referencias continuam bloqueando.	-
-MSTT.DSTA	state	ficha_verified_sizes_only	spec/record-fichas.md#mstt-dsta	Label documents gameplay, condition, inventory, activation or animation state.	-
+MSTT.DSTA	state	layout_verified_sizes_only	spec/record-layouts.md#mstt-dsta	Label documents gameplay, condition, inventory, activation or animation state.	-
 MSTT.DSTD	outside	raw	https://falloutck.uesp.net/wiki/Destructible_Object_Data|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/Destruction.html	Estagios de dano futuro; estados de dano explicitos de referencias continuam bloqueando.	-
 MSTT.DSTF	outside	raw	https://falloutck.uesp.net/wiki/Destructible_Object_Data|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/Destruction.html	Estagios de dano futuro; estados de dano explicitos de referencias continuam bloqueando.	-
 MSTT.EDID	outside	existing	https://raw.githubusercontent.com/TES5Edit/TES5Edit/dev-4.1.6/Core/wbDefinitionsFO4.pas|https://falloutck.uesp.net/wiki/MovableStatic|https://redsavstudios.com/fallout-mods/modding-notes/mat-swaps/	Layout anterior documentado em spec/plugin.md; identificacao textual fora da imagem; MODL/MODS/OBND conservados tipados.	-
 MSTT.FULL	outside	existing	https://raw.githubusercontent.com/TES5Edit/TES5Edit/dev-4.1.6/Core/wbDefinitionsFO4.pas|https://falloutck.uesp.net/wiki/MovableStatic|https://redsavstudios.com/fallout-mods/modding-notes/mat-swaps/	Layout anterior documentado em spec/plugin.md; identificacao textual fora da imagem; MODL/MODS/OBND conservados tipados.	-
 MSTT.KSIZ	outside	raw	https://falloutck.uesp.net/wiki/Keyword|https://www.nexusmods.com/fallout4/mods/46676?tab=posts	Metadados de palavras-chave para outros sistemas; sem executar scripts ou interacoes no quadro.	-
 MSTT.KWDA	outside	raw	https://falloutck.uesp.net/wiki/Keyword|https://www.nexusmods.com/fallout4/mods/46676?tab=posts	Metadados de palavras-chave para outros sistemas; sem executar scripts ou interacoes no quadro.	-
-MSTT.MODC	used	ficha_verified_sizes_only	spec/record-fichas.md#mstt-modc	Visual field; typed labeled values exposed in Common.ficha_fields.	-
+MSTT.MODC	used	layout_verified_sizes_only	spec/record-layouts.md#mstt-modc	Visual field; typed labeled values exposed in Common.layout_fields.	-
 MSTT.MODL	used	existing	https://raw.githubusercontent.com/TES5Edit/TES5Edit/dev-4.1.6/Core/wbDefinitionsFO4.pas|https://falloutck.uesp.net/wiki/MovableStatic|https://redsavstudios.com/fallout-mods/modding-notes/mat-swaps/	Layout anterior documentado em spec/plugin.md; identificacao textual fora da imagem; MODL/MODS/OBND conservados tipados.	-
 MSTT.MODS	used	existing	https://raw.githubusercontent.com/TES5Edit/TES5Edit/dev-4.1.6/Core/wbDefinitionsFO4.pas|https://falloutck.uesp.net/wiki/MovableStatic|https://redsavstudios.com/fallout-mods/modding-notes/mat-swaps/	Layout anterior documentado em spec/plugin.md; identificacao textual fora da imagem; MODL/MODS/OBND conservados tipados.	-
 MSTT.MODT	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
 MSTT.OBND	used	existing	https://raw.githubusercontent.com/TES5Edit/TES5Edit/dev-4.1.6/Core/wbDefinitionsFO4.pas|https://falloutck.uesp.net/wiki/MovableStatic|https://redsavstudios.com/fallout-mods/modding-notes/mat-swaps/	Layout anterior documentado em spec/plugin.md; identificacao textual fora da imagem; MODL/MODS/OBND conservados tipados.	-
 MSTT.PRPS	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
 MSTT.PTRN	outside	raw	https://falloutck.uesp.net/wiki/Transform|https://www.nexusmods.com/fallout4/articles/2799	Preview de editor/inventario; nao transforma a referencia autorada na celula.	-
-MSTT.SNAM	outside	ficha_verified_sizes_only	spec/record-fichas.md#mstt-snam	Label documents audio, editor metadata, collision or item value/weight outside static image.	-
+MSTT.SNAM	outside	layout_verified_sizes_only	spec/record-layouts.md#mstt-snam	Label documents audio, editor metadata, collision or item value/weight outside static image.	-
 MSTT.VMAD	state	raw	https://falloutck.uesp.net/wiki/Papyrus|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/CTDA.html	Comportamento ou condicao dependente de estado/script; nao executar.	-
 NOTE.CTDA	state	raw	https://falloutck.uesp.net/wiki/Papyrus|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/CTDA.html	Comportamento ou condicao dependente de estado/script; nao executar.	-
 NOTE.DATA	unknown	none		Semantica/layout FO4 nao sustentado pelas fontes permitidas consultadas; fallback Unknown observado no censo.	-
@@ -355,49 +355,49 @@ NOTE.ZNAM	unknown	none		Semantica/layout FO4 nao sustentado pelas fontes permiti
 REFR.CTDA	state	raw	https://falloutck.uesp.net/wiki/Papyrus|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/CTDA.html	Comportamento ou condicao dependente de estado/script; nao executar.	-
 REFR.DATA	used	existing	https://raw.githubusercontent.com/TES5Edit/TES5Edit/dev-4.1.6/Core/wbDefinitionsFO4.pas|https://falloutck.uesp.net/wiki/Reference	Contrato tipado anterior preservado; coordenadas e FormIDs sem defaults.	-
 REFR.FNAM	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
-REFR.INAM	state	ficha_verified_sizes_only	spec/record-fichas.md#refr-inam	Label documents gameplay, condition, inventory, activation or animation state.	-
-REFR.LNAM	used	ficha_verified_sizes_only	spec/record-fichas.md#refr-lnam	Visual field; typed labeled values exposed in Common.ficha_fields.	-
-REFR.MNAM	outside	ficha_verified_sizes_only	spec/record-fichas.md#refr-mnam	Label documents audio, editor metadata, collision or item value/weight outside static image.	-
+REFR.INAM	state	layout_verified_sizes_only	spec/record-layouts.md#refr-inam	Label documents gameplay, condition, inventory, activation or animation state.	-
+REFR.LNAM	used	layout_verified_sizes_only	spec/record-layouts.md#refr-lnam	Visual field; typed labeled values exposed in Common.layout_fields.	-
+REFR.MNAM	outside	layout_verified_sizes_only	spec/record-layouts.md#refr-mnam	Label documents audio, editor metadata, collision or item value/weight outside static image.	-
 REFR.NAME	used	existing	https://raw.githubusercontent.com/TES5Edit/TES5Edit/dev-4.1.6/Core/wbDefinitionsFO4.pas|https://falloutck.uesp.net/wiki/Reference	Contrato tipado anterior preservado; coordenadas e FormIDs sem defaults.	-
-REFR.ONAM	state	ficha_verified_sizes_only	spec/record-fichas.md#refr-onam	Label documents gameplay, condition, inventory, activation or animation state.	-
+REFR.ONAM	state	layout_verified_sizes_only	spec/record-layouts.md#refr-onam	Label documents gameplay, condition, inventory, activation or animation state.	-
 REFR.PDTO	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
 REFR.TNAM	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
 REFR.VMAD	state	raw	https://falloutck.uesp.net/wiki/Papyrus|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/CTDA.html	Comportamento ou condicao dependente de estado/script; nao executar.	-
 REFR.XACT	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
 REFR.XALP	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
-REFR.XAMC	state	ficha_verified_sizes_only	spec/record-fichas.md#refr-xamc	Label documents gameplay, condition, inventory, activation or animation state.	-
+REFR.XAMC	state	layout_verified_sizes_only	spec/record-layouts.md#refr-xamc	Label documents gameplay, condition, inventory, activation or animation state.	-
 REFR.XAPD	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
 REFR.XAPR	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
-REFR.XASP	outside	ficha_verified_sizes_only	spec/record-fichas.md#refr-xasp	Label documents audio, editor metadata, collision or item value/weight outside static image.	-
-REFR.XATP	state	ficha_verified_sizes_only	spec/record-fichas.md#refr-xatp	Label documents gameplay, condition, inventory, activation or animation state.	-
-REFR.XATR	state	ficha_verified_sizes_only	spec/record-fichas.md#refr-xatr	Label documents gameplay, condition, inventory, activation or animation state.	-
+REFR.XASP	outside	layout_verified_sizes_only	spec/record-layouts.md#refr-xasp	Label documents audio, editor metadata, collision or item value/weight outside static image.	-
+REFR.XATP	state	layout_verified_sizes_only	spec/record-layouts.md#refr-xatp	Label documents gameplay, condition, inventory, activation or animation state.	-
+REFR.XATR	state	layout_verified_sizes_only	spec/record-layouts.md#refr-xatr	Label documents gameplay, condition, inventory, activation or animation state.	-
 REFR.XBSD	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
-REFR.XCNT	state	ficha_verified_sizes_only	spec/record-fichas.md#refr-xcnt	Label documents gameplay, condition, inventory, activation or animation state.	-
+REFR.XCNT	state	layout_verified_sizes_only	spec/record-layouts.md#refr-xcnt	Label documents gameplay, condition, inventory, activation or animation state.	-
 REFR.XCVL	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
 REFR.XCVR	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
 REFR.XCZA	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
-REFR.XCZC	state	ficha_verified_sizes_only	spec/record-fichas.md#refr-xczc	Label documents gameplay, condition, inventory, activation or animation state.	-
+REFR.XCZC	state	layout_verified_sizes_only	spec/record-layouts.md#refr-xczc	Label documents gameplay, condition, inventory, activation or animation state.	-
 REFR.XCZR	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
-REFR.XEMI	used	ficha_verified_sizes_only	spec/record-fichas.md#refr-xemi	Visual field; typed labeled values exposed in Common.ficha_fields.	-
+REFR.XEMI	used	layout_verified_sizes_only	spec/record-layouts.md#refr-xemi	Visual field; typed labeled values exposed in Common.layout_fields.	-
 REFR.XESP	state	existing	https://falloutck.uesp.net/wiki/Reference	Enable parent depende de estado; conservar FormRef e flags, sem escolher habilitacao.	-
-REFR.XEZN	state	ficha_verified_sizes_only	spec/record-fichas.md#refr-xezn	Label documents gameplay, condition, inventory, activation or animation state.	-
-REFR.XFVC	state	ficha_verified_sizes_only	spec/record-fichas.md#refr-xfvc	Label documents gameplay, condition, inventory, activation or animation state.	-
-REFR.XHLT	state	ficha_verified_sizes_only	spec/record-fichas.md#refr-xhlt	Label documents gameplay, condition, inventory, activation or animation state.	-
-REFR.XHTW	state	ficha_verified_sizes_only	spec/record-fichas.md#refr-xhtw	Label documents gameplay, condition, inventory, activation or animation state.	-
-REFR.XIS2	state	ficha_verified_sizes_only	spec/record-fichas.md#refr-xis2	Label documents gameplay, condition, inventory, activation or animation state.	-
+REFR.XEZN	state	layout_verified_sizes_only	spec/record-layouts.md#refr-xezn	Label documents gameplay, condition, inventory, activation or animation state.	-
+REFR.XFVC	state	layout_verified_sizes_only	spec/record-layouts.md#refr-xfvc	Label documents gameplay, condition, inventory, activation or animation state.	-
+REFR.XHLT	state	layout_verified_sizes_only	spec/record-layouts.md#refr-xhlt	Label documents gameplay, condition, inventory, activation or animation state.	-
+REFR.XHTW	state	layout_verified_sizes_only	spec/record-layouts.md#refr-xhtw	Label documents gameplay, condition, inventory, activation or animation state.	-
+REFR.XIS2	state	layout_verified_sizes_only	spec/record-layouts.md#refr-xis2	Label documents gameplay, condition, inventory, activation or animation state.	-
 REFR.XLCM	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
-REFR.XLIB	state	ficha_verified_sizes_only	spec/record-fichas.md#refr-xlib	Label documents gameplay, condition, inventory, activation or animation state.	-
+REFR.XLIB	state	layout_verified_sizes_only	spec/record-layouts.md#refr-xlib	Label documents gameplay, condition, inventory, activation or animation state.	-
 REFR.XLIG	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
 REFR.XLKR	outside	raw	https://www.nexusmods.com/fallout4/mods/107414|https://falloutck.uesp.net/wiki/Reference	Ligacao para gestao de objetos/interacoes; nao executa a ligacao nem scripts.	-
-REFR.XLKT	state	ficha_verified_sizes_only	spec/record-fichas.md#refr-xlkt	Label documents gameplay, condition, inventory, activation or animation state.	-
+REFR.XLKT	state	layout_verified_sizes_only	spec/record-layouts.md#refr-xlkt	Label documents gameplay, condition, inventory, activation or animation state.	-
 REFR.XLOC	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
-REFR.XLRM	used	ficha_verified_sizes_only	spec/record-fichas.md#refr-xlrm	Visual field; typed labeled values exposed in Common.ficha_fields.	-
-REFR.XLRT	state	ficha_verified_sizes_only	spec/record-fichas.md#refr-xlrt	Label documents gameplay, condition, inventory, activation or animation state.	-
-REFR.XLYR	outside	ficha_verified_sizes_only	spec/record-fichas.md#refr-xlyr	Label documents audio, editor metadata, collision or item value/weight outside static image.	-
+REFR.XLRM	used	layout_verified_sizes_only	spec/record-layouts.md#refr-xlrm	Visual field; typed labeled values exposed in Common.layout_fields.	-
+REFR.XLRT	state	layout_verified_sizes_only	spec/record-layouts.md#refr-xlrt	Label documents gameplay, condition, inventory, activation or animation state.	-
+REFR.XLYR	outside	layout_verified_sizes_only	spec/record-layouts.md#refr-xlyr	Label documents audio, editor metadata, collision or item value/weight outside static image.	-
 REFR.XMBO	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
 REFR.XMBP	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
-REFR.XMBR	used	ficha_verified_sizes_only	spec/record-fichas.md#refr-xmbr	Visual field; typed labeled values exposed in Common.ficha_fields.	-
-REFR.XMRK	state	ficha_verified_sizes_only	spec/record-fichas.md#refr-xmrk	Label documents gameplay, condition, inventory, activation or animation state.	-
+REFR.XMBR	used	layout_verified_sizes_only	spec/record-layouts.md#refr-xmbr	Visual field; typed labeled values exposed in Common.layout_fields.	-
+REFR.XMRK	state	layout_verified_sizes_only	spec/record-layouts.md#refr-xmrk	Label documents gameplay, condition, inventory, activation or animation state.	-
 REFR.XMSP	used	existing	https://raw.githubusercontent.com/TES5Edit/TES5Edit/dev-4.1.6/Core/wbDefinitionsFO4.pas|https://falloutck.uesp.net/wiki/Reference	Contrato tipado anterior preservado; coordenadas e FormIDs sem defaults.	-
 REFR.XNDP	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
 REFR.XOCP	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
@@ -406,23 +406,23 @@ REFR.XOWN	unknown	none		Semantica ou layout FO4 insuficientemente documentado; n
 REFR.XPDD	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
 REFR.XPLK	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
 REFR.XPOD	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
-REFR.XPPA	state	ficha_verified_sizes_only	spec/record-fichas.md#refr-xppa	Label documents gameplay, condition, inventory, activation or animation state.	-
-REFR.XPRD	state	ficha_verified_sizes_only	spec/record-fichas.md#refr-xprd	Label documents gameplay, condition, inventory, activation or animation state.	-
+REFR.XPPA	state	layout_verified_sizes_only	spec/record-layouts.md#refr-xppa	Label documents gameplay, condition, inventory, activation or animation state.	-
+REFR.XPRD	state	layout_verified_sizes_only	spec/record-layouts.md#refr-xprd	Label documents gameplay, condition, inventory, activation or animation state.	-
 REFR.XPRM	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
 REFR.XRDO	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
 REFR.XRDS	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
-REFR.XRFG	state	ficha_verified_sizes_only	spec/record-fichas.md#refr-xrfg	Label documents gameplay, condition, inventory, activation or animation state.	-
+REFR.XRFG	state	layout_verified_sizes_only	spec/record-layouts.md#refr-xrfg	Label documents gameplay, condition, inventory, activation or animation state.	-
 REFR.XRGD	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
 REFR.XRMR	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
-REFR.XRNK	state	ficha_verified_sizes_only	spec/record-fichas.md#refr-xrnk	Label documents gameplay, condition, inventory, activation or animation state.	-
+REFR.XRNK	state	layout_verified_sizes_only	spec/record-layouts.md#refr-xrnk	Label documents gameplay, condition, inventory, activation or animation state.	-
 REFR.XSCL	used	existing	https://raw.githubusercontent.com/TES5Edit/TES5Edit/dev-4.1.6/Core/wbDefinitionsFO4.pas|https://falloutck.uesp.net/wiki/Reference	Contrato tipado anterior preservado; coordenadas e FormIDs sem defaults.	-
-REFR.XSPC	state	ficha_verified_sizes_only	spec/record-fichas.md#refr-xspc	Label documents gameplay, condition, inventory, activation or animation state.	-
+REFR.XSPC	state	layout_verified_sizes_only	spec/record-layouts.md#refr-xspc	Label documents gameplay, condition, inventory, activation or animation state.	-
 REFR.XTEL	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
-REFR.XTNM	state	ficha_verified_sizes_only	spec/record-fichas.md#refr-xtnm	Label documents gameplay, condition, inventory, activation or animation state.	-
-REFR.XTRI	outside	ficha_verified_sizes_only	spec/record-fichas.md#refr-xtri	Label documents audio, editor metadata, collision or item value/weight outside static image.	-
+REFR.XTNM	state	layout_verified_sizes_only	spec/record-layouts.md#refr-xtnm	Label documents gameplay, condition, inventory, activation or animation state.	-
+REFR.XTRI	outside	layout_verified_sizes_only	spec/record-layouts.md#refr-xtri	Label documents audio, editor metadata, collision or item value/weight outside static image.	-
 REFR.XWCN	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
 REFR.XWCU	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
-REFR.XWPG	state	ficha_verified_sizes_only	spec/record-fichas.md#refr-xwpg	Label documents gameplay, condition, inventory, activation or animation state.	-
+REFR.XWPG	state	layout_verified_sizes_only	spec/record-layouts.md#refr-xwpg	Label documents gameplay, condition, inventory, activation or animation state.	-
 REFR.XWPN	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
 SCOL.CTDA	state	raw	https://falloutck.uesp.net/wiki/Papyrus|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/CTDA.html	Comportamento ou condicao dependente de estado/script; nao executar.	-
 SCOL.DATA	used	existing	https://raw.githubusercontent.com/TES5Edit/TES5Edit/dev-4.1.6/Core/wbDefinitionsFO4.pas|https://falloutck.uesp.net/wiki/Reference	Contrato tipado anterior preservado; coordenadas e FormIDs sem defaults.	-
@@ -432,7 +432,7 @@ SCOL.DMDT	outside	raw	https://falloutck.uesp.net/wiki/Destructible_Object_Data|h
 SCOL.DSTD	outside	raw	https://falloutck.uesp.net/wiki/Destructible_Object_Data|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/Destruction.html	Estagios de dano futuro; estados de dano explicitos de referencias continuam bloqueando.	-
 SCOL.DSTF	outside	raw	https://falloutck.uesp.net/wiki/Destructible_Object_Data|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/Destruction.html	Estagios de dano futuro; estados de dano explicitos de referencias continuam bloqueando.	-
 SCOL.EDID	outside	existing	https://raw.githubusercontent.com/TES5Edit/TES5Edit/dev-4.1.6/Core/wbDefinitionsFO4.pas|https://falloutck.uesp.net/wiki/Static_Collection|https://redsavstudios.com/fallout-mods/modding-notes/mat-swaps/	Layout anterior documentado em spec/plugin.md; identificacao textual fora da imagem; MODL/MODS/OBND conservados tipados.	-
-SCOL.FLTR	outside	ficha_verified_sizes_only	spec/record-fichas.md#scol-fltr	Label documents audio, editor metadata, collision or item value/weight outside static image.	-
+SCOL.FLTR	outside	layout_verified_sizes_only	spec/record-layouts.md#scol-fltr	Label documents audio, editor metadata, collision or item value/weight outside static image.	-
 SCOL.FULL	outside	existing	https://raw.githubusercontent.com/TES5Edit/TES5Edit/dev-4.1.6/Core/wbDefinitionsFO4.pas|https://falloutck.uesp.net/wiki/Static_Collection|https://redsavstudios.com/fallout-mods/modding-notes/mat-swaps/	Layout anterior documentado em spec/plugin.md; identificacao textual fora da imagem; MODL/MODS/OBND conservados tipados.	-
 SCOL.KSIZ	outside	raw	https://falloutck.uesp.net/wiki/Keyword|https://www.nexusmods.com/fallout4/mods/46676?tab=posts	Metadados de palavras-chave para outros sistemas; sem executar scripts ou interacoes no quadro.	-
 SCOL.KWDA	outside	raw	https://falloutck.uesp.net/wiki/Keyword|https://www.nexusmods.com/fallout4/mods/46676?tab=posts	Metadados de palavras-chave para outros sistemas; sem executar scripts ou interacoes no quadro.	-
@@ -448,16 +448,16 @@ STAT.CTDA	state	raw	https://falloutck.uesp.net/wiki/Papyrus|https://tes5edit.git
 STAT.DEST	outside	raw	https://falloutck.uesp.net/wiki/Destructible_Object_Data|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/Destruction.html	Estagios de dano futuro; estados de dano explicitos de referencias continuam bloqueando.	-
 STAT.DMDL	outside	raw	https://falloutck.uesp.net/wiki/Destructible_Object_Data|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/Destruction.html	Estagios de dano futuro; estados de dano explicitos de referencias continuam bloqueando.	-
 STAT.DMDT	outside	raw	https://falloutck.uesp.net/wiki/Destructible_Object_Data|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/Destruction.html	Estagios de dano futuro; estados de dano explicitos de referencias continuam bloqueando.	-
-STAT.DNAM	used	ficha_verified_sizes_only	spec/record-fichas.md#stat-dnam	Visual field; typed labeled values exposed in Common.ficha_fields.	-
+STAT.DNAM	used	layout_verified_sizes_only	spec/record-layouts.md#stat-dnam	Visual field; typed labeled values exposed in Common.layout_fields.	-
 STAT.DSTD	outside	raw	https://falloutck.uesp.net/wiki/Destructible_Object_Data|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/Destruction.html	Estagios de dano futuro; estados de dano explicitos de referencias continuam bloqueando.	-
 STAT.DSTF	outside	raw	https://falloutck.uesp.net/wiki/Destructible_Object_Data|https://tes5edit.github.io/fopdoc/Fallout4/Records/Subrecords/Destruction.html	Estagios de dano futuro; estados de dano explicitos de referencias continuam bloqueando.	-
 STAT.EDID	outside	existing	https://raw.githubusercontent.com/TES5Edit/TES5Edit/dev-4.1.6/Core/wbDefinitionsFO4.pas|https://falloutck.uesp.net/wiki/Static|https://redsavstudios.com/fallout-mods/modding-notes/mat-swaps/	Layout anterior documentado em spec/plugin.md; identificacao textual fora da imagem; MODL/MODS/OBND conservados tipados.	-
-STAT.FTYP	state	ficha_verified_sizes_only	spec/record-fichas.md#stat-ftyp	Label documents gameplay, condition, inventory, activation or animation state.	-
+STAT.FTYP	state	layout_verified_sizes_only	spec/record-layouts.md#stat-ftyp	Label documents gameplay, condition, inventory, activation or animation state.	-
 STAT.FULL	outside	existing	https://raw.githubusercontent.com/TES5Edit/TES5Edit/dev-4.1.6/Core/wbDefinitionsFO4.pas|https://falloutck.uesp.net/wiki/Static|https://redsavstudios.com/fallout-mods/modding-notes/mat-swaps/	Layout anterior documentado em spec/plugin.md; identificacao textual fora da imagem; MODL/MODS/OBND conservados tipados.	-
 STAT.KSIZ	outside	raw	https://falloutck.uesp.net/wiki/Keyword|https://www.nexusmods.com/fallout4/mods/46676?tab=posts	Metadados de palavras-chave para outros sistemas; sem executar scripts ou interacoes no quadro.	-
 STAT.KWDA	outside	raw	https://falloutck.uesp.net/wiki/Keyword|https://www.nexusmods.com/fallout4/mods/46676?tab=posts	Metadados de palavras-chave para outros sistemas; sem executar scripts ou interacoes no quadro.	-
-STAT.MNAM	used	ficha_verified_sizes_only	spec/record-fichas.md#stat-mnam	Visual field; typed labeled values exposed in Common.ficha_fields.	-
-STAT.MODC	used	ficha_verified_sizes_only	spec/record-fichas.md#stat-modc	Visual field; typed labeled values exposed in Common.ficha_fields.	-
+STAT.MNAM	used	layout_verified_sizes_only	spec/record-layouts.md#stat-mnam	Visual field; typed labeled values exposed in Common.layout_fields.	-
+STAT.MODC	used	layout_verified_sizes_only	spec/record-layouts.md#stat-modc	Visual field; typed labeled values exposed in Common.layout_fields.	-
 STAT.MODL	used	existing	https://raw.githubusercontent.com/TES5Edit/TES5Edit/dev-4.1.6/Core/wbDefinitionsFO4.pas|https://falloutck.uesp.net/wiki/Static|https://redsavstudios.com/fallout-mods/modding-notes/mat-swaps/	Layout anterior documentado em spec/plugin.md; identificacao textual fora da imagem; MODL/MODS/OBND conservados tipados.	-
 STAT.MODS	used	existing	https://raw.githubusercontent.com/TES5Edit/TES5Edit/dev-4.1.6/Core/wbDefinitionsFO4.pas|https://falloutck.uesp.net/wiki/Static|https://redsavstudios.com/fallout-mods/modding-notes/mat-swaps/	Layout anterior documentado em spec/plugin.md; identificacao textual fora da imagem; MODL/MODS/OBND conservados tipados.	-
 STAT.MODT	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-

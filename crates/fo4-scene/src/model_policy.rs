@@ -2,7 +2,7 @@
 use crate::paths::{resolve, Citation};
 use fo4_core::{add, Budget, Error, Result};
 use fo4_nif::{Data, Field, Nif, Value};
-use fo4_plugin::still::Class;
+use fo4_plugin::static_frame::Class;
 use fo4_vfs::Vfs;
 use serde::Serialize;
 pub const BLOCK_TABLE: &str = include_str!("../../../spec/static-blocks.tsv");

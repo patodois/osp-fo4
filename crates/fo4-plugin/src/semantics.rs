@@ -2,7 +2,7 @@ use crate::{exact, zstring, Record};
 use fo4_core::{Budget, Cursor, Error, Limits, Result, SliceSource};
 use serde::Serialize;
 
-pub const PHASE1_TYPES: [[u8; 4]; 26] = [
+pub const INTERPRETED_TYPES: [[u8; 4]; 26] = [
     *b"CELL", *b"REFR", *b"WRLD", *b"STAT", *b"SCOL", *b"MSTT", *b"ACTI", *b"DOOR", *b"FURN",
     *b"LIGH", *b"LGTM", *b"MSWP", *b"TXST", *b"MISC", *b"CONT", *b"ALCH", *b"BOOK", *b"AMMO",
     *b"KEYM", *b"NOTE", *b"FLOR", *b"TERM", *b"TACT", *b"IDLM", *b"SOUN", *b"ASPC",
@@ -129,7 +129,7 @@ pub fn interpret(r: &Record, l: &Limits, b: &Budget) -> Result<Vec<Field>> {
         };
         let mut c = Cursor::new(&src);
         // Context matters: an EDID inside an unhandled record is still an envelope.
-        let value = if !PHASE1_TYPES.contains(ty) {
+        let value = if !INTERPRETED_TYPES.contains(ty) {
             Value::Raw
         } else if sig == b"EDID"
             || model && sig == b"MODL"

@@ -1,4 +1,4 @@
-// Layout facts only: a generated table plus hand-audited additions. See spec/record-fichas.md and record-light-key-layouts.md.
+// Layout facts only: a generated table plus hand-audited additions. See spec/record-layouts.md and record-light-key-layouts.md.
 use super::{FieldSpec, FlagWord, Kind, Schema};
 pub(super) const SCHEMAS: &[Schema] = &[
     Schema {

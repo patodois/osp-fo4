@@ -2,7 +2,7 @@
 use crate::{causes, Reports};
 use fo4_core::{add, Budget, Error, Manifest, Result};
 use fo4_plugin::{
-    still::Class,
+    static_frame::Class,
     typed::{CellKind, Refr, Store},
     FormKey,
 };
@@ -128,7 +128,7 @@ pub(crate) fn outside_record(
     b: &Budget,
 ) -> Result<()> {
     for raw in &record.subrecords {
-        if fo4_plugin::still::classify_size(
+        if fo4_plugin::static_frame::classify_size(
             &record.signature,
             &raw.signature,
             record.data(raw).len(),

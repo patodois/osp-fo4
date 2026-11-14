@@ -81,7 +81,7 @@ pub fn rule(record: &[u8; 4], tag: &[u8; 4]) -> Option<Rule> {
     })
 }
 pub fn classify_size(record: &[u8; 4], tag: &[u8; 4], size: usize) -> Class {
-    if crate::ficha::schema(record, tag).is_some_and(|s| !s.accepts(size)) {
+    if crate::layout::schema(record, tag).is_some_and(|s| !s.accepts(size)) {
         return Class::Unknown;
     }
     classify(record, tag)

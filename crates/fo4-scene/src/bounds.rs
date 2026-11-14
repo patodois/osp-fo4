@@ -40,7 +40,7 @@ pub fn model(n: &Nif<'_>, file: &str, limits: &Limits, budget: &Budget) -> Resul
             let ty = &self.n.block_types[block.type_index as usize];
             if matches!(
                 crate::model_policy::block_class(ty),
-                fo4_plugin::still::Class::Outside | fo4_plugin::still::Class::State
+                fo4_plugin::static_frame::Class::Outside | fo4_plugin::static_frame::Class::State
             ) {
                 return Ok(());
             }

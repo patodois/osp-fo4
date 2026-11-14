@@ -31,7 +31,7 @@ pub struct EnableParent {
 pub struct ModelGroup {
     pub path: Option<String>,
     pub material_swap: Option<FormRef>,
-    /// MOD* companion indices; decoded ficha values and raw fields remain explicit.
+    /// MOD* companion indices; decoded layout values and raw fields remain explicit.
     pub companions: Vec<usize>,
 }
 #[derive(Debug, Serialize)]
@@ -77,7 +77,7 @@ pub struct Lighting {
 }
 #[derive(Debug, Serialize)]
 pub struct Common {
-    pub ficha_fields: Vec<crate::ficha::Field>,
+    pub layout_fields: Vec<crate::layout::Field>,
     pub editor_id: Option<String>,
     pub full_name: Option<FullName>,
     pub model: ModelGroup,
@@ -96,7 +96,7 @@ pub trait Typed: Sized {
     const SIGNATURE: [u8; 4];
     fn decode(d: &mut Decoder<'_>) -> Result<Self>;
 }
-/// Combines Record::fields with the separately sourced ficha decoder.
+/// Combines Record::fields with the separately sourced layout decoder.
 pub struct Decoder<'a> {
     fields: Vec<Field>,
     consumed: Vec<bool>,
@@ -240,7 +240,7 @@ impl Decoder<'_> {
             }
         }
         Ok(Common {
-            ficha_fields: Vec::new(),
+            layout_fields: Vec::new(),
             editor_id,
             full_name,
             model: ModelGroup {
@@ -254,15 +254,15 @@ impl Decoder<'_> {
         })
     }
     fn finish(&self, common: &mut Common) -> Result<()> {
-        common.ficha_fields = crate::ficha::decode(
+        common.layout_fields = crate::layout::decode(
             self.record,
             self.order,
             self.plugin,
             self.budget,
             self.limits,
         )?;
-        for field in &common.ficha_fields {
-            if let crate::ficha::Value::Float(v) = field.value {
+        for field in &common.layout_fields {
+            if let crate::layout::Value::Float(v) = field.value {
                 let sub = &self.record.subrecords[field.subrecord];
                 let already_counted = (&self.record.signature == b"LIGH"
                     && &sub.signature == b"DATA")
@@ -278,12 +278,12 @@ impl Decoder<'_> {
         // Supersede the old lighting-prefix tail only for an exact verified schema.
         common
             .uninterpreted
-            .retain(|raw| crate::ficha::schema(&self.record.signature, &raw.signature).is_none());
+            .retain(|raw| crate::layout::schema(&self.record.signature, &raw.signature).is_none());
         for f in &self.fields {
             let s = &self.record.subrecords[f.subrecord];
-            let schema = crate::ficha::schema(&self.record.signature, &s.signature);
+            let schema = crate::layout::schema(&self.record.signature, &s.signature);
             let verified = schema.is_some_and(|v| v.accepts(self.record.data(s).len()));
-            let class = crate::still::classify_size(
+            let class = crate::static_frame::classify_size(
                 &self.record.signature,
                 &s.signature,
                 self.record.data(s).len(),
@@ -292,7 +292,7 @@ impl Decoder<'_> {
             let handled = closed
                 && matches!(
                     class,
-                    crate::still::Class::Used | crate::still::Class::Outside
+                    crate::static_frame::Class::Used | crate::static_frame::Class::Outside
                 );
             let partial = verified && !closed;
             if !handled

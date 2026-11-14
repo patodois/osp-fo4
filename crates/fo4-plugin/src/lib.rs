@@ -1,9 +1,9 @@
 #![forbid(unsafe_code)]
 //! TES4-family FO4 envelopes, selected fields and explicit FormKey resolution.
 //! See spec/plugin.md and spec/strings.md; unhandled bytes remain available.
-pub mod ficha;
+pub mod layout;
 mod semantics;
-pub mod still;
+pub mod static_frame;
 mod strings;
 pub mod typed;
 pub mod writer;
@@ -11,7 +11,7 @@ use fo4_core::{
     add, limit, range, read_bytes_inside_operation, zlib, Budget, Cursor, Error, Limits, ReadAt,
     Result, SliceSource, SourceSpan,
 };
-pub use semantics::{Field, Value, PHASE1_TYPES};
+pub use semantics::{Field, Value, INTERPRETED_TYPES};
 use serde::Serialize;
 use std::{
     collections::{HashMap, HashSet},
@@ -629,7 +629,7 @@ fn scan_with(
             if record.flags & COMPRESSED != 0 {
                 stats.compressed += 1;
             }
-            if !PHASE1_TYPES.contains(&record.signature) {
+            if !INTERPRETED_TYPES.contains(&record.signature) {
                 stats.envelope_records += 1;
                 stats.uninterpreted_subrecords += record.subrecords.len() as u64;
             }

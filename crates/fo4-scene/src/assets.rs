@@ -1,7 +1,7 @@
 use crate::model_policy::{self, Animation, ModelPolicy};
 use crate::paths::Citation;
 use fo4_core::{add, limit, path_key_bytes, Budget, Error, Result, SourceSpan};
-use fo4_plugin::still::Class;
+use fo4_plugin::static_frame::Class;
 use fo4_vfs::Vfs;
 use serde::Serialize;
 use std::collections::HashMap;
