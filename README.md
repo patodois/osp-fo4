@@ -1,76 +1,133 @@
-# OSP FO4
+# osp-fo4
 
-Rust readers and a CPU reference renderer for people who own Fallout 4.
-The project reads assets from your own installation and produces inventories,
-structured diagnostics and unlit images. It does not run the game.
+Rust libraries that read Fallout 4's data files and draw its static scenes on
+the CPU, for people who own the game. Nothing here contains game files or
+decompiled code: every behaviour is either a documented format fact or a rule
+checked against measurements of the running game.
 
-The workspace covers BA2/BSA archives, plugin envelopes and selected record
-semantics, localized strings, a NIF subset, BGSM/BGEM materials, DDS textures,
-explicit virtual file resolution and static scene assembly. Readers preserve
-unknown bytes and report unsupported cases with their source and offset.
+It is a reference, not a playable engine. There is no lighting, animation,
+physics or gameplay yet.
 
-A measured seven-plugin installation contains 39,188 inspected bases: 17 pass
-strictly (16 light declarations and one empty collection), 25,341 require
-registered hypotheses, and 13,830 remain blocked. No mesh placement in that
-census passes without hypotheses.
-The Financial13 reference scene draws 293 of 339 geometric placements;
-45 REFR placements and one excluded NAVM do not draw. These counts describe
-that corpus, not compatibility with every installation. See the
-[spec index and hypothesis register](spec/README.md).
+## What works
 
-There is no game lighting, full shader reproduction, animation/controller
-execution, particles, gameplay or general exterior renderer. Rotation order is
-supported by measured matrices; its exact floating-point arithmetic is still
-open. The NIF/runtime local-matrix bridge is also under comparison. MODT, material blend equivalence, SCOL geometry, effect colors, backface
-culling and named helper visibility retain explicit limitations. The renderer
-is a diagnostic reference, not a pixel-exact recreation of the game.
+- **Archives**: BA2 (general and texture) indexes and bounded extraction; BSA
+  version 105.
+- **Plugins**: records, groups, compression, load order, FormID resolution,
+  overrides, localized strings, and typed fields for the record types a static
+  scene needs. A small writer produces test plugins.
+- **Models, materials, textures**: a NIF subset, BGSM/BGEM, and DDS including
+  the block-compressed formats.
+- **Scenes**: a cell's placed references with their base records, models,
+  materials and textures, each with the reasons it can or cannot be drawn.
+- **Rendering**: a deterministic unlit CPU rasterizer and tools that compare
+  its frames with photographs of the game.
 
-Use Rust 1.88 or newer. Set `FO4_DATA` to the **Data directory** of your own copy,
-then run this command from the repository:
+Readers are bounded and never panic on malformed input by design: sizes,
+counts and depths are checked, unknown bytes are preserved, and every error
+names the file and offset.
+
+## How much of the game it covers
+
+Counts from the base game plus its six expansions (39,188 placeable base
+records, November 2026):
+
+| Level | Bases | Placements of those bases |
+| --- | ---: | ---: |
+| Documented facts only | 17 | — |
+| Facts plus rules measured in the game | 17,797 | 1,012,007 |
+| Also needs a rule that is still unmeasured | 7,544 | 278,643 |
+| Blocked (animation, unknown fields, missing data) | 13,830 | — |
+
+In the example interior used below (`Financial13`, 352 placements), 158 draw
+on facts plus measured rules, 136 more need an unmeasured rule (mostly the
+blend factors of translucent materials), and 56 are blocked.
+
+## Try it
+
+You need Rust 1.88 or newer and your own copy of the game.
 
 ```sh
 export FO4_DATA="/path/to/Fallout 4/Data"
-CARGO_HOME="$PWD/.cargo-home" CARGO_TARGET_DIR="$PWD/target" CARGO_INCREMENTAL=0 cargo run --release -j 4 -p fo4-unpack --example render -- examples/fallout4.json "$FO4_DATA" Financial13 build/example --under-hypotheses
+cargo run --release -p fo4-unpack --example render -- \
+  examples/fallout4.json "$FO4_DATA" Financial13 build/lobby \
+  --under-hypotheses --eye 0,153.6,104.49 --look 70.7,224.3,104.49
 ```
 
-It writes `build/example/frame.png` and `summary.json`. Choose a new output
-directory for each run. The camera is an authored overview of the scene bounds;
-measured-camera comparisons use separately collected camera data. The example
-manifest explicitly lists the base-game plugin and archives. Adjust that file
-for your installed archive set; load order and mount priority are never inferred
-from directory order or timestamps. `--under-hypotheses` permits the recorded
-candidate rules and lists them in the output; `--strict` keeps them blocked.
-No game files, derived textures, photographs or measurement datasets are bundled.
+This writes `build/lobby/frame.png` and `summary.json` in a couple of seconds on a recent laptop.
+The summary lists every placement that was drawn or omitted and why. Drop
+`--eye/--look` for an overview from outside the scene. Use a new output
+directory for each run; the tool refuses to write into the game directory.
 
-`fo4-unpack` also provides `inventory`, `resolve`, `sweep` and `check-cell`.
-Their explicit manifest and report contracts are documented in
-[manifest-vfs.md](spec/manifest-vfs.md) and [scene.md](spec/scene.md).
+The manifest [examples/fallout4.json](examples/fallout4.json) lists the base
+game's plugin and archives explicitly. Load order and archive priority are
+never inferred from directory listings; edit the manifest for your
+installation ([manifest format](spec/manifest-vfs.md)).
 
-Default tests build their own synthetic bytes and require neither the game nor
-network access once dependencies are cached:
+### Rule levels
+
+| Flag | Accepts |
+| --- | --- |
+| `--strict` | Documented format facts only. |
+| `--measured` (default) | Also rules supported by measurement of the running game. |
+| `--under-hypotheses` | Also registered rules that are still pending measurement. |
+
+The rules, their status and the measurement behind each are in the
+[spec index](spec/README.md#registered-rules).
+
+### Command-line tool
+
+`fo4-unpack` reports on an installation without rendering: `inventory`,
+`resolve`, `sweep` (archives, records, models, materials, textures, cells,
+bases) and `check-cell`. Reports are JSON lines with source offsets
+([scene and report contracts](spec/scene.md)).
+
+## How facts are established
+
+1. **Layouts** come from public format documentation and schemas, cited in
+   [spec/](spec/README.md) and [docs/provenance.md](docs/provenance.md).
+2. **Behaviour** that documentation does not settle (rotation order, default
+   scale, which helper geometry is hidden) is registered as a named rule before
+   it is used, then tested by reading transforms from the running game and by
+   photographing purpose-built test cells.
+3. A rule becomes `supported` only for the scope that was measured. Until then
+   anything relying on it is reported as such and excluded by default.
+
+No game executable is disassembled and no third-party implementation is
+consulted, with one attributed exception described in
+[THIRD_PARTY.md](THIRD_PARTY.md).
+
+## Layout
+
+| Crate | Purpose |
+| --- | --- |
+| `fo4-core` | Checked I/O, allocation budgets, errors, manifests. |
+| `fo4-archive` | BA2 and BSA readers. |
+| `fo4-vfs` | Explicit mount order and asset lookup. |
+| `fo4-plugin` | Plugin records, load order, strings, typed fields. |
+| `fo4-nif`, `fo4-material`, `fo4-texture` | Model, material and texture readers. |
+| `fo4-scene` | Scene assembly and rule levels. |
+| `fo4-render` | CPU renderer and image comparison. |
+| `fo4-unpack` | Command-line tool and the `render` example. |
+
+[AGENTS.md](AGENTS.md) has the working rules for contributors and coding agents.
+
+## Tests
+
+The tests build their own synthetic files and need neither the game nor the
+network once dependencies are fetched:
 
 ```sh
-export CARGO_HOME="$PWD/.cargo-home" CARGO_TARGET_DIR="$PWD/target" CARGO_INCREMENTAL=0 RUST_TEST_THREADS=4
-cargo test --workspace --offline -j 4
+cargo test --workspace
 cargo fmt --check
-cargo clippy --workspace --all-targets --offline -j 4 -- -D warnings
+cargo clippy --workspace --all-targets -- -D warnings
 ```
 
-Two synthetic index scale measurements are ignored by default for runtime cost.
-They need no game data. The optional `measured_transforms` replay is also explicitly ignored. To run it,
-supply your compatible measurement fixture through `FO4_TRANSFORM_FIXTURE` and
-use `cargo test -p fo4-unpack --test measured_transforms -- --ignored --nocapture`.
-Its exact comparisons cover only that fixture; they do not establish a universal
-rotation arithmetic law.
+## Licence
 
-Format facts come from cited public documentation and independently recorded
-measurements of a running, owned copy. Candidate behavior is registered before
-use, compared with measured transforms or repeated photographs, and kept
-separate from confirmed field layouts. No decompiled game code is used.
-[Provenance and source boundaries](docs/provenance.md) explain the existing
-attributed MaterialLib layout port and third-party dependencies.
+[MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE), at your option, with the
+notices in [THIRD_PARTY.md](THIRD_PARTY.md). Fallout 4 is a trademark of its
+owner; this project is not affiliated with or endorsed by it.
 
-Project code is licensed under [MIT](LICENSE-MIT) OR
-[Apache-2.0](LICENSE-APACHE), with the notices in [THIRD_PARTY.md](THIRD_PARTY.md).
-AI coding assistance was used extensively; generated changes are reviewed through
-bounded readers, synthetic corruption tests and explicit measurement comparisons.
+Most of this code was written with AI coding assistants (GPT and Claude
+models) under human direction, and is checked by synthetic corruption tests
+and by comparison with measurements of the game.

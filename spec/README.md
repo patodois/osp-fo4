@@ -1,8 +1,8 @@
 # Specification index
 
-Format notes may be in Portuguese. Layout facts require cited sources; runtime
-behavior and candidate rendering rules stay separate. Historical local reports
-and measurement datasets are not distributed.
+Several notes are written in Portuguese. Layout facts cite their sources;
+runtime behaviour and candidate rendering rules are kept apart from them.
+Measurement datasets and photographs of the game are not distributed.
 
 | File | Scope |
 | --- | --- |
@@ -37,15 +37,19 @@ and measurement datasets are not distributed.
 | [strings.md](strings.md) | Localized STRINGS, DLSTRINGS and ILSTRINGS layouts and VFS lookup. |
 | [unread.md](unread.md) | Accounting for uninterpreted asset families without claiming their semantics. |
 
-## Hypotheses
+## Registered rules
 
-Status is a reviewed measurement verdict, not permission to silently erase
-diagnostics. Exact scope and reasons remain in the TSV. Pending rules are
-explicit candidates; controller rules have not been released.
+Every behaviour that is not a documented format fact is a named rule in
+[hypotheses.tsv](hypotheses.tsv). A rule is `pending` until a measurement of
+the running game supports or refutes it, and `supported` only within the scope
+its row records. The code reads this file: supported rules count at the
+`Measured` level, pending ones only at the `Hypotheses` level, and a refuted
+rule blocks whatever relied on it. A test keeps the table below in step with
+the registry.
 
-| Hypothesis | Status | Supporting measurement or next measurement |
+| Rule | Status | Supporting measurement or next measurement |
 | --- | --- | --- |
-| `modt_not_in_frame_v1` | pending | Photograph same-model variants and original/control/absent/foreign MODT copies side by side; any repeatable change rejects it. |
+| `modt_not_in_frame_v1` | supported | Three bases photographed with original, absent and foreign MODT in separate launches plus a repeat of the original: identical root world words; object pixels differ no more than between the two original launches once the whole-frame brightness offset between launches is removed. |
 | `bgsm_blend_factors_alpha_function_v1` | pending | Photograph the three tuples over known background; compare source/destination contributions and transparency. |
 | `refr_rotation_order_v1` | refuted | Measure world matrices for X/Y/Z 30-degree and combined XYZ placements; compare every coefficient before photo fitting. |
 | `editor_marker_hidden_v1` | supported | Flagged ACTI, DOOR and STAT controls absent in photographs; the unflagged shared-model twin is visible. |
@@ -54,10 +58,10 @@ explicit candidates; controller rules have not been released.
 | `asset_path_data_prefix_strip_v1` | supported | Controlled object with an absolute Data-prefixed citation appears textured. |
 | `asset_path_missing_root_v1` | supported | Weak sample: rootless-citation specimen is only available in an unqualified cropped capture. |
 | `nif_backface_cull_v1` | pending | Only one tiny plate is visible in current views; closer front/back captures are required. |
-| `nif_editor_marker_export_suffix_v1` | pending | Mixed ordinary/helper models are visible; compare variants with and without their suffixed subtree. |
+| `nif_editor_marker_export_suffix_v1` | supported | One mixed ordinary/helper model photographed and drawn with and without the suffixed subtree: the photograph matches the drawing without it. |
 | `refr_rotation_zyx_v2` | supported | Fourteen measured roots; unique among 24 order/sense/storage candidates below 1e-5; max error 2.1e-7, runner-up 1.43. |
 | `asset_path_data_relative_strip_v1` | supported | Controlled object with a Data-relative citation appears textured. |
 | `effect_color_only_v1` | pending | Compare instance032 and Bench2 light/dark controls; unsupported falloff/grayscale/refraction/soft effects remain refused. |
-| `nif_editor_marker_named_hidden_v1` | pending | Mixed ordinary/helper models are visible; compare variants with and without their named subtree. |
-| `nif_visibility_editor_marker_hidden_v1` | pending | Compare the same measured interior cameras with and without only these meshes; photograph absence and preserve differences. |
-| `nif_matrix_runtime_row_bridge_v1` | pending | Both storage orders for 94 locals in two pauses; raw words and 18 nonunique requests retained; no renderer change. |
+| `nif_editor_marker_named_hidden_v1` | supported | One mixed ordinary/helper model photographed and drawn with and without the named subtree: the photograph matches the drawing without it. |
+| `nif_visibility_editor_marker_hidden_v1` | supported | One measured interior with four placements of two shrub models: the helper boxes drawn from this mesh are absent in the photographs. |
+| `nif_matrix_runtime_row_bridge_v1` | pending | Compare both storage orders for all 94 uniquely matched node locals in two pauses; retain raw words, 18 nonunique requests and independent changing nodes. Independent point/pose evidence is needed before changing the renderer. |

@@ -261,4 +261,21 @@ mod tests {
         assert_eq!(measured.hypotheses(), [MODT]);
         assert_eq!(pending.hypotheses(), [BLEND, MODT]);
     }
+    #[test]
+    fn the_spec_index_lists_every_registered_rule_with_its_status() {
+        let index = include_str!("../../../spec/README.md");
+        let mut rules = 0;
+        for row in REGISTRY.lines().filter(|row| !row.starts_with('#')) {
+            let mut columns = row.split('\t');
+            let (Some(name), Some(status)) = (columns.next(), columns.nth(4)) else {
+                continue;
+            };
+            assert!(
+                index.contains(&format!("| `{name}` | {status} |")),
+                "spec/README.md is out of step with hypotheses.tsv for {name}"
+            );
+            rules += 1;
+        }
+        assert!(rules >= 16);
+    }
 }

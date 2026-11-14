@@ -6,3 +6,6 @@
 
 # Private secondary Git directory used by a local workflow.
 /.progress-git/
+
+# Local Cargo settings.
+/.cargo/
