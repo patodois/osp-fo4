@@ -263,8 +263,10 @@ pub fn scan_machine_paths(root: &Path, paths: &[PathBuf]) -> io::Result<Vec<Viol
     Ok(violations)
 }
 fn versioned_paths(root: &Path) -> io::Result<Vec<PathBuf>> {
-    // A directory or, in a linked worktree, a file. Outside a checkout there is no versioned set.
-    if !root.join(".git").exists() {
+    // A checkout has `.git/HEAD`, or a `.git` file in a linked worktree. Anything
+    // else, including an empty directory named `.git`, has no versioned set.
+    let git = root.join(".git");
+    if !(git.join("HEAD").is_file() || git.is_file()) {
         return Ok(Vec::new());
     }
     let out = std::process::Command::new("git")
