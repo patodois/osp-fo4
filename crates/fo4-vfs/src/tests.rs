@@ -170,7 +170,7 @@ fn loose_symlink_outside_root_is_rejected() {
 }
 
 #[test]
-fn review_n8_asset_fingerprint_ignores_plugin_content() {
+fn asset_fingerprint_ignores_plugin_content() {
     let (m, _dir) = installation();
     let first = Vfs::mount(&m, &Budget::new(1 << 20))
         .unwrap()
@@ -186,7 +186,7 @@ fn review_n8_asset_fingerprint_ignores_plugin_content() {
     assert_eq!(first, second);
 }
 #[test]
-fn review_m3_loose_precedence_survives_cross_class_reordering() {
+fn loose_precedence_survives_cross_class_reordering() {
     let (mut m, _dir) = installation();
     m.mounts.reverse();
     let v = Vfs::mount(&m, &Budget::new(1 << 20)).unwrap();
@@ -196,7 +196,7 @@ fn review_m3_loose_precedence_survives_cross_class_reordering() {
     );
 }
 #[test]
-fn review_h2_bad_entry_does_not_remove_other_archive_assets() {
+fn bad_entry_does_not_remove_other_archive_assets() {
     let (mut m, _dir) = installation();
     std::fs::write(m.root.join("a.ba2"), shared_archive()).unwrap();
     m.mounts.truncate(2);
@@ -291,7 +291,7 @@ fn shared_archive() -> Vec<u8> {
     b
 }
 #[test]
-fn review_n1_blocked_winner_never_promotes_loser() {
+fn blocked_winner_never_promotes_loser() {
     let (mut m, _dir) = installation();
     m.mounts.truncate(2);
     std::fs::write(m.root.join("b.ba2"), shared_archive()).unwrap();
@@ -309,7 +309,7 @@ fn review_n1_blocked_winner_never_promotes_loser() {
     );
 }
 #[test]
-fn review_n1_structural_failure_taints_every_lookup() {
+fn structural_failure_taints_every_lookup() {
     let (m, _dir) = installation();
     std::fs::write(m.root.join("b.ba2"), b"BTDX").unwrap();
     let v = Vfs::mount(&m, &Budget::new(1 << 20)).unwrap();
@@ -317,7 +317,7 @@ fn review_n1_structural_failure_taints_every_lookup() {
     assert_eq!(v.chain("unknown").unwrap_err().code, "VfsIncomplete");
 }
 #[test]
-fn review_n4_collision_requires_explicit_invalidation() {
+fn collision_requires_explicit_invalidation() {
     let (mut m, _dir) = installation();
     m.archive_invalidation = None;
     let v = Vfs::mount(&m, &Budget::new(1 << 20)).unwrap();
@@ -327,14 +327,14 @@ fn review_n4_collision_requires_explicit_invalidation() {
     );
 }
 #[test]
-fn review_n8_asset_resolution_does_not_require_plugin_files() {
+fn asset_resolution_does_not_require_plugin_files() {
     let (m, _dir) = installation();
     std::fs::remove_file(m.root.join("A.esm")).unwrap();
     assert!(Vfs::mount(&m, &Budget::new(1 << 20)).is_ok());
 }
 
 #[test]
-fn review_r4_unkeyed_blocked_entries_taint_every_lookup() {
+fn unkeyed_blocked_entries_taint_every_lookup() {
     for name in [
         "meshes/a:bin".to_string(),
         "meshes/./a.bin".to_string(),
@@ -358,7 +358,7 @@ fn review_r4_unkeyed_blocked_entries_taint_every_lookup() {
 }
 
 #[test]
-fn stage7_observed_names_use_original_bytes_and_ascii_case_only() {
+fn observed_names_use_original_bytes_and_ascii_case_only() {
     for (name, display) in [
         (
             b"Sound\\Voice\\Fallout4.esm\\RobotMrHandy\\Mar\xeda_F.fuz".as_slice(),
@@ -408,7 +408,7 @@ fn stage7_observed_names_use_original_bytes_and_ascii_case_only() {
 }
 
 #[test]
-fn stage8_game_profile_is_part_of_asset_fingerprint() {
+fn game_profile_is_part_of_asset_fingerprint() {
     let (mut m, _dir) = installation();
     // Loose-only profiles have identical asset bytes under both game selections.
     m.mounts

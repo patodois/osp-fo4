@@ -58,7 +58,7 @@ fn fixture(runtime: bool, unknown: bool) -> Fixture {
     fixture_with_cell(runtime, unknown, &[])
 }
 fn fixture_with_cell(runtime: bool, unknown: bool, extra: &[u8]) -> Fixture {
-    let temp = TestDir::new("scene-stage11");
+    let temp = TestDir::new("scene-case11");
     let root = temp.join("Data");
     fs::create_dir_all(root.join("meshes")).unwrap();
     fs::write(root.join("meshes/a.nif"), nif(unknown)).unwrap();
@@ -423,7 +423,7 @@ fn scol_parts_swaps_and_explicit_texture_set_keep_their_records() {
 }
 
 #[test]
-fn stage11_interrupted_cache_load_does_not_report_a_spurious_dependency_cycle() {
+fn interrupted_cache_load_does_not_report_a_spurious_dependency_cycle() {
     let f = fixture(false, false);
     let v = Vfs::mount(&f.manifest, &Budget::new(8 << 20)).unwrap();
     let budget = Budget::new(16 << 10);
@@ -450,7 +450,7 @@ fn stage11_interrupted_cache_load_does_not_report_a_spurious_dependency_cycle() 
 }
 
 #[test]
-fn stage11_deleted_lighting_template_is_retained_but_not_certified() {
+fn deleted_lighting_template_is_retained_but_not_certified() {
     let f = fixture_with_cell(false, false, &sub(b"LTMP", &0x900u32.to_le_bytes()));
     let path = f.manifest.root.join("base.esm");
     let mut bytes = fs::read(&path).unwrap();
@@ -476,7 +476,7 @@ fn stage11_deleted_lighting_template_is_retained_but_not_certified() {
 }
 
 #[test]
-fn stage11_cache_identity_is_not_published_before_path_allocation() {
+fn cache_identity_is_not_published_before_path_allocation() {
     let f = fixture(false, false);
     let v = Vfs::mount(&f.manifest, &Budget::new(8 << 20)).unwrap();
     let path = b"meshes/allocation-window.nif";
@@ -501,7 +501,7 @@ fn stage11_cache_identity_is_not_published_before_path_allocation() {
 }
 
 #[test]
-fn stage13_cell_causes_are_separate_from_own_instance_readiness() {
+fn cell_causes_are_separate_from_own_instance_readiness() {
     let f = fixture_with_cell(false, false, &sub(b"CCCC", &[1, 2, 3, 4]));
     let store = Store::open(&f.manifest, &Budget::new(8 << 20)).unwrap();
     let v = Vfs::mount(&f.manifest, &Budget::new(8 << 20)).unwrap();
@@ -520,7 +520,7 @@ fn stage13_cell_causes_are_separate_from_own_instance_readiness() {
     );
 }
 #[test]
-fn stage13_documented_audio_stays_raw_and_does_not_block_the_frame() {
+fn documented_audio_stays_raw_and_does_not_block_the_frame() {
     let f = fixture_with_cell(false, false, &sub(b"XCAS", &0x801u32.to_le_bytes()));
     let store = Store::open(&f.manifest, &Budget::new(8 << 20)).unwrap();
     let v = Vfs::mount(&f.manifest, &Budget::new(8 << 20)).unwrap();
@@ -562,7 +562,7 @@ fn lighting_shader(texture: i32) -> Vec<u8> {
     v
 }
 #[test]
-fn stage13_bgsm_name_overrides_texture_set_v1_only_when_strictly_resolved() {
+fn bgsm_name_overrides_texture_set_v1_only_when_strictly_resolved() {
     use model_policy::{MaterialStatus, ModelPolicy, Ownership};
     let mut f = fixture(false, false);
     fs::create_dir_all(f.manifest.root.join("materials")).unwrap();
@@ -630,7 +630,7 @@ fn stage13_bgsm_name_overrides_texture_set_v1_only_when_strictly_resolved() {
     }
 }
 #[test]
-fn stage13_collision_is_raw_outside_but_animation_and_skin_still_block() {
+fn collision_is_raw_outside_but_animation_and_skin_still_block() {
     for (ty, outside) in [
         ("bhkNPCollisionObject", true),
         ("BSMultiBoundAABB", true),
@@ -675,7 +675,7 @@ fn scene_node(controller: i32, child: Option<i32>) -> Vec<u8> {
     v
 }
 #[test]
-fn stage13_animation_target_membership_is_known_only_for_decoded_targets() {
+fn animation_target_membership_is_known_only_for_decoded_targets() {
     for (target, expected) in [(0i32, Some(true)), (2, Some(false)), (-1, None)] {
         let f = fixture(false, false);
         let mut control = (-1i32).to_le_bytes().to_vec();
@@ -709,7 +709,7 @@ fn stage13_animation_target_membership_is_known_only_for_decoded_targets() {
     }
 }
 #[test]
-fn stage13_new_visible_types_keep_their_models_and_audio_markers_are_outside() {
+fn new_visible_types_keep_their_models_and_audio_markers_are_outside() {
     let f = fixture(false, false);
     let mut bytes = fs::read(f.manifest.root.join("base.esm")).unwrap();
     let types = [
@@ -762,7 +762,7 @@ fn stage13_new_visible_types_keep_their_models_and_audio_markers_are_outside() {
 }
 
 #[test]
-fn stage13_extra_animation_target_can_reach_visual_when_primary_does_not() {
+fn extra_animation_target_can_reach_visual_when_primary_does_not() {
     let f = fixture(false, false);
     let mut control = (-1i32).to_le_bytes().to_vec();
     control.extend(0u16.to_le_bytes());
@@ -793,7 +793,7 @@ fn stage13_extra_animation_target_can_reach_visual_when_primary_does_not() {
 }
 
 #[test]
-fn stage13_decoded_structure_does_not_certify_an_unknown_block_role() {
+fn decoded_structure_does_not_certify_an_unknown_block_role() {
     let f = fixture(false, false);
     let mut data = u32::MAX.to_le_bytes().to_vec();
     data.extend(0u32.to_le_bytes());
@@ -815,7 +815,7 @@ fn stage13_decoded_structure_does_not_certify_an_unknown_block_role() {
 }
 
 #[test]
-fn stage13_misc_preview_and_keywords_stay_raw_without_blocking_its_model() {
+fn misc_preview_and_keywords_stay_raw_without_blocking_its_model() {
     let f = fixture(false, false);
     let mut bytes = fs::read(f.manifest.root.join("base.esm")).unwrap();
     let mut data = sub(b"MODL", b"a.nif\0");
@@ -848,7 +848,7 @@ fn stage13_misc_preview_and_keywords_stay_raw_without_blocking_its_model() {
 }
 
 #[test]
-fn stage13_additional_controller_prefixes_keep_targets_and_opaque_bodies() {
+fn additional_controller_prefixes_keep_targets_and_opaque_bodies() {
     for ty in [
         "BSProceduralLightningController",
         "NiPSysInitialRotSpeedCtlr",
@@ -890,7 +890,7 @@ fn stage13_additional_controller_prefixes_keep_targets_and_opaque_bodies() {
 }
 
 #[test]
-fn stage13_common_controller_prefix_truncations_remain_raw_without_panic() {
+fn common_controller_prefix_truncations_remain_raw_without_panic() {
     let mut control = (-1i32).to_le_bytes().to_vec();
     control.extend(0u16.to_le_bytes());
     for _ in 0..4 {
@@ -928,7 +928,7 @@ fn stage13_common_controller_prefix_truncations_remain_raw_without_panic() {
 }
 
 #[test]
-fn stage13_next_controller_uses_the_same_sourced_prefix() {
+fn next_controller_uses_the_same_sourced_prefix() {
     let f = fixture(false, false);
     let mut controller = 2i32.to_le_bytes().to_vec();
     controller.extend(0u16.to_le_bytes());
@@ -975,7 +975,7 @@ fn stage13_next_controller_uses_the_same_sourced_prefix() {
 }
 
 #[test]
-fn stage15_explicit_overlay_and_marker_visibility_keep_data_readiness_separate() {
+fn explicit_overlay_and_marker_visibility_keep_data_readiness_separate() {
     let f = fixture(false, false);
     let overlay = f.manifest.root.parent().unwrap().join("OwnOverlay.esp");
     let mut hedr = 0.95f32.to_le_bytes().to_vec();
@@ -1018,7 +1018,7 @@ fn stage15_explicit_overlay_and_marker_visibility_keep_data_readiness_separate()
 }
 
 #[test]
-fn stage15_absent_scale_stays_absent_and_is_only_usable_under_its_hypothesis() {
+fn absent_scale_stays_absent_and_is_only_usable_under_its_hypothesis() {
     let f = fixture(false, false);
     let path = f.manifest.root.join("base.esm");
     let raw = fs::read(&path).unwrap();
@@ -1078,7 +1078,7 @@ fn stage15_absent_scale_stays_absent_and_is_only_usable_under_its_hypothesis() {
 }
 
 #[test]
-fn stage16_path_hypotheses_require_a_unique_existing_winner_and_preserve_strictness() {
+fn path_hypotheses_require_a_unique_existing_winner_and_preserve_strictness() {
     use paths::{candidate, resolve_with, Citation};
     let mut f = fixture(false, false);
     let root = &f.manifest.root;
@@ -1147,7 +1147,7 @@ fn stage16_path_hypotheses_require_a_unique_existing_winner_and_preserve_strictn
 }
 
 #[test]
-fn stage16_numeric_marker_labels_are_a_narrow_hypothesis_not_a_filename_heuristic() {
+fn numeric_marker_labels_are_a_narrow_hypothesis_not_a_filename_heuristic() {
     for n in [
         b"EditorMarker:27".as_slice(),
         b"EditorMarker042",
@@ -1194,7 +1194,7 @@ fn asset_cache_reset_preserves_explicit_path_hypotheses_and_strict_refusal() {
 }
 
 #[test]
-fn stage17_data_relative_path_is_explicit_unique_and_strict_stays_rejected() {
+fn data_relative_path_is_explicit_unique_and_strict_stays_rejected() {
     let f = fixture(false, false);
     let b = Budget::new(8 << 20);
     let v = Vfs::mount(&f.manifest, &b).unwrap();
@@ -1237,7 +1237,7 @@ fn stage17_data_relative_path_is_explicit_unique_and_strict_stays_rejected() {
     }
 }
 #[test]
-fn stage17_shared_model_without_bit_does_not_inherit_marker_visibility() {
+fn shared_model_without_bit_does_not_inherit_marker_visibility() {
     let f = fixture(false, false);
     let path = f.manifest.root.join("base.esm");
     let mut bytes = fs::read(&path).unwrap();
@@ -1283,7 +1283,7 @@ fn stage17_shared_model_without_bit_does_not_inherit_marker_visibility() {
 }
 
 #[test]
-fn stage18_placed_lights_expose_data_and_keep_unknown_type_and_modifiers() {
+fn placed_lights_expose_data_and_keep_unknown_type_and_modifiers() {
     for flags in [0u32, 1025, 0x8008] {
         let f = fixture_with_cell(false, false, &sub(b"XCLL", &[0; 136]));
         let path = f.manifest.root.join("base.esm");

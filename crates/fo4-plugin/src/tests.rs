@@ -3,7 +3,7 @@ use fo4_core::{Manifest, Mount, PluginSpec};
 use fo4_vfs::Vfs;
 use std::io::Write;
 #[test]
-fn stage14_writer_preserves_payload_transport_and_explicit_compression() {
+fn writer_preserves_payload_transport_and_explicit_compression() {
     use crate::writer::{self, Node, RecordModel, Subrecord};
     let limits = Limits::default();
     let large = vec![0x9a; 70_001];
@@ -162,7 +162,7 @@ fn stage14_writer_preserves_payload_transport_and_explicit_compression() {
     .is_err());
 }
 #[test]
-fn stage14_writer_tes4_master_order_and_raw_master_data_round_trip() {
+fn writer_tes4_master_order_and_raw_master_data_round_trip() {
     let masters = [
         writer::Master {
             name: "First.esm",
@@ -932,7 +932,7 @@ fn flags_and_model_subrecords_are_interpreted_in_context() {
 }
 
 #[test]
-fn review_h1_light_range_follows_hedr_version() {
+fn light_range_follows_hedr_version() {
     let mut bytes = plugin(MASTER | LIGHT, &[], 0, &[]);
     bytes[30..34].copy_from_slice(&1f32.to_le_bytes());
     let order = LoadOrder::new(
@@ -945,7 +945,7 @@ fn review_h1_light_range_follows_hedr_version() {
     assert!(order.remap(0, 0x1000, "new.esl", 0).is_err());
 }
 #[test]
-fn review_h3_bad_text_does_not_discard_good_string() {
+fn bad_text_does_not_discard_good_string() {
     let mut bytes = table(StringKind::Strings);
     *bytes.last_mut().unwrap() = 0xff;
     let t = StringTable::read(
@@ -960,7 +960,7 @@ fn review_h3_bad_text_does_not_discard_good_string() {
     assert!(t.get(91, &Limits::default()).is_err());
 }
 #[test]
-fn review_h4_injected_record_and_later_override() {
+fn injected_record_and_later_override() {
     let a = plugin(MASTER, &[], 0, &[]);
     let b = plugin(MASTER, &["A.esm"], 1, &record(b"STAT", 0x900, 0, &[]));
     let c = plugin(
@@ -1016,7 +1016,7 @@ fn review_h4_injected_record_and_later_override() {
     );
 }
 #[test]
-fn review_m1_hedr_mismatch_is_not_structural() {
+fn hedr_mismatch_is_not_structural() {
     let bytes = plugin(MASTER, &[], 9, &record(b"STAT", 0x800, 0, &[]));
     let h = header("A.esm", &bytes).unwrap();
     let stats = scan(
@@ -1032,7 +1032,7 @@ fn review_m1_hedr_mismatch_is_not_structural() {
     assert_eq!(stats.records, 1);
 }
 #[test]
-fn review_m3_nonmaster_before_master_is_named_error() {
+fn nonmaster_before_master_is_named_error() {
     let a = plugin(0, &[], 0, &[]);
     let b = plugin(MASTER, &[], 0, &[]);
     let result = LoadOrder::new(
@@ -1042,7 +1042,7 @@ fn review_m3_nonmaster_before_master_is_named_error() {
     assert_eq!(result.err().unwrap().code, "NonMasterBeforeMaster");
 }
 #[test]
-fn review_m4_undocumented_light_size_remains_raw() {
+fn undocumented_light_size_remains_raw() {
     for size in [0, 40, 48, 52, 56, 60, 64, 65] {
         let bytes = plugin(
             MASTER,
@@ -1071,11 +1071,11 @@ fn review_m4_undocumented_light_size_remains_raw() {
     }
 }
 #[test]
-fn review_l1_extension_policy_is_not_a_header_rejection() {
+fn extension_policy_is_not_a_header_rejection() {
     assert!(header("flagless.esl", &plugin(0, &[], 0, &[])).is_ok());
 }
 #[test]
-fn review_l2_more_than_253_masters_keeps_header() {
+fn more_than_253_masters_keeps_header() {
     let names: Vec<String> = (0..254).map(|i| format!("M{i}.esm")).collect();
     let refs: Vec<&str> = names.iter().map(String::as_str).collect();
     assert_eq!(
@@ -1087,7 +1087,7 @@ fn review_l2_more_than_253_masters_keeps_header() {
     );
 }
 #[test]
-fn review_l6_reference_envelopes_count_disabled() {
+fn reference_envelopes_count_disabled() {
     for ty in [
         *b"ACHR", *b"PGRE", *b"PMIS", *b"PHZD", *b"PARW", *b"PBAR", *b"PBEA", *b"PCON", *b"PFLA",
     ] {
@@ -1110,7 +1110,7 @@ fn review_l6_reference_envelopes_count_disabled() {
 }
 
 #[test]
-fn review_h3_cache_reads_once_per_plugin_language_and_kind() {
+fn cache_reads_once_per_plugin_language_and_kind() {
     let root = temp();
     std::fs::write(root.join("A.esm"), plugin(MASTER, &[], 0, &[])).unwrap();
     let file = "Strings/A_english.STRINGS";
@@ -1162,7 +1162,7 @@ fn review_h3_cache_reads_once_per_plugin_language_and_kind() {
     assert_eq!(cache.loads, 2);
 }
 #[test]
-fn review_h3_high_bytes_preserve_raw_id_and_diagnostic() {
+fn high_bytes_preserve_raw_id_and_diagnostic() {
     let mut bytes = table(StringKind::Strings);
     let offset = bytes.len() - 4;
     bytes[offset] = 0xe9;
@@ -1185,7 +1185,7 @@ fn review_h3_high_bytes_preserve_raw_id_and_diagnostic() {
 }
 
 #[test]
-fn review_l7_winner_reload_never_merges_absent_fields() {
+fn winner_reload_never_merges_absent_fields() {
     let a = plugin(
         MASTER,
         &[],
@@ -1299,7 +1299,7 @@ fn measure_override_index() {
 }
 
 #[test]
-fn review_n2_string_diagnostic_raw_is_at_most_64_bytes() {
+fn string_diagnostic_raw_is_at_most_64_bytes() {
     let mut bytes = 1u32.to_le_bytes().to_vec();
     bytes.extend(100_000u32.to_le_bytes());
     bytes.extend(17u32.to_le_bytes());
@@ -1316,7 +1316,7 @@ fn review_n2_string_diagnostic_raw_is_at_most_64_bytes() {
     assert!(t.diagnostics[0].raw.len() <= 64);
 }
 #[test]
-fn review_n3_valid_utf8_is_decoded() {
+fn valid_utf8_is_decoded() {
     let text = "Café — 日本語\0".as_bytes();
     let mut bytes = 1u32.to_le_bytes().to_vec();
     bytes.extend((text.len() as u32).to_le_bytes());
@@ -1334,7 +1334,7 @@ fn review_n3_valid_utf8_is_decoded() {
     assert_eq!(t.get(1, &Limits::default()).unwrap(), "Café — 日本語");
 }
 #[test]
-fn review_n5_unscanned_base_is_not_an_injection() {
+fn unscanned_base_is_not_an_injection() {
     let a = plugin(MASTER, &[], 0, &[]);
     let b = plugin(MASTER, &["A.esm"], 1, &record(b"STAT", 0x900, 0, &[]));
     let order = LoadOrder::new(
@@ -1363,7 +1363,7 @@ fn review_n5_unscanned_base_is_not_an_injection() {
     assert_eq!(code.as_deref(), Some("BaseUnavailable"));
 }
 #[test]
-fn review_n10_extension_masters_are_recognized() {
+fn extension_masters_are_recognized() {
     let a = plugin(0, &[], 0, &[]);
     let b = plugin(MASTER, &[], 0, &[]);
     assert!(LoadOrder::new(
@@ -1377,7 +1377,7 @@ fn review_n10_extension_masters_are_recognized() {
 }
 
 #[test]
-fn review_n3_language_codecs_are_strict_and_preserve_bytes() {
+fn language_codecs_are_strict_and_preserve_bytes() {
     for kind in [
         StringKind::Strings,
         StringKind::DlStrings,
@@ -1429,7 +1429,7 @@ fn review_n3_language_codecs_are_strict_and_preserve_bytes() {
 }
 
 #[test]
-fn review_n9_winner_source_catalog_rejects_wrong_or_missing_source() {
+fn winner_source_catalog_rejects_wrong_or_missing_source() {
     let a = plugin(
         MASTER,
         &[],
@@ -1497,7 +1497,7 @@ fn review_n9_winner_source_catalog_rejects_wrong_or_missing_source() {
 }
 
 #[test]
-fn review_n10_flagless_esl_is_light_without_rewriting_flags() {
+fn flagless_esl_is_light_without_rewriting_flags() {
     let raw = plugin(0, &[], 0, &[]);
     let h = header("Flagless.esl", &raw).unwrap();
     assert_eq!(h.flags, 0);
@@ -1508,7 +1508,7 @@ fn review_n10_flagless_esl_is_light_without_rewriting_flags() {
 }
 
 #[test]
-fn review_r2_seven_documented_plugin_types_get_correct_slots_and_ranges() {
+fn seven_documented_plugin_types_get_correct_slots_and_ranges() {
     for (name, flags, master, light) in [
         ("A.esm", 0, true, false),
         ("B.esm", LIGHT, true, false),
@@ -1535,7 +1535,7 @@ fn review_r2_seven_documented_plugin_types_get_correct_slots_and_ranges() {
 }
 
 #[test]
-fn review_r5_and_observation_count_delimited_raw_text_once_in_all_tables() {
+fn and_observation_count_delimited_raw_text_once_in_all_tables() {
     for kind in [
         StringKind::Strings,
         StringKind::DlStrings,
@@ -1610,7 +1610,7 @@ fn sse_header(name: &str, version: f32, flags: u32, masters: &[&str]) -> Header 
     .unwrap()
 }
 #[test]
-fn stage8_sse_header_profiles_light_ranges_and_effective_type() {
+fn sse_header_profiles_light_ranges_and_effective_type() {
     for (version, min) in [(1.7, 0x800), (1.71, 1)] {
         let h = sse_header("Light.esl", version, 0, &[]);
         assert_eq!(h.form_version, 44);
@@ -1648,7 +1648,7 @@ fn stage8_sse_header_profiles_light_ranges_and_effective_type() {
     );
 }
 #[test]
-fn stage8_sse_header_versions_truncation_and_record_layout_separation() {
+fn sse_header_versions_truncation_and_record_layout_separation() {
     let mut bytes = plugin(MASTER, &[], 0, &[]);
     bytes[20..22].copy_from_slice(&44u16.to_le_bytes());
     bytes[30..34].copy_from_slice(&1.7f32.to_le_bytes());
@@ -1711,7 +1711,7 @@ fn stage8_sse_header_versions_truncation_and_record_layout_separation() {
 }
 
 #[test]
-fn stage10_nonfinite_scalar_and_transform_remain_interpreted() {
+fn nonfinite_scalar_and_transform_remain_interpreted() {
     for (sig, values) in [
         (*b"XSCL", vec![0x7fc12345u32]),
         (*b"DATA", vec![0x7f800000, 0xff800000, 0x7fc12345, 0, 0, 0]),
@@ -1749,7 +1749,7 @@ fn stage10_nonfinite_scalar_and_transform_remain_interpreted() {
 }
 
 #[test]
-fn stage10_nonfinite_light_lighting_and_scol_keep_typed_counts() {
+fn nonfinite_light_lighting_and_scol_keep_typed_counts() {
     for (kind, size, changes, expected) in [
         (
             *b"LIGH",
@@ -2065,7 +2065,7 @@ fn typed_duplicate_and_corrupt_new_reference_field_fail_named() {
 }
 
 #[test]
-fn stage11_relocated_winner_belongs_only_to_new_cell_and_bad_label_is_named() {
+fn relocated_winner_belongs_only_to_new_cell_and_bad_label_is_named() {
     use crate::typed::Store;
     let key = |id| FormKey {
         plugin: "base.esm".into(),
@@ -2125,7 +2125,7 @@ fn stage11_relocated_winner_belongs_only_to_new_cell_and_bad_label_is_named() {
 }
 
 #[test]
-fn stage11_cell_kind_uses_only_winning_group_context() {
+fn cell_kind_uses_only_winning_group_context() {
     use crate::typed::Store;
     let base = plugin(
         MASTER,
@@ -2156,7 +2156,7 @@ fn stage11_cell_kind_uses_only_winning_group_context() {
 }
 
 #[test]
-fn stage11_unassigned_winning_reference_has_named_diagnostic() {
+fn unassigned_winning_reference_has_named_diagnostic() {
     use crate::typed::Store;
     let rf = record(b"REFR", 0x802, 0, &sub(b"NAME", &0x801u32.to_le_bytes()));
     let base = plugin(
@@ -2195,7 +2195,7 @@ fn stage11_unassigned_winning_reference_has_named_diagnostic() {
 }
 
 #[test]
-fn stage11_compressed_typed_error_keeps_decompressed_offset_on_numeric_collision() {
+fn compressed_typed_error_keeps_decompressed_offset_on_numeric_collision() {
     use crate::typed::{Cell, Store};
     let mut data = sub(b"EDID", b"A\0");
     data.extend(sub(b"ZZZZ", &[1; 28]));
@@ -2224,7 +2224,7 @@ fn stage11_compressed_typed_error_keeps_decompressed_offset_on_numeric_collision
 }
 
 #[test]
-fn stage13_static_cell_references_are_decoded_not_guessed_or_defaulted() {
+fn static_cell_references_are_decoded_not_guessed_or_defaulted() {
     let data = [
         sub(b"XCIM", &0x800u32.to_le_bytes()),
         sub(b"XGDR", &0x801u32.to_le_bytes()),
@@ -2252,7 +2252,7 @@ fn stage13_static_cell_references_are_decoded_not_guessed_or_defaulted() {
 }
 
 #[test]
-fn stage13_contract_covers_every_stage12_cause_once_with_evidence_or_gap() {
+fn contract_covers_every_case12_cause_once_with_evidence_or_gap() {
     use crate::still::{rule, Class, TABLE};
     let keys = include_str!("../../../spec/static-record-keys.txt");
     let mut n = 0;
@@ -2282,7 +2282,7 @@ fn stage13_contract_covers_every_stage12_cause_once_with_evidence_or_gap() {
 }
 
 #[test]
-fn stage13_common_outside_tags_cover_the_new_visible_types() {
+fn common_outside_tags_cover_the_new_visible_types() {
     use crate::still::{classify, Class};
     for record in [
         b"MISC", b"CONT", b"ALCH", b"BOOK", b"AMMO", b"KEYM", b"NOTE", b"FLOR", b"TERM", b"TACT",
@@ -2302,7 +2302,7 @@ fn stage13_common_outside_tags_cover_the_new_visible_types() {
 }
 
 #[test]
-fn stage15_marker_model_catalog_uses_only_winning_labelled_types() {
+fn marker_model_catalog_uses_only_winning_labelled_types() {
     use crate::typed::Store;
     let original = plugin(
         MASTER,
@@ -2346,7 +2346,7 @@ fn stage15_marker_model_catalog_uses_only_winning_labelled_types() {
 }
 
 #[test]
-fn stage18_equal_zlib_lengths_preserve_different_payloads_without_new_fields() {
+fn equal_zlib_lengths_preserve_different_payloads_without_new_fields() {
     let l = Limits::default();
     let mut sizes = Vec::new();
     for n in [0usize, 1, 12, 93, 255] {

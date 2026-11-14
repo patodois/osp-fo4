@@ -11,7 +11,7 @@ fn read(bytes: &[u8]) -> Result<Material<'_>> {
     )
 }
 #[test]
-fn stage10_documented_v2_bgem_is_interpreted() {
+fn documented_v2_bgem_is_interpreted() {
     let w = fixture(b"BGEM", 2, false, b"");
     assert_eq!(w.v.len(), 135);
     let m = read(&w.v).unwrap();
@@ -184,7 +184,7 @@ fn disabled_blend_tuple_is_retained_without_requiring_factors() {
     }
 }
 #[test]
-fn stage14_mode_label_never_controls_alpha_readiness() {
+fn mode_label_never_controls_alpha_readiness() {
     for enabled in [0, 1, 2, 255] {
         for (source, destination) in [(0, 0), (6, 7), (u32::MAX, 17)] {
             for mode in [None, Some(BlendMode::Unknown), Some(BlendMode::Standard)] {
@@ -201,7 +201,7 @@ fn stage14_mode_label_never_controls_alpha_readiness() {
 }
 
 #[test]
-fn stage13_unknown_components_sum_without_collapsing_their_names() {
+fn unknown_components_sum_without_collapsing_their_names() {
     let l = fo4_core::Limits::default();
     for (magic, version) in [(b"BGSM", 3), (b"BGSM", 22), (b"BGEM", 22)] {
         let w = fixture(magic, version, true, b"");

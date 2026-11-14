@@ -1,5 +1,5 @@
 //! Photo-first edges: fixed-scale blur, nonmaximum suppression, paired persistence.
-//! Selection never reads the engine. See spec/stage18-criteria.md for frozen parameters.
+//! Selection never reads the engine. Frozen parameters: spec/photo-metrics.md.
 use crate::{
     compare::{edge_distances, EdgeSummary},
     png::Png,

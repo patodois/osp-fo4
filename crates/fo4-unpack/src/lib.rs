@@ -3,12 +3,12 @@
 mod assets;
 mod bases;
 mod causes;
+mod cell_census;
 mod check_cell;
 mod families;
 mod path_census;
 mod references;
 mod root_census;
-mod stage11;
 use fo4_archive::GameArchive;
 use fo4_core::{
     digest, io_error, within, Budget, Error, FileSource, Manifest, Mount, ReadAt, Result,
@@ -164,11 +164,11 @@ pub struct Summary {
     pub diagnostic_groups_omitted: u64,
     pub items_omitted: u64,
     pub root_census: root_census::Summary,
-    pub cell_census: stage11::CellTotals,
+    pub cell_census: cell_census::CellTotals,
     pub base_census: bases::Summary,
     pub shader_citations: families::Summary,
     pub path_census: path_census::Summary,
-    pub unread: stage11::Unread,
+    pub unread: cell_census::Unread,
     pub schema: u32,
     pub under_hypotheses: bool,
     pub overlay_plugin: Option<PathBuf>,
@@ -901,11 +901,11 @@ fn run_selected(o: &Options, keys: Option<&[fo4_plugin::FormKey]>) -> Result<u8>
             Some("archives") => archives(&m, &mut r),
             Some("records") => records(&m, &mut r),
             Some("roots") => root_census::sweep(&m, &mut r),
-            Some("cells") => stage11::cells(&m, &mut r),
+            Some("cells") => cell_census::cells(&m, &mut r),
             Some("bases") => bases::sweep(&m, &mut r, keys),
             Some("shader-citations") => families::sweep(&m, &mut r),
-            Some("unread") => stage11::unread(&m, &mut r, false),
-            Some("paths") => stage11::unread(&m, &mut r, true),
+            Some("unread") => cell_census::unread(&m, &mut r, false),
+            Some("paths") => cell_census::unread(&m, &mut r, true),
             Some(scope @ ("nif" | "materials" | "textures")) => assets::sweep(&m, &mut r, scope),
             _ => return Err(usage()),
         },
@@ -1616,7 +1616,7 @@ fn count_string_table(
 mod tests {
     use super::*;
     #[test]
-    fn review_n7_failure_of_second_or_third_create_publishes_nothing() {
+    fn failure_of_second_or_third_create_publishes_nothing() {
         let base = fo4_core::TestDir::new("atomic-report");
         for fail_at in [2, 3] {
             let out = base.join(format!("out-{fail_at}"));
@@ -1663,7 +1663,7 @@ mod tests {
         drop(files);
     }
     #[test]
-    fn review_r3_identity_rejection_rolls_back_staging_and_publication() {
+    fn identity_rejection_rolls_back_staging_and_publication() {
         for reject_staging in [false, true] {
             let base = fo4_core::TestDir::new("identity-rollback");
             let out = base.join("new/intermediate/reports");
@@ -1710,7 +1710,7 @@ mod tests {
     }
     #[cfg(unix)]
     #[test]
-    fn review_r1_canonical_identity_is_checked_before_creation_or_open() {
+    fn canonical_identity_is_checked_before_creation_or_open() {
         let base = fo4_core::TestDir::new("identity-preflight");
         let root = base.join("Data");
         let sub = root.join("sub");

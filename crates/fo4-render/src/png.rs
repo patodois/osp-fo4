@@ -494,7 +494,7 @@ pub fn encode_srgb(size: [u32; 2], pixels: &[[f32; 4]], b: &Budget) -> Result<Ve
 }
 
 #[cfg(test)]
-mod stage16_tests {
+mod transfer_tests {
     use super::*;
     fn image(w: u32, h: u32, kind: u8, rows: &[u8]) -> Vec<u8> {
         let b = Budget::new(8 << 20);

@@ -354,7 +354,7 @@ mod tests {
             revision: 0,
             version: 131,
             unknown: 0,
-            source: fo4_core::SourceSpan::new("synthetic-stage18", 0, n as u64),
+            source: fo4_core::SourceSpan::new("synthetic-case18", 0, n as u64),
             payload: bytes,
             subrecords: vec![crate::Subrecord {
                 signature: tag,
@@ -366,7 +366,7 @@ mod tests {
         }
     }
     #[test]
-    fn stage18_only_observed_boolean_bytes_and_sourced_xlig_offsets_are_named() {
+    fn only_observed_boolean_bytes_and_sourced_xlig_offsets_are_named() {
         let order = LoadOrder::new(Vec::new(), &Budget::new(1 << 20)).unwrap();
         let schema = super::schema(b"MSTT", b"DATA").unwrap();
         for value in 0..=255u8 {
@@ -412,7 +412,7 @@ mod tests {
         assert!(decode(&r, &order, 0, &Budget::new(0), &Limits::default()).is_err());
     }
     #[test]
-    fn stage18_ficha_pair_index_has_no_duplicates() {
+    fn ficha_pair_index_has_no_duplicates() {
         assert!(INDEX.windows(2).all(|w| w[0].0 < w[1].0));
     }
     #[test]

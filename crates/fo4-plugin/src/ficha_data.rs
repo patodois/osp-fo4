@@ -1,4 +1,4 @@
-// Layout facts only; original stage14 table plus hand-audited stage17/18 additions. See spec/record-fichas.md and record-light-key-layouts.md.
+// Layout facts only: a generated table plus hand-audited additions. See spec/record-fichas.md and record-light-key-layouts.md.
 use super::{FieldSpec, FlagWord, Kind, Schema};
 pub(super) const SCHEMAS: &[Schema] = &[
     Schema {

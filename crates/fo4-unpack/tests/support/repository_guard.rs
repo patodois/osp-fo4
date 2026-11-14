@@ -263,17 +263,12 @@ pub fn scan_machine_paths(root: &Path, paths: &[PathBuf]) -> io::Result<Vec<Viol
     Ok(violations)
 }
 fn versioned_paths(root: &Path) -> io::Result<Vec<PathBuf>> {
-    let dir = if root.join(".progress-git/HEAD").is_file() {
-        root.join(".progress-git")
-    } else if root.join(".git/HEAD").is_file() {
-        root.join(".git")
-    } else {
+    // A directory or, in a linked worktree, a file. Outside a checkout there is no versioned set.
+    if !root.join(".git").exists() {
         return Ok(Vec::new());
-    };
+    }
     let out = std::process::Command::new("git")
-        .arg("--git-dir")
-        .arg(dir)
-        .arg("--work-tree")
+        .arg("-C")
         .arg(root)
         .args(["ls-files", "--full-name", "-z"])
         .output()?;

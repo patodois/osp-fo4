@@ -335,7 +335,7 @@ fn repeated_reports_are_deterministic_and_order_changes_fingerprint() {
 }
 
 #[test]
-fn review_b1_record_caps_are_per_plugin() {
+fn record_caps_are_per_plugin() {
     let i = setup();
     let mut m: Manifest = serde_json::from_slice(&fs::read(&i.manifest).unwrap()).unwrap();
     m.limits.max_records = 1;
@@ -345,7 +345,7 @@ fn review_b1_record_caps_are_per_plugin() {
     assert_eq!(s["records"], 2);
 }
 #[test]
-fn review_l9_unavailable_counts_missing_headers() {
+fn unavailable_counts_missing_headers() {
     let i = setup();
     fs::write(i.root.join("DLCRobot.esm"), b"bad").unwrap();
     let (_, s, _) = run(&i, "sweep", Some("records"), "missing");
@@ -354,7 +354,7 @@ fn review_l9_unavailable_counts_missing_headers() {
 }
 #[cfg(target_os = "macos")]
 #[test]
-fn review_m2_firmlink_reports_never_write_inside_data() {
+fn firmlink_reports_never_write_inside_data() {
     let i = setup();
     let alias = Path::new("/System/Volumes/Data")
         .join(i.root.strip_prefix("/").unwrap())
@@ -370,7 +370,7 @@ fn review_m2_firmlink_reports_never_write_inside_data() {
     assert!(!i.root.join("reports").exists());
 }
 #[test]
-fn review_m2_hardlinked_report_is_never_truncated() {
+fn hardlinked_report_is_never_truncated() {
     let i = setup();
     let out = i.base.join("linked-report");
     fs::create_dir(&out).unwrap();
@@ -389,7 +389,7 @@ fn review_m2_hardlinked_report_is_never_truncated() {
 }
 
 #[test]
-fn review_h2_bad_archive_entry_keeps_localized_strings_available() {
+fn bad_archive_entry_keeps_localized_strings_available() {
     let i = setup();
     let mut blocked = archive(&[
         ("meshes/a.nif", b"shared", false),
@@ -410,7 +410,7 @@ fn review_h2_bad_archive_entry_keeps_localized_strings_available() {
     assert_eq!(s["non_enumerable_regions"], 0);
 }
 #[test]
-fn review_m1_count_divergence_is_reported_without_unreadable_region() {
+fn count_divergence_is_reported_without_unreadable_region() {
     let i = setup();
     let path = i.root.join("Fallout4.esm");
     let mut bytes = fs::read(&path).unwrap();
@@ -423,7 +423,7 @@ fn review_m1_count_divergence_is_reported_without_unreadable_region() {
     assert_eq!(s["records"], 2);
 }
 #[test]
-fn review_h3_failed_localized_lookup_is_not_counted_as_interpreted() {
+fn failed_localized_lookup_is_not_counted_as_interpreted() {
     let i = setup();
     let mut table = strings();
     table[18] = 0x81;
@@ -454,7 +454,7 @@ fn review_h3_failed_localized_lookup_is_not_counted_as_interpreted() {
 }
 
 #[test]
-fn review_l8_configured_target_helper() {
+fn configured_target_helper() {
     let directory = fo4_core::TestDir::new("target-rule");
     let target = std::env::var_os("CARGO_TARGET_DIR")
         .map(PathBuf::from)
@@ -462,13 +462,13 @@ fn review_l8_configured_target_helper() {
     assert!(directory.starts_with(target.canonicalize().unwrap()));
 }
 #[test]
-fn review_l8_custom_target_is_honored_in_child() {
+fn custom_target_is_honored_in_child() {
     let directory = fo4_core::TestDir::new("redirected-target");
     let target = directory.join("custom");
     fs::create_dir(&target).unwrap();
     let output = Command::new(std::env::current_exe().unwrap())
         .env("CARGO_TARGET_DIR", &target)
-        .args(["--exact", "review_l8_configured_target_helper"])
+        .args(["--exact", "configured_target_helper"])
         .output()
         .unwrap();
     assert!(
@@ -479,7 +479,7 @@ fn review_l8_custom_target_is_honored_in_child() {
     assert_eq!(fs::read_dir(target.join("synthetic")).unwrap().count(), 0);
 }
 #[test]
-fn review_b1_memory_accounts_are_independent() {
+fn memory_accounts_are_independent() {
     let i = setup();
     let mut m: Manifest = serde_json::from_slice(&fs::read(&i.manifest).unwrap()).unwrap();
     m.limits.max_override_memory = 4096;
@@ -493,7 +493,7 @@ fn review_b1_memory_accounts_are_independent() {
 }
 
 #[test]
-fn review_h2_structural_failure_prevents_vfs_lookup() {
+fn structural_failure_prevents_vfs_lookup() {
     let i = setup();
     fs::write(i.root.join("b.ba2"), b"BTDX").unwrap();
     let (o, s, _) = run(&i, "sweep", Some("records"), "broken-archive");
@@ -506,7 +506,7 @@ fn review_h2_structural_failure_prevents_vfs_lookup() {
 }
 
 #[test]
-fn review_b1_subrecord_caps_are_per_plugin() {
+fn subrecord_caps_are_per_plugin() {
     let i = setup();
     let mut m: Manifest = serde_json::from_slice(&fs::read(&i.manifest).unwrap()).unwrap();
     m.limits.max_subrecords = 3;
@@ -527,7 +527,7 @@ fn review_b1_subrecord_caps_are_per_plugin() {
 }
 
 #[test]
-fn review_n7_refused_creation_rolls_back_earlier_reports() {
+fn refused_creation_rolls_back_earlier_reports() {
     let i = setup();
     let out = i.base.join("atomic");
     fs::create_dir(&out).unwrap();
@@ -554,7 +554,7 @@ fn diagnostics(i: &Install, name: &str) -> Vec<Value> {
 }
 
 #[test]
-fn review_n2_reports_are_bounded_and_string_diagnostics_are_not_duplicated() {
+fn reports_are_bounded_and_string_diagnostics_are_not_duplicated() {
     let i = setup();
     let mut table = 200u32.to_le_bytes().to_vec();
     table.extend(100_000u32.to_le_bytes());
@@ -588,7 +588,7 @@ fn review_n2_reports_are_bounded_and_string_diagnostics_are_not_duplicated() {
 }
 
 #[test]
-fn review_n5_injection_requires_completed_base_and_is_counted() {
+fn injection_requires_completed_base_and_is_counted() {
     for truncated in [false, true] {
         let i = setup();
         let mut base = plugin(None, 1, 0, &[]);
@@ -618,7 +618,7 @@ fn review_n5_injection_requires_completed_base_and_is_counted() {
 }
 
 #[test]
-fn review_n8_fingerprint_scopes_and_missing_plugin_resolve() {
+fn fingerprint_scopes_and_missing_plugin_resolve() {
     let i = setup();
     let (_, assets, _) = run(&i, "resolve", None, "assets-before");
     let (_, records, _) = run(&i, "sweep", Some("records"), "records-before");
@@ -639,7 +639,7 @@ fn review_n8_fingerprint_scopes_and_missing_plugin_resolve() {
 }
 
 #[test]
-fn review_n4_manifest_condition_and_origin_reach_report() {
+fn manifest_condition_and_origin_reach_report() {
     let i = setup();
     let mut m: Manifest = serde_json::from_slice(&fs::read(&i.manifest).unwrap()).unwrap();
     for enabled in [false, true] {
@@ -678,7 +678,7 @@ fn review_n4_manifest_condition_and_origin_reach_report() {
 }
 
 #[test]
-fn review_n1_resolve_never_certifies_a_shadowed_loser() {
+fn resolve_never_certifies_a_shadowed_loser() {
     let i = setup();
     let mut m: Manifest = serde_json::from_slice(&fs::read(&i.manifest).unwrap()).unwrap();
     m.mounts.truncate(2);
@@ -715,7 +715,7 @@ fn review_n1_resolve_never_certifies_a_shadowed_loser() {
 }
 
 #[test]
-fn review_n3_scan_counts_decoding_by_language() {
+fn scan_counts_decoding_by_language() {
     for (language, text, expected) in [
         ("en", b"Caf\xe9".as_slice(), "Café"),
         ("fr", "été 日本語".as_bytes(), "été 日本語"),
@@ -750,7 +750,7 @@ fn review_n3_scan_counts_decoding_by_language() {
 }
 
 #[test]
-fn review_n2_too_small_budget_is_refused_before_output() {
+fn too_small_budget_is_refused_before_output() {
     let i = setup();
     let mut m: Manifest = serde_json::from_slice(&fs::read(&i.manifest).unwrap()).unwrap();
     m.limits.max_report_bytes = 2048;
@@ -772,7 +772,7 @@ fn review_n2_too_small_budget_is_refused_before_output() {
 
 #[cfg(unix)]
 #[test]
-fn review_r1_symlinks_to_data_subdirectories_never_create_reports() {
+fn symlinks_to_data_subdirectories_never_create_reports() {
     for intermediate in [false, true] {
         let i = setup();
         let sub = i.root.join("sub");
@@ -819,7 +819,7 @@ fn string_entries(entries: &[(u32, &[u8])]) -> Vec<u8> {
 }
 
 #[test]
-fn review_r5_bom_counts_per_language_preserve_decoded_prefix() {
+fn bom_counts_per_language_preserve_decoded_prefix() {
     for (language, expected) in [("en", "ï»¿BOM"), ("fr", "\u{feff}BOM")] {
         let i = setup();
         let mut m: Manifest = serde_json::from_slice(&fs::read(&i.manifest).unwrap()).unwrap();
@@ -874,7 +874,7 @@ fn review_observation_english_utf8_candidates_are_counted_without_codec_change()
 }
 
 #[test]
-fn review_r4_resolve_marks_all_known_candidates_incomplete_for_unusable_name() {
+fn resolve_marks_all_known_candidates_incomplete_for_unusable_name() {
     let i = setup();
     fs::write(
         i.root.join("b.ba2"),
@@ -896,7 +896,7 @@ fn review_r4_resolve_marks_all_known_candidates_incomplete_for_unusable_name() {
 
 #[cfg(unix)]
 #[test]
-fn review_q2_existing_private_empty_output_is_refused_unchanged() {
+fn existing_private_empty_output_is_refused_unchanged() {
     use std::os::unix::fs::{MetadataExt, PermissionsExt};
     let i = setup();
     let out = i.base.join("private-report");
@@ -942,7 +942,7 @@ fn review_q2_existing_private_empty_output_is_refused_unchanged() {
 }
 
 #[test]
-fn stage7_default_is_aggregated_and_items_are_explicit() {
+fn default_is_aggregated_and_items_are_explicit() {
     let i = setup();
     for (command, scope) in [
         ("inventory", None),
@@ -976,7 +976,7 @@ fn stage7_default_is_aggregated_and_items_are_explicit() {
 }
 
 #[test]
-fn stage7_report_limit_does_not_stop_enumeration_or_drop_counts() {
+fn report_limit_does_not_stop_enumeration_or_drop_counts() {
     let i = setup();
     let mut m: Manifest = serde_json::from_slice(&fs::read(&i.manifest).unwrap()).unwrap();
     m.limits.max_report_bytes = 8 << 20;
@@ -1019,7 +1019,7 @@ fn stage7_report_limit_does_not_stop_enumeration_or_drop_counts() {
 }
 
 #[test]
-fn stage7_english_alias_and_all_mounted_localization_formats_are_counted() {
+fn english_alias_and_all_mounted_localization_formats_are_counted() {
     let i = setup();
     let simple = string_entries(&[(71, b"Name")]);
     let mut length_prefixed = 1u32.to_le_bytes().to_vec();
@@ -1088,7 +1088,7 @@ fn sse_bsa(files: &[(&[u8], &[u8])]) -> Vec<u8> {
     out
 }
 #[test]
-fn stage8_sse_four_commands_use_explicit_profile_and_bsa() {
+fn sse_four_commands_use_explicit_profile_and_bsa() {
     let i = setup();
     let mut m: Manifest = serde_json::from_slice(&fs::read(&i.manifest).unwrap()).unwrap();
     m.game = fo4_core::Game::SkyrimSe;
@@ -1245,7 +1245,7 @@ fn stage8_sse_four_commands_use_explicit_profile_and_bsa() {
 }
 
 #[test]
-fn stage9_cli_accepts_asset_sweeps() {
+fn cli_accepts_asset_sweeps() {
     for scope in ["nif", "materials", "textures"] {
         for args in [
             vec![
@@ -1323,7 +1323,7 @@ fn asset_dds() -> Vec<u8> {
     out
 }
 #[test]
-fn stage9_asset_commands_both_games_and_truncated_material_is_explicit() {
+fn asset_commands_both_games_and_truncated_material_is_explicit() {
     for (game, bs) in [
         (fo4_core::Game::Fallout4, 130),
         (fo4_core::Game::SkyrimSe, 100),
@@ -1334,7 +1334,7 @@ fn stage9_asset_commands_both_games_and_truncated_material_is_explicit() {
         let nif = asset_node_nif(bs);
         let texture = asset_dds();
         let material = b"BGSM\x02\0\0\0payload-without-claimed-layout";
-        // This test uses BA2 for FO4; SSE's own BSA route is exercised by stage8 and the reader tests.
+        // This test uses BA2 for FO4; SSE's own BSA route is exercised by case8 and the reader tests.
         if game == fo4_core::Game::SkyrimSe {
             fs::create_dir_all(i.root.join("assets/models")).unwrap();
             fs::create_dir_all(i.root.join("assets/textures")).unwrap();
@@ -1392,7 +1392,7 @@ fn stage9_asset_commands_both_games_and_truncated_material_is_explicit() {
 }
 
 #[test]
-fn stage9_failure_code_counts_survive_diagnostic_group_cap() {
+fn failure_code_counts_survive_diagnostic_group_cap() {
     let i = setup();
     let mut m: Manifest = serde_json::from_slice(&fs::read(&i.manifest).unwrap()).unwrap();
     let names: Vec<_> = (0..4200).map(|i| format!("materials/m{i}.bgsm")).collect();
@@ -1487,14 +1487,14 @@ fn shader_nif(path: &[u8]) -> Vec<u8> {
     v
 }
 #[test]
-fn stage10_asset_notices_slots_and_vfs_cross_references() {
+fn asset_notices_slots_and_vfs_cross_references() {
     let i = setup();
     let mut m: Manifest = serde_json::from_slice(&fs::read(&i.manifest).unwrap()).unwrap();
     let mat = material_v2(b"a.dds", true);
     let nif = shader_nif(b"Materials/Test.BGEM");
     let dds = asset_dds();
     fs::write(
-        i.root.join("stage10.ba2"),
+        i.root.join("case10.ba2"),
         archive(&[
             ("materials/test.bgem", &mat, true),
             ("meshes/test.nif", &nif, true),
@@ -1503,7 +1503,7 @@ fn stage10_asset_notices_slots_and_vfs_cross_references() {
     )
     .unwrap();
     m.mounts = vec![Mount::Archive {
-        path: "stage10.ba2".into(),
+        path: "case10.ba2".into(),
         plugin: None,
     }];
     fs::write(&i.manifest, serde_json::to_vec(&m).unwrap()).unwrap();
@@ -1533,7 +1533,7 @@ fn stage10_asset_notices_slots_and_vfs_cross_references() {
     assert_eq!(snapshot(&i.root), before);
 }
 #[test]
-fn stage10_unresolved_references_are_complete_deduplicated_notices() {
+fn unresolved_references_are_complete_deduplicated_notices() {
     let i = setup();
     let mut m: Manifest = serde_json::from_slice(&fs::read(&i.manifest).unwrap()).unwrap();
     let mat = material_v2(b"missing.dds", false);
@@ -1577,7 +1577,7 @@ fn stage10_unresolved_references_are_complete_deduplicated_notices() {
     }
 }
 #[test]
-fn stage10_record_ieee_notices_preserve_values_and_plugin_counts() {
+fn record_ieee_notices_preserve_values_and_plugin_counts() {
     let i = setup();
     let mut m: Manifest = serde_json::from_slice(&fs::read(&i.manifest).unwrap()).unwrap();
     m.plugins.retain(|p| p.name != "Override.esp");
@@ -1614,7 +1614,7 @@ fn stage10_record_ieee_notices_preserve_values_and_plugin_counts() {
 }
 
 #[test]
-fn stage10_reference_work_limit_keeps_the_unchecked_denominator() {
+fn reference_work_limit_keeps_the_unchecked_denominator() {
     let i = setup();
     let mut m: Manifest = serde_json::from_slice(&fs::read(&i.manifest).unwrap()).unwrap();
     fs::create_dir_all(i.root.join("materials")).unwrap();
@@ -1646,7 +1646,7 @@ fn stage10_reference_work_limit_keeps_the_unchecked_denominator() {
     );
 }
 
-fn stage11_nif() -> Vec<u8> {
+fn shape_nif() -> Vec<u8> {
     let mut v = b"Gamebryo File Format, Version 20.2.0.7\n".to_vec();
     v.extend(0x14020007u32.to_le_bytes());
     v.push(1);
@@ -1660,7 +1660,7 @@ fn stage11_nif() -> Vec<u8> {
     }
     v
 }
-fn stage11_group(kind: u32, id: u32, data: &[u8]) -> Vec<u8> {
+fn cell_group(kind: u32, id: u32, data: &[u8]) -> Vec<u8> {
     let mut v = b"GRUP".to_vec();
     v.extend((data.len() as u32 + 24).to_le_bytes());
     v.extend(id.to_le_bytes());
@@ -1670,7 +1670,7 @@ fn stage11_group(kind: u32, id: u32, data: &[u8]) -> Vec<u8> {
     v
 }
 #[test]
-fn stage11_cells_unread_and_paths_close_synthetic_denominators() {
+fn cells_unread_and_paths_close_synthetic_denominators() {
     let install = setup();
     let mut m = Manifest::load(&install.manifest).unwrap();
     m.plugins.truncate(7);
@@ -1689,12 +1689,12 @@ fn stage11_cells_unread_and_paths_close_synthetic_denominators() {
         refs.extend(record(b"REFR", id, flags, &data));
     }
     refs.extend(record(b"ACHR", 0x807, 0, &[]));
-    let mut body = stage11_group(
+    let mut body = cell_group(
         2,
         0,
         &[
             record(b"CELL", 0x800, 0, &cell),
-            stage11_group(6, 0x800, &stage11_group(9, 0x800, &refs)),
+            cell_group(6, 0x800, &cell_group(9, 0x800, &refs)),
         ]
         .concat(),
     );
@@ -1703,9 +1703,9 @@ fn stage11_cells_unread_and_paths_close_synthetic_denominators() {
     body.extend(record(b"IDLE", 0x808, 0, &sub(b"ZZZZ", b"envelope")));
     fs::write(install.root.join("Fallout4.esm"), plugin(None, 1, 0, &body)).unwrap();
     let hkx = b"\x57\xe0\xe0\x57\x10\xc0\xc0\x10hk_2014.1.0-r1\0";
-    let nif = stage11_nif();
+    let nif = shape_nif();
     fs::write(
-        install.root.join("stage11.ba2"),
+        install.root.join("case11.ba2"),
         archive(&[
             ("meshes/test.nif", &nif, true),
             ("meshes/actors/test.hkx", hkx, true),
@@ -1715,11 +1715,11 @@ fn stage11_cells_unread_and_paths_close_synthetic_denominators() {
     .unwrap();
     m.mounts = vec![Mount::Archive {
         plugin: None,
-        path: "stage11.ba2".into(),
+        path: "case11.ba2".into(),
     }];
     fs::write(&install.manifest, serde_json::to_vec_pretty(&m).unwrap()).unwrap();
     for scope in ["cells", "unread", "paths"] {
-        let out = install.base.join(format!("stage11-{scope}"));
+        let out = install.base.join(format!("case11-{scope}"));
         let output = Command::new(env!("CARGO_BIN_EXE_fo4-unpack"))
             .args(["sweep", "--manifest"])
             .arg(&install.manifest)
@@ -1759,7 +1759,7 @@ fn stage11_cells_unread_and_paths_close_synthetic_denominators() {
 }
 
 #[test]
-fn stage11_candidates_are_smallest_twenty_and_never_use_precombine() {
+fn candidates_are_smallest_twenty_and_never_use_precombine() {
     let install = setup();
     let mut m = Manifest::load(&install.manifest).unwrap();
     m.plugins.truncate(7);
@@ -1777,12 +1777,12 @@ fn stage11_candidates_are_smallest_twenty_and_never_use_precombine() {
             data.extend(sub(b"XSCL", &1f32.to_le_bytes()));
             refs.extend(record(b"REFR", 0x2000 + i * 32 + j, 0, &data));
         }
-        body.extend(stage11_group(
+        body.extend(cell_group(
             2,
             0,
             &[
                 record(b"CELL", cellid, 0, &cell),
-                stage11_group(6, cellid, &stage11_group(9, cellid, &refs)),
+                cell_group(6, cellid, &cell_group(9, cellid, &refs)),
             ]
             .concat(),
         ));
@@ -1791,7 +1791,7 @@ fn stage11_candidates_are_smallest_twenty_and_never_use_precombine() {
     fs::write(install.root.join("Fallout4.esm"), plugin(None, 1, 0, &body)).unwrap();
     m.mounts.clear();
     fs::write(&install.manifest, serde_json::to_vec(&m).unwrap()).unwrap();
-    let out = install.base.join("stage11-candidates");
+    let out = install.base.join("case11-candidates");
     let output = Command::new(env!("CARGO_BIN_EXE_fo4-unpack"))
         .args(["sweep", "--scope", "cells", "--manifest"])
         .arg(&install.manifest)
@@ -1817,7 +1817,7 @@ fn stage11_candidates_are_smallest_twenty_and_never_use_precombine() {
     assert!(list.iter().all(|r| r["precombine"] == false));
 }
 
-fn stage12_install(oversized: bool) -> Install {
+fn census_install(oversized: bool) -> Install {
     let install = setup();
     let mut m = Manifest::load(&install.manifest).unwrap();
     m.plugins.truncate(7);
@@ -1841,42 +1841,42 @@ fn stage12_install(oversized: bool) -> Install {
             }
             children.extend(record(b"REFR", refid, 0, &data));
         }
-        body.extend(stage11_group(
+        body.extend(cell_group(
             2,
             0,
             &[
                 record(b"CELL", id, 0, &cell),
-                stage11_group(6, id, &stage11_group(9, id, &children)),
+                cell_group(6, id, &cell_group(9, id, &children)),
             ]
             .concat(),
         ));
     }
     let mut stat = sub(b"MODL", b"test.nif\0");
-    stat.extend(sub(b"DNAM", &[0; 12])); // stage14: deliberately unverified size for sole-cause tests
+    stat.extend(sub(b"DNAM", &[0; 12])); // case14: deliberately unverified size for sole-cause tests
     body.extend(record(b"STAT", 0x800, 0, &stat));
     body.extend(record(b"LIGH", 0x801, 0, &sub(b"DATA", &[0; 64])));
     fs::write(install.root.join("Fallout4.esm"), plugin(None, 1, 0, &body)).unwrap();
-    let mut nif = stage11_nif();
+    let mut nif = shape_nif();
     if oversized {
         nif.resize(2 << 20, 0);
         m.limits.max_memory = 1 << 20;
     }
     fs::write(
-        install.root.join("stage12.ba2"),
+        install.root.join("case12.ba2"),
         archive(&[("meshes/test.nif", &nif, true)]),
     )
     .unwrap();
     m.mounts = vec![Mount::Archive {
         plugin: None,
-        path: "stage12.ba2".into(),
+        path: "case12.ba2".into(),
     }];
     fs::write(&install.manifest, serde_json::to_vec(&m).unwrap()).unwrap();
     install
 }
 #[test]
-fn stage12_detail_sole_causes_closest_and_cell_cache_are_explicit() {
-    let install = stage12_install(false);
-    let out = install.base.join("stage12-details");
+fn detail_sole_causes_closest_and_cell_cache_are_explicit() {
+    let install = census_install(false);
+    let out = install.base.join("case12-details");
     let output = Command::new(env!("CARGO_BIN_EXE_fo4-unpack"))
         .args(["sweep", "--scope", "cells", "--manifest"])
         .arg(&install.manifest)
@@ -1920,9 +1920,9 @@ fn stage12_detail_sole_causes_closest_and_cell_cache_are_explicit() {
     assert_eq!(c["candidates"].as_array().unwrap().len(), 1);
 }
 #[test]
-fn stage12_resource_failure_is_infrastructure_and_next_cell_still_reads() {
-    let install = stage12_install(true);
-    let out = install.base.join("stage12-cache-resource");
+fn resource_failure_is_infrastructure_and_next_cell_still_reads() {
+    let install = census_install(true);
+    let out = install.base.join("case12-cache-resource");
     let output = Command::new(env!("CARGO_BIN_EXE_fo4-unpack"))
         .args(["sweep", "--scope", "cells", "--manifest"])
         .arg(&install.manifest)
@@ -1943,8 +1943,8 @@ fn stage12_resource_failure_is_infrastructure_and_next_cell_still_reads() {
     assert!(c["detailed"].as_object().unwrap().is_empty());
 }
 #[test]
-fn stage14_check_cell_is_strict_and_reports_each_blocked_instance() {
-    let install = stage12_install(false);
+fn check_cell_is_strict_and_reports_each_blocked_instance() {
+    let install = census_install(false);
     for (editor_id, success, count) in [("Cell4098", true, 1), ("Cell4096", false, 2)] {
         let out = install.base.join(format!("check-{editor_id}"));
         let output = Command::new(env!("CARGO_BIN_EXE_fo4-unpack"))
@@ -1983,9 +1983,9 @@ fn stage14_check_cell_is_strict_and_reports_each_blocked_instance() {
 }
 
 #[test]
-fn stage12_root_survey_keeps_raw_and_class_prefixed_results_separate() {
-    let install = stage12_install(false);
-    let out = install.base.join("stage12-roots");
+fn root_survey_keeps_raw_and_class_prefixed_results_separate() {
+    let install = census_install(false);
+    let out = install.base.join("case12-roots");
     let output = Command::new(env!("CARGO_BIN_EXE_fo4-unpack"))
         .args(["sweep", "--scope", "roots", "--manifest"])
         .arg(&install.manifest)
@@ -2009,8 +2009,8 @@ fn stage12_root_survey_keeps_raw_and_class_prefixed_results_separate() {
 }
 
 #[test]
-fn stage12_cache_batch_boundary_preserves_global_distinct_counts() {
-    let install = stage12_install(false);
+fn cache_batch_boundary_preserves_global_distinct_counts() {
+    let install = census_install(false);
     let path = install.root.join("Fallout4.esm");
     let mut bytes = fs::read(&path).unwrap();
     for i in 0..33u32 {
@@ -2018,22 +2018,22 @@ fn stage12_cache_batch_boundary_preserves_global_distinct_counts() {
         let mut data = sub(b"NAME", &0x800u32.to_le_bytes());
         data.extend(sub(b"DATA", &[0; 24]));
         data.extend(sub(b"XSCL", &1f32.to_le_bytes()));
-        bytes.extend(stage11_group(
+        bytes.extend(cell_group(
             2,
             0,
             &[
                 record(b"CELL", cellid, 0, &[]),
-                stage11_group(
+                cell_group(
                     6,
                     cellid,
-                    &stage11_group(9, cellid, &record(b"REFR", 0x6000 + i, 0, &data)),
+                    &cell_group(9, cellid, &record(b"REFR", 0x6000 + i, 0, &data)),
                 ),
             ]
             .concat(),
         ));
     }
     fs::write(path, bytes).unwrap();
-    let (_, s, _) = run(&install, "sweep", Some("cells"), "stage12-cache-batches");
+    let (_, s, _) = run(&install, "sweep", Some("cells"), "case12-cache-batches");
     let c = &s["cell_census"];
     assert_eq!(c["attempted"], 36);
     assert_eq!(c["read"], 36);
@@ -2045,9 +2045,9 @@ fn stage12_cache_batch_boundary_preserves_global_distinct_counts() {
 }
 
 #[test]
-fn stage13_bases_ignore_cell_causes_and_publish_reference_counts() {
-    let install = stage12_install(false);
-    let out = install.base.join("stage13-bases");
+fn bases_ignore_cell_causes_and_publish_reference_counts() {
+    let install = census_install(false);
+    let out = install.base.join("case13-bases");
     let status = Command::new(env!("CARGO_BIN_EXE_fo4-unpack"))
         .args(["sweep", "--scope", "bases", "--manifest"])
         .arg(&install.manifest)
@@ -2086,7 +2086,7 @@ fn stage13_bases_ignore_cell_causes_and_publish_reference_counts() {
 
 #[test]
 fn base_subset_preserves_reference_counts_and_reports_explicit_scope() {
-    let install = stage12_install(false);
+    let install = census_install(false);
     let out = install.base.join("base-subset");
     let options = fo4_unpack::Options::parse([
         "sweep".to_string(),
@@ -2123,7 +2123,7 @@ fn base_subset_preserves_reference_counts_and_reports_explicit_scope() {
 }
 
 #[test]
-fn stage17_teleport_door_prefix_is_partial_and_only_for_observed_size() {
+fn teleport_door_prefix_is_partial_and_only_for_observed_size() {
     let install = setup();
     let mut m = Manifest::load(&install.manifest).unwrap();
     m.plugins.truncate(7);

@@ -381,7 +381,7 @@ fn each_registered_blend_tuple_uses_its_raw_numbers() {
 }
 
 #[test]
-fn stage16_bilinear_centers_area_lod_and_raw_sidedness_are_deterministic() {
+fn bilinear_centers_area_lod_and_raw_sidedness_are_deterministic() {
     let mut l = list();
     let t = &mut l.textures[0];
     t.width = 2;
@@ -451,7 +451,7 @@ fn stage16_bilinear_centers_area_lod_and_raw_sidedness_are_deterministic() {
 }
 
 #[test]
-fn stage17_compact_snapshot_is_exact_and_rejects_wrong_declared_lengths() {
+fn compact_snapshot_is_exact_and_rejects_wrong_declared_lengths() {
     let l = list();
     let limits = Limits::default();
     let budget = Budget::new(8 << 20);
@@ -477,7 +477,7 @@ fn stage17_compact_snapshot_is_exact_and_rejects_wrong_declared_lengths() {
 }
 
 #[test]
-fn stage17_effect_vertex_channels_interpolate_and_survive_clipping_and_snapshot() {
+fn effect_vertex_channels_interpolate_and_survive_clipping_and_snapshot() {
     let mut l = list();
     l.meshes[0].vertex_colors = Some(vec![[0.2, 0.4, 0.6, 0.5]; l.meshes[0].vertices.len()]);
     l.textures[0].rgba = vec![2., 1., 0.5, 1.];
@@ -529,7 +529,7 @@ fn stage17_effect_vertex_channels_interpolate_and_survive_clipping_and_snapshot(
 }
 
 #[test]
-fn stage17_effect_color_is_perspective_correct_across_near_clipping() {
+fn effect_color_is_perspective_correct_across_near_clipping() {
     let mut l = list();
     l.meshes[0].triangles.truncate(1);
     l.meshes[0].vertices[1] = vertex(4., 0., 4., 1.);

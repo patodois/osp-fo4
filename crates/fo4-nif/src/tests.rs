@@ -317,7 +317,7 @@ fn shader_texture_metadata_and_unknown_tail_are_retained() {
 }
 
 #[test]
-fn stage10_nonfinite_half_position_preserves_mesh() {
+fn nonfinite_half_position_preserves_mesh() {
     let mut shape = shape(130);
     let at = shape.len() - 6 - 24;
     shape[at..at + 2].copy_from_slice(&0x7fffu16.to_le_bytes());
@@ -332,7 +332,7 @@ fn stage10_nonfinite_half_position_preserves_mesh() {
     assert!(n.blocks[0].diagnostics.is_empty());
 }
 #[test]
-fn stage10_nonfinite_full_position_preserves_mesh() {
+fn nonfinite_full_position_preserves_mesh() {
     let mut shape = shape(100);
     let at = shape.len() - 4 - 6 - 48;
     shape[at..at + 4].copy_from_slice(&0xff800000u32.to_le_bytes());
@@ -347,7 +347,7 @@ fn stage10_nonfinite_full_position_preserves_mesh() {
     );
 }
 #[test]
-fn stage10_nonfinite_uv_preserves_mesh() {
+fn nonfinite_uv_preserves_mesh() {
     let mut v = av();
     for f in [0f32, 0., 0., 1.] {
         u32s(&mut v, &[f.to_bits()]);
@@ -546,7 +546,7 @@ fn retained_diagnostic_strings_are_charged_to_the_asset_budget() {
 }
 
 #[test]
-fn stage10_dynamic_and_metadata_ieee_are_counted_without_hiding_index_errors() {
+fn dynamic_and_metadata_ieee_are_counted_without_hiding_index_errors() {
     let mut body = shape(100);
     u32s(&mut body, &[48]);
     for i in 0..12 {
@@ -588,7 +588,7 @@ fn stage10_dynamic_and_metadata_ieee_are_counted_without_hiding_index_errors() {
 }
 
 #[test]
-fn stage18_animation_key_layouts_are_bounded_without_pose_evaluation() {
+fn animation_key_layouts_are_bounded_without_pose_evaluation() {
     let mut specimens = vec![];
     for (name, width) in [("NiFloatData", 4), ("NiPosData", 12), ("NiBoolData", 1)] {
         specimens.push((name, 0u32.to_le_bytes().to_vec()));
@@ -683,7 +683,7 @@ fn stage18_animation_key_layouts_are_bounded_without_pose_evaluation() {
 }
 
 #[test]
-fn stage18_bethesda_particle_envelopes_and_modifier_controllers_keep_runtime_data() {
+fn bethesda_particle_envelopes_and_modifier_controllers_keep_runtime_data() {
     let mut particle = av();
     particle.extend([0; 16]);
     u32s(&mut particle, &[u32::MAX, u32::MAX, u32::MAX]);

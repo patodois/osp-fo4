@@ -924,7 +924,7 @@ fn push_dep(
 mod tests {
     use super::*;
     #[test]
-    fn stage14_terminal_self_material_publishes_ready_but_two_files_still_block() {
+    fn terminal_self_material_publishes_ready_but_two_files_still_block() {
         fn wire(parent: &[u8]) -> Vec<u8> {
             let mut bytes = super::material_fixture::fixture(b"BGSM", 2, false, b"").v;
             bytes[32] = 0;
@@ -946,7 +946,7 @@ mod tests {
             bytes.splice(at - 4..at + 1, replacement);
             bytes
         }
-        let dir = fo4_core::TestDir::new("stage14-material-terminal");
+        let dir = fo4_core::TestDir::new("case14-material-terminal");
         std::fs::create_dir(dir.join("materials")).unwrap();
         for (name, parent) in [
             ("self.bgsm", b"self.bgsm".as_slice()),
@@ -1000,8 +1000,8 @@ mod tests {
             .any(|e| e.code == "AssetDependencyCycle" && e.found.starts_with("length=2;"))));
     }
     #[test]
-    fn stage13_self_parent_is_a_length_one_citation_cycle_not_a_cache_failure() {
-        let dir = fo4_core::TestDir::new("stage13-cycle");
+    fn self_parent_is_a_length_one_citation_cycle_not_a_cache_failure() {
+        let dir = fo4_core::TestDir::new("case13-cycle");
         let manifest = fo4_core::Manifest {
             game: fo4_core::Game::Fallout4,
             root: dir.to_path_buf(),

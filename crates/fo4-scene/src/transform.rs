@@ -152,7 +152,7 @@ mod tests {
 }
 
 #[cfg(test)]
-mod stage17_tests {
+mod zyx_tests {
     use super::*;
     #[test]
     fn unequal_negative_angles_follow_independent_zyx_coefficients() {

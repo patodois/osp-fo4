@@ -148,7 +148,7 @@ fn scoped_budgets_share_one_ceiling_and_release_only_their_charges() {
 }
 
 #[test]
-fn review_b1_limits_can_exceed_initial_defaults() {
+fn limits_can_exceed_initial_defaults() {
     let limits = Limits {
         max_records: 5_000_000,
         max_subrecords: 50_000_000,
@@ -159,7 +159,7 @@ fn review_b1_limits_can_exceed_initial_defaults() {
     assert!(limits.validate("raised").is_ok());
 }
 #[test]
-fn review_l5_short_stream_does_not_allocate_its_large_declaration() {
+fn short_stream_does_not_allocate_its_large_declaration() {
     let packed = compressed(b"tiny");
     let budget = Budget::new(512 << 20);
     assert!(zlib(&packed, 256 << 20, &Limits::default(), &budget, "bomb", 0).is_err());
@@ -171,7 +171,7 @@ fn review_l5_short_stream_does_not_allocate_its_large_declaration() {
 }
 
 #[test]
-fn review_l8_temporary_guard_cleans_on_unwind() {
+fn temporary_guard_cleans_on_unwind() {
     let mut path = None;
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         let dir = TestDir::new("unwind");
@@ -189,7 +189,7 @@ fn review_l8_temporary_guard_cleans_on_unwind() {
 }
 
 #[test]
-fn review_l5_incremental_output_crosses_many_chunks_without_exceeding_declaration() {
+fn incremental_output_crosses_many_chunks_without_exceeding_declaration() {
     let data: Vec<u8> = (0..(2 * 1024 * 1024 + 19))
         .map(|i| ((i * 17) % 251) as u8)
         .collect();
@@ -220,7 +220,7 @@ fn review_l5_incremental_output_crosses_many_chunks_without_exceeding_declaratio
 }
 
 #[test]
-fn review_n6_position_recovers_after_partial_read_error() {
+fn position_recovers_after_partial_read_error() {
     struct Failing {
         inner: std::io::Cursor<Vec<u8>>,
         phase: u8,
@@ -257,7 +257,7 @@ fn review_n6_position_recovers_after_partial_read_error() {
 }
 
 #[test]
-fn review_n6_position_recovers_after_moving_seek_error() {
+fn position_recovers_after_moving_seek_error() {
     struct FailingSeek {
         inner: std::io::Cursor<Vec<u8>>,
         seeks: u8,
@@ -290,7 +290,7 @@ fn review_n6_position_recovers_after_moving_seek_error() {
 }
 
 #[test]
-fn review_n4_invalidation_ini_requires_file_and_one_based_line() {
+fn invalidation_ini_requires_file_and_one_based_line() {
     let json = r#"{"root":"data","language":"en","plugins":[{"name":"A.esm","path":"A.esm"}],"mounts":[],"required_masters":[],"excluded":[],"archive_invalidation":{"enabled":true,"origin":{"kind":"ini","file":"Fallout4Custom.ini","line":0}}}"#;
     let mut m: Manifest = serde_json::from_str(json).unwrap();
     assert_eq!(
@@ -305,7 +305,7 @@ fn review_n4_invalidation_ini_requires_file_and_one_based_line() {
 }
 
 #[test]
-fn stage7_byte_keys_fold_only_ascii_and_reject_unsafe_components() {
+fn byte_keys_fold_only_ascii_and_reject_unsafe_components() {
     assert_eq!(
         path_key_bytes(b"A\\Mar\xeda.fuz").unwrap(),
         b"a/mar\xeda.fuz"
@@ -332,7 +332,7 @@ fn stage7_byte_keys_fold_only_ascii_and_reject_unsafe_components() {
 }
 
 #[test]
-fn stage8_manifest_game_is_explicit_and_legacy_defaults_to_fallout4() {
+fn manifest_game_is_explicit_and_legacy_defaults_to_fallout4() {
     let base = serde_json::json!({"root":"Data","language":"en","plugins":[{"name":"Base.esm","path":"Base.esm"}],"mounts":[],"required_masters":[],"excluded":[]});
     let legacy: Manifest = serde_json::from_value(base.clone()).unwrap();
     assert_eq!(serde_json::to_value(&legacy).unwrap()["game"], "fallout4");
@@ -346,7 +346,7 @@ fn stage8_manifest_game_is_explicit_and_legacy_defaults_to_fallout4() {
 }
 
 #[test]
-fn stage10_cursor_preserves_nonfinite_ieee_bits() {
+fn cursor_preserves_nonfinite_ieee_bits() {
     for bits in [
         0x7fc12345u32,
         0xffc54321,
@@ -364,7 +364,7 @@ fn stage10_cursor_preserves_nonfinite_ieee_bits() {
 }
 
 #[test]
-fn stage10_ieee_json_never_erases_nonfinite_payloads() {
+fn ieee_json_never_erases_nonfinite_payloads() {
     #[derive(serde::Serialize)]
     struct Sample {
         #[serde(serialize_with = "crate::ieee::serialize")]
@@ -384,7 +384,7 @@ fn stage10_ieee_json_never_erases_nonfinite_payloads() {
 }
 
 #[test]
-fn stage13_allocation_meter_separates_live_credits_and_scoped_charges() {
+fn allocation_meter_separates_live_credits_and_scoped_charges() {
     use crate::AllocationKind;
     let b = Budget::metered(1000);
     b.measure(AllocationKind::Reference, || b.charge(100, "synthetic", 1))

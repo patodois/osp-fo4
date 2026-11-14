@@ -356,7 +356,7 @@ fn indexing_never_reads_payload_and_chunk_read_is_selective() {
 }
 
 #[test]
-fn review_h2_bad_name_does_not_discard_archive() {
+fn bad_name_does_not_discard_archive() {
     let bytes = general(1, &[("good", b"yes", false), ("../bad", b"raw", false)]);
     let archive = parse(&bytes).unwrap();
     assert_eq!(archive.entries.len(), 2);
@@ -372,14 +372,14 @@ fn review_h2_bad_name_does_not_discard_archive() {
     );
 }
 #[test]
-fn review_h2_unknown_texture_format_keeps_structural_index() {
+fn unknown_texture_format_keeps_structural_index() {
     let (mut bytes, _) = texture(1, false, false, false);
     bytes[45] = 0xff;
     assert!(parse(&bytes).is_ok());
 }
 
 #[test]
-fn review_l4_index_checks_metadata_at_operation_boundaries() {
+fn index_checks_metadata_at_operation_boundaries() {
     let dir = fo4_core::TestDir::new("file-io");
     let bytes = general(1, &[("first", b"a", false), ("second", b"b", false)]);
     let path = dir.join("index.ba2");
@@ -398,7 +398,7 @@ fn review_l4_index_checks_metadata_at_operation_boundaries() {
 }
 
 #[test]
-fn review_h2_layout_and_sharing_policies_are_entry_local() {
+fn layout_and_sharing_policies_are_entry_local() {
     for (offset, value, code) in [
         (45, 255, "UnsupportedDxgiFormat"),
         (46, 3, "UnsupportedTextureLayout"),

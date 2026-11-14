@@ -85,7 +85,7 @@ fn parse(bytes: &[u8]) -> Result<BsaArchive> {
     )
 }
 #[test]
-fn stage8_bsa_raw_frame_toggle_embedded_and_byte_names() {
+fn bsa_raw_frame_toggle_embedded_and_byte_names() {
     for default in [false, true] {
         for embedded in [false, true] {
             let bytes = bsa(
@@ -151,7 +151,7 @@ fn stage8_bsa_raw_frame_toggle_embedded_and_byte_names() {
     }
 }
 #[test]
-fn stage8_bsa_every_truncation_and_semantic_header_table_corruption() {
+fn bsa_every_truncation_and_semantic_header_table_corruption() {
     let bytes = bsa(
         b"a",
         &[(b"b", b"raw", false), (b"c", b"compressed", true)],
@@ -211,7 +211,7 @@ fn stage8_bsa_every_truncation_and_semantic_header_table_corruption() {
     }
 }
 #[test]
-fn stage8_bsa_limits_unsafe_names_missing_names_and_embedded_bounds() {
+fn bsa_limits_unsafe_names_missing_names_and_embedded_bounds() {
     let bytes = bsa(b"a", &[(b"b", b"x", true)], false, true);
     for l in [
         Limits {
@@ -264,7 +264,7 @@ fn stage8_bsa_limits_unsafe_names_missing_names_and_embedded_bounds() {
     }
 }
 #[test]
-fn stage8_lz4_independent_linked_sizes_checksums_and_exact_consumption() {
+fn lz4_independent_linked_sizes_checksums_and_exact_consumption() {
     let mut data = Vec::new();
     let mut state = 123u32;
     for _ in 0..65536 {
@@ -352,7 +352,7 @@ fn stage8_lz4_independent_linked_sizes_checksums_and_exact_consumption() {
     );
 }
 #[test]
-fn stage8_bsa_index_and_single_entry_use_only_ranges() {
+fn bsa_index_and_single_entry_use_only_ranges() {
     struct Counting<'a> {
         s: SliceSource<'a>,
         bytes: Cell<usize>,
@@ -394,7 +394,7 @@ fn stage8_bsa_index_and_single_entry_use_only_ranges() {
 }
 
 #[test]
-fn stage8_bsa_mutations_stay_bounded_and_duplicates_stay_blocked() {
+fn bsa_mutations_stay_bounded_and_duplicates_stay_blocked() {
     let bytes = bsa(
         b"folder",
         &[(b"a.bin", b"abcabcabcabcabcabc", true)],
@@ -431,7 +431,7 @@ fn stage8_bsa_mutations_stay_bounded_and_duplicates_stay_blocked() {
         .any(|d| d.code == "UnsupportedAmbiguousName")));
 }
 #[test]
-fn stage8_lz4_empty_frame_and_exact_checksum_diagnostics() {
+fn lz4_empty_frame_and_exact_checksum_diagnostics() {
     fn header(flg: u8) -> Vec<u8> {
         let mut out = 0x184d2204u32.to_le_bytes().to_vec();
         out.extend([flg, 0x40]);
@@ -496,7 +496,7 @@ fn stage8_lz4_empty_frame_and_exact_checksum_diagnostics() {
     );
 }
 #[test]
-fn stage8_bsa_multiple_folders_and_opaque_fields() {
+fn bsa_multiple_folders_and_opaque_fields() {
     let mut bytes = b"BSA\0".to_vec();
     for n in [105u32, 36, 3, 2, 2, 4, 4, 0] {
         bytes.extend(n.to_le_bytes());
@@ -529,7 +529,7 @@ fn stage8_bsa_multiple_folders_and_opaque_fields() {
 }
 
 #[test]
-fn stage8_bsa_uninterpreted_name_table_tail_is_retained() {
+fn bsa_uninterpreted_name_table_tail_is_retained() {
     // Observed condition only: extra table bytes have no assumed padding semantics.
     // All bytes and payload below are generated, not copied from a game archive.
     let mut bytes = bsa(b"a", &[(b"b", b"payload", false)], false, false);

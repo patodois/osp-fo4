@@ -364,7 +364,7 @@ fn scol_hypothesis_draws_two_textured_parts_without_the_generated_alternative() 
 }
 
 #[test]
-fn stage17_untextured_effect_requires_hypothesis_and_refuses_unhandled_features() {
+fn untextured_effect_requires_hypothesis_and_refuses_unhandled_features() {
     for (flags, expected_error) in [
         (0, None),
         (1 << 6, Some("UnsupportedColorOnlyEffectFeatures")),

@@ -50,7 +50,7 @@ const SIGNATURE_CASES: &[(&[u8], &str)] = &[
 ];
 const ROOT_SKIP_CASES: &[&str] = &[".git", ".progress-git", "target", ".cargo-home", "reports"];
 #[test]
-fn stage15_only_the_explicit_generated_build_root_is_exempt() {
+fn only_the_explicit_generated_build_root_is_exempt() {
     let root = TestDir::new("guard-bench");
     fs::create_dir_all(root.join("build/bench")).unwrap();
     fs::write(root.join("build/bench/Own.esp"), b"TES4").unwrap();
@@ -258,7 +258,7 @@ fn scan_errors_do_not_certify_an_unchecked_root() {
 }
 
 #[test]
-fn stage16_versioned_machine_paths_are_rejected_across_read_boundaries() {
+fn versioned_machine_paths_are_rejected_across_read_boundaries() {
     let root = TestDir::new("guard-machine-path");
     let needle = concat!("/", "Users/");
     let mut bytes = vec![b'x'; 8190];
