@@ -15,7 +15,7 @@ Measurement datasets and photographs of the game are not distributed.
 | [havok-objects.md](havok-objects.md) | Object spans, per-class leading sizes and the convex polytope layout of the Havok collision payload, measured over one installation. |
 | [havok-bodies.md](havok-bodies.md) | Array element sizes, the body array of the top-level object (shape link and placement), Body ID against it, and the sphere, capsule, convex, scaled convex and compound shape layouts, measured over one installation. |
 | [havok-mesh.md](havok-mesh.md) | `hknpCompressedMeshShape` and its data object: array slots, sections, quantized section and shared vertices, byte 92, four-index primitives and their triangles, box trees, vertex records, units and triangles against render meshes, measured over one installation. |
-| [collision-placement.md](collision-placement.md) | Placing decoded collision in world space for a cell: the Target node chain, units, the open body placement rule with its two levels, the API, the `cell-collision` report and its first run. |
+| [collision-placement.md](collision-placement.md) | Placing decoded collision in world space for a cell: collision readiness apart from render readiness, the Target node chain, units, the open body placement rule with its two levels, the API, the `cell-collision` report and its runs. |
 | [walk.md](walk.md) | First walking controller over a cell's placed collision (`fo4-walk`): capsule, collide-and-slide, step-up, slope limit, terrain under the walker, the `walk` report (paths and `--drops` point lists) and viewer walk mode (`--terrain` drawing, `--around` neighbour cells, fall recovery); every movement number a provisional registered rule. |
 | [havok-container-census.tsv](havok-container-census.tsv) | Counts, holds/fails of container, object, body, shape and compressed-mesh properties, class names and signatures from the Havok census. |
 | [controller-measurements.md](controller-measurements.md) | Measurement design for comparing stored NIF locals with paused runtime nodes. |
@@ -85,6 +85,8 @@ the registry.
 | `havok_scaled_convex_v1` | pending | Rest an object on a scaled convex with unequal scale or non-zero translation; the other order must predict worse. |
 | `havok_mesh_triangles_surface_v1` | pending | Contact heights along a non-planar quad from above and below; sidedness open (one plane of a two-plane mesh was passable from above). |
 | `havok_convex_radius_added_v1` | pending | Measured for one polytope slab (rests at 96.000, not 95.300; scales with the reference); repeat with other radii and scales. |
+| `mswp_collision_unchanged_v1` | pending | Indicated by one live drop comparison (one filtered swap); two references of one model, with and without a filtered swap: drop and walk into both. |
+| `render_inputs_collision_unchanged_v1` | pending | One model placed as shipped and as a copy whose material citations name missing files: drop and walk into both. |
 | `land_single_cell_child_v1` | pending | Census of LAND count and group kind per exterior cell; live: ground with the cell's LAND deleted or duplicated by an overlay plugin. |
 | `land_vhgt_row_accumulation_v1` | pending | Offline edge continuity against transposed and mirrored alternatives; live: `player.getpos z` after settling at several points of one exterior cell. |
 | `land_vhgt_units_8_v1` | pending | Offline: placed objects' lowest collision point against the ground under them for factors 4, 8 and 16; live: `player.getpos z` at several points. |

@@ -29,6 +29,10 @@ pub struct Asset {
     pub origin: Option<SourceSpan>,
     pub dependencies: Vec<usize>,
     pub blockers: Vec<Error>,
+    /// Indices into `blockers` raised while following this file's material
+    /// and texture citations (`crate::readiness::Origin::ModelCitation`).
+    #[serde(skip)]
+    pub citation_blockers: Vec<usize>,
     pub uninterpreted: u64,
     pub outside_blocks: std::collections::BTreeMap<String, u64>,
     pub shapes: u64,
@@ -281,6 +285,7 @@ impl<'a> Assets<'a> {
             origin: None,
             dependencies: Vec::new(),
             blockers: Vec::new(),
+            citation_blockers: Vec::new(),
             uninterpreted: 0,
             outside_blocks: std::collections::BTreeMap::new(),
             shapes: 0,
@@ -722,7 +727,7 @@ impl<'a> Assets<'a> {
                 ) {
                     Ok(resolved) => {
                         for e in resolved.diagnostics(&c.original, dep.offset, &work)? {
-                            self.block(i, e)?;
+                            self.block_citation(i, e)?;
                         }
                         let mut key = Vec::new();
                         self.allocation.reserve(
@@ -770,7 +775,7 @@ impl<'a> Assets<'a> {
                         });
                         e.source.file = c.original.clone();
                         e.source.offset = dep.offset;
-                        self.block(i, e)?;
+                        self.block_citation(i, e)?;
                         continue;
                     }
                 };
@@ -801,7 +806,7 @@ impl<'a> Assets<'a> {
                         )?;
                         self.nodes[i].dependencies.push(target);
                     }
-                    Err(e) => self.block(i, e)?,
+                    Err(e) => self.block_citation(i, e)?,
                 }
             }
             Ok(())
@@ -839,6 +844,19 @@ impl<'a> Assets<'a> {
             e.source.offset,
         )?;
         self.nodes[i].blockers.push(e);
+        Ok(())
+    }
+    /// [`Self::block`] for an error met while following a citation of node `i`.
+    fn block_citation(&mut self, i: usize, e: Error) -> Result<()> {
+        let at = self.nodes[i].blockers.len();
+        self.allocation.reserve(
+            &mut self.nodes[i].citation_blockers,
+            1,
+            &e.source.file,
+            e.source.offset,
+        )?;
+        self.block(i, e)?;
+        self.nodes[i].citation_blockers.push(at);
         Ok(())
     }
     /// Typed, bounded re-read of any declared asset; no whole-archive extraction.
@@ -1032,6 +1050,7 @@ mod tests {
             origin: None,
             dependencies: Vec::new(),
             blockers: Vec::new(),
+            citation_blockers: Vec::new(),
             uninterpreted: 0,
             outside_blocks: Default::default(),
             shapes: 0,
@@ -1087,6 +1106,7 @@ mod tests {
             origin: None,
             dependencies: Vec::new(),
             blockers: Vec::new(),
+            citation_blockers: Vec::new(),
             uninterpreted: 0,
             outside_blocks: Default::default(),
             shapes: 0,

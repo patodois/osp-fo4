@@ -17,9 +17,9 @@ documentation, converter, decompilation or third-party reader was consulted
 
 ## From reference to shape
 
-For each scene instance ready at the requested level (the renderer's own
-test), the reference transform is `Transform::euler` of DATA and XSCL, as for
-the render mesh; a SCOL with parts places its constituents with their part
+For each reference whose collision readiness accepts the requested level
+(below; not the renderer's readiness), the reference transform is
+`Transform::euler` of DATA and XSCL, as for the render mesh; a SCOL with parts places its constituents with their part
 placements under `scol_parts_static_frame_v1`, as the renderer does, and its
 own model is then not used. Each model is decoded once per cell:
 
@@ -82,6 +82,79 @@ A body counts as storing the identity placement when its translation and
 first three f32 are within 1e-6 of zero and the fourth within 1e-6 of ±1
 (stored identity quaternions such as w = 0.99999994 occur). For such bodies
 the two levels coincide.
+
+## Collision readiness
+
+A reference's collision needs less than its drawing: the reference and base
+records, the placement rules they use (rotation, scale, SCOL part frames),
+the model file and its collision payload. A blocker on an input only the
+renderer reads (a material swap, a material or texture file, a shader or
+visibility field) does not stop the collision. The scene keeps two states per
+instance: `Instance::state`, the render readiness, unchanged and still the
+only one the renderer reads, and `Instance::collision` (module
+`fo4_scene::readiness`), which the collision assembly reads.
+
+This was motivated by a live drop comparison in one interior cell: settled
+player heights from drops at a list of points, against the vertical-ray
+surface of the assembled collision. The assembly skipped every reference not
+ready for rendering; one static collection, not drawn because its reference
+carries a material swap with a conditional filter, was absent, although in
+the running game the player stands on it. With that reference placed by a
+throw-away diagnostic, 34 of 38 settled readings agreed with the surface
+within 0.05 units, against 8 of 38 without it.
+
+Each blocker is recorded with where it was raised
+(`Instance::blocker_origins`, `readiness::Origin`):
+
+| Origin | What | Collision |
+| --- | --- | --- |
+| `Record` | the reference, its base records, SCOL parts, the records' own model citation | by code (below) |
+| `MaterialSwap` | a material swap of the reference or of a base: the MSWP record, its filter, its material citations | render only |
+| `Model` | a model file: its read, blocks and fields | by code (below) |
+| `ModelCitation` | a material or texture citation inside a model, or the file it names | render only |
+| `RenderAsset` | a material or texture file, or anything it cites | render only |
+
+For `Record` and `Model`, `readiness::Code::collision_use` classifies every
+blocker code the loader raises in one exhaustive match, so a new code cannot
+be added without a decision; a code it does not name (a reader's own error)
+counts as needed. A test reads the loader's sources and fails on a code
+literal that is not classified.
+
+| Codes | Collision |
+| --- | --- |
+| `MissingPlacementTransform`, `RuntimeEnableParent`, `RuntimeCondition`, `MissingBaseForm`, `MissingRecord`, `BaseTypeOutsideSlice`, `ScolCycle`, `DeletedBaseForm`, `MissingModelPath` | needed: placement, presence at run time, the base |
+| `UnverifiedEulerRotation`, `MissingDocumentedReferenceScale`, `UnverifiedScolGeometrySource`, `MissingScolPartBase`, `MissingScolPlacements` | needed: placement rules (rotation, absent XSCL, SCOL part frames) |
+| `RuntimeRecordState`, `UnsupportedUsedFieldLayout`, `UninterpretedVisualSubrecord` | needed: an uninterpreted record field could bear on placement (MODT keeps its own rule) |
+| `HypothesisAssetDataPrefixStrip`, `HypothesisAssetDataRelativeStrip`, `HypothesisAssetMissingRoot`, `RejectedVfsPath`, `PathCandidateUnavailable`, `PathCandidateWrongRoot` | needed when raised on a record (the path of the model itself); render only from the other origins |
+| `MissingModel`, `AssetDependencyCycle`, `UnsupportedNifBlockSemantics`, `UnsupportedAnimationRuntime`, `UnsupportedNifBlock`, `UnsupportedNifBlockTail`, `UnsupportedNifField` | needed: the model file reaches the node chain and the collision blocks; an animation can move a collision Target |
+| `AllocationFailed`, `AssetCacheUnavailable`, `InvalidAssetIndex`, `LimitExceeded`, `Overflow`, any other code | needed |
+| `DeletedMaterialSwap`, `MissingMaterialSwap`, `RuntimeMaterialSwapFilter` | render only |
+| `MissingMaterial`, `MissingTexture`, `UnsupportedMaterialFields`, `UnsupportedShaderMaterialName`, `UnverifiedEffectColorOnly`, `UnsupportedLightData`, `UnsupportedSkinning` | render only |
+| `UnverifiedVisibilityEditorMarker`, `UnverifiedNifEditorMarkerVisibility`, `UnverifiedNifEditorMarkerSuffixVisibility` | render only (visibility of helper geometry) |
+
+A needed blocker counts exactly as for rendering: its covering rule is relied
+on, a refuted or missing one blocks. Setting a render-only blocker aside is
+itself a claim about the game, so the collision then relies on a registered
+rule, both `pending`:
+
+| Rule | Relied on when |
+| --- | --- |
+| `mswp_collision_unchanged_v1` | the reference, its base or a SCOL part base names a material swap (whether or not the swap raised a blocker: collision never applies it), and for every blocker a swap raised |
+| `render_inputs_collision_unchanged_v1` | any other render-only blocker, unless the blocker's own render rule stands better (supported against pending: a material or texture path read under a supported path rule keeps that rule, so readiness at `Measured` does not change) |
+
+A rule that is refuted, or a render-only blocker with neither rule usable,
+blocks the collision. Placement rules are gated exactly as before: a SCOL's
+parts are placed only when the collision state relies on
+`scol_parts_static_frame_v1`, an absent XSCL is read as 1 only under
+`refr_absent_xscl_identity_v1`, and every rule of the collision state is
+listed in each instance's rules and in the placement's `scene_rules`, which
+now hold the collision state's rules, not the render state's. A reference
+whose collision is not ready is listed as unplaced with
+`CollisionNotReady` (formerly `SceneInstanceNotReady`, which reported the
+render state) and its collision state as detail. Conservative choices: the
+blockers of a SCOL's own generated model count as needed even when its parts
+are placed instead; a swap's material files count as render inputs under
+`render_inputs_collision_unchanged_v1` as well as the swap rule.
 
 ## What the API returns
 
@@ -168,6 +241,34 @@ Decoding and placing took about 0.01 s for either cell after the scene load
 (exterior), most of it the plugin index and the content fingerprint
 (`/usr/bin/time -l` on the 16 GB Mac).
 
+## Run with collision readiness
+
+Same installation and cells as the first run, before and after collision
+readiness replaced the render readiness in the assembly:
+
+| | Interior before | after | Exterior before | after |
+| --- | ---: | ---: | ---: | ---: |
+| references not followed (`SceneInstanceNotReady` / `CollisionNotReady`), `UnderHypotheses` | 113 | 88 | 79 | 76 |
+| references with a model, with collision | 340, 340 | 365, 349 | 311, 143 | 314, 146 |
+| placed bodies / instances | 348 / 348 | 365 / 365 | 165 / 214 | 168 / 217 |
+| compressed mesh / polytope instances | 340 / 8 | 357 / 8 | 133 / 81 | 136 / 81 |
+| triangles | 5,983 | 9,878 | 6,953 | 8,118 |
+| references not followed, `Measured` | 126 | 133 | 147 | 151 |
+| references not followed, `Strict` | 453 | 453 | 390 | 390 |
+
+At `UnderHypotheses` the newly followed references were blocked for
+rendering only by render-only blockers (missing textures, effect and editor
+marker visibility, a filtered material swap, a missing material); none
+became unfollowed. At `Measured` nothing is placed either way (no body
+placement level is supported); the references that name a material swap
+(7 interior, 4 exterior) now wait for `mswp_collision_unchanged_v1` and so
+move from `BodyPlacementRuleNotAccepted` to `CollisionNotReady`. At
+`Strict` only the code changes. The rendered frames are byte for byte
+the same; the render summary differs only in the memory accounting of the
+new per-instance records. With the interior's live drop list, the walker's
+drop report now agrees with the throw-away diagnostic at every point
+(34 of 38 settled readings within 0.05 units of the ray surface).
+
 ## Open
 
 | Question | Status |
@@ -181,3 +282,4 @@ Decoding and placing took about 0.01 s for either cell after the scene load
 | Which side of a mesh triangle blocks | **[open]**: one plane of a two-plane mesh was passable from above |
 | Vertex records (convex pieces with a radius) as collision | **[hypothesis]**; exposed as points and radius only |
 | Editor-marker references and ragdoll systems | not placed, by name |
+| Whether a material swap or a missing render input changes collision | **[hypothesis]**, two pending rules (Collision readiness) |

@@ -26,6 +26,9 @@ pub const COMPOUND_INSTANCE: &str = "havok_compound_instance_v1";
 pub const SCALED_CONVEX: &str = "havok_scaled_convex_v1";
 pub const MESH_TRIANGLES: &str = "havok_mesh_triangles_surface_v1";
 pub const CONVEX_RADIUS: &str = "havok_convex_radius_added_v1";
+/// Collision readiness apart from render readiness (`crate::readiness`).
+pub const SWAP_COLLISION: &str = "mswp_collision_unchanged_v1";
+pub const RENDER_INPUTS_COLLISION: &str = "render_inputs_collision_unchanged_v1";
 /// Terrain of an exterior cell (`crate::terrain`, `spec/land.md`).
 pub const LAND_OF_CELL: &str = "land_single_cell_child_v1";
 pub const LAND_ACCUMULATION: &str = "land_vhgt_row_accumulation_v1";
@@ -260,6 +263,8 @@ mod tests {
             SCALED_CONVEX,
             MESH_TRIANGLES,
             CONVEX_RADIUS,
+            SWAP_COLLISION,
+            RENDER_INPUTS_COLLISION,
             LAND_OF_CELL,
             LAND_ACCUMULATION,
             LAND_UNITS,

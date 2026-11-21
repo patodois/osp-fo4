@@ -7,6 +7,9 @@
 //! placed is not a format fact: every step is a registered rule
 //! (`spec/collision-placement.md`, `spec/hypotheses.tsv`) and an instance is
 //! returned only at a [`RuleLevel`] that accepts all the rules it needs.
+//! A reference is followed when its collision readiness
+//! ([`Instance::collision`], [`crate::readiness`]) accepts the level; blockers
+//! that only the renderer reads do not stop it.
 //! The rule on the body's own stored translation and rotation is open and
 //! has two levels, [`BodyPlacement::Ignored`] and [`BodyPlacement::Applied`];
 //! every instance can be evaluated under either ([`CellCollision::world`]).
@@ -271,7 +274,8 @@ pub struct ModelPlacement {
     /// Reference transform composed with any SCOL part placement: the
     /// model's world frame, as the render walk uses it.
     pub frame: Transform,
-    /// Rules the scene instance relies on.
+    /// Rules the reference's collision readiness relies on
+    /// ([`Instance::collision`]).
     pub scene_rules: Vec<&'static str>,
 }
 
@@ -735,7 +739,7 @@ impl Builder<'_, '_> {
     fn base(&mut self, i: &Instance, base: &Base, frame: Transform, depth: u64) -> Result<()> {
         fo4_core::limit(depth, self.limits.max_depth, "cell collision", 0)?;
         let parts = base.record.signature == *b"SCOL" && !base.parts.is_empty();
-        if parts && !i.state.hypotheses().contains(&hypotheses::SCOL) {
+        if parts && !i.collision.hypotheses().contains(&hypotheses::SCOL) {
             return self.skip(
                 i,
                 Some(base),
@@ -851,7 +855,7 @@ impl Builder<'_, '_> {
                     }
                     Ok(())
                 };
-                for r in i.state.hypotheses() {
+                for r in i.collision.hypotheses() {
                     add(r, self.budget)?;
                 }
                 for r in [
@@ -928,7 +932,7 @@ impl Builder<'_, '_> {
                 base: base.key.clone(),
                 model: m,
                 frame,
-                scene_rules: i.state.hypotheses().to_vec(),
+                scene_rules: i.collision.hypotheses().to_vec(),
             },
             self.budget,
         )?;
@@ -952,12 +956,12 @@ impl Builder<'_, '_> {
                 "collision of editor markers is not placed".into(),
             );
         }
-        if !i.state.ready_at(self.level) {
+        if !i.collision.ready_at(self.level) {
             return self.skip(
                 i,
                 base,
-                "SceneInstanceNotReady",
-                format!("{:?} at {:?}", i.state, self.level),
+                "CollisionNotReady",
+                format!("{:?} at {:?}", i.collision, self.level),
             );
         }
         let Some(base) = base else {
@@ -973,7 +977,7 @@ impl Builder<'_, '_> {
         };
         let scale = match i.reference.data.scale {
             Some(s) => s,
-            None if i.state.hypotheses().contains(&hypotheses::SCALE) => 1.0,
+            None if i.collision.hypotheses().contains(&hypotheses::SCALE) => 1.0,
             None => {
                 return self.skip(
                     i,

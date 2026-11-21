@@ -2,7 +2,7 @@
 //! the container layout of `spec/havok-container.md` and the physics root and
 //! sphere layouts of `spec/havok-bodies.md`.
 use super::*;
-use crate::tests::{fixture, nif_blocks};
+use crate::tests::{fixture, nif_blocks, record, sub};
 use fo4_havok::{
     ARRAY_FLAG, CLASS_NAME_MARKER, HEADER_LEN, LAYOUT, MAGIC, PHYSICS_SYSTEM, SECTION_NAMES,
     SPHERE, VERSION, VERTEX_TAG,
@@ -631,6 +631,63 @@ fn cell_places_bodies_only_at_a_level_that_accepts_their_rules() {
     let c = cell_with(&scene, &loader, &limits, options, &refuted, &b).unwrap();
     assert!(c.instances.is_empty());
     assert!(c.unplaced.iter().any(|u| u.code == "CollisionRuleRefuted"));
+}
+
+#[test]
+fn a_material_swap_filter_blocks_the_render_and_not_the_collision() {
+    let f = fixture(false, false);
+    let root = f.manifest.root.clone();
+    std::fs::write(root.join("meshes/a.nif"), model_nif(1)).unwrap();
+    // The synthetic STAT, last in the file, now names a material swap whose
+    // filter (FNAM) the scene does not evaluate.
+    let path = root.join("base.esm");
+    let bytes = std::fs::read(&path).unwrap();
+    let at = bytes.windows(4).rposition(|s| s == b"STAT").unwrap();
+    let mut bytes = bytes[..at].to_vec();
+    let mut stat = sub(b"MODL", b"a.nif\0");
+    stat.extend(sub(b"MODS", &0x820u32.to_le_bytes()));
+    bytes.extend(record(b"STAT", 0x801, 0, &stat));
+    bytes.extend(record(b"MSWP", 0x820, 0, &sub(b"FNAM", b"Filter\0")));
+    std::fs::write(&path, bytes).unwrap();
+    let store = Store::open(&f.manifest, &Budget::new(8 << 20)).unwrap();
+    let v = Vfs::mount(&f.manifest, &Budget::new(8 << 20)).unwrap();
+    let b = Budget::new(64 << 20);
+    let mut loader = Loader::new(&store, &v, "english", RuleLevel::Hypotheses, &b);
+    let scene = loader.by_editor_id("SyntheticRoom", &b).unwrap();
+    let i = &scene.instances[0];
+    assert!(matches!(i.state, State::Blocked));
+    let k = i
+        .blockers
+        .iter()
+        .position(|e| e.code == "RuntimeMaterialSwapFilter")
+        .unwrap();
+    assert_eq!(i.blocker_origins[k], crate::readiness::Origin::MaterialSwap);
+    assert_eq!(i.blocker_origins.len(), i.blockers.len());
+    assert!(i.collision.ready_at(RuleLevel::Hypotheses));
+    assert!(!i.collision.ready_at(RuleLevel::Measured));
+    assert!(i
+        .collision
+        .hypotheses()
+        .contains(&hypotheses::SWAP_COLLISION));
+    let options = Options {
+        level: RuleLevel::Hypotheses,
+        body_placement: None,
+    };
+    let limits = Limits::default();
+    let c = cell(&scene, &loader, &limits, options, &b).unwrap();
+    assert_eq!(c.instances.len(), 1, "{:?}", c.unplaced);
+    assert!(c.instances[0].rules.contains(&hypotheses::SWAP_COLLISION));
+    assert!(c.placements[0]
+        .scene_rules
+        .contains(&hypotheses::SWAP_COLLISION));
+    // Not at Measured while the swap rule is pending.
+    let options = Options {
+        level: RuleLevel::Measured,
+        body_placement: Some(BodyPlacement::Ignored),
+    };
+    let c = cell(&scene, &loader, &limits, options, &b).unwrap();
+    assert!(c.instances.is_empty());
+    assert_eq!(c.unplaced[0].code, "CollisionNotReady");
 }
 
 #[test]

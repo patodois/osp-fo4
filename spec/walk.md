@@ -215,6 +215,8 @@ Outputs, in a new directory:
 `fo4-unpack walk PROFILE.json EditorID --drops FILE [--out DIR]
 [--strict|--measured|--under-hypotheses] [--overlay-plugin FILE]` builds the
 same world (same rules, same refusal below their level) and walks no path.
+The world holds every reference whose collision is ready, drawn or not
+([collision-placement.md](collision-placement.md), Collision readiness).
 `FILE` lists points, one per line as `label x y z` separated by tabs or
 spaces (blank lines and lines starting with `#` skipped; at most 4,096
 points, 1 MiB, labels of at most 64 bytes without whitespace). For each

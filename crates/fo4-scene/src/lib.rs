@@ -9,6 +9,7 @@ pub mod hypotheses;
 pub mod lighting;
 pub mod model_policy;
 pub mod paths;
+pub mod readiness;
 pub mod terrain;
 pub mod transform;
 pub use assets::{Asset, AssetKind, Assets, Cycle, CycleEdge, DecodedAsset};
@@ -110,6 +111,12 @@ pub struct Instance {
     pub visibility: Visibility,
     pub state: State,
     pub blockers: Vec<Error>,
+    /// Where each of `blockers` was raised (same order).
+    pub blocker_origins: Vec<readiness::Origin>,
+    /// Readiness of the reference's collision: `state` without the blockers
+    /// only the renderer reads, which it sets aside under registered rules
+    /// ([`readiness`]).
+    pub collision: State,
     pub assets: Vec<usize>,
 }
 #[derive(Debug, Serialize)]
@@ -402,9 +409,10 @@ impl<'a> Loader<'a> {
             unhandled(&reference.record, &reference.data.common, &mut blockers, b)
         })?;
         let mut ancestry = Vec::new();
+        let mut swaps = Vec::new();
         let base = match reference.data.base.as_ref().and_then(|r| r.key.as_ref()) {
             Some(key) => match b.measure(AllocationKind::BaseAssets, || {
-                self.base(key, b, &mut ancestry, 0, &mut blockers)
+                self.base(key, b, &mut ancestry, 0, &mut blockers, &mut swaps)
             }) {
                 Ok(v) => Some(v),
                 Err(e) => {
@@ -421,6 +429,7 @@ impl<'a> Loader<'a> {
                 None
             }
         };
+        let at = blockers.len();
         let material_swap = self.swap(reference.data.material_swap.as_ref(), &mut blockers, b)?;
         let mut roots = Vec::new();
         if let Some(base) = &base {
@@ -429,14 +438,32 @@ impl<'a> Loader<'a> {
         if let Some(swap) = &material_swap {
             self.swap_assets(swap, &mut roots, &mut blockers, b)?;
         }
+        mark(&mut swaps, at..blockers.len(), src, b)?;
+        let mut origins = Vec::new();
+        b.reserve(&mut origins, blockers.len(), &src.file, src.offset)?;
+        origins.resize(blockers.len(), readiness::Origin::Record);
+        for range in &swaps {
+            for o in &mut origins[range.clone()] {
+                *o = readiness::Origin::MaterialSwap;
+            }
+        }
         let assets = b.measure(AllocationKind::AssetGraph, || {
             self.assets.closure(&roots, b)
         })?;
         for i in &assets {
-            for e in &self.assets.nodes[*i].blockers {
+            let node = &self.assets.nodes[*i];
+            for (k, e) in node.blockers.iter().enumerate() {
                 b.measure(AllocationKind::Diagnostics, || {
                     push_error(&mut blockers, e.clone(), b)
                 })?;
+                b.reserve(&mut origins, 1, &src.file, src.offset)?;
+                origins.push(match node.kind {
+                    AssetKind::Model if node.citation_blockers.contains(&k) => {
+                        readiness::Origin::ModelCitation
+                    }
+                    AssetKind::Model => readiness::Origin::Model,
+                    AssetKind::Material | AssetKind::Texture => readiness::Origin::RenderAsset,
+                });
             }
         }
         if base
@@ -475,12 +502,20 @@ impl<'a> Loader<'a> {
                 b,
             )?;
         }
-        let state = hypotheses::classify(
-            &blockers,
-            base.as_ref()
-                .is_some_and(|v| v.frame_role == fo4_plugin::static_frame::Class::Outside),
-            b,
-        )?;
+        let outside = base
+            .as_ref()
+            .is_some_and(|v| v.frame_role == fo4_plugin::static_frame::Class::Outside);
+        let state = hypotheses::classify(&blockers, outside, b)?;
+        let more = blockers.len().saturating_sub(origins.len());
+        b.reserve(&mut origins, more, &src.file, src.offset)?;
+        origins.resize(blockers.len(), readiness::Origin::Record);
+        let cites_swap = reference
+            .data
+            .material_swap
+            .as_ref()
+            .is_some_and(|r| r.key.is_some())
+            || base.as_ref().is_some_and(base_cites_swap);
+        let collision = readiness::collision_state(&blockers, &origins, outside, cites_swap, b)?;
         let editor_marker = base.as_ref().is_some_and(|v| v.editor_marker);
         let mut visibility_hypotheses = Vec::new();
         if editor_marker {
@@ -501,6 +536,8 @@ impl<'a> Loader<'a> {
             visibility,
             state,
             blockers,
+            blocker_origins: origins,
+            collision,
             assets,
         })
     }
@@ -552,7 +589,7 @@ impl<'a> Loader<'a> {
     pub fn inspect_base(&mut self, key: &FormKey, b: &Budget) -> Result<BaseInspection> {
         let mut blockers = Vec::new();
         let mut ancestry = Vec::new();
-        let base = self.base(key, b, &mut ancestry, 0, &mut blockers)?;
+        let base = self.base(key, b, &mut ancestry, 0, &mut blockers, &mut Vec::new())?;
         let mut roots = Vec::new();
         collect_base_assets(&base, &mut roots, b)?;
         let assets = self.assets.closure(&roots, b)?;
@@ -580,6 +617,7 @@ impl<'a> Loader<'a> {
         ancestry: &mut Vec<FormKey>,
         depth: u64,
         blockers: &mut Vec<Error>,
+        swaps: &mut Vec<std::ops::Range<usize>>,
     ) -> Result<Base> {
         limit(depth, self.plugins.limits.max_depth, &key.plugin, 0)?;
         if ancestry.contains(key) {
@@ -655,7 +693,9 @@ impl<'a> Loader<'a> {
         }
         runtime(&record, blockers, b)?;
         unhandled(&record, &common, blockers, b)?;
+        let at = blockers.len();
         let material_swap = self.swap(common.model.material_swap.as_ref(), blockers, b)?;
+        mark(swaps, at..blockers.len(), &record.source, b)?;
         let mut assets = Vec::new();
         if let Some(path) = &common.model.path {
             b.reserve(&mut assets, 1, &record.source.file, record.source.offset)?;
@@ -693,7 +733,9 @@ impl<'a> Loader<'a> {
             )?;
         }
         if let Some(swap) = &material_swap {
+            let at = blockers.len();
             self.swap_assets(swap, &mut assets, blockers, b)?;
+            mark(swaps, at..blockers.len(), &record.source, b)?;
         }
         if signature == *b"SCOL" && !declared.is_empty() {
             push_error(
@@ -728,7 +770,7 @@ impl<'a> Loader<'a> {
             let resolved = match part.base.as_ref().and_then(|r| r.key.as_ref()) {
                 Some(key) => {
                     let len = ancestry.len();
-                    let result = self.base(key, b, ancestry, depth + 1, blockers);
+                    let result = self.base(key, b, ancestry, depth + 1, blockers, swaps);
                     ancestry.truncate(len);
                     match result {
                         Ok(v) => Some(v),
@@ -972,6 +1014,32 @@ fn visibility(r: &Record, b: &Budget) -> Result<Visibility> {
         });
     }
     Ok(result)
+}
+/// Records `range` of blockers as raised by a material swap.
+fn mark(
+    swaps: &mut Vec<std::ops::Range<usize>>,
+    range: std::ops::Range<usize>,
+    src: &SourceSpan,
+    b: &Budget,
+) -> Result<()> {
+    if !range.is_empty() {
+        b.reserve(swaps, 1, &src.file, src.offset)?;
+        swaps.push(range);
+    }
+    Ok(())
+}
+/// Whether the base or any resolved SCOL part base names a material swap.
+fn base_cites_swap(base: &Base) -> bool {
+    base.common
+        .model
+        .material_swap
+        .as_ref()
+        .is_some_and(|r| r.key.is_some())
+        || base
+            .parts
+            .iter()
+            .filter_map(|p| p.resolved.as_ref())
+            .any(base_cites_swap)
 }
 fn collect_base_assets(base: &Base, out: &mut Vec<usize>, b: &Budget) -> Result<()> {
     b.reserve(

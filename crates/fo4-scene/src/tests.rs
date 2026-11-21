@@ -1,13 +1,13 @@
 use super::*;
 use fo4_core::{Game, Limits, Manifest, Mount, PluginSpec, TestDir};
 use std::fs;
-fn sub(sig: &[u8; 4], data: &[u8]) -> Vec<u8> {
+pub(crate) fn sub(sig: &[u8; 4], data: &[u8]) -> Vec<u8> {
     let mut v = sig.to_vec();
     v.extend((data.len() as u16).to_le_bytes());
     v.extend(data);
     v
 }
-fn record(sig: &[u8; 4], id: u32, flags: u32, data: &[u8]) -> Vec<u8> {
+pub(crate) fn record(sig: &[u8; 4], id: u32, flags: u32, data: &[u8]) -> Vec<u8> {
     let mut v = sig.to_vec();
     for n in [data.len() as u32, flags, id, 0] {
         v.extend(n.to_le_bytes());
