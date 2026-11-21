@@ -49,6 +49,17 @@ Names such as body, rotation, radius and scale are labels for stored values;
 their runtime meaning stays a hypothesis. No Havok SDK, header, documentation,
 converter, decompilation or third-party reader was opened or searched for.
 
+The `hknpCompressedMeshShape` and `hknpCompressedMeshShapeData` views
+([spec/havok-mesh.md](../spec/havok-mesh.md)) were established the same way:
+array slots from the first table, then candidate layouts counted over every
+stored object, with the decoded vertices checked against the boxes stored
+beside them and the decoded meshes compared with the render meshes of the
+same files. Exploration used a sample of the stored payloads and a throwaway
+script kept outside the repository; every enforced rule was then counted over
+the whole installation. No Havok SDK, header, documentation, converter,
+decompilation or third-party reader or schema of this format was opened or
+searched for.
+
 Runtime experiments measure an owned running copy through separately collected
 camera/transform words and repeated photographs. Their raw data stays local.
 Behavior not established by a format source is registered in

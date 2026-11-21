@@ -14,7 +14,8 @@ Measurement datasets and photographs of the game are not distributed.
 | [havok-container.md](havok-container.md) | Container level of the Havok collision payload (header, sections, class names, data tables), measured over one installation. |
 | [havok-objects.md](havok-objects.md) | Object spans, per-class leading sizes and the convex polytope layout of the Havok collision payload, measured over one installation. |
 | [havok-bodies.md](havok-bodies.md) | Array element sizes, the body array of the top-level object (shape link and placement), Body ID against it, and the sphere, capsule, convex, scaled convex and compound shape layouts, measured over one installation. |
-| [havok-container-census.tsv](havok-container-census.tsv) | Counts, holds/fails of container, object, body and shape properties, class names and signatures from the Havok census. |
+| [havok-mesh.md](havok-mesh.md) | `hknpCompressedMeshShape` and its data object: array slots, sections, quantized section and shared vertices, four-index primitives, trees, units against render meshes, measured over one installation. |
+| [havok-container-census.tsv](havok-container-census.tsv) | Counts, holds/fails of container, object, body, shape and compressed-mesh properties, class names and signatures from the Havok census. |
 | [controller-measurements.md](controller-measurements.md) | Measurement design for comparing stored NIF locals with paused runtime nodes. |
 | [dds.md](dds.md) | DDS headers, formats, surfaces, block layouts and supported decoding boundaries. |
 | [helper-visibility.md](helper-visibility.md) | Narrow editor-helper classification and explicit diagnostic visibility variants. |

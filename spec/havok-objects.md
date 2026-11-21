@@ -205,7 +205,7 @@ reader for this class.
 | Convex polytope planes and faces | Consistent on 218,451 of 218,459 objects; **[hypothesis]**, not enforced |
 | Bytes 16 to 27 of a polytope, fourth face byte | **[open]** |
 | Other shape classes | Sphere, capsule, convex, scaled convex and compound shapes in [havok-bodies.md](havok-bodies.md) |
-| Materials, compressed meshes | Untouched **[open]** |
+| Materials, compressed meshes | Materials untouched **[open]**; compressed meshes in [havok-mesh.md](havok-mesh.md) |
 
 ## Reader errors
 

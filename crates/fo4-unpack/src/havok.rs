@@ -15,6 +15,7 @@ use serde::Serialize;
 use std::collections::{BTreeMap, BTreeSet};
 
 mod bodies;
+mod mesh;
 
 const CAP: usize = 256;
 const OTHER: &str = "<other>";
@@ -130,6 +131,9 @@ impl Kind {
         };
         *self.counts.entry(key).or_default() += 1;
     }
+    fn totals_mut(&mut self, name: &'static str) -> &mut u64 {
+        self.totals.entry(name).or_default()
+    }
     fn total(&mut self, name: &'static str, n: u64) {
         *self.totals.entry(name).or_default() += n;
         let m = self.maxima.entry(name).or_default();
@@ -152,11 +156,13 @@ fn u32_at(bytes: &[u8], at: usize) -> Option<u32> {
 }
 
 /// Measures one payload; `body_ids` are the Body IDs of the
-/// bhkNPCollisionObject on its system.
+/// bhkNPCollisionObject on its system; `render` is the box of the file's
+/// render meshes when the file has one system and identity transforms.
 fn payload(
     k: &mut Kind,
     bytes: &[u8],
     body_ids: &[u32],
+    render: Option<mesh::Extent>,
     file: &str,
     base: u64,
     b: &Budget,
@@ -385,7 +391,7 @@ fn payload(
             .all(|n| !per_class.contains_key(n.name)),
     );
     objects_census(k, &c, file, base);
-    bodies::census(k, &c, file, base, body_ids);
+    bodies::census(k, &c, file, base, body_ids, render);
     if let Some(root) = c.root() {
         bump(&mut k.root_class, root.class.to_owned(), OTHER.into());
         let at = d + root.offset as usize;
@@ -679,6 +685,11 @@ pub fn sweep(m: &Manifest, r: &mut Reports) -> Result<()> {
                 continue;
             }
         };
+        let render = if col.systems.len() == 1 {
+            render_extent(&n)
+        } else {
+            None
+        };
         for system in &col.systems {
             let body_ids: Vec<u32> = col
                 .objects
@@ -695,6 +706,7 @@ pub fn sweep(m: &Manifest, r: &mut Reports) -> Result<()> {
                 kind,
                 system.payload,
                 &body_ids,
+                render,
                 &c.original,
                 system.payload_offset,
                 &scratch,
@@ -722,6 +734,48 @@ pub fn sweep(m: &Manifest, r: &mut Reports) -> Result<()> {
     r.tsv = Some(("havok.tsv", text));
     r.summary.havok = s;
     Ok(())
+}
+
+/// Box of every vertex position of the render meshes, when every node and
+/// mesh block stores translation 0, the identity rotation and scale 1.
+fn render_extent(n: &fo4_nif::Nif<'_>) -> Option<mesh::Extent> {
+    use fo4_nif::{Data, Value};
+    let mut bx = ([f32::INFINITY; 3], [f32::NEG_INFINITY; 3]);
+    let identity = [1.0f32, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0];
+    for block in &n.blocks {
+        let fields = match &block.decoded {
+            Some(Data::Node { fields, .. }) => fields,
+            Some(Data::Mesh(m)) => &m.fields,
+            _ => continue,
+        };
+        let floats = |name: &str| -> Vec<f32> {
+            fields
+                .iter()
+                .filter(|f| f.name == name)
+                .filter_map(|f| match f.value {
+                    Value::FloatBits(b) => Some(f32::from_bits(b)),
+                    _ => None,
+                })
+                .collect()
+        };
+        let t = floats("Translation");
+        let r = floats("Rotation");
+        let s = floats("Scale");
+        let placed = (t.is_empty() || t == [0.0; 3])
+            && (r.is_empty() || r == identity)
+            && (s.is_empty() || s == [1.0]);
+        if !placed {
+            return None;
+        }
+        if let Some(Data::Mesh(m)) = &block.decoded {
+            for v in m.vertices.iter().flatten() {
+                if let Some(p) = v.position {
+                    mesh::grow(&mut bx, p);
+                }
+            }
+        }
+    }
+    (bx.0[0] <= bx.1[0]).then_some(bx)
 }
 
 /// Text report: `section<TAB>key<TAB>value`, counts and small stored values.
@@ -925,9 +979,9 @@ mod tests {
         let bytes = container();
         let b = Budget::new(1 << 20);
         let mut k = Kind::default();
-        payload(&mut k, &bytes, &[0, 1], "a.nif", 0, &b).unwrap();
-        payload(&mut k, &bytes, &[0], "b.nif", 0, &b).unwrap();
-        assert!(payload(&mut k, &bytes[..100], &[0], "c.nif", 0, &b).is_err());
+        payload(&mut k, &bytes, &[0, 1], None, "a.nif", 0, &b).unwrap();
+        payload(&mut k, &bytes, &[0], None, "b.nif", 0, &b).unwrap();
+        assert!(payload(&mut k, &bytes[..100], &[0], None, "c.nif", 0, &b).is_err());
         assert_eq!((k.payloads, k.read), (3, 2));
         assert_eq!(k.errors.get("TruncatedHavokContainer"), Some(&1));
         let c = k.checks["eight_zero_bytes_at_every_pointer_source"];

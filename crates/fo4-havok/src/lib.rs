@@ -12,18 +12,26 @@
 //! Typed object views: [`ConvexPolytope`], the top-level [`PhysicsSystem`]
 //! with its bodies (shape link and placement), and the simple shapes
 //! [`Sphere`], [`Capsule`], [`ConvexShape`], [`ScaledConvex`] and
-//! [`Compound`] (`spec/havok-bodies.md`). A payload outside the measured
-//! profile is a named error carrying the file offset; nothing here panics.
+//! [`Compound`] (`spec/havok-bodies.md`), and the compressed mesh
+//! [`CompressedMesh`] with its [`MeshData`] (`spec/havok-mesh.md`). A payload
+//! outside the measured profile is a named error carrying the file offset;
+//! nothing here panics.
 use fo4_core::{Budget, Error, Result};
 use serde::Serialize;
 
 mod bodies;
+mod mesh;
 mod objects;
 mod shapes;
 mod view;
 pub use bodies::{
     Body, PhysicsSystem, BODY, PHYSICS_SYSTEM, RAGDOLL, RAGDOLL_ARRAY, SYSTEM_ARRAYS,
     UNIT_TOLERANCE,
+};
+pub use mesh::{
+    CompressedMesh, Geometry, MeshData, MeshSection, Primitive, COMPRESSED_MESH,
+    COMPRESSED_MESH_DATA, MESH_BOX_TOLERANCE, MESH_DATA_ARRAYS, MESH_DATA_FIXED, MESH_SHAPE_ARRAYS,
+    MESH_SHAPE_FIXED, PLACEHOLDER_PRIMITIVE, SECTION, SECTION_TREE_NODE, SECTION_VERTICES,
 };
 pub use objects::{
     ConvexPolytope, Face, ObjectSpan, CONVEX_POLYTOPE, CONVEX_POLYTOPE_FIXED, MAX_VERTEX_ROWS,

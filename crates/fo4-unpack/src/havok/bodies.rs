@@ -1,11 +1,11 @@
 //! Census of the body array of the top-level object, the simple shape views
 //! and the array slots. Counts and small stored constants only.
-use super::{f32_at, u16_at, u32_at, zero, Kind};
+use super::{f32_at, mesh, u16_at, u32_at, zero, Kind};
 use fo4_core::Budget;
 use fo4_havok::{
     orthonormal_error, segment_distance, Capsule, Compound, Container, ConvexPolytope, ConvexShape,
-    PhysicsSystem, ScaledConvex, Sphere, CAPSULE, CONVEX, CONVEX_POLYTOPE, DYNAMIC_COMPOUND,
-    INSTANCE, RAGDOLL, SCALED_CONVEX, SPHERE, STATIC_COMPOUND,
+    PhysicsSystem, ScaledConvex, Sphere, CAPSULE, COMPRESSED_MESH, CONVEX, CONVEX_POLYTOPE,
+    DYNAMIC_COMPOUND, INSTANCE, RAGDOLL, SCALED_CONVEX, SPHERE, STATIC_COMPOUND,
 };
 use serde::Serialize;
 
@@ -73,6 +73,8 @@ enum Geo {
     Scaled(usize),
     Compound(Vec<usize>),
     Missing,
+    /// A view refused the object: its error code.
+    Failed(String),
 }
 
 fn record(k: &mut Kind, class: &str, r: Result<(), String>) -> bool {
@@ -85,7 +87,14 @@ fn record(k: &mut Kind, class: &str, r: Result<(), String>) -> bool {
 }
 
 /// Reads the views of one payload and counts their rules and the bodies.
-pub(super) fn census(k: &mut Kind, c: &Container<'_>, file: &str, base: u64, body_ids: &[u32]) {
+pub(super) fn census(
+    k: &mut Kind,
+    c: &Container<'_>,
+    file: &str,
+    base: u64,
+    body_ids: &[u32],
+    render: Option<mesh::Extent>,
+) {
     let data = c.object_bytes();
     let b = Budget::new(1 << 26);
     let link = |source: usize| -> Option<usize> {
@@ -99,6 +108,7 @@ pub(super) fn census(k: &mut Kind, c: &Container<'_>, file: &str, base: u64, bod
     };
     let class_of = |i: Option<usize>| i.map_or("none", |i| c.objects[i].class);
     let mut geo = vec![Geo::Missing; c.objects.len()];
+    let mut mesh_box = vec![None; c.objects.len()];
     for span in c.object_spans() {
         let (i, o) = (span.index, span.offset as usize);
         let bytes = c.span_bytes(&span);
@@ -163,6 +173,13 @@ pub(super) fn census(k: &mut Kind, c: &Container<'_>, file: &str, base: u64, bod
                 }
                 k.count("u16_16_18", &format!("{class}|{}", u16_pair(bytes)));
             }
+            COMPRESSED_MESH => match mesh::census(k, c, i, file, base, &b) {
+                Ok(g) => {
+                    geo[i] = Geo::Leaf;
+                    mesh_box[i] = Some(mesh::vertex_box(&g));
+                }
+                Err(code) => geo[i] = Geo::Failed(code),
+            },
             CONVEX => {
                 let r = ConvexShape::read(c, i, file, base);
                 if r.is_ok() {
@@ -362,6 +379,19 @@ pub(super) fn census(k: &mut Kind, c: &Container<'_>, file: &str, base: u64, bod
             Err(missing) => format!("no_geometry_below|{missing}"),
         };
         k.count("body_geometry", &format!("{class}|{shape_class}|{key}"));
+        if reaches(c, body.shape, COMPRESSED_MESH, 0) {
+            let result = key.rsplit('|').next().unwrap_or("");
+            k.count(
+                "body_reaching_compressed_mesh",
+                &format!("{class}|{result}"),
+            );
+        }
+        let placed = body.translation == [0.0; 3]
+            && body.rotation[..3] == [0.0; 3]
+            && (f64::from(body.rotation[3].abs()) - 1.0).abs() <= 1e-6;
+        if let (Some(r), Some(Some(m)), true, 1) = (render, mesh_box.get(body.shape), placed, n) {
+            mesh::units(k, *m, r);
+        }
     }
     if let Some(a) = sys.array(80) {
         for j in 0..a.count as usize {
@@ -412,11 +442,11 @@ fn u16_pair(bytes: &[u8]) -> String {
 }
 
 /// Ok when every shape reached from `i` has a geometry view; otherwise the
-/// class of the first one without.
-fn resolve<'a>(geo: &[Geo], c: &Container<'a>, i: usize, depth: usize) -> Result<(), &'a str> {
+/// class of the first one without, and the error code when a view refused it.
+fn resolve(geo: &[Geo], c: &Container<'_>, i: usize, depth: usize) -> Result<(), String> {
     let class = c.objects.get(i).map_or("none", |o| o.class);
     if depth > 4 {
-        return Err(class);
+        return Err(class.to_owned());
     }
     match geo.get(i) {
         Some(Geo::Leaf) => Ok(()),
@@ -424,6 +454,33 @@ fn resolve<'a>(geo: &[Geo], c: &Container<'a>, i: usize, depth: usize) -> Result
         Some(Geo::Compound(children)) => children
             .iter()
             .try_for_each(|ch| resolve(geo, c, *ch, depth + 1)),
-        _ => Err(class),
+        Some(Geo::Failed(code)) => Err(format!("{class}|{code}")),
+        _ => Err(class.to_owned()),
     }
+}
+
+/// Whether a shape of `class` is reached from object `i` through scaled
+/// convex and compound links.
+fn reaches(c: &Container<'_>, i: usize, class: &str, depth: usize) -> bool {
+    let Some(o) = c.objects.get(i) else {
+        return false;
+    };
+    if o.class == class {
+        return true;
+    }
+    if depth > 4 {
+        return false;
+    }
+    let children: Vec<usize> = match o.class {
+        SCALED_CONVEX => ScaledConvex::read(c, i, "", 0)
+            .map(|s| vec![s.child])
+            .unwrap_or_default(),
+        STATIC_COMPOUND | DYNAMIC_COMPOUND => Compound::read(c, i, "", 0, &Budget::new(1 << 26))
+            .map(|s| s.instances.iter().map(|x| x.child).collect())
+            .unwrap_or_default(),
+        _ => Vec::new(),
+    };
+    children
+        .into_iter()
+        .any(|ch| reaches(c, ch, class, depth + 1))
 }

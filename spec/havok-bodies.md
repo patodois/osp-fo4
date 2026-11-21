@@ -277,7 +277,7 @@ point view (`ConvexPolytope`, `ConvexShape`, `Sphere`, `Capsule`):
 So about half of the bodies now go body → shape → vertices or points with a
 stored placement at each link, all by readers that enforce only rules that
 held on every object. The other half wait for the compressed mesh, out of
-scope here.
+scope here; [havok-mesh.md](havok-mesh.md) decodes 160,491 of those 166,970.
 
 ## Status
 
@@ -291,7 +291,7 @@ scope here.
 | Arrays at +16, +32, +48, +128 and body words 12, 20, 24, 60 | **[open]** |
 | How scale, translation and instance placement compose with child vertices | **[hypothesis]** |
 | Bytes 16 to 27 of each shape (u16 pair by class, f32, u32) | **[open]** |
-| Compressed mesh | Out of scope for this step **[open]** |
+| Compressed mesh | Out of scope for this step; see [havok-mesh.md](havok-mesh.md) |
 
 ## Reader errors
 
