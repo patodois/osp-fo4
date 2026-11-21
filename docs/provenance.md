@@ -86,6 +86,16 @@ objects-against-ground figures of the `land` report are offline evidence
 only. No xEdit source or definition file, OpenMW, Mutagen or other reader
 of the format was opened.
 
+The ground textures (`fo4_scene::terrain::layers`, [spec/land.md](../spec/land.md),
+"Ground textures") use no further source. The quadrant numbering and the
+17 x 17 VTXT position grid come from the same UESP pages; the LTEX TNAM link
+to a TXST, the use of TX00, the weight combination, the meaning of a missing
+base, the texture repeat and the VCLR multiplication are registered pending
+rules whose candidates come from offline measurement of the stored data of
+one installation through this repository's readers (counts, seam and edge
+continuity, texel density of placed objects), recorded in the spec. No
+reader, editor or renderer of the format was opened for them.
+
 The walking controller (`fo4-walk`, [spec/walk.md](../spec/walk.md)) is
 original work from general geometry (closest points of convex sets,
 collide-and-slide with substeps, step-up and ground snapping); it adds no

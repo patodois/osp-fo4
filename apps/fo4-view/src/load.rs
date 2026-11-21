@@ -104,11 +104,24 @@ pub fn cell(
         // instance in piece order, as the CPU render does.
         let first = u32::try_from(build.instances.len())?;
         let mut last = first;
+        let mut cache = fo4_render::terrain::TextureCache::new(BuildOptions::reference(level));
+        let mut textured = Vec::new();
         for (k, t) in g.terrains.iter().enumerate() {
             last = first
                 .checked_add(u32::try_from(k)?)
                 .ok_or("TerrainTagOverflow")?;
-            fo4_render::terrain::append_terrain(&mut build.list, t, last, &budget)?;
+            let r = fo4_render::terrain::append_textured_terrain(
+                &mut build.list,
+                t,
+                &store,
+                &mut loader,
+                &mut cache,
+                last,
+                level,
+                limits,
+                &budget,
+            )?;
+            textured.push(texture_line(&r));
         }
         let pieces: Vec<String> = g
             .pieces
@@ -120,6 +133,11 @@ pub fn cell(
             g.terrains.len(),
             pieces.join(", ")
         );
+        println!(
+            "terrain textures: {}; landscape textures {:?}",
+            textured.join("; "),
+            cache.outcomes()
+        );
     } else if terrain {
         let own = ground
             .as_ref()
@@ -129,8 +147,25 @@ pub fn cell(
             Some(t) => {
                 // Tagged after every placed instance, as the CPU render does.
                 let tag = u32::try_from(build.instances.len())?;
-                fo4_render::terrain::append_terrain(&mut build.list, t, tag, &budget)?;
+                let mut cache =
+                    fo4_render::terrain::TextureCache::new(BuildOptions::reference(level));
+                let r = fo4_render::terrain::append_textured_terrain(
+                    &mut build.list,
+                    t,
+                    &store,
+                    &mut loader,
+                    &mut cache,
+                    tag,
+                    level,
+                    limits,
+                    &budget,
+                )?;
                 println!("terrain drawn: grid {:?}, tag {tag}", t.grid);
+                println!(
+                    "terrain textures: {}; landscape textures {:?}",
+                    texture_line(&r),
+                    cache.outcomes()
+                );
             }
             None => println!(
                 "terrain not drawn: {}",
@@ -177,6 +212,25 @@ pub fn cell(
         data_root: manifest.root.clone(),
         walk,
     })
+}
+
+/// One line of what a terrain piece's texture passes drew.
+fn texture_line(r: &fo4_render::terrain::TexturedReport) -> String {
+    match &r.refusal {
+        Some(refusal) => format!("{:?} untextured ({})", r.grid, refusal.code),
+        None => format!(
+            "{:?} {} quadrants textured, {} untextured {:?}, {} layers, {} passes, weight {:?}, texture refusals {:?}, vertex colours {}",
+            r.grid,
+            r.quadrants_textured,
+            r.quadrants_untextured,
+            r.quadrant_refusals,
+            r.layers,
+            r.passes,
+            r.weight_share,
+            r.texture_refusals,
+            r.vertex_colors
+        ),
+    }
 }
 
 /// A new file for `arg`: under `./build`, no `..`, no symbolic link on the

@@ -61,10 +61,25 @@ impl SurfaceParams {
 
 /// The pipeline-level part of a surface: blend factors (colour and alpha use
 /// the same pair, as in the CPU `blend`) and back-face culling.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct SurfaceKey {
     pub blend: Option<(BlendFactor, BlendFactor)>,
     pub cull_back: bool,
+    /// `Draw::overlay`: a sample at exactly the stored depth is kept.
+    pub overlay: bool,
+}
+
+/// Hashes as the two-field key did before `overlay` existed when it is
+/// false, so the pipelines and their order (which decides exact depth ties
+/// between draws) stay those of a list without overlays.
+impl std::hash::Hash for SurfaceKey {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.blend.hash(state);
+        self.cull_back.hash(state);
+        if self.overlay {
+            self.overlay.hash(state);
+        }
+    }
 }
 
 pub struct Surface {
@@ -225,11 +240,12 @@ pub fn convert(list: &DrawList, options: &RenderOptions) -> Result<GpuScene, Str
     for t in &list.textures {
         t.validate().map_err(|e| e.to_string())?;
     }
+    list.validate_overlays().map_err(|e| e.to_string())?;
     let mut out = GpuScene::default();
     let mut mesh_index = BTreeMap::new();
     let mut texture_index = BTreeMap::new();
-    // Texture, parameter bits, raw blend codes, culling.
-    type SurfaceIdentity = (usize, [u32; 8], Option<(u32, u32)>, bool);
+    // Texture, parameter bits, raw blend codes, culling, overlay.
+    type SurfaceIdentity = (usize, [u32; 8], Option<(u32, u32)>, bool, bool);
     let mut surface_index: BTreeMap<SurfaceIdentity, usize> = BTreeMap::new();
     for (di, draw) in list.draws.iter().enumerate() {
         draw.alpha.validate().map_err(|e| e.to_string())?;
@@ -283,7 +299,13 @@ pub fn convert(list: &DrawList, options: &RenderOptions) -> Result<GpuScene, Str
         let blend_codes =
             (draw.alpha.enabled == 1).then_some((draw.alpha.source, draw.alpha.destination));
         let params = surface_params(draw.alpha, draw.uv_offset, draw.uv_scale);
-        let surface_key = (texture_slot, params.bits(), blend_codes, cull_back);
+        let surface_key = (
+            texture_slot,
+            params.bits(),
+            blend_codes,
+            cull_back,
+            list.is_overlay(di),
+        );
         let surface = match surface_index.get(&surface_key) {
             Some(&i) => i,
             None => {
@@ -294,7 +316,11 @@ pub fn convert(list: &DrawList, options: &RenderOptions) -> Result<GpuScene, Str
                 out.surfaces.push(Surface {
                     texture: texture_slot,
                     params,
-                    key: SurfaceKey { blend, cull_back },
+                    key: SurfaceKey {
+                        blend,
+                        cull_back,
+                        overlay: list.is_overlay(di),
+                    },
                 });
                 surface_index.insert(surface_key, out.surfaces.len() - 1);
                 out.surfaces.len() - 1
@@ -390,6 +416,7 @@ mod tests {
                 draw(8, 0, 0, alpha(0, 0, 0, Some((128, None)))),
                 draw(9, 0, 0, alpha(1, 6, 7, None)),
             ],
+            overlays: Vec::new(),
         }
     }
 
@@ -446,6 +473,43 @@ mod tests {
         undeclared.draws[0].sidedness = Sidedness::default();
         let e = convert(&undeclared, &options).err().unwrap();
         assert!(e.contains("MissingCullDeclarations"), "{e}");
+    }
+
+    #[test]
+    fn overlay_draws_get_their_own_surface_and_keep_the_old_hash_otherwise() {
+        use std::hash::{BuildHasher, Hash, Hasher};
+        let mut l = list();
+        l.overlays = vec![2];
+        let scene = convert(&l, &RenderOptions::REFERENCE).unwrap();
+        let keys: Vec<_> = scene
+            .instances
+            .iter()
+            .map(|i| scene.surfaces[i.surface].key.overlay)
+            .collect();
+        assert_eq!(keys, [false, false, true]);
+        for bad in [vec![2, 2], vec![3]] {
+            l.overlays = bad;
+            let e = convert(&l, &RenderOptions::REFERENCE).err().unwrap();
+            assert!(e.contains("InvalidOverlayDraws"), "{e}");
+        }
+        // Without overlay the key hashes as the two-field key did, so the
+        // pipelines of a list without overlays are unchanged.
+        let state = std::hash::RandomState::new();
+        let key = SurfaceKey {
+            blend: Some((BlendFactor::SrcAlpha, BlendFactor::One)),
+            cull_back: true,
+            overlay: false,
+        };
+        let a = state.hash_one(key);
+        let mut b = state.build_hasher();
+        key.blend.hash(&mut b);
+        key.cull_back.hash(&mut b);
+        assert_eq!(a, b.finish());
+        let c = state.hash_one(SurfaceKey {
+            overlay: true,
+            ..key
+        });
+        assert_ne!(a, c);
     }
 
     #[test]

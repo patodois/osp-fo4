@@ -37,6 +37,14 @@ pub const LAND_ORIGIN: &str = "land_grid_origin_southwest_v1";
 pub const LAND_SPACING: &str = "land_grid_spacing_128_v1";
 pub const LAND_DIAGONAL_SW_NE: &str = "land_quad_diagonal_sw_ne_v1";
 pub const LAND_DIAGONAL_NW_SE: &str = "land_quad_diagonal_nw_se_v1";
+/// Ground textures of a terrain (`crate::terrain::layers`, `spec/land.md`).
+pub const LAND_QUADRANTS: &str = "land_quadrant_layout_v1";
+pub const LAND_VTXT_POSITION: &str = "land_vtxt_position_grid_v1";
+pub const LAND_LAYER_WEIGHTS: &str = "land_layer_weights_residual_v1";
+pub const LAND_MISSING_BASE: &str = "land_missing_base_default_v1";
+pub const LTEX_TEXTURE_SET: &str = "ltex_tnam_texture_set_tx00_v1";
+pub const LAND_TEXTURE_REPEAT: &str = "land_texture_repeat_256_v1";
+pub const LAND_VERTEX_COLORS: &str = "land_vclr_multiply_v1";
 /// A rule's standing in `spec/hypotheses.tsv`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Status {

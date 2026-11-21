@@ -57,9 +57,39 @@ fn fixture() -> Fixture {
         let mut p = sub(b"DATA", &[0; 4]);
         if vhgt {
             p.extend(sub(b"VHGT", &ramp()));
+            // Quadrant 0: base LTEX 0x870; quadrant 1: one layer of 0x873.
+            p.extend(sub(b"BTXT", &[0x70, 8, 0, 0, 0, 0, 0xff, 0xff]));
+            p.extend(sub(b"ATXT", &[0x73, 8, 0, 0, 1, 0, 0, 0]));
+            let mut point = 3u16.to_le_bytes().to_vec();
+            point.extend([0, 0]);
+            point.extend(0.5f32.to_le_bytes());
+            p.extend(sub(b"VTXT", &point));
         }
         record(b"LAND", id, flags, &p)
     };
+    let tnam = |id: u32, target: Option<u32>| {
+        let mut p = sub(b"EDID", format!("Ground{id:x}\0").as_bytes());
+        if let Some(t) = target {
+            p.extend(sub(b"TNAM", &t.to_le_bytes()));
+        }
+        record(b"LTEX", id, 0, &p)
+    };
+    let ltex = [
+        tnam(0x870, Some(0x880)),
+        tnam(0x871, Some(0x810)),
+        tnam(0x872, None),
+        tnam(0x873, Some(0x881)),
+    ]
+    .concat();
+    let mut set = sub(b"EDID", b"GroundSet\0");
+    set.extend(sub(b"TX00", b"landscape\\ground_d.dds\0"));
+    let mut material_only = sub(b"EDID", b"GroundMaterial\0");
+    material_only.extend(sub(b"MNAM", b"landscape\\ground.bgsm\0"));
+    let txst = [
+        record(b"TXST", 0x880, 0, &set),
+        record(b"TXST", 0x881, 0, &material_only),
+    ]
+    .concat();
     let cells = [
         cell(0x810, 3, -2, &[land(0x811, 0, true)]),
         cell(0x820, 4, -2, &[]),
@@ -75,7 +105,9 @@ fn fixture() -> Fixture {
     .concat();
     let mut interior = sub(b"EDID", b"Room\0");
     interior.extend(sub(b"DATA", &1u16.to_le_bytes()));
-    let mut body = group(0, u32::from_le_bytes(*b"WRLD"), &world);
+    let mut body = group(0, u32::from_le_bytes(*b"LTEX"), &ltex);
+    body.extend(group(0, u32::from_le_bytes(*b"TXST"), &txst));
+    body.extend(group(0, u32::from_le_bytes(*b"WRLD"), &world));
     body.extend(group(
         0,
         u32::from_le_bytes(*b"CELL"),
@@ -327,4 +359,69 @@ fn a_refuted_or_unregistered_rule_blocks_the_terrain() {
     };
     assert!(matches!(t.state, State::ReadyMeasured { .. }));
     assert_eq!(t.diagonal, Diagonal::SouthwestNortheast);
+}
+
+#[test]
+fn ground_textures_follow_the_registry_and_name_their_colour_texture() {
+    let f = fixture();
+    let b = Budget::new(64 << 20);
+    let store = Store::open(&f.manifest, &b).unwrap();
+    assert!(store.diagnostics.is_empty(), "{:?}", store.diagnostics);
+    let options = Options {
+        level: RuleLevel::Hypotheses,
+        diagonal: None,
+    };
+    let Outcome::Built(t) = load(&store, &key(0x810), options, &b).unwrap() else {
+        panic!("terrain expected")
+    };
+    let pending = |_: &str| Some(Status::Pending);
+    let built = |level, status: &dyn Fn(&str) -> Option<Status>| {
+        layers::load_with(&store, &t, level, status, &b).unwrap()
+    };
+    let layers::Outcome::Built(l) = built(RuleLevel::Hypotheses, &pending) else {
+        panic!("texture weights expected")
+    };
+    assert!(
+        matches!(&l.state, State::ReadyUnderHypotheses { hypotheses } if hypotheses.len() == 7)
+    );
+    use layers::Source;
+    assert_eq!(l.quadrants[0].base, Some(Source::Ltex(key(0x870))));
+    assert_eq!(l.quadrants[1].base, Some(Source::Default));
+    let q1 = &l.quadrants[1].textures;
+    assert_eq!(
+        (q1[1].source.clone(), q1[1].weights[3], q1[0].weights[3]),
+        (Source::Ltex(key(0x873)), 0.5, 0.5)
+    );
+    let code = |o: layers::Outcome| match o {
+        layers::Outcome::Refused(r) => r.code,
+        layers::Outcome::Built(_) => "built",
+    };
+    assert_eq!(
+        code(built(RuleLevel::Measured, &pending)),
+        "TextureRulesNotAccepted"
+    );
+    let refuted = |n: &str| {
+        Some(if n == hypotheses::LAND_LAYER_WEIGHTS {
+            Status::Refuted
+        } else {
+            Status::Supported
+        })
+    };
+    assert_eq!(
+        code(built(RuleLevel::Hypotheses, &refuted)),
+        "TextureRulesNotAccepted"
+    );
+    let measured = |_: &str| Some(Status::Supported);
+    assert_eq!(code(built(RuleLevel::Measured, &measured)), "built");
+    let path = |id| layers::colour_texture_path(&store, &key(id), &b).unwrap();
+    assert_eq!(path(0x870), Ok("landscape\\ground_d.dds".to_owned()));
+    for (id, refusal) in [
+        (0x871, "LandscapeTextureTnamNotTextureSet"),
+        (0x872, "LandscapeTextureWithoutSingleTnam"),
+        (0x873, "TextureSetWithoutTx00"),
+        (0x880, "NotALandscapeTexture"),
+        (0x8ff, "MissingLandscapeTexture"),
+    ] {
+        assert_eq!(path(id), Err(refusal), "{id:x}");
+    }
 }

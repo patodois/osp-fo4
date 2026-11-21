@@ -22,7 +22,7 @@ Measurement datasets and photographs of the game are not distributed.
 | [dds.md](dds.md) | DDS headers, formats, surfaces, block layouts and supported decoding boundaries. |
 | [helper-visibility.md](helper-visibility.md) | Narrow editor-helper classification and explicit diagnostic visibility variants. |
 | [hypotheses.tsv](hypotheses.tsv) | Machine-readable candidate assertions, scope, status and falsification evidence. |
-| [land.md](land.md) | LAND subrecord layouts and sources, the terrain rules, the `land` report and its census of one worldspace. |
+| [land.md](land.md) | LAND subrecord layouts and sources, the terrain rules, the ground texture rules and drawing, the `land` report and its census of one worldspace. |
 | [light-measurement.md](light-measurement.md) | Light and cell declarations separated from unestablished rendering equations. |
 | [manifest-vfs.md](manifest-vfs.md) | Strict manifests, explicit load/mount order, virtual paths, fingerprints and budgets. |
 | [material-json-status.md](material-json-status.md) | Material JSON representation and preservation of unknown or unsourced fields. |
@@ -94,6 +94,13 @@ the registry.
 | `land_grid_spacing_128_v1` | pending | Offline objects against ground; live: `player.getpos` at a cell corner and at a quad centre. |
 | `land_quad_diagonal_sw_ne_v1` | pending | Live: settle at the two off-diagonal points of a non-planar quad; the other level must predict worse. |
 | `land_quad_diagonal_nw_se_v1` | pending | Same measurement as the sw_ne level. |
+| `land_quadrant_layout_v1` | pending | Top-down screenshot of a cell whose four quadrants have distinct base textures; offline: quadrant seams agree for 84.3% under the candidate, 51.4% or less otherwise. |
+| `land_vtxt_position_grid_v1` | pending | Photograph a layer painted in an asymmetric pattern; offline: cell edges agree for 80.6% under the candidate, 49.2% or less under the other symmetries. |
+| `land_layer_weights_residual_v1` | pending | Photograph two layers of flat colours at 0.5 and 0.5, then 0.25 and 0.25, over a third base; offline: opacities sum to at most 1 at all but 61 of 9,087,604 vertices. |
+| `land_missing_base_default_v1` | pending | Photograph a quadrant without BTXT and a FormID-zero layer at full opacity in one launch; which texture the default is stays refused. |
+| `ltex_tnam_texture_set_tx00_v1` | pending | Photograph a cell before and after an overlay plugin points an LTEX TNAM at another TXST. |
+| `land_texture_repeat_256_v1` | pending | Placeholder. Top-down screenshot of flat ground: count texture repeats over a known distance and check the image's orientation. |
+| `land_vclr_multiply_v1` | pending | Photograph ground across a VCLR gradient and the same cell with VCLR removed; offline: shared cell edges byte-equal for 99.4% of non-white pairs. |
 | `walk_capsule_radius_v1` | pending | Walk the player into a box face of known plane and into a thin pole; the stop distances equal the radius. |
 | `walk_capsule_height_v1` | pending | Slabs over a corridor at decreasing clearances; the lowest clearance walked under standing. |
 | `walk_eye_height_v1` | pending | Look level at markers of known height on a far wall from a floor of known height; the marker on the centre row. |

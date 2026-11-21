@@ -45,6 +45,12 @@ float32 é forward linear positivo; não afirma reproduzir a linha Z de projeç�
 GPU não medida. Opaque usa LESS com empate pelo primeiro item ordenado.
 Transparência vem depois, centróides de triângulos de trás para frente com
 ordinal estável no empate. Interseções transparentes não são subdivididas.
+Draws listados em `DrawList::overlays` (índices estritamente crescentes; só as
+passadas de textura do terreno, [land.md](land.md)) aceitam também a amostra
+com profundidade igual à opaca guardada; os demais exigem estritamente menor.
+Um overlay nunca troca o índice por pixel. O snapshot recusa listas com
+overlays (`SnapshotOverlayDraws`); o visualizador GPU usa GreaterEqual (Z
+reverso) só para esses draws na passada de cor.
 
 Índice por pixel identifica a instância contribuinte mais próxima; background
 é u32::MAX. Depth é a distância dessa contribuição ou +infinito. Blends não

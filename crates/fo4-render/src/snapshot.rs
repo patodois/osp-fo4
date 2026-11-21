@@ -131,6 +131,16 @@ pub fn write(list: &DrawList, writer: &mut impl Write, l: &Limits) -> Result<u64
             w.bytes(&v.to_le_bytes())?;
         }
     }
+    if !list.overlays.is_empty() {
+        // The interchange has no field for them; refuse rather than drop them.
+        return Err(Error::new(
+            "SnapshotOverlayDraws",
+            "snapshot",
+            w.bytes,
+            "no overlay draws",
+            list.overlays.len(),
+        ));
+    }
     for d in &list.draws {
         d.alpha.validate()?;
         w.u32(d.instance)?;

@@ -115,9 +115,15 @@ impl Material for SurfaceMaterial {
         descriptor.primitive.cull_mode = key.surface.cull_back.then_some(Face::Back);
         // The CPU keeps a sample only when it is strictly nearer than the
         // stored depth (`depth >= opaque_depth` is rejected); Bevy's default
-        // GreaterEqual (reverse Z) would also keep exact ties.
+        // GreaterEqual (reverse Z) would also keep exact ties. An overlay
+        // draw (the terrain's texture passes) keeps exact ties in colour, as
+        // the CPU does; its tag never replaces a stored one at equal depth.
         if let Some(depth) = descriptor.depth_stencil.as_mut() {
-            depth.depth_compare = Some(CompareFunction::Greater);
+            depth.depth_compare = Some(if key.surface.overlay && !key.tag_pass {
+                CompareFunction::GreaterEqual
+            } else {
+                CompareFunction::Greater
+            });
         }
         // Material pipelines always have a fragment stage with one target.
         let Some(fragment) = descriptor.fragment.as_mut() else {

@@ -265,8 +265,10 @@ as in the report, and the outcome of each piece is printed. Without `--walk`
 the viewer is unchanged.
 
 `--terrain` (window or `--headless`) appends the cell's own terrain to the
-draw list exactly as `render --terrain` does: one opaque double-sided draw,
-flat grey per triangle, tagged after the last placed instance; without
+draw list exactly as `render --terrain` does: its ground textures as
+weighted passes over one opaque pass, untextured weight in flat grey per
+triangle ([land.md](land.md), "Drawing"), tagged after the last placed
+instance, with one line of what was textured and refused; without
 `--around` the neighbours walked on are not drawn. A refused terrain is
 printed and not drawn. Without the flag nothing is loaded and the draw list
 is unchanged, so the CPU and GPU frames of one pose can be compared with or

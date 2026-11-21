@@ -393,5 +393,7 @@ pub fn land_heights(land: &Land, b: &Budget) -> Result<Option<Vec<f64>>> {
     }
 }
 
+pub mod layers;
+
 #[cfg(test)]
 mod tests;

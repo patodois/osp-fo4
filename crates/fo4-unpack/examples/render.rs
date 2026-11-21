@@ -10,6 +10,8 @@ use fo4_scene::{
 };
 use std::path::Path;
 type AnyResult<T> = Result<T, Box<dyn std::error::Error>>;
+/// The terrain key of `summary.json` describes how the terrain was drawn.
+const TERRAIN_SHADING: &str = "ground textures weighted per vertex under the pending terrain texture rules, times VCLR; untextured weight as flat neutral grey per triangle by geometric normal; unlit, not game lighting";
 fn run() -> AnyResult<()> {
     let args: Vec<_> = std::env::args().skip(1).collect();
     const USAGE: &str = "usage: render MANIFEST DATA_DIRECTORY CELL_EDITOR_ID build/OUTPUT [--strict|--measured|--under-hypotheses] [--eye X,Y,Z --look X,Y,Z] [--instance-ids] [--collision-overlay] [--terrain] [--around N]";
@@ -101,14 +103,28 @@ fn run() -> AnyResult<()> {
         // placed instance in piece order.
         let set = fo4_walk::terrain::load_with(&store, a, policy, &budget)?;
         let first = u32::try_from(built.instances.len())?;
+        let mut cache = fo4_render::terrain::TextureCache::new(
+            fo4_render::draw::BuildOptions::reference(policy),
+        );
+        let mut textures = Vec::new();
         for (k, t) in set.terrains.iter().enumerate() {
             let tag = first
                 .checked_add(u32::try_from(k)?)
                 .ok_or("TerrainTagOverflow")?;
-            fo4_render::terrain::append_terrain(&mut built.list, t, tag, &budget)?;
+            textures.push(fo4_render::terrain::append_textured_terrain(
+                &mut built.list,
+                t,
+                &store,
+                &mut loader,
+                &mut cache,
+                tag,
+                policy,
+                limits,
+                &budget,
+            )?);
         }
         terrain_summary = Some(
-            serde_json::json!({"drawn":!set.terrains.is_empty(),"first_instance_tag":first,"pieces":set.pieces,"neighbours_searched":set.neighbours_searched,"shading":"flat neutral grey per triangle by geometric normal; diagnostic, not game lighting"}),
+            serde_json::json!({"drawn":!set.terrains.is_empty(),"first_instance_tag":first,"pieces":set.pieces,"neighbours_searched":set.neighbours_searched,"textures":textures,"landscape_textures":cache.outcomes(),"texture_path_rules":cache.path_rules,"shading":TERRAIN_SHADING}),
         );
     } else if terrain {
         use fo4_scene::terrain::{self, Outcome};
@@ -121,8 +137,21 @@ fn run() -> AnyResult<()> {
                 Outcome::Built(t) => {
                     // Tagged after every placed instance.
                     let tag = u32::try_from(built.instances.len())?;
-                    fo4_render::terrain::append_terrain(&mut built.list, &t, tag, &budget)?;
-                    serde_json::json!({"drawn":true,"instance_tag":tag,"land":t.land,"grid":t.grid,"diagonal":t.diagonal,"rules":t.rules,"state":t.state,"bounds":t.bounds(),"shading":"flat neutral grey per triangle by geometric normal; diagnostic, not game lighting"})
+                    let mut cache = fo4_render::terrain::TextureCache::new(
+                        fo4_render::draw::BuildOptions::reference(policy),
+                    );
+                    let textures = fo4_render::terrain::append_textured_terrain(
+                        &mut built.list,
+                        &t,
+                        &store,
+                        &mut loader,
+                        &mut cache,
+                        tag,
+                        policy,
+                        limits,
+                        &budget,
+                    )?;
+                    serde_json::json!({"drawn":true,"instance_tag":tag,"land":t.land,"grid":t.grid,"diagonal":t.diagonal,"rules":t.rules,"state":t.state,"bounds":t.bounds(),"textures":textures,"landscape_textures":cache.outcomes(),"texture_path_rules":cache.path_rules,"shading":TERRAIN_SHADING})
                 }
                 Outcome::Refused(r) => serde_json::json!({"drawn":false,"refusal":r}),
             },

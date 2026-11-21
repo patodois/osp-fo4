@@ -212,7 +212,13 @@ struct Raster<'a> {
     options: RenderOptions,
 }
 impl Raster<'_> {
-    fn triangle(&mut self, mut v: [Clip; 3], draw: &Draw, tex: &Texture) -> Result<()> {
+    fn triangle(
+        &mut self,
+        mut v: [Clip; 3],
+        draw: &Draw,
+        tex: &Texture,
+        overlay: bool,
+    ) -> Result<()> {
         let mut p = [[0.; 2]; 3];
         for i in 0..3 {
             p[i] = self
@@ -293,7 +299,8 @@ impl Raster<'_> {
                 }
                 let depth = (1. / inv) as f32;
                 let at = y as usize * w as usize + x as usize;
-                if depth >= self.opaque_depth[at] {
+                let stored = self.opaque_depth[at];
+                if depth > stored || depth == stored && !overlay {
                     continue;
                 }
                 let uv = std::array::from_fn(|j| {
@@ -361,10 +368,10 @@ impl Raster<'_> {
         }
         Ok(())
     }
-    fn emit(&mut self, v: [Clip; 3], draw: &Draw, texture: &Texture) -> Result<()> {
+    fn emit(&mut self, v: [Clip; 3], draw: &Draw, texture: &Texture, overlay: bool) -> Result<()> {
         clipped(v, self.camera, |t| {
             self.frame.statistics.clipped_triangles += 1;
-            self.triangle(t, draw, texture)
+            self.triangle(t, draw, texture, overlay)
         })
     }
 }
@@ -429,6 +436,7 @@ pub fn render(
     for tex in &list.textures {
         tex.validate()?;
     }
+    list.validate_overlays()?;
     let mut transparent = Vec::new();
     let mut ordinal = 0;
     for (di, draw) in list.draws.iter().enumerate() {
@@ -500,7 +508,7 @@ pub fn render(
                     &scratch,
                 )?;
             } else {
-                raster.emit(v, draw, tex)?;
+                raster.emit(v, draw, tex, list.is_overlay(di))?;
             }
         }
     }
@@ -511,7 +519,12 @@ pub fn render(
     });
     for t in transparent {
         let d = &list.draws[t.draw];
-        raster.emit(t.vertices, d, &list.textures[d.texture])?;
+        raster.emit(
+            t.vertices,
+            d,
+            &list.textures[d.texture],
+            list.is_overlay(t.draw),
+        )?;
     }
     Ok(raster.frame)
 }

@@ -243,6 +243,31 @@ pub struct DrawList {
     pub meshes: Vec<Mesh>,
     pub textures: Vec<Texture>,
     pub draws: Vec<Draw>,
+    /// Indices into `draws`, strictly increasing, of draws laid over an
+    /// opaque draw of the same triangles (the terrain's texture passes): a
+    /// sample of such a draw whose depth equals the stored opaque depth is
+    /// kept. Every other draw keeps only samples strictly nearer than it.
+    pub overlays: Vec<usize>,
+}
+impl DrawList {
+    /// Whether draw `i` is an overlay; fails unless `overlays` is strictly
+    /// increasing and within `draws`.
+    pub fn validate_overlays(&self) -> Result<()> {
+        let ordered = self.overlays.windows(2).all(|w| w[0] < w[1]);
+        if !ordered || self.overlays.last().is_some_and(|i| *i >= self.draws.len()) {
+            return Err(Error::new(
+                "InvalidOverlayDraws",
+                "draw list",
+                0,
+                "strictly increasing draw indices",
+                format!("{} of {} draws", self.overlays.len(), self.draws.len()),
+            ));
+        }
+        Ok(())
+    }
+    pub fn is_overlay(&self, draw: usize) -> bool {
+        self.overlays.binary_search(&draw).is_ok()
+    }
 }
 pub(crate) fn append<T>(v: &mut Vec<T>, value: T, b: &Budget) -> Result<()> {
     b.reserve(v, 1, "render", 0)?;

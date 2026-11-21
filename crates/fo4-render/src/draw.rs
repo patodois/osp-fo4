@@ -178,6 +178,133 @@ struct Builder<'a, 's> {
     include_marker_subtrees: bool,
     allow_visibility_marker: bool,
 }
+/// A diffuse texture decoded under the reference limits, with the DDS
+/// declarations the summary reports.
+pub struct DecodedTexture {
+    pub texture: Texture,
+    pub declared_dxgi: Option<u32>,
+    pub declared_fourcc: u32,
+}
+/// Decodes texture asset `id` of `loader` as the draw-list builder does: the
+/// first single-surface level not larger than `options.max_texture_dimension`
+/// (else the smallest), then every coarser level while the running total
+/// `texture_bytes` stays within `options.max_texture_bytes`. Returns the
+/// texture before `Texture::validate`.
+pub fn decode_texture(
+    loader: &Loader<'_>,
+    id: usize,
+    options: BuildOptions,
+    texture_bytes: &mut u64,
+    limits: &Limits,
+    budget: &Budget,
+) -> Result<DecodedTexture> {
+    let scratch = budget.child();
+    let mut declared_dxgi = None;
+    let mut declared_fourcc = 0;
+    let texture = loader.assets.with_decoded(id, &scratch, |d| {
+        let DecodedAsset::Texture(t) = d else {
+            return Err(error("RenderAssetKind", "texture", 0, id));
+        };
+        declared_dxgi = t.dx10.map(|d| d[0]);
+        declared_fourcc = t.header[20];
+        if t.cubemap || t.array_size != 1 || t.depth != 1 {
+            return Err(error(
+                "RenderDiffuseTextureShape",
+                "texture",
+                0,
+                format!(
+                    "array={} cube={} depth={}",
+                    t.array_size, t.cubemap, t.depth
+                ),
+            ));
+        }
+        let index = t
+            .surfaces
+            .iter()
+            .position(|s| {
+                s.array == 0
+                    && s.face == 0
+                    && s.depth == 1
+                    && s.width <= options.max_texture_dimension
+                    && s.height <= options.max_texture_dimension
+            })
+            .or_else(|| {
+                t.surfaces
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, s)| s.array == 0 && s.face == 0 && s.depth == 1)
+                    .min_by_key(|(_, s)| s.width as u64 * s.height as u64)
+                    .map(|(i, _)| i)
+            })
+            .ok_or_else(|| {
+                error(
+                    "NoBudgetedDiffuseMip",
+                    "texture",
+                    0,
+                    options.max_texture_dimension,
+                )
+            })?;
+        let s = &t.surfaces[index];
+        let bytes = fo4_core::mul(
+            fo4_core::mul(s.width as u64, s.height as u64, "texture", 0)?,
+            16,
+            "texture",
+            0,
+        )?;
+        let total = fo4_core::add(*texture_bytes, bytes, "diffuse texture budget", 0)?;
+        fo4_core::limit(
+            total,
+            options.max_texture_bytes,
+            "diffuse texture budget",
+            0,
+        )?;
+        let rgba = t.decode(index, limits, budget)?;
+        *texture_bytes = total;
+        let mut mips = Vec::new();
+        for (i, level) in t
+            .surfaces
+            .iter()
+            .enumerate()
+            .filter(|(_, m)| m.array == 0 && m.face == 0 && m.depth == 1 && m.mip > s.mip)
+        {
+            let size = fo4_core::mul(
+                fo4_core::mul(level.width as u64, level.height as u64, "mip", 0)?,
+                16,
+                "mip",
+                0,
+            )?;
+            let total = fo4_core::add(*texture_bytes, size, "mip budget", 0)?;
+            if total > options.max_texture_bytes {
+                break;
+            }
+            let rgba = t.decode(i, limits, budget)?;
+            append(
+                &mut mips,
+                crate::Mip {
+                    width: level.width,
+                    height: level.height,
+                    rgba,
+                    mip: level.mip,
+                },
+                budget,
+            )?;
+            *texture_bytes = total;
+        }
+        Ok(Texture {
+            mips,
+            width: s.width,
+            height: s.height,
+            rgba,
+            mip: s.mip,
+            srgb: t.srgb,
+        })
+    })?;
+    Ok(DecodedTexture {
+        texture,
+        declared_dxgi,
+        declared_fourcc,
+    })
+}
 impl Builder<'_, '_> {
     fn resolve_path(&self, c: Citation, raw: &[u8], b: &Budget) -> Result<Vec<u8>> {
         let r = self.loader.assets.resolve_path(c, raw, b)?;
@@ -215,108 +342,16 @@ impl Builder<'_, '_> {
             return Ok(*i);
         }
         let id = self.asset(AssetKind::Texture, &path)?;
-        let scratch = self.budget.child();
-        let loader = self.loader;
-        let mut declared_dxgi = None;
-        let mut declared_fourcc = 0;
-        let texture = loader.assets.with_decoded(id, &scratch, |d| {
-            let DecodedAsset::Texture(t) = d else {
-                return Err(error("RenderAssetKind", "texture", 0, id));
-            };
-            declared_dxgi = t.dx10.map(|d| d[0]);
-            declared_fourcc = t.header[20];
-            if t.cubemap || t.array_size != 1 || t.depth != 1 {
-                return Err(error(
-                    "RenderDiffuseTextureShape",
-                    "texture",
-                    0,
-                    format!(
-                        "array={} cube={} depth={}",
-                        t.array_size, t.cubemap, t.depth
-                    ),
-                ));
-            }
-            let index = t
-                .surfaces
-                .iter()
-                .position(|s| {
-                    s.array == 0
-                        && s.face == 0
-                        && s.depth == 1
-                        && s.width <= self.options.max_texture_dimension
-                        && s.height <= self.options.max_texture_dimension
-                })
-                .or_else(|| {
-                    t.surfaces
-                        .iter()
-                        .enumerate()
-                        .filter(|(_, s)| s.array == 0 && s.face == 0 && s.depth == 1)
-                        .min_by_key(|(_, s)| s.width as u64 * s.height as u64)
-                        .map(|(i, _)| i)
-                })
-                .ok_or_else(|| {
-                    error(
-                        "NoBudgetedDiffuseMip",
-                        "texture",
-                        0,
-                        self.options.max_texture_dimension,
-                    )
-                })?;
-            let s = &t.surfaces[index];
-            let bytes = fo4_core::mul(
-                fo4_core::mul(s.width as u64, s.height as u64, "texture", 0)?,
-                16,
-                "texture",
-                0,
-            )?;
-            let total = fo4_core::add(self.texture_bytes, bytes, "diffuse texture budget", 0)?;
-            fo4_core::limit(
-                total,
-                self.options.max_texture_bytes,
-                "diffuse texture budget",
-                0,
-            )?;
-            let rgba = t.decode(index, self.limits, self.budget)?;
-            self.texture_bytes = total;
-            let mut mips = Vec::new();
-            for (i, level) in t
-                .surfaces
-                .iter()
-                .enumerate()
-                .filter(|(_, m)| m.array == 0 && m.face == 0 && m.depth == 1 && m.mip > s.mip)
-            {
-                let size = fo4_core::mul(
-                    fo4_core::mul(level.width as u64, level.height as u64, "mip", 0)?,
-                    16,
-                    "mip",
-                    0,
-                )?;
-                let total = fo4_core::add(self.texture_bytes, size, "mip budget", 0)?;
-                if total > self.options.max_texture_bytes {
-                    break;
-                }
-                let rgba = t.decode(i, self.limits, self.budget)?;
-                append(
-                    &mut mips,
-                    crate::Mip {
-                        width: level.width,
-                        height: level.height,
-                        rgba,
-                        mip: level.mip,
-                    },
-                    self.budget,
-                )?;
-                self.texture_bytes = total;
-            }
-            Ok(Texture {
-                mips,
-                width: s.width,
-                height: s.height,
-                rgba,
-                mip: s.mip,
-                srgb: t.srgb,
-            })
-        })?;
+        let loaded = decode_texture(
+            self.loader,
+            id,
+            self.options,
+            &mut self.texture_bytes,
+            self.limits,
+            self.budget,
+        )?;
+        let (texture, declared_dxgi, declared_fourcc) =
+            (loaded.texture, loaded.declared_dxgi, loaded.declared_fourcc);
         texture.validate()?;
         let index = self.output.list.textures.len();
         self.budget

@@ -60,6 +60,7 @@ fn list() -> DrawList {
             uv_scale: [1.; 2],
             raw_tile_flags: None,
         }],
+        overlays: Vec::new(),
     }
 }
 fn frame(l: &DrawList, c: &Camera, workers: usize) -> Frame {

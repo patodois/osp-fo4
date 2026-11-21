@@ -18,8 +18,10 @@ usage:
       also stands on the terrain of the cell and its neighbours when the level
       accepts the terrain rules. A walker that stays in the air below the
       lowest collision for a second is put back where it last stood.
-      --terrain also draws the cell's own terrain, plain grey as the CPU
-      render's --terrain (needs --under-hypotheses while its rules are pending).
+      --terrain also draws the cell's own terrain with its ground textures,
+      as the CPU render's --terrain (needs --under-hypotheses while its rules
+      are pending); weight of a texture no record names or that is refused
+      is drawn plain grey.
       --around N (1 to 3) also loads the exterior cells within N grid steps:
       their placed objects are drawn and, with --walk, collided; with
       --terrain their terrain is drawn too.

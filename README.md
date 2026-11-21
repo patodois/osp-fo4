@@ -21,8 +21,11 @@ capsule over a cell's collision under provisional, registered rules.
 - **Scenes**: a cell's placed references with their base records, models,
   materials and textures, each with the reasons it can or cannot be drawn.
 - **Terrain**: the LAND heights of an exterior cell placed in world space
-  under pending rules, drawn as plain geometry with `render --terrain` and
-  reported by `fo4-unpack land` ([terrain](spec/land.md)).
+  under pending rules, drawn with `render --terrain` with its ground
+  textures (base and alpha layers weighted per vertex, vertex colours) under
+  further pending rules, and reported by `fo4-unpack land`
+  ([terrain](spec/land.md)). The default ground texture no record names is
+  drawn grey, and the texture repeat is a placeholder.
 - **Rendering**: a deterministic unlit CPU rasterizer and tools that compare
   its frames with photographs of the game.
 - **Walking**: a deterministic capsule controller (gravity, ground, walls,
@@ -106,8 +109,8 @@ target/fo4-view/debug/fo4-view examples/fallout4.json "$FO4_DATA" Financial13 \
 
 Add `--walk` to walk instead of fly: the camera rides the walking controller
 at its eye height, Shift runs and Tab switches between walking and flying.
-Add `--terrain` to draw an exterior cell's terrain in plain grey, as
-`render --terrain` does; in walk mode the controller stands on the terrain
+Add `--terrain` to draw an exterior cell's terrain with its ground
+textures, as `render --terrain` does; in walk mode the controller stands on the terrain
 with or without the flag. A walker that stays in the air below the lowest
 collision for a second is put back where it last stood (a viewer
 convenience). Add `--around N` (1 to 3), to the viewer or to the `render`
