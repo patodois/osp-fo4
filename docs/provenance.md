@@ -56,9 +56,13 @@ stored object, with the decoded vertices checked against the boxes stored
 beside them and the decoded meshes compared with the render meshes of the
 same files. Exploration used a sample of the stored payloads and a throwaway
 script kept outside the repository; every enforced rule was then counted over
-the whole installation. No Havok SDK, header, documentation, converter,
-decompilation or third-party reader or schema of this format was opened or
-searched for.
+the whole installation. The box trees, byte 92 and the vertex records of
+byte-93 sections were decoded the same way, from a local dump of the objects
+that use them, by testing candidate readings against the stored section and
+object boxes and against the render meshes; the census counts each reading
+and its rejected alternatives. No Havok SDK, header, documentation,
+converter, decompilation or third-party reader or schema of this format was
+opened or searched for.
 
 Runtime experiments measure an owned running copy through separately collected
 camera/transform words and repeated photographs. Their raw data stays local.

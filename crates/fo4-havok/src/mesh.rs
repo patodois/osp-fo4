@@ -1,16 +1,14 @@
 //! Typed views of `hknpCompressedMeshShape` and the
 //! `hknpCompressedMeshShapeData` object it links to: the array slots of both,
-//! the 96-byte sections of the data object, and the vertices and 4-index
-//! primitives the sections address.
+//! the 96-byte sections of the data object, the two box trees, and the
+//! vertices, 4-index primitives and vertex records the sections address
+//! (`geometry.rs`, `tree.rs`).
 //!
 //! Every rule enforced here held on every stored object of both classes in
 //! the measured installation; `spec/havok-mesh.md` gives the counts. Offsets
 //! are from the object's offset. Field names are this project's labels for
-//! measured roles ("section", "primitive", "shared vertex", "run"); what the
-//! game does with them is a hypothesis. Sections whose byte 93 is 1 store
-//! some primitives in a form that is not decoded, and byte 92 has values whose
-//! meaning is open; [`MeshData::geometry`] leaves such sections out and lists
-//! them.
+//! measured roles ("section", "primitive", "shared vertex", "run", "record");
+//! what the game does with them is a hypothesis.
 use crate::view::{Array, View};
 use crate::Container;
 use fo4_core::{Budget, Error, Result};
@@ -178,7 +176,7 @@ pub struct MeshSection {
     /// Offset of the section from the data object's offset.
     pub offset: u32,
     /// The array slot at section byte 0: 2 × primitives − 1 nodes of 4 bytes,
-    /// kept opaque.
+    /// the box tree of the primitives ([`MeshData::primitive_boxes`]).
     pub tree: Array,
     /// Section bytes 16 and 32: three f32 each, the box of its vertices.
     pub min: [f32; 3],
@@ -199,10 +197,12 @@ pub struct MeshSection {
     pub runs: Range<u32>,
     /// u16 at byte 90; meaning open.
     pub word90: u16,
-    /// Byte 93 is 1: some primitives are stored in a form not decoded here.
+    /// Byte 93 is 1: primitives whose last three bytes are equal and whose
+    /// first byte is at least the vertex count address a vertex record
+    /// ([`MeshRecord`]) instead of four vertices.
     pub flagged: bool,
-    /// Byte 92: 0 to 4 in the measured sections; meaning open. Only
-    /// sections with 0 are decoded.
+    /// Byte 92: the high part (<< 16) of every shared-vertex position and
+    /// record offset the section reads through its u16 shared indices.
     pub byte92: u8,
 }
 impl MeshSection {
@@ -210,39 +210,10 @@ impl MeshSection {
     pub fn index_limit(&self) -> u32 {
         self.vertices.len() as u32 + self.shared.len() as u32
     }
-}
-
-/// One stored primitive with its indices into [`Geometry::vertices`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-pub struct Primitive {
-    pub section: u32,
-    /// Low u16 of the run that covers the primitive; below the length of the
-    /// material array linked from the shape in every measured run.
-    pub run_value: u16,
-    /// The four stored bytes, each resolved to a vertex. The third and fourth
-    /// are equal in about one measured primitive in six; how the four form
-    /// triangles is not established (`spec/havok-mesh.md`).
-    pub indices: [u32; 4],
-}
-
-/// Decoded vertices and primitives of the sections whose bytes 92 and 93 are
-/// zero.
-#[derive(Debug, Clone, Serialize)]
-pub struct Geometry {
-    /// The section vertices of each decoded section in stored order, each
-    /// section's own vertices followed by the shared vertices it is the first
-    /// to reference.
-    pub vertices: Vec<[f32; 3]>,
-    pub primitives: Vec<Primitive>,
-    /// Primitives stored as [`PLACEHOLDER_PRIMITIVE`], left out of `primitives`.
-    pub placeholders: usize,
-    /// Sections left out because byte 92 or 93 is not zero.
-    pub skipped: Vec<u32>,
-}
-impl Geometry {
-    /// Every section was decoded.
-    pub fn is_complete(&self) -> bool {
-        self.skipped.is_empty()
+    /// Added to every u16 the section reads from the shared-index array to
+    /// reach an element of the array at +144: byte 92 << 16.
+    pub fn shared_high(&self) -> u32 {
+        u32::from(self.byte92) << 16
     }
 }
 
@@ -266,10 +237,6 @@ pub struct MeshData<'a> {
     file: String,
     #[serde(skip)]
     at0: u64,
-}
-
-fn inside(lo: f32, hi: f32, x: f32, tolerance: f64) -> bool {
-    f64::from(x) >= f64::from(lo) - tolerance && f64::from(x) <= f64::from(hi) + tolerance
 }
 
 impl<'a> MeshData<'a> {
@@ -438,142 +405,6 @@ impl<'a> MeshData<'a> {
         let w = self.word(self.arrays[RUNS].element_at(j as usize)?)?;
         Some((w as u16, (w >> 16) as u8, (w >> 24) as u8))
     }
-    /// Decodes every section whose bytes 92 and 93 are zero and lists the
-    /// others in [`Geometry::skipped`]. A vertex outside its section's box, a
-    /// shared index past the shared vertices or a primitive index at or past
-    /// the section's vertices is `InvalidHavokCompressedMeshData`.
-    pub fn geometry(&self, b: &Budget) -> Result<Geometry> {
-        const CODE: &str = "InvalidHavokCompressedMeshData";
-        let shared = self.arrays[SHARED_VERTICES].count as usize;
-        let mut out = Geometry {
-            vertices: Vec::new(),
-            primitives: Vec::new(),
-            placeholders: 0,
-            skipped: Vec::new(),
-        };
-        // Position in `vertices` of each shared vertex once referenced.
-        let mut placed = Vec::new();
-        b.reserve(&mut placed, shared, &self.file, self.at0)?;
-        placed.resize(shared, u32::MAX);
-        for (si, s) in self.sections.iter().enumerate() {
-            if s.flagged || s.byte92 != 0 {
-                b.reserve(&mut out.skipped, 1, &self.file, self.at0)?;
-                out.skipped.push(si as u32);
-                continue;
-            }
-            let at = self.at0.saturating_add(u64::from(s.offset));
-            b.reserve(&mut out.vertices, s.index_limit() as usize, &self.file, at)?;
-            b.reserve(&mut out.primitives, s.primitives.len(), &self.file, at)?;
-            self.section_geometry(si, s, &mut out, &mut placed)
-                .map_err(|(at, expected, found)| self.err(CODE, at, expected, found))?;
-        }
-        Ok(out)
-    }
-
-    fn section_geometry(
-        &self,
-        si: usize,
-        s: &MeshSection,
-        out: &mut Geometry,
-        placed: &mut [u32],
-    ) -> std::result::Result<(), (usize, String, String)> {
-        let m = s
-            .min
-            .iter()
-            .chain(&s.max)
-            .fold(1f64, |m, x| m.max(f64::from(x.abs())));
-        let t = m * MESH_BOX_TOLERANCE;
-        let outside = |p: [f32; 3]| (0..3).find(|k| !inside(s.min[*k], s.max[*k], p[*k], t));
-        let mut map = [0u32; SECTION_VERTICES];
-        for (slot, i) in map.iter_mut().zip(s.vertices.clone()) {
-            let at = self.arrays[VERTICES].element_at(i as usize).unwrap_or(0);
-            let p = self.section_vertex(s, i).ok_or((
-                at,
-                "a vertex inside the array".to_owned(),
-                i.to_string(),
-            ))?;
-            if let Some(k) = outside(p) {
-                return Err((
-                    at,
-                    format!(
-                        "a vertex inside the section box [{}, {}]",
-                        s.min[k], s.max[k]
-                    ),
-                    p[k].to_string(),
-                ));
-            }
-            *slot = out.vertices.len() as u32;
-            out.vertices.push(p);
-        }
-        let nv = s.vertices.len();
-        let shared = placed.len();
-        for (k, j) in s.shared.clone().enumerate() {
-            let at = self.arrays[SHARED_INDICES]
-                .element_at(j as usize)
-                .unwrap_or(0);
-            let target = self.shared_index(j).unwrap_or(u16::MAX) as usize;
-            let p = self
-                .shared_vertex(target as u32)
-                .filter(|_| target < shared)
-                .ok_or((
-                    at,
-                    format!("a shared vertex index < {shared}"),
-                    target.to_string(),
-                ))?;
-            if let Some(a) = outside(p) {
-                return Err((
-                    at,
-                    format!(
-                        "a shared vertex inside the section box [{}, {}]",
-                        s.min[a], s.max[a]
-                    ),
-                    p[a].to_string(),
-                ));
-            }
-            let Some(at_list) = placed.get_mut(target) else {
-                continue;
-            };
-            if *at_list == u32::MAX {
-                *at_list = out.vertices.len() as u32;
-                out.vertices.push(p);
-            }
-            if let Some(slot) = map.get_mut(nv + k) {
-                *slot = *at_list;
-            }
-        }
-        let limit = s.index_limit();
-        let mut run = s.runs.start;
-        let mut run_end = 0u32;
-        let mut value = 0u16;
-        for (k, j) in s.primitives.clone().enumerate() {
-            while k as u32 >= run_end && run < s.runs.end {
-                if let Some((val, first, count)) = self.run(run) {
-                    value = val;
-                    run_end = u32::from(first) + u32::from(count);
-                }
-                run += 1;
-            }
-            let raw = self.primitive(j).unwrap_or(PLACEHOLDER_PRIMITIVE);
-            if raw == PLACEHOLDER_PRIMITIVE {
-                out.placeholders += 1;
-                continue;
-            }
-            if let Some(x) = raw.iter().position(|x| u32::from(*x) >= limit) {
-                let at = self.arrays[PRIMITIVES].element_at(j as usize).unwrap_or(0);
-                return Err((
-                    at + x,
-                    format!("a vertex index < {limit}"),
-                    raw[x].to_string(),
-                ));
-            }
-            out.primitives.push(Primitive {
-                section: si as u32,
-                run_value: value,
-                indices: raw.map(|x| map[x as usize]),
-            });
-        }
-        Ok(())
-    }
 }
 
 /// Reads and checks section `j` at data-object offset `e`.
@@ -688,6 +519,11 @@ fn section(v: &View<'_, '_>, arrays: &[Array], j: usize, e: usize) -> Result<Mes
     }
     Ok(s)
 }
+
+mod geometry;
+mod tree;
+pub use geometry::{Geometry, MeshRecord, Primitive, RECORD_KINDS};
+pub use tree::{shrink, MeshBox, TREE_SHRINK_DENOMINATOR};
 
 #[cfg(test)]
 mod tests;

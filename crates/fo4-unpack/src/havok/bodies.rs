@@ -3,9 +3,10 @@
 use super::{f32_at, mesh, u16_at, u32_at, zero, Kind};
 use fo4_core::Budget;
 use fo4_havok::{
-    orthonormal_error, segment_distance, Capsule, Compound, Container, ConvexPolytope, ConvexShape,
-    PhysicsSystem, ScaledConvex, Sphere, CAPSULE, COMPRESSED_MESH, CONVEX, CONVEX_POLYTOPE,
-    DYNAMIC_COMPOUND, INSTANCE, RAGDOLL, SCALED_CONVEX, SPHERE, STATIC_COMPOUND,
+    orthonormal_error, segment_distance, Capsule, Compound, CompressedMesh, Container,
+    ConvexPolytope, ConvexShape, MeshData, PhysicsSystem, ScaledConvex, Sphere, CAPSULE,
+    COMPRESSED_MESH, CONVEX, CONVEX_POLYTOPE, DYNAMIC_COMPOUND, INSTANCE, RAGDOLL, SCALED_CONVEX,
+    SPHERE, STATIC_COMPOUND,
 };
 use serde::Serialize;
 
@@ -93,7 +94,7 @@ pub(super) fn census(
     file: &str,
     base: u64,
     body_ids: &[u32],
-    render: Option<mesh::Extent>,
+    render: Option<&mesh::Render>,
 ) {
     let data = c.object_bytes();
     let b = Budget::new(1 << 26);
@@ -109,6 +110,8 @@ pub(super) fn census(
     let class_of = |i: Option<usize>| i.map_or("none", |i| c.objects[i].class);
     let mut geo = vec![Geo::Missing; c.objects.len()];
     let mut mesh_box = vec![None; c.objects.len()];
+    // Decoded meshes kept for the render comparison (files with render data).
+    let mut meshes: Vec<Option<fo4_havok::Geometry>> = vec![None; c.objects.len()];
     for span in c.object_spans() {
         let (i, o) = (span.index, span.offset as usize);
         let bytes = c.span_bytes(&span);
@@ -173,10 +176,15 @@ pub(super) fn census(
                 }
                 k.count("u16_16_18", &format!("{class}|{}", u16_pair(bytes)));
             }
-            COMPRESSED_MESH => match mesh::census(k, c, i, file, base, &b) {
+            // Each mesh has its own budget: one payload can hold many large
+            // meshes, and a budget counts every reservation it grants.
+            COMPRESSED_MESH => match mesh::census(k, c, i, file, base, &Budget::new(1 << 28)) {
                 Ok(g) => {
                     geo[i] = Geo::Leaf;
                     mesh_box[i] = Some(mesh::vertex_box(&g));
+                    if render.is_some() {
+                        meshes[i] = Some(g);
+                    }
                 }
                 Err(code) => geo[i] = Geo::Failed(code),
             },
@@ -390,7 +398,12 @@ pub(super) fn census(
             && body.rotation[..3] == [0.0; 3]
             && (f64::from(body.rotation[3].abs()) - 1.0).abs() <= 1e-6;
         if let (Some(r), Some(Some(m)), true, 1) = (render, mesh_box.get(body.shape), placed, n) {
-            mesh::units(k, *m, r);
+            mesh::units(k, *m, r.extent);
+            let data = CompressedMesh::read(c, body.shape, file, base)
+                .and_then(|s| MeshData::read(c, s.data, file, base, &Budget::new(1 << 28)));
+            if let (Some(Some(g)), Ok(d)) = (meshes.get(body.shape), data) {
+                mesh::triangles_vs_render(k, g, mesh::widest_section(&d), r);
+            }
         }
     }
     if let Some(a) = sys.array(80) {

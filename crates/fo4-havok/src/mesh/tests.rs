@@ -204,7 +204,6 @@ fn reads_a_synthetic_mesh() {
     assert_eq!((sec.tree.storage, sec.tree.count), (320, 3));
     assert_eq!(d.run(0), Some((0, 0, 2)));
     let g = d.geometry(&Budget::new(1 << 20)).unwrap();
-    assert!(g.is_complete());
     let expected = [
         [-1.0, -1.0, 0.0],
         [1.0, -1.0, 0.0],
@@ -228,19 +227,207 @@ fn reads_a_synthetic_mesh() {
 }
 
 #[test]
-fn placeholders_and_unsupported_sections() {
+fn placeholders_and_triangles() {
     let mut d = data();
     d[PRIMS_AT + 4..PRIMS_AT + 8].copy_from_slice(&PLACEHOLDER_PRIMITIVE);
     let g = geometry(&build(&spec(shape(), d))).unwrap();
     assert_eq!((g.primitives.len(), g.placeholders), (1, 1));
-    for (byte, value) in [(93, 1u8), (92, 1), (92, 4)] {
-        let mut d = data();
-        d[SECTION_AT + byte] = value;
-        let g = geometry(&build(&spec(shape(), d))).unwrap();
-        assert_eq!(g.skipped, [0]);
-        assert!(!g.is_complete());
-        assert!(g.vertices.is_empty() && g.primitives.is_empty());
+    let g = geometry(&build(&spec(shape(), data()))).unwrap();
+    assert_eq!(
+        g.primitives.iter().map(|p| p.quad).collect::<Vec<_>>(),
+        [false, true]
+    );
+    assert_eq!(g.primitives[0].triangles(), ([0, 1, 2], None));
+    assert_eq!(g.primitives[1].triangles(), ([0, 1, 3], Some([0, 3, 2])));
+    assert_eq!(
+        g.triangles().collect::<Vec<_>>(),
+        [[0, 1, 2], [0, 1, 3], [0, 3, 2]]
+    );
+    assert!(g.records.is_empty() && g.record_vertices.is_empty());
+}
+
+#[test]
+fn byte_92_is_the_high_part_of_shared_positions() {
+    let mut d = data();
+    d[SECTION_AT + 92] = 1;
+    let bytes = build(&spec(shape(), d.clone()));
+    let c = read(&bytes).unwrap();
+    let m = MeshData::read(&c, 2, F, 1000, &Budget::new(1 << 20)).unwrap();
+    assert_eq!(m.sections[0].shared_high(), 0x1_0000);
+    // The u16 0 now names element 65536 of a one-element array.
+    let bytes = build(&spec(shape(), d));
+    assert_eq!(
+        first_error(&bytes),
+        Some((
+            "InvalidHavokCompressedMeshData".into(),
+            abs(&bytes, DATA + SHARED_INDEX_AT)
+        ))
+    );
+}
+
+#[test]
+fn tree_shrink_is_squared_nibble_over_226() {
+    let parent: MeshBox = ([0.0, -1.0, 2.0], [226.0, 1.0, 4.0]);
+    let (lo, hi) = shrink(&parent, [0x10, 0x0f, 0x22]);
+    assert_eq!(lo, [1.0, -1.0, 2.0 + 8.0 / 226.0]);
+    assert_eq!(hi, [226.0, 1.0 - 450.0 / 226.0, 4.0 - 8.0 / 226.0]);
+    assert_eq!(TREE_SHRINK_DENOMINATOR, 226.0);
+}
+
+/// Section box (-1, -1, 0)..(1, 1, 2) and the box of primitive 1 in the
+/// tree written by [`flagged`]: x minimum up by 1/226, y maximum down by
+/// 1/226, z both by 4/226 of the extent.
+fn leaf_one() -> MeshBox {
+    (
+        [-1.0 + 2.0 / 226.0, -1.0, 8.0 / 226.0],
+        [1.0, 1.0 - 2.0 / 226.0, 2.0 - 8.0 / 226.0],
+    )
+}
+
+/// The synthetic data with byte 93 set: shared indices [0, tag, offset,
+/// third], primitive 1 stored as [4, 9, 9, 9] (a record at shared position
+/// 1), a second element at +144 holding the record words, and a section
+/// tree (inner, leaf 0, leaf 1).
+fn flagged(tag: u16, offset: u16, third: u16, words: [u32; 2]) -> Vec<u8> {
+    let mut d = data();
+    d[SECTION_AT + 93] = 1;
+    slot(&mut d, 112, 4);
+    slot(&mut d, 144, 2);
+    d[SECTION_AT + 89] = 4;
+    for (k, v) in [0u16, tag, offset, third].into_iter().enumerate() {
+        d[SHARED_INDEX_AT + 2 * k..SHARED_INDEX_AT + 2 * k + 2].copy_from_slice(&v.to_le_bytes());
     }
+    d[PRIMS_AT + 4..PRIMS_AT + 8].copy_from_slice(&[4, 9, 9, 9]);
+    put(&mut d, SHARED_AT + 8, words[0]);
+    put(&mut d, SHARED_AT + 12, words[1]);
+    let tree = [[0, 0, 0, 1], [0, 0, 0, 0], [0x10, 0x01, 0x22, 2]];
+    for (k, n) in tree.iter().enumerate() {
+        d[320 + 4 * k..324 + 4 * k].copy_from_slice(n);
+    }
+    d
+}
+
+fn close(a: [f32; 3], b: [f64; 3]) -> bool {
+    a.iter()
+        .zip(b)
+        .all(|(x, y)| (f64::from(*x) - y).abs() < 1e-6)
+}
+
+#[test]
+fn reads_vertex_records() {
+    // Kind 0x51 with two words: the leaf box's minimum and maximum corners.
+    let top = 0x7ff | (0x7ff << 11) | (0x3ff << 22);
+    let d = flagged(0x0251, 1, 0x3c24, [0, top]);
+    let bytes = build(&spec(shape(), d.clone()));
+    let c = read(&bytes).unwrap();
+    let m = MeshData::read(&c, 2, F, 1000, &Budget::new(1 << 20)).unwrap();
+    let boxes = m
+        .primitive_boxes(&m.sections[0], &Budget::new(1 << 20))
+        .unwrap();
+    assert_eq!(boxes.len(), 2);
+    assert_eq!(boxes[0], ([-1.0, -1.0, 0.0], [1.0, 1.0, 2.0]));
+    let want = leaf_one();
+    for k in 0..3 {
+        assert!((boxes[1].0[k] - want.0[k]).abs() < 1e-12);
+        assert!((boxes[1].1[k] - want.1[k]).abs() < 1e-12);
+    }
+    let top_tree = m.section_boxes(&Budget::new(1 << 20)).unwrap();
+    assert_eq!(top_tree, [([-1.0, -1.0, 0.0], [1.0, 1.0, 2.0])]);
+    let g = m.geometry(&Budget::new(1 << 20)).unwrap();
+    assert_eq!(g.primitives.len(), 1);
+    assert_eq!(g.records.len(), 1);
+    let r = &g.records[0];
+    assert_eq!(
+        (r.section, r.primitive, r.kind, r.repeated, r.offset),
+        (0, 1, 0x51, 9, 1)
+    );
+    assert_eq!(r.radius, f32::from_bits(0x3c24_0000));
+    assert_eq!(r.vertices, 0..2);
+    assert!(close(g.record_vertices[0], want.0));
+    assert!(close(g.record_vertices[1], want.1));
+    // Kind 0x50 with one word: the high half of the element; the low half is
+    // left over.
+    let d = flagged(0x0150, 1, 0x3c24, [0xdead_beef, top]);
+    let g = geometry(&build(&spec(shape(), d))).unwrap();
+    assert_eq!(g.records[0].vertices, 0..1);
+    assert!(close(g.record_vertices[0], want.1));
+    // Kind 0x12 has no radius: its third u16 is a shared index again.
+    let d = flagged(0x0212, 1, 0, [0, top]);
+    let g = geometry(&build(&spec(shape(), d))).unwrap();
+    assert_eq!(g.records[0].radius, 0.0);
+    // A primitive whose last bytes are equal is a triangle outside flagged
+    // sections.
+    let mut d = flagged(0x0251, 1, 0x3c24, [0, top]);
+    d[SECTION_AT + 93] = 0;
+    let bytes = build(&spec(shape(), d));
+    assert_eq!(
+        first_error(&bytes).map(|e| e.0),
+        Some("InvalidHavokCompressedMeshData".into())
+    );
+}
+
+#[test]
+fn record_errors() {
+    const C: &str = "InvalidHavokCompressedMeshData";
+    let top = 0x7ff | (0x7ff << 11) | (0x3ff << 22);
+    let tag_at = DATA + SHARED_INDEX_AT + 2;
+    let cases: Vec<(Vec<u8>, usize)> = vec![
+        // Unmeasured kind.
+        (flagged(0x0253, 1, 0x3c24, [0, top]), tag_at),
+        // No words.
+        (flagged(0x0051, 1, 0x3c24, [0, top]), tag_at + 1),
+        // Words past the array at +144.
+        (flagged(0x0451, 1, 0x3c24, [0, top]), tag_at + 2),
+        (flagged(0x0251, 2, 0x3c24, [0, top]), tag_at + 2),
+        // A NaN radius.
+        (flagged(0x0251, 1, 0x7fc0, [0, top]), tag_at + 4),
+        // A negative radius.
+        (flagged(0x0251, 1, 0xbf80, [0, top]), tag_at + 4),
+    ];
+    for (k, (d, at)) in cases.into_iter().enumerate() {
+        let bytes = build(&spec(shape(), d));
+        assert_eq!(
+            first_error(&bytes),
+            Some((C.into(), abs(&bytes, at))),
+            "case {k}"
+        );
+    }
+    // The record runs past the section's shared indices.
+    let mut d = flagged(0x0251, 1, 0x3c24, [0, top]);
+    d[PRIMS_AT + 4] = 6;
+    let bytes = build(&spec(shape(), d));
+    assert_eq!(
+        first_error(&bytes),
+        Some((C.into(), abs(&bytes, DATA + SHARED_INDEX_AT + 6)))
+    );
+    // A four-index primitive reaching into the record.
+    let mut d = flagged(0x0251, 1, 0x3c24, [0, top]);
+    d[PRIMS_AT + 2..PRIMS_AT + 4].copy_from_slice(&[5, 5]);
+    let bytes = build(&spec(shape(), d));
+    assert_eq!(
+        first_error(&bytes),
+        Some((C.into(), abs(&bytes, DATA + PRIMS_AT + 2)))
+    );
+    // A tree whose leaves repeat, and a leaf box with minimum above maximum.
+    let mut d = flagged(0x0251, 1, 0x3c24, [0, top]);
+    d[320 + 11] = 0;
+    let bytes = build(&spec(shape(), d));
+    assert_eq!(
+        first_error(&bytes),
+        Some((C.into(), abs(&bytes, DATA + 328)))
+    );
+    let mut d = flagged(0x0251, 1, 0x3c24, [0, top]);
+    d[320 + 8] = 0xff;
+    let bytes = build(&spec(shape(), d));
+    assert_eq!(
+        first_error(&bytes),
+        Some((C.into(), abs(&bytes, DATA + 320)))
+    );
+    // A tree with an inner node too many.
+    let mut d = flagged(0x0251, 1, 0x3c24, [0, top]);
+    d[320 + 7] = 1;
+    let bytes = build(&spec(shape(), d));
+    assert_eq!(first_error(&bytes).map(|e| e.0), Some(C.into()));
 }
 
 type Change = Box<dyn Fn(&mut Vec<u8>, &mut Vec<u8>)>;
@@ -401,6 +588,20 @@ fn single_byte_changes_never_panic() {
                 d2[at - s.len()] = value;
             }
             let _ = first_error(&build(&spec(s2, d2)));
+        }
+    }
+}
+
+#[test]
+fn record_byte_changes_never_panic() {
+    let top = 0x7ff | (0x7ff << 11) | (0x3ff << 22);
+    let (s, d) = (shape(), flagged(0x0251, 1, 0x3c24, [0, top]));
+    assert_eq!(first_error(&build(&spec(s.clone(), d.clone()))), None);
+    for at in 0..d.len() {
+        for value in [0u8, 1, 0x52, 0x7f, 0x80, 0xff] {
+            let mut d2 = d.clone();
+            d2[at] = value;
+            let _ = first_error(&build(&spec(s.clone(), d2)));
         }
     }
 }

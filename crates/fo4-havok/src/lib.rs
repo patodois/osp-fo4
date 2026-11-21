@@ -13,7 +13,8 @@
 //! with its bodies (shape link and placement), and the simple shapes
 //! [`Sphere`], [`Capsule`], [`ConvexShape`], [`ScaledConvex`] and
 //! [`Compound`] (`spec/havok-bodies.md`), and the compressed mesh
-//! [`CompressedMesh`] with its [`MeshData`] (`spec/havok-mesh.md`). A payload
+//! [`CompressedMesh`] with its [`MeshData`], box trees and vertex records
+//! (`spec/havok-mesh.md`). A payload
 //! outside the measured profile is a named error carrying the file offset;
 //! nothing here panics.
 use fo4_core::{Budget, Error, Result};
@@ -29,9 +30,10 @@ pub use bodies::{
     UNIT_TOLERANCE,
 };
 pub use mesh::{
-    CompressedMesh, Geometry, MeshData, MeshSection, Primitive, COMPRESSED_MESH,
-    COMPRESSED_MESH_DATA, MESH_BOX_TOLERANCE, MESH_DATA_ARRAYS, MESH_DATA_FIXED, MESH_SHAPE_ARRAYS,
-    MESH_SHAPE_FIXED, PLACEHOLDER_PRIMITIVE, SECTION, SECTION_TREE_NODE, SECTION_VERTICES,
+    shrink, CompressedMesh, Geometry, MeshBox, MeshData, MeshRecord, MeshSection, Primitive,
+    COMPRESSED_MESH, COMPRESSED_MESH_DATA, MESH_BOX_TOLERANCE, MESH_DATA_ARRAYS, MESH_DATA_FIXED,
+    MESH_SHAPE_ARRAYS, MESH_SHAPE_FIXED, PLACEHOLDER_PRIMITIVE, RECORD_KINDS, SECTION,
+    SECTION_TREE_NODE, SECTION_VERTICES, TREE_SHRINK_DENOMINATOR,
 };
 pub use objects::{
     ConvexPolytope, Face, ObjectSpan, CONVEX_POLYTOPE, CONVEX_POLYTOPE_FIXED, MAX_VERTEX_ROWS,

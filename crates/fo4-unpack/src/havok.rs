@@ -156,13 +156,13 @@ fn u32_at(bytes: &[u8], at: usize) -> Option<u32> {
 }
 
 /// Measures one payload; `body_ids` are the Body IDs of the
-/// bhkNPCollisionObject on its system; `render` is the box of the file's
-/// render meshes when the file has one system and identity transforms.
+/// bhkNPCollisionObject on its system; `render` holds the file's render
+/// meshes when the file has one system and identity transforms.
 fn payload(
     k: &mut Kind,
     bytes: &[u8],
     body_ids: &[u32],
-    render: Option<mesh::Extent>,
+    render: Option<&mesh::Render>,
     file: &str,
     base: u64,
     b: &Budget,
@@ -686,7 +686,7 @@ pub fn sweep(m: &Manifest, r: &mut Reports) -> Result<()> {
             }
         };
         let render = if col.systems.len() == 1 {
-            render_extent(&n)
+            render(&n)
         } else {
             None
         };
@@ -706,7 +706,7 @@ pub fn sweep(m: &Manifest, r: &mut Reports) -> Result<()> {
                 kind,
                 system.payload,
                 &body_ids,
-                render,
+                render.as_ref(),
                 &c.original,
                 system.payload_offset,
                 &scratch,
@@ -736,11 +736,13 @@ pub fn sweep(m: &Manifest, r: &mut Reports) -> Result<()> {
     Ok(())
 }
 
-/// Box of every vertex position of the render meshes, when every node and
-/// mesh block stores translation 0, the identity rotation and scale 1.
-fn render_extent(n: &fo4_nif::Nif<'_>) -> Option<mesh::Extent> {
+/// Box, vertex positions and triangles of the render meshes, when every node
+/// and mesh block stores translation 0, the identity rotation and scale 1.
+fn render(n: &fo4_nif::Nif<'_>) -> Option<mesh::Render> {
     use fo4_nif::{Data, Value};
     let mut bx = ([f32::INFINITY; 3], [f32::NEG_INFINITY; 3]);
+    let mut positions = Vec::new();
+    let mut triangles = Vec::new();
     let identity = [1.0f32, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0];
     for block in &n.blocks {
         let fields = match &block.decoded {
@@ -768,14 +770,27 @@ fn render_extent(n: &fo4_nif::Nif<'_>) -> Option<mesh::Extent> {
             return None;
         }
         if let Some(Data::Mesh(m)) = &block.decoded {
+            let first = positions.len() as u32;
             for v in m.vertices.iter().flatten() {
-                if let Some(p) = v.position {
+                let p = v.position.unwrap_or([f32::NAN; 3]);
+                if v.position.is_some() {
                     mesh::grow(&mut bx, p);
+                }
+                positions.push(p);
+            }
+            let count = positions.len() as u32 - first;
+            for t in m.triangles.iter().flatten() {
+                if t.iter().all(|x| u32::from(*x) < count) {
+                    triangles.push(t.map(|x| first + u32::from(x)));
                 }
             }
         }
     }
-    (bx.0[0] <= bx.1[0]).then_some(bx)
+    (bx.0[0] <= bx.1[0]).then_some(mesh::Render {
+        extent: bx,
+        positions,
+        triangles,
+    })
 }
 
 /// Text report: `section<TAB>key<TAB>value`, counts and small stored values.
