@@ -99,6 +99,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "fo4-havok"
+version = "0.1.0"
+dependencies = [
+ "fo4-core",
+ "serde",
+]
+
+[[package]]
 name = "fo4-material"
 version = "0.1.0"
 dependencies = [
@@ -168,6 +176,7 @@ dependencies = [
  "flate2",
  "fo4-archive",
  "fo4-core",
+ "fo4-havok",
  "fo4-material",
  "fo4-nif",
  "fo4-plugin",

@@ -23,6 +23,16 @@ spec/nif.md). The embedded Havok payload is described only by counts measured
 over the installed game ([spec/collision.md](../spec/collision.md)); no Havok
 SDK, header, converter or other reader of that format was consulted.
 
+`fo4-havok` reads the container level of that payload (header, three named
+sections, class-name entries and the three tables of the data section). Its
+layout and every rule it enforces were established only by measuring the
+stored payloads of the installed game with `fo4-unpack sweep --scope havok`
+([spec/havok-container.md](../spec/havok-container.md)). No Havok SDK, header,
+documentation, converter, decompilation or third-party reader of the format
+was opened or searched for; the field and table names are descriptive labels
+chosen here. Interpretations the bytes cannot decide are marked as
+hypotheses.
+
 Runtime experiments measure an owned running copy through separately collected
 camera/transform words and repeated photographs. Their raw data stays local.
 Behavior not established by a format source is registered in

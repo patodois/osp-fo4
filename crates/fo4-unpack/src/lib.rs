@@ -7,6 +7,7 @@ mod cell_census;
 mod check_cell;
 mod collision;
 mod families;
+mod havok;
 mod path_census;
 mod references;
 mod root_census;
@@ -132,6 +133,7 @@ impl Options {
                     "paths",
                     "roots",
                     "collision",
+                    "havok",
                 ]
                 .contains(&s)
             })
@@ -154,7 +156,7 @@ impl Options {
     }
 }
 fn usage() -> Error {
-    Error::new("Usage","CLI",0,"inventory|resolve|sweep --manifest PROFILE.json --out DIR [--scope archives|records|nif|materials|textures|cells|bases|shader-citations|unread|paths|roots|collision] [--all|--path ASSET] [--items]; check-cell PROFILE.json EditorID [--out DIR] [--strict|--under-hypotheses] [--overlay-plugin FILE]","invalid or missing argument")
+    Error::new("Usage","CLI",0,"inventory|resolve|sweep --manifest PROFILE.json --out DIR [--scope archives|records|nif|materials|textures|cells|bases|shader-citations|unread|paths|roots|collision|havok] [--all|--path ASSET] [--items]; check-cell PROFILE.json EditorID [--out DIR] [--strict|--under-hypotheses] [--overlay-plugin FILE]","invalid or missing argument")
 }
 #[derive(Default, Serialize)]
 pub struct Summary {
@@ -176,6 +178,7 @@ pub struct Summary {
     pub path_census: path_census::Summary,
     pub unread: cell_census::Unread,
     pub collision: collision::Summary,
+    pub havok: havok::Summary,
     pub schema: u32,
     pub under_hypotheses: bool,
     /// The rule level the command applied, for the commands that classify readiness.
@@ -506,8 +509,8 @@ fn publish_reports(
 
 struct Reports {
     items_enabled: bool,
-    /// Optional text report written beside summary.json (collision census).
-    tsv: Option<String>,
+    /// Optional text report written beside summary.json: file name and text.
+    tsv: Option<(&'static str, String)>,
     out: PathBuf,
     groups: BTreeMap<(String, String, Option<String>, bool), DiagnosticGroup>,
     output: OutputBudget,
@@ -783,16 +786,16 @@ impl Reports {
             &mut self.output,
             true,
         )?;
-        if let Some(text) = self.tsv.take() {
+        if let Some((name, text)) = self.tsv.take() {
             // The directory was created and identity-checked by publish_reports.
-            let path = self.out.join("collision.tsv");
+            let path = self.out.join(name);
             let mut file = std::fs::OpenOptions::new()
                 .write(true)
                 .create_new(true)
                 .open(&path)
-                .map_err(|e| io_error("collision.tsv", 0, e))?;
+                .map_err(|e| io_error(name, 0, e))?;
             file.write_all(text.as_bytes())
-                .map_err(|e| io_error("collision.tsv", 0, e))?;
+                .map_err(|e| io_error(name, 0, e))?;
         }
         for (file, name) in [
             (&mut self.items, "items.jsonl"),
@@ -941,6 +944,7 @@ fn run_selected(o: &Options, keys: Option<&[fo4_plugin::FormKey]>) -> Result<u8>
             Some("records") => records(&m, &mut r),
             Some("roots") => root_census::sweep(&m, &mut r),
             Some("collision") => collision::sweep(&m, &mut r),
+            Some("havok") => havok::sweep(&m, &mut r),
             Some("cells") => cell_census::cells(&m, &mut r),
             Some("bases") => bases::sweep(&m, &mut r, keys),
             Some("shader-citations") => families::sweep(&m, &mut r),

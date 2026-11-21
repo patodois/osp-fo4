@@ -144,6 +144,10 @@ such a model really lets the player through is
 
 ## Open questions for a payload decoder
 
+Questions 1 to 7 are taken up, by measurement, in
+[havok-container.md](havok-container.md), which records what was answered and
+what stays open.
+
 1. Is the 64-byte block at 0 a fixed file header? Its nonzero words (at 0,
    4, 12, 16, 20, 24, 36 and 60) are constant over the whole corpus, so the
    census cannot tell which are magic, version, counts or flags. Is word 20 the number

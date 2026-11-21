@@ -671,7 +671,7 @@ pub fn sweep(m: &Manifest, r: &mut Reports) -> Result<()> {
         text.push_str(&format!("census\t{k}\t{value}\n"));
     }
     text.push_str(&tsv(&s));
-    r.tsv = Some(text);
+    r.tsv = Some(("collision.tsv", text));
     r.summary.collision = s;
     Ok(())
 }

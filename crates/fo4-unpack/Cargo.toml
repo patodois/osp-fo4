@@ -14,6 +14,7 @@ fo4-render.workspace = true
 fo4-scene.workspace = true
 fo4-core.workspace = true
 fo4-nif.workspace = true
+fo4-havok.workspace = true
 fo4-material.workspace = true
 fo4-texture.workspace = true
 fo4-archive.workspace = true

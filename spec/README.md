@@ -11,6 +11,8 @@ Measurement datasets and photographs of the game are not distributed.
 | [citation-roots.md](citation-roots.md) | Which path roots are established for each citation type and which remain hypotheses. |
 | [collision.md](collision.md) | FO4 collision blocks, the census of their opaque Havok payloads and the open questions for a decoder. |
 | [collision-census.tsv](collision-census.tsv) | Counts and small stored header values from the collision census of one installation. |
+| [havok-container.md](havok-container.md) | Container level of the Havok collision payload (header, sections, class names, data tables), measured over one installation. |
+| [havok-container-census.tsv](havok-container-census.tsv) | Counts, holds/fails of container properties, class names and signatures from the Havok census. |
 | [controller-measurements.md](controller-measurements.md) | Measurement design for comparing stored NIF locals with paused runtime nodes. |
 | [dds.md](dds.md) | DDS headers, formats, surfaces, block layouts and supported decoding boundaries. |
 | [helper-visibility.md](helper-visibility.md) | Narrow editor-helper classification and explicit diagnostic visibility variants. |
