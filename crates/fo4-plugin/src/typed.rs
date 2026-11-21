@@ -736,6 +736,9 @@ pub struct Store {
     sources: Vec<(String, Box<dyn ReadAt>)>,
     memberships: Vec<Membership>,
     cell_kinds: HashMap<u64, (usize, CellKind)>,
+    /// Exterior CELL occurrence and the compact WRLD key of its enclosing
+    /// world children group (kind 1).
+    cell_worlds: HashMap<u64, (usize, u64)>,
     winning_indices: Vec<usize>,
     source_allocation: Option<Budget>,
     _allocation: Budget,
@@ -843,6 +846,7 @@ impl Store {
         let mut overrides = Overrides::new();
         let mut memberships = Vec::new();
         let mut cell_kinds = HashMap::new();
+        let mut cell_worlds = HashMap::new();
         let mut diagnostics = Vec::new();
         let mut record_types = BTreeMap::new();
         let mut marker_observations = Vec::new();
@@ -920,6 +924,27 @@ impl Store {
                             cell_kinds.insert(key, (history, kind));
                         } else {
                             cell_kinds.remove(&key);
+                        }
+                        let world = match groups.iter().rev().find(|g| g.kind == 1) {
+                            Some(g) => compact_label(&order, plugin, g)?,
+                            None => None,
+                        };
+                        if let Some(world) = world {
+                            if !cell_worlds.contains_key(&key) {
+                                allocation.charge(64, s.name(), r.source.offset)?;
+                                cell_worlds.try_reserve(1).map_err(|e| {
+                                    Error::new(
+                                        "AllocationFailed",
+                                        s.name(),
+                                        r.source.offset,
+                                        "CELL world index",
+                                        e,
+                                    )
+                                })?;
+                            }
+                            cell_worlds.insert(key, (history, world));
+                        } else {
+                            cell_worlds.remove(&key);
                         }
                     }
                     if let Some(g) = groups.iter().rev().find(|g| matches!(g.kind, 8..=10)) {
@@ -1011,6 +1036,7 @@ impl Store {
             sources,
             memberships,
             cell_kinds,
+            cell_worlds,
             winning_indices,
             source_allocation: None,
             _allocation: allocation,
@@ -1064,6 +1090,46 @@ impl Store {
         let w = self.overrides.winner(key)?;
         let (history, kind) = self.cell_kinds.get(&w.key)?;
         std::ptr::eq(&self.overrides.history[*history], w).then_some(*kind)
+    }
+    /// The WRLD whose world children group (kind 1) holds the winning
+    /// occurrence of this CELL; `None` for interiors and for a winner read
+    /// outside such a group.
+    pub fn world(&self, key: &FormKey) -> Option<FormKey> {
+        let w = self.overrides.winner(key)?;
+        let (history, world) = self.cell_worlds.get(&w.key)?;
+        std::ptr::eq(&self.overrides.history[*history], w)
+            .then(|| self.overrides.form_key(*world, &self.order))
+    }
+    /// The winning LAND record `key`, decoded by [`crate::land::Land::decode`].
+    pub fn get_land(&self, key: &FormKey, b: &Budget) -> Result<Option<Loaded<crate::land::Land>>> {
+        let Some(w) = self.overrides.winner(key) else {
+            return Ok(None);
+        };
+        if w.signature != *b"LAND" {
+            return Err(Error::new(
+                "RecordTypeMismatch",
+                &self.order.headers()[w.plugin].source.file,
+                w.offset,
+                "LAND",
+                String::from_utf8_lossy(&w.signature),
+            ));
+        }
+        let plugin = w.plugin;
+        let Some(record) = self.raw(key, b)? else {
+            return Ok(None);
+        };
+        let data = crate::land::Land::decode(&record, &self.order, plugin, b)?;
+        b.charge(
+            key.plugin.len() as u64,
+            &record.source.file,
+            record.source.offset,
+        )?;
+        Ok(Some(Loaded {
+            key: key.clone(),
+            plugin_index: plugin,
+            record,
+            data,
+        }))
     }
     pub fn raw(&self, key: &FormKey, b: &Budget) -> Result<Option<Record>> {
         let Some(w) = self.overrides.winner(key) else {

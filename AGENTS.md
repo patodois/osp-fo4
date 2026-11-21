@@ -13,6 +13,7 @@ Read [README.md](README.md) first for what the project is and how to run it.
 | `fo4-nif`, `fo4-material`, `fo4-texture` | Model, material and texture readers. | `src/lib.rs` of each |
 | `fo4-havok` | Havok collision payload: container (sections, class names, data tables), object spans, bodies, simple shape views and compressed meshes (trees, triangles, vertex records). | `src/lib.rs`, `src/objects.rs`, `src/bodies.rs`, `src/shapes.rs`, `src/mesh.rs`, `src/mesh/geometry.rs`, `src/mesh/tree.rs` |
 | `fo4-scene` | Cell loading, asset graph, rule levels and the rule registry; collision of a cell placed in world space. | `src/lib.rs`, `src/hypotheses.rs`, `src/collision.rs`, `src/collision/model.rs` |
+| Terrain (LAND) | `fo4-plugin` LAND view, `fo4-scene` terrain in world space under its rules, `fo4-render` plain terrain draw, `fo4-unpack land` report and census. | `fo4-plugin/src/land.rs`, `fo4-scene/src/terrain.rs`, `fo4-unpack/src/land.rs` |
 | `fo4-render` | Draw list, CPU rasterizer, PNG, image comparison. | `src/draw.rs`, `src/raster.rs` |
 | `fo4-unpack` | Command-line reports (including `cell-collision`) and the `render` example. | `src/lib.rs`, `src/cell_collision.rs`, `examples/render.rs` |
 | `apps/fo4-view` | GPU viewer (Bevy), own workspace; checked against the CPU frame. | `src/scene.rs`, `src/coords.rs`, `src/surface.wesl` |

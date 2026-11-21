@@ -75,6 +75,17 @@ collision and render boxes in the `cell-collision` report is evidence only.
 No Havok SDK, header, documentation, converter, decompilation or
 third-party reader or schema was opened or searched for.
 
+The LAND view (`fo4_plugin::land`, [spec/land.md](../spec/land.md)) uses
+only the UESP Skyrim and Oblivion LAND, CELL and file-format pages (read as
+wiki source) and the fopdoc Fallout 3 LAND page; none describes Fallout 4,
+so layouts are applied only at the documented sizes and other sizes stay
+raw. How the heights are accumulated, scaled, oriented, spaced and
+triangulated, and which LAND belongs to a cell, are registered pending rules
+whose candidates come from those pages; the edge-continuity and
+objects-against-ground figures of the `land` report are offline evidence
+only. No xEdit source or definition file, OpenMW, Mutagen or other reader
+of the format was opened.
+
 Runtime experiments measure an owned running copy through separately collected
 camera/transform words and repeated photographs. Their raw data stays local.
 Behavior not established by a format source is registered in

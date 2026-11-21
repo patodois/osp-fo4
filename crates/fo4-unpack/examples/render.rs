@@ -12,7 +12,7 @@ use std::path::Path;
 type AnyResult<T> = Result<T, Box<dyn std::error::Error>>;
 fn run() -> AnyResult<()> {
     let args: Vec<_> = std::env::args().skip(1).collect();
-    const USAGE: &str = "usage: render MANIFEST DATA_DIRECTORY CELL_EDITOR_ID build/OUTPUT [--strict|--measured|--under-hypotheses] [--eye X,Y,Z --look X,Y,Z] [--instance-ids] [--collision-overlay]";
+    const USAGE: &str = "usage: render MANIFEST DATA_DIRECTORY CELL_EDITOR_ID build/OUTPUT [--strict|--measured|--under-hypotheses] [--eye X,Y,Z --look X,Y,Z] [--instance-ids] [--collision-overlay] [--terrain]";
     if args.len() < 4 {
         return Err(USAGE.into());
     }
@@ -22,12 +22,14 @@ fn run() -> AnyResult<()> {
     let mut look = None;
     let mut instance_ids = false;
     let mut collision_overlay = false;
+    let mut terrain = false;
     let mut rest = args[4..].iter();
     while let Some(arg) = rest.next() {
         match arg.as_str() {
             "--strict" | "--measured" | "--under-hypotheses" => level_name = arg,
             "--instance-ids" => instance_ids = true,
             "--collision-overlay" => collision_overlay = true,
+            "--terrain" => terrain = true,
             "--eye" | "--look" => {
                 let point = point(rest.next().ok_or(USAGE)?)?;
                 *(if arg == "--eye" { &mut eye } else { &mut look }) = Some(point);
@@ -68,13 +70,33 @@ fn run() -> AnyResult<()> {
     let budget = Budget::metered(limits.max_memory);
     let mut loader = Loader::new(&store, &vfs, &manifest.language, policy, &budget);
     let scene = loader.by_editor_id(&args[2], &budget)?;
-    let built = fo4_render::draw::build(
+    let mut built = fo4_render::draw::build(
         &scene,
         &loader,
         limits,
         fo4_render::draw::BuildOptions::reference(policy),
         &budget,
     )?;
+    // Without --terrain nothing below changes the draw list or the summary.
+    let mut terrain_summary = None;
+    if terrain {
+        use fo4_scene::terrain::{self, Outcome};
+        let options = terrain::Options {
+            level: policy,
+            diagonal: None,
+        };
+        terrain_summary = Some(
+            match terrain::load(&store, &scene.cell.key, options, &budget)? {
+                Outcome::Built(t) => {
+                    // Tagged after every placed instance.
+                    let tag = u32::try_from(built.instances.len())?;
+                    fo4_render::terrain::append_terrain(&mut built.list, &t, tag, &budget)?;
+                    serde_json::json!({"drawn":true,"instance_tag":tag,"land":t.land,"grid":t.grid,"diagonal":t.diagonal,"rules":t.rules,"state":t.state,"bounds":t.bounds(),"shading":"flat neutral grey per triangle by geometric normal; diagnostic, not game lighting"})
+                }
+                Outcome::Refused(r) => serde_json::json!({"drawn":false,"refusal":r}),
+            },
+        );
+    }
     let mut min = [f64::INFINITY; 3];
     let mut max = [f64::NEG_INFINITY; 3];
     for draw in &built.list.draws {
@@ -157,6 +179,9 @@ fn run() -> AnyResult<()> {
     // The key is absent without the flag, so the summary stays as before.
     if let (Some(o), Some(map)) = (overlay, summary.as_object_mut()) {
         map.insert("collision_overlay".into(), o);
+    }
+    if let (Some(t), Some(map)) = (terrain_summary, summary.as_object_mut()) {
+        map.insert("terrain".into(), t);
     }
     files::json(&out.join("summary.json"), &summary)?;
     println!("{}", out.join("frame.png").display());

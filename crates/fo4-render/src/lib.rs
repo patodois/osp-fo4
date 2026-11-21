@@ -8,6 +8,7 @@ pub mod png;
 mod raster;
 pub mod silhouette;
 pub mod snapshot;
+pub mod terrain;
 use fo4_core::{Budget, Error, Result};
 use fo4_scene::transform::Transform;
 pub use raster::{render, Frame, RenderOptions, Statistics};

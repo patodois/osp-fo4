@@ -9,6 +9,7 @@ mod check_cell;
 mod collision;
 mod families;
 mod havok;
+mod land;
 mod path_census;
 mod references;
 mod root_census;
@@ -44,14 +45,15 @@ impl Options {
     pub fn parse(args: impl IntoIterator<Item = String>) -> Result<Self> {
         let mut args = args.into_iter();
         let command = args.next().ok_or_else(usage)?;
-        if command == "check-cell" || command == "cell-collision" {
+        if command == "check-cell" || command == "cell-collision" || command == "land" {
             let manifest = args.next().ok_or_else(usage)?.into();
             let path = Some(args.next().ok_or_else(usage)?);
-            let mut out = PathBuf::from(if command == "check-cell" {
-                "reports/check-cell"
-            } else {
-                "reports/cell-collision"
+            let mut out = PathBuf::from(match command.as_str() {
+                "check-cell" => "reports/check-cell",
+                "land" => "reports/land",
+                _ => "reports/cell-collision",
             });
+            let mut scope = None;
             let mut level = None;
             let mut overlay_plugin = None;
             let mut out_seen = false;
@@ -61,14 +63,17 @@ impl Options {
                         out = args.next().ok_or_else(usage)?.into();
                         out_seen = true;
                     }
-                    "--overlay-plugin" if overlay_plugin.is_none() => {
+                    "--census" if command == "land" && scope.is_none() => {
+                        scope = Some("census".to_owned())
+                    }
+                    "--overlay-plugin" if overlay_plugin.is_none() && command != "land" => {
                         overlay_plugin = Some(PathBuf::from(args.next().ok_or_else(usage)?))
                     }
                     "--under-hypotheses" if level.is_none() => {
                         level = Some(fo4_scene::RuleLevel::Hypotheses)
                     }
                     "--strict" if level.is_none() => level = Some(fo4_scene::RuleLevel::Facts),
-                    "--measured" if level.is_none() && command == "cell-collision" => {
+                    "--measured" if level.is_none() && command != "check-cell" => {
                         level = Some(fo4_scene::RuleLevel::Measured)
                     }
                     _ => return Err(usage()),
@@ -80,7 +85,7 @@ impl Options {
                 command,
                 manifest,
                 out,
-                scope: None,
+                scope,
                 path,
                 items: true,
             });
@@ -164,7 +169,7 @@ impl Options {
     }
 }
 fn usage() -> Error {
-    Error::new("Usage","CLI",0,"inventory|resolve|sweep --manifest PROFILE.json --out DIR [--scope archives|records|nif|materials|textures|cells|bases|shader-citations|unread|paths|roots|collision|havok] [--all|--path ASSET] [--items]; check-cell PROFILE.json EditorID [--out DIR] [--strict|--under-hypotheses] [--overlay-plugin FILE]; cell-collision PROFILE.json EditorID [--out DIR] [--strict|--measured|--under-hypotheses] [--overlay-plugin FILE]","invalid or missing argument")
+    Error::new("Usage","CLI",0,"inventory|resolve|sweep --manifest PROFILE.json --out DIR [--scope archives|records|nif|materials|textures|cells|bases|shader-citations|unread|paths|roots|collision|havok] [--all|--path ASSET] [--items]; check-cell PROFILE.json EditorID [--out DIR] [--strict|--under-hypotheses] [--overlay-plugin FILE]; cell-collision PROFILE.json EditorID [--out DIR] [--strict|--measured|--under-hypotheses] [--overlay-plugin FILE]; land PROFILE.json EditorID [--out DIR] [--strict|--measured|--under-hypotheses] [--census]","invalid or missing argument")
 }
 #[derive(Default, Serialize)]
 pub struct Summary {
@@ -188,6 +193,9 @@ pub struct Summary {
     pub collision: collision::Summary,
     pub havok: havok::Summary,
     pub cell_collision: cell_collision::Summary,
+    /// Only the `land` command fills it; absent from other summaries.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub land: Option<land::Summary>,
     pub schema: u32,
     pub under_hypotheses: bool,
     /// The rule level the command applied, for the commands that classify readiness.
@@ -954,6 +962,13 @@ fn run_selected(o: &Options, keys: Option<&[fo4_plugin::FormKey]>) -> Result<u8>
             &mut r,
             o.level,
             o.overlay_plugin.as_deref(),
+        ),
+        "land" => land::run(
+            &m,
+            o.path.as_deref().ok_or_else(usage)?,
+            &mut r,
+            o.level,
+            o.scope.as_deref() == Some("census"),
         ),
         "sweep" => match o.scope.as_deref() {
             Some("archives") => archives(&m, &mut r),

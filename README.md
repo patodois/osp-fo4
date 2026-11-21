@@ -19,6 +19,9 @@ physics or gameplay yet.
   the block-compressed formats.
 - **Scenes**: a cell's placed references with their base records, models,
   materials and textures, each with the reasons it can or cannot be drawn.
+- **Terrain**: the LAND heights of an exterior cell placed in world space
+  under pending rules, drawn as plain geometry with `render --terrain` and
+  reported by `fo4-unpack land` ([terrain](spec/land.md)).
 - **Rendering**: a deterministic unlit CPU rasterizer and tools that compare
   its frames with photographs of the game.
 

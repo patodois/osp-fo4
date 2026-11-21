@@ -8,6 +8,7 @@ pub mod hypotheses;
 pub mod lighting;
 pub mod model_policy;
 pub mod paths;
+pub mod terrain;
 pub mod transform;
 pub use assets::{Asset, AssetKind, Assets, Cycle, CycleEdge, DecodedAsset};
 use fo4_core::{limit, AllocationKind, Budget, Error, Result, SourceSpan};

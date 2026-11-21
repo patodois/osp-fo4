@@ -26,6 +26,14 @@ pub const COMPOUND_INSTANCE: &str = "havok_compound_instance_v1";
 pub const SCALED_CONVEX: &str = "havok_scaled_convex_v1";
 pub const MESH_TRIANGLES: &str = "havok_mesh_triangles_surface_v1";
 pub const CONVEX_RADIUS: &str = "havok_convex_radius_added_v1";
+/// Terrain of an exterior cell (`crate::terrain`, `spec/land.md`).
+pub const LAND_OF_CELL: &str = "land_single_cell_child_v1";
+pub const LAND_ACCUMULATION: &str = "land_vhgt_row_accumulation_v1";
+pub const LAND_UNITS: &str = "land_vhgt_units_8_v1";
+pub const LAND_ORIGIN: &str = "land_grid_origin_southwest_v1";
+pub const LAND_SPACING: &str = "land_grid_spacing_128_v1";
+pub const LAND_DIAGONAL_SW_NE: &str = "land_quad_diagonal_sw_ne_v1";
+pub const LAND_DIAGONAL_NW_SE: &str = "land_quad_diagonal_nw_se_v1";
 /// A rule's standing in `spec/hypotheses.tsv`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Status {
@@ -252,6 +260,13 @@ mod tests {
             SCALED_CONVEX,
             MESH_TRIANGLES,
             CONVEX_RADIUS,
+            LAND_OF_CELL,
+            LAND_ACCUMULATION,
+            LAND_UNITS,
+            LAND_ORIGIN,
+            LAND_SPACING,
+            LAND_DIAGONAL_SW_NE,
+            LAND_DIAGONAL_NW_SE,
         ] {
             assert!(status(name).is_some(), "{name}");
         }

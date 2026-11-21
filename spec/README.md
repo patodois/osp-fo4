@@ -21,6 +21,7 @@ Measurement datasets and photographs of the game are not distributed.
 | [dds.md](dds.md) | DDS headers, formats, surfaces, block layouts and supported decoding boundaries. |
 | [helper-visibility.md](helper-visibility.md) | Narrow editor-helper classification and explicit diagnostic visibility variants. |
 | [hypotheses.tsv](hypotheses.tsv) | Machine-readable candidate assertions, scope, status and falsification evidence. |
+| [land.md](land.md) | LAND subrecord layouts and sources, the terrain rules, the `land` report and its census of one worldspace. |
 | [light-measurement.md](light-measurement.md) | Light and cell declarations separated from unestablished rendering equations. |
 | [manifest-vfs.md](manifest-vfs.md) | Strict manifests, explicit load/mount order, virtual paths, fingerprints and budgets. |
 | [material-json-status.md](material-json-status.md) | Material JSON representation and preservation of unknown or unsourced fields. |
@@ -83,3 +84,10 @@ the registry.
 | `havok_scaled_convex_v1` | pending | Rest an object on a scaled convex with unequal scale or non-zero translation; the other order must predict worse. |
 | `havok_mesh_triangles_surface_v1` | pending | Contact heights along a non-planar quad from above and below; sidedness open (one plane of a two-plane mesh was passable from above). |
 | `havok_convex_radius_added_v1` | pending | Measured for one polytope slab (rests at 96.000, not 95.300; scales with the reference); repeat with other radii and scales. |
+| `land_single_cell_child_v1` | pending | Census of LAND count and group kind per exterior cell; live: ground with the cell's LAND deleted or duplicated by an overlay plugin. |
+| `land_vhgt_row_accumulation_v1` | pending | Offline edge continuity against transposed and mirrored alternatives; live: `player.getpos z` after settling at several points of one exterior cell. |
+| `land_vhgt_units_8_v1` | pending | Offline: placed objects' lowest collision point against the ground under them for factors 4, 8 and 16; live: `player.getpos z` at several points. |
+| `land_grid_origin_southwest_v1` | pending | Offline edge continuity under the eight symmetries of the square; live: `player.getpos` at the four corners of one cell. |
+| `land_grid_spacing_128_v1` | pending | Offline objects against ground; live: `player.getpos` at a cell corner and at a quad centre. |
+| `land_quad_diagonal_sw_ne_v1` | pending | Live: settle at the two off-diagonal points of a non-planar quad; the other level must predict worse. |
+| `land_quad_diagonal_nw_se_v1` | pending | Same measurement as the sw_ne level. |
