@@ -55,6 +55,16 @@ pub struct BuildOptions {
     /// Instances whose state is not ready at this level are omitted with a cause.
     pub level: fo4_scene::RuleLevel,
 }
+impl BuildOptions {
+    /// Texture limits of the reference renders (the `render` example and the GPU viewer).
+    pub const fn reference(level: fo4_scene::RuleLevel) -> Self {
+        Self {
+            max_texture_dimension: 256,
+            max_texture_bytes: 96 << 20,
+            level,
+        }
+    }
+}
 fn error(code: &str, file: &str, offset: u64, found: impl std::fmt::Display) -> Error {
     Error::new(code, file, offset, "documented unlit draw binding", found)
 }

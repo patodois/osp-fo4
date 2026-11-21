@@ -9,6 +9,15 @@ pub struct RenderOptions {
     pub bilinear: bool,
     pub backface_cull: bool,
 }
+impl RenderOptions {
+    /// Options of the reference renders (the `render` example and the GPU viewer).
+    pub const REFERENCE: Self = Self {
+        workers: 1,
+        bilinear: true,
+        backface_cull: false,
+        clear: [0.025, 0.025, 0.025, 1.],
+    };
+}
 #[derive(Debug, Default, Serialize)]
 pub struct Statistics {
     pub input_triangles: u64,

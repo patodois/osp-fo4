@@ -4,12 +4,15 @@
 #[path = "support/mod.rs"]
 mod files;
 use fo4_core::{Budget, Manifest};
-use fo4_scene::{camera::Camera, Loader, RuleLevel};
+use fo4_scene::{
+    camera::{self, Camera},
+    Loader, RuleLevel,
+};
 use std::path::Path;
 type AnyResult<T> = Result<T, Box<dyn std::error::Error>>;
 fn run() -> AnyResult<()> {
     let args: Vec<_> = std::env::args().skip(1).collect();
-    const USAGE: &str = "usage: render MANIFEST DATA_DIRECTORY CELL_EDITOR_ID build/OUTPUT [--strict|--measured|--under-hypotheses] [--eye X,Y,Z --look X,Y,Z]";
+    const USAGE: &str = "usage: render MANIFEST DATA_DIRECTORY CELL_EDITOR_ID build/OUTPUT [--strict|--measured|--under-hypotheses] [--eye X,Y,Z --look X,Y,Z] [--instance-ids]";
     if args.len() < 4 {
         return Err(USAGE.into());
     }
@@ -17,10 +20,12 @@ fn run() -> AnyResult<()> {
     let mut level_name = "--measured";
     let mut eye = None;
     let mut look = None;
+    let mut instance_ids = false;
     let mut rest = args[4..].iter();
     while let Some(arg) = rest.next() {
         match arg.as_str() {
             "--strict" | "--measured" | "--under-hypotheses" => level_name = arg,
+            "--instance-ids" => instance_ids = true,
             "--eye" | "--look" => {
                 let point = point(rest.next().ok_or(USAGE)?)?;
                 *(if arg == "--eye" { &mut eye } else { &mut look }) = Some(point);
@@ -65,11 +70,7 @@ fn run() -> AnyResult<()> {
         &scene,
         &loader,
         limits,
-        fo4_render::draw::BuildOptions {
-            max_texture_dimension: 256,
-            max_texture_bytes: 96 << 20,
-            level: policy,
-        },
+        fo4_render::draw::BuildOptions::reference(policy),
         &budget,
     )?;
     let mut min = [f64::INFINITY; 3];
@@ -89,11 +90,15 @@ fn run() -> AnyResult<()> {
     if min.iter().chain(&max).any(|v| !v.is_finite()) {
         return Err("NoDrawableGeometry".into());
     }
-    let right = (40f64.to_radians()).tan();
-    let top = right * 720. / 1280.;
+    let (right, top) = camera::reference_slopes(camera::REFERENCE_SIZE);
     let (camera, camera_kind) = match (eye, look) {
         (Some(eye), Some(look)) => (
-            look_at(eye, look, [-right, right, top, -top, 15., 12000.])?,
+            camera::look_at(
+                eye,
+                look,
+                camera::reference_frustum(camera::REFERENCE_SIZE),
+                camera::REFERENCE_SIZE,
+            )?,
             "explicit_eye_and_look",
         ),
         _ => {
@@ -113,7 +118,7 @@ fn run() -> AnyResult<()> {
                     scale: 1.,
                     frustum: [-right, right, top, -top, 0.1, distance + radius * 3.],
                     viewport: [0., 1., 1., 0.],
-                    size: [1280, 720],
+                    size: camera::REFERENCE_SIZE,
                 },
                 "authored_bounds_overview",
             )
@@ -122,17 +127,16 @@ fn run() -> AnyResult<()> {
     let frame = fo4_render::render(
         &built.list,
         &camera,
-        fo4_render::RenderOptions {
-            workers: 1,
-            bilinear: true,
-            backface_cull: false,
-            clear: [0.025, 0.025, 0.025, 1.],
-        },
+        fo4_render::RenderOptions::REFERENCE,
         limits,
         &budget,
     )?;
     let out = files::output_dir_away_from(&args[3], Some(&manifest.root))?;
     files::output_bytes(&out.join("frame.png"), &frame.png(&budget)?)?;
+    if instance_ids {
+        // Row-major u32 little-endian per pixel; u32::MAX is background.
+        files::output_bytes(&out.join("instances.bin"), &frame.instance_bytes(&budget)?)?;
+    }
     files::json(
         &out.join("summary.json"),
         &serde_json::json!({"camera":camera,"camera_kind":camera_kind,"cell":scene.cell.key,"instances":built.instances,"omitted":built.omitted,"statistics":frame.statistics,"hypothesis_policy":level_name,"renderer":"CPU unlit diffuse, no runtime controllers or lighting","memory":budget.measurements()}),
@@ -150,34 +154,6 @@ fn point(text: &str) -> AnyResult<[f64; 3]> {
         return Err("ExpectedThreeCoordinates".into());
     }
     Ok(out)
-}
-/// Z-up camera at `eye` facing `look`: rows are forward, up and right.
-fn look_at(eye: [f64; 3], look: [f64; 3], frustum: [f64; 6]) -> AnyResult<Camera> {
-    let unit = |v: [f64; 3]| -> AnyResult<[f64; 3]> {
-        let n = v.iter().map(|x| x * x).sum::<f64>().sqrt();
-        if n < 1e-9 {
-            return Err("DegenerateCameraDirection".into());
-        }
-        Ok(v.map(|x| x / n))
-    };
-    let cross = |a: [f64; 3], b: [f64; 3]| {
-        [
-            a[1] * b[2] - a[2] * b[1],
-            a[2] * b[0] - a[0] * b[2],
-            a[0] * b[1] - a[1] * b[0],
-        ]
-    };
-    let forward = unit(std::array::from_fn(|i| look[i] - eye[i]))?;
-    let right = unit(cross(forward, [0., 0., 1.]))?;
-    let up = cross(right, forward);
-    Ok(Camera {
-        rotation: [forward, up, right],
-        translation: eye,
-        scale: 1.,
-        frustum,
-        viewport: [0., 1., 1., 0.],
-        size: [1280, 720],
-    })
 }
 fn main() {
     if let Err(e) = run() {
