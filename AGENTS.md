@@ -14,6 +14,7 @@ Read [README.md](README.md) first for what the project is and how to run it.
 | `fo4-scene` | Cell loading, asset graph, rule levels and the rule registry. | `src/lib.rs`, `src/hypotheses.rs` |
 | `fo4-render` | Draw list, CPU rasterizer, PNG, image comparison. | `src/draw.rs`, `src/raster.rs` |
 | `fo4-unpack` | Command-line reports and the `render` example. | `src/lib.rs`, `examples/render.rs` |
+| `apps/fo4-view` | GPU viewer (Bevy), own workspace; checked against the CPU frame. | `src/scene.rs`, `src/coords.rs`, `src/surface.wesl` |
 
 Format layouts, their sources and the rule registry are indexed in
 [spec/README.md](spec/README.md).
@@ -69,6 +70,10 @@ cargo test --workspace
 cargo fmt --check
 cargo clippy --workspace --all-targets -- -D warnings
 ```
+
+The GPU viewer is outside that workspace: run `cargo test`, `cargo fmt --check`
+and `cargo clippy --all-targets -- -D warnings` inside `apps/fo4-view` when it
+or a crate it uses changes.
 
 If the change could alter output, render a cell before and after and compare
 the files byte for byte; say so in the commit message when a difference is

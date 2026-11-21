@@ -74,6 +74,30 @@ installation ([manifest format](spec/manifest-vfs.md)).
 The rules, their status and the measurement behind each are in the
 [spec index](spec/README.md#registered-rules).
 
+### GPU viewer
+
+`apps/fo4-view` draws the same draw list with Bevy on the GPU, unlit, and is
+checked against the CPU frame. It has its own Cargo workspace so the crates
+above build without a GPU stack.
+
+```sh
+cd apps/fo4-view && cargo build && cd ../..
+# One offscreen frame, no window, at the pose of the example above:
+target/fo4-view/debug/fo4-view examples/fallout4.json "$FO4_DATA" Financial13 \
+  --under-hypotheses --headless --eye 0,153.6,104.49 --look 70.7,224.3,104.49 \
+  --out build/view/gpu.png --tags build/view/gpu-tags.bin
+# Compare with the CPU frame (render example with --instance-ids):
+target/fo4-view/debug/fo4-view compare --cpu build/lobby/frame.png \
+  --gpu build/view/gpu.png --cpu-tags build/lobby/instances.bin \
+  --gpu-tags build/view/gpu-tags.bin --diff build/view/diff.png
+# Free-fly window: W/A/S/D, Shift faster, hold the left button to look.
+target/fo4-view/debug/fo4-view examples/fallout4.json "$FO4_DATA" Financial13 \
+  --under-hypotheses --eye 0,153.6,104.49 --look 70.7,224.3,104.49
+```
+
+The comparison prints coverage agreement and colour differences; it defines
+no pass threshold.
+
 ### Command-line tool
 
 `fo4-unpack` reports on an installation without rendering: `inventory`,
