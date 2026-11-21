@@ -185,6 +185,7 @@ dependencies = [
  "fo4-scene",
  "fo4-texture",
  "fo4-vfs",
+ "fo4-walk",
  "serde",
  "serde_json",
 ]
@@ -196,6 +197,18 @@ dependencies = [
  "fo4-archive",
  "fo4-core",
  "serde",
+]
+
+[[package]]
+name = "fo4-walk"
+version = "0.1.0"
+dependencies = [
+ "fo4-core",
+ "fo4-havok",
+ "fo4-plugin",
+ "fo4-scene",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

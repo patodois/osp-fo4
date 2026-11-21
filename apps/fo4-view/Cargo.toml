@@ -18,6 +18,7 @@ fo4-plugin = { path = "../../crates/fo4-plugin" }
 fo4-vfs = { path = "../../crates/fo4-vfs" }
 fo4-scene = { path = "../../crates/fo4-scene" }
 fo4-render = { path = "../../crates/fo4-render" }
+fo4-walk = { path = "../../crates/fo4-walk" }
 # Bevy already depends on `half`; used here for f32 -> f16 texture upload.
 half = { version = "2", default-features = false }
 bevy = { version = "0.20", default-features = false, features = [

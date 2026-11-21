@@ -86,6 +86,15 @@ objects-against-ground figures of the `land` report are offline evidence
 only. No xEdit source or definition file, OpenMW, Mutagen or other reader
 of the format was opened.
 
+The walking controller (`fo4-walk`, [spec/walk.md](../spec/walk.md)) is
+original work from general geometry (closest points of convex sets,
+collide-and-slide with substeps, step-up and ground snapping); it adds no
+format fact and does not claim to reproduce the game's controller. Every
+movement number is a registered pending rule with a provisional value. No
+character-controller source, physics SDK, decompilation or third-party
+implementation was opened or searched for. The game settings it lists are
+read from the plugins as raw bytes and are not applied.
+
 Runtime experiments measure an owned running copy through separately collected
 camera/transform words and repeated photographs. Their raw data stays local.
 Behavior not established by a format source is registered in

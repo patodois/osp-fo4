@@ -2021,6 +2021,80 @@ fn cell_collision_reports_models_without_collision_and_levels() {
 }
 
 #[test]
+fn walk_writes_a_deterministic_trace_and_needs_the_hypothesis_level() {
+    let install = census_install(false);
+    let walk = |out: &std::path::Path, level: &[&str]| {
+        Command::new(env!("CARGO_BIN_EXE_fo4-unpack"))
+            .arg("walk")
+            .arg(&install.manifest)
+            .arg("Cell4098")
+            .args(level)
+            .args(["--from", "0,0,10", "--path", "20,0,0,-5", "--out"])
+            .arg(out)
+            .output()
+            .unwrap()
+    };
+    let a = install.base.join("walk-a");
+    let b = install.base.join("walk-b");
+    for out in [&a, &b] {
+        let output = walk(out, &["--under-hypotheses"]);
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+    let trace = fs::read(a.join("trace.json")).unwrap();
+    assert_eq!(trace, fs::read(b.join("trace.json")).unwrap());
+    let t: Value = serde_json::from_slice(&trace).unwrap();
+    assert_eq!(t["schema"], 1);
+    assert_eq!(t["params"].as_array().unwrap().len(), 9);
+    assert!(t["params"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .all(|p| p["origin"] == "provisional" && p["status"] == "pending"));
+    // The synthetic cell has no collision: the character falls throughout.
+    assert_eq!(t["settle_ticks"], 600);
+    assert_eq!(t["legs"].as_array().unwrap().len(), 2);
+    assert!(t["steps"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .all(|s| s["grounded"] == false));
+    let s: Value = serde_json::from_slice(&fs::read(a.join("summary.json")).unwrap()).unwrap();
+    assert_eq!(s["walk"]["editor_id"], "Cell4098");
+    assert!(s["walk"]["rules"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|r| r == "walk_step_height_v1"));
+    // At the default (measured) level the pending rules refuse the walk.
+    let out = install.base.join("walk-measured");
+    let output = walk(&out, &[]);
+    assert_eq!(output.status.code(), Some(1));
+    let diagnostics = fs::read_to_string(out.join("diagnostics.jsonl")).unwrap();
+    assert!(diagnostics.contains("WalkRuleNotAccepted"));
+    assert!(!out.join("trace.json").exists());
+    // --from and --path are required and checked.
+    for bad in [
+        &["--path", "1,0"][..],
+        &["--from", "0,0,0"][..],
+        &["--from", "0,0", "--path", "1,0"][..],
+        &["--from", "0,0,0", "--path", "1"][..],
+    ] {
+        let output = Command::new(env!("CARGO_BIN_EXE_fo4-unpack"))
+            .arg("walk")
+            .arg(&install.manifest)
+            .arg("Cell4098")
+            .args(bad)
+            .output()
+            .unwrap();
+        assert_eq!(output.status.code(), Some(2), "{bad:?}");
+    }
+}
+
+#[test]
 fn root_survey_keeps_raw_and_class_prefixed_results_separate() {
     let install = census_install(false);
     let out = install.base.join("case12-roots");

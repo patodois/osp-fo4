@@ -14,9 +14,28 @@ pub type AnyResult<T> = Result<T, Box<dyn std::error::Error>>;
 pub struct Loaded {
     pub build: Build,
     pub data_root: PathBuf,
+    /// The cell's placed collision as a walking world, when asked for.
+    pub walk: Option<fo4_walk::World>,
 }
 
-pub fn cell(manifest: &str, data: &str, cell: &str, level: RuleLevel) -> AnyResult<Loaded> {
+/// The rules walk mode relies on before any collision is placed: the
+/// controller's own (every movement number, triangle sidedness).
+pub fn walk_rules() -> Vec<&'static str> {
+    let mut rules = fo4_walk::rules::PARAMS.to_vec();
+    rules.push(fo4_walk::rules::TRIANGLE_SIDES);
+    rules
+}
+
+pub fn cell(
+    manifest: &str,
+    data: &str,
+    cell: &str,
+    level: RuleLevel,
+    walk: bool,
+) -> AnyResult<Loaded> {
+    if walk {
+        fo4_walk::accept(&walk_rules(), level, fo4_scene::hypotheses::status)?;
+    }
     let mut manifest = Manifest::load(Path::new(manifest))?;
     manifest.root = Path::new(data).canonicalize()?;
     let limits = &manifest.limits;
@@ -37,9 +56,35 @@ pub fn cell(manifest: &str, data: &str, cell: &str, level: RuleLevel) -> AnyResu
         BuildOptions::reference(level),
         &budget,
     )?;
+    let walk = if walk {
+        // The same collision and world the `walk` report uses.
+        let options = fo4_scene::collision::Options {
+            level,
+            body_placement: None,
+        };
+        let c = fo4_scene::collision::cell(&scene, &loader, limits, options, &budget)?;
+        let placement = c
+            .body_placement
+            .ok_or("BodyPlacementRuleNotAccepted: no body placement level at this rule level")?;
+        let world = fo4_walk::World::build(&c, placement, &budget)?;
+        fo4_walk::accept(&world.rules, level, fo4_scene::hypotheses::status)?;
+        println!(
+            "walk world: {} triangles, {} hulls, {} spheres, {} capsules from {} instances ({} not placed)",
+            world.stats.triangles,
+            world.stats.hulls,
+            world.stats.spheres,
+            world.stats.capsules,
+            world.stats.instances,
+            c.unplaced.len(),
+        );
+        Some(world)
+    } else {
+        None
+    };
     Ok(Loaded {
         build,
         data_root: manifest.root.clone(),
+        walk,
     })
 }
 

@@ -4,6 +4,7 @@ use crate::{
     coords,
     fly::{FlyInput, FlySettings, FlyState},
     scene::GpuScene,
+    walk::WalkView,
 };
 use bevy::{
     asset::{embedded_asset, embedded_path, AssetPath, RenderAssetUsages},
@@ -466,6 +467,12 @@ struct Fly {
     state: FlyState,
     settings: FlySettings,
 }
+/// Walk mode: the cell's walking world and, while walking, the walker.
+#[derive(Resource)]
+struct Walk {
+    world: fo4_walk::World,
+    active: Option<WalkView>,
+}
 #[derive(Resource)]
 struct PendingScene(Option<GpuScene>, [f32; 4]);
 #[derive(Component)]
@@ -510,6 +517,7 @@ fn fly_camera(
     motion: Res<AccumulatedMouseMotion>,
     time: Res<Time>,
     mut fly: ResMut<Fly>,
+    walk: Option<ResMut<Walk>>,
     mut cameras: Query<&mut Transform, With<FlyCamera>>,
 ) {
     let input = FlyInput::from_keys(
@@ -524,7 +532,31 @@ fn fly_camera(
             .pressed(MouseButton::Left)
             .then_some([f64::from(motion.delta.x), f64::from(motion.delta.y)]),
     );
-    let next = fly.state.step(input, fly.settings, time.delta_secs_f64());
+    let dt = time.delta_secs_f64();
+    let next = match walk {
+        Some(mut walk) => {
+            let walk = &mut *walk;
+            if keys.just_pressed(KeyCode::Tab) {
+                walk.active = match walk.active.take() {
+                    Some(_) => None,
+                    None => WalkView::from_fly(
+                        fly.state,
+                        fo4_walk::Params::PROVISIONAL,
+                        fo4_walk::Settings::DEFAULT,
+                    )
+                    .ok(),
+                };
+            }
+            match walk.active.as_mut() {
+                Some(view) => {
+                    view.step(&walk.world, input, fly.settings, dt);
+                    view.look
+                }
+                None => fly.state.step(input, fly.settings, dt),
+            }
+        }
+        None => fly.state.step(input, fly.settings, dt),
+    };
     let Ok(pose) = fly_pose(&next) else {
         return;
     };
@@ -535,31 +567,50 @@ fn fly_camera(
     }
 }
 
-/// Windowed free-fly viewer; returns when the window is closed.
+/// Windowed viewer, free-fly or, with a walking world, walking (Tab
+/// switches); returns when the window is closed.
 pub fn window(
     scene: GpuScene,
     start: FlyState,
     settings: FlySettings,
+    walk: Option<fo4_walk::World>,
     clear: [f32; 4],
 ) -> Result<(), String> {
     fly_pose(&start)?;
-    App::new()
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                title: "fo4-view".into(),
-                ..default()
-            }),
+    let walk = match walk {
+        Some(world) => {
+            let view = WalkView::from_fly(
+                start,
+                fo4_walk::Params::PROVISIONAL,
+                fo4_walk::Settings::DEFAULT,
+            )?;
+            Some(Walk {
+                world,
+                active: Some(view),
+            })
+        }
+        None => None,
+    };
+    let mut app = App::new();
+    if let Some(walk) = walk {
+        app.insert_resource(walk);
+    }
+    app.add_plugins(DefaultPlugins.set(WindowPlugin {
+        primary_window: Some(Window {
+            title: "fo4-view".into(),
             ..default()
-        }))
-        .add_plugins(ViewerPlugin)
-        .insert_resource(Fly {
-            state: start,
-            settings,
-        })
-        .insert_resource(PendingScene(Some(scene), clear))
-        .add_systems(Startup, spawn_window_scene)
-        .add_systems(Update, fly_camera)
-        .run();
+        }),
+        ..default()
+    }))
+    .add_plugins(ViewerPlugin)
+    .insert_resource(Fly {
+        state: start,
+        settings,
+    })
+    .insert_resource(PendingScene(Some(scene), clear))
+    .add_systems(Startup, spawn_window_scene)
+    .add_systems(Update, fly_camera)
+    .run();
     Ok(())
 }
 

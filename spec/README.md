@@ -16,6 +16,7 @@ Measurement datasets and photographs of the game are not distributed.
 | [havok-bodies.md](havok-bodies.md) | Array element sizes, the body array of the top-level object (shape link and placement), Body ID against it, and the sphere, capsule, convex, scaled convex and compound shape layouts, measured over one installation. |
 | [havok-mesh.md](havok-mesh.md) | `hknpCompressedMeshShape` and its data object: array slots, sections, quantized section and shared vertices, byte 92, four-index primitives and their triangles, box trees, vertex records, units and triangles against render meshes, measured over one installation. |
 | [collision-placement.md](collision-placement.md) | Placing decoded collision in world space for a cell: the Target node chain, units, the open body placement rule with its two levels, the API, the `cell-collision` report and its first run. |
+| [walk.md](walk.md) | First walking controller over a cell's placed collision (`fo4-walk`): capsule, collide-and-slide, step-up, slope limit, the `walk` report and viewer walk mode; every movement number a provisional registered rule. |
 | [havok-container-census.tsv](havok-container-census.tsv) | Counts, holds/fails of container, object, body, shape and compressed-mesh properties, class names and signatures from the Havok census. |
 | [controller-measurements.md](controller-measurements.md) | Measurement design for comparing stored NIF locals with paused runtime nodes. |
 | [dds.md](dds.md) | DDS headers, formats, surfaces, block layouts and supported decoding boundaries. |
@@ -91,3 +92,13 @@ the registry.
 | `land_grid_spacing_128_v1` | pending | Offline objects against ground; live: `player.getpos` at a cell corner and at a quad centre. |
 | `land_quad_diagonal_sw_ne_v1` | pending | Live: settle at the two off-diagonal points of a non-planar quad; the other level must predict worse. |
 | `land_quad_diagonal_nw_se_v1` | pending | Same measurement as the sw_ne level. |
+| `walk_capsule_radius_v1` | pending | Walk the player into a box face of known plane and into a thin pole; the stop distances equal the radius. |
+| `walk_capsule_height_v1` | pending | Slabs over a corridor at decreasing clearances; the lowest clearance walked under standing. |
+| `walk_eye_height_v1` | pending | Look level at markers of known height on a far wall from a floor of known height; the marker on the centre row. |
+| `walk_step_height_v1` | pending | Staircase of boxes with risers 8 to 32 units; the highest riser walked onto, getpos z on each tread. |
+| `walk_max_slope_v1` | pending | Ramps of rotated boxes 30 to 60 degrees; the steepest walked up and whether the next slides. |
+| `walk_gravity_v1` | pending | Falls from ledges of known height timed from frame captures; compare with 0.5 g t^2. |
+| `walk_speed_walk_v1` | pending | Walk between two markers a known distance apart; time from frame captures, getpos at both ends. |
+| `walk_speed_run_v1` | pending | Same as the walk speed, running. |
+| `walk_no_air_control_v1` | pending | Walk off a high ledge holding the opposite direction in the air; compare landing points. |
+| `walk_triangles_block_both_sides_v1` | pending | Stand on, under and walk into single-plane mesh surfaces of both windings from each side. |

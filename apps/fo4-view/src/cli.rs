@@ -7,8 +7,13 @@ usage:
   fo4-view MANIFEST DATA_DIRECTORY CELL_EDITOR_ID [--strict|--measured|--under-hypotheses]
            --eye X,Y,Z --look X,Y,Z [--backface-cull]
            [--speed UNITS_PER_SECOND] [--fast-speed UNITS_PER_SECOND] [--radians-per-pixel R]
+           [--walk]
       Window with a free-fly camera: W/A/S/D move, Shift moves faster, hold the
       left mouse button and move the mouse to look.
+      --walk starts in walk mode instead: the fo4-walk controller on the
+      cell's placed collision (needs --under-hypotheses; every movement
+      number is a provisional rule), camera at its eye height, Shift runs;
+      Tab switches between walking and flying.
   fo4-view MANIFEST DATA_DIRECTORY CELL_EDITOR_ID [level] --headless
            --eye X,Y,Z --look X,Y,Z --out build/FRAME.png [--tags build/TAGS.bin]
            [--size WxH] [--backface-cull]
@@ -34,6 +39,8 @@ pub enum Command {
     Window {
         scene: Scene,
         fly: FlySettings,
+        /// Start in walk mode (`walk`), with Tab to switch.
+        walk: bool,
     },
     Headless {
         scene: Scene,
@@ -133,6 +140,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
     let mut tags = None;
     let mut frame = fo4_scene::camera::REFERENCE_SIZE;
     let mut fly = DEFAULT_FLY;
+    let mut walk = false;
     let mut rest = args[3..].iter();
     while let Some(arg) = rest.next() {
         let mut value = || rest.next().ok_or_else(usage);
@@ -150,6 +158,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             "--speed" => fly.speed = positive(value()?)?,
             "--fast-speed" => fly.fast_speed = positive(value()?)?,
             "--radians-per-pixel" => fly.radians_per_pixel = positive(value()?)?,
+            "--walk" => walk = true,
             _ => return Err(usage()),
         }
     }
@@ -162,7 +171,9 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
         look: look.ok_or_else(usage)?,
         backface_cull,
     };
-    if headless {
+    if headless && walk {
+        Err("--walk applies to the window only".into())
+    } else if headless {
         Ok(Command::Headless {
             scene,
             size: frame,
@@ -172,7 +183,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
     } else if out.is_some() || tags.is_some() || frame != fo4_scene::camera::REFERENCE_SIZE {
         Err("--out, --tags and --size apply to --headless only".into())
     } else {
-        Ok(Command::Window { scene, fly })
+        Ok(Command::Window { scene, fly, walk })
     }
 }
 
@@ -224,17 +235,24 @@ mod tests {
                     backface_cull: false,
                 },
                 fly: DEFAULT_FLY,
+                walk: false,
             }
         );
         let c = parse(&args(
             "m d C --strict --eye 1,2,3 --look 4,5,6 --speed 50 --fast-speed 75",
         ))
         .unwrap();
-        let Command::Window { scene, fly } = c else {
+        let Command::Window { scene, fly, walk } = c else {
             panic!()
         };
         assert_eq!(scene.level, RuleLevel::Facts);
         assert_eq!((fly.speed, fly.fast_speed), (50., 75.));
+        assert!(!walk);
+        let c = parse(&args(
+            "m d C --under-hypotheses --eye 1,2,3 --look 4,5,6 --walk",
+        ))
+        .unwrap();
+        assert!(matches!(c, Command::Window { walk: true, .. }));
     }
 
     #[test]
@@ -247,6 +265,7 @@ mod tests {
             "m d C --headless --eye 1,2,3 --look 4,5,6",
             "m d C --eye 1,2,3 --look 4,5,6 --speed -1",
             "m d C --eye 1,2,3 --look 4,5,6 --bogus",
+            "m d C --headless --eye 1,2,3 --look 4,5,6 --out a.png --walk",
             "m d C --headless --eye 1,2,3 --look 4,5,6 --out a.png --size 0x5",
             "compare --cpu a --gpu b",
             "compare --cpu a --gpu b --diff c --cpu-tags x",

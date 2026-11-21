@@ -20,6 +20,7 @@ fo4-texture.workspace = true
 fo4-archive.workspace = true
 fo4-vfs.workspace = true
 fo4-plugin.workspace = true
+fo4-walk.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 

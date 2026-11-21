@@ -16,6 +16,7 @@ fo4-render = { path = "crates/fo4-render" }
 fo4-scene = { path = "crates/fo4-scene" }
 fo4-nif = { path = "crates/fo4-nif" }
 fo4-havok = { path = "crates/fo4-havok" }
+fo4-walk = { path = "crates/fo4-walk" }
 fo4-material = { path = "crates/fo4-material" }
 fo4-texture = { path = "crates/fo4-texture" }
 bcn-decode = "=0.1.0"

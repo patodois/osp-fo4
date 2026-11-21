@@ -2051,7 +2051,17 @@ dependencies = [
  "fo4-render",
  "fo4-scene",
  "fo4-vfs",
+ "fo4-walk",
  "half",
+]
+
+[[package]]
+name = "fo4-walk"
+version = "0.1.0"
+dependencies = [
+ "fo4-core",
+ "fo4-scene",
+ "serde",
 ]
 
 [[package]]

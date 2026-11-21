@@ -6,7 +6,8 @@ decompiled code: every behaviour is either a documented format fact or a rule
 checked against measurements of the running game.
 
 It is a reference, not a playable engine. There is no lighting, animation,
-physics or gameplay yet.
+physics or gameplay yet, apart from a first walking controller that moves a
+capsule over a cell's collision under provisional, registered rules.
 
 ## What works
 
@@ -24,6 +25,9 @@ physics or gameplay yet.
   reported by `fo4-unpack land` ([terrain](spec/land.md)).
 - **Rendering**: a deterministic unlit CPU rasterizer and tools that compare
   its frames with photographs of the game.
+- **Walking**: a deterministic capsule controller (gravity, ground, walls,
+  steps, slope limit) over the placed collision of a cell; every movement
+  number is a placeholder awaiting measurement ([walk](spec/walk.md)).
 
 Readers are bounded and never panic on malformed input by design: sizes,
 counts and depths are checked, unknown bytes are preserved, and every error
@@ -98,6 +102,9 @@ target/fo4-view/debug/fo4-view examples/fallout4.json "$FO4_DATA" Financial13 \
   --under-hypotheses --eye 0,153.6,104.49 --look 70.7,224.3,104.49
 ```
 
+Add `--walk` to walk instead of fly: the camera rides the walking controller
+at its eye height, Shift runs and Tab switches between walking and flying.
+
 The comparison prints coverage agreement and colour differences; it defines
 no pass threshold.
 
@@ -105,9 +112,11 @@ no pass threshold.
 
 `fo4-unpack` reports on an installation without rendering: `inventory`,
 `resolve`, `sweep` (archives, records, models, materials, textures, cells,
-bases, collision, havok), `check-cell` and `cell-collision` (the collision of
+bases, collision, havok), `check-cell`, `cell-collision` (the collision of
 one cell placed in world space under the registered placement rules,
-[collision placement](spec/collision-placement.md)). Reports are JSON lines with source
+[collision placement](spec/collision-placement.md)) and `walk` (drops the
+walking controller at a point of a cell, walks a path and writes a
+deterministic trace, [walk](spec/walk.md)). Reports are JSON lines with source
 offsets ([scene and report contracts](spec/scene.md)); the collision and Havok
 censuses also write a TSV of counts ([collision blocks](spec/collision.md),
 [Havok container](spec/havok-container.md), [Havok objects](spec/havok-objects.md),
@@ -139,6 +148,7 @@ consulted, with one attributed exception described in
 | `fo4-nif`, `fo4-material`, `fo4-texture` | Model, material and texture readers. |
 | `fo4-havok` | Container and object spans of the Havok collision payload; bodies (shape link and placement); convex, sphere, capsule, scaled and compound shapes. |
 | `fo4-scene` | Scene assembly, rule levels and the collision of a cell. |
+| `fo4-walk` | Walking controller over the collision of a cell. |
 | `fo4-render` | CPU renderer and image comparison. |
 | `fo4-unpack` | Command-line tool and the `render` example. |
 

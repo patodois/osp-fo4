@@ -8,6 +8,7 @@ mod fly;
 mod gpu;
 mod load;
 mod scene;
+mod walk;
 
 use cli::Command;
 use fo4_render::RenderOptions;
@@ -21,8 +22,11 @@ fn main() {
     }
 }
 
-fn load_scene(s: &cli::Scene) -> AnyResult<(scene::GpuScene, RenderOptions, load::Loaded)> {
-    let loaded = load::cell(&s.manifest, &s.data, &s.cell, s.level)?;
+fn load_scene(
+    s: &cli::Scene,
+    walk: bool,
+) -> AnyResult<(scene::GpuScene, RenderOptions, load::Loaded)> {
+    let loaded = load::cell(&s.manifest, &s.data, &s.cell, s.level, walk)?;
     let options = RenderOptions {
         backface_cull: s.backface_cull,
         ..RenderOptions::REFERENCE
@@ -51,7 +55,7 @@ fn run() -> AnyResult<()> {
             out,
             tags,
         } => {
-            let (gpu, options, loaded) = load_scene(&s)?;
+            let (gpu, options, loaded) = load_scene(&s, false)?;
             let root = Some(loaded.data_root.as_path());
             // Open the outputs first: a refused path fails before rendering.
             let mut out_file = load::output_file(&out, root)?;
@@ -72,11 +76,19 @@ fn run() -> AnyResult<()> {
             }
             Ok(())
         }
-        Command::Window { scene: s, fly } => {
-            let (gpu, options, loaded) = load_scene(&s)?;
-            drop(loaded);
+        Command::Window {
+            scene: s,
+            fly,
+            walk,
+        } => {
+            let (gpu, options, loaded) = load_scene(&s, walk)?;
+            // Keep only the walking world; the draw list was converted.
+            let load::Loaded {
+                walk: world, build, ..
+            } = loaded;
+            drop(build);
             let start = fly::FlyState::from_eye_look(s.eye, s.look)?;
-            gpu::window(gpu, start, fly, options.clear)?;
+            gpu::window(gpu, start, fly, world, options.clear)?;
             Ok(())
         }
         Command::Compare {

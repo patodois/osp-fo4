@@ -13,6 +13,7 @@ mod land;
 mod path_census;
 mod references;
 mod root_census;
+mod walk;
 use fo4_archive::GameArchive;
 use fo4_core::{
     digest, io_error, within, Budget, Error, FileSource, Manifest, Mount, ReadAt, Result,
@@ -28,6 +29,7 @@ use std::{
     io::{BufWriter, Write},
     path::{Component, Path, PathBuf},
 };
+pub use walk::Args as WalkArgs;
 
 #[derive(Debug)]
 pub struct Options {
@@ -40,11 +42,63 @@ pub struct Options {
     pub scope: Option<String>,
     pub path: Option<String>,
     pub items: bool,
+    /// Start, legs and pace of `walk`.
+    pub walk: Option<WalkArgs>,
 }
 impl Options {
     pub fn parse(args: impl IntoIterator<Item = String>) -> Result<Self> {
         let mut args = args.into_iter();
         let command = args.next().ok_or_else(usage)?;
+        if command == "walk" {
+            let manifest = args.next().ok_or_else(usage)?.into();
+            let path = Some(args.next().ok_or_else(usage)?);
+            let mut out = None;
+            let mut level = None;
+            let mut overlay_plugin = None;
+            let mut from = None;
+            let mut legs = None;
+            let mut run = false;
+            while let Some(arg) = args.next() {
+                match arg.as_str() {
+                    "--out" if out.is_none() => out = Some(args.next().ok_or_else(usage)?.into()),
+                    "--overlay-plugin" if overlay_plugin.is_none() => {
+                        overlay_plugin = Some(PathBuf::from(args.next().ok_or_else(usage)?))
+                    }
+                    "--under-hypotheses" if level.is_none() => {
+                        level = Some(fo4_scene::RuleLevel::Hypotheses)
+                    }
+                    "--measured" if level.is_none() => level = Some(fo4_scene::RuleLevel::Measured),
+                    "--strict" if level.is_none() => level = Some(fo4_scene::RuleLevel::Facts),
+                    "--from" if from.is_none() => {
+                        from = Some(
+                            walk::parse_point(&args.next().ok_or_else(usage)?).ok_or_else(usage)?,
+                        )
+                    }
+                    "--path" if legs.is_none() => {
+                        legs = Some(
+                            walk::parse_path(&args.next().ok_or_else(usage)?).ok_or_else(usage)?,
+                        )
+                    }
+                    "--run" if !run => run = true,
+                    _ => return Err(usage()),
+                }
+            }
+            return Ok(Self {
+                level: level.unwrap_or(fo4_scene::RuleLevel::Measured),
+                overlay_plugin,
+                command,
+                manifest,
+                out: out.unwrap_or_else(|| PathBuf::from("reports/walk")),
+                scope: None,
+                path,
+                items: true,
+                walk: Some(WalkArgs {
+                    from: from.ok_or_else(usage)?,
+                    legs: legs.ok_or_else(usage)?,
+                    run,
+                }),
+            });
+        }
         if command == "check-cell" || command == "cell-collision" || command == "land" {
             let manifest = args.next().ok_or_else(usage)?.into();
             let path = Some(args.next().ok_or_else(usage)?);
@@ -88,6 +142,7 @@ impl Options {
                 scope,
                 path,
                 items: true,
+                walk: None,
             });
         }
         if !["inventory", "resolve", "sweep"].contains(&command.as_str()) {
@@ -165,11 +220,12 @@ impl Options {
             out: out.ok_or_else(usage)?.into(),
             scope,
             path,
+            walk: None,
         })
     }
 }
 fn usage() -> Error {
-    Error::new("Usage","CLI",0,"inventory|resolve|sweep --manifest PROFILE.json --out DIR [--scope archives|records|nif|materials|textures|cells|bases|shader-citations|unread|paths|roots|collision|havok] [--all|--path ASSET] [--items]; check-cell PROFILE.json EditorID [--out DIR] [--strict|--under-hypotheses] [--overlay-plugin FILE]; cell-collision PROFILE.json EditorID [--out DIR] [--strict|--measured|--under-hypotheses] [--overlay-plugin FILE]; land PROFILE.json EditorID [--out DIR] [--strict|--measured|--under-hypotheses] [--census]","invalid or missing argument")
+    Error::new("Usage","CLI",0,"inventory|resolve|sweep --manifest PROFILE.json --out DIR [--scope archives|records|nif|materials|textures|cells|bases|shader-citations|unread|paths|roots|collision|havok] [--all|--path ASSET] [--items]; check-cell PROFILE.json EditorID [--out DIR] [--strict|--under-hypotheses] [--overlay-plugin FILE]; cell-collision PROFILE.json EditorID [--out DIR] [--strict|--measured|--under-hypotheses] [--overlay-plugin FILE]; land PROFILE.json EditorID [--out DIR] [--strict|--measured|--under-hypotheses] [--census]; walk PROFILE.json EditorID --from X,Y,Z --path DX,DY[,DX,DY...] [--run] [--out DIR] [--strict|--measured|--under-hypotheses] [--overlay-plugin FILE]","invalid or missing argument")
 }
 #[derive(Default, Serialize)]
 pub struct Summary {
@@ -196,6 +252,9 @@ pub struct Summary {
     /// Only the `land` command fills it; absent from other summaries.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub land: Option<land::Summary>,
+    /// Only the `walk` command fills it; absent from other summaries.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub walk: Option<walk::Summary>,
     pub schema: u32,
     pub under_hypotheses: bool,
     /// The rule level the command applied, for the commands that classify readiness.
@@ -969,6 +1028,14 @@ fn run_selected(o: &Options, keys: Option<&[fo4_plugin::FormKey]>) -> Result<u8>
             &mut r,
             o.level,
             o.scope.as_deref() == Some("census"),
+        ),
+        "walk" => walk::run(
+            &m,
+            o.path.as_deref().ok_or_else(usage)?,
+            &mut r,
+            o.level,
+            o.overlay_plugin.as_deref(),
+            o.walk.as_ref().ok_or_else(usage)?,
         ),
         "sweep" => match o.scope.as_deref() {
             Some("archives") => archives(&m, &mut r),
