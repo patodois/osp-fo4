@@ -5,7 +5,7 @@ use fo4_scene::RuleLevel;
 pub const USAGE: &str = "\
 usage:
   fo4-view MANIFEST DATA_DIRECTORY CELL_EDITOR_ID [--strict|--measured|--under-hypotheses]
-           --eye X,Y,Z --look X,Y,Z [--backface-cull]
+           --eye X,Y,Z --look X,Y,Z [--backface-cull] [--terrain]
            [--speed UNITS_PER_SECOND] [--fast-speed UNITS_PER_SECOND] [--radians-per-pixel R]
            [--walk]
       Window with a free-fly camera: W/A/S/D move, Shift moves faster, hold the
@@ -13,10 +13,14 @@ usage:
       --walk starts in walk mode instead: the fo4-walk controller on the
       cell's placed collision (needs --under-hypotheses; every movement
       number is a provisional rule), camera at its eye height, Shift runs;
-      Tab switches between walking and flying.
+      Tab switches between walking and flying. In an exterior cell the walker
+      also stands on the terrain of the cell and its neighbours when the level
+      accepts the terrain rules.
+      --terrain also draws the cell's own terrain, plain grey as the CPU
+      render's --terrain (needs --under-hypotheses while its rules are pending).
   fo4-view MANIFEST DATA_DIRECTORY CELL_EDITOR_ID [level] --headless
            --eye X,Y,Z --look X,Y,Z --out build/FRAME.png [--tags build/TAGS.bin]
-           [--size WxH] [--backface-cull]
+           [--size WxH] [--backface-cull] [--terrain]
       One offscreen frame, no window. --tags also writes the per-pixel instance
       tags (u32 little-endian, u32::MAX = background).
   fo4-view compare --cpu CPU.png --gpu GPU.png --diff build/DIFF.png
@@ -32,6 +36,8 @@ pub struct Scene {
     pub eye: [f64; 3],
     pub look: [f64; 3],
     pub backface_cull: bool,
+    /// Draw the cell's terrain (`--terrain`), as the CPU render does.
+    pub terrain: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -141,6 +147,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
     let mut frame = fo4_scene::camera::REFERENCE_SIZE;
     let mut fly = DEFAULT_FLY;
     let mut walk = false;
+    let mut terrain = false;
     let mut rest = args[3..].iter();
     while let Some(arg) = rest.next() {
         let mut value = || rest.next().ok_or_else(usage);
@@ -159,6 +166,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             "--fast-speed" => fly.fast_speed = positive(value()?)?,
             "--radians-per-pixel" => fly.radians_per_pixel = positive(value()?)?,
             "--walk" => walk = true,
+            "--terrain" => terrain = true,
             _ => return Err(usage()),
         }
     }
@@ -170,6 +178,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
         eye: eye.ok_or_else(usage)?,
         look: look.ok_or_else(usage)?,
         backface_cull,
+        terrain,
     };
     if headless && walk {
         Err("--walk applies to the window only".into())
@@ -233,6 +242,7 @@ mod tests {
                     eye: [1., 2., 3.],
                     look: [4., 5., 6.],
                     backface_cull: false,
+                    terrain: false,
                 },
                 fly: DEFAULT_FLY,
                 walk: false,
@@ -253,6 +263,16 @@ mod tests {
         ))
         .unwrap();
         assert!(matches!(c, Command::Window { walk: true, .. }));
+        let c = parse(&args(
+            "m d C --under-hypotheses --eye 1,2,3 --look 4,5,6 --walk --terrain",
+        ))
+        .unwrap();
+        assert!(matches!(&c, Command::Window { walk: true, scene, .. } if scene.terrain));
+        let c = parse(&args(
+            "m d C --under-hypotheses --headless --eye 1,2,3 --look 4,5,6 --out a.png --terrain",
+        ))
+        .unwrap();
+        assert!(matches!(&c, Command::Headless { scene, .. } if scene.terrain));
     }
 
     #[test]

@@ -93,7 +93,9 @@ format fact and does not claim to reproduce the game's controller. Every
 movement number is a registered pending rule with a provisional value. No
 character-controller source, physics SDK, decompilation or third-party
 implementation was opened or searched for. The game settings it lists are
-read from the plugins as raw bytes and are not applied.
+read from the plugins as raw bytes and are not applied. The terrain it
+stands on is the terrain of [spec/land.md](../spec/land.md), under the same
+pending rules; walking on it adds no source.
 
 Runtime experiments measure an owned running copy through separately collected
 camera/transform words and repeated photographs. Their raw data stays local.

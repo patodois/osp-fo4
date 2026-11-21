@@ -14,6 +14,7 @@
 //! [`Params::PROVISIONAL`], is provisional. See `spec/walk.md`.
 pub mod controller;
 pub mod geometry;
+pub mod terrain;
 pub mod world;
 
 pub use controller::{Character, Ground, Input, Settings, State};

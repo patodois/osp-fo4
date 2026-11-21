@@ -2047,8 +2047,11 @@ fn walk_writes_a_deterministic_trace_and_needs_the_hypothesis_level() {
     let trace = fs::read(a.join("trace.json")).unwrap();
     assert_eq!(trace, fs::read(b.join("trace.json")).unwrap());
     let t: Value = serde_json::from_slice(&trace).unwrap();
-    assert_eq!(t["schema"], 1);
+    assert_eq!(t["schema"], 2);
     assert_eq!(t["params"].as_array().unwrap().len(), 9);
+    // An interior cell has no terrain; that is not a refusal to report.
+    assert_eq!(t["terrain"]["pieces"][0]["outcome"], "refused:NotExterior");
+    assert_eq!(t["terrain"]["neighbours_searched"], false);
     assert!(t["params"]
         .as_array()
         .unwrap()
@@ -2064,6 +2067,9 @@ fn walk_writes_a_deterministic_trace_and_needs_the_hypothesis_level() {
         .all(|s| s["grounded"] == false));
     let s: Value = serde_json::from_slice(&fs::read(a.join("summary.json")).unwrap()).unwrap();
     assert_eq!(s["walk"]["editor_id"], "Cell4098");
+    assert_eq!(s["walk"]["cell_terrain"], "refused:NotExterior");
+    assert_eq!(s["walk"]["without_cell_terrain"], false);
+    assert_eq!(s["walk"]["terrain_ground_ticks"], 0);
     assert!(s["walk"]["rules"]
         .as_array()
         .unwrap()

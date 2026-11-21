@@ -14,7 +14,8 @@ pub type AnyResult<T> = Result<T, Box<dyn std::error::Error>>;
 pub struct Loaded {
     pub build: Build,
     pub data_root: PathBuf,
-    /// The cell's placed collision as a walking world, when asked for.
+    /// The cell's placed collision as a walking world, when asked for,
+    /// with the terrain of the cell and its neighbours when it loads.
     pub walk: Option<fo4_walk::World>,
 }
 
@@ -32,6 +33,7 @@ pub fn cell(
     cell: &str,
     level: RuleLevel,
     walk: bool,
+    terrain: bool,
 ) -> AnyResult<Loaded> {
     if walk {
         fo4_walk::accept(&walk_rules(), level, fo4_scene::hypotheses::status)?;
@@ -49,13 +51,48 @@ pub fn cell(
     let budget = Budget::metered(limits.max_memory);
     let mut loader = Loader::new(&store, &vfs, &manifest.language, level, &budget);
     let scene = loader.by_editor_id(cell, &budget)?;
-    let build = fo4_render::draw::build(
+    let mut build = fo4_render::draw::build(
         &scene,
         &loader,
         limits,
         BuildOptions::reference(level),
         &budget,
     )?;
+    // The terrain of the cell and, for walking, of its neighbours. Without
+    // --terrain and --walk nothing is loaded and the draw list is unchanged.
+    let ground = if walk || terrain {
+        Some(fo4_walk::terrain::load_around(
+            &store,
+            &scene.cell.key,
+            level,
+            walk,
+            &budget,
+        )?)
+    } else {
+        None
+    };
+    let terrain_outcome = ground
+        .as_ref()
+        .and_then(|g| g.own())
+        .map(|p| p.outcome.clone());
+    if terrain {
+        let own = ground
+            .as_ref()
+            .filter(|g| g.own_built())
+            .and_then(|g| g.terrains.first());
+        match own {
+            Some(t) => {
+                // Tagged after every placed instance, as the CPU render does.
+                let tag = u32::try_from(build.instances.len())?;
+                fo4_render::terrain::append_terrain(&mut build.list, t, tag, &budget)?;
+                println!("terrain drawn: grid {:?}, tag {tag}", t.grid);
+            }
+            None => println!(
+                "terrain not drawn: {}",
+                terrain_outcome.as_deref().unwrap_or("unknown")
+            ),
+        }
+    }
     let walk = if walk {
         // The same collision and world the `walk` report uses.
         let options = fo4_scene::collision::Options {
@@ -66,7 +103,16 @@ pub fn cell(
         let placement = c
             .body_placement
             .ok_or("BodyPlacementRuleNotAccepted: no body placement level at this rule level")?;
-        let world = fo4_walk::World::build(&c, placement, &budget)?;
+        let mut world = fo4_walk::World::build(&c, placement, &budget)?;
+        if let Some(mut g) = ground {
+            g.add_to(&mut world, &budget)?;
+            let pieces: Vec<String> = g
+                .pieces
+                .iter()
+                .map(|p| format!("{} {}", p.name, p.outcome))
+                .collect();
+            println!("walk terrain: {}", pieces.join(", "));
+        }
         fo4_walk::accept(&world.rules, level, fo4_scene::hypotheses::status)?;
         println!(
             "walk world: {} triangles, {} hulls, {} spheres, {} capsules from {} instances ({} not placed)",

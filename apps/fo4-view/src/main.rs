@@ -26,7 +26,7 @@ fn load_scene(
     s: &cli::Scene,
     walk: bool,
 ) -> AnyResult<(scene::GpuScene, RenderOptions, load::Loaded)> {
-    let loaded = load::cell(&s.manifest, &s.data, &s.cell, s.level, walk)?;
+    let loaded = load::cell(&s.manifest, &s.data, &s.cell, s.level, walk, s.terrain)?;
     let options = RenderOptions {
         backface_cull: s.backface_cull,
         ..RenderOptions::REFERENCE

@@ -4,8 +4,11 @@
 //! grounded flag and the instance stood on, per tick) beside the usual
 //! summary. Every movement number is a provisional registered rule
 //! (`spec/walk.md`); the command refuses to run unless the level accepts
-//! them. As evidence only, it lists the game settings (GMST) whose EditorID
-//! names movement, with their raw DATA bytes; none is applied.
+//! them. In an exterior cell the terrain of the cell and of its loaded
+//! neighbours is added to the world when the level accepts the terrain
+//! rules (`spec/land.md`); a refused terrain is reported. As evidence only,
+//! it lists the game settings (GMST) whose EditorID names movement, with
+//! their raw DATA bytes; none is applied.
 use crate::Reports;
 use fo4_core::{Budget, Error, Manifest, Result};
 use fo4_plugin::typed::Store;
@@ -13,6 +16,7 @@ use fo4_plugin::FormKey;
 use fo4_scene::collision::{self, BodyPlacement, CellCollision};
 use fo4_scene::{Loader, RuleLevel};
 use fo4_vfs::Vfs;
+use fo4_walk::terrain::TerrainSet;
 use fo4_walk::{rules, Character, Input, Params, RayHit, Settings, State, World};
 use serde::Serialize;
 
@@ -45,6 +49,9 @@ pub const SETTING_KEYWORDS: [&str; 11] = [
 ];
 /// Most game settings listed.
 pub const MAX_SETTINGS: usize = 512;
+/// Feet more than this far below the terrain under them count as below the
+/// terrain (world units). A capsule standing on terrain is never below it.
+pub const BELOW_TERRAIN: f64 = 1.0;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct ParamRow {
@@ -74,6 +81,8 @@ pub struct Owner {
     pub model: Option<String>,
     pub class: Option<&'static str>,
     pub label: Option<String>,
+    /// XCLC grid of the cell whose terrain it is.
+    pub terrain: Option<[i32; 2]>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -82,6 +91,8 @@ pub struct Step {
     /// `None` while settling.
     pub leg: Option<usize>,
     pub feet: [f64; 3],
+    /// Height of the loaded terrain under the feet, when there is one.
+    pub terrain_z: Option<f64>,
     pub grounded: bool,
     pub stepped: bool,
     pub blocked: bool,
@@ -103,6 +114,8 @@ pub struct Leg {
     pub remaining: f64,
     pub stalled: bool,
     pub ended_grounded: bool,
+    /// Height of the loaded terrain under the end point.
+    pub end_terrain_z: Option<f64>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -125,6 +138,15 @@ pub struct Summary {
     pub collision_instances: u64,
     pub unplaced: u64,
     pub world: Option<fo4_walk::world::Stats>,
+    /// Outcome of the cell's own terrain: `built:<diagonal>` or
+    /// `refused:<code>`.
+    pub cell_terrain: Option<String>,
+    /// The cell is exterior (or its kind could not be told) and its own
+    /// terrain was not built: the walk runs without that ground.
+    pub without_cell_terrain: bool,
+    /// Every terrain piece tried (the cell and its eight neighbours).
+    pub terrain: Option<TerrainSet>,
+    pub terrain_seconds: f64,
     /// Every registered rule the walk relies on, sorted.
     pub rules: Vec<&'static str>,
     pub params: Vec<ParamRow>,
@@ -136,11 +158,25 @@ pub struct Summary {
     pub settled_grounded: bool,
     /// Settled feet z minus the surface found under the start point.
     pub settled_height_above_surface: Option<f64>,
+    /// Terrain height under the settled feet, and the feet above it.
+    pub settled_terrain_z: Option<f64>,
+    pub settled_height_above_terrain: Option<f64>,
     pub legs: Vec<Leg>,
     pub ticks: u64,
     pub grounded_ticks: u64,
     pub stepped_ticks: u64,
     pub blocked_ticks: u64,
+    /// Ticks grounded on terrain, on a placed instance, or on another
+    /// labelled set.
+    pub terrain_ground_ticks: u64,
+    pub instance_ground_ticks: u64,
+    pub other_ground_ticks: u64,
+    /// Ticks in the air after settling (while walking the legs).
+    pub airborne_path_ticks: u64,
+    /// Ticks whose feet are more than [`BELOW_TERRAIN`] below the terrain
+    /// under them, and the largest depth below it (positive is below).
+    pub below_terrain_ticks: u64,
+    pub deepest_below_terrain: Option<f64>,
     pub game_settings_scanned: u64,
     pub game_settings_matching: u64,
     pub fingerprint_seconds: f64,
@@ -160,6 +196,7 @@ struct Trace<'a> {
     params: &'a [ParamRow],
     settings: Settings,
     world: &'a fo4_walk::world::Stats,
+    terrain: &'a Option<TerrainSet>,
     from: [f64; 3],
     path: &'a [[f64; 2]],
     run: bool,
@@ -176,7 +213,7 @@ fn status_name(rule: &str) -> String {
     }
 }
 
-fn owner(c: &CellCollision, w: &World, source: u32) -> Owner {
+pub fn owner(c: &CellCollision, w: &World, source: u32) -> Owner {
     let s = w.sources.get(source as usize);
     let instance = s.and_then(|s| s.instance);
     let inst = instance.and_then(|i| c.instances.get(i));
@@ -188,6 +225,7 @@ fn owner(c: &CellCollision, w: &World, source: u32) -> Owner {
         model: inst.map(|i| c.model(i).path.clone()),
         class: s.and_then(|s| s.class).map(|k| k.class()),
         label: s.and_then(|s| s.label.clone()),
+        terrain: s.and_then(|s| s.terrain),
     }
 }
 
@@ -244,8 +282,23 @@ pub fn run(
             format!("{level:?}"),
         )
     })?;
-    let world = World::build(&c, placement, &budget)?;
+    let mut world = World::build(&c, placement, &budget)?;
     let collision_seconds = started.elapsed().as_secs_f64();
+    let started = std::time::Instant::now();
+    let mut ground = fo4_walk::terrain::load_around(&store, &scene.cell.key, level, true, &budget)?;
+    ground.add_to(&mut world, &budget)?;
+    let terrain_seconds = started.elapsed().as_secs_f64();
+    let cell_terrain = ground.own().map(|p| p.outcome.clone());
+    let without_cell_terrain =
+        !ground.own_built() && cell_terrain.as_deref() != Some("refused:NotExterior");
+    if without_cell_terrain {
+        let own = ground.own();
+        r.item(&serde_json::json!({"kind":"terrain_refused","cell":scene.cell.key,"outcome":cell_terrain,"refusal":own.and_then(|p| p.refusal.as_ref())}))?;
+        eprintln!(
+            "walk: the cell's terrain was not built ({}); walking without it",
+            cell_terrain.as_deref().unwrap_or("unknown")
+        );
+    }
     let mut all = world.rules.clone();
     all.extend_from_slice(&rules::PARAMS);
     all.sort_unstable();
@@ -260,6 +313,9 @@ pub fn run(
         collision_instances: c.instances.len() as u64,
         unplaced: c.unplaced.len() as u64,
         world: Some(world.stats.clone()),
+        cell_terrain,
+        without_cell_terrain,
+        terrain_seconds,
         rules: all,
         params: params
             .provenance()
@@ -279,10 +335,11 @@ pub fn run(
         collision_seconds,
         ..Summary::default()
     };
-    let (steps, legs) = walk(&c, &world, params, settings, args, &mut s)?;
+    let (steps, legs) = walk(&c, &world, Some(&ground), params, settings, args, &mut s)?;
+    s.terrain = Some(ground);
     s.walk_seconds = started.elapsed().as_secs_f64();
     let trace = Trace {
-        schema: 1,
+        schema: 2,
         editor_id,
         level,
         body_placement: Some(placement),
@@ -290,6 +347,7 @@ pub fn run(
         params: &s.params,
         settings,
         world: &world.stats,
+        terrain: &s.terrain,
         from: args.from,
         path: &args.legs,
         run: args.run,
@@ -319,10 +377,13 @@ pub fn run(
     Ok(())
 }
 
-/// Settles the character at `args.from` and walks every leg.
+/// Settles the character at `args.from` and walks every leg. `ground`, when
+/// given, is the terrain already added to `world`; it is used only to
+/// report the terrain height under the feet.
 pub fn walk(
     c: &CellCollision,
     world: &World,
+    ground: Option<&TerrainSet>,
     params: Params,
     settings: Settings,
     args: &Args,
@@ -333,12 +394,14 @@ pub fn walk(
     s.surface_under_start = world
         .ray_down(args.from[0], args.from[1], args.from[2] + 1e-6)
         .map(|h| surface(c, world, h));
+    let terrain_z = |p: [f64; 3]| ground.and_then(|g| g.height_at(p[0], p[1])).map(|h| h.0);
     let mut steps = Vec::new();
     let record = |st: &State, leg: Option<usize>, steps: &mut Vec<Step>| {
         steps.push(Step {
             tick: st.tick,
             leg,
             feet: st.feet,
+            terrain_z: terrain_z(st.feet),
             grounded: st.grounded,
             stepped: st.stepped,
             blocked: st.blocked,
@@ -365,6 +428,8 @@ pub fn walk(
     s.settled = Some(ch.feet);
     s.settled_grounded = ch.grounded;
     s.settled_height_above_surface = s.surface_under_start.as_ref().map(|h| ch.feet[2] - h.z);
+    s.settled_terrain_z = terrain_z(ch.feet);
+    s.settled_height_above_terrain = s.settled_terrain_z.map(|z| ch.feet[2] - z);
     let speed = if args.run {
         params.run_speed
     } else {
@@ -417,6 +482,7 @@ pub fn walk(
             remaining: left,
             stalled,
             ended_grounded: ch.grounded,
+            end_terrain_z: terrain_z(ch.feet),
         });
     }
     s.ticks = steps.len() as u64;
@@ -424,6 +490,22 @@ pub fn walk(
         s.grounded_ticks += u64::from(st.grounded);
         s.stepped_ticks += u64::from(st.stepped);
         s.blocked_ticks += u64::from(st.blocked);
+        match &st.ground {
+            Some(g) if g.terrain.is_some() => s.terrain_ground_ticks += 1,
+            Some(g) if g.instance.is_some() => s.instance_ground_ticks += 1,
+            Some(_) => s.other_ground_ticks += 1,
+            None => {}
+        }
+        s.airborne_path_ticks += u64::from(st.leg.is_some() && !st.grounded);
+        if let Some(z) = st.terrain_z {
+            let depth = z - st.feet[2];
+            if depth > BELOW_TERRAIN {
+                s.below_terrain_ticks += 1;
+            }
+            if s.deepest_below_terrain.is_none_or(|d| depth > d) {
+                s.deepest_below_terrain = Some(depth);
+            }
+        }
     }
     Ok((steps, legs))
 }
@@ -542,6 +624,7 @@ mod tests {
         let (steps, legs) = walk(
             &c,
             &w,
+            None,
             Params::PROVISIONAL,
             Settings::DEFAULT,
             &args,
@@ -567,6 +650,7 @@ mod tests {
         let (steps, legs) = walk(
             &c,
             &w,
+            None,
             Params::PROVISIONAL,
             Settings::DEFAULT,
             &args,
@@ -586,5 +670,112 @@ mod tests {
             last.ground.as_ref().and_then(|g| g.label.as_deref()),
             Some("floor")
         );
+    }
+
+    #[test]
+    fn the_trace_reports_terrain_and_instances_under_the_feet() {
+        use fo4_plugin::land::{Heights, POINTS};
+        use fo4_scene::terrain::{Diagonal, Terrain};
+        let c = CellCollision {
+            level: RuleLevel::Hypotheses,
+            body_placement: Some(BodyPlacement::Ignored),
+            models: Vec::new(),
+            placements: Vec::new(),
+            instances: Vec::new(),
+            unplaced: Vec::new(),
+            without_collision: Vec::new(),
+        };
+        let b = Budget::new(256 << 20);
+        let key = |id| FormKey {
+            plugin: "synthetic.esm".into(),
+            object_id: id,
+        };
+        // Flat terrain at 3 x 8 = 24 units over the cell at grid (0, 0).
+        let heights = Heights {
+            subrecord: 0,
+            offset: 3.0,
+            gradient: vec![0; POINTS],
+            trailing: [0; 3],
+        };
+        let rules: Vec<&'static str> = fo4_scene::terrain::RULES.to_vec();
+        let t = Terrain::from_heights(
+            key(1),
+            key(2),
+            None,
+            [0, 0],
+            0,
+            &heights,
+            Diagonal::SouthwestNortheast,
+            fo4_scene::collision::rules_state(&rules, fo4_scene::hypotheses::status),
+            &b,
+        )
+        .unwrap();
+        let mut ground = TerrainSet::default();
+        ground.terrains.push(t);
+        let mut w = World::new();
+        // A low slab on the terrain, crossed by the first leg.
+        let slab: Vec<[f64; 3]> = (0..8)
+            .map(|i| {
+                [
+                    if i & 1 == 0 { 300.0 } else { 400.0 },
+                    if i & 2 == 0 { 0.0 } else { 200.0 },
+                    if i & 4 == 0 { 0.0 } else { 34.0 },
+                ]
+            })
+            .collect();
+        w.add_hull(&slab, 0.0, "slab", &b).unwrap();
+        ground.add_to(&mut w, &b).unwrap();
+        let args = Args {
+            from: [200.0, 100.0, 80.0],
+            legs: vec![[400.0, 0.0], [0.0, 300.0]],
+            run: false,
+        };
+        let mut s = Summary::default();
+        let (steps, legs) = walk(
+            &c,
+            &w,
+            Some(&ground),
+            Params::PROVISIONAL,
+            Settings::DEFAULT,
+            &args,
+            &mut s,
+        )
+        .unwrap();
+        assert!(s.settled_grounded);
+        assert_eq!(s.settled_terrain_z, Some(24.0));
+        assert!(s
+            .settled_height_above_terrain
+            .is_some_and(|h| h.abs() < 1e-9));
+        assert!(legs.iter().all(|l| l.reached && l.ended_grounded));
+        assert!(legs.iter().all(|l| l.end_terrain_z == Some(24.0)));
+        assert!(s.terrain_ground_ticks > 0 && s.other_ground_ticks > 0);
+        assert_eq!(s.instance_ground_ticks, 0);
+        assert_eq!(s.airborne_path_ticks, 0);
+        assert_eq!(s.below_terrain_ticks, 0);
+        assert!(s.deepest_below_terrain.is_some_and(|d| d <= 1e-9));
+        let on = |st: &Step| st.ground.as_ref().map(|g| (g.terrain, g.label.clone()));
+        assert_eq!(
+            on(steps.iter().find(|st| st.grounded).unwrap()),
+            Some((Some([0, 0]), Some("terrain".to_owned())))
+        );
+        assert!(steps
+            .iter()
+            .any(|st| on(st) == Some((None, Some("slab".to_owned())))));
+        // In the trace the terrain grid and height sit beside the feet.
+        let last = serde_json::to_value(steps.last().unwrap()).unwrap();
+        assert_eq!(last["ground"]["terrain"], serde_json::json!([0, 0]));
+        assert_eq!(last["terrain_z"], 24.0);
+    }
+
+    #[test]
+    fn only_the_walk_command_puts_walk_in_the_summary() {
+        let v = serde_json::to_value(crate::Summary::default()).unwrap();
+        assert!(v.get("walk").is_none() && v.get("land").is_none());
+        let s = crate::Summary {
+            walk: Some(Summary::default()),
+            ..crate::Summary::default()
+        };
+        let v = serde_json::to_value(s).unwrap();
+        assert!(v["walk"]["terrain_ground_ticks"].is_u64());
     }
 }

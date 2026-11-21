@@ -26,7 +26,8 @@ capsule over a cell's collision under provisional, registered rules.
 - **Rendering**: a deterministic unlit CPU rasterizer and tools that compare
   its frames with photographs of the game.
 - **Walking**: a deterministic capsule controller (gravity, ground, walls,
-  steps, slope limit) over the placed collision of a cell; every movement
+  steps, slope limit) over the placed collision of a cell and, in an
+  exterior cell, the terrain of the cell and its neighbours; every movement
   number is a placeholder awaiting measurement ([walk](spec/walk.md)).
 
 Readers are bounded and never panic on malformed input by design: sizes,
@@ -104,6 +105,9 @@ target/fo4-view/debug/fo4-view examples/fallout4.json "$FO4_DATA" Financial13 \
 
 Add `--walk` to walk instead of fly: the camera rides the walking controller
 at its eye height, Shift runs and Tab switches between walking and flying.
+Add `--terrain` to draw an exterior cell's terrain in plain grey, as
+`render --terrain` does; in walk mode the controller stands on the terrain
+with or without the flag.
 
 The comparison prints coverage agreement and colour differences; it defines
 no pass threshold.
@@ -114,9 +118,10 @@ no pass threshold.
 `resolve`, `sweep` (archives, records, models, materials, textures, cells,
 bases, collision, havok), `check-cell`, `cell-collision` (the collision of
 one cell placed in world space under the registered placement rules,
-[collision placement](spec/collision-placement.md)) and `walk` (drops the
-walking controller at a point of a cell, walks a path and writes a
-deterministic trace, [walk](spec/walk.md)). Reports are JSON lines with source
+[collision placement](spec/collision-placement.md)), `land` (the terrain of
+one exterior cell, [terrain](spec/land.md)) and `walk` (drops the walking
+controller at a point of a cell, walks a path over its collision and
+terrain and writes a deterministic trace, [walk](spec/walk.md)). Reports are JSON lines with source
 offsets ([scene and report contracts](spec/scene.md)); the collision and Havok
 censuses also write a TSV of counts ([collision blocks](spec/collision.md),
 [Havok container](spec/havok-container.md), [Havok objects](spec/havok-objects.md),

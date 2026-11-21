@@ -11,10 +11,10 @@ rust-version.workspace = true
 
 [dependencies]
 fo4-core.workspace = true
+fo4-plugin.workspace = true
 fo4-scene.workspace = true
 serde.workspace = true
 
 [dev-dependencies]
 fo4-havok.workspace = true
-fo4-plugin.workspace = true
 serde_json.workspace = true

@@ -5,6 +5,7 @@ use crate::geometry::{self as g, Aabb, V3};
 use crate::rules;
 use fo4_core::{Budget, Error, Result};
 use fo4_scene::collision::{BodyPlacement, CellCollision, ShapeClass, WorldShape};
+use fo4_scene::terrain::Terrain;
 use serde::Serialize;
 
 const FILE: &str = "walk world";
@@ -40,6 +41,8 @@ pub struct Source {
     pub class: Option<ShapeClass>,
     /// A label for triangle sets added with [`World::add_triangles`].
     pub label: Option<String>,
+    /// XCLC grid of the cell whose terrain this is ([`World::add_terrain`]).
+    pub terrain: Option<[i32; 2]>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize)]
@@ -148,6 +151,7 @@ impl World {
                     instance: Some(k),
                     class: Some(inst.kind),
                     label: None,
+                    terrain: None,
                 },
                 b,
             )?;
@@ -286,12 +290,40 @@ impl World {
                 instance: None,
                 class: None,
                 label: Some(label.to_owned()),
+                terrain: None,
             },
             b,
         )?;
         grow(&mut self.entries, triangles.len(), b)?;
         for t in triangles {
             self.push_triangle(*t, source);
+        }
+        self.rebuild(self.cell_or_default(), b)?;
+        Ok(source)
+    }
+
+    /// Adds the 2,048 triangles of a cell's terrain under one source
+    /// labelled `terrain` with its grid, takes the terrain's rules
+    /// (`spec/land.md`) into [`World::rules`] and rebuilds the broad phase.
+    /// Returns the source.
+    pub fn add_terrain(&mut self, t: &Terrain, b: &Budget) -> Result<u32> {
+        self.add_rule(rules::TRIANGLE_SIDES, b)?;
+        for r in &t.rules {
+            self.add_rule(r, b)?;
+        }
+        let source = self.add_source(
+            Source {
+                instance: None,
+                class: None,
+                label: Some("terrain".to_owned()),
+                terrain: Some(t.grid),
+            },
+            b,
+        )?;
+        let n = t.triangle_indices().count();
+        grow(&mut self.entries, n, b)?;
+        for tri in t.world_triangles() {
+            self.push_triangle(tri, source);
         }
         self.rebuild(self.cell_or_default(), b)?;
         Ok(source)
@@ -335,6 +367,7 @@ impl World {
                 instance: None,
                 class: None,
                 label: Some(label.to_owned()),
+                terrain: None,
             },
             b,
         )

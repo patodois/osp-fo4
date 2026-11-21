@@ -37,9 +37,9 @@ report refuses to run unless the requested level accepts all of them.
 The broad phase is a uniform grid over x and y (256-unit columns by default,
 grown so that there are at most 2^20 columns); each column lists the
 primitives whose box meets it. Allocations go through the caller's `Budget`.
-`World::add_triangles` adds a labelled triangle set (for terrain, once it is
-read) and rebuilds the grid; `add_sphere`, `add_capsule` and `add_hull` do
-the same for single primitives.
+`World::add_triangles` adds a labelled triangle set and rebuilds the grid;
+`add_terrain` adds a cell's terrain (below); `add_sphere`, `add_capsule` and
+`add_hull` do the same for single primitives.
 
 `World::ray_down(x, y, z_from)` returns the highest surface at or below
 `z_from` on the vertical line through (x, y): the plane of a triangle the line
@@ -49,6 +49,33 @@ hit.
 
 Distances between the character and a primitive are the closest points of two
 convex point sets (GJK on the Minkowski difference), minus both radii.
+
+## Terrain
+
+`fo4_walk::terrain::load_around(store, cell, level, neighbours, budget)`
+loads the terrain of the cell with `fo4_scene::terrain::load` at the walk's
+rule level ([land.md](land.md)): the six terrain rules, all pending, so
+terrain exists only at `--under-hypotheses`, with the diagonal level the
+registry selects. With `neighbours`, when the cell is exterior, has an XCLC
+grid, belongs to a world and the level accepts the terrain rules, it then
+reads every other exterior cell of the same world once (through the
+budget), keeps those whose grid is within one step, and loads each of the
+eight neighbours the same way. Each of the nine positions is a `Piece`
+with its grid, cell, LAND and outcome: `built:<diagonal>`,
+`refused:<code>` (the refusals of `terrain::load`), `no_cell` or
+`ambiguous_grid` (two or more cells claim the grid; neither is used, as in
+the `land` report). Other cells claiming the cell's own grid are counted
+and ignored. Only the cell's own collision is placed; the neighbours
+contribute terrain only.
+
+`TerrainSet::add_to(world)` calls `World::add_terrain` for each built piece:
+its 2,048 triangles under one source labelled `terrain` with the piece's
+grid, the terrain's rules added to `World::rules`, both sides blocking
+under `walk_triangles_block_both_sides_v1` (the terrain itself claims no
+solid side). `TerrainSet::height_at(x, y)` is `Terrain::height_at` of the
+first built piece containing the point. The terrain adds no movement rule
+and no format fact; whether the game's player stands on exactly this
+surface is what the terrain rules' live measurements decide.
 
 ## The character
 
@@ -132,7 +159,8 @@ measurement. RACE and NPC_ height data are not read.
 [--run] [--out DIR] [--strict|--measured|--under-hypotheses]
 [--overlay-plugin FILE]` loads the cell and its collision as `cell-collision`
 does, builds the world under the body placement level the registry selects,
-drops the character with its feet at `--from`, lets it settle (no input, until
+adds the terrain of the cell and its neighbours (`load_around` with
+neighbours; above), drops the character with its feet at `--from`, lets it settle (no input, until
 it is on the ground and has not moved for two ticks, at most 600 ticks), then
 walks each leg: it heads for the leg's start plus (DX, DY) at walk (or run)
 speed, slowing on the last tick to land on it. A leg ends when it is within
@@ -142,21 +170,35 @@ most 1024 legs and 200,000 ticks.
 
 The default level is `Measured`; while the controller's rules are pending the
 command stops with `WalkRuleNotAccepted` naming them and writes no trace.
+When the cell is not interior and its own terrain was not built (for
+example `refused:NoLand`), the walk still runs and says so: the summary's
+`without_cell_terrain` is true, `items.jsonl` has a `terrain_refused` row
+and a line goes to standard error. An interior cell's `refused:NotExterior`
+is not reported as missing ground.
 
 Outputs, in a new directory:
 
-- `trace.json` (deterministic, schema 1): level, body placement level, every
-  rule relied on, the parameters with rule, value, origin and registry
-  status, the settings, world counts, start, path, the surface found under the
+- `trace.json` (deterministic, schema 2): level, body placement level, every
+  rule relied on (the terrain rules among them when terrain was added), the
+  parameters with rule, value, origin and registry status, the settings,
+  world counts, the terrain pieces, start, path, the surface found under the
   start (`ray_down`), settle ticks, each leg (target, start, end, ticks,
-  reached, stalled, remaining distance, grounded at the end) and every tick
-  (leg, feet, grounded, stepped, blocked, ground and last wall as source,
-  instance, reference, base, model and leaf class);
-- `summary.json` (`walk`): the same parameters and counts, the settled position
-  and its height above the surface under the start, ticks grounded, stepped
-  and blocked, the number of game settings scanned and matching, and timings;
+  reached, stalled, remaining distance, grounded at the end, terrain height
+  under the end) and every tick (leg, feet, terrain height under the feet,
+  grounded, stepped, blocked, ground and last wall as source, instance,
+  reference, base, model, leaf class, label and terrain grid: a ground with
+  a `terrain` grid is terrain, one with an `instance` is placed collision);
+- `summary.json` (`walk`, present only for this command): the same
+  parameters and counts, the cell's terrain outcome, `without_cell_terrain`,
+  the terrain pieces, the settled position and its height above the surface
+  under the start and above the terrain, ticks grounded, stepped and blocked,
+  ticks grounded on terrain, on placed instances and on other sets, ticks in
+  the air while walking the legs, ticks more than one unit below the terrain
+  and the deepest point below it, the number of game settings scanned and
+  matching, and timings;
 - `items.jsonl`: one `walk_leg` per leg, one `game_setting` per matching GMST
-  record (at most 512), and `walk_context`.
+  record (at most 512), `terrain_refused` when it applies, and
+  `walk_context`.
 
 ## Viewer
 
@@ -164,8 +206,18 @@ Outputs, in a new directory:
 --walk` opens the window in walk mode: the same world (built while loading),
 the character's eye at the `--eye` point at the start, W/A/S/D along the view
 heading, Shift to run, the left mouse button held to look; Tab switches to the
-free-fly camera and back (a new character starts at the camera). Without
-`--walk` the viewer is unchanged, and `--walk` is refused with `--headless`.
+free-fly camera and back (a new character starts at the camera). In an
+exterior cell the world includes the terrain of the cell and its neighbours
+as in the report, and the outcome of each piece is printed. Without `--walk`
+the viewer is unchanged, and `--walk` is refused with `--headless`.
+
+`--terrain` (window or `--headless`) appends the cell's own terrain to the
+draw list exactly as `render --terrain` does: one opaque double-sided draw,
+flat grey per triangle, tagged after the last placed instance; the
+neighbours walked on are not drawn. A refused terrain is printed and not
+drawn. Without the flag nothing is loaded and the draw list is unchanged, so
+the CPU and GPU frames of one pose can be compared with or without terrain
+by passing the flag to both.
 
 ## Open
 
@@ -176,6 +228,7 @@ free-fly camera and back (a new character starts at the camera). Without
 | Mesh vertex records as collision | left out |
 | `hknpConvexShape` radius | not read; radius 0 |
 | Triangle sidedness | both sides for the walker, by rule; open for the game |
-| Terrain (LAND) | not read here; `World::add_triangles` takes it when it is |
+| Terrain (LAND) | added under its own pending rules; the neighbours' collision is not placed, only their terrain |
+| XCLC hide-quad bits | not applied: hidden quads still carry the walker |
 | Jumping, crouching, sprinting, swimming, ladders, doors, moving objects, actors | not implemented |
 | Speed on slopes, acceleration, friction | not modelled: velocity is set from input each tick |
