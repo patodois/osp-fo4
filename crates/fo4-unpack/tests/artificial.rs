@@ -2101,6 +2101,71 @@ fn walk_writes_a_deterministic_trace_and_needs_the_hypothesis_level() {
 }
 
 #[test]
+fn walk_drops_reports_each_point_and_refuses_mixed_modes() {
+    let install = census_install(false);
+    let points = install.base.join("drops.txt");
+    fs::write(&points, "# label x y z\np1 0 0 10\np2\t5\t-5\t20\n").unwrap();
+    let walk = |out: &std::path::Path, extra: &[&str]| {
+        Command::new(env!("CARGO_BIN_EXE_fo4-unpack"))
+            .arg("walk")
+            .arg(&install.manifest)
+            .arg("Cell4098")
+            .arg("--under-hypotheses")
+            .arg("--drops")
+            .arg(&points)
+            .args(extra)
+            .arg("--out")
+            .arg(out)
+            .output()
+            .unwrap()
+    };
+    let a = install.base.join("drops-a");
+    let output = walk(&a, &[]);
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let tsv = fs::read_to_string(a.join("drops.tsv")).unwrap();
+    let lines: Vec<&str> = tsv.lines().collect();
+    assert_eq!(lines.len(), 3);
+    assert!(lines[0].starts_with("label\tx\ty\tz\tsurface_z\t"));
+    assert!(lines[1].starts_with("p1\t0.000000\t0.000000\t10.000000\t\t"));
+    assert!(lines[2].starts_with("p2\t5.000000\t-5.000000\t20.000000\t\t"));
+    assert!(!a.join("trace.json").exists());
+    let s: Value = serde_json::from_slice(&fs::read(a.join("summary.json")).unwrap()).unwrap();
+    // The synthetic cell has no collision: nothing below, nothing to rest on.
+    assert_eq!(s["walk"]["drops"], 2);
+    assert_eq!(s["walk"]["drops_with_surface"], 0);
+    assert_eq!(s["walk"]["drops_grounded"], 0);
+    let items = fs::read_to_string(a.join("items.jsonl")).unwrap();
+    let drops: Vec<Value> = items
+        .lines()
+        .map(|l| serde_json::from_str::<Value>(l).unwrap())
+        .filter(|v| v["kind"] == "walk_drop")
+        .collect();
+    assert_eq!(drops.len(), 2);
+    assert_eq!(drops[1]["drop"]["label"], "p2");
+    assert_eq!(drops[1]["drop"]["ring"]["missing"], 16);
+    // --drops excludes --from, --path and --run; a bad file is refused.
+    for (k, extra) in [
+        &["--from", "0,0,0"][..],
+        &["--path", "1,0"][..],
+        &["--run"][..],
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let output = walk(&install.base.join(format!("drops-mixed-{k}")), extra);
+        assert_eq!(output.status.code(), Some(2), "{extra:?}");
+    }
+    fs::write(&points, "p1 0 0\n").unwrap();
+    let output = walk(&install.base.join("drops-bad"), &[]);
+    assert_eq!(output.status.code(), Some(2));
+    assert!(String::from_utf8_lossy(&output.stderr).contains("InvalidDrops"));
+}
+
+#[test]
 fn root_survey_keeps_raw_and_class_prefixed_results_separate() {
     let install = census_install(false);
     let out = install.base.join("case12-roots");

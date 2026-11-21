@@ -46,6 +46,9 @@ primitives whose box meets it. Allocations go through the caller's `Budget`.
 crosses (either winding; normal turned up), or the top of a sphere, capsule or
 widened hull (found on the line by a convex search). Edge-on triangles are not
 hit.
+`World::surfaces(x, y)` lists, highest first, the surface each primitive
+gives on that line in the same way, with no starting height; `ray_down` is
+the first of them at or below `z_from`.
 
 Distances between the character and a primitive are the closest points of two
 convex point sets (GJK on the Minkowski difference), minus both radii.
@@ -199,6 +202,37 @@ Outputs, in a new directory:
 - `items.jsonl`: one `walk_leg` per leg, one `game_setting` per matching GMST
   record (at most 512), `terrain_refused` when it applies, and
   `walk_context`.
+
+### Drops
+
+`fo4-unpack walk PROFILE.json EditorID --drops FILE [--out DIR]
+[--strict|--measured|--under-hypotheses] [--overlay-plugin FILE]` builds the
+same world (same rules, same refusal below their level) and walks no path.
+`FILE` lists points, one per line as `label x y z` separated by tabs or
+spaces (blank lines and lines starting with `#` skipped; at most 4,096
+points, 1 MiB, labels of at most 64 bytes without whitespace). For each
+point the report gives:
+
+- `surface`: the first surface at or below the point (`ray_down`);
+- `surfaces`: every surface on the vertical line through it, highest first
+  (at most 256), each with its primitive (`triangle`, `hull`, `sphere`,
+  `capsule`), the side its stored winding faces (`up`, `down`, `neither`;
+  `convex` for the others) and stored normal, its radius, its box and the
+  instance, reference, base, model and leaf class it comes from;
+- `ring`: the first surface below the point's height on 16 vertical lines
+  20 units around it (a little more than the provisional radius, so that an
+  edge the character could rest on shows as a spread between `min` and
+  `max`);
+- the character dropped with its feet at the point and settled with no input
+  (`Character::settle`, at most 600 ticks): rest position, grounded, ticks,
+  what it rests on with the contact normal, rest height minus `surface`, and
+  the horizontal distance moved.
+
+Outputs: `drops.tsv` (one row per point), one `walk_drop` item per point and
+`walk_context` in `items.jsonl`, and the summary's `walk` block with
+`drops`, `drops_grounded` and `drops_with_surface`; no `trace.json`. The
+capsule is the provisional one: its rest height on a slope or an edge is a
+consequence of `walk_capsule_radius_v1`, not a claim about the player.
 
 ## Viewer
 

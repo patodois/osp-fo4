@@ -587,14 +587,7 @@ impl World {
         let mut best: Option<RayHit> = None;
         for i in cand {
             let e = &self.entries[i as usize];
-            let hit = match &e.prim {
-                Prim::Triangle(t) => top_of_triangle(*t, x, y),
-                _ => {
-                    let (core, r) = self.core(&e.prim);
-                    top_of_convex(core.points(), r, x, y, e.bounds.min[2], e.bounds.max[2])
-                }
-            };
-            if let Some((z, normal)) = hit {
+            if let Some((z, normal)) = self.top_on_line(e, x, y) {
                 if z <= z_from + 1e-9 && best.is_none_or(|b| z > b.z) {
                     best = Some(RayHit {
                         z,
@@ -606,6 +599,44 @@ impl World {
             }
         }
         best
+    }
+
+    /// Every surface on the vertical line through `(x, y)`, highest first:
+    /// for each primitive the line meets, the surface [`World::ray_down`]
+    /// would find on it (a triangle's plane, the top of a convex primitive),
+    /// with no starting height. Equal heights keep the entry order.
+    pub fn surfaces(&self, x: f64, y: f64) -> Vec<RayHit> {
+        let q = Aabb {
+            min: [x, y, f64::NEG_INFINITY],
+            max: [x, y, f64::INFINITY],
+        };
+        let mut cand = Vec::new();
+        self.candidates(&q, &mut cand);
+        let mut out: Vec<RayHit> = cand
+            .into_iter()
+            .filter_map(|i| {
+                let e = &self.entries[i as usize];
+                self.top_on_line(e, x, y).map(|(z, normal)| RayHit {
+                    z,
+                    normal,
+                    entry: i,
+                    source: e.source,
+                })
+            })
+            .collect();
+        out.sort_by(|a, b| b.z.total_cmp(&a.z).then(a.entry.cmp(&b.entry)));
+        out
+    }
+
+    /// The surface of one primitive on the vertical line through `(x, y)`.
+    fn top_on_line(&self, e: &Entry, x: f64, y: f64) -> Option<(f64, V3)> {
+        match &e.prim {
+            Prim::Triangle(t) => top_of_triangle(*t, x, y),
+            _ => {
+                let (core, r) = self.core(&e.prim);
+                top_of_convex(core.points(), r, x, y, e.bounds.min[2], e.bounds.max[2])
+            }
+        }
     }
 }
 

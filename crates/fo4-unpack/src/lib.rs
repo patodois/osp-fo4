@@ -30,6 +30,7 @@ use std::{
     path::{Component, Path, PathBuf},
 };
 pub use walk::Args as WalkArgs;
+pub use walk::DropPoint as WalkDrop;
 
 #[derive(Debug)]
 pub struct Options {
@@ -44,6 +45,8 @@ pub struct Options {
     pub items: bool,
     /// Start, legs and pace of `walk`.
     pub walk: Option<WalkArgs>,
+    /// Points of `walk --drops FILE`, read when the options are parsed.
+    pub drops: Option<Vec<WalkDrop>>,
 }
 impl Options {
     pub fn parse(args: impl IntoIterator<Item = String>) -> Result<Self> {
@@ -58,6 +61,7 @@ impl Options {
             let mut from = None;
             let mut legs = None;
             let mut run = false;
+            let mut drops = None;
             while let Some(arg) = args.next() {
                 match arg.as_str() {
                     "--out" if out.is_none() => out = Some(args.next().ok_or_else(usage)?.into()),
@@ -80,9 +84,25 @@ impl Options {
                         )
                     }
                     "--run" if !run => run = true,
+                    "--drops" if drops.is_none() => {
+                        drops = Some(walk::read_drops(Path::new(
+                            &args.next().ok_or_else(usage)?,
+                        ))?)
+                    }
                     _ => return Err(usage()),
                 }
             }
+            if drops.is_some() && (from.is_some() || legs.is_some() || run) {
+                return Err(usage());
+            }
+            let walk = match drops {
+                Some(_) => None,
+                None => Some(WalkArgs {
+                    from: from.ok_or_else(usage)?,
+                    legs: legs.ok_or_else(usage)?,
+                    run,
+                }),
+            };
             return Ok(Self {
                 level: level.unwrap_or(fo4_scene::RuleLevel::Measured),
                 overlay_plugin,
@@ -92,11 +112,8 @@ impl Options {
                 scope: None,
                 path,
                 items: true,
-                walk: Some(WalkArgs {
-                    from: from.ok_or_else(usage)?,
-                    legs: legs.ok_or_else(usage)?,
-                    run,
-                }),
+                walk,
+                drops,
             });
         }
         if command == "check-cell" || command == "cell-collision" || command == "land" {
@@ -143,6 +160,7 @@ impl Options {
                 path,
                 items: true,
                 walk: None,
+                drops: None,
             });
         }
         if !["inventory", "resolve", "sweep"].contains(&command.as_str()) {
@@ -221,11 +239,12 @@ impl Options {
             scope,
             path,
             walk: None,
+            drops: None,
         })
     }
 }
 fn usage() -> Error {
-    Error::new("Usage","CLI",0,"inventory|resolve|sweep --manifest PROFILE.json --out DIR [--scope archives|records|nif|materials|textures|cells|bases|shader-citations|unread|paths|roots|collision|havok] [--all|--path ASSET] [--items]; check-cell PROFILE.json EditorID [--out DIR] [--strict|--under-hypotheses] [--overlay-plugin FILE]; cell-collision PROFILE.json EditorID [--out DIR] [--strict|--measured|--under-hypotheses] [--overlay-plugin FILE]; land PROFILE.json EditorID [--out DIR] [--strict|--measured|--under-hypotheses] [--census]; walk PROFILE.json EditorID --from X,Y,Z --path DX,DY[,DX,DY...] [--run] [--out DIR] [--strict|--measured|--under-hypotheses] [--overlay-plugin FILE]","invalid or missing argument")
+    Error::new("Usage","CLI",0,"inventory|resolve|sweep --manifest PROFILE.json --out DIR [--scope archives|records|nif|materials|textures|cells|bases|shader-citations|unread|paths|roots|collision|havok] [--all|--path ASSET] [--items]; check-cell PROFILE.json EditorID [--out DIR] [--strict|--under-hypotheses] [--overlay-plugin FILE]; cell-collision PROFILE.json EditorID [--out DIR] [--strict|--measured|--under-hypotheses] [--overlay-plugin FILE]; land PROFILE.json EditorID [--out DIR] [--strict|--measured|--under-hypotheses] [--census]; walk PROFILE.json EditorID (--from X,Y,Z --path DX,DY[,DX,DY...] [--run] | --drops FILE) [--out DIR] [--strict|--measured|--under-hypotheses] [--overlay-plugin FILE]","invalid or missing argument")
 }
 #[derive(Default, Serialize)]
 pub struct Summary {
@@ -1029,14 +1048,24 @@ fn run_selected(o: &Options, keys: Option<&[fo4_plugin::FormKey]>) -> Result<u8>
             o.level,
             o.scope.as_deref() == Some("census"),
         ),
-        "walk" => walk::run(
-            &m,
-            o.path.as_deref().ok_or_else(usage)?,
-            &mut r,
-            o.level,
-            o.overlay_plugin.as_deref(),
-            o.walk.as_ref().ok_or_else(usage)?,
-        ),
+        "walk" => match &o.drops {
+            Some(points) => walk::run_drops(
+                &m,
+                o.path.as_deref().ok_or_else(usage)?,
+                &mut r,
+                o.level,
+                o.overlay_plugin.as_deref(),
+                points,
+            ),
+            None => walk::run(
+                &m,
+                o.path.as_deref().ok_or_else(usage)?,
+                &mut r,
+                o.level,
+                o.overlay_plugin.as_deref(),
+                o.walk.as_ref().ok_or_else(usage)?,
+            ),
+        },
         "sweep" => match o.scope.as_deref() {
             Some("archives") => archives(&m, &mut r),
             Some("records") => records(&m, &mut r),

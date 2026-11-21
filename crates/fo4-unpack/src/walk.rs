@@ -9,6 +9,11 @@
 //! rules (`spec/land.md`); a refused terrain is reported. As evidence only,
 //! it lists the game settings (GMST) whose EditorID names movement, with
 //! their raw DATA bytes; none is applied.
+//!
+//! With `--drops FILE` it walks no path: for every listed point it reports
+//! the surfaces on the vertical line through it, the first one below the
+//! point, the surfaces under a ring around it, and where the character
+//! comes to rest when dropped there with no input (`spec/walk.md`, Drops).
 use crate::Reports;
 use fo4_core::{Budget, Error, Manifest, Result};
 use fo4_plugin::typed::Store;
@@ -52,6 +57,20 @@ pub const MAX_SETTINGS: usize = 512;
 /// Feet more than this far below the terrain under them count as below the
 /// terrain (world units). A capsule standing on terrain is never below it.
 pub const BELOW_TERRAIN: f64 = 1.0;
+/// Most points in one drops file.
+pub const MAX_DROPS: usize = 4096;
+/// Largest drops file read, bytes.
+pub const MAX_DROPS_FILE: u64 = 1 << 20;
+/// Longest drop label, bytes.
+pub const MAX_DROP_LABEL: usize = 64;
+/// Radius of the ring of vertical lines around each drop point (world
+/// units): a little more than the provisional capsule radius, so that a
+/// surface edge the character could rest on shows as a difference.
+pub const DROP_RING_RADIUS: f64 = 20.0;
+/// Lines in the ring, evenly spaced from +X towards +Y.
+pub const DROP_RING_LINES: usize = 16;
+/// Most surfaces listed per drop point.
+pub const MAX_DROP_SURFACES: usize = 256;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct ParamRow {
@@ -177,6 +196,10 @@ pub struct Summary {
     /// under them, and the largest depth below it (positive is below).
     pub below_terrain_ticks: u64,
     pub deepest_below_terrain: Option<f64>,
+    /// `--drops`: points dropped, grounded at rest, with a surface below.
+    pub drops: u64,
+    pub drops_grounded: u64,
+    pub drops_with_surface: u64,
     pub game_settings_scanned: u64,
     pub game_settings_matching: u64,
     pub fingerprint_seconds: f64,
@@ -237,18 +260,37 @@ fn surface(c: &CellCollision, w: &World, h: RayHit) -> Surface {
     }
 }
 
-pub fn run(
+/// The cell's world as both modes use it.
+struct Loaded {
+    store: Store,
+    budget: Budget,
+    cell: FormKey,
+    c: CellCollision,
+    world: World,
+    ground: TerrainSet,
+    placement: BodyPlacement,
+    cell_terrain: Option<String>,
+    without_cell_terrain: bool,
+    /// Every rule relied on (world, terrain and movement), sorted.
+    rules: Vec<&'static str>,
+    fingerprint_seconds: f64,
+    scene_seconds: f64,
+    collision_seconds: f64,
+    terrain_seconds: f64,
+}
+
+/// Loads the cell, places its collision under the selected body placement
+/// level, adds the terrain of the cell and its neighbours, and checks that
+/// `level` accepts every rule relied on.
+fn load(
     m: &Manifest,
     editor_id: &str,
     r: &mut Reports,
     level: RuleLevel,
     overlay: Option<&std::path::Path>,
-    args: &Args,
-) -> Result<()> {
+) -> Result<Loaded> {
     r.items_enabled = true;
     r.summary.rule_level = Some(level);
-    let params = Params::PROVISIONAL;
-    let settings = Settings::DEFAULT;
     let mut own: Vec<&'static str> = rules::PARAMS.to_vec();
     own.push(rules::TRIANGLE_SIDES);
     fo4_walk::accept(&own, level, fo4_scene::hypotheses::status)?;
@@ -304,19 +346,41 @@ pub fn run(
     all.sort_unstable();
     all.dedup();
     fo4_walk::accept(&all, level, fo4_scene::hypotheses::status)?;
-    let started = std::time::Instant::now();
-    let mut s = Summary {
-        cell: Some(scene.cell.key.clone()),
-        editor_id: Some(editor_id.to_owned()),
-        level: Some(level),
-        body_placement: Some(placement),
-        collision_instances: c.instances.len() as u64,
-        unplaced: c.unplaced.len() as u64,
-        world: Some(world.stats.clone()),
+    let cell = scene.cell.key.clone();
+    drop(scene);
+    drop(loader);
+    Ok(Loaded {
+        store,
+        budget,
+        cell,
+        c,
+        world,
+        ground,
+        placement,
         cell_terrain,
         without_cell_terrain,
-        terrain_seconds,
         rules: all,
+        fingerprint_seconds,
+        scene_seconds,
+        collision_seconds,
+        terrain_seconds,
+    })
+}
+
+/// The summary fields both modes share.
+fn base_summary(editor_id: &str, level: RuleLevel, l: &Loaded, params: Params) -> Summary {
+    Summary {
+        cell: Some(l.cell.clone()),
+        editor_id: Some(editor_id.to_owned()),
+        level: Some(level),
+        body_placement: Some(l.placement),
+        collision_instances: l.c.instances.len() as u64,
+        unplaced: l.c.unplaced.len() as u64,
+        world: Some(l.world.stats.clone()),
+        cell_terrain: l.cell_terrain.clone(),
+        without_cell_terrain: l.without_cell_terrain,
+        terrain_seconds: l.terrain_seconds,
+        rules: l.rules.clone(),
         params: params
             .provenance()
             .into_iter()
@@ -328,13 +392,40 @@ pub fn run(
                 status: status_name(rule),
             })
             .collect(),
-        settings: Some(settings),
-        from: args.from,
-        fingerprint_seconds,
-        scene_seconds,
-        collision_seconds,
+        settings: Some(Settings::DEFAULT),
+        fingerprint_seconds: l.fingerprint_seconds,
+        scene_seconds: l.scene_seconds,
+        collision_seconds: l.collision_seconds,
         ..Summary::default()
+    }
+}
+
+pub fn run(
+    m: &Manifest,
+    editor_id: &str,
+    r: &mut Reports,
+    level: RuleLevel,
+    overlay: Option<&std::path::Path>,
+    args: &Args,
+) -> Result<()> {
+    let params = Params::PROVISIONAL;
+    let settings = Settings::DEFAULT;
+    let l = load(m, editor_id, r, level, overlay)?;
+    let started = std::time::Instant::now();
+    let mut s = Summary {
+        from: args.from,
+        ..base_summary(editor_id, level, &l, params)
     };
+    let Loaded {
+        store,
+        budget,
+        cell,
+        c,
+        world,
+        ground,
+        placement,
+        ..
+    } = l;
     let (steps, legs) = walk(&c, &world, Some(&ground), params, settings, args, &mut s)?;
     s.terrain = Some(ground);
     s.walk_seconds = started.elapsed().as_secs_f64();
@@ -369,7 +460,7 @@ pub fn run(
     for g in found.iter().take(MAX_SETTINGS) {
         r.item(&serde_json::json!({"kind":"game_setting","setting":g}))?;
     }
-    r.item(&serde_json::json!({"kind":"walk_context","cell":scene.cell.key,"editor_id":editor_id,"level":level,"body_placement":placement,"setting_keywords":SETTING_KEYWORDS}))?;
+    r.item(&serde_json::json!({"kind":"walk_context","cell":cell,"editor_id":editor_id,"level":level,"body_placement":placement,"setting_keywords":SETTING_KEYWORDS}))?;
     r.summary.files_attempted = s.ticks;
     r.summary.files_valid = s.ticks;
     s.legs = legs;
@@ -508,6 +599,310 @@ pub fn walk(
         }
     }
     Ok((steps, legs))
+}
+
+/// One point of a drops file: a label and the feet of the character at
+/// the start, world units.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct DropPoint {
+    pub label: String,
+    pub at: [f64; 3],
+}
+
+/// Which way a triangle's stored winding faces, by the sign of z of
+/// (b − a) × (c − a); convex primitives have no winding.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Facing {
+    Up,
+    Down,
+    /// Stored normal horizontal or the triangle degenerate.
+    Neither,
+    Convex,
+}
+
+/// A surface on the vertical line through a drop point.
+#[derive(Debug, Clone, Serialize)]
+pub struct LineSurface {
+    pub z: f64,
+    /// Upward-facing normal at the hit.
+    pub normal: [f64; 3],
+    /// `triangle`, `hull`, `sphere` or `capsule`.
+    pub primitive: &'static str,
+    pub facing: Facing,
+    /// Unit normal of the stored winding, for triangles.
+    pub stored_normal: Option<[f64; 3]>,
+    /// Widening radius of a hull, sphere or capsule.
+    pub radius: Option<f64>,
+    /// Box of the primitive (widened by its radius).
+    pub bounds: fo4_walk::geometry::Aabb,
+    #[serde(flatten)]
+    pub owner: Owner,
+}
+
+/// The first surface below the drop point on each line of the ring.
+#[derive(Debug, Clone, Serialize)]
+pub struct Ring {
+    pub radius: f64,
+    /// One per line, from +X towards +Y; `None` where nothing is below.
+    pub z: Vec<Option<f64>>,
+    pub min: Option<f64>,
+    pub max: Option<f64>,
+    pub missing: u64,
+}
+
+/// What the world says at one drop point.
+#[derive(Debug, Clone, Serialize)]
+pub struct DropResult {
+    pub label: String,
+    pub at: [f64; 3],
+    /// The first surface at or below the point (`ray_down`).
+    pub surface: Option<LineSurface>,
+    /// Every surface on the vertical line, highest first (at most
+    /// [`MAX_DROP_SURFACES`]).
+    pub surfaces: Vec<LineSurface>,
+    pub surfaces_omitted: u64,
+    pub ring: Ring,
+    /// Feet after settling with no input.
+    pub rest: [f64; 3],
+    pub grounded: bool,
+    pub ticks: u64,
+    /// What the character rests on, and the contact normal.
+    pub rest_ground: Option<Owner>,
+    pub rest_normal: Option<[f64; 3]>,
+    /// Rest height minus the first surface below the point.
+    pub rest_minus_surface: Option<f64>,
+    /// Horizontal distance from the point to the rest position.
+    pub moved: f64,
+}
+
+fn line_surface(c: &CellCollision, w: &World, h: RayHit) -> LineSurface {
+    use fo4_walk::world::Prim;
+    let e = &w.entries[h.entry as usize];
+    let (primitive, facing, stored_normal, radius) = match e.prim {
+        Prim::Triangle(t) => {
+            let n = fo4_walk::geometry::triangle_normal(t);
+            let facing = match n {
+                Some(n) if n[2] > 0.0 => Facing::Up,
+                Some(n) if n[2] < 0.0 => Facing::Down,
+                _ => Facing::Neither,
+            };
+            ("triangle", facing, n, None)
+        }
+        Prim::Hull { radius, .. } => ("hull", Facing::Convex, None, Some(radius)),
+        Prim::Sphere { radius, .. } => ("sphere", Facing::Convex, None, Some(radius)),
+        Prim::Capsule { radius, .. } => ("capsule", Facing::Convex, None, Some(radius)),
+    };
+    LineSurface {
+        z: h.z,
+        normal: h.normal,
+        primitive,
+        facing,
+        stored_normal,
+        radius,
+        bounds: e.bounds,
+        owner: owner(c, w, h.source),
+    }
+}
+
+/// Drops the character at one point: the surfaces on its line, the ring
+/// around it and where it comes to rest after at most [`SETTLE_TICKS`]
+/// ticks with no input (`Character::settle`).
+pub fn drop_at(
+    c: &CellCollision,
+    w: &World,
+    params: Params,
+    settings: Settings,
+    point: &DropPoint,
+) -> Result<DropResult> {
+    let [x, y, z] = point.at;
+    let all = w.surfaces(x, y);
+    let surfaces_omitted = all.len().saturating_sub(MAX_DROP_SURFACES) as u64;
+    let surfaces = all
+        .iter()
+        .take(MAX_DROP_SURFACES)
+        .map(|h| line_surface(c, w, *h))
+        .collect();
+    let surface = w.ray_down(x, y, z + 1e-6).map(|h| line_surface(c, w, h));
+    let ring_z: Vec<Option<f64>> = (0..DROP_RING_LINES)
+        .map(|k| {
+            let a = std::f64::consts::TAU * k as f64 / DROP_RING_LINES as f64;
+            let (s, co) = a.sin_cos();
+            w.ray_down(
+                x + DROP_RING_RADIUS * co,
+                y + DROP_RING_RADIUS * s,
+                z + 1e-6,
+            )
+            .map(|h| h.z)
+        })
+        .collect();
+    let found = ring_z.iter().flatten().copied();
+    let ring = Ring {
+        radius: DROP_RING_RADIUS,
+        min: found.clone().reduce(f64::min),
+        max: found.reduce(f64::max),
+        missing: ring_z.iter().filter(|z| z.is_none()).count() as u64,
+        z: ring_z,
+    };
+    let mut ch = Character::new(params, settings, point.at)?;
+    let ticks = ch.settle(w, SETTLE_TICKS);
+    let rest = ch.feet;
+    Ok(DropResult {
+        label: point.label.clone(),
+        at: point.at,
+        rest_minus_surface: surface.as_ref().map(|h| rest[2] - h.z),
+        surface,
+        surfaces,
+        surfaces_omitted,
+        ring,
+        rest,
+        grounded: ch.grounded,
+        ticks,
+        rest_ground: ch.ground.map(|g| owner(c, w, g.source)),
+        rest_normal: ch.ground.map(|g| g.normal),
+        moved: (rest[0] - x).hypot(rest[1] - y),
+    })
+}
+
+/// Tab-separated table of drop results, one row per point.
+pub fn drops_table(results: &[DropResult]) -> String {
+    let f = |v: Option<f64>| v.map_or_else(String::new, |v| format!("{v:.6}"));
+    let mut out = String::from(
+        "label\tx\ty\tz\tsurface_z\tsurface_primitive\tsurface_class\tsurface_facing\tsurface_instance\tsurfaces\tring_min\tring_max\tring_missing\trest_x\trest_y\trest_z\tgrounded\tticks\trest_minus_surface\tmoved\trest_instance\n",
+    );
+    for d in results {
+        let s = d.surface.as_ref();
+        let row = [
+            d.label.clone(),
+            format!("{:.6}", d.at[0]),
+            format!("{:.6}", d.at[1]),
+            format!("{:.6}", d.at[2]),
+            f(s.map(|s| s.z)),
+            s.map_or("", |s| s.primitive).to_owned(),
+            s.and_then(|s| s.owner.class).unwrap_or("").to_owned(),
+            s.map_or_else(String::new, |s| {
+                serde_json::to_value(s.facing)
+                    .ok()
+                    .and_then(|v| v.as_str().map(str::to_owned))
+                    .unwrap_or_default()
+            }),
+            s.and_then(|s| s.owner.instance)
+                .map_or_else(String::new, |i| i.to_string()),
+            d.surfaces.len().to_string(),
+            f(d.ring.min),
+            f(d.ring.max),
+            d.ring.missing.to_string(),
+            format!("{:.6}", d.rest[0]),
+            format!("{:.6}", d.rest[1]),
+            format!("{:.6}", d.rest[2]),
+            d.grounded.to_string(),
+            d.ticks.to_string(),
+            f(d.rest_minus_surface),
+            format!("{:.6}", d.moved),
+            d.rest_ground
+                .as_ref()
+                .and_then(|g| g.instance)
+                .map_or_else(String::new, |i| i.to_string()),
+        ];
+        out.push_str(&row.join("\t"));
+        out.push('\n');
+    }
+    out
+}
+
+/// `walk --drops FILE`: every point of the file dropped into the cell's
+/// world; `drops.tsv` beside the summary and one `walk_drop` item per point.
+pub fn run_drops(
+    m: &Manifest,
+    editor_id: &str,
+    r: &mut Reports,
+    level: RuleLevel,
+    overlay: Option<&std::path::Path>,
+    points: &[DropPoint],
+) -> Result<()> {
+    let params = Params::PROVISIONAL;
+    let settings = Settings::DEFAULT;
+    let l = load(m, editor_id, r, level, overlay)?;
+    let started = std::time::Instant::now();
+    let mut s = base_summary(editor_id, level, &l, params);
+    let mut results = Vec::new();
+    l.budget
+        .reserve(&mut results, points.len(), "walk drops", 0)?;
+    for p in points {
+        let d = drop_at(&l.c, &l.world, params, settings, p)?;
+        s.drops += 1;
+        s.drops_grounded += u64::from(d.grounded);
+        s.drops_with_surface += u64::from(d.surface.is_some());
+        s.ticks += d.ticks;
+        results.push(d);
+    }
+    s.walk_seconds = started.elapsed().as_secs_f64();
+    for d in &results {
+        r.item(&serde_json::json!({"kind":"walk_drop","drop":d}))?;
+    }
+    r.item(&serde_json::json!({"kind":"walk_context","cell":l.cell,"editor_id":editor_id,"level":level,"body_placement":l.placement,"drops":points.len(),"ring_radius":DROP_RING_RADIUS,"ring_lines":DROP_RING_LINES}))?;
+    r.tsv = Some(("drops.tsv", drops_table(&results)));
+    r.summary.files_attempted = s.drops;
+    r.summary.files_valid = s.drops;
+    s.terrain = Some(l.ground);
+    r.summary.walk = Some(s);
+    Ok(())
+}
+
+/// A drops file: one point per line, `label x y z` separated by tabs or
+/// spaces; blank lines and lines starting with `#` are skipped. Labels are
+/// at most [`MAX_DROP_LABEL`] bytes without whitespace; at most
+/// [`MAX_DROPS`] points; every coordinate finite.
+pub fn parse_drops(text: &str) -> Option<Vec<DropPoint>> {
+    let mut out = Vec::new();
+    for line in text.lines() {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        let f: Vec<&str> = line.split_whitespace().collect();
+        let [label, x, y, z] = f.as_slice() else {
+            return None;
+        };
+        if label.len() > MAX_DROP_LABEL || out.len() == MAX_DROPS {
+            return None;
+        }
+        let num = |t: &str| t.parse::<f64>().ok().filter(|v| v.is_finite());
+        out.push(DropPoint {
+            label: (*label).to_owned(),
+            at: [num(x)?, num(y)?, num(z)?],
+        });
+    }
+    (!out.is_empty()).then_some(out)
+}
+
+/// Reads and parses a drops file of at most [`MAX_DROPS_FILE`] bytes.
+pub fn read_drops(path: &std::path::Path) -> Result<Vec<DropPoint>> {
+    use std::io::Read;
+    let name = path.to_string_lossy();
+    let file = std::fs::File::open(path).map_err(|e| fo4_core::io_error(&name, 0, e))?;
+    let mut text = String::new();
+    file.take(MAX_DROPS_FILE + 1)
+        .read_to_string(&mut text)
+        .map_err(|e| fo4_core::io_error(&name, 0, e))?;
+    if text.len() as u64 > MAX_DROPS_FILE {
+        return Err(Error::new(
+            "LimitExceeded",
+            &name,
+            0,
+            format!("at most {MAX_DROPS_FILE} bytes"),
+            "more",
+        ));
+    }
+    parse_drops(&text).ok_or_else(|| {
+        Error::new(
+            "InvalidDrops",
+            &name,
+            0,
+            format!("1 to {MAX_DROPS} lines of label x y z"),
+            "invalid",
+        )
+    })
 }
 
 /// Winning GMST records whose EditorID contains one of
@@ -765,6 +1160,136 @@ mod tests {
         let last = serde_json::to_value(steps.last().unwrap()).unwrap();
         assert_eq!(last["ground"]["terrain"], serde_json::json!([0, 0]));
         assert_eq!(last["terrain_z"], 24.0);
+    }
+
+    #[test]
+    fn drops_files_parse_strictly() {
+        let text = "# label x y z\n\na 1 -2.5 3\nb\t4\t5\t6\n";
+        assert_eq!(
+            parse_drops(text),
+            Some(vec![
+                DropPoint {
+                    label: "a".into(),
+                    at: [1.0, -2.5, 3.0]
+                },
+                DropPoint {
+                    label: "b".into(),
+                    at: [4.0, 5.0, 6.0]
+                },
+            ])
+        );
+        let long = "x".repeat(MAX_DROP_LABEL + 1);
+        for bad in [
+            "",
+            "# only a comment\n",
+            "a 1 2\n",
+            "a 1 2 3 4\n",
+            "a 1 x 3\n",
+            "a 1 2 inf\n",
+            &format!("{long} 1 2 3\n"),
+        ] {
+            assert_eq!(parse_drops(bad), None, "{bad}");
+        }
+        let many = "p 0 0 0\n".repeat(MAX_DROPS + 1);
+        assert_eq!(parse_drops(&many), None);
+        assert_eq!(parse_drops(&many[8..]).map(|v| v.len()), Some(MAX_DROPS));
+    }
+
+    #[test]
+    fn a_drop_reports_the_line_the_ring_and_the_rest() {
+        let c = CellCollision {
+            level: RuleLevel::Hypotheses,
+            body_placement: Some(BodyPlacement::Ignored),
+            models: Vec::new(),
+            placements: Vec::new(),
+            instances: Vec::new(),
+            unplaced: Vec::new(),
+            without_collision: Vec::new(),
+        };
+        let b = Budget::new(64 << 20);
+        let mut w = World::new();
+        let (a, b2, c2, d) = (
+            [-500.0, -500.0, 0.0],
+            [500.0, -500.0, 0.0],
+            [500.0, 500.0, 0.0],
+            [-500.0, 500.0, 0.0],
+        );
+        // The floor wound downwards in one triangle, upwards in the other.
+        let floor = w
+            .add_triangles(&[[a, c2, b2], [a, c2, d]], "floor", &b)
+            .unwrap();
+        let cube: Vec<[f64; 3]> = (0..8)
+            .map(|i| {
+                [
+                    if i & 1 == 0 { -50.0 } else { 50.0 },
+                    if i & 2 == 0 { -50.0 } else { 50.0 },
+                    if i & 4 == 0 { 0.0 } else { 40.0 },
+                ]
+            })
+            .collect();
+        let bx = w.add_hull(&cube, 0.0, "box", &b).unwrap();
+        let drop = |label: &str, at: [f64; 3]| {
+            drop_at(
+                &c,
+                &w,
+                Params::PROVISIONAL,
+                Settings::DEFAULT,
+                &DropPoint {
+                    label: label.into(),
+                    at,
+                },
+            )
+            .unwrap()
+        };
+        // Over the middle of the box: the box top, then the floor.
+        let m = drop("middle", [0.0, 10.0, 200.0]);
+        let s = m.surface.as_ref().unwrap();
+        assert_eq!(s.owner.source, bx);
+        assert_eq!((s.primitive, s.facing), ("hull", Facing::Convex));
+        assert!((s.z - 40.0).abs() < 1e-5, "{s:?}");
+        let order: Vec<(u32, Facing)> = m
+            .surfaces
+            .iter()
+            .map(|s| (s.owner.source, s.facing))
+            .collect();
+        assert_eq!(order, vec![(bx, Facing::Convex), (floor, Facing::Up)]);
+        assert!(
+            m.ring.missing == 0
+                && m.ring
+                    .max
+                    .zip(m.ring.min)
+                    .is_some_and(|(a, b)| a - b < 1e-4)
+        );
+        assert!(m.grounded && m.ticks < SETTLE_TICKS);
+        assert!(
+            m.rest_minus_surface.is_some_and(|h| h.abs() < 1e-4),
+            "{m:?}"
+        );
+        assert!(m.moved < 1e-9);
+        assert_eq!(m.rest_ground.as_ref().map(|g| g.source), Some(bx));
+        // Ten units outside the box: the floor below, the box inside the
+        // ring, and the capsule rests on the box edge, above the floor.
+        let e = drop("edge", [60.0, 0.0, 200.0]);
+        let s = e.surface.as_ref().unwrap();
+        assert_eq!((s.owner.source, s.facing), (floor, Facing::Down));
+        assert_eq!(s.stored_normal.map(|n| n[2] < 0.0), Some(true));
+        assert!(e.ring.max.is_some_and(|z| (z - 40.0).abs() < 1e-4));
+        assert_eq!(e.ring.min, Some(0.0));
+        // The lower sphere of the capsule (radius 16) sits on the box edge
+        // 10 units from its axis: 40 - 16 + sqrt(16^2 - 10^2) above the floor.
+        let on_edge = 40.0 - 16.0 + (16.0f64 * 16.0 - 10.0 * 10.0).sqrt();
+        assert!((e.rest[2] - on_edge).abs() < 1e-3, "{e:?}");
+        assert!(e.moved < 1e-9);
+        // Nothing below a point off the world.
+        let o = drop("off", [5000.0, 0.0, 10.0]);
+        assert!(o.surface.is_none() && o.surfaces.is_empty() && !o.grounded);
+        assert_eq!(o.ring.missing, DROP_RING_LINES as u64);
+        let table = drops_table(&[m, e, o]);
+        let lines: Vec<&str> = table.lines().collect();
+        assert_eq!(lines.len(), 4);
+        assert!(lines.iter().all(|l| l.split('\t').count() == 21));
+        assert!(lines[2]
+            .starts_with("edge\t60.000000\t0.000000\t200.000000\t0.000000\ttriangle\t\tdown\t"));
     }
 
     #[test]

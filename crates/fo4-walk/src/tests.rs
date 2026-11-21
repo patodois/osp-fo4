@@ -403,6 +403,45 @@ fn ray_down_finds_the_highest_surface_below_a_point() {
 }
 
 #[test]
+fn surfaces_lists_every_primitive_on_the_line_highest_first() {
+    let b = budget();
+    let mut w = World::new();
+    let f = floor(&mut w, &b);
+    let bx = w
+        .add_hull(
+            &cuboid([-50.0, -50.0, 10.0], [50.0, 50.0, 40.0]),
+            2.0,
+            "box",
+            &b,
+        )
+        .unwrap();
+    let up = w
+        .add_triangles(&rect(-20.0, 20.0, -20.0, 20.0, 100.0), "slab", &b)
+        .unwrap();
+    let all = w.surfaces(0.0, 0.0);
+    let order: Vec<u32> = all.iter().map(|h| h.source).collect();
+    // The slab is two triangles; the line crosses their shared edge, so
+    // both report it.
+    assert_eq!(order, vec![up, up, bx, f, f]);
+    assert!(all.windows(2).all(|p| p[0].z >= p[1].z));
+    assert!(near(all[2].z, 42.0, 1e-5), "{:?}", all[2]);
+    assert_eq!(all[3].z, 0.0);
+    // ray_down is the first surface at or below its start.
+    for z in [1000.0, 99.0, 41.0, 5.0] {
+        let first = all.iter().find(|h| h.z <= z + 1e-9).copied();
+        assert_eq!(w.ray_down(0.0, 0.0, z), first, "{z}");
+    }
+    assert_eq!(
+        w.surfaces(30.0, 0.0)
+            .iter()
+            .map(|h| h.source)
+            .collect::<Vec<_>>(),
+        vec![bx, f]
+    );
+    assert!(w.surfaces(5000.0, 0.0).is_empty());
+}
+
+#[test]
 fn the_world_is_built_from_a_placed_cell() {
     use fo4_scene::collision::{
         BodyCollision, BodyPlacement, CellCollision, CollisionInstance, Leaf, ModelCollision,
