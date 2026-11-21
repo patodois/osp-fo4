@@ -35,13 +35,19 @@ Format layouts, their sources and the rule registry are indexed in
 
 ## Sources that are off limits
 
-Do not open, translate or paraphrase third-party implementations of these
-formats (for example nifly, NifSkope, PyNifly, BodySlide, fo76utils, OpenMW,
-xEdit source or scripts, Mutagen, Material Editor), and never inspect game
-executables or decompiled code. Public format documentation and schemas such as
-nifxml are allowed. The one attributed exception, a port of the MaterialLib
-layout, is documented in [THIRD_PARTY.md](THIRD_PARTY.md) and is not permission
-to consult further implementation code.
+Do not open, translate or paraphrase copyleft or mixed-licence implementations
+of these formats (for example nifly, NifSkope, PyNifly, BodySlide, OpenMW,
+xEdit source or scripts, Mutagen), and never inspect game executables or
+decompiled code. Public format documentation and schemas such as nifxml are
+allowed. Citing xEdit's published record and field names as a naming source,
+as `spec/plugin.md` does, is allowed; its source stays closed.
+
+MIT-licensed projects may be used as a reference with credit. Today that means
+fo76utils and Material Editor. Before opening one, confirm that the file you
+read is itself under MIT (bundled components can carry other terms), then
+record the project, the files, the commit and its MIT notice in
+[THIRD_PARTY.md](THIRD_PARTY.md) in the same change. What the reference says
+is still a hypothesis until a measurement on game data confirms it.
 
 ## What must never be committed
 
