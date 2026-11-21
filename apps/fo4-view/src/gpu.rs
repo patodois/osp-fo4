@@ -31,7 +31,7 @@ use bevy::{
         RenderApp, RenderPlugin,
     },
     shader::ShaderRef,
-    window::ExitCondition,
+    window::{ExitCondition, PrimaryWindow},
     winit::WinitPlugin,
 };
 use fo4_scene::camera::Camera as CpuCamera;
@@ -466,7 +466,21 @@ pub fn headless(
 struct Fly {
     state: FlyState,
     settings: FlySettings,
+    /// The pose of `--eye`/`--look`, restored by R.
+    start: FlyState,
+    /// Whether the window starts walking; R restores that mode too.
+    start_walking: bool,
 }
+/// Title-bar readout of mode, speed and position, and when it was last
+/// written to the window.
+#[derive(Resource, Default)]
+struct Readout {
+    text: String,
+    shown: String,
+    since: f64,
+}
+/// Seconds between title-bar updates.
+const READOUT_PERIOD: f64 = 0.2;
 /// Walk mode: the cell's walking world and, while walking, the walker.
 #[derive(Resource)]
 struct Walk {
@@ -511,15 +525,69 @@ fn spawn_window_scene(world: &mut World) {
     world.spawn((camera_bundle(pose, frustum, true, clear, 0, 0), FlyCamera));
 }
 
+/// Mouse motion used for looking this frame: the raw device motion when
+/// there is any, else the motion of the cursor in the window. Synthetic
+/// input (for example scripted drags on macOS) can move the cursor without
+/// producing raw device motion; both are never added.
+pub fn look_delta(raw: Vec2, cursor: Vec2) -> [f64; 2] {
+    let d = if raw != Vec2::ZERO { raw } else { cursor };
+    [f64::from(d.x), f64::from(d.y)]
+}
+
+/// Title-bar text: mode, speed and position.
+fn readout(fly: &Fly, walk: Option<&Walk>, input: FlyInput) -> String {
+    let p = |v: [f64; 3]| format!("{:.1}, {:.1}, {:.1}", v[0], v[1], v[2]);
+    match walk.and_then(|w| w.active.as_ref().map(|v| (w, v))) {
+        Some((w, v)) => {
+            let c = &v.character;
+            let gait = if input.fast { "run" } else { "walk" };
+            let set = if input.fast {
+                c.params.run_speed
+            } else {
+                c.params.walk_speed
+            };
+            let mut t = format!(
+                "fo4-view | walk | {gait} {set:.0} u/s, moving {:.0} u/s | feet {} | {}",
+                c.velocity[0].hypot(c.velocity[1]),
+                p(c.feet),
+                if c.grounded { "on ground" } else { "in air" },
+            );
+            if v.recoveries > 0 {
+                t.push_str(&format!(" | put back {}x", v.recoveries));
+            }
+            if w.world.bounds.is_none() {
+                t.push_str(" | no collision");
+            }
+            t
+        }
+        None => {
+            let speed = if input.fast {
+                fly.settings.fast_speed
+            } else {
+                fly.settings.speed
+            };
+            format!(
+                "fo4-view | fly | {speed:.0} u/s{} | eye {}",
+                if input.fast { " (Shift)" } else { "" },
+                p(fly.state.eye)
+            )
+        }
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
 fn fly_camera(
     keys: Res<ButtonInput<KeyCode>>,
     buttons: Res<ButtonInput<MouseButton>>,
     motion: Res<AccumulatedMouseMotion>,
+    mut cursor: MessageReader<CursorMoved>,
     time: Res<Time>,
     mut fly: ResMut<Fly>,
     walk: Option<ResMut<Walk>>,
+    mut readout_text: ResMut<Readout>,
     mut cameras: Query<&mut Transform, With<FlyCamera>>,
 ) {
+    let cursor_delta: Vec2 = cursor.read().filter_map(|m| m.delta).sum();
     let input = FlyInput::from_keys(
         [
             keys.pressed(KeyCode::KeyW),
@@ -530,13 +598,28 @@ fn fly_camera(
         keys.any_pressed([KeyCode::ShiftLeft, KeyCode::ShiftRight]),
         buttons
             .pressed(MouseButton::Left)
-            .then_some([f64::from(motion.delta.x), f64::from(motion.delta.y)]),
+            .then(|| look_delta(motion.delta, cursor_delta)),
     );
     let dt = time.delta_secs_f64();
-    let next = match walk {
-        Some(mut walk) => {
-            let walk = &mut *walk;
-            if keys.just_pressed(KeyCode::Tab) {
+    let restart = keys.just_pressed(KeyCode::KeyR);
+    if restart {
+        fly.state = fly.start;
+    }
+    let mut walk = walk;
+    let next = match walk.as_deref_mut() {
+        Some(walk) => {
+            if restart {
+                walk.active = if fly.start_walking {
+                    WalkView::from_fly(
+                        fly.start,
+                        fo4_walk::Params::PROVISIONAL,
+                        fo4_walk::Settings::DEFAULT,
+                    )
+                    .ok()
+                } else {
+                    None
+                };
+            } else if keys.just_pressed(KeyCode::Tab) {
                 walk.active = match walk.active.take() {
                     Some(_) => None,
                     None => WalkView::from_fly(
@@ -565,6 +648,24 @@ fn fly_camera(
         transform.translation = pose.0;
         transform.rotation = pose.1;
     }
+    readout_text.text = readout(&fly, walk.as_deref(), input);
+    readout_text.since += dt;
+}
+
+/// Writes the readout to the window title when it changed, at most every
+/// [`READOUT_PERIOD`] seconds.
+fn show_readout(
+    mut readout: ResMut<Readout>,
+    mut windows: Query<&mut Window, With<PrimaryWindow>>,
+) {
+    if readout.text == readout.shown || readout.since < READOUT_PERIOD {
+        return;
+    }
+    for mut window in &mut windows {
+        window.title.clone_from(&readout.text);
+    }
+    readout.shown = readout.text.clone();
+    readout.since = 0.0;
 }
 
 /// Windowed viewer, free-fly or, with a walking world, walking (Tab
@@ -577,6 +678,7 @@ pub fn window(
     clear: [f32; 4],
 ) -> Result<(), String> {
     fly_pose(&start)?;
+    let start_walking = walk.is_some();
     let walk = match walk {
         Some(world) => {
             let view = WalkView::from_fly(
@@ -606,10 +708,13 @@ pub fn window(
     .insert_resource(Fly {
         state: start,
         settings,
+        start,
+        start_walking,
     })
+    .init_resource::<Readout>()
     .insert_resource(PendingScene(Some(scene), clear))
     .add_systems(Startup, spawn_window_scene)
-    .add_systems(Update, fly_camera)
+    .add_systems(Update, (fly_camera, show_readout).chain())
     .run();
     Ok(())
 }
@@ -650,5 +755,176 @@ mod tests {
         let want = coords::game_to_bevy(state.forward());
         let want = Vec3::new(want[0] as f32, want[1] as f32, want[2] as f32);
         assert!(forward.abs_diff_eq(want, 1e-6), "{forward} {want}");
+    }
+
+    /// The windowed input system in an app without a window or renderer:
+    /// input resources are set by hand and time advances by 1/60 s.
+    struct InputApp(App);
+    impl InputApp {
+        fn new(walking: bool) -> Self {
+            let b = fo4_core::Budget::new(16 << 20);
+            let mut floor = fo4_walk::World::new();
+            let (a, c, d, e) = (
+                [-5000.0, -5000.0, 0.0],
+                [5000.0, -5000.0, 0.0],
+                [5000.0, 5000.0, 0.0],
+                [-5000.0, 5000.0, 0.0],
+            );
+            floor
+                .add_triangles(&[[a, c, d], [a, d, e]], "floor", &b)
+                .unwrap();
+            let eye = fo4_walk::Params::PROVISIONAL.eye_height;
+            let start = FlyState::from_eye_look([0., 0., eye], [1., 0., eye]).unwrap();
+            let mut app = App::new();
+            app.init_resource::<ButtonInput<KeyCode>>()
+                .init_resource::<ButtonInput<MouseButton>>()
+                .init_resource::<AccumulatedMouseMotion>()
+                .add_message::<CursorMoved>()
+                .insert_resource(Time::<()>::default())
+                .insert_resource(Fly {
+                    state: start,
+                    settings: crate::cli::DEFAULT_FLY,
+                    start,
+                    start_walking: walking,
+                })
+                .init_resource::<Readout>()
+                .insert_resource(Walk {
+                    world: floor,
+                    active: walking.then(|| {
+                        WalkView::from_fly(
+                            start,
+                            fo4_walk::Params::PROVISIONAL,
+                            fo4_walk::Settings::DEFAULT,
+                        )
+                        .unwrap()
+                    }),
+                })
+                .add_systems(Update, fly_camera);
+            Self(app)
+        }
+        fn frame(&mut self) {
+            let w = self.0.world_mut();
+            w.resource_mut::<Time>()
+                .advance_by(std::time::Duration::from_secs_f64(1. / 60.));
+            self.0.update();
+            let w = self.0.world_mut();
+            w.resource_mut::<ButtonInput<KeyCode>>().clear();
+            w.resource_mut::<ButtonInput<MouseButton>>().clear();
+            w.resource_mut::<AccumulatedMouseMotion>().delta = Vec2::ZERO;
+        }
+        fn frames(&mut self, n: usize) {
+            for _ in 0..n {
+                self.frame();
+            }
+        }
+        fn keys(&mut self) -> Mut<'_, ButtonInput<KeyCode>> {
+            self.0.world_mut().resource_mut::<ButtonInput<KeyCode>>()
+        }
+        fn fly(&self) -> &Fly {
+            self.0.world().resource::<Fly>()
+        }
+        fn walker(&self) -> &WalkView {
+            self.0.world().resource::<Walk>().active.as_ref().unwrap()
+        }
+    }
+
+    #[test]
+    fn shift_runs_and_the_readout_says_so_in_the_input_system() {
+        let mut app = InputApp::new(true);
+        app.frames(10);
+        assert!(app.walker().character.grounded);
+        let p = fo4_walk::Params::PROVISIONAL;
+        app.keys().press(KeyCode::KeyW);
+        let x0 = app.fly().state.eye[0];
+        app.frames(60);
+        let walked = app.fly().state.eye[0] - x0;
+        assert!((walked - p.walk_speed).abs() < 1e-3, "{walked}");
+        let text = app.0.world().resource::<Readout>().text.clone();
+        assert!(
+            text.contains("| walk | walk 100 u/s, moving 100 u/s"),
+            "{text}"
+        );
+        app.keys().press(KeyCode::ShiftLeft);
+        let x1 = app.fly().state.eye[0];
+        app.frames(60);
+        let ran = app.fly().state.eye[0] - x1;
+        assert!((ran - p.run_speed).abs() < 1e-3, "{ran}");
+        let text = app.0.world().resource::<Readout>().text.clone();
+        assert!(text.contains("run 350 u/s, moving 350 u/s"), "{text}");
+        assert!(text.contains("on ground"), "{text}");
+        // R returns to the start pose, walking.
+        app.keys().release(KeyCode::KeyW);
+        app.keys().release(KeyCode::ShiftLeft);
+        app.keys().press(KeyCode::KeyR);
+        app.frame();
+        let eye = app.fly().state.eye;
+        assert!(eye[0].abs() < 1e-9 && eye[1].abs() < 1e-9, "{eye:?}");
+        assert!(app.0.world().resource::<Walk>().active.is_some());
+        // Tab flies; Shift is then the fast fly speed.
+        app.keys().press(KeyCode::Tab);
+        app.frame();
+        assert!(app.0.world().resource::<Walk>().active.is_none());
+        app.keys().press(KeyCode::KeyW);
+        app.keys().press(KeyCode::ShiftRight);
+        let x2 = app.fly().state.eye[0];
+        app.frames(30);
+        let flown = app.fly().state.eye[0] - x2;
+        assert!(
+            (flown - 0.5 * crate::cli::DEFAULT_FLY.fast_speed).abs() < 1e-3,
+            "{flown}"
+        );
+        let text = app.0.world().resource::<Readout>().text.clone();
+        assert!(
+            text.starts_with("fo4-view | fly | 1500 u/s (Shift)"),
+            "{text}"
+        );
+    }
+
+    #[test]
+    fn dragging_with_the_left_button_turns_the_walker_and_its_walk() {
+        let rpp = crate::cli::DEFAULT_FLY.radians_per_pixel;
+        let mut app = InputApp::new(true);
+        app.frames(5);
+        let yaw0 = app.fly().state.yaw;
+        // Motion without the button does not turn.
+        app.0
+            .world_mut()
+            .resource_mut::<AccumulatedMouseMotion>()
+            .delta = Vec2::new(100., 0.);
+        app.frame();
+        assert_eq!(app.fly().state.yaw, yaw0);
+        // Raw device motion with the button held.
+        app.0
+            .world_mut()
+            .resource_mut::<ButtonInput<MouseButton>>()
+            .press(MouseButton::Left);
+        app.0
+            .world_mut()
+            .resource_mut::<AccumulatedMouseMotion>()
+            .delta = Vec2::new(100., 0.);
+        app.frame();
+        let turned = (yaw0 - app.fly().state.yaw).rem_euclid(std::f64::consts::TAU);
+        assert!((turned - 100. * rpp).abs() < 1e-6, "{turned}");
+        // Cursor motion alone (no raw motion), as synthetic drags produce.
+        app.0.world_mut().write_message(CursorMoved {
+            window: Entity::PLACEHOLDER,
+            position: Vec2::new(10., 10.),
+            delta: Some(Vec2::new(50., 0.)),
+        });
+        app.frame();
+        let turned = (yaw0 - app.fly().state.yaw).rem_euclid(std::f64::consts::TAU);
+        assert!((turned - 150. * rpp).abs() < 1e-6, "{turned}");
+        assert_eq!(app.walker().look.yaw, app.fly().state.yaw);
+        // The walk follows the new heading.
+        let before = app.fly().state.eye;
+        app.keys().press(KeyCode::KeyW);
+        app.frames(60);
+        let after = app.fly().state.eye;
+        let yaw = app.fly().state.yaw;
+        let moved = [after[0] - before[0], after[1] - before[1]];
+        assert!((moved[0] - 100. * yaw.cos()).abs() < 1e-3, "{moved:?}");
+        assert!((moved[1] - 100. * yaw.sin()).abs() < 1e-3, "{moved:?}");
+        assert_eq!(look_delta(Vec2::new(1., 2.), Vec2::new(5., 5.)), [1., 2.]);
+        assert_eq!(look_delta(Vec2::ZERO, Vec2::new(5., -5.)), [5., -5.]);
     }
 }

@@ -234,3 +234,40 @@ fn terrain_and_collision_carry_the_walker_together() {
     assert!(feet[0] > 4600.0);
     assert!((feet[2] - g.height_at(feet[0], feet[1]).unwrap().0).abs() < 1e-9);
 }
+
+#[test]
+fn a_larger_radius_keeps_the_first_ring_and_adds_the_next() {
+    let f = fixture();
+    let b = budget();
+    let one = load_around(&f.store, &key(0x810), RuleLevel::Hypotheses, true, &b).unwrap();
+    let g = load_grid(&f.store, &key(0x810), RuleLevel::Hypotheses, 1, &b).unwrap();
+    let names = |s: &TerrainSet| -> Vec<(&str, Option<[i32; 2]>, String)> {
+        s.pieces
+            .iter()
+            .map(|p| (p.name, p.grid, p.outcome.clone()))
+            .collect()
+    };
+    assert_eq!(names(&g), names(&one));
+    // Radius 2: the first nine pieces as before, then 16 of the second
+    // ring, none of which has a cell here; (5, 5) stays out of reach.
+    let two = load_grid(&f.store, &key(0x810), RuleLevel::Hypotheses, 2, &b).unwrap();
+    assert_eq!(two.pieces.len(), 25);
+    assert_eq!(names(&two)[..9], names(&one)[..]);
+    assert!(two.pieces[9..]
+        .iter()
+        .all(|p| p.name == "ring_2" && p.outcome == "no_cell"));
+    assert_eq!(two.pieces[9].grid, Some([-2, -2]));
+    assert_eq!(two.terrains.len(), 2);
+    // From a search done once for the scene, the same pieces.
+    let around = fo4_scene::grid::around(&f.store, &key(0x810), 2, &b).unwrap();
+    let with = load_with(&f.store, &around, RuleLevel::Hypotheses, &b).unwrap();
+    assert_eq!(names(&with), names(&two));
+    assert_eq!(with.cells_scanned, two.cells_scanned);
+    // A refusal that holds for every cell still stops the neighbours.
+    let m = load_with(&f.store, &around, RuleLevel::Measured, &b).unwrap();
+    assert_eq!(m.pieces.len(), 1);
+    assert!(!m.neighbours_searched);
+    assert_eq!(m.cells_scanned, 0);
+    assert_eq!(piece_name([0, 1]), "north");
+    assert_eq!(piece_name([3, -1]), "ring_3");
+}

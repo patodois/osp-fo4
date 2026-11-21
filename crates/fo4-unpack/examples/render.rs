@@ -12,7 +12,7 @@ use std::path::Path;
 type AnyResult<T> = Result<T, Box<dyn std::error::Error>>;
 fn run() -> AnyResult<()> {
     let args: Vec<_> = std::env::args().skip(1).collect();
-    const USAGE: &str = "usage: render MANIFEST DATA_DIRECTORY CELL_EDITOR_ID build/OUTPUT [--strict|--measured|--under-hypotheses] [--eye X,Y,Z --look X,Y,Z] [--instance-ids] [--collision-overlay] [--terrain]";
+    const USAGE: &str = "usage: render MANIFEST DATA_DIRECTORY CELL_EDITOR_ID build/OUTPUT [--strict|--measured|--under-hypotheses] [--eye X,Y,Z --look X,Y,Z] [--instance-ids] [--collision-overlay] [--terrain] [--around N]";
     if args.len() < 4 {
         return Err(USAGE.into());
     }
@@ -23,6 +23,7 @@ fn run() -> AnyResult<()> {
     let mut instance_ids = false;
     let mut collision_overlay = false;
     let mut terrain = false;
+    let mut around = 0u32;
     let mut rest = args[4..].iter();
     while let Some(arg) = rest.next() {
         match arg.as_str() {
@@ -30,6 +31,13 @@ fn run() -> AnyResult<()> {
             "--instance-ids" => instance_ids = true,
             "--collision-overlay" => collision_overlay = true,
             "--terrain" => terrain = true,
+            "--around" => {
+                around = rest
+                    .next()
+                    .and_then(|v| v.parse::<u32>().ok())
+                    .filter(|n| (1..=fo4_scene::grid::MAX_RADIUS).contains(n))
+                    .ok_or(USAGE)?;
+            }
             "--eye" | "--look" => {
                 let point = point(rest.next().ok_or(USAGE)?)?;
                 *(if arg == "--eye" { &mut eye } else { &mut look }) = Some(point);
@@ -69,7 +77,16 @@ fn run() -> AnyResult<()> {
     vfs.check_complete()?;
     let budget = Budget::metered(limits.max_memory);
     let mut loader = Loader::new(&store, &vfs, &manifest.language, policy, &budget);
-    let scene = loader.by_editor_id(&args[2], &budget)?;
+    let mut scene = loader.by_editor_id(&args[2], &budget)?;
+    // --around N: the placed references of the exterior cells within N grid
+    // steps join the scene (and, with --terrain, their terrain the draw
+    // list). Without the flag the scene is the cell's alone.
+    let mut grid = None;
+    if around > 0 {
+        let a = fo4_scene::grid::around(&store, &scene.cell.key, around, &budget)?;
+        let loads = fo4_scene::grid::absorb_around(&mut loader, &mut scene, &a, &budget)?;
+        grid = Some((a, loads));
+    }
     let mut built = fo4_render::draw::build(
         &scene,
         &loader,
@@ -79,7 +96,21 @@ fn run() -> AnyResult<()> {
     )?;
     // Without --terrain nothing below changes the draw list or the summary.
     let mut terrain_summary = None;
-    if terrain {
+    if let (true, Some((a, _))) = (terrain, &grid) {
+        // Every built piece, the cell first, each tagged after the last
+        // placed instance in piece order.
+        let set = fo4_walk::terrain::load_with(&store, a, policy, &budget)?;
+        let first = u32::try_from(built.instances.len())?;
+        for (k, t) in set.terrains.iter().enumerate() {
+            let tag = first
+                .checked_add(u32::try_from(k)?)
+                .ok_or("TerrainTagOverflow")?;
+            fo4_render::terrain::append_terrain(&mut built.list, t, tag, &budget)?;
+        }
+        terrain_summary = Some(
+            serde_json::json!({"drawn":!set.terrains.is_empty(),"first_instance_tag":first,"pieces":set.pieces,"neighbours_searched":set.neighbours_searched,"shading":"flat neutral grey per triangle by geometric normal; diagnostic, not game lighting"}),
+        );
+    } else if terrain {
         use fo4_scene::terrain::{self, Outcome};
         let options = terrain::Options {
             level: policy,
@@ -182,6 +213,12 @@ fn run() -> AnyResult<()> {
     }
     if let (Some(t), Some(map)) = (terrain_summary, summary.as_object_mut()) {
         map.insert("terrain".into(), t);
+    }
+    if let (Some((a, loads)), Some(map)) = (&grid, summary.as_object_mut()) {
+        map.insert(
+            "around".into(),
+            serde_json::json!({"radius":a.radius,"searched":a.searched,"grid":a.grid,"world":a.world,"cells_scanned":a.cells_scanned,"same_grid_cells":a.same_grid_cells,"cells":loads}),
+        );
     }
     files::json(&out.join("summary.json"), &summary)?;
     println!("{}", out.join("frame.png").display());

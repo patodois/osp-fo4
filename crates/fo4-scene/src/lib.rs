@@ -4,6 +4,7 @@ mod assets;
 pub mod bounds;
 pub mod camera;
 pub mod collision;
+pub mod grid;
 pub mod hypotheses;
 pub mod lighting;
 pub mod model_policy;

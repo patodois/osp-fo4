@@ -114,7 +114,10 @@ level. When built, it is appended as one opaque double-sided draw with a
 angle of the geometric normal to a fixed direction), tagged after the last
 placed instance; `summary.json` gains a `terrain` key with the outcome or the
 refusal. Without the flag the draw list and summary are unchanged; frames
-were compared byte for byte before and after this change.
+were compared byte for byte before and after this change. With `--around N`
+([scene.md](scene.md)) every built piece of the cells within N grid steps is
+drawn the same way, the cell first, tagged in piece order after the last
+placed instance, and the `terrain` key lists the pieces.
 
 ## Report: `fo4-unpack land PROFILE EditorID [--out DIR] [--strict|--measured|--under-hypotheses] [--census]`
 

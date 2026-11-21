@@ -98,7 +98,8 @@ target/fo4-view/debug/fo4-view examples/fallout4.json "$FO4_DATA" Financial13 \
 target/fo4-view/debug/fo4-view compare --cpu build/lobby/frame.png \
   --gpu build/view/gpu.png --cpu-tags build/lobby/instances.bin \
   --gpu-tags build/view/gpu-tags.bin --diff build/view/diff.png
-# Free-fly window: W/A/S/D, Shift faster, hold the left button to look.
+# Free-fly window: W/A/S/D, Shift faster, hold the left button to look,
+# R back to the start pose; the title bar shows mode, speed and position.
 target/fo4-view/debug/fo4-view examples/fallout4.json "$FO4_DATA" Financial13 \
   --under-hypotheses --eye 0,153.6,104.49 --look 70.7,224.3,104.49
 ```
@@ -107,7 +108,13 @@ Add `--walk` to walk instead of fly: the camera rides the walking controller
 at its eye height, Shift runs and Tab switches between walking and flying.
 Add `--terrain` to draw an exterior cell's terrain in plain grey, as
 `render --terrain` does; in walk mode the controller stands on the terrain
-with or without the flag.
+with or without the flag. A walker that stays in the air below the lowest
+collision for a second is put back where it last stood (a viewer
+convenience). Add `--around N` (1 to 3), to the viewer or to the `render`
+example, to load the exterior cells within N grid steps as well: their
+objects are drawn and walked on and, with `--terrain`, their terrain is
+drawn. `--headless --walk` settles the walker from `--eye` and draws one
+frame from its eye.
 
 The comparison prints coverage agreement and colour differences; it defines
 no pass threshold.

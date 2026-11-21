@@ -34,6 +34,7 @@ pub fn cell(
     level: RuleLevel,
     walk: bool,
     terrain: bool,
+    around: u32,
 ) -> AnyResult<Loaded> {
     if walk {
         fo4_walk::accept(&walk_rules(), level, fo4_scene::hypotheses::status)?;
@@ -50,7 +51,30 @@ pub fn cell(
     vfs.check_complete()?;
     let budget = Budget::metered(limits.max_memory);
     let mut loader = Loader::new(&store, &vfs, &manifest.language, level, &budget);
-    let scene = loader.by_editor_id(cell, &budget)?;
+    let mut scene = loader.by_editor_id(cell, &budget)?;
+    // --around N: the placed references of the exterior cells within N grid
+    // steps join the scene, as in the CPU render. Without it nothing changes.
+    let grid = if around > 0 {
+        let started = std::time::Instant::now();
+        let a = fo4_scene::grid::around(&store, &scene.cell.key, around, &budget)?;
+        let loads = fo4_scene::grid::absorb_around(&mut loader, &mut scene, &a, &budget)?;
+        let cells: Vec<String> = loads
+            .iter()
+            .map(|l| format!("{:?} {} {}", l.offset, l.outcome, l.instances))
+            .collect();
+        println!(
+            "around {}: {} (searched {}, {} cells scanned, {:.2} s): {}",
+            a.radius,
+            if a.searched { "exterior" } else { "no grid" },
+            a.searched,
+            a.cells_scanned,
+            started.elapsed().as_secs_f64(),
+            cells.join(", ")
+        );
+        Some(a)
+    } else {
+        None
+    };
     let mut build = fo4_render::draw::build(
         &scene,
         &loader,
@@ -60,22 +84,43 @@ pub fn cell(
     )?;
     // The terrain of the cell and, for walking, of its neighbours. Without
     // --terrain and --walk nothing is loaded and the draw list is unchanged.
-    let ground = if walk || terrain {
-        Some(fo4_walk::terrain::load_around(
+    let ground = match (&grid, walk || terrain) {
+        (Some(a), true) => Some(fo4_walk::terrain::load_with(&store, a, level, &budget)?),
+        (None, true) => Some(fo4_walk::terrain::load_around(
             &store,
             &scene.cell.key,
             level,
             walk,
             &budget,
-        )?)
-    } else {
-        None
+        )?),
+        (_, false) => None,
     };
     let terrain_outcome = ground
         .as_ref()
         .and_then(|g| g.own())
         .map(|p| p.outcome.clone());
-    if terrain {
+    if let (true, Some(g)) = (terrain && grid.is_some(), &ground) {
+        // Every built piece, the cell first, tagged after the last placed
+        // instance in piece order, as the CPU render does.
+        let first = u32::try_from(build.instances.len())?;
+        let mut last = first;
+        for (k, t) in g.terrains.iter().enumerate() {
+            last = first
+                .checked_add(u32::try_from(k)?)
+                .ok_or("TerrainTagOverflow")?;
+            fo4_render::terrain::append_terrain(&mut build.list, t, last, &budget)?;
+        }
+        let pieces: Vec<String> = g
+            .pieces
+            .iter()
+            .map(|p| format!("{} {}", p.name, p.outcome))
+            .collect();
+        println!(
+            "terrain drawn: {} pieces, tags {first} to {last}; {}",
+            g.terrains.len(),
+            pieces.join(", ")
+        );
+    } else if terrain {
         let own = ground
             .as_ref()
             .filter(|g| g.own_built())

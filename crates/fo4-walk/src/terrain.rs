@@ -1,12 +1,14 @@
 //! Terrain under the walker (`spec/walk.md`, "Terrain"): the terrain of a
-//! cell and of its eight neighbours by XCLC grid, loaded with
+//! cell and of its eight neighbours (or the cells within a larger radius)
+//! by XCLC grid, found with `fo4_scene::grid::around` and loaded with
 //! `fo4_scene::terrain::load` at the walk's rule level, for
 //! [`World::add_terrain`]. Each piece records its outcome, so a refused
 //! terrain is reported rather than silently missing.
 use crate::World;
 use fo4_core::{Budget, Result};
-use fo4_plugin::typed::{Cell, CellKind, Store};
+use fo4_plugin::typed::Store;
 use fo4_plugin::FormKey;
+use fo4_scene::grid::{self, Around};
 use fo4_scene::terrain::{self, Outcome, Refusal, Terrain};
 use fo4_scene::RuleLevel;
 use serde::Serialize;
@@ -27,7 +29,8 @@ pub const AROUND: [(&str, i32, i32); 9] = [
 /// One cell's terrain as the walk sees it.
 #[derive(Debug, Clone, Serialize)]
 pub struct Piece {
-    /// `self` or the direction of the neighbour.
+    /// `self`, the direction of a neighbour one step away, or `ring_<n>`
+    /// ([`piece_name`]).
     pub name: &'static str,
     /// XCLC grid, when known.
     pub grid: Option<[i32; 2]>,
@@ -45,10 +48,11 @@ pub struct Piece {
 /// The terrain pieces around a cell.
 #[derive(Debug, Default, Serialize)]
 pub struct TerrainSet {
-    /// `pieces[0]` is the cell itself; neighbours follow in [`AROUND`]
-    /// order when they were searched.
+    /// `pieces[0]` is the cell itself; neighbours follow in
+    /// `fo4_scene::grid::offsets` order (for one step, [`AROUND`] order)
+    /// when they were searched.
     pub pieces: Vec<Piece>,
-    /// Whether the eight neighbours were searched: only for an exterior
+    /// Whether the neighbours were searched: only for an exterior
     /// cell with a grid, in a world, at a level that accepts the terrain
     /// rules.
     pub neighbours_searched: bool,
@@ -114,20 +118,6 @@ fn stops_search(code: &str) -> bool {
     )
 }
 
-/// XCLC grid of a non-deleted exterior cell.
-fn grid_of(store: &Store, key: &FormKey, b: &Budget) -> Result<Option<[i32; 2]>> {
-    if store.kind(key) != Some(CellKind::Exterior) {
-        return Ok(None);
-    }
-    let Some(c) = store.get::<Cell>(key, b)? else {
-        return Ok(None);
-    };
-    if c.record.deleted() {
-        return Ok(None);
-    }
-    Ok(c.data.grid.as_ref().map(|g| [g.i, g.j]))
-}
-
 fn take(
     out: &mut TerrainSet,
     mut p: Piece,
@@ -156,6 +146,27 @@ fn take(
     Ok(stop)
 }
 
+/// Name of a piece at a grid offset: the [`AROUND`] name within one
+/// step, `ring_<n>` beyond.
+pub fn piece_name(offset: [i32; 2]) -> &'static str {
+    if let Some((name, _, _)) = AROUND.iter().find(|(_, dx, dy)| [*dx, *dy] == offset) {
+        return name;
+    }
+    match offset[0].abs().max(offset[1].abs()) {
+        2 => "ring_2",
+        3 => "ring_3",
+        _ => "ring_far",
+    }
+}
+
+/// Where the neighbours come from.
+enum Search<'a> {
+    /// Search the world within this many grid steps.
+    Radius(u32),
+    /// Already searched.
+    Given(&'a Around),
+}
+
 /// Loads the terrain of `cell` at `level` and, when `neighbours` is set
 /// and the cell is an exterior cell of a world whose terrain rules the
 /// level accepts, of the eight cells around it by XCLC grid. Every read
@@ -167,6 +178,41 @@ pub fn load_around(
     neighbours: bool,
     b: &Budget,
 ) -> Result<TerrainSet> {
+    load_grid(store, cell, level, u32::from(neighbours), b)
+}
+
+/// [`load_around`] for the cells within `radius` grid steps
+/// ([`fo4_scene::grid::around`], at most [`fo4_scene::grid::MAX_RADIUS`]):
+/// the cell first, then the neighbours in [`fo4_scene::grid::offsets`]
+/// order. Radius 1 is [`load_around`] with neighbours.
+pub fn load_grid(
+    store: &Store,
+    cell: &FormKey,
+    level: RuleLevel,
+    radius: u32,
+    b: &Budget,
+) -> Result<TerrainSet> {
+    load(store, cell, level, Search::Radius(radius), b)
+}
+
+/// [`load_grid`] with the neighbours already found, so that the terrain
+/// and the placed references of a grid of cells come from one search.
+pub fn load_with(
+    store: &Store,
+    around: &Around,
+    level: RuleLevel,
+    b: &Budget,
+) -> Result<TerrainSet> {
+    load(store, &around.cell, level, Search::Given(around), b)
+}
+
+fn load(
+    store: &Store,
+    cell: &FormKey,
+    level: RuleLevel,
+    search: Search<'_>,
+    b: &Budget,
+) -> Result<TerrainSet> {
     let options = terrain::Options {
         level,
         diagonal: None,
@@ -174,64 +220,34 @@ pub fn load_around(
     let mut out = TerrainSet::default();
     let own = terrain::load(store, cell, options, b)?;
     let stop = take(&mut out, piece("self", None, Some(cell.clone())), own, b)?;
-    let world = store.world(cell);
-    let grid = match out.pieces[0].grid {
-        Some(g) => Some(g),
-        None => grid_of(store, cell, &b.child())?,
-    };
     if out.pieces[0].grid.is_none() {
-        out.pieces[0].grid = grid;
+        out.pieces[0].grid = grid::grid_of(store, cell, &b.child())?;
     }
-    let (Some([gx, gy]), Some(world), None, true) = (grid, world, stop, neighbours) else {
+    if stop.is_some() {
         return Ok(out);
-    };
-    out.neighbours_searched = true;
-    // One pass over the world's exterior cells, keeping those within one
-    // grid step.
-    let mut near: Vec<([i32; 2], FormKey)> = Vec::new();
-    for key in store.cells() {
-        if key == *cell
-            || store.kind(&key) != Some(CellKind::Exterior)
-            || store.world(&key).as_ref() != Some(&world)
-        {
-            continue;
-        }
-        out.cells_scanned += 1;
-        let Some([x, y]) = grid_of(store, &key, &b.child())? else {
-            continue;
-        };
-        let (dx, dy) = (i64::from(x) - i64::from(gx), i64::from(y) - i64::from(gy));
-        if dx.abs() > 1 || dy.abs() > 1 {
-            continue;
-        }
-        if dx == 0 && dy == 0 {
-            out.same_grid_cells += 1;
-            continue;
-        }
-        b.reserve(&mut near, 1, "walk terrain", 0)?;
-        b.charge(64 + key.plugin.len() as u64, "walk terrain", 0)?;
-        near.push(([x, y], key));
     }
-    for (name, dx, dy) in &AROUND[1..] {
-        // Within one step of a grid read from an i32, so no overflow
-        // unless the cell sits on the i32 edge; such a neighbour is absent.
-        let (Some(x), Some(y)) = (gx.checked_add(*dx), gy.checked_add(*dy)) else {
-            take_absent(&mut out, name, None, "no_cell", b)?;
-            continue;
-        };
-        let at = [x, y];
-        let mut keys = near.iter().filter(|(g, _)| *g == at).map(|(_, k)| k);
-        match (keys.next(), keys.next()) {
-            (None, _) => take_absent(&mut out, name, Some(at), "no_cell", b)?,
-            (Some(_), Some(_)) => take_absent(&mut out, name, Some(at), "ambiguous_grid", b)?,
-            (Some(key), None) => {
+    let searched;
+    let around = match search {
+        Search::Radius(0) => return Ok(out),
+        Search::Radius(r) => {
+            searched = grid::around(store, cell, r, b)?;
+            &searched
+        }
+        Search::Given(a) => a,
+    };
+    if !around.searched {
+        return Ok(out);
+    }
+    out.neighbours_searched = true;
+    out.cells_scanned = around.cells_scanned;
+    out.same_grid_cells = around.same_grid_cells;
+    for n in &around.neighbours {
+        let name = piece_name(n.offset);
+        match &n.cell {
+            None => take_absent(&mut out, name, n.grid, n.outcome, b)?,
+            Some(key) => {
                 let outcome = terrain::load(store, key, options, b)?;
-                take(
-                    &mut out,
-                    piece(name, Some(at), Some(key.clone())),
-                    outcome,
-                    b,
-                )?;
+                take(&mut out, piece(name, n.grid, Some(key.clone())), outcome, b)?;
             }
         }
     }

@@ -336,3 +336,35 @@ continua no envelope separado de `Scene.deleted`.
 Os payloads/ranges dessas luzes disabled ficam retidos em `inactive_records`,
 com crédito de memória transferido do decoder temporário; campos crus e strings
 não apontam para records já descartados.
+
+## Cells around an exterior cell
+
+`fo4_scene::grid` finds the exterior cells around a cell and joins their
+placed references to its scene. It adds no format fact and no rule, and it
+claims nothing about which cells the game keeps loaded: drawing and walking
+over a block of cells is a viewing choice.
+
+- `around(store, cell, radius, budget)` (radius 0 to `MAX_RADIUS` = 3) reads
+  the cell's XCLC grid and, for an exterior cell of a world, every other
+  exterior cell of the same world once, keeping those within `radius` grid
+  steps on both axes. Each position is `cell`, `no_cell` or
+  `ambiguous_grid` (two or more non-deleted cells claim it; neither is
+  used, as in the `land` report). Positions come in `offsets(radius)` order:
+  the first ring as east, west, north, south, north-east, north-west,
+  south-east, south-west, then each further ring from south to north and
+  west to east. An interior cell, a cell without a grid or radius 0 is not
+  searched.
+- `absorb_around(loader, scene, around, budget)` loads each found cell with
+  the same `Loader` and appends its instances, deleted, disabled and
+  excluded children, diagnostics, precombine and previs declarations and
+  assets to the centre's `Scene`, which keeps the centre's record, name,
+  kind and `lighting_data`. Asset indices belong to the loader, and both the
+  draw list and the collision of a cell order references by plugin and
+  object ID, so the joined scene is drawn and collided as one placement
+  list: instance tags run over every cell's references.
+
+The `render` example and the GPU viewer take it behind `--around N` (1 to
+3), with the walking world built from the joined scene's collision and,
+with `--terrain`, every built terrain piece drawn ([walk](walk.md),
+[land](land.md)). Without the flag nothing is searched and the draw list,
+frame and summary are unchanged.

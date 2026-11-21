@@ -61,15 +61,22 @@ rule level ([land.md](land.md)): the six terrain rules, all pending, so
 terrain exists only at `--under-hypotheses`, with the diagonal level the
 registry selects. With `neighbours`, when the cell is exterior, has an XCLC
 grid, belongs to a world and the level accepts the terrain rules, it then
+finds the cells within one grid step with `fo4_scene::grid::around`, which
 reads every other exterior cell of the same world once (through the
-budget), keeps those whose grid is within one step, and loads each of the
-eight neighbours the same way. Each of the nine positions is a `Piece`
-with its grid, cell, LAND and outcome: `built:<diagonal>`,
+budget; [scene.md](scene.md), "Cells around an exterior cell"), and loads
+each of the eight neighbours the same way. Each of the nine positions is a
+`Piece` with its grid, cell, LAND and outcome: `built:<diagonal>`,
 `refused:<code>` (the refusals of `terrain::load`), `no_cell` or
 `ambiguous_grid` (two or more cells claim the grid; neither is used, as in
 the `land` report). Other cells claiming the cell's own grid are counted
-and ignored. Only the cell's own collision is placed; the neighbours
-contribute terrain only.
+and ignored. `load_grid(.., radius, ..)` does the same within `radius`
+steps (at most 3): the first nine pieces as above, then each further ring,
+named `ring_2` or `ring_3`. `load_with(store, around, level, budget)` takes
+a search already made, so that the viewer and the `render` example search
+once for the placed references and the terrain of the same cells. The
+`walk` report places only the cell's own collision; the neighbours
+contribute terrain only. The viewer with `--around N` places the collision
+of every cell within N steps (below).
 
 `TerrainSet::add_to(world)` calls `World::add_terrain` for each built piece:
 its 2,048 triangles under one source labelled `terrain` with the piece's
@@ -243,15 +250,54 @@ heading, Shift to run, the left mouse button held to look; Tab switches to the
 free-fly camera and back (a new character starts at the camera). In an
 exterior cell the world includes the terrain of the cell and its neighbours
 as in the report, and the outcome of each piece is printed. Without `--walk`
-the viewer is unchanged, and `--walk` is refused with `--headless`.
+the viewer is unchanged.
 
 `--terrain` (window or `--headless`) appends the cell's own terrain to the
 draw list exactly as `render --terrain` does: one opaque double-sided draw,
-flat grey per triangle, tagged after the last placed instance; the
-neighbours walked on are not drawn. A refused terrain is printed and not
-drawn. Without the flag nothing is loaded and the draw list is unchanged, so
-the CPU and GPU frames of one pose can be compared with or without terrain
-by passing the flag to both.
+flat grey per triangle, tagged after the last placed instance; without
+`--around` the neighbours walked on are not drawn. A refused terrain is
+printed and not drawn. Without the flag nothing is loaded and the draw list
+is unchanged, so the CPU and GPU frames of one pose can be compared with or
+without terrain by passing the flag to both.
+
+`--around N` (1 to 3; window or `--headless`, and the `render` example)
+joins the placed references of the exterior cells within N grid steps to
+the cell's scene (`fo4_scene::grid`, [scene.md](scene.md)): they are drawn,
+and with `--walk` their collision is placed in the walking world with the
+cell's, under the same rules. The terrain pieces are those of
+`load_with` for the same search; with `--terrain` every built piece is
+drawn, the cell first, each tagged after the last placed instance in piece
+order, in both renderers. An interior cell is not searched. Which cells the
+game keeps loaded around the player is not claimed.
+
+Viewer conveniences, which claim nothing about the game:
+
+- **Fall recovery.** While the walker is in the air with its feet below the
+  lowest point of every primitive of the loaded world (or the world is
+  empty), the time is counted; after more than one second (`RECOVER_AFTER`)
+  it stands again, at rest, at the feet position of the last frame it spent
+  on the ground (the start until it first lands).
+- **R** returns to the start pose of `--eye`/`--look`, and to walking if
+  the window started walking.
+- **Title bar.** Mode (walk or fly), the speed asked for (walk or run, or
+  the fly speed with Shift), the measured horizontal speed of the walker,
+  the feet (walk) or eye (fly) position, whether the walker is on the
+  ground and how many times it was put back. Updated at most five times a
+  second.
+- **Looking.** The left button turns the view by the raw mouse motion; when
+  a frame has none (synthetic input, such as scripted drags on macOS, can
+  move the cursor without raw motion), by the motion of the cursor in the
+  window instead. The two are never added.
+- **Headless walk.** `--headless --walk` builds the same world, drops the
+  walker with its eye at `--eye`, settles it without input (at most 600
+  ticks) and draws the frame from its eye looking the same way; the settled
+  feet, the ground under them and the pose to pass to the `render` example
+  are printed.
+
+System-level tests drive the window's input system in an app without a
+window: Shift changes the walker's speed from the walk to the run speed,
+and a drag with the left button turns the heading the walker then walks
+along.
 
 ## Open
 
@@ -262,7 +308,7 @@ by passing the flag to both.
 | Mesh vertex records as collision | left out |
 | `hknpConvexShape` radius | not read; radius 0 |
 | Triangle sidedness | both sides for the walker, by rule; open for the game |
-| Terrain (LAND) | added under its own pending rules; the neighbours' collision is not placed, only their terrain |
+| Terrain (LAND) | added under its own pending rules; the report places only the cell's collision, the viewer with `--around` also the neighbours' |
 | XCLC hide-quad bits | not applied: hidden quads still carry the walker |
 | Jumping, crouching, sprinting, swimming, ladders, doors, moving objects, actors | not implemented |
 | Speed on slopes, acceleration, friction | not modelled: velocity is set from input each tick |

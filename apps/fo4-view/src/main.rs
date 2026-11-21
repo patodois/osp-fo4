@@ -26,7 +26,16 @@ fn load_scene(
     s: &cli::Scene,
     walk: bool,
 ) -> AnyResult<(scene::GpuScene, RenderOptions, load::Loaded)> {
-    let loaded = load::cell(&s.manifest, &s.data, &s.cell, s.level, walk, s.terrain)?;
+    let started = std::time::Instant::now();
+    let loaded = load::cell(
+        &s.manifest,
+        &s.data,
+        &s.cell,
+        s.level,
+        walk,
+        s.terrain,
+        s.around,
+    )?;
     let options = RenderOptions {
         backface_cull: s.backface_cull,
         ..RenderOptions::REFERENCE
@@ -43,7 +52,59 @@ fn load_scene(
         gpu.instances.len(),
         gpu.blended_instances(),
     );
+    // Only with --around, so the default output is unchanged.
+    if s.around > 0 {
+        println!(
+            "loaded and converted in {:.2} s",
+            started.elapsed().as_secs_f64()
+        );
+    }
     Ok((gpu, options, loaded))
+}
+
+/// Headless walk: the walker dropped with its eye at `eye`, settled
+/// without input, and the eye and look point it ends with (same direction).
+fn settled_pose(
+    world: &fo4_walk::World,
+    eye: [f64; 3],
+    look: [f64; 3],
+) -> AnyResult<([f64; 3], [f64; 3])> {
+    let start = fly::FlyState::from_eye_look(eye, look)?;
+    let mut view = walk::WalkView::from_fly(
+        start,
+        fo4_walk::Params::PROVISIONAL,
+        fo4_walk::Settings::DEFAULT,
+    )?;
+    let ticks = view.character.settle(world, 600);
+    let c = &view.character;
+    let ground = c.ground.and_then(|g| world.sources.get(g.source as usize));
+    println!(
+        "walk: settled in {ticks} ticks, feet {:.3},{:.3},{:.3}, {}, ground {}",
+        c.feet[0],
+        c.feet[1],
+        c.feet[2],
+        if c.grounded { "on ground" } else { "in air" },
+        match ground {
+            None => "none".into(),
+            Some(s) => match (s.terrain, s.instance) {
+                (Some(grid), _) => format!("terrain {grid:?}"),
+                (None, Some(i)) => format!("instance {i}"),
+                (None, None) => s.label.clone().unwrap_or_default(),
+            },
+        }
+    );
+    let eye = view.character.eye();
+    let d: [f64; 3] = std::array::from_fn(|i| look[i] - start.eye[i]);
+    println!(
+        "walk pose: --eye {:.3},{:.3},{:.3} --look {:.3},{:.3},{:.3}",
+        eye[0],
+        eye[1],
+        eye[2],
+        eye[0] + d[0],
+        eye[1] + d[1],
+        eye[2] + d[2]
+    );
+    Ok((eye, std::array::from_fn(|i| eye[i] + d[i])))
 }
 
 fn run() -> AnyResult<()> {
@@ -54,8 +115,9 @@ fn run() -> AnyResult<()> {
             size,
             out,
             tags,
+            walk,
         } => {
-            let (gpu, options, loaded) = load_scene(&s, false)?;
+            let (gpu, options, loaded) = load_scene(&s, walk)?;
             let root = Some(loaded.data_root.as_path());
             // Open the outputs first: a refused path fails before rendering.
             let mut out_file = load::output_file(&out, root)?;
@@ -63,8 +125,12 @@ fn run() -> AnyResult<()> {
                 .as_deref()
                 .map(|t| load::output_file(t, root))
                 .transpose()?;
+            let (eye, look) = match &loaded.walk {
+                Some(world) => settled_pose(world, s.eye, s.look)?,
+                None => (s.eye, s.look),
+            };
             drop(loaded);
-            let cam = camera::look_at(s.eye, s.look, camera::reference_frustum(size), size)?;
+            let cam = camera::look_at(eye, look, camera::reference_frustum(size), size)?;
             let frames = gpu::headless(&gpu, &cam, options.clear, tags.is_some())?;
             use std::io::Write;
             out_file.write_all(&load::png_rgba8(size, &frames.color)?)?;
