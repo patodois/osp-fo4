@@ -660,3 +660,77 @@ fn parameters_and_settings_are_validated() {
         .iter()
         .any(|(n, _, _, o)| *n == "walk_speed" && *o == Origin::Caller));
 }
+
+/// A box 100 x 100 x 40 on the floor, as one convex hull or as triangles
+/// (top and the four sides).
+fn box_world(triangles: bool, b: &Budget) -> (World, u32) {
+    let mut w = World::new();
+    floor(&mut w, b);
+    let source = if triangles {
+        let (lo, hi, top) = (-50.0, 50.0, 40.0);
+        let mut t = rect(lo, hi, lo, hi, top).to_vec();
+        for (a, c) in [
+            ([lo, lo], [hi, lo]),
+            ([hi, lo], [hi, hi]),
+            ([hi, hi], [lo, hi]),
+            ([lo, hi], [lo, lo]),
+        ] {
+            t.extend(quad(
+                [a[0], a[1], 0.0],
+                [c[0], c[1], 0.0],
+                [c[0], c[1], top],
+                [a[0], a[1], top],
+            ));
+        }
+        w.add_triangles(&t, "box", b).unwrap()
+    } else {
+        w.add_hull(
+            &cuboid([-50.0, -50.0, 0.0], [50.0, 50.0, 40.0]),
+            0.0,
+            "box",
+            b,
+        )
+        .unwrap()
+    };
+    (w, source)
+}
+
+#[test]
+fn rests_on_an_edge_within_the_slope_limit_and_stays_grounded() {
+    let b = budget();
+    for triangles in [false, true] {
+        let (w, bx) = box_world(triangles, &b);
+        // The axis 10 units outside the edge: the lower sphere touches the
+        // edge with a normal 38.7 degrees from vertical, inside the limit.
+        let mut c = character([60.0, 0.0, 200.0]);
+        let ticks = c.settle(&w, 600);
+        assert!(ticks < 600, "{triangles} {ticks}");
+        let on_edge = 40.0 - P.radius + (P.radius * P.radius - 10.0 * 10.0).sqrt();
+        assert!(near(c.feet[2], on_edge, 1e-6), "{triangles} {:?}", c.feet);
+        assert!(near(c.feet[0], 60.0, 1e-9));
+        assert_eq!(c.ground.map(|g| g.source), Some(bx));
+        let rest = c.feet;
+        let states = run(&mut c, &w, Input::default(), 300);
+        assert!(
+            states.iter().all(|s| s.grounded && s.feet == rest),
+            "{triangles}"
+        );
+        // From the edge it walks off to the floor...
+        let mut off = c.clone();
+        run(&mut off, &w, ahead(0.0), 120);
+        assert!(
+            off.grounded && near(off.feet[2], 0.0, 1e-6),
+            "{:?}",
+            off.feet
+        );
+        // ...or onto the top.
+        run(&mut c, &w, ahead(std::f64::consts::PI), 30);
+        assert!(c.grounded && near(c.feet[2], 40.0, 1e-6), "{:?}", c.feet);
+        // 12 units out the touching normal is steeper than the limit: it
+        // slides off the edge to the floor.
+        let mut c = character([62.0, 0.0, 200.0]);
+        c.settle(&w, 600);
+        assert!(c.grounded && near(c.feet[2], 0.0, 1e-6), "{:?}", c.feet);
+        assert!(c.feet[0] >= 50.0 + P.radius - 1e-6);
+    }
+}

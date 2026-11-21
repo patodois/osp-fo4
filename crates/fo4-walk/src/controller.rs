@@ -125,6 +125,10 @@ const PENETRATION_TOLERANCE: f64 = 1e-6;
 pub const MAX_TICKS_PER_STEP: u32 = 30;
 /// Most substeps of one move.
 const MAX_SUBSTEPS: f64 = 4096.0;
+/// Halvings of a ground-probe substep when looking for the first touch:
+/// the substep shrinks by 2^-32 (under 1e-9 units for a radius below 16
+/// units), well inside [`PENETRATION_TOLERANCE`].
+const TOUCH_BISECTIONS: u32 = 32;
 
 #[derive(Debug, Clone)]
 pub struct Character {
@@ -278,20 +282,53 @@ impl Character {
     }
 
     /// Lowers the capsule by up to `distance` until a walkable contact
-    /// holds it.
+    /// holds it. A substep that meets only steep contacts is tried again
+    /// from where the capsule first touches ([`Self::first_touch`]).
     fn probe_ground(&mut self, world: &World, feet: V3, distance: f64) -> Option<(V3, Ground)> {
         let n = self.substeps(distance);
         let part = distance / f64::from(n);
         let mut f = feet;
-        let mut flags = Flags::default();
         for _ in 0..n {
+            let before = f;
+            let mut flags = Flags::default();
             f[2] -= part;
             f = self.resolve(world, f, &mut flags);
             if let Some(ground) = flags.walkable {
                 return Some((f, ground));
             }
+            if flags.wall || flags.ceiling {
+                if let Some(found) = self.first_touch(world, before, part) {
+                    return Some(found);
+                }
+            }
         }
         None
+    }
+
+    /// The capsule lowered from `from` (not overlapping) until it first
+    /// touches something, at most `part`; the ground there if that contact
+    /// is walkable. Sinking a whole substep into an edge or a vertex tilts
+    /// the contact normal (the deeper, the steeper), so a capsule resting
+    /// on an edge within the slope limit would otherwise be found steep by
+    /// the long probe on the ground and walkable by the short one in the
+    /// air, and alternate between the two.
+    fn first_touch(&mut self, world: &World, from: V3, part: f64) -> Option<(V3, Ground)> {
+        let at = |d: f64| [from[0], from[1], from[2] - d];
+        if self.overlapping(world, from) || !self.overlapping(world, at(part)) {
+            return None;
+        }
+        let (mut free, mut touching) = (0.0, part);
+        for _ in 0..TOUCH_BISECTIONS {
+            let mid = 0.5 * (free + touching);
+            if self.overlapping(world, at(mid)) {
+                touching = mid;
+            } else {
+                free = mid;
+            }
+        }
+        let mut flags = Flags::default();
+        let f = self.resolve(world, at(touching), &mut flags);
+        flags.walkable.map(|ground| (f, ground))
     }
 
     /// Step-up: raised by the step height, moved, lowered onto walkable

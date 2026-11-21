@@ -111,7 +111,13 @@ lowest point; the eye is `eye_height` above the feet. One fixed tick
 4. Ground: unless rising, the capsule is lowered by up to the step height (if
    it was on the ground or just stepped) or by 0.05 units (in the air) until a
    walkable contact holds it. This snaps it down stairs and ramps and lands it
-   after a fall. The walkable primitive is reported as the ground.
+   after a fall. The walkable primitive is reported as the ground. A probe
+   substep that meets only steep contacts is tried again from the height
+   where the capsule first touches (bisection to about 1e-9 units), and that
+   contact's normal decides: sinking a whole substep into an edge tilts the
+   normal, so the long probe on the ground and the short one in the air used
+   to disagree about an edge and the character, perched on it, alternated
+   between grounded and falling without moving.
 
 `Character::tick` runs one tick; `Character::step(world, input, dt)` runs as
 many whole ticks as `dt` covers (at most 30, the rest is dropped) and keeps the
@@ -124,6 +130,10 @@ inputs give the same trace bit for bit.
 Consequences of the shape, not separate claims: on a slope of angle θ the
 capsule's lowest point stands `radius (1/cos θ − 1)` above the plane at its
 axis; it can rest on an edge or straddle a gap narrower than its diameter.
+Resting on an edge counts as grounded when the normal at the edge (from the
+edge to the centre of the lower sphere) is within the slope limit, that is
+when the axis is at most `radius sin(max slope)` (about 11.3 units) beyond
+the edge; further out the capsule slides off.
 
 ## Parameters
 

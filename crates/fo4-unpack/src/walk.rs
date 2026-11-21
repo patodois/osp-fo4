@@ -1280,6 +1280,9 @@ mod tests {
         let on_edge = 40.0 - 16.0 + (16.0f64 * 16.0 - 10.0 * 10.0).sqrt();
         assert!((e.rest[2] - on_edge).abs() < 1e-3, "{e:?}");
         assert!(e.moved < 1e-9);
+        // Perched on the edge, it is on the ground and settles.
+        assert!(e.grounded && e.ticks < SETTLE_TICKS, "{e:?}");
+        assert_eq!(e.rest_ground.as_ref().map(|g| g.source), Some(bx));
         // Nothing below a point off the world.
         let o = drop("off", [5000.0, 0.0, 10.0]);
         assert!(o.surface.is_none() && o.surfaces.is_empty() && !o.grounded);
