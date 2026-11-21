@@ -105,7 +105,7 @@ no pass threshold.
 bases, collision, havok) and `check-cell`. Reports are JSON lines with source
 offsets ([scene and report contracts](spec/scene.md)); the collision and Havok
 censuses also write a TSV of counts ([collision blocks](spec/collision.md),
-[Havok container](spec/havok-container.md)).
+[Havok container](spec/havok-container.md), [Havok objects](spec/havok-objects.md)).
 
 ## How facts are established
 
@@ -131,7 +131,7 @@ consulted, with one attributed exception described in
 | `fo4-vfs` | Explicit mount order and asset lookup. |
 | `fo4-plugin` | Plugin records, load order, strings, typed fields. |
 | `fo4-nif`, `fo4-material`, `fo4-texture` | Model, material and texture readers. |
-| `fo4-havok` | Container level of the Havok collision payload. |
+| `fo4-havok` | Container and object spans of the Havok collision payload; convex polytope vertices. |
 | `fo4-scene` | Scene assembly and rule levels. |
 | `fo4-render` | CPU renderer and image comparison. |
 | `fo4-unpack` | Command-line tool and the `render` example. |

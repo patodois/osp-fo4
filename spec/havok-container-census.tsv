@@ -24,10 +24,13 @@ havok.bhkPhysicsSystem.check	object_pointer_sources_distinct	holds=275154 fails=
 havok.bhkPhysicsSystem.check	object_pointer_sources_increasing	holds=179834 fails=95320
 havok.bhkPhysicsSystem.check	pointer_and_object_pointer_sources_8_apart	holds=275154 fails=0
 havok.bhkPhysicsSystem.check	pointer_and_object_pointer_sources_disjoint	holds=275154 fails=0
+havok.bhkPhysicsSystem.check	pointer_destination_after_source	holds=275154 fails=0
 havok.bhkPhysicsSystem.check	pointer_destination_multiple_of_16	holds=275154 fails=0
 havok.bhkPhysicsSystem.check	pointer_destination_not_an_object_offset	holds=275154 fails=0
+havok.bhkPhysicsSystem.check	pointer_destinations_distinct	holds=275154 fails=0
 havok.bhkPhysicsSystem.check	pointer_fill_below_16	holds=275154 fails=0
 havok.bhkPhysicsSystem.check	pointer_source_multiple_of_8	holds=275154 fails=0
+havok.bhkPhysicsSystem.check	pointer_source_u32_8_nonzero_and_u32_12_is_0x80000000_or_it	holds=275154 fails=0
 havok.bhkPhysicsSystem.check	pointer_sources_distinct	holds=275154 fails=0
 havok.bhkPhysicsSystem.check	pointer_sources_increasing	holds=120345 fails=154809
 havok.bhkPhysicsSystem.check	pointer_sources_increasing_iff_no_hknpCompressedMeshShape_listed	holds=275154 fails=0
@@ -38,6 +41,7 @@ havok.bhkPhysicsSystem.check	section_record_name_padding_zero	holds=275154 fails
 havok.bhkPhysicsSystem.check	section_records_byte19_and_48_to_63_are_ff	holds=275154 fails=0
 havok.bhkPhysicsSystem.check	section_starts_and_offsets_multiple_of_16	holds=275154 fails=0
 havok.bhkPhysicsSystem.total	class_names	2685748
+havok.bhkPhysicsSystem.total	convex_polytope_vertices	10106552
 havok.bhkPhysicsSystem.total	object_bytes	1837511120
 havok.bhkPhysicsSystem.total	object_pointers	1955242
 havok.bhkPhysicsSystem.total	objects	1898211
@@ -97,33 +101,109 @@ havok.bhkPhysicsSystem.fill	objects|08	2810
 havok.bhkPhysicsSystem.fill	objects|12	91715
 havok.bhkPhysicsSystem.fill	pointers|00	234134
 havok.bhkPhysicsSystem.fill	pointers|08	41020
-havok.bhkPhysicsSystem.class	hkClass	listed=275154 payloads=0 objects=0 signatures=33d42383x275154 count_eq_system_objects=holds=0 fails=275154
-havok.bhkPhysicsSystem.class	hkClassEnum	listed=275154 payloads=0 objects=0 signatures=8a3609cfx275154 count_eq_system_objects=holds=0 fails=275154
-havok.bhkPhysicsSystem.class	hkClassEnumItem	listed=275154 payloads=0 objects=0 signatures=ce6f8a6cx275154 count_eq_system_objects=holds=0 fails=275154
-havok.bhkPhysicsSystem.class	hkClassMember	listed=275154 payloads=0 objects=0 signatures=b0efa719x275154 count_eq_system_objects=holds=0 fails=275154
-havok.bhkPhysicsSystem.class	hkRefCountedProperties	listed=274272 payloads=274272 objects=386390 signatures=7c574867x274272 count_eq_system_objects=holds=265883 fails=8389
-havok.bhkPhysicsSystem.class	hknpBSMaterialProperties	listed=154809 payloads=154809 objects=167916 signatures=a3e47a9ax154809 count_eq_system_objects=holds=131972 fails=22837
-havok.bhkPhysicsSystem.class	hknpBreakableConstraintData	listed=5 payloads=5 objects=8 signatures=c40485c7x5 count_eq_system_objects=holds=0 fails=5
-havok.bhkPhysicsSystem.class	hknpCapsuleShape	listed=1380 payloads=1380 objects=2895 signatures=60a75f4cx1380 count_eq_system_objects=holds=811 fails=569
-havok.bhkPhysicsSystem.class	hknpCompressedMeshShape	listed=154809 payloads=154809 objects=167916 signatures=5f60d536x154809 count_eq_system_objects=holds=131972 fails=22837
-havok.bhkPhysicsSystem.class	hknpCompressedMeshShapeData	listed=154809 payloads=154809 objects=167916 signatures=a2bdfc59x154809 count_eq_system_objects=holds=131972 fails=22837
-havok.bhkPhysicsSystem.class	hknpConvexPolytopeShape	listed=142160 payloads=142160 objects=218364 signatures=3ce9b3e3x142160 count_eq_system_objects=holds=113247 fails=28913
-havok.bhkPhysicsSystem.class	hknpConvexShape	listed=110 payloads=110 objects=110 signatures=c8f7c10dx110 count_eq_system_objects=holds=11 fails=99
-havok.bhkPhysicsSystem.class	hknpDynamicCompoundShape	listed=8540 payloads=8540 objects=8905 signatures=4620d11cx8540 count_eq_system_objects=holds=6386 fails=2154
-havok.bhkPhysicsSystem.class	hknpDynamicCompoundShapeData	listed=8540 payloads=8540 objects=8905 signatures=f33dc3ccx8540 count_eq_system_objects=holds=6386 fails=2154
-havok.bhkPhysicsSystem.class	hknpPhysicsSystemData	listed=275154 payloads=275154 objects=275154 signatures=b857718bx275154 count_eq_system_objects=holds=239839 fails=35315
-havok.bhkPhysicsSystem.class	hknpScaledConvexShape	listed=94063 payloads=94063 objects=99438 signatures=0f14e5f2x94063 count_eq_system_objects=holds=86965 fails=7098
-havok.bhkPhysicsSystem.class	hknpShapeMassProperties	listed=142263 payloads=142263 objects=218474 signatures=e9191728x142263 count_eq_system_objects=holds=113255 fails=29008
-havok.bhkPhysicsSystem.class	hknpSphereShape	listed=166 payloads=166 objects=189 signatures=741e9012x166 count_eq_system_objects=holds=119 fails=47
-havok.bhkPhysicsSystem.class	hknpStaticCompoundShape	listed=86806 payloads=86806 objects=87314 signatures=4620d11cx86806 count_eq_system_objects=holds=79823 fails=6983
-havok.bhkPhysicsSystem.class	hknpStaticCompoundShapeData	listed=86806 payloads=86806 objects=87314 signatures=4fd87fd9x86806 count_eq_system_objects=holds=79823 fails=6983
-havok.bhkPhysicsSystem.class	hkpBallAndSocketConstraintData	listed=9 payloads=9 objects=284 signatures=d093f6ecx9 count_eq_system_objects=holds=0 fails=9
-havok.bhkPhysicsSystem.class	hkpHingeConstraintData	listed=9 payloads=9 objects=18 signatures=901a5ffax9 count_eq_system_objects=holds=0 fails=9
-havok.bhkPhysicsSystem.class	hkpLimitedHingeConstraintData	listed=114 payloads=114 objects=235 signatures=51ea603ax114 count_eq_system_objects=holds=63 fails=51
-havok.bhkPhysicsSystem.class	hkpPositionConstraintMotor	listed=170 payloads=170 objects=170 signatures=143dd400x170 count_eq_system_objects=holds=157 fails=13
-havok.bhkPhysicsSystem.class	hkpPrismaticConstraintData	listed=3 payloads=3 objects=8 signatures=62e0a78ex3 count_eq_system_objects=holds=0 fails=3
-havok.bhkPhysicsSystem.class	hkpRagdollConstraintData	listed=134 payloads=134 objects=286 signatures=b77d2036x134 count_eq_system_objects=holds=100 fails=34
-havok.bhkPhysicsSystem.class	hkpStiffSpringConstraintData	listed=1 payloads=1 objects=2 signatures=6a36520dx1 count_eq_system_objects=holds=0 fails=1
+havok.bhkPhysicsSystem.class	hkClass	listed=275154 payloads=0 objects=0 signatures=33d42383x275154 count_eq_system_objects=holds=0 fails=275154 span_min=0 span_max=0 span_distinct=0
+havok.bhkPhysicsSystem.class	hkClassEnum	listed=275154 payloads=0 objects=0 signatures=8a3609cfx275154 count_eq_system_objects=holds=0 fails=275154 span_min=0 span_max=0 span_distinct=0
+havok.bhkPhysicsSystem.class	hkClassEnumItem	listed=275154 payloads=0 objects=0 signatures=ce6f8a6cx275154 count_eq_system_objects=holds=0 fails=275154 span_min=0 span_max=0 span_distinct=0
+havok.bhkPhysicsSystem.class	hkClassMember	listed=275154 payloads=0 objects=0 signatures=b0efa719x275154 count_eq_system_objects=holds=0 fails=275154 span_min=0 span_max=0 span_distinct=0
+havok.bhkPhysicsSystem.class	hkRefCountedProperties	listed=274272 payloads=274272 objects=386390 signatures=7c574867x274272 count_eq_system_objects=holds=265883 fails=8389 span_min=32 span_max=32 span_distinct=1
+havok.bhkPhysicsSystem.class	hknpBSMaterialProperties	listed=154809 payloads=154809 objects=167916 signatures=a3e47a9ax154809 count_eq_system_objects=holds=131972 fails=22837 span_min=64 span_max=1024 span_distinct=38
+havok.bhkPhysicsSystem.class	hknpBreakableConstraintData	listed=5 payloads=5 objects=8 signatures=c40485c7x5 count_eq_system_objects=holds=0 fails=5 span_min=48 span_max=48 span_distinct=1
+havok.bhkPhysicsSystem.class	hknpCapsuleShape	listed=1380 payloads=1380 objects=2895 signatures=60a75f4cx1380 count_eq_system_objects=holds=811 fails=569 span_min=432 span_max=432 span_distinct=1
+havok.bhkPhysicsSystem.class	hknpCompressedMeshShape	listed=154809 payloads=154809 objects=167916 signatures=5f60d536x154809 count_eq_system_objects=holds=131972 fails=22837 span_min=192 span_max=202896 span_distinct=692
+havok.bhkPhysicsSystem.class	hknpCompressedMeshShapeData	listed=154809 payloads=154809 objects=167916 signatures=a2bdfc59x154809 count_eq_system_objects=holds=131972 fails=22837 span_min=608 span_max=654352 span_distinct=1024+
+havok.bhkPhysicsSystem.class	hknpConvexPolytopeShape	listed=142160 payloads=142160 objects=218364 signatures=3ce9b3e3x142160 count_eq_system_objects=holds=113247 fails=28913 span_min=240 span_max=15264 span_distinct=370
+havok.bhkPhysicsSystem.class	hknpConvexShape	listed=110 payloads=110 objects=110 signatures=c8f7c10dx110 count_eq_system_objects=holds=11 fails=99 span_min=128 span_max=192 span_distinct=2
+havok.bhkPhysicsSystem.class	hknpDynamicCompoundShape	listed=8540 payloads=8540 objects=8905 signatures=4620d11cx8540 count_eq_system_objects=holds=6386 fails=2154 span_min=336 span_max=15568 span_distinct=51
+havok.bhkPhysicsSystem.class	hknpDynamicCompoundShapeData	listed=8540 payloads=8540 objects=8905 signatures=f33dc3ccx8540 count_eq_system_objects=holds=6386 fails=2154 span_min=160 span_max=7776 span_distinct=51
+havok.bhkPhysicsSystem.class	hknpPhysicsSystemData	listed=275154 payloads=275154 objects=275154 signatures=b857718bx275154 count_eq_system_objects=holds=239839 fails=35315 span_min=320 span_max=74288 span_distinct=133
+havok.bhkPhysicsSystem.class	hknpScaledConvexShape	listed=94063 payloads=94063 objects=99438 signatures=0f14e5f2x94063 count_eq_system_objects=holds=86965 fails=7098 span_min=112 span_max=112 span_distinct=1
+havok.bhkPhysicsSystem.class	hknpShapeMassProperties	listed=142263 payloads=142263 objects=218474 signatures=e9191728x142263 count_eq_system_objects=holds=113255 fails=29008 span_min=48 span_max=48 span_distinct=1
+havok.bhkPhysicsSystem.class	hknpSphereShape	listed=166 payloads=166 objects=189 signatures=741e9012x166 count_eq_system_objects=holds=119 fails=47 span_min=128 span_max=128 span_distinct=1
+havok.bhkPhysicsSystem.class	hknpStaticCompoundShape	listed=86806 payloads=86806 objects=87314 signatures=4620d11cx86806 count_eq_system_objects=holds=79823 fails=6983 span_min=336 span_max=336 span_distinct=1
+havok.bhkPhysicsSystem.class	hknpStaticCompoundShapeData	listed=86806 payloads=86806 objects=87314 signatures=4fd87fd9x86806 count_eq_system_objects=holds=79823 fails=6983 span_min=80 span_max=80 span_distinct=1
+havok.bhkPhysicsSystem.class	hkpBallAndSocketConstraintData	listed=9 payloads=9 objects=284 signatures=d093f6ecx9 count_eq_system_objects=holds=0 fails=9 span_min=112 span_max=112 span_distinct=1
+havok.bhkPhysicsSystem.class	hkpHingeConstraintData	listed=9 payloads=9 objects=18 signatures=901a5ffax9 count_eq_system_objects=holds=0 fails=9 span_min=224 span_max=224 span_distinct=1
+havok.bhkPhysicsSystem.class	hkpLimitedHingeConstraintData	listed=114 payloads=114 objects=235 signatures=51ea603ax114 count_eq_system_objects=holds=63 fails=51 span_min=304 span_max=304 span_distinct=1
+havok.bhkPhysicsSystem.class	hkpPositionConstraintMotor	listed=170 payloads=170 objects=170 signatures=143dd400x170 count_eq_system_objects=holds=157 fails=13 span_min=48 span_max=48 span_distinct=1
+havok.bhkPhysicsSystem.class	hkpPrismaticConstraintData	listed=3 payloads=3 objects=8 signatures=62e0a78ex3 count_eq_system_objects=holds=0 fails=3 span_min=288 span_max=288 span_distinct=1
+havok.bhkPhysicsSystem.class	hkpRagdollConstraintData	listed=134 payloads=134 objects=286 signatures=b77d2036x134 count_eq_system_objects=holds=100 fails=34 span_min=416 span_max=416 span_distinct=1
+havok.bhkPhysicsSystem.class	hkpStiffSpringConstraintData	listed=1 payloads=1 objects=2 signatures=6a36520dx1 count_eq_system_objects=holds=0 fails=1 span_min=112 span_max=112 span_distinct=1
+havok.bhkPhysicsSystem.object_lead	hkRefCountedProperties|16	386390
+havok.bhkPhysicsSystem.object_lead	hknpBSMaterialProperties|32	167916
+havok.bhkPhysicsSystem.object_lead	hknpBreakableConstraintData|none	8
+havok.bhkPhysicsSystem.object_lead	hknpCapsuleShape|none	2895
+havok.bhkPhysicsSystem.object_lead	hknpCompressedMeshShape|160	167916
+havok.bhkPhysicsSystem.object_lead	hknpCompressedMeshShapeData|208	167916
+havok.bhkPhysicsSystem.object_lead	hknpConvexPolytopeShape|none	218364
+havok.bhkPhysicsSystem.object_lead	hknpConvexShape|none	110
+havok.bhkPhysicsSystem.object_lead	hknpDynamicCompoundShape|208	8905
+havok.bhkPhysicsSystem.object_lead	hknpDynamicCompoundShapeData|64	8905
+havok.bhkPhysicsSystem.object_lead	hknpPhysicsSystemData|128	275154
+havok.bhkPhysicsSystem.object_lead	hknpScaledConvexShape|none	99438
+havok.bhkPhysicsSystem.object_lead	hknpShapeMassProperties|none	218474
+havok.bhkPhysicsSystem.object_lead	hknpSphereShape|none	189
+havok.bhkPhysicsSystem.object_lead	hknpStaticCompoundShape|208	87314
+havok.bhkPhysicsSystem.object_lead	hknpStaticCompoundShapeData|64	87314
+havok.bhkPhysicsSystem.object_lead	hkpBallAndSocketConstraintData|none	284
+havok.bhkPhysicsSystem.object_lead	hkpHingeConstraintData|none	18
+havok.bhkPhysicsSystem.object_lead	hkpLimitedHingeConstraintData|none	235
+havok.bhkPhysicsSystem.object_lead	hkpPositionConstraintMotor|none	170
+havok.bhkPhysicsSystem.object_lead	hkpPrismaticConstraintData|none	8
+havok.bhkPhysicsSystem.object_lead	hkpRagdollConstraintData|none	286
+havok.bhkPhysicsSystem.object_lead	hkpStiffSpringConstraintData|none	2
+havok.bhkPhysicsSystem.object_check	hkRefCountedProperties|destinations_follow_source_order	holds=386390 fails=0
+havok.bhkPhysicsSystem.object_check	hknpBSMaterialProperties|destinations_follow_source_order	holds=167916 fails=0
+havok.bhkPhysicsSystem.object_check	hknpBreakableConstraintData|destinations_follow_source_order	holds=8 fails=0
+havok.bhkPhysicsSystem.object_check	hknpCapsuleShape|destinations_follow_source_order	holds=2895 fails=0
+havok.bhkPhysicsSystem.object_check	hknpCompressedMeshShapeData|destinations_follow_source_order	holds=0 fails=167916
+havok.bhkPhysicsSystem.object_check	hknpCompressedMeshShape|destinations_follow_source_order	holds=167916 fails=0
+havok.bhkPhysicsSystem.object_check	hknpConvexPolytopeShape|bytes_0_to_16_zero	holds=218364 fails=0
+havok.bhkPhysicsSystem.object_check	hknpConvexPolytopeShape|bytes_28_to_48_zero	holds=218364 fails=0
+havok.bhkPhysicsSystem.object_check	hknpConvexPolytopeShape|bytes_52_to_64_zero	holds=218364 fails=0
+havok.bhkPhysicsSystem.object_check	hknpConvexPolytopeShape|bytes_76_to_80_zero	holds=218364 fails=0
+havok.bhkPhysicsSystem.object_check	hknpConvexPolytopeShape|bytes_after_indices_zero	holds=218364 fails=0
+havok.bhkPhysicsSystem.object_check	hknpConvexPolytopeShape|destinations_follow_source_order	holds=218364 fails=0
+havok.bhkPhysicsSystem.object_check	hknpConvexPolytopeShape|every_vertex_in_some_face	holds=218197 fails=167
+havok.bhkPhysicsSystem.object_check	hknpConvexPolytopeShape|f32_at_20_finite_nonnegative	holds=218364 fails=0
+havok.bhkPhysicsSystem.object_check	hknpConvexPolytopeShape|face_count_at_least_3	holds=218364 fails=0
+havok.bhkPhysicsSystem.object_check	hknpConvexPolytopeShape|face_counts_sum_to_index_count	holds=218356 fails=8
+havok.bhkPhysicsSystem.object_check	hknpConvexPolytopeShape|face_first_is_running_sum_of_counts	holds=218356 fails=8
+havok.bhkPhysicsSystem.object_check	hknpConvexPolytopeShape|face_vertices_on_own_plane_rel_1e-2	holds=218356 fails=8
+havok.bhkPhysicsSystem.object_check	hknpConvexPolytopeShape|padding_face_entries_zero	holds=218364 fails=0
+havok.bhkPhysicsSystem.object_check	hknpConvexPolytopeShape|plane_normals_unit_within_1e-4	holds=218356 fails=8
+havok.bhkPhysicsSystem.object_check	hknpConvexPolytopeShape|vertices_behind_face_planes_rel_1e-3	holds=218363 fails=1
+havok.bhkPhysicsSystem.object_check	hknpConvexShape|destinations_follow_source_order	holds=110 fails=0
+havok.bhkPhysicsSystem.object_check	hknpConvexShape|span_is_64_plus_16_per_vertex_row	holds=110 fails=0
+havok.bhkPhysicsSystem.object_check	hknpConvexShape|vertex_pair_at_48_points_to_64	holds=110 fails=0
+havok.bhkPhysicsSystem.object_check	hknpConvexShape|vertex_rows_tagged_3f0000_and_index	holds=110 fails=0
+havok.bhkPhysicsSystem.object_check	hknpDynamicCompoundShapeData|destinations_follow_source_order	holds=8905 fails=0
+havok.bhkPhysicsSystem.object_check	hknpDynamicCompoundShape|destinations_follow_source_order	holds=8905 fails=0
+havok.bhkPhysicsSystem.object_check	hknpPhysicsSystemData|destinations_follow_source_order	holds=275154 fails=0
+havok.bhkPhysicsSystem.object_check	hknpScaledConvexShape|destinations_follow_source_order	holds=99438 fails=0
+havok.bhkPhysicsSystem.object_check	hknpShapeMassProperties|destinations_follow_source_order	holds=218474 fails=0
+havok.bhkPhysicsSystem.object_check	hknpSphereShape|destinations_follow_source_order	holds=189 fails=0
+havok.bhkPhysicsSystem.object_check	hknpStaticCompoundShapeData|destinations_follow_source_order	holds=87314 fails=0
+havok.bhkPhysicsSystem.object_check	hknpStaticCompoundShape|destinations_follow_source_order	holds=87314 fails=0
+havok.bhkPhysicsSystem.object_check	hkpBallAndSocketConstraintData|destinations_follow_source_order	holds=284 fails=0
+havok.bhkPhysicsSystem.object_check	hkpHingeConstraintData|destinations_follow_source_order	holds=18 fails=0
+havok.bhkPhysicsSystem.object_check	hkpLimitedHingeConstraintData|destinations_follow_source_order	holds=235 fails=0
+havok.bhkPhysicsSystem.object_check	hkpPositionConstraintMotor|destinations_follow_source_order	holds=170 fails=0
+havok.bhkPhysicsSystem.object_check	hkpPrismaticConstraintData|destinations_follow_source_order	holds=8 fails=0
+havok.bhkPhysicsSystem.object_check	hkpRagdollConstraintData|destinations_follow_source_order	holds=286 fails=0
+havok.bhkPhysicsSystem.object_check	hkpStiffSpringConstraintData|destinations_follow_source_order	holds=2 fails=0
+havok.bhkPhysicsSystem.convex_polytope	read	218364
+havok.bhkPhysicsSystem.convex_polytope_u16_16_18	259|256	4246
+havok.bhkPhysicsSystem.convex_polytope_u16_16_18	323|256	213849
+havok.bhkPhysicsSystem.convex_polytope_u16_16_18	3|256	3
+havok.bhkPhysicsSystem.convex_polytope_u16_16_18	67|256	266
+havok.bhkPhysicsSystem.convex_polytope_link32	hkRefCountedProperties	218364
+havok.bhkPhysicsSystem.convex_polytope_padding_rows	0	127019
+havok.bhkPhysicsSystem.convex_polytope_padding_rows	1	10855
+havok.bhkPhysicsSystem.convex_polytope_padding_rows	2	71497
+havok.bhkPhysicsSystem.convex_polytope_padding_rows	3	8993
+havok.bhkPhysicsSystem.max_per_object	convex_polytope_index_count	1462
+havok.bhkPhysicsSystem.max_per_object	convex_polytope_plane_rows	484
+havok.bhkPhysicsSystem.max_per_object	convex_polytope_vertex_rows	252
 havok.bhkPhysicsSystem.pointer_source_is_object	hkRefCountedProperties	386390
 havok.bhkPhysicsSystem.object_pointer_target	hkRefCountedProperties	386390
 havok.bhkPhysicsSystem.object_pointer_target	hknpBSMaterialProperties	167916
@@ -189,10 +269,13 @@ havok.bhkRagdollSystem.check	object_pointer_sources_distinct	holds=188 fails=0
 havok.bhkRagdollSystem.check	object_pointer_sources_increasing	holds=0 fails=188
 havok.bhkRagdollSystem.check	pointer_and_object_pointer_sources_8_apart	holds=188 fails=0
 havok.bhkRagdollSystem.check	pointer_and_object_pointer_sources_disjoint	holds=188 fails=0
+havok.bhkRagdollSystem.check	pointer_destination_after_source	holds=188 fails=0
 havok.bhkRagdollSystem.check	pointer_destination_multiple_of_16	holds=188 fails=0
 havok.bhkRagdollSystem.check	pointer_destination_not_an_object_offset	holds=188 fails=0
+havok.bhkRagdollSystem.check	pointer_destinations_distinct	holds=188 fails=0
 havok.bhkRagdollSystem.check	pointer_fill_below_16	holds=188 fails=0
 havok.bhkRagdollSystem.check	pointer_source_multiple_of_8	holds=188 fails=0
+havok.bhkRagdollSystem.check	pointer_source_u32_8_nonzero_and_u32_12_is_0x80000000_or_it	holds=188 fails=0
 havok.bhkRagdollSystem.check	pointer_sources_distinct	holds=188 fails=0
 havok.bhkRagdollSystem.check	pointer_sources_increasing	holds=188 fails=0
 havok.bhkRagdollSystem.check	pointer_sources_increasing_iff_no_hknpCompressedMeshShape_listed	holds=188 fails=0
@@ -203,6 +286,7 @@ havok.bhkRagdollSystem.check	section_record_name_padding_zero	holds=188 fails=0
 havok.bhkRagdollSystem.check	section_records_byte19_and_48_to_63_are_ff	holds=188 fails=0
 havok.bhkRagdollSystem.check	section_starts_and_offsets_multiple_of_16	holds=188 fails=0
 havok.bhkRagdollSystem.total	class_names	1907
+havok.bhkRagdollSystem.total	convex_polytope_vertices	2647
 havok.bhkRagdollSystem.total	object_bytes	2017776
 havok.bhkRagdollSystem.total	object_pointers	7838
 havok.bhkRagdollSystem.total	objects	3673
@@ -251,23 +335,74 @@ havok.bhkRagdollSystem.fill	objects|08	114
 havok.bhkRagdollSystem.fill	objects|12	14
 havok.bhkRagdollSystem.fill	pointers|00	175
 havok.bhkRagdollSystem.fill	pointers|08	13
-havok.bhkRagdollSystem.class	hkClass	listed=188 payloads=0 objects=0 signatures=33d42383x188 count_eq_system_objects=holds=0 fails=188
-havok.bhkRagdollSystem.class	hkClassEnum	listed=188 payloads=0 objects=0 signatures=8a3609cfx188 count_eq_system_objects=holds=0 fails=188
-havok.bhkRagdollSystem.class	hkClassEnumItem	listed=188 payloads=0 objects=0 signatures=ce6f8a6cx188 count_eq_system_objects=holds=0 fails=188
-havok.bhkRagdollSystem.class	hkClassMember	listed=188 payloads=0 objects=0 signatures=b0efa719x188 count_eq_system_objects=holds=0 fails=188
-havok.bhkRagdollSystem.class	hkRefCountedProperties	listed=31 payloads=31 objects=95 signatures=7c574867x31 count_eq_system_objects=holds=4 fails=27
-havok.bhkRagdollSystem.class	hkaSkeleton	listed=188 payloads=188 objects=188 signatures=fec1cedbx188 count_eq_system_objects=holds=0 fails=188
-havok.bhkRagdollSystem.class	hknpBreakableConstraintData	listed=2 payloads=2 objects=3 signatures=c40485c7x2 count_eq_system_objects=holds=0 fails=2
-havok.bhkRagdollSystem.class	hknpCapsuleShape	listed=183 payloads=183 objects=1432 signatures=60a75f4cx183 count_eq_system_objects=holds=125 fails=58
-havok.bhkRagdollSystem.class	hknpConvexPolytopeShape	listed=31 payloads=31 objects=95 signatures=3ce9b3e3x31 count_eq_system_objects=holds=4 fails=27
-havok.bhkRagdollSystem.class	hknpDynamicCompoundShape	listed=10 payloads=10 objects=13 signatures=4620d11cx10 count_eq_system_objects=holds=1 fails=9
-havok.bhkRagdollSystem.class	hknpDynamicCompoundShapeData	listed=10 payloads=10 objects=13 signatures=f33dc3ccx10 count_eq_system_objects=holds=1 fails=9
-havok.bhkRagdollSystem.class	hknpRagdollData	listed=188 payloads=188 objects=188 signatures=dc8f20abx188 count_eq_system_objects=holds=0 fails=188
-havok.bhkRagdollSystem.class	hknpShapeMassProperties	listed=31 payloads=31 objects=95 signatures=e9191728x31 count_eq_system_objects=holds=4 fails=27
-havok.bhkRagdollSystem.class	hknpSphereShape	listed=41 payloads=41 objects=90 signatures=741e9012x41 count_eq_system_objects=holds=1 fails=40
-havok.bhkRagdollSystem.class	hkpLimitedHingeConstraintData	listed=117 payloads=117 objects=431 signatures=51ea603ax117 count_eq_system_objects=holds=0 fails=117
-havok.bhkRagdollSystem.class	hkpPositionConstraintMotor	listed=188 payloads=188 objects=188 signatures=143dd400x188 count_eq_system_objects=holds=0 fails=188
-havok.bhkRagdollSystem.class	hkpRagdollConstraintData	listed=135 payloads=135 objects=842 signatures=b77d2036x135 count_eq_system_objects=holds=0 fails=135
+havok.bhkRagdollSystem.class	hkClass	listed=188 payloads=0 objects=0 signatures=33d42383x188 count_eq_system_objects=holds=0 fails=188 span_min=0 span_max=0 span_distinct=0
+havok.bhkRagdollSystem.class	hkClassEnum	listed=188 payloads=0 objects=0 signatures=8a3609cfx188 count_eq_system_objects=holds=0 fails=188 span_min=0 span_max=0 span_distinct=0
+havok.bhkRagdollSystem.class	hkClassEnumItem	listed=188 payloads=0 objects=0 signatures=ce6f8a6cx188 count_eq_system_objects=holds=0 fails=188 span_min=0 span_max=0 span_distinct=0
+havok.bhkRagdollSystem.class	hkClassMember	listed=188 payloads=0 objects=0 signatures=b0efa719x188 count_eq_system_objects=holds=0 fails=188 span_min=0 span_max=0 span_distinct=0
+havok.bhkRagdollSystem.class	hkRefCountedProperties	listed=31 payloads=31 objects=95 signatures=7c574867x31 count_eq_system_objects=holds=4 fails=27 span_min=32 span_max=32 span_distinct=1
+havok.bhkRagdollSystem.class	hkaSkeleton	listed=188 payloads=188 objects=188 signatures=fec1cedbx188 count_eq_system_objects=holds=0 fails=188 span_min=288 span_max=4448 span_distinct=31
+havok.bhkRagdollSystem.class	hknpBreakableConstraintData	listed=2 payloads=2 objects=3 signatures=c40485c7x2 count_eq_system_objects=holds=0 fails=2 span_min=48 span_max=48 span_distinct=1
+havok.bhkRagdollSystem.class	hknpCapsuleShape	listed=183 payloads=183 objects=1432 signatures=60a75f4cx183 count_eq_system_objects=holds=125 fails=58 span_min=432 span_max=432 span_distinct=1
+havok.bhkRagdollSystem.class	hknpConvexPolytopeShape	listed=31 payloads=31 objects=95 signatures=3ce9b3e3x31 count_eq_system_objects=holds=4 fails=27 span_min=400 span_max=12000 span_distinct=21
+havok.bhkRagdollSystem.class	hknpDynamicCompoundShape	listed=10 payloads=10 objects=13 signatures=4620d11cx10 count_eq_system_objects=holds=1 fails=9 span_min=464 span_max=1488 span_distinct=4
+havok.bhkRagdollSystem.class	hknpDynamicCompoundShapeData	listed=10 payloads=10 objects=13 signatures=f33dc3ccx10 count_eq_system_objects=holds=1 fails=9 span_min=224 span_max=736 span_distinct=4
+havok.bhkRagdollSystem.class	hknpRagdollData	listed=188 payloads=188 objects=188 signatures=dc8f20abx188 count_eq_system_objects=holds=0 fails=188 span_min=848 span_max=25360 span_distinct=41
+havok.bhkRagdollSystem.class	hknpShapeMassProperties	listed=31 payloads=31 objects=95 signatures=e9191728x31 count_eq_system_objects=holds=4 fails=27 span_min=48 span_max=48 span_distinct=1
+havok.bhkRagdollSystem.class	hknpSphereShape	listed=41 payloads=41 objects=90 signatures=741e9012x41 count_eq_system_objects=holds=1 fails=40 span_min=128 span_max=128 span_distinct=1
+havok.bhkRagdollSystem.class	hkpLimitedHingeConstraintData	listed=117 payloads=117 objects=431 signatures=51ea603ax117 count_eq_system_objects=holds=0 fails=117 span_min=304 span_max=304 span_distinct=1
+havok.bhkRagdollSystem.class	hkpPositionConstraintMotor	listed=188 payloads=188 objects=188 signatures=143dd400x188 count_eq_system_objects=holds=0 fails=188 span_min=48 span_max=48 span_distinct=1
+havok.bhkRagdollSystem.class	hkpRagdollConstraintData	listed=135 payloads=135 objects=842 signatures=b77d2036x135 count_eq_system_objects=holds=0 fails=135 span_min=416 span_max=416 span_distinct=1
+havok.bhkRagdollSystem.object_lead	hkRefCountedProperties|16	95
+havok.bhkRagdollSystem.object_lead	hkaSkeleton|144	188
+havok.bhkRagdollSystem.object_lead	hknpBreakableConstraintData|none	3
+havok.bhkRagdollSystem.object_lead	hknpCapsuleShape|none	1432
+havok.bhkRagdollSystem.object_lead	hknpConvexPolytopeShape|none	95
+havok.bhkRagdollSystem.object_lead	hknpDynamicCompoundShape|208	13
+havok.bhkRagdollSystem.object_lead	hknpDynamicCompoundShapeData|64	13
+havok.bhkRagdollSystem.object_lead	hknpRagdollData|144	188
+havok.bhkRagdollSystem.object_lead	hknpShapeMassProperties|none	95
+havok.bhkRagdollSystem.object_lead	hknpSphereShape|none	90
+havok.bhkRagdollSystem.object_lead	hkpLimitedHingeConstraintData|none	431
+havok.bhkRagdollSystem.object_lead	hkpPositionConstraintMotor|none	188
+havok.bhkRagdollSystem.object_lead	hkpRagdollConstraintData|none	842
+havok.bhkRagdollSystem.object_check	hkRefCountedProperties|destinations_follow_source_order	holds=95 fails=0
+havok.bhkRagdollSystem.object_check	hkaSkeleton|destinations_follow_source_order	holds=188 fails=0
+havok.bhkRagdollSystem.object_check	hknpBreakableConstraintData|destinations_follow_source_order	holds=3 fails=0
+havok.bhkRagdollSystem.object_check	hknpCapsuleShape|destinations_follow_source_order	holds=1432 fails=0
+havok.bhkRagdollSystem.object_check	hknpConvexPolytopeShape|bytes_0_to_16_zero	holds=95 fails=0
+havok.bhkRagdollSystem.object_check	hknpConvexPolytopeShape|bytes_28_to_48_zero	holds=95 fails=0
+havok.bhkRagdollSystem.object_check	hknpConvexPolytopeShape|bytes_52_to_64_zero	holds=95 fails=0
+havok.bhkRagdollSystem.object_check	hknpConvexPolytopeShape|bytes_76_to_80_zero	holds=95 fails=0
+havok.bhkRagdollSystem.object_check	hknpConvexPolytopeShape|bytes_after_indices_zero	holds=95 fails=0
+havok.bhkRagdollSystem.object_check	hknpConvexPolytopeShape|destinations_follow_source_order	holds=95 fails=0
+havok.bhkRagdollSystem.object_check	hknpConvexPolytopeShape|every_vertex_in_some_face	holds=95 fails=0
+havok.bhkRagdollSystem.object_check	hknpConvexPolytopeShape|f32_at_20_finite_nonnegative	holds=95 fails=0
+havok.bhkRagdollSystem.object_check	hknpConvexPolytopeShape|face_count_at_least_3	holds=95 fails=0
+havok.bhkRagdollSystem.object_check	hknpConvexPolytopeShape|face_counts_sum_to_index_count	holds=95 fails=0
+havok.bhkRagdollSystem.object_check	hknpConvexPolytopeShape|face_first_is_running_sum_of_counts	holds=95 fails=0
+havok.bhkRagdollSystem.object_check	hknpConvexPolytopeShape|face_vertices_on_own_plane_rel_1e-2	holds=95 fails=0
+havok.bhkRagdollSystem.object_check	hknpConvexPolytopeShape|padding_face_entries_zero	holds=95 fails=0
+havok.bhkRagdollSystem.object_check	hknpConvexPolytopeShape|plane_normals_unit_within_1e-4	holds=95 fails=0
+havok.bhkRagdollSystem.object_check	hknpConvexPolytopeShape|vertices_behind_face_planes_rel_1e-3	holds=95 fails=0
+havok.bhkRagdollSystem.object_check	hknpDynamicCompoundShapeData|destinations_follow_source_order	holds=13 fails=0
+havok.bhkRagdollSystem.object_check	hknpDynamicCompoundShape|destinations_follow_source_order	holds=13 fails=0
+havok.bhkRagdollSystem.object_check	hknpRagdollData|destinations_follow_source_order	holds=188 fails=0
+havok.bhkRagdollSystem.object_check	hknpShapeMassProperties|destinations_follow_source_order	holds=95 fails=0
+havok.bhkRagdollSystem.object_check	hknpSphereShape|destinations_follow_source_order	holds=90 fails=0
+havok.bhkRagdollSystem.object_check	hkpLimitedHingeConstraintData|destinations_follow_source_order	holds=431 fails=0
+havok.bhkRagdollSystem.object_check	hkpPositionConstraintMotor|destinations_follow_source_order	holds=188 fails=0
+havok.bhkRagdollSystem.object_check	hkpRagdollConstraintData|destinations_follow_source_order	holds=842 fails=0
+havok.bhkRagdollSystem.convex_polytope	read	95
+havok.bhkRagdollSystem.convex_polytope_u16_16_18	323|256	93
+havok.bhkRagdollSystem.convex_polytope_u16_16_18	67|256	2
+havok.bhkRagdollSystem.convex_polytope_link32	hkRefCountedProperties	95
+havok.bhkRagdollSystem.convex_polytope_padding_rows	0	62
+havok.bhkRagdollSystem.convex_polytope_padding_rows	1	5
+havok.bhkRagdollSystem.convex_polytope_padding_rows	2	20
+havok.bhkRagdollSystem.convex_polytope_padding_rows	3	8
+havok.bhkRagdollSystem.max_per_object	convex_polytope_index_count	1168
+havok.bhkRagdollSystem.max_per_object	convex_polytope_plane_rows	336
+havok.bhkRagdollSystem.max_per_object	convex_polytope_vertex_rows	252
 havok.bhkRagdollSystem.pointer_source_is_object	hkRefCountedProperties	95
 havok.bhkRagdollSystem.object_pointer_target	hkRefCountedProperties	95
 havok.bhkRagdollSystem.object_pointer_target	hkaSkeleton	188

@@ -11,7 +11,7 @@ Read [README.md](README.md) first for what the project is and how to run it.
 | `fo4-vfs` | Explicit mounts, winner and loser per path, content fingerprint. | `src/lib.rs` |
 | `fo4-plugin` | Records, load order, overrides, strings, typed views, subrecord layouts. | `src/lib.rs`, `src/typed.rs`, `src/layout.rs` |
 | `fo4-nif`, `fo4-material`, `fo4-texture` | Model, material and texture readers. | `src/lib.rs` of each |
-| `fo4-havok` | Container level of the Havok collision payload (sections, class names, data tables). | `src/lib.rs` |
+| `fo4-havok` | Havok collision payload: container (sections, class names, data tables), object spans, convex polytope view. | `src/lib.rs`, `src/objects.rs` |
 | `fo4-scene` | Cell loading, asset graph, rule levels and the rule registry. | `src/lib.rs`, `src/hypotheses.rs` |
 | `fo4-render` | Draw list, CPU rasterizer, PNG, image comparison. | `src/draw.rs`, `src/raster.rs` |
 | `fo4-unpack` | Command-line reports and the `render` example. | `src/lib.rs`, `examples/render.rs` |

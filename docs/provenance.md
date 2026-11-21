@@ -33,6 +33,13 @@ was opened or searched for; the field and table names are descriptive labels
 chosen here. Interpretations the bytes cannot decide are marked as
 hypotheses.
 
+The object spans and the `hknpConvexPolytopeShape` view of `fo4-havok`
+([spec/havok-objects.md](../spec/havok-objects.md)) were established the same
+way: candidate rules were written down and counted over every stored payload
+of the installation, and only those that held on every payload or object are
+enforced. No Havok source of any kind was opened or searched for at this step
+either.
+
 Runtime experiments measure an owned running copy through separately collected
 camera/transform words and repeated photographs. Their raw data stays local.
 Behavior not established by a format source is registered in

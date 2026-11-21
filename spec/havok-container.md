@@ -263,8 +263,9 @@ Interpretation, **[hypothesis]** throughout: the first table lists slots that
 point inside the object bytes (array or string storage), the second slots
 that point to whole objects, the third where each object starts and its
 class. Where an object ends, and which bytes between objects belong to which
-object, is **[open]**: the reader exposes the object bytes and the offsets
-only.
+object, is measured in [havok-objects.md](havok-objects.md): each object owns
+the bytes up to the next one, and the reader now enforces that every
+first-table pointer stays inside its object.
 
 ## Objects on a system and Body ID (question 7)
 
@@ -315,12 +316,12 @@ in every payload.
 | 2. Record words | Start absolute, six offsets relative, last is the length **[measured 275,342]** |
 | 3. Empty `__types__` | Objects are named through `__classnames__` and the third table **[measured 275,342]** |
 | 4. Class-name entries | Signature, marker 9, name; signature meaning **[open]** |
-| 5. Locating objects | Third table; pointers in the first two tables; object extents **[open]** |
+| 5. Locating objects | Third table; pointers in the first two tables; object extents in [havok-objects.md](havok-objects.md) |
 | 6. Byte order | Little-endian, 8-byte slots **[measured 275,342]** |
 | 7. Bodies and Body ID | Count matches in 275,339 of 275,342; selection **[hypothesis]** |
 
-Questions 8 to 10 of collision.md (shape contents, flags, walking) are
-untouched.
+Questions 9 and 10 of collision.md (flags, walking) are untouched; question
+8 is begun in [havok-objects.md](havok-objects.md).
 
 ## Reader errors
 
@@ -331,6 +332,7 @@ All carry the NIF file name and the absolute file offset (`base` passed to
 `UnsupportedHavokVersion`, `UnsupportedHavokSectionCount`,
 `InvalidHavokSectionRecord`, `InvalidHavokSectionBounds`,
 `UnsupportedHavokSectionLayout`, `InvalidHavokClassName`,
-`InvalidHavokFixupTable`, `InvalidHavokFixup`, `InvalidHavokRoot`. None occurs
+`InvalidHavokFixupTable`, `InvalidHavokFixup`, `InvalidHavokRoot`, and
+`InvalidHavokObjectSpan` from [havok-objects.md](havok-objects.md). None occurs
 in the census. The synthetic tests cover each error, every truncation and
 every single-byte change of a generated container.

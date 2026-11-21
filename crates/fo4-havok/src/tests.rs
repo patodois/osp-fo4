@@ -1,17 +1,19 @@
 use super::*;
 
 /// Synthetic container description; every byte is generated here.
-struct Spec {
-    names: Vec<(&'static str, u32)>,
-    object_bytes: usize,
-    pointers: Vec<[u32; 2]>,
-    links: Vec<[u32; 3]>,
-    objects: Vec<[u32; 3]>,
+pub(crate) struct Spec {
+    pub names: Vec<(&'static str, u32)>,
+    pub object_bytes: usize,
+    /// Bytes written into the object area at the given offsets.
+    pub content: Vec<(usize, Vec<u8>)>,
+    pub pointers: Vec<[u32; 2]>,
+    pub links: Vec<[u32; 3]>,
+    pub objects: Vec<[u32; 3]>,
     /// Header words 24, 28, 32, 36.
-    root: [u32; 4],
+    pub root: [u32; 4],
 }
 
-fn name_offset(names: &[(&str, u32)], index: usize) -> u32 {
+pub(crate) fn name_offset(names: &[(&str, u32)], index: usize) -> u32 {
     let mut at = 0;
     for (name, _) in &names[..index] {
         at += 5 + name.len() as u32 + 1;
@@ -29,6 +31,7 @@ fn spec() -> Spec {
     let leaf_name = name_offset(&names, 2);
     Spec {
         object_bytes: 0x60,
+        content: Vec::new(),
         pointers: vec![[0x10, 0x20], [0x48, 0x50]],
         links: vec![[0x18, 2, 0x30]],
         objects: vec![[0, 0, root_name], [0x30, 0, leaf_name]],
@@ -43,7 +46,7 @@ fn pad16(v: &mut Vec<u8>) {
     }
 }
 
-fn build(s: &Spec) -> Vec<u8> {
+pub(crate) fn build(s: &Spec) -> Vec<u8> {
     let mut names = Vec::new();
     for (name, sig) in &s.names {
         names.extend(sig.to_le_bytes());
@@ -53,6 +56,9 @@ fn build(s: &Spec) -> Vec<u8> {
     }
     pad16(&mut names);
     let mut data = vec![0u8; s.object_bytes];
+    for (at, bytes) in &s.content {
+        data[*at..*at + bytes.len()].copy_from_slice(bytes);
+    }
     let mut offs = [0u32; 6];
     offs[0] = data.len() as u32;
     for p in &s.pointers {
@@ -106,11 +112,11 @@ fn build(s: &Spec) -> Vec<u8> {
     out
 }
 
-fn read(bytes: &[u8]) -> Result<Container<'_>> {
+pub(crate) fn read(bytes: &[u8]) -> Result<Container<'_>> {
     Container::read(bytes, "synthetic.nif", 1000, &Budget::new(1 << 20))
 }
 
-fn code(bytes: &[u8]) -> (String, u64) {
+pub(crate) fn code(bytes: &[u8]) -> (String, u64) {
     let e = read(bytes).expect_err("must fail");
     (e.code, e.source.offset)
 }
@@ -344,6 +350,58 @@ fn table_errors_are_named() {
     assert_eq!(
         code(&build(&t)),
         ("InvalidHavokFixup".into(), 1000 + data as u64 + 0x8c)
+    );
+}
+
+#[test]
+fn pointers_stay_in_their_object() {
+    let s = spec();
+    let data = 304u64;
+    let bytes = build(&s);
+    let c = read(&bytes).unwrap();
+    let spans: Vec<_> = c
+        .object_spans()
+        .map(|x| (x.index, x.offset, x.end, x.class))
+        .collect();
+    assert_eq!(
+        spans,
+        vec![(0, 0, 0x30, "RootThing"), (1, 0x30, 0x60, "LeafThing")]
+    );
+    assert_eq!(c.object_at(0x2f), Some(0));
+    assert_eq!(c.object_at(0x30), Some(1));
+    assert_eq!(c.object_at(0x60), None);
+    assert_eq!(c.object_span(2), None);
+    assert_eq!(c.object_span(1).map(|x| c.span_bytes(&x).len()), Some(0x30));
+    // Destination in the next object's span.
+    let mut t = spec();
+    t.pointers[0][1] = 0x40;
+    assert_eq!(
+        code(&build(&t)),
+        ("InvalidHavokObjectSpan".into(), 1000 + data + 0x64)
+    );
+    // Destination before the object holding the source.
+    let mut t = spec();
+    t.pointers[1][1] = 0x20;
+    assert_eq!(
+        code(&build(&t)),
+        ("InvalidHavokObjectSpan".into(), 1000 + data + 0x6c)
+    );
+    // Sources before the first object, which is not at offset 0 here.
+    let mut t = spec();
+    t.objects = vec![[0x10, 0, t.root[3]], [0x30, 0, t.objects[1][2]]];
+    t.root[1] = 0x10;
+    t.pointers[0] = [0x08, 0x20];
+    assert_eq!(
+        code(&build(&t)),
+        ("InvalidHavokObjectSpan".into(), 1000 + data + 0x60)
+    );
+    let mut t = spec();
+    t.objects = vec![[0x10, 0, t.root[3]], [0x30, 0, t.objects[1][2]]];
+    t.root[1] = 0x10;
+    t.links[0][0] = 0x08;
+    assert_eq!(
+        code(&build(&t)),
+        ("InvalidHavokObjectSpan".into(), 1000 + data + 0x70)
     );
 }
 

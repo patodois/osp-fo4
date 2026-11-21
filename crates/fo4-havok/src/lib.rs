@@ -6,11 +6,20 @@
 //! installation; `spec/havok-container.md` tags each one with its count. No
 //! Havok SDK, header, converter or third-party reader was consulted. The reader
 //! splits a payload into its three named sections, lists the class-name
-//! entries and reads the three tables at the end of the data section. Object
-//! bytes are located and named, never decoded. A payload outside the measured
-//! profile is a named error carrying the file offset; nothing here panics.
+//! entries and reads the three tables at the end of the data section. Each
+//! object owns the bytes up to the next object (`spec/havok-objects.md`), and
+//! every first-table pointer stays inside the object that holds its source.
+//! The only object decoded is [`ConvexPolytope`]. A payload outside the
+//! measured profile is a named error carrying the file offset; nothing here
+//! panics.
 use fo4_core::{Budget, Error, Result};
 use serde::Serialize;
+
+mod objects;
+pub use objects::{
+    ConvexPolytope, Face, ObjectSpan, CONVEX_POLYTOPE, CONVEX_POLYTOPE_FIXED, MAX_VERTEX_ROWS,
+    VERTEX_TAG,
+};
 
 /// Bytes before the first section record.
 pub const HEADER_LEN: usize = 64;
@@ -466,6 +475,45 @@ impl<'a> Container<'a> {
                 },
                 at,
             )?;
+        }
+        // Each object owns the bytes up to the next one: a first-table
+        // pointer's destination lies in the span of the object holding its
+        // source, and a second-table source lies in some object's span.
+        for (i, p) in pointers.iter().enumerate() {
+            let at = d + o[0] + i * 8;
+            let owner = objects::owner(&objects, objects_end as u32, p.source);
+            if owner.is_none() {
+                return Err(c.err(
+                    "InvalidHavokObjectSpan",
+                    at,
+                    "source inside an object's span",
+                    p.source,
+                ));
+            }
+            if objects::owner(&objects, objects_end as u32, p.destination) != owner {
+                let (lo, hi) = owner
+                    .map(|k| {
+                        let end = objects.get(k + 1).map_or(objects_end as u32, |n| n.offset);
+                        (objects[k].offset, end)
+                    })
+                    .unwrap_or_default();
+                return Err(c.err(
+                    "InvalidHavokObjectSpan",
+                    at + 4,
+                    format!("destination in the source object's span [{lo}, {hi})"),
+                    p.destination,
+                ));
+            }
+        }
+        for (i, p) in object_pointers.iter().enumerate() {
+            if objects::owner(&objects, objects_end as u32, p.source).is_none() {
+                return Err(c.err(
+                    "InvalidHavokObjectSpan",
+                    d + o[1] + i * 12,
+                    "source inside an object's span",
+                    p.source,
+                ));
+            }
         }
         let root = objects
             .binary_search_by_key(&header.root_offset(), |x| x.offset)

@@ -4,10 +4,11 @@
 //! `fo4_havok::Container` and counts, per system kind, how often each
 //! container-level property holds. Properties the reader enforces are counted
 //! by the reads that succeed; the others are counted here, holds and fails.
-//! Nothing here decodes an object.
+//! Object rules (spans, leading sizes, the convex polytope view) are counted
+//! per object. Nothing here writes object contents.
 use crate::Reports;
 use fo4_core::{Budget, Manifest, Result};
-use fo4_havok::{Container, Object};
+use fo4_havok::{Container, ConvexPolytope, Object, CONVEX_POLYTOPE};
 use fo4_nif::Nif;
 use fo4_vfs::Vfs;
 use serde::Serialize;
@@ -15,6 +16,8 @@ use std::collections::{BTreeMap, BTreeSet};
 
 const CAP: usize = 256;
 const OTHER: &str = "<other>";
+/// Distinct span lengths kept per class; more are reported as `SPAN_CAP+`.
+const SPAN_CAP: usize = 1024;
 /// 16-byte groups after the first 16 bytes of the root object whose third
 /// u32 is compared with the number of collision objects on the system.
 const ROOT_GROUPS: usize = 8;
@@ -45,6 +48,11 @@ pub struct Class {
     /// Payloads where the number of objects of the class equals the number of
     /// bhkNPCollisionObject on the system, and where it differs.
     pub objects_eq_system_objects: Check,
+    /// Object span lengths (offset of the next object minus this offset).
+    pub spans: BTreeSet<u32>,
+    /// Leading size: smallest first-table destination owned by the object
+    /// minus its offset, or "none" when it owns no destination.
+    pub leads: BTreeMap<String, u64>,
 }
 
 #[derive(Default, Serialize)]
@@ -70,10 +78,34 @@ pub struct Kind {
     pub root_counts: BTreeMap<String, Check>,
     /// "root class|+group offset|property" -> holds / fails.
     pub root_groups: BTreeMap<String, Check>,
+    /// "class|rule" -> objects where the rule holds / fails.
+    pub object_checks: BTreeMap<String, Check>,
+    /// ConvexPolytope::read results: "read" or the error code -> objects.
+    pub convex_polytope: BTreeMap<String, u64>,
+    /// "u16 at +16|u16 at +18" of convex polytopes -> objects.
+    pub convex_polytope_word16: BTreeMap<String, u64>,
+    /// Class of the object the second-table source at +32 of a convex
+    /// polytope points to, or "none".
+    pub convex_polytope_link32: BTreeMap<String, u64>,
+    /// Vertex rows after the last tagged one (copies of it) -> objects.
+    pub convex_polytope_padding_rows: BTreeMap<u64, u64>,
+    /// Largest value in a single object.
+    pub object_maxima: BTreeMap<&'static str, u64>,
 }
 impl Kind {
     fn check(&mut self, name: &'static str, ok: bool) {
         let c = self.checks.entry(name).or_default();
+        if ok {
+            c.holds += 1;
+        } else {
+            c.fails += 1;
+        }
+    }
+    fn object_check(&mut self, class: &str, rule: &str, ok: bool) {
+        let c = self
+            .object_checks
+            .entry(format!("{class}|{rule}"))
+            .or_default();
         if ok {
             c.holds += 1;
         } else {
@@ -332,6 +364,7 @@ fn payload(
             .take(4)
             .all(|n| !per_class.contains_key(n.name)),
     );
+    objects_census(k, &c, file, base);
     if let Some(root) = c.root() {
         bump(&mut k.root_class, root.class.to_owned(), OTHER.into());
         let at = d + root.offset as usize;
@@ -373,6 +406,212 @@ fn payload(
         }
     }
     Ok(())
+}
+
+fn f32_at(bytes: &[u8], at: usize) -> Option<f32> {
+    u32_at(bytes, at).map(f32::from_bits)
+}
+fn zero(bytes: &[u8], lo: usize, hi: usize) -> bool {
+    bytes.get(lo..hi).is_some_and(|x| x.iter().all(|v| *v == 0))
+}
+
+/// Object spans, leading sizes, array headers at pointer sources and the
+/// convex shapes. Counted per object.
+fn objects_census(k: &mut Kind, c: &Container<'_>, file: &str, base: u64) {
+    let data = c.object_bytes();
+    let mut owned: Vec<Vec<(u32, u32)>> = vec![Vec::new(); c.objects.len()];
+    for p in &c.pointers {
+        if let Some(i) = c.object_at(p.source) {
+            owned[i].push((p.source, p.destination));
+        }
+    }
+    let mut after = true;
+    let mut header = true;
+    let mut distinct = true;
+    for span in c.object_spans() {
+        let class = k.classes.entry(span.class.to_owned()).or_default();
+        if class.spans.len() < SPAN_CAP || class.spans.contains(&span.len()) {
+            class.spans.insert(span.len());
+        }
+        let mut ptrs = std::mem::take(&mut owned[span.index]);
+        let lead = ptrs
+            .iter()
+            .map(|p| p.1)
+            .min()
+            .map_or("none".to_owned(), |d| (d - span.offset).to_string());
+        bump(&mut class.leads, lead, OTHER.into());
+        ptrs.sort_unstable();
+        let order = ptrs.windows(2).all(|w| w[0].1 < w[1].1);
+        k.object_check(span.class, "destinations_follow_source_order", order);
+        for (s, d) in &ptrs {
+            after &= d > s;
+            let n = u32_at(data, *s as usize + 8);
+            let flag = u32_at(data, *s as usize + 12);
+            header &= n
+                .zip(flag)
+                .is_some_and(|(n, f)| n > 0 && f == 0x8000_0000 | n);
+        }
+        let mut dests: Vec<u32> = ptrs.iter().map(|p| p.1).collect();
+        dests.sort_unstable();
+        distinct &= dests.windows(2).all(|w| w[0] != w[1]);
+        let bytes = c.span_bytes(&span);
+        if span.class == "hknpConvexShape" {
+            let rows = u16_at(bytes, 48).unwrap_or(0) as usize;
+            let rel = u16_at(bytes, 50).unwrap_or(0) as usize;
+            k.object_check(span.class, "vertex_pair_at_48_points_to_64", rel == 16);
+            k.object_check(
+                span.class,
+                "span_is_64_plus_16_per_vertex_row",
+                bytes.len() == 64 + 16 * rows,
+            );
+            k.object_check(
+                span.class,
+                "vertex_rows_tagged_3f0000_and_index",
+                (0..rows).all(|j| u32_at(bytes, 64 + 16 * j + 12) == Some(0x3f00_0000 | j as u32)),
+            );
+        }
+        if span.class == CONVEX_POLYTOPE {
+            polytope_census(k, c, span.index, file, base);
+        }
+    }
+    k.check("pointer_destination_after_source", after);
+    k.check("pointer_destinations_distinct", distinct);
+    k.check(
+        "pointer_source_u32_8_nonzero_and_u32_12_is_0x80000000_or_it",
+        header,
+    );
+}
+
+fn u16_at(bytes: &[u8], at: usize) -> Option<u16> {
+    let w = bytes.get(at..at.checked_add(2)?)?;
+    Some(u16::from_le_bytes([w[0], w[1]]))
+}
+
+fn polytope_census(k: &mut Kind, c: &Container<'_>, index: usize, file: &str, base: u64) {
+    let p = match ConvexPolytope::read(c, index, file, base) {
+        Ok(p) => p,
+        Err(e) => {
+            bump(&mut k.convex_polytope, e.code, OTHER.into());
+            return;
+        }
+    };
+    bump(&mut k.convex_polytope, "read".into(), OTHER.into());
+    let class = CONVEX_POLYTOPE;
+    let b = p.bytes();
+    let w16 = format!(
+        "{}|{}",
+        u16_at(b, 16).unwrap_or(0),
+        u16_at(b, 18).unwrap_or(0)
+    );
+    bump(&mut k.convex_polytope_word16, w16, OTHER.into());
+    let link = c
+        .object_pointers
+        .iter()
+        .find(|l| l.source == p.offset + 32)
+        .and_then(|l| {
+            c.objects
+                .binary_search_by_key(&l.destination, |o| o.offset)
+                .ok()
+        })
+        .map_or("none".to_owned(), |i| c.objects[i].class.to_owned());
+    bump(&mut k.convex_polytope_link32, link, OTHER.into());
+    let faces_at = 80 + 16 * p.vertex_rows + 16 * p.plane_rows;
+    let indices_end = faces_at + 4 * p.plane_rows + p.index_count;
+    for (rule, ok) in [
+        ("bytes_0_to_16_zero", zero(b, 0, 16)),
+        ("bytes_28_to_48_zero", zero(b, 28, 48)),
+        ("bytes_52_to_64_zero", zero(b, 52, 64)),
+        ("bytes_76_to_80_zero", zero(b, 76, 80)),
+        (
+            "f32_at_20_finite_nonnegative",
+            f32_at(b, 20).is_some_and(|v| v.is_finite() && v >= 0.0),
+        ),
+        (
+            "padding_face_entries_zero",
+            zero(b, faces_at + 4 * p.face_count, faces_at + 4 * p.plane_rows),
+        ),
+        ("bytes_after_indices_zero", zero(b, indices_end, b.len())),
+    ] {
+        k.object_check(class, rule, ok);
+    }
+    let faces: Vec<_> = (0..p.face_count).filter_map(|j| p.face(j)).collect();
+    let mut sum = 0usize;
+    let mut running = true;
+    for f in &faces {
+        running &= f.first as usize == sum;
+        sum += f.count as usize;
+    }
+    k.object_check(class, "face_first_is_running_sum_of_counts", running);
+    k.object_check(
+        class,
+        "face_counts_sum_to_index_count",
+        sum == p.index_count,
+    );
+    k.object_check(
+        class,
+        "face_count_at_least_3",
+        faces.iter().all(|f| f.count >= 3),
+    );
+    let planes: Vec<[f64; 4]> = (0..p.face_count)
+        .filter_map(|j| p.plane(j))
+        .map(|q| q.map(f64::from))
+        .collect();
+    let verts: Vec<[f64; 3]> = p.vertices().map(|v| v.map(f64::from)).collect();
+    k.object_check(
+        class,
+        "plane_normals_unit_within_1e-4",
+        planes
+            .iter()
+            .all(|q| ((q[0] * q[0] + q[1] * q[1] + q[2] * q[2]).sqrt() - 1.0).abs() <= 1e-4),
+    );
+    let scale = verts
+        .iter()
+        .flat_map(|v| v.iter().map(|x| x.abs()))
+        .fold(1.0f64, f64::max);
+    let dist =
+        |q: &[f64; 4], v: &[f64; 3]| (q[0] * v[0] + q[1] * v[1] + q[2] * v[2] + q[3]) / scale;
+    let behind = planes
+        .iter()
+        .flat_map(|q| verts.iter().map(move |v| (q, v)))
+        .map(|(q, v)| dist(q, v))
+        .fold(f64::MIN, f64::max);
+    k.object_check(
+        class,
+        "vertices_behind_face_planes_rel_1e-3",
+        behind <= 1e-3,
+    );
+    let idx = p.indices();
+    let mut on = 0f64;
+    for (q, f) in planes.iter().zip(&faces) {
+        let lo = f.first as usize;
+        for i in idx.get(lo..lo + f.count as usize).unwrap_or(&[]) {
+            if let Some(v) = verts.get(*i as usize) {
+                on = on.max(dist(q, v).abs());
+            }
+        }
+    }
+    k.object_check(class, "face_vertices_on_own_plane_rel_1e-2", on <= 1e-2);
+    let mut used = vec![false; p.vertex_count];
+    for i in idx {
+        if let Some(u) = used.get_mut(*i as usize) {
+            *u = true;
+        }
+    }
+    k.object_check(class, "every_vertex_in_some_face", used.iter().all(|u| *u));
+    *k.totals.entry("convex_polytope_vertices").or_default() += p.vertex_count as u64;
+    bump(
+        &mut k.convex_polytope_padding_rows,
+        (p.vertex_rows - p.vertex_count) as u64,
+        u64::MAX,
+    );
+    for (name, n) in [
+        ("convex_polytope_vertex_rows", p.vertex_rows),
+        ("convex_polytope_plane_rows", p.plane_rows),
+        ("convex_polytope_index_count", p.index_count),
+    ] {
+        let m = k.object_maxima.entry(name).or_default();
+        *m = (*m).max(n as u64);
+    }
 }
 
 pub fn sweep(m: &Manifest, r: &mut Reports) -> Result<()> {
@@ -520,14 +759,52 @@ pub fn tsv(s: &Summary) -> String {
                 &sec("class"),
                 name,
                 format!(
-                    "listed={} payloads={} objects={} signatures={} count_eq_system_objects={}",
+                    "listed={} payloads={} objects={} signatures={} count_eq_system_objects={} span_min={} span_max={} span_distinct={}",
                     c.listed,
                     c.payloads,
                     c.objects,
                     signatures.join(","),
-                    check(&c.objects_eq_system_objects)
+                    check(&c.objects_eq_system_objects),
+                    c.spans.first().copied().unwrap_or(0),
+                    c.spans.last().copied().unwrap_or(0),
+                    if c.spans.len() >= SPAN_CAP {
+                        format!("{SPAN_CAP}+")
+                    } else {
+                        c.spans.len().to_string()
+                    }
                 ),
             );
+        }
+        for (name, c) in &k.classes {
+            for (lead, n) in &c.leads {
+                row(
+                    &sec("object_lead"),
+                    &format!("{name}|{lead}"),
+                    n.to_string(),
+                );
+            }
+        }
+        for (key, c) in &k.object_checks {
+            row(&sec("object_check"), key, check(c));
+        }
+        for (key, n) in &k.convex_polytope {
+            row(&sec("convex_polytope"), key, n.to_string());
+        }
+        for (key, n) in &k.convex_polytope_word16 {
+            row(&sec("convex_polytope_u16_16_18"), key, n.to_string());
+        }
+        for (key, n) in &k.convex_polytope_link32 {
+            row(&sec("convex_polytope_link32"), key, n.to_string());
+        }
+        for (key, n) in &k.convex_polytope_padding_rows {
+            row(
+                &sec("convex_polytope_padding_rows"),
+                &key.to_string(),
+                n.to_string(),
+            );
+        }
+        for (name, n) in &k.object_maxima {
+            row(&sec("max_per_object"), name, n.to_string());
         }
         for (key, n) in &k.pointer_source_is_object {
             row(&sec("pointer_source_is_object"), key, n.to_string());
@@ -636,8 +913,15 @@ mod tests {
             "{text}"
         );
         assert!(text.contains(
-            "havok.bhkPhysicsSystem.class\tRoot\tlisted=2 payloads=2 objects=2 signatures=00000007x2 count_eq_system_objects=holds=1 fails=1\n"
+            "havok.bhkPhysicsSystem.class\tRoot\tlisted=2 payloads=2 objects=2 signatures=00000007x2 count_eq_system_objects=holds=1 fails=1 span_min=64 span_max=64 span_distinct=1\n"
         ));
         assert!(text.contains("havok.bhkPhysicsSystem.fill\tclassnames|06\t2\n"));
+        assert!(text.contains("havok.bhkPhysicsSystem.object_lead\tRoot|48\t2\n"));
+        assert!(text.contains(
+            "havok.bhkPhysicsSystem.check\tpointer_destination_after_source\tholds=2 fails=0\n"
+        ));
+        assert!(text.contains(
+            "havok.bhkPhysicsSystem.check\tpointer_source_u32_8_nonzero_and_u32_12_is_0x80000000_or_it\tholds=2 fails=0\n"
+        ));
     }
 }
