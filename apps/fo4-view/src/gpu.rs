@@ -294,7 +294,7 @@ fn camera_bundle(
     pose: (Vec3, Quat),
     frustum: [f64; 6],
     follow_aspect: bool,
-    clear: [f32; 4],
+    clear: Color,
     order: isize,
     layer: usize,
 ) -> impl Bundle {
@@ -302,9 +302,7 @@ fn camera_bundle(
         Camera3d::default(),
         Camera {
             order,
-            clear_color: ClearColorConfig::Custom(Color::LinearRgba(LinearRgba::new(
-                clear[0], clear[1], clear[2], clear[3],
-            ))),
+            clear_color: ClearColorConfig::Custom(clear),
             ..default()
         },
         Projection::custom(ViewerProjection {
@@ -371,8 +369,11 @@ pub fn headless(
         let mut target = Image::new_target_texture(width, height, TextureFormat::Rgba8Unorm, None);
         target.asset_usage = RenderAssetUsages::RENDER_WORLD;
         let target = world.resource_mut::<Assets<Image>>().add(target);
-        // The tag pass clears to all-ones bytes: u32::MAX, the CPU background tag.
-        let clear = if tag_pass { [1.; 4] } else { clear };
+        // The tag pass clears to all-ones bytes: u32::MAX, the CPU background
+        // tag. On this linear (Rgba8Unorm) target a linear colour is stored
+        // as is, like the CPU frame's clear value.
+        let [r, g, b, a] = if tag_pass { [1.; 4] } else { clear };
+        let clear = Color::LinearRgba(LinearRgba::new(r, g, b, a));
         world.spawn((
             camera_bundle(pose, camera.frustum, false, clear, k as isize, k),
             RenderTarget::Image(target.clone().into()),
@@ -490,6 +491,10 @@ fn spawn_window_scene(world: &mut World) {
     };
     let up = upload(world, &scene);
     spawn(world, &scene, &up, false, 0);
+    // The window's swap chain is expected to be sRGB (the shader checks the
+    // real format; the clear colour cannot): an sRGB colour with the CPU's
+    // clear values is stored as those values.
+    let clear = Color::Srgba(Srgba::new(clear[0], clear[1], clear[2], clear[3]));
     let fly = world.resource::<Fly>();
     let Ok(pose) = fly_pose(&fly.state) else {
         return;
