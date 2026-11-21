@@ -1,0 +1,492 @@
+//! `DrawList` to GPU-ready data, with no Bevy world involved.
+//!
+//! Every value here is read from the draw list exactly as the CPU rasterizer
+//! (`fo4_render::render`) reads it, and the same validations run first, so a
+//! list the CPU refuses is refused here too. Meshes keep the draw list's
+//! sharing; textures are uploaded once each; identical surfaces share one
+//! material.
+use crate::coords;
+use bevy::math::{Quat, Vec3};
+use bevy::render::render_resource::BlendFactor;
+use fo4_render::{Alpha, DrawList, RenderOptions};
+use std::collections::BTreeMap;
+
+pub struct GpuMesh {
+    pub positions: Vec<[f32; 3]>,
+    pub uvs: Vec<[f32; 2]>,
+    pub colors: Option<Vec<[f32; 4]>>,
+    pub indices: Vec<u16>,
+}
+
+/// RGBA16F texels, base level first, then each coarser level in order.
+pub struct GpuTexture {
+    pub width: u32,
+    pub height: u32,
+    pub levels: u32,
+    pub bytes: Vec<u8>,
+}
+
+/// Alpha test as the CPU's `Alpha::passes` evaluates it.
+pub const TEST_ALWAYS: u32 = 9;
+/// No comparison function (BGSM): the CPU reference policy `alpha*255 >= ref`.
+pub const TEST_REFERENCE_THRESHOLD: u32 = 8;
+
+/// Per-surface values the fragment shader needs. Plain data, hashed by bits.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct SurfaceParams {
+    pub uv_scale: [f32; 2],
+    pub uv_offset: [f32; 2],
+    /// `NiAlphaProperty` function 0..=7, `TEST_REFERENCE_THRESHOLD` or `TEST_ALWAYS`.
+    pub test_function: u32,
+    pub test_ref: f32,
+    pub opacity: f32,
+    /// The CPU skips a blended sample whose alpha is exactly zero when the
+    /// source factor is code 6 (source alpha).
+    pub skip_zero_alpha: bool,
+}
+impl SurfaceParams {
+    fn bits(&self) -> [u32; 8] {
+        [
+            self.uv_scale[0].to_bits(),
+            self.uv_scale[1].to_bits(),
+            self.uv_offset[0].to_bits(),
+            self.uv_offset[1].to_bits(),
+            self.test_function,
+            self.test_ref.to_bits(),
+            self.opacity.to_bits(),
+            u32::from(self.skip_zero_alpha),
+        ]
+    }
+}
+
+/// The pipeline-level part of a surface: blend factors (colour and alpha use
+/// the same pair, as in the CPU `blend`) and back-face culling.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct SurfaceKey {
+    pub blend: Option<(BlendFactor, BlendFactor)>,
+    pub cull_back: bool,
+}
+
+pub struct Surface {
+    pub texture: usize,
+    pub params: SurfaceParams,
+    pub key: SurfaceKey,
+}
+
+pub struct Instance {
+    pub mesh: usize,
+    pub surface: usize,
+    /// `Draw::instance`, the CPU frame's per-pixel tag.
+    pub tag: u32,
+    pub translation: Vec3,
+    pub rotation: Quat,
+    pub scale: Vec3,
+}
+
+#[derive(Default)]
+pub struct GpuScene {
+    pub meshes: Vec<GpuMesh>,
+    pub textures: Vec<GpuTexture>,
+    pub surfaces: Vec<Surface>,
+    pub instances: Vec<Instance>,
+}
+impl GpuScene {
+    pub fn blended_instances(&self) -> usize {
+        self.instances
+            .iter()
+            .filter(|i| self.surfaces[i.surface].key.blend.is_some())
+            .count()
+    }
+}
+
+/// The CPU `blend` factor codes 0..=10 as wgpu factors. Colour and alpha
+/// components follow the same table (code 10 gives alpha 1 in both).
+pub fn blend_factor(code: u32) -> Result<BlendFactor, String> {
+    Ok(match code {
+        0 => BlendFactor::One,
+        1 => BlendFactor::Zero,
+        2 => BlendFactor::Src,
+        3 => BlendFactor::OneMinusSrc,
+        4 => BlendFactor::Dst,
+        5 => BlendFactor::OneMinusDst,
+        6 => BlendFactor::SrcAlpha,
+        7 => BlendFactor::OneMinusSrcAlpha,
+        8 => BlendFactor::DstAlpha,
+        9 => BlendFactor::OneMinusDstAlpha,
+        10 => BlendFactor::SrcAlphaSaturated,
+        _ => return Err(format!("UnsupportedBlendFactor: {code}")),
+    })
+}
+
+fn surface_params(alpha: Alpha, uv_offset: [f64; 2], uv_scale: [f64; 2]) -> SurfaceParams {
+    SurfaceParams {
+        uv_scale: uv_scale.map(|v| v as f32),
+        uv_offset: uv_offset.map(|v| v as f32),
+        test_function: if alpha.test_enabled == 0 {
+            TEST_ALWAYS
+        } else {
+            alpha
+                .nif_test_function
+                .map_or(TEST_REFERENCE_THRESHOLD, u32::from)
+        },
+        test_ref: f32::from(alpha.test_ref),
+        opacity: alpha.opacity,
+        skip_zero_alpha: alpha.enabled == 1 && alpha.source == 6,
+    }
+}
+
+fn to_f16_bytes(rgba: &[f32], out: &mut Vec<u8>) {
+    for v in rgba {
+        out.extend_from_slice(&half::f16::from_f32(*v).to_le_bytes());
+    }
+}
+
+/// `t` has passed `Texture::validate` (see `convert`).
+fn texture(t: &fo4_render::Texture) -> Result<GpuTexture, String> {
+    let total: usize = std::iter::once(t.rgba.len())
+        .chain(t.mips.iter().map(|m| m.rgba.len()))
+        .try_fold(0usize, |a, n| a.checked_add(n))
+        .and_then(|n| n.checked_mul(2))
+        .ok_or("TextureSizeOverflow")?;
+    let mut bytes = Vec::new();
+    bytes.try_reserve_exact(total).map_err(|e| e.to_string())?;
+    to_f16_bytes(&t.rgba, &mut bytes);
+    // `Texture::validate` guarantees each listed mip is the next coarser level
+    // of the chosen base (`m.mip` strictly increasing, sizes halving), and the
+    // builder lists them from `base.mip + 1` without gaps, which is what a GPU
+    // mip chain requires; a gap is refused rather than filled.
+    for (k, m) in t.mips.iter().enumerate() {
+        let expected = t.mip.checked_add(k as u32 + 1).ok_or("MipOverflow")?;
+        if m.mip != expected {
+            return Err(format!(
+                "NonContiguousMipChain: base {} lists mip {} at position {k}",
+                t.mip, m.mip
+            ));
+        }
+        to_f16_bytes(&m.rgba, &mut bytes);
+    }
+    Ok(GpuTexture {
+        width: t.width,
+        height: t.height,
+        levels: 1 + t.mips.len() as u32,
+        bytes,
+    })
+}
+
+fn mesh(m: &fo4_render::Mesh) -> Result<GpuMesh, String> {
+    if let Some(colors) = &m.vertex_colors {
+        if colors.len() != m.vertices.len() || colors.iter().flatten().any(|v| !v.is_finite()) {
+            return Err(format!("RenderVertexColorLayout: {}", colors.len()));
+        }
+    }
+    let mut indices = Vec::new();
+    let count = m
+        .triangles
+        .len()
+        .checked_mul(3)
+        .ok_or("RenderIndexCountOverflow")?;
+    indices
+        .try_reserve_exact(count)
+        .map_err(|e| e.to_string())?;
+    for tri in &m.triangles {
+        for &i in tri {
+            if usize::from(i) >= m.vertices.len() {
+                return Err(format!("RenderVertexIndex: {i}"));
+            }
+            indices.push(i);
+        }
+    }
+    let mut positions = Vec::with_capacity(m.vertices.len());
+    let mut uvs = Vec::with_capacity(m.vertices.len());
+    for v in &m.vertices {
+        if v.position.iter().chain(&v.uv).any(|x| !x.is_finite()) {
+            return Err("RenderNonFiniteVertex".into());
+        }
+        positions.push(v.position.map(|x| x as f32));
+        uvs.push(v.uv.map(|x| x as f32));
+    }
+    Ok(GpuMesh {
+        positions,
+        uvs,
+        colors: m.vertex_colors.clone(),
+        indices,
+    })
+}
+
+/// Convert a validated draw list. `options` must be the CPU options the GPU
+/// frame is compared with; only bilinear filtering is implemented.
+pub fn convert(list: &DrawList, options: &RenderOptions) -> Result<GpuScene, String> {
+    if !options.bilinear {
+        return Err(
+            "UnsupportedViewerOption: the GPU path implements bilinear sampling only".into(),
+        );
+    }
+    // The CPU validates every texture of the list before drawing.
+    for t in &list.textures {
+        t.validate().map_err(|e| e.to_string())?;
+    }
+    let mut out = GpuScene::default();
+    let mut mesh_index = BTreeMap::new();
+    let mut texture_index = BTreeMap::new();
+    // Texture, parameter bits, raw blend codes, culling.
+    type SurfaceIdentity = (usize, [u32; 8], Option<(u32, u32)>, bool);
+    let mut surface_index: BTreeMap<SurfaceIdentity, usize> = BTreeMap::new();
+    for (di, draw) in list.draws.iter().enumerate() {
+        draw.alpha.validate().map_err(|e| e.to_string())?;
+        let source = list
+            .meshes
+            .get(draw.mesh)
+            .ok_or_else(|| format!("RenderMeshIndex: {}", draw.mesh))?;
+        let tex = list
+            .textures
+            .get(draw.texture)
+            .ok_or_else(|| format!("RenderTextureIndex: {}", draw.texture))?;
+        if draw
+            .uv_offset
+            .iter()
+            .chain(&draw.uv_scale)
+            .any(|x| !x.is_finite())
+            || !draw.world.scale.is_finite()
+            || draw
+                .world
+                .rotation
+                .iter()
+                .flatten()
+                .chain(&draw.world.translation)
+                .any(|x| !x.is_finite())
+        {
+            return Err(format!("RenderNonFiniteTransform: {di}"));
+        }
+        if source.triangles.is_empty() {
+            continue;
+        }
+        let mesh_slot = match mesh_index.get(&draw.mesh) {
+            Some(&i) => i,
+            None => {
+                out.meshes.push(mesh(source)?);
+                mesh_index.insert(draw.mesh, out.meshes.len() - 1);
+                out.meshes.len() - 1
+            }
+        };
+        let texture_slot = match texture_index.get(&draw.texture) {
+            Some(&i) => i,
+            None => {
+                out.textures.push(texture(tex)?);
+                texture_index.insert(draw.texture, out.textures.len() - 1);
+                out.textures.len() - 1
+            }
+        };
+        // The CPU culls only when asked, and then fails on a draw without a
+        // sidedness declaration; the same error is raised here.
+        let cull_back =
+            options.backface_cull && !draw.sidedness.double_sided().map_err(|e| e.to_string())?;
+        let blend_codes =
+            (draw.alpha.enabled == 1).then_some((draw.alpha.source, draw.alpha.destination));
+        let params = surface_params(draw.alpha, draw.uv_offset, draw.uv_scale);
+        let surface_key = (texture_slot, params.bits(), blend_codes, cull_back);
+        let surface = match surface_index.get(&surface_key) {
+            Some(&i) => i,
+            None => {
+                let blend = match blend_codes {
+                    Some((s, d)) => Some((blend_factor(s)?, blend_factor(d)?)),
+                    None => None,
+                };
+                out.surfaces.push(Surface {
+                    texture: texture_slot,
+                    params,
+                    key: SurfaceKey { blend, cull_back },
+                });
+                surface_index.insert(surface_key, out.surfaces.len() - 1);
+                out.surfaces.len() - 1
+            }
+        };
+        let (translation, rotation, scale) = coords::instance_transform(&draw.world)
+            .ok_or_else(|| format!("UnsupportedInstanceShear: draw {di} {:?}", draw.world))?;
+        out.instances.push(Instance {
+            mesh: mesh_slot,
+            surface,
+            tag: draw.instance,
+            translation,
+            rotation,
+            scale,
+        });
+    }
+    Ok(out)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fo4_render::{Draw, Mesh, Mip, Sidedness, Texture, Vertex};
+    use fo4_scene::transform::Transform;
+
+    fn alpha(enabled: u8, source: u32, destination: u32, test: Option<(u8, Option<u8>)>) -> Alpha {
+        Alpha {
+            enabled,
+            source,
+            destination,
+            test_enabled: u8::from(test.is_some()),
+            test_ref: test.map_or(0, |t| t.0),
+            nif_test_function: test.and_then(|t| t.1),
+            opacity: 0.5,
+            nif_flags: None,
+        }
+    }
+    fn draw(instance: u32, mesh: usize, texture: usize, alpha: Alpha) -> Draw {
+        Draw {
+            sidedness: Sidedness {
+                material_two_sided: Some(0),
+                nif_shader_flags_2: None,
+            },
+            instance,
+            mesh,
+            texture,
+            world: Transform {
+                translation: [instance as f64, 0., 0.],
+                ..Transform::IDENTITY
+            },
+            alpha,
+            uv_offset: [0.25, 0.],
+            uv_scale: [2., 1.],
+            raw_tile_flags: None,
+        }
+    }
+    fn list() -> DrawList {
+        let vertices = vec![
+            Vertex {
+                position: [0., 0., 0.],
+                uv: [0., 0.],
+            },
+            Vertex {
+                position: [1., 0., 0.],
+                uv: [1., 0.],
+            },
+            Vertex {
+                position: [0., 1., 0.],
+                uv: [0., 1.],
+            },
+        ];
+        DrawList {
+            meshes: vec![Mesh {
+                vertex_colors: None,
+                vertices,
+                triangles: vec![[0, 1, 2]],
+            }],
+            textures: vec![Texture {
+                mips: vec![Mip {
+                    width: 1,
+                    height: 1,
+                    rgba: vec![0.5; 4],
+                    mip: 1,
+                }],
+                width: 2,
+                height: 2,
+                rgba: vec![0.25; 16],
+                mip: 0,
+                srgb: false,
+            }],
+            draws: vec![
+                draw(7, 0, 0, alpha(0, 0, 0, Some((128, None)))),
+                draw(8, 0, 0, alpha(0, 0, 0, Some((128, None)))),
+                draw(9, 0, 0, alpha(1, 6, 7, None)),
+            ],
+        }
+    }
+
+    #[test]
+    fn meshes_textures_and_equal_surfaces_are_shared() {
+        let scene = convert(&list(), &RenderOptions::REFERENCE).unwrap();
+        assert_eq!(scene.meshes.len(), 1);
+        assert_eq!(scene.textures.len(), 1);
+        assert_eq!(scene.surfaces.len(), 2);
+        assert_eq!(scene.instances.len(), 3);
+        assert_eq!(scene.instances[0].surface, scene.instances[1].surface);
+        assert_eq!(
+            scene.instances.iter().map(|i| i.tag).collect::<Vec<_>>(),
+            [7, 8, 9]
+        );
+        assert_eq!(scene.blended_instances(), 1);
+        let t = &scene.textures[0];
+        assert_eq!((t.width, t.height, t.levels), (2, 2, 2));
+        assert_eq!(t.bytes.len(), (16 + 4) * 2);
+        assert_eq!(&t.bytes[..2], &half::f16::from_f32(0.25).to_le_bytes());
+        assert_eq!(&t.bytes[32..34], &half::f16::from_f32(0.5).to_le_bytes());
+    }
+
+    #[test]
+    fn alpha_fields_follow_the_cpu_reading() {
+        let scene = convert(&list(), &RenderOptions::REFERENCE).unwrap();
+        let tested = &scene.surfaces[scene.instances[0].surface];
+        assert_eq!(tested.params.test_function, TEST_REFERENCE_THRESHOLD);
+        assert_eq!(tested.params.test_ref, 128.);
+        assert_eq!(tested.params.uv_scale, [2., 1.]);
+        assert_eq!(tested.params.uv_offset, [0.25, 0.]);
+        assert_eq!(tested.key.blend, None);
+        assert!(!tested.params.skip_zero_alpha);
+        let blended = &scene.surfaces[scene.instances[2].surface];
+        assert_eq!(blended.params.test_function, TEST_ALWAYS);
+        assert_eq!(
+            blended.key.blend,
+            Some((BlendFactor::SrcAlpha, BlendFactor::OneMinusSrcAlpha))
+        );
+        assert!(blended.params.skip_zero_alpha);
+        let nif = surface_params(alpha(0, 0, 0, Some((10, Some(4)))), [0.; 2], [1.; 2]);
+        assert_eq!(nif.test_function, 4);
+    }
+
+    #[test]
+    fn culling_follows_the_cpu_option_and_its_errors() {
+        let mut options = RenderOptions::REFERENCE;
+        let scene = convert(&list(), &options).unwrap();
+        assert!(scene.surfaces.iter().all(|s| !s.key.cull_back));
+        options.backface_cull = true;
+        let scene = convert(&list(), &options).unwrap();
+        assert!(scene.surfaces.iter().all(|s| s.key.cull_back));
+        let mut undeclared = list();
+        undeclared.draws[0].sidedness = Sidedness::default();
+        let e = convert(&undeclared, &options).err().unwrap();
+        assert!(e.contains("MissingCullDeclarations"), "{e}");
+    }
+
+    #[test]
+    fn cpu_refusals_are_refusals_here() {
+        let mut bad = list();
+        bad.meshes[0].triangles[0][2] = 3;
+        assert!(convert(&bad, &RenderOptions::REFERENCE)
+            .err()
+            .unwrap()
+            .contains("RenderVertexIndex"));
+        let mut bad = list();
+        bad.draws[0].alpha.source = 11;
+        bad.draws[0].alpha.enabled = 1;
+        assert!(convert(&bad, &RenderOptions::REFERENCE).is_err());
+        let mut gap = list();
+        gap.textures[0].mips[0].mip = 2;
+        gap.textures[0].mips[0].width = 1;
+        assert!(convert(&gap, &RenderOptions::REFERENCE).is_err());
+        let mut nearest = RenderOptions::REFERENCE;
+        nearest.bilinear = false;
+        assert!(convert(&list(), &nearest).is_err());
+    }
+
+    #[test]
+    fn every_cpu_blend_code_has_a_factor() {
+        let expected = [
+            BlendFactor::One,
+            BlendFactor::Zero,
+            BlendFactor::Src,
+            BlendFactor::OneMinusSrc,
+            BlendFactor::Dst,
+            BlendFactor::OneMinusDst,
+            BlendFactor::SrcAlpha,
+            BlendFactor::OneMinusSrcAlpha,
+            BlendFactor::DstAlpha,
+            BlendFactor::OneMinusDstAlpha,
+            BlendFactor::SrcAlphaSaturated,
+        ];
+        for (code, want) in expected.iter().enumerate() {
+            assert_eq!(blend_factor(code as u32).unwrap(), *want);
+        }
+        assert!(blend_factor(11).is_err());
+    }
+}

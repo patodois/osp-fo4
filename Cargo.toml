@@ -1,5 +1,7 @@
 [workspace]
 members = ["crates/*"]
+# The GPU viewer has its own workspace and lock file; see apps/fo4-view.
+exclude = ["apps/fo4-view"]
 resolver = "2"
 
 [workspace.package]

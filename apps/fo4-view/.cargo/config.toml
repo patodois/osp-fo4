@@ -1,0 +1,4 @@
+# Build into the root `target/`, which the repository guard and .gitignore
+# already skip, instead of a second large tree under apps/.
+[build]
+target-dir = "../../target/fo4-view"

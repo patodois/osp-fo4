@@ -1,0 +1,127 @@
+//! Cell loading and output files. The loading sequence is the `render`
+//! example's (crates/fo4-unpack/examples/render.rs), so both renderers see the
+//! same draw list; the output rules are that example's too.
+use fo4_core::{Budget, Manifest};
+use fo4_render::draw::{Build, BuildOptions};
+use fo4_scene::{Loader, RuleLevel};
+use std::{
+    io::Write,
+    path::{Component, Path, PathBuf},
+};
+
+pub type AnyResult<T> = Result<T, Box<dyn std::error::Error>>;
+
+pub struct Loaded {
+    pub build: Build,
+    pub data_root: PathBuf,
+}
+
+pub fn cell(manifest: &str, data: &str, cell: &str, level: RuleLevel) -> AnyResult<Loaded> {
+    let mut manifest = Manifest::load(Path::new(manifest))?;
+    manifest.root = Path::new(data).canonicalize()?;
+    let limits = &manifest.limits;
+    let store =
+        fo4_plugin::typed::Store::open(&manifest, &Budget::new(limits.max_override_memory))?;
+    if !store.diagnostics.is_empty() {
+        return Err("PluginDiagnostics: inspect records with fo4-unpack before rendering".into());
+    }
+    let vfs = fo4_vfs::Vfs::mount(&manifest, &Budget::new(limits.max_vfs_memory))?;
+    vfs.check_complete()?;
+    let budget = Budget::metered(limits.max_memory);
+    let mut loader = Loader::new(&store, &vfs, &manifest.language, level, &budget);
+    let scene = loader.by_editor_id(cell, &budget)?;
+    let build = fo4_render::draw::build(
+        &scene,
+        &loader,
+        limits,
+        BuildOptions::reference(level),
+        &budget,
+    )?;
+    Ok(Loaded {
+        build,
+        data_root: manifest.root.clone(),
+    })
+}
+
+/// A new file for `arg`: under `./build`, no `..`, no symbolic link on the
+/// way, outside the game data, never overwriting.
+pub fn output_file(arg: &str, data_root: Option<&Path>) -> AnyResult<std::fs::File> {
+    let cwd = std::env::current_dir()?.canonicalize()?;
+    let path = Path::new(arg);
+    if path.components().any(|c| matches!(c, Component::ParentDir)) {
+        return Err("RenderOutputParentTraversal".into());
+    }
+    let out = if path.is_absolute() {
+        path.to_owned()
+    } else {
+        cwd.join(path)
+    };
+    if !out.starts_with(cwd.join("build")) {
+        return Err("RenderOutputOutsideBuild".into());
+    }
+    for ancestor in out.ancestors() {
+        if let Ok(m) = std::fs::symlink_metadata(ancestor) {
+            if m.file_type().is_symlink() {
+                return Err("RenderOutputSymlink".into());
+            }
+        }
+    }
+    if data_root.is_some_and(|root| out.starts_with(root)) {
+        return Err("RenderOutputInsideInputRoot".into());
+    }
+    if let Some(parent) = out.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    Ok(std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&out)
+        .map_err(|e| format!("{}: {e}", out.display()))?)
+}
+
+pub fn write(arg: &str, data_root: Option<&Path>, bytes: &[u8]) -> AnyResult<()> {
+    let mut f = output_file(arg, data_root)?;
+    f.write_all(bytes)?;
+    Ok(())
+}
+
+/// PNG of RGBA8 pixels (alpha dropped), through the reference encoder.
+pub fn png_rgba8(size: [u32; 2], rgba: &[u8]) -> AnyResult<Vec<u8>> {
+    let pixels: Vec<[f32; 4]> = rgba
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .map(|p| p.map(|v| f32::from(v) / 255.))
+        .collect();
+    let budget = Budget::new(64 << 20);
+    Ok(fo4_render::png::encode(size, &pixels, &budget)?)
+}
+
+pub fn read_png(path: &str) -> AnyResult<fo4_render::png::Png> {
+    let bytes = std::fs::read(path)?;
+    Ok(fo4_render::png::decode(
+        &bytes,
+        &fo4_core::Limits::default(),
+        &Budget::new(256 << 20),
+    )?)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn rgba8_round_trips_through_the_reference_png_codec() {
+        let rgba: Vec<u8> = (0..=255u8).flat_map(|v| [v, 255 - v, v / 2, 255]).collect();
+        let png = png_rgba8([16, 16], &rgba).unwrap();
+        let back =
+            fo4_render::png::decode(&png, &fo4_core::Limits::default(), &Budget::new(16 << 20))
+                .unwrap();
+        assert_eq!(back.size, [16, 16]);
+        assert_eq!(back.rgba, rgba);
+    }
+    #[test]
+    fn output_outside_build_or_with_parent_steps_is_refused() {
+        assert!(output_file("elsewhere/a.png", None).is_err());
+        assert!(output_file("build/../a.png", None).is_err());
+    }
+}

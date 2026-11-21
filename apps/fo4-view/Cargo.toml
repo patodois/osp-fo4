@@ -1,0 +1,47 @@
+[package]
+name = "fo4-view"
+description = "Interactive GPU viewer for cells drawn by fo4-render, checked against the CPU reference"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+rust-version = "1.88"
+repository = "https://github.com/patodois/osp-fo4"
+publish = false
+
+# Kept outside the main workspace so the reference crates build and test
+# without a GPU stack. See the root Cargo.toml `exclude`.
+[workspace]
+
+[dependencies]
+fo4-core = { path = "../../crates/fo4-core" }
+fo4-plugin = { path = "../../crates/fo4-plugin" }
+fo4-vfs = { path = "../../crates/fo4-vfs" }
+fo4-scene = { path = "../../crates/fo4-scene" }
+fo4-render = { path = "../../crates/fo4-render" }
+# Bevy already depends on `half`; used here for f32 -> f16 texture upload.
+half = { version = "2", default-features = false }
+bevy = { version = "0.20", default-features = false, features = [
+  "std",
+  "multi_threaded",
+  "bevy_asset",
+  "bevy_log",
+  "bevy_render",
+  "bevy_core_pipeline",
+  "bevy_pbr",
+  "bevy_window",
+  "bevy_winit",
+  "keyboard",
+  "mouse",
+] }
+
+# One profile for build, run, test and clippy, to keep the target directory
+# small: optimised (the loaders are slow unoptimised), no debug info.
+[profile.dev]
+opt-level = 3
+debug = 0
+incremental = false
+
+[profile.test]
+opt-level = 3
+debug = 0
+incremental = false
