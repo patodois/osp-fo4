@@ -1983,6 +1983,44 @@ fn check_cell_is_strict_and_reports_each_blocked_instance() {
 }
 
 #[test]
+fn cell_collision_reports_models_without_collision_and_levels() {
+    let install = census_install(false);
+    let out = install.base.join("cell-collision-Cell4098");
+    let output = Command::new(env!("CARGO_BIN_EXE_fo4-unpack"))
+        .arg("cell-collision")
+        .arg(&install.manifest)
+        .arg("Cell4098")
+        .arg("--under-hypotheses")
+        .arg("--out")
+        .arg(&out)
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let s: Value = serde_json::from_slice(&fs::read(out.join("summary.json")).unwrap()).unwrap();
+    let c = &s["cell_collision"];
+    assert_eq!(c["editor_id"], "Cell4098");
+    assert_eq!(c["body_placement"], "ignored");
+    assert_eq!(c["instances"], 0);
+    assert!(c["levels"]["ignored"]["status"].is_string());
+    assert!(c["levels"]["applied"]["status"].is_string());
+    let tsv = fs::read_to_string(out.join("cell_collision.tsv")).unwrap();
+    assert!(tsv.contains("census\tunits\t69.99125"));
+    // An unknown flag is a usage error.
+    let output = Command::new(env!("CARGO_BIN_EXE_fo4-unpack"))
+        .arg("cell-collision")
+        .arg(&install.manifest)
+        .arg("Cell4098")
+        .arg("--bogus")
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(2));
+}
+
+#[test]
 fn root_survey_keeps_raw_and_class_prefixed_results_separate() {
     let install = census_install(false);
     let out = install.base.join("case12-roots");

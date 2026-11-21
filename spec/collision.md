@@ -150,7 +150,10 @@ what stays open. Object extents (the rest of question 5) and the vertex layout
 of `hknpConvexPolytopeShape` (part of question 8) are in
 [havok-objects.md](havok-objects.md). The body array (question 7: each
 body's shape link and stored placement, Body ID below the body count) and
-the simple shapes are in [havok-bodies.md](havok-bodies.md).
+the simple shapes are in [havok-bodies.md](havok-bodies.md). Placing the
+decoded shapes in world space for a cell (question 8: units and the frame
+relative to the Target node) is registered as pending rules in
+[collision-placement.md](collision-placement.md).
 
 1. Is the 64-byte block at 0 a fixed file header? Its nonzero words (at 0,
    4, 12, 16, 20, 24, 36 and 60) are constant over the whole corpus, so the

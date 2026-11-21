@@ -102,7 +102,9 @@ no pass threshold.
 
 `fo4-unpack` reports on an installation without rendering: `inventory`,
 `resolve`, `sweep` (archives, records, models, materials, textures, cells,
-bases, collision, havok) and `check-cell`. Reports are JSON lines with source
+bases, collision, havok), `check-cell` and `cell-collision` (the collision of
+one cell placed in world space under the registered placement rules,
+[collision placement](spec/collision-placement.md)). Reports are JSON lines with source
 offsets ([scene and report contracts](spec/scene.md)); the collision and Havok
 censuses also write a TSV of counts ([collision blocks](spec/collision.md),
 [Havok container](spec/havok-container.md), [Havok objects](spec/havok-objects.md),
@@ -133,7 +135,7 @@ consulted, with one attributed exception described in
 | `fo4-plugin` | Plugin records, load order, strings, typed fields. |
 | `fo4-nif`, `fo4-material`, `fo4-texture` | Model, material and texture readers. |
 | `fo4-havok` | Container and object spans of the Havok collision payload; bodies (shape link and placement); convex, sphere, capsule, scaled and compound shapes. |
-| `fo4-scene` | Scene assembly and rule levels. |
+| `fo4-scene` | Scene assembly, rule levels and the collision of a cell. |
 | `fo4-render` | CPU renderer and image comparison. |
 | `fo4-unpack` | Command-line tool and the `render` example. |
 

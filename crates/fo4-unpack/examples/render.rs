@@ -12,7 +12,7 @@ use std::path::Path;
 type AnyResult<T> = Result<T, Box<dyn std::error::Error>>;
 fn run() -> AnyResult<()> {
     let args: Vec<_> = std::env::args().skip(1).collect();
-    const USAGE: &str = "usage: render MANIFEST DATA_DIRECTORY CELL_EDITOR_ID build/OUTPUT [--strict|--measured|--under-hypotheses] [--eye X,Y,Z --look X,Y,Z] [--instance-ids]";
+    const USAGE: &str = "usage: render MANIFEST DATA_DIRECTORY CELL_EDITOR_ID build/OUTPUT [--strict|--measured|--under-hypotheses] [--eye X,Y,Z --look X,Y,Z] [--instance-ids] [--collision-overlay]";
     if args.len() < 4 {
         return Err(USAGE.into());
     }
@@ -21,11 +21,13 @@ fn run() -> AnyResult<()> {
     let mut eye = None;
     let mut look = None;
     let mut instance_ids = false;
+    let mut collision_overlay = false;
     let mut rest = args[4..].iter();
     while let Some(arg) = rest.next() {
         match arg.as_str() {
             "--strict" | "--measured" | "--under-hypotheses" => level_name = arg,
             "--instance-ids" => instance_ids = true,
+            "--collision-overlay" => collision_overlay = true,
             "--eye" | "--look" => {
                 let point = point(rest.next().ok_or(USAGE)?)?;
                 *(if arg == "--eye" { &mut eye } else { &mut look }) = Some(point);
@@ -124,7 +126,7 @@ fn run() -> AnyResult<()> {
             )
         }
     };
-    let frame = fo4_render::render(
+    let mut frame = fo4_render::render(
         &built.list,
         &camera,
         fo4_render::RenderOptions::REFERENCE,
@@ -137,12 +139,110 @@ fn run() -> AnyResult<()> {
         // Row-major u32 little-endian per pixel; u32::MAX is background.
         files::output_bytes(&out.join("instances.bin"), &frame.instance_bytes(&budget)?)?;
     }
-    files::json(
-        &out.join("summary.json"),
-        &serde_json::json!({"camera":camera,"camera_kind":camera_kind,"cell":scene.cell.key,"instances":built.instances,"omitted":built.omitted,"statistics":frame.statistics,"hypothesis_policy":level_name,"renderer":"CPU unlit diffuse, no runtime controllers or lighting","memory":budget.measurements()}),
-    )?;
+    let mut overlay = None;
+    if collision_overlay {
+        // Diagnostic only: frame.png above is already written, unchanged.
+        let options = fo4_scene::collision::Options {
+            level: policy,
+            body_placement: None,
+        };
+        let c = fo4_scene::collision::cell(&scene, &loader, limits, options, &budget)?;
+        let drawn = draw_collision(&mut frame, &camera, &c)?;
+        files::output_bytes(&out.join("collision.png"), &frame.png(&budget)?)?;
+        overlay = Some(
+            serde_json::json!({"body_placement":c.body_placement,"instances":c.instances.len(),"edges_drawn":drawn,"unplaced":c.unplaced.len(),"file":"collision.png"}),
+        );
+    }
+    let mut summary = serde_json::json!({"camera":camera,"camera_kind":camera_kind,"cell":scene.cell.key,"instances":built.instances,"omitted":built.omitted,"statistics":frame.statistics,"hypothesis_policy":level_name,"renderer":"CPU unlit diffuse, no runtime controllers or lighting","memory":budget.measurements()});
+    // The key is absent without the flag, so the summary stays as before.
+    if let (Some(o), Some(map)) = (overlay, summary.as_object_mut()) {
+        map.insert("collision_overlay".into(), o);
+    }
+    files::json(&out.join("summary.json"), &summary)?;
     println!("{}", out.join("frame.png").display());
     Ok(())
+}
+/// Wireframe of every placed collision instance over the frame: mesh
+/// triangle edges, crosses at polytope and convex vertices and sphere
+/// centres, capsule segments, in magenta, without depth test. Returns the
+/// number of segments drawn.
+fn draw_collision(
+    frame: &mut fo4_render::Frame,
+    camera: &Camera,
+    c: &fo4_scene::collision::CellCollision,
+) -> AnyResult<u64> {
+    use fo4_scene::collision::{BodyPlacement, WorldShape};
+    let v = c.body_placement.unwrap_or(BodyPlacement::Ignored);
+    let [w, h] = frame.size;
+    let near = camera.frustum[4];
+    let mut drawn = 0u64;
+    let mut segment = |frame: &mut fo4_render::Frame, a: [f64; 3], b: [f64; 3]| {
+        let project = |p: [f64; 3]| {
+            camera
+                .project_coordinates(camera.coordinates(p))
+                .filter(|q| q.forward >= near)
+        };
+        let (Some(pa), Some(pb)) = (project(a), project(b)) else {
+            return;
+        };
+        let [x0, y0] = pa.pixel;
+        let [x1, y1] = pb.pixel;
+        let steps = (x1 - x0).abs().max((y1 - y0).abs()).ceil().min(4096.0) as u32;
+        for k in 0..=steps {
+            let t = if steps == 0 {
+                0.0
+            } else {
+                f64::from(k) / f64::from(steps)
+            };
+            let (x, y) = (x0 + t * (x1 - x0), y0 + t * (y1 - y0));
+            if x >= 0.0 && y >= 0.0 && x < f64::from(w) && y < f64::from(h) {
+                let i = y as usize * w as usize + x as usize;
+                if let Some(px) = frame.color.get_mut(i) {
+                    *px = [1.0, 0.0, 1.0, 1.0];
+                }
+            }
+        }
+        drawn += 1;
+    };
+    let cross = |p: [f64; 3], r: f64| {
+        (0..3).map(move |k| {
+            let (mut a, mut b) = (p, p);
+            a[k] -= r;
+            b[k] += r;
+            (a, b)
+        })
+    };
+    let scratch = Budget::new(256 << 20);
+    for i in &c.instances {
+        match c.world_shape(i, v, &scratch)? {
+            WorldShape::Mesh {
+                vertices,
+                triangles,
+                ..
+            } => {
+                for t in &triangles {
+                    let p = t.map(|k| vertices.get(k as usize).copied().unwrap_or([f64::NAN; 3]));
+                    for (a, b) in [(0, 1), (1, 2), (2, 0)] {
+                        segment(frame, p[a], p[b]);
+                    }
+                }
+            }
+            WorldShape::Points { vertices, .. } => {
+                for p in vertices {
+                    for (a, b) in cross(p, 2.0) {
+                        segment(frame, a, b);
+                    }
+                }
+            }
+            WorldShape::Sphere { center, radius } => {
+                for (a, b) in cross(center, radius) {
+                    segment(frame, a, b);
+                }
+            }
+            WorldShape::Capsule { points, .. } => segment(frame, points[0], points[1]),
+        }
+    }
+    Ok(drawn)
 }
 fn point(text: &str) -> AnyResult<[f64; 3]> {
     let mut values = text.split(',').map(str::parse::<f64>);

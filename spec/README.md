@@ -15,6 +15,7 @@ Measurement datasets and photographs of the game are not distributed.
 | [havok-objects.md](havok-objects.md) | Object spans, per-class leading sizes and the convex polytope layout of the Havok collision payload, measured over one installation. |
 | [havok-bodies.md](havok-bodies.md) | Array element sizes, the body array of the top-level object (shape link and placement), Body ID against it, and the sphere, capsule, convex, scaled convex and compound shape layouts, measured over one installation. |
 | [havok-mesh.md](havok-mesh.md) | `hknpCompressedMeshShape` and its data object: array slots, sections, quantized section and shared vertices, byte 92, four-index primitives and their triangles, box trees, vertex records, units and triangles against render meshes, measured over one installation. |
+| [collision-placement.md](collision-placement.md) | Placing decoded collision in world space for a cell: the Target node chain, units, the open body placement rule with its two levels, the API, the `cell-collision` report and its first run. |
 | [havok-container-census.tsv](havok-container-census.tsv) | Counts, holds/fails of container, object, body, shape and compressed-mesh properties, class names and signatures from the Havok census. |
 | [controller-measurements.md](controller-measurements.md) | Measurement design for comparing stored NIF locals with paused runtime nodes. |
 | [dds.md](dds.md) | DDS headers, formats, surfaces, block layouts and supported decoding boundaries. |
@@ -74,3 +75,11 @@ the registry.
 | `nif_matrix_runtime_row_bridge_v1` | pending | Compare both storage orders for all 94 uniquely matched node locals in two pauses; retain raw words, 18 nonunique requests and independent changing nodes. Independent point/pose evidence is needed before changing the renderer. |
 | `nif_physics_system_blocks_player_v1` | pending | In one purpose-built interior, place a STAT whose model has a physics system and a STAT whose model has none; walk the player into each and record whether the player position stops at the surface or passes through. Repeat in a second launch. |
 | `nif_collision_body_id_selects_body_v1` | pending | In a model with several objects on one bhkPhysicsSystem, displace each body in the running game (hit or push it) and record which node's runtime transform follows; every Body ID must map to its own Target node. |
+| `havok_collision_units_69_99125_v1` | pending | Measured for one polytope box (top at 176 and 352 at reference scales 1 and 2, 70 excluded); repeat for compressed meshes, spheres, capsules and compounds. |
+| `havok_shape_in_target_frame_v1` | pending | Reference scale and rotation sense indicated for a polytope; rest an object on a model whose Target is a child node with its own transform. |
+| `havok_body_placement_ignored_v1` | pending | Default level. Measured for one polytope slab, indicated for meshes; rest objects on mesh and compound bodies with a stored placement and compare both levels. |
+| `havok_body_placement_applied_v1` | pending | Contradicted for one polytope slab; order w, x, y, z refuted. Same measurement as the ignored level. |
+| `havok_compound_instance_v1` | pending | Rest an object on a compound instance with a non-identity rotation; the transposed rotation must predict worse. |
+| `havok_scaled_convex_v1` | pending | Rest an object on a scaled convex with unequal scale or non-zero translation; the other order must predict worse. |
+| `havok_mesh_triangles_surface_v1` | pending | Contact heights along a non-planar quad from above and below; sidedness open (one plane of a two-plane mesh was passable from above). |
+| `havok_convex_radius_added_v1` | pending | Measured for one polytope slab (rests at 96.000, not 95.300; scales with the reference); repeat with other radii and scales. |

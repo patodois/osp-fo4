@@ -1962,6 +1962,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "fo4-havok"
+version = "0.1.0"
+dependencies = [
+ "fo4-core",
+ "serde",
+]
+
+[[package]]
 name = "fo4-material"
 version = "0.1.0"
 dependencies = [
@@ -2006,6 +2014,7 @@ name = "fo4-scene"
 version = "0.1.0"
 dependencies = [
  "fo4-core",
+ "fo4-havok",
  "fo4-material",
  "fo4-nif",
  "fo4-plugin",

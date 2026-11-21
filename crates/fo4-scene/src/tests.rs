@@ -50,11 +50,11 @@ fn nif(unknown: bool) -> Vec<u8> {
     }
     v
 }
-struct Fixture {
+pub(crate) struct Fixture {
     _temp: TestDir,
-    manifest: Manifest,
+    pub(crate) manifest: Manifest,
 }
-fn fixture(runtime: bool, unknown: bool) -> Fixture {
+pub(crate) fn fixture(runtime: bool, unknown: bool) -> Fixture {
     fixture_with_cell(runtime, unknown, &[])
 }
 fn fixture_with_cell(runtime: bool, unknown: bool, extra: &[u8]) -> Fixture {
@@ -181,11 +181,11 @@ fn reached_unknown_and_runtime_are_named_and_budgeted() {
         .is_err());
 }
 
-fn sized(v: &mut Vec<u8>, text: &[u8]) {
+pub(crate) fn sized(v: &mut Vec<u8>, text: &[u8]) {
     v.extend((text.len() as u32).to_le_bytes());
     v.extend(text);
 }
-fn nif_blocks(blocks: &[(&str, Vec<u8>)], strings: &[&[u8]]) -> Vec<u8> {
+pub(crate) fn nif_blocks(blocks: &[(&str, Vec<u8>)], strings: &[&[u8]]) -> Vec<u8> {
     let mut v = b"Gamebryo File Format, Version 20.2.0.7\n".to_vec();
     v.extend(0x14020007u32.to_le_bytes());
     v.push(1);

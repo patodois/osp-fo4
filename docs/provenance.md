@@ -64,6 +64,17 @@ and its rejected alternatives. No Havok SDK, header, documentation,
 converter, decompilation or third-party reader or schema of this format was
 opened or searched for.
 
+Placing that collision in world space for a cell
+([spec/collision-placement.md](../spec/collision-placement.md),
+`fo4_scene::collision`) adds no format fact: the unit factor, the Target node
+frame, the two levels of the body's stored placement, the compound and
+scaled convex links, the polytope radius and the use of mesh triangles are
+registered rules, pending, whose defaults follow a first live run of the
+owned game and the stored-byte censuses above. The offline comparison of
+collision and render boxes in the `cell-collision` report is evidence only.
+No Havok SDK, header, documentation, converter, decompilation or
+third-party reader or schema was opened or searched for.
+
 Runtime experiments measure an owned running copy through separately collected
 camera/transform words and repeated photographs. Their raw data stays local.
 Behavior not established by a format source is registered in

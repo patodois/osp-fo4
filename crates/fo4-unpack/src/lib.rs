@@ -4,6 +4,7 @@ mod assets;
 mod bases;
 mod causes;
 mod cell_census;
+mod cell_collision;
 mod check_cell;
 mod collision;
 mod families;
@@ -43,10 +44,14 @@ impl Options {
     pub fn parse(args: impl IntoIterator<Item = String>) -> Result<Self> {
         let mut args = args.into_iter();
         let command = args.next().ok_or_else(usage)?;
-        if command == "check-cell" {
+        if command == "check-cell" || command == "cell-collision" {
             let manifest = args.next().ok_or_else(usage)?.into();
             let path = Some(args.next().ok_or_else(usage)?);
-            let mut out = PathBuf::from("reports/check-cell");
+            let mut out = PathBuf::from(if command == "check-cell" {
+                "reports/check-cell"
+            } else {
+                "reports/cell-collision"
+            });
             let mut level = None;
             let mut overlay_plugin = None;
             let mut out_seen = false;
@@ -63,6 +68,9 @@ impl Options {
                         level = Some(fo4_scene::RuleLevel::Hypotheses)
                     }
                     "--strict" if level.is_none() => level = Some(fo4_scene::RuleLevel::Facts),
+                    "--measured" if level.is_none() && command == "cell-collision" => {
+                        level = Some(fo4_scene::RuleLevel::Measured)
+                    }
                     _ => return Err(usage()),
                 }
             }
@@ -156,7 +164,7 @@ impl Options {
     }
 }
 fn usage() -> Error {
-    Error::new("Usage","CLI",0,"inventory|resolve|sweep --manifest PROFILE.json --out DIR [--scope archives|records|nif|materials|textures|cells|bases|shader-citations|unread|paths|roots|collision|havok] [--all|--path ASSET] [--items]; check-cell PROFILE.json EditorID [--out DIR] [--strict|--under-hypotheses] [--overlay-plugin FILE]","invalid or missing argument")
+    Error::new("Usage","CLI",0,"inventory|resolve|sweep --manifest PROFILE.json --out DIR [--scope archives|records|nif|materials|textures|cells|bases|shader-citations|unread|paths|roots|collision|havok] [--all|--path ASSET] [--items]; check-cell PROFILE.json EditorID [--out DIR] [--strict|--under-hypotheses] [--overlay-plugin FILE]; cell-collision PROFILE.json EditorID [--out DIR] [--strict|--measured|--under-hypotheses] [--overlay-plugin FILE]","invalid or missing argument")
 }
 #[derive(Default, Serialize)]
 pub struct Summary {
@@ -179,6 +187,7 @@ pub struct Summary {
     pub unread: cell_census::Unread,
     pub collision: collision::Summary,
     pub havok: havok::Summary,
+    pub cell_collision: cell_collision::Summary,
     pub schema: u32,
     pub under_hypotheses: bool,
     /// The rule level the command applied, for the commands that classify readiness.
@@ -933,6 +942,13 @@ fn run_selected(o: &Options, keys: Option<&[fo4_plugin::FormKey]>) -> Result<u8>
         "inventory" => inventory(&m, &mut r),
         "resolve" => resolve(&m, o, &mut r),
         "check-cell" => check_cell::run(
+            &m,
+            o.path.as_deref().ok_or_else(usage)?,
+            &mut r,
+            o.level,
+            o.overlay_plugin.as_deref(),
+        ),
+        "cell-collision" => cell_collision::run(
             &m,
             o.path.as_deref().ok_or_else(usage)?,
             &mut r,

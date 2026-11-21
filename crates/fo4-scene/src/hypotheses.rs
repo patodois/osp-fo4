@@ -16,6 +16,16 @@ pub const SCALE: &str = "refr_absent_xscl_identity_v1";
 pub const REGISTRY: &str = include_str!("../../../spec/hypotheses.tsv");
 pub const MARKER: &str = "editor_marker_hidden_v1";
 pub const NAMED_MARKER: &str = "nif_editor_marker_named_hidden_v1";
+/// Collision placement (`crate::collision`, `spec/collision-placement.md`).
+pub const COLLISION_UNITS: &str = "havok_collision_units_69_99125_v1";
+pub const TARGET_FRAME: &str = "havok_shape_in_target_frame_v1";
+pub const BODY_ID: &str = "nif_collision_body_id_selects_body_v1";
+pub const BODY_PLACEMENT_IGNORED: &str = "havok_body_placement_ignored_v1";
+pub const BODY_PLACEMENT_APPLIED: &str = "havok_body_placement_applied_v1";
+pub const COMPOUND_INSTANCE: &str = "havok_compound_instance_v1";
+pub const SCALED_CONVEX: &str = "havok_scaled_convex_v1";
+pub const MESH_TRIANGLES: &str = "havok_mesh_triangles_surface_v1";
+pub const CONVEX_RADIUS: &str = "havok_convex_radius_added_v1";
 /// A rule's standing in `spec/hypotheses.tsv`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Status {
@@ -233,6 +243,15 @@ mod tests {
             SCALE,
             MARKER,
             NAMED_MARKER,
+            COLLISION_UNITS,
+            TARGET_FRAME,
+            BODY_ID,
+            BODY_PLACEMENT_IGNORED,
+            BODY_PLACEMENT_APPLIED,
+            COMPOUND_INSTANCE,
+            SCALED_CONVEX,
+            MESH_TRIANGLES,
+            CONVEX_RADIUS,
         ] {
             assert!(status(name).is_some(), "{name}");
         }
