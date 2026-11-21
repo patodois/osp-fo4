@@ -1,8 +1,10 @@
 #![forbid(unsafe_code)]
 //! Independent NIF 20.2.0.7 / user 12 / Bethesda 100 and 130 reader.
 mod blocks;
+mod collision;
 mod geometry;
 pub use blocks::{Data, Field, Value};
+pub use collision::{Collision, CollisionObject, Owner, System, SystemKind};
 use fo4_core::{add, limit, mul, range, Budget, Cursor, Error, Game, Limits, Result, SliceSource};
 pub use geometry::{Mesh, Vertex};
 use serde::Serialize;

@@ -732,3 +732,166 @@ fn bethesda_particle_envelopes_and_modifier_controllers_keep_runtime_data() {
         "LimitExceeded"
     );
 }
+
+fn collision_node(collision: i32) -> Vec<u8> {
+    let mut node = av();
+    let at = node.len() - 4;
+    node[at..].copy_from_slice(&collision.to_le_bytes());
+    u32s(&mut node, &[0]);
+    node
+}
+fn np_object(target: i32, flags: u16, data: i32, body: u32) -> Vec<u8> {
+    let mut v = target.to_le_bytes().to_vec();
+    v.extend(flags.to_le_bytes());
+    v.extend(data.to_le_bytes());
+    v.extend(body.to_le_bytes());
+    v
+}
+fn byte_array(payload: &[u8]) -> Vec<u8> {
+    let mut v = (payload.len() as u32).to_le_bytes().to_vec();
+    v.extend(payload);
+    v
+}
+#[test]
+fn collision_blocks_keep_fields_and_exact_payload_bytes() {
+    let payload: Vec<u8> = (0u8..=40).map(|i| i.wrapping_mul(37)).collect();
+    let bytes = nif(
+        130,
+        &[
+            ("BSFadeNode", collision_node(1)),
+            ("bhkNPCollisionObject", np_object(0, 0x80, 2, 7)),
+            ("bhkPhysicsSystem", byte_array(&payload)),
+            ("bhkRagdollSystem", byte_array(&[])),
+        ],
+    );
+    let n = parse(&bytes, 130, &Budget::new(1 << 20)).unwrap();
+    assert!(n.blocks.iter().all(|b| b.diagnostics.is_empty()));
+    assert!(n.blocks[1..].iter().all(|b| b.raw_tail.is_empty()));
+    let c = n.collision("synthetic.nif", &Budget::new(1 << 20)).unwrap();
+    assert_eq!(
+        c.objects,
+        [CollisionObject {
+            block: 1,
+            offset: n.blocks[1].data.start as u64,
+            target: 0,
+            flags: 0x80,
+            data: 2,
+            body_id: 7,
+        }]
+    );
+    assert_eq!(
+        c.owners,
+        [Owner {
+            block: 0,
+            field_offset: n.blocks[0].data.start as u64 + 68,
+            collision: 1,
+        }]
+    );
+    assert_eq!(c.systems.len(), 2);
+    let physics = c.system(2).unwrap();
+    assert_eq!(physics.kind, SystemKind::Physics);
+    assert_eq!(physics.payload, payload.as_slice());
+    assert_eq!(physics.size_offset, n.blocks[2].data.start as u64);
+    assert_eq!(physics.payload_offset, physics.size_offset + 4);
+    let at = physics.payload_offset as usize;
+    assert_eq!(&bytes[at..at + payload.len()], payload.as_slice());
+    assert_eq!(physics.tail, 0);
+    let ragdoll = c.system(3).unwrap();
+    assert_eq!(ragdoll.kind, SystemKind::Ragdoll);
+    assert!(ragdoll.payload.is_empty());
+    assert!(c.system(-1).is_none());
+}
+#[test]
+fn collision_trailing_bytes_stay_counted_not_absorbed() {
+    let mut system = byte_array(&[1, 2, 3]);
+    system.extend([9, 9]);
+    let mut object = np_object(-1, 0, -1, 0);
+    object.push(5);
+    let bytes = nif(
+        130,
+        &[
+            ("bhkNPCollisionObject", object),
+            ("bhkPhysicsSystem", system),
+        ],
+    );
+    let n = parse(&bytes, 130, &Budget::new(1 << 20)).unwrap();
+    assert_eq!(n.blocks[0].raw_tail.len(), 1);
+    assert_eq!(n.blocks[1].raw_tail.len(), 2);
+    let c = n.collision("synthetic.nif", &Budget::new(1 << 20)).unwrap();
+    assert_eq!(c.systems[0].payload, &[1, 2, 3]);
+    assert_eq!(c.systems[0].tail, 2);
+    assert_eq!(c.objects[0].target, -1);
+    assert_eq!(c.objects[0].data, -1);
+}
+#[test]
+fn collision_truncation_and_bad_links_are_named_errors() {
+    // Every truncation of either body: the block keeps its bound and a diagnostic.
+    for (ty, body) in [
+        ("bhkNPCollisionObject", np_object(-1, 0x80, -1, 0)),
+        ("bhkPhysicsSystem", byte_array(&[1, 2, 3, 4])),
+        ("bhkRagdollSystem", byte_array(&[5])),
+    ] {
+        for end in 0..body.len() {
+            let bytes = nif(130, &[(ty, body[..end].to_vec())]);
+            let n = parse(&bytes, 130, &Budget::new(1 << 20)).unwrap();
+            assert!(n.blocks[0].decoded.is_none(), "{ty} {end}");
+            let e = &n.blocks[0].diagnostics[0];
+            assert_eq!(e.code, "Truncated", "{ty} {end}");
+            let err = n
+                .collision("synthetic.nif", &Budget::new(1 << 20))
+                .unwrap_err();
+            assert_eq!(&err, e);
+        }
+    }
+    // Declared size larger than the block.
+    let mut lying = 100u32.to_le_bytes().to_vec();
+    lying.extend([0; 8]);
+    let bytes = nif(130, &[("bhkPhysicsSystem", lying)]);
+    let n = parse(&bytes, 130, &Budget::new(1 << 20)).unwrap();
+    let e = &n.blocks[0].diagnostics[0];
+    assert_eq!(e.code, "Truncated");
+    assert_eq!(e.source.offset, n.blocks[0].data.start as u64 + 4);
+    // Data must name a bhkSystem subclass.
+    let bytes = nif(
+        130,
+        &[
+            ("bhkNPCollisionObject", np_object(-1, 0, 1, 0)),
+            ("NiFloatExtraData", {
+                let mut v = Vec::new();
+                u32s(&mut v, &[0, 0]);
+                v
+            }),
+        ],
+    );
+    let n = parse(&bytes, 130, &Budget::new(1 << 20)).unwrap();
+    let e = n
+        .collision("synthetic.nif", &Budget::new(1 << 20))
+        .unwrap_err();
+    assert_eq!(e.code, "InvalidNifCollisionData");
+    assert_eq!(e.source.offset, n.blocks[0].data.start as u64 + 6);
+    assert_eq!(e.found, "NiFloatExtraData");
+    // Out-of-range links are rejected by the shared reference check.
+    let bytes = nif(130, &[("bhkNPCollisionObject", np_object(4, 0, -1, 0))]);
+    let n = parse(&bytes, 130, &Budget::new(1 << 20)).unwrap();
+    assert_eq!(n.blocks[0].diagnostics[0].code, "InvalidNifReference");
+}
+#[test]
+fn collision_layout_is_not_assumed_outside_the_fo4_stream() {
+    let bytes = nif(100, &[("bhkNPCollisionObject", np_object(-1, 0, -1, 0))]);
+    let n = parse(&bytes, 100, &Budget::new(1 << 20)).unwrap();
+    assert!(n.blocks[0].decoded.is_none());
+    assert!(n.blocks[0].diagnostics.is_empty());
+    let e = n
+        .collision("synthetic.nif", &Budget::new(1 << 20))
+        .unwrap_err();
+    assert_eq!(e.code, "UnsupportedNifCollisionProfile");
+}
+#[test]
+fn collision_payload_is_charged_to_no_extra_budget() {
+    let bytes = nif(130, &[("bhkPhysicsSystem", byte_array(&[0; 4096]))]);
+    let n = parse(&bytes, 130, &Budget::new(1 << 20)).unwrap();
+    let b = Budget::new(1 << 20);
+    let c = n.collision("synthetic.nif", &b).unwrap();
+    assert_eq!(c.systems[0].payload.len(), 4096);
+    assert!(b.used() < 4096, "payload is borrowed, not copied");
+}

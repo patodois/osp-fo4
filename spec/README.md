@@ -9,6 +9,8 @@ Measurement datasets and photographs of the game are not distributed.
 | [ba2.md](ba2.md) | BA2 headers, entry/chunk tables, version gates, codecs and DDS reconstruction. |
 | [bsa.md](bsa.md) | Bounded BSA headers, folders, filenames, compression and version limits. |
 | [citation-roots.md](citation-roots.md) | Which path roots are established for each citation type and which remain hypotheses. |
+| [collision.md](collision.md) | FO4 collision blocks, the census of their opaque Havok payloads and the open questions for a decoder. |
+| [collision-census.tsv](collision-census.tsv) | Counts and small stored header values from the collision census of one installation. |
 | [controller-measurements.md](controller-measurements.md) | Measurement design for comparing stored NIF locals with paused runtime nodes. |
 | [dds.md](dds.md) | DDS headers, formats, surfaces, block layouts and supported decoding boundaries. |
 | [helper-visibility.md](helper-visibility.md) | Narrow editor-helper classification and explicit diagnostic visibility variants. |
@@ -65,3 +67,5 @@ the registry.
 | `nif_editor_marker_named_hidden_v1` | supported | One mixed ordinary/helper model photographed and drawn with and without the named subtree: the photograph matches the drawing without it. |
 | `nif_visibility_editor_marker_hidden_v1` | supported | One measured interior with four placements of two shrub models: the helper boxes drawn from this mesh are absent in the photographs. |
 | `nif_matrix_runtime_row_bridge_v1` | pending | Compare both storage orders for all 94 uniquely matched node locals in two pauses; retain raw words, 18 nonunique requests and independent changing nodes. Independent point/pose evidence is needed before changing the renderer. |
+| `nif_physics_system_blocks_player_v1` | pending | In one purpose-built interior, place a STAT whose model has a physics system and a STAT whose model has none; walk the player into each and record whether the player position stops at the surface or passes through. Repeat in a second launch. |
+| `nif_collision_body_id_selects_body_v1` | pending | In a model with several objects on one bhkPhysicsSystem, displace each body in the running game (hit or push it) and record which node's runtime transform follows; every Body ID must map to its own Target node. |

@@ -5,6 +5,7 @@ mod bases;
 mod causes;
 mod cell_census;
 mod check_cell;
+mod collision;
 mod families;
 mod path_census;
 mod references;
@@ -130,6 +131,7 @@ impl Options {
                     "unread",
                     "paths",
                     "roots",
+                    "collision",
                 ]
                 .contains(&s)
             })
@@ -152,7 +154,7 @@ impl Options {
     }
 }
 fn usage() -> Error {
-    Error::new("Usage","CLI",0,"inventory|resolve|sweep --manifest PROFILE.json --out DIR [--scope archives|records|nif|materials|textures|cells|bases|shader-citations|unread|paths|roots] [--all|--path ASSET] [--items]; check-cell PROFILE.json EditorID [--out DIR] [--strict|--under-hypotheses] [--overlay-plugin FILE]","invalid or missing argument")
+    Error::new("Usage","CLI",0,"inventory|resolve|sweep --manifest PROFILE.json --out DIR [--scope archives|records|nif|materials|textures|cells|bases|shader-citations|unread|paths|roots|collision] [--all|--path ASSET] [--items]; check-cell PROFILE.json EditorID [--out DIR] [--strict|--under-hypotheses] [--overlay-plugin FILE]","invalid or missing argument")
 }
 #[derive(Default, Serialize)]
 pub struct Summary {
@@ -173,6 +175,7 @@ pub struct Summary {
     pub shader_citations: families::Summary,
     pub path_census: path_census::Summary,
     pub unread: cell_census::Unread,
+    pub collision: collision::Summary,
     pub schema: u32,
     pub under_hypotheses: bool,
     /// The rule level the command applied, for the commands that classify readiness.
@@ -503,6 +506,9 @@ fn publish_reports(
 
 struct Reports {
     items_enabled: bool,
+    /// Optional text report written beside summary.json (collision census).
+    tsv: Option<String>,
+    out: PathBuf,
     groups: BTreeMap<(String, String, Option<String>, bool), DiagnosticGroup>,
     output: OutputBudget,
     summary_file: BufWriter<File>,
@@ -538,6 +544,8 @@ impl Reports {
             |p| check_output_identity(p, &root),
         )?;
         Ok(Self {
+            tsv: None,
+            out: out.clone(),
             items_enabled: o.items,
             groups: BTreeMap::new(),
             output: OutputBudget {
@@ -775,6 +783,17 @@ impl Reports {
             &mut self.output,
             true,
         )?;
+        if let Some(text) = self.tsv.take() {
+            // The directory was created and identity-checked by publish_reports.
+            let path = self.out.join("collision.tsv");
+            let mut file = std::fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&path)
+                .map_err(|e| io_error("collision.tsv", 0, e))?;
+            file.write_all(text.as_bytes())
+                .map_err(|e| io_error("collision.tsv", 0, e))?;
+        }
         for (file, name) in [
             (&mut self.items, "items.jsonl"),
             (&mut self.diagnostics, "diagnostics.jsonl"),
@@ -921,6 +940,7 @@ fn run_selected(o: &Options, keys: Option<&[fo4_plugin::FormKey]>) -> Result<u8>
             Some("archives") => archives(&m, &mut r),
             Some("records") => records(&m, &mut r),
             Some("roots") => root_census::sweep(&m, &mut r),
+            Some("collision") => collision::sweep(&m, &mut r),
             Some("cells") => cell_census::cells(&m, &mut r),
             Some("bases") => bases::sweep(&m, &mut r, keys),
             Some("shader-citations") => families::sweep(&m, &mut r),

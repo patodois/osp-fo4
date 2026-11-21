@@ -1,0 +1,424 @@
+census	build	fallout4-1.10.163-owner-declared; BA2 headers all v1
+census	plugins	7
+census	mounts	62
+census	vfs_fingerprint	a4316448c0ec344da880b10b738f02355a4a929817db6892cfa1ca3566abc100
+# section	key	value
+total	nif_files	224368
+total	nif_read	224366
+total	nif_failed	2
+total	collision_view_failed	0
+total	files_with_bhkNPCollisionObject	85919
+total	files_with_bhkSystem	85919
+total	files_with_ragdoll_only	152
+total	files_without_collision	138447
+total	records_scanned	176065
+total	records_failed	0
+block_type.blocks	bhkNPCollisionObject	333526
+block_type.blocks	bhkPhysicsSystem	275154
+block_type.blocks	bhkRagdollSystem	188
+block_type.files	bhkNPCollisionObject	85919
+block_type.files	bhkPhysicsSystem	85767
+block_type.files	bhkRagdollSystem	188
+undecoded_type.blocks	BSClothExtraData	409
+undecoded_type.blocks	BSMasterParticleSystem	182
+undecoded_type.blocks	BSMultiBound	14
+undecoded_type.blocks	BSMultiBoundAABB	2
+undecoded_type.blocks	BSMultiBoundOBB	12
+undecoded_type.blocks	BSPSysInheritVelocityModifier	173
+undecoded_type.blocks	BSPSysLODModifier	1681
+undecoded_type.blocks	BSPSysRecycleBoundModifier	25
+undecoded_type.blocks	BSPSysScaleModifier	1597
+undecoded_type.blocks	BSPSysSimpleColorModifier	1680
+undecoded_type.blocks	BSPSysSubTexModifier	520
+undecoded_type.blocks	BSParentVelocityModifier	7
+undecoded_type.blocks	BSPositionData	449
+undecoded_type.blocks	BSSkin::BoneData	23368
+undecoded_type.blocks	BSSkin::Instance	23368
+undecoded_type.blocks	BSSkyShaderProperty	19
+undecoded_type.blocks	BSWaterShaderProperty	12
+undecoded_type.blocks	BSWindModifier	534
+undecoded_type.blocks	NiBlendBoolInterpolator	4413
+undecoded_type.blocks	NiCamera	306
+undecoded_type.blocks	NiExtraData	100
+undecoded_type.blocks	NiPSysAgeDeathModifier	1681
+undecoded_type.blocks	NiPSysBombModifier	221
+undecoded_type.blocks	NiPSysBoundUpdateModifier	1681
+undecoded_type.blocks	NiPSysBoxEmitter	746
+undecoded_type.blocks	NiPSysColliderManager	166
+undecoded_type.blocks	NiPSysCylinderEmitter	181
+undecoded_type.blocks	NiPSysData	1681
+undecoded_type.blocks	NiPSysDragModifier	3413
+undecoded_type.blocks	NiPSysGravityModifier	1383
+undecoded_type.blocks	NiPSysMeshEmitter	482
+undecoded_type.blocks	NiPSysPlanarCollider	361
+undecoded_type.blocks	NiPSysPositionModifier	1681
+undecoded_type.blocks	NiPSysRotationModifier	1031
+undecoded_type.blocks	NiPSysSpawnModifier	1681
+undecoded_type.blocks	NiPSysSphereEmitter	272
+undecoded_type.blocks	NiPSysSphericalCollider	16
+undecoded_type.blocks	NiPathInterpolator	25
+undecoded_type.blocks	NiPointLight	208
+objects_per_file	0	138447
+objects_per_file	1	44634
+objects_per_file	10-99	7790
+objects_per_file	100+	76
+objects_per_file	2	10875
+objects_per_file	3	4878
+objects_per_file	4	5331
+objects_per_file	5	3736
+objects_per_file	6	2895
+objects_per_file	7	2083
+objects_per_file	8	2576
+objects_per_file	9	1045
+systems_per_file	0	138447
+systems_per_file	1	54024
+systems_per_file	10-99	5871
+systems_per_file	100+	63
+systems_per_file	2	6891
+systems_per_file	3	4889
+systems_per_file	4	4202
+systems_per_file	5	3911
+systems_per_file	6	2316
+systems_per_file	7	1292
+systems_per_file	8	1565
+systems_per_file	9	895
+object.flags	0x0080	91134
+object.flags	0x0088	242392
+object.flag_bits	bit03	242392
+object.flag_bits	bit07	333526
+object.body_id	0	275342
+object.body_id	1	35503
+object.body_id	10	166
+object.body_id	11	144
+object.body_id	12	130
+object.body_id	13	112
+object.body_id	14	101
+object.body_id	15	89
+object.body_id	16	86
+object.body_id	17	72
+object.body_id	18	63
+object.body_id	19	61
+object.body_id	2	7220
+object.body_id	20	57
+object.body_id	21	55
+object.body_id	22	50
+object.body_id	23	46
+object.body_id	24	33
+object.body_id	25	32
+object.body_id	26	27
+object.body_id	27	21
+object.body_id	28	19
+object.body_id	29	19
+object.body_id	3	3479
+object.body_id	30	18
+object.body_id	31	16
+object.body_id	32	15
+object.body_id	33	15
+object.body_id	34	15
+object.body_id	35	15
+object.body_id	36	15
+object.body_id	37	15
+object.body_id	38	15
+object.body_id	39	14
+object.body_id	4	3180
+object.body_id	40	10
+object.body_id	41	10
+object.body_id	42	10
+object.body_id	43	10
+object.body_id	44	10
+object.body_id	45	10
+object.body_id	46	10
+object.body_id	47	10
+object.body_id	48	9
+object.body_id	49	8
+object.body_id	5	2831
+object.body_id	50	8
+object.body_id	51	8
+object.body_id	52	8
+object.body_id	53	8
+object.body_id	54	8
+object.body_id	55	8
+object.body_id	56	8
+object.body_id	57	7
+object.body_id	58	7
+object.body_id	59	6
+object.body_id	6	2496
+object.body_id	60	6
+object.body_id	61	6
+object.body_id	62	5
+object.body_id	64	5
+object.body_id	7	1022
+object.body_id	8	212
+object.body_id	9	177
+object.body_id	<other>	333
+object.data_type	bhkPhysicsSystem	331937
+object.data_type	bhkRagdollSystem	1589
+object.target_type	BSLeafAnimNode	160
+object.target_type	BSMultiBoundNode	2
+object.target_type	NiNode	333364
+object.target_relation	target_links_back	333526
+object.target_is_root	not_root	305882
+object.target_is_root	root	27644
+object.owners	1	333526
+owner.type	BSLeafAnimNode	160
+owner.type	BSMultiBoundNode	2
+owner.type	NiNode	333364
+owner.link_type	bhkNPCollisionObject	333526
+owner.agreement	object_target_is_owner	333526
+system.objects	bhkPhysicsSystem|1	239839
+system.objects	bhkPhysicsSystem|10-99	128
+system.objects	bhkPhysicsSystem|100+	3
+system.objects	bhkPhysicsSystem|2	28200
+system.objects	bhkPhysicsSystem|3	3709
+system.objects	bhkPhysicsSystem|4	287
+system.objects	bhkPhysicsSystem|5	346
+system.objects	bhkPhysicsSystem|6	334
+system.objects	bhkPhysicsSystem|7	1468
+system.objects	bhkPhysicsSystem|8	808
+system.objects	bhkPhysicsSystem|9	32
+system.objects	bhkRagdollSystem|10-99	46
+system.objects	bhkRagdollSystem|2	83
+system.objects	bhkRagdollSystem|3	32
+system.objects	bhkRagdollSystem|4	12
+system.objects	bhkRagdollSystem|5	3
+system.objects	bhkRagdollSystem|6	1
+system.objects	bhkRagdollSystem|7	6
+system.objects	bhkRagdollSystem|8	2
+system.objects	bhkRagdollSystem|9	3
+system.body_id	bhkPhysicsSystem|body_id_lt_objects_on_system	331937
+system.body_id	bhkRagdollSystem|body_id_lt_objects_on_system	1589
+payload.bhkPhysicsSystem.stats	count	275154
+payload.bhkPhysicsSystem.stats	bytes	2055999776
+payload.bhkPhysicsSystem.stats	min	928
+payload.bhkPhysicsSystem.stats	p10	1568
+payload.bhkPhysicsSystem.stats	median	2880
+payload.bhkPhysicsSystem.stats	p90	6624
+payload.bhkPhysicsSystem.stats	max	8536496
+payload.bhkPhysicsSystem.stats	empty	0
+payload.bhkPhysicsSystem.stats	distinct_sha256	53827
+payload.bhkPhysicsSystem.stats	shared_blocks	238217
+payload.bhkPhysicsSystem.stats	block_tail_nonzero	0
+payload.bhkPhysicsSystem.size	2^09..2^10	52
+payload.bhkPhysicsSystem.size	2^10..2^11	44138
+payload.bhkPhysicsSystem.size	2^11..2^12	130262
+payload.bhkPhysicsSystem.size	2^12..2^13	76200
+payload.bhkPhysicsSystem.size	2^13..2^14	13647
+payload.bhkPhysicsSystem.size	2^14..2^15	5685
+payload.bhkPhysicsSystem.size	2^15..2^16	1476
+payload.bhkPhysicsSystem.size	2^16..2^17	1703
+payload.bhkPhysicsSystem.size	2^17..2^18	1261
+payload.bhkPhysicsSystem.size	2^18..2^19	512
+payload.bhkPhysicsSystem.size	2^19..2^20	141
+payload.bhkPhysicsSystem.size	2^20..2^21	48
+payload.bhkPhysicsSystem.size	2^21..2^22	24
+payload.bhkPhysicsSystem.size	2^22..2^23	4
+payload.bhkPhysicsSystem.size	2^23..2^24	1
+payload.bhkPhysicsSystem.prefix4	57e0e057	275154
+payload.bhkPhysicsSystem.prefix16	57e0e05710c0c010000000000b000000 W..W............	275154
+payload.bhkPhysicsSystem.u32le	00	present=275154 distinct=1 top=57e0e057x275154
+payload.bhkPhysicsSystem.u32le	04	present=275154 distinct=1 top=10c0c010x275154
+payload.bhkPhysicsSystem.u32le	08	present=275154 distinct=1 top=00000000x275154
+payload.bhkPhysicsSystem.u32le	12	present=275154 distinct=1 top=0000000bx275154
+payload.bhkPhysicsSystem.u32le	16	present=275154 distinct=1 top=01000108x275154
+payload.bhkPhysicsSystem.u32le	20	present=275154 distinct=1 top=00000003x275154
+payload.bhkPhysicsSystem.u32le	24	present=275154 distinct=1 top=00000002x275154
+payload.bhkPhysicsSystem.u32le	28	present=275154 distinct=1 top=00000000x275154
+payload.bhkPhysicsSystem.u32le	32	present=275154 distinct=1 top=00000000x275154
+payload.bhkPhysicsSystem.u32le	36	present=275154 distinct=1 top=0000004bx275154
+payload.bhkPhysicsSystem.u32le	40	present=275154 distinct=1 top=325f6b68x275154
+payload.bhkPhysicsSystem.u32le	44	present=275154 distinct=1 top=2e343130x275154
+payload.bhkPhysicsSystem.u32le	48	present=275154 distinct=1 top=2d302e31x275154
+payload.bhkPhysicsSystem.u32le	52	present=275154 distinct=1 top=ff003172x275154
+payload.bhkPhysicsSystem.u32le	56	present=275154 distinct=1 top=00000000x275154
+payload.bhkPhysicsSystem.u32le	60	present=275154 distinct=1 top=00000015x275154
+payload.bhkPhysicsSystem.u32le	64	present=275154 distinct=1 top=6c635f5fx275154
+payload.bhkPhysicsSystem.u32le	68	present=275154 distinct=1 top=6e737361x275154
+payload.bhkPhysicsSystem.u32le	72	present=275154 distinct=1 top=73656d61x275154
+payload.bhkPhysicsSystem.u32le	76	present=275154 distinct=1 top=00005f5fx275154
+payload.bhkPhysicsSystem.u32le	80	present=275154 distinct=1 top=ff000000x275154
+payload.bhkPhysicsSystem.u32le	84	present=275154 distinct=1 top=00000100x275154
+payload.bhkPhysicsSystem.u32le	88	present=275154 distinct=20 top=000000e0x138755,00000120x94748,000000c0x25938,00000170x7018,00000100x6134,00000160x1224
+payload.bhkPhysicsSystem.u32le	92	present=275154 distinct=20 top=000000e0x138755,00000120x94748,000000c0x25938,00000170x7018,00000100x6134,00000160x1224
+payload.bhkPhysicsSystem.u32le	96	present=275154 distinct=20 top=000000e0x138755,00000120x94748,000000c0x25938,00000170x7018,00000100x6134,00000160x1224
+payload.bhkPhysicsSystem.u32le	100	present=275154 distinct=20 top=000000e0x138755,00000120x94748,000000c0x25938,00000170x7018,00000100x6134,00000160x1224
+payload.bhkPhysicsSystem.u32le	104	present=275154 distinct=20 top=000000e0x138755,00000120x94748,000000c0x25938,00000170x7018,00000100x6134,00000160x1224
+payload.bhkPhysicsSystem.u32le	108	present=275154 distinct=20 top=000000e0x138755,00000120x94748,000000c0x25938,00000170x7018,00000100x6134,00000160x1224
+payload.bhkPhysicsSystem.u32le	112	present=275154 distinct=1 top=ffffffffx275154
+payload.bhkPhysicsSystem.u32le	116	present=275154 distinct=1 top=ffffffffx275154
+payload.bhkPhysicsSystem.u32le	120	present=275154 distinct=1 top=ffffffffx275154
+payload.bhkPhysicsSystem.u32le	124	present=275154 distinct=1 top=ffffffffx275154
+payload.bhkPhysicsSystem.u32le	128	present=275154 distinct=1 top=79745f5fx275154
+payload.bhkPhysicsSystem.u32le	132	present=275154 distinct=1 top=5f736570x275154
+payload.bhkPhysicsSystem.u32le	136	present=275154 distinct=1 top=0000005fx275154
+payload.bhkPhysicsSystem.u32le	140	present=275154 distinct=1 top=00000000x275154
+payload.bhkPhysicsSystem.u32le	144	present=275154 distinct=1 top=ff000000x275154
+payload.bhkPhysicsSystem.u32le	148	present=275154 distinct=20 top=000001e0x138755,00000220x94748,000001c0x25938,00000270x7018,00000200x6134,00000260x1224
+payload.bhkPhysicsSystem.u32le	152	present=275154 distinct=1 top=00000000x275154
+payload.bhkPhysicsSystem.u32le	156	present=275154 distinct=1 top=00000000x275154
+payload.bhkPhysicsSystem.u32le	160	present=275154 distinct=1 top=00000000x275154
+payload.bhkPhysicsSystem.u32le	164	present=275154 distinct=1 top=00000000x275154
+payload.bhkPhysicsSystem.u32le	168	present=275154 distinct=1 top=00000000x275154
+payload.bhkPhysicsSystem.u32le	172	present=275154 distinct=1 top=00000000x275154
+payload.bhkPhysicsSystem.u32le	176	present=275154 distinct=1 top=ffffffffx275154
+payload.bhkPhysicsSystem.u32le	180	present=275154 distinct=1 top=ffffffffx275154
+payload.bhkPhysicsSystem.u32le	184	present=275154 distinct=1 top=ffffffffx275154
+payload.bhkPhysicsSystem.u32le	188	present=275154 distinct=1 top=ffffffffx275154
+payload.bhkPhysicsSystem.u32le	192	present=275154 distinct=1 top=61645f5fx275154
+payload.bhkPhysicsSystem.u32le	196	present=275154 distinct=1 top=5f5f6174x275154
+payload.bhkPhysicsSystem.u32le	200	present=275154 distinct=1 top=00000000x275154
+payload.bhkPhysicsSystem.u32le	204	present=275154 distinct=1 top=00000000x275154
+payload.bhkPhysicsSystem.u32le	208	present=275154 distinct=1 top=ff000000x275154
+payload.bhkPhysicsSystem.u32le	212	present=275154 distinct=20 top=000001e0x138755,00000220x94748,000001c0x25938,00000270x7018,00000200x6134,00000260x1224
+payload.bhkPhysicsSystem.u32le	216	present=275154 distinct=256+ top=00000390x16157,00000320x7836,00000500x5046,00000570x3252,000006a0x3167,00000760x2466
+payload.bhkPhysicsSystem.u32le	220	present=275154 distinct=256+ top=00000820x9670,00000340x7836,00000570x4967,00000720x3208,000005e0x3072,000008a0x2753
+payload.bhkPhysicsSystem.u32le	224	present=275154 distinct=256+ top=000014e0x25983,000003f0x16250,00000370x7842,000005b0x5126,00000780x3528,00000620x2653
+payload.bhkPhysicsSystem.u32le	228	present=275154 distinct=256+ top=00001520x26180,000008b0x23147,000003a0x7836,000005f0x4960,000007e0x3731,000008a0x2984
+payload.bhkPhysicsSystem.u32le	232	present=275154 distinct=256+ top=00001520x26180,000008b0x23147,000003a0x7836,000005f0x4960,000007e0x3731,000008a0x2984
+payload.bhkPhysicsSystem.u32le	236	present=275154 distinct=256+ top=00001520x26180,000008b0x23147,000003a0x7836,000005f0x4960,000007e0x3731,000008a0x2984
+payload.bhkPhysicsSystem.u32le	240	present=275154 distinct=1 top=ffffffffx275154
+payload.bhkPhysicsSystem.u32le	244	present=275154 distinct=1 top=ffffffffx275154
+payload.bhkPhysicsSystem.u32le	248	present=275154 distinct=1 top=ffffffffx275154
+payload.bhkPhysicsSystem.u32le	252	present=275154 distinct=1 top=ffffffffx275154
+payload.bhkPhysicsSystem.stats	common_prefix	88
+payload.bhkPhysicsSystem.word_pair_sum_is_length	148+228	275154
+payload.bhkPhysicsSystem.word_pair_sum_is_length	148+232	275154
+payload.bhkPhysicsSystem.word_pair_sum_is_length	148+236	275154
+payload.bhkPhysicsSystem.word_pair_sum_is_length	212+228	275154
+payload.bhkPhysicsSystem.word_pair_sum_is_length	212+232	275154
+payload.bhkPhysicsSystem.word_pair_sum_is_length	212+236	275154
+payload.bhkPhysicsSystem.run_in_half	__classnames__	payloads=275154 first_offset=64..64
+payload.bhkPhysicsSystem.run_in_half	__data__	payloads=275154 first_offset=192..192
+payload.bhkPhysicsSystem.run_in_half	__types__	payloads=275154 first_offset=128..128
+payload.bhkPhysicsSystem.run_in_half	hkClass	payloads=275154 first_offset=261..261
+payload.bhkPhysicsSystem.run_in_half	hkClassEnum	payloads=275154 first_offset=293..293
+payload.bhkPhysicsSystem.run_in_half	hkClassEnumItem	payloads=275154 first_offset=310..310
+payload.bhkPhysicsSystem.run_in_half	hkClassMember	payloads=275154 first_offset=274..274
+payload.bhkPhysicsSystem.run_in_half	hkRefCountedProperties	payloads=274272 first_offset=379..473
+payload.bhkPhysicsSystem.run_in_half	hk_2014.1.0-r1	payloads=275154 first_offset=40..40
+payload.bhkPhysicsSystem.run_in_half	hknpBSMaterialProperties	payloads=154809 first_offset=415..588
+payload.bhkPhysicsSystem.run_in_half	hknpCompressedMeshShape	payloads=154809 first_offset=358..559
+payload.bhkPhysicsSystem.run_in_half	hknpCompressedMeshShapeData	payloads=154809 first_offset=445..618
+payload.bhkPhysicsSystem.run_in_half	hknpConvexPolytopeShape	payloads=142160 first_offset=358..570
+payload.bhkPhysicsSystem.run_in_half	hknpPhysicsSystemData	payloads=275154 first_offset=331..331
+payload.bhkPhysicsSystem.run_in_half	hknpShapeMassProperties	payloads=142263 first_offset=407..599
+payload.bhkRagdollSystem.stats	count	188
+payload.bhkRagdollSystem.stats	bytes	2266672
+payload.bhkRagdollSystem.stats	min	2848
+payload.bhkRagdollSystem.stats	p10	3136
+payload.bhkRagdollSystem.stats	median	4096
+payload.bhkRagdollSystem.stats	p90	32400
+payload.bhkRagdollSystem.stats	max	102544
+payload.bhkRagdollSystem.stats	empty	0
+payload.bhkRagdollSystem.stats	distinct_sha256	167
+payload.bhkRagdollSystem.stats	shared_blocks	33
+payload.bhkRagdollSystem.stats	block_tail_nonzero	0
+payload.bhkRagdollSystem.size	2^11..2^12	83
+payload.bhkRagdollSystem.size	2^12..2^13	47
+payload.bhkRagdollSystem.size	2^13..2^14	13
+payload.bhkRagdollSystem.size	2^14..2^15	26
+payload.bhkRagdollSystem.size	2^15..2^16	15
+payload.bhkRagdollSystem.size	2^16..2^17	4
+payload.bhkRagdollSystem.prefix4	57e0e057	188
+payload.bhkRagdollSystem.prefix16	57e0e05710c0c010000000000b000000 W..W............	188
+payload.bhkRagdollSystem.u32le	00	present=188 distinct=1 top=57e0e057x188
+payload.bhkRagdollSystem.u32le	04	present=188 distinct=1 top=10c0c010x188
+payload.bhkRagdollSystem.u32le	08	present=188 distinct=1 top=00000000x188
+payload.bhkRagdollSystem.u32le	12	present=188 distinct=1 top=0000000bx188
+payload.bhkRagdollSystem.u32le	16	present=188 distinct=1 top=01000108x188
+payload.bhkRagdollSystem.u32le	20	present=188 distinct=1 top=00000003x188
+payload.bhkRagdollSystem.u32le	24	present=188 distinct=1 top=00000002x188
+payload.bhkRagdollSystem.u32le	28	present=188 distinct=1 top=00000000x188
+payload.bhkRagdollSystem.u32le	32	present=188 distinct=1 top=00000000x188
+payload.bhkRagdollSystem.u32le	36	present=188 distinct=1 top=0000004bx188
+payload.bhkRagdollSystem.u32le	40	present=188 distinct=1 top=325f6b68x188
+payload.bhkRagdollSystem.u32le	44	present=188 distinct=1 top=2e343130x188
+payload.bhkRagdollSystem.u32le	48	present=188 distinct=1 top=2d302e31x188
+payload.bhkRagdollSystem.u32le	52	present=188 distinct=1 top=ff003172x188
+payload.bhkRagdollSystem.u32le	56	present=188 distinct=1 top=00000000x188
+payload.bhkRagdollSystem.u32le	60	present=188 distinct=1 top=00000015x188
+payload.bhkRagdollSystem.u32le	64	present=188 distinct=1 top=6c635f5fx188
+payload.bhkRagdollSystem.u32le	68	present=188 distinct=1 top=6e737361x188
+payload.bhkRagdollSystem.u32le	72	present=188 distinct=1 top=73656d61x188
+payload.bhkRagdollSystem.u32le	76	present=188 distinct=1 top=00005f5fx188
+payload.bhkRagdollSystem.u32le	80	present=188 distinct=1 top=ff000000x188
+payload.bhkRagdollSystem.u32le	84	present=188 distinct=1 top=00000100x188
+payload.bhkRagdollSystem.u32le	88	present=188 distinct=13 top=000000c0x60,000000d0x32,000000f0x32,000000e0x20,00000100x11,00000150x10
+payload.bhkRagdollSystem.u32le	92	present=188 distinct=13 top=000000c0x60,000000d0x32,000000f0x32,000000e0x20,00000100x11,00000150x10
+payload.bhkRagdollSystem.u32le	96	present=188 distinct=13 top=000000c0x60,000000d0x32,000000f0x32,000000e0x20,00000100x11,00000150x10
+payload.bhkRagdollSystem.u32le	100	present=188 distinct=13 top=000000c0x60,000000d0x32,000000f0x32,000000e0x20,00000100x11,00000150x10
+payload.bhkRagdollSystem.u32le	104	present=188 distinct=13 top=000000c0x60,000000d0x32,000000f0x32,000000e0x20,00000100x11,00000150x10
+payload.bhkRagdollSystem.u32le	108	present=188 distinct=13 top=000000c0x60,000000d0x32,000000f0x32,000000e0x20,00000100x11,00000150x10
+payload.bhkRagdollSystem.u32le	112	present=188 distinct=1 top=ffffffffx188
+payload.bhkRagdollSystem.u32le	116	present=188 distinct=1 top=ffffffffx188
+payload.bhkRagdollSystem.u32le	120	present=188 distinct=1 top=ffffffffx188
+payload.bhkRagdollSystem.u32le	124	present=188 distinct=1 top=ffffffffx188
+payload.bhkRagdollSystem.u32le	128	present=188 distinct=1 top=79745f5fx188
+payload.bhkRagdollSystem.u32le	132	present=188 distinct=1 top=5f736570x188
+payload.bhkRagdollSystem.u32le	136	present=188 distinct=1 top=0000005fx188
+payload.bhkRagdollSystem.u32le	140	present=188 distinct=1 top=00000000x188
+payload.bhkRagdollSystem.u32le	144	present=188 distinct=1 top=ff000000x188
+payload.bhkRagdollSystem.u32le	148	present=188 distinct=13 top=000001c0x60,000001d0x32,000001f0x32,000001e0x20,00000200x11,00000250x10
+payload.bhkRagdollSystem.u32le	152	present=188 distinct=1 top=00000000x188
+payload.bhkRagdollSystem.u32le	156	present=188 distinct=1 top=00000000x188
+payload.bhkRagdollSystem.u32le	160	present=188 distinct=1 top=00000000x188
+payload.bhkRagdollSystem.u32le	164	present=188 distinct=1 top=00000000x188
+payload.bhkRagdollSystem.u32le	168	present=188 distinct=1 top=00000000x188
+payload.bhkRagdollSystem.u32le	172	present=188 distinct=1 top=00000000x188
+payload.bhkRagdollSystem.u32le	176	present=188 distinct=1 top=ffffffffx188
+payload.bhkRagdollSystem.u32le	180	present=188 distinct=1 top=ffffffffx188
+payload.bhkRagdollSystem.u32le	184	present=188 distinct=1 top=ffffffffx188
+payload.bhkRagdollSystem.u32le	188	present=188 distinct=1 top=ffffffffx188
+payload.bhkRagdollSystem.u32le	192	present=188 distinct=1 top=61645f5fx188
+payload.bhkRagdollSystem.u32le	196	present=188 distinct=1 top=5f5f6174x188
+payload.bhkRagdollSystem.u32le	200	present=188 distinct=1 top=00000000x188
+payload.bhkRagdollSystem.u32le	204	present=188 distinct=1 top=00000000x188
+payload.bhkRagdollSystem.u32le	208	present=188 distinct=1 top=ff000000x188
+payload.bhkRagdollSystem.u32le	212	present=188 distinct=13 top=000001c0x60,000001d0x32,000001f0x32,000001e0x20,00000200x11,00000250x10
+payload.bhkRagdollSystem.u32le	216	present=188 distinct=66 top=000009e0x46,00000970x22,00000e80x10,00000d00x9,000012b0x9,00000840x8
+payload.bhkRagdollSystem.u32le	220	present=188 distinct=66 top=00000a30x46,000009c0x22,00000ed0x10,00000d50x9,00001300x9,00000890x8
+payload.bhkRagdollSystem.u32le	224	present=188 distinct=64 top=00000aa0x46,00000a20x22,00000f70x10,00000de0x9,000013c0x9,000008f0x8
+payload.bhkRagdollSystem.u32le	228	present=188 distinct=65 top=00000af0x46,00000a70x22,00000fd0x10,00000e40x9,00001440x9,00000940x8
+payload.bhkRagdollSystem.u32le	232	present=188 distinct=65 top=00000af0x46,00000a70x22,00000fd0x10,00000e40x9,00001440x9,00000940x8
+payload.bhkRagdollSystem.u32le	236	present=188 distinct=65 top=00000af0x46,00000a70x22,00000fd0x10,00000e40x9,00001440x9,00000940x8
+payload.bhkRagdollSystem.u32le	240	present=188 distinct=1 top=ffffffffx188
+payload.bhkRagdollSystem.u32le	244	present=188 distinct=1 top=ffffffffx188
+payload.bhkRagdollSystem.u32le	248	present=188 distinct=1 top=ffffffffx188
+payload.bhkRagdollSystem.u32le	252	present=188 distinct=1 top=ffffffffx188
+payload.bhkRagdollSystem.stats	common_prefix	88
+payload.bhkRagdollSystem.word_pair_sum_is_length	148+228	188
+payload.bhkRagdollSystem.word_pair_sum_is_length	148+232	188
+payload.bhkRagdollSystem.word_pair_sum_is_length	148+236	188
+payload.bhkRagdollSystem.word_pair_sum_is_length	212+228	188
+payload.bhkRagdollSystem.word_pair_sum_is_length	212+232	188
+payload.bhkRagdollSystem.word_pair_sum_is_length	212+236	188
+payload.bhkRagdollSystem.run_in_half	__classnames__	payloads=188 first_offset=64..64
+payload.bhkRagdollSystem.run_in_half	__data__	payloads=188 first_offset=192..192
+payload.bhkRagdollSystem.run_in_half	__types__	payloads=188 first_offset=128..128
+payload.bhkRagdollSystem.run_in_half	hkClass	payloads=188 first_offset=261..261
+payload.bhkRagdollSystem.run_in_half	hkClassEnum	payloads=188 first_offset=293..293
+payload.bhkRagdollSystem.run_in_half	hkClassEnumItem	payloads=188 first_offset=310..310
+payload.bhkRagdollSystem.run_in_half	hkClassMember	payloads=188 first_offset=274..274
+payload.bhkRagdollSystem.run_in_half	hk_2014.1.0-r1	payloads=188 first_offset=40..40
+payload.bhkRagdollSystem.run_in_half	hkaSkeleton	payloads=188 first_offset=435..654
+payload.bhkRagdollSystem.run_in_half	hknpCapsuleShape	payloads=183 first_offset=352..502
+payload.bhkRagdollSystem.run_in_half	hknpRagdollData	payloads=188 first_offset=331..331
+payload.bhkRagdollSystem.run_in_half	hkpLimitedHingeConstraintData	payloads=117 first_offset=374..586
+payload.bhkRagdollSystem.run_in_half	hkpPositionConstraintMotor	payloads=188 first_offset=403..559
+payload.bhkRagdollSystem.run_in_half	hkpRagdollConstraintData	payloads=135 first_offset=373..548
+records	ACTI	records=2195 no_model=452 physics=1567 ragdoll_only=0 object_without_system=0 none=156 model_unresolved=0 model_absent=20 model_failed=0
+records	ALCH	records=352 no_model=29 physics=323 ragdoll_only=0 object_without_system=0 none=0 model_unresolved=0 model_absent=0 model_failed=0
+records	AMMO	records=106 no_model=6 physics=99 ragdoll_only=0 object_without_system=0 none=0 model_unresolved=0 model_absent=1 model_failed=0
+records	BOOK	records=470 no_model=0 physics=469 ragdoll_only=0 object_without_system=0 none=1 model_unresolved=0 model_absent=0 model_failed=0
+records	CONT	records=630 no_model=0 physics=464 ragdoll_only=0 object_without_system=0 none=165 model_unresolved=0 model_absent=1 model_failed=0
+records	DOOR	records=442 no_model=9 physics=424 ragdoll_only=0 object_without_system=0 none=7 model_unresolved=0 model_absent=2 model_failed=0
+records	FLOR	records=64 no_model=0 physics=63 ragdoll_only=0 object_without_system=0 none=1 model_unresolved=0 model_absent=0 model_failed=0
+records	FURN	records=782 no_model=0 physics=526 ragdoll_only=0 object_without_system=0 none=256 model_unresolved=0 model_absent=0 model_failed=0
+records	KEYM	records=246 no_model=0 physics=245 ragdoll_only=0 object_without_system=0 none=1 model_unresolved=0 model_absent=0 model_failed=0
+records	LIGH	records=1064 no_model=964 physics=39 ragdoll_only=0 object_without_system=0 none=56 model_unresolved=0 model_absent=5 model_failed=0
+records	MISC	records=3258 no_model=12 physics=3127 ragdoll_only=0 object_without_system=0 none=119 model_unresolved=0 model_absent=0 model_failed=0
+records	MSTT	records=1106 no_model=0 physics=802 ragdoll_only=0 object_without_system=0 none=293 model_unresolved=0 model_absent=11 model_failed=0
+records	NOTE	records=252 no_model=0 physics=252 ragdoll_only=0 object_without_system=0 none=0 model_unresolved=0 model_absent=0 model_failed=0
+records	SCOL	records=3509 no_model=1 physics=3295 ragdoll_only=0 object_without_system=0 none=80 model_unresolved=0 model_absent=133 model_failed=0
+records	STAT	records=23569 no_model=12 physics=19768 ragdoll_only=0 object_without_system=0 none=3642 model_unresolved=0 model_absent=146 model_failed=1
+records	TACT	records=74 no_model=0 physics=35 ragdoll_only=0 object_without_system=0 none=33 model_unresolved=0 model_absent=6 model_failed=0
+records	TERM	records=1069 no_model=43 physics=1025 ragdoll_only=0 object_without_system=0 none=1 model_unresolved=0 model_absent=0 model_failed=0

@@ -16,6 +16,13 @@ notice remains intact. No additional Material Editor implementation was consulte
 for this work. The bounds, diagnostics, borrowing, IEEE preservation and synthetic
 tests are local work.
 
+The Fallout 4 collision readers use only the nifxml definitions of
+`NiCollisionObject`, `bhkCOFlags`, `bhkNPCollisionObject`, `bhkSystem`,
+`bhkPhysicsSystem`, `bhkRagdollSystem` and `ByteArray` (same pinned copy as
+spec/nif.md). The embedded Havok payload is described only by counts measured
+over the installed game ([spec/collision.md](../spec/collision.md)); no Havok
+SDK, header, converter or other reader of that format was consulted.
+
 Runtime experiments measure an owned running copy through separately collected
 camera/transform words and repeated photographs. Their raw data stays local.
 Behavior not established by a format source is registered in

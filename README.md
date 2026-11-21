@@ -102,8 +102,9 @@ no pass threshold.
 
 `fo4-unpack` reports on an installation without rendering: `inventory`,
 `resolve`, `sweep` (archives, records, models, materials, textures, cells,
-bases) and `check-cell`. Reports are JSON lines with source offsets
-([scene and report contracts](spec/scene.md)).
+bases, collision) and `check-cell`. Reports are JSON lines with source offsets
+([scene and report contracts](spec/scene.md)); the collision census also writes
+a TSV of counts ([collision blocks](spec/collision.md)).
 
 ## How facts are established
 

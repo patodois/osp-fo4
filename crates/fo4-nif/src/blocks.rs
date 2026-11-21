@@ -243,6 +243,20 @@ pub(crate) fn read(
             Ok(Some(Data::Fields(r.fields)))
         }
         "NiTriShapeData" => geometry::legacy(r).map(|m| Some(Data::Mesh(m))),
+        // nifxml NiCollisionObject + bhkNPCollisionObject, versions #FO4# #F76#.
+        "bhkNPCollisionObject" if bs == 130 => {
+            r.link("Target")?;
+            r.u16("Flags")?;
+            r.link("Data")?;
+            r.u32("Body ID")?;
+            Ok(Some(Data::Fields(r.fields)))
+        }
+        // nifxml bhkSystem subclasses: one ByteArray. The bytes stay opaque.
+        "bhkPhysicsSystem" | "bhkRagdollSystem" if bs == 130 => {
+            let size = r.u32("Data Size")?;
+            r.raw("Binary Data", size as u64)?;
+            Ok(Some(Data::Fields(r.fields)))
+        }
         "BSPackedCombinedSharedGeomDataExtra" => {
             r.string("Name")?;
             let o = r.c.pos;

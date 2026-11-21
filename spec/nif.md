@@ -13,7 +13,7 @@ Elementos da especificação que sustentam os campos implementados:
 - `NiExtraData`, `NiStringExtraData`, `NiIntegerExtraData`, `NiFloatExtraData`, `NiBooleanExtraData`, arrays floats/integers/strings, `NiBinaryExtraData`, `NiTextKeyExtraData`, `BSXFlags`, `BSBound`, `BSInvMarker`, `BSBehaviorGraphExtraData`: os campos de cada definição; bytes não entendidos permanecem disponíveis.
 - `NiTimeController`, `NiInterpController`, `NiSingleInterpController`, subclasses de transform/alpha/visibilidade e controllers float/color de shader: links, flags, frequência/fase/start/stop, interpolator e controlled variable. Isso lê metadados; não executa animação.
 
-Só se aceitam perfis 20.2.0.7/user 12/BS 130 (FO4), 100 ou o legado 83 documentado no conjunto #SKY# (SSE), selecionados explicitamente pelo manifest. Tamanho/tabela/referência inválidos geram erro com offset. Falha dentro de um bloco preserva o bloco inteiro e seu diagnóstico sem perder a fronteira do próximo. Tipos desconhecidos, `bhk*`/`BSSkin*`/demais skin ficam crus pelo tamanho declarado e entram no histograma por tipo. Sobra de bloco conhecido também é crua/contada, sem certificação de interpretação completa. Geometria com data size zero tem arrays ausentes (`None`), não vértices inventados.
+Só se aceitam perfis 20.2.0.7/user 12/BS 130 (FO4), 100 ou o legado 83 documentado no conjunto #SKY# (SSE), selecionados explicitamente pelo manifest. Tamanho/tabela/referência inválidos geram erro com offset. Falha dentro de um bloco preserva o bloco inteiro e seu diagnóstico sem perder a fronteira do próximo. Tipos desconhecidos, os demais `bhk*`, `BSSkin*` e demais skin ficam crus pelo tamanho declarado e entram no histograma por tipo. No perfil FO4 (BS 130), `bhkNPCollisionObject`, `bhkPhysicsSystem` e `bhkRagdollSystem` têm leitor tipado; o ByteArray embutido fica opaco e byte-exato: ver [collision.md](collision.md). Sobra de bloco conhecido também é crua/contada, sem certificação de interpretação completa. Geometria com data size zero tem arrays ausentes (`None`), não vértices inventados.
 
 Aritmética e alocações seguem os limites compartilhados; dados emprestados apontam aos bytes do único asset solicitado. Nunca se carrega um archive inteiro. A conversão half é própria, IEEE 754 binary16, com zeros/subnormais/inf/NaN; posições e demais valores não finitos são preservados, e floats opacos de propriedades conservam seus bits.
 
@@ -107,3 +107,10 @@ validação do leitor também lê o envelope NiParticleSystem BS100/130 e os doi
 Emitter/ModifierActive conforme a mesma fonte, preservando os links e flags.
 A mudança de herança Bethesda é explícita; nenhuma simulação ou pose de partículas
 é produzida.
+
+## Colisão FO4 (leitor tipado)
+
+`bhkNPCollisionObject` (Target Ptr, Flags u16, Data Ref, Body ID u32) e os dois
+`bhkSystem` (ByteArray: Data Size u32 + bytes) são lidos só no perfil BS 130,
+conforme o mesmo nif.xml. Os bytes do ByteArray não são interpretados. Fatos,
+medidas e perguntas abertas em [collision.md](collision.md).

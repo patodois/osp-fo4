@@ -169,3 +169,5 @@ NiUVController	state	https://raw.githubusercontent.com/niftools/nifxml/develop/n
 NiVisController	state	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Controle/interpolacao/chaves de animacao; continua bloqueando, sem amostrar tempo.	NiTimeController26
 bhkBlendController	outside	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Payload de colisao/fisica ou volume limite sem geometria drawable; nao executar fisica/culling.	NiTimeController26
 bhkNPCollisionObject	outside	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Payload de colisao/fisica ou volume limite sem geometria drawable; nao executar fisica/culling.	
+bhkPhysicsSystem	outside	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Payload de colisao/fisica ou volume limite sem geometria drawable; nao executar fisica/culling.	
+bhkRagdollSystem	outside	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Payload de colisao/fisica ou volume limite sem geometria drawable; nao executar fisica/culling.	
