@@ -306,7 +306,9 @@ stays **[hypothesis `nif_collision_body_id_selects_body_v1`]**; the three
 exceptions show that a system can store more entries than it has objects.
 How many objects of each class a payload holds against k is in the
 `count_eq_system_objects` field of the `class` rows; no class count equals k
-in every payload.
+in every payload. The group at 64 is an array of 96-byte elements that each
+link to a shape object; every Body ID is below its length
+([havok-bodies.md](havok-bodies.md)).
 
 ## Status of the open questions of collision.md
 

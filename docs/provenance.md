@@ -40,6 +40,15 @@ of the installation, and only those that held on every payload or object are
 enforced. No Havok source of any kind was opened or searched for at this step
 either.
 
+The array element sizes, the body array of the top-level object and the
+sphere, capsule, convex, scaled convex and compound shape views
+([spec/havok-bodies.md](../spec/havok-bodies.md)) were established the same
+way, by counting candidate rules and internal consistency checks (unit norm,
+orthonormal rows, points inside the vertex box) over every stored payload.
+Names such as body, rotation, radius and scale are labels for stored values;
+their runtime meaning stays a hypothesis. No Havok SDK, header, documentation,
+converter, decompilation or third-party reader was opened or searched for.
+
 Runtime experiments measure an owned running copy through separately collected
 camera/transform words and repeated photographs. Their raw data stays local.
 Behavior not established by a format source is registered in

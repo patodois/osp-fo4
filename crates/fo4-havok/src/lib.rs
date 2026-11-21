@@ -9,17 +9,33 @@
 //! entries and reads the three tables at the end of the data section. Each
 //! object owns the bytes up to the next object (`spec/havok-objects.md`), and
 //! every first-table pointer stays inside the object that holds its source.
-//! The only object decoded is [`ConvexPolytope`]. A payload outside the
-//! measured profile is a named error carrying the file offset; nothing here
-//! panics.
+//! Typed object views: [`ConvexPolytope`], the top-level [`PhysicsSystem`]
+//! with its bodies (shape link and placement), and the simple shapes
+//! [`Sphere`], [`Capsule`], [`ConvexShape`], [`ScaledConvex`] and
+//! [`Compound`] (`spec/havok-bodies.md`). A payload outside the measured
+//! profile is a named error carrying the file offset; nothing here panics.
 use fo4_core::{Budget, Error, Result};
 use serde::Serialize;
 
+mod bodies;
 mod objects;
+mod shapes;
+mod view;
+pub use bodies::{
+    Body, PhysicsSystem, BODY, PHYSICS_SYSTEM, RAGDOLL, RAGDOLL_ARRAY, SYSTEM_ARRAYS,
+    UNIT_TOLERANCE,
+};
 pub use objects::{
     ConvexPolytope, Face, ObjectSpan, CONVEX_POLYTOPE, CONVEX_POLYTOPE_FIXED, MAX_VERTEX_ROWS,
     VERTEX_TAG,
 };
+pub use shapes::{
+    orthonormal_error, segment_distance, Capsule, Compound, ConvexShape, Instance, ScaledConvex,
+    Sphere, CAPSULE, CAPSULE_PAIRS, CAPSULE_SPAN, COMPOUND_FIXED, CONVEX, DYNAMIC_COMPOUND,
+    INSTANCE, ORTHONORMAL_TOLERANCE, SCALED_CONVEX, SCALED_CONVEX_SPAN, SPHERE, SPHERE_SPAN,
+    STATIC_COMPOUND,
+};
+pub use view::{Array, ARRAY_FLAG};
 
 /// Bytes before the first section record.
 pub const HEADER_LEN: usize = 64;

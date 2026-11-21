@@ -67,7 +67,8 @@ the storage of its arrays, and that the slot at a source (8 zero bytes, then n
 and `0x80000000 | n`) is an array header with n elements, is
 **[hypothesis]**: it fits every pointer, but the census measures no element
 size. The rule in the second-to-last row ties the unsorted first table (see
-havok-container.md) to that one class.
+havok-container.md) to that one class. Element sizes per slot are measured in
+[havok-bodies.md](havok-bodies.md).
 
 ### Per class
 
@@ -199,11 +200,12 @@ reader for this class.
 | --- | --- |
 | Object extents (question 5 of collision.md) | Each object owns the bytes up to the next object; pointers stay in their object **[measured 275,342]**, enforced |
 | Leading size per class | One per class for the 11 classes with destinations **[measured]**; record size **[hypothesis]** |
-| Array headers at pointer sources | n and `0x80000000 | n` at every source **[measured 275,342]**; element sizes **[open]** |
+| Array headers at pointer sources | n and `0x80000000 | n` at every source **[measured 275,342]**; element sizes in [havok-bodies.md](havok-bodies.md) |
 | Convex polytope vertices (question 8) | Layout, count and padding enforced **[measured 218,459]**; units and the space they are in relative to the Target node **[open]** |
 | Convex polytope planes and faces | Consistent on 218,451 of 218,459 objects; **[hypothesis]**, not enforced |
 | Bytes 16 to 27 of a polytope, fourth face byte | **[open]** |
-| Other shape classes, materials, compressed meshes | Untouched **[open]** |
+| Other shape classes | Sphere, capsule, convex, scaled convex and compound shapes in [havok-bodies.md](havok-bodies.md) |
+| Materials, compressed meshes | Untouched **[open]** |
 
 ## Reader errors
 

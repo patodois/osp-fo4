@@ -154,7 +154,13 @@ havok.bhkPhysicsSystem.object_lead	hkpStiffSpringConstraintData|none	2
 havok.bhkPhysicsSystem.object_check	hkRefCountedProperties|destinations_follow_source_order	holds=386390 fails=0
 havok.bhkPhysicsSystem.object_check	hknpBSMaterialProperties|destinations_follow_source_order	holds=167916 fails=0
 havok.bhkPhysicsSystem.object_check	hknpBreakableConstraintData|destinations_follow_source_order	holds=8 fails=0
+havok.bhkPhysicsSystem.object_check	hknpCapsuleShape|bytes_0_to_16_zero	holds=2895 fails=0
+havok.bhkPhysicsSystem.object_check	hknpCapsuleShape|bytes_28_to_48_zero	holds=2895 fails=0
+havok.bhkPhysicsSystem.object_check	hknpCapsuleShape|bytes_52_to_64_zero	holds=2895 fails=0
+havok.bhkPhysicsSystem.object_check	hknpCapsuleShape|bytes_76_to_80_zero	holds=2895 fails=0
 havok.bhkPhysicsSystem.object_check	hknpCapsuleShape|destinations_follow_source_order	holds=2895 fails=0
+havok.bhkPhysicsSystem.object_check	hknpCapsuleShape|vertex_coordinates_two_values_per_axis	holds=1657 fails=1238
+havok.bhkPhysicsSystem.object_check	hknpCapsuleShape|vertices_within_0.02_radius_of_segment	holds=2895 fails=0
 havok.bhkPhysicsSystem.object_check	hknpCompressedMeshShapeData|destinations_follow_source_order	holds=0 fails=167916
 havok.bhkPhysicsSystem.object_check	hknpCompressedMeshShape|destinations_follow_source_order	holds=167916 fails=0
 havok.bhkPhysicsSystem.object_check	hknpConvexPolytopeShape|bytes_0_to_16_zero	holds=218364 fails=0
@@ -178,12 +184,60 @@ havok.bhkPhysicsSystem.object_check	hknpConvexShape|vertex_pair_at_48_points_to_
 havok.bhkPhysicsSystem.object_check	hknpConvexShape|vertex_rows_tagged_3f0000_and_index	holds=110 fails=0
 havok.bhkPhysicsSystem.object_check	hknpDynamicCompoundShapeData|destinations_follow_source_order	holds=8905 fails=0
 havok.bhkPhysicsSystem.object_check	hknpDynamicCompoundShape|destinations_follow_source_order	holds=8905 fails=0
+havok.bhkPhysicsSystem.object_check	hknpDynamicCompoundShape|instance_bytes_84_and_92_to_128_zero	holds=66439 fails=0
+havok.bhkPhysicsSystem.object_check	hknpDynamicCompoundShape|instance_f32_76_is_1	holds=66439 fails=0
+havok.bhkPhysicsSystem.object_check	hknpDynamicCompoundShape|instance_rotation_orthonormal_within_1e-5	holds=66439 fails=0
+havok.bhkPhysicsSystem.object_check	hknpDynamicCompoundShape|instance_scale_uniform	holds=66439 fails=0
+havok.bhkPhysicsSystem.object_check	hknpDynamicCompoundShape|instance_u32_88_is_ffffffff	holds=66439 fails=0
+havok.bhkPhysicsSystem.object_check	hknpDynamicCompoundShape|links_in_instances_equal_count	holds=8905 fails=0
+havok.bhkPhysicsSystem.object_check	hknpPhysicsSystemData|array_016_bytes_after_storage_zero_and_below_16	holds=275154 fails=0
+havok.bhkPhysicsSystem.object_check	hknpPhysicsSystemData|array_032_bytes_after_storage_zero_and_below_16	holds=10749 fails=0
+havok.bhkPhysicsSystem.object_check	hknpPhysicsSystemData|array_048_bytes_after_storage_zero_and_below_16	holds=5697 fails=0
+havok.bhkPhysicsSystem.object_check	hknpPhysicsSystemData|array_064_bytes_after_storage_zero_and_below_16	holds=275154 fails=0
+havok.bhkPhysicsSystem.object_check	hknpPhysicsSystemData|array_080_bytes_after_storage_zero_and_below_16	holds=244 fails=0
+havok.bhkPhysicsSystem.object_check	hknpPhysicsSystemData|array_096_bytes_after_storage_zero_and_below_16	holds=275154 fails=0
+havok.bhkPhysicsSystem.object_check	hknpPhysicsSystemData|body_bytes_16_17_ff_00	holds=331940 fails=0
+havok.bhkPhysicsSystem.object_check	hknpPhysicsSystemData|body_bytes_28_to_48_zero	holds=331940 fails=0
+havok.bhkPhysicsSystem.object_check	hknpPhysicsSystemData|body_bytes_80_to_96_zero	holds=331940 fails=0
+havok.bhkPhysicsSystem.object_check	hknpPhysicsSystemData|body_rotation_unit_within_1e-6	holds=331940 fails=0
+havok.bhkPhysicsSystem.object_check	hknpPhysicsSystemData|body_shape_is_a_shape_class	holds=275154 fails=0
+havok.bhkPhysicsSystem.object_check	hknpPhysicsSystemData|body_shapes_distinct	holds=275154 fails=0
+havok.bhkPhysicsSystem.object_check	hknpPhysicsSystemData|body_u16_18_is_index	holds=331940 fails=0
+havok.bhkPhysicsSystem.object_check	hknpPhysicsSystemData|body_u32_12_is_7fffffff_or_below_n48	holds=331940 fails=0
+havok.bhkPhysicsSystem.object_check	hknpPhysicsSystemData|body_u32_60_zero	holds=317328 fails=14612
+havok.bhkPhysicsSystem.object_check	hknpPhysicsSystemData|body_u32_8_is_7fffffff	holds=331940 fails=0
+havok.bhkPhysicsSystem.object_check	hknpPhysicsSystemData|bytes_0_to_16_zero	holds=275154 fails=0
+havok.bhkPhysicsSystem.object_check	hknpPhysicsSystemData|bytes_112_to_128_zero	holds=275154 fails=0
+havok.bhkPhysicsSystem.object_check	hknpPhysicsSystemData|constraint_bytes_16_to_24_zero	holds=833 fails=0
+havok.bhkPhysicsSystem.object_check	hknpPhysicsSystemData|constraint_u32_12_below_body_count_or_7fffffff	holds=833 fails=0
+havok.bhkPhysicsSystem.object_check	hknpPhysicsSystemData|constraint_u32_8_below_body_count	holds=833 fails=0
 havok.bhkPhysicsSystem.object_check	hknpPhysicsSystemData|destinations_follow_source_order	holds=275154 fails=0
+havok.bhkPhysicsSystem.object_check	hknpPhysicsSystemData|n32_is_0_or_body_count	holds=274928 fails=226
+havok.bhkPhysicsSystem.object_check	hknpPhysicsSystemData|n48_equals_n32	holds=266594 fails=8560
+havok.bhkPhysicsSystem.object_check	hknpScaledConvexShape|bytes_0_to_16_zero	holds=99438 fails=0
+havok.bhkPhysicsSystem.object_check	hknpScaledConvexShape|bytes_28_to_48_zero	holds=99438 fails=0
+havok.bhkPhysicsSystem.object_check	hknpScaledConvexShape|bytes_56_to_64_zero	holds=99438 fails=0
+havok.bhkPhysicsSystem.object_check	hknpScaledConvexShape|bytes_96_to_112_zero	holds=99438 fails=0
 havok.bhkPhysicsSystem.object_check	hknpScaledConvexShape|destinations_follow_source_order	holds=99438 fails=0
+havok.bhkPhysicsSystem.object_check	hknpScaledConvexShape|f32_20_equals_polytope_child_f32_20	holds=95585 fails=3781
+havok.bhkPhysicsSystem.object_check	hknpScaledConvexShape|f32_92_finite	holds=99438 fails=0
+havok.bhkPhysicsSystem.object_check	hknpScaledConvexShape|scale_uniform	holds=203 fails=99235
+havok.bhkPhysicsSystem.object_check	hknpScaledConvexShape|u32_76_high_24_bits_3f0000	holds=99438 fails=0
 havok.bhkPhysicsSystem.object_check	hknpShapeMassProperties|destinations_follow_source_order	holds=218474 fails=0
+havok.bhkPhysicsSystem.object_check	hknpSphereShape|bytes_0_to_16_zero	holds=189 fails=0
+havok.bhkPhysicsSystem.object_check	hknpSphereShape|bytes_28_to_48_zero	holds=189 fails=0
+havok.bhkPhysicsSystem.object_check	hknpSphereShape|bytes_52_to_64_zero	holds=189 fails=0
+havok.bhkPhysicsSystem.object_check	hknpSphereShape|center_zero	holds=176 fails=13
 havok.bhkPhysicsSystem.object_check	hknpSphereShape|destinations_follow_source_order	holds=189 fails=0
+havok.bhkPhysicsSystem.object_check	hknpSphereShape|radius_positive	holds=188 fails=1
 havok.bhkPhysicsSystem.object_check	hknpStaticCompoundShapeData|destinations_follow_source_order	holds=87314 fails=0
 havok.bhkPhysicsSystem.object_check	hknpStaticCompoundShape|destinations_follow_source_order	holds=87314 fails=0
+havok.bhkPhysicsSystem.object_check	hknpStaticCompoundShape|instance_bytes_84_and_92_to_128_zero	holds=87314 fails=0
+havok.bhkPhysicsSystem.object_check	hknpStaticCompoundShape|instance_f32_76_is_1	holds=87314 fails=0
+havok.bhkPhysicsSystem.object_check	hknpStaticCompoundShape|instance_rotation_orthonormal_within_1e-5	holds=87314 fails=0
+havok.bhkPhysicsSystem.object_check	hknpStaticCompoundShape|instance_scale_uniform	holds=87314 fails=0
+havok.bhkPhysicsSystem.object_check	hknpStaticCompoundShape|instance_u32_88_is_ffffffff	holds=87314 fails=0
+havok.bhkPhysicsSystem.object_check	hknpStaticCompoundShape|links_in_instances_equal_count	holds=87314 fails=0
 havok.bhkPhysicsSystem.object_check	hkpBallAndSocketConstraintData|destinations_follow_source_order	holds=284 fails=0
 havok.bhkPhysicsSystem.object_check	hkpHingeConstraintData|destinations_follow_source_order	holds=18 fails=0
 havok.bhkPhysicsSystem.object_check	hkpLimitedHingeConstraintData|destinations_follow_source_order	holds=235 fails=0
@@ -204,6 +258,129 @@ havok.bhkPhysicsSystem.convex_polytope_padding_rows	3	8993
 havok.bhkPhysicsSystem.max_per_object	convex_polytope_index_count	1462
 havok.bhkPhysicsSystem.max_per_object	convex_polytope_plane_rows	484
 havok.bhkPhysicsSystem.max_per_object	convex_polytope_vertex_rows	252
+havok.bhkPhysicsSystem.array_gap	hkRefCountedProperties|+000	arrays=386390 count_max=1 element_min=1 element_max=16 exact=386390
+havok.bhkPhysicsSystem.array_gap	hknpBSMaterialProperties|+016	arrays=167916 count_max=41 element_min=24 element_max=24 exact=20780
+havok.bhkPhysicsSystem.array_gap	hknpCompressedMeshShapeData|+016	arrays=167916 count_max=8447 element_min=5 element_max=5 exact=0
+havok.bhkPhysicsSystem.array_gap	hknpCompressedMeshShapeData|+080	arrays=167916 count_max=4224 element_min=96 element_max=96 exact=167916
+havok.bhkPhysicsSystem.array_gap	hknpCompressedMeshShapeData|+096	arrays=167916 count_max=324797 element_min=4 element_max=4 exact=27955
+havok.bhkPhysicsSystem.array_gap	hknpCompressedMeshShapeData|+112	arrays=26024 count_max=292038 element_min=2 element_max=2 exact=4079
+havok.bhkPhysicsSystem.array_gap	hknpCompressedMeshShapeData|+128	arrays=167360 count_max=258163 element_min=4 element_max=4 exact=91210
+havok.bhkPhysicsSystem.array_gap	hknpCompressedMeshShapeData|+144	arrays=26024 count_max=298140 element_min=8 element_max=8 exact=17708
+havok.bhkPhysicsSystem.array_gap	hknpCompressedMeshShapeData|+160	arrays=167916 count_max=80808 element_min=4 element_max=4 exact=8369
+havok.bhkPhysicsSystem.array_gap	hknpCompressedMeshShapeData|+184	arrays=167916 count_max=2 element_min=105 element_max=112 exact=167916
+havok.bhkPhysicsSystem.array_gap	hknpCompressedMeshShapeData|inside_storage	arrays=753882 count_max=253 element_min=4 element_max=4 exact=0
+havok.bhkPhysicsSystem.array_gap	hknpCompressedMeshShape|+104	arrays=167916 count_max=16894 element_min=4 element_max=4 exact=6916
+havok.bhkPhysicsSystem.array_gap	hknpCompressedMeshShape|+128	arrays=167916 count_max=33788 element_min=4 element_max=4 exact=11036
+havok.bhkPhysicsSystem.array_gap	hknpDynamicCompoundShapeData|+016	arrays=8905 count_max=241 element_min=32 element_max=32 exact=8905
+havok.bhkPhysicsSystem.array_gap	hknpDynamicCompoundShape|+096	arrays=8905 count_max=120 element_min=128 element_max=128 exact=8905
+havok.bhkPhysicsSystem.array_gap	hknpPhysicsSystemData|+016	arrays=275154 count_max=206 element_min=80 element_max=80 exact=275154
+havok.bhkPhysicsSystem.array_gap	hknpPhysicsSystemData|+032	arrays=10749 count_max=206 element_min=64 element_max=64 exact=10749
+havok.bhkPhysicsSystem.array_gap	hknpPhysicsSystemData|+048	arrays=5697 count_max=206 element_min=112 element_max=112 exact=5697
+havok.bhkPhysicsSystem.array_gap	hknpPhysicsSystemData|+064	arrays=275154 count_max=206 element_min=96 element_max=96 exact=275154
+havok.bhkPhysicsSystem.array_gap	hknpPhysicsSystemData|+080	arrays=244 count_max=39 element_min=24 element_max=24 exact=49
+havok.bhkPhysicsSystem.array_gap	hknpPhysicsSystemData|+096	arrays=275154 count_max=206 element_min=8 element_max=8 exact=29696
+havok.bhkPhysicsSystem.array_gap	hknpStaticCompoundShapeData|+016	arrays=87314 count_max=1 element_min=1 element_max=16 exact=87314
+havok.bhkPhysicsSystem.array_gap	hknpStaticCompoundShape|+096	arrays=87314 count_max=1 element_min=113 element_max=128 exact=87314
+havok.bhkPhysicsSystem.body_geometry	hknpPhysicsSystemData|hknpCapsuleShape|geometry	1030
+havok.bhkPhysicsSystem.body_geometry	hknpPhysicsSystemData|hknpCompressedMeshShape|no_geometry_below|hknpCompressedMeshShape	78703
+havok.bhkPhysicsSystem.body_geometry	hknpPhysicsSystemData|hknpConvexPolytopeShape|geometry	56294
+havok.bhkPhysicsSystem.body_geometry	hknpPhysicsSystemData|hknpConvexShape|geometry	102
+havok.bhkPhysicsSystem.body_geometry	hknpPhysicsSystemData|hknpDynamicCompoundShape|geometry	7952
+havok.bhkPhysicsSystem.body_geometry	hknpPhysicsSystemData|hknpDynamicCompoundShape|no_geometry_below|hknpCompressedMeshShape	953
+havok.bhkPhysicsSystem.body_geometry	hknpPhysicsSystemData|hknpScaledConvexShape|geometry	99438
+havok.bhkPhysicsSystem.body_geometry	hknpPhysicsSystemData|hknpSphereShape|geometry	154
+havok.bhkPhysicsSystem.body_geometry	hknpPhysicsSystemData|hknpStaticCompoundShape|no_geometry_below|hknpCompressedMeshShape	87314
+havok.bhkPhysicsSystem.body_shape	hknpPhysicsSystemData|hknpCapsuleShape	1030
+havok.bhkPhysicsSystem.body_shape	hknpPhysicsSystemData|hknpCompressedMeshShape	78703
+havok.bhkPhysicsSystem.body_shape	hknpPhysicsSystemData|hknpConvexPolytopeShape	56294
+havok.bhkPhysicsSystem.body_shape	hknpPhysicsSystemData|hknpConvexShape	102
+havok.bhkPhysicsSystem.body_shape	hknpPhysicsSystemData|hknpDynamicCompoundShape	8905
+havok.bhkPhysicsSystem.body_shape	hknpPhysicsSystemData|hknpScaledConvexShape	99438
+havok.bhkPhysicsSystem.body_shape	hknpPhysicsSystemData|hknpSphereShape	154
+havok.bhkPhysicsSystem.body_shape	hknpPhysicsSystemData|hknpStaticCompoundShape	87314
+havok.bhkPhysicsSystem.compound_child	hknpDynamicCompoundShape|hknpCapsuleShape	1794
+havok.bhkPhysicsSystem.compound_child	hknpDynamicCompoundShape|hknpCompressedMeshShape	1899
+havok.bhkPhysicsSystem.compound_child	hknpDynamicCompoundShape|hknpConvexPolytopeShape	62704
+havok.bhkPhysicsSystem.compound_child	hknpDynamicCompoundShape|hknpConvexShape	7
+havok.bhkPhysicsSystem.compound_child	hknpDynamicCompoundShape|hknpSphereShape	35
+havok.bhkPhysicsSystem.compound_child	hknpStaticCompoundShape|hknpCompressedMeshShape	87314
+havok.bhkPhysicsSystem.compound_instances	hknpDynamicCompoundShape|1	1
+havok.bhkPhysicsSystem.compound_instances	hknpDynamicCompoundShape|10	1787
+havok.bhkPhysicsSystem.compound_instances	hknpDynamicCompoundShape|105	1
+havok.bhkPhysicsSystem.compound_instances	hknpDynamicCompoundShape|11	91
+havok.bhkPhysicsSystem.compound_instances	hknpDynamicCompoundShape|116	1
+havok.bhkPhysicsSystem.compound_instances	hknpDynamicCompoundShape|12	294
+havok.bhkPhysicsSystem.compound_instances	hknpDynamicCompoundShape|120	2
+havok.bhkPhysicsSystem.compound_instances	hknpDynamicCompoundShape|13	167
+havok.bhkPhysicsSystem.compound_instances	hknpDynamicCompoundShape|14	20
+havok.bhkPhysicsSystem.compound_instances	hknpDynamicCompoundShape|15	872
+havok.bhkPhysicsSystem.compound_instances	hknpDynamicCompoundShape|16	17
+havok.bhkPhysicsSystem.compound_instances	hknpDynamicCompoundShape|17	110
+havok.bhkPhysicsSystem.compound_instances	hknpDynamicCompoundShape|18	32
+havok.bhkPhysicsSystem.compound_instances	hknpDynamicCompoundShape|19	30
+havok.bhkPhysicsSystem.compound_instances	hknpDynamicCompoundShape|2	2164
+havok.bhkPhysicsSystem.compound_instances	hknpDynamicCompoundShape|20	16
+havok.bhkPhysicsSystem.compound_instances	hknpDynamicCompoundShape|21	2
+havok.bhkPhysicsSystem.compound_instances	hknpDynamicCompoundShape|22	5
+havok.bhkPhysicsSystem.compound_instances	hknpDynamicCompoundShape|23	12
+havok.bhkPhysicsSystem.compound_instances	hknpDynamicCompoundShape|24	6
+havok.bhkPhysicsSystem.compound_instances	hknpDynamicCompoundShape|25	5
+havok.bhkPhysicsSystem.compound_instances	hknpDynamicCompoundShape|26	18
+havok.bhkPhysicsSystem.compound_instances	hknpDynamicCompoundShape|27	4
+havok.bhkPhysicsSystem.compound_instances	hknpDynamicCompoundShape|28	6
+havok.bhkPhysicsSystem.compound_instances	hknpDynamicCompoundShape|29	5
+havok.bhkPhysicsSystem.compound_instances	hknpDynamicCompoundShape|3	788
+havok.bhkPhysicsSystem.compound_instances	hknpDynamicCompoundShape|30	2
+havok.bhkPhysicsSystem.compound_instances	hknpDynamicCompoundShape|31	5
+havok.bhkPhysicsSystem.compound_instances	hknpDynamicCompoundShape|32	4
+havok.bhkPhysicsSystem.compound_instances	hknpDynamicCompoundShape|33	6
+havok.bhkPhysicsSystem.compound_instances	hknpDynamicCompoundShape|34	1
+havok.bhkPhysicsSystem.compound_instances	hknpDynamicCompoundShape|35	2
+havok.bhkPhysicsSystem.compound_instances	hknpDynamicCompoundShape|36	4
+havok.bhkPhysicsSystem.compound_instances	hknpDynamicCompoundShape|38	3
+havok.bhkPhysicsSystem.compound_instances	hknpDynamicCompoundShape|4	569
+havok.bhkPhysicsSystem.compound_instances	hknpDynamicCompoundShape|40	2
+havok.bhkPhysicsSystem.compound_instances	hknpDynamicCompoundShape|43	1
+havok.bhkPhysicsSystem.compound_instances	hknpDynamicCompoundShape|44	1
+havok.bhkPhysicsSystem.compound_instances	hknpDynamicCompoundShape|45	2
+havok.bhkPhysicsSystem.compound_instances	hknpDynamicCompoundShape|49	1
+havok.bhkPhysicsSystem.compound_instances	hknpDynamicCompoundShape|5	462
+havok.bhkPhysicsSystem.compound_instances	hknpDynamicCompoundShape|52	1
+havok.bhkPhysicsSystem.compound_instances	hknpDynamicCompoundShape|53	1
+havok.bhkPhysicsSystem.compound_instances	hknpDynamicCompoundShape|57	1
+havok.bhkPhysicsSystem.compound_instances	hknpDynamicCompoundShape|6	480
+havok.bhkPhysicsSystem.compound_instances	hknpDynamicCompoundShape|62	2
+havok.bhkPhysicsSystem.compound_instances	hknpDynamicCompoundShape|7	401
+havok.bhkPhysicsSystem.compound_instances	hknpDynamicCompoundShape|70	1
+havok.bhkPhysicsSystem.compound_instances	hknpDynamicCompoundShape|8	238
+havok.bhkPhysicsSystem.compound_instances	hknpDynamicCompoundShape|9	258
+havok.bhkPhysicsSystem.compound_instances	hknpDynamicCompoundShape|97	1
+havok.bhkPhysicsSystem.compound_instances	hknpStaticCompoundShape|1	87314
+havok.bhkPhysicsSystem.compound_link192	hknpDynamicCompoundShape|hknpDynamicCompoundShapeData	8905
+havok.bhkPhysicsSystem.compound_link192	hknpStaticCompoundShape|hknpStaticCompoundShapeData	87314
+havok.bhkPhysicsSystem.constraint_class	hknpPhysicsSystemData|hknpBreakableConstraintData	8
+havok.bhkPhysicsSystem.constraint_class	hknpPhysicsSystemData|hkpBallAndSocketConstraintData	284
+havok.bhkPhysicsSystem.constraint_class	hknpPhysicsSystemData|hkpHingeConstraintData	18
+havok.bhkPhysicsSystem.constraint_class	hknpPhysicsSystemData|hkpLimitedHingeConstraintData	230
+havok.bhkPhysicsSystem.constraint_class	hknpPhysicsSystemData|hkpPrismaticConstraintData	8
+havok.bhkPhysicsSystem.constraint_class	hknpPhysicsSystemData|hkpRagdollConstraintData	283
+havok.bhkPhysicsSystem.constraint_class	hknpPhysicsSystemData|hkpStiffSpringConstraintData	2
+havok.bhkPhysicsSystem.scaled_convex_child	hknpCapsuleShape	71
+havok.bhkPhysicsSystem.scaled_convex_child	hknpConvexPolytopeShape	99366
+havok.bhkPhysicsSystem.scaled_convex_child	hknpConvexShape	1
+havok.bhkPhysicsSystem.u16_16_18	hknpCapsuleShape|451|256	2895
+havok.bhkPhysicsSystem.u16_16_18	hknpScaledConvexShape|0|256	52
+havok.bhkPhysicsSystem.u16_16_18	hknpScaledConvexShape|256|256	99386
+havok.bhkPhysicsSystem.u16_16_18	hknpSphereShape|273|256	189
+havok.bhkPhysicsSystem.view	hknpCapsuleShape|read	2895
+havok.bhkPhysicsSystem.view	hknpConvexShape|read	110
+havok.bhkPhysicsSystem.view	hknpDynamicCompoundShape|read	8905
+havok.bhkPhysicsSystem.view	hknpPhysicsSystemData|read	275154
+havok.bhkPhysicsSystem.view	hknpScaledConvexShape|read	99438
+havok.bhkPhysicsSystem.view	hknpSphereShape|read	189
+havok.bhkPhysicsSystem.view	hknpStaticCompoundShape|read	87314
+havok.bhkPhysicsSystem.body_id_below_body_count	hknpPhysicsSystemData|objects	holds=331937 fails=0
+havok.bhkPhysicsSystem.body_id_below_body_count	hknpPhysicsSystemData|systems	holds=275154 fails=0
 havok.bhkPhysicsSystem.pointer_source_is_object	hkRefCountedProperties	386390
 havok.bhkPhysicsSystem.object_pointer_target	hkRefCountedProperties	386390
 havok.bhkPhysicsSystem.object_pointer_target	hknpBSMaterialProperties	167916
@@ -368,7 +545,13 @@ havok.bhkRagdollSystem.object_lead	hkpRagdollConstraintData|none	842
 havok.bhkRagdollSystem.object_check	hkRefCountedProperties|destinations_follow_source_order	holds=95 fails=0
 havok.bhkRagdollSystem.object_check	hkaSkeleton|destinations_follow_source_order	holds=188 fails=0
 havok.bhkRagdollSystem.object_check	hknpBreakableConstraintData|destinations_follow_source_order	holds=3 fails=0
+havok.bhkRagdollSystem.object_check	hknpCapsuleShape|bytes_0_to_16_zero	holds=1432 fails=0
+havok.bhkRagdollSystem.object_check	hknpCapsuleShape|bytes_28_to_48_zero	holds=1432 fails=0
+havok.bhkRagdollSystem.object_check	hknpCapsuleShape|bytes_52_to_64_zero	holds=1432 fails=0
+havok.bhkRagdollSystem.object_check	hknpCapsuleShape|bytes_76_to_80_zero	holds=1432 fails=0
 havok.bhkRagdollSystem.object_check	hknpCapsuleShape|destinations_follow_source_order	holds=1432 fails=0
+havok.bhkRagdollSystem.object_check	hknpCapsuleShape|vertex_coordinates_two_values_per_axis	holds=456 fails=976
+havok.bhkRagdollSystem.object_check	hknpCapsuleShape|vertices_within_0.02_radius_of_segment	holds=1432 fails=0
 havok.bhkRagdollSystem.object_check	hknpConvexPolytopeShape|bytes_0_to_16_zero	holds=95 fails=0
 havok.bhkRagdollSystem.object_check	hknpConvexPolytopeShape|bytes_28_to_48_zero	holds=95 fails=0
 havok.bhkRagdollSystem.object_check	hknpConvexPolytopeShape|bytes_52_to_64_zero	holds=95 fails=0
@@ -386,9 +569,45 @@ havok.bhkRagdollSystem.object_check	hknpConvexPolytopeShape|plane_normals_unit_w
 havok.bhkRagdollSystem.object_check	hknpConvexPolytopeShape|vertices_behind_face_planes_rel_1e-3	holds=95 fails=0
 havok.bhkRagdollSystem.object_check	hknpDynamicCompoundShapeData|destinations_follow_source_order	holds=13 fails=0
 havok.bhkRagdollSystem.object_check	hknpDynamicCompoundShape|destinations_follow_source_order	holds=13 fails=0
+havok.bhkRagdollSystem.object_check	hknpDynamicCompoundShape|instance_bytes_84_and_92_to_128_zero	holds=41 fails=0
+havok.bhkRagdollSystem.object_check	hknpDynamicCompoundShape|instance_f32_76_is_1	holds=41 fails=0
+havok.bhkRagdollSystem.object_check	hknpDynamicCompoundShape|instance_rotation_orthonormal_within_1e-5	holds=41 fails=0
+havok.bhkRagdollSystem.object_check	hknpDynamicCompoundShape|instance_scale_uniform	holds=41 fails=0
+havok.bhkRagdollSystem.object_check	hknpDynamicCompoundShape|instance_u32_88_is_ffffffff	holds=41 fails=0
+havok.bhkRagdollSystem.object_check	hknpDynamicCompoundShape|links_in_instances_equal_count	holds=13 fails=0
+havok.bhkRagdollSystem.object_check	hknpRagdollData|array_016_bytes_after_storage_zero_and_below_16	holds=188 fails=0
+havok.bhkRagdollSystem.object_check	hknpRagdollData|array_032_bytes_after_storage_zero_and_below_16	holds=188 fails=0
+havok.bhkRagdollSystem.object_check	hknpRagdollData|array_048_bytes_after_storage_zero_and_below_16	holds=188 fails=0
+havok.bhkRagdollSystem.object_check	hknpRagdollData|array_064_bytes_after_storage_zero_and_below_16	holds=188 fails=0
+havok.bhkRagdollSystem.object_check	hknpRagdollData|array_080_bytes_after_storage_zero_and_below_16	holds=188 fails=0
+havok.bhkRagdollSystem.object_check	hknpRagdollData|array_096_bytes_after_storage_zero_and_below_16	holds=188 fails=0
+havok.bhkRagdollSystem.object_check	hknpRagdollData|array_128_bytes_after_storage_zero_and_below_16	holds=188 fails=0
+havok.bhkRagdollSystem.object_check	hknpRagdollData|body_bytes_16_17_ff_00	holds=1589 fails=0
+havok.bhkRagdollSystem.object_check	hknpRagdollData|body_bytes_28_to_48_zero	holds=1589 fails=0
+havok.bhkRagdollSystem.object_check	hknpRagdollData|body_bytes_80_to_96_zero	holds=1589 fails=0
+havok.bhkRagdollSystem.object_check	hknpRagdollData|body_rotation_unit_within_1e-6	holds=1589 fails=0
+havok.bhkRagdollSystem.object_check	hknpRagdollData|body_shape_is_a_shape_class	holds=188 fails=0
+havok.bhkRagdollSystem.object_check	hknpRagdollData|body_shapes_distinct	holds=188 fails=0
+havok.bhkRagdollSystem.object_check	hknpRagdollData|body_u16_18_is_index	holds=471 fails=1118
+havok.bhkRagdollSystem.object_check	hknpRagdollData|body_u32_12_is_7fffffff_or_below_n48	holds=1589 fails=0
+havok.bhkRagdollSystem.object_check	hknpRagdollData|body_u32_60_zero	holds=1510 fails=79
+havok.bhkRagdollSystem.object_check	hknpRagdollData|body_u32_8_is_7fffffff	holds=1589 fails=0
+havok.bhkRagdollSystem.object_check	hknpRagdollData|bytes_0_to_16_zero	holds=188 fails=0
+havok.bhkRagdollSystem.object_check	hknpRagdollData|bytes_112_to_128_zero	holds=188 fails=0
+havok.bhkRagdollSystem.object_check	hknpRagdollData|constraint_bytes_16_to_24_zero	holds=1273 fails=0
+havok.bhkRagdollSystem.object_check	hknpRagdollData|constraint_u32_12_below_body_count_or_7fffffff	holds=1273 fails=0
+havok.bhkRagdollSystem.object_check	hknpRagdollData|constraint_u32_8_below_body_count	holds=1273 fails=0
 havok.bhkRagdollSystem.object_check	hknpRagdollData|destinations_follow_source_order	holds=188 fails=0
+havok.bhkRagdollSystem.object_check	hknpRagdollData|n128_equals_body_count	holds=168 fails=20
+havok.bhkRagdollSystem.object_check	hknpRagdollData|n32_is_0_or_body_count	holds=187 fails=1
+havok.bhkRagdollSystem.object_check	hknpRagdollData|n48_equals_n32	holds=187 fails=1
 havok.bhkRagdollSystem.object_check	hknpShapeMassProperties|destinations_follow_source_order	holds=95 fails=0
+havok.bhkRagdollSystem.object_check	hknpSphereShape|bytes_0_to_16_zero	holds=90 fails=0
+havok.bhkRagdollSystem.object_check	hknpSphereShape|bytes_28_to_48_zero	holds=90 fails=0
+havok.bhkRagdollSystem.object_check	hknpSphereShape|bytes_52_to_64_zero	holds=90 fails=0
+havok.bhkRagdollSystem.object_check	hknpSphereShape|center_zero	holds=52 fails=38
 havok.bhkRagdollSystem.object_check	hknpSphereShape|destinations_follow_source_order	holds=90 fails=0
+havok.bhkRagdollSystem.object_check	hknpSphereShape|radius_positive	holds=90 fails=0
 havok.bhkRagdollSystem.object_check	hkpLimitedHingeConstraintData|destinations_follow_source_order	holds=431 fails=0
 havok.bhkRagdollSystem.object_check	hkpPositionConstraintMotor|destinations_follow_source_order	holds=188 fails=0
 havok.bhkRagdollSystem.object_check	hkpRagdollConstraintData|destinations_follow_source_order	holds=842 fails=0
@@ -403,6 +622,46 @@ havok.bhkRagdollSystem.convex_polytope_padding_rows	3	8
 havok.bhkRagdollSystem.max_per_object	convex_polytope_index_count	1168
 havok.bhkRagdollSystem.max_per_object	convex_polytope_plane_rows	336
 havok.bhkRagdollSystem.max_per_object	convex_polytope_vertex_rows	252
+havok.bhkRagdollSystem.array_gap	hkRefCountedProperties|+000	arrays=95 count_max=1 element_min=1 element_max=16 exact=95
+havok.bhkRagdollSystem.array_gap	hkaSkeleton|+024	arrays=188 count_max=65 element_min=2 element_max=2 exact=5
+havok.bhkRagdollSystem.array_gap	hkaSkeleton|+040	arrays=188 count_max=65 element_min=16 element_max=16 exact=188
+havok.bhkRagdollSystem.array_gap	hkaSkeleton|+056	arrays=188 count_max=65 element_min=48 element_max=48 exact=188
+havok.bhkRagdollSystem.array_gap	hknpDynamicCompoundShapeData|+016	arrays=13 count_max=21 element_min=32 element_max=32 exact=13
+havok.bhkRagdollSystem.array_gap	hknpDynamicCompoundShape|+096	arrays=13 count_max=10 element_min=127 element_max=128 exact=13
+havok.bhkRagdollSystem.array_gap	hknpRagdollData|+016	arrays=188 count_max=65 element_min=80 element_max=80 exact=188
+havok.bhkRagdollSystem.array_gap	hknpRagdollData|+032	arrays=188 count_max=65 element_min=64 element_max=64 exact=188
+havok.bhkRagdollSystem.array_gap	hknpRagdollData|+048	arrays=188 count_max=65 element_min=112 element_max=112 exact=188
+havok.bhkRagdollSystem.array_gap	hknpRagdollData|+064	arrays=188 count_max=65 element_min=96 element_max=96 exact=188
+havok.bhkRagdollSystem.array_gap	hknpRagdollData|+080	arrays=188 count_max=64 element_min=24 element_max=24 exact=55
+havok.bhkRagdollSystem.array_gap	hknpRagdollData|+096	arrays=188 count_max=65 element_min=8 element_max=8 exact=123
+havok.bhkRagdollSystem.array_gap	hknpRagdollData|+128	arrays=188 count_max=65 element_min=4 element_max=4 exact=19
+havok.bhkRagdollSystem.body_geometry	hknpRagdollData|hknpCapsuleShape|geometry	1405
+havok.bhkRagdollSystem.body_geometry	hknpRagdollData|hknpConvexPolytopeShape|geometry	81
+havok.bhkRagdollSystem.body_geometry	hknpRagdollData|hknpDynamicCompoundShape|geometry	13
+havok.bhkRagdollSystem.body_geometry	hknpRagdollData|hknpSphereShape|geometry	90
+havok.bhkRagdollSystem.body_shape	hknpRagdollData|hknpCapsuleShape	1405
+havok.bhkRagdollSystem.body_shape	hknpRagdollData|hknpConvexPolytopeShape	81
+havok.bhkRagdollSystem.body_shape	hknpRagdollData|hknpDynamicCompoundShape	13
+havok.bhkRagdollSystem.body_shape	hknpRagdollData|hknpSphereShape	90
+havok.bhkRagdollSystem.compound_child	hknpDynamicCompoundShape|hknpCapsuleShape	27
+havok.bhkRagdollSystem.compound_child	hknpDynamicCompoundShape|hknpConvexPolytopeShape	14
+havok.bhkRagdollSystem.compound_instances	hknpDynamicCompoundShape|10	1
+havok.bhkRagdollSystem.compound_instances	hknpDynamicCompoundShape|2	6
+havok.bhkRagdollSystem.compound_instances	hknpDynamicCompoundShape|3	5
+havok.bhkRagdollSystem.compound_instances	hknpDynamicCompoundShape|4	1
+havok.bhkRagdollSystem.compound_link192	hknpDynamicCompoundShape|hknpDynamicCompoundShapeData	13
+havok.bhkRagdollSystem.constraint_class	hknpRagdollData|hknpBreakableConstraintData	3
+havok.bhkRagdollSystem.constraint_class	hknpRagdollData|hkpLimitedHingeConstraintData	429
+havok.bhkRagdollSystem.constraint_class	hknpRagdollData|hkpRagdollConstraintData	841
+havok.bhkRagdollSystem.ragdoll_link120	hkaSkeleton	188
+havok.bhkRagdollSystem.u16_16_18	hknpCapsuleShape|451|256	1432
+havok.bhkRagdollSystem.u16_16_18	hknpSphereShape|273|256	90
+havok.bhkRagdollSystem.view	hknpCapsuleShape|read	1432
+havok.bhkRagdollSystem.view	hknpDynamicCompoundShape|read	13
+havok.bhkRagdollSystem.view	hknpRagdollData|read	188
+havok.bhkRagdollSystem.view	hknpSphereShape|read	90
+havok.bhkRagdollSystem.body_id_below_body_count	hknpRagdollData|objects	holds=1589 fails=0
+havok.bhkRagdollSystem.body_id_below_body_count	hknpRagdollData|systems	holds=188 fails=0
 havok.bhkRagdollSystem.pointer_source_is_object	hkRefCountedProperties	95
 havok.bhkRagdollSystem.object_pointer_target	hkRefCountedProperties	95
 havok.bhkRagdollSystem.object_pointer_target	hkaSkeleton	188

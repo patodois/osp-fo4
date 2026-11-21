@@ -148,7 +148,9 @@ Questions 1 to 7 are taken up, by measurement, in
 [havok-container.md](havok-container.md), which records what was answered and
 what stays open. Object extents (the rest of question 5) and the vertex layout
 of `hknpConvexPolytopeShape` (part of question 8) are in
-[havok-objects.md](havok-objects.md).
+[havok-objects.md](havok-objects.md). The body array (question 7: each
+body's shape link and stored placement, Body ID below the body count) and
+the simple shapes are in [havok-bodies.md](havok-bodies.md).
 
 1. Is the 64-byte block at 0 a fixed file header? Its nonzero words (at 0,
    4, 12, 16, 20, 24, 36 and 60) are constant over the whole corpus, so the

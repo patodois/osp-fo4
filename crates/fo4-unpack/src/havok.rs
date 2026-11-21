@@ -14,6 +14,8 @@ use fo4_vfs::Vfs;
 use serde::Serialize;
 use std::collections::{BTreeMap, BTreeSet};
 
+mod bodies;
+
 const CAP: usize = 256;
 const OTHER: &str = "<other>";
 /// Distinct span lengths kept per class; more are reported as `SPAN_CAP+`.
@@ -91,6 +93,13 @@ pub struct Kind {
     pub convex_polytope_padding_rows: BTreeMap<u64, u64>,
     /// Largest value in a single object.
     pub object_maxima: BTreeMap<&'static str, u64>,
+    /// "class|+slot" (or "class|inside_storage") -> element-size bounds.
+    pub array_gaps: BTreeMap<String, bodies::Gap>,
+    /// "section|key" -> objects, bodies or instances, as the section says.
+    pub counts: BTreeMap<String, u64>,
+    /// "root class|objects" or "root class|systems" -> Body ID below the
+    /// body count of the system (holds / fails).
+    pub body_ids: BTreeMap<String, Check>,
 }
 impl Kind {
     fn check(&mut self, name: &'static str, ok: bool) {
@@ -111,6 +120,15 @@ impl Kind {
         } else {
             c.fails += 1;
         }
+    }
+    fn count(&mut self, section: &str, key: &str) {
+        let key = format!("{section}\t{key}");
+        let key = if self.counts.contains_key(&key) || self.counts.len() < 16 * CAP {
+            key
+        } else {
+            format!("{section}\t{OTHER}")
+        };
+        *self.counts.entry(key).or_default() += 1;
     }
     fn total(&mut self, name: &'static str, n: u64) {
         *self.totals.entry(name).or_default() += n;
@@ -133,15 +151,17 @@ fn u32_at(bytes: &[u8], at: usize) -> Option<u32> {
     Some(u32::from_le_bytes([w[0], w[1], w[2], w[3]]))
 }
 
-/// Measures one payload; `objects` is the number of bhkNPCollisionObject on its system.
+/// Measures one payload; `body_ids` are the Body IDs of the
+/// bhkNPCollisionObject on its system.
 fn payload(
     k: &mut Kind,
     bytes: &[u8],
-    objects: u64,
+    body_ids: &[u32],
     file: &str,
     base: u64,
     b: &Budget,
 ) -> Result<()> {
+    let objects = body_ids.len() as u64;
     k.payloads += 1;
     // Byte order: record starts read big-endian against the payload length.
     let be_in_bounds = (0..3).all(|i| {
@@ -365,6 +385,7 @@ fn payload(
             .all(|n| !per_class.contains_key(n.name)),
     );
     objects_census(k, &c, file, base);
+    bodies::census(k, &c, file, base, body_ids);
     if let Some(root) = c.root() {
         bump(&mut k.root_class, root.class.to_owned(), OTHER.into());
         let at = d + root.offset as usize;
@@ -441,6 +462,7 @@ fn objects_census(k: &mut Kind, c: &Container<'_>, file: &str, base: u64) {
             .map_or("none".to_owned(), |d| (d - span.offset).to_string());
         bump(&mut class.leads, lead, OTHER.into());
         ptrs.sort_unstable();
+        bodies::gaps(k, data, span.class, span.offset, span.end, &ptrs);
         let order = ptrs.windows(2).all(|w| w[0].1 < w[1].1);
         k.object_check(span.class, "destinations_follow_source_order", order);
         for (s, d) in &ptrs {
@@ -658,11 +680,12 @@ pub fn sweep(m: &Manifest, r: &mut Reports) -> Result<()> {
             }
         };
         for system in &col.systems {
-            let objects = col
+            let body_ids: Vec<u32> = col
                 .objects
                 .iter()
                 .filter(|o| o.data == system.block as i32)
-                .count() as u64;
+                .map(|o| o.body_id)
+                .collect();
             let kind = s
                 .kinds
                 .entry(system.kind.block_type().to_owned())
@@ -671,7 +694,7 @@ pub fn sweep(m: &Manifest, r: &mut Reports) -> Result<()> {
             if let Err(e) = payload(
                 kind,
                 system.payload,
-                objects,
+                &body_ids,
                 &c.original,
                 system.payload_offset,
                 &scratch,
@@ -806,6 +829,23 @@ pub fn tsv(s: &Summary) -> String {
         for (name, n) in &k.object_maxima {
             row(&sec("max_per_object"), name, n.to_string());
         }
+        for (key, g) in &k.array_gaps {
+            row(
+                &sec("array_gap"),
+                key,
+                format!(
+                    "arrays={} count_max={} element_min={} element_max={} exact={}",
+                    g.arrays, g.count_max, g.element_min, g.element_max, g.exact
+                ),
+            );
+        }
+        for (key, n) in &k.counts {
+            let (section, key) = key.split_once('\t').unwrap_or(("count", key));
+            row(&sec(section), key, n.to_string());
+        }
+        for (key, c) in &k.body_ids {
+            row(&sec("body_id_below_body_count"), key, check(c));
+        }
         for (key, n) in &k.pointer_source_is_object {
             row(&sec("pointer_source_is_object"), key, n.to_string());
         }
@@ -885,9 +925,9 @@ mod tests {
         let bytes = container();
         let b = Budget::new(1 << 20);
         let mut k = Kind::default();
-        payload(&mut k, &bytes, 2, "a.nif", 0, &b).unwrap();
-        payload(&mut k, &bytes, 1, "b.nif", 0, &b).unwrap();
-        assert!(payload(&mut k, &bytes[..100], 1, "c.nif", 0, &b).is_err());
+        payload(&mut k, &bytes, &[0, 1], "a.nif", 0, &b).unwrap();
+        payload(&mut k, &bytes, &[0], "b.nif", 0, &b).unwrap();
+        assert!(payload(&mut k, &bytes[..100], &[0], "c.nif", 0, &b).is_err());
         assert_eq!((k.payloads, k.read), (3, 2));
         assert_eq!(k.errors.get("TruncatedHavokContainer"), Some(&1));
         let c = k.checks["eight_zero_bytes_at_every_pointer_source"];
@@ -923,5 +963,12 @@ mod tests {
         assert!(text.contains(
             "havok.bhkPhysicsSystem.check\tpointer_source_u32_8_nonzero_and_u32_12_is_0x80000000_or_it\tholds=2 fails=0\n"
         ));
+        // 16 bytes from the destination to the span end over 2 elements.
+        assert!(text.contains(
+            "havok.bhkPhysicsSystem.array_gap\tRoot|+016\tarrays=2 count_max=2 element_min=1 element_max=8 exact=2\n"
+        ));
+        // The root is not a top-level class the body view reads.
+        assert!(text.contains("havok.bhkPhysicsSystem.view\tRoot|UnexpectedHavokClass\t2\n"));
+        assert!(!text.contains("body_id_below_body_count"));
     }
 }
