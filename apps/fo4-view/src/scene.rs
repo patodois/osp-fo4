@@ -136,6 +136,36 @@ pub struct Instance {
     pub scale: Vec3,
 }
 
+/// `base` with the UV offset, UV scale and opacity of animated surface `a`
+/// at `seconds` of the game clock.
+pub fn animated_params(
+    base: SurfaceParams,
+    a: &Animated,
+    seconds: f64,
+) -> Result<SurfaceParams, String> {
+    let (offset, scale, opacity) = a
+        .animation
+        .fields(seconds, a.held.0, a.held.1, a.held.2)
+        .map_err(|e| e.to_string())?;
+    Ok(SurfaceParams {
+        uv_offset: offset.map(|v| v as f32),
+        uv_scale: scale.map(|v| v as f32),
+        opacity,
+        ..base
+    })
+}
+
+/// A surface whose fields the game clock drives (`fo4_render::Animation`):
+/// a surface of its own, never shared, its params set again at any time
+/// from the same tracks and held values as the CPU's `DrawList::at_time`.
+pub struct Animated {
+    pub surface: usize,
+    pub animation: fo4_render::Animation,
+    /// The draw's UV offset, UV scale and opacity as converted: the values
+    /// of the fields without a track.
+    pub held: ([f64; 2], [f64; 2], f32),
+}
+
 #[derive(Default)]
 pub struct GpuScene {
     pub meshes: Vec<GpuMesh>,
@@ -144,8 +174,24 @@ pub struct GpuScene {
     pub textures: Vec<GpuTexture>,
     pub surfaces: Vec<Surface>,
     pub instances: Vec<Instance>,
+    /// Surfaces the game clock drives (empty without a build time).
+    pub animated: Vec<Animated>,
 }
 impl GpuScene {
+    /// Sets every animated surface's params to their values at `seconds`
+    /// (the window sets its materials' the same way, `gpu::advance_clock`).
+    #[cfg(test)]
+    pub fn at_time(&mut self, seconds: f64) -> Result<(), String> {
+        for a in &self.animated {
+            let base = self
+                .surfaces
+                .get(a.surface)
+                .ok_or_else(|| format!("RenderSurfaceIndex: {}", a.surface))?
+                .params;
+            self.surfaces[a.surface].params = animated_params(base, a, seconds)?;
+        }
+        Ok(())
+    }
     pub fn blended_instances(&self) -> usize {
         self.instances
             .iter()
@@ -315,7 +361,8 @@ pub fn convert(list: &mut DrawList, options: &RenderOptions) -> Result<GpuScene,
     let mut out = GpuScene::default();
     let mut mesh_index = BTreeMap::new();
     let mut texture_index = BTreeMap::new();
-    // Texture, palette, parameter bits, raw blend codes, culling, overlay.
+    // Texture, palette, parameter bits, raw blend codes, culling, overlay,
+    // and for a draw the clock drives its index (a surface of its own).
     type SurfaceIdentity = (
         usize,
         Option<usize>,
@@ -323,7 +370,15 @@ pub fn convert(list: &mut DrawList, options: &RenderOptions) -> Result<GpuScene,
         Option<(u32, u32)>,
         bool,
         bool,
+        Option<usize>,
     );
+    let animations: BTreeMap<usize, &fo4_render::Animation> =
+        list.animations.iter().map(|a| (a.draw, a)).collect();
+    if animations.len() != list.animations.len()
+        || animations.keys().any(|d| *d >= list.draws.len())
+    {
+        return Err("RenderAnimationDraws: one animation per draw of the list".into());
+    }
     let mut surface_index: BTreeMap<SurfaceIdentity, usize> = BTreeMap::new();
     for (di, draw) in list.draws.iter().enumerate() {
         draw.alpha.validate().map_err(|e| e.to_string())?;
@@ -406,6 +461,7 @@ pub fn convert(list: &mut DrawList, options: &RenderOptions) -> Result<GpuScene,
                 .map_or(0, |p| u32::from(p.colour) | u32::from(p.alpha) << 1),
             ..surface_params(draw.alpha, draw.uv_offset, draw.uv_scale)
         };
+        let animated = animations.get(&di).copied();
         let surface_key = (
             texture_slot,
             palette_slot,
@@ -413,6 +469,7 @@ pub fn convert(list: &mut DrawList, options: &RenderOptions) -> Result<GpuScene,
             blend_codes,
             cull_back,
             list.is_overlay(di),
+            animated.map(|_| di),
         );
         let surface = match surface_index.get(&surface_key) {
             Some(&i) => i,
@@ -432,6 +489,13 @@ pub fn convert(list: &mut DrawList, options: &RenderOptions) -> Result<GpuScene,
                     },
                 });
                 surface_index.insert(surface_key, out.surfaces.len() - 1);
+                if let Some(a) = animated {
+                    out.animated.push(Animated {
+                        surface: out.surfaces.len() - 1,
+                        animation: a.clone(),
+                        held: (draw.uv_offset, draw.uv_scale, draw.alpha.opacity),
+                    });
+                }
                 out.surfaces.len() - 1
             }
         };
@@ -531,6 +595,7 @@ mod tests {
             ],
             overlays: Vec::new(),
             blocks: Default::default(),
+            animations: Vec::new(),
         }
     }
 

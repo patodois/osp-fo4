@@ -9,7 +9,7 @@ usage:
            [--speed UNITS_PER_SECOND] [--fast-speed UNITS_PER_SECOND] [--radians-per-pixel R]
            [--walk] [--texture-cap N] [--alpha-tested-cap N] [--reference-textures]
            [--scene-memory MIB] [--no-stream] [--no-actors]
-           [--actor-clip ARCHIVE_PATH.hkx [--actor-clip-time SECONDS]]
+           [--actor-clip ARCHIVE_PATH.hkx [--actor-clip-time SECONDS]] [--time SECONDS]
            [--frame-log build/FRAMES.tsv] [--script-path X,Y;... [--script-shots build/NAME]]
       Window with a free-fly camera: W/A/S/D move, Shift moves faster, hold the
       left mouse button and move the mouse to look, R returns to the start pose.
@@ -56,6 +56,11 @@ usage:
       starting at --actor-clip-time (default 0) and looping, CPU-skinned
       again every frame; the clip is the one named here, not the one the
       game would play. Not with the moving grid (use --no-stream).
+      --time starts the game clock at SECONDS after load and advances it
+      with the window's frame clock: free-running controllers of shader UV
+      fields and alpha are drawn at its time under the pending clock rules
+      (--under-hypotheses; the CPU render's --time); without it such models
+      are left out, as before. Not with the moving grid (use --no-stream).
       Measurement aids: --frame-log writes one line per frame (interval,
       time in the frame's update, cells drawn and uploading, entities).
       --script-path (with --walk) steers the walker through the waypoints
@@ -69,10 +74,12 @@ usage:
            [--size WxH] [--backface-cull] [--terrain] [--around N] [--walk]
            [--texture-cap N] [--alpha-tested-cap N] [--reference-textures]
            [--scene-memory MIB] [--path X,Y;X,Y;... [--start-pose]] [--no-actors]
-           [--actor-clip ARCHIVE_PATH.hkx [--actor-clip-time SECONDS]]
+           [--actor-clip ARCHIVE_PATH.hkx [--actor-clip-time SECONDS]] [--time SECONDS]
            [--script-event INDEX:EVENT[,EVENT...]]
       One offscreen frame, no window. With --actor-clip the actors it fits
-      are drawn posed at --actor-clip-time (not with --path). --tags also writes the per-pixel instance
+      are drawn posed at --actor-clip-time (not with --path). With --time
+      the free-running controllers are drawn at that time of the game clock
+      (not with --path). --tags also writes the per-pixel instance
       tags (u32 little-endian, u32::MAX = background). With --walk the walking
       world is built as in the window, the walker is dropped with its eye at
       --eye and settled, and the frame is drawn from its eye looking the
@@ -122,6 +129,9 @@ pub struct Scene {
     pub clip: Option<crate::clip::Options>,
     /// Run a placed reference's scripts before drawing (`--script-event`).
     pub script_event: Option<crate::vm_event::ScriptEvent>,
+    /// Seconds of the game clock after load (`--time`): the build's time
+    /// (`fo4_render::draw::BuildOptions::time`), advanced in the window.
+    pub time: Option<f64>,
 }
 
 /// Default of `--scene-memory`: a viewer bound, not a claim about the game.
@@ -345,6 +355,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
     let mut clip_time = None;
     let mut debug = WindowDebug::default();
     let mut script_event = None;
+    let mut time = None;
     let mut rest = args[3..].iter();
     while let Some(arg) = rest.next() {
         let mut value = || rest.next().ok_or_else(usage);
@@ -375,6 +386,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             "--no-actors" => actors = false,
             "--actor-clip" => clip_path = Some(value()?.clone()),
             "--actor-clip-time" => clip_time = Some(not_negative(value()?)?),
+            "--time" => time = Some(not_negative(value()?)?),
             "--frame-log" => debug.frame_log = Some(value()?.clone()),
             "--script-path" => debug.path = Some(waypoints(value()?)?),
             "--script-shots" => debug.shots = Some(value()?.clone()),
@@ -421,6 +433,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             (None, Some(_)) => return Err("--actor-clip-time needs --actor-clip".into()),
         },
         script_event,
+        time,
     };
     if scene.script_event.is_some() && (!headless || walk) {
         return Err("--script-event applies to --headless without --walk".into());
@@ -454,6 +467,9 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
         if path.is_some() && scene.clip.is_some() {
             return Err("--actor-clip does not apply to --path".into());
         }
+        if path.is_some() && scene.time.is_some() {
+            return Err("--time does not apply to --path".into());
+        }
         Ok(Command::Headless {
             scene,
             size: frame,
@@ -472,6 +488,8 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
         Err("--out, --tags, --size, --path and --start-pose apply to --headless only".into())
     } else if grid_moves && !no_stream && scene.clip.is_some() {
         Err("--actor-clip does not apply to the moving grid: add --no-stream".into())
+    } else if grid_moves && !no_stream && scene.time.is_some() {
+        Err("--time does not apply to the moving grid: add --no-stream".into())
     } else {
         Ok(Command::Window {
             scene,
@@ -629,6 +647,7 @@ mod tests {
                     actors: true,
                     clip: None,
                     script_event: None,
+                    time: None,
                 },
                 fly: DEFAULT_FLY,
                 walk: false,

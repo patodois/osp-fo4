@@ -58,6 +58,12 @@ struct Terms {
     /// A field an effect-shader controller drives on which the material
     /// and the NIF disagree (`effect_material_over_controller_v1`).
     material_over_controller: bool,
+    /// The same, by clock slot (`crate::Animation`): U offset, V offset,
+    /// U scale, V scale, alpha; the material's value is then held.
+    material_differs: [bool; 5],
+    /// Every driven (colour, controlled variable) whose material value is
+    /// not the NIF's (or has no pairing): the material's value is drawn.
+    material_fields: Vec<(bool, u32)>,
     left_out: bool,
     color: [f32; 3],
     scale: f32,
@@ -223,6 +229,32 @@ impl Builder<'_, '_> {
                                 format!("color={color} variable={variable}"),
                             )
                         })?;
+                    // By clock slot: EffectShaderControlledVariable 6, 8,
+                    // 7, 9, 5.
+                    let material_differs = [6, 8, 7, 9, 5].map(|variable| {
+                        match (
+                            rest::effect_field(f, false, variable),
+                            material_field(&m, false, variable),
+                        ) {
+                            (Some(a), Some(b)) => {
+                                driven_fields_differ([(false, variable, Some(a), Some(b))])
+                                    .unwrap_or(true)
+                            }
+                            _ => true,
+                        }
+                    });
+                    let material_fields: Vec<(bool, u32)> = rest::effect_controlled(n, shader)
+                        .into_iter()
+                        .filter(|(color, variable)| {
+                            driven_fields_differ([(
+                                *color,
+                                *variable,
+                                rest::effect_field(f, *color, *variable),
+                                material_field(&m, *color, *variable),
+                            )])
+                            .unwrap_or(true)
+                        })
+                        .collect();
                     let c = &m.common;
                     let base = e.base_texture.bytes();
                     let grey = e.grayscale_texture.bytes();
@@ -245,6 +277,8 @@ impl Builder<'_, '_> {
                         environment: c.environment_mapping.is_some_and(|v| v.0 != 0)
                             || e.environment_mapping.is_some_and(|v| v.0 != 0),
                         material_over_controller,
+                        material_differs,
+                        material_fields,
                         features: [
                             (c.refraction.0 != 0, "refraction"),
                             (e.glass_enabled.is_some_and(|v| v.0 != 0), "glass"),
@@ -348,6 +382,8 @@ impl Builder<'_, '_> {
                         .collect(),
                     environment: flags1 & ENVIRONMENT != 0,
                     material_over_controller: false,
+                    material_differs: [false; 5],
+                    material_fields: Vec::new(),
                     left_out: flags1 & SOFT != 0
                         || flags2 & LIGHTING != 0
                         || byte(f, "Lighting Influence") != Some(255),
@@ -495,7 +531,7 @@ impl Builder<'_, '_> {
             }),
             None => None,
         };
-        Ok(Surface {
+        let mut surface = Surface {
             channels,
             requires_uv,
             texture,
@@ -510,7 +546,106 @@ impl Builder<'_, '_> {
             tint: Some(tint),
             falloff: falloff_drawn.then_some(falloff),
             palette,
-        })
+            clock: Default::default(),
+        };
+        // The clock drives a field only where the material does not hold
+        // another value (`effect_material_over_controller_v1` keeps the
+        // material's there, at every time).
+        let mut tracks = self.shader_clock(n, shader, file)?;
+        for (t, differs) in tracks.iter_mut().zip(terms.material_differs) {
+            if differs {
+                *t = None;
+            }
+        }
+        self.clock_surface(&mut surface, tracks, file, at)?;
+        self.clock_held(n, shader, f, &terms.material_fields, file, at)?;
+        Ok(surface)
+    }
+    /// With a build time, the effect fields a free-running controller
+    /// drives that the draw's animation does not carry (base colour scale,
+    /// emissive colour, the falloff fields): each must hold its stored
+    /// value at the build time (falloff angles compared as the cosines of
+    /// their keys in degrees, `nif_controller_falloff_angle_degrees_v1`),
+    /// else the surface is refused (`UnsettledClockField`): a frame of the
+    /// clock never mixes a field at its stored value with others at the
+    /// clock's. A field the material holds is the material's at every time.
+    fn clock_held(
+        &mut self,
+        n: &Nif<'_>,
+        shader: usize,
+        f: &[Field],
+        material_fields: &[(bool, u32)],
+        file: &str,
+        at: u64,
+    ) -> Result<()> {
+        let Some(time) = self.options.time else {
+            return Ok(());
+        };
+        for i in 0..n.blocks.len() {
+            let ty = n.block_types[n.blocks[i].type_index as usize].as_str();
+            let color = match ty {
+                "BSEffectShaderPropertyFloatController" => false,
+                "BSEffectShaderPropertyColorController" => true,
+                _ => continue,
+            };
+            let Some(cf) = n.blocks[i]
+                .decoded
+                .as_ref()
+                .map(fo4_scene::model_policy::fields)
+            else {
+                continue;
+            };
+            let target = cf.iter().find_map(|x| match x.value {
+                Value::Ref(r) if x.name == "Target" => Some(r),
+                _ => None,
+            });
+            let variable = cf.iter().find_map(|x| match x.value {
+                Value::U32(v) if x.name == "Controlled Variable" => Some(v),
+                _ => None,
+            });
+            let Some(variable) = variable else {
+                continue;
+            };
+            if target != Some(shader as i32)
+                || (!color && (5..=9).contains(&variable))
+                || material_fields.contains(&(color, variable))
+            {
+                continue;
+            }
+            let Ok(track) = fo4_scene::clock::track(n, i, self.budget)? else {
+                continue;
+            };
+            let Some(stored) = rest::effect_field(f, color, variable) else {
+                continue;
+            };
+            let degrees = !color && matches!(variable, 1 | 2);
+            let value = track.at(time).map(|v| {
+                v[..stored.len()]
+                    .iter()
+                    .map(|x| {
+                        if degrees {
+                            rest::degrees_cosine(*x)
+                        } else {
+                            *x
+                        }
+                    })
+                    .collect::<Vec<f32>>()
+            });
+            let held = value.is_some_and(|v| {
+                v.iter()
+                    .zip(&stored)
+                    .all(|(a, b)| (a - b).abs() <= rest::EFFECT_TOLERANCE)
+            });
+            if !held {
+                return Err(error(
+                    "UnsettledClockField",
+                    file,
+                    at,
+                    format!("color={color} variable={variable} at {time} s"),
+                ));
+            }
+        }
+        Ok(())
     }
 }
 

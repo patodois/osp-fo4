@@ -65,6 +65,7 @@ fn list() -> DrawList {
         }],
         overlays: Vec::new(),
         blocks: Default::default(),
+        animations: Vec::new(),
     }
 }
 fn frame(l: &DrawList, c: &Camera, workers: usize) -> Frame {

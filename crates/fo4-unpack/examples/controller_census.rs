@@ -27,12 +27,14 @@ use std::{
     path::Path,
 };
 
+#[path = "controller_census/clock.rs"]
+mod clock;
 type E = Box<dyn std::error::Error>;
-type Counts = BTreeMap<String, u64>;
-fn bump(m: &mut Counts, k: impl Into<String>) {
+pub(crate) type Counts = BTreeMap<String, u64>;
+pub(crate) fn bump(m: &mut Counts, k: impl Into<String>) {
     *m.entry(k.into()).or_default() += 1;
 }
-fn add(m: &mut Counts, k: impl Into<String>, n: u64) {
+pub(crate) fn add(m: &mut Counts, k: impl Into<String>, n: u64) {
     *m.entry(k.into()).or_default() += n;
 }
 
@@ -456,11 +458,13 @@ fn run() -> Result<(), E> {
         }
     }
     let mut model_uses: HashMap<Vec<u8>, (u64, u64)> = HashMap::new();
+    let mut model_bases: HashMap<Vec<u8>, BTreeMap<String, u64>> = HashMap::new();
     for (base, n) in &base_uses {
         let b = Budget::new(m.limits.max_memory);
         let Some(r) = store.raw(base, &b)? else {
             continue;
         };
+        let signature = String::from_utf8_lossy(&r.signature).into_owned();
         let Some(s) = r.subrecords.iter().find(|s| s.signature == *b"MODL") else {
             continue;
         };
@@ -472,6 +476,11 @@ fn run() -> Result<(), E> {
         ) else {
             continue;
         };
+        *model_bases
+            .entry(path.clone())
+            .or_default()
+            .entry(signature)
+            .or_default() += n;
         let e = model_uses.entry(path).or_default();
         e.0 += 1;
         e.1 += n;
@@ -694,18 +703,14 @@ fn run() -> Result<(), E> {
         for &i in &state {
             set.extend(tags[i].iter().copied());
         }
-        let decided = [
-            fo4_scene::rest::MANAGER_IDLE,
-            fo4_scene::rest::IDLE_TRANSFORM,
-            fo4_scene::rest::IDLE_SHADER,
-            fo4_scene::rest::TRANSFORM_CONSTANT,
-            fo4_scene::rest::UNRENDERED,
-        ];
+        // A tag is decided where a rule covers it (`fo4_scene::rest::rule`).
         let open: Vec<&str> = set
             .iter()
             .copied()
-            .filter(|t| !decided.contains(t))
+            .filter(|t| fo4_scene::rest::rule(t).is_none())
             .collect();
+        let sigs = model_bases.get(path).cloned().unwrap_or_default();
+        clock::census(&mut c, &n, &state, &set, uses, &sigs, &b)?;
         let all: Vec<&str> = set.iter().copied().collect();
         bump(
             &mut c,

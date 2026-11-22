@@ -446,11 +446,78 @@ pub struct Draw {
     /// An effect surface's greyscale-to-palette lookup.
     pub palette: Option<Palette>,
 }
+/// Slots of [`Animation::tracks`].
+pub const TRACK_U_OFFSET: usize = 0;
+pub const TRACK_V_OFFSET: usize = 1;
+pub const TRACK_U_SCALE: usize = 2;
+pub const TRACK_V_SCALE: usize = 3;
+pub const TRACK_OPACITY: usize = 4;
+/// A draw whose surface fields free-running controllers drive on the game
+/// clock (`draw::BuildOptions::time`, `fo4_scene::clock`, each value under
+/// the clock rules the build recorded for the instance): the draw's UV
+/// offset and scale components and its opacity at any time, from the same
+/// tracks for the CPU reference and the GPU viewer.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Animation {
+    /// Index into `DrawList::draws`.
+    pub draw: usize,
+    /// U offset, V offset, U scale, V scale, opacity ([`TRACK_U_OFFSET`]
+    /// and the others); `None`: the field is held as the draw stores it.
+    pub tracks: [Option<fo4_scene::clock::Track>; 5],
+}
+impl Animation {
+    /// The UV offset, UV scale and opacity at `seconds` of the clock after
+    /// load: each tracked field replaced by its track's value, the others
+    /// as given. A value that is not finite, or an opacity below 0, is an
+    /// error.
+    pub fn fields(
+        &self,
+        seconds: f64,
+        uv_offset: [f64; 2],
+        uv_scale: [f64; 2],
+        opacity: f32,
+    ) -> Result<([f64; 2], [f64; 2], f32)> {
+        let mut v = [
+            uv_offset[0],
+            uv_offset[1],
+            uv_scale[0],
+            uv_scale[1],
+            f64::from(opacity),
+        ];
+        for (slot, track) in v.iter_mut().zip(&self.tracks) {
+            if let Some(t) = track {
+                let x = t.at(seconds).map(|x| x[0]).filter(|x| x.is_finite());
+                *slot = f64::from(x.ok_or_else(|| {
+                    Error::new(
+                        "ClockTrackValue",
+                        "draw list",
+                        self.draw as u64,
+                        "finite value at the time",
+                        seconds,
+                    )
+                })?);
+            }
+        }
+        if v[4] < 0. {
+            return Err(Error::new(
+                "ClockTrackValue",
+                "draw list",
+                self.draw as u64,
+                "opacity at least 0",
+                v[4],
+            ));
+        }
+        Ok(([v[0], v[1]], [v[2], v[3]], v[4] as f32))
+    }
+}
 #[derive(Debug, Default)]
 pub struct DrawList {
     pub meshes: Vec<Mesh>,
     pub textures: Vec<Texture>,
     pub draws: Vec<Draw>,
+    /// Draws whose surface fields the game clock drives; empty unless the
+    /// list was built with a time (`draw::BuildOptions::time`).
+    pub animations: Vec<Animation>,
     /// Indices into `draws`, strictly increasing, of draws laid over an
     /// opaque draw of the same triangles (the terrain's texture passes): a
     /// sample of such a draw whose depth equals the stored opaque depth is
@@ -489,6 +556,21 @@ impl DrawList {
     }
     pub fn is_overlay(&self, draw: usize) -> bool {
         self.overlays.binary_search(&draw).is_ok()
+    }
+    /// Sets every animated draw's UV fields and opacity to their values at
+    /// `seconds` of the game clock after load ([`Animation::fields`]).
+    pub fn at_time(&mut self, seconds: f64) -> Result<()> {
+        for a in &self.animations {
+            let d = self.draws.get_mut(a.draw).ok_or_else(|| {
+                Error::new("RenderDrawIndex", "draw list", 0, "animated draw", a.draw)
+            })?;
+            let (offset, scale, opacity) =
+                a.fields(seconds, d.uv_offset, d.uv_scale, d.alpha.opacity)?;
+            d.uv_offset = offset;
+            d.uv_scale = scale;
+            d.alpha.opacity = opacity;
+        }
+        Ok(())
     }
 }
 pub(crate) fn append<T>(v: &mut Vec<T>, value: T, b: &Budget) -> Result<()> {

@@ -447,7 +447,12 @@ fn cell(
         fo4_scene::grid::absorb_around(loader, &mut scene, &a, b)?;
     }
     let actors = fo4_scene::actor::resolve(&scene, loader, b)?;
-    let options = BuildOptions::with_blocks(RuleLevel::Hypotheses, VIEWER_BLOCKS);
+    // At second 0 of the game clock: a model whose free-running controllers
+    // the clock runs is drawn as it is at load (`BuildOptions::time`).
+    let options = BuildOptions {
+        time: Some(0.),
+        ..BuildOptions::with_blocks(RuleLevel::Hypotheses, VIEWER_BLOCKS)
+    };
     let build =
         fo4_render::draw::build_with_actors(&scene, &actors, loader, &m.limits, options, b)?;
     let omitted: BTreeMap<u32, &fo4_render::draw::Omission> =

@@ -73,6 +73,13 @@ pub struct BuildOptions {
     /// Keep block-compressed textures as their stored blocks (for a GPU
     /// consumer) instead of decoding them; `None` in the reference.
     pub blocks: Option<BlockOptions>,
+    /// Seconds of the game clock since the models loaded: free-running
+    /// controllers of shader UV fields and alpha are evaluated at this time
+    /// under the clock rules (`fo4_scene::clock`) and recorded in
+    /// `DrawList::animations`. `None` (the reference): no clock; an instance
+    /// that relies on `nif_controller_clock_free_running_v1` is omitted
+    /// (`UnsettledControllerTime`) and every other field is drawn as before.
+    pub time: Option<f64>,
 }
 /// Limits of the textures kept as stored blocks ([`BuildOptions::blocks`]).
 /// A texture whose format or chosen level cannot be kept as blocks is
@@ -95,6 +102,7 @@ impl BuildOptions {
             max_texture_bytes: 96 << 20,
             level,
             blocks: None,
+            time: None,
         }
     }
     /// The reference limits, with block-compressed textures kept as blocks.
@@ -327,6 +335,8 @@ struct Surface {
     falloff: Option<crate::Falloff>,
     /// Effect surfaces drawn with a greyscale-to-palette lookup.
     palette: Option<crate::Palette>,
+    /// The clock tracks of the surface's fields (`crate::Animation`).
+    clock: [Option<fo4_scene::clock::Track>; 5],
 }
 struct Builder<'a, 's> {
     loader: &'a Loader<'s>,
@@ -374,6 +384,8 @@ struct Builder<'a, 's> {
     /// lighting shader whose UV fields a controller drives is drawn with its
     /// stored fields only where a material it names holds the same values.
     texture_first_key: bool,
+    /// The instance relies on `nif_controller_clock_free_running_v1`.
+    clock_rest: bool,
     allow_scol_parts: bool,
     allow_editor_marker_subtrees: bool,
     allow_marker_suffix: bool,
@@ -1345,6 +1357,7 @@ impl Builder<'_, '_> {
                     tint: None,
                     falloff: None,
                     palette: None,
+                    clock: Default::default(),
                 })
             })?;
             // A controller drives the NIF shader's field; the draw takes the
@@ -1368,6 +1381,42 @@ impl Builder<'_, '_> {
                     "material UV field differs from the controlled NIF field",
                 ));
             }
+            // A field the clock drives: the material must hold the NIF's
+            // stored value there too (the controller drives the NIF field).
+            let tracks = self.shader_clock(n, shader, file)?;
+            let at = n.blocks[shader].data.start as u64;
+            let stored_opacity = if lighting {
+                floats::<1>(f, "Alpha", file)?[0]
+            } else {
+                floats::<4>(f, "Base Color", file)?[3]
+            };
+            let held = [
+                stored[0],
+                nif_uv[0][1],
+                stored[1],
+                nif_uv[1][1],
+                stored_opacity,
+            ];
+            let drawn = [
+                surface.offset[0],
+                surface.offset[1],
+                surface.scale[0],
+                surface.scale[1],
+                f64::from(surface.alpha.opacity),
+            ];
+            if tracks
+                .iter()
+                .zip(drawn.iter().zip(&held))
+                .any(|(t, (a, b))| t.is_some() && (*a as f32) != (*b as f32))
+            {
+                return Err(error(
+                    "UnsettledClockMaterialField",
+                    file,
+                    at,
+                    "material field differs from the NIF field the clock drives",
+                ));
+            }
+            self.clock_surface(&mut surface, tracks, file, at)?;
             if lighting {
                 self.lighting_vertex_alpha(&mut surface, nif_flags2, geometry)?;
             }
@@ -1508,7 +1557,15 @@ impl Builder<'_, '_> {
             tint: None,
             falloff: None,
             palette: None,
+            clock: Default::default(),
         };
+        let tracks = self.shader_clock(n, shader, file)?;
+        self.clock_surface(
+            &mut surface,
+            tracks,
+            file,
+            n.blocks[shader].data.start as u64,
+        )?;
         if kind == "BSLightingShaderProperty" {
             self.lighting_vertex_alpha(&mut surface, nif_flags2, geometry)?;
         }
@@ -1808,6 +1865,7 @@ impl Builder<'_, '_> {
             if let Some(mesh) = geometry {
                 let surface = self.surface(n, f, swap, file, Some(mesh))?;
                 let mesh = self.mesh(path, mesh_index, mesh, &surface, None)?;
+                self.animate(&surface)?;
                 append(
                     &mut self.output.list.draws,
                     Draw {
@@ -1982,11 +2040,144 @@ impl Builder<'_, '_> {
         }
         Ok(())
     }
+    /// Records the animation of the draw about to be appended for
+    /// `surface`, when the clock drives one of its fields.
+    fn animate(&mut self, surface: &Surface) -> Result<()> {
+        if surface.clock.iter().all(Option::is_none) {
+            return Ok(());
+        }
+        let draw = self.output.list.draws.len();
+        append(
+            &mut self.output.list.animations,
+            crate::Animation {
+                draw,
+                tracks: surface.clock.clone(),
+            },
+            self.budget,
+        )
+    }
+    /// The clock tracks of the free-running controllers that drive shader
+    /// `shader`'s UV offset and scale components and alpha
+    /// (`fo4_scene::rest::clock_field`, `fo4_scene::clock::track`), by
+    /// `crate::Animation` slot; none without a build time. A controller the
+    /// clock does not run leaves its field to the rest rules.
+    fn shader_clock(
+        &mut self,
+        n: &Nif<'_>,
+        shader: usize,
+        file: &str,
+    ) -> Result<[Option<fo4_scene::clock::Track>; 5]> {
+        let mut out: [Option<fo4_scene::clock::Track>; 5] = Default::default();
+        if self.options.time.is_none() {
+            return Ok(out);
+        }
+        let effect =
+            n.block_types[n.blocks[shader].type_index as usize] == "BSEffectShaderProperty";
+        for i in 0..n.blocks.len() {
+            let Some(variable) = fo4_scene::rest::clock_field(n, i) else {
+                continue;
+            };
+            let target = n
+                .blocks
+                .get(i)
+                .and_then(|b| b.decoded.as_ref())
+                .and_then(|d| raw_ref(fields(d), "Target"));
+            if target != Some(shader as i32) {
+                continue;
+            }
+            let Ok(track) = fo4_scene::clock::track(n, i, self.budget)? else {
+                continue;
+            };
+            let slot = match (effect, variable) {
+                (true, 5) | (false, 12) => crate::TRACK_OPACITY,
+                (true, 6) | (false, 20) => crate::TRACK_U_OFFSET,
+                (true, 7) | (false, 21) => crate::TRACK_U_SCALE,
+                (true, 8) | (false, 22) => crate::TRACK_V_OFFSET,
+                (true, 9) | (false, 23) => crate::TRACK_V_SCALE,
+                _ => continue,
+            };
+            if out[slot].is_some() {
+                return Err(error(
+                    "AmbiguousClockField",
+                    file,
+                    n.blocks[i].data.start as u64,
+                    format!("two controllers drive slot {slot}"),
+                ));
+            }
+            out[slot] = Some(track);
+        }
+        Ok(out)
+    }
+    /// Sets `s`'s fields to the clock's values at the build time and keeps
+    /// the tracks for the draw's animation: the clock rules each track
+    /// relies on, the UV order rule for a tracked UV field of a textured
+    /// surface and the opacity rules over the whole range an opacity track
+    /// can take must be usable at the build's level.
+    fn clock_surface(
+        &mut self,
+        s: &mut Surface,
+        tracks: [Option<fo4_scene::clock::Track>; 5],
+        file: &str,
+        at: u64,
+    ) -> Result<()> {
+        let Some(time) = self.options.time else {
+            return Ok(());
+        };
+        if tracks.iter().all(Option::is_none) {
+            return Ok(());
+        }
+        for t in tracks.iter().flatten() {
+            for rule in t.rules() {
+                if !self.draw_rule(rule)? {
+                    return Err(error("UnverifiedControllerClock", file, at, rule));
+                }
+            }
+        }
+        if s.requires_uv
+            && tracks[..4].iter().any(Option::is_some)
+            && !self.draw_rule(fo4_scene::hypotheses::UV_SCALE_THEN_OFFSET)?
+        {
+            return Err(error(
+                "UnsupportedUvTransform",
+                file,
+                at,
+                "a UV field the clock drives without the UV order rule",
+            ));
+        }
+        if let Some(t) = &tracks[crate::TRACK_OPACITY] {
+            let (lo, hi) = t
+                .keys
+                .bounds(0)
+                .ok_or_else(|| error("ClockTrackValue", file, at, "opacity bounds"))?;
+            if lo < 0. || !lo.is_finite() || !hi.is_finite() {
+                return Err(error(
+                    "UnsupportedRenderAlpha",
+                    file,
+                    at,
+                    format!("opacity track from {lo} to {hi}"),
+                ));
+            }
+            self.opacity_rule(&Alpha {
+                opacity: hi,
+                ..s.alpha
+            })?;
+        }
+        let a = crate::Animation { draw: 0, tracks };
+        let (offset, scale, opacity) = a.fields(time, s.offset, s.scale, s.alpha.opacity)?;
+        s.offset = offset;
+        s.scale = scale;
+        s.alpha.opacity = opacity;
+        s.alpha.validate()?;
+        s.clock = a.tracks;
+        Ok(())
+    }
     /// Sets the rule flags the shared walkers read from a state's rules.
     fn allow(&mut self, rules: &[&'static str]) {
         use fo4_scene::hypotheses as h;
         self.allow_effect_color = rules.contains(&h::EFFECT_COLOR);
-        self.allow_effect_surface = rules.contains(&h::REST_EFFECT_FIRST_KEY);
+        self.allow_effect_surface =
+            rules.contains(&h::REST_EFFECT_FIRST_KEY) || rules.contains(&h::CLOCK_FREE_RUNNING);
+        self.clock_rest = rules.contains(&h::CLOCK_FREE_RUNNING);
         self.allow_missing_embedded = rules.contains(&h::MISSING_MATERIAL_EMBEDDED);
         self.texture_first_key = rules.contains(&h::REST_TEXTURE_FIRST_KEY);
         self.allow_path_strip = rules.contains(&h::PATH_STRIP);
@@ -2141,6 +2332,7 @@ impl Builder<'_, '_> {
                             self.budget,
                         )?;
                     }
+                    self.animate(&surface)?;
                     append(
                         &mut self.output.list.draws,
                         Draw {
@@ -2435,6 +2627,7 @@ fn build_inner(
         allow_effect_surface: false,
         allow_missing_embedded: false,
         texture_first_key: false,
+        clock_rest: false,
         allow_scol_parts: false,
         allow_editor_marker_subtrees: false,
         allow_marker_suffix: false,
@@ -2497,10 +2690,16 @@ fn build_inner(
             .state
             .hypotheses()
             .contains(&fo4_scene::hypotheses::EFFECT_COLOR);
-        builder.allow_effect_surface = i
+        builder.clock_rest = i
             .state
             .hypotheses()
-            .contains(&fo4_scene::hypotheses::REST_EFFECT_FIRST_KEY);
+            .contains(&fo4_scene::hypotheses::CLOCK_FREE_RUNNING);
+        // Effect shaders of a model settled by the first-key rule, or run
+        // by the clock, are drawn by `draw::effect`.
+        builder.allow_effect_surface = builder.clock_rest
+            || i.state
+                .hypotheses()
+                .contains(&fo4_scene::hypotheses::REST_EFFECT_FIRST_KEY);
         builder.allow_missing_embedded = i
             .state
             .hypotheses()
@@ -2527,6 +2726,16 @@ fn build_inner(
                     &src.file,
                     src.offset,
                     format!("{:?} at rule level {:?}", i.state, options.level),
+                ));
+            }
+            // A free-running controller whose value depends on the clock
+            // draws nothing without a time.
+            if builder.clock_rest && options.time.is_none() {
+                return Err(error(
+                    "UnsettledControllerTime",
+                    &src.file,
+                    src.offset,
+                    "a build time for a controller the game clock runs",
                 ));
             }
             // Ready only at the hypotheses level when it has an XESP: the
@@ -2620,6 +2829,7 @@ fn build_inner(
         }
         if let Err(e) = attempt {
             builder.output.list.draws.truncate(first);
+            builder.output.list.animations.retain(|a| a.draw < first);
             let mut causes = Vec::new();
             for e in std::iter::once(&e).chain(i.blockers.iter()) {
                 b.charge(
@@ -2680,6 +2890,7 @@ fn build_inner(
         }
         if let Err(e) = attempt {
             builder.output.list.draws.truncate(first);
+            builder.output.list.animations.retain(|a| a.draw < first);
             let mut causes = Vec::new();
             for e in std::iter::once(&e).chain(
                 a.blockers

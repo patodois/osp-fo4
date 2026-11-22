@@ -502,6 +502,7 @@ fn exact_depth_ties_resolve_by_list_order_in_every_run() {
             textures: vec![texture(first), texture(second)],
             surfaces: vec![surface(0, None, false), surface(1, None, false)],
             instances: vec![instance(0), instance(1)],
+            animated: Vec::new(),
         }
     };
     let camera = fo4_scene::camera::look_at(
@@ -675,6 +676,7 @@ fn cpu_and_gpu_frames_agree_on_falloff_palette_colour_alpha_clamp_and_vertex_alp
         draws: Vec::new(),
         overlays: Vec::new(),
         blocks: Default::default(),
+        animations: Vec::new(),
     };
     list.draws.push(draw(1, 0, 0, alpha(0, 0, 0, 1.)));
     let mut card = draw(2, 1, 1, alpha(1, 6, 7, 1.));
@@ -790,8 +792,212 @@ fn cpu_and_gpu_frames_agree_on_falloff_palette_colour_alpha_clamp_and_vertex_alp
             draws: list.draws.iter().map(|d| Draw { ..*d }).collect(),
             overlays: Vec::new(),
             blocks: Default::default(),
+            animations: Vec::new(),
         };
         strip(&mut other);
         assert_ne!(cpu_frame(&other).0, cpu);
     }
+}
+
+/// The game clock's terms (`fo4_render::Animation`): a textured opaque card
+/// whose V offset a looping linear track drives and a blended card whose
+/// opacity a clamped quadratic track drives, over a grey floor. The CPU
+/// reference at a fixed time (`DrawList::at_time`) and the GPU frame of the
+/// list converted at that time agree; the GPU scene set to a second time
+/// (`GpuScene::at_time`, the window's per-frame update) agrees with the CPU
+/// at that time; and the two times draw different frames.
+#[test]
+#[ignore = "needs a GPU: draws offscreen through Bevy"]
+fn cpu_and_gpu_frames_agree_on_clock_driven_uv_offset_and_opacity() {
+    use fo4_render::{Alpha, Animation, Draw, DrawList, Mesh, Sidedness, Texture, Vertex};
+    use fo4_scene::clock::{Key, Keys, Timing, Track};
+    let quad = |h: f64, x: f64, z: f64| -> Vec<Vertex> {
+        [[-h, -h], [h, -h], [h, h], [-h, h]]
+            .iter()
+            .zip([[0., 0.], [1., 0.], [1., 1.], [0., 1.]])
+            .map(|(p, uv)| Vertex {
+                position: [p[0] + x, p[1], z],
+                uv,
+            })
+            .collect()
+    };
+    let texture = |width: u32, height: u32, texel: &dyn Fn(u32, u32) -> [f32; 4]| Texture {
+        mips: Vec::new(),
+        width,
+        height,
+        rgba: (0..height)
+            .flat_map(|y| (0..width).flat_map(move |x| texel(x, y)))
+            .collect(),
+        mip: 0,
+        srgb: false,
+    };
+    let alpha = |enabled: u8, opacity: f32| Alpha {
+        enabled,
+        source: 6,
+        destination: 7,
+        test_enabled: 0,
+        test_ref: 0,
+        nif_test_function: Some(4),
+        opacity,
+        nif_flags: None,
+    };
+    let draw = |instance: u32, mesh: usize, texture: usize, alpha: Alpha| Draw {
+        sidedness: Sidedness {
+            material_two_sided: Some(1),
+            nif_shader_flags_2: None,
+        },
+        instance,
+        mesh,
+        texture,
+        world: fo4_scene::transform::Transform::IDENTITY,
+        alpha,
+        uv_offset: [0.; 2],
+        uv_scale: [1.; 2],
+        raw_tile_flags: None,
+        falloff: None,
+        palette: None,
+    };
+    let key = |time: f32, value: f32, tangent: f32| Key {
+        time,
+        value: [value, 0., 0.],
+        forward: [tangent, 0., 0.],
+        backward: [tangent, 0., 0.],
+        tbc: [0.; 3],
+    };
+    let track = |cycle: u16, kind: u32, keys: Vec<Key>| Track {
+        timing: Timing {
+            flags: 8 | (cycle << 1),
+            frequency: 1.,
+            phase: 0.,
+            start: 0.,
+            stop: 2.,
+        },
+        keys: Keys {
+            components: 1,
+            kind,
+            keys,
+        },
+    };
+    let tri = vec![[0, 1, 2], [0, 2, 3]];
+    let mesh = |vertices: Vec<Vertex>| Mesh {
+        vertex_colors: None,
+        normals: None,
+        vertices,
+        triangles: tri.clone(),
+    };
+    let mut list = DrawList {
+        meshes: vec![
+            mesh(quad(400., 0., 0.)),
+            mesh(quad(120., -130., 40.)),
+            mesh(quad(120., 130., 60.)),
+        ],
+        textures: vec![
+            texture(1, 1, &|_, _| [0.5, 0.5, 0.5, 1.]),
+            // Bands along V: the offset moves them.
+            texture(8, 8, &|_, y| {
+                let v = y as f32 / 7.;
+                [v, 1. - v, 0.3, 1.]
+            }),
+            texture(4, 4, &|x, _| [0.9, 0.6, 0.2, 0.5 + 0.1 * x as f32]),
+        ],
+        draws: Vec::new(),
+        overlays: Vec::new(),
+        blocks: Default::default(),
+        animations: Vec::new(),
+    };
+    list.draws.push(draw(1, 0, 0, alpha(0, 1.)));
+    list.draws.push(draw(2, 1, 1, alpha(0, 1.)));
+    list.draws.push(draw(3, 2, 2, alpha(1, 1.)));
+    let mut scroll: [Option<Track>; 5] = Default::default();
+    scroll[fo4_render::TRACK_V_OFFSET] = Some(track(
+        0,
+        fo4_scene::clock::LINEAR,
+        vec![key(0., 0., 0.), key(2., 1., 0.)],
+    ));
+    let mut fade: [Option<Track>; 5] = Default::default();
+    fade[fo4_render::TRACK_OPACITY] = Some(track(
+        2,
+        fo4_scene::clock::QUADRATIC,
+        vec![key(0., 1., 0.), key(2., 0.1, 0.)],
+    ));
+    list.animations.push(Animation {
+        draw: 1,
+        tracks: scroll,
+    });
+    list.animations.push(Animation {
+        draw: 2,
+        tracks: fade,
+    });
+    let camera = fo4_scene::camera::look_at(
+        [0., -500., 450.],
+        [0., 0., 0.],
+        fo4_scene::camera::reference_frustum(SIZE),
+        SIZE,
+    )
+    .unwrap();
+    let options = fo4_render::RenderOptions::REFERENCE;
+    let cpu_frame = |list: &DrawList| {
+        let f = fo4_render::render(
+            list,
+            &camera,
+            options,
+            &fo4_core::Limits::default(),
+            &fo4_core::Budget::new(256 << 20),
+        )
+        .unwrap();
+        let rgba: Vec<u8> = f
+            .color
+            .iter()
+            .flat_map(|c| c.map(|v| (v.clamp(0., 1.) * 255.).round() as u8))
+            .collect();
+        (rgba, f.instances)
+    };
+    let agree = |cpu: &(Vec<u8>, Vec<u32>), gpu: &Frames| {
+        let gpu_tags = crate::compare::tags_from_bytes(gpu.tags.as_ref().unwrap()).unwrap();
+        let report = crate::compare::compare(&crate::compare::Inputs {
+            size: SIZE,
+            cpu: &cpu.0,
+            gpu: &gpu.color,
+            tags: Some((&cpu.1, &gpu_tags)),
+            clear: crate::compare::clear_rgb(options.clear),
+        })
+        .unwrap();
+        println!(
+            "agreement {:.6}, mean {:?}, p95 {:?}, max {:?}",
+            report.agreement(),
+            report.mean_abs,
+            report.p95_abs,
+            report.max_abs
+        );
+        assert!(report.agreement() > 0.999, "{}", report.agreement());
+        assert!(
+            report.mean_abs.iter().all(|m| *m < 1.5),
+            "{:?}",
+            report.mean_abs
+        );
+        assert!(
+            report.p95_abs.iter().all(|m| *m <= 4),
+            "{:?}",
+            report.p95_abs
+        );
+    };
+    let (t1, t2) = (0.5, 1.5);
+    list.at_time(t1).unwrap();
+    assert_eq!(list.draws[1].uv_offset, [0., 0.25]);
+    let cpu1 = cpu_frame(&list);
+    // Two scenes converted at the first time (`convert` moves nothing out
+    // of a list without stored blocks; `headless` moves the texels out of
+    // the scene it draws): one drawn there, one set to the second time.
+    let mut gpu_scene = crate::scene::convert(&mut list, &options).unwrap();
+    let mut later = crate::scene::convert(&mut list, &options).unwrap();
+    assert_eq!(gpu_scene.animated.len(), 2);
+    let gpu1 = headless(&mut gpu_scene, &camera, options.clear, true).unwrap();
+    agree(&cpu1, &gpu1);
+    list.at_time(t2).unwrap();
+    let cpu2 = cpu_frame(&list);
+    assert_ne!(cpu1.0, cpu2.0);
+    later.at_time(t2).unwrap();
+    let gpu2 = headless(&mut later, &camera, options.clear, true).unwrap();
+    agree(&cpu2, &gpu2);
+    assert_ne!(gpu1.color, gpu2.color);
 }

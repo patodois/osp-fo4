@@ -356,7 +356,7 @@ fn spawn(
     tag_pass: bool,
     layer: usize,
     ranked: bool,
-) {
+) -> Vec<Entity> {
     spawn_instances(
         world,
         &scene.surfaces,
@@ -366,7 +366,23 @@ fn spawn(
         tag_pass,
         layer,
         ranked,
-    );
+    )
+}
+
+/// The uniform block of `p`.
+fn uniform(p: &crate::scene::SurfaceParams) -> SurfaceUniform {
+    SurfaceUniform {
+        uv_scale: Vec2::from_array(p.uv_scale),
+        uv_offset: Vec2::from_array(p.uv_offset),
+        test_ref: p.test_ref,
+        opacity: p.opacity,
+        test_function: p.test_function,
+        skip_zero_alpha: u32::from(p.skip_zero_alpha),
+        opaque_texture: u32::from(p.opaque_texture),
+        falloff_on: u32::from(p.falloff.is_some()),
+        palette_lookups: p.palette,
+        falloff: Vec4::from_array(p.falloff.unwrap_or([0.; 4])),
+    }
 }
 
 /// The material of `surface` drawing `image`, with its own pipeline when
@@ -378,20 +394,8 @@ fn surface_material(
     tag_pass: bool,
     rank: u32,
 ) -> SurfaceMaterial {
-    let p = surface.params;
     SurfaceMaterial {
-        params: SurfaceUniform {
-            uv_scale: Vec2::from_array(p.uv_scale),
-            uv_offset: Vec2::from_array(p.uv_offset),
-            test_ref: p.test_ref,
-            opacity: p.opacity,
-            test_function: p.test_function,
-            skip_zero_alpha: u32::from(p.skip_zero_alpha),
-            opaque_texture: u32::from(p.opaque_texture),
-            falloff_on: u32::from(p.falloff.is_some()),
-            palette_lookups: p.palette,
-            falloff: Vec4::from_array(p.falloff.unwrap_or([0.; 4])),
-        },
+        params: uniform(&surface.params),
         texture: image,
         palette,
         key: MaterialKey {
@@ -739,6 +743,51 @@ struct PendingScene(GpuScene, [f32; 4], Option<Uploaded>);
 /// `--actor-clip`'s animation, waiting for the scene's meshes to upload.
 #[derive(Resource)]
 struct PendingClip(crate::clip::Animation);
+
+/// `--time`: the game clock's seconds at the window's first frame.
+#[derive(Resource)]
+struct PendingClock(f64);
+
+/// The window's game clock (`--time`): every animated surface's material,
+/// its params as converted and its tracks; each frame the params at the
+/// clock's time are written to the material.
+#[derive(Resource)]
+struct SurfaceClock {
+    start: f64,
+    started: Option<f64>,
+    entries: Vec<(
+        Handle<SurfaceMaterial>,
+        crate::scene::SurfaceParams,
+        crate::scene::Animated,
+    )>,
+}
+
+/// Advances the game clock with the frame clock and sets the animated
+/// surfaces' params at its time.
+fn advance_clock(
+    time: Res<Time>,
+    clock: Option<ResMut<SurfaceClock>>,
+    mut materials: ResMut<Assets<SurfaceMaterial>>,
+) {
+    let Some(mut c) = clock else {
+        return;
+    };
+    let now = time.elapsed_secs_f64();
+    let started = *c.started.get_or_insert(now);
+    let t = c.start + now - started;
+    for (handle, base, a) in &c.entries {
+        let p = match crate::scene::animated_params(*base, a, t) {
+            Ok(p) => p,
+            Err(e) => {
+                eprintln!("{e}");
+                std::process::exit(2);
+            }
+        };
+        if let Some(mut m) = materials.get_mut(handle) {
+            m.params = uniform(&p);
+        }
+    }
+}
 #[derive(Component)]
 struct FlyCamera;
 
@@ -772,7 +821,29 @@ fn spawn_window_scene(world: &mut World) {
         world.insert_resource(PendingScene(scene, clear, Some(up)));
         return;
     }
-    spawn(world, &scene, &up, false, 0, false);
+    let entities = spawn(world, &scene, &up, false, 0, false);
+    if let Some(PendingClock(start)) = world.remove_resource::<PendingClock>() {
+        // Each animated surface's material, through its first instance.
+        let mut entries = Vec::new();
+        for a in std::mem::take(&mut scene.animated) {
+            let Some(k) = scene.instances.iter().position(|i| i.surface == a.surface) else {
+                continue;
+            };
+            let Some(handle) = entities
+                .get(k)
+                .and_then(|e| world.get::<MeshMaterial3d<SurfaceMaterial>>(*e))
+                .map(|m| m.0.clone())
+            else {
+                continue;
+            };
+            entries.push((handle, scene.surfaces[a.surface].params, a));
+        }
+        world.insert_resource(SurfaceClock {
+            start,
+            started: None,
+            entries,
+        });
+    }
     if let Some(PendingClip(animation)) = world.remove_resource::<PendingClip>() {
         let playing = crate::clip::Playing::new(animation, &scene, &up.meshes);
         world.insert_resource(playing);
@@ -1002,6 +1073,7 @@ fn show_readout(
 
 /// Windowed viewer, free-fly or, with a walking world, walking (Tab
 /// switches); returns when the window is closed.
+#[allow(clippy::too_many_arguments)]
 pub fn window(
     scene: GpuScene,
     start: FlyState,
@@ -1010,6 +1082,7 @@ pub fn window(
     clear: [f32; 4],
     aids: Aids,
     clip: Option<crate::clip::Animation>,
+    time: Option<f64>,
 ) -> Result<(), String> {
     fly_pose(&start)?;
     let start_walking = walk.is_some();
@@ -1057,6 +1130,10 @@ pub fn window(
     if let Some(animation) = clip {
         app.insert_resource(PendingClip(animation))
             .add_systems(Update, crate::clip::animate.after(spawn_window_scene));
+    }
+    if let Some(t) = time {
+        app.insert_resource(PendingClock(t))
+            .add_systems(Update, advance_clock.after(spawn_window_scene));
     }
     aids.add_to(&mut app);
     app.run();

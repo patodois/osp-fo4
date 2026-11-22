@@ -14,7 +14,7 @@ type AnyResult<T> = Result<T, Box<dyn std::error::Error>>;
 const TERRAIN_SHADING: &str = "ground textures weighted per vertex under the pending terrain texture rules, times VCLR; untextured weight as flat neutral grey per triangle by geometric normal; unlit, not game lighting";
 fn run() -> AnyResult<()> {
     let args: Vec<_> = std::env::args().skip(1).collect();
-    const USAGE: &str = "usage: render MANIFEST DATA_DIRECTORY CELL_EDITOR_ID build/OUTPUT [--strict|--measured|--under-hypotheses] [--eye X,Y,Z --look X,Y,Z] [--instance-ids] [--collision-overlay] [--terrain] [--around N] [--texture-mib N]";
+    const USAGE: &str = "usage: render MANIFEST DATA_DIRECTORY CELL_EDITOR_ID build/OUTPUT [--strict|--measured|--under-hypotheses] [--eye X,Y,Z --look X,Y,Z] [--instance-ids] [--collision-overlay] [--terrain] [--around N] [--texture-mib N] [--time SECONDS]";
     if args.len() < 4 {
         return Err(USAGE.into());
     }
@@ -29,6 +29,10 @@ fn run() -> AnyResult<()> {
     // The reference's decoded texture total (96 MiB) unless raised for a
     // dense view; a larger total changes which placements the limit drops.
     let mut texture_mib: Option<u64> = None;
+    // Seconds of the game clock after load at which free-running
+    // controllers are evaluated (`BuildOptions::time`); without the flag
+    // the build has no clock and the summary has no `time` key.
+    let mut time: Option<f64> = None;
     let mut rest = args[4..].iter();
     while let Some(arg) = rest.next() {
         match arg.as_str() {
@@ -48,6 +52,14 @@ fn run() -> AnyResult<()> {
                     rest.next()
                         .and_then(|v| v.parse::<u64>().ok())
                         .filter(|n| (1..=4096).contains(n))
+                        .ok_or(USAGE)?,
+                );
+            }
+            "--time" => {
+                time = Some(
+                    rest.next()
+                        .and_then(|v| v.parse::<f64>().ok())
+                        .filter(|t| t.is_finite() && *t >= 0.)
                         .ok_or(USAGE)?,
                 );
             }
@@ -82,6 +94,7 @@ fn run() -> AnyResult<()> {
     if let Some(mib) = texture_mib {
         build_options.max_texture_bytes = mib << 20;
     }
+    build_options.time = time;
     let mut manifest = Manifest::load(Path::new(&args[0]))?;
     manifest.root = Path::new(&args[1]).canonicalize()?;
     let limits = &manifest.limits;
@@ -241,7 +254,13 @@ fn run() -> AnyResult<()> {
         );
     }
     let mut summary = serde_json::json!({"camera":camera,"camera_kind":camera_kind,"cell":scene.cell.key,"instances":built.instances,"omitted":built.omitted,"statistics":frame.statistics,"hypothesis_policy":level_name,"renderer":"CPU unlit diffuse, no runtime controllers or lighting","memory":budget.measurements()});
-    // The key is absent without the flag, so the summary stays as before.
+    // The keys are absent without their flags, so the summary stays as before.
+    if let (Some(t), Some(map)) = (time, summary.as_object_mut()) {
+        map.insert(
+            "time".into(),
+            serde_json::json!({"seconds":t,"animated_draws":built.list.animations.len()}),
+        );
+    }
     if let (Some(o), Some(map)) = (overlay, summary.as_object_mut()) {
         map.insert("collision_overlay".into(), o);
     }

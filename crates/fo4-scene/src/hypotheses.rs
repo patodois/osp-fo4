@@ -130,6 +130,20 @@ pub const UV_NONFINITE: &str = "nif_uv_nonfinite_triangles_left_out_v1";
 /// nothing to collision; the base draws as it would without it.
 pub const REFERENCE_PRIMITIVE: &str = "refr_xprm_primitive_not_drawn_v1";
 pub const REST_TEXTURE_FIRST_KEY: &str = "nif_controller_rest_texture_first_key_v1";
+/// The game clock of free-running controllers (`crate::clock`,
+/// `spec/controller-clock.md`): a controller not run by a manager starts
+/// when its model loads and runs on the game clock; its time folded by its
+/// cycle type; its keys read by their key type.
+pub const CLOCK_FREE_RUNNING: &str = "nif_controller_clock_free_running_v1";
+pub const CLOCK_CYCLE_LOOP: &str = "nif_controller_cycle_loop_v1";
+pub const CLOCK_CYCLE_REVERSE: &str = "nif_controller_cycle_reverse_v1";
+pub const CLOCK_CYCLE_CLAMP: &str = "nif_controller_cycle_clamp_v1";
+pub const CLOCK_KEY_LINEAR: &str = "nif_key_linear_v1";
+pub const CLOCK_KEY_QUADRATIC: &str = "nif_key_quadratic_hermite_v1";
+pub const CLOCK_KEY_STEP: &str = "nif_key_constant_step_v1";
+/// A looping sequence of a controller manager that nothing starts leaves
+/// its controlled blocks as stored (`crate::rest`).
+pub const REST_LOOP_UNSTARTED: &str = "nif_controller_rest_loop_unstarted_v1";
 pub const UV_SCALE_THEN_OFFSET: &str = "uv_scale_then_offset_v1";
 pub const MISSING_PARENT: &str = "bgsm_missing_parent_own_fields_v1";
 /// A missing texture cited only in slots the unlit frame never samples
@@ -259,17 +273,10 @@ pub fn covering(error: &Error) -> Option<&'static str> {
     } else if error.code == "RuntimeEnableParent" {
         crate::enable::rule(&error.found)
     } else if error.code == "UnsupportedAnimationRuntime" {
-        match error.found.rsplit_once(";rest=").map(|(_, t)| t) {
-            Some(crate::rest::MANAGER_IDLE) => Some(REST_MANAGER_IDLE),
-            Some(crate::rest::IDLE_TRANSFORM) => Some(REST_IDLE_TRANSFORM),
-            Some(crate::rest::IDLE_SHADER) => Some(REST_IDLE_SHADER),
-            Some(crate::rest::TRANSFORM_CONSTANT) => Some(REST_TRANSFORM_CONSTANT),
-            Some(crate::rest::UNRENDERED) => Some(REST_UNRENDERED),
-            Some(crate::rest::EFFECT_FIRST_KEY) => Some(REST_EFFECT_FIRST_KEY),
-            Some(crate::rest::FALLOFF_DEGREES) => Some(REST_FALLOFF_DEGREES),
-            Some(crate::rest::TEXTURE_FIRST_KEY) => Some(REST_TEXTURE_FIRST_KEY),
-            _ => None,
-        }
+        error
+            .found
+            .rsplit_once(";rest=")
+            .and_then(|(_, t)| crate::rest::rule(t))
     } else {
         record_field_rule(error).or_else(|| actor_rule(&error.code))
     }
@@ -529,6 +536,14 @@ mod tests {
             SWAP_SCOPES_AGREE,
             REST_TEXTURE_FIRST_KEY,
             UV_SCALE_THEN_OFFSET,
+            CLOCK_FREE_RUNNING,
+            CLOCK_CYCLE_LOOP,
+            CLOCK_CYCLE_REVERSE,
+            CLOCK_CYCLE_CLAMP,
+            CLOCK_KEY_LINEAR,
+            CLOCK_KEY_QUADRATIC,
+            CLOCK_KEY_STEP,
+            REST_LOOP_UNSTARTED,
         ] {
             assert!(status(name).is_some(), "{name}");
         }

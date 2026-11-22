@@ -67,6 +67,19 @@ pub const TEXTURE_FIRST_KEY: &str = "texture-first-key";
 /// with what its interpolators reach. Always given with
 /// [`EFFECT_FIRST_KEY`].
 pub const FALLOFF_DEGREES: &str = "falloff-degrees";
+/// A free-running alpha or texture-transform controller of an effect or
+/// lighting shader that the clock runs (`crate::clock::track`), with what
+/// its interpolator reaches (`nif_controller_clock_free_running_v1`); always
+/// given with one cycle tag and one key tag below.
+pub const CLOCK: &str = "clock";
+/// The cycle type of a [`CLOCK`] controller (`nif_controller_cycle_*_v1`).
+pub const CLOCK_LOOP: &str = "clock-loop";
+pub const CLOCK_REVERSE: &str = "clock-reverse";
+pub const CLOCK_CLAMP: &str = "clock-clamp";
+/// The key type of a [`CLOCK`] controller's keys (`nif_key_*_v1`).
+pub const CLOCK_LINEAR: &str = "clock-linear";
+pub const CLOCK_QUADRATIC: &str = "clock-quadratic";
+pub const CLOCK_STEP: &str = "clock-step";
 /// Tolerance of "equal" between a stored effect-shader field and a key.
 pub const EFFECT_TOLERANCE: f32 = 1e-4;
 
@@ -75,6 +88,67 @@ pub const TOLERANCE: [f32; 3] = [1e-3, 1e-3, 1e-4];
 /// nifxml `#INV_FLT#`: a pose value that is not set.
 pub const INVALID: f32 = -3.402_823_4e38;
 
+/// The rule that covers a rest tag, `None` for a tag that names why the
+/// rest state is not decided. A looping sequence (`manager-loop`) is
+/// covered by `nif_controller_rest_loop_unstarted_v1`: nothing starts it.
+pub fn rule(tag: &str) -> Option<&'static str> {
+    use crate::hypotheses as h;
+    Some(match tag {
+        MANAGER_IDLE => h::REST_MANAGER_IDLE,
+        IDLE_TRANSFORM => h::REST_IDLE_TRANSFORM,
+        IDLE_SHADER => h::REST_IDLE_SHADER,
+        TRANSFORM_CONSTANT => h::REST_TRANSFORM_CONSTANT,
+        UNRENDERED => h::REST_UNRENDERED,
+        EFFECT_FIRST_KEY => h::REST_EFFECT_FIRST_KEY,
+        FALLOFF_DEGREES => h::REST_FALLOFF_DEGREES,
+        TEXTURE_FIRST_KEY => h::REST_TEXTURE_FIRST_KEY,
+        MANAGER_LOOP => h::REST_LOOP_UNSTARTED,
+        CLOCK => h::CLOCK_FREE_RUNNING,
+        CLOCK_LOOP => h::CLOCK_CYCLE_LOOP,
+        CLOCK_REVERSE => h::CLOCK_CYCLE_REVERSE,
+        CLOCK_CLAMP => h::CLOCK_CYCLE_CLAMP,
+        CLOCK_LINEAR => h::CLOCK_KEY_LINEAR,
+        CLOCK_QUADRATIC => h::CLOCK_KEY_QUADRATIC,
+        CLOCK_STEP => h::CLOCK_KEY_STEP,
+        _ => return None,
+    })
+}
+/// Whether controller `ctl` drives a shader field the draw evaluates on the
+/// clock: an effect shader's alpha or UV offset or scale
+/// (EffectShaderControlledVariable 5 to 9), a lighting shader's alpha or UV
+/// offset or scale (LightingShaderControlledFloat 12, 20 to 23), each on
+/// its own shader type.
+pub fn clock_field(n: &Nif<'_>, ctl: usize) -> Option<u32> {
+    let f = block_fields(n, ctl)?;
+    let variable = word(f, "Controlled Variable")?;
+    let target = links(f, &["Target"]).first().copied()?;
+    let ok = match (type_of(n, ctl), type_of(n, target)) {
+        ("BSEffectShaderPropertyFloatController", "BSEffectShaderProperty") => {
+            (5..=9).contains(&variable)
+        }
+        ("BSLightingShaderPropertyFloatController", "BSLightingShaderProperty") => {
+            variable == 12 || (20..=23).contains(&variable)
+        }
+        _ => false,
+    };
+    ok.then_some(variable)
+}
+/// The cycle and key tags of a clock track.
+fn clock_tags(t: &crate::clock::Track) -> [&'static str; 2] {
+    use crate::clock as c;
+    [
+        match t.timing.cycle() {
+            c::CYCLE_LOOP => CLOCK_LOOP,
+            c::CYCLE_REVERSE => CLOCK_REVERSE,
+            _ => CLOCK_CLAMP,
+        },
+        match t.keys.kind {
+            c::LINEAR => CLOCK_LINEAR,
+            c::QUADRATIC => CLOCK_QUADRATIC,
+            _ => CLOCK_STEP,
+        },
+    ]
+}
 /// What a controller type drives, with the shader controlled variable
 /// (nifxml EffectShaderControlledVariable, EffectShaderControlledColor,
 /// LightingShaderControlledFloat, LightingShaderControlledColor).
@@ -853,16 +927,30 @@ pub fn tags(n: &Nif<'_>, b: &Budget) -> Result<Vec<Vec<&'static str>>> {
                 } else {
                     class
                 };
+                // A free-running alpha or UV controller the clock runs.
+                let clocked =
+                    if matches!(tag, ALPHA | TEXTURE_TRANSFORM) && clock_field(n, i).is_some() {
+                        crate::clock::track(n, i, b)?.ok()
+                    } else {
+                        None
+                    };
+                let tag = if clocked.is_some() { CLOCK } else { tag };
+                let extra: Vec<&'static str> = clocked
+                    .as_ref()
+                    .map(clock_tags)
+                    .into_iter()
+                    .flatten()
+                    .chain((tag == EFFECT_FIRST_KEY && degrees(i)).then_some(FALLOFF_DEGREES))
+                    .collect();
                 add(&mut out, i, tag);
-                let angle = tag == EFFECT_FIRST_KEY && degrees(i);
-                if angle {
-                    add(&mut out, i, FALLOFF_DEGREES);
+                for &e in &extra {
+                    add(&mut out, i, e);
                 }
                 for ip in ips {
                     for x in chain(ip) {
                         add(&mut out, x, tag);
-                        if angle {
-                            add(&mut out, x, FALLOFF_DEGREES);
+                        for &e in &extra {
+                            add(&mut out, x, e);
                         }
                     }
                 }
@@ -1200,6 +1288,72 @@ mod tests {
         assert_eq!(covering(&e), Some(crate::hypotheses::REST_FALLOFF_DEGREES));
     }
 
+    /// [`effect_nif`] or [`lighting_nif`] whose controller carries the
+    /// timing fields of a free-running controller: flags (cycle in bits 1
+    /// and 2, Active), frequency 1, phase 0, start 0, stop 1.
+    fn timed(mut n: Nif<'static>, flags: u16) -> Nif<'static> {
+        if let Some(fo4_nif::Data::Fields(fields)) = &mut n.blocks[1].decoded {
+            fields[0] = f("Controller Flags", Value::U16(flags));
+            for (name, v) in [
+                ("Frequency", 1.),
+                ("Phase", 0.),
+                ("Start Time", 0.),
+                ("Stop Time", 1.),
+            ] {
+                fields.push(fl(name, v));
+            }
+        }
+        n
+    }
+
+    #[test]
+    fn a_free_running_alpha_or_uv_controller_away_from_its_first_key_is_run_by_the_clock() {
+        let b = Budget::new(1 << 20);
+        // Stored 0.5, keys 0.25 then 1: not settled at rest, run by the
+        // clock (loop, linear keys) on an effect and on a lighting shader.
+        for n in [
+            timed(effect_nif(0.5, &[(0., 0.25), (1., 1.)], false), 8),
+            timed(lighting_nif(0.5, &[(0., 0.25), (1., 1.)], false), 8),
+        ] {
+            assert_eq!(
+                clock_field(&n, 1),
+                Some(if n.block_types[0].starts_with("BSEffect") {
+                    6
+                } else {
+                    20
+                })
+            );
+            let t = tags(&n, &b).unwrap();
+            for tag in &t[1..4] {
+                assert_eq!(tag, &vec![CLOCK, CLOCK_LINEAR, CLOCK_LOOP]);
+            }
+        }
+        // Clamped: the clamp tag.
+        let n = timed(
+            effect_nif(0.5, &[(0., 0.25), (1., 1.)], false),
+            8 | (2 << 1),
+        );
+        assert_eq!(
+            tags(&n, &b).unwrap()[1],
+            vec![CLOCK, CLOCK_CLAMP, CLOCK_LINEAR]
+        );
+        // Settled at its first key: the first-key rule, not the clock.
+        let n = timed(effect_nif(0.25, &[(0., 0.25), (1., 1.)], false), 8);
+        assert_eq!(tags(&n, &b).unwrap()[1], vec![EFFECT_FIRST_KEY]);
+        // Not active, played backwards, or without timing fields: as before.
+        for flags in [0, 8 | 0x10] {
+            let n = timed(effect_nif(0.5, &[(0., 0.25), (1., 1.)], false), flags);
+            assert_eq!(tags(&n, &b).unwrap()[1], vec![TEXTURE_TRANSFORM]);
+        }
+        let n = effect_nif(0.5, &[(0., 0.25), (1., 1.)], false);
+        assert_eq!(tags(&n, &b).unwrap()[1], vec![TEXTURE_TRANSFORM]);
+        // Named by a looping sequence: the sequence's tags, never the clock.
+        let n = timed(effect_nif(0.5, &[(0., 0.25), (1., 1.)], true), 0x6c);
+        let t = tags(&n, &b).unwrap();
+        assert!(t.iter().all(|x| !x.contains(&CLOCK)), "{t:?}");
+        assert_eq!(t[4], vec![MANAGER_LOOP]);
+    }
+
     #[test]
     fn only_decided_tags_are_covered() {
         let e = |tag: &str| {
@@ -1228,10 +1382,25 @@ mod tests {
             EFFECT_EMISSIVE,
             FALLOFF,
             OTHER,
-            MANAGER_LOOP,
             EFFECT_IDLE,
         ] {
             assert_eq!(covering(&e(open)), None, "{open}");
+        }
+        // A looping sequence nothing starts, and the clock's tags.
+        assert_eq!(
+            covering(&e(MANAGER_LOOP)),
+            Some(crate::hypotheses::REST_LOOP_UNSTARTED)
+        );
+        for (tag, rule) in [
+            (CLOCK, crate::hypotheses::CLOCK_FREE_RUNNING),
+            (CLOCK_LOOP, crate::hypotheses::CLOCK_CYCLE_LOOP),
+            (CLOCK_REVERSE, crate::hypotheses::CLOCK_CYCLE_REVERSE),
+            (CLOCK_CLAMP, crate::hypotheses::CLOCK_CYCLE_CLAMP),
+            (CLOCK_LINEAR, crate::hypotheses::CLOCK_KEY_LINEAR),
+            (CLOCK_QUADRATIC, crate::hypotheses::CLOCK_KEY_QUADRATIC),
+            (CLOCK_STEP, crate::hypotheses::CLOCK_KEY_STEP),
+        ] {
+            assert_eq!(covering(&e(tag)), Some(rule), "{tag}");
         }
         // The text before this step names no rest state: not covered.
         let old = fo4_core::Error::new(

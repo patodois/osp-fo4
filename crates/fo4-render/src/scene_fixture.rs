@@ -2,6 +2,8 @@
 use crate::draw::{build, BuildOptions};
 use fo4_core::{Budget, Game, Limits, Manifest, Mount, PluginSpec, TestDir};
 use fo4_scene::{Loader, RuleLevel};
+#[path = "../../fo4-material/src/test_builder.rs"]
+mod material_fixture;
 fn sub(tag: &[u8; 4], data: &[u8]) -> Vec<u8> {
     [tag.as_slice(), &(data.len() as u16).to_le_bytes(), data].concat()
 }
@@ -61,6 +63,19 @@ fn nif_effect_textures(
     textures: (&[u8], &[u8]),
     lighting: Option<(u32, u16)>,
 ) -> Vec<u8> {
+    let blocks = model_blocks(diffuse, effect, extra, textures, lighting);
+    nif_file(blocks, label, material)
+}
+/// The blocks of [`nif_effect_textures`]: shape (0), shader (1), texture
+/// set (2), root node (3), helper shape (4), and with `lighting` an
+/// NiAlphaProperty (5).
+fn model_blocks(
+    diffuse: &[u8],
+    effect: Option<u32>,
+    extra: Option<[[u8; 8]; 3]>,
+    textures: (&[u8], &[u8]),
+    lighting: Option<(u32, u16)>,
+) -> Vec<(&'static str, Vec<u8>)> {
     let mut av = Vec::new();
     for x in [u32::MAX, 0, u32::MAX, 0] {
         av.extend(x.to_le_bytes());
@@ -166,6 +181,11 @@ fn nif_effect_textures(
         a.push(128);
         blocks.push(("NiAlphaProperty", a));
     }
+    blocks
+}
+/// A NIF file of `blocks` (each its own block type), with the strings
+/// `material` (index 0), `EditorMarker` and `label`, roots 0, 3 and 4.
+fn nif_file(blocks: Vec<(&'static str, Vec<u8>)>, label: &[u8], material: &[u8]) -> Vec<u8> {
     let count = blocks.len() as u32;
     let mut v = b"Gamebryo File Format, Version 20.2.0.7\n".to_vec();
     v.extend(0x14020007u32.to_le_bytes());
@@ -248,6 +268,21 @@ fn fixture_records(
     part_extra: &[u8],
     records: &[u8],
 ) -> (TestDir, Manifest) {
+    fixture_files(name, texture, part, placed, (part_extra, &[]), records, &[])
+}
+/// [`fixture_records`] whose reference also holds `extra.1` subrecords
+/// (the part STAT `extra.0`), with `files` (path under the data folder,
+/// bytes) written and mounted too.
+fn fixture_files(
+    name: &str,
+    texture: &[u8],
+    part: Vec<u8>,
+    placed: u32,
+    extra: (&[u8], &[u8]),
+    records: &[u8],
+    files: &[(&str, Vec<u8>)],
+) -> (TestDir, Manifest) {
+    let (part_extra, reference_extra) = extra;
     let temp = TestDir::new(name);
     let root = temp.join("Data");
     std::fs::create_dir_all(root.join("meshes")).unwrap();
@@ -267,6 +302,18 @@ fn fixture_records(
     let mut rf = sub(b"NAME", &placed.to_le_bytes());
     rf.extend(sub(b"DATA", &[0; 24]));
     rf.extend(sub(b"XSCL", &1f32.to_le_bytes()));
+    rf.extend(reference_extra);
+    let mut mounted: Vec<String> = vec![
+        "meshes/generated.nif".into(),
+        "meshes/part.nif".into(),
+        "textures/a.dds".into(),
+    ];
+    for (path, bytes) in files {
+        let at = root.join(path);
+        std::fs::create_dir_all(at.parent().unwrap()).unwrap();
+        std::fs::write(at, bytes).unwrap();
+        mounted.push((*path).into());
+    }
     let mut cell = sub(b"EDID", b"SyntheticScolCell\0");
     cell.extend(sub(b"DATA", &1u16.to_le_bytes()));
     let body = [
@@ -305,11 +352,7 @@ fn fixture_records(
         mounts: vec![Mount::Loose {
             plugin: None,
             base: None,
-            files: vec![
-                "meshes/generated.nif".into(),
-                "meshes/part.nif".into(),
-                "textures/a.dds".into(),
-            ],
+            files: mounted.iter().map(Into::into).collect(),
         }],
         required_masters: vec![],
         excluded: vec![],
@@ -343,6 +386,7 @@ fn scol_hypothesis_draws_two_textured_parts_without_the_generated_alternative() 
             max_texture_bytes: 1024,
             level: fo4_scene::RuleLevel::Hypotheses,
             blocks: None,
+            time: None,
         },
         &Budget::new(32 << 20),
     )
@@ -358,6 +402,7 @@ fn scol_hypothesis_draws_two_textured_parts_without_the_generated_alternative() 
             max_texture_bytes: 1 << 20,
             level: fo4_scene::RuleLevel::Hypotheses,
             blocks: None,
+            time: None,
         },
         &b,
     )
@@ -387,6 +432,7 @@ fn scol_hypothesis_draws_two_textured_parts_without_the_generated_alternative() 
             max_texture_bytes: 1 << 20,
             level: fo4_scene::RuleLevel::Hypotheses,
             blocks: None,
+            time: None,
         },
         true,
         &Budget::new(32 << 20),
@@ -411,6 +457,7 @@ fn scol_hypothesis_draws_two_textured_parts_without_the_generated_alternative() 
             max_texture_bytes: 1 << 20,
             level: fo4_scene::RuleLevel::Hypotheses,
             blocks: None,
+            time: None,
         },
         &b,
     )
@@ -438,6 +485,7 @@ fn scol_hypothesis_draws_two_textured_parts_without_the_generated_alternative() 
             max_texture_bytes: 1 << 20,
             level: fo4_scene::RuleLevel::Hypotheses,
             blocks: None,
+            time: None,
         },
         &Budget::new(32 << 20),
     )
@@ -457,6 +505,7 @@ fn scol_hypothesis_draws_two_textured_parts_without_the_generated_alternative() 
             max_texture_bytes: 1 << 20,
             level: fo4_scene::RuleLevel::Hypotheses,
             blocks: None,
+            time: None,
         },
         &b,
     )
@@ -542,6 +591,7 @@ fn untextured_effect_requires_hypothesis_and_refuses_unhandled_features() {
             max_texture_bytes: 1024,
             level: fo4_scene::RuleLevel::Hypotheses,
             blocks: None,
+            time: None,
         };
         let output = build(&scene, &loader, &m.limits, options, &b).unwrap();
         if let Some(code) = expected_error {
@@ -1257,6 +1307,7 @@ fn effect_surface_build_with(x: EffectFixture) -> crate::draw::Build {
         max_texture_bytes: 1024,
         level: x.level,
         blocks: None,
+        time: None,
     };
     build(&scene, &loader, &m.limits, options, &b).unwrap()
 }
@@ -1463,6 +1514,7 @@ fn a_missing_material_falls_back_to_the_shaders_own_texture_only_under_its_rule(
         max_texture_bytes: 1 << 20,
         level,
         blocks: None,
+        time: None,
     };
     let part = nif_named(
         b"textures/a.dds",
@@ -1537,6 +1589,7 @@ fn a_surface_with_uv_fields_other_than_identity_needs_the_uv_order_rule() {
         max_texture_bytes: 1 << 20,
         level,
         blocks: None,
+        time: None,
     };
     let measured = build(&scene, &loader, &m.limits, options(RuleLevel::Measured), &b).unwrap();
     assert!(measured.list.draws.is_empty());
@@ -1628,6 +1681,7 @@ fn a_swap_leaves_a_shape_without_material_to_its_own_texture_under_its_rule() {
         max_texture_bytes: 1 << 20,
         level,
         blocks: None,
+        time: None,
     };
     let run = |swap: &[u8]| {
         let part = nif_with_helper(b"textures/a.dds", None, b"PlainLabel");
@@ -1697,6 +1751,7 @@ fn a_blended_lighting_surface_takes_its_vertex_alpha_only_under_its_rule() {
         max_texture_bytes: 1 << 20,
         level,
         blocks: None,
+        time: None,
     };
     // Normal bytes, then RGBA: a vertex alpha of 0, 128 and 255.
     let colours = |a: [u8; 3]| a.map(|a| [128, 128, 255, 0, 200, 100, 50, a]);
@@ -1769,6 +1824,7 @@ fn swap_patterns_match_names_only_under_their_rules() {
         max_texture_bytes: 1 << 20,
         level,
         blocks: None,
+        time: None,
     };
     let run = |swap: &[u8], policy: RuleLevel| {
         let part = nif_named(
@@ -1858,6 +1914,7 @@ fn triangles_on_a_non_finite_texture_coordinate_are_left_out_only_under_their_ru
         max_texture_bytes: 1 << 20,
         level,
         blocks: None,
+        time: None,
     };
     let mut part = nif_with_helper(b"textures/a.dds", None, b"PlainLabel");
     // Vertex 0's position (1, 0, 0) then its first UV half: a NaN.
@@ -1904,4 +1961,283 @@ fn triangles_on_a_non_finite_texture_coordinate_are_left_out_only_under_their_ru
     // scale 0 is refused there too), and the mesh is never built.
     assert!(measured.list.draws.is_empty());
     assert!(measured.list.meshes.is_empty());
+}
+
+/// A free-running controller block of an effect shader (block 1): next
+/// controller `next`, flags `flags` (Active, cycle in bits 1 and 2),
+/// frequency 1, phase 0, start 0, stop 1, interpolator `interpolator`,
+/// controlled variable `variable`.
+fn effect_controller(next: i32, flags: u16, interpolator: i32, variable: u32) -> Vec<u8> {
+    let mut c = next.to_le_bytes().to_vec();
+    c.extend(flags.to_le_bytes());
+    for v in [1f32, 0., 0., 1.] {
+        c.extend(v.to_le_bytes());
+    }
+    for n in [1i32, interpolator] {
+        c.extend(n.to_le_bytes());
+    }
+    c.extend(variable.to_le_bytes());
+    c
+}
+/// An NiFloatInterpolator without a pose value and its NiFloatData of
+/// linear keys.
+fn float_keys(data: i32, keys: &[(f32, f32)]) -> [Vec<u8>; 2] {
+    let mut ip = (-3.402_823_4e38f32).to_le_bytes().to_vec();
+    ip.extend(data.to_le_bytes());
+    let mut d = (keys.len() as u32).to_le_bytes().to_vec();
+    d.extend(1u32.to_le_bytes());
+    for (t, v) in keys {
+        d.extend(t.to_le_bytes());
+        d.extend(v.to_le_bytes());
+    }
+    [ip, d]
+}
+
+/// A textured effect model whose shader's V offset (stored 0) and alpha
+/// (stored 0.8) two free-running looping controllers drive with linear
+/// keys away from the stored values (0.25 to 1.25, and 0.2 to 0.6, over one
+/// second): the scene tags them for the clock, the build omits the model
+/// without a time (`UnsettledControllerTime`) and, with one, draws the
+/// values at that time under the clock rules and keeps the tracks for any
+/// other time; below the hypotheses level nothing is drawn.
+#[test]
+fn free_running_controllers_are_drawn_at_the_build_time_only_under_the_clock_rules() {
+    use fo4_scene::hypotheses as h;
+    let temp = TestDir::new("effect-clock");
+    let root = temp.join("Data");
+    std::fs::create_dir_all(root.join("meshes")).unwrap();
+    std::fs::create_dir_all(root.join("textures")).unwrap();
+    std::fs::write(
+        root.join("textures/src.dds"),
+        dds_rgba(&[[255, 0, 0, 255], [0, 255, 0, 255]]),
+    )
+    .unwrap();
+    let mut blocks = model_blocks(b"", Some(0), None, (b"textures/src.dds", b""), None);
+    // The shader's Controller link (after Name and Num Extra Data).
+    blocks[1].1[8..12].copy_from_slice(&5i32.to_le_bytes());
+    let loop_active = 8u16;
+    blocks.push((
+        "BSEffectShaderPropertyFloatController",
+        effect_controller(8, loop_active, 6, 8),
+    ));
+    let [ip, data] = float_keys(7, &[(0., 0.25), (1., 1.25)]);
+    blocks.push(("NiFloatInterpolator", ip));
+    blocks.push(("NiFloatData", data));
+    blocks.push((
+        "BSEffectShaderPropertyFloatController",
+        effect_controller(-1, loop_active, 9, 5),
+    ));
+    let [ip, data] = float_keys(10, &[(0., 0.2), (1., 0.6)]);
+    blocks.push(("NiFloatInterpolator", ip));
+    blocks.push(("NiFloatData", data));
+    let bytes = nif_file(blocks, b"EditorMarker:27", b"");
+    std::fs::write(root.join("meshes/effect.nif"), bytes).unwrap();
+    let mut reference = sub(b"NAME", &0x801u32.to_le_bytes());
+    reference.extend(sub(b"DATA", &[0; 24]));
+    reference.extend(sub(b"XSCL", &1f32.to_le_bytes()));
+    let mut cell = sub(b"EDID", b"ClockCell\0");
+    cell.extend(sub(b"DATA", &1u16.to_le_bytes()));
+    let mut hedr = 0.95f32.to_le_bytes().to_vec();
+    hedr.extend([0; 8]);
+    let plugin = [
+        rec(b"TES4", 0, 1, &sub(b"HEDR", &hedr)),
+        rec(b"STAT", 0x801, 0, &sub(b"MODL", b"effect.nif\0")),
+        group(
+            2,
+            0,
+            &[
+                rec(b"CELL", 0x800, 0, &cell),
+                group(
+                    6,
+                    0x800,
+                    &group(9, 0x800, &rec(b"REFR", 0x802, 0, &reference)),
+                ),
+            ]
+            .concat(),
+        ),
+    ]
+    .concat();
+    std::fs::write(root.join("base.esm"), plugin).unwrap();
+    let m = Manifest {
+        root,
+        game: Game::Fallout4,
+        archive_invalidation: None,
+        language: "english".into(),
+        plugins: vec![PluginSpec {
+            name: "base.esm".into(),
+            path: "base.esm".into(),
+        }],
+        mounts: vec![Mount::Loose {
+            plugin: None,
+            base: None,
+            files: vec!["meshes/effect.nif".into(), "textures/src.dds".into()],
+        }],
+        required_masters: vec![],
+        excluded: vec![],
+        limits: Limits::default(),
+        build: Some("synthetic".into()),
+    };
+    let b = Budget::new(32 << 20);
+    let store = fo4_plugin::typed::Store::open(&m, &b).unwrap();
+    let vfs = fo4_vfs::Vfs::mount(&m, &b).unwrap();
+    let run = |level: RuleLevel, time: Option<f64>| {
+        let mut loader = Loader::new(&store, &vfs, "english", level, &b);
+        let scene = loader.by_editor_id("ClockCell", &b).unwrap();
+        let options = BuildOptions {
+            max_texture_dimension: 16,
+            max_texture_bytes: 1024,
+            level,
+            blocks: None,
+            time,
+        };
+        let state = scene.instances[0].state.hypotheses().to_vec();
+        (
+            state,
+            build(&scene, &loader, &m.limits, options, &b).unwrap(),
+        )
+    };
+    let (state, out) = run(RuleLevel::Hypotheses, None);
+    for rule in [
+        h::CLOCK_FREE_RUNNING,
+        h::CLOCK_CYCLE_LOOP,
+        h::CLOCK_KEY_LINEAR,
+    ] {
+        assert!(state.contains(&rule), "{rule} {state:?}");
+    }
+    assert!(out.list.draws.is_empty());
+    assert_eq!(out.omitted[0].causes[0].code, "UnsettledControllerTime");
+    let (_, out) = run(RuleLevel::Hypotheses, Some(0.5));
+    assert_eq!(out.list.draws.len(), 1, "{:?}", out.omitted);
+    let d = &out.list.draws[0];
+    assert_eq!(d.uv_offset, [0., 0.75]);
+    assert!((d.alpha.opacity - 0.4).abs() < 1e-6, "{}", d.alpha.opacity);
+    let rules = &out.instances[0].hypotheses;
+    for rule in [
+        h::UV_SCALE_THEN_OFFSET,
+        h::EFFECT_SHADING,
+        h::CLOCK_FREE_RUNNING,
+    ] {
+        assert!(rules.contains(&rule), "{rule} {rules:?}");
+    }
+    assert_eq!(out.list.animations.len(), 1);
+    let mut list = out.list;
+    // A quarter second in, a whole loop later, and the load.
+    for (t, offset, opacity) in [(0.25, 0.5, 0.3), (1.25, 0.5, 0.3), (0., 0.25, 0.2)] {
+        list.at_time(t).unwrap();
+        let d = &list.draws[0];
+        assert!(
+            (d.uv_offset[1] - offset).abs() < 1e-6,
+            "{t} {:?}",
+            d.uv_offset
+        );
+        assert!((d.alpha.opacity - opacity).abs() < 1e-6, "{t}");
+    }
+    // Without the hypotheses level nothing with a controller is drawn,
+    // with or without a time.
+    for time in [None, Some(0.5)] {
+        let (_, out) = run(RuleLevel::Measured, time);
+        assert!(out.list.draws.is_empty());
+        assert!(out.list.animations.is_empty());
+    }
+    drop(temp);
+}
+
+/// A swap pattern that reaches a material another swap scope put in place:
+/// the base swaps the model's material for a second one by a literal entry,
+/// and the reference's swap holds a pattern that matches only that second
+/// material. The scene forms the pattern's target from the base's target:
+/// with no file for it, `MissingSwapPatternTarget` names it; with the file,
+/// the scene loads it and the draw build (chained scopes, the pattern) draws
+/// the shape without `RenderAssetNotInScene`.
+#[test]
+fn a_swap_pattern_reaches_the_material_another_scope_put_in_place() {
+    use fo4_scene::hypotheses::{SWAP_CHAIN, SWAP_PATTERN};
+    let bgsm = material_fixture::fixture(b"BGSM", 2, false, b"a.dds").v;
+    let run = |with_target: bool| {
+        let part = nif_named(
+            b"textures/a.dds",
+            None,
+            b"PlainLabel",
+            b"materials/a/rock01.bgsm",
+        );
+        let mut base_swap = sub(b"BNAM", b"a\\rock01.bgsm\0");
+        base_swap.extend(sub(b"SNAM", b"a\\stone01.bgsm\0"));
+        let mut reference_swap = sub(b"BNAM", b"a\\stone*.bgsm\0");
+        reference_swap.extend(sub(b"SNAM", b"a\\cliff*.bgsm\0"));
+        let records = [
+            rec(b"MSWP", 0x820, 0, &base_swap),
+            rec(b"MSWP", 0x821, 0, &reference_swap),
+        ]
+        .concat();
+        let mut files = vec![("materials/a/stone01.bgsm", bgsm.clone())];
+        if with_target {
+            files.push(("materials/a/cliff01.bgsm", bgsm.clone()));
+        }
+        let (temp, m) = fixture_files(
+            "render-swap-pattern-chain",
+            &dds(),
+            part,
+            0x801,
+            (
+                &sub(b"MODS", &0x820u32.to_le_bytes()),
+                &sub(b"XMSP", &0x821u32.to_le_bytes()),
+            ),
+            &records,
+            &files,
+        );
+        let b = Budget::new(32 << 20);
+        let store = fo4_plugin::typed::Store::open(&m, &b).unwrap();
+        let vfs = fo4_vfs::Vfs::mount(&m, &b).unwrap();
+        let mut loader = Loader::new(&store, &vfs, "english", RuleLevel::Hypotheses, &b);
+        let scene = loader.by_editor_id("SyntheticScolCell", &b).unwrap();
+        let blockers: Vec<(String, String)> = scene.instances[0]
+            .blockers
+            .iter()
+            .map(|e| (e.code.clone(), e.found.clone()))
+            .collect();
+        let loaded = loader
+            .assets
+            .nodes
+            .iter()
+            .any(|n| n.path == b"materials/a/cliff01.bgsm");
+        let options = BuildOptions {
+            max_texture_dimension: 16,
+            max_texture_bytes: 1 << 20,
+            level: RuleLevel::Hypotheses,
+            blocks: None,
+            time: None,
+        };
+        let out = build(&scene, &loader, &m.limits, options, &b).unwrap();
+        drop(temp);
+        (blockers, loaded, out)
+    };
+    let cliff = fo4_core::HexBytes(b"materials/a/cliff01.bgsm").to_string();
+    let (blockers, _, _) = run(false);
+    assert!(
+        blockers
+            .iter()
+            .any(|(code, found)| code == "MissingSwapPatternTarget" && *found == cliff),
+        "{blockers:?}"
+    );
+    let (blockers, loaded, out) = run(true);
+    assert!(
+        !blockers
+            .iter()
+            .any(|(c, _)| c == "MissingSwapPatternTarget"),
+        "{blockers:?}"
+    );
+    assert!(loaded);
+    assert!(
+        out.omitted
+            .iter()
+            .flat_map(|o| &o.causes)
+            .all(|c| c.code != "RenderAssetNotInScene"),
+        "{:?}",
+        out.omitted
+    );
+    assert!(out.omitted.is_empty(), "{:?}", out.omitted);
+    assert!(!out.list.draws.is_empty());
+    let rules = &out.instances[0].hypotheses;
+    assert!(rules.contains(&SWAP_PATTERN), "{rules:?}");
+    assert!(rules.contains(&SWAP_CHAIN), "{rules:?}");
 }

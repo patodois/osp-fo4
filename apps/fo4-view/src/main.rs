@@ -42,7 +42,10 @@ fn load_scene(
         walk,
         s.terrain,
         s.around,
-        load::build_options(s.textures, s.level),
+        fo4_render::draw::BuildOptions {
+            time: s.time,
+            ..load::build_options(s.textures, s.level)
+        },
         s.scene_memory,
         s.actors,
         s.clip.as_ref(),
@@ -53,6 +56,13 @@ fn load_scene(
         ..RenderOptions::REFERENCE
     };
     let gpu = scene::convert(&mut loaded.build.list, &options)?;
+    // Only with --time, so the default output is unchanged.
+    if let Some(t) = s.time {
+        println!(
+            "clock: drawn at {t} s of the game clock, {} animated surfaces",
+            gpu.animated.len()
+        );
+    }
     println!(
         "cell {}: {} placements, {} omitted; GPU {} meshes, {} textures, {} surfaces, {} instances ({} blended)",
         s.cell,
@@ -289,7 +299,16 @@ fn run() -> AnyResult<()> {
             } = loaded;
             drop(build);
             let start = fly::FlyState::from_eye_look(s.eye, s.look)?;
-            gpu::window(gpu, start, fly, world, options.clear, aids, animation)?;
+            gpu::window(
+                gpu,
+                start,
+                fly,
+                world,
+                options.clear,
+                aids,
+                animation,
+                s.time,
+            )?;
             Ok(())
         }
         Command::Compare {
