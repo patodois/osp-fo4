@@ -141,6 +141,9 @@ pub struct World {
     /// Objects standing for one placement of a base (the base census),
     /// with the base's record key.
     pub placement_bases: Vec<(ObjId, String)>,
+    /// Quest state and the stage fragments and quest events queued
+    /// (`crate::quest`).
+    pub quests: crate::quest::Quests,
 }
 
 impl World {

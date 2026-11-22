@@ -1,0 +1,543 @@
+# quest_run stages: counts, type tags and native names only (spec/vm.md, Quests)
+10071	SetCurrentStageID answer: Value(Bool(true))
+1	cascade blocking native	actor.getlevel
+35	cascade blocking native	actor.isdead
+118	cascade blocking native	actor.isinfaction
+2	cascade blocking native	actorbase.getsex
+55	cascade blocking native	globalvariable.getvalue
+1	cascade blocking native	locationalias.getlocation
+3	cascade blocking native	objectreference.getcurrentlocation
+7	cascade blocking native	objectreference.getitemcount
+1	cascade blocking native	objectreference.getopenstate
+1	cascade blocking native	objectreference.getparentcell
+21	cascade blocking native	objectreference.getvalue
+1	cascade blocking native	objectreference.hasdirectlos
+57	cascade blocking native	objectreference.is3dloaded
+2	cascade blocking native	objectreference.isdisabled
+2	cascade blocking native	objectreference.ismapmarkervisible
+2	cascade blocking native	objectreference.placeactoratme
+6	cascade blocking native	objectreference.waitfor3dload
+4	cascade blocking native	quest.iscompleted
+23	cascade blocking native	quest.isobjectivecompleted
+112	cascade blocking native	quest.isobjectivedisplayed
+124	cascade blocking native	quest.isrunning
+419	cascade blocking native	quest.isstagedone
+100	cascade blocking native	refcollectionalias.getcount
+491	cascade blocking native	referencealias.getreference
+12	cascade blocking native	scene.isplaying
+2	cascade blocking native	utility.getcurrentgametime
+2	cascade blocking native	utility.randomint
+6	cascade blocking rule	pex_array_ops_v1
+1	cascade blocking rule	vmad_property_sets_variable_v1
+3	cascade depth per stage set	0
+7934	cascade depth per stage set	1
+1626	cascade depth per stage set	2
+447	cascade depth per stage set	3-4
+61	cascade depth per stage set	5-9
+55	cascade event onquestinit runs with no handler
+7	cascade event onquestshutdown outcome: completed
+6	cascade event onquestshutdown outcome: failed: NoneOperand op 23
+1007	cascade event onquestshutdown runs with no handler
+5	cascade failure	BadArgument
+1	cascade failure	IndexOutOfRange op 45
+64	cascade failure	NoneOperand op 23
+2	cascade failure	NoneOperand op 34
+10	cascade failure	NoneOperand op 42
+1604	cascade fragment outcome: blocked on a native's result
+6	cascade fragment outcome: blocked on an undetermined value (rule pex_array_ops_v1)
+1	cascade fragment outcome: blocked on an undetermined value (rule vmad_property_sets_variable_v1)
+2240	cascade fragment outcome: completed
+5	cascade fragment outcome: failed: BadArgument
+1	cascade fragment outcome: failed: IndexOutOfRange op 45
+58	cascade fragment outcome: failed: NoneOperand op 23
+2	cascade fragment outcome: failed: NoneOperand op 34
+10	cascade fragment outcome: failed: NoneOperand op 42
+165	cascade fragments per stage set	0
+8514	cascade fragments per stage set	1
+52	cascade fragments per stage set	10-19
+894	cascade fragments per stage set	2
+41	cascade fragments per stage set	20-99
+302	cascade fragments per stage set	3-4
+103	cascade fragments per stage set	5-9
+188	cascade open runs: whether OnQuestShutdown runs (running state undetermined)
+1724	cascade open runs: whether setting the stage started the quest
+126	cascade open runs: which log entry's fragment runs depends on conditions
+8	deepest cascade after one stage set
+1241	effects	actor state
+462	effects	actor value changed
+734	effects	alias fill changed
+1697	effects	disable
+2002	effects	enable
+809	effects	event registration
+239	effects	faction
+1709	effects	global set
+841	effects	items added, removed or equipped
+604	effects	lock or open state
+57	effects	message
+1088	effects	move
+95	effects	object placed
+2422	effects	objective completed
+2419	effects	objective displayed or hidden
+82	effects	objective failed
+42	effects	quest completed
+78	effects	quest made active
+195	effects	quest started
+1210	effects	quest stopped
+60	effects	reference deleted
+1434	effects	scene
+4375	effects	stage set on another quest
+610	effects	stage set on the same quest
+569	effects	timer
+1	host answer	alias.getowningquest	a record
+140	host answer	formlist.getat	a record
+1	host answer	formlist.getat	undetermined: the index is undetermined
+141	host answer	formlist.getsize	a value
+23	host answer	formlist.getsize	undetermined: changed by this run
+114	host answer	formlist.hasform	a value
+252	host answer	game.getformfromfile	a record
+986	host answer	globalvariable.getvalue	a value
+219	host answer	globalvariable.getvalue	undetermined: changed by this run
+26	host answer	objectreference.getbaseobject	undetermined: the receiver is not a record
+3	host answer	objectreference.getbaseobject	undetermined: the receiver is not an object
+410	host answer	objectreference.getlinkedref	a record
+35	host answer	objectreference.getlinkedref	none
+81	host answer	objectreference.getlinkedref	undetermined: the receiver is not an object
+7	host answer	objectreference.getlinkedrefchain	a record
+13	host answer	objectreference.isdisabled	a value
+20	host answer	objectreference.isdisabled	undetermined: the receiver is not an object
+388	host answer	quest.completeallobjectives	none
+171	host answer	quest.failallobjectives	none
+36	host answer	quest.getcurrentstageid	a value
+17	host answer	quest.getcurrentstageid	undetermined: not settled by the quest's state
+1	host answer	quest.hasobjective	a value
+3	host answer	quest.isobjectivecompleted	a value
+56	host answer	quest.isobjectivecompleted	undetermined: the objective's state is undetermined
+10	host answer	quest.isobjectivedisplayed	a value
+284	host answer	quest.isobjectivedisplayed	undetermined: the objective's state is undetermined
+8	host answer	quest.isrunning	a value
+302	host answer	quest.isrunning	undetermined: not settled by the quest's state
+109	host answer	quest.isstagedone	a value
+1664	host answer	quest.isstagedone	undetermined: not settled by the quest's state
+1	host answer	quest.isstagedone	undetermined: the quest's state is undetermined
+2	host answer	quest.reset	none
+14687	host answer	quest.setcurrentstageid	a value
+222	host answer	quest.setcurrentstageid	undetermined: the quest's state is undetermined
+1	host answer	quest.setcurrentstageid	undetermined: the receiver is not a quest record
+146	host answer	quest.setcurrentstageid	undetermined: the record holds no such stage
+2422	host answer	quest.setobjectivecompleted	none
+2419	host answer	quest.setobjectivedisplayed	none
+82	host answer	quest.setobjectivefailed	none
+2	host answer	quest.start	a value
+6	host answer	quest.start	undetermined: Start of a running quest
+1	host answer	quest.start	undetermined: the quest's state is undetermined
+186	host answer	quest.start	undetermined: whether the quest was running is undetermined
+1210	host answer	quest.stop	none
+118	host answer	referencealias.clear	none
+143	host answer	referencealias.forcerefto	none
+2	host answer	referencealias.forcerefto	undetermined: the alias is not an object
+694	host answer	referencealias.getreference	a record
+41	host answer	referencealias.getreference	none
+10	host answer	referencealias.getreference	undetermined: no reference alias of that index
+9189	host answer	referencealias.getreference	undetermined: the alias has no forced reference
+46	host answer	referencealias.getreference	undetermined: the quest's state is undetermined
+239	host answer	referencealias.getreference	undetermined: whether the quest runs is undetermined
+42	most fragments run after one stage set
+2422	quest changes	objective completed (or not)
+2053	quest changes	objective displayed
+82	quest changes	objective failed (or not)
+912	quest changes	objective hidden or undetermined
+55	quest changes	quest started
+334	quest changes	quest state became undetermined
+1210	quest changes	quest stopped
+141	quest changes	stage already done, not set again
+14597	quest changes	stage set
+632	quests with 0 stages with a fragment
+187	quests with 1 stages with a fragment
+174	quests with 10-19 stages with a fragment
+280	quests with 2 stages with a fragment
+122	quests with 20-99 stages with a fragment
+209	quests with 3-4 stages with a fragment
+301	quests with 5-9 stages with a fragment
+9231	quests with a stage set per sweep item	1
+38	quests with a stage set per sweep item	10-19
+606	quests with a stage set per sweep item	2
+7	quests with a stage set per sweep item	20-99
+151	quests with a stage set per sweep item	3-4
+38	quests with a stage set per sweep item	5-9
+4121	stage fragment	blocked on a native's result
+1	stage fragment	blocked on a scripted call on an object without that script
+14	stage fragment	blocked on an undetermined value (rule pex_array_ops_v1)
+2	stage fragment	blocked on an undetermined value (rule pex_ops_compare_v1)
+8	stage fragment	blocked on an undetermined value (rule pex_ops_not_copy_cast_v1)
+4	stage fragment	blocked on an undetermined value (rule vmad_property_sets_variable_v1)
+5537	stage fragment	completed
+1	stage fragment	failed: Ambiguous
+23	stage fragment	failed: BadArgument
+2	stage fragment	failed: IndexOutOfRange op 32
+1	stage fragment	failed: IndexOutOfRange op 45
+4	stage fragment	failed: MissingFunction
+2	stage fragment	failed: MissingScript
+164	stage fragment	failed: NoneOperand op 23
+1	stage fragment	failed: NoneOperand op 28
+10	stage fragment	failed: NoneOperand op 32
+6	stage fragment	failed: NoneOperand op 34
+5	stage fragment	failed: NoneOperand op 42
+3	stage fragment	no fragment queued
+162	stage fragment	open: which log entry's fragment runs depends on conditions
+4	stage fragment blocking native	actor.getfactionrank
+9	stage fragment blocking native	actor.getkiller
+8	stage fragment blocking native	actor.getlevel
+6	stage fragment blocking native	actor.getsitstate
+4	stage fragment blocking native	actor.hasdetectionlos
+5	stage fragment blocking native	actor.isbeingriddenby
+72	stage fragment blocking native	actor.isdead
+1	stage fragment blocking native	actor.isequipped
+3	stage fragment blocking native	actor.isincombat
+114	stage fragment blocking native	actor.isinfaction
+2	stage fragment blocking native	actor.isinscene
+2	stage fragment blocking native	actor.playidlewithtarget
+1	stage fragment blocking native	actor.wornhaskeyword
+3	stage fragment blocking native	actorbase.getdeadcount
+7	stage fragment blocking native	actorbase.getsex
+1	stage fragment blocking native	game.isplayerlistening
+1	stage fragment blocking native	game.isplugininstalled
+1	stage fragment blocking native	game.usinggamepad
+52	stage fragment blocking native	globalvariable.getvalue
+1	stage fragment blocking native	location.iscleared
+4	stage fragment blocking native	locationalias.getlocation
+1	stage fragment blocking native	objectreference.canproduceforworkshop
+2	stage fragment blocking native	objectreference.getbasevalue
+3	stage fragment blocking native	objectreference.getcontainer
+8	stage fragment blocking native	objectreference.getcurrentlocation
+10	stage fragment blocking native	objectreference.getdistance
+26	stage fragment blocking native	objectreference.getitemcount
+5	stage fragment blocking native	objectreference.getlinkedref
+1	stage fragment blocking native	objectreference.getlinkedrefchildren
+1	stage fragment blocking native	objectreference.getnthlinkedref
+6	stage fragment blocking native	objectreference.getopenstate
+5	stage fragment blocking native	objectreference.getparentcell
+2	stage fragment blocking native	objectreference.getpositionz
+1	stage fragment blocking native	objectreference.getrefslinkedtome
+53	stage fragment blocking native	objectreference.getvalue
+3	stage fragment blocking native	objectreference.getworkshopresourceobjects
+2	stage fragment blocking native	objectreference.getworldspace
+2	stage fragment blocking native	objectreference.hasdirectlos
+80	stage fragment blocking native	objectreference.is3dloaded
+18	stage fragment blocking native	objectreference.isdisabled
+1	stage fragment blocking native	objectreference.islocked
+5	stage fragment blocking native	objectreference.ismapmarkervisible
+5	stage fragment blocking native	objectreference.placeactoratme
+1	stage fragment blocking native	objectreference.raidtargetsavailable
+2	stage fragment blocking native	objectreference.waitfor3dload
+17	stage fragment blocking native	quest.getcurrentstageid
+1	stage fragment blocking native	quest.isactive
+6	stage fragment blocking native	quest.iscompleted
+33	stage fragment blocking native	quest.isobjectivecompleted
+172	stage fragment blocking native	quest.isobjectivedisplayed
+178	stage fragment blocking native	quest.isrunning
+1236	stage fragment blocking native	quest.isstagedone
+1	stage fragment blocking native	refcollectionalias.getat
+227	stage fragment blocking native	refcollectionalias.getcount
+1618	stage fragment blocking native	referencealias.getreference
+37	stage fragment blocking native	scene.isplaying
+13	stage fragment blocking native	utility.getcurrentgametime
+38	stage fragment blocking native	utility.randomint
+1	stage fragment blocking object without the script	player
+14	stage fragment blocking rule	pex_array_ops_v1
+2	stage fragment blocking rule	pex_ops_compare_v1
+8	stage fragment blocking rule	pex_ops_not_copy_cast_v1
+4	stage fragment blocking rule	vmad_property_sets_variable_v1
+1	stage fragment failure	Ambiguous
+23	stage fragment failure	BadArgument
+2	stage fragment failure	IndexOutOfRange op 32
+1	stage fragment failure	IndexOutOfRange op 45
+4	stage fragment failure	MissingFunction
+2	stage fragment failure	MissingScript
+164	stage fragment failure	NoneOperand op 23
+1	stage fragment failure	NoneOperand op 28
+10	stage fragment failure	NoneOperand op 32
+6	stage fragment failure	NoneOperand op 34
+5	stage fragment failure	NoneOperand op 42
+4121	stage fragment fragment outcome: blocked on a native's result
+1	stage fragment fragment outcome: blocked on a scripted call on an object without that script
+14	stage fragment fragment outcome: blocked on an undetermined value (rule pex_array_ops_v1)
+2	stage fragment fragment outcome: blocked on an undetermined value (rule pex_ops_compare_v1)
+8	stage fragment fragment outcome: blocked on an undetermined value (rule pex_ops_not_copy_cast_v1)
+4	stage fragment fragment outcome: blocked on an undetermined value (rule vmad_property_sets_variable_v1)
+5537	stage fragment fragment outcome: completed
+1	stage fragment fragment outcome: failed: Ambiguous
+23	stage fragment fragment outcome: failed: BadArgument
+2	stage fragment fragment outcome: failed: IndexOutOfRange op 32
+1	stage fragment fragment outcome: failed: IndexOutOfRange op 45
+4	stage fragment fragment outcome: failed: MissingFunction
+2	stage fragment fragment outcome: failed: MissingScript
+164	stage fragment fragment outcome: failed: NoneOperand op 23
+1	stage fragment fragment outcome: failed: NoneOperand op 28
+10	stage fragment fragment outcome: failed: NoneOperand op 32
+6	stage fragment fragment outcome: failed: NoneOperand op 34
+5	stage fragment fragment outcome: failed: NoneOperand op 42
+162	stage fragment open runs: which log entry's fragment runs depends on conditions
+10071	stages set
+8472	stages set per sweep item	1
+51	stages set per sweep item	10-19
+1043	stages set per sweep item	2
+47	stages set per sweep item	20-99
+343	stages set per sweep item	3-4
+115	stages set per sweep item	5-9
+421	sweep items relying on	pex_array_ops_v1
+9334	sweep items relying on	pex_call_dispatch_v1
+4716	sweep items relying on	pex_conditional_jump_sense_v1
+7429	sweep items relying on	pex_default_values_v1
+5698	sweep items relying on	pex_op_return_v1
+30	sweep items relying on	pex_op_string_concat_v1
+678	sweep items relying on	pex_ops_arithmetic_v1
+2571	sweep items relying on	pex_ops_compare_v1
+6279	sweep items relying on	pex_ops_not_copy_cast_v1
+1048	sweep items relying on	pex_property_get_set_v1
+489	sweep items relying on	pex_state_identifier_v1
+220	sweep items relying on	pex_struct_ops_v1
+304	sweep items relying on	pex_truth_of_values_v1
+4083	sweep items relying on	quest_alias_forced_reference_v1
+9906	sweep items relying on	quest_fragment_entry_v1
+9886	sweep items relying on	quest_fragment_instance_v1
+2600	sweep items relying on	quest_objectives_v1
+102	sweep items relying on	quest_repeated_stage_v1
+10071	sweep items relying on	quest_set_stage_v1
+10071	sweep items relying on	quest_stage_fragment_order_v1
+10071	sweep items relying on	quest_stage_log_entry_v1
+1237	sweep items relying on	quest_start_v1
+10071	sweep items relying on	quest_state_isolated_v1
+957	sweep items relying on	quest_stop_v1
+1015	sweep items relying on	vm_host_data_state_v1
+224	sweep items relying on	vm_host_form_from_file_v1
+140	sweep items relying on	vm_host_formlist_lnam_v1
+714	sweep items relying on	vm_host_global_fltv_v1
+7	sweep items relying on	vm_host_is_disabled_flag_v1
+7	sweep items relying on	vm_host_linked_ref_chain_v1
+29	sweep items relying on	vm_host_linked_ref_xlkr_v1
+1078	sweep items relying on	vm_host_player_handle_v1
+27	sweep items relying on	vm_object_identity_v1
+8900	sweep items relying on	vm_record_scripts_attach_v1
+15	sweep items relying on	vm_record_signature_type_v1
+523	sweep items relying on	vm_timer_events_v1
+9000	sweep items relying on	vmad_alias_value_v1
+9883	sweep items relying on	vmad_property_sets_variable_v1
+524	sweep items relying on	vmad_reference_scripts_v1
+4617	sweep items whose every run completed
+
+## effects of other natives, ranked
+10219	effects	other: referencealias.getreference
+5780	effects	other: utility.wait
+1774	effects	other: quest.isstagedone
+1508	effects	other: game.getplayer
+1205	effects	other: globalvariable.getvalue
+526	effects	other: objectreference.getlinkedref
+388	effects	other: quest.completeallobjectives
+383	effects	other: objectreference.blockactivation
+347	effects	other: actor.addperk
+310	effects	other: quest.isrunning
+298	effects	other: faction.setenemy
+294	effects	other: quest.isobjectivedisplayed
+272	effects	other: objectreference.playanimation
+253	effects	other: actor.removeperk
+252	effects	other: game.getformfromfile
+232	effects	other: actor.isinfaction
+220	effects	other: objectreference.attachmod
+173	effects	other: formlist.addform
+171	effects	other: quest.failallobjectives
+167	effects	other: objectreference.addtomap
+164	effects	other: formlist.getsize
+141	effects	other: formlist.getat
+137	effects	other: objectreference.is3dloaded
+132	effects	other: objectreference.setlinkedref
+130	effects	other: actor.setghost
+114	effects	other: formlist.hasform
+114	effects	other: objectreference.getvalue
+107	effects	other: actor.isdead
+104	effects	other: faction.setally
+97	effects	other: actor.startcombat
+91	effects	other: game.addachievement
+85	effects	other: sound.play
+83	effects	other: objectreference.activate
+71	effects	other: objectreference.setdestroyed
+70	effects	other: objectreference.ignorefriendlyhits
+69	effects	other: actor.changeanimarchetype
+68	effects	other: musictype.add
+67	effects	other: utility.randomint
+62	effects	other: actor.stopcombat
+61	effects	other: actor.playidle
+60	effects	other: objectreference.getnthlinkedref
+59	effects	other: quest.isobjectivecompleted
+57	effects	other: objectreference.removekeyword
+55	effects	other: inputenablelayer.create
+54	effects	other: scriptobject.canceltimergametime
+53	effects	other: actor.setprotected
+53	effects	other: quest.getcurrentstageid
+48	effects	other: objectreference.addkeyword
+48	effects	other: quest.updatecurrentinstanceglobal
+48	effects	other: scriptobject.sendcustomevent
+45	effects	other: actor.addspell
+44	effects	other: game.fadeoutgame
+43	effects	other: game.getform
+43	effects	other: utility.randomfloat
+42	effects	other: scriptobject.unregisterforcustomevent
+39	effects	other: inputenablelayer.disableplayercontrols
+39	effects	other: locationalias.getlocation
+39	effects	other: objectreference.setactorowner
+38	effects	other: faction.setplayerenemy
+34	effects	other: location.setcleared
+34	effects	other: objectreference.getitemcount
+33	effects	other: actor.setessential
+33	effects	other: objectreference.isdisabled
+32	effects	other: actor.removespell
+29	effects	other: actor.stopcombatalarm
+29	effects	other: objectreference.getbaseobject
+29	effects	other: scriptobject.registerfortrackedstatsevent
+28	effects	other: game.getaggressionav
+27	effects	other: scriptobject.registerforanimationevent
+24	effects	other: actor.movetopackagelocation
+23	effects	other: actor.setcrimefaction
+23	effects	other: formlist.removeaddedform
+23	effects	other: musictype.remove
+22	effects	other: game.rewardplayerxp
+21	effects	other: cell.reset
+21	effects	other: imagespacemodifier.apply
+21	effects	other: location.reset
+21	effects	other: spell.cast
+20	effects	other: objectreference.preloadtargetarea
+18	effects	other: actor.changeanimflavor
+18	effects	other: actor.setoutfit
+18	effects	other: actor.setplayerteammate
+17	effects	other: cell.enablefasttravel
+17	effects	other: leveleditem.addform
+17	effects	other: objectreference.setscale
+17	effects	other: utility.getcurrentgametime
+16	effects	other: objectreference.damageobject
+16	effects	other: objectreference.getbasevalue
+16	effects	other: objectreference.getcurrentlocation
+14	effects	other: actorbase.setessential
+14	effects	other: game.turnplayerradioon
+14	effects	other: inputenablelayer.enablefasttravel
+11	effects	other: inputenablelayer.enablesprinting
+11	effects	other: objectreference.setanimationvariablefloat
+10	effects	other: imagespacemodifier.remove
+10	effects	other: objectreference.getdistance
+10	effects	other: objectreference.waitfor3dload
+10	effects	other: quest.iscompleted
+9	effects	other: actor.getkiller
+9	effects	other: actor.getlevel
+9	effects	other: actorbase.getsex
+9	effects	other: objectreference.setfactionowner
+8	effects	other: actor.changeanimfacearchetype
+8	effects	other: actor.playidlewithtarget
+8	effects	other: encounterzone.reset
+8	effects	other: game.shakecamera
+8	effects	other: game.shakecontroller
+8	effects	other: objectreference.makeradioreceiver
+8	effects	other: weather.releaseoverride
+8	effects	other: weather.setactive
+7	effects	other: actor.dismember
+7	effects	other: actor.removefromallfactions
+7	effects	other: objectreference.getlinkedrefchain
+7	effects	other: objectreference.getopenstate
+7	effects	other: objectreference.ismapmarkervisible
+7	effects	other: soundcategorysnapshot.push
+6	effects	other: actor.allowpcdialogue
+6	effects	other: actor.getsitstate
+6	effects	other: actor.snapintointeraction
+6	effects	other: cell.setfactionowner
+6	effects	other: keyword.sendstoryevent
+6	effects	other: objectreference.addtextreplacementdata
+6	effects	other: objectreference.getparentcell
+5	effects	other: actor.isbeingriddenby
+5	effects	other: actor.setcombatstyle
+5	effects	other: game.setchargenhudmode
+5	effects	other: objectreference.applyhavokimpulse
+5	effects	other: objectreference.playanimationandwait
+5	effects	other: objectreference.setactorrefowner
+5	effects	other: objectreference.storeinworkshop
+5	effects	other: scriptobject.unregisterforallremoteevents
+4	effects	other: actor.getfactionrank
+4	effects	other: actor.hasdetectionlos
+4	effects	other: actor.setallowflying
+4	effects	other: actor.setnobleedoutrecovery
+4	effects	other: game.gethealthav
+4	effects	other: locationalias.clear
+4	effects	other: objectreference.getworkshopresourceobjects
+4	effects	other: objectreference.reset
+3	effects	other: actor.allowbleedoutdialogue
+3	effects	other: actor.isincombat
+3	effects	other: actor.playidleaction
+3	effects	other: actorbase.getdeadcount
+3	effects	other: actorbase.setprotected
+3	effects	other: cell.setactorowner
+3	effects	other: game.incrementstat
+3	effects	other: game.stopdialoguecamera
+3	effects	other: objectreference.cleardestruction
+3	effects	other: objectreference.getcontainer
+3	effects	other: objectreference.getpositionz
+3	effects	other: objectreference.hasdirectlos
+3	effects	other: objectreference.waitforworkshopresourcerecalc
+3	effects	other: sound.stopinstance
+3	effects	other: utility.getcurrentrealtime
+2	effects	other: actor.isinscene
+2	effects	other: actor.resethealthandlimbs
+2	effects	other: actor.setnotshowonstealthmeter
+2	effects	other: actor.startsneaking
+2	effects	other: actor.switchtopowerarmor
+2	effects	other: game.getconfidenceav
+2	effects	other: game.requestsave
+2	effects	other: game.setinchargen
+2	effects	other: objectreference.createdetectionevent
+2	effects	other: objectreference.getcurrentscene
+2	effects	other: objectreference.getworldspace
+2	effects	other: objectreference.saycustom
+2	effects	other: objectreference.setactivatetextoverride
+2	effects	other: objectreference.setnofavorallowed
+2	effects	other: quest.reset
+2	effects	other: scriptobject.registerformagiceffectapplyevent
+2	effects	other: scriptobject.registerfortutorialevent
+2	effects	other: scriptobject.unregisterforanimationevent
+2	effects	other: soundcategorysnapshot.remove
+1	effects	other: actor.dismount
+1	effects	other: actor.enableai
+1	effects	other: actor.getleveledactorbase
+1	effects	other: actor.isequipped
+1	effects	other: actor.sendassaultalarm
+1	effects	other: actor.sethaschargenskeleton
+1	effects	other: actor.setlookat
+1	effects	other: actor.wornhaskeyword
+1	effects	other: actorbase.getuniqueactor
+1	effects	other: actorbase.setinvulnerable
+1	effects	other: alias.getowningquest
+1	effects	other: faction.sendassaultalarm
+1	effects	other: game.enablepipboyhdrmask
+1	effects	other: game.fasttravel
+1	effects	other: game.forcefirstperson
+1	effects	other: game.isplayerlistening
+1	effects	other: game.isplugininstalled
+1	effects	other: game.requestautosave
+1	effects	other: game.setinsidememoryhudmode
+1	effects	other: game.showallmapmarkers
+1	effects	other: game.showspecialmenu
+1	effects	other: game.startdialoguecameraorcenterontarget
+1	effects	other: game.usinggamepad
+1	effects	other: inputenablelayer.enablevats
+1	effects	other: location.iscleared
+1	effects	other: objectreference.canproduceforworkshop
+1	effects	other: objectreference.getlinkedrefchildren
+1	effects	other: objectreference.getrefslinkedtome
+1	effects	other: objectreference.islocked
+1	effects	other: objectreference.raidtargetsavailable
+1	effects	other: objectreference.setdirectattarget
+1	effects	other: objectreference.setpersistloc
+1	effects	other: objectreference.setradioon
+1	effects	other: quest.hasobjective
+1	effects	other: quest.isactive
+1	effects	other: referencealias.removefromref
+1	effects	other: scriptobject.registerforlooksmenuevent
+1	effects	other: scriptobject.registerforplayersleep
+1	effects	other: scriptobject.unregisterforradiationdamageevent
+1	effects	other: sound.setinstancevolume
+1	effects	other: utility.waitmenumode
+1	effects	other: visualeffect.stop

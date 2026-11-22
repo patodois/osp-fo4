@@ -271,7 +271,8 @@ time. None of these has a default.
   quest's VMAD block (read to the last byte, [vmad.md](vmad.md)), a placed
   REFR's or ACHR's scripts as for a bound reference; each with its VMAD
   property values, in its auto state, no event run on it. Other records
-  get nothing. Quest stage fragments are read but not run.
+  get nothing. Quest stage fragments run only through the quest host
+  (Quests, below).
 - **Reference index**: the placed references of a cell are numbered as
   `fo4_vm::bind::placed` lists them: the active ones, then the initially
   disabled ones, each in stored order.
@@ -392,6 +393,147 @@ Byte identity of the viewer without the option is not decidable by frame
 comparison on this machine (spec of the previous step: two builds of one
 source differ in frames); the printed load reports are the check.
 
+## Quests
+
+`fo4_vm::quest` keeps a state per quest in the run's world and answers
+the quest natives from it and from the quest record
+([quest.md](quest.md), read by `fo4_plugin::quest`). Every behaviour is a
+pending rule; none is measured.
+
+**State** (`QuestState`): running, current stage, stages done,
+objectives displayed, completed and failed, alias fills a run set. Each
+item is known or undetermined; a native whose answer depends on an
+undetermined item answers undetermined, so the run blocks where it would
+steer. A native whose effect the rules do not settle (setting a stage the
+record does not hold or an undetermined stage, `Reset`) makes the whole
+quest undetermined. Two scenarios fix the starting state:
+
+- *isolated* (`quest_state_isolated_v1`, the stage sweep): everything is
+  undetermined until a run sets it; the quest whose stage the sweep sets
+  is running; a stage a run sets counts as not done before (first
+  settings are explored); a quest whose running state is undetermined runs
+  after one of its stages is set, and whether that started it is an open
+  job.
+- *new game* (`quest_start_game_enabled_v1`): the quests whose DNAM flags
+  carry bit 0 are started, in the store's order; nothing else runs; no
+  stage is done and no objective set before; the current stage is
+  undetermined until a stage is set.
+
+**Quest host** (`QuestHost`: the data host plus these natives):
+
+| Native | Answer | Rule |
+| --- | --- | --- |
+| `Quest.SetCurrentStageID(n)` (the installed `setStage` calls it) | stage n done and current; quest started if it was not running; true; the fragment of the log entry selected runs; already done: false and nothing, unless DNAM bit 3 | `quest_set_stage_v1`, `quest_stage_log_entry_v1`, `quest_repeated_stage_v1` |
+| `GetCurrentStageID` (and `GetStage`), `IsStageDone` (and `GetStageDone`), `IsRunning` | from the state | `quest_set_stage_v1`, `quest_start_v1` |
+| `Start` | running; startup stages (INDX bit 1) set; OnQuestInit then their fragments run; true. On a running quest: undetermined | `quest_start_v1` |
+| `Stop` | not running; OnQuestShutdown runs | `quest_stop_v1` |
+| `SetObjectiveDisplayed`, `SetObjectiveCompleted`, `SetObjectiveFailed`; `IsObjective...`; `HasObjective` | set and answered from the state; `HasObjective` from QOBJ; `CompleteAllObjectives`, `FailAllObjectives` make objectives undetermined | `quest_objectives_v1` |
+| `ReferenceAlias.GetReference` | running quest: the ALFR reference, else undetermined; stopped: none; after `ForceRefTo` or `Clear` in the run: what they set | `quest_alias_forced_reference_v1` |
+| `Alias.GetOwningQuest` | the alias's quest | `vmad_alias_value_v1` |
+
+**Fragments.** A stage's fragment is the function the VMAD block names
+for (stage, log entry) (`quest_fragment_entry_v1`), run with no argument
+on one instance of the block's fragment script on the quest's handle,
+made after the quest's own VMAD scripts are attached, with the block's
+property values (`quest_fragment_instance_v1`); its alias properties hold
+alias handles, which `GetReference` answers through ALFR. Which entry runs
+(`quest_stage_log_entry_v1`): the first whose conditions hold; one
+without conditions holds; conditions are not evaluated, so a conditioned
+entry before the first unconditioned one leaves the choice open (an open
+job) unless every candidate names the same fragment. A fragment function
+stored without instructions runs and returns at once (394 of the
+stages the sweep sets have one).
+
+**Order** (`quest_stage_fragment_order_v1`). The candidate is the
+*nested* reading: the fragment and quest events a native brings run at
+once inside that native call (`Vm::nested`, `quest::Runner`), within the
+enclosing run's step and depth limits. The *queued* reading (they run
+after the calling script, in order; `quest::run_jobs` without a runner,
+`quest_run --queued`) was run as the alternative. Neither is measured; the
+data argue for nested: the queued reading answers `GetReference` with
+none 69 times against 41 (aliases of a quest the calling script stops
+right after setting the stage, whose fragment then runs on a stopped
+quest) and leaves 84 cascaded fragments failing on a call on none against
+58. The new-game sweep gives the same counts under both.
+
+### Stage sweep (`quest_run MANIFEST stages OUT_DIR`)
+
+For every winning quest and every stage its record holds that a fragment
+names (10,071 stages of 1,273 quests; 632 quests have none), one fresh
+interpreter (quest host, isolated scenario, scripts attached on need)
+sets the stage and runs what follows, up to 256 jobs.
+[quest-run-stages.txt](quest-run-stages.txt) has every count. 14.7 s
+wall, peak RSS about 740 MB.
+
+| The stage's own fragment | Stages |
+| --- | ---: |
+| completed | 5,537 |
+| blocked on a native's result | 4,121 |
+| blocked on an undetermined value (open rule) | 28 |
+| blocked on an object without the script | 1 |
+| failed | 219 |
+| open: which log entry's fragment runs depends on conditions | 162 |
+| no fragment (the selected entry has none) | 3 |
+
+- Natives that blocked the stage's fragment, most first:
+  `ReferenceAlias.GetReference` 1,618 (aliases filled at run time),
+  `Quest.IsStageDone` 1,236 (stages the isolated state does not know),
+  `RefCollectionAlias.GetCount` 227, `Quest.IsRunning` 178,
+  `Quest.IsObjectiveDisplayed` 172, `Actor.IsInFaction` 114, `Is3DLoaded`
+  80, `Actor.IsDead` 72; the full ranking is in
+  [vm-blockers.txt](vm-blockers.txt).
+- Failures: a call on none (op 23) 164 and a property on none 1 (a
+  property or alias the data leaves none, mostly `MoveTo` and
+  `EnablePlayerControls` targets),
+  `BadArgument` 23 (VMAD object values with an invalid master index,
+  refused as the binding refuses them), array operations on none 21,
+  `MissingFunction` 4, `MissingScript` 2, `IndexOutOfRange` 3, `Ambiguous`
+  1.
+- 4,617 stages ran with every job completed and no open job.
+- Cascades: fragments run per stage set, the stage's own included: 1 in
+  8,514 stages, 2 in 894, 3 to 9 in 405, 10 to 42 in 93, none in 165
+  (the 162 open ones and 3 without a fragment); depth
+  up to 8; no stage reached the job limit and no run reached the step or
+  depth limit, so no cycle runs unbounded (141 settings of an already done
+  stage were refused by `quest_repeated_stage_v1`). Cascaded fragments:
+  3,927, 2,240 completed, 1,611 blocked, 76 failed; open jobs: 1,724
+  (whether setting the stage started another quest), 188 (whether a
+  stopped quest ran OnQuestShutdown), 126 (log entry conditions).
+- Effects (native calls) by kind over all runs: stage set on another
+  quest 4,375 and on the same quest 610, objectives displayed or hidden
+  2,419, completed 2,422, failed 82, enable 2,002, disable 1,697, global
+  set 1,709, scene 1,434, actor state 1,241, quest stopped 1,210, move
+  1,088, items 841, event registration 809, alias fill changed 734, lock
+  or open state 604, timer 569, actor value 462, faction 239, quest
+  started 195; reads and other natives are ranked in the file.
+
+### New game (`quest_run MANIFEST new-game OUT_DIR`)
+
+One interpreter starts the 457 quests flagged to start with the game
+([quest-run-new-game.txt](quest-run-new-game.txt)); 1.7 s.
+
+- 539 jobs ran: 459 OnQuestInit (457 starts, one `Start` and one stage set
+  from scripts), 73 stage jobs, 7 OnQuestShutdown. 436 OnQuestInit jobs
+  found no handler; the other 23 ran 24 handlers: 12 completed, 10
+  blocked, 2 failed.
+- 125 stages set on 98 quests (108 by starts, 17 by scripts); 72
+  fragments: 59 completed, 10 blocked (`RefCollectionAlias.GetCount`,
+  `Actor.GetLevel`, `Game.IsPluginInstalled`, `Scene.IsPlaying`,
+  `Is3DLoaded`, `ReferenceAlias.GetReference`; one open rule), 3 failed;
+  one stage left open by log entry conditions.
+- 452 quests run at the end (7 stopped by scripts); **no objective is
+  displayed**; three placed references, none flagged initially disabled,
+  are enabled; nothing is disabled.
+- Other effects: 17 stages set on other quests, 41 event registrations, 14
+  alias fills, 12 lock or open state changes, 8 moves, 9 objects placed, 7
+  item changes, 4 scene calls.
+
+This is the first picture of what the scripts do when a new game starts,
+under every rule above: little runs, because most of the game's opening
+is driven by events the interpreter does not deliver (the player leaving
+the first cell, dialogue, triggers, scenes ending) rather than by the
+quests' start.
+
 ## Limits
 
 - One installation, one game build; no measurement of the running game.
@@ -401,7 +543,9 @@ source differ in frames); the printed load reports are the check.
 - Natives are never performed; latent natives do not wait; the data host
   answers only the natives listed under Data host, from the data as at the
   start of a game.
-- Quest stage fragments are read but no stage is ever set or run; INFO,
+- Stages are set and their fragments run only by `quest_run` (Quests);
+  `script_run`, `bind::run` and the viewer keep the data host, so quest
+  natives stay undetermined there. Conditions are never evaluated. INFO,
   PACK, PERK and SCEN fragment blocks stay raw ([vmad.md](vmad.md)).
 - Opcode 34's arity between `4` and `4+n` stays open ([pex.md](pex.md));
   the interpreter reads its fourth slot as the start index.
@@ -440,3 +584,29 @@ over the data could refute (each counted above or in
 No editor, editor source or definition file, wiki page, script source,
 decompiler, other interpreter or the game executable was opened or
 searched for.
+
+## Provenance of the quest step
+
+Recognised from prior general knowledge, used only as hypotheses that the
+censuses could refute ([quest.md](quest.md), [quest-census.txt](quest-census.txt),
+[quest-run-stages.txt](quest-run-stages.txt)):
+
+- the QUST subrecord tags' roles and field layouts (`quest_qust_layout_v1`);
+- that a VMAD stage fragment's log entry is the position of a QSDT under
+  its INDX;
+- the meanings of DNAM flag bits 0 (start-game enabled) and 3 (repeated
+  stages allowed) and of INDX flag bit 1 (startup stage);
+- what setting a stage, starting and stopping a quest, objectives and
+  forced-reference aliases do, from the native and event names the
+  installed Quest, Alias and ReferenceAlias scripts declare (their
+  declarations, and the scripted `setStage`, `GetStage` and
+  `GetStageDone` that call the natives, were read from the archives with
+  `pex_dump`);
+- that the first log entry whose conditions hold selects the fragment.
+
+The order of nested fragments was chosen by the data-flow comparison
+above, not recalled. One public documentation page of script-facing
+behaviour was requested (the Creation Kit wiki page of the SetStage
+function); the server refused it (HTTP 403) and nothing of it was read. No
+editor, editor source or definition file, script source, decompiler,
+other interpreter or the game executable was opened or searched for.

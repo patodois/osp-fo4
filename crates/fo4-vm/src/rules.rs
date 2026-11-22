@@ -68,8 +68,38 @@ pub const ATTACH: &str = "vm_record_scripts_attach_v1";
 /// A VMAD object value with an alias index names that alias of the quest.
 pub const ALIAS_VALUE: &str = "vmad_alias_value_v1";
 
+/// The QUST record's subrecord order and field layouts (`fo4_plugin::quest`).
+pub const QUEST_LAYOUT: &str = "quest_qust_layout_v1";
+/// A VMAD stage fragment names a stage of the record and one of its log
+/// entries by position.
+pub const QUEST_FRAGMENT_ENTRY: &str = "quest_fragment_entry_v1";
+/// The fragment script of a quest's VMAD block is one instance on the
+/// quest's handle, with the block's property values.
+pub const QUEST_FRAGMENT_INSTANCE: &str = "quest_fragment_instance_v1";
+/// What setting a stage does: done, current, quest started, fragment.
+pub const QUEST_SET_STAGE: &str = "quest_set_stage_v1";
+/// Which log entry's fragment runs when a stage is set.
+pub const QUEST_LOG_ENTRY: &str = "quest_stage_log_entry_v1";
+/// Fragments and quest events run at once, inside the native call that
+/// brought them (nested reading).
+pub const QUEST_ORDER: &str = "quest_stage_fragment_order_v1";
+/// Setting a stage already done.
+pub const QUEST_REPEATED_STAGE: &str = "quest_repeated_stage_v1";
+/// Starting a quest: running, OnQuestInit, startup stages.
+pub const QUEST_START: &str = "quest_start_v1";
+/// Stopping a quest: not running, OnQuestShutdown.
+pub const QUEST_STOP: &str = "quest_stop_v1";
+/// Objectives displayed, completed and failed as set.
+pub const QUEST_OBJECTIVES: &str = "quest_objectives_v1";
+/// A reference alias holds its forced reference while its quest runs.
+pub const QUEST_ALIAS_FORCED: &str = "quest_alias_forced_reference_v1";
+/// The quests running at the start of a new game.
+pub const QUEST_START_GAME: &str = "quest_start_game_enabled_v1";
+/// The stage sweep's state: everything it does not set is undetermined.
+pub const QUEST_ISOLATED: &str = "quest_state_isolated_v1";
+
 /// Every rule above.
-pub const ALL: [&str; 31] = [
+pub const ALL: [&str; 44] = [
     ARITHMETIC,
     COMPARE,
     NOT_COPY_CAST,
@@ -101,6 +131,19 @@ pub const ALL: [&str; 31] = [
     SIGNATURE_TYPE,
     ATTACH,
     ALIAS_VALUE,
+    QUEST_LAYOUT,
+    QUEST_FRAGMENT_ENTRY,
+    QUEST_FRAGMENT_INSTANCE,
+    QUEST_SET_STAGE,
+    QUEST_LOG_ENTRY,
+    QUEST_ORDER,
+    QUEST_REPEATED_STAGE,
+    QUEST_START,
+    QUEST_STOP,
+    QUEST_OBJECTIVES,
+    QUEST_ALIAS_FORCED,
+    QUEST_START_GAME,
+    QUEST_ISOLATED,
 ];
 
 /// The rule an opcode's meaning rests on; `None` for an opcode without a

@@ -448,6 +448,12 @@ impl Vm<'_> {
             result: self.world.render(&v),
         };
         self.effects.push(effect);
+        if !self.world.quests.queue.is_empty() {
+            if let Some(n) = self.nested.take() {
+                n.run(self);
+                self.nested = Some(n);
+            }
+        }
         Ok(v)
     }
     fn call_values(&mut self, f: &mut Frame, ins: &Ins) -> R<Vec<Val>> {

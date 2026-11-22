@@ -7,6 +7,8 @@
 #   of the type called.
 # data answer (after only): calls the data host answered, by native and by kind of
 #   answer; an undetermined answer names why the data does not answer.
+# quest_run sections (at the end): the natives, rules and object kinds that
+#   blocked stage fragments and quest events (spec/vm.md, Quests).
 # Script, record and object names stay out of this file.
 
 ## the two test cells of the survey (one interior; one exterior with radius 1); before: recording host alone, no record's scripts attached (as at main)
@@ -326,3 +328,109 @@
 1	native	objectreference.isradioon
 1	object kind	player
 1	object kind and type class	player	actor
+
+## quest_run stages: every winning quest, every stage a fragment names, set in a fresh interpreter (quest host, isolated scenario, nested order); the stage's own fragment
+1618	native	referencealias.getreference
+1236	native	quest.isstagedone
+227	native	refcollectionalias.getcount
+178	native	quest.isrunning
+172	native	quest.isobjectivedisplayed
+114	native	actor.isinfaction
+80	native	objectreference.is3dloaded
+72	native	actor.isdead
+53	native	objectreference.getvalue
+52	native	globalvariable.getvalue
+38	native	utility.randomint
+37	native	scene.isplaying
+33	native	quest.isobjectivecompleted
+26	native	objectreference.getitemcount
+18	native	objectreference.isdisabled
+17	native	quest.getcurrentstageid
+13	native	utility.getcurrentgametime
+10	native	objectreference.getdistance
+9	native	actor.getkiller
+8	native	actor.getlevel
+8	native	objectreference.getcurrentlocation
+7	native	actorbase.getsex
+6	native	actor.getsitstate
+6	native	objectreference.getopenstate
+6	native	quest.iscompleted
+5	native	actor.isbeingriddenby
+5	native	objectreference.getlinkedref
+5	native	objectreference.getparentcell
+5	native	objectreference.ismapmarkervisible
+5	native	objectreference.placeactoratme
+4	native	actor.getfactionrank
+4	native	actor.hasdetectionlos
+4	native	locationalias.getlocation
+3	native	actor.isincombat
+3	native	actorbase.getdeadcount
+3	native	objectreference.getcontainer
+3	native	objectreference.getworkshopresourceobjects
+2	native	actor.isinscene
+2	native	actor.playidlewithtarget
+2	native	objectreference.getbasevalue
+2	native	objectreference.getpositionz
+2	native	objectreference.getworldspace
+2	native	objectreference.hasdirectlos
+2	native	objectreference.waitfor3dload
+1	native	actor.isequipped
+1	native	actor.wornhaskeyword
+1	native	game.isplayerlistening
+1	native	game.isplugininstalled
+1	native	game.usinggamepad
+1	native	location.iscleared
+1	native	objectreference.canproduceforworkshop
+1	native	objectreference.getlinkedrefchildren
+1	native	objectreference.getnthlinkedref
+1	native	objectreference.getrefslinkedtome
+1	native	objectreference.islocked
+1	native	objectreference.raidtargetsavailable
+1	native	quest.isactive
+1	native	refcollectionalias.getat
+14	rule	pex_array_ops_v1
+8	rule	pex_ops_not_copy_cast_v1
+4	rule	vmad_property_sets_variable_v1
+2	rule	pex_ops_compare_v1
+1	object kind	player
+
+## quest_run stages: the fragments and quest events those stages brought (cascades)
+491	native	referencealias.getreference
+419	native	quest.isstagedone
+124	native	quest.isrunning
+118	native	actor.isinfaction
+112	native	quest.isobjectivedisplayed
+100	native	refcollectionalias.getcount
+57	native	objectreference.is3dloaded
+55	native	globalvariable.getvalue
+35	native	actor.isdead
+23	native	quest.isobjectivecompleted
+21	native	objectreference.getvalue
+12	native	scene.isplaying
+7	native	objectreference.getitemcount
+6	native	objectreference.waitfor3dload
+4	native	quest.iscompleted
+3	native	objectreference.getcurrentlocation
+2	native	actorbase.getsex
+2	native	objectreference.isdisabled
+2	native	objectreference.ismapmarkervisible
+2	native	objectreference.placeactoratme
+2	native	utility.getcurrentgametime
+2	native	utility.randomint
+1	native	actor.getlevel
+1	native	locationalias.getlocation
+1	native	objectreference.getopenstate
+1	native	objectreference.getparentcell
+1	native	objectreference.hasdirectlos
+6	rule	pex_array_ops_v1
+1	rule	vmad_property_sets_variable_v1
+
+## quest_run new-game: the quests started with a new game, their OnQuestInit and startup-stage fragments and what those brought
+5	native	refcollectionalias.getcount
+3	native	actor.getlevel
+3	native	game.isplugininstalled
+3	native	scene.isplaying
+2	native	objectreference.is3dloaded
+2	native	referencealias.getreference
+1	rule	pex_array_ops_v1
+1	rule	pex_ops_not_copy_cast_v1

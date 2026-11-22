@@ -38,7 +38,11 @@ capsule over a cell's collision under provisional, registered rules.
   effect log, a native result that would steer control flow stops the run
   as blocked, and `script_run` binds a placed reference's scripts from VMAD
   and delivers one event; opcode meanings are supported by data-flow, idiom
-  and execution checks, not measured ([interpreter](spec/vm.md)).
+  and execution checks, not measured ([interpreter](spec/vm.md)). Quest
+  records are read to the last byte ([quests](spec/quest.md)), and
+  `quest_run` sets every quest stage that has a fragment, or starts the
+  quests flagged to start with a new game, and runs the stage fragments
+  under pending rules.
 - **Saves**: save files (`.fos`) read, never written, to the last byte:
   header, plugin lists, the location table, the three global data tables
   and the change-form table, with every form reference resolved against the

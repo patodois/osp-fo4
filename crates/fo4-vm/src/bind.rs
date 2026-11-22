@@ -177,7 +177,7 @@ pub fn base_of(store: &Store, reference: &FormKey, b: &Budget) -> Result<Option<
 }
 
 /// The VMAD of a record with the plugin its FormIDs resolve through.
-fn vmad_of(store: &Store, k: &FormKey, b: &Budget) -> Result<Option<(Record, usize)>> {
+pub(crate) fn vmad_of(store: &Store, k: &FormKey, b: &Budget) -> Result<Option<(Record, usize)>> {
     let Some((r, plugin)) = store.raw_with_plugin(k, b)? else {
         return Ok(None);
     };
@@ -187,11 +187,11 @@ fn vmad_of(store: &Store, k: &FormKey, b: &Budget) -> Result<Option<(Record, usi
     Ok(Some((r, plugin)))
 }
 
-struct Ctx<'s> {
-    store: &'s Store,
-    plugin: usize,
-    file: String,
-    b: &'s Budget,
+pub(crate) struct Ctx<'s> {
+    pub(crate) store: &'s Store,
+    pub(crate) plugin: usize,
+    pub(crate) file: String,
+    pub(crate) b: &'s Budget,
 }
 
 /// A VMAD value as a run value of a declared type.
@@ -302,7 +302,7 @@ fn make_struct(
 }
 
 /// Applies the properties of one VMAD script to an instance.
-fn apply(
+pub(crate) fn apply(
     vm: &mut Vm<'_>,
     cx: &Ctx<'_>,
     inst: InstId,

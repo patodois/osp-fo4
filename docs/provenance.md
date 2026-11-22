@@ -272,6 +272,23 @@ refuted them and did not; each behaviour is a pending rule in
 or definition file, wiki page, script source, decompiler, other
 interpreter or the game executable was opened or searched for.
 
+The quest record reader and the quest state (`fo4_plugin::quest`,
+`fo4_vm::quest`, [spec/quest.md](../spec/quest.md),
+[spec/vm.md](../spec/vm.md), Quests and Provenance of the quest step) add
+no sourced format fact. The QUST subrecord tags' roles, the field layouts,
+the meaning of the flag bits the interpreter relies on (DNAM bits 0 and 3,
+INDX bit 1), the log-entry position of a VMAD fragment and what setting a
+stage, starting and stopping a quest, objectives and forced-reference
+aliases do were recognised from prior general knowledge and are kept only
+as far as the censuses (`quest_census`, `quest_run`) could have refuted
+them and did not; each is a pending rule in
+[spec/hypotheses.tsv](../spec/hypotheses.tsv). The native and event names
+come from the declarations of the installed scripts. One request for a
+Creation Kit wiki page on SetStage was refused by the server (HTTP 403);
+nothing was read from it. No editor, editor source or definition file,
+script source, decompiler, other interpreter or the game executable was
+opened or searched for.
+
 The save file reader (`fo4-save`, [spec/save.md](../spec/save.md)) was
 established only by measuring the save files of one machine with the
 `save_census` example and by resolving their form references against the

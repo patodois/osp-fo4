@@ -31,6 +31,7 @@ pub mod data;
 mod exec;
 pub mod host;
 pub mod program;
+pub mod quest;
 pub mod rules;
 pub mod world;
 
@@ -351,6 +352,14 @@ pub trait Attach {
     fn attach(&mut self, vm: &mut Vm<'_>, o: ObjId) -> Result<(), VmError>;
 }
 
+/// Runs the stage fragments and quest events a native queued, at once,
+/// inside the run that called the native (`quest_stage_fragment_order_v1`,
+/// nested reading): asked after each native call that left the quest
+/// queue non-empty. `None` leaves them queued for `quest::run_jobs`.
+pub trait Nested {
+    fn run(&mut self, vm: &mut Vm<'_>);
+}
+
 /// The interpreter.
 pub struct Vm<'a> {
     lib: &'a mut dyn Library,
@@ -358,6 +367,9 @@ pub struct Vm<'a> {
     /// Attaches the scripts of records on first need; `None` attaches
     /// nothing.
     pub attach: Option<&'a mut dyn Attach>,
+    /// Runs queued quest jobs inside the calling run; `None` leaves them
+    /// queued.
+    pub nested: Option<&'a mut dyn Nested>,
     scripts: BTreeMap<String, Option<Rc<Script>>>,
     pub world: World,
     pub effects: Vec<Effect>,
@@ -378,6 +390,7 @@ impl<'a> Vm<'a> {
             lib,
             host,
             attach: None,
+            nested: None,
             scripts: BTreeMap::new(),
             world: World::default(),
             effects: Vec::new(),
@@ -587,6 +600,23 @@ impl<'a> Vm<'a> {
             }
             self.call(Some(inst), f, args)
         })();
+        Self::outcome(r)
+    }
+    /// Delivers an event inside a running delivery (a nested quest job):
+    /// as [`Vm::deliver`], but the step and call-depth counts go on from
+    /// the enclosing run's, so its limits bound both.
+    pub fn deliver_nested(&mut self, inst: InstId, event: &str, args: Vec<Val>) -> Outcome {
+        let depth = self.depth;
+        let r = (|| {
+            let f = self
+                .dispatch(inst, event)?
+                .ok_or_else(|| VmError::MissingFunction {
+                    script: self.world.instances[inst].script.clone(),
+                    name: event.to_string(),
+                })?;
+            self.call(Some(inst), f, args)
+        })();
+        self.depth = depth;
         Self::outcome(r)
     }
     /// Runs one scripted function (a check's entry point), with an

@@ -1,0 +1,119 @@
+# quest_run new-game: counts, type tags and native names only (spec/vm.md, Quests)
+3	blocking native	actor.getlevel
+3	blocking native	game.isplugininstalled
+2	blocking native	objectreference.is3dloaded
+5	blocking native	refcollectionalias.getcount
+2	blocking native	referencealias.getreference
+3	blocking native	scene.isplaying
+1	blocking rule	pex_array_ops_v1
+1	blocking rule	pex_ops_not_copy_cast_v1
+0	distinct objectives displayed
+14	effects	alias fill changed
+3	effects	enable
+41	effects	event registration
+7	effects	items added, removed or equipped
+12	effects	lock or open state
+8	effects	move
+9	effects	object placed
+1	effects	quest made active
+1	effects	quest started
+7	effects	quest stopped
+4	effects	scene
+17	effects	stage set on another quest
+1	effects	timer
+9	event onquestinit outcome: blocked on a native's result
+1	event onquestinit outcome: blocked on an undetermined value (rule pex_array_ops_v1)
+12	event onquestinit outcome: completed
+1	event onquestinit outcome: failed: BadArgument
+1	event onquestinit outcome: failed: NoneOperand op 28
+436	event onquestinit runs with no handler
+7	event onquestshutdown runs with no handler
+1	failure	BadArgument
+1	failure	MissingFunction
+2	failure	NoneOperand op 23
+1	failure	NoneOperand op 28
+9	fragment outcome: blocked on a native's result
+1	fragment outcome: blocked on an undetermined value (rule pex_ops_not_copy_cast_v1)
+59	fragment outcome: completed
+1	fragment outcome: failed: MissingFunction
+2	fragment outcome: failed: NoneOperand op 23
+4	host answer	formlist.getat	a record
+2	host answer	formlist.getsize	a value
+1	host answer	globalvariable.getvalue	a value
+7	host answer	quest.isrunning	a value
+9	host answer	quest.isstagedone	a value
+17	host answer	quest.setcurrentstageid	a value
+458	host answer	quest.start	a value
+7	host answer	quest.stop	none
+2	host answer	referencealias.forcerefto	none
+20	host answer	referencealias.getreference	a record
+33	host answer	referencealias.getreference	undetermined: the alias has no forced reference
+522	jobs at depth	1
+17	jobs at depth	2
+0	jobs left in the queue when the run ended
+539	jobs run
+1	open runs: which log entry's fragment runs depends on conditions
+459	quest changes	quest started
+7	quest changes	quest stopped
+125	quest changes	stage set
+452	quests running at the end (of those the run read)
+457	quests started with the game: Start answer Value(Bool(true))
+98	quests with a stage set
+1	rules relied on	pex_array_ops_v1
+1	rules relied on	pex_call_dispatch_v1
+1	rules relied on	pex_conditional_jump_sense_v1
+1	rules relied on	pex_default_values_v1
+1	rules relied on	pex_op_return_v1
+1	rules relied on	pex_ops_arithmetic_v1
+1	rules relied on	pex_ops_compare_v1
+1	rules relied on	pex_ops_not_copy_cast_v1
+1	rules relied on	pex_property_get_set_v1
+1	rules relied on	pex_state_identifier_v1
+1	rules relied on	pex_struct_ops_v1
+1	rules relied on	pex_truth_of_values_v1
+1	rules relied on	quest_alias_forced_reference_v1
+1	rules relied on	quest_fragment_entry_v1
+1	rules relied on	quest_fragment_instance_v1
+1	rules relied on	quest_set_stage_v1
+1	rules relied on	quest_stage_fragment_order_v1
+1	rules relied on	quest_stage_log_entry_v1
+1	rules relied on	quest_start_game_enabled_v1
+1	rules relied on	quest_start_v1
+1	rules relied on	quest_stop_v1
+1	rules relied on	vm_host_data_state_v1
+1	rules relied on	vm_host_formlist_lnam_v1
+1	rules relied on	vm_host_global_fltv_v1
+1	rules relied on	vm_host_player_handle_v1
+1	rules relied on	vm_record_scripts_attach_v1
+1	rules relied on	vm_record_signature_type_v1
+1	rules relied on	vm_timer_events_v1
+1	rules relied on	vmad_alias_value_v1
+1	rules relied on	vmad_property_sets_variable_v1
+1	rules relied on	vmad_reference_scripts_v1
+3	visibility	enable of a placed REFR not flagged
+
+## effects of other natives, ranked
+53	effects	other: referencealias.getreference
+34	effects	other: objectreference.attachmod
+29	effects	other: scriptobject.registerfortrackedstatsevent
+18	effects	other: formlist.addform
+17	effects	other: game.getplayer
+14	effects	other: faction.setally
+14	effects	other: objectreference.blockactivation
+9	effects	other: quest.isstagedone
+8	effects	other: objectreference.addkeyword
+7	effects	other: leveleditem.addform
+7	effects	other: quest.isrunning
+5	effects	other: actor.addperk
+4	effects	other: formlist.getat
+3	effects	other: actor.allowpcdialogue
+3	effects	other: actor.getlevel
+3	effects	other: game.isplugininstalled
+3	effects	other: utility.wait
+2	effects	other: faction.setenemy
+2	effects	other: formlist.getsize
+2	effects	other: objectreference.is3dloaded
+1	effects	other: globalvariable.getvalue
+1	effects	other: locationalias.getlocation
+1	effects	other: objectreference.setdestroyed
+1	effects	other: scriptobject.registerforplayersleep

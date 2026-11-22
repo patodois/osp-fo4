@@ -3,6 +3,7 @@
 use super::*;
 
 mod data;
+mod quest;
 
 use fo4_pex::{
     Function, Header, Instruction, Member, NamedFunction, Object, Pex, Property, Sections, State,
