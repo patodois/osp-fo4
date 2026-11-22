@@ -2,6 +2,8 @@
 
 Read [README.md](README.md) first for what the project is and how to run it.
 
+Where the work currently stops and what to do next: `docs/next-steps.md`. Update it whenever a step lands.
+
 ## Map
 
 | Crate | Purpose | Start here |

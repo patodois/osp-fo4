@@ -9,6 +9,8 @@ It is a reference, not a playable engine. There is no lighting, animation,
 physics or gameplay yet, apart from a first walking controller that moves a
 capsule over a cell's collision under provisional, registered rules.
 
+To continue the work, start at [docs/next-steps.md](docs/next-steps.md): it lists where each part stops and what is needed next.
+
 ## What works
 
 - **Archives**: BA2 (general and texture) indexes and bounded extraction; BSA
