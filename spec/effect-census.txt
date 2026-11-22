@@ -1,0 +1,1960 @@
+# Effect census (`effect_census`): 224366 NIF read, 2 unreadable, 86 s
+# enabled placed REFR 1776060, area proxy 3.6769e11; omitted (from bases.tsv) 256436 placements, area 1.5113e11
+
+3	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min 0 to 0.1, max 0.5 to 0.75, first key 0.5 to 0.75
+9	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min 0.1 to 0.25, max 0.25 to 0.5, first key 0.1 to 0.25
+12	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min 0.1 to 0.25, max 0.25 to 0.5, first key 0.25 to 0.5
+5	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min 0.1 to 0.25, max 0.5 to 0.75, first key 0.1 to 0.25
+3	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min 0.1 to 0.25, max 0.5 to 0.75, first key 0.25 to 0.5
+6	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min 0.1 to 0.25, max 0.5 to 0.75, first key 0.5 to 0.75
+40	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min 0.25 to 0.5, max 0.25 to 0.5, first key 0.25 to 0.5
+13	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min 0.25 to 0.5, max 0.5 to 0.75, first key 0.25 to 0.5
+35	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min 0.25 to 0.5, max 0.5 to 0.75, first key 0.5 to 0.75
+1	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min 0.25 to 0.5, max 0.5 to 0.75, first key = 0.5
+1	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min 0.25 to 0.5, max 0.75 to 1, first key 0.5 to 0.75
+8	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min 0.25 to 0.5, max 1 to 1.5, first key 1 to 1.5
+21	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min 0.5 to 0.75, max 0.5 to 0.75, first key 0.5 to 0.75
+5	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min 0.5 to 0.75, max 0.75 to 1, first key 0.5 to 0.75
+2	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min 0.5 to 0.75, max 0.75 to 1, first key 0.75 to 1
+2	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min 0.5 to 0.75, max = 1, first key 0.5 to 0.75
+1	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min 0.5 to 0.75, max = 1, first key 0.75 to 1
+10	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min 0.5 to 0.75, max = 1, first key = 1
+1	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min 0.75 to 1, max 0.75 to 1, first key 0.75 to 1
+3	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min 0.75 to 1, max 1 to 1.5, first key 0.75 to 1
+1	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min 0.75 to 1, max 1 to 1.5, first key 1 to 1.5
+4	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min 0.75 to 1, max = 1, first key 0.75 to 1
+3	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min 0.75 to 1, max = 1, first key = 1
+30	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min 0.75 to 1, max = 2, first key 0.75 to 1
+2	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min 1 to 1.5, max 1 to 1.5, first key 1 to 1.5
+4	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min = -0, max 0.25 to 0.5, first key = 0
+2	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min = -0, max 0.5 to 0.75, first key = 0
+8	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min = 0, max 0.25 to 0.5, first key = 0
+1	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min = 0, max 0.5 to 0.75, first key 0.5 to 0.75
+8	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min = 0, max 0.5 to 0.75, first key = 0
+9	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min = 0, max 0.75 to 1, first key 0.75 to 1
+10	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min = 0, max 0.75 to 1, first key = 0
+5	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min = 0, max 1 to 1.5, first key 1 to 1.5
+3	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min = 0, max 1 to 1.5, first key = 0
+2	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min = 0, max 1 to 1.5, first key = 1
+2	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min = 0, max 2 to 5, first key 2 to 5
+2	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min = 0, max = 0, first key = 0
+17	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min = 0, max = 0.5, first key = 0.5
+30	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min = 0, max = 1, first key 0.5 to 0.75
+64	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min = 0, max = 1, first key 0.75 to 1
+140	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min = 0, max = 1, first key = 0
+1	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min = 0, max = 1, first key = 0.25
+25	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min = 0, max = 1, first key = 1
+1	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min = 0, max = 2, first key = 0
+2	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min = 0.1, max 0.1 to 0.25, first key = 0.1
+1	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min = 0.1, max 0.25 to 0.5, first key 0.25 to 0.5
+1	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min = 0.1, max 0.75 to 1, first key 0.5 to 0.75
+1	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min = 0.1, max = 1, first key = 0.1
+1	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min = 0.25, max = 1, first key = 1
+1	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min = 0.5, max 0.5 to 0.75, first key 0.5 to 0.75
+1	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min = 0.5, max = 0.5, first key = 0.5
+2	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min = 0.5, max = 1, first key = 0.5
+20	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min = 0.5, max = 1, first key = 1
+1	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min = 0.75, max = 0.75, first key = 0.75
+1	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min = 0.75, max = 1, first key = 1
+6	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min = 1, max 1.5 to 2, first key = 1
+11	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min = 1, max = 1, first key = 1
+13	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min = 1.5, max = 1.5, first key = 1.5
+4	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min 0 to 0.1, max 0.75 to 1, first key 0 to 0.1
+4	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min 0 to 0.1, max 1 to 1.5, first key 0 to 0.1
+1	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min 0 to 0.1, max 1 to 1.5, first key 0.5 to 0.75
+2	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min 0 to 0.1, max 1 to 1.5, first key = 1
+1	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min 0.1 to 0.25, max = 1, first key = 1
+2	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min 0.25 to 0.5, max 1 to 1.5, first key 1 to 1.5
+10	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min 0.25 to 0.5, max = 1, first key = 1
+4	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min 0.5 to 0.75, max 0.5 to 0.75, first key 0.5 to 0.75
+2	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min 0.75 to 1, max 0.75 to 1, first key 0.75 to 1
+6	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min 0.75 to 1, max 1 to 1.5, first key 1 to 1.5
+1	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min 0.75 to 1, max 2 to 5, first key 2 to 5
+21	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min 0.75 to 1, max = 1, first key = 1
+2	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min 1 to 1.5, max 1 to 1.5, first key 1 to 1.5
+4	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min < 0, max 0 to 0.1, first key = 0
+3	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min < 0, max 0.5 to 0.75, first key < 0
+1	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min < 0, max 2 to 5, first key 2 to 5
+5	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min < 0, max = 0, first key = 0
+5	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min < 0, max = 1, first key = 1
+2	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min = 0, max 0.1 to 0.25, first key = 0
+5	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min = 0, max 0.25 to 0.5, first key 0.25 to 0.5
+3	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min = 0, max 0.25 to 0.5, first key = 0
+1	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min = 0, max 0.5 to 0.75, first key 0 to 0.1
+1	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min = 0, max 0.5 to 0.75, first key 0.1 to 0.25
+4	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min = 0, max 0.5 to 0.75, first key 0.5 to 0.75
+12	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min = 0, max 0.5 to 0.75, first key = 0
+1	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min = 0, max 0.5 to 0.75, first key = 0.5
+10	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min = 0, max 0.75 to 1, first key 0.75 to 1
+16	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min = 0, max 0.75 to 1, first key = 0
+2	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min = 0, max 1 to 1.5, first key 0.25 to 0.5
+6	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min = 0, max 1 to 1.5, first key 1 to 1.5
+20	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min = 0, max 1 to 1.5, first key = 0
+1	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min = 0, max 1 to 1.5, first key = 0.1
+4	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min = 0, max 1 to 1.5, first key = 1
+2	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min = 0, max 1.5 to 2, first key 0.25 to 0.5
+1	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min = 0, max 1.5 to 2, first key 1 to 1.5
+2	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min = 0, max 1.5 to 2, first key = 0
+44	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min = 0, max 2 to 5, first key 2 to 5
+3	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min = 0, max 2 to 5, first key = 0
+85	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min = 0, max = 0, first key = 0
+5	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min = 0, max = 0.5, first key = 0.5
+5	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min = 0, max = 0.75, first key = 0
+2	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min = 0, max = 0.75, first key = 0.75
+4	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min = 0, max = 1, first key 0.1 to 0.25
+3	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min = 0, max = 1, first key 0.25 to 0.5
+80	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min = 0, max = 1, first key = 0
+5	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min = 0, max = 1, first key = 0.25
+76	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min = 0, max = 1, first key = 1
+2	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min = 0, max = 1.5, first key 0.1 to 0.25
+2	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min = 0, max = 1.5, first key 0.25 to 0.5
+1	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min = 0, max = 2, first key 0.25 to 0.5
+15	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min = 0, max = 2, first key = 0
+1	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min = 0, max = 5, first key = 5
+1	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min = 0.5, max 0.75 to 1, first key = 0.5
+8	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min = 0.5, max 1 to 1.5, first key 1 to 1.5
+12	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min = 0.5, max = 0.5, first key = 0.5
+2	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min = 0.5, max = 0.75, first key = 0.75
+16	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min = 0.5, max = 1, first key = 1
+13	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min = 0.75, max = 1, first key = 1
+2	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min = 0.75, max = 1.5, first key = 1
+1	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min = 1, max 1 to 1.5, first key = 1
+8	effect controller ranges: alpha (base colour alpha) (sequence, clamp): min = 1, max = 1, first key = 1
+2	effect controller ranges: alpha (base colour alpha) (sequence, loop): min 0 to 0.1, max 0.1 to 0.25, first key 0 to 0.1
+2	effect controller ranges: alpha (base colour alpha) (sequence, loop): min 0 to 0.1, max 0.1 to 0.25, first key 0.1 to 0.25
+2	effect controller ranges: alpha (base colour alpha) (sequence, loop): min 0 to 0.1, max 0.25 to 0.5, first key 0 to 0.1
+2	effect controller ranges: alpha (base colour alpha) (sequence, loop): min 0 to 0.1, max 0.5 to 0.75, first key 0 to 0.1
+1	effect controller ranges: alpha (base colour alpha) (sequence, loop): min 0 to 0.1, max 0.5 to 0.75, first key 0.5 to 0.75
+1	effect controller ranges: alpha (base colour alpha) (sequence, loop): min 0 to 0.1, max = 1, first key 0.75 to 1
+4	effect controller ranges: alpha (base colour alpha) (sequence, loop): min 0 to 0.1, max = 1, first key = 0.1
+6	effect controller ranges: alpha (base colour alpha) (sequence, loop): min 0.1 to 0.25, max 0.1 to 0.25, first key 0.1 to 0.25
+1	effect controller ranges: alpha (base colour alpha) (sequence, loop): min 0.1 to 0.25, max 0.5 to 0.75, first key 0.1 to 0.25
+8	effect controller ranges: alpha (base colour alpha) (sequence, loop): min 0.25 to 0.5, max 0.25 to 0.5, first key 0.25 to 0.5
+6	effect controller ranges: alpha (base colour alpha) (sequence, loop): min 0.25 to 0.5, max 0.5 to 0.75, first key 0.25 to 0.5
+8	effect controller ranges: alpha (base colour alpha) (sequence, loop): min 0.25 to 0.5, max 0.5 to 0.75, first key 0.5 to 0.75
+1	effect controller ranges: alpha (base colour alpha) (sequence, loop): min 0.25 to 0.5, max = 1, first key 0.25 to 0.5
+8	effect controller ranges: alpha (base colour alpha) (sequence, loop): min 0.25 to 0.5, max = 1, first key 0.75 to 1
+18	effect controller ranges: alpha (base colour alpha) (sequence, loop): min 0.25 to 0.5, max = 1, first key = 1
+48	effect controller ranges: alpha (base colour alpha) (sequence, loop): min 0.5 to 0.75, max 0.5 to 0.75, first key 0.5 to 0.75
+6	effect controller ranges: alpha (base colour alpha) (sequence, loop): min 0.5 to 0.75, max 0.75 to 1, first key 0.5 to 0.75
+13	effect controller ranges: alpha (base colour alpha) (sequence, loop): min 0.5 to 0.75, max 0.75 to 1, first key 0.75 to 1
+6	effect controller ranges: alpha (base colour alpha) (sequence, loop): min 0.5 to 0.75, max 1 to 1.5, first key 1 to 1.5
+2	effect controller ranges: alpha (base colour alpha) (sequence, loop): min 0.5 to 0.75, max = 0.75, first key = 0.75
+4	effect controller ranges: alpha (base colour alpha) (sequence, loop): min 0.5 to 0.75, max = 1, first key 0.5 to 0.75
+9	effect controller ranges: alpha (base colour alpha) (sequence, loop): min 0.5 to 0.75, max = 1, first key = 1
+22	effect controller ranges: alpha (base colour alpha) (sequence, loop): min 0.75 to 1, max 0.75 to 1, first key 0.75 to 1
+1	effect controller ranges: alpha (base colour alpha) (sequence, loop): min 0.75 to 1, max 1 to 1.5, first key 0.75 to 1
+1	effect controller ranges: alpha (base colour alpha) (sequence, loop): min 0.75 to 1, max = 1, first key 0.75 to 1
+6	effect controller ranges: alpha (base colour alpha) (sequence, loop): min 0.75 to 1, max = 1, first key = 1
+23	effect controller ranges: alpha (base colour alpha) (sequence, loop): min 1 to 1.5, max 1 to 1.5, first key 1 to 1.5
+3	effect controller ranges: alpha (base colour alpha) (sequence, loop): min 1.5 to 2, max 1.5 to 2, first key 1.5 to 2
+21	effect controller ranges: alpha (base colour alpha) (sequence, loop): min 1.5 to 2, max 2 to 5, first key 1.5 to 2
+3	effect controller ranges: alpha (base colour alpha) (sequence, loop): min 1.5 to 2, max = 2, first key 1.5 to 2
+1	effect controller ranges: alpha (base colour alpha) (sequence, loop): min < 0, max 0.75 to 1, first key = 0
+2	effect controller ranges: alpha (base colour alpha) (sequence, loop): min < 0, max < 0, first key < 0
+2	effect controller ranges: alpha (base colour alpha) (sequence, loop): min < 0, max = 1, first key = 0
+1	effect controller ranges: alpha (base colour alpha) (sequence, loop): min < 0, max = 1, first key = 1
+2	effect controller ranges: alpha (base colour alpha) (sequence, loop): min = 0, max 0.1 to 0.25, first key 0.1 to 0.25
+1	effect controller ranges: alpha (base colour alpha) (sequence, loop): min = 0, max 0.1 to 0.25, first key = 0
+1	effect controller ranges: alpha (base colour alpha) (sequence, loop): min = 0, max 0.25 to 0.5, first key 0.25 to 0.5
+17	effect controller ranges: alpha (base colour alpha) (sequence, loop): min = 0, max 0.25 to 0.5, first key = 0
+7	effect controller ranges: alpha (base colour alpha) (sequence, loop): min = 0, max 0.5 to 0.75, first key 0.25 to 0.5
+1	effect controller ranges: alpha (base colour alpha) (sequence, loop): min = 0, max 0.5 to 0.75, first key 0.5 to 0.75
+3	effect controller ranges: alpha (base colour alpha) (sequence, loop): min = 0, max 0.5 to 0.75, first key = 0
+4	effect controller ranges: alpha (base colour alpha) (sequence, loop): min = 0, max 0.75 to 1, first key 0.5 to 0.75
+63	effect controller ranges: alpha (base colour alpha) (sequence, loop): min = 0, max 0.75 to 1, first key = 0
+1	effect controller ranges: alpha (base colour alpha) (sequence, loop): min = 0, max 1 to 1.5, first key 1 to 1.5
+3	effect controller ranges: alpha (base colour alpha) (sequence, loop): min = 0, max 1 to 1.5, first key = 0
+1	effect controller ranges: alpha (base colour alpha) (sequence, loop): min = 0, max 1 to 1.5, first key = 1
+4	effect controller ranges: alpha (base colour alpha) (sequence, loop): min = 0, max 2 to 5, first key = 0
+94	effect controller ranges: alpha (base colour alpha) (sequence, loop): min = 0, max = 0, first key = 0
+2	effect controller ranges: alpha (base colour alpha) (sequence, loop): min = 0, max = 0.25, first key = 0.25
+2	effect controller ranges: alpha (base colour alpha) (sequence, loop): min = 0, max = 0.75, first key 0.1 to 0.25
+1	effect controller ranges: alpha (base colour alpha) (sequence, loop): min = 0, max = 0.75, first key 0.5 to 0.75
+5	effect controller ranges: alpha (base colour alpha) (sequence, loop): min = 0, max = 0.75, first key = 0
+1	effect controller ranges: alpha (base colour alpha) (sequence, loop): min = 0, max = 1, first key 0.25 to 0.5
+131	effect controller ranges: alpha (base colour alpha) (sequence, loop): min = 0, max = 1, first key = 0
+1	effect controller ranges: alpha (base colour alpha) (sequence, loop): min = 0, max = 1, first key = 0.1
+11	effect controller ranges: alpha (base colour alpha) (sequence, loop): min = 0, max = 1, first key = 1
+1	effect controller ranges: alpha (base colour alpha) (sequence, loop): min = 0.1, max 1 to 1.5, first key = 0.1
+1	effect controller ranges: alpha (base colour alpha) (sequence, loop): min = 0.1, max = 0.1, first key = 0.1
+1	effect controller ranges: alpha (base colour alpha) (sequence, loop): min = 0.1, max = 1, first key = 1
+8	effect controller ranges: alpha (base colour alpha) (sequence, loop): min = 0.25, max = 0.25, first key = 0.25
+12	effect controller ranges: alpha (base colour alpha) (sequence, loop): min = 0.5, max = 0.5, first key = 0.5
+3	effect controller ranges: alpha (base colour alpha) (sequence, loop): min = 0.5, max = 1, first key = 1
+31	effect controller ranges: alpha (base colour alpha) (sequence, loop): min = 0.75, max = 0.75, first key = 0.75
+1	effect controller ranges: alpha (base colour alpha) (sequence, loop): min = 0.75, max = 1, first key = 0.75
+133	effect controller ranges: alpha (base colour alpha) (sequence, loop): min = 1, max = 1, first key = 1
+3	effect controller ranges: alpha (base colour alpha) (sequence, loop): min = 1.5, max = 1.5, first key = 1.5
+17	effect controller ranges: alpha (base colour alpha) (sequence, loop): min = 2, max = 2, first key = 2
+1	effect controller ranges: base colour rgb (controller not run by a manager): min 0 to 0.1, max 0 to 0.1, first key 0 to 0.1
+11	effect controller ranges: base colour rgb (controller not run by a manager): min 0 to 0.1, max = 1, first key = 1
+5	effect controller ranges: base colour rgb (controller not run by a manager): min 0.1 to 0.25, max 0.25 to 0.5, first key 0.25 to 0.5
+1	effect controller ranges: base colour rgb (controller not run by a manager): min 0.1 to 0.25, max = 1, first key = 1
+3	effect controller ranges: base colour rgb (controller not run by a manager): min 0.25 to 0.5, max 0.25 to 0.5, first key 0.25 to 0.5
+2	effect controller ranges: base colour rgb (controller not run by a manager): min 0.25 to 0.5, max 0.75 to 1, first key 0.25 to 0.5
+8	effect controller ranges: base colour rgb (controller not run by a manager): min 0.25 to 0.5, max 0.75 to 1, first key 0.75 to 1
+2	effect controller ranges: base colour rgb (controller not run by a manager): min 0.25 to 0.5, max = 1, first key = 1
+27	effect controller ranges: base colour rgb (controller not run by a manager): min 0.5 to 0.75, max 0.5 to 0.75, first key 0.5 to 0.75
+22	effect controller ranges: base colour rgb (controller not run by a manager): min 0.5 to 0.75, max 1 to 1.5, first key = 1
+11	effect controller ranges: base colour rgb (controller not run by a manager): min 0.5 to 0.75, max = 1, first key = 1
+49	effect controller ranges: base colour rgb (controller not run by a manager): min 0.75 to 1, max 0.75 to 1, first key 0.75 to 1
+82	effect controller ranges: base colour rgb (controller not run by a manager): min 0.75 to 1, max = 1, first key = 1
+1	effect controller ranges: base colour rgb (controller not run by a manager): min < 0, max < 0, first key < 0
+1	effect controller ranges: base colour rgb (controller not run by a manager): min = 0, max 0 to 0.1, first key 0 to 0.1
+1	effect controller ranges: base colour rgb (controller not run by a manager): min = 0, max 0.25 to 0.5, first key = 0
+1	effect controller ranges: base colour rgb (controller not run by a manager): min = 0, max = 0, first key = 0
+3	effect controller ranges: base colour rgb (controller not run by a manager): min = 0, max = 1, first key = 0
+10	effect controller ranges: base colour rgb (controller not run by a manager): min = 0, max = 1, first key = 1
+6	effect controller ranges: base colour rgb (controller not run by a manager): min = 1, max = 1, first key = 1
+1	effect controller ranges: base colour rgb (sequence, clamp): min 0 to 0.1, max 0.25 to 0.5, first key 0 to 0.1
+2	effect controller ranges: base colour rgb (sequence, clamp): min 0 to 0.1, max 0.25 to 0.5, first key 0.25 to 0.5
+1	effect controller ranges: base colour rgb (sequence, clamp): min 0 to 0.1, max 0.5 to 0.75, first key 0.5 to 0.75
+8	effect controller ranges: base colour rgb (sequence, clamp): min 0 to 0.1, max 0.75 to 1, first key 0.75 to 1
+8	effect controller ranges: base colour rgb (sequence, clamp): min 0 to 0.1, max = 1, first key = 1
+1	effect controller ranges: base colour rgb (sequence, clamp): min 0.1 to 0.25, max 0.75 to 1, first key 0.75 to 1
+2	effect controller ranges: base colour rgb (sequence, clamp): min 0.1 to 0.25, max 1 to 1.5, first key 1 to 1.5
+18	effect controller ranges: base colour rgb (sequence, clamp): min 0.1 to 0.25, max = 1, first key = 1
+2	effect controller ranges: base colour rgb (sequence, clamp): min 0.25 to 0.5, max 0.25 to 0.5, first key 0.25 to 0.5
+1	effect controller ranges: base colour rgb (sequence, clamp): min 0.25 to 0.5, max 0.5 to 0.75, first key 0.25 to 0.5
+13	effect controller ranges: base colour rgb (sequence, clamp): min 0.25 to 0.5, max 0.75 to 1, first key 0.25 to 0.5
+1	effect controller ranges: base colour rgb (sequence, clamp): min 0.25 to 0.5, max 0.75 to 1, first key 0.75 to 1
+3	effect controller ranges: base colour rgb (sequence, clamp): min 0.25 to 0.5, max = 1, first key 0.25 to 0.5
+6	effect controller ranges: base colour rgb (sequence, clamp): min 0.25 to 0.5, max = 1, first key = 1
+6	effect controller ranges: base colour rgb (sequence, clamp): min 0.5 to 0.75, max 0.75 to 1, first key 0.75 to 1
+2	effect controller ranges: base colour rgb (sequence, clamp): min 0.5 to 0.75, max = 1, first key 0.75 to 1
+34	effect controller ranges: base colour rgb (sequence, clamp): min 0.5 to 0.75, max = 1, first key = 1
+15	effect controller ranges: base colour rgb (sequence, clamp): min 0.75 to 1, max 0.75 to 1, first key 0.75 to 1
+1	effect controller ranges: base colour rgb (sequence, clamp): min 0.75 to 1, max 1 to 1.5, first key 0.75 to 1
+10	effect controller ranges: base colour rgb (sequence, clamp): min 0.75 to 1, max 2 to 5, first key 1.5 to 2
+20	effect controller ranges: base colour rgb (sequence, clamp): min 0.75 to 1, max = 1, first key = 1
+1	effect controller ranges: base colour rgb (sequence, clamp): min < 0, max 0.5 to 0.75, first key < 0
+2	effect controller ranges: base colour rgb (sequence, clamp): min < 0, max 0.75 to 1, first key 0.25 to 0.5
+2	effect controller ranges: base colour rgb (sequence, clamp): min = 0, max 0.1 to 0.25, first key 0.1 to 0.25
+1	effect controller ranges: base colour rgb (sequence, clamp): min = 0, max 0.1 to 0.25, first key = 0
+2	effect controller ranges: base colour rgb (sequence, clamp): min = 0, max 0.25 to 0.5, first key = 0
+33	effect controller ranges: base colour rgb (sequence, clamp): min = 0, max 0.75 to 1, first key 0.25 to 0.5
+21	effect controller ranges: base colour rgb (sequence, clamp): min = 0, max 0.75 to 1, first key 0.75 to 1
+12	effect controller ranges: base colour rgb (sequence, clamp): min = 0, max = 0, first key = 0
+2	effect controller ranges: base colour rgb (sequence, clamp): min = 0, max = 1, first key 0.75 to 1
+4	effect controller ranges: base colour rgb (sequence, clamp): min = 0, max = 1, first key = 0
+20	effect controller ranges: base colour rgb (sequence, clamp): min = 0, max = 1, first key = 1
+1	effect controller ranges: base colour rgb (sequence, clamp): min = 1, max 1 to 1.5, first key 1 to 1.5
+19	effect controller ranges: base colour rgb (sequence, clamp): min = 1, max = 1, first key = 1
+2	effect controller ranges: base colour rgb (sequence, loop): min 0 to 0.1, max 0 to 0.1, first key 0 to 0.1
+1	effect controller ranges: base colour rgb (sequence, loop): min 0 to 0.1, max 0.25 to 0.5, first key 0.25 to 0.5
+1	effect controller ranges: base colour rgb (sequence, loop): min 0 to 0.1, max 0.5 to 0.75, first key 0.5 to 0.75
+1	effect controller ranges: base colour rgb (sequence, loop): min 0 to 0.1, max = 1, first key = 1
+4	effect controller ranges: base colour rgb (sequence, loop): min 0.1 to 0.25, max 0.1 to 0.25, first key 0.1 to 0.25
+1	effect controller ranges: base colour rgb (sequence, loop): min 0.1 to 0.25, max 0.75 to 1, first key 0.1 to 0.25
+1	effect controller ranges: base colour rgb (sequence, loop): min 0.1 to 0.25, max = 1, first key 0.1 to 0.25
+5	effect controller ranges: base colour rgb (sequence, loop): min 0.25 to 0.5, max 0.25 to 0.5, first key 0.25 to 0.5
+3	effect controller ranges: base colour rgb (sequence, loop): min 0.25 to 0.5, max 0.5 to 0.75, first key 0.5 to 0.75
+11	effect controller ranges: base colour rgb (sequence, loop): min 0.25 to 0.5, max = 1, first key = 1
+29	effect controller ranges: base colour rgb (sequence, loop): min 0.5 to 0.75, max 0.5 to 0.75, first key 0.5 to 0.75
+8	effect controller ranges: base colour rgb (sequence, loop): min 0.5 to 0.75, max 0.75 to 1, first key 0.75 to 1
+2	effect controller ranges: base colour rgb (sequence, loop): min 0.5 to 0.75, max = 1, first key 0.5 to 0.75
+38	effect controller ranges: base colour rgb (sequence, loop): min 0.75 to 1, max 0.75 to 1, first key 0.75 to 1
+25	effect controller ranges: base colour rgb (sequence, loop): min 0.75 to 1, max = 1, first key = 1
+3	effect controller ranges: base colour rgb (sequence, loop): min = 0, max 0.75 to 1, first key 0.75 to 1
+4	effect controller ranges: base colour rgb (sequence, loop): min = 0, max = 0, first key = 0
+5	effect controller ranges: base colour rgb (sequence, loop): min = 0, max = 1, first key = 0
+1	effect controller ranges: base colour rgb (sequence, loop): min = 0, max = 1, first key = 1
+47	effect controller ranges: base colour rgb (sequence, loop): min = 1, max = 1, first key = 1
+27	effect controller ranges: base colour scale (emissive multiple) (controller not run by a manager): min 0.25 to 0.5, max 0.75 to 1, first key 0.25 to 0.5
+1	effect controller ranges: base colour scale (emissive multiple) (controller not run by a manager): min 0.25 to 0.5, max 2 to 5, first key 2 to 5
+3	effect controller ranges: base colour scale (emissive multiple) (controller not run by a manager): min 0.5 to 0.75, max 1 to 1.5, first key 0.5 to 0.75
+4	effect controller ranges: base colour scale (emissive multiple) (controller not run by a manager): min 0.75 to 1, max 1 to 1.5, first key 0.75 to 1
+14	effect controller ranges: base colour scale (emissive multiple) (controller not run by a manager): min 0.75 to 1, max 1 to 1.5, first key 1 to 1.5
+1	effect controller ranges: base colour scale (emissive multiple) (controller not run by a manager): min 0.75 to 1, max 10 to 100, first key 2 to 5
+3	effect controller ranges: base colour scale (emissive multiple) (controller not run by a manager): min 0.75 to 1, max 2 to 5, first key 2 to 5
+19	effect controller ranges: base colour scale (emissive multiple) (controller not run by a manager): min 1 to 1.5, max 1 to 1.5, first key 1 to 1.5
+6	effect controller ranges: base colour scale (emissive multiple) (controller not run by a manager): min 1 to 1.5, max 1.5 to 2, first key 1 to 1.5
+14	effect controller ranges: base colour scale (emissive multiple) (controller not run by a manager): min 1 to 1.5, max 1.5 to 2, first key 1.5 to 2
+47	effect controller ranges: base colour scale (emissive multiple) (controller not run by a manager): min 1 to 1.5, max 1.5 to 2, first key = 1.5
+2	effect controller ranges: base colour scale (emissive multiple) (controller not run by a manager): min 1 to 1.5, max = 1.5, first key 1 to 1.5
+2	effect controller ranges: base colour scale (emissive multiple) (controller not run by a manager): min 1.5 to 2, max 1.5 to 2, first key 1.5 to 2
+8	effect controller ranges: base colour scale (emissive multiple) (controller not run by a manager): min 1.5 to 2, max 2 to 5, first key 1.5 to 2
+28	effect controller ranges: base colour scale (emissive multiple) (controller not run by a manager): min 1.5 to 2, max 2 to 5, first key 2 to 5
+1	effect controller ranges: base colour scale (emissive multiple) (controller not run by a manager): min 1.5 to 2, max 2 to 5, first key = 2
+14	effect controller ranges: base colour scale (emissive multiple) (controller not run by a manager): min 2 to 5, max 2 to 5, first key 2 to 5
+1	effect controller ranges: base colour scale (emissive multiple) (controller not run by a manager): min 2 to 5, max 5 to 10, first key 2 to 5
+4	effect controller ranges: base colour scale (emissive multiple) (controller not run by a manager): min 2 to 5, max 5 to 10, first key 5 to 10
+4	effect controller ranges: base colour scale (emissive multiple) (controller not run by a manager): min 2 to 5, max = 5, first key 2 to 5
+3	effect controller ranges: base colour scale (emissive multiple) (controller not run by a manager): min 5 to 10, max 5 to 10, first key 5 to 10
+1	effect controller ranges: base colour scale (emissive multiple) (controller not run by a manager): min 5 to 10, max = 10, first key 5 to 10
+1	effect controller ranges: base colour scale (emissive multiple) (controller not run by a manager): min 5 to 10, max = 10, first key = 10
+3	effect controller ranges: base colour scale (emissive multiple) (controller not run by a manager): min = 0, max 1 to 1.5, first key = 0
+1	effect controller ranges: base colour scale (emissive multiple) (controller not run by a manager): min = 0, max 2 to 5, first key = 0
+1	effect controller ranges: base colour scale (emissive multiple) (controller not run by a manager): min = 0, max = 1, first key = 0
+2	effect controller ranges: base colour scale (emissive multiple) (controller not run by a manager): min = 0, max = 1.5, first key = 0
+2	effect controller ranges: base colour scale (emissive multiple) (controller not run by a manager): min = 0, max = 2, first key = 2
+4	effect controller ranges: base colour scale (emissive multiple) (controller not run by a manager): min = 0, max = 5, first key = 0
+6	effect controller ranges: base colour scale (emissive multiple) (controller not run by a manager): min = 0.5, max = 1, first key = 0.5
+6	effect controller ranges: base colour scale (emissive multiple) (controller not run by a manager): min = 1, max 1 to 1.5, first key = 1
+3	effect controller ranges: base colour scale (emissive multiple) (controller not run by a manager): min = 1, max 10 to 100, first key = 2
+3	effect controller ranges: base colour scale (emissive multiple) (controller not run by a manager): min = 1, max 2 to 5, first key 2 to 5
+6	effect controller ranges: base colour scale (emissive multiple) (controller not run by a manager): min = 1, max 2 to 5, first key = 1
+4	effect controller ranges: base colour scale (emissive multiple) (controller not run by a manager): min = 1, max 2 to 5, first key = 2
+3	effect controller ranges: base colour scale (emissive multiple) (controller not run by a manager): min = 1, max 5 to 10, first key = 1
+2	effect controller ranges: base colour scale (emissive multiple) (controller not run by a manager): min = 1, max 5 to 10, first key = 2
+9	effect controller ranges: base colour scale (emissive multiple) (controller not run by a manager): min = 1, max = 1, first key = 1
+9	effect controller ranges: base colour scale (emissive multiple) (controller not run by a manager): min = 1, max = 2, first key = 1
+1	effect controller ranges: base colour scale (emissive multiple) (controller not run by a manager): min = 1.5, max 2 to 5, first key = 1.5
+13	effect controller ranges: base colour scale (emissive multiple) (controller not run by a manager): min = 1.5, max = 1.5, first key = 1.5
+2	effect controller ranges: base colour scale (emissive multiple) (controller not run by a manager): min = 1.5, max = 10, first key = 10
+2	effect controller ranges: base colour scale (emissive multiple) (controller not run by a manager): min = 1.5, max = 5, first key = 5
+2	effect controller ranges: base colour scale (emissive multiple) (controller not run by a manager): min = 10, max = 10, first key = 10
+1	effect controller ranges: base colour scale (emissive multiple) (controller not run by a manager): min = 2, max 10 to 100, first key = 2
+7	effect controller ranges: base colour scale (emissive multiple) (controller not run by a manager): min = 2, max 2 to 5, first key = 2
+2	effect controller ranges: base colour scale (emissive multiple) (controller not run by a manager): min = 2, max 5 to 10, first key = 2
+1	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min 0 to 0.1, max = 1, first key = 1
+1	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min 0 to 0.1, max = 2, first key 0 to 0.1
+1	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min 0.1 to 0.25, max = 1, first key 0.1 to 0.25
+1	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min 0.25 to 0.5, max 2 to 5, first key 1 to 1.5
+1	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min 0.5 to 0.75, max 1 to 1.5, first key 1 to 1.5
+3	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min 0.75 to 1, max 1 to 1.5, first key 1 to 1.5
+1	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min 0.75 to 1, max 10 to 100, first key 10 to 100
+8	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min 0.75 to 1, max 2 to 5, first key 2 to 5
+3	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min 1 to 1.5, max 1 to 1.5, first key 1 to 1.5
+5	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min 1 to 1.5, max 10 to 100, first key 10 to 100
+4	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min 1 to 1.5, max 10 to 100, first key 2 to 5
+1	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min 1 to 1.5, max 2 to 5, first key 1 to 1.5
+2	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min 1 to 1.5, max 2 to 5, first key 1.5 to 2
+4	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min 1 to 1.5, max 5 to 10, first key 1 to 1.5
+1	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min 1 to 1.5, max = 1.5, first key = 1.5
+5	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min 1 to 1.5, max = 10, first key = 10
+6	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min 1 to 1.5, max = 2, first key 1 to 1.5
+1	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min 1.5 to 2, max 2 to 5, first key 1.5 to 2
+5	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min 1.5 to 2, max 2 to 5, first key 2 to 5
+3	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min 2 to 5, max 10 to 100, first key 10 to 100
+1	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min 2 to 5, max 2 to 5, first key 2 to 5
+5	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min 2 to 5, max 5 to 10, first key 2 to 5
+2	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min 2 to 5, max 5 to 10, first key 5 to 10
+1	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min 2 to 5, max = 10, first key 2 to 5
+2	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min 2 to 5, max = 10, first key = 5
+2	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min 2 to 5, max = 5, first key 2 to 5
+2	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min 5 to 10, max 5 to 10, first key 5 to 10
+2	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min = 0, max 1 to 1.5, first key 1 to 1.5
+2	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min = 0, max 1 to 1.5, first key = 0
+1	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min = 0, max 2 to 5, first key 2 to 5
+8	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min = 0, max 2 to 5, first key = 0
+9	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min = 0, max 5 to 10, first key = 0
+69	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min = 0, max = 0, first key = 0
+8	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min = 0, max = 2, first key = 2
+2	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min = 0.25, max = 0.25, first key = 0.25
+1	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min = 0.5, max 10 to 100, first key 1.5 to 2
+1	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min = 0.5, max 5 to 10, first key = 0.5
+5	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min = 0.75, max 10 to 100, first key 10 to 100
+2	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min = 0.75, max = 2, first key = 2
+2	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min = 1, max 1 to 1.5, first key 1 to 1.5
+2	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min = 1, max 1 to 1.5, first key = 1
+1	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min = 1, max 1.5 to 2, first key 1.5 to 2
+1	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min = 1, max 1.5 to 2, first key = 1.5
+16	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min = 1, max 10 to 100, first key 10 to 100
+40	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min = 1, max 2 to 5, first key 2 to 5
+1	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min = 1, max 2 to 5, first key = 1
+4	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min = 1, max 5 to 10, first key 5 to 10
+17	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min = 1, max = 1, first key = 1
+1	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min = 1, max = 1.5, first key = 1.5
+13	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min = 1, max = 10, first key = 10
+1	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min = 1, max = 5, first key = 1
+1	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min = 1.5, max = 1.5, first key = 1.5
+10	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min = 1.5, max = 10, first key = 10
+4	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min = 10, max = 10, first key = 10
+5	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min = 2, max 10 to 100, first key 10 to 100
+14	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min = 2, max 2 to 5, first key 2 to 5
+4	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min = 2, max 5 to 10, first key 5 to 10
+2	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min = 2, max = 10, first key = 10
+19	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min = 2, max = 2, first key = 2
+6	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min = 2, max = 5, first key = 5
+3	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min = 5, max 5 to 10, first key = 5
+1	effect controller ranges: base colour scale (emissive multiple) (sequence, clamp): min = 5, max = 5, first key = 5
+1	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min 0 to 0.1, max = 1, first key 0 to 0.1
+3	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min 0.1 to 0.25, max 0.1 to 0.25, first key 0.1 to 0.25
+6	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min 0.25 to 0.5, max 2 to 5, first key 1 to 1.5
+4	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min 0.5 to 0.75, max 2 to 5, first key 1 to 1.5
+1	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min 0.75 to 1, max 0.75 to 1, first key 0.75 to 1
+5	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min 0.75 to 1, max 1 to 1.5, first key 0.75 to 1
+8	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min 0.75 to 1, max 1 to 1.5, first key 1 to 1.5
+10	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min 0.75 to 1, max 1.5 to 2, first key 1 to 1.5
+2	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min 0.75 to 1, max = 1, first key = 1
+17	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min 1 to 1.5, max 1 to 1.5, first key 1 to 1.5
+4	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min 1 to 1.5, max 1.5 to 2, first key 1 to 1.5
+4	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min 1 to 1.5, max 1.5 to 2, first key 1.5 to 2
+24	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min 1 to 1.5, max 1.5 to 2, first key = 1.5
+4	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min 1 to 1.5, max 2 to 5, first key 1.5 to 2
+1	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min 1 to 1.5, max 5 to 10, first key 1 to 1.5
+20	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min 1.5 to 2, max 1.5 to 2, first key 1.5 to 2
+4	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min 1.5 to 2, max 2 to 5, first key 1.5 to 2
+7	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min 1.5 to 2, max 2 to 5, first key 2 to 5
+2	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min 10 to 100, max 10 to 100, first key 10 to 100
+1	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min 2 to 5, max 10 to 100, first key 2 to 5
+50	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min 2 to 5, max 2 to 5, first key 2 to 5
+5	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min 2 to 5, max 5 to 10, first key 2 to 5
+28	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min 2 to 5, max 5 to 10, first key 5 to 10
+1	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min 2 to 5, max 5 to 10, first key = 5
+1	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min 2 to 5, max = 10, first key 2 to 5
+2	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min 2 to 5, max = 5, first key 2 to 5
+10	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min 5 to 10, max 10 to 100, first key 10 to 100
+30	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min 5 to 10, max 5 to 10, first key 5 to 10
+1	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min = 0, max 0.25 to 0.5, first key = 0
+1	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min = 0, max 1.5 to 2, first key = 0
+2	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min = 0, max 2 to 5, first key = 0
+5	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min = 0, max = 0, first key = 0
+5	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min = 0, max = 1.5, first key = 0
+2	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min = 0, max = 2, first key = 0
+1	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min = 0, max = 2, first key = 2
+1	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min = 0, max = 5, first key = 5
+1	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min = 0.5, max 5 to 10, first key = 0.5
+6	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min = 0.5, max = 1, first key = 1
+1	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min = 0.5, max = 2, first key = 2
+3	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min = 1, max 1 to 1.5, first key 1 to 1.5
+1	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min = 1, max 1.5 to 2, first key 1.5 to 2
+10	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min = 1, max 1.5 to 2, first key = 1
+9	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min = 1, max = 1, first key = 1
+1	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min = 1, max = 1.5, first key 1 to 1.5
+1	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min = 1, max = 1.5, first key = 1
+1	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min = 1, max = 10, first key = 10
+1	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min = 1, max = 5, first key = 5
+4	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min = 1.5, max = 1.5, first key = 1.5
+20	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min = 10, max = 10, first key = 10
+2	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min = 2, max 2 to 5, first key 2 to 5
+6	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min = 2, max 2 to 5, first key = 2
+8	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min = 2, max = 2, first key = 2
+1	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min = 2, max = 5, first key = 2
+1	effect controller ranges: base colour scale (emissive multiple) (sequence, loop): min = 5, max = 5, first key = 5
+2	effect controller ranges: falloff start opacity (controller not run by a manager): min 0 to 0.1, max 0.25 to 0.5, first key 0.25 to 0.5
+144	effect controller ranges: falloff start opacity (controller not run by a manager): min = 0.75, max = 1, first key = 1
+1	effect controller ranges: falloff start opacity (sequence, loop): min 0 to 0.1, max 0 to 0.1, first key 0 to 0.1
+1	effect controller ranges: falloff start opacity (sequence, loop): min 0.5 to 0.75, max 0.5 to 0.75, first key 0.5 to 0.75
+144	effect controller ranges: falloff stop angle (controller not run by a manager): min 10 to 100, max 10 to 100, first key 10 to 100
+2	effect controller ranges: falloff stop angle (controller not run by a manager): min 10 to 100, max 100 to 1000, first key 10 to 100
+1	effect controller ranges: u offset (controller not run by a manager): min 0 to 0.1, max 0 to 0.1, first key 0 to 0.1
+3	effect controller ranges: u offset (controller not run by a manager): min 0.1 to 0.25, max 0.1 to 0.25, first key 0.1 to 0.25
+9	effect controller ranges: u offset (controller not run by a manager): min 0.75 to 1, max 1 to 1.5, first key 0.75 to 1
+10	effect controller ranges: u offset (controller not run by a manager): min 0.75 to 1, max 1 to 1.5, first key = 1
+3	effect controller ranges: u offset (controller not run by a manager): min < 0, max 0 to 0.1, first key 0 to 0.1
+17	effect controller ranges: u offset (controller not run by a manager): min < 0, max 0 to 0.1, first key < 0
+18	effect controller ranges: u offset (controller not run by a manager): min < 0, max 0 to 0.1, first key = 0
+1	effect controller ranges: u offset (controller not run by a manager): min < 0, max 0.1 to 0.25, first key 0.1 to 0.25
+2	effect controller ranges: u offset (controller not run by a manager): min < 0, max 0.1 to 0.25, first key = 0
+3	effect controller ranges: u offset (controller not run by a manager): min < 0, max 0.25 to 0.5, first key 0.25 to 0.5
+1	effect controller ranges: u offset (controller not run by a manager): min < 0, max 0.25 to 0.5, first key < 0
+17	effect controller ranges: u offset (controller not run by a manager): min < 0, max 0.25 to 0.5, first key = 0
+4	effect controller ranges: u offset (controller not run by a manager): min < 0, max 0.5 to 0.75, first key < 0
+1	effect controller ranges: u offset (controller not run by a manager): min < 0, max 10 to 100, first key < 0
+8	effect controller ranges: u offset (controller not run by a manager): min < 0, max < 0, first key < 0
+1	effect controller ranges: u offset (controller not run by a manager): min < 0, max = -0, first key = -0
+148	effect controller ranges: u offset (controller not run by a manager): min < 0, max = 0, first key = 0
+3	effect controller ranges: u offset (controller not run by a manager): min < 0, max = 0.1, first key = 0
+1	effect controller ranges: u offset (controller not run by a manager): min < 0, max = 5, first key < 0
+4	effect controller ranges: u offset (controller not run by a manager): min = -0, max 0.25 to 0.5, first key = -0
+1	effect controller ranges: u offset (controller not run by a manager): min = -0, max = 0, first key = 0
+23	effect controller ranges: u offset (controller not run by a manager): min = 0, max 0 to 0.1, first key = 0
+25	effect controller ranges: u offset (controller not run by a manager): min = 0, max 0.25 to 0.5, first key = 0
+4	effect controller ranges: u offset (controller not run by a manager): min = 0, max 0.5 to 0.75, first key 0 to 0.1
+6	effect controller ranges: u offset (controller not run by a manager): min = 0, max 0.5 to 0.75, first key = 0
+8	effect controller ranges: u offset (controller not run by a manager): min = 0, max 0.75 to 1, first key = 0
+2	effect controller ranges: u offset (controller not run by a manager): min = 0, max 10 to 100, first key = 0
+35	effect controller ranges: u offset (controller not run by a manager): min = 0, max 2 to 5, first key = 0
+1	effect controller ranges: u offset (controller not run by a manager): min = 0, max 5 to 10, first key 5 to 10
+11	effect controller ranges: u offset (controller not run by a manager): min = 0, max 5 to 10, first key = 0
+59	effect controller ranges: u offset (controller not run by a manager): min = 0, max = 0, first key = 0
+3	effect controller ranges: u offset (controller not run by a manager): min = 0, max = 0.1, first key = 0
+1	effect controller ranges: u offset (controller not run by a manager): min = 0, max = 0.5, first key = 0
+2	effect controller ranges: u offset (controller not run by a manager): min = 0, max = 0.75, first key = 0
+311	effect controller ranges: u offset (controller not run by a manager): min = 0, max = 1, first key = 0
+2	effect controller ranges: u offset (controller not run by a manager): min = 0, max = 10, first key = 0
+1	effect controller ranges: u offset (controller not run by a manager): min = 0, max = 100, first key = 0
+6	effect controller ranges: u offset (controller not run by a manager): min = 0, max = 2, first key = 0
+3	effect controller ranges: u offset (sequence, clamp): min 0 to 0.1, max 1 to 1.5, first key 0 to 0.1
+18	effect controller ranges: u offset (sequence, clamp): min < 0, max 0 to 0.1, first key = 0
+5	effect controller ranges: u offset (sequence, clamp): min < 0, max 0.1 to 0.25, first key < 0
+2	effect controller ranges: u offset (sequence, clamp): min < 0, max < 0, first key < 0
+4	effect controller ranges: u offset (sequence, clamp): min < 0, max = 0, first key < 0
+5	effect controller ranges: u offset (sequence, clamp): min < 0, max = 0, first key = 0
+5	effect controller ranges: u offset (sequence, clamp): min = 0, max 0.1 to 0.25, first key = 0
+2	effect controller ranges: u offset (sequence, clamp): min = 0, max 0.25 to 0.5, first key = 0
+10	effect controller ranges: u offset (sequence, clamp): min = 0, max 0.5 to 0.75, first key = 0
+1	effect controller ranges: u offset (sequence, clamp): min = 0, max 0.75 to 1, first key = 0
+3	effect controller ranges: u offset (sequence, clamp): min = 0, max 1 to 1.5, first key = 0
+4	effect controller ranges: u offset (sequence, clamp): min = 0, max 2 to 5, first key = 0
+37	effect controller ranges: u offset (sequence, clamp): min = 0, max = 0, first key = 0
+6	effect controller ranges: u offset (sequence, clamp): min = 0, max = 0.5, first key = 0.5
+20	effect controller ranges: u offset (sequence, clamp): min = 0, max = 0.75, first key = 0
+5	effect controller ranges: u offset (sequence, clamp): min = 0, max = 1, first key = 0
+2	effect controller ranges: u offset (sequence, clamp): min = 0, max = 2, first key = 0
+3	effect controller ranges: u offset (sequence, clamp): min = 0.5, max = 0.5, first key = 0.5
+2	effect controller ranges: u offset (sequence, loop): min 0 to 0.1, max 0 to 0.1, first key 0 to 0.1
+1	effect controller ranges: u offset (sequence, loop): min 0 to 0.1, max 0.25 to 0.5, first key 0.25 to 0.5
+6	effect controller ranges: u offset (sequence, loop): min 0 to 0.1, max 2 to 5, first key 0 to 0.1
+4	effect controller ranges: u offset (sequence, loop): min 0 to 0.1, max = 1, first key 0 to 0.1
+2	effect controller ranges: u offset (sequence, loop): min 0.1 to 0.25, max 0.1 to 0.25, first key 0.1 to 0.25
+10	effect controller ranges: u offset (sequence, loop): min 0.75 to 1, max 1 to 1.5, first key 0.75 to 1
+1	effect controller ranges: u offset (sequence, loop): min 0.75 to 1, max 1 to 1.5, first key 1 to 1.5
+2	effect controller ranges: u offset (sequence, loop): min 1 to 1.5, max = 2, first key 1 to 1.5
+1	effect controller ranges: u offset (sequence, loop): min 10 to 100, max 10 to 100, first key 10 to 100
+1	effect controller ranges: u offset (sequence, loop): min 2 to 5, max 2 to 5, first key 2 to 5
+3	effect controller ranges: u offset (sequence, loop): min 2 to 5, max = 5, first key 2 to 5
+8	effect controller ranges: u offset (sequence, loop): min < 0, max 0 to 0.1, first key 0 to 0.1
+15	effect controller ranges: u offset (sequence, loop): min < 0, max 0 to 0.1, first key < 0
+6	effect controller ranges: u offset (sequence, loop): min < 0, max 0 to 0.1, first key = 0
+1	effect controller ranges: u offset (sequence, loop): min < 0, max 0.1 to 0.25, first key 0.1 to 0.25
+5	effect controller ranges: u offset (sequence, loop): min < 0, max 0.1 to 0.25, first key = 0
+2	effect controller ranges: u offset (sequence, loop): min < 0, max 0.25 to 0.5, first key 0.25 to 0.5
+11	effect controller ranges: u offset (sequence, loop): min < 0, max < 0, first key < 0
+17	effect controller ranges: u offset (sequence, loop): min < 0, max = 0, first key = 0
+22	effect controller ranges: u offset (sequence, loop): min < 0, max = 0.1, first key = 0
+2	effect controller ranges: u offset (sequence, loop): min = -0, max 0.1 to 0.25, first key = -0
+20	effect controller ranges: u offset (sequence, loop): min = -0, max 0.25 to 0.5, first key = -0
+18	effect controller ranges: u offset (sequence, loop): min = 0, max 0 to 0.1, first key = 0
+7	effect controller ranges: u offset (sequence, loop): min = 0, max 0.1 to 0.25, first key = 0
+5	effect controller ranges: u offset (sequence, loop): min = 0, max 0.5 to 0.75, first key 0 to 0.1
+1	effect controller ranges: u offset (sequence, loop): min = 0, max 0.75 to 1, first key 0.25 to 0.5
+7	effect controller ranges: u offset (sequence, loop): min = 0, max 0.75 to 1, first key = 0
+2	effect controller ranges: u offset (sequence, loop): min = 0, max 10 to 100, first key = 0
+11	effect controller ranges: u offset (sequence, loop): min = 0, max 2 to 5, first key = 0
+1	effect controller ranges: u offset (sequence, loop): min = 0, max 5 to 10, first key = 0
+29	effect controller ranges: u offset (sequence, loop): min = 0, max = 0, first key = 0
+18	effect controller ranges: u offset (sequence, loop): min = 0, max = 0.5, first key = 0
+5	effect controller ranges: u offset (sequence, loop): min = 0, max = 0.75, first key = 0
+1	effect controller ranges: u offset (sequence, loop): min = 0, max = 0.75, first key = 0.5
+23	effect controller ranges: u offset (sequence, loop): min = 0, max = 1, first key = 0
+6	effect controller ranges: u offset (sequence, loop): min = 0, max = 2, first key = 0
+34	effect controller ranges: u offset (sequence, loop): min = 0, max = 5, first key = 0
+1	effect controller ranges: u offset (sequence, loop): min = 1, max = 2, first key = 1
+2	effect controller ranges: u scale (controller not run by a manager): min 0.5 to 0.75, max = 1, first key = 1
+1	effect controller ranges: u scale (controller not run by a manager): min 0.75 to 1, max 0.75 to 1, first key 0.75 to 1
+7	effect controller ranges: u scale (controller not run by a manager): min 0.75 to 1, max 1 to 1.5, first key 0.75 to 1
+8	effect controller ranges: u scale (controller not run by a manager): min 0.75 to 1, max 1 to 1.5, first key 1 to 1.5
+3	effect controller ranges: u scale (controller not run by a manager): min 0.75 to 1, max = 1, first key 0.75 to 1
+151	effect controller ranges: u scale (controller not run by a manager): min 0.75 to 1, max = 1, first key = 1
+72	effect controller ranges: u scale (controller not run by a manager): min = 1, max = 1, first key = 1
+1	effect controller ranges: u scale (controller not run by a manager): min = 2, max 2 to 5, first key = 2
+3	effect controller ranges: u scale (sequence, clamp): min 0.1 to 0.25, max 0.1 to 0.25, first key 0.1 to 0.25
+6	effect controller ranges: u scale (sequence, clamp): min 0.5 to 0.75, max 1 to 1.5, first key = 1
+2	effect controller ranges: u scale (sequence, clamp): min 0.5 to 0.75, max = 1, first key = 1
+3	effect controller ranges: u scale (sequence, clamp): min 0.75 to 1, max 1 to 1.5, first key = 1
+5	effect controller ranges: u scale (sequence, clamp): min 1 to 1.5, max 1 to 1.5, first key 1 to 1.5
+3	effect controller ranges: u scale (sequence, clamp): min = 1, max 1 to 1.5, first key = 1
+4	effect controller ranges: u scale (sequence, clamp): min = 1, max 2 to 5, first key 2 to 5
+2	effect controller ranges: u scale (sequence, clamp): min = 10, max 10 to 100, first key = 10
+1	effect controller ranges: u scale (sequence, loop): min 0.1 to 0.25, max 1.5 to 2, first key 0.1 to 0.25
+1	effect controller ranges: u scale (sequence, loop): min 0.75 to 1, max 0.75 to 1, first key 0.75 to 1
+2	effect controller ranges: u scale (sequence, loop): min 0.75 to 1, max 1 to 1.5, first key 0.75 to 1
+5	effect controller ranges: u scale (sequence, loop): min 0.75 to 1, max 1 to 1.5, first key 1 to 1.5
+2	effect controller ranges: u scale (sequence, loop): min 0.75 to 1, max = 1, first key 0.75 to 1
+7	effect controller ranges: u scale (sequence, loop): min 0.75 to 1, max = 1, first key = 1
+5	effect controller ranges: u scale (sequence, loop): min 1 to 1.5, max 1 to 1.5, first key 1 to 1.5
+25	effect controller ranges: u scale (sequence, loop): min = 1, max = 1, first key = 1
+9	effect controller ranges: v offset (controller not run by a manager): min 0 to 0.1, max 0 to 0.1, first key 0 to 0.1
+3	effect controller ranges: v offset (controller not run by a manager): min 0.1 to 0.25, max 0.1 to 0.25, first key 0.1 to 0.25
+2	effect controller ranges: v offset (controller not run by a manager): min 0.25 to 0.5, max 0.5 to 0.75, first key 0.25 to 0.5
+1	effect controller ranges: v offset (controller not run by a manager): min 0.25 to 0.5, max 0.5 to 0.75, first key 0.5 to 0.75
+5	effect controller ranges: v offset (controller not run by a manager): min 0.25 to 0.5, max 0.5 to 0.75, first key = 0.5
+2	effect controller ranges: v offset (controller not run by a manager): min 0.25 to 0.5, max 0.75 to 1, first key 0.25 to 0.5
+2	effect controller ranges: v offset (controller not run by a manager): min 0.25 to 0.5, max 1 to 1.5, first key 0.25 to 0.5
+7	effect controller ranges: v offset (controller not run by a manager): min 0.5 to 0.75, max 0.75 to 1, first key 0.75 to 1
+2	effect controller ranges: v offset (controller not run by a manager): min 0.75 to 1, max 0.75 to 1, first key 0.75 to 1
+3	effect controller ranges: v offset (controller not run by a manager): min < 0, max 0 to 0.1, first key 0 to 0.1
+14	effect controller ranges: v offset (controller not run by a manager): min < 0, max 0 to 0.1, first key < 0
+12	effect controller ranges: v offset (controller not run by a manager): min < 0, max 0 to 0.1, first key = 0
+1	effect controller ranges: v offset (controller not run by a manager): min < 0, max 0.1 to 0.25, first key 0.1 to 0.25
+2	effect controller ranges: v offset (controller not run by a manager): min < 0, max 0.1 to 0.25, first key = 0
+5	effect controller ranges: v offset (controller not run by a manager): min < 0, max 0.25 to 0.5, first key < 0
+6	effect controller ranges: v offset (controller not run by a manager): min < 0, max 0.5 to 0.75, first key = 0
+1	effect controller ranges: v offset (controller not run by a manager): min < 0, max 1 to 1.5, first key < 0
+3	effect controller ranges: v offset (controller not run by a manager): min < 0, max 1.5 to 2, first key < 0
+1	effect controller ranges: v offset (controller not run by a manager): min < 0, max 5 to 10, first key < 0
+11	effect controller ranges: v offset (controller not run by a manager): min < 0, max < 0, first key < 0
+1	effect controller ranges: v offset (controller not run by a manager): min < 0, max = -0, first key = -0
+138	effect controller ranges: v offset (controller not run by a manager): min < 0, max = 0, first key = 0
+13	effect controller ranges: v offset (controller not run by a manager): min < 0, max = 1, first key = 1
+6	effect controller ranges: v offset (controller not run by a manager): min = -0, max = 1, first key = -0
+2	effect controller ranges: v offset (controller not run by a manager): min = -0, max = 10, first key = -0
+2	effect controller ranges: v offset (controller not run by a manager): min = 0, max 0 to 0.1, first key = 0
+2	effect controller ranges: v offset (controller not run by a manager): min = 0, max 0.25 to 0.5, first key = 0
+7	effect controller ranges: v offset (controller not run by a manager): min = 0, max 0.75 to 1, first key = 0
+117	effect controller ranges: v offset (controller not run by a manager): min = 0, max 10 to 100, first key = 0
+1	effect controller ranges: v offset (controller not run by a manager): min = 0, max 100 to 1000, first key = 0
+40	effect controller ranges: v offset (controller not run by a manager): min = 0, max 2 to 5, first key = 0
+9	effect controller ranges: v offset (controller not run by a manager): min = 0, max 5 to 10, first key = 0
+21	effect controller ranges: v offset (controller not run by a manager): min = 0, max = 0, first key = 0
+4	effect controller ranges: v offset (controller not run by a manager): min = 0, max = 0.5, first key 0.1 to 0.25
+2	effect controller ranges: v offset (controller not run by a manager): min = 0, max = 0.5, first key = 0
+1	effect controller ranges: v offset (controller not run by a manager): min = 0, max = 0.75, first key = 0
+325	effect controller ranges: v offset (controller not run by a manager): min = 0, max = 1, first key = 0
+2	effect controller ranges: v offset (controller not run by a manager): min = 0, max = 10, first key = 0
+25	effect controller ranges: v offset (controller not run by a manager): min = 0, max = 2, first key = 0
+3	effect controller ranges: v offset (controller not run by a manager): min = 0, max = 5, first key = 0
+2	effect controller ranges: v offset (controller not run by a manager): min = 0.5, max = 0.5, first key = 0.5
+10	effect controller ranges: v offset (controller not run by a manager): min = 0.75, max = 1, first key = 1
+3	effect controller ranges: v offset (sequence, clamp): min 0 to 0.1, max 1 to 1.5, first key 0 to 0.1
+1	effect controller ranges: v offset (sequence, clamp): min 0.1 to 0.25, max 2 to 5, first key 0.1 to 0.25
+21	effect controller ranges: v offset (sequence, clamp): min 0.25 to 0.5, max 0.5 to 0.75, first key 0.25 to 0.5
+2	effect controller ranges: v offset (sequence, clamp): min 0.25 to 0.5, max 2 to 5, first key 0.25 to 0.5
+2	effect controller ranges: v offset (sequence, clamp): min < 0, max 0 to 0.1, first key 0 to 0.1
+1	effect controller ranges: v offset (sequence, clamp): min < 0, max 0 to 0.1, first key = 0
+3	effect controller ranges: v offset (sequence, clamp): min < 0, max 0.1 to 0.25, first key 0 to 0.1
+2	effect controller ranges: v offset (sequence, clamp): min < 0, max 0.1 to 0.25, first key = 0
+4	effect controller ranges: v offset (sequence, clamp): min < 0, max 0.25 to 0.5, first key 0.25 to 0.5
+2	effect controller ranges: v offset (sequence, clamp): min < 0, max 0.25 to 0.5, first key < 0
+5	effect controller ranges: v offset (sequence, clamp): min < 0, max 0.5 to 0.75, first key 0.5 to 0.75
+2	effect controller ranges: v offset (sequence, clamp): min < 0, max 5 to 10, first key < 0
+10	effect controller ranges: v offset (sequence, clamp): min < 0, max < 0, first key < 0
+88	effect controller ranges: v offset (sequence, clamp): min < 0, max = 0, first key = 0
+8	effect controller ranges: v offset (sequence, clamp): min = -0, max 0.75 to 1, first key = -0
+1	effect controller ranges: v offset (sequence, clamp): min = -0, max 1 to 1.5, first key = -0
+1	effect controller ranges: v offset (sequence, clamp): min = 0, max 0 to 0.1, first key = 0
+2	effect controller ranges: v offset (sequence, clamp): min = 0, max 0.1 to 0.25, first key = 0
+16	effect controller ranges: v offset (sequence, clamp): min = 0, max 0.25 to 0.5, first key = 0
+15	effect controller ranges: v offset (sequence, clamp): min = 0, max 0.5 to 0.75, first key = 0
+5	effect controller ranges: v offset (sequence, clamp): min = 0, max 0.75 to 1, first key = 0
+3	effect controller ranges: v offset (sequence, clamp): min = 0, max 1 to 1.5, first key = 0
+5	effect controller ranges: v offset (sequence, clamp): min = 0, max 1.5 to 2, first key = 0
+1	effect controller ranges: v offset (sequence, clamp): min = 0, max 10 to 100, first key = 0
+17	effect controller ranges: v offset (sequence, clamp): min = 0, max 2 to 5, first key = 0
+36	effect controller ranges: v offset (sequence, clamp): min = 0, max = 0, first key = 0
+26	effect controller ranges: v offset (sequence, clamp): min = 0, max = 0.5, first key = 0
+1	effect controller ranges: v offset (sequence, clamp): min = 0, max = 0.75, first key = 0
+10	effect controller ranges: v offset (sequence, clamp): min = 0, max = 1, first key = 0
+6	effect controller ranges: v offset (sequence, clamp): min = 0, max = 2, first key = 0
+1	effect controller ranges: v offset (sequence, clamp): min = 0, max = 5, first key = 0
+4	effect controller ranges: v offset (sequence, clamp): min = 2, max = 2, first key = 2
+6	effect controller ranges: v offset (sequence, loop): min 0 to 0.1, max 0 to 0.1, first key 0 to 0.1
+1	effect controller ranges: v offset (sequence, loop): min 0 to 0.1, max 0.75 to 1, first key 0 to 0.1
+20	effect controller ranges: v offset (sequence, loop): min 0 to 0.1, max 0.75 to 1, first key 0.75 to 1
+2	effect controller ranges: v offset (sequence, loop): min 0.1 to 0.25, max 0.1 to 0.25, first key 0.1 to 0.25
+10	effect controller ranges: v offset (sequence, loop): min 0.1 to 0.25, max 0.75 to 1, first key 0.1 to 0.25
+1	effect controller ranges: v offset (sequence, loop): min 0.1 to 0.25, max 2 to 5, first key 0.1 to 0.25
+11	effect controller ranges: v offset (sequence, loop): min 0.25 to 0.5, max 0.25 to 0.5, first key 0.25 to 0.5
+7	effect controller ranges: v offset (sequence, loop): min 0.25 to 0.5, max 0.5 to 0.75, first key 0.25 to 0.5
+1	effect controller ranges: v offset (sequence, loop): min 0.25 to 0.5, max 0.5 to 0.75, first key 0.5 to 0.75
+5	effect controller ranges: v offset (sequence, loop): min 0.25 to 0.5, max 0.5 to 0.75, first key = 0.5
+1	effect controller ranges: v offset (sequence, loop): min 0.25 to 0.5, max 1 to 1.5, first key 0.25 to 0.5
+1	effect controller ranges: v offset (sequence, loop): min 0.5 to 0.75, max 0.75 to 1, first key 0.5 to 0.75
+1	effect controller ranges: v offset (sequence, loop): min 0.5 to 0.75, max 0.75 to 1, first key 0.75 to 1
+11	effect controller ranges: v offset (sequence, loop): min 0.75 to 1, max 0.75 to 1, first key 0.75 to 1
+1	effect controller ranges: v offset (sequence, loop): min 0.75 to 1, max = 1, first key 0.75 to 1
+3	effect controller ranges: v offset (sequence, loop): min 1 to 1.5, max = 2, first key 1 to 1.5
+10	effect controller ranges: v offset (sequence, loop): min 10 to 100, max 10 to 100, first key 10 to 100
+2	effect controller ranges: v offset (sequence, loop): min 2 to 5, max 2 to 5, first key 2 to 5
+1	effect controller ranges: v offset (sequence, loop): min 2 to 5, max 5 to 10, first key 2 to 5
+1	effect controller ranges: v offset (sequence, loop): min 5 to 10, max 10 to 100, first key 5 to 10
+10	effect controller ranges: v offset (sequence, loop): min < 0, max 0 to 0.1, first key 0 to 0.1
+14	effect controller ranges: v offset (sequence, loop): min < 0, max 0 to 0.1, first key < 0
+10	effect controller ranges: v offset (sequence, loop): min < 0, max 0 to 0.1, first key = 0
+1	effect controller ranges: v offset (sequence, loop): min < 0, max 0.1 to 0.25, first key 0.1 to 0.25
+8	effect controller ranges: v offset (sequence, loop): min < 0, max 0.1 to 0.25, first key < 0
+6	effect controller ranges: v offset (sequence, loop): min < 0, max 0.1 to 0.25, first key = 0
+1	effect controller ranges: v offset (sequence, loop): min < 0, max 0.25 to 0.5, first key 0.25 to 0.5
+5	effect controller ranges: v offset (sequence, loop): min < 0, max 0.25 to 0.5, first key < 0
+6	effect controller ranges: v offset (sequence, loop): min < 0, max 0.5 to 0.75, first key = 0
+5	effect controller ranges: v offset (sequence, loop): min < 0, max 0.75 to 1, first key 0.75 to 1
+2	effect controller ranges: v offset (sequence, loop): min < 0, max 1.5 to 2, first key < 0
+46	effect controller ranges: v offset (sequence, loop): min < 0, max < 0, first key < 0
+55	effect controller ranges: v offset (sequence, loop): min < 0, max = 0, first key = 0
+2	effect controller ranges: v offset (sequence, loop): min < 0, max = 1, first key < 0
+1	effect controller ranges: v offset (sequence, loop): min < 0, max = 1, first key = 1
+18	effect controller ranges: v offset (sequence, loop): min = -0, max 10 to 100, first key = -0
+5	effect controller ranges: v offset (sequence, loop): min = -0, max 5 to 10, first key = -0
+5	effect controller ranges: v offset (sequence, loop): min = -0, max = 10, first key = -0
+4	effect controller ranges: v offset (sequence, loop): min = -0, max = 5, first key = -0
+11	effect controller ranges: v offset (sequence, loop): min = 0, max 0 to 0.1, first key = 0
+6	effect controller ranges: v offset (sequence, loop): min = 0, max 0.25 to 0.5, first key = 0
+4	effect controller ranges: v offset (sequence, loop): min = 0, max 0.5 to 0.75, first key = 0
+27	effect controller ranges: v offset (sequence, loop): min = 0, max 0.75 to 1, first key = 0
+2	effect controller ranges: v offset (sequence, loop): min = 0, max 1.5 to 2, first key = 0
+8	effect controller ranges: v offset (sequence, loop): min = 0, max 10 to 100, first key = 0
+24	effect controller ranges: v offset (sequence, loop): min = 0, max 2 to 5, first key = 0
+40	effect controller ranges: v offset (sequence, loop): min = 0, max 5 to 10, first key = 0
+27	effect controller ranges: v offset (sequence, loop): min = 0, max = 0, first key = 0
+4	effect controller ranges: v offset (sequence, loop): min = 0, max = 0.5, first key 0 to 0.1
+1	effect controller ranges: v offset (sequence, loop): min = 0, max = 0.5, first key 0.1 to 0.25
+6	effect controller ranges: v offset (sequence, loop): min = 0, max = 0.75, first key = 0
+50	effect controller ranges: v offset (sequence, loop): min = 0, max = 1, first key = 0
+9	effect controller ranges: v offset (sequence, loop): min = 0, max = 1, first key = 1
+10	effect controller ranges: v offset (sequence, loop): min = 0, max = 10, first key = 0
+45	effect controller ranges: v offset (sequence, loop): min = 0, max = 2, first key = 0
+1	effect controller ranges: v offset (sequence, loop): min = 0, max = 5, first key = 0
+1	effect controller ranges: v offset (sequence, loop): min = 0.1, max 0.25 to 0.5, first key = 0.1
+3	effect controller ranges: v offset (sequence, loop): min = 1, max = 1, first key = 1
+1	effect controller ranges: v offset (sequence, loop): min = 1, max = 2, first key = 1
+1	effect controller ranges: v offset (sequence, loop): min = 10, max 10 to 100, first key = 10
+2	effect controller ranges: v offset (sequence, loop): min = 2, max 5 to 10, first key = 2
+2	effect controller ranges: v scale (controller not run by a manager): min 0.1 to 0.25, max 0.25 to 0.5, first key 0.1 to 0.25
+1	effect controller ranges: v scale (controller not run by a manager): min 0.75 to 1, max 0.75 to 1, first key 0.75 to 1
+2	effect controller ranges: v scale (controller not run by a manager): min 0.75 to 1, max 1 to 1.5, first key 0.75 to 1
+8	effect controller ranges: v scale (controller not run by a manager): min 0.75 to 1, max 1 to 1.5, first key 1 to 1.5
+3	effect controller ranges: v scale (controller not run by a manager): min 0.75 to 1, max = 1, first key 0.75 to 1
+154	effect controller ranges: v scale (controller not run by a manager): min 0.75 to 1, max = 1, first key = 1
+3	effect controller ranges: v scale (controller not run by a manager): min 1 to 1.5, max 1 to 1.5, first key 1 to 1.5
+2	effect controller ranges: v scale (controller not run by a manager): min = 0.25, max = 2, first key = 2
+78	effect controller ranges: v scale (controller not run by a manager): min = 1, max = 1, first key = 1
+1	effect controller ranges: v scale (controller not run by a manager): min = 2, max 2 to 5, first key = 2
+21	effect controller ranges: v scale (sequence, clamp): min 0 to 0.1, max 0.25 to 0.5, first key 0 to 0.1
+1	effect controller ranges: v scale (sequence, clamp): min 0 to 0.1, max 0.5 to 0.75, first key 0.5 to 0.75
+4	effect controller ranges: v scale (sequence, clamp): min 0 to 0.1, max 1 to 1.5, first key 1 to 1.5
+6	effect controller ranges: v scale (sequence, clamp): min 0.1 to 0.25, max 0.25 to 0.5, first key 0.25 to 0.5
+1	effect controller ranges: v scale (sequence, clamp): min 0.25 to 0.5, max 0.25 to 0.5, first key 0.25 to 0.5
+2	effect controller ranges: v scale (sequence, clamp): min 0.25 to 0.5, max = 0.5, first key = 0.5
+2	effect controller ranges: v scale (sequence, clamp): min 0.75 to 1, max 1 to 1.5, first key = 1
+9	effect controller ranges: v scale (sequence, clamp): min 0.75 to 1, max 1.5 to 2, first key 0.75 to 1
+2	effect controller ranges: v scale (sequence, clamp): min 0.75 to 1, max = 1, first key = 1
+5	effect controller ranges: v scale (sequence, clamp): min 1 to 1.5, max 1 to 1.5, first key 1 to 1.5
+3	effect controller ranges: v scale (sequence, clamp): min = 0.5, max 1 to 1.5, first key = 0.5
+2	effect controller ranges: v scale (sequence, clamp): min = 10, max 10 to 100, first key = 10
+8	effect controller ranges: v scale (sequence, loop): min 0 to 0.1, max 0.1 to 0.25, first key 0 to 0.1
+3	effect controller ranges: v scale (sequence, loop): min 0.1 to 0.25, max 0.25 to 0.5, first key 0.1 to 0.25
+1	effect controller ranges: v scale (sequence, loop): min 0.1 to 0.25, max 1 to 1.5, first key 0.1 to 0.25
+6	effect controller ranges: v scale (sequence, loop): min 0.25 to 0.5, max 0.25 to 0.5, first key 0.25 to 0.5
+2	effect controller ranges: v scale (sequence, loop): min 0.75 to 1, max 0.75 to 1, first key 0.75 to 1
+2	effect controller ranges: v scale (sequence, loop): min 0.75 to 1, max 1 to 1.5, first key 0.75 to 1
+7	effect controller ranges: v scale (sequence, loop): min 0.75 to 1, max 1 to 1.5, first key 1 to 1.5
+2	effect controller ranges: v scale (sequence, loop): min 0.75 to 1, max = 1, first key 0.75 to 1
+4	effect controller ranges: v scale (sequence, loop): min 0.75 to 1, max = 1, first key = 1
+8	effect controller ranges: v scale (sequence, loop): min 1 to 1.5, max 1 to 1.5, first key 1 to 1.5
+1	effect controller ranges: v scale (sequence, loop): min < 0, max < 0, first key < 0
+1	effect controller ranges: v scale (sequence, loop): min = 0.25, max = 2, first key = 0.25
+3	effect controller ranges: v scale (sequence, loop): min = 0.25, max = 2, first key = 2
+1	effect controller ranges: v scale (sequence, loop): min = 0.5, max 0.75 to 1, first key = 0.5
+1	effect controller ranges: v scale (sequence, loop): min = 0.5, max = 0.5, first key = 0.5
+31	effect controller ranges: v scale (sequence, loop): min = 1, max = 1, first key = 1
+1	effect controller ranges: v scale (sequence, loop): min = 2, max = 2, first key = 2
+1	effect controller ranges: v scale (sequence, loop): min = 5, max = 5, first key = 5
+30	effect controllers: alpha (base colour alpha) (controller not run by a manager): every key equal
+66	effect controllers: alpha (base colour alpha) (controller not run by a manager): stored = another key (stored from NIF)
+19	effect controllers: alpha (base colour alpha) (controller not run by a manager): stored = first key (stored from BGEM)
+405	effect controllers: alpha (base colour alpha) (controller not run by a manager): stored = first key (stored from NIF)
+126	effect controllers: alpha (base colour alpha) (controller not run by a manager): stored inside key range, equal to no key (stored from NIF)
+1	effect controllers: alpha (base colour alpha) (controller not run by a manager): stored outside key range (stored from NIF)
+125	effect controllers: alpha (base colour alpha) (sequence, clamp): every key equal
+12	effect controllers: alpha (base colour alpha) (sequence, clamp): stored = another key (stored from NIF)
+2	effect controllers: alpha (base colour alpha) (sequence, clamp): stored = first key (stored from BGEM)
+549	effect controllers: alpha (base colour alpha) (sequence, clamp): stored = first key (stored from NIF)
+4	effect controllers: alpha (base colour alpha) (sequence, clamp): stored inside key range, equal to no key (stored from NIF)
+398	effect controllers: alpha (base colour alpha) (sequence, loop): every key equal
+35	effect controllers: alpha (base colour alpha) (sequence, loop): stored = another key (stored from NIF)
+11	effect controllers: alpha (base colour alpha) (sequence, loop): stored = first key (stored from BGEM)
+420	effect controllers: alpha (base colour alpha) (sequence, loop): stored = first key (stored from NIF)
+2	effect controllers: alpha (base colour alpha) (sequence, loop): stored inside key range, equal to no key (stored from BGEM)
+13	effect controllers: alpha (base colour alpha) (sequence, loop): stored inside key range, equal to no key (stored from NIF)
+6	effect controllers: alpha (base colour alpha) (sequence, loop): stored outside key range (stored from BGEM)
+324	effect controllers: alpha (base colour alpha) (sequence, loop): stored outside key range (stored from NIF)
+40	effect controllers: alpha (base colour alpha): NIF value = BGEM value
+621	effect controllers: alpha (base colour alpha): controller not run by a manager
+40	effect controllers: alpha (base colour alpha): no key data (pose 0)
+2	effect controllers: alpha (base colour alpha): no key data (pose 0.47)
+1	effect controllers: alpha (base colour alpha): no key data (pose 0.5)
+1	effect controllers: alpha (base colour alpha): no key data (pose 0.55)
+2	effect controllers: alpha (base colour alpha): no key data (pose 0.85006243)
+1	effect controllers: alpha (base colour alpha): no key data (pose 0.9)
+5	effect controllers: alpha (base colour alpha): no key data (pose 1)
+4	effect controllers: alpha (base colour alpha): no key data (pose 1.2)
+2	effect controllers: alpha (base colour alpha): no key data (pose 1.25)
+46	effect controllers: alpha (base colour alpha): no key data (pose INV)
+584	effect controllers: alpha (base colour alpha): sequence, clamp
+894	effect controllers: alpha (base colour alpha): sequence, loop
+46	effect controllers: base colour rgb (controller not run by a manager): every key equal
+70	effect controllers: base colour rgb (controller not run by a manager): stored = first key (stored from BGEM)
+147	effect controllers: base colour rgb (controller not run by a manager): stored = first key (stored from NIF)
+30	effect controllers: base colour rgb (controller not run by a manager): stored inside key range, equal to no key (stored from NIF)
+44	effect controllers: base colour rgb (sequence, clamp): every key equal
+3	effect controllers: base colour rgb (sequence, clamp): stored = first key (stored from BGEM)
+262	effect controllers: base colour rgb (sequence, clamp): stored = first key (stored from NIF)
+10	effect controllers: base colour rgb (sequence, clamp): stored inside key range, equal to no key (stored from NIF)
+110	effect controllers: base colour rgb (sequence, loop): every key equal
+1	effect controllers: base colour rgb (sequence, loop): stored = first key (stored from BGEM)
+103	effect controllers: base colour rgb (sequence, loop): stored = first key (stored from NIF)
+15	effect controllers: base colour rgb (sequence, loop): stored inside key range, equal to no key (stored from NIF)
+4	effect controllers: base colour rgb (sequence, loop): stored outside key range (stored from BGEM)
+69	effect controllers: base colour rgb (sequence, loop): stored outside key range (stored from NIF)
+1	effect controllers: base colour rgb: NIF value != BGEM value
+77	effect controllers: base colour rgb: NIF value = BGEM value
+257	effect controllers: base colour rgb: controller not run by a manager
+10	effect controllers: base colour rgb: no key data (pose )
+4	effect controllers: base colour rgb: no key data (pose 0 0 0)
+1	effect controllers: base colour rgb: no key data (pose 0.39607853 0.7764707 0.9960785)
+1	effect controllers: base colour rgb: no key data (pose 0.39607853 0.99607855 0.47843143)
+1	effect controllers: base colour rgb: no key data (pose 0.5019608 0.40000007 0.32156864)
+21	effect controllers: base colour rgb: no key data (pose 0.7411765 0.9764707 0.80784327)
+4	effect controllers: base colour rgb: no key data (pose 0.9764707 0.97647065 0.97647065)
+1	effect controllers: base colour rgb: no key data (pose 0.99607855 0.42745104 0.25490198)
+1	effect controllers: base colour rgb: no key data (pose 0.99607855 0.7764707 0.3960785)
+2	effect controllers: base colour rgb: no key data (pose 1 1 1)
+3	effect controllers: base colour rgb: no key data (pose INV INV INV)
+285	effect controllers: base colour rgb: sequence, clamp
+221	effect controllers: base colour rgb: sequence, loop
+32	effect controllers: base colour scale (emissive multiple) (controller not run by a manager): every key equal
+6	effect controllers: base colour scale (emissive multiple) (controller not run by a manager): stored = another key (stored from NIF)
+12	effect controllers: base colour scale (emissive multiple) (controller not run by a manager): stored = first key (stored from BGEM)
+234	effect controllers: base colour scale (emissive multiple) (controller not run by a manager): stored = first key (stored from NIF)
+50	effect controllers: base colour scale (emissive multiple) (controller not run by a manager): stored inside key range, equal to no key (stored from NIF)
+118	effect controllers: base colour scale (emissive multiple) (sequence, clamp): every key equal
+342	effect controllers: base colour scale (emissive multiple) (sequence, clamp): stored = first key (stored from NIF)
+3	effect controllers: base colour scale (emissive multiple) (sequence, clamp): stored inside key range, equal to no key (stored from NIF)
+5	effect controllers: base colour scale (emissive multiple) (sequence, clamp): stored outside key range (stored from BGEM)
+135	effect controllers: base colour scale (emissive multiple) (sequence, loop): every key equal
+6	effect controllers: base colour scale (emissive multiple) (sequence, loop): stored = another key (stored from NIF)
+256	effect controllers: base colour scale (emissive multiple) (sequence, loop): stored = first key (stored from NIF)
+18	effect controllers: base colour scale (emissive multiple) (sequence, loop): stored inside key range, equal to no key (stored from NIF)
+1	effect controllers: base colour scale (emissive multiple) (sequence, loop): stored outside key range (stored from BGEM)
+69	effect controllers: base colour scale (emissive multiple) (sequence, loop): stored outside key range (stored from NIF)
+5	effect controllers: base colour scale (emissive multiple): NIF value != BGEM value
+13	effect controllers: base colour scale (emissive multiple): NIF value = BGEM value
+312	effect controllers: base colour scale (emissive multiple): controller not run by a manager
+3	effect controllers: base colour scale (emissive multiple): controller run by a manager
+4	effect controllers: base colour scale (emissive multiple): no key data (pose 1)
+2	effect controllers: base colour scale (emissive multiple): no key data (pose 1.25)
+3	effect controllers: base colour scale (emissive multiple): no key data (pose 1.7955)
+4	effect controllers: base colour scale (emissive multiple): no key data (pose 2)
+1	effect controllers: base colour scale (emissive multiple): no key data (pose 20)
+19	effect controllers: base colour scale (emissive multiple): no key data (pose INV)
+354	effect controllers: base colour scale (emissive multiple): sequence, clamp
+369	effect controllers: base colour scale (emissive multiple): sequence, loop
+146	effect controllers: falloff start opacity (controller not run by a manager): stored = first key (stored from NIF)
+2	effect controllers: falloff start opacity (sequence, loop): every key equal
+2	effect controllers: falloff start opacity (sequence, loop): stored outside key range (stored from NIF)
+146	effect controllers: falloff start opacity: controller not run by a manager
+2	effect controllers: falloff start opacity: sequence, loop
+146	effect controllers: falloff stop angle (controller not run by a manager): stored outside key range (stored from NIF)
+146	effect controllers: falloff stop angle: controller not run by a manager
+10	effect controllers: flags 0x0041 (controller not run by a manager)
+156	effect controllers: flags 0x0045 (controller not run by a manager)
+2828	effect controllers: flags 0x0048 (controller not run by a manager)
+544	effect controllers: flags 0x004c (controller not run by a manager)
+48	effect controllers: flags 0x0068 (controller not run by a manager)
+196	effect controllers: flags 0x0068 (sequence, clamp)
+660	effect controllers: flags 0x0068 (sequence, loop)
+7	effect controllers: flags 0x006c (controller not run by a manager)
+3	effect controllers: flags 0x006c (controller run by a manager)
+1678	effect controllers: flags 0x006c (sequence, clamp)
+2023	effect controllers: flags 0x006c (sequence, loop)
+45	effect controllers: interpolator NiBlendFloatInterpolator
+10	effect controllers: interpolator NiBlendPoint3Interpolator
+7342	effect controllers: interpolator NiFloatInterpolator
+753	effect controllers: interpolator NiPoint3Interpolator
+3	effect controllers: interpolator none
+62	effect controllers: key interpolation 1, keys 1
+287	effect controllers: key interpolation 1, keys 10
+752	effect controllers: key interpolation 1, keys 2
+69	effect controllers: key interpolation 1, keys 3
+36	effect controllers: key interpolation 1, keys 4
+6	effect controllers: key interpolation 1, keys 5
+19	effect controllers: key interpolation 1, keys 6
+30	effect controllers: key interpolation 1, keys 7
+33	effect controllers: key interpolation 1, keys 8
+16	effect controllers: key interpolation 1, keys 9
+161	effect controllers: key interpolation 2, keys 1
+1136	effect controllers: key interpolation 2, keys 10
+1988	effect controllers: key interpolation 2, keys 2
+793	effect controllers: key interpolation 2, keys 3
+478	effect controllers: key interpolation 2, keys 4
+465	effect controllers: key interpolation 2, keys 5
+183	effect controllers: key interpolation 2, keys 6
+125	effect controllers: key interpolation 2, keys 7
+40	effect controllers: key interpolation 2, keys 8
+190	effect controllers: key interpolation 2, keys 9
+2	effect controllers: key interpolation 3, keys 1
+79	effect controllers: key interpolation 3, keys 10
+86	effect controllers: key interpolation 3, keys 2
+113	effect controllers: key interpolation 3, keys 3
+166	effect controllers: key interpolation 3, keys 4
+108	effect controllers: key interpolation 3, keys 5
+55	effect controllers: key interpolation 3, keys 6
+34	effect controllers: key interpolation 3, keys 7
+13	effect controllers: key interpolation 3, keys 8
+4	effect controllers: key interpolation 3, keys 9
+2	effect controllers: key interpolation 5, keys 1
+78	effect controllers: key interpolation 5, keys 10
+7	effect controllers: key interpolation 5, keys 4
+1	effect controllers: key interpolation 5, keys 5
+8	effect controllers: key interpolation 5, keys 6
+4	effect controllers: key interpolation 5, keys 7
+4	effect controllers: key interpolation 5, keys 8
+2	effect controllers: key interpolation 5, keys 9
+60	effect controllers: u offset (controller not run by a manager): every key equal
+13	effect controllers: u offset (controller not run by a manager): stored = another key (stored from NIF)
+50	effect controllers: u offset (controller not run by a manager): stored = first key (stored from BGEM)
+525	effect controllers: u offset (controller not run by a manager): stored = first key (stored from NIF)
+1	effect controllers: u offset (controller not run by a manager): stored inside key range, equal to no key (stored from BGEM)
+167	effect controllers: u offset (controller not run by a manager): stored inside key range, equal to no key (stored from NIF)
+40	effect controllers: u offset (sequence, clamp): every key equal
+2	effect controllers: u offset (sequence, clamp): stored = first key (stored from BGEM)
+116	effect controllers: u offset (sequence, clamp): stored = first key (stored from NIF)
+6	effect controllers: u offset (sequence, clamp): stored inside key range, equal to no key (stored from NIF)
+2	effect controllers: u offset (sequence, clamp): stored outside key range (stored from BGEM)
+9	effect controllers: u offset (sequence, clamp): stored outside key range (stored from NIF)
+31	effect controllers: u offset (sequence, loop): every key equal
+42	effect controllers: u offset (sequence, loop): stored = another key (stored from NIF)
+40	effect controllers: u offset (sequence, loop): stored = first key (stored from BGEM)
+181	effect controllers: u offset (sequence, loop): stored = first key (stored from NIF)
+20	effect controllers: u offset (sequence, loop): stored inside key range, equal to no key (stored from NIF)
+28	effect controllers: u offset (sequence, loop): stored outside key range (stored from NIF)
+95	effect controllers: u offset: NIF value = BGEM value
+771	effect controllers: u offset: controller not run by a manager
+2	effect controllers: u offset: no key data (pose -2.5363948)
+2	effect controllers: u offset: no key data (pose -3.096372)
+158	effect controllers: u offset: no key data (pose 0)
+1	effect controllers: u offset: no key data (pose 0.0625)
+3	effect controllers: u offset: no key data (pose 0.5)
+3	effect controllers: u offset: no key data (pose 0.9375)
+24	effect controllers: u offset: no key data (pose INV)
+219	effect controllers: u offset: sequence, clamp
+405	effect controllers: u offset: sequence, loop
+72	effect controllers: u scale (controller not run by a manager): every key equal
+240	effect controllers: u scale (controller not run by a manager): stored = first key (stored from NIF)
+5	effect controllers: u scale (controller not run by a manager): stored inside key range, equal to no key (stored from NIF)
+3	effect controllers: u scale (sequence, clamp): every key equal
+28	effect controllers: u scale (sequence, clamp): stored = first key (stored from NIF)
+25	effect controllers: u scale (sequence, loop): every key equal
+39	effect controllers: u scale (sequence, loop): stored = first key (stored from NIF)
+9	effect controllers: u scale (sequence, loop): stored outside key range (stored from NIF)
+245	effect controllers: u scale: controller not run by a manager
+2	effect controllers: u scale: no key data (pose 1)
+28	effect controllers: u scale: sequence, clamp
+50	effect controllers: u scale: sequence, loop
+24	effect controllers: v offset (controller not run by a manager): every key equal
+11	effect controllers: v offset (controller not run by a manager): stored = another key (stored from NIF)
+61	effect controllers: v offset (controller not run by a manager): stored = first key (stored from BGEM)
+581	effect controllers: v offset (controller not run by a manager): stored = first key (stored from NIF)
+2	effect controllers: v offset (controller not run by a manager): stored inside key range, equal to no key (stored from BGEM)
+170	effect controllers: v offset (controller not run by a manager): stored inside key range, equal to no key (stored from NIF)
+45	effect controllers: v offset (sequence, clamp): every key equal
+2	effect controllers: v offset (sequence, clamp): stored = another key (stored from NIF)
+3	effect controllers: v offset (sequence, clamp): stored = first key (stored from BGEM)
+289	effect controllers: v offset (sequence, clamp): stored = first key (stored from NIF)
+1	effect controllers: v offset (sequence, clamp): stored inside key range, equal to no key (stored from NIF)
+2	effect controllers: v offset (sequence, clamp): stored outside key range (stored from BGEM)
+7	effect controllers: v offset (sequence, clamp): stored outside key range (stored from NIF)
+41	effect controllers: v offset (sequence, loop): every key equal
+51	effect controllers: v offset (sequence, loop): stored = another key (stored from NIF)
+51	effect controllers: v offset (sequence, loop): stored = first key (stored from BGEM)
+326	effect controllers: v offset (sequence, loop): stored = first key (stored from NIF)
+18	effect controllers: v offset (sequence, loop): stored inside key range, equal to no key (stored from NIF)
+137	effect controllers: v offset (sequence, loop): stored outside key range (stored from NIF)
+119	effect controllers: v offset: NIF value = BGEM value
+841	effect controllers: v offset: controller not run by a manager
+1	effect controllers: v offset: no key data (pose -0.9761841)
+1	effect controllers: v offset: no key data (pose -1.4018142)
+1	effect controllers: v offset: no key data (pose -3.535748)
+38	effect controllers: v offset: no key data (pose 0)
+1	effect controllers: v offset: no key data (pose 0.375)
+2	effect controllers: v offset: no key data (pose 0.5)
+1	effect controllers: v offset: no key data (pose 0.6875)
+2	effect controllers: v offset: no key data (pose 0.9375)
+1	effect controllers: v offset: no key data (pose 1)
+2	effect controllers: v offset: no key data (pose 10.968996)
+1	effect controllers: v offset: no key data (pose 2)
+1	effect controllers: v offset: no key data (pose 2.064516)
+1	effect controllers: v offset: no key data (pose 3)
+54	effect controllers: v offset: no key data (pose INV)
+342	effect controllers: v offset: sequence, clamp
+636	effect controllers: v offset: sequence, loop
+78	effect controllers: v scale (controller not run by a manager): every key equal
+254	effect controllers: v scale (controller not run by a manager): stored = first key (stored from NIF)
+3	effect controllers: v scale (sequence, clamp): every key equal
+58	effect controllers: v scale (sequence, clamp): stored = first key (stored from NIF)
+37	effect controllers: v scale (sequence, loop): every key equal
+2	effect controllers: v scale (sequence, loop): stored = another key (stored from NIF)
+64	effect controllers: v scale (sequence, loop): stored = first key (stored from NIF)
+17	effect controllers: v scale (sequence, loop): stored outside key range (stored from NIF)
+254	effect controllers: v scale: controller not run by a manager
+4	effect controllers: v scale: no key data (pose 0.5)
+23	effect controllers: v scale: no key data (pose 1)
+62	effect controllers: v scale: sequence, clamp
+106	effect controllers: v scale: sequence, loop
+11	effect material fields: alpha: 0.1 to 0.25
+10	effect material fields: alpha: 0.25 to 0.5
+11	effect material fields: alpha: 0.5 to 0.75
+16	effect material fields: alpha: 0.75 to 1
+12	effect material fields: alpha: 1 to 1.5
+10	effect material fields: alpha: 1.5 to 2
+10	effect material fields: alpha: = 0
+2	effect material fields: alpha: = 0.1
+1	effect material fields: alpha: = 0.25
+10	effect material fields: alpha: = 0.5
+21	effect material fields: alpha: = 0.75
+225	effect material fields: alpha: = 1
+7	effect material fields: base colour rgb: 0 0 0
+178	effect material fields: base colour rgb: 1 1 1
+124	effect material fields: base colour rgb: colour
+30	effect material fields: base colour rgb: grey (r = g = b)
+22	effect material fields: base colour scale: 1 to 1.5
+1	effect material fields: base colour scale: 1.5 to 2
+42	effect material fields: base colour scale: 10 to 100
+28	effect material fields: base colour scale: 2 to 5
+67	effect material fields: base colour scale: 5 to 10
+2	effect material fields: base colour scale: = 0.1
+1	effect material fields: base colour scale: = 0.5
+137	effect material fields: base colour scale: = 1
+3	effect material fields: base colour scale: = 1.5
+22	effect material fields: base colour scale: = 10
+14	effect material fields: base colour scale: = 2
+1	effect material fields: falloff angles (start stop): 0.17364822 0.49999997
+1	effect material fields: falloff angles (start stop): 0.17364822 1
+4	effect material fields: falloff angles (start stop): 0.17364834 1
+32	effect material fields: falloff angles (start stop): 0.25881907 0.087155804
+2	effect material fields: falloff angles (start stop): 0.2588192 1
+3	effect material fields: falloff angles (start stop): 0.34202027 0.9396926
+8	effect material fields: falloff angles (start stop): 0.42261824 0.17364822
+5	effect material fields: falloff angles (start stop): 0.49999997 -0.00000004371139
+1	effect material fields: falloff angles (start stop): 0.49999997 0.17364822
+1	effect material fields: falloff angles (start stop): 0.64278764 0.087155804
+2	effect material fields: falloff angles (start stop): 0.81915206 -0.1736482
+1	effect material fields: falloff angles (start stop): 0.9396926 0.34202027
+1	effect material fields: falloff angles (start stop): 0.9668234 0.97357893
+7	effect material fields: falloff angles (start stop): 0.9848077 0.087155916
+17	effect material fields: falloff angles (start stop): 0.9848077 0.17364834
+10	effect material fields: falloff angles (start stop): 0.9961947 0.087155804
+16	effect material fields: falloff angles (start stop): 1 -0.00000004371139
+3	effect material fields: falloff angles (start stop): 1 -0.17364807
+8	effect material fields: falloff angles (start stop): 1 -0.9396926
+2	effect material fields: falloff angles (start stop): 1 0.087155804
+1	effect material fields: falloff angles (start stop): 1 0.17364822
+4	effect material fields: falloff angles (start stop): 1 0.17364834
+11	effect material fields: falloff angles (start stop): 1 0.34202015
+1	effect material fields: falloff angles (start stop): 1 0.34202027
+5	effect material fields: falloff angles (start stop): 1 0.49999997
+1	effect material fields: falloff angles (start stop): 1 0.76604444
+191	effect material fields: falloff angles (start stop): 1 1
+191	effect material fields: falloff opacities (start stop): 0 0
+9	effect material fields: falloff opacities (start stop): 0 1
+10	effect material fields: falloff opacities (start stop): 0.1 1
+5	effect material fields: falloff opacities (start stop): 0.2 1
+1	effect material fields: falloff opacities (start stop): 0.3 1
+2	effect material fields: falloff opacities (start stop): 0.4 1
+2	effect material fields: falloff opacities (start stop): 0.75 1
+1	effect material fields: falloff opacities (start stop): 0.8 1
+1	effect material fields: falloff opacities (start stop): 0.88 0.86
+2	effect material fields: falloff opacities (start stop): 0.9 1
+107	effect material fields: falloff opacities (start stop): 1 0
+3	effect material fields: falloff opacities (start stop): 1 0.5
+2	effect material fields: falloff opacities (start stop): 1 0.75
+3	effect material fields: falloff opacities (start stop): 1 1
+152	effect material fields: flags (palette alpha, falloff, falloff colour, soft, effect lighting, blood): 0 0 0 0 0 0
+34	effect material fields: flags (palette alpha, falloff, falloff colour, soft, effect lighting, blood): 0 0 0 0 1 0
+25	effect material fields: flags (palette alpha, falloff, falloff colour, soft, effect lighting, blood): 0 0 0 1 1 0
+47	effect material fields: flags (palette alpha, falloff, falloff colour, soft, effect lighting, blood): 0 1 0 0 0 0
+15	effect material fields: flags (palette alpha, falloff, falloff colour, soft, effect lighting, blood): 0 1 0 0 1 0
+1	effect material fields: flags (palette alpha, falloff, falloff colour, soft, effect lighting, blood): 0 1 0 1 0 0
+55	effect material fields: flags (palette alpha, falloff, falloff colour, soft, effect lighting, blood): 0 1 0 1 1 0
+1	effect material fields: flags (palette alpha, falloff, falloff colour, soft, effect lighting, blood): 1 0 0 0 0 0
+3	effect material fields: flags (palette alpha, falloff, falloff colour, soft, effect lighting, blood): 1 0 0 0 1 0
+1	effect material fields: flags (palette alpha, falloff, falloff colour, soft, effect lighting, blood): 1 0 1 1 1 0
+5	effect material fields: flags (palette alpha, falloff, falloff colour, soft, effect lighting, blood): 1 1 0 1 1 0
+218	effect material fields: grayscale to palette colour: 0
+121	effect material fields: grayscale to palette colour: 1
+1	effect material fields: lighting influence: 0.1 to 0.25
+38	effect material fields: lighting influence: 0.5 to 0.75
+38	effect material fields: lighting influence: 0.75 to 1
+10	effect material fields: lighting influence: = 0
+6	effect material fields: lighting influence: = 0.1
+9	effect material fields: lighting influence: = 0.5
+13	effect material fields: lighting influence: = 0.75
+224	effect material fields: lighting influence: = 1
+339	effect material fields: optional fields present (glass, envmap flag, glowmap, pbr specular, emittance): - - - - false
+339	effect material fields: refraction: 0
+35	effect material fields: soft depth: 10 to 100
+46	effect material fields: soft depth: 100 to 1000
+253	effect material fields: soft depth: = 100
+5	effect material fields: soft depth: = 2
+9	effect material fields: textures set (base, greyscale, envmap, normal, envmask): false false false false false
+93	effect material fields: textures set (base, greyscale, envmap, normal, envmask): true false false false false
+38	effect material fields: textures set (base, greyscale, envmap, normal, envmask): true false true true false
+35	effect material fields: textures set (base, greyscale, envmap, normal, envmask): true false true true true
+148	effect material fields: textures set (base, greyscale, envmap, normal, envmask): true true false false false
+5	effect material fields: textures set (base, greyscale, envmap, normal, envmask): true true false true true
+10	effect material fields: textures set (base, greyscale, envmap, normal, envmask): true true true true false
+1	effect material fields: textures set (base, greyscale, envmap, normal, envmask): true true true true true
+339	effect material fields: tile flags: 3
+264	effect material fields: two sided: 0
+75	effect material fields: two sided: 1
+339	effect material fields: version: 2
+221	effect material fields: z write / z test: 0 1
+118	effect material fields: z write / z test: 1 1
+4910	effect shader fields: Environment Map Texture set: false
+398	effect shader fields: Environment Map Texture set: true
+5033	effect shader fields: Environment Mask Texture set: false
+275	effect shader fields: Environment Mask Texture set: true
+2711	effect shader fields: Greyscale Texture set: false
+2597	effect shader fields: Greyscale Texture set: true
+4757	effect shader fields: Normal Texture set: false
+551	effect shader fields: Normal Texture set: true
+774	effect shader fields: Source Texture set: false
+4534	effect shader fields: Source Texture set: true
+36	effect shader fields: base colour alpha: 0 to 0.1
+83	effect shader fields: base colour alpha: 0.1 to 0.25
+233	effect shader fields: base colour alpha: 0.25 to 0.5
+305	effect shader fields: base colour alpha: 0.5 to 0.75
+450	effect shader fields: base colour alpha: 0.75 to 1
+84	effect shader fields: base colour alpha: 1 to 1.5
+28	effect shader fields: base colour alpha: 1.5 to 2
+79	effect shader fields: base colour alpha: 2 to 5
+37	effect shader fields: base colour alpha: < 0
+941	effect shader fields: base colour alpha: = 0
+96	effect shader fields: base colour alpha: = 0.1
+49	effect shader fields: base colour alpha: = 0.25
+172	effect shader fields: base colour alpha: = 0.5
+121	effect shader fields: base colour alpha: = 0.75
+2544	effect shader fields: base colour alpha: = 1
+25	effect shader fields: base colour alpha: = 1.5
+25	effect shader fields: base colour alpha: = 2
+125	effect shader fields: base colour rgb: 0 0 0
+2819	effect shader fields: base colour rgb: 1 1 1
+1814	effect shader fields: base colour rgb: colour
+550	effect shader fields: base colour rgb: grey (r = g = b)
+2	effect shader fields: base colour scale: 0 to 0.1
+25	effect shader fields: base colour scale: 0.1 to 0.25
+29	effect shader fields: base colour scale: 0.25 to 0.5
+33	effect shader fields: base colour scale: 0.5 to 0.75
+64	effect shader fields: base colour scale: 0.75 to 1
+289	effect shader fields: base colour scale: 1 to 1.5
+126	effect shader fields: base colour scale: 1.5 to 2
+198	effect shader fields: base colour scale: 10 to 100
+674	effect shader fields: base colour scale: 2 to 5
+288	effect shader fields: base colour scale: 5 to 10
+132	effect shader fields: base colour scale: = 0
+3	effect shader fields: base colour scale: = 0.1
+67	effect shader fields: base colour scale: = 0.25
+111	effect shader fields: base colour scale: = 0.5
+37	effect shader fields: base colour scale: = 0.75
+2100	effect shader fields: base colour scale: = 1
+359	effect shader fields: base colour scale: = 1.5
+256	effect shader fields: base colour scale: = 10
+399	effect shader fields: base colour scale: = 2
+116	effect shader fields: base colour scale: = 5
+5308	effect shader fields: block read to the last byte: true
+5294	effect shader fields: env map min lod / unused byte: 0 0
+11	effect shader fields: env map min lod / unused byte: 1 0
+2	effect shader fields: env map min lod / unused byte: 2 0
+1	effect shader fields: env map min lod / unused byte: 3 0
+187	effect shader fields: environment map scale: 0 to 0.1
+57	effect shader fields: environment map scale: 0.1 to 0.25
+68	effect shader fields: environment map scale: 0.25 to 0.5
+8	effect shader fields: environment map scale: 0.5 to 0.75
+9	effect shader fields: environment map scale: 0.75 to 1
+27	effect shader fields: environment map scale: 1 to 1.5
+16	effect shader fields: environment map scale: 10 to 100
+56	effect shader fields: environment map scale: 2 to 5
+3	effect shader fields: environment map scale: 5 to 10
+61	effect shader fields: environment map scale: = 0.1
+35	effect shader fields: environment map scale: = 0.25
+44	effect shader fields: environment map scale: = 0.5
+34	effect shader fields: environment map scale: = 0.75
+4678	effect shader fields: environment map scale: = 1
+7	effect shader fields: environment map scale: = 1.5
+12	effect shader fields: environment map scale: = 10
+5	effect shader fields: environment map scale: = 2
+1	effect shader fields: environment map scale: = 5
+11	effect shader fields: falloff flag set: angles (start stop): -0.00000004371139 0.17364822
+17	effect shader fields: falloff flag set: angles (start stop): -0.00000004371139 1
+1	effect shader fields: falloff flag set: angles (start stop): -0.1736482 1
+2	effect shader fields: falloff flag set: angles (start stop): -0.34202012 1
+6	effect shader fields: falloff flag set: angles (start stop): 0.087155804 -0.00000004371139
+7	effect shader fields: falloff flag set: angles (start stop): 0.09931967 -0.00000004371139
+3	effect shader fields: falloff flag set: angles (start stop): 0.1391731 0.052335974
+5	effect shader fields: falloff flag set: angles (start stop): 0.17364822 -0.00000004371139
+3	effect shader fields: falloff flag set: angles (start stop): 0.17364822 0.087155804
+2	effect shader fields: falloff flag set: angles (start stop): 0.17364822 0.34202015
+2	effect shader fields: falloff flag set: angles (start stop): 0.17364822 0.8660254
+2	effect shader fields: falloff flag set: angles (start stop): 0.17364822 0.9396926
+17	effect shader fields: falloff flag set: angles (start stop): 0.17364822 1
+17	effect shader fields: falloff flag set: angles (start stop): 0.25881907 -0.00000004371139
+45	effect shader fields: falloff flag set: angles (start stop): 0.25881907 0.087155804
+22	effect shader fields: falloff flag set: angles (start stop): 0.34202015 -0.00000004371139
+5	effect shader fields: falloff flag set: angles (start stop): 0.34202015 0.17364822
+1	effect shader fields: falloff flag set: angles (start stop): 0.34202015 0.9396926
+1	effect shader fields: falloff flag set: angles (start stop): 0.4067366 -0.00000004371139
+1	effect shader fields: falloff flag set: angles (start stop): 0.42261824 -0.00000004371139
+20	effect shader fields: falloff flag set: angles (start stop): 0.42261824 0.087155804
+16	effect shader fields: falloff flag set: angles (start stop): 0.42261824 0.17364822
+1	effect shader fields: falloff flag set: angles (start stop): 0.42261824 0.34202015
+2	effect shader fields: falloff flag set: angles (start stop): 0.42261824 1
+2	effect shader fields: falloff flag set: angles (start stop): 0.44307154 1
+18	effect shader fields: falloff flag set: angles (start stop): 0.49999997 -0.00000004371139
+5	effect shader fields: falloff flag set: angles (start stop): 0.49999997 0.087155804
+11	effect shader fields: falloff flag set: angles (start stop): 0.49999997 0.17364822
+9	effect shader fields: falloff flag set: angles (start stop): 0.49999997 1
+6	effect shader fields: falloff flag set: angles (start stop): 0.57357645 -0.50000006
+3	effect shader fields: falloff flag set: angles (start stop): 0.57357645 0.087155804
+7	effect shader fields: falloff flag set: angles (start stop): 0.57357645 0.17364822
+31	effect shader fields: falloff flag set: angles (start stop): 0.64278764 -0.00000004371139
+15	effect shader fields: falloff flag set: angles (start stop): 0.64278764 0.087155804
+11	effect shader fields: falloff flag set: angles (start stop): 0.64278764 0.17364822
+10	effect shader fields: falloff flag set: angles (start stop): 0.64278764 0.34202015
+7	effect shader fields: falloff flag set: angles (start stop): 0.64278764 0.9396926
+1	effect shader fields: falloff flag set: angles (start stop): 0.64278764 0.9848077
+1	effect shader fields: falloff flag set: angles (start stop): 0.6427878 0.087155804
+16	effect shader fields: falloff flag set: angles (start stop): 0.70710677 -0.00000004371139
+3	effect shader fields: falloff flag set: angles (start stop): 0.70710677 0.034899496
+3	effect shader fields: falloff flag set: angles (start stop): 0.70710677 0.087155804
+1	effect shader fields: falloff flag set: angles (start stop): 0.70710677 0.17364822
+6	effect shader fields: falloff flag set: angles (start stop): 0.70710677 0.49999997
+11	effect shader fields: falloff flag set: angles (start stop): 0.76604444 -0.00000004371139
+1	effect shader fields: falloff flag set: angles (start stop): 0.76604444 -1
+10	effect shader fields: falloff flag set: angles (start stop): 0.76604444 0.087155804
+14	effect shader fields: falloff flag set: angles (start stop): 0.76604444 0.17364822
+1	effect shader fields: falloff flag set: angles (start stop): 0.76604444 0.49999997
+2	effect shader fields: falloff flag set: angles (start stop): 0.76604444 1
+4	effect shader fields: falloff flag set: angles (start stop): 0.81915206 -0.00000004371139
+2	effect shader fields: falloff flag set: angles (start stop): 0.81915206 -0.1736482
+1	effect shader fields: falloff flag set: angles (start stop): 0.81915206 0.06975651
+27	effect shader fields: falloff flag set: angles (start stop): 0.81915206 0.087155804
+4	effect shader fields: falloff flag set: angles (start stop): 0.81915206 0.25881907
+3	effect shader fields: falloff flag set: angles (start stop): 0.81915206 0.42261824
+4	effect shader fields: falloff flag set: angles (start stop): 0.81915206 1
+1	effect shader fields: falloff flag set: angles (start stop): 0.83867055 -0.00000004371139
+36	effect shader fields: falloff flag set: angles (start stop): 0.8660254 -0.00000004371139
+9	effect shader fields: falloff flag set: angles (start stop): 0.8660254 0.17364822
+9	effect shader fields: falloff flag set: angles (start stop): 0.8660254 0.34202015
+16	effect shader fields: falloff flag set: angles (start stop): 0.8660254 0.49999997
+1	effect shader fields: falloff flag set: angles (start stop): 0.8660254 0.57357645
+3	effect shader fields: falloff flag set: angles (start stop): 0.8660254 1
+55	effect shader fields: falloff flag set: angles (start stop): 0.90630776 0.087155804
+4	effect shader fields: falloff flag set: angles (start stop): 0.90630776 0.17364822
+2	effect shader fields: falloff flag set: angles (start stop): 0.90630776 0.57357645
+1	effect shader fields: falloff flag set: angles (start stop): 0.9396926 -0.00000004371139
+125	effect shader fields: falloff flag set: angles (start stop): 0.9396926 0.34202015
+5	effect shader fields: falloff flag set: angles (start stop): 0.9396926 0.64278764
+2	effect shader fields: falloff flag set: angles (start stop): 0.9396926 0.8660254
+2	effect shader fields: falloff flag set: angles (start stop): 0.95105654 -0.00000004371139
+12	effect shader fields: falloff flag set: angles (start stop): 0.9659258 0.76604444
+3	effect shader fields: falloff flag set: angles (start stop): 0.9668234 0.97357893
+10	effect shader fields: falloff flag set: angles (start stop): 0.9848077 -0.17364807
+7	effect shader fields: falloff flag set: angles (start stop): 0.9848077 0.087155916
+20	effect shader fields: falloff flag set: angles (start stop): 0.9848077 0.17364822
+9	effect shader fields: falloff flag set: angles (start stop): 0.9848077 0.17364834
+28	effect shader fields: falloff flag set: angles (start stop): 0.9848077 0.25881907
+10	effect shader fields: falloff flag set: angles (start stop): 0.9848077 0.42261824
+34	effect shader fields: falloff flag set: angles (start stop): 0.9848077 0.49999997
+1	effect shader fields: falloff flag set: angles (start stop): 0.9848077 0.64278764
+9	effect shader fields: falloff flag set: angles (start stop): 0.9848077 0.70710677
+3	effect shader fields: falloff flag set: angles (start stop): 0.9848077 0.76604444
+1	effect shader fields: falloff flag set: angles (start stop): 0.9848077 0.81915206
+2	effect shader fields: falloff flag set: angles (start stop): 0.9888542 0.90630776
+115	effect shader fields: falloff flag set: angles (start stop): 1 -0.00000004371139
+2	effect shader fields: falloff flag set: angles (start stop): 1 -0.08715577
+74	effect shader fields: falloff flag set: angles (start stop): 1 -0.1736482
+8	effect shader fields: falloff flag set: angles (start stop): 1 -0.34202012
+19	effect shader fields: falloff flag set: angles (start stop): 1 -0.50000006
+54	effect shader fields: falloff flag set: angles (start stop): 1 -0.57357645
+10	effect shader fields: falloff flag set: angles (start stop): 1 -0.9396926
+5	effect shader fields: falloff flag set: angles (start stop): 1 0.087155804
+119	effect shader fields: falloff flag set: angles (start stop): 1 0.17364822
+2	effect shader fields: falloff flag set: angles (start stop): 1 0.17364834
+1	effect shader fields: falloff flag set: angles (start stop): 1 0.25881907
+210	effect shader fields: falloff flag set: angles (start stop): 1 0.34202015
+1	effect shader fields: falloff flag set: angles (start stop): 1 0.34202027
+1	effect shader fields: falloff flag set: angles (start stop): 1 0.42261824
+154	effect shader fields: falloff flag set: angles (start stop): 1 0.49999997
+7	effect shader fields: falloff flag set: angles (start stop): 1 0.57357645
+46	effect shader fields: falloff flag set: angles (start stop): 1 0.64278764
+43	effect shader fields: falloff flag set: angles (start stop): 1 0.70710677
+5	effect shader fields: falloff flag set: angles (start stop): 1 0.76604444
+2	effect shader fields: falloff flag set: angles (start stop): 1 0.8660254
+8	effect shader fields: falloff flag set: angles (start stop): 1 1
+1	effect shader fields: falloff flag set: opacities (start stop): -0.009999998 1
+8	effect shader fields: falloff flag set: opacities (start stop): 0 0
+1	effect shader fields: falloff flag set: opacities (start stop): 0 0.25
+37	effect shader fields: falloff flag set: opacities (start stop): 0 0.7
+10	effect shader fields: falloff flag set: opacities (start stop): 0 0.8
+35	effect shader fields: falloff flag set: opacities (start stop): 0 1
+2	effect shader fields: falloff flag set: opacities (start stop): 0.1 1
+5	effect shader fields: falloff flag set: opacities (start stop): 0.2 1
+1	effect shader fields: falloff flag set: opacities (start stop): 0.25 1
+3	effect shader fields: falloff flag set: opacities (start stop): 0.3 0.95
+1	effect shader fields: falloff flag set: opacities (start stop): 0.3 1
+1	effect shader fields: falloff flag set: opacities (start stop): 0.33 0.049999997
+2	effect shader fields: falloff flag set: opacities (start stop): 0.4 0
+2	effect shader fields: falloff flag set: opacities (start stop): 0.4 0.7
+18	effect shader fields: falloff flag set: opacities (start stop): 0.4 1
+3	effect shader fields: falloff flag set: opacities (start stop): 0.45 1
+2	effect shader fields: falloff flag set: opacities (start stop): 0.5 0.8
+5	effect shader fields: falloff flag set: opacities (start stop): 0.5 1
+1	effect shader fields: falloff flag set: opacities (start stop): 0.54999995 0
+2	effect shader fields: falloff flag set: opacities (start stop): 0.6 1
+1	effect shader fields: falloff flag set: opacities (start stop): 0.61 1
+7	effect shader fields: falloff flag set: opacities (start stop): 0.75 1
+1	effect shader fields: falloff flag set: opacities (start stop): 0.8 1
+3	effect shader fields: falloff flag set: opacities (start stop): 0.88 0.86
+2	effect shader fields: falloff flag set: opacities (start stop): 0.9 1
+1538	effect shader fields: falloff flag set: opacities (start stop): 1 0
+11	effect shader fields: falloff flag set: opacities (start stop): 1 0.0625
+10	effect shader fields: falloff flag set: opacities (start stop): 1 0.1
+5	effect shader fields: falloff flag set: opacities (start stop): 1 0.2
+3	effect shader fields: falloff flag set: opacities (start stop): 1 0.20000002
+6	effect shader fields: falloff flag set: opacities (start stop): 1 0.25
+1	effect shader fields: falloff flag set: opacities (start stop): 1 0.35
+3	effect shader fields: falloff flag set: opacities (start stop): 1 0.45
+22	effect shader fields: falloff flag set: opacities (start stop): 1 0.5
+4	effect shader fields: falloff flag set: opacities (start stop): 1 0.6
+2	effect shader fields: falloff flag set: opacities (start stop): 1 0.70000005
+2	effect shader fields: falloff flag set: opacities (start stop): 1 0.7000001
+2	effect shader fields: falloff flag set: opacities (start stop): 1 0.75
+2	effect shader fields: falloff flag set: opacities (start stop): 1 1
+1401	effect shader fields: lighting influence (byte): 1 to 254 (128 or more)
+307	effect shader fields: lighting influence (byte): 1 to 254 (below 128)
+3600	effect shader fields: lighting influence (byte): 255
+1167	effect shader fields: soft falloff depth: 10 to 100
+376	effect shader fields: soft falloff depth: 100 to 1000
+165	effect shader fields: soft falloff depth: 2 to 5
+156	effect shader fields: soft falloff depth: 5 to 10
+3	effect shader fields: soft falloff depth: = 0
+39	effect shader fields: soft falloff depth: = 1
+115	effect shader fields: soft falloff depth: = 10
+2789	effect shader fields: soft falloff depth: = 100
+6	effect shader fields: soft falloff depth: = 1000
+66	effect shader fields: soft falloff depth: = 2
+271	effect shader fields: soft falloff depth: = 5
+155	effect shader fields: soft falloff depth: > 1000
+132	effect shader fields: texture clamp mode: 0
+79	effect shader fields: texture clamp mode: 1
+208	effect shader fields: texture clamp mode: 2
+4889	effect shader fields: texture clamp mode: 3
+4132	effect shader fields: uv offset / scale: offset 0 0 scale 1 1
+467	effect shader fields: uv offset / scale: offset 0 0 scale other
+432	effect shader fields: uv offset / scale: offset other scale 1 1
+277	effect shader fields: uv offset / scale: offset other scale other
+5308	effect shapes
+186	effect shapes with BGEM: palette alpha NIF/BGEM 0/0 falloff NIF/BGEM 0/0 soft NIF/BGEM 0/0
+25	effect shapes with BGEM: palette alpha NIF/BGEM 0/0 falloff NIF/BGEM 0/0 soft NIF/BGEM 1/1
+62	effect shapes with BGEM: palette alpha NIF/BGEM 0/0 falloff NIF/BGEM 1/1 soft NIF/BGEM 0/0
+54	effect shapes with BGEM: palette alpha NIF/BGEM 0/0 falloff NIF/BGEM 1/1 soft NIF/BGEM 1/1
+1	effect shapes with BGEM: palette alpha NIF/BGEM 1/0 falloff NIF/BGEM 1/1 soft NIF/BGEM 0/1
+1	effect shapes with BGEM: palette alpha NIF/BGEM 1/0 falloff NIF/BGEM 1/1 soft NIF/BGEM 1/1
+4	effect shapes with BGEM: palette alpha NIF/BGEM 1/1 falloff NIF/BGEM 0/0 soft NIF/BGEM 0/0
+1	effect shapes with BGEM: palette alpha NIF/BGEM 1/1 falloff NIF/BGEM 0/0 soft NIF/BGEM 1/1
+5	effect shapes with BGEM: palette alpha NIF/BGEM 1/1 falloff NIF/BGEM 1/1 soft NIF/BGEM 1/1
+67	effect shapes with material: material alpha vs NIF alpha property: material blend 0 src 6 dst 7 test 0 ref 0 | NIF no alpha property
+1	effect shapes with material: material alpha vs NIF alpha property: material blend 1 src 4 dst 1 test 0 ref 0 | NIF blend 1 src 4 dst 1 test 0 func 4 threshold 0
+112	effect shapes with material: material alpha vs NIF alpha property: material blend 1 src 6 dst 0 test 0 ref 0 | NIF blend 1 src 6 dst 0 test 0 func 4 threshold 0
+5	effect shapes with material: material alpha vs NIF alpha property: material blend 1 src 6 dst 0 test 1 ref 127 | NIF blend 1 src 6 dst 0 test 1 func 4 threshold 127
+7	effect shapes with material: material alpha vs NIF alpha property: material blend 1 src 6 dst 7 test 0 ref 0 | NIF blend 1 src 6 dst 0 test 0 func 4 threshold 0
+115	effect shapes with material: material alpha vs NIF alpha property: material blend 1 src 6 dst 7 test 0 ref 0 | NIF blend 1 src 6 dst 7 test 0 func 4 threshold 0
+1	effect shapes with material: material alpha vs NIF alpha property: material blend 1 src 6 dst 7 test 1 ref 0 | NIF blend 1 src 6 dst 7 test 1 func 4 threshold 0
+2	effect shapes with material: material alpha vs NIF alpha property: material blend 1 src 6 dst 7 test 1 ref 100 | NIF blend 1 src 6 dst 7 test 1 func 4 threshold 100
+2	effect shapes with material: material alpha vs NIF alpha property: material blend 1 src 6 dst 7 test 1 ref 128 | NIF blend 1 src 6 dst 7 test 1 func 4 threshold 128
+1	effect shapes with material: material alpha vs NIF alpha property: material blend 1 src 6 dst 7 test 1 ref 158 | NIF blend 1 src 6 dst 7 test 1 func 4 threshold 158
+7	effect shapes with material: material alpha vs NIF alpha property: material blend 1 src 6 dst 7 test 1 ref 23 | NIF blend 1 src 6 dst 7 test 1 func 4 threshold 23
+5	effect shapes with material: material alpha vs NIF alpha property: material blend 1 src 6 dst 7 test 1 ref 37 | NIF blend 1 src 6 dst 7 test 1 func 4 threshold 37
+8	effect shapes with material: material alpha vs NIF alpha property: material blend 1 src 6 dst 7 test 1 ref 83 | NIF blend 1 src 6 dst 7 test 1 func 4 threshold 83
+6	effect shapes with material: material alpha vs NIF alpha property: material blend 1 src 6 dst 7 test 1 ref 90 | NIF blend 1 src 6 dst 7 test 1 func 4 threshold 90
+67	effect shapes with material: material alpha: blend 0 src 6 dst 7 test 0 ref 0
+1	effect shapes with material: material alpha: blend 1 src 4 dst 1 test 0 ref 0
+112	effect shapes with material: material alpha: blend 1 src 6 dst 0 test 0 ref 0
+5	effect shapes with material: material alpha: blend 1 src 6 dst 0 test 1 ref 127
+122	effect shapes with material: material alpha: blend 1 src 6 dst 7 test 0 ref 0
+1	effect shapes with material: material alpha: blend 1 src 6 dst 7 test 1 ref 0
+2	effect shapes with material: material alpha: blend 1 src 6 dst 7 test 1 ref 100
+2	effect shapes with material: material alpha: blend 1 src 6 dst 7 test 1 ref 128
+1	effect shapes with material: material alpha: blend 1 src 6 dst 7 test 1 ref 158
+7	effect shapes with material: material alpha: blend 1 src 6 dst 7 test 1 ref 23
+5	effect shapes with material: material alpha: blend 1 src 6 dst 7 test 1 ref 37
+8	effect shapes with material: material alpha: blend 1 src 6 dst 7 test 1 ref 83
+6	effect shapes with material: material alpha: blend 1 src 6 dst 7 test 1 ref 90
+2	effect shapes: alpha property x flags: blend 0 src 6 dst 7 test 1 func 4 threshold 122; palette colour 0 palette alpha 0 falloff 0 soft 0 vertex colours 0 vertex alpha 0
+1	effect shapes: alpha property x flags: blend 0 src 6 dst 7 test 1 func 4 threshold 122; palette colour 0 palette alpha 0 falloff 0 soft 0 vertex colours 1 vertex alpha 1
+1	effect shapes: alpha property x flags: blend 0 src 6 dst 7 test 1 func 4 threshold 122; palette colour 1 palette alpha 1 falloff 0 soft 0 vertex colours 0 vertex alpha 0
+1	effect shapes: alpha property x flags: blend 0 src 6 dst 7 test 1 func 4 threshold 122; palette colour 1 palette alpha 1 falloff 0 soft 0 vertex colours 1 vertex alpha 1
+1	effect shapes: alpha property x flags: blend 0 src 6 dst 7 test 1 func 4 threshold 127; palette colour 0 palette alpha 0 falloff 0 soft 0 vertex colours 1 vertex alpha 0
+2	effect shapes: alpha property x flags: blend 0 src 6 dst 7 test 1 func 4 threshold 128; palette colour 0 palette alpha 0 falloff 0 soft 0 vertex colours 0 vertex alpha 0
+2	effect shapes: alpha property x flags: blend 0 src 6 dst 7 test 1 func 4 threshold 128; palette colour 0 palette alpha 0 falloff 0 soft 0 vertex colours 1 vertex alpha 0
+2	effect shapes: alpha property x flags: blend 0 src 6 dst 7 test 1 func 4 threshold 128; palette colour 0 palette alpha 0 falloff 0 soft 1 vertex colours 1 vertex alpha 0
+2	effect shapes: alpha property x flags: blend 0 src 6 dst 7 test 1 func 4 threshold 255; palette colour 0 palette alpha 0 falloff 0 soft 0 vertex colours 1 vertex alpha 0
+1	effect shapes: alpha property x flags: blend 0 src 6 dst 7 test 1 func 4 threshold 40; palette colour 0 palette alpha 0 falloff 0 soft 1 vertex colours 1 vertex alpha 0
+2	effect shapes: alpha property x flags: blend 0 src 6 dst 7 test 1 func 4 threshold 80; palette colour 0 palette alpha 0 falloff 0 soft 1 vertex colours 1 vertex alpha 0
+2	effect shapes: alpha property x flags: blend 1 src 1 dst 2 test 0 func 4 threshold 0; palette colour 0 palette alpha 0 falloff 0 soft 0 vertex colours 0 vertex alpha 0
+13	effect shapes: alpha property x flags: blend 1 src 1 dst 2 test 0 func 4 threshold 0; palette colour 0 palette alpha 0 falloff 0 soft 0 vertex colours 1 vertex alpha 0
+1	effect shapes: alpha property x flags: blend 1 src 1 dst 2 test 0 func 4 threshold 0; palette colour 0 palette alpha 0 falloff 0 soft 0 vertex colours 1 vertex alpha 1
+3	effect shapes: alpha property x flags: blend 1 src 1 dst 2 test 0 func 4 threshold 0; palette colour 0 palette alpha 1 falloff 0 soft 1 vertex colours 1 vertex alpha 0
+1	effect shapes: alpha property x flags: blend 1 src 1 dst 2 test 0 func 4 threshold 0; palette colour 1 palette alpha 1 falloff 0 soft 0 vertex colours 0 vertex alpha 0
+1	effect shapes: alpha property x flags: blend 1 src 1 dst 2 test 0 func 4 threshold 0; palette colour 1 palette alpha 1 falloff 0 soft 0 vertex colours 1 vertex alpha 1
+2	effect shapes: alpha property x flags: blend 1 src 1 dst 2 test 1 func 4 threshold 5; palette colour 0 palette alpha 1 falloff 0 soft 1 vertex colours 1 vertex alpha 0
+1	effect shapes: alpha property x flags: blend 1 src 4 dst 1 test 0 func 4 threshold 0; palette colour 1 palette alpha 1 falloff 0 soft 0 vertex colours 1 vertex alpha 0
+3	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 0 func 4 threshold 0 high bits 0x4000; palette colour 0 palette alpha 0 falloff 0 soft 0 vertex colours 1 vertex alpha 0
+1	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 0 func 4 threshold 0 high bits 0x4000; palette colour 0 palette alpha 0 falloff 0 soft 0 vertex colours 1 vertex alpha 1
+306	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 0 func 4 threshold 0; palette colour 0 palette alpha 0 falloff 0 soft 0 vertex colours 0 vertex alpha 0
+511	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 0 func 4 threshold 0; palette colour 0 palette alpha 0 falloff 0 soft 0 vertex colours 1 vertex alpha 0
+36	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 0 func 4 threshold 0; palette colour 0 palette alpha 0 falloff 0 soft 0 vertex colours 1 vertex alpha 1
+19	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 0 func 4 threshold 0; palette colour 0 palette alpha 0 falloff 0 soft 1 vertex colours 0 vertex alpha 0
+149	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 0 func 4 threshold 0; palette colour 0 palette alpha 0 falloff 0 soft 1 vertex colours 1 vertex alpha 0
+10	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 0 func 4 threshold 0; palette colour 0 palette alpha 0 falloff 0 soft 1 vertex colours 1 vertex alpha 1
+43	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 0 func 4 threshold 0; palette colour 0 palette alpha 0 falloff 1 soft 0 vertex colours 0 vertex alpha 0
+151	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 0 func 4 threshold 0; palette colour 0 palette alpha 0 falloff 1 soft 0 vertex colours 1 vertex alpha 0
+19	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 0 func 4 threshold 0; palette colour 0 palette alpha 0 falloff 1 soft 0 vertex colours 1 vertex alpha 1
+11	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 0 func 4 threshold 0; palette colour 0 palette alpha 0 falloff 1 soft 1 vertex colours 0 vertex alpha 0
+257	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 0 func 4 threshold 0; palette colour 0 palette alpha 0 falloff 1 soft 1 vertex colours 1 vertex alpha 0
+58	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 0 func 4 threshold 0; palette colour 0 palette alpha 0 falloff 1 soft 1 vertex colours 1 vertex alpha 1
+6	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 0 func 4 threshold 0; palette colour 0 palette alpha 1 falloff 0 soft 0 vertex colours 1 vertex alpha 0
+2	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 0 func 4 threshold 0; palette colour 0 palette alpha 1 falloff 0 soft 0 vertex colours 1 vertex alpha 1
+45	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 0 func 4 threshold 0; palette colour 0 palette alpha 1 falloff 0 soft 1 vertex colours 0 vertex alpha 0
+126	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 0 func 4 threshold 0; palette colour 0 palette alpha 1 falloff 0 soft 1 vertex colours 1 vertex alpha 0
+1	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 0 func 4 threshold 0; palette colour 0 palette alpha 1 falloff 1 soft 0 vertex colours 0 vertex alpha 0
+49	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 0 func 4 threshold 0; palette colour 0 palette alpha 1 falloff 1 soft 0 vertex colours 1 vertex alpha 0
+11	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 0 func 4 threshold 0; palette colour 0 palette alpha 1 falloff 1 soft 1 vertex colours 1 vertex alpha 0
+9	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 0 func 4 threshold 0; palette colour 0 palette alpha 1 falloff 1 soft 1 vertex colours 1 vertex alpha 1
+7	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 0 func 4 threshold 0; palette colour 1 palette alpha 0 falloff 0 soft 0 vertex colours 0 vertex alpha 0
+2	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 0 func 4 threshold 0; palette colour 1 palette alpha 0 falloff 0 soft 0 vertex colours 0 vertex alpha 1
+166	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 0 func 4 threshold 0; palette colour 1 palette alpha 0 falloff 0 soft 0 vertex colours 1 vertex alpha 0
+1	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 0 func 4 threshold 0; palette colour 1 palette alpha 0 falloff 0 soft 0 vertex colours 1 vertex alpha 1
+67	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 0 func 4 threshold 0; palette colour 1 palette alpha 0 falloff 0 soft 1 vertex colours 0 vertex alpha 0
+107	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 0 func 4 threshold 0; palette colour 1 palette alpha 0 falloff 0 soft 1 vertex colours 1 vertex alpha 0
+5	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 0 func 4 threshold 0; palette colour 1 palette alpha 0 falloff 0 soft 1 vertex colours 1 vertex alpha 1
+9	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 0 func 4 threshold 0; palette colour 1 palette alpha 0 falloff 1 soft 0 vertex colours 0 vertex alpha 0
+82	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 0 func 4 threshold 0; palette colour 1 palette alpha 0 falloff 1 soft 0 vertex colours 1 vertex alpha 0
+10	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 0 func 4 threshold 0; palette colour 1 palette alpha 0 falloff 1 soft 0 vertex colours 1 vertex alpha 1
+188	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 0 func 4 threshold 0; palette colour 1 palette alpha 0 falloff 1 soft 1 vertex colours 1 vertex alpha 0
+11	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 0 func 4 threshold 0; palette colour 1 palette alpha 0 falloff 1 soft 1 vertex colours 1 vertex alpha 1
+17	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 0 func 4 threshold 0; palette colour 1 palette alpha 1 falloff 0 soft 0 vertex colours 0 vertex alpha 0
+65	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 0 func 4 threshold 0; palette colour 1 palette alpha 1 falloff 0 soft 0 vertex colours 1 vertex alpha 0
+5	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 0 func 4 threshold 0; palette colour 1 palette alpha 1 falloff 0 soft 0 vertex colours 1 vertex alpha 1
+3	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 0 func 4 threshold 0; palette colour 1 palette alpha 1 falloff 0 soft 1 vertex colours 0 vertex alpha 0
+68	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 0 func 4 threshold 0; palette colour 1 palette alpha 1 falloff 0 soft 1 vertex colours 1 vertex alpha 0
+1	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 0 func 4 threshold 0; palette colour 1 palette alpha 1 falloff 0 soft 1 vertex colours 1 vertex alpha 1
+1	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 0 func 4 threshold 0; palette colour 1 palette alpha 1 falloff 1 soft 0 vertex colours 0 vertex alpha 0
+23	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 0 func 4 threshold 0; palette colour 1 palette alpha 1 falloff 1 soft 0 vertex colours 1 vertex alpha 0
+6	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 0 func 4 threshold 0; palette colour 1 palette alpha 1 falloff 1 soft 0 vertex colours 1 vertex alpha 1
+9	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 0 func 4 threshold 0; palette colour 1 palette alpha 1 falloff 1 soft 1 vertex colours 0 vertex alpha 0
+43	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 0 func 4 threshold 0; palette colour 1 palette alpha 1 falloff 1 soft 1 vertex colours 1 vertex alpha 0
+8	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 0 func 4 threshold 0; palette colour 1 palette alpha 1 falloff 1 soft 1 vertex colours 1 vertex alpha 1
+1	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 1 func 4 threshold 0; palette colour 0 palette alpha 0 falloff 0 soft 1 vertex colours 1 vertex alpha 0
+2	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 1 func 4 threshold 0; palette colour 1 palette alpha 0 falloff 0 soft 1 vertex colours 1 vertex alpha 0
+5	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 1 func 4 threshold 127; palette colour 0 palette alpha 0 falloff 0 soft 0 vertex colours 0 vertex alpha 0
+1	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 1 func 4 threshold 128; palette colour 0 palette alpha 0 falloff 0 soft 0 vertex colours 1 vertex alpha 0
+7	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 1 func 4 threshold 128; palette colour 1 palette alpha 0 falloff 0 soft 0 vertex colours 1 vertex alpha 0
+4	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 1 func 4 threshold 128; palette colour 1 palette alpha 1 falloff 0 soft 0 vertex colours 1 vertex alpha 0
+1	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 1 func 4 threshold 16; palette colour 1 palette alpha 0 falloff 1 soft 1 vertex colours 0 vertex alpha 0
+3	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 1 func 4 threshold 1; palette colour 0 palette alpha 0 falloff 0 soft 1 vertex colours 1 vertex alpha 0
+10	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 1 func 4 threshold 1; palette colour 0 palette alpha 0 falloff 1 soft 0 vertex colours 0 vertex alpha 0
+6	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 1 func 4 threshold 1; palette colour 0 palette alpha 0 falloff 1 soft 1 vertex colours 1 vertex alpha 0
+7	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 1 func 4 threshold 1; palette colour 0 palette alpha 1 falloff 0 soft 1 vertex colours 1 vertex alpha 0
+4	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 1 func 4 threshold 1; palette colour 0 palette alpha 1 falloff 1 soft 1 vertex colours 1 vertex alpha 0
+1	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 1 func 4 threshold 1; palette colour 1 palette alpha 0 falloff 0 soft 0 vertex colours 1 vertex alpha 0
+4	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 1 func 4 threshold 1; palette colour 1 palette alpha 0 falloff 0 soft 1 vertex colours 1 vertex alpha 0
+6	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 1 func 4 threshold 1; palette colour 1 palette alpha 0 falloff 1 soft 1 vertex colours 1 vertex alpha 0
+7	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 1 func 4 threshold 1; palette colour 1 palette alpha 1 falloff 0 soft 0 vertex colours 1 vertex alpha 0
+6	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 1 func 4 threshold 1; palette colour 1 palette alpha 1 falloff 0 soft 1 vertex colours 1 vertex alpha 0
+6	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 1 func 4 threshold 1; palette colour 1 palette alpha 1 falloff 1 soft 1 vertex colours 1 vertex alpha 0
+1	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 1 func 4 threshold 20; palette colour 0 palette alpha 0 falloff 0 soft 0 vertex colours 1 vertex alpha 0
+1	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 1 func 4 threshold 255; palette colour 1 palette alpha 0 falloff 0 soft 0 vertex colours 1 vertex alpha 0
+2	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 1 func 4 threshold 255; palette colour 1 palette alpha 0 falloff 1 soft 0 vertex colours 0 vertex alpha 0
+1	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 1 func 4 threshold 2; palette colour 0 palette alpha 0 falloff 0 soft 0 vertex colours 1 vertex alpha 0
+1	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 1 func 4 threshold 2; palette colour 0 palette alpha 1 falloff 1 soft 1 vertex colours 1 vertex alpha 0
+8	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 1 func 4 threshold 2; palette colour 1 palette alpha 1 falloff 0 soft 1 vertex colours 1 vertex alpha 0
+3	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 1 func 4 threshold 2; palette colour 1 palette alpha 1 falloff 1 soft 1 vertex colours 1 vertex alpha 0
+3	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 1 func 4 threshold 37; palette colour 1 palette alpha 0 falloff 0 soft 0 vertex colours 1 vertex alpha 0
+1	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 1 func 4 threshold 3; palette colour 0 palette alpha 0 falloff 0 soft 1 vertex colours 1 vertex alpha 0
+1	effect shapes: alpha property x flags: blend 1 src 6 dst 0 test 1 func 4 threshold 60; palette colour 0 palette alpha 0 falloff 0 soft 0 vertex colours 0 vertex alpha 0
+143	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 0 func 4 threshold 0; palette colour 0 palette alpha 0 falloff 0 soft 0 vertex colours 0 vertex alpha 0
+292	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 0 func 4 threshold 0; palette colour 0 palette alpha 0 falloff 0 soft 0 vertex colours 1 vertex alpha 0
+16	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 0 func 4 threshold 0; palette colour 0 palette alpha 0 falloff 0 soft 0 vertex colours 1 vertex alpha 1
+11	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 0 func 4 threshold 0; palette colour 0 palette alpha 0 falloff 0 soft 1 vertex colours 0 vertex alpha 0
+191	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 0 func 4 threshold 0; palette colour 0 palette alpha 0 falloff 0 soft 1 vertex colours 1 vertex alpha 0
+8	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 0 func 4 threshold 0; palette colour 0 palette alpha 0 falloff 0 soft 1 vertex colours 1 vertex alpha 1
+98	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 0 func 4 threshold 0; palette colour 0 palette alpha 0 falloff 1 soft 0 vertex colours 0 vertex alpha 0
+101	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 0 func 4 threshold 0; palette colour 0 palette alpha 0 falloff 1 soft 0 vertex colours 1 vertex alpha 0
+3	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 0 func 4 threshold 0; palette colour 0 palette alpha 0 falloff 1 soft 0 vertex colours 1 vertex alpha 1
+11	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 0 func 4 threshold 0; palette colour 0 palette alpha 0 falloff 1 soft 1 vertex colours 0 vertex alpha 0
+65	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 0 func 4 threshold 0; palette colour 0 palette alpha 0 falloff 1 soft 1 vertex colours 1 vertex alpha 0
+68	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 0 func 4 threshold 0; palette colour 0 palette alpha 0 falloff 1 soft 1 vertex colours 1 vertex alpha 1
+3	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 0 func 4 threshold 0; palette colour 0 palette alpha 1 falloff 0 soft 0 vertex colours 0 vertex alpha 0
+7	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 0 func 4 threshold 0; palette colour 0 palette alpha 1 falloff 0 soft 0 vertex colours 1 vertex alpha 0
+2	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 0 func 4 threshold 0; palette colour 0 palette alpha 1 falloff 0 soft 1 vertex colours 0 vertex alpha 0
+26	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 0 func 4 threshold 0; palette colour 0 palette alpha 1 falloff 0 soft 1 vertex colours 1 vertex alpha 0
+5	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 0 func 4 threshold 0; palette colour 0 palette alpha 1 falloff 1 soft 0 vertex colours 0 vertex alpha 0
+5	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 0 func 4 threshold 0; palette colour 0 palette alpha 1 falloff 1 soft 0 vertex colours 1 vertex alpha 0
+6	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 0 func 4 threshold 0; palette colour 0 palette alpha 1 falloff 1 soft 1 vertex colours 0 vertex alpha 0
+27	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 0 func 4 threshold 0; palette colour 0 palette alpha 1 falloff 1 soft 1 vertex colours 1 vertex alpha 0
+145	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 0 func 4 threshold 0; palette colour 0 palette alpha 1 falloff 1 soft 1 vertex colours 1 vertex alpha 1
+6	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 0 func 4 threshold 0; palette colour 1 palette alpha 0 falloff 0 soft 0 vertex colours 0 vertex alpha 0
+69	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 0 func 4 threshold 0; palette colour 1 palette alpha 0 falloff 0 soft 0 vertex colours 1 vertex alpha 0
+8	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 0 func 4 threshold 0; palette colour 1 palette alpha 0 falloff 0 soft 0 vertex colours 1 vertex alpha 1
+13	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 0 func 4 threshold 0; palette colour 1 palette alpha 0 falloff 0 soft 1 vertex colours 0 vertex alpha 0
+132	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 0 func 4 threshold 0; palette colour 1 palette alpha 0 falloff 0 soft 1 vertex colours 1 vertex alpha 0
+14	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 0 func 4 threshold 0; palette colour 1 palette alpha 0 falloff 0 soft 1 vertex colours 1 vertex alpha 1
+4	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 0 func 4 threshold 0; palette colour 1 palette alpha 0 falloff 1 soft 0 vertex colours 0 vertex alpha 0
+13	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 0 func 4 threshold 0; palette colour 1 palette alpha 0 falloff 1 soft 0 vertex colours 1 vertex alpha 0
+1	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 0 func 4 threshold 0; palette colour 1 palette alpha 0 falloff 1 soft 1 vertex colours 0 vertex alpha 0
+69	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 0 func 4 threshold 0; palette colour 1 palette alpha 0 falloff 1 soft 1 vertex colours 1 vertex alpha 0
+37	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 0 func 4 threshold 0; palette colour 1 palette alpha 0 falloff 1 soft 1 vertex colours 1 vertex alpha 1
+5	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 0 func 4 threshold 0; palette colour 1 palette alpha 1 falloff 0 soft 0 vertex colours 0 vertex alpha 0
+56	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 0 func 4 threshold 0; palette colour 1 palette alpha 1 falloff 0 soft 0 vertex colours 1 vertex alpha 0
+4	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 0 func 4 threshold 0; palette colour 1 palette alpha 1 falloff 0 soft 0 vertex colours 1 vertex alpha 1
+12	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 0 func 4 threshold 0; palette colour 1 palette alpha 1 falloff 0 soft 1 vertex colours 0 vertex alpha 0
+152	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 0 func 4 threshold 0; palette colour 1 palette alpha 1 falloff 0 soft 1 vertex colours 1 vertex alpha 0
+4	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 0 func 4 threshold 0; palette colour 1 palette alpha 1 falloff 0 soft 1 vertex colours 1 vertex alpha 1
+20	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 0 func 4 threshold 0; palette colour 1 palette alpha 1 falloff 1 soft 0 vertex colours 1 vertex alpha 0
+3	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 0 func 4 threshold 0; palette colour 1 palette alpha 1 falloff 1 soft 0 vertex colours 1 vertex alpha 1
+26	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 0 func 4 threshold 0; palette colour 1 palette alpha 1 falloff 1 soft 1 vertex colours 1 vertex alpha 0
+9	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 0 func 4 threshold 0; palette colour 1 palette alpha 1 falloff 1 soft 1 vertex colours 1 vertex alpha 1
+22	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 1 func 4 threshold 0; palette colour 0 palette alpha 0 falloff 0 soft 0 vertex colours 0 vertex alpha 0
+2	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 1 func 4 threshold 0; palette colour 0 palette alpha 0 falloff 0 soft 1 vertex colours 1 vertex alpha 0
+2	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 1 func 4 threshold 100; palette colour 1 palette alpha 1 falloff 0 soft 0 vertex colours 1 vertex alpha 0
+5	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 1 func 4 threshold 123; palette colour 0 palette alpha 0 falloff 0 soft 0 vertex colours 0 vertex alpha 0
+9	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 1 func 4 threshold 123; palette colour 0 palette alpha 0 falloff 0 soft 0 vertex colours 1 vertex alpha 0
+2	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 1 func 4 threshold 128; palette colour 0 palette alpha 0 falloff 0 soft 0 vertex colours 0 vertex alpha 0
+2	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 1 func 4 threshold 128; palette colour 0 palette alpha 0 falloff 1 soft 0 vertex colours 0 vertex alpha 0
+1	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 1 func 4 threshold 128; palette colour 0 palette alpha 1 falloff 0 soft 0 vertex colours 1 vertex alpha 0
+5	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 1 func 4 threshold 128; palette colour 1 palette alpha 0 falloff 0 soft 0 vertex colours 1 vertex alpha 0
+1	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 1 func 4 threshold 130; palette colour 1 palette alpha 1 falloff 1 soft 1 vertex colours 1 vertex alpha 0
+2	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 1 func 4 threshold 158; palette colour 0 palette alpha 1 falloff 0 soft 0 vertex colours 1 vertex alpha 0
+5	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 1 func 4 threshold 1; palette colour 0 palette alpha 0 falloff 0 soft 1 vertex colours 1 vertex alpha 0
+2	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 1 func 4 threshold 1; palette colour 0 palette alpha 1 falloff 0 soft 1 vertex colours 1 vertex alpha 0
+1	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 1 func 4 threshold 1; palette colour 1 palette alpha 1 falloff 0 soft 1 vertex colours 1 vertex alpha 0
+4	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 1 func 4 threshold 1; palette colour 1 palette alpha 1 falloff 1 soft 1 vertex colours 1 vertex alpha 0
+1	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 1 func 4 threshold 20; palette colour 0 palette alpha 0 falloff 1 soft 0 vertex colours 1 vertex alpha 0
+4	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 1 func 4 threshold 23; palette colour 1 palette alpha 0 falloff 0 soft 0 vertex colours 0 vertex alpha 0
+3	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 1 func 4 threshold 23; palette colour 1 palette alpha 0 falloff 0 soft 0 vertex colours 1 vertex alpha 0
+1	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 1 func 4 threshold 2; palette colour 0 palette alpha 0 falloff 0 soft 1 vertex colours 1 vertex alpha 0
+3	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 1 func 4 threshold 2; palette colour 0 palette alpha 1 falloff 0 soft 1 vertex colours 1 vertex alpha 0
+17	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 1 func 4 threshold 2; palette colour 1 palette alpha 1 falloff 0 soft 1 vertex colours 1 vertex alpha 0
+1	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 1 func 4 threshold 2; palette colour 1 palette alpha 1 falloff 1 soft 1 vertex colours 0 vertex alpha 0
+1	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 1 func 4 threshold 2; palette colour 1 palette alpha 1 falloff 1 soft 1 vertex colours 1 vertex alpha 0
+6	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 1 func 4 threshold 37; palette colour 0 palette alpha 0 falloff 0 soft 0 vertex colours 0 vertex alpha 0
+1	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 1 func 4 threshold 44; palette colour 0 palette alpha 0 falloff 0 soft 0 vertex colours 0 vertex alpha 0
+1	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 1 func 4 threshold 57; palette colour 0 palette alpha 0 falloff 1 soft 1 vertex colours 1 vertex alpha 0
+4	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 1 func 4 threshold 83; palette colour 0 palette alpha 0 falloff 0 soft 0 vertex colours 0 vertex alpha 0
+4	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 1 func 4 threshold 83; palette colour 0 palette alpha 0 falloff 0 soft 0 vertex colours 1 vertex alpha 0
+1	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 1 func 4 threshold 8; palette colour 1 palette alpha 1 falloff 0 soft 1 vertex colours 1 vertex alpha 0
+6	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 1 func 4 threshold 90; palette colour 0 palette alpha 0 falloff 0 soft 1 vertex colours 1 vertex alpha 0
+206	effect shapes: alpha property x flags: no alpha property; palette colour 0 palette alpha 0 falloff 0 soft 0 vertex colours 0 vertex alpha 0
+97	effect shapes: alpha property x flags: no alpha property; palette colour 0 palette alpha 0 falloff 0 soft 0 vertex colours 1 vertex alpha 0
+2	effect shapes: alpha property x flags: no alpha property; palette colour 0 palette alpha 0 falloff 0 soft 0 vertex colours 1 vertex alpha 1
+10	effect shapes: alpha property x flags: no alpha property; palette colour 0 palette alpha 0 falloff 0 soft 1 vertex colours 1 vertex alpha 0
+112	effect shapes: alpha property x flags: no alpha property; palette colour 1 palette alpha 0 falloff 0 soft 0 vertex colours 1 vertex alpha 0
+1	effect shapes: alpha property x flags: no alpha property; palette colour 1 palette alpha 1 falloff 0 soft 0 vertex colours 1 vertex alpha 0
+5	effect shapes: alpha property: blend 0 src 6 dst 7 test 1 func 4 threshold 122
+1	effect shapes: alpha property: blend 0 src 6 dst 7 test 1 func 4 threshold 127
+6	effect shapes: alpha property: blend 0 src 6 dst 7 test 1 func 4 threshold 128
+2	effect shapes: alpha property: blend 0 src 6 dst 7 test 1 func 4 threshold 255
+1	effect shapes: alpha property: blend 0 src 6 dst 7 test 1 func 4 threshold 40
+2	effect shapes: alpha property: blend 0 src 6 dst 7 test 1 func 4 threshold 80
+21	effect shapes: alpha property: blend 1 src 1 dst 2 test 0 func 4 threshold 0
+2	effect shapes: alpha property: blend 1 src 1 dst 2 test 1 func 4 threshold 5
+1	effect shapes: alpha property: blend 1 src 4 dst 1 test 0 func 4 threshold 0
+2723	effect shapes: alpha property: blend 1 src 6 dst 0 test 0 func 4 threshold 0
+4	effect shapes: alpha property: blend 1 src 6 dst 0 test 0 func 4 threshold 0 high bits 0x4000
+3	effect shapes: alpha property: blend 1 src 6 dst 0 test 1 func 4 threshold 0
+60	effect shapes: alpha property: blend 1 src 6 dst 0 test 1 func 4 threshold 1
+5	effect shapes: alpha property: blend 1 src 6 dst 0 test 1 func 4 threshold 127
+12	effect shapes: alpha property: blend 1 src 6 dst 0 test 1 func 4 threshold 128
+1	effect shapes: alpha property: blend 1 src 6 dst 0 test 1 func 4 threshold 16
+13	effect shapes: alpha property: blend 1 src 6 dst 0 test 1 func 4 threshold 2
+1	effect shapes: alpha property: blend 1 src 6 dst 0 test 1 func 4 threshold 20
+3	effect shapes: alpha property: blend 1 src 6 dst 0 test 1 func 4 threshold 255
+1	effect shapes: alpha property: blend 1 src 6 dst 0 test 1 func 4 threshold 3
+3	effect shapes: alpha property: blend 1 src 6 dst 0 test 1 func 4 threshold 37
+1	effect shapes: alpha property: blend 1 src 6 dst 0 test 1 func 4 threshold 60
+1890	effect shapes: alpha property: blend 1 src 6 dst 7 test 0 func 4 threshold 0
+24	effect shapes: alpha property: blend 1 src 6 dst 7 test 1 func 4 threshold 0
+12	effect shapes: alpha property: blend 1 src 6 dst 7 test 1 func 4 threshold 1
+2	effect shapes: alpha property: blend 1 src 6 dst 7 test 1 func 4 threshold 100
+14	effect shapes: alpha property: blend 1 src 6 dst 7 test 1 func 4 threshold 123
+10	effect shapes: alpha property: blend 1 src 6 dst 7 test 1 func 4 threshold 128
+1	effect shapes: alpha property: blend 1 src 6 dst 7 test 1 func 4 threshold 130
+2	effect shapes: alpha property: blend 1 src 6 dst 7 test 1 func 4 threshold 158
+23	effect shapes: alpha property: blend 1 src 6 dst 7 test 1 func 4 threshold 2
+1	effect shapes: alpha property: blend 1 src 6 dst 7 test 1 func 4 threshold 20
+7	effect shapes: alpha property: blend 1 src 6 dst 7 test 1 func 4 threshold 23
+6	effect shapes: alpha property: blend 1 src 6 dst 7 test 1 func 4 threshold 37
+1	effect shapes: alpha property: blend 1 src 6 dst 7 test 1 func 4 threshold 44
+1	effect shapes: alpha property: blend 1 src 6 dst 7 test 1 func 4 threshold 57
+1	effect shapes: alpha property: blend 1 src 6 dst 7 test 1 func 4 threshold 8
+8	effect shapes: alpha property: blend 1 src 6 dst 7 test 1 func 4 threshold 83
+6	effect shapes: alpha property: blend 1 src 6 dst 7 test 1 func 4 threshold 90
+428	effect shapes: alpha property: no alpha property
+3726	effect shapes: controlled
+634	effect shapes: drawn texture x palette alpha 0: alpha 1 everywhere
+2336	effect shapes: drawn texture x palette alpha 0: alpha varies (min 0.00
+283	effect shapes: drawn texture x palette alpha 0: alpha varies (min 0.25
+62	effect shapes: drawn texture x palette alpha 0: alpha varies (min 0.50
+89	effect shapes: drawn texture x palette alpha 0: alpha varies (min 0.75
+777	effect shapes: drawn texture x palette alpha 0: no texture
+21	effect shapes: drawn texture x palette alpha 0: texture missing or unreadable
+121	effect shapes: drawn texture x palette alpha 1: alpha 1 everywhere
+857	effect shapes: drawn texture x palette alpha 1: alpha varies (min 0.00
+113	effect shapes: drawn texture x palette alpha 1: alpha varies (min 0.25
+7	effect shapes: drawn texture x palette alpha 1: alpha varies (min 0.50
+5	effect shapes: drawn texture x palette alpha 1: alpha varies (min 0.75
+3	effect shapes: drawn texture x palette alpha 1: texture missing or unreadable
+491	effect shapes: drawn texture: BC1Alpha colour, alpha 1 everywhere
+193	effect shapes: drawn texture: BC1Alpha grey, alpha 1 everywhere
+36	effect shapes: drawn texture: BC3 colour, alpha 1 everywhere
+145	effect shapes: drawn texture: BC3 colour, alpha varies (min 0.00, max 0.25)
+433	effect shapes: drawn texture: BC3 colour, alpha varies (min 0.00, max 0.50)
+652	effect shapes: drawn texture: BC3 colour, alpha varies (min 0.00, max 0.75)
+1420	effect shapes: drawn texture: BC3 colour, alpha varies (min 0.00, max 1.00)
+160	effect shapes: drawn texture: BC3 colour, alpha varies (min 0.25, max 0.50)
+99	effect shapes: drawn texture: BC3 colour, alpha varies (min 0.25, max 0.75)
+126	effect shapes: drawn texture: BC3 colour, alpha varies (min 0.25, max 1.00)
+33	effect shapes: drawn texture: BC3 colour, alpha varies (min 0.50, max 0.75)
+35	effect shapes: drawn texture: BC3 colour, alpha varies (min 0.50, max 1.00)
+94	effect shapes: drawn texture: BC3 colour, alpha varies (min 0.75, max 1.00)
+25	effect shapes: drawn texture: BC3 grey, alpha 1 everywhere
+61	effect shapes: drawn texture: BC3 grey, alpha varies (min 0.00, max 0.25)
+23	effect shapes: drawn texture: BC3 grey, alpha varies (min 0.00, max 0.50)
+73	effect shapes: drawn texture: BC3 grey, alpha varies (min 0.00, max 0.75)
+377	effect shapes: drawn texture: BC3 grey, alpha varies (min 0.00, max 1.00)
+11	effect shapes: drawn texture: BC3 grey, alpha varies (min 0.25, max 1.00)
+1	effect shapes: drawn texture: BC3 grey, alpha varies (min 0.50, max 1.00)
+9	effect shapes: drawn texture: BC5 colour, alpha 1 everywhere
+1	effect shapes: drawn texture: BGRA8 grey, alpha 1 everywhere
+5	effect shapes: drawn texture: BGRA8 grey, alpha varies (min 0.00, max 0.75)
+4	effect shapes: drawn texture: BGRA8 grey, alpha varies (min 0.00, max 1.00)
+777	effect shapes: drawn texture: no texture
+24	effect shapes: drawn texture: texture missing or unreadable
+197	effect shapes: flags 1 bit 01
+509	effect shapes: flags 1 bit 03
+1780	effect shapes: flags 1 bit 04
+1108	effect shapes: flags 1 bit 05
+1765	effect shapes: flags 1 bit 06
+377	effect shapes: flags 1 bit 07
+110	effect shapes: flags 1 bit 08
+19	effect shapes: flags 1 bit 15
+12	effect shapes: flags 1 bit 16
+117	effect shapes: flags 1 bit 26
+117	effect shapes: flags 1 bit 27
+2007	effect shapes: flags 1 bit 29
+2359	effect shapes: flags 1 bit 30
+5301	effect shapes: flags 1 bit 31
+940	effect shapes: flags 2 bit 00
+136	effect shapes: flags 2 bit 03
+1883	effect shapes: flags 2 bit 04
+4168	effect shapes: flags 2 bit 05
+172	effect shapes: flags 2 bit 07
+2007	effect shapes: flags 2 bit 30
+8	effect shapes: largest vertex alpha x flags: 0 (every vertex alpha 0); vertex colours flag 1 vertex alpha flag 0
+1	effect shapes: largest vertex alpha x flags: 0 (every vertex alpha 0); vertex colours flag 1 vertex alpha flag 1
+312	effect shapes: largest vertex alpha x flags: 0.5 to 1; vertex colours flag 1 vertex alpha flag 0
+54	effect shapes: largest vertex alpha x flags: 0.5 to 1; vertex colours flag 1 vertex alpha flag 1
+2165	effect shapes: largest vertex alpha x flags: 1; vertex colours flag 1 vertex alpha flag 0
+301	effect shapes: largest vertex alpha x flags: 1; vertex colours flag 1 vertex alpha flag 1
+168	effect shapes: largest vertex alpha x flags: below 0.5; vertex colours flag 1 vertex alpha flag 0
+151	effect shapes: largest vertex alpha x flags: below 0.5; vertex colours flag 1 vertex alpha flag 1
+339	effect shapes: material: BGEM
+2	effect shapes: material: material missing
+1	effect shapes: material: material unreadable
+4966	effect shapes: material: no material named
+1582	effect shapes: not controlled
+1070	effect shapes: vertex data x flags: no vertex colours; vertex colours flag 0 vertex alpha flag 0
+2	effect shapes: vertex data x flags: no vertex colours; vertex colours flag 0 vertex alpha flag 1
+68	effect shapes: vertex data x flags: no vertex data; vertex colours flag 0 vertex alpha flag 0
+1008	effect shapes: vertex data x flags: no vertex data; vertex colours flag 1 vertex alpha flag 0
+51	effect shapes: vertex data x flags: vertex colours: rgb all 1, alpha all 1; vertex colours flag 1 vertex alpha flag 0
+623	effect shapes: vertex data x flags: vertex colours: rgb all 1, alpha min 0.0; vertex colours flag 1 vertex alpha flag 0
+177	effect shapes: vertex data x flags: vertex colours: rgb all 1, alpha min 0.0; vertex colours flag 1 vertex alpha flag 1
+17	effect shapes: vertex data x flags: vertex colours: rgb all 1, alpha min 0.1; vertex colours flag 1 vertex alpha flag 0
+2	effect shapes: vertex data x flags: vertex colours: rgb all 1, alpha min 0.1; vertex colours flag 1 vertex alpha flag 1
+22	effect shapes: vertex data x flags: vertex colours: rgb all 1, alpha min 0.2; vertex colours flag 1 vertex alpha flag 0
+5	effect shapes: vertex data x flags: vertex colours: rgb all 1, alpha min 0.2; vertex colours flag 1 vertex alpha flag 1
+12	effect shapes: vertex data x flags: vertex colours: rgb all 1, alpha min 0.3; vertex colours flag 1 vertex alpha flag 0
+1	effect shapes: vertex data x flags: vertex colours: rgb all 1, alpha min 0.3; vertex colours flag 1 vertex alpha flag 1
+5	effect shapes: vertex data x flags: vertex colours: rgb all 1, alpha min 0.4; vertex colours flag 1 vertex alpha flag 0
+6	effect shapes: vertex data x flags: vertex colours: rgb all 1, alpha min 0.4; vertex colours flag 1 vertex alpha flag 1
+12	effect shapes: vertex data x flags: vertex colours: rgb all 1, alpha min 0.5; vertex colours flag 1 vertex alpha flag 0
+1	effect shapes: vertex data x flags: vertex colours: rgb all 1, alpha min 0.5; vertex colours flag 1 vertex alpha flag 1
+7	effect shapes: vertex data x flags: vertex colours: rgb all 1, alpha min 0.6; vertex colours flag 1 vertex alpha flag 0
+3	effect shapes: vertex data x flags: vertex colours: rgb all 1, alpha min 0.7; vertex colours flag 1 vertex alpha flag 0
+1	effect shapes: vertex data x flags: vertex colours: rgb all 1, alpha min 0.7; vertex colours flag 1 vertex alpha flag 1
+2	effect shapes: vertex data x flags: vertex colours: rgb all 1, alpha min 0.8; vertex colours flag 1 vertex alpha flag 0
+526	effect shapes: vertex data x flags: vertex colours: rgb vary, alpha all 1; vertex colours flag 1 vertex alpha flag 0
+1213	effect shapes: vertex data x flags: vertex colours: rgb vary, alpha min 0.0; vertex colours flag 1 vertex alpha flag 0
+294	effect shapes: vertex data x flags: vertex colours: rgb vary, alpha min 0.0; vertex colours flag 1 vertex alpha flag 1
+24	effect shapes: vertex data x flags: vertex colours: rgb vary, alpha min 0.1; vertex colours flag 1 vertex alpha flag 0
+2	effect shapes: vertex data x flags: vertex colours: rgb vary, alpha min 0.1; vertex colours flag 1 vertex alpha flag 1
+33	effect shapes: vertex data x flags: vertex colours: rgb vary, alpha min 0.2; vertex colours flag 1 vertex alpha flag 0
+6	effect shapes: vertex data x flags: vertex colours: rgb vary, alpha min 0.2; vertex colours flag 1 vertex alpha flag 1
+29	effect shapes: vertex data x flags: vertex colours: rgb vary, alpha min 0.3; vertex colours flag 1 vertex alpha flag 0
+5	effect shapes: vertex data x flags: vertex colours: rgb vary, alpha min 0.3; vertex colours flag 1 vertex alpha flag 1
+18	effect shapes: vertex data x flags: vertex colours: rgb vary, alpha min 0.4; vertex colours flag 1 vertex alpha flag 0
+2	effect shapes: vertex data x flags: vertex colours: rgb vary, alpha min 0.4; vertex colours flag 1 vertex alpha flag 1
+5	effect shapes: vertex data x flags: vertex colours: rgb vary, alpha min 0.5; vertex colours flag 1 vertex alpha flag 0
+1	effect shapes: vertex data x flags: vertex colours: rgb vary, alpha min 0.5; vertex colours flag 1 vertex alpha flag 1
+1	effect shapes: vertex data x flags: vertex colours: rgb vary, alpha min 0.6; vertex colours flag 1 vertex alpha flag 1
+19	effect shapes: vertex data x flags: vertex colours: rgb vary, alpha min 0.7; vertex colours flag 1 vertex alpha flag 0
+2	effect shapes: vertex data x flags: vertex colours: rgb vary, alpha min 0.7; vertex colours flag 1 vertex alpha flag 1
+23	effect shapes: vertex data x flags: vertex colours: rgb vary, alpha min 0.8; vertex colours flag 1 vertex alpha flag 0
+9	effect shapes: vertex data x flags: vertex colours: rgb vary, alpha min 0.9; vertex colours flag 1 vertex alpha flag 0
+1	effect shapes: vertex data x flags: vertex colours: rgb vary, alpha min 0.9; vertex colours flag 1 vertex alpha flag 1
+3	models by open rest tags: alpha
+1	models by open rest tags: alpha + behavior-graph + effect-emissive + effect-first-key + other + texture-transform + transform-varies
+1	models by open rest tags: alpha + behavior-graph + effect-emissive + effect-first-key + texture-transform + transform-varies
+30	models by open rest tags: alpha + behavior-graph + effect-first-key
+2	models by open rest tags: alpha + behavior-graph + effect-first-key + effect-idle + manager-loop + texture-transform + transform-varies
+2	models by open rest tags: alpha + behavior-graph + effect-first-key + other
+2	models by open rest tags: alpha + behavior-graph + effect-first-key + other + texture-transform + transform-varies
+2	models by open rest tags: alpha + behavior-graph + effect-first-key + transform-varies
+2	models by open rest tags: alpha + behavior-graph + other + texture-transform
+8	models by open rest tags: alpha + effect-emissive
+3	models by open rest tags: alpha + effect-emissive + effect-first-key
+1	models by open rest tags: alpha + effect-emissive + effect-first-key + other + texture-transform + transform-varies
+5	models by open rest tags: alpha + effect-emissive + effect-first-key + texture-transform
+2	models by open rest tags: alpha + effect-emissive + texture-transform
+33	models by open rest tags: alpha + effect-first-key
+1	models by open rest tags: alpha + effect-first-key + other
+8	models by open rest tags: alpha + effect-first-key + texture-transform
+1	models by open rest tags: alpha + other + texture-transform
+1	models by open rest tags: alpha + transform-varies
+2	models by open rest tags: behavior-graph + effect-emissive + effect-first-key + effect-idle + manager-loop + other + particle + transform-varies
+1	models by open rest tags: behavior-graph + effect-emissive + effect-first-key + other + transform-varies
+34	models by open rest tags: behavior-graph + effect-first-key
+8	models by open rest tags: behavior-graph + effect-first-key + effect-idle
+46	models by open rest tags: behavior-graph + effect-first-key + effect-idle + manager-loop
+23	models by open rest tags: behavior-graph + effect-first-key + effect-idle + manager-loop + other + particle
+14	models by open rest tags: behavior-graph + effect-first-key + effect-idle + manager-loop + other + particle + visibility
+1	models by open rest tags: behavior-graph + effect-first-key + effect-idle + manager-loop + other + transform-varies + visibility
+17	models by open rest tags: behavior-graph + effect-first-key + effect-idle + manager-loop + other + visibility
+1	models by open rest tags: behavior-graph + effect-first-key + effect-idle + manager-loop + texture-transform
+1	models by open rest tags: behavior-graph + effect-first-key + effect-idle + manager-loop + transform-varies
+3	models by open rest tags: behavior-graph + effect-first-key + effect-idle + other
+15	models by open rest tags: behavior-graph + effect-first-key + effect-idle + other + particle
+1	models by open rest tags: behavior-graph + effect-first-key + effect-idle + other + particle + texture-transform + transform-varies + visibility
+4	models by open rest tags: behavior-graph + effect-first-key + effect-idle + other + particle + visibility
+3	models by open rest tags: behavior-graph + effect-first-key + effect-idle + other + visibility
+8	models by open rest tags: behavior-graph + effect-first-key + manager-loop
+2	models by open rest tags: behavior-graph + effect-first-key + manager-loop + other + particle
+3	models by open rest tags: behavior-graph + effect-first-key + manager-loop + other + visibility
+1	models by open rest tags: behavior-graph + effect-first-key + other
+8	models by open rest tags: behavior-graph + effect-first-key + other + particle
+1	models by open rest tags: behavior-graph + effect-first-key + other + particle + visibility
+1	models by open rest tags: behavior-graph + effect-first-key + other + texture-transform
+1	models by open rest tags: behavior-graph + effect-first-key + other + transform-varies
+1	models by open rest tags: behavior-graph + effect-first-key + other + transform-varies + visibility
+2	models by open rest tags: behavior-graph + effect-first-key + other + visibility
+1	models by open rest tags: behavior-graph + effect-first-key + texture-transform
+2	models by open rest tags: behavior-graph + effect-first-key + texture-transform + transform-varies + visibility
+6	models by open rest tags: behavior-graph + effect-first-key + transform-varies
+50	models by open rest tags: behavior-graph + effect-idle
+49	models by open rest tags: behavior-graph + effect-idle + manager-loop
+8	models by open rest tags: behavior-graph + effect-idle + manager-loop + other
+41	models by open rest tags: behavior-graph + effect-idle + manager-loop + other + particle
+11	models by open rest tags: behavior-graph + effect-idle + manager-loop + other + particle + visibility
+2	models by open rest tags: behavior-graph + effect-idle + manager-loop + other + texture-transform + visibility
+1	models by open rest tags: behavior-graph + effect-idle + manager-loop + other + transform-varies + visibility
+22	models by open rest tags: behavior-graph + effect-idle + manager-loop + other + visibility
+1	models by open rest tags: behavior-graph + effect-idle + manager-loop + texture-transform
+2	models by open rest tags: behavior-graph + effect-idle + manager-loop + transform-varies
+1	models by open rest tags: behavior-graph + effect-idle + other
+8	models by open rest tags: behavior-graph + effect-idle + other + particle
+1	models by open rest tags: behavior-graph + effect-idle + other + particle + visibility
+38	models by open rest tags: behavior-graph + effect-idle + other + visibility
+1	models by open rest tags: behavior-graph + effect-idle + transform-varies
+60	models by open rest tags: behavior-graph + manager-loop
+5	models by open rest tags: behavior-graph + manager-loop + other
+22	models by open rest tags: behavior-graph + manager-loop + other + particle
+1	models by open rest tags: behavior-graph + manager-loop + other + particle + transform-varies
+6	models by open rest tags: behavior-graph + manager-loop + other + particle + visibility
+40	models by open rest tags: behavior-graph + manager-loop + other + visibility
+1	models by open rest tags: behavior-graph + manager-loop + transform-varies
+2	models by open rest tags: effect-emissive + effect-first-key
+10	models by open rest tags: effect-emissive + effect-first-key + texture-transform
+2	models by open rest tags: effect-emissive + texture-transform
+311	models by open rest tags: effect-first-key
+6	models by open rest tags: effect-first-key + effect-idle
+15	models by open rest tags: effect-first-key + effect-idle + manager-loop
+2	models by open rest tags: effect-first-key + effect-idle + manager-loop + other
+1	models by open rest tags: effect-first-key + effect-idle + manager-loop + other + particle
+3	models by open rest tags: effect-first-key + effect-idle + manager-loop + other + particle + visibility
+3	models by open rest tags: effect-first-key + effect-idle + manager-loop + other + visibility
+6	models by open rest tags: effect-first-key + effect-idle + other
+18	models by open rest tags: effect-first-key + effect-idle + other + particle
+7	models by open rest tags: effect-first-key + effect-idle + other + particle + visibility
+8	models by open rest tags: effect-first-key + effect-idle + other + visibility
+146	models by open rest tags: effect-first-key + falloff
+6	models by open rest tags: effect-first-key + manager-loop
+1	models by open rest tags: effect-first-key + manager-loop + other + particle
+1	models by open rest tags: effect-first-key + manager-loop + other + particle + visibility
+3	models by open rest tags: effect-first-key + manager-loop + other + visibility
+53	models by open rest tags: effect-first-key + other
+32	models by open rest tags: effect-first-key + other + particle
+14	models by open rest tags: effect-first-key + other + particle + visibility
+22	models by open rest tags: effect-first-key + other + texture-transform
+1	models by open rest tags: effect-first-key + other + texture-transform + transform-varies
+1	models by open rest tags: effect-first-key + other + texture-transform + visibility
+30	models by open rest tags: effect-first-key + other + transform-varies
+2	models by open rest tags: effect-first-key + other + transform-varies + visibility
+5	models by open rest tags: effect-first-key + other + visibility
+21	models by open rest tags: effect-first-key + texture-transform
+6	models by open rest tags: effect-first-key + texture-transform + transform-varies
+34	models by open rest tags: effect-first-key + transform-varies
+21	models by open rest tags: effect-first-key + transform-varies + visibility
+1	models by open rest tags: effect-first-key + visibility
+3	models by open rest tags: effect-idle
+15	models by open rest tags: effect-idle + manager-loop
+1	models by open rest tags: effect-idle + manager-loop + other
+3	models by open rest tags: effect-idle + manager-loop + other + visibility
+1	models by open rest tags: effect-idle + other + particle
+98	models by open rest tags: manager-loop
+2	models by open rest tags: manager-loop + other
+6	models by open rest tags: manager-loop + other + particle
+2	models by open rest tags: manager-loop + other + visibility
+4	models by open rest tags: other + texture-transform
+31	models by open rest tags: texture-transform
+1	models by open rest tags: texture-transform + transform-varies
+1651	models: in scope
+571	models: in scope, named by placed bases
+13539	sequence controlled blocks on effect shaders: interpolator NiFloatInterpolator
+1495	sequence controlled blocks on effect shaders: interpolator NiPoint3Interpolator
+2596	sequences: sequence, clamp
+2596	sequences: sequence, clamp: frequency = 1
+932	sequences: sequence, clamp: length in seconds 0 to 0.1
+190	sequences: sequence, clamp: length in seconds 0.1 to 0.25
+645	sequences: sequence, clamp: length in seconds 0.25 to 0.5
+78	sequences: sequence, clamp: length in seconds 0.5 to 0.75
+138	sequences: sequence, clamp: length in seconds 0.75 to 1
+93	sequences: sequence, clamp: length in seconds 1 to 1.5
+43	sequences: sequence, clamp: length in seconds 1.5 to 2
+75	sequences: sequence, clamp: length in seconds 10 to 100
+1	sequences: sequence, clamp: length in seconds 100 to 1000
+191	sequences: sequence, clamp: length in seconds 2 to 5
+92	sequences: sequence, clamp: length in seconds 5 to 10
+5	sequences: sequence, clamp: length in seconds = 0.1
+46	sequences: sequence, clamp: length in seconds = 0.5
+22	sequences: sequence, clamp: length in seconds = 1
+6	sequences: sequence, clamp: length in seconds = 1.5
+17	sequences: sequence, clamp: length in seconds = 10
+19	sequences: sequence, clamp: length in seconds = 2
+3	sequences: sequence, clamp: length in seconds = 5
+1001	sequences: sequence, loop
+1001	sequences: sequence, loop: frequency = 1
+54	sequences: sequence, loop: length in seconds 0 to 0.1
+107	sequences: sequence, loop: length in seconds 0.1 to 0.25
+91	sequences: sequence, loop: length in seconds 0.25 to 0.5
+60	sequences: sequence, loop: length in seconds 0.5 to 0.75
+21	sequences: sequence, loop: length in seconds 0.75 to 1
+51	sequences: sequence, loop: length in seconds 1 to 1.5
+59	sequences: sequence, loop: length in seconds 1.5 to 2
+147	sequences: sequence, loop: length in seconds 10 to 100
+13	sequences: sequence, loop: length in seconds 100 to 1000
+203	sequences: sequence, loop: length in seconds 2 to 5
+78	sequences: sequence, loop: length in seconds 5 to 10
+6	sequences: sequence, loop: length in seconds = 0.1
+4	sequences: sequence, loop: length in seconds = 0.5
+63	sequences: sequence, loop: length in seconds = 1
+1	sequences: sequence, loop: length in seconds = 1.5
+8	sequences: sequence, loop: length in seconds = 10
+24	sequences: sequence, loop: length in seconds = 2
+11	sequences: sequence, loop: length in seconds = 5
+5308	shapes: shader BSEffectShaderProperty
+5766	shapes: shader BSLightingShaderProperty
+256	shapes: shader none
+
+# Classes (open tags || facts): models, placements, area share of all placed, omitted placements, omitted area share of all omitted
+
+146	407	25.990%	407	63.229%	rest not settled: falloff
+26	12882	2.593%	12882	6.307%	settled, effect surfaces fail: falloff + vertex alpha without its flag
+28	667	0.578%	667	1.406%	settled, effect surfaces fail: colour above 1 + vertex alpha without its flag
+30	1517	0.267%	1517	0.649%	rest not settled: effect-idle + manager-loop
+11	316	0.173%	316	0.420%	rest not settled: alpha + effect-emissive
+6	803	0.157%	803	0.382%	rest not settled: effect-idle + manager-loop + other + visibility
+5	6	0.150%	6	0.366%	rest not settled: behavior-graph + effect-idle + other + particle + visibility
+18	883	0.147%	883	0.357%	settled, effect surfaces fail: colour above 1 + falloff + vertex alpha without its flag
+8	266	0.146%	266	0.354%	rest not settled: alpha + texture-transform
+4	86	0.136%	86	0.331%	settled, effect surfaces fail: colour above 1 + env map, refraction or colour falloff + vertex alpha without its flag
+52	386	0.100%	384	0.243%	rest not settled: texture-transform
+36	977	0.090%	977	0.219%	rest not settled: alpha
+7	68	0.056%	68	0.137%	rest not settled: alpha + effect-emissive + texture-transform
+104	1370	0.040%	1370	0.097%	rest not settled: manager-loop
+95	4664	0.036%	4664	0.089%	rest not settled: behavior-graph + effect-idle + manager-loop
+25	57	0.036%	57	0.088%	rest not settled: behavior-graph + effect-idle + manager-loop + other + particle + visibility
+26	342	0.019%	342	0.046%	rest not settled: other + texture-transform
+1	121	0.018%	121	0.043%	rest not settled: manager-loop + other + particle + visibility
+68	661	0.014%	660	0.033%	rest not settled: behavior-graph + manager-loop
+8	954	0.012%	954	0.029%	settled, effect surfaces fail: falloff + palette + vertex alpha without its flag
+36	353	0.010%	353	0.025%	settled, effect surfaces fail: palette + vertex alpha without its flag
+39	83	0.009%	83	0.023%	rest not settled: behavior-graph + effect-idle + manager-loop + other + visibility
+53	370	0.008%	370	0.020%	rest not settled: other
+34	21	0.008%	21	0.019%	rest not settled: transform-varies
+24	39	0.008%	39	0.019%	rest not settled: behavior-graph + manager-loop + other + particle
+34	340	0.007%	340	0.018%	rest not settled: behavior-graph
+13	409	0.006%	9	0.003%	settled, every effect surface passes
+64	1498	0.006%	1497	0.015%	rest not settled: behavior-graph + effect-idle + manager-loop + other + particle
+2	17	0.005%	17	0.012%	rest not settled: effect-emissive
+1	118	0.004%	118	0.010%	rest not settled: behavior-graph + effect-idle + transform-varies
+58	233	0.003%	233	0.007%	rest not settled: behavior-graph + effect-idle
+1	2	0.003%	2	0.006%	settled, effect surfaces fail: alpha outside 0 to 1 + colour above 1 + env map, refraction or colour falloff + falloff + vertex alpha without its flag
+23	173	0.002%	173	0.005%	rest not settled: behavior-graph + effect-idle + other + particle
+3	803	0.002%	469	0.001%	settled, effect surfaces fail: falloff
+26	119	0.001%	119	0.003%	settled, effect surfaces fail: colour above 1 + palette + vertex alpha without its flag
+11	89	0.001%	89	0.003%	settled, effect surfaces fail: colour above 1
+6	120	0.001%	120	0.003%	rest not settled: behavior-graph + transform-varies
+1	1	0.001%	1	0.002%	rest not settled: behavior-graph + manager-loop + other + particle + transform-varies
+1	126	0.001%	126	0.002%	rest not settled: alpha + behavior-graph + effect-emissive + other + texture-transform + transform-varies
+12	1249	0.001%	1249	0.001%	rest not settled: effect-emissive + texture-transform
+1	1	0.000%	1	0.001%	rest not settled: behavior-graph + effect-idle + other + particle + texture-transform + transform-varies + visibility
+26	128	0.000%	128	0.001%	settled, effect surfaces fail: colour above 1 + palette
+1	33	0.000%	33	0.001%	rest not settled: alpha + behavior-graph + effect-emissive + texture-transform + transform-varies
+2	3	0.000%	3	0.001%	settled, effect surfaces fail: colour above 1 + env map, refraction or colour falloff + falloff + vertex alpha without its flag
+43	92	0.000%	92	0.001%	rest not settled: behavior-graph + manager-loop + other + visibility
+1	3	0.000%	3	0.000%	rest not settled: alpha + other
+9	393	0.000%	393	0.000%	rest not settled: effect-idle
+2	13	0.000%	13	0.000%	rest not settled: alpha + behavior-graph + transform-varies
+15	242	0.000%	232	0.000%	settled, effect surfaces fail: vertex alpha without its flag
+1	2	0.000%	2	0.000%	settled, effect surfaces fail: alpha outside 0 to 1 + colour above 1 + env map, refraction or colour falloff + vertex alpha without its flag
+41	78	0.000%	78	0.000%	rest not settled: behavior-graph + effect-idle + other + visibility
+2	8	0.000%	8	0.000%	rest not settled: behavior-graph + effect-idle + manager-loop + texture-transform
+1	5	0.000%	5	0.000%	rest not settled: other + texture-transform + transform-varies
+22	276	0.000%	276	0.000%	settled, effect surfaces fail: env map, refraction or colour falloff + falloff + vertex alpha without its flag
+30	25	0.000%	25	0.000%	rest not settled: alpha + behavior-graph
+30	1	0.000%	1	0.000%	rest not settled: other + transform-varies
+5	22	0.000%	21	0.000%	rest not settled: behavior-graph + manager-loop + other
+8	16	0.000%	16	0.000%	rest not settled: behavior-graph + other + particle
+5	709	0.000%	709	0.000%	rest not settled: manager-loop + other + visibility
+2	2	0.000%	2	0.000%	rest not settled: behavior-graph + effect-idle + manager-loop + other + texture-transform + visibility
+9	3	0.000%	3	0.000%	settled, effect surfaces fail: colour above 1 + falloff + palette + vertex alpha without its flag
+7	1	0.000%	1	0.000%	rest not settled: manager-loop + other + particle
+7	1	0.000%	1	0.000%	rest not settled: texture-transform + transform-varies
+2	0	0.000%	0	0.000%	rest not settled: alpha + behavior-graph + effect-idle + manager-loop + texture-transform + transform-varies
+2	0	0.000%	0	0.000%	rest not settled: alpha + behavior-graph + other
+2	0	0.000%	0	0.000%	rest not settled: alpha + behavior-graph + other + texture-transform
+2	0	0.000%	0	0.000%	rest not settled: alpha + behavior-graph + other + texture-transform + transform-varies
+1	0	0.000%	0	0.000%	rest not settled: alpha + effect-emissive + other + texture-transform + transform-varies
+1	0	0.000%	0	0.000%	rest not settled: alpha + other + texture-transform
+1	0	0.000%	0	0.000%	rest not settled: alpha + transform-varies
+2	0	0.000%	0	0.000%	rest not settled: behavior-graph + effect-emissive + effect-idle + manager-loop + other + particle + transform-varies
+1	0	0.000%	0	0.000%	rest not settled: behavior-graph + effect-emissive + other + transform-varies
+8	0	0.000%	0	0.000%	rest not settled: behavior-graph + effect-idle + manager-loop + other
+2	0	0.000%	0	0.000%	rest not settled: behavior-graph + effect-idle + manager-loop + other + transform-varies + visibility
+3	0	0.000%	0	0.000%	rest not settled: behavior-graph + effect-idle + manager-loop + transform-varies
+4	0	0.000%	0	0.000%	rest not settled: behavior-graph + effect-idle + other
+6	0	0.000%	0	0.000%	rest not settled: behavior-graph + manager-loop + other + particle + visibility
+1	0	0.000%	0	0.000%	rest not settled: behavior-graph + manager-loop + transform-varies
+1	0	0.000%	0	0.000%	rest not settled: behavior-graph + other
+1	0	0.000%	0	0.000%	rest not settled: behavior-graph + other + particle + visibility
+1	0	0.000%	0	0.000%	rest not settled: behavior-graph + other + texture-transform
+1	0	0.000%	0	0.000%	rest not settled: behavior-graph + other + transform-varies
+1	0	0.000%	0	0.000%	rest not settled: behavior-graph + other + transform-varies + visibility
+2	0	0.000%	0	0.000%	rest not settled: behavior-graph + other + visibility
+1	0	0.000%	0	0.000%	rest not settled: behavior-graph + texture-transform
+2	0	0.000%	0	0.000%	rest not settled: behavior-graph + texture-transform + transform-varies + visibility
+3	0	0.000%	0	0.000%	rest not settled: effect-idle + manager-loop + other
+1	0	0.000%	0	0.000%	rest not settled: effect-idle + manager-loop + other + particle
+3	0	0.000%	0	0.000%	rest not settled: effect-idle + manager-loop + other + particle + visibility
+6	0	0.000%	0	0.000%	rest not settled: effect-idle + other
+19	0	0.000%	0	0.000%	rest not settled: effect-idle + other + particle
+7	0	0.000%	0	0.000%	rest not settled: effect-idle + other + particle + visibility
+8	0	0.000%	0	0.000%	rest not settled: effect-idle + other + visibility
+2	0	0.000%	0	0.000%	rest not settled: manager-loop + other
+32	0	0.000%	0	0.000%	rest not settled: other + particle
+14	0	0.000%	0	0.000%	rest not settled: other + particle + visibility
+1	0	0.000%	0	0.000%	rest not settled: other + texture-transform + visibility
+2	0	0.000%	0	0.000%	rest not settled: other + transform-varies + visibility
+5	0	0.000%	0	0.000%	rest not settled: other + visibility
+21	0	0.000%	0	0.000%	rest not settled: transform-varies + visibility
+1	0	0.000%	0	0.000%	rest not settled: visibility
+1	0	0.000%	0	0.000%	settled, effect surfaces fail: alpha outside 0 to 1 + colour above 1 + env map, refraction or colour falloff
+1	0	0.000%	0	0.000%	settled, effect surfaces fail: alpha outside 0 to 1 + colour above 1 + falloff + palette
+7	0	0.000%	0	0.000%	settled, effect surfaces fail: alpha outside 0 to 1 + colour above 1 + falloff + palette + vertex alpha without its flag
+1	0	0.000%	0	0.000%	settled, effect surfaces fail: alpha outside 0 to 1 + colour above 1 + palette + vertex alpha without its flag
+1	0	0.000%	0	0.000%	settled, effect surfaces fail: colour above 1 + env map, refraction or colour falloff
+3	0	0.000%	0	0.000%	settled, effect surfaces fail: colour above 1 + env map, refraction or colour falloff + falloff + palette
+1	0	0.000%	0	0.000%	settled, effect surfaces fail: colour above 1 + env map, refraction or colour falloff + falloff + palette + vertex alpha without its flag
+31	0	0.000%	0	0.000%	settled, effect surfaces fail: colour above 1 + falloff + palette
+3	0	0.000%	0	0.000%	settled, effect surfaces fail: env map, refraction or colour falloff
+2	0	0.000%	0	0.000%	settled, effect surfaces fail: env map, refraction or colour falloff + palette
+2	0	0.000%	0	0.000%	settled, effect surfaces fail: falloff + material missing or unreadable + vertex alpha without its flag
+2	0	0.000%	0	0.000%	settled, effect surfaces fail: falloff + palette
+1	0	0.000%	0	0.000%	settled, effect surfaces fail: falloff + palette + texture missing
+6	0	0.000%	0	0.000%	settled, effect surfaces fail: palette

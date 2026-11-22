@@ -14,6 +14,7 @@ use fo4_scene::{
 };
 use serde::Serialize;
 use std::collections::BTreeMap;
+mod effect;
 #[derive(Debug, Serialize)]
 pub struct Omission {
     pub instance: u32,
@@ -207,6 +208,9 @@ struct Surface {
     scale: [f64; 2],
     tile: Option<u32>,
     sidedness: crate::Sidedness,
+    /// Effect surfaces (`draw::effect`): base colour times its scale,
+    /// multiplied into the vertex colours.
+    tint: Option<[f32; 3]>,
 }
 struct Builder<'a, 's> {
     loader: &'a Loader<'s>,
@@ -214,9 +218,10 @@ struct Builder<'a, 's> {
     budget: &'a Budget,
     options: BuildOptions,
     output: Build,
-    /// By model, shape, effect channels, UV use and, for a skinned mesh,
-    /// the skeleton asset it is posed by.
-    meshes: BTreeMap<(usize, usize, u8, bool, Option<usize>), usize>,
+    /// By model, shape, effect channels, UV use, the effect tint's bits
+    /// and, for a skinned mesh, the skeleton asset it is posed by.
+    #[allow(clippy::type_complexity)]
+    meshes: BTreeMap<(usize, usize, u8, bool, Option<[u32; 3]>, Option<usize>), usize>,
     skeletons: BTreeMap<usize, fo4_scene::actor::pose::Skeleton>,
     /// Skeleton assets posed by the caller, whose meshes are recorded.
     posed: std::collections::BTreeSet<usize>,
@@ -230,6 +235,9 @@ struct Builder<'a, 's> {
     allow_path_root: bool,
     allow_path_relative: bool,
     allow_effect_color: bool,
+    /// The instance relies on `nif_controller_rest_effect_first_key_v1`:
+    /// its effect shaders are drawn by `draw::effect`.
+    allow_effect_surface: bool,
     allow_scol_parts: bool,
     allow_editor_marker_subtrees: bool,
     allow_marker_suffix: bool,
@@ -587,6 +595,10 @@ impl Builder<'_, '_> {
                 "finite declared color and registered hypothesis required",
             ));
         }
+        self.constant_texture(rgba, file, offset)
+    }
+    /// A one-texel texture of a computed colour.
+    fn constant_texture(&mut self, rgba: [f32; 4], file: &str, offset: u64) -> Result<usize> {
         let total = fo4_core::add(self.texture_bytes, 16, file, offset)?;
         fo4_core::limit(total, self.options.max_texture_bytes, file, offset)?;
         let mut pixels = Vec::new();
@@ -689,6 +701,7 @@ impl Builder<'_, '_> {
         shape: &[Field],
         swap: Option<&Loaded<Mswp>>,
         file: &str,
+        geometry: Option<&fo4_nif::Mesh>,
     ) -> Result<Surface> {
         let scratch = self.budget.child();
         let mut shaders = shape.iter().filter_map(|f| {
@@ -756,6 +769,25 @@ impl Builder<'_, '_> {
                 None
             }
         });
+        if self.allow_effect_surface
+            && n.blocks[shader].type_index as usize
+                == n.block_types
+                    .iter()
+                    .position(|t| t == "BSEffectShaderProperty")
+                    .unwrap_or(usize::MAX)
+        {
+            return self.effect_surface(
+                n,
+                shader,
+                f,
+                material.map(Vec::as_slice),
+                nif_alpha,
+                (nif_flags1, nif_flags2),
+                swap,
+                file,
+                geometry,
+            );
+        }
         if let Some(material) = material {
             let path = self.resolve_path(Citation::NifMaterial, material, &scratch)?;
             let path = self.swap(path, swap, &scratch)?;
@@ -847,6 +879,7 @@ impl Builder<'_, '_> {
                         material_two_sided: Some(c.two_sided.0),
                         nif_shader_flags_2: nif_flags2,
                     },
+                    tint: None,
                 })
             });
         }
@@ -981,6 +1014,7 @@ impl Builder<'_, '_> {
                 material_two_sided: None,
                 nif_shader_flags_2: nif_flags2,
             },
+            tint: None,
         })
     }
     fn mesh(
@@ -997,6 +1031,7 @@ impl Builder<'_, '_> {
             i,
             surface.channels,
             surface.requires_uv,
+            surface.tint.map(|t| t.map(f32::to_bits)),
             skinned.map(|s| s.0),
         );
         if let Some(index) = self.meshes.get(&key) {
@@ -1023,25 +1058,35 @@ impl Builder<'_, '_> {
         };
         self.budget
             .reserve(&mut mesh.vertices, vertices.len(), "render vertices", 0)?;
-        if surface.channels != 0 {
+        if surface.channels != 0 || surface.tint.is_some() {
+            let tint = surface.tint.unwrap_or([1.; 3]);
             let mut colors = Vec::new();
             self.budget
                 .reserve(&mut colors, vertices.len(), "effect vertex colors", 0)?;
             for v in vertices {
-                let c = v
+                let c = match v
                     .color
                     .map(|c| c.map(|v| v as f32 / 255.))
                     .or(v.color_float)
-                    .ok_or_else(|| error("MissingEnabledEffectVertexColor", "mesh", 0, i))?;
+                {
+                    Some(c) => c,
+                    None if surface.channels == 0 => [1.; 4],
+                    None => return Err(error("MissingEnabledEffectVertexColor", "mesh", 0, i)),
+                };
                 if c.iter().any(|v| !v.is_finite()) {
                     return Err(error("RenderNonFiniteVertexColor", "mesh", 0, i));
                 }
                 colors.push(std::array::from_fn(|j| {
-                    if (j < 3 && surface.channels & 1 != 0) || (j == 3 && surface.channels & 2 != 0)
+                    let own = if (j < 3 && surface.channels & 1 != 0)
+                        || (j == 3 && surface.channels & 2 != 0)
                     {
                         c[j]
                     } else {
                         1.
+                    };
+                    match tint.get(j) {
+                        Some(t) if surface.tint.is_some() => own * t,
+                        _ => own,
                     }
                 }));
             }
@@ -1209,7 +1254,7 @@ impl Builder<'_, '_> {
                 }
             };
             if let Some(mesh) = geometry {
-                let surface = self.surface(n, f, swap, file)?;
+                let surface = self.surface(n, f, swap, file, Some(mesh))?;
                 let mesh = self.mesh(path, mesh_index, mesh, &surface, None)?;
                 append(
                     &mut self.output.list.draws,
@@ -1364,6 +1409,7 @@ impl Builder<'_, '_> {
     fn allow(&mut self, rules: &[&'static str]) {
         use fo4_scene::hypotheses as h;
         self.allow_effect_color = rules.contains(&h::EFFECT_COLOR);
+        self.allow_effect_surface = rules.contains(&h::REST_EFFECT_FIRST_KEY);
         self.allow_path_strip = rules.contains(&h::PATH_STRIP);
         self.allow_path_root = rules.contains(&h::PATH_ROOT);
         self.allow_path_relative = rules.contains(&h::PATH_DATA_RELATIVE);
@@ -1491,7 +1537,7 @@ impl Builder<'_, '_> {
                         &file,
                         self.budget,
                     )?;
-                    let surface = self.surface(n, f, None, &file)?;
+                    let surface = self.surface(n, f, None, &file, Some(m))?;
                     let mesh = self.mesh(path, i, m, &surface, Some((skeleton, &positions)))?;
                     if self.posed.contains(&skeleton)
                         && !self.recorded.iter().any(|r| r.mesh == mesh)
@@ -1802,6 +1848,7 @@ fn build_inner(
         allow_path_root: false,
         allow_path_relative: false,
         allow_effect_color: false,
+        allow_effect_surface: false,
         allow_scol_parts: false,
         allow_editor_marker_subtrees: false,
         allow_marker_suffix: false,
@@ -1856,6 +1903,10 @@ fn build_inner(
             .state
             .hypotheses()
             .contains(&fo4_scene::hypotheses::EFFECT_COLOR);
+        builder.allow_effect_surface = i
+            .state
+            .hypotheses()
+            .contains(&fo4_scene::hypotheses::REST_EFFECT_FIRST_KEY);
         let first = builder.output.list.draws.len();
         builder.draw_rules.clear();
         let src = &i.reference.record.source;

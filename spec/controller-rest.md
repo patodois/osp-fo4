@@ -114,9 +114,17 @@ on `unrendered`. Of the decided models, 395 have only clamped sequences
 behaviour graph (5,083), `behavior-graph` alone (331, 2,288),
 `effect-emissive` alone (74, 2,162).
 
+A sixth tag, `effect-first-key`, was added with the effect surfaces
+([effect-surfaces.md](effect-surfaces.md)): an effect-shader controller
+whose target field holds, as stored, the first key of every interpolator
+that drives it (and a looping sequence of such controllers alone) is
+covered by `nif_controller_rest_effect_first_key_v1`; it replaces
+`effect-idle`, `manager-loop` and the effect tags only there. The draw
+build then draws the model's effect shaders by the effect surface rules.
+
 ## Coverage
 
-See [coverage.md](coverage.md), Controllers at rest.
+See [coverage.md](coverage.md), Controllers at rest, and Effect surfaces.
 
 ## Provenance
 

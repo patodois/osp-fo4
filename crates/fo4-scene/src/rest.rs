@@ -48,6 +48,14 @@ pub const MANAGER_LOOP: &str = "manager-loop";
 /// without their falloff and soft terms, so their stored alpha and colour
 /// are not settled to be what shows at rest.
 pub const EFFECT_IDLE: &str = "effect-idle";
+/// An effect-shader controller whose target field holds, as stored, the
+/// first key of every interpolator that drives it (its own, and the
+/// controlled blocks of every sequence that names it), with what those
+/// interpolators reach, and a looping sequence whose controlled blocks are
+/// all such controllers (`nif_controller_rest_effect_first_key_v1`).
+pub const EFFECT_FIRST_KEY: &str = "effect-first-key";
+/// Tolerance of "equal" between a stored effect-shader field and a key.
+pub const EFFECT_TOLERANCE: f32 = 1e-4;
 
 /// Translation, rotation word and scale tolerances of "equal".
 pub const TOLERANCE: [f32; 3] = [1e-3, 1e-3, 1e-4];
@@ -329,6 +337,192 @@ pub fn transform_constant(n: &Nif<'_>, ip: usize, node: usize) -> bool {
         && k.scale.iter().all(|(_, v)| s_ok(*v))
 }
 
+/// The stored effect-shader field a controller drives, by the nifxml
+/// enums EffectShaderControlledColor (colour controller, 0: Emissive Color,
+/// read as the RGB of Base Color) and EffectShaderControlledVariable (0:
+/// EmissiveMultiple, read as Base Color Scale; 1 to 4 the falloff fields;
+/// 5: Alpha Transparency, read as the alpha of Base Color; 6 to 9 the UV
+/// offset and scale components). The pairing of variable and field is by
+/// name only; `None` for another variable.
+pub fn effect_field(shader: &[Field], color: bool, variable: u32) -> Option<Vec<f32>> {
+    let one = |name: &str| floats(shader, name).first().map(|v| vec![*v]);
+    let base = floats(shader, "Base Color");
+    match (color, variable) {
+        (true, 0) => base.get(..3).map(<[f32]>::to_vec),
+        (false, 0) => one("Base Color Scale"),
+        (false, 1) => one("Falloff Start Angle"),
+        (false, 2) => one("Falloff Stop Angle"),
+        (false, 3) => one("Falloff Start Opacity"),
+        (false, 4) => one("Falloff Stop Opacity"),
+        (false, 5) => base.get(3).map(|v| vec![*v]),
+        (false, 6) => floats(shader, "UV Offset").first().map(|v| vec![*v]),
+        (false, 7) => floats(shader, "UV Scale").first().map(|v| vec![*v]),
+        (false, 8) => floats(shader, "UV Offset").get(1).map(|v| vec![*v]),
+        (false, 9) => floats(shader, "UV Scale").get(1).map(|v| vec![*v]),
+        _ => None,
+    }
+}
+/// The first key (lowest time; key times must not decrease) of an
+/// NiFloatData or NiPosData read in the reader's field order.
+pub fn first_key(f: &[Field], components: usize) -> Option<Vec<f32>> {
+    let mut it = f.iter();
+    let count = match it.next() {
+        Some(x) if x.name == "Num Keys" => match x.value {
+            Value::U32(v) => v,
+            _ => return None,
+        },
+        _ => return None,
+    };
+    if count == 0 {
+        return None;
+    }
+    let mut keys: Vec<(f32, Vec<f32>)> = Vec::new();
+    for x in it {
+        let Value::FloatBits(b) = x.value else {
+            continue;
+        };
+        let v = f32::from_bits(b);
+        match x.name {
+            "Key Time" => keys.push((v, Vec::new())),
+            "Key Value" => {
+                let last = keys.last_mut()?;
+                if last.1.len() < components {
+                    last.1.push(v);
+                }
+            }
+            _ => {}
+        }
+    }
+    let ordered = keys.windows(2).all(|w| w[0].0 <= w[1].0);
+    (keys.len() == count as usize && ordered && keys.iter().all(|k| k.1.len() == components))
+        .then(|| keys.swap_remove(0).1)
+}
+fn effect_close(a: &[f32], b: &[f32]) -> bool {
+    a.len() == b.len()
+        && a.iter()
+            .zip(b)
+            .all(|(x, y)| x.is_finite() && (x - y).abs() <= EFFECT_TOLERANCE)
+}
+/// Whether interpolator `ip` starts at `stored`: a keyframe interpolator
+/// whose set pose value and first key equal it, or a blend interpolator
+/// whose set pose value equals it (its keys come from the sequences).
+fn starts_at(n: &Nif<'_>, ip: usize, stored: &[f32], blend_ok: bool) -> bool {
+    let Some(f) = block_fields(n, ip) else {
+        return false;
+    };
+    let comps = stored.len();
+    match type_of(n, ip) {
+        "NiFloatInterpolator" | "NiPoint3Interpolator" => {
+            let pose = floats(f, "Value");
+            if pose.first().is_some_and(|v| *v != INVALID) && !effect_close(&pose, stored) {
+                return false;
+            }
+            let Some(d) = links(f, &["Data"]).first().copied() else {
+                return false;
+            };
+            let want = if comps == 3 {
+                "NiPosData"
+            } else {
+                "NiFloatData"
+            };
+            type_of(n, d) == want
+                && block_fields(n, d)
+                    .and_then(|k| first_key(k, comps))
+                    .is_some_and(|k| effect_close(&k, stored))
+        }
+        "NiBlendFloatInterpolator" | "NiBlendPoint3Interpolator" if blend_ok => {
+            let pose = floats(f, "Pose Value");
+            pose.first().is_none_or(|v| *v == INVALID) || effect_close(&pose, stored)
+        }
+        _ => false,
+    }
+}
+/// The interpolators of the sequences' controlled blocks, by the controller
+/// block each names.
+fn sequence_interpolators(n: &Nif<'_>) -> Vec<(usize, usize)> {
+    let mut out = Vec::new();
+    for i in 0..n.blocks.len() {
+        if type_of(n, i) != "NiControllerSequence" {
+            continue;
+        }
+        let Some(f) = block_fields(n, i) else {
+            continue;
+        };
+        let ips = f.iter().filter(|x| x.name == "Interpolator");
+        let ctls = f.iter().filter(|x| x.name == "Controller");
+        for (ip, ctl) in ips.zip(ctls) {
+            if let (Value::Ref(ip), Value::Ref(ctl)) = (&ip.value, &ctl.value) {
+                if *ip >= 0 && *ctl >= 0 {
+                    out.push((*ctl as usize, *ip as usize));
+                }
+            }
+        }
+    }
+    out
+}
+/// Whether effect-shader controller `ctl` is settled at rest under
+/// `nif_controller_rest_effect_first_key_v1`: its target is an effect
+/// shader whose driven field holds the first key of every interpolator that
+/// drives it. `sequences` are the (controller, interpolator) pairs of
+/// [`sequence_interpolators`].
+fn effect_settled(n: &Nif<'_>, ctl: usize, sequences: &[(usize, usize)]) -> bool {
+    let ty = type_of(n, ctl);
+    if !ty.starts_with("BSEffectShaderProperty") {
+        return false;
+    }
+    let Some(f) = block_fields(n, ctl) else {
+        return false;
+    };
+    let Some(target) = links(f, &["Target"]).first().copied() else {
+        return false;
+    };
+    if type_of(n, target) != "BSEffectShaderProperty" {
+        return false;
+    }
+    let (Some(shader), Some(variable)) = (block_fields(n, target), word(f, "Controlled Variable"))
+    else {
+        return false;
+    };
+    let color = ty == "BSEffectShaderPropertyColorController";
+    let Some(stored) = effect_field(shader, color, variable) else {
+        return false;
+    };
+    let from_sequences: Vec<usize> = sequences
+        .iter()
+        .filter(|(c, _)| *c == ctl)
+        .map(|(_, ip)| *ip)
+        .collect();
+    let own = links(f, &["Interpolator"]);
+    if own.is_empty() && from_sequences.is_empty() {
+        return false;
+    }
+    own.iter()
+        .all(|ip| starts_at(n, *ip, &stored, !from_sequences.is_empty()))
+        && from_sequences
+            .iter()
+            .all(|ip| starts_at(n, *ip, &stored, false))
+}
+/// The (colour, controlled variable) pairs of the effect-shader
+/// controllers that target shader block `shader`.
+pub fn effect_controlled(n: &Nif<'_>, shader: usize) -> Vec<(bool, u32)> {
+    let mut out = Vec::new();
+    for i in 0..n.blocks.len() {
+        let ty = type_of(n, i);
+        if !ty.starts_with("BSEffectShaderProperty") {
+            continue;
+        }
+        let Some(f) = block_fields(n, i) else {
+            continue;
+        };
+        if links(f, &["Target"]).first() == Some(&shader) {
+            if let Some(v) = word(f, "Controlled Variable") {
+                out.push((ty == "BSEffectShaderPropertyColorController", v));
+            }
+        }
+    }
+    out
+}
+
 /// The rest tags of every block (empty for blocks outside the `state` class).
 pub fn tags(n: &Nif<'_>, b: &Budget) -> Result<Vec<Vec<&'static str>>> {
     let count = n.blocks.len();
@@ -343,6 +537,8 @@ pub fn tags(n: &Nif<'_>, b: &Budget) -> Result<Vec<Vec<&'static str>>> {
         }
     };
     let has_manager = (0..count).any(|i| type_of(n, i) == "NiControllerManager");
+    let sequences = sequence_interpolators(n);
+    let settled = |c: usize| effect_settled(n, c, &sequences);
     // Interpolator chains: interpolator -> data, blend -> interpolators.
     let chain = |start: usize| -> Vec<usize> {
         let mut seen = Vec::new();
@@ -381,10 +577,24 @@ pub fn tags(n: &Nif<'_>, b: &Budget) -> Result<Vec<Vec<&'static str>>> {
             }
             "NiControllerSequence" => {
                 let looping = word(f, "Cycle Type") == Some(0);
+                // A looping sequence whose controlled blocks all name a
+                // settled effect-shader controller starts at their first
+                // keys.
+                let ctl_links = links(f, &["Controller"]);
+                let all_effect = f.iter().filter(|x| x.name == "Controller").count()
+                    == ctl_links.len()
+                    && !ctl_links.is_empty()
+                    && ctl_links.iter().all(|c| settled(*c));
                 add(
                     &mut out,
                     i,
-                    if looping { MANAGER_LOOP } else { MANAGER_IDLE },
+                    if looping && all_effect {
+                        EFFECT_FIRST_KEY
+                    } else if looping {
+                        MANAGER_LOOP
+                    } else {
+                        MANAGER_IDLE
+                    },
                 );
                 // Controlled blocks: interpolator, controller, ... in order.
                 let ips: Vec<i32> = f
@@ -419,8 +629,14 @@ pub fn tags(n: &Nif<'_>, b: &Budget) -> Result<Vec<Vec<&'static str>>> {
                         .or_else(|| names.get(k).copied().flatten())
                         .unwrap_or(b"");
                     let ctl_ty = std::str::from_utf8(ctl_ty).unwrap_or("");
+                    let settled_ctl = ctls
+                        .get(k)
+                        .filter(|c| **c >= 0)
+                        .is_some_and(|c| settled(*c as usize));
                     let tag = if particle(ctl_ty) {
                         PARTICLE
+                    } else if settled_ctl {
+                        EFFECT_FIRST_KEY
                     } else if ctl_ty == "NiVisController" {
                         VISIBILITY
                     } else if !KNOWN.contains(&ctl_ty) {
@@ -450,6 +666,8 @@ pub fn tags(n: &Nif<'_>, b: &Budget) -> Result<Vec<Vec<&'static str>>> {
                 let ips = links(f, &["Interpolator", "Visibility Interpolator"]);
                 let tag = if class == VISIBILITY || class == OTHER && !KNOWN.contains(&ty) {
                     class
+                } else if ty.starts_with("BSEffectShaderProperty") && settled(i) {
+                    EFFECT_FIRST_KEY
                 } else if manager && has_manager && class == "transform" {
                     IDLE_TRANSFORM
                 } else if manager && has_manager && ty.starts_with("BSEffectShaderProperty") {
@@ -563,6 +781,131 @@ mod tests {
         assert!(transform_keys(&v).is_none());
     }
 
+    fn block(type_index: u16, fields: Vec<Field>) -> fo4_nif::Block {
+        fo4_nif::Block {
+            type_index,
+            data: 0..0,
+            decoded: Some(fo4_nif::Data::Fields(fields)),
+            raw_tail: 0..0,
+            diagnostics: Vec::new(),
+        }
+    }
+    /// An effect shader with a stored U offset, a U offset controller and a
+    /// float interpolator with keys `keys`; with `sequence`, a looping
+    /// sequence names the controller.
+    fn effect_nif(stored: f32, keys: &[(f32, f32)], sequence: bool) -> Nif<'static> {
+        let shader = vec![
+            fl("UV Offset", stored),
+            fl("UV Offset", 0.),
+            fl("UV Scale", 1.),
+            fl("UV Scale", 1.),
+            fl("Base Color", 1.),
+            fl("Base Color", 1.),
+            fl("Base Color", 1.),
+            fl("Base Color", 0.5),
+            fl("Base Color Scale", 1.),
+        ];
+        let controller = vec![
+            f(
+                "Controller Flags",
+                Value::U16(if sequence { 0x6c } else { 0x48 }),
+            ),
+            f("Target", Value::Ref(0)),
+            f("Interpolator", Value::Ref(2)),
+            f("Controlled Variable", Value::U32(6)),
+        ];
+        let interpolator = vec![fl("Value", INVALID), f("Data", Value::Ref(3))];
+        let mut data = vec![
+            f("Num Keys", Value::U32(keys.len() as u32)),
+            f("Interpolation", Value::U32(1)),
+        ];
+        for (t, v) in keys {
+            data.push(fl("Key Time", *t));
+            data.push(fl("Key Value", *v));
+        }
+        let mut blocks = vec![
+            block(0, shader),
+            block(1, controller),
+            block(2, interpolator),
+            block(3, data),
+        ];
+        if sequence {
+            blocks.push(block(
+                4,
+                vec![
+                    f("Interpolator", Value::Ref(2)),
+                    f("Controller", Value::Ref(1)),
+                    f("Cycle Type", Value::U32(0)),
+                ],
+            ));
+            blocks.push(block(5, vec![f("Controller Sequence", Value::Ref(4))]));
+        }
+        Nif {
+            version: 0x14020007,
+            user_version: 12,
+            bs_version: 130,
+            exports: Vec::new(),
+            block_types: vec![
+                "BSEffectShaderProperty".into(),
+                "BSEffectShaderPropertyFloatController".into(),
+                "NiFloatInterpolator".into(),
+                "NiFloatData".into(),
+                "NiControllerSequence".into(),
+                "NiControllerManager".into(),
+            ],
+            strings: Vec::new(),
+            max_string_length: 0,
+            groups: Vec::new(),
+            roots: vec![0],
+            blocks,
+            bytes: &[],
+        }
+    }
+
+    #[test]
+    fn effect_fields_and_first_keys_follow_the_field_order() {
+        let n = effect_nif(0.25, &[(0., 0.25), (1., 1.)], false);
+        let shader = block_fields(&n, 0).unwrap();
+        assert_eq!(effect_field(shader, false, 6), Some(vec![0.25]));
+        assert_eq!(effect_field(shader, false, 5), Some(vec![0.5]));
+        assert_eq!(effect_field(shader, true, 0), Some(vec![1., 1., 1.]));
+        assert_eq!(effect_field(shader, false, 10), None);
+        assert_eq!(first_key(block_fields(&n, 3).unwrap(), 1), Some(vec![0.25]));
+        // Key times out of order, or a count that does not match: none.
+        let bad = effect_nif(0.25, &[(1., 0.25), (0., 1.)], false);
+        assert_eq!(first_key(block_fields(&bad, 3).unwrap(), 1), None);
+        assert_eq!(first_key(block_fields(&n, 3).unwrap(), 3), None);
+        assert_eq!(effect_controlled(&n, 0), vec![(false, 6)]);
+    }
+
+    #[test]
+    fn an_effect_controller_is_settled_only_where_the_stored_field_is_its_first_key() {
+        let b = Budget::new(1 << 20);
+        for sequence in [false, true] {
+            let n = effect_nif(0.25, &[(0., 0.25), (1., 1.)], sequence);
+            let t = tags(&n, &b).unwrap();
+            for (i, tag) in t.iter().enumerate().take(4).skip(1) {
+                assert_eq!(tag, &vec![EFFECT_FIRST_KEY], "{sequence} {i}");
+            }
+            if sequence {
+                // A looping sequence of settled effect controllers alone.
+                assert_eq!(t[4], vec![EFFECT_FIRST_KEY]);
+                assert_eq!(t[5], vec![MANAGER_IDLE]);
+            }
+            // Stored inside the key range but not at the first key.
+            let n = effect_nif(0.5, &[(0., 0.25), (1., 1.)], sequence);
+            let t = tags(&n, &b).unwrap();
+            if sequence {
+                assert_eq!(t[1], vec![EFFECT_IDLE]);
+                assert_eq!(t[3], vec![EFFECT_IDLE, MANAGER_LOOP]);
+                assert_eq!(t[4], vec![MANAGER_LOOP]);
+            } else {
+                assert_eq!(t[1], vec![TEXTURE_TRANSFORM]);
+                assert_eq!(t[3], vec![TEXTURE_TRANSFORM]);
+            }
+        }
+    }
+
     #[test]
     fn only_decided_tags_are_covered() {
         let e = |tag: &str| {
@@ -577,6 +920,10 @@ mod tests {
         assert_eq!(covering(&e(MANAGER_IDLE)), Some(REST_MANAGER_IDLE));
         assert_eq!(covering(&e(IDLE_SHADER)), Some(REST_IDLE_SHADER));
         assert_eq!(covering(&e(UNRENDERED)), Some(REST_UNRENDERED));
+        assert_eq!(
+            covering(&e(EFFECT_FIRST_KEY)),
+            Some(crate::hypotheses::REST_EFFECT_FIRST_KEY)
+        );
         for open in [
             PARTICLE,
             BEHAVIOR_GRAPH,

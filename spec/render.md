@@ -162,3 +162,22 @@ the tags (not the colours) of both dog views. A GPU test
 (`exact_depth_ties_resolve_by_list_order_in_every_run`, ignored without a
 GPU) draws two coplanar quads twice and with their textures swapped; a
 test without GPU checks the ranks, materials and tags that spawning gives.
+
+## Effect surfaces
+
+The effect shaders of an instance whose state relies on
+`nif_controller_rest_effect_first_key_v1` are drawn by `draw::effect`
+([effect-surfaces.md](effect-surfaces.md)), under the pending rules
+`effect_surface_texture_base_colour_v1`, `effect_blend_factors_add_v1`,
+`effect_blend_after_opaque_back_to_front_v1` and
+`effect_soft_lighting_left_out_v1`, which the instance's identity records.
+Nothing new enters the draw list format: the base colour times its scale is
+multiplied into the mesh's vertex colours (a mesh is shared only by draws
+with the same channels and the same colour bits), the base colour's alpha
+is the draw's opacity, and the blend factors are the alpha property's (or
+the material's). Blended effect surfaces take the existing second pass:
+after every opaque triangle, triangles sorted by centroid distance, far
+first, the list order breaking ties, no depth write; the GPU viewer puts
+them in Bevy's transparent phase (sorted by instance). Every other effect
+surface is drawn as before.
+

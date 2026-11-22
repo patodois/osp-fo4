@@ -25,6 +25,8 @@ Measurement datasets and photographs of the game are not distributed.
 | [coverage-census.txt](coverage-census.txt) | Aggregate output of `coverage_census` over every cell of one installation. |
 | [controller-rest.md](controller-rest.md) | Animation controllers at rest: how models with controller blocks were refused, the census of their controller, interpolator and data blocks (read to the last byte, flags, what they drive, stored transforms against interpolator values), the rest tags and their five pending rules, what stays refused and why. |
 | [controller-census.txt](controller-census.txt) | Counts from the controller census (`controller_census`). |
+| [effect-surfaces.md](effect-surfaces.md) | Effect-shader surfaces of models refused for their effect controllers: the census of their shader, blend, material, texture, vertex colour and controller facts, the classes they fall in, the rule for an effect controller at rest (stored field equal to its first key) and the effect surface rules (texture times base colour, blend, order, terms left out, falloff registered but not drawn), what stays refused and why, and the frames. |
+| [effect-census.txt](effect-census.txt) | Counts from the effect census (`effect_census`). |
 | [controller-measurements.md](controller-measurements.md) | Measurement design for comparing stored NIF locals with paused runtime nodes. |
 | [enable-parent.md](enable-parent.md) | Enable parents (XESP): layout read to the last byte, the census of every placed record's XESP and chain, the pending rules of a placement's presence through its chain, the scene and coverage changes, a script's Enable or Disable reaching the children in the viewer, the handler runs that change drawable placements through a chain and their frames. |
 | [enable-parent-census.txt](enable-parent-census.txt) | Counts from the enable parent census (`enable_parent_census`). |
@@ -69,7 +71,7 @@ Measurement datasets and photographs of the game are not distributed.
 | [record-flag-words.tsv](record-flag-words.tsv) | Observed record flag words with the supported, outside and unknown bit partitions. |
 | [record-light-key-layouts.md](record-light-key-layouts.md) | Measured record/light fields and schema-backed animation-key structure only. |
 | [reference-image-formats.md](reference-image-formats.md) | Camera, DDS/PNG and image-comparison data contracts. |
-| [render.md](render.md) | Deterministic CPU rasterization, material bindings, maps and snapshot protocols. |
+| [render.md](render.md) | Deterministic CPU rasterization, material bindings, maps and snapshot protocols; effect surfaces under the effect rules. |
 | [rotation-arithmetic.md](rotation-arithmetic.md) | Supported Euler convention, open exact arithmetic and the bounded numerical investigation. |
 | [scene.md](scene.md) | Scene assembly, static-frame classification, source spans and explicit omissions; exterior cells around a cell joined into one scene; the viewer's moving grid (a viewer policy) and its credits. |
 | [root-transform-census.txt](root-transform-census.txt) | Counts from the census of root node transforms against OBND boxes and collision (`root_transform_census`). |
@@ -278,3 +280,9 @@ the registry.
 | `vm_custom_events_v1` | pending | Two purpose-built scripts: one registers for the other's custom event and shows a notification with the first argument; the other sends it with an argument from an activation. |
 | `vm_custom_event_order_v1` | pending | A purpose-built script shows a notification, sends a custom event whose handler shows another, then shows a third: the order of the three notifications settles it. |
 | `vm_host_is_disabled_chain_v1` | pending | Show IsDisabled through a notification call of a child whose parent is initially disabled, before and after a script enables the parent. |
+| `nif_controller_rest_effect_first_key_v1` | pending | Load a cell with a looping UV-scrolling and an alpha-pulsing effect whose stored values equal their first keys; capture frames at load and at several later times: the frame at load must match the first-key draw, and a later frame that matches it only by chance refutes nothing; an effect already advanced or faded at load refutes the rule. |
+| `effect_surface_texture_base_colour_v1` | pending | Photograph one placed effect with a white texture region over a known background under two materials differing only in base colour, then only in scale (both at most 1), then only in alpha; and one mesh with painted vertex RGB and alpha under the four combinations of the two vertex flags; compare channel ratios. |
+| `effect_blend_factors_add_v1` | pending | Photograph an additive (6,0) and a normal (6,7) effect over black, white and mid-grey backgrounds; the additive one must brighten without darkening and saturate at white, the normal one must interpolate. |
+| `effect_blend_after_opaque_back_to_front_v1` | pending | Photograph two overlapping blended effects whose order by distance flips as the camera moves; a fixed order in the game refutes the distance sort. |
+| `effect_soft_lighting_left_out_v1` | pending | Photograph a soft effect crossing a wall at close range: if its edge against the wall fades, the frame differs there by construction; the rule is refuted for any surface whose look away from intersections differs from the frame. |
+| `effect_falloff_view_angle_v1` | pending | Photograph a falloff sphere from inside and outside at known angles and compare its alpha against the linear interpolation; smoothstep or a different angle refutes it. |

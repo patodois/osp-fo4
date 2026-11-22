@@ -49,6 +49,15 @@ pub const REST_IDLE_TRANSFORM: &str = "nif_controller_rest_idle_transform_v1";
 pub const REST_IDLE_SHADER: &str = "nif_controller_rest_idle_shader_v1";
 pub const REST_TRANSFORM_CONSTANT: &str = "nif_controller_rest_transform_constant_v1";
 pub const REST_UNRENDERED: &str = "nif_controller_rest_unrendered_v1";
+pub const REST_EFFECT_FIRST_KEY: &str = "nif_controller_rest_effect_first_key_v1";
+/// Effect surfaces of models settled by `REST_EFFECT_FIRST_KEY`
+/// (`fo4_render::draw`, `spec/effect-surfaces.md`).
+pub const EFFECT_SHADING: &str = "effect_surface_texture_base_colour_v1";
+pub const EFFECT_BLEND: &str = "effect_blend_factors_add_v1";
+pub const EFFECT_ORDER: &str = "effect_blend_after_opaque_back_to_front_v1";
+pub const EFFECT_LEFT_OUT: &str = "effect_soft_lighting_left_out_v1";
+/// Registered, not relied on: effect surfaces with falloff stay refused.
+pub const EFFECT_FALLOFF: &str = "effect_falloff_view_angle_v1";
 /// A script's Enable or Disable reaching enable children (the viewer's
 /// `--script-event`).
 pub const ENABLE_SCRIPT: &str = "xesp_script_change_propagates_v1";
@@ -159,6 +168,7 @@ pub fn covering(error: &Error) -> Option<&'static str> {
             Some(crate::rest::IDLE_SHADER) => Some(REST_IDLE_SHADER),
             Some(crate::rest::TRANSFORM_CONSTANT) => Some(REST_TRANSFORM_CONSTANT),
             Some(crate::rest::UNRENDERED) => Some(REST_UNRENDERED),
+            Some(crate::rest::EFFECT_FIRST_KEY) => Some(REST_EFFECT_FIRST_KEY),
             _ => None,
         }
     } else {
@@ -392,6 +402,12 @@ mod tests {
             REST_IDLE_SHADER,
             REST_TRANSFORM_CONSTANT,
             REST_UNRENDERED,
+            REST_EFFECT_FIRST_KEY,
+            EFFECT_SHADING,
+            EFFECT_BLEND,
+            EFFECT_ORDER,
+            EFFECT_LEFT_OUT,
+            EFFECT_FALLOFF,
         ] {
             assert!(status(name).is_some(), "{name}");
         }

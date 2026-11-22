@@ -117,6 +117,8 @@ fn label(e: &Error) -> String {
             | "UnsupportedSkinning"
             | "UnsupportedRenderSwapField"
             | "UnsupportedColorOnlyEffectFeatures"
+            | "UnsupportedEffectSurface"
+            | "UnsettledEffectMaterialField"
             | "UnsupportedBlendFlags"
             | "UnsupportedRenderAlpha"
             | "UnsupportedNifVertexAttributes"

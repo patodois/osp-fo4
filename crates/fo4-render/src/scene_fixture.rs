@@ -989,3 +989,118 @@ fn a_placed_actor_is_drawn_skinned_in_its_skeleton_rest_pose_after_the_reference
         "ActorSkinBoneMissing"
     );
 }
+
+/// One placed effect model (`nif_kind` with Shader Flags 1 `flags`, its
+/// Base Color Scale 2 replaced by `scale`), loaded at the hypotheses level,
+/// its state given `nif_controller_rest_effect_first_key_v1` as a settled
+/// controller would.
+fn effect_surface_build(flags: u32, scale: f32) -> crate::draw::Build {
+    let temp = TestDir::new("effect-surface");
+    let root = temp.join("Data");
+    std::fs::create_dir_all(root.join("meshes")).unwrap();
+    let mut bytes = nif_kind(b"", Some(flags));
+    let old: Vec<u8> = [2f32, 100.].iter().flat_map(|v| v.to_le_bytes()).collect();
+    let at = bytes.windows(8).position(|w| w == old.as_slice()).unwrap();
+    bytes[at..at + 4].copy_from_slice(&scale.to_le_bytes());
+    std::fs::write(root.join("meshes/effect.nif"), bytes).unwrap();
+    let mut reference = sub(b"NAME", &0x801u32.to_le_bytes());
+    reference.extend(sub(b"DATA", &[0; 24]));
+    reference.extend(sub(b"XSCL", &1f32.to_le_bytes()));
+    let mut cell = sub(b"EDID", b"EffectCell\0");
+    cell.extend(sub(b"DATA", &1u16.to_le_bytes()));
+    let mut hedr = 0.95f32.to_le_bytes().to_vec();
+    hedr.extend([0; 8]);
+    let plugin = [
+        rec(b"TES4", 0, 1, &sub(b"HEDR", &hedr)),
+        rec(b"STAT", 0x801, 0, &sub(b"MODL", b"effect.nif\0")),
+        group(
+            2,
+            0,
+            &[
+                rec(b"CELL", 0x800, 0, &cell),
+                group(
+                    6,
+                    0x800,
+                    &group(9, 0x800, &rec(b"REFR", 0x802, 0, &reference)),
+                ),
+            ]
+            .concat(),
+        ),
+    ]
+    .concat();
+    std::fs::write(root.join("base.esm"), plugin).unwrap();
+    let m = Manifest {
+        root,
+        game: Game::Fallout4,
+        archive_invalidation: None,
+        language: "english".into(),
+        plugins: vec![PluginSpec {
+            name: "base.esm".into(),
+            path: "base.esm".into(),
+        }],
+        mounts: vec![Mount::Loose {
+            plugin: None,
+            base: None,
+            files: vec!["meshes/effect.nif".into()],
+        }],
+        required_masters: vec![],
+        excluded: vec![],
+        limits: Limits::default(),
+        build: Some("synthetic".into()),
+    };
+    let b = Budget::new(32 << 20);
+    let store = fo4_plugin::typed::Store::open(&m, &b).unwrap();
+    let vfs = fo4_vfs::Vfs::mount(&m, &b).unwrap();
+    let mut loader = Loader::new(&store, &vfs, "english", RuleLevel::Hypotheses, &b);
+    let mut scene = loader.by_editor_id("EffectCell", &b).unwrap();
+    let mut hypotheses = scene.instances[0].state.hypotheses().to_vec();
+    hypotheses.push(fo4_scene::hypotheses::REST_EFFECT_FIRST_KEY);
+    scene.instances[0].state = fo4_scene::State::ReadyUnderHypotheses { hypotheses };
+    let options = BuildOptions {
+        max_texture_dimension: 16,
+        max_texture_bytes: 1024,
+        level: fo4_scene::RuleLevel::Hypotheses,
+        blocks: None,
+    };
+    build(&scene, &loader, &m.limits, options, &b).unwrap()
+}
+
+#[test]
+fn settled_effect_surfaces_take_the_base_colour_and_name_every_unsettled_term() {
+    // Untextured, no vertex flags, base colour (0.2, 0.4, 0.6, 0.8) x 0.5.
+    let output = effect_surface_build(0, 0.5);
+    assert_eq!(output.list.draws.len(), 1, "{:?}", output.omitted);
+    let draw = &output.list.draws[0];
+    assert_eq!(output.list.textures[draw.texture].rgba, [1.; 4]);
+    assert_eq!(draw.alpha.opacity, 0.8);
+    let colors = output.list.meshes[draw.mesh]
+        .vertex_colors
+        .as_ref()
+        .unwrap();
+    assert!(
+        colors.iter().all(|c| *c == [0.1, 0.2, 0.3, 1.]),
+        "{colors:?}"
+    );
+    let rules = &output.instances[0].hypotheses;
+    assert!(
+        rules.contains(&fo4_scene::hypotheses::EFFECT_SHADING),
+        "{rules:?}"
+    );
+    assert!(!rules.contains(&fo4_scene::hypotheses::EFFECT_BLEND));
+    // Vertex_Alpha alone with no vertex alpha below 1: settled, no channel.
+    let output = effect_surface_build(1 << 3, 0.5);
+    assert_eq!(output.list.draws.len(), 1, "{:?}", output.omitted);
+    // Each unsettled term is named, together.
+    for (flags, scale, found) in [
+        (0, 2., "colour-range"),
+        (1 << 6, 0.5, "falloff"),
+        (1 << 4, 0.5, "palette"),
+        (1 << 7 | 1 << 5, 2., "palette+feature+colour-range"),
+    ] {
+        let output = effect_surface_build(flags, scale);
+        assert!(output.list.draws.is_empty());
+        let cause = &output.omitted[0].causes[0];
+        assert_eq!(cause.code, "UnsupportedEffectSurface");
+        assert_eq!(cause.found, found);
+    }
+}

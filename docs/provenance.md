@@ -478,3 +478,18 @@ interpolator gives only its keys' values, and the standard rotation matrix
 of a unit quaternion (its row reading was checked against the stored node
 words of the installation, never the transpose alone). No other NIF reader,
 renderer, editor or game executable was opened.
+
+Effect surfaces ([spec/effect-surfaces.md](../spec/effect-surfaces.md)) use
+the pinned nifxml copy of spec/nif.md for the `BSEffectShaderProperty`
+fields of `bs_version` 130 and their descriptions (Base Color, Base Color
+Scale "Multiplier for Base Color (RGB part)", the four falloff fields "At
+this cosine of angle falloff will be equal to ..."), `AlphaFlags`,
+`AlphaFunction`, `Fallout4ShaderPropertyFlags1` and `2`, and
+`EffectShaderControlledVariable` and `EffectShaderControlledColor` (the
+pairing of a controlled variable with a field is by name only). Recognised
+from prior knowledge and used only as pending rules or as named refusals
+that the `effect_census` counts could refute: that a sequence's clock starts
+at its first key when a cell loads, that soft effects fade near geometry,
+and that falloff depends on the angle between the view direction and the
+surface normal. No NIF reader, renderer, editor, MIT reference or game
+executable was opened.

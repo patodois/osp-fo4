@@ -346,3 +346,65 @@ and every other pixel keeps its tag. The first, wider version
 of the rest rules changed 921,588 pixels of the lobby frame and 335,677 of
 the vault frame (white effects in front of the camera); none of that
 remains.
+
+## Effect surfaces
+
+Under `nif_controller_rest_effect_first_key_v1` and the effect surface
+rules of [effect-surfaces.md](effect-surfaces.md), a model whose
+effect-shader controllers all start at their stored fields is no longer
+refused for them; its effect surfaces are then drawn, or refused by the
+draw build with `UnsupportedEffectSurface` naming every term the frame does
+not settle. Every cell of the load order (3 shards of about 1,900 s, 0.98
+GB peak each, run beside other builds), against the census of controllers
+at rest:
+
+| Outcome | Controllers at rest | And effect surfaces |
+| --- | ---: | ---: |
+| drawn without hypotheses | 781,075 | 781,075 |
+| drawn only under hypotheses | 540,393 | 540,395 |
+| hidden by `xesp_child_follows_parent_v1` | 6,902 | 8,197 |
+| omitted | 427,141 | 425,844 |
+
+Two placements move from omitted to drawn under hypotheses (a skylight
+effect and a static vault gear door); 1,295 placements whose models
+are now settled and whose enable parent chain starts disabled are counted
+as hidden by the chain rule instead of omitted (area 0.41 % of all, mostly
+large mist volumes). Omitted area goes from 42.37 % to 41.96 % of all; the
+drawn area does not change measurably. The effect refusals now rank, as
+sole families by area: `falloff+vertex-alpha-one-flag` 10,989 placements
+(4.83 % of the omitted area; the large mist volumes),
+`colour-range+vertex-alpha-one-flag` 165 (1.37 %),
+`falloff+colour-range+vertex-alpha-one-flag` 728 (0.36 %),
+`feature+vertex-alpha-one-flag` 86 (0.32 %),
+`palette+falloff+vertex-alpha-one-flag` 943 (0.03 %); a material whose
+driven field differs from the NIF's (`UnsettledEffectMaterialField`) 104.
+The largest sole families left by area: `model: animation-controller blocks
+(falloff)` 407 placements, 61.99 % of the omitted area (distant clouds whose
+falloff stop angle is stored outside its keys); missing materials 46,166
+(11.69 %); the mist volumes above (4.83 %); swap scopes 3,316 (1.78 %);
+`texture-transform` 4,962 (1.77 %); `RenderSwapWithoutMaterial` 7,181 (1.71
+%); missing textures 31,760 (1.60 %); opacity above 1 with blending (1.56 %
+at 2.0 alone).
+
+Test views: drawn under hypotheses unchanged (lobby 141, vault 146, test
+cell 123, radius 1 666, radius 2 1,789). The test cell's large mist volume
+(62.80 % of its placement area) and four more in radius 1 and 2 are now
+hidden by the chain rule instead of omitted (omitted area: test cell 63.77 %
+→ 0.96 %, radius 1 52.81 % → 8.75 %, radius 2 25.09 % → 6.54 %); in the
+lobby and the vault the mist volumes are refused as
+`UnsupportedEffectSurface falloff+vertex-alpha-one-flag` (89.96 % and 37.05
+% of their omitted area).
+
+**Frames** (viewer, headless, 1280 x 720, the eight test views against the
+build of the commit before, `522df72`): every view is byte-identical, colour
+frames and tag files, with and without `--under-hypotheses` (the two walk
+views run only with it). The two newly drawn placements, rendered apart:
+the skylight shows, inside the roof opening, an opaque pale card (an
+effect shape without an alpha property, which writes depth) under an
+additive textured layer, where the frame before showed the clear colour and
+objects placed beyond the roof (72,990 pixels differ); whether the game
+shows those objects through the card is not known. The vault gear door
+model is drawn whole (43,365 pixels); its effect shape has an emissive
+multiple of 0 at its first key. Neither covers the room. The CPU and GPU frames of the skylight view agree as before
+(coverage agreement 1.000000 against 0.999997; mean channel difference 2.8
+to 3.0 steps against 3.0 to 3.2).

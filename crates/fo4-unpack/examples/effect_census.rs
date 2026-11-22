@@ -1,0 +1,1372 @@
+#![forbid(unsafe_code)]
+//! Census of the effect models that the scene refuses for effect-shader or
+//! looping-controller reasons (`spec/effect-surfaces.md`): counts only,
+//! written to `OUT.txt`; one line per model with its path and class to
+//! `OUT.txt.models.tsv`, which is never committed.
+//!
+//! `effect_census MANIFEST OUT.txt [--omitted BASES.tsv]`
+//!
+//! Every winning NIF of the archives is read and walked as the asset graph
+//! walks it. A model is in scope when a reached block of the `state` class
+//! (particle systems aside) carries a rest tag without a rule
+//! (`fo4_scene::rest`) and either that tag is `effect-idle` or
+//! `manager-loop`, or the block is an effect-shader controller. For those
+//! models and their reached shapes: the shader block type and its flag
+//! bits, the alpha property's flag word joined with the shader flags, the
+//! effect shader's fields, the effect material (BGEM) a shader names and
+//! its fields, the drawn texture's format and alpha range on a small mip,
+//! vertex colours and vertex alpha; and for every effect-shader controller
+//! (direct or through a sequence's controlled block) what it drives, its
+//! keys' range, start key and how the stored value relates to them.
+//! Placements and the area proxy of `coverage_census` (largest OBND face
+//! times the reference scale squared) are counted through the base records
+//! that name each model; with `--omitted`, the omitted placements and area
+//! of a coverage census's `bases.tsv` are added up by class too.
+use fo4_core::{Budget, Game, Manifest};
+use fo4_nif::{Data, Field, Nif, Value};
+use fo4_plugin::typed::Store;
+use fo4_scene::{model_policy, paths, rest};
+use fo4_vfs::Vfs;
+use std::{
+    collections::{BTreeMap, BTreeSet, HashMap},
+    fmt::Write as _,
+    path::Path,
+};
+
+type E = Box<dyn std::error::Error>;
+type Counts = BTreeMap<String, u64>;
+fn bump(m: &mut Counts, k: impl Into<String>) {
+    *m.entry(k.into()).or_default() += 1;
+}
+
+fn fields(d: &Data) -> &[Field] {
+    model_policy::fields(d)
+}
+fn block_fields<'n>(n: &'n Nif<'_>, i: usize) -> Option<&'n [Field]> {
+    n.blocks.get(i)?.decoded.as_ref().map(fields)
+}
+fn type_of<'n>(n: &'n Nif<'_>, i: usize) -> &'n str {
+    n.blocks
+        .get(i)
+        .and_then(|b| n.block_types.get(b.type_index as usize))
+        .map_or("", String::as_str)
+}
+fn floats(f: &[Field], name: &str) -> Vec<f32> {
+    f.iter()
+        .filter(|x| x.name == name)
+        .filter_map(|x| match x.value {
+            Value::FloatBits(b) => Some(f32::from_bits(b)),
+            _ => None,
+        })
+        .collect()
+}
+fn refs(f: &[Field], name: &str) -> Vec<i32> {
+    f.iter()
+        .filter(|x| x.name == name)
+        .filter_map(|x| match x.value {
+            Value::Ref(r) => Some(r),
+            _ => None,
+        })
+        .collect()
+}
+fn link(f: &[Field], name: &str) -> Option<usize> {
+    refs(f, name)
+        .first()
+        .copied()
+        .filter(|r| *r >= 0)
+        .map(|r| r as usize)
+}
+fn word(f: &[Field], name: &str) -> Option<u32> {
+    f.iter()
+        .find(|x| x.name == name)
+        .and_then(|x| match x.value {
+            Value::U32(v) => Some(v),
+            Value::U16(v) => Some(u32::from(v)),
+            Value::U8(v) => Some(u32::from(v)),
+            _ => None,
+        })
+}
+fn bytes<'f>(f: &'f [Field], name: &str) -> Option<&'f [u8]> {
+    f.iter()
+        .find(|x| x.name == name)
+        .and_then(|x| match &x.value {
+            Value::Bytes(v) => Some(v.as_slice()),
+            _ => None,
+        })
+}
+fn string<'n>(n: &'n Nif<'_>, f: &[Field], name: &str) -> Option<&'n [u8]> {
+    f.iter()
+        .find(|x| x.name == name)
+        .and_then(|x| match x.value {
+            Value::StringIndex(i) => n.strings.get(i as usize).map(Vec::as_slice),
+            _ => None,
+        })
+}
+fn particle(ty: &str) -> bool {
+    ty.starts_with("NiPS") || ty.starts_with("BSPSys") || ty == "NiParticleSystem"
+}
+/// A value for a histogram key: shortest round-trip text of the f32.
+fn v(x: f32) -> String {
+    if x == rest::INVALID {
+        "INV".into()
+    } else {
+        format!("{x}")
+    }
+}
+/// A bucket of a continuous value for the committed histograms.
+fn bucket(x: f32) -> String {
+    let edges = [0., 0.1, 0.25, 0.5, 0.75, 1., 1.5, 2., 5., 10., 100., 1000.];
+    if x.is_nan() {
+        return "NaN".into();
+    }
+    if edges.contains(&x) {
+        return format!("= {x}");
+    }
+    if x < 0. {
+        return "< 0".into();
+    }
+    match edges.iter().position(|e| x < *e) {
+        Some(k) => format!("{} to {}", edges[k - 1], edges[k]),
+        None => "> 1000".into(),
+    }
+}
+/// White, black, grey or coloured.
+fn rgb(c: &[f32]) -> String {
+    if c.len() < 3 {
+        return "absent".into();
+    }
+    if c[..3].iter().all(|x| *x == 1.) {
+        "1 1 1".into()
+    } else if c[..3].iter().all(|x| *x == 0.) {
+        "0 0 0".into()
+    } else if (c[0] - c[1]).abs() < 1e-3 && (c[0] - c[2]).abs() < 1e-3 {
+        "grey (r = g = b)".into()
+    } else {
+        "colour".into()
+    }
+}
+fn bits(x: u32) -> Vec<u32> {
+    (0..32).filter(|b| x >> b & 1 == 1).collect()
+}
+
+/// Keys of an NiFloatData or NiPosData: (time, value).
+/// (interpolation type, keys as (time, value)).
+type Keys = (u32, Vec<(f32, Vec<f32>)>);
+fn keys(f: &[Field], comps: usize) -> Option<Keys> {
+    let mut it = f.iter();
+    let n = match it.next()? {
+        x if x.name == "Num Keys" => match x.value {
+            Value::U32(v) => v,
+            _ => return None,
+        },
+        _ => return None,
+    };
+    if n == 0 {
+        return Some((0, Vec::new()));
+    }
+    let kind = match it.next()? {
+        x if x.name == "Interpolation" => match x.value {
+            Value::U32(v) => v,
+            _ => return None,
+        },
+        _ => return None,
+    };
+    let mut out = Vec::new();
+    let mut current: Option<(f32, Vec<f32>)> = None;
+    for x in it {
+        let val = match x.value {
+            Value::FloatBits(b) => f32::from_bits(b),
+            _ => continue,
+        };
+        match x.name {
+            "Key Time" => {
+                if let Some(k) = current.take() {
+                    out.push(k);
+                }
+                current = Some((val, Vec::new()));
+            }
+            "Key Value" => {
+                if let Some((_, vals)) = current.as_mut() {
+                    if vals.len() < comps {
+                        vals.push(val);
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+    if let Some(k) = current.take() {
+        out.push(k);
+    }
+    (out.len() == n as usize && out.iter().all(|(_, v)| v.len() == comps)).then_some((kind, out))
+}
+
+/// The NIF effect-shader field and the BGEM field a controlled variable
+/// names (nifxml EffectShaderControlledVariable / ...Color, by name).
+fn controlled_field(color: bool, var: u32) -> &'static str {
+    if color {
+        return if var == 0 {
+            "base colour rgb"
+        } else {
+            "colour ?"
+        };
+    }
+    match var {
+        0 => "base colour scale (emissive multiple)",
+        1 => "falloff start angle",
+        2 => "falloff stop angle",
+        3 => "falloff start opacity",
+        4 => "falloff stop opacity",
+        5 => "alpha (base colour alpha)",
+        6 => "u offset",
+        7 => "u scale",
+        8 => "v offset",
+        9 => "v scale",
+        _ => "other variable",
+    }
+}
+fn bgem_value(m: &fo4_material::Material<'_>, color: bool, var: u32) -> Option<Vec<f32>> {
+    let fo4_material::Kind::Bgem(e) = &m.kind else {
+        return None;
+    };
+    let c = &m.common;
+    Some(match (color, var) {
+        (true, 0) => e.base_color.to_vec(),
+        (false, 0) => vec![e.base_color_scale],
+        (false, 1) => vec![e.falloff_start_angle],
+        (false, 2) => vec![e.falloff_stop_angle],
+        (false, 3) => vec![e.falloff_start_opacity],
+        (false, 4) => vec![e.falloff_stop_opacity],
+        (false, 5) => vec![c.alpha],
+        (false, 6) => vec![c.u_offset],
+        (false, 7) => vec![c.u_scale],
+        (false, 8) => vec![c.v_offset],
+        (false, 9) => vec![c.v_scale],
+        _ => return None,
+    })
+}
+fn close(a: &[f32], b: &[f32]) -> bool {
+    a.len() == b.len() && a.iter().zip(b).all(|(x, y)| (x - y).abs() <= 1e-4)
+}
+
+/// Alpha and colour facts of a texture's small mip.
+#[derive(Clone)]
+struct TexFacts {
+    format: String,
+    alpha: String,
+    grey: bool,
+}
+fn tex_facts(vfs: &Vfs, m: &Manifest, path: &[u8]) -> Option<TexFacts> {
+    let b = Budget::new(m.limits.max_memory);
+    let bytes = vfs.read_path_bytes(path, &b).ok()?;
+    let t = fo4_texture::Texture::read(&bytes, "t", &m.limits, &b).ok()?;
+    let format = t.format.name().to_string();
+    let pick = t
+        .surfaces
+        .iter()
+        .enumerate()
+        .filter(|(_, s)| s.array == 0 && s.face == 0)
+        .filter(|(_, s)| s.width.min(s.height) >= 16 || s.mip == 0)
+        .max_by_key(|(_, s)| s.mip)
+        .map(|(i, _)| i)?;
+    let rgba = t.decode(pick, &m.limits, &b).ok()?;
+    let (mut lo, mut hi, mut spread) = (f32::MAX, f32::MIN, 0f32);
+    for p in rgba.as_chunks::<4>().0 {
+        lo = lo.min(p[3]);
+        hi = hi.max(p[3]);
+        spread = spread.max((p[0] - p[1]).abs()).max((p[0] - p[2]).abs());
+    }
+    let alpha = if lo >= 1. {
+        "alpha 1 everywhere".to_string()
+    } else if hi <= 0. {
+        "alpha 0 everywhere".to_string()
+    } else {
+        format!(
+            "alpha varies (min {:.2}, max {:.2})",
+            (lo * 4.).floor() / 4.,
+            (hi * 4.).ceil() / 4.
+        )
+    };
+    Some(TexFacts {
+        format,
+        alpha,
+        grey: spread <= 2. / 255.,
+    })
+}
+
+#[derive(Default, Clone)]
+struct Uses {
+    placements: u64,
+    area: f64,
+    bases: u64,
+    omitted: u64,
+    omitted_area: f64,
+}
+fn obnd_area(r: &fo4_plugin::Record) -> Option<f64> {
+    let s = r.subrecords.iter().find(|s| s.signature == *b"OBND")?;
+    let d = r.data(s);
+    if d.len() != 12 {
+        return None;
+    }
+    let b: [i16; 6] = std::array::from_fn(|k| i16::from_le_bytes([d[2 * k], d[2 * k + 1]]));
+    let e = [0, 1, 2].map(|k| (f64::from(b[k + 3]) - f64::from(b[k])).abs());
+    Some((e[0] * e[1]).max(e[0] * e[2]).max(e[1] * e[2]))
+}
+
+fn run() -> Result<(), E> {
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    let usage = "effect_census MANIFEST OUT.txt [--omitted BASES.tsv]";
+    let omitted_file = match args.as_slice() {
+        [_, _] => None,
+        [_, _, flag, file] if flag == "--omitted" => Some(file.clone()),
+        _ => return Err(usage.into()),
+    };
+    let started = std::time::Instant::now();
+    let m = Manifest::load(Path::new(&args[0]))?;
+    let mut c = Counts::new();
+
+    // Placements and area by model path: enabled placed REFR -> base -> MODL.
+    let store = Store::open(&m, &Budget::new(m.limits.max_override_memory))?;
+    let mut base_uses: HashMap<fo4_plugin::FormKey, (u64, f64)> = HashMap::new();
+    let placed: Vec<_> = store
+        .placement_cells()
+        .filter(|(o, _)| !o.deleted && !o.disabled && o.signature == *b"REFR")
+        .map(|(o, _)| store.overrides().form_key(o.key, store.order()))
+        .collect();
+    let mut base_area: HashMap<fo4_plugin::FormKey, Option<f64>> = HashMap::new();
+    let mut total_area = 0.;
+    for k in &placed {
+        let b = Budget::new(m.limits.max_memory);
+        let Some((r, plugin)) = store.raw_with_plugin(k, &b)? else {
+            continue;
+        };
+        let scale = r
+            .subrecords
+            .iter()
+            .find(|s| s.signature == *b"XSCL")
+            .and_then(|s| <[u8; 4]>::try_from(r.data(s)).ok())
+            .map_or(1., |d| f64::from(f32::from_le_bytes(d)));
+        let Some(s) = r.subrecords.iter().find(|s| s.signature == *b"NAME") else {
+            continue;
+        };
+        let Ok(d) = <[u8; 4]>::try_from(r.data(s)) else {
+            continue;
+        };
+        let Ok(Some(base)) =
+            store
+                .order()
+                .remap(plugin, u32::from_le_bytes(d), &r.source.file, s.offset)
+        else {
+            continue;
+        };
+        let face = match base_area.get(&base) {
+            Some(a) => *a,
+            None => {
+                let a = store.raw(&base, &b)?.as_ref().and_then(obnd_area);
+                base_area.insert(base.clone(), a);
+                a
+            }
+        };
+        let a = face.unwrap_or(0.) * scale * scale;
+        total_area += a;
+        let e = base_uses.entry(base).or_default();
+        e.0 += 1;
+        e.1 += a;
+    }
+    let mut model_uses: HashMap<Vec<u8>, Uses> = HashMap::new();
+    for (base, (n, a)) in &base_uses {
+        let b = Budget::new(m.limits.max_memory);
+        let Some(r) = store.raw(base, &b)? else {
+            continue;
+        };
+        let Some(s) = r.subrecords.iter().find(|s| s.signature == *b"MODL") else {
+            continue;
+        };
+        let d = r.data(s);
+        let Ok(path) = paths::resolve(
+            paths::Citation::RecordModel,
+            d.strip_suffix(&[0]).unwrap_or(d),
+            &b,
+        ) else {
+            continue;
+        };
+        let e = model_uses.entry(path).or_default();
+        e.bases += 1;
+        e.placements += n;
+        e.area += a;
+    }
+    drop(store);
+    // Omitted placements and area by model, from a coverage census's
+    // bases.tsv (one line per reason and base; a base counted once).
+    let mut omitted_total = (0u64, 0f64);
+    if let Some(file) = &omitted_file {
+        let text = std::fs::read_to_string(file)?;
+        let mut seen = BTreeSet::new();
+        for line in text.lines().skip(1) {
+            let col: Vec<&str> = line.split('\t').collect();
+            let [_, base, _, _, model, n, a] = col.as_slice() else {
+                continue;
+            };
+            if !seen.insert(base.to_string()) {
+                continue;
+            }
+            let (n, a): (u64, f64) = (n.parse()?, a.parse()?);
+            omitted_total.0 += n;
+            omitted_total.1 += a;
+            let b = Budget::new(m.limits.max_memory);
+            if let Ok(path) = paths::resolve(paths::Citation::RecordModel, model.as_bytes(), &b) {
+                let e = model_uses.entry(path).or_default();
+                e.omitted += n;
+                e.omitted_area += a;
+            }
+        }
+    }
+
+    let vfs = Vfs::mount(&m, &Budget::new(m.limits.max_vfs_memory))?;
+    let mut nifs: Vec<Vec<u8>> = vfs
+        .candidates
+        .iter()
+        .filter_map(|c| c.key.clone())
+        .filter(|k| k.ends_with(b".nif"))
+        .collect();
+    nifs.sort();
+    nifs.dedup();
+    let mut textures: HashMap<Vec<u8>, Option<TexFacts>> = HashMap::new();
+    let mut rows = String::from("model\tclass\tplacements\tarea\tomitted\tomitted_area\tdetail\n");
+    let mut classes: BTreeMap<String, Uses> = BTreeMap::new();
+    let mut class_models: Counts = Counts::new();
+    let mut detail_rows = String::new();
+    let (mut files, mut failed) = (0u64, 0u64);
+    for path in &nifs {
+        let b = Budget::new(m.limits.max_memory);
+        let Ok(nb) = vfs.read_path_bytes(path, &b) else {
+            failed += 1;
+            continue;
+        };
+        let Ok(n) = Nif::read(&nb, "m", Game::Fallout4, &m.limits, &b) else {
+            failed += 1;
+            continue;
+        };
+        files += 1;
+        // Reached blocks, as the asset graph walks them.
+        let count = n.blocks.len();
+        let mut seen = vec![false; count];
+        let mut stack: Vec<usize> = n
+            .roots
+            .iter()
+            .filter(|r| **r >= 0)
+            .map(|r| *r as usize)
+            .collect();
+        let mut reached = Vec::new();
+        while let Some(i) = stack.pop() {
+            if i >= count || seen[i] {
+                continue;
+            }
+            seen[i] = true;
+            let ty = type_of(&n, i);
+            let class = model_policy::block_class(ty);
+            if class == fo4_plugin::static_frame::Class::Outside {
+                continue;
+            }
+            reached.push(i);
+            let is_state = class == fo4_plugin::static_frame::Class::State;
+            let Some(d) = &n.blocks[i].decoded else {
+                continue;
+            };
+            if let Data::Node { children, .. } = d {
+                stack.extend(children.iter().filter(|x| **x >= 0).map(|x| *x as usize));
+            }
+            for f in fields(d) {
+                if let Value::Ref(r) = f.value {
+                    if r >= 0 && !(is_state && model_policy::weak_edge(ty, f.name)) {
+                        stack.push(r as usize);
+                    }
+                }
+            }
+        }
+        reached.sort_unstable();
+        let state: Vec<usize> = reached
+            .iter()
+            .copied()
+            .filter(|i| {
+                model_policy::block_class(type_of(&n, *i)) == fo4_plugin::static_frame::Class::State
+                    && !particle(type_of(&n, *i))
+            })
+            .collect();
+        if state.is_empty() {
+            continue;
+        }
+        let Ok(tags) = rest::tags(&n, &b) else {
+            bump(&mut c, "models: rest tags not computed");
+            continue;
+        };
+        let ruled = [
+            rest::MANAGER_IDLE,
+            rest::IDLE_TRANSFORM,
+            rest::IDLE_SHADER,
+            rest::TRANSFORM_CONSTANT,
+            rest::UNRENDERED,
+        ];
+        // Tags of the earlier rules, and the effect first-key tag of this
+        // census's rule (counted apart).
+        let mut open: BTreeSet<&str> = BTreeSet::new();
+        let mut in_scope = false;
+        for &i in &state {
+            let ty = type_of(&n, i);
+            for t in tags.get(i).into_iter().flatten() {
+                if ruled.contains(t) {
+                    continue;
+                }
+                open.insert(t);
+                if *t == rest::EFFECT_IDLE
+                    || *t == rest::MANAGER_LOOP
+                    || *t == rest::EFFECT_FIRST_KEY
+                    || ty.starts_with("BSEffectShaderProperty")
+                {
+                    in_scope = true;
+                }
+            }
+        }
+        if !in_scope {
+            continue;
+        }
+        let uses = model_uses.get(path).cloned().unwrap_or_default();
+        bump(&mut c, "models: in scope");
+        if uses.placements > 0 {
+            bump(&mut c, "models: in scope, named by placed bases");
+        }
+        let tagset: Vec<&str> = open.iter().copied().collect();
+        bump(
+            &mut c,
+            format!("models by open rest tags: {}", tagset.join(" + ")),
+        );
+
+        // Shapes: reached blocks with a shader property link.
+        let mut shader_of_shape: Vec<(usize, Option<usize>, Option<usize>)> = Vec::new();
+        for &i in &reached {
+            let Some(f) = block_fields(&n, i) else {
+                continue;
+            };
+            let sh = refs(f, "Shader Property");
+            if sh.is_empty() {
+                continue;
+            }
+            let shader = link(f, "Shader Property");
+            let alpha = link(f, "Alpha Property");
+            shader_of_shape.push((i, shader, alpha));
+        }
+        // Effect controllers: (controller block, shader, source label).
+        let mut ctls: Vec<(usize, Option<usize>, String)> = Vec::new();
+        let has_manager = reached
+            .iter()
+            .any(|i| type_of(&n, *i) == "NiControllerManager");
+        for &i in &state {
+            let ty = type_of(&n, i);
+            let Some(f) = block_fields(&n, i) else {
+                continue;
+            };
+            if ty.starts_with("BSEffectShaderProperty") {
+                let flags = word(f, "Controller Flags").unwrap_or(0);
+                let src = if flags & 0x20 != 0 && has_manager {
+                    "controller run by a manager"
+                } else {
+                    "controller not run by a manager"
+                };
+                ctls.push((i, link(f, "Target"), src.into()));
+            }
+        }
+        // Sequences: which effect controllers they drive, loop or clamp.
+        let mut seq_of: HashMap<usize, (String, f32, f32, f32, Option<usize>)> = HashMap::new();
+        for &i in &state {
+            if type_of(&n, i) != "NiControllerSequence" {
+                continue;
+            }
+            let Some(f) = block_fields(&n, i) else {
+                continue;
+            };
+            let cycle = word(f, "Cycle Type").unwrap_or(99);
+            let label = match cycle {
+                0 => "sequence, loop",
+                1 => "sequence, reverse",
+                2 => "sequence, clamp",
+                _ => "sequence, other cycle",
+            };
+            let start = floats(f, "Start Time").first().copied().unwrap_or(f32::NAN);
+            let stop = floats(f, "Stop Time").first().copied().unwrap_or(f32::NAN);
+            let freq = floats(f, "Frequency").first().copied().unwrap_or(f32::NAN);
+            let ips = refs(f, "Interpolator");
+            let cs = refs(f, "Controller");
+            bump(&mut c, format!("sequences: {label}"));
+            bump(
+                &mut c,
+                format!("sequences: {label}: frequency {}", bucket(freq)),
+            );
+            bump(
+                &mut c,
+                format!(
+                    "sequences: {label}: length in seconds {}",
+                    bucket(stop - start)
+                ),
+            );
+            for (k, ip) in ips.iter().enumerate() {
+                let ctl = cs.get(k).copied().unwrap_or(-1);
+                if ctl < 0 {
+                    bump(
+                        &mut c,
+                        "sequence controlled blocks: without a controller link",
+                    );
+                    continue;
+                }
+                let ctl = ctl as usize;
+                if type_of(&n, ctl).starts_with("BSEffectShaderProperty") {
+                    let ipl = (*ip >= 0).then_some(*ip as usize);
+                    // A looping sequence wins over another that names the
+                    // same controller.
+                    if cycle == 0 || !seq_of.contains_key(&ctl) {
+                        seq_of.insert(ctl, (label.into(), start, stop, freq, ipl));
+                    }
+                    if *ip >= 0 {
+                        bump(
+                            &mut c,
+                            format!(
+                                "sequence controlled blocks on effect shaders: interpolator {}",
+                                type_of(&n, *ip as usize)
+                            ),
+                        );
+                    }
+                }
+            }
+        }
+        // Per shape facts.
+        let mut model_facts: BTreeSet<String> = BTreeSet::new();
+        let mut detail: Vec<String> = Vec::new();
+        // Draw gates of the effect surface rules, by shape.
+        let mut gates: BTreeSet<&'static str> = BTreeSet::new();
+        let mut effect_shapes = 0;
+        for (shape, shader, alpha) in &shader_of_shape {
+            let sty = shader.map_or("none", |s| type_of(&n, s));
+            bump(&mut c, format!("shapes: shader {sty}"));
+            let Some(s) = *shader else { continue };
+            let Some(sf) = block_fields(&n, s) else {
+                continue;
+            };
+            let controlled: Vec<&(usize, Option<usize>, String)> =
+                ctls.iter().filter(|x| x.1 == Some(s)).collect();
+            let ctl_label = if controlled.is_empty() {
+                "not controlled"
+            } else {
+                "controlled"
+            };
+            if sty != "BSEffectShaderProperty" {
+                model_facts.insert(format!("{sty} shape"));
+                continue;
+            }
+            effect_shapes += 1;
+            let f1 = word(sf, "Shader Flags 1").unwrap_or(0);
+            let f2 = word(sf, "Shader Flags 2").unwrap_or(0);
+            for bit in bits(f1) {
+                bump(&mut c, format!("effect shapes: flags 1 bit {bit:02}"));
+            }
+            for bit in bits(f2) {
+                bump(&mut c, format!("effect shapes: flags 2 bit {bit:02}"));
+            }
+            bump(&mut c, "effect shapes");
+            bump(&mut c, format!("effect shapes: {ctl_label}"));
+            // Alpha property joined with the shader's flags that read alpha.
+            let af = alpha.and_then(|a| block_fields(&n, a)).map(|f| {
+                (
+                    word(f, "Alpha Flags").unwrap_or(0),
+                    word(f, "Threshold").unwrap_or(0),
+                )
+            });
+            let alpha_key = match af {
+                None => "no alpha property".to_string(),
+                Some((w, t)) => format!(
+                    "blend {} src {} dst {} test {} func {} threshold {}{}",
+                    w & 1,
+                    w >> 1 & 15,
+                    w >> 5 & 15,
+                    w >> 9 & 1,
+                    w >> 10 & 7,
+                    if w >> 9 & 1 == 1 { t } else { 0 },
+                    if w & 0xE000 != 0 {
+                        format!(" high bits 0x{:04x}", w & 0xE000)
+                    } else {
+                        String::new()
+                    }
+                ),
+            };
+            let palette_alpha = f1 >> 5 & 1;
+            let palette_color = f1 >> 4 & 1;
+            let falloff = f1 >> 6 & 1;
+            let soft = f1 >> 30 & 1;
+            let vcol = f2 >> 5 & 1;
+            let valpha = f1 >> 3 & 1;
+            bump(
+                &mut c,
+                format!(
+                    "effect shapes: alpha property x flags: {alpha_key}; palette colour {palette_color} palette alpha {palette_alpha} falloff {falloff} soft {soft} vertex colours {vcol} vertex alpha {valpha}"
+                ),
+            );
+            bump(
+                &mut c,
+                format!("effect shapes: alpha property: {alpha_key}"),
+            );
+            // Effect shader fields.
+            let bc = floats(sf, "Base Color");
+            let fo = [
+                "Falloff Start Angle",
+                "Falloff Stop Angle",
+                "Falloff Start Opacity",
+                "Falloff Stop Opacity",
+            ]
+            .map(|k| floats(sf, k).first().copied().unwrap_or(f32::NAN));
+            let one = |k: &str| floats(sf, k).first().copied().unwrap_or(f32::NAN);
+            let hist = |c: &mut Counts, k: &str, x: String| {
+                bump(c, format!("effect shader fields: {k}: {x}"));
+            };
+            if bc.len() == 4 {
+                hist(&mut c, "base colour alpha", bucket(bc[3]));
+                hist(&mut c, "base colour rgb", rgb(&bc));
+            }
+            hist(&mut c, "base colour scale", bucket(one("Base Color Scale")));
+            hist(
+                &mut c,
+                "soft falloff depth",
+                bucket(one("Soft Falloff Depth")),
+            );
+            hist(
+                &mut c,
+                "lighting influence (byte)",
+                match word(sf, "Lighting Influence") {
+                    Some(255) => "255".into(),
+                    Some(0) => "0".into(),
+                    Some(x) => format!(
+                        "1 to 254 ({})",
+                        if x < 128 { "below 128" } else { "128 or more" }
+                    ),
+                    None => "absent".into(),
+                },
+            );
+            if falloff == 1 {
+                hist(
+                    &mut c,
+                    "falloff flag set: angles (start stop)",
+                    format!("{} {}", v(fo[0]), v(fo[1])),
+                );
+                hist(
+                    &mut c,
+                    "falloff flag set: opacities (start stop)",
+                    format!("{} {}", v(fo[2]), v(fo[3])),
+                );
+            }
+            hist(
+                &mut c,
+                "texture clamp mode",
+                format!("{}", word(sf, "Texture Clamp Mode").unwrap_or(999)),
+            );
+            hist(
+                &mut c,
+                "env map min lod / unused byte",
+                format!(
+                    "{} {}",
+                    word(sf, "Env Map Min LOD").unwrap_or(999),
+                    word(sf, "Unused Byte").unwrap_or(999)
+                ),
+            );
+            hist(
+                &mut c,
+                "environment map scale",
+                bucket(one("Environment Map Scale")),
+            );
+            for t in [
+                "Source Texture",
+                "Greyscale Texture",
+                "Environment Map Texture",
+                "Normal Texture",
+                "Environment Mask Texture",
+            ] {
+                hist(
+                    &mut c,
+                    &format!("{t} set"),
+                    format!("{}", bytes(sf, t).is_some_and(|p| !p.is_empty())),
+                );
+            }
+            let uvo = floats(sf, "UV Offset");
+            let uvs = floats(sf, "UV Scale");
+            hist(
+                &mut c,
+                "uv offset / scale",
+                format!(
+                    "offset {} scale {}",
+                    if uvo.iter().all(|x| *x == 0.) {
+                        "0 0"
+                    } else {
+                        "other"
+                    },
+                    if uvs.iter().all(|x| *x == 1.) {
+                        "1 1"
+                    } else {
+                        "other"
+                    }
+                ),
+            );
+            // The block read to its last byte?
+            let blk = &n.blocks[s];
+            hist(
+                &mut c,
+                "block read to the last byte",
+                format!("{}", blk.raw_tail.is_empty() && blk.diagnostics.is_empty()),
+            );
+            // Vertex colours and alpha.
+            let mesh = n.blocks[*shape].decoded.as_ref().and_then(|d| match d {
+                Data::Mesh(m) => Some(m),
+                _ => None,
+            });
+            let vertex_alpha_min = mesh.and_then(|m| m.vertices.as_ref()).map(|vs| {
+                vs.iter()
+                    .filter_map(|x| {
+                        x.color
+                            .map(|c| f32::from(c[3]) / 255.)
+                            .or(x.color_float.map(|c| c[3]))
+                    })
+                    .fold(1f32, f32::min)
+            });
+            let vkey = match mesh.and_then(|m| m.vertices.as_ref()) {
+                None => "no vertex data".to_string(),
+                Some(vs) => {
+                    let cols: Vec<[f32; 4]> = vs
+                        .iter()
+                        .filter_map(|x| {
+                            x.color
+                                .map(|c| c.map(|v| f32::from(v) / 255.))
+                                .or(x.color_float)
+                        })
+                        .collect();
+                    if cols.is_empty() {
+                        "no vertex colours".into()
+                    } else {
+                        let amin = cols.iter().map(|c| c[3]).fold(1f32, f32::min);
+                        let white = cols.iter().all(|c| c[0] >= 1. && c[1] >= 1. && c[2] >= 1.);
+                        format!(
+                            "vertex colours: rgb {}, alpha {}",
+                            if white { "all 1" } else { "vary" },
+                            if amin >= 1. {
+                                "all 1".to_string()
+                            } else {
+                                format!("min {:.1}", (amin * 10.).floor() / 10.)
+                            }
+                        )
+                    }
+                }
+            };
+            bump(
+                &mut c,
+                format!("effect shapes: vertex data x flags: {vkey}; vertex colours flag {vcol} vertex alpha flag {valpha}"),
+            );
+            // Material.
+            let name = string(&n, sf, "Name").unwrap_or(b"");
+            let lower = name.to_ascii_lowercase();
+            let mut tex_path: Option<Vec<u8>> = None;
+            let mut mat_key = "no material named".to_string();
+            let mut mat_read = None;
+            let mbytes;
+            if lower.ends_with(b".bgem") || lower.ends_with(b".bgsm") {
+                let resolved =
+                    paths::resolve(paths::Citation::NifMaterial, name, &b).or_else(|_| {
+                        paths::resolve_with(
+                            paths::Citation::NifMaterial,
+                            name,
+                            &vfs,
+                            fo4_scene::RuleLevel::Hypotheses,
+                            &b,
+                        )
+                        .map(|r| r.key)
+                    });
+                match resolved.ok().and_then(|p| vfs.read_path_bytes(&p, &b).ok()) {
+                    None => mat_key = "material missing".into(),
+                    Some(bytesm) => {
+                        mbytes = bytesm;
+                        match fo4_material::Material::read(&mbytes, "m", &m.limits, &b) {
+                            Err(_) => mat_key = "material unreadable".into(),
+                            Ok(mat) => {
+                                mat_key = mat.magic().to_string();
+                                mat_read = Some(mat);
+                            }
+                        }
+                    }
+                }
+            } else if let Some(t) = bytes(sf, "Source Texture").filter(|p| !p.is_empty()) {
+                tex_path = paths::resolve(paths::Citation::NifTexture, t, &b).ok();
+            }
+            bump(&mut c, format!("effect shapes: material: {mat_key}"));
+            if let Some(mat) = &mat_read {
+                let cm = &mat.common;
+                let ab = &cm.alpha_blend;
+                let mk = format!(
+                    "blend {} src {} dst {} test {} ref {}",
+                    ab.enabled,
+                    ab.source,
+                    ab.destination,
+                    cm.alpha_test.0,
+                    if cm.alpha_test.0 != 0 {
+                        cm.alpha_test_ref
+                    } else {
+                        0
+                    },
+                );
+                if let fo4_material::Kind::Bgem(e) = &mat.kind {
+                    detail.push(format!(
+                        "bgem rgb {:?} scale {} alpha {} falloff {} {:?} soft {} palette a/c {}/{} {mk}",
+                        e.base_color,
+                        e.base_color_scale,
+                        cm.alpha,
+                        e.falloff_enabled.0,
+                        [e.falloff_start_angle, e.falloff_stop_angle, e.falloff_start_opacity, e.falloff_stop_opacity],
+                        e.soft_enabled.0,
+                        e.grayscale_to_palette_alpha.0,
+                        cm.grayscale_to_palette_color.0
+                    ));
+                }
+                bump(
+                    &mut c,
+                    format!("effect shapes with material: material alpha: {mk}"),
+                );
+                bump(
+                    &mut c,
+                    format!("effect shapes with material: material alpha vs NIF alpha property: material {mk} | NIF {alpha_key}"),
+                );
+                let bf = |c: &mut Counts, k: &str, x: String| {
+                    bump(c, format!("effect material fields: {k}: {x}"));
+                };
+                bf(
+                    &mut c,
+                    "z write / z test",
+                    format!("{} {}", cm.z_buffer_write.0, cm.z_buffer_test.0),
+                );
+                bf(&mut c, "two sided", format!("{}", cm.two_sided.0));
+                bf(
+                    &mut c,
+                    "grayscale to palette colour",
+                    format!("{}", cm.grayscale_to_palette_color.0),
+                );
+                bf(&mut c, "refraction", format!("{}", cm.refraction.0));
+                bf(&mut c, "tile flags", format!("{}", cm.tile_flags));
+                if let fo4_material::Kind::Bgem(e) = &mat.kind {
+                    bf(
+                        &mut c,
+                        "flags (palette alpha, falloff, falloff colour, soft, effect lighting, blood)",
+                        format!(
+                            "{} {} {} {} {} {}",
+                            e.grayscale_to_palette_alpha.0,
+                            e.falloff_enabled.0,
+                            e.falloff_color_enabled.0,
+                            e.soft_enabled.0,
+                            e.effect_lighting_enabled.0,
+                            e.blood_enabled.0
+                        ),
+                    );
+                    bf(&mut c, "base colour rgb", rgb(&e.base_color));
+                    bf(&mut c, "base colour scale", bucket(e.base_color_scale));
+                    bf(&mut c, "alpha", bucket(cm.alpha));
+                    bf(
+                        &mut c,
+                        "falloff angles (start stop)",
+                        format!("{} {}", v(e.falloff_start_angle), v(e.falloff_stop_angle)),
+                    );
+                    bf(
+                        &mut c,
+                        "falloff opacities (start stop)",
+                        format!(
+                            "{} {}",
+                            v(e.falloff_start_opacity),
+                            v(e.falloff_stop_opacity)
+                        ),
+                    );
+                    bf(&mut c, "lighting influence", bucket(e.lighting_influence));
+                    bf(&mut c, "soft depth", bucket(e.soft_depth));
+                    bf(
+                        &mut c,
+                        "textures set (base, greyscale, envmap, normal, envmask)",
+                        format!(
+                            "{} {} {} {} {}",
+                            !e.base_texture.bytes().is_empty(),
+                            !e.grayscale_texture.bytes().is_empty(),
+                            !e.envmap_texture.bytes().is_empty(),
+                            !e.normal_texture.bytes().is_empty(),
+                            !e.envmap_mask_texture.bytes().is_empty()
+                        ),
+                    );
+                    bf(
+                        &mut c,
+                        "optional fields present (glass, envmap flag, glowmap, pbr specular, emittance)",
+                        format!(
+                            "{} {} {} {} {}",
+                            e.glass_enabled.map_or("-".into(), |x| x.0.to_string()),
+                            e.environment_mapping.map_or("-".into(), |x| x.0.to_string()),
+                            e.glowmap.map_or("-".into(), |x| x.0.to_string()),
+                            e.effect_pbr_specular.map_or("-".into(), |x| x.0.to_string()),
+                            e.emittance_color.is_some()
+                        ),
+                    );
+                    bf(&mut c, "version", format!("{}", mat.version));
+                    // NIF flags against the material's flags.
+                    bump(
+                        &mut c,
+                        format!(
+                            "effect shapes with BGEM: palette alpha NIF/BGEM {palette_alpha}/{} falloff NIF/BGEM {falloff}/{} soft NIF/BGEM {soft}/{}",
+                            e.grayscale_to_palette_alpha.0, e.falloff_enabled.0, e.soft_enabled.0
+                        ),
+                    );
+                    if !e.base_texture.bytes().is_empty() {
+                        tex_path = paths::resolve(
+                            paths::Citation::MaterialTexture,
+                            e.base_texture.bytes(),
+                            &b,
+                        )
+                        .ok();
+                    }
+                    model_facts.insert(format!(
+                        "bgem palette alpha {} palette colour {} falloff {} soft {} blend {} {}-{}",
+                        e.grayscale_to_palette_alpha.0,
+                        cm.grayscale_to_palette_color.0,
+                        e.falloff_enabled.0,
+                        e.soft_enabled.0,
+                        ab.enabled,
+                        ab.source,
+                        ab.destination
+                    ));
+                }
+            } else {
+                model_facts.insert(format!(
+                    "nif palette alpha {palette_alpha} palette colour {palette_color} falloff {falloff} soft {soft} {alpha_key}"
+                ));
+            }
+            // Drawn texture.
+            let tkey = match &tex_path {
+                None => "no texture".to_string(),
+                Some(p) => {
+                    let f = textures
+                        .entry(p.clone())
+                        .or_insert_with(|| tex_facts(&vfs, &m, p))
+                        .clone();
+                    match f {
+                        None => "texture missing or unreadable".into(),
+                        Some(t) => format!(
+                            "{} {}, {}",
+                            t.format,
+                            if t.grey { "grey" } else { "colour" },
+                            t.alpha
+                        ),
+                    }
+                }
+            };
+            bump(&mut c, format!("effect shapes: drawn texture: {tkey}"));
+            detail.push(format!(
+                "shape f1 {f1:#x} f2 {f2:#x} {alpha_key} bc {bc:?} scale {} falloff {fo:?} tex {tkey} {vkey}",
+                one("Base Color Scale")
+            ));
+            // Gates, with the material's fields where one is named.
+            let bgem = mat_read.as_ref().and_then(|mm| match &mm.kind {
+                fo4_material::Kind::Bgem(e) => Some((e, &mm.common)),
+                _ => None,
+            });
+            let (pal, fall, rgb_fall, env, colour, scale_v, alpha_v) = match bgem {
+                Some((e, cm)) => (
+                    e.grayscale_to_palette_alpha.0 != 0 || cm.grayscale_to_palette_color.0 != 0,
+                    e.falloff_enabled.0 != 0,
+                    e.falloff_color_enabled.0 != 0,
+                    cm.refraction.0 != 0
+                        || e.environment_mapping.is_some_and(|x| x.0 != 0)
+                        || cm.environment_mapping.is_some_and(|x| x.0 != 0)
+                        || e.glass_enabled.is_some_and(|x| x.0 != 0),
+                    e.base_color.to_vec(),
+                    e.base_color_scale,
+                    cm.alpha,
+                ),
+                None => (
+                    palette_alpha != 0 || palette_color != 0,
+                    falloff != 0,
+                    f1 >> 8 & 1 != 0,
+                    f1 & (1 << 7 | 1 << 15 | 1 << 16 | 1 << 2) != 0,
+                    bc.get(..3).map_or(Vec::new(), <[f32]>::to_vec),
+                    one("Base Color Scale"),
+                    bc.get(3).copied().unwrap_or(f32::NAN),
+                ),
+            };
+            if mat_read.is_none() && mat_key != "no material named" {
+                gates.insert("material missing or unreadable");
+            }
+            if pal {
+                gates.insert("palette");
+            }
+            if rgb_fall || env {
+                gates.insert("env map, refraction or colour falloff");
+            }
+            if fall {
+                gates.insert("falloff");
+            }
+            let vertex_alpha_max = mesh.and_then(|m| m.vertices.as_ref()).and_then(|vs| {
+                vs.iter()
+                    .filter_map(|x| {
+                        x.color
+                            .map(|c| f32::from(c[3]) / 255.)
+                            .or(x.color_float.map(|c| c[3]))
+                    })
+                    .reduce(f32::max)
+            });
+            if let Some(hi) = vertex_alpha_max {
+                bump(
+                    &mut c,
+                    format!(
+                        "effect shapes: largest vertex alpha x flags: {}; vertex colours flag {vcol} vertex alpha flag {valpha}",
+                        if hi == 0. {
+                            "0 (every vertex alpha 0)".to_string()
+                        } else if hi < 0.5 {
+                            "below 0.5".to_string()
+                        } else if hi < 1. {
+                            "0.5 to 1".to_string()
+                        } else {
+                            "1".to_string()
+                        }
+                    ),
+                );
+            }
+            if vcol == 1 && valpha == 0 && vertex_alpha_min.is_some_and(|a| a < 1.) {
+                gates.insert("vertex alpha without its flag");
+            }
+            if colour.iter().any(|x| x * scale_v > 1.) {
+                gates.insert("colour above 1");
+            }
+            let blending = match bgem {
+                Some((_, cm)) => cm.alpha_blend.enabled != 0,
+                None => af.is_some_and(|(w, _)| w & 1 == 1),
+            };
+            if !(0. ..=1.).contains(&alpha_v) && (blending || alpha_v < 0.) {
+                gates.insert("alpha outside 0 to 1");
+            }
+            if tkey == "texture missing or unreadable" {
+                gates.insert("texture missing");
+            }
+            let has_mat_alpha = mat_read
+                .as_ref()
+                .map_or(palette_alpha, |mat| match &mat.kind {
+                    fo4_material::Kind::Bgem(e) => u32::from(e.grayscale_to_palette_alpha.0),
+                    _ => palette_alpha,
+                });
+            bump(
+                &mut c,
+                format!(
+                    "effect shapes: drawn texture x palette alpha {has_mat_alpha}: {}",
+                    tkey.split(", ").nth(1).unwrap_or(&tkey)
+                ),
+            );
+            // Controllers on this shader.
+            for (ci, _, src) in controlled {
+                let cty = type_of(&n, *ci);
+                let Some(cf) = block_fields(&n, *ci) else {
+                    continue;
+                };
+                let color = cty == "BSEffectShaderPropertyColorController";
+                let var = word(cf, "Controlled Variable").unwrap_or(999);
+                let seq = seq_of.get(ci);
+                let src = seq.map_or(src.clone(), |s| s.0.clone());
+                let field = controlled_field(color, var);
+                bump(&mut c, format!("effect controllers: {field}: {src}"));
+                model_facts.insert(format!("drives {field} ({src})"));
+                let flags = word(cf, "Controller Flags").unwrap_or(0);
+                bump(
+                    &mut c,
+                    format!("effect controllers: flags 0x{flags:04x} ({src})"),
+                );
+                // The sequence's interpolator holds the keys of a
+                // sequence-run controller; its own is a blend interpolator.
+                let ip = seq.and_then(|s| s.4).or_else(|| link(cf, "Interpolator"));
+                let ipty = ip.map_or("none", |i| type_of(&n, i));
+                bump(&mut c, format!("effect controllers: interpolator {ipty}"));
+                let Some(ipf) = ip.and_then(|i| block_fields(&n, i)) else {
+                    continue;
+                };
+                let comps = if color { 3 } else { 1 };
+                let pose = if color {
+                    floats(ipf, "Value")
+                } else {
+                    floats(ipf, "Value")
+                        .into_iter()
+                        .chain(floats(ipf, "Pose Value"))
+                        .take(1)
+                        .collect()
+                };
+                let data = link(ipf, "Data").and_then(|d| block_fields(&n, d));
+                let k = data.and_then(|d| keys(d, comps));
+                let nifv = rest::effect_field(sf, color, var);
+                let bgemv = mat_read.as_ref().and_then(|mm| bgem_value(mm, color, var));
+                let stored = bgemv.clone().or(nifv.clone());
+                let Some((kind, ks)) = k else {
+                    bump(
+                        &mut c,
+                        format!(
+                            "effect controllers: {field}: no key data (pose {})",
+                            pose.iter().map(|x| v(*x)).collect::<Vec<_>>().join(" ")
+                        ),
+                    );
+                    continue;
+                };
+                bump(
+                    &mut c,
+                    format!(
+                        "effect controllers: key interpolation {kind}, keys {}",
+                        ks.len().min(10)
+                    ),
+                );
+                if ks.is_empty() {
+                    continue;
+                }
+                let first = &ks[0].1;
+                let comp0: Vec<f32> = ks.iter().map(|(_, x)| x[0]).collect();
+                let lo = comp0.iter().copied().fold(f32::MAX, f32::min);
+                let hi = comp0.iter().copied().fold(f32::MIN, f32::max);
+                let at_start = seq.and_then(|s| {
+                    ks.iter()
+                        .find(|(t, _)| (*t - s.1).abs() <= 1e-4)
+                        .map(|(_, x)| x.clone())
+                });
+                detail.push(format!(
+                    "ctl {field} ({src}) keys {} min {lo} max {hi} first {first:?} stored {stored:?}",
+                    ks.len()
+                ));
+                bump(
+                    &mut c,
+                    format!(
+                        "effect controller ranges: {field} ({src}): min {}, max {}, first key {}",
+                        bucket(lo),
+                        bucket(hi),
+                        bucket(first[0])
+                    ),
+                );
+                if let Some(st) = &stored {
+                    let rel = if close(st, first) {
+                        "stored = first key"
+                    } else if at_start.as_ref().is_some_and(|a| close(st, a)) {
+                        "stored = key at sequence start"
+                    } else if ks.iter().any(|(_, x)| close(st, x)) {
+                        "stored = another key"
+                    } else if st[0] >= lo - 1e-4 && st[0] <= hi + 1e-4 {
+                        "stored inside key range, equal to no key"
+                    } else {
+                        "stored outside key range"
+                    };
+                    bump(
+                        &mut c,
+                        format!(
+                            "effect controllers: {field} ({src}): {rel} (stored from {})",
+                            if bgemv.is_some() { "BGEM" } else { "NIF" }
+                        ),
+                    );
+                    if let (Some(nv), Some(bv)) = (&nifv, &bgemv) {
+                        bump(
+                            &mut c,
+                            format!(
+                                "effect controllers: {field}: NIF value {} BGEM value",
+                                if close(nv, bv) { "=" } else { "!=" }
+                            ),
+                        );
+                    }
+                    let always_same = comp0.iter().all(|x| (x - comp0[0]).abs() <= 1e-4);
+                    if always_same {
+                        bump(
+                            &mut c,
+                            format!("effect controllers: {field} ({src}): every key equal"),
+                        );
+                    }
+                }
+            }
+        }
+        if effect_shapes == 0 {
+            model_facts.insert("no effect shape".into());
+        }
+        // Class: the open tags left besides the effect first-key tag, else
+        // the effect gates that fail.
+        let others: Vec<&str> = tagset
+            .iter()
+            .copied()
+            .filter(|t| *t != rest::EFFECT_FIRST_KEY)
+            .collect();
+        let class = if !others.is_empty() {
+            format!("rest not settled: {}", others.join(" + "))
+        } else if effect_shapes == 0 {
+            "settled, no effect shape".to_string()
+        } else if gates.is_empty() {
+            "settled, every effect surface passes".to_string()
+        } else {
+            format!(
+                "settled, effect surfaces fail: {}",
+                gates.iter().copied().collect::<Vec<_>>().join(" + ")
+            )
+        };
+        let facts = model_facts.iter().cloned().collect::<Vec<_>>().join(" ; ");
+        let _ = writeln!(
+            detail_rows,
+            "{}\t{class}\t{facts}",
+            String::from_utf8_lossy(path)
+        );
+        let e = classes.entry(class.clone()).or_default();
+        e.placements += uses.placements;
+        e.area += uses.area;
+        e.omitted += uses.omitted;
+        e.omitted_area += uses.omitted_area;
+        bump(&mut class_models, class.clone());
+        let _ = writeln!(
+            rows,
+            "{}\t{class}\t{}\t{:.0}\t{}\t{:.0}\t{}",
+            String::from_utf8_lossy(path),
+            uses.placements,
+            uses.area,
+            uses.omitted,
+            uses.omitted_area,
+            detail.join(" | ")
+        );
+    }
+
+    let mut out = String::new();
+    let _ = writeln!(
+        out,
+        "# Effect census (`effect_census`): {files} NIF read, {failed} unreadable, {:.0} s",
+        started.elapsed().as_secs_f64()
+    );
+    let _ = writeln!(
+        out,
+        "# enabled placed REFR {}, area proxy {:.4e}; omitted (from bases.tsv) {} placements, area {:.4e}\n",
+        placed.len(),
+        total_area,
+        omitted_total.0,
+        omitted_total.1
+    );
+    for (k, n) in &c {
+        let _ = writeln!(out, "{n}\t{k}");
+    }
+    let _ = writeln!(out, "\n# Classes (open tags || facts): models, placements, area share of all placed, omitted placements, omitted area share of all omitted\n");
+    let mut cl: Vec<_> = classes.iter().collect();
+    cl.sort_by(|a, b| b.1.area.total_cmp(&a.1.area).then(a.0.cmp(b.0)));
+    for (k, u) in cl {
+        let _ = writeln!(
+            out,
+            "{}\t{}\t{:.3}%\t{}\t{:.3}%\t{k}",
+            class_models.get(k).copied().unwrap_or(0),
+            u.placements,
+            100. * u.area / total_area.max(1.),
+            u.omitted,
+            100. * u.omitted_area / omitted_total.1.max(1.)
+        );
+    }
+    std::fs::write(&args[1], out)?;
+    std::fs::write(format!("{}.models.tsv", args[1]), rows)?;
+    std::fs::write(format!("{}.facts.tsv", args[1]), detail_rows)?;
+    Ok(())
+}
+fn main() {
+    if let Err(e) = run() {
+        eprintln!("{e}");
+        std::process::exit(2);
+    }
+}
