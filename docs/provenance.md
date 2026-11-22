@@ -229,3 +229,31 @@ LVLM and LVLF (a chance, a count, flags) and of the template bits (one
 property each); none of them is used: lists whose LVLD or LVLM is not zero
 stay refused, LVLF is never interpreted, and no template bit is mapped to
 a property.
+
+The script interpreter (`fo4-vm`, [spec/vm.md](../spec/vm.md)) adds no
+format fact. Its structure (values, frames, instances with a current
+state, dispatch from the instance's script up its parents, properties
+backed by variables or functions, arrays and structs by handle) and the
+candidate meaning of every opcode were recognised from prior general
+knowledge of this kind of script engine; so were the role of the `::State`
+identifier, the event function names and their link to game actions
+(activation, triggers, loading), the timer natives and their link to the
+timer events, the native that returns the player, and the meaning of the
+natives that disable and enable a reference. Each enters only as a named
+pending rule in [spec/hypotheses.tsv](../spec/hypotheses.tsv), whose text
+says which check supports it; the checks (`vm_checks`: declared slot types,
+data flow of compiler temporaries under each destination reading, object
+guards, loop and array-loop shapes, execution of the functions that reach
+no native under the candidate and under exchanged readings) were run over
+the stored scripts of one installation and could have refuted them; where
+none could, the rule says so. Native functions are not implemented: the
+recording host logs every call and supplies one value (the player handle),
+and leaves every other result undetermined. Binding a reference's scripts
+uses the VMAD reader above; which scripts a placed reference runs, how
+property values reach variables and which object identity holds are
+pending rules of the same kind. No compiler, decompiler, disassembler,
+script virtual machine (including Champollion, Caprica, psc-tools and the
+Skymp Papyrus VM), engine reimplementation, script extender or its
+library, editor documentation, wiki page, script source or the game
+executable was opened or searched for at this step, and none was
+reproduced from memory.

@@ -1,0 +1,245 @@
+//! What a run creates and changes: object handles, script instances,
+//! arrays, structs, undetermined values and queued timers.
+use std::fmt::Write as _;
+
+pub type ObjId = usize;
+pub type InstId = usize;
+pub type ArrId = usize;
+pub type StructId = usize;
+pub type UnknownId = usize;
+
+/// A value while a script runs.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Val {
+    None,
+    Int(i32),
+    Float(f32),
+    Bool(bool),
+    Str(String),
+    Object(ObjId),
+    Array(ArrId),
+    Struct(StructId),
+    /// A value nothing determines (a native's result, or a conversion no
+    /// rule settles): it may be stored, passed and logged, and the run
+    /// blocks where it would steer control flow.
+    Unknown(UnknownId),
+}
+
+/// Why a value is undetermined, or why a run blocked.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Origin {
+    /// The result of a native function (`script.function`, lower case).
+    Native(String),
+    /// A conversion or comparison the named rule leaves open, with a short
+    /// description.
+    Rule(&'static str, String),
+    /// A scripted call or property on an object that carries no instance
+    /// of the type (lower-case type name).
+    NoInstance(String),
+}
+impl Origin {
+    pub fn text(&self) -> String {
+        match self {
+            Origin::Native(n) => format!("native {n}"),
+            Origin::Rule(r, d) => format!("rule {r}: {d}"),
+            Origin::NoInstance(t) => format!("no script instance of {t}"),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Object {
+    /// Printed in the effect log.
+    pub label: String,
+    /// Identity of a record (for example a FormID resolved through the load
+    /// order); two objects with different keys are different objects
+    /// (`vm_object_identity_v1`). `None` for opaque handles such as the
+    /// player's.
+    pub key: Option<String>,
+    /// Lower-case types the object is known to be (each with its parents).
+    pub types: Vec<String>,
+    /// Script instances attached to the object, in attachment order.
+    pub instances: Vec<InstId>,
+}
+
+#[derive(Debug, Clone)]
+pub struct VarSlot {
+    pub script: String,
+    pub name: String,
+    pub type_name: String,
+    pub value: Val,
+}
+
+#[derive(Debug, Clone)]
+pub struct Instance {
+    pub object: Option<ObjId>,
+    /// The attached (most derived) script, lower case.
+    pub script: String,
+    /// Current state, lower case (`pex_state_identifier_v1`).
+    pub state: String,
+    /// Variables of the script and of every parent.
+    pub vars: Vec<VarSlot>,
+}
+
+#[derive(Debug, Clone)]
+pub struct Array {
+    /// Lower-case element type.
+    pub elem: String,
+    pub items: Vec<Val>,
+}
+
+#[derive(Debug, Clone)]
+pub struct StructVal {
+    /// `script#struct`, lower case.
+    pub type_name: String,
+    /// (member, type, value).
+    pub members: Vec<(String, String, Val)>,
+}
+
+#[derive(Debug, Clone)]
+pub struct Unknown {
+    pub origin: Origin,
+}
+
+/// Which clock a timer counts on (`vm_timer_events_v1`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Clock {
+    Real,
+    GameTime,
+}
+
+#[derive(Debug, Clone)]
+pub struct Timer {
+    pub clock: Clock,
+    /// Due time on its clock; `None` when the interval was undetermined.
+    pub due: Option<f64>,
+    pub seq: u64,
+    pub instance: InstId,
+    pub id: Val,
+}
+
+#[derive(Debug, Default)]
+pub struct World {
+    pub objects: Vec<Object>,
+    pub instances: Vec<Instance>,
+    pub arrays: Vec<Array>,
+    pub structs: Vec<StructVal>,
+    pub unknowns: Vec<Unknown>,
+    pub timers: Vec<Timer>,
+    pub timer_seq: u64,
+    /// Time already elapsed on each clock by fired timers.
+    pub now: [f64; 2],
+    /// The player handle (`vm_host_player_handle_v1`), once created.
+    pub player: Option<ObjId>,
+}
+
+impl World {
+    pub fn object(
+        &mut self,
+        label: impl Into<String>,
+        key: Option<String>,
+        types: &[&str],
+    ) -> ObjId {
+        self.objects.push(Object {
+            label: label.into(),
+            key,
+            types: types.iter().map(|t| t.to_ascii_lowercase()).collect(),
+            instances: Vec::new(),
+        });
+        self.objects.len() - 1
+    }
+    /// The object with that key, created when absent.
+    pub fn keyed_object(&mut self, label: &str, key: &str, type_name: &str) -> ObjId {
+        let t = type_name.to_ascii_lowercase();
+        if let Some(i) = self
+            .objects
+            .iter()
+            .position(|o| o.key.as_deref() == Some(key))
+        {
+            if !self.objects[i].types.contains(&t) {
+                self.objects[i].types.push(t);
+            }
+            return i;
+        }
+        self.object(label, Some(key.to_string()), &[type_name])
+    }
+    /// The player handle: one opaque object, created on first use, known
+    /// to be of the given type (`vm_host_player_handle_v1`).
+    pub fn player(&mut self, type_name: &str) -> ObjId {
+        let o = match self.player {
+            Some(o) => o,
+            None => {
+                let o = self.object(crate::host::PLAYER_LABEL, None, &[]);
+                self.player = Some(o);
+                o
+            }
+        };
+        let t = type_name.to_ascii_lowercase();
+        if !self.objects[o].types.contains(&t) {
+            self.objects[o].types.push(t);
+        }
+        o
+    }
+    pub fn unknown(&mut self, origin: Origin) -> Val {
+        self.unknowns.push(Unknown { origin });
+        Val::Unknown(self.unknowns.len() - 1)
+    }
+    pub fn origin(&self, u: UnknownId) -> &Origin {
+        &self.unknowns[u].origin
+    }
+    pub fn array(&mut self, elem: &str, items: Vec<Val>) -> Val {
+        self.arrays.push(Array {
+            elem: elem.to_string(),
+            items,
+        });
+        Val::Array(self.arrays.len() - 1)
+    }
+    /// Text of a value for the effect log.
+    pub fn render(&self, v: &Val) -> String {
+        let mut s = String::new();
+        self.render_into(&mut s, v, 0);
+        s
+    }
+    fn render_into(&self, s: &mut String, v: &Val, depth: usize) {
+        let _ = match v {
+            Val::None => write!(s, "none"),
+            Val::Int(n) => write!(s, "{n}"),
+            Val::Float(f) => write!(s, "{f:?}"),
+            Val::Bool(b) => write!(s, "{b}"),
+            Val::Str(t) => write!(s, "{t:?}"),
+            Val::Object(o) => write!(s, "<{}>", self.objects[*o].label),
+            Val::Unknown(u) => write!(s, "?{u}({})", self.unknowns[*u].origin.text()),
+            Val::Array(a) => {
+                let a = &self.arrays[*a];
+                let _ = write!(s, "{}[", a.elem);
+                for (i, x) in a.items.iter().enumerate() {
+                    if i > 0 {
+                        s.push_str(", ");
+                    }
+                    if depth > 2 || i >= 16 {
+                        s.push_str("...");
+                        break;
+                    }
+                    self.render_into(s, x, depth + 1);
+                }
+                write!(s, "]")
+            }
+            Val::Struct(i) => {
+                let st = &self.structs[*i];
+                let _ = write!(s, "{}{{", st.type_name);
+                for (k, (n, _, x)) in st.members.iter().enumerate() {
+                    if k > 0 {
+                        s.push_str(", ");
+                    }
+                    let _ = write!(s, "{n}: ");
+                    if depth > 2 {
+                        s.push_str("...");
+                    } else {
+                        self.render_into(s, x, depth + 1);
+                    }
+                }
+                write!(s, "}}")
+            }
+        };
+    }
+}
