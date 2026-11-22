@@ -532,7 +532,7 @@ fn exact_depth_ties_resolve_by_list_order_in_every_run() {
 /// earlier comparisons; each term changes the frame where it applies.
 #[test]
 #[ignore = "needs a GPU: draws offscreen through Bevy"]
-fn cpu_and_gpu_frames_agree_on_falloff_palette_and_colour_clamp() {
+fn cpu_and_gpu_frames_agree_on_falloff_palette_colour_and_alpha_clamp() {
     use fo4_render::{Alpha, Draw, DrawList, Falloff, Mesh, Palette, Sidedness, Texture, Vertex};
     let quad = |h: f64, z: f64| -> Vec<Vertex> {
         [[-h, -h], [h, -h], [h, h], [-h, h]]
@@ -618,6 +618,19 @@ fn cpu_and_gpu_frames_agree_on_falloff_palette_and_colour_clamp() {
                         ..v
                     })
                     .collect(),
+                triangles: tri.clone(),
+            },
+            // Behind the two cards: a blended card with an opacity above 1.
+            Mesh {
+                vertex_colors: None,
+                normals: None,
+                vertices: quad(110., 20.)
+                    .into_iter()
+                    .map(|v| Vertex {
+                        position: [v.position[0], v.position[1] + 250., v.position[2]],
+                        ..v
+                    })
+                    .collect(),
                 triangles: tri,
             },
         ],
@@ -632,6 +645,11 @@ fn cpu_and_gpu_frames_agree_on_falloff_palette_and_colour_clamp() {
             texture(8, 4, &|x, y| {
                 let (u, v) = (x as f32 / 7., y as f32 / 3.);
                 [u, v, u * v, (u * v).sqrt()]
+            }),
+            // Alpha from 0.2 to 0.9 along U: times 2, above 1 from the
+            // middle on.
+            texture(8, 8, &|x, y| {
+                [0.9, 0.3 + 0.08 * y as f32, 0.2, 0.2 + 0.1 * x as f32]
             }),
         ],
         draws: Vec::new(),
@@ -654,6 +672,12 @@ fn cpu_and_gpu_frames_agree_on_falloff_palette_and_colour_clamp() {
         alpha: true,
     });
     list.draws.push(additive);
+    // An opacity above 1 with blending (`blend_alpha_clamped_before_blend_v1`)
+    // and a V offset (a material's driven field drawn under
+    // `effect_material_over_controller_v1`).
+    let mut strong = draw(4, 3, 4, alpha(1, 6, 7, 2.));
+    strong.uv_offset = [0., 0.25];
+    list.draws.push(strong);
     let camera = fo4_scene::camera::look_at(
         [0., -500., 450.],
         [0., 0., 0.],
@@ -712,10 +736,12 @@ fn cpu_and_gpu_frames_agree_on_falloff_palette_and_colour_clamp() {
         report.p95_abs
     );
     // Each term shows: without it the CPU frame differs there.
-    let strips: [fn(&mut DrawList); 3] = [
+    let strips: [fn(&mut DrawList); 5] = [
         |l: &mut DrawList| l.draws[1].falloff = None,
         |l: &mut DrawList| l.draws[2].palette = None,
         |l: &mut DrawList| l.meshes[2].vertex_colors = Some(vec![[1., 1., 1., 0.75]; 4]),
+        |l: &mut DrawList| l.draws[3].alpha.opacity = 1.,
+        |l: &mut DrawList| l.draws[3].uv_offset = [0.; 2],
     ];
     for strip in strips {
         let mut other = DrawList {

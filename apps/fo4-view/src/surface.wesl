@@ -125,6 +125,9 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     if params.skip_zero_alpha == 1u && color.a == 0.0 {
         discard;
     }
+    // The blend reads the alpha within 0..1 after the test saw the product
+    // (an opacity above 1; the 8-bit target would clamp it anyway).
+    color.a = clamp(color.a, 0.0, 1.0);
     @if(INSTANCE_TAG) {
         // Byte k of the tag in channel k: an RGBA8 unorm target stores the
         // tag's little-endian bytes, the layout of `Frame::instance_bytes`.
