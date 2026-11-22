@@ -535,3 +535,67 @@ its decoded-texture limit (`LimitExceeded`; one placement in the vault
 view, a limit of the reference renderer, not of the viewer's policy). The
 GPU viewer leaves the falloff draws out ([render.md](render.md),
 Falloff); its frames were not rendered for this step.
+
+## Palette and colour above 1
+
+Effect surfaces with a greyscale-to-palette lookup, and with a base colour
+times scale above 1, are drawn under seven pending rules; features are
+refused by name ([effect-surfaces.md](effect-surfaces.md), Palette and
+colour above 1). Every cell of the load order (3 shards of about 1,850 s
+beside other builds, 0.98 GB peak), against the census of the falloff
+step:
+
+| Outcome | Falloff | And palette |
+| --- | ---: | ---: |
+| drawn without hypotheses | 779,237 (22.35 % of the area) | 779,237 (22.35 %) |
+| drawn only under hypotheses | 600,643 (40.75 %) | 603,053 (67.51 %) |
+| hidden by `xesp_child_follows_parent_v1` | 8,432 | 8,432 |
+| omitted | 367,199 (35.12 %) | 364,789 (8.36 %) |
+
+2,410 placements move from omitted to drawn under hypotheses (omitted
+area from 35.12 % to 8.36 % of all); nothing drawn without hypotheses
+changes. The distant clouds (407 placements, 26.0 % of all area) account
+for most of the area. Drawn placements rely on
+`effect_palette_sampled_clamped_v1` and `effect_palette_v_from_alpha_v1`
+1,297 times, the alpha pair (`effect_palette_alpha_u_alpha_v1`,
+`effect_palette_alpha_replaces_alpha_v1`) 1,040, the colour pair
+(`effect_palette_colour_u_green_v1`,
+`effect_palette_colour_replaces_rgb_v1`) 889,
+`effect_colour_clamped_before_blend_v1` 1,766 and
+`nif_controller_falloff_angle_degrees_v1` 407 (the clouds, now drawn); the
+falloff rules 12,813 (10,845 before) and
+`effect_vertex_alpha_under_vertex_colors_v1` 12,887 (11,045 before).
+
+By the bases of the census before: of the placements refused as
+`colour-range` alone, 1,155 are drawn and 153 stay omitted for record
+fields or a swap without material; of `palette` alone 635 are drawn, 299
+now meet a material whose alpha differs from the NIF's under its
+controller (`UnsettledEffectMaterialField`, variable 5, a refusal that
+an earlier shape of the same models used to mask) and 9 a record field;
+all 458 `palette+colour-range` placements are drawn. The sole families
+`UnsupportedEffectSurface palette`, `colour-range` and
+`palette+colour-range` are gone; `feature` (452) is now
+`environment-map` (453 placements, 1.63 % of the omitted area; no
+refraction, glass or other feature is a placement's first refusal), and
+no placement is refused for `palette-texture` or `colour-negative`. The
+largest sole families left by area: swap scopes whose readings differ
+(13.23 % of the omitted area), `RenderSwapWithoutMaterial` (10.32 %),
+opacity 2.0 with blending (9.03 %), missing textures (8.11 %).
+
+Test views: lobby, vault, test cell, radius 1 and radius 2 have the same
+outcomes before and after (no palette surface and no colour above 1
+among their placements).
+
+**Frames** (the `render` example, CPU, 1280 x 720, against the build of
+the commit before): the lobby and vault frames and instance files are
+byte-identical under hypotheses and without (the clamp of every sample
+changes nothing at or below 1). A view of the distant clouds (the world's
+persistent cell, camera within the reference's 12,000-unit far plane),
+blank before, now shows a soft grey-white cloud body with bluish vertex
+tints and edges that thin out, not a saturated card; a view of a
+simulation interior shows blue additive light streaks and data streams
+over the cubes that were drawn before (colour above 1, clamped).
+Interior views of emergency light beams and lit ceiling lamps did not
+change: the CPU reference drops those placements at its decoded-texture
+limit (`LimitExceeded`, 96 MiB), a limit of the reference and not of the
+viewer's policy.
