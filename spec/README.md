@@ -50,7 +50,7 @@ Measurement datasets and photographs of the game are not distributed.
 | [static-record-keys.txt](static-record-keys.txt) | Synthetic test contract for the typed-record dispatch keys. |
 | [static-records.tsv](static-records.tsv) | Record/subrecord roles for the selected static-frame scope. |
 | [strings.md](strings.md) | Localized STRINGS, DLSTRINGS and ILSTRINGS layouts and VFS lookup. |
-| [vmad.md](vmad.md) | VMAD: the scripts attached to records and their property values, the TERM fragment block, and cross-checks against the `.pex` declarations. |
+| [vmad.md](vmad.md) | VMAD: the scripts attached to records and their property values, the TERM fragment block,, cross-checks against the `.pex` declarations, and the survey of scripts on doors, terminals and activators with the native functions their code reaches. |
 | [vmad-census.txt](vmad-census.txt) | Counts from the VMAD census (`vmad_census`). |
 | [unread.md](unread.md) | Accounting for uninterpreted asset families without claiming their semantics. |
 

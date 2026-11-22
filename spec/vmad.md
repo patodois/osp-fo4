@@ -83,3 +83,20 @@ parameter and no return value, for 882 of 893 fragments; the other 11 name
 a function the script does not declare. Which terminal entry an index
 selects is not read here **[open]**.
 
+## Survey
+
+`script_survey MANIFEST OUT_DIR CELL[:RADIUS]... | ALL` (an example of
+`fo4-unpack`) takes the placed references of the given cells, follows NAME
+to DOOR, TERM and ACTI bases, collects the scripts of the base VMAD, the
+reference VMAD and the TERM block, and follows every call that resolves
+(`fo4_pex::index`) from all functions of those scripts and of their parents
+up to the first script that declares a native function. It writes the
+names to a file that is not versioned; the counts are below.
+
+| Scope | Placements or bases | Scripted | Distinct scripts | Reached functions (scripts) | Native call sites | Distinct natives (called directly) | Unresolved calls |
+| --- | --- | --- | ---: | ---: | ---: | ---: | ---: |
+| The two test cells (one interior; one exterior with radius 1, 9 cells) | 14 DOOR, 2 TERM, 21 ACTI placed | 0 DOOR, 0 TERM, 10 ACTI | 6 | 62 (14) | 90 | 42 (28) | 0 |
+| Every winning DOOR, TERM and ACTI base | 442 DOOR, 1,069 TERM, 2,195 ACTI | 19, 301, 931 | 759 | 3,174 (859) | 7,988 | 351 (299) | 0 |
+
+These are static reaches of the stored code, not what runs: events,
+states and conditions decide that at run time.
