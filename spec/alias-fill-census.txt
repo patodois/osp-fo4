@@ -1,0 +1,116 @@
+# alias_fill_census: kinds and counts only (spec/vm.md, Alias fills from placed references). Sections: 1 reference and collection aliases of every winning quest by fill and what the existing readings give;
+# 2 aliases filled from a forced location by a ref type: placed references carrying the type, by how they are tied to the location, against the special reference list; 3 placed references carrying XLRT; 4 flag bits of the aliases the list does not resolve to one row.
+6	1 aliases by fill	collection alias	a display name only (ALDN): empty
+24	1 aliases by fill	collection alias	an alias of another quest (ALEQ): empty
+32	1 aliases by fill	collection alias	by conditions only (CTDA): empty
+176	1 aliases by fill	collection alias	created at run time (ALCO): empty
+140	1 aliases by fill	collection alias	from a location alias (ALFA) with a ref type, a forced location: no special reference of the type: empty
+17	1 aliases by fill	collection alias	from a location alias (ALFA) with a ref type, a forced location: one special reference of the type: filled
+264	1 aliases by fill	collection alias	from a location alias (ALFA) with a ref type, a forced location: several distinct references of the type: empty
+3	1 aliases by fill	collection alias	from a location alias (ALFA) with a ref type, the location an alias of another quest: empty
+51	1 aliases by fill	collection alias	from a location alias (ALFA) with a ref type, the location another alias's location: empty
+12	1 aliases by fill	collection alias	from a location alias (ALFA) with a ref type, the location by conditions only: empty
+3	1 aliases by fill	collection alias	from a location alias (ALFA) with a ref type, the location no fill value: empty
+54	1 aliases by fill	collection alias	from a location alias (ALFA) with a ref type, the location the story event's location: empty
+11	1 aliases by fill	collection alias	linked to another alias (ALNA): empty
+91	1 aliases by fill	collection alias	no fill value: empty
+271	1 aliases by fill	reference alias	a display name only (ALDN): empty
+1402	1 aliases by fill	reference alias	a forced reference (ALFR): filled
+4	1 aliases by fill	reference alias	a unique actor (ALUA), no placed actor: empty
+1994	1 aliases by fill	reference alias	a unique actor (ALUA), one placed actor: filled
+117	1 aliases by fill	reference alias	a unique actor (ALUA), the player's base: the player
+508	1 aliases by fill	reference alias	an alias of another quest (ALEQ): empty
+241	1 aliases by fill	reference alias	by conditions only (CTDA): empty
+1751	1 aliases by fill	reference alias	created at run time (ALCO): empty
+279	1 aliases by fill	reference alias	from a location alias (ALFA) with a ref type, a forced location: no special reference of the type: empty
+773	1 aliases by fill	reference alias	from a location alias (ALFA) with a ref type, a forced location: one special reference of the type: filled
+184	1 aliases by fill	reference alias	from a location alias (ALFA) with a ref type, a forced location: several distinct references of the type: empty
+46	1 aliases by fill	reference alias	from a location alias (ALFA) with a ref type, a forced location: several rows of the type, all naming one reference: empty (one reference under the distinct-rows reading)
+14	1 aliases by fill	reference alias	from a location alias (ALFA) with a ref type, the location an alias of another quest: empty
+513	1 aliases by fill	reference alias	from a location alias (ALFA) with a ref type, the location another alias's location: empty
+186	1 aliases by fill	reference alias	from a location alias (ALFA) with a ref type, the location by conditions only: empty
+9	1 aliases by fill	reference alias	from a location alias (ALFA) with a ref type, the location no fill value: empty
+302	1 aliases by fill	reference alias	from a location alias (ALFA) with a ref type, the location the story event's location: empty
+1214	1 aliases by fill	reference alias	from the story event (ALFE): empty
+3469	1 aliases by fill	reference alias	linked to another alias (ALNA): empty
+1155	1 aliases by fill	reference alias	no fill value: empty
+94	2 placed references carrying the type	no special reference of the type	their cell's XLCN is the location	none
+210	2 placed references carrying the type	no special reference of the type	their cell's XLCN is the location	one
+115	2 placed references carrying the type	no special reference of the type	their cell's XLCN is the location	several
+94	2 placed references carrying the type	no special reference of the type	their cell's location is the location or below it	none
+210	2 placed references carrying the type	no special reference of the type	their cell's location is the location or below it	one
+115	2 placed references carrying the type	no special reference of the type	their cell's location is the location or below it	several
+384	2 placed references carrying the type	no special reference of the type	their own XLCN is the location	none
+17	2 placed references carrying the type	no special reference of the type	their own XLCN is the location	one
+18	2 placed references carrying the type	no special reference of the type	their own XLCN is the location	several
+221	2 placed references carrying the type	one special reference of the type	their cell's XLCN is the location	none
+569	2 placed references carrying the type	one special reference of the type	their cell's XLCN is the location	one, the same reference as the list
+214	2 placed references carrying the type	one special reference of the type	their cell's location is the location or below it	none
+3	2 placed references carrying the type	one special reference of the type	their cell's location is the location or below it	one, another reference than the list
+567	2 placed references carrying the type	one special reference of the type	their cell's location is the location or below it	one, the same reference as the list
+6	2 placed references carrying the type	one special reference of the type	their cell's location is the location or below it	several
+789	2 placed references carrying the type	one special reference of the type	their own XLCN is the location	none
+1	2 placed references carrying the type	one special reference of the type	their own XLCN is the location	one, another reference than the list
+62	2 placed references carrying the type	several distinct references of the type	their cell's XLCN is the location	none
+2	2 placed references carrying the type	several distinct references of the type	their cell's XLCN is the location	one
+384	2 placed references carrying the type	several distinct references of the type	their cell's XLCN is the location	several
+62	2 placed references carrying the type	several distinct references of the type	their cell's location is the location or below it	none
+2	2 placed references carrying the type	several distinct references of the type	their cell's location is the location or below it	one
+384	2 placed references carrying the type	several distinct references of the type	their cell's location is the location or below it	several
+403	2 placed references carrying the type	several distinct references of the type	their own XLCN is the location	none
+5	2 placed references carrying the type	several distinct references of the type	their own XLCN is the location	one
+40	2 placed references carrying the type	several distinct references of the type	their own XLCN is the location	several
+9	2 placed references carrying the type	several rows of the type, all naming one reference	their cell's XLCN is the location	none
+37	2 placed references carrying the type	several rows of the type, all naming one reference	their cell's XLCN is the location	one, the same reference as the list
+9	2 placed references carrying the type	several rows of the type, all naming one reference	their cell's location is the location or below it	none
+37	2 placed references carrying the type	several rows of the type, all naming one reference	their cell's location is the location or below it	one, the same reference as the list
+1	2 placed references carrying the type	several rows of the type, all naming one reference	their own XLCN is the location	none
+45	2 placed references carrying the type	several rows of the type, all naming one reference	their own XLCN is the location	one, the same reference as the list
+82	3 XLRT subrecords by length	12 bytes
+12	3 XLRT subrecords by length	16 bytes
+2	3 XLRT subrecords by length	20 bytes
+8674	3 XLRT subrecords by length	4 bytes
+327	3 XLRT subrecords by length	8 bytes
+320	3 placed references carrying XLRT	ACHR	with their own XLCN
+2108	3 placed references carrying XLRT	ACHR	without their own XLCN
+12	3 placed references carrying XLRT	PHZD	without their own XLCN
+6657	3 placed references carrying XLRT	REFR	without their own XLCN
+34	3 placed references carrying XLRT and XLCN	ACHR	their cell has no location
+73	3 placed references carrying XLRT and XLCN	ACHR	their own XLCN is a parent of their cell's location
+6	3 placed references carrying XLRT and XLCN	ACHR	their own XLCN is another location than their cell's
+207	3 placed references carrying XLRT and XLCN	ACHR	their own XLCN is their cell's location
+2	4 flag bits of the aliases the list does not resolve to one reference	no special reference of the type	bit 0x1
+47	4 flag bits of the aliases the list does not resolve to one reference	no special reference of the type	bit 0x10
+24	4 flag bits of the aliases the list does not resolve to one reference	no special reference of the type	bit 0x1000
+1	4 flag bits of the aliases the list does not resolve to one reference	no special reference of the type	bit 0x100000
+95	4 flag bits of the aliases the list does not resolve to one reference	no special reference of the type	bit 0x2
+2	4 flag bits of the aliases the list does not resolve to one reference	no special reference of the type	bit 0x20
+39	4 flag bits of the aliases the list does not resolve to one reference	no special reference of the type	bit 0x200
+1	4 flag bits of the aliases the list does not resolve to one reference	no special reference of the type	bit 0x200000
+21	4 flag bits of the aliases the list does not resolve to one reference	no special reference of the type	bit 0x4
+4	4 flag bits of the aliases the list does not resolve to one reference	no special reference of the type	bit 0x400
+4	4 flag bits of the aliases the list does not resolve to one reference	no special reference of the type	bit 0x4000
+5	4 flag bits of the aliases the list does not resolve to one reference	no special reference of the type	bit 0x40000
+39	4 flag bits of the aliases the list does not resolve to one reference	no special reference of the type	bit 0x8
+135	4 flag bits of the aliases the list does not resolve to one reference	no special reference of the type	bit 0x80
+2	4 flag bits of the aliases the list does not resolve to one reference	no special reference of the type	bit 0x8000
+4	4 flag bits of the aliases the list does not resolve to one reference	no special reference of the type	bit 0x80000
+211	4 flag bits of the aliases the list does not resolve to one reference	no special reference of the type	no bit
+10	4 flag bits of the aliases the list does not resolve to one reference	several distinct references of the type	bit 0x1
+37	4 flag bits of the aliases the list does not resolve to one reference	several distinct references of the type	bit 0x10
+2	4 flag bits of the aliases the list does not resolve to one reference	several distinct references of the type	bit 0x100
+24	4 flag bits of the aliases the list does not resolve to one reference	several distinct references of the type	bit 0x1000
+2	4 flag bits of the aliases the list does not resolve to one reference	several distinct references of the type	bit 0x100000
+193	4 flag bits of the aliases the list does not resolve to one reference	several distinct references of the type	bit 0x2
+1	4 flag bits of the aliases the list does not resolve to one reference	several distinct references of the type	bit 0x20
+46	4 flag bits of the aliases the list does not resolve to one reference	several distinct references of the type	bit 0x200
+2	4 flag bits of the aliases the list does not resolve to one reference	several distinct references of the type	bit 0x200000
+1	4 flag bits of the aliases the list does not resolve to one reference	several distinct references of the type	bit 0x4
+1	4 flag bits of the aliases the list does not resolve to one reference	several distinct references of the type	bit 0x40
+9	4 flag bits of the aliases the list does not resolve to one reference	several distinct references of the type	bit 0x4000
+8	4 flag bits of the aliases the list does not resolve to one reference	several distinct references of the type	bit 0x40000
+70	4 flag bits of the aliases the list does not resolve to one reference	several distinct references of the type	bit 0x8
+259	4 flag bits of the aliases the list does not resolve to one reference	several distinct references of the type	bit 0x80
+93	4 flag bits of the aliases the list does not resolve to one reference	several distinct references of the type	bit 0x8000
+97	4 flag bits of the aliases the list does not resolve to one reference	several distinct references of the type	bit 0x80000
+134	4 flag bits of the aliases the list does not resolve to one reference	several distinct references of the type	no bit

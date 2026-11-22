@@ -666,3 +666,18 @@ load, the three cycle foldings, the cubic Hermite reading of quadratic
 keys with tangents taken per interval, and that a manager's sequences
 play only when something starts them. No NIF reader, renderer, editor, MIT
 reference or game executable was opened.
+The sit step (`fo4_vm::sit`, `fo4_vm::menu`, [spec/vm.md](../spec/vm.md),
+Alias fills from repeated and placed rows, Distance conditions, Activation
+of actors, Furniture use, Menus, The player's base object;
+[spec/alias-fill-census.txt](../spec/alias-fill-census.txt),
+[spec/sit-menu-census.txt](../spec/sit-menu-census.txt)) reads no new
+format: it counts quest aliases against the special reference lists and
+the `XLRT` and `XLCN` words of placed references and cells (read as
+FormIDs as the earlier steps read them), and the compiled scripts' furniture
+and menu handlers, natives and registrations, with the repository's
+readers. What function 1 measures, which id the player's reference has,
+what activating an actor or a furniture raises, what the furniture and
+menu events are, and what the player's base is were recognised from prior
+general knowledge and are pending rules. No editor, editor source or
+definition file, reader of another project, script source or game
+executable was opened.

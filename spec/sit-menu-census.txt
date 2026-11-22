@@ -1,0 +1,178 @@
+# sit_menu_census: kinds and counts only (spec/vm.md, Furniture use and Menus). Sections: 0 names read from the scripts; 1 furniture event handlers; 2 what they call; 3 the records attaching them;
+# 4 furniture natives and Activate over every script; 5 menu natives, handlers and registrations; 6 the same in the scripts the opening quest's family attaches.
+3	0 names read from the scripts	furniture events
+7	0 names read from the scripts	furniture natives
+3	0 names read from the scripts	menu events
+25	0 names read from the scripts	menu natives
+10282	0 scripts read
+6	1 furniture handlers with code	onexitfurniture
+19	1 furniture handlers with code	ongetup
+18	1 furniture handlers with code	onsit
+6	1 furniture handlers with code by parameter types	onexitfurniture	(objectreference)
+18	1 furniture handlers with code by parameter types	ongetup	(objectreference)
+1	1 furniture handlers with code by parameter types	ongetup	(objectreference, objectreference)
+18	1 furniture handlers with code by parameter types	onsit	(objectreference)
+2	1 furniture handlers with code by state	onexitfurniture	another state
+3	1 furniture handlers with code by state	onexitfurniture	the empty state
+1	1 furniture handlers with code by state	onexitfurniture	the script's auto state
+1	1 furniture handlers with code by state	ongetup	another state
+11	1 furniture handlers with code by state	ongetup	the empty state
+7	1 furniture handlers with code by state	ongetup	the script's auto state
+15	1 furniture handlers with code by state	onsit	the empty state
+3	1 furniture handlers with code by state	onsit	the script's auto state
+2	1 furniture handlers with code by type extended	onexitfurniture	actor
+1	1 furniture handlers with code by type extended	onexitfurniture	objectreference
+3	1 furniture handlers with code by type extended	onexitfurniture	referencealias
+4	1 furniture handlers with code by type extended	ongetup	activemagiceffect
+5	1 furniture handlers with code by type extended	ongetup	actor
+1	1 furniture handlers with code by type extended	ongetup	refcollectionalias
+9	1 furniture handlers with code by type extended	ongetup	referencealias
+3	1 furniture handlers with code by type extended	onsit	activemagiceffect
+15	1 furniture handlers with code by type extended	onsit	referencealias
+6	1 furniture scripts declaring a handler with code	onexitfurniture
+19	1 furniture scripts declaring a handler with code	ongetup
+18	1 furniture scripts declaring a handler with code	onsit
+9	2 calls in the furniture handlers by name	onexitfurniture	another call
+1	2 calls in the furniture handlers by name	onexitfurniture	blockactivation
+2	2 calls in the furniture handlers by name	onexitfurniture	getowningquest
+4	2 calls in the furniture handlers by name	onexitfurniture	getplayer
+1	2 calls in the furniture handlers by name	onexitfurniture	getreference
+2	2 calls in the furniture handlers by name	onexitfurniture	getstagedone
+2	2 calls in the furniture handlers by name	onexitfurniture	gotostate
+1	2 calls in the furniture handlers by name	onexitfurniture	playidle
+1	2 calls in the furniture handlers by name	onexitfurniture	registerforanimationevent
+1	2 calls in the furniture handlers by name	onexitfurniture	start
+1	2 calls in the furniture handlers by name	ongetup	activate
+65	2 calls in the furniture handlers by name	ongetup	another call
+2	2 calls in the furniture handlers by name	ongetup	evaluatepackage
+5	2 calls in the furniture handlers by name	ongetup	getactorref
+1	2 calls in the furniture handlers by name	ongetup	getowningquest
+4	2 calls in the furniture handlers by name	ongetup	getplayer
+5	2 calls in the furniture handlers by name	ongetup	getref
+3	2 calls in the furniture handlers by name	ongetup	getstagedone
+6	2 calls in the furniture handlers by name	ongetup	gotostate
+1	2 calls in the furniture handlers by name	ongetup	playidle
+5	2 calls in the furniture handlers by name	ongetup	setstage
+16	2 calls in the furniture handlers by name	onsit	another call
+1	2 calls in the furniture handlers by name	onsit	evaluatepackage
+3	2 calls in the furniture handlers by name	onsit	getactorref
+12	2 calls in the furniture handlers by name	onsit	getowningquest
+1	2 calls in the furniture handlers by name	onsit	getplayer
+7	2 calls in the furniture handlers by name	onsit	getref
+1	2 calls in the furniture handlers by name	onsit	getreference
+13	2 calls in the furniture handlers by name	onsit	getstagedone
+1	2 calls in the furniture handlers by name	onsit	gotostate
+1	2 calls in the furniture handlers by name	onsit	playidle
+9	2 calls in the furniture handlers by name	onsit	setstage
+1	2 calls in the furniture handlers by name	onsit	starttimer
+1	2 calls in the furniture handlers by name	onsit	stop
+5	2 furniture handlers making at least one call of the name	onexitfurniture	another call
+1	2 furniture handlers making at least one call of the name	onexitfurniture	blockactivation
+1	2 furniture handlers making at least one call of the name	onexitfurniture	getowningquest
+3	2 furniture handlers making at least one call of the name	onexitfurniture	getplayer
+1	2 furniture handlers making at least one call of the name	onexitfurniture	getreference
+1	2 furniture handlers making at least one call of the name	onexitfurniture	getstagedone
+1	2 furniture handlers making at least one call of the name	onexitfurniture	gotostate
+1	2 furniture handlers making at least one call of the name	onexitfurniture	playidle
+1	2 furniture handlers making at least one call of the name	onexitfurniture	registerforanimationevent
+1	2 furniture handlers making at least one call of the name	onexitfurniture	start
+1	2 furniture handlers making at least one call of the name	ongetup	activate
+15	2 furniture handlers making at least one call of the name	ongetup	another call
+1	2 furniture handlers making at least one call of the name	ongetup	evaluatepackage
+2	2 furniture handlers making at least one call of the name	ongetup	getactorref
+1	2 furniture handlers making at least one call of the name	ongetup	getowningquest
+3	2 furniture handlers making at least one call of the name	ongetup	getplayer
+3	2 furniture handlers making at least one call of the name	ongetup	getref
+1	2 furniture handlers making at least one call of the name	ongetup	getstagedone
+6	2 furniture handlers making at least one call of the name	ongetup	gotostate
+1	2 furniture handlers making at least one call of the name	ongetup	playidle
+4	2 furniture handlers making at least one call of the name	ongetup	setstage
+10	2 furniture handlers making at least one call of the name	onsit	another call
+1	2 furniture handlers making at least one call of the name	onsit	evaluatepackage
+2	2 furniture handlers making at least one call of the name	onsit	getactorref
+5	2 furniture handlers making at least one call of the name	onsit	getowningquest
+1	2 furniture handlers making at least one call of the name	onsit	getplayer
+7	2 furniture handlers making at least one call of the name	onsit	getref
+1	2 furniture handlers making at least one call of the name	onsit	getreference
+5	2 furniture handlers making at least one call of the name	onsit	getstagedone
+1	2 furniture handlers making at least one call of the name	onsit	gotostate
+1	2 furniture handlers making at least one call of the name	onsit	playidle
+8	2 furniture handlers making at least one call of the name	onsit	setstage
+1	2 furniture handlers making at least one call of the name	onsit	starttimer
+1	2 furniture handlers making at least one call of the name	onsit	stop
+1	3 attachments of a script with the handler, by record type	onexitfurniture	ACHR
+3	3 attachments of a script with the handler, by record type	onexitfurniture	ACTI
+1	3 attachments of a script with the handler, by record type	onexitfurniture	FURN
+4	3 attachments of a script with the handler, by record type	onexitfurniture	NPC_
+119	3 attachments of a script with the handler, by record type	ongetup	ACHR
+4	3 attachments of a script with the handler, by record type	ongetup	MGEF
+87	3 attachments of a script with the handler, by record type	ongetup	NPC_
+3	3 attachments of a script with the handler, by record type	onsit	MGEF
+3	3 attachments on quest aliases of a script with the handler, by the alias's fill	onexitfurniture	a created object
+1	3 attachments on quest aliases of a script with the handler, by the alias's fill	onexitfurniture	a forced reference
+1	3 attachments on quest aliases of a script with the handler, by the alias's fill	onexitfurniture	a location's reference
+2	3 attachments on quest aliases of a script with the handler, by the alias's fill	ongetup	a location's reference
+7	3 attachments on quest aliases of a script with the handler, by the alias's fill	ongetup	a unique actor
+1	3 attachments on quest aliases of a script with the handler, by the alias's fill	ongetup	another fill (conditions, a list or none)
+3	3 attachments on quest aliases of a script with the handler, by the alias's fill	onsit	a location's reference
+14	3 attachments on quest aliases of a script with the handler, by the alias's fill	onsit	a unique actor
+1	3 attachments on quest aliases of a script with the handler, by the alias's fill	onsit	another fill (conditions, a list or none)
+352	4/5 over every script: Activate call sites	default processing only: literal false
+38	4/5 over every script: Activate call sites	default processing only: literal true
+38	4/5 over every script: furniture native call sites	getsitstate
+8	4/5 over every script: furniture native call sites	isfurnitureinuse
+9	4/5 over every script: menu native call sites	isinmenumode
+1	4/5 over every script: menu native call sites	openworkshopsettlementmenu
+5	4/5 over every script: menu native call sites	openworkshopsettlementmenuex
+1	4/5 over every script: menu native call sites	precachechargen
+1	4/5 over every script: menu native call sites	precachechargenclear
+2	4/5 over every script: menu native call sites	registerforlooksmenuevent
+11	4/5 over every script: menu native call sites	registerformenuopencloseevent
+5	4/5 over every script: menu native call sites	setchargenhudmode
+14	4/5 over every script: menu native call sites	sethaschargenskeleton
+4	4/5 over every script: menu native call sites	setinchargen
+205	4/5 over every script: menu native call sites	showbartermenu
+8	4/5 over every script: menu native call sites	showracemenu
+9	4/5 over every script: menu native call sites	showspecialmenu
+1	4/5 over every script: menu native call sites	unregisterforlooksmenuevent
+10	4/5 over every script: menu native call sites	unregisterformenuopencloseevent
+18	4/5 over every script: menu native call sites	waitmenumode
+2	4/5 over every script: menu registrations by the name argument	registerforlooksmenuevent	another argument
+10	4/5 over every script: menu registrations by the name argument	registerformenuopencloseevent	a literal name
+1	4/5 over every script: menu registrations by the name argument	registerformenuopencloseevent	a variable or property
+1	4/5 over every script: menu registrations by the name argument	unregisterforlooksmenuevent	another argument
+9	4/5 over every script: menu registrations by the name argument	unregisterformenuopencloseevent	a literal name
+1	4/5 over every script: menu registrations by the name argument	unregisterformenuopencloseevent	a variable or property
+6	5 distinct literal names in menu registrations over every script
+2	5 menu handlers with code	onlooksmenuevent
+9	5 menu handlers with code	onmenuopencloseevent
+2	5 menu handlers with code by parameter types	onlooksmenuevent	(int)
+9	5 menu handlers with code by parameter types	onmenuopencloseevent	(string, bool)
+2	5 menu handlers with code by state	onlooksmenuevent	the empty state
+9	5 menu handlers with code by state	onmenuopencloseevent	the empty state
+1	5 menu handlers with code by type extended	onlooksmenuevent	objectreference
+1	5 menu handlers with code by type extended	onlooksmenuevent	quest
+2	5 menu handlers with code by type extended	onmenuopencloseevent	actor
+3	5 menu handlers with code by type extended	onmenuopencloseevent	objectreference
+3	5 menu handlers with code by type extended	onmenuopencloseevent	quest
+1	5 menu handlers with code by type extended	onmenuopencloseevent	referencealias
+2	5 menu scripts declaring a handler with code	onlooksmenuevent
+9	5 menu scripts declaring a handler with code	onmenuopencloseevent
+5	6 the family: Activate call sites	default processing only: literal false
+3	6 the family: Activate call sites	default processing only: literal true
+0	6 the family: distinct literal names in menu registrations
+1	6 the family: furniture native call sites	getsitstate
+1	6 the family: handlers with code	onexitfurniture
+2	6 the family: handlers with code	ongetup
+1	6 the family: handlers with code	onlooksmenuevent
+2	6 the family: handlers with code	onsit
+1	6 the family: menu native call sites	precachechargen
+1	6 the family: menu native call sites	precachechargenclear
+1	6 the family: menu native call sites	registerforlooksmenuevent
+2	6 the family: menu native call sites	setchargenhudmode
+6	6 the family: menu native call sites	sethaschargenskeleton
+4	6 the family: menu native call sites	setinchargen
+1	6 the family: menu native call sites	unregisterforlooksmenuevent
+1	6 the family: menu registrations by the name argument	registerforlooksmenuevent	another argument
+1	6 the family: menu registrations by the name argument	unregisterforlooksmenuevent	another argument
+35	6 the family: scripts and ancestors read
