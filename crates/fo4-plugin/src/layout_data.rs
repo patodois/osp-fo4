@@ -2531,12 +2531,71 @@ pub(super) const SCHEMAS: &[Schema] = &[
             sizes: &[4],
         }],
     },
+    // Hand-audited addition: measured on every placed reference of one
+    // installation by `world_census` (spec/record-layouts.md#refr-xprm).
     Schema {
         pair: "REFR.XPRM",
         sizes: &[32],
-        closed: false,
+        closed: true,
         open_field: "layout_not_established",
-        fields: &[],
+        fields: &[
+            FieldSpec {
+                label: "XPRM word 0 (bound)",
+                offset: 0,
+                width: 4,
+                kind: Kind::Float,
+                sizes: &[32],
+            },
+            FieldSpec {
+                label: "XPRM word 1 (bound)",
+                offset: 4,
+                width: 4,
+                kind: Kind::Float,
+                sizes: &[32],
+            },
+            FieldSpec {
+                label: "XPRM word 2 (bound)",
+                offset: 8,
+                width: 4,
+                kind: Kind::Float,
+                sizes: &[32],
+            },
+            FieldSpec {
+                label: "XPRM word 3 (colour)",
+                offset: 12,
+                width: 4,
+                kind: Kind::Float,
+                sizes: &[32],
+            },
+            FieldSpec {
+                label: "XPRM word 4 (colour)",
+                offset: 16,
+                width: 4,
+                kind: Kind::Float,
+                sizes: &[32],
+            },
+            FieldSpec {
+                label: "XPRM word 5 (colour)",
+                offset: 20,
+                width: 4,
+                kind: Kind::Float,
+                sizes: &[32],
+            },
+            FieldSpec {
+                label: "XPRM word 6",
+                offset: 24,
+                width: 4,
+                kind: Kind::Float,
+                sizes: &[32],
+            },
+            FieldSpec {
+                label: "XPRM word 7 (kind)",
+                offset: 28,
+                width: 4,
+                kind: Kind::U32,
+                sizes: &[32],
+            },
+        ],
     },
     Schema {
         pair: "REFR.XRDO",

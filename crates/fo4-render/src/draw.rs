@@ -162,8 +162,11 @@ enum Settled {
         replace: bool,
     },
     /// A scope maps the material another scope put in place: the order of
-    /// application decides, and no rule settles it.
-    Chained,
+    /// application decides. `material` follows the chain
+    /// (`mswp_chain_followed_v1`): from the path the model names, the
+    /// outermost scope not yet applied that maps the current material
+    /// applies, each scope once.
+    Chained { material: Vec<u8> },
 }
 /// [`Settled`] for `path` under swap scopes `swaps` (outermost first), with
 /// `one` applying a single swap: the outermost swap alone, compared with the
@@ -192,7 +195,25 @@ fn settle<S>(
         }
         for (j, s) in swaps.iter().enumerate() {
             if j != k && one(owned(t)?, s)? != *t {
-                return Ok(Settled::Chained);
+                let mut used = Vec::new();
+                b.reserve(&mut used, swaps.len(), "material swap", 0)?;
+                used.resize(swaps.len(), false);
+                let mut current = owned(path)?;
+                'follow: loop {
+                    for (i, s) in swaps.iter().enumerate() {
+                        if used[i] {
+                            continue;
+                        }
+                        let next = one(owned(&current)?, s)?;
+                        if next != current {
+                            used[i] = true;
+                            current = next;
+                            continue 'follow;
+                        }
+                    }
+                    break;
+                }
+                return Ok(Settled::Chained { material: current });
             }
         }
     }
@@ -361,6 +382,18 @@ struct Builder<'a, 's> {
     allow_swap_folder: bool,
     /// The instance relies on `mswp_empty_entry_inert_v1`.
     allow_swap_empty: bool,
+    /// Swap sources holding `*` are read as patterns
+    /// (`mswp_wildcard_pattern_v1` usable at the build's level).
+    allow_swap_pattern: bool,
+    /// The instance relies on `mswp_wildcard_missing_target_inert_v1`.
+    allow_swap_pattern_missing: bool,
+    /// Pattern rules [`Self::swap_one`] relied on since they were last
+    /// recorded ([`Self::pattern_rules`]): bit 0 a pattern gave the
+    /// material, bit 1 a literal source won over a pattern.
+    pattern_used: std::cell::Cell<u8>,
+    /// Meshes built with triangles left out for a texture coordinate that
+    /// is not finite (`nif_uv_nonfinite_triangles_left_out_v1`).
+    uv_left_out: std::collections::BTreeSet<usize>,
     /// Registered rules the current instance's draws relied on beyond its
     /// state's (`Identity::hypotheses` gains them).
     draw_rules: Vec<&'static str>,
@@ -777,6 +810,28 @@ impl Builder<'_, '_> {
         swaps: &[&Loaded<Mswp>],
         scratch: &Budget,
     ) -> Result<Vec<u8>> {
+        let material = self.swap_scoped(path, swaps, scratch);
+        self.pattern_rules()?;
+        material
+    }
+    /// Records the pattern rules [`Self::swap_one`] relied on.
+    fn pattern_rules(&mut self) -> Result<()> {
+        use fo4_scene::hypotheses as h;
+        let used = self.pattern_used.replace(0);
+        if used & 1 != 0 {
+            self.draw_rule(h::SWAP_PATTERN)?;
+        }
+        if used & 2 != 0 {
+            self.draw_rule(h::SWAP_PATTERN_LITERAL)?;
+        }
+        Ok(())
+    }
+    fn swap_scoped(
+        &mut self,
+        path: Vec<u8>,
+        swaps: &[&Loaded<Mswp>],
+        scratch: &Budget,
+    ) -> Result<Vec<u8>> {
         match swaps {
             [] => Ok(path),
             [one] => self.swap_one(path, one, scratch),
@@ -797,7 +852,12 @@ impl Builder<'_, '_> {
                         0,
                         "readings differ",
                     )),
-                    Settled::Chained => Err(error(
+                    Settled::Chained { material }
+                        if self.draw_rule(fo4_scene::hypotheses::SWAP_CHAIN)? =>
+                    {
+                        Ok(material)
+                    }
+                    Settled::Chained { .. } => Err(error(
                         "UnsupportedRenderSwapScopes",
                         "material swap",
                         0,
@@ -866,7 +926,7 @@ impl Builder<'_, '_> {
         let scratch = self.budget.child();
         let loader = self.loader;
         let (mut chained, mut outer_wins, mut replace) = (false, false, false);
-        'models: for id in &base.assets {
+        for id in &base.assets {
             let Some(node) = loader.assets.nodes.get(*id) else {
                 continue;
             };
@@ -893,13 +953,11 @@ impl Builder<'_, '_> {
                         outer_wins |= outer;
                         replace |= r;
                     }
-                    Settled::Chained => {
-                        chained = true;
-                        break 'models;
-                    }
+                    Settled::Chained { .. } => chained = true,
                 }
             }
         }
+        self.pattern_rules()?;
         let refused = |found: &str| {
             Err(error(
                 "UnsupportedRenderSwapScopes",
@@ -908,7 +966,7 @@ impl Builder<'_, '_> {
                 found,
             ))
         };
-        if chained {
+        if chained && !self.draw_rule(fo4_scene::hypotheses::SWAP_CHAIN)? {
             return refused("readings differ, chained");
         }
         if (outer_wins || replace) && !self.scope_rules(outer_wins, replace)? {
@@ -932,6 +990,7 @@ impl Builder<'_, '_> {
         for s in swaps {
             self.swap_one(Vec::new(), s, scratch)?;
         }
+        self.pattern_rules()?;
         if self.draw_rule(fo4_scene::hypotheses::SWAP_WITHOUT_MATERIAL)? {
             Ok(())
         } else {
@@ -941,6 +1000,10 @@ impl Builder<'_, '_> {
     fn swap_one(&self, path: Vec<u8>, swap: &Loaded<Mswp>, scratch: &Budget) -> Result<Vec<u8>> {
         let mut from = None;
         let mut selected = None;
+        // The target a pattern entry gives `path` (`mswp_wildcard_pattern_v1`).
+        let mut pattern: Option<Vec<u8>> = None;
+        // A literal source with an empty target matched `path`.
+        let mut literal_kept = false;
         for entry in &swap.data.entries {
             match (&entry.signature, &entry.value) {
                 (b"BNAM", SwapValue::Path(p)) => {
@@ -962,6 +1025,29 @@ impl Builder<'_, '_> {
                     })?;
                     if source.is_empty() {
                         // The pair of an empty source changes nothing.
+                    } else if self.allow_swap_pattern
+                        && fo4_scene::swap_pattern::is_pattern(&source)
+                    {
+                        // An empty target leaves the material as it is.
+                        let target = if p.is_empty() && self.allow_swap_empty {
+                            fo4_scene::swap_pattern::apply(&source, &path, &path, scratch)?
+                                .map(|_| path.clone())
+                        } else {
+                            let t =
+                                self.resolve_path(Citation::SwapMaterial, p.as_bytes(), scratch)?;
+                            fo4_scene::swap_pattern::apply(&source, &t, &path, scratch)?
+                        };
+                        if let Some(t) = target {
+                            if pattern.as_ref().is_some_and(|q| *q != t) {
+                                return Err(error(
+                                    "AmbiguousMaterialSwap",
+                                    "material swap",
+                                    0,
+                                    "two patterns, two targets",
+                                ));
+                            }
+                            pattern = Some(t);
+                        }
                     } else if p.is_empty() && self.allow_swap_empty {
                         // An empty target leaves its source as it is.
                         if source == path && selected.is_some() {
@@ -972,6 +1058,7 @@ impl Builder<'_, '_> {
                                 "duplicate source",
                             ));
                         }
+                        literal_kept |= source == path;
                     } else if source == path {
                         if selected.is_some() {
                             return Err(error(
@@ -1005,7 +1092,42 @@ impl Builder<'_, '_> {
         if from.is_some() {
             return Err(error("RenderSwapPair", "material swap", 0, "unpaired BNAM"));
         }
-        Ok(selected.unwrap_or(path))
+        let Some(target) = pattern else {
+            return Ok(selected.unwrap_or(path));
+        };
+        // A literal source of the same swap wins over a pattern
+        // (`mswp_wildcard_literal_wins_v1`).
+        if let Some(literal) = selected.or_else(|| literal_kept.then(|| path.clone())) {
+            if literal != target {
+                self.pattern_used.set(self.pattern_used.get() | 2);
+            }
+            return Ok(literal);
+        }
+        self.pattern_used.set(self.pattern_used.get() | 1);
+        if target == path {
+            return Ok(path);
+        }
+        // A target no archive holds changes nothing under
+        // `mswp_wildcard_missing_target_inert_v1` (the scene raised
+        // `MissingSwapPatternTarget` for it).
+        let absent = self.loader.assets.nodes.iter().any(|a| {
+            a.kind == AssetKind::Material
+                && a.path == target
+                && a.blockers.iter().any(|e| e.code == "MissingMaterial")
+        });
+        if absent {
+            return if self.allow_swap_pattern_missing {
+                Ok(path)
+            } else {
+                Err(error(
+                    "MissingSwapPatternTarget",
+                    "material swap",
+                    0,
+                    fo4_core::HexBytes(&target),
+                ))
+            };
+        }
+        Ok(target)
     }
     fn surface(
         &mut self,
@@ -1411,8 +1533,11 @@ impl Builder<'_, '_> {
             skinned.map(|s| s.0),
             surface.falloff.is_some(),
         );
-        if let Some(index) = self.meshes.get(&key) {
-            return Ok(*index);
+        if let Some(index) = self.meshes.get(&key).copied() {
+            if self.uv_left_out.contains(&index) {
+                self.draw_rule(fo4_scene::hypotheses::UV_NONFINITE)?;
+            }
+            return Ok(index);
         }
         if skinned.is_some_and(|(_, p)| m.vertices.as_ref().is_none_or(|v| v.len() != p.len())) {
             return Err(error("RenderSkinnedVertexCount", "mesh", 0, i));
@@ -1489,6 +1614,7 @@ impl Builder<'_, '_> {
             }
             mesh.vertex_colors = Some(colors);
         }
+        let mut bad_uv: Vec<bool> = Vec::new();
         for (k, v) in vertices.iter().enumerate() {
             let position = match skinned {
                 Some((_, p)) => p[k],
@@ -1504,19 +1630,48 @@ impl Builder<'_, '_> {
             } else {
                 [0.; 2]
             };
-            if position.iter().chain(&uv).any(|x| !x.is_finite()) {
+            if position.iter().any(|x| !x.is_finite()) {
                 return Err(error("RenderNonFiniteVertex", "mesh", 0, i));
             }
+            // A texture coordinate that is not a finite number: the
+            // triangles using the vertex are left out under
+            // `nif_uv_nonfinite_triangles_left_out_v1`, and the unused
+            // vertex keeps an internal zero coordinate.
+            let uv = if uv.iter().any(|x| !x.is_finite()) {
+                if !self.draw_rule(fo4_scene::hypotheses::UV_NONFINITE)? {
+                    return Err(error("RenderNonFiniteVertex", "mesh", 0, i));
+                }
+                if bad_uv.is_empty() {
+                    self.budget
+                        .reserve(&mut bad_uv, vertices.len(), "render vertices", 0)?;
+                    bad_uv.resize(vertices.len(), false);
+                }
+                bad_uv[k] = true;
+                [0.; 2]
+            } else {
+                uv
+            };
             mesh.vertices.push(Vertex { position, uv });
         }
         self.budget
             .reserve(&mut mesh.triangles, triangles.len(), "render indices", 0)?;
-        mesh.triangles.extend_from_slice(triangles);
+        if bad_uv.is_empty() {
+            mesh.triangles.extend_from_slice(triangles);
+        } else {
+            mesh.triangles.extend(
+                triangles
+                    .iter()
+                    .filter(|t| t.iter().all(|v| !bad_uv[*v as usize])),
+            );
+        }
         let index = self.output.list.meshes.len();
         append(&mut self.output.list.meshes, mesh, self.budget)?;
         self.budget
             .charge(path.len() as u64 + 256, "mesh identity", 0)?;
         self.meshes.insert(key, index);
+        if !bad_uv.is_empty() {
+            self.uv_left_out.insert(index);
+        }
         Ok(index)
     }
     #[allow(clippy::too_many_arguments)]
@@ -1841,6 +1996,8 @@ impl Builder<'_, '_> {
         self.allow_marker_suffix = rules.contains(&h::MARKER_SUFFIX);
         self.allow_swap_folder = rules.contains(&h::SWAP_FOLDER);
         self.allow_swap_empty = rules.contains(&h::SWAP_EMPTY_ENTRY);
+        self.allow_swap_pattern_missing = rules.contains(&h::SWAP_PATTERN_MISSING);
+        self.pattern_used.set(0);
         self.allow_editor_marker_subtrees = rules.contains(&h::NAMED_MARKER);
         self.allow_scol_parts = rules.contains(&h::SCOL);
     }
@@ -2285,6 +2442,13 @@ fn build_inner(
         allow_visibility_marker: false,
         allow_swap_folder: false,
         allow_swap_empty: false,
+        allow_swap_pattern: fo4_scene::hypotheses::usable_at(
+            fo4_scene::hypotheses::SWAP_PATTERN,
+            options.level,
+        ),
+        allow_swap_pattern_missing: false,
+        pattern_used: std::cell::Cell::new(0),
+        uv_left_out: std::collections::BTreeSet::new(),
         draw_rules: Vec::new(),
     };
     let scratch = b.child();
@@ -2433,6 +2597,11 @@ fn build_inner(
                 .state
                 .hypotheses()
                 .contains(&fo4_scene::hypotheses::SWAP_EMPTY_ENTRY);
+            builder.allow_swap_pattern_missing = i
+                .state
+                .hypotheses()
+                .contains(&fo4_scene::hypotheses::SWAP_PATTERN_MISSING);
+            builder.pattern_used.set(0);
             let world = Transform::euler(p, scale)?;
             let swaps: Vec<&Loaded<Mswp>> = i.material_swap.iter().collect();
             builder.base(base, world, index, &swaps, 0)?;
@@ -2602,11 +2771,22 @@ mod tests {
         // Three scopes, only the middle one maps it: replaced too.
         let middle: Vec<Pairs> = vec![vec![], vec![(b"a", b"m")], vec![]];
         assert_eq!(go(b"a", &middle), ruled(b"a", false, true));
-        // A scope maps what another put in place: refused.
+        // A scope maps what another put in place: the chain is followed,
+        // outermost first among the scopes that map the current material,
+        // each scope once.
+        let chained = |m: &[u8]| Settled::Chained {
+            material: m.to_vec(),
+        };
         let chain: Vec<Pairs> = vec![vec![(b"b", b"c")], vec![(b"a", b"b")]];
-        assert_eq!(go(b"a", &chain), Settled::Chained);
+        assert_eq!(go(b"a", &chain), chained(b"c"));
         let chain: Vec<Pairs> = vec![vec![(b"a", b"b")], vec![(b"b", b"c")]];
-        assert_eq!(go(b"a", &chain), Settled::Chained);
+        assert_eq!(go(b"a", &chain), chained(b"c"));
+        // Both map the path; the outer's target is mapped again by the inner.
+        let chain: Vec<Pairs> = vec![vec![(b"a", b"b")], vec![(b"b", b"c"), (b"a", b"d")]];
+        assert_eq!(go(b"a", &chain), chained(b"c"));
+        // Back to the path: each scope applies once.
+        let chain: Vec<Pairs> = vec![vec![(b"b", b"a")], vec![(b"a", b"b")]];
+        assert_eq!(go(b"a", &chain), chained(b"a"));
         // Nothing maps it.
         assert_eq!(go(b"z", &both), ruled(b"z", false, false));
     }

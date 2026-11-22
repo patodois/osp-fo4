@@ -106,12 +106,29 @@ pub const SWAP_SCOPES_AGREE: &str = "mswp_scopes_readings_agree_v1";
 /// one as a whole.
 pub const SWAP_OUTER_WINS: &str = "mswp_outer_scope_wins_v1";
 pub const SWAP_OUTER_REPLACES: &str = "mswp_outer_scope_replaces_v1";
+/// Swap scopes where one maps the material another put in place: the
+/// chain is followed, each scope once (`fo4_render::draw`).
+pub const SWAP_CHAIN: &str = "mswp_chain_followed_v1";
 /// A swap over a shape whose shader names no material leaves the shape as
 /// it is (`fo4_render::draw`).
 pub const SWAP_WITHOUT_MATERIAL: &str = "mswp_shape_without_material_untouched_v1";
 /// A swap entry with an empty BNAM or SNAM changes nothing (scene
 /// `MaterialSwapEmptyEntry`, `fo4_render::draw`).
 pub const SWAP_EMPTY_ENTRY: &str = "mswp_empty_entry_inert_v1";
+/// Swap sources holding `*` (`crate::swap_pattern`, `fo4_render::draw`,
+/// `spec/materials.md`, Swap patterns): read as patterns over the path the
+/// shader names; a literal source of the same swap wins over a pattern;
+/// a pattern whose target no archive holds changes nothing (scene
+/// `MissingSwapPatternTarget`).
+pub const SWAP_PATTERN: &str = "mswp_wildcard_pattern_v1";
+pub const SWAP_PATTERN_LITERAL: &str = "mswp_wildcard_literal_wins_v1";
+pub const SWAP_PATTERN_MISSING: &str = "mswp_wildcard_missing_target_inert_v1";
+/// A triangle using a vertex whose texture coordinate is not a finite
+/// number is left out of the draw (`fo4_render::draw`).
+pub const UV_NONFINITE: &str = "nif_uv_nonfinite_triangles_left_out_v1";
+/// A placed reference's primitive (`REFR.XPRM`) draws nothing and adds
+/// nothing to collision; the base draws as it would without it.
+pub const REFERENCE_PRIMITIVE: &str = "refr_xprm_primitive_not_drawn_v1";
 pub const REST_TEXTURE_FIRST_KEY: &str = "nif_controller_rest_texture_first_key_v1";
 pub const UV_SCALE_THEN_OFFSET: &str = "uv_scale_then_offset_v1";
 pub const MISSING_PARENT: &str = "bgsm_missing_parent_own_fields_v1";
@@ -181,6 +198,16 @@ pub fn status(name: &str) -> Option<Status> {
         }
     })
 }
+/// Whether a rule may be relied on at `level`: a supported rule above
+/// the facts level, a pending one only under hypotheses (the draw build's
+/// reading, `fo4_render::draw`).
+pub fn usable_at(rule: &str, level: crate::RuleLevel) -> bool {
+    match status(rule) {
+        Some(Status::Supported) => level != crate::RuleLevel::Facts,
+        Some(Status::Pending) => level == crate::RuleLevel::Hypotheses,
+        Some(Status::Refuted) | None => false,
+    }
+}
 pub fn covering(error: &Error) -> Option<&'static str> {
     if error.code == "UnverifiedVisibilityEditorMarker" {
         Some(VISIBILITY_MARKER)
@@ -227,6 +254,8 @@ pub fn covering(error: &Error) -> Option<&'static str> {
         Some(SWAP_FOLDER)
     } else if error.code == "MaterialSwapEmptyEntry" {
         Some(SWAP_EMPTY_ENTRY)
+    } else if error.code == "MissingSwapPatternTarget" {
+        Some(SWAP_PATTERN_MISSING)
     } else if error.code == "RuntimeEnableParent" {
         crate::enable::rule(&error.found)
     } else if error.code == "UnsupportedAnimationRuntime" {
@@ -258,6 +287,7 @@ fn record_field_rule(error: &Error) -> Option<&'static str> {
         }
         ("UninterpretedVisualSubrecord", "MISC", "CVPA") => Some(MISC_COMPONENTS),
         ("RuntimeRecordState", "REFR", "XRFG") => Some(REFERENCE_GROUP),
+        ("RuntimeRecordState", "REFR", "XPRM") => Some(REFERENCE_PRIMITIVE),
         _ => None,
     }
 }
@@ -536,7 +566,15 @@ mod tests {
             ("RuntimeRecordState", "REFR.XRFG", Some(REFERENCE_GROUP)),
             ("UninterpretedVisualSubrecord", "REFR.XRFG", None),
             ("RuntimeRecordState", "ACHR.XRFG", None),
+            ("RuntimeRecordState", "REFR.XPRM", Some(REFERENCE_PRIMITIVE)),
+            (
+                "UninterpretedVisualSubrecord",
+                "REFR.XPRM.layout_not_established",
+                None,
+            ),
+            ("RuntimeRecordState", "ACHR.XPRM", None),
             ("RuntimeMaterialSwapFilter", "FNAM", Some(SWAP_FOLDER)),
+            ("MissingSwapPatternTarget", "", Some(SWAP_PATTERN_MISSING)),
         ] {
             assert_eq!(covering(&e(code, found)), rule, "{code} {found}");
         }

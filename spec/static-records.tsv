@@ -408,7 +408,7 @@ REFR.XPLK	unknown	none		Semantica ou layout FO4 insuficientemente documentado; n
 REFR.XPOD	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
 REFR.XPPA	state	layout_verified_sizes_only	spec/record-layouts.md#refr-xppa	Label documents gameplay, condition, inventory, activation or animation state.	-
 REFR.XPRD	state	layout_verified_sizes_only	spec/record-layouts.md#refr-xprd	Label documents gameplay, condition, inventory, activation or animation state.	-
-REFR.XPRM	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
+REFR.XPRM	state	layout_verified_sizes_only	spec/record-layouts.md#refr-xprm	Primitive volume of a placed reference (bound, colour and kind words, measured by world_census); what it shows in play is the pending rule refr_xprm_primitive_not_drawn_v1.	-
 REFR.XRDO	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
 REFR.XRDS	unknown	none		Semantica ou layout FO4 insuficientemente documentado; nao inferir pelo nome.	-
 REFR.XRFG	state	layout_verified_sizes_only	spec/record-layouts.md#refr-xrfg	Label documents gameplay, condition, inventory, activation or animation state.	-

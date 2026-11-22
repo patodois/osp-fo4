@@ -95,6 +95,9 @@ codes!(
     MissingMaterialSwap,
     RuntimeMaterialSwapFilter,
     MaterialSwapEmptyEntry,
+    MissingSwapPatternTarget,
+    UnsupportedSwapPattern,
+    AmbiguousMaterialSwap,
     // Paths.
     HypothesisAssetDataPrefixStrip,
     HypothesisAssetDataRelativeStrip,
@@ -192,6 +195,9 @@ impl Code {
             | Self::MissingMaterialSwap
             | Self::RuntimeMaterialSwapFilter
             | Self::MaterialSwapEmptyEntry
+            | Self::MissingSwapPatternTarget
+            | Self::UnsupportedSwapPattern
+            | Self::AmbiguousMaterialSwap
             | Self::MissingMaterial
             | Self::MissingMaterialEmbeddedShader
             | Self::MissingMaterialParent

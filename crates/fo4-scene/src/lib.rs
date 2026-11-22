@@ -15,6 +15,7 @@ pub mod model_policy;
 pub mod paths;
 pub mod readiness;
 pub mod rest;
+pub mod swap_pattern;
 pub mod terrain;
 pub mod transform;
 pub use assets::{
@@ -466,6 +467,13 @@ impl<'a> Loader<'a> {
         }
         if let Some(swap) = &material_swap {
             self.swap_assets(swap, &mut roots, &mut blockers, b)?;
+        }
+        // Swap sources holding `*` are read as patterns only where the
+        // rule may be relied on at the loader's level.
+        if hypotheses::usable_at(hypotheses::SWAP_PATTERN, self.path_policy) {
+            if let Some(base) = &base {
+                self.pattern_assets(material_swap.as_ref(), base, &mut roots, &mut blockers, b)?;
+            }
         }
         mark(&mut swaps, at..blockers.len(), src, b)?;
         let mut origins = Vec::new();
@@ -954,6 +962,131 @@ impl<'a> Loader<'a> {
                 ),
                 b,
             )?;
+        }
+        Ok(())
+    }
+    /// The targets that swap patterns give the materials the models under
+    /// each swap cite (`swap_pattern`, `mswp_wildcard_pattern_v1`): each
+    /// one an archive holds joins `roots`; each one none holds raises
+    /// `MissingSwapPatternTarget` (`mswp_wildcard_missing_target_inert_v1`)
+    /// and is kept out of the instance's assets. A material a literal source
+    /// of the same swap maps is left to that entry
+    /// (`mswp_wildcard_literal_wins_v1`).
+    fn pattern_assets(
+        &mut self,
+        reference: Option<&Loaded<Mswp>>,
+        base: &Base,
+        roots: &mut Vec<usize>,
+        blockers: &mut Vec<Error>,
+        b: &Budget,
+    ) -> Result<()> {
+        fn has_pattern(s: &Loaded<Mswp>) -> bool {
+            s.data.entries.iter().any(|e| {
+                e.signature == *b"BNAM" && matches!(&e.value, SwapValue::Path(p) if p.contains('*'))
+            })
+        }
+        fn scopes<'a>(
+            v: &'a Base,
+            out: &mut Vec<(&'a Loaded<Mswp>, &'a Base)>,
+            b: &Budget,
+        ) -> Result<()> {
+            if let Some(s) = v.material_swap.as_ref().filter(|s| has_pattern(s)) {
+                b.reserve(out, 1, &v.record.source.file, v.record.source.offset)?;
+                out.push((s, v));
+            }
+            for p in &v.parts {
+                if let Some(r) = &p.resolved {
+                    scopes(r, out, b)?;
+                }
+            }
+            Ok(())
+        }
+        let mut list = Vec::new();
+        if let Some(r) = reference.filter(|r| has_pattern(r)) {
+            b.reserve(&mut list, 1, &r.record.source.file, r.record.source.offset)?;
+            list.push((r, base));
+        }
+        scopes(base, &mut list, b)?;
+        for (swap, under) in list {
+            let work = b.child();
+            let src = &swap.record.source;
+            let mut models = Vec::new();
+            collect_base_assets(under, &mut models, &work)?;
+            let closure = self.assets.closure(&models, &work)?;
+            let mut materials: Vec<Vec<u8>> = Vec::new();
+            for i in &closure {
+                let node = &self.assets.nodes[*i];
+                if node.kind != AssetKind::Model {
+                    continue;
+                }
+                for (d, c) in node.dependencies.iter().zip(&node.dependency_citations) {
+                    let path = &self.assets.nodes[*d].path;
+                    if c.class == Citation::NifMaterial && !materials.contains(path) {
+                        work.reserve(&mut materials, 1, &src.file, src.offset)?;
+                        materials.push(path.clone());
+                    }
+                }
+            }
+            let pairs = missing::swap_pairs(&self.assets, swap, &work)?;
+            // Literal sources, an empty target's included.
+            let mut literal: Vec<Vec<u8>> = Vec::new();
+            for e in &swap.data.entries {
+                if let (b"BNAM", SwapValue::Path(p)) = (&e.signature, &e.value) {
+                    if let Ok(r) =
+                        self.assets
+                            .resolve_path(Citation::SwapMaterial, p.as_bytes(), &work)
+                    {
+                        if !swap_pattern::is_pattern(&r.key) {
+                            work.reserve(&mut literal, 1, &src.file, src.offset)?;
+                            literal.push(r.key);
+                        }
+                    }
+                }
+            }
+            for m in &materials {
+                if literal.contains(m) {
+                    continue;
+                }
+                for (f, t) in &pairs {
+                    if !swap_pattern::is_pattern(f) {
+                        continue;
+                    }
+                    let target = match swap_pattern::apply(f, t, m, &work) {
+                        Ok(Some(t)) => t,
+                        Ok(None) => continue,
+                        Err(e)
+                            if matches!(e.code.as_str(), "AllocationFailed" | "LimitExceeded") =>
+                        {
+                            return Err(e)
+                        }
+                        Err(mut e) => {
+                            e.source = Box::new(src.clone());
+                            push_error(blockers, e, b)?;
+                            continue;
+                        }
+                    };
+                    let id = self.assets.load(AssetKind::Material, &target, &work)?;
+                    let absent = self.assets.nodes[id]
+                        .blockers
+                        .iter()
+                        .any(|e| e.code == "MissingMaterial");
+                    if absent {
+                        push_error(
+                            blockers,
+                            error(
+                                "MissingSwapPatternTarget",
+                                src,
+                                "a target file for the pattern",
+                                &fo4_core::HexBytes(&target).to_string(),
+                            ),
+                            b,
+                        )?;
+                    } else if !roots.contains(&id) {
+                        b.reserve(roots, 1, &src.file, src.offset)?;
+                        roots.push(id);
+                    }
+                }
+            }
         }
         Ok(())
     }

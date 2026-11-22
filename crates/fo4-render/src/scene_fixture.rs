@@ -1752,3 +1752,156 @@ fn a_blended_lighting_surface_takes_its_vertex_alpha_only_under_its_rule() {
         assert!(out.list.meshes.iter().all(|m| m.vertex_colors.is_none()));
     }
 }
+
+/// A swap source holding `*` matches a material the model names only under
+/// `mswp_wildcard_pattern_v1`; a target no archive holds changes nothing
+/// under `mswp_wildcard_missing_target_inert_v1` (the scene raises
+/// `MissingSwapPatternTarget`, and only where the pattern rule may be
+/// relied on); a literal source of the same swap wins under
+/// `mswp_wildcard_literal_wins_v1`.
+#[test]
+fn swap_patterns_match_names_only_under_their_rules() {
+    use fo4_scene::hypotheses::{
+        SWAP_EMPTY_ENTRY, SWAP_PATTERN, SWAP_PATTERN_LITERAL, SWAP_PATTERN_MISSING,
+    };
+    let options = |level| BuildOptions {
+        max_texture_dimension: 16,
+        max_texture_bytes: 1 << 20,
+        level,
+        blocks: None,
+    };
+    let run = |swap: &[u8], policy: RuleLevel| {
+        let part = nif_named(
+            b"textures/a.dds",
+            None,
+            b"PlainLabel",
+            b"materials/a/rock01.bgsm",
+        );
+        let records = rec(b"MSWP", 0x820, 0, swap);
+        let (temp, m) = fixture_records(
+            "render-swap-pattern",
+            &dds(),
+            part,
+            0x801,
+            &sub(b"MODS", &0x820u32.to_le_bytes()),
+            &records,
+        );
+        let b = Budget::new(32 << 20);
+        let store = fo4_plugin::typed::Store::open(&m, &b).unwrap();
+        let vfs = fo4_vfs::Vfs::mount(&m, &b).unwrap();
+        let mut loader = Loader::new(&store, &vfs, "english", policy, &b);
+        let scene = loader.by_editor_id("SyntheticScolCell", &b).unwrap();
+        let codes: Vec<String> = scene.instances[0]
+            .blockers
+            .iter()
+            .map(|e| e.code.clone())
+            .collect();
+        let state = scene.instances[0].state.hypotheses().to_vec();
+        let out = build(&scene, &loader, &m.limits, options(policy), &b).unwrap();
+        drop(temp);
+        (codes, state, out)
+    };
+    let mut pattern = sub(b"BNAM", b"a\\Rock*.bgsm\0");
+    pattern.extend(sub(b"SNAM", b"a\\cliff*.bgsm\0"));
+    // Under hypotheses: the pattern matches, its target (`cliff01`) is
+    // absent, and the shape keeps the material it names.
+    let (codes, state, out) = run(&pattern, RuleLevel::Hypotheses);
+    assert!(
+        codes.iter().any(|c| c == "MissingSwapPatternTarget"),
+        "{codes:?}"
+    );
+    assert!(state.contains(&SWAP_PATTERN_MISSING));
+    assert!(out.omitted.is_empty(), "{:?}", out.omitted);
+    assert!(out.instances[0].hypotheses.contains(&SWAP_PATTERN));
+    // At the facts level the scene loads no pattern target and the
+    // pattern is never read.
+    let (codes, state, _) = run(&pattern, RuleLevel::Facts);
+    assert!(!codes.iter().any(|c| c == "MissingSwapPatternTarget"));
+    assert!(!state.contains(&SWAP_PATTERN_MISSING));
+    // A pattern that matches nothing is not relied on.
+    let mut other = sub(b"BNAM", b"a\\stone*.bgsm\0");
+    other.extend(sub(b"SNAM", b"a\\cliff*.bgsm\0"));
+    let (codes, _, out) = run(&other, RuleLevel::Hypotheses);
+    assert!(!codes.iter().any(|c| c == "MissingSwapPatternTarget"));
+    assert!(out.omitted.is_empty(), "{:?}", out.omitted);
+    assert!(!out.instances[0].hypotheses.contains(&SWAP_PATTERN));
+    // A literal source of the same swap (here with an empty target, which
+    // leaves the material as named) wins over the pattern.
+    let mut both = sub(b"BNAM", b"a\\rock01.bgsm\0");
+    both.extend(sub(b"SNAM", b"\0"));
+    both.extend(pattern.clone());
+    let (codes, _, out) = run(&both, RuleLevel::Hypotheses);
+    assert!(!codes.iter().any(|c| c == "MissingSwapPatternTarget"));
+    assert!(out.omitted.is_empty(), "{:?}", out.omitted);
+    let rules = &out.instances[0].hypotheses;
+    assert!(rules.contains(&SWAP_PATTERN_LITERAL), "{rules:?}");
+    assert!(rules.contains(&SWAP_EMPTY_ENTRY));
+    // A target with another count of `*` is refused by the scene.
+    let mut odd = sub(b"BNAM", b"a\\rock*.bgsm\0");
+    odd.extend(sub(b"SNAM", b"a\\*cliff*.bgsm\0"));
+    let (codes, _, out) = run(&odd, RuleLevel::Hypotheses);
+    assert!(
+        codes.iter().any(|c| c == "UnsupportedSwapPattern"),
+        "{codes:?}"
+    );
+    assert!(out.list.draws.is_empty());
+}
+
+/// A shape whose vertex holds a texture coordinate that is not finite:
+/// refused as before without `nif_uv_nonfinite_triangles_left_out_v1`,
+/// drawn without the triangles that use the vertex under it.
+#[test]
+fn triangles_on_a_non_finite_texture_coordinate_are_left_out_only_under_their_rule() {
+    use fo4_scene::hypotheses::UV_NONFINITE;
+    let options = |level| BuildOptions {
+        max_texture_dimension: 16,
+        max_texture_bytes: 1 << 20,
+        level,
+        blocks: None,
+    };
+    let mut part = nif_with_helper(b"textures/a.dds", None, b"PlainLabel");
+    // Vertex 0's position (1, 0, 0) then its first UV half: a NaN.
+    let first: Vec<u8> = [0x3c00u16, 0, 0, 0, 0, 0]
+        .iter()
+        .flat_map(|v| v.to_le_bytes())
+        .collect();
+    let mut at = 0;
+    let mut patched = 0;
+    while let Some(k) = part[at..]
+        .windows(first.len())
+        .position(|w| w == first.as_slice())
+    {
+        let k = at + k;
+        part[k + 8..k + 10].copy_from_slice(&0x7e00u16.to_le_bytes());
+        patched += 1;
+        at = k + first.len();
+    }
+    assert!(patched > 0);
+    let (_temp, m) = fixture_placing("render-uv-nan", &dds(), part, 0x801);
+    let b = Budget::new(32 << 20);
+    let store = fo4_plugin::typed::Store::open(&m, &b).unwrap();
+    let vfs = fo4_vfs::Vfs::mount(&m, &b).unwrap();
+    let mut loader = Loader::new(&store, &vfs, "english", RuleLevel::Facts, &b);
+    let scene = loader.by_editor_id("SyntheticScolCell", &b).unwrap();
+    let out = build(
+        &scene,
+        &loader,
+        &m.limits,
+        options(RuleLevel::Hypotheses),
+        &b,
+    )
+    .unwrap();
+    assert!(out.omitted.is_empty(), "{:?}", out.omitted);
+    assert!(out.instances[0].hypotheses.contains(&UV_NONFINITE));
+    let mesh = &out.list.meshes[out.list.draws[0].mesh];
+    assert!(mesh.triangles.is_empty());
+    assert!(mesh
+        .vertices
+        .iter()
+        .all(|v| v.uv.iter().all(|x| x.is_finite())));
+    let measured = build(&scene, &loader, &m.limits, options(RuleLevel::Measured), &b).unwrap();
+    // Pending rules are not used at the measured level (the fixture's UV
+    // scale 0 is refused there too), and the mesh is never built.
+    assert!(measured.list.draws.is_empty());
+    assert!(measured.list.meshes.is_empty());
+}
