@@ -599,3 +599,58 @@ Interior views of emergency light beams and lit ceiling lamps did not
 change: the CPU reference drops those placements at its decoded-texture
 limit (`LimitExceeded`, 96 MiB), a limit of the reference and not of the
 viewer's policy.
+
+## Environment map, driven material fields and blended opacity above 1
+
+Effect surfaces with an environment map are drawn without its term, a
+field a controller drives is drawn with the material's value where the
+material and the NIF disagree, and a blended surface with an opacity
+above 1 is blended with its alpha clamped to 1, each under pending rules
+([effect-surfaces.md](effect-surfaces.md), Environment map and driven
+material fields; [render.md](render.md), Environment map, driven material
+fields and opacity above 1 with blending). Every cell of the load order
+(3 shards of about 1,770 s, 1.05 GB peak), against the census of the
+palette step:
+
+| Outcome | Palette | And this step |
+| --- | ---: | ---: |
+| drawn without hypotheses | 779,237 (22.35 % of the area) | 779,237 (22.35 %) |
+| drawn only under hypotheses | 603,053 (67.51 %) | 632,601 (70.08 %) |
+| hidden by `xesp_child_follows_parent_v1` | 8,432 | 8,432 |
+| omitted | 364,789 (8.36 %) | 335,241 (5.79 %) |
+
+29,548 placements move from omitted to drawn under hypotheses; nothing
+drawn without hypotheses changes (lobby, vault and a debris view without
+hypotheses are byte-identical frames). Drawn placements rely on
+`blend_alpha_clamped_before_blend_v1` 28,599 times (3.45 % of the area
+drawn under hypotheses), the two environment map rules 406 times and
+`effect_material_over_controller_v1` 635 times. No placement is left whose
+sole refusal is `UnsupportedEffectSurface environment-map` (453 before,
+1.63 % of the omitted area), `UnsettledEffectMaterialField` (635 before:
+variable 5, alpha, 531; variable 8, V offset, 104) or
+`UnsupportedRenderAlpha` with blending (about 28,500 before through the
+reasons by opacity, 28.7 % of the omitted area); the 47 environment-mapped
+placements not drawn meet `rgb-falloff`, record fields, a swap without
+material or controllers the rest rules do not settle. Drawn with the root
+transform left out: 17,208 before, 17,590 now (newly drawn models with a
+root transform).
+
+The largest sole families left, by share of the omitted area: swap
+scopes whose readings differ (19.11 %, 3,678 placements),
+`RenderSwapWithoutMaterial` (14.90 %, 8,792), missing textures (11.71 %,
+32,015), rejected swap paths (2.36 %), `REFR.XPRM` (1.87 %), texture
+transform controllers (1.72 %), alpha controllers (1.54 %), behaviour
+graphs (1.54 %), `REFR.XATR` (1.14 %), non-finite vertices (1.13 %).
+
+**Frames** (the `render` example, CPU, 1280 x 720, under hypotheses,
+against the build of the commit before): hanging glass lantern bottles of
+a settlement interior, absent before, are drawn as clear glass; the glow
+cards of a vault's light panel, whose base swaps their material to one
+with a lower alpha, now show as soft additive glows; a wooden debris pile
+of an interior, absent before, is drawn with its blended ground layer,
+whose edge is hard (the frame reads no vertex colour on textured
+lighting surfaces; whether this layer fades by vertex alpha in the game
+was not checked). In dense views the reference drops more placements at its
+decoded-texture limit (96 MiB) than before, because it draws more; that
+is a limit of the reference.
+
