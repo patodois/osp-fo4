@@ -1,0 +1,801 @@
+# quest_census: every winning QUST read with fo4_plugin::quest (spec/quest.md)
+# counts only: tags, record types and numbers; no name, FormID or text
+1905	winning QUST records
+1905	read to the last byte
+
+## bytes and subrecords by tag (typed: given a field; raw: kept as stored)
+7708	ALCA	typed	bytes
+1927	ALCA	typed	subrecords
+676	ALCC	typed	bytes
+169	ALCC	typed	subrecords
+7708	ALCL	typed	bytes
+1927	ALCL	typed	subrecords
+7708	ALCO	typed	bytes
+1927	ALCO	typed	subrecords
+3536	ALCS	typed	bytes
+884	ALCS	typed	subrecords
+4	ALDI	typed	bytes
+1	ALDI	typed	subrecords
+1632	ALDN	typed	bytes
+408	ALDN	typed	subrecords
+2192	ALEA	typed	bytes
+548	ALEA	typed	subrecords
+0	ALED	typed	bytes
+16286	ALED	typed	subrecords
+2192	ALEQ	typed	bytes
+548	ALEQ	typed	subrecords
+11744	ALFA	typed	bytes
+2936	ALFA	typed	subrecords
+6956	ALFC	typed	bytes
+1739	ALFC	typed	subrecords
+5300	ALFD	typed	bytes
+1325	ALFD	typed	subrecords
+5300	ALFE	typed	bytes
+1325	ALFE	typed	subrecords
+2836	ALFI	typed	bytes
+709	ALFI	typed	subrecords
+2284	ALFL	typed	bytes
+571	ALFL	typed	subrecords
+5608	ALFR	typed	bytes
+1402	ALFR	typed	subrecords
+848	ALFV	typed	bytes
+212	ALFV	typed	subrecords
+231523	ALID	typed	bytes
+16286	ALID	typed	subrecords
+30448	ALLA	typed	bytes
+1784	ALLA	typed	subrecords
+3880	ALLS	typed	bytes
+970	ALLS	typed	subrecords
+884	ALMI	typed	bytes
+884	ALMI	typed	subrecords
+13920	ALNA	typed	bytes
+3480	ALNA	typed	subrecords
+13920	ALNT	typed	bytes
+3480	ALNT	typed	subrecords
+16536	ALPC	typed	bytes
+4134	ALPC	typed	subrecords
+11400	ALRT	typed	bytes
+2850	ALRT	typed	subrecords
+752	ALSP	typed	bytes
+188	ALSP	typed	subrecords
+61264	ALST	typed	bytes
+15316	ALST	typed	subrecords
+8460	ALUA	typed	bytes
+2115	ALUA	typed	subrecords
+7592	ANAM	typed	bytes
+1898	ANAM	typed	subrecords
+1717	CIS1	typed	bytes
+92	CIS1	typed	subrecords
+9638	CIS2	typed	bytes
+400	CIS2	typed	subrecords
+5500	CNAM	typed	bytes
+1375	CNAM	typed	subrecords
+1552	CNTO	typed	bytes
+194	CNTO	typed	subrecords
+508	COCT	typed	bytes
+127	COCT	typed	subrecords
+478720	CTDA	raw	bytes
+14960	CTDA	raw	subrecords
+22776	DNAM	typed	bytes
+1898	DNAM	typed	subrecords
+2400	ECOR	typed	bytes
+600	ECOR	typed	subrecords
+41158	EDID	typed	bytes
+1905	EDID	typed	subrecords
+3960	ENAM	typed	bytes
+990	ENAM	typed	subrecords
+28547	FLTR	typed	bytes
+1299	FLTR	typed	subrecords
+72680	FNAM	typed	bytes
+18170	FNAM	typed	subrecords
+3968	FULL	typed	bytes
+992	FULL	typed	subrecords
+940	GNAM	typed	bytes
+235	GNAM	typed	subrecords
+51420	INDX	typed	bytes
+12855	INDX	typed	subrecords
+1288	KSIZ	typed	bytes
+322	KSIZ	typed	subrecords
+1344	KWDA	typed	bytes
+322	KWDA	typed	subrecords
+620	LNAM	typed	bytes
+155	LNAM	typed	subrecords
+336063	NAM2	typed	bytes
+12295	NAM2	typed	subrecords
+0	NEXT	typed	bytes
+1898	NEXT	typed	subrecords
+7536	NNAM	typed	bytes
+1884	NNAM	typed	subrecords
+3768	QOBJ	typed	bytes
+1884	QOBJ	typed	subrecords
+13393	QSDT	typed	bytes
+13393	QSDT	typed	subrecords
+27468	QSTA	typed	bytes
+2289	QSTA	typed	subrecords
+772	QTGL	typed	bytes
+193	QTGL	typed	subrecords
+10243	SNAM	typed	bytes
+157	SNAM	typed	subrecords
+4	SPOR	typed	bytes
+1	SPOR	typed	subrecords
+2227761	VMAD	typed	bytes
+1353	VMAD	typed	subrecords
+61264	VTCK	typed	bytes
+15316	VTCK	typed	subrecords
+1008	XNAM	typed	bytes
+252	XNAM	typed	subrecords
+478720	all	raw	bytes
+3414107	all	typed	bytes
+
+## subrecord order observed: tag followed by tag (^ start, $ end)
+1927	ALCA	ALCL
+42	ALCC	ALED
+127	ALCC	CTDA
+2	ALCL	ALDN
+51	ALCL	ALFC
+20	ALCL	ALFV
+446	ALCL	ALLA
+119	ALCL	ALPC
+31	ALCL	ALSP
+15	ALCL	COCT
+35	ALCL	CTDA
+440	ALCL	ECOR
+143	ALCL	KSIZ
+625	ALCL	VTCK
+1927	ALCO	ALCA
+884	ALCS	ALMI
+1	ALDI	ALPC
+34	ALDN	ALFC
+6	ALDN	ALFV
+2	ALDN	ALPC
+1	ALDN	ALSP
+365	ALDN	VTCK
+9	ALEA	ALDN
+16	ALEA	ALED
+6	ALEA	ALFC
+1	ALEA	ALFV
+18	ALEA	ALPC
+5	ALEA	COCT
+4	ALEA	CTDA
+13	ALEA	ECOR
+21	ALEA	KSIZ
+455	ALEA	VTCK
+1374	ALED	$
+871	ALED	ALCS
+551	ALED	ALLS
+13194	ALED	ALST
+224	ALED	GNAM
+72	ALED	SNAM
+548	ALEQ	ALEA
+86	ALFA	ALED
+2850	ALFA	ALRT
+733	ALFC	ALFC
+663	ALFC	ALPC
+343	ALFC	VTCK
+101	ALFD	ALED
+13	ALFD	ALLA
+824	ALFD	CTDA
+5	ALFD	KSIZ
+382	ALFD	VTCK
+1325	ALFE	ALFD
+3	ALFI	ALCC
+422	ALFI	ALCO
+142	ALFI	ALFA
+26	ALFI	ALFE
+7	ALFI	ALNA
+33	ALFI	ALUA
+74	ALFI	CTDA
+2	ALFI	ECOR
+571	ALFL	ALED
+61	ALFR	ALDN
+9	ALFR	ALFC
+27	ALFR	ALFV
+16	ALFR	ALPC
+3	ALFR	ALSP
+8	ALFR	COCT
+23	ALFR	CTDA
+1	ALFR	ECOR
+3	ALFR	KSIZ
+1251	ALFR	VTCK
+82	ALFV	ALFC
+32	ALFV	ALPC
+98	ALFV	VTCK
+16286	ALID	FNAM
+15	ALLA	ALDN
+122	ALLA	ALFC
+16	ALLA	ALFV
+581	ALLA	ALPC
+63	ALLA	ALSP
+987	ALLA	VTCK
+970	ALLS	ALID
+884	ALMI	ALST
+3480	ALNA	ALNT
+3478	ALNT	CTDA
+2	ALNT	VTCK
+1835	ALPC	ALPC
+2299	ALPC	VTCK
+27	ALRT	ALDN
+71	ALRT	ALFC
+61	ALRT	ALFV
+12	ALRT	ALLA
+135	ALRT	ALPC
+81	ALRT	ALSP
+62	ALRT	COCT
+11	ALRT	CTDA
+22	ALRT	ECOR
+32	ALRT	KSIZ
+2336	ALRT	VTCK
+174	ALSP	ALFC
+3	ALSP	ALPC
+2	ALSP	ALSP
+9	ALSP	VTCK
+15316	ALST	ALID
+2	ALUA	ALDN
+60	ALUA	ALFC
+3	ALUA	ALFV
+37	ALUA	ALLA
+541	ALUA	ALPC
+3	ALUA	ALSP
+22	ALUA	COCT
+22	ALUA	CTDA
+48	ALUA	ECOR
+35	ALUA	KSIZ
+1342	ALUA	VTCK
+217	ANAM	$
+13	ANAM	ALCS
+419	ANAM	ALLS
+1238	ANAM	ALST
+11	ANAM	GNAM
+91	CIS1	CIS2
+1	CIS1	VTCK
+6	CIS2	ANAM
+3	CIS2	CNAM
+1	CIS2	COCT
+206	CIS2	CTDA
+31	CIS2	INDX
+3	CIS2	KSIZ
+26	CIS2	NAM2
+33	CIS2	QOBJ
+69	CIS2	QSTA
+22	CIS2	VTCK
+1101	CNAM	INDX
+27	CNAM	QOBJ
+247	CNAM	QSDT
+1	CNTO	ALDI
+1	CNTO	ALDN
+3	CNTO	ALFC
+1	CNTO	ALFV
+9	CNTO	ALLA
+6	CNTO	ALPC
+1	CNTO	ALSP
+67	CNTO	CNTO
+10	CNTO	ECOR
+95	CNTO	VTCK
+127	COCT	CNTO
+42	CTDA	ALCC
+7	CTDA	ALDN
+136	CTDA	ALED
+10	CTDA	ALFC
+4	CTDA	ALFV
+427	CTDA	ALLA
+7	CTDA	ALPC
+185	CTDA	ANAM
+92	CTDA	CIS1
+309	CTDA	CIS2
+133	CTDA	CNAM
+4	CTDA	COCT
+7612	CTDA	CTDA
+1	CTDA	ECOR
+489	CTDA	INDX
+7	CTDA	KSIZ
+385	CTDA	NAM2
+140	CTDA	NEXT
+371	CTDA	QOBJ
+3	CTDA	QSDT
+430	CTDA	QSTA
+4166	CTDA	VTCK
+53	DNAM	CTDA
+990	DNAM	ENAM
+330	DNAM	FLTR
+85	DNAM	LNAM
+244	DNAM	NEXT
+13	DNAM	QTGL
+183	DNAM	XNAM
+7	ECOR	ALDN
+355	ECOR	ALFC
+68	ECOR	ALFV
+80	ECOR	ALLA
+73	ECOR	ALPC
+2	ECOR	ALSP
+15	ECOR	VTCK
+1	EDID	$
+439	EDID	DNAM
+112	EDID	FULL
+1353	EDID	VMAD
+670	ENAM	FLTR
+70	ENAM	LNAM
+193	ENAM	NEXT
+4	ENAM	QTGL
+53	ENAM	XNAM
+83	FLTR	CTDA
+1216	FLTR	NEXT
+124	FNAM	ALCC
+1505	FNAM	ALCO
+277	FNAM	ALDN
+18	FNAM	ALED
+548	FNAM	ALEQ
+2794	FNAM	ALFA
+15	FNAM	ALFC
+1299	FNAM	ALFE
+709	FNAM	ALFI
+571	FNAM	ALFL
+1402	FNAM	ALFR
+3	FNAM	ALFV
+577	FNAM	ALLA
+3473	FNAM	ALNA
+73	FNAM	ALPC
+1	FNAM	ALSP
+2082	FNAM	ALUA
+3	FNAM	COCT
+240	FNAM	CTDA
+30	FNAM	ECOR
+73	FNAM	KSIZ
+1884	FNAM	NNAM
+469	FNAM	VTCK
+992	FULL	DNAM
+150	GNAM	$
+85	GNAM	SNAM
+17	INDX	ANAM
+55	INDX	INDX
+2	INDX	QOBJ
+12781	INDX	QSDT
+322	KSIZ	KWDA
+14	KWDA	ALFC
+2	KWDA	ALFV
+182	KWDA	ALLA
+29	KWDA	ALPC
+7	KWDA	COCT
+33	KWDA	ECOR
+1	KWDA	SPOR
+54	KWDA	VTCK
+3	LNAM	CTDA
+104	LNAM	FLTR
+27	LNAM	NEXT
+5	LNAM	QTGL
+16	LNAM	XNAM
+605	NAM2	ANAM
+1229	NAM2	CNAM
+9775	NAM2	INDX
+352	NAM2	QOBJ
+334	NAM2	QSDT
+438	NEXT	ANAM
+576	NEXT	CTDA
+883	NEXT	INDX
+1	NEXT	QOBJ
+14	NNAM	ANAM
+113	NNAM	QOBJ
+1757	NNAM	QSTA
+1884	QOBJ	FNAM
+298	QSDT	ANAM
+10	QSDT	CNAM
+593	QSDT	CTDA
+521	QSDT	INDX
+11884	QSDT	NAM2
+59	QSDT	QOBJ
+28	QSDT	QSDT
+335	QSTA	ANAM
+995	QSTA	CTDA
+926	QSTA	QOBJ
+33	QSTA	QSTA
+1	QTGL	CTDA
+38	QTGL	FLTR
+23	QTGL	NEXT
+131	QTGL	QTGL
+157	SNAM	$
+1	SPOR	ALLA
+6	VMAD	$
+467	VMAD	DNAM
+880	VMAD	FULL
+15316	VTCK	ALED
+157	XNAM	FLTR
+55	XNAM	NEXT
+40	XNAM	QTGL
+1905	^	EDID
+
+## values, flags, alias index and FormID checks
+1705	ALCA high half = 0x0000
+222	ALCA high half = 0x8000
+35	ALCC = 0
+12	ALCC = 1
+17	ALCC = 10-19
+4	ALCC = 2
+6	ALCC = 20-49
+59	ALCC = 3-4
+36	ALCC = 5-9
+1074	ALCL = 0
+542	ALCL = 1
+151	ALCL = 2
+47	ALCL = 3
+113	ALCL = 4
+86	ALFA without ALRT
+420	ALMI = 0
+37	ALMI = 1
+106	ALMI = 10-19
+39	ALMI = 2
+69	ALMI = 20-49
+82	ALMI = 3-4
+99	ALMI = 5-9
+32	ALMI = >=50
+3212	ALNT = 0
+268	ALNT = 1
+1670	ANAM above every alias id true
+125	CNTO count 1
+12	CNTO count 10-19
+14	CNTO count 2
+8	CNTO count 20-49
+27	CNTO count 3-4
+5	CNTO count 5-9
+3	CNTO count >=50
+1557	DNAM byte 3 = 0
+1	DNAM byte 3 = 108
+2	DNAM byte 3 = 112
+43	DNAM byte 3 = 118
+129	DNAM byte 3 = 119
+1	DNAM byte 3 = 123
+1	DNAM byte 3 = 137
+25	DNAM byte 3 = 148
+1	DNAM byte 3 = 149
+1	DNAM byte 3 = 153
+2	DNAM byte 3 = 154
+15	DNAM byte 3 = 156
+2	DNAM byte 3 = 158
+17	DNAM byte 3 = 161
+1	DNAM byte 3 = 172
+5	DNAM byte 3 = 176
+2	DNAM byte 3 = 2
+84	DNAM byte 3 = 255
+2	DNAM byte 3 = 35
+2	DNAM byte 3 = 51
+1	DNAM byte 3 = 65
+1	DNAM byte 3 = 70
+1	DNAM byte 3 = 73
+1	DNAM byte 3 = 77
+1	DNAM byte 3 = 95
+457	DNAM flags bit 0 (0x1) set
+101	DNAM flags bit 10 (0x400) set
+15	DNAM flags bit 12 (0x1000) set
+17	DNAM flags bit 2 (0x4) set
+78	DNAM flags bit 3 (0x8) set
+455	DNAM flags bit 4 (0x10) set
+918	DNAM flags bit 8 (0x100) set
+53	DNAM flags bit 9 (0x200) set
+851	DNAM flags zero
+226	DNAM priority 0
+48	DNAM priority 10-19
+779	DNAM priority 20-49
+47	DNAM priority 5-9
+798	DNAM priority >=50
+1123	DNAM u32 at 8 = 0
+41	DNAM u32 at 8 = 1
+36	DNAM u32 at 8 = 2
+33	DNAM u32 at 8 = 3
+29	DNAM u32 at 8 = 4
+21	DNAM u32 at 8 = 5
+497	DNAM u32 at 8 = 6
+118	DNAM u32 at 8 = 7
+1898	DNAM word at 4 = 0
+11209	INDX flags byte = 0x00
+966	INDX flags byte = 0x02
+654	INDX flags byte = 0x04
+20	INDX flags byte = 0x08
+6	INDX flags byte = 0x0a
+9	QOBJ FNAM bit 0 (0x1) set
+8	QOBJ FNAM bit 1 (0x2) set
+1867	QOBJ FNAM zero
+12771	QSDT flags byte = 0x00
+405	QSDT flags byte = 0x01
+217	QSDT flags byte = 0x02
+3	QSTA flags bit 0 (0x1) set
+17	QSTA flags bit 1 (0x2) set
+6	QSTA flags bit 2 (0x4) set
+2263	QSTA flags zero
+8	alias FNAM (collection) bit 0 (0x1) set
+470	alias FNAM (collection) bit 1 (0x2) set
+6	alias FNAM (collection) bit 10 (0x400) set
+42	alias FNAM (collection) bit 12 (0x1000) set
+3	alias FNAM (collection) bit 13 (0x2000) set
+10	alias FNAM (collection) bit 14 (0x4000) set
+218	alias FNAM (collection) bit 15 (0x8000) set
+3	alias FNAM (collection) bit 17 (0x20000) set
+37	alias FNAM (collection) bit 18 (0x40000) set
+269	alias FNAM (collection) bit 19 (0x80000) set
+7	alias FNAM (collection) bit 2 (0x4) set
+27	alias FNAM (collection) bit 20 (0x100000) set
+4	alias FNAM (collection) bit 21 (0x200000) set
+228	alias FNAM (collection) bit 3 (0x8) set
+91	alias FNAM (collection) bit 4 (0x10) set
+29	alias FNAM (collection) bit 5 (0x20) set
+6	alias FNAM (collection) bit 6 (0x40) set
+364	alias FNAM (collection) bit 7 (0x80) set
+2	alias FNAM (collection) bit 8 (0x100) set
+108	alias FNAM (collection) bit 9 (0x200) set
+93	alias FNAM (collection) zero
+127	alias FNAM (location) bit 0 (0x1) set
+149	alias FNAM (location) bit 1 (0x2) set
+13	alias FNAM (location) bit 11 (0x800) set
+313	alias FNAM (location) bit 16 (0x10000) set
+14	alias FNAM (location) bit 20 (0x100000) set
+78	alias FNAM (location) bit 3 (0x8) set
+246	alias FNAM (location) bit 8 (0x100) set
+371	alias FNAM (location) bit 9 (0x200) set
+267	alias FNAM (location) zero
+237	alias FNAM (reference) bit 0 (0x1) set
+3891	alias FNAM (reference) bit 1 (0x2) set
+132	alias FNAM (reference) bit 10 (0x400) set
+519	alias FNAM (reference) bit 11 (0x800) set
+288	alias FNAM (reference) bit 12 (0x1000) set
+48	alias FNAM (reference) bit 13 (0x2000) set
+453	alias FNAM (reference) bit 14 (0x4000) set
+649	alias FNAM (reference) bit 15 (0x8000) set
+152	alias FNAM (reference) bit 17 (0x20000) set
+150	alias FNAM (reference) bit 18 (0x40000) set
+1577	alias FNAM (reference) bit 19 (0x80000) set
+385	alias FNAM (reference) bit 2 (0x4) set
+418	alias FNAM (reference) bit 20 (0x100000) set
+106	alias FNAM (reference) bit 21 (0x200000) set
+229	alias FNAM (reference) bit 22 (0x400000) set
+23	alias FNAM (reference) bit 23 (0x800000) set
+122	alias FNAM (reference) bit 24 (0x1000000) set
+380	alias FNAM (reference) bit 3 (0x8) set
+741	alias FNAM (reference) bit 4 (0x10) set
+185	alias FNAM (reference) bit 5 (0x20) set
+48	alias FNAM (reference) bit 6 (0x40) set
+2343	alias FNAM (reference) bit 7 (0x80) set
+236	alias FNAM (reference) bit 8 (0x100) set
+1471	alias FNAM (reference) bit 9 (0x200) set
+6527	alias FNAM (reference) zero
+1927	alias index ALCA low half names a reference alias of the quest
+16	alias index ALEA (in the ALEQ quest) names a location alias of the quest
+532	alias index ALEA (in the ALEQ quest) names a reference alias of the quest
+2850	alias index ALFA names a location alias of the quest
+86	alias index ALFA names a reference alias of the quest
+46	alias index ALFI names a location alias of the quest
+663	alias index ALFI names a reference alias of the quest
+3777	alias index ALLA pair word 1 names a reference alias of the quest
+28	alias index ALLA pair word 1 names no alias of the quest
+1	alias index ALLA pair word 1 negative (-1)
+3480	alias index ALNA names a reference alias of the quest
+2289	alias index QSTA at 0 names a reference alias of the quest
+169	alias values ALCC
+1927	alias values ALCO
+1	alias values ALDI
+408	alias values ALDN
+548	alias values ALEQ
+2936	alias values ALFA
+1739	alias values ALFC
+1325	alias values ALFE
+709	alias values ALFI
+571	alias values ALFL
+1402	alias values ALFR
+212	alias values ALFV
+1784	alias values ALLA
+3480	alias values ALNA
+4134	alias values ALPC
+188	alias values ALSP
+2115	alias values ALUA
+127	alias values COCT
+10808	alias values CTDA
+600	alias values ECOR
+322	alias values KSIZ
+1	alias values SPOR
+15316	alias values VTCK
+884	aliases collection
+970	aliases location
+14432	aliases reference
+14	form field ALCO names a winning ACTI
+15	form field ALCO names a winning ALCH
+3	form field ALCO names a winning AMMO
+7	form field ALCO names a winning ARMO
+72	form field ALCO names a winning BOOK
+11	form field ALCO names a winning CONT
+49	form field ALCO names a winning FURN
+12	form field ALCO names a winning HAZD
+8	form field ALCO names a winning IDLM
+23	form field ALCO names a winning KEYM
+17	form field ALCO names a winning LVLI
+4	form field ALCO names a winning LVLN
+73	form field ALCO names a winning MISC
+32	form field ALCO names a winning MSTT
+41	form field ALCO names a winning NOTE
+1516	form field ALCO names a winning NPC_
+16	form field ALCO names a winning PROJ
+3	form field ALCO names a winning SCOL
+7	form field ALCO names a winning STAT
+1	form field ALCO names a winning TERM
+3	form field ALCO names a winning WEAP
+1	form field ALDI names a winning LVLI
+408	form field ALDN names a winning MESG
+548	form field ALEQ names a winning QUST
+1739	form field ALFC names a winning FACT
+571	form field ALFL names a winning LCTN
+57	form field ALFR names a winning ACHR
+1328	form field ALFR names a winning REFR
+17	form field ALFR names no winning record
+212	form field ALFV names a winning VTYP
+3694	form field ALLA pair word 0 names a winning KYWD
+112	form field ALLA pair word 0 names zero
+4134	form field ALPC names a winning PACK
+2850	form field ALRT names a winning LCRT
+188	form field ALSP names a winning SPEL
+2115	form field ALUA names a winning NPC_
+17	form field CNTO at 0 names a winning ALCH
+19	form field CNTO at 0 names a winning AMMO
+7	form field CNTO at 0 names a winning BOOK
+23	form field CNTO at 0 names a winning KEYM
+103	form field CNTO at 0 names a winning LVLI
+13	form field CNTO at 0 names a winning MISC
+2	form field CNTO at 0 names a winning NOTE
+10	form field CNTO at 0 names a winning WEAP
+600	form field ECOR names a winning FLST
+235	form field GNAM names a winning KYWD
+336	form field KWDA names a winning KYWD
+155	form field LNAM names a winning LCTN
+2	form field QSTA at 8 names a winning KYWD
+2287	form field QSTA at 8 names zero
+193	form field QTGL names a winning GLOB
+1	form field SPOR names a winning FLST
+148	form field VTCK names a winning FACT
+143	form field VTCK names a winning FLST
+84	form field VTCK names a winning NPC_
+375	form field VTCK names a winning VTYP
+14566	form field VTCK names zero
+252	form field XNAM names a winning GLOB
+12800	log entries with 0 conditions
+357	log entries with 1 conditions
+162	log entries with 2 conditions
+66	log entries with 3-4 conditions
+8	log entries with 5-9 conditions
+12018	log entries with CNAM false
+1375	log entries with CNAM true
+1098	log entries with NAM2 false
+12295	log entries with NAM2 true
+330	log entries with conditions followed by another entry
+127	objectives with 0 targets
+1476	objectives with 1 targets
+6	objectives with 10-19 targets
+178	objectives with 2 targets
+71	objectives with 3-4 targets
+26	objectives with 5-9 targets
+235	quests with 0 aliases
+1329	quests with 0 conditions after NEXT
+1765	quests with 0 conditions before NEXT
+1463	quests with 0 objectives
+543	quests with 0 stages
+147	quests with 1 aliases
+199	quests with 1 conditions after NEXT
+103	quests with 1 conditions before NEXT
+139	quests with 1 objectives
+172	quests with 1 stages
+343	quests with 10-19 aliases
+47	quests with 10-19 objectives
+187	quests with 10-19 stages
+483	quests with 2 aliases
+179	quests with 2 conditions after NEXT
+13	quests with 2 conditions before NEXT
+101	quests with 2 objectives
+301	quests with 2 stages
+236	quests with 20-49 aliases
+7	quests with 20-49 objectives
+128	quests with 20-49 stages
+200	quests with 3-4 aliases
+133	quests with 3-4 conditions after NEXT
+12	quests with 3-4 conditions before NEXT
+69	quests with 3-4 objectives
+214	quests with 3-4 stages
+246	quests with 5-9 aliases
+65	quests with 5-9 conditions after NEXT
+12	quests with 5-9 conditions before NEXT
+79	quests with 5-9 objectives
+321	quests with 5-9 stages
+15	quests with >=50 aliases
+39	quests with >=50 stages
+584	quests with DNAM flag bit 0 false and 0 stages with INDX flag 0x02
+863	quests with DNAM flag bit 0 false and 1 stages with INDX flag 0x02
+1	quests with DNAM flag bit 0 false and 2 stages with INDX flag 0x02
+361	quests with DNAM flag bit 0 true and 0 stages with INDX flag 0x02
+95	quests with DNAM flag bit 0 true and 1 stages with INDX flag 0x02
+1	quests with DNAM flag bit 0 true and 10-19 stages with INDX flag 0x02
+990	quests with ENAM
+7	quests without DNAM
+74	stages with 0 log entries
+12419	stages with 1 log entries
+199	stages with 2 log entries
+139	stages with 3-4 log entries
+24	stages with 5-9 log entries
+
+## alias fill subrecords
+57	ALFR names a placed ACHR (winning, not deleted), alias kind reference
+1328	ALFR names a placed REFR (winning, not deleted), alias kind reference
+17	ALFR names no winning record, alias kind reference
+176	collection aliases by fill subrecords present	ALCO
+23	collection aliases by fill subrecords present	ALEQ
+1	collection aliases by fill subrecords present	ALEQ+conditions
+543	collection aliases by fill subrecords present	ALFA
+1	collection aliases by fill subrecords present	ALFA+conditions
+11	collection aliases by fill subrecords present	ALNA+conditions
+32	collection aliases by fill subrecords present	conditions
+97	collection aliases by fill subrecords present	none of them
+16	location aliases by fill subrecords present	ALEQ
+86	location aliases by fill subrecords present	ALFA
+101	location aliases by fill subrecords present	ALFE
+1	location aliases by fill subrecords present	ALFE+ALFI+conditions
+9	location aliases by fill subrecords present	ALFE+conditions
+45	location aliases by fill subrecords present	ALFI+conditions
+571	location aliases by fill subrecords present	ALFL
+123	location aliases by fill subrecords present	conditions
+18	location aliases by fill subrecords present	none of them
+1320	reference aliases by fill subrecords present	ALCO
+396	reference aliases by fill subrecords present	ALCO+ALFI
+26	reference aliases by fill subrecords present	ALCO+ALFI+conditions
+9	reference aliases by fill subrecords present	ALCO+conditions
+505	reference aliases by fill subrecords present	ALEQ
+3	reference aliases by fill subrecords present	ALEQ+conditions
+2155	reference aliases by fill subrecords present	ALFA
+141	reference aliases by fill subrecords present	ALFA+ALFI
+1	reference aliases by fill subrecords present	ALFA+ALFI+conditions
+9	reference aliases by fill subrecords present	ALFA+conditions
+400	reference aliases by fill subrecords present	ALFE
+25	reference aliases by fill subrecords present	ALFE+ALFI+conditions
+789	reference aliases by fill subrecords present	ALFE+conditions
+2	reference aliases by fill subrecords present	ALFI
+7	reference aliases by fill subrecords present	ALFI+ALNA+conditions
+20	reference aliases by fill subrecords present	ALFI+ALUA
+13	reference aliases by fill subrecords present	ALFI+ALUA+conditions
+32	reference aliases by fill subrecords present	ALFI+conditions
+1379	reference aliases by fill subrecords present	ALFR
+23	reference aliases by fill subrecords present	ALFR+conditions
+2	reference aliases by fill subrecords present	ALNA
+3460	reference aliases by fill subrecords present	ALNA+conditions
+2073	reference aliases by fill subrecords present	ALUA
+9	reference aliases by fill subrecords present	ALUA+conditions
+209	reference aliases by fill subrecords present	conditions
+1424	reference aliases by fill subrecords present	none of them
+
+## stage fragments of the VMAD quest block against the record
+111	fragment alias properties: of the same quest false, its alias has ALFR false
+4983	fragment alias properties: of the same quest true, its alias has ALFR false
+334	fragment alias properties: of the same quest true, its alias has ALFR true
+10506	fragment byte before the texts = 1
+10375	fragment maps: stage and log entry in the record
+131	fragment maps: stage not in the record
+5428	fragment script properties holding an alias value
+10506	fragment u16 after the stage = 0
+10506	fragments
+9652	mapped fragments: entry has conditions false, an earlier entry has conditions false, stage has 1 entries
+257	mapped fragments: entry has conditions false, an earlier entry has conditions false, stage has 2 entries
+124	mapped fragments: entry has conditions false, an earlier entry has conditions false, stage has 3-4 entries
+9	mapped fragments: entry has conditions false, an earlier entry has conditions false, stage has 5-9 entries
+15	mapped fragments: entry has conditions false, an earlier entry has conditions true, stage has 2 entries
+20	mapped fragments: entry has conditions false, an earlier entry has conditions true, stage has 3-4 entries
+4	mapped fragments: entry has conditions false, an earlier entry has conditions true, stage has 5-9 entries
+60	mapped fragments: entry has conditions true, an earlier entry has conditions false, stage has 1 entries
+64	mapped fragments: entry has conditions true, an earlier entry has conditions false, stage has 2 entries
+39	mapped fragments: entry has conditions true, an earlier entry has conditions false, stage has 3-4 entries
+18	mapped fragments: entry has conditions true, an earlier entry has conditions false, stage has 5-9 entries
+32	mapped fragments: entry has conditions true, an earlier entry has conditions true, stage has 2 entries
+44	mapped fragments: entry has conditions true, an earlier entry has conditions true, stage has 3-4 entries
+37	mapped fragments: entry has conditions true, an earlier entry has conditions true, stage has 5-9 entries
+1282	quest blocks whose fragment script is not in the VMAD script list
+18	quest blocks with an empty fragment script name
+53	quests with a VMAD and no quest block
+1300	quests with a quest block
+485	quests without a VMAD, 0 stages
+33	quests without a VMAD, 1 stages
+22	quests without a VMAD, 2 stages
+4	quests without a VMAD, 3-4 stages
+8	quests without a VMAD, 5-9 stages
+2627	stages of quests with a block, without a fragment
+9953	stages with fragments: 1 fragments
+193	stages with fragments: 2 fragments
+49	stages with fragments: 3-4 fragments
+2	stages with fragments: 5-9 fragments

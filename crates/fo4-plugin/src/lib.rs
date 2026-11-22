@@ -4,6 +4,7 @@
 pub mod actor;
 pub mod land;
 pub mod layout;
+pub mod quest;
 mod semantics;
 pub mod static_frame;
 mod strings;
