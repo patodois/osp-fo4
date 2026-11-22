@@ -1,8 +1,8 @@
-# quest_run new-game, the forced opening with dialogue outside scenes, unique actor aliases and actor positions (talk step): kinds and counts only (spec/vm.md, Dialogue outside scenes)
+# quest_run new-game, the forced opening with animation events, behaviour graphs and package destinations (animation step): kinds and counts only (spec/vm.md, The forced opening with animation events and the vault)
 # Section 1: stops in order: what stopped the run, what passed it, whether the data (under pending readings) or a caller assumption passed it, the kind of world the stop stands for.
-# Section 2: the two dialogue stops: candidate lines and what each reading of the choice decides. Section 3: unique actor aliases, actor positions and what they raised. Section 4: where the run ends.
-# Section 5: how far it gets. Section 6: the run's natives of the opening quest's family by the kind of world model they would need. Section 7: the caller's assumptions. Section 8: the final run's --next-blockers counts.
-# Section 9: each new reading alone, on the world step's command line and track.
+# Section 2: the two dialogue stops' candidate lines. Section 3: unique actor aliases, actor positions and what they raised. Section 4: animation events and graphs. Section 5: package destinations.
+# Section 6: where the run ends. Section 7: how far it gets. Section 8: the run's natives of the opening quest's family by the kind of world model they would need.
+# Section 9: the caller's assumptions. Section 10: the final run's --next-blockers counts. Section 11: stages reached with one thing changed on the final command line.
 
 ## 1 stops passed, in order
 1	the first scene's phase 0 on a condition function the evaluator does not answer	--assume-cond (one function)	a caller assumption	not read: a condition function
@@ -25,67 +25,92 @@
 18	the next stage, set only by the TIQS end half of a hello line no scene action names; its fragment registers the distance events	the track within the game setting's distance of the speaker at its stored position (--hello-lines, --actor-positions); its enable state by --enable-child-flag-ignored; the line by --assume-line, timed by its voice file	the data under pending readings, with a caller assumption	dialogue outside scenes (an actor greeting the player who comes near); the line choice
 19	the next stage, set only by the player's distance event to a marker	the track within the threshold, the registration now made (--distance-events)	the data under pending readings, with a caller assumption	player position (distance to an object)
 20	a side stage set by a trigger only one alias's actor may enter, the alias forced to a unique actor alias's reference	--alias-unique-actors resolves the alias, --player-no-record tells the player apart, the actor's assumed move into the volume raises the event (--assume-actor-at, --actor-triggers)	the data under pending readings, with a caller assumption	actor movement
-21	the next stage, set when six actors' distance registrations to the same marker have been raised	six assumed moves of the actors onto the marker's platform (--assume-actor-at; the actors resolved by --alias-unique-actors)	the data under pending readings, with a caller assumption	actor movement (AI packages)
+21	the next stage, set when six actors' distance registrations to the same marker have been raised	five actors put on the marker's platform by their scene's package actions, whose packages name it as their one Location (--package-destinations, seconds the caller's), the sixth by two assumed moves (--assume-actor-at); the track held twice so that the scene reaches those phases	the data under pending readings, with a caller assumption	actor movement (AI packages)
+22	the next two stages, set by an animation event handler of the quest a stage fragment registered on a placed activator	PlayAnimation in the next fragment enters a state of the activator's behaviour graph whose Gamebryo sequence carries text keys of those names (--anim-events, --anim-graphs, --anim-graph-keys)	the data under pending readings	animation (an activator's sequence)
+23	a third stage set by the same kind of handler on another activator, its registered name differing in case from the key	the same, the key reached through two graph transitions, with --anim-event-case	the data under pending readings	animation (an activator's sequence)
+24	the next stage, a trigger inside an interior cell	the track rides the elevator down and loads through the automatic door into the interior at once (both the caller's)	the data under pending readings, with a caller assumption	player movement (an elevator ride and a door load)
+25	the next stage, a trigger below the interior's own elevator	the track rides that elevator down (the caller's)	the data under pending readings, with a caller assumption	player movement (an elevator ride)
+26	four stages in turn, each a trigger-enter handler along a corridor	the track crossing each trigger's box	the data under pending readings, with a caller assumption	player movement into a trigger (the track is the caller's)
 
-## 2 the two dialogue stops: the candidate lines of running quests' topics of the subtype, tried with either party speaking
+## 2 the two dialogue stops: the candidate lines of running quests' topics of the subtype, tried with either party speaking (final run)
 6132	greeting (the player talks to the actor): candidate line and speaker pairs
 1787	greeting (the player talks to the actor): pairs whose conditions hold
 1788	greeting (the player talks to the actor): pairs whose conditions are undetermined
 14034	hello (the player comes near the actor): candidate line and speaker pairs
 4777	hello (the player comes near the actor): pairs whose conditions hold
 3979	hello (the player comes near the actor): pairs whose conditions are undetermined
-14	conversations tried (one greeting, the rest hello entries) left undetermined by the single-line reading (dialogue_outside_line_choice_v1) without --assume-line
-14	conversations tried left undetermined by the priority reading (--dialogue-priority) without --assume-line: the first line by priority is undetermined
-44	stages of the opening quest set by the single-line reading without --assume-line
-44	stages of the opening quest set by the priority reading without --assume-line
-2	lines chosen by --assume-line in the final run (each holds)
+15	conversations tried whose line the records leave undetermined
+2	lines chosen by --assume-line (each holds)
 1	hello lines timed by their voice file
 1	greeting lines timed by the assumed seconds (the player's voice type is not in the records)
-13	entries of the track within the hello distance of a placed actor at its stored position (each tried for a hello line)
-53	placed actors near the track
+14	entries of the track within the hello distance of a placed actor at its stored position
+76	placed actors near the track
 
 ## 3 unique actor aliases, actor positions and what they raised (final run)
-793	unique actor aliases the run read, resolved to one placed actor or the player
+799	unique actor aliases the run read, resolved to one placed actor or the player
 1	unique actor aliases the run read, not resolved (no placed actor of the base)
-7	actor moves assumed by the caller (--assume-actor-at)
-1	trigger events raised by an actor's move
+0	actor moves assumed by the caller (--assume-actor-at)
+29	actor moves applied (the caller's and the package destinations')
+20	trigger events raised by an actor's move
 7	distance registrations made
-7	distance events raised (one by the track, the others by the actors' moves)
-11	references a native moved (their position open until an assumed move)
-46	stages of the opening quest set without the actors' moves (--assume-actor-at left out)
+7	distance events raised
+16	references a native moved, by native
 
-## 4 where the run ends (no caller assumption passes)
-the next two stages of the opening quest (one of them the stage a playing scene waits on) are set only by an animation event handler on the quest	no switch: the interpreter raises no animation event	animation
-the stage after them is set by a trigger the track does not reach, or by a stage fragment already run	a longer track, once the stages before it are set	player movement into a trigger
-the two stages with no setter in the data	no longer on the path: the stage the scenes wait on is set by the distance events' handler	unknown (no setter)
+## 4 animation events and graphs (final run)
+23	animation	PlayAnimation followed
+2	animation	PlayAnimation not followed	the reference or the event is undetermined
+6	animation	deliveries	a handler ran
+12	animation	graph events not taken	no transition of the state or wildcard
+30	animation	graph events taken
+7	animation	graph states entered	a sequence of cycle type 0
+13	animation	graph states entered	a sequence of cycle type 2
+9	animation	graph states entered	the generator is not a sequence generator
+1	animation	graph states entered	the sequence is not in the model
+10	animation	graphs read
+10	animation	registrations	made
+6	animation	registrations	removed
+48	animation	text keys not scheduled	the text is no event name of the graph
+19	animation	text keys raised
+6	animation events	raised from the data	completed
+13	animation events	raised from the data	no registered instance
 
-## 5 reached
-49	stages of the opening quest set (of 104), one by the caller (world step: 43)
-6	stages set beyond the world step's run
-0	stages of the world step's run not set
-1	objectives of the opening quest displayed (then hidden by a later stage)
+## 5 package destinations (final run)
+5	world model	package destinations	actor moves dropped: the scene stopped first
+32	world model	package destinations	actor moves scheduled
+33	world model	package destinations	no actor move	no Location input names a placed reference
+1	world model	package destinations	no actor move	several Location inputs name placed references
+2	world model	package destinations	no actor move	the action's alias holds no placed reference in the run
 
-## 6 natives of the opening quest's family with no world model, by kind
-44	player or actor position and movement
-21	UI menus and player controls (character creation among them)
+## 6 where the run ends (no caller assumption passes)
+the next three stages are set by the animation event handler of an alias script on three actors; the script registers only when its actor's 3D loads, and the event is the actor's own idle ending	no switch: the interpreter raises no load event, and no graph of a character is followed	a load event and animation (an actor's idle)
+a phase of the scene the stages before set off waits on a condition of how far its own dialogue action has run, answered by the caller's fixed value below the threshold	no reading of that function from the scene clock	none (a reading of the scene clock)
+the stage the next scene waits on is set only by the stage field of a later scene the run never starts	the scenes before it, once the three stages are set	the chain of scenes after the three stages
+
+## 7 reached
+59	stages of the opening quest set (of 104), one by the caller (talk step: 49)
+2	objectives of the opening quest displayed
+
+## 8 natives of the opening quest's family with no world model, by kind
+70	player or actor position and movement
+28	UI menus and player controls (character creation among them)
 6	inventory and items
 0	combat and actor values
 0	cells, 3D and loading
-55	animation and idles
+87	animation and idles
 31	sound, music, video and imagespace
 
-## 7 caller assumptions of the final run
+## 9 caller assumptions of the final run
 2	assumption from the command line: a line plays where the choice outside a scene is not settled (--assume-line)
 1	assumption from the command line: a line whose audio does not settle its time lasts 3 s
-7	assumption from the command line: a placed actor moved to a position at a second (--assume-actor-at)
+2	assumption from the command line: a placed actor moved to a position at a second (--assume-actor-at)
 1	assumption from the command line: a stage set from outside any script after the start
 1	assumption from the command line: a stage set from outside any script at a second of the real-time clock
-37	assumption from the command line: conditions decided by an assumed value
+65	assumption from the command line: conditions decided by an assumed value
 1	assumption from the command line: every HasDirectLOS answers true (--assume-los)
 1	assumption from the command line: every condition of function 131 has the value 50
 1	assumption from the command line: every condition of function 555 has the value 1
 1	assumption from the command line: package actions complete as they start
-65	assumption from the command line: points of the player's track
+81	assumption from the command line: points of the player's track
 1	assumption from the command line: queued timers fired after the jobs
 1	assumption from the command line: start-scene actions complete as they start
 1	assumption from the command line: the NPC_ of that editor ID is the player's base (--player-base)
@@ -97,30 +122,35 @@ the two stages with no setter in the data	no longer on the path: the stage the s
 1	assumption from the command line: the player starts a conversation with a placed actor (--assume-talk)
 1	assumption from the command line: the player's body reaches 120 units up from the reference point (--trigger-body)
 1	assumption from the command line: the scene clock advanced (--scene-clock)
-57	package actions assumed complete (actor movement)
+68	package actions assumed complete (actor movement)
 6	player dialogue actions on the assumed choice (the dialogue menu)
-53	scene lines timed by the assumed seconds
+55	scene lines timed by the assumed seconds
 
-## 8 the final run's --next-blockers
+## 10 the final run's --next-blockers
 1	scenes stopped at the end	an action runs in the phase: kind 5
 29	scenes stopped at the end	an action runs in the phase: kind 6
-3	scenes stopped at the end	completion conditions false
+4	scenes stopped at the end	completion conditions false
 16	scenes stopped at the end	completion conditions undetermined
 1	scenes stopped at the end	start conditions undetermined
-3	setters of a waited stage	1
-1	setters of a waited stage	2
-1	setters of a waited stage by kind and need	a call in a placed REFR's own script, through a function passing a parameter on	engine event ontriggerenter on a placed REFR
-1	setters of a waited stage by kind and need	a call in a quest stage fragment	a stage of a quest set (its stage fragment)
-3	setters of a waited stage by kind and need	a call in a quest's own script	engine event onanimationevent on the quest
-1	setters of a waited stage: the need in this run	a chain: the stage is done in the run
-1	setters of a waited stage: the need in this run	a player action a caller can assume (--assume-trigger-enter)
+4	setters of a waited stage	1
+3	setters of a waited stage by kind and need	a call in a quest alias script	engine event onanimationevent on a quest alias
+1	setters of a waited stage by kind and need	a scene phase field SCQS, second half	a scene phase ends
+1	setters of a waited stage: the need in this run	a scene the run never started
 3	setters of a waited stage: the need in this run	an engine event the interpreter does not raise
 1	waits	completion conditions	function 59	the stage is not done in the run
 3	waits	next stage of a quest the caller set a stage on	the stage is not done in the run
 4	waits: stages a stopped scene phase or the caller's quests wait on
 
-## 9 each new reading alone on the world step's command line and track (stages of the opening quest set)
-43	the world step's run
-43	with --alias-unique-actors and --player-base (the side trigger's handler then blocks on whether the player is that actor)
-43	with --player-no-record as well (the handler completes: the player is not that actor)
-43	on the shifted track alone
+## 11 stages of the opening quest set with one thing changed on the final command line
+59	the final run (the track held twice, package destinations after 10 s, the spouse's two moves assumed)
+59	the talk step's seven assumed moves instead of the package destinations, on the track without the holds
+59	package destinations after 5 s
+47	package destinations after 30 s (the elevator scene stops before the actors arrive)
+47	without package destinations
+58	without --anim-event-case
+56	without --anim-graph-keys
+56	without --anim-graphs
+56	without --anim-events
+58	the two animation events assumed by the caller (--assume-anim-event) at the seconds the graphs raise them, instead of the graphs
+52	the talk step's track with this step's switches (no vault track)
+49	every switch of the animation step off on the talk step's command line and track (= the talk step's run)

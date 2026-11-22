@@ -1243,8 +1243,9 @@ line plays) that the scene and phase fields do not need.
 
 ### The forced opening continued
 
-The second opening step's [quest-run-opening.txt](quest-run-opening.txt)
-held the stops in order by kind, where the run ends, how far it gets, and
+(Each later opening step replaced [quest-run-opening.txt](quest-run-opening.txt)
+with its own run; the earlier versions are in the history.) The second
+opening step's file held the stops in order by kind, where the run ends, how far it gets, and
 the run's needs by kind (since the world step the file holds the run with
 a track, Player position below, its section 2 comparing the trigger stops
 with this run's); the concrete records and the command line are in the
@@ -1607,9 +1608,10 @@ destination. Without the switch no package moves anyone.
 
 ## The forced opening with animation events and the vault
 
-(The command lines, the tracks and every record named are in the step's
-notes; no versioned output of the earlier openings changes.) On the talk
-step's command line:
+([quest-run-opening.txt](quest-run-opening.txt), regenerated from this
+run and its variants by the load step, the record that replaces the talk
+step's; the command lines, the tracks and every record named are in the
+step's notes.) On the talk step's command line:
 
 - The two stages the talk step stopped on, and a third the same handler
   sets, come from the opening quest's animation event handler. With the
