@@ -1,0 +1,33 @@
+# static_rotation_census
+# cols: the nine rotation words as the columns of the matrix acting on column vectors (the previous reading); rows: as its rows (the reading adopted)
+files	224366 read, 2 not read; 28074 named by a base record with MODL and OBND
+base records with MODL and OBND	ACTI:1743 ADDN:230 ALCH:323 AMMO:100 ARTO:258 BOOK:470 CONT:630 DOOR:433 EXPL:336 FLOR:64 FURN:782 GRAS:107 HAZD:78 IDLM:2 INGR:1 KEYM:246 LIGH:100 LVLN:12 MISC:3246 MSTT:1106 NOTE:252 PROJ:234 SCOL:3508 STAT:23557 TACT:74 TERM:1026 TREE:1 WEAP:262
+shapes	1190376 reached (23368 skinned, left out below); editor-marker subtrees left out 9006
+shapes by non-identity rotations on the chain (4 = 4 or more)	0:1156007 1:7211 2:2976 3:357 4:457
+shapes with two or more	3790; with a non-symmetric one	9164
+shapes whose vertices move by more than 0.01 between readings	8651
+models with such a shape	1789 (named by a base record 1026); moving more than 1 unit 1662 (named 986)
+largest displacement per model	b <0.1:35 c <1.01:94 d <2.01:52 e <10:186 f <100:638 g >=100:784
+BSMultiBound / AABB block sizes (1000+ = BSMultiBound)	24:2 1004:14
+OBND against the model box, every base record: cols within 1.01 in 34378 of 36757
+OBND containing the moved shapes (widened by 1.01), models moving > 1, per base record	cols only 32, rows only 343, both 528, neither 611
+same, per model (first of: cols only, rows only, both, neither)	15 258 237 476
+files with a BSBound on a root	49
+files with a rotated root node	1603 (named by a base record 578)
+OBND within 1.01 of the model box, by reading and root handling (base records whose four boxes differ)	none:372 cols+cols-noroot:2 rows-noroot:26 rows+rows-noroot:301 cols-noroot+rows-noroot:431 rows+cols-noroot+rows-noroot:1 cols+rows+cols-noroot+rows-noroot:4
+OBND (all models)	closer: cols 157, rows 626, tie 35974
+OBND (all models)	within 1.01: cols only 9, rows only 304, both 34369, neither 2075
+OBND (all models)	cols error a <0.01:6354 b <0.1:1212 c <1.01:26812 d <2.01:54 e <10:334 f <100:1434 g >=100:557
+OBND (all models)	rows error a <0.01:6357 b <0.1:1211 c <1.01:27105 d <2.01:69 e <10:354 f <100:1264 g >=100:397
+OBND (models moving > 1)	closer: cols 154, rows 624, tie 736
+OBND (models moving > 1)	within 1.01: cols only 9, rows only 304, both 398, neither 803
+OBND (models moving > 1)	cols error a <0.01:7 b <0.1:13 c <1.01:387 d <2.01:33 e <10:191 f <100:470 g >=100:413
+OBND (models moving > 1)	rows error a <0.01:10 b <0.1:12 c <1.01:680 d <2.01:48 e <10:211 f <100:300 g >=100:253
+BSBound (models moving > 1)	closer: cols 0, rows 0, tie 0
+BSBound (models moving > 1)	within 0.01: cols only 0, rows only 0, both 0, neither 0
+BSBound (models moving > 1)	cols error 
+BSBound (models moving > 1)	rows error 
+BSMultiBoundAABB (boxes differing > 1)	closer: cols 0, rows 0, tie 0
+BSMultiBoundAABB (boxes differing > 1)	within 0.01: cols only 0, rows only 0, both 0, neither 0
+BSMultiBoundAABB (boxes differing > 1)	cols error 
+BSMultiBoundAABB (boxes differing > 1)	rows error 

@@ -1,4 +1,5 @@
-//! Stored row rotations and independently measured parent/local composition.
+//! NIF node rotation words read as rows acting on column vectors, placement
+//! Euler angles, and parent/local composition.
 use fo4_core::{Error, Result};
 use fo4_nif::{Field, Value};
 use serde::{Deserialize, Serialize};
@@ -94,11 +95,13 @@ impl Transform {
         let translation = floats::<3>(fields, "Translation", file)?;
         let raw = floats::<9>(fields, "Rotation", file)?;
         let [scale] = floats::<1>(fields, "Scale", file)?;
-        // Retain the nine raw NIF column-major words in the current reference representation.
-        // The separate runtime-row bridge comparison is pending; this path does not adopt it.
+        // The nine words are the rows of a matrix R acting on column vectors
+        // (a node maps a child point p to t + s * R * p), measured offline in
+        // spec/scene.md (Node rotation words) and spec/actor.md; `rotation`
+        // holds R transposed because `apply` multiplies by its transpose.
         Ok(Self {
             translation,
-            rotation: std::array::from_fn(|i| std::array::from_fn(|j| raw[i * 3 + j])),
+            rotation: std::array::from_fn(|i| std::array::from_fn(|j| raw[j * 3 + i])),
             scale,
         })
     }
@@ -140,6 +143,45 @@ mod tests {
         assert_eq!(w.scale, 6.);
         assert_eq!(w.rotation, [[0., 1., 0.], [0., 0., 1.], [1., 0., 0.]]);
         assert_eq!(w.apply([1., 2., 3.]), p.apply(l.apply([1., 2., 3.])));
+    }
+    #[test]
+    fn node_words_match_the_actor_reading_under_nested_rotations() {
+        fn fields(t: [f32; 3], r: [f32; 9], s: f32) -> Vec<Field> {
+            let mut out = Vec::new();
+            for (name, values) in [
+                ("Translation", t.to_vec()),
+                ("Rotation", r.to_vec()),
+                ("Scale", vec![s]),
+            ] {
+                out.extend(values.into_iter().map(|v| Field {
+                    name,
+                    offset: 0,
+                    value: Value::FloatBits(v.to_bits()),
+                }));
+            }
+            out
+        }
+        // A quarter turn about z under a quarter turn about x, scaled.
+        let a = fields([1., 2., 3.], [1., 0., 0., 0., 0., -1., 0., 1., 0.], 2.);
+        let b = fields([4., 5., 6.], [0., -1., 0., 1., 0., 0., 0., 0., 1.], 0.5);
+        let ours = Transform::from_fields(&a, "synthetic")
+            .unwrap()
+            .compose(Transform::from_fields(&b, "synthetic").unwrap());
+        let pose = crate::actor::pose::Affine::from_fields(&a, "synthetic")
+            .unwrap()
+            .unwrap()
+            .compose(
+                &crate::actor::pose::Affine::from_fields(&b, "synthetic")
+                    .unwrap()
+                    .unwrap(),
+            );
+        for p in [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.], [7., -3., 2.]] {
+            let (x, y) = (ours.apply(p), pose.apply(p));
+            assert!((0..3).all(|i| (x[i] - y[i]).abs() < 1e-12), "{x:?} {y:?}");
+        }
+        // Rows act on column vectors: the child's x axis goes to the parent's y.
+        let one = Transform::from_fields(&b, "synthetic").unwrap();
+        assert_eq!(one.apply([1., 0., 0.]), [4., 5.5, 6.]);
     }
     #[test]
     fn euler_is_explicit_hypothesis_and_rejects_nonfinite() {

@@ -567,8 +567,10 @@ fn cell_places_bodies_only_at_a_level_that_accepts_their_rules() {
     }
     assert!(!i.rules.contains(&hypotheses::MESH_TRIANGLES));
     let reference = Transform::euler([12.5, -2., 3., 0.1, 0.2, 0.3], 0.7).unwrap();
+    // The node's words are the rows of R acting on column vectors;
+    // `Transform::rotation` holds R transposed (spec/nif.md).
     let target = Transform {
-        rotation: QUARTER_Z.map(|r| r.map(f64::from)),
+        rotation: std::array::from_fn(|i| std::array::from_fn(|j| f64::from(QUARTER_Z[j][i]))),
         translation: [10.0, 0.0, 5.0],
         scale: 2.0,
     };

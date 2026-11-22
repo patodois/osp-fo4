@@ -35,6 +35,7 @@ Measurement datasets and photographs of the game are not distributed.
 | [nif.md](nif.md) | NIF framing, blocks, links, meshes, vertex layouts and bounded structural readers. |
 | [pex.md](pex.md) | Compiled scripts (`.pex`): header, string table, debug information, user flags, objects, structs, variables, properties, states, functions and instructions as measured over every entry of one installation; opcode arities established by alternative readings, argument kinds, the claimed opcode roles and their checks, the disassembly. |
 | [pex-census.txt](pex-census.txt) | Counts from the `.pex` census (`pex_census`). |
+| [nif.md](nif.md) | NIF framing, blocks, links, meshes, vertex layouts, node rotation words and bounded structural readers. |
 | [path-census.md](path-census.md) | Path accounting and independent candidate-resolution comparisons. |
 | [photo-metrics.md](photo-metrics.md) | Prospective forward silhouette and persistent reverse-photo metrics, with explicit limits. |
 | [plugin.md](plugin.md) | Plugin envelopes, groups, subrecords, compression, FormIDs, overrides and flags. |
@@ -46,6 +47,7 @@ Measurement datasets and photographs of the game are not distributed.
 | [render.md](render.md) | Deterministic CPU rasterization, material bindings, maps and snapshot protocols. |
 | [rotation-arithmetic.md](rotation-arithmetic.md) | Supported Euler convention, open exact arithmetic and the bounded numerical investigation. |
 | [scene.md](scene.md) | Scene assembly, static-frame classification, source spans and explicit omissions; exterior cells around a cell joined into one scene; the viewer's moving grid (a viewer policy) and its credits. |
+| [static-rotation-census.txt](static-rotation-census.txt) | Counts from the census of node rotations in drawn models and their OBND boxes (`static_rotation_census`). |
 | [static-blocks.tsv](static-blocks.tsv) | NIF block roles in the selected static-frame scope. |
 | [static-record-keys.txt](static-record-keys.txt) | Synthetic test contract for the typed-record dispatch keys. |
 | [static-records.tsv](static-records.tsv) | Record/subrecord roles for the selected static-frame scope. |
@@ -81,7 +83,7 @@ the registry.
 | `effect_color_only_v1` | pending | Compare instance032 and Bench2 light/dark controls; unsupported falloff/grayscale/refraction/soft effects remain refused. |
 | `nif_editor_marker_named_hidden_v1` | supported | One mixed ordinary/helper model photographed and drawn with and without the named subtree: the photograph matches the drawing without it. |
 | `nif_visibility_editor_marker_hidden_v1` | supported | One measured interior with four placements of two shrub models: the helper boxes drawn from this mesh are absent in the photographs. |
-| `nif_matrix_runtime_row_bridge_v1` | pending | Compare both storage orders for all 94 uniquely matched node locals in two pauses; retain raw words, 18 nonunique requests and independent changing nodes. Independent point/pose evidence is needed before changing the renderer. |
+| `nif_matrix_runtime_row_bridge_v1` | pending | Compare both storage orders for all 94 uniquely matched node locals in two pauses; retain raw words, 18 nonunique requests and independent changing nodes. Offline point evidence (OBND boxes, skeleton bones) moved the renderer to the row reading; photograph one placed model with a shape under two non-commuting node rotations beside its drawing: the other reading must misplace that shape. |
 | `nif_physics_system_blocks_player_v1` | pending | In one purpose-built interior, place a STAT whose model has a physics system and a STAT whose model has none; walk the player into each and record whether the player position stops at the surface or passes through. Repeat in a second launch. |
 | `nif_collision_body_id_selects_body_v1` | pending | In a model with several objects on one bhkPhysicsSystem, displace each body in the running game (hit or push it) and record which node's runtime transform follows; every Body ID must map to its own Target node. |
 | `havok_collision_units_69_99125_v1` | pending | Measured for one polytope box (top at 176 and 352 at reference scales 1 and 2, 70 excluded); repeat for compressed meshes, spheres, capsules and compounds. |

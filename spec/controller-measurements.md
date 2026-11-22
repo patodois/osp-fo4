@@ -33,7 +33,8 @@ A comparação publica duas ordens separadamente: palavras na sequência crua do
 NIF e transposição das nove palavras de rotação. nifxml define Matrix33 como
 column-major; a documentação do coletor define três linhas armazenadas do SDK,
 sem estabelecer uma convenção de composição. A ponte é uma hipótese diagnóstica
-pendente (`nif_matrix_runtime_row_bridge_v1`). Não altera `Transform::from_fields`
-nem libera controladores. Diferenças de armazenamento não devem ser atribuídas
+pendente (`nif_matrix_runtime_row_bridge_v1`). Esta comparação não alterou `Transform::from_fields`
+nem libera controladores; a leitura em linhas foi adotada depois, por medição offline
+(spec/nif.md, Node rotation words). Diferenças de armazenamento não devem ser atribuídas
 silenciosamente à execução de animação. Mudanças entre as duas pausas continuam
 mudanças independentemente dessa normalização.

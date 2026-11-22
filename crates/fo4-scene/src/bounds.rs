@@ -166,7 +166,7 @@ pub fn model(n: &Nif<'_>, file: &str, limits: &Limits, budget: &Budget) -> Resul
 mod tests {
     use super::*;
     #[test]
-    fn column_major_rotation_uniform_scale_and_parent_composition() {
+    fn stored_rows_act_on_column_vectors_with_scale_and_parent_composition() {
         let mut fields = Vec::new();
         for (name, values) in [
             ("Translation", vec![10f32, 20., 30.]),
@@ -180,14 +180,15 @@ mod tests {
             }));
         }
         let transform = Transform::from_fields(&fields, "synthetic").unwrap();
-        assert_eq!(transform.apply([1., 2., 3.]), [6., 22., 36.]);
+        // Rows (0, 1, 0), (-1, 0, 0), (0, 0, 1) times (1, 2, 3) is (2, -1, 3).
+        assert_eq!(transform.apply([1., 2., 3.]), [14., 18., 36.]);
         let parent = Transform {
             translation: [100., 0., 0.],
             ..Transform::IDENTITY
         };
         assert_eq!(
             parent.compose(transform).apply([1., 2., 3.]),
-            [106., 22., 36.]
+            [114., 18., 36.]
         );
         fields.pop();
         assert_eq!(

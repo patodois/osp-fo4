@@ -202,3 +202,12 @@ format documentation, wiki page or third-party reader of this subrecord was
 opened or searched for. The `spec/static-records.tsv` rows that mark VMAD as
 raw state predate this reader and keep their scope (static frames do not run
 scripts).
+The reading of a NIF node's nine rotation words by the static renderer
+(`fo4_scene::transform::Transform::from_fields`, [spec/nif.md](../spec/nif.md),
+Node rotation words) was changed by measurement only: both readings were
+composed over every winning NIF and compared with the OBND boxes of the
+base records that name the models, which the plugin reader already decodes,
+and with the skeleton comparison of the actor step. That a block of nine
+words may be stored by rows or by columns was known in general terms and
+decided by those counts. No reader, editor, renderer or documentation of
+the format beyond the sources already cited in spec/nif.md was opened.

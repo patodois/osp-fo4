@@ -288,7 +288,9 @@ use fo4_scene::actor::pose::{self, Affine};
 use fo4_scene::transform::Transform;
 
 /// World translations of the named nodes of a file under the static
-/// renderer's reading of node rotations (`Transform`), for comparison.
+/// renderer's previous reading of node rotations (the nine words as the
+/// columns of the matrix, `Transform::from_fields` transposed), for
+/// comparison.
 fn static_reading(n: &Nif<'_>, file: &str) -> HashMap<Vec<u8>, [f64; 3]> {
     let mut out = HashMap::new();
     let mut stack: Vec<(usize, Transform, u32)> = n
@@ -308,6 +310,10 @@ fn static_reading(n: &Nif<'_>, file: &str) -> HashMap<Vec<u8>, [f64; 3]> {
         };
         let Ok(local) = Transform::from_fields(fields, file) else {
             continue;
+        };
+        let local = Transform {
+            rotation: std::array::from_fn(|i| std::array::from_fn(|j| local.rotation[j][i])),
+            ..local
         };
         let w = parent.compose(local);
         if let Some(name) = pose::name(n, i) {
@@ -597,7 +603,7 @@ fn rest(
             "  most common bind translations {:?}",
             &v[..v.len().min(8)]
         )?;
-        writeln!(out, "  model bone node vs skeleton world translation [<0.01, <1, >=1]: measured reading {:?}, static renderer's reading {:?}", f.nodes_measured, f.nodes_static)?;
+        writeln!(out, "  model bone node vs skeleton world translation [<0.01, <1, >=1]: measured reading {:?}, previous static reading (words as columns) {:?}", f.nodes_measured, f.nodes_static)?;
         writeln!(out, "  rest moves a vertex from its bind position by at most [<0.001, <0.01, <0.1, <1, <10, >=10]: {:?}", f.moved)?;
     }
     Ok(())

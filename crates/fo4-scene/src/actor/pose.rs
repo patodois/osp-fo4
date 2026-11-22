@@ -8,7 +8,7 @@
 //! (94.5 % within 0.01 units; 3 % with the transposed reading), and each
 //! bone's stored skin-to-bone transform is the inverse of its node's world
 //! transform up to one translation per shape. `crate::transform::Transform`
-//! keeps the static renderer's own reading and is not used here.
+//! reads the words the same way (`spec/nif.md`, Node rotation words).
 use fo4_core::{Budget, Error, Limits, Result};
 use fo4_nif::{skin::Skin, Data, Nif, Value};
 use std::collections::BTreeMap;

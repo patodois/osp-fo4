@@ -88,6 +88,8 @@ substitutos. Malhas clássicas seguem a referência Data; compactas usam seu pr�
 NiAVObject. Ausência de posição, geometria dinâmica, ciclos, não finitos e limites
 de percurso geram erros nomeados. AABB e composição são matemática própria;
 nenhum código de outro leitor foi consultado.
+A leitura das nove palavras de rotação mudou por medição: ver "Node rotation
+words" abaixo.
 
 ## Cor de efeitos sem textura (validação do leitor)
 
@@ -114,6 +116,73 @@ A mudança de herança Bethesda é explícita; nenhuma simulação ou pose de pa
 `bhkSystem` (ByteArray: Data Size u32 + bytes) são lidos só no perfil BS 130,
 conforme o mesmo nif.xml. Os bytes do ByteArray não são interpretados. Fatos,
 medidas e perguntas abertas em [collision.md](collision.md).
+
+## Node rotation words (by measurement)
+
+`fo4_scene::transform::Transform::from_fields` reads a node's nine rotation
+words as the three rows of a matrix R acting on column vectors: the node
+maps a child point p to `t + s * R * p`. Until this step it read them as
+the columns of that matrix (the column-major order of the schema cited
+above), which is R transposed. The two readings place a shape differently
+whenever a rotation on its chain (the shape's own transform included) is
+not symmetric; the difference also reaches the shape's translation when a
+rotated node has a translated child, so depth two is not needed. That a
+nine-word block can be stored either way was known in general terms; the
+choice below was made only by the counts, which could have gone either way.
+
+`static_rotation_census` (an example of `fo4-unpack`) walks every winning
+NIF as the static renderer does (editor-marker subtrees and the outside and
+state blocks left out, skinned shapes counted apart), composes both
+readings and compares each model's box with the boxes stored in the data.
+Output: [static-rotation-census.txt](static-rotation-census.txt); 224,366
+files read, 2 not read, 46 s, 0.95 GB peak.
+
+- **Scope.** 1,190,376 shapes reached (23,368 skinned). By the number of
+  non-identity rotations on their chain: none 1,156,007, one 7,211, two
+  2,976, three 357, four or more 457; 9,164 have a non-symmetric one. 8,651
+  shapes move by more than 0.01 between the readings, in 1,789 models
+  (1,662 by more than 1 unit); 1,026 of these models are named by a base
+  record with a MODL and an OBND (986 moving by more than 1).
+- **OBND.** 28,074 models are named by 36,757 such base records. Over the
+  records whose model box differs by more than 1 unit between the readings
+  or with the root node's own transform left out (four boxes), the OBND
+  (six i16, `spec/plugin.md`) is within 1.01 of the row reading's box only
+  for 327 records and of the column-major reading's box only for 2; 436
+  match both (431 of them only with the root transform left out, where the
+  two readings agree) and 372 neither. Of the records whose model moves by
+  more than 1 unit, the shapes that move lie inside the OBND (widened by
+  1.01) under the row reading only for 343 and under the column-major
+  reading only for 32 (528 both, 611 neither). Per model, with the root
+  transform applied: in the 4 models whose OBND fits the column-major
+  box and not the row box, the row box misses by 1.11 to 12.9 units (a
+  damage stage, a loading-screen model); in the 221 models where it is the
+  other way round, the column-major box misses by 1.2 to 6,285 units.
+- **Skeletons.** The bone nodes of the addon models equal the composed
+  world translations of their race skeleton for 111,574 of 118,050 bones
+  under the row reading and 4,217 under the column-major one
+  ([actor.md](actor.md), Rest pose).
+- **Other stored boxes.** 49 files carry a `BSBound` on a root and 2 a
+  24-byte `BSMultiBoundAABB`; none of them is in a model whose readings
+  differ, so they decide nothing.
+
+The row reading is adopted; the measurement of the running game that could
+refute it is `nif_matrix_runtime_row_bridge_v1` (pending). The bounds,
+the static draw and the collision frames (`fo4_scene::collision`, whose
+Target nodes compose the same way) follow it. Frames of the viewer under
+hypotheses against the commit before, in the cases of
+[actor.md](actor.md): an interior with clothed humanoids 7 of 921,600
+pixels differ, an interior without actors 19, the test cell alone 0, with
+`--terrain --around 1` 1,549 and from the creature's pose 4,235,
+`--walk --terrain --around 2` 470 and the `--path` walk 63 (its walked
+positions unchanged). Without `--under-hypotheses`: 1,019, 0, 0, 6,741 and
+6,026 pixels in the cases that run without rules.
+
+**Open: the root's own transform.** 1,603 files have a rotated root node
+(578 named by a base record). For 431 OBND records the box fits only when
+the root's own transform is left out, and for none only when it is
+applied. The renderer still applies it; whether the game replaces a root's
+transform with the placement (a reading recognised from general knowledge)
+is not established by editor bounds and is not registered or applied here.
 
 ## Skinned shapes (by measurement)
 

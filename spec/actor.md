@@ -129,8 +129,9 @@ Skinned shapes, their skin blocks and per-vertex weights are in
   MNAM-section skeleton), the models' own bone nodes, which sit flat under
   their root, equal the skeleton's composed world translations within 0.01
   units for 111,574 of 118,050 bones under this reading and for 4,217 under
-  the static renderer's reading (`fo4_scene::transform::Transform`, which
-  applies the rows to row vectors). The static renderer is unchanged.
+  the reading the static renderer then used (the rows applied to row
+  vectors). The static renderer has read the words this way since the
+  next step ([nif.md](nif.md), Node rotation words).
 - **Skinning.** Vertex position = sum over its non-zero weights of weight x
   (bone's world transform in the pose) x (bone's stored skin-to-bone
   transform) x stored position (`actor_skin_linear_blend_v1`); a vertex
@@ -274,10 +275,10 @@ dog), `--walk --terrain --around 2`, a `--path` walk, and `--no-actors`.
 
 ## Left as found
 
-- The static renderer composes rotated NIF nodes with the other reading of
-  the rotation words (above); for nested rotated nodes of static models that
-  reading is contradicted by these measurements. Changing it would change
-  static frames and stays with `nif_matrix_runtime_row_bridge_v1`.
+- The static renderer composed rotated NIF nodes with the other reading of
+  the rotation words (above); it now uses this one, after the OBND census
+  of [nif.md](nif.md) (Node rotation words), under the pending
+  `nif_matrix_runtime_row_bridge_v1`.
 - Creature models carry extra skinned shapes that the rest pose draws, for
   example the drawn creature's two shapes named as caps; whether the game
   draws them in this state is not established.
