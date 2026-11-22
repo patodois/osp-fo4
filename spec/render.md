@@ -181,3 +181,8 @@ first, the list order breaking ties, no depth write; the GPU viewer puts
 them in Bevy's transparent phase (sorted by instance). Every other effect
 surface is drawn as before.
 
+Measured after this change: the eight headless test views (with and
+without `--under-hypotheses`) and the two views of the newly drawn
+placements give byte-identical frames and tag files in two runs of one
+build and in a second build of the same commit from another directory (62
+files).
