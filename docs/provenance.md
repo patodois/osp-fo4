@@ -640,3 +640,13 @@ editor ID names navigation mesh generation holds 633 of the 637 placed
 statics with a model and a primitive is read from the records, not from
 any account of what that cell is for. No editor, editor definition file, MIT reference, third-party
 reader of these formats or game executable was opened.
+The load step (`fo4_vm::load`, [spec/vm.md](../spec/vm.md), Load events
+and Scene action progress; [spec/load-event-census.txt](../spec/load-event-census.txt),
+[spec/action-percent-census.txt](../spec/action-percent-census.txt)) reads
+no new format: it counts the compiled scripts' load handlers and the VMAD
+attachments, and the conditions of function 131 with the scene records
+they name, with the repository's readers. When a reference loads, where a
+`MoveTo` puts it, what function 131 means and when a phase's conditions
+end it were recognised from prior general knowledge and are pending
+rules. No editor, editor source or definition file, reader of another
+project, Havok project, script source or game executable was opened.

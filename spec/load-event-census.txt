@@ -1,0 +1,315 @@
+# load_census: kinds and counts only (spec/vm.md, Load events). Sections: 1 handlers whose name holds load, attach or detach, by event, by the engine type extended and by state;
+# 2 what those handlers call; 3 the records whose VMAD attaches a script declaring one (placed references, base records, quest alias scripts by fill); 4 natives on 3D over every script.
+58	1 handlers with code	oncellattach
+42	1 handlers with code	oncelldetach
+56	1 handlers with code	oncellload
+406	1 handlers with code	onload
+186	1 handlers with code	onunload
+1	1 handlers with code by state	oncellattach	another state
+54	1 handlers with code by state	oncellattach	the empty state
+3	1 handlers with code by state	oncellattach	the script's auto state
+1	1 handlers with code by state	oncelldetach	another state
+41	1 handlers with code by state	oncelldetach	the empty state
+2	1 handlers with code by state	oncellload	another state
+48	1 handlers with code by state	oncellload	the empty state
+6	1 handlers with code by state	oncellload	the script's auto state
+7	1 handlers with code by state	onload	another state
+345	1 handlers with code by state	onload	the empty state
+54	1 handlers with code by state	onload	the script's auto state
+2	1 handlers with code by state	onunload	another state
+174	1 handlers with code by state	onunload	the empty state
+10	1 handlers with code by state	onunload	the script's auto state
+4	1 handlers with code by type extended	oncellattach	actor
+53	1 handlers with code by type extended	oncellattach	objectreference
+1	1 handlers with code by type extended	oncellattach	referencealias
+2	1 handlers with code by type extended	oncelldetach	actor
+39	1 handlers with code by type extended	oncelldetach	objectreference
+1	1 handlers with code by type extended	oncelldetach	referencealias
+2	1 handlers with code by type extended	oncellload	actor
+52	1 handlers with code by type extended	oncellload	objectreference
+2	1 handlers with code by type extended	oncellload	referencealias
+82	1 handlers with code by type extended	onload	actor
+274	1 handlers with code by type extended	onload	objectreference
+6	1 handlers with code by type extended	onload	refcollectionalias
+44	1 handlers with code by type extended	onload	referencealias
+45	1 handlers with code by type extended	onunload	actor
+100	1 handlers with code by type extended	onunload	objectreference
+8	1 handlers with code by type extended	onunload	refcollectionalias
+33	1 handlers with code by type extended	onunload	referencealias
+57	1 scripts declaring a handler with code	oncellattach
+42	1 scripts declaring a handler with code	oncelldetach
+54	1 scripts declaring a handler with code	oncellload
+402	1 scripts declaring a handler with code	onload
+186	1 scripts declaring a handler with code	onunload
+10282	1 scripts read
+177	2 calls in the handlers by name	oncellattach	another call
+9	2 calls in the handlers by name	oncellattach	blockactivation
+4	2 calls in the handlers by name	oncellattach	disable
+2	2 calls in the handlers by name	oncellattach	enable
+2	2 calls in the handlers by name	oncellattach	getparentcell
+5	2 calls in the handlers by name	oncellattach	getstagedone
+22	2 calls in the handlers by name	oncellattach	gotostate
+1	2 calls in the handlers by name	oncellattach	moveto
+22	2 calls in the handlers by name	oncellattach	playanimation
+5	2 calls in the handlers by name	oncellattach	registerforanimationevent
+1	2 calls in the handlers by name	oncellattach	registerforcustomevent
+9	2 calls in the handlers by name	oncellattach	registerforremoteevent
+3	2 calls in the handlers by name	oncellattach	setstage
+8	2 calls in the handlers by name	oncellattach	starttimer
+8	2 calls in the handlers by name	oncellattach	waitfor3dload
+60	2 calls in the handlers by name	oncelldetach	another call
+1	2 calls in the handlers by name	oncelldetach	disable
+1	2 calls in the handlers by name	oncelldetach	getcurrentlocation
+4	2 calls in the handlers by name	oncelldetach	getstagedone
+2	2 calls in the handlers by name	oncelldetach	gotostate
+1	2 calls in the handlers by name	oncelldetach	isdisabled
+2	2 calls in the handlers by name	oncelldetach	setstage
+5	2 calls in the handlers by name	oncelldetach	unregisterforanimationevent
+208	2 calls in the handlers by name	oncellload	another call
+4	2 calls in the handlers by name	oncellload	blockactivation
+2	2 calls in the handlers by name	oncellload	enable
+1	2 calls in the handlers by name	oncellload	evaluatepackage
+2	2 calls in the handlers by name	oncellload	getstagedone
+9	2 calls in the handlers by name	oncellload	gotostate
+1	2 calls in the handlers by name	oncellload	isdisabled
+1	2 calls in the handlers by name	oncellload	moveto
+7	2 calls in the handlers by name	oncellload	playanimation
+11	2 calls in the handlers by name	oncellload	registerforanimationevent
+1	2 calls in the handlers by name	oncellload	registerforcustomevent
+3	2 calls in the handlers by name	oncellload	registerfordistancelessthanevent
+6	2 calls in the handlers by name	oncellload	registerforremoteevent
+1	2 calls in the handlers by name	oncellload	setstage
+7	2 calls in the handlers by name	oncellload	starttimer
+1	2 calls in the handlers by name	oncellload	starttimergametime
+3	2 calls in the handlers by name	oncellload	waitfor3dload
+1089	2 calls in the handlers by name	onload	another call
+48	2 calls in the handlers by name	onload	blockactivation
+13	2 calls in the handlers by name	onload	disable
+21	2 calls in the handlers by name	onload	enable
+4	2 calls in the handlers by name	onload	evaluatepackage
+7	2 calls in the handlers by name	onload	getcurrentlocation
+1	2 calls in the handlers by name	onload	getparentcell
+48	2 calls in the handlers by name	onload	getstagedone
+45	2 calls in the handlers by name	onload	gotostate
+51	2 calls in the handlers by name	onload	is3dloaded
+18	2 calls in the handlers by name	onload	isdisabled
+6	2 calls in the handlers by name	onload	moveto
+71	2 calls in the handlers by name	onload	playanimation
+1	2 calls in the handlers by name	onload	playidle
+44	2 calls in the handlers by name	onload	registerforanimationevent
+14	2 calls in the handlers by name	onload	registerforcustomevent
+3	2 calls in the handlers by name	onload	registerfordistancelessthanevent
+2	2 calls in the handlers by name	onload	registerformenuopencloseevent
+64	2 calls in the handlers by name	onload	registerforremoteevent
+5	2 calls in the handlers by name	onload	setstage
+22	2 calls in the handlers by name	onload	starttimer
+6	2 calls in the handlers by name	onload	waitfor3dload
+316	2 calls in the handlers by name	onunload	another call
+32	2 calls in the handlers by name	onunload	disable
+4	2 calls in the handlers by name	onunload	enable
+2	2 calls in the handlers by name	onunload	getcurrentlocation
+1	2 calls in the handlers by name	onunload	getparentcell
+55	2 calls in the handlers by name	onunload	getstagedone
+4	2 calls in the handlers by name	onunload	gotostate
+1	2 calls in the handlers by name	onunload	is3dloaded
+5	2 calls in the handlers by name	onunload	isdisabled
+4	2 calls in the handlers by name	onunload	moveto
+1	2 calls in the handlers by name	onunload	registerforcustomevent
+16	2 calls in the handlers by name	onunload	setstage
+1	2 calls in the handlers by name	onunload	starttimer
+7	2 calls in the handlers by name	onunload	unregisterforanimationevent
+43	2 handlers making at least one call of the name	oncellattach	another call
+9	2 handlers making at least one call of the name	oncellattach	blockactivation
+4	2 handlers making at least one call of the name	oncellattach	disable
+2	2 handlers making at least one call of the name	oncellattach	enable
+1	2 handlers making at least one call of the name	oncellattach	getparentcell
+2	2 handlers making at least one call of the name	oncellattach	getstagedone
+11	2 handlers making at least one call of the name	oncellattach	gotostate
+1	2 handlers making at least one call of the name	oncellattach	moveto
+10	2 handlers making at least one call of the name	oncellattach	playanimation
+3	2 handlers making at least one call of the name	oncellattach	registerforanimationevent
+1	2 handlers making at least one call of the name	oncellattach	registerforcustomevent
+4	2 handlers making at least one call of the name	oncellattach	registerforremoteevent
+2	2 handlers making at least one call of the name	oncellattach	setstage
+5	2 handlers making at least one call of the name	oncellattach	starttimer
+2	2 handlers making at least one call of the name	oncellattach	waitfor3dload
+35	2 handlers making at least one call of the name	oncelldetach	another call
+1	2 handlers making at least one call of the name	oncelldetach	disable
+1	2 handlers making at least one call of the name	oncelldetach	getcurrentlocation
+3	2 handlers making at least one call of the name	oncelldetach	getstagedone
+2	2 handlers making at least one call of the name	oncelldetach	gotostate
+1	2 handlers making at least one call of the name	oncelldetach	isdisabled
+2	2 handlers making at least one call of the name	oncelldetach	setstage
+2	2 handlers making at least one call of the name	oncelldetach	unregisterforanimationevent
+50	2 handlers making at least one call of the name	oncellload	another call
+4	2 handlers making at least one call of the name	oncellload	blockactivation
+2	2 handlers making at least one call of the name	oncellload	enable
+1	2 handlers making at least one call of the name	oncellload	evaluatepackage
+2	2 handlers making at least one call of the name	oncellload	getstagedone
+8	2 handlers making at least one call of the name	oncellload	gotostate
+1	2 handlers making at least one call of the name	oncellload	isdisabled
+1	2 handlers making at least one call of the name	oncellload	moveto
+5	2 handlers making at least one call of the name	oncellload	playanimation
+6	2 handlers making at least one call of the name	oncellload	registerforanimationevent
+1	2 handlers making at least one call of the name	oncellload	registerforcustomevent
+3	2 handlers making at least one call of the name	oncellload	registerfordistancelessthanevent
+5	2 handlers making at least one call of the name	oncellload	registerforremoteevent
+1	2 handlers making at least one call of the name	oncellload	setstage
+5	2 handlers making at least one call of the name	oncellload	starttimer
+1	2 handlers making at least one call of the name	oncellload	starttimergametime
+2	2 handlers making at least one call of the name	oncellload	waitfor3dload
+340	2 handlers making at least one call of the name	onload	another call
+44	2 handlers making at least one call of the name	onload	blockactivation
+11	2 handlers making at least one call of the name	onload	disable
+13	2 handlers making at least one call of the name	onload	enable
+4	2 handlers making at least one call of the name	onload	evaluatepackage
+7	2 handlers making at least one call of the name	onload	getcurrentlocation
+1	2 handlers making at least one call of the name	onload	getparentcell
+34	2 handlers making at least one call of the name	onload	getstagedone
+34	2 handlers making at least one call of the name	onload	gotostate
+51	2 handlers making at least one call of the name	onload	is3dloaded
+15	2 handlers making at least one call of the name	onload	isdisabled
+5	2 handlers making at least one call of the name	onload	moveto
+42	2 handlers making at least one call of the name	onload	playanimation
+1	2 handlers making at least one call of the name	onload	playidle
+25	2 handlers making at least one call of the name	onload	registerforanimationevent
+9	2 handlers making at least one call of the name	onload	registerforcustomevent
+3	2 handlers making at least one call of the name	onload	registerfordistancelessthanevent
+2	2 handlers making at least one call of the name	onload	registerformenuopencloseevent
+33	2 handlers making at least one call of the name	onload	registerforremoteevent
+5	2 handlers making at least one call of the name	onload	setstage
+21	2 handlers making at least one call of the name	onload	starttimer
+6	2 handlers making at least one call of the name	onload	waitfor3dload
+169	2 handlers making at least one call of the name	onunload	another call
+27	2 handlers making at least one call of the name	onunload	disable
+4	2 handlers making at least one call of the name	onunload	enable
+2	2 handlers making at least one call of the name	onunload	getcurrentlocation
+1	2 handlers making at least one call of the name	onunload	getparentcell
+27	2 handlers making at least one call of the name	onunload	getstagedone
+4	2 handlers making at least one call of the name	onunload	gotostate
+1	2 handlers making at least one call of the name	onunload	is3dloaded
+5	2 handlers making at least one call of the name	onunload	isdisabled
+3	2 handlers making at least one call of the name	onunload	moveto
+1	2 handlers making at least one call of the name	onunload	registerforcustomevent
+12	2 handlers making at least one call of the name	onunload	setstage
+1	2 handlers making at least one call of the name	onunload	starttimer
+5	2 handlers making at least one call of the name	onunload	unregisterforanimationevent
+57	3 attachments on base or other records of a script with the handler	oncellattach	ACTI
+5	3 attachments on base or other records of a script with the handler	oncellattach	FURN
+14	3 attachments on base or other records of a script with the handler	oncellattach	NPC_
+3	3 attachments on base or other records of a script with the handler	oncellattach	TERM
+50	3 attachments on base or other records of a script with the handler	oncelldetach	ACTI
+14	3 attachments on base or other records of a script with the handler	oncelldetach	NPC_
+52	3 attachments on base or other records of a script with the handler	oncellload	ACTI
+3	3 attachments on base or other records of a script with the handler	oncellload	CONT
+1	3 attachments on base or other records of a script with the handler	oncellload	DOOR
+3	3 attachments on base or other records of a script with the handler	oncellload	FURN
+3	3 attachments on base or other records of a script with the handler	oncellload	LIGH
+297	3 attachments on base or other records of a script with the handler	onload	ACTI
+8	3 attachments on base or other records of a script with the handler	onload	BOOK
+123	3 attachments on base or other records of a script with the handler	onload	CONT
+10	3 attachments on base or other records of a script with the handler	onload	DOOR
+19	3 attachments on base or other records of a script with the handler	onload	FLOR
+257	3 attachments on base or other records of a script with the handler	onload	FURN
+1	3 attachments on base or other records of a script with the handler	onload	LIGH
+10	3 attachments on base or other records of a script with the handler	onload	MISC
+34	3 attachments on base or other records of a script with the handler	onload	MSTT
+454	3 attachments on base or other records of a script with the handler	onload	NPC_
+4	3 attachments on base or other records of a script with the handler	onload	PGRE
+1	3 attachments on base or other records of a script with the handler	onload	STAT
+3	3 attachments on base or other records of a script with the handler	onload	TACT
+12	3 attachments on base or other records of a script with the handler	onload	TERM
+1	3 attachments on base or other records of a script with the handler	onload	WEAP
+122	3 attachments on base or other records of a script with the handler	onunload	ACTI
+8	3 attachments on base or other records of a script with the handler	onunload	BOOK
+44	3 attachments on base or other records of a script with the handler	onunload	CONT
+8	3 attachments on base or other records of a script with the handler	onunload	DOOR
+19	3 attachments on base or other records of a script with the handler	onunload	FLOR
+215	3 attachments on base or other records of a script with the handler	onunload	FURN
+4	3 attachments on base or other records of a script with the handler	onunload	LIGH
+6	3 attachments on base or other records of a script with the handler	onunload	MISC
+10	3 attachments on base or other records of a script with the handler	onunload	MSTT
+214	3 attachments on base or other records of a script with the handler	onunload	NPC_
+4	3 attachments on base or other records of a script with the handler	onunload	PGRE
+1	3 attachments on base or other records of a script with the handler	onunload	STAT
+8	3 attachments on base or other records of a script with the handler	onunload	TERM
+1	3 attachments on placed references of a script with the handler	oncellattach	ACHR	an exterior cell	persistent	initially enabled
+15	3 attachments on placed references of a script with the handler	oncellattach	ACHR	an interior cell	persistent	initially disabled
+6	3 attachments on placed references of a script with the handler	oncellattach	ACHR	an interior cell	persistent	initially enabled
+39	3 attachments on placed references of a script with the handler	oncellattach	REFR	an exterior cell	persistent	initially enabled
+6	3 attachments on placed references of a script with the handler	oncellattach	REFR	an exterior cell	temporary	initially enabled
+10	3 attachments on placed references of a script with the handler	oncellattach	REFR	an interior cell	persistent	initially disabled
+23	3 attachments on placed references of a script with the handler	oncellattach	REFR	an interior cell	persistent	initially enabled
+23	3 attachments on placed references of a script with the handler	oncellattach	REFR	an interior cell	temporary	initially enabled
+1	3 attachments on placed references of a script with the handler	oncelldetach	ACHR	an exterior cell	persistent	initially disabled
+1	3 attachments on placed references of a script with the handler	oncelldetach	ACHR	an exterior cell	persistent	initially enabled
+3	3 attachments on placed references of a script with the handler	oncelldetach	ACHR	an exterior cell	temporary	initially enabled
+15	3 attachments on placed references of a script with the handler	oncelldetach	ACHR	an interior cell	persistent	initially disabled
+1	3 attachments on placed references of a script with the handler	oncelldetach	ACHR	an interior cell	persistent	initially enabled
+17	3 attachments on placed references of a script with the handler	oncelldetach	ACHR	an interior cell	temporary	initially enabled
+30	3 attachments on placed references of a script with the handler	oncelldetach	REFR	an exterior cell	persistent	initially enabled
+9	3 attachments on placed references of a script with the handler	oncelldetach	REFR	an exterior cell	temporary	initially enabled
+16	3 attachments on placed references of a script with the handler	oncelldetach	REFR	an interior cell	persistent	initially disabled
+9	3 attachments on placed references of a script with the handler	oncelldetach	REFR	an interior cell	persistent	initially enabled
+13	3 attachments on placed references of a script with the handler	oncelldetach	REFR	an interior cell	temporary	initially enabled
+1	3 attachments on placed references of a script with the handler	oncellload	ACHR	an exterior cell	persistent	initially enabled
+1	3 attachments on placed references of a script with the handler	oncellload	ACHR	an exterior cell	temporary	initially enabled
+4	3 attachments on placed references of a script with the handler	oncellload	ACHR	an interior cell	persistent	initially enabled
+12	3 attachments on placed references of a script with the handler	oncellload	ACHR	an interior cell	temporary	initially enabled
+3	3 attachments on placed references of a script with the handler	oncellload	REFR	an exterior cell	persistent	initially disabled
+295	3 attachments on placed references of a script with the handler	oncellload	REFR	an exterior cell	persistent	initially enabled
+141	3 attachments on placed references of a script with the handler	oncellload	REFR	an exterior cell	temporary	initially enabled
+9	3 attachments on placed references of a script with the handler	oncellload	REFR	an interior cell	persistent	initially disabled
+161	3 attachments on placed references of a script with the handler	oncellload	REFR	an interior cell	persistent	initially enabled
+189	3 attachments on placed references of a script with the handler	oncellload	REFR	an interior cell	temporary	initially enabled
+6	3 attachments on placed references of a script with the handler	onload	ACHR	an exterior cell	persistent	initially disabled
+31	3 attachments on placed references of a script with the handler	onload	ACHR	an exterior cell	persistent	initially enabled
+14	3 attachments on placed references of a script with the handler	onload	ACHR	an exterior cell	temporary	initially disabled
+256	3 attachments on placed references of a script with the handler	onload	ACHR	an exterior cell	temporary	initially enabled
+4	3 attachments on placed references of a script with the handler	onload	ACHR	an interior cell	persistent	initially disabled
+70	3 attachments on placed references of a script with the handler	onload	ACHR	an interior cell	persistent	initially enabled
+3	3 attachments on placed references of a script with the handler	onload	ACHR	an interior cell	temporary	initially disabled
+166	3 attachments on placed references of a script with the handler	onload	ACHR	an interior cell	temporary	initially enabled
+23	3 attachments on placed references of a script with the handler	onload	REFR	an exterior cell	persistent	initially disabled
+514	3 attachments on placed references of a script with the handler	onload	REFR	an exterior cell	persistent	initially enabled
+9	3 attachments on placed references of a script with the handler	onload	REFR	an exterior cell	temporary	initially disabled
+2930	3 attachments on placed references of a script with the handler	onload	REFR	an exterior cell	temporary	initially enabled
+66	3 attachments on placed references of a script with the handler	onload	REFR	an interior cell	persistent	initially disabled
+839	3 attachments on placed references of a script with the handler	onload	REFR	an interior cell	persistent	initially enabled
+11	3 attachments on placed references of a script with the handler	onload	REFR	an interior cell	temporary	initially disabled
+1818	3 attachments on placed references of a script with the handler	onload	REFR	an interior cell	temporary	initially enabled
+4	3 attachments on placed references of a script with the handler	onunload	ACHR	an exterior cell	persistent	initially disabled
+9	3 attachments on placed references of a script with the handler	onunload	ACHR	an exterior cell	persistent	initially enabled
+1	3 attachments on placed references of a script with the handler	onunload	ACHR	an exterior cell	temporary	initially disabled
+95	3 attachments on placed references of a script with the handler	onunload	ACHR	an exterior cell	temporary	initially enabled
+1	3 attachments on placed references of a script with the handler	onunload	ACHR	an interior cell	persistent	initially disabled
+21	3 attachments on placed references of a script with the handler	onunload	ACHR	an interior cell	persistent	initially enabled
+3	3 attachments on placed references of a script with the handler	onunload	ACHR	an interior cell	temporary	initially disabled
+49	3 attachments on placed references of a script with the handler	onunload	ACHR	an interior cell	temporary	initially enabled
+8	3 attachments on placed references of a script with the handler	onunload	REFR	an exterior cell	persistent	initially disabled
+328	3 attachments on placed references of a script with the handler	onunload	REFR	an exterior cell	persistent	initially enabled
+8	3 attachments on placed references of a script with the handler	onunload	REFR	an exterior cell	temporary	initially disabled
+2413	3 attachments on placed references of a script with the handler	onunload	REFR	an exterior cell	temporary	initially enabled
+9	3 attachments on placed references of a script with the handler	onunload	REFR	an interior cell	persistent	initially disabled
+527	3 attachments on placed references of a script with the handler	onunload	REFR	an interior cell	persistent	initially enabled
+6	3 attachments on placed references of a script with the handler	onunload	REFR	an interior cell	temporary	initially disabled
+908	3 attachments on placed references of a script with the handler	onunload	REFR	an interior cell	temporary	initially enabled
+1	3 attachments on quest aliases of a script with the handler, by the alias's fill	oncellattach	a location's reference
+1	3 attachments on quest aliases of a script with the handler, by the alias's fill	oncelldetach	a location's reference
+4	3 attachments on quest aliases of a script with the handler, by the alias's fill	oncellload	a location's reference
+7	3 attachments on quest aliases of a script with the handler, by the alias's fill	oncellload	another fill (conditions, a list or none)
+1294	3 attachments on quest aliases of a script with the handler, by the alias's fill	onload	a created object
+22	3 attachments on quest aliases of a script with the handler, by the alias's fill	onload	a forced reference
+92	3 attachments on quest aliases of a script with the handler, by the alias's fill	onload	a location's reference
+81	3 attachments on quest aliases of a script with the handler, by the alias's fill	onload	a unique actor
+51	3 attachments on quest aliases of a script with the handler, by the alias's fill	onload	another fill (conditions, a list or none)
+1066	3 attachments on quest aliases of a script with the handler, by the alias's fill	onunload	a created object
+13	3 attachments on quest aliases of a script with the handler, by the alias's fill	onunload	a forced reference
+18	3 attachments on quest aliases of a script with the handler, by the alias's fill	onunload	a location's reference
+2	3 attachments on quest aliases of a script with the handler, by the alias's fill	onunload	a story event's data
+108	3 attachments on quest aliases of a script with the handler, by the alias's fill	onunload	a unique actor
+47	3 attachments on quest aliases of a script with the handler, by the alias's fill	onunload	another fill (conditions, a list or none)
+69	4 call sites over every script	getparentcell
+300	4 call sites over every script	is3dloaded
+3	4 call sites over every script	isinterior
+69	4 call sites over every script	waitfor3dload

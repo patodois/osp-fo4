@@ -1,0 +1,16 @@
+# action_percent_census: kinds and counts only (spec/vm.md, Scene action progress). Sections: 1 conditions of function 131 in every winning record by host, operator, flags, run-on and value;
+# 2 in scene records by part; 3 what the parameters name: the scene, the action and its kind, the action against the phase whose list holds the condition.
+5	1 by comparison value	an integer 1 to 49
+18	1 by comparison value	an integer 50 to 79
+29	1 by comparison value	an integer 80 to 99
+23	1 by operator, flag bits and run-on	op 3	flags 0x00	run-on 0
+29	1 by operator, flag bits and run-on	op 3	flags 0x01	run-on 0
+52	1 conditions by host record type	SCEN
+52	2 scene conditions by part	a phase's completion conditions
+52	3 first parameter	the host scene itself
+39	3 second parameter names one action	of kind 0 (a dialogue line: audio)
+1	3 second parameter names one action	of kind 3 (player dialogue: the player)
+12	3 second parameter names one action	of kind 5 (a response line: audio)
+1	3 the named action against the phase whose list holds the condition	a phase's completion conditions	the action ends in the phase, started earlier
+4	3 the named action against the phase whose list holds the condition	a phase's completion conditions	the action spans the phase and ends later
+47	3 the named action against the phase whose list holds the condition	a phase's completion conditions	the action starts and ends in the phase
