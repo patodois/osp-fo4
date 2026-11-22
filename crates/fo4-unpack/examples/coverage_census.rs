@@ -668,6 +668,16 @@ fn details(
             );
         }
     }
+    if reasons.iter().any(|r| r.ends_with(": MissingTexture")) {
+        let (set, files) = detail::missing_texture_labels(i, loader, spelling, b)?;
+        if sole {
+            add(c, "missing texture, sole family, placements", set.clone());
+        }
+        add(c, "missing texture, any, placements", set);
+        for f in files {
+            add(c, "missing texture, any, files (per placement)", f);
+        }
+    }
     if let Some(r) = reasons
         .iter()
         .find(|r| r.starts_with("draw: UnsupportedRenderSwapScopes"))

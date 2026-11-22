@@ -94,6 +94,7 @@ codes!(
     DeletedMaterialSwap,
     MissingMaterialSwap,
     RuntimeMaterialSwapFilter,
+    MaterialSwapEmptyEntry,
     // Paths.
     HypothesisAssetDataPrefixStrip,
     HypothesisAssetDataRelativeStrip,
@@ -107,6 +108,7 @@ codes!(
     MissingMaterialEmbeddedShader,
     MissingMaterialParent,
     MissingTexture,
+    MissingTextureUnreadSlot,
     AssetDependencyCycle,
     UnverifiedEffectColorOnly,
     UnverifiedVisibilityEditorMarker,
@@ -189,10 +191,12 @@ impl Code {
             Self::DeletedMaterialSwap
             | Self::MissingMaterialSwap
             | Self::RuntimeMaterialSwapFilter
+            | Self::MaterialSwapEmptyEntry
             | Self::MissingMaterial
             | Self::MissingMaterialEmbeddedShader
             | Self::MissingMaterialParent
             | Self::MissingTexture
+            | Self::MissingTextureUnreadSlot
             | Self::UnsupportedLightData
             | Self::UnverifiedEffectColorOnly
             | Self::UnverifiedVisibilityEditorMarker

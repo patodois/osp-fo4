@@ -252,6 +252,11 @@ fn effect_shader() -> Vec<u8> {
     v
 }
 fn effect_material(path: &[u8]) -> Vec<u8> {
+    effect_material_slots([path, b"", b"", b"", b""])
+}
+/// [`effect_material`] with its five first texture slots (base, grayscale,
+/// envmap, normal, envmap mask).
+fn effect_material_slots(paths: [&[u8]; 5]) -> Vec<u8> {
     let mut v = b"BGEM".to_vec();
     v.extend(2u32.to_le_bytes());
     v.extend(0u32.to_le_bytes());
@@ -266,8 +271,7 @@ fn effect_material(path: &[u8]) -> Vec<u8> {
     v.push(0);
     v.extend(1f32.to_le_bytes());
     v.push(0);
-    for i in 0..5 {
-        let path = if i == 0 { path } else { b"" };
+    for path in paths {
         v.extend((path.len() as u32 + 1).to_le_bytes());
         v.extend(path);
         v.push(0);
@@ -358,6 +362,89 @@ fn asset_chain_keeps_provenance_and_does_not_reach_unlinked_unknown() {
         assert!(!assets.nodes[id].ready);
         assert_eq!(assets.nodes[id].blockers[0].code, expected);
     }
+}
+/// A missing texture cited only from slots the frame never samples keeps
+/// `MissingTextureUnreadSlot` under its pending rule; one cited from the
+/// base slot stays `MissingTexture`.
+#[test]
+fn a_missing_texture_only_in_unsampled_slots_is_set_apart_under_its_rule() {
+    for (base, unread) in [(b"a.dds".as_slice(), true), (b"absent_d.dds", false)] {
+        let mut f = fixture(false, false);
+        fs::create_dir(f.manifest.root.join("materials")).unwrap();
+        fs::create_dir(f.manifest.root.join("textures")).unwrap();
+        let model = nif_blocks(
+            &[("BSEffectShaderProperty", effect_shader())],
+            &[b"materials/a.bgem"],
+        );
+        fs::write(f.manifest.root.join("meshes/a.nif"), model).unwrap();
+        fs::write(
+            f.manifest.root.join("materials/a.bgem"),
+            effect_material_slots([base, b"absent_g.dds", b"absent_e.dds", b"absent_n.dds", b""]),
+        )
+        .unwrap();
+        fs::write(f.manifest.root.join("textures/a.dds"), dds()).unwrap();
+        let Mount::Loose { files, .. } = &mut f.manifest.mounts[0] else {
+            unreachable!()
+        };
+        files.extend(["materials/a.bgem".into(), "textures/a.dds".into()]);
+        let store = Store::open(&f.manifest, &Budget::new(8 << 20)).unwrap();
+        let v = Vfs::mount(&f.manifest, &Budget::new(8 << 20)).unwrap();
+        let mut loader = Loader::new(
+            &store,
+            &v,
+            "english",
+            RuleLevel::Facts,
+            &Budget::new(8 << 20),
+        );
+        let b = Budget::new(8 << 20);
+        let scene = loader.by_editor_id("SyntheticRoom", &b).unwrap();
+        let i = &scene.instances[0];
+        let codes: Vec<&str> = i
+            .blockers
+            .iter()
+            .map(|e| e.code.as_str())
+            .filter(|c| c.starts_with("MissingTexture"))
+            .collect();
+        let unread_ids = crate::missing::unread_textures(&loader.assets, &i.assets, &b).unwrap();
+        let slots: Vec<_> = i
+            .assets
+            .iter()
+            .flat_map(|n| loader.assets.nodes[*n].dependency_citations.iter())
+            .filter_map(|c| c.slot)
+            .collect();
+        assert!(slots.contains(&crate::TextureSlot::Material {
+            slot: "normal",
+            palette: false
+        }));
+        if unread {
+            // Grayscale (no palette flag), environment and normal maps.
+            assert_eq!(codes, ["MissingTextureUnreadSlot"; 3]);
+            assert_eq!(unread_ids.len(), 3);
+            assert!(i
+                .state
+                .hypotheses()
+                .contains(&crate::hypotheses::MISSING_TEXTURE_UNREAD));
+        } else {
+            assert_eq!(codes.iter().filter(|c| **c == "MissingTexture").count(), 1);
+            assert_eq!(unread_ids.len(), 3);
+            assert!(matches!(i.state, crate::State::Blocked));
+        }
+    }
+    let sampled = |s: crate::TextureSlot| s.sampled_by_frame();
+    assert!(sampled(crate::TextureSlot::TextureSet(0)));
+    assert!(!sampled(crate::TextureSlot::TextureSet(1)));
+    assert!(sampled(crate::TextureSlot::Effect {
+        field: "Greyscale Texture",
+        palette: true
+    }));
+    assert!(!sampled(crate::TextureSlot::Effect {
+        field: "Greyscale Texture",
+        palette: false
+    }));
+    assert!(sampled(crate::TextureSlot::Material {
+        slot: "diffuse",
+        palette: false
+    }));
 }
 #[test]
 fn scol_parts_swaps_and_explicit_texture_set_keep_their_records() {

@@ -1,6 +1,6 @@
-//! Sub-reasons of three omission reasons for `coverage_census`
-//! (`spec/materials.md`): missing materials, swap scopes and texture
-//! transform controllers. Every label is a class of the data (a role, a
+//! Sub-reasons of four omission reasons for `coverage_census`
+//! (`spec/materials.md`): missing materials, missing textures, swap scopes
+//! and texture transform controllers. Every label is a class of the data (a role, a
 //! path shape, a field value bucket), never a path or a name.
 use fo4_core::{Budget, Manifest, Mount};
 use fo4_nif::Value;
@@ -27,6 +27,19 @@ pub struct Spelling {
     loose: HashSet<Vec<u8>>,
     pub unmounted_archives: u64,
     pub loose_files: u64,
+    /// The same three sets for keys under `textures/`, and the mounted
+    /// texture keys without their extension.
+    texture_keys: HashSet<Vec<u8>>,
+    texture_names: HashMap<Vec<u8>, u32>,
+    texture_stems: HashSet<Vec<u8>>,
+    texture_unmounted: HashSet<Vec<u8>>,
+    texture_loose: HashSet<Vec<u8>>,
+}
+fn stem(key: &[u8]) -> &[u8] {
+    match key.iter().rposition(|c| *c == b'.') {
+        Some(k) if !key[k..].contains(&b'/') => &key[..k],
+        _ => key,
+    }
 }
 
 fn file_name(key: &[u8]) -> &[u8] {
@@ -53,11 +66,20 @@ impl Spelling {
             loose: HashSet::new(),
             unmounted_archives: 0,
             loose_files: 0,
+            texture_keys: HashSet::new(),
+            texture_names: HashMap::new(),
+            texture_stems: HashSet::new(),
+            texture_unmounted: HashSet::new(),
+            texture_loose: HashSet::new(),
         };
         for c in &vfs.candidates {
             if let Some(k) = &c.key {
                 if k.starts_with(b"materials/") && s.keys.insert(k.clone()) {
                     *s.names.entry(file_name(k).to_vec()).or_default() += 1;
+                }
+                if k.starts_with(b"textures/") && s.texture_keys.insert(k.clone()) {
+                    *s.texture_names.entry(file_name(k).to_vec()).or_default() += 1;
+                    s.texture_stems.insert(stem(k).to_vec());
                 }
             }
         }
@@ -105,6 +127,8 @@ impl Spelling {
                         for e in a.entries {
                             if e.key.starts_with(b"materials/") {
                                 s.unmounted.insert(e.key);
+                            } else if e.key.starts_with(b"textures/") {
+                                s.texture_unmounted.insert(e.key);
                             }
                         }
                     }
@@ -112,6 +136,8 @@ impl Spelling {
                     s.loose_files += 1;
                     if rel.ends_with(b".bgsm") || rel.ends_with(b".bgem") {
                         s.loose.insert(rel);
+                    } else if rel.starts_with(b"textures/") {
+                        s.texture_loose.insert(rel);
                     }
                 }
             }
@@ -150,8 +176,94 @@ impl Spelling {
             _ => "absent at its path; file name under several other folders",
         }
     }
+    /// The class of a missing texture key.
+    pub fn texture_class(&self, key: &[u8]) -> &'static str {
+        if self.texture_loose.contains(key) {
+            return "in a loose folder";
+        }
+        if self.texture_unmounted.contains(key) {
+            return "in an archive the manifest does not mount";
+        }
+        if !key.starts_with(b"textures/") {
+            return "outside the textures root";
+        }
+        if self.texture_stems.contains(stem(key)) {
+            return "present with another extension (or none)";
+        }
+        if let Some(rest) = key.strip_prefix(b"textures/textures/") {
+            let mut k = b"textures/".to_vec();
+            k.extend_from_slice(rest);
+            if self.texture_keys.contains(&k) {
+                return "present without a doubled root folder";
+            }
+        }
+        match self.texture_names.get(file_name(key)).copied().unwrap_or(0) {
+            0 => "absent from every mounted archive and loose folder; file name nowhere",
+            1 => "absent at its path; file name under one other folder",
+            _ => "absent at its path; file name under several other folders",
+        }
+    }
 }
 use std::path::Path;
+
+/// The slot words of a texture citation.
+fn slot_label(slot: Option<fo4_scene::TextureSlot>) -> String {
+    use fo4_scene::TextureSlot as S;
+    match slot {
+        Some(S::Material { slot, .. }) => format!("material {slot}"),
+        Some(S::TextureSet(k)) => format!("texture set slot {k}"),
+        Some(S::Effect { field, .. }) => format!("effect {field}"),
+        None => "other citation".into(),
+    }
+}
+
+/// Labels of the missing textures of `i`: one per file (whether a slot the
+/// frame samples cites it, the citing slots, the spelling class), and the
+/// placement's set of the first two.
+pub fn missing_texture_labels(
+    i: &Instance,
+    loader: &Loader<'_>,
+    spelling: &Spelling,
+    b: &Budget,
+) -> fo4_core::Result<(String, Vec<String>)> {
+    let unread = missing::unread_textures(&loader.assets, &i.assets, b)?;
+    let mut files = Vec::new();
+    let mut set: Vec<String> = Vec::new();
+    for t in &i.assets {
+        let node = &loader.assets.nodes[*t];
+        if node.kind != AssetKind::Texture
+            || !node.blockers.iter().any(|e| e.code == "MissingTexture")
+        {
+            continue;
+        }
+        let mut slots: Vec<String> = Vec::new();
+        for n in &i.assets {
+            let citer = &loader.assets.nodes[*n];
+            for (d, c) in citer.dependencies.iter().zip(&citer.dependency_citations) {
+                if d == t {
+                    let l = slot_label(c.slot);
+                    if !slots.contains(&l) {
+                        slots.push(l);
+                    }
+                }
+            }
+        }
+        slots.sort();
+        let read = if unread.contains(t) {
+            "unsampled slots only"
+        } else {
+            "a sampled slot"
+        };
+        let class = spelling.texture_class(&node.path);
+        files.push(format!("{read}; {}; {class}", slots.join(", ")));
+        let l = format!("{read}; {}", slots.join(", "));
+        if !set.contains(&l) {
+            set.push(l);
+        }
+    }
+    set.sort();
+    Ok((set.join(" + "), files))
+}
 
 fn roles(r: &missing::Roles) -> String {
     let mut v = Vec::new();

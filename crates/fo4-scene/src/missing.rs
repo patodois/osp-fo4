@@ -12,6 +12,12 @@
 //! their own, is [`Read::EmbeddedShader`]: drawing it with the shader's own
 //! fields is the pending rule [`crate::hypotheses::MISSING_MATERIAL_EMBEDDED`].
 //! Everything else stays [`Read::Needed`].
+//!
+//! Texture files that no mounted archive or loose folder holds
+//! (`MissingTexture`) are sorted by the slots that cite them
+//! ([`unread_textures`]): one cited only where the draw build never samples
+//! (`crate::TextureSlot::sampled_by_frame`) keeps a narrower code that the
+//! pending rule [`crate::hypotheses::MISSING_TEXTURE_UNREAD`] covers.
 use crate::paths::Citation;
 use crate::{AssetKind, Assets};
 use fo4_core::{Budget, Result};
@@ -218,6 +224,39 @@ pub fn classify(
         } else {
             Read::NotRead("swap source only")
         };
+    }
+    Ok(out)
+}
+
+/// The missing textures among `nodes` (an instance's asset closure) that
+/// every citation in `nodes` cites from a slot the frame never samples; a
+/// texture with no citation in `nodes` counts as sampled.
+pub fn unread_textures(assets: &Assets, nodes: &[usize], b: &Budget) -> Result<Vec<usize>> {
+    let mut out = Vec::new();
+    for t in nodes {
+        let missing = assets.nodes.get(*t).is_some_and(|n| {
+            n.kind == AssetKind::Texture && n.blockers.iter().any(|e| e.code == "MissingTexture")
+        });
+        if !missing {
+            continue;
+        }
+        let mut cited = false;
+        let mut sampled = false;
+        for i in nodes {
+            let Some(node) = assets.nodes.get(*i) else {
+                continue;
+            };
+            for (d, c) in node.dependencies.iter().zip(&node.dependency_citations) {
+                if d == t {
+                    cited = true;
+                    sampled |= c.slot.is_none_or(|s| s.sampled_by_frame());
+                }
+            }
+        }
+        if cited && !sampled {
+            b.reserve(&mut out, 1, "missing textures", 0)?;
+            out.push(*t);
+        }
     }
     Ok(out)
 }

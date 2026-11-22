@@ -289,7 +289,13 @@ impl Builder<'_, '_> {
             }
             None => {
                 if !swap.is_empty() {
-                    return Err(error("RenderSwapWithoutMaterial", file, at, shader));
+                    self.swap_without_material(swap, file, shader, &scratch)
+                        .map_err(|mut e| {
+                            if e.code == "RenderSwapWithoutMaterial" {
+                                e.source.offset = at;
+                            }
+                            e
+                        })?;
                 }
                 let base = floats::<4>(f, "Base Color", file)?;
                 let scale = floats::<1>(f, "Base Color Scale", file)?[0];

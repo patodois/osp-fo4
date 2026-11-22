@@ -66,6 +66,9 @@ pub const EFFECT_FALLOFF_ALPHA: &str = "effect_falloff_multiplies_alpha_v1";
 /// Vertex alpha of an effect surface with Vertex_Colors set and
 /// Vertex_Alpha clear.
 pub const EFFECT_VERTEX_ALPHA_COLORS: &str = "effect_vertex_alpha_under_vertex_colors_v1";
+/// Vertex alpha of a blended lighting surface with Vertex_Colors set
+/// (`fo4_render::draw`); vertex RGB stays out of the unlit frame.
+pub const LIGHTING_VERTEX_ALPHA: &str = "lighting_vertex_alpha_blend_v1";
 /// Falloff angle controllers whose keys are degrees (`crate::rest`).
 pub const REST_FALLOFF_DEGREES: &str = "nif_controller_falloff_angle_degrees_v1";
 /// Greyscale-to-palette lookups of effect surfaces (`fo4_render::Palette`,
@@ -97,9 +100,24 @@ pub const BLEND_OPACITY_CLAMPED: &str = "blend_alpha_clamped_before_blend_v1";
 /// `crate::rest`, `fo4_render::draw`, `spec/materials.md`).
 pub const MISSING_MATERIAL_EMBEDDED: &str = "nif_missing_material_embedded_shader_v1";
 pub const SWAP_SCOPES_AGREE: &str = "mswp_scopes_readings_agree_v1";
+/// Swap scopes whose readings differ (`fo4_render::draw`,
+/// `spec/materials.md`, Swap scopes): the outer scope's mapping of a
+/// material the model names wins, and the outer swap replaces the inner
+/// one as a whole.
+pub const SWAP_OUTER_WINS: &str = "mswp_outer_scope_wins_v1";
+pub const SWAP_OUTER_REPLACES: &str = "mswp_outer_scope_replaces_v1";
+/// A swap over a shape whose shader names no material leaves the shape as
+/// it is (`fo4_render::draw`).
+pub const SWAP_WITHOUT_MATERIAL: &str = "mswp_shape_without_material_untouched_v1";
+/// A swap entry with an empty BNAM or SNAM changes nothing (scene
+/// `MaterialSwapEmptyEntry`, `fo4_render::draw`).
+pub const SWAP_EMPTY_ENTRY: &str = "mswp_empty_entry_inert_v1";
 pub const REST_TEXTURE_FIRST_KEY: &str = "nif_controller_rest_texture_first_key_v1";
 pub const UV_SCALE_THEN_OFFSET: &str = "uv_scale_then_offset_v1";
 pub const MISSING_PARENT: &str = "bgsm_missing_parent_own_fields_v1";
+/// A missing texture cited only in slots the unlit frame never samples
+/// (`crate::missing::unread_textures`).
+pub const MISSING_TEXTURE_UNREAD: &str = "texture_missing_unread_slot_v1";
 /// A script's Enable or Disable reaching enable children (the viewer's
 /// `--script-event`).
 pub const ENABLE_SCRIPT: &str = "xesp_script_change_propagates_v1";
@@ -203,8 +221,12 @@ pub fn covering(error: &Error) -> Option<&'static str> {
         Some(MISSING_MATERIAL_EMBEDDED)
     } else if error.code == "MissingMaterialParent" {
         Some(MISSING_PARENT)
+    } else if error.code == "MissingTextureUnreadSlot" {
+        Some(MISSING_TEXTURE_UNREAD)
     } else if error.code == "RuntimeMaterialSwapFilter" {
         Some(SWAP_FOLDER)
+    } else if error.code == "MaterialSwapEmptyEntry" {
+        Some(SWAP_EMPTY_ENTRY)
     } else if error.code == "RuntimeEnableParent" {
         crate::enable::rule(&error.found)
     } else if error.code == "UnsupportedAnimationRuntime" {

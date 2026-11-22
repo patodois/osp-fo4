@@ -13,6 +13,36 @@ struct Dependency {
     class: Citation,
     offset: u64,
     shader: Option<CitingShader>,
+    slot: Option<TextureSlot>,
+}
+/// Where a file cites a texture: a material's slot (by the reader's slot
+/// name), a NIF texture set's slot (by position) or an effect shader's
+/// field; `palette` says whether the citing material or shader sets a
+/// greyscale-to-palette flag (`spec/materials.md`, Missing textures).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub enum TextureSlot {
+    Material { slot: &'static str, palette: bool },
+    TextureSet(u32),
+    Effect { field: &'static str, palette: bool },
+}
+impl TextureSlot {
+    /// Whether the draw build (`fo4_render::draw`) can sample a texture
+    /// cited here: a material's diffuse or base texture, a texture set's
+    /// first slot, an effect shader's source texture, and a greyscale
+    /// texture where a palette flag is set. Every other slot is one this
+    /// unlit frame never reads.
+    pub fn sampled_by_frame(self) -> bool {
+        match self {
+            Self::Material { slot, palette } => {
+                matches!(slot, "diffuse" | "base")
+                    || (palette && matches!(slot, "greyscale" | "grayscale"))
+            }
+            Self::TextureSet(k) => k == 0,
+            Self::Effect { field, palette } => {
+                field == "Source Texture" || (palette && field == "Greyscale Texture")
+            }
+        }
+    }
 }
 /// How a model cites one of its dependencies: the citation class and, for a
 /// shader's material name, what the citing shader holds of its own.
@@ -20,6 +50,8 @@ struct Dependency {
 pub struct Cited {
     pub class: Citation,
     pub shader: Option<CitingShader>,
+    /// For a texture citation, the slot that cites it.
+    pub slot: Option<TextureSlot>,
 }
 /// The shader block whose `Name` cites a material: its type and whether it
 /// carries a texture of its own (a lighting shader's texture set with a
@@ -559,7 +591,24 @@ impl<'a> Assets<'a> {
                                 &m.fields
                             }
                         };
+                        // Texture set slots by position; an effect shader's
+                        // palette flags (Shader Flags 1 bits 4 and 5).
+                        let mut set_slot = 0u32;
+                        let effect_palette = ty == "BSEffectShaderProperty"
+                            && fields.iter().any(|f| {
+                                f.name == "Shader Flags 1"
+                                    && matches!(f.value, fo4_nif::Value::U32(v) if v & 0x30 != 0)
+                            });
                         for f in fields {
+                            let slot = if ty == "BSShaderTextureSet" && f.name == "Texture" {
+                                set_slot += 1;
+                                Some(TextureSlot::TextureSet(set_slot - 1))
+                            } else {
+                                Some(TextureSlot::Effect {
+                                    field: f.name,
+                                    palette: effect_palette,
+                                })
+                            };
                             match &f.value {
                                 fo4_nif::Value::Ref(v) if *v >= 0 => {
                                     // Target is a weak back pointer, not owned controller data.
@@ -661,6 +710,9 @@ impl<'a> Assets<'a> {
                                         &c.original,
                                         f.offset,
                                     )?;
+                                    if let Some(d) = deps.last_mut() {
+                                        d.slot = slot;
+                                    }
                                 }
                                 _ => {}
                             }
@@ -721,7 +773,9 @@ impl<'a> Assets<'a> {
                             ),
                         )?;
                     }
-                    for (_, p) in mat.texture_paths() {
+                    let palette = mat.common.grayscale_to_palette_color.0 != 0
+                        || matches!(&mat.kind, fo4_material::Kind::Bgem(e) if e.grayscale_to_palette_alpha.0 != 0);
+                    for (slot, p) in mat.texture_paths() {
                         if !p.bytes().is_empty() {
                             push_dep(
                                 &mut deps,
@@ -731,6 +785,9 @@ impl<'a> Assets<'a> {
                                 &c.original,
                                 p.offset,
                             )?;
+                            if let Some(d) = deps.last_mut() {
+                                d.slot = Some(TextureSlot::Material { slot, palette });
+                            }
                         }
                     }
                     if let fo4_material::Kind::Bgsm(m) = &mat.kind {
@@ -847,6 +904,7 @@ impl<'a> Assets<'a> {
                         self.nodes[i].dependency_citations.push(Cited {
                             class: dep.class,
                             shader: dep.shader,
+                            slot: dep.slot,
                         });
                     }
                     Err(e) => self.block_citation(i, e)?,
@@ -1007,6 +1065,7 @@ fn push_dep(
         class,
         offset,
         shader: None,
+        slot: None,
     });
     Ok(())
 }

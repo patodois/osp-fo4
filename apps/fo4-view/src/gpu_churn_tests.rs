@@ -532,7 +532,7 @@ fn exact_depth_ties_resolve_by_list_order_in_every_run() {
 /// earlier comparisons; each term changes the frame where it applies.
 #[test]
 #[ignore = "needs a GPU: draws offscreen through Bevy"]
-fn cpu_and_gpu_frames_agree_on_falloff_palette_colour_and_alpha_clamp() {
+fn cpu_and_gpu_frames_agree_on_falloff_palette_colour_alpha_clamp_and_vertex_alpha() {
     use fo4_render::{Alpha, Draw, DrawList, Falloff, Mesh, Palette, Sidedness, Texture, Vertex};
     let quad = |h: f64, z: f64| -> Vec<Vertex> {
         [[-h, -h], [h, -h], [h, h], [-h, h]]
@@ -631,6 +631,26 @@ fn cpu_and_gpu_frames_agree_on_falloff_palette_colour_and_alpha_clamp() {
                         ..v
                     })
                     .collect(),
+                triangles: tri.clone(),
+            },
+            // In front: a blended textured card whose vertex alpha (alpha
+            // channel only, RGB 1) fades from 1 to 0 across it, as a
+            // blended lighting surface under `lighting_vertex_alpha_blend_v1`.
+            Mesh {
+                vertex_colors: Some(vec![
+                    [1., 1., 1., 1.],
+                    [1., 1., 1., 0.],
+                    [1., 1., 1., 0.],
+                    [1., 1., 1., 1.],
+                ]),
+                normals: None,
+                vertices: quad(90., 80.)
+                    .into_iter()
+                    .map(|v| Vertex {
+                        position: [v.position[0], v.position[1] - 230., v.position[2]],
+                        ..v
+                    })
+                    .collect(),
                 triangles: tri,
             },
         ],
@@ -678,6 +698,7 @@ fn cpu_and_gpu_frames_agree_on_falloff_palette_colour_and_alpha_clamp() {
     let mut strong = draw(4, 3, 4, alpha(1, 6, 7, 2.));
     strong.uv_offset = [0., 0.25];
     list.draws.push(strong);
+    list.draws.push(draw(5, 4, 1, alpha(1, 6, 7, 1.)));
     let camera = fo4_scene::camera::look_at(
         [0., -500., 450.],
         [0., 0., 0.],
@@ -736,12 +757,13 @@ fn cpu_and_gpu_frames_agree_on_falloff_palette_colour_and_alpha_clamp() {
         report.p95_abs
     );
     // Each term shows: without it the CPU frame differs there.
-    let strips: [fn(&mut DrawList); 5] = [
+    let strips: [fn(&mut DrawList); 6] = [
         |l: &mut DrawList| l.draws[1].falloff = None,
         |l: &mut DrawList| l.draws[2].palette = None,
         |l: &mut DrawList| l.meshes[2].vertex_colors = Some(vec![[1., 1., 1., 0.75]; 4]),
         |l: &mut DrawList| l.draws[3].alpha.opacity = 1.,
         |l: &mut DrawList| l.draws[3].uv_offset = [0.; 2],
+        |l: &mut DrawList| l.meshes[4].vertex_colors = None,
     ];
     for strip in strips {
         let mut other = DrawList {

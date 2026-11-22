@@ -16,7 +16,9 @@ pub mod readiness;
 pub mod rest;
 pub mod terrain;
 pub mod transform;
-pub use assets::{Asset, AssetKind, Assets, Cited, CitingShader, Cycle, CycleEdge, DecodedAsset};
+pub use assets::{
+    Asset, AssetKind, Assets, Cited, CitingShader, Cycle, CycleEdge, DecodedAsset, TextureSlot,
+};
 use fo4_core::{limit, AllocationKind, Budget, Error, Result, SourceSpan};
 use fo4_plugin::{typed::*, FormKey, Record};
 use fo4_vfs::Vfs;
@@ -486,6 +488,9 @@ impl<'a> Loader<'a> {
             &missing::swaps_of(material_swap.as_ref(), base.as_ref()),
             b,
         )?;
+        // Missing textures cited only in slots the frame never samples keep
+        // a narrower code that a pending rule covers (`missing`).
+        let unread = missing::unread_textures(&self.assets, &assets, b)?;
         for i in &assets {
             let node = &self.assets.nodes[*i];
             let read = missing.iter().find(|m| m.node == *i).map(|m| m.read);
@@ -502,6 +507,9 @@ impl<'a> Loader<'a> {
                         }
                         _ => {}
                     }
+                }
+                if e.code == "MissingTexture" && unread.contains(i) {
+                    e.code = "MissingTextureUnreadSlot".into();
                 }
                 b.measure(AllocationKind::Diagnostics, || {
                     push_error(&mut blockers, e, b)
@@ -881,9 +889,37 @@ impl<'a> Loader<'a> {
         blockers: &mut Vec<Error>,
         b: &Budget,
     ) -> Result<()> {
-        for e in &swap.data.entries {
+        for (k, e) in swap.data.entries.iter().enumerate() {
             if matches!(&e.signature, b"BNAM" | b"SNAM") {
                 if let SwapValue::Path(path) = &e.value {
+                    // The source of a pair whose target is empty is not read:
+                    // the pair changes nothing under the rule below.
+                    let next = swap.data.entries[k + 1..]
+                        .iter()
+                        .find(|n| matches!(&n.signature, b"BNAM" | b"SNAM"));
+                    if e.signature == *b"BNAM"
+                        && next.is_some_and(|n| {
+                            n.signature == *b"SNAM"
+                                && matches!(&n.value, SwapValue::Path(p) if p.is_empty())
+                        })
+                    {
+                        continue;
+                    }
+                    // An empty source or target names no file: under
+                    // `mswp_empty_entry_inert_v1` the entry changes nothing.
+                    if path.is_empty() {
+                        push_error(
+                            blockers,
+                            error(
+                                "MaterialSwapEmptyEntry",
+                                &swap.record.source,
+                                "nonempty swap path",
+                                &String::from_utf8_lossy(&e.signature),
+                            ),
+                            b,
+                        )?;
+                        continue;
+                    }
                     b.reserve(
                         assets,
                         1,

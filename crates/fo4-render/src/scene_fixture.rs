@@ -47,10 +47,11 @@ fn nif_vertices(
     material: &[u8],
     extra: Option<[[u8; 8]; 3]>,
 ) -> Vec<u8> {
-    nif_effect_textures(diffuse, effect, label, material, extra, (b"", b""))
+    nif_effect_textures(diffuse, effect, label, material, extra, (b"", b""), None)
 }
 /// [`nif_vertices`] whose effect shader names `textures` (source,
-/// greyscale).
+/// greyscale); with `lighting`, the lighting shader's Shader Flags 2 and
+/// an NiAlphaProperty's flags (block 5, named by the shapes).
 fn nif_effect_textures(
     diffuse: &[u8],
     effect: Option<u32>,
@@ -58,6 +59,7 @@ fn nif_effect_textures(
     material: &[u8],
     extra: Option<[[u8; 8]; 3]>,
     textures: (&[u8], &[u8]),
+    lighting: Option<(u32, u16)>,
 ) -> Vec<u8> {
     let mut av = Vec::new();
     for x in [u32::MAX, 0, u32::MAX, 0] {
@@ -71,7 +73,8 @@ fn nif_effect_textures(
     for f in [0f32, 0., 0., 1.] {
         mesh.extend(f.to_le_bytes());
     }
-    for n in [u32::MAX, 1, u32::MAX] {
+    let alpha_ref = if lighting.is_some() { 5 } else { u32::MAX };
+    for n in [u32::MAX, 1, alpha_ref] {
         mesh.extend(n.to_le_bytes());
     }
     // Position and UV; with `extra`, normal at byte 12 and colour at 16.
@@ -108,6 +111,9 @@ fn nif_effect_textures(
     shader.extend(u32::MAX.to_le_bytes());
     shader.extend(0u32.to_le_bytes());
     shader.extend([0; 68]);
+    if let Some((flags2, _)) = lighting {
+        shader[20..24].copy_from_slice(&flags2.to_le_bytes());
+    }
     if let Some(flags1) = effect {
         shader.clear();
         for n in [0u32, 0, u32::MAX, flags1, 0] {
@@ -137,7 +143,7 @@ fn nif_effect_textures(
     av.extend(0u32.to_le_bytes());
     let mut helper_mesh = mesh.clone();
     helper_mesh[..4].copy_from_slice(&2u32.to_le_bytes());
-    let blocks = [
+    let mut blocks = vec![
         ("BSTriShape", mesh),
         (
             if effect.is_some() {
@@ -151,19 +157,29 @@ fn nif_effect_textures(
         ("NiNode", av),
         ("BSTriShape", helper_mesh),
     ];
+    if let Some((_, flags)) = lighting {
+        let mut a = Vec::new();
+        for n in [u32::MAX, 0, u32::MAX] {
+            a.extend(n.to_le_bytes());
+        }
+        a.extend(flags.to_le_bytes());
+        a.push(128);
+        blocks.push(("NiAlphaProperty", a));
+    }
+    let count = blocks.len() as u32;
     let mut v = b"Gamebryo File Format, Version 20.2.0.7\n".to_vec();
     v.extend(0x14020007u32.to_le_bytes());
     v.push(1);
-    for n in [12u32, 5, 130] {
+    for n in [12u32, count, 130] {
         v.extend(n.to_le_bytes());
     }
     v.extend([0; 4]);
-    v.extend(5u16.to_le_bytes());
+    v.extend((count as u16).to_le_bytes());
     for (name, _) in &blocks {
         v.extend((name.len() as u32).to_le_bytes());
         v.extend(name.as_bytes());
     }
-    for i in [0u16, 1, 2, 3, 4] {
+    for i in 0..count as u16 {
         v.extend(i.to_le_bytes());
     }
     for (_, b) in &blocks {
@@ -220,6 +236,18 @@ fn scol_fixture_with(name: &str, texture: &[u8], part: Vec<u8>) -> (TestDir, Man
 /// [`scol_fixture_with`] whose reference places `placed` (0x801 the part
 /// STAT itself, 0x802 the SCOL).
 fn fixture_placing(name: &str, texture: &[u8], part: Vec<u8>, placed: u32) -> (TestDir, Manifest) {
+    fixture_records(name, texture, part, placed, &[], &[])
+}
+/// [`fixture_placing`] whose part STAT also holds `part_extra` subrecords,
+/// with `records` added to the plugin.
+fn fixture_records(
+    name: &str,
+    texture: &[u8],
+    part: Vec<u8>,
+    placed: u32,
+    part_extra: &[u8],
+    records: &[u8],
+) -> (TestDir, Manifest) {
     let temp = TestDir::new(name);
     let root = temp.join("Data");
     std::fs::create_dir_all(root.join("meshes")).unwrap();
@@ -242,8 +270,14 @@ fn fixture_placing(name: &str, texture: &[u8], part: Vec<u8>, placed: u32) -> (T
     let mut cell = sub(b"EDID", b"SyntheticScolCell\0");
     cell.extend(sub(b"DATA", &1u16.to_le_bytes()));
     let body = [
-        rec(b"STAT", 0x801, 0, &sub(b"MODL", b"part.nif\0")),
+        rec(
+            b"STAT",
+            0x801,
+            0,
+            &[sub(b"MODL", b"part.nif\0").as_slice(), part_extra].concat(),
+        ),
         rec(b"SCOL", 0x802, 0, &scol),
+        records.to_vec(),
         group(
             2,
             0,
@@ -1133,8 +1167,15 @@ fn effect_surface_build_with(x: EffectFixture) -> crate::draw::Build {
             files.push(format!("textures/{name}"));
         }
     }
-    let mut bytes =
-        nif_effect_textures(b"", Some(x.flags1), b"EditorMarker:27", b"", x.extra, names);
+    let mut bytes = nif_effect_textures(
+        b"",
+        Some(x.flags1),
+        b"EditorMarker:27",
+        b"",
+        x.extra,
+        names,
+        None,
+    );
     let patch = |bytes: &mut Vec<u8>, old: &[f32], new: &[f32]| {
         let old: Vec<u8> = old.iter().flat_map(|v| v.to_le_bytes()).collect();
         let at = bytes
@@ -1573,4 +1614,141 @@ fn palette_surfaces_are_drawn_only_under_their_rules() {
         "{:?}",
         output.omitted
     );
+}
+
+/// A swap over a model whose only shader names no material: refused as
+/// `RenderSwapWithoutMaterial` before, now drawn with the shader's own
+/// texture set under `mswp_shape_without_material_untouched_v1`, the swap's
+/// entries still read.
+#[test]
+fn a_swap_leaves_a_shape_without_material_to_its_own_texture_under_its_rule() {
+    use fo4_scene::hypotheses::SWAP_WITHOUT_MATERIAL;
+    let options = |level| BuildOptions {
+        max_texture_dimension: 16,
+        max_texture_bytes: 1 << 20,
+        level,
+        blocks: None,
+    };
+    let run = |swap: &[u8]| {
+        let part = nif_with_helper(b"textures/a.dds", None, b"PlainLabel");
+        let records = rec(b"MSWP", 0x820, 0, swap);
+        let (temp, m) = fixture_records(
+            "render-swap-no-material",
+            &dds(),
+            part,
+            0x801,
+            &sub(b"MODS", &0x820u32.to_le_bytes()),
+            &records,
+        );
+        let b = Budget::new(32 << 20);
+        let store = fo4_plugin::typed::Store::open(&m, &b).unwrap();
+        let vfs = fo4_vfs::Vfs::mount(&m, &b).unwrap();
+        let mut loader = Loader::new(&store, &vfs, "english", RuleLevel::Facts, &b);
+        let scene = loader.by_editor_id("SyntheticScolCell", &b).unwrap();
+        assert!(scene.instances[0]
+            .base
+            .as_ref()
+            .unwrap()
+            .material_swap
+            .is_some());
+        let out = build(
+            &scene,
+            &loader,
+            &m.limits,
+            options(RuleLevel::Hypotheses),
+            &b,
+        )
+        .unwrap();
+        drop(temp);
+        out
+    };
+    let mut swap = sub(b"BNAM", b"other.bgsm\0");
+    swap.extend(sub(b"SNAM", b"replacement.bgsm\0"));
+    let out = run(&swap);
+    assert!(out.omitted.is_empty(), "{:?}", out.omitted);
+    assert!(!out.list.draws.is_empty());
+    assert!(out.instances[0].hypotheses.contains(&SWAP_WITHOUT_MATERIAL));
+    // Empty entries (a blank row, an empty target) change nothing under
+    // `mswp_empty_entry_inert_v1`.
+    let mut blank = swap.clone();
+    blank.extend(sub(b"BNAM", b"\0"));
+    blank.extend(sub(b"SNAM", b"\0"));
+    blank.extend(sub(b"BNAM", b"other2.bgsm\0"));
+    blank.extend(sub(b"SNAM", b"\0"));
+    let out = run(&blank);
+    assert!(out.omitted.is_empty(), "{:?}", out.omitted);
+    assert!(out.instances[0]
+        .hypotheses
+        .contains(&fo4_scene::hypotheses::SWAP_EMPTY_ENTRY));
+    // An unpaired entry is still refused (by the scene or the swap reader).
+    let out = run(&sub(b"BNAM", b"other.bgsm\0"));
+    assert!(out.list.draws.is_empty());
+    assert_eq!(out.omitted.len(), 1);
+}
+
+/// A blended lighting surface whose shape sets Vertex_Colors and stores a
+/// vertex alpha below 1 is drawn with its vertex alpha (alpha channel only)
+/// under `lighting_vertex_alpha_blend_v1`, and without it as before.
+#[test]
+fn a_blended_lighting_surface_takes_its_vertex_alpha_only_under_its_rule() {
+    use fo4_scene::hypotheses::LIGHTING_VERTEX_ALPHA;
+    let options = |level| BuildOptions {
+        max_texture_dimension: 16,
+        max_texture_bytes: 1 << 20,
+        level,
+        blocks: None,
+    };
+    // Normal bytes, then RGBA: a vertex alpha of 0, 128 and 255.
+    let colours = |a: [u8; 3]| a.map(|a| [128, 128, 255, 0, 200, 100, 50, a]);
+    let run = |flags2: u32, alpha_flags: u16, a: [u8; 3]| {
+        let part = nif_effect_textures(
+            b"textures/a.dds",
+            None,
+            b"PlainLabel",
+            b"",
+            Some(colours(a)),
+            (b"", b""),
+            Some((flags2, alpha_flags)),
+        );
+        let (temp, m) = fixture_placing("render-lighting-vertex-alpha", &dds(), part, 0x801);
+        let b = Budget::new(32 << 20);
+        let store = fo4_plugin::typed::Store::open(&m, &b).unwrap();
+        let vfs = fo4_vfs::Vfs::mount(&m, &b).unwrap();
+        let mut loader = Loader::new(&store, &vfs, "english", RuleLevel::Facts, &b);
+        let scene = loader.by_editor_id("SyntheticScolCell", &b).unwrap();
+        let out = build(
+            &scene,
+            &loader,
+            &m.limits,
+            options(RuleLevel::Hypotheses),
+            &b,
+        )
+        .unwrap();
+        drop(temp);
+        out
+    };
+    // Blending on (flags bit 0, SRC_ALPHA / INV_SRC_ALPHA), Vertex_Colors set.
+    let blend = 1 | (6 << 1) | (7 << 5);
+    let out = run(1 << 5, blend, [0, 128, 255]);
+    assert!(out.omitted.is_empty(), "{:?}", out.omitted);
+    assert!(out.instances[0].hypotheses.contains(&LIGHTING_VERTEX_ALPHA));
+    let colours = out.list.meshes[out.list.draws[0].mesh]
+        .vertex_colors
+        .clone()
+        .unwrap();
+    // The alpha only: RGB stays 1.
+    assert_eq!(colours[0], [1., 1., 1., 0.]);
+    assert_eq!(colours[2], [1., 1., 1., 1.]);
+    // Without blending, without Vertex_Colors, or with every vertex alpha
+    // 1, nothing changes and the rule is not used.
+    for (flags2, alpha_flags, a) in [
+        (1 << 5, 0, [0, 128, 255]),
+        (0, blend, [0, 128, 255]),
+        (1 << 5, blend, [255; 3]),
+    ] {
+        let out = run(flags2, alpha_flags, a);
+        assert!(out.omitted.is_empty(), "{:?}", out.omitted);
+        assert!(!out.instances[0].hypotheses.contains(&LIGHTING_VERTEX_ALPHA));
+        assert!(out.list.meshes.iter().all(|m| m.vertex_colors.is_none()));
+    }
 }

@@ -14,7 +14,7 @@ type AnyResult<T> = Result<T, Box<dyn std::error::Error>>;
 const TERRAIN_SHADING: &str = "ground textures weighted per vertex under the pending terrain texture rules, times VCLR; untextured weight as flat neutral grey per triangle by geometric normal; unlit, not game lighting";
 fn run() -> AnyResult<()> {
     let args: Vec<_> = std::env::args().skip(1).collect();
-    const USAGE: &str = "usage: render MANIFEST DATA_DIRECTORY CELL_EDITOR_ID build/OUTPUT [--strict|--measured|--under-hypotheses] [--eye X,Y,Z --look X,Y,Z] [--instance-ids] [--collision-overlay] [--terrain] [--around N]";
+    const USAGE: &str = "usage: render MANIFEST DATA_DIRECTORY CELL_EDITOR_ID build/OUTPUT [--strict|--measured|--under-hypotheses] [--eye X,Y,Z --look X,Y,Z] [--instance-ids] [--collision-overlay] [--terrain] [--around N] [--texture-mib N]";
     if args.len() < 4 {
         return Err(USAGE.into());
     }
@@ -26,6 +26,9 @@ fn run() -> AnyResult<()> {
     let mut collision_overlay = false;
     let mut terrain = false;
     let mut around = 0u32;
+    // The reference's decoded texture total (96 MiB) unless raised for a
+    // dense view; a larger total changes which placements the limit drops.
+    let mut texture_mib: Option<u64> = None;
     let mut rest = args[4..].iter();
     while let Some(arg) = rest.next() {
         match arg.as_str() {
@@ -39,6 +42,14 @@ fn run() -> AnyResult<()> {
                     .and_then(|v| v.parse::<u32>().ok())
                     .filter(|n| (1..=fo4_scene::grid::MAX_RADIUS).contains(n))
                     .ok_or(USAGE)?;
+            }
+            "--texture-mib" => {
+                texture_mib = Some(
+                    rest.next()
+                        .and_then(|v| v.parse::<u64>().ok())
+                        .filter(|n| (1..=4096).contains(n))
+                        .ok_or(USAGE)?,
+                );
             }
             "--eye" | "--look" => {
                 let point = point(rest.next().ok_or(USAGE)?)?;
@@ -67,6 +78,10 @@ fn run() -> AnyResult<()> {
                 }
             })?;
     }
+    let mut build_options = fo4_render::draw::BuildOptions::reference(policy);
+    if let Some(mib) = texture_mib {
+        build_options.max_texture_bytes = mib << 20;
+    }
     let mut manifest = Manifest::load(Path::new(&args[0]))?;
     manifest.root = Path::new(&args[1]).canonicalize()?;
     let limits = &manifest.limits;
@@ -89,13 +104,7 @@ fn run() -> AnyResult<()> {
         let loads = fo4_scene::grid::absorb_around(&mut loader, &mut scene, &a, &budget)?;
         grid = Some((a, loads));
     }
-    let mut built = fo4_render::draw::build(
-        &scene,
-        &loader,
-        limits,
-        fo4_render::draw::BuildOptions::reference(policy),
-        &budget,
-    )?;
+    let mut built = fo4_render::draw::build(&scene, &loader, limits, build_options, &budget)?;
     // Without --terrain nothing below changes the draw list or the summary.
     let mut terrain_summary = None;
     if let (true, Some((a, _))) = (terrain, &grid) {
@@ -103,9 +112,7 @@ fn run() -> AnyResult<()> {
         // placed instance in piece order.
         let set = fo4_walk::terrain::load_with(&store, a, policy, &budget)?;
         let first = u32::try_from(built.instances.len())?;
-        let mut cache = fo4_render::terrain::TextureCache::new(
-            fo4_render::draw::BuildOptions::reference(policy),
-        );
+        let mut cache = fo4_render::terrain::TextureCache::new(build_options);
         let mut textures = Vec::new();
         for (k, t) in set.terrains.iter().enumerate() {
             let tag = first
@@ -137,9 +144,7 @@ fn run() -> AnyResult<()> {
                 Outcome::Built(t) => {
                     // Tagged after every placed instance.
                     let tag = u32::try_from(built.instances.len())?;
-                    let mut cache = fo4_render::terrain::TextureCache::new(
-                        fo4_render::draw::BuildOptions::reference(policy),
-                    );
+                    let mut cache = fo4_render::terrain::TextureCache::new(build_options);
                     let textures = fo4_render::terrain::append_textured_terrain(
                         &mut built.list,
                         &t,

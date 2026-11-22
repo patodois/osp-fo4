@@ -147,6 +147,66 @@ fn readings<S>(
     }
     Ok([outer, inner, down, up])
 }
+/// How two or more swap scopes settle one path where the four
+/// [`readings`] differ.
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum Settled {
+    /// No scope maps a material that another scope put in its place: the
+    /// outermost swap alone gives the material. `outer` names
+    /// `mswp_outer_scope_wins_v1` (the outermost swap maps the path), and
+    /// `replace` names `mswp_outer_scope_replaces_v1` (it does not, and an
+    /// inner swap that maps it is left out).
+    Ruled {
+        material: Vec<u8>,
+        outer: bool,
+        replace: bool,
+    },
+    /// A scope maps the material another scope put in place: the order of
+    /// application decides, and no rule settles it.
+    Chained,
+}
+/// [`Settled`] for `path` under swap scopes `swaps` (outermost first), with
+/// `one` applying a single swap: the outermost swap alone, compared with the
+/// path the model names, unless a swap maps what another puts in place.
+fn settle<S>(
+    path: &[u8],
+    swaps: &[S],
+    b: &Budget,
+    mut one: impl FnMut(Vec<u8>, &S) -> Result<Vec<u8>>,
+) -> Result<Settled> {
+    let owned = |p: &[u8]| -> Result<Vec<u8>> {
+        let mut v = Vec::new();
+        b.reserve(&mut v, p.len(), "material swap", 0)?;
+        v.extend_from_slice(p);
+        Ok(v)
+    };
+    let mut targets = Vec::new();
+    b.reserve(&mut targets, swaps.len(), "material swap", 0)?;
+    for s in swaps {
+        targets.push(one(owned(path)?, s)?);
+    }
+    // A target another scope maps again: the readings depend on the order.
+    for (k, t) in targets.iter().enumerate() {
+        if t.as_slice() == path {
+            continue;
+        }
+        for (j, s) in swaps.iter().enumerate() {
+            if j != k && one(owned(t)?, s)? != *t {
+                return Ok(Settled::Chained);
+            }
+        }
+    }
+    let Some(first) = targets.first() else {
+        return Err(error("RenderSwapPair", "material swap", 0, "no swap"));
+    };
+    let outer = first.as_slice() != path;
+    let inner = targets[1..].iter().any(|t| t.as_slice() != path);
+    Ok(Settled::Ruled {
+        material: owned(first)?,
+        outer,
+        replace: !outer && inner,
+    })
+}
 fn error(code: &str, file: &str, offset: u64, found: impl std::fmt::Display) -> Error {
     Error::new(code, file, offset, "documented unlit draw binding", found)
 }
@@ -299,6 +359,8 @@ struct Builder<'a, 's> {
     include_marker_subtrees: bool,
     allow_visibility_marker: bool,
     allow_swap_folder: bool,
+    /// The instance relies on `mswp_empty_entry_inert_v1`.
+    allow_swap_empty: bool,
     /// Registered rules the current instance's draws relied on beyond its
     /// state's (`Identity::hypotheses` gains them).
     draw_rules: Vec<&'static str>,
@@ -705,26 +767,84 @@ impl Builder<'_, '_> {
     /// The material a shape draws for `path` under the swaps that apply to
     /// it, outermost first (the reference's, then the bases' down through
     /// SCOL parts). With two or more, the four readings of
-    /// [`Self::swap_readings`] must agree (`mswp_scopes_readings_agree_v1`,
-    /// checked for the whole base by [`Self::swap_scopes`]).
-    fn swap(&self, path: Vec<u8>, swaps: &[&Loaded<Mswp>], scratch: &Budget) -> Result<Vec<u8>> {
+    /// [`Self::swap_readings`] agree (`mswp_scopes_readings_agree_v1`,
+    /// checked for the whole base by [`Self::swap_scopes`]), or [`settle`]
+    /// gives the material under `mswp_outer_scope_wins_v1` and
+    /// `mswp_outer_scope_replaces_v1`.
+    fn swap(
+        &mut self,
+        path: Vec<u8>,
+        swaps: &[&Loaded<Mswp>],
+        scratch: &Budget,
+    ) -> Result<Vec<u8>> {
         match swaps {
             [] => Ok(path),
             [one] => self.swap_one(path, one, scratch),
             _ => {
                 let [outer, inner, down, up] = self.swap_readings(&path, swaps, scratch)?;
                 if outer == inner && outer == down && outer == up {
-                    Ok(outer)
-                } else {
-                    Err(error(
+                    return Ok(outer);
+                }
+                match settle(&path, swaps, scratch, |p, s| self.swap_one(p, s, scratch))? {
+                    Settled::Ruled {
+                        material,
+                        outer,
+                        replace,
+                    } if self.scope_rules(outer, replace)? => Ok(material),
+                    Settled::Ruled { .. } => Err(error(
                         "UnsupportedRenderSwapScopes",
                         "material swap",
                         0,
                         "readings differ",
-                    ))
+                    )),
+                    Settled::Chained => Err(error(
+                        "UnsupportedRenderSwapScopes",
+                        "material swap",
+                        0,
+                        "readings differ, chained",
+                    )),
                 }
             }
         }
+    }
+    /// The vertex alpha of a blended lighting surface whose shape sets
+    /// Shader Flags 2 Vertex_Colors and stores a vertex alpha below 1, under
+    /// `lighting_vertex_alpha_blend_v1` (vertex RGB stays out of the frame).
+    /// Without the rule the surface is drawn as before, without vertex
+    /// alpha.
+    fn lighting_vertex_alpha(
+        &mut self,
+        surface: &mut Surface,
+        flags2: Option<u32>,
+        geometry: Option<&fo4_nif::Mesh>,
+    ) -> Result<()> {
+        if surface.channels != 0
+            || surface.alpha.enabled == 0
+            || flags2.is_none_or(|f| f & (1 << 5) == 0)
+        {
+            return Ok(());
+        }
+        let below = geometry
+            .and_then(|m| m.vertices.as_ref())
+            .is_some_and(|vs| {
+                vs.iter().any(|v| {
+                    v.color
+                        .map(|c| c[3] != 255)
+                        .or(v.color_float.map(|c| c[3] != 1.))
+                        .unwrap_or(false)
+                })
+            });
+        if below && self.draw_rule(fo4_scene::hypotheses::LIGHTING_VERTEX_ALPHA)? {
+            surface.channels = 2;
+        }
+        Ok(())
+    }
+    /// Whether the scope rules a settled path needs are usable at the
+    /// build's level; used ones are recorded.
+    fn scope_rules(&mut self, outer: bool, replace: bool) -> Result<bool> {
+        use fo4_scene::hypotheses as h;
+        Ok((!outer || self.draw_rule(h::SWAP_OUTER_WINS)?)
+            && (!replace || self.draw_rule(h::SWAP_OUTER_REPLACES)?))
     }
     /// The material for `path` under two or more swap scopes, by each
     /// reading the data leaves open: the outermost swap alone (a reference
@@ -740,11 +860,12 @@ impl Builder<'_, '_> {
     }
     /// Before a base with two or more swap scopes draws anything: every
     /// material its models' shaders name must get the same material under
-    /// every reading, and the rule must be usable at the build's level.
+    /// every reading, or one [`settle`] gives under the scope rules; the
+    /// rules must be usable at the build's level.
     fn swap_scopes(&mut self, base: &Base, swaps: &[&Loaded<Mswp>]) -> Result<()> {
         let scratch = self.budget.child();
         let loader = self.loader;
-        let mut agree = true;
+        let (mut chained, mut outer_wins, mut replace) = (false, false, false);
         'models: for id in &base.assets {
             let Some(node) = loader.assets.nodes.get(*id) else {
                 continue;
@@ -760,29 +881,62 @@ impl Builder<'_, '_> {
                     continue;
                 };
                 let [outer, inner, down, up] = self.swap_readings(&target.path, swaps, &scratch)?;
-                if !(outer == inner && outer == down && outer == up) {
-                    agree = false;
-                    break 'models;
+                if outer == inner && outer == down && outer == up {
+                    continue;
+                }
+                match settle(&target.path, swaps, &scratch, |p, s| {
+                    self.swap_one(p, s, &scratch)
+                })? {
+                    Settled::Ruled {
+                        outer, replace: r, ..
+                    } => {
+                        outer_wins |= outer;
+                        replace |= r;
+                    }
+                    Settled::Chained => {
+                        chained = true;
+                        break 'models;
+                    }
                 }
             }
         }
-        if !agree {
-            return Err(error(
+        let refused = |found: &str| {
+            Err(error(
                 "UnsupportedRenderSwapScopes",
                 &base.record.source.file,
                 base.record.source.offset,
-                "readings differ",
-            ));
+                found,
+            ))
+        };
+        if chained {
+            return refused("readings differ, chained");
+        }
+        if (outer_wins || replace) && !self.scope_rules(outer_wins, replace)? {
+            return refused("readings differ");
         }
         if !self.draw_rule(fo4_scene::hypotheses::SWAP_SCOPES_AGREE)? {
-            return Err(error(
-                "UnsupportedRenderSwapScopes",
-                &base.record.source.file,
-                base.record.source.offset,
-                "readings agree",
-            ));
+            return refused("readings agree");
         }
         Ok(())
+    }
+    /// A shape whose shader names no material under one or more swaps: its
+    /// swaps are read as for any shape (their refusals stand), and the shape
+    /// keeps its own texture under `mswp_shape_without_material_untouched_v1`.
+    pub(crate) fn swap_without_material(
+        &mut self,
+        swaps: &[&Loaded<Mswp>],
+        file: &str,
+        shader: usize,
+        scratch: &Budget,
+    ) -> Result<()> {
+        for s in swaps {
+            self.swap_one(Vec::new(), s, scratch)?;
+        }
+        if self.draw_rule(fo4_scene::hypotheses::SWAP_WITHOUT_MATERIAL)? {
+            Ok(())
+        } else {
+            Err(error("RenderSwapWithoutMaterial", file, 0, shader))
+        }
     }
     fn swap_one(&self, path: Vec<u8>, swap: &Loaded<Mswp>, scratch: &Budget) -> Result<Vec<u8>> {
         let mut from = None;
@@ -793,14 +947,32 @@ impl Builder<'_, '_> {
                     if from.is_some() {
                         return Err(error("RenderSwapPair", "material swap", 0, "unpaired BNAM"));
                     }
-                    from =
-                        Some(self.resolve_path(Citation::SwapMaterial, p.as_bytes(), scratch)?);
+                    // An empty source matches no material under
+                    // `mswp_empty_entry_inert_v1` (an empty key never
+                    // equals a resolved path).
+                    from = Some(if p.is_empty() && self.allow_swap_empty {
+                        Vec::new()
+                    } else {
+                        self.resolve_path(Citation::SwapMaterial, p.as_bytes(), scratch)?
+                    });
                 }
                 (b"SNAM", SwapValue::Path(p)) => {
                     let source = from.take().ok_or_else(|| {
                         error("RenderSwapPair", "material swap", 0, "SNAM without BNAM")
                     })?;
-                    if source == path {
+                    if source.is_empty() {
+                        // The pair of an empty source changes nothing.
+                    } else if p.is_empty() && self.allow_swap_empty {
+                        // An empty target leaves its source as it is.
+                        if source == path && selected.is_some() {
+                            return Err(error(
+                                "AmbiguousMaterialSwap",
+                                "material swap",
+                                0,
+                                "duplicate source",
+                            ));
+                        }
+                    } else if source == path {
                         if selected.is_some() {
                             return Err(error(
                                 "AmbiguousMaterialSwap",
@@ -894,6 +1066,8 @@ impl Builder<'_, '_> {
                     || s[s.len().saturating_sub(5)..].eq_ignore_ascii_case(b".bgem")
             });
         let nif_alpha = ni_alpha(n, shape, file)?;
+        let lighting =
+            n.block_types[n.blocks[shader].type_index as usize] == "BSLightingShaderProperty";
         let nif_flags1 = f.iter().find_map(|v| match (v.name, &v.value) {
             ("Shader Flags 1", Value::U32(x)) => Some(*x),
             _ => None,
@@ -960,7 +1134,7 @@ impl Builder<'_, '_> {
                 floats::<2>(f, "UV Offset", file)?,
                 floats::<2>(f, "UV Scale", file)?,
             ];
-            let surface = loader.assets.with_decoded(id, &scratch, |d| {
+            let mut surface = loader.assets.with_decoded(id, &scratch, |d| {
                 let DecodedAsset::Material(m) = d else {
                     return Err(error("RenderAssetKind", file, 0, id));
                 };
@@ -1072,11 +1246,14 @@ impl Builder<'_, '_> {
                     "material UV field differs from the controlled NIF field",
                 ));
             }
+            if lighting {
+                self.lighting_vertex_alpha(&mut surface, nif_flags2, geometry)?;
+            }
             self.uv_rule(&surface)?;
             return Ok(surface);
         }
         if !swap.is_empty() {
-            return Err(error("RenderSwapWithoutMaterial", file, 0, shader));
+            self.swap_without_material(swap, file, shader, &scratch)?;
         }
         let kind = &n.block_types[n.blocks[shader].type_index as usize];
         let raw = if kind == "BSLightingShaderProperty" {
@@ -1190,7 +1367,7 @@ impl Builder<'_, '_> {
         };
         self.opacity_rule(&alpha)?;
         alpha.validate()?;
-        let surface = Surface {
+        let mut surface = Surface {
             requires_uv: !color_only,
             channels: if color_only {
                 effect_channels(nif_flags1, nif_flags2, file)?
@@ -1210,6 +1387,9 @@ impl Builder<'_, '_> {
             falloff: None,
             palette: None,
         };
+        if kind == "BSLightingShaderProperty" {
+            self.lighting_vertex_alpha(&mut surface, nif_flags2, geometry)?;
+        }
         self.uv_rule(&surface)?;
         Ok(surface)
     }
@@ -1660,6 +1840,7 @@ impl Builder<'_, '_> {
         self.allow_visibility_marker = rules.contains(&h::VISIBILITY_MARKER);
         self.allow_marker_suffix = rules.contains(&h::MARKER_SUFFIX);
         self.allow_swap_folder = rules.contains(&h::SWAP_FOLDER);
+        self.allow_swap_empty = rules.contains(&h::SWAP_EMPTY_ENTRY);
         self.allow_editor_marker_subtrees = rules.contains(&h::NAMED_MARKER);
         self.allow_scol_parts = rules.contains(&h::SCOL);
     }
@@ -2103,6 +2284,7 @@ fn build_inner(
         include_marker_subtrees,
         allow_visibility_marker: false,
         allow_swap_folder: false,
+        allow_swap_empty: false,
         draw_rules: Vec::new(),
     };
     let scratch = b.child();
@@ -2247,6 +2429,10 @@ fn build_inner(
                 .state
                 .hypotheses()
                 .contains(&fo4_scene::hypotheses::SWAP_FOLDER);
+            builder.allow_swap_empty = i
+                .state
+                .hypotheses()
+                .contains(&fo4_scene::hypotheses::SWAP_EMPTY_ENTRY);
             let world = Transform::euler(p, scale)?;
             let swaps: Vec<&Loaded<Mswp>> = i.material_swap.iter().collect();
             builder.base(base, world, index, &swaps, 0)?;
@@ -2388,6 +2574,41 @@ mod tests {
         assert_eq!(r[2], b"b");
         assert_eq!(r[3], b"c");
         assert!(readings::<Pairs>(b"a", &[], &b, apply).is_err());
+    }
+    #[test]
+    fn swap_scopes_whose_readings_differ_settle_outermost_first_unless_chained() {
+        let b = Budget::new(1 << 16);
+        type Pairs = Vec<(&'static [u8], &'static [u8])>;
+        let apply = |p: Vec<u8>, s: &Pairs| -> Result<Vec<u8>> {
+            Ok(s.iter()
+                .find(|(from, _)| *from == p.as_slice())
+                .map_or(p, |(_, to)| to.to_vec()))
+        };
+        let ruled = |m: &[u8], outer, replace| Settled::Ruled {
+            material: m.to_vec(),
+            outer,
+            replace,
+        };
+        let go = |path: &[u8], swaps: &[Pairs]| settle(path, swaps, &b, apply).unwrap();
+        // Both scopes map it: the outer (reference) target wins.
+        let both: Vec<Pairs> = vec![vec![(b"a", b"c")], vec![(b"a", b"b")]];
+        assert_eq!(go(b"a", &both), ruled(b"c", true, false));
+        // Only the outer maps it: its target, against the inner-alone reading.
+        let outer: Vec<Pairs> = vec![vec![(b"a", b"c")], vec![(b"x", b"y")]];
+        assert_eq!(go(b"a", &outer), ruled(b"c", true, false));
+        // Only the inner maps it: the outer swap replaces it, the path stays.
+        let inner: Vec<Pairs> = vec![vec![(b"x", b"y")], vec![(b"a", b"b")]];
+        assert_eq!(go(b"a", &inner), ruled(b"a", false, true));
+        // Three scopes, only the middle one maps it: replaced too.
+        let middle: Vec<Pairs> = vec![vec![], vec![(b"a", b"m")], vec![]];
+        assert_eq!(go(b"a", &middle), ruled(b"a", false, true));
+        // A scope maps what another put in place: refused.
+        let chain: Vec<Pairs> = vec![vec![(b"b", b"c")], vec![(b"a", b"b")]];
+        assert_eq!(go(b"a", &chain), Settled::Chained);
+        let chain: Vec<Pairs> = vec![vec![(b"a", b"b")], vec![(b"b", b"c")]];
+        assert_eq!(go(b"a", &chain), Settled::Chained);
+        // Nothing maps it.
+        assert_eq!(go(b"z", &both), ruled(b"z", false, false));
     }
     #[test]
     fn decoded_alpha_property_fields_keep_the_raw_flags_and_threshold() {
