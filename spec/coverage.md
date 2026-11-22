@@ -654,3 +654,59 @@ was not checked). In dense views the reference drops more placements at its
 decoded-texture limit (96 MiB) than before, because it draws more; that
 is a limit of the reference.
 
+
+## Swap scopes, swaps over shapes without material, missing textures and vertex alpha
+
+Swap scopes whose readings differ are drawn by the outermost swap alone
+unless a swap maps another's target, a shape without a material keeps its
+own texture under a swap, empty swap paths change nothing, a missing
+texture cited only from slots the frame never samples no longer blocks its
+placement, and a blended lighting surface takes its vertex alpha, each
+under pending rules ([materials.md](materials.md), second step;
+[render.md](render.md), Vertex alpha of blended lighting surfaces). Every
+cell of the load order (3 shards of 1,764 to 1,882 s, 1.02 GB peak),
+against the census of the environment map step:
+
+| Outcome | Environment map step | And this step |
+| --- | ---: | ---: |
+| drawn without hypotheses | 779,237 (22.35 % of the area) | 779,020 (22.31 %) |
+| drawn only under hypotheses | 632,601 (70.08 %) | 680,843 (72.87 %) |
+| hidden by `xesp_child_follows_parent_v1` | 8,432 | 8,517 |
+| omitted | 335,241 (5.79 %) | 287,131 (3.04 %) |
+
+48,110 placements leave the omitted outcome. The 217 that move from drawn
+without hypotheses to drawn under hypotheses are blended lighting surfaces
+with vertex alpha: at the hypotheses level they are now drawn with it
+(`lighting_vertex_alpha_blend_v1` is their only rule); without hypotheses
+they are drawn exactly as before (frames of five views byte-identical).
+Rules used by drawn placements: `lighting_vertex_alpha_blend_v1` 53,512
+(5.72 % of the area drawn under hypotheses), `texture_missing_unread_slot_v1`
+31,111, `mswp_shape_without_material_untouched_v1` 8,972,
+`mswp_empty_entry_inert_v1` 4,581, `mswp_outer_scope_wins_v1` 2,767,
+`mswp_outer_scope_replaces_v1` 1,202.
+
+As sole families: swap scopes whose readings differ fall from 3,678
+placements (19.11 % of the omitted area) to 94 chained ones (0.48 % of the
+smaller omitted area); `RenderSwapWithoutMaterial` (8,792) and rejected swap
+paths (4,560) leave the list; missing textures fall from 32,015 to 841, all
+cited from a sampled slot (an effect's source texture 318, a material's
+diffuse 360, a texture set's first slot 163).
+
+The largest sole families left, by share of the omitted area:
+`REFR.XPRM` (3.56 %, 2,513 placements), texture-transform controllers
+(3.28 %), alpha controllers (2.94 %), behaviour graphs (2.94 %),
+non-finite vertices (2.29 %), `REFR.XATR` (2.17 %), `REFR.XEZN` (1.91 %),
+`MSTT.DSTA` (1.18 %), `REFR.XRNK` (1.12 %), manager loops (1.04 %).
+Material swap entries whose paths hold a `*` (68 records) stay inert in
+every frame, with and without hypotheses ([materials.md](materials.md)).
+
+**Frames** (the `render` example, CPU, 1280 x 720, under hypotheses,
+`--texture-mib 1024` on both sides, against the commit before with only
+that option added): the blended ground layer under a debris pile fades
+into the floor instead of ending in a hard polygon edge; the walls and
+ceiling of an interior whose materials name an absent environment map are
+drawn (the room was mostly empty before); two rock piles whose base swaps
+their ground materials are drawn, their branch shape with its own
+texture; a boxcar door whose base swaps its paint and whose reference
+holds an unrelated swap is drawn in the body's colour. Without hypotheses
+the five views are byte-identical frames and instance buffers.

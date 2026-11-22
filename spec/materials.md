@@ -292,6 +292,23 @@ file is behaviour). A missing texture cited from any sampled slot stays
 `MissingTexture`. `coverage_census` labels both (`missing texture`
 sub-reasons: sampled or not, citing slots, spelling class).
 
+### Coverage
+
+Whole load order ([coverage.md](coverage.md), Swap scopes, swaps over
+shapes without material, missing textures and vertex alpha): omitted area
+5.79 % to 3.04 % of all; swap scopes whose readings differ as a sole family
+from 3,678 placements to 94 (all chained); `RenderSwapWithoutMaterial` and
+rejected swap paths to none; missing textures from 32,015 to 841, all
+cited from a sampled slot.
+
+### What stays refused in this family
+
+- Chained swap stacks (94 placements): a swap maps what another puts in
+  place; the order of application decides.
+- Missing textures in a sampled slot (841): what the game draws without the
+  file is not known.
+- Swap entries with `*` (inert in every frame; above).
+
 ### Rules added in this step
 
 All pending, in [hypotheses.tsv](hypotheses.tsv) with the measurement that
