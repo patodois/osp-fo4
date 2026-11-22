@@ -7,6 +7,7 @@ pub mod enable;
 pub mod land;
 pub mod layout;
 pub mod quest;
+pub mod scen;
 mod semantics;
 pub mod static_frame;
 pub mod story;

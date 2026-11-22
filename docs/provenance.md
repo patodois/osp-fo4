@@ -329,6 +329,22 @@ scripts read with `fo4-pex`. Each behaviour is a pending rule in
 definition file, script source, decompiler, other interpreter, script
 extender or the game executable was opened or searched for.
 
+The fragments step (`fo4_plugin::vmad` INFO, PACK, SCEN and PERK blocks,
+`fo4_plugin::scen`, `fo4_vm::scene`; [spec/scene-record.md](../spec/scene-record.md),
+[spec/vm.md](../spec/vm.md), Scenes and fragments) adds no sourced layout:
+two public UESP file format pages were requested on 2026-11-22
+(`Skyrim_Mod:Mod_File_Format/VMAD_Field` and
+`Fallout4Mod:Mod_File_Format/SCEN`); each answered HTTP 403 and nothing was
+read. The block layouts were found by measurement over every block of the
+installation; the slot meanings, the scene record's parts and action
+kinds, FNAM bit 0x1 of a scene, the scene natives' behaviour, the owning
+quest of a dialogue line and the time-scale relation of the two timer
+clocks were recognised from prior general knowledge and are used only as
+pending rules that `fragment_census`, `story_census` and the sweeps could
+refute. No editor, editor source or definition file, script source,
+decompiler, other interpreter, script extender or game executable was
+opened or searched for.
+
 The save file reader (`fo4-save`, [spec/save.md](../spec/save.md)) was
 established only by measuring the save files of one machine with the
 `save_census` example and by resolving their form references against the

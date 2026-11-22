@@ -155,7 +155,7 @@ pub const XESP_BIT1: &str = "xesp_flag_bit1_not_presence_v1";
 pub const XESP_PROPAGATES: &str = "xesp_script_change_propagates_v1";
 
 /// Every rule above.
-pub const ALL: [&str; 69] = [
+pub const ALL: [&str; 77] = [
     ARITHMETIC,
     COMPARE,
     NOT_COPY_CAST,
@@ -225,6 +225,14 @@ pub const ALL: [&str; 69] = [
     XESP_OPPOSITE,
     XESP_BIT1,
     XESP_PROPAGATES,
+    FRAGMENT_BLOCKS,
+    FRAGMENT_INSTANCE,
+    SCEN_LAYOUT,
+    SCENE_START,
+    SCENE_PHASES,
+    SCENE_BEGIN_ON_QUEST_START,
+    OWNING_QUEST,
+    TIME_SCALE,
 ];
 
 /// The rule an opcode's meaning rests on; `None` for an opcode without a
@@ -244,6 +252,27 @@ pub fn of_opcode(op: u8) -> Option<&'static str> {
         _ => return None,
     })
 }
+
+/// The VMAD fragment blocks of INFO, PACK, SCEN and PERK and the slot
+/// each fragment attaches to.
+pub const FRAGMENT_BLOCKS: &str = "vmad_fragment_blocks_v1";
+/// A fragment block's script instance on its record's handle, with the
+/// block's property values.
+pub const FRAGMENT_INSTANCE: &str = "vmad_fragment_instance_v1";
+/// The SCEN record layout.
+pub const SCEN_LAYOUT: &str = "scen_record_layout_v1";
+/// `Scene.Start`, `ForceStart`, `Stop`, `IsPlaying` on the run's state.
+pub const SCENE_START: &str = "scene_start_v1";
+/// Phases offered in order, entered and completed where the data decides.
+pub const SCENE_PHASES: &str = "scene_phase_progression_v1";
+/// FNAM bit 0x1: the scene starts when its quest starts.
+pub const SCENE_BEGIN_ON_QUEST_START: &str = "scene_begin_on_quest_start_v1";
+/// `Scene.GetOwningQuest` from PNAM, `TopicInfo.GetOwningQuest` from the
+/// group that holds the INFO.
+pub const OWNING_QUEST: &str = "vm_host_owning_quest_v1";
+/// A game-time timer due after its hours times 3600 over the time-scale
+/// global, against real-time timers.
+pub const TIME_SCALE: &str = "vm_timer_time_scale_v1";
 
 /// The registry the rules are checked against.
 pub const REGISTRY: &str = include_str!("../../../spec/hypotheses.tsv");

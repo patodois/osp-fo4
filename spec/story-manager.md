@@ -103,38 +103,60 @@ property resolves to the object values that the VMAD of every record
 attaching the script (or a script extending it) stores under that name.
 
 What the scan cannot see: receivers that come from a parameter, a call's
-result, an array or another object's property; scripts attached through
-the fragment blocks of INFO (2,396 VMADs), SCEN (632), PACK (166) and PERK
-(32), which `fo4_plugin::vmad` keeps raw, so their properties and owners
-are unknown; quests started by the engine, by the console or by events
-of the world; and whether a call site runs at all.
+result, an array or another object's property; quests started by the
+engine, by the console or by events of the world; and whether a call site
+runs at all. Before the fragments step it could not see the scripts of the
+fragment blocks of INFO (2,396 VMADs), SCEN (632), PACK (166) and PERK
+(32) either; since then they are attachments with their properties, and
+an INFO's or SCEN's owning quest is the quest whose group of kind 10 holds
+it (`vm_host_owning_quest_v1`, [scene-record.md](scene-record.md)), so
+`GetOwningQuest()` in their fragments resolves. `story_census
+--no-fragments` leaves them out and reproduces the earlier census byte for
+byte.
 
 - Call sites: `setStage` 8,495 (receiver a property 4,399, `self` 3,371,
   `GetOwningQuest()` 697, other 28), `Start` 254, `SetCurrentStageID` 1
   (the scripted `setStage` itself), `SendStoryEvent` 60,
   `SendStoryEventAndWait` 30.
-- Receivers that resolve to a constant record: 6,591 `setStage` sites, 206
-  `Start` sites, 46 story event sites (42 keywords, 35 of them tested by a
-  node of the `SCPT` tree with function 576 selector 0 `K1`, which tests
+- Receivers that resolve to a constant record (with the fragment blocks;
+  before them in brackets): 7,271 `setStage` sites (6,591), 220 `Start`
+  sites (206), 30 story event sites (21; 47 keywords, 40 of them tested by
+  a node of the `SCPT` tree with function 576 selector 0 `K1`, which tests
   47 keywords). Calls whose constant receiver is the calling script's own
-  quest are not counted as starts.
-- 554 quests are the constant receiver of a starting call of a script
-  that does not belong to them.
+  quest are not counted as starts. Of the 1,861 `setStage` sites in
+  scripts no read VMAD attached, 707 are now attached: 502 in INFO, 143 in
+  SCEN, 56 in PACK and 6 in PERK fragment scripts.
+- 565 quests (554) are the constant receiver of a starting call of a
+  script that does not belong to them.
 
 The 1,448 quests not flagged to start, by what could start them: a story
-node only 957, a script call only 375, both 54, **unknown 62** (no node,
-no constant call: started by something the scan cannot see). By way
-(a quest may have several): story event `SCPT` 476, `ADIA` 366, `CLOC` 96,
-`AOBJ` and `LCLD` 16 each, and 13 other codes; a stage set from a quest
-stage fragment script 298, a quest script 118, a terminal fragment script
-43, a placed reference's script 39 (and 2 of a placed actor), an activator
-base's script 33, `Start` from a stage fragment 130, from a quest script
-15, and the rest in the census.
+node only 956 (957), a script call only 377 (375), both 55 (54),
+**unknown 60** (62; no node, no constant call: started by something the
+scan cannot see). By way (a quest may have several): story event `SCPT`
+476, `ADIA` 366, `CLOC` 96, `AOBJ` and `LCLD` 16 each, and 13 other
+codes; a stage set from a quest stage fragment script 298, a quest script
+118, a terminal fragment script 43, a placed reference's script 39 (and 2
+of a placed actor), a dialogue line (INFO) fragment script 34, an
+activator base's script 33, a scene fragment script 30, a package
+fragment script 8; `Start` from a stage fragment 130, from a quest script
+15, from an INFO fragment 6, from a scene fragment 1, and the rest in the
+census. Two of the 62 quests are now reached (by fragment scripts).
 
-The opening's main quest is among the 375 a script call could start: only
-fragments and quest scripts of quests that themselves wait on world events
-set its later stages, and nothing the scan sees sets its first stage
-(counts and names in the step's notes, outside the repository).
+The opening's main quest is among the 377 a script call could start: only
+fragments and scripts of quests that themselves wait on world events set
+its later stages; no INFO, SCEN, PACK or PERK fragment starts it or sets a
+stage of it (its own scenes' fragments set its stages, which needs it
+running), and nothing the scan sees sets its first stage. Its first stage
+is a startup stage (INDX flag 0x2), so starting the quest sets it
+([vm.md](vm.md), Where the opening stops; names in the step's notes,
+outside the repository).
+
+**Scenes** (section 7, since the fragments step): 1,626 `Scene.Start` and
+16 `ForceStart` call sites, 1,610 and 15 with a property receiver; of the
+4,773 scenes, 1,329 are the constant receiver of such a call, 683 the
+target of a start-scene action (kind 4) of another scene, and 2,906
+neither; FNAM bit 0x1 against these ways is in
+[scene-record.md](scene-record.md).
 
 ## Rules (behaviour at run time, `fo4_vm::story`)
 
@@ -158,5 +180,5 @@ undetermined conditions ([vm.md](vm.md), Events and the story manager).
 - Whether the walk is depth-first as above, whether a node may start more
   than one quest, how the game orders siblings whose links do not make one
   chain, and how alias filling decides whether a start succeeds.
-- What starts the 62 quests with no node and no constant call, and the
-  first stage of the opening's main quest.
+- What starts the 60 quests with no node and no constant call, and the
+  opening's main quest.

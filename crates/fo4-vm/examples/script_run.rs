@@ -298,6 +298,7 @@ fn census(
                     fo4_vm::quest::Job::Open { why, .. } => format!("open: {why}"),
                     fo4_vm::quest::Job::Custom { .. } => "custom event".to_string(),
                     fo4_vm::quest::Job::Story { .. } => "event onstoryscript".to_string(),
+                    fo4_vm::quest::Job::Scene { .. } => "scene step".to_string(),
                 };
                 if j.outcomes.is_empty() {
                     bump(

@@ -330,7 +330,7 @@
 1	object kind	player
 1	object kind and type class	player	actor
 
-## quest_run stages: every winning quest, every stage a fragment names, set in a fresh interpreter (quest host, isolated scenario, nested order, log entry conditions evaluated, remote and custom events and story events delivered); the stage's own fragment
+## quest_run stages: every winning quest, every stage a fragment names, set in a fresh interpreter (quest host, isolated scenario, nested order, log entry conditions evaluated, remote and custom events, story events and scenes delivered); the stage's own fragment
 1619	native	referencealias.getreference
 1237	native	quest.isstagedone
 227	native	refcollectionalias.getcount
@@ -401,7 +401,7 @@
 23	rule	pex_array_ops_v1
 2	rule	quest_on_stage_set_v1
 
-## quest_run stages: the fragments, quest events, custom events and story events those stages brought (cascades)
+## quest_run stages: the fragments, quest events, custom events, story events and scene fragments those stages brought (cascades)
 497	native	referencealias.getreference
 420	native	quest.isstagedone
 127	native	quest.isrunning
@@ -456,17 +456,74 @@
 1	condition	function 562
 1	condition	function 660
 
-## quest_run new-game: the quests started with a new game, their OnQuestInit and startup-stage fragments, OnStageSet, remote and custom events, story events and what those brought
+## quest_run new-game: the quests started with a new game, their OnQuestInit and startup-stage fragments, OnStageSet, remote and custom events, story events, the scenes that start with their quests and what those brought
 20	native	objectreference.attachmod
 6	native	refcollectionalias.getcount
 3	native	actor.getlevel
 3	native	game.isplugininstalled
-3	native	scene.isplaying
 2	native	objectreference.is3dloaded
 2	native	referencealias.getreference
 1	rule	pex_array_ops_v1
 1	rule	pex_ops_not_copy_cast_v1
 1	condition	function 14
+
+## quest_run fragments: every INFO begin fragment run in a fresh interpreter (isolated scenario), its parameters undetermined; the fragment itself
+55	native	quest.isstagedone
+22	native	form.haskeyword
+20	native	objectreference.getbaseobject
+5	native	referencealias.getreference
+4	native	quest.isrunning
+3	native	keyword.sendstoryeventandwait
+2	native	utility.randomint
+1	native	actor.playidle
+1	native	actor.playidlewithtarget
+1	native	globalvariable.getvalue
+1	native	objectreference.getvalue
+1	native	scene.isplaying
+4	rule	vmad_fragment_instance_v1
+
+## quest_run fragments: every INFO end fragment run in a fresh interpreter (isolated scenario), its parameters undetermined; the fragment itself
+53	native	quest.isstagedone
+45	native	utility.randomint
+33	native	objectreference.getvaluepercentage
+24	native	objectreference.getdistance
+17	native	referencealias.getreference
+11	native	objectreference.getitemcount
+10	native	quest.isrunning
+7	native	objectreference.ismapmarkervisible
+4	native	quest.isobjectivedisplayed
+1	native	message.show
+1	native	objectreference.getcurrentlocation
+1	native	scene.isplaying
+28	rule	vmad_fragment_instance_v1
+
+## quest_run fragments: every PACK begin fragment run in a fresh interpreter (isolated scenario), its parameters undetermined; the fragment itself
+8	native	referencealias.getreference
+3	native	package.getowningquest
+1	native	actor.getcurrentpackage
+1	native	objectreference.is3dloaded
+3	rule	vmad_fragment_instance_v1
+
+## quest_run fragments: every PACK end fragment run in a fresh interpreter (isolated scenario), its parameters undetermined; the fragment itself
+19	native	package.getowningquest
+6	native	objectreference.getdistance
+6	native	quest.isstagedone
+2	native	objectreference.is3dloaded
+2	rule	vmad_fragment_instance_v1
+
+## quest_run fragments: every PACK change fragment run in a fresh interpreter (isolated scenario), its parameters undetermined; the fragment itself
+8	native	referencealias.getreference
+6	native	package.getowningquest
+1	rule	vmad_fragment_instance_v1
+
+## quest_run fragments: every PERK perk entry fragment run in a fresh interpreter (isolated scenario), its parameters undetermined; the fragment itself
+3	native	actor.hasmagiceffect
+3	native	utility.getcurrentgametime
+2	native	objectreference.haskeyword
+2	native	quest.isstagedone
+1	native	message.show
+1	native	utility.randomint
+1	rule	vmad_fragment_instance_v1
 
 ## the two test cells of the survey (one interior; one exterior with radius 1); quest host (script_run default): data host, quest natives from the run's quest state (isolated scenario), stage fragments, OnStageSet, remote and custom events and story events run inside the call
 3	data answer	referencealias.getreference	undetermined: whether the quest runs is undetermined

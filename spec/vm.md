@@ -769,6 +769,131 @@ above and [vm-blockers.txt](vm-blockers.txt)):
    `L1` (59 conditions), 359 (93), 71 (45), 426 (28), 310 (25), 77 (24),
    560 (24).
 
+## Scenes and fragments
+
+Since the fragments step the fragment blocks of INFO, PACK, SCEN and PERK
+are read and scene records are read far enough to place them
+([scene-record.md](scene-record.md)). `fo4_vm::scene` keeps a state per
+scene in the run's world and the quest host answers the scene natives
+from it when scenes are on (`World::scenes.on`; `quest_run` turns it on,
+`--no-scenes` leaves the natives to the data host as before; `script_run`
+and the viewer keep it off). Each part is a pending rule and can be
+switched off; with `--no-scenes` the two quest sweeps reproduce the
+earlier censuses byte for byte, and `story_census --no-fragments` the
+earlier story census (checked).
+
+| What | Rule | How |
+| --- | --- | --- |
+| `Scene.Start`, `ForceStart` | `scene_start_v1` | a scene not playing whose owning quest (PNAM) runs plays: its begin fragment, then its phases; a stopped quest refuses it; Start of a playing scene does nothing; a scene or quest whose state is undetermined leaves the scene undetermined |
+| `Scene.Stop`, `IsPlaying` | `scene_start_v1` | not playing, no fragment run; the state, false for every scene at the start of a new game, undetermined in the isolated scenario until the run sets it |
+| phases | `scene_phase_progression_v1` | offered in stored order: start conditions false pass a phase over, true enter it (its begin fragment); it completes (its end fragment, then the next phase) only when no action of the scene spans it and its completion conditions are absent or true; after the last phase the scene's end fragment runs and it stops playing; anything else keeps it in the phase, counted by reason |
+| FNAM bit 0x1 | `scene_begin_on_quest_start_v1` | the quest's scenes with the bit start when it starts, after its start jobs (and after the fragment of the stage whose setting started it) |
+| `Scene.GetOwningQuest`, `TopicInfo.GetOwningQuest` | `vm_host_owning_quest_v1` | PNAM; the quest whose group of kind 10 holds the INFO |
+| fragments | `vmad_fragment_instance_v1` | one instance of the block's script on the record's handle with the block's property values; scene fragments run as jobs (`Job::Scene`) in the order above, nested like stage fragments |
+| two timer clocks | `vm_timer_time_scale_v1` | only when a caller fires timers (`quest_run --timers`): a game-time timer of h hours is due after h x 3600 / s real seconds, s the GLOB whose editor ID the caller names with `--time-scale-global` (its role an assumption): the value a run last set with `SetValue`, else its FLTV; s = 0 stops the game clock; without that switch the earlier stop is kept |
+
+What a phase waits on is never advanced: an action spanning it (a spoken
+line, kind 0; a package, 1; a timer, 2; player dialogue, 3; a start-scene
+action, 4; a response line, 5; radio, 6), completion conditions that are
+false, conditions the evaluator leaves undetermined. INFO, PACK and PERK
+fragments are bound and runnable on request only: no world event (a line
+spoken, a package starting, a perk entry firing) runs them.
+
+**Fragment sweep** (`quest_run MANIFEST fragments OUT_DIR`,
+[quest-run-fragments.txt](quest-run-fragments.txt)): every INFO, PACK and
+PERK fragment in a fresh interpreter (isolated scenario), its parameters
+undetermined (the speaker, actor or target is not known outside the
+world). 2,779 runs, 2.7 s, peak RSS about 900 MB: INFO begin 1,154 (950
+completed, 116 blocked on a native's result, 4 on an undetermined
+parameter, 83 failed, 1 script missing), INFO end 1,401 (1,149 completed,
+207 blocked, 28 on a parameter, 7 failed, 9 scripts missing, 1 function
+missing), PACK 188 and PERK 36 (in the file). The INFO fragments set 456
+stages and display 54 objectives in the isolated scenario; 80 of the 83 INFO begin
+failures are one DLC script that calls `Play` on a property left none. Natives that
+block them most: `Quest.IsStageDone` 116, `Utility.RandomInt` 48,
+`ReferenceAlias.GetReference` 38, `ObjectReference.GetValuePercentage` 33, `GetDistance` 30,
+`Package.GetOwningQuest` 28 (not answered) ([vm-blockers.txt](vm-blockers.txt)).
+
+**Scene sweep** (`quest_run MANIFEST scenes OUT_DIR`,
+[quest-run-scenes.txt](quest-run-scenes.txt)): every scene started in a
+fresh interpreter, its quest taken as running and the scene as not playing
+(as the stage sweep takes its quest). 4,773 scenes, 1.8 s: 4,601 phases
+entered, 50 completed, 6 passed over; 32 scenes run to their end; the
+others stop on an action (dialogue 2,495, player dialogue 689, package 660,
+radio 400, timer 165, start-scene 25, response 11) or on conditions
+(undetermined start conditions 190, completion 104, by function index in
+the file; false completion conditions 2). Scene fragments: begin 119 (80
+completed), phase begin 83, phase end 16, end 1.
+
+**Stage sweep** with scenes on: the stages' own fragments and OnStageSet
+are unchanged; in the isolated scenario 892 `Scene.Start` calls leave the
+scene undetermined (whether it plays is unknown), 16 start one (14 phases
+entered), 551 `Stop` calls are recorded.
+
+**New game, fourth pass** (`quest_run new-game`, scenes on, the
+time-scale global named by the caller with `--time-scale-global`;
+[quest-run-new-game.txt](quest-run-new-game.txt)): 757 jobs (664), 93 of
+them scene steps. 47 scenes start, 46 with their quest (FNAM bit 0x1)
+and 1 from a script; 2 starts are refused (quest not running). 46 phases
+are entered and none completes: the scenes wait on radio (26), packages
+(8), spoken lines (5), timers (3) and conditions of functions 613, 614 and
+67 (5). The three fragments blocked on `Scene.IsPlaying` before now
+complete (62 fragments complete, against 59), and start three real-time
+timers. Timers asked: real time 1,800 s once and 900 s twice, game time 4 h
+once; the time-scale global stands at its stored 20. **No objective is
+displayed.** With `--no-scenes-with-quest` 25 scenes start from scripts
+and 713 jobs run.
+
+**Where the opening stops now.** What starts the opening's main quest is
+still in no record read: it is not flagged to start, no story manager node
+lists it, no DOBJ entry names it, no constant `Start` or `SetStage` call of
+any compiled script reaches its first stage, and no INFO, SCEN, PACK or
+PERK fragment starts it or sets a stage of it (the static scan with the
+fragment blocks, and the fragment sweep). Its first stage is a startup
+stage (INDX flag 0x2): starting the quest sets it. A scan of every
+subrecord of every winning record for its FormID finds it only as a
+dialogue or package quest, in conditions, in scene owners, in the
+properties of stage-setting triggers of the opening cells and of other
+opening quests' scripts; the player reference (FormID 0x14) is in no
+plugin. The placed scripted references of the opening's exterior cells
+(`script_run --census`, the cell of the opening house with radius 1:
+181 references, 491 handlers) have no OnInit or cell-load handler; their
+23 trigger handlers set later stages of the quest and block on
+`Quest.IsStageDone`. What starts it is therefore outside the data read:
+the engine at a new game, which only the running game can show.
+
+Started by hand (`--then` the quest's stage 0, an assumption of the
+caller) with scenes on: its stage 0 fragment runs to completion (the
+time-scale global set to 0, character generation set up, the player
+moved, a one-second real-time timer started), and its first scene (FNAM
+bit 0x1) starts with it and enters phase 0, whose completion condition
+(function 555) the evaluator leaves undetermined. Firing timers
+(`--timers 50`) under `vm_timer_time_scale_v1` now orders the two clocks:
+the game clock stands still (time scale 0), the 4-hour game-time timer of
+another quest never comes due, and the opening's one-second timer fires 50
+times, restarting itself each time with one lighting call and nothing
+else; no objective is displayed. Without the rule (no `--time-scale-global`) the
+firing stops at once as before.
+
+What would take the opening further, most first:
+
+1. **The engine's start of the opening quest** (and of the 60 quests with
+   no node and no constant call): a measurement of the running game at a
+   new game (which quests run before the first frame, which stage is
+   set), not a record.
+2. **World events that end a scene's phase**: spoken lines (2,495 phase
+   waits in the scene sweep), player dialogue (689), packages (660),
+   radio (400), timers (165); in the opening, the first scene's phase 0
+   waits on condition function 555 and the stage 0 timer polls with no
+   state change (its loop ends on something the world does).
+3. **Condition indexes** on phases (waits in the scene sweep naming the
+   index): 1 (85), 59 (77), 629 (28), 555 (27), 14 (17), 613 (12), 614
+   (11), 67 and 58 (10 each).
+4. **Natives that steer a run** (new game): `ObjectReference.AttachMod`
+   20, `RefCollectionAlias.GetCount` 6, `Actor.GetLevel` 3,
+   `Game.IsPluginInstalled` 3, `Is3DLoaded` 2,
+   `ReferenceAlias.GetReference` 2 (`Scene.IsPlaying` 3 is answered now).
+
 ## Conditions
 
 `fo4_vm::cond` evaluates the condition lists read by
@@ -827,7 +952,9 @@ start of a new game is [conditions-census.txt](conditions-census.txt)
   `script_run` names) and custom events as they are sent; the story
   manager receives only the script event; tracked-statistics, sleep,
   location, combat and every other world event are never delivered.
-  INFO, PACK, PERK and SCEN fragment blocks stay raw ([vmad.md](vmad.md)).
+  INFO, PACK and PERK fragments run only in the fragment sweep, scenes
+  only where a run starts them, phases only where the data decides
+  ([scene-record.md](scene-record.md), Scenes and fragments above).
 - Opcode 34's arity between `4` and `4+n` stays open ([pex.md](pex.md));
   the interpreter reads its fourth slot as the start index.
 
@@ -948,3 +1075,34 @@ stored custom event names. Three UESP file format pages were requested on
 editor source or definition file, script source, decompiler, other
 interpreter, script extender or the game executable was opened or
 searched for.
+
+## Provenance of the fragments step
+
+Recognised from prior general knowledge, used only as hypotheses that the
+censuses could refute ([scene-record.md](scene-record.md),
+[fragment-census.txt](fragment-census.txt),
+[story-manager-census.txt](story-manager-census.txt)):
+
+- that the flag bits of an INFO, PACK or SCEN block select begin, end and
+  change fragments and a phase fragment's flag byte its begin or end
+  fragment, and that a PERK fragment's index is a PRKE entry;
+- the SCEN record's parts (phases with start and completion conditions,
+  actors, actions with a kind, alias, start and end phase) and the meaning
+  of the action kinds (checked against the record types their fields
+  name);
+- FNAM bit 0x1 of a scene as starting it with its quest;
+- what Scene.Start, Stop and IsPlaying do and when a phase ends;
+- the owning quest of a dialogue line as the quest that holds its topic;
+- that a game-time timer's interval is in game hours and that the global
+  conventionally called the time scale relates the two clocks, and that GlobalVariable.SetValue
+  sets the value.
+
+The block layouts were found by measurement (a probe printed the bytes of
+every block and a tentative reader was run until every block was consumed
+exactly). Two UESP file format pages were requested on 2026-11-22
+(`Skyrim_Mod:Mod_File_Format/VMAD_Field`,
+`Fallout4Mod:Mod_File_Format/SCEN`) and answered HTTP 403; nothing was
+read from them. Native names and parameter types were read from the
+installed scripts with this project's own readers. No editor, editor
+source or definition file, script source, decompiler, other interpreter,
+script extender or the game executable was opened or searched for.

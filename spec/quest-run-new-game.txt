@@ -5,7 +5,6 @@
 2	blocking native	objectreference.is3dloaded
 6	blocking native	refcollectionalias.getcount
 2	blocking native	referencealias.getreference
-3	blocking native	scene.isplaying
 1	blocking rule	pex_array_ops_v1
 1	blocking rule	pex_ops_not_copy_cast_v1
 0	distinct objectives displayed
@@ -19,9 +18,9 @@
 1	effects	quest made active
 1	effects	quest started
 7	effects	quest stopped
-4	effects	scene
+43	effects	scene
 17	effects	stage set on another quest
-1	effects	timer
+4	effects	timer
 9	event onquestinit outcome: blocked on a native's result
 1	event onquestinit outcome: blocked on an undetermined value (rule pex_array_ops_v1)
 12	event onquestinit outcome: completed
@@ -47,9 +46,9 @@
 2	failure	NoneOperand op 23
 1	failure	NoneOperand op 28
 1	failure	NoneOperand op 40
-9	fragment outcome: blocked on a native's result
+6	fragment outcome: blocked on a native's result
 1	fragment outcome: blocked on an undetermined value (rule pex_ops_not_copy_cast_v1)
-59	fragment outcome: completed
+62	fragment outcome: completed
 1	fragment outcome: failed: MissingFunction
 2	fragment outcome: failed: NoneOperand op 23
 24	host answer	formlist.getat	a record
@@ -63,10 +62,11 @@
 2	host answer	referencealias.forcerefto	none
 24	host answer	referencealias.getreference	a record
 33	host answer	referencealias.getreference	undetermined: the alias has no forced reference
-629	jobs at depth	1
-35	jobs at depth	2
+675	jobs at depth	1
+81	jobs at depth	2
+1	jobs at depth	3-4
 0	jobs left in the queue when the run ended
-664	jobs run
+757	jobs run
 2	log entry condition lists	undetermined
 1	log entry selections left open, by function index of an undetermined condition	function 14
 1	log entry selections with conditions evaluated	open
@@ -109,6 +109,9 @@
 1	rules relied on	quest_start_game_enabled_v1
 1	rules relied on	quest_start_v1
 1	rules relied on	quest_stop_v1
+1	rules relied on	scene_begin_on_quest_start_v1
+1	rules relied on	scene_phase_progression_v1
+1	rules relied on	scene_start_v1
 1	rules relied on	vm_custom_events_v1
 1	rules relied on	vm_host_data_state_v1
 1	rules relied on	vm_host_formlist_lnam_v1
@@ -121,6 +124,23 @@
 1	rules relied on	vmad_alias_value_v1
 1	rules relied on	vmad_property_sets_variable_v1
 1	rules relied on	vmad_reference_scripts_v1
+93	scene steps
+46	scenes	phase entered
+2	scenes	scene start refused	its quest is not running
+1	scenes	scene started
+46	scenes	scene started with its quest
+5	scenes	scene stopped in a phase	an action runs in the phase: kind 0 (a dialogue line: audio)
+8	scenes	scene stopped in a phase	an action runs in the phase: kind 1 (a package: actor movement)
+3	scenes	scene stopped in a phase	an action runs in the phase: kind 2 (a timer: the clock)
+26	scenes	scene stopped in a phase	an action runs in the phase: kind 6 (radio: audio)
+2	scenes	scene stopped in a phase	completion conditions undetermined (function 613, 614)
+1	scenes	scene stopped in a phase	completion conditions undetermined (function 67)
+1	scenes	scene stopped in a phase	completion conditions undetermined (function 67, 613, 614)
+1	scenes	scene stopped in a phase	start conditions undetermined (function 613, 614)
+1	time-scale global at the end (vm_timer_time_scale_v1)	20
+1	timers asked	game time, hours	interval 4.0
+1	timers asked	real time, seconds	interval 1800.0
+2	timers asked	real time, seconds	interval 900.0
 3	visibility	enable of a placed REFR not flagged
 
 ## effects of other natives, ranked

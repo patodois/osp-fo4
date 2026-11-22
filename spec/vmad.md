@@ -3,9 +3,11 @@
 The VMAD subrecord names the compiled scripts ([pex.md](pex.md)) attached to
 a record and the values of their properties. `fo4_plugin::vmad::Vmad` reads
 its script list for every record type, for TERM the fragment block that
-follows, and for QUST the block of stage fragments and aliases; for the
-other record types the bytes after the script list are kept as stored
-(`tail`). Nothing here runs a script or applies a property.
+follows, for QUST the block of stage fragments and aliases, and since the
+fragments step for INFO, PACK, SCEN and PERK their fragment blocks
+([scene-record.md](scene-record.md)); for the other record types the bytes
+after the script list would be kept as stored (`tail`; empty in every
+measured VMAD). Nothing here runs a script or applies a property.
 
 Every statement below comes from measuring the VMAD subrecords of the
 winning records of one installation. The layout was recognised from prior
@@ -26,13 +28,15 @@ committed as [vmad-census.txt](vmad-census.txt). Same installation as
 [pex.md](pex.md): 20,147 records hold one VMAD each (never two), 4,403,029
 bytes, on 26 record types; 8.1 s wall, peak RSS about 850 MB.
 
-**Result: every VMAD is read without error** for all 26 types. The script
-list and the TERM and QUST blocks cover 3,859,236 bytes. The other 543,793
-bytes are the blocks after the script list of INFO (2,396 of 5,611
-records), PACK (166 of 167), PERK (32 of 35) and SCEN (632 of 634), which
-are kept, not read **[open]**. Every other VMAD ends exactly where its
-script list (or TERM or QUST block) ends, including all 8,767 REFR, 931
-ACTI, 301 TERM, 19 DOOR and 1,353 QUST records.
+**Result: every VMAD is read without error and to its last byte** for all
+26 types: 4,403,029 of 4,403,029 bytes. Before the fragments step the
+script list and the TERM and QUST blocks covered 3,859,236 bytes and the
+543,793 bytes of the blocks of INFO (2,396 of 5,611 records), PACK (166 of
+167), PERK (32 of 35) and SCEN (632 of 634) were kept as stored; their
+layouts and census are in [scene-record.md](scene-record.md). Every other
+VMAD ends exactly where its script list (or TERM or QUST block) ends,
+including all 8,767 REFR, 931 ACTI, 301 TERM, 19 DOOR and 1,353 QUST
+records.
 
 ## Layout
 

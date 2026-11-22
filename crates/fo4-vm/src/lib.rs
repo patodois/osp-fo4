@@ -35,6 +35,7 @@ pub mod host;
 pub mod program;
 pub mod quest;
 pub mod rules;
+pub mod scene;
 pub mod story;
 pub mod world;
 
@@ -690,6 +691,71 @@ impl<'a> Vm<'a> {
             out.push((timer.instance, timer.id, o));
         }
         out
+    }
+    /// Fires the next timer under `vm_timer_time_scale_v1`: a game-time
+    /// timer's interval in hours is due after `hours * 3600 / scale` real
+    /// seconds; with a scale of 0 the game clock stands still and no
+    /// game-time timer is due. Both clocks advance together. `scale` is the
+    /// caller's reading of the time-scale global (`None`: undetermined,
+    /// which stops the firing as [`Vm::fire_timers`] does). Returns `None`
+    /// when no timer is due.
+    pub fn fire_timer_scaled(&mut self, scale: Option<f64>) -> Option<(InstId, Val, Outcome)> {
+        use world::Clock;
+        let t = &self.world.timers;
+        let first = t.first()?.instance;
+        let fail = |p: &str| Some((first, Val::None, Outcome::Failed(VmError::Timers(p.into()))));
+        if t.iter().any(|x| x.due.is_none()) {
+            return fail("a timer interval is undetermined");
+        }
+        let both = t.iter().any(|x| x.clock != t[0].clock);
+        // With a scale the clocks are related for every timer; without one
+        // only a queue on one clock is ordered.
+        let scaled = scale.is_some();
+        let Some(scale) = scale.or((!both).then_some(1.0)) else {
+            return fail("timers on both clocks are queued and the time scale is undetermined");
+        };
+        if t.iter().enumerate().any(|(i, x)| {
+            t[i + 1..]
+                .iter()
+                .any(|y| y.instance == x.instance && y.clock == x.clock && y.id == x.id)
+        }) {
+            return fail("two timers of one id on one instance are queued");
+        }
+        let now_real = self.world.now[Clock::Real as usize];
+        let now_game = self.world.now[Clock::GameTime as usize];
+        // Real seconds from now until each timer is due.
+        let wait = |x: &world::Timer| -> Option<f64> {
+            let due = x.due.unwrap_or(0.0);
+            match x.clock {
+                Clock::Real => Some(due - now_real),
+                Clock::GameTime if !scaled => Some(due - now_game),
+                Clock::GameTime if scale > 0.0 => Some((due - now_game) * 3600.0 / scale),
+                Clock::GameTime => None,
+            }
+        };
+        let i = (0..t.len())
+            .filter(|&a| wait(&t[a]).is_some())
+            .min_by(|&a, &b| {
+                wait(&t[a])
+                    .partial_cmp(&wait(&t[b]))
+                    .unwrap_or(std::cmp::Ordering::Equal)
+                    .then(t[a].seq.cmp(&t[b].seq))
+            })?;
+        let dt = wait(&t[i]).unwrap_or(0.0).max(0.0);
+        let timer = self.world.timers.remove(i);
+        self.rules.insert(rules::TIMERS);
+        if scaled {
+            self.rules.insert(rules::TIME_SCALE);
+            self.world.now[Clock::Real as usize] = now_real + dt;
+            self.world.now[Clock::GameTime as usize] = now_game + dt * scale / 3600.0;
+        }
+        self.world.now[timer.clock as usize] = timer.due.unwrap_or(0.0);
+        let event = match timer.clock {
+            Clock::Real => "ontimer",
+            Clock::GameTime => "ontimergametime",
+        };
+        let o = self.deliver(timer.instance, event, vec![timer.id.clone()]);
+        Some((timer.instance, timer.id, o))
     }
 }
 

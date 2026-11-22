@@ -5,6 +5,7 @@ use super::*;
 mod data;
 mod events;
 mod quest;
+mod scene;
 
 use fo4_pex::{
     Function, Header, Instruction, Member, NamedFunction, Object, Pex, Property, Sections, State,
@@ -242,6 +243,7 @@ fn base() -> MapLibrary {
          func OnTimer none Int aiTimerID
          func OnInit none
          func StartTimer none native Float afInterval Int aiTimerID
+         func StartTimerGameTime none native Float afInterval Int aiTimerID
          func CancelTimer none native Int aiTimerID",
     ));
     l.add(assemble("script Form extends ScriptObject"));
@@ -681,6 +683,39 @@ fn timers_queue_and_fire_in_due_order() {
     assert_eq!(ids, [Val::Int(1), Val::Int(2)]);
     assert_eq!(vm.world.instances[i].vars[0].value, Val::Int(2));
     assert!(vm.rules.contains(rules::TIMERS));
+}
+
+#[test]
+fn the_time_scale_orders_game_time_timers_against_real_time_ones() {
+    let mut lib = base();
+    lib.add(assemble(
+        "script Clocked2 extends ObjectReference
+         var Int last 0
+         func OnLoad none
+         local none ::nonevar
+         23 StartTimerGameTime self ::nonevar 2 1.0 7
+         23 StartTimer self ::nonevar 2 100.0 8
+         func OnTimer none Int aiTimerID
+         13 last aiTimerID
+         func OnTimerGameTime none Int aiTimerID
+         13 last aiTimerID",
+    ));
+    let mut host = RecordingHost::default();
+    let mut vm = Vm::new(&mut lib, &mut host);
+    let i = new_ref(&mut vm, "clocked2");
+    vm.deliver(i, "onload", vec![]);
+    // Both clocks queued: without a scale the firing stops.
+    let x = vm.fire_timer_scaled(None).unwrap();
+    assert!(matches!(x.2, Outcome::Failed(VmError::Timers(_))));
+    // One game hour at scale 20 is 180 real seconds: the real-time timer
+    // (100 s) fires first, then the game-time one.
+    assert_eq!(vm.fire_timer_scaled(Some(20.0)).unwrap().1, Val::Int(8));
+    assert_eq!(vm.fire_timer_scaled(Some(20.0)).unwrap().1, Val::Int(7));
+    assert!(vm.rules.contains(rules::TIME_SCALE));
+    // At scale 0 the game clock stands still: nothing is due.
+    vm.deliver(i, "onload", vec![]);
+    assert_eq!(vm.fire_timer_scaled(Some(0.0)).unwrap().1, Val::Int(8));
+    assert!(vm.fire_timer_scaled(Some(0.0)).is_none());
 }
 
 #[test]

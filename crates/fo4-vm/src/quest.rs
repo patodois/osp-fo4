@@ -253,6 +253,12 @@ pub enum Job {
         args: Vec<Val>,
         depth: usize,
     },
+    /// A step of a playing scene (`crate::scene`).
+    Scene {
+        scene: ObjId,
+        step: crate::scene::Step,
+        depth: usize,
+    },
 }
 impl Job {
     pub fn depth(&self) -> usize {
@@ -262,7 +268,8 @@ impl Job {
             | Job::StageEvent { depth, .. }
             | Job::Open { depth, .. }
             | Job::Custom { depth, .. }
-            | Job::Story { depth, .. } => *depth,
+            | Job::Story { depth, .. }
+            | Job::Scene { depth, .. } => *depth,
         }
     }
     /// The quest the job runs on (for a custom event, its sender).
@@ -274,6 +281,7 @@ impl Job {
             | Job::Open { quest, .. }
             | Job::Story { quest, .. } => *quest,
             Job::Custom { sender, .. } => *sender,
+            Job::Scene { scene, .. } => *scene,
         }
     }
 }
@@ -535,6 +543,14 @@ impl<'s> QuestHost<'s> {
         i: &Rc<QuestInfo>,
         skip: Option<i32>,
     ) {
+        self.start_quest_jobs(w, o, i, skip);
+        // A start by a stage set starts the scenes after that stage's own
+        // fragment is queued (in `set_stage`).
+        if skip.is_none() {
+            crate::scene::quest_started(self, w, &i.key);
+        }
+    }
+    fn start_quest_jobs(&mut self, w: &mut World, o: ObjId, i: &Rc<QuestInfo>, skip: Option<i32>) {
         self.using(rules::QUEST_START);
         self.using(rules::QUEST_ORDER);
         w.quests.state(i).running = Some(true);
@@ -597,6 +613,7 @@ impl<'s> QuestHost<'s> {
             }
             Some(false) => {}
         }
+        let starts = running == Some(false);
         match running {
             Some(true) => {}
             Some(false) => self.start_quest(w, o, i, Some(n)),
@@ -721,6 +738,9 @@ impl<'s> QuestHost<'s> {
                 entry: settled.filter(|_| selection == "settled"),
                 depth,
             });
+        }
+        if starts {
+            crate::scene::quest_started(self, w, &i.key);
         }
         Ok((Val::Bool(true), data::Answer::Value))
     }
@@ -978,6 +998,12 @@ impl Host for QuestHost<'_> {
         }
         if self.story.is_some() && crate::story::NATIVES.contains(&full.as_str()) {
             return crate::story::send(self, c, w);
+        }
+        if w.scenes.on
+            && (crate::scene::NATIVES.contains(&full.as_str())
+                || (c.script == "scene" && c.name == crate::scene::STEP))
+        {
+            return crate::scene::call(self, c, w);
         }
         if !NATIVES.contains(&full.as_str()) {
             let r = self.data.call(c, w);
@@ -1275,6 +1301,53 @@ pub fn run_one(vm: &mut Vm<'_>, store: &Store, job: Job, nested: bool, b: &Budge
                 }
             }
         }
+        Job::Scene { scene, step, .. } => match step {
+            crate::scene::Step::Fragment(function, _) => {
+                match crate::scene::fragment_instance(vm, store, *scene, &mut notes, b) {
+                    Err(e) => outcomes.push((String::new(), Outcome::Failed(e))),
+                    Ok(inst) => {
+                        let script = vm.world.instances[inst].script.clone();
+                        let found = match vm.dispatch(inst, function) {
+                            Ok(f) => Ok(f),
+                            Err(crate::Stop::Error(e)) => Err(*e),
+                            Err(crate::Stop::Blocked(bl)) => Err(VmError::BadArgument {
+                                site: None,
+                                detail: format!("dispatch blocked on {}", bl.on.text()),
+                            }),
+                        };
+                        match found {
+                            Ok(Some(f)) if f.params.is_empty() => {
+                                let o = deliver(vm, inst, function);
+                                outcomes.push((script, o));
+                            }
+                            Ok(Some(_)) => outcomes.push((
+                                script,
+                                Outcome::Failed(VmError::BadArgument {
+                                    site: None,
+                                    detail: format!("scene fragment {function} takes parameters"),
+                                }),
+                            )),
+                            Ok(None) => outcomes.push((
+                                script.clone(),
+                                Outcome::Failed(VmError::MissingFunction {
+                                    script,
+                                    name: function.clone(),
+                                }),
+                            )),
+                            Err(e) => outcomes.push((script, Outcome::Failed(e))),
+                        }
+                    }
+                }
+            }
+            crate::scene::Step::Enter | crate::scene::Step::Complete => {
+                let complete = *step == crate::scene::Step::Complete;
+                let call = crate::scene::step_call(*scene, complete);
+                let _ = vm.host.call(&call, &mut vm.world);
+                for r in vm.host.rules() {
+                    vm.rules.insert(r);
+                }
+            }
+        },
         Job::Open { .. } => {}
     }
     vm.world.quests.depth = saved;

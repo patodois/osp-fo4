@@ -146,6 +146,8 @@ pub struct World {
     pub quests: crate::quest::Quests,
     /// Remote and custom event registrations (`crate::events`).
     pub events: crate::events::Events,
+    /// Scene state and the steps of playing scenes (`crate::scene`).
+    pub scenes: crate::scene::Scenes,
 }
 
 impl World {

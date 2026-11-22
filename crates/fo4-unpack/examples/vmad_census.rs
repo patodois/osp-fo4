@@ -522,7 +522,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     writeln!(out, "VMAD bytes\t{bytes}")?;
     writeln!(
         out,
-        "VMAD bytes read (scripts, TERM and QUST blocks)\t{read_bytes}"
+        "VMAD bytes read (scripts; TERM, QUST, INFO, PACK, SCEN and PERK blocks)\t{read_bytes}"
     )?;
     writeln!(out, ".pex objects indexed\t{}", ix.scripts.len())?;
     writeln!(out, "wall seconds\t{:.1}", started.elapsed().as_secs_f64())?;

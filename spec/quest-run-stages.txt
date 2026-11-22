@@ -35,10 +35,10 @@
 7	cascade custom event outcome: blocked on an undetermined value (rule pex_array_ops_v1)
 4	cascade custom event outcome: completed
 335	cascade custom event runs with no handler
-7664	cascade depth per stage set	1
-1867	cascade depth per stage set	2
-479	cascade depth per stage set	3-4
-61	cascade depth per stage set	5-9
+7655	cascade depth per stage set	1
+1866	cascade depth per stage set	2
+487	cascade depth per stage set	3-4
+63	cascade depth per stage set	5-9
 55	cascade event onquestinit runs with no handler
 7	cascade event onquestshutdown outcome: completed
 6	cascade event onquestshutdown outcome: failed: NoneOperand op 23
@@ -73,6 +73,8 @@
 188	cascade open runs: whether OnQuestShutdown runs (running state undetermined)
 1736	cascade open runs: whether setting the stage started the quest
 96	cascade open runs: which log entry's fragment runs depends on conditions
+5	cascade scene fragment (begin) outcome: completed
+30	cascade scene steps
 8	deepest cascade after one stage set
 1243	effects	actor state
 462	effects	actor value changed
@@ -95,7 +97,7 @@
 197	effects	quest started
 1219	effects	quest stopped
 60	effects	reference deleted
-1527	effects	scene
+1532	effects	scene
 4383	effects	stage set on another quest
 618	effects	stage set on the same quest
 613	effects	timer
@@ -210,6 +212,14 @@
 7	quests with a stage set per sweep item	20-99
 153	quests with a stage set per sweep item	3-4
 39	quests with a stage set per sweep item	5-9
+14	scenes	phase entered
+16	scenes	scene started
+892	scenes	scene state became undetermined	Start of a scene whose state is undetermined
+551	scenes	scene stopped by a script
+6	scenes	scene stopped in a phase	an action runs in the phase: kind 0 (a dialogue line: audio)
+5	scenes	scene stopped in a phase	an action runs in the phase: kind 1 (a package: actor movement)
+3	scenes	scene stopped in a phase	an action runs in the phase: kind 2 (a timer: the clock)
+2	scenes	scene stopped in a phase	start conditions undetermined (function 1)
 1	stage OnStageSet blocking native	objectreference.attachmod
 2	stage OnStageSet blocking native	refcollectionalias.getcount
 23	stage OnStageSet blocking native	utility.getcurrentgametime
@@ -355,14 +365,14 @@
 6	story	story event outcome	open: a node's conditions are undetermined
 6	story	story events offered	SCPT
 101	sweep items relying on	cond_compare_ops_v1
-280	sweep items relying on	cond_ctda_layout_v1
+282	sweep items relying on	cond_ctda_layout_v1
 246	sweep items relying on	cond_flag_parameters_v1
 6	sweep items relying on	cond_fn_56_quest_running_v1
 6	sweep items relying on	cond_fn_576_event_data_v1
 23	sweep items relying on	cond_fn_58_quest_stage_v1
 204	sweep items relying on	cond_fn_59_stage_done_v1
 41	sweep items relying on	cond_fn_74_global_value_v1
-280	sweep items relying on	cond_list_or_groups_v1
+282	sweep items relying on	cond_list_or_groups_v1
 274	sweep items relying on	cond_log_entry_state_v1
 6	sweep items relying on	cond_use_global_v1
 3505	sweep items relying on	pex_array_ops_v1
@@ -374,7 +384,7 @@
 743	sweep items relying on	pex_ops_arithmetic_v1
 5146	sweep items relying on	pex_ops_compare_v1
 7663	sweep items relying on	pex_ops_not_copy_cast_v1
-1069	sweep items relying on	pex_property_get_set_v1
+1074	sweep items relying on	pex_property_get_set_v1
 495	sweep items relying on	pex_state_identifier_v1
 597	sweep items relying on	pex_struct_ops_v1
 3384	sweep items relying on	pex_truth_of_values_v1
@@ -391,6 +401,8 @@
 1242	sweep items relying on	quest_start_v1
 10071	sweep items relying on	quest_state_isolated_v1
 962	sweep items relying on	quest_stop_v1
+14	sweep items relying on	scene_phase_progression_v1
+1046	sweep items relying on	scene_start_v1
 6	sweep items relying on	sm_node_layout_v1
 6	sweep items relying on	sm_quest_node_start_v1
 6	sweep items relying on	sm_script_event_v1
@@ -404,6 +416,7 @@
 7	sweep items relying on	vm_host_is_disabled_flag_v1
 7	sweep items relying on	vm_host_linked_ref_chain_v1
 29	sweep items relying on	vm_host_linked_ref_xlkr_v1
+5	sweep items relying on	vm_host_owning_quest_v1
 1090	sweep items relying on	vm_host_player_handle_v1
 53	sweep items relying on	vm_object_identity_v1
 9054	sweep items relying on	vm_record_scripts_attach_v1
@@ -411,6 +424,7 @@
 156	sweep items relying on	vm_remote_events_v1
 567	sweep items relying on	vm_timer_events_v1
 9120	sweep items relying on	vmad_alias_value_v1
+5	sweep items relying on	vmad_fragment_instance_v1
 10037	sweep items relying on	vmad_property_sets_variable_v1
 531	sweep items relying on	vmad_reference_scripts_v1
 4606	sweep items whose every run completed

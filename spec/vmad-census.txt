@@ -1,8 +1,8 @@
 records with VMAD (winners, not deleted)	20147
 VMAD bytes	4403029
-VMAD bytes read (scripts, TERM and QUST blocks)	3859236
+VMAD bytes read (scripts; TERM, QUST, INFO, PACK, SCEN and PERK blocks)	4403029
 .pex objects indexed	10282
-wall seconds	9.3
+wall seconds	7.8
 
 # outcomes by record type
 781	ACHR read
@@ -41,9 +41,7 @@ wall seconds	9.3
 19	DOOR no bytes after what is read
 19	FLOR no bytes after what is read
 242	FURN no bytes after what is read
-353405	INFO bytes after what is read: bytes
-2396	INFO bytes after what is read: records
-3215	INFO no bytes after what is read
+5611	INFO no bytes after what is read
 4	KEYM no bytes after what is read
 4	LIGH no bytes after what is read
 244	MGEF no bytes after what is read
@@ -51,18 +49,12 @@ wall seconds	9.3
 49	MSTT no bytes after what is read
 5	NOTE no bytes after what is read
 566	NPC_ no bytes after what is read
-29411	PACK bytes after what is read: bytes
-166	PACK bytes after what is read: records
-1	PACK no bytes after what is read
-7019	PERK bytes after what is read: bytes
-32	PERK bytes after what is read: records
-3	PERK no bytes after what is read
+167	PACK no bytes after what is read
+35	PERK no bytes after what is read
 4	PGRE no bytes after what is read
 1353	QUST no bytes after what is read
 8767	REFR no bytes after what is read
-153958	SCEN bytes after what is read: bytes
-632	SCEN bytes after what is read: records
-2	SCEN no bytes after what is read
+634	SCEN no bytes after what is read
 1	STAT no bytes after what is read
 4	TACT no bytes after what is read
 301	TERM no bytes after what is read

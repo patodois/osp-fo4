@@ -27,6 +27,7 @@ use fo4_vm::{
     bind::{self, outcome_text, RecordScripts, VfsLibrary},
     data::Answer,
     quest::{self, Change, Job, JobRun, QuestHost, QuestInfo},
+    scene::{self, Step},
     Effect, Origin, Outcome, Vm, World,
 };
 use std::{collections::BTreeMap, fmt::Write as _, path::Path, rc::Rc};
@@ -183,6 +184,14 @@ fn job_text(vm: &Vm<'_>, r: &JobRun) -> String {
         Job::Story { quest, depth, .. } => {
             writeln!(s, "  [{depth}] event onstoryscript on {}", label(*quest))
         }
+        Job::Scene { scene, step, depth } => {
+            let what = match step {
+                Step::Fragment(f, slot) => format!("fragment {f} ({slot})"),
+                Step::Enter => "step: offer the next phase".into(),
+                Step::Complete => "step: complete the phase".into(),
+            };
+            writeln!(s, "  [{depth}] scene {what} on {}", label(*scene))
+        }
     };
     for (script, o) in &r.outcomes {
         let _ = writeln!(s, "    {script}: {}", outcome_text(o));
@@ -223,6 +232,25 @@ fn count_jobs(c: &mut Counts, runs: &[JobRun], prefix: &str) {
             }
             Job::Custom { .. } => "custom event".to_string(),
             Job::Story { .. } => "event onstoryscript".to_string(),
+            Job::Scene {
+                step: Step::Fragment(_, slot),
+                ..
+            } => {
+                let slot = if slot.starts_with("phase") {
+                    if slot.ends_with("begin") {
+                        "phase begin"
+                    } else {
+                        "phase end"
+                    }
+                } else {
+                    slot.as_str()
+                };
+                format!("scene fragment ({slot})")
+            }
+            Job::Scene { .. } => {
+                bump(c, format!("{prefix}scene steps"));
+                continue;
+            }
         };
         if r.outcomes.is_empty() {
             bump(c, format!("{prefix}{what} runs with no handler"));
@@ -308,6 +336,12 @@ struct Opts {
     /// `IsDisabled` follows enable parent chains
     /// (`vm_host_is_disabled_chain_v1`).
     enable_chain: bool,
+    /// Answer the scene natives and run scenes (`scene_start_v1`,
+    /// `scene_phase_progression_v1`).
+    scenes: bool,
+    /// Start a quest's scenes with FNAM bit 0x1 with the quest
+    /// (`scene_begin_on_quest_start_v1`).
+    scenes_with_quest: bool,
 }
 
 /// The story manager's nodes, read once when the story manager is on.
@@ -334,6 +368,37 @@ fn host<'s>(store: &'s Store, max: u64, o: Opts, tree: &Option<Rc<Tree>>) -> Que
 fn events_on(vm: &mut Vm<'_>, o: Opts) {
     vm.world.events.remote = o.remote;
     vm.world.events.custom = o.custom;
+    vm.world.scenes.on = o.scenes;
+    vm.world.scenes.begin_on_quest_start = o.scenes && o.scenes_with_quest;
+    if o.scenes {
+        GROUPS.with(|g| vm.world.scenes.groups = g.borrow().clone());
+    }
+}
+
+thread_local! {
+    /// The groups of kind 10, read once per process when scenes are on.
+    static GROUPS: std::cell::RefCell<Option<Rc<scene::Groups>>> = const { std::cell::RefCell::new(None) };
+}
+
+/// The counts of what scenes did in a run.
+fn count_scenes(c: &mut Counts, vm: &Vm<'_>, prefix: &str) {
+    for (_, ch) in &vm.world.scenes.log {
+        let what = match ch {
+            scene::Change::Started => "scene started".to_string(),
+            scene::Change::StartedWithQuest => "scene started with its quest".to_string(),
+            scene::Change::PhaseEntered(_) => "phase entered".to_string(),
+            scene::Change::PhaseSkipped(_) => {
+                "phase passed over (start conditions false)".to_string()
+            }
+            scene::Change::PhaseCompleted(_) => "phase completed".to_string(),
+            scene::Change::Waiting(_, why) => format!("scene stopped in a phase\t{why}"),
+            scene::Change::Ended => "scene ended (last phase completed)".to_string(),
+            scene::Change::Stopped => "scene stopped by a script".to_string(),
+            scene::Change::Refused(why) => format!("scene start refused\t{why}"),
+            scene::Change::Opened(why) => format!("scene state became undetermined\t{why}"),
+        };
+        bump(c, format!("{prefix}scenes\t{what}"));
+    }
 }
 
 /// The counts of event registrations and deliveries, and of story events.
@@ -602,6 +667,9 @@ fn stages(m: &Manifest, vfs: &Vfs, store: &Store, out: &Path, opts: Opts) -> Res
                 names.push_str(&job_text(&vm, r));
             }
             count_events(&mut c, &vm);
+            if opts.scenes {
+                count_scenes(&mut c, &vm, "");
+            }
             drop(vm);
             count_conditions(&mut c, &host);
             count_story(&mut c, &host);
@@ -628,6 +696,11 @@ fn stages(m: &Manifest, vfs: &Vfs, store: &Store, out: &Path, opts: Opts) -> Res
 struct Then {
     stages: Vec<(String, i32)>,
     timers: usize,
+    /// Order game-time timers against real-time ones through the
+    /// time-scale global (`vm_timer_time_scale_v1`), when timers are fired:
+    /// the editor ID of that global, named by the caller
+    /// (`--time-scale-global`); `None` keeps the earlier stop.
+    time_scale: Option<String>,
 }
 
 fn quest_by_editor_id(store: &Store, b: &Budget, edid: &str) -> Result<FormKey, E> {
@@ -689,12 +762,53 @@ fn new_game(
         let _ = writeln!(names, "## --then {edid}:{n}: {reply:?}");
         top.extend(quest::run_jobs(&mut vm, store, MAX_GAME_JOBS, &b));
     }
+    let scale_global = then
+        .time_scale
+        .as_deref()
+        .and_then(|n| time_scale_global(store, &b, n));
     if then.timers > 0 {
         bump(
             &mut c,
             "assumption from the command line: queued timers fired after the jobs",
         );
-        for (inst, id, o) in vm.fire_timers(then.timers) {
+        let fired: Vec<(usize, fo4_vm::Val, Outcome)> = if then.time_scale.is_some() {
+            let mut v = Vec::new();
+            for _ in 0..then.timers {
+                let scale = scale_global
+                    .as_ref()
+                    .and_then(|g| time_scale(&vm, store, g, &b));
+                let before = vm.effects.len();
+                let Some(x) = vm.fire_timer_scaled(scale) else {
+                    break;
+                };
+                let _ = writeln!(names, "## timer fired (time scale {scale:?})");
+                for e in &vm.effects[before..] {
+                    let _ = writeln!(
+                        names,
+                        "    {}{}({}{}) = {}",
+                        "  ".repeat(e.depth),
+                        e.native,
+                        e.receiver
+                            .as_ref()
+                            .map(|x| format!("on {x}; "))
+                            .unwrap_or_default(),
+                        e.args.join(", "),
+                        e.result
+                    );
+                }
+                let failed = matches!(x.2, Outcome::Failed(_));
+                v.push(x);
+                if failed {
+                    break;
+                }
+                // The jobs a timer's handler queued run before the next.
+                top.extend(quest::run_jobs(&mut vm, store, MAX_GAME_JOBS, &b));
+            }
+            v
+        } else {
+            vm.fire_timers(then.timers)
+        };
+        for (inst, id, o) in fired {
             let script = vm.world.instances[inst].script.clone();
             bump(&mut c, format!("timer outcome: {}", outcome_kind(&o)));
             if let Outcome::Blocked(bl) = &o {
@@ -801,6 +915,42 @@ fn new_game(
         bump(&mut c, format!("rules relied on\t{r}"));
     }
     count_events(&mut c, &vm);
+    if opts.scenes {
+        // What the two timer kinds are asked for (`vm_timer_events_v1`).
+        for e in &vm.effects {
+            if let Some(kind) = match e.native.as_str() {
+                "scriptobject.starttimer" => Some("real time, seconds"),
+                "scriptobject.starttimergametime" => Some("game time, hours"),
+                _ => None,
+            } {
+                let interval = e.args.first().cloned().unwrap_or_default();
+                let interval = if interval.parse::<f64>().is_ok() {
+                    interval
+                } else {
+                    "undetermined".into()
+                };
+                bump(&mut c, format!("timers asked\t{kind}\tinterval {interval}"));
+            }
+        }
+        if let Some(g) = scale_global.clone() {
+            let s = time_scale(&vm, store, &g, &b);
+            bump(
+                &mut c,
+                format!(
+                    "time-scale global at the end (vm_timer_time_scale_v1)\t{}",
+                    s.map_or("undetermined".to_string(), |v| v.to_string())
+                ),
+            );
+        }
+        count_scenes(&mut c, &vm, "");
+        for (o, ch) in &vm.world.scenes.log {
+            let _ = writeln!(
+                names,
+                "## scene change on {}: {ch:?}",
+                vm.world.objects[*o].label
+            );
+        }
+    }
     // Registrations left at the end, by what would raise their event.
     let raised = ["onstageset", "onquestinit", "onquestshutdown"];
     for r in &vm.world.events.registrations {
@@ -826,6 +976,365 @@ fn new_game(
         *c.entry(format!("host answer\t{native}\t{a}")).or_default() += v;
     }
     write(out, &c, &names, "new-game")
+}
+
+/// The GLOB whose editor ID the caller named: the role
+/// `vm_timer_time_scale_v1` gives it is an assumption of the rule.
+fn time_scale_global(store: &Store, b: &Budget, name: &str) -> Option<FormKey> {
+    store
+        .winners()
+        .filter(|w| !w.deleted && w.signature == *b"GLOB")
+        .map(|w| store.overrides().form_key(w.key, store.order()))
+        .find(|k| {
+            store
+                .raw(k, &b.child())
+                .ok()
+                .flatten()
+                .and_then(|r| bind::editor_id(&r))
+                .is_some_and(|e| e.eq_ignore_ascii_case(name))
+        })
+}
+
+/// The time scale a run has: the value of the last
+/// `GlobalVariable.SetValue` of the global with a determined argument, or
+/// the stored FLTV when no native of the run touched the global; `None`
+/// when another native touched it after that or the argument is
+/// undetermined (`vm_timer_time_scale_v1`).
+fn time_scale(vm: &Vm<'_>, store: &Store, g: &FormKey, _b: &Budget) -> Option<f64> {
+    let key = bind::record_key(g);
+    let touched: Vec<&Effect> = vm
+        .effects
+        .iter()
+        .filter(|e| {
+            e.receiver_object
+                .and_then(|o| vm.world.objects[o].key.as_ref())
+                .is_some_and(|k| *k == key)
+                || e.args.iter().any(|a| a.contains(&key))
+        })
+        .collect();
+    match touched.last() {
+        None => fo4_vm::data::global_fltv(store, g, store.limits.max_memory)
+            .ok()
+            .map(f64::from),
+        Some(e) if e.native == "globalvariable.setvalue" => {
+            e.args.first().and_then(|a| a.parse::<f64>().ok())
+        }
+        Some(e) if e.native == "globalvariable.getvalue" => {
+            // A read changes nothing: the value before it stands.
+            let before: Vec<&&Effect> = touched
+                .iter()
+                .filter(|x| x.native != "globalvariable.getvalue")
+                .collect();
+            match before.last() {
+                None => fo4_vm::data::global_fltv(store, g, store.limits.max_memory)
+                    .ok()
+                    .map(f64::from),
+                Some(x) if x.native == "globalvariable.setvalue" => {
+                    x.args.first().and_then(|a| a.parse::<f64>().ok())
+                }
+                _ => None,
+            }
+        }
+        _ => None,
+    }
+}
+
+/// Counts the outcome of one run and its blocking native or rule.
+fn count_outcome(c: &mut Counts, prefix: &str, o: &Outcome) {
+    bump(c, format!("{prefix}outcome: {}", outcome_kind(o)));
+    match o {
+        Outcome::Blocked(b) => match &b.on {
+            Origin::Native(n) => bump(c, format!("{prefix}blocking native\t{n}")),
+            Origin::Rule(r, _) => bump(c, format!("{prefix}blocking rule\t{r}")),
+            Origin::NoInstance(_, kind) => bump(
+                c,
+                format!("{prefix}blocking object without the script\t{kind}"),
+            ),
+        },
+        Outcome::Failed(e) => bump(c, format!("{prefix}failure\t{}", e.kind())),
+        Outcome::Completed(_) => {}
+    }
+}
+
+/// Counts the quest changes a run made, and which quests it started or
+/// set a stage of (names to the names file).
+fn count_quest_log(c: &mut Counts, vm: &Vm<'_>, prefix: &str, names: &mut String) {
+    for (q, ch) in &vm.world.quests.log {
+        let what = match ch {
+            Change::StageSet(n) => {
+                let _ = writeln!(names, "    stage {n} set on {}", vm.world.objects[*q].label);
+                "stage set"
+            }
+            Change::Started => {
+                let _ = writeln!(names, "    started {}", vm.world.objects[*q].label);
+                "quest started"
+            }
+            Change::StageRepeatRefused(_) => "stage already done, not set again",
+            Change::StartedByStory => "quest started by the story manager",
+            Change::Stopped => "quest stopped",
+            Change::Objective(quest::DISPLAYED, _, Some(true)) => "objective displayed",
+            Change::Objective(quest::DISPLAYED, _, _) => "objective hidden or undetermined",
+            Change::Objective(quest::COMPLETED, _, _) => "objective completed (or not)",
+            Change::Objective(..) => "objective failed (or not)",
+            Change::Opened(_) => "quest state became undetermined",
+        };
+        bump(c, format!("{prefix}quest changes\t{what}"));
+    }
+}
+
+/// `fragments`: every fragment of every winning INFO, PACK and PERK block,
+/// each in a fresh interpreter (isolated scenario, quest host, scenes on
+/// as the options say): the fragment script instance on the record's
+/// handle with the block's values (`vmad_fragment_instance_v1`), the
+/// function called with an undetermined value for each parameter (the
+/// speaker, actor or target is not known outside the world), then the
+/// jobs it brings, up to [`MAX_JOBS`].
+fn fragments(m: &Manifest, vfs: &Vfs, store: &Store, out: &Path, opts: Opts) -> Result<(), E> {
+    let max = m.limits.max_memory;
+    let b = Budget::new(max);
+    let tree = story_tree(store, opts)?;
+    let mut lib = VfsLibrary::new(vfs, max);
+    let mut c = Counts::new();
+    let mut names = String::new();
+    let keys: Vec<(FormKey, [u8; 4])> = store
+        .winners()
+        .filter(|w| !w.deleted && matches!(&w.signature, b"INFO" | b"PACK" | b"PERK"))
+        .map(|w| {
+            (
+                store.overrides().form_key(w.key, store.order()),
+                w.signature,
+            )
+        })
+        .collect();
+    for (k, sig) in &keys {
+        let t = String::from_utf8_lossy(sig).into_owned();
+        let bb = b.child();
+        let Some((r, _)) = store.raw_with_plugin(k, &bb)? else {
+            continue;
+        };
+        let Some(sub) = r.subrecords.iter().find(|x| x.signature == *b"VMAD") else {
+            continue;
+        };
+        let v = fo4_plugin::vmad::Vmad::read(
+            r.data(sub),
+            r.signature,
+            &r.source.file,
+            sub.offset,
+            &bb,
+        )?;
+        let list: Vec<(String, String)> = match (&v.info, &v.package, &v.perk) {
+            (Some(x), _, _) | (_, Some(x), _) => x
+                .fragments
+                .iter()
+                .map(|(bit, f)| {
+                    let slot = match *bit {
+                        fo4_plugin::vmad::FRAGMENT_BEGIN => "begin",
+                        fo4_plugin::vmad::FRAGMENT_END => "end",
+                        _ => "change",
+                    };
+                    (slot.to_string(), fo4_pex::index::lower(f.function))
+                })
+                .collect(),
+            (_, _, Some(p)) => p
+                .fragments
+                .iter()
+                .map(|f| {
+                    (
+                        "perk entry".to_string(),
+                        fo4_pex::index::lower(f.fragment.function),
+                    )
+                })
+                .collect(),
+            _ => continue,
+        };
+        let ty = match sig {
+            b"INFO" => "topicinfo",
+            b"PACK" => "package",
+            _ => "perk",
+        };
+        for (slot, function) in list {
+            let prefix = format!("{t} {slot} fragment ");
+            bump(&mut c, format!("{prefix}runs"));
+            let mut host = host(store, max, opts, &tree);
+            let mut attach = RecordScripts::new(store, max);
+            let mut runner = quest::Runner::new(store, max, MAX_JOBS);
+            let mut vm = Vm::new(&mut lib, &mut host);
+            vm.attach = Some(&mut attach);
+            if opts.nested {
+                vm.nested = Some(&mut runner);
+            }
+            events_on(&mut vm, opts);
+            let o = fo4_vm::data::record_object(&mut vm.world, store, k, ty, &bb)?;
+            let mut notes = Vec::new();
+            let label = vm.world.objects[o].label.clone();
+            let _ = writeln!(names, "## {label} {slot} {function}");
+            let inst = match scene::record_fragment_instance(&mut vm, store, o, &mut notes, &bb) {
+                Ok(i) => i,
+                Err(e) => {
+                    bump(&mut c, format!("{prefix}not bound\t{}", e.kind()));
+                    let _ = writeln!(names, "    not bound: {e}");
+                    continue;
+                }
+            };
+            let f = match vm.find_handler(inst, &function) {
+                Ok(Some(f)) => f,
+                Ok(None) => {
+                    bump(&mut c, format!("{prefix}function not found"));
+                    let _ = writeln!(names, "    function not found");
+                    continue;
+                }
+                Err(e) => {
+                    bump(&mut c, format!("{prefix}function not found\t{}", e.kind()));
+                    continue;
+                }
+            };
+            let args: Vec<fo4_vm::Val> = f
+                .params
+                .iter()
+                .map(|(_, ty)| {
+                    vm.world.unknown(Origin::Rule(
+                        fo4_vm::rules::FRAGMENT_INSTANCE,
+                        format!("the {ty} a fragment receives is not known outside the world"),
+                    ))
+                })
+                .collect();
+            let start = vm.effects.len();
+            let outcome = vm.deliver(inst, &function, args);
+            count_outcome(&mut c, &prefix, &outcome);
+            let _ = writeln!(names, "    {}", outcome_text(&outcome));
+            for e in &vm.effects[start..] {
+                let _ = writeln!(
+                    names,
+                    "    {}{}({}{}) = {}",
+                    "  ".repeat(e.depth),
+                    e.native,
+                    e.receiver
+                        .as_ref()
+                        .map(|x| format!("on {x}; "))
+                        .unwrap_or_default(),
+                    e.args.join(", "),
+                    e.result
+                );
+            }
+            let top = quest::run_jobs(&mut vm, store, MAX_JOBS, &bb);
+            let runs = all_runs(&mut vm, top);
+            count_jobs(&mut c, &runs, &format!("{prefix}job "));
+            for r in &runs {
+                names.push_str(&job_text(&vm, r));
+            }
+            count_effects(&mut c, &vm, &prefix);
+            count_quest_log(&mut c, &vm, &prefix, &mut names);
+            if opts.scenes {
+                count_scenes(&mut c, &vm, &prefix);
+            }
+            count_events(&mut c, &vm);
+            drop(vm);
+            count_conditions(&mut c, &host);
+            count_story(&mut c, &host);
+        }
+    }
+    write(out, &c, &names, "fragments")
+}
+
+/// `scenes`: every winning scene started in a fresh interpreter (isolated
+/// scenario, quest host): its owning quest taken as running and the scene
+/// as not playing (`quest_state_isolated_v1`, as the stage sweep takes the
+/// quest it sets a stage of), `Scene.Start` asked of the host, then the
+/// steps and jobs it brings, up to [`MAX_JOBS`].
+fn scenes(m: &Manifest, vfs: &Vfs, store: &Store, out: &Path, opts: Opts) -> Result<(), E> {
+    if !opts.scenes {
+        return Err("the scenes sweep needs scenes on".into());
+    }
+    let max = m.limits.max_memory;
+    let b = Budget::new(max);
+    let tree = story_tree(store, opts)?;
+    let mut lib = VfsLibrary::new(vfs, max);
+    let mut c = Counts::new();
+    let mut names = String::new();
+    let keys: Vec<FormKey> = store
+        .winners()
+        .filter(|w| !w.deleted && w.signature == *b"SCEN")
+        .map(|w| store.overrides().form_key(w.key, store.order()))
+        .collect();
+    for k in &keys {
+        let bb = b.child();
+        bump(&mut c, "scenes started by the sweep");
+        let mut host = host(store, max, opts, &tree);
+        let mut attach = RecordScripts::new(store, max);
+        let mut runner = quest::Runner::new(store, max, MAX_JOBS);
+        let mut vm = Vm::new(&mut lib, &mut host);
+        vm.attach = Some(&mut attach);
+        if opts.nested {
+            vm.nested = Some(&mut runner);
+        }
+        events_on(&mut vm, opts);
+        let o = fo4_vm::data::record_object(&mut vm.world, store, k, "scene", &bb)?;
+        let Some(info) = scene::info(store, max, &mut vm.world, o) else {
+            bump(&mut c, "scenes whose record does not read");
+            continue;
+        };
+        if let Some(q) = &info.quest {
+            if let Some(qi) = quest::info_by_key(store, max, &mut vm.world, q) {
+                vm.world.quests.state(&qi).running = Some(true);
+                vm.rules.insert(fo4_vm::rules::QUEST_ISOLATED);
+            }
+        }
+        vm.world.scenes.states.insert(
+            bind::record_key(k),
+            scene::SceneState {
+                playing: Some(false),
+                next: 0,
+            },
+        );
+        let call = fo4_vm::NativeCall {
+            script: "scene".into(),
+            name: "start".into(),
+            receiver: Some(fo4_vm::Val::Object(o)),
+            instance: None,
+            args: Vec::new(),
+            param_types: Vec::new(),
+            return_type: "none".into(),
+        };
+        let _ = vm.host.call(&call, &mut vm.world);
+        let _ = writeln!(names, "## {}", vm.world.objects[o].label);
+        let top = quest::run_jobs(&mut vm, store, MAX_JOBS, &bb);
+        let runs = all_runs(&mut vm, top);
+        count_jobs(&mut c, &runs, "");
+        for r in &runs {
+            names.push_str(&job_text(&vm, r));
+        }
+        for (_, ch) in &vm.world.scenes.log {
+            let _ = writeln!(names, "    scene change: {ch:?}");
+        }
+        count_effects(&mut c, &vm, "");
+        count_quest_log(&mut c, &vm, "", &mut names);
+        count_scenes(&mut c, &vm, "");
+        let entered = vm
+            .world
+            .scenes
+            .log
+            .iter()
+            .filter(|(s, ch)| *s == o && matches!(ch, scene::Change::PhaseEntered(_)))
+            .count();
+        bump(
+            &mut c,
+            format!("phases of the started scene entered\t{}", bucket(entered)),
+        );
+        if vm
+            .world
+            .scenes
+            .log
+            .iter()
+            .any(|(s, ch)| *s == o && *ch == scene::Change::Ended)
+        {
+            bump(&mut c, "started scenes that ran to their end");
+        }
+        count_events(&mut c, &vm);
+        drop(vm);
+        count_conditions(&mut c, &host);
+        count_story(&mut c, &host);
+    }
+    write(out, &c, &names, "scenes")
 }
 
 fn write(out: &Path, c: &Counts, names: &str, scope: &str) -> Result<(), E> {
@@ -925,31 +1434,44 @@ fn run() -> Result<(), E> {
         },
         story: !flag(&mut a, "--no-story"),
         enable_chain: !flag(&mut a, "--no-enable-chain"),
+        scenes: !flag(&mut a, "--no-scenes"),
+        scenes_with_quest: !flag(&mut a, "--no-scenes-with-quest"),
     };
     let mut then = Then::default();
-    while let Some(i) = a.iter().position(|x| x == "--then" || x == "--timers") {
+    while let Some(i) = a
+        .iter()
+        .position(|x| x == "--then" || x == "--timers" || x == "--time-scale-global")
+    {
         let v = a
             .get(i + 1)
             .cloned()
-            .ok_or("--then and --timers take a value")?;
+            .ok_or("--then, --timers and --time-scale-global take a value")?;
         if a[i] == "--then" {
             let (q, n) = v.split_once(':').ok_or("--then EDITOR_ID:STAGE")?;
             then.stages.push((q.to_string(), n.parse()?));
-        } else {
+        } else if a[i] == "--timers" {
             then.timers = v.parse()?;
+        } else {
+            then.time_scale = Some(v);
         }
         a.drain(i..i + 2);
     }
-    let usage = "quest_run MANIFEST (stages OUT_DIR | new-game OUT_DIR | QUEST STAGE) [--queued] [--no-conditions] [--no-stage-event] [--no-remote] [--no-custom | --custom-nested] [--no-story] [--no-enable-chain]; new-game also takes --then EDITOR_ID:STAGE (repeated) and --timers N, assumptions of the caller";
+    let usage = "quest_run MANIFEST (stages OUT_DIR | new-game OUT_DIR | fragments OUT_DIR | scenes OUT_DIR | QUEST STAGE) [--queued] [--no-conditions] [--no-stage-event] [--no-remote] [--no-custom | --custom-nested] [--no-story] [--no-enable-chain] [--no-scenes] [--no-scenes-with-quest]; fragments OUT_DIR and scenes OUT_DIR run every INFO, PACK and PERK fragment and start every scene in a fresh interpreter; new-game also takes --then EDITOR_ID:STAGE (repeated) --timers N and --time-scale-global EDITOR_ID, assumptions of the caller";
     if a.len() != 3 {
         return Err(usage.into());
     }
     let m = Manifest::load(Path::new(&a[0]))?;
     let vfs = Vfs::mount(&m, &Budget::new(m.limits.max_vfs_memory))?;
     let store = Store::open(&m, &Budget::new(m.limits.max_override_memory))?;
+    if opts.scenes {
+        let g = Rc::new(scene::Groups::read(&store));
+        GROUPS.with(|x| *x.borrow_mut() = Some(g));
+    }
     match a[1].as_str() {
         "stages" => stages(&m, &vfs, &store, Path::new(&a[2]), opts),
         "new-game" => new_game(&m, &vfs, &store, Path::new(&a[2]), opts, &then),
+        "fragments" => fragments(&m, &vfs, &store, Path::new(&a[2]), opts),
+        "scenes" => scenes(&m, &vfs, &store, Path::new(&a[2]), opts),
         q => one(&m, &vfs, &store, q, a[2].parse()?, opts),
     }
 }

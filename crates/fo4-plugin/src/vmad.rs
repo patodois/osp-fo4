@@ -5,10 +5,13 @@
 //! records of one installation (`vmad_census`); the layout was recognised
 //! from prior general knowledge before it was measured and is kept only
 //! where that census holds (see `docs/provenance.md`). The script list is
-//! read for every record type. What follows it is read only for TERM (its
-//! fragment block) and QUST (its stage fragments and aliases); for every
-//! other record type the bytes after the script list are kept in `tail` as
-//! stored.
+//! read for every record type. What follows it is read for TERM (its
+//! fragment block), QUST (its stage fragments and aliases), INFO and PACK
+//! (begin, end and change fragments), SCEN (begin and end fragments and
+//! phase fragments) and PERK (entry fragments); for every other record type
+//! the bytes after the script list are kept in `tail` as stored. The INFO,
+//! PACK, SCEN and PERK layouts were measured on every such VMAD of one
+//! installation; no public page of them could be read (`docs/provenance.md`).
 use fo4_core::{Budget, Error, Result};
 use serde::Serialize;
 
@@ -134,6 +137,104 @@ pub struct QuestBlock<'a> {
     pub aliases: Vec<QuestAlias<'a>>,
 }
 
+/// One fragment of an INFO, PACK, SCEN or PERK block: a byte, the script
+/// holding the function and the function's name.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct Fragment<'a> {
+    /// One byte before the texts, kept as stored: 1 in every measured
+    /// fragment; what it means is not read (`UNSETTLED_FRAGMENT_BYTE`).
+    pub byte: u8,
+    /// The script holding the function (the block's script in every
+    /// measured fragment).
+    pub script: &'a [u8],
+    pub function: &'a [u8],
+}
+
+/// Why [`Fragment::byte`] is kept as stored.
+pub const UNSETTLED_FRAGMENT_BYTE: &str =
+    "one byte before the fragment texts, 1 in every measured fragment; its meaning is not read";
+
+/// Flag bit of a begin fragment in an INFO, PACK or SCEN block (the first
+/// fragment stored; its function is named `Fragment_Begin` in every measured
+/// block).
+pub const FRAGMENT_BEGIN: u8 = 0x01;
+/// Flag bit of an end fragment (`Fragment_End` in every measured block).
+pub const FRAGMENT_END: u8 = 0x02;
+/// Flag bit of a PACK change fragment (`Fragment_Change` in every measured
+/// block).
+pub const FRAGMENT_CHANGE: u8 = 0x04;
+/// The flag bits measured in INFO and SCEN blocks.
+pub const BEGIN_END: u8 = FRAGMENT_BEGIN | FRAGMENT_END;
+/// The flag bits measured in PACK blocks.
+pub const BEGIN_END_CHANGE: u8 = BEGIN_END | FRAGMENT_CHANGE;
+
+/// The block after the script list of an INFO or PACK VMAD, and the first
+/// part of a SCEN block: a version byte, a flag byte, the fragment script
+/// laid out as a script entry, then one fragment per set flag bit, lowest
+/// bit first.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct FlaggedFragments<'a> {
+    /// One byte, 3 in every measured block.
+    pub version: u8,
+    /// Which fragments follow ([`FRAGMENT_BEGIN`], [`FRAGMENT_END`],
+    /// [`FRAGMENT_CHANGE`]); a bit outside the measured ones is refused
+    /// (`FragmentFlags`), since it would change how many fragments follow.
+    pub flags: u8,
+    pub script: Script<'a>,
+    /// (flag bit, fragment), one per set bit, lowest bit first.
+    pub fragments: Vec<(u8, Fragment<'a>)>,
+}
+impl<'a> FlaggedFragments<'a> {
+    /// The fragment stored for a flag bit.
+    pub fn slot(&self, bit: u8) -> Option<&Fragment<'a>> {
+        self.fragments.iter().find(|(b, _)| *b == bit).map(|x| &x.1)
+    }
+}
+
+/// One phase fragment of a SCEN block.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct PhaseFragment<'a> {
+    /// One byte kept as stored: 1 in 350 and 2 in 386 measured fragments
+    /// (functions named `..._Begin` and `..._End`), 0 in 2. Which slot a
+    /// value selects is not read here (`fo4_vm::scene` names it as a
+    /// pending rule).
+    pub flags: u8,
+    /// u32: a phase index (counted from 0 against the record's phases in
+    /// the census).
+    pub phase: u32,
+    pub fragment: Fragment<'a>,
+}
+
+/// The block after the script list of a SCEN VMAD.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct SceneFragments<'a> {
+    /// Version, flags ([`BEGIN_END`]), script, begin and end fragments.
+    pub block: FlaggedFragments<'a>,
+    /// A u16 count, then the phase fragments.
+    pub phases: Vec<PhaseFragment<'a>>,
+}
+
+/// One entry fragment of a PERK block.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct PerkFragment<'a> {
+    /// u16: an index (counted against the record's entries in the census).
+    pub entry: u16,
+    /// u16 after the index, kept as stored: 0 in every measured fragment.
+    pub word: u16,
+    pub fragment: Fragment<'a>,
+}
+
+/// The block after the script list of a PERK VMAD: a version byte, the
+/// fragment script laid out as a script entry (no flag byte), a u16 count
+/// and the entry fragments.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct PerkFragments<'a> {
+    /// One byte, 3 in every measured block.
+    pub version: u8,
+    pub script: Script<'a>,
+    pub fragments: Vec<PerkFragment<'a>>,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Vmad<'a> {
     pub version: u16,
@@ -143,9 +244,16 @@ pub struct Vmad<'a> {
     pub terminal: Option<TerminalFragments<'a>>,
     /// Read for QUST records only.
     pub quest: Option<QuestBlock<'a>>,
+    /// Read for INFO records only.
+    pub info: Option<FlaggedFragments<'a>>,
+    /// Read for PACK records only.
+    pub package: Option<FlaggedFragments<'a>>,
+    /// Read for SCEN records only.
+    pub scene: Option<SceneFragments<'a>>,
+    /// Read for PERK records only.
+    pub perk: Option<PerkFragments<'a>>,
     /// Bytes after what was read, kept as stored: empty in every measured
-    /// VMAD except those of INFO, PACK, PERK and SCEN records, whose blocks
-    /// are not read.
+    /// VMAD.
     pub tail: &'a [u8],
 }
 
@@ -345,6 +453,70 @@ impl<'a> R<'a, '_> {
             aliases,
         })
     }
+    fn fragment(&mut self) -> Result<Fragment<'a>> {
+        Ok(Fragment {
+            byte: self.u8()?,
+            script: self.text()?,
+            function: self.text()?,
+        })
+    }
+    /// Version, flags, script, then one fragment per set bit of `allowed`.
+    fn flagged(&mut self, allowed: u8) -> Result<FlaggedFragments<'a>> {
+        let version = self.u8()?;
+        let flags = self.u8()?;
+        if flags & !allowed != 0 {
+            self.p -= 1;
+            return Err(self.err(
+                "FragmentFlags",
+                format!("bits within {allowed:#04x}"),
+                format!("{flags:#04x}"),
+            ));
+        }
+        let script = self.script()?;
+        let mut fragments = Vec::new();
+        for bit in [FRAGMENT_BEGIN, FRAGMENT_END, FRAGMENT_CHANGE] {
+            if flags & bit != 0 {
+                fragments.push((bit, self.fragment()?));
+            }
+        }
+        Ok(FlaggedFragments {
+            version,
+            flags,
+            script,
+            fragments,
+        })
+    }
+    fn scene(&mut self) -> Result<SceneFragments<'a>> {
+        let block = self.flagged(BEGIN_END)?;
+        let n = self.u16()? as usize;
+        let mut phases = self.vec(n, 10)?;
+        for _ in 0..n {
+            phases.push(PhaseFragment {
+                flags: self.u8()?,
+                phase: self.u32()?,
+                fragment: self.fragment()?,
+            });
+        }
+        Ok(SceneFragments { block, phases })
+    }
+    fn perk(&mut self) -> Result<PerkFragments<'a>> {
+        let version = self.u8()?;
+        let script = self.script()?;
+        let n = self.u16()? as usize;
+        let mut fragments = self.vec(n, 9)?;
+        for _ in 0..n {
+            fragments.push(PerkFragment {
+                entry: self.u16()?,
+                word: self.u16()?,
+                fragment: self.fragment()?,
+            });
+        }
+        Ok(PerkFragments {
+            version,
+            script,
+            fragments,
+        })
+    }
     fn terminal(&mut self) -> Result<TerminalFragments<'a>> {
         let version = self.u8()?;
         let script = self.script()?;
@@ -399,12 +571,37 @@ impl<'a> Vmad<'a> {
         } else {
             None
         };
+        let more = r.p < d.len();
+        let info = if signature == *b"INFO" && more {
+            Some(r.flagged(BEGIN_END)?)
+        } else {
+            None
+        };
+        let package = if signature == *b"PACK" && more {
+            Some(r.flagged(BEGIN_END_CHANGE)?)
+        } else {
+            None
+        };
+        let scene = if signature == *b"SCEN" && more {
+            Some(r.scene()?)
+        } else {
+            None
+        };
+        let perk = if signature == *b"PERK" && more {
+            Some(r.perk()?)
+        } else {
+            None
+        };
         Ok(Vmad {
             version,
             object_format,
             scripts,
             terminal,
             quest,
+            info,
+            package,
+            scene,
+            perk,
             tail: &d[r.p..],
         })
     }
@@ -486,7 +683,7 @@ mod tests {
         assert_eq!((t.version, t.script.name), (3, &b"F:T"[..]));
         assert_eq!(t.fragments[0].function, b"Fragment_1");
         assert!(m.tail.is_empty());
-        let m = Vmad::read(&d, *b"INFO", "t", 0, &b).unwrap();
+        let m = Vmad::read(&d, *b"ACTI", "t", 0, &b).unwrap();
         assert_eq!(m.tail.len(), d.len() - 6);
         d[2] = 3;
         assert_eq!(
@@ -578,9 +775,110 @@ mod tests {
             .quest
             .is_none());
         assert_eq!(
-            Vmad::read(&d, *b"SCEN", "t", 0, &b).unwrap().tail.len(),
+            Vmad::read(&d, *b"DOOR", "t", 0, &b).unwrap().tail.len(),
             d.len() - 12
         );
+    }
+
+    fn fragment(d: &mut Vec<u8>, script: &str, f: &str) {
+        d.push(1);
+        text(d, script);
+        text(d, f);
+    }
+
+    #[test]
+    fn reads_info_package_scene_and_perk_blocks_to_the_last_byte() {
+        let b = Budget::new(1 << 16);
+        // INFO: begin and end, a script with one Int property.
+        let mut d = vec![6, 0, 2, 0, 0, 0, 3, 3];
+        text(&mut d, "TIF");
+        d.extend([0, 1, 0]);
+        text(&mut d, "n");
+        d.extend([3, 1]);
+        d.extend(9i32.to_le_bytes());
+        fragment(&mut d, "TIF", "Fragment_Begin");
+        fragment(&mut d, "TIF", "Fragment_End");
+        let m = Vmad::read(&d, *b"INFO", "t", 0, &b).unwrap();
+        assert!(m.tail.is_empty());
+        let i = m.info.as_ref().unwrap();
+        assert_eq!((i.version, i.flags, i.fragments.len()), (3, 3, 2));
+        assert_eq!(i.slot(FRAGMENT_END).unwrap().function, b"Fragment_End");
+        assert_eq!(i.script.properties[0].value, PropertyValue::Int(9));
+        for n in 7..d.len() {
+            assert!(Vmad::read(&d[..n], *b"INFO", "t", 0, &b).is_err(), "{n}");
+        }
+        // The same bytes are a tail on a type whose block is not read, and
+        // a PACK reads them as its own block.
+        assert_eq!(
+            Vmad::read(&d, *b"ACTI", "t", 0, &b).unwrap().tail.len(),
+            d.len() - 6
+        );
+        let p = Vmad::read(&d, *b"PACK", "t", 0, &b).unwrap();
+        assert_eq!(p.package.unwrap().fragments.len(), 2);
+        // A flag bit outside the measured ones is refused where it stands.
+        let mut bad = d.clone();
+        bad[7] = 4;
+        let e = Vmad::read(&bad, *b"INFO", "t", 0, &b).unwrap_err();
+        assert_eq!((e.code.as_str(), e.source.offset), ("FragmentFlags", 7));
+        // PACK: begin and change.
+        let mut d = vec![6, 0, 2, 0, 0, 0, 3, 5];
+        text(&mut d, "PF");
+        d.extend([0, 0, 0]);
+        fragment(&mut d, "PF", "Fragment_Begin");
+        fragment(&mut d, "PF", "Fragment_Change");
+        let p = Vmad::read(&d, *b"PACK", "t", 0, &b).unwrap();
+        let p = p.package.unwrap();
+        assert!(p.slot(FRAGMENT_END).is_none());
+        assert_eq!(
+            p.slot(FRAGMENT_CHANGE).unwrap().function,
+            b"Fragment_Change"
+        );
+        // SCEN: end fragment, two phase fragments.
+        let mut d = vec![6, 0, 2, 0, 0, 0, 3, 2];
+        text(&mut d, "SF");
+        d.extend([0, 0, 0]);
+        fragment(&mut d, "SF", "Fragment_End");
+        d.extend(2u16.to_le_bytes());
+        for (f, ph, name) in [
+            (1u8, 0u32, "Fragment_Phase_01_Begin"),
+            (2, 3, "Fragment_Phase_04_End"),
+        ] {
+            d.push(f);
+            d.extend(ph.to_le_bytes());
+            fragment(&mut d, "SF", name);
+        }
+        let m = Vmad::read(&d, *b"SCEN", "t", 0, &b).unwrap();
+        assert!(m.tail.is_empty());
+        let s = m.scene.unwrap();
+        assert_eq!(s.block.fragments.len(), 1);
+        assert_eq!(
+            s.phases
+                .iter()
+                .map(|p| (p.flags, p.phase))
+                .collect::<Vec<_>>(),
+            [(1, 0), (2, 3)]
+        );
+        for n in 7..d.len() {
+            assert!(Vmad::read(&d[..n], *b"SCEN", "t", 0, &b).is_err(), "{n}");
+        }
+        // PERK: no flag byte; two entry fragments.
+        let mut d = vec![6, 0, 2, 0, 0, 0, 3];
+        text(&mut d, "PRKF");
+        d.extend([0, 0, 0]);
+        d.extend(2u16.to_le_bytes());
+        for (e, name) in [(0u16, "Fragment_Entry_00"), (1, "Fragment_Entry_01")] {
+            d.extend(e.to_le_bytes());
+            d.extend([0, 0]);
+            fragment(&mut d, "PRKF", name);
+        }
+        let m = Vmad::read(&d, *b"PERK", "t", 0, &b).unwrap();
+        assert!(m.tail.is_empty());
+        let k = m.perk.unwrap();
+        assert_eq!((k.version, k.fragments.len()), (3, 2));
+        assert_eq!((k.fragments[1].entry, k.fragments[1].word), (1, 0));
+        for n in 7..d.len() {
+            assert!(Vmad::read(&d[..n], *b"PERK", "t", 0, &b).is_err(), "{n}");
+        }
     }
 
     #[test]

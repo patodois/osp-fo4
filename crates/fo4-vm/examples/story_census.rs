@@ -76,6 +76,10 @@ fn attach_kind(record: [u8; 4], part: &str) -> String {
         (b"QUST", "fragment") => "quest stage fragment script".into(),
         (b"QUST", "alias") => "quest alias script".into(),
         (b"TERM", "fragment") => "terminal fragment script".into(),
+        (b"INFO", "fragment") => "dialogue line (INFO) fragment script".into(),
+        (b"SCEN", "fragment") => "scene fragment script".into(),
+        (b"PACK", "fragment") => "package fragment script".into(),
+        (b"PERK", "fragment") => "perk fragment script".into(),
         (b"REFR" | b"ACHR" | b"PGRE" | b"PHZD", _) => format!("placed {} script", sig(record)),
         _ => format!("{} script", sig(record)),
     }
@@ -280,15 +284,22 @@ const STARTS: [(&str, &str); 4] = [
     ("quest", "setstage"),
     ("quest", "setallstages"),
 ];
+/// Scene starts, counted apart (`--no-fragments` leaves them out).
+const SCENES: [(&str, &str); 2] = [("scene", "start"), ("scene", "forcestart")];
 const STORY: [(&str, &str); 2] = [
     ("keyword", "sendstoryevent"),
     ("keyword", "sendstoryeventandwait"),
 ];
 
 fn run() -> Result<(), E> {
-    let a: Vec<String> = std::env::args().skip(1).collect();
+    let mut a: Vec<String> = std::env::args().skip(1).collect();
+    // `--no-fragments` leaves the INFO, SCEN, PACK and PERK fragment
+    // blocks out of the attachments, as before they were read, and
+    // reproduces the earlier census.
+    let fragments = !a.iter().any(|x| x == "--no-fragments");
+    a.retain(|x| x != "--no-fragments");
     if a.len() != 3 {
-        return Err("story_census MANIFEST OUT.txt NAMES.txt".into());
+        return Err("story_census MANIFEST OUT.txt NAMES.txt [--no-fragments]".into());
     }
     let m = Manifest::load(Path::new(&a[0]))?;
     let b = Budget::new(m.limits.max_memory);
@@ -625,6 +636,16 @@ fn run() -> Result<(), E> {
         }
     }
     add(&mut c, "5 scripts read", lib.scripts.len() as u64);
+    // The quest whose group of kind 10 holds each INFO and SCEN: its
+    // owning quest (measured in `spec/fragment-census.txt`).
+    let mut owner: BTreeMap<FormKey, FormKey> = BTreeMap::new();
+    if fragments {
+        for (o, cell, kind) in store.placement_groups() {
+            if kind == 10 && matches!(&o.signature, b"INFO" | b"SCEN") {
+                owner.insert(store.overrides().form_key(o.key, store.order()), cell);
+            }
+        }
+    }
     // Attachments: every winning record with a VMAD.
     let mut attachments: BTreeMap<String, Vec<Attachment>> = BTreeMap::new();
     let winners: Vec<(FormKey, [u8; 4])> = store
@@ -682,6 +703,27 @@ fn run() -> Result<(), E> {
                 }
             }
         }
+        let block = v
+            .info
+            .as_ref()
+            .or(v.package.as_ref())
+            .or(v.scene.as_ref().map(|x| &x.block))
+            .map(|x| &x.script)
+            .or(v.perk.as_ref().map(|x| &x.script));
+        if let Some(bs) = block {
+            if fragments {
+                bump(&mut c, format!("5 VMAD fragment blocks read\t{}", sig(*s)));
+                put(bs, "fragment", owner.get(k).cloned());
+            } else {
+                bump(
+                    &mut c,
+                    format!(
+                        "5 VMAD fragment blocks not read (their script's properties are not seen)\t{}",
+                        sig(*s)
+                    ),
+                );
+            }
+        }
         if !v.tail.is_empty() {
             bump(
                 &mut c,
@@ -708,6 +750,7 @@ fn run() -> Result<(), E> {
         }
     }
     let mut started_by: BTreeMap<FormKey, BTreeSet<String>> = BTreeMap::new();
+    let mut scene_started_by: BTreeMap<FormKey, BTreeSet<String>> = BTreeMap::new();
     let mut story_keywords: BTreeMap<FormKey, u64> = BTreeMap::new();
     let scripts: Vec<Rc<Script>> = lib.scripts.values().cloned().collect();
     for s in &scripts {
@@ -739,6 +782,28 @@ fn run() -> Result<(), E> {
                 let rt = decl_type(&lib, s, f, &recv_lit).unwrap_or_default();
                 let start = STARTS.iter().any(|(t, n)| *n == name && is_a(&lib, &rt, t));
                 let story = STORY.iter().any(|(t, n)| *n == name && is_a(&lib, &rt, t));
+                let scene =
+                    fragments && SCENES.iter().any(|(t, n)| *n == name && is_a(&lib, &rt, t));
+                if scene {
+                    let r = receiver(&lib, s, f, at, &recv_lit);
+                    bump(
+                        &mut c,
+                        format!("7 scene call sites\tscene.{name}\treceiver {}", r.kind()),
+                    );
+                    if let Recv::Property(p) = &r {
+                        for x in &attached {
+                            for k in x.objects.get(p).into_iter().flatten() {
+                                if store.signature(k) == Some(*b"SCEN") {
+                                    scene_started_by
+                                        .entry(k.clone())
+                                        .or_default()
+                                        .insert(format!("scene.{name} from a {}", x.kind));
+                                }
+                            }
+                        }
+                    }
+                    continue;
+                }
                 if !start && !story {
                     continue;
                 }
@@ -923,6 +988,11 @@ fn run() -> Result<(), E> {
         let _ = writeln!(names, "FLAGGED {}", label(k));
     }
 
+    // ---- 7. Scenes: what could start each ---------------------------------
+    if fragments {
+        scenes(&store, &b, &mut c, &mut names, &scene_started_by, &label)?;
+    }
+
     let mut s = String::new();
     writeln!(
         s,
@@ -930,13 +1000,88 @@ fn run() -> Result<(), E> {
     )?;
     writeln!(
         s,
-        "# 1 records and their fields; 2 links; 3 the tree and its conditions; 4 quests; 5 the static scan of compiled scripts; 6 how each quest not flagged to start could start"
+        "# 1 records and their fields; 2 links; 3 the tree and its conditions; 4 quests; 5 the static scan of compiled scripts; 6 how each quest not flagged to start could start{}",
+        if fragments { "; 7 scenes and what could start them" } else { "" }
     )?;
     for (k, v) in &c {
         writeln!(s, "{v}\t{k}")?;
     }
     std::fs::write(&a[1], s)?;
     std::fs::write(&a[2], names)?;
+    Ok(())
+}
+
+/// Every winning SCEN: its FNAM bit 0x1 (`scene_begin_on_quest_start_v1`
+/// names it) against the ways the scan sees it started: a constant
+/// `Scene.Start` or `ForceStart` call, or a start-scene action (kind 4,
+/// LCEP) of another scene.
+fn scenes(
+    store: &Store,
+    b: &Budget,
+    c: &mut Counts,
+    names: &mut String,
+    by_call: &BTreeMap<FormKey, BTreeSet<String>>,
+    label: &dyn Fn(&FormKey) -> String,
+) -> Result<(), E> {
+    let keys: Vec<FormKey> = store
+        .winners()
+        .filter(|w| !w.deleted && w.signature == *b"SCEN")
+        .map(|w| store.overrides().form_key(w.key, store.order()))
+        .collect();
+    let mut read = BTreeMap::new();
+    let mut by_action: BTreeMap<FormKey, u64> = BTreeMap::new();
+    for k in &keys {
+        let Some((r, plugin)) = store.raw_with_plugin(k, &b.child())? else {
+            continue;
+        };
+        let ctx = fo4_plugin::actor::Context {
+            order: store.order(),
+            plugin,
+        };
+        match fo4_plugin::scen::Scene::read(&r, ctx, &b.child()) {
+            Ok(x) => {
+                for a in x.actions.iter().filter(|a| a.kind == 4) {
+                    for f in a.fields.iter().filter(|f| f.tag == *b"LCEP") {
+                        if let Some(t) = f.form.as_ref().and_then(|f| f.key.clone()) {
+                            *by_action.entry(t).or_default() += 1;
+                        }
+                    }
+                }
+                read.insert(k.clone(), x);
+            }
+            Err(_) => bump(c, "7 scenes that do not read"),
+        }
+    }
+    for (k, x) in &read {
+        let flag = if x.flags & 1 != 0 {
+            "FNAM bit 0x1 set"
+        } else {
+            "FNAM bit 0x1 clear"
+        };
+        let call = by_call.contains_key(k);
+        let action = by_action.contains_key(k);
+        let ways = match (call, action) {
+            (true, true) => "a constant call and a start-scene action",
+            (true, false) => "a constant call only",
+            (false, true) => "a start-scene action only",
+            (false, false) => "neither",
+        };
+        bump(
+            c,
+            format!("7 scenes by flag and how the scan sees them started\t{flag}\t{ways}"),
+        );
+        if x.flags & 1 != 0 || !(call || action) {
+            let _ = writeln!(
+                names,
+                "SCENE {} ({flag}): {ways}{}",
+                label(k),
+                by_call
+                    .get(k)
+                    .map(|s| format!(" [{}]", s.iter().cloned().collect::<Vec<_>>().join("; ")))
+                    .unwrap_or_default()
+            );
+        }
+    }
     Ok(())
 }
 

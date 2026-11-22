@@ -1,0 +1,467 @@
+# quest_run fragments: counts, type tags and native names only (spec/vm.md, Quests)
+1	INFO begin fragment blocking native	actor.playidle
+1	INFO begin fragment blocking native	actor.playidlewithtarget
+22	INFO begin fragment blocking native	form.haskeyword
+1	INFO begin fragment blocking native	globalvariable.getvalue
+3	INFO begin fragment blocking native	keyword.sendstoryeventandwait
+20	INFO begin fragment blocking native	objectreference.getbaseobject
+1	INFO begin fragment blocking native	objectreference.getvalue
+4	INFO begin fragment blocking native	quest.isrunning
+55	INFO begin fragment blocking native	quest.isstagedone
+5	INFO begin fragment blocking native	referencealias.getreference
+1	INFO begin fragment blocking native	scene.isplaying
+2	INFO begin fragment blocking native	utility.randomint
+4	INFO begin fragment blocking rule	vmad_fragment_instance_v1
+22	INFO begin fragment effects	actor state
+14	INFO begin fragment effects	actor value changed
+3	INFO begin fragment effects	alias fill changed
+3	INFO begin fragment effects	disable
+2	INFO begin fragment effects	enable
+7	INFO begin fragment effects	event registration
+104	INFO begin fragment effects	global set
+39	INFO begin fragment effects	items added, removed or equipped
+4	INFO begin fragment effects	lock or open state
+6	INFO begin fragment effects	message
+16	INFO begin fragment effects	objective completed
+5	INFO begin fragment effects	objective displayed or hidden
+2	INFO begin fragment effects	quest started
+2	INFO begin fragment effects	quest stopped
+6	INFO begin fragment effects	scene
+100	INFO begin fragment effects	stage set on another quest
+20	INFO begin fragment effects	stage set on the same quest
+2	INFO begin fragment failure	BadArgument
+81	INFO begin fragment failure	NoneOperand op 23
+1	INFO begin fragment job blocking native	actor.isdead
+13	INFO begin fragment job blocking native	locationalias.getlocation
+4	INFO begin fragment job blocking native	quest.isstagedone
+2	INFO begin fragment job blocking native	referencealias.getreference
+2	INFO begin fragment job event onquestshutdown runs with no handler
+19	INFO begin fragment job event onstageset outcome: completed
+97	INFO begin fragment job event onstageset runs with no handler
+1	INFO begin fragment job failure	NoneOperand op 34
+20	INFO begin fragment job fragment outcome: blocked on a native's result
+57	INFO begin fragment job fragment outcome: completed
+1	INFO begin fragment job fragment outcome: failed: NoneOperand op 34
+102	INFO begin fragment job open runs: whether setting the stage started the quest
+1	INFO begin fragment not bound	MissingScript
+116	INFO begin fragment outcome: blocked on a native's result
+4	INFO begin fragment outcome: blocked on an undetermined value (rule vmad_fragment_instance_v1)
+950	INFO begin fragment outcome: completed
+2	INFO begin fragment outcome: failed: BadArgument
+81	INFO begin fragment outcome: failed: NoneOperand op 23
+16	INFO begin fragment quest changes	objective completed (or not)
+5	INFO begin fragment quest changes	objective displayed
+3	INFO begin fragment quest changes	quest state became undetermined
+2	INFO begin fragment quest changes	quest stopped
+3	INFO begin fragment quest changes	stage already done, not set again
+116	INFO begin fragment quest changes	stage set
+1154	INFO begin fragment runs
+1	INFO begin fragment scenes	scene state became undetermined	Start of a scene whose state is undetermined
+1	INFO begin fragment scenes	scene stopped by a script
+1	INFO end fragment blocking native	message.show
+1	INFO end fragment blocking native	objectreference.getcurrentlocation
+24	INFO end fragment blocking native	objectreference.getdistance
+11	INFO end fragment blocking native	objectreference.getitemcount
+33	INFO end fragment blocking native	objectreference.getvaluepercentage
+7	INFO end fragment blocking native	objectreference.ismapmarkervisible
+4	INFO end fragment blocking native	quest.isobjectivedisplayed
+10	INFO end fragment blocking native	quest.isrunning
+53	INFO end fragment blocking native	quest.isstagedone
+17	INFO end fragment blocking native	referencealias.getreference
+1	INFO end fragment blocking native	scene.isplaying
+45	INFO end fragment blocking native	utility.randomint
+28	INFO end fragment blocking rule	vmad_fragment_instance_v1
+35	INFO end fragment effects	actor state
+94	INFO end fragment effects	actor value changed
+56	INFO end fragment effects	alias fill changed
+2	INFO end fragment effects	disable
+17	INFO end fragment effects	enable
+6	INFO end fragment effects	event registration
+17	INFO end fragment effects	faction
+215	INFO end fragment effects	global set
+155	INFO end fragment effects	items added, removed or equipped
+4	INFO end fragment effects	lock or open state
+11	INFO end fragment effects	message
+5	INFO end fragment effects	move
+1	INFO end fragment effects	object placed
+82	INFO end fragment effects	objective completed
+49	INFO end fragment effects	objective displayed or hidden
+4	INFO end fragment effects	quest made active
+11	INFO end fragment effects	quest started
+15	INFO end fragment effects	quest stopped
+1	INFO end fragment effects	reference deleted
+85	INFO end fragment effects	scene
+342	INFO end fragment effects	stage set on another quest
+23	INFO end fragment effects	stage set on the same quest
+10	INFO end fragment effects	timer
+5	INFO end fragment failure	BadArgument
+1	INFO end fragment failure	NoneOperand op 23
+1	INFO end fragment failure	NoneOperand op 29
+1	INFO end fragment function not found
+2	INFO end fragment job blocking native	actor.isdead
+4	INFO end fragment job blocking native	actor.isinfaction
+1	INFO end fragment job blocking native	actorbase.getsex
+4	INFO end fragment job blocking native	globalvariable.getvalue
+1	INFO end fragment job blocking native	objectreference.attachmod
+1	INFO end fragment job blocking native	objectreference.getitemcount
+8	INFO end fragment job blocking native	quest.isobjectivedisplayed
+38	INFO end fragment job blocking native	quest.isstagedone
+8	INFO end fragment job blocking native	refcollectionalias.getcount
+57	INFO end fragment job blocking native	referencealias.getreference
+1	INFO end fragment job blocking native	utility.randomint
+4	INFO end fragment job blocking rule	pex_ops_compare_v1
+1	INFO end fragment job blocking rule	pex_ops_not_copy_cast_v1
+1	INFO end fragment job blocking rule	vmad_property_sets_variable_v1
+21	INFO end fragment job custom event runs with no handler
+6	INFO end fragment job event onquestshutdown runs with no handler
+1	INFO end fragment job event onstageset outcome: blocked on a native's result
+1	INFO end fragment job event onstageset outcome: blocked on an undetermined value (rule vmad_property_sets_variable_v1)
+149	INFO end fragment job event onstageset outcome: completed
+189	INFO end fragment job event onstageset runs with no handler
+1	INFO end fragment job failure	NoneOperand op 23
+124	INFO end fragment job fragment outcome: blocked on a native's result
+4	INFO end fragment job fragment outcome: blocked on an undetermined value (rule pex_ops_compare_v1)
+1	INFO end fragment job fragment outcome: blocked on an undetermined value (rule pex_ops_not_copy_cast_v1)
+108	INFO end fragment job fragment outcome: completed
+1	INFO end fragment job fragment outcome: failed: NoneOperand op 23
+9	INFO end fragment job open runs: whether OnQuestShutdown runs (running state undetermined)
+275	INFO end fragment job open runs: whether setting the stage started the quest
+19	INFO end fragment job open runs: which log entry's fragment runs depends on conditions
+9	INFO end fragment not bound	MissingScript
+207	INFO end fragment outcome: blocked on a native's result
+28	INFO end fragment outcome: blocked on an undetermined value (rule vmad_fragment_instance_v1)
+1149	INFO end fragment outcome: completed
+5	INFO end fragment outcome: failed: BadArgument
+1	INFO end fragment outcome: failed: NoneOperand op 23
+1	INFO end fragment outcome: failed: NoneOperand op 29
+82	INFO end fragment quest changes	objective completed (or not)
+49	INFO end fragment quest changes	objective displayed
+8	INFO end fragment quest changes	objective hidden or undetermined
+30	INFO end fragment quest changes	quest state became undetermined
+15	INFO end fragment quest changes	quest stopped
+340	INFO end fragment quest changes	stage set
+1401	INFO end fragment runs
+75	INFO end fragment scenes	scene state became undetermined	Start of a scene whose state is undetermined
+6	INFO end fragment scenes	scene stopped by a script
+1	PACK begin fragment blocking native	actor.getcurrentpackage
+1	PACK begin fragment blocking native	objectreference.is3dloaded
+3	PACK begin fragment blocking native	package.getowningquest
+8	PACK begin fragment blocking native	referencealias.getreference
+3	PACK begin fragment blocking rule	vmad_fragment_instance_v1
+3	PACK begin fragment effects	actor state
+1	PACK begin fragment effects	actor value changed
+2	PACK begin fragment effects	move
+1	PACK begin fragment effects	quest stopped
+1	PACK begin fragment effects	scene
+1	PACK begin fragment effects	stage set on another quest
+1	PACK begin fragment effects	stage set on the same quest
+1	PACK begin fragment effects	timer
+2	PACK begin fragment failure	NoneOperand op 34
+4	PACK begin fragment function not found
+1	PACK begin fragment job event onquestshutdown runs with no handler
+1	PACK begin fragment job event onstageset outcome: completed
+1	PACK begin fragment job event onstageset runs with no handler
+1	PACK begin fragment job fragment outcome: completed
+2	PACK begin fragment job open runs: whether setting the stage started the quest
+5	PACK begin fragment not bound	MissingScript
+13	PACK begin fragment outcome: blocked on a native's result
+3	PACK begin fragment outcome: blocked on an undetermined value (rule vmad_fragment_instance_v1)
+11	PACK begin fragment outcome: completed
+2	PACK begin fragment outcome: failed: NoneOperand op 34
+1	PACK begin fragment quest changes	quest stopped
+2	PACK begin fragment quest changes	stage set
+38	PACK begin fragment runs
+1	PACK begin fragment scenes	scene stopped by a script
+6	PACK change fragment blocking native	package.getowningquest
+8	PACK change fragment blocking native	referencealias.getreference
+1	PACK change fragment blocking rule	vmad_fragment_instance_v1
+1	PACK change fragment effects	disable
+1	PACK change fragment effects	stage set on another quest
+1	PACK change fragment function not found
+1	PACK change fragment job event onstageset outcome: completed
+1	PACK change fragment job open runs: whether setting the stage started the quest
+14	PACK change fragment outcome: blocked on a native's result
+1	PACK change fragment outcome: blocked on an undetermined value (rule vmad_fragment_instance_v1)
+3	PACK change fragment outcome: completed
+1	PACK change fragment quest changes	stage set
+19	PACK change fragment runs
+6	PACK end fragment blocking native	objectreference.getdistance
+2	PACK end fragment blocking native	objectreference.is3dloaded
+19	PACK end fragment blocking native	package.getowningquest
+6	PACK end fragment blocking native	quest.isstagedone
+2	PACK end fragment blocking rule	vmad_fragment_instance_v1
+8	PACK end fragment effects	actor state
+1	PACK end fragment effects	alias fill changed
+27	PACK end fragment effects	disable
+8	PACK end fragment effects	enable
+2	PACK end fragment effects	event registration
+48	PACK end fragment effects	global set
+1	PACK end fragment effects	items added, removed or equipped
+3	PACK end fragment effects	lock or open state
+6	PACK end fragment effects	move
+4	PACK end fragment effects	objective completed
+4	PACK end fragment effects	objective displayed or hidden
+1	PACK end fragment effects	quest started
+1	PACK end fragment effects	quest stopped
+8	PACK end fragment effects	scene
+22	PACK end fragment effects	stage set on another quest
+5	PACK end fragment effects	stage set on the same quest
+25	PACK end fragment effects	timer
+2	PACK end fragment failure	NoneOperand op 34
+9	PACK end fragment function not found
+3	PACK end fragment job blocking native	objectreference.getopenstate
+2	PACK end fragment job blocking native	quest.isstagedone
+1	PACK end fragment job blocking native	refcollectionalias.getcount
+3	PACK end fragment job blocking native	referencealias.getreference
+1	PACK end fragment job custom event runs with no handler
+1	PACK end fragment job event onquestshutdown runs with no handler
+10	PACK end fragment job event onstageset outcome: completed
+15	PACK end fragment job event onstageset runs with no handler
+9	PACK end fragment job fragment outcome: blocked on a native's result
+10	PACK end fragment job fragment outcome: completed
+23	PACK end fragment job open runs: whether setting the stage started the quest
+1	PACK end fragment not bound	MissingScript
+33	PACK end fragment outcome: blocked on a native's result
+2	PACK end fragment outcome: blocked on an undetermined value (rule vmad_fragment_instance_v1)
+84	PACK end fragment outcome: completed
+2	PACK end fragment outcome: failed: NoneOperand op 34
+4	PACK end fragment quest changes	objective completed (or not)
+4	PACK end fragment quest changes	objective displayed
+3	PACK end fragment quest changes	quest state became undetermined
+1	PACK end fragment quest changes	quest stopped
+25	PACK end fragment quest changes	stage set
+131	PACK end fragment runs
+8	PACK end fragment scenes	scene state became undetermined	Start of a scene whose state is undetermined
+3	PERK perk entry fragment blocking native	actor.hasmagiceffect
+1	PERK perk entry fragment blocking native	message.show
+2	PERK perk entry fragment blocking native	objectreference.haskeyword
+2	PERK perk entry fragment blocking native	quest.isstagedone
+3	PERK perk entry fragment blocking native	utility.getcurrentgametime
+1	PERK perk entry fragment blocking native	utility.randomint
+1	PERK perk entry fragment blocking rule	vmad_fragment_instance_v1
+2	PERK perk entry fragment effects	actor state
+3	PERK perk entry fragment effects	actor value changed
+2	PERK perk entry fragment effects	global set
+2	PERK perk entry fragment effects	items added, removed or equipped
+1	PERK perk entry fragment effects	message
+1	PERK perk entry fragment effects	objective completed
+1	PERK perk entry fragment effects	objective displayed or hidden
+1	PERK perk entry fragment effects	scene
+1	PERK perk entry fragment effects	stage set on another quest
+2	PERK perk entry fragment failure	NoneOperand op 23
+1	PERK perk entry fragment function not found
+1	PERK perk entry fragment job event onstageset outcome: completed
+1	PERK perk entry fragment job fragment outcome: completed
+1	PERK perk entry fragment job open runs: whether setting the stage started the quest
+1	PERK perk entry fragment not bound	MissingScript
+12	PERK perk entry fragment outcome: blocked on a native's result
+1	PERK perk entry fragment outcome: blocked on an undetermined value (rule vmad_fragment_instance_v1)
+19	PERK perk entry fragment outcome: completed
+2	PERK perk entry fragment outcome: failed: NoneOperand op 23
+1	PERK perk entry fragment quest changes	objective completed (or not)
+1	PERK perk entry fragment quest changes	objective displayed
+1	PERK perk entry fragment quest changes	stage set
+36	PERK perk entry fragment runs
+1	PERK perk entry fragment scenes	scene state became undetermined	Start of a scene whose state is undetermined
+22	events	custom events sent	queued for delivery
+1	events	registrations	remote	by event	onitemequipped
+1	events	registrations	remote	by event	onitemunequipped
+1	events	registrations	remote	by event	onlocationchange
+3	events	registrations	remote	made
+12	events	registrations	remote	not made: an argument or the instance is undetermined
+1	log entry condition lists	true
+37	log entry condition lists	undetermined
+1	log entry selections left open, by function index of an undetermined condition	function 491
+17	log entry selections left open, by function index of an undetermined condition	function 59
+1	log entry selections left open, by function index of an undetermined condition	function 74
+19	log entry selections with conditions evaluated	open
+1	log entry selections with conditions evaluated	settled
+22	story	story event left open, by function index of an undetermined condition	function 310
+22	story	story event left open, by function index of an undetermined condition	function 359
+19	story	story event left open, by function index of an undetermined condition	function 560
+22	story	story event left open, by function index of an undetermined condition	function 59
+2	story	story event left open, by function index of an undetermined condition	function 629
+11	story	story event left open, by function index of an undetermined condition	function 71
+22	story	story event left open, by function index of an undetermined condition	function 77
+22	story	story event outcome	open: a node's conditions are undetermined
+22	story	story events offered	SCPT
+
+## effects of other natives, ranked
+830	INFO begin fragment effects	other: topicinfo.getowningquest
+773	INFO end fragment effects	other: topicinfo.getowningquest
+409	INFO end fragment effects	other: referencealias.getreference
+314	INFO begin fragment effects	other: referencealias.getreference
+233	INFO end fragment effects	other: game.getplayer
+120	INFO end fragment effects	other: globalvariable.getvalue
+119	INFO end fragment effects	other: utility.wait
+108	INFO begin fragment effects	other: visualeffect.play
+91	INFO end fragment effects	other: quest.isstagedone
+75	INFO end fragment effects	other: game.fadeoutgame
+72	INFO end fragment effects	other: visualeffect.stop
+71	INFO end fragment effects	other: inputenablelayer.create
+65	INFO end fragment effects	other: game.getformfromfile
+59	INFO begin fragment effects	other: quest.isstagedone
+47	INFO end fragment effects	other: utility.randomint
+45	INFO begin fragment effects	other: locationalias.getlocation
+45	INFO end fragment effects	other: objectreference.getlocklevel
+44	INFO begin fragment effects	other: game.startdialoguecameraorcenterontarget
+38	INFO end fragment effects	other: inputenablelayer.disableplayercontrols
+36	INFO begin fragment effects	other: game.getplayer
+35	INFO end fragment effects	other: actor.playidle
+33	INFO begin fragment effects	other: sound.play
+33	INFO end fragment effects	other: objectreference.getvaluepercentage
+30	INFO end fragment effects	other: game.getform
+29	INFO begin fragment effects	other: musictype.add
+27	INFO end fragment effects	other: objectreference.getvalue
+25	INFO begin fragment effects	other: globalvariable.getvalue
+25	INFO begin fragment effects	other: location.reset
+25	INFO begin fragment effects	other: objectreference.getcurrentlocation
+24	INFO end fragment effects	other: objectreference.getdistance
+24	PACK end fragment effects	other: referencealias.getreference
+22	INFO begin fragment effects	other: form.haskeyword
+21	INFO begin fragment effects	other: objectreference.playanimation
+21	INFO end fragment effects	other: scriptobject.sendcustomevent
+20	INFO begin fragment effects	other: objectreference.getbaseobject
+20	INFO end fragment effects	other: spell.cast
+20	PACK end fragment effects	other: package.getowningquest
+18	INFO begin fragment effects	other: actor.getdialoguetarget
+17	PERK perk entry fragment effects	other: game.getplayer
+16	INFO begin fragment effects	other: actor.switchtopowerarmor
+16	INFO end fragment effects	other: objectreference.addtomap
+16	INFO end fragment effects	other: objectreference.getitemcount
+15	INFO end fragment effects	other: game.stopdialoguecamera
+14	INFO end fragment effects	other: objectreference.playanimation
+13	INFO begin fragment effects	other: objectreference.addkeyword
+13	INFO end fragment effects	other: actor.switchtopowerarmor
+12	INFO end fragment effects	other: quest.isobjectivedisplayed
+11	INFO begin fragment effects	other: keyword.sendstoryeventandwait
+10	INFO end fragment effects	other: objectreference.addkeyword
+10	INFO end fragment effects	other: quest.isrunning
+10	PERK perk entry fragment effects	other: game.getformfromfile
+9	INFO end fragment effects	other: actor.allowpcdialogue
+9	INFO end fragment effects	other: actor.setcrimefaction
+9	INFO end fragment effects	other: keyword.sendstoryevent
+9	PERK perk entry fragment effects	other: spell.cast
+8	INFO begin fragment effects	other: actor.playidle
+8	INFO end fragment effects	other: faction.setenemy
+8	INFO end fragment effects	other: quest.completeallobjectives
+8	PACK begin fragment effects	other: game.getformfromfile
+8	PACK begin fragment effects	other: referencealias.getreference
+8	PACK change fragment effects	other: referencealias.getreference
+8	PACK end fragment effects	other: quest.isstagedone
+8	PERK perk entry fragment effects	other: game.incrementstat
+7	INFO begin fragment effects	other: actor.changeanimflavor
+7	INFO begin fragment effects	other: game.getformfromfile
+7	INFO end fragment effects	other: objectreference.ismapmarkervisible
+7	PACK end fragment effects	other: objectreference.getdistance
+6	INFO begin fragment effects	other: actor.playidlewithtarget
+6	INFO begin fragment effects	other: game.stopdialoguecamera
+6	INFO end fragment effects	other: locationalias.getlocation
+6	PACK change fragment effects	other: game.getformfromfile
+6	PACK change fragment effects	other: package.getowningquest
+6	PERK perk entry fragment effects	other: effectshader.play
+6	PERK perk entry fragment effects	other: utility.wait
+5	PACK end fragment effects	other: actor.playidle
+5	PERK perk entry fragment effects	other: game.showperkvaultboyonhud
+4	INFO begin fragment effects	other: game.getform
+4	INFO begin fragment effects	other: objectreference.addtomap
+4	INFO begin fragment effects	other: objectreference.setdestroyed
+4	INFO begin fragment effects	other: quest.isrunning
+4	INFO begin fragment effects	other: weapon.fire
+4	INFO end fragment effects	other: actor.getdialoguetarget
+4	INFO end fragment effects	other: actor.isinfaction
+4	INFO end fragment effects	other: actor.openinventory
+4	INFO end fragment effects	other: actor.setghost
+4	INFO end fragment effects	other: objectreference.blockactivation
+4	INFO end fragment effects	other: objectreference.waitfor3dload
+4	INFO end fragment effects	other: quest.getcurrentstageid
+4	PACK end fragment effects	other: objectreference.ignorefriendlyhits
+4	PERK perk entry fragment effects	other: globalvariable.getvalue
+3	INFO begin fragment effects	other: actor.setlookat
+3	INFO begin fragment effects	other: objectreference.getitemcount
+3	INFO begin fragment effects	other: utility.wait
+3	INFO end fragment effects	other: actor.clearlookat
+3	INFO end fragment effects	other: game.addachievement
+3	INFO end fragment effects	other: game.startdialoguecameraorcenterontarget
+3	INFO end fragment effects	other: objectreference.getlinkedref
+3	INFO end fragment effects	other: objectreference.ignorefriendlyhits
+3	INFO end fragment effects	other: utility.getcurrentgametime
+3	PACK begin fragment effects	other: package.getowningquest
+3	PACK end fragment effects	other: actor.changeanimarchetype
+3	PACK end fragment effects	other: actorbase.setessential
+3	PACK end fragment effects	other: game.getplayer
+3	PACK end fragment effects	other: objectreference.getopenstate
+3	PACK end fragment effects	other: utility.wait
+3	PERK perk entry fragment effects	other: actor.hasmagiceffect
+3	PERK perk entry fragment effects	other: actor.startcannibal
+3	PERK perk entry fragment effects	other: objectreference.playimpacteffect
+3	PERK perk entry fragment effects	other: referencealias.getreference
+3	PERK perk entry fragment effects	other: utility.getcurrentgametime
+2	INFO begin fragment effects	other: actor.changeanimarchetype
+2	INFO begin fragment effects	other: game.addachievement
+2	INFO begin fragment effects	other: utility.randomint
+2	INFO end fragment effects	other: actor.addperk
+2	INFO end fragment effects	other: actor.changeanimflavor
+2	INFO end fragment effects	other: actor.isdead
+2	INFO end fragment effects	other: actor.setessential
+2	INFO end fragment effects	other: cell.enablefasttravel
+2	INFO end fragment effects	other: faction.setplayerenemy
+2	INFO end fragment effects	other: leveleditem.addform
+2	INFO end fragment effects	other: musictype.add
+2	INFO end fragment effects	other: objectreference.activate
+2	INFO end fragment effects	other: sound.play
+2	PACK begin fragment effects	other: objectreference.blockactivation
+2	PACK end fragment effects	other: game.getformfromfile
+2	PACK end fragment effects	other: objectreference.is3dloaded
+2	PERK perk entry fragment effects	other: actor.startvampirefeed
+2	PERK perk entry fragment effects	other: keyword.sendstoryeventandwait
+2	PERK perk entry fragment effects	other: objectreference.getcurrentlocation
+2	PERK perk entry fragment effects	other: objectreference.haskeyword
+2	PERK perk entry fragment effects	other: quest.isstagedone
+1	INFO begin fragment effects	other: actor.addperk
+1	INFO begin fragment effects	other: actor.changeanimfacearchetype
+1	INFO begin fragment effects	other: actor.isdead
+1	INFO begin fragment effects	other: actor.playidleaction
+1	INFO begin fragment effects	other: actor.setcandocommand
+1	INFO begin fragment effects	other: actor.setghost
+1	INFO begin fragment effects	other: faction.setenemy
+1	INFO begin fragment effects	other: game.getconfidenceav
+1	INFO begin fragment effects	other: objectreference.getvalue
+1	INFO end fragment effects	other: actor.addspell
+1	INFO end fragment effects	other: actor.hasperk
+1	INFO end fragment effects	other: actor.playidleaction
+1	INFO end fragment effects	other: actor.setcandocommand
+1	INFO end fragment effects	other: actor.setprotected
+1	INFO end fragment effects	other: actor.startcombat
+1	INFO end fragment effects	other: actorbase.getsex
+1	INFO end fragment effects	other: cell.reset
+1	INFO end fragment effects	other: formlist.getat
+1	INFO end fragment effects	other: formlist.getsize
+1	INFO end fragment effects	other: game.getconfidenceav
+1	INFO end fragment effects	other: game.setchargenhudmode
+1	INFO end fragment effects	other: game.shakecamera
+1	INFO end fragment effects	other: game.shakecontroller
+1	INFO end fragment effects	other: location.reset
+1	INFO end fragment effects	other: musictype.remove
+1	INFO end fragment effects	other: objectreference.attachmod
+1	INFO end fragment effects	other: objectreference.damageobject
+1	INFO end fragment effects	other: objectreference.getbaseobject
+1	INFO end fragment effects	other: objectreference.getcurrentlocation
+1	INFO end fragment effects	other: objectreference.setactorcause
+1	INFO end fragment effects	other: quest.hasobjective
+1	INFO end fragment effects	other: sound.setinstancevolume
+1	INFO end fragment effects	other: sound.stopinstance
+1	INFO end fragment effects	other: soundcategorysnapshot.push
+1	PACK begin fragment effects	other: actor.getcurrentpackage
+1	PACK begin fragment effects	other: actor.setalpha
+1	PACK begin fragment effects	other: effectshader.play
+1	PACK begin fragment effects	other: objectreference.getlinkedref
+1	PACK begin fragment effects	other: objectreference.is3dloaded
+1	PACK change fragment effects	other: objectreference.blockactivation
+1	PACK change fragment effects	other: objectreference.saycustom
+1	PACK end fragment effects	other: actor.dogdropitems
+1	PACK end fragment effects	other: faction.setenemy
+1	PACK end fragment effects	other: game.setplayeraidriven
+1	PACK end fragment effects	other: scriptobject.sendcustomevent
+1	PERK perk entry fragment effects	other: actor.removeperk
+1	PERK perk entry fragment effects	other: utility.randomint

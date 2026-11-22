@@ -1,0 +1,562 @@
+# fragment_census: counts, record type tags, slot kinds and parameter types only (spec/scene-record.md)
+# 0 records; 1 VMAD fragment blocks and their functions; 2 scene records; 3 fragments placed against the records
+5611	0 records with a VMAD	INFO
+167	0 records with a VMAD	PACK
+35	0 records with a VMAD	PERK
+634	0 records with a VMAD	SCEN
+102433	0 winning records	INFO
+4888	0 winning records	PACK
+617	0 winning records	PERK
+4773	0 winning records	SCEN
+36	1 PERK fragment word after the index	0
+5611	1 VMAD read to its last byte	INFO	holds
+167	1 VMAD read to its last byte	PACK	holds
+35	1 VMAD read to its last byte	PERK	holds
+634	1 VMAD read to its last byte	SCEN	holds
+3215	1 VMAD without a block	INFO
+1	1 VMAD without a block	PACK
+2	1 VMAD without a block	SCEN
+995	1 block flag byte	INFO	0x01
+1242	1 block flag byte	INFO	0x02
+159	1 block flag byte	INFO	0x03
+18	1 block flag byte	PACK	0x01
+121	1 block flag byte	PACK	0x02
+8	1 block flag byte	PACK	0x03
+7	1 block flag byte	PACK	0x04
+10	1 block flag byte	PACK	0x05
+2	1 block flag byte	PACK	0x07
+307	1 block flag byte	SCEN	0x00
+48	1 block flag byte	SCEN	0x01
+206	1 block flag byte	SCEN	0x02
+71	1 block flag byte	SCEN	0x03
+10	1 block script names a compiled script	INFO	false
+2386	1 block script names a compiled script	INFO	true
+5	1 block script names a compiled script	PACK	false
+161	1 block script names a compiled script	PACK	true
+1	1 block script names a compiled script	PERK	false
+31	1 block script names a compiled script	PERK	true
+2	1 block script names a compiled script	SCEN	false
+630	1 block script names a compiled script	SCEN	true
+1414	1 block script properties	INFO
+167	1 block script properties	PACK
+796	1 block script properties	SCEN
+2396	1 block version byte	INFO	3
+166	1 block version byte	PACK	3
+32	1 block version byte	PERK	3
+632	1 block version byte	SCEN	3
+2396	1 blocks	INFO
+166	1 blocks	PACK
+32	1 blocks	PERK
+632	1 blocks	SCEN
+2555	1 fragment byte before the texts	INFO	1
+188	1 fragment byte before the texts	PACK	1
+36	1 fragment byte before the texts	PERK	1
+1134	1 fragment byte before the texts	SCEN	1
+2544	1 fragment function in the compiled script	INFO	found: parameters (objectreference) returns none, with instructions
+11	1 fragment function in the compiled script	INFO	not found
+9	1 fragment function in the compiled script	PACK	found: parameters (actor) returns none, no instructions
+168	1 fragment function in the compiled script	PACK	found: parameters (actor) returns none, with instructions
+11	1 fragment function in the compiled script	PACK	not found
+34	1 fragment function in the compiled script	PERK	found: parameters (objectreference, actor) returns none, with instructions
+2	1 fragment function in the compiled script	PERK	not found
+98	1 fragment function in the compiled script	SCEN	found: parameters () returns none, no instructions
+1024	1 fragment function in the compiled script	SCEN	found: parameters () returns none, with instructions
+2	1 fragment function in the compiled script	SCEN	found: parameters (referencealias) returns none, with instructions
+10	1 fragment function in the compiled script	SCEN	not found
+2555	1 fragment script is the block's script	INFO	holds
+188	1 fragment script is the block's script	PACK	holds
+36	1 fragment script is the block's script	PERK	holds
+1134	1 fragment script is the block's script	SCEN	holds
+1154	1 fragments by slot	INFO	begin
+1401	1 fragments by slot	INFO	end
+38	1 fragments by slot	PACK	begin
+19	1 fragments by slot	PACK	change
+131	1 fragments by slot	PACK	end
+36	1 fragments by slot	PERK	perk entry
+119	1 fragments by slot	SCEN	begin
+277	1 fragments by slot	SCEN	end
+350	1 fragments by slot	SCEN	phase begin (flag 1)
+386	1 fragments by slot	SCEN	phase end (flag 2)
+2	1 fragments by slot	SCEN	phase, flag byte neither 1 nor 2
+28	1 fragments per block	PERK	1
+4	1 fragments per block	PERK	2
+2237	1 fragments per block (begin, end, change)	INFO	1
+159	1 fragments per block (begin, end, change)	INFO	2
+146	1 fragments per block (begin, end, change)	PACK	1
+18	1 fragments per block (begin, end, change)	PACK	2
+2	1 fragments per block (begin, end, change)	PACK	3
+307	1 fragments per block (begin, end, change)	SCEN	0
+254	1 fragments per block (begin, end, change)	SCEN	1
+71	1 fragments per block (begin, end, change)	SCEN	2
+1154	1 function name ends with	INFO	begin	_begin
+1401	1 function name ends with	INFO	end	_end
+38	1 function name ends with	PACK	begin	_begin
+19	1 function name ends with	PACK	change	_change
+131	1 function name ends with	PACK	end	_end
+31	1 function name ends with	PERK	perk entry	_00
+3	1 function name ends with	PERK	perk entry	_01
+2	1 function name ends with	PERK	perk entry	_02
+119	1 function name ends with	SCEN	begin	_begin
+277	1 function name ends with	SCEN	end	_end
+350	1 function name ends with	SCEN	phase begin (flag 1)	_begin
+386	1 function name ends with	SCEN	phase end (flag 2)	_end
+1	1 function name ends with	SCEN	phase, flag byte neither 1 nor 2	_10
+1	1 function name ends with	SCEN	phase, flag byte neither 1 nor 2	_20
+1	1 phase fragment flag byte against the function name	0	_10
+1	1 phase fragment flag byte against the function name	0	_20
+350	1 phase fragment flag byte against the function name	1	_begin
+386	1 phase fragment flag byte against the function name	2	_end
+249	1 phase fragments per SCEN block	0
+249	1 phase fragments per SCEN block	1
+4	1 phase fragments per SCEN block	10-19
+66	1 phase fragments per SCEN block	2
+30	1 phase fragments per SCEN block	3-4
+34	1 phase fragments per SCEN block	5-9
+4773	2 PNAM names	QUST
+4773	2 SCEN read to the last byte
+1856	2 action ALID is an actor's ALID or -1	fails
+23102	2 action ALID is an actor's ALID or -1	holds
+130	2 action FNAM bit set	kind 0	0x00000400
+3403	2 action FNAM bit set	kind 0	0x00001000
+7241	2 action FNAM bit set	kind 0	0x00008000
+78	2 action FNAM bit set	kind 0	0x00010000
+4386	2 action FNAM bit set	kind 0	0x00020000
+112	2 action FNAM bit set	kind 0	0x00080000
+256	2 action FNAM bit set	kind 0	0x00200000
+40	2 action FNAM bit set	kind 0	0x00400000
+30	2 action FNAM bit set	kind 1	0x00000080
+958	2 action FNAM bit set	kind 1	0x00080000
+5	2 action FNAM bit set	kind 2	0x00080000
+19	2 action FNAM bit set	kind 3	0x00000080
+18	2 action FNAM bit set	kind 3	0x00000100
+20	2 action FNAM bit set	kind 3	0x00000200
+83	2 action FNAM bit set	kind 3	0x00000800
+1	2 action FNAM bit set	kind 3	0x00001000
+3143	2 action FNAM bit set	kind 3	0x00008000
+3142	2 action FNAM bit set	kind 3	0x00020000
+1	2 action FNAM bit set	kind 3	0x00080000
+2701	2 action FNAM bit set	kind 3	0x00200000
+17	2 action FNAM bit set	kind 3	0x00400000
+19	2 action FNAM bit set	kind 3	0x08000000
+18	2 action FNAM bit set	kind 3	0x10000000
+13	2 action FNAM bit set	kind 3	0x20000000
+25	2 action FNAM bit set	kind 3	0x40000000
+307	2 action FNAM bit set	kind 4	0x00004000
+5	2 action FNAM bit set	kind 4	0x00080000
+1	2 action FNAM bit set	kind 5	0x00000800
+68	2 action FNAM bit set	kind 5	0x00001000
+484	2 action FNAM bit set	kind 5	0x00008000
+454	2 action FNAM bit set	kind 5	0x00020000
+3	2 action FNAM bit set	kind 5	0x00080000
+36	2 action FNAM bit set	kind 5	0x00200000
+6	2 action FNAM bit set	kind 5	0x00400000
+1	2 action FNAM bit set	kind 6	0x00000400
+1	2 action FNAM bit set	kind 6	0x00080000
+31	2 action INAM distinct within a scene	fails
+4742	2 action INAM distinct within a scene	holds
+424	2 action conditions	kind 4
+2	2 action fields	kind 0	CRIS	8 bytes
+13503	2 action fields	kind 0	DATA	DIAL
+5	2 action fields	kind 0	DATA	a FormID naming no winning record
+34	2 action fields	kind 0	DATA	zero
+9	2 action fields	kind 0	DEMO	STAT
+87	2 action fields	kind 0	DEMO	zero
+5	2 action fields	kind 0	DEVA	STAT
+3	2 action fields	kind 0	DEVA	a FormID naming no winning record
+88	2 action fields	kind 0	DEVA	zero
+13541	2 action fields	kind 0	DMAX	a word that does not resolve
+1	2 action fields	kind 0	DMAX	zero
+13539	2 action fields	kind 0	DMIN	a word that does not resolve
+3	2 action fields	kind 0	DMIN	zero
+179	2 action fields	kind 0	HTID	12 bytes
+85	2 action fields	kind 0	HTID	16 bytes
+33	2 action fields	kind 0	HTID	20 bytes
+7	2 action fields	kind 0	HTID	24 bytes
+21	2 action fields	kind 0	HTID	28 bytes
+495	2 action fields	kind 0	HTID	8 bytes
+12	2 action fields	kind 0	HTID	ACTI
+7	2 action fields	kind 0	HTID	BPTD
+7	2 action fields	kind 0	HTID	CELL
+8	2 action fields	kind 0	HTID	CONT
+1	2 action fields	kind 0	HTID	CPTH
+180	2 action fields	kind 0	HTID	DOOR
+8	2 action fields	kind 0	HTID	ECZN
+8	2 action fields	kind 0	HTID	GLOB
+77	2 action fields	kind 0	HTID	MISC
+7	2 action fields	kind 0	HTID	NOCM
+34	2 action fields	kind 0	HTID	NPC_
+18	2 action fields	kind 0	HTID	OVIS
+2117	2 action fields	kind 0	HTID	STAT
+17	2 action fields	kind 0	HTID	TXST
+19	2 action fields	kind 0	HTID	WATR
+227	2 action fields	kind 0	HTID	a FormID naming no winning record
+30	2 action fields	kind 0	HTID	a word that does not resolve
+1154	2 action fields	kind 0	HTID	zero
+335	2 action fields	kind 0	ONAM	SOPM
+29	2 action fields	kind 0	PNAM	KYWD
+130	2 action fields	kind 0	VENC	KYWD
+3328	2 action fields	kind 1	PNAM	PACK
+1	2 action fields	kind 2	SCQS	2 bytes
+1198	2 action fields	kind 2	SNAM	a word that does not resolve
+3	2 action fields	kind 2	SNAM	zero
+171	2 action fields	kind 2	TNAM	a word that does not resolve
+3	2 action fields	kind 2	TNAM	zero
+31	2 action fields	kind 3	DALC	KYWD
+20	2 action fields	kind 3	DTGT	ACTI
+5	2 action fields	kind 3	DTGT	BPTD
+18	2 action fields	kind 3	DTGT	CONT
+8	2 action fields	kind 3	DTGT	CPTH
+136	2 action fields	kind 3	DTGT	DOOR
+11	2 action fields	kind 3	DTGT	ECZN
+8	2 action fields	kind 3	DTGT	GLOB
+53	2 action fields	kind 3	DTGT	MISC
+3	2 action fields	kind 3	DTGT	NOCM
+54	2 action fields	kind 3	DTGT	NPC_
+14	2 action fields	kind 3	DTGT	RACE
+1166	2 action fields	kind 3	DTGT	STAT
+7	2 action fields	kind 3	DTGT	TXST
+1	2 action fields	kind 3	DTGT	VTYP
+7	2 action fields	kind 3	DTGT	WATR
+289	2 action fields	kind 3	DTGT	a FormID naming no winning record
+12	2 action fields	kind 3	DTGT	a word that does not resolve
+1347	2 action fields	kind 3	DTGT	zero
+1	2 action fields	kind 3	DTID	12 bytes
+2	2 action fields	kind 3	DTID	STAT
+2	2 action fields	kind 3	DTID	a FormID naming no winning record
+20	2 action fields	kind 3	JOUT	KYWD
+3140	2 action fields	kind 3	NETO	DIAL
+5	2 action fields	kind 3	NETO	a FormID naming no winning record
+18	2 action fields	kind 3	NNGS	KYWD
+2948	2 action fields	kind 3	NNGT	DIAL
+5	2 action fields	kind 3	NNGT	a FormID naming no winning record
+13	2 action fields	kind 3	NNUS	KYWD
+2952	2 action fields	kind 3	NNUT	DIAL
+5	2 action fields	kind 3	NNUT	a FormID naming no winning record
+19	2 action fields	kind 3	NPOS	KYWD
+2955	2 action fields	kind 3	NPOT	DIAL
+5	2 action fields	kind 3	NPOT	a FormID naming no winning record
+25	2 action fields	kind 3	NQUS	KYWD
+2947	2 action fields	kind 3	NQUT	DIAL
+5	2 action fields	kind 3	NQUT	a FormID naming no winning record
+3140	2 action fields	kind 3	NTOP	DIAL
+5	2 action fields	kind 3	NTOP	a FormID naming no winning record
+18	2 action fields	kind 3	PLVD	KYWD
+3146	2 action fields	kind 3	PTOP	DIAL
+5	2 action fields	kind 3	PTOP	a FormID naming no winning record
+3135	2 action fields	kind 3	QTOP	DIAL
+7	2 action fields	kind 3	QTOP	a FormID naming no winning record
+19	2 action fields	kind 3	VENC	KYWD
+1069	2 action fields	kind 4	CITC	4 bytes
+27	2 action fields	kind 4	HTID	0 bytes
+1069	2 action fields	kind 4	INTT	2 bytes
+1069	2 action fields	kind 4	LCEP	SCEN
+11	2 action fields	kind 4	SSPN	10 bytes
+51	2 action fields	kind 4	SSPN	11 bytes
+36	2 action fields	kind 4	SSPN	12 bytes
+25	2 action fields	kind 4	SSPN	13 bytes
+11	2 action fields	kind 4	SSPN	14 bytes
+30	2 action fields	kind 4	SSPN	15 bytes
+13	2 action fields	kind 4	SSPN	16 bytes
+6	2 action fields	kind 4	SSPN	17 bytes
+34	2 action fields	kind 4	SSPN	18 bytes
+9	2 action fields	kind 4	SSPN	19 bytes
+12	2 action fields	kind 4	SSPN	20 bytes
+4	2 action fields	kind 4	SSPN	21 bytes
+3	2 action fields	kind 4	SSPN	22 bytes
+8	2 action fields	kind 4	SSPN	23 bytes
+4	2 action fields	kind 4	SSPN	24 bytes
+5	2 action fields	kind 4	SSPN	25 bytes
+9	2 action fields	kind 4	SSPN	26 bytes
+7	2 action fields	kind 4	SSPN	27 bytes
+3	2 action fields	kind 4	SSPN	28 bytes
+3	2 action fields	kind 4	SSPN	29 bytes
+6	2 action fields	kind 4	SSPN	30 bytes
+1	2 action fields	kind 4	SSPN	31 bytes
+5	2 action fields	kind 4	SSPN	32 bytes
+10	2 action fields	kind 4	SSPN	33 bytes
+3	2 action fields	kind 4	SSPN	34 bytes
+10	2 action fields	kind 4	SSPN	35 bytes
+5	2 action fields	kind 4	SSPN	36 bytes
+3	2 action fields	kind 4	SSPN	37 bytes
+6	2 action fields	kind 4	SSPN	38 bytes
+1	2 action fields	kind 4	SSPN	39 bytes
+1	2 action fields	kind 4	SSPN	40 bytes
+1	2 action fields	kind 4	SSPN	41 bytes
+8	2 action fields	kind 4	SSPN	42 bytes
+3	2 action fields	kind 4	SSPN	43 bytes
+1	2 action fields	kind 4	SSPN	45 bytes
+1	2 action fields	kind 4	SSPN	49 bytes
+4	2 action fields	kind 4	SSPN	5 bytes
+1	2 action fields	kind 4	SSPN	50 bytes
+55	2 action fields	kind 4	SSPN	6 bytes
+27	2 action fields	kind 4	SSPN	7 bytes
+11	2 action fields	kind 4	SSPN	8 bytes
+5	2 action fields	kind 4	SSPN	9 bytes
+4	2 action fields	kind 4	SSPN	a FormID naming no winning record
+25	2 action fields	kind 4	STSC	zero
+1	2 action fields	kind 5	DALC	KYWD
+2	2 action fields	kind 5	DTID	12 bytes
+8	2 action fields	kind 5	DTID	8 bytes
+6	2 action fields	kind 5	DTID	DOOR
+1	2 action fields	kind 5	DTID	MISC
+1	2 action fields	kind 5	DTID	NPC_
+25	2 action fields	kind 5	DTID	STAT
+3	2 action fields	kind 5	DTID	a FormID naming no winning record
+7	2 action fields	kind 5	DTID	zero
+495	2 action fields	kind 5	NETO	DIAL
+496	2 action fields	kind 5	NTOP	DIAL
+496	2 action fields	kind 5	PTOP	DIAL
+502	2 action fields	kind 5	QTOP	DIAL
+1861	2 action fields	kind 6	DATA	DIAL
+415	2 action fields	kind 6	DATA	zero
+573	2 action fields	kind 6	DMAX	SOPM
+1703	2 action fields	kind 6	DMAX	zero
+360	2 action fields	kind 6	HTID	SNDR
+1916	2 action fields	kind 6	HTID	zero
+1	2 action fields	kind 6	VENC	KYWD
+13542	2 action start phase <= end phase < number of phases	kind 0	holds
+3292	2 action start phase <= end phase < number of phases	kind 1	holds
+1201	2 action start phase <= end phase < number of phases	kind 2	holds
+3159	2 action start phase <= end phase < number of phases	kind 3	holds
+986	2 action start phase <= end phase < number of phases	kind 4	holds
+502	2 action start phase <= end phase < number of phases	kind 5	holds
+2276	2 action start phase <= end phase < number of phases	kind 6	holds
+13542	2 actions by kind	0
+3292	2 actions by kind	1
+1201	2 actions by kind	2
+3159	2 actions by kind	3
+986	2 actions by kind	4
+502	2 actions by kind	5
+2276	2 actions by kind	6
+35	2 actions per scene	0
+918	2 actions per scene	1
+448	2 actions per scene	10-19
+637	2 actions per scene	2
+1226	2 actions per scene	3-4
+1380	2 actions per scene	5-9
+129	2 actions per scene	>=20
+559	2 actors per scene	0
+2836	2 actors per scene	1
+8	2 actors per scene	10-19
+1051	2 actors per scene	2
+245	2 actors per scene	3-4
+74	2 actors per scene	5-9
+99832	2 bytes by place and tag	action	ALID	typed
+49916	2 bytes by place and tag	action	ANAM	typed
+1889	2 bytes by place and tag	action	CIS2	typed
+4276	2 bytes by place and tag	action	CITC	kept as stored
+16	2 bytes by place and tag	action	CRIS	kept as stored
+13568	2 bytes by place and tag	action	CTDA	typed
+128	2 bytes by place and tag	action	DALC	kept as stored
+63272	2 bytes by place and tag	action	DATA	kept as stored
+384	2 bytes by place and tag	action	DEMO	kept as stored
+384	2 bytes by place and tag	action	DEVA	kept as stored
+63272	2 bytes by place and tag	action	DMAX	kept as stored
+54168	2 bytes by place and tag	action	DMIN	kept as stored
+12636	2 bytes by place and tag	action	DTGT	kept as stored
+288	2 bytes by place and tag	action	DTID	kept as stored
+99832	2 bytes by place and tag	action	ENAM	typed
+54584	2 bytes by place and tag	action	FNAM	kept as stored
+33712	2 bytes by place and tag	action	HTID	kept as stored
+99832	2 bytes by place and tag	action	INAM	typed
+2138	2 bytes by place and tag	action	INTT	kept as stored
+80	2 bytes by place and tag	action	JOUT	kept as stored
+4276	2 bytes by place and tag	action	LCEP	kept as stored
+49351	2 bytes by place and tag	action	NAM0	typed
+14560	2 bytes by place and tag	action	NETO	kept as stored
+72	2 bytes by place and tag	action	NNGS	kept as stored
+11812	2 bytes by place and tag	action	NNGT	kept as stored
+52	2 bytes by place and tag	action	NNUS	kept as stored
+11828	2 bytes by place and tag	action	NNUT	kept as stored
+76	2 bytes by place and tag	action	NPOS	kept as stored
+11840	2 bytes by place and tag	action	NPOT	kept as stored
+100	2 bytes by place and tag	action	NQUS	kept as stored
+11808	2 bytes by place and tag	action	NQUT	kept as stored
+14564	2 bytes by place and tag	action	NTOP	kept as stored
+1340	2 bytes by place and tag	action	ONAM	kept as stored
+72	2 bytes by place and tag	action	PLVD	kept as stored
+13428	2 bytes by place and tag	action	PNAM	kept as stored
+14588	2 bytes by place and tag	action	PTOP	kept as stored
+14576	2 bytes by place and tag	action	QTOP	kept as stored
+2	2 bytes by place and tag	action	SCQS	kept as stored
+4804	2 bytes by place and tag	action	SNAM	kept as stored
+99832	2 bytes by place and tag	action	SNAM	typed
+7603	2 bytes by place and tag	action	SSPN	kept as stored
+100	2 bytes by place and tag	action	STSC	kept as stored
+696	2 bytes by place and tag	action	TNAM	kept as stored
+600	2 bytes by place and tag	action	VENC	kept as stored
+25056	2 bytes by place and tag	actor	ALID	typed
+25056	2 bytes by place and tag	actor	DNAM	kept as stored
+25056	2 bytes by place and tag	actor	LNAM	kept as stored
+346	2 bytes by place and tag	phase	CIS1	typed
+11754	2 bytes by place and tag	phase	CIS2	typed
+136192	2 bytes by place and tag	phase	CTDA	typed
+506	2 bytes by place and tag	phase	FNAM	kept as stored
+0	2 bytes by place and tag	phase	HNAM	typed
+72870	2 bytes by place and tag	phase	NAM0	typed
+0	2 bytes by place and tag	phase	NEXT	typed
+3604	2 bytes by place and tag	phase	SCQS	kept as stored
+85140	2 bytes by place and tag	phase	WNAM	kept as stored
+1396	2 bytes by place and tag	scene	ACTV	kept as stored
+84	2 bytes by place and tag	scene	CNAM	kept as stored
+28	2 bytes by place and tag	scene	CRIS	kept as stored
+256	2 bytes by place and tag	scene	CTDA	typed
+137261	2 bytes by place and tag	scene	EDID	typed
+19092	2 bytes by place and tag	scene	FNAM	kept as stored
+19092	2 bytes by place and tag	scene	INAM	kept as stored
+16	2 bytes by place and tag	scene	KSIZ	kept as stored
+16	2 bytes by place and tag	scene	KWDA	kept as stored
+32065	2 bytes by place and tag	scene	NNAM	kept as stored
+19092	2 bytes by place and tag	scene	PNAM	typed
+2196	2 bytes by place and tag	scene	SCQS	kept as stored
+2192	2 bytes by place and tag	scene	TNAM	kept as stored
+157846	2 bytes by place and tag	scene	VMAD	typed
+76368	2 bytes by place and tag	scene	VNAM	kept as stored
+18824	2 bytes by place and tag	scene	XNAM	kept as stored
+257	2 phase completion condition function index	1
+52	2 phase completion condition function index	131
+10	2 phase completion condition function index	14
+1	2 phase completion condition function index	141
+16	2 phase completion condition function index	157
+16	2 phase completion condition function index	159
+1	2 phase completion condition function index	162
+4	2 phase completion condition function index	18
+6	2 phase completion condition function index	248
+4	2 phase completion condition function index	249
+14	2 phase completion condition function index	27
+8	2 phase completion condition function index	289
+5	2 phase completion condition function index	310
+1	2 phase completion condition function index	32
+3	2 phase completion condition function index	323
+84	2 phase completion condition function index	327
+1	2 phase completion condition function index	35
+12	2 phase completion condition function index	359
+2	2 phase completion condition function index	360
+1	2 phase completion condition function index	45
+62	2 phase completion condition function index	46
+1	2 phase completion condition function index	47
+3	2 phase completion condition function index	513
+1	2 phase completion condition function index	543
+416	2 phase completion condition function index	550
+78	2 phase completion condition function index	555
+6	2 phase completion condition function index	56
+4	2 phase completion condition function index	566
+17	2 phase completion condition function index	58
+1	2 phase completion condition function index	580
+231	2 phase completion condition function index	59
+1	2 phase completion condition function index	590
+19	2 phase completion condition function index	594
+9	2 phase completion condition function index	613
+9	2 phase completion condition function index	614
+85	2 phase completion condition function index	629
+11	2 phase completion condition function index	633
+4	2 phase completion condition function index	660
+42	2 phase completion condition function index	67
+1	2 phase completion condition function index	72
+29	2 phase completion condition function index	74
+12	2 phase completion condition function index	784
+1	2 phase completion condition function index	792
+4	2 phase completion condition function index	799
+1	2 phase completion condition function index	811
+18490	2 phase conditions (start, completion)	0, 0
+577	2 phase conditions (start, completion)	0, 1
+1	2 phase conditions (start, completion)	0, 10-19
+285	2 phase conditions (start, completion)	0, 2
+60	2 phase conditions (start, completion)	0, 3-4
+5	2 phase conditions (start, completion)	0, 5-9
+1212	2 phase conditions (start, completion)	1, 0
+44	2 phase conditions (start, completion)	1, 1
+35	2 phase conditions (start, completion)	1, 2
+5	2 phase conditions (start, completion)	1, 3-4
+7	2 phase conditions (start, completion)	10-19, 0
+424	2 phase conditions (start, completion)	2, 0
+7	2 phase conditions (start, completion)	2, 1
+8	2 phase conditions (start, completion)	2, 2
+1	2 phase conditions (start, completion)	2, 3-4
+103	2 phase conditions (start, completion)	3-4, 0
+2	2 phase conditions (start, completion)	3-4, 2
+19	2 phase conditions (start, completion)	5-9, 0
+390	2 phase start condition function index	1
+113	2 phase start condition function index	14
+2	2 phase start condition function index	157
+3	2 phase start condition function index	159
+2	2 phase start condition function index	18
+1	2 phase start condition function index	182
+64	2 phase start condition function index	231
+104	2 phase start condition function index	248
+2	2 phase start condition function index	255
+1	2 phase start condition function index	263
+8	2 phase start condition function index	27
+7	2 phase start condition function index	289
+2	2 phase start condition function index	300
+3	2 phase start condition function index	310
+2	2 phase start condition function index	32
+1	2 phase start condition function index	323
+42	2 phase start condition function index	359
+19	2 phase start condition function index	414
+2	2 phase start condition function index	426
+5	2 phase start condition function index	448
+4	2 phase start condition function index	45
+46	2 phase start condition function index	46
+8	2 phase start condition function index	47
+2	2 phase start condition function index	5
+1	2 phase start condition function index	50
+5	2 phase start condition function index	507
+1	2 phase start condition function index	510
+3	2 phase start condition function index	543
+48	2 phase start condition function index	555
+33	2 phase start condition function index	56
+1	2 phase start condition function index	560
+63	2 phase start condition function index	58
+633	2 phase start condition function index	59
+1	2 phase start condition function index	590
+34	2 phase start condition function index	613
+33	2 phase start condition function index	614
+2	2 phase start condition function index	625
+450	2 phase start condition function index	629
+11	2 phase start condition function index	660
+63	2 phase start condition function index	67
+2	2 phase start condition function index	69
+7	2 phase start condition function index	70
+31	2 phase start condition function index	71
+48	2 phase start condition function index	72
+230	2 phase start condition function index	74
+8	2 phase start condition function index	77
+1	2 phase start condition function index	773
+1	2 phase start condition function index	784
+2	2 phase start condition function index	792
+140	2 phase start condition function index	799
+3	2 phase start condition function index	80
+1	2 phase start condition function index	811
+21	2 phase start condition function index	84
+16	2 phases per scene	0
+1055	2 phases per scene	1
+348	2 phases per scene	10-19
+762	2 phases per scene	2
+1255	2 phases per scene	3-4
+1269	2 phases per scene	5-9
+68	2 phases per scene	>=20
+632	2 scene FNAM bit set	0x00000001
+479	2 scene FNAM bit set	0x00000002
+4765	2 scene FNAM bit set	0x00000004
+15	2 scene FNAM bit set	0x00000008
+556	2 scene FNAM bit set	0x00000010
+2119	2 scene FNAM bit set	0x00000020
+119	2 scene FNAM bit set	0x00000040
+469	2 scene FNAM bit set	0x00000100
+63	2 scene FNAM bit set	0x00000800
+854	2 scene FNAM bit set	0x00001000
+4352	2 scene INAM greater than every action INAM	fails
+386	2 scene INAM greater than every action INAM	holds
+36	3 PERK fragment index equals the digits ending the function name	holds
+1	3 PERK fragment index is below the number of PRKE entries	fails
+35	3 PERK fragment index is below the number of PRKE entries	holds
+35	3 PERK fragment's PRKE entry, first byte	2
+4773	3 SCEN PNAM equals the label of the group of kind 10 holding it	holds
+632	3 at most one phase fragment per phase and flag	holds
+102433	3 owning quest	INFO	held by a group of kind 10 labelled with a QUST
+4773	3 owning quest	SCEN	held by a group of kind 10 labelled with a QUST
+2	3 phase fragment index + 1 equals the two digits in the function name	fails
+736	3 phase fragment index + 1 equals the two digits in the function name	holds
+2	3 phase fragment index is below the number of phases	fails
+736	3 phase fragment index is below the number of phases	holds

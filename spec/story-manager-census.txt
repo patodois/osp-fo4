@@ -1,5 +1,5 @@
 # story_census: counts, record type tags, event codes, function indexes and engine native names only (spec/story-manager.md)
-# 1 records and their fields; 2 links; 3 the tree and its conditions; 4 quests; 5 the static scan of compiled scripts; 6 how each quest not flagged to start could start
+# 1 records and their fields; 2 links; 3 the tree and its conditions; 4 quests; 5 the static scan of compiled scripts; 6 how each quest not flagged to start could start; 7 scenes and what could start them
 120	1 CITC equals the number of conditions	SMBN	holds
 18	1 CITC equals the number of conditions	SMEN	holds
 335	1 CITC equals the number of conditions	SMQN	holds
@@ -323,10 +323,10 @@
 1	4 quests by ENAM	TMEE
 457	4 quests flagged to start with the game
 2	4 quests listed by a node and flagged to start
-2396	5 VMAD fragment blocks not read (their script's properties are not seen)	INFO
-166	5 VMAD fragment blocks not read (their script's properties are not seen)	PACK
-32	5 VMAD fragment blocks not read (their script's properties are not seen)	PERK
-632	5 VMAD fragment blocks not read (their script's properties are not seen)	SCEN
+2396	5 VMAD fragment blocks read	INFO
+166	5 VMAD fragment blocks read	PACK
+32	5 VMAD fragment blocks read	PERK
+632	5 VMAD fragment blocks read	SCEN
 57	5 call sites	keyword.sendstoryevent	receiver a property
 3	5 call sites	keyword.sendstoryevent	receiver a property of another object
 1	5 call sites	keyword.sendstoryeventandwait	receiver a parameter
@@ -348,7 +348,8 @@
 1	5 call sites by script attachment	keyword.sendstoryevent	FURN script
 1	5 call sites by script attachment	keyword.sendstoryevent	MSTT script
 3	5 call sites by script attachment	keyword.sendstoryevent	NPC_ script
-37	5 call sites by script attachment	keyword.sendstoryevent	a script no read VMAD attaches
+28	5 call sites by script attachment	keyword.sendstoryevent	a script no read VMAD attaches
+9	5 call sites by script attachment	keyword.sendstoryevent	dialogue line (INFO) fragment script
 1	5 call sites by script attachment	keyword.sendstoryevent	quest alias script
 6	5 call sites by script attachment	keyword.sendstoryevent	quest script
 9	5 call sites by script attachment	keyword.sendstoryevent	quest stage fragment script
@@ -377,44 +378,52 @@
 1	5 call sites by script attachment	quest.setstage	NPC_ script and placed ACHR script
 2	5 call sites by script attachment	quest.setstage	TACT script and placed REFR script
 1	5 call sites by script attachment	quest.setstage	TERM script
-1861	5 call sites by script attachment	quest.setstage	a script no read VMAD attaches
+1154	5 call sites by script attachment	quest.setstage	a script no read VMAD attaches
+502	5 call sites by script attachment	quest.setstage	dialogue line (INFO) fragment script
+56	5 call sites by script attachment	quest.setstage	package fragment script
+6	5 call sites by script attachment	quest.setstage	perk fragment script
 84	5 call sites by script attachment	quest.setstage	placed REFR script
 255	5 call sites by script attachment	quest.setstage	quest alias script
 742	5 call sites by script attachment	quest.setstage	quest script
 2	5 call sites by script attachment	quest.setstage	quest script and quest stage fragment script
 5246	5 call sites by script attachment	quest.setstage	quest stage fragment script
+143	5 call sites by script attachment	quest.setstage	scene fragment script
 164	5 call sites by script attachment	quest.setstage	terminal fragment script
 5	5 call sites by script attachment	quest.start	ACTI script
 3	5 call sites by script attachment	quest.start	ACTI script and placed REFR script
 1	5 call sites by script attachment	quest.start	NPC_ script
-47	5 call sites by script attachment	quest.start	a script no read VMAD attaches
+33	5 call sites by script attachment	quest.start	a script no read VMAD attaches
+13	5 call sites by script attachment	quest.start	dialogue line (INFO) fragment script
 3	5 call sites by script attachment	quest.start	placed REFR script
 5	5 call sites by script attachment	quest.start	quest alias script
 17	5 call sites by script attachment	quest.start	quest script
 173	5 call sites by script attachment	quest.start	quest stage fragment script
-39	5 call sites whose receiver resolves to a constant record	keyword.sendstoryevent	no
-21	5 call sites whose receiver resolves to a constant record	keyword.sendstoryevent	yes
+1	5 call sites by script attachment	quest.start	scene fragment script
+30	5 call sites whose receiver resolves to a constant record	keyword.sendstoryevent	no
+30	5 call sites whose receiver resolves to a constant record	keyword.sendstoryevent	yes
 5	5 call sites whose receiver resolves to a constant record	keyword.sendstoryeventandwait	no
 25	5 call sites whose receiver resolves to a constant record	keyword.sendstoryeventandwait	yes
 1	5 call sites whose receiver resolves to a constant record	quest.setcurrentstageid	yes
-1904	5 call sites whose receiver resolves to a constant record	quest.setstage	no
-6591	5 call sites whose receiver resolves to a constant record	quest.setstage	yes
-48	5 call sites whose receiver resolves to a constant record	quest.start	no
-206	5 call sites whose receiver resolves to a constant record	quest.start	yes
+1224	5 call sites whose receiver resolves to a constant record	quest.setstage	no
+7271	5 call sites whose receiver resolves to a constant record	quest.setstage	yes
+34	5 call sites whose receiver resolves to a constant record	quest.start	no
+220	5 call sites whose receiver resolves to a constant record	quest.start	yes
 2750	5 constant receivers that are the calling script's own quest (not a start)	quest.setcurrentstageid
-11184	5 constant receivers that are the calling script's own quest (not a start)	quest.setstage
+11494	5 constant receivers that are the calling script's own quest (not a start)	quest.setstage
 2	5 constant receivers that are the calling script's own quest (not a start)	quest.start
 47	5 keywords a SCPT tree node tests (function 576, selector 0 K1)
-35	5 keywords both sent by a constant story event call and tested by a SCPT node
-42	5 keywords named as the constant receiver of a story event call
-554	5 quests named as the constant receiver of a starting call
+40	5 keywords both sent by a constant story event call and tested by a SCPT node
+47	5 keywords named as the constant receiver of a story event call
+565	5 quests named as the constant receiver of a starting call
 10282	5 scripts read
 6	6 quests not flagged that could start by	Start from a ACTI script
 1	6 quests not flagged that could start by	Start from a NPC_ script
+6	6 quests not flagged that could start by	Start from a dialogue line (INFO) fragment script
 9	6 quests not flagged that could start by	Start from a placed REFR script
 2	6 quests not flagged that could start by	Start from a quest alias script
 15	6 quests not flagged that could start by	Start from a quest script
 130	6 quests not flagged that could start by	Start from a quest stage fragment script
+1	6 quests not flagged that could start by	Start from a scene fragment script
 33	6 quests not flagged that could start by	a stage set from a ACTI script
 3	6 quests not flagged that could start by	a stage set from a BOOK script
 2	6 quests not flagged that could start by	a stage set from a CONT script
@@ -425,11 +434,14 @@
 3	6 quests not flagged that could start by	a stage set from a NPC_ script
 1	6 quests not flagged that could start by	a stage set from a TACT script
 1	6 quests not flagged that could start by	a stage set from a TERM script
+34	6 quests not flagged that could start by	a stage set from a dialogue line (INFO) fragment script
+8	6 quests not flagged that could start by	a stage set from a package fragment script
 2	6 quests not flagged that could start by	a stage set from a placed ACHR script
 39	6 quests not flagged that could start by	a stage set from a placed REFR script
 8	6 quests not flagged that could start by	a stage set from a quest alias script
 118	6 quests not flagged that could start by	a stage set from a quest script
 298	6 quests not flagged that could start by	a stage set from a quest stage fragment script
+30	6 quests not flagged that could start by	a stage set from a scene fragment script
 43	6 quests not flagged that could start by	a stage set from a terminal fragment script
 1	6 quests not flagged that could start by	story event ADCR
 366	6 quests not flagged that could start by	story event ADIA
@@ -450,7 +462,22 @@
 476	6 quests not flagged that could start by	story event SCPT
 1	6 quests not flagged that could start by	story event TMEE
 1448	6 quests not flagged to start
-375	6 quests not flagged, by family	script call only
-54	6 quests not flagged, by family	story node and script call
-957	6 quests not flagged, by family	story node only
-62	6 quests not flagged, by family	unknown
+377	6 quests not flagged, by family	script call only
+55	6 quests not flagged, by family	story node and script call
+956	6 quests not flagged, by family	story node only
+60	6 quests not flagged, by family	unknown
+15	7 scene call sites	scene.forcestart	receiver a property
+1	7 scene call sites	scene.forcestart	receiver the result of another operation
+1	7 scene call sites	scene.start	receiver a parameter
+1610	7 scene call sites	scene.start	receiver a property
+4	7 scene call sites	scene.start	receiver a property of another object
+6	7 scene call sites	scene.start	receiver an array element
+5	7 scene call sites	scene.start	receiver the result of another operation
+136	7 scenes by flag and how the scan sees them started	FNAM bit 0x1 clear	a constant call and a start-scene action
+1177	7 scenes by flag and how the scan sees them started	FNAM bit 0x1 clear	a constant call only
+461	7 scenes by flag and how the scan sees them started	FNAM bit 0x1 clear	a start-scene action only
+2367	7 scenes by flag and how the scan sees them started	FNAM bit 0x1 clear	neither
+9	7 scenes by flag and how the scan sees them started	FNAM bit 0x1 set	a constant call and a start-scene action
+7	7 scenes by flag and how the scan sees them started	FNAM bit 0x1 set	a constant call only
+77	7 scenes by flag and how the scan sees them started	FNAM bit 0x1 set	a start-scene action only
+539	7 scenes by flag and how the scan sees them started	FNAM bit 0x1 set	neither
