@@ -51,12 +51,24 @@ fn render_only_blockers_are_set_aside_under_a_rule() {
         state(&[], true, table(Refuted, Pending, Pending)),
         State::Blocked
     ));
-    // The swap filter blocks the render, not the collision.
+    // The swap's FNAM needs its own rule for render (refuted there, it
+    // blocks), and only the swap rule for collision.
     let filter = (e("RuntimeMaterialSwapFilter", "FNAM"), Origin::MaterialSwap);
     let errors = [filter.0.clone()];
+    let folder = |refuted: bool| {
+        move |name: &str| match name {
+            hypotheses::SWAP_FOLDER if refuted => Some(Status::Refuted),
+            hypotheses::SWAP_FOLDER => Some(Status::Pending),
+            _ => None,
+        }
+    };
     assert!(matches!(
-        hypotheses::classify_with(&errors, false, &pending, &Budget::new(1 << 20)).unwrap(),
+        hypotheses::classify_with(&errors, false, folder(true), &Budget::new(1 << 20)).unwrap(),
         State::Blocked
+    ));
+    assert!(matches!(
+        hypotheses::classify_with(&errors, false, folder(false), &Budget::new(1 << 20)).unwrap(),
+        State::ReadyUnderHypotheses { .. }
     ));
     let s = state(std::slice::from_ref(&filter), true, &pending);
     assert!(s.ready_at(crate::RuleLevel::Hypotheses) && rules(&s) == [SWAP_COLLISION]);

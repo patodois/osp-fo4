@@ -890,7 +890,9 @@ fn run() -> AnyResult<()> {
         let mut rows = String::from(
             "reference\tkind\tbase\teditor_id\tmodel\tarea\toutcome\tdetail\tplacement\n",
         );
-        let b = Budget::new(m.limits.max_memory);
+        // A view with the cells around it holds more than one cell's read;
+        // the viewer's own scene ceiling (`--scene-memory`) is larger too.
+        let b = Budget::new(m.limits.max_memory.saturating_mul(8));
         cell(
             &mut c,
             &mut loader,
@@ -919,7 +921,9 @@ fn run() -> AnyResult<()> {
                 batch = 0;
             }
             batch += 1;
-            let b = Budget::new(m.limits.max_memory);
+            // The viewer's scene ceiling, not one read's: the draw list of a
+            // large cell holds more than the manifest's per-read limit.
+            let b = Budget::new(m.limits.max_memory.saturating_mul(8));
             if let Err(e) = cell(&mut c, &mut loader, &store, &m, key, 0, None, &b) {
                 *c.cell_failures.entry(e.code.clone()).or_default() += 1;
                 loader.reset_asset_cache(&cache);

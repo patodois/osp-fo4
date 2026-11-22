@@ -275,6 +275,21 @@ fn deterministic_png_indices_depth_and_corrupt_inputs_are_bounded() {
             .code,
         "UnsupportedRenderAlpha"
     );
+    // An opacity above 1 is a valid draw only without blending
+    // (`bgsm_opacity_above_one_test_v1`, gated by the draw build).
+    bad = list();
+    bad.draws[0].alpha.opacity = 1.7;
+    assert!(bad.draws[0].alpha.validate().is_ok());
+    bad.draws[0].alpha.enabled = 1;
+    bad.draws[0].alpha.source = 6;
+    bad.draws[0].alpha.destination = 7;
+    assert_eq!(
+        bad.draws[0].alpha.validate().unwrap_err().code,
+        "UnsupportedRenderAlpha"
+    );
+    bad.draws[0].alpha.enabled = 0;
+    bad.draws[0].alpha.opacity = -0.5;
+    assert!(bad.draws[0].alpha.validate().is_err());
     let mut c = c;
     c.size = [u32::MAX, u32::MAX];
     assert!(render(&l, &c, opts, &Limits::default(), &budget).is_err());

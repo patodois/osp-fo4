@@ -235,6 +235,10 @@ struct Builder<'a, 's> {
     allow_marker_suffix: bool,
     include_marker_subtrees: bool,
     allow_visibility_marker: bool,
+    allow_swap_folder: bool,
+    /// Registered rules the current instance's draws relied on beyond its
+    /// state's (`Identity::hypotheses` gains them).
+    draw_rules: Vec<&'static str>,
 }
 /// A diffuse texture decoded under the reference limits, with the DDS
 /// declarations the summary reports.
@@ -662,6 +666,8 @@ impl Builder<'_, '_> {
                 }
                 // Color remap is retained in Scene. This unlit texture-only backend does not apply tints.
                 (b"CNAM", SwapValue::Scalar(_)) => {}
+                // An editor folder label under `mswp_fnam_folder_label_v1`.
+                (b"FNAM", SwapValue::Path(_)) if self.allow_swap_folder => {}
                 _ => {
                     return Err(error(
                         "UnsupportedRenderSwapField",
@@ -823,6 +829,7 @@ impl Builder<'_, '_> {
                     opacity: c.alpha,
                     nif_flags: nif_alpha.map(|a| a.0),
                 };
+                self.opacity_rule(&alpha)?;
                 alpha.validate()?;
                 Ok(Surface {
                     requires_uv: !color_only,
@@ -956,6 +963,7 @@ impl Builder<'_, '_> {
                 nif_flags: None,
             },
         };
+        self.opacity_rule(&alpha)?;
         alpha.validate()?;
         Ok(Surface {
             requires_uv: !color_only,
@@ -1289,6 +1297,58 @@ impl Builder<'_, '_> {
     }
 }
 impl Builder<'_, '_> {
+    /// Whether a registered rule that the draw itself needs (not one of the
+    /// instance's state) may be used at the build's level; a used rule is
+    /// recorded for the instance.
+    fn draw_rule(&mut self, rule: &'static str) -> Result<bool> {
+        use fo4_scene::hypotheses::{status, Status};
+        let usable = match status(rule) {
+            Some(Status::Supported) => self.options.level != fo4_scene::RuleLevel::Facts,
+            Some(Status::Pending) => self.options.level == fo4_scene::RuleLevel::Hypotheses,
+            Some(Status::Refuted) | None => false,
+        };
+        if usable && !self.draw_rules.contains(&rule) {
+            append(&mut self.draw_rules, rule, self.budget)?;
+        }
+        Ok(usable)
+    }
+    /// Adds the rules the current instance's draws relied on to its
+    /// identity, the last one pushed.
+    fn record_draw_rules(&mut self) -> Result<()> {
+        if self.draw_rules.is_empty() {
+            return Ok(());
+        }
+        let Some(id) = self.output.instances.last_mut() else {
+            return Ok(());
+        };
+        for rule in &self.draw_rules {
+            if !id.hypotheses.contains(rule) {
+                self.budget
+                    .reserve(&mut id.hypotheses, 1, "draw hypotheses", 0)?;
+                id.hypotheses.push(rule);
+            }
+        }
+        id.hypotheses.sort_unstable();
+        Ok(())
+    }
+    /// An alpha whose opacity is above 1 on a surface without blending is
+    /// drawn only under `bgsm_opacity_above_one_test_v1`.
+    fn opacity_rule(&mut self, alpha: &Alpha) -> Result<()> {
+        if alpha.enabled == 0
+            && alpha.opacity.is_finite()
+            && alpha.opacity > 1.
+            && !self.draw_rule(fo4_scene::hypotheses::OPACITY_ABOVE_ONE)?
+        {
+            return Err(Error::new(
+                "UnsupportedRenderAlpha",
+                "draw list",
+                0,
+                "opacity at most 1 without a registered rule",
+                format!("{alpha:?}"),
+            ));
+        }
+        Ok(())
+    }
     /// Sets the rule flags the shared walkers read from a state's rules.
     fn allow(&mut self, rules: &[&'static str]) {
         use fo4_scene::hypotheses as h;
@@ -1298,6 +1358,7 @@ impl Builder<'_, '_> {
         self.allow_path_relative = rules.contains(&h::PATH_DATA_RELATIVE);
         self.allow_visibility_marker = rules.contains(&h::VISIBILITY_MARKER);
         self.allow_marker_suffix = rules.contains(&h::MARKER_SUFFIX);
+        self.allow_swap_folder = rules.contains(&h::SWAP_FOLDER);
         self.allow_editor_marker_subtrees = rules.contains(&h::NAMED_MARKER);
         self.allow_scol_parts = rules.contains(&h::SCOL);
     }
@@ -1727,6 +1788,8 @@ fn build_inner(
         allow_marker_suffix: false,
         include_marker_subtrees,
         allow_visibility_marker: false,
+        allow_swap_folder: false,
+        draw_rules: Vec::new(),
     };
     let scratch = b.child();
     let mut instances = Vec::new();
@@ -1775,6 +1838,7 @@ fn build_inner(
             .hypotheses()
             .contains(&fo4_scene::hypotheses::EFFECT_COLOR);
         let first = builder.output.list.draws.len();
+        builder.draw_rules.clear();
         let src = &i.reference.record.source;
         let attempt = (|| {
             if i.editor_marker {
@@ -1843,6 +1907,10 @@ fn build_inner(
                 .hypotheses()
                 .contains(&fo4_scene::hypotheses::NAMED_MARKER);
             builder.allow_scol_parts = i.state.hypotheses().contains(&fo4_scene::hypotheses::SCOL);
+            builder.allow_swap_folder = i
+                .state
+                .hypotheses()
+                .contains(&fo4_scene::hypotheses::SWAP_FOLDER);
             let world = Transform::euler(p, scale)?;
             builder.base(base, world, index, i.material_swap.as_ref(), 0)?;
             if builder.output.list.draws.len() == first {
@@ -1855,6 +1923,9 @@ fn build_inner(
             }
             Ok(())
         })();
+        if attempt.is_ok() {
+            builder.record_draw_rules()?;
+        }
         if let Err(e) = attempt {
             builder.output.list.draws.truncate(first);
             let mut causes = Vec::new();
@@ -1910,7 +1981,12 @@ fn build_inner(
         )?;
         append(&mut builder.output.actors, index, b)?;
         let first = builder.output.list.draws.len();
-        if let Err(e) = builder.actor(a, index) {
+        builder.draw_rules.clear();
+        let attempt = builder.actor(a, index);
+        if attempt.is_ok() {
+            builder.record_draw_rules()?;
+        }
+        if let Err(e) = attempt {
             builder.output.list.draws.truncate(first);
             let mut causes = Vec::new();
             for e in std::iter::once(&e).chain(

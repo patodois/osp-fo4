@@ -337,3 +337,19 @@ the operating system's own file-information tool to check this project's
 output; it was not used as a reference for the format. Every meaning is a
 pending rule in [spec/hypotheses.tsv](../spec/hypotheses.tsv); sound files
 and anything read from them stay outside the repository.
+The coverage census and the decisions taken on its largest reasons
+([spec/coverage.md](../spec/coverage.md)) add no format fact beyond the
+pinned nifxml copy of spec/nif.md, whose `BSClothExtraData` definition
+(a `BSExtraData` holding one byte array, "Fallout 4 Cloth data") is the
+only new schema use: the block is now classed with the other physics
+payloads as outside the static frame. Everything else rests on counts over
+the winning records of one installation (`swap_census`, `subrecord_probe`,
+`record_census`, `record_dump`) and on registered pending rules. Recognised
+from general knowledge before it was measured: that an MSWP FNAM is an
+editor folder label (the census of its 1,901 texts could have refuted it
+and did not), and that a PRPS pair is an actor value with a value (its
+first words resolve only to AVIF records or to FormIDs below 0x800 with no
+record); neither the meaning of those engine-defined actor values nor any
+behaviour of a reference group was taken from prior knowledge. No editor,
+editor definition file, decompilation or third-party reader of these
+records was opened.

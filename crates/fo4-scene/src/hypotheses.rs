@@ -28,6 +28,16 @@ pub const MESH_TRIANGLES: &str = "havok_mesh_triangles_surface_v1";
 pub const CONVEX_RADIUS: &str = "havok_convex_radius_added_v1";
 /// Collision readiness apart from render readiness (`crate::readiness`).
 pub const SWAP_COLLISION: &str = "mswp_collision_unchanged_v1";
+/// Coverage rules (`spec/coverage.md`).
+pub const SWAP_FOLDER: &str = "mswp_fnam_folder_label_v1";
+pub const OPACITY_ABOVE_ONE: &str = "bgsm_opacity_above_one_test_v1";
+pub const BASE_PROPERTIES: &str = "base_prps_not_in_frame_v1";
+pub const MISC_COMPONENTS: &str = "misc_cvpa_not_in_frame_v1";
+pub const REFERENCE_GROUP: &str = "refr_xrfg_not_in_frame_v1";
+/// Base types whose PRPS `BASE_PROPERTIES` covers: those measured.
+const PROPERTY_BASES: [&str; 8] = [
+    "STAT", "ACTI", "FURN", "CONT", "FLOR", "LIGH", "MSTT", "TERM",
+];
 pub const RENDER_INPUTS_COLLISION: &str = "render_inputs_collision_unchanged_v1";
 /// Terrain of an exterior cell (`crate::terrain`, `spec/land.md`).
 pub const LAND_OF_CELL: &str = "land_single_cell_child_v1";
@@ -120,8 +130,26 @@ pub fn covering(error: &Error) -> Option<&'static str> {
         Some(SCALE)
     } else if error.code == "UnverifiedEulerRotation" {
         Some(ROTATION)
+    } else if error.code == "RuntimeMaterialSwapFilter" {
+        Some(SWAP_FOLDER)
     } else {
-        actor_rule(&error.code)
+        record_field_rule(error).or_else(|| actor_rule(&error.code))
+    }
+}
+/// Rules over single record fields, keyed by the `RECORD.FIELD` that opens
+/// the diagnostic's `found` text.
+fn record_field_rule(error: &Error) -> Option<&'static str> {
+    let mut parts = error.found.split('.');
+    let (record, field) = (parts.next()?, parts.next()?);
+    match (error.code.as_str(), record, field) {
+        ("UninterpretedVisualSubrecord" | "UnsupportedUsedFieldLayout", r, "PRPS")
+            if PROPERTY_BASES.contains(&r) =>
+        {
+            Some(BASE_PROPERTIES)
+        }
+        ("UninterpretedVisualSubrecord", "MISC", "CVPA") => Some(MISC_COMPONENTS),
+        ("RuntimeRecordState", "REFR", "XRFG") => Some(REFERENCE_GROUP),
+        _ => None,
     }
 }
 fn actor_rule(code: &str) -> Option<&'static str> {
@@ -319,11 +347,52 @@ mod tests {
             ACTOR_SKINNING,
             ACTOR_CLIP_SKELETON,
             ACTOR_CLIP_POSE,
+            SWAP_FOLDER,
+            OPACITY_ABOVE_ONE,
+            BASE_PROPERTIES,
+            MISC_COMPONENTS,
+            REFERENCE_GROUP,
         ] {
             assert!(status(name).is_some(), "{name}");
         }
         assert_eq!(status("refr_rotation_order_v1"), Some(Status::Refuted));
         assert_eq!(status("not_a_registered_rule"), None);
+    }
+    #[test]
+    fn record_field_rules_cover_only_the_measured_fields() {
+        let e = |code: &str, found: &str| Error::new(code, "synthetic", 0, "known", found);
+        for (code, found, rule) in [
+            (
+                "UninterpretedVisualSubrecord",
+                "STAT.PRPS.layout_not_established",
+                Some(BASE_PROPERTIES),
+            ),
+            (
+                "UninterpretedVisualSubrecord",
+                "FURN.PRPS",
+                Some(BASE_PROPERTIES),
+            ),
+            (
+                "UnsupportedUsedFieldLayout",
+                "ACTI.PRPS.x",
+                Some(BASE_PROPERTIES),
+            ),
+            ("UninterpretedVisualSubrecord", "DOOR.PRPS", None),
+            ("UninterpretedVisualSubrecord", "STAT.PRPSX", None),
+            ("UninterpretedVisualSubrecord", "PRPS", None),
+            (
+                "UninterpretedVisualSubrecord",
+                "MISC.CVPA.layout_not_established",
+                Some(MISC_COMPONENTS),
+            ),
+            ("UninterpretedVisualSubrecord", "CONT.CVPA", None),
+            ("RuntimeRecordState", "REFR.XRFG", Some(REFERENCE_GROUP)),
+            ("UninterpretedVisualSubrecord", "REFR.XRFG", None),
+            ("RuntimeRecordState", "ACHR.XRFG", None),
+            ("RuntimeMaterialSwapFilter", "FNAM", Some(SWAP_FOLDER)),
+        ] {
+            assert_eq!(covering(&e(code, found)), rule, "{code} {found}");
+        }
     }
     #[test]
     fn readiness_levels_nest() {

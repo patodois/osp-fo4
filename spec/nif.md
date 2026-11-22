@@ -78,6 +78,11 @@ corpo opaco fictício. NiPSysUpdateCtlr é coberto por regressão encadeada. Nos
 outros tipos derivados, o corpo fica Raw e bloqueado. Essa ampliação usa só a
 herança e os fields do schema, sem gerar nem copiar implementação de leitor.
 
+`BSClothExtraData` (nifxml: `BSExtraData` com um `ByteArray`, "Fallout 4
+Cloth data") entra na tabela como `outside`, junto dos demais payloads de
+física: não é lido nem executado. Medição e decisão em
+[coverage.md](coverage.md).
+
 ## Limites geométricos para a bancada (validação do leitor)
 
 A mesma especificação `nif.xml`, Matrix33 (linhas 1815–1825 da cópia fixada),

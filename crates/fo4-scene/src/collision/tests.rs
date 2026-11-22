@@ -636,12 +636,12 @@ fn cell_places_bodies_only_at_a_level_that_accepts_their_rules() {
 }
 
 #[test]
-fn a_material_swap_filter_blocks_the_render_and_not_the_collision() {
+fn a_material_swap_folder_label_needs_its_own_rule_for_render_and_not_for_collision() {
     let f = fixture(false, false);
     let root = f.manifest.root.clone();
     std::fs::write(root.join("meshes/a.nif"), model_nif(1)).unwrap();
-    // The synthetic STAT, last in the file, now names a material swap whose
-    // filter (FNAM) the scene does not evaluate.
+    // The synthetic STAT, last in the file, now names a material swap with
+    // an FNAM text (`mswp_fnam_folder_label_v1`).
     let path = root.join("base.esm");
     let bytes = std::fs::read(&path).unwrap();
     let at = bytes.windows(4).rposition(|s| s == b"STAT").unwrap();
@@ -657,7 +657,14 @@ fn a_material_swap_filter_blocks_the_render_and_not_the_collision() {
     let mut loader = Loader::new(&store, &v, "english", RuleLevel::Hypotheses, &b);
     let scene = loader.by_editor_id("SyntheticRoom", &b).unwrap();
     let i = &scene.instances[0];
-    assert!(matches!(i.state, State::Blocked));
+    assert!(
+        i.state.ready_at(RuleLevel::Hypotheses),
+        "{:?} {:?}",
+        i.state,
+        i.blockers
+    );
+    assert!(!i.state.ready_at(RuleLevel::Measured));
+    assert!(i.state.hypotheses().contains(&hypotheses::SWAP_FOLDER));
     let k = i
         .blockers
         .iter()

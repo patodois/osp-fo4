@@ -3,6 +3,7 @@ BSBehaviorGraphExtraData	state	https://raw.githubusercontent.com/niftools/nifxml
 BSBlastNode	used	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Dados do fechamento visual; decoder existente. Nao ha conversao para renderer.	
 BSBoneLODExtraData	unknown	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Payload opaco ou finalidade descrita como Unknown; estrutura parcial nao estabelece contribuicao visual.	
 BSBound	outside	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Payload de colisao/fisica ou volume limite sem geometria drawable; nao executar fisica/culling.	
+BSClothExtraData	outside	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Extra data de fisica de tecido (Binary Data, ByteArray opaco); nao executar simulacao. Atores desenhados na pose de repouso do esqueleto.	
 BSConnectPoint::Children	used	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Dados do fechamento visual; decoder existente. Nao ha conversao para renderer.	
 BSConnectPoint::Parents	used	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Dados do fechamento visual; decoder existente. Nao ha conversao para renderer.	
 BSDamageStage	used	https://raw.githubusercontent.com/niftools/nifxml/develop/nif.xml	Dados do fechamento visual; decoder existente. Nao ha conversao para renderer.	
