@@ -12,6 +12,22 @@ struct Dependency {
     path: Vec<u8>,
     class: Citation,
     offset: u64,
+    shader: Option<CitingShader>,
+}
+/// How a model cites one of its dependencies: the citation class and, for a
+/// shader's material name, what the citing shader holds of its own.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub struct Cited {
+    pub class: Citation,
+    pub shader: Option<CitingShader>,
+}
+/// The shader block whose `Name` cites a material: its type and whether it
+/// carries a texture of its own (a lighting shader's texture set with a
+/// non-empty first texture, an effect shader's non-empty source texture).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub struct CitingShader {
+    pub effect: bool,
+    pub texture: bool,
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum AssetKind {
@@ -28,6 +44,9 @@ pub struct Asset {
     pub path: Vec<u8>,
     pub origin: Option<SourceSpan>,
     pub dependencies: Vec<usize>,
+    /// How each of `dependencies` is cited (same order).
+    #[serde(skip)]
+    pub dependency_citations: Vec<Cited>,
     pub blockers: Vec<Error>,
     /// Indices into `blockers` raised while following this file's material
     /// and texture citations (`crate::readiness::Origin::ModelCitation`).
@@ -286,6 +305,7 @@ impl<'a> Assets<'a> {
             path: owned,
             origin: None,
             dependencies: Vec::new(),
+            dependency_citations: Vec::new(),
             blockers: Vec::new(),
             citation_blockers: Vec::new(),
             uninterpreted: 0,
@@ -598,6 +618,12 @@ impl<'a> Assets<'a> {
                                                     &c.original,
                                                     f.offset,
                                                 )?;
+                                                if f.name == "Name" {
+                                                    if let Some(d) = deps.last_mut() {
+                                                        d.shader =
+                                                            Some(citing_shader(&n, ty, fields));
+                                                    }
+                                                }
                                             } else {
                                                 self.block(
                                                     i,
@@ -812,6 +838,16 @@ impl<'a> Assets<'a> {
                             0,
                         )?;
                         self.nodes[i].dependencies.push(target);
+                        self.allocation.reserve(
+                            &mut self.nodes[i].dependency_citations,
+                            1,
+                            &c.original,
+                            0,
+                        )?;
+                        self.nodes[i].dependency_citations.push(Cited {
+                            class: dep.class,
+                            shader: dep.shader,
+                        });
                     }
                     Err(e) => self.block_citation(i, e)?,
                 }
@@ -925,6 +961,35 @@ impl<'a> Assets<'a> {
         Ok(result)
     }
 }
+/// What a shader block with `fields` holds of its own: an effect shader's
+/// source texture, a lighting shader's texture set's first texture.
+fn citing_shader(n: &fo4_nif::Nif<'_>, ty: &str, fields: &[fo4_nif::Field]) -> CitingShader {
+    let bytes = |f: &[fo4_nif::Field], name: &str| {
+        f.iter().find_map(|x| match &x.value {
+            fo4_nif::Value::Bytes(p) if x.name == name => Some(!p.is_empty()),
+            _ => None,
+        })
+    };
+    if ty == "BSEffectShaderProperty" {
+        return CitingShader {
+            effect: true,
+            texture: bytes(fields, "Source Texture").unwrap_or(false),
+        };
+    }
+    let set = fields.iter().find_map(|x| match x.value {
+        fo4_nif::Value::Ref(r) if x.name == "Texture Set" && r >= 0 => Some(r as usize),
+        _ => None,
+    });
+    let texture = set
+        .and_then(|i| n.blocks.get(i))
+        .and_then(|b| b.decoded.as_ref())
+        .and_then(|d| bytes(model_policy::fields(d), "Texture"))
+        .unwrap_or(false);
+    CitingShader {
+        effect: false,
+        texture,
+    }
+}
 fn push_dep(
     deps: &mut Vec<Dependency>,
     class: Citation,
@@ -941,6 +1006,7 @@ fn push_dep(
         path: v,
         class,
         offset,
+        shader: None,
     });
     Ok(())
 }
@@ -977,6 +1043,7 @@ mod tests {
             ("self.bgsm", b"self.bgsm".as_slice()),
             ("a.bgsm", b"b.bgsm"),
             ("b.bgsm", b"a.bgsm"),
+            ("child.bgsm", b"absent.bgsm"),
         ] {
             std::fs::write(dir.join("materials").join(name), wire(parent)).unwrap();
         }
@@ -995,6 +1062,7 @@ mod tests {
                     "materials/self.bgsm".into(),
                     "materials/a.bgsm".into(),
                     "materials/b.bgsm".into(),
+                    "materials/child.bgsm".into(),
                 ],
             }],
             required_masters: Vec::new(),
@@ -1023,6 +1091,23 @@ mod tests {
             .blockers
             .iter()
             .any(|e| e.code == "AssetDependencyCycle" && e.found.starts_with("length=2;"))));
+        // A parent file that is absent is cited as a parent only: the draw
+        // build reads the child's own fields (`missing`).
+        let child = assets
+            .load(AssetKind::Material, b"materials/child.bgsm", &budget)
+            .unwrap();
+        assert_eq!(
+            assets.nodes[child].dependency_citations[0].class,
+            Citation::MaterialParent
+        );
+        let closure = assets.closure(&[child], &budget).unwrap();
+        let missing = crate::missing::classify(&assets, &closure, &[], &budget).unwrap();
+        assert_eq!(missing.len(), 1);
+        assert_eq!(missing[0].roles.parent, 1);
+        assert_eq!(
+            missing[0].read,
+            crate::missing::Read::Needed(crate::missing::PARENT_ONLY)
+        );
     }
     #[test]
     fn self_parent_is_a_length_one_citation_cycle_not_a_cache_failure() {
@@ -1056,6 +1141,7 @@ mod tests {
             path,
             origin: None,
             dependencies: Vec::new(),
+            dependency_citations: Vec::new(),
             blockers: Vec::new(),
             citation_blockers: Vec::new(),
             uninterpreted: 0,
@@ -1112,6 +1198,7 @@ mod tests {
             path: b"materials/other.bgsm".to_vec(),
             origin: None,
             dependencies: Vec::new(),
+            dependency_citations: Vec::new(),
             blockers: Vec::new(),
             citation_blockers: Vec::new(),
             uninterpreted: 0,

@@ -9,13 +9,14 @@ pub mod enable;
 pub mod grid;
 pub mod hypotheses;
 pub mod lighting;
+pub mod missing;
 pub mod model_policy;
 pub mod paths;
 pub mod readiness;
 pub mod rest;
 pub mod terrain;
 pub mod transform;
-pub use assets::{Asset, AssetKind, Assets, Cycle, CycleEdge, DecodedAsset};
+pub use assets::{Asset, AssetKind, Assets, Cited, CitingShader, Cycle, CycleEdge, DecodedAsset};
 use fo4_core::{limit, AllocationKind, Budget, Error, Result, SourceSpan};
 use fo4_plugin::{typed::*, FormKey, Record};
 use fo4_vfs::Vfs;
@@ -475,11 +476,35 @@ impl<'a> Loader<'a> {
         let assets = b.measure(AllocationKind::AssetGraph, || {
             self.assets.closure(&roots, b)
         })?;
+        // Missing materials the draw build does not read are set aside;
+        // those read only by lighting shaders with their own texture, or
+        // only as a material's parent, keep a narrower code that a pending
+        // rule covers (`missing`).
+        let missing = missing::classify(
+            &self.assets,
+            &assets,
+            &missing::swaps_of(material_swap.as_ref(), base.as_ref()),
+            b,
+        )?;
         for i in &assets {
             let node = &self.assets.nodes[*i];
+            let read = missing.iter().find(|m| m.node == *i).map(|m| m.read);
             for (k, e) in node.blockers.iter().enumerate() {
+                let mut e = e.clone();
+                if e.code == "MissingMaterial" {
+                    match read {
+                        Some(missing::Read::NotRead(_)) => continue,
+                        Some(missing::Read::EmbeddedShader) => {
+                            e.code = "MissingMaterialEmbeddedShader".into();
+                        }
+                        Some(missing::Read::Needed(missing::PARENT_ONLY)) => {
+                            e.code = "MissingMaterialParent".into();
+                        }
+                        _ => {}
+                    }
+                }
                 b.measure(AllocationKind::Diagnostics, || {
-                    push_error(&mut blockers, e.clone(), b)
+                    push_error(&mut blockers, e, b)
                 })?;
                 b.reserve(&mut origins, 1, &src.file, src.offset)?;
                 origins.push(match node.kind {

@@ -104,6 +104,8 @@ codes!(
     // Files of the asset graph.
     MissingModel,
     MissingMaterial,
+    MissingMaterialEmbeddedShader,
+    MissingMaterialParent,
     MissingTexture,
     AssetDependencyCycle,
     UnverifiedEffectColorOnly,
@@ -188,6 +190,8 @@ impl Code {
             | Self::MissingMaterialSwap
             | Self::RuntimeMaterialSwapFilter
             | Self::MissingMaterial
+            | Self::MissingMaterialEmbeddedShader
+            | Self::MissingMaterialParent
             | Self::MissingTexture
             | Self::UnsupportedLightData
             | Self::UnverifiedEffectColorOnly

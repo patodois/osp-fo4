@@ -31,6 +31,10 @@ fn nif_kind(diffuse: &[u8], effect: Option<u32>) -> Vec<u8> {
     nif_with_helper(diffuse, effect, b"EditorMarker:27")
 }
 fn nif_with_helper(diffuse: &[u8], effect: Option<u32>, label: &[u8]) -> Vec<u8> {
+    nif_named(diffuse, effect, label, b"")
+}
+/// The model with string 0, the shader's `Name`, set to `material`.
+fn nif_named(diffuse: &[u8], effect: Option<u32>, label: &[u8], material: &[u8]) -> Vec<u8> {
     let mut av = Vec::new();
     for x in [u32::MAX, 0, u32::MAX, 0] {
         av.extend(x.to_le_bytes());
@@ -127,9 +131,12 @@ fn nif_with_helper(diffuse: &[u8], effect: Option<u32>, label: &[u8]) -> Vec<u8>
     for (_, b) in &blocks {
         v.extend((b.len() as u32).to_le_bytes());
     }
-    for n in [3u32, 15u32.max(label.len() as u32), 0, 12] {
+    for n in [3u32, 15u32.max(label.len().max(material.len()) as u32)] {
         v.extend(n.to_le_bytes());
     }
+    v.extend((material.len() as u32).to_le_bytes());
+    v.extend(material);
+    v.extend(12u32.to_le_bytes());
     v.extend(b"EditorMarker");
     v.extend((label.len() as u32).to_le_bytes());
     v.extend(label);
@@ -166,12 +173,21 @@ fn dds() -> Vec<u8> {
 }
 /// The SCOL cell with its loose files, `texture` as the parts' diffuse.
 fn scol_fixture(name: &str, texture: &[u8]) -> (TestDir, Manifest) {
+    scol_fixture_with(name, texture, nif(b"textures/a.dds"))
+}
+/// [`scol_fixture`] with `part` as the parts' model.
+fn scol_fixture_with(name: &str, texture: &[u8], part: Vec<u8>) -> (TestDir, Manifest) {
+    fixture_placing(name, texture, part, 0x802)
+}
+/// [`scol_fixture_with`] whose reference places `placed` (0x801 the part
+/// STAT itself, 0x802 the SCOL).
+fn fixture_placing(name: &str, texture: &[u8], part: Vec<u8>, placed: u32) -> (TestDir, Manifest) {
     let temp = TestDir::new(name);
     let root = temp.join("Data");
     std::fs::create_dir_all(root.join("meshes")).unwrap();
     std::fs::create_dir_all(root.join("textures")).unwrap();
     std::fs::write(root.join("meshes/generated.nif"), nif(b"")).unwrap();
-    std::fs::write(root.join("meshes/part.nif"), nif(b"textures/a.dds")).unwrap();
+    std::fs::write(root.join("meshes/part.nif"), part).unwrap();
     std::fs::write(root.join("textures/a.dds"), texture).unwrap();
     let mut scol = sub(b"MODL", b"generated.nif\0");
     scol.extend(sub(b"ONAM", &0x801u32.to_le_bytes()));
@@ -182,7 +198,7 @@ fn scol_fixture(name: &str, texture: &[u8]) -> (TestDir, Manifest) {
         }
     }
     scol.extend(sub(b"DATA", &p));
-    let mut rf = sub(b"NAME", &0x802u32.to_le_bytes());
+    let mut rf = sub(b"NAME", &placed.to_le_bytes());
     rf.extend(sub(b"DATA", &[0; 24]));
     rf.extend(sub(b"XSCL", &1f32.to_le_bytes()));
     let mut cell = sub(b"EDID", b"SyntheticScolCell\0");
@@ -1103,4 +1119,105 @@ fn settled_effect_surfaces_take_the_base_colour_and_name_every_unsettled_term() 
         assert_eq!(cause.code, "UnsupportedEffectSurface");
         assert_eq!(cause.found, found);
     }
+}
+
+/// A lighting shader naming a material file that is absent: drawn with its
+/// own texture set only under `nif_missing_material_embedded_shader_v1`,
+/// and only when the texture set has a texture.
+#[test]
+fn a_missing_material_falls_back_to_the_shaders_own_texture_only_under_its_rule() {
+    use fo4_scene::hypotheses::{MISSING_MATERIAL_EMBEDDED, UV_SCALE_THEN_OFFSET};
+    let options = |level| BuildOptions {
+        max_texture_dimension: 16,
+        max_texture_bytes: 1 << 20,
+        level,
+        blocks: None,
+    };
+    let part = nif_named(
+        b"textures/a.dds",
+        None,
+        b"EditorMarker:27",
+        b"materials/absent.bgsm",
+    );
+    let (_temp, m) = scol_fixture_with("render-missing-material", &dds(), part);
+    let b = Budget::new(32 << 20);
+    let store = fo4_plugin::typed::Store::open(&m, &b).unwrap();
+    let vfs = fo4_vfs::Vfs::mount(&m, &b).unwrap();
+    let mut loader = Loader::new(&store, &vfs, "english", RuleLevel::Facts, &b);
+    let scene = loader.by_editor_id("SyntheticScolCell", &b).unwrap();
+    let i = &scene.instances[0];
+    assert!(i
+        .blockers
+        .iter()
+        .any(|e| e.code == "MissingMaterialEmbeddedShader"));
+    assert!(!i.blockers.iter().any(|e| e.code == "MissingMaterial"));
+    assert!(i.state.hypotheses().contains(&MISSING_MATERIAL_EMBEDDED));
+    let out = build(
+        &scene,
+        &loader,
+        &m.limits,
+        options(RuleLevel::Hypotheses),
+        &b,
+    )
+    .unwrap();
+    assert!(out.omitted.is_empty(), "{:?}", out.omitted);
+    assert_eq!(out.list.draws.len(), 2);
+    assert_eq!(out.list.textures.len(), 1);
+    // The fixture's shader stores UV scale 0: the draw relies on the order rule.
+    assert!(out.instances[0].hypotheses.contains(&UV_SCALE_THEN_OFFSET));
+    let facts = build(&scene, &loader, &m.limits, options(RuleLevel::Facts), &b).unwrap();
+    assert!(facts.list.draws.is_empty());
+
+    // Without a texture of its own the material is still needed.
+    let part = nif_named(b"", None, b"EditorMarker:27", b"materials/absent.bgsm");
+    let (_temp, m) = scol_fixture_with("render-missing-bare", &dds(), part);
+    let store = fo4_plugin::typed::Store::open(&m, &b).unwrap();
+    let vfs = fo4_vfs::Vfs::mount(&m, &b).unwrap();
+    let mut loader = Loader::new(&store, &vfs, "english", RuleLevel::Facts, &b);
+    let scene = loader.by_editor_id("SyntheticScolCell", &b).unwrap();
+    let i = &scene.instances[0];
+    assert!(i.blockers.iter().any(|e| e.code == "MissingMaterial"));
+    assert!(matches!(i.state, fo4_scene::State::Blocked));
+}
+
+/// A surface whose UV scale is not 1 (the fixture's shader stores 0) is
+/// drawn only under `uv_scale_then_offset_v1`: refused at the measured
+/// level, drawn under hypotheses.
+#[test]
+fn a_surface_with_uv_fields_other_than_identity_needs_the_uv_order_rule() {
+    use fo4_scene::hypotheses::UV_SCALE_THEN_OFFSET;
+    let mut part = nif_with_helper(b"textures/a.dds", None, b"PlainLabel");
+    // Rename the root node so that no editor-marker rule applies.
+    let at = part.windows(12).position(|w| w == b"EditorMarker").unwrap();
+    part[at + 11] = b'X';
+    let (_temp, m) = fixture_placing("render-uv-rule", &dds(), part, 0x801);
+    let b = Budget::new(32 << 20);
+    let store = fo4_plugin::typed::Store::open(&m, &b).unwrap();
+    let vfs = fo4_vfs::Vfs::mount(&m, &b).unwrap();
+    let mut loader = Loader::new(&store, &vfs, "english", RuleLevel::Facts, &b);
+    let scene = loader.by_editor_id("SyntheticScolCell", &b).unwrap();
+    assert!(
+        scene.instances[0].state.ready_at(RuleLevel::Measured),
+        "{:?}",
+        scene.instances[0].blockers
+    );
+    let options = |level| BuildOptions {
+        max_texture_dimension: 16,
+        max_texture_bytes: 1 << 20,
+        level,
+        blocks: None,
+    };
+    let measured = build(&scene, &loader, &m.limits, options(RuleLevel::Measured), &b).unwrap();
+    assert!(measured.list.draws.is_empty());
+    assert_eq!(measured.omitted[0].causes[0].code, "UnsupportedUvTransform");
+    let under = build(
+        &scene,
+        &loader,
+        &m.limits,
+        options(RuleLevel::Hypotheses),
+        &b,
+    )
+    .unwrap();
+    assert!(under.omitted.is_empty(), "{:?}", under.omitted);
+    assert_eq!(under.instances[0].hypotheses, [UV_SCALE_THEN_OFFSET]);
 }

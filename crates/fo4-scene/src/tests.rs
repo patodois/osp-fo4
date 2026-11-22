@@ -406,10 +406,28 @@ fn scol_parts_swaps_and_explicit_texture_set_keep_their_records() {
         matches!(base.parts[0].declared.placements,Some(ref p) if p[0]==[1.,2.,3.,4.,5.,6.,0.7])
     );
     assert_eq!(base.material_swap.as_ref().unwrap().key.object_id, 0x820);
-    assert!(scene.instances[0]
+    // Both swap files are missing and no model cites the swap's source: the
+    // draw build reads neither, so neither blocks (`missing`).
+    assert!(!scene.instances[0]
         .blockers
         .iter()
-        .any(|e| e.code == "MissingMaterial"));
+        .any(|e| e.code.starts_with("MissingMaterial")));
+    let i = &scene.instances[0];
+    let missing = crate::missing::classify(
+        &loader.assets,
+        &i.assets,
+        &crate::missing::instance_swaps(i),
+        &b,
+    )
+    .unwrap();
+    let reads: Vec<_> = missing.iter().map(|m| m.read).collect();
+    assert_eq!(
+        reads,
+        [
+            crate::missing::Read::NotRead("swap source only"),
+            crate::missing::Read::NotRead("swap target of a material no model cites")
+        ]
+    );
     assert_eq!(scene.instances[0].assets.len(), 3);
     let (tx, assets) = loader
         .texture_set(

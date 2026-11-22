@@ -58,6 +58,13 @@ pub const EFFECT_ORDER: &str = "effect_blend_after_opaque_back_to_front_v1";
 pub const EFFECT_LEFT_OUT: &str = "effect_soft_lighting_left_out_v1";
 /// Registered, not relied on: effect surfaces with falloff stay refused.
 pub const EFFECT_FALLOFF: &str = "effect_falloff_view_angle_v1";
+/// Materials, swap scopes and texture transforms (`crate::missing`,
+/// `crate::rest`, `fo4_render::draw`, `spec/materials.md`).
+pub const MISSING_MATERIAL_EMBEDDED: &str = "nif_missing_material_embedded_shader_v1";
+pub const SWAP_SCOPES_AGREE: &str = "mswp_scopes_readings_agree_v1";
+pub const REST_TEXTURE_FIRST_KEY: &str = "nif_controller_rest_texture_first_key_v1";
+pub const UV_SCALE_THEN_OFFSET: &str = "uv_scale_then_offset_v1";
+pub const MISSING_PARENT: &str = "bgsm_missing_parent_own_fields_v1";
 /// A script's Enable or Disable reaching enable children (the viewer's
 /// `--script-event`).
 pub const ENABLE_SCRIPT: &str = "xesp_script_change_propagates_v1";
@@ -157,6 +164,10 @@ pub fn covering(error: &Error) -> Option<&'static str> {
         Some(SCALE)
     } else if error.code == "UnverifiedEulerRotation" {
         Some(ROTATION)
+    } else if error.code == "MissingMaterialEmbeddedShader" {
+        Some(MISSING_MATERIAL_EMBEDDED)
+    } else if error.code == "MissingMaterialParent" {
+        Some(MISSING_PARENT)
     } else if error.code == "RuntimeMaterialSwapFilter" {
         Some(SWAP_FOLDER)
     } else if error.code == "RuntimeEnableParent" {
@@ -169,6 +180,7 @@ pub fn covering(error: &Error) -> Option<&'static str> {
             Some(crate::rest::TRANSFORM_CONSTANT) => Some(REST_TRANSFORM_CONSTANT),
             Some(crate::rest::UNRENDERED) => Some(REST_UNRENDERED),
             Some(crate::rest::EFFECT_FIRST_KEY) => Some(REST_EFFECT_FIRST_KEY),
+            Some(crate::rest::TEXTURE_FIRST_KEY) => Some(REST_TEXTURE_FIRST_KEY),
             _ => None,
         }
     } else {
@@ -408,6 +420,11 @@ mod tests {
             EFFECT_ORDER,
             EFFECT_LEFT_OUT,
             EFFECT_FALLOFF,
+            MISSING_MATERIAL_EMBEDDED,
+            MISSING_PARENT,
+            SWAP_SCOPES_AGREE,
+            REST_TEXTURE_FIRST_KEY,
+            UV_SCALE_THEN_OFFSET,
         ] {
             assert!(status(name).is_some(), "{name}");
         }

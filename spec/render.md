@@ -186,3 +186,32 @@ without `--under-hypotheses`) and the two views of the newly drawn
 placements give byte-identical frames and tag files in two runs of one
 build and in a second build of the same commit from another directory (62
 files).
+
+## Swap scopes, missing materials and UV fields
+
+Under the rules of [materials.md](materials.md); nothing new enters the draw
+list, so the CPU rasterizer and the GPU viewer draw the same list as before.
+
+- **Swap scopes.** The swaps that apply to a base are kept as a stack,
+  outermost first (the reference's, the base's, a SCOL part base's). With
+  two or more, before a base draws anything, every material its models'
+  shaders name is passed through four readings (the outermost swap alone,
+  the innermost alone, all from the outermost in, all from the innermost
+  out); if they differ for any material the base is refused
+  (`UnsupportedRenderSwapScopes readings differ`), and if they agree it is
+  drawn with that material only under `mswp_scopes_readings_agree_v1`
+  (`readings agree` otherwise). One swap is applied as before.
+- **Missing material.** A lighting shader whose material node is missing
+  is drawn with its own fields and texture set only when the instance's
+  state relies on `nif_missing_material_embedded_shader_v1`.
+- **Texture-transform controllers.** For an instance relying on
+  `nif_controller_rest_texture_first_key_v1`, a shape whose shader names a
+  material and whose UV field a controller drives is refused
+  (`UnsettledTextureMaterialField`) where the material's value of that field
+  differs from the NIF's.
+- **UV fields.** The texture coordinate is stored UV x scale + offset per
+  component in both renderers (the CPU per vertex, the GPU per fragment, an
+  affine map in both). A textured surface whose offset is not 0 or whose
+  scale is not 1 is now drawn only under `uv_scale_then_offset_v1`, which the
+  instance's identity records; without `--under-hypotheses` such a surface
+  is refused (`UnsupportedUvTransform`).

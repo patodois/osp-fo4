@@ -116,6 +116,37 @@ impl BuildOptions {
         })
     }
 }
+/// The four readings of a path under swap scopes `swaps` (outermost
+/// first), with `one` applying a single swap: the outermost alone, the
+/// innermost alone, every swap from the outermost in, and from the
+/// innermost out (`mswp_scopes_readings_agree_v1`).
+fn readings<S>(
+    path: &[u8],
+    swaps: &[S],
+    b: &Budget,
+    mut one: impl FnMut(Vec<u8>, &S) -> Result<Vec<u8>>,
+) -> Result<[Vec<u8>; 4]> {
+    let (Some(first), Some(last)) = (swaps.first(), swaps.last()) else {
+        return Err(error("RenderSwapPair", "material swap", 0, "no swap"));
+    };
+    let owned = || -> Result<Vec<u8>> {
+        let mut v = Vec::new();
+        b.reserve(&mut v, path.len(), "material swap", 0)?;
+        v.extend_from_slice(path);
+        Ok(v)
+    };
+    let outer = one(owned()?, first)?;
+    let inner = one(owned()?, last)?;
+    let mut down = owned()?;
+    for s in swaps {
+        down = one(down, s)?;
+    }
+    let mut up = owned()?;
+    for s in swaps.iter().rev() {
+        up = one(up, s)?;
+    }
+    Ok([outer, inner, down, up])
+}
 fn error(code: &str, file: &str, offset: u64, found: impl std::fmt::Display) -> Error {
     Error::new(code, file, offset, "documented unlit draw binding", found)
 }
@@ -238,6 +269,14 @@ struct Builder<'a, 's> {
     /// The instance relies on `nif_controller_rest_effect_first_key_v1`:
     /// its effect shaders are drawn by `draw::effect`.
     allow_effect_surface: bool,
+    /// The instance relies on `nif_missing_material_embedded_shader_v1`: a
+    /// lighting shader whose material file is missing is drawn with its own
+    /// fields and texture set.
+    allow_missing_embedded: bool,
+    /// The instance relies on `nif_controller_rest_texture_first_key_v1`: a
+    /// lighting shader whose UV fields a controller drives is drawn with its
+    /// stored fields only where a material it names holds the same values.
+    texture_first_key: bool,
     allow_scol_parts: bool,
     allow_editor_marker_subtrees: bool,
     allow_marker_suffix: bool,
@@ -636,15 +675,89 @@ impl Builder<'_, '_> {
         self.texture_bytes = total;
         Ok(index)
     }
-    fn swap(
+    /// The material a shape draws for `path` under the swaps that apply to
+    /// it, outermost first (the reference's, then the bases' down through
+    /// SCOL parts). With two or more, the four readings of
+    /// [`Self::swap_readings`] must agree (`mswp_scopes_readings_agree_v1`,
+    /// checked for the whole base by [`Self::swap_scopes`]).
+    fn swap(&self, path: Vec<u8>, swaps: &[&Loaded<Mswp>], scratch: &Budget) -> Result<Vec<u8>> {
+        match swaps {
+            [] => Ok(path),
+            [one] => self.swap_one(path, one, scratch),
+            _ => {
+                let [outer, inner, down, up] = self.swap_readings(&path, swaps, scratch)?;
+                if outer == inner && outer == down && outer == up {
+                    Ok(outer)
+                } else {
+                    Err(error(
+                        "UnsupportedRenderSwapScopes",
+                        "material swap",
+                        0,
+                        "readings differ",
+                    ))
+                }
+            }
+        }
+    }
+    /// The material for `path` under two or more swap scopes, by each
+    /// reading the data leaves open: the outermost swap alone (a reference
+    /// swap replacing the base's), the innermost alone, every swap in turn
+    /// from the outermost in, and from the innermost out.
+    fn swap_readings(
         &self,
-        path: Vec<u8>,
-        swap: Option<&Loaded<Mswp>>,
+        path: &[u8],
+        swaps: &[&Loaded<Mswp>],
         scratch: &Budget,
-    ) -> Result<Vec<u8>> {
-        let Some(swap) = swap else {
-            return Ok(path);
-        };
+    ) -> Result<[Vec<u8>; 4]> {
+        readings(path, swaps, scratch, |p, s| self.swap_one(p, s, scratch))
+    }
+    /// Before a base with two or more swap scopes draws anything: every
+    /// material its models' shaders name must get the same material under
+    /// every reading, and the rule must be usable at the build's level.
+    fn swap_scopes(&mut self, base: &Base, swaps: &[&Loaded<Mswp>]) -> Result<()> {
+        let scratch = self.budget.child();
+        let loader = self.loader;
+        let mut agree = true;
+        'models: for id in &base.assets {
+            let Some(node) = loader.assets.nodes.get(*id) else {
+                continue;
+            };
+            if node.kind != AssetKind::Model {
+                continue;
+            }
+            for (d, c) in node.dependencies.iter().zip(&node.dependency_citations) {
+                if c.class != Citation::NifMaterial {
+                    continue;
+                }
+                let Some(target) = loader.assets.nodes.get(*d) else {
+                    continue;
+                };
+                let [outer, inner, down, up] = self.swap_readings(&target.path, swaps, &scratch)?;
+                if !(outer == inner && outer == down && outer == up) {
+                    agree = false;
+                    break 'models;
+                }
+            }
+        }
+        if !agree {
+            return Err(error(
+                "UnsupportedRenderSwapScopes",
+                &base.record.source.file,
+                base.record.source.offset,
+                "readings differ",
+            ));
+        }
+        if !self.draw_rule(fo4_scene::hypotheses::SWAP_SCOPES_AGREE)? {
+            return Err(error(
+                "UnsupportedRenderSwapScopes",
+                &base.record.source.file,
+                base.record.source.offset,
+                "readings agree",
+            ));
+        }
+        Ok(())
+    }
+    fn swap_one(&self, path: Vec<u8>, swap: &Loaded<Mswp>, scratch: &Budget) -> Result<Vec<u8>> {
         let mut from = None;
         let mut selected = None;
         for entry in &swap.data.entries {
@@ -699,7 +812,7 @@ impl Builder<'_, '_> {
         &mut self,
         n: &Nif<'_>,
         shape: &[Field],
-        swap: Option<&Loaded<Mswp>>,
+        swap: &[&Loaded<Mswp>],
         file: &str,
         geometry: Option<&fo4_nif::Mesh>,
     ) -> Result<Surface> {
@@ -776,7 +889,7 @@ impl Builder<'_, '_> {
                     .position(|t| t == "BSEffectShaderProperty")
                     .unwrap_or(usize::MAX)
         {
-            return self.effect_surface(
+            let surface = self.effect_surface(
                 n,
                 shader,
                 f,
@@ -786,14 +899,41 @@ impl Builder<'_, '_> {
                 swap,
                 file,
                 geometry,
-            );
+            )?;
+            self.uv_rule(&surface)?;
+            return Ok(surface);
         }
-        if let Some(material) = material {
-            let path = self.resolve_path(Citation::NifMaterial, material, &scratch)?;
-            let path = self.swap(path, swap, &scratch)?;
-            let id = self.asset(AssetKind::Material, &path)?;
+        let material = match material {
+            Some(material) => {
+                let path = self.resolve_path(Citation::NifMaterial, material, &scratch)?;
+                let path = self.swap(path, swap, &scratch)?;
+                let id = self.asset(AssetKind::Material, &path)?;
+                // A material file no archive holds: the shader's own fields
+                // and texture set, under the scene's pending rule.
+                let missing = self.loader.assets.nodes[id]
+                    .blockers
+                    .iter()
+                    .any(|e| e.code == "MissingMaterial");
+                if missing && self.allow_missing_embedded {
+                    None
+                } else {
+                    Some(id)
+                }
+            }
+            None => None,
+        };
+        let uv_driven = if self.texture_first_key {
+            fo4_scene::rest::texture_driven(n, shader)
+        } else {
+            [false; 4]
+        };
+        if let Some(id) = material {
             let loader = self.loader;
-            return loader.assets.with_decoded(id, &scratch, |d| {
+            let nif_uv = [
+                floats::<2>(f, "UV Offset", file)?,
+                floats::<2>(f, "UV Scale", file)?,
+            ];
+            let surface = loader.assets.with_decoded(id, &scratch, |d| {
                 let DecodedAsset::Material(m) = d else {
                     return Err(error("RenderAssetKind", file, 0, id));
                 };
@@ -881,9 +1021,32 @@ impl Builder<'_, '_> {
                     },
                     tint: None,
                 })
-            });
+            })?;
+            // A controller drives the NIF shader's field; the draw takes the
+            // material's, so the two must hold the same value.
+            let drawn = [
+                surface.offset[0],
+                surface.scale[0],
+                surface.offset[1],
+                surface.scale[1],
+            ];
+            let stored = [nif_uv[0][0], nif_uv[1][0], nif_uv[0][1], nif_uv[1][1]];
+            if uv_driven
+                .iter()
+                .zip(drawn.iter().zip(&stored))
+                .any(|(d, (a, b))| *d && (*a as f32) != (*b as f32))
+            {
+                return Err(error(
+                    "UnsettledTextureMaterialField",
+                    file,
+                    n.blocks[shader].data.start as u64,
+                    "material UV field differs from the controlled NIF field",
+                ));
+            }
+            self.uv_rule(&surface)?;
+            return Ok(surface);
         }
-        if swap.is_some() {
+        if !swap.is_empty() {
             return Err(error("RenderSwapWithoutMaterial", file, 0, shader));
         }
         let kind = &n.block_types[n.blocks[shader].type_index as usize];
@@ -998,7 +1161,7 @@ impl Builder<'_, '_> {
         };
         self.opacity_rule(&alpha)?;
         alpha.validate()?;
-        Ok(Surface {
+        let surface = Surface {
             requires_uv: !color_only,
             channels: if color_only {
                 effect_channels(nif_flags1, nif_flags2, file)?
@@ -1015,7 +1178,9 @@ impl Builder<'_, '_> {
                 nif_shader_flags_2: nif_flags2,
             },
             tint: None,
-        })
+        };
+        self.uv_rule(&surface)?;
+        Ok(surface)
     }
     fn mesh(
         &mut self,
@@ -1130,7 +1295,7 @@ impl Builder<'_, '_> {
         i: usize,
         parent: Transform,
         instance: u32,
-        swap: Option<&Loaded<Mswp>>,
+        swap: &[&Loaded<Mswp>],
         active: &mut Vec<usize>,
         depth: u64,
     ) -> Result<()> {
@@ -1282,23 +1447,27 @@ impl Builder<'_, '_> {
         base: &Base,
         world: Transform,
         instance: u32,
-        inherited: Option<&Loaded<Mswp>>,
+        inherited: &[&Loaded<Mswp>],
         depth: u64,
     ) -> Result<()> {
         fo4_core::limit(depth, self.limits.max_depth, "render base", 0)?;
         if base.editor_marker {
             return Ok(());
         }
-        if base.material_swap.is_some() && inherited.is_some() {
-            return Err(error(
-                "UnsupportedRenderSwapScopes",
-                &base.record.source.file,
-                base.record.source.offset,
-                "base and reference/parent swaps both present",
-            ));
+        let mut stack: Vec<&Loaded<Mswp>> = Vec::new();
+        self.budget
+            .reserve(&mut stack, inherited.len() + 1, "material swap", 0)?;
+        stack.extend_from_slice(inherited);
+        if let Some(s) = &base.material_swap {
+            stack.push(s);
         }
-        let swap = base.material_swap.as_ref().or(inherited);
+        let swap = stack.as_slice();
         let collection_parts = base.record.signature == *b"SCOL" && !base.parts.is_empty();
+        // A SCOL drawn by its parts draws no model of its own: each part
+        // checks its own models with the whole stack.
+        if stack.len() > 1 && !collection_parts {
+            self.swap_scopes(base, &stack)?;
+        }
         if collection_parts && !self.allow_scol_parts {
             return Err(error(
                 "UnverifiedScolGeometrySource",
@@ -1405,11 +1574,30 @@ impl Builder<'_, '_> {
         }
         Ok(())
     }
+    /// A textured surface whose UV offset is not 0 or whose UV scale is not
+    /// 1 is drawn only under `uv_scale_then_offset_v1` (texture coordinate
+    /// = stored UV x scale + offset, per component).
+    fn uv_rule(&mut self, s: &Surface) -> Result<()> {
+        if s.requires_uv
+            && (s.offset != [0., 0.] || s.scale != [1., 1.])
+            && !self.draw_rule(fo4_scene::hypotheses::UV_SCALE_THEN_OFFSET)?
+        {
+            return Err(error(
+                "UnsupportedUvTransform",
+                "draw list",
+                0,
+                "UV offset 0 and scale 1 without a registered rule",
+            ));
+        }
+        Ok(())
+    }
     /// Sets the rule flags the shared walkers read from a state's rules.
     fn allow(&mut self, rules: &[&'static str]) {
         use fo4_scene::hypotheses as h;
         self.allow_effect_color = rules.contains(&h::EFFECT_COLOR);
         self.allow_effect_surface = rules.contains(&h::REST_EFFECT_FIRST_KEY);
+        self.allow_missing_embedded = rules.contains(&h::MISSING_MATERIAL_EMBEDDED);
+        self.texture_first_key = rules.contains(&h::REST_TEXTURE_FIRST_KEY);
         self.allow_path_strip = rules.contains(&h::PATH_STRIP);
         self.allow_path_root = rules.contains(&h::PATH_ROOT);
         self.allow_path_relative = rules.contains(&h::PATH_DATA_RELATIVE);
@@ -1537,7 +1725,7 @@ impl Builder<'_, '_> {
                         &file,
                         self.budget,
                     )?;
-                    let surface = self.surface(n, f, None, &file, Some(m))?;
+                    let surface = self.surface(n, f, &[], &file, Some(m))?;
                     let mesh = self.mesh(path, i, m, &surface, Some((skeleton, &positions)))?;
                     if self.posed.contains(&skeleton)
                         && !self.recorded.iter().any(|r| r.mesh == mesh)
@@ -1849,6 +2037,8 @@ fn build_inner(
         allow_path_relative: false,
         allow_effect_color: false,
         allow_effect_surface: false,
+        allow_missing_embedded: false,
+        texture_first_key: false,
         allow_scol_parts: false,
         allow_editor_marker_subtrees: false,
         allow_marker_suffix: false,
@@ -1907,6 +2097,14 @@ fn build_inner(
             .state
             .hypotheses()
             .contains(&fo4_scene::hypotheses::REST_EFFECT_FIRST_KEY);
+        builder.allow_missing_embedded = i
+            .state
+            .hypotheses()
+            .contains(&fo4_scene::hypotheses::MISSING_MATERIAL_EMBEDDED);
+        builder.texture_first_key = i
+            .state
+            .hypotheses()
+            .contains(&fo4_scene::hypotheses::REST_TEXTURE_FIRST_KEY);
         let first = builder.output.list.draws.len();
         builder.draw_rules.clear();
         let src = &i.reference.record.source;
@@ -1992,7 +2190,8 @@ fn build_inner(
                 .hypotheses()
                 .contains(&fo4_scene::hypotheses::SWAP_FOLDER);
             let world = Transform::euler(p, scale)?;
-            builder.base(base, world, index, i.material_swap.as_ref(), 0)?;
+            let swaps: Vec<&Loaded<Mswp>> = i.material_swap.iter().collect();
+            builder.base(base, world, index, &swaps, 0)?;
             if builder.output.list.draws.len() == first {
                 return Err(error(
                     "NoDrawableGeometry",
@@ -2101,6 +2300,37 @@ fn build_inner(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn swap_scope_readings_agree_only_where_no_order_matters() {
+        let b = Budget::new(1 << 16);
+        type Pairs = Vec<(&'static [u8], &'static [u8])>;
+        let apply = |p: Vec<u8>, s: &Pairs| -> Result<Vec<u8>> {
+            Ok(s.iter()
+                .find(|(from, _)| *from == p.as_slice())
+                .map_or(p, |(_, to)| to.to_vec()))
+        };
+        let read = |path: &[u8], swaps: &[Pairs]| readings(path, swaps, &b, apply).unwrap();
+        let agree = |r: &[Vec<u8>; 4]| r.iter().all(|x| *x == r[0]);
+        // The same mapping in both scopes, and a path neither maps.
+        let same: Vec<Pairs> = vec![vec![(b"a", b"b")], vec![(b"a", b"b")]];
+        assert!(agree(&read(b"a", &same)));
+        assert_eq!(read(b"a", &same)[0], b"b");
+        assert!(agree(&read(b"c", &same)));
+        // Only the inner (base) swap maps it: the outer-alone reading keeps it.
+        let inner_only: Vec<Pairs> = vec![vec![(b"x", b"y")], vec![(b"a", b"b")]];
+        let r = read(b"a", &inner_only);
+        assert_eq!(
+            r,
+            [b"a".to_vec(), b"b".to_vec(), b"b".to_vec(), b"b".to_vec()]
+        );
+        assert!(!agree(&r));
+        // Chained: the two orders differ.
+        let chain: Vec<Pairs> = vec![vec![(b"b", b"c")], vec![(b"a", b"b")]];
+        let r = read(b"a", &chain);
+        assert_eq!(r[2], b"b");
+        assert_eq!(r[3], b"c");
+        assert!(readings::<Pairs>(b"a", &[], &b, apply).is_err());
+    }
     #[test]
     fn decoded_alpha_property_fields_keep_the_raw_flags_and_threshold() {
         // Own single-block NIF builder; exercise the actual decoder's field names.

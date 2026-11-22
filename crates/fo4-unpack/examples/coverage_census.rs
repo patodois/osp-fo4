@@ -19,6 +19,8 @@
 //! coverage_census MANIFEST OUT_DIR --all [--every N] [--limit N]
 //! coverage_census MANIFEST OUT_DIR --view CELL_EDITOR_ID [--around N]
 //! ```
+#[path = "coverage/detail.rs"]
+mod detail;
 use fo4_core::{Budget, Error, Manifest};
 use fo4_plugin::{typed::Store, FormKey};
 use fo4_render::draw::{BlockOptions, BuildOptions};
@@ -95,6 +97,12 @@ struct Census {
     /// (reason, base) -> tally, for the local table with real names.
     bases: BTreeMap<(String, Option<FormKey>), Tally>,
     base_info: BTreeMap<FormKey, (String, String, String)>,
+    /// Sub-reasons of missing materials, swap scopes and texture transform
+    /// controllers, and the UV fields of drawn placements, by (section,
+    /// label) (`detail`).
+    detail: BTreeMap<(String, String), Tally>,
+    /// Texture-transform analysis by model path (not counted).
+    texture_cache: BTreeMap<Vec<u8>, detail::TextureModel>,
 }
 
 /// A label for `e` that carries no path, FormID or object name: the code,
@@ -126,6 +134,7 @@ fn label(e: &Error) -> String {
             | "BaseTypeOutsideSlice"
             | "RenderSwapPair"
             | "AmbiguousMaterialSwap"
+            | "UnsupportedRenderSwapScopes"
     );
     if e.code == "UnsupportedRenderAlpha" {
         // `Alpha` in Debug form: keep the blend and test words only.
@@ -425,6 +434,8 @@ fn cell(
     loader: &mut Loader<'_>,
     store: &Store,
     m: &Manifest,
+    vfs: &Vfs,
+    spelling: &detail::Spelling,
     key: &FormKey,
     around: u32,
     rows: Option<&mut String>,
@@ -441,6 +452,14 @@ fn cell(
         fo4_render::draw::build_with_actors(&scene, &actors, loader, &m.limits, options, b)?;
     let omitted: BTreeMap<u32, &fo4_render::draw::Omission> =
         build.omitted.iter().map(|o| (o.instance, o)).collect();
+    // Whether any draw of an instance has a UV offset other than 0 or a UV
+    // scale other than 1.
+    let mut uv: BTreeMap<u32, (bool, bool)> = BTreeMap::new();
+    for d in &build.list.draws {
+        let e = uv.entry(d.instance).or_default();
+        e.0 |= d.uv_offset != [0., 0.];
+        e.1 |= d.uv_scale != [1., 1.];
+    }
     let by_ref: BTreeMap<&FormKey, &Instance> = scene
         .instances
         .iter()
@@ -477,6 +496,17 @@ fn cell(
             i.base.as_ref().and_then(|v| v.common.bounds),
             i.reference.data.scale,
         );
+        details(
+            c,
+            i,
+            &outcome,
+            loader,
+            vfs,
+            spelling,
+            uv.get(&id.index),
+            a.unwrap_or(0.),
+            b,
+        )?;
         if let Some(p) = &i.enable {
             c.enable
                 .entry(enable_key("reference", p, &outcome))
@@ -578,6 +608,118 @@ fn cell(
     c.deleted += scene.deleted.len() as u64;
     c.disabled += scene.disabled.len() as u64;
     c.cells += 1;
+    Ok(())
+}
+
+/// Tallies the sub-reasons of one placement (`detail`).
+#[allow(clippy::too_many_arguments)]
+fn details(
+    c: &mut Census,
+    i: &Instance,
+    outcome: &Outcome,
+    loader: &Loader<'_>,
+    vfs: &Vfs,
+    spelling: &detail::Spelling,
+    uv: Option<&(bool, bool)>,
+    a: f64,
+    b: &Budget,
+) -> fo4_core::Result<()> {
+    let add = |c: &mut Census, section: &str, label: String| {
+        c.detail.entry((section.into(), label)).or_default().add(a);
+    };
+    let reasons = match outcome {
+        Outcome::Omitted(r) => r,
+        Outcome::Drawn | Outcome::UnderHypotheses(_) => {
+            let kind = if matches!(outcome, Outcome::Drawn) {
+                "drawn without hypotheses"
+            } else {
+                "drawn only under hypotheses"
+            };
+            let label = match uv.copied().unwrap_or_default() {
+                (false, false) => "every draw at UV offset 0 and scale 1",
+                (true, false) => "a draw with UV offset not 0",
+                (false, true) => "a draw with UV scale not 1",
+                (true, true) => "a draw with UV offset not 0 and scale not 1",
+            };
+            add(
+                c,
+                "UV fields of drawn placements",
+                format!("{kind}; {label}"),
+            );
+            return Ok(());
+        }
+        _ => return Ok(()),
+    };
+    let sole = families(reasons).len() == 1;
+    if reasons.iter().any(|r| r.ends_with(": MissingMaterial")) {
+        let (set, files, spell) = detail::missing_labels(i, loader, spelling, b)?;
+        if sole {
+            add(c, "missing material, sole family, placements", set.clone());
+        }
+        add(c, "missing material, any, placements", set);
+        for f in files {
+            add(c, "missing material, any, files (per placement)", f);
+        }
+        for f in spell {
+            add(
+                c,
+                "missing material, any, path classes (per placement and file)",
+                f.into(),
+            );
+        }
+    }
+    if let Some(r) = reasons
+        .iter()
+        .find(|r| r.starts_with("draw: UnsupportedRenderSwapScopes"))
+    {
+        let found = r.trim_start_matches("draw: UnsupportedRenderSwapScopes");
+        add(c, "swap scopes, placements", detail::scopes_label(i, found));
+    }
+    if reasons
+        .iter()
+        .any(|r| r.ends_with(";rest=texture-transform"))
+    {
+        let mut cache = std::mem::take(&mut c.texture_cache);
+        let t = detail::texture_labels(i, loader, vfs, &mut cache, b);
+        c.texture_cache = cache;
+        let t = t?;
+        let fam: Vec<String> = families(reasons);
+        let only = fam.len() == 1;
+        if only {
+            add(
+                c,
+                "texture transform, sole family, placements",
+                t.label.clone(),
+            );
+        }
+        add(
+            c,
+            "texture transform, any, placements",
+            format!("{}; other families {}", t.label, fam.len() - 1),
+        );
+        for x in t.controllers {
+            add(
+                c,
+                if only {
+                    "texture transform, sole family, controllers (per placement)"
+                } else {
+                    "texture transform, any, controllers (per placement)"
+                },
+                x,
+            );
+        }
+        for x in t.shaders {
+            add(
+                c,
+                if only {
+                    "texture transform, sole family, controlled shaders (per placement)"
+                } else {
+                    "texture transform, any, controlled shaders (per placement)"
+                },
+                x,
+            );
+        }
+    }
     Ok(())
 }
 
@@ -730,6 +872,20 @@ fn summary(c: &Census, scope: &str, elapsed: f64) -> String {
         c.hypotheses,
         20,
     );
+    let mut section = String::new();
+    for ((sec, label), t) in &c.detail {
+        if *sec != section {
+            let _ = writeln!(out, "\n## Sub-reasons: {sec}\n");
+            section = sec.clone();
+        }
+        let _ = writeln!(
+            out,
+            "  {:>8}  area {:>6.2}% of omitted, {:>6.2}% of all  {label}",
+            t.n,
+            pct(t.area, c.omitted.area),
+            pct(t.area, p.area)
+        );
+    }
     let _ = writeln!(out, "\n## Placed children not read as placements\n");
     for (k, n) in &c.exclusions {
         let _ = writeln!(out, "  {n:>8}  {k}");
@@ -820,6 +976,9 @@ fn dump(c: &Census) -> String {
         });
         line("bases", &format!("{r}\u{1f}{b}"), *v);
     }
+    for ((sec, label), v) in &c.detail {
+        line("detail", &format!("{sec}\u{1f}{label}"), *v);
+    }
     for (k, (e, m, sg)) in &c.base_info {
         let _ = writeln!(
             out,
@@ -887,6 +1046,20 @@ fn load(c: &mut Census, text: &str) -> AnyResult<()> {
                 .bases
                 .entry((parts[0].into(), form(&parts[1..])?))
                 .or_default()),
+            "detail" if parts.len() == 2 => {
+                if parts[0] == "data folder" {
+                    let e = c
+                        .detail
+                        .entry((parts[0].into(), parts[1].into()))
+                        .or_default();
+                    e.n = e.n.max(t.n);
+                } else {
+                    add(c
+                        .detail
+                        .entry((parts[0].into(), parts[1].into()))
+                        .or_default())
+                }
+            }
             "base_info" if parts.len() == 5 => {
                 if let Some(k) = form(&parts[..2])? {
                     c.base_info
@@ -961,7 +1134,20 @@ fn run() -> AnyResult<()> {
     }
     let vfs = Vfs::mount(&m, &Budget::new(m.limits.max_vfs_memory))?;
     vfs.check_complete()?;
+    let spelling = detail::Spelling::build(&m, &vfs)?;
     let mut c = Census::default();
+    let n = |v: u64| Tally { n: v, area: 0. };
+    c.detail.insert(
+        (
+            "data folder".into(),
+            "archives the manifest does not mount".into(),
+        ),
+        n(spelling.unmounted_archives),
+    );
+    c.detail.insert(
+        ("data folder".into(), "loose files".into()),
+        n(spelling.loose_files),
+    );
     let cache = Budget::new(m.limits.max_memory);
     let mut loader = Loader::new(&store, &vfs, &m.language, RuleLevel::Hypotheses, &cache);
     let scope;
@@ -980,6 +1166,8 @@ fn run() -> AnyResult<()> {
             &mut loader,
             &store,
             &m,
+            &vfs,
+            &spelling,
             &key,
             around,
             Some(&mut rows),
@@ -1006,7 +1194,18 @@ fn run() -> AnyResult<()> {
             // The viewer's scene ceiling, not one read's: the draw list of a
             // large cell holds more than the manifest's per-read limit.
             let b = Budget::new(m.limits.max_memory.saturating_mul(8));
-            if let Err(e) = cell(&mut c, &mut loader, &store, &m, key, 0, None, &b) {
+            if let Err(e) = cell(
+                &mut c,
+                &mut loader,
+                &store,
+                &m,
+                &vfs,
+                &spelling,
+                key,
+                0,
+                None,
+                &b,
+            ) {
                 *c.cell_failures.entry(e.code.clone()).or_default() += 1;
                 loader.reset_asset_cache(&cache);
                 batch = 0;

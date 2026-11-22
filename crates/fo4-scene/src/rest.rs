@@ -54,6 +54,12 @@ pub const EFFECT_IDLE: &str = "effect-idle";
 /// interpolators reach, and a looping sequence whose controlled blocks are
 /// all such controllers (`nif_controller_rest_effect_first_key_v1`).
 pub const EFFECT_FIRST_KEY: &str = "effect-first-key";
+/// A lighting-shader texture-transform controller (U or V offset or scale)
+/// whose target field holds, as stored, the first key of every
+/// interpolator that drives it, with what those interpolators reach, where
+/// it is not run by a manager or is run by a looping sequence
+/// (`nif_controller_rest_texture_first_key_v1`).
+pub const TEXTURE_FIRST_KEY: &str = "texture-first-key";
 /// Tolerance of "equal" between a stored effect-shader field and a key.
 pub const EFFECT_TOLERANCE: f32 = 1e-4;
 
@@ -502,6 +508,104 @@ fn effect_settled(n: &Nif<'_>, ctl: usize, sequences: &[(usize, usize)]) -> bool
             .iter()
             .all(|ip| starts_at(n, *ip, &stored, false))
 }
+/// The stored lighting-shader field a texture-transform controller drives,
+/// by the nifxml enum LightingShaderControlledFloat (20: U Offset, 21: U
+/// Scale, 22: V Offset, 23: V Scale), read as the components of the
+/// shader's `UV Offset` and `UV Scale`; `None` for another variable.
+pub fn lighting_texture_field(shader: &[Field], variable: u32) -> Option<f32> {
+    match variable {
+        20 => floats(shader, "UV Offset").first().copied(),
+        21 => floats(shader, "UV Scale").first().copied(),
+        22 => floats(shader, "UV Offset").get(1).copied(),
+        23 => floats(shader, "UV Scale").get(1).copied(),
+        _ => None,
+    }
+}
+/// What the census and the rest tags read of a texture-transform
+/// controller of a lighting shader.
+#[derive(Debug, Clone, PartialEq)]
+pub struct TextureController {
+    /// The controlled variable (20 to 23).
+    pub variable: u32,
+    /// Controller flag 0x20 (run by a manager).
+    pub manager_flag: bool,
+    /// Named by a sequence's controlled blocks.
+    pub in_sequence: bool,
+    /// The target shader block.
+    pub shader: usize,
+    /// The stored field the controller drives.
+    pub stored: f32,
+    /// Every interpolator that drives it starts at `stored`
+    /// (`nif_controller_rest_texture_first_key_v1`).
+    pub first_key_is_stored: bool,
+}
+/// The texture-transform controller `ctl` of a lighting shader, or `None`
+/// when `ctl` is not a `BSLightingShaderPropertyFloatController` driving a
+/// UV field of a `BSLightingShaderProperty`.
+pub fn texture_controller(n: &Nif<'_>, ctl: usize) -> Option<TextureController> {
+    texture_controller_with(n, ctl, &sequence_interpolators(n))
+}
+fn texture_controller_with(
+    n: &Nif<'_>,
+    ctl: usize,
+    sequences: &[(usize, usize)],
+) -> Option<TextureController> {
+    if type_of(n, ctl) != "BSLightingShaderPropertyFloatController" {
+        return None;
+    }
+    let f = block_fields(n, ctl)?;
+    let shader = links(f, &["Target"]).first().copied()?;
+    if type_of(n, shader) != "BSLightingShaderProperty" {
+        return None;
+    }
+    let variable = word(f, "Controlled Variable")?;
+    let stored = lighting_texture_field(block_fields(n, shader)?, variable)?;
+    let from_sequences: Vec<usize> = sequences
+        .iter()
+        .filter(|(c, _)| *c == ctl)
+        .map(|(_, ip)| *ip)
+        .collect();
+    let own = links(f, &["Interpolator"]);
+    let first_key_is_stored = !(own.is_empty() && from_sequences.is_empty())
+        && own
+            .iter()
+            .all(|ip| starts_at(n, *ip, &[stored], !from_sequences.is_empty()))
+        && from_sequences
+            .iter()
+            .all(|ip| starts_at(n, *ip, &[stored], false));
+    Some(TextureController {
+        variable,
+        manager_flag: word(f, "Controller Flags").is_some_and(|v| v & 0x20 != 0),
+        in_sequence: !from_sequences.is_empty(),
+        shader,
+        stored,
+        first_key_is_stored,
+    })
+}
+/// Which UV fields of lighting shader `shader` a texture-transform
+/// controller drives, in the order of LightingShaderControlledFloat 20 to
+/// 23: U offset, U scale, V offset, V scale.
+pub fn texture_driven(n: &Nif<'_>, shader: usize) -> [bool; 4] {
+    let mut out = [false; 4];
+    for i in 0..n.blocks.len() {
+        if type_of(n, i) != "BSLightingShaderPropertyFloatController" {
+            continue;
+        }
+        let Some(f) = block_fields(n, i) else {
+            continue;
+        };
+        if links(f, &["Target"]).first() != Some(&shader) {
+            continue;
+        }
+        if let Some(slot) = word(f, "Controlled Variable")
+            .and_then(|v| v.checked_sub(20))
+            .and_then(|v| out.get_mut(v as usize))
+        {
+            *slot = true;
+        }
+    }
+    out
+}
 /// The (colour, controlled variable) pairs of the effect-shader
 /// controllers that target shader block `shader`.
 pub fn effect_controlled(n: &Nif<'_>, shader: usize) -> Vec<(bool, u32)> {
@@ -539,6 +643,8 @@ pub fn tags(n: &Nif<'_>, b: &Budget) -> Result<Vec<Vec<&'static str>>> {
     let has_manager = (0..count).any(|i| type_of(n, i) == "NiControllerManager");
     let sequences = sequence_interpolators(n);
     let settled = |c: usize| effect_settled(n, c, &sequences);
+    let texture_settled =
+        |c: usize| texture_controller_with(n, c, &sequences).is_some_and(|t| t.first_key_is_stored);
     // Interpolator chains: interpolator -> data, blend -> interpolators.
     let chain = |start: usize| -> Vec<usize> {
         let mut seen = Vec::new();
@@ -581,21 +687,32 @@ pub fn tags(n: &Nif<'_>, b: &Budget) -> Result<Vec<Vec<&'static str>>> {
                 // settled effect-shader controller starts at their first
                 // keys.
                 let ctl_links = links(f, &["Controller"]);
-                let all_effect = f.iter().filter(|x| x.name == "Controller").count()
+                let all_links = f.iter().filter(|x| x.name == "Controller").count()
                     == ctl_links.len()
-                    && !ctl_links.is_empty()
-                    && ctl_links.iter().all(|c| settled(*c));
-                add(
-                    &mut out,
-                    i,
-                    if looping && all_effect {
-                        EFFECT_FIRST_KEY
-                    } else if looping {
-                        MANAGER_LOOP
-                    } else {
-                        MANAGER_IDLE
-                    },
-                );
+                    && !ctl_links.is_empty();
+                let all_effect = all_links && ctl_links.iter().all(|c| settled(*c));
+                // The same with lighting texture-transform controllers among
+                // them: each kind under its own first-key rule.
+                let all_first_key =
+                    all_links && ctl_links.iter().all(|c| settled(*c) || texture_settled(*c));
+                if looping && all_first_key && !all_effect {
+                    add(&mut out, i, TEXTURE_FIRST_KEY);
+                    if ctl_links.iter().any(|c| settled(*c)) {
+                        add(&mut out, i, EFFECT_FIRST_KEY);
+                    }
+                } else {
+                    add(
+                        &mut out,
+                        i,
+                        if looping && all_effect {
+                            EFFECT_FIRST_KEY
+                        } else if looping {
+                            MANAGER_LOOP
+                        } else {
+                            MANAGER_IDLE
+                        },
+                    );
+                }
                 // Controlled blocks: interpolator, controller, ... in order.
                 let ips: Vec<i32> = f
                     .iter()
@@ -633,6 +750,10 @@ pub fn tags(n: &Nif<'_>, b: &Budget) -> Result<Vec<Vec<&'static str>>> {
                         .get(k)
                         .filter(|c| **c >= 0)
                         .is_some_and(|c| settled(*c as usize));
+                    let texture_ctl = ctls
+                        .get(k)
+                        .filter(|c| **c >= 0)
+                        .is_some_and(|c| texture_settled(*c as usize));
                     let tag = if particle(ctl_ty) {
                         PARTICLE
                     } else if settled_ctl {
@@ -641,6 +762,8 @@ pub fn tags(n: &Nif<'_>, b: &Budget) -> Result<Vec<Vec<&'static str>>> {
                         VISIBILITY
                     } else if !KNOWN.contains(&ctl_ty) {
                         OTHER
+                    } else if looping && texture_ctl {
+                        TEXTURE_FIRST_KEY
                     } else if looping {
                         MANAGER_LOOP
                     } else if ctl_ty.starts_with("BSEffectShaderProperty") {
@@ -680,6 +803,8 @@ pub fn tags(n: &Nif<'_>, b: &Budget) -> Result<Vec<Vec<&'static str>>> {
                         (Some(t), [ip]) if transform_constant(n, *ip, t) => TRANSFORM_CONSTANT,
                         _ => TRANSFORM_VARIES,
                     }
+                } else if class == TEXTURE_TRANSFORM && texture_settled(i) {
+                    TEXTURE_FIRST_KEY
                 } else {
                     class
                 };
@@ -904,6 +1029,64 @@ mod tests {
                 assert_eq!(t[3], vec![TEXTURE_TRANSFORM]);
             }
         }
+    }
+
+    /// [`effect_nif`] with a lighting shader and its U offset controller
+    /// (LightingShaderControlledFloat 20).
+    fn lighting_nif(stored: f32, keys: &[(f32, f32)], sequence: bool) -> Nif<'static> {
+        let mut n = effect_nif(stored, keys, sequence);
+        n.block_types[0] = "BSLightingShaderProperty".into();
+        n.block_types[1] = "BSLightingShaderPropertyFloatController".into();
+        if let Some(fo4_nif::Data::Fields(fields)) = &mut n.blocks[1].decoded {
+            fields[3] = f("Controlled Variable", Value::U32(20));
+        }
+        n
+    }
+
+    #[test]
+    fn a_lighting_texture_controller_is_settled_only_where_the_stored_field_is_its_first_key() {
+        let b = Budget::new(1 << 20);
+        let n = lighting_nif(0.25, &[(0., 0.25), (1., 1.)], false);
+        assert_eq!(
+            lighting_texture_field(block_fields(&n, 0).unwrap(), 20),
+            Some(0.25)
+        );
+        assert_eq!(
+            lighting_texture_field(block_fields(&n, 0).unwrap(), 21),
+            Some(1.)
+        );
+        assert_eq!(texture_driven(&n, 0), [true, false, false, false]);
+        let c = texture_controller(&n, 1).unwrap();
+        assert!(c.first_key_is_stored && !c.manager_flag && !c.in_sequence);
+        let t = tags(&n, &b).unwrap();
+        for tag in &t[1..4] {
+            assert_eq!(tag, &vec![TEXTURE_FIRST_KEY]);
+        }
+        // Stored away from the first key: undecided, as before.
+        let n = lighting_nif(0.5, &[(0., 0.25), (1., 1.)], false);
+        assert!(!texture_controller(&n, 1).unwrap().first_key_is_stored);
+        assert_eq!(tags(&n, &b).unwrap()[1], vec![TEXTURE_TRANSFORM]);
+        // Run by a looping sequence: the sequence and the chain it drives
+        // take the first-key tag; the controller run by the manager keeps
+        // the idle-shader tag.
+        let n = lighting_nif(0.25, &[(0., 0.25), (1., 1.)], true);
+        let t = tags(&n, &b).unwrap();
+        assert_eq!(t[1], vec![IDLE_SHADER]);
+        assert_eq!(t[3], vec![IDLE_SHADER, TEXTURE_FIRST_KEY]);
+        assert_eq!(t[4], vec![TEXTURE_FIRST_KEY]);
+        let n = lighting_nif(0.5, &[(0., 0.25), (1., 1.)], true);
+        assert_eq!(tags(&n, &b).unwrap()[4], vec![MANAGER_LOOP]);
+        let e = fo4_core::Error::new(
+            "UnsupportedAnimationRuntime",
+            "t.nif",
+            0,
+            "x",
+            format!("NiFloatData;target_in_visual=None;rest={TEXTURE_FIRST_KEY}"),
+        );
+        assert_eq!(
+            covering(&e),
+            Some(crate::hypotheses::REST_TEXTURE_FIRST_KEY)
+        );
     }
 
     #[test]

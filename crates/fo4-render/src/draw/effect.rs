@@ -106,7 +106,7 @@ impl Builder<'_, '_> {
         material: Option<&[u8]>,
         nif_alpha: Option<(u16, u8)>,
         flags: (Option<u32>, Option<u32>),
-        swap: Option<&Loaded<Mswp>>,
+        swap: &[&Loaded<Mswp>],
         file: &str,
         geometry: Option<&fo4_nif::Mesh>,
     ) -> Result<Surface> {
@@ -197,7 +197,7 @@ impl Builder<'_, '_> {
                 })?
             }
             None => {
-                if swap.is_some() {
+                if !swap.is_empty() {
                     return Err(error("RenderSwapWithoutMaterial", file, at, shader));
                 }
                 let base = floats::<4>(f, "Base Color", file)?;
