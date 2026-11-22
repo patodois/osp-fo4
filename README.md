@@ -154,7 +154,10 @@ arrived waits in place. `--no-stream` loads the grid once, as before.
 `--headless ... --path X,Y;X,Y` walks the settled walker through the
 waypoints at the run speed with the same grid moves done synchronously,
 prints each grid change (cells dropped and loaded, time per cell, credits
-kept) and draws the frame where the walk ends. At the test cell, walking
+kept) and draws the frame where the walk ends (`--start-pose`: from the
+start pose). In the window, `--script-path` walks the same way without
+the keys, `--script-shots` captures the start pose before and after, and
+`--frame-log` writes each frame's time ([walk](spec/walk.md)). At the test cell, walking
 four cells east and back twice kept 357 to 401 MiB of credits at radius 1
 and 584 to 674 MiB at radius 2, the same at every repeated grid change,
 with 1.54 and 1.79 GB peak resident memory; a crossing took 2 to 3.3 s

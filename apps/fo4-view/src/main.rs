@@ -11,6 +11,7 @@ mod live;
 mod load;
 mod path;
 mod scene;
+mod script;
 mod stream;
 mod walk;
 
@@ -184,6 +185,28 @@ fn start_stream(s: &cli::Scene) -> AnyResult<Option<gpu::Stream>> {
     }
 }
 
+/// The window's measurement aids, their files opened (and refused) before
+/// anything is loaded.
+fn window_aids(s: &cli::Scene, debug: cli::WindowDebug) -> AnyResult<gpu::Aids> {
+    let root = Some(std::path::Path::new(&s.data));
+    let frame_log = debug
+        .frame_log
+        .as_deref()
+        .map(|f| load::output_file(f, root))
+        .transpose()?;
+    let shots = match &debug.shots {
+        Some(name) => Some([
+            load::output_file(&format!("{name}-start.png"), root)?,
+            load::output_file(&format!("{name}-return.png"), root)?,
+        ]),
+        None => None,
+    };
+    Ok(gpu::Aids {
+        frame_log,
+        script: debug.path.map(|p| gpu::Script::new(p, shots)),
+    })
+}
+
 fn run() -> AnyResult<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     match cli::parse(&args)? {
@@ -192,8 +215,9 @@ fn run() -> AnyResult<()> {
             size,
             out,
             path: Some(path),
+            start_pose,
             ..
-        } => path::headless(&s, size, &out, &path),
+        } => path::headless(&s, size, &out, &path, start_pose),
         Command::Headless {
             scene: s,
             size,
@@ -201,6 +225,7 @@ fn run() -> AnyResult<()> {
             tags,
             walk,
             path: None,
+            ..
         } => {
             let (mut gpu, options, loaded) = load_scene(&s, walk)?;
             let root = Some(loaded.data_root.as_path());
@@ -232,13 +257,15 @@ fn run() -> AnyResult<()> {
             fly,
             walk,
             stream,
+            debug,
         } => {
+            let aids = window_aids(&s, debug)?;
             if stream {
                 match start_stream(&s)? {
                     Some(link) => {
                         let start = fly::FlyState::from_eye_look(s.eye, s.look)?;
                         let clear = RenderOptions::REFERENCE.clear;
-                        gpu::window_stream(link, start, fly, clear)?;
+                        gpu::window_stream(link.loading(s.around), start, fly, clear, aids)?;
                         return Ok(());
                     }
                     // Not an exterior cell of a world with a grid: the
@@ -253,7 +280,7 @@ fn run() -> AnyResult<()> {
             } = loaded;
             drop(build);
             let start = fly::FlyState::from_eye_look(s.eye, s.look)?;
-            gpu::window(gpu, start, fly, world, options.clear)?;
+            gpu::window(gpu, start, fly, world, options.clear, aids)?;
             Ok(())
         }
         Command::Compare {

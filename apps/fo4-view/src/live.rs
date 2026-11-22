@@ -9,6 +9,7 @@
 //! each other. Only the GPU upload of a received cell waits for later
 //! frames ([`Live::waiting`]); its collision is walkable at once.
 use crate::cells::CellPiece;
+use crate::gpu::SurfaceMaterial;
 use crate::scene::{GpuMesh, GpuScene, GpuTexture, Instance, Surface};
 use crate::stream::{AssetKey, Shared};
 use bevy::prelude::{Entity, Handle, Image, Mesh};
@@ -22,15 +23,49 @@ pub enum Slot<D, H> {
     Ready(H),
 }
 
+/// Identity of a drawn surface across cells: its texture by content, its
+/// shader parameters by bits, its blend factors (as the CPU codes),
+/// culling and overlay. Cells drawing equal surfaces share one material,
+/// as the surfaces of one joined scene do (`crate::scene::convert`), so
+/// their instances are drawn together.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct SurfaceId {
+    pub texture: AssetKey,
+    pub params: [u32; 9],
+    pub blend: Option<(u32, u32)>,
+    pub cull_back: bool,
+    pub overlay: bool,
+}
+impl SurfaceId {
+    pub fn of(surface: &Surface, texture: AssetKey) -> Self {
+        // The factors were made from these codes (`scene::blend_factor`).
+        let code = |f| (0..=10u32).find(|c| crate::scene::blend_factor(*c) == Ok(f));
+        Self {
+            texture,
+            params: surface.params.bits(),
+            blend: surface
+                .key
+                .blend
+                .map(|(a, b)| (code(a).unwrap_or(u32::MAX), code(b).unwrap_or(u32::MAX))),
+            cull_back: surface.key.cull_back,
+            overlay: surface.key.overlay,
+        }
+    }
+}
+
 pub struct LiveCell {
     pub meshes: Vec<AssetKey>,
     pub textures: Vec<AssetKey>,
     /// Each key once, as acquired.
     keys: Vec<AssetKey>,
     pub surfaces: Vec<Surface>,
+    /// Identity of each surface, for the materials shared by identity.
+    pub surface_ids: Vec<SurfaceId>,
     pub instances: Vec<Instance>,
     /// Entities drawing it, once spawned.
     pub entities: Vec<Entity>,
+    /// Spawned: its entities exist and it holds one user of the material
+    /// of each of its surfaces.
     pub spawned: bool,
     pub received: Instant,
     /// Frames spent uploading.
@@ -42,6 +77,8 @@ pub struct Live {
     pub cells: BTreeMap<[i32; 2], LiveCell>,
     pub meshes: Shared<AssetKey, Slot<GpuMesh, Handle<Mesh>>>,
     pub textures: Shared<AssetKey, Slot<GpuTexture, Handle<Image>>>,
+    /// The material of each surface identity a spawned cell draws.
+    pub materials: Shared<SurfaceId, Handle<SurfaceMaterial>>,
     /// Received cells not spawned yet, in arrival order.
     pub waiting: VecDeque<[i32; 2]>,
 }
@@ -107,6 +144,20 @@ impl Live {
         if let Some(world) = collision {
             space.insert(grid, world).map_err(|e| e.to_string())?;
         }
+        let mut surface_ids = Vec::with_capacity(surfaces.len());
+        for s in &surfaces {
+            let Some(texture) = textures.get(s.texture) else {
+                for k in &keys {
+                    self.release(k);
+                }
+                space.remove(&grid);
+                return Err(format!(
+                    "StreamSurfaceTexture: cell {grid:?} names texture {}",
+                    s.texture
+                ));
+            };
+            surface_ids.push(SurfaceId::of(s, *texture));
+        }
         self.cells.insert(
             grid,
             LiveCell {
@@ -114,6 +165,7 @@ impl Live {
                 textures,
                 keys,
                 surfaces,
+                surface_ids,
                 instances,
                 entities: Vec::new(),
                 spawned: false,
@@ -144,6 +196,12 @@ impl Live {
         self.waiting.retain(|g| *g != grid);
         for k in &cell.keys {
             self.release(k);
+        }
+        if cell.spawned {
+            for id in &cell.surface_ids {
+                // The last user's handle is dropped here.
+                drop(self.materials.release(id));
+            }
         }
         cell.entities
     }

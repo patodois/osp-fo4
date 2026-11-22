@@ -61,7 +61,7 @@ pub struct SurfaceParams {
     pub opaque_texture: bool,
 }
 impl SurfaceParams {
-    fn bits(&self) -> [u32; 9] {
+    pub fn bits(&self) -> [u32; 9] {
         [
             self.uv_scale[0].to_bits(),
             self.uv_scale[1].to_bits(),

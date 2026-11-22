@@ -9,6 +9,7 @@ usage:
            [--speed UNITS_PER_SECOND] [--fast-speed UNITS_PER_SECOND] [--radians-per-pixel R]
            [--walk] [--texture-cap N] [--alpha-tested-cap N] [--reference-textures]
            [--scene-memory MIB] [--no-stream]
+           [--frame-log build/FRAMES.tsv] [--script-path X,Y;... [--script-shots build/NAME]]
       Window with a free-fly camera: W/A/S/D move, Shift moves faster, hold the
       left mouse button and move the mouse to look, R returns to the start pose.
       The title bar shows the mode, the speed and the position.
@@ -43,11 +44,19 @@ usage:
       blocks, terrain, collision, walking world); the manifest's max_memory
       still bounds each cell read and each asset decode on its own. Credits
       are conservative, not resident memory.
+      Measurement aids: --frame-log writes one line per frame (interval,
+      time in the frame's update, cells drawn and uploading, entities).
+      --script-path (with --walk) steers the walker through the waypoints
+      as the headless --path does once the cells around the start are
+      drawn, then returns to the start pose as R does and closes the
+      window when its cells are drawn again; --script-shots captures the
+      window at the start pose before the walk (NAME-start.png) and after
+      the return (NAME-return.png), from the same camera pose.
   fo4-view MANIFEST DATA_DIRECTORY CELL_EDITOR_ID [level] --headless
            --eye X,Y,Z --look X,Y,Z --out build/FRAME.png [--tags build/TAGS.bin]
            [--size WxH] [--backface-cull] [--terrain] [--around N] [--walk]
            [--texture-cap N] [--alpha-tested-cap N] [--reference-textures]
-           [--scene-memory MIB] [--path X,Y;X,Y;...]
+           [--scene-memory MIB] [--path X,Y;X,Y;... [--start-pose]]
       One offscreen frame, no window. --tags also writes the per-pixel instance
       tags (u32 little-endian, u32::MAX = background). With --walk the walking
       world is built as in the window, the walker is dropped with its eye at
@@ -57,7 +66,9 @@ usage:
       each X,Y in turn at the run speed, moving the loaded grid as the
       window does but loading synchronously, prints every grid change
       (cells dropped and loaded, time per cell, credits kept) and draws
-      the frame from where the walk ends, looking along its last leg.
+      the frame from where the walk ends, looking along its last leg;
+      with --start-pose, from the settled start pose instead (the frame
+      without --path), with the cells kept when the walk ends.
   fo4-view compare --cpu CPU.png --gpu GPU.png --diff build/DIFF.png
            [--cpu-tags CPU.bin --gpu-tags GPU.bin]
       Coverage agreement and colour differences of two frames of one pose.";
@@ -131,6 +142,8 @@ pub enum Command {
         /// Move the loaded grid with the player (`--walk --terrain
         /// --around N` without `--no-stream`).
         stream: bool,
+        /// Measurement aids.
+        debug: WindowDebug,
     },
     Headless {
         scene: Scene,
@@ -141,6 +154,9 @@ pub enum Command {
         walk: bool,
         /// Waypoints walked with the moving grid (`--path`).
         path: Option<Vec<[f64; 2]>>,
+        /// Draw the `--path` frame from the settled start pose
+        /// (`--start-pose`).
+        start_pose: bool,
     },
     Compare {
         cpu: String,
@@ -148,6 +164,15 @@ pub enum Command {
         diff: String,
         tags: Option<(String, String)>,
     },
+}
+
+/// Measurement aids of the window (`--frame-log`, `--script-path`,
+/// `--script-shots`).
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct WindowDebug {
+    pub frame_log: Option<String>,
+    pub path: Option<Vec<[f64; 2]>>,
+    pub shots: Option<String>,
 }
 
 /// Free-fly defaults: plain viewer settings with no claim about the game.
@@ -275,6 +300,8 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
     let mut memory = DEFAULT_SCENE_MEMORY_MIB << 20;
     let mut path = None;
     let mut no_stream = false;
+    let mut start_pose = false;
+    let mut debug = WindowDebug::default();
     let mut rest = args[3..].iter();
     while let Some(arg) = rest.next() {
         let mut value = || rest.next().ok_or_else(usage);
@@ -301,6 +328,10 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             "--scene-memory" => memory = scene_memory(value()?)?,
             "--path" => path = Some(waypoints(value()?)?),
             "--no-stream" => no_stream = true,
+            "--start-pose" => start_pose = true,
+            "--frame-log" => debug.frame_log = Some(value()?.clone()),
+            "--script-path" => debug.path = Some(waypoints(value()?)?),
+            "--script-shots" => debug.shots = Some(value()?.clone()),
             _ => return Err(usage()),
         }
     }
@@ -335,7 +366,16 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
         scene_memory: memory,
     };
     let grid_moves = walk && scene.terrain && scene.around > 0;
+    if debug.shots.is_some() && debug.path.is_none() {
+        return Err("--script-shots needs --script-path".into());
+    }
+    if debug.path.is_some() && !walk {
+        return Err("--script-path needs --walk".into());
+    }
     if headless {
+        if debug != WindowDebug::default() {
+            return Err("--frame-log and --script-path apply to the window only".into());
+        }
         if no_stream {
             return Err("--no-stream applies to the window only".into());
         }
@@ -345,6 +385,9 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
         if path.is_some() && tags.is_some() {
             return Err("--path draws no instance tags".into());
         }
+        if start_pose && path.is_none() {
+            return Err("--start-pose applies to --path only".into());
+        }
         Ok(Command::Headless {
             scene,
             size: frame,
@@ -352,19 +395,22 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             tags,
             walk,
             path,
+            start_pose,
         })
     } else if out.is_some()
         || tags.is_some()
         || path.is_some()
+        || start_pose
         || frame != fo4_scene::camera::REFERENCE_SIZE
     {
-        Err("--out, --tags, --size and --path apply to --headless only".into())
+        Err("--out, --tags, --size, --path and --start-pose apply to --headless only".into())
     } else {
         Ok(Command::Window {
             scene,
             fly,
             walk,
             stream: grid_moves && !no_stream,
+            debug,
         })
     }
 }
@@ -390,11 +436,13 @@ mod tests {
             tags,
             walk,
             path,
+            start_pose,
         } = c
         else {
             panic!("{c:?}")
         };
         assert!(path.is_none());
+        assert!(!start_pose);
         assert_eq!(scene.level, RuleLevel::Hypotheses);
         assert_eq!(scene.eye, [0., 153.6, 104.49]);
         assert_eq!(scene.look, [70.7, 224.3, 104.49]);
@@ -427,6 +475,7 @@ mod tests {
                 fly: DEFAULT_FLY,
                 walk: false,
                 stream: false,
+                debug: WindowDebug::default(),
             }
         );
         let c = parse(&args(
@@ -486,7 +535,30 @@ mod tests {
         ))
         .unwrap();
         assert!(
-            matches!(&c, Command::Headless { path: Some(p), .. } if p == &[[1., 2.], [-3.5, 4000.]])
+            matches!(&c, Command::Headless { path: Some(p), start_pose: false, .. } if p == &[[1., 2.], [-3.5, 4000.]])
+        );
+        let c = parse(&args(
+            "m d C --headless --eye 1,2,3 --look 4,5,6 --out a.png --walk --terrain --around 1 --path 1,2 --start-pose",
+        ))
+        .unwrap();
+        assert!(matches!(
+            &c,
+            Command::Headless {
+                path: Some(_),
+                start_pose: true,
+                ..
+            }
+        ));
+        let c = parse(&args(
+            "m d C --eye 1,2,3 --look 4,5,6 --walk --terrain --around 2 --frame-log build/f.tsv --script-path 1,2;3,4 --script-shots build/s",
+        ))
+        .unwrap();
+        assert!(
+            matches!(&c, Command::Window { stream: true, debug, .. } if *debug == WindowDebug {
+                frame_log: Some("build/f.tsv".into()),
+                path: Some(vec![[1., 2.], [3., 4.]]),
+                shots: Some("build/s".into()),
+            })
         );
         let c = parse(&args("m d C --eye 1,2,3 --look 4,5,6 --texture-cap 512")).unwrap();
         assert!(matches!(&c, Command::Window { scene, .. } if scene.textures
@@ -525,6 +597,11 @@ mod tests {
             "m d C --headless --eye 1,2,3 --look 4,5,6 --out a.png --walk --terrain --around 1 --path 1,2;3",
             "m d C --headless --eye 1,2,3 --look 4,5,6 --out a.png --walk --terrain --around 1 --path 1,x",
             "m d C --headless --eye 1,2,3 --look 4,5,6 --out a.png --no-stream",
+            "m d C --headless --eye 1,2,3 --look 4,5,6 --out a.png --walk --terrain --around 1 --start-pose",
+            "m d C --eye 1,2,3 --look 4,5,6 --walk --terrain --around 1 --start-pose",
+            "m d C --eye 1,2,3 --look 4,5,6 --script-path 1,2",
+            "m d C --eye 1,2,3 --look 4,5,6 --walk --script-shots build/s",
+            "m d C --headless --eye 1,2,3 --look 4,5,6 --out a.png --frame-log build/f.tsv",
             "compare --cpu a --gpu b",
             "compare --cpu a --gpu b --diff c --cpu-tags x",
         ] {

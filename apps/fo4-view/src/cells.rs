@@ -43,6 +43,24 @@ pub struct LoadReport {
     pub shared_assets: usize,
     /// Credits of the whole scene once the cell is kept.
     pub credits: u64,
+    /// Seconds spent reading the cell and its assets, building its draw
+    /// list, its textured terrain, its collision and walking world, and
+    /// converting the draw list to GPU data ([`Phases::NAMES`]).
+    pub phases: [f64; 5],
+}
+
+/// Names of [`LoadReport::phases`].
+pub struct Phases;
+impl Phases {
+    pub const NAMES: [&'static str; 5] = ["read", "draw", "terrain", "collision", "convert"];
+    pub fn line(p: &[f64; 5]) -> String {
+        let parts: Vec<String> = Self::NAMES
+            .iter()
+            .zip(p)
+            .map(|(n, s)| format!("{n} {s:.3}"))
+            .collect();
+        parts.join(", ")
+    }
 }
 
 /// One cell, ready to draw and walk on.
@@ -306,8 +324,15 @@ impl<'a> Streamer<'a> {
         let o = self.options;
         let limits = &s.manifest.limits;
         let work = self.root.child();
+        let mut clock = Instant::now();
+        let mut lap = |k: usize, report: &mut LoadReport| {
+            report.phases[k] += clock.elapsed().as_secs_f64();
+            clock = Instant::now();
+        };
         let scene = loader.cell(key, &work)?;
+        lap(0, report);
         let mut build = fo4_render::draw::build(&scene, loader, limits, o.build, &work)?;
+        lap(1, report);
         report.placements = build.instances.len();
         report.omitted = build.omitted.len();
         let terrain = if o.terrain || o.walk {
@@ -346,6 +371,7 @@ impl<'a> Streamer<'a> {
                 &work,
             )?;
         }
+        lap(2, report);
         let collision = if o.walk {
             let options = fo4_scene::collision::Options {
                 level: o.level,
@@ -365,7 +391,9 @@ impl<'a> Streamer<'a> {
         } else {
             None
         };
+        lap(3, report);
         let gpu = crate::scene::convert(&mut build.list, &o.render)?;
+        lap(4, report);
         drop(build);
         drop(terrain);
         drop(scene);

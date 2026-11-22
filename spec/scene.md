@@ -447,6 +447,60 @@ keeps loaded around the player, or when it loads them.
   uses it, by a count on each side. The loading side decides whether a
   key's data travels with a cell from the same message order the main
   thread applies, so both counts agree without a reply.
+- **Shared materials.** A spawned cell's surfaces are identified by their
+  texture's content key, their shader parameters by bits, their blend
+  factors, culling and overlay mark; equal surfaces of different cells
+  draw with one material, held while any spawned cell draws it, as the
+  surfaces of a joined scene share one. Instances of different cells then
+  batch as they do in the joined scene.
+- **Instance data on the CPU.** The window with the moving grid builds
+  Bevy's per-instance data on the CPU (`use_gpu_instance_buffer_builder:
+  false`); the window that loads once keeps Bevy's default.
+
+### Drawing the moving grid: what was measured
+
+Window at 2560 x 1440 (Apple M5, Metal, vsync at 60 Hz), `--around 2` at
+the test cell, GPU time from the Metal HUD log, frame intervals from
+`--frame-log`. Scripted walk (`--script-path`): south four cells, west
+one, five crossings over one border, back to the start pose (17
+waypoints, 24 grid changes, about 275 s of walking).
+
+- **Before.** Each cell made its own material for each of its surfaces,
+  so the same 25 cells drew with many times the materials of the joined
+  scene, and Bevy built the instance data on the GPU. Standing at the
+  start the GPU took 16.5 to 17.5 ms a frame (the same 25 cells loaded
+  once, `--no-stream`: mostly 7.3 to 7.8 ms), so frames alternated between one
+  and two vsync intervals: about 36 FPS standing, 31.9 FPS on the walk
+  (every frame over 20 ms). Back at the start pose the frame differed
+  from the start frame in 6.8 % of its pixels (up to 176 steps): near
+  the camera a region of ground bounded by a straight edge showed bare
+  soil instead of its grass texture, and a mound on it changed look,
+  with every entity of every cell alive, queued in its render phase and
+  specialized (counted in the render world). The same walk headless
+  (`--path ... --start-pose`) does not show it; the scripted window
+  shows it every time, with the same pixel count.
+- **Each change alone.** Shared materials with GPU-built instance data:
+  59.8 FPS walking, GPU 12.5 ms on average and up to 16.5 ms, 12 pixels
+  differing at the end. Per-cell materials with CPU-built instance data:
+  59.8 FPS walking, GPU 4.9 ms, 368 pixels differing by at most 2 steps.
+  Which part of Bevy's GPU-built path draws wrongly after cells are
+  despawned and spawned again was not isolated; both changes are kept.
+- **After both.** The same walk: 59.8 FPS (16.71 ms mean interval, 10
+  frames of 16,471 over 20 ms, the longest 63 ms), GPU 4.9 ms on average
+  and 10.3 ms at most; back at the start pose 368 pixels differ by at
+  most 2 steps (7 by 2), in a band near the horizon (cause not isolated).
+  A short walk (one cell south and back) holds 60.0 FPS both with the
+  moving grid (GPU 4.8 ms) and with `--no-stream` (GPU 11.0 ms).
+- **Headless.** `--path ... --start-pose` back at the start differs from
+  the start frame only by the five cells the extra step keeps (114
+  pixels); with those five cells left out it is byte-identical.
+- **From a crossing to the new cells drawn.** 0.4 to 2.1 s for the first
+  cell and 0.4 to 5.2 s for the last (median 3.3 s) over 17 crossings
+  that loaded cells. The loading thread took 0.26 to 2.0 s a cell
+  (median 0.66 s): reading the cell and its asset graph 38 %, building
+  its draw list (models and textures) 42 %, its textured terrain 12 %,
+  its collision and walking world 3 %; the upload to the GPU takes a
+  frame.
 
 ### Credits of the moving grid
 

@@ -52,11 +52,12 @@ fn change(
                 live.receive(*piece, space)?;
                 let ms = t.elapsed().as_secs_f64() * 1e3;
                 println!(
-                    "  load {},{} {}: {:.3} s worker, {:.2} ms received; {} placements, {} omitted, terrain {}, {} triangles; {} new assets ({:.1} MiB), {} shared; credits {:.1} MiB",
+                    "  load {},{} {}: {:.3} s worker ({}), {:.2} ms received; {} placements, {} omitted, terrain {}, {} triangles; {} new assets ({:.1} MiB), {} shared; credits {:.1} MiB",
                     grid[0],
                     grid[1],
                     r.outcome,
                     r.seconds,
+                    crate::cells::Phases::line(&r.phases),
                     ms,
                     r.placements,
                     r.omitted,
@@ -102,14 +103,14 @@ fn leg_cap(distance: f64, speed: f64, tick: f64) -> u64 {
 
 /// A move has stalled when its distance shrank by less than this over
 /// [`STALL_TICKS`] ticks.
-const STALL_UNITS: f64 = 0.5;
-const STALL_TICKS: u64 = 60;
+pub(crate) const STALL_UNITS: f64 = 0.5;
+pub(crate) const STALL_TICKS: u64 = 60;
 /// A stalled leg steps aside and tries again: to the left of the line to
 /// its waypoint by [`DETOUR_UNITS`], then to the right by twice that, and
 /// so on, at most [`DETOURS`] times. A property of this scripted walk, not
 /// of the controller or of the game.
-const DETOUR_UNITS: f64 = 512.0;
-const DETOURS: u32 = 8;
+pub(crate) const DETOUR_UNITS: f64 = 512.0;
+pub(crate) const DETOURS: u32 = 8;
 
 /// The walker and the moving grid around it.
 struct Run<'a> {
@@ -248,7 +249,13 @@ impl Run<'_> {
     }
 }
 
-pub fn headless(s: &cli::Scene, size: [u32; 2], out: &str, path: &[[f64; 2]]) -> AnyResult<()> {
+pub fn headless(
+    s: &cli::Scene,
+    size: [u32; 2],
+    out: &str,
+    path: &[[f64; 2]],
+    start_pose: bool,
+) -> AnyResult<()> {
     let started = Instant::now();
     fo4_walk::accept(&load::walk_rules(), s.level, fo4_scene::hypotheses::status)?;
     // The cell under the walker is read under the terrain placement rule.
@@ -302,6 +309,10 @@ pub fn headless(s: &cli::Scene, size: [u32; 2], out: &str, path: &[[f64; 2]]) ->
     let mut view = WalkView::from_fly(look0, p, settings)?;
     let settle = view.character.settle(&space, 600);
     let c = &view.character;
+    // The settled start pose: its eye, looking as --eye/--look do (the
+    // frame of `--headless --walk` without --path).
+    let start_eye = c.eye();
+    let start_look: [f64; 3] = std::array::from_fn(|i| start_eye[i] + (s.look[i] - s.eye[i]));
     println!(
         "walk: settled in {settle} ticks, feet {:.3},{:.3},{:.3}, {}",
         c.feet[0],
@@ -366,29 +377,41 @@ pub fn headless(s: &cli::Scene, size: [u32; 2], out: &str, path: &[[f64; 2]]) ->
         ..
     } = run;
     // The frame from the walker's eye, looking along the last leg with
-    // the pitch of --eye/--look.
-    let eye = view.character.eye();
-    let d: [f64; 3] = std::array::from_fn(|i| s.look[i] - s.eye[i]);
-    let flat = d[0].hypot(d[1]);
-    let look = [
-        eye[0] + flat * heading.cos(),
-        eye[1] + flat * heading.sin(),
-        eye[2] + d[2],
-    ];
+    // the pitch of --eye/--look; or, with --start-pose, from the settled
+    // start pose.
+    let (eye, look) = if start_pose {
+        (start_eye, start_look)
+    } else {
+        let eye = view.character.eye();
+        let d: [f64; 3] = std::array::from_fn(|i| s.look[i] - s.eye[i]);
+        let flat = d[0].hypot(d[1]);
+        let look = [
+            eye[0] + flat * heading.cos(),
+            eye[1] + flat * heading.sin(),
+            eye[2] + d[2],
+        ];
+        (eye, look)
+    };
     println!(
-        "final pose: --eye {:.3},{:.3},{:.3} --look {:.3},{:.3},{:.3}",
-        eye[0], eye[1], eye[2], look[0], look[1], look[2]
+        "{} pose: --eye {:.3},{:.3},{:.3} --look {:.3},{:.3},{:.3}",
+        if start_pose { "start" } else { "final" },
+        eye[0],
+        eye[1],
+        eye[2],
+        look[0],
+        look[1],
+        look[2]
     );
+    let cam =
+        fo4_scene::camera::look_at(eye, look, fo4_scene::camera::reference_frustum(size), size)?;
     let mut gpu = live.take_scene()?;
     drop(live);
     drop(space);
     drop(streamer);
     drop(sources);
-    let cam =
-        fo4_scene::camera::look_at(eye, look, fo4_scene::camera::reference_frustum(size), size)?;
-    let frames = crate::gpu::headless(&mut gpu, &cam, RenderOptions::REFERENCE.clear, false)?;
+    let color = crate::gpu::headless(&mut gpu, &cam, RenderOptions::REFERENCE.clear, false)?.color;
     use std::io::Write;
-    out_file.write_all(&load::png_rgba8(size, &frames.color)?)?;
+    out_file.write_all(&load::png_rgba8(size, &color)?)?;
     println!("{out}");
     Ok(())
 }

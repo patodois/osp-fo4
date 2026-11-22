@@ -328,6 +328,22 @@ Viewer conveniences, which claim nothing about the game:
   steps aside, 512 units to the left of its line, then 1,024 to the right,
   and so on (at most 8 times), and then heads for the waypoint again. The
   detours are a property of the script, not of the controller.
+  `--start-pose` draws that walk's frame from the settled start pose
+  instead of where the walk ends, with the cells kept at the end, to
+  compare with the frame of the same pose before walking.
+- **Scripted window walk** (a measurement aid). In the window,
+  `--script-path X,Y;...` (with `--walk`) waits until the cells around
+  the start are drawn, steers the walker through the waypoints with the
+  same steering, stall rule and detours as the headless walk (one
+  controller tick per 1/60 s of frame time), then returns to the start
+  pose as R does and closes the window once the cells around it are drawn
+  again; the keys and mouse do nothing meanwhile. `--script-shots
+  build/NAME` captures the window at the start pose before the walk and
+  after the return, both from the camera pose of the first capture
+  (`NAME-start.png`, `NAME-return.png`). `--frame-log FILE` writes one
+  line per frame: the interval since the previous frame, the time of the
+  frame's update, the cells received and still uploading, the entities,
+  the script's phase and the feet (or eye).
 - **Headless walk.** `--headless --walk` builds the same world, drops the
   walker with its eye at `--eye`, settles it without input (at most 600
   ticks) and draws the frame from its eye looking the same way; the settled

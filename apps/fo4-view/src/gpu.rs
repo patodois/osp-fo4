@@ -6,6 +6,7 @@ use crate::{
     fly::{FlyInput, FlySettings, FlyState},
     live::{Live, Slot},
     scene::{GpuMesh, GpuScene, GpuTexture, Instance, Surface, TexelFormat},
+    script::{Phase, Steer, SETTLE_FRAMES},
     stream::AssetKey,
     walk::WalkView,
 };
@@ -338,6 +339,64 @@ fn spawn(world: &mut World, scene: &GpuScene, up: &Uploaded, tag_pass: bool, lay
     );
 }
 
+/// The material of `surface` drawing `image`; `tag` is written by the
+/// tag pass.
+fn surface_material(
+    surface: &Surface,
+    image: Handle<Image>,
+    tag: u32,
+    tag_pass: bool,
+) -> SurfaceMaterial {
+    let p = surface.params;
+    SurfaceMaterial {
+        params: SurfaceUniform {
+            uv_scale: Vec2::from_array(p.uv_scale),
+            uv_offset: Vec2::from_array(p.uv_offset),
+            test_ref: p.test_ref,
+            opacity: p.opacity,
+            test_function: p.test_function,
+            skip_zero_alpha: u32::from(p.skip_zero_alpha),
+            tag,
+            opaque_texture: u32::from(p.opaque_texture),
+        },
+        texture: image,
+        key: MaterialKey {
+            surface: surface.key,
+            tag_pass,
+        },
+    }
+}
+
+/// The components of one drawn instance.
+type InstanceBundle = (
+    Mesh3d,
+    MeshMaterial3d<SurfaceMaterial>,
+    Transform,
+    NoFrustumCulling,
+    RenderLayers,
+);
+
+/// One drawn instance.
+fn instance_bundle(
+    mesh: Handle<Mesh>,
+    material: Handle<SurfaceMaterial>,
+    instance: &Instance,
+    layer: usize,
+) -> InstanceBundle {
+    (
+        Mesh3d(mesh),
+        MeshMaterial3d(material),
+        Transform {
+            translation: instance.translation,
+            rotation: instance.rotation,
+            scale: instance.scale,
+        },
+        // The CPU draws every triangle and clips; no culling by bounds.
+        NoFrustumCulling,
+        RenderLayers::layer(layer),
+    )
+}
+
 /// Spawns `instances`, whose surfaces index `surfaces`, with the uploaded
 /// `meshes` and `images` their indices name; returns the entities.
 fn spawn_instances(
@@ -360,37 +419,19 @@ fn spawn_instances(
         let material = handles
             .entry((instance.surface, tag))
             .or_insert_with(|| {
-                let p = surface.params;
-                materials.add(SurfaceMaterial {
-                    params: SurfaceUniform {
-                        uv_scale: Vec2::from_array(p.uv_scale),
-                        uv_offset: Vec2::from_array(p.uv_offset),
-                        test_ref: p.test_ref,
-                        opacity: p.opacity,
-                        test_function: p.test_function,
-                        skip_zero_alpha: u32::from(p.skip_zero_alpha),
-                        tag,
-                        opaque_texture: u32::from(p.opaque_texture),
-                    },
-                    texture: images[surface.texture].clone(),
-                    key: MaterialKey {
-                        surface: surface.key,
-                        tag_pass,
-                    },
-                })
+                materials.add(surface_material(
+                    surface,
+                    images[surface.texture].clone(),
+                    tag,
+                    tag_pass,
+                ))
             })
             .clone();
-        entities.push((
-            Mesh3d(meshes[instance.mesh].clone()),
-            MeshMaterial3d(material),
-            Transform {
-                translation: instance.translation,
-                rotation: instance.rotation,
-                scale: instance.scale,
-            },
-            // The CPU draws every triangle and clips; no culling by bounds.
-            NoFrustumCulling,
-            RenderLayers::layer(layer),
+        entities.push(instance_bundle(
+            meshes[instance.mesh].clone(),
+            material,
+            instance,
+            layer,
         ));
     }
     world.spawn_batch(entities).collect()
@@ -613,6 +654,9 @@ pub struct Stream {
     messages: Mutex<Receiver<Message>>,
     sent: Option<[i32; 2]>,
     live: Live,
+    /// Grid steps loaded around the player (`--around`), for a scripted
+    /// run's check that the cells around it are drawn.
+    load: u32,
 }
 impl Stream {
     pub fn new(centres: Sender<[i32; 2]>, messages: Receiver<Message>) -> Self {
@@ -621,7 +665,12 @@ impl Stream {
             messages: Mutex::new(messages),
             sent: None,
             live: Live::default(),
+            load: 0,
         }
+    }
+    /// The same, loading `n` grid steps around the player.
+    pub fn loading(self, n: u32) -> Self {
+        Self { load: n, ..self }
     }
 }
 /// The scene until it is spawned: its clear colour and what was uploaded.
@@ -739,8 +788,11 @@ fn fly_camera(
     // The cell the walker last waited for, and whether its landing after
     // the wait is still to be logged.
     mut waited: Local<(Option<[i32; 2]>, bool)>,
+    mut script: Option<ResMut<Script>>,
 ) {
     let cursor_delta: Vec2 = cursor.read().filter_map(|m| m.delta).sum();
+    // A scripted run steers the walker; the keys and mouse do nothing.
+    let keys_on = script.is_none();
     let input = FlyInput::from_keys(
         [
             keys.pressed(KeyCode::KeyW),
@@ -753,8 +805,12 @@ fn fly_camera(
             .pressed(MouseButton::Left)
             .then(|| look_delta(motion.delta, cursor_delta)),
     );
+    let input = if keys_on { input } else { FlyInput::default() };
     let dt = time.delta_secs_f64();
-    let restart = keys.just_pressed(KeyCode::KeyR);
+    let restart = match script.as_deref_mut() {
+        None => keys.just_pressed(KeyCode::KeyR),
+        Some(s) => std::mem::take(&mut s.restart),
+    };
     if restart {
         fly.state = fly.start;
     }
@@ -775,7 +831,7 @@ fn fly_camera(
                 } else {
                     None
                 };
-            } else if keys.just_pressed(KeyCode::Tab) {
+            } else if keys_on && keys.just_pressed(KeyCode::Tab) {
                 walk.active = match walk.active.take() {
                     Some(_) => None,
                     None => WalkView::from_fly(
@@ -792,8 +848,11 @@ fn fly_camera(
                     waiting = stream.as_ref().and_then(|s| {
                         crate::stream::cell_at(feet[0], feet[1]).filter(|g| !s.live.arrived(*g))
                     });
+                    let steering = script.as_deref_mut().filter(|s| s.phase == Phase::Walking);
                     if waiting.is_some() {
                         view.hold(input, fly.settings, dt);
+                    } else if let Some(s) = steering {
+                        s.walk(view, &walk.space, dt);
                     } else {
                         view.step(&walk.space, input, fly.settings, dt);
                     }
@@ -882,6 +941,7 @@ pub fn window(
     settings: FlySettings,
     walk: Option<fo4_walk::World>,
     clear: [f32; 4],
+    aids: Aids,
 ) -> Result<(), String> {
     fly_pose(&start)?;
     let start_walking = walk.is_some();
@@ -925,8 +985,9 @@ pub fn window(
     .add_systems(
         Update,
         (spawn_window_scene, fly_camera, show_readout).chain(),
-    )
-    .run();
+    );
+    aids.add_to(&mut app);
+    app.run();
     Ok(())
 }
 
@@ -979,11 +1040,12 @@ fn stream_frame(world: &mut World, stream: &mut Stream) -> Result<(), String> {
             Message::Load(piece) => {
                 let r = &piece.report;
                 println!(
-                    "stream: cell {},{} {} loaded in {:.3} s (worker): {} placements, {} omitted, terrain {}, {} triangles, {} new assets ({:.1} MiB), {} shared; credits {:.1} MiB",
+                    "stream: cell {},{} {} loaded in {:.3} s (worker: {}): {} placements, {} omitted, terrain {}, {} triangles, {} new assets ({:.1} MiB), {} shared; credits {:.1} MiB",
                     piece.grid[0],
                     piece.grid[1],
                     r.outcome,
                     r.seconds,
+                    crate::cells::Phases::line(&r.phases),
                     r.placements,
                     r.omitted,
                     r.terrain,
@@ -1084,18 +1146,40 @@ fn upload_waiting(world: &mut World, live: &mut Live) -> Result<(), String> {
             .iter()
             .map(|k: &AssetKey| handle_of(live.textures.get(k)).cloned())
             .collect::<Result<_, _>>()?;
-        let Some(cell) = live.cells.get_mut(&grid) else {
+        let Live {
+            cells, materials, ..
+        } = &mut *live;
+        let Some(cell) = cells.get_mut(&grid) else {
             continue;
         };
-        cell.entities = spawn_instances(
-            world,
-            &cell.surfaces,
-            &cell.instances,
-            &meshes,
-            &images,
-            false,
-            0,
-        );
+        // One material per surface identity, shared with every spawned
+        // cell drawing the same surface, so that instances of different
+        // cells batch as in one joined scene.
+        let mut handles = Vec::with_capacity(cell.surfaces.len());
+        for (surface, id) in cell.surfaces.iter().zip(&cell.surface_ids) {
+            let handle = if materials.acquire(id) {
+                materials.get(id).cloned().ok_or("StreamMaterialNotHeld")?
+            } else {
+                let image = images
+                    .get(surface.texture)
+                    .cloned()
+                    .ok_or("StreamSurfaceTexture")?;
+                let h = world
+                    .resource_mut::<Assets<SurfaceMaterial>>()
+                    .add(surface_material(surface, image, 0, false));
+                materials.insert(*id, h.clone());
+                h
+            };
+            handles.push(handle);
+        }
+        let mut bundles = Vec::with_capacity(cell.instances.len());
+        for i in &cell.instances {
+            let (Some(mesh), Some(material)) = (meshes.get(i.mesh), handles.get(i.surface)) else {
+                return Err("StreamInstanceIndex".into());
+            };
+            bundles.push(instance_bundle(mesh.clone(), material.clone(), i, 0));
+        }
+        cell.entities = world.spawn_batch(bundles).collect();
         cell.spawned = true;
         println!(
             "stream: cell {},{} drawn: {} instances, uploaded over {} frames, {:.0} ms after it arrived",
@@ -1119,6 +1203,7 @@ pub fn window_stream(
     start: FlyState,
     settings: FlySettings,
     clear: [f32; 4],
+    aids: Aids,
 ) -> Result<(), String> {
     fly_pose(&start)?;
     let view = WalkView::from_fly(
@@ -1126,36 +1211,353 @@ pub fn window_stream(
         fo4_walk::Params::PROVISIONAL,
         fo4_walk::Settings::DEFAULT,
     )?;
-    App::new()
-        .insert_resource(Walk {
-            space: fo4_walk::WorldSet::new(),
-            active: Some(view),
-        })
-        .insert_resource(stream)
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                title: "fo4-view".into(),
+    let mut app = App::new();
+    app.insert_resource(Walk {
+        space: fo4_walk::WorldSet::new(),
+        active: Some(view),
+    })
+    .insert_resource(stream)
+    .add_plugins(
+        DefaultPlugins
+            .set(WindowPlugin {
+                primary_window: Some(Window {
+                    title: "fo4-view".into(),
+                    ..default()
+                }),
                 ..default()
-            }),
-            ..default()
-        }))
-        .add_plugins(ViewerPlugin)
-        .insert_resource(Fly {
-            state: start,
-            settings,
-            start,
-            start_walking: true,
-        })
-        .init_resource::<Readout>()
-        // No scene to upload at start: the camera is spawned at once.
-        .insert_resource(PendingScene(GpuScene::default(), clear, None))
-        .add_systems(
-            Update,
-            (spawn_window_scene, stream_cells, fly_camera, show_readout).chain(),
-        )
-        .run();
+            })
+            .set(stream_pbr()),
+    )
+    .add_plugins(ViewerPlugin)
+    .insert_resource(Fly {
+        state: start,
+        settings,
+        start,
+        start_walking: true,
+    })
+    .init_resource::<Readout>()
+    // No scene to upload at start: the camera is spawned at once.
+    .insert_resource(PendingScene(GpuScene::default(), clear, None))
+    .add_systems(
+        Update,
+        (spawn_window_scene, stream_cells, fly_camera, show_readout).chain(),
+    );
+    aids.add_to(&mut app);
+    app.run();
     Ok(())
 }
+
+/// The moving grid window's PBR plugin: per-instance data built on the
+/// CPU (`use_gpu_instance_buffer_builder: false`). With Bevy's GPU-built
+/// instance data and a material per cell, cells despawned and spawned
+/// again were measured to draw wrongly, and the frame took more than
+/// twice the GPU time of the same cells loaded once (`spec/scene.md`,
+/// "Drawing the moving grid"); the window that loads once keeps Bevy's
+/// default.
+pub(crate) fn stream_pbr() -> bevy::pbr::PbrPlugin {
+    bevy::pbr::PbrPlugin {
+        use_gpu_instance_buffer_builder: false,
+        ..default()
+    }
+}
+
+/// Measurement aids of the window (`--frame-log`, `--script-path`,
+/// `--script-shots`); nothing runs without them.
+#[derive(Default)]
+pub struct Aids {
+    pub frame_log: Option<std::fs::File>,
+    pub script: Option<Script>,
+}
+impl Aids {
+    fn add_to(self, app: &mut App) {
+        if let Some(file) = self.frame_log {
+            app.insert_resource(FrameLog::new(file))
+                .add_systems(First, frame_begin)
+                .add_systems(Last, frame_end);
+        }
+        if let Some(script) = self.script {
+            app.insert_resource(script)
+                .add_systems(Update, script_frame.after(fly_camera));
+        }
+    }
+}
+
+/// `--frame-log`: one tab-separated line per frame.
+#[derive(Resource)]
+struct FrameLog {
+    out: std::io::BufWriter<std::fs::File>,
+    frame: u64,
+    /// When this frame's and the previous frame's updates began.
+    begin: Option<std::time::Instant>,
+    previous: Option<std::time::Instant>,
+}
+impl FrameLog {
+    fn new(file: std::fs::File) -> Self {
+        let mut out = std::io::BufWriter::new(file);
+        use std::io::Write;
+        let _ = writeln!(
+            out,
+            "frame\tunix_s\tinterval_ms\tupdate_ms\tcells\tuploading\tentities\tphase\tx\ty"
+        );
+        Self {
+            out,
+            frame: 0,
+            begin: None,
+            previous: None,
+        }
+    }
+}
+
+fn frame_begin(mut log: ResMut<FrameLog>) {
+    log.previous = log.begin;
+    log.begin = Some(std::time::Instant::now());
+}
+
+/// Writes the frame's line: the interval since the previous frame's
+/// update began, the time from this update's start to its end, and what
+/// is loaded.
+fn frame_end(world: &mut World) {
+    let entities = world.entities().count_spawned();
+    let (cells, uploading) = world
+        .get_resource::<Stream>()
+        .map_or((0, 0), |s| (s.live.cells.len(), s.live.waiting.len()));
+    let phase = world
+        .get_resource::<Script>()
+        .map_or("-", |s| s.phase.name());
+    let point = match world.get_resource::<Walk>().and_then(|w| w.active.as_ref()) {
+        Some(view) => view.character.feet,
+        None => world.resource::<Fly>().state.eye,
+    };
+    let unix = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0.0, |d| d.as_secs_f64());
+    let mut log = world.resource_mut::<FrameLog>();
+    let now = std::time::Instant::now();
+    let ms = |a: Option<std::time::Instant>, b: Option<std::time::Instant>| match (a, b) {
+        (Some(a), Some(b)) => format!("{:.3}", b.duration_since(a).as_secs_f64() * 1e3),
+        _ => "-".into(),
+    };
+    let line = format!(
+        "{}\t{unix:.3}\t{}\t{}\t{cells}\t{uploading}\t{entities}\t{phase}\t{:.1}\t{:.1}",
+        log.frame,
+        ms(log.previous, log.begin),
+        ms(log.begin, Some(now)),
+        point[0],
+        point[1],
+    );
+    log.frame += 1;
+    use std::io::Write;
+    let _ = writeln!(log.out, "{line}");
+}
+
+/// A scripted run (`--script-path`, [`crate::script`]).
+#[derive(Resource)]
+pub struct Script {
+    steer: Steer,
+    phase: Phase,
+    /// Set for one frame: return to the start pose as R does.
+    restart: bool,
+    /// Seconds not yet walked in whole ticks.
+    accumulator: f64,
+    /// The start and return frames' files (`--script-shots`).
+    shots: Option<[std::fs::File; 2]>,
+    /// The camera pose of the start frame, also used for the return frame.
+    pose: Option<Transform>,
+    captured: Arc<Mutex<Option<Image>>>,
+    requested: bool,
+}
+impl Script {
+    pub fn new(path: Vec<[f64; 2]>, shots: Option<[std::fs::File; 2]>) -> Self {
+        Self {
+            steer: Steer::new(path),
+            phase: Phase::Loading,
+            restart: false,
+            accumulator: 0.0,
+            shots,
+            pose: None,
+            captured: Arc::new(Mutex::new(None)),
+            requested: false,
+        }
+    }
+
+    /// One frame of the scripted walk: whole ticks of the controller, each
+    /// with the input the steering gives; the view looks along the walk.
+    fn walk(&mut self, view: &mut WalkView, space: &fo4_walk::WorldSet<[i32; 2]>, dt: f64) {
+        let tick = view.character.settings.tick;
+        if dt.is_finite() && dt > 0.0 {
+            self.accumulator += dt;
+        }
+        while self.accumulator >= tick {
+            self.accumulator -= tick;
+            let c = &mut view.character;
+            match self.steer.input(c.feet, c.params.run_speed, tick) {
+                Some(input) => {
+                    c.tick(space, input);
+                    view.look.yaw = input.heading;
+                }
+                None => {
+                    self.accumulator = 0.0;
+                    break;
+                }
+            }
+        }
+        view.recover(space, dt);
+        view.look.eye = view.character.eye();
+    }
+}
+
+/// Whether the scene is drawn: the start-up scene spawned and, with the
+/// moving grid, every cell within the loaded steps of the cell under the
+/// player received and spawned.
+fn drawn_around(world: &World) -> bool {
+    if world.contains_resource::<PendingScene>() {
+        return false;
+    }
+    let Some(stream) = world.get_resource::<Stream>() else {
+        return true;
+    };
+    let point = match world.get_resource::<Walk>().and_then(|w| w.active.as_ref()) {
+        Some(view) => view.character.feet,
+        None => world.resource::<Fly>().state.eye,
+    };
+    let Some(c) = crate::stream::cell_at(point[0], point[1]) else {
+        return false;
+    };
+    if !stream.live.waiting.is_empty() {
+        return false;
+    }
+    let r = i64::from(stream.load);
+    (-r..=r).all(|dy| {
+        (-r..=r).all(|dx| {
+            let g = [i64::from(c[0]) + dx, i64::from(c[1]) + dy];
+            let Ok(g) = g
+                .map(i32::try_from)
+                .into_iter()
+                .collect::<Result<Vec<_>, _>>()
+            else {
+                return true;
+            };
+            stream
+                .live
+                .cells
+                .get(&[g[0], g[1]])
+                .is_some_and(|cell| cell.spawned)
+        })
+    })
+}
+
+fn script_frame(world: &mut World) {
+    let Some(mut script) = world.remove_resource::<Script>() else {
+        return;
+    };
+    let result = script_step(world, &mut script);
+    world.insert_resource(script);
+    if let Err(e) = result {
+        eprintln!("{e}");
+        std::process::exit(2);
+    }
+}
+
+fn script_step(world: &mut World, s: &mut Script) -> Result<(), String> {
+    match s.phase {
+        Phase::Loading => {
+            if drawn_around(world) {
+                println!("script: start drawn");
+                s.phase = Phase::Start(0);
+            }
+        }
+        Phase::Walking => {
+            if s.steer.done() {
+                println!(
+                    "script: walked, {} waypoints given up; back to the start pose",
+                    s.steer.missed
+                );
+                s.restart = true;
+                s.phase = Phase::Returning;
+            }
+        }
+        Phase::Returning => {
+            if drawn_around(world) {
+                println!("script: return drawn");
+                s.phase = Phase::Return(0);
+            }
+        }
+        Phase::Start(n) | Phase::Return(n) => {
+            let start = matches!(s.phase, Phase::Start(_));
+            if n < SETTLE_FRAMES {
+                s.phase = if start {
+                    Phase::Start(n + 1)
+                } else {
+                    Phase::Return(n + 1)
+                };
+                return Ok(());
+            }
+            // The same camera pose for both frames: the settled start pose.
+            let mut cameras = world.query_filtered::<&mut Transform, With<FlyCamera>>();
+            if s.pose.is_none() {
+                s.pose = cameras.iter(world).next().copied();
+            }
+            if let Some(pose) = s.pose {
+                for mut t in cameras.iter_mut(world) {
+                    *t = pose;
+                }
+            }
+            let next = if start { Phase::Walking } else { Phase::Done };
+            let Some(files) = s.shots.as_mut() else {
+                s.phase = next;
+                return Ok(());
+            };
+            if !s.requested {
+                let slot = s.captured.clone();
+                world.spawn(Screenshot::primary_window()).observe(
+                    move |shot: On<ScreenshotCaptured>| {
+                        if let Ok(mut slot) = slot.lock() {
+                            *slot = Some(shot.event().image.clone());
+                        }
+                    },
+                );
+                s.requested = true;
+                return Ok(());
+            }
+            let Some(image) = s.captured.lock().map_err(|_| "ScreenshotLock")?.take() else {
+                return Ok(());
+            };
+            s.requested = false;
+            let size = [image.width(), image.height()];
+            let bgra = match image.texture_descriptor.format {
+                TextureFormat::Bgra8Unorm | TextureFormat::Bgra8UnormSrgb => true,
+                TextureFormat::Rgba8Unorm | TextureFormat::Rgba8UnormSrgb => false,
+                f => return Err(format!("UnexpectedCaptureFormat: {f:?}")),
+            };
+            let mut rgba = image.data.ok_or("EmptyCapture")?;
+            if bgra {
+                for p in rgba.as_chunks_mut::<4>().0 {
+                    p.swap(0, 2);
+                }
+            }
+            let png = crate::load::png_rgba8(size, &rgba).map_err(|e| e.to_string())?;
+            use std::io::Write;
+            files[usize::from(!start)]
+                .write_all(&png)
+                .map_err(|e| e.to_string())?;
+            println!(
+                "script: {} frame captured ({}x{})",
+                if start { "start" } else { "return" },
+                size[0],
+                size[1]
+            );
+            s.phase = next;
+        }
+        Phase::Done => {
+            world.write_message(AppExit::Success);
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+#[path = "gpu_churn_tests.rs"]
+mod churn_tests;
 
 #[cfg(test)]
 mod tests {
