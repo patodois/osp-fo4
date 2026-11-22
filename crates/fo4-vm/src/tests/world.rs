@@ -14,15 +14,15 @@ use fo4_core::{Budget, Limits, ReadAt};
 use fo4_plugin::{typed::Store, FormKey};
 use fo4_scene::transform::Transform;
 
-const WRLD: u32 = 0x800;
-const CELL: u32 = 0x801;
+pub(super) const WRLD: u32 = 0x800;
+pub(super) const CELL: u32 = 0x801;
 const ACTI: u32 = 0x802;
 const STAT: u32 = 0x803;
-const TRIG: u32 = 0x810;
-const MARK: u32 = 0x811;
-const OFF: u32 = 0x812;
+pub(super) const TRIG: u32 = 0x810;
+pub(super) const MARK: u32 = 0x811;
+pub(super) const OFF: u32 = 0x812;
 
-fn key(id: u32) -> FormKey {
+pub(super) fn key(id: u32) -> FormKey {
     FormKey {
         plugin: "test.esm".into(),
         object_id: id,
@@ -176,7 +176,7 @@ fn xprm(bounds: [f32; 3], kind: u32) -> Vec<u8> {
 /// box (half extents 50) at (1000, 1000, 0) whose script `Trig` handles
 /// enter and leave, an initially disabled second trigger at (1000, 2000,
 /// 0) and a marker at (3000, 1000, 0).
-fn store() -> Store {
+pub(super) fn store() -> Store {
     let mut vmad = vec![6, 0, 2, 0];
     vmad.extend(1u16.to_le_bytes());
     text(&mut vmad, "Trig");
@@ -280,7 +280,7 @@ fn lib() -> crate::MapLibrary {
     l
 }
 
-fn all_on() -> Switches {
+pub(super) fn all_on() -> Switches {
     Switches {
         boxes: true,
         spheres: true,
@@ -298,7 +298,7 @@ fn all_on() -> Switches {
     }
 }
 
-const WALK: &str = "0 test.esm:00000801 0 1000 0\n20 test.esm:00000801 2000 1000 0\n40 test.esm:00000801 3000 1000 0\n";
+pub(super) const WALK: &str = "0 test.esm:00000801 0 1000 0\n20 test.esm:00000801 2000 1000 0\n40 test.esm:00000801 3000 1000 0\n";
 
 /// Walks the track, settling at every due second; returns the raised
 /// events with their seconds and the trigger script's two counters.

@@ -93,6 +93,11 @@ pub const ADDED: [(u16, &str); 5] = [
     (629, rules::COND_FN_629),
 ];
 
+/// The function index read from the scene clock under
+/// `cond_fn_131_action_percent_v1`, behind its own switch and off by
+/// default (not one of [`ADDED`], which are on by default).
+pub const ACTION_PERCENT: u16 = 131;
+
 /// Record types of placed references, for the reference word of run-on 2.
 pub const PLACED: [&[u8; 4]; 10] = [
     b"REFR", b"ACHR", b"PGRE", b"PMIS", b"PHZD", b"PARW", b"PBAR", b"PBEA", b"PCON", b"PFLA",
@@ -232,6 +237,18 @@ pub trait Facts {
     /// it reads the scene clock's actions (`cond_fn_550_clock_actions_v1`).
     fn action_rule(&self) -> Option<&'static str> {
         None
+    }
+    /// Whether function 131 is read from the scene clock
+    /// (`cond_fn_131_action_percent_v1`); off, it is not evaluated, as
+    /// before.
+    fn action_percent_on(&self) -> bool {
+        false
+    }
+    /// How far, in percent, the action of that index of a scene has run
+    /// on the scene clock (function 131).
+    fn action_percent(&mut self, scene: &FormKey, action: u32) -> Result<f32, &'static str> {
+        let _ = (scene, action);
+        Err("scene state is not read here")
     }
     /// How many actors of a base have died (function 84).
     fn dead_count(&mut self, base: &FormKey) -> Result<f32, &'static str> {
@@ -450,6 +467,21 @@ fn eval_with_text(
         // A caller assumption: the function's value is given, the
         // comparison is read as for an evaluated function.
         return compare(c, v, ctx, file, facts, used);
+    }
+    if f == ACTION_PERCENT && facts.action_percent_on() {
+        // Function 131 read from the scene clock, off by default
+        // (`cond_fn_131_action_percent_v1`).
+        used.insert(rules::COND_FLAGS);
+        if c.flags() & (flag::ALIASES | flag::PACK_DATA) != 0 {
+            return Truth::open(f, "the parameters name aliases or package data");
+        }
+        used.insert(rules::COND_FN_131);
+        let v = record(facts, ctx, c.param1, file, b"SCEN")
+            .and_then(|s| facts.action_percent(&s, c.param2));
+        return match v {
+            Ok(v) => compare(c, v, ctx, file, facts, used),
+            Err(why) => Truth::open(f, why),
+        };
     }
     let Some(rule) = rule_of(f).filter(|_| !is_added(f) || facts.switches().on(f)) else {
         return Truth::open(f, NOT_EVALUATED);

@@ -140,6 +140,9 @@ pub struct Switches {
     /// `--actor-triggers` (`world_actor_trigger_v1`): an actor's assumed
     /// move raises trigger enter and leave as the player's does.
     pub actor_triggers: bool,
+    /// `--moveto-target` (`world_moveto_target_v1`): `MoveTo(target)` with
+    /// zero offsets puts the reference at the target's position at once.
+    pub moveto_target: bool,
 }
 impl Switches {
     /// Whether a shape of this kind is read (its switch on).
@@ -561,6 +564,9 @@ pub struct Place {
     pub moved: BTreeSet<ObjId>,
     /// The second of the last native that may have moved each object.
     pub moved_at: BTreeMap<ObjId, f64>,
+    /// Where a `MoveTo` with zero offsets put an object, at the second of
+    /// that native (`world_moveto_target_v1`): (second, space, position).
+    pub native_at: BTreeMap<ObjId, (f64, FormKey, [f64; 3])>,
     /// The caller's assumed actor moves, earliest first.
     pub actor_moves: Vec<ActorMove>,
     /// Actor moves applied so far (`world_actor_trigger_v1`).
@@ -944,7 +950,7 @@ fn placed_at(store: &Store, max: u64, w: &mut World, o: ObjId, t: f64) -> Spot {
             .cloned();
         let native = w.place.moved_at.get(&o).copied();
         if native.is_some_and(|n| assumed.as_ref().is_none_or(|m| n > m.t)) {
-            return Spot::Open("a native of the run may have moved it");
+            return moved_to(w, o, k);
         }
         w.place.used.insert(rules::WORLD_ACTOR_POSITION);
         if let Some(m) = assumed {
@@ -966,7 +972,7 @@ fn placed_at(store: &Store, max: u64, w: &mut World, o: ObjId, t: f64) -> Spot {
         };
     }
     if w.place.moved.contains(&o) {
-        return Spot::Open("a native of the run may have moved it");
+        return moved_to(w, o, k);
     }
     let got = match w.place.stored.get(&k) {
         Some(x) => x.clone(),
@@ -987,6 +993,24 @@ fn placed_at(store: &Store, max: u64, w: &mut World, o: ObjId, t: f64) -> Spot {
             }
         }
         Err(why) => Spot::Open(why),
+    }
+}
+
+/// Where the last native that moved an object put it: the target of a
+/// `MoveTo` with zero offsets (`world_moveto_target_v1`), else open.
+fn moved_to(w: &mut World, o: ObjId, k: FormKey) -> Spot {
+    let last = w.place.moved_at.get(&o).copied();
+    match w.place.native_at.get(&o) {
+        Some((t, space, pos)) if Some(*t) == last => {
+            w.place.used.insert(rules::WORLD_MOVETO_TARGET);
+            Spot::At {
+                space: space.clone(),
+                pos: *pos,
+                facing: None,
+                record: Some(k),
+            }
+        }
+        _ => Spot::Open("a native of the run may have moved it"),
     }
 }
 
@@ -1198,7 +1222,31 @@ pub fn observe(store: &Store, max: u64, c: &NativeCall, w: &mut World) {
         return;
     }
     let now = w.now[Clock::Real as usize];
+    // `MoveTo(target, 0, 0, 0)` with the target settled
+    // (`world_moveto_target_v1`), its spot taken before the move is noted.
+    let zero = c
+        .args
+        .get(1..4)
+        .is_some_and(|x| x.iter().all(|v| matches!(v, Val::Float(f) if *f == 0.0)));
+    let target = (w.place.sw.moveto_target && full == "objectreference.moveto" && zero)
+        .then(|| spot(store, max, w, c.args.first()));
     w.place.moved_at.insert(o, now);
+    match target {
+        Some(Spot::At { space, pos, .. }) => {
+            w.place.native_at.insert(o, (now, space, pos));
+            w.place
+                .count("references moved by a native\tMoveTo to a settled target with zero offsets: placed there");
+        }
+        Some(Spot::Open(why)) => {
+            w.place.native_at.remove(&o);
+            w.place.count(format!(
+                "references moved by a native\tMoveTo whose target is open: {why}"
+            ));
+        }
+        None => {
+            w.place.native_at.remove(&o);
+        }
+    }
     if w.place.moved.insert(o) {
         w.place
             .count(format!("references moved by a native\t{full}"));

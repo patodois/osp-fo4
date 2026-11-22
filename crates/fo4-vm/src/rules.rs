@@ -169,7 +169,7 @@ pub const XESP_BIT1: &str = "xesp_flag_bit1_not_presence_v1";
 pub const XESP_PROPAGATES: &str = "xesp_script_change_propagates_v1";
 
 /// Every rule above.
-pub const ALL: [&str; 135] = [
+pub const ALL: [&str; 141] = [
     ARITHMETIC,
     COMPARE,
     NOT_COPY_CAST,
@@ -305,6 +305,12 @@ pub const ALL: [&str; 135] = [
     ANIM_GRAPH,
     ANIM_GRAPH_KEYS,
     PACKAGE_DESTINATION,
+    WORLD_MOVETO_TARGET,
+    WORLD_LOAD_ENTERS,
+    WORLD_LOAD_ARRIVES,
+    WORLD_LOAD_GRID,
+    COND_FN_131,
+    SCENE_CONDITIONS_END,
 ];
 
 /// The rule an opcode's meaning rests on; `None` for an opcode without a
@@ -532,3 +538,22 @@ pub const ANIM_GRAPH_KEYS: &str = "anim_graph_sequence_keys_v1";
 /// reference's stored position a caller's number of seconds after the
 /// action starts (no path, no speed).
 pub const PACKAGE_DESTINATION: &str = "pack_location_destination_v1";
+
+/// `ObjectReference.MoveTo(target, 0, 0, 0, ...)` puts the reference at
+/// the target's position, in the target's space, at once.
+pub const WORLD_MOVETO_TARGET: &str = "world_moveto_target_v1";
+/// A reference that comes into the interior cell the player is in (moved
+/// there by a native, or enabled there) loads its 3D at once: `OnLoad`.
+pub const WORLD_LOAD_ENTERS: &str = "world_load_reference_enters_v1";
+/// When the player reaches an interior cell (the track's point in a new
+/// space), every enabled reference standing in it loads at that second.
+pub const WORLD_LOAD_ARRIVES: &str = "world_load_player_arrives_v1";
+/// In a worldspace, a reference within N grid squares of the player's
+/// square loads when it comes into that range.
+pub const WORLD_LOAD_GRID: &str = "world_load_exterior_grid_v1";
+/// Condition function 131 is how far, in percent, the scene action its
+/// parameters name has run.
+pub const COND_FN_131: &str = "cond_fn_131_action_percent_v1";
+/// A scene phase with completion conditions ends as soon as they hold,
+/// its timed actions still running.
+pub const SCENE_CONDITIONS_END: &str = "scene_phase_conditions_end_v1";

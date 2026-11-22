@@ -400,6 +400,8 @@ pub struct Clock {
 #[derive(Debug, Clone, PartialEq)]
 pub struct ActionRun {
     pub kind: u16,
+    /// Real-time second it started at.
+    pub start: f64,
     /// Real-time second it completes at, when settled.
     pub due: Option<f64>,
     pub done: bool,
@@ -444,6 +446,20 @@ pub struct Scenes {
     /// Line stage fields due later on the clock, in the order they were
     /// scheduled.
     pub line_events: Vec<LineEvent>,
+    /// Answer condition function 131 from the scene clock: how far an
+    /// action has run (`cond_fn_131_action_percent_v1`; `quest_run
+    /// --cond-131-clock`). Off by default: the function is not evaluated,
+    /// as before.
+    pub action_percent: bool,
+    /// A phase with completion conditions ends when they hold, its timed
+    /// actions still running (`scene_phase_conditions_end_v1`; `quest_run
+    /// --phase-conditions-end`). Off by default: a phase waits for its
+    /// actions, as before.
+    pub conditions_end: bool,
+    /// Seconds at which a scene waiting on its completion conditions is
+    /// offered them again, where a function 131 condition reaches its
+    /// comparison value on the clock: (scene handle, second).
+    pub percent_marks: Vec<(ObjId, f64)>,
 }
 
 /// A line's TIQS half due at a second of the real-time clock
@@ -727,8 +743,19 @@ fn step(h: &mut QuestHost<'_>, w: &mut World, o: ObjId, i: &Rc<SceneInfo>, compl
             return;
         }
         if timed {
-            w.scenes.log.push((o, Change::OnClock(p)));
-            return;
+            // With `scene_phase_conditions_end_v1`, completion conditions
+            // that hold end the phase while its timed actions run.
+            let early = w.scenes.conditions_end
+                && !phase.completion.is_empty()
+                && matches!(eval(h, w, i, &phase.completion), Truth::True);
+            if !early {
+                if w.scenes.conditions_end && !phase.completion.is_empty() {
+                    percent_marks(h, w, o, i, &phase.completion);
+                }
+                w.scenes.log.push((o, Change::OnClock(p)));
+                return;
+            }
+            h.using(rules::SCENE_CONDITIONS_END);
         }
     } else if let Some(k) = phase.actions.iter().min() {
         wait(
@@ -747,7 +774,10 @@ fn step(h: &mut QuestHost<'_>, w: &mut World, o: ObjId, i: &Rc<SceneInfo>, compl
             }
             queue(w, o, Step::Enter);
         }
-        Truth::False => wait(w, "completion conditions false (waits on the world)".into()),
+        Truth::False => {
+            percent_marks(h, w, o, i, &phase.completion);
+            wait(w, "completion conditions false (waits on the world)".into())
+        }
         Truth::Undetermined(why) => wait(
             w,
             format!(
@@ -758,8 +788,68 @@ fn step(h: &mut QuestHost<'_>, w: &mut World, o: ObjId, i: &Rc<SceneInfo>, compl
     }
 }
 
+/// With `cond_fn_131_action_percent_v1`: the seconds at which each
+/// function 131 condition of a list, naming a running action the clock
+/// times, reaches its comparison value; each becomes a mark at which the
+/// scene `o` is offered its completion again.
+fn percent_marks(
+    h: &mut QuestHost<'_>,
+    w: &mut World,
+    o: ObjId,
+    i: &SceneInfo,
+    list: &[Condition],
+) {
+    if !(w.scenes.clock.on && w.scenes.action_percent) {
+        return;
+    }
+    let ctx = Context {
+        order: h.data.store.order(),
+        plugin: i.plugin,
+    };
+    let now = w.now[TimerClock::Real as usize];
+    for c in list {
+        let c = &c.ctda;
+        if c.function != cond::ACTION_PERCENT {
+            continue;
+        }
+        let fo4_plugin::condition::Comparison::Float(v) = c.comparison() else {
+            continue;
+        };
+        let Ok(Some(scene)) = fo4_plugin::condition::form(ctx, c.param1, &i.file, 0) else {
+            continue;
+        };
+        let key = bind::record_key(&scene);
+        let Some(so) = w
+            .objects
+            .iter()
+            .position(|x| x.key.as_deref() == Some(&key))
+        else {
+            continue;
+        };
+        let Some(Some(si)) = w.scenes.infos.get(&key).cloned() else {
+            continue;
+        };
+        for (j, a) in si.actions.iter().enumerate() {
+            if a.index != c.param2 {
+                continue;
+            }
+            let Some(r) = w.scenes.actions.get(&(so, j)) else {
+                continue;
+            };
+            let (false, Some(d)) = (r.done, r.due) else {
+                continue;
+            };
+            let t = r.start + f64::from(v.clamp(0.0, 100.0)) / 100.0 * (d - r.start);
+            if t > now && !w.scenes.percent_marks.contains(&(o, t)) {
+                w.scenes.percent_marks.push((o, t));
+            }
+        }
+    }
+}
+
 fn clear_actions(w: &mut World, o: ObjId) {
     w.scenes.actions.retain(|(s, _), _| *s != o);
+    w.scenes.percent_marks.retain(|(s, _)| *s != o);
     w.scenes.line_events.retain(|e| e.scene != o);
     // The actor moves of the scene's package actions not yet applied end
     // with the scene (`pack_location_destination_v1`).
@@ -1297,6 +1387,7 @@ fn start_actions(h: &mut QuestHost<'_>, w: &mut World, o: ObjId, i: &SceneInfo, 
             (o, j),
             ActionRun {
                 kind: a.kind,
+                start: now,
                 due: t.map(|x| now + x),
                 done,
             },
@@ -1373,6 +1464,7 @@ pub fn next_due(w: &World) -> Option<f64> {
                 .filter(|e| !e.queued)
                 .map(|e| e.due),
         )
+        .chain(w.scenes.percent_marks.iter().map(|(_, t)| *t))
         .min_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
         .map(|d| (d - now).max(0.0))
 }
@@ -1417,6 +1509,17 @@ pub fn advance_clock(w: &mut World, scale: Option<f64>) -> Option<f64> {
         }
     }
     w.scenes.log.extend(done);
+    // Function 131 marks reached (`cond_fn_131_action_percent_v1`).
+    let marks = std::mem::take(&mut w.scenes.percent_marks);
+    for (o, m) in marks {
+        if m <= t {
+            if !scenes.contains(&o) {
+                scenes.push(o);
+            }
+        } else {
+            w.scenes.percent_marks.push((o, m));
+        }
+    }
     for o in scenes {
         queue(w, o, Step::Complete);
     }

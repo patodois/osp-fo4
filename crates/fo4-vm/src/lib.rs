@@ -34,6 +34,7 @@ pub mod data;
 pub mod events;
 mod exec;
 pub mod host;
+pub mod load;
 pub mod player;
 pub mod program;
 pub mod quest;

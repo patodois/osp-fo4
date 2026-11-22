@@ -384,6 +384,14 @@ struct Opts {
     /// own (`xesp_child_own_flag_ignored_v1`,
     /// `--enable-child-flag-ignored`; off by default).
     child_flag_ignored: bool,
+    /// Function 131 reads how far an action has run on the scene clock
+    /// (`cond_fn_131_action_percent_v1`, `--cond-131-clock`; off by
+    /// default).
+    action_percent: bool,
+    /// A phase with completion conditions ends when they hold while its
+    /// timed actions run (`scene_phase_conditions_end_v1`,
+    /// `--phase-conditions-end`; off by default).
+    conditions_end: bool,
 }
 
 /// The story manager's nodes, read once when the story manager is on.
@@ -429,6 +437,8 @@ fn events_on(vm: &mut Vm<'_>, o: Opts) {
     vm.world.scenes.begin_on_quest_start = o.scenes && o.scenes_with_quest;
     vm.world.scenes.stage_fields = o.scenes && o.stage_fields;
     vm.world.scenes.action_conditions = o.scenes && o.action_conditions;
+    vm.world.scenes.action_percent = o.scenes && o.action_percent;
+    vm.world.scenes.conditions_end = o.scenes && o.conditions_end;
     vm.world.quests.location_fills = o.location_fills;
     vm.world.scenes.line_fields = o.scenes && o.line_fields;
     vm.none_arrays = o.none_arrays;
@@ -491,6 +501,14 @@ fn count_switches(c: &mut Counts, o: Opts) {
         (
             o.line_fields,
             "the TIQS of the line a timed dialogue action plays set stages (--line-stage-fields)",
+        ),
+        (
+            o.action_percent,
+            "condition function 131 reads how far a scene action has run on the clock (--cond-131-clock)",
+        ),
+        (
+            o.conditions_end,
+            "a phase with completion conditions ends when they hold, its timed actions running (--phase-conditions-end)",
         ),
     ] {
         if on {
@@ -954,6 +972,9 @@ struct Then {
     /// (`--anim-graphs`) and their sequences' text keys raised
     /// (`--anim-graph-keys`).
     anim: [bool; 4],
+    /// Load events (`fo4_vm::load`): `--load-in-cell`,
+    /// `--load-on-arrival`, `--load-grid N`.
+    loads: fo4_vm::load::Switches,
 }
 
 /// One thing the caller makes happen.
@@ -1241,7 +1262,11 @@ fn world_step(
         return;
     }
     let before = vm.effects.len();
-    let (raised, mut runs) = fo4_vm::track::settle(vm, store, MAX_GAME_JOBS, b);
+    let loaded = vm.world.loads.log.len();
+    let (mut raised, mut runs) = fo4_vm::load::settle(vm, store, MAX_GAME_JOBS, b);
+    let (track_raised, track_runs) = fo4_vm::track::settle(vm, store, MAX_GAME_JOBS, b);
+    raised.extend(track_raised);
+    runs.extend(track_runs);
     let logged = vm.world.anims.log.len();
     let (anim_raised, anim_runs) = fo4_vm::anim::settle(vm, store, MAX_GAME_JOBS, b);
     runs.extend(anim_runs);
@@ -1279,6 +1304,13 @@ fn world_step(
     runs.extend(fo4_vm::talk::settle(vm, store, MAX_GAME_JOBS, b));
     for (t, x) in &vm.world.talk.log[talked..] {
         let _ = writeln!(names, "## talk at {t} s: {x}");
+    }
+    // Loads the steps above brought (moves and enables of their natives).
+    let (load_raised, load_runs) = fo4_vm::load::settle(vm, store, MAX_GAME_JOBS, b);
+    raised.extend(load_raised);
+    runs.extend(load_runs);
+    for (t, x) in &vm.world.loads.log[loaded..] {
+        let _ = writeln!(names, "## load at {t} s: {x}");
     }
     for r in &raised {
         let what = r
@@ -1387,6 +1419,7 @@ fn clock_loop(
             fo4_vm::track::next_due(store, max, &mut vm.world),
             fo4_vm::talk::next_due(&vm.world),
             fo4_vm::anim::next_due(&vm.world),
+            fo4_vm::load::next_due(store, &vm.world),
         ]
         .into_iter()
         .flatten()
@@ -1618,6 +1651,13 @@ fn new_game(
             then.actor_moves.clone(),
             &b,
         )?;
+        vm.world.loads.sw = then.loads;
+        if let Some(n) = then.loads.grid {
+            bump(
+                &mut c,
+                format!("assumption from the command line: references within {n} grid squares of the player's load (--load-grid)"),
+            );
+        }
         if !then.actor_moves.is_empty() {
             *c.entry(
                 "assumption from the command line: a placed actor moved to a position at a second (--assume-actor-at)"
@@ -1659,6 +1699,10 @@ fn new_game(
             (sw.location_native, "the current location is the parent cell's (--location-native)"),
             (sw.actors, "placed actors stand at their stored position or where the caller moved them (--actor-positions)"),
             (sw.actor_triggers, "an actor's assumed move raises trigger events as the player's (--actor-triggers)"),
+            (sw.moveto_target, "MoveTo with zero offsets puts the reference at its target's position (--moveto-target)"),
+            (then.loads.enters, "a reference that comes into the player's interior cell loads (--load-in-cell)"),
+            (then.loads.arrival, "the references of an interior cell load when the player's track reaches it (--load-on-arrival)"),
+            (then.loads.grid.is_some(), "references within the caller's grid of the player's square load (--load-grid)"),
         ] {
             if on {
                 bump(&mut c, format!("switch: {what}"));
@@ -1981,6 +2025,9 @@ fn new_game(
     }
     for (k, v) in &vm.world.anims.counts {
         *c.entry(format!("animation\t{k}")).or_default() += v;
+    }
+    for (k, v) in &vm.world.loads.counts {
+        *c.entry(format!("load\t{k}")).or_default() += v;
     }
     count_events(&mut c, &vm);
     if opts.scenes {
@@ -2894,6 +2941,8 @@ fn run() -> Result<(), E> {
             change: flag(&mut a, "--none-array-change"),
         },
         child_flag_ignored: flag(&mut a, "--enable-child-flag-ignored"),
+        action_percent: flag(&mut a, "--cond-131-clock"),
+        conditions_end: flag(&mut a, "--phase-conditions-end"),
     };
     let mut switches = fo4_vm::cond::Switches::all();
     let mut assume: BTreeMap<u16, f32> = BTreeMap::new();
@@ -3046,19 +3095,22 @@ fn run() -> Result<(), E> {
         body: None,
         actors: flag(&mut a, "--actor-positions"),
         actor_triggers: flag(&mut a, "--actor-triggers"),
+        moveto_target: flag(&mut a, "--moveto-target"),
     };
+    then.loads.enters = flag(&mut a, "--load-in-cell");
+    then.loads.arrival = flag(&mut a, "--load-on-arrival");
     let mut world_sw = world_sw;
     let mut track_file = None;
-    while let Some(i) = a
-        .iter()
-        .position(|x| x == "--track" || x == "--assume-los" || x == "--trigger-body")
-    {
+    while let Some(i) = a.iter().position(|x| {
+        x == "--track" || x == "--assume-los" || x == "--trigger-body" || x == "--load-grid"
+    }) {
         let v = a.get(i + 1).cloned().ok_or(
-            "--track FILE, --assume-los true|false and --trigger-body HEIGHT take a value",
+            "--track FILE, --assume-los true|false, --trigger-body HEIGHT and --load-grid N take a value",
         )?;
         match a[i].as_str() {
             "--track" => track_file = Some(v),
             "--trigger-body" => world_sw.body = Some(v.parse()?),
+            "--load-grid" => then.loads.grid = Some(v.parse()?),
             _ => world_sw.assume_los = Some(v.parse()?),
         }
         a.drain(i..i + 2);
@@ -3068,7 +3120,7 @@ fn run() -> Result<(), E> {
             let text = std::fs::read_to_string(&f)?;
             then.track = Some((fo4_vm::track::Track::parse(&text)?, world_sw));
         }
-        None if world_sw != fo4_vm::track::Switches::default() => {
+        None if world_sw != fo4_vm::track::Switches::default() || then.loads.any() => {
             return Err("the world model's switches need --track FILE".into());
         }
         None => {}
@@ -3146,6 +3198,9 @@ fn run() -> Result<(), E> {
     if (assumed_anim || then.anim[1]) && !then.anim[0] {
         return Err("--assume-anim-event and --anim-event-case need --anim-events".into());
     }
+    if (opts.action_percent || opts.conditions_end) && then.scene_clock == 0 {
+        return Err("--cond-131-clock and --phase-conditions-end need --scene-clock N".into());
+    }
     if then.anim[3] && !then.anim[2] {
         return Err("--anim-graph-keys needs --anim-graphs".into());
     }
@@ -3161,7 +3216,7 @@ fn run() -> Result<(), E> {
     {
         return Err("--assume-player-choice takes 0 to 3".into());
     }
-    let usage = "quest_run MANIFEST (stages OUT_DIR | new-game OUT_DIR | fragments OUT_DIR | scenes OUT_DIR | QUEST STAGE) [--queued] [--no-conditions] [--no-stage-event] [--no-remote] [--no-custom | --custom-nested] [--no-story] [--no-enable-chain] [--no-scenes] [--no-scenes-with-quest] [--no-cond-fn-N]... [--no-cond-run-on] [--assume-cond N=VALUE]...; fragments OUT_DIR and scenes OUT_DIR run every INFO, PACK and PERK fragment and start every scene in a fresh interpreter; new-game also takes --then EDITOR_ID:STAGE[@SECONDS] (repeated), --assume-activate, --assume-trigger-enter, --assume-trigger-leave and --assume-open PLUGIN:OBJECTID[@SECONDS] (repeated), --timers N and --time-scale-global EDITOR_ID, assumptions of the caller, --scene-recheck, --stage-fields, --cond-550-clock, --alias-location-refs and --next-blockers; new-game and scenes take --scene-clock N (advance the scene clock up to N times) with --no-timer-actions, --no-line-audio, --assume-line-seconds X, --assume-player-choice N (0 to 3), --assume-packages-complete, --assume-start-scene-actions, --line-stage-fields and --assume-first-line; every mode takes --none-array-length, --none-array-read, --none-array-find, --none-array-change and --enable-child-flag-ignored; new-game with --scene-clock takes --track FILE (the player's track, lines SECONDS SPACE X Y Z [FACING]) with --trigger-box, --trigger-sphere, --trigger-point or --trigger-body HEIGHT, --trigger-instant, --trigger-enabled, --trigger-order, --distance-events, --distance-once, --placed-positions, --position-natives, --cell-natives, --location-native and --assume-los true|false, --actor-positions, --actor-triggers and --assume-actor-at REF SPACE X Y Z@SECONDS (repeated); new-game takes --alias-unique-actors, --player-base EDITOR_ID and --player-no-record, and with --scene-clock --assume-talk PLUGIN:OBJECTID[@SECONDS] (repeated), --greeting-on-talk, --hello-lines with --hello-distance-setting EDITOR_ID, --dialogue-priority and --assume-line PLUGIN:OBJECTID (repeated); new-game with --track and --actor-positions takes --package-destinations SECONDS; new-game takes --anim-events with --anim-event-case and --assume-anim-event PLUGIN:OBJECTID EVENT[@SECONDS] (repeated), and with --scene-clock --anim-graphs with --anim-graph-keys";
+    let usage = "quest_run MANIFEST (stages OUT_DIR | new-game OUT_DIR | fragments OUT_DIR | scenes OUT_DIR | QUEST STAGE) [--queued] [--no-conditions] [--no-stage-event] [--no-remote] [--no-custom | --custom-nested] [--no-story] [--no-enable-chain] [--no-scenes] [--no-scenes-with-quest] [--no-cond-fn-N]... [--no-cond-run-on] [--assume-cond N=VALUE]...; fragments OUT_DIR and scenes OUT_DIR run every INFO, PACK and PERK fragment and start every scene in a fresh interpreter; new-game also takes --then EDITOR_ID:STAGE[@SECONDS] (repeated), --assume-activate, --assume-trigger-enter, --assume-trigger-leave and --assume-open PLUGIN:OBJECTID[@SECONDS] (repeated), --timers N and --time-scale-global EDITOR_ID, assumptions of the caller, --scene-recheck, --stage-fields, --cond-550-clock, --alias-location-refs and --next-blockers; new-game and scenes take --scene-clock N (advance the scene clock up to N times) with --no-timer-actions, --no-line-audio, --assume-line-seconds X, --assume-player-choice N (0 to 3), --assume-packages-complete, --assume-start-scene-actions, --line-stage-fields and --assume-first-line; every mode takes --none-array-length, --none-array-read, --none-array-find, --none-array-change and --enable-child-flag-ignored; new-game with --scene-clock takes --track FILE (the player's track, lines SECONDS SPACE X Y Z [FACING]) with --trigger-box, --trigger-sphere, --trigger-point or --trigger-body HEIGHT, --trigger-instant, --trigger-enabled, --trigger-order, --distance-events, --distance-once, --placed-positions, --position-natives, --cell-natives, --location-native and --assume-los true|false, --actor-positions, --actor-triggers and --assume-actor-at REF SPACE X Y Z@SECONDS (repeated); new-game takes --alias-unique-actors, --player-base EDITOR_ID and --player-no-record, and with --scene-clock --assume-talk PLUGIN:OBJECTID[@SECONDS] (repeated), --greeting-on-talk, --hello-lines with --hello-distance-setting EDITOR_ID, --dialogue-priority and --assume-line PLUGIN:OBJECTID (repeated); new-game with --track and --actor-positions takes --package-destinations SECONDS; new-game takes --anim-events with --anim-event-case and --assume-anim-event PLUGIN:OBJECTID EVENT[@SECONDS] (repeated), and with --scene-clock --anim-graphs with --anim-graph-keys; new-game with --track takes --moveto-target, --load-in-cell, --load-on-arrival and --load-grid N, and --assume-load PLUGIN:OBJECTID[@SECONDS] (repeated); new-game and scenes with --scene-clock take --cond-131-clock and --phase-conditions-end";
     if a.len() != 3 {
         return Err(usage.into());
     }

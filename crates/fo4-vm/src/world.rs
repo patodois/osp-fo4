@@ -161,6 +161,8 @@ pub struct World {
     /// Animation event registrations and the graphs of references
     /// (`crate::anim`); off unless a caller turns a switch on.
     pub anims: crate::anim::Anims,
+    /// Load events (`crate::load`).
+    pub loads: crate::load::Loads,
 }
 
 impl World {

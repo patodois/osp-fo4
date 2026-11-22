@@ -32,6 +32,10 @@ pub enum Action {
     TriggerEnter,
     TriggerLeave,
     Open,
+    /// A placed reference's 3D loads (`OnLoad`): not a player action; a
+    /// caller's assumption (`--assume-load`) or a load the world model
+    /// raises (`crate::load`). Not in [`Action::ALL`].
+    Load,
 }
 impl Action {
     pub const ALL: [Action; 4] = [
@@ -47,6 +51,7 @@ impl Action {
             Action::TriggerEnter => "ontriggerenter",
             Action::TriggerLeave => "ontriggerleave",
             Action::Open => "onopen",
+            Action::Load => "onload",
         }
     }
     /// The command-line switch that assumes it.
@@ -56,6 +61,7 @@ impl Action {
             Action::TriggerEnter => "--assume-trigger-enter",
             Action::TriggerLeave => "--assume-trigger-leave",
             Action::Open => "--assume-open",
+            Action::Load => "--assume-load",
         }
     }
     /// What the action is, for counts.
@@ -65,10 +71,16 @@ impl Action {
             Action::TriggerEnter => "the player enters a placed trigger reference",
             Action::TriggerLeave => "the player leaves a placed trigger reference",
             Action::Open => "the player opens a placed reference (a door or a container)",
+            Action::Load => "a placed reference's 3D loads",
         }
     }
+    /// The action a command-line switch assumes: the player actions of
+    /// [`Action::ALL`] and [`Action::Load`].
     pub fn from_switch(s: &str) -> Option<Action> {
-        Action::ALL.into_iter().find(|a| a.switch() == s)
+        Action::ALL
+            .into_iter()
+            .chain([Action::Load])
+            .find(|a| a.switch() == s)
     }
 }
 

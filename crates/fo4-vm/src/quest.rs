@@ -828,6 +828,55 @@ impl Facts for RunFacts<'_, '_> {
         (self.w.scenes.clock.on && self.w.scenes.action_conditions)
             .then_some(rules::COND_FN_550_CLOCK)
     }
+    fn action_percent_on(&self) -> bool {
+        self.w.scenes.clock.on && self.w.scenes.action_percent
+    }
+    /// Function 131 from the scene clock (`cond_fn_131_action_percent_v1`):
+    /// an action of the scene not started reads 0, a completed one 100, a
+    /// running one timed on the clock the share of its seconds already run;
+    /// a running action the clock does not time is undetermined.
+    fn action_percent(&mut self, scene: &FormKey, index: u32) -> Result<f32, &'static str> {
+        let key = bind::record_key(scene);
+        let Some(o) = self
+            .w
+            .objects
+            .iter()
+            .position(|x| x.key.as_deref() == Some(&key))
+        else {
+            return Ok(0.0);
+        };
+        let Some(Some(info)) = self.w.scenes.infos.get(&key).cloned() else {
+            return Ok(0.0);
+        };
+        let now = self.w.now[crate::world::Clock::Real as usize];
+        let mut found = false;
+        let mut best: Option<f32> = None;
+        for (j, a) in info.actions.iter().enumerate() {
+            if a.index != index {
+                continue;
+            }
+            found = true;
+            let Some(r) = self.w.scenes.actions.get(&(o, j)) else {
+                continue;
+            };
+            let v = if r.done {
+                100.0
+            } else {
+                let d = r.due.ok_or("the action runs untimed on the scene clock")?;
+                let span = d - r.start;
+                if span <= 0.0 {
+                    100.0
+                } else {
+                    (100.0 * (now - r.start) / span).clamp(0.0, 100.0) as f32
+                }
+            };
+            best = Some(best.map_or(v, |b: f32| b.max(v)));
+        }
+        if !found {
+            return Err("the scene holds no action of that index");
+        }
+        Ok(best.unwrap_or(0.0))
+    }
     fn scene_action_complete(&mut self, scene: &FormKey, index: u32) -> Result<bool, &'static str> {
         if self.w.scenes.clock.on && self.w.scenes.action_conditions {
             let key = bind::record_key(scene);
@@ -1428,6 +1477,7 @@ impl Host for QuestHost<'_> {
         // (`crate::track`); off, nothing changes.
         if w.place.on {
             let (store, max) = (self.data.store, self.data.max_memory);
+            crate::load::observe(c, w);
             crate::track::observe(store, max, c, w);
             let got = crate::track::call(store, max, c, w);
             for u in std::mem::take(&mut w.place.used) {
