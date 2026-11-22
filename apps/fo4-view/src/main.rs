@@ -1,13 +1,17 @@
 #![forbid(unsafe_code)]
 //! Interactive GPU viewer for one cell, checked against the CPU reference.
 //! See `cli::USAGE` and the README section "GPU viewer".
+mod cells;
 mod cli;
 mod compare;
 mod coords;
 mod fly;
 mod gpu;
+mod live;
 mod load;
+mod path;
 mod scene;
+mod stream;
 mod walk;
 
 use cli::Command;
@@ -125,6 +129,61 @@ fn settled_pose(
     Ok((eye, std::array::from_fn(|i| eye[i] + d[i])))
 }
 
+/// Starts the window's loading thread ([`cells::worker`]) and waits until
+/// it has opened the sources and found the cell; `None` when the cell is
+/// not an exterior cell of a world with a grid.
+fn start_stream(s: &cli::Scene) -> AnyResult<Option<gpu::Stream>> {
+    fo4_walk::accept(&load::walk_rules(), s.level, fo4_scene::hypotheses::status)?;
+    // The cell under the walker is read under the terrain placement rule.
+    fo4_walk::accept(
+        &[fo4_scene::hypotheses::LAND_SPACING],
+        s.level,
+        fo4_scene::hypotheses::status,
+    )?;
+    let options = cells::Options {
+        level: s.level,
+        terrain: s.terrain,
+        walk: true,
+        build: load::build_options(s.textures, s.level),
+        render: RenderOptions {
+            backface_cull: s.backface_cull,
+            ..RenderOptions::REFERENCE
+        },
+        policy: stream::Policy::around(s.around),
+        scene_memory: s.scene_memory,
+    };
+    let args = cells::WorkerArgs {
+        manifest: s.manifest.clone(),
+        data: s.data.clone(),
+        cell: s.cell.clone(),
+        options,
+    };
+    let (centres, centres_rx) = std::sync::mpsc::channel();
+    let (messages_tx, messages) = std::sync::mpsc::channel();
+    let started = std::time::Instant::now();
+    std::thread::Builder::new()
+        .name("fo4-view cells".into())
+        .spawn(move || cells::worker(args, centres_rx, messages_tx))?;
+    match messages.recv() {
+        Ok(cells::Message::Ready(start)) => {
+            println!(
+                "stream: start cell {},{}; {} grid positions with cells in its world; ready in {:.2} s; viewer policy: load within {} steps, drop past {}",
+                start.grid[0],
+                start.grid[1],
+                start.world_cells,
+                started.elapsed().as_secs_f64(),
+                options.policy.load,
+                options.policy.drop,
+            );
+            Ok(Some(gpu::Stream::new(centres, messages)))
+        }
+        Ok(cells::Message::Failed(e)) if e.starts_with("NotStreamable") => Ok(None),
+        Ok(cells::Message::Failed(e)) => Err(e.into()),
+        Ok(_) => Err("StreamProtocol: the loading thread did not start".into()),
+        Err(_) => Err("StreamWorkerStopped".into()),
+    }
+}
+
 fn run() -> AnyResult<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     match cli::parse(&args)? {
@@ -132,8 +191,16 @@ fn run() -> AnyResult<()> {
             scene: s,
             size,
             out,
+            path: Some(path),
+            ..
+        } => path::headless(&s, size, &out, &path),
+        Command::Headless {
+            scene: s,
+            size,
+            out,
             tags,
             walk,
+            path: None,
         } => {
             let (mut gpu, options, loaded) = load_scene(&s, walk)?;
             let root = Some(loaded.data_root.as_path());
@@ -164,7 +231,21 @@ fn run() -> AnyResult<()> {
             scene: s,
             fly,
             walk,
+            stream,
         } => {
+            if stream {
+                match start_stream(&s)? {
+                    Some(link) => {
+                        let start = fly::FlyState::from_eye_look(s.eye, s.look)?;
+                        let clear = RenderOptions::REFERENCE.clear;
+                        gpu::window_stream(link, start, fly, clear)?;
+                        return Ok(());
+                    }
+                    // Not an exterior cell of a world with a grid: the
+                    // window loads as without --around.
+                    None => println!("stream: not an exterior cell with a grid; loading once"),
+                }
+            }
             let (gpu, options, loaded) = load_scene(&s, walk)?;
             // Keep only the walking world; the draw list was converted.
             let load::Loaded {

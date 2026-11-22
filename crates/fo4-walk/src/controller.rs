@@ -16,7 +16,8 @@
 //! the air) to find walkable ground (ground detection and snapping down
 //! stairs and ramps). This is a general design written for this crate.
 use crate::geometry::{self as g, V3};
-use crate::world::{Contact, World};
+use crate::set::Space;
+use crate::world::Contact;
 use crate::Params;
 use fo4_core::{Error, Result};
 use serde::Serialize;
@@ -85,9 +86,9 @@ pub struct Input {
 /// The walkable primitive the character stands on.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub struct Ground {
-    /// Index into [`World::entries`].
+    /// Index into the entries of the [`Space`] (`World::entries`).
     pub entry: u32,
-    /// Index into [`World::sources`].
+    /// Index into the sources of the [`Space`] (`World::sources`).
     pub source: u32,
     /// Contact normal (unit, towards the character).
     pub normal: V3,
@@ -204,7 +205,7 @@ impl Character {
     }
 
     /// Pushes the capsule out of every overlap, deepest first.
-    fn resolve(&mut self, world: &World, mut feet: V3, flags: &mut Flags) -> V3 {
+    fn resolve<W: Space + ?Sized>(&mut self, world: &W, mut feet: V3, flags: &mut Flags) -> V3 {
         let cos = self.cos_limit();
         for _ in 0..self.settings.iterations {
             let seg = self.segment(feet);
@@ -225,7 +226,7 @@ impl Character {
             let n = c.normal;
             let touched = Ground {
                 entry: c.entry,
-                source: world.entries[c.entry as usize].source,
+                source: world.source_of(c.entry),
                 normal: n,
             };
             if n[2] < cos {
@@ -257,7 +258,13 @@ impl Character {
         (distance / most).ceil().clamp(1.0, MAX_SUBSTEPS) as u32
     }
 
-    fn move_and_slide(&mut self, world: &World, mut feet: V3, disp: V3, flags: &mut Flags) -> V3 {
+    fn move_and_slide<W: Space + ?Sized>(
+        &mut self,
+        world: &W,
+        mut feet: V3,
+        disp: V3,
+        flags: &mut Flags,
+    ) -> V3 {
         let n = self.substeps(g::length(disp));
         let part = g::scale(disp, 1.0 / f64::from(n));
         for _ in 0..n {
@@ -267,7 +274,7 @@ impl Character {
         feet
     }
 
-    fn overlapping(&mut self, world: &World, feet: V3) -> bool {
+    fn overlapping<W: Space + ?Sized>(&mut self, world: &W, feet: V3) -> bool {
         let seg = self.segment(feet);
         world.contacts(
             seg,
@@ -284,7 +291,12 @@ impl Character {
     /// Lowers the capsule by up to `distance` until a walkable contact
     /// holds it. A substep that meets only steep contacts is tried again
     /// from where the capsule first touches ([`Self::first_touch`]).
-    fn probe_ground(&mut self, world: &World, feet: V3, distance: f64) -> Option<(V3, Ground)> {
+    fn probe_ground<W: Space + ?Sized>(
+        &mut self,
+        world: &W,
+        feet: V3,
+        distance: f64,
+    ) -> Option<(V3, Ground)> {
         let n = self.substeps(distance);
         let part = distance / f64::from(n);
         let mut f = feet;
@@ -312,7 +324,12 @@ impl Character {
     /// on an edge within the slope limit would otherwise be found steep by
     /// the long probe on the ground and walkable by the short one in the
     /// air, and alternate between the two.
-    fn first_touch(&mut self, world: &World, from: V3, part: f64) -> Option<(V3, Ground)> {
+    fn first_touch<W: Space + ?Sized>(
+        &mut self,
+        world: &W,
+        from: V3,
+        part: f64,
+    ) -> Option<(V3, Ground)> {
         let at = |d: f64| [from[0], from[1], from[2] - d];
         if self.overlapping(world, from) || !self.overlapping(world, at(part)) {
             return None;
@@ -336,7 +353,13 @@ impl Character {
     /// further than `baseline`, again with the displacement lengthened to
     /// one radius, accepted only when it ends higher than `start` (a tick's
     /// move is often too short to carry the capsule over an edge).
-    fn try_step(&mut self, world: &World, start: V3, horizontal: V3, baseline: f64) -> Option<V3> {
+    fn try_step<W: Space + ?Sized>(
+        &mut self,
+        world: &W,
+        start: V3,
+        horizontal: V3,
+        baseline: f64,
+    ) -> Option<V3> {
         let step = self.params.step_height;
         let up = g::add(start, [0.0, 0.0, step]);
         if step <= 0.0 || self.overlapping(world, up) {
@@ -369,7 +392,7 @@ impl Character {
     }
 
     /// Advances one fixed tick.
-    pub fn tick(&mut self, world: &World, input: Input) -> State {
+    pub fn tick<W: Space + ?Sized>(&mut self, world: &W, input: Input) -> State {
         let p = self.params;
         let dt = self.settings.tick;
         let clamp = |x: f64| {
@@ -453,7 +476,7 @@ impl Character {
 
     /// Advances by `dt` seconds of wall time in whole fixed ticks (at most
     /// [`MAX_TICKS_PER_STEP`]); the remainder waits for the next call.
-    pub fn step(&mut self, world: &World, input: Input, dt: f64) -> State {
+    pub fn step<W: Space + ?Sized>(&mut self, world: &W, input: Input, dt: f64) -> State {
         if dt.is_finite() && dt > 0.0 {
             self.accumulator += dt;
         }
@@ -474,7 +497,7 @@ impl Character {
 
     /// Ticks without input until the character is on the ground and has not
     /// moved for two ticks, or `max_ticks` pass. Returns the ticks run.
-    pub fn settle(&mut self, world: &World, max_ticks: u64) -> u64 {
+    pub fn settle<W: Space + ?Sized>(&mut self, world: &W, max_ticks: u64) -> u64 {
         let mut still = 0;
         for n in 0..max_ticks {
             let before = self.feet;

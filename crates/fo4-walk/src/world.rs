@@ -520,6 +520,21 @@ impl World {
         out: &mut Vec<Contact>,
     ) {
         out.clear();
+        self.push_contacts(segment, radius, margin, scratch, 0, out);
+    }
+
+    /// [`World::contacts`] appended to `out` without clearing it, each
+    /// entry index raised by `base` (a [`crate::WorldSet`] numbers the
+    /// entries of its worlds one after another).
+    pub fn push_contacts(
+        &self,
+        segment: [V3; 2],
+        radius: f64,
+        margin: f64,
+        scratch: &mut Vec<u32>,
+        base: u32,
+        out: &mut Vec<Contact>,
+    ) {
         let Some(q) = Aabb::of(&segment, radius + margin) else {
             return;
         };
@@ -538,7 +553,7 @@ impl World {
                 self.fallback_normal(&e.prim, segment)
             };
             out.push(Contact {
-                entry: *i,
+                entry: base + *i,
                 depth: reach - c.distance,
                 normal,
             });

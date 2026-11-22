@@ -7,7 +7,7 @@
 //! Fall recovery and the return to the start pose are viewer conveniences
 //! (`spec/walk.md`, "Viewer"): they claim nothing about the game.
 use crate::fly::{FlyInput, FlySettings, FlyState};
-use fo4_walk::{Character, Input, Params, Settings, World};
+use fo4_walk::{Character, Input, Params, Settings, Space};
 
 /// Seconds the walker may stay in the air below the lowest collision of
 /// the loaded world before it is put back at its last grounded position.
@@ -47,7 +47,13 @@ impl WalkView {
     /// One frame: the mouse turns the view as in fly mode; W/A/S/D walk
     /// along the view's heading on the ground, Shift runs. Then
     /// [`WalkView::recover`].
-    pub fn step(&mut self, world: &World, input: FlyInput, settings: FlySettings, dt: f64) {
+    pub fn step<W: Space + ?Sized>(
+        &mut self,
+        world: &W,
+        input: FlyInput,
+        settings: FlySettings,
+        dt: f64,
+    ) {
         let turn = FlyInput {
             forward: 0.0,
             right: 0.0,
@@ -72,19 +78,37 @@ impl WalkView {
         };
     }
 
+    /// One frame while the cell under the walker has not arrived (the
+    /// moving grid, a viewer convenience): the mouse turns the view, the
+    /// walker does not move, fall and fall recovery wait, and the frame's
+    /// time is not carried over to the next step.
+    pub fn hold(&mut self, input: FlyInput, settings: FlySettings, dt: f64) {
+        let turn = FlyInput {
+            forward: 0.0,
+            right: 0.0,
+            look: input.look,
+            fast: false,
+        };
+        let turned = self.look.step(turn, settings, dt);
+        self.look = FlyState {
+            eye: self.character.eye(),
+            ..turned
+        };
+    }
+
     /// Fall recovery, a viewer convenience: while the walker is in the air
     /// with its feet below the lowest point of every primitive of `world`
     /// (or the world is empty), the time is counted; past
     /// [`RECOVER_AFTER`] seconds the walker stands again, at rest, at its
     /// last grounded position. Returns whether it was put back.
-    pub fn recover(&mut self, world: &World, dt: f64) -> bool {
+    pub fn recover<W: Space + ?Sized>(&mut self, world: &W, dt: f64) -> bool {
         let c = &self.character;
         if c.grounded {
             self.last_grounded = c.feet;
             self.below_for = 0.0;
             return false;
         }
-        let below = world.bounds.is_none_or(|b| c.feet[2] < b.min[2]);
+        let below = world.bounds().is_none_or(|b| c.feet[2] < b.min[2]);
         if !below {
             self.below_for = 0.0;
             return false;
@@ -110,6 +134,7 @@ impl WalkView {
 mod tests {
     use super::*;
     use fo4_core::Budget;
+    use fo4_walk::World;
 
     fn floor() -> World {
         let b = Budget::new(16 << 20);
@@ -243,5 +268,21 @@ mod tests {
         }
         assert_eq!(high.below_for, 0.0);
         assert_eq!(high.recoveries, 0);
+    }
+
+    #[test]
+    fn a_held_walker_turns_but_neither_moves_nor_falls() {
+        let p = Params::PROVISIONAL;
+        let start = FlyState::from_eye_look([0., 0., 500.], [1., 0., 500.]).unwrap();
+        let mut v = WalkView::from_fly(start, p, Settings::DEFAULT).unwrap();
+        let w_key = FlyInput::from_keys([true, false, false, false], false, Some([30., 0.]));
+        for _ in 0..120 {
+            v.hold(w_key, SETTINGS, 1. / 60.);
+        }
+        assert_eq!(v.character.feet, [0., 0., 500. - p.eye_height]);
+        assert_eq!(v.character.velocity, [0.; 3]);
+        assert_eq!((v.below_for, v.recoveries), (0.0, 0));
+        assert!(v.look.yaw != start.yaw);
+        assert_eq!(v.look.eye, v.character.eye());
     }
 }

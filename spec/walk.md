@@ -41,6 +41,17 @@ primitives whose box meets it. Allocations go through the caller's `Budget`.
 `add_terrain` adds a cell's terrain (below); `add_sphere`, `add_capsule` and
 `add_hull` do the same for single primitives.
 
+A `WorldSet<K>` holds several worlds under ordered keys (the viewer uses
+the grid of the cell each was built from) and is queried as one: the
+controller walks in anything that implements `Space` (contacts, the source
+of an entry, bounds), which `World` and `WorldSet` both do. Entries and
+sources are numbered across the set in key order, the first world's from
+zero, so the same pieces give the same contacts in the same order whatever
+order they were added in, and a set of one world numbers exactly as that
+world does. Adding or removing one world rebuilds no other world's broad
+phase; it renumbers the set in O(worlds). `WorldSet::ray_down` and
+`WorldSet::source` answer across the set. The set adds no rule.
+
 `World::ray_down(x, y, z_from)` returns the highest surface at or below
 `z_from` on the vertical line through (x, y): the plane of a triangle the line
 crosses (either winding; normal turned up), or the top of a sphere, capsule or
@@ -278,7 +289,9 @@ without terrain by passing the flag to both.
 joins the placed references of the exterior cells within N grid steps to
 the cell's scene (`fo4_scene::grid`, [scene.md](scene.md)): they are drawn,
 and with `--walk` their collision is placed in the walking world with the
-cell's, under the same rules. The terrain pieces are those of
+cell's, under the same rules (with `--terrain`, in the window, as one piece per
+cell that follows the player: [scene.md](scene.md), "The moving grid").
+The terrain pieces are those of
 `load_with` for the same search; with `--terrain` every built piece is
 drawn, the cell first, each tagged after the last placed instance in piece
 order, in both renderers. An interior cell is not searched. Which cells the
@@ -302,6 +315,19 @@ Viewer conveniences, which claim nothing about the game:
   a frame has none (synthetic input, such as scripted drags on macOS, can
   move the cursor without raw motion), by the motion of the cursor in the
   window instead. The two are never added.
+- **Waiting for a cell.** With the moving grid ([scene.md](scene.md),
+  "The moving grid"), while the grid cell under the walker's feet has not
+  arrived from the loading thread, the walker does not move: the mouse
+  still turns the view, gravity and fall recovery wait, the frame's time
+  is dropped, and the title bar says which cell it waits for. A grid
+  position without a cell counts as arrived (nothing to wait for).
+- **Scripted walk.** `--headless --walk --terrain --around N --path
+  X,Y;...` settles the walker as below and walks it to each waypoint in
+  turn at the run speed, one fixed tick at a time. A move whose distance
+  shrank by less than 0.5 units over 60 ticks has stalled; a stalled leg
+  steps aside, 512 units to the left of its line, then 1,024 to the right,
+  and so on (at most 8 times), and then heads for the waypoint again. The
+  detours are a property of the script, not of the controller.
 - **Headless walk.** `--headless --walk` builds the same world, drops the
   walker with its eye at `--eye`, settles it without input (at most 600
   ticks) and draws the frame from its eye looking the same way; the settled

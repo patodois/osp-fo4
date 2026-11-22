@@ -264,3 +264,29 @@ fn each_cell_around_is_bounded_by_the_scope_limit_and_kept_by_the_root() {
     let e = absorb_with(&f, &small).unwrap_err();
     assert!(e.expected.contains("(scene)"), "{e}");
 }
+
+#[test]
+fn the_world_grid_agrees_with_the_search_around() {
+    let f = fixture();
+    let b = budget();
+    let store = Store::open(&f.manifest, &b).unwrap();
+    let g = world_grid(&store, &key(0x810), &b).unwrap();
+    assert!(g.searched);
+    assert_eq!(g.grid, Some([0, 0]));
+    assert_eq!(g.cells_scanned, 6);
+    assert_eq!(g.at([0, 0]), (Some(&key(0x810)), "cell"));
+    assert_eq!(g.at([5, 5]), (Some(&key(0x870)), "cell"));
+    assert_eq!(g.at([-1, 0]), (None, "ambiguous_grid"));
+    assert_eq!(g.at([9, 9]), (None, "no_cell"));
+    let a = around(&store, &key(0x810), MAX_RADIUS, &b).unwrap();
+    for n in &a.neighbours {
+        let (cell, outcome) = g.at(n.grid.unwrap());
+        assert_eq!(
+            (cell.cloned(), outcome),
+            (n.cell.clone(), n.outcome),
+            "{n:?}"
+        );
+    }
+    let room = world_grid(&store, &key(0x8a0), &b).unwrap();
+    assert!(!room.searched && room.cells.is_empty());
+}

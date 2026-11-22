@@ -14,10 +14,12 @@
 //! [`Params::PROVISIONAL`], is provisional. See `spec/walk.md`.
 pub mod controller;
 pub mod geometry;
+pub mod set;
 pub mod terrain;
 pub mod world;
 
 pub use controller::{Character, Ground, Input, Settings, State};
+pub use set::{Space, WorldSet};
 pub use world::{Contact, Prim, RayHit, Source, World};
 
 use fo4_core::{Error, Result};

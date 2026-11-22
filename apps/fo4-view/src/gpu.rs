@@ -1,9 +1,12 @@
 //! Bevy side: the unlit surface material, the reference projection, scene
 //! upload, one offscreen frame, and the windowed free-fly viewer.
 use crate::{
+    cells::Message,
     coords,
     fly::{FlyInput, FlySettings, FlyState},
-    scene::{GpuScene, TexelFormat},
+    live::{Live, Slot},
+    scene::{GpuMesh, GpuScene, GpuTexture, Instance, Surface, TexelFormat},
+    stream::AssetKey,
     walk::WalkView,
 };
 use bevy::{
@@ -37,7 +40,10 @@ use bevy::{
 };
 use fo4_render::BlockFormat;
 use fo4_scene::camera::Camera as CpuCamera;
-use std::sync::{Arc, Mutex};
+use std::sync::{
+    mpsc::{Receiver, Sender},
+    Arc, Mutex,
+};
 
 pub struct ViewerPlugin;
 impl Plugin for ViewerPlugin {
@@ -230,12 +236,7 @@ fn upload_meshes(world: &mut World, scene: &GpuScene) -> Result<Uploaded, String
         .textures
         .iter()
         .any(|t| matches!(t.format, TexelFormat::Blocks(_)));
-    if blocks
-        && !world
-            .resource::<RenderDevice>()
-            .features()
-            .contains(WgpuFeatures::TEXTURE_COMPRESSION_BC)
-    {
+    if blocks && !samples_blocks(world) {
         return Err(
             "GpuWithoutBcTextures: this device cannot sample block-compressed textures; use --reference-textures"
                 .into(),
@@ -246,23 +247,68 @@ fn upload_meshes(world: &mut World, scene: &GpuScene) -> Result<Uploaded, String
         .meshes
         .iter()
         .map(|m| {
-            let mut mesh = Mesh::new(
-                PrimitiveTopology::TriangleList,
-                RenderAssetUsages::RENDER_WORLD,
-            )
-            .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, m.positions.clone())
-            .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, m.uvs.clone())
-            .with_inserted_indices(Indices::U16(m.indices.clone()));
-            if let Some(colors) = &m.colors {
-                mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors.clone());
-            }
-            meshes.add(mesh)
+            meshes.add(bevy_mesh(GpuMesh {
+                positions: m.positions.clone(),
+                uvs: m.uvs.clone(),
+                colors: m.colors.clone(),
+                indices: m.indices.clone(),
+            }))
         })
         .collect();
     Ok(Uploaded {
         meshes,
         images: Vec::new(),
     })
+}
+
+/// Whether the device samples block-compressed textures.
+fn samples_blocks(world: &World) -> bool {
+    world
+        .resource::<RenderDevice>()
+        .features()
+        .contains(WgpuFeatures::TEXTURE_COMPRESSION_BC)
+}
+
+/// A triangle-list mesh of `m`'s data, moved in.
+fn bevy_mesh(m: GpuMesh) -> Mesh {
+    let mut mesh = Mesh::new(
+        PrimitiveTopology::TriangleList,
+        RenderAssetUsages::RENDER_WORLD,
+    )
+    .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, m.positions)
+    .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, m.uvs)
+    .with_inserted_indices(Indices::U16(m.indices));
+    if let Some(colors) = m.colors {
+        mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors);
+    }
+    mesh
+}
+
+/// The image of `t`, its bytes moved in.
+fn bevy_image(t: &mut GpuTexture) -> Image {
+    let mut image = Image::new_uninit(
+        Extent3d {
+            width: t.width,
+            height: t.height,
+            depth_or_array_layers: 1,
+        },
+        TextureDimension::D2,
+        texel_format(t.format),
+        RenderAssetUsages::RENDER_WORLD,
+    );
+    image.texture_descriptor.mip_level_count = t.levels;
+    image.data = Some(std::mem::take(&mut t.bytes));
+    // Wrap and bilinear within one level, the level chosen in the
+    // shader: the CPU `Texture::sample_lod` with `bilinear`.
+    image.sampler = ImageSampler::Descriptor(ImageSamplerDescriptor {
+        address_mode_u: ImageAddressMode::Repeat,
+        address_mode_v: ImageAddressMode::Repeat,
+        mag_filter: ImageFilterMode::Linear,
+        min_filter: ImageFilterMode::Linear,
+        mipmap_filter: ImageFilterMode::Nearest,
+        ..default()
+    });
+    image
 }
 
 /// Adds the next batch of textures, their bytes moved into the images;
@@ -275,39 +321,39 @@ fn upload_textures(world: &mut World, scene: &mut GpuScene, up: &mut Uploaded) -
             return false;
         }
         bytes += t.bytes.len();
-        let mut image = Image::new_uninit(
-            Extent3d {
-                width: t.width,
-                height: t.height,
-                depth_or_array_layers: 1,
-            },
-            TextureDimension::D2,
-            texel_format(t.format),
-            RenderAssetUsages::RENDER_WORLD,
-        );
-        image.texture_descriptor.mip_level_count = t.levels;
-        image.data = Some(std::mem::take(&mut t.bytes));
-        // Wrap and bilinear within one level, the level chosen in the
-        // shader: the CPU `Texture::sample_lod` with `bilinear`.
-        image.sampler = ImageSampler::Descriptor(ImageSamplerDescriptor {
-            address_mode_u: ImageAddressMode::Repeat,
-            address_mode_v: ImageAddressMode::Repeat,
-            mag_filter: ImageFilterMode::Linear,
-            min_filter: ImageFilterMode::Linear,
-            mipmap_filter: ImageFilterMode::Nearest,
-            ..default()
-        });
-        up.images.push(images.add(image));
+        up.images.push(images.add(bevy_image(t)));
     }
     true
 }
 
 fn spawn(world: &mut World, scene: &GpuScene, up: &Uploaded, tag_pass: bool, layer: usize) {
+    spawn_instances(
+        world,
+        &scene.surfaces,
+        &scene.instances,
+        &up.meshes,
+        &up.images,
+        tag_pass,
+        layer,
+    );
+}
+
+/// Spawns `instances`, whose surfaces index `surfaces`, with the uploaded
+/// `meshes` and `images` their indices name; returns the entities.
+fn spawn_instances(
+    world: &mut World,
+    surfaces: &[Surface],
+    instances: &[Instance],
+    meshes: &[Handle<Mesh>],
+    images: &[Handle<Image>],
+    tag_pass: bool,
+    layer: usize,
+) -> Vec<Entity> {
     let mut materials = world.resource_mut::<Assets<SurfaceMaterial>>();
     let mut handles = std::collections::BTreeMap::new();
-    let mut entities = Vec::with_capacity(scene.instances.len());
-    for instance in &scene.instances {
-        let surface = &scene.surfaces[instance.surface];
+    let mut entities = Vec::with_capacity(instances.len());
+    for instance in instances {
+        let surface = &surfaces[instance.surface];
         // The tag pass needs the tag in the material, so it shares per
         // (surface, tag); the colour pass shares per surface.
         let tag = if tag_pass { instance.tag } else { 0 };
@@ -326,7 +372,7 @@ fn spawn(world: &mut World, scene: &GpuScene, up: &Uploaded, tag_pass: bool, lay
                         tag,
                         opaque_texture: u32::from(p.opaque_texture),
                     },
-                    texture: up.images[surface.texture].clone(),
+                    texture: images[surface.texture].clone(),
                     key: MaterialKey {
                         surface: surface.key,
                         tag_pass,
@@ -335,7 +381,7 @@ fn spawn(world: &mut World, scene: &GpuScene, up: &Uploaded, tag_pass: bool, lay
             })
             .clone();
         entities.push((
-            Mesh3d(up.meshes[instance.mesh].clone()),
+            Mesh3d(meshes[instance.mesh].clone()),
             MeshMaterial3d(material),
             Transform {
                 translation: instance.translation,
@@ -347,7 +393,7 @@ fn spawn(world: &mut World, scene: &GpuScene, up: &Uploaded, tag_pass: bool, lay
             RenderLayers::layer(layer),
         ));
     }
-    world.spawn_batch(entities);
+    world.spawn_batch(entities).collect()
 }
 
 fn camera_bundle(
@@ -551,11 +597,32 @@ struct Readout {
 }
 /// Seconds between title-bar updates.
 const READOUT_PERIOD: f64 = 0.2;
-/// Walk mode: the cell's walking world and, while walking, the walker.
+/// Walk mode: the walking world, one piece per loaded cell when the grid
+/// moves, and, while walking, the walker.
 #[derive(Resource)]
 struct Walk {
-    world: fo4_walk::World,
+    space: fo4_walk::WorldSet<[i32; 2]>,
     active: Option<WalkView>,
+}
+
+/// The moving grid in the window: the channel to the loading thread, the
+/// cell last sent as the centre and the cells received.
+#[derive(Resource)]
+pub struct Stream {
+    centres: Sender<[i32; 2]>,
+    messages: Mutex<Receiver<Message>>,
+    sent: Option<[i32; 2]>,
+    live: Live,
+}
+impl Stream {
+    pub fn new(centres: Sender<[i32; 2]>, messages: Receiver<Message>) -> Self {
+        Self {
+            centres,
+            messages: Mutex::new(messages),
+            sent: None,
+            live: Live::default(),
+        }
+    }
 }
 /// The scene until it is spawned: its clear colour and what was uploaded.
 #[derive(Resource)]
@@ -637,7 +704,7 @@ fn readout(fly: &Fly, walk: Option<&Walk>, input: FlyInput) -> String {
             if v.recoveries > 0 {
                 t.push_str(&format!(" | put back {}x", v.recoveries));
             }
-            if w.world.bounds.is_none() {
+            if fo4_walk::Space::bounds(&w.space).is_none() {
                 t.push_str(" | no collision");
             }
             t
@@ -666,8 +733,12 @@ fn fly_camera(
     time: Res<Time>,
     mut fly: ResMut<Fly>,
     walk: Option<ResMut<Walk>>,
+    stream: Option<Res<Stream>>,
     mut readout_text: ResMut<Readout>,
     mut cameras: Query<&mut Transform, With<FlyCamera>>,
+    // The cell the walker last waited for, and whether its landing after
+    // the wait is still to be logged.
+    mut waited: Local<(Option<[i32; 2]>, bool)>,
 ) {
     let cursor_delta: Vec2 = cursor.read().filter_map(|m| m.delta).sum();
     let input = FlyInput::from_keys(
@@ -688,6 +759,9 @@ fn fly_camera(
         fly.state = fly.start;
     }
     let mut walk = walk;
+    // With the moving grid, the cell under the walker that has not
+    // arrived yet (the walker waits).
+    let mut waiting = None;
     let next = match walk.as_deref_mut() {
         Some(walk) => {
             if restart {
@@ -714,7 +788,15 @@ fn fly_camera(
             }
             match walk.active.as_mut() {
                 Some(view) => {
-                    view.step(&walk.world, input, fly.settings, dt);
+                    let feet = view.character.feet;
+                    waiting = stream.as_ref().and_then(|s| {
+                        crate::stream::cell_at(feet[0], feet[1]).filter(|g| !s.live.arrived(*g))
+                    });
+                    if waiting.is_some() {
+                        view.hold(input, fly.settings, dt);
+                    } else {
+                        view.step(&walk.space, input, fly.settings, dt);
+                    }
                     view.look
                 }
                 None => fly.state.step(input, fly.settings, dt),
@@ -730,8 +812,50 @@ fn fly_camera(
         transform.translation = pose.0;
         transform.rotation = pose.1;
     }
-    readout_text.text = readout(&fly, walk.as_deref(), input);
+    if stream.is_some() {
+        log_wait(&mut waited, waiting, walk.as_deref());
+    }
+    let mut text = readout(&fly, walk.as_deref(), input);
+    if let Some(s) = &stream {
+        text.push_str(&format!(
+            " | cells {} ({} uploading)",
+            s.live.cells.len(),
+            s.live.waiting.len()
+        ));
+    }
+    if let Some(g) = waiting {
+        text.push_str(&format!(" | waiting for cell {},{}", g[0], g[1]));
+    }
+    readout_text.text = text;
     readout_text.since += dt;
+}
+
+/// Logs when the walker starts and stops waiting for a cell, and where it
+/// first stands after a wait.
+fn log_wait(state: &mut (Option<[i32; 2]>, bool), waiting: Option<[i32; 2]>, walk: Option<&Walk>) {
+    let Some(c) = walk.and_then(|w| w.active.as_ref()).map(|v| &v.character) else {
+        return;
+    };
+    let f = c.feet;
+    match (state.0, waiting) {
+        (None, Some(g)) => println!(
+            "stream: walker waits for cell {},{} at feet {:.1},{:.1},{:.1}",
+            g[0], g[1], f[0], f[1], f[2]
+        ),
+        (Some(g), None) => {
+            println!("stream: cell {},{} arrived; walker moves", g[0], g[1]);
+            state.1 = true;
+        }
+        _ => {}
+    }
+    state.0 = waiting;
+    if state.1 && c.grounded {
+        println!(
+            "stream: walker stands at feet {:.1},{:.1},{:.1}",
+            f[0], f[1], f[2]
+        );
+        state.1 = false;
+    }
 }
 
 /// Writes the readout to the window title when it changed, at most every
@@ -768,8 +892,11 @@ pub fn window(
                 fo4_walk::Params::PROVISIONAL,
                 fo4_walk::Settings::DEFAULT,
             )?;
+            // The world loaded at start, as the one piece of a set.
+            let mut space = fo4_walk::WorldSet::new();
+            space.insert([0, 0], world).map_err(|e| e.to_string())?;
             Some(Walk {
-                world,
+                space,
                 active: Some(view),
             })
         }
@@ -800,6 +927,233 @@ pub fn window(
         (spawn_window_scene, fly_camera, show_readout).chain(),
     )
     .run();
+    Ok(())
+}
+
+/// Texture and mesh bytes uploaded per frame at most for streamed cells
+/// (one item at least), as for the start-up scene.
+const STREAM_BATCH_BYTES: u64 = UPLOAD_BATCH_BYTES as u64;
+
+/// The moving grid, each frame: sends the cell under the player (the
+/// walker's feet, or the eye when flying) when it changed, applies every
+/// message of the loading thread in order (a cell's collision becomes
+/// walkable at once; a dropped cell is despawned and data no cell uses any
+/// more is freed), then uploads the waiting cells' data, a bounded batch
+/// per frame, and spawns each cell once its data is on the GPU.
+fn stream_cells(world: &mut World) {
+    let Some(mut stream) = world.remove_resource::<Stream>() else {
+        return;
+    };
+    let result = stream_frame(world, &mut stream);
+    world.insert_resource(stream);
+    if let Err(e) = result {
+        eprintln!("{e}");
+        std::process::exit(2);
+    }
+}
+
+fn mib(n: u64) -> f64 {
+    n as f64 / f64::from(1u32 << 20)
+}
+
+fn stream_frame(world: &mut World, stream: &mut Stream) -> Result<(), String> {
+    let point = match world.get_resource::<Walk>().and_then(|w| w.active.as_ref()) {
+        Some(view) => view.character.feet,
+        None => world.resource::<Fly>().state.eye,
+    };
+    if let Some(c) = crate::stream::cell_at(point[0], point[1]) {
+        if stream.sent != Some(c) {
+            println!("stream: centre {},{}", c[0], c[1]);
+            // A closed channel means the loading thread stopped; its
+            // message says why.
+            let _ = stream.centres.send(c);
+            stream.sent = Some(c);
+        }
+    }
+    let messages: Vec<Message> = {
+        let rx = stream.messages.lock().map_err(|_| "StreamChannelLock")?;
+        rx.try_iter().collect()
+    };
+    for m in messages {
+        match m {
+            Message::Load(piece) => {
+                let r = &piece.report;
+                println!(
+                    "stream: cell {},{} {} loaded in {:.3} s (worker): {} placements, {} omitted, terrain {}, {} triangles, {} new assets ({:.1} MiB), {} shared; credits {:.1} MiB",
+                    piece.grid[0],
+                    piece.grid[1],
+                    r.outcome,
+                    r.seconds,
+                    r.placements,
+                    r.omitted,
+                    r.terrain,
+                    r.triangles,
+                    r.new_assets,
+                    mib(r.new_bytes),
+                    r.shared_assets,
+                    mib(r.credits),
+                );
+                let old = match world.get_resource_mut::<Walk>() {
+                    Some(mut walk) => stream.live.receive(*piece, &mut walk.space)?,
+                    None => stream
+                        .live
+                        .receive(*piece, &mut fo4_walk::WorldSet::new())?,
+                };
+                for e in old {
+                    world.despawn(e);
+                }
+            }
+            Message::Drop { grid, credits } => {
+                let entities = match world.get_resource_mut::<Walk>() {
+                    Some(mut walk) => stream.live.drop_cell(grid, &mut walk.space),
+                    None => stream.live.drop_cell(grid, &mut fo4_walk::WorldSet::new()),
+                };
+                let n = entities.len();
+                for e in entities {
+                    world.despawn(e);
+                }
+                println!(
+                    "stream: cell {},{} dropped ({n} entities); credits {:.1} MiB; {} meshes and {} textures held",
+                    grid[0],
+                    grid[1],
+                    mib(credits),
+                    stream.live.meshes.len(),
+                    stream.live.textures.len(),
+                );
+            }
+            Message::Failed(e) => return Err(e),
+            Message::Ready(_) => {}
+        }
+    }
+    upload_waiting(world, &mut stream.live)
+}
+
+fn handle_of<D, H>(slot: Option<&Slot<D, H>>) -> Result<&H, String> {
+    match slot {
+        Some(Slot::Ready(h)) => Ok(h),
+        _ => Err("StreamDataNotUploaded".into()),
+    }
+}
+
+/// Uploads the data of the waiting cells in arrival order, at most
+/// [`STREAM_BATCH_BYTES`] per frame, and spawns each cell whose data is
+/// all on the GPU.
+fn upload_waiting(world: &mut World, live: &mut Live) -> Result<(), String> {
+    let mut bytes = 0u64;
+    while let Some(&grid) = live.waiting.front() {
+        let Some(cell) = live.cells.get_mut(&grid) else {
+            live.waiting.pop_front();
+            continue;
+        };
+        cell.frames += 1;
+        let (mesh_keys, texture_keys) = (cell.meshes.clone(), cell.textures.clone());
+        for k in &texture_keys {
+            let Some(slot) = live.textures.get_mut(k) else {
+                return Err("StreamTextureNotHeld".into());
+            };
+            if let Slot::Waiting(t) = slot {
+                if bytes > 0 && bytes + k.bytes > STREAM_BATCH_BYTES {
+                    return Ok(());
+                }
+                if matches!(t.format, TexelFormat::Blocks(_)) && !samples_blocks(world) {
+                    return Err("GpuWithoutBcTextures: this device cannot sample block-compressed textures; use --reference-textures".into());
+                }
+                bytes += k.bytes;
+                let image = bevy_image(t);
+                *slot = Slot::Ready(world.resource_mut::<Assets<Image>>().add(image));
+            }
+        }
+        for k in &mesh_keys {
+            let Some(slot) = live.meshes.get_mut(k) else {
+                return Err("StreamMeshNotHeld".into());
+            };
+            if let Slot::Waiting(m) = slot {
+                if bytes > 0 && bytes + k.bytes > STREAM_BATCH_BYTES {
+                    return Ok(());
+                }
+                bytes += k.bytes;
+                let mesh = bevy_mesh(std::mem::take(m));
+                *slot = Slot::Ready(world.resource_mut::<Assets<Mesh>>().add(mesh));
+            }
+        }
+        let meshes: Vec<Handle<Mesh>> = mesh_keys
+            .iter()
+            .map(|k| handle_of(live.meshes.get(k)).cloned())
+            .collect::<Result<_, _>>()?;
+        let images: Vec<Handle<Image>> = texture_keys
+            .iter()
+            .map(|k: &AssetKey| handle_of(live.textures.get(k)).cloned())
+            .collect::<Result<_, _>>()?;
+        let Some(cell) = live.cells.get_mut(&grid) else {
+            continue;
+        };
+        cell.entities = spawn_instances(
+            world,
+            &cell.surfaces,
+            &cell.instances,
+            &meshes,
+            &images,
+            false,
+            0,
+        );
+        cell.spawned = true;
+        println!(
+            "stream: cell {},{} drawn: {} instances, uploaded over {} frames, {:.0} ms after it arrived",
+            grid[0],
+            grid[1],
+            cell.instances.len(),
+            cell.frames,
+            cell.received.elapsed().as_secs_f64() * 1e3,
+        );
+        live.waiting.pop_front();
+    }
+    Ok(())
+}
+
+/// Windowed viewer whose loaded grid follows the player: `stream` talks to
+/// the loading thread ([`crate::cells::worker`]), which has already
+/// answered that it is ready. Walking starts at once; the walker waits
+/// over a cell that has not arrived yet.
+pub fn window_stream(
+    stream: Stream,
+    start: FlyState,
+    settings: FlySettings,
+    clear: [f32; 4],
+) -> Result<(), String> {
+    fly_pose(&start)?;
+    let view = WalkView::from_fly(
+        start,
+        fo4_walk::Params::PROVISIONAL,
+        fo4_walk::Settings::DEFAULT,
+    )?;
+    App::new()
+        .insert_resource(Walk {
+            space: fo4_walk::WorldSet::new(),
+            active: Some(view),
+        })
+        .insert_resource(stream)
+        .add_plugins(DefaultPlugins.set(WindowPlugin {
+            primary_window: Some(Window {
+                title: "fo4-view".into(),
+                ..default()
+            }),
+            ..default()
+        }))
+        .add_plugins(ViewerPlugin)
+        .insert_resource(Fly {
+            state: start,
+            settings,
+            start,
+            start_walking: true,
+        })
+        .init_resource::<Readout>()
+        // No scene to upload at start: the camera is spawned at once.
+        .insert_resource(PendingScene(GpuScene::default(), clear, None))
+        .add_systems(
+            Update,
+            (spawn_window_scene, stream_cells, fly_camera, show_readout).chain(),
+        )
+        .run();
     Ok(())
 }
 
@@ -873,7 +1227,11 @@ mod tests {
                 })
                 .init_resource::<Readout>()
                 .insert_resource(Walk {
-                    world: floor,
+                    space: {
+                        let mut space = fo4_walk::WorldSet::new();
+                        space.insert([0, 0], floor).unwrap();
+                        space
+                    },
                     active: walking.then(|| {
                         WalkView::from_fly(
                             start,
@@ -962,6 +1320,45 @@ mod tests {
             text.starts_with("fo4-view | fly | 1500 u/s (Shift)"),
             "{text}"
         );
+    }
+
+    #[test]
+    fn the_walker_waits_over_a_cell_that_has_not_arrived() {
+        let mut app = InputApp::new(true);
+        let (centres, sent) = std::sync::mpsc::channel();
+        let (_messages, received) = std::sync::mpsc::channel();
+        app.0.insert_resource(Stream::new(centres, received));
+        app.keys().press(KeyCode::KeyW);
+        let feet = app.walker().character.feet;
+        app.frames(30);
+        assert_eq!(app.walker().character.feet, feet);
+        let text = app.0.world().resource::<Readout>().text.clone();
+        assert!(text.contains("| waiting for cell 0,0"), "{text}");
+        assert!(text.contains("| cells 0 (0 uploading)"), "{text}");
+        // The cell arrives (here without collision; the floor is there).
+        let piece = crate::cells::CellPiece {
+            grid: [0, 0],
+            collision: None,
+            meshes: Vec::new(),
+            textures: Vec::new(),
+            new_meshes: Vec::new(),
+            new_textures: Vec::new(),
+            surfaces: Vec::new(),
+            instances: Vec::new(),
+            report: crate::cells::LoadReport::default(),
+        };
+        app.0
+            .world_mut()
+            .resource_scope(|world, mut stream: Mut<Stream>| {
+                let mut walk = world.resource_mut::<Walk>();
+                stream.live.receive(piece, &mut walk.space).unwrap();
+            });
+        app.frames(60);
+        let moved = app.walker().character.feet[0] - feet[0];
+        assert!(moved > 90.0, "{moved}");
+        let text = app.0.world().resource::<Readout>().text.clone();
+        assert!(!text.contains("waiting"), "{text}");
+        drop(sent);
     }
 
     #[test]

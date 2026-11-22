@@ -11,6 +11,7 @@ use bevy::render::render_resource::BlendFactor;
 use fo4_render::{Alpha, BlockFormat, DrawList, RenderOptions};
 use std::collections::BTreeMap;
 
+#[derive(Default)]
 pub struct GpuMesh {
     pub positions: Vec<[f32; 3]>,
     pub uvs: Vec<[f32; 2]>,

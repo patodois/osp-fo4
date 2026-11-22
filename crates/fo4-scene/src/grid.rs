@@ -178,6 +178,94 @@ pub fn around(store: &Store, cell: &FormKey, radius: u32, b: &Budget) -> Result<
     Ok(out)
 }
 
+/// Who claims one grid position of a world ([`WorldGrid`]).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub enum Claim {
+    /// One non-deleted exterior cell.
+    Cell(FormKey),
+    /// Two or more; neither is used, as in [`around`].
+    Ambiguous,
+}
+
+/// Every exterior cell of a cell's world by XCLC grid, read once, so that
+/// the cells around any grid position can be found without reading the
+/// world again (the viewer's moving grid, `spec/scene.md`). The cell's own
+/// grid is the cell's, as in [`around`]: other cells claiming it are
+/// counted and ignored. Like [`around`] it claims nothing about which
+/// cells the game keeps loaded.
+#[derive(Debug, Clone, Serialize)]
+pub struct WorldGrid {
+    pub cell: FormKey,
+    pub grid: Option<[i32; 2]>,
+    pub world: Option<FormKey>,
+    /// Whether the world was read: only for an exterior cell with a grid,
+    /// in a world.
+    pub searched: bool,
+    pub cells: std::collections::BTreeMap<[i32; 2], Claim>,
+    /// Exterior cells of the same world read.
+    pub cells_scanned: u64,
+    /// Other cells claiming the cell's own grid (ignored).
+    pub same_grid_cells: u64,
+}
+
+impl WorldGrid {
+    /// The cell at `grid` and the outcome of [`Neighbour::outcome`]:
+    /// `cell`, `no_cell` or `ambiguous_grid`.
+    pub fn at(&self, grid: [i32; 2]) -> (Option<&FormKey>, &'static str) {
+        match self.cells.get(&grid) {
+            Some(Claim::Cell(k)) => (Some(k), "cell"),
+            Some(Claim::Ambiguous) => (None, "ambiguous_grid"),
+            None => (None, "no_cell"),
+        }
+    }
+}
+
+/// The exterior cells of `cell`'s world by grid, in one pass over the
+/// world's cells. Every read goes through `b`.
+pub fn world_grid(store: &Store, cell: &FormKey, b: &Budget) -> Result<WorldGrid> {
+    let grid = grid_of(store, cell, &b.child())?;
+    let world = store.world(cell);
+    let mut out = WorldGrid {
+        cell: cell.clone(),
+        grid,
+        world: world.clone(),
+        searched: false,
+        cells: std::collections::BTreeMap::new(),
+        cells_scanned: 0,
+        same_grid_cells: 0,
+    };
+    let (Some(own), Some(world)) = (grid, world) else {
+        return Ok(out);
+    };
+    out.searched = true;
+    b.charge(64 + cell.plugin.len() as u64, FILE, 0)?;
+    out.cells.insert(own, Claim::Cell(cell.clone()));
+    for key in store.cells() {
+        if key == *cell
+            || store.kind(&key) != Some(CellKind::Exterior)
+            || store.world(&key).as_ref() != Some(&world)
+        {
+            continue;
+        }
+        out.cells_scanned += 1;
+        let Some(at) = grid_of(store, &key, &b.child())? else {
+            continue;
+        };
+        if at == own {
+            out.same_grid_cells += 1;
+            continue;
+        }
+        match out.cells.get_mut(&at) {
+            Some(claim) => *claim = Claim::Ambiguous,
+            None => {
+                b.charge(64 + key.plugin.len() as u64, FILE, 0)?;
+                out.cells.insert(at, Claim::Cell(key));
+            }
+        }
+    }
+    Ok(out)
+}
+
 /// What [`absorb_around`] did with one grid position.
 #[derive(Debug, Clone, Serialize)]
 pub struct CellLoad {

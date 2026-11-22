@@ -396,3 +396,94 @@ The `render` example and the GPU viewer take it behind `--around N` (1 to
 with `--terrain`, every built terrain piece drawn ([walk](walk.md),
 [land](land.md)). Without the flag nothing is searched and the draw list,
 frame and summary are unchanged.
+
+## The moving grid
+
+The GPU viewer's window with `--walk --terrain --around N` in an exterior
+cell keeps the loaded grid around the player instead of loading it once.
+It adds no format fact and no game rule: **which cells are loaded and when
+is a viewer policy**, chosen for walking without loading and dropping the
+same cells over and over; it claims nothing about which cells the game
+keeps loaded around the player, or when it loads them.
+
+- **Index.** `fo4_scene::grid::world_grid(store, cell, budget)` reads every
+  exterior cell of the cell's world once (as `around` does) into a map from
+  XCLC grid to `Claim::Cell` or `Claim::Ambiguous` (two or more cells claim
+  it; neither is used). The cell's own grid is the cell's; other cells
+  claiming it are counted and ignored, as in `around`. Its lookups agree
+  with `around` for every radius.
+- **The cell under the player.** The walker's feet (the eye while flying)
+  divided by 4,096 and rounded down: the cell whose terrain footprint holds
+  the point under the pending rule `land_grid_spacing_128_v1`
+  ([land.md](land.md)). The window and `--path` refuse to move the grid at
+  a level that does not accept it.
+- **Viewer policy.** Load every grid position within N steps (on the
+  farther axis) of the cell under the player, nearest first (by steps, then
+  by distance between cell centres, then south to north and west to east);
+  drop loaded cells more than N + 1 steps away. With the extra step,
+  standing on a border loads one row once and drops nothing (a test walks
+  a border twenty times: one row loaded, nothing dropped; with N for both
+  distances the same walk drops 60 cells).
+- **Loading thread.** One thread owns the plugins, the archives, the
+  credits and a loader; the main thread never reads game data while the
+  window runs. It loads one cell at a time and checks for a newer centre
+  after each: what the new centre no longer needs within N steps leaves the
+  queue, and what lies past N + 1 steps is dropped first. Each cell is read
+  alone with the same calls as the joined scene (`Loader::cell`, the draw
+  list, the terrain with its ground textures tagged after the cell's own
+  instances, the cell's collision and walking world with its terrain) and
+  converted to GPU data in the thread; only plain data crosses to the main
+  thread. Messages are applied in the order they were sent.
+- **Main thread.** A received cell's walking world joins the walker's
+  `fo4_walk::WorldSet` under the cell's grid at once (before any of its
+  drawing data is uploaded); its meshes and textures are uploaded in
+  batches of at most 64 MiB a frame, as at start-up, and its instances are
+  spawned when all are on the GPU. A dropped cell leaves the set and is
+  despawned. While the cell under the walker has not arrived the walker
+  waits ([walk.md](walk.md), Viewer).
+- **Shared data.** Meshes and textures are identified by their content
+  (two 64-bit hashes, the byte count and the kind): equal data drawn by
+  several cells is sent and uploaded once and held while any loaded cell
+  uses it, by a count on each side. The loading side decides whether a
+  key's data travels with a cell from the same message order the main
+  thread applies, so both counts agree without a reply.
+
+### Credits of the moving grid
+
+The root is `--scene-memory` with the manifest's `max_memory` as the scope
+limit, as for the joined scene. The rule:
+
+- each loaded cell has an account of the root charged with its walking
+  world and with what the main thread keeps of it apart from shared data
+  (instances, surfaces, keys); dropping the cell drops the account;
+- each mesh or texture held by content has its own account charged with
+  its bytes when the first cell using it is loaded, dropped when the last
+  cell using it is dropped;
+- a cell is read in a child scope of the root, released once the cell is
+  converted;
+- the loader's asset graph is an account of the root that lives while
+  cells wait to load and is dropped, with its credits, when the queue is
+  empty, so walking far does not grow it without bound;
+- the grid index is an account kept for the whole run.
+
+A synthetic test walks away and back over a grid of hand-built cells and
+finds exactly the credits of the first visit whenever the same cells are
+kept. Measured at the test cell with `--path` (two round trips of four
+cells east and back, 24 grid changes, run speed): at radius 1 the start
+keeps 9 cells and 313.7 MiB, the walk 13 to 16 cells and 357 to 401 MiB,
+peak credits 563 MiB while a batch loads, peak resident memory 1.54 GB;
+at radius 2, 25 cells and 503.5 MiB at the start, 33 to 36 cells and 584
+to 674 MiB while walking, peak credits 856 MiB, 1.79 GB resident. Every
+grid change of the second round trip keeps exactly the credits of the
+same change in the first (radius 1: 362.9 MiB back at the start cell,
+with the four cells the extra step keeps; radius 2: 591.9 MiB). Loading
+takes 0.3 to 1.6 s a cell in the viewer's build, so a crossing at radius
+1 (three cells) takes 2 to 3.3 s of the loading thread and one at radius
+2 (five cells) 3 to 4.5 s; applying a cell on the receiving side takes
+under 2 ms, and in the window each cell was uploaded within one or two
+frames.
+
+Without the flags, with `--no-stream`, `--around 0`, in an interior cell or
+headless without `--path`, nothing of this runs: the scene is loaded once
+as before and the frames and tags of `--headless` are byte-identical to
+those before the moving grid (checked at `--around` 0, 1 and 2).

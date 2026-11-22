@@ -16,7 +16,7 @@ Measurement datasets and photographs of the game are not distributed.
 | [havok-bodies.md](havok-bodies.md) | Array element sizes, the body array of the top-level object (shape link and placement), Body ID against it, and the sphere, capsule, convex, scaled convex and compound shape layouts, measured over one installation. |
 | [havok-mesh.md](havok-mesh.md) | `hknpCompressedMeshShape` and its data object: array slots, sections, quantized section and shared vertices, byte 92, four-index primitives and their triangles, box trees, vertex records, units and triangles against render meshes, measured over one installation. |
 | [collision-placement.md](collision-placement.md) | Placing decoded collision in world space for a cell: collision readiness apart from render readiness, the Target node chain, units, the open body placement rule with its two levels, the API, the `cell-collision` report and its runs. |
-| [walk.md](walk.md) | First walking controller over a cell's placed collision (`fo4-walk`): capsule, collide-and-slide, step-up, slope limit, terrain under the walker, the `walk` report (paths and `--drops` point lists) and viewer walk mode (`--terrain` drawing, `--around` neighbour cells, fall recovery); every movement number a provisional registered rule. |
+| [walk.md](walk.md) | First walking controller over a cell's placed collision (`fo4-walk`): capsule, collide-and-slide, step-up, slope limit, terrain under the walker, the `walk` report (paths and `--drops` point lists) and viewer walk mode (`--terrain` drawing, `--around` neighbour cells, fall recovery, waiting for a cell of the moving grid, scripted `--path` walks); a set of worlds walked as one; every movement number a provisional registered rule. |
 | [havok-container-census.tsv](havok-container-census.tsv) | Counts, holds/fails of container, object, body, shape and compressed-mesh properties, class names and signatures from the Havok census. |
 | [controller-measurements.md](controller-measurements.md) | Measurement design for comparing stored NIF locals with paused runtime nodes. |
 | [dds.md](dds.md) | DDS headers, formats, surfaces, block layouts and supported decoding boundaries. |
@@ -40,7 +40,7 @@ Measurement datasets and photographs of the game are not distributed.
 | [reference-image-formats.md](reference-image-formats.md) | Camera, DDS/PNG and image-comparison data contracts. |
 | [render.md](render.md) | Deterministic CPU rasterization, material bindings, maps and snapshot protocols. |
 | [rotation-arithmetic.md](rotation-arithmetic.md) | Supported Euler convention, open exact arithmetic and the bounded numerical investigation. |
-| [scene.md](scene.md) | Scene assembly, static-frame classification, source spans and explicit omissions; exterior cells around a cell joined into one scene. |
+| [scene.md](scene.md) | Scene assembly, static-frame classification, source spans and explicit omissions; exterior cells around a cell joined into one scene; the viewer's moving grid (a viewer policy) and its credits. |
 | [static-blocks.tsv](static-blocks.tsv) | NIF block roles in the selected static-frame scope. |
 | [static-record-keys.txt](static-record-keys.txt) | Synthetic test contract for the typed-record dispatch keys. |
 | [static-records.tsv](static-records.tsv) | Record/subrecord roles for the selected static-frame scope. |

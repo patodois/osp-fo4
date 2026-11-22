@@ -8,7 +8,7 @@ usage:
            --eye X,Y,Z --look X,Y,Z [--backface-cull] [--terrain] [--around N]
            [--speed UNITS_PER_SECOND] [--fast-speed UNITS_PER_SECOND] [--radians-per-pixel R]
            [--walk] [--texture-cap N] [--alpha-tested-cap N] [--reference-textures]
-           [--scene-memory MIB]
+           [--scene-memory MIB] [--no-stream]
       Window with a free-fly camera: W/A/S/D move, Shift moves faster, hold the
       left mouse button and move the mouse to look, R returns to the start pose.
       The title bar shows the mode, the speed and the position.
@@ -25,7 +25,13 @@ usage:
       is drawn plain grey.
       --around N (1 to 3) also loads the exterior cells within N grid steps:
       their placed objects are drawn and, with --walk, collided; with
-      --terrain their terrain is drawn too.
+      --terrain their terrain is drawn too. With --walk --terrain --around N
+      in an exterior cell the loaded grid follows the player (walking: the
+      feet; flying: the eye): a second thread loads the cells within N
+      steps of the cell under the player, nearest first, and the cells more
+      than N + 1 steps away are dropped (a viewer policy); a walker over a
+      cell that has not arrived yet waits in place. --no-stream loads the
+      grid once at start instead.
       Block-compressed textures are uploaded as their stored blocks, from
       the first stored level whose sides are at most --texture-cap (default
       1024), or --alpha-tested-cap (default 2048) for a texture drawn with an
@@ -41,12 +47,17 @@ usage:
            --eye X,Y,Z --look X,Y,Z --out build/FRAME.png [--tags build/TAGS.bin]
            [--size WxH] [--backface-cull] [--terrain] [--around N] [--walk]
            [--texture-cap N] [--alpha-tested-cap N] [--reference-textures]
-           [--scene-memory MIB]
+           [--scene-memory MIB] [--path X,Y;X,Y;...]
       One offscreen frame, no window. --tags also writes the per-pixel instance
       tags (u32 little-endian, u32::MAX = background). With --walk the walking
       world is built as in the window, the walker is dropped with its eye at
       --eye and settled, and the frame is drawn from its eye looking the
       same way; the settled pose is printed.
+      --path (with --walk --terrain --around N) walks the settled walker to
+      each X,Y in turn at the run speed, moving the loaded grid as the
+      window does but loading synchronously, prints every grid change
+      (cells dropped and loaded, time per cell, credits kept) and draws
+      the frame from where the walk ends, looking along its last leg.
   fo4-view compare --cpu CPU.png --gpu GPU.png --diff build/DIFF.png
            [--cpu-tags CPU.bin --gpu-tags GPU.bin]
       Coverage agreement and colour differences of two frames of one pose.";
@@ -117,6 +128,9 @@ pub enum Command {
         fly: FlySettings,
         /// Start in walk mode (`walk`), with Tab to switch.
         walk: bool,
+        /// Move the loaded grid with the player (`--walk --terrain
+        /// --around N` without `--no-stream`).
+        stream: bool,
     },
     Headless {
         scene: Scene,
@@ -125,6 +139,8 @@ pub enum Command {
         tags: Option<String>,
         /// Settle a walker from the eye and draw from its eye.
         walk: bool,
+        /// Waypoints walked with the moving grid (`--path`).
+        path: Option<Vec<[f64; 2]>>,
     },
     Compare {
         cpu: String,
@@ -177,6 +193,26 @@ fn radius(text: &str) -> Result<u32, String> {
                 fo4_scene::grid::MAX_RADIUS
             )
         })
+}
+
+/// Most waypoints of `--path`.
+pub const MAX_WAYPOINTS: usize = 256;
+
+/// `X,Y;X,Y;...`: finite world coordinates.
+pub fn waypoints(text: &str) -> Result<Vec<[f64; 2]>, String> {
+    let bad = || format!("ExpectedWaypoints X,Y;X,Y (at most {MAX_WAYPOINTS}): {text}");
+    let mut out = Vec::new();
+    for part in text.split(';') {
+        let mut v = part.split(',').map(str::parse::<f64>);
+        let (Some(Ok(x)), Some(Ok(y)), None) = (v.next(), v.next(), v.next()) else {
+            return Err(bad());
+        };
+        if !(x.is_finite() && y.is_finite()) || out.len() == MAX_WAYPOINTS {
+            return Err(bad());
+        }
+        out.push([x, y]);
+    }
+    Ok(out)
 }
 
 fn positive(text: &str) -> Result<f64, String> {
@@ -237,6 +273,8 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
     let mut cap = None;
     let mut alpha_tested_cap = None;
     let mut memory = DEFAULT_SCENE_MEMORY_MIB << 20;
+    let mut path = None;
+    let mut no_stream = false;
     let mut rest = args[3..].iter();
     while let Some(arg) = rest.next() {
         let mut value = || rest.next().ok_or_else(usage);
@@ -261,6 +299,8 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             "--texture-cap" => cap = Some(texture_side(value()?)?),
             "--alpha-tested-cap" => alpha_tested_cap = Some(texture_side(value()?)?),
             "--scene-memory" => memory = scene_memory(value()?)?,
+            "--path" => path = Some(waypoints(value()?)?),
+            "--no-stream" => no_stream = true,
             _ => return Err(usage()),
         }
     }
@@ -294,18 +334,38 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
         textures,
         scene_memory: memory,
     };
+    let grid_moves = walk && scene.terrain && scene.around > 0;
     if headless {
+        if no_stream {
+            return Err("--no-stream applies to the window only".into());
+        }
+        if path.is_some() && !grid_moves {
+            return Err("--path needs --walk --terrain --around N".into());
+        }
+        if path.is_some() && tags.is_some() {
+            return Err("--path draws no instance tags".into());
+        }
         Ok(Command::Headless {
             scene,
             size: frame,
             out: out.ok_or_else(usage)?,
             tags,
             walk,
+            path,
         })
-    } else if out.is_some() || tags.is_some() || frame != fo4_scene::camera::REFERENCE_SIZE {
-        Err("--out, --tags and --size apply to --headless only".into())
+    } else if out.is_some()
+        || tags.is_some()
+        || path.is_some()
+        || frame != fo4_scene::camera::REFERENCE_SIZE
+    {
+        Err("--out, --tags, --size and --path apply to --headless only".into())
     } else {
-        Ok(Command::Window { scene, fly, walk })
+        Ok(Command::Window {
+            scene,
+            fly,
+            walk,
+            stream: grid_moves && !no_stream,
+        })
     }
 }
 
@@ -329,10 +389,12 @@ mod tests {
             out,
             tags,
             walk,
+            path,
         } = c
         else {
             panic!("{c:?}")
         };
+        assert!(path.is_none());
         assert_eq!(scene.level, RuleLevel::Hypotheses);
         assert_eq!(scene.eye, [0., 153.6, 104.49]);
         assert_eq!(scene.look, [70.7, 224.3, 104.49]);
@@ -364,13 +426,17 @@ mod tests {
                 },
                 fly: DEFAULT_FLY,
                 walk: false,
+                stream: false,
             }
         );
         let c = parse(&args(
             "m d C --strict --eye 1,2,3 --look 4,5,6 --speed 50 --fast-speed 75",
         ))
         .unwrap();
-        let Command::Window { scene, fly, walk } = c else {
+        let Command::Window {
+            scene, fly, walk, ..
+        } = c
+        else {
             panic!()
         };
         assert_eq!(scene.level, RuleLevel::Facts);
@@ -402,7 +468,26 @@ mod tests {
         .unwrap();
         assert!(matches!(c, Command::Headless { walk: true, .. }));
         let c = parse(&args("m d C --eye 1,2,3 --look 4,5,6 --walk --around 1")).unwrap();
-        assert!(matches!(&c, Command::Window { walk: true, scene, .. } if scene.around == 1));
+        assert!(
+            matches!(&c, Command::Window { walk: true, scene, stream: false, .. } if scene.around == 1)
+        );
+        let c = parse(&args(
+            "m d C --eye 1,2,3 --look 4,5,6 --walk --terrain --around 2",
+        ))
+        .unwrap();
+        assert!(matches!(&c, Command::Window { stream: true, .. }));
+        let c = parse(&args(
+            "m d C --eye 1,2,3 --look 4,5,6 --walk --terrain --around 2 --no-stream",
+        ))
+        .unwrap();
+        assert!(matches!(&c, Command::Window { stream: false, .. }));
+        let c = parse(&args(
+            "m d C --headless --eye 1,2,3 --look 4,5,6 --out a.png --walk --terrain --around 1 --path 1,2;-3.5,4e3",
+        ))
+        .unwrap();
+        assert!(
+            matches!(&c, Command::Headless { path: Some(p), .. } if p == &[[1., 2.], [-3.5, 4000.]])
+        );
         let c = parse(&args("m d C --eye 1,2,3 --look 4,5,6 --texture-cap 512")).unwrap();
         assert!(matches!(&c, Command::Window { scene, .. } if scene.textures
             == Textures::Blocks { cap: 512, alpha_tested_cap: 2048 }));
@@ -434,6 +519,12 @@ mod tests {
             "m d C --eye 1,2,3 --look 4,5,6 --scene-memory 63",
             "m d C --eye 1,2,3 --look 4,5,6 --scene-memory 16385",
             "m d C --eye 1,2,3 --look 4,5,6 --scene-memory x",
+            "m d C --eye 1,2,3 --look 4,5,6 --walk --terrain --around 1 --path 1,2",
+            "m d C --headless --eye 1,2,3 --look 4,5,6 --out a.png --walk --around 1 --path 1,2",
+            "m d C --headless --eye 1,2,3 --look 4,5,6 --out a.png --walk --terrain --around 1 --path 1,2 --tags t.bin",
+            "m d C --headless --eye 1,2,3 --look 4,5,6 --out a.png --walk --terrain --around 1 --path 1,2;3",
+            "m d C --headless --eye 1,2,3 --look 4,5,6 --out a.png --walk --terrain --around 1 --path 1,x",
+            "m d C --headless --eye 1,2,3 --look 4,5,6 --out a.png --no-stream",
             "compare --cpu a --gpu b",
             "compare --cpu a --gpu b --diff c --cpu-tags x",
         ] {

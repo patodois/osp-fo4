@@ -142,6 +142,25 @@ loads in 9 to 12 s (debug build) and peaks near 1.3, 1.6 and 1.8 GB
 resident memory headless; the credits are a conservative count, not
 resident memory ([scene](spec/scene.md#memory-of-a-joined-scene)).
 
+In the window, `--walk --terrain --around N` on an exterior cell moves the
+loaded grid with the player: a second thread loads the cells within N grid
+steps of the cell under the walker's feet (the eye when flying), nearest
+first, and the cells more than N + 1 steps away are dropped, with their
+GPU data, collision and credits; meshes and textures that several cells
+draw are uploaded once and freed when no loaded cell uses them. Which cells
+are loaded is a viewer policy, not a claim about the game
+([scene](spec/scene.md#the-moving-grid)). A walker over a cell that has not
+arrived waits in place. `--no-stream` loads the grid once, as before.
+`--headless ... --path X,Y;X,Y` walks the settled walker through the
+waypoints at the run speed with the same grid moves done synchronously,
+prints each grid change (cells dropped and loaded, time per cell, credits
+kept) and draws the frame where the walk ends. At the test cell, walking
+four cells east and back twice kept 357 to 401 MiB of credits at radius 1
+and 584 to 674 MiB at radius 2, the same at every repeated grid change,
+with 1.54 and 1.79 GB peak resident memory; a crossing took 2 to 3.3 s
+(radius 1) and 3 to 4.5 s (radius 2) of loading. Headless frames without
+`--path` are unchanged.
+
 The comparison prints coverage agreement and colour differences; it defines
 no pass threshold.
 

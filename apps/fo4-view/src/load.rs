@@ -19,6 +19,33 @@ pub struct Loaded {
     pub walk: Option<fo4_walk::World>,
 }
 
+/// The manifest with its data root, the plugins and the mounted archives.
+pub struct Sources {
+    pub manifest: Manifest,
+    pub store: fo4_plugin::typed::Store,
+    pub vfs: fo4_vfs::Vfs,
+}
+
+/// Opens the plugins and mounts the archives of `manifest` with `data` as
+/// its root.
+pub fn open(manifest: &str, data: &str) -> AnyResult<Sources> {
+    let mut manifest = Manifest::load(Path::new(manifest))?;
+    manifest.root = Path::new(data).canonicalize()?;
+    let limits = &manifest.limits;
+    let store =
+        fo4_plugin::typed::Store::open(&manifest, &Budget::new(limits.max_override_memory))?;
+    if !store.diagnostics.is_empty() {
+        return Err("PluginDiagnostics: inspect records with fo4-unpack before rendering".into());
+    }
+    let vfs = fo4_vfs::Vfs::mount(&manifest, &Budget::new(limits.max_vfs_memory))?;
+    vfs.check_complete()?;
+    Ok(Sources {
+        manifest,
+        store,
+        vfs,
+    })
+}
+
 /// The rules walk mode relies on before any collision is placed: the
 /// controller's own (every movement number, triangle sidedness).
 pub fn walk_rules() -> Vec<&'static str> {
@@ -89,16 +116,12 @@ pub fn cell(
     if walk {
         fo4_walk::accept(&walk_rules(), level, fo4_scene::hypotheses::status)?;
     }
-    let mut manifest = Manifest::load(Path::new(manifest))?;
-    manifest.root = Path::new(data).canonicalize()?;
+    let Sources {
+        manifest,
+        store,
+        vfs,
+    } = open(manifest, data)?;
     let limits = &manifest.limits;
-    let store =
-        fo4_plugin::typed::Store::open(&manifest, &Budget::new(limits.max_override_memory))?;
-    if !store.diagnostics.is_empty() {
-        return Err("PluginDiagnostics: inspect records with fo4-unpack before rendering".into());
-    }
-    let vfs = fo4_vfs::Vfs::mount(&manifest, &Budget::new(limits.max_vfs_memory))?;
-    vfs.check_complete()?;
     let budget = scene_budget(scene_memory, limits);
     let mut loader = Loader::new(&store, &vfs, &manifest.language, level, &budget);
     let mut scene = scoped(&budget, |b| loader.by_editor_id(cell, b))?;

@@ -734,3 +734,98 @@ fn rests_on_an_edge_within_the_slope_limit_and_stays_grounded() {
         assert!(c.feet[0] >= 50.0 + P.radius - 1e-6);
     }
 }
+
+#[test]
+fn a_set_of_one_world_walks_exactly_as_the_world() {
+    let b = budget();
+    let w = mixed_world(&b);
+    let mut set = WorldSet::new();
+    set.insert(7, mixed_world(&b)).unwrap();
+    let inputs: Vec<Input> = (0..400u32)
+        .map(|k| Input {
+            forward: 1.0,
+            right: if k % 97 < 30 { 0.5 } else { 0.0 },
+            heading: 0.002 * f64::from(k),
+            run: k % 150 > 100,
+        })
+        .collect();
+    let mut a = character([0.0, 0.0, 30.0]);
+    let mut c = character([0.0, 0.0, 30.0]);
+    for input in &inputs {
+        assert_eq!(a.tick(&w, *input), c.tick(&set, *input));
+    }
+    assert_eq!(Space::bounds(&set), w.bounds);
+}
+
+/// Two 2,000-unit floors side by side along x, as two keyed worlds.
+fn two_floors(b: &Budget) -> WorldSet<[i32; 2]> {
+    let mut set = WorldSet::new();
+    for k in [0, 1] {
+        let x0 = 2000.0 * f64::from(k);
+        let mut w = World::new();
+        w.add_triangles(&rect(x0, x0 + 2000.0, 0.0, 2000.0, 0.0), "floor", b)
+            .unwrap();
+        w.add_sphere([x0 + 1000.0, 1500.0, 0.0], 40.0, "ball", b)
+            .unwrap();
+        set.insert([k, 0], w).unwrap();
+    }
+    set
+}
+
+#[test]
+fn a_set_numbers_entries_across_its_worlds_in_key_order() {
+    let b = budget();
+    let set = two_floors(&b);
+    // Inserted in the other order: the same numbering.
+    let mut other = WorldSet::new();
+    let mut pieces: Vec<_> = set.keys().copied().collect();
+    pieces.reverse();
+    for k in pieces {
+        other.insert(k, set.get(&k).unwrap().clone()).unwrap();
+    }
+    assert_eq!(set.entries(), 6);
+    let (mut scratch, mut a, mut c) = (Vec::new(), Vec::new(), Vec::new());
+    // A capsule standing across the shared edge touches both floors.
+    let seg = [[2000.0, 500.0, 15.0], [2000.0, 500.0, 111.0]];
+    Space::contacts(&set, seg, 16.0, 0.0, &mut scratch, &mut a);
+    Space::contacts(&other, seg, 16.0, 0.0, &mut scratch, &mut c);
+    assert_eq!(a, c);
+    let entries: Vec<u32> = a.iter().map(|x| x.entry).collect();
+    assert!(entries.iter().any(|e| *e < 3) && entries.iter().any(|e| *e >= 3));
+    // Entry 3 is the second floor's first triangle, of source 2 (its first).
+    assert_eq!(set.source_of(3), 2);
+    assert_eq!(
+        set.source(2).map(|(k, s)| (*k, s.label.clone())),
+        Some(([1, 0], Some("floor".into())))
+    );
+    assert_eq!(set.source(3).map(|(k, _)| *k), Some([1, 0]));
+    assert!(set.source(4).is_none());
+    let hit = set.ray_down(3000.0, 1500.0, 500.0).unwrap();
+    assert!(near(hit.z, 40.0, 1e-6), "{hit:?}");
+    assert_eq!(
+        set.source(hit.source).map(|(k, s)| (*k, s.label.clone())),
+        Some(([1, 0], Some("ball".into())))
+    );
+}
+
+#[test]
+fn a_walker_crosses_from_one_world_of_a_set_to_the_next_and_falls_when_one_is_removed() {
+    let b = budget();
+    let mut set = two_floors(&b);
+    let mut c = character([1900.0, 500.0, 10.0]);
+    c.settle(&set, 600);
+    assert!(c.grounded);
+    let states: Vec<State> = (0..120).map(|_| c.tick(&set, ahead(0.0))).collect();
+    assert!(states.iter().all(|s| s.grounded), "{:?}", c.feet);
+    assert!(c.feet[0] > 2000.0 + 90.0, "{:?}", c.feet);
+    let ground = c.ground.unwrap();
+    assert_eq!(set.source(ground.source).map(|(k, _)| *k), Some([1, 0]));
+    // The world under the walker goes: it falls; back, it stands again.
+    let floor = set.remove(&[1, 0]).unwrap();
+    assert!(!set.contains(&[1, 0]) && set.len() == 1);
+    assert!(!c.tick(&set, Input::default()).grounded);
+    set.insert([1, 0], floor).unwrap();
+    let mut d = character([2500.0, 500.0, 10.0]);
+    d.settle(&set, 600);
+    assert!(d.grounded && near(d.feet[2], 0.0, 1e-6));
+}
