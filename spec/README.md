@@ -21,6 +21,8 @@ Measurement datasets and photographs of the game are not distributed.
 | [havok-animation.md](havok-animation.md) | Objects of the `.hkx` animation and skeleton files: top-level entries, animation container, skeleton (bones, parents, reference pose against the skeleton NIFs), binding, animation header, the spline block table and its track data (masks, curves, quantised rotations, values at a time), measured over one installation. |
 | [havok-animation-census.txt](havok-animation-census.txt) | Counts and small stored values from the animation census (`anim_census`). |
 | [havok-container-census.tsv](havok-container-census.tsv) | Counts, holds/fails of container, object, body, shape and compressed-mesh properties, class names and signatures from the Havok census, for the collision payloads and the `.hkx` files. |
+| [coverage.md](coverage.md) | Coverage census: every placement of every cell and of the test views by outcome (drawn, drawn only under hypotheses, hidden, outside, omitted with its exact reasons and their families), ranked by count and by an OBND area proxy; the decisions taken on the largest reasons. |
+| [coverage-census.txt](coverage-census.txt) | Aggregate output of `coverage_census` over every cell of one installation. |
 | [controller-measurements.md](controller-measurements.md) | Measurement design for comparing stored NIF locals with paused runtime nodes. |
 | [dds.md](dds.md) | DDS headers, formats, surfaces, block layouts and supported decoding boundaries. |
 | [helper-visibility.md](helper-visibility.md) | Narrow editor-helper classification and explicit diagnostic visibility variants. |
