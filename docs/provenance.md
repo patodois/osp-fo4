@@ -650,3 +650,19 @@ they name, with the repository's readers. When a reference loads, where a
 end it were recognised from prior general knowledge and are pending
 rules. No editor, editor source or definition file, reader of another
 project, Havok project, script source or game executable was opened.
+
+The game clock of controllers ([spec/controller-clock.md](../spec/controller-clock.md);
+[spec/render.md](../spec/render.md), The game clock) uses the pinned
+nifxml copy of spec/nif.md for `TimeControllerFlags` (Anim Type, Cycle
+Type, Active, Play Backwards, Manager Controlled), the `NiTimeController`
+fields and their descriptions (Frequency "usually 1.0", Phase "usually
+0.0", Start Time, Stop Time), `CycleType` (LOOP, REVERSE, CLAMP) and
+`KeyType` (linear; quadratic with forward and back tangents; TBC; XYZ;
+constant, a "step function"). Nifxml names these without formulas.
+Recognised from prior knowledge of Gamebryo controllers and used only as
+pending rules that the `controller_census` counts could have refuted: the
+controller time Start Time + Phase + Frequency x seconds from the model's
+load, the three cycle foldings, the cubic Hermite reading of quadratic
+keys with tangents taken per interval, and that a manager's sequences
+play only when something starts them. No NIF reader, renderer, editor, MIT
+reference or game executable was opened.

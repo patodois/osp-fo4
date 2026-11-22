@@ -231,6 +231,14 @@ moving grid (`--no-stream` loads the grid once) and with `--path`. Without
 it the frames are byte-identical to those before
 ([Clip pose](spec/actor.md#clip-pose)).
 
+`--time SECONDS` (and the CPU render's `--time SECONDS`) starts the game
+clock at that second after load: free-running controllers of shader UV
+fields and alpha (scrolling water debris, mist, glows) are drawn at its
+time under pending clock rules, and the window's frame clock advances it.
+Without it the models that need the clock are left out and every frame is
+as before ([the game clock](spec/controller-clock.md)); it is refused with
+the moving grid and with `--path`.
+
 The comparison prints coverage agreement and colour differences; it defines
 no pass threshold.
 

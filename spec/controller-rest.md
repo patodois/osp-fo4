@@ -92,9 +92,11 @@ a manager that change what the frame draws), `particle` and `other`
 (controller types outside the lists, controlled blocks of unknown type, a
 `NiTextKeyExtraData` or palette without a manager), `manager-loop` (a
 sequence that loops, with what its controlled blocks reach: it may be
-playing at rest) and `effect-idle` (an effect-shader controller run by a
-manager: the frame draws effects without their falloff and soft terms, so
-the stored alpha and colour are not settled to be what shows).
+playing at rest; since the clock step covered by
+`nif_controller_rest_loop_unstarted_v1`, below) and `effect-idle` (an
+effect-shader controller run by a manager: the frame draws effects without
+their falloff and soft terms, so the stored alpha and colour are not
+settled to be what shows).
 
 The last two were split off after a first version of the rules, in which
 every manager-run controller and every sequence counted as idle, drew the
@@ -122,9 +124,34 @@ covered by `nif_controller_rest_effect_first_key_v1`; it replaces
 `effect-idle`, `manager-loop` and the effect tags only there. The draw
 build then draws the model's effect shaders by the effect surface rules.
 
+A seventh, `texture-first-key`, does the same for lighting-shader UV
+controllers (`nif_controller_rest_texture_first_key_v1`).
+
+## The clock and loops that nothing starts
+
+The clock step ([controller-clock.md](controller-clock.md)) adds the tag
+`clock`, with one cycle tag (`clock-loop`, `clock-reverse`, `clock-clamp`)
+and one key tag (`clock-linear`, `clock-quadratic`, `clock-step`), each
+under its pending rule: a free-running alpha or UV controller of an effect
+or lighting shader that the first-key rules leave unsettled and that the
+game clock can run (`fo4_scene::clock::track`) takes it in place of
+`alpha` or `texture-transform`, with what its interpolator reaches. Such a
+model is drawn only by a build with a time. A looping sequence
+(`manager-loop`) is covered by `nif_controller_rest_loop_unstarted_v1`:
+nothing starts it, so its controlled blocks other than effect-shader
+controllers (which keep `effect-idle`) leave the model as stored; the
+tension with the first-key rules' reading of a looping sequence is written
+into the rule. `fo4_scene::rest::rule` maps every covered tag to its rule.
+
+By the census after that step: 1,210 of the 4,070 models (48,398 enabled
+placed references) have only covered tags, against 1,041 models (46,087)
+with the rules before it; 941 of those placements rely on the clock and
+1,370 on the unstarted loop rule.
+
 ## Coverage
 
-See [coverage.md](coverage.md), Controllers at rest, and Effect surfaces.
+See [coverage.md](coverage.md), Controllers at rest, Effect surfaces and
+The game clock.
 
 ## Provenance
 

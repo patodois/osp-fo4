@@ -417,3 +417,31 @@ shape is drawn; a position that is not finite stays refused. The CPU
 reference and the viewer both draw the draw list's mesh, so they leave out
 the same triangles; no shading changes. Without the rule the placement is
 refused as before.
+
+## The game clock
+
+A draw build may take a time (`BuildOptions::time`, seconds of the game
+clock since the models loaded; the `render` example's `--time SECONDS`,
+the viewer's `--time SECONDS`). With a time, each shader's free-running
+alpha and UV controllers that the clock can run
+([controller-clock.md](controller-clock.md)) give the draw's opacity and UV
+offset and scale components at that time under the pending clock rules,
+and the draw list keeps their tracks (`DrawList::animations`): the CPU
+reference sets any other time with `DrawList::at_time`, the viewer's
+window sets the animated surfaces' parameters from the same tracks every
+frame (its frame clock advances the game clock from the given start), and
+a headless viewer frame is drawn at the given time. An animated draw has a
+surface of its own in the viewer, never shared with a static one. The
+values reach the frame through the fields the CPU and the GPU already read
+(`Draw::uv_offset`, `Draw::uv_scale`, `Alpha::opacity`); no shading term
+changes. The CPU and GPU frames of a synthetic list agree at two times,
+the second reached by the window's update path (the viewer's ignored GPU
+test `cpu_and_gpu_frames_agree_on_clock_driven_uv_offset_and_opacity`).
+
+Without a time the build is as before: an instance whose model relies on
+`nif_controller_clock_free_running_v1` is omitted
+(`UnsettledControllerTime`), every other draw is unchanged, and the
+summary of the `render` example has no `time` key. Frames without
+hypotheses of six views (two interiors with clock-driven effects among
+them) are byte-identical to the commit before, frame and instance
+buffers; under hypotheses and without a time three of them are too.
