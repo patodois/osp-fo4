@@ -2,7 +2,8 @@
 
 `fo4_vm` runs the compiled scripts read by `fo4_pex` ([pex.md](pex.md))
 under pending rules, with a host that records native calls instead of
-performing them. It is the smallest interpreter that runs one real
+performing them and answers only those whose result the installed data
+stores (the data host). It is the smallest interpreter that runs one real
 interaction, and every result it gives is labelled with the rules it relied
 on. Nothing here has been measured in the running game: every opcode
 meaning, every binding rule and every host answer below is a registered
@@ -12,7 +13,7 @@ here support some of them without establishing any.
 Evidence tags as in [pex.md](pex.md). Names of scripts, objects, records and
 cells stay out of this file; the census tools write them to files that are
 not versioned. The exception is the handful of engine interface names the
-code itself binds to (listed under Recording host and Binding), without
+code itself binds to (listed under Recording host, Data host and Binding), without
 which the assumptions could not be stated.
 
 ## What runs
@@ -162,15 +163,75 @@ result). The host answers:
 | Every other native returning a value | undetermined, naming the native | — |
 
 Object identity (`vm_object_identity_v1`): one handle per record (FormID
-resolved through the load order); handles of different records compare
-unequal; whether an opaque handle (the player's, or a VMAD object value
-carrying an alias index, whose meaning is not read) is the same object as
+resolved through the load order) and one per quest alias
+(`vmad_alias_value_v1`); handles of different records or aliases compare
+unequal; whether an opaque handle (the player's) is the same object as
 another handle is left undetermined.
 
 Timers fire only when asked (`script_run ... --timers N`), in due order; the
 firing stops with an error when the queue does not order them (an
 undetermined interval, both clocks queued, or two timers of one id on one
 instance).
+
+## Data host
+
+`fo4_vm::data::DataHost` answers as the recording host does, except for
+the natives below, which it answers by a lookup over the records the
+plugin store already reads. It is what `bind::run` and `script_run` use;
+`script_run --recording` runs the recording host alone. Each answer is a
+pending rule; the counts are from `host_data_census`
+([vm-host-data-census.txt](vm-host-data-census.txt), every winning record
+of the installation) and from the census below (calls answered).
+
+| Native | Answer read from | Rule | Data census | Calls answered (placed references) |
+| --- | --- | --- | --- | --- |
+| `ObjectReference.GetLinkedRef(kw)` | the receiver's XLKR pair whose first word is `kw` (0 for none): its second word; none when no pair has it; undetermined when two do | `vm_host_linked_ref_xlkr_v1` | 88,491 XLKR on 76,079 placed records, all 8 bytes; first words 0 or a KYWD; second words a REFR, ACHR or PHZD (2 name no winning record); first words distinct within every record | 5,035 a reference, 1,057 none |
+| `GetLinkedRefChain(kw, max)`, `CountLinkedRefChain(kw, max)` | GetLinkedRef(kw) followed from the receiver until none; undetermined on a loop or past `max` | `vm_host_linked_ref_chain_v1` | as above | 288 chains, 69 empty, 52 counts; 2 loops open |
+| `ObjectReference.IsDisabled` | the record header flag 0x800 (the store's initially disabled), or this run's last Enable or Disable of the receiver | `vm_host_is_disabled_flag_v1` | 4,032 placed records carry it; read and indexed alike in all 2,001,939 | 133,317 |
+| `ObjectReference.GetBaseObject` | NAME; for a base bound alone, that base | `vm_host_base_object_name_v1` | one 4-byte NAME naming a winning record in all 1,789,365 placed REFR and ACHR | 161 a record |
+| `Game.GetFormFromFile(id, file)` | the load order: the plugin of that name (any case), object id `id` masked to 24 bits (12 for a light plugin); none when that plugin is not loaded or has no such record | `vm_host_form_from_file_v1` | (the manifest's load order) | 394 a record |
+| `GlobalVariable.GetValue` | the GLOB's one FLTV (f32) | `vm_host_global_fltv_v1` | one 4-byte finite FLTV in all 1,916 GLOB; 549 carry header flag 0x40, whose meaning is not read | 670 |
+| `FormList.GetSize`, `GetAt(i)`, `HasForm(f)` | the FLST's LNAM entries in stored order; HasForm undetermined when not found in a list that holds lists | `vm_host_formlist_lnam_v1` | 12,548 LNAM in 1,060 FLST, all 4 bytes, 12,539 naming a winning record (94 a FLST) | none answered: every GetSize follows an AddForm in the same run, every HasForm gets an undetermined form |
+
+What every answer assumes (`vm_host_data_state_v1`): the data's state is
+the state at the start of a game, before any script ran. A fact another
+script may have changed earlier in play is read as stored. Within one run,
+Enable and Disable set what IsDisabled answers; SetLinkedRef on a
+reference makes its links undetermined; any other native that receives a
+global or a form list (as receiver or argument), except the reads above,
+makes its value or its entries undetermined (in the census this is why
+FormList.GetSize is never answered: the handlers add a form first).
+
+A record handle the host or the binding creates is of its record type's
+engine type (`vm_record_signature_type_v1`: ACHR Actor, REFR
+ObjectReference, QUST Quest, GLOB GlobalVariable, KYWD Keyword, FLST
+FormList and 31 more, `fo4_vm::data::SIGNATURE_TYPES`), with that type's
+parents and the scripts attached to it, and of no other: a type test (36)
+against another type is false, where it was undetermined. A cast (14) to
+another type stays open (`pex_ops_not_copy_cast_v1`), and a cast of an
+array of objects to an array of another object type is now undetermined
+instead of a type mismatch (such arrays first appear with
+GetLinkedRefChain). The census of VMAD object values checks the table: of
+35,901 values naming a record of a listed type, the declared type of the
+property is that type, a parent or a script extending it for 35,882; the
+19 others are 13 REFR in Scene properties, 2 REFR in Quest, one REFR each
+in Faction and Perk, one QUST in ObjectReference and one NPC_ in Actor;
+2,502 values name records of types not listed, whose handles get no type
+from their record type.
+
+What stays blocked, and why (ranked by placed handlers after this step,
+[vm-blockers.txt](vm-blockers.txt)): quest stages and running state
+(`Quest.IsStageDone` 1,115, `IsRunning` 109; runtime), 3D loading
+(`Is3DLoaded` 886; runtime), `GetActorsLinkedToMe` (759; the stored XLKR
+of actors could answer it, but which actors are present is runtime),
+`GetOpenState` (657), `IsDestroyed` (556) and the destruction stage (196),
+followers (358), trigger occupancy (228), `FormList.GetSize` after an
+AddForm (355), `Scene.IsPlaying` (123), actor values and states (dead,
+sneaking, mounted, factions, perks, inventory), workshop production,
+`GetFactionOwner` (73; ownership may come from the reference or its cell,
+and which one decides is not in the data), `ReferenceAlias.GetReference`
+(61; aliases are filled at run time), distances, random numbers and
+time. None of these has a default.
 
 ## Binding
 
@@ -198,6 +259,19 @@ instance).
   refused. Each delivery starts from the bound state: no `OnInit` or other
   event runs before it unless named first (events may be listed, comma
   separated).
+- **Alias values** (`vmad_alias_value_v1`): an object value with an alias
+  index names the alias of that index of the quest the FormID names, one
+  handle per quest and index, typed by the property's declared type (the
+  VMAD census finds every such property declared an alias type,
+  [vmad.md](vmad.md)). Before this step it was an opaque handle.
+- **Scripts attached on need** (`vm_record_scripts_attach_v1`): when a run
+  first needs an instance on a record handle (a call, a property, a cast or
+  a type test on it), `bind::RecordScripts` attaches the scripts of the
+  record behind it: a QUST's VMAD scripts, an alias's scripts from its
+  quest's VMAD block (read to the last byte, [vmad.md](vmad.md)), a placed
+  REFR's or ACHR's scripts as for a bound reference; each with its VMAD
+  property values, in its auto state, no event run on it. Other records
+  get nothing. Quest stage fragments are read but not run.
 - **Reference index**: the placed references of a cell are numbered as
   `fo4_vm::bind::placed` lists them: the active ones, then the initially
   disabled ones, each in stored order.
@@ -209,80 +283,160 @@ exterior cell that many grid steps east and north.
 
 ## Census
 
-`script_run MANIFEST --census OUT_DIR CELL[:RADIUS]... | ALL` delivers to
-each scripted DOOR, TERM and ACTI, one fresh run per event, every event
-that one of its scripts has a function with instructions for, and every
-TERM fragment. The counts are [vm-census.txt](vm-census.txt); the names go
-to files that are not versioned.
+`script_run MANIFEST --census OUT_DIR CELL[:RADIUS]... | ALL | PLACED`
+delivers to each scripted DOOR, TERM and ACTI, one fresh run per event,
+every event that one of its scripts has a function with instructions for,
+and every TERM fragment. `ALL` binds every winning scripted base alone (a
+placement without a reference); `PLACED` binds every winning placed REFR
+of a DOOR, TERM or ACTI base with a VMAD on the base or the reference, in
+every cell. The counts are [vm-census.txt](vm-census.txt), each scope
+before this step (recording host, nothing attached: measured with this
+step's census before the data host was written; its counts for the two
+old scopes are main's) and after it; the blockers ranked are
+[vm-blockers.txt](vm-blockers.txt); names go to files that are not
+versioned.
 
-| Scope | Objects | Handlers run | Completed | Blocked on a native's result | Blocked on an object without that script | Blocked on an open rule | Failed |
+| Scope | Objects | Handlers | Completed | Blocked on a native's result | Blocked on an object without that script | Blocked on an open rule | Failed |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| The two test cells of the survey (one interior, one exterior with radius 1) | 10 placed ACTI | 22 | 16 | 6 | 0 | 0 | 0 |
-| Every winning scripted DOOR, TERM and ACTI base, bound alone (no reference VMAD) | 1,251 | 2,530 | 1,113 | 902 | 335 | 77 | 103 |
+| Test cells, before | 10 placed ACTI | 22 | 16 | 6 | 0 | 0 | 0 |
+| Test cells, after | 10 | 22 | 16 | 6 | 0 | 0 | 0 |
+| Every scripted base alone, before | 1,251 | 2,530 | 1,113 | 902 | 335 | 77 | 103 |
+| Every scripted base alone, after | 1,251 | 2,530 | 1,319 | 1,034 | 0 | 57 | 120 |
+| Every placed scripted reference, before | 16,718 | 32,548 | 20,671 | 9,802 | 1,040 | 449 | 586 |
+| Every placed scripted reference, after | 16,718 | 32,548 | 24,655 | 6,686 | 1 | 478 | 728 |
 
-- In the test cells, the 6 blocked handlers block on four natives (one of
-  them three times), each at a conditional jump or a call that needs its
-  result; no handler fails.
-- Over all bases, blocks happen at opcode 22 (840), 23 (424), 29 (26), 28
-  (15) and 21 (9). 152 distinct origins; the ten most frequent account for
-  776 blocked handlers (306, 89, 83, 46, 45, 44, 43, 43, 43, 34): six are
-  natives returning a value, four are scripted calls on records whose
-  scripts are not instantiated (quests and other records named by
-  properties). Open rules: casts of objects to a type their known types do
-  not include (60), the length of none (7), texts equal but for case (5),
-  the identity of an opaque handle (5).
-- Failures over all bases: a call, property or array operation on none (99:
-  mostly properties that only a placed reference's VMAD would fill, as bases
-  are bound alone), three TERM fragments naming a function the fragment
-  script does not declare ([vmad.md](vmad.md) counts 11 such), and one
-  index one past the end of an array in a loop guarded by `index <= length`
-  (opcode 17), consistent with a mistaken bound in its source under the
-  candidate.
+### Blockers
+
+Before this step, over every placed scripted reference, the natives whose
+result blocked the most handlers were `ObjectReference.GetLinkedRef`
+(3,492), `Quest.IsStageDone` (1,051), `Is3DLoaded` (736), `IsDisabled`
+(689), `GetOpenState` (497), `GetActorsLinkedToMe` (382),
+`Game.GetFormFromFile` (380), `Game.GetPlayerFollowers` (358),
+`GetTriggerObjectCount` (228) and `GetLinkedRefChain` (205); the objects
+without a script instance were quests (889 handlers) and placed references
+(148), plus 2 opaque alias handles and the player once. Over the bases
+bound alone: `GetLinkedRef` (306), `IsStageDone` (83), `Is3DLoaded` (46),
+`GetFormFromFile`, `GlobalVariable.GetValue` and `CountLinkedRefChain`
+(43 each); objects without a script: quests (316), references (18), one
+opaque alias.
+
+After it, the placed references' blocking natives are all runtime state
+(listed under Data host); no handler blocks on `GetLinkedRef`,
+`IsDisabled`, `GetFormFromFile`, `GetLinkedRefChain` or `GetValue`; one
+blocks on an object without a script (the player). Over the bases bound
+alone `GetLinkedRef` still leads (408): there its receiver is the
+placement standing for the base, which has no record, so the data cannot
+answer; the bases' natives blocked rise from 902 to 1,034 because the 335
+handlers that stopped at a quest without a script now run into the
+quest's own natives.
+
+- Failures rise (586 to 728 placed, 103 to 120 bases) because handlers run
+  further: a linked reference the data says is none, then called (op 23,
+  281 to 359 placed), 12 runs reaching the step limit in a loop that waits
+  on IsDisabled answered from the data, one attached reference whose VMAD
+  names a FormID with an invalid master index (refused, as the binding
+  refuses it).
+- Open rules: casts of objects to a type their known types do not include
+  (115 placed), array lengths of none, opaque identities.
+- The test cells' six blocked handlers block on runtime natives after this
+  step as before (`ReferenceAlias.GetReference` three times, an item count,
+  a quest stage, a form list's size after AddForm); the data host answered
+  a linked reference, a form from a file and a disabled flag on the way.
 
 ## Visible effect (`fo4-view --script-event`)
 
 `fo4-view ... --under-hypotheses --headless --script-event INDEX:EVENT`
-(a viewer built with `--features script-event`; the default build does not
-link the interpreter and refuses the option) binds the cell's placed reference INDEX, delivers the events, prints the
-effect log, and leaves out of the scene each reference of the loaded cells
-whose last visibility change in the log is a `Disable`
-(`vm_disable_hides_reference_v1`); an `Enable` of a drawn reference changes
-nothing, and of an initially disabled one is only reported (drawing it is
-not implemented). Every other native stays log-only. Without the option
-nothing changes.
+(a viewer built with `--features script-event`; the default build does
+not link the interpreter and refuses the option) binds the cell's placed
+reference INDEX, delivers the events with the data host, prints the effect
+log, and for each reference of the loaded cells takes its last visibility
+change in the log (`vm_disable_hides_reference_v1`): a `Disable` takes a
+drawn reference out of the scene; an `Enable` of a reference flagged
+initially disabled puts it in, its instance made as the cell load makes
+one for an active reference (`fo4_scene::Loader::instance`), and drawn if
+it is ready at the level. Every other native stays log-only. Without the
+option nothing changes.
 
-In the test cells one interaction produces a determined visibility change:
-activating one scripted activator of the exterior cell runs its handler to
-completion, which logs an item given to the player, `Disable` on the
-activator itself, and its deletion. The viewer does not draw that
-activator in the first place (its reference has seven blockers, among them
-a runtime condition and uninterpreted visual subrecords), so hiding it
-changes no pixel: the colour frames before and after are byte-identical,
-the instance tags differ only by the renumbering of the instances after the
-removed one (every tag maps one to one, to itself or to itself minus one),
-and the build counts one omitted placement fewer. No
-other test-cell interaction disables or enables a drawn reference (one
-other completed handler enables a reference that is already drawn). **No
-visible effect is shown.**
+**No visible effect exists in the installed data under the current
+rules.** The placed census classifies every visibility change of a placed
+REFR made by handlers that all completed (4,175): 1,540 disables of an
+enabled REFR, 33 of an initially disabled one, 2,577 enables of an enabled
+one, 25 of an initially disabled one. For each, the target's instance is
+made as the viewer would make it: 15 are drawable under every pending rule
+(3 disables of an enabled REFR, 7 enables of an enabled one, 5 enables of
+an initially disabled one), on 12 distinct references: 10 are editor
+markers (EnableMarker or XMarker bases), which the viewer leaves out of
+the frame under its marker rules, and 2 are references of a console panel
+static that load handlers enable while they are already enabled (no
+change). Every other target carries a blocker no rule covers: most often an
+uninterpreted visual subrecord, a VMAD on the reference (a scripted
+reference is never drawn), an enable parent (XESP), an animation or an
+unsupported NIF block. 21 of the changes fall on 14 distinct targets that
+are enable parents of other placed references (from 1 to 19 each); those
+children carry XESP and are never drawn either, so following enable
+parents would be the next step for a visible effect.
+
+One case shows the path end to end: activating a door in an interior cell
+runs a handler to completion that reads the door's linked reference by
+keyword from XLKR and enables it, an initially disabled enable marker. In
+the viewer the marker becomes a scene instance (one placement more), is
+omitted from the draw list as an editor marker (one omission more), the
+colour frames before and after are byte-identical, and the instance tags
+map one to one (each tag to itself or to itself plus one, from the first
+tag after the inserted instance). Activating a code button in another
+interior cell completes and disables a placed activator found through its
+linked references; the scene removes it, but it was not drawable before
+(uninterpreted visual subrecords, material fields).
 
 Byte identity of the viewer without the option is not decidable by frame
-comparison on this machine: the eight headless regression cases of the
-previous steps, rendered by main's viewer and by main's unchanged source
-rebuilt in a second target directory, differ in 7 of their 15 frame and
-tag files (each binary repeats its own output byte for byte). The default
-build of this change differs from main in 6 of those 7 files and nowhere
-else; built with the feature, in the same 7 and one more tag file. The
-printed load reports (placements, omissions, meshes, textures, instances)
-are identical in all of them.
+comparison on this machine (spec of the previous step: two builds of one
+source differ in frames); the printed load reports are the check.
 
 ## Limits
 
 - One installation, one game build; no measurement of the running game.
 - Each delivery starts from a freshly bound object; event sequences are
-  only those named on the command line; no other record's scripts
-  (quests, aliases, other references) are instantiated, so calls into them
-  block.
-- Natives are never performed, latent natives do not wait, and the host
-  supplies one value (the player handle).
+  only those named on the command line; scripts attached on need start
+  from their VMAD values and auto state, as if nothing had run on them.
+- Natives are never performed; latent natives do not wait; the data host
+  answers only the natives listed under Data host, from the data as at the
+  start of a game.
+- Quest stage fragments are read but no stage is ever set or run; INFO,
+  PACK, PERK and SCEN fragment blocks stay raw ([vmad.md](vmad.md)).
 - Opcode 34's arity between `4` and `4+n` stays open ([pex.md](pex.md));
   the interpreter reads its fourth slot as the start index.
+
+## Provenance of this step
+
+Recognised from prior knowledge, used only as hypotheses that a census
+over the data could refute (each counted above or in
+[vmad.md](vmad.md)):
+
+- the QUST VMAD block layout (version byte, fragment count, fragment
+  script entry, stage fragments of stage, word, log entry, byte and two
+  texts, alias entries of an object value, version, object format and a
+  script list); measured to the last byte in all 1,353 QUST VMADs, after
+  one wrong first guess (a two-byte fragment field) that the census
+  refuted;
+- an alias-indexed object value naming a quest's alias;
+- the linked-reference subrecord: first guessed as LNKR, which no placed
+  record carries (refuted by the census); XLKR, keyword then reference;
+- the initially-disabled header flag 0x800 (already read by `fo4_plugin`),
+  NAME as the base, FLTV as a global's value, LNAM as a form list's
+  entries, INDX as a quest stage and ALST as a quest alias index (the
+  last two only as census checks);
+- the meanings of the natives named under Data host, from their names and
+  stored parameter names: GetLinkedRef, GetLinkedRefChain,
+  CountLinkedRefChain, IsDisabled, GetBaseObject, GetFormFromFile (the
+  24-bit and 12-bit masks, none for a plugin not loaded), GetValue,
+  GetSize, GetAt, HasForm; and which natives change those facts (Enable,
+  Disable, SetLinkedRef, AddForm and others receiving a list or a global);
+- the record type to engine type table (`SIGNATURE_TYPES`), checked
+  against the declared types of VMAD properties;
+- that the natives ranked as runtime state (quest stages, 3D loading,
+  open state, destruction, followers, triggers) depend on the running
+  simulation; this only keeps them blocked.
+
+No editor, editor source or definition file, wiki page, script source,
+decompiler, other interpreter or the game executable was opened or
+searched for.

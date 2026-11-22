@@ -1,6 +1,9 @@
 //! Hand-built synthetic scripts only: a small text assembler builds
 //! `fo4_pex` structures, which [`Script::from_pex`] copies. No game data.
 use super::*;
+
+mod data;
+
 use fo4_pex::{
     Function, Header, Instruction, Member, NamedFunction, Object, Pex, Property, Sections, State,
     Str, Struct, Value, Variable, FUNCTION_GLOBAL, FUNCTION_NATIVE, OPCODES, PROPERTY_READ,
@@ -757,7 +760,7 @@ fn a_scripted_call_on_an_object_without_that_script_blocks() {
     assert_eq!(
         o,
         Outcome::Blocked(Block {
-            on: Origin::NoInstance("questlike".into()),
+            on: Origin::NoInstance("questlike".into(), "record ques".into()),
             at: Some(Site {
                 script: "caller".into(),
                 state: String::new(),
@@ -857,6 +860,9 @@ fn events_reach_each_instance_with_a_handler_and_the_log_names_visibility_change
         effects: vm.effects.clone(),
         rules: vm.rules.clone(),
         world: std::mem::take(&mut vm.world),
+        answers: Default::default(),
+        attached: Default::default(),
+        attach_notes: Vec::new(),
     };
     assert_eq!(
         bind::visibility_changes(&run),

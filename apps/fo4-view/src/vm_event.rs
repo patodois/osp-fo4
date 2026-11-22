@@ -1,8 +1,10 @@
 //! `--script-event INDEX:EVENT[,EVENT...]`: runs the scripts of one placed
-//! reference of the cell with `fo4_vm` (recording host, every rule pending)
+//! reference of the cell with `fo4_vm` (data host, every rule pending)
 //! before the frame is drawn, prints the effect log, and applies only the
 //! visibility changes the log names on references of the loaded cells
-//! (`vm_disable_hides_reference_v1`). Every other native stays log-only.
+//! (`vm_disable_hides_reference_v1`): a disable takes a drawn reference out
+//! of the scene, an enable of an initially disabled one puts it in, made
+//! as the cell load makes an active one. Every other native stays log-only.
 //!
 //! The interpreter is linked only with `--features script-event`; without
 //! the feature the option is refused and the build links nothing new
@@ -52,14 +54,18 @@ pub fn rules() -> Vec<&'static str> {
 }
 
 #[cfg(feature = "script-event")]
-/// Runs the event and hides, in `scene`, the references whose last
-/// visibility change in the effect log is a disable.
+/// Runs the event; in `scene`, takes out the references whose last
+/// visibility change in the effect log is a disable and puts in the
+/// initially disabled references whose last change is an enable.
+#[allow(clippy::too_many_arguments)]
 pub fn apply(
     ev: &ScriptEvent,
     store: &fo4_plugin::typed::Store,
     vfs: &fo4_vfs::Vfs,
     max_memory: u64,
     scene: &mut fo4_scene::Scene,
+    loader: &mut fo4_scene::Loader<'_>,
+    budget: &Budget,
     level: RuleLevel,
 ) -> AnyResult<()> {
     if level != RuleLevel::Hypotheses {
@@ -114,9 +120,38 @@ pub fn apply(
                 println!("script-event: {k} disabled, but it is not a drawn instance of the loaded cells")
             }
             (true, Some(_)) => println!("script-event: {k} enabled; it is already drawn"),
-            (true, None) => println!(
-                "script-event: {k} enabled, but it is not a drawn instance of the loaded cells (drawing an initially disabled reference is not implemented)"
-            ),
+            (true, None) => {
+                let Some(d) = scene
+                    .disabled
+                    .iter()
+                    .position(|c| bind::record_key(&c.key) == k)
+                else {
+                    println!(
+                        "script-event: {k} enabled, but it is neither drawn nor an initially disabled reference of the loaded cells"
+                    );
+                    continue;
+                };
+                let child = scene.disabled.remove(d);
+                let scope = budget.child();
+                let instance = loader.instance(&child.key, &scope)?;
+                scope.commit(budget)?;
+                let causes: Vec<&str> = instance.blockers.iter().map(|e| e.code.as_str()).collect();
+                println!(
+                    "script-event: {k} initially disabled, enabled: shown under {} (scene instance {}; drawable at this level: {}{})",
+                    fo4_vm::rules::DISABLE_HIDES,
+                    scene.instances.len(),
+                    instance.state.ready_at(level),
+                    if causes.is_empty() {
+                        String::new()
+                    } else {
+                        format!("; blockers {causes:?}")
+                    }
+                );
+                scene.assets.extend_from_slice(&instance.assets);
+                scene.assets.sort_unstable();
+                scene.assets.dedup();
+                scene.instances.push(instance);
+            }
         }
     }
     Ok(())

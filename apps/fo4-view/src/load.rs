@@ -239,7 +239,16 @@ pub fn cell(
     // before anything is built. Without it nothing changes.
     #[cfg(feature = "script-event")]
     if let Some(ev) = script_event {
-        crate::vm_event::apply(ev, &store, &vfs, limits.max_memory, &mut scene, level)?;
+        crate::vm_event::apply(
+            ev,
+            &store,
+            &vfs,
+            limits.max_memory,
+            &mut scene,
+            &mut loader,
+            &budget,
+            level,
+        )?;
     }
     let mut animation = None;
     if clip.is_some() && !actors {

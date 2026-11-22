@@ -1,6 +1,7 @@
 # script_run --census: counts only (spec/vm.md, Census)
+# Each scope twice: before this step's data host and after it.
 
-## the two test cells of the survey (one interior; one exterior with radius 1)
+## the two test cells of the survey (one interior; one exterior with radius 1); before: recording host alone, no record's scripts attached (as at main)
 10	targets: scripted DOOR, TERM and ACTI placed in the cells named
 22	handlers run
 5	blocked at opcode 22
@@ -37,7 +38,55 @@
 0	distinct failures
 6	handlers blocked by the ten most frequent origins (3, 1, 1, 1)
 
-## every winning scripted DOOR, TERM and ACTI base, bound alone
+## the two test cells of the survey (one interior; one exterior with radius 1); after: data host, scripts of quests, aliases and placed references attached when first needed
+10	targets: scripted DOOR, TERM and ACTI placed in the cells named
+22	handlers run
+6	blocked at opcode 22
+4	event activate handlers
+3	event cell-detach handlers
+2	event load handlers
+4	event reset handlers
+8	event trigger-enter handlers
+1	event trigger-leave handlers
+2	handles given scripts when first needed: quest
+1	handles given scripts when first needed: reference
+10	objects bound
+6	outcome blocked on a native result
+16	outcome completed
+19	runs relying on pex_call_dispatch_v1
+13	runs relying on pex_conditional_jump_sense_v1
+5	runs relying on pex_default_values_v1
+5	runs relying on pex_op_return_v1
+2	runs relying on pex_ops_arithmetic_v1
+7	runs relying on pex_ops_compare_v1
+12	runs relying on pex_ops_not_copy_cast_v1
+13	runs relying on pex_state_identifier_v1
+6	runs relying on pex_truth_of_values_v1
+22	runs relying on vm_event_handlers_v1
+3	runs relying on vm_host_data_state_v1
+1	runs relying on vm_host_form_from_file_v1
+1	runs relying on vm_host_is_disabled_flag_v1
+1	runs relying on vm_host_linked_ref_xlkr_v1
+3	runs relying on vm_host_player_handle_v1
+3	runs relying on vm_record_scripts_attach_v1
+6	runs relying on vm_timer_events_v1
+5	runs relying on vmad_alias_value_v1
+22	runs relying on vmad_property_sets_variable_v1
+22	runs relying on vmad_reference_scripts_v1
+3	runs with 0 effects
+8	runs with 1 effects
+11	runs with 2-4 effects
+1	visibility change disable of a reference of the loaded cells
+1	visibility change enable of a reference of the loaded cells
+1	visibility change: disable of an enabled REFR, handlers completed
+1	visibility change: disable of an enabled REFR, handlers completed, target not drawable
+1	visibility change: enable of an enabled REFR, handlers completed
+1	visibility change: enable of an enabled REFR, handlers completed, target not drawable
+4	distinct blocking origins
+0	distinct failures
+6	handlers blocked by the ten most frequent origins (3, 1, 1, 1)
+
+## every winning scripted DOOR, TERM and ACTI base, bound alone; before: recording host alone, no record's scripts attached (as at main)
 1251	targets: every winning scripted DOOR, TERM and ACTI base, bound alone
 2530	handlers run
 29	binding note: property not declared
@@ -101,3 +150,267 @@
 152	distinct blocking origins
 61	distinct failures
 776	handlers blocked by the ten most frequent origins (306, 89, 83, 46, 45, 44, 43, 43, 43, 34)
+
+## every winning scripted DOOR, TERM and ACTI base, bound alone; after: data host, scripts of quests, aliases and placed references attached when first needed
+1251	targets: every winning scripted DOOR, TERM and ACTI base, bound alone
+2530	handlers run
+29	binding note: property not declared
+9	blocked at opcode 21
+1016	blocked at opcode 22
+49	blocked at opcode 23
+3	blocked at opcode 28
+12	blocked at opcode 29
+2	blocked at opcode 43
+480	event activate handlers
+60	event cell-attach handlers
+50	event cell-detach handlers
+885	event fragment handlers
+72	event init handlers
+319	event load handlers
+119	event reset handlers
+298	event trigger-enter handlers
+110	event trigger-leave handlers
+137	event unload handlers
+10	handles given scripts when first needed: alias
+592	handles given scripts when first needed: quest
+84	handles given scripts when first needed: reference
+1251	objects bound
+54	objects without an event function with instructions
+1034	outcome blocked on a native result
+9	outcome blocked on rule pex_array_ops_v1
+5	outcome blocked on rule pex_ops_compare_v1
+38	outcome blocked on rule pex_ops_not_copy_cast_v1
+5	outcome blocked on rule vm_object_identity_v1
+1319	outcome completed
+5	outcome failed: IndexOutOfRange op 32
+3	outcome failed: MissingFunction
+82	outcome failed: NoneOperand op 23
+2	outcome failed: NoneOperand op 28
+9	outcome failed: NoneOperand op 32
+5	outcome failed: NoneOperand op 34
+1	outcome failed: NoneOperand op 42
+13	outcome failed: NoneOperand op 46
+505	runs relying on pex_array_ops_v1
+2298	runs relying on pex_call_dispatch_v1
+1782	runs relying on pex_conditional_jump_sense_v1
+1247	runs relying on pex_default_values_v1
+438	runs relying on pex_op_return_v1
+190	runs relying on pex_ops_arithmetic_v1
+1030	runs relying on pex_ops_compare_v1
+1528	runs relying on pex_ops_not_copy_cast_v1
+85	runs relying on pex_property_get_set_v1
+531	runs relying on pex_state_identifier_v1
+113	runs relying on pex_struct_ops_v1
+264	runs relying on pex_truth_of_values_v1
+2495	runs relying on vm_event_handlers_v1
+5	runs relying on vm_host_base_object_name_v1
+155	runs relying on vm_host_data_state_v1
+45	runs relying on vm_host_form_from_file_v1
+1	runs relying on vm_host_formlist_lnam_v1
+96	runs relying on vm_host_global_fltv_v1
+2	runs relying on vm_host_linked_ref_chain_v1
+6	runs relying on vm_host_linked_ref_xlkr_v1
+511	runs relying on vm_host_player_handle_v1
+6	runs relying on vm_object_identity_v1
+633	runs relying on vm_record_scripts_attach_v1
+7	runs relying on vm_record_signature_type_v1
+101	runs relying on vm_timer_events_v1
+463	runs relying on vmad_alias_value_v1
+2495	runs relying on vmad_property_sets_variable_v1
+2495	runs relying on vmad_reference_scripts_v1
+290	runs with 0 effects
+942	runs with 1 effects
+1102	runs with 2-4 effects
+121	runs with 5-9 effects
+40	runs with >=10 effects
+5	visibility change disable of another record
+15	visibility change enable of another record
+3	visibility change: disable of an enabled REFR, handlers completed
+2	visibility change: disable of an enabled REFR, handlers completed, target drawable under every pending rule
+1	visibility change: disable of an enabled REFR, handlers completed, target not drawable
+2	visibility change: disable of an initially disabled REFR, handlers completed
+2	visibility change: disable of an initially disabled REFR, handlers completed, target drawable under every pending rule
+4	visibility change: enable of an enabled REFR, handlers completed
+2	visibility change: enable of an enabled REFR, handlers completed, target drawable under every pending rule
+2	visibility change: enable of an enabled REFR, handlers completed, target not drawable
+10	visibility change: enable of an initially disabled REFR, handlers completed
+5	visibility change: enable of an initially disabled REFR, handlers completed, target drawable under every pending rule
+5	visibility change: enable of an initially disabled REFR, handlers completed, target not drawable
+1	visibility change: enable of an initially disabled REFR, handlers not all completed
+102	distinct blocking origins
+68	distinct failures
+779	handlers blocked by the ten most frequent origins (408, 86, 51, 43, 43, 41, 34, 28, 23, 22)
+
+## every placed reference of a DOOR, TERM or ACTI base with a VMAD on the base or the reference; before: recording host alone, no record's scripts attached (as at main)
+16718	targets: every placed reference of a DOOR, TERM or ACTI base with a VMAD on the base or the reference
+32548	handlers run
+58	binding note: property not declared
+127	blocked at opcode 21
+9144	blocked at opcode 22
+1842	blocked at opcode 23
+148	blocked at opcode 28
+30	blocked at opcode 29
+6585	event activate handlers
+488	event cell-attach handlers
+225	event cell-detach handlers
+233	event fragment handlers
+682	event init handlers
+7557	event load handlers
+4672	event reset handlers
+5685	event trigger-enter handlers
+1384	event trigger-leave handlers
+5037	event unload handlers
+16718	objects bound
+1	objects whose binding failed
+814	objects without an event function with instructions
+9802	outcome blocked on a native result
+1040	outcome blocked on a scripted call or property of an object without that script
+241	outcome blocked on rule pex_array_ops_v1
+26	outcome blocked on rule pex_ops_compare_v1
+129	outcome blocked on rule pex_ops_not_copy_cast_v1
+1	outcome blocked on rule pex_struct_ops_v1
+47	outcome blocked on rule vm_object_identity_v1
+5	outcome blocked on rule vmad_property_sets_variable_v1
+20671	outcome completed
+2	outcome failed: IndexOutOfRange op 32
+1	outcome failed: MissingFunction
+281	outcome failed: NoneOperand op 23
+2	outcome failed: NoneOperand op 29
+2	outcome failed: NoneOperand op 32
+139	outcome failed: NoneOperand op 34
+135	outcome failed: NoneOperand op 42
+24	outcome failed: NoneOperand op 46
+1822	runs relying on pex_array_ops_v1
+30098	runs relying on pex_call_dispatch_v1
+19442	runs relying on pex_conditional_jump_sense_v1
+13702	runs relying on pex_default_values_v1
+3312	runs relying on pex_op_return_v1
+1076	runs relying on pex_ops_arithmetic_v1
+10320	runs relying on pex_ops_compare_v1
+21414	runs relying on pex_ops_not_copy_cast_v1
+405	runs relying on pex_property_get_set_v1
+12603	runs relying on pex_state_identifier_v1
+274	runs relying on pex_struct_ops_v1
+2910	runs relying on pex_truth_of_values_v1
+32184	runs relying on vm_event_handlers_v1
+6331	runs relying on vm_host_player_handle_v1
+47	runs relying on vm_object_identity_v1
+2060	runs relying on vm_timer_events_v1
+32184	runs relying on vmad_property_sets_variable_v1
+32184	runs relying on vmad_reference_scripts_v1
+3122	runs with 0 effects
+13733	runs with 1 effects
+14341	runs with 2-4 effects
+799	runs with 5-9 effects
+189	runs with >=10 effects
+1478	visibility change disable of a reference of the loaded cells
+2383	visibility change enable of a reference of the loaded cells
+203	distinct blocking origins
+47	distinct failures
+8580	handlers blocked by the ten most frequent origins (3492, 1051, 754, 736, 689, 497, 382, 380, 358, 241)
+
+## every placed reference of a DOOR, TERM or ACTI base with a VMAD on the base or the reference; after: data host, scripts of quests, aliases and placed references attached when first needed
+16718	targets: every placed reference of a DOOR, TERM or ACTI base with a VMAD on the base or the reference
+32548	handlers run
+32	attach note: property not declared
+58	binding note: property not declared
+201	blocked at opcode 21
+6925	blocked at opcode 22
+36	blocked at opcode 23
+1	blocked at opcode 28
+2	blocked at opcode 29
+6585	event activate handlers
+488	event cell-attach handlers
+225	event cell-detach handlers
+233	event fragment handlers
+682	event init handlers
+7557	event load handlers
+4672	event reset handlers
+5685	event trigger-enter handlers
+1384	event trigger-leave handlers
+5037	event unload handlers
+47	handles given scripts when first needed: alias
+2614	handles given scripts when first needed: quest
+2898	handles given scripts when first needed: reference
+16718	objects bound
+1	objects whose binding failed
+814	objects without an event function with instructions
+6686	outcome blocked on a native result
+1	outcome blocked on a scripted call or property of an object without that script
+277	outcome blocked on rule pex_array_ops_v1
+26	outcome blocked on rule pex_ops_compare_v1
+115	outcome blocked on rule pex_ops_not_copy_cast_v1
+1	outcome blocked on rule pex_struct_ops_v1
+50	outcome blocked on rule vm_object_identity_v1
+9	outcome blocked on rule vmad_property_sets_variable_v1
+24655	outcome completed
+1	outcome failed: BadArgument
+2	outcome failed: IndexOutOfRange op 32
+1	outcome failed: MissingFunction
+359	outcome failed: NoneOperand op 23
+2	outcome failed: NoneOperand op 29
+52	outcome failed: NoneOperand op 32
+140	outcome failed: NoneOperand op 34
+135	outcome failed: NoneOperand op 42
+24	outcome failed: NoneOperand op 46
+12	outcome failed: StepLimit
+2538	runs relying on pex_array_ops_v1
+30215	runs relying on pex_call_dispatch_v1
+20357	runs relying on pex_conditional_jump_sense_v1
+16840	runs relying on pex_default_values_v1
+3869	runs relying on pex_op_return_v1
+2092	runs relying on pex_ops_arithmetic_v1
+11444	runs relying on pex_ops_compare_v1
+23612	runs relying on pex_ops_not_copy_cast_v1
+527	runs relying on pex_property_get_set_v1
+12892	runs relying on pex_state_identifier_v1
+321	runs relying on pex_struct_ops_v1
+5558	runs relying on pex_truth_of_values_v1
+32184	runs relying on vm_event_handlers_v1
+161	runs relying on vm_host_base_object_name_v1
+6138	runs relying on vm_host_data_state_v1
+394	runs relying on vm_host_form_from_file_v1
+607	runs relying on vm_host_global_fltv_v1
+1088	runs relying on vm_host_is_disabled_flag_v1
+257	runs relying on vm_host_linked_ref_chain_v1
+4129	runs relying on vm_host_linked_ref_xlkr_v1
+6760	runs relying on vm_host_player_handle_v1
+50	runs relying on vm_object_identity_v1
+5286	runs relying on vm_record_scripts_attach_v1
+178	runs relying on vm_record_signature_type_v1
+2151	runs relying on vm_timer_events_v1
+2033	runs relying on vmad_alias_value_v1
+32184	runs relying on vmad_property_sets_variable_v1
+32184	runs relying on vmad_reference_scripts_v1
+2571	runs with 0 effects
+11092	runs with 1 effects
+16621	runs with 2-4 effects
+1395	runs with 5-9 effects
+505	runs with >=10 effects
+1667	visibility change disable of a reference of the loaded cells
+2684	visibility change enable of a reference of the loaded cells
+57	visibility change enable of another record
+1540	visibility change: disable of an enabled REFR, handlers completed
+8	visibility change: disable of an enabled REFR, handlers completed, target an enable parent
+3	visibility change: disable of an enabled REFR, handlers completed, target drawable under every pending rule
+1537	visibility change: disable of an enabled REFR, handlers completed, target not drawable
+88	visibility change: disable of an enabled REFR, handlers not all completed
+33	visibility change: disable of an initially disabled REFR, handlers completed
+1	visibility change: disable of an initially disabled REFR, handlers completed, target an enable parent
+33	visibility change: disable of an initially disabled REFR, handlers completed, target not drawable
+6	visibility change: disable of an initially disabled REFR, handlers not all completed
+2577	visibility change: enable of an enabled REFR, handlers completed
+7	visibility change: enable of an enabled REFR, handlers completed, target an enable parent
+7	visibility change: enable of an enabled REFR, handlers completed, target drawable under every pending rule
+2570	visibility change: enable of an enabled REFR, handlers completed, target not drawable
+73	visibility change: enable of an enabled REFR, handlers not all completed
+25	visibility change: enable of an initially disabled REFR, handlers completed
+5	visibility change: enable of an initially disabled REFR, handlers completed, target an enable parent
+5	visibility change: enable of an initially disabled REFR, handlers completed, target drawable under every pending rule
+20	visibility change: enable of an initially disabled REFR, handlers completed, target not drawable
+9	visibility change: enable of an initially disabled REFR, handlers not all completed
+7	visibility change: not a placed REFR, handlers completed
+50	visibility change: not a placed REFR, handlers not all completed
+183	distinct blocking origins
+72	distinct failures
+5387	handlers blocked by the ten most frequent origins (1115, 886, 759, 657, 556, 358, 355, 277, 228, 196)

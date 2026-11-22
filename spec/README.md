@@ -35,9 +35,11 @@ Measurement datasets and photographs of the game are not distributed.
 | [pex.md](pex.md) | Compiled scripts (`.pex`): header, string table, debug information, user flags, objects, structs, variables, properties, states, functions and instructions as measured over every entry of one installation; opcode arities established by alternative readings, argument kinds, the claimed opcode roles and their checks, the disassembly. |
 | [pex-census.txt](pex-census.txt) | Counts from the `.pex` census (`pex_census`). |
 | [nif.md](nif.md) | NIF framing, blocks, links, meshes, vertex layouts, node rotation words and bounded structural readers. |
-| [vm.md](vm.md) | The script interpreter `fo4-vm`: what runs, the candidate meaning of each opcode with the checks that could refute it, the recording host and its assumptions, binding by VMAD and events, the census of handlers, the viewer's `--script-event`. |
+| [vm.md](vm.md) | The script interpreter `fo4-vm`: what runs, the candidate meaning of each opcode with the checks that could refute it, the recording host and its assumptions, the data host (natives answered from the records), binding by VMAD and events with scripts of quests, aliases and references attached on need, the census of handlers and of what blocks them, the viewer's `--script-event`. |
 | [vm-checks.txt](vm-checks.txt) | Counts from the opcode checks (`vm_checks`): slot types, data flow, idioms, execution under each reading. |
-| [vm-census.txt](vm-census.txt) | Counts from the handler census (`script_run --census`): the test cells and every scripted DOOR, TERM and ACTI base. |
+| [vm-census.txt](vm-census.txt) | Counts from the handler census (`script_run --census`): the test cells, every scripted DOOR, TERM and ACTI base, and every placed scripted reference, each before and after the data host. |
+| [vm-blockers.txt](vm-blockers.txt) | The natives whose result blocked handlers, ranked, the kinds of objects without a script instance, and the data host's answers, from the handler census, before and after the data host. |
+| [vm-host-data-census.txt](vm-host-data-census.txt) | Counts from the census of the data the data host reads (`host_data_census`): XLKR, NAME, the initially-disabled flag, FLTV, LNAM, record types against declared property types. |
 | [path-census.md](path-census.md) | Path accounting and independent candidate-resolution comparisons. |
 | [photo-metrics.md](photo-metrics.md) | Prospective forward silhouette and persistent reverse-photo metrics, with explicit limits. |
 | [plugin.md](plugin.md) | Plugin envelopes, groups, subrecords, compression, FormIDs, overrides and flags. |
@@ -54,7 +56,7 @@ Measurement datasets and photographs of the game are not distributed.
 | [static-record-keys.txt](static-record-keys.txt) | Synthetic test contract for the typed-record dispatch keys. |
 | [static-records.tsv](static-records.tsv) | Record/subrecord roles for the selected static-frame scope. |
 | [strings.md](strings.md) | Localized STRINGS, DLSTRINGS and ILSTRINGS layouts and VFS lookup. |
-| [vmad.md](vmad.md) | VMAD: the scripts attached to records and their property values, the TERM fragment block,, cross-checks against the `.pex` declarations, and the survey of scripts on doors, terminals and activators with the native functions their code reaches. |
+| [vmad.md](vmad.md) | VMAD: the scripts attached to records and their property values, the TERM fragment block, the QUST block of stage fragments and aliases, object values with an alias index, cross-checks against the `.pex` declarations, and the survey of scripts on doors, terminals and activators with the native functions their code reaches. |
 | [vmad-census.txt](vmad-census.txt) | Counts from the VMAD census (`vmad_census`). |
 | [unread.md](unread.md) | Accounting for uninterpreted asset families without claiming their semantics. |
 
@@ -156,3 +158,14 @@ the registry.
 | `vmad_reference_scripts_v1` | pending | Place two references of one scripted base, one with a reference VMAD that overrides a property; activate both and show the property value through a notification call. |
 | `vmad_property_sets_variable_v1` | pending | A hand-assembled script shows in OnInit the values of properties set by VMAD on a placed reference through a notification call. |
 | `vm_disable_hides_reference_v1` | pending | Activate in the running game a placed reference whose script calls Disable on itself, and photograph the place before and after. |
+| `vm_host_data_state_v1` | pending | In a purpose-built cell, change a linked reference, a global and a form list from one script, then run a second script that reads them, and show what it reads through a notification call. |
+| `vm_host_linked_ref_xlkr_v1` | pending | Place a reference with two XLKR pairs (no keyword, a keyword) and show GetLinkedRef() and GetLinkedRef(keyword) through a notification call. |
+| `vm_host_linked_ref_chain_v1` | pending | Chain three references by one keyword, one more by another, and show the chain's length and order through a notification call. |
+| `vm_host_is_disabled_flag_v1` | pending | Show IsDisabled of an initially disabled and an initially enabled reference through a notification call before anything enables them. |
+| `vm_host_base_object_name_v1` | pending | Show GetBaseObject of a placed reference compared with a property holding its base through a notification call. |
+| `vm_host_form_from_file_v1` | pending | Call GetFormFromFile for a record of a loaded master, of a plugin not loaded, and an id with a load-order byte set, and show the results through a notification call. |
+| `vm_host_global_fltv_v1` | pending | Show GetValue of a global never set by a script through a notification call, then of one set in an earlier session. |
+| `vm_host_formlist_lnam_v1` | pending | Show GetSize, GetAt(0) and HasForm of a stored list through a notification call. |
+| `vm_record_signature_type_v1` | pending | Test in a script a placed activator against Furniture and Activator and a quest against Quest, and show the results through a notification call. |
+| `vm_record_scripts_attach_v1` | pending | A hand-assembled activator script reads a property of a quest script and of an alias script and shows them through a notification call. |
+| `vmad_alias_value_v1` | pending | Give a script a property naming an alias of a running quest and show the alias's reference through a notification call. |

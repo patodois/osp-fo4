@@ -257,3 +257,17 @@ Skymp Papyrus VM), engine reimplementation, script extender or its
 library, editor documentation, wiki page, script source or the game
 executable was opened or searched for at this step, and none was
 reproduced from memory.
+
+The data host and the QUST block (`fo4_vm::data`, `fo4_plugin::vmad`,
+[spec/vm.md](../spec/vm.md), Data host and Provenance of this step;
+[spec/vmad.md](../spec/vmad.md), QUST block) add no sourced format fact.
+The QUST block layout, the meaning of an alias-indexed object value, the
+linked-reference subrecord (first guessed as LNKR, refuted by the census,
+then XLKR), NAME, FLTV, LNAM, the header flag 0x800, the native meanings
+the host answers and the record-type-to-script-type table were recognised
+from prior general knowledge and are kept only as far as the censuses
+(`vmad_census`, `host_data_census`, `script_run --census`) could have
+refuted them and did not; each behaviour is a pending rule in
+[spec/hypotheses.tsv](../spec/hypotheses.tsv). No editor, editor source
+or definition file, wiki page, script source, decompiler, other
+interpreter or the game executable was opened or searched for.

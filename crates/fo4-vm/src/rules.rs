@@ -44,8 +44,32 @@ pub const VMAD_VALUES: &str = "vmad_property_sets_variable_v1";
 /// The viewer hides a reference disabled by a run and shows one enabled.
 pub const DISABLE_HIDES: &str = "vm_disable_hides_reference_v1";
 
+/// The data host answers from the data as at the start of a game.
+pub const DATA_STATE: &str = "vm_host_data_state_v1";
+/// `GetLinkedRef` from XLKR.
+pub const LINKED_REF: &str = "vm_host_linked_ref_xlkr_v1";
+/// `GetLinkedRefChain`, `CountLinkedRefChain` by following XLKR.
+pub const LINKED_REF_CHAIN: &str = "vm_host_linked_ref_chain_v1";
+/// `IsDisabled` from the record's initially-disabled flag.
+pub const IS_DISABLED: &str = "vm_host_is_disabled_flag_v1";
+/// `GetBaseObject` from NAME.
+pub const BASE_OBJECT: &str = "vm_host_base_object_name_v1";
+/// `GetFormFromFile` through the load order.
+pub const FORM_FROM_FILE: &str = "vm_host_form_from_file_v1";
+/// `GlobalVariable.GetValue` from FLTV.
+pub const GLOBAL_VALUE: &str = "vm_host_global_fltv_v1";
+/// `FormList.HasForm`, `GetSize`, `GetAt` from LNAM.
+pub const FORM_LIST: &str = "vm_host_formlist_lnam_v1";
+/// A record handle is of its record type's engine type.
+pub const SIGNATURE_TYPE: &str = "vm_record_signature_type_v1";
+/// The scripts of a quest, an alias or a placed reference are attached to
+/// its handle when a run first needs them.
+pub const ATTACH: &str = "vm_record_scripts_attach_v1";
+/// A VMAD object value with an alias index names that alias of the quest.
+pub const ALIAS_VALUE: &str = "vmad_alias_value_v1";
+
 /// Every rule above.
-pub const ALL: [&str; 20] = [
+pub const ALL: [&str; 31] = [
     ARITHMETIC,
     COMPARE,
     NOT_COPY_CAST,
@@ -66,6 +90,17 @@ pub const ALL: [&str; 20] = [
     VMAD_SCRIPTS,
     VMAD_VALUES,
     DISABLE_HIDES,
+    DATA_STATE,
+    LINKED_REF,
+    LINKED_REF_CHAIN,
+    IS_DISABLED,
+    BASE_OBJECT,
+    FORM_FROM_FILE,
+    GLOBAL_VALUE,
+    FORM_LIST,
+    SIGNATURE_TYPE,
+    ATTACH,
+    ALIAS_VALUE,
 ];
 
 /// The rule an opcode's meaning rests on; `None` for an opcode without a

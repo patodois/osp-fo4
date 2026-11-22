@@ -27,6 +27,7 @@ use std::{
 };
 
 pub mod bind;
+pub mod data;
 mod exec;
 pub mod host;
 pub mod program;
@@ -342,10 +343,21 @@ impl Variant {
     }
 }
 
+/// Attaches the scripts of the record behind an object when a run first
+/// needs an instance on it (`vm_record_scripts_attach_v1`): asked once per
+/// object, before the object's instances are looked up for a call, a
+/// property, a cast or a type test.
+pub trait Attach {
+    fn attach(&mut self, vm: &mut Vm<'_>, o: ObjId) -> Result<(), VmError>;
+}
+
 /// The interpreter.
 pub struct Vm<'a> {
     lib: &'a mut dyn Library,
     pub host: &'a mut dyn Host,
+    /// Attaches the scripts of records on first need; `None` attaches
+    /// nothing.
+    pub attach: Option<&'a mut dyn Attach>,
     scripts: BTreeMap<String, Option<Rc<Script>>>,
     pub world: World,
     pub effects: Vec<Effect>,
@@ -365,6 +377,7 @@ impl<'a> Vm<'a> {
         Vm {
             lib,
             host,
+            attach: None,
             scripts: BTreeMap::new(),
             world: World::default(),
             effects: Vec::new(),
@@ -421,6 +434,7 @@ impl<'a> Vm<'a> {
     /// Whether an object is known to be of a type: one of its known types
     /// or attached scripts is the type or has it as a parent.
     pub fn object_is_a(&mut self, o: ObjId, target: &str) -> Result<bool, VmError> {
+        self.attach_scripts(o)?;
         let mut types = self.world.objects[o].types.clone();
         for i in self.world.objects[o].instances.clone() {
             types.push(self.world.instances[i].script.clone());
@@ -430,7 +444,26 @@ impl<'a> Vm<'a> {
                 return Ok(true);
             }
         }
+        if let Some(t) = self.world.objects[o].signature_type.clone() {
+            if self.is_a(&t, target)? {
+                self.rules.insert(rules::SIGNATURE_TYPE);
+                return Ok(true);
+            }
+        }
         Ok(false)
+    }
+    /// Asks [`Vm::attach`] once for an object.
+    pub fn attach_scripts(&mut self, o: ObjId) -> Result<(), VmError> {
+        if self.world.objects[o].attached {
+            return Ok(());
+        }
+        self.world.objects[o].attached = true;
+        if let Some(a) = self.attach.take() {
+            let r = a.attach(self, o);
+            self.attach = Some(a);
+            r?;
+        }
+        Ok(())
     }
     /// A new instance of a script (and its parents' variables), in the
     /// auto state of the script, attached to an object when given.

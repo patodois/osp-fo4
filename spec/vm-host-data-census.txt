@@ -1,0 +1,123 @@
+wall seconds	17.2
+
+# values
+45	FLST LNAM entries 0
+824	FLST LNAM entries 1-9
+191	FLST LNAM entries >=10
+94	FLST LNAM naming a FLST
+1060	FLST records
+1893	GLOB FLTV integral
+23	GLOB FLTV with a fraction
+40	GLOB FNAM 'f'
+1	GLOB FNAM 'l'
+743	GLOB FNAM 's'
+1916	GLOB records
+549	GLOB with header flag 0x40
+21581	XLKR first word names 0
+66910	XLKR first word names KYWD
+927	XLKR second word names ACHR
+39	XLKR second word names PHZD
+87523	XLKR second word names REFR
+2	XLKR second word names no winning record
+88491	XLKR size 8
+68967	XLKR subrecords per record 1
+4367	XLKR subrecords per record 2
+1268	XLKR subrecords per record 3
+888	XLKR subrecords per record 4
+589	XLKR subrecords per record 5
+10391	placed ACHR
+1050	placed ACHR initially disabled (header flag 0x800)
+7400	placed ACHR with XLKR
+46373	placed DIAL
+185	placed DLBR
+102433	placed INFO
+43482	placed LAND
+12403	placed NAVM
+522	placed PGRE
+1	placed PGRE initially disabled (header flag 0x800)
+2401	placed PHZD
+67	placed PHZD initially disabled (header flag 0x800)
+62	placed PHZD with XLKR
+2	placed PMIS
+1778974	placed REFR
+2914	placed REFR initially disabled (header flag 0x800)
+68617	placed REFR with XLKR
+4773	placed SCEN
+307	object value of a record type not listed: AACT
+1	object value of a record type not listed: COBJ
+23	object value of a record type not listed: CSTY
+27	object value of a record type not listed: DIAL
+16	object value of a record type not listed: ECZN
+139	object value of a record type not listed: EFSH
+211	object value of a record type not listed: IDLE
+22	object value of a record type not listed: IPDS
+1	object value of a record type not listed: LAND
+121	object value of a record type not listed: LCRT
+27	object value of a record type not listed: MSTT
+110	object value of a record type not listed: MUSC
+40	object value of a record type not listed: NOTE
+199	object value of a record type not listed: OMOD
+55	object value of a record type not listed: OTFT
+14	object value of a record type not listed: PACK
+10	object value of a record type not listed: PHZD
+17	object value of a record type not listed: PROJ
+74	object value of a record type not listed: RACE
+60	object value of a record type not listed: RFCT
+3	object value of a record type not listed: RFGP
+14	object value of a record type not listed: SCSN
+1	object value of a record type not listed: SNCT
+943	object value of a record type not listed: SNDR
+8	object value of a record type not listed: SOPM
+1	object value of a record type not listed: TACT
+9	object value of a record type not listed: VTYP
+13	object value of a record type not listed: WRLD
+36	object value of a record type not listed: WTHR
+
+# checks: holds, fails
+12548	0	FLST: LNAM is 4 bytes
+12539	9	FLST: LNAM names a winning record
+1916	0	GLOB: FLTV is 4 bytes
+1916	0	GLOB: FLTV is finite
+1916	0	GLOB: exactly one FLTV
+88491	0	XLKR size is a multiple of 8
+76079	0	XLKR: first words distinct within a record
+1789365	0	placed REFR/ACHR: NAME is 4 bytes
+1789365	0	placed REFR/ACHR: NAME names a winning record
+1789365	0	placed REFR/ACHR: exactly one NAME
+2001939	0	placed record: header flag 0x800 as read == as indexed
+227	0	signature type ACHR actor: declared type is it, a parent or a script extending it
+201	0	signature type ACTI activator: declared type is it, a parent or a script extending it
+172	0	signature type ALCH potion: declared type is it, a parent or a script extending it
+106	0	signature type AMMO ammo: declared type is it, a parent or a script extending it
+177	0	signature type ARMO armor: declared type is it, a parent or a script extending it
+1283	0	signature type AVIF actorvalue: declared type is it, a parent or a script extending it
+94	0	signature type BOOK book: declared type is it, a parent or a script extending it
+63	0	signature type CELL cell: declared type is it, a parent or a script extending it
+36	0	signature type CMPO component: declared type is it, a parent or a script extending it
+14	0	signature type CONT container: declared type is it, a parent or a script extending it
+3	0	signature type DOOR door: declared type is it, a parent or a script extending it
+232	0	signature type EXPL explosion: declared type is it, a parent or a script extending it
+1893	0	signature type FACT faction: declared type is it, a parent or a script extending it
+283	0	signature type FLST formlist: declared type is it, a parent or a script extending it
+41	0	signature type FURN furniture: declared type is it, a parent or a script extending it
+3037	0	signature type GLOB globalvariable: declared type is it, a parent or a script extending it
+4	0	signature type HAZD hazard: declared type is it, a parent or a script extending it
+121	0	signature type IDLM idlemarker: declared type is it, a parent or a script extending it
+109	0	signature type IMAD imagespacemodifier: declared type is it, a parent or a script extending it
+68	0	signature type KEYM key: declared type is it, a parent or a script extending it
+11004	0	signature type KYWD keyword: declared type is it, a parent or a script extending it
+292	0	signature type LCTN location: declared type is it, a parent or a script extending it
+12	0	signature type LIGH light: declared type is it, a parent or a script extending it
+393	0	signature type LVLI leveleditem: declared type is it, a parent or a script extending it
+1416	0	signature type MESG message: declared type is it, a parent or a script extending it
+30	0	signature type MGEF magiceffect: declared type is it, a parent or a script extending it
+474	0	signature type MISC miscobject: declared type is it, a parent or a script extending it
+337	1	signature type NPC_ actorbase: declared type is it, a parent or a script extending it
+170	0	signature type PERK perk: declared type is it, a parent or a script extending it
+6890	1	signature type QUST quest: declared type is it, a parent or a script extending it
+3914	17	signature type REFR objectreference: declared type is it, a parent or a script extending it
+2018	0	signature type SCEN scene: declared type is it, a parent or a script extending it
+544	0	signature type SPEL spell: declared type is it, a parent or a script extending it
+29	0	signature type STAT static: declared type is it, a parent or a script extending it
+2	0	signature type TERM terminal: declared type is it, a parent or a script extending it
+193	0	signature type WEAP weapon: declared type is it, a parent or a script extending it

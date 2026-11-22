@@ -370,7 +370,10 @@ impl<'a> Loader<'a> {
         scene.lighting_data = lighting::describe(&scene, self.plugins, b)?;
         Ok(scene)
     }
-    fn instance(&mut self, key: &FormKey, b: &Budget) -> Result<Instance> {
+    /// The instance of one placed reference, made as the cell load makes
+    /// one for each active child. The viewer's `--script-event` uses it for
+    /// an initially disabled reference a script enables.
+    pub fn instance(&mut self, key: &FormKey, b: &Budget) -> Result<Instance> {
         let reference = b
             .measure(AllocationKind::Reference, || {
                 self.plugins.get::<Refr>(key, b)

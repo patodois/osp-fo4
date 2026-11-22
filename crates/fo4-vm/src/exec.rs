@@ -294,6 +294,7 @@ impl Vm<'_> {
     }
     /// An instance of an object whose script is or extends `type_name`.
     fn instance_of(&mut self, o: ObjId, type_name: &str) -> R<Vec<InstId>> {
+        self.attach_scripts(o)?;
         let mut out = Vec::new();
         for i in self.world.objects[o].instances.clone() {
             let s = self.world.instances[i].script.clone();
@@ -528,7 +529,7 @@ impl Vm<'_> {
                             Some(i) => i,
                             None => {
                                 return Err(Stop::blocked(Block {
-                                    on: Origin::NoInstance(rtype),
+                                    on: Origin::NoInstance(rtype, self.world.object_kind(o)),
                                     at: Some(Self::site(f)),
                                 }))
                             }
@@ -605,7 +606,7 @@ impl Vm<'_> {
                 match insts.as_slice() {
                     [i] => Ok(*i),
                     [] => Err(Stop::blocked(Block {
-                        on: Origin::NoInstance(rtype),
+                        on: Origin::NoInstance(rtype, self.world.object_kind(o)),
                         at: Some(Self::site(f)),
                     })),
                     _ => Err(Stop::err(VmError::Ambiguous {
@@ -871,8 +872,16 @@ impl Vm<'_> {
                 other => self.unknown(open(format!("{} to String", kind_text(&other))))?,
             },
             t if t.ends_with("[]") || t.contains('#') => {
+                let simple = |e: &str| matches!(e, "int" | "float" | "bool" | "string" | "var");
                 if self.fits(&v, t)? {
                     v
+                } else if let (Val::Array(a), Some(e)) = (&v, t.strip_suffix("[]")) {
+                    let from = self.world.arrays[*a].elem.clone();
+                    if simple(&from) || simple(e) || e.contains('#') || from.contains('#') {
+                        return Err(Self::mismatch(f, t, self.kind_of(&v)));
+                    }
+                    let d = format!("cast of an array of {from} to {t}");
+                    self.unknown(open(d))?
                 } else {
                     return Err(Self::mismatch(f, t, self.kind_of(&v)));
                 }
@@ -1249,6 +1258,14 @@ impl Vm<'_> {
                     Val::Object(o) => {
                         if self.object_is_a(o, &t)? {
                             Val::Bool(true)
+                        } else if self.attach.is_some()
+                            && self.world.objects[o].signature_type.is_some()
+                        {
+                            // A record handle is its record type's engine
+                            // type and the scripts attached to it, nothing
+                            // else (`vm_record_signature_type_v1`).
+                            self.rules.insert(rules::SIGNATURE_TYPE);
+                            Val::Bool(false)
                         } else {
                             let d = format!("whether <{}> is {t}", self.world.objects[o].label);
                             self.unknown(Origin::Rule(rules::STRUCTS, d))?

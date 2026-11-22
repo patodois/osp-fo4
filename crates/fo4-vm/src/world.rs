@@ -34,15 +34,16 @@ pub enum Origin {
     /// description.
     Rule(&'static str, String),
     /// A scripted call or property on an object that carries no instance
-    /// of the type (lower-case type name).
-    NoInstance(String),
+    /// of the type: lower-case type name, and the kind of the object
+    /// ([`World::object_kind`]).
+    NoInstance(String, String),
 }
 impl Origin {
     pub fn text(&self) -> String {
         match self {
             Origin::Native(n) => format!("native {n}"),
             Origin::Rule(r, d) => format!("rule {r}: {d}"),
-            Origin::NoInstance(t) => format!("no script instance of {t}"),
+            Origin::NoInstance(t, k) => format!("no script instance of {t} ({k})"),
         }
     }
 }
@@ -60,6 +61,12 @@ pub struct Object {
     pub types: Vec<String>,
     /// Script instances attached to the object, in attachment order.
     pub instances: Vec<InstId>,
+    /// The engine type of the record behind the object by its record type
+    /// (`vm_record_signature_type_v1`), when known.
+    pub signature_type: Option<String>,
+    /// Whether the scripts of the record behind the object were attached
+    /// (or the object was bound), so that [`crate::Attach`] is asked once.
+    pub attached: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -131,6 +138,9 @@ pub struct World {
     pub now: [f64; 2],
     /// The player handle (`vm_host_player_handle_v1`), once created.
     pub player: Option<ObjId>,
+    /// Objects standing for one placement of a base (the base census),
+    /// with the base's record key.
+    pub placement_bases: Vec<(ObjId, String)>,
 }
 
 impl World {
@@ -145,6 +155,8 @@ impl World {
             key,
             types: types.iter().map(|t| t.to_ascii_lowercase()).collect(),
             instances: Vec::new(),
+            signature_type: None,
+            attached: false,
         });
         self.objects.len() - 1
     }
@@ -179,6 +191,22 @@ impl World {
             self.objects[o].types.push(t);
         }
         o
+    }
+    /// What kind of object a handle is, for counts: `player`, `alias of a
+    /// quest` (key with `#alias:`), `record XXXX` (keyed: the label's
+    /// record type), `placement of a base` or `opaque`.
+    pub fn object_kind(&self, o: ObjId) -> String {
+        let ob = &self.objects[o];
+        if self.player == Some(o) {
+            return "player".into();
+        }
+        match &ob.key {
+            Some(k) if k.contains("#alias:") => "alias of a quest".into(),
+            Some(_) => format!("record {}", ob.label.get(..4).unwrap_or("????")),
+            None if ob.label.starts_with("placement of ") => "placement of a base".into(),
+            None if ob.label.starts_with("alias ") => "alias (opaque)".into(),
+            None => "opaque".into(),
+        }
     }
     pub fn unknown(&mut self, origin: Origin) -> Val {
         self.unknowns.push(Unknown { origin });

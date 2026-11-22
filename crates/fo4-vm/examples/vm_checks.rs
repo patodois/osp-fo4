@@ -645,7 +645,7 @@ fn outcome_class(o: &Outcome) -> String {
             match &b.on {
                 fo4_vm::Origin::Rule(r, _) => format!("rule {r}"),
                 fo4_vm::Origin::Native(_) => "native".into(),
-                fo4_vm::Origin::NoInstance(_) => "no instance".into(),
+                fo4_vm::Origin::NoInstance(..) => "no instance".into(),
             }
         ),
         Outcome::Failed(e) => format!("failed {}", e.kind()),

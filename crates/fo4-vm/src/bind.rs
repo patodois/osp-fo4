@@ -3,6 +3,7 @@
 //! reference instantiated from VMAD with their property values
 //! (`vmad_reference_scripts_v1`, `vmad_property_sets_variable_v1`), and the
 //! events a command line can deliver (`vm_event_handlers_v1`).
+use crate::data::{key_record, record_object, DataHost};
 use crate::{
     program::{Library, Script},
     rules,
@@ -147,7 +148,7 @@ pub fn editor_id(r: &Record) -> Option<String> {
 
 /// A label for the effect log: record type, editor ID when there is one,
 /// and the record key.
-fn label(store: &Store, k: &FormKey, b: &Budget) -> Result<String> {
+pub fn label(store: &Store, k: &FormKey, b: &Budget) -> Result<String> {
     let sig = store
         .signature(k)
         .map(|s| String::from_utf8_lossy(&s).into_owned())
@@ -229,16 +230,18 @@ fn value(
                     format!("object value {} names no winning record", record_key(&k)),
                 )));
             }
-            let l = label(cx.store, &k, cx.b)?;
             if o.alias >= 0 {
-                // The alias word is not read (spec/vmad.md): an opaque
-                // handle whose identity with any other is left open.
+                // The alias of that index of the quest the FormID names
+                // (`vmad_alias_value_v1`): one handle per quest and index.
+                vm.rules.insert(rules::ALIAS_VALUE);
+                let l = label(cx.store, &k, cx.b)?;
+                let key = format!("{}#alias:{}", record_key(&k), o.alias);
                 let o = vm
                     .world
-                    .object(format!("alias {} of {l}", o.alias), None, &[ty]);
+                    .keyed_object(&format!("alias {} of {l}", o.alias), &key, ty);
                 return Ok(Val::Object(o));
             }
-            Val::Object(vm.world.keyed_object(&l, &record_key(&k), ty))
+            Val::Object(record_object(&mut vm.world, cx.store, &k, ty, cx.b)?)
         }
         PropertyValue::Struct(members) => make_struct(vm, cx, members, ty, notes)?,
         PropertyValue::Array(_, items) => {
@@ -340,10 +343,7 @@ pub fn bind_reference(
     let Some(base) = base_of(store, reference, b)? else {
         return Ok(None);
     };
-    let l = label(store, reference, b)?;
-    let object = vm
-        .world
-        .keyed_object(&l, &record_key(reference), "objectreference");
+    let object = record_object(&mut vm.world, store, reference, "objectreference", b)?;
     bind(vm, store, object, &base, Some(reference), b).map(Some)
 }
 
@@ -357,6 +357,7 @@ pub fn bind_base(
 ) -> std::result::Result<Bound, Box<dyn std::error::Error>> {
     let l = format!("placement of {}", label(store, base, b)?);
     let object = vm.world.object(l, None, &["objectreference"]);
+    vm.world.placement_bases.push((object, record_key(base)));
     bind(vm, store, object, base, None, b)
 }
 
@@ -369,6 +370,7 @@ fn bind(
     b: &Budget,
 ) -> std::result::Result<Bound, Box<dyn std::error::Error>> {
     let base_signature = store.signature(base).unwrap_or(*b"????");
+    vm.world.objects[object].attached = true;
     let mut bound = Bound {
         object,
         base_signature,
@@ -413,8 +415,8 @@ fn bind(
             }
             if let Some(t) = &v.terminal {
                 let name = lower(t.script.name);
-                let bl = label(store, k, b)?;
-                let form = vm.world.keyed_object(&bl, &record_key(k), "form");
+                let form = record_object(&mut vm.world, store, k, "form", b)?;
+                vm.world.objects[form].attached = true;
                 match vm.instantiate(Some(form), &name) {
                     Ok(i) => {
                         apply(vm, &cx, i, &name, &t.script.properties, &mut bound.notes)?;
@@ -547,11 +549,161 @@ pub struct Run {
     pub effects: Vec<crate::Effect>,
     pub rules: std::collections::BTreeSet<&'static str>,
     pub world: crate::World,
+    /// The data host's answers by native and kind ([`Mode::Data`]).
+    pub answers: std::collections::BTreeMap<(String, crate::data::Answer), u64>,
+    /// Handles given scripts when first needed, by kind.
+    pub attached: std::collections::BTreeMap<&'static str, u64>,
+    /// What attaching could not apply.
+    pub attach_notes: Vec<String>,
+}
+
+/// Which host a run uses.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Mode {
+    /// The recording host alone, no record's scripts attached on need, as
+    /// before the data host (`script_run --recording`).
+    Recording,
+    /// The data host ([`DataHost`]) and the scripts of quests, aliases and
+    /// placed references attached when first needed ([`RecordScripts`]).
+    Data,
+}
+
+/// Attaches the scripts of the record behind a handle when a run first
+/// needs an instance on it (`vm_record_scripts_attach_v1`): a quest's VMAD
+/// scripts on the quest's handle, the scripts of a quest's alias entry on
+/// the alias handle (`vmad_alias_value_v1`), and a placed reference's
+/// (REFR or ACHR) scripts as [`bind_reference`] attaches them, each with
+/// its VMAD property values. Other records get nothing.
+pub struct RecordScripts<'s> {
+    pub store: &'s Store,
+    pub max_memory: u64,
+    /// Handles given scripts, by kind (`quest`, `alias`, `reference`).
+    pub attached: std::collections::BTreeMap<&'static str, u64>,
+    /// What could not be attached or applied, as text.
+    pub notes: Vec<String>,
+}
+impl<'s> RecordScripts<'s> {
+    pub fn new(store: &'s Store, max_memory: u64) -> Self {
+        RecordScripts {
+            store,
+            max_memory,
+            attached: Default::default(),
+            notes: Vec::new(),
+        }
+    }
+    fn scripts(
+        &mut self,
+        vm: &mut Vm<'_>,
+        o: ObjId,
+        cx: &Ctx<'_>,
+        list: &[fo4_plugin::vmad::Script<'_>],
+    ) -> std::result::Result<bool, Box<dyn std::error::Error>> {
+        let mut any = false;
+        for sc in list {
+            let name = lower(sc.name);
+            match vm.instantiate(Some(o), &name) {
+                Ok(i) => {
+                    any = true;
+                    apply(vm, cx, i, &name, &sc.properties, &mut self.notes)?;
+                }
+                Err(e) => self
+                    .notes
+                    .push(format!("attached script {name}: {e}; not attached")),
+            }
+        }
+        Ok(any)
+    }
+    fn quest(
+        &mut self,
+        vm: &mut Vm<'_>,
+        o: ObjId,
+        quest: &FormKey,
+        alias: Option<i16>,
+        b: &Budget,
+    ) -> std::result::Result<bool, Box<dyn std::error::Error>> {
+        let Some((r, plugin)) = vmad_of(self.store, quest, b)? else {
+            return Ok(false);
+        };
+        let cx = Ctx {
+            store: self.store,
+            plugin,
+            file: r.source.file.clone(),
+            b,
+        };
+        let mut any = false;
+        for s in r.subrecords.iter().filter(|s| s.signature == *b"VMAD") {
+            let v = Vmad::read(r.data(s), r.signature, &r.source.file, s.offset, b)?;
+            match alias {
+                None => any |= self.scripts(vm, o, &cx, &v.scripts)?,
+                Some(i) => {
+                    let entries = v.quest.iter().flat_map(|q| &q.aliases);
+                    for a in entries.filter(|a| a.object.alias == i) {
+                        any |= self.scripts(vm, o, &cx, &a.scripts)?;
+                    }
+                }
+            }
+        }
+        Ok(any)
+    }
+    fn attach_key(
+        &mut self,
+        vm: &mut Vm<'_>,
+        o: ObjId,
+        key: &str,
+    ) -> std::result::Result<(), Box<dyn std::error::Error>> {
+        let b = Budget::new(self.max_memory);
+        if let Some((q, i)) = key.split_once("#alias:") {
+            let (Some(q), Ok(i)) = (key_record(q), i.parse::<i16>()) else {
+                return Ok(());
+            };
+            if self.quest(vm, o, &q, Some(i), &b)? {
+                *self.attached.entry("alias").or_default() += 1;
+                vm.rules.insert(rules::ATTACH);
+            }
+            return Ok(());
+        }
+        let Some(k) = key_record(key) else {
+            return Ok(());
+        };
+        match self.store.signature(&k).as_ref().map(|s| &s[..]) {
+            Some(b"QUST") => {
+                if self.quest(vm, o, &k, None, &b)? {
+                    *self.attached.entry("quest").or_default() += 1;
+                    vm.rules.insert(rules::ATTACH);
+                }
+            }
+            Some(b"REFR" | b"ACHR") => {
+                let Some(base) = base_of(self.store, &k, &b)? else {
+                    return Ok(());
+                };
+                let bound = bind(vm, self.store, o, &base, Some(&k), &b)?;
+                self.notes.extend(bound.notes);
+                if !bound.instances.is_empty() {
+                    *self.attached.entry("reference").or_default() += 1;
+                    vm.rules.insert(rules::ATTACH);
+                }
+            }
+            _ => {}
+        }
+        Ok(())
+    }
+}
+impl crate::Attach for RecordScripts<'_> {
+    fn attach(&mut self, vm: &mut Vm<'_>, o: ObjId) -> std::result::Result<(), VmError> {
+        let Some(key) = vm.world.objects[o].key.clone() else {
+            return Ok(());
+        };
+        self.attach_key(vm, o, &key)
+            .map_err(|e| VmError::BadArgument {
+                site: None,
+                detail: format!("attaching the scripts of {key}: {e}"),
+            })
+    }
 }
 
 /// Binds a placed reference (or, with `reference` `None`, a base alone)
-/// in a fresh interpreter with the recording host, delivers the events,
-/// and fires up to `timers` queued timers.
+/// in a fresh interpreter with the data host ([`Mode::Data`]), delivers
+/// the events, and fires up to `timers` queued timers.
 pub fn run(
     lib: &mut dyn Library,
     store: &Store,
@@ -561,8 +713,33 @@ pub fn run(
     timers: usize,
     b: &Budget,
 ) -> std::result::Result<Run, Box<dyn std::error::Error>> {
-    let mut host = crate::RecordingHost::default();
-    let mut vm = Vm::new(lib, &mut host);
+    run_in(Mode::Data, lib, store, reference, base, events, timers, b)
+}
+
+/// [`run`] with a chosen host.
+#[allow(clippy::too_many_arguments)]
+pub fn run_in(
+    mode: Mode,
+    lib: &mut dyn Library,
+    store: &Store,
+    reference: Option<&FormKey>,
+    base: &FormKey,
+    events: &[Event],
+    timers: usize,
+    b: &Budget,
+) -> std::result::Result<Run, Box<dyn std::error::Error>> {
+    let max = store.limits.max_memory;
+    let mut recording = crate::RecordingHost::default();
+    let mut data = DataHost::new(store, max);
+    let mut attach = RecordScripts::new(store, max);
+    let host: &mut dyn crate::Host = match mode {
+        Mode::Recording => &mut recording,
+        Mode::Data => &mut data,
+    };
+    let mut vm = Vm::new(lib, host);
+    if mode == Mode::Data {
+        vm.attach = Some(&mut attach);
+    }
     let bound = match reference {
         Some(r) => bind_reference(&mut vm, store, r, b)?.ok_or("reference without a base")?,
         None => bind_base(&mut vm, store, base, b)?,
@@ -577,12 +754,19 @@ pub fn run(
         let script = vm.world.instances[inst].script.clone();
         outcomes.push((format!("timer:{}", vm.world.render(&id)), script, o));
     }
+    let effects = std::mem::take(&mut vm.effects);
+    let rules = std::mem::take(&mut vm.rules);
+    let world = std::mem::take(&mut vm.world);
+    drop(vm);
     Ok(Run {
         bound,
         outcomes,
-        effects: std::mem::take(&mut vm.effects),
-        rules: std::mem::take(&mut vm.rules),
-        world: std::mem::take(&mut vm.world),
+        effects,
+        rules,
+        world,
+        answers: std::mem::take(&mut data.answers),
+        attached: attach.attached,
+        attach_notes: attach.notes,
     })
 }
 

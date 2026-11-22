@@ -82,9 +82,10 @@ usage:
       scripts of the cell's placed reference INDEX (numbered as
       `script_run CELL list` numbers them) for the events named (activate,
       trigger-enter, trigger-leave, load, unload, init, reset, cell-attach,
-      cell-detach, fragment:N) with fo4-vm's recording host, prints the
-      effect log, and leaves out of the frame each reference of the loaded
-      cells whose last visibility change in the log is a disable; every
+      cell-detach, fragment:N) with fo4-vm's data host, prints the
+      effect log, leaves out of the frame each reference of the loaded
+      cells whose last visibility change in the log is a disable, and puts
+      in each initially disabled one whose last change is an enable; every
       other native call is only logged.
       --path (with --walk --terrain --around N) walks the settled walker to
       each X,Y in turn at the run speed, moving the loaded grid as the

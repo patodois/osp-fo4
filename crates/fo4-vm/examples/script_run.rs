@@ -5,8 +5,13 @@
 //! ```text
 //! script_run MANIFEST CELL[@DX,DY] list
 //! script_run MANIFEST CELL[@DX,DY] INDEX EVENT[,EVENT...] [--timers N]
-//! script_run MANIFEST --census OUT_DIR (CELL[:RADIUS]... | ALL)
+//! script_run MANIFEST --census OUT_DIR (CELL[:RADIUS]... | ALL | PLACED)
 //! ```
+//!
+//! Runs use the data host and attach the scripts of quests, aliases and
+//! placed references when first needed (`fo4_vm::bind::Mode::Data`);
+//! `--recording` anywhere on the line runs the recording host alone, as
+//! before the data host (`Mode::Recording`).
 //!
 //! CELL is an EditorID; `@DX,DY` takes the exterior cell that many grid
 //! steps east and north of it. INDEX numbers the cell's placed references
@@ -16,9 +21,17 @@
 //!
 //! `--census` delivers, to every scripted DOOR, TERM and ACTI placed in the
 //! cells (or, with `ALL`, every winning scripted DOOR, TERM and ACTI base,
-//! bound alone), each event that one of its scripts has a function with
-//! instructions for, and each TERM fragment, one fresh run per event. It
-//! writes `vm-census.txt` (counts only) and `vm-census-names.txt` (names).
+//! bound alone; with `PLACED`, every winning placed reference of a
+//! scripted DOOR, TERM or ACTI base, or with its own VMAD, in every cell),
+//! each event that one of its scripts has a function with instructions
+//! for, and each TERM fragment, one fresh run per event. It writes
+//! `vm-census.txt` (counts only), `vm-census-names.txt` (names),
+//! `vm-census-origins.txt` (blocking origins ranked, names) and
+//! `vm-blockers.txt` (the natives whose result a blocked handler needed,
+//! ranked by handlers, and the objects without a script instance by kind
+//! and by the engine class of the type called), and `vm-visibility.txt`
+//! (every visibility change of a placed REFR by handlers that completed,
+//! names).
 use fo4_core::{Budget, Manifest};
 use fo4_plugin::{typed::Store, FormKey};
 use fo4_vfs::Vfs;
@@ -96,6 +109,7 @@ fn census(
     store: &Store,
     out_dir: &Path,
     specs: &[String],
+    mode: bind::Mode,
 ) -> Result<(), E> {
     let b = Budget::new(m.limits.max_memory);
     let mut lib = VfsLibrary::new(vfs, m.limits.max_memory);
@@ -103,7 +117,51 @@ fn census(
     let mut targets: Vec<(String, Option<FormKey>, FormKey)> = Vec::new();
     let mut counts = Counts::new();
     let mut loaded_keys = std::collections::BTreeSet::new();
+    let mut enable_children: std::collections::HashMap<FormKey, u64> = Default::default();
     for spec in specs {
+        if spec == "PLACED" {
+            let placed: Vec<FormKey> = store
+                .placement_cells()
+                .filter(|(o, _)| !o.deleted && o.signature == *b"REFR")
+                .map(|(o, _)| store.overrides().form_key(o.key, store.order()))
+                .collect();
+            for r in placed {
+                loaded_keys.insert(bind::record_key(&r));
+                let b = b.child();
+                // Enable parents (XESP, first word): only counted, for the
+                // visibility lines; the scene draws no reference that has one.
+                if let Some((x, plugin)) = store.raw_with_plugin(&r, &b)? {
+                    for s in x.subrecords.iter().filter(|s| s.signature == *b"XESP") {
+                        let d = x.data(s);
+                        if d.len() >= 4 {
+                            let id = u32::from_le_bytes([d[0], d[1], d[2], d[3]]);
+                            if let Ok(Some(p)) =
+                                store.order().remap(plugin, id, &x.source.file, s.offset)
+                            {
+                                *enable_children.entry(p).or_default() += 1;
+                            }
+                        }
+                    }
+                }
+                let Some(base) = bind::base_of(store, &r, &b)? else {
+                    continue;
+                };
+                if !store.signature(&base).is_some_and(|s| KINDS.contains(&s)) {
+                    continue;
+                }
+                let scripted = [&base, &r].iter().any(|k| {
+                    store
+                        .raw(k, &b.child())
+                        .ok()
+                        .flatten()
+                        .is_some_and(|x| x.subrecords.iter().any(|s| s.signature == *b"VMAD"))
+                });
+                if scripted {
+                    targets.push((format!("placed {}", bind::record_key(&r)), Some(r), base));
+                }
+            }
+            continue;
+        }
         if spec == "ALL" {
             let bases: Vec<FormKey> = store
                 .winners()
@@ -157,8 +215,24 @@ fn census(
         }
     }
     let mut names = String::new();
+    let mut visibility = String::new();
+    let cells_of: std::collections::HashMap<FormKey, FormKey> = store
+        .placement_cells()
+        .map(|(o, c)| (store.overrides().form_key(o.key, store.order()), c))
+        .collect();
+    let mut blockers = Counts::new();
     let mut handlers = 0u64;
+    let cache = Budget::new(m.limits.max_memory);
+    let mut loader = fo4_scene::Loader::new(
+        store,
+        vfs,
+        &m.language,
+        fo4_scene::RuleLevel::Hypotheses,
+        &cache,
+    );
+    let mut checked = 0u64;
     for (label, reference, base) in &targets {
+        let b = b.child();
         bump(&mut counts, "objects bound");
         let events = match events_of(&mut lib, store, reference.as_ref(), base, &b) {
             Ok(e) => e,
@@ -175,7 +249,8 @@ fn census(
             );
         }
         for ev in &events {
-            let r = bind::run(
+            let r = bind::run_in(
+                mode,
                 &mut lib,
                 store,
                 reference.as_ref(),
@@ -184,6 +259,34 @@ fn census(
                 0,
                 &b,
             )?;
+            for ((native, answer), n) in &r.answers {
+                let kind = match answer {
+                    fo4_vm::data::Answer::Record => "a record".to_string(),
+                    fo4_vm::data::Answer::NoRecord => "none".to_string(),
+                    fo4_vm::data::Answer::Value => "a value".to_string(),
+                    fo4_vm::data::Answer::Open(why) => format!("undetermined: {why}"),
+                };
+                *blockers
+                    .entry(format!("data answer\t{native}\t{kind}"))
+                    .or_default() += n;
+            }
+            for (kind, n) in &r.attached {
+                *counts
+                    .entry(format!("handles given scripts when first needed: {kind}"))
+                    .or_default() += n;
+            }
+            for n in &r.attach_notes {
+                let kind = if n.contains("is not declared") {
+                    "property not declared"
+                } else if n.contains("no variable behind it") {
+                    "property without a variable"
+                } else if n.contains("not attached") {
+                    "script not attached"
+                } else {
+                    "property value refused"
+                };
+                bump(&mut counts, format!("attach note: {kind}"));
+            }
             writeln!(
                 names,
                 "## {label} {} event {} ({})",
@@ -221,10 +324,24 @@ fn census(
                 match o {
                     Outcome::Completed(_) => bump(&mut counts, "outcome completed"),
                     Outcome::Blocked(bl) => {
+                        match &bl.on {
+                            fo4_vm::Origin::Native(n) => {
+                                bump(&mut blockers, format!("native\t{n}"))
+                            }
+                            fo4_vm::Origin::NoInstance(t, kind) => {
+                                let class = engine_class(&mut lib, t);
+                                bump(&mut blockers, format!("object kind\t{kind}"));
+                                bump(
+                                    &mut blockers,
+                                    format!("object kind and type class\t{kind}\t{class}"),
+                                );
+                            }
+                            fo4_vm::Origin::Rule(..) => {}
+                        }
                         let what = match &bl.on {
                             fo4_vm::Origin::Native(_) => "blocked on a native result".to_string(),
                             fo4_vm::Origin::Rule(rule, _) => format!("blocked on rule {rule}"),
-                            fo4_vm::Origin::NoInstance(_) => {
+                            fo4_vm::Origin::NoInstance(..) => {
                                 "blocked on a scripted call or property of an object without that script".to_string()
                             }
                         };
@@ -260,6 +377,126 @@ fn census(
                         if shown { "enable" } else { "disable" }
                     ),
                 );
+                // Whether the change could show in a frame: a handler
+                // that completed, on a placed reference, enabling one that
+                // starts disabled or disabling one that starts enabled.
+                let completed = r
+                    .outcomes
+                    .iter()
+                    .all(|o| matches!(o.2, Outcome::Completed(_)));
+                let target = fo4_vm::data::key_record(&k);
+                let start = target
+                    .as_ref()
+                    .and_then(|t| store.overrides().winner(t))
+                    .filter(|w| !w.deleted && w.signature == *b"REFR")
+                    .map(|w| w.disabled);
+                let what = match (shown, start) {
+                    (_, None) => "not a placed REFR",
+                    (true, Some(true)) => "enable of an initially disabled REFR",
+                    (true, Some(false)) => "enable of an enabled REFR",
+                    (false, Some(false)) => "disable of an enabled REFR",
+                    (false, Some(true)) => "disable of an initially disabled REFR",
+                };
+                bump(
+                    &mut counts,
+                    format!(
+                        "visibility change: {what}, handlers {}",
+                        if completed {
+                            "completed"
+                        } else {
+                            "not all completed"
+                        }
+                    ),
+                );
+                if completed && start.is_some() {
+                    // What the scene would hold against drawing the target:
+                    // its base's record type and the reference subrecords
+                    // that block drawing (VMAD, CTDA, XESP).
+                    let mut traits = Vec::new();
+                    if let Some(t) = &target {
+                        let b = b.child();
+                        if let Some(base) = bind::base_of(store, t, &b)? {
+                            let sig = store.signature(&base).unwrap_or(*b"????");
+                            traits.push(format!("base {}", String::from_utf8_lossy(&sig)));
+                        }
+                        if let Some(x) = store.raw(t, &b)? {
+                            for sub in [b"VMAD", b"CTDA", b"XESP"] {
+                                if x.subrecords.iter().any(|y| y.signature == *sub) {
+                                    traits.push(String::from_utf8_lossy(sub).into_owned());
+                                }
+                            }
+                        }
+                        if Some(t) == reference.as_ref() {
+                            traits.push("itself".into());
+                        }
+                    }
+                    // Whether the scene would draw the target under every
+                    // pending rule: its instance made as a cell load makes
+                    // one (`fo4_scene::Loader::instance`).
+                    let drawable = match &target {
+                        Some(t) => {
+                            checked += 1;
+                            if checked.is_multiple_of(200) {
+                                loader.reset_asset_cache(&cache);
+                            }
+                            let b = b.child();
+                            match loader.instance(t, &b) {
+                                Ok(i) if i.state.ready_at(fo4_scene::RuleLevel::Hypotheses) => {
+                                    "drawable".to_string()
+                                }
+                                Ok(i) => {
+                                    let mut codes: Vec<&str> =
+                                        i.blockers.iter().map(|e| e.code.as_str()).collect();
+                                    codes.sort_unstable();
+                                    codes.dedup();
+                                    format!("not drawable: {}", codes.join(" "))
+                                }
+                                Err(e) => format!("not drawable: {}", e.code),
+                            }
+                        }
+                        None => "not drawable: no record".to_string(),
+                    };
+                    bump(
+                        &mut counts,
+                        format!(
+                            "visibility change: {what}, handlers completed, target {}",
+                            if drawable == "drawable" {
+                                "drawable under every pending rule"
+                            } else {
+                                "not drawable"
+                            }
+                        ),
+                    );
+                    traits.push(drawable);
+                    if let Some(n) = target.as_ref().and_then(|t| enable_children.get(t)) {
+                        traits.push(format!("enable parent of {n} placed REFR"));
+                        bump(
+                            &mut counts,
+                            format!("visibility change: {what}, handlers completed, target an enable parent"),
+                        );
+                    }
+                    let cell = target.as_ref().and_then(|t| cells_of.get(t));
+                    let bound_cell = reference.as_ref().and_then(|t| cells_of.get(t));
+                    writeln!(
+                        visibility,
+                        "{what}\t{}\t{}\t{}\t{}\t{k}\t{}\t{}",
+                        traits.join(" "),
+                        label,
+                        ev.name(),
+                        if cell.is_some() && cell == bound_cell {
+                            "same cell"
+                        } else {
+                            "other cell"
+                        },
+                        cell.map(bind::record_key).unwrap_or_default(),
+                        r.world
+                            .objects
+                            .iter()
+                            .find(|o| o.key.as_deref() == Some(&k))
+                            .map(|o| o.label.clone())
+                            .unwrap_or_default()
+                    )?;
+                }
             }
             bump(
                 &mut counts,
@@ -272,11 +509,14 @@ fn census(
     }
     std::fs::create_dir_all(out_dir)?;
     std::fs::write(out_dir.join("vm-census-names.txt"), names)?;
+    std::fs::write(out_dir.join("vm-visibility.txt"), visibility)?;
     // Names leave the counts file: origin and failure lines name natives
     // and scripts, so only their number of distinct values is kept there.
     let mut agg = String::new();
     let scope = if specs.iter().any(|s| s == "ALL") {
         "every winning scripted DOOR, TERM and ACTI base, bound alone"
+    } else if specs.iter().any(|s| s == "PLACED") {
+        "every placed reference of a DOOR, TERM or ACTI base with a VMAD on the base or the reference"
     } else {
         "scripted DOOR, TERM and ACTI placed in the cells named"
     };
@@ -317,7 +557,46 @@ fn census(
         writeln!(ranked, "{v}\t{k}")?;
     }
     std::fs::write(out_dir.join("vm-census-origins.txt"), ranked)?;
+    let mut ranked: Vec<(u64, &String)> = blockers.iter().map(|(k, v)| (*v, k)).collect();
+    ranked.sort_by(|a, b| {
+        let section = |k: &str| k.split('\t').next().unwrap_or("").to_string();
+        section(a.1)
+            .cmp(&section(b.1))
+            .then(b.0.cmp(&a.0))
+            .then(a.1.cmp(b.1))
+    });
+    let mut text = String::new();
+    for (v, k) in ranked {
+        writeln!(text, "{v}\t{k}")?;
+    }
+    std::fs::write(out_dir.join("vm-blockers.txt"), text)?;
     Ok(())
+}
+
+/// Engine types a blocked call's type is classified by: the first of these
+/// in the type's chain, else `other`.
+const ENGINE_CLASSES: [&str; 10] = [
+    "referencealias",
+    "refcollectionalias",
+    "locationalias",
+    "activemagiceffect",
+    "actor",
+    "objectreference",
+    "quest",
+    "scene",
+    "alias",
+    "form",
+];
+fn engine_class(lib: &mut VfsLibrary<'_>, t: &str) -> &'static str {
+    let mut host = fo4_vm::NoHost;
+    let mut vm = Vm::new(lib, &mut host);
+    let chain = vm.chain(t).unwrap_or_default();
+    for s in &chain {
+        if let Some(c) = ENGINE_CLASSES.iter().find(|c| **c == s.name) {
+            return c;
+        }
+    }
+    "other"
 }
 
 fn bucket(n: usize) -> &'static str {
@@ -331,8 +610,14 @@ fn bucket(n: usize) -> &'static str {
 }
 
 fn run() -> Result<(), E> {
-    let args: Vec<String> = std::env::args().skip(1).collect();
-    let usage = "script_run MANIFEST CELL[@DX,DY] (list | INDEX EVENT[,EVENT...] [--timers N]) | script_run MANIFEST --census OUT_DIR (CELL[:RADIUS]... | ALL)";
+    let mut args: Vec<String> = std::env::args().skip(1).collect();
+    let mode = if args.iter().any(|a| a == "--recording") {
+        bind::Mode::Recording
+    } else {
+        bind::Mode::Data
+    };
+    args.retain(|a| a != "--recording");
+    let usage = "script_run MANIFEST CELL[@DX,DY] (list | INDEX EVENT[,EVENT...] [--timers N]) | script_run MANIFEST --census OUT_DIR (CELL[:RADIUS]... | ALL | PLACED); --recording: the recording host alone";
     if args.len() < 3 {
         return Err(usage.into());
     }
@@ -340,7 +625,7 @@ fn run() -> Result<(), E> {
     let vfs = Vfs::mount(&m, &Budget::new(m.limits.max_vfs_memory))?;
     let store = Store::open(&m, &Budget::new(m.limits.max_override_memory))?;
     if args[1] == "--census" {
-        return census(&m, &vfs, &store, Path::new(&args[2]), &args[3..]);
+        return census(&m, &vfs, &store, Path::new(&args[2]), &args[3..], mode);
     }
     let b = Budget::new(m.limits.max_memory);
     let ck = cell(&store, &args[1], &b)?;
@@ -387,7 +672,7 @@ fn run() -> Result<(), E> {
         None => 0,
     };
     let mut lib = VfsLibrary::new(&vfs, m.limits.max_memory);
-    let run = bind::run(&mut lib, &store, Some(r), &base, &events, timers, &b)?;
+    let run = bind::run_in(mode, &mut lib, &store, Some(r), &base, &events, timers, &b)?;
     print!("{}", bind::effect_log(&run));
     Ok(())
 }
