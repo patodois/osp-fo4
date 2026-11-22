@@ -993,7 +993,152 @@ throughout):
    quest done, false. No run sets that stage: the next stop is a world
    event (the opening quest's own script sets stages from animation and
    distance events, none of them stage 20; what sets it is not
-   determined).
+   determined). Since the stage-setters step the table finds no setter
+   of that stage anywhere in the data; Stage setters, below, continues
+   the opening from there.
+
+## Stage setters
+
+Since the stage-setters step `fo4_vm::setters` builds a static table of
+every place in the data that can set a quest stage, with what each place
+needs to happen first; nothing runs to build it. The census tool is
+`stage_census` ([stage-setter-census.txt](stage-setter-census.txt), counts
+and kinds only; the quest by quest list with names goes to a file that is
+never versioned). 9 to 30 s wall, peak RSS about 1.1 GB.
+
+| Kind of setter | How it is found | Rule |
+| --- | --- | --- |
+| a call in a compiled script | every call of the scripted `setStage` or the native `SetCurrentStageID` on a quest receiver (the definitions on the quest type left out), its quest and stage followed back within the function to a literal, `self`, `GetOwningQuest()` on `self` or on a property, a property (resolved per attaching record by the values its VMAD stores, an int property without a stored value by its compiled initial value), a struct property's members together, any element of an array property, or a parameter, resolved at each call of the function up to three calls outward (the quest type's struct-taking function among them) | `setter_static_scan_v1` |
+| what attaches the script | every winning VMAD: a quest's own scripts, its alias scripts, its stage fragment script; the TERM, INFO, PACK, SCEN and PERK fragment blocks with each fragment's slot; the own scripts of placed references, base objects, lines, scenes, packages, perks, magic effects; a script no read VMAD attaches is still scanned | `vmad_reference_scripts_v1`, `vmad_fragment_blocks_v1` |
+| the event that runs it | an engine event (a function without instructions named `on...`, declared by a script that declares a native function: 159 names) runs the function of its name; `::remote_<type>_<event>` a remote event; another `::remote_` function a custom event; a fragment its slot; calls on `self` and parent calls carry an entry to the functions they call; a function no entry reaches is counted apart | `setter_event_entry_v1` |
+| record fields | INFO TIQS, scene SCQS and phase SCQS: two i16, the stage of the owning quest set at the begin and at the end (negative: none) | `record_set_stage_fields_v1` |
+| startup stages | a stage with INDX flag 0x2, set when its quest starts | `quest_start_v1` |
+
+Measured over one installation (every count in the census):
+
+- 26,361 setters (one per distinct place, attachment, stage and need):
+  calls in quest stage fragments 5,233, quests' own scripts 4,294, alias
+  scripts 4,116, placed references' own scripts 1,688, base objects'
+  scripts 522, INFO fragments 513, INFO own scripts 130, terminal fragments
+  164, scene fragments 146, package fragments 56, perk fragments 6, magic
+  effects 4, scripts no read VMAD attaches 1,150; record fields 7,367 (INFO
+  TIQS 5,875, phase SCQS 910, scene SCQS 582); startup stages 972. 3,521
+  of the calls go through a function passing a parameter on (73 calls of
+  such functions at depth 1, 147 at depth 2, none at 3).
+- What they need first, by family: another stage or a quest start (a
+  chain) 6,187, a dialogue line 6,388, an engine event 5,189, a player
+  action on an object (activation, trigger enter or leave, a terminal
+  item) 1,917, a scene's progress 1,638, a timer of the script 1,107, a
+  custom event 799, a package 56, a perk entry 6; 3,074 sit in functions
+  no event or fragment of their own script reaches.
+- Resolution: the quest is a constant in 24,506 setters, the stage in
+  24,646; 2,491 constant setters name a stage the quest record does not
+  hold (1,051 pairs), mostly generic scripts whose int property has no
+  stored value; of the record fields' non-negative halves 117 of 5,875
+  TIQS, 6 of 582 scene SCQS and 7 of 910 phase SCQS name no stage of the
+  owning quest (one 2-byte SCQS inside an action is counted and not read).
+- **Stages**: of the 12,855 stages of the 1,905 winning quests with
+  stages, **2,297 have no setter found at all** (none a startup stage);
+  584 quests have no stage with a setter. 6,603 stages have one setter,
+  1,961 two, 1,310 three or four, 684 five or more.
+- Quest starts: 2,049 starters on 1,625 quests (457 flagged to start with
+  the game, story manager nodes by event, 254 `Start` call sites).
+- Location special references: 300 LCTN lists (LCSR) all divide into
+  16-byte rows, every row an LCRT then a placed REFR, ACHR or PHZD; of the
+  2,850 reference aliases filled from a location alias with a ref type,
+  790 resolve to exactly one row (`quest_alias_location_ref_v1`).
+
+**Reachability** (`quest_run new-game --next-blockers`): at the end of a
+run, every scene stopped in a phase on its conditions is read for
+conditions of function 59 (and 58 compared with `==` or `>=`) on a stage
+the run has not set, and the quests the caller set a stage on add their
+next three stages not done; for each such stage the table gives its
+setters, by kind and need, with the need's state in the run (a chain stage
+done or not, a scene point reached or not, a player action on a reference
+or on the reference an alias holds, which the caller can assume, an event
+the interpreter does not raise). `quest-run-next-blockers.txt` holds the
+counts and kinds; the names file names the records and the switch that
+would deliver a player action.
+
+### Player-event assumptions and the readings behind switches
+
+`fo4_vm::player` delivers the engine event of a player action on a placed
+reference when the caller assumes it: `quest_run --assume-activate`,
+`--assume-trigger-enter`, `--assume-trigger-leave`, `--assume-open`, each
+with a reference as `plugin.esm:0001ABCD` given on the command line (never
+stored), at once after the start or `@SECONDS` on the real-time clock
+(with `--scene-clock`); `--then EDITOR_ID:STAGE@SECONDS` likewise. The
+event runs on the reference's scripts (base VMAD, then its own), then on
+the scripts of every quest alias holding it, then on the instances
+registered for it as a remote event, each handler the function of the
+event's name the compiled scripts declare with the arguments its
+parameters ask for (none, or the player for one object parameter); nothing
+else the action does in the game (a door opening, the default activation)
+is performed. Every assumption is counted as one in the census.
+
+| Switch | Reading | Rule |
+| --- | --- | --- |
+| `--assume-activate`, `--assume-trigger-enter`, `--assume-trigger-leave` | caller assumption; who receives the event | `vm_event_handlers_v1`, `vm_event_alias_scripts_v1` |
+| `--assume-open` | caller assumption; OnOpen with the player as opener | `vm_event_open_v1`, `vm_event_alias_scripts_v1` |
+| `--then Q:S@SECONDS` | caller assumption: a stage set from outside any script at that second | none |
+| `--scene-recheck` | a scene stopped on its phase's conditions is offered that phase again after any change of quest state | `scene_condition_recheck_v1` |
+| `--stage-fields` | scene and phase SCQS set stages when a scene starts or ends and a phase is entered or completed (INFO TIQS is not applied: no run speaks a line) | `record_set_stage_fields_v1` |
+| `--cond-550-clock` | function 550 reads the actions the scene clock completed | `cond_fn_550_clock_actions_v1` |
+| `--alias-location-refs` | a reference alias filled from a location alias with a ref type holds the location's special reference | `quest_alias_location_ref_v1` |
+| `--assume-start-scene-actions` | caller assumption: a start-scene action completes as it starts; it starts the scene LCEP names | `scene_start_scene_action_v1` |
+
+Each is off by default. With none of them every versioned census
+reproduces byte for byte (checked with `cmp`: the four `quest-run-*.txt`,
+`conditions-census.txt`, `conditions-blockers.txt`,
+`conditions-blockers-before.txt`, `story-manager-census.txt`,
+`fragment-census.txt`, `voice-census.txt`, `scene-clock-census.txt`; in
+`vm-census.txt` every line but three pairs of drawable / not drawable
+counts of enable children in the sections of the bases bound alone, which
+main's own binary gives exactly as this step's: they were stale before it).
+
+**The forced opening, stop by stop** (`quest_run new-game --then <opening
+quest>:0 --timers 50 --time-scale-global <time-scale global>
+--scene-clock 200`; the concrete records are in the step's notes). Each
+stop and what passed it, in order:
+
+1. The first scene's phase 0 on function 555: `--assume-cond 555=1`.
+2. Phase 1's line whose topic holds no line: `--assume-line-seconds 3`.
+3. Phase 4 on function 131: `--assume-cond 131=50`.
+4. Phase 8's package action: `--assume-packages-complete`.
+5. Phase 8 on function 59, a stage of the opening quest **for which the
+   table finds no setter at all**: `--then <quest>:<stage>@18` with
+   `--scene-recheck`; the scene ends. (With `--stage-fields` the scene's
+   phase fields had already set three earlier stages.)
+6. The quest's next stage: a trigger-enter handler of a placed trigger
+   reference (through the shared set-stage helper): `--assume-trigger-enter
+   <reference>@19`. The stage fragment starts a second scene and a helper
+   quest; with `--stage-fields` the second scene's end sets a stage, a
+   third scene starts, and two of its phase fields set two more.
+7. The third scene's phase 4 on function 550 of its own timer action:
+   `--cond-550-clock`. The scene ends; its end field sets a stage whose
+   fragment sets another, whose fragment sets a third; a fourth scene
+   starts and runs on its timers, lines and packages, two of its phase
+   fields setting two stages.
+8. The fourth scene's start-scene action: `--assume-start-scene-actions`;
+   it starts a fifth scene that loops on a timer with a TNAM (time not
+   settled), and the fourth scene ends.
+9. The next stage's setter is the activation handler of an alias filled
+   from a location alias by a ref type: `--alias-location-refs` fills it
+   (one special reference), then `--assume-activate <that reference>@90`
+   sets the stage; its fragment opens the reference by script and stops
+   the two scenes.
+10. The next stage's setter is the alias's OnOpen handler:
+    `--assume-open <reference>@90` delivers it, and the handler **blocks
+    on an open interpreter rule** (`pex_array_ops_v1`: the length of an
+    array property left none, inside the shared set-stage helper). No
+    caller assumption passes this stop.
+
+Reached: **15 of the opening quest's 104 stages** (one of them set by the
+caller), no objective displayed. Exploring past the stop with the stage
+set by hand (`--then <quest>:<stage>@91`) and `--assume-player-choice 0`:
+a sixth scene starts and runs through two player dialogue actions to its
+phase whose field sets one more stage (17 stages); the next stages need a
+dialogue line's TIQS, which no run applies.
 
 ## Conditions
 
@@ -1320,3 +1465,33 @@ No public page was requested in this step. No editor, editor source or
 definition file, script source, decompiler, other interpreter, audio
 decoder or tool, script extender or the game executable was opened or
 searched for. The game was not run.
+
+## Provenance of the stage-setters step
+
+Recognised from prior general knowledge, used only as hypotheses the
+census could refute ([stage-setter-census.txt](stage-setter-census.txt)):
+
+- that engine events are the functions named `On...` the engine's own
+  types declare without instructions, and that a remote event runs
+  `::remote_<type>_<event>` (`setter_event_entry_v1`, with the earlier
+  `vm_remote_events_v1`);
+- that the INFO field TIQS and the SCEN fields SCQS hold the stages a
+  line, a scene or a phase sets at its begin and end
+  (`record_set_stage_fields_v1`);
+- that a quest alias's scripts receive the events of the reference the
+  alias holds (`vm_event_alias_scripts_v1`), and the name and parameter of
+  OnOpen (`vm_event_open_v1`);
+- that a playing scene keeps testing its phase conditions
+  (`scene_condition_recheck_v1`);
+- that a start-scene action starts the scene LCEP names
+  (`scene_start_scene_action_v1`);
+- the row layout of a location's special reference list (LCSR) and that a
+  location alias's ref type picks a row (`quest_alias_location_ref_v1`);
+- the quest type's struct of a quest and a stage and its global setter,
+  read from the installed compiled script.
+
+The table, the forced opening's stops and every count were measured with
+the repository's own readers on the installed data. No public page was
+requested in this step. No editor, editor source or definition file,
+script source, decompiler, other interpreter, script extender or the game
+executable was opened or searched for. The game was not run.

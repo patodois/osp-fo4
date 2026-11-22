@@ -1,0 +1,15 @@
+# quest_run new-game --next-blockers: counts and kinds only (spec/vm.md, Stage setters)
+1	scenes stopped at the end	an action runs in the phase: kind 3
+30	scenes stopped at the end	an action runs in the phase: kind 6
+16	scenes stopped at the end	completion conditions undetermined
+1	scenes stopped at the end	start conditions undetermined
+2	setters of a waited stage	1
+1	setters of a waited stage	2
+1	setters of a waited stage by kind and need	a call in a quest alias script, through a function passing a parameter on	engine event onopen on a quest alias
+1	setters of a waited stage by kind and need	a dialogue line (INFO) field TIQS, first half	a dialogue line begins
+2	setters of a waited stage by kind and need	a scene phase field SCQS, second half	a scene phase ends
+1	setters of a waited stage: the need in this run	a dialogue line: the interpreter speaks no line itself (only scene actions time them)
+1	setters of a waited stage: the need in this run	a player action on the reference an alias holds in the run, a caller can assume (--assume-open)
+2	setters of a waited stage: the need in this run	a scene the run never started
+3	waits	next stage of a quest the caller set a stage on	the stage is not done in the run
+3	waits: stages a stopped scene phase or the caller's quests wait on

@@ -1,0 +1,516 @@
+# stage_census: counts, kinds, record type tags and engine event names only (spec/vm.md, Stage setters)
+# 1 what the scan read; 2 every setter by kind, need and resolution; 3 every stage of every winning quest by its setters; 4 how quests start; 5 reference aliases filled from a location's special references
+27244	1 attachments (a script attached by one VMAD part)
+1024	1 attachments by kind	a base object's script (ACTI)
+14	1 attachments by kind	a base object's script (ARMO)
+237	1 attachments by kind	a base object's script (BOOK)
+138	1 attachments by kind	a base object's script (CONT)
+19	1 attachments by kind	a base object's script (DOOR)
+19	1 attachments by kind	a base object's script (FLOR)
+329	1 attachments by kind	a base object's script (FURN)
+4	1 attachments by kind	a base object's script (KEYM)
+4	1 attachments by kind	a base object's script (LIGH)
+105	1 attachments by kind	a base object's script (MISC)
+51	1 attachments by kind	a base object's script (MSTT)
+5	1 attachments by kind	a base object's script (NOTE)
+767	1 attachments by kind	a base object's script (NPC_)
+1	1 attachments by kind	a base object's script (STAT)
+5	1 attachments by kind	a base object's script (TACT)
+26	1 attachments by kind	a base object's script (TERM)
+3	1 attachments by kind	a base object's script (WEAP)
+2396	1 attachments by kind	a dialogue line (INFO) fragment
+4015	1 attachments by kind	a dialogue line (INFO)'s own script
+276	1 attachments by kind	a magic effect's script
+166	1 attachments by kind	a package fragment
+1	1 attachments by kind	a package's own script
+32	1 attachments by kind	a perk fragment
+6	1 attachments by kind	a perk's own script
+810	1 attachments by kind	a placed ACHR's own script
+4	1 attachments by kind	a placed PGRE's own script
+9047	1 attachments by kind	a placed REFR's own script
+4057	1 attachments by kind	a quest alias script
+1282	1 attachments by kind	a quest stage fragment
+1471	1 attachments by kind	a quest's own script
+632	1 attachments by kind	a scene fragment
+4	1 attachments by kind	a scene's own script
+294	1 attachments by kind	a terminal fragment
+254	1 call sites	quest start	the native
+8494	1 call sites	set stage	the scripted function
+73	1 calls of functions passing a parameter on	depth 1
+147	1 calls of functions passing a parameter on	depth 2
+0	1 calls of functions passing a parameter on	depth 3
+159	1 engine events (functions without instructions named on..., declared by a script with a native function)
+1	1 functions of the quest type taking the quest and stage in a struct
+1	1 record fields SCQS not read as a stage field	place action, 2 bytes
+4870	1 record stage fields	INFO TIQS	first half	negative (none)
+835	1 record stage fields	INFO TIQS	second half	negative (none)
+409	1 record stage fields	a scene field SCQS	first half	negative (none)
+107	1 record stage fields	a scene field SCQS	second half	negative (none)
+718	1 record stage fields	a scene phase field SCQS	first half	negative (none)
+174	1 record stage fields	a scene phase field SCQS	second half	negative (none)
+10282	1 scripts read
+23	1 sites resolved at their callers (a parameter)
+4	2 constant setters naming no stage of a winning quest, by kind	a call in a base object's script (ACTI)
+10	2 constant setters naming no stage of a winning quest, by kind	a call in a base object's script (ACTI), through a function passing a parameter on
+2	2 constant setters naming no stage of a winning quest, by kind	a call in a base object's script (CONT), through a function passing a parameter on
+1	2 constant setters naming no stage of a winning quest, by kind	a call in a base object's script (MISC), through a function passing a parameter on
+2	2 constant setters naming no stage of a winning quest, by kind	a call in a base object's script (NPC_)
+11	2 constant setters naming no stage of a winning quest, by kind	a call in a dialogue line (INFO) fragment
+2	2 constant setters naming no stage of a winning quest, by kind	a call in a dialogue line (INFO)'s own script, through a function passing a parameter on
+1	2 constant setters naming no stage of a winning quest, by kind	a call in a package fragment
+2	2 constant setters naming no stage of a winning quest, by kind	a call in a placed ACHR's own script, through a function passing a parameter on
+18	2 constant setters naming no stage of a winning quest, by kind	a call in a placed REFR's own script
+43	2 constant setters naming no stage of a winning quest, by kind	a call in a placed REFR's own script, through a function passing a parameter on
+1258	2 constant setters naming no stage of a winning quest, by kind	a call in a quest alias script
+45	2 constant setters naming no stage of a winning quest, by kind	a call in a quest alias script, through a function passing a parameter on
+175	2 constant setters naming no stage of a winning quest, by kind	a call in a quest stage fragment
+780	2 constant setters naming no stage of a winning quest, by kind	a call in a quest's own script
+2	2 constant setters naming no stage of a winning quest, by kind	a call in a quest's own script, through a function passing a parameter on
+4	2 constant setters naming no stage of a winning quest, by kind	a call in a scene fragment
+4	2 constant setters naming no stage of a winning quest, by kind	a call in a terminal fragment
+27	2 constant setters naming no stage of a winning quest, by kind	a dialogue line (INFO) field TIQS, first half
+90	2 constant setters naming no stage of a winning quest, by kind	a dialogue line (INFO) field TIQS, second half
+2	2 constant setters naming no stage of a winning quest, by kind	a scene field SCQS, first half
+4	2 constant setters naming no stage of a winning quest, by kind	a scene field SCQS, second half
+1	2 constant setters naming no stage of a winning quest, by kind	a scene phase field SCQS, first half
+6	2 constant setters naming no stage of a winning quest, by kind	a scene phase field SCQS, second half
+2491	2 constant setters: the stage against the quest record	a stage the quest does not hold
+20350	2 constant setters: the stage against the quest record	a stage the quest holds
+3	2 constant setters: the stage against the quest record	the quest is not a winning QUST
+26361	2 setters
+189	2 setters by kind	a call in a base object's script (ACTI)
+37	2 setters by kind	a call in a base object's script (ACTI), through a function passing a parameter on
+7	2 setters by kind	a call in a base object's script (ARMO)
+37	2 setters by kind	a call in a base object's script (BOOK)
+15	2 setters by kind	a call in a base object's script (BOOK), through a function passing a parameter on
+2	2 setters by kind	a call in a base object's script (CONT)
+2	2 setters by kind	a call in a base object's script (CONT), through a function passing a parameter on
+1	2 setters by kind	a call in a base object's script (DOOR), through a function passing a parameter on
+7	2 setters by kind	a call in a base object's script (FURN)
+2	2 setters by kind	a call in a base object's script (KEYM)
+3	2 setters by kind	a call in a base object's script (KEYM), through a function passing a parameter on
+11	2 setters by kind	a call in a base object's script (MISC)
+10	2 setters by kind	a call in a base object's script (MISC), through a function passing a parameter on
+9	2 setters by kind	a call in a base object's script (MSTT)
+135	2 setters by kind	a call in a base object's script (NPC_)
+47	2 setters by kind	a call in a base object's script (NPC_), through a function passing a parameter on
+4	2 setters by kind	a call in a base object's script (TACT)
+1	2 setters by kind	a call in a base object's script (TERM)
+3	2 setters by kind	a call in a base object's script (TERM), through a function passing a parameter on
+497	2 setters by kind	a call in a dialogue line (INFO) fragment
+16	2 setters by kind	a call in a dialogue line (INFO) fragment, through a function passing a parameter on
+130	2 setters by kind	a call in a dialogue line (INFO)'s own script, through a function passing a parameter on
+4	2 setters by kind	a call in a magic effect's script
+56	2 setters by kind	a call in a package fragment
+6	2 setters by kind	a call in a perk fragment
+8	2 setters by kind	a call in a placed ACHR's own script
+89	2 setters by kind	a call in a placed ACHR's own script, through a function passing a parameter on
+576	2 setters by kind	a call in a placed REFR's own script
+1015	2 setters by kind	a call in a placed REFR's own script, through a function passing a parameter on
+2204	2 setters by kind	a call in a quest alias script
+1912	2 setters by kind	a call in a quest alias script, through a function passing a parameter on
+5202	2 setters by kind	a call in a quest stage fragment
+31	2 setters by kind	a call in a quest stage fragment, through a function passing a parameter on
+4099	2 setters by kind	a call in a quest's own script
+195	2 setters by kind	a call in a quest's own script, through a function passing a parameter on
+143	2 setters by kind	a call in a scene fragment
+3	2 setters by kind	a call in a scene fragment, through a function passing a parameter on
+1138	2 setters by kind	a call in a script no read VMAD attaches
+12	2 setters by kind	a call in a script no read VMAD attaches, through a function passing a parameter on
+164	2 setters by kind	a call in a terminal fragment
+920	2 setters by kind	a dialogue line (INFO) field TIQS, first half
+4955	2 setters by kind	a dialogue line (INFO) field TIQS, second half
+140	2 setters by kind	a scene field SCQS, first half
+442	2 setters by kind	a scene field SCQS, second half
+183	2 setters by kind	a scene phase field SCQS, first half
+727	2 setters by kind	a scene phase field SCQS, second half
+972	2 setters by kind	a startup stage (INDX flag 0x2)
+1	2 setters by kind and need	a call in a base object's script (ACTI)	a custom event another script sends
+8	2 setters by kind and need	a call in a base object's script (ACTI)	a function no engine event or fragment of its script reaches
+113	2 setters by kind and need	a call in a base object's script (ACTI)	engine event onactivate on a placement of a base ACTI
+6	2 setters by kind and need	a call in a base object's script (ACTI)	engine event onanimationevent on a placement of a base ACTI
+10	2 setters by kind and need	a call in a base object's script (ACTI)	engine event onbeginstate on a placement of a base ACTI
+5	2 setters by kind and need	a call in a base object's script (ACTI)	engine event oncellattach on a placement of a base ACTI
+2	2 setters by kind and need	a call in a base object's script (ACTI)	engine event oncellload on a placement of a base ACTI
+2	2 setters by kind and need	a call in a base object's script (ACTI)	engine event ondestructionstagechanged on a placement of a base ACTI
+1	2 setters by kind and need	a call in a base object's script (ACTI)	engine event onhit on a placement of a base ACTI
+1	2 setters by kind and need	a call in a base object's script (ACTI)	engine event onload on a placement of a base ACTI
+5	2 setters by kind and need	a call in a base object's script (ACTI)	engine event ontimer on a placement of a base ACTI
+28	2 setters by kind and need	a call in a base object's script (ACTI)	engine event ontriggerenter on a placement of a base ACTI
+2	2 setters by kind and need	a call in a base object's script (ACTI)	engine event ontriggerleave on a placement of a base ACTI
+2	2 setters by kind and need	a call in a base object's script (ACTI)	remote event onactivate of a objectreference the script registered for
+1	2 setters by kind and need	a call in a base object's script (ACTI)	remote event onplayerloadgame of a actor the script registered for
+2	2 setters by kind and need	a call in a base object's script (ACTI)	remote event ontranslationcomplete of a objectreference the script registered for
+3	2 setters by kind and need	a call in a base object's script (ACTI), through a function passing a parameter on	a function no engine event or fragment of its script reaches
+18	2 setters by kind and need	a call in a base object's script (ACTI), through a function passing a parameter on	engine event onactivate on a placement of a base ACTI
+14	2 setters by kind and need	a call in a base object's script (ACTI), through a function passing a parameter on	engine event ontriggerenter on a placement of a base ACTI
+2	2 setters by kind and need	a call in a base object's script (ACTI), through a function passing a parameter on	engine event ontriggerleave on a placement of a base ACTI
+6	2 setters by kind and need	a call in a base object's script (ARMO)	engine event onequipped on a placement of a base ARMO
+1	2 setters by kind and need	a call in a base object's script (ARMO)	engine event onunequipped on a placement of a base ARMO
+10	2 setters by kind and need	a call in a base object's script (BOOK)	engine event onactivate on a placement of a base BOOK
+27	2 setters by kind and need	a call in a base object's script (BOOK)	engine event onread on a placement of a base BOOK
+4	2 setters by kind and need	a call in a base object's script (BOOK), through a function passing a parameter on	engine event oncontainerchanged on a placement of a base BOOK
+11	2 setters by kind and need	a call in a base object's script (BOOK), through a function passing a parameter on	engine event onread on a placement of a base BOOK
+1	2 setters by kind and need	a call in a base object's script (CONT)	engine event onactivate on a placement of a base CONT
+1	2 setters by kind and need	a call in a base object's script (CONT)	remote event onitemadded of a objectreference the script registered for
+2	2 setters by kind and need	a call in a base object's script (CONT), through a function passing a parameter on	engine event onload on a placement of a base CONT
+1	2 setters by kind and need	a call in a base object's script (DOOR), through a function passing a parameter on	engine event onopen on a placement of a base DOOR
+5	2 setters by kind and need	a call in a base object's script (FURN)	engine event onactivate on a placement of a base FURN
+1	2 setters by kind and need	a call in a base object's script (FURN)	engine event onbeginstate on a placement of a base FURN
+1	2 setters by kind and need	a call in a base object's script (FURN)	engine event oninit on a placement of a base FURN
+1	2 setters by kind and need	a call in a base object's script (KEYM)	engine event oncontainerchanged on a placement of a base KEYM
+1	2 setters by kind and need	a call in a base object's script (KEYM)	engine event onholotapeplay on a placement of a base KEYM
+3	2 setters by kind and need	a call in a base object's script (KEYM), through a function passing a parameter on	engine event oncontainerchanged on a placement of a base KEYM
+7	2 setters by kind and need	a call in a base object's script (MISC)	engine event onactivate on a placement of a base MISC
+4	2 setters by kind and need	a call in a base object's script (MISC)	engine event oncontainerchanged on a placement of a base MISC
+10	2 setters by kind and need	a call in a base object's script (MISC), through a function passing a parameter on	engine event oncontainerchanged on a placement of a base MISC
+1	2 setters by kind and need	a call in a base object's script (MSTT)	engine event onactivate on a placement of a base MSTT
+2	2 setters by kind and need	a call in a base object's script (MSTT)	engine event onplayerteleport on a placement of a base MSTT
+2	2 setters by kind and need	a call in a base object's script (MSTT)	engine event onplayerwaitstop on a placement of a base MSTT
+2	2 setters by kind and need	a call in a base object's script (MSTT)	engine event ontranslationalmostcomplete on a placement of a base MSTT
+2	2 setters by kind and need	a call in a base object's script (MSTT)	engine event onunload on a placement of a base MSTT
+43	2 setters by kind and need	a call in a base object's script (NPC_)	a custom event another script sends
+32	2 setters by kind and need	a call in a base object's script (NPC_)	a function no engine event or fragment of its script reaches
+1	2 setters by kind and need	a call in a base object's script (NPC_)	engine event onactivate on a placement of a base NPC_
+1	2 setters by kind and need	a call in a base object's script (NPC_)	engine event oncombatstatechanged on a placement of a base NPC_
+16	2 setters by kind and need	a call in a base object's script (NPC_)	engine event ondeath on a placement of a base NPC_
+31	2 setters by kind and need	a call in a base object's script (NPC_)	engine event ondying on a placement of a base NPC_
+10	2 setters by kind and need	a call in a base object's script (NPC_)	engine event onhit on a placement of a base NPC_
+1	2 setters by kind and need	a call in a base object's script (NPC_)	engine event onunload on a placement of a base NPC_
+16	2 setters by kind and need	a call in a base object's script (NPC_), through a function passing a parameter on	a custom event another script sends
+7	2 setters by kind and need	a call in a base object's script (NPC_), through a function passing a parameter on	engine event ondeath on a placement of a base NPC_
+7	2 setters by kind and need	a call in a base object's script (NPC_), through a function passing a parameter on	engine event ondying on a placement of a base NPC_
+1	2 setters by kind and need	a call in a base object's script (NPC_), through a function passing a parameter on	engine event onhit on a placement of a base NPC_
+16	2 setters by kind and need	a call in a base object's script (NPC_), through a function passing a parameter on	engine event ontimer on a placement of a base NPC_
+2	2 setters by kind and need	a call in a base object's script (TACT)	engine event onactivate on a placement of a base TACT
+2	2 setters by kind and need	a call in a base object's script (TACT)	engine event onanimationevent on a placement of a base TACT
+1	2 setters by kind and need	a call in a base object's script (TERM)	engine event onactivate on a placement of a base TERM
+3	2 setters by kind and need	a call in a base object's script (TERM), through a function passing a parameter on	engine event onactivate on a placement of a base TERM
+168	2 setters by kind and need	a call in a dialogue line (INFO) fragment	a dialogue line begins
+329	2 setters by kind and need	a call in a dialogue line (INFO) fragment	a dialogue line ends
+16	2 setters by kind and need	a call in a dialogue line (INFO) fragment, through a function passing a parameter on	a dialogue line ends
+65	2 setters by kind and need	a call in a dialogue line (INFO)'s own script, through a function passing a parameter on	engine event onbegin on a placement of a base INFO
+65	2 setters by kind and need	a call in a dialogue line (INFO)'s own script, through a function passing a parameter on	engine event onend on a placement of a base INFO
+4	2 setters by kind and need	a call in a magic effect's script	engine event oneffectstart on a placement of a base MGEF
+5	2 setters by kind and need	a call in a package fragment	a package begins
+7	2 setters by kind and need	a call in a package fragment	a package changes
+44	2 setters by kind and need	a call in a package fragment	a package ends
+6	2 setters by kind and need	a call in a perk fragment	a perk entry fires
+7	2 setters by kind and need	a call in a placed ACHR's own script	engine event onactivate on a placed ACHR
+1	2 setters by kind and need	a call in a placed ACHR's own script	engine event onhit on a placed ACHR
+1	2 setters by kind and need	a call in a placed ACHR's own script, through a function passing a parameter on	a function no engine event or fragment of its script reaches
+2	2 setters by kind and need	a call in a placed ACHR's own script, through a function passing a parameter on	engine event onactivate on a placed ACHR
+1	2 setters by kind and need	a call in a placed ACHR's own script, through a function passing a parameter on	engine event oncellload on a placed ACHR
+4	2 setters by kind and need	a call in a placed ACHR's own script, through a function passing a parameter on	engine event oncombatstatechanged on a placed ACHR
+10	2 setters by kind and need	a call in a placed ACHR's own script, through a function passing a parameter on	engine event onconsciousnessstatechanged on a placed ACHR
+29	2 setters by kind and need	a call in a placed ACHR's own script, through a function passing a parameter on	engine event ondeath on a placed ACHR
+29	2 setters by kind and need	a call in a placed ACHR's own script, through a function passing a parameter on	engine event ondying on a placed ACHR
+13	2 setters by kind and need	a call in a placed ACHR's own script, through a function passing a parameter on	engine event onhit on a placed ACHR
+8	2 setters by kind and need	a call in a placed REFR's own script	a custom event another script sends
+27	2 setters by kind and need	a call in a placed REFR's own script	a function no engine event or fragment of its script reaches
+194	2 setters by kind and need	a call in a placed REFR's own script	engine event onactivate on a placed REFR
+13	2 setters by kind and need	a call in a placed REFR's own script	engine event onanimationevent on a placed REFR
+11	2 setters by kind and need	a call in a placed REFR's own script	engine event onbeginstate on a placed REFR
+12	2 setters by kind and need	a call in a placed REFR's own script	engine event oncellattach on a placed REFR
+2	2 setters by kind and need	a call in a placed REFR's own script	engine event oncelldetach on a placed REFR
+8	2 setters by kind and need	a call in a placed REFR's own script	engine event oncellload on a placed REFR
+8	2 setters by kind and need	a call in a placed REFR's own script	engine event oncontainerchanged on a placed REFR
+1	2 setters by kind and need	a call in a placed REFR's own script	engine event ondestructionstagechanged on a placed REFR
+1	2 setters by kind and need	a call in a placed REFR's own script	engine event onitemadded on a placed REFR
+3	2 setters by kind and need	a call in a placed REFR's own script	engine event onload on a placed REFR
+2	2 setters by kind and need	a call in a placed REFR's own script	engine event onlockstatechanged on a placed REFR
+3	2 setters by kind and need	a call in a placed REFR's own script	engine event onmenuopencloseevent on a placed REFR
+1	2 setters by kind and need	a call in a placed REFR's own script	engine event onplayerteleport on a placed REFR
+1	2 setters by kind and need	a call in a placed REFR's own script	engine event onplayerwaitstop on a placed REFR
+1	2 setters by kind and need	a call in a placed REFR's own script	engine event onpoweron on a placed REFR
+138	2 setters by kind and need	a call in a placed REFR's own script	engine event ontimer on a placed REFR
+1	2 setters by kind and need	a call in a placed REFR's own script	engine event ontranslationalmostcomplete on a placed REFR
+101	2 setters by kind and need	a call in a placed REFR's own script	engine event ontriggerenter on a placed REFR
+21	2 setters by kind and need	a call in a placed REFR's own script	engine event ontriggerleave on a placed REFR
+2	2 setters by kind and need	a call in a placed REFR's own script	engine event onunload on a placed REFR
+12	2 setters by kind and need	a call in a placed REFR's own script	remote event onactivate of a objectreference the script registered for
+3	2 setters by kind and need	a call in a placed REFR's own script	remote event onplayerloadgame of a actor the script registered for
+2	2 setters by kind and need	a call in a placed REFR's own script	remote event ontranslationcomplete of a objectreference the script registered for
+61	2 setters by kind and need	a call in a placed REFR's own script, through a function passing a parameter on	a function no engine event or fragment of its script reaches
+66	2 setters by kind and need	a call in a placed REFR's own script, through a function passing a parameter on	engine event onactivate on a placed REFR
+2	2 setters by kind and need	a call in a placed REFR's own script, through a function passing a parameter on	engine event oncelldetach on a placed REFR
+2	2 setters by kind and need	a call in a placed REFR's own script, through a function passing a parameter on	engine event oncellload on a placed REFR
+8	2 setters by kind and need	a call in a placed REFR's own script, through a function passing a parameter on	engine event oncontainerchanged on a placed REFR
+1	2 setters by kind and need	a call in a placed REFR's own script, through a function passing a parameter on	engine event ondestructionstagechanged on a placed REFR
+17	2 setters by kind and need	a call in a placed REFR's own script, through a function passing a parameter on	engine event onload on a placed REFR
+8	2 setters by kind and need	a call in a placed REFR's own script, through a function passing a parameter on	engine event onopen on a placed REFR
+843	2 setters by kind and need	a call in a placed REFR's own script, through a function passing a parameter on	engine event ontriggerenter on a placed REFR
+7	2 setters by kind and need	a call in a placed REFR's own script, through a function passing a parameter on	engine event ontriggerleave on a placed REFR
+107	2 setters by kind and need	a call in a quest alias script	engine event onactivate on a quest alias
+2	2 setters by kind and need	a call in a quest alias script	engine event onaliasinit on a quest alias
+8	2 setters by kind and need	a call in a quest alias script	engine event onanimationevent on a quest alias
+2	2 setters by kind and need	a call in a quest alias script	engine event onanimationeventunregistered on a quest alias
+109	2 setters by kind and need	a call in a quest alias script	engine event oncombatstatechanged on a quest alias
+2	2 setters by kind and need	a call in a quest alias script	engine event oncommandmodeenter on a quest alias
+33	2 setters by kind and need	a call in a quest alias script	engine event oncontainerchanged on a quest alias
+5	2 setters by kind and need	a call in a quest alias script	engine event oncripple on a quest alias
+196	2 setters by kind and need	a call in a quest alias script	engine event ondeath on a quest alias
+16	2 setters by kind and need	a call in a quest alias script	engine event ondestructionstagechanged on a quest alias
+234	2 setters by kind and need	a call in a quest alias script	engine event ondying on a quest alias
+7	2 setters by kind and need	a call in a quest alias script	engine event onenterbleedout on a quest alias
+5	2 setters by kind and need	a call in a quest alias script	engine event ongetup on a quest alias
+1	2 setters by kind and need	a call in a quest alias script	engine event ongrab on a quest alias
+1380	2 setters by kind and need	a call in a quest alias script	engine event onhit on a quest alias
+19	2 setters by kind and need	a call in a quest alias script	engine event onitemadded on a quest alias
+4	2 setters by kind and need	a call in a quest alias script	engine event onitemequipped on a quest alias
+4	2 setters by kind and need	a call in a quest alias script	engine event onitemremoved on a quest alias
+2	2 setters by kind and need	a call in a quest alias script	engine event onitemunequipped on a quest alias
+1	2 setters by kind and need	a call in a quest alias script	engine event onload on a quest alias
+25	2 setters by kind and need	a call in a quest alias script	engine event onlocationchange on a quest alias
+6	2 setters by kind and need	a call in a quest alias script	engine event onmagiceffectapply on a quest alias
+2	2 setters by kind and need	a call in a quest alias script	engine event onopen on a quest alias
+1	2 setters by kind and need	a call in a quest alias script	engine event onpipboyradiodetection on a quest alias
+1	2 setters by kind and need	a call in a quest alias script	engine event onread on a quest alias
+8	2 setters by kind and need	a call in a quest alias script	engine event onsit on a quest alias
+3	2 setters by kind and need	a call in a quest alias script	engine event ontimer on a quest alias
+1	2 setters by kind and need	a call in a quest alias script	engine event ontriggerenter on a quest alias
+18	2 setters by kind and need	a call in a quest alias script	engine event onunload on a quest alias
+1	2 setters by kind and need	a call in a quest alias script	engine event onworkshopobjectrepaired on a quest alias
+1	2 setters by kind and need	a call in a quest alias script	remote event onworkshopobjectdestroyed of a objectreference the script registered for
+6	2 setters by kind and need	a call in a quest alias script, through a function passing a parameter on	a function no engine event or fragment of its script reaches
+156	2 setters by kind and need	a call in a quest alias script, through a function passing a parameter on	engine event onactivate on a quest alias
+8	2 setters by kind and need	a call in a quest alias script, through a function passing a parameter on	engine event oncellload on a quest alias
+135	2 setters by kind and need	a call in a quest alias script, through a function passing a parameter on	engine event oncombatstatechanged on a quest alias
+146	2 setters by kind and need	a call in a quest alias script, through a function passing a parameter on	engine event oncontainerchanged on a quest alias
+494	2 setters by kind and need	a call in a quest alias script, through a function passing a parameter on	engine event ondeath on a quest alias
+3	2 setters by kind and need	a call in a quest alias script, through a function passing a parameter on	engine event ondestructionstagechanged on a quest alias
+445	2 setters by kind and need	a call in a quest alias script, through a function passing a parameter on	engine event ondying on a quest alias
+1	2 setters by kind and need	a call in a quest alias script, through a function passing a parameter on	engine event onenterbleedout on a quest alias
+1	2 setters by kind and need	a call in a quest alias script, through a function passing a parameter on	engine event onequipped on a quest alias
+323	2 setters by kind and need	a call in a quest alias script, through a function passing a parameter on	engine event onhit on a quest alias
+43	2 setters by kind and need	a call in a quest alias script, through a function passing a parameter on	engine event onload on a quest alias
+30	2 setters by kind and need	a call in a quest alias script, through a function passing a parameter on	engine event onlocationchange on a quest alias
+8	2 setters by kind and need	a call in a quest alias script, through a function passing a parameter on	engine event onlockstatechanged on a quest alias
+13	2 setters by kind and need	a call in a quest alias script, through a function passing a parameter on	engine event onopen on a quest alias
+4	2 setters by kind and need	a call in a quest alias script, through a function passing a parameter on	engine event onpipboyradiodetection on a quest alias
+30	2 setters by kind and need	a call in a quest alias script, through a function passing a parameter on	engine event onread on a quest alias
+1	2 setters by kind and need	a call in a quest alias script, through a function passing a parameter on	engine event ontimer on a quest alias
+2	2 setters by kind and need	a call in a quest alias script, through a function passing a parameter on	engine event ontriggerenter on a quest alias
+63	2 setters by kind and need	a call in a quest alias script, through a function passing a parameter on	engine event onunload on a quest alias
+17	2 setters by kind and need	a call in a quest stage fragment	a function no engine event or fragment of its script reaches
+5184	2 setters by kind and need	a call in a quest stage fragment	a stage of a quest set (its stage fragment)
+1	2 setters by kind and need	a call in a quest stage fragment	engine event ontimer on the quest
+31	2 setters by kind and need	a call in a quest stage fragment, through a function passing a parameter on	a stage of a quest set (its stage fragment)
+587	2 setters by kind and need	a call in a quest's own script	a custom event another script sends
+1847	2 setters by kind and need	a call in a quest's own script	a function no engine event or fragment of its script reaches
+12	2 setters by kind and need	a call in a quest's own script	engine event onanimationevent on the quest
+4	2 setters by kind and need	a call in a quest's own script	engine event ondistancegreaterthan on the quest
+437	2 setters by kind and need	a call in a quest's own script	engine event ondistancelessthan on the quest
+2	2 setters by kind and need	a call in a quest's own script	engine event onhit on the quest
+1	2 setters by kind and need	a call in a quest's own script	engine event onlostlos on the quest
+6	2 setters by kind and need	a call in a quest's own script	engine event onmenuopencloseevent on the quest
+15	2 setters by kind and need	a call in a quest's own script	engine event onquestinit on the quest
+1	2 setters by kind and need	a call in a quest's own script	engine event onradiationdamage on the quest
+1	2 setters by kind and need	a call in a quest's own script	engine event onstoryhackterminal on the quest
+48	2 setters by kind and need	a call in a quest's own script	engine event onstoryscript on the quest
+462	2 setters by kind and need	a call in a quest's own script	engine event ontimer on the quest
+461	2 setters by kind and need	a call in a quest's own script	engine event ontimergametime on the quest
+18	2 setters by kind and need	a call in a quest's own script	engine event ontutorialevent on the quest
+1	2 setters by kind and need	a call in a quest's own script	remote event onactivate of a objectreference the script registered for
+36	2 setters by kind and need	a call in a quest's own script	remote event ondeath of a actor the script registered for
+2	2 setters by kind and need	a call in a quest's own script	remote event ondeath of a referencealias the script registered for
+12	2 setters by kind and need	a call in a quest's own script	remote event onitemadded of a objectreference the script registered for
+1	2 setters by kind and need	a call in a quest's own script	remote event onitemequipped of a actor the script registered for
+65	2 setters by kind and need	a call in a quest's own script	remote event onlocationchange of a actor the script registered for
+2	2 setters by kind and need	a call in a quest's own script	remote event onlocationcleared of a location the script registered for
+2	2 setters by kind and need	a call in a quest's own script	remote event onlocationloaded of a location the script registered for
+3	2 setters by kind and need	a call in a quest's own script	remote event onplayermodrobot of a actor the script registered for
+4	2 setters by kind and need	a call in a quest's own script	remote event onpoweroff of a objectreference the script registered for
+5	2 setters by kind and need	a call in a quest's own script	remote event onpoweron of a objectreference the script registered for
+1	2 setters by kind and need	a call in a quest's own script	remote event onspeechchallengeavailable of a actor the script registered for
+36	2 setters by kind and need	a call in a quest's own script	remote event onstageset of a quest the script registered for
+1	2 setters by kind and need	a call in a quest's own script	remote event ontriggerenter of a objectreference the script registered for
+1	2 setters by kind and need	a call in a quest's own script	remote event onunload of a objectreference the script registered for
+8	2 setters by kind and need	a call in a quest's own script	remote event onworkshopmode of a objectreference the script registered for
+6	2 setters by kind and need	a call in a quest's own script	remote event onworkshopobjectdestroyed of a objectreference the script registered for
+11	2 setters by kind and need	a call in a quest's own script	remote event onworkshopobjectplaced of a objectreference the script registered for
+140	2 setters by kind and need	a call in a quest's own script, through a function passing a parameter on	a custom event another script sends
+19	2 setters by kind and need	a call in a quest's own script, through a function passing a parameter on	a function no engine event or fragment of its script reaches
+10	2 setters by kind and need	a call in a quest's own script, through a function passing a parameter on	engine event ontimer on the quest
+26	2 setters by kind and need	a call in a quest's own script, through a function passing a parameter on	remote event onlocationchange of a actor the script registered for
+12	2 setters by kind and need	a call in a scene fragment	a scene begins
+74	2 setters by kind and need	a call in a scene fragment	a scene ends
+17	2 setters by kind and need	a call in a scene fragment	a scene phase fragment (flag byte 1)
+40	2 setters by kind and need	a call in a scene fragment	a scene phase fragment (flag byte 2)
+3	2 setters by kind and need	a call in a scene fragment, through a function passing a parameter on	a scene begins
+4	2 setters by kind and need	a call in a script no read VMAD attaches	a custom event another script sends
+1040	2 setters by kind and need	a call in a script no read VMAD attaches	a function no engine event or fragment of its script reaches
+31	2 setters by kind and need	a call in a script no read VMAD attaches	engine event onactivate on an object no VMAD read attaches the script to
+1	2 setters by kind and need	a call in a script no read VMAD attaches	engine event onanimationevent on an object no VMAD read attaches the script to
+1	2 setters by kind and need	a call in a script no read VMAD attaches	engine event onbeginstate on an object no VMAD read attaches the script to
+3	2 setters by kind and need	a call in a script no read VMAD attaches	engine event oncontainerchanged on an object no VMAD read attaches the script to
+3	2 setters by kind and need	a call in a script no read VMAD attaches	engine event ondeath on an object no VMAD read attaches the script to
+2	2 setters by kind and need	a call in a script no read VMAD attaches	engine event ondestructionstagechanged on an object no VMAD read attaches the script to
+1	2 setters by kind and need	a call in a script no read VMAD attaches	engine event ondying on an object no VMAD read attaches the script to
+3	2 setters by kind and need	a call in a script no read VMAD attaches	engine event oninit on an object no VMAD read attaches the script to
+1	2 setters by kind and need	a call in a script no read VMAD attaches	engine event onitemadded on an object no VMAD read attaches the script to
+1	2 setters by kind and need	a call in a script no read VMAD attaches	engine event onitemremoved on an object no VMAD read attaches the script to
+4	2 setters by kind and need	a call in a script no read VMAD attaches	engine event onload on an object no VMAD read attaches the script to
+3	2 setters by kind and need	a call in a script no read VMAD attaches	engine event onlocationchange on an object no VMAD read attaches the script to
+1	2 setters by kind and need	a call in a script no read VMAD attaches	engine event onlockstatechanged on an object no VMAD read attaches the script to
+3	2 setters by kind and need	a call in a script no read VMAD attaches	engine event onplayerdialoguetarget on an object no VMAD read attaches the script to
+1	2 setters by kind and need	a call in a script no read VMAD attaches	engine event onpoweron on an object no VMAD read attaches the script to
+1	2 setters by kind and need	a call in a script no read VMAD attaches	engine event onsit on an object no VMAD read attaches the script to
+6	2 setters by kind and need	a call in a script no read VMAD attaches	engine event ontimer on an object no VMAD read attaches the script to
+3	2 setters by kind and need	a call in a script no read VMAD attaches	engine event ontimergametime on an object no VMAD read attaches the script to
+9	2 setters by kind and need	a call in a script no read VMAD attaches	engine event ontriggerenter on an object no VMAD read attaches the script to
+2	2 setters by kind and need	a call in a script no read VMAD attaches	engine event onunload on an object no VMAD read attaches the script to
+1	2 setters by kind and need	a call in a script no read VMAD attaches	engine event onworkshopnpctransfer on an object no VMAD read attaches the script to
+2	2 setters by kind and need	a call in a script no read VMAD attaches	remote event onactivate of a objectreference the script registered for
+9	2 setters by kind and need	a call in a script no read VMAD attaches	remote event onlocationchange of a actor the script registered for
+1	2 setters by kind and need	a call in a script no read VMAD attaches	remote event onlocationcleared of a location the script registered for
+1	2 setters by kind and need	a call in a script no read VMAD attaches	remote event onstageset of a quest the script registered for
+12	2 setters by kind and need	a call in a script no read VMAD attaches, through a function passing a parameter on	a function no engine event or fragment of its script reaches
+1	2 setters by kind and need	a call in a terminal fragment	a function no engine event or fragment of its script reaches
+1	2 setters by kind and need	a call in a terminal fragment	engine event ontimer on a placement of a base TERM
+162	2 setters by kind and need	a call in a terminal fragment	the player picks a terminal menu item
+920	2 setters by kind and need	a dialogue line (INFO) field TIQS, first half	a dialogue line begins
+4955	2 setters by kind and need	a dialogue line (INFO) field TIQS, second half	a dialogue line ends
+140	2 setters by kind and need	a scene field SCQS, first half	a scene begins
+442	2 setters by kind and need	a scene field SCQS, second half	a scene ends
+183	2 setters by kind and need	a scene phase field SCQS, first half	a scene phase begins
+727	2 setters by kind and need	a scene phase field SCQS, second half	a scene phase ends
+972	2 setters by kind and need	a startup stage (INDX flag 0x2)	the quest starts
+799	2 setters by the family of their need	a custom event of a script
+6388	2 setters by the family of their need	a dialogue line
+6	2 setters by the family of their need	a perk entry
+1917	2 setters by the family of their need	a player action on an object
+1638	2 setters by the family of their need	a scene's progress
+1107	2 setters by the family of their need	a timer of the script
+56	2 setters by the family of their need	an actor's package
+5189	2 setters by the family of their need	an engine event
+6187	2 setters by the family of their need	another stage or quest start (a chain)
+3074	2 setters by the family of their need	not reached from the script's own events
+24506	2 setters: quest	a constant
+18	2 setters: quest	not a constant: a property of another object
+36	2 setters: quest	not a constant: a property of the called object
+568	2 setters: quest	not a constant: a property without a record value
+24	2 setters: quest	not a constant: a script variable without a property
+6	2 setters: quest	not a constant: a struct property without a stored value
+1144	2 setters: quest	not a constant: no attachment gives the value
+27	2 setters: quest	not a constant: the owning quest of the record is not read
+32	2 setters: quest	not a constant: the result of a call
+24646	2 setters: stage	a constant
+155	2 setters: stage	not a constant: a member of a struct the scan does not follow
+14	2 setters: stage	not a constant: a property of another object
+60	2 setters: stage	not a constant: a script variable without a property
+697	2 setters: stage	not a constant: a struct property without a number member
+6	2 setters: stage	not a constant: a struct property without a stored value
+1	2 setters: stage	not a constant: a struct value without that member
+750	2 setters: stage	not a constant: an array property without a number value
+32	2 setters: stage	not a constant: the result of a call
+1051	3 (quest, stage) pairs a constant setter names that no quest record holds
+1905	3 quests with stages
+584	3 quests with stages none of which has a setter
+2297	3 stages by number of setters	0
+6603	3 stages by number of setters	1
+114	3 stages by number of setters	10-19
+1961	3 stages by number of setters	2
+1310	3 stages by number of setters	3-4
+549	3 stages by number of setters	5-9
+21	3 stages by number of setters	>=20
+12855	3 stages of winning quests
+99	3 stages with a setter of kind	a call in a base object's script (ACTI)
+3	3 stages with a setter of kind	a call in a base object's script (ARMO)
+41	3 stages with a setter of kind	a call in a base object's script (BOOK)
+2	3 stages with a setter of kind	a call in a base object's script (CONT)
+1	3 stages with a setter of kind	a call in a base object's script (DOOR)
+5	3 stages with a setter of kind	a call in a base object's script (FURN)
+4	3 stages with a setter of kind	a call in a base object's script (KEYM)
+19	3 stages with a setter of kind	a call in a base object's script (MISC)
+1	3 stages with a setter of kind	a call in a base object's script (MSTT)
+32	3 stages with a setter of kind	a call in a base object's script (NPC_)
+1	3 stages with a setter of kind	a call in a base object's script (TACT)
+3	3 stages with a setter of kind	a call in a base object's script (TERM)
+220	3 stages with a setter of kind	a call in a dialogue line (INFO) fragment
+43	3 stages with a setter of kind	a call in a dialogue line (INFO)'s own script
+4	3 stages with a setter of kind	a call in a magic effect's script
+22	3 stages with a setter of kind	a call in a package fragment
+5	3 stages with a setter of kind	a call in a perk fragment
+32	3 stages with a setter of kind	a call in a placed ACHR's own script
+906	3 stages with a setter of kind	a call in a placed REFR's own script
+1408	3 stages with a setter of kind	a call in a quest alias script
+2819	3 stages with a setter of kind	a call in a quest stage fragment
+1264	3 stages with a setter of kind	a call in a quest's own script
+122	3 stages with a setter of kind	a call in a scene fragment
+138	3 stages with a setter of kind	a call in a terminal fragment
+2972	3 stages with a setter of kind	a dialogue line (INFO) field TIQS
+526	3 stages with a setter of kind	a scene field SCQS
+848	3 stages with a setter of kind	a scene phase field SCQS
+972	3 stages with a setter of kind	a startup stage (INDX flag 0x2)
+207	3 stages with a setter whose need is	a custom event of a script
+3148	3 stages with a setter whose need is	a dialogue line
+5	3 stages with a setter whose need is	a perk entry
+1278	3 stages with a setter whose need is	a player action on an object
+1428	3 stages with a setter whose need is	a scene's progress
+195	3 stages with a setter whose need is	a timer of the script
+22	3 stages with a setter whose need is	an actor's package
+1727	3 stages with a setter whose need is	an engine event
+3730	3 stages with a setter whose need is	another stage or quest start (a chain)
+636	3 stages with a setter whose need is	not reached from the script's own events
+2297	3 stages with no setter found	not a startup stage
+2	4 Start calls by need	a custom event another script sends
+2	4 Start calls by need	a dialogue line begins
+11	4 Start calls by need	a dialogue line ends
+40	4 Start calls by need	a function no engine event or fragment of its script reaches
+1	4 Start calls by need	a scene phase fragment (flag byte 2)
+173	4 Start calls by need	a stage of a quest set (its stage fragment)
+1	4 Start calls by need	engine event onactivate on a placed REFR
+2	4 Start calls by need	engine event onactivate on a placement of a base ACTI
+1	4 Start calls by need	engine event oncellattach on a placed REFR
+22	4 Start calls by need	engine event ondying on a quest alias
+7	4 Start calls by need	engine event onload on a placed REFR
+1	4 Start calls by need	engine event onlocationchange on a quest alias
+1	4 Start calls by need	engine event ontimer on a placement of a base ACTI
+2	4 Start calls by need	engine event ontimergametime on the quest
+10	4 Start calls by need	engine event ontriggerenter on a placed REFR
+4	4 Start calls by need	engine event ontriggerenter on a placement of a base ACTI
+2	4 Start calls by need	engine event ontriggerenter on an object no VMAD read attaches the script to
+1	4 Start calls by need	remote event onlocationchange of a actor the script registered for
+1	4 Start calls by need	remote event onworkshopmode of a objectreference the script registered for
+6	4 Start calls whose quest is not a constant	a property without a record value
+28	4 Start calls whose quest is not a constant	no attachment gives the value
+1	4 Start calls whose quest is not a constant	the owning quest of another object
+1625	4 quests with a starter
+2049	4 starters
+7	4 starters by kind	a Start call in a base object's script (ACTI)
+1	4 starters by kind	a Start call in a base object's script (NPC_)
+13	4 starters by kind	a Start call in a dialogue line (INFO) fragment
+19	4 starters by kind	a Start call in a placed REFR's own script
+23	4 starters by kind	a Start call in a quest alias script
+173	4 starters by kind	a Start call in a quest stage fragment
+18	4 starters by kind	a Start call in a quest's own script
+1	4 starters by kind	a Start call in a scene fragment
+29	4 starters by kind	a Start call in a script no read VMAD attaches
+1	4 starters by kind	a story manager node of event ADCR
+386	4 starters by kind	a story manager node of event ADIA
+9	4 starters by kind	a story manager node of event AHEL
+7	4 starters by kind	a story manager node of event AIPL
+16	4 starters by kind	a story manager node of event AOBJ
+1	4 starters by kind	a story manager node of event ASSU
+100	4 starters by kind	a story manager node of event CLOC
+1	4 starters by kind	a story manager node of event CRFT
+3	4 starters by kind	a story manager node of event HACK
+1	4 starters by kind	a story manager node of event IRON
+4	4 starters by kind	a story manager node of event KILL
+17	4 starters by kind	a story manager node of event LCLD
+3	4 starters by kind	a story manager node of event LEVL
+3	4 starters by kind	a story manager node of event LOCK
+4	4 starters by kind	a story manager node of event OAAT
+3	4 starters by kind	a story manager node of event REMP
+748	4 starters by kind	a story manager node of event SCPT
+1	4 starters by kind	a story manager node of event TMEE
+457	4 starters by kind	flagged to start with the game (DNAM bit 0)
+2028	5 LCSR rows: first word, second word	LCRT, ACHR
+10	5 LCSR rows: first word, second word	LCRT, PHZD
+3818	5 LCSR rows: first word, second word	LCRT, REFR
+300	5 LCTN special reference lists (LCSR)	16-byte rows
+419	5 reference aliases filled from a location alias with a ref type	no special reference of that type in the location
+790	5 reference aliases filled from a location alias with a ref type	one special reference of that type
+494	5 reference aliases filled from a location alias with a ref type	several special references of that type in the location
+1147	5 reference aliases filled from a location alias with a ref type	the location alias has no forced location
