@@ -1,8 +1,8 @@
 records with VMAD (winners, not deleted)	20147
 VMAD bytes	4403029
-VMAD bytes read (scripts and TERM blocks)	2102984
+VMAD bytes read (scripts, TERM and QUST blocks)	3859236
 .pex objects indexed	10282
-wall seconds	7.5
+wall seconds	9.3
 
 # outcomes by record type
 781	ACHR read
@@ -58,9 +58,7 @@ wall seconds	7.5
 32	PERK bytes after what is read: records
 3	PERK no bytes after what is read
 4	PGRE no bytes after what is read
-1756252	QUST bytes after what is read: bytes
-1300	QUST bytes after what is read: records
-53	QUST no bytes after what is read
+1353	QUST no bytes after what is read
 8767	REFR no bytes after what is read
 153958	SCEN bytes after what is read: bytes
 632	SCEN bytes after what is read: records
@@ -71,6 +69,23 @@ wall seconds	7.5
 3	WEAP no bytes after what is read
 
 # values
+2563	QUST alias entry scripts 1
+524	QUST alias entry scripts 2
+115	QUST alias entry scripts 3
+20	QUST alias entry scripts 4
+4	QUST alias entry scripts 5
+3226	QUST alias entry zero word 0 version 6 object format 2
+4057	QUST alias script flags 0
+1282	QUST block script flags 0
+3	QUST block script name empty false, fragments 0
+1279	QUST block script name empty false, fragments >0
+18	QUST block script name empty true, fragments 0
+1300	QUST block version 3
+1170	QUST block with two fragments of one stage false
+130	QUST block with two fragments of one stage true
+10500	QUST fragment function params 0 returns none
+10506	QUST fragment word 0 byte 1
+53	QUST without a block
 133	TERM block fragments 1
 23	TERM block fragments 10
 68	TERM block fragments 2
@@ -90,7 +105,7 @@ wall seconds	7.5
 14052	list script flags 0
 4188	list script flags 1
 145	list script flags 3
-117	object value FormID 0 (alias -1)
+144	object value FormID 0 (alias -1)
 757	object value alias -1 on ACHR
 2302	object value alias -1 on ACTI
 52	object value alias -1 on ARMO
@@ -109,7 +124,7 @@ wall seconds	7.5
 3512	object value alias -1 on NPC_
 1	object value alias -1 on PACK
 12	object value alias -1 on PERK
-8329	object value alias -1 on QUST
+19713	object value alias -1 on QUST
 6228	object value alias -1 on REFR
 5	object value alias -1 on TACT
 718	object value alias -1 on TERM
@@ -124,23 +139,29 @@ wall seconds	7.5
 18	object value alias >=0 on MGEF
 3	object value alias >=0 on MISC
 3	object value alias >=0 on NPC_
-3375	object value alias >=0 on QUST
+9228	object value alias >=0 on QUST
 276	object value alias >=0 on REFR
 7	object value alias >=0 on TERM
-36123	object value zero word 0
+7	object value with alias >= 0: declared type class alias
+178	object value with alias >= 0: declared type class locationalias
+816	object value with alias >= 0: declared type class refcollectionalias
+7536	object value with alias >= 0: declared type class referencealias
+6713	object value with alias >= 0: the quest's VMAD block has an entry of that index false
+3043	object value with alias >= 0: the quest's VMAD block has an entry of that index true
+53360	object value zero word 0
 1	property kind 0 flags 1
-22997	property kind 1 flags 1
+39932	property kind 1 flags 1
 5	property kind 1 flags 3
-1333	property kind 11 flags 1
+1518	property kind 11 flags 1
 108	property kind 12 flags 1
-21	property kind 13 flags 1
+35	property kind 13 flags 1
 78	property kind 14 flags 1
 700	property kind 17 flags 1
-695	property kind 2 flags 1
-3870	property kind 3 flags 1
+812	property kind 2 flags 1
+6957	property kind 3 flags 1
 2	property kind 3 flags 3
-799	property kind 4 flags 1
-12278	property kind 5 flags 1
+807	property kind 4 flags 1
+14364	property kind 5 flags 1
 37	property kind 5 flags 3
 36	property kind 7 flags 1
 3813	scripts per VMAD 0
@@ -158,6 +179,19 @@ wall seconds	7.5
 20146	version 6
 
 # checks: holds, fails
+3226	0	QUST alias entry FormID is the quest's own
+3226	0	QUST alias entry index >= 0
+3216	10	QUST alias entry index is the value of an ALST subrecord of the quest
+1300	0	QUST alias entry indices distinct within a block
+7796	0	QUST alias property kind fits the declared type (kind 0 excepted)
+7796	0	QUST alias property names a property of the script or a parent
+4057	0	QUST alias script name is a .pex object of the archives
+14575	0	QUST block property kind fits the declared type (kind 0 excepted)
+14575	55	QUST block property names a property of the script or a parent
+1279	3	QUST block script name is a .pex object of the archives
+10500	6	QUST fragment function declared by the block script
+10506	0	QUST fragment script == block script
+10375	131	QUST fragment stage is the first u16 of an INDX subrecord of the quest
 627	0	TERM block property kind fits the declared type (kind 0 excepted)
 627	16	TERM block property names a property of the script or a parent
 290	4	TERM block script name is a .pex object of the archives
@@ -168,4 +202,6 @@ wall seconds	7.5
 42119	0	list property kind fits the declared type (kind 0 excepted)
 42119	194	list property names a property of the script or a parent
 18384	1	list script name is a .pex object of the archives
-31570	533	object value FormID (alias -1, not 0) names a winning record
+42737	723	object value FormID (alias -1, not 0) names a winning record
+9756	0	object value with alias >= 0 names a winning QUST
+9362	394	object value with alias >= 0: the quest's ALST values hold the index

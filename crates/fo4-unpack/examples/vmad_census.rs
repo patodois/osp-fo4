@@ -1,7 +1,8 @@
 #![forbid(unsafe_code)]
 //! Census of every VMAD subrecord of the winning records with
 //! `fo4_plugin::vmad` (`spec/vmad.md`): outcomes and tails by record type,
-//! value kinds and flags, the TERM fragment block, and cross-checks against
+//! value kinds and flags, the TERM fragment block, the QUST block (stage
+//! fragments and aliases), and cross-checks against
 //! the scripts of the archives read with `fo4_pex` (each script name against
 //! a `.pex` entry, each property against that script's declared properties
 //! and type, each object FormID against the winning records). Measurement
@@ -67,6 +68,31 @@ struct Ctx<'a> {
     file: String,
     c: Counts,
     checks: BTreeMap<String, [u64; 2]>,
+    /// Per winning QUST: the alias indices of its VMAD block and the u32
+    /// values of its ALST subrecords.
+    quests: std::collections::HashMap<fo4_plugin::FormKey, (Vec<i16>, Vec<u32>)>,
+}
+
+/// Engine types an object property's declared type is classified by: the
+/// first of these in the declared type's chain.
+const TYPE_CLASSES: [&str; 8] = [
+    "referencealias",
+    "refcollectionalias",
+    "locationalias",
+    "actor",
+    "objectreference",
+    "quest",
+    "alias",
+    "form",
+];
+fn type_class(ix: &Index, ty: &str) -> String {
+    let t = ty.strip_suffix("[]").unwrap_or(ty);
+    for (k, _) in ix.chain(t) {
+        if TYPE_CLASSES.contains(&k) {
+            return k.to_string();
+        }
+    }
+    "other".to_string()
 }
 impl Ctx<'_> {
     fn object(&mut self, sig: &str, o: &fo4_plugin::vmad::ObjectRef) {
@@ -83,6 +109,33 @@ impl Ctx<'_> {
             ),
         );
         if o.alias >= 0 {
+            let key = self
+                .store
+                .order()
+                .remap(self.plugin, o.form_id, &self.file, 0)
+                .ok()
+                .flatten();
+            let quest = key.as_ref().and_then(|k| self.quests.get(k));
+            check(
+                &mut self.checks,
+                "object value with alias >= 0 names a winning QUST",
+                quest.is_some(),
+            );
+            if let Some((block, alst)) = quest {
+                let (in_block, in_alst) = (
+                    block.contains(&o.alias),
+                    alst.contains(&(o.alias as i32 as u32)),
+                );
+                check(
+                    &mut self.checks,
+                    "object value with alias >= 0: the quest's ALST values hold the index",
+                    in_alst,
+                );
+                bump(
+                    &mut self.c,
+                    format!("object value with alias >= 0: the quest's VMAD block has an entry of that index {in_block}"),
+                );
+            }
             return;
         }
         if o.form_id == 0 {
@@ -154,6 +207,22 @@ impl Ctx<'_> {
                     ty.is_some(),
                 );
                 if let Some(ty) = ty {
+                    let aliased = match &p.value {
+                        PropertyValue::Object(o) => o.alias >= 0,
+                        PropertyValue::Array(_, v) => v
+                            .iter()
+                            .any(|x| matches!(x, PropertyValue::Object(o) if o.alias >= 0)),
+                        _ => false,
+                    };
+                    if aliased {
+                        bump(
+                            &mut self.c,
+                            format!(
+                                "object value with alias >= 0: declared type class {}",
+                                type_class(self.ix, &ty)
+                            ),
+                        );
+                    }
                     let fits = matches!(p.kind, 0) || kind_fits(p.kind, &ty, self.ix);
                     check(
                         &mut self.checks,
@@ -188,6 +257,109 @@ impl Ctx<'_> {
     }
 }
 
+/// Counts and checks of one QUST block.
+fn quest_block(ctx: &mut Ctx<'_>, r: &fo4_plugin::Record, q: &fo4_plugin::vmad::QuestBlock<'_>) {
+    bump(&mut ctx.c, format!("QUST block version {}", q.version));
+    bump(
+        &mut ctx.c,
+        format!(
+            "QUST block script name empty {}, fragments {}",
+            q.script.name.is_empty(),
+            if q.fragments.is_empty() { "0" } else { ">0" }
+        ),
+    );
+    if !q.script.name.is_empty() {
+        ctx.script("QUST", &q.script, "QUST block");
+    }
+    let block = lower(q.script.name);
+    let mut stages: Vec<u16> = Vec::new();
+    for f in &q.fragments {
+        bump(
+            &mut ctx.c,
+            format!("QUST fragment word {} byte {}", f.word, f.byte),
+        );
+        check(
+            &mut ctx.checks,
+            "QUST fragment script == block script",
+            f.script == q.script.name,
+        );
+        let declared = ctx.ix.function(&block, &lower(f.function));
+        check(
+            &mut ctx.checks,
+            "QUST fragment function declared by the block script",
+            declared.is_some(),
+        );
+        if let Some(c) = declared {
+            bump(
+                &mut ctx.c,
+                format!(
+                    "QUST fragment function params {} returns {}",
+                    c.decl.params, c.decl.return_type
+                ),
+            );
+        }
+        let has_stage = r.subrecords.iter().any(|s| {
+            s.signature == *b"INDX" && r.data(s).get(..2) == Some(&f.stage.to_le_bytes()[..])
+        });
+        check(
+            &mut ctx.checks,
+            "QUST fragment stage is the first u16 of an INDX subrecord of the quest",
+            has_stage,
+        );
+        stages.push(f.stage);
+    }
+    let mut aliases: Vec<i16> = Vec::new();
+    for a in &q.aliases {
+        bump(
+            &mut ctx.c,
+            format!(
+                "QUST alias entry zero word {} version {} object format {}",
+                a.object.zero, a.version, a.object_format
+            ),
+        );
+        check(
+            &mut ctx.checks,
+            "QUST alias entry FormID is the quest's own",
+            a.object.form_id == r.form_id,
+        );
+        check(
+            &mut ctx.checks,
+            "QUST alias entry index >= 0",
+            a.object.alias >= 0,
+        );
+        let alst = r.subrecords.iter().any(|s| {
+            s.signature == *b"ALST" && r.data(s) == (a.object.alias as i32 as u32).to_le_bytes()
+        });
+        check(
+            &mut ctx.checks,
+            "QUST alias entry index is the value of an ALST subrecord of the quest",
+            alst,
+        );
+        bump(
+            &mut ctx.c,
+            format!("QUST alias entry scripts {}", a.scripts.len().min(5)),
+        );
+        for sc in &a.scripts {
+            ctx.script("QUST", sc, "QUST alias");
+        }
+        aliases.push(a.object.alias);
+    }
+    aliases.sort_unstable();
+    check(
+        &mut ctx.checks,
+        "QUST alias entry indices distinct within a block",
+        aliases.windows(2).all(|w| w[0] != w[1]),
+    );
+    stages.sort_unstable();
+    bump(
+        &mut ctx.c,
+        format!(
+            "QUST block with two fragments of one stage {}",
+            stages.windows(2).any(|w| w[0] == w[1])
+        ),
+    );
+}
+
 fn run() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<_> = std::env::args().skip(1).collect();
     if args.len() != 2 {
@@ -209,7 +381,34 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         file: String::new(),
         c: Counts::new(),
         checks: BTreeMap::new(),
+        quests: Default::default(),
     };
+    // First pass: the alias indices of every QUST block and the ALST
+    // values of the quest.
+    for (key, _) in winners
+        .iter()
+        .filter(|(k, _)| store.signature(k) == Some(*b"QUST"))
+    {
+        let b = Budget::new(m.limits.max_memory);
+        let Some(r) = store.raw(key, &b)? else {
+            continue;
+        };
+        let alst = r
+            .subrecords
+            .iter()
+            .filter(|s| s.signature == *b"ALST")
+            .filter_map(|s| r.data(s).try_into().ok().map(u32::from_le_bytes))
+            .collect();
+        let mut block = Vec::new();
+        for s in r.subrecords.iter().filter(|s| s.signature == *b"VMAD") {
+            if let Ok(v) = Vmad::read(r.data(s), r.signature, &r.source.file, s.offset, &b) {
+                if let Some(q) = &v.quest {
+                    block.extend(q.aliases.iter().map(|a| a.object.alias));
+                }
+            }
+        }
+        ctx.quests.insert(key.clone(), (block, alst));
+    }
     let mut outcomes = Counts::new();
     let mut tails = Counts::new();
     let mut bytes = 0u64;
@@ -309,6 +508,11 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     } else if sig == "TERM" {
                         bump(&mut ctx.c, "TERM without a block");
                     }
+                    if let Some(q) = &v.quest {
+                        quest_block(&mut ctx, &r, q);
+                    } else if sig == "QUST" {
+                        bump(&mut ctx.c, "QUST without a block");
+                    }
                 }
             }
         }
@@ -318,7 +522,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     writeln!(out, "VMAD bytes\t{bytes}")?;
     writeln!(
         out,
-        "VMAD bytes read (scripts and TERM blocks)\t{read_bytes}"
+        "VMAD bytes read (scripts, TERM and QUST blocks)\t{read_bytes}"
     )?;
     writeln!(out, ".pex objects indexed\t{}", ix.scripts.len())?;
     writeln!(out, "wall seconds\t{:.1}", started.elapsed().as_secs_f64())?;

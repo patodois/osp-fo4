@@ -2,9 +2,10 @@
 
 The VMAD subrecord names the compiled scripts ([pex.md](pex.md)) attached to
 a record and the values of their properties. `fo4_plugin::vmad::Vmad` reads
-its script list for every record type, and for TERM the fragment block that
-follows; for the other record types the bytes after the script list are
-kept as stored (`tail`). Nothing here runs a script or applies a property.
+its script list for every record type, for TERM the fragment block that
+follows, and for QUST the block of stage fragments and aliases; for the
+other record types the bytes after the script list are kept as stored
+(`tail`). Nothing here runs a script or applies a property.
 
 Every statement below comes from measuring the VMAD subrecords of the
 winning records of one installation. The layout was recognised from prior
@@ -26,12 +27,12 @@ committed as [vmad-census.txt](vmad-census.txt). Same installation as
 bytes, on 26 record types; 8.1 s wall, peak RSS about 850 MB.
 
 **Result: every VMAD is read without error** for all 26 types. The script
-list (and the TERM block) covers 2,102,984 bytes. The other 2,300,045 bytes
-are the blocks after the script list of INFO (2,396 of 5,611 records),
-PACK (166 of 167), PERK (32 of 35), QUST (1,300 of 1,353) and SCEN (632 of
-634), which are kept, not read **[open]**. Every other VMAD ends exactly
-where its script list (or TERM block) ends, including all 8,767 REFR, 931
-ACTI, 301 TERM and 19 DOOR records.
+list and the TERM and QUST blocks cover 3,859,236 bytes. The other 543,793
+bytes are the blocks after the script list of INFO (2,396 of 5,611
+records), PACK (166 of 167), PERK (32 of 35) and SCEN (632 of 634), which
+are kept, not read **[open]**. Every other VMAD ends exactly where its
+script list (or TERM or QUST block) ends, including all 8,767 REFR, 931
+ACTI, 301 TERM, 19 DOOR and 1,353 QUST records.
 
 ## Layout
 
@@ -82,6 +83,37 @@ block), u8 1, text *script* (the block's script in all 893 fragments), text
 parameter and no return value, for 882 of 893 fragments; the other 11 name
 a function the script does not declare. Which terminal entry an index
 selects is not read here **[open]**.
+
+### QUST block
+
+After the script list of 1,300 of the 1,353 QUST VMADs (the other 53 end
+with the list); every one read to its last byte, none refused:
+
+| Field | Content | Evidence |
+| --- | --- | --- |
+| u8 | 3 | 1,300 |
+| u16 | fragment count | 0 in 21 blocks |
+| text | the fragment script; when not empty, followed by u8 *flags* and the properties of a script entry; when empty, nothing | empty in 18 blocks, all with no fragment; not empty in 1,282 (3 of them with no fragment), flags 0 in all |
+| fragments | u16 *stage*, u16 (0 in all), i32 *log entry*, u8 (1 in all), text *script*, text *function* | 10,506 fragments; the script is the block's in all; the function is declared by it, with no parameter and no return value, for 10,500 (6 not declared); the stage is the first u16 of an INDX subrecord of the quest for 10,375 (131 not); 130 blocks have two fragments of one stage |
+| u16 | alias count | 3,226 aliases |
+| aliases | an object value (u16 0, i16 *alias index*, u32 the quest's own FormID), u16 6, u16 2, then a script list | index not negative and FormID the quest's own in all 3,226; indices distinct within every block; the index is the value of an ALST subrecord of the quest for 3,216 (10 not); 1 to 5 scripts each |
+
+The fragment block script names a `.pex` object for 1,279 of 1,282, and
+its 14,575 properties fit their declared types (55 not declared); the
+alias scripts name a `.pex` object in all 4,057 cases, with all 7,796
+properties declared and fitting. Which stage or event runs a fragment is
+not read here **[open]**.
+
+### Object values with an alias index
+
+An object value whose i16 is not negative (9,756 values, 9,228 of them on
+QUST records) names a winning QUST in all 9,756; the quest's ALST values
+hold the index in 9,362. The declared type of the property holding it is
+ReferenceAlias (7,536 properties), RefCollectionAlias (816), LocationAlias
+(178) or Alias (7), never an object reference type. The quest's VMAD block
+has an alias entry of that index for 3,043 (aliases without scripts have
+no entry). `fo4_vm` reads such a value as the alias of that index of that
+quest (`vmad_alias_value_v1`).
 
 ## Survey
 
