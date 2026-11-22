@@ -565,6 +565,10 @@ pub struct Place {
     pub actor_moves: Vec<ActorMove>,
     /// Actor moves applied so far (`world_actor_trigger_v1`).
     pub actor_cursor: usize,
+    /// The moves scene package actions scheduled, by scene handle
+    /// (`pack_location_destination_v1`): those not yet applied end with
+    /// their scene.
+    pub package_moves: Vec<(ObjId, ActorMove)>,
     /// Volumes holding each moved actor, by actor key.
     pub actor_held: BTreeMap<FormKey, BTreeSet<usize>>,
     /// Placed actors of the cells read near the track (with
@@ -1007,6 +1011,33 @@ fn stored(store: &Store, max: u64, k: &FormKey) -> Stored {
         [t[0], t[1], t[2]].map(f64::from),
         f64::from(t[5]).to_degrees(),
     ))
+}
+
+/// The stored space (its worldspace, or its interior cell) and position
+/// of a placed reference or actor.
+pub fn stored_position(
+    store: &Store,
+    max: u64,
+    k: &FormKey,
+) -> Result<(FormKey, [f64; 3]), &'static str> {
+    let got = if store.signature(k) == Some(*b"ACHR") {
+        stored_actor(store, max, k)
+    } else {
+        stored(store, max, k)
+    };
+    got.map(|(space, pos, _)| (space, pos))
+}
+
+/// Adds an actor move to the world model, after the moves already applied
+/// and in time order among those waiting (a move at a second already
+/// passed applies at the next settling).
+pub fn schedule_move(w: &mut World, m: ActorMove) {
+    let at = w.place.actor_cursor
+        + w.place.actor_moves[w.place.actor_cursor..]
+            .iter()
+            .take_while(|x| x.t <= m.t)
+            .count();
+    w.place.actor_moves.insert(at, m);
 }
 
 /// A placed actor's stored space, position and facing (`DATA` as a

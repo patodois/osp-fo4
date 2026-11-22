@@ -2,7 +2,7 @@ use crate::tests::{build, name_offset, read, Spec};
 use crate::*;
 use fo4_core::Budget;
 
-const NAMES: [&str; 6] = [
+pub(crate) const NAMES: [&str; 6] = [
     "hkClass",
     ROOT_LEVEL,
     ANIMATION_CONTAINER,
@@ -20,7 +20,7 @@ pub(crate) struct Lay {
     pub objects: Vec<[u32; 3]>,
 }
 impl Lay {
-    fn put(&mut self, at: usize, v: u32) {
+    pub(crate) fn put(&mut self, at: usize, v: u32) {
         self.bytes[at..at + 4].copy_from_slice(&v.to_le_bytes());
     }
     fn putf(&mut self, at: usize, v: &[f32]) {
@@ -28,18 +28,18 @@ impl Lay {
             self.put(at + 4 * k, x.to_bits());
         }
     }
-    fn array(&mut self, at: usize, count: u32, storage: usize) {
+    pub(crate) fn array(&mut self, at: usize, count: u32, storage: usize) {
         self.put(at + 8, count);
         self.put(at + 12, ARRAY_FLAG | count);
         if count > 0 {
             self.pointers.push([at as u32, storage as u32]);
         }
     }
-    fn text(&mut self, source: usize, at: usize, s: &str) {
+    pub(crate) fn text(&mut self, source: usize, at: usize, s: &str) {
         self.bytes[at..at + s.len()].copy_from_slice(s.as_bytes());
         self.pointers.push([source as u32, at as u32]);
     }
-    fn link(&mut self, source: usize, object: usize) {
+    pub(crate) fn link(&mut self, source: usize, object: usize) {
         self.links.push([source as u32, 2, self.objects[object][0]]);
     }
 }

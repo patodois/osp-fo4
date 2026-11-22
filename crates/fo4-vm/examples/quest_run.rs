@@ -528,6 +528,12 @@ fn count_clock(c: &mut Counts, steps: usize) {
                 format!("assumption from the command line: the player picks choice {n}"),
             );
         }
+        if let Some(n) = k.package_arrival {
+            bump(
+                c,
+                format!("switch: a package action's actor is at its package's one placed Location reference {n} s (the caller's) after the action starts (--package-destinations)"),
+            );
+        }
         if k.assume_packages {
             bump(
                 c,
@@ -942,6 +948,12 @@ struct Then {
     /// The player is no record's handle (`vm_player_no_record_v1`,
     /// `--player-no-record`).
     player_no_record: bool,
+    /// Animation events (`fo4_vm::anim`): registrations kept and
+    /// delivered (`--anim-events`), names compared ignoring case
+    /// (`--anim-event-case`), references' graphs followed
+    /// (`--anim-graphs`) and their sequences' text keys raised
+    /// (`--anim-graph-keys`).
+    anim: [bool; 4],
 }
 
 /// One thing the caller makes happen.
@@ -955,6 +967,9 @@ enum What {
     /// The player starts a conversation with a placed actor
     /// (`--assume-talk`).
     Talk(String),
+    /// A placed reference raises a named animation event
+    /// (`--assume-anim-event REF EVENT`).
+    Anim(String, String),
 }
 #[derive(Clone, Debug)]
 struct Caller {
@@ -1023,6 +1038,59 @@ fn act(
             let o = quest::quest_object(vm, store, &k, b)?;
             let reply = quest::set_stage(vm, store, o, *n);
             let _ = writeln!(names, "## --then {edid}:{n}{when}: {reply:?}");
+        }
+        What::Anim(key, event) => {
+            bump(
+                c,
+                "assumption from the command line: a placed reference raises a named animation event (--assume-anim-event)",
+            );
+            let k = fo4_vm::player::parse_key(key)
+                .ok_or("a reference is given as plugin.esm:0001ABCD")?;
+            if !matches!(
+                store.signature(&k).as_ref().map(|s| &s[..]),
+                Some(b"REFR" | b"ACHR")
+            ) {
+                return Err("--assume-anim-event names no winning placed REFR or ACHR".into());
+            }
+            let o = fo4_vm::data::record_object(&mut vm.world, store, &k, "objectreference", b)?;
+            let before = vm.effects.len();
+            let runs = fo4_vm::anim::deliver(vm, o, event);
+            let _ = writeln!(
+                names,
+                "## --assume-anim-event {key} {event}{when}: {} handler run(s)",
+                runs.len()
+            );
+            if runs.is_empty() {
+                bump(
+                    c,
+                    "animation events\tassumed by the caller\tno registered instance",
+                );
+            }
+            for (script, o) in &runs {
+                bump(
+                    c,
+                    format!(
+                        "animation events\tassumed by the caller\t{}",
+                        outcome_kind(o)
+                    ),
+                );
+                let _ = writeln!(names, "    {script}: {}", outcome_text(o));
+            }
+            top.extend(quest::run_jobs(vm, store, MAX_GAME_JOBS, b));
+            for e in &vm.effects[before..] {
+                let _ = writeln!(
+                    names,
+                    "      {}{}({}{}) = {}",
+                    "  ".repeat(e.depth),
+                    e.native,
+                    e.receiver
+                        .as_ref()
+                        .map(|x| format!("on {x}; "))
+                        .unwrap_or_default(),
+                    e.args.join(", "),
+                    e.result
+                );
+            }
         }
         What::Talk(key) => {
             bump(
@@ -1169,11 +1237,44 @@ fn world_step(
     top: &mut Vec<JobRun>,
     b: &Budget,
 ) {
-    if !vm.world.place.on && !vm.world.talk.on {
+    if !vm.world.place.on && !vm.world.talk.on && !vm.world.anims.on && !vm.world.anims.graphs {
         return;
     }
     let before = vm.effects.len();
     let (raised, mut runs) = fo4_vm::track::settle(vm, store, MAX_GAME_JOBS, b);
+    let logged = vm.world.anims.log.len();
+    let (anim_raised, anim_runs) = fo4_vm::anim::settle(vm, store, MAX_GAME_JOBS, b);
+    runs.extend(anim_runs);
+    for (t, x) in &vm.world.anims.log[logged..] {
+        let _ = writeln!(names, "## animation at {t} s: {x}");
+    }
+    for r in &anim_raised {
+        let _ = writeln!(
+            names,
+            "## animation event at {} s: {} on {} ({}), {} handler run(s)",
+            r.t,
+            r.name,
+            vm.world.objects[r.sender].label,
+            r.from,
+            r.runs.len()
+        );
+        for (script, o) in &r.runs {
+            let _ = writeln!(names, "    {script}: {}", outcome_text(o));
+            bump(
+                c,
+                format!(
+                    "animation events\traised from the data\t{}",
+                    outcome_kind(o)
+                ),
+            );
+        }
+        if r.runs.is_empty() {
+            bump(
+                c,
+                "animation events\traised from the data\tno registered instance",
+            );
+        }
+    }
     let talked = vm.world.talk.log.len();
     runs.extend(fo4_vm::talk::settle(vm, store, MAX_GAME_JOBS, b));
     for (t, x) in &vm.world.talk.log[talked..] {
@@ -1198,7 +1299,7 @@ fn world_step(
             );
         }
     }
-    if !raised.is_empty() {
+    if !raised.is_empty() || !anim_raised.is_empty() {
         for e in &vm.effects[before..] {
             let _ = writeln!(
                 names,
@@ -1285,6 +1386,7 @@ fn clock_loop(
         let track_wait = [
             fo4_vm::track::next_due(store, max, &mut vm.world),
             fo4_vm::talk::next_due(&vm.world),
+            fo4_vm::anim::next_due(&vm.world),
         ]
         .into_iter()
         .flatten()
@@ -1378,6 +1480,26 @@ fn clock_loop(
     Ok(fired)
 }
 
+/// Reads models' graphs through the mounted archives
+/// (`fo4_scene::anim_graph::model_graph`), once per model text.
+struct VfsGraphs<'a> {
+    vfs: &'a Vfs,
+    cache: BTreeMap<String, Result<Rc<fo4_scene::anim_graph::ModelGraph>, String>>,
+}
+impl fo4_vm::anim::GraphSource for VfsGraphs<'_> {
+    fn graph(&mut self, model: &str) -> Result<Rc<fo4_scene::anim_graph::ModelGraph>, String> {
+        let key = model.to_ascii_lowercase();
+        if let Some(g) = self.cache.get(&key) {
+            return g.clone();
+        }
+        let limits = self.vfs.limits().clone();
+        let b = Budget::new(limits.max_memory);
+        let g = fo4_scene::anim_graph::model_graph(self.vfs, model, &limits, &b).map(Rc::new);
+        self.cache.insert(key, g.clone());
+        g
+    }
+}
+
 /// The winning NPC_ of an editor ID.
 fn npc_by_editor_id(store: &Store, b: &Budget, edid: &str) -> Result<FormKey, E> {
     Ok(store
@@ -1459,9 +1581,30 @@ fn new_game(
     let mut c = Counts::new();
     let mut names = String::new();
     let mut host = host(store, vfs, max, opts, &tree);
+    if then.anim[2] {
+        host.graphs = Some(Box::new(VfsGraphs {
+            vfs,
+            cache: BTreeMap::new(),
+        }));
+    }
     let mut attach = RecordScripts::new(store, max);
     let mut runner = quest::Runner::new(store, max, MAX_GAME_JOBS);
     let mut vm = Vm::new(&mut lib, &mut host);
+    let [anim_on, anim_case, anim_graphs, anim_keys] = then.anim;
+    vm.world.anims.on = anim_on;
+    vm.world.anims.ignore_case = anim_case;
+    vm.world.anims.graphs = anim_graphs;
+    vm.world.anims.keys = anim_keys;
+    for (on, what) in [
+        (anim_on, "animation event registrations kept and delivered where the run raises the event (--anim-events)"),
+        (anim_case, "animation event names compared ignoring case (--anim-event-case)"),
+        (anim_graphs, "a placed reference runs its base model's behaviour graph; PlayAnimation takes a transition (--anim-graphs)"),
+        (anim_keys, "the text keys of the sequence a graph state plays are raised (--anim-graph-keys)"),
+    ] {
+        if on {
+            bump(&mut c, format!("switch: {what}"));
+        }
+    }
     vm.attach = Some(&mut attach);
     if nested {
         vm.nested = Some(&mut runner);
@@ -1836,6 +1979,9 @@ fn new_game(
     for (k, v) in &vm.world.talk.counts {
         *c.entry(format!("talk\t{k}")).or_default() += v;
     }
+    for (k, v) in &vm.world.anims.counts {
+        *c.entry(format!("animation\t{k}")).or_default() += v;
+    }
     count_events(&mut c, &vm);
     if opts.scenes {
         // What the two timer kinds are asked for (`vm_timer_events_v1`).
@@ -1879,7 +2025,7 @@ fn new_game(
             .iter()
             .filter_map(|x| match &x.what {
                 What::Stage(q, _) => Some(q.clone()),
-                What::Player(..) | What::Talk(_) => None,
+                What::Player(..) | What::Talk(_) | What::Anim(..) => None,
             })
             .collect();
         next_blockers(&mut vm, m, vfs, store, opts, &quests, out)?;
@@ -2777,6 +2923,12 @@ fn run() -> Result<(), E> {
         recheck: flag(&mut a, "--scene-recheck").then(|| std::cell::Cell::new(0)),
         unique_fills: flag(&mut a, "--alias-unique-actors"),
         player_no_record: flag(&mut a, "--player-no-record"),
+        anim: [
+            flag(&mut a, "--anim-events"),
+            flag(&mut a, "--anim-event-case"),
+            flag(&mut a, "--anim-graphs"),
+            flag(&mut a, "--anim-graph-keys"),
+        ],
         talk: fo4_vm::talk::Switches {
             greeting: flag(&mut a, "--greeting-on-talk"),
             hello: flag(&mut a, "--hello-lines"),
@@ -2785,6 +2937,21 @@ fn run() -> Result<(), E> {
         },
         ..Then::default()
     };
+    // The caller's assumed animation events: REF EVENT[@SECONDS].
+    while let Some(i) = a.iter().position(|x| x == "--assume-anim-event") {
+        let usage = "--assume-anim-event PLUGIN:OBJECTID EVENT[@SECONDS]";
+        let key = a.get(i + 1).cloned().ok_or(usage)?;
+        let v = a.get(i + 2).cloned().ok_or(usage)?;
+        let (event, at) = match v.rsplit_once('@') {
+            Some((e, t)) => (e.to_string(), Some(t.parse::<f64>()?)),
+            None => (v, None),
+        };
+        then.actions.push(Caller {
+            what: What::Anim(key, event),
+            at,
+        });
+        a.drain(i..i + 3);
+    }
     // The caller's assumed actor moves: REF SPACE X Y Z@SECONDS.
     while let Some(i) = a.iter().position(|x| x == "--assume-actor-at") {
         let usage = "--assume-actor-at REF SPACE X Y Z@SECONDS";
@@ -2921,14 +3088,24 @@ fn run() -> Result<(), E> {
     };
     let line_audio = !flag(&mut a, "--no-line-audio");
     while let Some(i) = a.iter().position(|x| {
-        x == "--scene-clock" || x == "--assume-line-seconds" || x == "--assume-player-choice"
+        x == "--scene-clock"
+            || x == "--assume-line-seconds"
+            || x == "--assume-player-choice"
+            || x == "--package-destinations"
     }) {
         let v = a.get(i + 1).cloned().ok_or(
-            "--scene-clock, --assume-line-seconds and --assume-player-choice take a value",
+            "--scene-clock, --assume-line-seconds, --assume-player-choice and --package-destinations take a value",
         )?;
         match a[i].as_str() {
             "--scene-clock" => then.scene_clock = v.parse()?,
             "--assume-line-seconds" => clock.assume_line_seconds = Some(v.parse()?),
+            "--package-destinations" => {
+                let n: f64 = v.parse()?;
+                if !n.is_finite() || n < 0.0 {
+                    return Err("--package-destinations takes seconds, not negative".into());
+                }
+                clock.package_arrival = Some(n);
+            }
             _ => clock.assume_player_choice = Some(v.parse()?),
         }
         a.drain(i..i + 2);
@@ -2950,6 +3127,9 @@ fn run() -> Result<(), E> {
     if talk_on && then.scene_clock == 0 {
         return Err("--greeting-on-talk, --hello-lines, --dialogue-priority and --assume-talk need --scene-clock N".into());
     }
+    if clock.package_arrival.is_some() && !world_sw.actors {
+        return Err("--package-destinations needs --track FILE and --actor-positions".into());
+    }
     if !then.actor_moves.is_empty() && !world_sw.actors {
         return Err("--assume-actor-at needs --track FILE and --actor-positions".into());
     }
@@ -2958,6 +3138,19 @@ fn run() -> Result<(), E> {
             "--hello-lines needs --track FILE, --actor-positions and --hello-distance-setting EDITOR_ID"
                 .into(),
         );
+    }
+    let assumed_anim = then
+        .actions
+        .iter()
+        .any(|x| matches!(x.what, What::Anim(..)));
+    if (assumed_anim || then.anim[1]) && !then.anim[0] {
+        return Err("--assume-anim-event and --anim-event-case need --anim-events".into());
+    }
+    if then.anim[3] && !then.anim[2] {
+        return Err("--anim-graph-keys needs --anim-graphs".into());
+    }
+    if then.anim[2] && then.scene_clock == 0 {
+        return Err("--anim-graphs needs --scene-clock N".into());
     }
     if then.scene_clock == 0 && then.actions.iter().any(|x| x.at.is_some()) {
         return Err("an action at a second (@SECONDS) needs --scene-clock N".into());
@@ -2968,7 +3161,7 @@ fn run() -> Result<(), E> {
     {
         return Err("--assume-player-choice takes 0 to 3".into());
     }
-    let usage = "quest_run MANIFEST (stages OUT_DIR | new-game OUT_DIR | fragments OUT_DIR | scenes OUT_DIR | QUEST STAGE) [--queued] [--no-conditions] [--no-stage-event] [--no-remote] [--no-custom | --custom-nested] [--no-story] [--no-enable-chain] [--no-scenes] [--no-scenes-with-quest] [--no-cond-fn-N]... [--no-cond-run-on] [--assume-cond N=VALUE]...; fragments OUT_DIR and scenes OUT_DIR run every INFO, PACK and PERK fragment and start every scene in a fresh interpreter; new-game also takes --then EDITOR_ID:STAGE[@SECONDS] (repeated), --assume-activate, --assume-trigger-enter, --assume-trigger-leave and --assume-open PLUGIN:OBJECTID[@SECONDS] (repeated), --timers N and --time-scale-global EDITOR_ID, assumptions of the caller, --scene-recheck, --stage-fields, --cond-550-clock, --alias-location-refs and --next-blockers; new-game and scenes take --scene-clock N (advance the scene clock up to N times) with --no-timer-actions, --no-line-audio, --assume-line-seconds X, --assume-player-choice N (0 to 3), --assume-packages-complete, --assume-start-scene-actions, --line-stage-fields and --assume-first-line; every mode takes --none-array-length, --none-array-read, --none-array-find, --none-array-change and --enable-child-flag-ignored; new-game with --scene-clock takes --track FILE (the player's track, lines SECONDS SPACE X Y Z [FACING]) with --trigger-box, --trigger-sphere, --trigger-point or --trigger-body HEIGHT, --trigger-instant, --trigger-enabled, --trigger-order, --distance-events, --distance-once, --placed-positions, --position-natives, --cell-natives, --location-native and --assume-los true|false, --actor-positions, --actor-triggers and --assume-actor-at REF SPACE X Y Z@SECONDS (repeated); new-game takes --alias-unique-actors, --player-base EDITOR_ID and --player-no-record, and with --scene-clock --assume-talk PLUGIN:OBJECTID[@SECONDS] (repeated), --greeting-on-talk, --hello-lines with --hello-distance-setting EDITOR_ID, --dialogue-priority and --assume-line PLUGIN:OBJECTID (repeated)";
+    let usage = "quest_run MANIFEST (stages OUT_DIR | new-game OUT_DIR | fragments OUT_DIR | scenes OUT_DIR | QUEST STAGE) [--queued] [--no-conditions] [--no-stage-event] [--no-remote] [--no-custom | --custom-nested] [--no-story] [--no-enable-chain] [--no-scenes] [--no-scenes-with-quest] [--no-cond-fn-N]... [--no-cond-run-on] [--assume-cond N=VALUE]...; fragments OUT_DIR and scenes OUT_DIR run every INFO, PACK and PERK fragment and start every scene in a fresh interpreter; new-game also takes --then EDITOR_ID:STAGE[@SECONDS] (repeated), --assume-activate, --assume-trigger-enter, --assume-trigger-leave and --assume-open PLUGIN:OBJECTID[@SECONDS] (repeated), --timers N and --time-scale-global EDITOR_ID, assumptions of the caller, --scene-recheck, --stage-fields, --cond-550-clock, --alias-location-refs and --next-blockers; new-game and scenes take --scene-clock N (advance the scene clock up to N times) with --no-timer-actions, --no-line-audio, --assume-line-seconds X, --assume-player-choice N (0 to 3), --assume-packages-complete, --assume-start-scene-actions, --line-stage-fields and --assume-first-line; every mode takes --none-array-length, --none-array-read, --none-array-find, --none-array-change and --enable-child-flag-ignored; new-game with --scene-clock takes --track FILE (the player's track, lines SECONDS SPACE X Y Z [FACING]) with --trigger-box, --trigger-sphere, --trigger-point or --trigger-body HEIGHT, --trigger-instant, --trigger-enabled, --trigger-order, --distance-events, --distance-once, --placed-positions, --position-natives, --cell-natives, --location-native and --assume-los true|false, --actor-positions, --actor-triggers and --assume-actor-at REF SPACE X Y Z@SECONDS (repeated); new-game takes --alias-unique-actors, --player-base EDITOR_ID and --player-no-record, and with --scene-clock --assume-talk PLUGIN:OBJECTID[@SECONDS] (repeated), --greeting-on-talk, --hello-lines with --hello-distance-setting EDITOR_ID, --dialogue-priority and --assume-line PLUGIN:OBJECTID (repeated); new-game with --track and --actor-positions takes --package-destinations SECONDS; new-game takes --anim-events with --anim-event-case and --assume-anim-event PLUGIN:OBJECTID EVENT[@SECONDS] (repeated), and with --scene-clock --anim-graphs with --anim-graph-keys";
     if a.len() != 3 {
         return Err(usage.into());
     }

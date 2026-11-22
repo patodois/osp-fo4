@@ -169,7 +169,7 @@ pub const XESP_BIT1: &str = "xesp_flag_bit1_not_presence_v1";
 pub const XESP_PROPAGATES: &str = "xesp_script_change_propagates_v1";
 
 /// Every rule above.
-pub const ALL: [&str; 130] = [
+pub const ALL: [&str; 135] = [
     ARITHMETIC,
     COMPARE,
     NOT_COPY_CAST,
@@ -300,6 +300,11 @@ pub const ALL: [&str; 130] = [
     DIALOGUE_LINE_FIELDS,
     PLAYER_NO_RECORD,
     XESP_CHILD_FLAG_IGNORED,
+    ANIM_EVENTS,
+    ANIM_EVENT_CASE,
+    ANIM_GRAPH,
+    ANIM_GRAPH_KEYS,
+    PACKAGE_DESTINATION,
 ];
 
 /// The rule an opcode's meaning rests on; `None` for an opcode without a
@@ -501,3 +506,29 @@ pub const PLAYER_NO_RECORD: &str = "vm_player_no_record_v1";
 /// carries its own flag 0x800 takes its parent's state as the other links
 /// do: the flag carries no state of its own.
 pub const XESP_CHILD_FLAG_IGNORED: &str = "xesp_child_own_flag_ignored_v1";
+
+/// `RegisterForAnimationEvent` keeps (instance, sender, name) until
+/// `UnregisterForAnimationEvent`; an animation event of the sender the run
+/// raises runs `OnAnimationEvent(sender, name)` on every instance
+/// registered for that name, in registration order (`crate::anim`).
+pub const ANIM_EVENTS: &str = "vm_anim_event_registration_v1";
+/// Animation event names compare ignoring ASCII case, in registrations
+/// and in a graph's event table; the handler receives the name as the
+/// registration stored it.
+pub const ANIM_EVENT_CASE: &str = "anim_event_name_case_v1";
+/// A placed reference runs the behaviour graph its base model names
+/// (`fo4_scene::anim_graph`), from the root machine's start state;
+/// `PlayAnimation(event)` takes the current state's transition of that
+/// event, else a wildcard one, entering the target state at once.
+pub const ANIM_GRAPH: &str = "anim_graph_model_transition_v1";
+/// A state whose generator is a Gamebryo sequence generator plays the
+/// model's controller sequence of that name from its start: each text key
+/// naming an event of the graph is raised at the entry plus its time over
+/// the frequency, as an animation event of the reference and as an event
+/// of its graph; leaving the state drops the keys not yet raised.
+pub const ANIM_GRAPH_KEYS: &str = "anim_graph_sequence_keys_v1";
+/// A scene package action whose package names exactly one placed
+/// reference as a Location input puts the action's actor at that
+/// reference's stored position a caller's number of seconds after the
+/// action starts (no path, no speed).
+pub const PACKAGE_DESTINATION: &str = "pack_location_destination_v1";

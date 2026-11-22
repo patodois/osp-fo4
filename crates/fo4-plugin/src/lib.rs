@@ -8,6 +8,7 @@ pub mod enable;
 pub mod info;
 pub mod land;
 pub mod layout;
+pub mod pack;
 pub mod quest;
 pub mod scen;
 mod semantics;

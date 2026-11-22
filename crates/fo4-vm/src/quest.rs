@@ -876,6 +876,9 @@ pub struct QuestHost<'s> {
     pub story: Option<Rc<fo4_plugin::story::Tree>>,
     /// Story events offered and what they did, as text.
     pub story_counts: BTreeMap<String, u64>,
+    /// Reads the graphs of models for `crate::anim` (`rules::ANIM_GRAPH`);
+    /// `None`: no graph is read.
+    pub graphs: Option<Box<dyn crate::anim::GraphSource + 's>>,
 }
 
 /// Natives the quest host answers, lower case `script.function`.
@@ -920,6 +923,7 @@ impl<'s> QuestHost<'s> {
             open_functions: BTreeMap::new(),
             story: None,
             story_counts: BTreeMap::new(),
+            graphs: None,
         }
     }
     pub(crate) fn using(&mut self, r: &'static str) {
@@ -1405,6 +1409,21 @@ impl<'s> QuestHost<'s> {
 impl Host for QuestHost<'_> {
     fn call(&mut self, c: &NativeCall, w: &mut World) -> Reply {
         let full = c.full_name();
+        // Animation events, when a caller turned them on (`crate::anim`);
+        // off, the natives are recorded as before.
+        if w.anims.graphs && full == crate::anim::PLAY {
+            if let Some(g) = self.graphs.as_mut() {
+                let (store, max) = (self.data.store, self.data.max_memory);
+                crate::anim::observe_play(store, max, g.as_mut(), c, w);
+            }
+        }
+        let anim_reply = crate::anim::native(c, w);
+        for u in std::mem::take(&mut w.anims.used) {
+            self.using(u);
+        }
+        if let Some(r) = anim_reply {
+            return r;
+        }
         // The player position model, when a caller gave a track
         // (`crate::track`); off, nothing changes.
         if w.place.on {

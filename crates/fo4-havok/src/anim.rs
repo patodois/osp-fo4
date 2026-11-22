@@ -11,7 +11,9 @@
 //! tracks and durations as the labels say is checked only as far as the spec
 //! states (counts, references, unit quaternions, agreement with the skeleton
 //! NIFs); the runtime use stays a hypothesis.
+mod annotation;
 mod spline;
+pub use annotation::{annotation_tracks, Annotation, AnnotationTrack, ANNOTATION, MAX_ANNOTATIONS};
 pub use spline::{
     de_boor, Component, Curve, DecodedSpline, Quantised, RotationTrack, Track, TrackPose,
     VectorTrack, ROTATION_40, ROTATION_48, VECTOR_16,
@@ -341,7 +343,7 @@ pub struct AnimationHeader {
     pub float_tracks: u32,
     /// Object linked from +32, an `hkaDefaultAnimatedReferenceFrame`, if any.
     pub reference_frame: Option<usize>,
-    /// Array at +40 of 24-byte elements; not read further.
+    /// Array at +40 of 24-byte elements, read by [`annotation_tracks`].
     pub annotation_tracks: Array,
 }
 impl AnimationHeader {

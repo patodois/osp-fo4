@@ -249,6 +249,7 @@ version = "0.1.0"
 dependencies = [
  "fo4-audio",
  "fo4-core",
+ "fo4-havok",
  "fo4-nav",
  "fo4-pex",
  "fo4-plugin",

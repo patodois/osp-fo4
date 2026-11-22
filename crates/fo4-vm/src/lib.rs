@@ -26,6 +26,7 @@ use std::{
     rc::Rc,
 };
 
+pub mod anim;
 pub mod bind;
 pub mod blockers;
 pub mod cond;

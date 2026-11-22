@@ -158,6 +158,9 @@ pub struct World {
     /// Dialogue outside scenes (`crate::talk`); off unless a caller turns
     /// a switch on.
     pub talk: crate::talk::Talk,
+    /// Animation event registrations and the graphs of references
+    /// (`crate::anim`); off unless a caller turns a switch on.
+    pub anims: crate::anim::Anims,
 }
 
 impl World {

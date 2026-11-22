@@ -18,6 +18,8 @@ fo4-vfs.workspace = true
 fo4-scene.workspace = true
 
 [dev-dependencies]
+# Tests build a model graph (`fo4_scene::anim_graph::ModelGraph`) by hand.
+fo4-havok.workspace = true
 # Examples read voice file headers; the library takes the seconds from its caller.
 fo4-audio = { path = "../fo4-audio" }
 # `world_census` reads the navmesh ground under trigger volumes.

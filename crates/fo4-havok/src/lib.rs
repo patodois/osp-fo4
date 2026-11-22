@@ -17,7 +17,10 @@
 //! [`CompressedMesh`] with its [`MeshData`], box trees and vertex records
 //! (`spec/havok-mesh.md`). The animation and skeleton objects of the `.hkx`
 //! files are read by [`Skeleton`], [`Binding`], [`AnimationContainer`],
-//! [`AnimationHeader`] and [`SplineAnimation`] (`spec/havok-animation.md`).
+//! [`AnimationHeader`] and [`SplineAnimation`] (`spec/havok-animation.md`);
+//! the behaviour project, character and graph files as far as a state
+//! machine of Gamebryo sequence states needs, by [`Machine`] and its parts
+//! (`spec/havok-behavior.md`).
 //! A payload
 //! outside the measured profile is a named error carrying the file offset;
 //! nothing here panics.
@@ -25,17 +28,25 @@ use fo4_core::{Budget, Error, Result};
 use serde::Serialize;
 
 mod anim;
+mod behavior;
 mod bodies;
 mod mesh;
 mod objects;
 mod shapes;
 mod view;
 pub use anim::{
-    de_boor, root_entries, AnimationContainer, AnimationHeader, Binding, BonePose, Component,
-    Curve, DecodedSpline, Quantised, RootEntry, RotationTrack, Skeleton, SplineAnimation, Track,
-    TrackPose, VectorTrack, ANIMATION_CONTAINER, ANNOTATION_TRACK, BINDING, LOSSLESS,
-    LOSSLESS_KIND, POSE_UNIT_TOLERANCE, ROOT_ENTRY, ROOT_LEVEL, ROTATION_40, ROTATION_48, SKELETON,
-    SKELETON_BONE, SKELETON_POSE, SPLINE, SPLINE_KIND, VECTOR_16,
+    annotation_tracks, de_boor, root_entries, AnimationContainer, AnimationHeader, Annotation,
+    AnnotationTrack, Binding, BonePose, Component, Curve, DecodedSpline, Quantised, RootEntry,
+    RotationTrack, Skeleton, SplineAnimation, Track, TrackPose, VectorTrack, ANIMATION_CONTAINER,
+    ANNOTATION, ANNOTATION_TRACK, BINDING, LOSSLESS, LOSSLESS_KIND, MAX_ANNOTATIONS,
+    POSE_UNIT_TOLERANCE, ROOT_ENTRY, ROOT_LEVEL, ROTATION_40, ROTATION_48, SKELETON, SKELETON_BONE,
+    SKELETON_POSE, SPLINE, SPLINE_KIND, VECTOR_16,
+};
+pub use behavior::{
+    character_behavior, graph_events, graph_strings_link, only_object, project_characters,
+    sequence_name, transitions, BehaviorGraph, Machine, MachineState, StateInfo, StateMachine,
+    Transition, BEHAVIOR_GRAPH, CHARACTER_STRINGS, GRAPH_DATA, GRAPH_STRINGS, MAX_ENTRIES,
+    PROJECT_STRINGS, SEQUENCE_GENERATOR, STATE_INFO, STATE_MACHINE, TRANSITION, TRANSITIONS,
 };
 pub use bodies::{
     Body, PhysicsSystem, BODY, PHYSICS_SYSTEM, RAGDOLL, RAGDOLL_ARRAY, SYSTEM_ARRAYS,

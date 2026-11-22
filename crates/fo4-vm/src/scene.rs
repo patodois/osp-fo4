@@ -128,6 +128,8 @@ pub struct ActionInfo {
     pub topic: Option<FormKey>,
     /// Kind 4: the scene LCEP names.
     pub scene: Option<FormKey>,
+    /// Kind 1: the package PNAM names.
+    pub package: Option<FormKey>,
     /// Kind 3: the topics of [`PLAYER_CHOICES`], resolved.
     pub choices: Vec<(Option<FormKey>, Option<FormKey>)>,
 }
@@ -149,6 +151,7 @@ impl ActionInfo {
             low: (a.kind == TIMER).then(|| a.float(b"TNAM")).flatten(),
             topic: (a.kind == LINE).then(|| topic(b"DATA")).flatten(),
             scene: (a.kind == START_SCENE).then(|| topic(b"LCEP")).flatten(),
+            package: (a.kind == PACKAGE).then(|| topic(b"PNAM")).flatten(),
             choices: if a.kind == PLAYER_DIALOGUE {
                 PLAYER_CHOICES
                     .iter()
@@ -385,6 +388,12 @@ pub struct Clock {
     /// in stored order plays, for its stage fields
     /// (`scene_line_stage_fields_v1` with `quest_run --assume-first-line`).
     pub assume_first_line: bool,
+    /// `pack_location_destination_v1` (`quest_run --package-destinations
+    /// N`): a package action whose package names one placed reference as
+    /// a Location input puts the action's actor there this many seconds
+    /// (the caller's) after the action starts, as an assumed actor move of
+    /// the world model (`crate::track`). `None`: no actor moves.
+    pub package_arrival: Option<f64>,
 }
 
 /// One started action of a playing scene.
@@ -752,6 +761,31 @@ fn step(h: &mut QuestHost<'_>, w: &mut World, o: ObjId, i: &Rc<SceneInfo>, compl
 fn clear_actions(w: &mut World, o: ObjId) {
     w.scenes.actions.retain(|(s, _), _| *s != o);
     w.scenes.line_events.retain(|e| e.scene != o);
+    // The actor moves of the scene's package actions not yet applied end
+    // with the scene (`pack_location_destination_v1`).
+    let pending: Vec<crate::track::ActorMove> = w
+        .place
+        .package_moves
+        .iter()
+        .filter(|(s, _)| *s == o)
+        .map(|(_, m)| m.clone())
+        .collect();
+    w.place.package_moves.retain(|(s, _)| *s != o);
+    let cursor = w.place.actor_cursor;
+    let before = w.place.actor_moves.len();
+    let mut i = cursor;
+    while i < w.place.actor_moves.len() {
+        if pending.contains(&w.place.actor_moves[i]) {
+            w.place.actor_moves.remove(i);
+        } else {
+            i += 1;
+        }
+    }
+    let dropped = before - w.place.actor_moves.len();
+    for _ in 0..dropped {
+        w.place
+            .count("package destinations\tactor moves dropped: the scene stopped first");
+    }
 }
 
 /// The seconds of one line of a topic, or why they are not settled, with
@@ -1137,6 +1171,115 @@ fn apply_line_events(h: &mut QuestHost<'_>, w: &mut World, o: ObjId) {
     }
 }
 
+/// The placed reference a scene's alias holds in the run: the fill a run
+/// set, else the alias's fill from the records (`quest::Quests::fill`).
+fn alias_reference(
+    h: &QuestHost<'_>,
+    w: &mut World,
+    quest: &FormKey,
+    alias: i32,
+) -> Option<FormKey> {
+    let key = bind::record_key(quest);
+    if let Some(Val::Object(o)) = w.quests.states.get(&key).and_then(|s| s.fills.get(&alias)) {
+        return w.objects[*o].key.as_deref().and_then(key_record);
+    }
+    let info = quest::info_by_key(h.data.store, h.data.max_memory, w, quest)?;
+    match w.quests.fill(&info, u32::try_from(alias).ok()?) {
+        Ok(Some(quest::Fill::Record(k))) => Some(k),
+        _ => None,
+    }
+}
+
+/// The destination of a package action (`pack_location_destination_v1`):
+/// the one placed reference (REFR or ACHR) the package's Location inputs
+/// name; `Err` with why there is none.
+fn package_destination(
+    store: &Store,
+    max: u64,
+    package: &FormKey,
+) -> Result<FormKey, &'static str> {
+    let b = Budget::new(max);
+    let (r, plugin) = store
+        .raw_with_plugin(package, &b)
+        .ok()
+        .flatten()
+        .ok_or("the package is not a winning record")?;
+    let ctx = Context {
+        order: store.order(),
+        plugin,
+    };
+    let p = fo4_plugin::pack::Package::read(&r, ctx, &b)
+        .map_err(|_| "the package could not be read")?;
+    let mut found: Vec<FormKey> = p
+        .locations()
+        .filter_map(|(_, l)| l.word.key.clone())
+        .filter(|k| {
+            matches!(
+                store.signature(k).as_ref().map(|s| &s[..]),
+                Some(b"REFR" | b"ACHR")
+            )
+        })
+        .collect();
+    found.dedup();
+    match found.len() {
+        0 => Err("no Location input names a placed reference"),
+        1 => Ok(found.remove(0)),
+        _ => Err("several Location inputs name placed references"),
+    }
+}
+
+/// Under `pack_location_destination_v1`, the actor move a package action
+/// brings, scheduled on the world model; counted either way.
+fn package_move(
+    h: &mut QuestHost<'_>,
+    w: &mut World,
+    o: ObjId,
+    i: &SceneInfo,
+    a: &ActionInfo,
+    now: f64,
+) {
+    let Some(n) = w.scenes.clock.package_arrival else {
+        return;
+    };
+    let why = |w: &mut World, x: &str| {
+        w.place
+            .count(format!("package destinations\tno actor move\t{x}"));
+    };
+    if !w.place.on || !w.place.sw.actors {
+        return why(w, "the world model's actor positions are off");
+    }
+    let Some(pk) = a.package.clone() else {
+        return why(w, "the action names no package");
+    };
+    let (store, max) = (h.data.store, h.data.max_memory);
+    let dest = match package_destination(store, max, &pk) {
+        Ok(d) => d,
+        Err(e) => return why(w, e),
+    };
+    let Some(q) = i.quest.clone() else {
+        return why(w, "the scene has no quest");
+    };
+    let Some(actor) = alias_reference(h, w, &q, a.alias) else {
+        return why(w, "the action's alias holds no placed reference in the run");
+    };
+    if store.signature(&actor) != Some(*b"ACHR") {
+        return why(w, "the action's alias holds no placed actor");
+    }
+    let Ok((space, pos)) = crate::track::stored_position(store, max, &dest) else {
+        return why(w, "the destination's position is not stored");
+    };
+    h.using(rules::PACKAGE_DESTINATION);
+    w.place.count("package destinations\tactor moves scheduled");
+    let m = crate::track::ActorMove {
+        t: now + n,
+        actor,
+        space,
+        pos,
+    };
+    w.place.package_moves.push((o, m.clone()));
+    crate::track::schedule_move(w, m);
+}
+
 /// Starts the actions whose start phase is `p` (`scene_clock_v1`).
 fn start_actions(h: &mut QuestHost<'_>, w: &mut World, o: ObjId, i: &SceneInfo, p: usize) {
     h.using(rules::SCENE_CLOCK);
@@ -1160,6 +1303,9 @@ fn start_actions(h: &mut QuestHost<'_>, w: &mut World, o: ObjId, i: &SceneInfo, 
         );
         if w.scenes.line_fields && matches!(a.kind, LINE | PLAYER_DIALOGUE) {
             line_fields(h, w, o, i, j, a, now);
+        }
+        if a.kind == PACKAGE {
+            package_move(h, w, o, i, a, now);
         }
         if done {
             w.scenes
