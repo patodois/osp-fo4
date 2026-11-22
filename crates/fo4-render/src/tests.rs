@@ -52,6 +52,7 @@ fn list() -> DrawList {
         }],
         draws: vec![Draw {
             falloff: None,
+            palette: None,
             sidedness: crate::Sidedness::default(),
             instance: 7,
             mesh: 0,
@@ -712,4 +713,89 @@ fn falloff_reads_the_angle_between_the_rotated_normal_and_the_eye_per_sample() {
             .code,
         "SnapshotFalloffDraws"
     );
+}
+#[test]
+fn palette_samples_clamp_to_the_edge_instead_of_wrapping() {
+    let t = Texture {
+        mips: Vec::new(),
+        width: 2,
+        height: 1,
+        rgba: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+        mip: 0,
+        srgb: false,
+    };
+    assert_eq!(t.sample_clamped([0., 0.5]), [0.; 4]);
+    assert_eq!(t.sample_clamped([1., 0.5]), [1.; 4]);
+    assert_eq!(t.sample_clamped([-3., 7.]), [0.; 4]);
+    assert_eq!(t.sample_clamped([0.5, 0.]), [0.5; 4]);
+    // The wrapping sample of the same coordinate reads the other edge.
+    assert_eq!(t.sample_lod([1., 0.5], true, 0.).0, [0.5; 4]);
+    assert_eq!(
+        Palette::coordinates([0.1, 0.2, 0.3, 0.4], 1.5),
+        [[0.2f32 as f64, 1.], [0.4f32 as f64, 1.]]
+    );
+}
+/// The colour lookup reads U from the texel's green and replaces its RGB;
+/// the alpha lookup reads U from the texel's alpha and replaces the alpha;
+/// both read V from the opacity times the vertex alpha.
+#[test]
+fn palette_lookups_replace_colour_and_alpha_at_the_alpha_before_the_palette() {
+    let mut l = list();
+    // Green 0 (U 0 for colour), alpha 1 (U 1 for alpha).
+    l.textures[0].rgba = vec![0.3, 0., 0.9, 1.];
+    l.textures.push(Texture {
+        mips: Vec::new(),
+        width: 2,
+        height: 2,
+        rgba: vec![
+            0.2, 0.2, 0.2, 0.1, 0.4, 0.4, 0.4, 0.3, // V 0
+            0.6, 0.5, 0.4, 0.5, 0.8, 0.8, 0.8, 0.7, // V 1
+        ],
+        mip: 0,
+        srgb: false,
+    });
+    let close = |a: [f32; 4], b: [f32; 4]| a.iter().zip(&b).all(|(x, y)| (x - y).abs() < 1e-6);
+    let mut run = |colour: bool, alpha: bool, opacity: f32, vertex_alpha: Option<f32>| {
+        l.draws[0].palette = Some(Palette {
+            texture: 1,
+            colour,
+            alpha,
+        });
+        l.draws[0].alpha.opacity = opacity;
+        l.meshes[0].vertex_colors = vertex_alpha.map(|a| vec![[1., 1., 1., a]; 4]);
+        frame(&l, &camera(), 1).color[5]
+    };
+    let c = run(true, false, 1., None);
+    assert!(close(c, [0.6, 0.5, 0.4, 1.]), "{c:?}");
+    let c = run(false, true, 1., None);
+    assert!(close(c, [0.3, 0., 0.9, 0.7]), "{c:?}");
+    // V 0.5 from the opacity, or from the vertex alpha.
+    let c = run(true, true, 0.5, None);
+    assert!(close(c, [0.4, 0.35, 0.3, 0.5]), "{c:?}");
+    let c = run(true, true, 1., Some(0.5));
+    assert!(close(c, [0.4, 0.35, 0.3, 0.5]), "{c:?}");
+    // Without the alpha lookup the alpha is the texel's times both.
+    let c = run(true, false, 1., Some(0.5));
+    assert!(close(c, [0.4, 0.35, 0.3, 0.5]), "{c:?}");
+}
+/// A colour above 1 (vertex colours carrying a base colour times a scale
+/// above 1) is clamped before the blend, not after.
+#[test]
+fn a_colour_above_one_is_clamped_before_the_blend() {
+    let mut l = list();
+    l.textures[0].rgba = vec![0.25, 0.5, 0.75, 1.];
+    l.meshes[0].vertex_colors = Some(vec![[2., 2., 2., 1.]; 4]);
+    l.draws[0].alpha = Alpha {
+        enabled: 1,
+        source: 6,
+        destination: 0,
+        opacity: 0.5,
+        ..alpha()
+    };
+    let c = frame(&l, &camera(), 1).color[5];
+    assert_eq!(c, [0.25, 0.5, 0.5, 1.]);
+    // Opaque: the stored colour is within 0 to 1 too.
+    l.draws[0].alpha = alpha();
+    let c = frame(&l, &camera(), 1).color[5];
+    assert_eq!(c, [0.5, 1., 1., 1.]);
 }

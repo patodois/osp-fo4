@@ -106,6 +106,7 @@ pub fn append_terrain(
         &mut list.draws,
         Draw {
             falloff: None,
+            palette: None,
             sidedness: Sidedness {
                 material_two_sided: Some(1),
                 nif_shader_flags_2: None,
@@ -818,6 +819,7 @@ fn pass(
         &mut list.draws,
         Draw {
             falloff: None,
+            palette: None,
             sidedness: TWO_SIDED,
             instance,
             mesh,

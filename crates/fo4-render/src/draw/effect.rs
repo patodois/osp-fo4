@@ -13,14 +13,21 @@ use fo4_nif::{Field, Nif, Value};
 use fo4_plugin::typed::{Loaded, Mswp};
 use fo4_scene::{hypotheses as h, paths::Citation, rest, AssetKind, DecodedAsset};
 
-/// Shader Flags 1 bits (nifxml Fallout4ShaderPropertyFlags1) whose terms
-/// this frame does not draw: Temp_Refraction (2), GreyscaleToPalette_Color
-/// (4), GreyscaleToPalette_Alpha (5), Use_Falloff (6), Environment_Mapping
-/// (7), RGB_Falloff (8), Refraction (15), Fire_Refraction (16).
-const PALETTE: u32 = 1 << 4 | 1 << 5;
+/// Shader Flags 1 bits (nifxml Fallout4ShaderPropertyFlags1):
+/// GreyscaleToPalette_Color (4), GreyscaleToPalette_Alpha (5), Use_Falloff
+/// (6), RGB_Falloff (8), and the features this frame does not draw, by the
+/// name a refusal gives them: Temp_Refraction (2), Environment_Mapping
+/// (7), Refraction (15), Fire_Refraction (16).
+const PALETTE_COLOUR: u32 = 1 << 4;
+const PALETTE_ALPHA: u32 = 1 << 5;
 const FALLOFF: u32 = 1 << 6;
 const RGB_FALLOFF: u32 = 1 << 8;
-const FEATURES: u32 = 1 << 2 | 1 << 7 | 1 << 15 | 1 << 16;
+const FEATURES: [(u32, &str); 4] = [
+    (1 << 2, "temp-refraction"),
+    (1 << 7, "environment-map"),
+    (1 << 15, "refraction"),
+    (1 << 16, "fire-refraction"),
+];
 /// Vertex_Alpha (Shader Flags 1 bit 3), Vertex_Colors (Shader Flags 2 bit 5).
 const VERTEX_ALPHA: u32 = 1 << 3;
 const VERTEX_COLORS: u32 = 1 << 5;
@@ -30,12 +37,17 @@ const LIGHTING: u32 = 1 << 30;
 
 /// What the frame takes from an effect shader and the material it names.
 struct Terms {
-    palette: bool,
+    palette_colour: bool,
+    palette_alpha: bool,
+    /// The greyscale (palette) texture, resolved; `None` when the slot is
+    /// empty.
+    greyscale: Option<Vec<u8>>,
     falloff: bool,
     rgb_falloff: bool,
     /// Falloff Start Angle, Stop Angle, Start Opacity, Stop Opacity.
     falloff_fields: [f32; 4],
-    feature: bool,
+    /// Every feature set, by name.
+    features: Vec<&'static str>,
     left_out: bool,
     color: [f32; 3],
     scale: f32,
@@ -179,9 +191,15 @@ impl Builder<'_, '_> {
                     }
                     let c = &m.common;
                     let base = e.base_texture.bytes();
+                    let grey = e.grayscale_texture.bytes();
                     Ok(Terms {
-                        palette: e.grayscale_to_palette_alpha.0 != 0
-                            || c.grayscale_to_palette_color.0 != 0,
+                        palette_colour: c.grayscale_to_palette_color.0 != 0,
+                        palette_alpha: e.grayscale_to_palette_alpha.0 != 0,
+                        greyscale: if grey.is_empty() {
+                            None
+                        } else {
+                            Some(self.resolve_path(Citation::MaterialTexture, grey, &scratch)?)
+                        },
                         falloff: e.falloff_enabled.0 != 0,
                         rgb_falloff: e.falloff_color_enabled.0 != 0,
                         falloff_fields: [
@@ -190,14 +208,25 @@ impl Builder<'_, '_> {
                             e.falloff_start_opacity,
                             e.falloff_stop_opacity,
                         ],
-                        feature: c.refraction.0 != 0
-                            || c.environment_mapping.is_some_and(|v| v.0 != 0)
-                            || e.environment_mapping.is_some_and(|v| v.0 != 0)
-                            || e.glass_enabled.is_some_and(|v| v.0 != 0)
-                            || e.glowmap.is_some_and(|v| v.0 != 0)
-                            || e.effect_pbr_specular.is_some_and(|v| v.0 != 0)
-                            || e.blood_enabled.0 != 0
-                            || e.emittance_color.is_some(),
+                        features: [
+                            (c.refraction.0 != 0, "refraction"),
+                            (
+                                c.environment_mapping.is_some_and(|v| v.0 != 0)
+                                    || e.environment_mapping.is_some_and(|v| v.0 != 0),
+                                "environment-map",
+                            ),
+                            (e.glass_enabled.is_some_and(|v| v.0 != 0), "glass"),
+                            (e.glowmap.is_some_and(|v| v.0 != 0), "glow-map"),
+                            (
+                                e.effect_pbr_specular.is_some_and(|v| v.0 != 0),
+                                "pbr-specular",
+                            ),
+                            (e.blood_enabled.0 != 0, "blood"),
+                            (e.emittance_color.is_some(), "emittance-colour"),
+                        ]
+                        .into_iter()
+                        .filter_map(|(on, name)| on.then_some(name))
+                        .collect(),
                         left_out: e.soft_enabled.0 != 0
                             || e.effect_lighting_enabled.0 != 0
                             || e.lighting_influence != 1.,
@@ -262,12 +291,23 @@ impl Builder<'_, '_> {
                     floats::<1>(f, "Falloff Start Opacity", file)?[0] as f32,
                     floats::<1>(f, "Falloff Stop Opacity", file)?[0] as f32,
                 ];
+                let grey = text(f, "Greyscale Texture").unwrap_or(b"");
                 Terms {
-                    palette: flags1 & PALETTE != 0,
+                    palette_colour: flags1 & PALETTE_COLOUR != 0,
+                    palette_alpha: flags1 & PALETTE_ALPHA != 0,
+                    greyscale: if grey.is_empty() {
+                        None
+                    } else {
+                        Some(self.resolve_path(Citation::NifTexture, grey, &scratch)?)
+                    },
                     falloff: flags1 & FALLOFF != 0,
                     rgb_falloff: flags1 & RGB_FALLOFF != 0,
                     falloff_fields,
-                    feature: flags1 & FEATURES != 0,
+                    features: FEATURES
+                        .iter()
+                        .filter(|(bit, _)| flags1 & bit != 0)
+                        .map(|(_, name)| *name)
+                        .collect(),
                     left_out: flags1 & SOFT != 0
                         || flags2 & LIGHTING != 0
                         || byte(f, "Lighting Influence") != Some(255),
@@ -318,9 +358,12 @@ impl Builder<'_, '_> {
             stop_opacity,
         };
         let falloff_drawn = terms.falloff && !terms.rgb_falloff;
+        let palette_drawn = terms.palette_colour || terms.palette_alpha;
         let gates: Vec<&str> = [
-            (terms.palette, "palette"),
-            (terms.feature, "feature"),
+            (
+                palette_drawn && terms.greyscale.is_none(),
+                "palette-texture",
+            ),
             (terms.rgb_falloff, "rgb-falloff"),
             (
                 falloff_drawn && falloff.validate().is_err(),
@@ -331,9 +374,8 @@ impl Builder<'_, '_> {
                 "falloff-normals",
             ),
             (
-                tint.iter()
-                    .any(|v| !v.is_finite() || !(0. ..=1.).contains(v)),
-                "colour-range",
+                tint.iter().any(|v| !v.is_finite() || *v < 0.),
+                "colour-negative",
             ),
             (
                 vertex_alpha == VertexAlpha::AlphaFlagAlone && vertex_alpha_below_one,
@@ -342,6 +384,7 @@ impl Builder<'_, '_> {
         ]
         .into_iter()
         .filter_map(|(failed, name)| failed.then_some(name))
+        .chain(terms.features.iter().copied())
         .collect();
         if !gates.is_empty() {
             return Err(error("UnsupportedEffectSurface", file, at, gates.join("+")));
@@ -364,6 +407,26 @@ impl Builder<'_, '_> {
                 .into_iter()
                 .filter(|_| falloff_drawn),
             )
+            .chain(
+                [h::EFFECT_PALETTE_SAMPLED, h::EFFECT_PALETTE_V]
+                    .into_iter()
+                    .filter(|_| palette_drawn),
+            )
+            .chain(
+                [h::EFFECT_PALETTE_COLOUR_U, h::EFFECT_PALETTE_COLOUR_RGB]
+                    .into_iter()
+                    .filter(|_| terms.palette_colour),
+            )
+            .chain(
+                [h::EFFECT_PALETTE_ALPHA_U, h::EFFECT_PALETTE_ALPHA_REPLACES]
+                    .into_iter()
+                    .filter(|_| terms.palette_alpha),
+            )
+            .chain(
+                tint.iter()
+                    .any(|v| *v > 1.)
+                    .then_some(h::EFFECT_COLOUR_CLAMPED),
+            )
         {
             if !self.draw_rule(rule)? {
                 return Err(error("UnverifiedEffectSurface", file, at, rule));
@@ -373,6 +436,14 @@ impl Builder<'_, '_> {
         let texture = match terms.texture {
             Some(path) => self.texture(path, terms.alpha_tested)?,
             None => self.constant_texture([1.; 4], file, at)?,
+        };
+        let palette = match terms.greyscale.filter(|_| palette_drawn) {
+            Some(path) => Some(crate::Palette {
+                texture: self.decoded_texture(path)?,
+                colour: terms.palette_colour,
+                alpha: terms.palette_alpha,
+            }),
+            None => None,
         };
         Ok(Surface {
             channels,
@@ -388,6 +459,7 @@ impl Builder<'_, '_> {
             },
             tint: Some(tint),
             falloff: falloff_drawn.then_some(falloff),
+            palette,
         })
     }
 }

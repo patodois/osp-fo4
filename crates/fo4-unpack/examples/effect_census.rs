@@ -390,6 +390,170 @@ fn tex_facts(vfs: &Vfs, m: &Manifest, path: &[u8]) -> Option<TexFacts> {
     })
 }
 
+/// Statistics of the level of a texture the reference draws (the first
+/// with both sides at most 256), for the palette census.
+#[derive(Clone)]
+struct TexStats {
+    format: String,
+    top: [u32; 2],
+    level: [u32; 2],
+    /// Largest |R - G|, |R - B| over the level.
+    spread: f32,
+    red: [f32; 2],
+    alpha: [f32; 2],
+    /// Largest |A - R|.
+    alpha_vs_red: f32,
+    /// Largest difference of any channel between a row and the first row,
+    /// and between a column and the first column.
+    rows: f32,
+    columns: f32,
+    /// Along the first row: red and alpha non-decreasing, non-increasing.
+    red_along_u: &'static str,
+    alpha_along_u: &'static str,
+    rgb_max: f32,
+    /// Means of (R + G + B) / 3 and of A over an 8 x 8 grid of the level,
+    /// row by row (V down), for the unversioned palette listing.
+    grid: Vec<[f32; 2]>,
+    /// Standard deviations of the green channel and of alpha.
+    deviation: [f32; 2],
+}
+impl TexStats {
+    /// On the coarse grid: whether luminance and alpha never fall (by more
+    /// than 4 of 255) along U in any row and along V in any column.
+    fn monotone(&self) -> String {
+        let w = self.level[0].min(8) as usize;
+        let h = self.grid.len() / w.max(1);
+        let rises = |k: usize, along_u: bool| {
+            (0..h).all(|y| {
+                (0..w).all(|x| {
+                    let (nx, ny) = if along_u { (x + 1, y) } else { (x, y + 1) };
+                    nx >= w
+                        || ny >= h
+                        || self.grid[ny * w + nx][k] >= self.grid[y * w + x][k] - 4. / 255.
+                })
+            })
+        };
+        format!(
+            "luminance rises along U {} along V {}; alpha rises along U {} along V {}",
+            rises(0, true),
+            rises(0, false),
+            rises(1, true),
+            rises(1, false)
+        )
+    }
+}
+fn tex_stats(vfs: &Vfs, m: &Manifest, path: &[u8]) -> Option<TexStats> {
+    let b = Budget::new(m.limits.max_memory);
+    let bytes = vfs.read_path_bytes(path, &b).ok()?;
+    let t = fo4_texture::Texture::read(&bytes, "t", &m.limits, &b).ok()?;
+    let surfaces: Vec<(usize, &fo4_texture::Surface)> = t
+        .surfaces
+        .iter()
+        .enumerate()
+        .filter(|(_, s)| s.array == 0 && s.face == 0 && s.depth == 1)
+        .collect();
+    let (pick, s) = surfaces
+        .iter()
+        .find(|(_, s)| s.width <= 256 && s.height <= 256)
+        .or(surfaces.last())?;
+    let rgba = t.decode(*pick, &m.limits, &b).ok()?;
+    let (w, h) = (s.width as usize, s.height as usize);
+    let px = |x: usize, y: usize| -> [f32; 4] {
+        let at = (y * w + x) * 4;
+        [rgba[at], rgba[at + 1], rgba[at + 2], rgba[at + 3]]
+    };
+    let mut st = TexStats {
+        format: t.format.name().to_string(),
+        top: [t.width, t.height],
+        level: [s.width, s.height],
+        spread: 0.,
+        red: [f32::MAX, f32::MIN],
+        alpha: [f32::MAX, f32::MIN],
+        alpha_vs_red: 0.,
+        rows: 0.,
+        columns: 0.,
+        red_along_u: "",
+        alpha_along_u: "",
+        rgb_max: 0.,
+        grid: Vec::new(),
+        deviation: [0.; 2],
+    };
+    let n = (w * h).max(1) as f64;
+    for (k, ch) in [(0, 1), (1, 3)] {
+        let mean = (0..w * h).map(|i| f64::from(rgba[i * 4 + ch])).sum::<f64>() / n;
+        let var = (0..w * h)
+            .map(|i| (f64::from(rgba[i * 4 + ch]) - mean).powi(2))
+            .sum::<f64>()
+            / n;
+        st.deviation[k] = var.sqrt() as f32;
+    }
+    for y in 0..h {
+        for x in 0..w {
+            let p = px(x, y);
+            st.spread = st.spread.max((p[0] - p[1]).abs()).max((p[0] - p[2]).abs());
+            st.red = [st.red[0].min(p[0]), st.red[1].max(p[0])];
+            st.alpha = [st.alpha[0].min(p[3]), st.alpha[1].max(p[3])];
+            st.alpha_vs_red = st.alpha_vs_red.max((p[3] - p[0]).abs());
+            st.rgb_max = st.rgb_max.max(p[0]).max(p[1]).max(p[2]);
+            let (r, c) = (px(x, 0), px(0, y));
+            for k in 0..4 {
+                st.rows = st.rows.max((p[k] - r[k]).abs());
+                st.columns = st.columns.max((p[k] - c[k]).abs());
+            }
+        }
+    }
+    let order = |ch: usize| -> &'static str {
+        let v: Vec<f32> = (0..w).map(|x| px(x, 0)[ch]).collect();
+        let up = v.windows(2).all(|p| p[1] >= p[0] - 1. / 255.);
+        let down = v.windows(2).all(|p| p[1] <= p[0] + 1. / 255.);
+        match (up, down) {
+            (true, true) => "constant",
+            (true, false) => "non-decreasing",
+            (false, true) => "non-increasing",
+            _ => "rises and falls",
+        }
+    };
+    st.red_along_u = order(0);
+    st.alpha_along_u = order(3);
+    let (gw, gh) = (w.min(8), h.min(8));
+    for gy in 0..gh {
+        for gx in 0..gw {
+            let (mut l, mut a, mut n) = (0f32, 0f32, 0f32);
+            for y in gy * h / gh..(gy + 1) * h / gh {
+                for x in gx * w / gw..(gx + 1) * w / gw {
+                    let p = px(x, y);
+                    l += (p[0] + p[1] + p[2]) / 3.;
+                    a += p[3];
+                    n += 1.;
+                }
+            }
+            st.grid.push([l / n.max(1.), a / n.max(1.)]);
+        }
+    }
+    Some(st)
+}
+/// A difference between channel values, in 8-bit steps.
+fn steps(x: f32) -> &'static str {
+    let s = x * 255.;
+    if s <= 2. {
+        "at most 2 steps"
+    } else if s <= 8. {
+        "3 to 8 steps"
+    } else if s <= 32. {
+        "9 to 32 steps"
+    } else {
+        "more than 32 steps"
+    }
+}
+/// A 0 to 1 range in quarter steps.
+fn range(r: [f32; 2]) -> String {
+    format!(
+        "{:.2} to {:.2}",
+        (r[0] * 4.).floor() / 4.,
+        (r[1] * 4.).ceil() / 4.
+    )
+}
+
 #[derive(Default, Clone)]
 struct Uses {
     placements: u64,
@@ -533,6 +697,8 @@ fn run() -> Result<(), E> {
     let mut class_models: Counts = Counts::new();
     let mut detail_rows = String::new();
     let mut falloff_weights = Weighted::new();
+    let mut palette_weights = Weighted::new();
+    let mut stats: HashMap<Vec<u8>, Option<TexStats>> = HashMap::new();
     let (mut files, mut failed) = (0u64, 0u64);
     for path in &nifs {
         let b = Budget::new(m.limits.max_memory);
@@ -1195,11 +1361,17 @@ fn run() -> Result<(), E> {
             if mat_read.is_none() && mat_key != "no material named" {
                 gates.insert("material missing or unreadable");
             }
-            if pal {
-                gates.insert("palette");
+            // A palette is drawn under its rules where the greyscale slot
+            // names a texture.
+            let grey_named = match bgem {
+                Some((e, _)) => !e.grayscale_texture.bytes().is_empty(),
+                None => bytes(sf, "Greyscale Texture").is_some_and(|p| !p.is_empty()),
+            };
+            if pal && !grey_named {
+                gates.insert("palette texture not set");
             }
-            if rgb_fall || env {
-                gates.insert("env map, refraction or colour falloff");
+            if rgb_fall {
+                gates.insert("colour falloff");
             }
             let vertex_alpha_max = mesh.and_then(|m| m.vertices.as_ref()).and_then(|vs| {
                 vs.iter()
@@ -1232,8 +1404,12 @@ fn run() -> Result<(), E> {
             if vcol == 0 && valpha == 1 && vertex_alpha_min.is_some_and(|a| a < 1.) {
                 gates.insert("vertex alpha flag alone");
             }
-            if colour.iter().any(|x| x * scale_v > 1.) {
-                gates.insert("colour above 1");
+            // Above 1 is drawn clamped under its rule; below 0 is not.
+            if colour
+                .iter()
+                .any(|x| !(x * scale_v).is_finite() || x * scale_v < 0.)
+            {
+                gates.insert("colour negative");
             }
             let blending = match bgem {
                 Some((_, cm)) => cm.alpha_blend.enabled != 0,
@@ -1359,6 +1535,276 @@ fn run() -> Result<(), E> {
                         format!("equal angles: opacities {} {}", v(so), v(eo)),
                         &uses,
                     );
+                }
+            }
+            // Palette, colour range and features, as the draw build reads
+            // them (the material's fields where a BGEM is named).
+            let (pal_colour, pal_alpha) = match bgem {
+                Some((e, cm)) => (
+                    cm.grayscale_to_palette_color.0 != 0,
+                    e.grayscale_to_palette_alpha.0 != 0,
+                ),
+                None => (palette_color != 0, palette_alpha != 0),
+            };
+            let features: Vec<&str> = match bgem {
+                Some((e, cm)) => [
+                    (cm.refraction.0 != 0, "refraction"),
+                    (
+                        cm.environment_mapping.is_some_and(|x| x.0 != 0)
+                            || e.environment_mapping.is_some_and(|x| x.0 != 0),
+                        "environment map",
+                    ),
+                    (e.glass_enabled.is_some_and(|x| x.0 != 0), "glass"),
+                    (e.glowmap.is_some_and(|x| x.0 != 0), "glow map"),
+                    (
+                        e.effect_pbr_specular.is_some_and(|x| x.0 != 0),
+                        "pbr specular",
+                    ),
+                    (e.blood_enabled.0 != 0, "blood"),
+                    (e.emittance_color.is_some(), "emittance colour"),
+                ]
+                .into_iter()
+                .filter_map(|(on, k)| on.then_some(k))
+                .collect(),
+                None => [
+                    (f1 >> 2 & 1 != 0, "temp refraction"),
+                    (f1 >> 7 & 1 != 0, "environment map"),
+                    (f1 >> 15 & 1 != 0, "refraction"),
+                    (f1 >> 16 & 1 != 0, "fire refraction"),
+                ]
+                .into_iter()
+                .filter_map(|(on, k)| on.then_some(k))
+                .collect(),
+            };
+            let blend_key = match bgem {
+                Some((_, cm)) => format!(
+                    "material blend {} src {} dst {} test {}",
+                    cm.alpha_blend.enabled,
+                    cm.alpha_blend.source,
+                    cm.alpha_blend.destination,
+                    cm.alpha_test.0
+                ),
+                None => alpha_key.clone(),
+            };
+            let tint_max = colour
+                .iter()
+                .map(|x| x * scale_v)
+                .fold(f32::NEG_INFINITY, f32::max);
+            let above = colour.iter().any(|x| x * scale_v > 1.);
+            let source = if bgem.is_some() { "BGEM" } else { "NIF" };
+            let combo = format!(
+                "palette {}{}, colour above 1 {above}, falloff {fall}, feature {}, vertex flags colours {vcol} alpha {valpha}",
+                if pal_colour { "colour" } else { "-" },
+                if pal_alpha { "+alpha" } else { "" },
+                !features.is_empty()
+            );
+            let pw = &mut palette_weights;
+            if !features.is_empty() {
+                gates.insert(
+                    "feature (environment map, refraction, glass, glow map, blood, emittance)",
+                );
+                weigh(
+                    pw,
+                    format!("feature: {} (from {source})", features.join(" + ")),
+                    &uses,
+                );
+                for k in &features {
+                    if *k == "environment map" {
+                        let env_tex = match bgem {
+                            Some((e, _)) => !e.envmap_texture.bytes().is_empty(),
+                            None => {
+                                bytes(sf, "Environment Map Texture").is_some_and(|p| !p.is_empty())
+                            }
+                        };
+                        weigh(
+                            pw,
+                            format!(
+                                "feature: environment map: texture set {env_tex}, scale {}",
+                                bucket(one("Environment Map Scale"))
+                            ),
+                            &uses,
+                        );
+                    }
+                }
+            }
+            if above {
+                weigh(
+                    pw,
+                    format!(
+                        "colour above 1: largest base colour x scale {}, base colour {}, scale {}",
+                        bucket(tint_max),
+                        rgb(&colour),
+                        bucket(scale_v)
+                    ),
+                    &uses,
+                );
+                weigh(pw, format!("colour above 1: blend: {blend_key}"), &uses);
+                weigh(pw, format!("colour above 1: combination: {combo}"), &uses);
+                let brightest = tex_path.as_ref().and_then(|p| {
+                    stats
+                        .entry(p.clone())
+                        .or_insert_with(|| tex_stats(&vfs, &m, p))
+                        .clone()
+                });
+                weigh(
+                    pw,
+                    format!(
+                        "colour above 1: drawn texture's largest RGB x largest base colour x scale: {}",
+                        match (&tex_path, brightest) {
+                            (None, _) => format!("no texture, {}", bucket(tint_max)),
+                            (Some(_), None) => "texture missing or unreadable".into(),
+                            (Some(_), Some(t)) => bucket(t.rgb_max * tint_max),
+                        }
+                    ),
+                    &uses,
+                );
+            }
+            if pal_colour || pal_alpha {
+                weigh(
+                    pw,
+                    format!(
+                        "palette: variant colour {pal_colour} alpha {pal_alpha} (from {source})"
+                    ),
+                    &uses,
+                );
+                weigh(pw, format!("palette: combination: {combo}"), &uses);
+                weigh(pw, format!("palette: blend: {blend_key}"), &uses);
+                weigh(
+                    pw,
+                    format!(
+                        "palette: base colour {}, scale {}, alpha {}",
+                        rgb(&colour),
+                        bucket(scale_v),
+                        bucket(alpha_v)
+                    ),
+                    &uses,
+                );
+                weigh(pw, format!("palette: vertex data: {vkey}"), &uses);
+                let grey = match bgem {
+                    Some((e, _)) => paths::resolve(
+                        paths::Citation::MaterialTexture,
+                        e.grayscale_texture.bytes(),
+                        &b,
+                    )
+                    .ok()
+                    .filter(|_| !e.grayscale_texture.bytes().is_empty()),
+                    None => bytes(sf, "Greyscale Texture")
+                        .filter(|p| !p.is_empty())
+                        .and_then(|p| paths::resolve(paths::Citation::NifTexture, p, &b).ok()),
+                };
+                let mut stat = |p: &Option<Vec<u8>>| {
+                    p.as_ref().and_then(|p| {
+                        stats
+                            .entry(p.clone())
+                            .or_insert_with(|| tex_stats(&vfs, &m, p))
+                            .clone()
+                    })
+                };
+                let (gs, ss) = (stat(&grey), stat(&tex_path));
+                detail.push(format!(
+                    "palette colour {pal_colour} alpha {pal_alpha} palette {} source {}",
+                    grey.as_ref()
+                        .map_or("-".into(), |p| String::from_utf8_lossy(p).into_owned()),
+                    tex_path
+                        .as_ref()
+                        .map_or("-".into(), |p| String::from_utf8_lossy(p).into_owned())
+                ));
+                match (&grey, &gs) {
+                    (None, _) => weigh(pw, "palette texture: not set", &uses),
+                    (Some(_), None) => weigh(pw, "palette texture: missing or unreadable", &uses),
+                    (Some(_), Some(g)) => {
+                        weigh(
+                            pw,
+                            format!(
+                                "palette texture: {} {}x{} (drawn level {}x{})",
+                                g.format, g.top[0], g.top[1], g.level[0], g.level[1]
+                            ),
+                            &uses,
+                        );
+                        weigh(
+                            pw,
+                            format!(
+                                "palette texture: rows differ by {}; columns differ by {}",
+                                steps(g.rows),
+                                steps(g.columns)
+                            ),
+                            &uses,
+                        );
+                        weigh(
+                            pw,
+                            format!(
+                                "palette texture: along U red {}, alpha {}; rgb spread {}; alpha {}",
+                                g.red_along_u,
+                                g.alpha_along_u,
+                                steps(g.spread),
+                                range(g.alpha)
+                            ),
+                            &uses,
+                        );
+                        weigh(
+                            pw,
+                            format!(
+                                "palette texture x variant: colour {pal_colour} alpha {pal_alpha}: {}",
+                                g.monotone()
+                            ),
+                            &uses,
+                        );
+                        weigh(
+                            pw,
+                            format!(
+                                "palette texture x variant: colour {pal_colour} alpha {pal_alpha}: alpha {}, alpha along U {}",
+                                range(g.alpha),
+                                g.alpha_along_u
+                            ),
+                            &uses,
+                        );
+                    }
+                }
+                match (&tex_path, &ss) {
+                    (None, _) => weigh(pw, "palette source texture: none", &uses),
+                    (Some(_), None) => {
+                        weigh(pw, "palette source texture: missing or unreadable", &uses)
+                    }
+                    (Some(_), Some(s)) => {
+                        weigh(
+                            pw,
+                            format!(
+                                "palette source texture: {}, rgb spread {}",
+                                s.format,
+                                steps(s.spread)
+                            ),
+                            &uses,
+                        );
+                        weigh(
+                            pw,
+                            format!(
+                                "palette source texture: red {}, alpha {}, alpha against red {}",
+                                range(s.red),
+                                range(s.alpha),
+                                steps(s.alpha_vs_red)
+                            ),
+                            &uses,
+                        );
+                        weigh(
+                            pw,
+                            format!(
+                                "palette source texture x variant: colour {pal_colour} alpha {pal_alpha}: deviation of green {}, of alpha {}",
+                                steps(s.deviation[0]),
+                                steps(s.deviation[1])
+                            ),
+                            &uses,
+                        );
+                        weigh(
+                            pw,
+                            format!(
+                                "palette source texture x variant: colour {pal_colour} alpha {pal_alpha}: rgb spread {}, alpha against red {}, alpha {}",
+                                steps(s.spread),
+                                steps(s.alpha_vs_red),
+                                range(s.alpha)
+                            ),
+                            &uses,
+                        );
+                    }
                 }
             }
             // Vertex alpha against the open boundary, for every effect
@@ -1593,9 +2039,47 @@ fn run() -> Result<(), E> {
     for (k, [shapes, placements, omitted]) in &falloff_weights {
         let _ = writeln!(out, "{shapes}\t{placements}\t{omitted}\t{k}");
     }
+    let _ = writeln!(out, "\n# Palette, colour above 1 and features (shapes whose drawn fields set them): shapes, placements of their models, omitted placements\n");
+    for (k, [shapes, placements, omitted]) in &palette_weights {
+        let _ = writeln!(out, "{shapes}\t{placements}\t{omitted}\t{k}");
+    }
     std::fs::write(&args[1], out)?;
     std::fs::write(format!("{}.models.tsv", args[1]), rows)?;
     std::fs::write(format!("{}.facts.tsv", args[1]), detail_rows)?;
+    // Every texture the palette section read, with its coarse grid (paths:
+    // never committed).
+    let mut listing = String::from(
+        "texture\tformat\ttop\tlevel\trows\tcolumns\tgrid (luminance/alpha, 8 x 8, V down)\n",
+    );
+    let mut seen: Vec<_> = stats.iter().collect();
+    seen.sort_by(|a, b| a.0.cmp(b.0));
+    for (p, t) in seen {
+        let Some(t) = t else { continue };
+        let grid: Vec<String> = t
+            .grid
+            .chunks(t.level[0].min(8) as usize)
+            .map(|row| {
+                row.iter()
+                    .map(|c| format!("{:02}/{:02}", (c[0] * 99.).round(), (c[1] * 99.).round()))
+                    .collect::<Vec<_>>()
+                    .join(" ")
+            })
+            .collect();
+        let _ = writeln!(
+            listing,
+            "{}\t{}\t{}x{}\t{}x{}\t{:.0}\t{:.0}\t{}",
+            String::from_utf8_lossy(p),
+            t.format,
+            t.top[0],
+            t.top[1],
+            t.level[0],
+            t.level[1],
+            t.rows * 255.,
+            t.columns * 255.,
+            grid.join(" | ")
+        );
+    }
+    std::fs::write(format!("{}.textures.tsv", args[1]), listing)?;
     Ok(())
 }
 fn main() {

@@ -244,6 +244,8 @@ struct Surface {
     tint: Option<[f32; 3]>,
     /// Effect surfaces drawn with their falloff; the mesh keeps normals.
     falloff: Option<crate::Falloff>,
+    /// Effect surfaces drawn with a greyscale-to-palette lookup.
+    palette: Option<crate::Palette>,
 }
 struct Builder<'a, 's> {
     loader: &'a Loader<'s>,
@@ -567,6 +569,17 @@ impl Builder<'_, '_> {
     /// limit when textures are kept as blocks, and is ignored otherwise.
     fn texture(&mut self, path: Vec<u8>, alpha_tested: bool) -> Result<usize> {
         let cap = self.options.block_dimension(alpha_tested);
+        self.texture_at(path, cap)
+    }
+    /// The draw-list texture of `path` as decoded texels whatever the
+    /// options: an effect surface's palette, which is sampled at its base
+    /// level with clamped coordinates, never mipmapped.
+    pub(super) fn decoded_texture(&mut self, path: Vec<u8>) -> Result<usize> {
+        self.texture_at(path, None)
+    }
+    /// The draw-list texture of `path`, kept as stored blocks up to `cap`
+    /// when the options keep blocks and `cap` is given.
+    fn texture_at(&mut self, path: Vec<u8>, cap: Option<u32>) -> Result<usize> {
         if let Some(i) = self.textures.get(&(path.clone(), cap.unwrap_or(0))) {
             return Ok(*i);
         }
@@ -1035,6 +1048,7 @@ impl Builder<'_, '_> {
                     },
                     tint: None,
                     falloff: None,
+                    palette: None,
                 })
             })?;
             // A controller drives the NIF shader's field; the draw takes the
@@ -1194,6 +1208,7 @@ impl Builder<'_, '_> {
             },
             tint: None,
             falloff: None,
+            palette: None,
         };
         self.uv_rule(&surface)?;
         Ok(surface)
@@ -1471,6 +1486,7 @@ impl Builder<'_, '_> {
                         uv_scale: surface.scale,
                         raw_tile_flags: surface.tile,
                         falloff: surface.falloff,
+                        palette: surface.palette,
                     },
                     self.budget,
                 )?;
@@ -1798,6 +1814,7 @@ impl Builder<'_, '_> {
                             uv_scale: surface.scale,
                             raw_tile_flags: surface.tile,
                             falloff: surface.falloff,
+                            palette: surface.palette,
                         },
                         self.budget,
                     )?;

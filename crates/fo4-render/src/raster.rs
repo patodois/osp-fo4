@@ -223,6 +223,7 @@ impl Raster<'_> {
         mut v: [Clip; 3],
         draw: &Draw,
         tex: &Texture,
+        palette: Option<&Texture>,
         overlay: bool,
     ) -> Result<()> {
         let mut p = [[0.; 2]; 3];
@@ -335,8 +336,10 @@ impl Raster<'_> {
                 let lod = 0.5 * footprint.max(1.).log2();
                 let (mut color, level) = tex.sample_lod(uv, self.options.bilinear, lod);
                 self.frame.mip_usage[draw.texture][level] += 1;
+                let mut vertex = None;
                 if v[0].color.is_some() {
-                    for (channel, value) in color.iter_mut().enumerate() {
+                    let mut c = [0f32; 4];
+                    for (channel, value) in c.iter_mut().enumerate() {
                         let mut component = 0.;
                         for i in 0..3 {
                             component += weight[i]
@@ -345,11 +348,33 @@ impl Raster<'_> {
                                     .ok_or_else(|| err("RenderVertexColorLayout", i))?[channel]
                                 / v[i].a[0];
                         }
-                        let component = component / inv;
-                        *value *= component as f32;
+                        *value = (component / inv) as f32;
+                    }
+                    vertex = Some(c);
+                }
+                // The palette lookups read the texel and the surface's
+                // alpha before the palette (opacity times vertex alpha).
+                let mut palette_alpha = None;
+                if let (Some(p), Some(pt)) = (draw.palette, palette) {
+                    let before = draw.alpha.opacity * vertex.map_or(1., |c| c[3]);
+                    let [at_colour, at_alpha] = crate::Palette::coordinates(color, before);
+                    if p.colour {
+                        let looked = pt.sample_clamped(at_colour);
+                        color[..3].copy_from_slice(&looked[..3]);
+                    }
+                    if p.alpha {
+                        palette_alpha = Some(pt.sample_clamped(at_alpha)[3]);
+                    }
+                }
+                if let Some(c) = vertex {
+                    for (value, component) in color.iter_mut().zip(c) {
+                        *value *= component;
                     }
                 }
                 color[3] *= draw.alpha.opacity;
+                if let Some(a) = palette_alpha {
+                    color[3] = a;
+                }
                 if let Some(falloff) = draw.falloff {
                     // The normal and the surface point, interpolated by
                     // reciprocal depth like UV; the eye is the origin of
@@ -375,6 +400,14 @@ impl Raster<'_> {
                 if color.iter().any(|v| !v.is_finite()) {
                     return Err(err("RenderNonFiniteSurfaceColor", at));
                 }
+                // The frame holds colour within 0 to 1: a colour above 1
+                // (an effect's base colour times a scale above 1) is
+                // clamped before the test and the blend, as an 8-bit
+                // target clamps a fragment's output
+                // (`effect_colour_clamped_before_blend_v1`).
+                for value in &mut color[..3] {
+                    *value = value.clamp(0., 1.);
+                }
                 self.frame.statistics.shaded_samples += 1;
                 if !draw.alpha.passes(color[3]) {
                     continue;
@@ -396,10 +429,17 @@ impl Raster<'_> {
         }
         Ok(())
     }
-    fn emit(&mut self, v: [Clip; 3], draw: &Draw, texture: &Texture, overlay: bool) -> Result<()> {
+    fn emit(
+        &mut self,
+        v: [Clip; 3],
+        draw: &Draw,
+        texture: &Texture,
+        palette: Option<&Texture>,
+        overlay: bool,
+    ) -> Result<()> {
         clipped(v, self.camera, |t| {
             self.frame.statistics.clipped_triangles += 1;
-            self.triangle(t, draw, texture, overlay)
+            self.triangle(t, draw, texture, palette, overlay)
         })
     }
 }
@@ -482,6 +522,14 @@ pub fn render(
             .textures
             .get(draw.texture)
             .ok_or_else(|| err("RenderTextureIndex", draw.texture))?;
+        let palette = match draw.palette {
+            Some(p) => Some(
+                list.textures
+                    .get(p.texture)
+                    .ok_or_else(|| err("RenderTextureIndex", p.texture))?,
+            ),
+            None => None,
+        };
         if draw
             .uv_offset
             .iter()
@@ -563,7 +611,7 @@ pub fn render(
                     &scratch,
                 )?;
             } else {
-                raster.emit(v, draw, tex, list.is_overlay(di))?;
+                raster.emit(v, draw, tex, palette, list.is_overlay(di))?;
             }
         }
     }
@@ -578,6 +626,7 @@ pub fn render(
             t.vertices,
             d,
             &list.textures[d.texture],
+            d.palette.map(|p| &list.textures[p.texture]),
             list.is_overlay(t.draw),
         )?;
     }

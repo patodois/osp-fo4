@@ -161,6 +161,16 @@ pub fn write(list: &DrawList, writer: &mut impl Write, l: &Limits) -> Result<u64
             d,
         ));
     }
+    if let Some(d) = list.draws.iter().position(|d| d.palette.is_some()) {
+        // Nor for an effect surface's palette lookup.
+        return Err(Error::new(
+            "SnapshotPaletteDraws",
+            "snapshot",
+            w.bytes,
+            "no palette draws",
+            d,
+        ));
+    }
     for d in &list.draws {
         d.alpha.validate()?;
         w.u32(d.instance)?;
@@ -500,6 +510,7 @@ pub fn read(bytes: &[u8], l: &Limits, b: &Budget) -> Result<DrawList> {
         alpha.validate()?;
         list.draws.push(Draw {
             falloff: None,
+            palette: None,
             sidedness: crate::Sidedness::default(),
             instance,
             mesh,

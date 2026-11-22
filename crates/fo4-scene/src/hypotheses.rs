@@ -68,6 +68,19 @@ pub const EFFECT_FALLOFF_ALPHA: &str = "effect_falloff_multiplies_alpha_v1";
 pub const EFFECT_VERTEX_ALPHA_COLORS: &str = "effect_vertex_alpha_under_vertex_colors_v1";
 /// Falloff angle controllers whose keys are degrees (`crate::rest`).
 pub const REST_FALLOFF_DEGREES: &str = "nif_controller_falloff_angle_degrees_v1";
+/// Greyscale-to-palette lookups of effect surfaces (`fo4_render::Palette`,
+/// `spec/effect-surfaces.md`, Palette): how the palette is sampled, its
+/// vertical coordinate, the colour and the alpha lookup's horizontal
+/// coordinate and what each replaces.
+pub const EFFECT_PALETTE_SAMPLED: &str = "effect_palette_sampled_clamped_v1";
+pub const EFFECT_PALETTE_V: &str = "effect_palette_v_from_alpha_v1";
+pub const EFFECT_PALETTE_COLOUR_U: &str = "effect_palette_colour_u_green_v1";
+pub const EFFECT_PALETTE_COLOUR_RGB: &str = "effect_palette_colour_replaces_rgb_v1";
+pub const EFFECT_PALETTE_ALPHA_U: &str = "effect_palette_alpha_u_alpha_v1";
+pub const EFFECT_PALETTE_ALPHA_REPLACES: &str = "effect_palette_alpha_replaces_alpha_v1";
+/// A surface colour above 1 (an effect's base colour times a scale above
+/// 1), clamped before the alpha test and the blend.
+pub const EFFECT_COLOUR_CLAMPED: &str = "effect_colour_clamped_before_blend_v1";
 /// Materials, swap scopes and texture transforms (`crate::missing`,
 /// `crate::rest`, `fo4_render::draw`, `spec/materials.md`).
 pub const MISSING_MATERIAL_EMBEDDED: &str = "nif_missing_material_embedded_shader_v1";
@@ -436,6 +449,13 @@ mod tests {
             EFFECT_FALLOFF_ALPHA,
             EFFECT_VERTEX_ALPHA_COLORS,
             REST_FALLOFF_DEGREES,
+            EFFECT_PALETTE_SAMPLED,
+            EFFECT_PALETTE_V,
+            EFFECT_PALETTE_COLOUR_U,
+            EFFECT_PALETTE_COLOUR_RGB,
+            EFFECT_PALETTE_ALPHA_U,
+            EFFECT_PALETTE_ALPHA_REPLACES,
+            EFFECT_COLOUR_CLAMPED,
             MISSING_MATERIAL_EMBEDDED,
             MISSING_PARENT,
             SWAP_SCOPES_AGREE,

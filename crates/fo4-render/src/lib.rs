@@ -233,6 +233,30 @@ impl Texture {
         )
     }
 }
+impl Texture {
+    /// Bilinear sample of the base level at `uv` with both coordinates
+    /// clamped to 0 to 1 and texel indices clamped to the edge (no wrap):
+    /// the palette lookup of an effect surface ([`Palette`]).
+    pub fn sample_clamped(&self, uv: [f64; 2]) -> [f32; 4] {
+        let (w, h) = (i64::from(self.width), i64::from(self.height));
+        let texel = |x: i64, y: i64| {
+            let at = (y.clamp(0, h - 1) as usize * w as usize + x.clamp(0, w - 1) as usize) * 4;
+            std::array::from_fn::<_, 4, _>(|i| self.rgba[at + i])
+        };
+        let x = uv[0].clamp(0., 1.) * w as f64 - 0.5;
+        let y = uv[1].clamp(0., 1.) * h as f64 - 0.5;
+        let fx = (x - x.floor()) as f32;
+        let fy = (y - y.floor()) as f32;
+        let (ix, iy) = (x.floor() as i64, y.floor() as i64);
+        let a = texel(ix, iy);
+        let b = texel(ix + 1, iy);
+        let c = texel(ix, iy + 1);
+        let d = texel(ix + 1, iy + 1);
+        std::array::from_fn(|i| {
+            (a[i] * (1. - fx) + b[i] * fx) * (1. - fy) + (c[i] * (1. - fx) + d[i] * fx) * fy
+        })
+    }
+}
 #[derive(Debug, Clone, Copy, Serialize)]
 pub struct Alpha {
     pub enabled: u8,
@@ -372,6 +396,38 @@ impl Falloff {
         p + (q - p) * t
     }
 }
+/// The greyscale-to-palette lookup of an effect surface (`draw::effect`,
+/// `spec/effect-surfaces.md`, Palette). Every term is a pending rule: the
+/// palette texture is read bilinearly at its base level with clamped
+/// coordinates (`effect_palette_sampled_clamped_v1`); its vertical
+/// coordinate is the surface's alpha before the palette, the base colour's
+/// alpha (the draw's opacity) times the vertex alpha where read, clamped
+/// to 0 to 1 (`effect_palette_v_from_alpha_v1`); the colour lookup's
+/// horizontal coordinate is the texel's green channel
+/// (`effect_palette_colour_u_green_v1`) and its RGB replaces the texel's
+/// (`effect_palette_colour_replaces_rgb_v1`); the alpha lookup's
+/// horizontal coordinate is the texel's alpha
+/// (`effect_palette_alpha_u_alpha_v1`) and its alpha replaces the
+/// surface's alpha before the falloff
+/// (`effect_palette_alpha_replaces_alpha_v1`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub struct Palette {
+    /// Index of the palette (the shader's greyscale texture) in
+    /// `DrawList::textures`; always decoded texels, never stored blocks.
+    pub texture: usize,
+    /// GreyscaleToPalette_Color.
+    pub colour: bool,
+    /// GreyscaleToPalette_Alpha.
+    pub alpha: bool,
+}
+impl Palette {
+    /// The lookup coordinates of the colour and of the alpha lookup for a
+    /// `texel` and the surface's alpha `v` before the palette.
+    pub fn coordinates(texel: [f32; 4], v: f32) -> [[f64; 2]; 2] {
+        let v = f64::from(v.clamp(0., 1.));
+        [[f64::from(texel[1]), v], [f64::from(texel[3]), v]]
+    }
+}
 #[derive(Debug, Serialize)]
 pub struct Draw {
     pub sidedness: Sidedness,
@@ -385,6 +441,8 @@ pub struct Draw {
     pub raw_tile_flags: Option<u32>,
     /// An effect surface's falloff; its mesh then has `normals`.
     pub falloff: Option<Falloff>,
+    /// An effect surface's greyscale-to-palette lookup.
+    pub palette: Option<Palette>,
 }
 #[derive(Debug, Default)]
 pub struct DrawList {

@@ -47,6 +47,18 @@ fn nif_vertices(
     material: &[u8],
     extra: Option<[[u8; 8]; 3]>,
 ) -> Vec<u8> {
+    nif_effect_textures(diffuse, effect, label, material, extra, (b"", b""))
+}
+/// [`nif_vertices`] whose effect shader names `textures` (source,
+/// greyscale).
+fn nif_effect_textures(
+    diffuse: &[u8],
+    effect: Option<u32>,
+    label: &[u8],
+    material: &[u8],
+    extra: Option<[[u8; 8]; 3]>,
+    textures: (&[u8], &[u8]),
+) -> Vec<u8> {
     let mut av = Vec::new();
     for x in [u32::MAX, 0, u32::MAX, 0] {
         av.extend(x.to_le_bytes());
@@ -104,12 +116,15 @@ fn nif_vertices(
         for v in [0f32, 0., 1., 1.] {
             shader.extend(v.to_le_bytes());
         }
-        shader.extend(0u32.to_le_bytes());
+        shader.extend((textures.0.len() as u32).to_le_bytes());
+        shader.extend(textures.0);
         shader.extend([3, 255, 0, 0]);
         for v in [1f32, 1., 0., 0., 0.2, 0.4, 0.6, 0.8, 2., 100.] {
             shader.extend(v.to_le_bytes());
         }
-        for _ in 0..4 {
+        shader.extend((textures.1.len() as u32).to_le_bytes());
+        shader.extend(textures.1);
+        for _ in 0..3 {
             shader.extend(0u32.to_le_bytes());
         }
         shader.extend(1f32.to_le_bytes());
@@ -1051,6 +1066,10 @@ struct EffectFixture {
     /// Per vertex: normal bytes and colour bytes ([`nif_vertices`]).
     extra: Option<[[u8; 8]; 3]>,
     level: RuleLevel,
+    /// Source and greyscale textures the shader names, each written as a
+    /// one-row RGBA8 DDS of the given texels when named.
+    source: Option<&'static [[u8; 4]]>,
+    greyscale: Option<&'static [[u8; 4]]>,
 }
 impl Default for EffectFixture {
     fn default() -> Self {
@@ -1061,14 +1080,61 @@ impl Default for EffectFixture {
             falloff: [1., 1., 0., 0.],
             extra: None,
             level: RuleLevel::Hypotheses,
+            source: None,
+            greyscale: None,
         }
     }
+}
+/// An RGBA8 DDS of one row of `texels` (legacy header, byte masks).
+fn dds_rgba(texels: &[[u8; 4]]) -> Vec<u8> {
+    let mut h = [0u32; 31];
+    h[0] = 124;
+    h[1] = 0x100f;
+    h[2] = 1;
+    h[3] = texels.len() as u32;
+    h[4] = 4 * texels.len() as u32;
+    h[6] = 1;
+    h[18] = 32;
+    h[19] = 0x41;
+    h[21] = 32;
+    h[22] = 0xff;
+    h[23] = 0xff00;
+    h[24] = 0xff0000;
+    h[25] = 0xff00_0000;
+    h[26] = 0x1000;
+    let mut v = b"DDS ".to_vec();
+    for n in h {
+        v.extend(n.to_le_bytes());
+    }
+    v.extend(texels.iter().flatten());
+    v
 }
 fn effect_surface_build_with(x: EffectFixture) -> crate::draw::Build {
     let temp = TestDir::new("effect-surface");
     let root = temp.join("Data");
     std::fs::create_dir_all(root.join("meshes")).unwrap();
-    let mut bytes = nif_vertices(b"", Some(x.flags1), b"EditorMarker:27", b"", x.extra);
+    let names: (&[u8], &[u8]) = (
+        if x.source.is_some() {
+            b"textures/src.dds"
+        } else {
+            b""
+        },
+        if x.greyscale.is_some() {
+            b"textures/pal.dds"
+        } else {
+            b""
+        },
+    );
+    let mut files = vec!["meshes/effect.nif".to_string()];
+    std::fs::create_dir_all(root.join("textures")).unwrap();
+    for (name, texels) in [("src.dds", x.source), ("pal.dds", x.greyscale)] {
+        if let Some(texels) = texels {
+            std::fs::write(root.join("textures").join(name), dds_rgba(texels)).unwrap();
+            files.push(format!("textures/{name}"));
+        }
+    }
+    let mut bytes =
+        nif_effect_textures(b"", Some(x.flags1), b"EditorMarker:27", b"", x.extra, names);
     let patch = |bytes: &mut Vec<u8>, old: &[f32], new: &[f32]| {
         let old: Vec<u8> = old.iter().flat_map(|v| v.to_le_bytes()).collect();
         let at = bytes
@@ -1130,7 +1196,7 @@ fn effect_surface_build_with(x: EffectFixture) -> crate::draw::Build {
         mounts: vec![Mount::Loose {
             plugin: None,
             base: None,
-            files: vec!["meshes/effect.nif".into()],
+            files: files.iter().map(Into::into).collect(),
         }],
         required_masters: vec![],
         excluded: vec![],
@@ -1179,13 +1245,22 @@ fn settled_effect_surfaces_take_the_base_colour_and_name_every_unsettled_term() 
     // Vertex_Alpha alone with no vertex alpha below 1: settled, no channel.
     let output = effect_surface_build(1 << 3, 0.5);
     assert_eq!(output.list.draws.len(), 1, "{:?}", output.omitted);
+    // Base colour x scale above 1: drawn, clamped under its rule.
+    let output = effect_surface_build(0, 2.);
+    assert_eq!(output.list.draws.len(), 1, "{:?}", output.omitted);
+    let rules = &output.instances[0].hypotheses;
+    assert!(rules.contains(&fo4_scene::hypotheses::EFFECT_COLOUR_CLAMPED));
+    let output = effect_surface_build(0, 0.5);
+    let rules = &output.instances[0].hypotheses;
+    assert!(!rules.contains(&fo4_scene::hypotheses::EFFECT_COLOUR_CLAMPED));
     // Each unsettled term is named, together.
     for (flags, scale, found) in [
-        (0, 2., "colour-range"),
+        (0, -1., "colour-negative"),
         (1 << 6, 0.5, "falloff-normals"),
         (1 << 8, 0.5, "rgb-falloff"),
-        (1 << 4, 0.5, "palette"),
-        (1 << 7 | 1 << 5, 2., "palette+feature+colour-range"),
+        (1 << 4, 0.5, "palette-texture"),
+        (1 << 7 | 1 << 5, 2., "palette-texture+environment-map"),
+        (1 << 15 | 1 << 16, 0.5, "refraction+fire-refraction"),
     ] {
         let output = effect_surface_build(flags, scale);
         assert!(output.list.draws.is_empty());
@@ -1411,4 +1486,67 @@ fn a_surface_with_uv_fields_other_than_identity_needs_the_uv_order_rule() {
     .unwrap();
     assert!(under.omitted.is_empty(), "{:?}", under.omitted);
     assert_eq!(under.instances[0].hypotheses, [UV_SCALE_THEN_OFFSET]);
+}
+
+/// A greyscale-to-palette surface: drawn only under the palette rules,
+/// which the instance records by variant, with the palette decoded; an
+/// absent palette texture refuses it by name.
+#[test]
+fn palette_surfaces_are_drawn_only_under_their_rules() {
+    use fo4_scene::hypotheses as h;
+    const SOURCE: &[[u8; 4]] = &[[10, 64, 200, 191]];
+    const PALETTE: &[[u8; 4]] = &[[0, 0, 0, 0], [255, 128, 0, 255]];
+    let fixture = EffectFixture {
+        flags1: 1 << 4,
+        scale: 1.,
+        source: Some(SOURCE),
+        greyscale: Some(PALETTE),
+        ..EffectFixture::default()
+    };
+    let output = effect_surface_build_with(fixture);
+    assert_eq!(output.list.draws.len(), 1, "{:?}", output.omitted);
+    let draw = &output.list.draws[0];
+    let palette = draw.palette.unwrap();
+    assert!(palette.colour && !palette.alpha);
+    let t = &output.list.textures[palette.texture];
+    assert_eq!((t.width, t.height), (2, 1));
+    assert_eq!(&t.rgba[4..], [1., 128. / 255., 0., 1.]);
+    assert_ne!(palette.texture, draw.texture);
+    let rules = &output.instances[0].hypotheses;
+    for rule in [
+        h::EFFECT_PALETTE_SAMPLED,
+        h::EFFECT_PALETTE_V,
+        h::EFFECT_PALETTE_COLOUR_U,
+        h::EFFECT_PALETTE_COLOUR_RGB,
+    ] {
+        assert!(rules.contains(&rule), "{rule} {rules:?}");
+    }
+    assert!(!rules.contains(&h::EFFECT_PALETTE_ALPHA_U));
+    // The alpha variant records its own pair.
+    let output = effect_surface_build_with(EffectFixture {
+        flags1: 1 << 5,
+        ..fixture
+    });
+    let palette = output.list.draws[0].palette.unwrap();
+    assert!(!palette.colour && palette.alpha);
+    let rules = &output.instances[0].hypotheses;
+    assert!(rules.contains(&h::EFFECT_PALETTE_ALPHA_U));
+    assert!(rules.contains(&h::EFFECT_PALETTE_ALPHA_REPLACES));
+    assert!(!rules.contains(&h::EFFECT_PALETTE_COLOUR_U));
+    // Without the hypotheses level the palette rules are not used.
+    let output = effect_surface_build_with(EffectFixture {
+        level: RuleLevel::Measured,
+        ..fixture
+    });
+    assert!(output.list.draws.is_empty());
+    // Named but absent: a missing texture, as for any texture.
+    let output = effect_surface_build_with(EffectFixture {
+        greyscale: None,
+        ..fixture
+    });
+    assert_eq!(
+        output.omitted[0].causes[0].found, "palette-texture",
+        "{:?}",
+        output.omitted
+    );
 }
