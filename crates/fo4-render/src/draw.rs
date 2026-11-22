@@ -242,6 +242,8 @@ struct Surface {
     /// Effect surfaces (`draw::effect`): base colour times its scale,
     /// multiplied into the vertex colours.
     tint: Option<[f32; 3]>,
+    /// Effect surfaces drawn with their falloff; the mesh keeps normals.
+    falloff: Option<crate::Falloff>,
 }
 struct Builder<'a, 's> {
     loader: &'a Loader<'s>,
@@ -249,10 +251,22 @@ struct Builder<'a, 's> {
     budget: &'a Budget,
     options: BuildOptions,
     output: Build,
-    /// By model, shape, effect channels, UV use, the effect tint's bits
-    /// and, for a skinned mesh, the skeleton asset it is posed by.
+    /// By model, shape, effect channels, UV use, the effect tint's bits,
+    /// for a skinned mesh the skeleton asset it is posed by, and whether
+    /// it keeps normals (a falloff draw).
     #[allow(clippy::type_complexity)]
-    meshes: BTreeMap<(usize, usize, u8, bool, Option<[u32; 3]>, Option<usize>), usize>,
+    meshes: BTreeMap<
+        (
+            usize,
+            usize,
+            u8,
+            bool,
+            Option<[u32; 3]>,
+            Option<usize>,
+            bool,
+        ),
+        usize,
+    >,
     skeletons: BTreeMap<usize, fo4_scene::actor::pose::Skeleton>,
     /// Skeleton assets posed by the caller, whose meshes are recorded.
     posed: std::collections::BTreeSet<usize>,
@@ -1020,6 +1034,7 @@ impl Builder<'_, '_> {
                         nif_shader_flags_2: nif_flags2,
                     },
                     tint: None,
+                    falloff: None,
                 })
             })?;
             // A controller drives the NIF shader's field; the draw takes the
@@ -1178,6 +1193,7 @@ impl Builder<'_, '_> {
                 nif_shader_flags_2: nif_flags2,
             },
             tint: None,
+            falloff: None,
         };
         self.uv_rule(&surface)?;
         Ok(surface)
@@ -1198,6 +1214,7 @@ impl Builder<'_, '_> {
             surface.requires_uv,
             surface.tint.map(|t| t.map(f32::to_bits)),
             skinned.map(|s| s.0),
+            surface.falloff.is_some(),
         );
         if let Some(index) = self.meshes.get(&key) {
             return Ok(*index);
@@ -1207,6 +1224,10 @@ impl Builder<'_, '_> {
         }
         if m.dynamic_vertices.is_some() {
             return Err(error("UnsupportedRenderDynamicGeometry", "mesh", 0, i));
+        }
+        if surface.falloff.is_some() && skinned.is_some() {
+            // Posed positions come without posed normals.
+            return Err(error("UnsupportedSkinnedFalloff", "mesh", 0, i));
         }
         let vertices = m
             .vertices
@@ -1218,9 +1239,25 @@ impl Builder<'_, '_> {
             .ok_or_else(|| error("MissingRenderTriangles", "mesh", 0, i))?;
         let mut mesh = Mesh {
             vertex_colors: None,
+            normals: None,
             vertices: Vec::new(),
             triangles: Vec::new(),
         };
+        if surface.falloff.is_some() {
+            let mut normals = Vec::new();
+            self.budget
+                .reserve(&mut normals, vertices.len(), "falloff normals", 0)?;
+            for v in vertices {
+                let n = v
+                    .normal
+                    .ok_or_else(|| error("MissingEffectFalloffNormals", "mesh", 0, i))?;
+                if n.iter().any(|x| !x.is_finite()) {
+                    return Err(error("RenderNonFiniteNormal", "mesh", 0, i));
+                }
+                normals.push(n.map(f64::from));
+            }
+            mesh.normals = Some(normals);
+        }
         self.budget
             .reserve(&mut mesh.vertices, vertices.len(), "render vertices", 0)?;
         if surface.channels != 0 || surface.tint.is_some() {
@@ -1433,6 +1470,7 @@ impl Builder<'_, '_> {
                         uv_offset: surface.offset,
                         uv_scale: surface.scale,
                         raw_tile_flags: surface.tile,
+                        falloff: surface.falloff,
                     },
                     self.budget,
                 )?;
@@ -1759,6 +1797,7 @@ impl Builder<'_, '_> {
                             uv_offset: surface.offset,
                             uv_scale: surface.scale,
                             raw_tile_flags: surface.tile,
+                            falloff: surface.falloff,
                         },
                         self.budget,
                     )?;

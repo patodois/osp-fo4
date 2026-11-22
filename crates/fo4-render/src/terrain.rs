@@ -95,6 +95,7 @@ pub fn append_terrain(
     append(
         &mut list.meshes,
         Mesh {
+            normals: None,
             vertex_colors: Some(colors),
             vertices,
             triangles: indices,
@@ -104,6 +105,7 @@ pub fn append_terrain(
     append(
         &mut list.draws,
         Draw {
+            falloff: None,
             sidedness: Sidedness {
                 material_two_sided: Some(1),
                 nif_shader_flags_2: None,
@@ -805,6 +807,7 @@ fn pass(
     append(
         &mut list.meshes,
         Mesh {
+            normals: None,
             vertex_colors: Some(colors),
             vertices,
             triangles: indices,
@@ -814,6 +817,7 @@ fn pass(
     append(
         &mut list.draws,
         Draw {
+            falloff: None,
             sidedness: TWO_SIDED,
             instance,
             mesh,

@@ -86,10 +86,16 @@ struct Clip {
     a: [f64; 3],
     uv: [f64; 2],
     color: Option<[f64; 4]>,
+    /// The vertex normal in camera axes, for a draw with a falloff.
+    normal: Option<[f64; 3]>,
 }
 impl Clip {
     fn mix(self, b: Self, t: f64) -> Self {
         Self {
+            normal: self
+                .normal
+                .zip(b.normal)
+                .map(|(a, b)| std::array::from_fn(|i| a[i] + (b[i] - a[i]) * t)),
             color: self
                 .color
                 .zip(b.color)
@@ -344,6 +350,28 @@ impl Raster<'_> {
                     }
                 }
                 color[3] *= draw.alpha.opacity;
+                if let Some(falloff) = draw.falloff {
+                    // The normal and the surface point, interpolated by
+                    // reciprocal depth like UV; the eye is the origin of
+                    // camera axes.
+                    let mut n = [0.; 3];
+                    let mut point = [0.; 3];
+                    for i in 0..3 {
+                        let normal = v[i].normal.ok_or_else(|| err("RenderFalloffNormals", i))?;
+                        for j in 0..3 {
+                            n[j] += weight[i] * normal[j] / v[i].a[0];
+                            point[j] += weight[i] * v[i].a[j] / v[i].a[0];
+                        }
+                    }
+                    let dot: f64 = (0..3).map(|j| -n[j] * point[j]).sum();
+                    let length = (0..3).map(|j| n[j] * n[j]).sum::<f64>().sqrt()
+                        * (0..3).map(|j| point[j] * point[j]).sum::<f64>().sqrt();
+                    let cosine = dot / length;
+                    if !cosine.is_finite() {
+                        return Err(err("RenderFalloffNormals", at));
+                    }
+                    color[3] *= falloff.factor(cosine.clamp(-1., 1.)) as f32;
+                }
                 if color.iter().any(|v| !v.is_finite()) {
                     return Err(err("RenderNonFiniteSurfaceColor", at));
                 }
@@ -477,6 +505,27 @@ pub fn render(
                 return Err(err("RenderVertexColorLayout", colors.len()));
             }
         }
+        // A falloff reads the mesh's normals, in camera axes: the draw's
+        // rotation (rows, as `Transform::apply`), then the camera's.
+        let normals = match draw.falloff {
+            Some(f) => {
+                f.validate()?;
+                let n = mesh
+                    .normals
+                    .as_ref()
+                    .filter(|n| {
+                        n.len() == mesh.vertices.len() && n.iter().flatten().all(|v| v.is_finite())
+                    })
+                    .ok_or_else(|| err("RenderFalloffNormals", di))?;
+                Some(n)
+            }
+            None => None,
+        };
+        let to_camera = |n: [f64; 3]| -> [f64; 3] {
+            let w: [f64; 3] =
+                std::array::from_fn(|i| (0..3).map(|j| draw.world.rotation[j][i] * n[j]).sum());
+            std::array::from_fn(|i| (0..3).map(|j| camera.rotation[i][j] * w[j]).sum())
+        };
         for tri in &mesh.triangles {
             ordinal = fo4_core::add(ordinal, 1, "triangles", 0)?;
             fo4_core::limit(ordinal, l.max_entries, "triangles", 0)?;
@@ -487,6 +536,7 @@ pub fn render(
                     .get(tri[i] as usize)
                     .ok_or_else(|| err("RenderVertexIndex", tri[i]))?;
                 v[i] = Clip {
+                    normal: normals.map(|n| to_camera(n[tri[i] as usize])),
                     color: mesh
                         .vertex_colors
                         .as_ref()

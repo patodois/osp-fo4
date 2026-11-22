@@ -60,6 +60,13 @@ pub const EFFECT_FIRST_KEY: &str = "effect-first-key";
 /// it is not run by a manager or is run by a looping sequence
 /// (`nif_controller_rest_texture_first_key_v1`).
 pub const TEXTURE_FIRST_KEY: &str = "texture-first-key";
+/// An effect-shader controller driving Falloff Start Angle or Falloff Stop
+/// Angle (EffectShaderControlledVariable 1, 2) settled under the first-key
+/// rule only when its key and pose values are read as degrees and the
+/// stored field as their cosine (`nif_controller_falloff_angle_degrees_v1`),
+/// with what its interpolators reach. Always given with
+/// [`EFFECT_FIRST_KEY`].
+pub const FALLOFF_DEGREES: &str = "falloff-degrees";
 /// Tolerance of "equal" between a stored effect-shader field and a key.
 pub const EFFECT_TOLERANCE: f32 = 1e-4;
 
@@ -413,6 +420,22 @@ fn effect_close(a: &[f32], b: &[f32]) -> bool {
 /// whose set pose value and first key equal it, or a blend interpolator
 /// whose set pose value equals it (its keys come from the sequences).
 fn starts_at(n: &Nif<'_>, ip: usize, stored: &[f32], blend_ok: bool) -> bool {
+    starts_at_as(n, ip, stored, blend_ok, false)
+}
+/// The cosine of a key or pose value read as degrees.
+pub fn degrees_cosine(v: f32) -> f32 {
+    (f64::from(v).to_radians().cos()) as f32
+}
+/// [`starts_at`], with key and pose values read as degrees and compared
+/// through their cosine when `degrees` is set.
+fn starts_at_as(n: &Nif<'_>, ip: usize, stored: &[f32], blend_ok: bool, degrees: bool) -> bool {
+    let read = |v: Vec<f32>| -> Vec<f32> {
+        if degrees {
+            v.into_iter().map(degrees_cosine).collect()
+        } else {
+            v
+        }
+    };
     let Some(f) = block_fields(n, ip) else {
         return false;
     };
@@ -420,7 +443,7 @@ fn starts_at(n: &Nif<'_>, ip: usize, stored: &[f32], blend_ok: bool) -> bool {
     match type_of(n, ip) {
         "NiFloatInterpolator" | "NiPoint3Interpolator" => {
             let pose = floats(f, "Value");
-            if pose.first().is_some_and(|v| *v != INVALID) && !effect_close(&pose, stored) {
+            if pose.first().is_some_and(|v| *v != INVALID) && !effect_close(&read(pose), stored) {
                 return false;
             }
             let Some(d) = links(f, &["Data"]).first().copied() else {
@@ -434,11 +457,11 @@ fn starts_at(n: &Nif<'_>, ip: usize, stored: &[f32], blend_ok: bool) -> bool {
             type_of(n, d) == want
                 && block_fields(n, d)
                     .and_then(|k| first_key(k, comps))
-                    .is_some_and(|k| effect_close(&k, stored))
+                    .is_some_and(|k| effect_close(&read(k), stored))
         }
         "NiBlendFloatInterpolator" | "NiBlendPoint3Interpolator" if blend_ok => {
             let pose = floats(f, "Pose Value");
-            pose.first().is_none_or(|v| *v == INVALID) || effect_close(&pose, stored)
+            pose.first().is_none_or(|v| *v == INVALID) || effect_close(&read(pose), stored)
         }
         _ => false,
     }
@@ -493,6 +516,7 @@ fn effect_settled(n: &Nif<'_>, ctl: usize, sequences: &[(usize, usize)]) -> bool
     let Some(stored) = effect_field(shader, color, variable) else {
         return false;
     };
+    let degrees = !color && matches!(variable, 1 | 2);
     let from_sequences: Vec<usize> = sequences
         .iter()
         .filter(|(c, _)| *c == ctl)
@@ -503,10 +527,19 @@ fn effect_settled(n: &Nif<'_>, ctl: usize, sequences: &[(usize, usize)]) -> bool
         return false;
     }
     own.iter()
-        .all(|ip| starts_at(n, *ip, &stored, !from_sequences.is_empty()))
+        .all(|ip| starts_at_as(n, *ip, &stored, !from_sequences.is_empty(), degrees))
         && from_sequences
             .iter()
-            .all(|ip| starts_at(n, *ip, &stored, false))
+            .all(|ip| starts_at_as(n, *ip, &stored, false, degrees))
+}
+/// Whether block `ctl` is an effect-shader float controller of a falloff
+/// angle (EffectShaderControlledVariable 1 or 2), whose keys the first-key
+/// rule reads as degrees.
+pub fn falloff_angle_controller(n: &Nif<'_>, ctl: usize) -> bool {
+    type_of(n, ctl) == "BSEffectShaderPropertyFloatController"
+        && block_fields(n, ctl)
+            .and_then(|f| word(f, "Controlled Variable"))
+            .is_some_and(|v| matches!(v, 1 | 2))
 }
 /// The stored lighting-shader field a texture-transform controller drives,
 /// by the nifxml enum LightingShaderControlledFloat (20: U Offset, 21: U
@@ -643,6 +676,8 @@ pub fn tags(n: &Nif<'_>, b: &Budget) -> Result<Vec<Vec<&'static str>>> {
     let has_manager = (0..count).any(|i| type_of(n, i) == "NiControllerManager");
     let sequences = sequence_interpolators(n);
     let settled = |c: usize| effect_settled(n, c, &sequences);
+    // A settled falloff angle controller relies on the degrees reading too.
+    let degrees = |c: usize| settled(c) && falloff_angle_controller(n, c);
     let texture_settled =
         |c: usize| texture_controller_with(n, c, &sequences).is_some_and(|t| t.first_key_is_stored);
     // Interpolator chains: interpolator -> data, blend -> interpolators.
@@ -713,6 +748,9 @@ pub fn tags(n: &Nif<'_>, b: &Budget) -> Result<Vec<Vec<&'static str>>> {
                         },
                     );
                 }
+                if looping && all_first_key && ctl_links.iter().any(|c| degrees(*c)) {
+                    add(&mut out, i, FALLOFF_DEGREES);
+                }
                 // Controlled blocks: interpolator, controller, ... in order.
                 let ips: Vec<i32> = f
                     .iter()
@@ -750,6 +788,10 @@ pub fn tags(n: &Nif<'_>, b: &Budget) -> Result<Vec<Vec<&'static str>>> {
                         .get(k)
                         .filter(|c| **c >= 0)
                         .is_some_and(|c| settled(*c as usize));
+                    let degrees_ctl = ctls
+                        .get(k)
+                        .filter(|c| **c >= 0)
+                        .is_some_and(|c| degrees(*c as usize));
                     let texture_ctl = ctls
                         .get(k)
                         .filter(|c| **c >= 0)
@@ -776,6 +818,9 @@ pub fn tags(n: &Nif<'_>, b: &Budget) -> Result<Vec<Vec<&'static str>>> {
                     if *ip >= 0 {
                         for x in chain(*ip as usize) {
                             add(&mut out, x, tag);
+                            if degrees_ctl {
+                                add(&mut out, x, FALLOFF_DEGREES);
+                            }
                         }
                     }
                 }
@@ -809,9 +854,16 @@ pub fn tags(n: &Nif<'_>, b: &Budget) -> Result<Vec<Vec<&'static str>>> {
                     class
                 };
                 add(&mut out, i, tag);
+                let angle = tag == EFFECT_FIRST_KEY && degrees(i);
+                if angle {
+                    add(&mut out, i, FALLOFF_DEGREES);
+                }
                 for ip in ips {
                     for x in chain(ip) {
                         add(&mut out, x, tag);
+                        if angle {
+                            add(&mut out, x, FALLOFF_DEGREES);
+                        }
                     }
                 }
             }
@@ -1087,6 +1139,65 @@ mod tests {
             covering(&e),
             Some(crate::hypotheses::REST_TEXTURE_FIRST_KEY)
         );
+    }
+
+    /// [`effect_nif`] with its controller driving Falloff Stop Angle
+    /// (EffectShaderControlledVariable 2), the shader storing `stored` there.
+    fn falloff_nif(stored: f32, keys: &[(f32, f32)], sequence: bool) -> Nif<'static> {
+        let mut n = effect_nif(0., keys, sequence);
+        if let Some(fo4_nif::Data::Fields(fields)) = &mut n.blocks[0].decoded {
+            fields.push(fl("Falloff Stop Angle", stored));
+        }
+        if let Some(fo4_nif::Data::Fields(fields)) = &mut n.blocks[1].decoded {
+            fields[3] = f("Controlled Variable", Value::U32(2));
+        }
+        n
+    }
+
+    #[test]
+    fn a_falloff_angle_controller_is_settled_where_its_first_key_in_degrees_is_the_stored_cosine() {
+        let b = Budget::new(1 << 20);
+        let cos70 = degrees_cosine(70.);
+        assert!((cos70 - 0.342_020_15).abs() < 1e-6);
+        for sequence in [false, true] {
+            // Keys 70 then 63 degrees; the field stores cos 70.
+            let n = falloff_nif(cos70, &[(0., 70.), (1., 63.)], sequence);
+            assert!(falloff_angle_controller(&n, 1));
+            let t = tags(&n, &b).unwrap();
+            for (i, tag) in t.iter().enumerate().take(4).skip(1) {
+                assert_eq!(
+                    tag,
+                    &vec![EFFECT_FIRST_KEY, FALLOFF_DEGREES],
+                    "{sequence} {i}"
+                );
+            }
+            if sequence {
+                assert_eq!(t[4], vec![EFFECT_FIRST_KEY, FALLOFF_DEGREES]);
+            }
+            // The key read as the cosine itself, or a stored value that is
+            // the cosine of another key: not settled, as before.
+            for (stored, keys) in [
+                (0.5, [(0., 0.5), (1., 1.)]),
+                (degrees_cosine(63.), [(0., 70.), (1., 63.)]),
+            ] {
+                let n = falloff_nif(stored, &keys, sequence);
+                let t = tags(&n, &b).unwrap();
+                assert!(t.iter().all(|x| !x.contains(&FALLOFF_DEGREES)), "{t:?}");
+                assert!(t[1].contains(&if sequence { EFFECT_IDLE } else { FALLOFF }));
+            }
+        }
+        // Another controlled variable is never read in degrees.
+        let n = effect_nif(0.25, &[(0., 0.25), (1., 1.)], false);
+        assert!(!falloff_angle_controller(&n, 1));
+        assert!(tags(&n, &b).unwrap()[1] == vec![EFFECT_FIRST_KEY]);
+        let e = fo4_core::Error::new(
+            "UnsupportedAnimationRuntime",
+            "t.nif",
+            0,
+            "x",
+            format!("NiFloatData;target_in_visual=None;rest={FALLOFF_DEGREES}"),
+        );
+        assert_eq!(covering(&e), Some(crate::hypotheses::REST_FALLOFF_DEGREES));
     }
 
     #[test]

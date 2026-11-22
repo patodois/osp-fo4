@@ -151,6 +151,16 @@ pub fn write(list: &DrawList, writer: &mut impl Write, l: &Limits) -> Result<u64
             list.overlays.len(),
         ));
     }
+    if let Some(d) = list.draws.iter().position(|d| d.falloff.is_some()) {
+        // Nor for an effect surface's falloff and its mesh's normals.
+        return Err(Error::new(
+            "SnapshotFalloffDraws",
+            "snapshot",
+            w.bytes,
+            "no falloff draws",
+            d,
+        ));
+    }
     for d in &list.draws {
         d.alpha.validate()?;
         w.u32(d.instance)?;
@@ -357,6 +367,7 @@ pub fn read(bytes: &[u8], l: &Limits, b: &Budget) -> Result<DrawList> {
             "snapshot",
         )?;
         let mut m = Mesh {
+            normals: None,
             vertex_colors: None,
             vertices: Vec::new(),
             triangles: Vec::new(),
@@ -488,6 +499,7 @@ pub fn read(bytes: &[u8], l: &Limits, b: &Budget) -> Result<DrawList> {
         };
         alpha.validate()?;
         list.draws.push(Draw {
+            falloff: None,
             sidedness: crate::Sidedness::default(),
             instance,
             mesh,

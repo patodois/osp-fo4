@@ -56,8 +56,18 @@ pub const EFFECT_SHADING: &str = "effect_surface_texture_base_colour_v1";
 pub const EFFECT_BLEND: &str = "effect_blend_factors_add_v1";
 pub const EFFECT_ORDER: &str = "effect_blend_after_opaque_back_to_front_v1";
 pub const EFFECT_LEFT_OUT: &str = "effect_soft_lighting_left_out_v1";
-/// Registered, not relied on: effect surfaces with falloff stay refused.
+/// Falloff of effect surfaces (`fo4_render::draw::effect`, the reference
+/// rasterizer, `spec/effect-surfaces.md`, Falloff): the angle it reads,
+/// the cosine's sign, the interpolation and what the factor multiplies.
 pub const EFFECT_FALLOFF: &str = "effect_falloff_view_angle_v1";
+pub const EFFECT_FALLOFF_ABSOLUTE: &str = "effect_falloff_cosine_absolute_v1";
+pub const EFFECT_FALLOFF_LINEAR: &str = "effect_falloff_linear_in_cosine_v1";
+pub const EFFECT_FALLOFF_ALPHA: &str = "effect_falloff_multiplies_alpha_v1";
+/// Vertex alpha of an effect surface with Vertex_Colors set and
+/// Vertex_Alpha clear.
+pub const EFFECT_VERTEX_ALPHA_COLORS: &str = "effect_vertex_alpha_under_vertex_colors_v1";
+/// Falloff angle controllers whose keys are degrees (`crate::rest`).
+pub const REST_FALLOFF_DEGREES: &str = "nif_controller_falloff_angle_degrees_v1";
 /// Materials, swap scopes and texture transforms (`crate::missing`,
 /// `crate::rest`, `fo4_render::draw`, `spec/materials.md`).
 pub const MISSING_MATERIAL_EMBEDDED: &str = "nif_missing_material_embedded_shader_v1";
@@ -180,6 +190,7 @@ pub fn covering(error: &Error) -> Option<&'static str> {
             Some(crate::rest::TRANSFORM_CONSTANT) => Some(REST_TRANSFORM_CONSTANT),
             Some(crate::rest::UNRENDERED) => Some(REST_UNRENDERED),
             Some(crate::rest::EFFECT_FIRST_KEY) => Some(REST_EFFECT_FIRST_KEY),
+            Some(crate::rest::FALLOFF_DEGREES) => Some(REST_FALLOFF_DEGREES),
             Some(crate::rest::TEXTURE_FIRST_KEY) => Some(REST_TEXTURE_FIRST_KEY),
             _ => None,
         }
@@ -420,6 +431,11 @@ mod tests {
             EFFECT_ORDER,
             EFFECT_LEFT_OUT,
             EFFECT_FALLOFF,
+            EFFECT_FALLOFF_ABSOLUTE,
+            EFFECT_FALLOFF_LINEAR,
+            EFFECT_FALLOFF_ALPHA,
+            EFFECT_VERTEX_ALPHA_COLORS,
+            REST_FALLOFF_DEGREES,
             MISSING_MATERIAL_EMBEDDED,
             MISSING_PARENT,
             SWAP_SCOPES_AGREE,

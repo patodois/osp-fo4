@@ -2,7 +2,8 @@
 //! rest (`nif_controller_rest_effect_first_key_v1`), under the effect
 //! surface rules of `spec/effect-surfaces.md`: the texture (or a white
 //! constant) times the base colour and its scale, the vertex colours where
-//! the flags settle them, the base colour's alpha as opacity and the alpha
+//! the flags settle them or their rule decides, the base colour's alpha as
+//! opacity, the falloff by view angle under its rules, and the alpha
 //! property's (or the material's) blend state. Every term the data does not
 //! settle refuses the surface with a named error.
 use super::{error, floats, Builder, Surface};
@@ -17,7 +18,8 @@ use fo4_scene::{hypotheses as h, paths::Citation, rest, AssetKind, DecodedAsset}
 /// (4), GreyscaleToPalette_Alpha (5), Use_Falloff (6), Environment_Mapping
 /// (7), RGB_Falloff (8), Refraction (15), Fire_Refraction (16).
 const PALETTE: u32 = 1 << 4 | 1 << 5;
-const FALLOFF: u32 = 1 << 6 | 1 << 8;
+const FALLOFF: u32 = 1 << 6;
+const RGB_FALLOFF: u32 = 1 << 8;
 const FEATURES: u32 = 1 << 2 | 1 << 7 | 1 << 15 | 1 << 16;
 /// Vertex_Alpha (Shader Flags 1 bit 3), Vertex_Colors (Shader Flags 2 bit 5).
 const VERTEX_ALPHA: u32 = 1 << 3;
@@ -30,6 +32,9 @@ const LIGHTING: u32 = 1 << 30;
 struct Terms {
     palette: bool,
     falloff: bool,
+    rgb_falloff: bool,
+    /// Falloff Start Angle, Stop Angle, Start Opacity, Stop Opacity.
+    falloff_fields: [f32; 4],
     feature: bool,
     left_out: bool,
     color: [f32; 3],
@@ -78,20 +83,38 @@ fn material_field(m: &fo4_material::Material<'_>, color: bool, variable: u32) ->
     })
 }
 
-/// Which vertex channels an effect surface takes (bit 0 RGB, bit 1 alpha),
-/// or why the data does not settle it. RGB follows Vertex_Colors. Alpha:
-/// with both flags set, or with neither, the readings "alpha follows
-/// Vertex_Alpha" and "alpha follows Vertex_Colors" agree; with one flag
-/// alone they differ unless every vertex alpha is 1.
-pub(super) fn vertex_channels(flags1: u32, flags2: u32) -> (u8, bool) {
+/// What the vertex flags settle of an effect surface's vertex channels.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum VertexAlpha {
+    /// Both flags or neither: the readings agree.
+    Settled,
+    /// Vertex_Colors alone: vertex alpha is read under
+    /// `effect_vertex_alpha_under_vertex_colors_v1` where it is below 1.
+    UnderVertexColors,
+    /// Vertex_Alpha alone: no rule; refused where a vertex alpha is below 1.
+    AlphaFlagAlone,
+}
+/// Which vertex channels an effect surface takes (bit 0 RGB, bit 1 alpha)
+/// where its vertex alpha is 1 everywhere, and what the flags settle of
+/// the alpha. RGB follows Vertex_Colors. Alpha: with both flags set, or
+/// with neither, the readings "alpha follows Vertex_Alpha" and "alpha
+/// follows Vertex_Colors" agree; with one flag alone they differ unless
+/// every vertex alpha is 1.
+pub(super) fn vertex_channels(flags1: u32, flags2: u32) -> (u8, VertexAlpha) {
     let colors = flags2 & VERTEX_COLORS != 0;
     let alpha = flags1 & VERTEX_ALPHA != 0;
     match (colors, alpha) {
-        (true, true) => (3, false),
-        (false, false) => (0, false),
-        (true, false) => (1, true),
-        (false, true) => (0, true),
+        (true, true) => (3, VertexAlpha::Settled),
+        (false, false) => (0, VertexAlpha::Settled),
+        (true, false) => (1, VertexAlpha::UnderVertexColors),
+        (false, true) => (0, VertexAlpha::AlphaFlagAlone),
     }
+}
+/// Whether every vertex of `geometry` has a normal.
+fn normals_on_every_vertex(geometry: Option<&fo4_nif::Mesh>) -> bool {
+    geometry
+        .and_then(|m| m.vertices.as_ref())
+        .is_some_and(|vs| vs.iter().all(|v| v.normal.is_some()))
 }
 
 impl Builder<'_, '_> {
@@ -159,7 +182,14 @@ impl Builder<'_, '_> {
                     Ok(Terms {
                         palette: e.grayscale_to_palette_alpha.0 != 0
                             || c.grayscale_to_palette_color.0 != 0,
-                        falloff: e.falloff_enabled.0 != 0 || e.falloff_color_enabled.0 != 0,
+                        falloff: e.falloff_enabled.0 != 0,
+                        rgb_falloff: e.falloff_color_enabled.0 != 0,
+                        falloff_fields: [
+                            e.falloff_start_angle,
+                            e.falloff_stop_angle,
+                            e.falloff_start_opacity,
+                            e.falloff_stop_opacity,
+                        ],
                         feature: c.refraction.0 != 0
                             || c.environment_mapping.is_some_and(|v| v.0 != 0)
                             || e.environment_mapping.is_some_and(|v| v.0 != 0)
@@ -226,9 +256,17 @@ impl Builder<'_, '_> {
                         nif_flags: None,
                     },
                 };
+                let falloff_fields = [
+                    floats::<1>(f, "Falloff Start Angle", file)?[0] as f32,
+                    floats::<1>(f, "Falloff Stop Angle", file)?[0] as f32,
+                    floats::<1>(f, "Falloff Start Opacity", file)?[0] as f32,
+                    floats::<1>(f, "Falloff Stop Opacity", file)?[0] as f32,
+                ];
                 Terms {
                     palette: flags1 & PALETTE != 0,
                     falloff: flags1 & FALLOFF != 0,
+                    rgb_falloff: flags1 & RGB_FALLOFF != 0,
+                    falloff_fields,
                     feature: flags1 & FEATURES != 0,
                     left_out: flags1 & SOFT != 0
                         || flags2 & LIGHTING != 0
@@ -251,7 +289,7 @@ impl Builder<'_, '_> {
         };
         // Every term this frame does not settle, named together.
         let tint: [f32; 3] = std::array::from_fn(|i| terms.color[i] * terms.scale);
-        let (channels, alpha_gate) = vertex_channels(flags1, flags2);
+        let (mut channels, vertex_alpha) = vertex_channels(flags1, flags2);
         let vertex_alpha_below_one = geometry
             .and_then(|m| m.vertices.as_ref())
             .is_some_and(|vs| {
@@ -262,18 +300,44 @@ impl Builder<'_, '_> {
                         .unwrap_or(false)
                 })
             });
+        // Vertex alpha below 1 under Vertex_Colors alone is read under its
+        // rule; with every vertex alpha 1 both readings agree.
+        let vertex_alpha_rule =
+            vertex_alpha == VertexAlpha::UnderVertexColors && vertex_alpha_below_one;
+        if vertex_alpha_rule {
+            channels = 3;
+        }
+        // The falloff the frame draws under its rules: the angle fields as
+        // cosines, both opacities within 0 to 1, two different angles
+        // unless the opacities are equal, a normal on every vertex.
+        let [start_angle, stop_angle, start_opacity, stop_opacity] = terms.falloff_fields;
+        let falloff = crate::Falloff {
+            start_angle,
+            stop_angle,
+            start_opacity,
+            stop_opacity,
+        };
+        let falloff_drawn = terms.falloff && !terms.rgb_falloff;
         let gates: Vec<&str> = [
             (terms.palette, "palette"),
             (terms.feature, "feature"),
-            (terms.falloff, "falloff"),
+            (terms.rgb_falloff, "rgb-falloff"),
+            (
+                falloff_drawn && falloff.validate().is_err(),
+                "falloff-fields",
+            ),
+            (
+                falloff_drawn && !normals_on_every_vertex(geometry),
+                "falloff-normals",
+            ),
             (
                 tint.iter()
                     .any(|v| !v.is_finite() || !(0. ..=1.).contains(v)),
                 "colour-range",
             ),
             (
-                alpha_gate && vertex_alpha_below_one,
-                "vertex-alpha-one-flag",
+                vertex_alpha == VertexAlpha::AlphaFlagAlone && vertex_alpha_below_one,
+                "vertex-alpha-flag-alone",
             ),
         ]
         .into_iter()
@@ -289,6 +353,17 @@ impl Builder<'_, '_> {
             .chain((terms.alpha.enabled != 0).then_some(h::EFFECT_BLEND))
             .chain((terms.alpha.enabled != 0).then_some(h::EFFECT_ORDER))
             .chain(terms.left_out.then_some(h::EFFECT_LEFT_OUT))
+            .chain(vertex_alpha_rule.then_some(h::EFFECT_VERTEX_ALPHA_COLORS))
+            .chain(
+                [
+                    h::EFFECT_FALLOFF,
+                    h::EFFECT_FALLOFF_ABSOLUTE,
+                    h::EFFECT_FALLOFF_LINEAR,
+                    h::EFFECT_FALLOFF_ALPHA,
+                ]
+                .into_iter()
+                .filter(|_| falloff_drawn),
+            )
         {
             if !self.draw_rule(rule)? {
                 return Err(error("UnverifiedEffectSurface", file, at, rule));
@@ -312,19 +387,23 @@ impl Builder<'_, '_> {
                 nif_shader_flags_2: Some(flags2),
             },
             tint: Some(tint),
+            falloff: falloff_drawn.then_some(falloff),
         })
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::vertex_channels;
+    use super::{vertex_channels, VertexAlpha};
     #[test]
     fn vertex_channels_are_settled_where_both_readings_agree() {
-        // (Shader Flags 1, Shader Flags 2) -> (channels, alpha gate).
-        assert_eq!(vertex_channels(1 << 3, 1 << 5), (3, false));
-        assert_eq!(vertex_channels(0, 0), (0, false));
-        assert_eq!(vertex_channels(0, 1 << 5), (1, true));
-        assert_eq!(vertex_channels(1 << 3, 0), (0, true));
+        // (Shader Flags 1, Shader Flags 2) -> (channels, vertex alpha).
+        assert_eq!(vertex_channels(1 << 3, 1 << 5), (3, VertexAlpha::Settled));
+        assert_eq!(vertex_channels(0, 0), (0, VertexAlpha::Settled));
+        assert_eq!(
+            vertex_channels(0, 1 << 5),
+            (1, VertexAlpha::UnderVertexColors)
+        );
+        assert_eq!(vertex_channels(1 << 3, 0), (0, VertexAlpha::AlphaFlagAlone));
     }
 }

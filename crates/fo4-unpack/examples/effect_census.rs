@@ -148,6 +148,102 @@ fn rgb(c: &[f32]) -> String {
 fn bits(x: u32) -> Vec<u32> {
     (0..32).filter(|b| x >> b & 1 == 1).collect()
 }
+/// A falloff angle field (a cosine, nifxml) as the whole degree whose
+/// cosine it is, when it is one within 1e-4.
+fn cosine_label(x: f32) -> String {
+    if !(-1. ..=1.).contains(&x) {
+        return format!("{x} (not a cosine)");
+    }
+    let deg = f64::from(x).acos().to_degrees();
+    let whole = deg.round();
+    if (whole.to_radians().cos() - f64::from(x)).abs() <= 1e-4 {
+        format!("cos {whole}")
+    } else {
+        format!("{x}")
+    }
+}
+/// Vertex alpha of a mesh against its open boundary (edges used by one
+/// triangle): whether the alpha is lower on the boundary than inside.
+fn alpha_against_boundary(m: &fo4_nif::Mesh) -> String {
+    let (Some(vs), Some(ts)) = (m.vertices.as_ref(), m.triangles.as_ref()) else {
+        return "no vertex or triangle data".into();
+    };
+    let alpha: Vec<Option<f32>> = vs
+        .iter()
+        .map(|x| {
+            x.color
+                .map(|c| f32::from(c[3]) / 255.)
+                .or(x.color_float.map(|c| c[3]))
+        })
+        .collect();
+    if alpha.iter().any(Option::is_none) || alpha.is_empty() {
+        return "no vertex alpha".into();
+    }
+    let mut edges: HashMap<(u16, u16), u32> = HashMap::new();
+    for t in ts {
+        for (a, b) in [(t[0], t[1]), (t[1], t[2]), (t[2], t[0])] {
+            *edges.entry((a.min(b), a.max(b))).or_default() += 1;
+        }
+    }
+    let mut boundary = vec![false; vs.len()];
+    for ((a, b), n) in &edges {
+        if *n == 1 {
+            for v in [a, b] {
+                if let Some(x) = boundary.get_mut(*v as usize) {
+                    *x = true;
+                }
+            }
+        }
+    }
+    let mean = |on: bool| {
+        let v: Vec<f32> = alpha
+            .iter()
+            .zip(&boundary)
+            .filter(|(_, b)| **b == on)
+            .filter_map(|(a, _)| *a)
+            .collect();
+        (!v.is_empty()).then(|| v.iter().sum::<f32>() / v.len() as f32)
+    };
+    match (mean(true), mean(false)) {
+        (None, _) => "closed (no open boundary)".into(),
+        (Some(_), None) => "every vertex on the boundary".into(),
+        (Some(b), Some(i)) => {
+            let zero = alpha
+                .iter()
+                .zip(&boundary)
+                .filter(|(a, b)| **b && a.is_some_and(|x| x == 0.))
+                .count();
+            let on = boundary.iter().filter(|b| **b).count();
+            format!(
+                "boundary mean {} interior mean; boundary vertices with alpha 0: {}",
+                if b + 0.25 <= i {
+                    "at least 0.25 below"
+                } else if b < i {
+                    "below"
+                } else {
+                    "not below"
+                },
+                if zero == on {
+                    "all"
+                } else if zero * 2 >= on {
+                    "half or more"
+                } else if zero > 0 {
+                    "under half"
+                } else {
+                    "none"
+                }
+            )
+        }
+    }
+}
+/// Shapes, placements of their models and omitted placements by key.
+type Weighted = BTreeMap<String, [u64; 3]>;
+fn weigh(m: &mut Weighted, k: impl Into<String>, uses: &Uses) {
+    let e = m.entry(k.into()).or_default();
+    e[0] += 1;
+    e[1] += uses.placements;
+    e[2] += uses.omitted;
+}
 
 /// Keys of an NiFloatData or NiPosData: (time, value).
 /// (interpolation type, keys as (time, value)).
@@ -436,6 +532,7 @@ fn run() -> Result<(), E> {
     let mut classes: BTreeMap<String, Uses> = BTreeMap::new();
     let mut class_models: Counts = Counts::new();
     let mut detail_rows = String::new();
+    let mut falloff_weights = Weighted::new();
     let (mut files, mut failed) = (0u64, 0u64);
     for path in &nifs {
         let b = Budget::new(m.limits.max_memory);
@@ -521,6 +618,7 @@ fn run() -> Result<(), E> {
                 if *t == rest::EFFECT_IDLE
                     || *t == rest::MANAGER_LOOP
                     || *t == rest::EFFECT_FIRST_KEY
+                    || *t == rest::FALLOFF_DEGREES
                     || ty.starts_with("BSEffectShaderProperty")
                 {
                     in_scope = true;
@@ -1103,9 +1201,6 @@ fn run() -> Result<(), E> {
             if rgb_fall || env {
                 gates.insert("env map, refraction or colour falloff");
             }
-            if fall {
-                gates.insert("falloff");
-            }
             let vertex_alpha_max = mesh.and_then(|m| m.vertices.as_ref()).and_then(|vs| {
                 vs.iter()
                     .filter_map(|x| {
@@ -1132,8 +1227,10 @@ fn run() -> Result<(), E> {
                     ),
                 );
             }
-            if vcol == 1 && valpha == 0 && vertex_alpha_min.is_some_and(|a| a < 1.) {
-                gates.insert("vertex alpha without its flag");
+            // Vertex_Colors alone is read under its rule; Vertex_Alpha alone
+            // has none.
+            if vcol == 0 && valpha == 1 && vertex_alpha_min.is_some_and(|a| a < 1.) {
+                gates.insert("vertex alpha flag alone");
             }
             if colour.iter().any(|x| x * scale_v > 1.) {
                 gates.insert("colour above 1");
@@ -1147,6 +1244,134 @@ fn run() -> Result<(), E> {
             }
             if tkey == "texture missing or unreadable" {
                 gates.insert("texture missing");
+            }
+            // Falloff as the draw build reads it: the material's fields
+            // where a BGEM is named, the shader's otherwise.
+            let (fall_angles, fall_two_sided, fall_soft) = match bgem {
+                Some((e, cm)) => (
+                    [
+                        e.falloff_start_angle,
+                        e.falloff_stop_angle,
+                        e.falloff_start_opacity,
+                        e.falloff_stop_opacity,
+                    ],
+                    cm.two_sided.0 != 0,
+                    e.soft_enabled.0 != 0,
+                ),
+                None => (fo, f2 >> 4 & 1 == 1, soft == 1),
+            };
+            if fall || rgb_fall {
+                let w = &mut falloff_weights;
+                let source = if bgem.is_some() { "BGEM" } else { "NIF" };
+                let [sa, ea, so, eo] = fall_angles;
+                weigh(
+                    w,
+                    format!("terms: falloff {fall} rgb falloff {rgb_fall} (from {source})"),
+                    &uses,
+                );
+                weigh(
+                    w,
+                    format!(
+                        "angles and opacities: {} -> {} | {} -> {}",
+                        cosine_label(sa),
+                        cosine_label(ea),
+                        v(so),
+                        v(eo)
+                    ),
+                    &uses,
+                );
+                weigh(
+                    w,
+                    format!(
+                        "angle order: {}",
+                        if sa > ea {
+                            "start cosine above stop (opaque facing the eye)"
+                        } else if sa < ea {
+                            "start cosine below stop (opaque at grazing angles)"
+                        } else {
+                            "start equal to stop"
+                        }
+                    ),
+                    &uses,
+                );
+                weigh(w, format!("negative cosine: {}", sa < 0. || ea < 0.), &uses);
+                weigh(
+                    w,
+                    format!(
+                        "opacities within 0 to 1: {}",
+                        [so, eo].iter().all(|x| (0. ..=1.).contains(x))
+                    ),
+                    &uses,
+                );
+                weigh(w, format!("blend: {alpha_key}"), &uses);
+                weigh(
+                    w,
+                    format!("two sided {fall_two_sided}, soft {fall_soft}, palette {pal}, feature {env}, colour above 1 {}",
+                        colour.iter().any(|x| x * scale_v > 1.)),
+                    &uses,
+                );
+                weigh(
+                    w,
+                    format!(
+                        "greyscale texture set {} with palette {pal}",
+                        bytes(sf, "Greyscale Texture").is_some_and(|p| !p.is_empty())
+                            || bgem.is_some_and(|(e, _)| !e.grayscale_texture.bytes().is_empty())
+                    ),
+                    &uses,
+                );
+                let normals = mesh
+                    .and_then(|m| m.vertices.as_ref())
+                    .map(|vs| vs.iter().all(|x| x.normal.is_some()));
+                weigh(
+                    w,
+                    format!(
+                        "vertex normals on every vertex: {normals:?}; skinned flag {}",
+                        f1 >> 1 & 1
+                    ),
+                    &uses,
+                );
+                // The draw build's falloff gates (`fo4_render::Falloff`).
+                let fields_ok = [sa, ea].iter().all(|x| x.is_finite())
+                    && [so, eo].iter().all(|x| (0. ..=1.).contains(x))
+                    && (sa != ea || so == eo);
+                if fall && !rgb_fall && !(fields_ok && normals == Some(true)) {
+                    gates.insert("falloff fields or normals");
+                }
+                weigh(
+                    w,
+                    format!("vertex flags: colours {vcol} alpha {valpha}; {vkey}"),
+                    &uses,
+                );
+                if vcol != valpha {
+                    weigh(
+                        w,
+                        format!(
+                            "one vertex flag: colours {vcol} alpha {valpha}; {}",
+                            mesh.map_or("no mesh".into(), alpha_against_boundary)
+                        ),
+                        &uses,
+                    );
+                }
+                weigh(w, format!("drawn texture: {tkey}"), &uses);
+                if (sa - ea).abs() <= 1e-6 {
+                    weigh(
+                        w,
+                        format!("equal angles: opacities {} {}", v(so), v(eo)),
+                        &uses,
+                    );
+                }
+            }
+            // Vertex alpha against the open boundary, for every effect
+            // shape with one vertex flag and a vertex alpha below 1.
+            if vcol != valpha && vertex_alpha_min.is_some_and(|a| a < 1.) {
+                weigh(
+                    &mut falloff_weights,
+                    format!(
+                        "every effect shape, one vertex flag (colours {vcol} alpha {valpha}), vertex alpha below 1: {}",
+                        mesh.map_or("no mesh".into(), alpha_against_boundary)
+                    ),
+                    &uses,
+                );
             }
             let has_mat_alpha = mat_read
                 .as_ref()
@@ -1251,6 +1476,11 @@ fn run() -> Result<(), E> {
                         "stored = key at sequence start"
                     } else if ks.iter().any(|(_, x)| close(st, x)) {
                         "stored = another key"
+                    } else if !color
+                        && matches!(var, 1 | 2)
+                        && close(st, &[(first[0].to_radians()).cos()])
+                    {
+                        "stored = cosine of the first key read as degrees"
                     } else if st[0] >= lo - 1e-4 && st[0] <= hi + 1e-4 {
                         "stored inside key range, equal to no key"
                     } else {
@@ -1290,7 +1520,7 @@ fn run() -> Result<(), E> {
         let others: Vec<&str> = tagset
             .iter()
             .copied()
-            .filter(|t| *t != rest::EFFECT_FIRST_KEY)
+            .filter(|t| *t != rest::EFFECT_FIRST_KEY && *t != rest::FALLOFF_DEGREES)
             .collect();
         let class = if !others.is_empty() {
             format!("rest not settled: {}", others.join(" + "))
@@ -1358,6 +1588,10 @@ fn run() -> Result<(), E> {
             u.omitted,
             100. * u.omitted_area / omitted_total.1.max(1.)
         );
+    }
+    let _ = writeln!(out, "\n# Falloff (shapes whose drawn fields enable falloff or RGB falloff): shapes, placements of their models, omitted placements\n");
+    for (k, [shapes, placements, omitted]) in &falloff_weights {
+        let _ = writeln!(out, "{shapes}\t{placements}\t{omitted}\t{k}");
     }
     std::fs::write(&args[1], out)?;
     std::fs::write(format!("{}.models.tsv", args[1]), rows)?;

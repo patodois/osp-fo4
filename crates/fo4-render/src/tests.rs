@@ -32,6 +32,7 @@ fn vertex(x: f64, y: f64, z: f64, u: f64) -> Vertex {
 fn list() -> DrawList {
     DrawList {
         meshes: vec![Mesh {
+            normals: None,
             vertex_colors: None,
             vertices: vec![
                 vertex(0., 0., 1., 0.),
@@ -50,6 +51,7 @@ fn list() -> DrawList {
             srgb: false,
         }],
         draws: vec![Draw {
+            falloff: None,
             sidedness: crate::Sidedness::default(),
             instance: 7,
             mesh: 0,
@@ -592,5 +594,122 @@ fn snapshot_writer_refuses_what_the_reader_would_reject() {
     assert_eq!(
         snapshot::write(&bad, &mut bytes, &limits).unwrap_err().code,
         "SnapshotNonFinite"
+    );
+}
+
+#[test]
+fn falloff_factor_is_linear_in_the_absolute_cosine_and_constant_beyond_its_ends() {
+    let (cos10, cos80) = (10f32.to_radians().cos(), 80f32.to_radians().cos());
+    let f = Falloff {
+        start_angle: cos10,
+        stop_angle: cos80,
+        start_opacity: 1.,
+        stop_opacity: 0.,
+    };
+    f.validate().unwrap();
+    assert_eq!(f.factor(1.), 1.);
+    assert_eq!(f.factor(0.), 0.);
+    let mid = (f64::from(cos10) + f64::from(cos80)) / 2.;
+    assert!((f.factor(mid) - 0.5).abs() < 1e-12);
+    // A face seen from behind takes its front value.
+    assert_eq!(f.factor(-mid), f.factor(mid));
+    // Start below stop: opaque at grazing angles.
+    let rim = Falloff {
+        start_angle: 0.,
+        stop_angle: 1.,
+        start_opacity: 1.,
+        stop_opacity: 0.25,
+    };
+    assert!((rim.factor(0.5) - 0.625).abs() < 1e-12);
+    assert_eq!(rim.factor(1.), 0.25);
+    // Equal angles: valid only with equal opacities, then constant.
+    let flat = Falloff {
+        start_angle: 1.,
+        stop_angle: 1.,
+        start_opacity: 0.,
+        stop_opacity: 0.,
+    };
+    flat.validate().unwrap();
+    assert_eq!(flat.factor(0.3), 0.);
+    for bad in [
+        Falloff {
+            stop_opacity: 1.,
+            ..flat
+        },
+        Falloff {
+            start_opacity: -0.01,
+            ..f
+        },
+        Falloff {
+            stop_angle: f32::NAN,
+            ..f
+        },
+    ] {
+        assert_eq!(bad.validate().unwrap_err().code, "UnsupportedRenderFalloff");
+    }
+}
+
+/// The alpha of a falloff draw: the full-screen quad of [`list`] at
+/// forward distance 1, its normals rotated by the draw's rotation.
+#[test]
+fn falloff_reads_the_angle_between_the_rotated_normal_and_the_eye_per_sample() {
+    let f = Falloff {
+        start_angle: 1.,
+        stop_angle: 0.,
+        start_opacity: 1.,
+        stop_opacity: 0.,
+    };
+    let mut l = list();
+    l.textures[0].rgba = vec![1., 1., 1., 1.];
+    l.draws[0].falloff = Some(f);
+    // The pixel's point on the quad (forward 1) in camera axes.
+    let point = |x: usize, y: usize| [1., 1. - (y as f64 + 0.5) / 2., (x as f64 + 0.5) / 2. - 1.];
+    let check = |l: &DrawList, normal: [f64; 3]| {
+        let frame = frame(l, &camera(), 1);
+        for y in 0..4 {
+            for x in 0..4 {
+                let a = point(x, y);
+                let len = |v: [f64; 3]| v.iter().map(|c| c * c).sum::<f64>().sqrt();
+                let dot: f64 = (0..3).map(|j| -normal[j] * a[j]).sum();
+                let expected = (dot / (len(normal) * len(a))).abs();
+                let alpha = frame.color[y * 4 + x][3];
+                assert!(
+                    (f64::from(alpha) - expected).abs() < 1e-5,
+                    "{x} {y} {alpha} {expected}"
+                );
+            }
+        }
+    };
+    // Facing the eye along the forward axis, then facing away: the same.
+    for normal in [[-1., 0., 0.], [1., 0., 0.]] {
+        l.meshes[0].normals = Some(vec![normal; 4]);
+        check(&l, normal);
+    }
+    // A quarter turn about the forward axis (y to z, z to -y), which maps
+    // the quad onto itself; a model normal tilted toward y is drawn tilted
+    // toward z.
+    l.draws[0].world.rotation = [[1., 0., 0.], [0., 0., 1.], [0., -1., 0.]];
+    l.meshes[0].normals = Some(vec![[-1., 0.5, 0.]; 4]);
+    check(&l, [-1., 0., 0.5]);
+    // Normals missing, or one short: refused.
+    for normals in [None, Some(vec![[-1., 0., 0.]; 3])] {
+        l.meshes[0].normals = normals;
+        let e = render(
+            &l,
+            &camera(),
+            RenderOptions::REFERENCE,
+            &Limits::default(),
+            &Budget::new(8 << 20),
+        )
+        .unwrap_err();
+        assert_eq!(e.code, "RenderFalloffNormals");
+    }
+    // The interchange has no field for a falloff.
+    l.meshes[0].normals = Some(vec![[-1., 0., 0.]; 4]);
+    assert_eq!(
+        snapshot::write(&l, &mut Vec::new(), &Limits::default())
+            .unwrap_err()
+            .code,
+        "SnapshotFalloffDraws"
     );
 }

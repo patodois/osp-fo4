@@ -22,6 +22,8 @@ pub struct Vertex {
 pub struct Mesh {
     /// Enabled effect channels; absent on ordinary textured geometry.
     pub vertex_colors: Option<Vec<[f32; 4]>>,
+    /// Model-space vertex normals, kept only for draws with a [`Falloff`].
+    pub normals: Option<Vec<[f64; 3]>>,
     pub vertices: Vec<Vertex>,
     pub triangles: Vec<[u16; 3]>,
 }
@@ -320,6 +322,56 @@ impl Sidedness {
         })
     }
 }
+/// The falloff of an effect surface (`draw::effect`,
+/// `spec/effect-surfaces.md`, Falloff): the angle fields are cosines
+/// (nifxml), the opacities the alpha factor at each. Every term is a
+/// pending rule: the cosine is that of the angle between the interpolated
+/// surface normal and the direction to the eye
+/// (`effect_falloff_view_angle_v1`), taken by its absolute value
+/// (`effect_falloff_cosine_absolute_v1`); the factor is linear in that
+/// cosine between the two angles and constant outside them
+/// (`effect_falloff_linear_in_cosine_v1`), and it multiplies alpha only
+/// (`effect_falloff_multiplies_alpha_v1`).
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+pub struct Falloff {
+    pub start_angle: f32,
+    pub stop_angle: f32,
+    pub start_opacity: f32,
+    pub stop_opacity: f32,
+}
+impl Falloff {
+    /// Finite angles, opacities within 0 to 1, and two different angles
+    /// unless the two opacities are equal (the factor is then that
+    /// opacity whatever the cosine).
+    pub fn validate(self) -> Result<()> {
+        let angles = [self.start_angle, self.stop_angle];
+        let opacities = [self.start_opacity, self.stop_opacity];
+        if angles.iter().any(|v| !v.is_finite())
+            || opacities.iter().any(|v| !(0. ..=1.).contains(v))
+            || (self.start_angle == self.stop_angle && self.start_opacity != self.stop_opacity)
+        {
+            return Err(Error::new(
+                "UnsupportedRenderFalloff",
+                "draw list",
+                0,
+                "finite angles, opacities within 0 to 1, different angles or equal opacities",
+                format!("{self:?}"),
+            ));
+        }
+        Ok(())
+    }
+    /// The alpha factor at `cosine`, the signed cosine between the surface
+    /// normal and the direction from the surface to the eye.
+    pub fn factor(self, cosine: f64) -> f64 {
+        let (a, b) = (f64::from(self.start_angle), f64::from(self.stop_angle));
+        let (p, q) = (f64::from(self.start_opacity), f64::from(self.stop_opacity));
+        if a == b {
+            return p;
+        }
+        let t = ((cosine.abs() - a) / (b - a)).clamp(0., 1.);
+        p + (q - p) * t
+    }
+}
 #[derive(Debug, Serialize)]
 pub struct Draw {
     pub sidedness: Sidedness,
@@ -331,6 +383,8 @@ pub struct Draw {
     pub uv_offset: [f64; 2],
     pub uv_scale: [f64; 2],
     pub raw_tile_flags: Option<u32>,
+    /// An effect surface's falloff; its mesh then has `normals`.
+    pub falloff: Option<Falloff>,
 }
 #[derive(Debug, Default)]
 pub struct DrawList {

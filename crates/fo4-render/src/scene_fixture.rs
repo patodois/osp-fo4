@@ -35,6 +35,18 @@ fn nif_with_helper(diffuse: &[u8], effect: Option<u32>, label: &[u8]) -> Vec<u8>
 }
 /// The model with string 0, the shader's `Name`, set to `material`.
 fn nif_named(diffuse: &[u8], effect: Option<u32>, label: &[u8], material: &[u8]) -> Vec<u8> {
+    nif_vertices(diffuse, effect, label, material, None)
+}
+/// [`nif_named`] whose shapes' vertices also carry, from `extra`, a normal
+/// (four normbytes, nifxml `ByteVector3` and the bitangent's Y) and a
+/// colour (RGBA bytes).
+fn nif_vertices(
+    diffuse: &[u8],
+    effect: Option<u32>,
+    label: &[u8],
+    material: &[u8],
+    extra: Option<[[u8; 8]; 3]>,
+) -> Vec<u8> {
     let mut av = Vec::new();
     for x in [u32::MAX, 0, u32::MAX, 0] {
         av.extend(x.to_le_bytes());
@@ -50,15 +62,26 @@ fn nif_named(diffuse: &[u8], effect: Option<u32>, label: &[u8], material: &[u8])
     for n in [u32::MAX, 1, u32::MAX] {
         mesh.extend(n.to_le_bytes());
     }
-    mesh.extend(((3u64 << 44) | (2 << 8) | 3).to_le_bytes());
+    // Position and UV; with `extra`, normal at byte 12 and colour at 16.
+    let desc = match extra {
+        None => (3u64 << 44) | (2 << 8) | 3,
+        Some(_) => (0x2bu64 << 44) | (4 << 24) | (3 << 16) | (2 << 8) | 5,
+    };
+    mesh.extend(desc.to_le_bytes());
     mesh.extend(1u32.to_le_bytes());
     mesh.extend(3u16.to_le_bytes());
-    mesh.extend(42u32.to_le_bytes());
-    for xyz in [[0x3c00u16, 0, 0], [0x3c00, 0x3800, 0], [0x3c00, 0, 0x3800]] {
+    mesh.extend(if extra.is_some() { 66u32 } else { 42 }.to_le_bytes());
+    for (k, xyz) in [[0x3c00u16, 0, 0], [0x3c00, 0x3800, 0], [0x3c00, 0, 0x3800]]
+        .into_iter()
+        .enumerate()
+    {
         for n in xyz {
             mesh.extend(n.to_le_bytes());
         }
         mesh.extend([0; 6]);
+        if let Some(extra) = extra {
+            mesh.extend(extra[k]);
+        }
     }
     for i in [0u16, 1, 2] {
         mesh.extend(i.to_le_bytes());
@@ -1011,13 +1034,63 @@ fn a_placed_actor_is_drawn_skinned_in_its_skeleton_rest_pose_after_the_reference
 /// its state given `nif_controller_rest_effect_first_key_v1` as a settled
 /// controller would.
 fn effect_surface_build(flags: u32, scale: f32) -> crate::draw::Build {
+    effect_surface_build_with(EffectFixture {
+        flags1: flags,
+        scale,
+        ..EffectFixture::default()
+    })
+}
+/// What [`effect_surface_build_with`] changes in the placed effect model.
+#[derive(Clone, Copy)]
+struct EffectFixture {
+    flags1: u32,
+    flags2: u32,
+    scale: f32,
+    /// Falloff Start Angle, Stop Angle, Start Opacity, Stop Opacity.
+    falloff: [f32; 4],
+    /// Per vertex: normal bytes and colour bytes ([`nif_vertices`]).
+    extra: Option<[[u8; 8]; 3]>,
+    level: RuleLevel,
+}
+impl Default for EffectFixture {
+    fn default() -> Self {
+        Self {
+            flags1: 0,
+            flags2: 0,
+            scale: 2.,
+            falloff: [1., 1., 0., 0.],
+            extra: None,
+            level: RuleLevel::Hypotheses,
+        }
+    }
+}
+fn effect_surface_build_with(x: EffectFixture) -> crate::draw::Build {
     let temp = TestDir::new("effect-surface");
     let root = temp.join("Data");
     std::fs::create_dir_all(root.join("meshes")).unwrap();
-    let mut bytes = nif_kind(b"", Some(flags));
-    let old: Vec<u8> = [2f32, 100.].iter().flat_map(|v| v.to_le_bytes()).collect();
-    let at = bytes.windows(8).position(|w| w == old.as_slice()).unwrap();
-    bytes[at..at + 4].copy_from_slice(&scale.to_le_bytes());
+    let mut bytes = nif_vertices(b"", Some(x.flags1), b"EditorMarker:27", b"", x.extra);
+    let patch = |bytes: &mut Vec<u8>, old: &[f32], new: &[f32]| {
+        let old: Vec<u8> = old.iter().flat_map(|v| v.to_le_bytes()).collect();
+        let at = bytes
+            .windows(old.len())
+            .position(|w| w == old.as_slice())
+            .unwrap();
+        let new: Vec<u8> = new.iter().flat_map(|v| v.to_le_bytes()).collect();
+        bytes[at..at + new.len()].copy_from_slice(&new);
+    };
+    patch(&mut bytes, &[2., 100.], &[x.scale]);
+    patch(&mut bytes, &[1., 1., 0., 0., 0.2], &x.falloff);
+    // Shader Flags 2 follows Shader Flags 1, before UV offset 0 and scale 1.
+    let flags: Vec<u8> = [0, 0, u32::MAX, x.flags1, 0]
+        .iter()
+        .flat_map(|v| v.to_le_bytes())
+        .chain([0f32, 0., 1., 1.].iter().flat_map(|v| v.to_le_bytes()))
+        .collect();
+    let at = bytes
+        .windows(36)
+        .position(|w| w == flags.as_slice())
+        .unwrap();
+    bytes[at + 16..at + 20].copy_from_slice(&x.flags2.to_le_bytes());
     std::fs::write(root.join("meshes/effect.nif"), bytes).unwrap();
     let mut reference = sub(b"NAME", &0x801u32.to_le_bytes());
     reference.extend(sub(b"DATA", &[0; 24]));
@@ -1075,7 +1148,7 @@ fn effect_surface_build(flags: u32, scale: f32) -> crate::draw::Build {
     let options = BuildOptions {
         max_texture_dimension: 16,
         max_texture_bytes: 1024,
-        level: fo4_scene::RuleLevel::Hypotheses,
+        level: x.level,
         blocks: None,
     };
     build(&scene, &loader, &m.limits, options, &b).unwrap()
@@ -1109,12 +1182,130 @@ fn settled_effect_surfaces_take_the_base_colour_and_name_every_unsettled_term() 
     // Each unsettled term is named, together.
     for (flags, scale, found) in [
         (0, 2., "colour-range"),
-        (1 << 6, 0.5, "falloff"),
+        (1 << 6, 0.5, "falloff-normals"),
+        (1 << 8, 0.5, "rgb-falloff"),
         (1 << 4, 0.5, "palette"),
         (1 << 7 | 1 << 5, 2., "palette+feature+colour-range"),
     ] {
         let output = effect_surface_build(flags, scale);
         assert!(output.list.draws.is_empty());
+        let cause = &output.omitted[0].causes[0];
+        assert_eq!(cause.code, "UnsupportedEffectSurface");
+        assert_eq!(cause.found, found);
+    }
+}
+
+/// Falloff and vertex alpha under Vertex_Colors alone: drawn under their
+/// pending rules, which the instance records; every term they do not
+/// settle still refuses the surface by name.
+#[test]
+fn effect_falloff_and_vertex_alpha_are_drawn_only_under_their_rules() {
+    use fo4_scene::hypotheses as h;
+    // Normals along +x (normbytes 255, 128, 128), colours white; the third
+    // vertex's alpha is 0.
+    let white = |a: u8| [255, 128, 128, 255, 255, 255, 255, a];
+    let painted = Some([white(255), white(255), white(0)]);
+    let (cos10, cos80) = (10f32.to_radians().cos(), 80f32.to_radians().cos());
+    let falloff = EffectFixture {
+        flags1: 1 << 6,
+        flags2: 1 << 5,
+        scale: 1.,
+        falloff: [cos10, cos80, 1., 0.],
+        extra: painted,
+        ..EffectFixture::default()
+    };
+    let output = effect_surface_build_with(EffectFixture { ..falloff });
+    assert_eq!(output.list.draws.len(), 1, "{:?}", output.omitted);
+    let draw = &output.list.draws[0];
+    assert_eq!(
+        draw.falloff,
+        Some(crate::Falloff {
+            start_angle: cos10,
+            stop_angle: cos80,
+            start_opacity: 1.,
+            stop_opacity: 0.,
+        })
+    );
+    let mesh = &output.list.meshes[draw.mesh];
+    let normals = mesh.normals.as_ref().unwrap();
+    assert!(normals
+        .iter()
+        .all(|n| n[0] == 1. && n[1].abs() < 0.01 && n[2].abs() < 0.01));
+    // Vertex alpha read under Vertex_Colors alone, times the base colour.
+    let colors = mesh.vertex_colors.as_ref().unwrap();
+    assert_eq!(colors[2][3], 0.);
+    assert_eq!(colors[0][3], 1.);
+    let rules = &output.instances[0].hypotheses;
+    for rule in [
+        h::EFFECT_FALLOFF,
+        h::EFFECT_FALLOFF_ABSOLUTE,
+        h::EFFECT_FALLOFF_LINEAR,
+        h::EFFECT_FALLOFF_ALPHA,
+        h::EFFECT_VERTEX_ALPHA_COLORS,
+    ] {
+        assert!(rules.contains(&rule), "{rule} {rules:?}");
+    }
+    // Vertex alpha 1 everywhere: the readings agree, no vertex alpha rule,
+    // no alpha channel; no falloff flag: no falloff and no normals.
+    let output = effect_surface_build_with(EffectFixture {
+        flags1: 0,
+        extra: Some([white(255); 3]),
+        ..falloff
+    });
+    let draw = &output.list.draws[0];
+    assert_eq!(draw.falloff, None);
+    assert!(output.list.meshes[draw.mesh].normals.is_none());
+    let rules = &output.instances[0].hypotheses;
+    assert!(!rules.contains(&h::EFFECT_VERTEX_ALPHA_COLORS));
+    assert!(!rules.contains(&h::EFFECT_FALLOFF));
+    // Equal angles with equal opacities: the factor is that opacity.
+    let output = effect_surface_build_with(EffectFixture {
+        falloff: [1., 1., 0., 0.],
+        ..falloff
+    });
+    assert_eq!(output.list.draws.len(), 1, "{:?}", output.omitted);
+    // What stays refused, by name.
+    for (fixture, found) in [
+        (
+            EffectFixture {
+                falloff: [1., 1., 1., 0.],
+                ..falloff
+            },
+            "falloff-fields",
+        ),
+        (
+            EffectFixture {
+                falloff: [cos10, cos80, 1.5, 0.],
+                ..falloff
+            },
+            "falloff-fields",
+        ),
+        (
+            EffectFixture {
+                extra: None,
+                flags2: 0,
+                ..falloff
+            },
+            "falloff-normals",
+        ),
+        (
+            EffectFixture {
+                flags1: 1 << 6 | 1 << 8,
+                ..falloff
+            },
+            "rgb-falloff",
+        ),
+        (
+            EffectFixture {
+                flags1: 1 << 3,
+                flags2: 0,
+                ..falloff
+            },
+            "vertex-alpha-flag-alone",
+        ),
+    ] {
+        let output = effect_surface_build_with(fixture);
+        assert!(output.list.draws.is_empty(), "{found}");
         let cause = &output.omitted[0].causes[0];
         assert_eq!(cause.code, "UnsupportedEffectSurface");
         assert_eq!(cause.found, found);
