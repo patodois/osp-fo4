@@ -710,3 +710,52 @@ their ground materials are drawn, their branch shape with its own
 texture; a boxcar door whose base swaps its paint and whose reference
 holds an unrelated swap is drawn in the body's colour. Without hypotheses
 the five views are byte-identical frames and instance buffers.
+
+## Swap patterns, reference primitive, chained scopes and texture coordinates
+
+After the swap pattern, primitive, chain and texture coordinate rules
+([materials.md](materials.md), third step; [render.md](render.md), Texture
+coordinates that are not finite; three shards of 1,983 to 2,092 s, peak
+1.1 GB):
+
+| Outcome | before | after |
+| --- | ---: | ---: |
+| drawn without hypotheses | 779,020 (22.31 % of the area) | 779,020 (22.31 %) |
+| drawn only under hypotheses | 680,843 (72.87 %) | 682,246 (73.06 %) |
+| hidden through the enable parent chain | 8,517 | 8,522 |
+| omitted | 287,131 (3.04 %) | 285,723 (2.85 %) |
+
+Nothing moves out of "drawn without hypotheses", and the frames without
+hypotheses of nine views are byte-identical to the commit before (frame
+and instance buffers). Rules used by drawn placements:
+`mswp_wildcard_pattern_v1` 12,714 (3.58 % of all the area),
+`mswp_wildcard_missing_target_inert_v1` 5,006 (it is raised for every
+target a pattern forms and no archive holds, including targets formed for
+materials another swap could put in place, so it is counted on placements
+that may not reach such a target), `mswp_wildcard_literal_wins_v1` 2,736,
+`nif_uv_nonfinite_triangles_left_out_v1` 683, `refr_xprm_primitive_not_drawn_v1`
+626 (0.11 %), `mswp_chain_followed_v1` 254.
+
+As sole families: `REFR.XPRM` (2,513 placements, 3.56 % of the omitted
+area), non-finite vertices (683, 2.29 %) and chained swap scopes (94,
+0.48 %) leave the list. The primitive's placements mostly go elsewhere:
+626 are drawn (statics with a model, nearly all in one interior cell whose
+editor ID names navigation mesh generation), texture-set placements now
+carry only their own family (`BaseTypeOutsideSlice TXST`, 27,132 to
+37,865, no area), and sound and acoustic-space placements, outside the
+frame, are now refused by the draw build for a missing scale
+(`MissingDocumentedReferenceScale`, 163 to 2,044, no area) because a
+reference with a covered blocker is no longer classed as outside. The
+largest sole families left, by share of the smaller omitted area:
+texture-transform controllers (3.50 %), behaviour graphs (3.15 %), alpha
+controllers (3.14 %), `REFR.XATR` (2.32 %), `REFR.XEZN` (2.04 %),
+`MSTT.DSTA` (1.25 %), `REFR.XRNK` (1.19 %), manager loops (1.11 %),
+`REFR.XALP` (1.02 %), transform-varies controllers (0.81 %); missing
+textures in a sampled slot stay at 841 placements (0.41 %).
+
+**Frames** (the `render` example, CPU, 1280 x 720, `--texture-mib 1024`
+on both sides, against the commit before): under hypotheses, ground debris
+under a pipe of a coastal factory takes the regional forest floor its
+swap's pattern names, the rubble along a flooded subway tunnel takes the
+wet riverbed material, and debris piles of a coastal dock whose swaps
+chain are drawn.

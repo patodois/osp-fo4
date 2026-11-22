@@ -367,6 +367,12 @@ Three pending rules read them, only where the pattern rule may be relied on
   `MissingSwapPatternTarget` (render only) and keeps the file out of the
   instance's assets.
 
+The scene forms targets for the materials the models under each swap name
+and, a few rounds deep, for the literal targets of the placement's swaps
+and the targets patterns form: with two or more scopes the draw build's
+readings can reach a material another scope put in place (the first
+census found 7 placements refused as `RenderAssetNotInScene` for this).
+
 The scene loads, for every scope holding a pattern, the targets its
 patterns form for the materials its models name (not for a material a
 literal source of the same swap maps); the draw build forms the same target
@@ -405,3 +411,18 @@ textures held under a shared folder). Reading the other folder would be a
 behaviour of the game's file lookup, not a reader gap; what the game draws
 without the file (a placeholder, nothing, another texel) is not known.
 They stay refused (`MissingTexture`).
+
+### Coverage after the third step
+
+Whole load order ([coverage.md](coverage.md), Swap patterns, reference
+primitive, chained scopes and texture coordinates): omitted area 3.04 % to
+2.85 % of all; `mswp_wildcard_pattern_v1` used by 12,714 drawn placements,
+`mswp_wildcard_literal_wins_v1` by 2,736, `mswp_chain_followed_v1` by 254;
+chained scopes leave the sole families; missing textures in a sampled slot
+stay at 841.
+
+### What stays refused in this family
+
+- Missing textures in a sampled slot (841 placements).
+- A pattern target with another count of `*` than its source, or a path
+  a pattern splits in two ways with different targets (none placed).
