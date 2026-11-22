@@ -1,0 +1,96 @@
+# Blend opacity census (`blend_opacity_census`): 33 s; 224366 NIF read, 6019 name a material in scope
+
+44	in scope: BGEM
+7	in scope: BGEM: blend src 6 dst 0 test 0
+26	in scope: BGEM: blend src 6 dst 7 test 0
+11	in scope: BGEM: blend src 6 dst 7 test 1
+4	in scope: BGEM: opacity above 3
+1	in scope: BGEM: opacity above 3: alpha x opacity above 1 on 50 % or more of the texels
+2	in scope: BGEM: opacity above 3: alpha x opacity above 1 on all of the texels
+1	in scope: BGEM: opacity above 3: texture missing
+14	in scope: BGEM: opacity at most 1.1
+1	in scope: BGEM: opacity at most 1.1: alpha x opacity above 1 on 10 to 50 % of the texels
+1	in scope: BGEM: opacity at most 1.1: alpha x opacity above 1 on 50 % or more of the texels
+2	in scope: BGEM: opacity at most 1.1: alpha x opacity above 1 on all of the texels
+8	in scope: BGEM: opacity at most 1.1: alpha x opacity above 1 on none of the texels
+2	in scope: BGEM: opacity at most 1.1: alpha x opacity above 1 on under 10 % of the texels
+9	in scope: BGEM: opacity at most 1.2
+1	in scope: BGEM: opacity at most 1.2: alpha x opacity above 1 on 10 to 50 % of the texels
+3	in scope: BGEM: opacity at most 1.2: alpha x opacity above 1 on 50 % or more of the texels
+4	in scope: BGEM: opacity at most 1.2: alpha x opacity above 1 on all of the texels
+1	in scope: BGEM: opacity at most 1.2: alpha x opacity above 1 on under 10 % of the texels
+8	in scope: BGEM: opacity at most 1.5
+6	in scope: BGEM: opacity at most 1.5: alpha x opacity above 1 on all of the texels
+2	in scope: BGEM: opacity at most 1.5: alpha x opacity above 1 on none of the texels
+9	in scope: BGEM: opacity at most 2
+1	in scope: BGEM: opacity at most 2: alpha x opacity above 1 on 10 to 50 % of the texels
+1	in scope: BGEM: opacity at most 2: alpha x opacity above 1 on 50 % or more of the texels
+5	in scope: BGEM: opacity at most 2: alpha x opacity above 1 on all of the texels
+1	in scope: BGEM: opacity at most 2: alpha x opacity above 1 on none of the texels
+1	in scope: BGEM: opacity at most 2: alpha x opacity above 1 on under 10 % of the texels
+16	in scope: BGEM: texture: BC1Alpha, alpha 1.00 to 1.00, alpha x opacity above 1 on all of the texels
+1	in scope: BGEM: texture: BC3, alpha 0.00 to 0.25, alpha x opacity above 1 on none of the texels
+1	in scope: BGEM: texture: BC3, alpha 0.00 to 0.75, alpha x opacity above 1 on none of the texels
+2	in scope: BGEM: texture: BC3, alpha 0.00 to 1.00, alpha x opacity above 1 on 10 to 50 % of the texels
+4	in scope: BGEM: texture: BC3, alpha 0.00 to 1.00, alpha x opacity above 1 on 50 % or more of the texels
+3	in scope: BGEM: texture: BC3, alpha 0.00 to 1.00, alpha x opacity above 1 on under 10 % of the texels
+1	in scope: BGEM: texture: BC3, alpha 0.25 to 1.00, alpha x opacity above 1 on all of the texels
+1	in scope: BGEM: texture: BC3, alpha 0.25 to 1.00, alpha x opacity above 1 on under 10 % of the texels
+2	in scope: BGEM: texture: BC3, alpha 0.50 to 0.75, alpha x opacity above 1 on none of the texels
+1	in scope: BGEM: texture: BC3, alpha 0.50 to 1.00, alpha x opacity above 1 on 10 to 50 % of the texels
+2	in scope: BGEM: texture: BC3, alpha 0.50 to 1.00, alpha x opacity above 1 on 50 % or more of the texels
+2	in scope: BGEM: texture: BC3, alpha 0.50 to 1.00, alpha x opacity above 1 on all of the texels
+7	in scope: BGEM: texture: BC3, alpha 0.50 to 1.00, alpha x opacity above 1 on none of the texels
+1	in scope: BGEM: texture: texture missing
+59	in scope: BGSM
+51	in scope: BGSM: blend src 6 dst 7 test 0
+8	in scope: BGSM: blend src 6 dst 7 test 1
+6	in scope: BGSM: opacity above 3
+1	in scope: BGSM: opacity above 3: alpha x opacity above 1 on 10 to 50 % of the texels
+4	in scope: BGSM: opacity above 3: alpha x opacity above 1 on 50 % or more of the texels
+1	in scope: BGSM: opacity above 3: alpha x opacity above 1 on all of the texels
+4	in scope: BGSM: opacity at most 1.1
+1	in scope: BGSM: opacity at most 1.1: alpha x opacity above 1 on all of the texels
+3	in scope: BGSM: opacity at most 1.1: alpha x opacity above 1 on none of the texels
+8	in scope: BGSM: opacity at most 1.2
+2	in scope: BGSM: opacity at most 1.2: alpha x opacity above 1 on 10 to 50 % of the texels
+2	in scope: BGSM: opacity at most 1.2: alpha x opacity above 1 on 50 % or more of the texels
+2	in scope: BGSM: opacity at most 1.2: alpha x opacity above 1 on all of the texels
+2	in scope: BGSM: opacity at most 1.2: alpha x opacity above 1 on under 10 % of the texels
+18	in scope: BGSM: opacity at most 1.5
+12	in scope: BGSM: opacity at most 1.5: alpha x opacity above 1 on 10 to 50 % of the texels
+5	in scope: BGSM: opacity at most 1.5: alpha x opacity above 1 on 50 % or more of the texels
+1	in scope: BGSM: opacity at most 1.5: alpha x opacity above 1 on all of the texels
+22	in scope: BGSM: opacity at most 2
+5	in scope: BGSM: opacity at most 2: alpha x opacity above 1 on 10 to 50 % of the texels
+10	in scope: BGSM: opacity at most 2: alpha x opacity above 1 on 50 % or more of the texels
+6	in scope: BGSM: opacity at most 2: alpha x opacity above 1 on all of the texels
+1	in scope: BGSM: opacity at most 2: alpha x opacity above 1 on under 10 % of the texels
+1	in scope: BGSM: opacity at most 3
+1	in scope: BGSM: opacity at most 3: alpha x opacity above 1 on 50 % or more of the texels
+1	in scope: BGSM: texture: BC1Alpha, alpha 1.00 to 1.00, alpha x opacity above 1 on all of the texels
+17	in scope: BGSM: texture: BC3, alpha 0.00 to 1.00, alpha x opacity above 1 on 10 to 50 % of the texels
+8	in scope: BGSM: texture: BC3, alpha 0.00 to 1.00, alpha x opacity above 1 on 50 % or more of the texels
+1	in scope: BGSM: texture: BC3, alpha 0.00 to 1.00, alpha x opacity above 1 on all of the texels
+1	in scope: BGSM: texture: BC3, alpha 0.00 to 1.00, alpha x opacity above 1 on under 10 % of the texels
+1	in scope: BGSM: texture: BC3, alpha 0.25 to 1.00, alpha x opacity above 1 on 10 to 50 % of the texels
+8	in scope: BGSM: texture: BC3, alpha 0.25 to 1.00, alpha x opacity above 1 on 50 % or more of the texels
+3	in scope: BGSM: texture: BC3, alpha 0.25 to 1.00, alpha x opacity above 1 on none of the texels
+2	in scope: BGSM: texture: BC3, alpha 0.25 to 1.00, alpha x opacity above 1 on under 10 % of the texels
+2	in scope: BGSM: texture: BC3, alpha 0.50 to 1.00, alpha x opacity above 1 on 10 to 50 % of the texels
+6	in scope: BGSM: texture: BC3, alpha 0.50 to 1.00, alpha x opacity above 1 on 50 % or more of the texels
+7	in scope: BGSM: texture: BC3, alpha 0.50 to 1.00, alpha x opacity above 1 on all of the texels
+1	in scope: BGSM: texture: BC3, alpha 0.75 to 1.00, alpha x opacity above 1 on all of the texels
+1	in scope: BGSM: texture: BC3, alpha 1.00 to 1.00, alpha x opacity above 1 on all of the texels
+690	materials: BGEM
+8591	materials: BGSM
+5	materials: unreadable
+70	shapes naming a material in scope: BSEffectShaderProperty: alpha x opacity above 1 on 10 to 50 % of the texels
+442	shapes naming a material in scope: BSEffectShaderProperty: alpha x opacity above 1 on 50 % or more of the texels
+262	shapes naming a material in scope: BSEffectShaderProperty: alpha x opacity above 1 on all of the texels
+1314	shapes naming a material in scope: BSEffectShaderProperty: alpha x opacity above 1 on none of the texels
+13	shapes naming a material in scope: BSEffectShaderProperty: alpha x opacity above 1 on under 10 % of the texels
+735	shapes naming a material in scope: BSLightingShaderProperty: alpha x opacity above 1 on 10 to 50 % of the texels
+2847	shapes naming a material in scope: BSLightingShaderProperty: alpha x opacity above 1 on 50 % or more of the texels
+670	shapes naming a material in scope: BSLightingShaderProperty: alpha x opacity above 1 on all of the texels
+155	shapes naming a material in scope: BSLightingShaderProperty: alpha x opacity above 1 on none of the texels

@@ -1,5 +1,5 @@
-# Effect census (`effect_census`): 224366 NIF read, 2 unreadable, 95 s
-# enabled placed REFR 1776060, area proxy 3.6769e11; omitted (from bases.tsv) 213730 placements, area 1.2628e11
+# Effect census (`effect_census`): 224366 NIF read, 2 unreadable, 54 s
+# enabled placed REFR 1776060, area proxy 3.6769e11; omitted (from bases.tsv) 188012 placements, area 2.0142e10
 
 3	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min 0 to 0.1, max 0.5 to 0.75, first key 0.5 to 0.75
 9	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min 0.1 to 0.25, max 0.25 to 0.5, first key 0.1 to 0.25
@@ -1854,56 +1854,55 @@
 
 # Classes (open tags || facts): models, placements, area share of all placed, omitted placements, omitted area share of all omitted
 
-404	17939	29.340%	4126	78.030%	settled, every effect surface passes
-30	1517	0.267%	1517	0.777%	rest not settled: effect-idle + manager-loop
-11	316	0.173%	316	0.503%	rest not settled: alpha + effect-emissive
-6	803	0.157%	803	0.458%	rest not settled: effect-idle + manager-loop + other + visibility
-5	6	0.150%	6	0.438%	rest not settled: behavior-graph + effect-idle + other + particle + visibility
-8	266	0.146%	266	0.424%	rest not settled: alpha + texture-transform
-35	365	0.136%	345	0.397%	settled, effect surfaces fail: feature (environment map, refraction, glass, glow map, blood, emittance)
-38	256	0.100%	254	0.290%	rest not settled: texture-transform
-36	977	0.090%	977	0.262%	rest not settled: alpha
-7	68	0.056%	68	0.164%	rest not settled: alpha + effect-emissive + texture-transform
-104	1370	0.040%	1370	0.116%	rest not settled: manager-loop
-25	57	0.036%	57	0.106%	rest not settled: behavior-graph + effect-idle + manager-loop + other + particle + visibility
-89	4480	0.036%	4480	0.105%	rest not settled: behavior-graph + effect-idle + manager-loop
-21	195	0.019%	195	0.055%	rest not settled: other + texture-first-key
-1	121	0.018%	121	0.052%	rest not settled: manager-loop + other + particle + visibility
-61	624	0.013%	623	0.039%	rest not settled: behavior-graph + manager-loop
-39	83	0.009%	83	0.027%	rest not settled: behavior-graph + effect-idle + manager-loop + other + visibility
-53	370	0.008%	370	0.024%	rest not settled: other
-34	21	0.008%	21	0.023%	rest not settled: transform-varies
-23	20	0.008%	20	0.022%	rest not settled: behavior-graph + manager-loop + other + particle
-34	340	0.007%	340	0.021%	rest not settled: behavior-graph
-2	17	0.005%	17	0.015%	rest not settled: effect-emissive
-54	745	0.004%	744	0.012%	rest not settled: behavior-graph + effect-idle + manager-loop + other + particle
-1	118	0.004%	118	0.012%	rest not settled: behavior-graph + effect-idle + transform-varies
-58	233	0.003%	233	0.009%	rest not settled: behavior-graph + effect-idle
-1	2	0.003%	1	0.004%	settled, effect surfaces fail: alpha outside 0 to 1 + colour falloff + feature (environment map, refraction, glass, glow map, blood, emittance)
-23	173	0.002%	173	0.006%	rest not settled: behavior-graph + effect-idle + other + particle
-10	753	0.002%	753	0.005%	rest not settled: behavior-graph + effect-idle + manager-loop + other + particle + texture-first-key
-6	120	0.001%	120	0.003%	rest not settled: behavior-graph + transform-varies
-1	1	0.001%	1	0.003%	rest not settled: behavior-graph + manager-loop + other + particle + transform-varies
-1	126	0.001%	126	0.002%	rest not settled: alpha + behavior-graph + effect-emissive + other + texture-first-key + texture-transform + transform-varies
-7	1249	0.001%	1249	0.001%	rest not settled: effect-emissive + texture-transform
-1	1	0.000%	1	0.001%	rest not settled: behavior-graph + effect-idle + other + particle + texture-first-key + transform-varies + visibility
-8	192	0.000%	192	0.001%	rest not settled: behavior-graph + effect-idle + manager-loop + texture-first-key
-3	29	0.000%	29	0.001%	rest not settled: behavior-graph + manager-loop + texture-first-key
-1	33	0.000%	33	0.001%	rest not settled: alpha + behavior-graph + effect-emissive + texture-first-key + texture-transform + transform-varies
-43	92	0.000%	92	0.001%	rest not settled: behavior-graph + manager-loop + other + visibility
-14	130	0.000%	107	0.000%	rest not settled: texture-first-key
-1	3	0.000%	3	0.000%	rest not settled: alpha + other
-9	393	0.000%	393	0.000%	rest not settled: effect-idle
-2	13	0.000%	13	0.000%	rest not settled: alpha + behavior-graph + transform-varies
-2	2	0.000%	1	0.000%	settled, effect surfaces fail: alpha outside 0 to 1 + feature (environment map, refraction, glass, glow map, blood, emittance)
-41	78	0.000%	78	0.000%	rest not settled: behavior-graph + effect-idle + other + visibility
-1	5	0.000%	5	0.000%	rest not settled: other + texture-first-key + transform-varies
-30	25	0.000%	25	0.000%	rest not settled: alpha + behavior-graph
-30	1	0.000%	1	0.000%	rest not settled: other + transform-varies
-5	147	0.000%	147	0.000%	rest not settled: other + texture-transform
-5	22	0.000%	21	0.000%	rest not settled: behavior-graph + manager-loop + other
-8	16	0.000%	16	0.000%	rest not settled: behavior-graph + other + particle
-1	19	0.000%	19	0.000%	rest not settled: behavior-graph + manager-loop + other + particle + texture-first-key
+439	18304	29.476%	1269	1.931%	settled, every effect surface passes
+30	1517	0.267%	1517	4.869%	rest not settled: effect-idle + manager-loop
+11	316	0.173%	316	3.153%	rest not settled: alpha + effect-emissive
+6	803	0.157%	803	2.870%	rest not settled: effect-idle + manager-loop + other + visibility
+5	6	0.150%	6	2.745%	rest not settled: behavior-graph + effect-idle + other + particle + visibility
+8	266	0.146%	266	2.660%	rest not settled: alpha + texture-transform
+38	256	0.100%	254	1.820%	rest not settled: texture-transform
+36	977	0.090%	977	1.642%	rest not settled: alpha
+7	68	0.056%	68	1.029%	rest not settled: alpha + effect-emissive + texture-transform
+104	1370	0.040%	1370	0.727%	rest not settled: manager-loop
+25	57	0.036%	57	0.664%	rest not settled: behavior-graph + effect-idle + manager-loop + other + particle + visibility
+89	4480	0.036%	4480	0.659%	rest not settled: behavior-graph + effect-idle + manager-loop
+21	195	0.019%	195	0.343%	rest not settled: other + texture-first-key
+1	121	0.018%	121	0.323%	rest not settled: manager-loop + other + particle + visibility
+61	624	0.013%	623	0.244%	rest not settled: behavior-graph + manager-loop
+39	83	0.009%	83	0.172%	rest not settled: behavior-graph + effect-idle + manager-loop + other + visibility
+53	370	0.008%	370	0.152%	rest not settled: other
+34	21	0.008%	21	0.142%	rest not settled: transform-varies
+23	20	0.008%	20	0.139%	rest not settled: behavior-graph + manager-loop + other + particle
+34	340	0.007%	340	0.133%	rest not settled: behavior-graph
+2	17	0.005%	17	0.092%	rest not settled: effect-emissive
+54	745	0.004%	744	0.078%	rest not settled: behavior-graph + effect-idle + manager-loop + other + particle
+1	118	0.004%	118	0.072%	rest not settled: behavior-graph + effect-idle + transform-varies
+58	233	0.003%	233	0.054%	rest not settled: behavior-graph + effect-idle
+1	2	0.003%	1	0.024%	settled, effect surfaces fail: alpha outside 0 to 1 + colour falloff + feature (refraction, glass, glow map, blood, emittance)
+23	173	0.002%	173	0.039%	rest not settled: behavior-graph + effect-idle + other + particle
+10	753	0.002%	753	0.031%	rest not settled: behavior-graph + effect-idle + manager-loop + other + particle + texture-first-key
+6	120	0.001%	120	0.019%	rest not settled: behavior-graph + transform-varies
+1	1	0.001%	1	0.016%	rest not settled: behavior-graph + manager-loop + other + particle + transform-varies
+1	126	0.001%	126	0.012%	rest not settled: alpha + behavior-graph + effect-emissive + other + texture-first-key + texture-transform + transform-varies
+7	1249	0.001%	1249	0.009%	rest not settled: effect-emissive + texture-transform
+1	1	0.000%	1	0.008%	rest not settled: behavior-graph + effect-idle + other + particle + texture-first-key + transform-varies + visibility
+8	192	0.000%	192	0.006%	rest not settled: behavior-graph + effect-idle + manager-loop + texture-first-key
+3	29	0.000%	29	0.005%	rest not settled: behavior-graph + manager-loop + texture-first-key
+1	33	0.000%	33	0.005%	rest not settled: alpha + behavior-graph + effect-emissive + texture-first-key + texture-transform + transform-varies
+43	92	0.000%	92	0.004%	rest not settled: behavior-graph + manager-loop + other + visibility
+14	130	0.000%	48	0.000%	rest not settled: texture-first-key
+1	3	0.000%	3	0.003%	rest not settled: alpha + other
+9	393	0.000%	393	0.002%	rest not settled: effect-idle
+2	13	0.000%	13	0.002%	rest not settled: alpha + behavior-graph + transform-varies
+11	2	0.000%	0	0.000%	settled, effect surfaces fail: alpha outside 0 to 1
+41	78	0.000%	78	0.001%	rest not settled: behavior-graph + effect-idle + other + visibility
+1	5	0.000%	5	0.001%	rest not settled: other + texture-first-key + transform-varies
+30	25	0.000%	25	0.001%	rest not settled: alpha + behavior-graph
+30	1	0.000%	1	0.001%	rest not settled: other + transform-varies
+5	147	0.000%	147	0.001%	rest not settled: other + texture-transform
+5	22	0.000%	21	0.001%	rest not settled: behavior-graph + manager-loop + other
+8	16	0.000%	16	0.001%	rest not settled: behavior-graph + other + particle
+1	19	0.000%	19	0.001%	rest not settled: behavior-graph + manager-loop + other + particle + texture-first-key
 4	709	0.000%	709	0.000%	rest not settled: manager-loop + other + visibility
 2	2	0.000%	2	0.000%	rest not settled: behavior-graph + effect-idle + manager-loop + other + texture-first-key + texture-transform + visibility
 7	1	0.000%	1	0.000%	rest not settled: manager-loop + other + particle
@@ -1951,15 +1950,14 @@
 2	0	0.000%	0	0.000%	rest not settled: texture-transform + transform-varies
 21	0	0.000%	0	0.000%	rest not settled: transform-varies + visibility
 1	0	0.000%	0	0.000%	rest not settled: visibility
-9	0	0.000%	0	0.000%	settled, effect surfaces fail: alpha outside 0 to 1
 3	0	0.000%	0	0.000%	settled, effect surfaces fail: colour falloff
 2	0	0.000%	0	0.000%	settled, effect surfaces fail: material missing or unreadable
 1	0	0.000%	0	0.000%	settled, effect surfaces fail: texture missing
 
 # Falloff (shapes whose drawn fields enable falloff or RGB falloff): shapes, placements of their models, omitted placements
 
-1674	40368	26579	angle order: start cosine above stop (opaque facing the eye)
-96	2576	1600	angle order: start cosine below stop (opaque at grazing angles)
+1674	40368	22890	angle order: start cosine above stop (opaque facing the eye)
+96	2576	1450	angle order: start cosine below stop (opaque at grazing angles)
 8	32	32	angle order: start equal to stop
 6	0	0	angles and opacities: 0.09931967 -> cos 90 | 1 -> 0.1
 1	0	0	angles and opacities: 0.09931967 -> cos 90 | 1 -> 0.2
@@ -1967,26 +1965,26 @@
 3	0	0	angles and opacities: 0.9668234 -> 0.97357893 | 0.88 -> 0.86
 2	0	0	angles and opacities: 0.9888542 -> cos 25 | 1 -> 0
 8	32	32	angles and opacities: cos 0 -> cos 0 | 0 -> 0
-77	1576	1554	angles and opacities: cos 0 -> cos 100 | 1 -> 0
+77	1576	511	angles and opacities: cos 0 -> cos 100 | 1 -> 0
 8	754	754	angles and opacities: cos 0 -> cos 110 | 1 -> 0
-17	1129	1129	angles and opacities: cos 0 -> cos 120 | 1 -> 0
+17	1129	1126	angles and opacities: cos 0 -> cos 120 | 1 -> 0
 2	0	0	angles and opacities: cos 0 -> cos 120 | 1 -> 0.25
 54	314	314	angles and opacities: cos 0 -> cos 125 | 1 -> 0
 10	0	0	angles and opacities: cos 0 -> cos 160 | 0 -> 0.8
 1	3	3	angles and opacities: cos 0 -> cos 30 | 0.1 -> 1
 1	0	0	angles and opacities: cos 0 -> cos 30 | 1 -> 0
 4	0	0	angles and opacities: cos 0 -> cos 40 | 1 -> 0
-1	41	41	angles and opacities: cos 0 -> cos 40 | 1 -> 1
-37	655	635	angles and opacities: cos 0 -> cos 45 | 0 -> 0.7
+1	41	0	angles and opacities: cos 0 -> cos 40 | 1 -> 1
+37	655	395	angles and opacities: cos 0 -> cos 45 | 0 -> 0.7
 5	27	27	angles and opacities: cos 0 -> cos 45 | 1 -> 0
 1	0	0	angles and opacities: cos 0 -> cos 45 | 1 -> 0.25
 46	537	537	angles and opacities: cos 0 -> cos 50 | 1 -> 0
 7	39	39	angles and opacities: cos 0 -> cos 55 | 1 -> 0
-154	1541	1074	angles and opacities: cos 0 -> cos 60 | 1 -> 0
+154	1541	1153	angles and opacities: cos 0 -> cos 60 | 1 -> 0
 1	0	0	angles and opacities: cos 0 -> cos 65 | 1 -> 0
-211	6027	3279	angles and opacities: cos 0 -> cos 70 | 1 -> 0
+211	6027	2506	angles and opacities: cos 0 -> cos 70 | 1 -> 0
 1	0	0	angles and opacities: cos 0 -> cos 75 | 0.61 -> 1
-118	2756	2280	angles and opacities: cos 0 -> cos 80 | 1 -> 0
+118	2756	2358	angles and opacities: cos 0 -> cos 80 | 1 -> 0
 2	1	0	angles and opacities: cos 0 -> cos 85 | 0 -> 1
 3	441	441	angles and opacities: cos 0 -> cos 85 | 1 -> 0
 1	0	0	angles and opacities: cos 0 -> cos 90 | -0.009999998 -> 1
@@ -1994,7 +1992,7 @@
 2	0	0	angles and opacities: cos 0 -> cos 90 | 0.4 -> 0
 17	0	0	angles and opacities: cos 0 -> cos 90 | 0.4 -> 1
 3	57	57	angles and opacities: cos 0 -> cos 90 | 0.45 -> 1
-7	3	3	angles and opacities: cos 0 -> cos 90 | 0.75 -> 1
+7	3	0	angles and opacities: cos 0 -> cos 90 | 0.75 -> 1
 1	0	0	angles and opacities: cos 0 -> cos 90 | 0.8 -> 1
 84	3851	3851	angles and opacities: cos 0 -> cos 90 | 1 -> 0
 1	0	0	angles and opacities: cos 0 -> cos 90 | 1 -> 0.25
@@ -2004,19 +2002,19 @@
 3	78	78	angles and opacities: cos 10 -> cos 40 | 1 -> 0
 8	134	134	angles and opacities: cos 10 -> cos 45 | 1 -> 0
 1	0	0	angles and opacities: cos 10 -> cos 50 | 0.25 -> 1
-34	1027	1023	angles and opacities: cos 10 -> cos 60 | 1 -> 0
+34	1027	1009	angles and opacities: cos 10 -> cos 60 | 1 -> 0
 10	351	351	angles and opacities: cos 10 -> cos 65 | 1 -> 0
 28	811	811	angles and opacities: cos 10 -> cos 75 | 1 -> 0
-29	9962	364	angles and opacities: cos 10 -> cos 80 | 1 -> 0
+29	9962	327	angles and opacities: cos 10 -> cos 80 | 1 -> 0
 1	0	0	angles and opacities: cos 10 -> cos 80 | 1 -> 0.1
-7	1426	1036	angles and opacities: cos 10 -> cos 85 | 1 -> 0
+7	1426	0	angles and opacities: cos 10 -> cos 85 | 1 -> 0
 1	1	1	angles and opacities: cos 100 -> cos 0 | 1 -> 0.5
 2	0	0	angles and opacities: cos 110 -> cos 0 | 1 -> 0.1
 12	0	0	angles and opacities: cos 15 -> cos 40 | 1 -> 0
 2	0	0	angles and opacities: cos 18 -> cos 90 | 1 -> 0
 2	0	0	angles and opacities: cos 20 -> cos 30 | 1 -> 0
 5	0	0	angles and opacities: cos 20 -> cos 50 | 1 -> 0
-125	4889	4836	angles and opacities: cos 20 -> cos 70 | 1 -> 0
+125	4889	4181	angles and opacities: cos 20 -> cos 70 | 1 -> 0
 1	1	1	angles and opacities: cos 20 -> cos 90 | 1 -> 0
 2	0	0	angles and opacities: cos 25 -> cos 55 | 1 -> 0
 4	0	0	angles and opacities: cos 25 -> cos 80 | 1 -> 0
@@ -2071,7 +2069,7 @@
 11	0	0	angles and opacities: cos 60 -> cos 80 | 1 -> 0
 5	17	17	angles and opacities: cos 60 -> cos 85 | 1 -> 0
 5	17	17	angles and opacities: cos 60 -> cos 90 | 0.2 -> 1
-11	3	2	angles and opacities: cos 60 -> cos 90 | 1 -> 0
+11	3	1	angles and opacities: cos 60 -> cos 90 | 1 -> 0
 2	2	2	angles and opacities: cos 60 -> cos 90 | 1 -> 0.7000001
 2	213	213	angles and opacities: cos 65 -> cos 0 | 1 -> 0.75
 1	0	0	angles and opacities: cos 65 -> cos 70 | 1 -> 0
@@ -2086,8 +2084,8 @@
 45	33	27	angles and opacities: cos 75 -> cos 85 | 1 -> 0
 17	1	1	angles and opacities: cos 75 -> cos 90 | 1 -> 0.5
 4	0	0	angles and opacities: cos 80 -> cos 0 | 0 -> 1
-13	595	128	angles and opacities: cos 80 -> cos 0 | 1 -> 0
-2	229	229	angles and opacities: cos 80 -> cos 20 | 1 -> 0.70000005
+13	595	207	angles and opacities: cos 80 -> cos 0 | 1 -> 0
+2	229	0	angles and opacities: cos 80 -> cos 20 | 1 -> 0.70000005
 2	0	0	angles and opacities: cos 80 -> cos 30 | 0.4 -> 0.7
 8	70	69	angles and opacities: cos 80 -> cos 60 | 0 -> 1
 2	0	0	angles and opacities: cos 80 -> cos 70 | 0 -> 1
@@ -2102,116 +2100,116 @@
 12	805	299	angles and opacities: cos 90 -> cos 0 | 1 -> 0
 3	167	167	angles and opacities: cos 90 -> cos 0 | 1 -> 0.6
 11	111	111	angles and opacities: cos 90 -> cos 80 | 1 -> 0.0625
-1002	25409	22025	blend: blend 1 src 6 dst 0 test 0 func 4 threshold 0
+1002	25409	18657	blend: blend 1 src 6 dst 0 test 0 func 4 threshold 0
 32	73	73	blend: blend 1 src 6 dst 0 test 1 func 4 threshold 1
 1	0	0	blend: blend 1 src 6 dst 0 test 1 func 4 threshold 16
 4	0	0	blend: blend 1 src 6 dst 0 test 1 func 4 threshold 2
 2	0	0	blend: blend 1 src 6 dst 0 test 1 func 4 threshold 255
-726	17415	6034	blend: blend 1 src 6 dst 7 test 0 func 4 threshold 0
+726	17415	5566	blend: blend 1 src 6 dst 7 test 0 func 4 threshold 0
 4	36	36	blend: blend 1 src 6 dst 7 test 1 func 4 threshold 1
-2	3	3	blend: blend 1 src 6 dst 7 test 1 func 4 threshold 128
+2	3	0	blend: blend 1 src 6 dst 7 test 1 func 4 threshold 128
 1	0	0	blend: blend 1 src 6 dst 7 test 1 func 4 threshold 130
 2	0	0	blend: blend 1 src 6 dst 7 test 1 func 4 threshold 2
 1	0	0	blend: blend 1 src 6 dst 7 test 1 func 4 threshold 20
 1	40	40	blend: blend 1 src 6 dst 7 test 1 func 4 threshold 57
-97	908	887	drawn texture: BC1Alpha colour, alpha 1 everywhere
+97	908	647	drawn texture: BC1Alpha colour, alpha 1 everywhere
 18	249	249	drawn texture: BC1Alpha grey, alpha 1 everywhere
 2	0	0	drawn texture: BC3 colour, alpha 1 everywhere
 60	2	2	drawn texture: BC3 colour, alpha varies (min 0.00, max 0.25)
 56	0	0	drawn texture: BC3 colour, alpha varies (min 0.00, max 0.50)
-268	4430	4426	drawn texture: BC3 colour, alpha varies (min 0.00, max 0.75)
-511	8815	8815	drawn texture: BC3 colour, alpha varies (min 0.00, max 1.00)
-113	2346	2155	drawn texture: BC3 colour, alpha varies (min 0.25, max 0.50)
+268	4430	4419	drawn texture: BC3 colour, alpha varies (min 0.00, max 0.75)
+511	8815	8361	drawn texture: BC3 colour, alpha varies (min 0.00, max 1.00)
+113	2346	1112	drawn texture: BC3 colour, alpha varies (min 0.25, max 0.50)
 54	396	387	drawn texture: BC3 colour, alpha varies (min 0.25, max 0.75)
-70	1129	1124	drawn texture: BC3 colour, alpha varies (min 0.25, max 1.00)
+70	1129	888	drawn texture: BC3 colour, alpha varies (min 0.25, max 1.00)
 21	2	2	drawn texture: BC3 colour, alpha varies (min 0.50, max 0.75)
 3	167	167	drawn texture: BC3 colour, alpha varies (min 0.50, max 1.00)
-68	14973	1394	drawn texture: BC3 colour, alpha varies (min 0.75, max 1.00)
+68	14973	1228	drawn texture: BC3 colour, alpha varies (min 0.75, max 1.00)
 24	3	3	drawn texture: BC3 grey, alpha 1 everywhere
 26	510	510	drawn texture: BC3 grey, alpha varies (min 0.00, max 0.75)
-264	8063	7614	drawn texture: BC3 grey, alpha varies (min 0.00, max 1.00)
+264	8063	5922	drawn texture: BC3 grey, alpha varies (min 0.00, max 1.00)
 2	0	0	drawn texture: BC3 grey, alpha varies (min 0.25, max 1.00)
 1	0	0	drawn texture: BGRA8 grey, alpha varies (min 0.00, max 1.00)
-100	807	300	drawn texture: no texture
+100	807	299	drawn texture: no texture
 20	176	176	drawn texture: texture missing or unreadable
 8	32	32	equal angles: opacities 0 0
-717	28697	16707	every effect shape, one vertex flag (colours 1 alpha 0), vertex alpha below 1: boundary mean at least 0.25 below interior mean; boundary vertices with alpha 0: all
-309	8721	6673	every effect shape, one vertex flag (colours 1 alpha 0), vertex alpha below 1: boundary mean at least 0.25 below interior mean; boundary vertices with alpha 0: half or more
+717	28697	15477	every effect shape, one vertex flag (colours 1 alpha 0), vertex alpha below 1: boundary mean at least 0.25 below interior mean; boundary vertices with alpha 0: all
+309	8721	5091	every effect shape, one vertex flag (colours 1 alpha 0), vertex alpha below 1: boundary mean at least 0.25 below interior mean; boundary vertices with alpha 0: half or more
 38	2693	2693	every effect shape, one vertex flag (colours 1 alpha 0), vertex alpha below 1: boundary mean at least 0.25 below interior mean; boundary vertices with alpha 0: none
-164	2373	2373	every effect shape, one vertex flag (colours 1 alpha 0), vertex alpha below 1: boundary mean at least 0.25 below interior mean; boundary vertices with alpha 0: under half
-70	1843	1420	every effect shape, one vertex flag (colours 1 alpha 0), vertex alpha below 1: boundary mean below interior mean; boundary vertices with alpha 0: all
+164	2373	2368	every effect shape, one vertex flag (colours 1 alpha 0), vertex alpha below 1: boundary mean at least 0.25 below interior mean; boundary vertices with alpha 0: under half
+70	1843	1299	every effect shape, one vertex flag (colours 1 alpha 0), vertex alpha below 1: boundary mean below interior mean; boundary vertices with alpha 0: all
 46	607	595	every effect shape, one vertex flag (colours 1 alpha 0), vertex alpha below 1: boundary mean below interior mean; boundary vertices with alpha 0: half or more
-73	1755	1549	every effect shape, one vertex flag (colours 1 alpha 0), vertex alpha below 1: boundary mean below interior mean; boundary vertices with alpha 0: none
-95	1237	1236	every effect shape, one vertex flag (colours 1 alpha 0), vertex alpha below 1: boundary mean below interior mean; boundary vertices with alpha 0: under half
+73	1755	1430	every effect shape, one vertex flag (colours 1 alpha 0), vertex alpha below 1: boundary mean below interior mean; boundary vertices with alpha 0: none
+95	1237	1211	every effect shape, one vertex flag (colours 1 alpha 0), vertex alpha below 1: boundary mean below interior mean; boundary vertices with alpha 0: under half
 36	750	750	every effect shape, one vertex flag (colours 1 alpha 0), vertex alpha below 1: boundary mean not below interior mean; boundary vertices with alpha 0: half or more
-83	3790	3717	every effect shape, one vertex flag (colours 1 alpha 0), vertex alpha below 1: boundary mean not below interior mean; boundary vertices with alpha 0: none
-94	896	893	every effect shape, one vertex flag (colours 1 alpha 0), vertex alpha below 1: boundary mean not below interior mean; boundary vertices with alpha 0: under half
-350	3915	3780	every effect shape, one vertex flag (colours 1 alpha 0), vertex alpha below 1: every vertex on the boundary
-714	10795	10192	greyscale texture set false with palette false
+83	3790	2815	every effect shape, one vertex flag (colours 1 alpha 0), vertex alpha below 1: boundary mean not below interior mean; boundary vertices with alpha 0: none
+94	896	892	every effect shape, one vertex flag (colours 1 alpha 0), vertex alpha below 1: boundary mean not below interior mean; boundary vertices with alpha 0: under half
+350	3915	3614	every effect shape, one vertex flag (colours 1 alpha 0), vertex alpha below 1: every vertex on the boundary
+714	10795	9252	greyscale texture set false with palette false
 4	0	0	greyscale texture set false with palette true
-168	17228	3105	greyscale texture set true with palette false
-892	14953	14914	greyscale texture set true with palette true
-1269	33241	19005	negative cosine: false
-509	9735	9206	negative cosine: true
-403	23530	11835	one vertex flag: colours 1 alpha 0; boundary mean at least 0.25 below interior mean; boundary vertices with alpha 0: all
-187	5999	3953	one vertex flag: colours 1 alpha 0; boundary mean at least 0.25 below interior mean; boundary vertices with alpha 0: half or more
+168	17228	1903	greyscale texture set true with palette false
+892	14953	13217	greyscale texture set true with palette true
+1269	33241	16216	negative cosine: false
+509	9735	8156	negative cosine: true
+403	23530	10847	one vertex flag: colours 1 alpha 0; boundary mean at least 0.25 below interior mean; boundary vertices with alpha 0: all
+187	5999	2425	one vertex flag: colours 1 alpha 0; boundary mean at least 0.25 below interior mean; boundary vertices with alpha 0: half or more
 19	1258	1258	one vertex flag: colours 1 alpha 0; boundary mean at least 0.25 below interior mean; boundary vertices with alpha 0: none
 106	2045	2045	one vertex flag: colours 1 alpha 0; boundary mean at least 0.25 below interior mean; boundary vertices with alpha 0: under half
-14	931	510	one vertex flag: colours 1 alpha 0; boundary mean below interior mean; boundary vertices with alpha 0: all
+14	931	493	one vertex flag: colours 1 alpha 0; boundary mean below interior mean; boundary vertices with alpha 0: all
 8	142	130	one vertex flag: colours 1 alpha 0; boundary mean below interior mean; boundary vertices with alpha 0: half or more
 22	1377	1377	one vertex flag: colours 1 alpha 0; boundary mean below interior mean; boundary vertices with alpha 0: none
 56	288	288	one vertex flag: colours 1 alpha 0; boundary mean below interior mean; boundary vertices with alpha 0: under half
 7	285	285	one vertex flag: colours 1 alpha 0; boundary mean not below interior mean; boundary vertices with alpha 0: half or more
-88	2871	2311	one vertex flag: colours 1 alpha 0; boundary mean not below interior mean; boundary vertices with alpha 0: none
-76	784	783	one vertex flag: colours 1 alpha 0; boundary mean not below interior mean; boundary vertices with alpha 0: under half
+88	2871	1656	one vertex flag: colours 1 alpha 0; boundary mean not below interior mean; boundary vertices with alpha 0: none
+76	784	782	one vertex flag: colours 1 alpha 0; boundary mean not below interior mean; boundary vertices with alpha 0: under half
 165	656	656	one vertex flag: colours 1 alpha 0; every vertex on the boundary
 15	0	0	one vertex flag: colours 1 alpha 0; no mesh
 1	0	0	opacities within 0 to 1: false
-1777	42976	28211	opacities within 0 to 1: true
+1777	42976	24372	opacities within 0 to 1: true
 1	0	0	terms: falloff false rgb falloff true (from BGEM)
 12	72	71	terms: falloff false rgb falloff true (from NIF)
-123	18261	4103	terms: falloff true rgb falloff false (from BGEM)
-1545	24560	23955	terms: falloff true rgb falloff false (from NIF)
+123	18261	1821	terms: falloff true rgb falloff false (from BGEM)
+1545	24560	22398	terms: falloff true rgb falloff false (from NIF)
 97	83	82	terms: falloff true rgb falloff true (from NIF)
 150	1493	987	two sided false, soft false, palette false, feature false, colour above 1 false
-30	48	48	two sided false, soft false, palette false, feature false, colour above 1 true
-76	905	884	two sided false, soft false, palette false, feature true, colour above 1 false
+30	48	7	two sided false, soft false, palette false, feature false, colour above 1 true
+76	905	644	two sided false, soft false, palette false, feature true, colour above 1 false
 34	10	9	two sided false, soft false, palette false, feature true, colour above 1 true
 30	173	171	two sided false, soft false, palette true, feature false, colour above 1 false
 58	214	214	two sided false, soft false, palette true, feature false, colour above 1 true
 3	24	23	two sided false, soft false, palette true, feature true, colour above 1 false
-41	811	344	two sided false, soft true, palette false, feature false, colour above 1 false
+41	811	423	two sided false, soft true, palette false, feature false, colour above 1 false
 54	126	126	two sided false, soft true, palette false, feature false, colour above 1 true
 4	0	0	two sided false, soft true, palette false, feature true, colour above 1 true
 60	943	943	two sided false, soft true, palette true, feature false, colour above 1 false
-242	711	711	two sided false, soft true, palette true, feature false, colour above 1 true
+242	711	304	two sided false, soft true, palette true, feature false, colour above 1 true
 12	70	69	two sided false, soft true, palette true, feature true, colour above 1 true
 54	171	171	two sided true, soft false, palette false, feature false, colour above 1 false
 21	9	9	two sided true, soft false, palette false, feature false, colour above 1 true
-35	214	213	two sided true, soft false, palette false, feature true, colour above 1 false
+35	214	210	two sided true, soft false, palette false, feature true, colour above 1 false
 1	31	31	two sided true, soft false, palette false, feature true, colour above 1 true
 28	327	327	two sided true, soft false, palette true, feature false, colour above 1 false
-142	4465	4465	two sided true, soft false, palette true, feature false, colour above 1 true
+142	4465	4462	two sided true, soft false, palette true, feature false, colour above 1 true
 1	0	0	two sided true, soft false, palette true, feature true, colour above 1 false
-184	17776	4100	two sided true, soft true, palette false, feature false, colour above 1 false
-192	6372	6318	two sided true, soft true, palette false, feature false, colour above 1 true
+184	17776	2819	two sided true, soft true, palette false, feature false, colour above 1 false
+192	6372	5662	two sided true, soft true, palette false, feature false, colour above 1 true
 6	57	57	two sided true, soft true, palette false, feature true, colour above 1 false
-115	3204	3169	two sided true, soft true, palette true, feature false, colour above 1 false
-202	4822	4822	two sided true, soft true, palette true, feature false, colour above 1 true
+115	3204	1883	two sided true, soft true, palette true, feature false, colour above 1 false
+202	4822	4821	two sided true, soft true, palette true, feature false, colour above 1 true
 3	0	0	two sided true, soft true, palette true, feature true, colour above 1 true
-226	1085	1061	vertex flags: colours 0 alpha 0; no vertex colours
+226	1085	818	vertex flags: colours 0 alpha 0; no vertex colours
 15	0	0	vertex flags: colours 1 alpha 0; no vertex data
 18	0	0	vertex flags: colours 1 alpha 0; vertex colours: rgb all 1, alpha all 1
-240	3709	3689	vertex flags: colours 1 alpha 0; vertex colours: rgb all 1, alpha min 0.0
+240	3709	2653	vertex flags: colours 1 alpha 0; vertex colours: rgb all 1, alpha min 0.0
 8	19	19	vertex flags: colours 1 alpha 0; vertex colours: rgb all 1, alpha min 0.2
 1	0	0	vertex flags: colours 1 alpha 0; vertex colours: rgb all 1, alpha min 0.3
 9	354	354	vertex flags: colours 1 alpha 0; vertex colours: rgb all 1, alpha min 0.5
 6	6	6	vertex flags: colours 1 alpha 0; vertex colours: rgb all 1, alpha min 0.6
 2	101	101	vertex flags: colours 1 alpha 0; vertex colours: rgb all 1, alpha min 0.8
 79	827	320	vertex flags: colours 1 alpha 0; vertex colours: rgb vary, alpha all 1
-729	30584	16429	vertex flags: colours 1 alpha 0; vertex colours: rgb vary, alpha min 0.0
-11	123	122	vertex flags: colours 1 alpha 0; vertex colours: rgb vary, alpha min 0.1
-18	1929	1877	vertex flags: colours 1 alpha 0; vertex colours: rgb vary, alpha min 0.2
+729	30584	14931	vertex flags: colours 1 alpha 0; vertex colours: rgb vary, alpha min 0.0
+11	123	8	vertex flags: colours 1 alpha 0; vertex colours: rgb vary, alpha min 0.1
+18	1929	1336	vertex flags: colours 1 alpha 0; vertex colours: rgb vary, alpha min 0.2
 26	2506	2506	vertex flags: colours 1 alpha 0; vertex colours: rgb vary, alpha min 0.3
 2	1	1	vertex flags: colours 1 alpha 0; vertex colours: rgb vary, alpha min 0.4
 2	7	7	vertex flags: colours 1 alpha 0; vertex colours: rgb vary, alpha min 0.7
@@ -2220,14 +2218,14 @@
 5	29	29	vertex flags: colours 1 alpha 1; vertex colours: rgb all 1, alpha min 0.2
 1	0	0	vertex flags: colours 1 alpha 1; vertex colours: rgb all 1, alpha min 0.5
 1	0	0	vertex flags: colours 1 alpha 1; vertex colours: rgb all 1, alpha min 0.7
-238	1183	1177	vertex flags: colours 1 alpha 1; vertex colours: rgb vary, alpha min 0.0
+238	1183	770	vertex flags: colours 1 alpha 1; vertex colours: rgb vary, alpha min 0.0
 3	0	0	vertex flags: colours 1 alpha 1; vertex colours: rgb vary, alpha min 0.2
 2	0	0	vertex flags: colours 1 alpha 1; vertex colours: rgb vary, alpha min 0.3
 1	0	0	vertex flags: colours 1 alpha 1; vertex colours: rgb vary, alpha min 0.4
 1	0	0	vertex flags: colours 1 alpha 1; vertex colours: rgb vary, alpha min 0.6
 1	0	0	vertex flags: colours 1 alpha 1; vertex colours: rgb vary, alpha min 0.9
 15	0	0	vertex normals on every vertex: None; skinned flag 0
-1670	42469	27704	vertex normals on every vertex: Some(true); skinned flag 0
+1670	42469	23865	vertex normals on every vertex: Some(true); skinned flag 0
 93	507	507	vertex normals on every vertex: Some(true); skinned flag 1
 
 # Palette, colour above 1 and features (shapes whose drawn fields set them): shapes, placements of their models, omitted placements
@@ -2236,7 +2234,7 @@
 2	0	0	colour above 1: blend: blend 0 src 6 dst 7 test 1 func 4 threshold 80
 6	0	0	colour above 1: blend: blend 1 src 1 dst 2 test 0 func 4 threshold 0
 1	0	0	colour above 1: blend: blend 1 src 1 dst 2 test 1 func 4 threshold 5
-1607	24882	24532	colour above 1: blend: blend 1 src 6 dst 0 test 0 func 4 threshold 0
+1607	24882	23616	colour above 1: blend: blend 1 src 6 dst 0 test 0 func 4 threshold 0
 4	0	0	colour above 1: blend: blend 1 src 6 dst 0 test 0 func 4 threshold 0 high bits 0x4000
 3	0	0	colour above 1: blend: blend 1 src 6 dst 0 test 1 func 4 threshold 0
 31	328	328	colour above 1: blend: blend 1 src 6 dst 0 test 1 func 4 threshold 1
@@ -2247,7 +2245,7 @@
 1	0	0	colour above 1: blend: blend 1 src 6 dst 0 test 1 func 4 threshold 255
 3	0	0	colour above 1: blend: blend 1 src 6 dst 0 test 1 func 4 threshold 37
 1	84	84	colour above 1: blend: blend 1 src 6 dst 0 test 1 func 4 threshold 60
-671	3216	3214	colour above 1: blend: blend 1 src 6 dst 7 test 0 func 4 threshold 0
+671	3216	2800	colour above 1: blend: blend 1 src 6 dst 7 test 0 func 4 threshold 0
 2	3	3	colour above 1: blend: blend 1 src 6 dst 7 test 1 func 4 threshold 0
 7	26	26	colour above 1: blend: blend 1 src 6 dst 7 test 1 func 4 threshold 1
 5	0	0	colour above 1: blend: blend 1 src 6 dst 7 test 1 func 4 threshold 128
@@ -2255,27 +2253,27 @@
 21	0	0	colour above 1: blend: blend 1 src 6 dst 7 test 1 func 4 threshold 2
 1	0	0	colour above 1: blend: blend 1 src 6 dst 7 test 1 func 4 threshold 20
 1	0	0	colour above 1: blend: blend 1 src 6 dst 7 test 1 func 4 threshold 8
-64	346	344	colour above 1: blend: material blend 0 src 6 dst 7 test 0
-69	2803	2799	colour above 1: blend: material blend 1 src 6 dst 0 test 0
+64	346	2	colour above 1: blend: material blend 0 src 6 dst 7 test 0
+69	2803	2362	colour above 1: blend: material blend 1 src 6 dst 0 test 0
 5	0	0	colour above 1: blend: material blend 1 src 6 dst 0 test 1
 41	8	8	colour above 1: blend: material blend 1 src 6 dst 7 test 0
-7	125	125	colour above 1: blend: material blend 1 src 6 dst 7 test 1
-42	213	212	colour above 1: blend: no alpha property
+7	125	39	colour above 1: blend: material blend 1 src 6 dst 7 test 1
+42	213	33	colour above 1: blend: no alpha property
 38	30	15	colour above 1: combination: palette -+alpha, colour above 1 true, falloff false, feature false, vertex flags colours 0 alpha 0
-93	299	299	colour above 1: combination: palette -+alpha, colour above 1 true, falloff false, feature false, vertex flags colours 1 alpha 0
+93	299	282	colour above 1: combination: palette -+alpha, colour above 1 true, falloff false, feature false, vertex flags colours 1 alpha 0
 2	0	0	colour above 1: combination: palette -+alpha, colour above 1 true, falloff false, feature false, vertex flags colours 1 alpha 1
 2	0	0	colour above 1: combination: palette -+alpha, colour above 1 true, falloff false, feature true, vertex flags colours 1 alpha 0
 7	0	0	colour above 1: combination: palette -+alpha, colour above 1 true, falloff true, feature false, vertex flags colours 0 alpha 0
 78	2	2	colour above 1: combination: palette -+alpha, colour above 1 true, falloff true, feature false, vertex flags colours 1 alpha 0
-144	407	407	colour above 1: combination: palette -+alpha, colour above 1 true, falloff true, feature false, vertex flags colours 1 alpha 1
-166	2620	2556	colour above 1: combination: palette -, colour above 1 true, falloff false, feature false, vertex flags colours 0 alpha 0
-430	3814	3595	colour above 1: combination: palette -, colour above 1 true, falloff false, feature false, vertex flags colours 1 alpha 0
-14	17	17	colour above 1: combination: palette -, colour above 1 true, falloff false, feature false, vertex flags colours 1 alpha 1
+144	407	0	colour above 1: combination: palette -+alpha, colour above 1 true, falloff true, feature false, vertex flags colours 1 alpha 1
+166	2620	2270	colour above 1: combination: palette -, colour above 1 true, falloff false, feature false, vertex flags colours 0 alpha 0
+430	3814	3247	colour above 1: combination: palette -, colour above 1 true, falloff false, feature false, vertex flags colours 1 alpha 0
+14	17	16	colour above 1: combination: palette -, colour above 1 true, falloff false, feature false, vertex flags colours 1 alpha 1
 7	3	3	colour above 1: combination: palette -, colour above 1 true, falloff false, feature true, vertex flags colours 0 alpha 0
-34	102	101	colour above 1: combination: palette -, colour above 1 true, falloff false, feature true, vertex flags colours 1 alpha 0
+34	102	14	colour above 1: combination: palette -, colour above 1 true, falloff false, feature true, vertex flags colours 1 alpha 0
 3	0	0	colour above 1: combination: palette -, colour above 1 true, falloff false, feature true, vertex flags colours 1 alpha 1
 27	0	0	colour above 1: combination: palette -, colour above 1 true, falloff true, feature false, vertex flags colours 0 alpha 0
-208	6432	6378	colour above 1: combination: palette -, colour above 1 true, falloff true, feature false, vertex flags colours 1 alpha 0
+208	6432	5681	colour above 1: combination: palette -, colour above 1 true, falloff true, feature false, vertex flags colours 1 alpha 0
 62	123	123	colour above 1: combination: palette -, colour above 1 true, falloff true, feature false, vertex flags colours 1 alpha 1
 14	31	31	colour above 1: combination: palette -, colour above 1 true, falloff true, feature true, vertex flags colours 0 alpha 0
 19	10	9	colour above 1: combination: palette -, colour above 1 true, falloff true, feature true, vertex flags colours 1 alpha 0
@@ -2285,63 +2283,63 @@
 7	0	0	colour above 1: combination: palette colour+alpha, colour above 1 true, falloff false, feature false, vertex flags colours 1 alpha 1
 8	70	69	colour above 1: combination: palette colour+alpha, colour above 1 true, falloff false, feature true, vertex flags colours 0 alpha 0
 11	0	0	colour above 1: combination: palette colour+alpha, colour above 1 true, falloff true, feature false, vertex flags colours 0 alpha 0
-89	248	248	colour above 1: combination: palette colour+alpha, colour above 1 true, falloff true, feature false, vertex flags colours 1 alpha 0
+89	248	245	colour above 1: combination: palette colour+alpha, colour above 1 true, falloff true, feature false, vertex flags colours 1 alpha 0
 8	0	0	colour above 1: combination: palette colour+alpha, colour above 1 true, falloff true, feature false, vertex flags colours 1 alpha 1
 61	2	2	colour above 1: combination: palette colour, colour above 1 true, falloff false, feature false, vertex flags colours 0 alpha 0
 2	2	2	colour above 1: combination: palette colour, colour above 1 true, falloff false, feature false, vertex flags colours 0 alpha 1
-448	4388	4384	colour above 1: combination: palette colour, colour above 1 true, falloff false, feature false, vertex flags colours 1 alpha 0
+448	4388	3857	colour above 1: combination: palette colour, colour above 1 true, falloff false, feature false, vertex flags colours 1 alpha 0
 23	861	861	colour above 1: combination: palette colour, colour above 1 true, falloff false, feature false, vertex flags colours 1 alpha 1
 2	0	0	colour above 1: combination: palette colour, colour above 1 true, falloff false, feature true, vertex flags colours 0 alpha 0
 12	1334	1334	colour above 1: combination: palette colour, colour above 1 true, falloff false, feature true, vertex flags colours 1 alpha 0
 1	0	0	colour above 1: combination: palette colour, colour above 1 true, falloff false, feature true, vertex flags colours 1 alpha 1
 35	0	0	colour above 1: combination: palette colour, colour above 1 true, falloff true, feature false, vertex flags colours 0 alpha 0
-260	9555	9555	colour above 1: combination: palette colour, colour above 1 true, falloff true, feature false, vertex flags colours 1 alpha 0
+260	9555	9554	colour above 1: combination: palette colour, colour above 1 true, falloff true, feature false, vertex flags colours 1 alpha 0
 9	0	0	colour above 1: combination: palette colour, colour above 1 true, falloff true, feature false, vertex flags colours 1 alpha 1
 7	0	0	colour above 1: combination: palette colour, colour above 1 true, falloff true, feature true, vertex flags colours 1 alpha 0
 6	0	0	colour above 1: drawn texture's largest RGB x largest base colour x scale: 0.1 to 0.25
-6	92	92	colour above 1: drawn texture's largest RGB x largest base colour x scale: 0.25 to 0.5
-7	31	28	colour above 1: drawn texture's largest RGB x largest base colour x scale: 0.5 to 0.75
+6	92	6	colour above 1: drawn texture's largest RGB x largest base colour x scale: 0.25 to 0.5
+7	31	2	colour above 1: drawn texture's largest RGB x largest base colour x scale: 0.5 to 0.75
 21	61	61	colour above 1: drawn texture's largest RGB x largest base colour x scale: 0.75 to 1
-513	7025	7014	colour above 1: drawn texture's largest RGB x largest base colour x scale: 1 to 1.5
-235	3730	3610	colour above 1: drawn texture's largest RGB x largest base colour x scale: 1.5 to 2
-194	1067	1065	colour above 1: drawn texture's largest RGB x largest base colour x scale: 10 to 100
-601	8791	8787	colour above 1: drawn texture's largest RGB x largest base colour x scale: 2 to 5
-411	6033	6031	colour above 1: drawn texture's largest RGB x largest base colour x scale: 5 to 10
-144	1205	1136	colour above 1: drawn texture's largest RGB x largest base colour x scale: = 1.5
-109	54	54	colour above 1: drawn texture's largest RGB x largest base colour x scale: = 10
-211	2982	2981	colour above 1: drawn texture's largest RGB x largest base colour x scale: = 2
+513	7025	6531	colour above 1: drawn texture's largest RGB x largest base colour x scale: 1 to 1.5
+235	3730	3563	colour above 1: drawn texture's largest RGB x largest base colour x scale: 1.5 to 2
+194	1067	658	colour above 1: drawn texture's largest RGB x largest base colour x scale: 10 to 100
+601	8791	8675	colour above 1: drawn texture's largest RGB x largest base colour x scale: 2 to 5
+411	6033	5730	colour above 1: drawn texture's largest RGB x largest base colour x scale: 5 to 10
+144	1205	230	colour above 1: drawn texture's largest RGB x largest base colour x scale: = 1.5
+109	54	53	colour above 1: drawn texture's largest RGB x largest base colour x scale: = 10
+211	2982	2978	colour above 1: drawn texture's largest RGB x largest base colour x scale: = 2
 68	66	66	colour above 1: drawn texture's largest RGB x largest base colour x scale: = 5
 14	33	33	colour above 1: drawn texture's largest RGB x largest base colour x scale: no texture, 1 to 1.5
 10	8	8	colour above 1: drawn texture's largest RGB x largest base colour x scale: no texture, 1.5 to 2
-40	707	561	colour above 1: drawn texture's largest RGB x largest base colour x scale: no texture, 2 to 5
+40	707	560	colour above 1: drawn texture's largest RGB x largest base colour x scale: no texture, 2 to 5
 4	0	0	colour above 1: drawn texture's largest RGB x largest base colour x scale: no texture, 5 to 10
-6	2	1	colour above 1: drawn texture's largest RGB x largest base colour x scale: no texture, = 1.5
+6	2	0	colour above 1: drawn texture's largest RGB x largest base colour x scale: no texture, = 1.5
 2	0	0	colour above 1: drawn texture's largest RGB x largest base colour x scale: no texture, = 10
 9	148	148	colour above 1: drawn texture's largest RGB x largest base colour x scale: no texture, = 2
 4	0	0	colour above 1: drawn texture's largest RGB x largest base colour x scale: texture missing or unreadable
-177	1377	1374	colour above 1: largest base colour x scale 1 to 1.5, base colour 1 1 1, scale 1 to 1.5
-71	1218	1209	colour above 1: largest base colour x scale 1 to 1.5, base colour colour, scale 1 to 1.5
+177	1377	1372	colour above 1: largest base colour x scale 1 to 1.5, base colour 1 1 1, scale 1 to 1.5
+71	1218	1150	colour above 1: largest base colour x scale 1 to 1.5, base colour colour, scale 1 to 1.5
 3	1	1	colour above 1: largest base colour x scale 1 to 1.5, base colour colour, scale 1.5 to 2
-29	2393	2392	colour above 1: largest base colour x scale 1 to 1.5, base colour colour, scale 2 to 5
+29	2393	2351	colour above 1: largest base colour x scale 1 to 1.5, base colour colour, scale 2 to 5
 8	2	2	colour above 1: largest base colour x scale 1 to 1.5, base colour colour, scale = 1.5
-27	92	92	colour above 1: largest base colour x scale 1 to 1.5, base colour colour, scale = 2
+27	92	6	colour above 1: largest base colour x scale 1 to 1.5, base colour colour, scale = 2
 1	0	0	colour above 1: largest base colour x scale 1 to 1.5, base colour colour, scale = 5
 11	126	126	colour above 1: largest base colour x scale 1 to 1.5, base colour grey (r = g = b), scale 1 to 1.5
 14	0	0	colour above 1: largest base colour x scale 1 to 1.5, base colour grey (r = g = b), scale 2 to 5
 9	0	0	colour above 1: largest base colour x scale 1 to 1.5, base colour grey (r = g = b), scale = 1.5
 20	0	0	colour above 1: largest base colour x scale 1 to 1.5, base colour grey (r = g = b), scale = 2
-60	1309	1307	colour above 1: largest base colour x scale 1.5 to 2, base colour 1 1 1, scale 1.5 to 2
-54	1501	1495	colour above 1: largest base colour x scale 1.5 to 2, base colour colour, scale 1.5 to 2
+60	1309	1299	colour above 1: largest base colour x scale 1.5 to 2, base colour 1 1 1, scale 1.5 to 2
+54	1501	1457	colour above 1: largest base colour x scale 1.5 to 2, base colour colour, scale 1.5 to 2
 2	84	84	colour above 1: largest base colour x scale 1.5 to 2, base colour colour, scale 2 to 5
 23	71	71	colour above 1: largest base colour x scale 1.5 to 2, base colour colour, scale = 2
 4	0	0	colour above 1: largest base colour x scale 1.5 to 2, base colour grey (r = g = b), scale 1.5 to 2
 19	414	414	colour above 1: largest base colour x scale 1.5 to 2, base colour grey (r = g = b), scale 2 to 5
 6	8	8	colour above 1: largest base colour x scale 1.5 to 2, base colour grey (r = g = b), scale = 2
-176	1065	1063	colour above 1: largest base colour x scale 10 to 100, base colour 1 1 1, scale 10 to 100
+176	1065	656	colour above 1: largest base colour x scale 10 to 100, base colour 1 1 1, scale 10 to 100
 17	2	2	colour above 1: largest base colour x scale 10 to 100, base colour colour, scale 10 to 100
 5	0	0	colour above 1: largest base colour x scale 10 to 100, base colour grey (r = g = b), scale 10 to 100
-342	6643	6527	colour above 1: largest base colour x scale 2 to 5, base colour 1 1 1, scale 2 to 5
-195	1736	1590	colour above 1: largest base colour x scale 2 to 5, base colour colour, scale 2 to 5
+342	6643	6518	colour above 1: largest base colour x scale 2 to 5, base colour 1 1 1, scale 2 to 5
+195	1736	1485	colour above 1: largest base colour x scale 2 to 5, base colour colour, scale 2 to 5
 1	0	0	colour above 1: largest base colour x scale 2 to 5, base colour colour, scale 5 to 10
 9	1	1	colour above 1: largest base colour x scale 2 to 5, base colour colour, scale = 5
 61	871	871	colour above 1: largest base colour x scale 2 to 5, base colour grey (r = g = b), scale 2 to 5
@@ -2349,35 +2347,35 @@
 11	210	210	colour above 1: largest base colour x scale 2 to 5, base colour grey (r = g = b), scale = 5
 103	5397	5397	colour above 1: largest base colour x scale 5 to 10, base colour 1 1 1, scale 5 to 10
 1	0	0	colour above 1: largest base colour x scale 5 to 10, base colour colour, scale 2 to 5
-144	1308	1307	colour above 1: largest base colour x scale 5 to 10, base colour colour, scale 5 to 10
+144	1308	1114	colour above 1: largest base colour x scale 5 to 10, base colour colour, scale 5 to 10
 11	0	0	colour above 1: largest base colour x scale 5 to 10, base colour colour, scale = 10
 33	0	0	colour above 1: largest base colour x scale 5 to 10, base colour grey (r = g = b), scale 5 to 10
 12	2	2	colour above 1: largest base colour x scale 5 to 10, base colour grey (r = g = b), scale = 10
-274	847	834	colour above 1: largest base colour x scale = 1.5, base colour 1 1 1, scale = 1.5
-51	903	845	colour above 1: largest base colour x scale = 1.5, base colour colour, scale = 1.5
-196	491	490	colour above 1: largest base colour x scale = 10, base colour 1 1 1, scale = 10
+274	847	212	colour above 1: largest base colour x scale = 1.5, base colour 1 1 1, scale = 1.5
+51	903	153	colour above 1: largest base colour x scale = 1.5, base colour colour, scale = 1.5
+196	491	381	colour above 1: largest base colour x scale = 10, base colour 1 1 1, scale = 10
 37	25	25	colour above 1: largest base colour x scale = 10, base colour colour, scale = 10
-249	3464	3464	colour above 1: largest base colour x scale = 2, base colour 1 1 1, scale = 2
-53	8	7	colour above 1: largest base colour x scale = 2, base colour colour, scale = 2
+249	3464	3462	colour above 1: largest base colour x scale = 2, base colour 1 1 1, scale = 2
+53	8	6	colour above 1: largest base colour x scale = 2, base colour colour, scale = 2
 58	424	424	colour above 1: largest base colour x scale = 5, base colour 1 1 1, scale = 5
 33	42	42	colour above 1: largest base colour x scale = 5, base colour colour, scale = 5
-84	403	402	feature: environment map (from BGEM)
-308	5898	5866	feature: environment map (from NIF)
+84	403	227	feature: environment map (from BGEM)
+308	5898	5567	feature: environment map (from NIF)
 2	4	2	feature: environment map + fire refraction (from NIF)
-34	330	330	feature: environment map: texture set true, scale 0 to 0.1
+34	330	158	feature: environment map: texture set true, scale 0 to 0.1
 11	230	230	feature: environment map: texture set true, scale 0.1 to 0.25
 26	0	0	feature: environment map: texture set true, scale 0.25 to 0.5
-8	54	53	feature: environment map: texture set true, scale 0.5 to 0.75
+8	54	0	feature: environment map: texture set true, scale 0.5 to 0.75
 8	2	2	feature: environment map: texture set true, scale 0.75 to 1
 25	1752	1751	feature: environment map: texture set true, scale 1 to 1.5
-16	58	57	feature: environment map: texture set true, scale 10 to 100
+16	58	56	feature: environment map: texture set true, scale 10 to 100
 44	98	96	feature: environment map: texture set true, scale 2 to 5
 3	0	0	feature: environment map: texture set true, scale 5 to 10
 18	0	0	feature: environment map: texture set true, scale = 0.1
 21	6	6	feature: environment map: texture set true, scale = 0.25
-21	98	96	feature: environment map: texture set true, scale = 0.5
-34	652	632	feature: environment map: texture set true, scale = 0.75
-101	2903	2896	feature: environment map: texture set true, scale = 1
+21	98	91	feature: environment map: texture set true, scale = 0.5
+34	652	392	feature: environment map: texture set true, scale = 0.75
+101	2903	2893	feature: environment map: texture set true, scale = 1
 7	37	36	feature: environment map: texture set true, scale = 1.5
 12	12	12	feature: environment map: texture set true, scale = 10
 4	72	72	feature: environment map: texture set true, scale = 2
@@ -2386,81 +2384,81 @@
 19	67	67	feature: refraction (from NIF)
 4	0	0	palette source texture x variant: colour false alpha true: deviation of green 3 to 8 steps, of alpha more than 32 steps
 13	22	22	palette source texture x variant: colour false alpha true: deviation of green 9 to 32 steps, of alpha 9 to 32 steps
-8	5	4	palette source texture x variant: colour false alpha true: deviation of green 9 to 32 steps, of alpha at most 2 steps
-171	683	682	palette source texture x variant: colour false alpha true: deviation of green 9 to 32 steps, of alpha more than 32 steps
-5	4	3	palette source texture x variant: colour false alpha true: deviation of green at most 2 steps, of alpha 9 to 32 steps
+8	5	3	palette source texture x variant: colour false alpha true: deviation of green 9 to 32 steps, of alpha at most 2 steps
+171	683	275	palette source texture x variant: colour false alpha true: deviation of green 9 to 32 steps, of alpha more than 32 steps
+5	4	2	palette source texture x variant: colour false alpha true: deviation of green at most 2 steps, of alpha 9 to 32 steps
 59	9	1	palette source texture x variant: colour false alpha true: deviation of green at most 2 steps, of alpha at most 2 steps
 8	441	441	palette source texture x variant: colour false alpha true: deviation of green at most 2 steps, of alpha more than 32 steps
 6	0	0	palette source texture x variant: colour false alpha true: deviation of green more than 32 steps, of alpha 9 to 32 steps
-42	35	27	palette source texture x variant: colour false alpha true: deviation of green more than 32 steps, of alpha at most 2 steps
-182	396	389	palette source texture x variant: colour false alpha true: deviation of green more than 32 steps, of alpha more than 32 steps
+42	35	21	palette source texture x variant: colour false alpha true: deviation of green more than 32 steps, of alpha at most 2 steps
+182	396	380	palette source texture x variant: colour false alpha true: deviation of green more than 32 steps, of alpha more than 32 steps
 13	441	441	palette source texture x variant: colour false alpha true: rgb spread 3 to 8 steps, alpha against red more than 32 steps, alpha 0.00 to 1.00
 20	0	0	palette source texture x variant: colour false alpha true: rgb spread 9 to 32 steps, alpha against red 9 to 32 steps, alpha 0.00 to 1.00
 1	0	0	palette source texture x variant: colour false alpha true: rgb spread 9 to 32 steps, alpha against red 9 to 32 steps, alpha 0.50 to 1.00
-9	5	4	palette source texture x variant: colour false alpha true: rgb spread 9 to 32 steps, alpha against red more than 32 steps, alpha 0.00 to 0.75
-335	978	971	palette source texture x variant: colour false alpha true: rgb spread 9 to 32 steps, alpha against red more than 32 steps, alpha 0.00 to 1.00
+9	5	3	palette source texture x variant: colour false alpha true: rgb spread 9 to 32 steps, alpha against red more than 32 steps, alpha 0.00 to 0.75
+335	978	555	palette source texture x variant: colour false alpha true: rgb spread 9 to 32 steps, alpha against red more than 32 steps, alpha 0.00 to 1.00
 6	0	0	palette source texture x variant: colour false alpha true: rgb spread 9 to 32 steps, alpha against red more than 32 steps, alpha 0.50 to 1.00
-38	32	25	palette source texture x variant: colour false alpha true: rgb spread 9 to 32 steps, alpha against red more than 32 steps, alpha 1.00 to 1.00
+38	32	19	palette source texture x variant: colour false alpha true: rgb spread 9 to 32 steps, alpha against red more than 32 steps, alpha 1.00 to 1.00
 59	9	1	palette source texture x variant: colour false alpha true: rgb spread at most 2 steps, alpha against red at most 2 steps, alpha 1.00 to 1.00
 2	0	0	palette source texture x variant: colour false alpha true: rgb spread at most 2 steps, alpha against red more than 32 steps, alpha 0.00 to 1.00
 3	122	121	palette source texture x variant: colour false alpha true: rgb spread more than 32 steps, alpha against red more than 32 steps, alpha 0.00 to 1.00
-12	8	6	palette source texture x variant: colour false alpha true: rgb spread more than 32 steps, alpha against red more than 32 steps, alpha 1.00 to 1.00
+12	8	5	palette source texture x variant: colour false alpha true: rgb spread more than 32 steps, alpha against red more than 32 steps, alpha 1.00 to 1.00
 1	0	0	palette source texture x variant: colour true alpha false: deviation of green 3 to 8 steps, of alpha 3 to 8 steps
 40	51	51	palette source texture x variant: colour true alpha false: deviation of green 3 to 8 steps, of alpha 9 to 32 steps
 18	201	201	palette source texture x variant: colour true alpha false: deviation of green 3 to 8 steps, of alpha more than 32 steps
-181	1747	1567	palette source texture x variant: colour true alpha false: deviation of green 9 to 32 steps, of alpha 9 to 32 steps
+181	1747	1560	palette source texture x variant: colour true alpha false: deviation of green 9 to 32 steps, of alpha 9 to 32 steps
 8	1334	1334	palette source texture x variant: colour true alpha false: deviation of green 9 to 32 steps, of alpha at most 2 steps
 97	845	844	palette source texture x variant: colour true alpha false: deviation of green 9 to 32 steps, of alpha more than 32 steps
 6	210	210	palette source texture x variant: colour true alpha false: deviation of green at most 2 steps, of alpha 9 to 32 steps
 11	23	23	palette source texture x variant: colour true alpha false: deviation of green at most 2 steps, of alpha at most 2 steps
-58	256	256	palette source texture x variant: colour true alpha false: deviation of green at most 2 steps, of alpha more than 32 steps
+58	256	255	palette source texture x variant: colour true alpha false: deviation of green at most 2 steps, of alpha more than 32 steps
 3	0	0	palette source texture x variant: colour true alpha false: deviation of green more than 32 steps, of alpha 9 to 32 steps
-137	1039	1036	palette source texture x variant: colour true alpha false: deviation of green more than 32 steps, of alpha at most 2 steps
-633	15589	15584	palette source texture x variant: colour true alpha false: deviation of green more than 32 steps, of alpha more than 32 steps
+137	1039	515	palette source texture x variant: colour true alpha false: deviation of green more than 32 steps, of alpha at most 2 steps
+633	15589	15564	palette source texture x variant: colour true alpha false: deviation of green more than 32 steps, of alpha more than 32 steps
 2	0	0	palette source texture x variant: colour true alpha false: rgb spread 3 to 8 steps, alpha against red 9 to 32 steps, alpha 0.00 to 1.00
 3	0	0	palette source texture x variant: colour true alpha false: rgb spread 3 to 8 steps, alpha against red more than 32 steps, alpha 0.00 to 0.75
 73	2120	2120	palette source texture x variant: colour true alpha false: rgb spread 3 to 8 steps, alpha against red more than 32 steps, alpha 0.00 to 1.00
 1	0	0	palette source texture x variant: colour true alpha false: rgb spread 3 to 8 steps, alpha against red more than 32 steps, alpha 0.25 to 1.00
 2	0	0	palette source texture x variant: colour true alpha false: rgb spread 9 to 32 steps, alpha against red 3 to 8 steps, alpha 0.00 to 1.00
-129	4548	4546	palette source texture x variant: colour true alpha false: rgb spread 9 to 32 steps, alpha against red 9 to 32 steps, alpha 0.00 to 1.00
-102	855	675	palette source texture x variant: colour true alpha false: rgb spread 9 to 32 steps, alpha against red more than 32 steps, alpha 0.00 to 0.50
+129	4548	4539	palette source texture x variant: colour true alpha false: rgb spread 9 to 32 steps, alpha against red 9 to 32 steps, alpha 0.00 to 1.00
+102	855	668	palette source texture x variant: colour true alpha false: rgb spread 9 to 32 steps, alpha against red more than 32 steps, alpha 0.00 to 0.50
 47	0	0	palette source texture x variant: colour true alpha false: rgb spread 9 to 32 steps, alpha against red more than 32 steps, alpha 0.00 to 0.75
-596	9943	9939	palette source texture x variant: colour true alpha false: rgb spread 9 to 32 steps, alpha against red more than 32 steps, alpha 0.00 to 1.00
+596	9943	9926	palette source texture x variant: colour true alpha false: rgb spread 9 to 32 steps, alpha against red more than 32 steps, alpha 0.00 to 1.00
 1	0	0	palette source texture x variant: colour true alpha false: rgb spread 9 to 32 steps, alpha against red more than 32 steps, alpha 0.25 to 1.00
 1	5	5	palette source texture x variant: colour true alpha false: rgb spread 9 to 32 steps, alpha against red more than 32 steps, alpha 0.50 to 1.00
-40	518	518	palette source texture x variant: colour true alpha false: rgb spread 9 to 32 steps, alpha against red more than 32 steps, alpha 1.00 to 1.00
+40	518	512	palette source texture x variant: colour true alpha false: rgb spread 9 to 32 steps, alpha against red more than 32 steps, alpha 1.00 to 1.00
 11	23	23	palette source texture x variant: colour true alpha false: rgb spread at most 2 steps, alpha against red at most 2 steps, alpha 1.00 to 1.00
 5	0	0	palette source texture x variant: colour true alpha false: rgb spread at most 2 steps, alpha against red more than 32 steps, alpha 0.00 to 0.75
-41	462	462	palette source texture x variant: colour true alpha false: rgb spread at most 2 steps, alpha against red more than 32 steps, alpha 0.00 to 1.00
+41	462	461	palette source texture x variant: colour true alpha false: rgb spread at most 2 steps, alpha against red more than 32 steps, alpha 0.00 to 1.00
 6	0	0	palette source texture x variant: colour true alpha false: rgb spread more than 32 steps, alpha against red more than 32 steps, alpha 0.00 to 0.75
 19	157	157	palette source texture x variant: colour true alpha false: rgb spread more than 32 steps, alpha against red more than 32 steps, alpha 0.00 to 1.00
 9	809	809	palette source texture x variant: colour true alpha false: rgb spread more than 32 steps, alpha against red more than 32 steps, alpha 0.25 to 0.75
-105	1855	1852	palette source texture x variant: colour true alpha false: rgb spread more than 32 steps, alpha against red more than 32 steps, alpha 1.00 to 1.00
+105	1855	1337	palette source texture x variant: colour true alpha false: rgb spread more than 32 steps, alpha against red more than 32 steps, alpha 1.00 to 1.00
 1	0	0	palette source texture x variant: colour true alpha true: deviation of green 3 to 8 steps, of alpha more than 32 steps
-37	1207	1187	palette source texture x variant: colour true alpha true: deviation of green 9 to 32 steps, of alpha 9 to 32 steps
+37	1207	151	palette source texture x variant: colour true alpha true: deviation of green 9 to 32 steps, of alpha 9 to 32 steps
 47	99	99	palette source texture x variant: colour true alpha true: deviation of green 9 to 32 steps, of alpha more than 32 steps
 4	0	0	palette source texture x variant: colour true alpha true: deviation of green at most 2 steps, of alpha at most 2 steps
 2	0	0	palette source texture x variant: colour true alpha true: deviation of green at most 2 steps, of alpha more than 32 steps
 24	136	136	palette source texture x variant: colour true alpha true: deviation of green more than 32 steps, of alpha 9 to 32 steps
 8	70	69	palette source texture x variant: colour true alpha true: deviation of green more than 32 steps, of alpha at most 2 steps
-482	4322	4308	palette source texture x variant: colour true alpha true: deviation of green more than 32 steps, of alpha more than 32 steps
+482	4322	4076	palette source texture x variant: colour true alpha true: deviation of green more than 32 steps, of alpha more than 32 steps
 6	0	0	palette source texture x variant: colour true alpha true: rgb spread 3 to 8 steps, alpha against red 9 to 32 steps, alpha 0.00 to 1.00
 2	0	0	palette source texture x variant: colour true alpha true: rgb spread 3 to 8 steps, alpha against red more than 32 steps, alpha 0.00 to 1.00
 12	70	69	palette source texture x variant: colour true alpha true: rgb spread 3 to 8 steps, alpha against red more than 32 steps, alpha 1.00 to 1.00
 32	1	1	palette source texture x variant: colour true alpha true: rgb spread 9 to 32 steps, alpha against red 9 to 32 steps, alpha 0.00 to 1.00
-8	1056	1036	palette source texture x variant: colour true alpha true: rgb spread 9 to 32 steps, alpha against red more than 32 steps, alpha 0.00 to 0.50
+8	1056	0	palette source texture x variant: colour true alpha true: rgb spread 9 to 32 steps, alpha against red more than 32 steps, alpha 0.00 to 0.50
 53	142	142	palette source texture x variant: colour true alpha true: rgb spread 9 to 32 steps, alpha against red more than 32 steps, alpha 0.00 to 0.75
-478	2886	2872	palette source texture x variant: colour true alpha true: rgb spread 9 to 32 steps, alpha against red more than 32 steps, alpha 0.00 to 1.00
+478	2886	2640	palette source texture x variant: colour true alpha true: rgb spread 9 to 32 steps, alpha against red more than 32 steps, alpha 0.00 to 1.00
 2	0	0	palette source texture x variant: colour true alpha true: rgb spread 9 to 32 steps, alpha against red more than 32 steps, alpha 0.50 to 1.00
 2	0	0	palette source texture x variant: colour true alpha true: rgb spread at most 2 steps, alpha against red more than 32 steps, alpha 0.00 to 1.00
 10	1679	1679	palette source texture x variant: colour true alpha true: rgb spread more than 32 steps, alpha against red more than 32 steps, alpha 0.00 to 1.00
 12	70	69	palette source texture: BC1Alpha, rgb spread 3 to 8 steps
-47	27	21	palette source texture: BC1Alpha, rgb spread 9 to 32 steps
+47	27	16	palette source texture: BC1Alpha, rgb spread 9 to 32 steps
 49	31	23	palette source texture: BC1Alpha, rgb spread at most 2 steps
-117	1863	1858	palette source texture: BC1Alpha, rgb spread more than 32 steps
+117	1863	1342	palette source texture: BC1Alpha, rgb spread more than 32 steps
 100	2561	2561	palette source texture: BC3, rgb spread 3 to 8 steps
-1853	20942	20713	palette source texture: BC3, rgb spread 9 to 32 steps
-71	463	463	palette source texture: BC3, rgb spread at most 2 steps
+1853	20942	18994	palette source texture: BC3, rgb spread 9 to 32 steps
+71	463	462	palette source texture: BC3, rgb spread at most 2 steps
 47	2767	2766	palette source texture: BC3, rgb spread more than 32 steps
 6	19	19	palette source texture: missing or unreadable
 4	0	0	palette source texture: red 0.00 to 0.25, alpha 1.00 to 1.00, alpha against red more than 32 steps
@@ -2470,57 +2468,57 @@
 4	1	0	palette source texture: red 0.00 to 0.75, alpha 0.00 to 1.00, alpha against red more than 32 steps
 54	143	143	palette source texture: red 0.00 to 1.00, alpha 0.00 to 0.75, alpha against red more than 32 steps
 2	0	0	palette source texture: red 0.00 to 1.00, alpha 0.00 to 1.00, alpha against red 3 to 8 steps
-189	4549	4547	palette source texture: red 0.00 to 1.00, alpha 0.00 to 1.00, alpha against red 9 to 32 steps
-1244	16808	16783	palette source texture: red 0.00 to 1.00, alpha 0.00 to 1.00, alpha against red more than 32 steps
+189	4549	4540	palette source texture: red 0.00 to 1.00, alpha 0.00 to 1.00, alpha against red 9 to 32 steps
+1244	16808	16529	palette source texture: red 0.00 to 1.00, alpha 0.00 to 1.00, alpha against red more than 32 steps
 9	809	809	palette source texture: red 0.00 to 1.00, alpha 0.25 to 0.75, alpha against red more than 32 steps
 1	0	0	palette source texture: red 0.00 to 1.00, alpha 0.25 to 1.00, alpha against red more than 32 steps
-193	1149	1136	palette source texture: red 0.00 to 1.00, alpha 1.00 to 1.00, alpha against red more than 32 steps
+193	1149	608	palette source texture: red 0.00 to 1.00, alpha 1.00 to 1.00, alpha against red more than 32 steps
 16	14	14	palette source texture: red 0.25 to 0.75, alpha 0.00 to 1.00, alpha against red more than 32 steps
-110	1911	1711	palette source texture: red 0.25 to 1.00, alpha 0.00 to 0.50, alpha against red more than 32 steps
+110	1911	668	palette source texture: red 0.25 to 1.00, alpha 0.00 to 0.50, alpha against red more than 32 steps
 52	283	283	palette source texture: red 0.25 to 1.00, alpha 0.00 to 1.00, alpha against red more than 32 steps
 1	0	0	palette source texture: red 0.25 to 1.00, alpha 0.25 to 1.00, alpha against red more than 32 steps
 4	0	0	palette source texture: red 0.25 to 1.00, alpha 0.50 to 1.00, alpha against red more than 32 steps
 38	0	0	palette source texture: red 0.50 to 1.00, alpha 0.00 to 0.75, alpha against red more than 32 steps
-161	573	573	palette source texture: red 0.50 to 1.00, alpha 0.00 to 1.00, alpha against red more than 32 steps
+161	573	166	palette source texture: red 0.50 to 1.00, alpha 0.00 to 1.00, alpha against red more than 32 steps
 5	5	5	palette source texture: red 0.50 to 1.00, alpha 0.50 to 1.00, alpha against red more than 32 steps
-8	4	3	palette source texture: red 0.75 to 1.00, alpha 0.00 to 0.75, alpha against red more than 32 steps
+8	4	2	palette source texture: red 0.75 to 1.00, alpha 0.00 to 0.75, alpha against red more than 32 steps
 51	647	647	palette source texture: red 0.75 to 1.00, alpha 0.00 to 1.00, alpha against red more than 32 steps
 1	0	0	palette source texture: red 0.75 to 1.00, alpha 0.50 to 1.00, alpha against red 9 to 32 steps
 5	0	0	palette source texture: red 1.00 to 1.00, alpha 0.00 to 0.75, alpha against red more than 32 steps
-45	462	462	palette source texture: red 1.00 to 1.00, alpha 0.00 to 1.00, alpha against red more than 32 steps
+45	462	461	palette source texture: red 1.00 to 1.00, alpha 0.00 to 1.00, alpha against red more than 32 steps
 70	32	24	palette source texture: red 1.00 to 1.00, alpha 1.00 to 1.00, alpha against red at most 2 steps
 2	0	0	palette texture x variant: colour false alpha true: alpha 0.00 to 0.75, alpha along U constant
-361	1491	1480	palette texture x variant: colour false alpha true: alpha 0.00 to 1.00, alpha along U constant
-131	104	89	palette texture x variant: colour false alpha true: alpha 0.00 to 1.00, alpha along U non-decreasing
+361	1491	1073	palette texture x variant: colour false alpha true: alpha 0.00 to 1.00, alpha along U constant
+131	104	72	palette texture x variant: colour false alpha true: alpha 0.00 to 1.00, alpha along U non-decreasing
 15	31	31	palette texture x variant: colour false alpha true: luminance rises along U false along V false; alpha rises along U false along V false
 44	240	240	palette texture x variant: colour false alpha true: luminance rises along U false along V false; alpha rises along U true along V true
 1	0	0	palette texture x variant: colour false alpha true: luminance rises along U false along V true; alpha rises along U true along V true
 38	58	58	palette texture x variant: colour false alpha true: luminance rises along U true along V false; alpha rises along U true along V true
-128	80	57	palette texture x variant: colour false alpha true: luminance rises along U true along V true; alpha rises along U true along V false
-268	1186	1183	palette texture x variant: colour false alpha true: luminance rises along U true along V true; alpha rises along U true along V true
+128	80	40	palette texture x variant: colour false alpha true: luminance rises along U true along V true; alpha rises along U true along V false
+268	1186	776	palette texture x variant: colour false alpha true: luminance rises along U true along V true; alpha rises along U true along V true
 2	0	0	palette texture x variant: colour true alpha false: alpha 0.00 to 0.50, alpha along U constant
-957	19763	19578	palette texture x variant: colour true alpha false: alpha 0.00 to 1.00, alpha along U constant
+957	19763	19551	palette texture x variant: colour true alpha false: alpha 0.00 to 1.00, alpha along U constant
 64	624	623	palette texture x variant: colour true alpha false: alpha 0.00 to 1.00, alpha along U non-decreasing
 6	64	64	palette texture x variant: colour true alpha false: alpha 0.00 to 1.00, alpha along U non-increasing
-17	15	15	palette texture x variant: colour true alpha false: alpha 0.00 to 1.00, alpha along U rises and falls
-141	833	830	palette texture x variant: colour true alpha false: alpha 1.00 to 1.00, alpha along U constant
+17	15	8	palette texture x variant: colour true alpha false: alpha 0.00 to 1.00, alpha along U rises and falls
+141	833	315	palette texture x variant: colour true alpha false: alpha 1.00 to 1.00, alpha along U constant
 11	1	1	palette texture x variant: colour true alpha false: luminance rises along U false along V false; alpha rises along U false along V false
 2	0	0	palette texture x variant: colour true alpha false: luminance rises along U false along V false; alpha rises along U true along V false
-210	3155	3147	palette texture x variant: colour true alpha false: luminance rises along U false along V false; alpha rises along U true along V true
+210	3155	2719	palette texture x variant: colour true alpha false: luminance rises along U false along V false; alpha rises along U true along V true
 7	0	0	palette texture x variant: colour true alpha false: luminance rises along U false along V true; alpha rises along U false along V false
 1	0	0	palette texture x variant: colour true alpha false: luminance rises along U false along V true; alpha rises along U true along V false
 3	0	0	palette texture x variant: colour true alpha false: luminance rises along U false along V true; alpha rises along U true along V true
 6	157	157	palette texture x variant: colour true alpha false: luminance rises along U true along V false; alpha rises along U false along V false
 3	0	0	palette texture x variant: colour true alpha false: luminance rises along U true along V false; alpha rises along U true along V false
-240	3680	3679	palette texture x variant: colour true alpha false: luminance rises along U true along V false; alpha rises along U true along V true
+240	3680	3571	palette texture x variant: colour true alpha false: luminance rises along U true along V false; alpha rises along U true along V true
 4	0	0	palette texture x variant: colour true alpha false: luminance rises along U true along V true; alpha rises along U false along V false
-36	880	880	palette texture x variant: colour true alpha false: luminance rises along U true along V true; alpha rises along U false along V true
+36	880	873	palette texture x variant: colour true alpha false: luminance rises along U true along V true; alpha rises along U false along V true
 24	2	1	palette texture x variant: colour true alpha false: luminance rises along U true along V true; alpha rises along U true along V false
-640	13424	13245	palette texture x variant: colour true alpha false: luminance rises along U true along V true; alpha rises along U true along V true
+640	13424	13239	palette texture x variant: colour true alpha false: luminance rises along U true along V true; alpha rises along U true along V true
 1	0	0	palette texture x variant: colour true alpha true: alpha 0.00 to 0.50, alpha along U constant
 2	14	14	palette texture x variant: colour true alpha true: alpha 0.00 to 0.50, alpha along U non-decreasing
 21	182	181	palette texture x variant: colour true alpha true: alpha 0.00 to 0.75, alpha along U constant
-465	5337	5308	palette texture x variant: colour true alpha true: alpha 0.00 to 1.00, alpha along U constant
+465	5337	4040	palette texture x variant: colour true alpha true: alpha 0.00 to 1.00, alpha along U constant
 82	301	296	palette texture x variant: colour true alpha true: alpha 0.00 to 1.00, alpha along U non-decreasing
 24	0	0	palette texture x variant: colour true alpha true: alpha 0.00 to 1.00, alpha along U non-increasing
 9	0	0	palette texture x variant: colour true alpha true: alpha 0.00 to 1.00, alpha along U rises and falls
@@ -2539,12 +2537,12 @@
 6	0	0	palette texture x variant: colour true alpha true: luminance rises along U true along V true; alpha rises along U false along V false
 19	134	134	palette texture x variant: colour true alpha true: luminance rises along U true along V true; alpha rises along U false along V true
 25	8	3	palette texture x variant: colour true alpha true: luminance rises along U true along V true; alpha rises along U true along V false
-282	5155	5126	palette texture x variant: colour true alpha true: luminance rises along U true along V true; alpha rises along U true along V true
-99	521	518	palette texture: BC1Alpha 32x32 (drawn level 32x32)
+282	5155	3858	palette texture x variant: colour true alpha true: luminance rises along U true along V true; alpha rises along U true along V true
+99	521	3	palette texture: BC1Alpha 32x32 (drawn level 32x32)
 141	89	89	palette texture: BC3 128x128 (drawn level 128x128)
 12	0	0	palette texture: BC3 16x16 (drawn level 16x16)
-5	15	15	palette texture: BC3 256x256 (drawn level 256x256)
-144	407	407	palette texture: BC3 256x512 (drawn level 128x256)
+5	15	8	palette texture: BC3 256x256 (drawn level 256x256)
+144	407	0	palette texture: BC3 256x512 (drawn level 128x256)
 10	0	0	palette texture: BC3 256x64 (drawn level 256x64)
 61	525	525	palette texture: BC3 32x32 (drawn level 32x32)
 3	471	471	palette texture: BC3 512x512 (drawn level 256x256)
@@ -2552,10 +2550,10 @@
 7	0	0	palette texture: BC3 64x64 (drawn level 64x64)
 87	192	191	palette texture: BGRA8 128x128 (drawn level 128x128)
 3	0	0	palette texture: BGRA8 256x128 (drawn level 256x128)
-83	612	612	palette texture: BGRA8 256x256 (drawn level 256x256)
+83	612	383	palette texture: BGRA8 256x256 (drawn level 256x256)
 1	0	0	palette texture: BGRA8 256x64 (drawn level 256x64)
 7	41	41	palette texture: BGRA8 32x128 (drawn level 32x128)
-1397	25557	25327	palette texture: BGRA8 32x32 (drawn level 32x32)
+1397	25557	24244	palette texture: BGRA8 32x32 (drawn level 32x32)
 17	111	111	palette texture: BGRA8 512x512 (drawn level 256x256)
 11	0	0	palette texture: BGRA8 512x64 (drawn level 256x32)
 8	0	0	palette texture: BGRA8 64x256 (drawn level 64x256)
@@ -2564,21 +2562,21 @@
 2	0	0	palette texture: along U red constant, alpha constant; rgb spread 3 to 8 steps; alpha 0.00 to 1.00
 2	0	0	palette texture: along U red constant, alpha constant; rgb spread 9 to 32 steps; alpha 0.00 to 0.75
 26	5	4	palette texture: along U red constant, alpha constant; rgb spread 9 to 32 steps; alpha 0.00 to 1.00
-284	3905	3699	palette texture: along U red constant, alpha constant; rgb spread at most 2 steps; alpha 0.00 to 1.00
+284	3905	2256	palette texture: along U red constant, alpha constant; rgb spread at most 2 steps; alpha 0.00 to 1.00
 1	0	0	palette texture: along U red constant, alpha constant; rgb spread at most 2 steps; alpha 1.00 to 1.00
 9	112	112	palette texture: along U red constant, alpha constant; rgb spread more than 32 steps; alpha 0.00 to 0.75
-915	16030	16028	palette texture: along U red constant, alpha constant; rgb spread more than 32 steps; alpha 0.00 to 1.00
-124	562	559	palette texture: along U red constant, alpha constant; rgb spread more than 32 steps; alpha 1.00 to 1.00
+915	16030	16024	palette texture: along U red constant, alpha constant; rgb spread more than 32 steps; alpha 0.00 to 1.00
+124	562	44	palette texture: along U red constant, alpha constant; rgb spread more than 32 steps; alpha 1.00 to 1.00
 19	134	134	palette texture: along U red constant, alpha non-decreasing; rgb spread 9 to 32 steps; alpha 0.00 to 1.00
-85	72	57	palette texture: along U red constant, alpha non-decreasing; rgb spread at most 2 steps; alpha 0.00 to 1.00
+85	72	40	palette texture: along U red constant, alpha non-decreasing; rgb spread at most 2 steps; alpha 0.00 to 1.00
 41	1	1	palette texture: along U red constant, alpha non-decreasing; rgb spread more than 32 steps; alpha 0.00 to 1.00
 1	0	0	palette texture: along U red constant, alpha rises and falls; rgb spread at most 2 steps; alpha 0.00 to 1.00
 7	0	0	palette texture: along U red constant, alpha rises and falls; rgb spread more than 32 steps; alpha 0.00 to 1.00
-35	612	612	palette texture: along U red non-decreasing, alpha constant; rgb spread 9 to 32 steps; alpha 0.00 to 1.00
+35	612	383	palette texture: along U red non-decreasing, alpha constant; rgb spread 9 to 32 steps; alpha 0.00 to 1.00
 13	2	1	palette texture: along U red non-decreasing, alpha constant; rgb spread at most 2 steps; alpha 0.00 to 1.00
 3	0	0	palette texture: along U red non-decreasing, alpha constant; rgb spread more than 32 steps; alpha 0.00 to 0.50
 8	70	69	palette texture: along U red non-decreasing, alpha constant; rgb spread more than 32 steps; alpha 0.00 to 0.75
-289	3844	3844	palette texture: along U red non-decreasing, alpha constant; rgb spread more than 32 steps; alpha 0.00 to 1.00
+289	3844	3839	palette texture: along U red non-decreasing, alpha constant; rgb spread more than 32 steps; alpha 0.00 to 1.00
 5	0	0	palette texture: along U red non-decreasing, alpha constant; rgb spread more than 32 steps; alpha 1.00 to 1.00
 2	0	0	palette texture: along U red non-decreasing, alpha non-decreasing; rgb spread 3 to 8 steps; alpha 0.00 to 1.00
 22	6	0	palette texture: along U red non-decreasing, alpha non-decreasing; rgb spread 9 to 32 steps; alpha 0.00 to 1.00
@@ -2592,18 +2590,18 @@
 2	0	0	palette texture: along U red non-increasing, alpha non-increasing; rgb spread more than 32 steps; alpha 0.00 to 1.00
 45	716	707	palette texture: along U red rises and falls, alpha constant; rgb spread 9 to 32 steps; alpha 0.00 to 1.00
 4	0	0	palette texture: along U red rises and falls, alpha constant; rgb spread more than 32 steps; alpha 0.00 to 0.75
-111	1445	1439	palette texture: along U red rises and falls, alpha constant; rgb spread more than 32 steps; alpha 0.00 to 1.00
+111	1445	1418	palette texture: along U red rises and falls, alpha constant; rgb spread more than 32 steps; alpha 0.00 to 1.00
 11	271	271	palette texture: along U red rises and falls, alpha constant; rgb spread more than 32 steps; alpha 1.00 to 1.00
 10	0	0	palette texture: along U red rises and falls, alpha non-decreasing; rgb spread 9 to 32 steps; alpha 0.00 to 1.00
 3	0	0	palette texture: along U red rises and falls, alpha non-decreasing; rgb spread at most 2 steps; alpha 0.00 to 1.00
 12	0	0	palette texture: along U red rises and falls, alpha non-decreasing; rgb spread more than 32 steps; alpha 0.00 to 1.00
-6	15	15	palette texture: along U red rises and falls, alpha rises and falls; rgb spread more than 32 steps; alpha 0.00 to 1.00
+6	15	8	palette texture: along U red rises and falls, alpha rises and falls; rgb spread more than 32 steps; alpha 0.00 to 1.00
 1	0	0	palette texture: along U red rises and falls, alpha rises and falls; rgb spread more than 32 steps; alpha 0.75 to 1.00
 7	0	0	palette texture: missing or unreadable
 9	15	15	palette texture: not set
 1	0	0	palette texture: rows differ by at most 2 steps; columns differ by at most 2 steps
-67	159	150	palette texture: rows differ by more than 32 steps; columns differ by at most 2 steps
-2218	28569	28328	palette texture: rows differ by more than 32 steps; columns differ by more than 32 steps
+67	159	42	palette texture: rows differ by more than 32 steps; columns differ by at most 2 steps
+2218	28569	26195	palette texture: rows differ by more than 32 steps; columns differ by more than 32 steps
 7	14	14	palette: base colour 0 0 0, scale 0.75 to 1, alpha = 0
 2	0	0	palette: base colour 0 0 0, scale 1 to 1.5, alpha 0.1 to 0.25
 1	0	0	palette: base colour 0 0 0, scale 1 to 1.5, alpha 0.5 to 0.75
@@ -2620,7 +2618,7 @@
 10	1681	1681	palette: base colour 1 1 1, scale 0.75 to 1, alpha 0.75 to 1
 1	0	0	palette: base colour 1 1 1, scale 0.75 to 1, alpha 1 to 1.5
 1	0	0	palette: base colour 1 1 1, scale 0.75 to 1, alpha = 0
-2	229	229	palette: base colour 1 1 1, scale 0.75 to 1, alpha = 0.25
+2	229	0	palette: base colour 1 1 1, scale 0.75 to 1, alpha = 0.25
 1	1	1	palette: base colour 1 1 1, scale 0.75 to 1, alpha = 0.5
 3	0	0	palette: base colour 1 1 1, scale 0.75 to 1, alpha = 1
 4	67	67	palette: base colour 1 1 1, scale 1 to 1.5, alpha 0 to 0.1
@@ -2629,7 +2627,7 @@
 6	1	1	palette: base colour 1 1 1, scale 1 to 1.5, alpha 0.75 to 1
 8	282	281	palette: base colour 1 1 1, scale 1 to 1.5, alpha 1 to 1.5
 13	69	69	palette: base colour 1 1 1, scale 1 to 1.5, alpha = 0
-11	9	7	palette: base colour 1 1 1, scale 1 to 1.5, alpha = 0.1
+11	9	5	palette: base colour 1 1 1, scale 1 to 1.5, alpha = 0.1
 3	39	39	palette: base colour 1 1 1, scale 1 to 1.5, alpha = 0.75
 40	638	638	palette: base colour 1 1 1, scale 1 to 1.5, alpha = 1
 5	0	0	palette: base colour 1 1 1, scale 1 to 1.5, alpha = 1.5
@@ -2638,12 +2636,12 @@
 2	0	0	palette: base colour 1 1 1, scale 1.5 to 2, alpha 0.75 to 1
 1	0	0	palette: base colour 1 1 1, scale 1.5 to 2, alpha 1 to 1.5
 3	0	0	palette: base colour 1 1 1, scale 1.5 to 2, alpha = 0
-8	7	5	palette: base colour 1 1 1, scale 1.5 to 2, alpha = 0.1
-15	14	14	palette: base colour 1 1 1, scale 1.5 to 2, alpha = 1
+8	7	3	palette: base colour 1 1 1, scale 1.5 to 2, alpha = 0.1
+15	14	8	palette: base colour 1 1 1, scale 1.5 to 2, alpha = 1
 7	0	0	palette: base colour 1 1 1, scale 10 to 100, alpha 0.75 to 1
 4	0	0	palette: base colour 1 1 1, scale 10 to 100, alpha 1 to 1.5
 15	0	0	palette: base colour 1 1 1, scale 10 to 100, alpha = 0
-146	1065	1063	palette: base colour 1 1 1, scale 10 to 100, alpha = 1
+146	1065	656	palette: base colour 1 1 1, scale 10 to 100, alpha = 1
 1	0	0	palette: base colour 1 1 1, scale 10 to 100, alpha = 2
 1	0	0	palette: base colour 1 1 1, scale 2 to 5, alpha 0 to 0.1
 14	1705	1705	palette: base colour 1 1 1, scale 2 to 5, alpha 0.25 to 0.5
@@ -2652,10 +2650,10 @@
 7	4	4	palette: base colour 1 1 1, scale 2 to 5, alpha 2 to 5
 4	1	1	palette: base colour 1 1 1, scale 2 to 5, alpha < 0
 33	42	42	palette: base colour 1 1 1, scale 2 to 5, alpha = 0
-15	12	9	palette: base colour 1 1 1, scale 2 to 5, alpha = 0.1
+15	12	7	palette: base colour 1 1 1, scale 2 to 5, alpha = 0.1
 4	382	382	palette: base colour 1 1 1, scale 2 to 5, alpha = 0.5
 9	542	542	palette: base colour 1 1 1, scale 2 to 5, alpha = 0.75
-96	1020	1020	palette: base colour 1 1 1, scale 2 to 5, alpha = 1
+96	1020	1016	palette: base colour 1 1 1, scale 2 to 5, alpha = 1
 2	0	0	palette: base colour 1 1 1, scale 2 to 5, alpha = 1.5
 12	0	0	palette: base colour 1 1 1, scale 2 to 5, alpha = 2
 2	0	0	palette: base colour 1 1 1, scale 5 to 10, alpha 0.25 to 0.5
@@ -2671,15 +2669,15 @@
 4	0	0	palette: base colour 1 1 1, scale = 0.75, alpha = 0
 1	1	1	palette: base colour 1 1 1, scale = 0.75, alpha = 0.5
 8	0	0	palette: base colour 1 1 1, scale = 1, alpha 0.1 to 0.25
-66	1795	1608	palette: base colour 1 1 1, scale = 1, alpha 0.25 to 0.5
-36	295	293	palette: base colour 1 1 1, scale = 1, alpha 0.5 to 0.75
+66	1795	1594	palette: base colour 1 1 1, scale = 1, alpha 0.25 to 0.5
+36	295	286	palette: base colour 1 1 1, scale = 1, alpha 0.5 to 0.75
 14	652	651	palette: base colour 1 1 1, scale = 1, alpha 0.75 to 1
 7	0	0	palette: base colour 1 1 1, scale = 1, alpha 1 to 1.5
 1	1	1	palette: base colour 1 1 1, scale = 1, alpha 2 to 5
 9	67	67	palette: base colour 1 1 1, scale = 1, alpha < 0
 28	354	354	palette: base colour 1 1 1, scale = 1, alpha = 0
 1	0	0	palette: base colour 1 1 1, scale = 1, alpha = 0.25
-12	1056	1036	palette: base colour 1 1 1, scale = 1, alpha = 0.5
+12	1056	0	palette: base colour 1 1 1, scale = 1, alpha = 0.5
 12	3	3	palette: base colour 1 1 1, scale = 1, alpha = 0.75
 155	938	929	palette: base colour 1 1 1, scale = 1, alpha = 1
 4	0	0	palette: base colour 1 1 1, scale = 1, alpha = 2
@@ -2690,16 +2688,16 @@
 1	0	0	palette: base colour 1 1 1, scale = 1.5, alpha 1 to 1.5
 1	0	0	palette: base colour 1 1 1, scale = 1.5, alpha < 0
 4	0	0	palette: base colour 1 1 1, scale = 1.5, alpha = 0
-49	42	34	palette: base colour 1 1 1, scale = 1.5, alpha = 0.1
-4	2	2	palette: base colour 1 1 1, scale = 1.5, alpha = 0.25
-177	447	447	palette: base colour 1 1 1, scale = 1.5, alpha = 1
+49	42	24	palette: base colour 1 1 1, scale = 1.5, alpha = 0.1
+4	2	1	palette: base colour 1 1 1, scale = 1.5, alpha = 0.25
+177	447	40	palette: base colour 1 1 1, scale = 1.5, alpha = 1
 3	0	0	palette: base colour 1 1 1, scale = 1.5, alpha = 2
 1	0	0	palette: base colour 1 1 1, scale = 10, alpha 0.5 to 0.75
 76	0	0	palette: base colour 1 1 1, scale = 10, alpha 0.75 to 1
 14	4	4	palette: base colour 1 1 1, scale = 10, alpha = 0
-1	1	1	palette: base colour 1 1 1, scale = 10, alpha = 0.5
+1	1	0	palette: base colour 1 1 1, scale = 10, alpha = 0.5
 1	0	0	palette: base colour 1 1 1, scale = 10, alpha = 0.75
-45	462	461	palette: base colour 1 1 1, scale = 10, alpha = 1
+45	462	353	palette: base colour 1 1 1, scale = 10, alpha = 1
 3	0	0	palette: base colour 1 1 1, scale = 2, alpha 0.1 to 0.25
 6	14	14	palette: base colour 1 1 1, scale = 2, alpha 0.25 to 0.5
 2	308	308	palette: base colour 1 1 1, scale = 2, alpha 0.5 to 0.75
@@ -2723,7 +2721,7 @@
 2	0	0	palette: base colour colour, scale 1 to 1.5, alpha 0.75 to 1
 4	0	0	palette: base colour colour, scale 1 to 1.5, alpha = 1
 10	1202	1202	palette: base colour colour, scale 1.5 to 2, alpha 0.5 to 0.75
-2	8	8	palette: base colour colour, scale 1.5 to 2, alpha 0.75 to 1
+2	8	3	palette: base colour colour, scale 1.5 to 2, alpha 0.75 to 1
 2	0	0	palette: base colour colour, scale 10 to 100, alpha = 0
 4	0	0	palette: base colour colour, scale 10 to 100, alpha = 0.25
 1	0	0	palette: base colour colour, scale 10 to 100, alpha = 0.75
@@ -2818,7 +2816,7 @@
 2	0	0	palette: blend: blend 0 src 6 dst 7 test 1 func 4 threshold 122
 5	0	0	palette: blend: blend 1 src 1 dst 2 test 0 func 4 threshold 0
 2	0	0	palette: blend: blend 1 src 1 dst 2 test 1 func 4 threshold 5
-1140	16421	16397	palette: blend: blend 1 src 6 dst 0 test 0 func 4 threshold 0
+1140	16421	16147	palette: blend: blend 1 src 6 dst 0 test 0 func 4 threshold 0
 2	0	0	palette: blend: blend 1 src 6 dst 0 test 1 func 4 threshold 0
 41	477	477	palette: blend: blend 1 src 6 dst 0 test 1 func 4 threshold 1
 11	0	0	palette: blend: blend 1 src 6 dst 0 test 1 func 4 threshold 128
@@ -2826,19 +2824,19 @@
 12	1679	1679	palette: blend: blend 1 src 6 dst 0 test 1 func 4 threshold 2
 3	0	0	palette: blend: blend 1 src 6 dst 0 test 1 func 4 threshold 255
 3	0	0	palette: blend: blend 1 src 6 dst 0 test 1 func 4 threshold 37
-869	6926	6901	palette: blend: blend 1 src 6 dst 7 test 0 func 4 threshold 0
+869	6926	6467	palette: blend: blend 1 src 6 dst 7 test 0 func 4 threshold 0
 7	54	54	palette: blend: blend 1 src 6 dst 7 test 1 func 4 threshold 1
 6	0	0	palette: blend: blend 1 src 6 dst 7 test 1 func 4 threshold 128
 1	0	0	palette: blend: blend 1 src 6 dst 7 test 1 func 4 threshold 130
 1	0	0	palette: blend: blend 1 src 6 dst 7 test 1 func 4 threshold 158
 22	0	0	palette: blend: blend 1 src 6 dst 7 test 1 func 4 threshold 2
 1	0	0	palette: blend: blend 1 src 6 dst 7 test 1 func 4 threshold 8
-64	346	344	palette: blend: material blend 0 src 6 dst 7 test 0
+64	346	2	palette: blend: material blend 0 src 6 dst 7 test 0
 1	0	0	palette: blend: material blend 1 src 4 dst 1 test 0
-13	1497	1477	palette: blend: material blend 1 src 6 dst 0 test 0
+13	1497	441	palette: blend: material blend 1 src 6 dst 0 test 0
 36	345	167	palette: blend: material blend 1 src 6 dst 7 test 0
 10	0	0	palette: blend: material blend 1 src 6 dst 7 test 1
-49	998	997	palette: blend: no alpha property
+49	998	818	palette: blend: no alpha property
 12	0	0	palette: combination: palette -+alpha, colour above 1 false, falloff false, feature false, vertex flags colours 0 alpha 0
 84	220	212	palette: combination: palette -+alpha, colour above 1 false, falloff false, feature false, vertex flags colours 1 alpha 0
 6	25	25	palette: combination: palette -+alpha, colour above 1 false, falloff false, feature true, vertex flags colours 1 alpha 0
@@ -2847,18 +2845,18 @@
 10	108	108	palette: combination: palette -+alpha, colour above 1 false, falloff true, feature false, vertex flags colours 1 alpha 1
 2	1	0	palette: combination: palette -+alpha, colour above 1 false, falloff true, feature true, vertex flags colours 1 alpha 0
 38	30	15	palette: combination: palette -+alpha, colour above 1 true, falloff false, feature false, vertex flags colours 0 alpha 0
-93	299	299	palette: combination: palette -+alpha, colour above 1 true, falloff false, feature false, vertex flags colours 1 alpha 0
+93	299	282	palette: combination: palette -+alpha, colour above 1 true, falloff false, feature false, vertex flags colours 1 alpha 0
 2	0	0	palette: combination: palette -+alpha, colour above 1 true, falloff false, feature false, vertex flags colours 1 alpha 1
 2	0	0	palette: combination: palette -+alpha, colour above 1 true, falloff false, feature true, vertex flags colours 1 alpha 0
 7	0	0	palette: combination: palette -+alpha, colour above 1 true, falloff true, feature false, vertex flags colours 0 alpha 0
 78	2	2	palette: combination: palette -+alpha, colour above 1 true, falloff true, feature false, vertex flags colours 1 alpha 0
-144	407	407	palette: combination: palette -+alpha, colour above 1 true, falloff true, feature false, vertex flags colours 1 alpha 1
+144	407	0	palette: combination: palette -+alpha, colour above 1 true, falloff true, feature false, vertex flags colours 1 alpha 1
 7	0	0	palette: combination: palette colour+alpha, colour above 1 false, falloff false, feature false, vertex flags colours 0 alpha 0
 82	29	29	palette: combination: palette colour+alpha, colour above 1 false, falloff false, feature false, vertex flags colours 1 alpha 0
 9	0	0	palette: combination: palette colour+alpha, colour above 1 false, falloff false, feature false, vertex flags colours 1 alpha 1
 9	0	0	palette: combination: palette colour+alpha, colour above 1 false, falloff false, feature true, vertex flags colours 0 alpha 0
 44	1934	1929	palette: combination: palette colour+alpha, colour above 1 false, falloff false, feature true, vertex flags colours 1 alpha 0
-36	1560	1531	palette: combination: palette colour+alpha, colour above 1 false, falloff true, feature false, vertex flags colours 1 alpha 0
+36	1560	266	palette: combination: palette colour+alpha, colour above 1 false, falloff true, feature false, vertex flags colours 1 alpha 0
 18	308	308	palette: combination: palette colour+alpha, colour above 1 false, falloff true, feature false, vertex flags colours 1 alpha 1
 1	0	0	palette: combination: palette colour+alpha, colour above 1 false, falloff true, feature true, vertex flags colours 1 alpha 0
 15	0	0	palette: combination: palette colour+alpha, colour above 1 true, falloff false, feature false, vertex flags colours 0 alpha 0
@@ -2866,7 +2864,7 @@
 7	0	0	palette: combination: palette colour+alpha, colour above 1 true, falloff false, feature false, vertex flags colours 1 alpha 1
 8	70	69	palette: combination: palette colour+alpha, colour above 1 true, falloff false, feature true, vertex flags colours 0 alpha 0
 11	0	0	palette: combination: palette colour+alpha, colour above 1 true, falloff true, feature false, vertex flags colours 0 alpha 0
-89	248	248	palette: combination: palette colour+alpha, colour above 1 true, falloff true, feature false, vertex flags colours 1 alpha 0
+89	248	245	palette: combination: palette colour+alpha, colour above 1 true, falloff true, feature false, vertex flags colours 1 alpha 0
 8	0	0	palette: combination: palette colour+alpha, colour above 1 true, falloff true, feature false, vertex flags colours 1 alpha 1
 30	206	206	palette: combination: palette colour, colour above 1 false, falloff false, feature false, vertex flags colours 0 alpha 0
 146	2706	2527	palette: combination: palette colour, colour above 1 false, falloff false, feature false, vertex flags colours 1 alpha 0
@@ -2874,26 +2872,26 @@
 4	0	0	palette: combination: palette colour, colour above 1 false, falloff false, feature true, vertex flags colours 0 alpha 0
 3	0	0	palette: combination: palette colour, colour above 1 false, falloff false, feature true, vertex flags colours 1 alpha 0
 9	0	0	palette: combination: palette colour, colour above 1 false, falloff true, feature false, vertex flags colours 0 alpha 0
-90	1557	1551	palette: combination: palette colour, colour above 1 false, falloff true, feature false, vertex flags colours 1 alpha 0
+90	1557	1530	palette: combination: palette colour, colour above 1 false, falloff true, feature false, vertex flags colours 1 alpha 0
 49	611	611	palette: combination: palette colour, colour above 1 false, falloff true, feature false, vertex flags colours 1 alpha 1
 1	23	23	palette: combination: palette colour, colour above 1 false, falloff true, feature true, vertex flags colours 1 alpha 0
 61	2	2	palette: combination: palette colour, colour above 1 true, falloff false, feature false, vertex flags colours 0 alpha 0
 2	2	2	palette: combination: palette colour, colour above 1 true, falloff false, feature false, vertex flags colours 0 alpha 1
-448	4388	4384	palette: combination: palette colour, colour above 1 true, falloff false, feature false, vertex flags colours 1 alpha 0
+448	4388	3857	palette: combination: palette colour, colour above 1 true, falloff false, feature false, vertex flags colours 1 alpha 0
 23	861	861	palette: combination: palette colour, colour above 1 true, falloff false, feature false, vertex flags colours 1 alpha 1
 2	0	0	palette: combination: palette colour, colour above 1 true, falloff false, feature true, vertex flags colours 0 alpha 0
 12	1334	1334	palette: combination: palette colour, colour above 1 true, falloff false, feature true, vertex flags colours 1 alpha 0
 1	0	0	palette: combination: palette colour, colour above 1 true, falloff false, feature true, vertex flags colours 1 alpha 1
 35	0	0	palette: combination: palette colour, colour above 1 true, falloff true, feature false, vertex flags colours 0 alpha 0
-260	9555	9555	palette: combination: palette colour, colour above 1 true, falloff true, feature false, vertex flags colours 1 alpha 0
+260	9555	9554	palette: combination: palette colour, colour above 1 true, falloff true, feature false, vertex flags colours 1 alpha 0
 9	0	0	palette: combination: palette colour, colour above 1 true, falloff true, feature false, vertex flags colours 1 alpha 1
 7	0	0	palette: combination: palette colour, colour above 1 true, falloff true, feature true, vertex flags colours 1 alpha 0
 3	441	441	palette: variant colour false alpha true (from BGEM)
-496	1154	1128	palette: variant colour false alpha true (from NIF)
-114	691	511	palette: variant colour true alpha false (from BGEM)
-1082	20623	20614	palette: variant colour true alpha false (from NIF)
-7	1056	1036	palette: variant colour true alpha true (from BGEM)
-600	4778	4763	palette: variant colour true alpha true (from NIF)
+496	1154	704	palette: variant colour false alpha true (from NIF)
+114	691	169	palette: variant colour true alpha false (from BGEM)
+1082	20623	20407	palette: variant colour true alpha false (from NIF)
+7	1056	0	palette: variant colour true alpha true (from BGEM)
+600	4778	4531	palette: variant colour true alpha true (from NIF)
 191	312	294	palette: vertex data: no vertex colours
 669	3392	3390	palette: vertex data: no vertex data
 4	0	0	palette: vertex data: vertex colours: rgb all 1, alpha all 1
@@ -2903,12 +2901,252 @@
 8	2	0	palette: vertex data: vertex colours: rgb all 1, alpha min 0.3
 2	0	0	palette: vertex data: vertex colours: rgb all 1, alpha min 0.4
 5	0	0	palette: vertex data: vertex colours: rgb all 1, alpha min 0.5
-216	2185	2182	palette: vertex data: vertex colours: rgb vary, alpha all 1
-928	19612	19391	palette: vertex data: vertex colours: rgb vary, alpha min 0.0
+216	2185	1775	palette: vertex data: vertex colours: rgb vary, alpha all 1
+928	19612	17671	palette: vertex data: vertex colours: rgb vary, alpha min 0.0
 6	1179	1179	palette: vertex data: vertex colours: rgb vary, alpha min 0.1
 4	155	155	palette: vertex data: vertex colours: rgb vary, alpha min 0.2
 2	19	19	palette: vertex data: vertex colours: rgb vary, alpha min 0.4
 2	0	0	palette: vertex data: vertex colours: rgb vary, alpha min 0.5
 1	0	0	palette: vertex data: vertex colours: rgb vary, alpha min 0.6
-22	110	109	palette: vertex data: vertex colours: rgb vary, alpha min 0.8
-4	13	13	palette: vertex data: vertex colours: rgb vary, alpha min 0.9
+22	110	1	palette: vertex data: vertex colours: rgb vary, alpha min 0.8
+4	13	7	palette: vertex data: vertex colours: rgb vary, alpha min 0.9
+
+# Environment map (shapes whose drawn fields set it): shapes, placements of their models, omitted placements
+
+3	0	0	base colour 0 0 0, scale 1.5 to 2, alpha = 0.5
+1	0	0	base colour 0 0 0, scale 1.5 to 2, alpha = 0.75
+1	2	1	base colour 0 0 0, scale = 0, alpha 2 to 5
+4	2	0	base colour 0 0 0, scale = 1, alpha = 0.75
+13	0	0	base colour 0 0 0, scale = 2, alpha = 0.5
+1	0	0	base colour 1 1 1, scale 0.1 to 0.25, alpha = 0
+2	0	0	base colour 1 1 1, scale 0.25 to 0.5, alpha = 1
+8	1679	1679	base colour 1 1 1, scale 0.75 to 1, alpha 0.75 to 1
+3	1	1	base colour 1 1 1, scale 1 to 1.5, alpha 0.75 to 1
+5	69	68	base colour 1 1 1, scale 1 to 1.5, alpha 1 to 1.5
+3	0	0	base colour 1 1 1, scale 1 to 1.5, alpha = 0
+1	3	3	base colour 1 1 1, scale 1 to 1.5, alpha = 1
+6	1333	1333	base colour 1 1 1, scale 2 to 5, alpha 0.75 to 1
+9	10	8	base colour 1 1 1, scale 2 to 5, alpha 1 to 1.5
+1	1	1	base colour 1 1 1, scale 2 to 5, alpha < 0
+1	0	0	base colour 1 1 1, scale 2 to 5, alpha = 1
+1	0	0	base colour 1 1 1, scale = 0, alpha = 0.25
+2	79	79	base colour 1 1 1, scale = 0.1, alpha = 0.5
+2	0	0	base colour 1 1 1, scale = 0.1, alpha = 1
+37	655	395	base colour 1 1 1, scale = 0.5, alpha 0.75 to 1
+1	22	22	base colour 1 1 1, scale = 0.5, alpha = 1
+10	0	0	base colour 1 1 1, scale = 1, alpha 0.1 to 0.25
+7	7	0	base colour 1 1 1, scale = 1, alpha 0.25 to 0.5
+4	1	0	base colour 1 1 1, scale = 1, alpha 0.5 to 0.75
+11	29	29	base colour 1 1 1, scale = 1, alpha 0.75 to 1
+3	2	2	base colour 1 1 1, scale = 1, alpha 1 to 1.5
+9	67	67	base colour 1 1 1, scale = 1, alpha < 0
+9	253	253	base colour 1 1 1, scale = 1, alpha = 0
+14	0	0	base colour 1 1 1, scale = 1, alpha = 0.75
+62	193	188	base colour 1 1 1, scale = 1, alpha = 1
+4	0	0	base colour 1 1 1, scale = 1.5, alpha = 1
+6	0	0	base colour 1 1 1, scale = 2, alpha = 0
+28	0	0	base colour 1 1 1, scale = 2, alpha = 1
+3	22	22	base colour colour, scale 0.75 to 1, alpha = 0.1
+2	0	0	base colour colour, scale 1 to 1.5, alpha 1 to 1.5
+10	10	10	base colour colour, scale 1 to 1.5, alpha 1.5 to 2
+11	0	0	base colour colour, scale 1 to 1.5, alpha = 0
+1	0	0	base colour colour, scale 1 to 1.5, alpha = 1
+2	0	0	base colour colour, scale 2 to 5, alpha 0 to 0.1
+2	2	2	base colour colour, scale 2 to 5, alpha 0.75 to 1
+2	6	5	base colour colour, scale 2 to 5, alpha 2 to 5
+2	0	0	base colour colour, scale 2 to 5, alpha = 0
+1	31	31	base colour colour, scale 2 to 5, alpha = 1
+2	0	0	base colour colour, scale = 0, alpha = 0
+2	136	136	base colour colour, scale = 0.75, alpha = 1
+4	52	0	base colour colour, scale = 1, alpha 0.25 to 0.5
+2	16	16	base colour colour, scale = 1, alpha 0.5 to 0.75
+1	40	40	base colour colour, scale = 1, alpha = 0
+1	0	0	base colour colour, scale = 1, alpha = 0.1
+1	3	3	base colour colour, scale = 1, alpha = 0.25
+2	5	0	base colour colour, scale = 1, alpha = 0.5
+14	1316	1316	base colour colour, scale = 1, alpha = 1
+1	0	0	base colour colour, scale = 1.5, alpha = 0
+7	0	0	base colour colour, scale = 1.5, alpha = 1
+4	4	4	base colour colour, scale = 2, alpha 1 to 1.5
+6	92	6	base colour colour, scale = 2, alpha = 1
+6	0	0	base colour colour, scale = 5, alpha = 1
+4	0	0	base colour grey (r = g = b), scale 0.1 to 0.25, alpha 0.75 to 1
+2	2	2	base colour grey (r = g = b), scale 1 to 1.5, alpha = 1
+2	0	0	base colour grey (r = g = b), scale = 1, alpha 1 to 1.5
+10	67	67	base colour grey (r = g = b), scale = 1, alpha < 0
+2	0	0	base colour grey (r = g = b), scale = 1, alpha = 0
+10	93	7	base colour grey (r = g = b), scale = 1, alpha = 1
+3	0	0	base colour grey (r = g = b), scale = 2, alpha = 1
+1	1175	1175	blend: blend 1 src 1 dst 2 test 0 func 4 threshold 0
+81	1686	1682	blend: blend 1 src 6 dst 0 test 0 func 4 threshold 0
+1	1	1	blend: blend 1 src 6 dst 0 test 1 func 4 threshold 128
+8	1679	1679	blend: blend 1 src 6 dst 0 test 1 func 4 threshold 2
+216	1321	992	blend: blend 1 src 6 dst 7 test 0 func 4 threshold 0
+1	0	0	blend: blend 1 src 6 dst 7 test 1 func 4 threshold 158
+1	0	0	blend: blend 1 src 6 dst 7 test 1 func 4 threshold 37
+1	40	40	blend: blend 1 src 6 dst 7 test 1 func 4 threshold 57
+12	142	141	blend: material blend 1 src 6 dst 0 test 0
+41	166	80	blend: material blend 1 src 6 dst 7 test 0
+31	95	6	blend: material blend 1 src 6 dst 7 test 1
+130	2180	1828	drawn texture: BC1Alpha colour, alpha 1 everywhere
+40	314	314	drawn texture: BC1Alpha grey, alpha 1 everywhere
+17	53	1	drawn texture: BC3 colour, alpha varies (min 0.00, max 0.25)
+7	3	3	drawn texture: BC3 colour, alpha varies (min 0.00, max 0.50)
+60	206	196	drawn texture: BC3 colour, alpha varies (min 0.00, max 0.75)
+46	249	158	drawn texture: BC3 colour, alpha varies (min 0.00, max 1.00)
+17	144	144	drawn texture: BC3 colour, alpha varies (min 0.25, max 0.75)
+18	1702	1699	drawn texture: BC3 colour, alpha varies (min 0.25, max 1.00)
+21	2	2	drawn texture: BC3 colour, alpha varies (min 0.50, max 0.75)
+19	207	207	drawn texture: BC3 colour, alpha varies (min 0.50, max 1.00)
+9	70	69	drawn texture: BC3 colour, alpha varies (min 0.75, max 1.00)
+1	1175	1175	drawn texture: BC3 grey, alpha varies (min 0.50, max 1.00)
+9	0	0	drawn texture: no texture
+31	1596	1421	environment texture: cube of 6 faces, BC1Alpha 32x32, 6 levels, mean rgb colour
+363	4709	4375	environment texture: cube of 6 faces, BGRA8 128x128, 8 levels, mean rgb colour
+17	42	42	flags: NIF Environment_Mapping 0, BGEM flag (version 10 on) -, common flag (before 10) 1
+67	361	185	flags: NIF Environment_Mapping 1, BGEM flag (version 10 on) -, common flag (before 10) 1
+1	1	1	mask texture: BC1Alpha, R 0.00 to 1.00 mean 0.0, G 0.00 to 1.00 mean 0.0, B 0.00 to 1.00 mean 0.0, A 1.00 to 1.00 mean 1.0
+9	103	102	mask texture: BC1Alpha, R 0.00 to 1.00 mean 0.2, G 0.00 to 1.00 mean 0.2, B 0.00 to 1.00 mean 0.2, A 1.00 to 1.00 mean 1.0
+2	4	2	mask texture: BC1Alpha, R 0.00 to 1.00 mean 0.7, G 0.00 to 1.00 mean 0.7, B 0.00 to 1.00 mean 0.7, A 1.00 to 1.00 mean 1.0
+2	1	0	mask texture: BC1Alpha, R 0.00 to 1.00 mean 0.9, G 0.00 to 1.00 mean 0.9, B 0.00 to 1.00 mean 0.9, A 1.00 to 1.00 mean 1.0
+2	18	18	mask texture: BC1Alpha, R 0.25 to 1.00 mean 0.8, G 0.25 to 1.00 mean 0.8, B 0.25 to 1.00 mean 0.8, A 1.00 to 1.00 mean 1.0
+10	32	32	mask texture: BC3, R 0.00 to 0.25 mean 0.1, G 0.00 to 0.25 mean 0.1, B 0.00 to 0.25 mean 0.1, A 0.00 to 1.00 mean 0.7
+3	0	0	mask texture: BC3, R 0.00 to 1.00 mean 0.1, G 0.00 to 1.00 mean 0.1, B 0.00 to 1.00 mean 0.1, A 1.00 to 1.00 mean 1.0
+5	17	17	mask texture: BC3, R 0.25 to 0.75 mean 0.5, G 0.25 to 0.75 mean 0.6, B 0.25 to 0.75 mean 0.5, A 0.00 to 0.75 mean 0.4
+10	10	10	mask texture: BC5, R 0.00 to 0.50 mean 0.2, G 0.00 to 0.25 mean 0.1, B 0.00 to 0.00 mean 0.0, A 1.00 to 1.00 mean 1.0
+1	0	0	mask texture: BC5, R 0.00 to 0.75 mean 0.0, G 1.00 to 1.00 mean 1.0, B 0.00 to 0.00 mean 0.0, A 1.00 to 1.00 mean 1.0
+2	0	0	mask texture: BC5, R 0.00 to 0.75 mean 0.2, G 0.00 to 1.00 mean 0.6, B 0.00 to 0.00 mean 0.0, A 1.00 to 1.00 mean 1.0
+2	3	0	mask texture: BC5, R 0.00 to 0.75 mean 0.2, G 1.00 to 1.00 mean 1.0, B 0.00 to 0.00 mean 0.0, A 1.00 to 1.00 mean 1.0
+6	0	0	mask texture: BC5, R 0.00 to 0.75 mean 0.5, G 0.00 to 0.75 mean 0.5, B 0.00 to 0.00 mean 0.0, A 1.00 to 1.00 mean 1.0
+4	0	0	mask texture: BC5, R 0.00 to 1.00 mean 0.2, G 1.00 to 1.00 mean 1.0, B 0.00 to 0.00 mean 0.0, A 1.00 to 1.00 mean 1.0
+1	0	0	mask texture: BC5, R 0.00 to 1.00 mean 0.3, G 0.00 to 1.00 mean 0.4, B 0.00 to 0.00 mean 0.0, A 1.00 to 1.00 mean 1.0
+1	22	22	mask texture: BC5, R 0.00 to 1.00 mean 0.4, G 0.00 to 1.00 mean 0.5, B 0.00 to 0.00 mean 0.0, A 1.00 to 1.00 mean 1.0
+1	0	0	mask texture: BC5, R 0.00 to 1.00 mean 0.4, G 0.00 to 1.00 mean 0.7, B 0.00 to 0.00 mean 0.0, A 1.00 to 1.00 mean 1.0
+14	0	0	mask texture: BC5, R 0.00 to 1.00 mean 0.6, G 0.50 to 0.75 mean 0.5, B 0.00 to 0.00 mean 0.0, A 1.00 to 1.00 mean 1.0
+4	0	0	mask texture: BC5, no small level
+314	6094	5592	mask texture: slot empty
+6	25	25	other terms: palette -+alpha, falloff false, colour above 1 false, other features 
+2	0	0	other terms: palette -+alpha, falloff false, colour above 1 true, other features 
+2	1	0	other terms: palette -+alpha, falloff true, colour above 1 false, other features 
+100	1596	1448	other terms: palette -, falloff false, colour above 1 false, other features 
+44	105	17	other terms: palette -, falloff false, colour above 1 true, other features 
+116	1174	910	other terms: palette -, falloff true, colour above 1 false, other features 
+1	2	1	other terms: palette -, falloff true, colour above 1 false, other features fire refraction
+34	39	39	other terms: palette -, falloff true, colour above 1 true, other features 
+1	2	1	other terms: palette -, falloff true, colour above 1 true, other features fire refraction
+53	1934	1929	other terms: palette colour+alpha, falloff false, colour above 1 false, other features 
+8	70	69	other terms: palette colour+alpha, falloff false, colour above 1 true, other features 
+1	0	0	other terms: palette colour+alpha, falloff true, colour above 1 false, other features 
+7	0	0	other terms: palette colour, falloff false, colour above 1 false, other features 
+15	1334	1334	other terms: palette colour, falloff false, colour above 1 true, other features 
+1	23	23	other terms: palette colour, falloff true, colour above 1 false, other features 
+3	0	0	other terms: palette colour, falloff true, colour above 1 true, other features 
+22	146	146	scale (the drawn field): 0 to 0.1
+12	184	12	scale (the drawn field): 0 to 0.1, NIF field 0 to 0.1
+11	230	230	scale (the drawn field): 0.1 to 0.25
+26	0	0	scale (the drawn field): 0.25 to 0.5
+8	54	0	scale (the drawn field): 0.5 to 0.75
+8	2	2	scale (the drawn field): 0.75 to 1
+17	1682	1682	scale (the drawn field): 1 to 1.5
+8	70	69	scale (the drawn field): 1 to 1.5, NIF field 1 to 1.5
+3	33	31	scale (the drawn field): 10 to 100
+13	25	25	scale (the drawn field): 10 to 100, NIF field 10 to 100
+10	10	10	scale (the drawn field): 10 to 100, NIF field = 10
+39	80	78	scale (the drawn field): 2 to 5
+2	3	3	scale (the drawn field): 2 to 5, NIF field 2 to 5
+3	0	0	scale (the drawn field): 5 to 10
+18	0	0	scale (the drawn field): = 0.1
+21	6	6	scale (the drawn field): = 0.25
+19	98	91	scale (the drawn field): = 0.5
+1	0	0	scale (the drawn field): = 0.5, NIF field 2 to 5
+2	0	0	scale (the drawn field): = 0.5, NIF field = 0.5
+1	22	22	scale (the drawn field): = 0.5, NIF field = 1.5
+34	652	392	scale (the drawn field): = 0.75
+71	2898	2891	scale (the drawn field): = 1
+1	0	0	scale (the drawn field): = 1, NIF field 2 to 5
+30	5	2	scale (the drawn field): = 1, NIF field = 1
+6	15	14	scale (the drawn field): = 1.5
+1	15	15	scale (the drawn field): = 1.5, NIF field 2 to 5
+2	2	2	scale (the drawn field): = 10
+1	3	3	scale (the drawn field): = 2
+3	69	69	scale (the drawn field): = 2, NIF field = 2
+1	1	1	scale (the drawn field): = 5
+67	1452	1452	slots: environment true, mask false, normal false; scale 0 false
+247	4642	4140	slots: environment true, mask false, normal true; scale 0 false
+10	32	32	slots: environment true, mask true, normal false; scale 0 false
+70	179	172	slots: environment true, mask true, normal true; scale 0 false
+84	403	227	source: BGEM
+310	5902	5569	source: NIF
+182	1033	764	vertex data: no vertex colours; flags colours 0 alpha 0
+13	0	0	vertex data: vertex colours: rgb all 1, alpha all 1; flags colours 1 alpha 0
+88	477	364	vertex data: vertex colours: rgb all 1, alpha min 0.0; flags colours 1 alpha 0
+9	7	7	vertex data: vertex colours: rgb all 1, alpha min 0.0; flags colours 1 alpha 1
+8	5	4	vertex data: vertex colours: rgb all 1, alpha min 0.2; flags colours 1 alpha 0
+4	2	0	vertex data: vertex colours: rgb all 1, alpha min 0.3; flags colours 1 alpha 0
+1	33	0	vertex data: vertex colours: rgb all 1, alpha min 0.4; flags colours 1 alpha 0
+2	0	0	vertex data: vertex colours: rgb all 1, alpha min 0.4; flags colours 1 alpha 1
+6	6	6	vertex data: vertex colours: rgb all 1, alpha min 0.6; flags colours 1 alpha 0
+1	0	0	vertex data: vertex colours: rgb all 1, alpha min 0.7; flags colours 1 alpha 0
+1	0	0	vertex data: vertex colours: rgb all 1, alpha min 0.7; flags colours 1 alpha 1
+2	101	101	vertex data: vertex colours: rgb all 1, alpha min 0.8; flags colours 1 alpha 0
+15	124	123	vertex data: vertex colours: rgb vary, alpha all 1; flags colours 1 alpha 0
+46	3096	3092	vertex data: vertex colours: rgb vary, alpha min 0.0; flags colours 1 alpha 0
+3	0	0	vertex data: vertex colours: rgb vary, alpha min 0.0; flags colours 1 alpha 1
+4	1179	1179	vertex data: vertex colours: rgb vary, alpha min 0.1; flags colours 1 alpha 0
+3	155	155	vertex data: vertex colours: rgb vary, alpha min 0.2; flags colours 1 alpha 0
+2	0	0	vertex data: vertex colours: rgb vary, alpha min 0.5; flags colours 1 alpha 0
+4	87	1	vertex data: vertex colours: rgb vary, alpha min 0.9; flags colours 1 alpha 0
+
+# Controlled fields under material swaps (swap pairs whose source material has driven fields)
+
+4	driven fields that differ: alpha (base colour alpha): NIF 0.1 to 0.25 first key 0.1 to 0.25 replacement = 0.1; other differences: 
+2	driven fields that differ: alpha (base colour alpha): NIF = 1 first key = 1 replacement 0.75 to 1; other differences: base colour scale
+1	driven fields that differ: alpha (base colour alpha): NIF = 1 first key = 1 replacement = 0.1; other differences: base colour scale
+1	driven fields that differ: alpha (base colour alpha): NIF = 1 first key = 1 replacement = 0.1; other differences: greyscale texture, falloff fields, flags
+3	driven fields that differ: alpha (base colour alpha): NIF = 1 first key = 1 replacement = 0.25; other differences: 
+1	driven fields that differ: alpha (base colour alpha): NIF = 1 first key = 1 replacement = 0.5; other differences: base colour scale
+1	driven fields that differ: base colour scale (emissive multiple): NIF = 0 first key = 0 replacement = 0.5; other differences: 
+3	driven fields that differ: u offset: NIF = 0 first key = 0 replacement 0 to 0.1; other differences: alpha, falloff fields
+3	driven fields that differ: u offset: NIF = 0 first key = 0 replacement 0 to 0.1; other differences: base colour, alpha, uv scale, falloff fields
+3	driven fields that differ: u offset: NIF = 0 first key = 0 replacement 0 to 0.1; other differences: greyscale texture, alpha, falloff fields
+3	driven fields that differ: v offset: NIF = 0 first key = 0 replacement 0 to 0.1; other differences: alpha, falloff fields
+3	driven fields that differ: v offset: NIF = 0 first key = 0 replacement 0 to 0.1; other differences: base colour, alpha, uv scale, falloff fields
+3	driven fields that differ: v offset: NIF = 0 first key = 0 replacement 0 to 0.1; other differences: greyscale texture, alpha, falloff fields
+12	driven fields: alpha (base colour alpha): replacement != NIF stored; NIF stored = first key; replacement below the first key; every key equal true
+10	driven fields: alpha (base colour alpha): replacement = NIF stored
+2	driven fields: base colour rgb: replacement = NIF stored
+1	driven fields: base colour scale (emissive multiple): replacement != NIF stored; NIF stored = first key; replacement above the first key; every key equal true
+9	driven fields: u offset: replacement != NIF stored; NIF stored = first key; replacement above the first key; every key equal false
+62	driven fields: u offset: replacement = NIF stored
+9	driven fields: v offset: replacement != NIF stored; NIF stored = first key; replacement above the first key; every key equal false
+64	driven fields: v offset: replacement = NIF stored
+14	pairs: replacement differs from the source in: alpha
+3	pairs: replacement differs from the source in: alpha, uv offset, falloff fields
+4	pairs: replacement differs from the source in: alpha, uv scale
+2	pairs: replacement differs from the source in: base colour
+1	pairs: replacement differs from the source in: base colour scale
+4	pairs: replacement differs from the source in: base colour scale, alpha
+4	pairs: replacement differs from the source in: base colour scale, falloff fields
+3	pairs: replacement differs from the source in: base colour, alpha, falloff fields
+3	pairs: replacement differs from the source in: base colour, alpha, uv offset, uv scale, falloff fields
+1	pairs: replacement differs from the source in: base colour, base colour scale, alpha, uv scale, blend
+4	pairs: replacement differs from the source in: base colour, base colour scale, falloff fields
+1	pairs: replacement differs from the source in: base texture
+4	pairs: replacement differs from the source in: base texture, alpha, falloff fields
+4	pairs: replacement differs from the source in: base texture, falloff fields
+2	pairs: replacement differs from the source in: base texture, greyscale texture, base colour scale, alpha, falloff fields, blend, flags
+2	pairs: replacement differs from the source in: base texture, greyscale texture, base colour scale, alpha, uv scale, falloff fields, blend, flags
+1	pairs: replacement differs from the source in: base texture, greyscale texture, base colour, alpha, uv scale, flags
+1	pairs: replacement differs from the source in: base texture, greyscale texture, environment texture, base colour, base colour scale, alpha, uv scale, falloff fields, blend, flags
+4	pairs: replacement differs from the source in: greyscale texture
+2	pairs: replacement differs from the source in: greyscale texture, alpha
+1	pairs: replacement differs from the source in: greyscale texture, alpha, falloff fields, flags
+3	pairs: replacement differs from the source in: greyscale texture, alpha, uv offset, falloff fields
+2	pairs: replacement differs from the source in: greyscale texture, alpha, uv scale, falloff fields, blend, flags
+1	pairs: replacement differs from the source in: greyscale texture, base colour, alpha
+1	pairs: replacement differs from the source in: greyscale texture, base colour, alpha, uv scale
+4	pairs: replacement differs from the source in: greyscale texture, base colour, alpha, uv scale, falloff fields
+4	pairs: replacement differs from the source in: greyscale texture, base colour, base colour scale, uv scale, blend
+4	pairs: replacement differs from the source in: nothing
+4	source or replacement material missing
+88	swap pairs replacing a material with driven fields

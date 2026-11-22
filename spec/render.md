@@ -288,7 +288,7 @@ are byte-identical to the commit before. Effect surfaces whose base colour
 times scale exceeds 1 record `effect_colour_clamped_before_blend_v1`; with
 SRC_ALPHA factors an additive layer then adds at most its alpha.
 
-**CPU against GPU.** `cpu_and_gpu_frames_agree_on_falloff_palette_and_colour_clamp`
+**CPU against GPU.** `cpu_and_gpu_frames_agree_on_falloff_palette_colour_and_alpha_clamp`
 (viewer, ignored without a GPU) draws a grey floor, a blended card whose
 vertex normals tilt away toward its corners (falloff 1 to 0 between the
 cosines 1 and 0.3) and an additive card with both palette lookups (a 2D
@@ -297,3 +297,57 @@ palette) and vertex RGB above 1, through `fo4_render::render` and through
 agreement 1.000000 (35,676 pixels drawn by both), mean channel difference
 0.03 to 0.06 steps, 95th percentile 0 to 1, largest 1; removing the
 falloff, the palette or the colour above 1 changes the CPU frame.
+
+## Environment map, driven material fields and opacity above 1 with blending
+
+**Environment map.** An effect surface that sets an environment map is
+drawn as the same surface without the flag: its draw carries no
+environment term, so neither renderer changes
+(`effect_environment_adds_to_colour_v1`,
+`effect_environment_left_out_v1`; [effect-surfaces.md](effect-surfaces.md),
+Environment map and driven material fields). The instance records both
+rules; nothing in `Draw` names the left-out term.
+
+**Driven material fields.** Where the effect material and the NIF
+disagree on a field an effect controller drives, the draw takes the
+material's value, as it does for every other field
+(`effect_material_over_controller_v1`); the draw is an ordinary effect
+draw (opacity, UV offset), which both renderers already draw.
+
+**Opacity above 1 with blending.** A surface with blending enabled whose
+opacity is above 1 (the material's Alpha, or the NIF shader's alpha or
+base colour alpha) is drawn under `blend_alpha_clamped_before_blend_v1`:
+the alpha test compares the sampled alpha times the opacity as it stands
+(as `bgsm_opacity_above_one_test_v1` does without blending), and the blend
+reads that alpha clamped to 0..1. The reference rasterizer clamps the
+source alpha at the start of every blend; the viewer clamps the output
+alpha after the test and the zero-alpha discard (its 8-bit unsigned
+normalised target would clamp it before blending anyway). At or below 1
+both clamps change nothing: the lobby and vault frames, under hypotheses
+and without, and a debris view without hypotheses, are byte-identical to
+the commit before. `Alpha::validate` now accepts an opacity above 1 with
+blending; the draw build gates it (`UnsupportedRenderAlpha` without the
+rule, the same text as before).
+
+`blend_opacity_census MANIFEST OUT.txt` (an example of `fo4-unpack`)
+reads every winning BGSM and BGEM (9,281 read, 5 unreadable; 34 s, 0.6 GB
+peak) and keeps those that blend with an opacity above 1, with the drawn
+texture's alpha on the level the reference draws, then every winning NIF
+for the shapes that name them. 103 materials: 59 BGSM, all SRC_ALPHA /
+INV_SRC_ALPHA (8 with the alpha test), opacities from just above 1 to
+above 3, 40 of them above 1.2 and at most 2; 44 BGEM (7 additive), 16 of them over a texture whose alpha is 1
+everywhere. On the drawn texture the alpha times the opacity exceeds 1 on
+part of the texels for most of them, where a clamp and no clamp differ.
+6,019 models name them: 4,407 lighting shapes (on 3,517 the product
+exceeds 1 on half or more of the texels, on 155 on none) and 2,101 effect
+shapes (1,314 on none). Counts: [blend-opacity-census.txt](blend-opacity-census.txt); unversioned
+listing: `OUT.txt.tsv`.
+
+**CPU against GPU.** `cpu_and_gpu_frames_agree_on_falloff_palette_colour_and_alpha_clamp`
+(viewer, ignored without a GPU) adds to the scene of the palette step a
+blended (SRC_ALPHA / INV_SRC_ALPHA) card with opacity 2 over a texture
+whose alpha runs from 0.2 to 0.9, drawn with a V offset of 0.25: on this
+machine (Apple M5, Metal) coverage agreement 1.000000 (35,676 pixels drawn
+by both), mean channel difference 0.04 to 0.06 steps, 95th percentile 0
+to 1, largest 1; setting its opacity to 1, or its offset to 0, changes the
+CPU frame.

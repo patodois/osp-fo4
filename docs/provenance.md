@@ -542,3 +542,17 @@ at its first key when a cell loads, that soft effects fade near geometry,
 and that falloff depends on the angle between the view direction and the
 surface normal. No NIF reader, renderer, editor, MIT reference or game
 executable was opened.
+
+The environment map, driven material field and blended opacity step
+([spec/effect-surfaces.md](../spec/effect-surfaces.md), Environment map
+and driven material fields; [spec/render.md](../spec/render.md), Opacity
+above 1 with blending) adds no format fact: it uses the nifxml names of
+the environment slots and scale already in spec/nif.md, the material
+reader's fields, the DDS cube layout of spec/dds.md and, for the viewer,
+that an unsigned normalised colour target clamps a fragment's output
+before blending (the graphics API's documented behaviour, used only to
+say the viewer's explicit clamp changes nothing). Recognised from prior
+knowledge and kept as pending rules: that an environment map adds a
+reflection to the colour, and that an opacity above 1 acts on a blend
+through a clamped alpha. No NIF reader, renderer, editor, MIT reference
+or game executable was opened.

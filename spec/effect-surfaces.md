@@ -309,6 +309,79 @@ where base colour times scale exceeds 1 in a channel. The reference
 rasterizer and the viewer apply them per sample ([render.md](render.md),
 Palette and colour above 1).
 
+## Environment map and driven material fields
+
+After the palette step, effect surfaces that set an environment map
+(`environment-map`, 453 placements, 1.63 % of the omitted area) and
+surfaces whose material disagrees with the NIF on a field a controller
+drives (`UnsettledEffectMaterialField`, variables 5 and 8: alpha and V
+offset; 635 placements, 0.38 % of the omitted area) were the effect
+refusals left among sole reasons.
+
+### Census
+
+`effect_census` now writes two more sections
+([effect-census.txt](effect-census.txt)):
+
+- **Environment map** (shapes in scope whose drawn fields, the BGEM's where
+  one is named, set environment mapping): 394 shapes (310 through the NIF
+  flag, 84 through a BGEM; 17 of the BGEM ones set it in the material
+  while the NIF flag is clear). Every environment slot names a cube map
+  with 6 faces that the texture reader decodes (BGRA8 128 x 128 with 8
+  levels on 363 shapes, BC1 32 x 32 on 31). The mask slot is empty on
+  314 shapes; the 80 masks are BC1, BC3 or BC5 with very different
+  channel use (grey masks, a mask in alpha, two-channel BC5 maps). 317
+  shapes also name a normal map. The scale (the NIF's Environment Map
+  Scale or the material's environment mapping mask scale) is never 0:
+  below 0.1 on 34 shapes, 0.1 to 0.25 on 50, above 0.25 and below 1 on
+  99, exactly 1 on 102, above 1 up to 5 on 78, above 5 (up to 100) on 31.
+  Blend: SRC_ALPHA / INV_SRC_ALPHA on 291 shapes, additive (SRC_ALPHA /
+  ONE) on 102, one multiplicative (ZERO / SRC_COLOR); many also carry a
+  palette, a falloff or a colour above 1 drawn under their rules.
+- **Controlled fields under material swaps**: the material swaps (MSWP)
+  whose source material is the BGEM of a shape with effect controllers,
+  with the replacement's value of each driven field against the NIF's
+  stored value (which the first-key rule settled). 88 swap pairs; of the
+  driven-field comparisons, 31 differ: 12 alpha fields, every one below
+  the first key and every one driven by a controller whose keys hold one
+  value (7 from pairs that change nothing but the alpha, 4 from pairs
+  that change the alpha and the base colour scale), 9 U and 9 V offsets
+  (0.005 and 0.035 against 0, by controllers that scroll), 1 base colour
+  scale. Without a swap, the NIF and its own BGEM differ on 6 of 350
+  driven fields (5 base colour scales, 1 base colour). An unversioned
+  listing (`OUT.txt.swaps.tsv`) names the swaps and materials.
+
+### Rules
+
+Pending ([hypotheses.tsv](hypotheses.tsv)):
+
+- `effect_environment_adds_to_colour_v1`: the environment term only adds
+  light to the colour; it changes neither the alpha, the coverage, the
+  test and blend, nor the other colour terms.
+- `effect_environment_left_out_v1`: this unlit frame leaves the term out
+  and draws the surface with its other terms; under the first rule that
+  is a lower bound of the colour. Chosen over drawing the reflection: the
+  cube maps decode, but a reflection needs at least five conventions no
+  source gives (the world-to-cube axes, the reflection's normal, the mask
+  channel, the weight of the scale, the combination with the base
+  colour), and 317 of the 394 shapes name a normal map, which this frame
+  never reads, so a reflection taken from vertex normals would contradict
+  their own data. The frame already draws lighting-shader surfaces from
+  their diffuse alone, without their environment maps.
+- `effect_material_over_controller_v1`: where the material (as named, or
+  as a swap replaces it) and the NIF disagree on a driven field, the
+  material's value is drawn. The swaps that change only a driven alpha
+  held constant by its controller would draw exactly as the unswapped
+  model under the opposite reading; the opposite reading (a running
+  controller writes its first key) is the first-key rule's own premise,
+  so the two rules pull against each other there and a measurement
+  decides.
+
+A field without a pairing to a material field still refuses the surface
+(`UnsettledEffectMaterialField`); refraction, fire refraction, temp
+refraction, glass, glow map, PBR specular, blood and emittance colour stay
+refused by name.
+
 ## What stays refused, and why
 
 An effect surface of a settled model is refused with
@@ -318,11 +391,12 @@ settle, joined by `+`:
 - `palette-texture`: a greyscale-to-palette flag with an empty greyscale
   slot (no palette to read; before the palette step every palette surface
   was refused as `palette`);
-- each feature by name: `environment-map`, `refraction`,
-  `fire-refraction`, `temp-refraction`, `glass`, `glow-map`,
-  `pbr-specular`, `blood`, `emittance-colour` (before: `feature`). An
-  environment map needs a cube map sampled along a reflection vector and
-  its mask, none of which the frame reads;
+- each feature by name: `refraction`, `fire-refraction`,
+  `temp-refraction`, `glass`, `glow-map`, `pbr-specular`, `blood`,
+  `emittance-colour` (before: `feature`). The environment map is no
+  longer refused: it is drawn without its term under
+  `effect_environment_left_out_v1` (Environment map and driven material
+  fields above);
 - `rgb-falloff`: RGB_Falloff or the material's falloff colour flag
   (nifxml does not describe it; whether the factor dims the colour is not
   settled);
@@ -343,7 +417,8 @@ since the palette step under its rules (before: refused for
 ## Coverage
 
 See [coverage.md](coverage.md), Effect surfaces, Falloff and vertex alpha,
-and Palette and colour above 1.
+Palette and colour above 1, and Environment map, driven material fields
+and blended opacity above 1.
 
 ## Provenance
 
@@ -374,4 +449,14 @@ texel's green channel, that the alpha lookup reads the texel's alpha and
 that its result replaces the alpha, that the palette colour is then tinted
 by the base colour, its scale and the vertex colour. The clamp before the
 blend is a policy of this frame. No MIT reference, other reader, editor
-or game executable was opened.
+or game executable was opened. For the environment map
+and driven material fields step: the nifxml field names of the
+environment slots and scale, the material reader's fields, and the DDS
+cube layout already sourced in [dds.md](dds.md). Recognised from prior
+knowledge and kept as pending rules: that an environment map is a
+reflection added to the colour (and, unregistered because the frame does
+not draw it, that it is read along a reflection of the view direction
+about the normal, weighted by a mask channel and the scale). The choice of
+the material over the controller rests on the census of swaps, not on
+prior knowledge. No MIT reference, other reader, editor or game executable
+was opened.
