@@ -27,6 +27,7 @@ use std::{
 };
 
 pub mod bind;
+pub mod cond;
 pub mod data;
 mod exec;
 pub mod host;

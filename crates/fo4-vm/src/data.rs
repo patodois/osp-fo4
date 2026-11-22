@@ -129,6 +129,22 @@ pub fn linked_refs(
     Some(out)
 }
 
+/// The f32 of a GLOB's one FLTV (`vm_host_global_fltv_v1`).
+pub fn global_fltv(store: &Store, k: &FormKey, max_memory: u64) -> Result<f32, &'static str> {
+    let b = Budget::new(max_memory);
+    let (r, _) = store
+        .raw_with_plugin(k, &b)
+        .ok()
+        .flatten()
+        .ok_or("the global names no winning record")?;
+    let mut v = r.subrecords.iter().filter(|s| s.signature == *b"FLTV");
+    let (Some(s), None) = (v.next(), v.next()) else {
+        return Err("the global has not one FLTV");
+    };
+    let d: [u8; 4] = r.data(s).try_into().map_err(|_| "FLTV is not 4 bytes")?;
+    Ok(f32::from_le_bytes(d))
+}
+
 /// One answer of the data host, counted by `script_run --census`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Answer {
@@ -365,13 +381,17 @@ impl<'s> DataHost<'s> {
             return Err("changed by this run");
         }
         let k = k.ok_or("the receiver is not a record")?;
-        let (r, _) = self.raw(&k).ok_or("the global names no winning record")?;
-        let mut v = r.subrecords.iter().filter(|s| s.signature == *b"FLTV");
-        let (Some(s), None) = (v.next(), v.next()) else {
-            return Err("the global has not one FLTV");
-        };
-        let d: [u8; 4] = r.data(s).try_into().map_err(|_| "FLTV is not 4 bytes")?;
-        Ok((Val::Float(f32::from_le_bytes(d)), Answer::Value))
+        let v = global_fltv(self.store, &k, self.max_memory)?;
+        Ok((Val::Float(v), Answer::Value))
+    }
+    /// Whether a native of this run may have changed the value of the
+    /// global or form list `k` (so the data no longer answers it).
+    pub fn value_changed(&self, w: &World, k: &FormKey) -> bool {
+        let key = record_key(k);
+        w.objects
+            .iter()
+            .enumerate()
+            .any(|(o, x)| x.key.as_deref() == Some(&key) && self.changed.contains(&(o, "value")))
     }
     /// The entries of a form list (`vm_host_formlist_lnam_v1`): its LNAM
     /// subrecords in stored order.

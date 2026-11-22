@@ -864,6 +864,8 @@ fn events_reach_each_instance_with_a_handler_and_the_log_names_visibility_change
         answers: Default::default(),
         attached: Default::default(),
         attach_notes: Vec::new(),
+        quest_jobs: Vec::new(),
+        quest_jobs_left: 0,
     };
     assert_eq!(
         bind::visibility_changes(&run),

@@ -8,10 +8,13 @@
 //! script_run MANIFEST --census OUT_DIR (CELL[:RADIUS]... | ALL | PLACED)
 //! ```
 //!
-//! Runs use the data host and attach the scripts of quests, aliases and
-//! placed references when first needed (`fo4_vm::bind::Mode::Data`);
-//! `--recording` anywhere on the line runs the recording host alone, as
-//! before the data host (`Mode::Recording`).
+//! Runs use the quest host (the data host plus the quest natives, stage
+//! fragments, quest events and OnStageSet run inside the call that brought
+//! them) and attach the scripts of quests, aliases and placed references
+//! when first needed (`fo4_vm::bind::Mode::Quest`); `--data` anywhere on
+//! the line runs the data host without the quest host, as before the
+//! quest host (`Mode::Data`), and `--recording` the recording host alone,
+//! as before the data host (`Mode::Recording`).
 //!
 //! CELL is an EditorID; `@DX,DY` takes the exterior cell that many grid
 //! steps east and north of it. INDEX numbers the cell's placed references
@@ -280,6 +283,46 @@ fn census(
                 *counts
                     .entry(format!("handles given scripts when first needed: {kind}"))
                     .or_default() += n;
+            }
+            // Quest jobs the handlers brought (`Mode::Quest`).
+            for j in &r.quest_jobs {
+                let what = match &j.job {
+                    fo4_vm::quest::Job::Fragment { .. } => "stage fragment".to_string(),
+                    fo4_vm::quest::Job::Event { event, .. } => format!("event {event}"),
+                    fo4_vm::quest::Job::StageEvent { .. } => "event onstageset".to_string(),
+                    fo4_vm::quest::Job::Open { why, .. } => format!("open: {why}"),
+                };
+                if j.outcomes.is_empty() {
+                    bump(
+                        &mut counts,
+                        format!("quest jobs run inside handlers: {what}"),
+                    );
+                }
+                for (_, o) in &j.outcomes {
+                    let k = match o {
+                        Outcome::Completed(_) => "completed".to_string(),
+                        Outcome::Blocked(b) => match &b.on {
+                            fo4_vm::Origin::Native(n) => {
+                                *blockers
+                                    .entry(format!("quest job blocking native\t{n}"))
+                                    .or_default() += 1;
+                                "blocked on a native's result".to_string()
+                            }
+                            fo4_vm::Origin::Rule(rule, _) => format!("blocked on rule {rule}"),
+                            fo4_vm::Origin::NoInstance(..) => {
+                                "blocked on an object without the script".to_string()
+                            }
+                        },
+                        Outcome::Failed(e) => format!("failed: {}", e.kind()),
+                    };
+                    bump(
+                        &mut counts,
+                        format!("quest jobs run inside handlers: {what}: {k}"),
+                    );
+                }
+            }
+            if r.quest_jobs_left > 0 {
+                bump(&mut counts, "runs that left quest jobs queued (job limit)");
             }
             for n in &r.attach_notes {
                 let kind = if n.contains("is not declared") {
@@ -841,11 +884,13 @@ fn run() -> Result<(), E> {
     let mut args: Vec<String> = std::env::args().skip(1).collect();
     let mode = if args.iter().any(|a| a == "--recording") {
         bind::Mode::Recording
-    } else {
+    } else if args.iter().any(|a| a == "--data") {
         bind::Mode::Data
+    } else {
+        bind::Mode::Quest
     };
-    args.retain(|a| a != "--recording");
-    let usage = "script_run MANIFEST CELL[@DX,DY] (list | INDEX EVENT[,EVENT...] [--timers N]) | script_run MANIFEST --census OUT_DIR (CELL[:RADIUS]... | ALL | PLACED); --recording: the recording host alone";
+    args.retain(|a| a != "--recording" && a != "--data");
+    let usage = "script_run MANIFEST CELL[@DX,DY] (list | INDEX EVENT[,EVENT...] [--timers N]) | script_run MANIFEST --census OUT_DIR (CELL[:RADIUS]... | ALL | PLACED); --data: the data host without quests; --recording: the recording host alone";
     if args.len() < 3 {
         return Err(usage.into());
     }

@@ -289,6 +289,22 @@ nothing was read from it. No editor, editor source or definition file,
 script source, decompiler, other interpreter or the game executable was
 opened or searched for.
 
+The condition reader and evaluator (`fo4_plugin::condition`,
+`fo4_vm::cond`, [spec/conditions.md](../spec/conditions.md),
+[spec/vm.md](../spec/vm.md), Conditions and Provenance of the conditions
+step) add no sourced format fact. The CTDA field layout, the operator
+codes, the flag bits, how a list combines, the meanings of function
+indexes 56, 58, 59 and 74 and OnStageSet's order were recognised from
+prior general knowledge and are kept only as far as `cond_census` and
+`quest_run` could have refuted them and did not; each is a pending rule in
+[spec/hypotheses.tsv](../spec/hypotheses.tsv). Function indexes are kept
+as bare numbers: no public index-to-name table was read. Two Creation Kit
+wiki pages (Fallout 4, `Conditions` and `Condition_Functions`) were
+requested on 2026-11-22 and redirected to a maintenance page; nothing was
+read from them and no other copy was looked for. No editor, editor
+source or definition file, script source, decompiler, other interpreter
+or the game executable was opened or searched for.
+
 The save file reader (`fo4-save`, [spec/save.md](../spec/save.md)) was
 established only by measuring the save files of one machine with the
 `save_census` example and by resolving their form references against the

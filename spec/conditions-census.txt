@@ -1,0 +1,2511 @@
+# cond_census: counts, record type tags and function indexes only (spec/conditions.md)
+# Function indexes are bare numbers: no public index-to-name table was read.
+10809	CIS2 text shape by function	629	begins with :: and ends with _var
+907	CIS2 text shape by function	629	other
+382	CIS2 text shape by function	660	begins with :: and ends with _var
+64	CIS2 text shape by function	660	other
+1371	CITC before a list	4 bytes, equal to the list's conditions
+91	CITC in	ACTI
+1	CITC in	FACT
+1	CITC in	FURN
+103	CITC in	MUST
+1452	CITC in	PACK
+1069	CITC in	SCEN
+120	CITC in	SMBN
+18	CITC in	SMEN
+335	CITC in	SMQN
+130308	CTDA size (bytes)	32
+12	OR group length (conditions)	10-19
+2169	OR group length (conditions)	2
+370	OR group length (conditions)	3
+503	OR group length (conditions)	4
+148	OR group length (conditions)	5-9
+90	QUST conditions by part and function	alias	1
+122	QUST conditions by part and function	alias	14
+17	QUST conditions by part and function	alias	161
+52	QUST conditions by part and function	alias	181
+1	QUST conditions by part and function	alias	182
+13	QUST conditions by part and function	alias	203
+1	QUST conditions by part and function	alias	242
+1	QUST conditions by part and function	alias	255
+81	QUST conditions by part and function	alias	277
+17	QUST conditions by part and function	alias	310
+5	QUST conditions by part and function	alias	35
+9	QUST conditions by part and function	alias	353
+17	QUST conditions by part and function	alias	359
+4	QUST conditions by part and function	alias	360
+5	QUST conditions by part and function	alias	361
+35	QUST conditions by part and function	alias	362
+11	QUST conditions by part and function	alias	365
+473	QUST conditions by part and function	alias	426
+3	QUST conditions by part and function	alias	432
+3	QUST conditions by part and function	alias	444
+1	QUST conditions by part and function	alias	445
+29	QUST conditions by part and function	alias	449
+1	QUST conditions by part and function	alias	45
+13	QUST conditions by part and function	alias	46
+1	QUST conditions by part and function	alias	47
+5	QUST conditions by part and function	alias	49
+4	QUST conditions by part and function	alias	543
+1	QUST conditions by part and function	alias	555
+5	QUST conditions by part and function	alias	56
+283	QUST conditions by part and function	alias	560
+4509	QUST conditions by part and function	alias	561
+469	QUST conditions by part and function	alias	562
+269	QUST conditions by part and function	alias	563
+10	QUST conditions by part and function	alias	565
+27	QUST conditions by part and function	alias	566
+2	QUST conditions by part and function	alias	567
+3	QUST conditions by part and function	alias	576
+1	QUST conditions by part and function	alias	59
+1	QUST conditions by part and function	alias	603
+1	QUST conditions by part and function	alias	605
+1	QUST conditions by part and function	alias	608
+1	QUST conditions by part and function	alias	618
+16	QUST conditions by part and function	alias	629
+3165	QUST conditions by part and function	alias	650
+1	QUST conditions by part and function	alias	651
+1	QUST conditions by part and function	alias	659
+13	QUST conditions by part and function	alias	66
+68	QUST conditions by part and function	alias	660
+1	QUST conditions by part and function	alias	67
+3	QUST conditions by part and function	alias	69
+282	QUST conditions by part and function	alias	71
+499	QUST conditions by part and function	alias	72
+8	QUST conditions by part and function	alias	726
+3	QUST conditions by part and function	alias	734
+29	QUST conditions by part and function	alias	74
+3	QUST conditions by part and function	alias	753
+23	QUST conditions by part and function	alias	77
+29	QUST conditions by part and function	alias	794
+5	QUST conditions by part and function	alias	797
+33	QUST conditions by part and function	alias	80
+26	QUST conditions by part and function	alias	805
+3	QUST conditions by part and function	alias	84
+105	QUST conditions by part and function	objective target	1
+2	QUST conditions by part and function	objective target	117
+3	QUST conditions by part and function	objective target	14
+5	QUST conditions by part and function	objective target	157
+1	QUST conditions by part and function	objective target	203
+2	QUST conditions by part and function	objective target	214
+5	QUST conditions by part and function	objective target	242
+7	QUST conditions by part and function	objective target	248
+12	QUST conditions by part and function	objective target	300
+37	QUST conditions by part and function	objective target	310
+34	QUST conditions by part and function	objective target	35
+1	QUST conditions by part and function	objective target	354
+38	QUST conditions by part and function	objective target	359
+58	QUST conditions by part and function	objective target	360
+11	QUST conditions by part and function	objective target	414
+1	QUST conditions by part and function	objective target	448
+204	QUST conditions by part and function	objective target	46
+65	QUST conditions by part and function	objective target	47
+18	QUST conditions by part and function	objective target	491
+1	QUST conditions by part and function	objective target	5
+3	QUST conditions by part and function	objective target	510
+3	QUST conditions by part and function	objective target	512
+4	QUST conditions by part and function	objective target	555
+3	QUST conditions by part and function	objective target	56
+1	QUST conditions by part and function	objective target	560
+4	QUST conditions by part and function	objective target	577
+24	QUST conditions by part and function	objective target	58
+2	QUST conditions by part and function	objective target	580
+411	QUST conditions by part and function	objective target	59
+3	QUST conditions by part and function	objective target	592
+4	QUST conditions by part and function	objective target	6
+37	QUST conditions by part and function	objective target	601
+10	QUST conditions by part and function	objective target	625
+137	QUST conditions by part and function	objective target	629
+14	QUST conditions by part and function	objective target	660
+203	QUST conditions by part and function	objective target	67
+2	QUST conditions by part and function	objective target	71
+2	QUST conditions by part and function	objective target	72
+8	QUST conditions by part and function	objective target	726
+76	QUST conditions by part and function	objective target	74
+2	QUST conditions by part and function	objective target	792
+3	QUST conditions by part and function	objective target	798
+2	QUST conditions by part and function	objective target	84
+1	QUST conditions by part and function	quest, after NEXT	1
+1	QUST conditions by part and function	quest, after NEXT	136
+4	QUST conditions by part and function	quest, after NEXT	14
+2	QUST conditions by part and function	quest, after NEXT	157
+8	QUST conditions by part and function	quest, after NEXT	161
+4	QUST conditions by part and function	quest, after NEXT	18
+2	QUST conditions by part and function	quest, after NEXT	248
+2	QUST conditions by part and function	quest, after NEXT	289
+127	QUST conditions by part and function	quest, after NEXT	310
+2	QUST conditions by part and function	quest, after NEXT	359
+5	QUST conditions by part and function	quest, after NEXT	362
+4	QUST conditions by part and function	quest, after NEXT	426
+3	QUST conditions by part and function	quest, after NEXT	46
+10	QUST conditions by part and function	quest, after NEXT	485
+17	QUST conditions by part and function	quest, after NEXT	543
+4	QUST conditions by part and function	quest, after NEXT	555
+50	QUST conditions by part and function	quest, after NEXT	56
+324	QUST conditions by part and function	quest, after NEXT	560
+71	QUST conditions by part and function	quest, after NEXT	576
+18	QUST conditions by part and function	quest, after NEXT	58
+171	QUST conditions by part and function	quest, after NEXT	59
+31	QUST conditions by part and function	quest, after NEXT	629
+9	QUST conditions by part and function	quest, after NEXT	660
+5	QUST conditions by part and function	quest, after NEXT	67
+46	QUST conditions by part and function	quest, after NEXT	71
+71	QUST conditions by part and function	quest, after NEXT	72
+276	QUST conditions by part and function	quest, after NEXT	74
+2	QUST conditions by part and function	quest, after NEXT	760
+16	QUST conditions by part and function	quest, after NEXT	765
+1	QUST conditions by part and function	quest, after NEXT	769
+8	QUST conditions by part and function	quest, after NEXT	77
+68	QUST conditions by part and function	quest, after NEXT	80
+41	QUST conditions by part and function	quest, after NEXT	84
+1	QUST conditions by part and function	quest, before NEXT	300
+1	QUST conditions by part and function	quest, before NEXT	359
+95	QUST conditions by part and function	quest, before NEXT	426
+1	QUST conditions by part and function	quest, before NEXT	56
+24	QUST conditions by part and function	quest, before NEXT	566
+1	QUST conditions by part and function	quest, before NEXT	58
+1	QUST conditions by part and function	quest, before NEXT	59
+1	QUST conditions by part and function	quest, before NEXT	67
+14	QUST conditions by part and function	quest, before NEXT	69
+86	QUST conditions by part and function	quest, before NEXT	71
+17	QUST conditions by part and function	quest, before NEXT	72
+1	QUST conditions by part and function	stage log entry	1
+6	QUST conditions by part and function	stage log entry	14
+2	QUST conditions by part and function	stage log entry	359
+22	QUST conditions by part and function	stage log entry	46
+7	QUST conditions by part and function	stage log entry	491
+16	QUST conditions by part and function	stage log entry	58
+617	QUST conditions by part and function	stage log entry	59
+125	QUST conditions by part and function	stage log entry	629
+1	QUST conditions by part and function	stage log entry	67
+30	QUST conditions by part and function	stage log entry	70
+2	QUST conditions by part and function	stage log entry	71
+1	QUST conditions by part and function	stage log entry	72
+76	QUST conditions by part and function	stage log entry	74
+32	QUST conditions by part and function	stage log entry	84
+12	QUST flag 0x02 set: first parameter names an alias of the quest	no
+3308	QUST flag 0x02 set: first parameter names an alias of the quest	yes
+4838	QUST lists by part	alias
+995	QUST lists by part	objective target
+576	QUST lists by part	quest, after NEXT
+140	QUST lists by part	quest, before NEXT
+593	QUST lists by part	stage log entry
+287	QUST run-on word 5: last word names an alias of the quest	yes
+8393	byte 0 flag bit set	0x01
+3955	byte 0 flag bit set	0x02
+10005	byte 0 flag bit set	0x04
+109	byte 0 flag bit set	0x08
+30	byte 0 flag bit set	0x10
+108592	byte 0 flag bits (0-4)	0x00
+7731	byte 0 flag bits (0-4)	0x01
+3734	byte 0 flag bits (0-4)	0x02
+107	byte 0 flag bits (0-4)	0x03
+9351	byte 0 flag bits (0-4)	0x04
+544	byte 0 flag bits (0-4)	0x05
+107	byte 0 flag bits (0-4)	0x06
+3	byte 0 flag bits (0-4)	0x07
+101	byte 0 flag bits (0-4)	0x08
+8	byte 0 flag bits (0-4)	0x09
+26	byte 0 flag bits (0-4)	0x10
+4	byte 0 flag bits (0-4)	0x12
+104953	byte 0 operator code (bits 5-7)	0
+10186	byte 0 operator code (bits 5-7)	1
+2221	byte 0 operator code (bits 5-7)	2
+4421	byte 0 operator code (bits 5-7)	3
+6794	byte 0 operator code (bits 5-7)	4
+1733	byte 0 operator code (bits 5-7)	5
+120549	bytes 1-3	not zero
+9759	bytes 1-3	zero
+96718	bytes 10-11	not zero
+33590	bytes 10-11	zero
+120303	comparison word, global bit clear, as a FormID	not a GLOB
+119692	comparison word, global bit clear, as an f32	finite, integral
+611	comparison word, global bit clear, as an f32	finite, with a fraction
+10005	comparison word, global bit set, as a FormID	GLOB
+139	conditions by host record type	ACTI
+431	conditions by host record type	ALCH
+260	conditions by host record type	CAMS
+20	conditions by host record type	CLFM
+3319	conditions by host record type	COBJ
+780	conditions by host record type	CPTH
+295	conditions by host record type	ENCH
+1	conditions by host record type	FACT
+1	conditions by host record type	FURN
+40	conditions by host record type	HDPT
+3376	conditions by host record type	IDLE
+88412	conditions by host record type	INFO
+693	conditions by host record type	LSCR
+85	conditions by host record type	MESG
+284	conditions by host record type	MGEF
+331	conditions by host record type	MUST
+6126	conditions by host record type	PACK
+1718	conditions by host record type	PERK
+14960	conditions by host record type	QUST
+297	conditions by host record type	RACE
+4688	conditions by host record type	SCEN
+186	conditions by host record type	SMBN
+2	conditions by host record type	SMEN
+576	conditions by host record type	SMQN
+909	conditions by host record type	SNDR
+601	conditions by host record type	SPEL
+1778	conditions by host record type	TERM
+34417	conditions per list	1
+259	conditions per list	10-19
+17461	conditions per list	2
+5601	conditions per list	3
+5192	conditions per list	4
+2664	conditions per list	5-9
+189	conditions per list	>=20
+3328	function 58 comparison value against parameter 1's stages	a stage of the quest
+327	function 58 comparison value against parameter 1's stages	not a stage of the quest
+10	function 58 comparison value against parameter 1's stages	parameter 1 names no readable QUST
+17902	function 59 parameter 2 against parameter 1's stages	a stage of the quest
+690	function 59 parameter 2 against parameter 1's stages	not a stage of the quest
+16	function 59 parameter 2 against parameter 1's stages	parameter 1 names no readable QUST
+62690	last condition of a list carries the OR bit	no
+3093	last condition of a list carries the OR bit	yes
+113255	last word (i32) by run-on word	0	-1
+1	last word (i32) by run-on word	0	0
+2	last word (i32) by run-on word	0	2
+11	last word (i32) by run-on word	0	4
+4	last word (i32) by run-on word	0	>=20
+2828	last word (i32) by run-on word	1	-1
+10	last word (i32) by run-on word	10	-1
+7951	last word (i32) by run-on word	2	-1
+1	last word (i32) by run-on word	2	0
+1	last word (i32) by run-on word	2	>=20
+948	last word (i32) by run-on word	3	-1
+2	last word (i32) by run-on word	4	-1
+93	last word (i32) by run-on word	4	0
+658	last word (i32) by run-on word	4	0x800 or more, as a FormID: KYWD
+1	last word (i32) by run-on word	5	-1
+643	last word (i32) by run-on word	5	0
+465	last word (i32) by run-on word	5	1
+433	last word (i32) by run-on word	5	10-19
+392	last word (i32) by run-on word	5	2
+226	last word (i32) by run-on word	5	3
+305	last word (i32) by run-on word	5	4
+404	last word (i32) by run-on word	5	5-9
+554	last word (i32) by run-on word	5	>=20
+24	last word (i32) by run-on word	6	0
+12	last word (i32) by run-on word	6	1
+28	last word (i32) by run-on word	6	10-19
+13	last word (i32) by run-on word	6	2
+21	last word (i32) by run-on word	6	3
+12	last word (i32) by run-on word	6	4
+34	last word (i32) by run-on word	6	5-9
+2	last word (i32) by run-on word	6	>=20
+7	last word (i32) by run-on word	7	-1
+800	last word (i32) by run-on word	7	0x800 or more, as a FormID: no winning record
+163	last word (i32) by run-on word	8	-1
+4	last word (i32) by run-on word	9	-1
+1581	list connectors	AND and OR mixed
+28181	list connectors	AND only
+1604	list connectors	OR only
+34417	list connectors	one condition
+91	lists by host record type	ACTI
+373	lists by host record type	ALCH
+78	lists by host record type	CAMS
+10	lists by host record type	CLFM
+2215	lists by host record type	COBJ
+327	lists by host record type	CPTH
+211	lists by host record type	ENCH
+1	lists by host record type	FACT
+1	lists by host record type	FURN
+40	lists by host record type	HDPT
+2100	lists by host record type	IDLE
+42219	lists by host record type	INFO
+278	lists by host record type	LSCR
+63	lists by host record type	MESG
+132	lists by host record type	MGEF
+103	lists by host record type	MUST
+3360	lists by host record type	PACK
+1075	lists by host record type	PERK
+7142	lists by host record type	QUST
+249	lists by host record type	RACE
+3192	lists by host record type	SCEN
+82	lists by host record type	SMBN
+1	lists by host record type	SMEN
+283	lists by host record type	SMQN
+639	lists by host record type	SNDR
+362	lists by host record type	SPEL
+1156	lists by host record type	TERM
+8	new game, before scripts: OR groups and left to right differ	false / true
+182	new game, before scripts: OR groups and left to right differ	false / undetermined
+5	new game, before scripts: OR groups and left to right differ	undetermined / true
+4734	new game, before scripts: conditions by function	1	undetermined
+84	new game, before scripts: conditions by function	101	undetermined
+13	new game, before scripts: conditions by function	108	undetermined
+53	new game, before scripts: conditions by function	117	undetermined
+1	new game, before scripts: conditions by function	118	undetermined
+3	new game, before scripts: conditions by function	127	undetermined
+10	new game, before scripts: conditions by function	130	undetermined
+52	new game, before scripts: conditions by function	131	undetermined
+3	new game, before scripts: conditions by function	135	undetermined
+76	new game, before scripts: conditions by function	136	undetermined
+4076	new game, before scripts: conditions by function	14	undetermined
+8	new game, before scripts: conditions by function	141	undetermined
+2	new game, before scripts: conditions by function	143	undetermined
+20	new game, before scripts: conditions by function	144	undetermined
+13	new game, before scripts: conditions by function	145	undetermined
+28	new game, before scripts: conditions by function	149	undetermined
+76	new game, before scripts: conditions by function	157	undetermined
+191	new game, before scripts: conditions by function	159	undetermined
+154	new game, before scripts: conditions by function	161	undetermined
+5	new game, before scripts: conditions by function	162	undetermined
+35	new game, before scripts: conditions by function	163	undetermined
+4	new game, before scripts: conditions by function	175	undetermined
+390	new game, before scripts: conditions by function	18	undetermined
+52	new game, before scripts: conditions by function	181	undetermined
+113	new game, before scripts: conditions by function	182	undetermined
+38	new game, before scripts: conditions by function	185	undetermined
+28	new game, before scripts: conditions by function	203	undetermined
+92	new game, before scripts: conditions by function	214	undetermined
+15	new game, before scripts: conditions by function	224	undetermined
+64	new game, before scripts: conditions by function	231	undetermined
+1	new game, before scripts: conditions by function	235	undetermined
+1	new game, before scripts: conditions by function	237	undetermined
+6	new game, before scripts: conditions by function	24	undetermined
+43	new game, before scripts: conditions by function	242	undetermined
+2	new game, before scripts: conditions by function	247	undetermined
+212	new game, before scripts: conditions by function	248	undetermined
+219	new game, before scripts: conditions by function	249	undetermined
+23	new game, before scripts: conditions by function	25	undetermined
+25	new game, before scripts: conditions by function	250	undetermined
+1	new game, before scripts: conditions by function	254	undetermined
+190	new game, before scripts: conditions by function	255	undetermined
+8	new game, before scripts: conditions by function	258	undetermined
+1	new game, before scripts: conditions by function	259	undetermined
+6	new game, before scripts: conditions by function	261	undetermined
+22	new game, before scripts: conditions by function	263	undetermined
+9	new game, before scripts: conditions by function	264	undetermined
+38	new game, before scripts: conditions by function	266	undetermined
+97	new game, before scripts: conditions by function	27	undetermined
+445	new game, before scripts: conditions by function	277	undetermined
+94	new game, before scripts: conditions by function	286	undetermined
+5	new game, before scripts: conditions by function	288	undetermined
+204	new game, before scripts: conditions by function	289	undetermined
+425	new game, before scripts: conditions by function	300	undetermined
+2	new game, before scripts: conditions by function	304	undetermined
+360	new game, before scripts: conditions by function	310	undetermined
+2	new game, before scripts: conditions by function	313	undetermined
+7	new game, before scripts: conditions by function	314	undetermined
+14	new game, before scripts: conditions by function	32	undetermined
+46	new game, before scripts: conditions by function	323	undetermined
+73	new game, before scripts: conditions by function	325	undetermined
+108	new game, before scripts: conditions by function	327	undetermined
+23	new game, before scripts: conditions by function	329	undetermined
+81	new game, before scripts: conditions by function	35	undetermined
+59	new game, before scripts: conditions by function	353	undetermined
+28	new game, before scripts: conditions by function	354	undetermined
+52	new game, before scripts: conditions by function	358	undetermined
+1429	new game, before scripts: conditions by function	359	undetermined
+104	new game, before scripts: conditions by function	360	undetermined
+8	new game, before scripts: conditions by function	361	undetermined
+282	new game, before scripts: conditions by function	362	undetermined
+26	new game, before scripts: conditions by function	365	undetermined
+4	new game, before scripts: conditions by function	372	undetermined
+6	new game, before scripts: conditions by function	375	undetermined
+2	new game, before scripts: conditions by function	376	undetermined
+13	new game, before scripts: conditions by function	378	undetermined
+13	new game, before scripts: conditions by function	380	undetermined
+11	new game, before scripts: conditions by function	390	undetermined
+243	new game, before scripts: conditions by function	391	undetermined
+30	new game, before scripts: conditions by function	398	undetermined
+162	new game, before scripts: conditions by function	407	undetermined
+44	new game, before scripts: conditions by function	414	undetermined
+154	new game, before scripts: conditions by function	415	undetermined
+3	new game, before scripts: conditions by function	416	undetermined
+4229	new game, before scripts: conditions by function	426	undetermined
+1	new game, before scripts: conditions by function	427	undetermined
+157	new game, before scripts: conditions by function	430	undetermined
+124	new game, before scripts: conditions by function	432	undetermined
+16	new game, before scripts: conditions by function	438	undetermined
+29	new game, before scripts: conditions by function	439	undetermined
+1	new game, before scripts: conditions by function	44	undetermined
+3	new game, before scripts: conditions by function	444	undetermined
+1	new game, before scripts: conditions by function	445	undetermined
+5	new game, before scripts: conditions by function	446	undetermined
+32	new game, before scripts: conditions by function	447	undetermined
+3110	new game, before scripts: conditions by function	448	undetermined
+40	new game, before scripts: conditions by function	449	undetermined
+33	new game, before scripts: conditions by function	45	undetermined
+11	new game, before scripts: conditions by function	453	undetermined
+1	new game, before scripts: conditions by function	458	undetermined
+4	new game, before scripts: conditions by function	459	undetermined
+808	new game, before scripts: conditions by function	46	undetermined
+1	new game, before scripts: conditions by function	463	undetermined
+18	new game, before scripts: conditions by function	465	undetermined
+718	new game, before scripts: conditions by function	47	undetermined
+18	new game, before scripts: conditions by function	476	undetermined
+14	new game, before scripts: conditions by function	48	undetermined
+84	new game, before scripts: conditions by function	483	undetermined
+17	new game, before scripts: conditions by function	485	undetermined
+3	new game, before scripts: conditions by function	487	undetermined
+89	new game, before scripts: conditions by function	49	undetermined
+42	new game, before scripts: conditions by function	491	undetermined
+14	new game, before scripts: conditions by function	494	undetermined
+80	new game, before scripts: conditions by function	5	undetermined
+198	new game, before scripts: conditions by function	50	undetermined
+8	new game, before scripts: conditions by function	506	undetermined
+34	new game, before scripts: conditions by function	507	undetermined
+4	new game, before scripts: conditions by function	508	undetermined
+75	new game, before scripts: conditions by function	510	undetermined
+261	new game, before scripts: conditions by function	511	undetermined
+3	new game, before scripts: conditions by function	512	undetermined
+9	new game, before scripts: conditions by function	513	undetermined
+113	new game, before scripts: conditions by function	515	undetermined
+105	new game, before scripts: conditions by function	516	undetermined
+98	new game, before scripts: conditions by function	517	undetermined
+44	new game, before scripts: conditions by function	518	undetermined
+66	new game, before scripts: conditions by function	522	undetermined
+68	new game, before scripts: conditions by function	523	undetermined
+2	new game, before scripts: conditions by function	525	undetermined
+117	new game, before scripts: conditions by function	536	undetermined
+219	new game, before scripts: conditions by function	543	undetermined
+942	new game, before scripts: conditions by function	544	undetermined
+417	new game, before scripts: conditions by function	550	undetermined
+157	new game, before scripts: conditions by function	555	undetermined
+179	new game, before scripts: conditions by function	56	false
+331	new game, before scripts: conditions by function	56	true
+1877	new game, before scripts: conditions by function	560	undetermined
+4535	new game, before scripts: conditions by function	561	undetermined
+689	new game, before scripts: conditions by function	562	undetermined
+269	new game, before scripts: conditions by function	563	undetermined
+10	new game, before scripts: conditions by function	565	undetermined
+5986	new game, before scripts: conditions by function	566	undetermined
+2	new game, before scripts: conditions by function	567	undetermined
+14	new game, before scripts: conditions by function	568	undetermined
+6	new game, before scripts: conditions by function	569	undetermined
+11	new game, before scripts: conditions by function	570	undetermined
+1	new game, before scripts: conditions by function	571	undetermined
+1	new game, before scripts: conditions by function	572	undetermined
+323	new game, before scripts: conditions by function	576	undetermined
+18	new game, before scripts: conditions by function	577	undetermined
+3	new game, before scripts: conditions by function	578	undetermined
+3665	new game, before scripts: conditions by function	58	undetermined
+30	new game, before scripts: conditions by function	580	undetermined
+32	new game, before scripts: conditions by function	584	undetermined
+18	new game, before scripts: conditions by function	589	undetermined
+10326	new game, before scripts: conditions by function	59	false
+8259	new game, before scripts: conditions by function	59	true
+23	new game, before scripts: conditions by function	59	undetermined
+22	new game, before scripts: conditions by function	590	undetermined
+3	new game, before scripts: conditions by function	592	undetermined
+25	new game, before scripts: conditions by function	594	undetermined
+2	new game, before scripts: conditions by function	596	undetermined
+26	new game, before scripts: conditions by function	6	undetermined
+37	new game, before scripts: conditions by function	601	undetermined
+5	new game, before scripts: conditions by function	603	undetermined
+24	new game, before scripts: conditions by function	605	undetermined
+4	new game, before scripts: conditions by function	608	undetermined
+16	new game, before scripts: conditions by function	610	undetermined
+2	new game, before scripts: conditions by function	611	undetermined
+148	new game, before scripts: conditions by function	612	undetermined
+51	new game, before scripts: conditions by function	613	undetermined
+47	new game, before scripts: conditions by function	614	undetermined
+1	new game, before scripts: conditions by function	618	undetermined
+24	new game, before scripts: conditions by function	62	undetermined
+16	new game, before scripts: conditions by function	620	undetermined
+23	new game, before scripts: conditions by function	621	undetermined
+31	new game, before scripts: conditions by function	623	undetermined
+74	new game, before scripts: conditions by function	625	undetermined
+11716	new game, before scripts: conditions by function	629	undetermined
+25	new game, before scripts: conditions by function	630	undetermined
+12	new game, before scripts: conditions by function	631	undetermined
+24	new game, before scripts: conditions by function	633	undetermined
+2	new game, before scripts: conditions by function	635	undetermined
+1	new game, before scripts: conditions by function	636	undetermined
+72	new game, before scripts: conditions by function	637	undetermined
+7	new game, before scripts: conditions by function	639	undetermined
+109	new game, before scripts: conditions by function	640	undetermined
+10	new game, before scripts: conditions by function	642	undetermined
+131	new game, before scripts: conditions by function	644	undetermined
+123	new game, before scripts: conditions by function	65	undetermined
+3167	new game, before scripts: conditions by function	650	undetermined
+30	new game, before scripts: conditions by function	651	undetermined
+8	new game, before scripts: conditions by function	659	undetermined
+27	new game, before scripts: conditions by function	66	undetermined
+446	new game, before scripts: conditions by function	660	undetermined
+899	new game, before scripts: conditions by function	67	undetermined
+6	new game, before scripts: conditions by function	672	undetermined
+2	new game, before scripts: conditions by function	673	undetermined
+194	new game, before scripts: conditions by function	675	undetermined
+27	new game, before scripts: conditions by function	678	undetermined
+10	new game, before scripts: conditions by function	680	undetermined
+437	new game, before scripts: conditions by function	682	undetermined
+22	new game, before scripts: conditions by function	683	undetermined
+642	new game, before scripts: conditions by function	69	undetermined
+19	new game, before scripts: conditions by function	691	undetermined
+60	new game, before scripts: conditions by function	693	undetermined
+1	new game, before scripts: conditions by function	694	undetermined
+49	new game, before scripts: conditions by function	699	undetermined
+4140	new game, before scripts: conditions by function	70	undetermined
+3	new game, before scripts: conditions by function	701	undetermined
+5	new game, before scripts: conditions by function	702	undetermined
+78	new game, before scripts: conditions by function	704	undetermined
+143	new game, before scripts: conditions by function	707	undetermined
+139	new game, before scripts: conditions by function	709	undetermined
+8698	new game, before scripts: conditions by function	71	undetermined
+1	new game, before scripts: conditions by function	711	undetermined
+1	new game, before scripts: conditions by function	714	undetermined
+24	new game, before scripts: conditions by function	716	undetermined
+22	new game, before scripts: conditions by function	719	undetermined
+17964	new game, before scripts: conditions by function	72	undetermined
+8	new game, before scripts: conditions by function	720	undetermined
+17	new game, before scripts: conditions by function	722	undetermined
+1	new game, before scripts: conditions by function	723	undetermined
+11	new game, before scripts: conditions by function	725	undetermined
+17	new game, before scripts: conditions by function	726	undetermined
+12	new game, before scripts: conditions by function	729	undetermined
+26	new game, before scripts: conditions by function	73	undetermined
+11	new game, before scripts: conditions by function	734	undetermined
+16	new game, before scripts: conditions by function	736	undetermined
+3	new game, before scripts: conditions by function	738	undetermined
+50	new game, before scripts: conditions by function	739	undetermined
+5512	new game, before scripts: conditions by function	74	false
+5287	new game, before scripts: conditions by function	74	true
+19	new game, before scripts: conditions by function	74	undetermined
+432	new game, before scripts: conditions by function	744	undetermined
+1	new game, before scripts: conditions by function	745	undetermined
+193	new game, before scripts: conditions by function	747	undetermined
+3	new game, before scripts: conditions by function	748	undetermined
+259	new game, before scripts: conditions by function	749	undetermined
+1	new game, before scripts: conditions by function	75	undetermined
+12	new game, before scripts: conditions by function	751	undetermined
+3	new game, before scripts: conditions by function	753	undetermined
+1	new game, before scripts: conditions by function	754	undetermined
+44	new game, before scripts: conditions by function	756	undetermined
+27	new game, before scripts: conditions by function	757	undetermined
+8	new game, before scripts: conditions by function	758	undetermined
+8	new game, before scripts: conditions by function	759	undetermined
+9	new game, before scripts: conditions by function	760	undetermined
+13	new game, before scripts: conditions by function	761	undetermined
+25	new game, before scripts: conditions by function	762	undetermined
+1	new game, before scripts: conditions by function	763	undetermined
+37	new game, before scripts: conditions by function	764	undetermined
+43	new game, before scripts: conditions by function	765	undetermined
+51	new game, before scripts: conditions by function	766	undetermined
+21	new game, before scripts: conditions by function	767	undetermined
+19	new game, before scripts: conditions by function	769	undetermined
+1099	new game, before scripts: conditions by function	77	undetermined
+1	new game, before scripts: conditions by function	770	undetermined
+8	new game, before scripts: conditions by function	772	undetermined
+22	new game, before scripts: conditions by function	773	undetermined
+226	new game, before scripts: conditions by function	774	undetermined
+118	new game, before scripts: conditions by function	775	undetermined
+2	new game, before scripts: conditions by function	776	undetermined
+4	new game, before scripts: conditions by function	777	undetermined
+22	new game, before scripts: conditions by function	779	undetermined
+20	new game, before scripts: conditions by function	784	undetermined
+1	new game, before scripts: conditions by function	785	undetermined
+3	new game, before scripts: conditions by function	786	undetermined
+1	new game, before scripts: conditions by function	787	undetermined
+21	new game, before scripts: conditions by function	788	undetermined
+4	new game, before scripts: conditions by function	790	undetermined
+3	new game, before scripts: conditions by function	791	undetermined
+7	new game, before scripts: conditions by function	792	undetermined
+2	new game, before scripts: conditions by function	793	undetermined
+29	new game, before scripts: conditions by function	794	undetermined
+3	new game, before scripts: conditions by function	795	undetermined
+5	new game, before scripts: conditions by function	796	undetermined
+171	new game, before scripts: conditions by function	797	undetermined
+7	new game, before scripts: conditions by function	798	undetermined
+144	new game, before scripts: conditions by function	799	undetermined
+173	new game, before scripts: conditions by function	80	undetermined
+14	new game, before scripts: conditions by function	800	undetermined
+3	new game, before scripts: conditions by function	801	undetermined
+2	new game, before scripts: conditions by function	802	undetermined
+2	new game, before scripts: conditions by function	803	undetermined
+1	new game, before scripts: conditions by function	804	undetermined
+26	new game, before scripts: conditions by function	805	undetermined
+47	new game, before scripts: conditions by function	806	undetermined
+45	new game, before scripts: conditions by function	807	undetermined
+11	new game, before scripts: conditions by function	808	undetermined
+9	new game, before scripts: conditions by function	809	undetermined
+2	new game, before scripts: conditions by function	810	undetermined
+3	new game, before scripts: conditions by function	811	undetermined
+6	new game, before scripts: conditions by function	812	undetermined
+5	new game, before scripts: conditions by function	813	undetermined
+3	new game, before scripts: conditions by function	814	undetermined
+4	new game, before scripts: conditions by function	817	undetermined
+600	new game, before scripts: conditions by function	84	undetermined
+1	new game, before scripts: conditions by function	99	undetermined
+3	new game, before scripts: lists	ACTI	false
+1	new game, before scripts: lists	ACTI	true
+87	new game, before scripts: lists	ACTI	undetermined
+94	new game, before scripts: lists	ALCH	false
+1	new game, before scripts: lists	ALCH	true
+278	new game, before scripts: lists	ALCH	undetermined
+78	new game, before scripts: lists	CAMS	undetermined
+10	new game, before scripts: lists	CLFM	false
+633	new game, before scripts: lists	COBJ	false
+3	new game, before scripts: lists	COBJ	true
+1579	new game, before scripts: lists	COBJ	undetermined
+1	new game, before scripts: lists	CPTH	false
+326	new game, before scripts: lists	CPTH	undetermined
+2	new game, before scripts: lists	ENCH	false
+209	new game, before scripts: lists	ENCH	undetermined
+1	new game, before scripts: lists	FACT	undetermined
+1	new game, before scripts: lists	FURN	undetermined
+40	new game, before scripts: lists	HDPT	false
+2100	new game, before scripts: lists	IDLE	undetermined
+9572	new game, before scripts: lists	INFO	false
+1827	new game, before scripts: lists	INFO	true
+30820	new game, before scripts: lists	INFO	undetermined
+40	new game, before scripts: lists	LSCR	false
+238	new game, before scripts: lists	LSCR	undetermined
+10	new game, before scripts: lists	MESG	false
+4	new game, before scripts: lists	MESG	true
+49	new game, before scripts: lists	MESG	undetermined
+2	new game, before scripts: lists	MGEF	false
+1	new game, before scripts: lists	MGEF	true
+129	new game, before scripts: lists	MGEF	undetermined
+3	new game, before scripts: lists	MUST	false
+8	new game, before scripts: lists	MUST	true
+92	new game, before scripts: lists	MUST	undetermined
+1259	new game, before scripts: lists	PACK	false
+352	new game, before scripts: lists	PACK	true
+1749	new game, before scripts: lists	PACK	undetermined
+12	new game, before scripts: lists	PERK	false
+5	new game, before scripts: lists	PERK	true
+1058	new game, before scripts: lists	PERK	undetermined
+700	new game, before scripts: lists	QUST	false
+292	new game, before scripts: lists	QUST	true
+6150	new game, before scripts: lists	QUST	undetermined
+249	new game, before scripts: lists	RACE	false
+642	new game, before scripts: lists	SCEN	false
+329	new game, before scripts: lists	SCEN	true
+2221	new game, before scripts: lists	SCEN	undetermined
+6	new game, before scripts: lists	SMBN	false
+2	new game, before scripts: lists	SMBN	true
+74	new game, before scripts: lists	SMBN	undetermined
+1	new game, before scripts: lists	SMEN	undetermined
+62	new game, before scripts: lists	SMQN	false
+10	new game, before scripts: lists	SMQN	true
+211	new game, before scripts: lists	SMQN	undetermined
+14	new game, before scripts: lists	SNDR	false
+2	new game, before scripts: lists	SNDR	true
+623	new game, before scripts: lists	SNDR	undetermined
+11	new game, before scripts: lists	SPEL	false
+1	new game, before scripts: lists	SPEL	true
+350	new game, before scripts: lists	SPEL	undetermined
+438	new game, before scripts: lists	TERM	false
+160	new game, before scripts: lists	TERM	true
+558	new game, before scripts: lists	TERM	undetermined
+13803	new game, before scripts: lists (all types)	false
+2998	new game, before scripts: lists (all types)	true
+48982	new game, before scripts: lists (all types)	undetermined
+91	records with conditions	ACTI
+157	records with conditions	ALCH
+78	records with conditions	CAMS
+10	records with conditions	CLFM
+2215	records with conditions	COBJ
+327	records with conditions	CPTH
+89	records with conditions	ENCH
+1	records with conditions	FACT
+1	records with conditions	FURN
+40	records with conditions	HDPT
+2100	records with conditions	IDLE
+42219	records with conditions	INFO
+278	records with conditions	LSCR
+30	records with conditions	MESG
+132	records with conditions	MGEF
+103	records with conditions	MUST
+2924	records with conditions	PACK
+475	records with conditions	PERK
+1251	records with conditions	QUST
+3	records with conditions	RACE
+1149	records with conditions	SCEN
+82	records with conditions	SMBN
+1	records with conditions	SMEN
+283	records with conditions	SMQN
+639	records with conditions	SNDR
+148	records with conditions	SPEL
+270	records with conditions	TERM
+113273	reference word by run-on word	0	zero
+2828	reference word by run-on word	1	zero
+10	reference word by run-on word	10	zero
+118	reference word by run-on word	2	ACHR
+6	reference word by run-on word	2	PHZD
+103	reference word by run-on word	2	REFR
+7725	reference word by run-on word	2	no winning record, object id below 0x800
+1	reference word by run-on word	2	zero
+948	reference word by run-on word	3	zero
+753	reference word by run-on word	4	zero
+3423	reference word by run-on word	5	zero
+146	reference word by run-on word	6	zero
+807	reference word by run-on word	7	zero
+163	reference word by run-on word	8	zero
+4	reference word by run-on word	9	zero
+113273	run-on word	0
+2828	run-on word	1
+10	run-on word	10
+7953	run-on word	2
+948	run-on word	3
+753	run-on word	4
+3423	run-on word	5
+146	run-on word	6
+807	run-on word	7
+163	run-on word	8
+4	run-on word	9
+680	subrecords	CIS1
+12162	subrecords	CIS2
+91	tag before a list	ACTI	CITC
+373	tag before a list	ALCH	EFIT
+78	tag before a list	CAMS	MODT
+10	tag before a list	CLFM	FNAM
+2132	tag before a list	COBJ	DESC
+83	tag before a list	COBJ	FVPA
+327	tag before a list	CPTH	EDID
+211	tag before a list	ENCH	EFIT
+1	tag before a list	FACT	CITC
+1	tag before a list	FURN	CITC
+40	tag before a list	HDPT	RNAM
+2100	tag before a list	IDLE	EDID
+2787	tag before a list	INFO	DNAM
+3085	tag before a list	INFO	ENAM
+1191	tag before a list	INFO	GNAM
+4224	tag before a list	INFO	NAM4
+29211	tag before a list	INFO	NAM9
+1567	tag before a list	INFO	PNAM
+35	tag before a list	INFO	SNAM
+4	tag before a list	INFO	SRAF
+102	tag before a list	INFO	TNAM
+13	tag before a list	INFO	WZMD
+278	tag before a list	LSCR	DESC
+63	tag before a list	MESG	ITXT
+132	tag before a list	MGEF	DNAM
+103	tag before a list	MUST	CITC
+521	tag before a list	PACK	CITC
+2839	tag before a list	PACK	PSDT
+320	tag before a list	PERK	DESC
+755	tag before a list	PERK	PRKC
+127	tag before a list	QUST	ALCC
+35	tag before a list	QUST	ALCL
+4	tag before a list	QUST	ALEA
+824	tag before a list	QUST	ALFD
+74	tag before a list	QUST	ALFI
+23	tag before a list	QUST	ALFR
+3478	tag before a list	QUST	ALNT
+11	tag before a list	QUST	ALRT
+22	tag before a list	QUST	ALUA
+53	tag before a list	QUST	DNAM
+83	tag before a list	QUST	FLTR
+240	tag before a list	QUST	FNAM
+3	tag before a list	QUST	LNAM
+576	tag before a list	QUST	NEXT
+593	tag before a list	QUST	QSDT
+995	tag before a list	QUST	QSTA
+1	tag before a list	QUST	QTGL
+249	tag before a list	RACE	TTEF
+288	tag before a list	SCEN	CITC
+1	tag before a list	SCEN	CNAM
+1867	tag before a list	SCEN	NAM0
+1030	tag before a list	SCEN	NEXT
+6	tag before a list	SCEN	VNAM
+82	tag before a list	SMBN	CITC
+1	tag before a list	SMEN	CITC
+283	tag before a list	SMQN	CITC
+639	tag before a list	SNDR	ONAM
+362	tag before a list	SPEL	EFIT
+333	tag before a list	TERM	BTXT
+186	tag before a list	TERM	ITID
+183	tag before a list	TERM	TNAM
+454	tag before a list	TERM	UNAM
+234	texts	CIS1
+446	texts	CIS1 and CIS2
+11716	texts	CIS2
+117912	texts	none
+175	winning records read	AACT
+10391	winning records read	ACHR
+2195	winning records read	ACTI
+369	winning records read	ADDN
+31	winning records read	AECH
+352	winning records read	ALCH
+60	winning records read	AMDL
+106	winning records read	AMMO
+168	winning records read	ANIO
+9	winning records read	AORU
+1062	winning records read	ARMA
+1019	winning records read	ARMO
+258	winning records read	ARTO
+98	winning records read	ASPC
+13	winning records read	ASTP
+433	winning records read	AVIF
+12	winning records read	BNDS
+470	winning records read	BOOK
+58	winning records read	BPTD
+772	winning records read	CAMS
+62393	winning records read	CELL
+32	winning records read	CLAS
+166	winning records read	CLFM
+11	winning records read	CLMT
+33	winning records read	CMPO
+4148	winning records read	COBJ
+57	winning records read	COLL
+630	winning records read	CONT
+447	winning records read	CPTH
+143	winning records read	CSTY
+5	winning records read	DEBR
+445	winning records read	DFOB
+46373	winning records read	DIAL
+185	winning records read	DLBR
+1	winning records read	DLVW
+8	winning records read	DMGT
+1	winning records read	DOBJ
+442	winning records read	DOOR
+362	winning records read	ECZN
+70	winning records read	EFSH
+416	winning records read	ENCH
+47	winning records read	EQUP
+342	winning records read	EXPL
+851	winning records read	FACT
+64	winning records read	FLOR
+1060	winning records read	FLST
+175	winning records read	FSTP
+42	winning records read	FSTS
+782	winning records read	FURN
+69	winning records read	GDRY
+1916	winning records read	GLOB
+2049	winning records read	GMST
+107	winning records read	GRAS
+78	winning records read	HAZD
+420	winning records read	HDPT
+3691	winning records read	IDLE
+51	winning records read	IDLM
+269	winning records read	IMAD
+334	winning records read	IMGS
+102433	winning records read	INFO
+1	winning records read	INGR
+20	winning records read	INNR
+863	winning records read	IPCT
+371	winning records read	IPDS
+246	winning records read	KEYM
+197	winning records read	KSSM
+4279	winning records read	KYWD
+43482	winning records read	LAND
+4577	winning records read	LAYR
+913	winning records read	LCRT
+487	winning records read	LCTN
+49	winning records read	LENS
+70	winning records read	LGTM
+1064	winning records read	LIGH
+448	winning records read	LSCR
+128	winning records read	LTEX
+2768	winning records read	LVLI
+375	winning records read	LVLN
+26	winning records read	MATO
+156	winning records read	MATT
+1809	winning records read	MESG
+831	winning records read	MGEF
+3258	winning records read	MISC
+103	winning records read	MOVT
+1106	winning records read	MSTT
+3935	winning records read	MSWP
+132	winning records read	MUSC
+624	winning records read	MUST
+1	winning records read	NAVI
+12403	winning records read	NAVM
+1	winning records read	NOCM
+252	winning records read	NOTE
+4363	winning records read	NPC_
+3986	winning records read	OMOD
+477	winning records read	OTFT
+1	winning records read	OVIS
+4888	winning records read	PACK
+617	winning records read	PERK
+522	winning records read	PGRE
+2401	winning records read	PHZD
+1007	winning records read	PKIN
+2	winning records read	PMIS
+239	winning records read	PROJ
+1905	winning records read	QUST
+110	winning records read	RACE
+1778974	winning records read	REFR
+153	winning records read	REGN
+67	winning records read	RELA
+59	winning records read	REVB
+53	winning records read	RFCT
+9368	winning records read	RFGP
+231	winning records read	SCCO
+4773	winning records read	SCEN
+3509	winning records read	SCOL
+11	winning records read	SCSN
+120	winning records read	SMBN
+18	winning records read	SMEN
+335	winning records read	SMQN
+50	winning records read	SNCT
+7428	winning records read	SNDR
+402	winning records read	SOPM
+339	winning records read	SOUN
+427	winning records read	SPEL
+4	winning records read	SPGD
+36	winning records read	STAG
+23569	winning records read	STAT
+74	winning records read	TACT
+1069	winning records read	TERM
+1	winning records read	TREE
+1409	winning records read	TRNS
+511	winning records read	TXST
+732	winning records read	VTYP
+47	winning records read	WATR
+480	winning records read	WEAP
+13	winning records read	WRLD
+107	winning records read	WTHR
+18	winning records read	ZOOM
+
+## functions by index: total, host record types, operator codes, flag bits other than OR, run-on words, comparison values, texts
+function 1	4734	hosts INFO:3646 SCEN:690 QUST:197 PACK:104 CAMS:57 PERK:12 CPTH:8 SPEL:6 IDLE:5 TERM:5 SMQN:3 MGEF:1	op 4:4233 2:226 3:139 5:135 0:1	flags 0x04:3572 0x00:633 0x02:411 0x06:110 0x08:7 0x10:1	run-on 0:3733 5:629 2:339 8:18 1:9 4:3 7:2 3:1	value a global:3682 another integer:1050 0:2	texts none
+function 5	80	hosts INFO:58 TERM:16 PERK:2 SCEN:2 QUST:1 SMQN:1	op 0:79 3:1	flags 0x00:80	run-on 5:21 1:20 8:20 4:11 2:5 0:2 7:1	value 1:63 0:17	texts none
+function 6	26	hosts PACK:14 INFO:8 QUST:4	op 2:11 4:9 3:6	flags 0x00:19 0x04:7	run-on 2:14 0:12	value another integer:19 a global:7	texts none
+function 14	4076	hosts INFO:2863 PACK:248 IDLE:233 QUST:135 PERK:123 SCEN:123 TERM:93 ENCH:92 ALCH:86 SPEL:48 SMQN:14 SMBN:11 MGEF:4 ACTI:1 CPTH:1 FACT:1	op 0:2792 2:446 3:390 4:256 1:120 5:72	flags 0x00:2826 0x04:1248 0x02:2	run-on 0:3242 4:383 5:257 2:103 1:61 7:29 3:1	value a global:1248 1:1045 0:987 another integer:796	texts none
+function 18	390	hosts SNDR:216 MUST:152 INFO:10 SCEN:6 QUST:4 PACK:2	op 3:168 4:113 5:82 2:27	flags 0x00:390	run-on 0:390	value another integer:292 a fraction:90 0:6 1:2	texts none
+function 24	6	hosts IDLE:6	op 0:6	flags 0x00:6	run-on 0:6	value 1:5 a fraction:1	texts none
+function 25	23	hosts SPEL:8 IDLE:7 ENCH:3 PERK:3 INFO:1 PACK:1	op 0:23	flags 0x00:23	run-on 0:23	value 0:18 1:5	texts none
+function 27	97	hosts INFO:62 SCEN:26 PACK:8 IDLE:1	op 0:97	flags 0x00:76 0x02:21	run-on 2:72 5:14 0:11	value 1:86 0:11	texts none
+function 32	14	hosts INFO:9 SCEN:3 PACK:2	op 0:14	flags 0x02:11 0x00:2 0x08:1	run-on 2:6 5:5 0:3	value 1:13 0:1	texts none
+function 35	81	hosts QUST:39 TERM:26 PACK:13 INFO:2 SCEN:1	op 0:78 1:3	flags 0x00:77 0x02:4	run-on 0:32 2:26 5:13 4:10	value 0:62 1:19	texts none
+function 44	1	hosts INFO:1	op 0:1	flags 0x02:1	run-on 0:1	value 0:1	texts none
+function 45	33	hosts PACK:25 SCEN:5 PERK:2 QUST:1	op 0:33	flags 0x00:28 0x02:2 0x12:2 0x08:1	run-on 0:25 2:4 5:3 1:1	value 1:29 0:4	texts none
+function 46	808	hosts QUST:242 INFO:224 PACK:139 SCEN:116 IDLE:31 TERM:24 PERK:19 ACTI:5 SPEL:4 MGEF:2 SMQN:2	op 0:777 1:31	flags 0x00:785 0x08:20 0x02:3	run-on 5:420 0:212 6:101 2:45 4:13 1:8 8:6 7:3	value 0:512 1:296	texts none
+function 47	718	hosts INFO:587 QUST:66 MESG:28 SCEN:19 TERM:9 PACK:5 IDLE:2 COBJ:1 PERK:1	op 3:410 0:135 4:108 2:39 1:16 5:10	flags 0x00:575 0x04:130 0x02:13	run-on 2:599 0:99 5:11 1:6 9:3	value 1:362 0:149 a global:130 another integer:77	texts none
+function 48	14	hosts INFO:8 SPEL:6	op 3:7 5:6 4:1	flags 0x00:14	run-on 2:8 0:6	value another integer:14	texts none
+function 49	89	hosts IDLE:71 INFO:10 QUST:5 PERK:3	op 0:45 1:41 2:3	flags 0x00:89	run-on 0:89	value another integer:61 0:27 1:1	texts none
+function 50	198	hosts INFO:196 PACK:1 SCEN:1	op 0:198	flags 0x00:198	run-on 1:150 0:42 5:6	value 1:172 0:26	texts none
+function 56	510	hosts INFO:280 PACK:60 QUST:59 SCEN:39 TERM:26 SNDR:12 SMQN:11 MUST:10 LSCR:5 ACTI:4 SMBN:4	op 0:487 1:22 5:1	flags 0x00:510	run-on 0:510	value 0:301 1:209	texts none
+function 58	3665	hosts INFO:2228 PACK:1149 SCEN:81 TERM:68 QUST:59 SNDR:26 LSCR:24 COBJ:12 SMQN:10 ACTI:2 MUST:2 PERK:2 CPTH:1 MESG:1	op 4:1230 3:1060 0:1054 5:125 1:113 2:83	flags 0x00:3665	run-on 0:3660 2:3 4:1 5:1	value another integer:3592 0:64 1:9	texts none
+function 59	18608	hosts INFO:12662 PACK:2579 QUST:1201 SCEN:1031 TERM:502 RACE:249 COBJ:162 LSCR:77 SMQN:60 HDPT:40 CLFM:10 MUST:9 PERK:8 MESG:7 SNDR:5 SMBN:3 SPEL:2 ACTI:1	op 0:17691 1:906 3:8 4:3	flags 0x00:18601 0x02:7	run-on 0:18596 2:7 1:3 5:2	value 1:11208 0:7364 another integer:36	texts none
+function 62	24	hosts INFO:12 SNDR:10 IDLE:1 SMQN:1	op 0:24	flags 0x00:24	run-on 0:24	value 1:24	texts none
+function 65	123	hosts INFO:123	op 0:103 3:8 5:8 2:4	flags 0x04:95 0x00:28	run-on 5:95 1:28	value a global:95 another integer:27 0:1	texts none
+function 66	27	hosts INFO:13 QUST:13 SPEL:1	op 0:16 2:10 1:1	flags 0x00:27	run-on 0:21 1:6	value 0:25 another integer:2	texts none
+function 67	899	hosts INFO:371 QUST:211 SCEN:105 PACK:80 SNDR:60 COBJ:56 LSCR:10 TERM:2 ACTI:1 CPTH:1 MGEF:1 SMQN:1	op 0:873 1:26	flags 0x00:898 0x02:1	run-on 0:507 2:339 5:50 7:3	value 1:665 0:234	texts none
+function 69	642	hosts INFO:473 IDLE:122 QUST:17 PERK:10 MGEF:8 PACK:6 CAMS:3 SCEN:2 ENCH:1	op 0:619 1:23	flags 0x00:642	run-on 3:438 0:114 1:79 5:8 2:2 8:1	value 1:569 0:73	texts none
+function 70	4140	hosts INFO:4021 PERK:36 QUST:30 SNDR:28 TERM:10 SCEN:7 IDLE:6 PACK:2	op 0:4140	flags 0x00:4130 0x02:10	run-on 2:3560 0:312 5:132 1:73 3:54 8:9	value 1:4118 0:22	texts none
+function 71	8698	hosts INFO:7971 QUST:418 PACK:100 MGEF:35 SCEN:34 SMQN:33 SPEL:33 PERK:23 TERM:14 SMBN:12 ENCH:8 ACTI:7 COBJ:5 IDLE:3 LSCR:2	op 0:8661 1:36 5:1	flags 0x00:8698	run-on 0:8179 5:178 2:124 7:87 1:80 3:49 4:1	value 1:8127 0:570 another integer:1	texts none
+function 72	17964	hosts INFO:17065 QUST:590 SCEN:59 IDLE:55 PERK:48 ACTI:41 MGEF:27 PACK:23 ENCH:17 ALCH:8 SMQN:8 TERM:6 CPTH:5 SPEL:5 CAMS:4 SMBN:2 SNDR:1	op 0:17909 1:53 3:1 4:1	flags 0x00:17951 0x02:13	run-on 0:16180 1:1016 5:585 3:87 7:81 2:9 4:4 6:1 9:1	value 1:17715 0:247 another integer:2	texts none
+function 73	26	hosts INFO:24 PACK:2	op 0:15 2:8 5:2 3:1	flags 0x00:26	run-on 0:15 2:6 5:5	value 1:12 another integer:9 0:5	texts none
+function 74	10818	hosts INFO:8480 COBJ:620 QUST:457 TERM:359 SCEN:289 PACK:272 ALCH:97 SMQN:62 RACE:48 SPEL:39 LSCR:19 SMBN:19 PERK:18 CLFM:10 MESG:8 MUST:8 MGEF:5 ENCH:4 ACTI:2 CPTH:1 IDLE:1	op 0:9558 1:456 3:301 2:230 4:181 5:92	flags 0x00:7365 0x04:3434 0x02:19	run-on 0:10818	value 1:3593 a global:3434 0:2050 another integer:1717 a fraction:24	texts none
+function 75	1	hosts SMQN:1	op 0:1	flags 0x00:1	run-on 0:1	value 1:1	texts none
+function 77	1099	hosts LSCR:371 IDLE:229 INFO:201 PERK:81 SNDR:64 QUST:31 PACK:27 CPTH:21 SMQN:17 SCEN:13 ENCH:11 MGEF:10 SPEL:8 CAMS:7 SMBN:7 ALCH:1	op 5:907 4:105 3:66 2:21	flags 0x00:851 0x04:248	run-on 0:1099	value another integer:761 a global:248 a fraction:41 1:40 0:9	texts none
+function 80	173	hosts QUST:101 SPEL:31 PERK:22 INFO:13 SCEN:3 SMQN:2 SMBN:1	op 3:108 5:38 2:17 4:10	flags 0x00:109 0x04:64	run-on 2:84 0:48 7:29 1:12	value another integer:109 a global:64	texts none
+function 84	600	hosts INFO:489 QUST:78 SCEN:21 PACK:9 TERM:2 SMQN:1	op 0:472 3:54 2:26 4:25 5:15 1:8	flags 0x00:600	run-on 0:600	value 0:461 1:138 another integer:1	texts none
+function 99	1	hosts IDLE:1	op 2:1	flags 0x00:1	run-on 0:1	value 0:1	texts none
+function 101	84	hosts IDLE:84	op 0:84	flags 0x00:84	run-on 0:84	value 0:42 1:42	texts none
+function 108	13	hosts INFO:9 IDLE:3 PACK:1	op 0:11 1:1 2:1	flags 0x00:13	run-on 0:11 2:2	value another integer:12 0:1	texts none
+function 117	53	hosts INFO:27 SNDR:13 SPEL:10 QUST:2 LSCR:1	op 0:53	flags 0x00:53	run-on 0:53	value 1:38 0:15	texts none
+function 118	1	hosts IDLE:1	op 0:1	flags 0x00:1	run-on 0:1	value 0:1	texts none
+function 127	3	hosts PERK:3	op 0:3	flags 0x00:3	run-on 0:3	value 0:3	texts none
+function 130	10	hosts INFO:5 PACK:3 IDLE:2	op 0:10	flags 0x00:10	run-on 1:5 0:2 5:2 6:1	value 0:10	texts none
+function 131	52	hosts SCEN:52	op 3:52	flags 0x00:52	run-on 0:52	value another integer:52	texts none
+function 135	3	hosts PACK:3	op 0:3	flags 0x00:3	run-on 0:3	value 0:2 1:1	texts none
+function 136	76	hosts PACK:45 INFO:11 PERK:11 ALCH:4 MGEF:4 QUST:1	op 0:65 1:11	flags 0x08:43 0x00:33	run-on 0:51 3:21 4:2 1:1 7:1	value 1:58 0:18	texts none
+function 141	8	hosts IDLE:5 PACK:2 SCEN:1	op 0:8	flags 0x00:8	run-on 0:7 5:1	value 0:7 1:1	texts none
+function 143	2	hosts IDLE:2	op 0:2	flags 0x00:2	run-on 0:2	value another integer:2	texts none
+function 144	20	hosts INFO:20	op 0:7 2:7 5:6	flags 0x00:20	run-on 0:20	value another integer:13 1:4 0:3	texts none
+function 145	13	hosts INFO:13	op 0:13	flags 0x00:13	run-on 1:10 0:3	value 0:13	texts none
+function 149	28	hosts ALCH:11 INFO:7 SNDR:5 SPEL:5	op 0:28	flags 0x00:28	run-on 0:28	value 1:23 0:5	texts none
+function 157	76	hosts TERM:42 SCEN:20 QUST:7 INFO:5 PACK:2	op 0:57 1:16 3:2 2:1	flags 0x00:58 0x10:18	run-on 4:38 5:27 2:8 7:3	value another integer:40 1:36	texts none
+function 159	191	hosts IDLE:126 INFO:26 SCEN:19 CAMS:10 SPEL:6 PACK:2 MGEF:1 PERK:1	op 0:127 1:56 2:6 3:2	flags 0x00:191	run-on 0:166 2:11 5:8 1:6	value another integer:118 0:63 1:10	texts none
+function 161	154	hosts INFO:129 QUST:25	op 0:146 1:8	flags 0x00:140 0x02:14	run-on 0:127 5:18 7:8 1:1	value 1:132 0:22	texts none
+function 162	5	hosts PACK:3 INFO:1 SCEN:1	op 0:5	flags 0x08:3 0x00:2	run-on 0:3 2:2	value 0:4 1:1	texts none
+function 163	35	hosts INFO:32 IDLE:3	op 0:35	flags 0x00:35	run-on 0:35	value 1:34 0:1	texts none
+function 175	4	hosts PACK:4	op 0:4	flags 0x00:4	run-on 0:4	value 1:4	texts none
+function 181	52	hosts QUST:52	op 0:52	flags 0x00:49 0x02:3	run-on 0:52	value 1:46 0:6	texts none
+function 182	113	hosts INFO:107 PACK:2 PERK:1 QUST:1 SCEN:1 SPEL:1	op 0:113	flags 0x00:113	run-on 2:68 0:42 1:3	value 1:96 0:17	texts none
+function 185	38	hosts IDLE:34 PACK:2 INFO:1 SPEL:1	op 0:38	flags 0x00:38	run-on 0:37 2:1	value 1:31 0:7	texts none
+function 203	28	hosts QUST:14 INFO:6 PACK:3 SMQN:2 TERM:2 PERK:1	op 0:28	flags 0x00:27 0x02:1	run-on 0:15 5:7 4:4 7:2	value 0:25 1:3	texts none
+function 214	92	hosts PERK:33 INFO:29 MGEF:10 SPEL:9 TERM:6 ENCH:3 QUST:2	op 0:87 1:5	flags 0x00:92	run-on 0:66 2:13 1:7 4:6	value 0:56 1:36	texts none
+function 224	15	hosts IDLE:8 CPTH:4 SNDR:2 PERK:1	op 0:13 1:2	flags 0x00:15	run-on 0:13 1:2	value 1:8 0:7	texts none
+function 231	64	hosts SCEN:64	op 0:42 1:22	flags 0x00:64	run-on 0:64	value 1:34 another integer:24 0:6	texts none
+function 235	1	hosts IDLE:1	op 5:1	flags 0x00:1	run-on 0:1	value another integer:1	texts none
+function 237	1	hosts PACK:1	op 0:1	flags 0x00:1	run-on 0:1	value 1:1	texts none
+function 242	43	hosts IDLE:16 TERM:15 QUST:6 INFO:4 ACTI:1 PERK:1	op 0:43	flags 0x00:43	run-on 0:23 2:10 4:10	value 1:25 0:18	texts none
+function 247	2	hosts IDLE:2	op 0:2	flags 0x00:2	run-on 1:2	value 1:2	texts none
+function 248	212	hosts SCEN:110 INFO:45 SNDR:31 PACK:15 QUST:9 IDLE:2	op 0:206 1:6	flags 0x00:212	run-on 0:212	value 0:162 1:50	texts none
+function 249	219	hosts INFO:196 IDLE:16 SCEN:5 PACK:2	op 0:219	flags 0x00:219	run-on 0:214 5:5	value 1:154 0:65	texts none
+function 250	25	hosts INFO:25	op 0:25	flags 0x00:25	run-on 0:25	value 0:23 1:2	texts none
+function 254	1	hosts SNDR:1	op 0:1	flags 0x00:1	run-on 0:1	value 1:1	texts none
+function 255	190	hosts INFO:187 SCEN:2 QUST:1	op 0:187 1:3	flags 0x00:190	run-on 0:180 1:7 5:3	value 1:162 0:28	texts none
+function 258	8	hosts INFO:8	op 0:8	flags 0x02:8	run-on 0:8	value 1:8	texts none
+function 259	1	hosts INFO:1	op 0:1	flags 0x02:1	run-on 0:1	value 1:1	texts none
+function 261	6	hosts INFO:6	op 0:6	flags 0x02:4 0x00:2	run-on 0:6	value 0:4 1:2	texts none
+function 263	22	hosts IDLE:12 INFO:8 SCEN:2	op 0:19 1:1 2:1 3:1	flags 0x00:22	run-on 0:10 2:9 1:2 5:1	value 0:12 1:6 another integer:4	texts none
+function 264	9	hosts PACK:5 INFO:4	op 0:9	flags 0x00:9	run-on 0:8 2:1	value 1:8 0:1	texts none
+function 266	38	hosts INFO:38	op 0:38	flags 0x00:38	run-on 0:38	value 1:38	texts none
+function 277	445	hosts PERK:320 QUST:81 INFO:34 ENCH:10	op 3:262 2:94 4:63 0:26	flags 0x00:445	run-on 2:312 0:104 5:18 4:9 1:2	value another integer:316 0:95 1:34	texts none
+function 286	94	hosts INFO:39 IDLE:37 PACK:7 SPEL:4 ENCH:3 PERK:3 SMBN:1	op 0:90 1:4	flags 0x00:93 0x02:1	run-on 0:55 2:25 3:14	value 1:73 0:21	texts none
+function 288	5	hosts INFO:5	op 3:5	flags 0x00:5	run-on 0:5	value 1:5	texts none
+function 289	204	hosts IDLE:80 INFO:69 SCEN:17 SPEL:14 PACK:13 ENCH:6 PERK:2 QUST:2 SMQN:1	op 0:201 1:3	flags 0x00:204	run-on 0:160 5:22 2:11 1:9 7:2	value 1:124 0:80	texts none
+function 300	425	hosts INFO:302 SNDR:56 PACK:21 COBJ:17 QUST:13 SPEL:8 SMQN:3 SCEN:2 ALCH:1 ENCH:1 SMBN:1	op 0:404 1:21	flags 0x00:425	run-on 0:383 2:42	value 1:227 0:198	texts none
+function 304	2	hosts PERK:2	op 0:2	flags 0x00:2	run-on 0:2	value 1:2	texts none
+function 310	360	hosts QUST:181 INFO:111 SMQN:19 PACK:15 LSCR:11 SCEN:8 COBJ:6 SMBN:6 SNDR:2 CPTH:1	op 0:353 1:7	flags 0x00:360	run-on 0:170 7:148 2:32 5:6 4:4	value 1:340 0:20	texts none
+function 313	2	hosts IDLE:2	op 0:2	flags 0x00:2	run-on 0:2	value 0:2	texts none
+function 314	7	hosts INFO:7	op 0:7	flags 0x00:7	run-on 0:7	value 0:4 1:3	texts none
+function 323	46	hosts INFO:22 PACK:7 PERK:6 SCEN:4 IDLE:3 MGEF:3 SPEL:1	op 0:35 1:9 2:2	flags 0x00:46	run-on 0:36 5:7 2:3	value 0:29 1:17	texts none
+function 325	73	hosts PACK:73	op 0:73	flags 0x00:73	run-on 0:28 2:23 5:12 6:10	value 1:52 0:21	texts none
+function 327	108	hosts SCEN:84 PACK:16 IDLE:6 MGEF:1 PERK:1	op 0:105 1:3	flags 0x00:108	run-on 5:83 0:22 2:3	value 0:74 1:34	texts none
+function 329	23	hosts IDLE:23	op 0:23	flags 0x00:23	run-on 0:23	value 0:23	texts none
+function 353	59	hosts PACK:22 CAMS:13 ACTI:12 QUST:9 CPTH:1 PERK:1 SMEN:1	op 0:56 1:3	flags 0x00:39 0x08:20	run-on 0:22 6:20 1:14 4:2 7:1	value 1:47 0:12	texts none
+function 354	28	hosts MGEF:19 IDLE:5 PERK:2 ENCH:1 QUST:1	op 0:22 1:6	flags 0x00:28	run-on 0:28	value 0:16 1:12	texts none
+function 358	52	hosts PACK:52	op 0:52	flags 0x00:52	run-on 0:52	value 0:49 1:3	texts none
+function 359	1429	hosts INFO:971 LSCR:166 SMQN:74 PACK:71 QUST:60 SCEN:55 SMBN:19 TERM:8 COBJ:3 PERK:2	op 0:1416 1:13	flags 0x00:1422 0x02:7	run-on 0:1173 2:167 5:70 7:19	value 1:982 0:447	texts none
+function 360	104	hosts QUST:62 INFO:27 PACK:13 SCEN:2	op 0:103 1:1	flags 0x00:100 0x02:4	run-on 2:62 0:42	value 0:65 1:39	texts none
+function 361	8	hosts QUST:5 PERK:2 SMQN:1	op 2:6 3:1 5:1	flags 0x00:8	run-on 0:7 7:1	value 0:6 a fraction:1 another integer:1	texts none
+function 362	282	hosts PACK:202 QUST:40 TERM:40	op 0:278 1:4	flags 0x00:274 0x08:8	run-on 0:256 4:13 6:8 7:5	value 1:249 0:33	texts none
+function 365	26	hosts QUST:11 MGEF:5 ENCH:4 PERK:3 IDLE:1 INFO:1 PACK:1	op 0:26	flags 0x00:26	run-on 0:25 1:1	value 0:26	texts none
+function 372	4	hosts ACTI:3 INFO:1	op 0:4	flags 0x00:4	run-on 0:4	value 1:4	texts none
+function 375	6	hosts INFO:6	op 3:3 2:2 4:1	flags 0x00:6	run-on 2:6	value another integer:4 0:2	texts none
+function 376	2	hosts INFO:2	op 2:2	flags 0x00:2	run-on 2:2	value 0:2	texts none
+function 378	13	hosts ACTI:13	op 1:12 0:1	flags 0x10:7 0x00:6	run-on 0:13	value 1:12 0:1	texts none
+function 380	13	hosts INFO:13	op 3:10 4:3	flags 0x02:13	run-on 0:13	value another integer:13	texts none
+function 390	11	hosts IDLE:11	op 0:11	flags 0x00:11	run-on 0:11	value another integer:10 1:1	texts none
+function 391	243	hosts SNDR:230 IDLE:9 SPEL:4	op 0:242 1:1	flags 0x00:242 0x08:1	run-on 0:236 1:7	value 1:135 0:108	texts none
+function 398	30	hosts IDLE:30	op 0:30	flags 0x00:30	run-on 0:17 10:10 2:3	value 1:28 0:2	texts none
+function 407	162	hosts CPTH:159 IDLE:2 PERK:1	op 2:77 0:52 4:24 1:5 3:3 5:1	flags 0x00:162	run-on 0:162	value another integer:105 1:55 0:2	texts none
+function 414	44	hosts SCEN:19 PACK:13 QUST:11 INFO:1	op 0:44	flags 0x00:31 0x02:13	run-on 5:31 0:13	value 1:43 0:1	texts none
+function 415	154	hosts INFO:154	op 3:130 2:23 0:1	flags 0x00:154	run-on 0:149 3:5	value another integer:143 1:11	texts none
+function 416	3	hosts SPEL:2 PERK:1	op 3:3	flags 0x00:3	run-on 0:3	value another integer:3	texts none
+function 426	4229	hosts INFO:3594 QUST:572 SCEN:34 SMQN:28 MGEF:1	op 0:4215 1:14	flags 0x00:4229	run-on 0:4147 5:40 7:32 1:10	value 1:4100 0:129	texts none
+function 427	1	hosts IDLE:1	op 0:1	flags 0x00:1	run-on 0:1	value 1:1	texts none
+function 430	157	hosts PERK:55 INFO:51 ENCH:35 SPEL:7 ALCH:6 IDLE:3	op 5:87 2:35 3:23 0:6 4:6	flags 0x00:157	run-on 0:137 3:11 2:6 5:2 1:1	value a fraction:135 another integer:13 1:6 0:3	texts none
+function 432	124	hosts INFO:97 IDLE:17 PACK:4 PERK:3 QUST:3	op 0:123 1:1	flags 0x00:124	run-on 5:42 8:37 1:29 0:12 4:2 6:2	value 1:91 0:33	texts none
+function 438	16	hosts INFO:16	op 0:16	flags 0x00:16	run-on 0:16	value 0:16	texts none
+function 439	29	hosts IDLE:29	op 0:29	flags 0x00:29	run-on 0:29	value 1:29	texts none
+function 444	3	hosts QUST:3	op 0:3	flags 0x00:3	run-on 0:3	value 1:3	texts none
+function 445	1	hosts QUST:1	op 0:1	flags 0x00:1	run-on 0:1	value 0:1	texts none
+function 446	5	hosts IDLE:5	op 5:3 4:2	flags 0x00:5	run-on 0:5	value another integer:5	texts none
+function 447	32	hosts IDLE:32	op 2:14 5:12 0:3 4:3	flags 0x00:32	run-on 0:32	value another integer:19 0:10 a fraction:3	texts CIS1:32
+function 448	3110	hosts COBJ:2083 ALCH:211 INFO:197 PERK:181 SPEL:161 SNDR:111 TERM:45 MGEF:44 IDLE:35 PACK:17 ACTI:13 ENCH:5 SCEN:5 QUST:1 SMQN:1	op 0:3028 3:60 1:21 2:1	flags 0x00:3110	run-on 0:1769 2:1329 1:11 5:1	value 1:2598 0:510 another integer:2	texts none
+function 449	40	hosts QUST:29 INFO:8 ENCH:2 SCEN:1	op 0:26 5:10 3:3 4:1	flags 0x00:20 0x02:20	run-on 0:39 5:1	value another integer:30 1:10	texts none
+function 453	11	hosts INFO:8 PERK:2 SPEL:1	op 0:9 1:2	flags 0x00:11	run-on 2:8 0:3	value 1:11	texts none
+function 458	1	hosts INFO:1	op 0:1	flags 0x00:1	run-on 0:1	value 1:1	texts none
+function 459	4	hosts INFO:4	op 2:4	flags 0x00:4	run-on 2:4	value 0:4	texts none
+function 463	1	hosts ACTI:1	op 0:1	flags 0x00:1	run-on 0:1	value 0:1	texts none
+function 465	18	hosts INFO:18	op 3:18	flags 0x00:18	run-on 5:14 2:4	value 1:18	texts none
+function 476	18	hosts MGEF:18	op 0:14 1:4	flags 0x00:18	run-on 0:18	value 0:14 1:4	texts none
+function 483	84	hosts INFO:84	op 0:84	flags 0x00:84	run-on 0:84	value 1:82 0:2	texts none
+function 485	17	hosts QUST:10 SMBN:5 SMQN:2	op 5:17	flags 0x04:17	run-on 0:17	value a global:17	texts none
+function 487	3	hosts IDLE:3	op 0:3	flags 0x00:3	run-on 1:3	value 1:3	texts none
+function 491	42	hosts QUST:25 INFO:17	op 0:20 3:20 4:2	flags 0x00:42	run-on 5:37 2:5	value 1:26 0:11 another integer:5	texts none
+function 494	14	hosts MESG:14	op 3:7 4:7	flags 0x00:14	run-on 0:14	value another integer:14	texts none
+function 506	8	hosts MESG:7 INFO:1	op 3:8	flags 0x00:8	run-on 2:7 0:1	value another integer:7 1:1	texts none
+function 507	34	hosts INFO:26 SCEN:5 PERK:3	op 0:29 1:5	flags 0x00:34	run-on 2:25 0:9	value 1:34	texts none
+function 508	4	hosts ENCH:4	op 0:4	flags 0x00:4	run-on 0:4	value 1:4	texts none
+function 510	75	hosts INFO:66 MESG:5 QUST:3 SCEN:1	op 3:40 4:17 0:16 1:1 2:1	flags 0x04:41 0x00:34	run-on 2:70 0:5	value a global:41 1:28 0:4 another integer:2	texts none
+function 511	261	hosts INFO:261	op 0:261	flags 0x00:261	run-on 0:261	value 1:261	texts none
+function 512	3	hosts QUST:3	op 0:3	flags 0x02:3	run-on 0:3	value 0:3	texts none
+function 513	9	hosts INFO:6 SCEN:3	op 0:7 1:2	flags 0x00:6 0x02:3	run-on 5:7 0:2	value 1:9	texts none
+function 515	113	hosts CPTH:101 CAMS:12	op 3:86 2:23 4:3 5:1	flags 0x00:113	run-on 0:68 1:45	value another integer:113	texts none
+function 516	105	hosts CPTH:97 CAMS:8	op 3:80 2:25	flags 0x00:105	run-on 0:60 1:45	value another integer:105	texts none
+function 517	98	hosts CPTH:60 CAMS:38	op 2:61 3:37	flags 0x00:98	run-on 1:50 0:48	value another integer:98	texts none
+function 518	44	hosts CPTH:41 CAMS:3	op 3:33 2:7 4:4	flags 0x00:44	run-on 0:26 1:18	value another integer:44	texts none
+function 522	66	hosts CPTH:52 CAMS:14	op 3:44 2:18 5:3 4:1	flags 0x00:66	run-on 0:52 1:14	value another integer:66	texts none
+function 523	68	hosts CPTH:52 CAMS:16	op 3:45 2:22 4:1	flags 0x00:68	run-on 0:52 1:16	value another integer:68	texts none
+function 525	2	hosts CPTH:2	op 3:2	flags 0x00:2	run-on 0:2	value another integer:2	texts none
+function 536	117	hosts INFO:95 PACK:20 SMBN:1 SMQN:1	op 0:104 1:13	flags 0x04:97 0x00:20	run-on 0:114 7:2 8:1	value a global:97 another integer:15 0:5	texts none
+function 543	219	hosts INFO:161 QUST:21 COBJ:13 PACK:11 SMQN:8 SCEN:4 LSCR:1	op 0:218 2:1	flags 0x00:219	run-on 0:211 1:8	value 1:170 0:49	texts none
+function 544	942	hosts INFO:941 SCEN:1	op 0:827 3:80 2:31 1:4	flags 0x00:942	run-on 0:937 2:5	value 1:692 0:250	texts none
+function 550	417	hosts SCEN:416 INFO:1	op 0:417	flags 0x00:416 0x02:1	run-on 0:411 5:4 2:2	value 1:416 0:1	texts none
+function 555	157	hosts SCEN:126 PACK:9 QUST:9 INFO:7 TERM:4 SPEL:2	op 0:155 1:2	flags 0x00:157	run-on 5:117 2:28 0:12	value 1:148 0:9	texts none
+function 560	1877	hosts QUST:608 PERK:474 INFO:358 SPEL:114 IDLE:112 ENCH:61 MGEF:57 PACK:38 ACTI:25 SMQN:12 SMBN:11 CAMS:4 FURN:1 SCEN:1 SMEN:1	op 0:1840 1:37	flags 0x00:1877	run-on 0:1118 7:305 1:172 3:152 8:54 4:42 5:33 6:1	value 1:975 0:902	texts none
+function 561	4535	hosts QUST:4509 INFO:14 MGEF:5 SPEL:4 PERK:2 PACK:1	op 0:4532 1:3	flags 0x00:4535	run-on 0:4535	value 1:4516 0:19	texts none
+function 562	689	hosts QUST:469 INFO:166 COBJ:46 PERK:5 SMQN:2 PACK:1	op 0:689	flags 0x00:689	run-on 0:687 1:1 7:1	value 1:542 0:147	texts none
+function 563	269	hosts QUST:269	op 0:269	flags 0x00:269	run-on 0:269	value 1:269	texts none
+function 565	10	hosts QUST:10	op 0:10	flags 0x00:10	run-on 0:10	value 1:10	texts none
+function 566	5986	hosts INFO:5893 QUST:51 PACK:22 SCEN:20	op 0:5985 1:1	flags 0x00:5961 0x02:25	run-on 0:5267 1:646 5:44 4:15 3:8 8:5 2:1	value 1:5935 0:51	texts none
+function 567	2	hosts QUST:2	op 0:2	flags 0x00:2	run-on 0:2	value 1:2	texts none
+function 568	14	hosts IDLE:6 SPEL:5 ENCH:2 PERK:1	op 0:14	flags 0x00:14	run-on 0:14	value 1:9 0:5	texts none
+function 569	6	hosts IDLE:5 PERK:1	op 1:5 0:1	flags 0x00:6	run-on 0:6	value 1:6	texts none
+function 570	11	hosts IDLE:11	op 0:11	flags 0x00:11	run-on 0:11	value 1:9 0:2	texts none
+function 571	1	hosts IDLE:1	op 0:1	flags 0x00:1	run-on 0:1	value 1:1	texts none
+function 572	1	hosts IDLE:1	op 0:1	flags 0x00:1	run-on 0:1	value 0:1	texts none
+function 576	323	hosts SMQN:173 SMBN:76 QUST:74	op 0:318 2:3 1:1 3:1	flags 0x00:300 0x04:23	run-on 0:308 7:15	value 1:257 0:37 a global:23 another integer:6	texts none
+function 577	18	hosts INFO:12 QUST:4 PACK:2	op 0:17 1:1	flags 0x02:16 0x00:2	run-on 8:12 2:4 0:2	value 1:16 0:2	texts none
+function 578	3	hosts PERK:3	op 4:3	flags 0x00:3	run-on 0:3	value 0:3	texts none
+function 580	30	hosts INFO:15 IDLE:6 PACK:3 QUST:2 SPEL:2 PERK:1 SCEN:1	op 0:29 1:1	flags 0x00:29 0x02:1	run-on 0:28 5:2	value 0:16 1:14	texts none
+function 584	32	hosts IDLE:32	op 2:9 3:8 5:8 4:7	flags 0x00:32	run-on 0:18 3:14	value another integer:32	texts none
+function 589	18	hosts IDLE:18	op 0:17 1:1	flags 0x00:18	run-on 0:18	value another integer:14 1:4	texts none
+function 590	22	hosts INFO:9 IDLE:6 PACK:3 SCEN:2 SMBN:2	op 0:21 1:1	flags 0x00:22	run-on 0:15 2:7	value 0:19 1:3	texts none
+function 592	3	hosts QUST:3	op 4:2 5:1	flags 0x00:3	run-on 0:3	value another integer:3	texts none
+function 594	25	hosts SCEN:19 IDLE:4 PACK:2	op 0:25	flags 0x00:25	run-on 5:19 0:6	value 0:19 1:6	texts none
+function 596	2	hosts IDLE:2	op 0:2	flags 0x00:2	run-on 0:2	value 1:2	texts none
+function 601	37	hosts QUST:37	op 5:12 2:11 4:9 3:5	flags 0x04:20 0x02:9 0x00:8	run-on 0:37	value a global:20 another integer:17	texts none
+function 603	5	hosts PACK:3 INFO:1 QUST:1	op 0:4 1:1	flags 0x00:4 0x02:1	run-on 0:4 5:1	value 1:5	texts none
+function 605	24	hosts INFO:23 QUST:1	op 0:24	flags 0x00:24	run-on 0:24	value 1:24	texts none
+function 608	4	hosts INFO:3 QUST:1	op 0:4	flags 0x02:3 0x00:1	run-on 0:4	value 1:3 0:1	texts none
+function 610	16	hosts INFO:16	op 0:16	flags 0x00:16	run-on 0:16	value 1:16	texts none
+function 611	2	hosts PACK:2	op 0:2	flags 0x00:2	run-on 0:2	value 1:2	texts none
+function 612	148	hosts PACK:148	op 0:148	flags 0x00:148	run-on 0:148	value 1:108 0:40	texts none
+function 613	51	hosts SCEN:43 INFO:8	op 0:51	flags 0x00:51	run-on 0:51	value 1:51	texts none
+function 614	47	hosts SCEN:42 INFO:5	op 0:47	flags 0x00:43 0x04:4	run-on 0:47	value another integer:42 a global:4 a fraction:1	texts none
+function 618	1	hosts QUST:1	op 0:1	flags 0x02:1	run-on 0:1	value 0:1	texts none
+function 620	16	hosts IDLE:16	op 2:8 4:4 5:4	flags 0x00:16	run-on 0:16	value another integer:16	texts none
+function 621	23	hosts IDLE:23	op 2:15 5:8	flags 0x00:23	run-on 0:23	value another integer:23	texts none
+function 623	31	hosts IDLE:23 CPTH:6 CAMS:2	op 2:14 3:9 4:8	flags 0x00:31	run-on 0:24 1:7	value another integer:31	texts none
+function 625	74	hosts INFO:43 QUST:10 PACK:8 TERM:8 PERK:2 SCEN:2 SMQN:1	op 0:59 1:15	flags 0x00:74	run-on 0:73 2:1	value 1:74	texts none
+function 629	11716	hosts INFO:10281 SCEN:629 QUST:309 PACK:244 TERM:210 MESG:12 MUST:11 LSCR:6 SMQN:6 SPEL:5 SMBN:2 ACTI:1	op 1:7718 0:3514 3:218 2:164 4:88 5:14	flags 0x00:10826 0x04:890	run-on 0:11713 5:3	value another integer:8284 1:1629 0:913 a global:890	texts CIS2:11716
+function 630	25	hosts INFO:25	op 2:20 0:4 3:1	flags 0x00:25	run-on 0:25	value 0:20 1:5	texts none
+function 631	12	hosts INFO:12	op 2:10 0:1 3:1	flags 0x00:12	run-on 0:12	value 0:11 1:1	texts none
+function 633	24	hosts SCEN:11 IDLE:7 PACK:6	op 0:19 3:3 1:1 2:1	flags 0x00:24	run-on 0:13 5:11	value 0:14 another integer:9 1:1	texts none
+function 635	2	hosts SMBN:1 SMQN:1	op 0:2	flags 0x00:2	run-on 7:2	value 0:2	texts none
+function 636	1	hosts IDLE:1	op 0:1	flags 0x00:1	run-on 0:1	value 1:1	texts none
+function 637	72	hosts IDLE:72	op 0:72	flags 0x00:72	run-on 0:72	value 1:72	texts none
+function 639	7	hosts PACK:6 IDLE:1	op 0:6 5:1	flags 0x02:3 0x00:2 0x08:2	run-on 2:4 0:3	value 1:4 0:2 another integer:1	texts none
+function 640	109	hosts INFO:75 SPEL:23 ENCH:7 IDLE:2 MGEF:1 PERK:1	op 2:42 4:33 5:22 3:7 0:5	flags 0x00:109	run-on 2:69 1:29 0:10 5:1	value a fraction:60 1:25 0:24	texts none
+function 642	10	hosts IDLE:10	op 3:3 4:3 2:2 5:2	flags 0x00:10	run-on 0:10	value another integer:10	texts none
+function 644	131	hosts INFO:131	op 0:129 2:2	flags 0x00:131	run-on 0:131	value 1:74 0:57	texts none
+function 650	3167	hosts QUST:3165 PACK:2	op 0:3167	flags 0x02:3165 0x08:2	run-on 0:3165 6:2	value 1:3167	texts none
+function 651	30	hosts COBJ:17 INFO:12 QUST:1	op 0:23 2:4 3:3	flags 0x00:30	run-on 0:30	value 1:23 0:5 another integer:2	texts none
+function 659	8	hosts TERM:6 PERK:1 QUST:1	op 0:8	flags 0x00:8	run-on 4:6 0:2	value 1:7 0:1	texts CIS1:8
+function 660	446	hosts TERM:230 QUST:91 PACK:52 INFO:41 SCEN:15 SMQN:7 ACTI:6 MESG:3 IDLE:1	op 0:411 2:20 1:14 3:1	flags 0x00:445 0x04:1	run-on 0:175 4:174 2:47 5:23 7:21 1:6	value 0:254 1:173 another integer:18 a global:1	texts CIS1:446 CIS2:446
+function 672	6	hosts IDLE:6	op 0:6	flags 0x00:6	run-on 0:6	value 0:6	texts none
+function 673	2	hosts PERK:2	op 0:2	flags 0x00:2	run-on 0:2	value 1:2	texts none
+function 675	194	hosts IDLE:187 INFO:7	op 0:183 1:6 2:4 4:1	flags 0x00:194	run-on 0:194	value 0:113 1:50 another integer:31	texts CIS1:194
+function 678	27	hosts IDLE:27	op 0:27	flags 0x00:27	run-on 0:27	value 1:27	texts none
+function 680	10	hosts IDLE:10	op 3:6 0:3 1:1	flags 0x00:10	run-on 0:10	value another integer:6 0:4	texts none
+function 682	437	hosts INFO:184 IDLE:132 CPTH:54 PERK:45 ENCH:8 PACK:5 MGEF:4 CAMS:2 SMQN:2 SPEL:1	op 0:353 1:84	flags 0x00:437	run-on 0:249 2:78 5:74 1:18 3:16 7:2	value 1:355 0:82	texts none
+function 683	22	hosts IDLE:22	op 4:7 5:6 2:5 3:4	flags 0x00:22	run-on 0:22	value another integer:22	texts none
+function 691	19	hosts COBJ:19	op 0:18 3:1	flags 0x00:19	run-on 0:19	value 0:18 1:1	texts none
+function 693	60	hosts PERK:60	op 0:60	flags 0x00:60	run-on 0:60	value 1:57 0:3	texts none
+function 694	1	hosts INFO:1	op 0:1	flags 0x00:1	run-on 0:1	value 1:1	texts none
+function 699	49	hosts INFO:49	op 0:49	flags 0x00:49	run-on 2:45 0:4	value 0:25 1:24	texts none
+function 701	3	hosts IDLE:3	op 0:3	flags 0x00:3	run-on 0:3	value 0:3	texts none
+function 702	5	hosts IDLE:5	op 0:5	flags 0x00:5	run-on 0:4 1:1	value 1:3 0:2	texts none
+function 704	78	hosts IDLE:48 CAMS:26 INFO:4	op 0:51 1:27	flags 0x00:78	run-on 0:65 1:13	value 0:46 1:32	texts none
+function 707	143	hosts MUST:139 INFO:3 PERK:1	op 1:84 0:59	flags 0x00:143	run-on 0:143	value 1:143	texts none
+function 709	139	hosts INFO:128 PERK:10 CPTH:1	op 2:108 3:15 0:13 4:3	flags 0x00:139	run-on 0:69 3:69 1:1	value 1:108 another integer:31	texts none
+function 711	1	hosts PERK:1	op 4:1	flags 0x00:1	run-on 0:1	value another integer:1	texts none
+function 714	1	hosts PACK:1	op 0:1	flags 0x00:1	run-on 0:1	value 0:1	texts none
+function 716	24	hosts INFO:24	op 4:13 3:11	flags 0x00:24	run-on 0:24	value another integer:24	texts none
+function 719	22	hosts MGEF:18 SPEL:4	op 2:12 0:10	flags 0x00:22	run-on 0:22	value 0:12 1:10	texts none
+function 720	8	hosts IDLE:8	op 2:4 4:4	flags 0x00:8	run-on 3:8	value another integer:8	texts none
+function 722	17	hosts SPEL:12 PERK:4 CPTH:1	op 3:12 0:5	flags 0x00:17	run-on 2:12 0:5	value 1:13 0:4	texts none
+function 723	1	hosts PERK:1	op 5:1	flags 0x00:1	run-on 0:1	value 0:1	texts none
+function 725	11	hosts IDLE:11	op 0:8 2:3	flags 0x00:11	run-on 0:9 1:2	value 0:11	texts none
+function 726	17	hosts QUST:16 SMQN:1	op 0:17	flags 0x00:17	run-on 5:16 7:1	value 1:17	texts none
+function 729	12	hosts IDLE:12	op 0:9 3:2 5:1	flags 0x00:12	run-on 0:12	value another integer:11 1:1	texts none
+function 734	11	hosts INFO:6 QUST:3 PACK:2	op 0:11	flags 0x00:11	run-on 5:8 0:3	value 1:9 0:2	texts none
+function 736	16	hosts PERK:16	op 0:16	flags 0x00:16	run-on 0:15 2:1	value 1:16	texts none
+function 738	3	hosts IDLE:2 ENCH:1	op 1:2 0:1	flags 0x00:3	run-on 0:2 1:1	value another integer:3	texts none
+function 739	50	hosts IDLE:50	op 3:48 2:2	flags 0x00:50	run-on 0:48 2:2	value a fraction:22 another integer:17 1:10 0:1	texts none
+function 744	432	hosts IDLE:432	op 0:432	flags 0x00:432	run-on 0:432	value 1:432	texts none
+function 745	1	hosts INFO:1	op 5:1	flags 0x00:1	run-on 0:1	value another integer:1	texts none
+function 747	193	hosts IDLE:193	op 0:184 3:9	flags 0x00:193	run-on 0:193	value another integer:85 1:55 0:53	texts none
+function 748	3	hosts IDLE:3	op 0:3	flags 0x00:3	run-on 0:3	value 1:3	texts none
+function 749	259	hosts COBJ:259	op 0:230 1:29	flags 0x00:259	run-on 0:259	value 1:252 0:7	texts none
+function 751	12	hosts INFO:12	op 0:12	flags 0x00:12	run-on 0:12	value 0:12	texts none
+function 753	3	hosts QUST:3	op 0:3	flags 0x12:2 0x02:1	run-on 0:3	value 0:3	texts none
+function 754	1	hosts INFO:1	op 0:1	flags 0x02:1	run-on 5:1	value 0:1	texts none
+function 756	44	hosts SNDR:36 CPTH:6 ENCH:2	op 0:32 3:9 1:1 4:1 5:1	flags 0x00:44	run-on 0:42 1:2	value another integer:25 1:14 0:5	texts none
+function 757	27	hosts INFO:26 PERK:1	op 0:27	flags 0x00:27	run-on 0:27	value 1:27	texts none
+function 758	8	hosts INFO:7 PERK:1	op 0:8	flags 0x00:8	run-on 0:8	value 1:7 0:1	texts none
+function 759	8	hosts INFO:7 PERK:1	op 0:8	flags 0x00:8	run-on 0:8	value 1:7 0:1	texts none
+function 760	9	hosts INFO:6 QUST:2 PERK:1	op 0:9	flags 0x00:9	run-on 0:9	value 1:8 0:1	texts none
+function 761	13	hosts INFO:12 PERK:1	op 0:13	flags 0x00:13	run-on 0:13	value 1:13	texts none
+function 762	25	hosts INFO:24 PERK:1	op 0:25	flags 0x00:25	run-on 0:25	value 1:25	texts none
+function 763	1	hosts PERK:1	op 0:1	flags 0x00:1	run-on 0:1	value 1:1	texts none
+function 764	37	hosts INFO:33 PACK:4	op 0:37	flags 0x00:37	run-on 0:37	value 1:37	texts none
+function 765	43	hosts INFO:20 QUST:16 PACK:4 SMBN:2 SMQN:1	op 0:43	flags 0x00:43	run-on 0:43	value 1:42 0:1	texts none
+function 766	51	hosts IDLE:31 INFO:19 ALCH:1	op 0:51	flags 0x00:51	run-on 0:51	value 1:44 0:7	texts none
+function 767	21	hosts IDLE:21	op 0:21	flags 0x00:21	run-on 0:21	value another integer:13 0:4 1:4	texts none
+function 769	19	hosts INFO:14 ALCH:3 PERK:1 QUST:1	op 0:19	flags 0x00:19	run-on 0:18 2:1	value 0:14 1:5	texts none
+function 770	1	hosts IDLE:1	op 0:1	flags 0x00:1	run-on 0:1	value 0:1	texts none
+function 772	8	hosts CPTH:8	op 3:5 4:3	flags 0x00:8	run-on 0:8	value 0:8	texts none
+function 773	22	hosts PERK:15 ENCH:4 SPEL:2 SCEN:1	op 0:22	flags 0x00:21 0x02:1	run-on 0:13 2:9	value 1:17 0:5	texts none
+function 774	226	hosts IDLE:226	op 4:109 2:92 3:21 5:4	flags 0x00:226	run-on 0:226	value a fraction:226	texts none
+function 775	118	hosts IDLE:118	op 3:87 0:25 2:4 5:2	flags 0x00:118	run-on 0:118	value another integer:99 1:12 a fraction:7	texts none
+function 776	2	hosts SMQN:2	op 0:2	flags 0x00:2	run-on 0:2	value 0:2	texts none
+function 777	4	hosts INFO:4	op 3:2 4:2	flags 0x04:4	run-on 5:4	value a global:4	texts none
+function 779	22	hosts IDLE:16 PACK:6	op 0:22	flags 0x00:22	run-on 0:16 2:6	value 0:18 1:4	texts none
+function 784	20	hosts SCEN:13 PACK:7	op 0:18 1:2	flags 0x00:20	run-on 5:15 0:5	value 1:16 0:4	texts none
+function 785	1	hosts CPTH:1	op 0:1	flags 0x00:1	run-on 0:1	value 1:1	texts none
+function 786	3	hosts CPTH:3	op 0:3	flags 0x00:3	run-on 0:3	value 1:3	texts none
+function 787	1	hosts IDLE:1	op 0:1	flags 0x00:1	run-on 0:1	value 0:1	texts none
+function 788	21	hosts INFO:21	op 0:21	flags 0x00:21	run-on 0:21	value 1:21	texts none
+function 790	4	hosts IDLE:4	op 0:4	flags 0x00:4	run-on 0:4	value 0:3 1:1	texts none
+function 791	3	hosts IDLE:3	op 0:3	flags 0x00:3	run-on 0:3	value 1:3	texts none
+function 792	7	hosts SCEN:3 ALCH:2 QUST:2	op 0:7	flags 0x00:7	run-on 0:5 2:2	value 1:4 0:3	texts none
+function 793	2	hosts IDLE:2	op 0:2	flags 0x00:2	run-on 0:2	value 1:2	texts none
+function 794	29	hosts QUST:29	op 0:29	flags 0x00:29	run-on 0:29	value 0:29	texts none
+function 795	3	hosts IDLE:3	op 1:2 0:1	flags 0x00:3	run-on 0:3	value 1:2 0:1	texts none
+function 796	5	hosts CPTH:5	op 5:5	flags 0x00:5	run-on 0:5	value 1:5	texts none
+function 797	171	hosts INFO:166 QUST:5	op 0:171	flags 0x00:171	run-on 0:171	value 0:167 1:4	texts none
+function 798	7	hosts INFO:3 QUST:3 SMQN:1	op 0:7	flags 0x00:7	run-on 0:3 5:3 7:1	value 0:6 1:1	texts none
+function 799	144	hosts SCEN:144	op 3:72 4:68 5:4	flags 0x00:144	run-on 5:144	value another integer:140 0:4	texts none
+function 800	14	hosts CAMS:14	op 4:12 3:2	flags 0x00:14	run-on 0:14	value another integer:12 1:2	texts none
+function 801	3	hosts SPEL:2 IDLE:1	op 0:2 1:1	flags 0x00:3	run-on 0:3	value 1:2 0:1	texts none
+function 802	2	hosts PERK:2	op 0:2	flags 0x00:2	run-on 0:2	value 1:2	texts none
+function 803	2	hosts PERK:2	op 0:2	flags 0x00:2	run-on 0:2	value 1:2	texts none
+function 804	1	hosts PACK:1	op 0:1	flags 0x08:1	run-on 0:1	value 1:1	texts none
+function 805	26	hosts QUST:26	op 0:26	flags 0x00:26	run-on 0:26	value 1:26	texts none
+function 806	47	hosts CPTH:40 CAMS:7	op 3:30 2:17	flags 0x00:47	run-on 0:26 1:21	value another integer:47	texts none
+function 807	45	hosts CPTH:39 CAMS:6	op 3:31 2:14	flags 0x00:45	run-on 0:24 1:21	value another integer:45	texts none
+function 808	11	hosts CAMS:8 CPTH:3	op 2:8 3:3	flags 0x00:11	run-on 0:8 1:3	value another integer:11	texts none
+function 809	9	hosts CAMS:6 CPTH:3	op 2:6 3:3	flags 0x00:9	run-on 0:6 1:3	value another integer:9	texts none
+function 810	2	hosts CPTH:2	op 0:2	flags 0x00:2	run-on 0:2	value 1:2	texts none
+function 811	3	hosts SCEN:2 INFO:1	op 0:3	flags 0x00:3	run-on 0:3	value 1:2 0:1	texts none
+function 812	6	hosts IDLE:6	op 0:6	flags 0x00:6	run-on 0:6	value 0:3 1:3	texts none
+function 813	5	hosts PERK:5	op 0:5	flags 0x00:5	run-on 0:5	value 0:5	texts none
+function 814	3	hosts IDLE:3	op 0:3	flags 0x00:3	run-on 0:3	value 1:2 0:1	texts none
+function 817	4	hosts IDLE:4	op 0:4	flags 0x00:4	run-on 0:4	value 1:4	texts none
+
+## parameters by function index: what each word names read as a FormID through the record's plugin (record type of the winning record; zero; a number below 0x800 that names no winning record; no winning record; not a FormID)
+function 1	parameter 1	a number below 0x800:3943 zero:267 REFR:204 STAT:161 ACHR:60 MISC:26 GLOB:20 DOOR:19 NPC_:11 CELL:7 ACTI:6 VTYP:5 WATR:2 CONT:1 CPTH:1 TXST:1
+function 1	parameter 2	zero:4734
+function 5	parameter 1	zero:80
+function 5	parameter 2	zero:80
+function 6	parameter 1	a number below 0x800:26
+function 6	parameter 2	zero:26
+function 14	parameter 1	AVIF:3705 a number below 0x800:371
+function 14	parameter 2	zero:4076
+function 18	parameter 1	zero:390
+function 18	parameter 2	zero:390
+function 24	parameter 1	zero:6
+function 24	parameter 2	zero:6
+function 25	parameter 1	zero:23
+function 25	parameter 2	zero:23
+function 27	parameter 1	ACHR:61 zero:15 a number below 0x800:14 STAT:3 DOOR:1 GLOB:1 NPC_:1 REFR:1
+function 27	parameter 2	zero:97
+function 32	parameter 1	STAT:7 a number below 0x800:4 zero:3
+function 32	parameter 2	zero:14
+function 35	parameter 1	zero:81
+function 35	parameter 2	zero:81
+function 44	parameter 1	STAT:1
+function 44	parameter 2	zero:1
+function 45	parameter 1	a number below 0x800:28 DOOR:5
+function 45	parameter 2	zero:33
+function 46	parameter 1	zero:808
+function 46	parameter 2	zero:808
+function 47	parameter 1	MISC:452 ALCH:103 KEYM:45 NOTE:38 ARMO:37 BOOK:16 AMMO:14 WEAP:8 FLST:4 LVLI:1
+function 47	parameter 2	zero:718
+function 48	parameter 1	zero:14
+function 48	parameter 2	zero:14
+function 49	parameter 1	zero:89
+function 49	parameter 2	zero:89
+function 50	parameter 1	zero:198
+function 50	parameter 2	zero:198
+function 56	parameter 1	QUST:510
+function 56	parameter 2	zero:510
+function 58	parameter 1	QUST:3655 zero:10
+function 58	parameter 2	zero:3665
+function 59	parameter 1	QUST:18592 zero:16
+function 59	parameter 2	a number below 0x800:11955 STAT:2904 MISC:1113 WEAP:599 ECZN:452 TXST:352 WRLD:210 no winning record:164 AVIF:134 RACE:129 WTHR:117 GLOB:115 MESG:77 VTYP:52 ACTI:42 CPTH:42 DOOR:23 WATR:22 CELL:14 zero:11 EXPL:10 FLST:10 NPC_:10 CONT:9 IMAD:9 IMGS:9 OVIS:6 REFR:6 BPTD:5 CLMT:4 NOCM:3
+function 62	parameter 1	zero:24
+function 62	parameter 2	zero:24
+function 65	parameter 1	zero:123
+function 65	parameter 2	zero:123
+function 66	parameter 1	a number below 0x800:27
+function 66	parameter 2	zero:27
+function 67	parameter 1	CELL:899
+function 67	parameter 2	zero:899
+function 69	parameter 1	RACE:642
+function 69	parameter 2	zero:642
+function 70	parameter 1	zero:2205 STAT:1935
+function 70	parameter 2	zero:4140
+function 71	parameter 1	FACT:8698
+function 71	parameter 2	zero:8698
+function 72	parameter 1	NPC_:17736 FURN:67 STAT:53 ACTI:30 MISC:23 ENCH:12 TACT:10 ALCH:8 SPEL:7 TERM:4 zero:4 IDLM:3 WEAP:3 DOOR:2 CONT:1 MSTT:1
+function 72	parameter 2	zero:17964
+function 73	parameter 1	FACT:26
+function 73	parameter 2	zero:26
+function 74	parameter 1	GLOB:10818
+function 74	parameter 2	zero:10818
+function 75	parameter 1	zero:1
+function 75	parameter 2	zero:1
+function 77	parameter 1	zero:1099
+function 77	parameter 2	zero:1099
+function 80	parameter 1	zero:173
+function 80	parameter 2	zero:173
+function 84	parameter 1	NPC_:600
+function 84	parameter 2	zero:600
+function 99	parameter 1	zero:1
+function 99	parameter 2	zero:1
+function 101	parameter 1	zero:84
+function 101	parameter 2	zero:84
+function 108	parameter 1	zero:13
+function 108	parameter 2	zero:13
+function 117	parameter 1	REGN:53
+function 117	parameter 2	zero:53
+function 118	parameter 1	zero:1
+function 118	parameter 2	zero:1
+function 127	parameter 1	zero:3
+function 127	parameter 2	zero:3
+function 130	parameter 1	zero:10
+function 130	parameter 2	zero:10
+function 131	parameter 1	SCEN:52
+function 131	parameter 2	STAT:28 a number below 0x800:10 DOOR:3 MISC:3 CONT:2 NPC_:2 ACTI:1 BPTD:1 RACE:1 WATR:1
+function 135	parameter 1	zero:3
+function 135	parameter 2	zero:3
+function 136	parameter 1	a number below 0x800:29 STAT:24 zero:8 DOOR:7 VTYP:4 REFR:3 ACTI:1
+function 136	parameter 2	zero:76
+function 141	parameter 1	zero:8
+function 141	parameter 2	zero:8
+function 143	parameter 1	zero:2
+function 143	parameter 2	zero:2
+function 144	parameter 1	zero:20
+function 144	parameter 2	zero:20
+function 145	parameter 1	zero:13
+function 145	parameter 2	zero:13
+function 149	parameter 1	WTHR:24 zero:4
+function 149	parameter 2	zero:28
+function 157	parameter 1	zero:76
+function 157	parameter 2	zero:76
+function 159	parameter 1	zero:191
+function 159	parameter 2	zero:191
+function 161	parameter 1	PACK:154
+function 161	parameter 2	zero:154
+function 162	parameter 1	a number below 0x800:3 REFR:2
+function 162	parameter 2	zero:5
+function 163	parameter 1	FURN:35
+function 163	parameter 2	zero:35
+function 175	parameter 1	zero:4
+function 175	parameter 2	zero:4
+function 181	parameter 1	STAT:50 DOOR:1 a number below 0x800:1
+function 181	parameter 2	KYWD:46 zero:6
+function 182	parameter 1	ARMO:83 FLST:16 WEAP:14
+function 182	parameter 2	zero:113
+function 185	parameter 1	zero:38
+function 185	parameter 2	zero:38
+function 203	parameter 1	zero:28
+function 203	parameter 2	zero:28
+function 214	parameter 1	MGEF:92
+function 214	parameter 2	zero:92
+function 224	parameter 1	zero:15
+function 224	parameter 2	zero:15
+function 231	parameter 1	zero:64
+function 231	parameter 2	zero:64
+function 235	parameter 1	zero:1
+function 235	parameter 2	zero:1
+function 237	parameter 1	zero:1
+function 237	parameter 2	zero:1
+function 242	parameter 1	zero:43
+function 242	parameter 2	zero:43
+function 247	parameter 1	a number below 0x800:2
+function 247	parameter 2	zero:2
+function 248	parameter 1	SCEN:180 zero:32
+function 248	parameter 2	zero:212
+function 249	parameter 1	zero:219
+function 249	parameter 2	zero:219
+function 250	parameter 1	LCTN:25
+function 250	parameter 2	zero:25
+function 254	parameter 1	zero:1
+function 254	parameter 2	zero:1
+function 255	parameter 1	zero:190
+function 255	parameter 2	zero:190
+function 258	parameter 1	NOCM:8
+function 258	parameter 2	ASTP:8
+function 259	parameter 1	ACTI:1
+function 259	parameter 2	zero:1
+function 261	parameter 1	NOCM:4 ACHR:2
+function 261	parameter 2	zero:6
+function 263	parameter 1	zero:22
+function 263	parameter 2	zero:22
+function 264	parameter 1	SPEL:9
+function 264	parameter 2	zero:9
+function 266	parameter 1	zero:38
+function 266	parameter 2	zero:38
+function 277	parameter 1	AVIF:436 a number below 0x800:9
+function 277	parameter 2	zero:445
+function 286	parameter 1	zero:94
+function 286	parameter 2	zero:94
+function 288	parameter 1	zero:5
+function 288	parameter 2	zero:5
+function 289	parameter 1	zero:196 STAT:8
+function 289	parameter 2	zero:204
+function 300	parameter 1	zero:425
+function 300	parameter 2	zero:425
+function 304	parameter 1	zero:2
+function 304	parameter 2	zero:2
+function 310	parameter 1	WRLD:360
+function 310	parameter 2	zero:360
+function 313	parameter 1	zero:2
+function 313	parameter 2	zero:2
+function 314	parameter 1	zero:7
+function 314	parameter 2	zero:7
+function 323	parameter 1	zero:46
+function 323	parameter 2	zero:46
+function 325	parameter 1	STAT:36 a number below 0x800:30 OVIS:4 NPC_:2 zero:1
+function 325	parameter 2	zero:73
+function 327	parameter 1	zero:108
+function 327	parameter 2	zero:108
+function 329	parameter 1	zero:23
+function 329	parameter 2	zero:23
+function 353	parameter 1	zero:59
+function 353	parameter 2	zero:59
+function 354	parameter 1	zero:28
+function 354	parameter 2	zero:28
+function 358	parameter 1	zero:52
+function 358	parameter 2	zero:52
+function 359	parameter 1	LCTN:1429
+function 359	parameter 2	zero:1429
+function 360	parameter 1	STAT:49 zero:37 ACTI:7 DOOR:7 a number below 0x800:3 MISC:1
+function 360	parameter 2	zero:104
+function 361	parameter 1	zero:8
+function 361	parameter 2	zero:8
+function 362	parameter 1	KYWD:269 zero:13
+function 362	parameter 2	zero:282
+function 365	parameter 1	zero:26
+function 365	parameter 2	zero:26
+function 372	parameter 1	FLST:4
+function 372	parameter 2	zero:4
+function 375	parameter 1	FACT:6
+function 375	parameter 2	zero:6
+function 376	parameter 1	FACT:1 zero:1
+function 376	parameter 2	zero:2
+function 378	parameter 1	zero:13
+function 378	parameter 2	zero:13
+function 380	parameter 1	zero:13
+function 380	parameter 2	zero:13
+function 390	parameter 1	zero:11
+function 390	parameter 2	zero:11
+function 391	parameter 1	zero:243
+function 391	parameter 2	zero:243
+function 398	parameter 1	FLST:30
+function 398	parameter 2	zero:30
+function 407	parameter 1	DOOR:105 a number below 0x800:34 STAT:22 CONT:1
+function 407	parameter 2	zero:156 STAT:4 a number below 0x800:2
+function 414	parameter 1	zero:31 a number below 0x800:10 ACTI:1 BPTD:1 STAT:1
+function 414	parameter 2	zero:44
+function 415	parameter 1	zero:154
+function 415	parameter 2	zero:154
+function 416	parameter 1	zero:3
+function 416	parameter 2	zero:3
+function 426	parameter 1	VTYP:2201 FLST:2027 zero:1
+function 426	parameter 2	zero:4229
+function 427	parameter 1	zero:1
+function 427	parameter 2	zero:1
+function 430	parameter 1	zero:157
+function 430	parameter 2	zero:157
+function 432	parameter 1	a number below 0x800:80 STAT:23 DOOR:16 CPTH:2 zero:2 NPC_:1
+function 432	parameter 2	zero:124
+function 438	parameter 1	zero:16
+function 438	parameter 2	zero:16
+function 439	parameter 1	STAT:13 DOOR:8 a number below 0x800:8
+function 439	parameter 2	zero:29
+function 444	parameter 1	FLST:3
+function 444	parameter 2	zero:3
+function 445	parameter 1	ECZN:1
+function 445	parameter 2	zero:1
+function 446	parameter 1	a number below 0x800:5
+function 446	parameter 2	zero:5
+function 447	parameter 1	not a FormID (master index outside the plugin's masters):32
+function 447	parameter 2	zero:32
+function 448	parameter 1	PERK:3092 zero:18
+function 448	parameter 2	zero:3110
+function 449	parameter 1	zero:18 STAT:12 a number below 0x800:10
+function 449	parameter 2	zero:40
+function 453	parameter 1	zero:11
+function 453	parameter 2	zero:11
+function 458	parameter 1	zero:1
+function 458	parameter 2	zero:1
+function 459	parameter 1	FACT:4
+function 459	parameter 2	zero:4
+function 463	parameter 1	zero:1
+function 463	parameter 2	zero:1
+function 465	parameter 1	KYWD:18
+function 465	parameter 2	zero:18
+function 476	parameter 1	zero:18
+function 476	parameter 2	zero:18
+function 483	parameter 1	zero:84
+function 483	parameter 2	zero:84
+function 485	parameter 1	zero:17
+function 485	parameter 2	zero:17
+function 487	parameter 1	zero:3
+function 487	parameter 2	zero:3
+function 491	parameter 1	zero:42
+function 491	parameter 2	zero:42
+function 494	parameter 1	AVIF:14
+function 494	parameter 2	zero:14
+function 506	parameter 1	AVIF:8
+function 506	parameter 2	zero:8
+function 507	parameter 1	PERK:34
+function 507	parameter 2	zero:34
+function 508	parameter 1	zero:4
+function 508	parameter 2	zero:4
+function 510	parameter 1	MISC:63 ALCH:5 NOTE:3 BOOK:2 ARMO:1 KEYM:1
+function 510	parameter 2	zero:75
+function 511	parameter 1	AVIF:261
+function 511	parameter 2	zero:261
+function 512	parameter 1	a number below 0x800:3
+function 512	parameter 2	zero:3
+function 513	parameter 1	a number below 0x800:9
+function 513	parameter 2	zero:9
+function 515	parameter 1	zero:113
+function 515	parameter 2	zero:113
+function 516	parameter 1	zero:105
+function 516	parameter 2	zero:105
+function 517	parameter 1	zero:98
+function 517	parameter 2	zero:98
+function 518	parameter 1	zero:44
+function 518	parameter 2	zero:44
+function 522	parameter 1	zero:66
+function 522	parameter 2	zero:66
+function 523	parameter 1	zero:68
+function 523	parameter 2	zero:68
+function 525	parameter 1	zero:2
+function 525	parameter 2	zero:2
+function 536	parameter 1	zero:117
+function 536	parameter 2	zero:117
+function 543	parameter 1	QUST:218 zero:1
+function 543	parameter 2	zero:219
+function 544	parameter 1	zero:942
+function 544	parameter 2	zero:942
+function 550	parameter 1	SCEN:417
+function 550	parameter 2	STAT:228 a number below 0x800:93 DOOR:26 MISC:22 NPC_:15 CPTH:8 CONT:7 ACTI:4 WATR:4 BPTD:2 RACE:2 TXST:2 CELL:1 ECZN:1 OVIS:1 zero:1
+function 555	parameter 1	zero:157
+function 555	parameter 2	zero:157
+function 560	parameter 1	KYWD:1877
+function 560	parameter 2	zero:1877
+function 561	parameter 1	LCRT:4535
+function 561	parameter 2	zero:4535
+function 562	parameter 1	KYWD:689
+function 562	parameter 2	zero:689
+function 563	parameter 1	LCRT:269
+function 563	parameter 2	zero:269
+function 565	parameter 1	LCTN:10
+function 565	parameter 2	zero:10
+function 566	parameter 1	STAT:2426 zero:1511 a number below 0x800:910 DOOR:227 NPC_:225 MISC:206 WATR:92 ACTI:75 CONT:52 TXST:51 RACE:36 GLOB:32 CPTH:31 NOCM:24 not a FormID (master index outside the plugin's masters):24 BPTD:23 ECZN:22 OVIS:15 CELL:2 VTYP:2
+function 566	parameter 2	zero:5986
+function 567	parameter 1	STAT:2
+function 567	parameter 2	zero:2
+function 568	parameter 1	zero:14
+function 568	parameter 2	zero:14
+function 569	parameter 1	zero:6
+function 569	parameter 2	zero:6
+function 570	parameter 1	STAT:6 zero:5
+function 570	parameter 2	zero:11
+function 571	parameter 1	STAT:1
+function 571	parameter 2	zero:1
+function 572	parameter 1	STAT:1
+function 572	parameter 2	zero:1
+function 576	parameter 1	not a FormID (master index outside the plugin's masters):323
+function 576	parameter 2	KYWD:215 LCTN:60 zero:47 FLST:1
+function 577	parameter 1	STAT:14 DOOR:2 REFR:2
+function 577	parameter 2	STAT:7 zero:7 DOOR:2 REFR:2
+function 578	parameter 1	zero:3
+function 578	parameter 2	zero:3
+function 580	parameter 1	zero:30
+function 580	parameter 2	zero:30
+function 584	parameter 1	zero:32
+function 584	parameter 2	a number below 0x800:32
+function 589	parameter 1	zero:18
+function 589	parameter 2	zero:18
+function 590	parameter 1	zero:22
+function 590	parameter 2	zero:22
+function 592	parameter 1	LCTN:3
+function 592	parameter 2	LCRT:3
+function 594	parameter 1	zero:25
+function 594	parameter 2	zero:25
+function 596	parameter 1	STAT:2
+function 596	parameter 2	KYWD:2
+function 601	parameter 1	STAT:19 DOOR:14 ACTI:2 a number below 0x800:2
+function 601	parameter 2	LCRT:37
+function 603	parameter 1	a number below 0x800:4 zero:1
+function 603	parameter 2	zero:3 KYWD:2
+function 605	parameter 1	STAT:24
+function 605	parameter 2	LCTN:24
+function 608	parameter 1	zero:3 STAT:1
+function 608	parameter 2	KYWD:4
+function 610	parameter 1	DOOR:16
+function 610	parameter 2	KYWD:16
+function 611	parameter 1	MISC:1 STAT:1
+function 611	parameter 2	zero:2
+function 612	parameter 1	a number below 0x800:76 STAT:35 DOOR:14 VTYP:4 WATR:4 ACTI:2 BPTD:2 CELL:2 ECZN:2 NPC_:2 TXST:2 CONT:1 MISC:1 OVIS:1
+function 612	parameter 2	zero:148
+function 613	parameter 1	zero:51
+function 613	parameter 2	zero:51
+function 614	parameter 1	zero:47
+function 614	parameter 2	zero:47
+function 618	parameter 1	zero:1
+function 618	parameter 2	zero:1
+function 620	parameter 1	a number below 0x800:16
+function 620	parameter 2	zero:16
+function 621	parameter 1	zero:23
+function 621	parameter 2	zero:23
+function 623	parameter 1	zero:31
+function 623	parameter 2	zero:31
+function 625	parameter 1	LCTN:74
+function 625	parameter 2	zero:74
+function 629	parameter 1	QUST:11716
+function 629	parameter 2	not a FormID (master index outside the plugin's masters):11715 zero:1
+function 630	parameter 1	zero:25
+function 630	parameter 2	zero:25
+function 631	parameter 1	zero:12
+function 631	parameter 2	zero:12
+function 633	parameter 1	zero:24
+function 633	parameter 2	zero:24
+function 635	parameter 1	zero:2
+function 635	parameter 2	zero:2
+function 636	parameter 1	zero:1
+function 636	parameter 2	zero:1
+function 637	parameter 1	STAT:30 DOOR:21 a number below 0x800:21
+function 637	parameter 2	zero:72
+function 639	parameter 1	zero:4 STAT:2 a number below 0x800:1
+function 639	parameter 2	not a FormID (master index outside the plugin's masters):4 CONT:1 WATR:1 zero:1
+function 640	parameter 1	AVIF:85 a number below 0x800:24
+function 640	parameter 2	zero:109
+function 642	parameter 1	zero:10
+function 642	parameter 2	zero:10
+function 644	parameter 1	zero:131
+function 644	parameter 2	zero:131
+function 650	parameter 1	STAT:3161 zero:6
+function 650	parameter 2	KYWD:3165 zero:2
+function 651	parameter 1	KYWD:30
+function 651	parameter 2	zero:30
+function 659	parameter 1	not a FormID (master index outside the plugin's masters):8
+function 659	parameter 2	zero:8
+function 660	parameter 1	not a FormID (master index outside the plugin's masters):446
+function 660	parameter 2	not a FormID (master index outside the plugin's masters):445 zero:1
+function 672	parameter 1	zero:6
+function 672	parameter 2	zero:6
+function 673	parameter 1	zero:2
+function 673	parameter 2	zero:2
+function 675	parameter 1	not a FormID (master index outside the plugin's masters):194
+function 675	parameter 2	zero:194
+function 678	parameter 1	zero:27
+function 678	parameter 2	zero:27
+function 680	parameter 1	zero:10
+function 680	parameter 2	zero:10
+function 682	parameter 1	KYWD:415 FLST:22
+function 682	parameter 2	zero:437
+function 683	parameter 1	zero:22
+function 683	parameter 2	zero:22
+function 691	parameter 1	ACTI:12 FURN:5 CONT:1 TERM:1
+function 691	parameter 2	zero:19
+function 693	parameter 1	KYWD:60
+function 693	parameter 2	zero:60
+function 694	parameter 1	zero:1
+function 694	parameter 2	zero:1
+function 699	parameter 1	KYWD:47 not a FormID (master index outside the plugin's masters):2
+function 699	parameter 2	zero:49
+function 701	parameter 1	zero:3
+function 701	parameter 2	zero:3
+function 702	parameter 1	zero:5
+function 702	parameter 2	zero:5
+function 704	parameter 1	zero:78
+function 704	parameter 2	zero:78
+function 707	parameter 1	KYWD:143
+function 707	parameter 2	zero:143
+function 709	parameter 1	zero:139
+function 709	parameter 2	zero:139
+function 711	parameter 1	zero:1
+function 711	parameter 2	zero:1
+function 714	parameter 1	zero:1
+function 714	parameter 2	zero:1
+function 716	parameter 1	zero:24
+function 716	parameter 2	zero:24
+function 719	parameter 1	a number below 0x800:16 zero:6
+function 719	parameter 2	zero:22
+function 720	parameter 1	zero:8
+function 720	parameter 2	zero:8
+function 722	parameter 1	KYWD:17
+function 722	parameter 2	zero:17
+function 723	parameter 1	zero:1
+function 723	parameter 2	zero:1
+function 725	parameter 1	zero:11
+function 725	parameter 2	zero:11
+function 726	parameter 1	zero:17
+function 726	parameter 2	zero:17
+function 729	parameter 1	zero:12
+function 729	parameter 2	zero:12
+function 734	parameter 1	zero:11
+function 734	parameter 2	zero:11
+function 736	parameter 1	DMGT:16
+function 736	parameter 2	zero:16
+function 738	parameter 1	zero:3
+function 738	parameter 2	zero:3
+function 739	parameter 1	zero:50
+function 739	parameter 2	zero:50
+function 744	parameter 1	zero:356 CELL:39 REFR:37
+function 744	parameter 2	STAT:138 REFR:121 DOOR:73 CELL:69 zero:31
+function 745	parameter 1	zero:1
+function 745	parameter 2	zero:1
+function 747	parameter 1	zero:189 STAT:4
+function 747	parameter 2	zero:193
+function 748	parameter 1	zero:3
+function 748	parameter 2	zero:3
+function 749	parameter 1	KYWD:259
+function 749	parameter 2	zero:259
+function 751	parameter 1	zero:12
+function 751	parameter 2	zero:12
+function 753	parameter 1	STAT:3
+function 753	parameter 2	zero:3
+function 754	parameter 1	a number below 0x800:1
+function 754	parameter 2	zero:1
+function 756	parameter 1	zero:44
+function 756	parameter 2	zero:44
+function 757	parameter 1	zero:27
+function 757	parameter 2	zero:27
+function 758	parameter 1	zero:8
+function 758	parameter 2	zero:8
+function 759	parameter 1	zero:8
+function 759	parameter 2	zero:8
+function 760	parameter 1	zero:9
+function 760	parameter 2	zero:9
+function 761	parameter 1	zero:13
+function 761	parameter 2	zero:13
+function 762	parameter 1	zero:25
+function 762	parameter 2	zero:25
+function 763	parameter 1	zero:1
+function 763	parameter 2	zero:1
+function 764	parameter 1	zero:37
+function 764	parameter 2	zero:37
+function 765	parameter 1	zero:43
+function 765	parameter 2	zero:43
+function 766	parameter 1	KYWD:51
+function 766	parameter 2	zero:51
+function 767	parameter 1	zero:21
+function 767	parameter 2	zero:21
+function 769	parameter 1	zero:19
+function 769	parameter 2	zero:19
+function 770	parameter 1	zero:1
+function 770	parameter 2	zero:1
+function 772	parameter 1	zero:8
+function 772	parameter 2	zero:8
+function 773	parameter 1	zero:21 STAT:1
+function 773	parameter 2	zero:22
+function 774	parameter 1	zero:226
+function 774	parameter 2	zero:226
+function 775	parameter 1	zero:118
+function 775	parameter 2	zero:118
+function 776	parameter 1	STAT:1 a number below 0x800:1
+function 776	parameter 2	zero:2
+function 777	parameter 1	zero:4
+function 777	parameter 2	zero:4
+function 779	parameter 1	zero:22
+function 779	parameter 2	zero:22
+function 784	parameter 1	zero:20
+function 784	parameter 2	zero:20
+function 785	parameter 1	zero:1
+function 785	parameter 2	zero:1
+function 786	parameter 1	zero:3
+function 786	parameter 2	zero:3
+function 787	parameter 1	zero:1
+function 787	parameter 2	zero:1
+function 788	parameter 1	zero:21
+function 788	parameter 2	zero:21
+function 790	parameter 1	zero:4
+function 790	parameter 2	zero:4
+function 791	parameter 1	zero:3
+function 791	parameter 2	zero:3
+function 792	parameter 1	zero:7
+function 792	parameter 2	zero:7
+function 793	parameter 1	zero:2
+function 793	parameter 2	zero:2
+function 794	parameter 1	zero:29
+function 794	parameter 2	zero:29
+function 795	parameter 1	zero:3
+function 795	parameter 2	zero:3
+function 796	parameter 1	zero:5
+function 796	parameter 2	zero:5
+function 797	parameter 1	zero:171
+function 797	parameter 2	zero:171
+function 798	parameter 1	zero:7
+function 798	parameter 2	zero:7
+function 799	parameter 1	zero:144
+function 799	parameter 2	zero:144
+function 800	parameter 1	zero:14
+function 800	parameter 2	zero:14
+function 801	parameter 1	zero:3
+function 801	parameter 2	zero:3
+function 802	parameter 1	a number below 0x800:2
+function 802	parameter 2	zero:2
+function 803	parameter 1	zero:2
+function 803	parameter 2	zero:2
+function 804	parameter 1	STAT:1
+function 804	parameter 2	zero:1
+function 805	parameter 1	zero:26
+function 805	parameter 2	zero:26
+function 806	parameter 1	zero:47
+function 806	parameter 2	zero:47
+function 807	parameter 1	zero:45
+function 807	parameter 2	zero:45
+function 808	parameter 1	zero:11
+function 808	parameter 2	zero:11
+function 809	parameter 1	zero:9
+function 809	parameter 2	zero:9
+function 810	parameter 1	zero:2
+function 810	parameter 2	zero:2
+function 811	parameter 1	not a FormID (master index outside the plugin's masters):3
+function 811	parameter 2	zero:3
+function 812	parameter 1	zero:6
+function 812	parameter 2	zero:6
+function 813	parameter 1	zero:5
+function 813	parameter 2	zero:5
+function 814	parameter 1	zero:3
+function 814	parameter 2	zero:3
+function 817	parameter 1	zero:4
+function 817	parameter 2	zero:4
+
+## ranked by conditions: function index, conditions
+18608	function 59
+17964	function 72
+11716	function 629
+10818	function 74
+8698	function 71
+5986	function 566
+4734	function 1
+4535	function 561
+4229	function 426
+4140	function 70
+4076	function 14
+3665	function 58
+3167	function 650
+3110	function 448
+1877	function 560
+1429	function 359
+1099	function 77
+942	function 544
+899	function 67
+808	function 46
+718	function 47
+689	function 562
+642	function 69
+600	function 84
+510	function 56
+446	function 660
+445	function 277
+437	function 682
+432	function 744
+425	function 300
+417	function 550
+390	function 18
+360	function 310
+323	function 576
+282	function 362
+269	function 563
+261	function 511
+259	function 749
+243	function 391
+226	function 774
+219	function 249
+219	function 543
+212	function 248
+204	function 289
+198	function 50
+194	function 675
+193	function 747
+191	function 159
+190	function 255
+173	function 80
+171	function 797
+162	function 407
+157	function 430
+157	function 555
+154	function 161
+154	function 415
+148	function 612
+144	function 799
+143	function 707
+139	function 709
+131	function 644
+124	function 432
+123	function 65
+118	function 775
+117	function 536
+113	function 182
+113	function 515
+109	function 640
+108	function 327
+105	function 516
+104	function 360
+98	function 517
+97	function 27
+94	function 286
+92	function 214
+89	function 49
+84	function 101
+84	function 483
+81	function 35
+80	function 5
+78	function 704
+76	function 136
+76	function 157
+75	function 510
+74	function 625
+73	function 325
+72	function 637
+68	function 523
+66	function 522
+64	function 231
+60	function 693
+59	function 353
+53	function 117
+52	function 131
+52	function 181
+52	function 358
+51	function 613
+51	function 766
+50	function 739
+49	function 699
+47	function 614
+47	function 806
+46	function 323
+45	function 807
+44	function 414
+44	function 518
+44	function 756
+43	function 242
+43	function 765
+42	function 491
+40	function 449
+38	function 185
+38	function 266
+37	function 601
+37	function 764
+35	function 163
+34	function 507
+33	function 45
+32	function 447
+32	function 584
+31	function 623
+30	function 398
+30	function 580
+30	function 651
+29	function 439
+29	function 794
+28	function 149
+28	function 203
+28	function 354
+27	function 66
+27	function 678
+27	function 757
+26	function 6
+26	function 73
+26	function 365
+26	function 805
+25	function 250
+25	function 594
+25	function 630
+25	function 762
+24	function 62
+24	function 605
+24	function 633
+24	function 716
+23	function 25
+23	function 329
+23	function 621
+22	function 263
+22	function 590
+22	function 683
+22	function 719
+22	function 773
+22	function 779
+21	function 767
+21	function 788
+20	function 144
+20	function 784
+19	function 691
+19	function 769
+18	function 465
+18	function 476
+18	function 577
+18	function 589
+17	function 485
+17	function 722
+17	function 726
+16	function 438
+16	function 610
+16	function 620
+16	function 736
+15	function 224
+14	function 32
+14	function 48
+14	function 494
+14	function 568
+14	function 800
+13	function 108
+13	function 145
+13	function 378
+13	function 380
+13	function 761
+12	function 631
+12	function 729
+12	function 751
+11	function 390
+11	function 453
+11	function 570
+11	function 725
+11	function 734
+11	function 808
+10	function 130
+10	function 565
+10	function 642
+10	function 680
+9	function 264
+9	function 513
+9	function 760
+9	function 809
+8	function 141
+8	function 258
+8	function 361
+8	function 506
+8	function 659
+8	function 720
+8	function 758
+8	function 759
+8	function 772
+7	function 314
+7	function 639
+7	function 792
+7	function 798
+6	function 24
+6	function 261
+6	function 375
+6	function 569
+6	function 672
+6	function 812
+5	function 162
+5	function 288
+5	function 446
+5	function 603
+5	function 702
+5	function 796
+5	function 813
+4	function 175
+4	function 372
+4	function 459
+4	function 508
+4	function 608
+4	function 777
+4	function 790
+4	function 817
+3	function 127
+3	function 135
+3	function 416
+3	function 444
+3	function 487
+3	function 512
+3	function 578
+3	function 592
+3	function 701
+3	function 738
+3	function 748
+3	function 753
+3	function 786
+3	function 791
+3	function 795
+3	function 801
+3	function 811
+3	function 814
+2	function 143
+2	function 247
+2	function 304
+2	function 313
+2	function 376
+2	function 525
+2	function 567
+2	function 596
+2	function 611
+2	function 635
+2	function 673
+2	function 776
+2	function 793
+2	function 802
+2	function 803
+2	function 810
+1	function 44
+1	function 75
+1	function 99
+1	function 118
+1	function 235
+1	function 237
+1	function 254
+1	function 259
+1	function 427
+1	function 445
+1	function 458
+1	function 463
+1	function 571
+1	function 572
+1	function 618
+1	function 636
+1	function 694
+1	function 711
+1	function 714
+1	function 723
+1	function 745
+1	function 754
+1	function 763
+1	function 770
+1	function 785
+1	function 787
+1	function 804
+
+## new game, before scripts: lists left undetermined, by function index of an undetermined condition in them (QUST)
+3460	function 561
+3165	function 650
+569	function 72
+375	function 426
+308	function 560
+307	function 71
+207	function 46
+199	function 562
+176	function 1
+171	function 629
+166	function 67
+166	function 563
+120	function 310
+93	function 14
+87	function 660
+81	function 277
+64	function 576
+60	function 360
+57	function 80
+54	function 47
+50	function 84
+50	function 359
+50	function 566
+49	function 181
+41	function 58
+40	function 362
+37	function 601
+30	function 35
+30	function 70
+30	function 77
+28	function 794
+26	function 805
+21	function 449
+16	function 69
+16	function 491
+16	function 543
+16	function 726
+14	function 203
+13	function 66
+13	function 300
+13	function 765
+11	function 365
+11	function 414
+10	function 161
+9	function 353
+9	function 565
+9	function 625
+8	function 248
+8	function 555
+7	function 157
+6	function 242
+5	function 49
+5	function 361
+5	function 797
+4	function 577
+3	function 6
+3	function 444
+3	function 510
+3	function 512
+3	function 592
+3	function 734
+3	function 753
+3	function 798
+2	function 18
+2	function 117
+2	function 214
+2	function 289
+2	function 432
+2	function 567
+2	function 760
+1	function 45
+1	function 136
+1	function 182
+1	function 255
+1	function 445
+1	function 448
+1	function 603
+1	function 605
+1	function 608
+1	function 618
+1	function 651
+1	function 659
+1	function 769
+
+## new game, before scripts: lists left undetermined, by function index of an undetermined condition in them (all records)
+13088	function 72
+7053	function 71
+4108	function 566
+3934	function 70
+3766	function 1
+3483	function 561
+3389	function 629
+3213	function 426
+3167	function 650
+2998	function 14
+2429	function 58
+2306	function 448
+1227	function 560
+937	function 77
+888	function 544
+881	function 359
+652	function 46
+588	function 67
+530	function 47
+441	function 277
+423	function 69
+418	function 84
+414	function 300
+399	function 562
+379	function 744
+349	function 682
+347	function 550
+321	function 660
+255	function 310
+243	function 391
+243	function 749
+242	function 362
+207	function 576
+194	function 18
+194	function 289
+192	function 747
+183	function 675
+177	function 50
+171	function 511
+171	function 797
+166	function 563
+162	function 249
+154	function 415
+152	function 543
+145	function 255
+142	function 612
+133	function 159
+127	function 407
+122	function 555
+118	function 80
+118	function 775
+115	function 709
+114	function 644
+113	function 774
+109	function 248
+109	function 430
+106	function 432
+106	function 536
+103	function 161
+91	function 286
+90	function 517
+87	function 515
+86	function 327
+86	function 360
+84	function 65
+84	function 101
+81	function 640
+78	function 5
+78	function 516
+77	function 214
+76	function 136
+76	function 799
+71	function 637
+70	function 27
+67	function 704
+62	function 510
+61	function 523
+59	function 49
+59	function 325
+59	function 353
+59	function 522
+57	function 35
+55	function 182
+52	function 117
+52	function 131
+52	function 231
+50	function 739
+49	function 157
+49	function 181
+48	function 693
+47	function 483
+46	function 806
+45	function 358
+44	function 518
+44	function 699
+44	function 807
+43	function 756
+41	function 323
+40	function 242
+39	function 625
+38	function 185
+37	function 266
+37	function 414
+37	function 601
+37	function 613
+37	function 765
+37	function 766
+36	function 614
+33	function 507
+32	function 449
+31	function 764
+30	function 45
+30	function 623
+29	function 439
+29	function 491
+28	function 794
+27	function 66
+27	function 354
+27	function 678
+26	function 365
+26	function 398
+26	function 651
+26	function 757
+26	function 805
+25	function 203
+25	function 250
+25	function 580
+25	function 594
+25	function 630
+25	function 762
+24	function 62
+24	function 73
+24	function 447
+24	function 605
+23	function 25
+23	function 329
+23	function 621
+22	function 683
+22	function 719
+22	function 773
+21	function 6
+21	function 716
+21	function 767
+21	function 779
+20	function 144
+20	function 263
+20	function 590
+20	function 707
+20	function 788
+19	function 74
+19	function 633
+19	function 784
+18	function 163
+18	function 476
+17	function 59
+17	function 584
+17	function 722
+17	function 726
+16	function 465
+16	function 577
+16	function 736
+15	function 149
+15	function 224
+15	function 438
+14	function 48
+14	function 568
+14	function 589
+14	function 769
+14	function 800
+13	function 145
+13	function 378
+13	function 610
+13	function 761
+12	function 108
+12	function 631
+12	function 729
+12	function 751
+11	function 453
+11	function 808
+10	function 680
+9	function 32
+9	function 130
+9	function 264
+9	function 390
+9	function 565
+9	function 725
+9	function 760
+9	function 809
+8	function 141
+8	function 258
+8	function 380
+8	function 494
+8	function 506
+8	function 620
+8	function 758
+8	function 759
+8	function 772
+7	function 314
+7	function 361
+7	function 570
+7	function 691
+6	function 24
+6	function 261
+6	function 485
+6	function 569
+6	function 639
+6	function 659
+6	function 672
+6	function 798
+6	function 812
+5	function 162
+5	function 288
+5	function 375
+5	function 446
+5	function 513
+5	function 642
+5	function 702
+5	function 734
+5	function 792
+5	function 796
+5	function 813
+4	function 175
+4	function 372
+4	function 459
+4	function 508
+4	function 603
+4	function 720
+4	function 777
+4	function 790
+4	function 817
+3	function 127
+3	function 135
+3	function 416
+3	function 444
+3	function 487
+3	function 512
+3	function 578
+3	function 592
+3	function 701
+3	function 738
+3	function 748
+3	function 753
+3	function 786
+3	function 791
+3	function 795
+3	function 801
+3	function 814
+2	function 143
+2	function 247
+2	function 313
+2	function 376
+2	function 525
+2	function 567
+2	function 596
+2	function 611
+2	function 673
+2	function 793
+2	function 802
+2	function 803
+2	function 810
+2	function 811
+1	function 44
+1	function 75
+1	function 99
+1	function 118
+1	function 235
+1	function 237
+1	function 254
+1	function 304
+1	function 427
+1	function 445
+1	function 458
+1	function 463
+1	function 571
+1	function 572
+1	function 608
+1	function 618
+1	function 636
+1	function 694
+1	function 711
+1	function 714
+1	function 723
+1	function 745
+1	function 754
+1	function 763
+1	function 770
+1	function 776
+1	function 785
+1	function 787
+1	function 804

@@ -329,15 +329,15 @@
 1	object kind	player
 1	object kind and type class	player	actor
 
-## quest_run stages: every winning quest, every stage a fragment names, set in a fresh interpreter (quest host, isolated scenario, nested order); the stage's own fragment
-1618	native	referencealias.getreference
-1236	native	quest.isstagedone
+## quest_run stages: every winning quest, every stage a fragment names, set in a fresh interpreter (quest host, isolated scenario, nested order, log entry conditions evaluated); the stage's own fragment
+1619	native	referencealias.getreference
+1237	native	quest.isstagedone
 227	native	refcollectionalias.getcount
 178	native	quest.isrunning
 172	native	quest.isobjectivedisplayed
 114	native	actor.isinfaction
 80	native	objectreference.is3dloaded
-72	native	actor.isdead
+73	native	actor.isdead
 53	native	objectreference.getvalue
 52	native	globalvariable.getvalue
 38	native	utility.randomint
@@ -394,13 +394,21 @@
 2	rule	pex_ops_compare_v1
 1	object kind	player
 
+## quest_run stages: OnStageSet delivered to the quest's own scripts after the stage's fragment
+23	native	utility.getcurrentgametime
+2	native	refcollectionalias.getcount
+1	native	objectreference.attachmod
+23	rule	pex_array_ops_v1
+2	rule	quest_on_stage_set_v1
+
 ## quest_run stages: the fragments and quest events those stages brought (cascades)
-491	native	referencealias.getreference
-419	native	quest.isstagedone
-124	native	quest.isrunning
+497	native	referencealias.getreference
+420	native	quest.isstagedone
+127	native	quest.isrunning
 118	native	actor.isinfaction
 112	native	quest.isobjectivedisplayed
-100	native	refcollectionalias.getcount
+102	native	refcollectionalias.getcount
+58	native	objectreference.attachmod
 57	native	objectreference.is3dloaded
 55	native	globalvariable.getvalue
 35	native	actor.isdead
@@ -412,6 +420,7 @@
 4	native	quest.iscompleted
 3	native	objectreference.getcurrentlocation
 2	native	actorbase.getsex
+2	native	objectreference.getopenstate
 2	native	objectreference.isdisabled
 2	native	objectreference.ismapmarkervisible
 2	native	objectreference.placeactoratme
@@ -419,14 +428,27 @@
 2	native	utility.randomint
 1	native	actor.getlevel
 1	native	locationalias.getlocation
-1	native	objectreference.getopenstate
 1	native	objectreference.getparentcell
 1	native	objectreference.hasdirectlos
-6	rule	pex_array_ops_v1
-1	rule	vmad_property_sets_variable_v1
+60	rule	pex_array_ops_v1
+6	rule	vmad_property_sets_variable_v1
 
-## quest_run new-game: the quests started with a new game, their OnQuestInit and startup-stage fragments and what those brought
-5	native	refcollectionalias.getcount
+## quest_run stages: log entry selections left open, by function index of an undetermined condition in them
+191	condition	function 59
+28	condition	function 629
+14	condition	function 491
+12	condition	function 70
+7	condition	function 46
+4	condition	function 84
+3	condition	function 14
+1	condition	function 1
+1	condition	function 58
+1	condition	function 71
+1	condition	function 74
+
+## quest_run new-game: the quests started with a new game, their OnQuestInit and startup-stage fragments, OnStageSet and what those brought
+20	native	objectreference.attachmod
+6	native	refcollectionalias.getcount
 3	native	actor.getlevel
 3	native	game.isplugininstalled
 3	native	scene.isplaying
@@ -434,3 +456,235 @@
 2	native	referencealias.getreference
 1	rule	pex_array_ops_v1
 1	rule	pex_ops_not_copy_cast_v1
+1	condition	function 14
+
+## the two test cells of the survey (one interior; one exterior with radius 1); quest host (script_run default since the conditions step): data host, quest natives from the run's quest state (isolated scenario), stage fragments and OnStageSet run inside the call
+3	data answer	referencealias.getreference	undetermined: whether the quest runs is undetermined
+1	data answer	formlist.getsize	undetermined: changed by this run
+1	data answer	game.getformfromfile	a record
+1	data answer	objectreference.getlinkedref	a record
+1	data answer	objectreference.isdisabled	a value
+1	data answer	quest.isstagedone	undetermined: not settled by the quest's state
+3	native	referencealias.getreference
+1	native	formlist.getsize
+1	native	objectreference.getitemcount
+1	native	quest.isstagedone
+
+## every winning scripted DOOR, TERM and ACTI base, bound alone; quest host (script_run default since the conditions step): data host, quest natives from the run's quest state (isolated scenario), stage fragments and OnStageSet run inside the call
+592	data answer	objectreference.getlinkedref	undetermined: the receiver is not a record
+269	data answer	globalvariable.getvalue	a value
+200	data answer	referencealias.getreference	undetermined: whether the quest runs is undetermined
+198	data answer	quest.setcurrentstageid	a value
+113	data answer	quest.isstagedone	undetermined: not settled by the quest's state
+105	data answer	referencealias.getreference	undetermined: the alias has no forced reference
+70	data answer	objectreference.getlinkedref	a record
+60	data answer	game.getformfromfile	a record
+59	data answer	objectreference.getlinkedrefchain	undetermined: the receiver is not a record
+52	data answer	referencealias.forcerefto	none
+47	data answer	quest.isobjectivedisplayed	undetermined: the objective's state is undetermined
+44	data answer	objectreference.countlinkedrefchain	undetermined: the receiver is not a record
+41	data answer	formlist.getsize	undetermined: changed by this run
+39	data answer	quest.setobjectivecompleted	none
+36	data answer	quest.setobjectivedisplayed	none
+25	data answer	quest.isrunning	undetermined: not settled by the quest's state
+16	data answer	globalvariable.getvalue	undetermined: changed by this run
+14	data answer	quest.getcurrentstageid	undetermined: not settled by the quest's state
+12	data answer	quest.isstagedone	a value
+10	data answer	objectreference.isdisabled	undetermined: the receiver is not a record
+8	data answer	formlist.getsize	a value
+8	data answer	objectreference.getlinkedref	none
+7	data answer	formlist.getat	a record
+7	data answer	objectreference.getlinkedref	undetermined: the receiver is not an object
+7	data answer	objectreference.getlinkedrefchain	a record
+7	data answer	quest.start	undetermined: whether the quest was running is undetermined
+7	data answer	referencealias.clear	none
+6	data answer	objectreference.getbaseobject	undetermined: the receiver is not a record
+6	data answer	referencealias.getreference	a record
+5	data answer	objectreference.getbaseobject	a record
+3	data answer	objectreference.getlinkedref	undetermined: changed by this run
+2	data answer	quest.getcurrentstageid	a value
+2	data answer	quest.setcurrentstageid	undetermined: the record holds no such stage
+2	data answer	quest.stop	none
+1	data answer	formlist.hasform	undetermined: the form is not an object
+1	data answer	objectreference.isdisabled	undetermined: the receiver is not an object
+1	data answer	quest.isobjectivecompleted	undetermined: the objective's state is undetermined
+408	native	objectreference.getlinkedref
+86	native	quest.isstagedone
+51	native	objectreference.is3dloaded
+43	native	keyword.sendstoryeventandwait
+43	native	objectreference.countlinkedrefchain
+41	native	formlist.getsize
+34	native	objectreference.canproduceforworkshop
+28	native	objectreference.gettriggerobjectcount
+23	native	quest.isrunning
+22	native	objectreference.ismapmarkervisible
+21	native	objectreference.ispowered
+18	native	scene.isplaying
+17	native	objectreference.getopenstate
+16	native	objectreference.getitemcount
+14	native	objectreference.getlinkedrefchain
+14	native	quest.getcurrentstageid
+13	native	objectreference.getvalue
+12	native	refcollectionalias.getcount
+11	native	objectreference.isdisabled
+10	native	game.getplayerfollowers
+9	native	actor.isinfaction
+9	native	sound.playandwait
+7	native	message.show
+7	native	objectreference.getcurrentdestructionstage
+7	native	objectreference.getfactionowner
+7	native	referencealias.getreference
+5	native	actor.hasperk
+5	native	objectreference.getactorslinkedtome
+5	native	objectreference.getcurrentlocation
+5	native	objectreference.placeatnode
+4	native	objectreference.isdestroyed
+4	native	objectreference.islocked
+3	native	actor.isdead
+3	native	actor.isincombat
+2	native	actor.getrace
+2	native	cell.isloaded
+2	native	math.abs
+2	native	objectreference.findallreferenceswithkeyword
+2	native	objectreference.getbaseobject
+1	native	actor.getsitstate
+1	native	actor.hasdetectionlos
+1	native	actor.hasmagiceffect
+1	native	actor.isessential
+1	native	actor.isonmount
+1	native	actor.issneaking
+1	native	actor.isunconscious
+1	native	actorbase.getsex
+1	native	formlist.hasform
+1	native	globalvariable.getvalue
+1	native	objectreference.getdistance
+1	native	objectreference.getlinkedrefchildren
+1	native	objectreference.getparentcell
+1	native	objectreference.haskeyword
+1	native	objectreference.isradioon
+1	native	quest.isobjectivedisplayed
+1	native	refcollectionalias.find
+1	native	utility.getcurrentgametime
+1	native	utility.randomint
+46	quest job blocking native	quest.isobjectivedisplayed
+27	quest job blocking native	quest.isstagedone
+15	quest job blocking native	globalvariable.getvalue
+6	quest job blocking native	refcollectionalias.getcount
+6	quest job blocking native	referencealias.getreference
+2	quest job blocking native	objectreference.ismapmarkervisible
+2	quest job blocking native	quest.isrunning
+1	quest job blocking native	actor.isdead
+1	quest job blocking native	actor.isinfaction
+1	quest job blocking native	objectreference.getnthlinkedref
+1	quest job blocking native	objectreference.is3dloaded
+1	quest job blocking native	quest.isobjectivecompleted
+1	quest job blocking native	scene.isplaying
+
+## every placed reference of a DOOR, TERM or ACTI base with a VMAD on the base or the reference; quest host (script_run default since the conditions step): data host, quest natives from the run's quest state (isolated scenario), stage fragments and OnStageSet run inside the call
+133317	data answer	objectreference.isdisabled	a value
+5042	data answer	objectreference.getlinkedref	a record
+1247	data answer	quest.isstagedone	undetermined: not settled by the quest's state
+1058	data answer	objectreference.getlinkedref	none
+673	data answer	globalvariable.getvalue	a value
+394	data answer	game.getformfromfile	a record
+355	data answer	formlist.getsize	undetermined: changed by this run
+293	data answer	objectreference.getlinkedrefchain	a record
+192	data answer	quest.setcurrentstageid	a value
+191	data answer	objectreference.getbaseobject	undetermined: the receiver is not a record
+161	data answer	formlist.hasform	undetermined: the form is not an object
+161	data answer	objectreference.getbaseobject	a record
+138	data answer	referencealias.getreference	undetermined: whether the quest runs is undetermined
+136	data answer	referencealias.forcerefto	none
+109	data answer	quest.isrunning	undetermined: not settled by the quest's state
+69	data answer	objectreference.getlinkedrefchain	none
+52	data answer	objectreference.countlinkedrefchain	a value
+30	data answer	referencealias.clear	none
+29	data answer	quest.getcurrentstageid	undetermined: not settled by the quest's state
+22	data answer	objectreference.getlinkedref	undetermined: the receiver is not an object
+21	data answer	referencealias.getreference	undetermined: the alias has no forced reference
+14	data answer	quest.setobjectivecompleted	none
+14	data answer	quest.setobjectivedisplayed	none
+11	data answer	quest.isstagedone	a value
+9	data answer	quest.start	undetermined: whether the quest was running is undetermined
+4	data answer	objectreference.getbaseobject	undetermined: the receiver is not an object
+3	data answer	objectreference.getlinkedref	undetermined: changed by this run
+3	data answer	quest.stop	none
+2	data answer	globalvariable.getvalue	undetermined: changed by this run
+2	data answer	objectreference.getlinkedrefchain	undetermined: the chain loops
+2	data answer	objectreference.isdisabled	undetermined: the receiver is not an object
+2	data answer	quest.setcurrentstageid	undetermined: the record holds no such stage
+1	data answer	quest.isobjectivecompleted	undetermined: the objective's state is undetermined
+1	data answer	referencealias.getreference	a record
+1115	native	quest.isstagedone
+886	native	objectreference.is3dloaded
+759	native	objectreference.getactorslinkedtome
+657	native	objectreference.getopenstate
+556	native	objectreference.isdestroyed
+358	native	game.getplayerfollowers
+355	native	formlist.getsize
+228	native	objectreference.gettriggerobjectcount
+196	native	objectreference.getcurrentdestructionstage
+161	native	formlist.hasform
+123	native	scene.isplaying
+109	native	quest.isrunning
+95	native	objectreference.getvalue
+90	native	actor.isdead
+90	native	actor.isinfaction
+85	native	objectreference.canproduceforworkshop
+73	native	objectreference.getfactionowner
+73	native	objectreference.getlinkedrefchildren
+61	native	referencealias.getreference
+60	native	actor.isonmount
+54	native	objectreference.getdistance
+53	native	objectreference.getitemcount
+50	native	actor.issneaking
+38	native	actor.hasperk
+29	native	objectreference.getbaseobject
+29	native	quest.getcurrentstageid
+25	native	refcollectionalias.getcount
+24	native	form.getgoldvalue
+24	native	objectreference.placeatnode
+21	native	message.show
+21	native	utility.randomint
+20	native	quest.iscompleted
+19	native	sound.playandwait
+17	native	keyword.sendstoryeventandwait
+16	native	objectreference.findallreferenceswithkeyword
+15	native	objectreference.getnthlinkedref
+14	native	actor.isincombat
+12	native	refcollectionalias.find
+8	native	math.abs
+6	native	utility.randomfloat
+5	native	objectreference.ismapmarkervisible
+4	native	cell.isloaded
+4	native	location.iscleared
+4	native	objectreference.getscale
+4	native	objectreference.haskeyword
+4	native	objectreference.playanimation
+4	native	utility.getcurrentgametime
+3	native	actor.hasdetectionlos
+3	native	objectreference.getlinkedref
+3	native	objectreference.ispowered
+2	native	actor.getlevel
+2	native	actor.getrace
+2	native	actor.isessential
+2	native	actorbase.getuniqueactor
+2	native	globalvariable.getvalue
+2	native	location.haseverbeencleared
+2	native	objectreference.getlinkedrefchain
+2	native	objectreference.getrefslinkedtome
+2	native	objectreference.isdisabled
+1	native	actorbase.getsex
+1	native	objectreference.getanglez
+1	native	objectreference.getparentcell
+1	native	objectreference.islocked
+1	native	objectreference.isradioon
+1	object kind	player
+1	object kind and type class	player	actor
+132	quest job blocking native	quest.isstagedone
+5	quest job blocking native	refcollectionalias.getcount
+4	quest job blocking native	referencealias.getreference
+4	quest job blocking native	scene.isplaying
+1	quest job blocking native	actor.isdead
+1	quest job blocking native	objectreference.getnthlinkedref
+1	quest job blocking native	quest.isobjectivecompleted

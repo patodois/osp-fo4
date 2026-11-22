@@ -306,6 +306,33 @@ versioned.
 | Every placed scripted reference, before | 16,718 | 32,548 | 20,671 | 9,802 | 1,040 | 449 | 586 |
 | Every placed scripted reference, after | 16,718 | 32,548 | 24,655 | 6,686 | 1 | 478 | 728 |
 
+**Quest host** (since the conditions step, `script_run`'s default,
+`bind::Mode::Quest`; `--data` runs the data host alone as above,
+`--recording` the recording host alone). Quest natives are answered from
+the run's quest state in the isolated scenario (`quest_state_isolated_v1`:
+whether a quest runs and which stages are done are undetermined until
+the run sets them); a stage a handler sets runs its fragment, the quest
+events and OnStageSet inside the call (`quest::Runner`, up to
+`bind::QUEST_JOBS` = 256 jobs per run). Over the three scopes **no
+handler's outcome changes**: the same 16, 1,319 and 24,655 complete and
+the same natives block them, because what the handlers ask of quests
+(`IsStageDone` 1,247 calls over the placed references, `IsRunning` 109,
+`GetCurrentStageID` 29, `GetReference` of a quest whose running state is
+undetermined 138) stays undetermined in that scenario. What changes is
+what runs inside them ([vm-census.txt](vm-census.txt), last three
+sections): over the placed references, 192 stage settings answered, 182
+stage fragments run (32 completed, 148 blocked, 132 of them on
+`Quest.IsStageDone`, 2 failed), 191 OnStageSet deliveries (21 to a
+handler, all completed), 179 open jobs on whether the setting started
+the quest and 2 on OnQuestShutdown; over the bases alone 183 fragments
+(73 completed, 110 blocked), 197 OnStageSet deliveries (53 to a handler,
+all completed), 132 open jobs on whether the setting started the quest,
+2 on OnQuestShutdown and one on a log entry choice. The test
+cells' handlers set no stage. A rerun with `--data` reproduces the
+earlier census except the drawability split of 2,577 enabled
+references (7 drawable then, 112 now), which the scene loader decides,
+not this step.
+
 ### Blockers
 
 Before this step, over every placed scripted reference, the natives whose
@@ -454,11 +481,31 @@ made after the quest's own VMAD scripts are attached, with the block's
 property values (`quest_fragment_instance_v1`); its alias properties hold
 alias handles, which `GetReference` answers through ALFR. Which entry runs
 (`quest_stage_log_entry_v1`): the first whose conditions hold; one
-without conditions holds; conditions are not evaluated, so a conditioned
-entry before the first unconditioned one leaves the choice open (an open
-job) unless every candidate names the same fragment. A fragment function
-stored without instructions runs and returns at once (394 of the
-stages the sweep sets have one).
+without conditions holds; none when no entry holds. The conditions are
+evaluated by `fo4_vm::cond` (Conditions, below) in the state after the
+stage is marked done and current (`cond_log_entry_state_v1`); an entry
+whose conditions are undetermined keeps it and the entries after it as
+candidates, and the choice stays open (an open job) unless every
+candidate names the same fragment. `QuestHost::evaluate = false`
+(`quest_run --no-conditions`) leaves every conditioned entry
+undetermined, as before conditions were read. A fragment function stored
+without instructions runs and returns at once (394 of the stages the
+sweep sets have one).
+
+**OnStageSet** (`quest_on_stage_set_v1`). After a stage is set (not when
+a setting is refused as already done), `OnStageSet(stage, item)` is
+delivered to every script instance on the quest's handle that has a
+function with instructions for it, after the stage's fragment, inside
+the same call; `item` is the position of the log entry selected, an
+undetermined value when the selection is open or no entry holds. A
+handler that does not take two Int fails as a bad argument (none does).
+Over every winning quest, 193 of the quests' own VMAD scripts, on 191
+quests, have a handler, all taking two Int; no fragment script and no
+alias script has one (alias scripts would receive nothing under the
+rule). Scripts that register for another quest's OnStageSet as a remote
+event (2 registrations in the new-game run) receive nothing: remote
+events are not delivered. `QuestHost::stage_event = false`
+(`quest_run --no-stage-event`) delivers nothing.
 
 **Order** (`quest_stage_fragment_order_v1`). The candidate is the
 *nested* reading: the fragment and quest events a native brings run at
@@ -470,7 +517,19 @@ data argue for nested: the queued reading answers `GetReference` with
 none 69 times against 41 (aliases of a quest the calling script stops
 right after setting the stage, whose fragment then runs on a stopped
 quest) and leaves 84 cascaded fragments failing on a call on none against
-58. The new-game sweep gives the same counts under both.
+58. The new-game sweep gives the same counts under both. After the
+conditions step (below) the comparison is 70 against 34 and 85 against
+57.
+
+Since the conditions step, the jobs queued beside the one a runner runs
+are set aside while it runs (`quest::run_jobs` with a runner and
+`quest::Runner`): a job runs inside it only the jobs it brings, as the
+rule states; before, a job queued earlier (OnQuestInit's startup-stage
+fragments, now OnStageSet) could run inside a sibling that called any
+native. Alone, this changes the stage sweep by 2 cascaded fragments
+completed instead of failing on a call on none and 8 fewer `GetReference`
+answers of none (`quest_run stages --no-conditions --no-stage-event`
+against the earlier census); the new-game run is unchanged.
 
 ### Stage sweep (`quest_run MANIFEST stages OUT_DIR`)
 
@@ -478,26 +537,44 @@ For every winning quest and every stage its record holds that a fragment
 names (10,071 stages of 1,273 quests; 632 quests have none), one fresh
 interpreter (quest host, isolated scenario, scripts attached on need)
 sets the stage and runs what follows, up to 256 jobs.
-[quest-run-stages.txt](quest-run-stages.txt) has every count. 14.7 s
-wall, peak RSS about 740 MB.
+[quest-run-stages.txt](quest-run-stages.txt) has every count (log entry
+conditions evaluated, OnStageSet delivered). 13 to 16 s wall, peak RSS
+about 800 MB.
 
-| The stage's own fragment | Stages |
-| --- | ---: |
-| completed | 5,537 |
-| blocked on a native's result | 4,121 |
-| blocked on an undetermined value (open rule) | 28 |
-| blocked on an object without the script | 1 |
-| failed | 219 |
-| open: which log entry's fragment runs depends on conditions | 162 |
-| no fragment (the selected entry has none) | 3 |
+| The stage's own fragment | Stages before conditions | Stages now |
+| --- | ---: | ---: |
+| completed | 5,537 | 5,553 |
+| blocked on a native's result | 4,121 | 4,124 |
+| blocked on an undetermined value (open rule) | 28 | 28 |
+| blocked on an object without the script | 1 | 1 |
+| failed | 219 | 219 |
+| open: which log entry's fragment runs depends on conditions | 162 | 130 |
+| no fragment (no entry holds, or the one that holds has none) | 3 | 16 |
+
+Of the 162 stages the conditions left open, 32 close: 16 run their
+fragment to completion, 3 run it until it blocks, 13 run none (no entry
+holds); 130 stay open. Over the sweep 538 log entry lists were
+evaluated: 80 true, 35 false, 423 undetermined; 289 selections met a
+conditioned entry, 63 were settled and 226 stayed open (130 of the
+stages' own, 96 in cascades, against 126 before). The function indexes
+of the undetermined conditions in the open selections, once per
+selection: 59 (191; stages of a quest the isolated scenario does not
+know as done or not), 629 (28), 491 (14), 70 (12), 46 (7), 84 (4), 14
+(3), 1, 58, 71 and 74 (1 each).
 
 - Natives that blocked the stage's fragment, most first:
-  `ReferenceAlias.GetReference` 1,618 (aliases filled at run time),
-  `Quest.IsStageDone` 1,236 (stages the isolated state does not know),
+  `ReferenceAlias.GetReference` 1,619 (aliases filled at run time),
+  `Quest.IsStageDone` 1,237 (stages the isolated state does not know),
   `RefCollectionAlias.GetCount` 227, `Quest.IsRunning` 178,
   `Quest.IsObjectiveDisplayed` 172, `Actor.IsInFaction` 114, `Is3DLoaded`
-  80, `Actor.IsDead` 72; the full ranking is in
+  80, `Actor.IsDead` 73; the full ranking is in
   [vm-blockers.txt](vm-blockers.txt).
+- OnStageSet after the stage's own fragment: 3,087 of the 10,071 stage
+  sets reach a handler, 3,165 handler runs: 3,111 completed, 51 blocked
+  (26 on a native's result, 23 of them `Utility.GetCurrentGameTime`; 23
+  on an array operation the rules leave open; 2 on the undetermined
+  item), 3 failed; in cascades 1,644 handler runs (1,526 completed). The handlers add 60 objects placed, 85 scene calls, 43
+  timers and 11 global sets to the effects; no stage set.
 - Failures: a call on none (op 23) 164 and a property on none 1 (a
   property or alias the data leaves none, mostly `MoveTo` and
   `EnablePlayerControls` targets),
@@ -505,50 +582,126 @@ wall, peak RSS about 740 MB.
   refused as the binding refuses them), array operations on none 21,
   `MissingFunction` 4, `MissingScript` 2, `IndexOutOfRange` 3, `Ambiguous`
   1.
-- 4,617 stages ran with every job completed and no open job.
+- 4,607 stages ran with every job completed and no open job (4,617
+  before; 4,646 with conditions and without OnStageSet: the handlers'
+  own blocks take 39 away).
 - Cascades: fragments run per stage set, the stage's own included: 1 in
-  8,514 stages, 2 in 894, 3 to 9 in 405, 10 to 42 in 93, none in 165
-  (the 162 open ones and 3 without a fragment); depth
+  8,520 stages, 2 in 904, 3 to 9 in 408, 10 to 42 in 93, none in 146
+  (the 130 open ones and 16 without a fragment); depth
   up to 8; no stage reached the job limit and no run reached the step or
   depth limit, so no cycle runs unbounded (141 settings of an already done
   stage were refused by `quest_repeated_stage_v1`). Cascaded fragments:
-  3,927, 2,240 completed, 1,611 blocked, 76 failed; open jobs: 1,724
+  3,955, 2,256 completed, 1,624 blocked, 75 failed; open jobs: 1,736
   (whether setting the stage started another quest), 188 (whether a
-  stopped quest ran OnQuestShutdown), 126 (log entry conditions).
+  stopped quest ran OnQuestShutdown), 96 (log entry conditions).
 - Effects (native calls) by kind over all runs: stage set on another
-  quest 4,375 and on the same quest 610, objectives displayed or hidden
-  2,419, completed 2,422, failed 82, enable 2,002, disable 1,697, global
-  set 1,709, scene 1,434, actor state 1,241, quest stopped 1,210, move
-  1,088, items 841, event registration 809, alias fill changed 734, lock
-  or open state 604, timer 569, actor value 462, faction 239, quest
-  started 195; reads and other natives are ranked in the file.
+  quest 4,383 and on the same quest 618, objectives displayed or hidden
+  2,480, completed 2,432, failed 82, enable 2,006, disable 1,709, global
+  set 1,728, scene 1,527, actor state 1,243, quest stopped 1,219, move
+  1,092, items 849, event registration 812, alias fill changed 740, lock
+  or open state 607, timer 613, actor value 462, faction 239, quest
+  started 197, objects placed 155; reads and other natives are ranked in
+  the file.
 
 ### New game (`quest_run MANIFEST new-game OUT_DIR`)
 
 One interpreter starts the 457 quests flagged to start with the game
-([quest-run-new-game.txt](quest-run-new-game.txt)); 1.7 s.
+([quest-run-new-game.txt](quest-run-new-game.txt)); 1.7 to 2.5 s. Second
+pass, with log entry conditions evaluated and OnStageSet delivered (the
+first pass's numbers in brackets):
 
-- 539 jobs ran: 459 OnQuestInit (457 starts, one `Start` and one stage set
-  from scripts), 73 stage jobs, 7 OnQuestShutdown. 436 OnQuestInit jobs
-  found no handler; the other 23 ran 24 handlers: 12 completed, 10
-  blocked, 2 failed.
-- 125 stages set on 98 quests (108 by starts, 17 by scripts); 72
-  fragments: 59 completed, 10 blocked (`RefCollectionAlias.GetCount`,
+- 664 jobs ran (539): 459 OnQuestInit (457 starts, one `Start` and one
+  stage set from scripts), 73 stage jobs, 125 OnStageSet, 7
+  OnQuestShutdown. 436 OnQuestInit jobs found no handler; the other 23 ran
+  24 handlers: 12 completed, 10 blocked, 2 failed.
+- 125 stages set on 98 quests (108 by starts, 17 by scripts), as before;
+  72 fragments: 59 completed, 10 blocked (`RefCollectionAlias.GetCount`,
   `Actor.GetLevel`, `Game.IsPluginInstalled`, `Scene.IsPlaying`,
   `Is3DLoaded`, `ReferenceAlias.GetReference`; one open rule), 3 failed;
-  one stage left open by log entry conditions.
+  one stage still open by its log entry conditions (two lists, both
+  undetermined by function 14).
+- OnStageSet: 125 deliveries, 50 to a handler: 28 completed, 21 blocked
+  (20 on `ObjectReference.AttachMod`, one on
+  `RefCollectionAlias.GetCount`), 1 failed (an array of none). The
+  handlers add 20 objects placed (29 against 9), 40 form list reads and
+  one alias fill.
 - 452 quests run at the end (7 stopped by scripts); **no objective is
   displayed**; three placed references, none flagged initially disabled,
   are enabled; nothing is disabled.
-- Other effects: 17 stages set on other quests, 41 event registrations, 14
-  alias fills, 12 lock or open state changes, 8 moves, 9 objects placed, 7
-  item changes, 4 scene calls.
+- Other effects: 17 stages set on other quests, 41 event registrations,
+  15 alias fills, 12 lock or open state changes, 8 moves, 7 item changes,
+  4 scene calls.
 
-This is the first picture of what the scripts do when a new game starts,
-under every rule above: little runs, because most of the game's opening
-is driven by events the interpreter does not deliver (the player leaving
-the first cell, dialogue, triggers, scenes ending) rather than by the
-quests' start.
+Where it stops, ranked (what the next steps can be chosen from):
+
+1. **Events nobody delivers.** The 71 event registrations made by the
+   start are never answered: 29 tracked-statistics events, 23 remote
+   events (`OnLocationChange` 10, `OnLoad` 3, `OnUnload` 3,
+   `OnPlayerLoadGame` 3, `OnStageSet` of another quest 2, two on an
+   undetermined sender), 18 custom events of other scripts, one
+   player-sleep registration (the census's 41 "event registration"
+   effects are the remote and custom ones). Engine events that need no
+   registration (the player's cell attaching and loading, triggers,
+   scenes ending, dialogue) are not delivered either.
+   The main quest of the game's opening is not among the 457 flagged
+   to start (some of its helper quests are), so its start, and with it
+   every objective, waits on something the model does not have: an
+   engine event, a story-manager start or a script outside these runs.
+2. **Natives whose result steers a run:** `ObjectReference.AttachMod` 20
+   (all in OnStageSet handlers), `RefCollectionAlias.GetCount` 6,
+   `Actor.GetLevel` 3, `Game.IsPluginInstalled` 3, `Scene.IsPlaying` 3,
+   `Is3DLoaded` 2, `ReferenceAlias.GetReference` 2; and 33
+   `GetReference` answers left undetermined that steered nothing
+   (aliases without a forced reference: alias filling is not modelled).
+3. **Conditions:** one log entry selection open, on function 14.
+4. **Open rules and failures:** an array operation on none, a cast, a
+   property on none, a missing function, a bad argument, two calls on
+   none, one array of none in an OnStageSet handler.
+
+This is the second picture of what the scripts do when a new game
+starts, under every rule above: conditions change almost nothing here
+(the new-game state settles all but one selection) and OnStageSet adds
+50 handler runs; the opening still waits on events the interpreter does
+not deliver (the player in the first cell, triggers, scenes ending,
+dialogue, remote events) rather than on the quests' start.
+
+## Conditions
+
+`fo4_vm::cond` evaluates the condition lists read by
+`fo4_plugin::condition` ([conditions.md](conditions.md)) to true, false
+or undetermined. A condition is evaluated only when its function index is
+one of four, each a pending rule; every other condition is undetermined,
+named by its function index. Three-valued AND and OR: a list is
+undetermined only when its determined conditions do not settle it.
+
+| Index | Value | Read from | Rule |
+| --- | --- | --- | --- |
+| 56 | 1 when the quest of parameter 1 runs, else 0 | the quest state | `cond_fn_56_quest_running_v1` |
+| 58 | the current stage of the quest of parameter 1 | the quest state | `cond_fn_58_quest_stage_v1` |
+| 59 | 1 when stage (parameter 2) of the quest of parameter 1 is done, else 0 | the quest state | `cond_fn_59_stage_done_v1` |
+| 74 | the value of the GLOB of parameter 1 | FLTV, undetermined once the run may have changed it (as `GlobalVariable.GetValue`) | `cond_fn_74_global_value_v1` |
+
+- Operator codes 0 to 5 compare the value with the comparison value
+  (`cond_compare_ops_v1`); with flag bit 0x04 the comparison value is the
+  global's value (`cond_use_global_v1`); with bit 0x02 or 0x08 the
+  parameters name aliases or package data and the condition is
+  undetermined (`cond_flag_parameters_v1`); a parameter that does not
+  name a winning record of the expected type leaves it undetermined.
+- Combination (`cond_list_or_groups_v1`): the AND of OR groups, a
+  condition with bit 0x01 joined to the next by OR; `Combine::LeftToRight`
+  is the alternative the census counts.
+- What the four functions read (`cond::Facts`): during a run, the quest
+  state of the run's world and the data host's globals
+  (`quest::RunFacts`); for the census, the new-game state before any
+  script runs (`cond::StaticFacts`).
+- Used today only to choose a stage's log entry (Quests, above); quest
+  conditions before and after NEXT, objective target and alias
+  conditions, and every other record type's conditions are read and
+  counted, not used.
+
+The census of every condition and of what the evaluator settles at the
+start of a new game is [conditions-census.txt](conditions-census.txt)
+(`cond_census MANIFEST OUT.txt`, 12 s, peak RSS about 510 MB).
 
 ## Limits
 
@@ -559,10 +712,13 @@ quests' start.
 - Natives are never performed; latent natives do not wait; the data host
   answers only the natives listed under Data host, from the data as at the
   start of a game.
-- Stages are set and their fragments run only by `quest_run` (Quests);
-  `script_run`, `bind::run` and the viewer keep the data host, so quest
-  natives stay undetermined there. Conditions are never evaluated. INFO,
-  PACK, PERK and SCEN fragment blocks stay raw ([vmad.md](vmad.md)).
+- Stages are set and their fragments run by `quest_run` (Quests) and by
+  `script_run` (quest host, isolated scenario); `bind::run` and the
+  viewer keep the data host, so quest natives stay undetermined there.
+  Conditions are evaluated only for log entry selection, and only four
+  function indexes. Remote and custom events, tracked-statistics events
+  and engine events beyond those `script_run` names are never delivered.
+  INFO, PACK, PERK and SCEN fragment blocks stay raw ([vmad.md](vmad.md)).
 - Opcode 34's arity between `4` and `4+n` stays open ([pex.md](pex.md));
   the interpreter reads its fourth slot as the start index.
 
@@ -626,3 +782,32 @@ behaviour was requested (the Creation Kit wiki page of the SetStage
 function); the server refused it (HTTP 403) and nothing of it was read. No
 editor, editor source or definition file, script source, decompiler,
 other interpreter or the game executable was opened or searched for.
+
+## Provenance of the conditions step
+
+Recognised from prior general knowledge, used only as hypotheses that the
+census could refute ([conditions.md](conditions.md),
+[conditions-census.txt](conditions-census.txt)):
+
+- the CTDA field layout and the CIS1 and CIS2 texts
+  (`cond_ctda_layout_v1`);
+- the operator codes, the OR, global, alias and package-data flag bits
+  and how a list combines (`cond_compare_ops_v1`, `cond_use_global_v1`,
+  `cond_flag_parameters_v1`, `cond_list_or_groups_v1`);
+- the meanings of function indexes 56, 58, 59 and 74 (whether a quest
+  runs, its current stage, whether a stage is done, a global's value);
+  the census of their parameters supports each and names no other index;
+- that log entry conditions are evaluated with the stage already set
+  (`cond_log_entry_state_v1`);
+- OnStageSet's delivery after the fragment and the meaning of its second
+  parameter (`quest_on_stage_set_v1`); its name and its two Int
+  parameters were read from the installed scripts' declarations and
+  handlers.
+
+Two public documentation pages were requested (the Fallout 4 Creation Kit
+wiki's `Conditions` and `Condition_Functions`); both redirected to a
+maintenance page and nothing of them was read; no copy elsewhere was
+looked for. No function index is given a name: no citable index-to-name
+table was read. No editor, editor source or definition file, script
+source, decompiler, other interpreter or the game executable was opened
+or searched for.

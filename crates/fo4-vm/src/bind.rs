@@ -555,6 +555,10 @@ pub struct Run {
     pub attached: std::collections::BTreeMap<&'static str, u64>,
     /// What attaching could not apply.
     pub attach_notes: Vec<String>,
+    /// [`Mode::Quest`]: the quest jobs run inside the events, in order of
+    /// starting, and the jobs left queued.
+    pub quest_jobs: Vec<crate::quest::JobRun>,
+    pub quest_jobs_left: usize,
 }
 
 /// Which host a run uses.
@@ -566,7 +570,17 @@ pub enum Mode {
     /// The data host ([`DataHost`]) and the scripts of quests, aliases and
     /// placed references attached when first needed ([`RecordScripts`]).
     Data,
+    /// As [`Mode::Data`], with the quest host
+    /// ([`crate::quest::QuestHost`]): quest natives answered from the
+    /// quest state of the run (isolated scenario,
+    /// `quest_state_isolated_v1`), stage fragments, quest events and
+    /// OnStageSet run inside the native call that brought them
+    /// ([`crate::quest::Runner`], at most [`QUEST_JOBS`] per run).
+    Quest,
 }
+
+/// Quest jobs a run in [`Mode::Quest`] runs at most.
+pub const QUEST_JOBS: usize = 256;
 
 /// Attaches the scripts of the record behind a handle when a run first
 /// needs an instance on it (`vm_record_scripts_attach_v1`): a quest's VMAD
@@ -731,14 +745,20 @@ pub fn run_in(
     let max = store.limits.max_memory;
     let mut recording = crate::RecordingHost::default();
     let mut data = DataHost::new(store, max);
+    let mut quest = crate::quest::QuestHost::new(store, max);
     let mut attach = RecordScripts::new(store, max);
+    let mut runner = crate::quest::Runner::new(store, max, QUEST_JOBS);
     let host: &mut dyn crate::Host = match mode {
         Mode::Recording => &mut recording,
         Mode::Data => &mut data,
+        Mode::Quest => &mut quest,
     };
     let mut vm = Vm::new(lib, host);
-    if mode == Mode::Data {
+    if mode != Mode::Recording {
         vm.attach = Some(&mut attach);
+    }
+    if mode == Mode::Quest {
+        vm.nested = Some(&mut runner);
     }
     let bound = match reference {
         Some(r) => bind_reference(&mut vm, store, r, b)?.ok_or("reference without a base")?,
@@ -754,19 +774,28 @@ pub fn run_in(
         let script = vm.world.instances[inst].script.clone();
         outcomes.push((format!("timer:{}", vm.world.render(&id)), script, o));
     }
+    let mut quest_jobs = std::mem::take(&mut vm.world.quests.nested_runs);
+    quest_jobs.sort_by_key(|r| r.seq);
+    let quest_jobs_left = vm.world.quests.queue.len();
     let effects = std::mem::take(&mut vm.effects);
     let rules = std::mem::take(&mut vm.rules);
     let world = std::mem::take(&mut vm.world);
     drop(vm);
+    let mut answers = std::mem::take(&mut data.answers);
+    for (k, v) in quest.answers.iter().chain(quest.data.answers.iter()) {
+        *answers.entry(k.clone()).or_default() += v;
+    }
     Ok(Run {
         bound,
         outcomes,
         effects,
         rules,
         world,
-        answers: std::mem::take(&mut data.answers),
+        answers,
         attached: attach.attached,
         attach_notes: attach.notes,
+        quest_jobs,
+        quest_jobs_left,
     })
 }
 

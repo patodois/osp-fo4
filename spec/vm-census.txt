@@ -1,5 +1,6 @@
 # script_run --census: counts only (spec/vm.md, Census)
-# Each scope twice: before this step's data host and after it.
+# Each scope twice: before the data host and after it; then once more with the quest host
+# (script_run default since the conditions step; --data gives the second reading).
 
 ## the two test cells of the survey (one interior; one exterior with radius 1); before: recording host alone, no record's scripts attached (as at main)
 10	targets: scripted DOOR, TERM and ACTI placed in the cells named
@@ -407,6 +408,299 @@
 25	visibility change: enable of an initially disabled REFR, handlers completed
 5	visibility change: enable of an initially disabled REFR, handlers completed, target an enable parent
 5	visibility change: enable of an initially disabled REFR, handlers completed, target drawable under every pending rule
+20	visibility change: enable of an initially disabled REFR, handlers completed, target not drawable
+9	visibility change: enable of an initially disabled REFR, handlers not all completed
+7	visibility change: not a placed REFR, handlers completed
+50	visibility change: not a placed REFR, handlers not all completed
+183	distinct blocking origins
+72	distinct failures
+5387	handlers blocked by the ten most frequent origins (1115, 886, 759, 657, 556, 358, 355, 277, 228, 196)
+
+## the two test cells of the survey (one interior; one exterior with radius 1); quest host (script_run default since the conditions step): data host, quest natives from the run's quest state (isolated scenario), stage fragments and OnStageSet run inside the call
+10	targets: scripted DOOR, TERM and ACTI placed in the cells named
+22	handlers run
+6	blocked at opcode 22
+4	event activate handlers
+3	event cell-detach handlers
+2	event load handlers
+4	event reset handlers
+8	event trigger-enter handlers
+1	event trigger-leave handlers
+2	handles given scripts when first needed: quest
+1	handles given scripts when first needed: reference
+10	objects bound
+6	outcome blocked on a native result
+16	outcome completed
+19	runs relying on pex_call_dispatch_v1
+13	runs relying on pex_conditional_jump_sense_v1
+5	runs relying on pex_default_values_v1
+5	runs relying on pex_op_return_v1
+2	runs relying on pex_ops_arithmetic_v1
+7	runs relying on pex_ops_compare_v1
+12	runs relying on pex_ops_not_copy_cast_v1
+13	runs relying on pex_state_identifier_v1
+6	runs relying on pex_truth_of_values_v1
+3	runs relying on quest_alias_forced_reference_v1
+4	runs relying on quest_qust_layout_v1
+1	runs relying on quest_set_stage_v1
+22	runs relying on vm_event_handlers_v1
+3	runs relying on vm_host_data_state_v1
+1	runs relying on vm_host_form_from_file_v1
+1	runs relying on vm_host_is_disabled_flag_v1
+1	runs relying on vm_host_linked_ref_xlkr_v1
+3	runs relying on vm_host_player_handle_v1
+3	runs relying on vm_record_scripts_attach_v1
+6	runs relying on vm_timer_events_v1
+5	runs relying on vmad_alias_value_v1
+22	runs relying on vmad_property_sets_variable_v1
+22	runs relying on vmad_reference_scripts_v1
+3	runs with 0 effects
+8	runs with 1 effects
+11	runs with 2-4 effects
+1	visibility change disable of a reference of the loaded cells
+1	visibility change enable of a reference of the loaded cells
+1	visibility change: disable of an enabled REFR, handlers completed
+1	visibility change: disable of an enabled REFR, handlers completed, target not drawable
+1	visibility change: enable of an enabled REFR, handlers completed
+1	visibility change: enable of an enabled REFR, handlers completed, target not drawable
+4	distinct blocking origins
+0	distinct failures
+6	handlers blocked by the ten most frequent origins (3, 1, 1, 1)
+
+## every winning scripted DOOR, TERM and ACTI base, bound alone; quest host (script_run default since the conditions step): data host, quest natives from the run's quest state (isolated scenario), stage fragments and OnStageSet run inside the call
+1251	targets: every winning scripted DOOR, TERM and ACTI base, bound alone
+2530	handlers run
+29	binding note: property not declared
+9	blocked at opcode 21
+1016	blocked at opcode 22
+49	blocked at opcode 23
+3	blocked at opcode 28
+12	blocked at opcode 29
+2	blocked at opcode 43
+480	event activate handlers
+60	event cell-attach handlers
+50	event cell-detach handlers
+885	event fragment handlers
+72	event init handlers
+319	event load handlers
+119	event reset handlers
+298	event trigger-enter handlers
+110	event trigger-leave handlers
+137	event unload handlers
+27	handles given scripts when first needed: alias
+627	handles given scripts when first needed: quest
+133	handles given scripts when first needed: reference
+1251	objects bound
+54	objects without an event function with instructions
+1034	outcome blocked on a native result
+9	outcome blocked on rule pex_array_ops_v1
+5	outcome blocked on rule pex_ops_compare_v1
+38	outcome blocked on rule pex_ops_not_copy_cast_v1
+5	outcome blocked on rule vm_object_identity_v1
+1319	outcome completed
+5	outcome failed: IndexOutOfRange op 32
+3	outcome failed: MissingFunction
+82	outcome failed: NoneOperand op 23
+2	outcome failed: NoneOperand op 28
+9	outcome failed: NoneOperand op 32
+5	outcome failed: NoneOperand op 34
+1	outcome failed: NoneOperand op 42
+13	outcome failed: NoneOperand op 46
+144	quest jobs run inside handlers: event onstageset
+53	quest jobs run inside handlers: event onstageset: completed
+2	quest jobs run inside handlers: open: whether OnQuestShutdown runs (running state undetermined)
+132	quest jobs run inside handlers: open: whether setting the stage started the quest
+1	quest jobs run inside handlers: open: which log entry's fragment runs depends on conditions
+110	quest jobs run inside handlers: stage fragment: blocked on a native's result
+73	quest jobs run inside handlers: stage fragment: completed
+1	runs relying on cond_ctda_layout_v1
+1	runs relying on cond_flag_parameters_v1
+1	runs relying on cond_fn_59_stage_done_v1
+1	runs relying on cond_list_or_groups_v1
+1	runs relying on cond_log_entry_state_v1
+546	runs relying on pex_array_ops_v1
+2298	runs relying on pex_call_dispatch_v1
+1860	runs relying on pex_conditional_jump_sense_v1
+1248	runs relying on pex_default_values_v1
+438	runs relying on pex_op_return_v1
+196	runs relying on pex_ops_arithmetic_v1
+1097	runs relying on pex_ops_compare_v1
+1609	runs relying on pex_ops_not_copy_cast_v1
+90	runs relying on pex_property_get_set_v1
+540	runs relying on pex_state_identifier_v1
+127	runs relying on pex_struct_ops_v1
+301	runs relying on pex_truth_of_values_v1
+131	runs relying on quest_alias_forced_reference_v1
+112	runs relying on quest_fragment_entry_v1
+112	runs relying on quest_fragment_instance_v1
+54	runs relying on quest_objectives_v1
+124	runs relying on quest_on_stage_set_v1
+339	runs relying on quest_qust_layout_v1
+1	runs relying on quest_repeated_stage_v1
+225	runs relying on quest_set_stage_v1
+126	runs relying on quest_stage_fragment_order_v1
+124	runs relying on quest_stage_log_entry_v1
+28	runs relying on quest_start_v1
+124	runs relying on quest_state_isolated_v1
+2	runs relying on quest_stop_v1
+2495	runs relying on vm_event_handlers_v1
+5	runs relying on vm_host_base_object_name_v1
+194	runs relying on vm_host_data_state_v1
+60	runs relying on vm_host_form_from_file_v1
+1	runs relying on vm_host_formlist_lnam_v1
+115	runs relying on vm_host_global_fltv_v1
+5	runs relying on vm_host_linked_ref_chain_v1
+9	runs relying on vm_host_linked_ref_xlkr_v1
+523	runs relying on vm_host_player_handle_v1
+6	runs relying on vm_object_identity_v1
+638	runs relying on vm_record_scripts_attach_v1
+22	runs relying on vm_record_signature_type_v1
+116	runs relying on vm_timer_events_v1
+524	runs relying on vmad_alias_value_v1
+2495	runs relying on vmad_property_sets_variable_v1
+2495	runs relying on vmad_reference_scripts_v1
+290	runs with 0 effects
+860	runs with 1 effects
+1138	runs with 2-4 effects
+152	runs with 5-9 effects
+55	runs with >=10 effects
+6	visibility change disable of another record
+16	visibility change enable of another record
+4	visibility change: disable of an enabled REFR, handlers completed
+3	visibility change: disable of an enabled REFR, handlers completed, target drawable under every pending rule
+1	visibility change: disable of an enabled REFR, handlers completed, target not drawable
+2	visibility change: disable of an initially disabled REFR, handlers completed
+2	visibility change: disable of an initially disabled REFR, handlers completed, target drawable under every pending rule
+4	visibility change: enable of an enabled REFR, handlers completed
+2	visibility change: enable of an enabled REFR, handlers completed, target drawable under every pending rule
+2	visibility change: enable of an enabled REFR, handlers completed, target not drawable
+11	visibility change: enable of an initially disabled REFR, handlers completed
+6	visibility change: enable of an initially disabled REFR, handlers completed, target drawable under every pending rule
+5	visibility change: enable of an initially disabled REFR, handlers completed, target not drawable
+1	visibility change: enable of an initially disabled REFR, handlers not all completed
+102	distinct blocking origins
+68	distinct failures
+779	handlers blocked by the ten most frequent origins (408, 86, 51, 43, 43, 41, 34, 28, 23, 22)
+
+## every placed reference of a DOOR, TERM or ACTI base with a VMAD on the base or the reference; quest host (script_run default since the conditions step): data host, quest natives from the run's quest state (isolated scenario), stage fragments and OnStageSet run inside the call
+16718	targets: every placed reference of a DOOR, TERM or ACTI base with a VMAD on the base or the reference
+32548	handlers run
+32	attach note: property not declared
+58	binding note: property not declared
+201	blocked at opcode 21
+6925	blocked at opcode 22
+36	blocked at opcode 23
+1	blocked at opcode 28
+2	blocked at opcode 29
+6585	event activate handlers
+488	event cell-attach handlers
+225	event cell-detach handlers
+233	event fragment handlers
+682	event init handlers
+7557	event load handlers
+4672	event reset handlers
+5685	event trigger-enter handlers
+1384	event trigger-leave handlers
+5037	event unload handlers
+57	handles given scripts when first needed: alias
+2741	handles given scripts when first needed: quest
+2946	handles given scripts when first needed: reference
+16718	objects bound
+1	objects whose binding failed
+814	objects without an event function with instructions
+6686	outcome blocked on a native result
+1	outcome blocked on a scripted call or property of an object without that script
+277	outcome blocked on rule pex_array_ops_v1
+26	outcome blocked on rule pex_ops_compare_v1
+115	outcome blocked on rule pex_ops_not_copy_cast_v1
+1	outcome blocked on rule pex_struct_ops_v1
+50	outcome blocked on rule vm_object_identity_v1
+9	outcome blocked on rule vmad_property_sets_variable_v1
+24655	outcome completed
+1	outcome failed: BadArgument
+2	outcome failed: IndexOutOfRange op 32
+1	outcome failed: MissingFunction
+359	outcome failed: NoneOperand op 23
+2	outcome failed: NoneOperand op 29
+52	outcome failed: NoneOperand op 32
+140	outcome failed: NoneOperand op 34
+135	outcome failed: NoneOperand op 42
+24	outcome failed: NoneOperand op 46
+12	outcome failed: StepLimit
+1	quest jobs run inside handlers: event onquestshutdown
+170	quest jobs run inside handlers: event onstageset
+21	quest jobs run inside handlers: event onstageset: completed
+2	quest jobs run inside handlers: open: whether OnQuestShutdown runs (running state undetermined)
+179	quest jobs run inside handlers: open: whether setting the stage started the quest
+148	quest jobs run inside handlers: stage fragment: blocked on a native's result
+32	quest jobs run inside handlers: stage fragment: completed
+2	quest jobs run inside handlers: stage fragment: failed: NoneOperand op 23
+2556	runs relying on pex_array_ops_v1
+30215	runs relying on pex_call_dispatch_v1
+20378	runs relying on pex_conditional_jump_sense_v1
+16840	runs relying on pex_default_values_v1
+3869	runs relying on pex_op_return_v1
+2096	runs relying on pex_ops_arithmetic_v1
+11460	runs relying on pex_ops_compare_v1
+23636	runs relying on pex_ops_not_copy_cast_v1
+536	runs relying on pex_property_get_set_v1
+12899	runs relying on pex_state_identifier_v1
+321	runs relying on pex_struct_ops_v1
+5572	runs relying on pex_truth_of_values_v1
+224	runs relying on quest_alias_forced_reference_v1
+164	runs relying on quest_fragment_entry_v1
+164	runs relying on quest_fragment_instance_v1
+13	runs relying on quest_objectives_v1
+171	runs relying on quest_on_stage_set_v1
+1625	runs relying on quest_qust_layout_v1
+1	runs relying on quest_repeated_stage_v1
+1317	runs relying on quest_set_stage_v1
+173	runs relying on quest_stage_fragment_order_v1
+171	runs relying on quest_stage_log_entry_v1
+113	runs relying on quest_start_v1
+171	runs relying on quest_state_isolated_v1
+3	runs relying on quest_stop_v1
+32184	runs relying on vm_event_handlers_v1
+161	runs relying on vm_host_base_object_name_v1
+6144	runs relying on vm_host_data_state_v1
+394	runs relying on vm_host_form_from_file_v1
+609	runs relying on vm_host_global_fltv_v1
+1088	runs relying on vm_host_is_disabled_flag_v1
+260	runs relying on vm_host_linked_ref_chain_v1
+4131	runs relying on vm_host_linked_ref_xlkr_v1
+6768	runs relying on vm_host_player_handle_v1
+50	runs relying on vm_object_identity_v1
+5290	runs relying on vm_record_scripts_attach_v1
+178	runs relying on vm_record_signature_type_v1
+2156	runs relying on vm_timer_events_v1
+2164	runs relying on vmad_alias_value_v1
+32184	runs relying on vmad_property_sets_variable_v1
+32184	runs relying on vmad_reference_scripts_v1
+2571	runs with 0 effects
+11067	runs with 1 effects
+16625	runs with 2-4 effects
+1407	runs with 5-9 effects
+514	runs with >=10 effects
+1669	visibility change disable of a reference of the loaded cells
+2685	visibility change enable of a reference of the loaded cells
+57	visibility change enable of another record
+1542	visibility change: disable of an enabled REFR, handlers completed
+9	visibility change: disable of an enabled REFR, handlers completed, target an enable parent
+4	visibility change: disable of an enabled REFR, handlers completed, target drawable under every pending rule
+1538	visibility change: disable of an enabled REFR, handlers completed, target not drawable
+88	visibility change: disable of an enabled REFR, handlers not all completed
+33	visibility change: disable of an initially disabled REFR, handlers completed
+1	visibility change: disable of an initially disabled REFR, handlers completed, target an enable parent
+33	visibility change: disable of an initially disabled REFR, handlers completed, target not drawable
+6	visibility change: disable of an initially disabled REFR, handlers not all completed
+2577	visibility change: enable of an enabled REFR, handlers completed
+7	visibility change: enable of an enabled REFR, handlers completed, target an enable parent
+112	visibility change: enable of an enabled REFR, handlers completed, target drawable under every pending rule
+2465	visibility change: enable of an enabled REFR, handlers completed, target not drawable
+73	visibility change: enable of an enabled REFR, handlers not all completed
+26	visibility change: enable of an initially disabled REFR, handlers completed
+6	visibility change: enable of an initially disabled REFR, handlers completed, target an enable parent
+6	visibility change: enable of an initially disabled REFR, handlers completed, target drawable under every pending rule
 20	visibility change: enable of an initially disabled REFR, handlers completed, target not drawable
 9	visibility change: enable of an initially disabled REFR, handlers not all completed
 7	visibility change: not a placed REFR, handlers completed

@@ -44,7 +44,7 @@ condition:    CTDA [CIS1] [CIS2]
 | DNAM | 12 | u16 flags, u8 priority, u8 byte, u32 word (zero in all), u32 (0 to 7) | 1,898 |
 | ENAM | 4 | four-byte code, kept as stored | 990 |
 | LNAM, XNAM, QTGL, GNAM | 4 | FormID | LCTN, GLOB, GLOB, KYWD in every one |
-| CTDA | 32 | **raw** | 14,960 |
+| CTDA | 32 | kept as stored here; field by field by `fo4_plugin::condition` ([conditions.md](conditions.md)) | 14,960 |
 | NEXT, ALED | 0 | marker | |
 | INDX | 4 | u16 stage, u8 flags, u8 byte kept as stored | 12,855 |
 | QSDT | 1 | u8 flags | 13,393 |
@@ -65,7 +65,9 @@ condition:    CTDA [CIS1] [CIS2]
 
 Of 3,892,827 bytes in the 1,905 winning QUST records, 3,414,107 are typed
 (2,227,761 of them VMAD bytes read by the VMAD reader) and 478,720 are
-raw, all of them CTDA. The census lists every tag followed by every tag it
+raw, all of them CTDA (14,960 conditions, every byte of which
+`fo4_plugin::condition` now places in a field, kept as stored where the
+census gives no meaning: [conditions.md](conditions.md)). The census lists every tag followed by every tag it
 was seen followed by ([quest-census.txt](quest-census.txt), subrecord
 order observed): the grammar above admits every observed sequence. A
 record that does not fit is refused with `QuestSubrecordOrder` (the
@@ -108,7 +110,12 @@ does not occur in this data: no subrecord follows CNAM inside an entry.
   interpreter relies on (DNAM bit 0 and bit 3, INDX bit 1) are named in
   pending rules (`quest_start_game_enabled_v1`, `quest_repeated_stage_v1`,
   `quest_start_v1`).
-- Conditions (CTDA) are kept raw and never evaluated.
+- Conditions (CTDA) stay raw in this reader's byte accounting; their
+  fields are read by `fo4_plugin::condition` ([conditions.md](conditions.md)),
+  and `fo4_vm::cond` evaluates a stage's log entry conditions when the
+  stage is set ([vm.md](vm.md), Conditions); the quest's own conditions
+  (before and after NEXT), objective target and alias conditions are
+  counted there, not used.
 - How an alias is filled in the running game, except that the interpreter
   takes an ALFR alias of a running quest to hold its reference
   (`quest_alias_forced_reference_v1`).

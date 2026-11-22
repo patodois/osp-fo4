@@ -42,7 +42,10 @@ capsule over a cell's collision under provisional, registered rules.
   records are read to the last byte ([quests](spec/quest.md)), and
   `quest_run` sets every quest stage that has a fragment, or starts the
   quests flagged to start with a new game, and runs the stage fragments
-  under pending rules.
+  under pending rules. Conditions (CTDA) of every record are read field
+  by field ([conditions](spec/conditions.md)), and a three-valued
+  evaluator settles the few whose result the quest state and the data
+  decide, to choose which log entry's fragment a stage runs.
 - **Saves**: save files (`.fos`) read, never written, to the last byte:
   header, plugin lists, the location table, the three global data tables
   and the change-form table, with every form reference resolved against the

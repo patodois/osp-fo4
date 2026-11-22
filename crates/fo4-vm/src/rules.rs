@@ -98,8 +98,34 @@ pub const QUEST_START_GAME: &str = "quest_start_game_enabled_v1";
 /// The stage sweep's state: everything it does not set is undetermined.
 pub const QUEST_ISOLATED: &str = "quest_state_isolated_v1";
 
+/// OnStageSet delivered to the quest's scripts after the stage's fragment.
+pub const QUEST_ON_STAGE_SET: &str = "quest_on_stage_set_v1";
+/// Log entry conditions are evaluated in the state after the stage is set.
+pub const QUEST_LOG_ENTRY_STATE: &str = "cond_log_entry_state_v1";
+
+/// The CTDA layout read by `fo4_plugin::condition`.
+pub const COND_LAYOUT: &str = "cond_ctda_layout_v1";
+/// How a condition list combines: AND of OR groups.
+pub const COND_LIST: &str = "cond_list_or_groups_v1";
+/// Operator codes 0 to 5 compare the function's value with the comparison
+/// value.
+pub const COND_OPS: &str = "cond_compare_ops_v1";
+/// The global bit: the comparison value is the global's value.
+pub const COND_GLOBAL: &str = "cond_use_global_v1";
+/// Flag bits 0x02 and 0x08 make parameters name aliases or package data.
+pub const COND_FLAGS: &str = "cond_flag_parameters_v1";
+/// Function 56: whether the quest of parameter 1 runs.
+pub const COND_FN_56: &str = "cond_fn_56_quest_running_v1";
+/// Function 58: the current stage of the quest of parameter 1.
+pub const COND_FN_58: &str = "cond_fn_58_quest_stage_v1";
+/// Function 59: whether stage parameter 2 of the quest of parameter 1 is
+/// done.
+pub const COND_FN_59: &str = "cond_fn_59_stage_done_v1";
+/// Function 74: the value of the global of parameter 1.
+pub const COND_FN_74: &str = "cond_fn_74_global_value_v1";
+
 /// Every rule above.
-pub const ALL: [&str; 44] = [
+pub const ALL: [&str; 55] = [
     ARITHMETIC,
     COMPARE,
     NOT_COPY_CAST,
@@ -144,6 +170,17 @@ pub const ALL: [&str; 44] = [
     QUEST_ALIAS_FORCED,
     QUEST_START_GAME,
     QUEST_ISOLATED,
+    QUEST_ON_STAGE_SET,
+    QUEST_LOG_ENTRY_STATE,
+    COND_LAYOUT,
+    COND_LIST,
+    COND_OPS,
+    COND_GLOBAL,
+    COND_FLAGS,
+    COND_FN_56,
+    COND_FN_58,
+    COND_FN_59,
+    COND_FN_74,
 ];
 
 /// The rule an opcode's meaning rests on; `None` for an opcode without a

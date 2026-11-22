@@ -12,6 +12,7 @@
 //! reset) makes the quest's whole state undetermined (`open`).
 use crate::{
     bind,
+    cond::{self, Combine, Facts, Truth},
     data::{self, key_record, record_object, DataHost},
     host::{Host, NativeCall, Reply},
     rules,
@@ -19,7 +20,9 @@ use crate::{
     Outcome, Vm, VmError,
 };
 use fo4_core::Budget;
-use fo4_plugin::{actor::Context, quest::Quest, typed::Store, vmad::Vmad, FormKey};
+use fo4_plugin::{
+    actor::Context, condition::Condition, quest::Quest, typed::Store, vmad::Vmad, FormKey,
+};
 use std::{
     collections::{BTreeMap, BTreeSet, VecDeque},
     rc::Rc,
@@ -36,8 +39,11 @@ pub const STARTUP_STAGE: u8 = 0x02;
 /// One log entry of a stage, as the host needs it.
 #[derive(Debug, Clone)]
 pub struct EntryInfo {
-    /// Whether the entry has conditions (CTDA), which no rule evaluates.
+    /// Whether the entry has conditions (CTDA).
     pub conditions: bool,
+    /// The entry's conditions, evaluated by [`cond`] when the stage is set
+    /// (`quest_stage_log_entry_v1`).
+    pub list: Vec<Condition>,
     /// The fragment function the VMAD block names for this (stage, entry)
     /// (`quest_fragment_entry_v1`), lower case.
     pub fragment: Option<String>,
@@ -54,6 +60,11 @@ pub struct StageInfo {
 #[derive(Debug, Clone)]
 pub struct QuestInfo {
     pub key: FormKey,
+    /// The load-order index of the plugin the record was read from, for
+    /// resolving the FormIDs of its conditions.
+    pub plugin: usize,
+    /// The file the record was read from (for error texts).
+    pub file: String,
     /// DNAM flags, when the record has DNAM.
     pub flags: Option<u16>,
     pub stages: Vec<StageInfo>,
@@ -109,6 +120,7 @@ impl QuestInfo {
                 mapped += usize::from(fragment.is_some());
                 entries.push(EntryInfo {
                     conditions: !e.conditions.is_empty(),
+                    list: e.conditions.iter().map(Condition::from).collect(),
                     fragment,
                 });
             }
@@ -126,6 +138,8 @@ impl QuestInfo {
             .collect();
         Ok(Some(QuestInfo {
             key: k.clone(),
+            plugin,
+            file: r.source.file.clone(),
             flags: q.general.map(|g| g.flags),
             stages,
             objectives: q.objectives.iter().map(|o| o.objective).collect(),
@@ -200,6 +214,16 @@ pub enum Job {
         event: &'static str,
         depth: usize,
     },
+    /// `OnStageSet(stage, item)` delivered to every script instance of
+    /// the quest's handle that has a function with instructions for it
+    /// (`quest_on_stage_set_v1`); `entry` is the log entry selected, `None`
+    /// when the selection is open or no entry holds.
+    StageEvent {
+        quest: ObjId,
+        stage: i32,
+        entry: Option<usize>,
+        depth: usize,
+    },
     /// A run the rules leave undetermined (which fragment, whether an
     /// event runs).
     Open {
@@ -211,16 +235,18 @@ pub enum Job {
 impl Job {
     pub fn depth(&self) -> usize {
         match self {
-            Job::Fragment { depth, .. } | Job::Event { depth, .. } | Job::Open { depth, .. } => {
-                *depth
-            }
+            Job::Fragment { depth, .. }
+            | Job::Event { depth, .. }
+            | Job::StageEvent { depth, .. }
+            | Job::Open { depth, .. } => *depth,
         }
     }
     pub fn quest(&self) -> ObjId {
         match self {
-            Job::Fragment { quest, .. } | Job::Event { quest, .. } | Job::Open { quest, .. } => {
-                *quest
-            }
+            Job::Fragment { quest, .. }
+            | Job::Event { quest, .. }
+            | Job::StageEvent { quest, .. }
+            | Job::Open { quest, .. } => *quest,
         }
     }
 }
@@ -296,6 +322,69 @@ pub fn info(store: &Store, max_memory: u64, w: &mut World, o: ObjId) -> Option<R
     i
 }
 
+/// The record of a quest by key, cached in the world as [`info`] caches it.
+pub fn info_by_key(
+    store: &Store,
+    max_memory: u64,
+    w: &mut World,
+    k: &FormKey,
+) -> Option<Rc<QuestInfo>> {
+    let key = bind::record_key(k);
+    if let Some(i) = w.quests.infos.get(&key) {
+        return i.clone();
+    }
+    let b = Budget::new(max_memory);
+    let i = QuestInfo::load(store, k, &b).ok().flatten().map(Rc::new);
+    w.quests.infos.insert(key, i.clone());
+    i
+}
+
+/// What a condition reads during a run: the quest state in the run's
+/// world (created from the scenario when first read), and globals as the
+/// data host answers them (`vm_host_global_fltv_v1`; undetermined once a
+/// native of the run may have changed them).
+pub struct RunFacts<'a, 's> {
+    pub data: &'a DataHost<'s>,
+    pub w: &'a mut World,
+}
+impl RunFacts<'_, '_> {
+    fn state(&mut self, k: &FormKey) -> Result<&QuestState, &'static str> {
+        let i = info_by_key(self.data.store, self.data.max_memory, self.w, k)
+            .ok_or("the quest record could not be read")?;
+        let s = self.w.quests.state(&i);
+        if s.open.is_some() {
+            return Err(OPEN);
+        }
+        Ok(s)
+    }
+}
+impl Facts for RunFacts<'_, '_> {
+    fn store(&self) -> &Store {
+        self.data.store
+    }
+    fn quest_running(&mut self, q: &FormKey) -> Result<bool, &'static str> {
+        self.state(q)?
+            .running
+            .ok_or("whether the quest runs is undetermined")
+    }
+    fn quest_stage(&mut self, q: &FormKey) -> Result<i32, &'static str> {
+        self.state(q)?
+            .current
+            .ok_or("the current stage is undetermined")
+    }
+    fn stage_done(&mut self, q: &FormKey, n: i32) -> Result<bool, &'static str> {
+        self.state(q)?
+            .is_done(n)
+            .ok_or("whether the stage is done is undetermined")
+    }
+    fn global(&mut self, g: &FormKey) -> Result<f32, &'static str> {
+        if self.data.value_changed(self.w, g) {
+            return Err("changed by this run");
+        }
+        data::global_fltv(self.data.store, g, self.data.max_memory)
+    }
+}
+
 /// The quest host: the data host, plus the quest natives answered from
 /// the quest state and the records.
 pub struct QuestHost<'s> {
@@ -303,6 +392,17 @@ pub struct QuestHost<'s> {
     used: Vec<&'static str>,
     /// Answers by native and kind, as the data host counts its own.
     pub answers: BTreeMap<(String, data::Answer), u64>,
+    /// Evaluate log entry conditions ([`cond`]); `false` leaves every
+    /// conditioned entry undetermined, as before conditions were read.
+    pub evaluate: bool,
+    /// Deliver `OnStageSet` after a stage's fragment
+    /// (`quest_on_stage_set_v1`); `false` delivers nothing.
+    pub stage_event: bool,
+    /// Log entry selections and condition lists by outcome, as text.
+    pub conditions: BTreeMap<String, u64>,
+    /// Function indexes of undetermined conditions in the lists that left
+    /// a log entry selection open, once per selection.
+    pub open_functions: BTreeMap<u16, u64>,
 }
 
 /// Natives the quest host answers, lower case `script.function`.
@@ -340,6 +440,10 @@ impl<'s> QuestHost<'s> {
             data: DataHost::new(store, max_memory),
             used: Vec::new(),
             answers: BTreeMap::new(),
+            evaluate: true,
+            stage_event: true,
+            conditions: BTreeMap::new(),
+            open_functions: BTreeMap::new(),
         }
     }
     fn using(&mut self, r: &'static str) {
@@ -459,37 +563,106 @@ impl<'s> QuestHost<'s> {
         w.quests.log.push((o, Change::StageSet(n)));
         // Which log entry's fragment runs (`quest_stage_log_entry_v1`):
         // the first entry whose conditions hold; one without conditions
-        // holds; conditions are not evaluated.
+        // holds; the conditions are evaluated in the state after the stage
+        // is set (`cond_log_entry_state_v1`); an entry whose conditions are
+        // undetermined leaves the choice open between it and what follows.
         self.using(rules::QUEST_LOG_ENTRY);
         self.using(rules::QUEST_ORDER);
         let mut choices: BTreeSet<Option<(usize, String)>> = BTreeSet::new();
-        let mut settled = false;
+        let mut settled = None;
+        let mut open: Vec<cond::Why> = Vec::new();
+        let mut evaluated = false;
         for (k, e) in stage.entries.iter().enumerate() {
-            choices.insert(e.fragment.clone().map(|f| (k, f)));
-            if !e.conditions {
-                settled = true;
-                break;
+            let t = if e.list.is_empty() {
+                Truth::True
+            } else if self.evaluate {
+                evaluated = true;
+                self.using(rules::QUEST_LOG_ENTRY_STATE);
+                let ctx = Context {
+                    order: self.data.store.order(),
+                    plugin: i.plugin,
+                };
+                let mut used = BTreeSet::new();
+                let mut facts = RunFacts {
+                    data: &self.data,
+                    w: &mut *w,
+                };
+                let t = cond::eval_list_with(
+                    &e.list,
+                    ctx,
+                    &i.file,
+                    &mut facts,
+                    Combine::OrGroups,
+                    &mut used,
+                );
+                for u in used {
+                    self.using(u);
+                }
+                *self
+                    .conditions
+                    .entry(format!("log entry condition lists\t{}", t.word()))
+                    .or_default() += 1;
+                t
+            } else {
+                Truth::Undetermined(Vec::new())
+            };
+            match t {
+                Truth::False => {}
+                Truth::True => {
+                    choices.insert(e.fragment.clone().map(|f| (k, f)));
+                    settled = Some(k);
+                    break;
+                }
+                Truth::Undetermined(why) => {
+                    choices.insert(e.fragment.clone().map(|f| (k, f)));
+                    open.extend(why);
+                }
             }
         }
-        if !settled {
+        if settled.is_none() {
             choices.insert(None);
         }
         let funcs: BTreeSet<Option<&String>> =
             choices.iter().map(|c| c.as_ref().map(|x| &x.1)).collect();
         let depth = w.quests.depth + 1;
-        if funcs.len() > 1 {
+        let selection = if funcs.len() > 1 {
             w.quests.queue.push_back(Job::Open {
                 quest: o,
                 why: "which log entry's fragment runs depends on conditions".into(),
                 depth,
             });
-        } else if let Some(Some((entry, function))) = choices.into_iter().next() {
-            self.using(rules::QUEST_FRAGMENT_ENTRY);
-            w.quests.queue.push_back(Job::Fragment {
+            let fs: BTreeSet<u16> = open.iter().map(|x| x.function).collect();
+            for f in fs {
+                *self.open_functions.entry(f).or_default() += 1;
+            }
+            "open"
+        } else {
+            if let Some(Some((entry, function))) = choices.into_iter().next() {
+                self.using(rules::QUEST_FRAGMENT_ENTRY);
+                w.quests.queue.push_back(Job::Fragment {
+                    quest: o,
+                    stage: n,
+                    entry,
+                    function,
+                    depth,
+                });
+            }
+            "settled"
+        };
+        if evaluated {
+            *self
+                .conditions
+                .entry(format!(
+                    "log entry selections with conditions evaluated\t{selection}"
+                ))
+                .or_default() += 1;
+        }
+        if self.stage_event {
+            self.using(rules::QUEST_ON_STAGE_SET);
+            w.quests.queue.push_back(Job::StageEvent {
                 quest: o,
                 stage: n,
-                entry,
-                function,
+                entry: settled.filter(|_| selection == "settled"),
                 depth,
             });
         }
@@ -757,6 +930,9 @@ impl Host for QuestHost<'_> {
     }
 }
 
+/// The event a stage's setting delivers (`quest_on_stage_set_v1`).
+pub const ON_STAGE_SET: &str = "onstageset";
+
 /// One job run by [`run_jobs`].
 #[derive(Debug, Clone)]
 pub struct JobRun {
@@ -911,6 +1087,54 @@ pub fn run_one(vm: &mut Vm<'_>, store: &Store, job: Job, nested: bool, b: &Budge
                 }
             }
         }
+        Job::StageEvent {
+            quest,
+            stage,
+            entry,
+            ..
+        } => {
+            if let Err(e) = vm.attach_scripts(*quest) {
+                outcomes.push((String::new(), Outcome::Failed(e)));
+            } else {
+                vm.rules.insert(rules::QUEST_ON_STAGE_SET);
+                let insts = vm.world.objects[*quest].instances.clone();
+                for i in insts {
+                    let script = vm.world.instances[i].script.clone();
+                    match vm.find_handler(i, ON_STAGE_SET) {
+                        Ok(Some(f)) => {
+                            let ints = f.params.len() == 2
+                                && f.params.iter().all(|(_, t)| t.as_str() == "int");
+                            if !ints {
+                                outcomes.push((
+                                    script,
+                                    Outcome::Failed(VmError::BadArgument {
+                                        site: None,
+                                        detail: "OnStageSet does not take two Int".into(),
+                                    }),
+                                ));
+                                continue;
+                            }
+                            let item = match entry {
+                                Some(k) => Val::Int(*k as i32),
+                                None => vm.world.unknown(crate::Origin::Rule(
+                                    rules::QUEST_ON_STAGE_SET,
+                                    "the log entry selected is undetermined".into(),
+                                )),
+                            };
+                            let args = vec![Val::Int(*stage), item];
+                            let o = if nested {
+                                vm.deliver_nested(i, ON_STAGE_SET, args)
+                            } else {
+                                vm.deliver(i, ON_STAGE_SET, args)
+                            };
+                            outcomes.push((script, o));
+                        }
+                        Ok(None) => {}
+                        Err(e) => outcomes.push((script, Outcome::Failed(e))),
+                    }
+                }
+            }
+        }
         Job::Open { .. } => {}
     }
     vm.world.quests.depth = saved;
@@ -935,10 +1159,28 @@ pub fn run_jobs(vm: &mut Vm<'_>, store: &Store, max: usize, b: &Budget) -> Vec<J
         let Some(job) = vm.world.quests.queue.pop_front() else {
             break;
         };
+        // With a runner, the jobs queued beside this one are set aside
+        // while it runs, so the runner runs inside it only the jobs it
+        // brings (`quest_stage_fragment_order_v1`).
+        let nested = vm.nested.is_some();
+        let siblings = if nested {
+            std::mem::take(&mut vm.world.quests.queue)
+        } else {
+            VecDeque::new()
+        };
         let r = run_one(vm, store, job, false, &b.child());
+        if nested {
+            restore(vm, siblings);
+        }
         out.push(r);
     }
     out
+}
+
+/// Puts the jobs set aside back behind the jobs left by the one that ran.
+fn restore(vm: &mut Vm<'_>, siblings: VecDeque<Job>) {
+    let q = &mut vm.world.quests.queue;
+    q.extend(siblings);
 }
 
 /// The nested reading of `quest_stage_fragment_order_v1`: the jobs a
@@ -968,7 +1210,11 @@ impl crate::Nested for Runner<'_> {
                 break;
             };
             let b = Budget::new(self.max_memory);
+            // The jobs queued beside this one wait until it ends: a run
+            // brings inside it only the jobs it queues.
+            let siblings = std::mem::take(&mut vm.world.quests.queue);
             let r = run_one(vm, self.store, job, true, &b);
+            restore(vm, siblings);
             vm.world.quests.nested_runs.push(r);
         }
     }

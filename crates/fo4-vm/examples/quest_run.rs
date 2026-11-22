@@ -154,6 +154,17 @@ fn job_text(vm: &Vm<'_>, r: &JobRun) -> String {
             event,
             depth,
         } => writeln!(s, "  [{depth}] event {event} on {}", label(*quest)),
+        Job::StageEvent {
+            quest,
+            stage,
+            entry,
+            depth,
+        } => writeln!(
+            s,
+            "  [{depth}] event onstageset({stage}, {}) on {}",
+            entry.map_or("undetermined".to_string(), |e| e.to_string()),
+            label(*quest)
+        ),
         Job::Open { quest, why, depth } => {
             writeln!(s, "  [{depth}] open on {}: {why}", label(*quest))
         }
@@ -187,6 +198,7 @@ fn count_jobs(c: &mut Counts, runs: &[JobRun], prefix: &str) {
         let what = match &r.job {
             Job::Fragment { .. } => "fragment".to_string(),
             Job::Event { event, .. } => format!("event {event}"),
+            Job::StageEvent { .. } => "event onstageset".to_string(),
             Job::Open { why, .. } => {
                 bump(c, format!("{prefix}open runs: {why}"));
                 continue;
@@ -246,11 +258,131 @@ fn quests(store: &Store, b: &Budget) -> Result<Vec<(FormKey, QuestInfo)>, E> {
     Ok(out)
 }
 
-fn stages(m: &Manifest, vfs: &Vfs, store: &Store, out: &Path, nested: bool) -> Result<(), E> {
+/// Switches that reproduce earlier censuses.
+#[derive(Clone, Copy)]
+struct Opts {
+    /// Nested reading of `quest_stage_fragment_order_v1` (else queued).
+    nested: bool,
+    /// Evaluate log entry conditions (else every conditioned entry is
+    /// undetermined, as before conditions were read).
+    conditions: bool,
+    /// Deliver OnStageSet (`quest_on_stage_set_v1`).
+    stage_event: bool,
+}
+
+fn host<'s>(store: &'s Store, max: u64, o: Opts) -> QuestHost<'s> {
+    let mut h = QuestHost::new(store, max);
+    h.evaluate = o.conditions;
+    h.stage_event = o.stage_event;
+    h
+}
+
+/// The condition counts of a host.
+fn count_conditions(c: &mut Counts, h: &QuestHost<'_>) {
+    for (k, v) in &h.conditions {
+        *c.entry(k.clone()).or_default() += v;
+    }
+    for (f, v) in &h.open_functions {
+        *c.entry(format!(
+            "log entry selections left open, by function index of an undetermined condition\tfunction {f}"
+        ))
+        .or_default() += v;
+    }
+}
+
+/// Counts the OnStageSet handlers of every winning quest: on its own VMAD
+/// scripts (to which `quest_on_stage_set_v1` delivers the event), on its
+/// fragment script, and on the scripts of its aliases (which receive
+/// nothing here).
+fn stage_event_handlers(lib: &mut VfsLibrary<'_>, store: &Store, b: &Budget) -> Result<Counts, E> {
+    let mut c = Counts::new();
+    let max = store.limits.max_memory;
+    let keys: Vec<FormKey> = store
+        .winners()
+        .filter(|w| !w.deleted && w.signature == *b"QUST")
+        .map(|w| store.overrides().form_key(w.key, store.order()))
+        .collect();
+    let mut host = fo4_vm::RecordingHost::default();
+    let mut attach = RecordScripts::new(store, max);
+    let mut vm = Vm::new(lib, &mut host);
+    vm.attach = Some(&mut attach);
+    // Whether a script has a handler, and whether it takes two Int.
+    let has = |vm: &mut Vm<'_>, script: &str| -> Option<bool> {
+        let i = vm.instantiate(None, script).ok()?;
+        let f = vm.find_handler(i, quest::ON_STAGE_SET).ok()??;
+        Some(f.params.len() == 2 && f.params.iter().all(|(_, t)| t == "int"))
+    };
+    for k in keys {
+        let b = b.child();
+        let o = quest::quest_object(&mut vm, store, &k, &b)?;
+        let _ = vm.attach_scripts(o);
+        let own: Vec<String> = vm.world.objects[o]
+            .instances
+            .iter()
+            .map(|i| vm.world.instances[*i].script.clone())
+            .collect();
+        let mut q = false;
+        for sc in &own {
+            if let Some(ints) = has(&mut vm, sc) {
+                q = true;
+                bump(
+                    &mut c,
+                    format!(
+                        "OnStageSet handlers\tquest VMAD scripts with one{}",
+                        if ints {
+                            ""
+                        } else {
+                            " (not two Int parameters)"
+                        }
+                    ),
+                );
+            }
+        }
+        if q {
+            bump(
+                &mut c,
+                "OnStageSet handlers\tquests whose own scripts have one",
+            );
+        }
+        let Some((r, _)) = store.raw_with_plugin(&k, &b)? else {
+            continue;
+        };
+        for s in r.subrecords.iter().filter(|s| s.signature == *b"VMAD") {
+            let v =
+                fo4_plugin::vmad::Vmad::read(r.data(s), r.signature, &r.source.file, s.offset, &b)?;
+            let Some(block) = &v.quest else { continue };
+            if !block.script.name.is_empty() {
+                let name = fo4_pex::index::lower(block.script.name);
+                if has(&mut vm, &name).is_some() {
+                    bump(&mut c, "OnStageSet handlers\tfragment scripts with one");
+                }
+            }
+            for a in &block.aliases {
+                for sc in &a.scripts {
+                    let name = fo4_pex::index::lower(sc.name);
+                    if has(&mut vm, &name).is_some() {
+                        bump(
+                            &mut c,
+                            "OnStageSet handlers\talias scripts with one (not delivered)",
+                        );
+                    }
+                }
+            }
+        }
+    }
+    Ok(c)
+}
+
+fn stages(m: &Manifest, vfs: &Vfs, store: &Store, out: &Path, opts: Opts) -> Result<(), E> {
+    let nested = opts.nested;
     let max = m.limits.max_memory;
     let b = Budget::new(max);
     let mut lib = VfsLibrary::new(vfs, max);
-    let mut c = Counts::new();
+    let mut c = if opts.stage_event {
+        stage_event_handlers(&mut lib, store, &b)?
+    } else {
+        Counts::new()
+    };
     let mut names = String::new();
     let all = quests(store, &b)?;
     for (k, info) in &all {
@@ -267,7 +399,7 @@ fn stages(m: &Manifest, vfs: &Vfs, store: &Store, out: &Path, nested: bool) -> R
         for n in &with {
             bump(&mut c, "stages set");
             let b = b.child();
-            let mut host = QuestHost::new(store, max);
+            let mut host = host(store, max, opts);
             let mut attach = RecordScripts::new(store, max);
             let mut runner = quest::Runner::new(store, max, MAX_JOBS);
             let mut vm = Vm::new(&mut lib, &mut host);
@@ -288,8 +420,13 @@ fn stages(m: &Manifest, vfs: &Vfs, store: &Store, out: &Path, nested: bool) -> R
                     "stages whose runs reached the job limit (cascade cut)",
                 );
             }
-            // The stage's own run: the first job.
-            let target = runs.first();
+            // The stage's own run: the first job at depth 1 other than
+            // OnStageSet; OnStageSet at depth 1 is counted apart; every
+            // other job is a cascade.
+            let own = runs
+                .iter()
+                .position(|r| r.job.depth() == 1 && !matches!(r.job, Job::StageEvent { .. }));
+            let target = own.map(|i| &runs[i]);
             let kind = match target {
                 None => "no fragment queued".to_string(),
                 Some(r) => match &r.job {
@@ -304,9 +441,14 @@ fn stages(m: &Manifest, vfs: &Vfs, store: &Store, out: &Path, nested: bool) -> R
             if let Some(r) = target {
                 count_jobs(&mut c, std::slice::from_ref(r), "stage fragment ");
             }
-            if runs.len() > 1 {
-                count_jobs(&mut c, &runs[1..], "cascade ");
-            }
+            let (events, cascade): (Vec<JobRun>, Vec<JobRun>) = runs
+                .iter()
+                .enumerate()
+                .filter(|(i, _)| Some(*i) != own)
+                .map(|(_, r)| r.clone())
+                .partition(|r| r.job.depth() == 1 && matches!(r.job, Job::StageEvent { .. }));
+            count_jobs(&mut c, &events, "stage OnStageSet ");
+            count_jobs(&mut c, &cascade, "cascade ");
             // Cascades: fragments run, depth, quests touched.
             let fragments = runs
                 .iter()
@@ -386,6 +528,7 @@ fn stages(m: &Manifest, vfs: &Vfs, store: &Store, out: &Path, nested: bool) -> R
                 names.push_str(&job_text(&vm, r));
             }
             drop(vm);
+            count_conditions(&mut c, &host);
             for ((native, a), v) in host.answers.iter().chain(host.data.answers.iter()) {
                 let a = match a {
                     Answer::Record => "a record".to_string(),
@@ -400,13 +543,14 @@ fn stages(m: &Manifest, vfs: &Vfs, store: &Store, out: &Path, nested: bool) -> R
     write(out, &c, &names, "stages")
 }
 
-fn new_game(m: &Manifest, vfs: &Vfs, store: &Store, out: &Path, nested: bool) -> Result<(), E> {
+fn new_game(m: &Manifest, vfs: &Vfs, store: &Store, out: &Path, opts: Opts) -> Result<(), E> {
+    let nested = opts.nested;
     let max = m.limits.max_memory;
     let b = Budget::new(max);
     let mut lib = VfsLibrary::new(vfs, max);
     let mut c = Counts::new();
     let mut names = String::new();
-    let mut host = QuestHost::new(store, max);
+    let mut host = host(store, max, opts);
     let mut attach = RecordScripts::new(store, max);
     let mut runner = quest::Runner::new(store, max, MAX_GAME_JOBS);
     let mut vm = Vm::new(&mut lib, &mut host);
@@ -511,6 +655,7 @@ fn new_game(m: &Manifest, vfs: &Vfs, store: &Store, out: &Path, nested: bool) ->
         bump(&mut c, format!("rules relied on\t{r}"));
     }
     drop(vm);
+    count_conditions(&mut c, &host);
     for ((native, a), v) in host.answers.iter().chain(host.data.answers.iter()) {
         let a = match a {
             Answer::Record => "a record".to_string(),
@@ -555,8 +700,9 @@ fn one(
     store: &Store,
     edid: &str,
     stage: i32,
-    nested: bool,
+    opts: Opts,
 ) -> Result<(), E> {
+    let nested = opts.nested;
     let max = m.limits.max_memory;
     let b = Budget::new(max);
     let k = store
@@ -573,7 +719,7 @@ fn one(
         })
         .ok_or("no quest of that editor ID")?;
     let mut lib = VfsLibrary::new(vfs, max);
-    let mut host = QuestHost::new(store, max);
+    let mut host = host(store, max, opts);
     let mut attach = RecordScripts::new(store, max);
     let mut runner = quest::Runner::new(store, max, MAX_JOBS);
     let mut vm = Vm::new(&mut lib, &mut host);
@@ -598,9 +744,17 @@ fn one(
 
 fn run() -> Result<(), E> {
     let mut a: Vec<String> = std::env::args().skip(1).collect();
-    let queued = a.iter().any(|x| x == "--queued");
-    a.retain(|x| x != "--queued");
-    let usage = "quest_run MANIFEST (stages OUT_DIR | new-game OUT_DIR | QUEST STAGE) [--queued]";
+    let flag = |a: &mut Vec<String>, f: &str| {
+        let on = a.iter().any(|x| x == f);
+        a.retain(|x| x != f);
+        on
+    };
+    let opts = Opts {
+        nested: !flag(&mut a, "--queued"),
+        conditions: !flag(&mut a, "--no-conditions"),
+        stage_event: !flag(&mut a, "--no-stage-event"),
+    };
+    let usage = "quest_run MANIFEST (stages OUT_DIR | new-game OUT_DIR | QUEST STAGE) [--queued] [--no-conditions] [--no-stage-event]";
     if a.len() != 3 {
         return Err(usage.into());
     }
@@ -608,9 +762,9 @@ fn run() -> Result<(), E> {
     let vfs = Vfs::mount(&m, &Budget::new(m.limits.max_vfs_memory))?;
     let store = Store::open(&m, &Budget::new(m.limits.max_override_memory))?;
     match a[1].as_str() {
-        "stages" => stages(&m, &vfs, &store, Path::new(&a[2]), !queued),
-        "new-game" => new_game(&m, &vfs, &store, Path::new(&a[2]), !queued),
-        q => one(&m, &vfs, &store, q, a[2].parse()?, !queued),
+        "stages" => stages(&m, &vfs, &store, Path::new(&a[2]), opts),
+        "new-game" => new_game(&m, &vfs, &store, Path::new(&a[2]), opts),
+        q => one(&m, &vfs, &store, q, a[2].parse()?, opts),
     }
 }
 
