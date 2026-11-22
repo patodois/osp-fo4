@@ -34,6 +34,9 @@ pub const OPACITY_ABOVE_ONE: &str = "bgsm_opacity_above_one_test_v1";
 pub const BASE_PROPERTIES: &str = "base_prps_not_in_frame_v1";
 pub const MISC_COMPONENTS: &str = "misc_cvpa_not_in_frame_v1";
 pub const REFERENCE_GROUP: &str = "refr_xrfg_not_in_frame_v1";
+/// The root node's own transform of a placed model (`spec/nif.md`, Root
+/// node transform).
+pub const ROOT_TRANSFORM: &str = "nif_root_transform_replaced_v1";
 /// Base types whose PRPS `BASE_PROPERTIES` covers: those measured.
 const PROPERTY_BASES: [&str; 8] = [
     "STAT", "ACTI", "FURN", "CONT", "FLOR", "LIGH", "MSTT", "TERM",
@@ -352,6 +355,7 @@ mod tests {
             BASE_PROPERTIES,
             MISC_COMPONENTS,
             REFERENCE_GROUP,
+            ROOT_TRANSFORM,
         ] {
             assert!(status(name).is_some(), "{name}");
         }

@@ -1163,7 +1163,18 @@ impl Builder<'_, '_> {
         let data = decoded(n, i, file)?;
         let f = fields(data);
         let world = if f.iter().any(|f| f.name == "Translation") {
-            parent.compose(Transform::from_fields(f, file)?)
+            let local = Transform::from_fields(f, file)?;
+            // A root node's own transform is left out, the placement standing
+            // in its place, only under `nif_root_transform_replaced_v1`; at
+            // the other levels it composes as the schema's node transform.
+            if depth == 0
+                && !local.is_identity()
+                && self.draw_rule(fo4_scene::hypotheses::ROOT_TRANSFORM)?
+            {
+                parent
+            } else {
+                parent.compose(local)
+            }
         } else {
             parent
         };

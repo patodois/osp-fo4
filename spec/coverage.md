@@ -233,3 +233,21 @@ without actors 536,605. The `--path` walk changes because the newly
 covered bases also have collision under the same rules: the walked feet
 stand 14.8 units higher on two legs (on a road), the waypoints are reached
 as before.
+
+## Root node transform
+
+Under `nif_root_transform_replaced_v1` ([nif.md](nif.md), Root node
+transform) the draw build leaves a placed model's root node transform out
+and collision follows. This changes how some placements are drawn under
+hypotheses, never whether: the census counts them apart ("drawn with the
+root transform left out") and keeps them in their outcome. Whole
+installation: 16,842 placements (0.55 % of the area). Test views: lobby 13, vault 0, test
+cell 2, radius 1 9, radius 2 24; their outcomes are unchanged.
+
+**Frames** against the commit before: without `--under-hypotheses` every
+test view repeats byte for byte except the lobby, which differs in 36
+pixels of one instance, the run-to-run difference of the next section, not
+this change. Under hypotheses: lobby 11,097 pixels differ (wall panels
+and a door frame turned), test cell 663, dog view 15,256, radius 1 1,326,
+`--walk --terrain --around 2` 288, dog view without actors 24,174; vault
+and the `--path` walk byte-identical (the walked positions unchanged).

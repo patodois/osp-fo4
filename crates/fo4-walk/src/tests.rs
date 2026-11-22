@@ -490,6 +490,8 @@ fn the_world_is_built_from_a_placed_cell() {
             rotation: [0.0, 0.0, 0.0, 1.0],
         },
         target_local: Transform::IDENTITY,
+        below_root: Transform::IDENTITY,
+        root_moves: false,
         chain: vec![0],
         hidden_chain: false,
         leaves: vec![

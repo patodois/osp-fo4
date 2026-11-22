@@ -32,6 +32,15 @@ impl Transform {
             scale: self.scale * local.scale,
         }
     }
+    /// Whether the transform moves a point by more than rounding: a
+    /// rotation word more than 1e-6 from the identity's, a translation word
+    /// above 1e-6 or a scale more than 1e-6 from 1.
+    pub fn is_identity(&self) -> bool {
+        (0..3).all(|i| {
+            (0..3).all(|j| (self.rotation[i][j] - f64::from(u8::from(i == j))).abs() <= 1e-6)
+        }) && self.translation.iter().all(|t| t.abs() <= 1e-6)
+            && (self.scale - 1.).abs() <= 1e-6
+    }
     /// Supported ZYX convention, evaluated approximately with binary32 sin/cos.
     /// Exact runtime arithmetic remains open; see spec/rotation-arithmetic.md.
     pub fn euler(placement: [f32; 6], scale: f32) -> Result<Self> {

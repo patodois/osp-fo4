@@ -23,7 +23,7 @@ use fo4_core::{Budget, Error, Manifest};
 use fo4_plugin::{typed::Store, FormKey};
 use fo4_render::draw::{BlockOptions, BuildOptions};
 use fo4_scene::{
-    hypotheses::{covering, status, Status},
+    hypotheses::{self, covering, status, Status},
     readiness::Origin,
     Instance, Loader, RuleLevel, State,
 };
@@ -70,6 +70,9 @@ struct Census {
     hidden: BTreeMap<String, Tally>,
     outside: BTreeMap<String, Tally>,
     omitted: Tally,
+    /// Drawn with the root node's own transform left out
+    /// (`nif_root_transform_replaced_v1`, under hypotheses).
+    root_left_out: Tally,
     no_bounds: u64,
     /// Omitted placements whose reasons are this one only.
     sole: BTreeMap<String, Tally>,
@@ -235,7 +238,9 @@ fn pending(rules: &[&'static str]) -> Vec<&'static str> {
     let mut v: Vec<_> = rules
         .iter()
         .copied()
-        .filter(|h| status(h) != Some(Status::Supported))
+        // The root transform rule changes how a placement is drawn, not
+        // whether: without it the placement is drawn with the root applied.
+        .filter(|h| status(h) != Some(Status::Supported) && *h != hypotheses::ROOT_TRANSFORM)
         .collect();
     v.sort_unstable();
     v.dedup();
@@ -426,6 +431,15 @@ fn cell(
             });
         }
         let outcome = instance_outcome(i, id, omitted.get(&id.index).copied());
+        if id.hypotheses.contains(&hypotheses::ROOT_TRANSFORM) {
+            c.root_left_out.add(
+                area(
+                    i.base.as_ref().and_then(|v| v.common.bounds),
+                    i.reference.data.scale,
+                )
+                .unwrap_or(0.),
+            );
+        }
         let a = area(
             i.base.as_ref().and_then(|v| v.common.bounds),
             i.reference.data.scale,
@@ -593,6 +607,11 @@ fn summary(c: &Census, scope: &str, elapsed: f64) -> String {
     });
     line(&mut out, "outside the visual slice", outside);
     line(&mut out, "omitted", c.omitted);
+    line(
+        &mut out,
+        "drawn with the root transform left out",
+        c.root_left_out,
+    );
     let _ = writeln!(out, "\nby placement kind:");
     for ((kind, name), t) in &c.by_type {
         line(&mut out, &format!("{kind}, {name}"), *t);
@@ -710,6 +729,7 @@ fn dump(c: &Census) -> String {
     line("drawn", "", c.drawn);
     line("hypotheses", "", c.hypotheses);
     line("omitted", "", c.omitted);
+    line("root_left_out", "", c.root_left_out);
     for (k, v) in &c.cell_failures {
         line("cell_failures", k, n(*v));
     }
@@ -786,6 +806,7 @@ fn load(c: &mut Census, text: &str) -> AnyResult<()> {
             "drawn" => add(&mut c.drawn),
             "hypotheses" => add(&mut c.hypotheses),
             "omitted" => add(&mut c.omitted),
+            "root_left_out" => add(&mut c.root_left_out),
             "cell_failures" => *c.cell_failures.entry(key.into()).or_default() += t.n,
             "exclusions" => *c.exclusions.entry(key.into()).or_default() += t.n,
             "hidden" => add(c.hidden.entry(key.into()).or_default()),

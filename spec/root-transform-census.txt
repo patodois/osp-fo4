@@ -1,0 +1,27 @@
+# root_transform_census
+# root kinds: R rotation, T translation, S scale (- identity); handlings: applied, left out, rotation left out, translation left out, scale left out
+files	224366 read, 2 not read
+root -	215854 files, 27319 named by a base record with MODL and OBND
+root R	1309 files, 578 named by a base record with MODL and OBND
+root RT	295 files, 0 named by a base record with MODL and OBND
+root T	6726 files, 0 named by a base record with MODL and OBND
+root R	base records whose five boxes agree within 1 (decide nothing)	115
+# OBND within 1.01, by set of handlings (bits in the order above), base records
+root R	[none]:55 [left out+rotation left out]:455 [applied+left out+rotation left out+translation left out+scale left out]:1
+# handling with the smallest OBND error (ties within 0.01), base records
+root R	[left out = rotation left out]:491 [applied = left out = rotation left out = translation left out = scale left out]:14 [applied = translation left out = scale left out]:6
+# collision bodies whose Target chain starts at a non-identity root
+root R: body placement equal to the root's rotation and translation	333
+root R: body placement identity	39
+root R: body placement other	843
+root R: body placement rotation equal to the root's	129
+root R: body placement rotation equal to the root's transposed	4
+root RT: body placement equal to the root's rotation and translation	1
+root RT: body placement other	1
+root T: body placement identity	6723
+# same bodies: collision box against the render box of the Target subtree (within 10 or 10% of the largest side)
+root R: collision and render both with the root	648
+root R: collision and render both with the root | collision with, render without	10
+root R: collision and render both with the root | collision with, render without | collision without, render with	254
+root R: collision and render both with the root | collision without, render with	5
+root R: none	44

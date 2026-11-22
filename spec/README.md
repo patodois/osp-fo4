@@ -57,6 +57,7 @@ Measurement datasets and photographs of the game are not distributed.
 | [render.md](render.md) | Deterministic CPU rasterization, material bindings, maps and snapshot protocols. |
 | [rotation-arithmetic.md](rotation-arithmetic.md) | Supported Euler convention, open exact arithmetic and the bounded numerical investigation. |
 | [scene.md](scene.md) | Scene assembly, static-frame classification, source spans and explicit omissions; exterior cells around a cell joined into one scene; the viewer's moving grid (a viewer policy) and its credits. |
+| [root-transform-census.txt](root-transform-census.txt) | Counts from the census of root node transforms against OBND boxes and collision (`root_transform_census`). |
 | [static-rotation-census.txt](static-rotation-census.txt) | Counts from the census of node rotations in drawn models and their OBND boxes (`static_rotation_census`). |
 | [static-blocks.tsv](static-blocks.tsv) | NIF block roles in the selected static-frame scope. |
 | [static-record-keys.txt](static-record-keys.txt) | Synthetic test contract for the typed-record dispatch keys. |
@@ -202,3 +203,4 @@ the registry.
 | `base_prps_not_in_frame_v1` | pending | Place, by an overlay plugin, two copies of one road STAT side by side, one with its PRPS and one without (its value 0x33d = 1 removed); photograph both from above and walk onto both in one launch: any difference in shape, placement, texture or collision height refutes it. |
 | `misc_cvpa_not_in_frame_v1` | pending | Place, by an overlay plugin, two copies of one clutter MISC with and without CVPA side by side; photograph both and drop the player onto both in one launch: any difference refutes it. |
 | `refr_xrfg_not_in_frame_v1` | pending | Place, by an overlay plugin, a copy of a grouped reference without XRFG beside the original; photograph both and walk into both in one launch: any difference refutes it; then disable the group's RNAM reference by console and check that the grouped reference stays visible (it would refute a reading in which the group gates presence). |
+| `nif_root_transform_replaced_v1` | pending | Photograph, in one launch, a placed STAT whose model's root node is rotated (an asymmetric model, for example a sign) beside its drawing with the root applied and with the root left out from the same camera words; then place, by an overlay plugin, a copy of that model whose root rotation is zeroed in a loose NIF: if the game ignores the root, both look the same; walk into both to check the collision. |

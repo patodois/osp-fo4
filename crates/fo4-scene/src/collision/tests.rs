@@ -329,6 +329,8 @@ fn mesh_leaf(steps: Vec<Step>) -> Leaf {
 
 fn synthetic_cell(leaf: Leaf, frame: Transform, target_local: Transform) -> CellCollision {
     let body = BodyCollision {
+        below_root: target_local,
+        root_moves: false,
         collision_object: 2,
         target: 1,
         target_name: None,
@@ -747,4 +749,37 @@ fn polytope_radius_widens_bounds_and_scales_with_the_frame() {
     };
     assert_eq!(vertices.len(), 2);
     assert!((radius.unwrap() - r).abs() < 1e-9);
+}
+
+#[test]
+fn the_root_transform_rule_places_collision_below_the_root() {
+    // A body whose chain is a root turned a quarter about z, then a Target
+    // translated by 10 along x.
+    let root = Transform {
+        rotation: [[0., 1., 0.], [-1., 0., 0.], [0., 0., 1.]],
+        ..Transform::IDENTITY
+    };
+    let target = Transform {
+        translation: [10., 0., 0.],
+        ..Transform::IDENTITY
+    };
+    assert!(!root.is_identity() && Transform::IDENTITY.is_identity());
+    let mut c = synthetic_cell(mesh_leaf(vec![]), Transform::IDENTITY, root.compose(target));
+    let body = &mut c.models[0].bodies[0];
+    body.below_root = target;
+    body.root_moves = true;
+    let body = c.models[0].bodies[0].clone();
+    let applied = body_world_root(Transform::IDENTITY, &body, BodyPlacement::Ignored, false);
+    let left_out = body_world_root(Transform::IDENTITY, &body, BodyPlacement::Ignored, true);
+    let origin = [0.; 3];
+    let a = applied.apply(origin);
+    let b = left_out.apply(origin);
+    assert!((b[0] - 10.).abs() < 1e-9 && b[1].abs() < 1e-9);
+    assert!((a[0] - 10.).abs() > 1. || (a[1] - 0.).abs() > 1.);
+    // The instance's own world view follows its rules.
+    let i = &mut c.instances[0];
+    i.rules.push(hypotheses::ROOT_TRANSFORM);
+    let i = c.instances[0].clone();
+    let w = c.world(&i, BodyPlacement::Ignored).apply(origin);
+    assert!((w[0] - b[0]).abs() < 1e-9 && (w[1] - b[1]).abs() < 1e-9);
 }

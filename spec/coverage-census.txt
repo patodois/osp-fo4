@@ -1,6 +1,6 @@
 # Coverage census (every cell of the load order, each alone; 3 shards)
 
-cells 62393 read, 1 failed (1820 s)
+cells 62393 read, 1 failed (1413 s)
   cell failure DeletedCell: 1
 placements 1785401 (area proxy 3.6741e11 square units; 73200 without OBND, area 0); deleted 531, initially disabled 4032
   drawn without hypotheses             781075  43.75%  area  24.07%
@@ -8,6 +8,7 @@ placements 1785401 (area proxy 3.6741e11 square units; 73200 without OBND, area 
   hidden by rule editor_marker_hidden_v1    23059   1.29%  area   0.77%
   outside the visual slice               6831   0.38%  area   0.00%
   omitted                              446615  25.01%  area  43.30%
+  drawn with the root transform left out    16842   0.94%  area   0.55%
 
 by placement kind:
   actor, omitted                         8665   0.49%  area   0.01%

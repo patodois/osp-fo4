@@ -185,12 +185,48 @@ the test cell alone 0. (A first count of 1,019 pixels in the interior
 without actors was run-to-run variation: that frame without
 `--under-hypotheses` differs between two runs of one binary.)
 
-**Open: the root's own transform.** 1,603 files have a rotated root node
-(578 named by a base record). For 431 OBND records the box fits only when
-the root's own transform is left out, and for none only when it is
-applied. The renderer still applies it; whether the game replaces a root's
-transform with the placement (a reading recognised from general knowledge)
-is not established by editor bounds and is not registered or applied here.
+**Root node transform.** `root_transform_census` (an example of
+`fo4-unpack`; output [root-transform-census.txt](root-transform-census.txt);
+224,366 files read, 2 not read, 47 s, 0.82 GB peak) takes the first root
+node of every winning NIF and composes the static renderer's walk under
+five handlings of that node's own transform: applied, left out, and left
+out in its rotation, translation or scale only.
+
+- **Kinds.** 215,854 roots are the identity; 1,309 rotate only (578 of
+  these files are named by a base record with a MODL and an OBND), 295
+  rotate and translate, 6,726 translate only; none scales. No file whose
+  root translates is named by such a base record, so the OBND decides
+  only the rotation.
+- **OBND.** Over the base records of the rotated-root models, 115 have
+  five boxes within 1 unit of each other (they decide nothing). Of the
+  others, the OBND is within 1.01 of the box with the root's transform
+  left out (whole, or its rotation only: the same box here) for 455, of
+  every handling for 1, and of none for 55; it fits the applied root
+  alone for none. Taking the handling with the smallest error, the root
+  left out wins for 491, the applied root for 6 (all of them misfitting
+  by more than 1.01 under both), and 14 tie.
+- **Collision, a second witness that does not discriminate.** For the
+  1,350 collision bodies whose Target chain starts at a rotated root, the
+  collision box with the chain composed as today and the render box of the
+  Target subtree agree within 10 units or 10 % for 917 of 961 bodies whose
+  boxes are both defined; since the root's own transform is the first
+  factor of both chains, leaving it out of both keeps that agreement
+  unchanged, and the mixed pairings agree only where the rotation leaves
+  the box nearly unchanged (264 and 259). The stored body placement equals
+  the root's rotation and translation in 334 bodies (rotation only in 129,
+  its transpose in 4), the identity in 39, and neither in 844: the body
+  placement rules of [collision-placement.md](collision-placement.md) stay
+  as they are.
+
+The renderer now leaves a placed model's root node transform out under the
+pending rule `nif_root_transform_replaced_v1` (the reading that the
+placement replaces the root's own transform was recognised from general
+knowledge; only the OBND counts above support it, editor bounds rather
+than the running game). At the other levels the root composes as the
+schema's node transform, as before. Collision placed by
+`fo4_scene::collision` follows the same rule at the same level, so that
+render and collision stay in one frame. Actor models are skinned from the
+skeleton and are not affected.
 
 ## Skinned shapes (by measurement)
 

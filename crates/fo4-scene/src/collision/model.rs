@@ -38,6 +38,11 @@ pub struct BodyCollision {
     /// Composition of the node transforms from a root to the Target, Target
     /// included, in the order the render walk composes them.
     pub target_local: Transform,
+    /// The same without the root node's own transform
+    /// (`nif_root_transform_replaced_v1`).
+    pub below_root: Transform,
+    /// The root node's own transform is not the identity.
+    pub root_moves: bool,
     /// Blocks of the chain, root first, Target last.
     pub chain: Vec<usize>,
     /// A node of the chain is one whose subtree the renderer hides (editor
@@ -349,14 +354,21 @@ pub fn decode(
             }
         };
         let mut target_local = Transform::IDENTITY;
+        let mut below_root = Transform::IDENTITY;
+        let mut root_moves = false;
         let mut composed = Ok(());
-        for b in &chain {
+        for (k, b) in chain.iter().enumerate() {
             match local(n, *b, target_local, file) {
                 Ok(t) => target_local = t,
                 Err(e) => {
                     composed = Err(e);
                     break;
                 }
+            }
+            if k == 0 {
+                root_moves = !target_local.is_identity();
+            } else if let Ok(t) = local(n, *b, below_root, file) {
+                below_root = t;
             }
         }
         if let Err(e) = composed {
@@ -411,6 +423,8 @@ pub fn decode(
             body_id: o.body_id,
             body,
             target_local,
+            below_root,
+            root_moves,
             chain,
             hidden_chain,
             leaves,

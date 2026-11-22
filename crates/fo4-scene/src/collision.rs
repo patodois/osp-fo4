@@ -431,11 +431,26 @@ pub fn body_placement_is_identity(body: &fo4_havok::Body) -> bool {
 
 /// Body coordinates (collision units) to world for a model `frame`.
 pub fn body_world(frame: Transform, body: &BodyCollision, v: BodyPlacement) -> Transform {
+    body_world_root(frame, body, v, false)
+}
+/// [`body_world`], with the root node's own transform left out when
+/// `root_left_out` (`nif_root_transform_replaced_v1`).
+pub fn body_world_root(
+    frame: Transform,
+    body: &BodyCollision,
+    v: BodyPlacement,
+    root_left_out: bool,
+) -> Transform {
     let units = Transform {
         scale: UNITS,
         ..Transform::IDENTITY
     };
-    let t = frame.compose(body.target_local).compose(units);
+    let chain = if root_left_out {
+        body.below_root
+    } else {
+        body.target_local
+    };
+    let t = frame.compose(chain).compose(units);
     match v {
         BodyPlacement::Ignored => t,
         BodyPlacement::Applied => t.compose(Transform {
@@ -484,7 +499,12 @@ impl CellCollision {
     }
     /// Body coordinates to world under level `v`.
     pub fn world(&self, i: &CollisionInstance, v: BodyPlacement) -> Transform {
-        body_world(self.placement(i).frame, self.body(i), v)
+        body_world_root(
+            self.placement(i).frame,
+            self.body(i),
+            v,
+            i.rules.contains(&hypotheses::ROOT_TRANSFORM),
+        )
     }
     /// A leaf point in world coordinates under level `v`.
     pub fn world_point(&self, i: &CollisionInstance, v: BodyPlacement, p: [f32; 3]) -> [f64; 3] {
@@ -846,7 +866,15 @@ impl Builder<'_, '_> {
                 )?;
                 continue;
             };
-            let world = body_world(frame, body, v);
+            // The root node's own transform is left out as the renderer
+            // leaves it out, under the same rule and level.
+            let root_left_out = body.root_moves
+                && match (self.status)(hypotheses::ROOT_TRANSFORM) {
+                    Some(Status::Supported) => self.level != RuleLevel::Facts,
+                    Some(Status::Pending) => self.level == RuleLevel::Hypotheses,
+                    _ => false,
+                };
+            let world = body_world_root(frame, body, v, root_left_out);
             for (li, leaf) in body.leaves.iter().enumerate() {
                 let mut rules = Vec::new();
                 let mut add = |r: &'static str, b: &Budget| -> Result<()> {
@@ -868,6 +896,9 @@ impl Builder<'_, '_> {
                 }
                 for s in &leaf.steps {
                     add(s.rule(), self.budget)?;
+                }
+                if root_left_out {
+                    add(hypotheses::ROOT_TRANSFORM, self.budget)?;
                 }
                 match leaf.shape {
                     Shape::Mesh { .. } => add(hypotheses::MESH_TRIANGLES, self.budget)?,

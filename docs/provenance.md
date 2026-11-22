@@ -353,3 +353,12 @@ record); neither the meaning of those engine-defined actor values nor any
 behaviour of a reference group was taken from prior knowledge. No editor,
 editor definition file, decompilation or third-party reader of these
 records was opened.
+
+Leaving a placed model's root node transform out under
+`nif_root_transform_replaced_v1` ([spec/nif.md](../spec/nif.md), Root
+node transform) adds no source: the reading that the placement replaces
+the root's own transform was recognised from general knowledge and is
+used only under hypotheses, supported only by the `root_transform_census`
+counts of model boxes against the OBND boxes of one installation (editor
+bounds, not the running game). No reader, editor, renderer or
+documentation of the format beyond the pinned nifxml copy was opened.
