@@ -24,13 +24,16 @@ and fails for none unless a second count says so; **[hypothesis]**;
 
 `anim_census MANIFEST OUT` (an example of `fo4-unpack`) reads every winning
 `.hkx` file of the VFS through the container reader, runs every reader of
-this file on every object of its class, counts the relations below and
-compares each `skeleton.hkx` with the `skeleton.nif` beside it. The output,
-counts and small stored values only, is committed as
+this file on every object of its class, decodes every spline object, counts
+the relations below and compares each file's first skeleton with the `.nif`
+of the same path stem. The *race skeletons* are the `.hkx` files at the path
+of a skeleton NIF that a RACE record names (ANAM, resolved under `meshes/`
+as record models are) with `.hkx` for `.nif`: 45 files. The output, counts
+and small stored values only, is committed as
 [havok-animation-census.txt](havok-animation-census.txt). Same installation
 as havok-container.md (build declared 1.10.163, 7 plugins, 62 archive
-mounts): 17,508 winning `.hkx` files, 442,724,720 bytes; 2.3 s wall, peak
-RSS 529 MB. The object spans, leading sizes and array element sizes of
+mounts): 17,508 winning `.hkx` files, 442,724,720 bytes; 8.0 s wall, peak
+RSS 868 MB (two passes over the files and the plugins opened once). The object spans, leading sizes and array element sizes of
 these classes are the `havok.hkx.*` rows of
 [havok-container-census.tsv](havok-container-census.tsv).
 
@@ -96,9 +99,10 @@ and a fourth word with varying values (not read); four f32 of unit norm
 (largest deviation 2.9e-7, enforced within 1e-5); scale x, y, z (each within
 2e-4 of 1 in every bone) and a fourth word 0 or 1 (not read).
 
-**Against the skeleton NIFs.** Of the 190 `skeleton.hkx` files, 40 have a
-`skeleton.nif` beside them. Their first skeletons hold 2,785 bones, 2,248 of
-them named like a node of the NIF (all bones in 9 files). Composing the
+**Against the skeleton NIFs.** Of the 241 files holding a skeleton, 89 have
+a `.nif` of the same path stem, among them the 45 race skeletons. The first
+skeletons of those 45 hold 2,915 bones, 2,139 of them named like a node of
+the NIF (all bones in 10 files). Composing the
 reference pose from the root with the measured node convention of
 [actor.md](actor.md) (a bone maps a child point p to `t + s R p`, with s
 the first scale word) and reading the four f32 as a quaternion (x, y, z, w),
@@ -111,20 +115,21 @@ R being
 ```
 
 the bone's world translation is within 0.01 of the NIF node's world
-translation for 2,080 of the 2,248 bones (1,919 within 0.001), and every
-rotation element within 0.001 for 2,126. The three other readings measured
-(R transposed; the w first, rows or transposed) put at most 180 bones
-within 0.01 and at most 87 within 0.001 in rotation. So the stored order is
+translation for 1,962 of the 2,139 bones (1,853 within 0.001), and every
+rotation element within 0.001 for 2,008. The three other readings measured
+(R transposed; the w first, rows or transposed) put at most 181 bones
+within 0.01 and at most 88 within 0.001 in rotation. Over all 89 files the
+same reading gives 2,589 and 2,635 of 2,766 bones. So the stored order is
 x, y, z, w and R acts on column vectors as in the NIF nodes **[measured
-2,248 bones]**. Where the two hierarchies name the same parent for a bone
-and all its ancestors (1,191 bones), the largest world translation
-difference per file is below 0.001 in 28 files, below 0.1 in 37 and 1 or
-more in 2; the dog skeleton matches in all 65 bones (largest 0.00019,
-rotation 4e-6). The human skeleton names 74 of its 95 bones in the NIF but
-shares the whole parent chain for only 15 of them (largest difference 0.0036
-there); over all files the NIF names another parent for 154 bones. So a
-pose is compared and applied by bone name in world space, not by parent
-index.
+2,766 bones]**. Where the two hierarchies name the same parent for a bone
+and all its ancestors (1,182 bones of the race skeletons), the largest
+world translation difference per file is below 0.001 in 32 of the 45
+files, below 0.1 in 41 and 1 or more in 3; the dog skeleton matches in all
+65 bones (largest 0.00019, rotation 4e-6). The human skeleton names 74 of
+its 95 bones in the NIF but shares the whole parent chain for only 15 of
+them (largest difference 0.0036 there); in the race skeletons the NIF names
+another parent for 163 bones. So a pose is compared and applied by bone
+name in world space, not by parent index.
 
 ### `hkaAnimationBinding`
 
@@ -143,9 +148,9 @@ count its u32 at +28. `Binding::fits(skeleton)` requires the binding's
 name to equal the skeleton's name and every track to name a distinct bone
 below the skeleton's bone count. Against the skeletons of all files: 16,142
 bindings have at least one skeleton of their name that they fit (3 have
-none); for 13,734 the `characterassets/skeleton.hkx` of their actor folder
-fits, for 15 it has their name and does not fit. Which skeleton a clip is
-played on is not stored in the clip.
+none); 15,861 fit at least one race skeleton, and 14,909 one in their own
+folder (the first three path components). Which skeleton a clip is played
+on is not stored in the clip.
 
 ### Animation header, both classes
 
@@ -263,7 +268,7 @@ static 120.
   or reverse order, the share is 0.28 % to 0.46 %, and fields at bits 4, 16
   and 28 give 71 %. For 6-byte points the chosen index and sign words give
   0.32 %, the other five assignments 1.07 % to 1.55 %. In the decoded idle
-  and other clips below, 50,386 and 309,534 tracks are within 0.1 degree of
+  and other clips below, 54,099 and 330,139 tracks are within 0.1 degree of
   the skeleton's reference rotation at frame 0. Whether the stored constants
   are exactly 2047, 16383 and 1/sqrt 2 in the writer's arithmetic is not
   established; they reproduce the reference rotations within the
@@ -301,12 +306,12 @@ Checks of the values:
   2,393 pairs agree with the stored knots and not with uniform ones (above
   1e-4), 15 the reverse. Many such pairs are different motions, so this
   supports the stored-knot evaluation without proving it frame by frame.
-- **Frame 0 against the reference pose**, for clips whose binding fits the
-  `characterassets/skeleton.hkx` of their actor folder (1,861 clips with
-  "idle" in the file name, 11,018 others; one comparison per track):
-  translation within 0.001 of the bone's reference translation for 133,687
-  of 168,211 idle tracks (79 %), rotation within 1 degree for 53,800 (32 %)
-  and 45 degrees or more for 24,610. A pose differs from the reference pose
+- **Frame 0 against the reference pose**, for clips whose binding fits a
+  race skeleton of their folder (the first that fits; 2,000 clips with
+  "idle" in the file name, 11,956 others; one comparison per track):
+  translation within 0.001 of the bone's reference translation for 137,565
+  of 179,299 idle tracks (77 %), rotation within 1 degree for 57,932 (32 %)
+  and 45 degrees or more for 28,513. A pose differs from the reference pose
   where the clip moves the bone, so this bounds nothing; it shows the static
   translations reproducing the bone offsets. In one dog idle of 65 tracks,
   57 translations equal the reference translation within 0.001 (not the

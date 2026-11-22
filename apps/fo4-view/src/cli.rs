@@ -9,6 +9,7 @@ usage:
            [--speed UNITS_PER_SECOND] [--fast-speed UNITS_PER_SECOND] [--radians-per-pixel R]
            [--walk] [--texture-cap N] [--alpha-tested-cap N] [--reference-textures]
            [--scene-memory MIB] [--no-stream] [--no-actors]
+           [--actor-clip ARCHIVE_PATH.hkx [--actor-clip-time SECONDS]]
            [--frame-log build/FRAMES.tsv] [--script-path X,Y;... [--script-shots build/NAME]]
       Window with a free-fly camera: W/A/S/D move, Shift moves faster, hold the
       left mouse button and move the mouse to look, R returns to the start pose.
@@ -48,6 +49,13 @@ usage:
       pose, CPU-skinned once at load, when the level accepts their rules
       (pending: --under-hypotheses); each actor's report line says what was
       drawn or why not. --no-actors leaves them out, as before.
+      --actor-clip names a Havok animation clip by its archive path (a .hkx
+      file; spline-compressed clips only):
+      every drawn actor whose skeleton's .hkx beside its skeleton NIF the
+      clip's binding fits is posed by it (pending rules: --under-hypotheses),
+      starting at --actor-clip-time (default 0) and looping, CPU-skinned
+      again every frame; the clip is the one named here, not the one the
+      game would play. Not with the moving grid (use --no-stream).
       Measurement aids: --frame-log writes one line per frame (interval,
       time in the frame's update, cells drawn and uploading, entities).
       --script-path (with --walk) steers the walker through the waypoints
@@ -61,7 +69,9 @@ usage:
            [--size WxH] [--backface-cull] [--terrain] [--around N] [--walk]
            [--texture-cap N] [--alpha-tested-cap N] [--reference-textures]
            [--scene-memory MIB] [--path X,Y;X,Y;... [--start-pose]] [--no-actors]
-      One offscreen frame, no window. --tags also writes the per-pixel instance
+           [--actor-clip ARCHIVE_PATH.hkx [--actor-clip-time SECONDS]]
+      One offscreen frame, no window. With --actor-clip the actors it fits
+      are drawn posed at --actor-clip-time (not with --path). --tags also writes the per-pixel instance
       tags (u32 little-endian, u32::MAX = background). With --walk the walking
       world is built as in the window, the walker is dropped with its eye at
       --eye and settled, and the frame is drawn from its eye looking the
@@ -96,6 +106,9 @@ pub struct Scene {
     pub scene_memory: u64,
     /// Draw the placed actors (default; `--no-actors` turns it off).
     pub actors: bool,
+    /// Pose the drawn actors with a clip (`--actor-clip`,
+    /// `--actor-clip-time`).
+    pub clip: Option<crate::clip::Options>,
 }
 
 /// Default of `--scene-memory`: a viewer bound, not a claim about the game.
@@ -246,6 +259,13 @@ pub fn waypoints(text: &str) -> Result<Vec<[f64; 2]>, String> {
     Ok(out)
 }
 
+fn not_negative(text: &str) -> Result<f64, String> {
+    text.parse::<f64>()
+        .ok()
+        .filter(|v| v.is_finite() && *v >= 0.)
+        .ok_or_else(|| format!("ExpectedSecondsNotNegative: {text}"))
+}
+
 fn positive(text: &str) -> Result<f64, String> {
     text.parse::<f64>()
         .ok()
@@ -308,6 +328,8 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
     let mut no_stream = false;
     let mut start_pose = false;
     let mut actors = true;
+    let mut clip_path = None;
+    let mut clip_time = None;
     let mut debug = WindowDebug::default();
     let mut rest = args[3..].iter();
     while let Some(arg) = rest.next() {
@@ -337,6 +359,8 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             "--no-stream" => no_stream = true,
             "--start-pose" => start_pose = true,
             "--no-actors" => actors = false,
+            "--actor-clip" => clip_path = Some(value()?.clone()),
+            "--actor-clip-time" => clip_time = Some(not_negative(value()?)?),
             "--frame-log" => debug.frame_log = Some(value()?.clone()),
             "--script-path" => debug.path = Some(waypoints(value()?)?),
             "--script-shots" => debug.shots = Some(value()?.clone()),
@@ -373,7 +397,18 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
         textures,
         scene_memory: memory,
         actors,
+        clip: match (clip_path, clip_time) {
+            (Some(path), time) => Some(crate::clip::Options {
+                path,
+                time: time.unwrap_or(0.),
+            }),
+            (None, None) => None,
+            (None, Some(_)) => return Err("--actor-clip-time needs --actor-clip".into()),
+        },
     };
+    if scene.clip.is_some() && !scene.actors {
+        return Err("--actor-clip poses the drawn actors: not with --no-actors".into());
+    }
     let grid_moves = walk && scene.terrain && scene.around > 0;
     if debug.shots.is_some() && debug.path.is_none() {
         return Err("--script-shots needs --script-path".into());
@@ -397,6 +432,9 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
         if start_pose && path.is_none() {
             return Err("--start-pose applies to --path only".into());
         }
+        if path.is_some() && scene.clip.is_some() {
+            return Err("--actor-clip does not apply to --path".into());
+        }
         Ok(Command::Headless {
             scene,
             size: frame,
@@ -413,6 +451,8 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
         || frame != fo4_scene::camera::REFERENCE_SIZE
     {
         Err("--out, --tags, --size, --path and --start-pose apply to --headless only".into())
+    } else if grid_moves && !no_stream && scene.clip.is_some() {
+        Err("--actor-clip does not apply to the moving grid: add --no-stream".into())
     } else {
         Ok(Command::Window {
             scene,
@@ -464,6 +504,43 @@ mod tests {
     }
 
     #[test]
+    fn actor_clip_options() {
+        let c = parse(&args(
+            "m d C --headless --eye 1,2,3 --look 4,5,6 --out a.png --actor-clip a/b.hkx --actor-clip-time 1.5",
+        ))
+        .unwrap();
+        let Command::Headless { scene, .. } = c else {
+            panic!("{c:?}")
+        };
+        assert_eq!(
+            scene.clip,
+            Some(crate::clip::Options {
+                path: "a/b.hkx".into(),
+                time: 1.5
+            })
+        );
+        let Command::Window { scene, .. } =
+            parse(&args("m d C --eye 1,2,3 --look 4,5,6 --actor-clip a.hkx")).unwrap()
+        else {
+            panic!()
+        };
+        assert_eq!(scene.clip.map(|c| c.time), Some(0.));
+        for (line, error) in [
+            ("m d C --eye 1,2,3 --look 4,5,6 --actor-clip-time 1", "--actor-clip-time needs --actor-clip"),
+            ("m d C --eye 1,2,3 --look 4,5,6 --actor-clip a.hkx --no-actors", "--actor-clip poses the drawn actors: not with --no-actors"),
+            ("m d C --eye 1,2,3 --look 4,5,6 --actor-clip a.hkx --actor-clip-time -1", "ExpectedSecondsNotNegative: -1"),
+            ("m d C --under-hypotheses --eye 1,2,3 --look 4,5,6 --walk --terrain --around 1 --actor-clip a.hkx", "--actor-clip does not apply to the moving grid: add --no-stream"),
+            ("m d C --headless --eye 1,2,3 --look 4,5,6 --out a.png --walk --terrain --around 1 --path 1,2 --actor-clip a.hkx", "--actor-clip does not apply to --path"),
+        ] {
+            assert_eq!(parse(&args(line)).unwrap_err(), error, "{line}");
+        }
+        assert!(parse(&args(
+            "m d C --under-hypotheses --eye 1,2,3 --look 4,5,6 --walk --terrain --around 1 --no-stream --actor-clip a.hkx"
+        ))
+        .is_ok());
+    }
+
+    #[test]
     fn no_actors_turns_the_actors_off_in_both_modes() {
         for line in [
             "m d C --eye 1,2,3 --look 4,5,6 --no-actors",
@@ -496,6 +573,7 @@ mod tests {
                     textures: DEFAULT_TEXTURES,
                     scene_memory: 2048 << 20,
                     actors: true,
+                    clip: None,
                 },
                 fly: DEFAULT_FLY,
                 walk: false,

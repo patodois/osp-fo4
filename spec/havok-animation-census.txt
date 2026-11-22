@@ -1,5 +1,6 @@
 winning .hkx paths	17508
 bytes	442724720
+race skeleton .hkx files	45
 
 # outcomes
 16388	animation container: read
@@ -39,18 +40,26 @@ bytes	442724720
 16141	binding float tracks 0
 4	binding float tracks 1
 16145	binding unread count 0
-3	binding: skeletons of its name 0, fitting 0, actor folder skeleton.hkx absent or other name
-142	binding: skeletons of its name 1, fitting 1, actor folder skeleton.hkx absent or other name
-443	binding: skeletons of its name 1, fitting 1, actor folder skeleton.hkx fits
-6	binding: skeletons of its name 2, fitting 1, actor folder skeleton.hkx absent or other name
-64	binding: skeletons of its name 2, fitting 1, actor folder skeleton.hkx fits
-8	binding: skeletons of its name 2, fitting 2, actor folder skeleton.hkx absent or other name
-58	binding: skeletons of its name 2, fitting 2, actor folder skeleton.hkx fits
-7	binding: skeletons of its name 3, fitting 1, actor folder skeleton.hkx absent or other name
-9	binding: skeletons of its name 3, fitting 2, actor folder skeleton.hkx absent or other name
-2221	binding: skeletons of its name 3, fitting 3, actor folder skeleton.hkx absent or other name
-15	binding: skeletons of its name 3, fitting 3, actor folder skeleton.hkx does not fit
-13169	binding: skeletons of its name 3, fitting 3, actor folder skeleton.hkx fits
+3	binding: skeletons of its name 0, fitting 0; race skeletons of its name fitting 0; in its folder 0 fitting 0
+89	binding: skeletons of its name 1, fitting 1; race skeletons of its name fitting 0; in its folder 0 fitting 0
+53	binding: skeletons of its name 1, fitting 1; race skeletons of its name fitting 1; in its folder 0 fitting 0
+443	binding: skeletons of its name 1, fitting 1; race skeletons of its name fitting 1; in its folder 1 fitting 1
+5	binding: skeletons of its name 2, fitting 1; race skeletons of its name fitting 0; in its folder 0 fitting 0
+1	binding: skeletons of its name 2, fitting 1; race skeletons of its name fitting 1; in its folder 0 fitting 0
+64	binding: skeletons of its name 2, fitting 1; race skeletons of its name fitting 1; in its folder 1 fitting 1
+7	binding: skeletons of its name 2, fitting 2; race skeletons of its name fitting 0; in its folder 0 fitting 0
+1	binding: skeletons of its name 2, fitting 2; race skeletons of its name fitting 2; in its folder 0 fitting 0
+58	binding: skeletons of its name 2, fitting 2; race skeletons of its name fitting 2; in its folder 1 fitting 1
+7	binding: skeletons of its name 3, fitting 1; race skeletons of its name fitting 0; in its folder 0 fitting 0
+9	binding: skeletons of its name 3, fitting 2; race skeletons of its name fitting 0; in its folder 0 fitting 0
+164	binding: skeletons of its name 3, fitting 3; race skeletons of its name fitting 0; in its folder 0 fitting 0
+489	binding: skeletons of its name 3, fitting 3; race skeletons of its name fitting 3; in its folder 0 fitting 0
+15	binding: skeletons of its name 3, fitting 3; race skeletons of its name fitting 3; in its folder 1 fitting 0
+13169	binding: skeletons of its name 3, fitting 3; race skeletons of its name fitting 3; in its folder 1 fitting 1
+393	binding: skeletons of its name 3, fitting 3; race skeletons of its name fitting 3; in its folder 3 fitting 0
+132	binding: skeletons of its name 3, fitting 3; race skeletons of its name fitting 3; in its folder 3 fitting 1
+759	binding: skeletons of its name 3, fitting 3; race skeletons of its name fitting 3; in its folder 3 fitting 2
+284	binding: skeletons of its name 3, fitting 3; race skeletons of its name fitting 3; in its folder 3 fitting 3
 42	root entry name|class: Cloth Container|hclClothContainer
 42	root entry name|class: Cloth Setup Data|hclClothSetupContainer
 16388	root entry name|class: Merged Animation Container|hkaAnimationContainer
@@ -137,28 +146,28 @@ bytes	442724720
 389	curve scale degree 3
 55221	curve translation degree 1
 38236	curve translation degree 3
-1861	frame 0 vs reference pose: idle clips
-50386	frame 0 vs reference pose: idle clips: track rotation angle <0.1
-3414	frame 0 vs reference pose: idle clips: track rotation angle <1
-27354	frame 0 vs reference pose: idle clips: track rotation angle <10
-62447	frame 0 vs reference pose: idle clips: track rotation angle <45
-24610	frame 0 vs reference pose: idle clips: track rotation angle >=45
-133687	frame 0 vs reference pose: idle clips: track translation distance <0.001
-4707	frame 0 vs reference pose: idle clips: track translation distance <0.01
-1357	frame 0 vs reference pose: idle clips: track translation distance <0.1
-3516	frame 0 vs reference pose: idle clips: track translation distance <1
-24944	frame 0 vs reference pose: idle clips: track translation distance >=1
-11018	frame 0 vs reference pose: other clips
-309534	frame 0 vs reference pose: other clips: track rotation angle <0.1
-20988	frame 0 vs reference pose: other clips: track rotation angle <1
-158781	frame 0 vs reference pose: other clips: track rotation angle <10
-360421	frame 0 vs reference pose: other clips: track rotation angle <45
-153324	frame 0 vs reference pose: other clips: track rotation angle >=45
-778808	frame 0 vs reference pose: other clips: track translation distance <0.001
-26063	frame 0 vs reference pose: other clips: track translation distance <0.01
-10105	frame 0 vs reference pose: other clips: track translation distance <0.1
-24215	frame 0 vs reference pose: other clips: track translation distance <1
-163857	frame 0 vs reference pose: other clips: track translation distance >=1
+2000	frame 0 vs reference pose: idle clips
+54099	frame 0 vs reference pose: idle clips: track rotation angle <0.1
+3833	frame 0 vs reference pose: idle clips: track rotation angle <1
+27926	frame 0 vs reference pose: idle clips: track rotation angle <10
+64928	frame 0 vs reference pose: idle clips: track rotation angle <45
+28513	frame 0 vs reference pose: idle clips: track rotation angle >=45
+137565	frame 0 vs reference pose: idle clips: track translation distance <0.001
+4863	frame 0 vs reference pose: idle clips: track translation distance <0.01
+1455	frame 0 vs reference pose: idle clips: track translation distance <0.1
+3854	frame 0 vs reference pose: idle clips: track translation distance <1
+31562	frame 0 vs reference pose: idle clips: track translation distance >=1
+11956	frame 0 vs reference pose: other clips
+330139	frame 0 vs reference pose: other clips: track rotation angle <0.1
+23011	frame 0 vs reference pose: other clips: track rotation angle <1
+164243	frame 0 vs reference pose: other clips: track rotation angle <10
+379406	frame 0 vs reference pose: other clips: track rotation angle <45
+185886	frame 0 vs reference pose: other clips: track rotation angle >=45
+802891	frame 0 vs reference pose: other clips: track translation distance <0.001
+26822	frame 0 vs reference pose: other clips: track translation distance <0.01
+10742	frame 0 vs reference pose: other clips: track translation distance <0.1
+26944	frame 0 vs reference pose: other clips: track translation distance <1
+215286	frame 0 vs reference pose: other clips: track translation distance >=1
 39506983	quantised rotations
 276739	track rotation absent 40-bit
 34236	track rotation absent 48-bit
@@ -196,63 +205,122 @@ bytes	442724720
 2.373e-3	boundary translation static->static: largest difference
 5.079e-8	largest quantised rotation norm deviation
 
-# skeleton.hkx against skeleton.nif
-537	bone parent: none named in the NIF
-154	bone parent: other name in the NIF
-40	bone parent: root bone
-2054	bone parent: same name in the NIF
-2785	bones
-2248	bones found in the NIF
-1191	bones with a matching parent chain
-9	files: bones found in the NIF all
-31	files: bones found in the NIF not all
-40	files: compared
-37	files: matching chain, largest rotation difference <0.001
+# skeleton in a .hkx against the .nif of the same stem
+7106	bone parent: none named in the NIF
+580	bone parent: other name in the NIF
+89	bone parent: root bone
+2139	bone parent: same name in the NIF
+9914	bones
+2766	bones found in the NIF
+1212	bones with a matching parent chain
+10	files: bones found in the NIF all
+79	files: bones found in the NIF not all
+89	files: compared
+85	files: matching chain, largest rotation difference <0.001
 1	files: matching chain, largest rotation difference <0.01
 1	files: matching chain, largest rotation difference <0.1
+1	files: matching chain, largest rotation difference <1
 1	files: matching chain, largest rotation difference >=1
-28	files: matching chain, largest translation distance <0.001
+76	files: matching chain, largest translation distance <0.001
 6	files: matching chain, largest translation distance <0.01
 3	files: matching chain, largest translation distance <0.1
 1	files: matching chain, largest translation distance <1
-2	files: matching chain, largest translation distance >=1
-150	files: no skeleton.nif beside it
-41	q(w,x,y,z) rows: world rotation largest element difference <0.001
+3	files: matching chain, largest translation distance >=1
+152	files: no .nif of the same stem
+43	q(w,x,y,z) rows: world rotation largest element difference <0.001
 9	q(w,x,y,z) rows: world rotation largest element difference <0.1
-334	q(w,x,y,z) rows: world rotation largest element difference <1
-1864	q(w,x,y,z) rows: world rotation largest element difference >=1
-80	q(w,x,y,z) rows: world translation distance <0.001
+384	q(w,x,y,z) rows: world rotation largest element difference <1
+2330	q(w,x,y,z) rows: world rotation largest element difference >=1
+92	q(w,x,y,z) rows: world translation distance <0.001
 9	q(w,x,y,z) rows: world translation distance <0.1
-6	q(w,x,y,z) rows: world translation distance <1
-2153	q(w,x,y,z) rows: world translation distance >=1
-37	q(w,x,y,z) transposed: world rotation largest element difference <0.001
+8	q(w,x,y,z) rows: world translation distance <1
+2657	q(w,x,y,z) rows: world translation distance >=1
+39	q(w,x,y,z) transposed: world rotation largest element difference <0.001
 2	q(w,x,y,z) transposed: world rotation largest element difference <0.01
 6	q(w,x,y,z) transposed: world rotation largest element difference <0.1
-329	q(w,x,y,z) transposed: world rotation largest element difference <1
-1874	q(w,x,y,z) transposed: world rotation largest element difference >=1
-78	q(w,x,y,z) transposed: world translation distance <0.001
+369	q(w,x,y,z) transposed: world rotation largest element difference <1
+2350	q(w,x,y,z) transposed: world rotation largest element difference >=1
+90	q(w,x,y,z) transposed: world translation distance <0.001
 9	q(w,x,y,z) transposed: world translation distance <0.1
-6	q(w,x,y,z) transposed: world translation distance <1
-2155	q(w,x,y,z) transposed: world translation distance >=1
-2126	q(x,y,z,w) rows: world rotation largest element difference <0.001
+8	q(w,x,y,z) transposed: world translation distance <1
+2659	q(w,x,y,z) transposed: world translation distance >=1
+2635	q(x,y,z,w) rows: world rotation largest element difference <0.001
 43	q(x,y,z,w) rows: world rotation largest element difference <0.01
 3	q(x,y,z,w) rows: world rotation largest element difference <0.1
-18	q(x,y,z,w) rows: world rotation largest element difference <1
+27	q(x,y,z,w) rows: world rotation largest element difference <1
 58	q(x,y,z,w) rows: world rotation largest element difference >=1
-1919	q(x,y,z,w) rows: world translation distance <0.001
-161	q(x,y,z,w) rows: world translation distance <0.01
+2423	q(x,y,z,w) rows: world translation distance <0.001
+166	q(x,y,z,w) rows: world translation distance <0.01
 57	q(x,y,z,w) rows: world translation distance <0.1
 2	q(x,y,z,w) rows: world translation distance <1
-109	q(x,y,z,w) rows: world translation distance >=1
-87	q(x,y,z,w) transposed: world rotation largest element difference <0.001
+118	q(x,y,z,w) rows: world translation distance >=1
+96	q(x,y,z,w) transposed: world rotation largest element difference <0.001
 4	q(x,y,z,w) transposed: world rotation largest element difference <0.01
 17	q(x,y,z,w) transposed: world rotation largest element difference <0.1
-197	q(x,y,z,w) transposed: world rotation largest element difference <1
-1943	q(x,y,z,w) transposed: world rotation largest element difference >=1
-180	q(x,y,z,w) transposed: world translation distance <0.001
+222	q(x,y,z,w) transposed: world rotation largest element difference <1
+2427	q(x,y,z,w) transposed: world rotation largest element difference >=1
+195	q(x,y,z,w) transposed: world translation distance <0.001
 5	q(x,y,z,w) transposed: world translation distance <0.1
 4	q(x,y,z,w) transposed: world translation distance <1
-2059	q(x,y,z,w) transposed: world translation distance >=1
+2562	q(x,y,z,w) transposed: world translation distance >=1
+
+# the same, race skeletons only
+776	bone parent: none named in the NIF
+163	bone parent: other name in the NIF
+45	bone parent: root bone
+1931	bone parent: same name in the NIF
+2915	bones
+2139	bones found in the NIF
+1182	bones with a matching parent chain
+10	files: bones found in the NIF all
+35	files: bones found in the NIF not all
+45	files: compared
+41	files: matching chain, largest rotation difference <0.001
+1	files: matching chain, largest rotation difference <0.01
+1	files: matching chain, largest rotation difference <0.1
+1	files: matching chain, largest rotation difference <1
+1	files: matching chain, largest rotation difference >=1
+32	files: matching chain, largest translation distance <0.001
+6	files: matching chain, largest translation distance <0.01
+3	files: matching chain, largest translation distance <0.1
+1	files: matching chain, largest translation distance <1
+3	files: matching chain, largest translation distance >=1
+37	q(w,x,y,z) rows: world rotation largest element difference <0.001
+9	q(w,x,y,z) rows: world rotation largest element difference <0.1
+317	q(w,x,y,z) rows: world rotation largest element difference <1
+1776	q(w,x,y,z) rows: world rotation largest element difference >=1
+80	q(w,x,y,z) rows: world translation distance <0.001
+7	q(w,x,y,z) rows: world translation distance <0.1
+8	q(w,x,y,z) rows: world translation distance <1
+2044	q(w,x,y,z) rows: world translation distance >=1
+33	q(w,x,y,z) transposed: world rotation largest element difference <0.001
+2	q(w,x,y,z) transposed: world rotation largest element difference <0.01
+6	q(w,x,y,z) transposed: world rotation largest element difference <0.1
+305	q(w,x,y,z) transposed: world rotation largest element difference <1
+1793	q(w,x,y,z) transposed: world rotation largest element difference >=1
+78	q(w,x,y,z) transposed: world translation distance <0.001
+7	q(w,x,y,z) transposed: world translation distance <0.1
+8	q(w,x,y,z) transposed: world translation distance <1
+2046	q(w,x,y,z) transposed: world translation distance >=1
+2008	q(x,y,z,w) rows: world rotation largest element difference <0.001
+43	q(x,y,z,w) rows: world rotation largest element difference <0.01
+3	q(x,y,z,w) rows: world rotation largest element difference <0.1
+27	q(x,y,z,w) rows: world rotation largest element difference <1
+58	q(x,y,z,w) rows: world rotation largest element difference >=1
+1853	q(x,y,z,w) rows: world translation distance <0.001
+109	q(x,y,z,w) rows: world translation distance <0.01
+57	q(x,y,z,w) rows: world translation distance <0.1
+2	q(x,y,z,w) rows: world translation distance <1
+118	q(x,y,z,w) rows: world translation distance >=1
+88	q(x,y,z,w) transposed: world rotation largest element difference <0.001
+4	q(x,y,z,w) transposed: world rotation largest element difference <0.01
+13	q(x,y,z,w) transposed: world rotation largest element difference <0.1
+197	q(x,y,z,w) transposed: world rotation largest element difference <1
+1837	q(x,y,z,w) transposed: world rotation largest element difference >=1
+181	q(x,y,z,w) transposed: world translation distance <0.001
+5	q(x,y,z,w) transposed: world translation distance <0.1
+4	q(x,y,z,w) transposed: world translation distance <1
+1949	q(x,y,z,w) transposed: world translation distance >=1
 
 # class	files	objects
 BGSGamebryoSequenceGenerator	209	1427

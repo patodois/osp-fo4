@@ -34,7 +34,10 @@ capsule over a cell's collision under provisional, registered rules.
   plugins, and drawn by the GPU viewer standing in the skeleton's rest pose,
   skinned once on the CPU under pending rules; heads are not read, and an
   actor whose look the data does not settle (leveled lists, unresolved
-  outfits) is left out with its reasons ([actors](spec/actor.md)).
+  outfits) is left out with its reasons ([actors](spec/actor.md)). With
+  `--actor-clip` a named Havok animation clip (spline-compressed, decoded
+  from measured layouts: [Havok animation](spec/havok-animation.md)) poses
+  the actors whose skeleton it fits, looping in the window.
 - **Rendering**: a deterministic unlit CPU rasterizer and tools that compare
   its frames with photographs of the game.
 - **Walking**: a deterministic capsule controller (gravity, ground, walls,
@@ -182,6 +185,16 @@ is drawn, loading takes 5.99 s instead of 5.93 s, with 7.1 MiB more
 credits and 14 MB more peak resident memory
 ([actors](spec/actor.md#results)). The CPU render does not draw actors, so
 compare frames with `--no-actors`.
+
+`--actor-clip ARCHIVE_PATH.hkx` poses every drawn actor whose skeleton's
+`.hkx` (beside its skeleton NIF) the clip's binding fits, under two more
+pending rules: at `--actor-clip-time SECONDS` (default 0) in a headless
+frame, and looping from there in the window, CPU-skinned again every frame
+on the main thread (0.05 ms a frame for the test cell's dog). The clip is
+the one named, not the one the game would play; it is refused with the
+moving grid (`--no-stream` loads the grid once) and with `--path`. Without
+it the frames are byte-identical to those before
+([Clip pose](spec/actor.md#clip-pose)).
 
 The comparison prints coverage agreement and colour differences; it defines
 no pass threshold.

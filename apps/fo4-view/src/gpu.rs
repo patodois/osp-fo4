@@ -676,6 +676,9 @@ impl Stream {
 /// The scene until it is spawned: its clear colour and what was uploaded.
 #[derive(Resource)]
 struct PendingScene(GpuScene, [f32; 4], Option<Uploaded>);
+/// `--actor-clip`'s animation, waiting for the scene's meshes to upload.
+#[derive(Resource)]
+struct PendingClip(crate::clip::Animation);
 #[derive(Component)]
 struct FlyCamera;
 
@@ -710,6 +713,10 @@ fn spawn_window_scene(world: &mut World) {
         return;
     }
     spawn(world, &scene, &up, false, 0);
+    if let Some(PendingClip(animation)) = world.remove_resource::<PendingClip>() {
+        let playing = crate::clip::Playing::new(animation, &scene, &up.meshes);
+        world.insert_resource(playing);
+    }
     // The window's swap chain is expected to be sRGB (the shader checks the
     // real format; the clear colour cannot): an sRGB colour with the CPU's
     // clear values is stored as those values.
@@ -942,6 +949,7 @@ pub fn window(
     walk: Option<fo4_walk::World>,
     clear: [f32; 4],
     aids: Aids,
+    clip: Option<crate::clip::Animation>,
 ) -> Result<(), String> {
     fly_pose(&start)?;
     let start_walking = walk.is_some();
@@ -986,6 +994,10 @@ pub fn window(
         Update,
         (spawn_window_scene, fly_camera, show_readout).chain(),
     );
+    if let Some(animation) = clip {
+        app.insert_resource(PendingClip(animation))
+            .add_systems(Update, crate::clip::animate.after(spawn_window_scene));
+    }
     aids.add_to(&mut app);
     app.run();
     Ok(())

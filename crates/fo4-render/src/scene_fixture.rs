@@ -931,4 +931,61 @@ fn a_placed_actor_is_drawn_skinned_in_its_skeleton_rest_pose_after_the_reference
     assert!(measured.list.draws.is_empty());
     assert_eq!(measured.omitted.len(), 1);
     assert_eq!(measured.omitted[0].causes[0].code, "ActorNotDrawable");
+    // Posed: no pose given draws as without poses and records nothing.
+    let options = BuildOptions::reference(RuleLevel::Hypotheses);
+    let (same, recorded) = crate::draw::build_with_posed_actors(
+        &scene,
+        &actors,
+        Default::default(),
+        &loader,
+        &m.limits,
+        options,
+        &b,
+    )
+    .unwrap();
+    assert!(recorded.is_empty());
+    let q: Vec<[f64; 3]> = same.list.meshes[same.list.draws[0].mesh]
+        .vertices
+        .iter()
+        .map(|v| v.position)
+        .collect();
+    assert_eq!(q, p);
+    // A pose with the bone 5 higher than at rest moves every vertex by 5,
+    // and the recorded shape reproduces the drawn positions.
+    let skeleton = actors.actors[0].plan.as_ref().unwrap().skeleton_asset;
+    let mut pose = fo4_scene::actor::pose::Skeleton::default();
+    let mut bone = fo4_scene::actor::pose::Affine::IDENTITY;
+    bone.translation = [0., 0., 17.];
+    pose.bones.insert(b"Bone".to_vec(), bone);
+    pose.bones
+        .insert(b"Root".to_vec(), fo4_scene::actor::pose::Affine::IDENTITY);
+    let poses = [(skeleton, pose.clone())].into_iter().collect();
+    let (posed, recorded) = crate::draw::build_with_posed_actors(
+        &scene, &actors, poses, &loader, &m.limits, options, &b,
+    )
+    .unwrap();
+    assert!(posed.omitted.is_empty());
+    let d = &posed.list.draws[0];
+    let r: Vec<[f64; 3]> = posed.list.meshes[d.mesh]
+        .vertices
+        .iter()
+        .map(|v| v.position)
+        .collect();
+    assert_eq!(r, [[1., 0., 17.], [1., 1., 17.], [1., 0., 18.]]);
+    assert_eq!(recorded.len(), 1);
+    assert_eq!((recorded[0].mesh, recorded[0].skeleton), (d.mesh, skeleton));
+    let mut m4 = Vec::new();
+    recorded[0].shape.matrices(&pose, "skel", &mut m4).unwrap();
+    let mut again = Vec::new();
+    recorded[0].shape.positions(&m4, &mut again);
+    assert_eq!(again, r);
+    pose.bones.remove(&b"Bone"[..]);
+    assert_eq!(
+        recorded[0]
+            .shape
+            .matrices(&pose, "skel", &mut m4)
+            .unwrap_err()
+            .code,
+        "ActorSkinBoneMissing"
+    );
 }

@@ -262,6 +262,7 @@ impl<'a> Streamer<'a> {
             textures,
             surfaces,
             instances,
+            ..
         } = gpu;
         let mut piece = CellPiece {
             grid,

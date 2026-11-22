@@ -118,6 +118,8 @@ pub struct Instance {
 #[derive(Default)]
 pub struct GpuScene {
     pub meshes: Vec<GpuMesh>,
+    /// For each draw-list mesh that was converted, its index in `meshes`.
+    pub draw_meshes: BTreeMap<usize, usize>,
     pub textures: Vec<GpuTexture>,
     pub surfaces: Vec<Surface>,
     pub instances: Vec<Instance>,
@@ -378,6 +380,7 @@ pub fn convert(list: &mut DrawList, options: &RenderOptions) -> Result<GpuScene,
             scale,
         });
     }
+    out.draw_meshes = mesh_index;
     Ok(out)
 }
 

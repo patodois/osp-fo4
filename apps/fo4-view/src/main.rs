@@ -3,6 +3,7 @@
 //! See `cli::USAGE` and the README section "GPU viewer".
 mod cells;
 mod cli;
+mod clip;
 mod compare;
 mod coords;
 mod fly;
@@ -43,6 +44,7 @@ fn load_scene(
         load::build_options(s.textures, s.level),
         s.scene_memory,
         s.actors,
+        s.clip.as_ref(),
     )?;
     let options = RenderOptions {
         backface_cull: s.backface_cull,
@@ -278,11 +280,14 @@ fn run() -> AnyResult<()> {
             let (gpu, options, loaded) = load_scene(&s, walk)?;
             // Keep only the walking world; the draw list was converted.
             let load::Loaded {
-                walk: world, build, ..
+                walk: world,
+                build,
+                animation,
+                ..
             } = loaded;
             drop(build);
             let start = fly::FlyState::from_eye_look(s.eye, s.look)?;
-            gpu::window(gpu, start, fly, world, options.clear, aids)?;
+            gpu::window(gpu, start, fly, world, options.clear, aids, animation)?;
             Ok(())
         }
         Command::Compare {

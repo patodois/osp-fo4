@@ -2,8 +2,8 @@
 //! Census of the winning `.hkx` files of the manifest's mounts with
 //! `fo4_havok`: container outcome by header variant, the animation objects'
 //! readers (`spec/havok-animation.md`), the relations between their stored
-//! values, bindings against skeletons, and each `skeleton.hkx` against the
-//! `skeleton.nif` beside it. Measurement support; writes plain text, counts
+//! values, bindings against skeletons, and each skeleton against the `.nif`
+//! of the same path stem. Measurement support; writes plain text, counts
 //! and small stored values only.
 use fo4_core::{Budget, Manifest};
 use fo4_havok as hk;
@@ -76,6 +76,11 @@ fn hk_worlds(s: &hk::Skeleton<'_>, transpose: bool, w_first: bool) -> Vec<Affine
     out
 }
 
+/// The first three components of an archive path.
+fn folder(path: &str) -> String {
+    path.split('/').take(3).collect::<Vec<_>>().join("/")
+}
+
 fn dist(a: [f64; 3], b: [f64; 3]) -> f64 {
     (0..3).map(|i| (a[i] - b[i]).powi(2)).sum::<f64>().sqrt()
 }
@@ -146,6 +151,7 @@ fn track_census(
     i: usize,
     name: &str,
     skeletons: &[SkelInfo],
+    race_skeletons: &BTreeSet<String>,
     out: &mut BTreeMap<String, u64>,
     checks: &mut BTreeMap<String, [u64; 2]>,
     worst: &mut BTreeMap<String, f64>,
@@ -281,20 +287,17 @@ fn track_census(
             }
         }
     }
-    // Frame 0 against the reference pose of the actor-folder skeleton.
+    // Frame 0 against the reference pose of the first race skeleton of the
+    // clip's folder (first three path components) that the binding fits.
     let Some(bind) = k.objects.iter().position(|o| o.class == hk::BINDING) else {
         return;
     };
     let Ok(bind) = hk::Binding::read(k, bind, name, 0, b) else {
         return;
     };
-    let parts: Vec<&str> = name.split('/').collect();
-    if parts.len() < 4 || parts[1] != "actors" {
-        return;
-    }
-    let path = format!("meshes/actors/{}/characterassets/skeleton.hkx", parts[2]);
     let Some(sk) = skeletons.iter().find(|x| {
-        x.path == path
+        folder(&x.path) == folder(name)
+            && race_skeletons.contains(&x.path)
             && x.name == bind.skeleton_name
             && bind
                 .transform_tracks
@@ -345,6 +348,10 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         .collect();
     paths.sort();
     paths.dedup();
+    // The .hkx paths beside the skeleton NIFs that RACE records name (ANAM,
+    // resolved under meshes/ as record models are), when such a file exists:
+    // the candidates of actor_clip_skeleton_beside_nif_v1.
+    let race_skeletons = race_skeletons(&m, &paths)?;
     let mut c = BTreeMap::<String, u64>::new();
     let mut checks = BTreeMap::<String, [u64; 2]>::new();
     let mut values = BTreeMap::<String, u64>::new();
@@ -355,6 +362,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     // Per binding: (file, skeleton name, largest track index + 1, tracks distinct).
     let mut bindings: Vec<(String, Vec<u8>, usize, bool)> = Vec::new();
     let mut nif_cmp = BTreeMap::<String, u64>::new();
+    let mut nif_cmp_race = BTreeMap::<String, u64>::new();
     for p in &paths {
         let name = String::from_utf8_lossy(p).into_owned();
         let b = Budget::new(m.limits.max_memory);
@@ -525,10 +533,13 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 _ => {}
             }
         }
-        // A skeleton.hkx against the skeleton.nif beside it.
-        if name.ends_with("/skeleton.hkx") {
+        // A file with a skeleton against the .nif of the same path stem.
+        if k.objects.iter().any(|o| o.class == hk::SKELETON) {
             let nif = format!("{}.nif", name.trim_end_matches(".hkx"));
             compare_nif(&vfs, &m, &k, &name, &nif, &mut nif_cmp, &b);
+            if race_skeletons.contains(&name) {
+                compare_nif(&vfs, &m, &k, &name, &nif, &mut nif_cmp_race, &b);
+            }
         }
         skeletons.extend(file_skeletons);
     }
@@ -551,6 +562,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     i,
                     &name,
                     &skeletons,
+                    &race_skeletons,
                     &mut tracks,
                     &mut checks,
                     &mut worst,
@@ -563,25 +575,28 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     for (file, sname, max, distinct) in &bindings {
         let same: Vec<_> = skeletons.iter().filter(|s| &s.name == sname).collect();
         let fit = same.iter().filter(|s| *max <= s.bones && *distinct).count();
-        // The skeleton.hkx of the clip's actor folder, if any: the path up to
-        // the folder after meshes/actors/, then /characterassets/skeleton.hkx.
-        let parts: Vec<&str> = file.split('/').collect();
-        let folder_skel = (parts.len() > 3 && parts[0] == "meshes" && parts[1] == "actors")
-            .then(|| format!("meshes/actors/{}/characterassets/skeleton.hkx", parts[2]));
-        let own = folder_skel
-            .as_ref()
-            .and_then(|f| skeletons.iter().find(|s| &s.path == f && &s.name == sname));
+        // Race skeletons (beside a race's skeleton NIF) of its name, in the
+        // clip's folder (the first three path components) and anywhere.
+        let fits = |s: &&&SkelInfo| *max <= s.bones && *distinct;
+        let race: Vec<_> = same
+            .iter()
+            .copied()
+            .filter(|s| race_skeletons.contains(&s.path))
+            .collect();
+        let own: Vec<_> = race
+            .iter()
+            .copied()
+            .filter(|s| folder(&s.path) == folder(file))
+            .collect();
         bump(
             &mut values,
             format!(
-                "binding: skeletons of its name {}, fitting {}, actor folder skeleton.hkx {}",
+                "binding: skeletons of its name {}, fitting {}; race skeletons of its name fitting {}; in its folder {} fitting {}",
                 same.len().min(3),
                 fit.min(3),
-                match own {
-                    None => "absent or other name",
-                    Some(s) if *max <= s.bones && *distinct => "fits",
-                    Some(_) => "does not fit",
-                }
+                race.iter().filter(fits).count().min(3),
+                own.len().min(3),
+                own.iter().filter(fits).count().min(3),
             ),
         );
     }
@@ -591,6 +606,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         "winning .hkx paths\t{}\nbytes\t{bytes_total}",
         paths.len()
     )?;
+    writeln!(out, "race skeleton .hkx files\t{}", race_skeletons.len())?;
     writeln!(out, "\n# outcomes")?;
     for (k, n) in &c {
         writeln!(out, "{n}\t{k}")?;
@@ -610,8 +626,15 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     for (k, v) in &worst {
         writeln!(out, "{v:.3e}\t{k}")?;
     }
-    writeln!(out, "\n# skeleton.hkx against skeleton.nif")?;
+    writeln!(
+        out,
+        "\n# skeleton in a .hkx against the .nif of the same stem"
+    )?;
     for (k, n) in &nif_cmp {
+        writeln!(out, "{n}\t{k}")?;
+    }
+    writeln!(out, "\n# the same, race skeletons only")?;
+    for (k, n) in &nif_cmp_race {
         writeln!(out, "{n}\t{k}")?;
     }
     writeln!(out, "\n# class\tfiles\tobjects")?;
@@ -623,7 +646,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 /// Bone names, parents and reference-pose world transforms of the first
-/// skeleton of a `skeleton.hkx` against the nodes of the `skeleton.nif`.
+/// skeleton of a `.hkx` file against the nodes of the `.nif` of the same
+/// path stem.
 fn compare_nif(
     vfs: &Vfs,
     m: &Manifest,
@@ -642,15 +666,15 @@ fn compare_nif(
         return;
     };
     let Ok(bytes) = vfs.read_path_bytes(nif.as_bytes(), b) else {
-        bump(out, "files: no skeleton.nif beside it".into());
+        bump(out, "files: no .nif of the same stem".into());
         return;
     };
     let Ok(n) = Nif::read(&bytes, nif, fo4_core::Game::Fallout4, &m.limits, b) else {
-        bump(out, "files: skeleton.nif not read".into());
+        bump(out, "files: .nif not read".into());
         return;
     };
     let Ok(rest) = pose::Skeleton::read(&n, nif, &m.limits, b) else {
-        bump(out, "files: skeleton.nif rest pose not read".into());
+        bump(out, "files: .nif rest pose not read".into());
         return;
     };
     bump(out, "files: compared".into());
@@ -758,6 +782,41 @@ fn compare_nif(
             .or_default() += 1;
         }
     }
+}
+
+/// The `.hkx` paths of the winning files beside the skeleton NIFs that
+/// RACE records name.
+fn race_skeletons(
+    m: &Manifest,
+    paths: &[Vec<u8>],
+) -> Result<BTreeSet<String>, Box<dyn std::error::Error>> {
+    let store = fo4_plugin::typed::Store::open(m, &Budget::new(m.limits.max_override_memory))?;
+    let mut out = BTreeSet::new();
+    for w in store
+        .winners()
+        .filter(|w| w.signature == *b"RACE" && !w.deleted)
+    {
+        let key = store.overrides().form_key(w.key, store.order());
+        let b = Budget::new(m.limits.max_memory);
+        let Some(r) = store.raw(&key, &b)? else {
+            continue;
+        };
+        for sub in r.subrecords.iter().filter(|s| s.signature == *b"ANAM") {
+            let d = r.data(sub);
+            let text = String::from_utf8_lossy(d.strip_suffix(&[0]).unwrap_or(d)).into_owned();
+            let Ok(nif) = fo4_core::path_key(&format!("meshes\\{text}")) else {
+                continue;
+            };
+            let Some(stem) = nif.strip_suffix(".nif") else {
+                continue;
+            };
+            let hkx = format!("{stem}.hkx");
+            if paths.iter().any(|p| p.as_slice() == hkx.as_bytes()) {
+                out.insert(hkx);
+            }
+        }
+    }
+    Ok(out)
 }
 
 fn main() {

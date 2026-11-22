@@ -17,6 +17,8 @@ pub struct Loaded {
     /// The cell's placed collision as a walking world, when asked for,
     /// with the terrain of the cell and its neighbours when it loads.
     pub walk: Option<fo4_walk::World>,
+    /// `--actor-clip`: what the window needs to pose the actors again.
+    pub animation: Option<crate::clip::Animation>,
 }
 
 /// The manifest with its data root, the plugins and the mounted archives.
@@ -170,6 +172,7 @@ pub fn cell(
     options: BuildOptions,
     scene_memory: u64,
     actors: bool,
+    clip: Option<&crate::clip::Options>,
 ) -> AnyResult<Loaded> {
     if walk {
         fo4_walk::accept(&walk_rules(), level, fo4_scene::hypotheses::status)?;
@@ -208,6 +211,10 @@ pub fn cell(
     } else {
         None
     };
+    let mut animation = None;
+    if clip.is_some() && !actors {
+        return Err("ActorClipWithoutActors: --actor-clip poses the drawn actors".into());
+    }
     let mut build = if actors {
         // Placed actors, drawn after the placed references (`--no-actors`
         // leaves them out and the draw list is the one before).
@@ -216,9 +223,27 @@ pub fn cell(
             fo4_scene::actor::resolve(&scene, &mut loader, b)
         })?;
         let resolved = started.elapsed().as_secs_f64();
-        let build = fo4_render::draw::build_with_actors(
-            &scene, &actors, &loader, limits, options, &budget,
-        )?;
+        let build = match clip {
+            // Without --actor-clip the draw list is the rest-pose one.
+            None => fo4_render::draw::build_with_actors(
+                &scene, &actors, &loader, limits, options, &budget,
+            )?,
+            Some(o) => {
+                let started = std::time::Instant::now();
+                let (poses, mut a) =
+                    crate::clip::prepare(o, &actors, &loader, &vfs, level, limits, &budget)?;
+                let (build, recorded) = fo4_render::draw::build_with_posed_actors(
+                    &scene, &actors, poses, &loader, limits, options, &budget,
+                )?;
+                a.meshes = recorded;
+                println!(
+                    "actor clip read, posed and skinned in {:.2} s",
+                    started.elapsed().as_secs_f64()
+                );
+                animation = Some(a);
+                build
+            }
+        };
         println!("{}", actor_summary(&actors, &build));
         for line in actor_lines(&actors, &build) {
             println!("  {line}");
@@ -372,6 +397,7 @@ pub fn cell(
         build,
         data_root: manifest.root.clone(),
         walk,
+        animation,
     })
 }
 

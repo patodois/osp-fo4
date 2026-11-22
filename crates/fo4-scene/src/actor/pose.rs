@@ -144,7 +144,7 @@ pub fn node_worlds(
 }
 
 /// The rest pose of a skeleton file: the world transform of each named node.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct Skeleton {
     pub bones: BTreeMap<Vec<u8>, Affine>,
     /// Names held by more than one node; the first in block order is kept.
@@ -345,4 +345,168 @@ pub fn bind_fit(n: &Nif<'_>, skin: &Skin, file: &str, l: &Limits, b: &Budget) ->
         }
     }
     Ok(fit)
+}
+
+/// A skinned shape kept to be posed again: each bone's name and stored
+/// skin-to-bone transform, and each vertex's stored position with its four
+/// weights and bone indices.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SkinnedShape {
+    pub bones: Vec<(Vec<u8>, Affine)>,
+    pub vertices: Vec<SkinnedVertex>,
+}
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SkinnedVertex {
+    pub position: [f64; 3],
+    pub weights: [f32; 4],
+    pub bones: [u8; 4],
+}
+impl SkinnedShape {
+    /// Reads shape `shape` of `n` with its skin, checked as
+    /// [`bone_matrices`] and [`skin_positions`] check them.
+    pub fn read(n: &Nif<'_>, shape: usize, skin: &Skin, file: &str, b: &Budget) -> Result<Self> {
+        let mut out = Self {
+            bones: Vec::new(),
+            vertices: Vec::new(),
+        };
+        b.reserve(&mut out.bones, skin.bones.len(), file, 0)?;
+        for bone in &skin.bones {
+            let at = n.blocks.get(bone.node).map_or(0, |x| x.data.start as u64);
+            let bone_name = name(n, bone.node).ok_or_else(|| {
+                Error::new("ActorSkinBoneName", file, at, "named node", bone.node)
+            })?;
+            let to_bone = Affine {
+                rows: bone.rotation.map(|r| r.map(f64::from)),
+                translation: bone.translation.map(f64::from),
+                scale: f64::from(bone.scale),
+            };
+            if !to_bone
+                .rows
+                .iter()
+                .flatten()
+                .chain(&to_bone.translation)
+                .all(|v| v.is_finite())
+                || !to_bone.scale.is_finite()
+            {
+                return Err(Error::new(
+                    "ActorSkinNonFinite",
+                    file,
+                    at,
+                    "finite",
+                    "bone data",
+                ));
+            }
+            b.charge(bone_name.len() as u64 + 128, file, at)?;
+            out.bones.push((bone_name.to_vec(), to_bone));
+        }
+        let Some(Data::Mesh(mesh)) = n.blocks.get(shape).and_then(|s| s.decoded.as_ref()) else {
+            return Err(Error::new(
+                "ActorSkinShape",
+                file,
+                0,
+                "decoded shape",
+                shape,
+            ));
+        };
+        let at = n.blocks[shape].data.start as u64;
+        let vertices = mesh
+            .vertices
+            .as_ref()
+            .ok_or_else(|| Error::new("ActorSkinVertices", file, at, "vertices", "absent"))?;
+        b.reserve(&mut out.vertices, vertices.len(), file, at)?;
+        for (k, v) in vertices.iter().enumerate() {
+            let p = v
+                .position
+                .ok_or_else(|| Error::new("ActorSkinVertices", file, at, "position", k))?;
+            if p.iter().any(|x| !x.is_finite()) {
+                return Err(Error::new(
+                    "ActorSkinNonFinite",
+                    file,
+                    at,
+                    "finite position",
+                    k,
+                ));
+            }
+            let w = fo4_nif::skin::vertex_weights(n.bytes, v)
+                .ok_or_else(|| Error::new("ActorSkinWeights", file, at, "12 skin bytes", k))?;
+            let mut total = 0.;
+            for (weight, bone) in w.weights.iter().zip(w.bones) {
+                if *weight == 0. {
+                    continue;
+                }
+                if !weight.is_finite() {
+                    return Err(Error::new(
+                        "ActorSkinNonFinite",
+                        file,
+                        at,
+                        "finite weight",
+                        k,
+                    ));
+                }
+                if usize::from(bone) >= out.bones.len() {
+                    return Err(Error::new(
+                        "ActorSkinBoneIndex",
+                        file,
+                        at,
+                        format!("< {}", out.bones.len()),
+                        bone,
+                    ));
+                }
+                total += f64::from(*weight);
+            }
+            if total == 0. {
+                return Err(Error::new(
+                    "ActorSkinZeroWeights",
+                    file,
+                    at,
+                    "a non-zero weight",
+                    k,
+                ));
+            }
+            out.vertices.push(SkinnedVertex {
+                position: p.map(f64::from),
+                weights: w.weights,
+                bones: w.bones,
+            });
+        }
+        Ok(out)
+    }
+    /// The composite transform of each bone in `pose`, as [`bone_matrices`].
+    pub fn matrices(&self, pose: &Skeleton, file: &str, out: &mut Vec<Affine>) -> Result<()> {
+        out.clear();
+        for (bone_name, to_bone) in &self.bones {
+            let world = pose.bones.get(bone_name).ok_or_else(|| {
+                Error::new(
+                    "ActorSkinBoneMissing",
+                    file,
+                    0,
+                    "bone named in the skeleton",
+                    String::from_utf8_lossy(bone_name),
+                )
+            })?;
+            out.push(world.compose(to_bone));
+        }
+        Ok(())
+    }
+    /// Linearly blended positions under `matrices`, with the arithmetic of
+    /// [`skin_positions`].
+    pub fn positions(&self, matrices: &[Affine], out: &mut Vec<[f64; 3]>) {
+        out.clear();
+        for v in &self.vertices {
+            let mut acc = [0.; 3];
+            for (weight, bone) in v.weights.iter().zip(v.bones) {
+                if *weight == 0. {
+                    continue;
+                }
+                let Some(m) = matrices.get(usize::from(bone)) else {
+                    continue;
+                };
+                let x = m.apply(v.position);
+                for a in 0..3 {
+                    acc[a] += f64::from(*weight) * x[a];
+                }
+            }
+            out.push(acc);
+        }
+    }
 }

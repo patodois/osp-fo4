@@ -52,6 +52,15 @@ pub struct Build {
     pub omitted: Vec<Omission>,
     pub texture_choices: Vec<TextureChoice>,
 }
+/// One skinned actor mesh of a posed build ([`build_with_posed_actors`]),
+/// kept so that a caller can pose it again: the draw-list mesh, the skeleton
+/// asset that poses it and the shape's skin.
+#[derive(Debug, Clone)]
+pub struct SkinnedMesh {
+    pub mesh: usize,
+    pub skeleton: usize,
+    pub shape: fo4_scene::actor::pose::SkinnedShape,
+}
 #[derive(Clone, Copy)]
 pub struct BuildOptions {
     pub max_texture_dimension: u32,
@@ -207,6 +216,9 @@ struct Builder<'a, 's> {
     /// the skeleton asset it is posed by.
     meshes: BTreeMap<(usize, usize, u8, bool, Option<usize>), usize>,
     skeletons: BTreeMap<usize, fo4_scene::actor::pose::Skeleton>,
+    /// Skeleton assets posed by the caller, whose meshes are recorded.
+    posed: std::collections::BTreeSet<usize>,
+    recorded: Vec<SkinnedMesh>,
     /// By path and the block limit applied (0 when decoded).
     textures: BTreeMap<(Vec<u8>, u32), usize>,
     texture_bytes: u64,
@@ -1407,6 +1419,26 @@ impl Builder<'_, '_> {
                     )?;
                     let surface = self.surface(n, f, None, &file)?;
                     let mesh = self.mesh(path, i, m, &surface, Some((skeleton, &positions)))?;
+                    if self.posed.contains(&skeleton)
+                        && !self.recorded.iter().any(|r| r.mesh == mesh)
+                    {
+                        let shape = fo4_scene::actor::pose::SkinnedShape::read(
+                            n,
+                            i,
+                            &skin,
+                            &file,
+                            self.budget,
+                        )?;
+                        append(
+                            &mut self.recorded,
+                            SkinnedMesh {
+                                mesh,
+                                skeleton,
+                                shape,
+                            },
+                            self.budget,
+                        )?;
+                    }
                     append(
                         &mut self.output.list.draws,
                         Draw {
@@ -1517,7 +1549,33 @@ pub fn build_with_actors(
     options: BuildOptions,
     b: &Budget,
 ) -> Result<Build> {
-    build_inner(scene, Some(actors), loader, limits, options, false, b)
+    build_inner(scene, Some(actors), None, loader, limits, options, false, b).map(|x| x.0)
+}
+/// [`build_with_actors`], with the actors whose skeleton asset is a key of
+/// `poses` skinned in that pose instead of the skeleton's rest pose; their
+/// skinned meshes are returned with the build so that they can be posed
+/// again. With no pose given, the draw list is that of
+/// [`build_with_actors`].
+#[allow(clippy::too_many_arguments)]
+pub fn build_with_posed_actors(
+    scene: &Scene,
+    actors: &fo4_scene::actor::Actors,
+    poses: BTreeMap<usize, fo4_scene::actor::pose::Skeleton>,
+    loader: &Loader<'_>,
+    limits: &Limits,
+    options: BuildOptions,
+    b: &Budget,
+) -> Result<(Build, Vec<SkinnedMesh>)> {
+    build_inner(
+        scene,
+        Some(actors),
+        Some(poses),
+        loader,
+        limits,
+        options,
+        false,
+        b,
+    )
 }
 /// Explicit diagnostic comparison. `include_marker_subtrees` retains named marker
 /// geometry; it does not change the registered visibility policy or base flags.
@@ -1532,22 +1590,26 @@ pub fn build_with_marker_visibility(
     build_inner(
         scene,
         None,
+        None,
         loader,
         limits,
         options,
         include_marker_subtrees,
         b,
     )
+    .map(|x| x.0)
 }
+#[allow(clippy::too_many_arguments)]
 fn build_inner(
     scene: &Scene,
     actors: Option<&fo4_scene::actor::Actors>,
+    poses: Option<BTreeMap<usize, fo4_scene::actor::pose::Skeleton>>,
     loader: &Loader<'_>,
     limits: &Limits,
     options: BuildOptions,
     include_marker_subtrees: bool,
     b: &Budget,
-) -> Result<Build> {
+) -> Result<(Build, Vec<SkinnedMesh>)> {
     if options.max_texture_dimension == 0
         || options.max_texture_bytes == 0
         || options.blocks.is_some_and(|b| {
@@ -1576,7 +1638,12 @@ fn build_inner(
             texture_choices: Vec::new(),
         },
         meshes: BTreeMap::new(),
-        skeletons: BTreeMap::new(),
+        posed: poses
+            .as_ref()
+            .map(|p| p.keys().copied().collect())
+            .unwrap_or_default(),
+        skeletons: poses.unwrap_or_default(),
+        recorded: Vec::new(),
         textures: BTreeMap::new(),
         texture_bytes: 0,
         block_bytes: 0,
@@ -1742,7 +1809,7 @@ fn build_inner(
         }
     }
     let Some(actors) = actors else {
-        return Ok(builder.output);
+        return Ok((builder.output, builder.recorded));
     };
     let mut index = u32::try_from(builder.output.instances.len())
         .map_err(|e| error("RenderInstanceLimit", "scene", 0, e))?;
@@ -1803,7 +1870,7 @@ fn build_inner(
             .checked_add(1)
             .ok_or_else(|| error("RenderInstanceLimit", "scene", 0, index))?;
     }
-    Ok(builder.output)
+    Ok((builder.output, builder.recorded))
 }
 #[cfg(test)]
 mod tests {

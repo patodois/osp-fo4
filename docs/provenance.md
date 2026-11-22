@@ -159,3 +159,10 @@ decompilation or third-party reader of these records, of NIF skinning or of
 Havok animation was opened or searched for at this step; record and field
 names are the stored four-character signatures, and the block and class
 names are the strings stored in the files.
+
+Posing an actor by a clip (`fo4_scene::actor::clip`, [spec/actor.md](../spec/actor.md),
+Clip pose) adds no format fact beyond [spec/havok-animation.md](../spec/havok-animation.md):
+which Havok skeleton belongs to an actor and how a clip's bones replace the
+skeleton NIF's nodes are registered pending rules whose candidates come from
+the offline comparisons recorded there. No animation runtime, behaviour-graph
+reader, SDK or third-party implementation was opened or searched for.

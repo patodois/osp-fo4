@@ -6,6 +6,7 @@
 //! covered by a pending rule of `spec/hypotheses.tsv`; an actor whose look
 //! the data does not settle is left out with its reasons. Nothing here
 //! evaluates levels, chances or conditions.
+pub mod clip;
 pub mod pose;
 #[cfg(test)]
 mod tests;

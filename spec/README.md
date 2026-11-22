@@ -6,7 +6,7 @@ Measurement datasets and photographs of the game are not distributed.
 
 | File | Scope |
 | --- | --- |
-| [actor.md](actor.md) | Placed actors: ACHR, NPC_, RACE, OTFT, ARMO, ARMA and leveled-list layouts measured on the winning records, the chain from a placed actor to a skeleton and addon models, the skeleton's rest pose and skinning, their checks and the counts of drawn and left-out actors. |
+| [actor.md](actor.md) | Placed actors: ACHR, NPC_, RACE, OTFT, ARMO, ARMA and leveled-list layouts measured on the winning records, the chain from a placed actor to a skeleton and addon models, the skeleton's rest pose and skinning, their checks and the counts of drawn and left-out actors; the pose given by a named animation clip, its rules, checks and cost. |
 | [ba2.md](ba2.md) | BA2 headers, entry/chunk tables, version gates, codecs and DDS reconstruction. |
 | [bsa.md](bsa.md) | Bounded BSA headers, folders, filenames, compression and version limits. |
 | [citation-roots.md](citation-roots.md) | Which path roots are established for each citation type and which remain hypotheses. |
@@ -123,3 +123,5 @@ the registry.
 | `armo_race_addons_drawn_v1` | pending | An ARMO with two addons for the actor's race, each model replaced in turn by an overlay plugin: both must show. |
 | `actor_worn_slots_hide_skin_v1` | pending | A body armour worn, then its BOD2 bits cleared by an overlay plugin: the skin body must appear only in the second. |
 | `actor_skin_linear_blend_v1` | pending | A posed actor photographed against a render of the same pose from bone transforms read in game; another vertex blend shows at bent joints. |
+| `actor_clip_skeleton_beside_nif_v1` | pending | A race's skeleton .hkx replaced by an overlay copy with permuted bone order: a known idle must break as the permutation predicts. |
+| `actor_clip_pose_by_bone_name_v1` | pending | An actor frozen in a known idle captured beside a render of the same clip time: silhouettes and extremities at two times. |

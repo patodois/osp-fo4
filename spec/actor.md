@@ -1,8 +1,9 @@
-# Placed actors standing in their rest pose
+# Placed actors standing in their rest pose, or posed by a clip
 
 First step towards animated actors: a placed actor (ACHR) is followed to a
 skeleton and to the models it wears, and drawn standing in the skeleton's
-rest pose, skinned once on the CPU. No animation is read.
+rest pose, skinned once on the CPU. A Havok animation clip named by the
+caller can pose it instead (Clip pose, below).
 
 Every layout below was established by measurement on the winning records of
 one installation (base game and six expansions, build declared 1.10.163),
@@ -192,6 +193,84 @@ of the commit before (an interior, the test cell alone, `--terrain --around
 1`, `--walk --terrain --around 2` and a `--path` walk), against a viewer
 built from that commit in the same directory: one built elsewhere breaks
 coplanar depth ties differently, so it differs in a few pixels on its own.
+
+## Clip pose
+
+`fo4_scene::actor::clip` poses an actor's skeleton by a Havok animation
+clip decoded as in [havok-animation.md](havok-animation.md); the viewer's
+`--actor-clip ARCHIVE_PATH` uses it. Which clip an actor plays in the game
+is behaviour-graph logic that is not read, so the clip is always the one
+named by the caller, never chosen.
+
+- **Havok skeleton.** The first `hkaSkeleton` of the `.hkx` file at the
+  skeleton NIF's path with `.hkx` for `.nif`
+  (`actor_clip_skeleton_beside_nif_v1`, pending). The clip's binding must
+  fit it (`Binding::fits`: its name, distinct tracks below the bone count);
+  a skeleton it does not fit is left in its rest pose with a report line.
+- **Pose.** Each bone's local transform is its track's sample at the clip
+  time, or its reference pose when no track drives it; bones compose from
+  the root with the quaternion reading measured against the skeleton NIFs.
+  In model space, every skeleton NIF node named like a Havok bone takes the
+  bone's transform; every other node its parent's pose after its own stored
+  local transform (`actor_clip_pose_by_bone_name_v1`, pending). The result
+  replaces the rest pose in the skinning above, unchanged.
+- **Refused**, each a named error: a file without exactly one binding
+  (`ActorClipBinding`), a lossless clip (`ActorClipCompression`), a binding
+  whose byte 80 is not 0 (`ActorClipBindingByte80`: 98 of the 102 clips
+  whose file name says "additive" store 2 there, and 951 other clips 1 or
+  2; what it selects is not established), and a sampled scale whose three
+  words differ by more than 0.001 (`ActorClipScale`; the pose uses one
+  scale per bone).
+- **Draw.** `fo4_render::draw::build_with_posed_actors` skins the actors of
+  the posed skeleton assets in their pose and returns their skinned meshes
+  (`pose::SkinnedShape`) so that a caller can pose them again; with no pose
+  given its draw list is that of `build_with_actors`.
+
+**Checks** with the actor drawn at the test cell (the dog, radius 1; dog
+skeleton of 65 Havok bones, all 65 named in its NIF; 3 skinned shapes of
+5,034 vertices), over every frame of two clips, with the `actor_clip_check`
+example (report kept outside the repository):
+
+| Check | Idle, 4.4 s, 133 frames | Run to stand, 0.633 s, 20 frames |
+| --- | ---: | ---: |
+| Largest change of a bone's distance to its Havok parent from frame 0, bones whose track has no translation curve | 2.1e-14 | 1.4e-14 |
+| Same, bones whose track has a translation curve | 0.150 | 17.79 |
+| Lowest skinned vertex minus the placement height, over the clip | -0.84 to -0.75 | -5.03 to 1.21 |
+| Lowest Havok bone but the root, minus the placement height | 3.03 to 3.11 | -0.20 to 7.65 |
+| Pose and skin one frame on the CPU (release build) | mean 0.040 ms, largest 0.065 ms | mean 0.040 ms, largest 0.067 ms |
+
+In the rest pose the lowest vertex is 2.21 below the placement. The
+collision found straight below the placement is 33.1 below it, as in the
+rest-pose step: the idle's lowest vertex stays 32.25 to 32.34 above that
+collision, so the floor check is against the placement height, which the
+frames show at the drawn ground. At frame 0 of the idle, 3 of the 67 named
+skeleton NIF nodes are within 0.01 of their rest-pose world position: the
+clip moves the body's centre bone by 5.93 from the reference pose and
+bends the legs and tail (largest 27.9 at the tail tip), while in local
+terms 57 of its 65 tracks keep the reference translation within 0.001
+([havok-animation.md](havok-animation.md)).
+
+**Frames.** Headless frames of the dog at 0 and 2.2 s of the idle differ
+in 33,863 of 921,600 pixels; the rest pose and the idle at 0 s in 55,917.
+Frames are kept outside the repository.
+
+**Window.** The clip loops from `--actor-clip-time`; each frame the main
+thread samples the clip, poses the skeleton and skins and replaces the
+animated meshes (the loading thread of the moving grid is not involved;
+`--actor-clip` is refused with the moving grid, so `--no-stream` is
+needed with `--walk --terrain --around N`). At the test cell with `--walk
+--terrain --around 1 --no-stream` and a scripted walk (299 frames each, the
+viewer's optimised dev build on the 16 GB Mac): posing, skinning and
+replacing 5,034 vertices took 0.053 to 0.059 ms per frame on average over
+each 60 frames, 0.120 ms at most; the median frame update was 0.490 ms
+with the clip and 0.403 ms without, the median frame interval 16.67 ms in
+both.
+
+**Without `--actor-clip`** the headless frames and tags of the viewer are
+byte-identical to those of 487c57c built in the same path, in eight cases:
+an interior without actors, an interior with 10 drawn humanoids, the test
+cell alone, with `--terrain --around 1` from two poses (one showing the
+dog), `--walk --terrain --around 2`, a `--path` walk, and `--no-actors`.
 
 ## Left as found
 
