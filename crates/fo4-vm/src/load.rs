@@ -92,6 +92,8 @@ pub struct Loads {
     /// The scripted references of each worldspace's cells without a grid
     /// square, with their stored positions, read once.
     loose: BTreeMap<FormKey, Vec<(FormKey, [f64; 3])>>,
+    /// Stored positions read so far, by reference.
+    stored: BTreeMap<FormKey, Result<(FormKey, [f64; 3]), String>>,
 }
 impl Loads {
     pub fn count(&mut self, k: impl Into<String>) {
@@ -406,24 +408,41 @@ fn position(store: &Store, w: &mut World, k: &FormKey) -> Result<(FormKey, [f64;
         .objects
         .iter()
         .position(|x| x.key.as_deref() == Some(key.as_str()));
-    match object {
-        Some(o) => match track::spot(store, max, w, Some(&Val::Object(o))) {
-            Spot::At { space, pos, .. } => Ok((space, pos)),
-            Spot::Open(why) => Err(why.to_string()),
-        },
-        None => track::stored_position(store, max, k)
-            .map_err(|e| e.to_string())
-            .and_then(|(space, pos)| {
-                // An exterior cell's space is its worldspace.
-                match store.kind(&space) {
-                    Some(CellKind::Exterior) => store
-                        .world(&space)
-                        .map(|wld| (wld, pos))
-                        .ok_or_else(|| "an exterior cell without a worldspace".into()),
-                    _ => Ok((space, pos)),
-                }
-            }),
+    if let Some(o) = object {
+        // An object the run may have moved, or one the world model would
+        // leave open, goes through the world model.
+        let actor = store.signature(k) == Some(*b"ACHR");
+        let moved = w.place.moved_at.contains_key(&o)
+            || (actor && w.place.actor_moves.iter().any(|m| &m.actor == k));
+        let off = if actor {
+            !w.place.sw.actors
+        } else {
+            !w.place.sw.placed
+        };
+        if moved || off {
+            return match track::spot(store, max, w, Some(&Val::Object(o))) {
+                Spot::At { space, pos, .. } => Ok((space, pos)),
+                Spot::Open(why) => Err(why.to_string()),
+            };
+        }
     }
+    if let Some(x) = w.loads.stored.get(k) {
+        return x.clone();
+    }
+    let x = track::stored_position(store, max, k)
+        .map_err(|e| e.to_string())
+        .and_then(|(space, pos)| {
+            // An exterior cell's space is its worldspace.
+            match store.kind(&space) {
+                Some(CellKind::Exterior) => store
+                    .world(&space)
+                    .map(|wld| (wld, pos))
+                    .ok_or_else(|| "an exterior cell without a worldspace".into()),
+                _ => Ok((space, pos)),
+            }
+        });
+    w.loads.stored.insert(k.clone(), x.clone());
+    x
 }
 
 /// Raises the loads the model settles at the run's present second, in
