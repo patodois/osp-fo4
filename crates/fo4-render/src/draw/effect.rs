@@ -4,8 +4,11 @@
 //! constant) times the base colour and its scale, the vertex colours where
 //! the flags settle them or their rule decides, the base colour's alpha as
 //! opacity, the falloff by view angle under its rules, and the alpha
-//! property's (or the material's) blend state. Every term the data does not
-//! settle refuses the surface with a named error.
+//! property's (or the material's) blend state; the environment map's term
+//! left out of this unlit frame, and the material's value of a field a
+//! controller drives where the material and the NIF disagree, each under its
+//! rule. Every term the data does not settle refuses the surface with a
+//! named error.
 use super::{error, floats, Builder, Surface};
 use crate::Alpha;
 use fo4_core::Result;
@@ -16,18 +19,20 @@ use fo4_scene::{hypotheses as h, paths::Citation, rest, AssetKind, DecodedAsset}
 /// Shader Flags 1 bits (nifxml Fallout4ShaderPropertyFlags1):
 /// GreyscaleToPalette_Color (4), GreyscaleToPalette_Alpha (5), Use_Falloff
 /// (6), RGB_Falloff (8), and the features this frame does not draw, by the
-/// name a refusal gives them: Temp_Refraction (2), Environment_Mapping
-/// (7), Refraction (15), Fire_Refraction (16).
+/// name a refusal gives them: Temp_Refraction (2), Refraction (15),
+/// Fire_Refraction (16).
 const PALETTE_COLOUR: u32 = 1 << 4;
 const PALETTE_ALPHA: u32 = 1 << 5;
 const FALLOFF: u32 = 1 << 6;
 const RGB_FALLOFF: u32 = 1 << 8;
-const FEATURES: [(u32, &str); 4] = [
+const FEATURES: [(u32, &str); 3] = [
     (1 << 2, "temp-refraction"),
-    (1 << 7, "environment-map"),
     (1 << 15, "refraction"),
     (1 << 16, "fire-refraction"),
 ];
+/// Environment_Mapping (Shader Flags 1 bit 7): drawn without its term
+/// under `effect_environment_left_out_v1`.
+const ENVIRONMENT: u32 = 1 << 7;
 /// Vertex_Alpha (Shader Flags 1 bit 3), Vertex_Colors (Shader Flags 2 bit 5).
 const VERTEX_ALPHA: u32 = 1 << 3;
 const VERTEX_COLORS: u32 = 1 << 5;
@@ -46,8 +51,13 @@ struct Terms {
     rgb_falloff: bool,
     /// Falloff Start Angle, Stop Angle, Start Opacity, Stop Opacity.
     falloff_fields: [f32; 4],
-    /// Every feature set, by name.
+    /// Every feature set that the frame does not draw, by name.
     features: Vec<&'static str>,
+    /// The environment map flag (the shader's, or the material's).
+    environment: bool,
+    /// A field an effect-shader controller drives on which the material
+    /// and the NIF disagree (`effect_material_over_controller_v1`).
+    material_over_controller: bool,
     left_out: bool,
     color: [f32; 3],
     scale: f32,
@@ -95,6 +105,31 @@ fn material_field(m: &fo4_material::Material<'_>, color: bool, variable: u32) ->
     })
 }
 
+/// Whether a driven field's material value differs from the NIF's, for
+/// each (colour, variable, NIF value, material value) of the fields the
+/// shader's effect controllers drive: `Ok(true)` when the two values of
+/// some field differ (the material's is drawn under
+/// `effect_material_over_controller_v1`), `Ok(false)` when every pair is
+/// equal within the rest rule's tolerance, and the field when either value
+/// is missing (no pairing to compare).
+pub(super) fn driven_fields_differ(
+    pairs: impl IntoIterator<Item = (bool, u32, Option<Vec<f32>>, Option<Vec<f32>>)>,
+) -> std::result::Result<bool, (bool, u32)> {
+    let mut differ = false;
+    for (color, variable, nif, own) in pairs {
+        let (Some(a), Some(b)) = (nif, own) else {
+            return Err((color, variable));
+        };
+        if a.len() != b.len() {
+            return Err((color, variable));
+        }
+        differ |= a
+            .iter()
+            .zip(&b)
+            .any(|(x, y)| (x - y).abs() > rest::EFFECT_TOLERANCE);
+    }
+    Ok(differ)
+}
 /// What the vertex flags settle of an effect surface's vertex channels.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum VertexAlpha {
@@ -167,28 +202,27 @@ impl Builder<'_, '_> {
                         return Err(error("UnsupportedEffectMaterialKind", file, at, m.magic()));
                     };
                     // The rest rule compared the NIF's stored fields with
-                    // the keys; the frame draws the material's.
-                    for (color, variable) in rest::effect_controlled(n, shader) {
-                        let nif = rest::effect_field(f, color, variable);
-                        let own = material_field(&m, color, variable);
-                        let same = match (&nif, &own) {
-                            (Some(a), Some(b)) => {
-                                a.len() == b.len()
-                                    && a.iter()
-                                        .zip(b)
-                                        .all(|(x, y)| (x - y).abs() <= rest::EFFECT_TOLERANCE)
-                            }
-                            _ => false,
-                        };
-                        if !same {
-                            return Err(error(
+                    // the keys; the frame draws the material's, under its
+                    // rule where the two disagree.
+                    let material_over_controller =
+                        driven_fields_differ(rest::effect_controlled(n, shader).into_iter().map(
+                            |(color, variable)| {
+                                (
+                                    color,
+                                    variable,
+                                    rest::effect_field(f, color, variable),
+                                    material_field(&m, color, variable),
+                                )
+                            },
+                        ))
+                        .map_err(|(color, variable)| {
+                            error(
                                 "UnsettledEffectMaterialField",
                                 file,
                                 at,
                                 format!("color={color} variable={variable}"),
-                            ));
-                        }
-                    }
+                            )
+                        })?;
                     let c = &m.common;
                     let base = e.base_texture.bytes();
                     let grey = e.grayscale_texture.bytes();
@@ -208,13 +242,11 @@ impl Builder<'_, '_> {
                             e.falloff_start_opacity,
                             e.falloff_stop_opacity,
                         ],
+                        environment: c.environment_mapping.is_some_and(|v| v.0 != 0)
+                            || e.environment_mapping.is_some_and(|v| v.0 != 0),
+                        material_over_controller,
                         features: [
                             (c.refraction.0 != 0, "refraction"),
-                            (
-                                c.environment_mapping.is_some_and(|v| v.0 != 0)
-                                    || e.environment_mapping.is_some_and(|v| v.0 != 0),
-                                "environment-map",
-                            ),
                             (e.glass_enabled.is_some_and(|v| v.0 != 0), "glass"),
                             (e.glowmap.is_some_and(|v| v.0 != 0), "glow-map"),
                             (
@@ -308,6 +340,8 @@ impl Builder<'_, '_> {
                         .filter(|(bit, _)| flags1 & bit != 0)
                         .map(|(_, name)| *name)
                         .collect(),
+                    environment: flags1 & ENVIRONMENT != 0,
+                    material_over_controller: false,
                     left_out: flags1 & SOFT != 0
                         || flags2 & LIGHTING != 0
                         || byte(f, "Lighting Influence") != Some(255),
@@ -427,6 +461,16 @@ impl Builder<'_, '_> {
                     .any(|v| *v > 1.)
                     .then_some(h::EFFECT_COLOUR_CLAMPED),
             )
+            .chain(
+                [h::EFFECT_ENVIRONMENT_ADDS, h::EFFECT_ENVIRONMENT_LEFT_OUT]
+                    .into_iter()
+                    .filter(|_| terms.environment),
+            )
+            .chain(
+                terms
+                    .material_over_controller
+                    .then_some(h::EFFECT_MATERIAL_OVER_CONTROLLER),
+            )
         {
             if !self.draw_rule(rule)? {
                 return Err(error("UnverifiedEffectSurface", file, at, rule));
@@ -466,7 +510,26 @@ impl Builder<'_, '_> {
 
 #[cfg(test)]
 mod tests {
-    use super::{vertex_channels, VertexAlpha};
+    use super::{driven_fields_differ, vertex_channels, VertexAlpha};
+    #[test]
+    fn a_driven_field_the_material_and_the_nif_disagree_on_needs_its_rule() {
+        let pair = |nif: f32, own: f32| (false, 5, Some(vec![nif]), Some(vec![own]));
+        assert_eq!(driven_fields_differ([]), Ok(false));
+        assert_eq!(driven_fields_differ([pair(1., 1.)]), Ok(false));
+        assert_eq!(
+            driven_fields_differ([pair(1., 1.), pair(1., 0.25)]),
+            Ok(true)
+        );
+        // A field without a pairing is still refused by name.
+        assert_eq!(
+            driven_fields_differ([pair(1., 0.25), (false, 10, Some(vec![1.]), None)]),
+            Err((false, 10))
+        );
+        assert_eq!(
+            driven_fields_differ([(true, 0, Some(vec![1.; 3]), Some(vec![1.]))]),
+            Err((true, 0))
+        );
+    }
     #[test]
     fn vertex_channels_are_settled_where_both_readings_agree() {
         // (Shader Flags 1, Shader Flags 2) -> (channels, vertex alpha).

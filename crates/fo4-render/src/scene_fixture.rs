@@ -1253,13 +1253,37 @@ fn settled_effect_surfaces_take_the_base_colour_and_name_every_unsettled_term() 
     let output = effect_surface_build(0, 0.5);
     let rules = &output.instances[0].hypotheses;
     assert!(!rules.contains(&fo4_scene::hypotheses::EFFECT_COLOUR_CLAMPED));
+    // An environment map: drawn without its term under its two rules,
+    // otherwise as the same surface without the flag.
+    let plain = effect_surface_build(0, 0.5);
+    let output = effect_surface_build(1 << 7, 0.5);
+    assert_eq!(output.list.draws.len(), 1, "{:?}", output.omitted);
+    let rules = &output.instances[0].hypotheses;
+    for rule in [
+        fo4_scene::hypotheses::EFFECT_ENVIRONMENT_ADDS,
+        fo4_scene::hypotheses::EFFECT_ENVIRONMENT_LEFT_OUT,
+    ] {
+        assert!(rules.contains(&rule), "{rule} {rules:?}");
+        assert!(!plain.instances[0].hypotheses.contains(&rule));
+    }
+    let (a, b) = (&output.list.draws[0], &plain.list.draws[0]);
+    assert_eq!(a.alpha.opacity, b.alpha.opacity);
+    assert_eq!(
+        output.list.meshes[a.mesh].vertex_colors,
+        plain.list.meshes[b.mesh].vertex_colors
+    );
+    assert_eq!(
+        output.list.textures[a.texture].rgba,
+        plain.list.textures[b.texture].rgba
+    );
     // Each unsettled term is named, together.
     for (flags, scale, found) in [
         (0, -1., "colour-negative"),
         (1 << 6, 0.5, "falloff-normals"),
         (1 << 8, 0.5, "rgb-falloff"),
         (1 << 4, 0.5, "palette-texture"),
-        (1 << 7 | 1 << 5, 2., "palette-texture+environment-map"),
+        (1 << 7 | 1 << 5, 2., "palette-texture"),
+        (1 << 7 | 1 << 16, 2., "fire-refraction"),
         (1 << 15 | 1 << 16, 0.5, "refraction+fire-refraction"),
     ] {
         let output = effect_surface_build(flags, scale);

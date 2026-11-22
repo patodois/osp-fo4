@@ -22,6 +22,13 @@
 //! times the reference scale squared) are counted through the base records
 //! that name each model; with `--omitted`, the omitted placements and area
 //! of a coverage census's `bases.tsv` are added up by class too.
+//!
+//! Further sections: falloff, palette and colour above 1, the environment
+//! map (its cube map and mask decoded, the scale, the other terms of the
+//! same shapes), and the material swaps (MSWP) that replace the effect
+//! material of a shape with controllers, with each driven field of the
+//! replacement against the NIF's stored value; the swaps and materials are
+//! listed in `OUT.txt.swaps.tsv`, never committed.
 use fo4_core::{Budget, Game, Manifest};
 use fo4_nif::{Data, Field, Nif, Value};
 use fo4_plugin::typed::Store;
@@ -236,6 +243,9 @@ fn alpha_against_boundary(m: &fo4_nif::Mesh) -> String {
         }
     }
 }
+/// A field an effect controller drives: (colour, controlled variable, the
+/// NIF's stored value, the first key, every key equal).
+type Driven = (bool, u32, Vec<f32>, Vec<f32>, bool);
 /// Shapes, placements of their models and omitted placements by key.
 type Weighted = BTreeMap<String, [u64; 3]>;
 fn weigh(m: &mut Weighted, k: impl Into<String>, uses: &Uses) {
@@ -532,6 +542,184 @@ fn tex_stats(vfs: &Vfs, m: &Manifest, path: &[u8]) -> Option<TexStats> {
     }
     Some(st)
 }
+/// What an environment map slot names: missing, unreadable (the reader's
+/// error code), or the texture's kind, format, size and levels, with the
+/// mean RGB over every face of a small level.
+fn env_texture_facts(vfs: &Vfs, m: &Manifest, path: &[u8]) -> String {
+    let b = Budget::new(m.limits.max_memory);
+    let bytes = match vfs.read_path_bytes(path, &b) {
+        Ok(x) => x,
+        Err(e) => return format!("not read ({})", e.code),
+    };
+    let t = match fo4_texture::Texture::read(&bytes, "t", &m.limits, &b) {
+        Ok(t) => t,
+        Err(e) => return format!("unreadable ({})", e.code),
+    };
+    let kind = if t.cubemap {
+        format!(
+            "cube of {} faces",
+            t.surfaces.iter().map(|s| s.face).max().map_or(0, |f| f + 1)
+        )
+    } else {
+        "not a cube".to_string()
+    };
+    // The first level with a side of at most 64, on every face.
+    let level = t
+        .surfaces
+        .iter()
+        .filter(|s| s.array == 0 && s.width <= 64)
+        .map(|s| s.mip)
+        .min();
+    let mut sum = [0f64; 3];
+    let mut n = 0f64;
+    for (i, s) in t.surfaces.iter().enumerate() {
+        if s.array != 0 || Some(s.mip) != level {
+            continue;
+        }
+        let Ok(rgba) = t.decode(i, &m.limits, &b) else {
+            return format!(
+                "{kind}, {} {}x{}, level not decoded",
+                t.format.name(),
+                t.width,
+                t.height
+            );
+        };
+        for p in rgba.as_chunks::<4>().0 {
+            for k in 0..3 {
+                sum[k] += f64::from(p[k]);
+            }
+            n += 1.;
+        }
+    }
+    let mean = sum.map(|x| (x / n.max(1.)) as f32);
+    format!(
+        "{kind}, {} {}x{}, {} levels, mean rgb {}",
+        t.format.name(),
+        t.width,
+        t.height,
+        t.mipmaps.max(1),
+        rgb(&mean)
+    )
+}
+/// Per channel (R, G, B, A) range and mean of an environment mask's level
+/// the reference would draw (the first with both sides at most 256).
+fn mask_facts(vfs: &Vfs, m: &Manifest, path: &[u8]) -> String {
+    let b = Budget::new(m.limits.max_memory);
+    let bytes = match vfs.read_path_bytes(path, &b) {
+        Ok(x) => x,
+        Err(e) => return format!("not read ({})", e.code),
+    };
+    let t = match fo4_texture::Texture::read(&bytes, "t", &m.limits, &b) {
+        Ok(t) => t,
+        Err(e) => return format!("unreadable ({})", e.code),
+    };
+    let Some((i, _)) = t
+        .surfaces
+        .iter()
+        .enumerate()
+        .filter(|(_, s)| s.array == 0 && s.face == 0 && s.depth == 1)
+        .find(|(_, s)| s.width <= 256 && s.height <= 256)
+    else {
+        return format!("{}, no small level", t.format.name());
+    };
+    let Ok(rgba) = t.decode(i, &m.limits, &b) else {
+        return format!("{}, level not decoded", t.format.name());
+    };
+    let px = rgba.as_chunks::<4>().0;
+    let n = px.len().max(1) as f32;
+    let channel = |k: usize| {
+        let lo = px.iter().map(|p| p[k]).fold(f32::MAX, f32::min);
+        let hi = px.iter().map(|p| p[k]).fold(f32::MIN, f32::max);
+        let mean = px.iter().map(|p| p[k]).sum::<f32>() / n;
+        format!("{} mean {:.1}", range([lo, hi]), (mean * 10.).round() / 10.)
+    };
+    format!(
+        "{}{}, R {}, G {}, B {}, A {}",
+        t.format.name(),
+        if t.cubemap { " cube" } else { "" },
+        channel(0),
+        channel(1),
+        channel(2),
+        channel(3)
+    )
+}
+/// The fields in which two effect materials differ, by name.
+fn bgem_diff(a: &fo4_material::Material<'_>, b: &fo4_material::Material<'_>) -> Vec<&'static str> {
+    let (fo4_material::Kind::Bgem(x), fo4_material::Kind::Bgem(y)) = (&a.kind, &b.kind) else {
+        return vec!["kind"];
+    };
+    let (c, d) = (&a.common, &b.common);
+    [
+        (
+            x.base_texture.bytes() != y.base_texture.bytes(),
+            "base texture",
+        ),
+        (
+            x.grayscale_texture.bytes() != y.grayscale_texture.bytes(),
+            "greyscale texture",
+        ),
+        (
+            x.envmap_texture.bytes() != y.envmap_texture.bytes(),
+            "environment texture",
+        ),
+        (x.base_color != y.base_color, "base colour"),
+        (
+            x.base_color_scale != y.base_color_scale,
+            "base colour scale",
+        ),
+        (c.alpha != d.alpha, "alpha"),
+        (
+            [c.u_offset, c.v_offset] != [d.u_offset, d.v_offset],
+            "uv offset",
+        ),
+        ([c.u_scale, c.v_scale] != [d.u_scale, d.v_scale], "uv scale"),
+        (
+            [
+                x.falloff_start_angle,
+                x.falloff_stop_angle,
+                x.falloff_start_opacity,
+                x.falloff_stop_opacity,
+            ] != [
+                y.falloff_start_angle,
+                y.falloff_stop_angle,
+                y.falloff_start_opacity,
+                y.falloff_stop_opacity,
+            ],
+            "falloff fields",
+        ),
+        (
+            (
+                c.alpha_blend.enabled,
+                c.alpha_blend.source,
+                c.alpha_blend.destination,
+                c.alpha_test.0,
+            ) != (
+                d.alpha_blend.enabled,
+                d.alpha_blend.source,
+                d.alpha_blend.destination,
+                d.alpha_test.0,
+            ),
+            "blend",
+        ),
+        (
+            (
+                x.falloff_enabled.0,
+                x.soft_enabled.0,
+                x.grayscale_to_palette_alpha.0,
+                c.grayscale_to_palette_color.0,
+            ) != (
+                y.falloff_enabled.0,
+                y.soft_enabled.0,
+                y.grayscale_to_palette_alpha.0,
+                d.grayscale_to_palette_color.0,
+            ),
+            "flags",
+        ),
+    ]
+    .into_iter()
+    .filter_map(|(differs, k)| differs.then_some(k))
+    .collect()
+}
 /// A difference between channel values, in 8-bit steps.
 fn steps(x: f32) -> &'static str {
     let s = x * 255.;
@@ -698,6 +886,10 @@ fn run() -> Result<(), E> {
     let mut detail_rows = String::new();
     let mut falloff_weights = Weighted::new();
     let mut palette_weights = Weighted::new();
+    let mut env_weights = Weighted::new();
+    let mut env_textures: HashMap<Vec<u8>, String> = HashMap::new();
+    // Effect materials whose shapes have controllers, by resolved path.
+    let mut driven_materials: HashMap<Vec<u8>, Vec<Driven>> = HashMap::new();
     let mut stats: HashMap<Vec<u8>, Option<TexStats>> = HashMap::new();
     let (mut files, mut failed) = (0u64, 0u64);
     for path in &nifs {
@@ -1134,6 +1326,7 @@ fn run() -> Result<(), E> {
             let mut tex_path: Option<Vec<u8>> = None;
             let mut mat_key = "no material named".to_string();
             let mut mat_read = None;
+            let mut mat_path: Option<Vec<u8>> = None;
             let mbytes;
             if lower.ends_with(b".bgem") || lower.ends_with(b".bgsm") {
                 let resolved =
@@ -1147,6 +1340,7 @@ fn run() -> Result<(), E> {
                         )
                         .map(|r| r.key)
                     });
+                mat_path = resolved.as_ref().ok().cloned();
                 match resolved.ok().and_then(|p| vfs.read_path_bytes(&p, &b).ok()) {
                     None => mat_key = "material missing".into(),
                     Some(bytesm) => {
@@ -1599,10 +1793,13 @@ fn run() -> Result<(), E> {
                 !features.is_empty()
             );
             let pw = &mut palette_weights;
+            // The environment map is drawn without its term under its rules
+            // (`effect_environment_left_out_v1`); every other feature
+            // refuses the surface.
+            if features.iter().any(|k| *k != "environment map") {
+                gates.insert("feature (refraction, glass, glow map, blood, emittance)");
+            }
             if !features.is_empty() {
-                gates.insert(
-                    "feature (environment map, refraction, glass, glow map, blood, emittance)",
-                );
                 weigh(
                     pw,
                     format!("feature: {} (from {source})", features.join(" + ")),
@@ -1626,6 +1823,129 @@ fn run() -> Result<(), E> {
                         );
                     }
                 }
+            }
+            // Environment map, as the draw build reads it (the material's
+            // fields where a BGEM is named).
+            if features.contains(&"environment map") {
+                let ew = &mut env_weights;
+                let nif_flag = f1 >> 7 & 1;
+                let nif_scale = one("Environment Map Scale");
+                let (env_slot, mask_slot, scale, normal_set) = match bgem {
+                    Some((e, cm)) => {
+                        weigh(
+                            ew,
+                            format!(
+                                "flags: NIF Environment_Mapping {nif_flag}, BGEM flag (version 10 on) {}, common flag (before 10) {}",
+                                e.environment_mapping.map_or("-".into(), |x| x.0.to_string()),
+                                cm.environment_mapping.map_or("-".into(), |x| x.0.to_string())
+                            ),
+                            &uses,
+                        );
+                        (
+                            Some(e.envmap_texture.bytes().to_vec()).filter(|p| !p.is_empty()),
+                            Some(e.envmap_mask_texture.bytes().to_vec()).filter(|p| !p.is_empty()),
+                            e.environment_mapping_mask_scale
+                                .or(cm.environment_mapping_mask_scale)
+                                .unwrap_or(f32::NAN),
+                            !e.normal_texture.bytes().is_empty(),
+                        )
+                    }
+                    None => (
+                        bytes(sf, "Environment Map Texture")
+                            .filter(|p| !p.is_empty())
+                            .map(<[u8]>::to_vec),
+                        bytes(sf, "Environment Mask Texture")
+                            .filter(|p| !p.is_empty())
+                            .map(<[u8]>::to_vec),
+                        nif_scale,
+                        bytes(sf, "Normal Texture").is_some_and(|p| !p.is_empty()),
+                    ),
+                };
+                let citation = if bgem.is_some() {
+                    paths::Citation::MaterialTexture
+                } else {
+                    paths::Citation::NifTexture
+                };
+                let mut facts = |slot: &Option<Vec<u8>>, mask: bool| match slot {
+                    None => "slot empty".to_string(),
+                    Some(p) => match paths::resolve(citation, p, &b) {
+                        Err(e) => format!("path not resolved ({})", e.code),
+                        Ok(p) => env_textures
+                            .entry(p.clone())
+                            .or_insert_with(|| {
+                                if mask {
+                                    mask_facts(&vfs, &m, &p)
+                                } else {
+                                    env_texture_facts(&vfs, &m, &p)
+                                }
+                            })
+                            .clone(),
+                    },
+                };
+                let (env_key, mask_key) = (facts(&env_slot, false), facts(&mask_slot, true));
+                weigh(ew, format!("source: {source}"), &uses);
+                weigh(ew, format!("environment texture: {env_key}"), &uses);
+                weigh(ew, format!("mask texture: {mask_key}"), &uses);
+                weigh(
+                    ew,
+                    format!(
+                        "scale (the drawn field): {}{}",
+                        bucket(scale),
+                        if bgem.is_some() {
+                            format!(", NIF field {}", bucket(nif_scale))
+                        } else {
+                            String::new()
+                        }
+                    ),
+                    &uses,
+                );
+                weigh(
+                    ew,
+                    format!(
+                        "slots: environment {}, mask {}, normal {normal_set}; scale 0 {}",
+                        env_slot.is_some(),
+                        mask_slot.is_some(),
+                        scale == 0.
+                    ),
+                    &uses,
+                );
+                weigh(ew, format!("blend: {blend_key}"), &uses);
+                weigh(
+                    ew,
+                    format!(
+                        "base colour {}, scale {}, alpha {}",
+                        rgb(&colour),
+                        bucket(scale_v),
+                        bucket(alpha_v)
+                    ),
+                    &uses,
+                );
+                weigh(ew, format!("drawn texture: {tkey}"), &uses);
+                weigh(
+                    ew,
+                    format!(
+                        "other terms: palette {}{}, falloff {fall}, colour above 1 {above}, other features {}",
+                        if pal_colour { "colour" } else { "-" },
+                        if pal_alpha { "+alpha" } else { "" },
+                        features
+                            .iter()
+                            .filter(|k| **k != "environment map")
+                            .copied()
+                            .collect::<Vec<_>>()
+                            .join(" + ")
+                    ),
+                    &uses,
+                );
+                weigh(
+                    ew,
+                    format!("vertex data: {vkey}; flags colours {vcol} alpha {valpha}"),
+                    &uses,
+                );
+                detail.push(format!(
+                    "env from {source} texture {} ({env_key}) mask {} ({mask_key}) scale {scale} normal {normal_set}",
+                    env_slot.as_ref().map_or("-".into(), |p| String::from_utf8_lossy(p).into_owned()),
+                    mask_slot.as_ref().map_or("-".into(), |p| String::from_utf8_lossy(p).into_owned()),
+                ));
             }
             if above {
                 weigh(
@@ -1895,6 +2215,18 @@ fn run() -> Result<(), E> {
                 }
                 let first = &ks[0].1;
                 let comp0: Vec<f32> = ks.iter().map(|(_, x)| x[0]).collect();
+                if let (Some(mp), Some(nv), Some(fo4_material::Kind::Bgem(_))) =
+                    (&mat_path, &nifv, mat_read.as_ref().map(|x| &x.kind))
+                {
+                    let equal = ks.iter().all(|(_, x)| close(x, first));
+                    driven_materials.entry(mp.clone()).or_default().push((
+                        color,
+                        var,
+                        nv.clone(),
+                        first.clone(),
+                        equal,
+                    ));
+                }
                 let lo = comp0.iter().copied().fold(f32::MAX, f32::min);
                 let hi = comp0.iter().copied().fold(f32::MIN, f32::max);
                 let at_start = seq.and_then(|s| {
@@ -2004,6 +2336,132 @@ fn run() -> Result<(), E> {
         );
     }
 
+    // Material swaps that replace an effect material whose shapes have
+    // controllers: the replacement's value of each driven field against
+    // the NIF's stored value (the first key where the rest rule settles it).
+    let mut swap_counts = Counts::new();
+    let mut swap_rows = String::from(
+        "swap\tsource\treplacement\tfield\tnif\tfirst\treplacement value\tother differences\n",
+    );
+    {
+        let store = Store::open(&m, &Budget::new(m.limits.max_override_memory))?;
+        let keys: Vec<_> = store
+            .winners()
+            .filter(|w| w.signature == *b"MSWP")
+            .map(|w| store.overrides().form_key(w.key, store.order()))
+            .collect();
+        let read_bgem =
+            |p: &[u8], b: &Budget| -> Option<Vec<u8>> { vfs.read_path_bytes(p, b).ok() };
+        for key in &keys {
+            let b = Budget::new(m.limits.max_memory);
+            let Ok(Some(sw)) = store.get::<fo4_plugin::typed::Mswp>(key, &b) else {
+                continue;
+            };
+            if sw.record.deleted() {
+                continue;
+            }
+            let mut from: Option<Vec<u8>> = None;
+            for entry in &sw.data.entries {
+                let fo4_plugin::typed::SwapValue::Path(text) = &entry.value else {
+                    continue;
+                };
+                match &entry.signature {
+                    b"BNAM" => {
+                        from =
+                            paths::resolve(paths::Citation::SwapMaterial, text.as_bytes(), &b).ok();
+                    }
+                    b"SNAM" => {
+                        let Some(source) = from.take() else { continue };
+                        let Some(driven) = driven_materials.get(&source) else {
+                            continue;
+                        };
+                        bump(
+                            &mut swap_counts,
+                            "swap pairs replacing a material with driven fields",
+                        );
+                        let Ok(target) =
+                            paths::resolve(paths::Citation::SwapMaterial, text.as_bytes(), &b)
+                        else {
+                            bump(&mut swap_counts, "replacement path not resolved");
+                            continue;
+                        };
+                        let (Some(sb), Some(tb)) = (read_bgem(&source, &b), read_bgem(&target, &b))
+                        else {
+                            bump(&mut swap_counts, "source or replacement material missing");
+                            continue;
+                        };
+                        let (Ok(sm), Ok(tm)) = (
+                            fo4_material::Material::read(&sb, "s", &m.limits, &b),
+                            fo4_material::Material::read(&tb, "t", &m.limits, &b),
+                        ) else {
+                            bump(
+                                &mut swap_counts,
+                                "source or replacement material unreadable",
+                            );
+                            continue;
+                        };
+                        let diff = bgem_diff(&sm, &tm);
+                        bump(
+                            &mut swap_counts,
+                            format!(
+                                "pairs: replacement differs from the source in: {}",
+                                if diff.is_empty() {
+                                    "nothing".into()
+                                } else {
+                                    diff.join(", ")
+                                }
+                            ),
+                        );
+                        let mut seen = BTreeSet::new();
+                        for (color, var, nifv, first, equal) in driven {
+                            if !seen.insert((*color, *var)) {
+                                continue;
+                            }
+                            let field = controlled_field(*color, *var);
+                            let Some(tv) = bgem_value(&tm, *color, *var) else {
+                                continue;
+                            };
+                            let rel = if close(&tv, nifv) {
+                                "replacement = NIF stored".to_string()
+                            } else {
+                                format!(
+                                    "replacement != NIF stored; NIF stored {} first key; replacement {} the first key; every key equal {equal}",
+                                    if close(nifv, first) { "=" } else { "!=" },
+                                    if tv[0] < first[0] { "below" } else { "above" }
+                                )
+                            };
+                            bump(&mut swap_counts, format!("driven fields: {field}: {rel}"));
+                            if !close(&tv, nifv) {
+                                bump(
+                                    &mut swap_counts,
+                                    format!(
+                                        "driven fields that differ: {field}: NIF {} first key {} replacement {}; other differences: {}",
+                                        bucket(nifv[0]),
+                                        bucket(first[0]),
+                                        bucket(tv[0]),
+                                        diff.iter().filter(|k| !field.starts_with(**k) && !(**k == "uv offset" && field.ends_with("offset"))).copied().collect::<Vec<_>>().join(", ")
+                                    ),
+                                );
+                                let _ = writeln!(
+                                    swap_rows,
+                                    "{}\t{}\t{}\t{field}\t{:?}\t{:?}\t{:?}\t{}",
+                                    sw.data.common.editor_id.as_deref().unwrap_or("-"),
+                                    String::from_utf8_lossy(&source),
+                                    String::from_utf8_lossy(&target),
+                                    nifv,
+                                    first,
+                                    tv,
+                                    diff.join(", ")
+                                );
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+    }
+
     let mut out = String::new();
     let _ = writeln!(
         out,
@@ -2043,6 +2501,15 @@ fn run() -> Result<(), E> {
     for (k, [shapes, placements, omitted]) in &palette_weights {
         let _ = writeln!(out, "{shapes}\t{placements}\t{omitted}\t{k}");
     }
+    let _ = writeln!(out, "\n# Environment map (shapes whose drawn fields set it): shapes, placements of their models, omitted placements\n");
+    for (k, [shapes, placements, omitted]) in &env_weights {
+        let _ = writeln!(out, "{shapes}\t{placements}\t{omitted}\t{k}");
+    }
+    let _ = writeln!(out, "\n# Controlled fields under material swaps (swap pairs whose source material has driven fields)\n");
+    for (k, n) in &swap_counts {
+        let _ = writeln!(out, "{n}\t{k}");
+    }
+    std::fs::write(format!("{}.swaps.tsv", args[1]), swap_rows)?;
     std::fs::write(&args[1], out)?;
     std::fs::write(format!("{}.models.tsv", args[1]), rows)?;
     std::fs::write(format!("{}.facts.tsv", args[1]), detail_rows)?;

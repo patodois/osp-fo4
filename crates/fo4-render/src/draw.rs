@@ -1610,14 +1610,16 @@ impl Builder<'_, '_> {
         id.hypotheses.sort_unstable();
         Ok(())
     }
-    /// An alpha whose opacity is above 1 on a surface without blending is
-    /// drawn only under `bgsm_opacity_above_one_test_v1`.
+    /// An alpha whose opacity is above 1 is drawn only under
+    /// `bgsm_opacity_above_one_test_v1` on a surface without blending and
+    /// under `blend_alpha_clamped_before_blend_v1` on a blended one.
     fn opacity_rule(&mut self, alpha: &Alpha) -> Result<()> {
-        if alpha.enabled == 0
-            && alpha.opacity.is_finite()
-            && alpha.opacity > 1.
-            && !self.draw_rule(fo4_scene::hypotheses::OPACITY_ABOVE_ONE)?
-        {
+        let rule = if alpha.enabled == 0 {
+            fo4_scene::hypotheses::OPACITY_ABOVE_ONE
+        } else {
+            fo4_scene::hypotheses::BLEND_OPACITY_CLAMPED
+        };
+        if alpha.opacity.is_finite() && alpha.opacity > 1. && !self.draw_rule(rule)? {
             return Err(Error::new(
                 "UnsupportedRenderAlpha",
                 "draw list",

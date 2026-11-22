@@ -275,9 +275,11 @@ impl Alpha {
             || self.test_enabled > 1
             || !self.opacity.is_finite()
             || self.opacity < 0.
-            // Above 1 only without blending (`bgsm_opacity_above_one_test_v1`,
-            // gated by the draw build): it then only scales the tested alpha.
-            || (self.opacity > 1. && self.enabled != 0)
+            // Above 1 the draw build gates it: without blending by
+            // `bgsm_opacity_above_one_test_v1` (it then only scales the
+            // tested alpha), with blending by
+            // `blend_alpha_clamped_before_blend_v1` (the blend reads the
+            // alpha clamped to 1).
             || (self.enabled == 1
                 && if self.nif_test_function.is_some() {
                     self.source > 10 || self.destination > 10

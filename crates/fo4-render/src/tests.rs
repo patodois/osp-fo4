@@ -278,14 +278,17 @@ fn deterministic_png_indices_depth_and_corrupt_inputs_are_bounded() {
             .code,
         "UnsupportedRenderAlpha"
     );
-    // An opacity above 1 is a valid draw only without blending
-    // (`bgsm_opacity_above_one_test_v1`, gated by the draw build).
+    // An opacity above 1 is a valid draw with blending and without; the
+    // draw build gates it (`bgsm_opacity_above_one_test_v1`,
+    // `blend_alpha_clamped_before_blend_v1`).
     bad = list();
     bad.draws[0].alpha.opacity = 1.7;
     assert!(bad.draws[0].alpha.validate().is_ok());
     bad.draws[0].alpha.enabled = 1;
     bad.draws[0].alpha.source = 6;
     bad.draws[0].alpha.destination = 7;
+    assert!(bad.draws[0].alpha.validate().is_ok());
+    bad.draws[0].alpha.opacity = f32::INFINITY;
     assert_eq!(
         bad.draws[0].alpha.validate().unwrap_err().code,
         "UnsupportedRenderAlpha"
@@ -798,4 +801,36 @@ fn a_colour_above_one_is_clamped_before_the_blend() {
     l.draws[0].alpha = alpha();
     let c = frame(&l, &camera(), 1).color[5];
     assert_eq!(c, [0.5, 1., 1., 1.]);
+}
+
+#[test]
+fn a_blended_alpha_above_one_is_tested_as_it_stands_and_blended_clamped() {
+    let mut l = list();
+    l.textures[0].rgba = vec![0.25, 0.5, 0.75, 0.75];
+    l.draws[0].alpha = Alpha {
+        enabled: 1,
+        source: 6,
+        destination: 7,
+        opacity: 2.,
+        ..alpha()
+    };
+    // Alpha 1.5 reaches the blend as 1: the texel colour over the clear
+    // colour (unclamped it would be 1.5 x source - 0.5 x destination).
+    let c = frame(&l, &camera(), 1).color[5];
+    assert_eq!(c[..3], [0.25, 0.5, 0.75]);
+    // The test compares the product: 1.5 x 255 > 255 passes GREATER 255.
+    l.draws[0].alpha.test_enabled = 1;
+    l.draws[0].alpha.test_ref = 255;
+    l.draws[0].alpha.nif_test_function = Some(4);
+    let c = frame(&l, &camera(), 1).color[5];
+    assert_eq!(c[..3], [0.25, 0.5, 0.75]);
+    // At or below 1 nothing changes: half over the clear colour.
+    l.draws[0].alpha.test_enabled = 0;
+    l.draws[0].alpha.opacity = 2. / 3.;
+    let c = frame(&l, &camera(), 1).color[5];
+    for k in 0..3 {
+        // Over the black clear colour.
+        let want = l.textures[0].rgba[k] * 0.5;
+        assert!((c[k] - want).abs() < 1e-6, "{c:?} {want}");
+    }
 }

@@ -81,6 +81,18 @@ pub const EFFECT_PALETTE_ALPHA_REPLACES: &str = "effect_palette_alpha_replaces_a
 /// A surface colour above 1 (an effect's base colour times a scale above
 /// 1), clamped before the alpha test and the blend.
 pub const EFFECT_COLOUR_CLAMPED: &str = "effect_colour_clamped_before_blend_v1";
+/// The environment map of an effect surface: what its term changes, and
+/// that this unlit frame leaves it out (`spec/effect-surfaces.md`,
+/// Environment map).
+pub const EFFECT_ENVIRONMENT_ADDS: &str = "effect_environment_adds_to_colour_v1";
+pub const EFFECT_ENVIRONMENT_LEFT_OUT: &str = "effect_environment_left_out_v1";
+/// A field an effect-shader controller drives on which the shape's effect
+/// material (as named, or as a swap replaces it) and the NIF disagree: the
+/// material's value is drawn.
+pub const EFFECT_MATERIAL_OVER_CONTROLLER: &str = "effect_material_over_controller_v1";
+/// An opacity above 1 on a blended surface: the alpha is clamped to 1
+/// after the alpha test and before the blend (`spec/render.md`).
+pub const BLEND_OPACITY_CLAMPED: &str = "blend_alpha_clamped_before_blend_v1";
 /// Materials, swap scopes and texture transforms (`crate::missing`,
 /// `crate::rest`, `fo4_render::draw`, `spec/materials.md`).
 pub const MISSING_MATERIAL_EMBEDDED: &str = "nif_missing_material_embedded_shader_v1";
@@ -456,6 +468,10 @@ mod tests {
             EFFECT_PALETTE_ALPHA_U,
             EFFECT_PALETTE_ALPHA_REPLACES,
             EFFECT_COLOUR_CLAMPED,
+            EFFECT_ENVIRONMENT_ADDS,
+            EFFECT_ENVIRONMENT_LEFT_OUT,
+            EFFECT_MATERIAL_OVER_CONTROLLER,
+            BLEND_OPACITY_CLAMPED,
             MISSING_MATERIAL_EMBEDDED,
             MISSING_PARENT,
             SWAP_SCOPES_AGREE,

@@ -183,6 +183,11 @@ fn blend(source: [f32; 4], destination: [f32; 4], alpha: Alpha) -> [f32; 4] {
     if alpha.enabled == 0 {
         return source;
     }
+    // The blend reads the source alpha within 0 to 1: an opacity above 1
+    // reaches it clamped, after the alpha test saw the product
+    // (`blend_alpha_clamped_before_blend_v1`, gated by the draw build; a
+    // no-op at or below 1, as an 8-bit target clamps a fragment's output).
+    let source = [source[0], source[1], source[2], source[3].clamp(0., 1.)];
     fn factor(code: u32, i: usize, s: [f32; 4], d: [f32; 4]) -> f32 {
         match code {
             0 => 1.,
