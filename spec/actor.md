@@ -82,7 +82,7 @@ Further facts used by the rules:
 Open, kept raw and named in each typed view's `unread`: the other ACBS
 bytes, NPC_ NAM4 and NAM6 (f32 near 1) and RACE DATA (200 bytes), SOFT (an
 OTFT, 24 NPC_), HDPT TNAM, RNAM, NAM0 and NAM1, LVLD, LVLM and LVLF (one byte
-each; LVLD 0 in 366 LVLN and 100 in 9), INDX values, MOD4 and MOD5, RACE
+each, read but not interpreted: see Leveled bases), INDX values, MOD4 and MOD5, RACE
 GNAM (a BPTD), ACHR XRGD (1,423 records).
 
 Reader: `fo4_plugin::actor` (`Achr`, `Npc`, `Race`, `Hdpt`, `Otft`, `Armo`, `Arma`,
@@ -98,10 +98,12 @@ counted, not drawn), in plugin and object-ID order, and for each:
 
 1. **Look.** From the NPC_ (NAME) it gathers, recursively through templates
    (the slots of the set template bits, or TPLT without TPTA) and leveled
-   lists (every LVLO entry of an LVLN whose LVLD, LVLM and LVLF are zero),
-   every candidate value of race, ACBS bit 0, skin (WNAM, else the race's
-   WNAM) and outfit (DOFT). A property with more than one candidate leaves
-   the actor out (`npc_appearance_candidates_agree_v1`).
+   lists (every LVLO entry of an LVLN whose LVLD and LVLM are zero; a
+   non-zero LVLF under `npc_leveled_list_flags_v1`), every candidate value
+   of race, ACBS bit 0, skin (WNAM, else the race's WNAM) and outfit
+   (DOFT); an NPC_ with every template bit set gives no own values
+   (`npc_template_all_bits_v1`). A property with more than one candidate
+   leaves the actor out (`npc_appearance_candidates_agree_v1`).
 2. **Skeleton.** The race's ANAM of the section that ACBS bit 0 selects
    (`actor_acbs_bit0_second_section_v1`).
 3. **Worn armours.** The skin, then the outfit's ARMO entries; a leveled
@@ -368,6 +370,81 @@ rest pose. Headless frames against the commit before: that interior differs
 in 2,168 of 921,600 pixels; the seven other cases of the previous steps are
 byte-identical (frames and tags), and so are all cases without
 `--under-hypotheses`. Frames are kept outside the repository.
+
+## Leveled bases and disagreeing candidates
+
+Section L of `actor_census` (outputs outside the repository) measures the
+two largest groups left out by the first step: 4,962 placed actors whose
+chain reaches a leveled list with a non-zero LVLD, LVLM or LVLF byte, and
+3,231 whose template or leveled candidates disagree. What these bytes and
+the template bits mean is not read from any source; only lists and
+templates whose candidates all give one look are drawn, so no choice the
+game makes among them can change what is drawn.
+
+**The bytes.** Over the 375 LVLN, (LVLD, LVLM, LVLF) is (0, 0, 0) in 80,
+(0, 0, 1) 17, (0, 0, 2) 66, (0, 0, 3) 198, (0, 0, 4) 5, (100, 0, 0) 1 and
+(100, 0, 3) 8: LVLM is always 0, LVLD 0 or 100. The 9 lists with LVLD 100
+all have an LVLG (a GLOB; 14 lists have one) and one or two entries.
+Entries per list run from 1 to 44; 103 of the 206 lists with LVLF 3 hold a
+single LVLO level, the others up to 5 or more distinct levels. LLKC
+(keyword and a further FormID) is in 30 lists and MODL in 12.
+
+**The chains** (census-only re-gathering over the raw records, placed
+actors not disabled; "settled" means one race, ACBS bit 0, skin and
+outfit, before the outfit, addon and model steps):
+
+| Variant | Settled |
+| --- | ---: |
+| As the first step (lists with a non-zero byte refused) | 1,148 |
+| Lists with a non-zero byte followed when they have one entry | 1,233 |
+| Every list with a non-zero byte followed, every entry a candidate | 2,524 |
+| As the first step, no own values from an NPC_ with all twelve template bits | 1,158 |
+| Both of the last two | 2,560 |
+| As the first step, no own values from any templated NPC_ (measurement only) | 2,641 |
+
+Of the 4,962 refused for a byte, following every entry settles 1,376
+(lists with LVLF 3: 1,285, LVLF 1: 77, LVLF 2: 14); 19 reach a list with
+LVLD 100 and none of them would settle. Of the 3,231 whose candidates
+disagree, 1,542 disagree on the outfit alone, 691 on the skin alone and
+566 on both; 1,493 settle when no templated NPC_ gives own values, so their
+disagreement is between an NPC_'s own field and its template's, which only
+a mapping from template bits to properties would settle, and that mapping
+is not established (the bit k set exactly when TPTA slot k is used is all
+the data says). In 33 of them every templated NPC_ sets all twelve bits
+used in the data (0 to 5 and 7 to 12); leaving out their own values settles
+10 (race), the other 23 disagree among their templates' entries.
+
+**Adopted** (each a pending rule; the actor then carries its blocker):
+
+- `npc_leveled_list_flags_v1`: a list whose LVLD and LVLM are zero is
+  followed whatever its LVLF, every entry a candidate. Single-entry lists
+  are not singled out: they are the case where the entries agree
+  trivially. Lists with LVLD or LVLM not zero stay refused.
+- `npc_template_all_bits_v1`: an NPC_ setting every one of the twelve
+  bits gives no own values (race, ACBS bit 0, skin, outfit, head parts).
+
+Not adopted: following a template bit to one property, choosing an entry
+by level, count or chance, and outfits whose leveled item lists have a
+non-zero byte (unchanged).
+
+**Results** (A1, every placed actor, same breakdown as above): 9,341
+placed; 761 resolve and are drawable under hypotheses (399 before); 445
+resolve but their models are blocked (animation controllers 335, unread
+NIF blocks 105, textures 10; 205 before); 8,135 are left out (8,737
+before): leveled lists whose LVLD or LVLM is not zero 19 (4,962 with any
+byte before), leveled or template candidates that disagree 6,755 (3,231:
+leveled 5,658 from 2,124, template 1,097 from 1,107), outfits that do not
+resolve 793 (445), an addon without the section's model 377 (79), no skin
+183 (19), more than 256 candidates or 8 levels 7 (0), an armour without an
+addon for the race 1 (1). 413 drawable actors carry one of the two new
+rules (256 the leveled-flags rule, 61 the all-bits rule, 96 both); by
+skeleton they are mounted turrets 220, hounds 77, deer-like creatures 48,
+anglers 39, clawed creatures 10, brahmin 8 and 11 others; none is a
+humanoid, whose lists disagree on outfit or skin. Heads are unchanged (81
+ready). Frames: the eight cases of the previous steps are byte-identical to
+the commit before, under hypotheses and without (their actors are left out
+for other reasons); an exterior cell with four newly drawn creatures
+differs, in a view of one, in 85,424 of 921,600 pixels.
 
 ## Left as found
 

@@ -24,6 +24,9 @@ use std::collections::{BTreeMap, BTreeSet};
 pub const MAX_CANDIDATES: u64 = 256;
 /// Bound on the depth of template and leveled-list chains.
 pub const MAX_CHAIN: u32 = 8;
+/// The bits of NPC_ ACBS u16 at 14 that any winning record sets (bits 6,
+/// 13, 14 and 15 never are; `spec/actor.md`).
+pub const TEMPLATE_BITS: u16 = 0b1_1111_1011_1111;
 
 /// One armour addon model drawn for an actor.
 #[derive(Debug, Serialize)]
@@ -133,6 +136,11 @@ struct Look {
     outfit: BTreeSet<Option<FormKey>>,
     templated: bool,
     leveled: bool,
+    /// A leveled list followed has a non-zero LVLF (`npc_leveled_list_flags_v1`).
+    leveled_flags: bool,
+    /// An NPC_ with every template bit set gave no own values
+    /// (`npc_template_all_bits_v1`).
+    all_bits: bool,
     /// Per NPC_ visited: its PNAM head parts, sorted, or its race's HEAD of
     /// its section when it lists none (marked true).
     heads: BTreeSet<(Vec<FormKey>, bool)>,
@@ -164,8 +172,13 @@ fn gather(
         b"LVLN" => {
             let l = Leveled::decode(&r, ctx(loader, plugin), &work)
                 .map_err(|e| format!("leveled list {}: {}", short(key), e.code))?;
-            if l.bytes.iter().any(|v| v.is_some_and(|v| v != 0)) {
-                return Err(format!("template: leveled list {} with LVLD/LVLM/LVLF not zero (meaning not established)", short(key)));
+            // LVLD and LVLM not zero: refused. LVLF not zero: followed, every
+            // entry a candidate, under its own rule.
+            if l.bytes[..2].iter().any(|v| v.is_some_and(|v| v != 0)) {
+                return Err(format!("template: leveled list {} with LVLD or LVLM not zero (meaning not established)", short(key)));
+            }
+            if l.bytes[2].is_some_and(|v| v != 0) {
+                look.leveled_flags = true;
             }
             if l.entries.is_empty() {
                 return Err(format!("template: leveled list {} is empty", short(key)));
@@ -211,16 +224,22 @@ fn gather(
             }
             heads.sort();
             heads.dedup();
-            look.heads.insert((heads, from_race));
             let skin = match n.skin.as_ref().and_then(|f| f.key.clone()) {
                 Some(k) => Some(k),
                 None => race_record.skin.and_then(|f| f.key),
             };
-            look.race.insert(race);
-            look.section.insert((flags & 1) as usize);
-            look.skin.insert(skin);
-            look.outfit.insert(n.outfit.and_then(|f| f.key));
             let tf = n.template_flags.unwrap_or(0);
+            // With every template bit set, every property comes from the
+            // templates: the own values are no candidates.
+            if tf & TEMPLATE_BITS == TEMPLATE_BITS {
+                look.all_bits = true;
+            } else {
+                look.heads.insert((heads, from_race));
+                look.race.insert(race);
+                look.section.insert((flags & 1) as usize);
+                look.skin.insert(skin);
+                look.outfit.insert(n.outfit.and_then(|f| f.key));
+            }
             if tf != 0 {
                 look.templated = true;
                 let mut targets: Vec<FormKey> = Vec::new();
@@ -507,7 +526,20 @@ pub fn resolve_reference(
             "every template or leveled candidate agrees",
         )?;
     }
-
+    if look.leveled_flags {
+        rules(
+            &mut blockers,
+            "UnverifiedActorLeveledFlags",
+            "leveled list with LVLF not zero: every entry a candidate",
+        )?;
+    }
+    if look.all_bits {
+        rules(
+            &mut blockers,
+            "UnverifiedActorTemplateAllBits",
+            "every template bit set: no own values",
+        )?;
+    }
     // Race: skeleton of the section.
     let Some((rr, rp)) = read(loader, &race, &work)? else {
         note(

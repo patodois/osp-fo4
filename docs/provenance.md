@@ -219,3 +219,13 @@ sizes, values and FormID targets counted over every winning record, and
 the head part models fitted against the race skeletons with the existing
 skinning code. No schema, editor, face-generation reader or documentation
 of these records was opened or searched for.
+
+Following leveled actor lists whose LVLF byte is not zero, and leaving out
+the own values of an NPC_ that sets every template bit
+([spec/actor.md](../spec/actor.md), Leveled bases and disagreeing
+candidates), add no source: they rest on counts over the winning records
+and on candidate agreement. General knowledge suggests readings of LVLD,
+LVLM and LVLF (a chance, a count, flags) and of the template bits (one
+property each); none of them is used: lists whose LVLD or LVLM is not zero
+stay refused, LVLF is never interpreted, and no template bit is mapped to
+a property.

@@ -189,11 +189,43 @@ fn fixture() -> Fixture {
     lvli.extend(lvlo(1, 0x823));
     let mut templated = sub(b"TPLT", &id(0x830));
     templated.extend(sub(b"TPTA", &[id(0x830), vec![0; 48]].concat()));
+    let on_list = |list: u32| {
+        let mut d = sub(b"TPLT", &id(list));
+        d.extend(sub(b"TPTA", &[id(list), vec![0; 48]].concat()));
+        d
+    };
+    // A list with LVLF 3 whose two entries are one NPC_, and one with LVLD 100.
+    let mut agreeing = sub(b"LVLD", &[0]);
+    agreeing.extend(sub(b"LVLM", &[0]));
+    agreeing.extend(sub(b"LVLF", &[3]));
+    agreeing.extend(sub(b"LLCT", &[2]));
+    agreeing.extend(lvlo(1, 0x803));
+    agreeing.extend(lvlo(7, 0x803));
+    let mut chance = sub(b"LVLD", &[100]);
+    chance.extend(sub(b"LVLM", &[0]));
+    chance.extend(sub(b"LVLF", &[0]));
+    chance.extend(sub(b"LLCT", &[1]));
+    chance.extend(lvlo(1, 0x803));
+    // Every template bit set, every slot the plain NPC_; its own skin differs.
+    let mut all_bits = sub(b"TPLT", &id(0x803));
+    let slots: Vec<u8> = (0..13)
+        .flat_map(|k| {
+            if super::TEMPLATE_BITS & (1 << k) != 0 {
+                id(0x803)
+            } else {
+                vec![0; 4]
+            }
+        })
+        .collect();
+    all_bits.extend(sub(b"TPTA", &slots));
     let references = [
         achr(0x900, 0x803),
         achr(0x901, 0x804),
         achr(0x902, 0x805),
         achr(0x903, 0x807),
+        achr(0x904, 0x808),
+        achr(0x905, 0x809),
+        achr(0x906, 0x80a),
     ]
     .concat();
     let hdpt = |conditions: usize| {
@@ -218,6 +250,11 @@ fn fixture() -> Fixture {
     );
     body.extend(npc(0x803, 0x820, &sub(b"PNAM", &id(0x850)), 0));
     body.extend(npc(0x807, 0x820, &sub(b"PNAM", &id(0x851)), 0));
+    body.extend(npc(0x808, 0x820, &on_list(0x831), 1));
+    body.extend(npc(0x809, 0x820, &on_list(0x832), 1));
+    body.extend(npc(0x80a, 0x822, &all_bits, super::TEMPLATE_BITS));
+    body.extend(record(b"LVLN", 0x831, 0, &agreeing));
+    body.extend(record(b"LVLN", 0x832, 0, &chance));
     body.extend(record(b"HDPT", 0x850, 0, &hdpt(0)));
     body.extend(record(b"HDPT", 0x851, 0, &hdpt(1)));
     body.extend(npc(0x806, 0x822, &[], 0));
@@ -337,7 +374,7 @@ fn placed_actors_resolve_to_a_skeleton_and_addon_models_or_say_why_not() {
     let mut loader = Loader::new(&store, &v, "english", crate::RuleLevel::Hypotheses, &b);
     let scene = loader.by_editor_id("ActorRoom", &b).unwrap();
     let actors = resolve(&scene, &mut loader, &b).unwrap();
-    assert_eq!(actors.actors.len(), 4);
+    assert_eq!(actors.actors.len(), 7);
     let plain = &actors.actors[0];
     let plan = plain.plan.as_ref().expect("resolved");
     assert_eq!(plan.skeleton, b"meshes/actors/skel.nif");
@@ -389,6 +426,32 @@ fn placed_actors_resolve_to_a_skeleton_and_addon_models_or_say_why_not() {
         "{:?}",
         conditional.notes
     );
+    // A list with LVLF not zero whose entries agree, under its own rule.
+    let flagged = &actors.actors[4];
+    assert!(flagged.plan.is_some(), "{:?}", flagged.notes);
+    let crate::State::ReadyUnderHypotheses { hypotheses: rules } = &flagged.state else {
+        panic!("{:?}", flagged.state)
+    };
+    assert!(rules.contains(&hypotheses::ACTOR_LEVELED_FLAGS));
+    assert!(rules.contains(&hypotheses::ACTOR_CANDIDATES));
+    assert!(!rules.contains(&hypotheses::ACTOR_TEMPLATE_ALL_BITS));
+    // A list with LVLD not zero stays refused.
+    let chance = &actors.actors[5];
+    assert!(chance.plan.is_none());
+    assert!(
+        chance.notes[0].contains("LVLD or LVLM not zero"),
+        "{:?}",
+        chance.notes
+    );
+    // Every template bit set: the template's skin, not the own one.
+    let templated = &actors.actors[6];
+    let plan = templated.plan.as_ref().expect("resolved");
+    assert_eq!(plan.parts[0].armor.object_id, 0x820);
+    let crate::State::ReadyUnderHypotheses { hypotheses: rules } = &templated.state else {
+        panic!("{:?}", templated.state)
+    };
+    assert!(rules.contains(&hypotheses::ACTOR_TEMPLATE_ALL_BITS));
+    assert!(plan.head.is_some());
     // A leveled template whose two entries wear different skins.
     let leveled = &actors.actors[1];
     assert!(leveled.plan.is_none());

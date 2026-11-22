@@ -110,6 +110,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     chain(&store, &mut db, &mut out)?;
     rest(&store, &mut db, &vfs, &m, &mut out)?;
     heads(&store, &mut db, &vfs, &m, &mut out)?;
+    leveled(&store, &mut db, &mut out)?;
     placed(&store, &vfs, &m, &mut out)?;
     std::fs::write(&args[1], out)?;
     Ok(())
@@ -1206,6 +1207,351 @@ fn heads(
     Ok(())
 }
 
+/// Options of the census-only re-gather of section L.
+#[derive(Clone, Copy)]
+struct Variant {
+    /// Follow leveled lists whose LVLD, LVLM or LVLF is not zero.
+    bytes: bool,
+    /// ... but only when they have one entry.
+    single_only: bool,
+    /// Leave out the own values of an NPC_ whose template bits are all the
+    /// twelve set in the data (0 to 5, 7 to 12).
+    all_bits: bool,
+    /// Leave out the own values of every templated NPC_ (measurement only:
+    /// which bit governs which property is not established).
+    no_own: bool,
+}
+const USED_BITS: u16 = 0b1_1111_1011_1111;
+#[derive(Default)]
+struct LLook {
+    race: std::collections::BTreeSet<(String, u32)>,
+    section: std::collections::BTreeSet<u32>,
+    skin: std::collections::BTreeSet<Option<(String, u32)>>,
+    outfit: std::collections::BTreeSet<Option<(String, u32)>>,
+    heads: std::collections::BTreeSet<Vec<(String, u32)>>,
+    /// Template bit words of the templated NPC_ visited.
+    bits: std::collections::BTreeSet<u16>,
+    /// Byte triples of the lists followed with a non-zero byte.
+    triples: Vec<[u8; 3]>,
+    visits: u32,
+}
+fn lk(k: &FormKey) -> (String, u32) {
+    (k.plugin.to_lowercase(), k.object_id)
+}
+fn lgather(
+    db: &mut Db<'_>,
+    key: &FormKey,
+    depth: u32,
+    v: Variant,
+    look: &mut LLook,
+) -> Result<(), String> {
+    look.visits += 1;
+    if look.visits > 256 || depth > 8 {
+        return Err("too large".into());
+    }
+    let r = db.get(key).ok_or("no record")?;
+    match &r.signature {
+        b"LVLN" => {
+            let bytes = [b"LVLD", b"LVLM", b"LVLF"]
+                .map(|t| r.one(t).and_then(|d| d.first().copied()).unwrap_or(0));
+            let entries: Vec<u32> = r.all(b"LVLO").filter_map(|d| u32_at(d, 4)).collect();
+            if bytes.iter().any(|b| *b != 0) {
+                if !v.bytes || (v.single_only && entries.len() != 1) {
+                    return Err("leveled list with a non-zero byte".into());
+                }
+                look.triples.push(bytes);
+            }
+            if entries.is_empty() {
+                return Err("empty list".into());
+            }
+            for id in entries {
+                let (k, _) = db.reference(&r, id).ok_or("unresolved entry")?;
+                lgather(db, &k, depth + 1, v, look)?;
+            }
+            Ok(())
+        }
+        b"NPC_" => {
+            let acbs = r.one(b"ACBS").ok_or("no ACBS")?.clone();
+            let flags = u32_at(&acbs, 0).ok_or("ACBS")?;
+            let tf = u16_at(&acbs, 14).unwrap_or(0);
+            let own = !(v.all_bits && tf & USED_BITS == USED_BITS) && !(v.no_own && tf != 0);
+            let race = r
+                .one(b"RNAM")
+                .and_then(|d| u32_at(d, 0))
+                .and_then(|id| db.reference(&r, id));
+            let (rk, rr) = race.ok_or("no race")?;
+            if own {
+                look.race.insert(lk(&rk));
+                look.section.insert(flags & 1);
+                let skin = match r
+                    .one(b"WNAM")
+                    .and_then(|d| u32_at(d, 0))
+                    .and_then(|id| db.reference(&r, id))
+                {
+                    Some((k, _)) => Some(lk(&k)),
+                    None => rr
+                        .one(b"WNAM")
+                        .and_then(|d| u32_at(d, 0))
+                        .and_then(|id| db.reference(&rr, id))
+                        .map(|(k, _)| lk(&k)),
+                };
+                look.skin.insert(skin);
+                look.outfit.insert(
+                    r.one(b"DOFT")
+                        .and_then(|d| u32_at(d, 0))
+                        .and_then(|id| db.reference(&r, id))
+                        .map(|(k, _)| lk(&k)),
+                );
+                let mut heads: Vec<(String, u32)> = r
+                    .all(b"PNAM")
+                    .filter_map(|d| u32_at(d, 0))
+                    .filter_map(|id| db.reference(&r, id))
+                    .map(|(k, _)| lk(&k))
+                    .collect();
+                heads.sort();
+                heads.dedup();
+                look.heads.insert(heads);
+            }
+            if tf != 0 {
+                look.bits.insert(tf);
+                let mut targets: Vec<FormKey> = Vec::new();
+                match r.one(b"TPTA") {
+                    Some(t) => {
+                        for k in 0..13 {
+                            if tf & (1 << k) != 0 {
+                                if let Some((tk, _)) = u32_at(t, 4 * k)
+                                    .filter(|id| *id != 0)
+                                    .and_then(|id| db.reference(&r, id))
+                                {
+                                    if !targets.contains(&tk) {
+                                        targets.push(tk);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    None => {
+                        if let Some((tk, _)) = r
+                            .one(b"TPLT")
+                            .and_then(|d| u32_at(d, 0))
+                            .and_then(|id| db.reference(&r, id))
+                        {
+                            targets.push(tk);
+                        }
+                    }
+                }
+                if targets.is_empty() {
+                    return Err("template flags without template".into());
+                }
+                for t in targets {
+                    lgather(db, &t, depth + 1, v, look)?;
+                }
+            }
+            Ok(())
+        }
+        _ => Err("other type".into()),
+    }
+}
+fn settled(l: &LLook) -> Vec<&'static str> {
+    let mut out = Vec::new();
+    if l.race.len() != 1 {
+        out.push("race");
+    }
+    if l.section.len() != 1 {
+        out.push("section");
+    }
+    if l.skin.len() != 1 {
+        out.push("skin");
+    }
+    if l.outfit.len() != 1 {
+        out.push("outfit");
+    }
+    out
+}
+/// L1-L3: leveled actor lists and template candidates, over every LVLN and
+/// over the placed actors' chains under census-only variants.
+fn leveled(
+    store: &Store,
+    db: &mut Db<'_>,
+    out: &mut String,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let mut triples: BTreeMap<String, u64> = BTreeMap::new();
+    let mut entries_by_triple: BTreeMap<String, u64> = BTreeMap::new();
+    let mut levels: BTreeMap<String, u64> = BTreeMap::new();
+    let mut extra: BTreeMap<String, u64> = BTreeMap::new();
+    for k in keys(store, b"LVLN") {
+        let Some(r) = db.get(&k) else { continue };
+        let b = [b"LVLD", b"LVLM", b"LVLF"].map(|t| r.one(t).and_then(|d| d.first().copied()));
+        let t = format!("{b:?}");
+        bump(&mut triples, t.clone());
+        let n = r.all(b"LVLO").count();
+        bump(&mut entries_by_triple, format!("{t} entries {}", n.min(10)));
+        let lv: std::collections::BTreeSet<u16> =
+            r.all(b"LVLO").filter_map(|d| u16_at(d, 0)).collect();
+        bump(
+            &mut levels,
+            format!("{t} distinct levels {}", lv.len().min(5)),
+        );
+        for sig in [b"LVLG", b"LLKC", b"MODL"] {
+            if r.one(sig).is_some() {
+                bump(
+                    &mut extra,
+                    format!("{t} with {}", String::from_utf8_lossy(sig)),
+                );
+            }
+        }
+    }
+    writeln!(out, "\n## L1 LVLN: (LVLD, LVLM, LVLF) {triples:?}")?;
+    writeln!(
+        out,
+        "entries (10 = 10 or more) by triple: {entries_by_triple:?}"
+    )?;
+    writeln!(
+        out,
+        "distinct LVLO levels (5 = 5 or more) by triple: {levels:?}"
+    )?;
+    writeln!(out, "further subrecords by triple: {extra:?}")?;
+    // L2: placed actors under variants.
+    let variants = [
+        (
+            "V0 as resolved",
+            Variant {
+                bytes: false,
+                single_only: false,
+                all_bits: false,
+                no_own: false,
+            },
+        ),
+        (
+            "V1 lists with a non-zero byte followed, one entry only",
+            Variant {
+                bytes: true,
+                single_only: true,
+                all_bits: false,
+                no_own: false,
+            },
+        ),
+        (
+            "V2 lists with a non-zero byte followed, every entry",
+            Variant {
+                bytes: true,
+                single_only: false,
+                all_bits: false,
+                no_own: false,
+            },
+        ),
+        (
+            "V3 V0 without the own values of NPC_ with all twelve bits",
+            Variant {
+                bytes: false,
+                single_only: false,
+                all_bits: true,
+                no_own: false,
+            },
+        ),
+        (
+            "V4 V2 and V3",
+            Variant {
+                bytes: true,
+                single_only: false,
+                all_bits: true,
+                no_own: false,
+            },
+        ),
+        (
+            "V5 V0 without the own values of any templated NPC_ (measurement only)",
+            Variant {
+                bytes: false,
+                single_only: false,
+                all_bits: false,
+                no_own: true,
+            },
+        ),
+    ];
+    let mut outcomes: BTreeMap<String, u64> = BTreeMap::new();
+    let mut reached: BTreeMap<String, u64> = BTreeMap::new();
+    let mut disagree_bits: BTreeMap<String, u64> = BTreeMap::new();
+    let mut n = 0u64;
+    let cells: Vec<FormKey> = store.cells().collect();
+    for cell in &cells {
+        let Ok(children) = store.children(cell, &Budget::new(64 << 20)) else {
+            continue;
+        };
+        for c in children
+            .excluded
+            .iter()
+            .filter(|c| c.signature == *b"ACHR" && c.group_kind != 10)
+        {
+            let Some(r) = db.get(&c.key) else { continue };
+            let Some((base, _)) = r
+                .one(b"NAME")
+                .and_then(|d| u32_at(d, 0))
+                .and_then(|id| db.reference(&r, id))
+            else {
+                continue;
+            };
+            n += 1;
+            let mut v0_failed_on_bytes = false;
+            for (name, v) in variants {
+                let mut look = LLook::default();
+                let res = lgather(db, &base, 0, v, &mut look);
+                let o = match res {
+                    Err(e) => {
+                        if name.starts_with("V0") && e.contains("non-zero byte") {
+                            v0_failed_on_bytes = true;
+                        }
+                        format!("not gathered: {e}")
+                    }
+                    Ok(()) => {
+                        let u = settled(&look);
+                        if u.is_empty() {
+                            "settled".to_string()
+                        } else {
+                            format!("candidates differ: {}", u.join(", "))
+                        }
+                    }
+                };
+                bump(&mut outcomes, format!("{name}: {o}"));
+                if name.starts_with("V2") && v0_failed_on_bytes {
+                    let mut ts: Vec<[u8; 3]> = look.triples.clone();
+                    ts.sort();
+                    ts.dedup();
+                    bump(&mut reached, format!("{ts:?} -> {o}"));
+                }
+                if name.starts_with("V0")
+                    && o.starts_with("candidates differ")
+                    && !look.bits.is_empty()
+                {
+                    let all = look.bits.iter().all(|b| b & USED_BITS == USED_BITS);
+                    let any_all = look.bits.iter().any(|b| b & USED_BITS == USED_BITS);
+                    bump(
+                        &mut disagree_bits,
+                        format!("{o}; templated NPC_ with all twelve bits: every one {all}, some {any_all}"),
+                    );
+                }
+            }
+        }
+    }
+    writeln!(
+        out,
+        "\n## L2 placed actors ({n}) under census-only variants of the candidate gathering"
+    )?;
+    for (k, c) in &outcomes {
+        writeln!(out, "  {c}\t{k}")?;
+    }
+    writeln!(out, "\n## L3 actors that V0 refuses for a non-zero byte, under V2: byte triples of the lists followed -> outcome")?;
+    let mut v: Vec<_> = reached.into_iter().collect();
+    v.sort_by_key(|a| std::cmp::Reverse(a.1));
+    for (k, c) in v {
+        writeln!(out, "  {c}\t{k}")?;
+    }
+    writeln!(out, "\n## L4 V0 template disagreements by template bits")?;
+    for (k, c) in &disagree_bits {
+        writeln!(out, "  {c}\t{k}")?;
+    }
+    Ok(())
+}
+
 fn placed(
     store: &Store,
     vfs: &fo4_vfs::Vfs,
@@ -1226,6 +1572,10 @@ fn placed(
     let mut n = 0u64;
     let mut multi: BTreeMap<String, u64> = BTreeMap::new();
     let mut heads: BTreeMap<String, u64> = BTreeMap::new();
+    let mut new_rules: BTreeMap<String, u64> = BTreeMap::new();
+    let mut new_cells: BTreeMap<String, u64> = BTreeMap::new();
+    let mut new_skeletons: BTreeMap<String, u64> = BTreeMap::new();
+    let mut new_skeleton_cells: BTreeMap<String, u64> = BTreeMap::new();
     let cells: Vec<FormKey> = store.cells().collect();
     for cell in &cells {
         let Ok(children) = store.children(cell, &budget.child()) else {
@@ -1316,6 +1666,30 @@ fn placed(
                 let drawable =
                     a.plan.is_some() && a.state.ready_at(fo4_scene::RuleLevel::Hypotheses);
                 if drawable {
+                    let codes: Vec<&str> = a
+                        .blockers
+                        .iter()
+                        .map(|e| e.code.as_str())
+                        .filter(|c| {
+                            *c == "UnverifiedActorLeveledFlags"
+                                || *c == "UnverifiedActorTemplateAllBits"
+                        })
+                        .collect();
+                    if !codes.is_empty() {
+                        bump(&mut new_rules, codes.join(" + "));
+                        bump(
+                            &mut new_cells,
+                            format!("{}:{:06x}", cell.plugin, cell.object_id),
+                        );
+                        if let Some(p) = &a.plan {
+                            let sk = String::from_utf8_lossy(&p.skeleton).into_owned();
+                            bump(&mut new_skeletons, sk.clone());
+                            bump(
+                                &mut new_skeleton_cells,
+                                format!("{sk} {}:{:06x}", cell.plugin, cell.object_id),
+                            );
+                        }
+                    }
                     let h = match a.plan.as_ref().and_then(|p| p.head.as_ref()) {
                         None => "no head parts drawn".to_string(),
                         Some(h) if h.state.ready_at(fo4_scene::RuleLevel::Hypotheses) => {
@@ -1406,6 +1780,25 @@ fn placed(
     let mut v: Vec<_> = heads.into_iter().collect();
     v.sort_by_key(|a| std::cmp::Reverse(a.1));
     writeln!(out, "heads of the actors drawable under hypotheses: {v:?}")?;
+    writeln!(
+        out,
+        "drawable actors relying on the leveled-flags or all-bits rules: {new_rules:?}"
+    )?;
+    let mut v: Vec<_> = new_cells.into_iter().collect();
+    v.sort_by_key(|a| std::cmp::Reverse(a.1));
+    writeln!(
+        out,
+        "cells with the most of them: {:?}",
+        &v[..v.len().min(10)]
+    )?;
+    writeln!(out, "their skeletons: {new_skeletons:?}")?;
+    let mut v: Vec<_> = new_skeleton_cells.into_iter().collect();
+    v.sort_by_key(|a| std::cmp::Reverse(a.1));
+    writeln!(
+        out,
+        "skeleton and cell with the most of them: {:?}",
+        &v[..v.len().min(12)]
+    )?;
     let mut v: Vec<_> = multi.into_iter().collect();
     v.sort_by_key(|a| std::cmp::Reverse(a.1));
     writeln!(
