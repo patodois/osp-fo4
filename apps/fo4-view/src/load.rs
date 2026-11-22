@@ -49,6 +49,31 @@ pub fn build_options(textures: crate::cli::Textures, level: RuleLevel) -> BuildO
     }
 }
 
+/// Named in the error when the scene's credits exceed `--scene-memory`.
+pub const SCENE_MEMORY: &str = "credits of the loaded scene; raise with --scene-memory MIB";
+
+/// The viewer's allocation account: `scene_memory` bounds what the scene
+/// keeps, and the manifest's `max_memory` each child scope (one cell read,
+/// one asset decode, one terrain piece's textures).
+pub fn scene_budget(scene_memory: u64, limits: &fo4_core::Limits) -> Budget {
+    Budget::metered(scene_memory)
+        .with_scope_limit(limits.max_memory)
+        .named(SCENE_MEMORY)
+}
+
+/// `f` in a child scope of `budget`, whose charges `budget` keeps when `f`
+/// succeeds: what one cell or one piece reads is bounded by the scope
+/// limit, and what the scene keeps of it by the scene's ceiling.
+fn scoped<T>(
+    budget: &Budget,
+    f: impl FnOnce(&Budget) -> fo4_core::Result<T>,
+) -> fo4_core::Result<T> {
+    let scope = budget.child();
+    let out = f(&scope)?;
+    scope.commit(budget)?;
+    Ok(out)
+}
+
 #[allow(clippy::too_many_arguments)]
 pub fn cell(
     manifest: &str,
@@ -59,6 +84,7 @@ pub fn cell(
     terrain: bool,
     around: u32,
     options: BuildOptions,
+    scene_memory: u64,
 ) -> AnyResult<Loaded> {
     if walk {
         fo4_walk::accept(&walk_rules(), level, fo4_scene::hypotheses::status)?;
@@ -73,14 +99,16 @@ pub fn cell(
     }
     let vfs = fo4_vfs::Vfs::mount(&manifest, &Budget::new(limits.max_vfs_memory))?;
     vfs.check_complete()?;
-    let budget = Budget::metered(limits.max_memory);
+    let budget = scene_budget(scene_memory, limits);
     let mut loader = Loader::new(&store, &vfs, &manifest.language, level, &budget);
-    let mut scene = loader.by_editor_id(cell, &budget)?;
+    let mut scene = scoped(&budget, |b| loader.by_editor_id(cell, b))?;
     // --around N: the placed references of the exterior cells within N grid
     // steps join the scene, as in the CPU render. Without it nothing changes.
     let grid = if around > 0 {
         let started = std::time::Instant::now();
-        let a = fo4_scene::grid::around(&store, &scene.cell.key, around, &budget)?;
+        let a = scoped(&budget, |b| {
+            fo4_scene::grid::around(&store, &scene.cell.key, around, b)
+        })?;
         let loads = fo4_scene::grid::absorb_around(&mut loader, &mut scene, &a, &budget)?;
         let cells: Vec<String> = loads
             .iter()
@@ -128,17 +156,19 @@ pub fn cell(
             last = first
                 .checked_add(u32::try_from(k)?)
                 .ok_or("TerrainTagOverflow")?;
-            let r = fo4_render::terrain::append_textured_terrain(
-                &mut build.list,
-                t,
-                &store,
-                &mut loader,
-                &mut cache,
-                last,
-                level,
-                limits,
-                &budget,
-            )?;
+            let r = scoped(&budget, |b| {
+                fo4_render::terrain::append_textured_terrain(
+                    &mut build.list,
+                    t,
+                    &store,
+                    &mut loader,
+                    &mut cache,
+                    last,
+                    level,
+                    limits,
+                    b,
+                )
+            })?;
             textured.push(texture_line(&r));
         }
         let pieces: Vec<String> = g
@@ -167,17 +197,19 @@ pub fn cell(
                 // Tagged after every placed instance, as the CPU render does.
                 let tag = u32::try_from(build.instances.len())?;
                 let mut cache = fo4_render::terrain::TextureCache::new(options);
-                let r = fo4_render::terrain::append_textured_terrain(
-                    &mut build.list,
-                    t,
-                    &store,
-                    &mut loader,
-                    &mut cache,
-                    tag,
-                    level,
-                    limits,
-                    &budget,
-                )?;
+                let r = scoped(&budget, |b| {
+                    fo4_render::terrain::append_textured_terrain(
+                        &mut build.list,
+                        t,
+                        &store,
+                        &mut loader,
+                        &mut cache,
+                        tag,
+                        level,
+                        limits,
+                        b,
+                    )
+                })?;
                 println!("terrain drawn: grid {:?}, tag {tag}", t.grid);
                 println!(
                     "terrain textures: {}; landscape textures {:?}; default textures {:?}",
@@ -226,6 +258,16 @@ pub fn cell(
     } else {
         None
     };
+    if around > 0 {
+        let mib = |n: u64| n as f64 / f64::from(1u32 << 20);
+        println!(
+            "scene memory: {:.1} MiB of {:.0} MiB credits kept (--scene-memory), peak {:.1} MiB; each read within {:.0} MiB (manifest max_memory)",
+            mib(budget.used()),
+            mib(budget.max()),
+            mib(budget.measurements().map_or(0, |m| m.peak)),
+            mib(budget.scope_max()),
+        );
+    }
     Ok(Loaded {
         build,
         data_root: manifest.root.clone(),

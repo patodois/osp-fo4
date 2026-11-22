@@ -36,6 +36,7 @@ fn load_scene(
         s.terrain,
         s.around,
         load::build_options(s.textures, s.level),
+        s.scene_memory,
     )?;
     let options = RenderOptions {
         backface_cull: s.backface_cull,

@@ -325,7 +325,15 @@ The figures of the first run are kept with the local reports, not here.
   than TNAM (MNAM, HNAM, SNAM, GNAM) are not used.
 - The seam disagreements that remain under the candidates (15.7% of
   quadrant seams, 19.4% of cell edges); whether the game shows them is not
-  known.
+  known. Each quadrant is drawn with its own weights, so a disagreement
+  shows as a straight tone step along the quadrant or cell border, as
+  stored: at the centre vertex of the test exterior cell three quadrants
+  give one texture full weight and the fourth gives it none, and one
+  quadrant paints a texture up to its edge that its neighbour has no layer
+  for. Copying one side's weights onto the shared vertices, as an offline
+  diagnostic only, removes the step in both renderers; no blending across
+  quadrants is applied, since nothing in the data or the registry states
+  one.
 - The few unequal edges of the census, which are concentrated away from the
   map centre; whether they are seams the game also shows is not known.
 - DATA bits, the trailing VHGT bytes, BTXT's raw bytes, ATXT's unknown byte,

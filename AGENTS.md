@@ -6,7 +6,7 @@ Read [README.md](README.md) first for what the project is and how to run it.
 
 | Crate | Purpose | Start here |
 | --- | --- | --- |
-| `fo4-core` | Checked I/O (`ReadAt`, `Cursor`), allocation `Budget`, `Error`, `Manifest`. | `src/lib.rs` |
+| `fo4-core` | Checked I/O (`ReadAt`, `Cursor`), allocation `Budget` (children are scopes released on drop or kept with `commit`; an optional scope limit below the root's ceiling), `Error`, `Manifest`. | `src/lib.rs` |
 | `fo4-archive` | BA2 and BSA indexes and bounded extraction. | `src/lib.rs`, `src/bsa.rs` |
 | `fo4-vfs` | Explicit mounts, winner and loser per path, content fingerprint. | `src/lib.rs` |
 | `fo4-plugin` | Records, load order, overrides, strings, typed views, subrecord layouts. | `src/lib.rs`, `src/typed.rs`, `src/layout.rs` |
@@ -17,7 +17,7 @@ Read [README.md](README.md) first for what the project is and how to run it.
 | `fo4-walk` | Walking controller over a cell's placed collision: world of convex primitives with a grid broad phase, `ray_down`, vertical capsule with collide-and-slide, step-up and slope limit; terrain of the cells around a cell under the walker; every movement number a provisional rule. | `src/lib.rs`, `src/controller.rs`, `src/world.rs`, `src/geometry.rs`, `src/terrain.rs` |
 | `fo4-render` | Draw list, CPU rasterizer, PNG, image comparison; optionally stored texture blocks for a GPU consumer (`DrawList::blocks`), which the CPU refuses. | `src/draw.rs`, `src/raster.rs` |
 | `fo4-unpack` | Command-line reports (including `cell-collision` and `walk`) and the `render` example. | `src/lib.rs`, `src/cell_collision.rs`, `src/walk.rs`, `examples/render.rs` |
-| `apps/fo4-view` | GPU viewer (Bevy), own workspace; checked against the CPU frame; free-fly and walk modes; `--terrain` draws the terrain with its ground textures; `--around N` adds the cells around an exterior cell; block-compressed textures uploaded as stored blocks (`--texture-cap`, `--alpha-tested-cap`; `--reference-textures` for the CPU's decoded textures). | `src/scene.rs`, `src/coords.rs`, `src/surface.wesl`, `src/fly.rs`, `src/walk.rs` |
+| `apps/fo4-view` | GPU viewer (Bevy), own workspace; checked against the CPU frame; free-fly and walk modes; `--terrain` draws the terrain with its ground textures; `--around N` adds the cells around an exterior cell; block-compressed textures uploaded as stored blocks (`--texture-cap`, `--alpha-tested-cap`; `--reference-textures` for the CPU's decoded textures); `--scene-memory` bounds what the scene keeps, the manifest's `max_memory` each read (`Budget::with_scope_limit`). | `src/scene.rs`, `src/coords.rs`, `src/surface.wesl`, `src/fly.rs`, `src/walk.rs` |
 
 Format layouts, their sources and the rule registry are indexed in
 [spec/README.md](spec/README.md).

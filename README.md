@@ -133,6 +133,15 @@ resident memory. `--reference-textures` decodes every texture as the CPU
 render does (first level at most 256 texels), for comparing frames with it;
 the CPU render never draws stored blocks.
 
+The manifest's `max_memory` bounds each cell read and each asset decode;
+what the viewer's scene keeps in all (records, draw list, stored blocks,
+terrain, collision and walking world) is bounded by `--scene-memory MIB`,
+2048 by default. With `--walk --terrain` at the test cell the scene keeps
+about 0.5, 0.9 and 1.4 GiB of allocation credits at `--around` 1, 2 and 3,
+loads in 9 to 12 s (debug build) and peaks near 1.3, 1.6 and 1.8 GB
+resident memory headless; the credits are a conservative count, not
+resident memory ([scene](spec/scene.md#memory-of-a-joined-scene)).
+
 The comparison prints coverage agreement and colour differences; it defines
 no pass threshold.
 

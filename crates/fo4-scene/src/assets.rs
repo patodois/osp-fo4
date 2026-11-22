@@ -105,7 +105,9 @@ impl<'a> Assets<'a> {
             nodes: Vec::new(),
             index: HashMap::new(),
             vfs,
-            allocation: b.child(),
+            // The cache grows with every asset of the scene: an account of
+            // `b`, bounded where `b` is, not a scope of one read.
+            allocation: b.account(),
             unavailable: false,
             active: Vec::new(),
         }

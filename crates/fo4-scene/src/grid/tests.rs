@@ -219,3 +219,48 @@ fn the_scene_takes_the_references_of_every_cell_around() {
     assert_eq!(loads.len(), 1);
     assert_eq!(alone.instances.len(), 2);
 }
+
+/// Loads the centre and its ring with every account under `root`; returns
+/// the root's credits after absorbing, or the error.
+fn absorb_with(f: &Fixture, root: &Budget) -> fo4_core::Result<u64> {
+    let open = budget();
+    let store = Store::open(&f.manifest, &open).unwrap();
+    let vfs = fo4_vfs::Vfs::mount(&f.manifest, &open).unwrap();
+    let mut loader = Loader::new(&store, &vfs, "english", RuleLevel::Measured, root);
+    let mut scene = loader.cell(&key(0x810), root)?;
+    let a = around(&store, &key(0x810), 2, root)?;
+    absorb_around(&mut loader, &mut scene, &a, root)?;
+    assert_eq!(scene.instances.len(), 7);
+    Ok(root.used())
+}
+
+#[test]
+fn each_cell_around_is_bounded_by_the_scope_limit_and_kept_by_the_root() {
+    let f = fixture();
+    // Without a scope limit: what the scene keeps.
+    let kept = absorb_with(&f, &budget()).unwrap();
+    // The smallest scope limit that loads every cell.
+    let (mut lo, mut hi) = (0u64, kept);
+    while lo + 1 < hi {
+        let mid = lo + (hi - lo) / 2;
+        let root = Budget::new(256 << 20).with_scope_limit(mid);
+        match absorb_with(&f, &root) {
+            Ok(_) => hi = mid,
+            Err(e) => {
+                assert_eq!(e.code, "LimitExceeded");
+                lo = mid;
+            }
+        }
+    }
+    // One cell's work fits a scope well below the sum the scene keeps, and
+    // the scene keeps the same credits as without the limit.
+    assert!(hi < kept / 2, "scope {hi} of {kept}");
+    let root = Budget::new(256 << 20).with_scope_limit(hi);
+    assert_eq!(absorb_with(&f, &root).unwrap(), kept);
+    let short = Budget::new(256 << 20).with_scope_limit(hi - 1);
+    assert_eq!(absorb_with(&f, &short).unwrap_err().code, "LimitExceeded");
+    // The root still bounds the sum, and says so.
+    let small = Budget::new(kept - 1).with_scope_limit(hi).named("scene");
+    let e = absorb_with(&f, &small).unwrap_err();
+    assert!(e.expected.contains("(scene)"), "{e}");
+}

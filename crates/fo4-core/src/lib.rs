@@ -227,14 +227,29 @@ impl Drop for MeterScope<'_> {
         self.meter.current.set(self.previous);
     }
 }
-/// Conservative allocation credits. Child credits are released when the child drops.
+/// Conservative allocation credits. Child credits are released when the child drops,
+/// unless the child is [`Budget::commit`]ted to its parent.
 /// Within one budget, credits remain cumulative; use children for temporary work.
+///
+/// Every account of one tree shares the root's ceiling. A root made with
+/// [`Budget::with_scope_limit`] also limits each child, with all its own
+/// children, to a smaller ceiling: the root then bounds what a whole scene
+/// keeps and the scope limit what one read or one cell may take. A root made
+/// with [`Budget::new`] has a scope limit equal to its ceiling, which changes
+/// nothing.
 pub struct Budget {
     max: u64,
     shared: Rc<Cell<u64>>,
     local: Cell<u64>,
     meter: Option<Rc<Meter>>,
     categories: [Cell<u64>; 8],
+    /// Ceiling of each child scope (the child and its descendants).
+    scope_max: u64,
+    /// Credits of each enclosing child scope, outermost first; this
+    /// account's own scope last. Empty for a root.
+    scopes: Vec<Rc<Cell<u64>>>,
+    /// Named in the error when the root ceiling, not a scope, is exceeded.
+    name: Option<&'static str>,
 }
 impl Budget {
     pub fn new(max: u64) -> Self {
@@ -244,7 +259,33 @@ impl Budget {
             local: Cell::new(0),
             meter: None,
             categories: std::array::from_fn(|_| Cell::new(0)),
+            scope_max: max,
+            scopes: Vec::new(),
+            name: None,
         }
+    }
+    /// Limits every child scope of this root to `scope_max` credits (at
+    /// most the root's ceiling), while the root keeps its own ceiling for
+    /// the sum. Only a root can set it.
+    pub fn with_scope_limit(mut self, scope_max: u64) -> Self {
+        if self.scopes.is_empty() {
+            self.scope_max = scope_max.min(self.max);
+        }
+        self
+    }
+    /// Names the root ceiling in the error that exceeding it returns, such
+    /// as the option that sets it.
+    pub fn named(mut self, name: &'static str) -> Self {
+        self.name = Some(name);
+        self
+    }
+    /// The root ceiling.
+    pub fn max(&self) -> u64 {
+        self.max
+    }
+    /// The ceiling of each child scope.
+    pub fn scope_max(&self) -> u64 {
+        self.scope_max
     }
     /// Optional telemetry of conservative credits; this is not resident memory.
     pub fn metered(max: u64) -> Self {
@@ -280,14 +321,68 @@ impl Budget {
     }
     /// A scoped allocation account sharing the aggregate ceiling. Drop releases its charges.
     /// Its allocated data must be dropped before this account is dropped.
+    /// The child is a scope: its charges and its own children's together
+    /// stay within the root's scope limit.
     pub fn child(&self) -> Self {
+        let mut scopes = Vec::with_capacity(self.scopes.len() + 1);
+        scopes.extend(self.scopes.iter().cloned());
+        scopes.push(Rc::new(Cell::new(0)));
         Self {
             max: self.max,
             shared: Rc::clone(&self.shared),
             local: Cell::new(0),
             meter: self.meter.clone(),
             categories: std::array::from_fn(|_| Cell::new(0)),
+            scope_max: self.scope_max,
+            scopes,
+            name: self.name,
         }
+    }
+    /// A long-lived account released when it drops, like [`Budget::child`],
+    /// but inside this account's scope instead of a new one: for a cache
+    /// that grows with the whole scene, bounded by the enclosing scope (the
+    /// root's ceiling for an account of the root) rather than by the scope
+    /// limit of one read.
+    pub fn account(&self) -> Self {
+        Self {
+            max: self.max,
+            shared: Rc::clone(&self.shared),
+            local: Cell::new(0),
+            meter: self.meter.clone(),
+            categories: std::array::from_fn(|_| Cell::new(0)),
+            scope_max: self.scope_max,
+            scopes: self.scopes.clone(),
+            name: self.name,
+        }
+    }
+    /// Keeps the charges of `self`, a child of `parent`, as `parent`'s:
+    /// for data made within the child's scope limit that outlives it.
+    /// Fails unless `self` is a direct child of `parent`; its charges are
+    /// then released as when it drops.
+    pub fn commit(self, parent: &Budget) -> Result<()> {
+        let direct = Rc::ptr_eq(&self.shared, &parent.shared)
+            && self.scopes.len() == parent.scopes.len() + 1
+            && self
+                .scopes
+                .iter()
+                .zip(&parent.scopes)
+                .all(|(a, b)| Rc::ptr_eq(a, b));
+        if !direct {
+            return Err(Error::new(
+                "BudgetNotAChild",
+                "budget",
+                0,
+                "a direct child of the parent",
+                "another account",
+            ));
+        }
+        let local = add(parent.local.get(), self.local.get(), "budget", 0)?;
+        parent.local.set(local);
+        self.local.set(0);
+        for (own, theirs) in self.categories.iter().zip(&parent.categories) {
+            theirs.set(add(theirs.get(), own.replace(0), "budget", 0)?);
+        }
+        Ok(())
     }
     pub fn used(&self) -> u64 {
         self.shared.get()
@@ -297,12 +392,37 @@ impl Budget {
     }
     pub fn charge(&self, size: u64, file: &str, offset: u64) -> Result<()> {
         let next = add(self.shared.get(), size, file, offset)?;
-        if next > self.max {
+        let reject = || {
             if let Some(m) = &self.meter {
                 m.rejected.set(Some((m.current.get(), size)));
             }
+        };
+        if next > self.max {
+            reject();
+            return Err(match self.name {
+                Some(name) => Error::new(
+                    "LimitExceeded",
+                    file,
+                    offset,
+                    format!("<= {} ({name})", self.max),
+                    next,
+                ),
+                None => Error::new(
+                    "LimitExceeded",
+                    file,
+                    offset,
+                    format!("<= {}", self.max),
+                    next,
+                ),
+            });
         }
-        limit(next, self.max, file, offset)?;
+        for scope in &self.scopes {
+            let n = add(scope.get(), size, file, offset)?;
+            if n > self.scope_max {
+                reject();
+            }
+            limit(n, self.scope_max, file, offset)?;
+        }
         let local = add(self.local.get(), size, file, offset)?;
         if let Some(m) = &self.meter {
             let i = m.current.get();
@@ -315,6 +435,9 @@ impl Budget {
             m.peak.set(m.peak.get().max(next));
         }
         self.shared.set(next);
+        for scope in &self.scopes {
+            scope.set(scope.get() + size);
+        }
         self.local.set(local);
         Ok(())
     }
@@ -377,6 +500,9 @@ impl Drop for Budget {
         }
         self.shared
             .set(self.shared.get().saturating_sub(self.local.get()));
+        for scope in &self.scopes {
+            scope.set(scope.get().saturating_sub(self.local.get()));
+        }
     }
 }
 pub trait ReadAt {

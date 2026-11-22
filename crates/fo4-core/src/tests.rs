@@ -417,3 +417,103 @@ fn allocation_meter_separates_live_credits_and_scoped_charges() {
     assert_eq!(m.rejected_category, Some("diagnostics"));
     assert_eq!(m.rejected_requested_bytes, Some(101));
 }
+
+#[test]
+fn scope_limit_bounds_each_child_while_the_root_bounds_the_sum() {
+    let root = Budget::new(1000)
+        .with_scope_limit(300)
+        .named("scene option");
+    assert_eq!((root.max(), root.scope_max()), (1000, 300));
+    // Three children of 300 each, kept by the root: 900 of 1000.
+    let mut kept = Vec::new();
+    for _ in 0..3 {
+        let read = root.child();
+        let e = read.charge(301, "one read", 7).unwrap_err();
+        assert_eq!(e.code, "LimitExceeded");
+        assert!(!e.expected.contains("scene option"), "{e}");
+        // A grandchild counts against its parent's scope too.
+        {
+            let scratch = read.child();
+            scratch.charge(200, "scratch", 0).unwrap();
+            assert!(read.charge(101, "over the scope", 0).is_err());
+        }
+        kept.push(read.bytes(300, "kept", 0).unwrap());
+        read.commit(&root).unwrap();
+    }
+    assert_eq!(root.used(), 900);
+    // The fourth exceeds the root, whose error names it.
+    let read = root.child();
+    let e = read.charge(101, "fourth", 9).unwrap_err();
+    assert_eq!(e.code, "LimitExceeded");
+    assert!(e.expected.contains("scene option"), "{e}");
+    drop(read);
+    // Direct charges of the root are bounded by the root alone.
+    root.charge(100, "root", 0).unwrap();
+    assert_eq!(root.used(), 1000);
+    assert_eq!(kept.len(), 3);
+}
+
+#[test]
+fn commit_keeps_charges_and_drop_releases_them() {
+    let root = Budget::metered(1000).with_scope_limit(600);
+    {
+        let dropped = root.child();
+        dropped.charge(500, "temporary", 0).unwrap();
+    }
+    assert_eq!(root.used(), 0);
+    let kept = root.child();
+    kept.measure(crate::AllocationKind::Reference, || {
+        kept.charge(500, "kept", 0)
+    })
+    .unwrap();
+    kept.commit(&root).unwrap();
+    assert_eq!(root.used(), 500);
+    assert_eq!(root.measurements().unwrap().categories[3].live_credits, 500);
+    // A new scope starts empty although the root holds 500.
+    let next = root.child();
+    next.charge(500, "next", 0).unwrap();
+    // Only a direct child commits; a grandchild is refused and released.
+    let grandchild = next.child();
+    grandchild.charge(0, "empty", 0).unwrap();
+    assert_eq!(
+        grandchild.commit(&root).unwrap_err().code,
+        "BudgetNotAChild"
+    );
+    let other = Budget::new(1000);
+    let stranger = other.child();
+    stranger.charge(10, "stranger", 0).unwrap();
+    assert_eq!(stranger.commit(&root).unwrap_err().code, "BudgetNotAChild");
+    assert_eq!(other.used(), 0);
+    drop(next);
+    assert_eq!(root.used(), 500);
+}
+
+#[test]
+fn without_a_scope_limit_children_share_the_root_ceiling() {
+    let root = Budget::new(1000);
+    assert_eq!(root.scope_max(), 1000);
+    let a = root.child();
+    a.charge(900, "a", 0).unwrap();
+    let b = a.child();
+    assert!(b.charge(101, "b", 0).is_err());
+    b.charge(100, "b", 0).unwrap();
+}
+
+#[test]
+fn an_account_is_bounded_by_its_enclosing_scope_not_a_new_one() {
+    let root = Budget::new(1000).with_scope_limit(300);
+    let cache = root.account();
+    cache.charge(600, "cache", 0).unwrap();
+    assert_eq!(root.used(), 600);
+    // A child of the account is a scope of its own.
+    let e = cache.child().charge(301, "read", 0).unwrap_err();
+    assert_eq!(e.expected, "<= 300");
+    cache.child().charge(300, "read", 0).unwrap();
+    drop(cache);
+    assert_eq!(root.used(), 0);
+    // An account inside a scope shares that scope's limit.
+    let read = root.child();
+    let inner = read.account();
+    inner.charge(300, "inner", 0).unwrap();
+    assert!(read.charge(1, "read", 0).is_err());
+}

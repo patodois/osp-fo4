@@ -196,8 +196,11 @@ pub struct CellLoad {
 /// `scene`, the scene of `around.cell`. The scene keeps the centre cell's
 /// record, name, kind and lighting. Asset indices are the loader's, so the
 /// draw list and the collision of the merged scene read the references of
-/// every cell as one placement list (both sort by reference). Returns one
-/// entry per position, the centre first.
+/// every cell as one placement list (both sort by reference). Each cell is
+/// loaded in a child scope of `b` that `b` then keeps, so a root with a
+/// scope limit ([`Budget::with_scope_limit`]) bounds each cell by it and
+/// the whole scene by its ceiling. Returns one entry per position, the
+/// centre first.
 pub fn absorb_around(
     loader: &mut Loader<'_>,
     scene: &mut Scene,
@@ -224,7 +227,12 @@ pub fn absorb_around(
             });
             continue;
         };
-        let other = loader.cell(key, b)?;
+        // Each cell is read in its own scope of `b` (one cell's work stays
+        // within `b`'s scope limit) and what it read is then kept by `b`,
+        // which also pays for joining it to the scene.
+        let scope = b.child();
+        let other = loader.cell(key, &scope)?;
+        scope.commit(b)?;
         let instances = other.instances.len();
         absorb(scene, other, b)?;
         out.push(CellLoad {

@@ -8,6 +8,7 @@ usage:
            --eye X,Y,Z --look X,Y,Z [--backface-cull] [--terrain] [--around N]
            [--speed UNITS_PER_SECOND] [--fast-speed UNITS_PER_SECOND] [--radians-per-pixel R]
            [--walk] [--texture-cap N] [--alpha-tested-cap N] [--reference-textures]
+           [--scene-memory MIB]
       Window with a free-fly camera: W/A/S/D move, Shift moves faster, hold the
       left mouse button and move the mouse to look, R returns to the start pose.
       The title bar shows the mode, the speed and the position.
@@ -31,10 +32,16 @@ usage:
       alpha test; other textures are decoded as the CPU render decodes them.
       --reference-textures decodes every texture as the CPU render does
       (first level at most 256 texels), for comparing frames with it.
+      --scene-memory MIB (default 2048) bounds the allocation credits of
+      everything the loaded scene keeps (records, draw list, stored texture
+      blocks, terrain, collision, walking world); the manifest's max_memory
+      still bounds each cell read and each asset decode on its own. Credits
+      are conservative, not resident memory.
   fo4-view MANIFEST DATA_DIRECTORY CELL_EDITOR_ID [level] --headless
            --eye X,Y,Z --look X,Y,Z --out build/FRAME.png [--tags build/TAGS.bin]
            [--size WxH] [--backface-cull] [--terrain] [--around N] [--walk]
            [--texture-cap N] [--alpha-tested-cap N] [--reference-textures]
+           [--scene-memory MIB]
       One offscreen frame, no window. --tags also writes the per-pixel instance
       tags (u32 little-endian, u32::MAX = background). With --walk the walking
       world is built as in the window, the walker is dropped with its eye at
@@ -59,6 +66,23 @@ pub struct Scene {
     /// (`--around`, 0 = the cell alone), as the CPU render does.
     pub around: u32,
     pub textures: Textures,
+    /// Credits the loaded scene may keep, in bytes (`--scene-memory`).
+    pub scene_memory: u64,
+}
+
+/// Default of `--scene-memory`: a viewer bound, not a claim about the game.
+/// About 1.2 GiB of credits are kept at `--around 3` at the test cell
+/// (README), with a peak resident memory near 2 GB.
+pub const DEFAULT_SCENE_MEMORY_MIB: u64 = 2048;
+
+/// `--scene-memory` in MiB, within the manifest's own absolute ceiling of
+/// one account (16 GiB).
+fn scene_memory(text: &str) -> Result<u64, String> {
+    text.parse::<u64>()
+        .ok()
+        .filter(|v| (64..=16384).contains(v))
+        .map(|v| v << 20)
+        .ok_or_else(|| format!("ExpectedSceneMemoryMiB 64 to 16384: {text}"))
 }
 
 /// How the viewer keeps its textures.
@@ -212,6 +236,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
     let mut reference_textures = false;
     let mut cap = None;
     let mut alpha_tested_cap = None;
+    let mut memory = DEFAULT_SCENE_MEMORY_MIB << 20;
     let mut rest = args[3..].iter();
     while let Some(arg) = rest.next() {
         let mut value = || rest.next().ok_or_else(usage);
@@ -235,6 +260,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             "--reference-textures" => reference_textures = true,
             "--texture-cap" => cap = Some(texture_side(value()?)?),
             "--alpha-tested-cap" => alpha_tested_cap = Some(texture_side(value()?)?),
+            "--scene-memory" => memory = scene_memory(value()?)?,
             _ => return Err(usage()),
         }
     }
@@ -266,6 +292,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
         terrain,
         around,
         textures,
+        scene_memory: memory,
     };
     if headless {
         Ok(Command::Headless {
@@ -333,6 +360,7 @@ mod tests {
                     terrain: false,
                     around: 0,
                     textures: DEFAULT_TEXTURES,
+                    scene_memory: 2048 << 20,
                 },
                 fly: DEFAULT_FLY,
                 walk: false,
@@ -378,6 +406,8 @@ mod tests {
         let c = parse(&args("m d C --eye 1,2,3 --look 4,5,6 --texture-cap 512")).unwrap();
         assert!(matches!(&c, Command::Window { scene, .. } if scene.textures
             == Textures::Blocks { cap: 512, alpha_tested_cap: 2048 }));
+        let c = parse(&args("m d C --eye 1,2,3 --look 4,5,6 --scene-memory 1024")).unwrap();
+        assert!(matches!(&c, Command::Window { scene, .. } if scene.scene_memory == 1 << 30));
         let c = parse(&args("m d C --eye 1,2,3 --look 4,5,6 --reference-textures")).unwrap();
         assert!(
             matches!(&c, Command::Window { scene, .. } if scene.textures == Textures::Reference)
@@ -401,6 +431,9 @@ mod tests {
             "m d C --eye 1,2,3 --look 4,5,6 --around",
             "m d C --eye 1,2,3 --look 4,5,6 --texture-cap 2",
             "m d C --eye 1,2,3 --look 4,5,6 --reference-textures --texture-cap 512",
+            "m d C --eye 1,2,3 --look 4,5,6 --scene-memory 63",
+            "m d C --eye 1,2,3 --look 4,5,6 --scene-memory 16385",
+            "m d C --eye 1,2,3 --look 4,5,6 --scene-memory x",
             "compare --cpu a --gpu b",
             "compare --cpu a --gpu b --diff c --cpu-tags x",
         ] {

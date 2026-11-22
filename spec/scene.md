@@ -361,7 +361,35 @@ over a block of cells is a viewing choice.
   kind and `lighting_data`. Asset indices belong to the loader, and both the
   draw list and the collision of a cell order references by plugin and
   object ID, so the joined scene is drawn and collided as one placement
-  list: instance tags run over every cell's references.
+  list: instance tags run over every cell's references. Each cell is read
+  in a child scope of the budget that the budget then keeps
+  (`Budget::commit`); joining it to the scene is charged to the budget
+  itself.
+
+### Memory of a joined scene
+
+The manifest's `max_memory` is a safety limit on one read of possibly
+hostile input, not a scene size: the credits that 25 or 49 legitimately
+bounded cells keep add up past it (at the test cell, with `--walk
+--terrain`, about 476 MiB of credits at radius 1, 881 MiB at radius 2 and
+1,477 MiB at radius 3, of which the viewer's stored texture blocks are
+250 to 412 MiB). A `Budget` therefore has two ceilings
+(`fo4_core::Budget::with_scope_limit`): the root's bounds the sum of what
+the scene keeps, and the scope limit bounds every child scope, that is
+one cell read, one asset decode, one terrain piece's textures, with all
+their own children. `commit` keeps a child's charges in its parent;
+dropping it releases them. A long-lived cache that grows with the scene
+(the loader's asset graph) is an `account` of the root, bounded by the
+root. A root made with `Budget::new` has a scope limit equal to its
+ceiling, so the `render` example and the reports behave as before: their
+whole run stays within `max_memory`.
+
+The GPU viewer's root is `--scene-memory MIB` (default 2048) with
+`max_memory` as the scope limit; exceeding the root fails with
+`LimitExceeded` naming the option. Credits are conservative (a vector's
+growth keeps its old charge, records read and dropped stay charged) and
+are not resident memory: at radius 3 the headless viewer peaked at about
+1.8 GB resident.
 
 The `render` example and the GPU viewer take it behind `--around N` (1 to
 3), with the walking world built from the joined scene's collision and,
