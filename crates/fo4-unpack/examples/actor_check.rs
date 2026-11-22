@@ -2,7 +2,8 @@
 //! The placed actors of a cell and the cells around it: what each is drawn
 //! with or why not, and the rest-pose checks of `spec/actor.md` (bind fit,
 //! seams between an actor's parts, feet against the placement and against
-//! the collision under it). Writes a JSON report; draws nothing.
+//! the collision under it, the terrain and the render triangles of the
+//! placed references under it). Writes a JSON report; draws nothing.
 //!
 //! `actor_check MANIFEST CELL_EDITOR_ID RADIUS OUT.json`
 use fo4_core::{Budget, Manifest};
@@ -217,6 +218,60 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             }
             let t = a.transform.unwrap();
             let floor = world.ray_down(f64::from(t[0]), f64::from(t[1]), f64::from(t[2]) + 100.);
+            let (px, py, pz) = (f64::from(t[0]), f64::from(t[1]), f64::from(t[2]));
+            // Render triangles of the placed references straight under the
+            // placement (from 100 above it down to 300 below), drawn or not.
+            let mut under = Vec::new();
+            for inst in &scene.instances {
+                let (Some(base), Some(rt)) = (&inst.base, inst.reference.data.transform) else {
+                    continue;
+                };
+                let d = ((f64::from(rt[0]) - px).powi(2) + (f64::from(rt[1]) - py).powi(2)).sqrt();
+                if d > 6000. {
+                    continue;
+                }
+                let Ok(placed) = fo4_scene::transform::Transform::euler(
+                    rt,
+                    inst.reference.data.scale.unwrap_or(1.),
+                ) else {
+                    continue;
+                };
+                for id in &base.assets {
+                    if loader.assets.nodes[*id].kind != fo4_scene::AssetKind::Model {
+                        continue;
+                    }
+                    let hits = loader.assets.with_decoded(*id, &budget.child(), |dd| {
+                        let DecodedAsset::Model(n) = dd else {
+                            return Ok(Vec::new());
+                        };
+                        let mut hits = Vec::new();
+                        for r in n.roots.iter().filter(|r| **r >= 0) {
+                            render_hits(&n, *r as usize, placed, px, py, 0, &mut hits);
+                        }
+                        Ok(hits)
+                    });
+                    for z in hits.unwrap_or_default() {
+                        if z <= pz + 100. && z >= pz - 300. {
+                            under.push(serde_json::json!({
+                                "z": z,
+                                "z_minus_placement": z - pz,
+                                "reference": format!("{}:{:06x}", inst.reference.key.plugin, inst.reference.key.object_id),
+                                "base_type": String::from_utf8_lossy(&base.record.signature),
+                                "model": String::from_utf8_lossy(&loader.assets.nodes[*id].path),
+                                "ready_under_hypotheses": inst.state.ready_at(RuleLevel::Hypotheses),
+                                "blockers": inst.blockers.iter().filter(|e| fo4_scene::hypotheses::covering(e).is_none()).map(|e| e.code.clone()).collect::<std::collections::BTreeSet<_>>(),
+                            }));
+                        }
+                    }
+                }
+            }
+            under.sort_by(|a, b| {
+                b["z"]
+                    .as_f64()
+                    .unwrap()
+                    .total_cmp(&a["z"].as_f64().unwrap())
+            });
+            let terrain = ground.height_at(px, py).map(|h| h.0);
             item["plan"] = serde_json::json!({
                 "race": format!("{}:{:06x}", plan.race.plugin, plan.race.object_id),
                 "section": plan.section + 1,
@@ -228,6 +283,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 "lowest_minus_placement": lowest - f64::from(t[2]),
                 "collision_floor_z_under_placement": floor.map(|h| h.z),
                 "lowest_minus_floor": floor.map(|h| lowest - h.z),
+                "terrain_z_under_placement": terrain,
+                "render_triangles_under_placement": under,
                 "seam_vertex_pairs": seam_pairs,
                 "seam_max_distance_in_bind": seam_bind_max,
                 "seam_max_distance_after_posing": seam_max,
@@ -249,6 +306,95 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     });
     std::fs::write(&args[3], serde_json::to_string_pretty(&out)?)?;
     Ok(())
+}
+/// Heights of the triangles of the model subtree `i` (placed by `parent`)
+/// that a vertical line at (x, y) crosses, walking nodes as the static
+/// renderer does (editor markers and outside blocks left out).
+fn render_hits(
+    n: &fo4_nif::Nif<'_>,
+    i: usize,
+    parent: fo4_scene::transform::Transform,
+    x: f64,
+    y: f64,
+    depth: u32,
+    out: &mut Vec<f64>,
+) {
+    use fo4_nif::Data;
+    if depth > 64 {
+        return;
+    }
+    let Some(block) = n.blocks.get(i) else { return };
+    if fo4_scene::model_policy::visibility_editor_marker(n, i)
+        || fo4_scene::model_policy::editor_marker_object(n, i)
+        || fo4_scene::model_policy::editor_marker_suffix(n, i)
+    {
+        return;
+    }
+    let ty = &n.block_types[block.type_index as usize];
+    if matches!(
+        fo4_scene::model_policy::block_class(ty),
+        fo4_plugin::static_frame::Class::Outside | fo4_plugin::static_frame::Class::State
+    ) {
+        return;
+    }
+    let Some(data) = block.decoded.as_ref() else {
+        return;
+    };
+    let f = fo4_scene::model_policy::fields(data);
+    let w = if f.iter().any(|f| f.name == "Translation") {
+        match fo4_scene::transform::Transform::from_fields(f, "check") {
+            Ok(l) => parent.compose(l),
+            Err(_) => return,
+        }
+    } else {
+        parent
+    };
+    let mesh = match data {
+        Data::Node { children, .. } => {
+            for c in children.iter().filter(|c| **c >= 0) {
+                render_hits(n, *c as usize, w, x, y, depth + 1, out);
+            }
+            return;
+        }
+        Data::Mesh(m) => Some(m),
+        Data::Fields(ff) => ff
+            .iter()
+            .find_map(|f| match f.value {
+                fo4_nif::Value::Ref(r) if f.name == "Data" && r >= 0 => Some(r as usize),
+                _ => None,
+            })
+            .and_then(|r| match n.blocks.get(r).and_then(|b| b.decoded.as_ref()) {
+                Some(Data::Mesh(m)) => Some(m),
+                _ => None,
+            }),
+    };
+    let Some(mesh) = mesh else { return };
+    let (Some(vs), Some(ts)) = (&mesh.vertices, &mesh.triangles) else {
+        return;
+    };
+    let p: Vec<Option<[f64; 3]>> = vs
+        .iter()
+        .map(|v| v.position.map(|p| w.apply(p.map(f64::from))))
+        .collect();
+    for t in ts {
+        let (Some(Some(a)), Some(Some(b)), Some(Some(c))) = (
+            p.get(t[0] as usize),
+            p.get(t[1] as usize),
+            p.get(t[2] as usize),
+        ) else {
+            continue;
+        };
+        let det = (b[1] - c[1]) * (a[0] - c[0]) + (c[0] - b[0]) * (a[1] - c[1]);
+        if det.abs() < 1e-9 {
+            continue;
+        }
+        let l1 = ((b[1] - c[1]) * (x - c[0]) + (c[0] - b[0]) * (y - c[1])) / det;
+        let l2 = ((c[1] - a[1]) * (x - c[0]) + (a[0] - c[0]) * (y - c[1])) / det;
+        let l3 = 1. - l1 - l2;
+        if l1 >= 0. && l2 >= 0. && l3 >= 0. {
+            out.push(l1 * a[2] + l2 * b[2] + l3 * c[2]);
+        }
+    }
 }
 fn main() {
     if let Err(e) = run() {

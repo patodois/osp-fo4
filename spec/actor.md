@@ -446,6 +446,41 @@ the commit before, under hypotheses and without (their actors are left out
 for other reasons); an exterior cell with four newly drawn creatures
 differs, in a view of one, in 85,424 of 921,600 pixels.
 
+## Height against the ground
+
+Two drawn actors looked as if they floated: the creature of the test cell
+(its lowest vertex 30.9 above the collision under it) and humanoids of the
+clothed interior. `actor_check` now also lists, for each actor, the render
+triangles of every placed reference that a vertical line through the
+placement crosses from 100 above to 300 below it (walking the models as
+the static renderer does, drawn or not) and the terrain height there.
+
+- **Interior.** For all 10 drawn humanoids the first surface under the
+  placement is a room or hall model at 0.00 (one at -0.93 of a placement
+  0.9 up); their rest-pose lowest vertex is between 0.67 below it and 0.26
+  above it. None of those room models is drawn under hypotheses (blocked by a
+  runtime material swap filter, one also by an animation controller,
+  unread blocks and a missing texture; the actor standing on that one has
+  no collision under it either). The humanoids stand on floors that are not
+  drawn.
+- **Test cell.** The only surface under the creature's placement is a road
+  skirt model 10.0 below it, not drawn (its base has a visual subrecord the
+  static frame does not interpret); the collision found there is the
+  terrain, 33.1 below the placement, and so is the drawn ground (a view at
+  ground level shows the gap). The creature's lowest vertex is 2.2 below
+  the placement (0.75 to 0.84 in the idle clip), so about 8 above the road
+  surface that is not drawn.
+- **Others.** In an exterior with 15 creatures drawn, the 11 with a surface
+  under the placement have it within -1.2 to +0.8 of the placement, and
+  their lowest vertex 0.8 or 2.0 below the placement. Ceiling turrets are
+  placed on the surface their ray meets first (0.0), hanging 35.3 below it.
+
+So the rest pose and the placement put feet within about 2 units of the
+surface the placement stands on, and what floats is a missing floor or
+road model, or a placement about 10 units above the road model under it;
+no root or centre bone is involved and nothing in the actor drawing is
+changed. Drawing those floors is a matter of the static frame's blockers.
+
 ## Left as found
 
 - The static renderer composed rotated NIF nodes with the other reading of
