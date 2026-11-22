@@ -70,12 +70,22 @@ usage:
            [--texture-cap N] [--alpha-tested-cap N] [--reference-textures]
            [--scene-memory MIB] [--path X,Y;X,Y;... [--start-pose]] [--no-actors]
            [--actor-clip ARCHIVE_PATH.hkx [--actor-clip-time SECONDS]]
+           [--script-event INDEX:EVENT[,EVENT...]]
       One offscreen frame, no window. With --actor-clip the actors it fits
       are drawn posed at --actor-clip-time (not with --path). --tags also writes the per-pixel instance
       tags (u32 little-endian, u32::MAX = background). With --walk the walking
       world is built as in the window, the walker is dropped with its eye at
       --eye and settled, and the frame is drawn from its eye looking the
       same way; the settled pose is printed.
+      --script-event (a viewer built with --features script-event; needs
+      --under-hypotheses; not with --walk) runs the
+      scripts of the cell's placed reference INDEX (numbered as
+      `script_run CELL list` numbers them) for the events named (activate,
+      trigger-enter, trigger-leave, load, unload, init, reset, cell-attach,
+      cell-detach, fragment:N) with fo4-vm's recording host, prints the
+      effect log, and leaves out of the frame each reference of the loaded
+      cells whose last visibility change in the log is a disable; every
+      other native call is only logged.
       --path (with --walk --terrain --around N) walks the settled walker to
       each X,Y in turn at the run speed, moving the loaded grid as the
       window does but loading synchronously, prints every grid change
@@ -109,6 +119,8 @@ pub struct Scene {
     /// Pose the drawn actors with a clip (`--actor-clip`,
     /// `--actor-clip-time`).
     pub clip: Option<crate::clip::Options>,
+    /// Run a placed reference's scripts before drawing (`--script-event`).
+    pub script_event: Option<crate::vm_event::ScriptEvent>,
 }
 
 /// Default of `--scene-memory`: a viewer bound, not a claim about the game.
@@ -331,6 +343,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
     let mut clip_path = None;
     let mut clip_time = None;
     let mut debug = WindowDebug::default();
+    let mut script_event = None;
     let mut rest = args[3..].iter();
     while let Some(arg) = rest.next() {
         let mut value = || rest.next().ok_or_else(usage);
@@ -364,6 +377,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             "--frame-log" => debug.frame_log = Some(value()?.clone()),
             "--script-path" => debug.path = Some(waypoints(value()?)?),
             "--script-shots" => debug.shots = Some(value()?.clone()),
+            "--script-event" => script_event = Some(crate::vm_event::parse(value()?)?),
             _ => return Err(usage()),
         }
     }
@@ -405,7 +419,11 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             (None, None) => None,
             (None, Some(_)) => return Err("--actor-clip-time needs --actor-clip".into()),
         },
+        script_event,
     };
+    if scene.script_event.is_some() && (!headless || walk) {
+        return Err("--script-event applies to --headless without --walk".into());
+    }
     if scene.clip.is_some() && !scene.actors {
         return Err("--actor-clip poses the drawn actors: not with --no-actors".into());
     }
@@ -540,6 +558,41 @@ mod tests {
         .is_ok());
     }
 
+    #[cfg(feature = "script-event")]
+    #[test]
+    fn script_event_is_headless_only_and_not_with_walk() {
+        let c = parse(&args(
+            "m d C --under-hypotheses --headless --eye 1,2,3 --look 4,5,6 --out a.png --script-event 7:activate",
+        ))
+        .unwrap();
+        let Command::Headless { scene, .. } = c else {
+            panic!("{c:?}")
+        };
+        assert_eq!(
+            scene.script_event,
+            Some(crate::vm_event::ScriptEvent {
+                index: 7,
+                events: vec!["activate".into()]
+            })
+        );
+        for line in [
+            "m d C --under-hypotheses --eye 1,2,3 --look 4,5,6 --script-event 7:activate",
+            "m d C --under-hypotheses --headless --eye 1,2,3 --look 4,5,6 --out a.png --walk --script-event 7:activate",
+            "m d C --under-hypotheses --headless --eye 1,2,3 --look 4,5,6 --out a.png --script-event 7:dance",
+        ] {
+            assert!(parse(&args(line)).is_err(), "{line}");
+        }
+    }
+
+    #[cfg(not(feature = "script-event"))]
+    #[test]
+    fn script_event_is_refused_without_the_feature() {
+        let line = "m d C --under-hypotheses --headless --eye 1,2,3 --look 4,5,6 --out a.png --script-event 7:activate";
+        assert!(parse(&args(line))
+            .unwrap_err()
+            .contains("--features script-event"));
+    }
+
     #[test]
     fn no_actors_turns_the_actors_off_in_both_modes() {
         for line in [
@@ -574,6 +627,7 @@ mod tests {
                     scene_memory: 2048 << 20,
                     actors: true,
                     clip: None,
+                    script_event: None,
                 },
                 fly: DEFAULT_FLY,
                 walk: false,

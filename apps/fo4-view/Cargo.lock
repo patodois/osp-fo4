@@ -1986,6 +1986,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "fo4-pex"
+version = "0.1.0"
+dependencies = [
+ "fo4-core",
+ "serde",
+]
+
+[[package]]
 name = "fo4-plugin"
 version = "0.1.0"
 dependencies = [
@@ -2051,8 +2059,19 @@ dependencies = [
  "fo4-render",
  "fo4-scene",
  "fo4-vfs",
+ "fo4-vm",
  "fo4-walk",
  "half",
+]
+
+[[package]]
+name = "fo4-vm"
+version = "0.1.0"
+dependencies = [
+ "fo4-core",
+ "fo4-pex",
+ "fo4-plugin",
+ "fo4-vfs",
 ]
 
 [[package]]

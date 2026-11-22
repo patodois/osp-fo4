@@ -184,9 +184,22 @@ pub fn cell(
     scene_memory: u64,
     actors: bool,
     clip: Option<&crate::clip::Options>,
+    script_event: Option<&crate::vm_event::ScriptEvent>,
 ) -> AnyResult<Loaded> {
     if walk {
         fo4_walk::accept(&walk_rules(), level, fo4_scene::hypotheses::status)?;
+    }
+    #[cfg(feature = "script-event")]
+    if script_event.is_some() && level != RuleLevel::Hypotheses {
+        return Err(format!(
+            "ScriptEventRuleLevel: --script-event relies on the pending rules {:?} (--under-hypotheses)",
+            crate::vm_event::rules()
+        )
+        .into());
+    }
+    #[cfg(not(feature = "script-event"))]
+    if script_event.is_some() {
+        return Err("--script-event needs a viewer built with --features script-event".into());
     }
     let Sources {
         manifest,
@@ -222,6 +235,12 @@ pub fn cell(
     } else {
         None
     };
+    // --script-event: the references the run disables leave the scene
+    // before anything is built. Without it nothing changes.
+    #[cfg(feature = "script-event")]
+    if let Some(ev) = script_event {
+        crate::vm_event::apply(ev, &store, &vfs, limits.max_memory, &mut scene, level)?;
+    }
     let mut animation = None;
     if clip.is_some() && !actors {
         return Err("ActorClipWithoutActors: --actor-clip poses the drawn actors".into());

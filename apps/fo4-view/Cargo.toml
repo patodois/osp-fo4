@@ -12,6 +12,9 @@ publish = false
 # without a GPU stack. See the root Cargo.toml `exclude`.
 [workspace]
 
+[features]
+script-event = ["dep:fo4-vm"]
+
 [dependencies]
 fo4-core = { path = "../../crates/fo4-core" }
 fo4-plugin = { path = "../../crates/fo4-plugin" }
@@ -19,6 +22,9 @@ fo4-vfs = { path = "../../crates/fo4-vfs" }
 fo4-scene = { path = "../../crates/fo4-scene" }
 fo4-render = { path = "../../crates/fo4-render" }
 fo4-walk = { path = "../../crates/fo4-walk" }
+# Only with `--features script-event` (`--script-event`): the default build
+# does not link the interpreter (spec/vm.md, Visible effect).
+fo4-vm = { path = "../../crates/fo4-vm", optional = true }
 # Bevy already depends on `half`; used here for f32 -> f16 texture upload.
 half = { version = "2", default-features = false }
 bevy = { version = "0.20", default-features = false, features = [

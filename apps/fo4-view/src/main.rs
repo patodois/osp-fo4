@@ -14,6 +14,7 @@ mod path;
 mod scene;
 mod script;
 mod stream;
+mod vm_event;
 mod walk;
 
 use cli::Command;
@@ -45,6 +46,7 @@ fn load_scene(
         s.scene_memory,
         s.actors,
         s.clip.as_ref(),
+        s.script_event.as_ref(),
     )?;
     let options = RenderOptions {
         backface_cull: s.backface_cull,
