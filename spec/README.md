@@ -42,6 +42,8 @@ Measurement datasets and photographs of the game are not distributed.
 | [vm-host-data-census.txt](vm-host-data-census.txt) | Counts from the census of the data the data host reads (`host_data_census`): XLKR, NAME, the initially-disabled flag, FLTV, LNAM, record types against declared property types. |
 | [save.md](save.md) | Save files (`.fos`): the container read to the last byte (header, screenshot span, versions, plugin lists, location table, three global data tables, change-form table, form id array, second array, closing block), change-form entries by type, version, compression and flag bits, form references resolved against the plugin data under alternative readings, the moved-reference prefix checked against plugin placements; what stays raw and open. |
 | [save-census.txt](save-census.txt) | Counts from the save census (`save_census`): no content of any save. |
+| [audio.md](audio.md) | Sound files and the records that tie them to the world: the RIFF `WAVE` and `XWMA` containers and the voice container (`FUZE`, lip half kept raw) read to the last byte, their header fields and chunks, PCM decoded and the WMA-family payload left raw with its packets counted, the sound-family records and their links, how stored sound paths resolve, placed emitters, and what the test cells place and assign; what stays open. |
+| [audio-census.txt](audio-census.txt) | Counts from the audio census (`audio_census`): files, containers, header fields, chunks, decoding, record subrecords, links, path readings and the test cells, numbered. No name or path. |
 | [path-census.md](path-census.md) | Path accounting and independent candidate-resolution comparisons. |
 | [photo-metrics.md](photo-metrics.md) | Prospective forward silhouette and persistent reverse-photo metrics, with explicit limits. |
 | [plugin.md](plugin.md) | Plugin envelopes, groups, subrecords, compression, FormIDs, overrides and flags. |
@@ -181,3 +183,15 @@ the registry.
 | `save_form_id_array_v1` | pending | Same saves as save_ref_id_kinds_v1: the DLC object's entry must carry that DLC's index in the first list. |
 | `save_change_form_type_record_v1` | pending | Change one form of each record type in the running game (move a reference, change a cell, finish a dialogue line, advance a quest) and save: each new entry must carry its type. |
 | `save_refr_move_layout_v1` | pending | Move a placed object by a known offset in a known cell with the console and save: the payload's first bytes must name that cell and hold the position and rotation the console reports. |
+| `audio_riff_framing_v1` | pending | Write a RIFF file with an extra chunk and an odd chunk without its pad into an overlay archive in place of a looping ambient of a purpose-built cell and record whether the game plays each; a file the rule frames that the game refuses, or the reverse, rejects it. |
+| `audio_format_chunk_v1` | pending | Same overlay as audio_pcm_layout_v1 with the sample-rate field halved: the game's output must play at half pitch or half speed. |
+| `audio_format_tags_v1` | pending | Record the game's output while a looping ambient of each tag plays in a purpose-built cell and compare its spectrum with the decoded PCM file (tag 1) and with a reference recording (tag 0x161). |
+| `audio_pcm_layout_v1` | pending | Record the game's output while a PCM-only looping ambient plays alone in a purpose-built cell and cross-correlate it with the decoded samples: no peak at the loop period rejects the rule. |
+| `audio_xwma_packets_v1` | pending | None on the data alone: needs a decoder, which is out of scope; the packet count against dpds below is the only check. |
+| `audio_xwma_dpds_v1` | pending | Time the game's playback of a long XWMA music track from start to loop and compare it with the last dpds entry over 2 x channels x rate. |
+| `audio_fuz_layout_v1` | pending | Put a voice container whose lip half is emptied into an overlay archive for one line of a purpose-built dialogue and observe that the line plays with the lips still. |
+| `audio_wave_smpl_v1` | pending | Record a looping PCM ambient with a loop shorter than its file in a purpose-built cell: the repeat period must equal end - start + 1 frames. |
+| `audio_wave_cue_v1` | pending | None planned: the points are not used. |
+| `audio_wave_list_v1` | pending | None planned: the contents are not used. |
+| `audio_record_links_v1` | pending | In a purpose-built cell, place one sound marker, one door and one region whose sound descriptors name distinct test files in an overlay archive, and record which file plays on entering, on opening the door and in the region. |
+| `audio_record_path_readings_v1` | pending | Replace one .xwm named by a sound descriptor of a purpose-built cell with a .wav of the stored name in an overlay archive and record which of the two the game plays. |

@@ -1,0 +1,1178 @@
+# audio census: 7 plugins, 62 archive mounts
+
+# archive entries
+archive kind DX10: entries	41348
+archive kind GNRL: entries	463870
+entries	505218
+distinct paths	503245
+texture-archive entries (DDS by construction, first bytes not read)	41348
+
+# entries by extension: entries, bytes, entries whose first bytes name a sound container, their bytes
+(none)	3	1723787	0	0
+bgem	700	165988	0	0
+bgsm	8594	3452794	0	0
+bin	1	85016	0	0
+bto	802	275100559	0	0
+btr	8271	119840374	0	0
+dat	1	28151	0	0
+dds	41974	34041269815	0	0
+dlstrings	192	8875979	0	0
+fuz	158065	3606750436	158065	3606750436
+fxp	1	12794936	0	0
+gfx	5	92748	0	0
+hko	12	341469	0	0
+hkx	17510	442786672	0	0
+ilstrings	192	77464372	0	0
+lod	6	96	0	0
+log	6	8059	0	0
+lst	2	8	0	0
+max	1	606208	0	0
+nif	226206	6263201562	0	0
+obj	4	300406	0	0
+pex	10282	14857157	0	0
+sclp	68	465296	0	0
+ssf	714	527126	0	0
+strings	192	27727251	0	0
+swf	344	25739429	0	0
+tri	79	24957821	0	0
+txt	17163	937184751	0	0
+uvd	1422	1609948128	0	0
+wav	2467	1806548818	2467	1806548818
+xml	8	30859	0	0
+xwm	9931	596176762	9931	596176762
+
+# sound containers by first bytes, by extension
+FUZE	fuz	158065
+RIFF WAVE	wav	2467
+RIFF XWMA	xwm	9931
+
+# loose files under the data root, by extension (archives and plugins left out)
+14	bk2
+6	cdx
+6	csg
+1	dll
+29	pex
+29	psc
+1	txt
+loose sound containers by first bytes	0
+
+# sound files
+sound entries (every candidate)	170463
+overridden copies among them	18
+files	170463
+bytes	6009476016
+files read to the last byte	170463
+bytes read to the last byte	6009476016
+files decoded to PCM	2467
+bytes of the files decoded to PCM	1806548818
+
+# container RIFF WAVE
+files	2467
+bytes	1806548818
+bytes by part: voice header 0 | lip half 0 | RIFF framing 101274 | fmt 39472 | dpds 0 | data 1806118156 | other chunks 289916 | total 1806548818
+
+# RIFF WAVE: outcomes
+2467	read to the last byte
+
+# RIFF WAVE: entries by mount group
+1948	base
+489	dlc
+30	other
+
+# RIFF WAVE: fmt fields
+1	form WAVE tag 0x0001 (pcm) channels 1 rate 16000 bits 16 align 2 extension none
+12	form WAVE tag 0x0001 (pcm) channels 1 rate 32000 bits 16 align 2 extension none
+102	form WAVE tag 0x0001 (pcm) channels 1 rate 44100 bits 16 align 2 extension none
+1514	form WAVE tag 0x0001 (pcm) channels 1 rate 48000 bits 16 align 2 extension none
+1	form WAVE tag 0x0001 (pcm) channels 2 rate 32000 bits 16 align 4 extension none
+18	form WAVE tag 0x0001 (pcm) channels 2 rate 44100 bits 16 align 4 extension none
+811	form WAVE tag 0x0001 (pcm) channels 2 rate 48000 bits 16 align 4 extension none
+2	form WAVE tag 0x0001 (pcm) channels 2 rate 48000 bits 24 align 6 extension none
+2	form WAVE tag 0x0001 (pcm) channels 2 rate 8000 bits 16 align 4 extension none
+4	form WAVE tag 0x0001 (pcm) channels 2 rate 96000 bits 24 align 6 extension none
+
+# RIFF WAVE: chunks (files with, occurrences, payload bytes, size range)
+CDif	255	532	36176	n 532 min 68 max 68 sum 36176
+Fake	1	1	2	n 1 min 2 max 2 sum 2
+JUNK	1046	1046	29288	n 1046 min 28 max 28 sum 29288
+LIST	1257	1257	94298	n 1257 min 66 max 100 sum 94298
+bext	1	1	802	n 1 min 802 max 802 sum 802
+cue 	173	173	72260	n 173 min 28 max 604 sum 72260
+data	2467	2467	1806118156	n 2467 min 2982 max 16851096 sum 1806118156
+fmt 	2467	2467	39472	n 2467 min 16 max 16 sum 39472
+iXML	1	1	1316	n 1 min 1316 max 1316 sum 1316
+inst	70	70	490	n 70 min 7 max 7 sum 490
+smpl	935	935	55284	n 935 min 36 max 60 sum 55284
+
+# RIFF WAVE: chunk order
+432	JUNK,fmt ,data
+1	JUNK,fmt ,data,CDif,cue ,LIST,smpl,inst
+1	JUNK,fmt ,data,CDif,smpl,inst
+6	JUNK,fmt ,data,cue ,LIST,smpl,inst
+8	JUNK,fmt ,data,smpl,inst
+106	fmt ,data
+1	fmt ,data,CDif,CDif
+7	fmt ,data,CDif,CDif,CDif,CDif,JUNK
+16	fmt ,data,CDif,CDif,JUNK
+4	fmt ,data,CDif,JUNK
+241	fmt ,data,JUNK
+684	fmt ,data,LIST
+27	fmt ,data,LIST,CDif
+10	fmt ,data,LIST,CDif,CDif
+3	fmt ,data,LIST,JUNK
+429	fmt ,data,LIST,smpl
+30	fmt ,data,LIST,smpl,CDif
+12	fmt ,data,LIST,smpl,CDif,CDif
+8	fmt ,data,LIST,smpl,CDif,CDif,CDif
+1	fmt ,data,LIST,smpl,CDif,CDif,CDif,CDif
+1	fmt ,data,LIST,smpl,CDif,CDif,JUNK,CDif,inst
+2	fmt ,data,LIST,smpl,JUNK
+1	fmt ,data,cue ,JUNK
+43	fmt ,data,cue ,LIST,smpl
+38	fmt ,data,cue ,smpl
+1	fmt ,data,cue ,smpl,CDif,CDif,CDif,CDif,CDif,CDif,CDif,CDif,CDif,CDif,JUNK
+2	fmt ,data,cue ,smpl,CDif,CDif,CDif,CDif,CDif,JUNK
+2	fmt ,data,cue ,smpl,CDif,CDif,CDif,CDif,JUNK
+1	fmt ,data,cue ,smpl,CDif,CDif,CDif,JUNK
+1	fmt ,data,cue ,smpl,CDif,CDif,JUNK
+3	fmt ,data,cue ,smpl,CDif,JUNK
+4	fmt ,data,cue ,smpl,CDif,JUNK,inst
+70	fmt ,data,cue ,smpl,JUNK
+31	fmt ,data,smpl
+1	fmt ,data,smpl,CDif,CDif,CDif,CDif,CDif,CDif,CDif,CDif,JUNK
+3	fmt ,data,smpl,CDif,CDif,CDif,CDif,CDif,CDif,JUNK
+9	fmt ,data,smpl,CDif,CDif,CDif,CDif,CDif,JUNK
+1	fmt ,data,smpl,CDif,CDif,CDif,CDif,CDif,JUNK,inst
+19	fmt ,data,smpl,CDif,CDif,CDif,CDif,JUNK
+16	fmt ,data,smpl,CDif,CDif,CDif,JUNK
+14	fmt ,data,smpl,CDif,CDif,JUNK
+1	fmt ,data,smpl,CDif,CDif,JUNK,CDif,inst
+2	fmt ,data,smpl,CDif,CDif,JUNK,inst
+11	fmt ,data,smpl,CDif,JUNK
+1	fmt ,data,smpl,CDif,JUNK,CDif,inst
+44	fmt ,data,smpl,CDif,JUNK,inst
+117	fmt ,data,smpl,JUNK
+1	fmt ,data,smpl,bext,Fake,iXML
+
+# RIFF WAVE: pad bytes
+70	inst pad byte zero
+
+# RIFF WAVE: smpl chunk under its candidate layout
+935	candidate layout frames the chunk
+935	header word 0 value 0
+935	header word 1 value 0
+870	header word 3 value 60
+65	header word 3 value 72
+935	header word 4 value 0
+935	header word 5 value 0
+935	header word 6 value 0
+901	loop fraction 0
+901	loop kind 0
+901	loop play count 0
+34	loops 0
+901	loops 1
+935	trailing bytes 0
+
+# RIFF WAVE: cue chunk under its candidate layout
+173	candidate layout frames the chunk
+12	points 1
+3	points 13
+1	points 15
+8	points 16
+2	points 17
+10	points 18
+88	points 19
+2	points 2
+43	points 20
+1	points 25
+1	points 3
+1	points 4
+1	points 6
+
+# RIFF WAVE: LIST chunk under its candidate layout
+1257	candidate layout frames the chunk
+1250	list type INFO
+1250	list type INFO sub-chunk ICRD
+1250	list type INFO sub-chunk IENG
+1250	list type INFO sub-chunk ISFT
+7	list type adtl
+7	list type adtl sub-chunk labl
+7	list type adtl sub-chunk ltxt
+7	list type adtl sub-chunk note
+
+# RIFF WAVE: checks (holds, fails)
+2467	0	PCM: average bytes per second == rate * block align
+2466	0	PCM: little-endian signed reading has smaller steps between consecutive samples than big-endian
+2466	0	PCM: signed reading has smaller steps between consecutive samples than offset-binary
+2467	0	fmt chunk before data chunk
+2019	448	fmt chunk is the first chunk
+901	0	smpl loop end < frames of data (candidate: inclusive frame index)
+343	558	smpl loop end == frames of data - 1
+901	0	smpl loop start <= end
+70	865	smpl word 2 == floor(1e9 / sample rate) (candidate: sample period in ns)
+
+# RIFF WAVE: decoding
+2467	decoded to PCM
+1	decoded, every consecutive step zero (checks below skip it)
+decoded PCM: files 2467 bytes 1806548818 frames 630069108 seconds 13167
+
+# RIFF WAVE: durations
+1238	1-5 s
+19	30-120 s
+869	5-30 s
+341	< 1 s
+
+# container RIFF XWMA
+files	9931
+bytes	596176762
+bytes by part: voice header 0 | lip half 0 | RIFF framing 357522 | fmt 178758 | dpds 1982060 | data 593658422 | other chunks 0 | total 596176762
+
+# RIFF XWMA: outcomes
+9931	read to the last byte
+
+# RIFF XWMA: entries by mount group
+6949	base
+2981	dlc
+1	other
+
+# RIFF XWMA: fmt fields
+8087	form XWMA tag 0x0161 (wma2) channels 1 rate 44100 bits 16 align 2230 extension 0 bytes
+10	form XWMA tag 0x0161 (wma2) channels 2 rate 32000 bits 16 align 2304 extension 0 bytes
+129	form XWMA tag 0x0161 (wma2) channels 2 rate 44100 bits 16 align 2230 extension 0 bytes
+8	form XWMA tag 0x0161 (wma2) channels 2 rate 44100 bits 16 align 4459 extension 0 bytes
+1697	form XWMA tag 0x0161 (wma2) channels 2 rate 48000 bits 16 align 1008 extension 0 bytes
+
+# RIFF XWMA: fmt average bytes per second
+8	average bytes per second 12000
+9923	average bytes per second 6000
+
+# RIFF XWMA: chunks (files with, occurrences, payload bytes, size range)
+data	9931	9931	593658422	n 9931 min 2016 max 6637680 sum 593658422
+dpds	9931	9931	1982060	n 9931 min 4 max 26340 sum 1982060
+fmt 	9931	9931	178758	n 9931 min 18 max 18 sum 178758
+
+# RIFF XWMA: chunk order
+9931	fmt ,dpds,data
+
+# RIFF XWMA: pad bytes
+6	data pad byte zero
+
+# RIFF XWMA: checks (holds, fails)
+9931	0	XWMA: data length a multiple of block align
+9931	0	XWMA: dpds entries == whole packets (data / block align)
+9749	182	XWMA: dpds strictly increasing
+296	9635	XWMA: every dpds step (first value included) equal within the file
+1155	8776	XWMA: every dpds step but the last equal within the file
+9931	0	XWMA: last dpds a multiple of 2 * channels (candidate: 16-bit decoded bytes)
+9931	0	fmt chunk before data chunk
+9931	0	fmt chunk is the first chunk
+
+# RIFF XWMA: decoding
+9931	WMA family: not decoded, payload raw
+WMA packets (whole, data / block align)	495515
+seconds under the dpds candidate	76209
+
+# RIFF XWMA: XWMA framing
+1570	data / average bytes per second over dpds duration: 0.9-1.1
+8022	data / average bytes per second over dpds duration: 1.1-2
+339	data / average bytes per second over dpds duration: > 2
+2	first dpds entry not above the one before: an earlier entry, equal
+180	first dpds entry not above the one before: the last entry, equal
+
+# RIFF XWMA: dpds first step
+20	channels 1 first step 12288
+14	channels 1 first step 13312
+4	channels 1 first step 13824
+1	channels 1 first step 14080
+2	channels 1 first step 14208
+343	channels 1 first step 16384
+346	channels 1 first step 17408
+174	channels 1 first step 17920
+89	channels 1 first step 18176
+137	channels 1 first step 18304
+1147	channels 1 first step 20480
+494	channels 1 first step 21504
+258	channels 1 first step 22016
+134	channels 1 first step 22272
+181	channels 1 first step 22400
+1208	channels 1 first step 24576
+351	channels 1 first step 25600
+153	channels 1 first step 26112
+97	channels 1 first step 26368
+100	channels 1 first step 26496
+1960	channels 1 first step 28672
+497	channels 1 first step 29696
+149	channels 1 first step 30208
+79	channels 1 first step 30464
+134	channels 1 first step 30592
+14	channels 1 first step 8192
+1	channels 1 first step 9216
+1	channels 2 first step 10240
+1220	channels 2 first step 16384
+273	channels 2 first step 18432
+93	channels 2 first step 19456
+42	channels 2 first step 19968
+67	channels 2 first step 20224
+10	channels 2 first step 24576
+7	channels 2 first step 26624
+2	channels 2 first step 27648
+6	channels 2 first step 28416
+12	channels 2 first step 32768
+8	channels 2 first step 34816
+3	channels 2 first step 35840
+1	channels 2 first step 36352
+4	channels 2 first step 36608
+19	channels 2 first step 40960
+7	channels 2 first step 43008
+3	channels 2 first step 44032
+2	channels 2 first step 44544
+2	channels 2 first step 44800
+6	channels 2 first step 49152
+3	channels 2 first step 51200
+5	channels 2 first step 52224
+34	channels 2 first step 57344
+5	channels 2 first step 59392
+4	channels 2 first step 60416
+2	channels 2 first step 60928
+2	channels 2 first step 61184
+1	channels 2 first step 8192
+
+# RIFF XWMA: durations
+5267	1-5 s
+77	30-120 s
+1836	5-30 s
+2570	< 1 s
+181	>= 120 s
+
+# container FUZE
+files	158065
+bytes	3606750436
+bytes by part: voice header 1896780 | lip half 706176224 | RIFF framing 5769758 | fmt 2845170 | dpds 7705696 | data 2882356808 | other chunks 0 | total 3606750436
+
+# FUZE: outcomes
+158065	read to the last byte
+
+# FUZE: entries by mount group
+116745	base
+41320	dlc
+
+# FUZE: fmt fields
+157476	form XWMA tag 0x0161 (wma2) channels 1 rate 44100 bits 16 align 1487 extension 0 bytes
+589	form XWMA tag 0x0161 (wma2) channels 2 rate 48000 bits 16 align 2731 extension 0 bytes
+
+# FUZE: fmt average bytes per second
+157476	average bytes per second 4000
+589	average bytes per second 8000
+
+# FUZE: chunks (files with, occurrences, payload bytes, size range)
+data	158065	158065	2882356808	n 158065 min 1487 max 1676834 sum 2882356808
+dpds	158065	158065	7705696	n 158065 min 4 max 2456 sum 7705696
+fmt 	158065	158065	2845170	n 158065 min 18 max 18 sum 2845170
+
+# FUZE: chunk order
+158065	fmt ,dpds,data
+
+# FUZE: pad bytes
+79418	data pad byte zero
+
+# FUZE: checks (holds, fails)
+158065	0	XWMA: data length a multiple of block align
+158065	0	XWMA: dpds entries == whole packets (data / block align)
+151335	6730	XWMA: dpds strictly increasing
+284	157781	XWMA: every dpds step (first value included) equal within the file
+2303	155762	XWMA: every dpds step but the last equal within the file
+158065	0	XWMA: last dpds a multiple of 2 * channels (candidate: 16-bit decoded bytes)
+158065	0	fmt chunk before data chunk
+158065	0	fmt chunk is the first chunk
+
+# FUZE: decoding
+158065	WMA family: not decoded, payload raw
+WMA packets (whole, data / block align)	1926424
+seconds under the dpds candidate	560721
+
+# FUZE: XWMA framing
+4661	data / average bytes per second over dpds duration: 0.9-1.1
+151664	data / average bytes per second over dpds duration: 1.1-2
+1740	data / average bytes per second over dpds duration: > 2
+6730	first dpds entry not above the one before: the last entry, equal
+
+# FUZE: dpds first step
+93	channels 1 first step 12288
+107	channels 1 first step 13312
+20	channels 1 first step 13824
+14	channels 1 first step 14080
+19	channels 1 first step 14208
+2084	channels 1 first step 16384
+1830	channels 1 first step 17408
+349	channels 1 first step 17920
+169	channels 1 first step 18176
+317	channels 1 first step 18304
+4953	channels 1 first step 20480
+3137	channels 1 first step 21504
+709	channels 1 first step 22016
+480	channels 1 first step 22272
+588	channels 1 first step 22400
+17824	channels 1 first step 24576
+18718	channels 1 first step 25600
+4453	channels 1 first step 26112
+2793	channels 1 first step 26368
+3851	channels 1 first step 26496
+56487	channels 1 first step 28672
+23450	channels 1 first step 29696
+6274	channels 1 first step 30208
+3362	channels 1 first step 30464
+5395	channels 1 first step 30592
+1	channels 2 first step 32768
+2	channels 2 first step 34816
+19	channels 2 first step 40960
+10	channels 2 first step 43008
+3	channels 2 first step 44032
+1	channels 2 first step 44800
+52	channels 2 first step 49152
+16	channels 2 first step 51200
+4	channels 2 first step 52224
+2	channels 2 first step 52736
+258	channels 2 first step 57344
+170	channels 2 first step 59392
+17	channels 2 first step 60416
+14	channels 2 first step 60928
+20	channels 2 first step 61184
+
+# FUZE: durations
+111425	1-5 s
+3	30-120 s
+35180	5-30 s
+11432	< 1 s
+25	>= 120 s
+
+# FUZE: voice container
+158065	audio half form XWMA
+150139	lip half first four bytes 01 00 00 00
+1682	lip half first four bytes 54 4f 4d 33
+6244	lip half of 0 bytes
+158065	version 1
+lip half bytes	n 158065 min 0 max 268642 sum 706176224
+
+# FUZE: lip half sizes
+6244	0
+25006	2^10..2^11
+49053	2^11..2^12
+39230	2^12..2^13
+21072	2^13..2^14
+1365	2^14..2^15
+475	2^15..2^16
+136	2^16..2^17
+11	2^17..2^18
+2	2^18..2^19
+1090	2^7..2^8
+5018	2^8..2^9
+9363	2^9..2^10
+
+# records: winning records by type (live, deleted)
+SNDR	7428	0
+SOUN	339	0
+SNCT	50	0
+SOPM	402	0
+MUSC	132	0
+MUST	624	0
+ASPC	98	0
+AECH	31	0
+REVB	59	0
+REGN	153	0
+CELL	62393	1
+WRLD	13	0
+LCTN	487	0
+DOOR	442	0
+ACTI	2195	0
+WEAP	480	0
+
+# subrecords: type, subrecord, records with it, occurrences, most per record, sizes (count) up to 8 most common, distinct sizes, text occurrences, text extensions
+ACTI	ATTX	283	283	1	4:283	1	0	
+ACTI	CIS1	6	6	1	13:6	1	6	(none):6
+ACTI	CIS2	7	7	1	26:6,29:1	2	7	(none):7
+ACTI	CITC	91	91	1	4:91	1	0	
+ACTI	CTDA	91	139	6	32:139	1	0	
+ACTI	DAMC	1	1	1	32:1	1	0	
+ACTI	DEST	83	83	1	8:83	1	0	
+ACTI	DMDL	55	58	2	48:19,53:7,40:5,59:5,50:4,49:3,31:2,35:2	17	58	nif:58
+ACTI	DMDS	4	4	1	4:4	1	0	
+ACTI	DMDT	55	58	2	68:29,104:5,140:5,80:4,20:2,56:2,128:2,132:2	13	0	
+ACTI	DSTA	16	22	3	5:8,8:8,13:6	3	22	(none):22
+ACTI	DSTD	83	129	4	20:129	1	0	
+ACTI	DSTF	83	129	4	0:129	1	0	
+ACTI	EDID	2194	2194	1	21:183,40:125,24:106,39:97,23:95,28:93,26:88,25:86	48	2194	(none):2194
+ACTI	FNAM	2195	2195	1	2:2195	1	0	
+ACTI	FTYP	17	17	1	4:17	1	0	
+ACTI	FULL	1282	1282	1	4:1282	1	0	
+ACTI	KSIZ	678	678	1	4:678	1	0	
+ACTI	KWDA	678	678	1	8:417,4:172,12:49,16:30,20:10	5	0	
+ACTI	MODC	8	8	1	4:8	1	0	
+ACTI	MODL	1743	1743	1	56:220,65:146,39:79,26:60,34:59,52:54,60:52,74:51	78	1743	hkp:1,nif:1742
+ACTI	MODS	412	412	1	4:412	1	0	
+ACTI	MODT	1743	1743	1	20:516,68:256,80:181,92:66,116:56,128:56,144:46,16:45	75	0	
+ACTI	NTRM	51	51	1	4:51	1	0	
+ACTI	NVNM	7	7	1	426:1,509:1,552:1,852:1,928:1,1028:1,1104:1	7	0	
+ACTI	OBND	2195	2195	1	12:2195	1	0	
+ACTI	PNAM	2195	2195	1	4:2195	1	0	
+ACTI	PRPS	463	463	1	16:333,8:94,24:21,32:12,40:1,72:1,80:1	7	0	
+ACTI	PTRN	648	648	1	4:648	1	0	
+ACTI	RADR	114	114	1	14:113,13:1	2	0	
+ACTI	SNAM	2	2	1	4:2	1	0	
+ACTI	STCP	8	8	1	4:8	1	0	
+ACTI	VMAD	931	931	1	52:29,54:28,67:26,280:26,49:25,38:22,57:20,39:19	228	0	
+ACTI	VNAM	26	26	1	4:26	1	0	
+ACTI	WNAM	50	50	1	4:50	1	0	
+AECH	DNAM	31	92	5	16:69,20:23	2	0	
+AECH	EDID	31	31	1	26:3,39:3,25:2,27:2,29:2,30:2,31:2,35:2	18	31	(none):31
+AECH	KNAM	31	92	5	4:92	1	0	
+ASPC	BNAM	92	92	1	4:92	1	0	
+ASPC	EDID	98	98	1	21:11,28:9,20:8,22:6,12:5,13:5,17:5,18:5	24	98	(none):98
+ASPC	OBND	98	98	1	12:98	1	0	
+ASPC	RDAT	61	61	1	4:61	1	0	
+ASPC	SNAM	79	79	1	4:79	1	0	
+ASPC	WNAM	83	83	1	2:83	1	0	
+ASPC	XTRI	98	98	1	1:98	1	0	
+CELL	DATA	62393	62393	1	2:62393	1	253	(none):253
+CELL	EDID	2195	2195	1	9:384,19:125,16:120,21:120,18:117,13:104,20:99,11:94	55	2195	(none):2195
+CELL	FULL	397	397	1	4:397	1	0	
+CELL	LTMP	62393	62393	1	4:62393	1	0	
+CELL	MHDT	12046	12046	1	1028:12046	1	0	
+CELL	PCMB	9211	9211	1	2:9211	1	0	
+CELL	RVIS	9733	9733	1	4:9733	1	0	
+CELL	TVDT	1	1	1	4:1	1	0	
+CELL	VISI	10255	10255	1	2:10255	1	0	
+CELL	XCAS	333	333	1	4:333	1	0	
+CELL	XCCM	86	86	1	4:86	1	0	
+CELL	XCIM	396	396	1	4:396	1	0	
+CELL	XCLC	60983	60983	1	12:60983	1	0	
+CELL	XCLL	1410	1410	1	136:821,92:579,128:10	3	0	
+CELL	XCLR	22815	22815	1	4:16609,8:1983,16:1298,20:1222,12:992,24:466,32:122,28:89	9	0	
+CELL	XCLW	62393	62393	1	4:62393	1	0	
+CELL	XCMO	330	330	1	4:330	1	0	
+CELL	XCRI	6936	6936	1	20:211,32:113,44:90,76:65,64:60,56:55,88:51,52:50	1343	0	
+CELL	XCWT	583	583	1	4:583	1	0	
+CELL	XEZN	218	218	1	4:218	1	0	
+CELL	XGDR	10	10	1	4:10	1	0	
+CELL	XILL	21	21	1	4:21	1	0	
+CELL	XILW	25	25	1	16:25	1	0	
+CELL	XLCN	1236	1236	1	4:1236	1	0	
+CELL	XOWN	50	50	1	12:50	1	0	
+CELL	XPRI	3369	3369	1	4:583,8:358,12:304,16:215,20:197,24:146,28:136,36:109	185	0	
+CELL	XRNK	6	6	1	4:6	1	0	
+CELL	XWCN	1	1	1	4:1	1	0	
+CELL	XWCU	1	1	1	48:1	1	0	
+DOOR	ANAM	319	319	1	4:319	1	0	
+DOOR	CNAM	1	1	1	4:1	1	0	
+DOOR	DEST	1	1	1	8:1	1	0	
+DOOR	DSTD	1	1	1	20:1	1	0	
+DOOR	DSTF	1	1	1	0:1	1	0	
+DOOR	EDID	442	442	1	18:37,22:31,23:31,24:29,26:29,20:28,19:27,21:25	36	442	(none):442
+DOOR	FNAM	442	442	1	1:442	1	0	
+DOOR	FULL	346	346	1	4:346	1	0	
+DOOR	KSIZ	62	62	1	4:62	1	0	
+DOOR	KWDA	62	62	1	4:61,8:1	2	0	
+DOOR	MODL	433	433	1	50:46,46:23,44:22,55:21,40:19,47:19,54:19,43:16	49	433	nif:433
+DOOR	MODS	41	41	1	4:41	1	0	
+DOOR	MODT	433	433	1	80:75,68:65,92:46,128:41,116:31,176:30,20:22,188:17	29	0	
+DOOR	NTRM	67	67	1	4:67	1	0	
+DOOR	OBND	442	442	1	12:442	1	0	
+DOOR	ONAM	6	6	1	4:6	1	0	
+DOOR	PTRN	45	45	1	4:45	1	0	
+DOOR	SNAM	325	325	1	4:325	1	0	
+DOOR	VMAD	19	19	1	34:3,200:3,75:2,149:2,225:2,29:1,35:1,45:1	12	0	
+LCTN	ACEC	63	64	2	8:20,20:12,12:11,16:10,28:3,32:2,52:2,24:1	11	0	
+LCTN	ACEP	25	25	1	12:4,24:4,60:3,72:3,36:2,48:2,84:2,96:2	11	0	
+LCTN	ACID	32	32	1	8:5,4:4,12:4,20:3,16:2,24:2,56:2,68:2	16	0	
+LCTN	ACPR	31	31	1	12:10,24:8,48:4,36:1,60:1,120:1,132:1,144:1	12	0	
+LCTN	ACSR	86	86	1	112:8,16:7,80:7,32:6,48:6,128:6,64:5,96:4	41	0	
+LCTN	ACUN	31	31	1	12:8,24:6,48:4,132:3,60:2,36:1,96:1,168:1	13	0	
+LCTN	ANAM	475	475	1	4:475	1	0	
+LCTN	CNAM	1	1	1	4:1	1	0	
+LCTN	EDID	487	487	1	24:46,22:36,21:32,23:32,28:31,27:28,25:26,26:24	33	487	(none):487
+LCTN	FULL	456	456	1	4:456	1	0	
+LCTN	KSIZ	419	419	1	4:419	1	0	
+LCTN	KWDA	419	419	1	12:109,8:105,16:83,4:71,20:22,24:20,32:6,28:3	8	0	
+LCTN	LCEC	228	228	1	8:92,12:55,20:25,16:23,28:10,32:10,24:2,36:2	15	0	
+LCTN	LCEP	117	117	1	12:46,24:18,36:7,72:6,84:5,108:4,48:3,60:3	25	0	
+LCTN	LCID	82	82	1	4:22,8:12,12:10,16:8,24:7,20:3,36:3,28:2	19	0	
+LCTN	LCPR	81	81	1	12:25,24:16,36:8,72:6,96:6,48:3,60:3,108:2	19	0	
+LCTN	LCSR	300	300	1	32:27,16:25,128:17,48:14,64:14,80:13,96:13,144:13	56	0	
+LCTN	LCUN	72	72	1	12:24,24:15,36:8,72:5,96:5,60:3,48:2,228:2	15	0	
+LCTN	MNAM	233	233	1	4:233	1	0	
+LCTN	NAM1	67	67	1	4:67	1	0	
+LCTN	PNAM	429	429	1	4:429	1	0	
+LCTN	RCEC	1	1	1	8:1	1	0	
+LCTN	RCSR	2	2	1	24:1,32:1	2	0	
+LCTN	RNAM	476	476	1	4:476	1	0	
+MUSC	EDID	132	132	1	12:10,17:9,18:9,14:8,21:8,19:7,26:7,13:6	34	132	(none):132
+MUSC	FNAM	132	132	1	4:132	1	0	
+MUSC	PNAM	132	132	1	4:132	1	0	
+MUSC	TNAM	132	132	1	4:55,8:23,12:20,16:8,24:7,20:5,28:2,32:2	16	0	
+MUSC	WNAM	132	132	1	4:132	1	0	
+MUST	ANAM	575	575	1	67:81,71:58,77:46,34:35,57:28,75:27,61:25,44:20	42	575	wav:575
+MUST	BNAM	20	20	1	41:12,36:8	2	20	wav:20
+MUST	CIS2	11	11	1	28:11	1	11	(none):11
+MUST	CITC	103	103	1	4:103	1	0	
+MUST	CNAM	624	624	1	4:624	1	0	
+MUST	CTDA	103	331	13	32:331	1	0	
+MUST	DNAM	41	41	1	4:41	1	0	
+MUST	EDID	624	624	1	31:99,33:65,36:42,25:37,27:37,35:35,38:32,17:28	34	624	(none):624
+MUST	FLTV	49	49	1	4:49	1	0	
+MUST	FNAM	20	20	1	84:4,68:3,72:3,76:3,88:3,108:1,112:1,128:1	9	0	
+MUST	LNAM	27	27	1	12:27	1	0	
+MUST	SNAM	41	41	1	56:5,100:4,68:3,76:3,96:3,48:2,52:2,72:2	21	0	
+REGN	ANAM	41	41	1	4:41	1	0	
+REGN	EDID	152	152	1	18:13,19:12,21:12,9:9,24:9,22:8,23:8,25:7	32	152	(none):152
+REGN	RCLR	153	153	1	4:153	1	0	
+REGN	RDAT	117	138	5	8:138	1	0	
+REGN	RDGS	2	2	1	0:2	1	0	
+REGN	RDMO	28	28	1	4:28	1	0	
+REGN	RDMP	19	19	1	4:19	1	0	
+REGN	RDOT	5	5	1	0:5	1	0	
+REGN	RDSA	45	45	1	36:12,12:11,60:4,96:3,132:3,168:3,24:2,72:2	13	0	
+REGN	RDWT	47	47	1	12:26,24:7,36:6,96:4,72:2,48:1,60:1	7	0	
+REGN	RPLD	112	124	3	32:34,40:14,64:12,48:7,72:6,56:5,96:4,104:4	26	0	
+REGN	RPLI	112	124	3	4:124	1	0	
+REGN	WNAM	108	108	1	4:108	1	0	
+REVB	ANAM	59	59	1	4:59	1	0	
+REVB	DATA	59	59	1	14:59	1	0	
+REVB	EDID	59	59	1	18:10,19:7,23:7,24:5,25:4,17:3,31:3,20:2	21	59	(none):59
+SNCT	CNAM	5	5	1	4:5	1	0	
+SNCT	EDID	50	50	1	24:6,17:5,26:5,23:4,27:3,34:3,39:3,19:2	20	50	(none):50
+SNCT	FNAM	50	50	1	4:50	1	0	
+SNCT	FULL	44	44	1	4:44	1	0	
+SNCT	MNAM	50	50	1	4:50	1	0	
+SNCT	ONAM	43	43	1	4:43	1	0	
+SNCT	PNAM	49	49	1	4:49	1	0	
+SNCT	UNAM	5	5	1	2:5	1	0	
+SNCT	VNAM	50	50	1	2:50	1	0	
+SNDR	ANAM	6715	14016	91	69:528,64:496,71:461,65:421,76:398,66:385,70:370,78:365	86	14016	wav:14016
+SNDR	BNAM	6755	6755	1	6:6731,4:24	2	0	
+SNDR	CNAM	7428	7428	1	4:7428	1	0	
+SNDR	CTDA	639	909	3	32:909	1	0	
+SNDR	DNAM	668	1742	10	4:1742	1	0	
+SNDR	EDID	7427	7427	1	29:373,25:359,28:356,26:341,27:334,31:332,24:319,34:310	53	7427	(none):7427
+SNDR	FNAM	24	120	5	72:20,82:10,86:10,90:10,74:5,79:5,80:5,81:5	18	120	wav:120
+SNDR	GNAM	6733	6733	1	4:6733	1	0	
+SNDR	INTV	24	120	5	4:120	1	0	
+SNDR	ITMC	24	24	1	4:24	1	0	
+SNDR	ITME	24	120	5	0:120	1	0	
+SNDR	ITMS	24	120	5	0:120	1	0	
+SNDR	LNAM	6731	6731	1	4:6731	1	0	
+SNDR	NNAM	6	6	1	56:3,20:2,11:1	3	3	(none):3
+SNDR	ONAM	6731	6731	1	4:6731	1	0	
+SNDR	SNAM	66	66	1	4:66	1	0	
+SOPM	ATTN	377	377	1	24:377	1	0	
+SOPM	EDID	402	402	1	18:49,13:27,23:26,38:18,51:18,44:17,43:15,41:14	50	402	(none):402
+SOPM	ENAM	72	72	1	4:72	1	0	
+SOPM	MNAM	402	402	1	4:402	1	0	
+SOPM	NAM1	402	402	1	4:402	1	0	
+SOPM	ONAM	117	117	1	24:117	1	0	
+SOPM	VNAM	402	402	1	2:402	1	3	(none):3
+SOUN	EDID	339	339	1	31:24,32:23,40:22,39:21,36:18,42:18,50:17,35:16	40	339	(none):339
+SOUN	OBND	339	339	1	12:339	1	0	
+SOUN	REPT	69	69	1	9:66,8:3	2	0	
+SOUN	SDSC	339	339	1	4:339	1	0	
+WEAP	APPR	171	171	1	8:60,4:30,12:30,16:26,20:19,28:2,32:2,44:2	8	0	
+WEAP	BAMT	86	86	1	4:86	1	0	
+WEAP	BIDS	281	281	1	4:281	1	0	
+WEAP	CRDT	480	480	1	12:480	1	0	
+WEAP	DAMA	128	128	1	8:128	1	0	
+WEAP	DESC	480	480	1	4:480	1	0	
+WEAP	DEST	5	5	1	8:5	1	0	
+WEAP	DNAM	480	480	1	132:480	1	0	
+WEAP	DSTD	5	5	1	20:5	1	0	
+WEAP	DSTF	5	5	1	0:5	1	0	
+WEAP	EAMT	4	4	1	2:4	1	0	
+WEAP	EDID	480	480	1	23:29,22:25,28:25,24:24,18:22,29:20,17:18,13:16	50	480	(none):480
+WEAP	EITM	55	55	1	4:55	1	0	
+WEAP	ETYP	478	478	1	4:478	1	0	
+WEAP	FNAM	329	329	1	41:329	1	0	
+WEAP	FULL	370	1291	24	4:1291	1	0	
+WEAP	INAM	429	429	1	4:429	1	0	
+WEAP	INRD	141	141	1	4:141	1	0	
+WEAP	KSIZ	462	462	1	4:462	1	0	
+WEAP	KWDA	462	462	1	8:95,16:71,12:57,40:45,4:38,20:23,52:23,24:22	17	0	
+WEAP	LNAM	242	242	1	4:242	1	0	
+WEAP	MASE	19	19	1	4:19	1	0	
+WEAP	MO4T	62	62	1	20:62	1	0	
+WEAP	MOD4	62	62	1	30:8,38:8,36:7,32:5,46:5,28:4,40:4,34:3	20	62	nif:62
+WEAP	MODL	262	262	1	24:68,45:33,34:26,41:15,49:14,50:12,26:11,28:11	25	262	nif:262
+WEAP	MODS	3	3	1	4:3	1	0	
+WEAP	MODT	262	262	1	20:147,80:46,128:21,68:9,116:6,164:5,72:4,92:4	22	0	
+WEAP	NNAM	33	33	1	4:33	1	0	
+WEAP	OBND	480	480	1	12:480	1	0	
+WEAP	OBTE	161	161	1	4:161	1	0	
+WEAP	OBTF	120	924	23	0:924	1	0	
+WEAP	OBTS	161	986	23	64:283,22:165,57:128,29:96,71:43,25:42,39:41,46:37	17	0	
+WEAP	PTRN	384	384	1	4:384	1	0	
+WEAP	STOP	161	161	1	0:161	1	0	
+WEAP	VMAD	3	3	1	28:1,66:1,87:1	3	0	
+WEAP	WAMD	280	280	1	4:280	1	0	
+WEAP	WZMD	226	226	1	4:226	1	0	
+WEAP	YNAM	180	180	1	4:180	1	0	
+WEAP	ZNAM	180	180	1	4:180	1	0	
+WRLD	CLSZ	13	13	1	192:1,256:1,320:1,512:1,520:1,544:1,780:1,1216:1	13	0	
+WRLD	CNAM	6	6	1	4:6	1	0	
+WRLD	DATA	13	13	1	1:13	1	0	
+WRLD	DNAM	10	10	1	8:10	1	0	
+WRLD	EDID	13	13	1	13:4,15:2,10:1,12:1,14:1,16:1,18:1,20:1	9	13	(none):13
+WRLD	FULL	12	12	1	4:12	1	0	
+WRLD	ICON	3	3	1	37:2,33:1	2	3	dds:3
+WRLD	MHDT	3	3	1	3032:1,12328:1,26900:1	3	0	
+WRLD	MNAM	8	8	1	16:8	1	0	
+WRLD	NAM0	13	13	1	8:13	1	0	
+WRLD	NAM2	10	10	1	4:10	1	0	
+WRLD	NAM3	8	8	1	4:8	1	0	
+WRLD	NAM4	8	8	1	4:8	1	0	
+WRLD	NAM9	13	13	1	8:13	1	0	
+WRLD	NAMA	13	13	1	4:13	1	0	
+WRLD	OFST	13	13	1	192:1,256:1,320:1,512:1,520:1,544:1,780:1,1216:1	13	0	
+WRLD	ONAM	13	13	1	16:13	1	0	
+WRLD	PNAM	6	6	1	2:6	1	0	
+WRLD	RNAM	11	4723	2170	24:694,40:391,16:364,56:352,72:276,88:236,32:224,64:220	55	0	
+WRLD	WCTR	4	4	1	4:4	1	0	
+WRLD	WLEV	2	4	2	4:2,1089:1,3844:1	3	0	
+WRLD	WNAM	6	6	1	4:6	1	0	
+WRLD	XEZN	1	1	1	4:1	1	0	
+WRLD	XLCN	7	7	1	4:7	1	0	
+WRLD	XWEM	5	5	1	58:5	1	5	dds:5
+WRLD	ZNAM	6	6	1	4:6	1	0	
+
+# four-byte values that name a live sound-family record: type, subrecord, byte offset, alignment, target type, values, occurrences of the subrecord (offsets where at least 2 values and 5% of the occurrences do)
+ACTI	RADR	0	aligned	SOPM	64	114
+ACTI	SNAM	0	aligned	SNDR	2	2
+ACTI	VNAM	0	aligned	SNDR	26	26
+ASPC	BNAM	0	aligned	REVB	92	92
+ASPC	RDAT	0	aligned	REGN	61	61
+ASPC	SNAM	0	aligned	SNDR	79	79
+CELL	XCAS	0	aligned	ASPC	333	333
+CELL	XCCM	0	aligned	REGN	86	86
+CELL	XCLR	0	aligned	REGN	22815	22815
+CELL	XCLR	4	aligned	REGN	6206	22815
+CELL	XCLR	8	aligned	REGN	4223	22815
+CELL	XCLR	12	aligned	REGN	3231	22815
+CELL	XCLR	16	aligned	REGN	1933	22815
+CELL	XCMO	0	aligned	MUSC	330	330
+DOOR	ANAM	0	aligned	SNDR	319	319
+DOOR	SNAM	0	aligned	SNDR	325	325
+LCTN	NAM1	0	aligned	MUSC	67	67
+MUSC	TNAM	0	aligned	MUST	132	132
+MUSC	TNAM	4	aligned	MUST	77	132
+MUSC	TNAM	8	aligned	MUST	54	132
+MUSC	TNAM	12	aligned	MUST	34	132
+MUSC	TNAM	16	aligned	MUST	26	132
+MUSC	TNAM	20	aligned	MUST	21	132
+MUSC	TNAM	24	aligned	MUST	14	132
+MUSC	TNAM	28	aligned	MUST	12	132
+MUSC	TNAM	32	aligned	MUST	10	132
+MUSC	TNAM	36	aligned	MUST	9	132
+MUSC	TNAM	40	aligned	MUST	9	132
+MUSC	TNAM	44	aligned	MUST	9	132
+MUSC	TNAM	48	aligned	MUST	9	132
+MUSC	TNAM	52	aligned	MUST	8	132
+MUSC	TNAM	56	aligned	MUST	8	132
+MUSC	TNAM	60	aligned	MUST	7	132
+MUST	SNAM	0	aligned	MUST	41	41
+MUST	SNAM	4	aligned	MUST	41	41
+MUST	SNAM	8	aligned	MUST	41	41
+MUST	SNAM	12	aligned	MUST	41	41
+MUST	SNAM	16	aligned	MUST	38	41
+MUST	SNAM	20	aligned	MUST	33	41
+MUST	SNAM	24	aligned	MUST	38	41
+MUST	SNAM	28	aligned	MUST	39	41
+MUST	SNAM	32	aligned	MUST	27	41
+MUST	SNAM	36	aligned	MUST	33	41
+MUST	SNAM	40	aligned	MUST	39	41
+MUST	SNAM	44	aligned	MUST	37	41
+MUST	SNAM	48	aligned	MUST	35	41
+MUST	SNAM	52	aligned	MUST	31	41
+MUST	SNAM	56	aligned	MUST	27	41
+MUST	SNAM	60	aligned	MUST	29	41
+MUST	SNAM	64	aligned	MUST	25	41
+MUST	SNAM	68	aligned	MUST	26	41
+MUST	SNAM	72	aligned	MUST	24	41
+MUST	SNAM	76	aligned	MUST	16	41
+MUST	SNAM	80	aligned	MUST	18	41
+MUST	SNAM	84	aligned	MUST	17	41
+MUST	SNAM	88	aligned	MUST	15	41
+MUST	SNAM	92	aligned	MUST	13	41
+MUST	SNAM	96	aligned	MUST	11	41
+MUST	SNAM	100	aligned	MUST	8	41
+MUST	SNAM	104	aligned	MUST	8	41
+MUST	SNAM	108	aligned	MUST	7	41
+MUST	SNAM	112	aligned	MUST	8	41
+MUST	SNAM	116	aligned	MUST	6	41
+MUST	SNAM	120	aligned	MUST	6	41
+MUST	SNAM	124	aligned	MUST	7	41
+MUST	SNAM	128	aligned	MUST	5	41
+MUST	SNAM	132	aligned	MUST	5	41
+MUST	SNAM	136	aligned	MUST	5	41
+MUST	SNAM	140	aligned	MUST	5	41
+MUST	SNAM	144	aligned	MUST	5	41
+MUST	SNAM	148	aligned	MUST	5	41
+MUST	SNAM	152	aligned	MUST	3	41
+MUST	SNAM	156	aligned	MUST	4	41
+MUST	SNAM	160	aligned	MUST	3	41
+REGN	RDMO	0	aligned	MUSC	28	28
+REGN	RDSA	0	aligned	SNDR	45	45
+REGN	RDSA	12	aligned	SNDR	34	45
+REGN	RDSA	24	aligned	SNDR	32	45
+REGN	RDSA	36	aligned	SNDR	20	45
+REGN	RDSA	48	aligned	SNDR	20	45
+REGN	RDSA	60	aligned	SNDR	16	45
+REGN	RDSA	72	aligned	SNDR	14	45
+REGN	RDSA	84	aligned	SNDR	14	45
+REGN	RDSA	96	aligned	SNDR	11	45
+REGN	RDSA	108	aligned	SNDR	11	45
+REGN	RDSA	120	aligned	SNDR	11	45
+REGN	RDSA	132	aligned	SNDR	8	45
+REGN	RDSA	144	aligned	SNDR	7	45
+REGN	RDSA	156	aligned	SNDR	6	45
+REGN	RDSA	168	aligned	SNDR	3	45
+REGN	RDSA	180	aligned	SNDR	3	45
+REGN	RDSA	192	aligned	SNDR	3	45
+REGN	RDSA	204	aligned	SNDR	3	45
+REGN	RDSA	216	aligned	SNDR	3	45
+REGN	RDSA	228	aligned	SNDR	3	45
+SNCT	ONAM	0	aligned	SNCT	43	43
+SNCT	PNAM	0	aligned	SNCT	49	49
+SNDR	DNAM	0	aligned	SNDR	1742	1742
+SNDR	GNAM	0	aligned	SNCT	6733	6733
+SNDR	ONAM	0	aligned	SOPM	6731	6731
+SNDR	SNAM	0	aligned	SNDR	66	66
+SOPM	ENAM	0	aligned	AECH	72	72
+SOUN	SDSC	0	aligned	SNDR	339	339
+WEAP	DNAM	73	unaligned	SNDR	44	480
+WEAP	DNAM	85	unaligned	SNDR	219	480
+WEAP	DNAM	93	unaligned	SNDR	200	480
+WEAP	DNAM	97	unaligned	SNDR	300	480
+WEAP	YNAM	0	aligned	SNDR	180	180
+WEAP	ZNAM	0	aligned	SNDR	180	180
+WRLD	ZNAM	0	aligned	MUSC	6	6
+offsets below the threshold	935
+values at them	2738
+
+# candidate links (audio_record_links_v1): subrecords, slots zero, slots naming the target type, slots naming another type, slots naming no live record
+CELL XCAS from 0 every 4 bytes -> ASPC	333	0	333	0	0
+CELL XCMO from 0 every 4 bytes -> MUSC	330	0	330	0	0
+CELL XCCM from 0 every 4 bytes -> REGN	86	0	86	0	0
+CELL XCLR from 0 every 4 bytes -> REGN	22815	0	39554	0	0
+CELL XLCN from 0 every 4 bytes -> LCTN	1236	0	1236	0	0
+LCTN NAM1 from 0 every 4 bytes -> MUSC	67	0	67	0	0
+WRLD ZNAM from 0 every 4 bytes -> MUSC	6	0	6	0	0
+REGN RDMO from 0 every 4 bytes -> MUSC	28	0	28	0	0
+REGN RDSA from 0 every 12 bytes -> SNDR	45	0	298	0	0
+SOUN SDSC from 0 every 4 bytes -> SNDR	339	0	339	0	0
+ASPC SNAM from 0 every 4 bytes -> SNDR	79	0	79	0	0
+ASPC BNAM from 0 every 4 bytes -> REVB	92	0	92	0	0
+ASPC RDAT from 0 every 4 bytes -> REGN	61	0	61	0	0
+DOOR SNAM from 0 every 4 bytes -> SNDR	325	0	325	0	0
+DOOR ANAM from 0 every 4 bytes -> SNDR	319	0	319	0	0
+ACTI SNAM from 0 every 4 bytes -> SNDR	2	0	2	0	0
+ACTI VNAM from 0 every 4 bytes -> SNDR	26	0	26	0	0
+ACTI RADR from 0 every 4 bytes, 1 slots -> SOPM	114	50	64	0	0
+WEAP DNAM from 73 every 4 bytes, 8 slots, size 132 only -> SNDR	480	3053	787	0	0
+WEAP YNAM from 0 every 4 bytes -> SNDR	180	0	180	0	0
+WEAP ZNAM from 0 every 4 bytes -> SNDR	180	0	180	0	0
+MUSC TNAM from 0 every 4 bytes -> MUST	132	0	461	0	0
+MUST SNAM from 0 every 4 bytes -> MUST	41	63	855	0	0
+SNDR DNAM from 0 every 4 bytes -> SNDR	1742	0	1742	0	0
+SNDR SNAM from 0 every 4 bytes -> SNDR	66	0	66	0	0
+SNDR BNAM from 0 every 4 bytes, size 4 only -> SNDR	6755	0	24	0	0
+SNDR GNAM from 0 every 4 bytes -> SNCT	6733	0	6733	0	0
+SNDR ONAM from 0 every 4 bytes -> SOPM	6731	0	6731	0	0
+ACTI RADR from 0 every 4 bytes, 1 slots -> SOPM slot 0 at +0		50	64	0	0
+WEAP DNAM from 73 every 4 bytes, 8 slots, size 132 only -> SNDR slot 0 at +73		436	44	0	0
+WEAP DNAM from 73 every 4 bytes, 8 slots, size 132 only -> SNDR slot 1 at +77		480	0	0	0
+WEAP DNAM from 73 every 4 bytes, 8 slots, size 132 only -> SNDR slot 2 at +81		480	0	0	0
+WEAP DNAM from 73 every 4 bytes, 8 slots, size 132 only -> SNDR slot 3 at +85		261	219	0	0
+WEAP DNAM from 73 every 4 bytes, 8 slots, size 132 only -> SNDR slot 4 at +89		460	20	0	0
+WEAP DNAM from 73 every 4 bytes, 8 slots, size 132 only -> SNDR slot 5 at +93		280	200	0	0
+WEAP DNAM from 73 every 4 bytes, 8 slots, size 132 only -> SNDR slot 6 at +97		180	300	0	0
+WEAP DNAM from 73 every 4 bytes, 8 slots, size 132 only -> SNDR slot 7 at +101		476	4	0	0
+
+# candidate links (holds, fails)
+2	0	ACTI SNAM from 0 every 4 bytes -> SNDR: size minus offset a multiple of the stride
+26	0	ACTI VNAM from 0 every 4 bytes -> SNDR: size minus offset a multiple of the stride
+92	0	ASPC BNAM from 0 every 4 bytes -> REVB: size minus offset a multiple of the stride
+61	0	ASPC RDAT from 0 every 4 bytes -> REGN: size minus offset a multiple of the stride
+79	0	ASPC SNAM from 0 every 4 bytes -> SNDR: size minus offset a multiple of the stride
+333	0	CELL XCAS from 0 every 4 bytes -> ASPC: size minus offset a multiple of the stride
+86	0	CELL XCCM from 0 every 4 bytes -> REGN: size minus offset a multiple of the stride
+22815	0	CELL XCLR from 0 every 4 bytes -> REGN: size minus offset a multiple of the stride
+330	0	CELL XCMO from 0 every 4 bytes -> MUSC: size minus offset a multiple of the stride
+1236	0	CELL XLCN from 0 every 4 bytes -> LCTN: size minus offset a multiple of the stride
+319	0	DOOR ANAM from 0 every 4 bytes -> SNDR: size minus offset a multiple of the stride
+325	0	DOOR SNAM from 0 every 4 bytes -> SNDR: size minus offset a multiple of the stride
+67	0	LCTN NAM1 from 0 every 4 bytes -> MUSC: size minus offset a multiple of the stride
+132	0	MUSC TNAM from 0 every 4 bytes -> MUST: size minus offset a multiple of the stride
+41	0	MUST SNAM from 0 every 4 bytes -> MUST: size minus offset a multiple of the stride
+28	0	REGN RDMO from 0 every 4 bytes -> MUSC: size minus offset a multiple of the stride
+45	0	REGN RDSA from 0 every 12 bytes -> SNDR: size minus offset a multiple of the stride
+24	0	SNDR BNAM from 0 every 4 bytes, size 4 only -> SNDR: size minus offset a multiple of the stride
+1742	0	SNDR DNAM from 0 every 4 bytes -> SNDR: size minus offset a multiple of the stride
+6733	0	SNDR GNAM from 0 every 4 bytes -> SNCT: size minus offset a multiple of the stride
+6731	0	SNDR ONAM from 0 every 4 bytes -> SOPM: size minus offset a multiple of the stride
+66	0	SNDR SNAM from 0 every 4 bytes -> SNDR: size minus offset a multiple of the stride
+339	0	SOUN SDSC from 0 every 4 bytes -> SNDR: size minus offset a multiple of the stride
+180	0	WEAP YNAM from 0 every 4 bytes -> SNDR: size minus offset a multiple of the stride
+180	0	WEAP ZNAM from 0 every 4 bytes -> SNDR: size minus offset a multiple of the stride
+6	0	WRLD ZNAM from 0 every 4 bytes -> MUSC: size minus offset a multiple of the stride
+
+# file paths in MUST ANAM (audio_record_path_readings_v1)
+occurrences	575
+distinct paths (case folded)	541
+without extension	0
+resolving under some reading	527
+stored extension wav	575
+resolves under leading data folder removed, extension .xwm	527
+first reading: leading data folder removed, extension .xwm	527
+first reading: no reading names a mounted file	48
+file named by the first reading: RIFF XWMA WMA, payload raw	527
+
+# file paths in MUST BNAM (audio_record_path_readings_v1)
+occurrences	20
+distinct paths (case folded)	10
+without extension	0
+resolving under some reading	20
+stored extension wav	20
+resolves under leading data folder removed, extension .xwm	20
+first reading: leading data folder removed, extension .xwm	20
+file named by the first reading: RIFF XWMA WMA, payload raw	20
+
+# file paths in SNDR ANAM (audio_record_path_readings_v1)
+occurrences	14016
+distinct paths (case folded)	11687
+without extension	0
+resolving under some reading	13213
+stored extension wav	14016
+resolves under leading data folder removed, extension .xwm	10613
+resolves under leading data folder removed, extension as stored	2592
+resolves under prefix 'sound/', extension .xwm	6
+resolves under prefix 'sound/', extension as stored	2
+first reading: leading data folder removed, extension .xwm	10613
+first reading: leading data folder removed, extension as stored	2592
+first reading: no reading names a mounted file	803
+first reading: prefix 'sound/', extension .xwm	6
+first reading: prefix 'sound/', extension as stored	2
+file named by the first reading: RIFF WAVE decoded to PCM	2594
+file named by the first reading: RIFF XWMA WMA, payload raw	10619
+
+# file paths in SNDR FNAM (audio_record_path_readings_v1)
+occurrences	120
+distinct paths (case folded)	109
+without extension	0
+resolving under some reading	115
+stored extension wav	120
+resolves under leading data folder removed, extension as stored	115
+first reading: leading data folder removed, extension as stored	115
+first reading: no reading names a mounted file	5
+file named by the first reading: RIFF WAVE decoded to PCM	115
+
+# placed REFR (every winning, live placement)
+placed REFR read	1778974
+not read	0
+
+# placed REFR by base type (sound family, doors, activators)
+1155	base ACTI with a sound link
+28533	base ACTI without a sound link
+1269	base ASPC
+3616	base DOOR with a sound link
+1733	base DOOR without a sound link
+3718	base SOUN
+
+# placed REFR subrecords other than NAME with an aligned value naming a sound-family record
+3	FULL +0 -> SNDR
+14	VMAD +100 -> SNDR
+3	VMAD +112 -> SNDR
+1	VMAD +116 -> MUSC
+1	VMAD +120 -> SNDR
+1	VMAD +140 -> SNDR
+2	VMAD +164 -> SNDR
+1	VMAD +180 -> SNDR
+22	VMAD +188 -> SNDR
+1	VMAD +204 -> MUSC
+1	VMAD +208 -> MUSC
+1	VMAD +248 -> SNDR
+1	VMAD +256 -> SNDR
+1	VMAD +268 -> SNDR
+1	VMAD +284 -> SNDR
+2	VMAD +288 -> SNDR
+1	VMAD +316 -> SNDR
+1	VMAD +404 -> SNDR
+1	VMAD +420 -> MUSC
+1	VMAD +44 -> SNDR
+25	VMAD +52 -> SNDR
+1	VMAD +532 -> MUST
+1	VMAD +56 -> SNDR
+1	VMAD +60 -> MUSC
+6	VMAD +60 -> SNDR
+1	VMAD +64 -> SNDR
+1	VMAD +68 -> MUSC
+10	VMAD +72 -> SNDR
+8	VMAD +76 -> SNDR
+3	VMAD +84 -> SNDR
+1	VMAD +96 -> MUSC
+10	VMAD +96 -> SNDR
+14746	XEMI +0 -> REGN
+
+# test cell 1 (interior, radius 0, 1 cells)
+1	cells
+454	placed REFR (active)
+
+# test cell 2 (exterior, radius 1, 9 cells)
+50	cell XCLR -> REGN
+6	cell XLCN -> LCTN
+9	cells
+21	placed ACTI whose base has 0 sound link(s)
+8	placed DOOR whose base has 0 sound link(s)
+6	placed DOOR whose base has 2 sound link(s)
+2530	placed REFR (active)
+1	placed REFR (initially disabled)
+20	placed REFR of a ACTI base (active)
+1	placed REFR of a ACTI base (initially disabled)
+1	placed REFR of a ASPC base (active)
+14	placed REFR of a DOOR base (active)
+15	placed REFR of a SOUN base (active)
+16	placed REFR value naming a REGN in XEMI +0
+1	world ZNAM -> MUSC
+
+# test cell 2, from placed SOUN (sound emitters)
+seeds (with repeats)	15
+distinct records reached	11
+2	SNCT reached
+4	SNDR reached
+3	SOPM reached
+2	SOUN reached
+2	link followed: SNDR DNAM from 0 every 4 bytes -> SNDR
+3	link followed: SNDR GNAM from 0 every 4 bytes -> SNCT
+3	link followed: SNDR ONAM from 0 every 4 bytes -> SOPM
+2	link followed: SOUN SDSC from 0 every 4 bytes -> SNDR
+1	SNDR storing no file path
+3	SNDR with a resolved file, none decoded
+
+# test cell 2, from placed SOUN (sound emitters): paths in SNDR ANAM
+occurrences	18
+distinct paths (case folded)	10
+without extension	0
+resolving under some reading	18
+stored extension wav	18
+resolves under leading data folder removed, extension .xwm	18
+first reading: leading data folder removed, extension .xwm	18
+file named by the first reading: RIFF XWMA WMA, payload raw	18
+
+# test cell 2, from placed ASPC (acoustic spaces)
+seeds (with repeats)	1
+distinct records reached	3
+1	ASPC reached
+1	REGN reached
+1	REVB reached
+1	link followed: ASPC BNAM from 0 every 4 bytes -> REVB
+1	link followed: ASPC RDAT from 0 every 4 bytes -> REGN
+
+# test cell 2, from placed DOOR (door sounds)
+seeds (with repeats)	6
+distinct records reached	8
+4	DOOR reached
+1	SNCT reached
+2	SNDR reached
+1	SOPM reached
+4	link followed: DOOR ANAM from 0 every 4 bytes -> SNDR
+4	link followed: DOOR SNAM from 0 every 4 bytes -> SNDR
+2	link followed: SNDR GNAM from 0 every 4 bytes -> SNCT
+2	link followed: SNDR ONAM from 0 every 4 bytes -> SOPM
+2	SNDR with a resolved file, none decoded
+
+# test cell 2, from placed DOOR (door sounds): paths in SNDR ANAM
+occurrences	4
+distinct paths (case folded)	4
+without extension	0
+resolving under some reading	4
+stored extension wav	4
+resolves under leading data folder removed, extension .xwm	4
+first reading: leading data folder removed, extension .xwm	4
+file named by the first reading: RIFF XWMA WMA, payload raw	4
+
+# test cell 2, from cell XCLR and XCCM (regions)
+seeds (with repeats)	50
+distinct records reached	142
+2	MUSC reached
+86	MUST reached
+6	REGN reached
+3	SNCT reached
+42	SNDR reached
+3	SOPM reached
+41	link followed: MUSC TNAM from 0 every 4 bytes -> MUST
+260	link followed: MUST SNAM from 0 every 4 bytes -> MUST
+2	link followed: REGN RDMO from 0 every 4 bytes -> MUSC
+53	link followed: REGN RDSA from 0 every 12 bytes -> SNDR
+42	link followed: SNDR GNAM from 0 every 4 bytes -> SNCT
+42	link followed: SNDR ONAM from 0 every 4 bytes -> SOPM
+36	SNDR with a resolved file, none decoded
+6	SNDR with at least one file decoded to PCM
+
+# test cell 2, from cell XCLR and XCCM (regions): paths in MUST ANAM
+occurrences	67
+distinct paths (case folded)	65
+without extension	0
+resolving under some reading	67
+stored extension wav	67
+resolves under leading data folder removed, extension .xwm	67
+first reading: leading data folder removed, extension .xwm	67
+file named by the first reading: RIFF XWMA WMA, payload raw	67
+
+# test cell 2, from cell XCLR and XCCM (regions): paths in SNDR ANAM
+occurrences	172
+distinct paths (case folded)	111
+without extension	0
+resolving under some reading	172
+stored extension wav	172
+resolves under leading data folder removed, extension .xwm	166
+resolves under leading data folder removed, extension as stored	6
+first reading: leading data folder removed, extension .xwm	166
+first reading: leading data folder removed, extension as stored	6
+file named by the first reading: RIFF WAVE decoded to PCM	6
+file named by the first reading: RIFF XWMA WMA, payload raw	166
+
+# test cell 2, from cell XLCN (location)
+seeds (with repeats)	6
+distinct records reached	78
+1	LCTN reached
+1	MUSC reached
+76	MUST reached
+1	link followed: LCTN NAM1 from 0 every 4 bytes -> MUSC
+20	link followed: MUSC TNAM from 0 every 4 bytes -> MUST
+130	link followed: MUST SNAM from 0 every 4 bytes -> MUST
+
+# test cell 2, from cell XLCN (location): paths in MUST ANAM
+occurrences	65
+distinct paths (case folded)	65
+without extension	0
+resolving under some reading	65
+stored extension wav	65
+resolves under leading data folder removed, extension .xwm	65
+first reading: leading data folder removed, extension .xwm	65
+file named by the first reading: RIFF XWMA WMA, payload raw	65
+
+# test cell 2, from world of an exterior cell
+seeds (with repeats)	1
+distinct records reached	142
+1	MUSC reached
+141	MUST reached
+27	link followed: MUSC TNAM from 0 every 4 bytes -> MUST
+222	link followed: MUST SNAM from 0 every 4 bytes -> MUST
+
+# test cell 2, from world of an exterior cell: paths in MUST ANAM
+occurrences	132
+distinct paths (case folded)	131
+without extension	0
+resolving under some reading	132
+stored extension wav	132
+resolves under leading data folder removed, extension .xwm	132
+first reading: leading data folder removed, extension .xwm	132
+file named by the first reading: RIFF XWMA WMA, payload raw	132
+
+# timing
+files pass wall seconds	23.6
+total wall seconds	44.0

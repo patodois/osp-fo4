@@ -304,3 +304,36 @@ recalled as possibly one short), and the closing table does not read as a
 count followed by entries, so it is kept raw. Every meaning is a pending
 rule in [spec/hypotheses.tsv](../spec/hypotheses.tsv); the save files and
 anything read from them stay outside the repository.
+
+The sound reader (`fo4-audio`, [spec/audio.md](../spec/audio.md)) was
+established only by measuring the sound files of one installation with the
+`audio_census` example, reading the archives through `fo4-vfs` and the
+records through `fo4-plugin`. No audio decoder or its source (of any
+codec), audio library, sound tool, format write-up, wiki page, editor
+source or definition file, decompilation or game executable was opened or
+searched for, and no decoder was reproduced from memory; no external
+dependency was added. Recognised from prior general knowledge before it
+was measured, and kept only because the census could have refuted it and
+did not: RIFF chunking (the magic, the size word, chunk ids and u32 sizes,
+the pad byte after an odd chunk, `LIST` holding a list type and
+sub-chunks); the `WAVE` and `XWMA` form types and the chunk ids `fmt `,
+`data`, `dpds`, `smpl`, `cue `, `LIST` and `JUNK`; the `fmt ` layout and
+the format tag numbers 1 (integer PCM), 2 and 0x11 (ADPCM variants), 3,
+0x161, 0x162 and 0xFFFE, of which only 1 and 0x161 occur; integer PCM as
+interleaved little-endian two's-complement frames, decided over the
+big-endian and offset-binary alternatives by counts, not taken from
+memory; `dpds` as one u32 per packet counting decoded bytes and `XWMA`
+data as packets of block-align bytes; the voice container as the `FUZE`
+magic, a version, a lip length, the lip data and the audio data; the
+`smpl` and `cue ` layouts; sound descriptors storing `.wav` paths, with a
+leading `data` folder, for files stored under another extension; and the
+record signatures and roles of the sound-family records (sound
+descriptor, marker, category, output model, music type and track,
+acoustic space, region sounds and music). The subrecord offsets and target
+types of the links were measured by resolving every four-byte value at
+every offset, not recalled; the `WEAP DNAM` offsets were found that way.
+The WMA-family payload is not decoded. One dumped file was also opened with
+the operating system's own file-information tool to check this project's
+output; it was not used as a reference for the format. Every meaning is a
+pending rule in [spec/hypotheses.tsv](../spec/hypotheses.tsv); sound files
+and anything read from them stay outside the repository.

@@ -89,6 +89,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "fo4-audio"
+version = "0.1.0"
+dependencies = [
+ "fo4-core",
+ "fo4-plugin",
+ "fo4-scene",
+ "fo4-vfs",
+ "serde",
+]
+
+[[package]]
 name = "fo4-core"
 version = "0.1.0"
 dependencies = [
