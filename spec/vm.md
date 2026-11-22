@@ -899,7 +899,8 @@ What would take the opening further, most first:
 `fo4_vm::cond` evaluates the condition lists read by
 `fo4_plugin::condition` ([conditions.md](conditions.md)) to true, false
 or undetermined. A condition is evaluated only when its function index is
-one of five, each a pending rule; every other condition is undetermined,
+one of ten (five since the second conditions step, each behind its own
+switch), each a pending rule; every other condition is undetermined,
 named by its function index. Three-valued AND and OR: a list is
 undetermined only when its determined conditions do not settle it.
 
@@ -910,6 +911,11 @@ undetermined only when its determined conditions do not settle it.
 | 59 | 1 when stage (parameter 2) of the quest of parameter 1 is done, else 0 | the quest state | `cond_fn_59_stage_done_v1` |
 | 74 | the value of the GLOB of parameter 1 | FLTV, undetermined once the run may have changed it (as `GlobalVariable.GetValue`) | `cond_fn_74_global_value_v1` |
 | 576 | selector 0 with member `K1` or `L1` (parameter 1): 1 when the story event's keyword or location is the record of parameter 2 | the story event being offered (`fo4_vm::story`); undetermined outside one | `cond_fn_576_event_data_v1` |
+| 72 | 1 when the base (NAME) of the reference the run-on word names is the record of parameter 1 | run-on 2: the reference word; run-on 5: the alias (last word) of the list's quest, as `ReferenceAlias.GetReference` answers it; any other run-on word undetermined | `cond_fn_72_reference_base_v1`, `cond_run_on_subject_v1` |
+| 84 | the number of dead actors of the NPC_ of parameter 1 | 0 in the new-game state before any script; undetermined in a run | `cond_fn_84_dead_count_v1` |
+| 248 | 1 when the scene of parameter 1 plays | the run's scene state (none plays at a new game; undetermined in the isolated scenario until the run starts or stops it, and with scenes off) | `cond_fn_248_scene_playing_v1` |
+| 550 | 1 when action INAM (parameter 2) of the scene of parameter 1 is complete | 0 wherever the scene's state is settled: no scene has played at a new game and a run completes no action | `cond_fn_550_scene_action_complete_v1` |
+| 629 | the script variable CIS2 names of the quest of parameter 1 | the run's attached instances; before the quest is attached, the VMAD property value the variable backs, else its stored initial value (`fo4_vm::vars`; needs the compiled scripts: `quest_run` and the censuses pass them, `script_run` does not) | `cond_fn_629_quest_variable_v1` |
 
 - Operator codes 0 to 5 compare the value with the comparison value
   (`cond_compare_ops_v1`); with flag bit 0x04 the comparison value is the
@@ -920,10 +926,20 @@ undetermined only when its determined conditions do not settle it.
 - Combination (`cond_list_or_groups_v1`): the AND of OR groups, a
   condition with bit 0x01 joined to the next by OR; `Combine::LeftToRight`
   is the alternative the census counts.
-- What the four functions read (`cond::Facts`): during a run, the quest
-  state of the run's world and the data host's globals
-  (`quest::RunFacts`); for the census, the new-game state before any
-  script runs (`cond::StaticFacts`).
+- What the functions read (`cond::Facts`): during a run, the quest and
+  scene state of the run's world, the data host's globals, the run's
+  script instances (`quest::RunFacts`, with `quest::CondInputs`: the
+  switches, the compiled scripts, the caller's assumptions); for the
+  census, the new-game state before any script runs (`cond::StaticFacts`).
+  The owning quest of a list (for run-on 5) is the quest itself for a log
+  entry or the conditions after NEXT, a scene's PNAM for its phases, none
+  for a story manager node.
+- Switches (`cond::Switches`): `--no-cond-fn-N` for each of 72, 84, 248,
+  550 and 629 and `--no-cond-run-on` (`cond_census`, `cond_blockers`,
+  `quest_run`, `script_run`); with all of them off every census written
+  before reproduces byte for byte. `quest_run --assume-cond N=VALUE` is a
+  caller assumption (every condition of index N takes that value), counted
+  as such in the census.
 - Used to choose a stage's log entry (Quests, above) and by the story
   manager (the nodes' conditions and the quest's conditions after NEXT,
   Events and the story manager, above); quest conditions before NEXT,
@@ -932,7 +948,58 @@ undetermined only when its determined conditions do not settle it.
 
 The census of every condition and of what the evaluator settles at the
 start of a new game is [conditions-census.txt](conditions-census.txt)
-(`cond_census MANIFEST OUT.txt`, 12 s, peak RSS about 510 MB).
+(`cond_census MANIFEST OUT.txt`, 12 s, peak RSS about 510 MB); the
+census of what blocks the lists a run evaluates, by context, is
+[conditions-blockers.txt](conditions-blockers.txt) (`cond_blockers`,
+[conditions.md](conditions.md), Blockers).
+
+**Second conditions step: what the five added evaluators change.** With
+every new switch off each census below reproduces the earlier file byte
+for byte (checked with `cmp` for `conditions-census.txt`, the four
+`quest-run-*.txt`, `story-manager-census.txt`, and for the quest-host
+sections of `vm-census.txt` and `vm-blockers.txt` against the same
+binary with the switches on). With them on:
+
+- `quest_run new-game` is unchanged (no list it evaluates holds an added
+  index whose input the new game settles); [quest-run-new-game.txt](quest-run-new-game.txt)
+  is not regenerated.
+- `quest_run stages` ([quest-run-stages.txt](quest-run-stages.txt),
+  regenerated): log entry condition lists 82 false, 102 true, 351
+  undetermined (35, 80, 423 before); selections settled 70 (63), open 219
+  (226); no selection is left open by function 629 any more (28 before),
+  191 by 59 become 187; 5,555 stage fragments complete (5,553); 4,612
+  sweep items complete every run (4,606). Rules relied on now include
+  `cond_fn_629_quest_variable_v1` (34 items) and `cond_fn_84_dead_count_v1`
+  (4, left undetermined in the run).
+- `quest_run scenes` ([quest-run-scenes.txt](quest-run-scenes.txt),
+  regenerated): 4,617 phases entered (4,601), 32 passed over because their
+  start conditions are false (6), 34 scenes run to their end (32), 9 stop
+  on completion conditions that are false (2); no scene stops on function
+  629 any more (28 before, alone or with 59 or 555).
+- `quest_run fragments` ([quest-run-fragments.txt](quest-run-fragments.txt),
+  regenerated): two story events are no longer left open by function 629.
+- [vm-blockers.txt](vm-blockers.txt): its stage-sweep section of log entry
+  selections changes as above (regenerated from the stage sweep with the
+  events step's assembly; with the switches off the same assembly
+  reproduces the file).
+- `script_run --census` (quest host): handler outcomes are unchanged; the
+  bases alone and the placed references gain one line each, the runs
+  relying on `cond_fn_629_quest_variable_v1` (44 and 20), inserted into
+  [vm-census.txt](vm-census.txt). The other lines of that file are kept as
+  the events step wrote them: today's binary, with or without this step,
+  draws a few more enable children and visibility targets than they say
+  (the data host, which evaluates no condition, shows the same
+  difference), a change of an earlier step that this one does not
+  regenerate.
+- The forced opening (`quest_run new-game --then <opening quest>:0
+  --timers 50 --time-scale-global <time-scale global>`) is unchanged:
+  its first scene still stops in phase 0 on two completion conditions of
+  function 555 (the scene's alias 2 and the player reference), which the
+  interpreter cannot evaluate (no 3D state, `cond_fn_555_3d_loaded_v1`
+  proposed only), and the one-second timer still loops. Exploring with
+  the caller assumption `--assume-cond 555=1`, phase 0 completes and phase
+  1 is entered and waits on an action of kind 0 (a spoken line): the next
+  stop is a world event, dialogue audio.
 
 ## Limits
 
@@ -946,8 +1013,8 @@ start of a new game is [conditions-census.txt](conditions-census.txt)
 - Stages are set and their fragments run by `quest_run` (Quests) and by
   `script_run` (quest host, isolated scenario); `bind::run` and the
   viewer keep the data host, so quest natives stay undetermined there.
-  Conditions are evaluated for log entry selection and for the story
-  manager, and only five function indexes. Remote events are delivered
+  Conditions are evaluated for log entry selection, scene phases and
+  the story manager, and only ten function indexes. Remote events are delivered
   only for the events a run raises itself (quest events, the events
   `script_run` names) and custom events as they are sent; the story
   manager receives only the script event; tracked-statistics, sleep,
@@ -1106,3 +1173,27 @@ read from them. Native names and parameter types were read from the
 installed scripts with this project's own readers. No editor, editor
 source or definition file, script source, decompiler, other interpreter,
 script extender or the game executable was opened or searched for.
+
+## Provenance of the second conditions step
+
+Recognised from prior general knowledge, used only as hypotheses that the
+censuses could refute ([conditions.md](conditions.md), Blockers;
+[conditions-blockers.txt](conditions-blockers.txt),
+[conditions-census.txt](conditions-census.txt), the quest sweeps):
+
+- the run-on words 2 (the reference word) and 5 (an alias of the list's
+  quest, by the last word) as what a function that reads a subject reads
+  (`cond_run_on_subject_v1`), and the owning quest of a scene's lists as
+  its PNAM;
+- the meanings of function indexes 72 (the subject's base), 84 (dead
+  actors of a base), 248 (a scene plays), 550 (a scene action complete;
+  the second parameter's match with the action's INAM is measured) and
+  629 (a quest script variable named by CIS2);
+- the proposed meanings of 1, 14, 71, 359, 426, 555, 560 and 561, which no
+  code relies on;
+- that a quest's script variables before any script runs hold the VMAD
+  value of the property they back, else their stored initial value.
+
+No public page was requested in this step. No editor, editor source or
+definition file, script source, decompiler, other interpreter, script
+extender or the game executable was opened or searched for.

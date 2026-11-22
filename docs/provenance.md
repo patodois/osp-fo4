@@ -305,6 +305,22 @@ read from them and no other copy was looked for. No editor, editor
 source or definition file, script source, decompiler, other interpreter
 or the game executable was opened or searched for.
 
+The second conditions step (`fo4_vm::cond` evaluators of function indexes
+72, 84, 248, 550 and 629 and the run-on reading, `fo4_vm::vars`,
+`fo4_vm::blockers`, `cond_blockers`; [spec/conditions.md](../spec/conditions.md),
+Blockers) adds no sourced format fact and read no public page. The
+meanings of those five indexes, of the run-on words 2 and 5, and the
+proposed meanings of 1, 14, 71, 359, 426, 555, 560 and 561 (which no code
+relies on) were recognised from prior general knowledge and are kept only
+as pending rules that `cond_census` and `cond_blockers` could refute; the
+parameter types, value ranges and the match of function 550's second
+parameter with the scene's action indexes (INAM) are measurements of the
+installation. That an auto property's backing variable carries the name
+`::Name_var` was read from the installed compiled scripts with `fo4-pex`.
+Function indexes stay bare numbers. No editor, editor source or definition
+file, script source, decompiler, other interpreter, script extender or the
+game executable was opened or searched for.
+
 The story manager reader and the events step (`fo4_plugin::story`,
 `fo4_vm::events`, `fo4_vm::story`,
 [spec/story-manager.md](../spec/story-manager.md),

@@ -128,6 +128,20 @@ pub const COND_FN_74: &str = "cond_fn_74_global_value_v1";
 /// being offered is the record of parameter 2.
 pub const COND_FN_576: &str = "cond_fn_576_event_data_v1";
 
+/// The run-on word: 2 the reference word, 5 an alias of the owning quest.
+pub const COND_RUN_ON: &str = "cond_run_on_subject_v1";
+/// Function 72: whether the base of the subject reference is parameter 1.
+pub const COND_FN_72: &str = "cond_fn_72_reference_base_v1";
+/// Function 84: how many actors of the base of parameter 1 died.
+pub const COND_FN_84: &str = "cond_fn_84_dead_count_v1";
+/// Function 248: whether the scene of parameter 1 plays.
+pub const COND_FN_248: &str = "cond_fn_248_scene_playing_v1";
+/// Function 550: whether action parameter 2 of the scene of parameter 1 is
+/// complete.
+pub const COND_FN_550: &str = "cond_fn_550_scene_action_complete_v1";
+/// Function 629: the value of the quest variable CIS2 names.
+pub const COND_FN_629: &str = "cond_fn_629_quest_variable_v1";
+
 /// Remote events: registration and delivery of the events the run raises.
 pub const REMOTE_EVENTS: &str = "vm_remote_events_v1";
 /// Custom events: registration and delivery.
@@ -155,7 +169,7 @@ pub const XESP_BIT1: &str = "xesp_flag_bit1_not_presence_v1";
 pub const XESP_PROPAGATES: &str = "xesp_script_change_propagates_v1";
 
 /// Every rule above.
-pub const ALL: [&str; 77] = [
+pub const ALL: [&str; 83] = [
     ARITHMETIC,
     COMPARE,
     NOT_COPY_CAST,
@@ -212,6 +226,12 @@ pub const ALL: [&str; 77] = [
     COND_FN_59,
     COND_FN_74,
     COND_FN_576,
+    COND_RUN_ON,
+    COND_FN_72,
+    COND_FN_84,
+    COND_FN_248,
+    COND_FN_550,
+    COND_FN_629,
     REMOTE_EVENTS,
     CUSTOM_EVENTS,
     CUSTOM_EVENT_ORDER,

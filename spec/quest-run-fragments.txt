@@ -280,7 +280,6 @@
 22	story	story event left open, by function index of an undetermined condition	function 359
 19	story	story event left open, by function index of an undetermined condition	function 560
 22	story	story event left open, by function index of an undetermined condition	function 59
-2	story	story event left open, by function index of an undetermined condition	function 629
 11	story	story event left open, by function index of an undetermined condition	function 71
 22	story	story event left open, by function index of an undetermined condition	function 77
 22	story	story event outcome	open: a node's conditions are undetermined

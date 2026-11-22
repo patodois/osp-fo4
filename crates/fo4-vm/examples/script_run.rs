@@ -900,13 +900,28 @@ fn run() -> Result<(), E> {
     let no_chain = args.iter().any(|a| a == "--no-enable-chain");
     let no_story = args.iter().any(|a| a == "--no-story");
     let no_events = args.iter().any(|a| a == "--no-events");
+    let mut switches = fo4_vm::cond::Switches::all();
+    args.retain(|x| {
+        if let Some(n) = x
+            .strip_prefix("--no-cond-fn-")
+            .and_then(|n| n.parse::<u16>().ok())
+        {
+            switches.off(n);
+            false
+        } else if x == "--no-cond-run-on" {
+            switches.run_on_off = true;
+            false
+        } else {
+            true
+        }
+    });
     args.retain(|a| {
         !matches!(
             a.as_str(),
             "--recording" | "--data" | "--no-enable-chain" | "--no-story" | "--no-events"
         )
     });
-    let usage = "script_run MANIFEST CELL[@DX,DY] (list | INDEX EVENT[,EVENT...] [--timers N]) | script_run MANIFEST --census OUT_DIR (CELL[:RADIUS]... | ALL | PLACED); --data: the data host without quests; --recording: the recording host alone; --no-enable-chain: IsDisabled from the header flag alone; --no-story: no story manager; --no-events: no remote or custom event delivered";
+    let usage = "script_run MANIFEST CELL[@DX,DY] (list | INDEX EVENT[,EVENT...] [--timers N]) | script_run MANIFEST --census OUT_DIR (CELL[:RADIUS]... | ALL | PLACED); --data: the data host without quests; --recording: the recording host alone; --no-enable-chain: IsDisabled from the header flag alone; --no-story: no story manager; --no-events: no remote or custom event delivered; --no-cond-fn-N, --no-cond-run-on: a condition evaluator added in the second conditions step off";
     if args.len() < 3 {
         return Err(usage.into());
     }
@@ -915,6 +930,7 @@ fn run() -> Result<(), E> {
     let store = Store::open(&m, &Budget::new(m.limits.max_override_memory))?;
     let mut opts = bind::Options::of(mode);
     opts.enable_chain &= !no_chain;
+    opts.cond = switches;
     if no_events {
         opts.remote = false;
         opts.custom = None;

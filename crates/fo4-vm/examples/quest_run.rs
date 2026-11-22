@@ -353,8 +353,22 @@ fn story_tree(store: &Store, o: Opts) -> Result<Option<Rc<Tree>>, E> {
     Ok(Some(Rc::new(Tree::read(store, &b)?)))
 }
 
-fn host<'s>(store: &'s Store, max: u64, o: Opts, tree: &Option<Rc<Tree>>) -> QuestHost<'s> {
+fn host<'s>(
+    store: &'s Store,
+    vfs: &'s Vfs,
+    max: u64,
+    o: Opts,
+    tree: &Option<Rc<Tree>>,
+) -> QuestHost<'s> {
     let mut h = QuestHost::new(store, max);
+    COND.with(|c| {
+        let c = c.borrow();
+        h.cond.switches = c.0.clone();
+        h.cond.assume = c.1.clone();
+    });
+    if h.cond.switches.on(629) {
+        h.cond.scripts = Some(std::cell::RefCell::new(Box::new(VfsLibrary::new(vfs, max))));
+    }
     h.evaluate = o.conditions;
     h.stage_event = o.stage_event;
     h.data.enable_chain = o.enable_chain;
@@ -376,6 +390,11 @@ fn events_on(vm: &mut Vm<'_>, o: Opts) {
 }
 
 thread_local! {
+    /// The condition evaluator switches (`--no-cond-fn-N`,
+    /// `--no-cond-run-on`) and the caller's assumptions (`--assume-cond
+    /// N=VALUE`), set once per process.
+    static COND: std::cell::RefCell<(fo4_vm::cond::Switches, BTreeMap<u16, f32>)> =
+        const { std::cell::RefCell::new((fo4_vm::cond::Switches::all(), BTreeMap::new())) };
     /// The groups of kind 10, read once per process when scenes are on.
     static GROUPS: std::cell::RefCell<Option<Rc<scene::Groups>>> = const { std::cell::RefCell::new(None) };
 }
@@ -423,6 +442,18 @@ fn count_conditions(c: &mut Counts, h: &QuestHost<'_>) {
             "log entry selections left open, by function index of an undetermined condition\tfunction {f}"
         ))
         .or_default() += v;
+    }
+    for (f, x) in &h.cond.assume {
+        *c.entry(format!(
+            "assumption from the command line: every condition of function {f} has the value {x}"
+        ))
+        .or_default() += 1;
+    }
+    if !h.cond.assume.is_empty() {
+        *c.entry(
+            "assumption from the command line: conditions decided by an assumed value".into(),
+        )
+        .or_default() += h.cond.assumed.get();
     }
 }
 
@@ -536,7 +567,7 @@ fn stages(m: &Manifest, vfs: &Vfs, store: &Store, out: &Path, opts: Opts) -> Res
         for n in &with {
             bump(&mut c, "stages set");
             let b = b.child();
-            let mut host = host(store, max, opts, &tree);
+            let mut host = host(store, vfs, max, opts, &tree);
             let mut attach = RecordScripts::new(store, max);
             let mut runner = quest::Runner::new(store, max, MAX_JOBS);
             let mut vm = Vm::new(&mut lib, &mut host);
@@ -734,7 +765,7 @@ fn new_game(
     let mut lib = VfsLibrary::new(vfs, max);
     let mut c = Counts::new();
     let mut names = String::new();
-    let mut host = host(store, max, opts, &tree);
+    let mut host = host(store, vfs, max, opts, &tree);
     let mut attach = RecordScripts::new(store, max);
     let mut runner = quest::Runner::new(store, max, MAX_GAME_JOBS);
     let mut vm = Vm::new(&mut lib, &mut host);
@@ -1155,7 +1186,7 @@ fn fragments(m: &Manifest, vfs: &Vfs, store: &Store, out: &Path, opts: Opts) -> 
         for (slot, function) in list {
             let prefix = format!("{t} {slot} fragment ");
             bump(&mut c, format!("{prefix}runs"));
-            let mut host = host(store, max, opts, &tree);
+            let mut host = host(store, vfs, max, opts, &tree);
             let mut attach = RecordScripts::new(store, max);
             let mut runner = quest::Runner::new(store, max, MAX_JOBS);
             let mut vm = Vm::new(&mut lib, &mut host);
@@ -1259,7 +1290,7 @@ fn scenes(m: &Manifest, vfs: &Vfs, store: &Store, out: &Path, opts: Opts) -> Res
     for k in &keys {
         let bb = b.child();
         bump(&mut c, "scenes started by the sweep");
-        let mut host = host(store, max, opts, &tree);
+        let mut host = host(store, vfs, max, opts, &tree);
         let mut attach = RecordScripts::new(store, max);
         let mut runner = quest::Runner::new(store, max, MAX_JOBS);
         let mut vm = Vm::new(&mut lib, &mut host);
@@ -1389,7 +1420,7 @@ fn one(
         })
         .ok_or("no quest of that editor ID")?;
     let mut lib = VfsLibrary::new(vfs, max);
-    let mut host = host(store, max, opts, &tree);
+    let mut host = host(store, vfs, max, opts, &tree);
     let mut attach = RecordScripts::new(store, max);
     let mut runner = quest::Runner::new(store, max, MAX_JOBS);
     let mut vm = Vm::new(&mut lib, &mut host);
@@ -1437,6 +1468,29 @@ fn run() -> Result<(), E> {
         scenes: !flag(&mut a, "--no-scenes"),
         scenes_with_quest: !flag(&mut a, "--no-scenes-with-quest"),
     };
+    let mut switches = fo4_vm::cond::Switches::all();
+    let mut assume: BTreeMap<u16, f32> = BTreeMap::new();
+    a.retain(|x| {
+        if let Some(n) = x
+            .strip_prefix("--no-cond-fn-")
+            .and_then(|n| n.parse::<u16>().ok())
+        {
+            switches.off(n);
+            false
+        } else if x == "--no-cond-run-on" {
+            switches.run_on_off = true;
+            false
+        } else {
+            true
+        }
+    });
+    while let Some(i) = a.iter().position(|x| x == "--assume-cond") {
+        let v = a.get(i + 1).cloned().ok_or("--assume-cond N=VALUE")?;
+        let (f, x) = v.split_once('=').ok_or("--assume-cond N=VALUE")?;
+        assume.insert(f.parse()?, x.parse()?);
+        a.drain(i..i + 2);
+    }
+    COND.with(|c| *c.borrow_mut() = (switches, assume));
     let mut then = Then::default();
     while let Some(i) = a
         .iter()
@@ -1456,7 +1510,7 @@ fn run() -> Result<(), E> {
         }
         a.drain(i..i + 2);
     }
-    let usage = "quest_run MANIFEST (stages OUT_DIR | new-game OUT_DIR | fragments OUT_DIR | scenes OUT_DIR | QUEST STAGE) [--queued] [--no-conditions] [--no-stage-event] [--no-remote] [--no-custom | --custom-nested] [--no-story] [--no-enable-chain] [--no-scenes] [--no-scenes-with-quest]; fragments OUT_DIR and scenes OUT_DIR run every INFO, PACK and PERK fragment and start every scene in a fresh interpreter; new-game also takes --then EDITOR_ID:STAGE (repeated) --timers N and --time-scale-global EDITOR_ID, assumptions of the caller";
+    let usage = "quest_run MANIFEST (stages OUT_DIR | new-game OUT_DIR | fragments OUT_DIR | scenes OUT_DIR | QUEST STAGE) [--queued] [--no-conditions] [--no-stage-event] [--no-remote] [--no-custom | --custom-nested] [--no-story] [--no-enable-chain] [--no-scenes] [--no-scenes-with-quest] [--no-cond-fn-N]... [--no-cond-run-on] [--assume-cond N=VALUE]...; fragments OUT_DIR and scenes OUT_DIR run every INFO, PACK and PERK fragment and start every scene in a fresh interpreter; new-game also takes --then EDITOR_ID:STAGE (repeated) --timers N and --time-scale-global EDITOR_ID, assumptions of the caller";
     if a.len() != 3 {
         return Err(usage.into());
     }

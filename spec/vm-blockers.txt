@@ -434,8 +434,7 @@
 6	rule	vmad_property_sets_variable_v1
 
 ## quest_run stages: log entry selections left open, by function index of an undetermined condition in them
-191	condition	function 59
-28	condition	function 629
+187	condition	function 59
 14	condition	function 491
 12	condition	function 70
 7	condition	function 46

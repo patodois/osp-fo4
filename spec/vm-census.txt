@@ -717,6 +717,7 @@
 44	runs relying on cond_fn_56_quest_running_v1
 44	runs relying on cond_fn_576_event_data_v1
 45	runs relying on cond_fn_59_stage_done_v1
+44	runs relying on cond_fn_629_quest_variable_v1
 44	runs relying on cond_fn_74_global_value_v1
 45	runs relying on cond_list_or_groups_v1
 1	runs relying on cond_log_entry_state_v1
@@ -903,6 +904,7 @@
 20	runs relying on cond_fn_56_quest_running_v1
 20	runs relying on cond_fn_576_event_data_v1
 20	runs relying on cond_fn_59_stage_done_v1
+20	runs relying on cond_fn_629_quest_variable_v1
 20	runs relying on cond_fn_74_global_value_v1
 20	runs relying on cond_list_or_groups_v1
 20	runs relying on cond_use_global_v1

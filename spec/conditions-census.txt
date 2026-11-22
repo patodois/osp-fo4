@@ -330,8 +330,8 @@
 639	lists by host record type	SNDR
 362	lists by host record type	SPEL
 1156	lists by host record type	TERM
-8	new game, before scripts: OR groups and left to right differ	false / true
-182	new game, before scripts: OR groups and left to right differ	false / undetermined
+9	new game, before scripts: OR groups and left to right differ	false / true
+170	new game, before scripts: OR groups and left to right differ	false / undetermined
 5	new game, before scripts: OR groups and left to right differ	undetermined / true
 4734	new game, before scripts: conditions by function	1	undetermined
 84	new game, before scripts: conditions by function	101	undetermined
@@ -368,7 +368,9 @@
 6	new game, before scripts: conditions by function	24	undetermined
 43	new game, before scripts: conditions by function	242	undetermined
 2	new game, before scripts: conditions by function	247	undetermined
-212	new game, before scripts: conditions by function	248	undetermined
+44	new game, before scripts: conditions by function	248	false
+136	new game, before scripts: conditions by function	248	true
+32	new game, before scripts: conditions by function	248	undetermined
 219	new game, before scripts: conditions by function	249	undetermined
 23	new game, before scripts: conditions by function	25	undetermined
 25	new game, before scripts: conditions by function	250	undetermined
@@ -464,7 +466,9 @@
 117	new game, before scripts: conditions by function	536	undetermined
 219	new game, before scripts: conditions by function	543	undetermined
 942	new game, before scripts: conditions by function	544	undetermined
-417	new game, before scripts: conditions by function	550	undetermined
+415	new game, before scripts: conditions by function	550	false
+1	new game, before scripts: conditions by function	550	true
+1	new game, before scripts: conditions by function	550	undetermined
 157	new game, before scripts: conditions by function	555	undetermined
 179	new game, before scripts: conditions by function	56	false
 331	new game, before scripts: conditions by function	56	true
@@ -510,7 +514,9 @@
 23	new game, before scripts: conditions by function	621	undetermined
 31	new game, before scripts: conditions by function	623	undetermined
 74	new game, before scripts: conditions by function	625	undetermined
-11716	new game, before scripts: conditions by function	629	undetermined
+3071	new game, before scripts: conditions by function	629	false
+8644	new game, before scripts: conditions by function	629	true
+1	new game, before scripts: conditions by function	629	undetermined
 25	new game, before scripts: conditions by function	630	undetermined
 12	new game, before scripts: conditions by function	631	undetermined
 24	new game, before scripts: conditions by function	633	undetermined
@@ -629,7 +635,8 @@
 5	new game, before scripts: conditions by function	813	undetermined
 3	new game, before scripts: conditions by function	814	undetermined
 4	new game, before scripts: conditions by function	817	undetermined
-600	new game, before scripts: conditions by function	84	undetermined
+144	new game, before scripts: conditions by function	84	false
+456	new game, before scripts: conditions by function	84	true
 1	new game, before scripts: conditions by function	99	undetermined
 3	new game, before scripts: lists	ACTI	false
 1	new game, before scripts: lists	ACTI	true
@@ -650,33 +657,33 @@
 1	new game, before scripts: lists	FURN	undetermined
 40	new game, before scripts: lists	HDPT	false
 2100	new game, before scripts: lists	IDLE	undetermined
-9572	new game, before scripts: lists	INFO	false
-1827	new game, before scripts: lists	INFO	true
-30820	new game, before scripts: lists	INFO	undetermined
-40	new game, before scripts: lists	LSCR	false
-238	new game, before scripts: lists	LSCR	undetermined
-10	new game, before scripts: lists	MESG	false
+11340	new game, before scripts: lists	INFO	false
+2517	new game, before scripts: lists	INFO	true
+28362	new game, before scripts: lists	INFO	undetermined
+46	new game, before scripts: lists	LSCR	false
+232	new game, before scripts: lists	LSCR	undetermined
+16	new game, before scripts: lists	MESG	false
 4	new game, before scripts: lists	MESG	true
-49	new game, before scripts: lists	MESG	undetermined
+43	new game, before scripts: lists	MESG	undetermined
 2	new game, before scripts: lists	MGEF	false
 1	new game, before scripts: lists	MGEF	true
 129	new game, before scripts: lists	MGEF	undetermined
 3	new game, before scripts: lists	MUST	false
 8	new game, before scripts: lists	MUST	true
 92	new game, before scripts: lists	MUST	undetermined
-1259	new game, before scripts: lists	PACK	false
-352	new game, before scripts: lists	PACK	true
-1749	new game, before scripts: lists	PACK	undetermined
+1377	new game, before scripts: lists	PACK	false
+393	new game, before scripts: lists	PACK	true
+1590	new game, before scripts: lists	PACK	undetermined
 12	new game, before scripts: lists	PERK	false
 5	new game, before scripts: lists	PERK	true
 1058	new game, before scripts: lists	PERK	undetermined
-700	new game, before scripts: lists	QUST	false
-292	new game, before scripts: lists	QUST	true
-6150	new game, before scripts: lists	QUST	undetermined
+800	new game, before scripts: lists	QUST	false
+379	new game, before scripts: lists	QUST	true
+5963	new game, before scripts: lists	QUST	undetermined
 249	new game, before scripts: lists	RACE	false
-642	new game, before scripts: lists	SCEN	false
-329	new game, before scripts: lists	SCEN	true
-2221	new game, before scripts: lists	SCEN	undetermined
+1307	new game, before scripts: lists	SCEN	false
+460	new game, before scripts: lists	SCEN	true
+1425	new game, before scripts: lists	SCEN	undetermined
 6	new game, before scripts: lists	SMBN	false
 2	new game, before scripts: lists	SMBN	true
 74	new game, before scripts: lists	SMBN	undetermined
@@ -687,15 +694,15 @@
 14	new game, before scripts: lists	SNDR	false
 2	new game, before scripts: lists	SNDR	true
 623	new game, before scripts: lists	SNDR	undetermined
-11	new game, before scripts: lists	SPEL	false
-1	new game, before scripts: lists	SPEL	true
-350	new game, before scripts: lists	SPEL	undetermined
-438	new game, before scripts: lists	TERM	false
-160	new game, before scripts: lists	TERM	true
-558	new game, before scripts: lists	TERM	undetermined
-13803	new game, before scripts: lists (all types)	false
-2998	new game, before scripts: lists (all types)	true
-48982	new game, before scripts: lists (all types)	undetermined
+14	new game, before scripts: lists	SPEL	false
+2	new game, before scripts: lists	SPEL	true
+346	new game, before scripts: lists	SPEL	undetermined
+511	new game, before scripts: lists	TERM	false
+202	new game, before scripts: lists	TERM	true
+443	new game, before scripts: lists	TERM	undetermined
+16542	new game, before scripts: lists (all types)	false
+3990	new game, before scripts: lists (all types)	true
+45251	new game, before scripts: lists (all types)	undetermined
 91	records with conditions	ACTI
 157	records with conditions	ALCH
 78	records with conditions	CAMS
@@ -2138,23 +2145,21 @@ function 817	parameter 2	zero:4
 3165	function 650
 569	function 72
 375	function 426
-308	function 560
 307	function 71
-207	function 46
+297	function 560
 199	function 562
+193	function 46
 176	function 1
-171	function 629
-166	function 67
 166	function 563
-120	function 310
+159	function 67
+111	function 310
 93	function 14
 87	function 660
 81	function 277
 66	function 576
 60	function 360
-57	function 80
+56	function 80
 54	function 47
-50	function 84
 50	function 359
 50	function 566
 49	function 181
@@ -2173,17 +2178,16 @@ function 817	parameter 2	zero:4
 16	function 726
 14	function 203
 13	function 66
-13	function 300
 13	function 765
+12	function 300
 11	function 365
 11	function 414
 10	function 161
 9	function 353
 9	function 565
 9	function 625
-8	function 248
-8	function 555
 7	function 157
+7	function 555
 6	function 242
 5	function 49
 5	function 361
@@ -2219,61 +2223,57 @@ function 817	parameter 2	zero:4
 1	function 769
 
 ## new game, before scripts: lists left undetermined, by function index of an undetermined condition in them (all records)
-13088	function 72
-7053	function 71
-4108	function 566
-3934	function 70
-3766	function 1
+13102	function 72
+6660	function 71
+4010	function 566
+3916	function 70
+3744	function 1
 3483	function 561
-3389	function 629
-3213	function 426
+3194	function 426
 3167	function 650
-2998	function 14
-2429	function 58
+2950	function 14
+2381	function 58
 2306	function 448
-1227	function 560
-937	function 77
-888	function 544
-881	function 359
-652	function 46
-588	function 67
-530	function 47
+1214	function 560
+929	function 77
+858	function 359
+830	function 544
+633	function 46
+558	function 67
+490	function 47
 441	function 277
 423	function 69
-418	function 84
-414	function 300
-399	function 562
 379	function 744
+366	function 562
 349	function 682
-347	function 550
-321	function 660
-255	function 310
+316	function 660
+268	function 300
+246	function 310
 243	function 391
 243	function 749
-242	function 362
+240	function 362
 213	function 576
 194	function 18
-194	function 289
+193	function 289
 192	function 747
 183	function 675
-177	function 50
+176	function 50
 171	function 511
-171	function 797
+168	function 797
 166	function 563
-162	function 249
+156	function 249
 154	function 415
-152	function 543
-145	function 255
-142	function 612
+149	function 543
+144	function 255
+136	function 612
 133	function 159
 127	function 407
-122	function 555
-118	function 80
 118	function 775
+117	function 80
 115	function 709
-114	function 644
+113	function 555
 113	function 774
-109	function 248
+110	function 644
 109	function 430
 106	function 432
 106	function 536
@@ -2281,10 +2281,10 @@ function 817	parameter 2	zero:4
 91	function 286
 90	function 517
 87	function 515
-86	function 327
 86	function 360
 84	function 65
 84	function 101
+82	function 327
 81	function 640
 78	function 5
 78	function 516
@@ -2292,31 +2292,31 @@ function 817	parameter 2	zero:4
 76	function 136
 76	function 799
 71	function 637
-70	function 27
+69	function 27
 67	function 704
 62	function 510
 61	function 523
 59	function 49
-59	function 325
 59	function 353
 59	function 522
-57	function 35
 55	function 182
-52	function 117
-52	function 131
+53	function 325
 52	function 231
+51	function 117
+51	function 131
+50	function 35
 50	function 739
 49	function 157
 49	function 181
 48	function 693
 47	function 483
 46	function 806
-45	function 358
 44	function 518
 44	function 699
 44	function 807
 43	function 756
 41	function 323
+41	function 358
 40	function 242
 39	function 625
 38	function 185
@@ -2324,10 +2324,11 @@ function 817	parameter 2	zero:4
 37	function 414
 37	function 601
 37	function 613
-37	function 765
 37	function 766
 36	function 614
+36	function 765
 33	function 507
+32	function 248
 32	function 449
 31	function 764
 30	function 45
@@ -2346,28 +2347,27 @@ function 817	parameter 2	zero:4
 25	function 203
 25	function 250
 25	function 580
-25	function 594
 25	function 630
 25	function 762
 24	function 62
-24	function 73
 24	function 447
 24	function 605
 23	function 25
 23	function 329
 23	function 621
+22	function 594
 22	function 683
 22	function 719
 22	function 773
-21	function 6
-21	function 716
 21	function 767
 21	function 779
 20	function 144
 20	function 263
 20	function 590
 20	function 707
-20	function 788
+20	function 716
+19	function 6
+19	function 73
 19	function 74
 19	function 633
 19	function 784
@@ -2392,10 +2392,10 @@ function 817	parameter 2	zero:4
 13	function 378
 13	function 610
 13	function 761
-12	function 108
 12	function 631
 12	function 729
 12	function 751
+11	function 108
 11	function 453
 11	function 808
 10	function 680
@@ -2413,13 +2413,13 @@ function 817	parameter 2	zero:4
 8	function 494
 8	function 506
 8	function 620
-8	function 758
-8	function 759
 8	function 772
 7	function 314
 7	function 361
 7	function 570
 7	function 691
+7	function 758
+7	function 759
 6	function 24
 6	function 261
 6	function 485
@@ -2444,19 +2444,19 @@ function 817	parameter 2	zero:4
 4	function 372
 4	function 459
 4	function 508
-4	function 603
 4	function 720
 4	function 777
+4	function 788
 4	function 790
 4	function 817
 3	function 127
-3	function 135
 3	function 416
 3	function 444
 3	function 487
 3	function 512
 3	function 578
 3	function 592
+3	function 603
 3	function 701
 3	function 738
 3	function 748
@@ -2492,10 +2492,12 @@ function 817	parameter 2	zero:4
 1	function 445
 1	function 458
 1	function 463
+1	function 550
 1	function 571
 1	function 572
 1	function 608
 1	function 618
+1	function 629
 1	function 636
 1	function 694
 1	function 711

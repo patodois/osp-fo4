@@ -62,12 +62,12 @@ impl ReadAt for Owned {
     }
 }
 
-const STAT: u32 = 0x803;
+pub(super) const STAT: u32 = 0x803;
 const CELL: u32 = 0x810;
-const BOX: u32 = 0x812;
-const Q1: u32 = 0x820;
-const Q2: u32 = 0x830;
-const G1: u32 = 0x840;
+pub(super) const BOX: u32 = 0x812;
+pub(super) const Q1: u32 = 0x820;
+pub(super) const Q2: u32 = 0x830;
+pub(super) const G1: u32 = 0x840;
 
 /// The VMAD of a quest: no scripts, then a block of `script` with
 /// properties and fragments (stage, log entry, function).
@@ -127,7 +127,7 @@ fn stage(n: u16, flags: u8, entries: &[bool]) -> Vec<u8> {
 
 /// A CTDA: operator code, flag bits, function, comparison word, the two
 /// parameters; run-on 0, reference 0, last word -1.
-fn ctda(op: u8, flags: u8, function: u16, value: u32, p1: u32, p2: u32) -> Vec<u8> {
+pub(super) fn ctda(op: u8, flags: u8, function: u16, value: u32, p1: u32, p2: u32) -> Vec<u8> {
     fo4_plugin::condition::Ctda {
         byte0: (op << 5) | flags,
         unused: [0; 3],
@@ -163,7 +163,7 @@ fn stage_with(n: u16, entries: &[&[Vec<u8>]]) -> Vec<u8> {
 /// first entry holds when G1 >= G1 (function 74 against the global bit) or
 /// Q2 runs (function 56); objective 10; alias 0 forced to a placed box; its own
 /// script QS1 handles OnStageSet. Q2: stage 20 only.
-fn store() -> Store {
+pub(super) fn store() -> Store {
     let q1 = [
         sub(b"EDID", b"Q1\0"),
         sub(
@@ -556,7 +556,7 @@ fn nested_jobs_run_inside_the_call_that_set_the_stage() {
     assert_eq!(var(&vm, inner.job.quest(), "done20"), Val::Bool(true));
 }
 
-fn conds(list: &[Vec<u8>]) -> Vec<fo4_plugin::condition::Condition> {
+pub(super) fn conds(list: &[Vec<u8>]) -> Vec<fo4_plugin::condition::Condition> {
     list.iter()
         .enumerate()
         .map(|(i, c)| fo4_plugin::condition::Condition {

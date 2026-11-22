@@ -15,7 +15,7 @@
 //! evaluated indexes were recognised from prior knowledge and kept because
 //! the census of their parameters (`cond_census`) could have refuted them
 //! and did not.
-use crate::{data, rules};
+use crate::{data, program::Library, rules};
 use fo4_plugin::{
     actor::Context,
     condition::{self, flag, Comparison, Condition, Ctda},
@@ -83,18 +83,102 @@ pub const EVALUATED: [(u16, &str); 5] = [
     (576, rules::COND_FN_576),
 ];
 
+/// Function indexes evaluated since the second conditions step, each
+/// behind its own switch ([`Switches`]) and its own pending rule.
+pub const ADDED: [(u16, &str); 5] = [
+    (72, rules::COND_FN_72),
+    (84, rules::COND_FN_84),
+    (248, rules::COND_FN_248),
+    (550, rules::COND_FN_550),
+    (629, rules::COND_FN_629),
+];
+
+/// Record types of placed references, for the reference word of run-on 2.
+pub const PLACED: [&[u8; 4]; 10] = [
+    b"REFR", b"ACHR", b"PGRE", b"PMIS", b"PHZD", b"PARW", b"PBAR", b"PBEA", b"PCON", b"PFLA",
+];
+
+/// The reason a condition of a function index the evaluator does not
+/// evaluate gives (or of one whose switch is off).
+pub const NOT_EVALUATED: &str = "the function is not evaluated";
+
+/// Which of the evaluators added after the first five are on. Each new
+/// function index has its own switch, on by default; with every switch off
+/// the evaluator is the one before they were added, and every census it
+/// wrote reproduces byte for byte.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct Switches {
+    off: BTreeSet<u16>,
+    /// The run-on reading (`cond_run_on_subject_v1`): when off, every new
+    /// evaluator that reads the subject leaves it undetermined.
+    pub run_on_off: bool,
+}
+impl Switches {
+    /// Every evaluator on.
+    pub const fn all() -> Self {
+        Switches {
+            off: BTreeSet::new(),
+            run_on_off: false,
+        }
+    }
+    /// Every evaluator added after the first five off.
+    pub fn none() -> Self {
+        let mut s = Self::all();
+        for (f, _) in ADDED {
+            s.off(f);
+        }
+        s.run_on_off = true;
+        s
+    }
+    pub fn off(&mut self, function: u16) {
+        self.off.insert(function);
+    }
+    /// Whether the evaluator of an added function index is on.
+    pub fn on(&self, function: u16) -> bool {
+        !self.off.contains(&function)
+    }
+    pub fn is_all(&self) -> bool {
+        self.off.is_empty() && !self.run_on_off
+    }
+    /// The switches that are off, as text.
+    pub fn describe(&self) -> String {
+        let mut v: Vec<String> = self
+            .off
+            .iter()
+            .map(|f| format!("function {f} off"))
+            .collect();
+        if self.run_on_off {
+            v.push("run-on reading off".into());
+        }
+        v.join(", ")
+    }
+}
+
+/// Every evaluator on: what [`Facts::switches`] answers by default.
+pub static ALL_ON: Switches = Switches::all();
+
 /// The rule of an evaluated function index.
 pub fn rule_of(function: u16) -> Option<&'static str> {
     EVALUATED
         .iter()
+        .chain(ADDED.iter())
         .find(|(f, _)| *f == function)
         .map(|(_, r)| *r)
+}
+
+/// Whether the index is one of the [`ADDED`] evaluators.
+pub fn is_added(function: u16) -> bool {
+    ADDED.iter().any(|(f, _)| *f == function)
 }
 
 /// What an evaluation reads: the store, and the state of quests and
 /// globals. An `Err` is the reason the state does not settle it.
 pub trait Facts {
     fn store(&self) -> &Store;
+    /// Which added evaluators are on.
+    fn switches(&self) -> &Switches {
+        &ALL_ON
+    }
     /// Whether the quest is running.
     fn quest_running(&mut self, quest: &FormKey) -> Result<bool, &'static str>;
     /// The quest's current stage.
@@ -109,6 +193,62 @@ pub trait Facts {
     fn event_member(&mut self, code: [u8; 2]) -> Result<Option<FormKey>, &'static str> {
         let _ = code;
         Err("no story event is being offered")
+    }
+    /// The quest whose aliases run-on 5 names: the quest of the record the
+    /// list belongs to (`cond_run_on_subject_v1`).
+    fn owner(&self) -> Option<&FormKey> {
+        None
+    }
+    /// The reference an alias of a quest holds (`None`: empty).
+    fn alias_reference(
+        &mut self,
+        quest: &FormKey,
+        alias: i32,
+    ) -> Result<Option<FormKey>, &'static str> {
+        let _ = (quest, alias);
+        Err("alias state is not read here")
+    }
+    /// The value of a variable (lower case) of the scripts attached to a
+    /// quest, as a number (function 629).
+    fn quest_variable(&mut self, quest: &FormKey, name: &str) -> Result<f32, &'static str> {
+        let _ = (quest, name);
+        Err("script variables are not read here")
+    }
+    /// Whether a scene plays (function 248).
+    fn scene_playing(&mut self, scene: &FormKey) -> Result<bool, &'static str> {
+        let _ = scene;
+        Err("scene state is not read here")
+    }
+    /// Whether the action of that index of a scene is complete (550).
+    fn scene_action_complete(
+        &mut self,
+        scene: &FormKey,
+        action: u32,
+    ) -> Result<bool, &'static str> {
+        let _ = (scene, action);
+        Err("scene state is not read here")
+    }
+    /// How many actors of a base have died (function 84).
+    fn dead_count(&mut self, base: &FormKey) -> Result<f32, &'static str> {
+        let _ = base;
+        Err("deaths are not kept by a run")
+    }
+    /// Bound of one record read.
+    fn max_memory(&self) -> u64 {
+        1 << 24
+    }
+    /// The base object a placed reference names (NAME).
+    fn reference_base(&mut self, reference: &FormKey) -> Result<FormKey, &'static str> {
+        let b = fo4_core::Budget::new(self.max_memory());
+        crate::bind::base_of(self.store(), reference, &b)
+            .map_err(|_| "the reference could not be read")?
+            .ok_or("the reference has no base")
+    }
+    /// A value the caller assumes for every condition of a function index
+    /// (a caller assumption, not a rule: `quest_run --assume-cond`).
+    fn assumed(&self, function: u16) -> Option<f32> {
+        let _ = function;
+        None
     }
 }
 
@@ -127,15 +267,58 @@ fn record(
     if facts.store().signature(&k) != Some(*sig) {
         return Err(match sig {
             b"QUST" => "a parameter names no winning QUST",
+            b"SCEN" => "a parameter names no winning SCEN",
+            b"NPC_" => "a parameter names no winning NPC_",
             _ => "a parameter names no winning GLOB",
         });
     }
     Ok(k)
 }
 
+/// The placed reference a condition runs on (`cond_run_on_subject_v1`):
+/// run-on 2, the reference word; run-on 5, the reference the alias of
+/// the last word of the owning quest holds. Any other run-on word names a
+/// subject the interpreter does not know.
+pub fn subject(
+    c: &Ctda,
+    ctx: Context<'_>,
+    file: &str,
+    facts: &mut dyn Facts,
+) -> Result<FormKey, &'static str> {
+    if facts.switches().run_on_off {
+        return Err("the run-on reading is off");
+    }
+    if c.flags() & flag::SWAP != 0 {
+        return Err("subject and target are swapped");
+    }
+    match c.run_on {
+        2 => {
+            let k = condition::form(ctx, c.reference, file, 0)
+                .map_err(|_| "the reference word is not a FormID")?
+                .ok_or("the reference word is zero")?;
+            match facts.store().signature(&k) {
+                Some(s) if PLACED.contains(&&s) => Ok(k),
+                Some(_) => Err("the reference word names no placed reference"),
+                None => Err("the reference word names no record the data defines"),
+            }
+        }
+        5 => {
+            let q = facts
+                .owner()
+                .cloned()
+                .ok_or("the list has no owning quest")?;
+            facts
+                .alias_reference(&q, c.param3)?
+                .ok_or("the alias holds no reference")
+        }
+        _ => Err("the condition runs on a subject the interpreter does not know"),
+    }
+}
+
 /// The function's value of one condition, as a number.
 fn function_value(
     c: &Ctda,
+    cis2: Option<&[u8]>,
     ctx: Context<'_>,
     file: &str,
     facts: &mut dyn Facts,
@@ -175,11 +358,37 @@ fn function_value(
                 .map_err(|_| "a parameter is not a FormID")?;
             Ok(b(member == want))
         }
-        _ => Err("the function is not evaluated"),
+        72 => {
+            let want = condition::form(ctx, c.param1, file, 0)
+                .map_err(|_| "a parameter is not a FormID")?
+                .ok_or("a parameter is zero")?;
+            let r = subject(c, ctx, file, facts)?;
+            let base = facts.reference_base(&r)?;
+            Ok(b(base == want))
+        }
+        84 => {
+            let n = record(facts, ctx, c.param1, file, b"NPC_")?;
+            facts.dead_count(&n)
+        }
+        248 => {
+            let s = record(facts, ctx, c.param1, file, b"SCEN")?;
+            facts.scene_playing(&s).map(b)
+        }
+        550 => {
+            let s = record(facts, ctx, c.param1, file, b"SCEN")?;
+            facts.scene_action_complete(&s, c.param2).map(b)
+        }
+        629 => {
+            let q = record(facts, ctx, c.param1, file, b"QUST")?;
+            let name = cis2.ok_or("the condition has no CIS2")?;
+            facts.quest_variable(&q, &fo4_pex::index::lower(name))
+        }
+        _ => Err(NOT_EVALUATED),
     }
 }
 
-/// Evaluates one condition; adds the rules it relied on to `used`.
+/// Evaluates one condition; adds the rules it relied on to `used`. The
+/// condition's texts are not read: [`eval_condition`] reads them.
 pub fn eval_term(
     c: &Ctda,
     ctx: Context<'_>,
@@ -187,20 +396,64 @@ pub fn eval_term(
     facts: &mut dyn Facts,
     used: &mut BTreeSet<&'static str>,
 ) -> Truth {
+    eval_with_text(c, None, ctx, file, facts, used)
+}
+
+/// Evaluates one condition with its texts (function 629 reads CIS2).
+pub fn eval_condition(
+    c: &Condition,
+    ctx: Context<'_>,
+    file: &str,
+    facts: &mut dyn Facts,
+    used: &mut BTreeSet<&'static str>,
+) -> Truth {
+    eval_with_text(&c.ctda, c.cis2.as_deref(), ctx, file, facts, used)
+}
+
+fn eval_with_text(
+    c: &Ctda,
+    cis2: Option<&[u8]>,
+    ctx: Context<'_>,
+    file: &str,
+    facts: &mut dyn Facts,
+    used: &mut BTreeSet<&'static str>,
+) -> Truth {
     used.insert(rules::COND_LAYOUT);
     let f = c.function;
-    let Some(rule) = rule_of(f) else {
-        return Truth::open(f, "the function is not evaluated");
+    if let Some(v) = facts.assumed(f) {
+        // A caller assumption: the function's value is given, the
+        // comparison is read as for an evaluated function.
+        return compare(c, v, ctx, file, facts, used);
+    }
+    let Some(rule) = rule_of(f).filter(|_| !is_added(f) || facts.switches().on(f)) else {
+        return Truth::open(f, NOT_EVALUATED);
     };
     used.insert(rules::COND_FLAGS);
     if c.flags() & (flag::ALIASES | flag::PACK_DATA) != 0 {
         return Truth::open(f, "the parameters name aliases or package data");
     }
     used.insert(rule);
-    let v = match function_value(c, ctx, file, facts) {
+    if f == 72 {
+        used.insert(rules::COND_RUN_ON);
+    }
+    let v = match function_value(c, cis2, ctx, file, facts) {
         Ok(v) => v,
         Err(why) => return Truth::open(f, why),
     };
+    compare(c, v, ctx, file, facts, used)
+}
+
+/// Compares a function's value `v` with the condition's comparison value
+/// under its operator code.
+fn compare(
+    c: &Ctda,
+    v: f32,
+    ctx: Context<'_>,
+    file: &str,
+    facts: &mut dyn Facts,
+    used: &mut BTreeSet<&'static str>,
+) -> Truth {
+    let f = c.function;
     let against = match c.comparison() {
         Comparison::Float(x) => x,
         Comparison::Global(raw) => {
@@ -285,7 +538,7 @@ pub fn eval_list_with(
     used.insert(rules::COND_LIST);
     let terms: Vec<Truth> = list
         .iter()
-        .map(|c| eval_term(&c.ctda, ctx, file, facts, used))
+        .map(|c| eval_condition(c, ctx, file, facts, used))
         .collect();
     let t = match combine {
         Combine::OrGroups => {
@@ -339,6 +592,11 @@ pub struct StaticFacts<'s> {
     pub store: &'s Store,
     pub max_memory: u64,
     running: BTreeMap<FormKey, Result<bool, &'static str>>,
+    switches: Switches,
+    /// The compiled scripts, for the initial values of quest variables
+    /// (function 629); `None` leaves them undetermined.
+    scripts: Option<Box<dyn Library + 's>>,
+    owner: Option<FormKey>,
 }
 impl<'s> StaticFacts<'s> {
     pub fn new_game(store: &'s Store, max_memory: u64) -> Self {
@@ -346,12 +604,36 @@ impl<'s> StaticFacts<'s> {
             store,
             max_memory,
             running: BTreeMap::new(),
+            switches: Switches::all(),
+            scripts: None,
+            owner: None,
         }
+    }
+    /// The same facts with these evaluator switches.
+    pub fn with_switches(mut self, s: Switches) -> Self {
+        self.switches = s;
+        self
+    }
+    /// The same facts reading quest variables' initial values from these
+    /// compiled scripts.
+    pub fn with_scripts(mut self, lib: Box<dyn Library + 's>) -> Self {
+        self.scripts = Some(lib);
+        self
+    }
+    /// The quest whose aliases run-on 5 names in the next lists.
+    pub fn set_owner(&mut self, quest: Option<FormKey>) {
+        self.owner = quest;
     }
 }
 impl Facts for StaticFacts<'_> {
     fn store(&self) -> &Store {
         self.store
+    }
+    fn switches(&self) -> &Switches {
+        &self.switches
+    }
+    fn max_memory(&self) -> u64 {
+        self.max_memory
     }
     fn quest_running(&mut self, quest: &FormKey) -> Result<bool, &'static str> {
         if let Some(r) = self.running.get(quest) {
@@ -373,5 +655,54 @@ impl Facts for StaticFacts<'_> {
     }
     fn global(&mut self, global: &FormKey) -> Result<f32, &'static str> {
         data::global_fltv(self.store, global, self.max_memory)
+    }
+    fn owner(&self) -> Option<&FormKey> {
+        self.owner.as_ref()
+    }
+    /// A quest that runs at the start of a new game holds the forced
+    /// reference of an alias that has one (`quest_alias_forced_reference_v1`);
+    /// a quest that does not run holds none.
+    fn alias_reference(
+        &mut self,
+        quest: &FormKey,
+        alias: i32,
+    ) -> Result<Option<FormKey>, &'static str> {
+        if !self.quest_running(quest)? {
+            return Ok(None);
+        }
+        let b = fo4_core::Budget::new(self.max_memory);
+        let i = crate::quest::QuestInfo::load(self.store, quest, &b)
+            .ok()
+            .flatten()
+            .ok_or("the quest record could not be read")?;
+        let forced = u32::try_from(alias)
+            .ok()
+            .and_then(|a| i.reference_aliases.get(&a))
+            .ok_or("no reference alias of that index")?;
+        forced
+            .clone()
+            .map(Some)
+            .ok_or("the alias has no forced reference")
+    }
+    fn quest_variable(&mut self, quest: &FormKey, name: &str) -> Result<f32, &'static str> {
+        let lib = self
+            .scripts
+            .as_deref_mut()
+            .ok_or("compiled scripts are not read here")?;
+        let b = fo4_core::Budget::new(self.max_memory);
+        crate::vars::quest_variable_initial(self.store, lib, quest, name, &b)
+    }
+    /// No scene plays at the start of a new game (`scene_start_v1`).
+    fn scene_playing(&mut self, _: &FormKey) -> Result<bool, &'static str> {
+        Ok(false)
+    }
+    /// No scene has played, so no action is complete
+    /// (`cond_fn_550_scene_action_complete_v1`).
+    fn scene_action_complete(&mut self, _: &FormKey, _: u32) -> Result<bool, &'static str> {
+        Ok(false)
+    }
+    /// No actor has died (`cond_fn_84_dead_count_v1`).
+    fn dead_count(&mut self, _: &FormKey) -> Result<f32, &'static str> {
+        Ok(0.0)
     }
 }

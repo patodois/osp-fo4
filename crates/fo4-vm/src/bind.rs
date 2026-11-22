@@ -772,6 +772,12 @@ pub struct Options {
     /// `IsDisabled` follows enable parent chains
     /// (`vm_host_is_disabled_chain_v1`; data and quest hosts).
     pub enable_chain: bool,
+    /// The condition evaluators added after the first five
+    /// ([`crate::cond::Switches`]; quest host only). A quest variable is
+    /// read from the run's attached instances only: the run's library is
+    /// the interpreter's, so a quest the run did not attach leaves it
+    /// undetermined.
+    pub cond: crate::cond::Switches,
 }
 impl Options {
     /// The candidate readings for a host: events delivered with the quest
@@ -783,6 +789,7 @@ impl Options {
             custom: (mode == Mode::Quest).then_some(crate::events::CustomOrder::Queued),
             story: None,
             enable_chain: mode != Mode::Recording,
+            cond: crate::cond::Switches::all(),
         }
     }
 }
@@ -807,6 +814,7 @@ pub fn run_with(
     let mut quest = crate::quest::QuestHost::new(store, max);
     quest.data.enable_chain = opts.enable_chain;
     quest.story = opts.story.clone();
+    quest.cond.switches = opts.cond.clone();
     let mut attach = RecordScripts::new(store, max);
     let mut runner = crate::quest::Runner::new(store, max, QUEST_JOBS);
     let host: &mut dyn crate::Host = match mode {

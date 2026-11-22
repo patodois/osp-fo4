@@ -399,11 +399,7 @@ fn eval(h: &mut QuestHost<'_>, w: &mut World, i: &SceneInfo, list: &[Condition])
         plugin: i.plugin,
     };
     let mut used = BTreeSet::new();
-    let mut facts = RunFacts {
-        data: &h.data,
-        w,
-        event: None,
-    };
+    let mut facts = RunFacts::of(h, w, None, i.quest.clone());
     let t = cond::eval_list_with(list, ctx, &i.file, &mut facts, Combine::OrGroups, &mut used);
     for u in used {
         h.using(u);

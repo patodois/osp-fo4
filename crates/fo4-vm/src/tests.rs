@@ -2,6 +2,7 @@
 //! `fo4_pex` structures, which [`Script::from_pex`] copies. No game data.
 use super::*;
 
+mod cond2;
 mod data;
 mod events;
 mod quest;

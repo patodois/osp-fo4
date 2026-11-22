@@ -65,6 +65,7 @@ fn eval(
     list: &[Condition],
     plugin: usize,
     file: &str,
+    owner: Option<FormKey>,
 ) -> Truth {
     let ctx = Context {
         order: host.data.store.order(),
@@ -72,11 +73,7 @@ fn eval(
     };
     let mut used = BTreeSet::new();
     let t = {
-        let mut facts = RunFacts {
-            data: &host.data,
-            w,
-            event: Some(ev),
-        };
+        let mut facts = RunFacts::of(host, w, Some(ev), owner);
         cond::eval_list_with(list, ctx, file, &mut facts, Combine::OrGroups, &mut used)
     };
     for u in used {
@@ -114,7 +111,7 @@ pub fn walk(
     if depth > fo4_plugin::story::MAX_DEPTH {
         return Walk::Open("the tree is deeper than the walk follows", BTreeSet::new());
     }
-    let t = eval(host, w, ev, &n.conditions, n.plugin, &n.file);
+    let t = eval(host, w, ev, &n.conditions, n.plugin, &n.file, None);
     match t {
         Truth::False => return Walk::Skip,
         Truth::Undetermined(_) => {
@@ -142,7 +139,15 @@ pub fn walk(
                 }
                 Some(false) => {}
             }
-            let t = eval(host, w, ev, &i.event_conditions, i.plugin, &i.file);
+            let t = eval(
+                host,
+                w,
+                ev,
+                &i.event_conditions,
+                i.plugin,
+                &i.file,
+                Some(i.key.clone()),
+            );
             match t {
                 Truth::True => return Walk::Start(q.clone()),
                 Truth::False => continue,

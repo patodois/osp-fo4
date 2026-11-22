@@ -20,7 +20,7 @@
 5	effects	global set
 7	effects	lock or open state
 9	effects	move
-99	effects	scene
+100	effects	scene
 14	effects	stage set on another quest
 2	effects	stage set on the same quest
 9	event onstageset outcome: completed
@@ -41,8 +41,8 @@
 1	log entry selections with conditions evaluated	open
 12	open runs: whether setting the stage started the quest
 1	open runs: which log entry's fragment runs depends on conditions
-205	phases of the started scene entered	0
-4535	phases of the started scene entered	1
+189	phases of the started scene entered	0
+4551	phases of the started scene entered	1
 33	phases of the started scene entered	2
 16	quest changes	stage set
 34	scene fragment (begin) outcome: blocked on a native's result
@@ -50,7 +50,7 @@
 1	scene fragment (begin) outcome: failed: MissingFunction
 2	scene fragment (begin) outcome: failed: MissingScript
 2	scene fragment (begin) outcome: failed: NoneOperand op 34
-1	scene fragment (end) outcome: completed
+2	scene fragment (end) outcome: completed
 12	scene fragment (phase begin) outcome: blocked on a native's result
 65	scene fragment (phase begin) outcome: completed
 1	scene fragment (phase begin) outcome: failed: BadArgument
@@ -59,22 +59,22 @@
 3	scene fragment (phase end) outcome: blocked on a native's result
 1	scene fragment (phase end) outcome: completed
 12	scene fragment (phase end) outcome: failed: NoneOperand op 23
-9430	scene steps
+9472	scene steps
 50	scenes	phase completed
-4601	scenes	phase entered
-6	scenes	phase passed over (start conditions false)
-32	scenes	scene ended (last phase completed)
+4617	scenes	phase entered
+32	scenes	phase passed over (start conditions false)
+34	scenes	scene ended (last phase completed)
 4773	scenes	scene started
 16	scenes	scene stopped by a script
-2495	scenes	scene stopped in a phase	an action runs in the phase: kind 0 (a dialogue line: audio)
-660	scenes	scene stopped in a phase	an action runs in the phase: kind 1 (a package: actor movement)
-165	scenes	scene stopped in a phase	an action runs in the phase: kind 2 (a timer: the clock)
-689	scenes	scene stopped in a phase	an action runs in the phase: kind 3 (player dialogue: the player)
-25	scenes	scene stopped in a phase	an action runs in the phase: kind 4 (starts another scene)
+2500	scenes	scene stopped in a phase	an action runs in the phase: kind 0 (a dialogue line: audio)
+663	scenes	scene stopped in a phase	an action runs in the phase: kind 1 (a package: actor movement)
+167	scenes	scene stopped in a phase	an action runs in the phase: kind 2 (a timer: the clock)
+690	scenes	scene stopped in a phase	an action runs in the phase: kind 3 (player dialogue: the player)
+29	scenes	scene stopped in a phase	an action runs in the phase: kind 4 (starts another scene)
 11	scenes	scene stopped in a phase	an action runs in the phase: kind 5 (a response line: audio)
 400	scenes	scene stopped in a phase	an action runs in the phase: kind 6 (radio: audio)
-2	scenes	scene stopped in a phase	completion conditions false (waits on the world)
-37	scenes	scene stopped in a phase	completion conditions undetermined (function 1)
+9	scenes	scene stopped in a phase	completion conditions false (waits on the world)
+38	scenes	scene stopped in a phase	completion conditions undetermined (function 1)
 1	scenes	scene stopped in a phase	completion conditions undetermined (function 1, 27)
 2	scenes	scene stopped in a phase	completion conditions undetermined (function 1, 310)
 1	scenes	scene stopped in a phase	completion conditions undetermined (function 1, 360)
@@ -90,11 +90,9 @@
 1	scenes	scene stopped in a phase	completion conditions undetermined (function 359, 811)
 1	scenes	scene stopped in a phase	completion conditions undetermined (function 46)
 15	scenes	scene stopped in a phase	completion conditions undetermined (function 555)
-4	scenes	scene stopped in a phase	completion conditions undetermined (function 555, 629)
 3	scenes	scene stopped in a phase	completion conditions undetermined (function 56)
 9	scenes	scene stopped in a phase	completion conditions undetermined (function 59)
 6	scenes	scene stopped in a phase	completion conditions undetermined (function 613, 614)
-3	scenes	scene stopped in a phase	completion conditions undetermined (function 629)
 1	scenes	scene stopped in a phase	completion conditions undetermined (function 633)
 2	scenes	scene stopped in a phase	completion conditions undetermined (function 67)
 4	scenes	scene stopped in a phase	completion conditions undetermined (function 67, 555)
@@ -126,12 +124,10 @@
 7	scenes	scene stopped in a phase	start conditions undetermined (function 58)
 1	scenes	scene stopped in a phase	start conditions undetermined (function 58, 289)
 1	scenes	scene stopped in a phase	start conditions undetermined (function 58, 613)
-54	scenes	scene stopped in a phase	start conditions undetermined (function 59)
-3	scenes	scene stopped in a phase	start conditions undetermined (function 59, 629)
+57	scenes	scene stopped in a phase	start conditions undetermined (function 59)
 1	scenes	scene stopped in a phase	start conditions undetermined (function 59, 660)
 3	scenes	scene stopped in a phase	start conditions undetermined (function 59, 84)
 4	scenes	scene stopped in a phase	start conditions undetermined (function 613, 614)
-18	scenes	scene stopped in a phase	start conditions undetermined (function 629)
 2	scenes	scene stopped in a phase	start conditions undetermined (function 660)
 2	scenes	scene stopped in a phase	start conditions undetermined (function 67)
 1	scenes	scene stopped in a phase	start conditions undetermined (function 70)
@@ -140,7 +136,7 @@
 1	scenes	scene stopped in a phase	start conditions undetermined (function 792)
 4	scenes	scene stopped in a phase	start conditions undetermined (function 799)
 4773	scenes started by the sweep
-32	started scenes that ran to their end
+34	started scenes that ran to their end
 
 ## effects of other natives, ranked
 106	effects	other: referencealias.getreference

@@ -1,0 +1,1224 @@
+# cond_blockers: counts, record type tags, contexts and function indexes only (spec/conditions.md, Blockers)
+# Function indexes are bare numbers. New-game state before any script runs (cond::StaticFacts).
+# switches: every evaluator on
+
+## lists and outcomes
+4838	lists	quest alias fill	QUST
+593	lists	quest stage log entry	QUST
+576	lists	quest story event (after NEXT)	QUST
+1030	lists	scene phase completion	SCEN
+1867	lists	scene phase start	SCEN
+82	lists	story manager node	SMBN
+1	lists	story manager node	SMEN
+283	lists	story manager node	SMQN
+25	lists by outcome	quest alias fill	false
+4	lists by outcome	quest alias fill	true
+4809	lists by outcome	quest alias fill	undetermined
+356	lists by outcome	quest stage log entry	false
+167	lists by outcome	quest stage log entry	true
+70	lists by outcome	quest stage log entry	undetermined
+181	lists by outcome	quest story event (after NEXT)	false
+70	lists by outcome	quest story event (after NEXT)	true
+325	lists by outcome	quest story event (after NEXT)	undetermined
+475	lists by outcome	scene phase completion	false
+19	lists by outcome	scene phase completion	true
+536	lists by outcome	scene phase completion	undetermined
+662	lists by outcome	scene phase start	false
+387	lists by outcome	scene phase start	true
+818	lists by outcome	scene phase start	undetermined
+68	lists by outcome	story manager node	false
+12	lists by outcome	story manager node	true
+286	lists by outcome	story manager node	undetermined
+3	undetermined lists by the reason an evaluated function gives	quest alias fill	576	no story event is being offered
+483	undetermined lists by the reason an evaluated function gives	quest alias fill	72	the condition runs on a subject the interpreter does not know
+10	undetermined lists by the reason an evaluated function gives	quest stage log entry	58	the current stage is undetermined until a stage is set
+1	undetermined lists by the reason an evaluated function gives	quest stage log entry	72	the alias holds no reference
+46	undetermined lists by the reason an evaluated function gives	quest story event (after NEXT)	576	a selector of function 576 without a candidate meaning
+17	undetermined lists by the reason an evaluated function gives	quest story event (after NEXT)	576	no story event is being offered
+11	undetermined lists by the reason an evaluated function gives	quest story event (after NEXT)	58	the current stage is undetermined until a stage is set
+68	undetermined lists by the reason an evaluated function gives	quest story event (after NEXT)	72	the condition runs on a subject the interpreter does not know
+1	undetermined lists by the reason an evaluated function gives	scene phase completion	248	a parameter is zero
+1	undetermined lists by the reason an evaluated function gives	scene phase completion	550	the parameters name aliases or package data
+17	undetermined lists by the reason an evaluated function gives	scene phase completion	58	the current stage is undetermined until a stage is set
+1	undetermined lists by the reason an evaluated function gives	scene phase completion	59	the parameters name aliases or package data
+1	undetermined lists by the reason an evaluated function gives	scene phase completion	72	the alias holds no reference
+44	undetermined lists by the reason an evaluated function gives	scene phase start	58	the current stage is undetermined until a stage is set
+1	undetermined lists by the reason an evaluated function gives	scene phase start	72	a parameter is zero
+37	undetermined lists by the reason an evaluated function gives	scene phase start	72	the alias holds no reference
+1	undetermined lists by the reason an evaluated function gives	scene phase start	72	the parameters name aliases or package data
+15	undetermined lists by the reason an evaluated function gives	story manager node	576	a selector of function 576 without a candidate meaning
+10	undetermined lists by the reason an evaluated function gives	story manager node	576	an event member function 576 is not evaluated for
+122	undetermined lists by the reason an evaluated function gives	story manager node	576	no story event is being offered
+4	undetermined lists by the reason an evaluated function gives	story manager node	58	the current stage is undetermined until a stage is set
+7	undetermined lists by the reason an evaluated function gives	story manager node	72	the condition runs on a subject the interpreter does not know
+768	undetermined lists by what blocks them	quest alias fill	one function index not evaluated, alone
+61	undetermined lists by what blocks them	quest alias fill	one function index not evaluated, with open evaluated functions
+401	undetermined lists by what blocks them	quest alias fill	only evaluated functions whose input the state leaves open
+3556	undetermined lists by what blocks them	quest alias fill	two or more function indexes not evaluated
+23	undetermined lists by what blocks them	quest alias fill	two or more function indexes not evaluated, with open evaluated functions
+57	undetermined lists by what blocks them	quest stage log entry	one function index not evaluated, alone
+11	undetermined lists by what blocks them	quest stage log entry	only evaluated functions whose input the state leaves open
+2	undetermined lists by what blocks them	quest stage log entry	two or more function indexes not evaluated
+128	undetermined lists by what blocks them	quest story event (after NEXT)	one function index not evaluated, alone
+19	undetermined lists by what blocks them	quest story event (after NEXT)	one function index not evaluated, with open evaluated functions
+99	undetermined lists by what blocks them	quest story event (after NEXT)	only evaluated functions whose input the state leaves open
+73	undetermined lists by what blocks them	quest story event (after NEXT)	two or more function indexes not evaluated
+6	undetermined lists by what blocks them	quest story event (after NEXT)	two or more function indexes not evaluated, with open evaluated functions
+410	undetermined lists by what blocks them	scene phase completion	one function index not evaluated, alone
+4	undetermined lists by what blocks them	scene phase completion	one function index not evaluated, with open evaluated functions
+16	undetermined lists by what blocks them	scene phase completion	only evaluated functions whose input the state leaves open
+105	undetermined lists by what blocks them	scene phase completion	two or more function indexes not evaluated
+1	undetermined lists by what blocks them	scene phase completion	two or more function indexes not evaluated, with open evaluated functions
+636	undetermined lists by what blocks them	scene phase start	one function index not evaluated, alone
+31	undetermined lists by what blocks them	scene phase start	one function index not evaluated, with open evaluated functions
+35	undetermined lists by what blocks them	scene phase start	only evaluated functions whose input the state leaves open
+100	undetermined lists by what blocks them	scene phase start	two or more function indexes not evaluated
+16	undetermined lists by what blocks them	scene phase start	two or more function indexes not evaluated, with open evaluated functions
+116	undetermined lists by what blocks them	story manager node	one function index not evaluated, alone
+20	undetermined lists by what blocks them	story manager node	one function index not evaluated, with open evaluated functions
+121	undetermined lists by what blocks them	story manager node	only evaluated functions whose input the state leaves open
+20	undetermined lists by what blocks them	story manager node	two or more function indexes not evaluated
+9	undetermined lists by what blocks them	story manager node	two or more function indexes not evaluated, with open evaluated functions
+3	undetermined lists with an evaluated function whose input the state leaves open	quest alias fill	576
+483	undetermined lists with an evaluated function whose input the state leaves open	quest alias fill	72
+10	undetermined lists with an evaluated function whose input the state leaves open	quest stage log entry	58
+1	undetermined lists with an evaluated function whose input the state leaves open	quest stage log entry	72
+61	undetermined lists with an evaluated function whose input the state leaves open	quest story event (after NEXT)	576
+11	undetermined lists with an evaluated function whose input the state leaves open	quest story event (after NEXT)	58
+68	undetermined lists with an evaluated function whose input the state leaves open	quest story event (after NEXT)	72
+1	undetermined lists with an evaluated function whose input the state leaves open	scene phase completion	248
+1	undetermined lists with an evaluated function whose input the state leaves open	scene phase completion	550
+17	undetermined lists with an evaluated function whose input the state leaves open	scene phase completion	58
+1	undetermined lists with an evaluated function whose input the state leaves open	scene phase completion	59
+1	undetermined lists with an evaluated function whose input the state leaves open	scene phase completion	72
+44	undetermined lists with an evaluated function whose input the state leaves open	scene phase start	58
+39	undetermined lists with an evaluated function whose input the state leaves open	scene phase start	72
+143	undetermined lists with an evaluated function whose input the state leaves open	story manager node	576
+4	undetermined lists with an evaluated function whose input the state leaves open	story manager node	58
+7	undetermined lists with an evaluated function whose input the state leaves open	story manager node	72
+
+## ranked: function index, lists blocked only by it over the six contexts
+457	1
+276	561
+223	426
+203	71
+111	14
+94	560
+89	359
+76	799
+51	67
+50	131
+49	46
+48	231
+33	70
+33	362
+29	555
+18	77
+18	159
+16	310
+16	594
+15	80
+15	660
+14	327
+13	289
+13	563
+10	566
+9	157
+8	47
+8	543
+8	765
+7	365
+7	491
+7	562
+7	633
+7	784
+6	277
+5	27
+5	45
+5	414
+5	507
+5	726
+4	69
+4	161
+4	448
+3	18
+3	32
+3	792
+2	5
+2	49
+2	182
+2	255
+2	300
+1	35
+1	136
+1	141
+1	162
+1	323
+1	360
+1	510
+1	513
+1	605
+1	651
+1	659
+1	760
+1	769
+1	773
+1	776
+
+## by context: function index, lists blocked only by it, undetermined lists it is among the blockers of, conditions of the index in the context
+scene phase start	1	259	354	390
+scene phase start	14	87	95	113
+scene phase start	799	72	72	140
+scene phase start	231	48	52	64
+scene phase start	67	32	36	63
+scene phase start	359	23	35	42
+scene phase start	46	23	26	46
+scene phase start	71	18	31	31
+scene phase start	660	8	10	11
+scene phase start	47	7	8	8
+scene phase start	289	6	7	7
+scene phase start	414	5	19	19
+scene phase start	77	5	8	8
+scene phase start	507	5	5	5
+scene phase start	448	4	4	5
+scene phase start	70	3	7	7
+scene phase start	45	3	3	4
+scene phase start	159	3	3	3
+scene phase start	27	2	8	8
+scene phase start	310	2	2	3
+scene phase start	543	2	2	3
+scene phase start	32	2	2	2
+scene phase start	69	2	2	2
+scene phase start	255	2	2	2
+scene phase start	300	2	2	2
+scene phase start	792	2	2	2
+scene phase start	5	1	2	2
+scene phase start	157	1	2	2
+scene phase start	18	1	1	2
+scene phase start	182	1	1	1
+scene phase start	323	1	1	1
+scene phase start	510	1	1	1
+scene phase start	560	1	1	1
+scene phase start	773	1	1	1
+scene phase start	784	1	1	1
+scene phase start	555	0	46	48
+scene phase start	613	0	23	34
+scene phase start	614	0	22	33
+scene phase start	426	0	1	2
+scene phase start	590	0	1	1
+scene phase start	811	0	1	1
+scene phase start	59	0	0	633
+scene phase start	629	0	0	450
+scene phase start	74	0	0	230
+scene phase start	248	0	0	104
+scene phase start	58	0	0	63
+scene phase start	72	0	0	48
+scene phase start	56	0	0	33
+scene phase start	84	0	0	21
+scene phase start	80	0	0	3
+scene phase start	625	0	0	2
+scene phase start	50	0	0	1
+scene phase start	263	0	0	1
+scene phase completion	1	196	227	257
+scene phase completion	131	50	51	52
+scene phase completion	555	29	41	78
+scene phase completion	594	16	16	19
+scene phase completion	67	15	31	42
+scene phase completion	159	15	16	16
+scene phase completion	327	14	67	84
+scene phase completion	46	10	60	62
+scene phase completion	14	9	10	10
+scene phase completion	157	8	13	16
+scene phase completion	359	7	11	12
+scene phase completion	633	7	8	11
+scene phase completion	784	6	11	12
+scene phase completion	289	6	6	8
+scene phase completion	799	4	4	4
+scene phase completion	27	3	13	14
+scene phase completion	660	2	3	4
+scene phase completion	18	2	2	4
+scene phase completion	310	1	3	5
+scene phase completion	513	1	2	3
+scene phase completion	360	1	2	2
+scene phase completion	32	1	1	1
+scene phase completion	35	1	1	1
+scene phase completion	45	1	1	1
+scene phase completion	47	1	1	1
+scene phase completion	141	1	1	1
+scene phase completion	162	1	1	1
+scene phase completion	543	1	1	1
+scene phase completion	792	1	1	1
+scene phase completion	613	0	9	9
+scene phase completion	614	0	9	9
+scene phase completion	566	0	4	4
+scene phase completion	323	0	1	3
+scene phase completion	580	0	1	1
+scene phase completion	590	0	1	1
+scene phase completion	811	0	1	1
+scene phase completion	550	0	0	416
+scene phase completion	59	0	0	231
+scene phase completion	629	0	0	85
+scene phase completion	74	0	0	29
+scene phase completion	58	0	0	17
+scene phase completion	56	0	0	6
+scene phase completion	248	0	0	6
+scene phase completion	249	0	0	4
+scene phase completion	72	0	0	1
+quest stage log entry	70	30	30	30
+quest stage log entry	46	14	14	22
+quest stage log entry	491	7	7	7
+quest stage log entry	14	3	5	6
+quest stage log entry	359	1	1	2
+quest stage log entry	1	1	1	1
+quest stage log entry	67	1	1	1
+quest stage log entry	71	0	2	2
+quest stage log entry	59	0	0	617
+quest stage log entry	629	0	0	125
+quest stage log entry	74	0	0	76
+quest stage log entry	84	0	0	32
+quest stage log entry	58	0	0	16
+quest stage log entry	72	0	0	1
+quest alias fill	561	276	3460	4509
+quest alias fill	426	207	308	473
+quest alias fill	71	158	251	282
+quest alias fill	362	33	35	35
+quest alias fill	560	20	165	283
+quest alias fill	563	13	166	269
+quest alias fill	566	10	26	27
+quest alias fill	77	9	22	23
+quest alias fill	562	7	199	469
+quest alias fill	365	7	11	11
+quest alias fill	277	6	81	81
+quest alias fill	726	5	8	8
+quest alias fill	660	4	65	68
+quest alias fill	49	2	5	5
+quest alias fill	69	2	2	3
+quest alias fill	1	1	82	90
+quest alias fill	14	1	81	122
+quest alias fill	46	1	13	13
+quest alias fill	45	1	1	1
+quest alias fill	67	1	1	1
+quest alias fill	182	1	1	1
+quest alias fill	605	1	1	1
+quest alias fill	651	1	1	1
+quest alias fill	659	1	1	1
+quest alias fill	650	0	3165	3165
+quest alias fill	181	0	49	52
+quest alias fill	794	0	28	29
+quest alias fill	805	0	26	26
+quest alias fill	449	0	21	29
+quest alias fill	80	0	17	33
+quest alias fill	310	0	17	17
+quest alias fill	66	0	13	13
+quest alias fill	203	0	13	13
+quest alias fill	565	0	9	10
+quest alias fill	353	0	9	9
+quest alias fill	359	0	8	17
+quest alias fill	161	0	6	17
+quest alias fill	35	0	5	5
+quest alias fill	361	0	5	5
+quest alias fill	797	0	5	5
+quest alias fill	360	0	4	4
+quest alias fill	543	0	4	4
+quest alias fill	444	0	3	3
+quest alias fill	734	0	3	3
+quest alias fill	753	0	3	3
+quest alias fill	432	0	2	3
+quest alias fill	567	0	2	2
+quest alias fill	47	0	1	1
+quest alias fill	242	0	1	1
+quest alias fill	255	0	1	1
+quest alias fill	445	0	1	1
+quest alias fill	555	0	1	1
+quest alias fill	603	0	1	1
+quest alias fill	608	0	1	1
+quest alias fill	618	0	1	1
+quest alias fill	72	0	0	499
+quest alias fill	74	0	0	29
+quest alias fill	629	0	0	16
+quest alias fill	56	0	0	5
+quest alias fill	84	0	0	3
+quest alias fill	576	0	0	3
+quest alias fill	59	0	0	1
+quest story event (after NEXT)	560	65	131	324
+quest story event (after NEXT)	80	15	39	68
+quest story event (after NEXT)	71	13	22	46
+quest story event (after NEXT)	310	10	58	127
+quest story event (after NEXT)	765	6	13	16
+quest story event (after NEXT)	543	4	12	17
+quest story event (after NEXT)	161	4	4	8
+quest story event (after NEXT)	77	2	8	8
+quest story event (after NEXT)	67	2	5	5
+quest story event (after NEXT)	426	2	2	4
+quest story event (after NEXT)	660	1	8	9
+quest story event (after NEXT)	760	1	2	2
+quest story event (after NEXT)	46	1	1	3
+quest story event (after NEXT)	136	1	1	1
+quest story event (after NEXT)	769	1	1	1
+quest story event (after NEXT)	362	0	5	5
+quest story event (after NEXT)	14	0	4	4
+quest story event (after NEXT)	18	0	2	4
+quest story event (after NEXT)	555	0	2	4
+quest story event (after NEXT)	157	0	2	2
+quest story event (after NEXT)	289	0	2	2
+quest story event (after NEXT)	359	0	2	2
+quest story event (after NEXT)	74	0	0	276
+quest story event (after NEXT)	59	0	0	171
+quest story event (after NEXT)	72	0	0	71
+quest story event (after NEXT)	576	0	0	71
+quest story event (after NEXT)	56	0	0	50
+quest story event (after NEXT)	84	0	0	41
+quest story event (after NEXT)	629	0	0	31
+quest story event (after NEXT)	58	0	0	18
+quest story event (after NEXT)	485	0	0	10
+quest story event (after NEXT)	248	0	0	2
+quest story event (after NEXT)	1	0	0	1
+story manager node	359	58	67	93
+story manager node	71	14	26	45
+story manager node	426	14	14	28
+story manager node	14	11	14	25
+story manager node	560	8	17	24
+story manager node	310	3	8	25
+story manager node	77	2	11	24
+story manager node	765	2	3	3
+story manager node	543	1	6	8
+story manager node	776	1	1	2
+story manager node	5	1	1	1
+story manager node	289	1	1	1
+story manager node	485	0	6	7
+story manager node	660	0	5	7
+story manager node	80	0	3	3
+story manager node	300	0	2	4
+story manager node	1	0	2	3
+story manager node	46	0	2	2
+story manager node	562	0	1	2
+story manager node	590	0	1	2
+story manager node	682	0	1	2
+story manager node	62	0	1	1
+story manager node	75	0	1	1
+story manager node	353	0	1	1
+story manager node	361	0	1	1
+story manager node	448	0	1	1
+story manager node	726	0	1	1
+story manager node	798	0	1	1
+story manager node	576	0	0	249
+story manager node	74	0	0	81
+story manager node	59	0	0	63
+story manager node	56	0	0	15
+story manager node	58	0	0	10
+story manager node	72	0	0	10
+story manager node	629	0	0	8
+story manager node	203	0	0	2
+story manager node	536	0	0	2
+story manager node	635	0	0	2
+story manager node	67	0	0	1
+story manager node	84	0	0	1
+story manager node	286	0	0	1
+story manager node	625	0	0	1
+
+## details of the top-ranked indexes, of 555, 1, 629, 14 and of the indexes evaluated since the second conditions step: context, field, value
+48	function 1	quest alias fill	comparison value	a global
+42	function 1	quest alias fill	comparison value	another integer
+13	function 1	quest alias fill	flag bits other than OR	0x00
+29	function 1	quest alias fill	flag bits other than OR	0x02
+25	function 1	quest alias fill	flag bits other than OR	0x04
+23	function 1	quest alias fill	flag bits other than OR	0x06
+7	function 1	quest alias fill	in a list it alone blocks	yes
+24	function 1	quest alias fill	operator code	2
+26	function 1	quest alias fill	operator code	3
+24	function 1	quest alias fill	operator code	4
+16	function 1	quest alias fill	operator code	5
+1	function 1	quest alias fill	parameter 1	CELL
+6	function 1	quest alias fill	parameter 1	DOOR
+1	function 1	quest alias fill	parameter 1	MISC
+17	function 1	quest alias fill	parameter 1	STAT
+30	function 1	quest alias fill	parameter 1	a number below 0x800
+35	function 1	quest alias fill	parameter 1	zero
+90	function 1	quest alias fill	parameter 2	zero
+81	function 1	quest alias fill	run-on word	0
+9	function 1	quest alias fill	run-on word	5
+90	function 1	quest alias fill	texts	none
+1	function 1	quest stage log entry	comparison value	another integer
+1	function 1	quest stage log entry	flag bits other than OR	0x02
+1	function 1	quest stage log entry	in a list it alone blocks	yes
+1	function 1	quest stage log entry	operator code	5
+1	function 1	quest stage log entry	parameter 1	STAT
+1	function 1	quest stage log entry	parameter 2	zero
+1	function 1	quest stage log entry	run-on word	5
+1	function 1	quest stage log entry	texts	none
+1	function 1	quest story event (after NEXT)	comparison value	another integer
+1	function 1	quest story event (after NEXT)	flag bits other than OR	0x00
+1	function 1	quest story event (after NEXT)	operator code	4
+1	function 1	quest story event (after NEXT)	parameter 1	a number below 0x800
+1	function 1	quest story event (after NEXT)	parameter 2	zero
+1	function 1	quest story event (after NEXT)	reference word (run-on 2)	ACHR
+1	function 1	quest story event (after NEXT)	run-on word	2
+1	function 1	quest story event (after NEXT)	texts	none
+8	function 1	scene phase completion	comparison value	a global
+249	function 1	scene phase completion	comparison value	another integer
+112	function 1	scene phase completion	flag bits other than OR	0x00
+137	function 1	scene phase completion	flag bits other than OR	0x02
+8	function 1	scene phase completion	flag bits other than OR	0x04
+207	function 1	scene phase completion	in a list it alone blocks	yes
+19	function 1	scene phase completion	operator code	2
+4	function 1	scene phase completion	operator code	3
+208	function 1	scene phase completion	operator code	4
+26	function 1	scene phase completion	operator code	5
+11	function 1	scene phase completion	parameter 1	ACHR
+2	function 1	scene phase completion	parameter 1	ACTI
+3	function 1	scene phase completion	parameter 1	DOOR
+1	function 1	scene phase completion	parameter 1	GLOB
+15	function 1	scene phase completion	parameter 1	MISC
+2	function 1	scene phase completion	parameter 1	NPC_
+38	function 1	scene phase completion	parameter 1	REFR
+48	function 1	scene phase completion	parameter 1	STAT
+89	function 1	scene phase completion	parameter 1	a number below 0x800
+48	function 1	scene phase completion	parameter 1	zero
+257	function 1	scene phase completion	parameter 2	zero
+1	function 1	scene phase completion	reference word (run-on 2)	ACHR
+95	function 1	scene phase completion	reference word (run-on 2)	a number below 0x800
+13	function 1	scene phase completion	run-on word	0
+96	function 1	scene phase completion	run-on word	2
+148	function 1	scene phase completion	run-on word	5
+257	function 1	scene phase completion	texts	none
+1	function 1	scene phase start	comparison value	0
+230	function 1	scene phase start	comparison value	a global
+159	function 1	scene phase start	comparison value	another integer
+106	function 1	scene phase start	flag bits other than OR	0x00
+54	function 1	scene phase start	flag bits other than OR	0x02
+176	function 1	scene phase start	flag bits other than OR	0x04
+54	function 1	scene phase start	flag bits other than OR	0x06
+288	function 1	scene phase start	in a list it alone blocks	yes
+21	function 1	scene phase start	operator code	2
+26	function 1	scene phase start	operator code	3
+321	function 1	scene phase start	operator code	4
+22	function 1	scene phase start	operator code	5
+2	function 1	scene phase start	parameter 1	ACHR
+6	function 1	scene phase start	parameter 1	DOOR
+2	function 1	scene phase start	parameter 1	NPC_
+25	function 1	scene phase start	parameter 1	REFR
+11	function 1	scene phase start	parameter 1	STAT
+274	function 1	scene phase start	parameter 1	a number below 0x800
+70	function 1	scene phase start	parameter 1	zero
+390	function 1	scene phase start	parameter 2	zero
+1	function 1	scene phase start	reference word (run-on 2)	REFR
+60	function 1	scene phase start	reference word (run-on 2)	a number below 0x800
+4	function 1	scene phase start	run-on word	0
+61	function 1	scene phase start	run-on word	2
+325	function 1	scene phase start	run-on word	5
+390	function 1	scene phase start	texts	none
+1	function 1	story manager node	comparison value	a global
+2	function 1	story manager node	comparison value	another integer
+2	function 1	story manager node	flag bits other than OR	0x00
+1	function 1	story manager node	flag bits other than OR	0x04
+3	function 1	story manager node	operator code	2
+2	function 1	story manager node	parameter 1	REFR
+1	function 1	story manager node	parameter 1	a number below 0x800
+3	function 1	story manager node	parameter 2	zero
+1	function 1	story manager node	reference word (run-on 2)	a number below 0x800
+1	function 1	story manager node	run-on word	2
+2	function 1	story manager node	run-on word	7
+3	function 1	story manager node	texts	none
+58	function 14	quest alias fill	comparison value	0
+35	function 14	quest alias fill	comparison value	1
+26	function 14	quest alias fill	comparison value	a global
+3	function 14	quest alias fill	comparison value	another integer
+96	function 14	quest alias fill	flag bits other than OR	0x00
+26	function 14	quest alias fill	flag bits other than OR	0x04
+1	function 14	quest alias fill	in a list it alone blocks	yes
+50	function 14	quest alias fill	operator code	0
+49	function 14	quest alias fill	operator code	2
+6	function 14	quest alias fill	operator code	3
+15	function 14	quest alias fill	operator code	4
+2	function 14	quest alias fill	operator code	5
+31	function 14	quest alias fill	parameter 1	AVIF
+91	function 14	quest alias fill	parameter 1	a number below 0x800
+122	function 14	quest alias fill	parameter 2	zero
+122	function 14	quest alias fill	run-on word	0
+122	function 14	quest alias fill	texts	none
+6	function 14	quest stage log entry	comparison value	a global
+6	function 14	quest stage log entry	flag bits other than OR	0x04
+3	function 14	quest stage log entry	in a list it alone blocks	yes
+3	function 14	quest stage log entry	operator code	2
+3	function 14	quest stage log entry	operator code	5
+6	function 14	quest stage log entry	parameter 1	AVIF
+6	function 14	quest stage log entry	parameter 2	zero
+6	function 14	quest stage log entry	run-on word	0
+6	function 14	quest stage log entry	texts	none
+3	function 14	quest story event (after NEXT)	comparison value	1
+1	function 14	quest story event (after NEXT)	comparison value	another integer
+4	function 14	quest story event (after NEXT)	flag bits other than OR	0x00
+1	function 14	quest story event (after NEXT)	operator code	2
+3	function 14	quest story event (after NEXT)	operator code	3
+3	function 14	quest story event (after NEXT)	parameter 1	AVIF
+1	function 14	quest story event (after NEXT)	parameter 1	a number below 0x800
+4	function 14	quest story event (after NEXT)	parameter 2	zero
+4	function 14	quest story event (after NEXT)	run-on word	7
+4	function 14	quest story event (after NEXT)	texts	none
+3	function 14	scene phase completion	comparison value	0
+7	function 14	scene phase completion	comparison value	1
+10	function 14	scene phase completion	flag bits other than OR	0x00
+9	function 14	scene phase completion	in a list it alone blocks	yes
+4	function 14	scene phase completion	operator code	0
+6	function 14	scene phase completion	operator code	1
+10	function 14	scene phase completion	parameter 1	AVIF
+10	function 14	scene phase completion	parameter 2	zero
+1	function 14	scene phase completion	reference word (run-on 2)	a number below 0x800
+5	function 14	scene phase completion	run-on word	0
+1	function 14	scene phase completion	run-on word	2
+4	function 14	scene phase completion	run-on word	5
+10	function 14	scene phase completion	texts	none
+19	function 14	scene phase start	comparison value	0
+14	function 14	scene phase start	comparison value	1
+78	function 14	scene phase start	comparison value	a global
+2	function 14	scene phase start	comparison value	another integer
+35	function 14	scene phase start	flag bits other than OR	0x00
+78	function 14	scene phase start	flag bits other than OR	0x04
+109	function 14	scene phase start	in a list it alone blocks	yes
+110	function 14	scene phase start	operator code	0
+1	function 14	scene phase start	operator code	1
+2	function 14	scene phase start	operator code	4
+113	function 14	scene phase start	parameter 1	AVIF
+113	function 14	scene phase start	parameter 2	zero
+1	function 14	scene phase start	reference word (run-on 2)	a number below 0x800
+12	function 14	scene phase start	run-on word	0
+1	function 14	scene phase start	run-on word	2
+100	function 14	scene phase start	run-on word	5
+113	function 14	scene phase start	texts	none
+22	function 14	story manager node	comparison value	1
+1	function 14	story manager node	comparison value	a global
+2	function 14	story manager node	comparison value	another integer
+24	function 14	story manager node	flag bits other than OR	0x00
+1	function 14	story manager node	flag bits other than OR	0x04
+22	function 14	story manager node	in a list it alone blocks	yes
+24	function 14	story manager node	operator code	3
+1	function 14	story manager node	operator code	4
+23	function 14	story manager node	parameter 1	AVIF
+2	function 14	story manager node	parameter 1	a number below 0x800
+25	function 14	story manager node	parameter 2	zero
+25	function 14	story manager node	run-on word	7
+25	function 14	story manager node	texts	none
+1	function 46	quest alias fill	comparison value	0
+12	function 46	quest alias fill	comparison value	1
+13	function 46	quest alias fill	flag bits other than OR	0x00
+1	function 46	quest alias fill	in a list it alone blocks	yes
+13	function 46	quest alias fill	operator code	0
+13	function 46	quest alias fill	parameter 1	zero
+13	function 46	quest alias fill	parameter 2	zero
+13	function 46	quest alias fill	run-on word	0
+13	function 46	quest alias fill	texts	none
+10	function 46	quest stage log entry	comparison value	0
+12	function 46	quest stage log entry	comparison value	1
+22	function 46	quest stage log entry	flag bits other than OR	0x00
+17	function 46	quest stage log entry	in a list it alone blocks	yes
+22	function 46	quest stage log entry	operator code	0
+22	function 46	quest stage log entry	parameter 1	zero
+22	function 46	quest stage log entry	parameter 2	zero
+22	function 46	quest stage log entry	run-on word	5
+22	function 46	quest stage log entry	texts	none
+2	function 46	quest story event (after NEXT)	comparison value	0
+1	function 46	quest story event (after NEXT)	comparison value	1
+3	function 46	quest story event (after NEXT)	flag bits other than OR	0x00
+1	function 46	quest story event (after NEXT)	in a list it alone blocks	yes
+3	function 46	quest story event (after NEXT)	operator code	0
+3	function 46	quest story event (after NEXT)	parameter 1	zero
+3	function 46	quest story event (after NEXT)	parameter 2	zero
+2	function 46	quest story event (after NEXT)	reference word (run-on 2)	ACHR
+2	function 46	quest story event (after NEXT)	run-on word	2
+1	function 46	quest story event (after NEXT)	run-on word	7
+3	function 46	quest story event (after NEXT)	texts	none
+62	function 46	scene phase completion	comparison value	1
+62	function 46	scene phase completion	flag bits other than OR	0x00
+13	function 46	scene phase completion	in a list it alone blocks	yes
+62	function 46	scene phase completion	operator code	0
+62	function 46	scene phase completion	parameter 1	zero
+62	function 46	scene phase completion	parameter 2	zero
+62	function 46	scene phase completion	run-on word	5
+62	function 46	scene phase completion	texts	none
+33	function 46	scene phase start	comparison value	0
+13	function 46	scene phase start	comparison value	1
+46	function 46	scene phase start	flag bits other than OR	0x00
+27	function 46	scene phase start	in a list it alone blocks	yes
+46	function 46	scene phase start	operator code	0
+46	function 46	scene phase start	parameter 1	zero
+46	function 46	scene phase start	parameter 2	zero
+18	function 46	scene phase start	reference word (run-on 2)	ACHR
+18	function 46	scene phase start	run-on word	2
+28	function 46	scene phase start	run-on word	5
+46	function 46	scene phase start	texts	none
+2	function 46	story manager node	comparison value	1
+2	function 46	story manager node	flag bits other than OR	0x00
+2	function 46	story manager node	operator code	0
+2	function 46	story manager node	parameter 1	zero
+2	function 46	story manager node	parameter 2	zero
+2	function 46	story manager node	run-on word	7
+2	function 46	story manager node	texts	none
+1	function 67	quest alias fill	comparison value	1
+1	function 67	quest alias fill	flag bits other than OR	0x00
+1	function 67	quest alias fill	in a list it alone blocks	yes
+1	function 67	quest alias fill	operator code	1
+1	function 67	quest alias fill	parameter 1	CELL
+1	function 67	quest alias fill	parameter 2	zero
+1	function 67	quest alias fill	run-on word	0
+1	function 67	quest alias fill	texts	none
+1	function 67	quest stage log entry	comparison value	0
+1	function 67	quest stage log entry	flag bits other than OR	0x00
+1	function 67	quest stage log entry	in a list it alone blocks	yes
+1	function 67	quest stage log entry	operator code	0
+1	function 67	quest stage log entry	parameter 1	CELL
+1	function 67	quest stage log entry	parameter 2	zero
+1	function 67	quest stage log entry	reference word (run-on 2)	a number below 0x800
+1	function 67	quest stage log entry	run-on word	2
+1	function 67	quest stage log entry	texts	none
+5	function 67	quest story event (after NEXT)	comparison value	0
+5	function 67	quest story event (after NEXT)	flag bits other than OR	0x00
+5	function 67	quest story event (after NEXT)	in a list it alone blocks	yes
+5	function 67	quest story event (after NEXT)	operator code	0
+5	function 67	quest story event (after NEXT)	parameter 1	CELL
+5	function 67	quest story event (after NEXT)	parameter 2	zero
+2	function 67	quest story event (after NEXT)	reference word (run-on 2)	a number below 0x800
+2	function 67	quest story event (after NEXT)	run-on word	2
+3	function 67	quest story event (after NEXT)	run-on word	7
+5	function 67	quest story event (after NEXT)	texts	none
+15	function 67	scene phase completion	comparison value	0
+27	function 67	scene phase completion	comparison value	1
+42	function 67	scene phase completion	flag bits other than OR	0x00
+17	function 67	scene phase completion	in a list it alone blocks	yes
+42	function 67	scene phase completion	operator code	0
+42	function 67	scene phase completion	parameter 1	CELL
+42	function 67	scene phase completion	parameter 2	zero
+31	function 67	scene phase completion	reference word (run-on 2)	a number below 0x800
+1	function 67	scene phase completion	run-on word	0
+31	function 67	scene phase completion	run-on word	2
+10	function 67	scene phase completion	run-on word	5
+42	function 67	scene phase completion	texts	none
+3	function 67	scene phase start	comparison value	0
+60	function 67	scene phase start	comparison value	1
+63	function 67	scene phase start	flag bits other than OR	0x00
+53	function 67	scene phase start	in a list it alone blocks	yes
+58	function 67	scene phase start	operator code	0
+5	function 67	scene phase start	operator code	1
+63	function 67	scene phase start	parameter 1	CELL
+63	function 67	scene phase start	parameter 2	zero
+63	function 67	scene phase start	reference word (run-on 2)	a number below 0x800
+63	function 67	scene phase start	run-on word	2
+63	function 67	scene phase start	texts	none
+1	function 67	story manager node	comparison value	1
+1	function 67	story manager node	flag bits other than OR	0x00
+1	function 67	story manager node	operator code	0
+1	function 67	story manager node	parameter 1	CELL
+1	function 67	story manager node	parameter 2	zero
+1	function 67	story manager node	reference word (run-on 2)	a number below 0x800
+1	function 67	story manager node	run-on word	2
+1	function 67	story manager node	texts	none
+42	function 71	quest alias fill	comparison value	0
+240	function 71	quest alias fill	comparison value	1
+282	function 71	quest alias fill	flag bits other than OR	0x00
+194	function 71	quest alias fill	in a list it alone blocks	yes
+282	function 71	quest alias fill	operator code	0
+282	function 71	quest alias fill	parameter 1	FACT
+282	function 71	quest alias fill	parameter 2	zero
+280	function 71	quest alias fill	run-on word	0
+2	function 71	quest alias fill	run-on word	7
+282	function 71	quest alias fill	texts	none
+1	function 71	quest stage log entry	comparison value	0
+1	function 71	quest stage log entry	comparison value	1
+2	function 71	quest stage log entry	flag bits other than OR	0x00
+2	function 71	quest stage log entry	operator code	0
+2	function 71	quest stage log entry	parameter 1	FACT
+2	function 71	quest stage log entry	parameter 2	zero
+2	function 71	quest stage log entry	run-on word	5
+2	function 71	quest stage log entry	texts	none
+5	function 71	quest story event (after NEXT)	comparison value	0
+41	function 71	quest story event (after NEXT)	comparison value	1
+46	function 71	quest story event (after NEXT)	flag bits other than OR	0x00
+30	function 71	quest story event (after NEXT)	in a list it alone blocks	yes
+46	function 71	quest story event (after NEXT)	operator code	0
+46	function 71	quest story event (after NEXT)	parameter 1	FACT
+46	function 71	quest story event (after NEXT)	parameter 2	zero
+4	function 71	quest story event (after NEXT)	reference word (run-on 2)	ACHR
+2	function 71	quest story event (after NEXT)	reference word (run-on 2)	a number below 0x800
+6	function 71	quest story event (after NEXT)	run-on word	2
+40	function 71	quest story event (after NEXT)	run-on word	7
+46	function 71	quest story event (after NEXT)	texts	none
+7	function 71	scene phase start	comparison value	0
+24	function 71	scene phase start	comparison value	1
+31	function 71	scene phase start	flag bits other than OR	0x00
+19	function 71	scene phase start	in a list it alone blocks	yes
+31	function 71	scene phase start	operator code	0
+31	function 71	scene phase start	parameter 1	FACT
+31	function 71	scene phase start	parameter 2	zero
+2	function 71	scene phase start	reference word (run-on 2)	ACHR
+2	function 71	scene phase start	run-on word	2
+29	function 71	scene phase start	run-on word	5
+31	function 71	scene phase start	texts	none
+10	function 71	story manager node	comparison value	0
+35	function 71	story manager node	comparison value	1
+45	function 71	story manager node	flag bits other than OR	0x00
+30	function 71	story manager node	in a list it alone blocks	yes
+45	function 71	story manager node	operator code	0
+45	function 71	story manager node	parameter 1	FACT
+45	function 71	story manager node	parameter 2	zero
+45	function 71	story manager node	run-on word	7
+45	function 71	story manager node	texts	none
+53	function 72	quest alias fill	comparison value	0
+446	function 72	quest alias fill	comparison value	1
+499	function 72	quest alias fill	flag bits other than OR	0x00
+492	function 72	quest alias fill	operator code	0
+7	function 72	quest alias fill	operator code	1
+26	function 72	quest alias fill	parameter 1	ACTI
+1	function 72	quest alias fill	parameter 1	ALCH
+1	function 72	quest alias fill	parameter 1	CONT
+1	function 72	quest alias fill	parameter 1	DOOR
+45	function 72	quest alias fill	parameter 1	FURN
+3	function 72	quest alias fill	parameter 1	IDLM
+20	function 72	quest alias fill	parameter 1	MISC
+393	function 72	quest alias fill	parameter 1	NPC_
+9	function 72	quest alias fill	parameter 1	STAT
+499	function 72	quest alias fill	parameter 2	zero
+499	function 72	quest alias fill	run-on word	0
+499	function 72	quest alias fill	texts	none
+1	function 72	quest stage log entry	comparison value	1
+1	function 72	quest stage log entry	flag bits other than OR	0x00
+1	function 72	quest stage log entry	operator code	0
+1	function 72	quest stage log entry	parameter 1	NPC_
+1	function 72	quest stage log entry	parameter 2	zero
+1	function 72	quest stage log entry	run-on word	5
+1	function 72	quest stage log entry	texts	none
+71	function 72	quest story event (after NEXT)	comparison value	1
+71	function 72	quest story event (after NEXT)	flag bits other than OR	0x00
+69	function 72	quest story event (after NEXT)	operator code	0
+2	function 72	quest story event (after NEXT)	operator code	1
+30	function 72	quest story event (after NEXT)	parameter 1	NPC_
+41	function 72	quest story event (after NEXT)	parameter 1	STAT
+71	function 72	quest story event (after NEXT)	parameter 2	zero
+71	function 72	quest story event (after NEXT)	run-on word	7
+71	function 72	quest story event (after NEXT)	texts	none
+1	function 72	scene phase completion	comparison value	1
+1	function 72	scene phase completion	flag bits other than OR	0x00
+1	function 72	scene phase completion	operator code	0
+1	function 72	scene phase completion	parameter 1	NPC_
+1	function 72	scene phase completion	parameter 2	zero
+1	function 72	scene phase completion	run-on word	5
+1	function 72	scene phase completion	texts	none
+9	function 72	scene phase start	comparison value	0
+39	function 72	scene phase start	comparison value	1
+46	function 72	scene phase start	flag bits other than OR	0x00
+2	function 72	scene phase start	flag bits other than OR	0x02
+48	function 72	scene phase start	operator code	0
+46	function 72	scene phase start	parameter 1	NPC_
+2	function 72	scene phase start	parameter 1	zero
+48	function 72	scene phase start	parameter 2	zero
+1	function 72	scene phase start	reference word (run-on 2)	a number below 0x800
+1	function 72	scene phase start	run-on word	0
+1	function 72	scene phase start	run-on word	2
+46	function 72	scene phase start	run-on word	5
+48	function 72	scene phase start	texts	none
+10	function 72	story manager node	comparison value	1
+10	function 72	story manager node	flag bits other than OR	0x00
+10	function 72	story manager node	operator code	0
+1	function 72	story manager node	parameter 1	ACTI
+9	function 72	story manager node	parameter 1	NPC_
+10	function 72	story manager node	parameter 2	zero
+10	function 72	story manager node	run-on word	7
+10	function 72	story manager node	texts	none
+1	function 84	quest alias fill	comparison value	0
+2	function 84	quest alias fill	comparison value	1
+3	function 84	quest alias fill	flag bits other than OR	0x00
+1	function 84	quest alias fill	operator code	2
+2	function 84	quest alias fill	operator code	3
+3	function 84	quest alias fill	parameter 1	NPC_
+3	function 84	quest alias fill	parameter 2	zero
+3	function 84	quest alias fill	run-on word	0
+3	function 84	quest alias fill	texts	none
+26	function 84	quest stage log entry	comparison value	0
+6	function 84	quest stage log entry	comparison value	1
+32	function 84	quest stage log entry	flag bits other than OR	0x00
+19	function 84	quest stage log entry	operator code	0
+1	function 84	quest stage log entry	operator code	1
+8	function 84	quest stage log entry	operator code	2
+4	function 84	quest stage log entry	operator code	3
+32	function 84	quest stage log entry	parameter 1	NPC_
+32	function 84	quest stage log entry	parameter 2	zero
+32	function 84	quest stage log entry	run-on word	0
+32	function 84	quest stage log entry	texts	none
+37	function 84	quest story event (after NEXT)	comparison value	0
+4	function 84	quest story event (after NEXT)	comparison value	1
+41	function 84	quest story event (after NEXT)	flag bits other than OR	0x00
+37	function 84	quest story event (after NEXT)	operator code	0
+4	function 84	quest story event (after NEXT)	operator code	4
+41	function 84	quest story event (after NEXT)	parameter 1	NPC_
+41	function 84	quest story event (after NEXT)	parameter 2	zero
+41	function 84	quest story event (after NEXT)	run-on word	0
+41	function 84	quest story event (after NEXT)	texts	none
+17	function 84	scene phase start	comparison value	0
+4	function 84	scene phase start	comparison value	1
+21	function 84	scene phase start	flag bits other than OR	0x00
+21	function 84	scene phase start	operator code	0
+21	function 84	scene phase start	parameter 1	NPC_
+21	function 84	scene phase start	parameter 2	zero
+21	function 84	scene phase start	run-on word	0
+21	function 84	scene phase start	texts	none
+1	function 84	story manager node	comparison value	0
+1	function 84	story manager node	flag bits other than OR	0x00
+1	function 84	story manager node	operator code	0
+1	function 84	story manager node	parameter 1	NPC_
+1	function 84	story manager node	parameter 2	zero
+1	function 84	story manager node	run-on word	0
+1	function 84	story manager node	texts	none
+52	function 131	scene phase completion	comparison value	another integer
+52	function 131	scene phase completion	flag bits other than OR	0x00
+50	function 131	scene phase completion	in a list it alone blocks	yes
+52	function 131	scene phase completion	operator code	3
+52	function 131	scene phase completion	parameter 1	SCEN
+1	function 131	scene phase completion	parameter 2	ACTI
+1	function 131	scene phase completion	parameter 2	BPTD
+2	function 131	scene phase completion	parameter 2	CONT
+3	function 131	scene phase completion	parameter 2	DOOR
+3	function 131	scene phase completion	parameter 2	MISC
+2	function 131	scene phase completion	parameter 2	NPC_
+1	function 131	scene phase completion	parameter 2	RACE
+28	function 131	scene phase completion	parameter 2	STAT
+1	function 131	scene phase completion	parameter 2	WATR
+10	function 131	scene phase completion	parameter 2	a number below 0x800
+52	function 131	scene phase completion	run-on word	0
+52	function 131	scene phase completion	texts	none
+6	function 231	scene phase start	comparison value	0
+34	function 231	scene phase start	comparison value	1
+24	function 231	scene phase start	comparison value	another integer
+64	function 231	scene phase start	flag bits other than OR	0x00
+60	function 231	scene phase start	in a list it alone blocks	yes
+42	function 231	scene phase start	operator code	0
+22	function 231	scene phase start	operator code	1
+64	function 231	scene phase start	parameter 1	zero
+64	function 231	scene phase start	parameter 2	zero
+64	function 231	scene phase start	run-on word	0
+64	function 231	scene phase start	texts	none
+2	function 248	quest story event (after NEXT)	comparison value	0
+2	function 248	quest story event (after NEXT)	flag bits other than OR	0x00
+2	function 248	quest story event (after NEXT)	operator code	0
+2	function 248	quest story event (after NEXT)	parameter 1	SCEN
+2	function 248	quest story event (after NEXT)	parameter 2	zero
+2	function 248	quest story event (after NEXT)	run-on word	0
+2	function 248	quest story event (after NEXT)	texts	none
+4	function 248	scene phase completion	comparison value	0
+2	function 248	scene phase completion	comparison value	1
+6	function 248	scene phase completion	flag bits other than OR	0x00
+6	function 248	scene phase completion	operator code	0
+5	function 248	scene phase completion	parameter 1	SCEN
+1	function 248	scene phase completion	parameter 1	zero
+6	function 248	scene phase completion	parameter 2	zero
+6	function 248	scene phase completion	run-on word	0
+6	function 248	scene phase completion	texts	none
+104	function 248	scene phase start	comparison value	0
+104	function 248	scene phase start	flag bits other than OR	0x00
+104	function 248	scene phase start	operator code	0
+104	function 248	scene phase start	parameter 1	SCEN
+104	function 248	scene phase start	parameter 2	zero
+104	function 248	scene phase start	run-on word	0
+104	function 248	scene phase start	texts	none
+6	function 359	quest alias fill	comparison value	0
+11	function 359	quest alias fill	comparison value	1
+17	function 359	quest alias fill	flag bits other than OR	0x00
+17	function 359	quest alias fill	operator code	0
+17	function 359	quest alias fill	parameter 1	LCTN
+17	function 359	quest alias fill	parameter 2	zero
+17	function 359	quest alias fill	run-on word	0
+17	function 359	quest alias fill	texts	none
+1	function 359	quest stage log entry	comparison value	0
+1	function 359	quest stage log entry	comparison value	1
+2	function 359	quest stage log entry	flag bits other than OR	0x00
+2	function 359	quest stage log entry	in a list it alone blocks	yes
+2	function 359	quest stage log entry	operator code	0
+2	function 359	quest stage log entry	parameter 1	LCTN
+2	function 359	quest stage log entry	parameter 2	zero
+1	function 359	quest stage log entry	reference word (run-on 2)	a number below 0x800
+1	function 359	quest stage log entry	run-on word	2
+1	function 359	quest stage log entry	run-on word	5
+2	function 359	quest stage log entry	texts	none
+1	function 359	quest story event (after NEXT)	comparison value	0
+1	function 359	quest story event (after NEXT)	comparison value	1
+2	function 359	quest story event (after NEXT)	flag bits other than OR	0x00
+2	function 359	quest story event (after NEXT)	operator code	0
+2	function 359	quest story event (after NEXT)	parameter 1	LCTN
+2	function 359	quest story event (after NEXT)	parameter 2	zero
+1	function 359	quest story event (after NEXT)	reference word (run-on 2)	a number below 0x800
+1	function 359	quest story event (after NEXT)	run-on word	2
+1	function 359	quest story event (after NEXT)	run-on word	7
+2	function 359	quest story event (after NEXT)	texts	none
+5	function 359	scene phase completion	comparison value	0
+7	function 359	scene phase completion	comparison value	1
+12	function 359	scene phase completion	flag bits other than OR	0x00
+7	function 359	scene phase completion	in a list it alone blocks	yes
+11	function 359	scene phase completion	operator code	0
+1	function 359	scene phase completion	operator code	1
+12	function 359	scene phase completion	parameter 1	LCTN
+12	function 359	scene phase completion	parameter 2	zero
+8	function 359	scene phase completion	reference word (run-on 2)	a number below 0x800
+8	function 359	scene phase completion	run-on word	2
+4	function 359	scene phase completion	run-on word	5
+12	function 359	scene phase completion	texts	none
+1	function 359	scene phase start	comparison value	0
+41	function 359	scene phase start	comparison value	1
+42	function 359	scene phase start	flag bits other than OR	0x00
+35	function 359	scene phase start	in a list it alone blocks	yes
+42	function 359	scene phase start	operator code	0
+42	function 359	scene phase start	parameter 1	LCTN
+42	function 359	scene phase start	parameter 2	zero
+17	function 359	scene phase start	reference word (run-on 2)	a number below 0x800
+17	function 359	scene phase start	run-on word	2
+25	function 359	scene phase start	run-on word	5
+42	function 359	scene phase start	texts	none
+13	function 359	story manager node	comparison value	0
+80	function 359	story manager node	comparison value	1
+93	function 359	story manager node	flag bits other than OR	0x00
+66	function 359	story manager node	in a list it alone blocks	yes
+93	function 359	story manager node	operator code	0
+93	function 359	story manager node	parameter 1	LCTN
+93	function 359	story manager node	parameter 2	zero
+13	function 359	story manager node	reference word (run-on 2)	a number below 0x800
+62	function 359	story manager node	run-on word	0
+13	function 359	story manager node	run-on word	2
+18	function 359	story manager node	run-on word	7
+93	function 359	story manager node	texts	none
+8	function 426	quest alias fill	comparison value	0
+465	function 426	quest alias fill	comparison value	1
+473	function 426	quest alias fill	flag bits other than OR	0x00
+406	function 426	quest alias fill	in a list it alone blocks	yes
+473	function 426	quest alias fill	operator code	0
+79	function 426	quest alias fill	parameter 1	FLST
+394	function 426	quest alias fill	parameter 1	VTYP
+473	function 426	quest alias fill	parameter 2	zero
+467	function 426	quest alias fill	run-on word	0
+6	function 426	quest alias fill	run-on word	5
+473	function 426	quest alias fill	texts	none
+4	function 426	quest story event (after NEXT)	comparison value	1
+4	function 426	quest story event (after NEXT)	flag bits other than OR	0x00
+4	function 426	quest story event (after NEXT)	in a list it alone blocks	yes
+4	function 426	quest story event (after NEXT)	operator code	0
+4	function 426	quest story event (after NEXT)	parameter 1	FLST
+4	function 426	quest story event (after NEXT)	parameter 2	zero
+4	function 426	quest story event (after NEXT)	run-on word	7
+4	function 426	quest story event (after NEXT)	texts	none
+2	function 426	scene phase start	comparison value	1
+2	function 426	scene phase start	flag bits other than OR	0x00
+2	function 426	scene phase start	operator code	0
+2	function 426	scene phase start	parameter 1	VTYP
+2	function 426	scene phase start	parameter 2	zero
+2	function 426	scene phase start	run-on word	5
+2	function 426	scene phase start	texts	none
+28	function 426	story manager node	comparison value	1
+28	function 426	story manager node	flag bits other than OR	0x00
+28	function 426	story manager node	in a list it alone blocks	yes
+28	function 426	story manager node	operator code	0
+22	function 426	story manager node	parameter 1	FLST
+6	function 426	story manager node	parameter 1	VTYP
+28	function 426	story manager node	parameter 2	zero
+28	function 426	story manager node	run-on word	7
+28	function 426	story manager node	texts	none
+416	function 550	scene phase completion	comparison value	1
+415	function 550	scene phase completion	flag bits other than OR	0x00
+1	function 550	scene phase completion	flag bits other than OR	0x02
+416	function 550	scene phase completion	operator code	0
+416	function 550	scene phase completion	parameter 1	SCEN
+4	function 550	scene phase completion	parameter 2	ACTI
+2	function 550	scene phase completion	parameter 2	BPTD
+1	function 550	scene phase completion	parameter 2	CELL
+7	function 550	scene phase completion	parameter 2	CONT
+8	function 550	scene phase completion	parameter 2	CPTH
+26	function 550	scene phase completion	parameter 2	DOOR
+1	function 550	scene phase completion	parameter 2	ECZN
+22	function 550	scene phase completion	parameter 2	MISC
+15	function 550	scene phase completion	parameter 2	NPC_
+1	function 550	scene phase completion	parameter 2	OVIS
+2	function 550	scene phase completion	parameter 2	RACE
+227	function 550	scene phase completion	parameter 2	STAT
+2	function 550	scene phase completion	parameter 2	TXST
+4	function 550	scene phase completion	parameter 2	WATR
+93	function 550	scene phase completion	parameter 2	a number below 0x800
+1	function 550	scene phase completion	parameter 2	zero
+2	function 550	scene phase completion	parameter 2 against the INAM of the actions of parameter 1's scene	an action index of another scene, kind 1
+5	function 550	scene phase completion	parameter 2 against the INAM of the actions of parameter 1's scene	an action index of another scene, kind 2
+1	function 550	scene phase completion	parameter 2 against the INAM of the actions of parameter 1's scene	an action index of the list's own scene, kind 0, the action ends before the condition's phase or starts after it
+112	function 550	scene phase completion	parameter 2 against the INAM of the actions of parameter 1's scene	an action index of the list's own scene, kind 0, the action's phases include the condition's phase
+1	function 550	scene phase completion	parameter 2 against the INAM of the actions of parameter 1's scene	an action index of the list's own scene, kind 1, the action ends before the condition's phase or starts after it
+125	function 550	scene phase completion	parameter 2 against the INAM of the actions of parameter 1's scene	an action index of the list's own scene, kind 1, the action's phases include the condition's phase
+6	function 550	scene phase completion	parameter 2 against the INAM of the actions of parameter 1's scene	an action index of the list's own scene, kind 2, the action ends before the condition's phase or starts after it
+139	function 550	scene phase completion	parameter 2 against the INAM of the actions of parameter 1's scene	an action index of the list's own scene, kind 2, the action's phases include the condition's phase
+6	function 550	scene phase completion	parameter 2 against the INAM of the actions of parameter 1's scene	an action index of the list's own scene, kind 3, the action's phases include the condition's phase
+1	function 550	scene phase completion	parameter 2 against the INAM of the actions of parameter 1's scene	an action index of the list's own scene, kind 4, the action ends before the condition's phase or starts after it
+1	function 550	scene phase completion	parameter 2 against the INAM of the actions of parameter 1's scene	an action index of the list's own scene, kind 4, the action's phases include the condition's phase
+13	function 550	scene phase completion	parameter 2 against the INAM of the actions of parameter 1's scene	an action index of the list's own scene, kind 5, the action's phases include the condition's phase
+4	function 550	scene phase completion	parameter 2 against the INAM of the actions of parameter 1's scene	no action of the scene has that index
+2	function 550	scene phase completion	reference word (run-on 2)	a number below 0x800
+410	function 550	scene phase completion	run-on word	0
+2	function 550	scene phase completion	run-on word	2
+4	function 550	scene phase completion	run-on word	5
+416	function 550	scene phase completion	texts	none
+1	function 555	quest alias fill	comparison value	0
+1	function 555	quest alias fill	flag bits other than OR	0x00
+1	function 555	quest alias fill	operator code	0
+1	function 555	quest alias fill	parameter 1	zero
+1	function 555	quest alias fill	parameter 2	zero
+1	function 555	quest alias fill	run-on word	0
+1	function 555	quest alias fill	texts	none
+2	function 555	quest story event (after NEXT)	comparison value	0
+2	function 555	quest story event (after NEXT)	comparison value	1
+4	function 555	quest story event (after NEXT)	flag bits other than OR	0x00
+4	function 555	quest story event (after NEXT)	operator code	0
+4	function 555	quest story event (after NEXT)	parameter 1	zero
+4	function 555	quest story event (after NEXT)	parameter 2	zero
+3	function 555	quest story event (after NEXT)	reference word (run-on 2)	ACHR
+1	function 555	quest story event (after NEXT)	reference word (run-on 2)	REFR
+4	function 555	quest story event (after NEXT)	run-on word	2
+4	function 555	quest story event (after NEXT)	texts	none
+2	function 555	scene phase completion	comparison value	0
+76	function 555	scene phase completion	comparison value	1
+78	function 555	scene phase completion	flag bits other than OR	0x00
+47	function 555	scene phase completion	in a list it alone blocks	yes
+78	function 555	scene phase completion	operator code	0
+78	function 555	scene phase completion	parameter 1	zero
+78	function 555	scene phase completion	parameter 2	zero
+1	function 555	scene phase completion	reference word (run-on 2)	ACHR
+18	function 555	scene phase completion	reference word (run-on 2)	a number below 0x800
+19	function 555	scene phase completion	run-on word	2
+59	function 555	scene phase completion	run-on word	5
+78	function 555	scene phase completion	texts	none
+48	function 555	scene phase start	comparison value	1
+48	function 555	scene phase start	flag bits other than OR	0x00
+48	function 555	scene phase start	operator code	0
+48	function 555	scene phase start	parameter 1	zero
+48	function 555	scene phase start	parameter 2	zero
+48	function 555	scene phase start	run-on word	5
+48	function 555	scene phase start	texts	none
+153	function 560	quest alias fill	comparison value	0
+130	function 560	quest alias fill	comparison value	1
+283	function 560	quest alias fill	flag bits other than OR	0x00
+21	function 560	quest alias fill	in a list it alone blocks	yes
+283	function 560	quest alias fill	operator code	0
+283	function 560	quest alias fill	parameter 1	KYWD
+283	function 560	quest alias fill	parameter 2	zero
+283	function 560	quest alias fill	run-on word	0
+283	function 560	quest alias fill	texts	none
+303	function 560	quest story event (after NEXT)	comparison value	0
+21	function 560	quest story event (after NEXT)	comparison value	1
+324	function 560	quest story event (after NEXT)	flag bits other than OR	0x00
+119	function 560	quest story event (after NEXT)	in a list it alone blocks	yes
+324	function 560	quest story event (after NEXT)	operator code	0
+324	function 560	quest story event (after NEXT)	parameter 1	KYWD
+324	function 560	quest story event (after NEXT)	parameter 2	zero
+43	function 560	quest story event (after NEXT)	run-on word	0
+281	function 560	quest story event (after NEXT)	run-on word	7
+324	function 560	quest story event (after NEXT)	texts	none
+1	function 560	scene phase start	comparison value	1
+1	function 560	scene phase start	flag bits other than OR	0x00
+1	function 560	scene phase start	in a list it alone blocks	yes
+1	function 560	scene phase start	operator code	0
+1	function 560	scene phase start	parameter 1	KYWD
+1	function 560	scene phase start	parameter 2	zero
+1	function 560	scene phase start	run-on word	5
+1	function 560	scene phase start	texts	none
+12	function 560	story manager node	comparison value	0
+12	function 560	story manager node	comparison value	1
+24	function 560	story manager node	flag bits other than OR	0x00
+11	function 560	story manager node	in a list it alone blocks	yes
+24	function 560	story manager node	operator code	0
+24	function 560	story manager node	parameter 1	KYWD
+24	function 560	story manager node	parameter 2	zero
+24	function 560	story manager node	run-on word	7
+24	function 560	story manager node	texts	none
+8	function 561	quest alias fill	comparison value	0
+4501	function 561	quest alias fill	comparison value	1
+4509	function 561	quest alias fill	flag bits other than OR	0x00
+297	function 561	quest alias fill	in a list it alone blocks	yes
+4509	function 561	quest alias fill	operator code	0
+4509	function 561	quest alias fill	parameter 1	LCRT
+4509	function 561	quest alias fill	parameter 2	zero
+4509	function 561	quest alias fill	run-on word	0
+4509	function 561	quest alias fill	texts	none
+1	function 629	quest alias fill	comparison value	1
+15	function 629	quest alias fill	comparison value	a global
+1	function 629	quest alias fill	flag bits other than OR	0x00
+15	function 629	quest alias fill	flag bits other than OR	0x04
+1	function 629	quest alias fill	operator code	0
+15	function 629	quest alias fill	operator code	4
+16	function 629	quest alias fill	parameter 1	QUST
+16	function 629	quest alias fill	parameter 2	not a FormID
+16	function 629	quest alias fill	run-on word	0
+16	function 629	quest alias fill	texts	CIS2
+68	function 629	quest stage log entry	comparison value	0
+57	function 629	quest stage log entry	comparison value	1
+125	function 629	quest stage log entry	flag bits other than OR	0x00
+125	function 629	quest stage log entry	operator code	0
+125	function 629	quest stage log entry	parameter 1	QUST
+125	function 629	quest stage log entry	parameter 2	not a FormID
+125	function 629	quest stage log entry	run-on word	0
+125	function 629	quest stage log entry	texts	CIS2
+6	function 629	quest story event (after NEXT)	comparison value	0
+19	function 629	quest story event (after NEXT)	comparison value	1
+2	function 629	quest story event (after NEXT)	comparison value	a global
+4	function 629	quest story event (after NEXT)	comparison value	another integer
+29	function 629	quest story event (after NEXT)	flag bits other than OR	0x00
+2	function 629	quest story event (after NEXT)	flag bits other than OR	0x04
+14	function 629	quest story event (after NEXT)	operator code	0
+14	function 629	quest story event (after NEXT)	operator code	3
+3	function 629	quest story event (after NEXT)	operator code	4
+31	function 629	quest story event (after NEXT)	parameter 1	QUST
+31	function 629	quest story event (after NEXT)	parameter 2	not a FormID
+31	function 629	quest story event (after NEXT)	run-on word	0
+31	function 629	quest story event (after NEXT)	texts	CIS2
+15	function 629	scene phase completion	comparison value	0
+25	function 629	scene phase completion	comparison value	1
+45	function 629	scene phase completion	comparison value	another integer
+85	function 629	scene phase completion	flag bits other than OR	0x00
+47	function 629	scene phase completion	operator code	0
+37	function 629	scene phase completion	operator code	3
+1	function 629	scene phase completion	operator code	4
+85	function 629	scene phase completion	parameter 1	QUST
+85	function 629	scene phase completion	parameter 2	not a FormID
+83	function 629	scene phase completion	run-on word	0
+2	function 629	scene phase completion	run-on word	5
+85	function 629	scene phase completion	texts	CIS2
+109	function 629	scene phase start	comparison value	0
+114	function 629	scene phase start	comparison value	1
+227	function 629	scene phase start	comparison value	another integer
+450	function 629	scene phase start	flag bits other than OR	0x00
+389	function 629	scene phase start	operator code	0
+8	function 629	scene phase start	operator code	1
+15	function 629	scene phase start	operator code	2
+21	function 629	scene phase start	operator code	3
+16	function 629	scene phase start	operator code	4
+1	function 629	scene phase start	operator code	5
+450	function 629	scene phase start	parameter 1	QUST
+450	function 629	scene phase start	parameter 2	not a FormID
+449	function 629	scene phase start	run-on word	0
+1	function 629	scene phase start	run-on word	5
+450	function 629	scene phase start	texts	CIS2
+7	function 629	story manager node	comparison value	1
+1	function 629	story manager node	comparison value	a global
+7	function 629	story manager node	flag bits other than OR	0x00
+1	function 629	story manager node	flag bits other than OR	0x04
+7	function 629	story manager node	operator code	0
+1	function 629	story manager node	operator code	5
+8	function 629	story manager node	parameter 1	QUST
+8	function 629	story manager node	parameter 2	not a FormID
+8	function 629	story manager node	run-on word	0
+8	function 629	story manager node	texts	CIS2
+4	function 799	scene phase completion	comparison value	another integer
+4	function 799	scene phase completion	flag bits other than OR	0x00
+4	function 799	scene phase completion	in a list it alone blocks	yes
+4	function 799	scene phase completion	operator code	5
+4	function 799	scene phase completion	parameter 1	zero
+4	function 799	scene phase completion	parameter 2	zero
+4	function 799	scene phase completion	run-on word	5
+4	function 799	scene phase completion	texts	none
+4	function 799	scene phase start	comparison value	0
+136	function 799	scene phase start	comparison value	another integer
+140	function 799	scene phase start	flag bits other than OR	0x00
+140	function 799	scene phase start	in a list it alone blocks	yes
+72	function 799	scene phase start	operator code	3
+68	function 799	scene phase start	operator code	4
+140	function 799	scene phase start	parameter 1	zero
+140	function 799	scene phase start	parameter 2	zero
+140	function 799	scene phase start	run-on word	5
+140	function 799	scene phase start	texts	none

@@ -9,9 +9,9 @@ use crate::{
 use fo4_core::{Budget, Limits, ReadAt};
 use fo4_plugin::typed::Store;
 
-const QS: u32 = 0x900;
-const SC: u32 = 0x901;
-const SD: u32 = 0x902;
+pub(super) const QS: u32 = 0x900;
+pub(super) const SC: u32 = 0x901;
+pub(super) const SD: u32 = 0x902;
 
 fn w(v: u32) -> Vec<u8> {
     v.to_le_bytes().to_vec()
@@ -50,7 +50,7 @@ fn action() -> Vec<u8> {
 /// SC: FNAM bit 0x1, begin fragment, phase 0 begin and end fragments,
 /// two phases, a dialogue action in phase 1. SD: no flag, one phase, no
 /// action, an end fragment.
-fn store() -> Store {
+pub(super) fn store() -> Store {
     let mut vsc = vec![6, 0, 2, 0, 0, 0, 3, 1];
     text(&mut vsc, "SFS");
     vsc.extend([0, 0, 0]);
@@ -121,7 +121,7 @@ fn store() -> Store {
     .unwrap()
 }
 
-fn lib() -> crate::MapLibrary {
+pub(super) fn lib() -> crate::MapLibrary {
     let mut l = library();
     l.add(assemble(
         "script Scene extends Form

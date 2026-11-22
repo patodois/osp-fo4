@@ -35,14 +35,14 @@
 7	cascade custom event outcome: blocked on an undetermined value (rule pex_array_ops_v1)
 4	cascade custom event outcome: completed
 335	cascade custom event runs with no handler
-7655	cascade depth per stage set	1
-1866	cascade depth per stage set	2
+7654	cascade depth per stage set	1
+1867	cascade depth per stage set	2
 487	cascade depth per stage set	3-4
 63	cascade depth per stage set	5-9
 55	cascade event onquestinit runs with no handler
 7	cascade event onquestshutdown outcome: completed
 6	cascade event onquestshutdown outcome: failed: NoneOperand op 23
-1016	cascade event onquestshutdown runs with no handler
+1017	cascade event onquestshutdown runs with no handler
 58	cascade event onstageset outcome: blocked on a native's result
 54	cascade event onstageset outcome: blocked on an undetermined value (rule pex_array_ops_v1)
 5	cascade event onstageset outcome: blocked on an undetermined value (rule vmad_property_sets_variable_v1)
@@ -63,8 +63,8 @@
 57	cascade fragment outcome: failed: NoneOperand op 23
 2	cascade fragment outcome: failed: NoneOperand op 34
 10	cascade fragment outcome: failed: NoneOperand op 42
-146	cascade fragments per stage set	0
-8520	cascade fragments per stage set	1
+144	cascade fragments per stage set	0
+8522	cascade fragments per stage set	1
 52	cascade fragments per stage set	10-19
 904	cascade fragments per stage set	2
 41	cascade fragments per stage set	20-99
@@ -72,7 +72,7 @@
 104	cascade fragments per stage set	5-9
 188	cascade open runs: whether OnQuestShutdown runs (running state undetermined)
 1736	cascade open runs: whether setting the stage started the quest
-96	cascade open runs: which log entry's fragment runs depends on conditions
+95	cascade open runs: which log entry's fragment runs depends on conditions
 5	cascade scene fragment (begin) outcome: completed
 30	cascade scene steps
 8	deepest cascade after one stage set
@@ -95,7 +95,7 @@
 42	effects	quest completed
 78	effects	quest made active
 197	effects	quest started
-1219	effects	quest stopped
+1220	effects	quest stopped
 60	effects	reference deleted
 1532	effects	scene
 4383	effects	stage set on another quest
@@ -162,7 +162,7 @@
 6	host answer	quest.start	undetermined: Start of a running quest
 1	host answer	quest.start	undetermined: the quest's state is undetermined
 188	host answer	quest.start	undetermined: whether the quest was running is undetermined
-1219	host answer	quest.stop	none
+1220	host answer	quest.stop	none
 118	host answer	referencealias.clear	none
 145	host answer	referencealias.forcerefto	none
 2	host answer	referencealias.forcerefto	undetermined: the alias is not an object
@@ -173,22 +173,21 @@
 2	host answer	referencealias.getreference	undetermined: the forced reference names no winning record
 46	host answer	referencealias.getreference	undetermined: the quest's state is undetermined
 247	host answer	referencealias.getreference	undetermined: whether the quest runs is undetermined
-35	log entry condition lists	false
-80	log entry condition lists	true
-423	log entry condition lists	undetermined
+82	log entry condition lists	false
+102	log entry condition lists	true
+351	log entry condition lists	undetermined
 1	log entry selections left open, by function index of an undetermined condition	function 1
 3	log entry selections left open, by function index of an undetermined condition	function 14
 7	log entry selections left open, by function index of an undetermined condition	function 46
 14	log entry selections left open, by function index of an undetermined condition	function 491
 1	log entry selections left open, by function index of an undetermined condition	function 58
-191	log entry selections left open, by function index of an undetermined condition	function 59
-28	log entry selections left open, by function index of an undetermined condition	function 629
+187	log entry selections left open, by function index of an undetermined condition	function 59
 12	log entry selections left open, by function index of an undetermined condition	function 70
 1	log entry selections left open, by function index of an undetermined condition	function 71
 1	log entry selections left open, by function index of an undetermined condition	function 74
 4	log entry selections left open, by function index of an undetermined condition	function 84
-226	log entry selections with conditions evaluated	open
-63	log entry selections with conditions evaluated	settled
+219	log entry selections with conditions evaluated	open
+70	log entry selections with conditions evaluated	settled
 42	most fragments run after one stage set
 2432	quest changes	objective completed (or not)
 2076	quest changes	objective displayed
@@ -196,7 +195,7 @@
 957	quest changes	objective hidden or undetermined
 55	quest changes	quest started
 336	quest changes	quest state became undetermined
-1219	quest changes	quest stopped
+1220	quest changes	quest stopped
 141	quest changes	stage already done, not set again
 14613	quest changes	stage set
 632	quests with 0 stages with a fragment
@@ -240,7 +239,7 @@
 2	stage fragment	blocked on an undetermined value (rule pex_ops_compare_v1)
 8	stage fragment	blocked on an undetermined value (rule pex_ops_not_copy_cast_v1)
 4	stage fragment	blocked on an undetermined value (rule vmad_property_sets_variable_v1)
-5553	stage fragment	completed
+5555	stage fragment	completed
 1	stage fragment	failed: Ambiguous
 23	stage fragment	failed: BadArgument
 2	stage fragment	failed: IndexOutOfRange op 32
@@ -252,8 +251,8 @@
 10	stage fragment	failed: NoneOperand op 32
 6	stage fragment	failed: NoneOperand op 34
 5	stage fragment	failed: NoneOperand op 42
-16	stage fragment	no fragment queued
-130	stage fragment	open: which log entry's fragment runs depends on conditions
+20	stage fragment	no fragment queued
+124	stage fragment	open: which log entry's fragment runs depends on conditions
 4	stage fragment blocking native	actor.getfactionrank
 9	stage fragment blocking native	actor.getkiller
 8	stage fragment blocking native	actor.getlevel
@@ -334,7 +333,7 @@
 2	stage fragment fragment outcome: blocked on an undetermined value (rule pex_ops_compare_v1)
 8	stage fragment fragment outcome: blocked on an undetermined value (rule pex_ops_not_copy_cast_v1)
 4	stage fragment fragment outcome: blocked on an undetermined value (rule vmad_property_sets_variable_v1)
-5553	stage fragment fragment outcome: completed
+5555	stage fragment fragment outcome: completed
 1	stage fragment fragment outcome: failed: Ambiguous
 23	stage fragment fragment outcome: failed: BadArgument
 2	stage fragment fragment outcome: failed: IndexOutOfRange op 32
@@ -346,7 +345,7 @@
 10	stage fragment fragment outcome: failed: NoneOperand op 32
 6	stage fragment fragment outcome: failed: NoneOperand op 34
 5	stage fragment fragment outcome: failed: NoneOperand op 42
-130	stage fragment open runs: which log entry's fragment runs depends on conditions
+124	stage fragment open runs: which log entry's fragment runs depends on conditions
 10071	stages set
 8468	stages set per sweep item	1
 51	stages set per sweep item	10-19
@@ -364,33 +363,35 @@
 6	story	story event left open, by function index of an undetermined condition	function 77
 6	story	story event outcome	open: a node's conditions are undetermined
 6	story	story events offered	SCPT
-101	sweep items relying on	cond_compare_ops_v1
+127	sweep items relying on	cond_compare_ops_v1
 282	sweep items relying on	cond_ctda_layout_v1
-246	sweep items relying on	cond_flag_parameters_v1
+249	sweep items relying on	cond_flag_parameters_v1
 6	sweep items relying on	cond_fn_56_quest_running_v1
 6	sweep items relying on	cond_fn_576_event_data_v1
 23	sweep items relying on	cond_fn_58_quest_stage_v1
 204	sweep items relying on	cond_fn_59_stage_done_v1
+34	sweep items relying on	cond_fn_629_quest_variable_v1
 41	sweep items relying on	cond_fn_74_global_value_v1
+4	sweep items relying on	cond_fn_84_dead_count_v1
 282	sweep items relying on	cond_list_or_groups_v1
 274	sweep items relying on	cond_log_entry_state_v1
 6	sweep items relying on	cond_use_global_v1
 3505	sweep items relying on	pex_array_ops_v1
-9415	sweep items relying on	pex_call_dispatch_v1
+9416	sweep items relying on	pex_call_dispatch_v1
 6503	sweep items relying on	pex_conditional_jump_sense_v1
 7587	sweep items relying on	pex_default_values_v1
 5833	sweep items relying on	pex_op_return_v1
 30	sweep items relying on	pex_op_string_concat_v1
 743	sweep items relying on	pex_ops_arithmetic_v1
 5146	sweep items relying on	pex_ops_compare_v1
-7663	sweep items relying on	pex_ops_not_copy_cast_v1
-1074	sweep items relying on	pex_property_get_set_v1
+7664	sweep items relying on	pex_ops_not_copy_cast_v1
+1075	sweep items relying on	pex_property_get_set_v1
 495	sweep items relying on	pex_state_identifier_v1
 597	sweep items relying on	pex_struct_ops_v1
 3384	sweep items relying on	pex_truth_of_values_v1
 4097	sweep items relying on	quest_alias_forced_reference_v1
-9925	sweep items relying on	quest_fragment_entry_v1
-9905	sweep items relying on	quest_fragment_instance_v1
+9927	sweep items relying on	quest_fragment_entry_v1
+9907	sweep items relying on	quest_fragment_instance_v1
 2619	sweep items relying on	quest_objectives_v1
 10071	sweep items relying on	quest_on_stage_set_v1
 10071	sweep items relying on	quest_qust_layout_v1
@@ -398,9 +399,9 @@
 10071	sweep items relying on	quest_set_stage_v1
 10071	sweep items relying on	quest_stage_fragment_order_v1
 10071	sweep items relying on	quest_stage_log_entry_v1
-1242	sweep items relying on	quest_start_v1
+1243	sweep items relying on	quest_start_v1
 10071	sweep items relying on	quest_state_isolated_v1
-962	sweep items relying on	quest_stop_v1
+963	sweep items relying on	quest_stop_v1
 14	sweep items relying on	scene_phase_progression_v1
 1046	sweep items relying on	scene_start_v1
 6	sweep items relying on	sm_node_layout_v1
@@ -427,7 +428,7 @@
 5	sweep items relying on	vmad_fragment_instance_v1
 10037	sweep items relying on	vmad_property_sets_variable_v1
 531	sweep items relying on	vmad_reference_scripts_v1
-4606	sweep items whose every run completed
+4612	sweep items whose every run completed
 
 ## effects of other natives, ranked
 10266	effects	other: referencealias.getreference

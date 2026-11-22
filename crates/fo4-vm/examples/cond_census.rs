@@ -18,7 +18,12 @@ use fo4_plugin::{
     typed::Store,
     FormKey,
 };
-use fo4_vm::cond::{self, Combine, StaticFacts, Truth};
+use fo4_vfs::Vfs;
+use fo4_vm::{
+    bind::VfsLibrary,
+    cond::{self, Combine, StaticFacts, Switches, Truth},
+    scene::Groups,
+};
 use std::{
     collections::{BTreeMap, BTreeSet},
     fmt::Write as _,
@@ -347,12 +352,44 @@ impl Census {
 }
 
 fn run() -> Result<(), E> {
-    let a: Vec<String> = std::env::args().skip(1).collect();
+    let mut a: Vec<String> = std::env::args().skip(1).collect();
+    let mut sw = Switches::all();
+    a.retain(|x| {
+        if let Some(n) = x
+            .strip_prefix("--no-cond-fn-")
+            .and_then(|n| n.parse::<u16>().ok())
+        {
+            sw.off(n);
+            false
+        } else if x == "--no-cond-run-on" {
+            sw.run_on_off = true;
+            false
+        } else {
+            true
+        }
+    });
     if a.len() != 2 {
-        return Err("cond_census MANIFEST OUT.txt".into());
+        return Err("cond_census MANIFEST OUT.txt [--no-cond-fn-N]... [--no-cond-run-on]".into());
     }
     let m = Manifest::load(Path::new(&a[0]))?;
+    let vfs = Vfs::mount(&m, &Budget::new(m.limits.max_vfs_memory))?;
     let store = Store::open(&m, &Budget::new(m.limits.max_override_memory))?;
+    // The owning quest of a record's lists, for run-on 5
+    // (`cond_run_on_subject_v1`): the quest itself, the quest whose group
+    // holds a SCEN or an INFO.
+    let groups = Groups::read(&store);
+    let mut owners: BTreeMap<String, FormKey> = groups
+        .info_owner
+        .iter()
+        .map(|(k, q)| (k.clone(), q.clone()))
+        .collect();
+    for (q, scenes) in &groups.scenes {
+        if let Some(q) = fo4_vm::data::key_record(q) {
+            for s in scenes {
+                owners.insert(fo4_vm::bind::record_key(s), q.clone());
+            }
+        }
+    }
     let winners: Vec<(FormKey, [u8; 4])> = store
         .winners()
         .filter(|w| !w.deleted)
@@ -364,8 +401,16 @@ fn run() -> Result<(), E> {
         })
         .collect();
     let mut cs = Census::default();
-    let mut facts = StaticFacts::new_game(&store, m.limits.max_memory);
+    let mut facts = StaticFacts::new_game(&store, m.limits.max_memory).with_switches(sw.clone());
+    if sw.on(629) {
+        facts = facts.with_scripts(Box::new(VfsLibrary::new(&vfs, m.limits.max_memory)));
+    }
     for (key, sig) in &winners {
+        facts.set_owner(if sig == b"QUST" {
+            Some(key.clone())
+        } else {
+            owners.get(&fo4_vm::bind::record_key(key)).cloned()
+        });
         let host = tag(sig);
         let b = Budget::new(m.limits.max_memory);
         bump(&mut cs.c, format!("winning records read\t{host}"));
@@ -463,7 +508,7 @@ fn run() -> Result<(), E> {
                 }
             }
             for c in &l.conditions {
-                let (v, _) = cond::eval_one(&c.ctda, ctx, &file, &mut facts);
+                let v = cond::eval_condition(c, ctx, &file, &mut facts, &mut BTreeSet::new());
                 bump(
                     &mut cs.c,
                     format!(

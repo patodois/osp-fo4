@@ -27,6 +27,7 @@ use std::{
 };
 
 pub mod bind;
+pub mod blockers;
 pub mod cond;
 pub mod data;
 pub mod events;
@@ -37,6 +38,7 @@ pub mod quest;
 pub mod rules;
 pub mod scene;
 pub mod story;
+pub mod vars;
 pub mod world;
 
 pub use host::{Host, NativeCall, NoHost, RecordingHost, Reply};

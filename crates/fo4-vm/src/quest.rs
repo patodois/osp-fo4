@@ -387,6 +387,42 @@ pub struct RunFacts<'a, 's> {
     /// The story event being offered, when conditions are evaluated for
     /// the story manager (`crate::story`).
     pub event: Option<&'a crate::story::StoryEvent>,
+    /// The evaluator switches, scripts and caller assumptions.
+    pub cond: &'a CondInputs<'s>,
+    /// The quest whose aliases run-on 5 names.
+    pub owner: Option<FormKey>,
+}
+
+/// What the quest host gives the condition evaluator besides the state:
+/// which added evaluators are on, the compiled scripts for quest variables
+/// not yet attached, and the values the caller assumes.
+#[derive(Default)]
+pub struct CondInputs<'s> {
+    pub switches: cond::Switches,
+    pub scripts: Option<std::cell::RefCell<Box<dyn crate::program::Library + 's>>>,
+    /// Caller assumptions (`quest_run --assume-cond`): the value of every
+    /// condition of a function index. Not a rule.
+    pub assume: BTreeMap<u16, f32>,
+    /// Conditions an assumption decided.
+    pub assumed: std::cell::Cell<u64>,
+}
+
+impl<'a, 's> RunFacts<'a, 's> {
+    /// The facts of a run of the quest host, for lists of `owner`.
+    pub fn of(
+        h: &'a QuestHost<'s>,
+        w: &'a mut World,
+        event: Option<&'a crate::story::StoryEvent>,
+        owner: Option<FormKey>,
+    ) -> Self {
+        RunFacts {
+            data: &h.data,
+            w,
+            event,
+            cond: &h.cond,
+            owner,
+        }
+    }
 }
 impl RunFacts<'_, '_> {
     fn state(&mut self, k: &FormKey) -> Result<&QuestState, &'static str> {
@@ -432,12 +468,121 @@ impl Facts for RunFacts<'_, '_> {
             _ => Err("an event member function 576 is not evaluated for"),
         }
     }
+    fn switches(&self) -> &cond::Switches {
+        &self.cond.switches
+    }
+    fn max_memory(&self) -> u64 {
+        self.data.max_memory
+    }
+    fn assumed(&self, function: u16) -> Option<f32> {
+        let v = self.cond.assume.get(&function).copied();
+        if v.is_some() {
+            self.cond.assumed.set(self.cond.assumed.get() + 1);
+        }
+        v
+    }
+    fn owner(&self) -> Option<&FormKey> {
+        self.owner.as_ref()
+    }
+    /// The alias as `ReferenceAlias.GetReference` answers it: the fill a
+    /// run set, else the forced reference while the quest runs
+    /// (`quest_alias_forced_reference_v1`).
+    fn alias_reference(
+        &mut self,
+        quest: &FormKey,
+        alias: i32,
+    ) -> Result<Option<FormKey>, &'static str> {
+        let i = info_by_key(self.data.store, self.data.max_memory, self.w, quest)
+            .ok_or("the quest record could not be read")?;
+        let s = self.state(quest)?;
+        let (fill, running) = (s.fills.get(&alias).cloned(), s.running);
+        if let Some(v) = fill {
+            return match &v {
+                Val::None => Ok(None),
+                Val::Object(o) => self.w.objects[*o]
+                    .key
+                    .as_deref()
+                    .and_then(data::key_record)
+                    .map(Some)
+                    .ok_or("the alias holds an object that is not a record"),
+                _ => Err("the alias holds an undetermined value"),
+            };
+        }
+        match running {
+            None => Err("whether the quest runs is undetermined"),
+            Some(false) => Ok(None),
+            Some(true) => {
+                let forced = u32::try_from(alias)
+                    .ok()
+                    .and_then(|a| i.reference_aliases.get(&a))
+                    .ok_or("no reference alias of that index")?;
+                forced
+                    .clone()
+                    .map(Some)
+                    .ok_or("the alias has no forced reference")
+            }
+        }
+    }
+    /// The variable as the run holds it on the quest's attached script
+    /// instances; before the run attached them, the value the records and
+    /// compiled scripts give (`crate::vars`).
+    fn quest_variable(&mut self, quest: &FormKey, name: &str) -> Result<f32, &'static str> {
+        let key = bind::record_key(quest);
+        let o = self
+            .w
+            .objects
+            .iter()
+            .position(|x| x.key.as_deref() == Some(key.as_str()) && x.attached);
+        if let Some(o) = o {
+            let mut found = self.w.objects[o]
+                .instances
+                .iter()
+                .flat_map(|i| self.w.instances[*i].vars.iter())
+                .filter(|v| v.name == name)
+                .map(|v| crate::vars::number(&v.value));
+            let first = found
+                .next()
+                .ok_or("no attached script of the quest declares the variable")??;
+            for x in found {
+                if x? != first {
+                    return Err("more than one script of the quest declares the variable");
+                }
+            }
+            return Ok(first);
+        }
+        let lib = self
+            .cond
+            .scripts
+            .as_ref()
+            .ok_or("the quest's scripts are not attached in this run")?;
+        let b = Budget::new(self.data.max_memory);
+        let mut lib = lib.borrow_mut();
+        crate::vars::quest_variable_initial(self.data.store, &mut **lib, quest, name, &b)
+    }
+    fn scene_playing(&mut self, scene: &FormKey) -> Result<bool, &'static str> {
+        if !self.w.scenes.on {
+            return Err("scenes are not run");
+        }
+        match self.w.scenes.states.get(&bind::record_key(scene)) {
+            Some(s) => s.playing.ok_or("whether the scene plays is undetermined"),
+            None if self.w.quests.scenario == Scenario::NewGame => Ok(false),
+            None => Err("whether the scene plays is undetermined"),
+        }
+    }
+    /// The run completes no action of a scene (each waits on the world):
+    /// an action is complete in no state the run settles
+    /// (`cond_fn_550_scene_action_complete_v1`).
+    fn scene_action_complete(&mut self, scene: &FormKey, _: u32) -> Result<bool, &'static str> {
+        self.scene_playing(scene).map(|_| false)
+    }
 }
 
 /// The quest host: the data host, plus the quest natives answered from
 /// the quest state and the records.
 pub struct QuestHost<'s> {
     pub data: DataHost<'s>,
+    /// What the condition evaluator reads besides the state.
+    pub cond: CondInputs<'s>,
     used: Vec<&'static str>,
     /// Answers by native and kind, as the data host counts its own.
     pub answers: BTreeMap<(String, data::Answer), u64>,
@@ -493,6 +638,7 @@ impl<'s> QuestHost<'s> {
     pub fn new(store: &'s Store, max_memory: u64) -> Self {
         QuestHost {
             data: DataHost::new(store, max_memory),
+            cond: CondInputs::default(),
             used: Vec::new(),
             answers: BTreeMap::new(),
             evaluate: true,
@@ -655,11 +801,7 @@ impl<'s> QuestHost<'s> {
                     plugin: i.plugin,
                 };
                 let mut used = BTreeSet::new();
-                let mut facts = RunFacts {
-                    data: &self.data,
-                    w: &mut *w,
-                    event: None,
-                };
+                let mut facts = RunFacts::of(self, &mut *w, None, Some(i.key.clone()));
                 let t = cond::eval_list_with(
                     &e.list,
                     ctx,
