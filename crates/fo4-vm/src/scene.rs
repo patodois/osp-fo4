@@ -283,9 +283,15 @@ fn field_stage(h: &mut QuestHost<'_>, w: &mut World, i: &SceneInfo, n: i16) {
         return;
     }
     let Some(q) = i.quest.clone() else { return };
+    set_field_stage(h, w, &q, n);
+}
+
+/// Sets a stage a record field names on a quest, as `SetCurrentStageID`
+/// would (`record_set_stage_fields_v1`).
+fn set_field_stage(h: &mut QuestHost<'_>, w: &mut World, q: &FormKey, n: i16) {
     h.using(rules::SETTER_FIELDS);
     let b = Budget::new(h.data.max_memory);
-    let Ok(qo) = record_object(w, h.data.store, &q, "quest", &b) else {
+    let Ok(qo) = record_object(w, h.data.store, q, "quest", &b) else {
         return;
     };
     let Some(qi) = quest::info(h.data.store, h.data.max_memory, w, qo) else {
@@ -314,6 +320,9 @@ pub enum Step {
     Enter,
     /// Decide whether the entered phase completes without the world.
     Complete,
+    /// Set the line stage fields the clock has reached
+    /// (`scene_line_stage_fields_v1`).
+    LineFields,
 }
 
 /// One change of scene state, as logged.
@@ -340,6 +349,11 @@ pub enum Change {
     ActionCompleted(usize, u16, f64),
     /// ... and a phase that waits only on actions with a due time.
     OnClock(usize),
+    /// A dialogue action's line stage fields (`scene_line_stage_fields_v1`,
+    /// only with [`Scenes::line_fields`]): the action's index and what
+    /// happened, as a short text the census counts, and the stage set when
+    /// one was.
+    LineField(usize, String, Option<i16>),
 }
 
 /// The scene clock and the caller's assumptions (`quest_run
@@ -367,6 +381,10 @@ pub struct Clock {
     /// as it starts, and starts the scene its LCEP names
     /// (`scene_start_scene_action_v1`).
     pub assume_start_scenes: bool,
+    /// Caller assumption: where several lines of a topic hold, the first
+    /// in stored order plays, for its stage fields
+    /// (`scene_line_stage_fields_v1` with `quest_run --assume-first-line`).
+    pub assume_first_line: bool,
 }
 
 /// One started action of a playing scene.
@@ -409,6 +427,33 @@ pub struct Scenes {
     /// (`record_set_stage_fields_v1`; `quest_run --stage-fields`). Off by
     /// default: no record field sets a stage, as before.
     pub stage_fields: bool,
+    /// Apply the TIQS of the line a dialogue action the clock times plays,
+    /// when the records leave a single line of its topic
+    /// (`scene_line_stage_fields_v1`; `quest_run --line-stage-fields`).
+    /// Off by default: no line sets a stage, as before.
+    pub line_fields: bool,
+    /// Line stage fields due later on the clock, in the order they were
+    /// scheduled.
+    pub line_events: Vec<LineEvent>,
+}
+
+/// A line's TIQS half due at a second of the real-time clock
+/// (`scene_line_stage_fields_v1`): set by the scene's next
+/// [`Step::LineFields`] job once the clock reaches it.
+#[derive(Debug, Clone, PartialEq)]
+pub struct LineEvent {
+    pub scene: ObjId,
+    pub due: f64,
+    /// The line's owning quest and the stage its field names.
+    pub quest: FormKey,
+    pub stage: i16,
+    /// The line, as a record key, and whether this is its end half.
+    pub line: String,
+    pub end: bool,
+    /// The action's index in the scene record.
+    pub action: usize,
+    /// Whether a [`Step::LineFields`] job is queued for it.
+    pub queued: bool,
 }
 
 /// What the groups of kind 10 hold: scenes by quest, INFO owners.
@@ -706,6 +751,7 @@ fn step(h: &mut QuestHost<'_>, w: &mut World, o: ObjId, i: &Rc<SceneInfo>, compl
 
 fn clear_actions(w: &mut World, o: ObjId) {
     w.scenes.actions.retain(|(s, _), _| *s != o);
+    w.scenes.line_events.retain(|e| e.scene != o);
 }
 
 /// The seconds of one line of a topic, or why they are not settled, with
@@ -838,6 +884,259 @@ fn action_time(
     }
 }
 
+/// The truth of every line of a topic in the run's state.
+fn topic_truths(
+    h: &mut QuestHost<'_>,
+    w: &mut World,
+    i: &SceneInfo,
+    topic: &FormKey,
+) -> Result<Vec<(FormKey, voice::LineTruth)>, String> {
+    let Some(v) = w.scenes.clock.voice.clone() else {
+        return Err("the topics are not read (line audio off)".into());
+    };
+    let store = h.data.store;
+    let b = Budget::new(h.data.max_memory);
+    let mut cond_used = BTreeSet::new();
+    let quest = i.quest.clone();
+    let mut eval = |info: &fo4_plugin::info::Info, plugin: usize, file: &str| {
+        let ctx = Context {
+            order: store.order(),
+            plugin,
+        };
+        let mut facts = RunFacts::of(h, w, None, quest.clone());
+        cond::eval_list_with(
+            &info.conditions,
+            ctx,
+            file,
+            &mut facts,
+            Combine::OrGroups,
+            &mut cond_used,
+        )
+    };
+    let t = voice::line_truths(store, &v, topic, &mut eval, &b);
+    for u in cond_used {
+        h.using(u);
+    }
+    t
+}
+
+/// The lines a dialogue action plays, each with the second it begins at
+/// after the action starts and the second it ends at when settled: the
+/// topic's line for kind 0; under an assumed choice, the player's line
+/// then the answer for kind 3 (`scene_player_dialogue_choice_v1`).
+fn line_segments(
+    h: &mut QuestHost<'_>,
+    w: &mut World,
+    i: &SceneInfo,
+    a: &ActionInfo,
+) -> Vec<(Option<FormKey>, f64, Option<f64>)> {
+    let speaker = |h: &mut QuestHost<'_>| match &i.quest {
+        Some(q) => {
+            let b = Budget::new(h.data.max_memory);
+            voice::speaker(h.data.store, q, a.alias, &b)
+        }
+        None => Speaker::Unknown("the scene has no quest".into()),
+    };
+    match a.kind {
+        LINE => {
+            let sp = speaker(h);
+            let (t, _) = line_time(h, w, i, a.topic.as_ref(), &sp);
+            vec![(a.topic.clone(), 0.0, t)]
+        }
+        PLAYER_DIALOGUE => {
+            let Some(n) = w.scenes.clock.assume_player_choice else {
+                return Vec::new();
+            };
+            let Some((player, answer)) = a.choices.get(n).cloned() else {
+                return Vec::new();
+            };
+            let me = Speaker::Unknown("the player's voice type is not in the records".into());
+            let (p, _) = line_time(h, w, i, player.as_ref(), &me);
+            let mut out = vec![(player, 0.0, p)];
+            if let Some(p) = p {
+                let sp = speaker(h);
+                let (r, _) = line_time(h, w, i, answer.as_ref(), &sp);
+                out.push((answer, p, r.map(|r| p + r)));
+            }
+            out
+        }
+        _ => Vec::new(),
+    }
+}
+
+/// The TIQS of the line each segment of a dialogue action plays, when the
+/// records leave a single line of its topic or the caller assumes the
+/// first (`scene_line_stage_fields_v1`): a half due at the action's start
+/// is set at once, a later one is scheduled on the clock
+/// ([`LineEvent`]); what stops it is logged.
+fn line_fields(
+    h: &mut QuestHost<'_>,
+    w: &mut World,
+    o: ObjId,
+    i: &SceneInfo,
+    j: usize,
+    a: &ActionInfo,
+    now: f64,
+) {
+    let log =
+        |w: &mut World, what: String| w.scenes.log.push((o, Change::LineField(j, what, None)));
+    for (topic, begin, end) in line_segments(h, w, i, a) {
+        let Some(topic) = topic else {
+            log(w, "no line: the action names no topic".into());
+            continue;
+        };
+        let truths = match topic_truths(h, w, i, &topic) {
+            Ok(t) => t,
+            Err(why) => {
+                log(w, format!("no line: {why}"));
+                continue;
+            }
+        };
+        let holds = truths
+            .iter()
+            .filter(|t| t.1 == voice::LineTruth::Holds)
+            .count();
+        let open: BTreeSet<u16> = truths
+            .iter()
+            .filter_map(|t| match &t.1 {
+                voice::LineTruth::Undetermined(f) => Some(f.iter().copied()),
+                _ => None,
+            })
+            .flatten()
+            .collect();
+        let first = truths.iter().find(|t| t.1 != voice::LineTruth::Fails);
+        let line = match first {
+            Some((k, voice::LineTruth::Holds)) if holds == 1 && open.is_empty() => {
+                log(
+                    w,
+                    "line determined: the only line of its topic that holds".into(),
+                );
+                k.clone()
+            }
+            Some((k, voice::LineTruth::Holds)) if w.scenes.clock.assume_first_line => {
+                log(
+                    w,
+                    "line assumed: the first of several lines that may hold (--assume-first-line)"
+                        .into(),
+                );
+                k.clone()
+            }
+            _ if holds > 1 && open.is_empty() => {
+                log(
+                    w,
+                    "line undetermined: several lines of its topic hold".into(),
+                );
+                continue;
+            }
+            _ if !open.is_empty() => {
+                let f: Vec<String> = open.iter().map(|n| n.to_string()).collect();
+                log(
+                    w,
+                    format!(
+                        "line undetermined: whether a line holds is undetermined (function {})",
+                        f.join(", ")
+                    ),
+                );
+                continue;
+            }
+            _ => {
+                log(w, "no line: no line of its topic holds".into());
+                continue;
+            }
+        };
+        let b = Budget::new(h.data.max_memory);
+        let tiqs = h.data.store.raw(&line, &b).ok().flatten().and_then(|r| {
+            r.subrecords
+                .iter()
+                .find(|x| x.signature == *b"TIQS")
+                .and_then(|x| stage_pair(r.data(x)))
+        });
+        let Some([b0, b1]) = tiqs else {
+            log(w, "the line stores no TIQS".into());
+            continue;
+        };
+        if b0 < 0 && b1 < 0 {
+            log(w, "the line's TIQS names no stage".into());
+            continue;
+        }
+        let key = bind::record_key(&line);
+        let Some(q) = groups(h.data.store, w).info_owner.get(&key).cloned() else {
+            log(w, "the line has no owning quest".into());
+            continue;
+        };
+        h.using(rules::LINE_STAGE_FIELDS);
+        for (n, at, is_end) in [(b0, Some(begin), false), (b1, end, true)] {
+            if n < 0 {
+                continue;
+            }
+            let half = if is_end { "end" } else { "begin" };
+            match at {
+                Some(x) if x <= 0.0 => {
+                    w.scenes.log.push((
+                        o,
+                        Change::LineField(
+                            j,
+                            format!("{half} half set as the line {half}s"),
+                            Some(n),
+                        ),
+                    ));
+                    set_field_stage(h, w, &q, n);
+                }
+                Some(x) => {
+                    log(w, format!("{half} half scheduled on the clock"));
+                    w.scenes.line_events.push(LineEvent {
+                        scene: o,
+                        due: now + x,
+                        quest: q.clone(),
+                        stage: n,
+                        line: key.clone(),
+                        end: is_end,
+                        action: j,
+                        queued: false,
+                    });
+                }
+                None => log(
+                    w,
+                    format!("{half} half not applied: the line's time is not settled"),
+                ),
+            }
+        }
+    }
+}
+
+/// Sets the line stage fields of a scene the clock has reached
+/// ([`Step::LineFields`], `scene_line_stage_fields_v1`), in due order.
+fn apply_line_events(h: &mut QuestHost<'_>, w: &mut World, o: ObjId) {
+    let now = w.now[TimerClock::Real as usize];
+    let mut due: Vec<LineEvent> = Vec::new();
+    w.scenes.line_events.retain(|e| {
+        if e.scene == o && e.due <= now {
+            due.push(e.clone());
+            false
+        } else {
+            true
+        }
+    });
+    due.sort_by(|a, b| {
+        a.due
+            .partial_cmp(&b.due)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+    for e in due {
+        let half = if e.end { "end" } else { "begin" };
+        h.using(rules::LINE_STAGE_FIELDS);
+        w.scenes.log.push((
+            o,
+            Change::LineField(
+                e.action,
+                format!("{half} half set on the clock"),
+                Some(e.stage),
+            ),
+        ));
+        set_field_stage(h, w, &e.quest, e.stage);
+    }
+}
+
 /// Starts the actions whose start phase is `p` (`scene_clock_v1`).
 fn start_actions(h: &mut QuestHost<'_>, w: &mut World, o: ObjId, i: &SceneInfo, p: usize) {
     h.using(rules::SCENE_CLOCK);
@@ -859,6 +1158,9 @@ fn start_actions(h: &mut QuestHost<'_>, w: &mut World, o: ObjId, i: &SceneInfo, 
                 done,
             },
         );
+        if w.scenes.line_fields && matches!(a.kind, LINE | PLAYER_DIALOGUE) {
+            line_fields(h, w, o, i, j, a, now);
+        }
         if done {
             w.scenes
                 .log
@@ -918,6 +1220,13 @@ pub fn next_due(w: &World) -> Option<f64> {
         .values()
         .filter(|r| !r.done)
         .filter_map(|r| r.due)
+        .chain(
+            w.scenes
+                .line_events
+                .iter()
+                .filter(|e| !e.queued)
+                .map(|e| e.due),
+        )
         .min_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
         .map(|d| (d - now).max(0.0))
 }
@@ -935,6 +1244,20 @@ pub fn advance_clock(w: &mut World, scale: Option<f64>) -> Option<f64> {
     w.now[TimerClock::Real as usize] = t;
     if let Some(s) = scale {
         w.now[TimerClock::GameTime as usize] += dt * s / 3600.0;
+    }
+    // Line stage fields reached first (`scene_line_stage_fields_v1`), one
+    // job per scene, ahead of the scene's completion step.
+    let mut fields = Vec::new();
+    for e in w.scenes.line_events.iter_mut() {
+        if !e.queued && e.due <= t {
+            e.queued = true;
+            if !fields.contains(&e.scene) {
+                fields.push(e.scene);
+            }
+        }
+    }
+    for o in fields {
+        queue(w, o, Step::LineFields);
     }
     let mut scenes = Vec::new();
     let mut done = Vec::new();
@@ -1021,6 +1344,10 @@ pub(crate) fn call(h: &mut QuestHost<'_>, c: &NativeCall, w: &mut World) -> Repl
             }
         }
         ("scene", n) if n == STEP => {
+            if matches!(c.args.first(), Some(Val::Str(_))) {
+                apply_line_events(h, w, o);
+                return Reply::Value(Val::None);
+            }
             let complete = matches!(c.args.first(), Some(Val::Bool(true)));
             step(h, w, o, &i, complete);
             Reply::Value(Val::None)
@@ -1102,6 +1429,19 @@ pub fn record_fragment_instance(
     };
     bind::apply(vm, &cx, inst, &name, &script.properties, notes).map_err(|e| bad(&e))?;
     Ok(inst)
+}
+
+/// The synthetic call of a [`Step::LineFields`] job.
+pub fn line_fields_call(scene: ObjId) -> NativeCall {
+    NativeCall {
+        script: "scene".into(),
+        name: STEP.into(),
+        receiver: Some(Val::Object(scene)),
+        instance: None,
+        args: vec![Val::Str("line fields".into())],
+        param_types: vec!["string".into()],
+        return_type: "none".into(),
+    }
 }
 
 /// The synthetic call of a step job.

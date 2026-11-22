@@ -1627,9 +1627,13 @@ pub fn run_one(vm: &mut Vm<'_>, store: &Store, job: Job, nested: bool, b: &Budge
                     }
                 }
             }
-            crate::scene::Step::Enter | crate::scene::Step::Complete => {
-                let complete = *step == crate::scene::Step::Complete;
-                let call = crate::scene::step_call(*scene, complete);
+            crate::scene::Step::Enter
+            | crate::scene::Step::Complete
+            | crate::scene::Step::LineFields => {
+                let call = match step {
+                    crate::scene::Step::LineFields => crate::scene::line_fields_call(*scene),
+                    _ => crate::scene::step_call(*scene, *step == crate::scene::Step::Complete),
+                };
                 let _ = vm.host.call(&call, &mut vm.world);
                 for r in vm.host.rules() {
                     vm.rules.insert(r);

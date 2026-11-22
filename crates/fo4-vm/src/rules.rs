@@ -169,7 +169,7 @@ pub const XESP_BIT1: &str = "xesp_flag_bit1_not_presence_v1";
 pub const XESP_PROPAGATES: &str = "xesp_script_change_propagates_v1";
 
 /// Every rule above.
-pub const ALL: [&str; 101] = [
+pub const ALL: [&str; 106] = [
     ARITHMETIC,
     COMPARE,
     NOT_COPY_CAST,
@@ -271,6 +271,11 @@ pub const ALL: [&str; 101] = [
     START_SCENE_ACTION,
     ALIAS_LOCATION_REF,
     EVENT_OPEN,
+    NONE_ARRAY_LENGTH,
+    NONE_ARRAY_READ,
+    NONE_ARRAY_FIND,
+    NONE_ARRAY_CHANGE,
+    LINE_STAGE_FIELDS,
 ];
 
 /// The rule an opcode's meaning rests on; `None` for an opcode without a
@@ -368,6 +373,21 @@ pub const ALIAS_LOCATION_REF: &str = "quest_alias_location_ref_v1";
 
 /// A placed reference opening runs OnOpen with the opener on its scripts.
 pub const EVENT_OPEN: &str = "vm_event_open_v1";
+
+/// Opcode 31 on a none array stores 0.
+pub const NONE_ARRAY_LENGTH: &str = "pex_array_none_length_v1";
+/// Opcode 32 on a none array stores the default of the element type and
+/// the run goes on.
+pub const NONE_ARRAY_READ: &str = "pex_array_none_read_v1";
+/// Opcodes 34 and 40 on a none array store -1.
+pub const NONE_ARRAY_FIND: &str = "pex_array_none_find_v1";
+/// Opcodes 33, 42, 43, 45 and 46 on a none array change nothing and the
+/// run goes on.
+pub const NONE_ARRAY_CHANGE: &str = "pex_array_none_change_v1";
+
+/// A dialogue action the scene clock times sets the TIQS stages of the
+/// line it plays when the records leave one line of its topic.
+pub const LINE_STAGE_FIELDS: &str = "scene_line_stage_fields_v1";
 
 /// The registry the rules are checked against.
 pub const REGISTRY: &str = include_str!("../../../spec/hypotheses.tsv");

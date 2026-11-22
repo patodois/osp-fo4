@@ -251,6 +251,54 @@ pub enum LineTime {
     Undetermined(String),
 }
 
+/// Whether one line's conditions hold, as `eval` gives it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum LineTruth {
+    Holds,
+    Fails,
+    /// Undetermined, with the condition functions that leave it open.
+    Undetermined(BTreeSet<u16>),
+}
+
+/// Every line of a topic in stored order with the truth of its conditions
+/// (`eval`), for callers that need to know whether the records leave a
+/// single line (`scene_line_stage_fields_v1`). `Err` when the topic holds
+/// no line or a line does not read.
+pub fn line_truths(
+    store: &Store,
+    voice: &Voice,
+    topic: &FormKey,
+    eval: &mut dyn FnMut(&Info, usize, &str) -> Truth,
+    b: &Budget,
+) -> Result<Vec<(FormKey, LineTruth)>, String> {
+    let lines = voice.topics.of(topic);
+    if lines.is_empty() {
+        return Err("the topic holds no line".into());
+    }
+    let mut out = Vec::new();
+    for k in lines {
+        let Ok(Some((r, plugin))) = store.raw_with_plugin(k, b) else {
+            return Err("a line of the topic does not read".into());
+        };
+        let ctx = Context {
+            order: store.order(),
+            plugin,
+        };
+        let Ok(info) = Info::read(&r, ctx, b) else {
+            return Err("a line of the topic does not read".into());
+        };
+        let t = match eval(&info, plugin, &r.source.file) {
+            Truth::True => LineTruth::Holds,
+            Truth::False => LineTruth::Fails,
+            Truth::Undetermined(why) => {
+                LineTruth::Undetermined(why.iter().map(|x| x.function).collect())
+            }
+        };
+        out.push((k.clone(), t));
+    }
+    Ok(out)
+}
+
 /// The line a topic plays and its seconds (`scene_dialogue_line_choice_v1`,
 /// `scene_dialogue_line_audio_v1`, `info_shared_response_v1`): the first
 /// line in stored order whose conditions hold (`eval` gives their truth;

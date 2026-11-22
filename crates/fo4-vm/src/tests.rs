@@ -5,6 +5,7 @@ use super::*;
 mod cond2;
 mod data;
 mod events;
+mod open2;
 mod quest;
 mod scene;
 mod scev;

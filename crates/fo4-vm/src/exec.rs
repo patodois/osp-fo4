@@ -920,6 +920,16 @@ impl Vm<'_> {
             v => Err(Self::mismatch(f, "array", kind_text(&v))),
         }
     }
+    /// The array an opcode works on, or `None` when the operand is none
+    /// and `none_ok` (the caller's switch for the rule that settles that
+    /// opcode on none) is on; otherwise as [`Self::array`].
+    fn array_or_none(&mut self, f: &mut Frame, l: &Lit, none_ok: bool) -> R<Option<usize>> {
+        match self.read(f, l)? {
+            Val::None if none_ok => Ok(None),
+            Val::Array(a) => Ok(Some(a)),
+            _ => self.array(f, l).map(Some),
+        }
+    }
     fn index(&self, f: &Frame, a: usize, i: i32, inclusive: bool) -> R<usize> {
         let len = self.world.arrays[a].items.len();
         let ok = i >= 0 && (i as usize) < len + usize::from(inclusive);
@@ -1164,6 +1174,10 @@ impl Vm<'_> {
                 let v = match self.read(f, arg(1)?)? {
                     Val::Array(x) => Val::Int(self.world.arrays[x].items.len() as i32),
                     Val::Unknown(u) => Val::Unknown(u),
+                    Val::None if self.none_arrays.length => {
+                        self.rules.insert(rules::NONE_ARRAY_LENGTH);
+                        Val::Int(0)
+                    }
                     Val::None => {
                         self.unknown(Origin::Rule(rules::ARRAYS, "length of none".into()))?
                     }
@@ -1172,14 +1186,32 @@ impl Vm<'_> {
                 self.write(f, arg(0)?, v)?;
             }
             32 => {
-                let x = self.array(f, arg(1)?)?;
+                let Some(x) = self.array_or_none(f, arg(1)?, self.none_arrays.read)? else {
+                    // The element type's default (`pex_array_none_read_v1`).
+                    self.rules.insert(rules::NONE_ARRAY_READ);
+                    let ty = self.decl_type(f, arg(1)?)?;
+                    let v = match ty.strip_suffix("[]") {
+                        Some(elem) => self.default_of(elem),
+                        None => self.unknown(Origin::Rule(
+                            rules::NONE_ARRAY_READ,
+                            format!("element of none typed {ty}"),
+                        ))?,
+                    };
+                    self.write(f, arg(0)?, v)?;
+                    f.pc += 1;
+                    return Ok(None);
+                };
                 let i = self.int_arg(f, arg(2)?)?;
                 let i = self.index(f, x, i, false)?;
                 let v = self.world.arrays[x].items[i].clone();
                 self.write(f, arg(0)?, v)?;
             }
             33 => {
-                let x = self.array(f, arg(0)?)?;
+                let Some(x) = self.array_or_none(f, arg(0)?, self.none_arrays.change)? else {
+                    self.rules.insert(rules::NONE_ARRAY_CHANGE);
+                    f.pc += 1;
+                    return Ok(None);
+                };
                 let i = self.int_arg(f, arg(1)?)?;
                 let i = self.index(f, x, i, false)?;
                 let v = self.read(f, arg(2)?)?;
@@ -1190,14 +1222,26 @@ impl Vm<'_> {
                 self.world.arrays[x].items[i] = v;
             }
             34 => {
-                let x = self.array(f, arg(0)?)?;
+                let Some(x) = self.array_or_none(f, arg(0)?, self.none_arrays.find)? else {
+                    // Not found (`pex_array_none_find_v1`).
+                    self.rules.insert(rules::NONE_ARRAY_FIND);
+                    self.write(f, arg(1)?, Val::Int(-1))?;
+                    f.pc += 1;
+                    return Ok(None);
+                };
                 let v = self.read(f, arg(2)?)?;
                 let start = self.int_arg(f, arg(3)?)?;
                 let r = self.find(f, x, None, &v, start)?;
                 self.write(f, arg(1)?, r)?;
             }
             40 => {
-                let x = self.array(f, arg(0)?)?;
+                let Some(x) = self.array_or_none(f, arg(0)?, self.none_arrays.find)? else {
+                    // Not found (`pex_array_none_find_v1`).
+                    self.rules.insert(rules::NONE_ARRAY_FIND);
+                    self.write(f, arg(1)?, Val::Int(-1))?;
+                    f.pc += 1;
+                    return Ok(None);
+                };
                 let Lit::Str(m) = arg(2)? else {
                     return Err(Self::bad(f, "member name"));
                 };
@@ -1208,7 +1252,11 @@ impl Vm<'_> {
                 self.write(f, arg(1)?, r)?;
             }
             42 => {
-                let x = self.array(f, arg(0)?)?;
+                let Some(x) = self.array_or_none(f, arg(0)?, self.none_arrays.change)? else {
+                    self.rules.insert(rules::NONE_ARRAY_CHANGE);
+                    f.pc += 1;
+                    return Ok(None);
+                };
                 let v = self.read(f, arg(1)?)?;
                 let n = self.int_arg(f, arg(2)?)?;
                 let n = usize::try_from(n).map_err(|_| Self::bad(f, format!("count {n}")))?;
@@ -1221,7 +1269,11 @@ impl Vm<'_> {
                 self.world.arrays[x].items.extend(std::iter::repeat_n(v, n));
             }
             43 => {
-                let x = self.array(f, arg(0)?)?;
+                let Some(x) = self.array_or_none(f, arg(0)?, self.none_arrays.change)? else {
+                    self.rules.insert(rules::NONE_ARRAY_CHANGE);
+                    f.pc += 1;
+                    return Ok(None);
+                };
                 let v = self.read(f, arg(1)?)?;
                 let i = self.int_arg(f, arg(2)?)?;
                 let i = self.index(f, x, i, true)?;
@@ -1234,7 +1286,11 @@ impl Vm<'_> {
                 self.world.arrays[x].items.insert(i, v);
             }
             45 => {
-                let x = self.array(f, arg(0)?)?;
+                let Some(x) = self.array_or_none(f, arg(0)?, self.none_arrays.change)? else {
+                    self.rules.insert(rules::NONE_ARRAY_CHANGE);
+                    f.pc += 1;
+                    return Ok(None);
+                };
                 let i = self.int_arg(f, arg(1)?)?;
                 let n = self.int_arg(f, arg(2)?)?;
                 let i = self.index(f, x, i, false)?;
@@ -1250,7 +1306,11 @@ impl Vm<'_> {
                 self.world.arrays[x].items.drain(i..i + n);
             }
             46 => {
-                let x = self.array(f, arg(0)?)?;
+                let Some(x) = self.array_or_none(f, arg(0)?, self.none_arrays.change)? else {
+                    self.rules.insert(rules::NONE_ARRAY_CHANGE);
+                    f.pc += 1;
+                    return Ok(None);
+                };
                 self.world.arrays[x].items.clear();
             }
             36 => {

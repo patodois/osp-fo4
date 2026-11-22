@@ -331,6 +331,31 @@ pub(crate) fn apply(
     Ok(())
 }
 
+/// Applies the property values of one VMAD script entry, read from a
+/// record of `plugin` stored in `file`, to an instance, exactly as binding
+/// does (`vmad_property_sets_variable_v1`); what could not be applied goes
+/// to `notes`. For census tools that check what the binder carries.
+#[allow(clippy::too_many_arguments)]
+pub fn apply_script(
+    vm: &mut Vm<'_>,
+    store: &Store,
+    plugin: usize,
+    file: &str,
+    inst: InstId,
+    script: &str,
+    props: &[Property<'_>],
+    notes: &mut Vec<String>,
+    b: &Budget,
+) -> std::result::Result<(), Box<dyn std::error::Error>> {
+    let cx = Ctx {
+        store,
+        plugin,
+        file: file.to_string(),
+        b,
+    };
+    apply(vm, &cx, inst, script, props, notes)
+}
+
 /// Instantiates the scripts of a placed reference from its base's VMAD and
 /// its own (`vmad_reference_scripts_v1`), with their property values.
 /// Returns `None` when the reference has no base.

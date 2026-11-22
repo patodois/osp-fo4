@@ -207,6 +207,7 @@ fn job_text(vm: &Vm<'_>, r: &JobRun) -> String {
                 Step::Fragment(f, slot) => format!("fragment {f} ({slot})"),
                 Step::Enter => "step: offer the next phase".into(),
                 Step::Complete => "step: complete the phase".into(),
+                Step::LineFields => "step: line stage fields the clock reached".into(),
             };
             writeln!(s, "  [{depth}] scene {what} on {}", label(*scene))
         }
@@ -371,6 +372,14 @@ struct Opts {
     /// (`quest_alias_location_ref_v1`, `--alias-location-refs`; off by
     /// default).
     location_fills: bool,
+    /// The TIQS of a line a timed dialogue action plays when the records
+    /// leave one line (`scene_line_stage_fields_v1`, `--line-stage-fields`;
+    /// off by default).
+    line_fields: bool,
+    /// Array opcodes on a none array (`pex_array_none_*_v1`,
+    /// `--none-array-length`, `--none-array-read`, `--none-array-find`,
+    /// `--none-array-change`; each off by default).
+    none_arrays: fo4_vm::NoneArrays,
 }
 
 /// The story manager's nodes, read once when the story manager is on.
@@ -416,6 +425,8 @@ fn events_on(vm: &mut Vm<'_>, o: Opts) {
     vm.world.scenes.stage_fields = o.scenes && o.stage_fields;
     vm.world.scenes.action_conditions = o.scenes && o.action_conditions;
     vm.world.quests.location_fills = o.location_fills;
+    vm.world.scenes.line_fields = o.scenes && o.line_fields;
+    vm.none_arrays = o.none_arrays;
     if o.scenes {
         GROUPS.with(|g| vm.world.scenes.groups = g.borrow().clone());
         CLOCK.with(|c| vm.world.scenes.clock = c.borrow().clone());
@@ -445,6 +456,38 @@ fn load_voice(m: &Manifest, vfs: &Vfs, store: &Store) -> Result<voice::Voice, E>
         v.files.add(k, secs);
     }
     Ok(v)
+}
+
+/// Counts the readings turned on by the switches of the second opening
+/// step, when on.
+fn count_switches(c: &mut Counts, o: Opts) {
+    let n = o.none_arrays;
+    for (on, what) in [
+        (
+            n.length,
+            "the length of a none array is 0 (--none-array-length)",
+        ),
+        (
+            n.read,
+            "an element of a none array is the element type's default (--none-array-read)",
+        ),
+        (
+            n.find,
+            "a find in a none array gives -1 (--none-array-find)",
+        ),
+        (
+            n.change,
+            "changing a none array does nothing (--none-array-change)",
+        ),
+        (
+            o.line_fields,
+            "the TIQS of the line a timed dialogue action plays set stages (--line-stage-fields)",
+        ),
+    ] {
+        if on {
+            bump(c, format!("switch: {what}"));
+        }
+    }
 }
 
 /// Counts the caller's scene clock assumptions, when made.
@@ -488,6 +531,12 @@ fn count_clock(c: &mut Counts, steps: usize) {
                 "assumption from the command line: start-scene actions complete as they start",
             );
         }
+        if k.assume_first_line {
+            bump(
+                c,
+                "assumption from the command line: where several lines of a topic may hold, the first plays (--assume-first-line)",
+            );
+        }
     });
 }
 
@@ -527,6 +576,9 @@ fn count_scenes(c: &mut Counts, vm: &Vm<'_>, prefix: &str) {
             }
             scene::Change::OnClock(_) => {
                 "scene clock: phase waits on actions with a due time".to_string()
+            }
+            scene::Change::LineField(_, what, _) => {
+                format!("scene clock: line stage fields\t{what}")
             }
         };
         bump(c, format!("{prefix}scenes\t{what}"));
@@ -664,6 +716,7 @@ fn stages(m: &Manifest, vfs: &Vfs, store: &Store, out: &Path, opts: Opts) -> Res
     } else {
         Counts::new()
     };
+    count_switches(&mut c, opts);
     let mut names = String::new();
     let all = quests(store, &b)?;
     for (k, info) in &all {
@@ -1250,6 +1303,7 @@ fn new_game(
         .as_deref()
         .and_then(|n| time_scale_global(store, &b, n));
     count_clock(&mut c, then.scene_clock);
+    count_switches(&mut c, opts);
     if then.scene_clock > 0 {
         if then.timers > 0 {
             bump(
@@ -1944,6 +1998,7 @@ fn fragments(m: &Manifest, vfs: &Vfs, store: &Store, out: &Path, opts: Opts) -> 
     let tree = story_tree(store, opts)?;
     let mut lib = VfsLibrary::new(vfs, max);
     let mut c = Counts::new();
+    count_switches(&mut c, opts);
     let mut names = String::new();
     let keys: Vec<(FormKey, [u8; 4])> = store
         .winners()
@@ -2113,6 +2168,7 @@ fn scenes(
         .map(|w| store.overrides().form_key(w.key, store.order()))
         .collect();
     count_clock(&mut c, steps);
+    count_switches(&mut c, opts);
     for k in &keys {
         let bb = b.child();
         bump(&mut c, "scenes started by the sweep");
@@ -2320,6 +2376,13 @@ fn run() -> Result<(), E> {
         stage_fields: flag(&mut a, "--stage-fields"),
         action_conditions: flag(&mut a, "--cond-550-clock"),
         location_fills: flag(&mut a, "--alias-location-refs"),
+        line_fields: flag(&mut a, "--line-stage-fields"),
+        none_arrays: fo4_vm::NoneArrays {
+            length: flag(&mut a, "--none-array-length"),
+            read: flag(&mut a, "--none-array-read"),
+            find: flag(&mut a, "--none-array-find"),
+            change: flag(&mut a, "--none-array-change"),
+        },
     };
     let mut switches = fo4_vm::cond::Switches::all();
     let mut assume: BTreeMap<u16, f32> = BTreeMap::new();
@@ -2390,6 +2453,7 @@ fn run() -> Result<(), E> {
         timers: !flag(&mut a, "--no-timer-actions"),
         assume_packages: flag(&mut a, "--assume-packages-complete"),
         assume_start_scenes: flag(&mut a, "--assume-start-scene-actions"),
+        assume_first_line: flag(&mut a, "--assume-first-line"),
         ..scene::Clock::default()
     };
     let line_audio = !flag(&mut a, "--no-line-audio");
@@ -2409,7 +2473,9 @@ fn run() -> Result<(), E> {
     let assumed = clock.assume_packages
         || clock.assume_start_scenes
         || clock.assume_line_seconds.is_some()
-        || clock.assume_player_choice.is_some();
+        || clock.assume_player_choice.is_some()
+        || clock.assume_first_line
+        || opts.line_fields;
     if then.scene_clock == 0 && (assumed || !clock.timers || !line_audio) {
         return Err("the scene action switches and assumptions need --scene-clock N".into());
     }
@@ -2422,7 +2488,7 @@ fn run() -> Result<(), E> {
     {
         return Err("--assume-player-choice takes 0 to 3".into());
     }
-    let usage = "quest_run MANIFEST (stages OUT_DIR | new-game OUT_DIR | fragments OUT_DIR | scenes OUT_DIR | QUEST STAGE) [--queued] [--no-conditions] [--no-stage-event] [--no-remote] [--no-custom | --custom-nested] [--no-story] [--no-enable-chain] [--no-scenes] [--no-scenes-with-quest] [--no-cond-fn-N]... [--no-cond-run-on] [--assume-cond N=VALUE]...; fragments OUT_DIR and scenes OUT_DIR run every INFO, PACK and PERK fragment and start every scene in a fresh interpreter; new-game also takes --then EDITOR_ID:STAGE[@SECONDS] (repeated), --assume-activate, --assume-trigger-enter, --assume-trigger-leave and --assume-open PLUGIN:OBJECTID[@SECONDS] (repeated), --timers N and --time-scale-global EDITOR_ID, assumptions of the caller, --scene-recheck, --stage-fields, --cond-550-clock, --alias-location-refs and --next-blockers; new-game and scenes take --scene-clock N (advance the scene clock up to N times) with --no-timer-actions, --no-line-audio, --assume-line-seconds X, --assume-player-choice N (0 to 3), --assume-packages-complete and --assume-start-scene-actions";
+    let usage = "quest_run MANIFEST (stages OUT_DIR | new-game OUT_DIR | fragments OUT_DIR | scenes OUT_DIR | QUEST STAGE) [--queued] [--no-conditions] [--no-stage-event] [--no-remote] [--no-custom | --custom-nested] [--no-story] [--no-enable-chain] [--no-scenes] [--no-scenes-with-quest] [--no-cond-fn-N]... [--no-cond-run-on] [--assume-cond N=VALUE]...; fragments OUT_DIR and scenes OUT_DIR run every INFO, PACK and PERK fragment and start every scene in a fresh interpreter; new-game also takes --then EDITOR_ID:STAGE[@SECONDS] (repeated), --assume-activate, --assume-trigger-enter, --assume-trigger-leave and --assume-open PLUGIN:OBJECTID[@SECONDS] (repeated), --timers N and --time-scale-global EDITOR_ID, assumptions of the caller, --scene-recheck, --stage-fields, --cond-550-clock, --alias-location-refs and --next-blockers; new-game and scenes take --scene-clock N (advance the scene clock up to N times) with --no-timer-actions, --no-line-audio, --assume-line-seconds X, --assume-player-choice N (0 to 3), --assume-packages-complete, --assume-start-scene-actions, --line-stage-fields and --assume-first-line; every mode takes --none-array-length, --none-array-read, --none-array-find and --none-array-change";
     if a.len() != 3 {
         return Err(usage.into());
     }

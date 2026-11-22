@@ -356,3 +356,8 @@ the registry.
 | `cond_fn_550_clock_actions_v1` | pending | Time a later phase completing on function 550 of a 2 s timer action of an earlier phase. |
 | `scene_start_scene_action_v1` | pending | Time a phase after a start-scene action against the started scene's end. |
 | `quest_alias_location_ref_v1` | pending | Start a quest with an alias filled from a location's ref type and read the alias's reference from the console. |
+| `pex_array_none_length_v1` | pending | Show through a notification the .Length of an array property the test plugin does not store, from a loose test script on an activator in a purpose-built cell. |
+| `pex_array_none_read_v1` | pending | Show element 0 of the same unset array property, then a second notification: the default and the second notification support it. |
+| `pex_array_none_find_v1` | pending | Show the result of Find on the same unset array property: -1 supports it. |
+| `pex_array_none_change_v1` | pending | Add to the same unset array property, then show its .Length and a later notification: 0 and the notification support it; 1 rejects it. |
+| `scene_line_stage_fields_v1` | pending | Watch the owning quest's stages while a scene speaks a line with a TIQS whose topic holds one line: set as the line begins and as it ends. |

@@ -276,6 +276,24 @@ impl Default for Limits {
     }
 }
 
+/// Readings of the array opcodes on a none array, each a pending rule the
+/// caller turns on (`quest_run --none-array-*`). All off by default: the
+/// length of none is undetermined and every other array opcode fails on
+/// none, as before.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct NoneArrays {
+    /// Opcode 31 on none stores 0 (`pex_array_none_length_v1`).
+    pub length: bool,
+    /// Opcode 32 on none stores the default of the element type and the
+    /// run goes on (`pex_array_none_read_v1`).
+    pub read: bool,
+    /// Opcodes 34 and 40 on none store -1 (`pex_array_none_find_v1`).
+    pub find: bool,
+    /// Opcodes 33, 42, 43, 45 and 46 on none change nothing and the run
+    /// goes on (`pex_array_none_change_v1`).
+    pub change: bool,
+}
+
 /// Alternative readings of opcodes, for the checks that could refute the
 /// candidate meanings (`vm_checks`). [`Variant::Candidate`] is the
 /// registered reading; the others each exchange one pair of meanings.
@@ -386,6 +404,8 @@ pub struct Vm<'a> {
     pub rules: BTreeSet<&'static str>,
     pub limits: Limits,
     pub variant: Variant,
+    /// Readings of array opcodes on a none array, each off by default.
+    pub none_arrays: NoneArrays,
     steps: u64,
     depth: usize,
 }
@@ -406,6 +426,7 @@ impl<'a> Vm<'a> {
             rules: BTreeSet::new(),
             limits: Limits::default(),
             variant: Variant::Candidate,
+            none_arrays: NoneArrays::default(),
             steps: 0,
             depth: 0,
         }
