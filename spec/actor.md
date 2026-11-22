@@ -41,7 +41,13 @@ Counts are over winning, not deleted records.
 | NPC_ | PNAM (repeated) | FormID of an HDPT | 23,252 in 2,153 records |
 | RACE | WNAM | FormID of an ARMO | 104 of 104 |
 | RACE | ANAM | NUL-terminated `.nif` path, one after MNAM and one after FNAM | 216 in 109 races: MNAM then FNAM in 107, MNAM only in 2 |
-| RACE | HEAD (repeated) | FormID of an HDPT | 141 in 16 races |
+| RACE | HEAD (repeated) | FormID of an HDPT | 141 in 16 races; every one after an NAM0 marker, then MNAM (66) or FNAM (75), and after an INDX |
+| HDPT | MODL | NUL-terminated `.nif` path | 419 of 420 |
+| HDPT | PNAM | u32, a small integer (0 to 9) | 420 of 420 |
+| HDPT | DATA | u8 | 420 of 420 |
+| HDPT | HNAM (repeated) | FormID of an HDPT | 385 in 184 records |
+| HDPT | CTDA (repeated) | 32 bytes (conditions; counted, not read) | 40 records, one each |
+| HDPT | TNAM, RNAM | FormID of a TXST, of a FLST | 106, 402 |
 | OTFT | INAM | FormIDs (ARMO or LVLI) | 4n bytes in all 477; 902 values, 607 ARMO and 295 LVLI |
 | ARMO | INDX, MODL pairs | u16, then a FormID of an ARMA | INDX then MODL in all 1,019; 1,387 MODL, all ARMA |
 | ARMO | RNAM | FormID of a RACE | 1,019 of 1,019 |
@@ -75,11 +81,11 @@ Further facts used by the rules:
 
 Open, kept raw and named in each typed view's `unread`: the other ACBS
 bytes, NPC_ NAM4 and NAM6 (f32 near 1) and RACE DATA (200 bytes), SOFT (an
-OTFT, 24 NPC_), head parts and their models, LVLD, LVLM and LVLF (one byte
+OTFT, 24 NPC_), HDPT TNAM, RNAM, NAM0 and NAM1, LVLD, LVLM and LVLF (one byte
 each; LVLD 0 in 366 LVLN and 100 in 9), INDX values, MOD4 and MOD5, RACE
 GNAM (a BPTD), ACHR XRGD (1,423 records).
 
-Reader: `fo4_plugin::actor` (`Achr`, `Npc`, `Race`, `Otft`, `Armo`, `Arma`,
+Reader: `fo4_plugin::actor` (`Achr`, `Npc`, `Race`, `Hdpt`, `Otft`, `Armo`, `Arma`,
 `Leveled`), each decoding one record with its plugin's FormID context;
 wrong sizes, duplicate singletons, an ANAM outside a section and an MODL
 without INDX are named errors.
@@ -113,10 +119,13 @@ counted, not drawn), in plugin and object-ID order, and for each:
    (`UnsupportedSkinning` and the `BSSkin::` blocks).
 6. **Placement.** ACHR DATA and XSCL as REFR DATA and XSCL; no NPC_ or RACE
    size applies (`achr_placement_as_refr_v1`).
+7. **Head.** The head part models of [Heads](#heads), with their own
+   blockers and state: a head that is not settled or not ready leaves the
+   head out, never the body.
 
 Each actor carries report lines (`notes`): what was hidden or not read, such
-as `head: not read (10 head parts)`, `outfit: none declared`, or why it is
-left out. Head parts are never drawn by this step.
+as `head: 10 parts`, `outfit: none declared`, or why it is left out. The
+head is resolved after the body (Heads, below).
 
 ## Rest pose and skinning
 
@@ -182,8 +191,9 @@ drawable under hypotheses; 205 resolve but their models are blocked
 left out: leveled lists whose LVLD, LVLM or LVLF byte is not zero 4,962,
 leveled or template candidates that disagree 3,231, outfits that do not
 resolve 445, an addon without the section's model 79, no skin 19, an armour
-without an addon for the race 1. Of all placed actors, 432 note head parts
-not read and 349 a skin addon hidden by worn armour slots.
+without an addon for the race 1. Of all placed actors, 432 noted head parts
+not read at that step (see Heads) and 349 a skin addon hidden by worn
+armour slots.
 
 **Viewer, radius 1** (`--walk --terrain --around 1` at the test cell,
 headless, the viewer's build): load 5.93 s without actors and 5.99 s with
@@ -272,6 +282,92 @@ byte-identical to those of 487c57c built in the same path, in eight cases:
 an interior without actors, an interior with 10 drawn humanoids, the test
 cell alone, with `--terrain --around 1` from two poses (one showing the
 dog), `--walk --terrain --around 2`, a `--path` walk, and `--no-actors`.
+
+## Heads
+
+Head parts are drawn unmorphed: the models that the data names, skinned to
+the actor's skeleton like an addon, without face morphs, tints, morph
+files or texture-set overrides (`npc_head_parts_unmorphed_v1`, pending).
+The census is section H of `actor_census` (outputs outside the
+repository); the layouts are in the table above.
+
+**What the data says** (winning records):
+
+- **HDPT.** 420 records. PNAM holds 0 (159), 1 (16), 2 (87), 3 (93), 4
+  (43), 7 (3), 8 (11) or 9 (8). The 154 parts that another part names in
+  HNAM all have DATA bit 3 set and PNAM 0; 2 more have bit 3 set, 264
+  neither. 40 parts carry conditions (CTDA), with PNAM 3 (30) or 2 (10).
+  Which part a PNAM value is (face, eyes, hair...) is a label at most; the
+  code uses only "0" for parts named as extras, and does not use it to
+  choose.
+- **NPC_ PNAM.** 2,153 NPC_ list 1 to 72 parts, all HDPT; no value but 0 is
+  listed twice in one NPC_. 2,210 list none: 1,551 of races without HEAD,
+  659 of races with HEAD in one or both sections. The HNAM extras of a
+  listed part are listed too in most cases but not all: for listed parts
+  with PNAM 2, 3 and 4, 6,070, 2,329 and 1,113 extras are listed and 76, 109
+  and 16 not; for PNAM 1, 305 listed and 1,695 not. 1,236 listings name a
+  part with conditions.
+- **RACE HEAD.** All 141 follow an NAM0 marker, then MNAM (66) or FNAM
+  (75), each after an INDX: the race's parts of that section
+  (`Race::section_head_parts`).
+- **Models.** For each NPC_'s parts (its race's section parts when it
+  lists none) against its race section's skeleton, 312 model and skeleton
+  pairs: 313 skinned shapes, 297 with every bone named in the skeleton;
+  the 16 others name hair cloth bones (`..._Cloth00` and the like) or one
+  of 3 other bones the skeleton lacks. Of the 297, the composite of the
+  model's own bone nodes and the stored skin-to-bone transforms is one
+  translation within 0.01 for 293 (4 rotated: PNAM 7 and one PNAM 4), the
+  same (0, -1, 121) as the humanoid addons for 291 of them; the rest pose
+  moves a vertex from its bind position by less than 0.1 for 290 and by 10
+  or more for 4 (the 3 PNAM 7 shapes and one PNAM 8). Head parts and body
+  addons are bound in the same pose.
+
+**Resolution** (`fo4_scene::actor`, after the body):
+
+1. The list: per NPC_ of the template and leveled candidates of step 1
+   above, its PNAM parts, sorted and without repeats, or with none its
+   race's HEAD of its section. Every candidate must give the same list;
+   otherwise `head: N candidate part lists; not drawn`. An empty list (no
+   PNAM, no race HEAD: creatures) draws nothing more.
+2. HNAM extras that the list does not name are not added.
+3. A listed part with conditions leaves the head out (`head: part ...
+   has conditions`): whether it shows is decided at run time.
+4. Each part's MODL resolves and loads as a record model; the blockers of
+   their closure, apart from what skinning reads, and the rule's own
+   blocker (`UnverifiedActorHeadParts`) are the head's, not the actor's.
+5. **Covering.** The head's main bone is the bone carrying the largest
+   sum of vertex weights over the head parts. A worn outfit addon (not the
+   skin) with vertices whose largest weight is on that bone covers the
+   head, which is then left out (`head: covered by worn armour ...`); what
+   shows under it (hair, a face under an open helmet) is not established.
+   Over the census below, the covering addons have under 1 % of their
+   vertices on the main bone in 2 actors, 1 to 10 % in 2, 10 to 50 % in 18
+   and 50 % or more in 27: no threshold separates them, so any vertex
+   counts.
+
+**Drawing** (`fo4_render::draw`): after the body, each part's skinned
+shapes as an addon's, in the same pose (rest or clip). A head not ready at
+the build's level, and each part that fails (a bone the skeleton lacks, a
+surface the renderer refuses), is an entry of `Build::actor_head_omissions`
+with its causes; the body stays drawn and the other parts too.
+
+**Results.** Over every placed actor (A1), the actor counts are unchanged
+(399 drawable under hypotheses). Of the 604 that resolve, 167 have a head
+(162 from their PNAM, 5 from their race), 49 are covered by a worn armour,
+33 name a part with conditions, 25 have candidates with different lists and
+1 a part without a model; the other 329 name no head parts (no PNAM and a race without HEAD). Of the
+399 drawable actors, 81 have a head ready under hypotheses (3 from their
+race), 15 a head blocked by an unread NIF block of a part (cloth data) and
+303 no head drawn. In the interior with clothed humanoids, 8 of the 10
+drawn humanoids get a head (9 to 11 parts each, 2 parts of each left out
+because the renderer refuses their blend factors); 1 names a part with
+conditions and 1 has a part with cloth data. In `actor_check` of that
+interior, the few vertices that head and body parts share in the bind pose
+(5 to 7 pairs in 4 actors, at most 0.008 apart) are as far apart after the
+rest pose. Headless frames against the commit before: that interior differs
+in 2,168 of 921,600 pixels; the seven other cases of the previous steps are
+byte-identical (frames and tags), and so are all cases without
+`--under-hypotheses`. Frames are kept outside the repository.
 
 ## Left as found
 

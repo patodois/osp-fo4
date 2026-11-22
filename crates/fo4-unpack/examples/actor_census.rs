@@ -109,6 +109,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let vfs = fo4_vfs::Vfs::mount(&m, &Budget::new(m.limits.max_vfs_memory))?;
     chain(&store, &mut db, &mut out)?;
     rest(&store, &mut db, &vfs, &m, &mut out)?;
+    heads(&store, &mut db, &vfs, &m, &mut out)?;
     placed(&store, &vfs, &m, &mut out)?;
     std::fs::write(&args[1], out)?;
     Ok(())
@@ -888,6 +889,323 @@ fn chain(
     Ok(())
 }
 /// Every placed actor of the load order resolved as the viewer does.
+/// H1-H4: head parts (HDPT) and where NPC_ and RACE name them.
+fn heads(
+    store: &Store,
+    db: &mut Db<'_>,
+    vfs: &fo4_vfs::Vfs,
+    m: &Manifest,
+    out: &mut String,
+) -> Result<(), Box<dyn std::error::Error>> {
+    struct Part {
+        kind: Option<u32>,
+        data: Option<u8>,
+        extras: Vec<FormKey>,
+        conditions: usize,
+        model: Option<String>,
+    }
+    let mut parts: BTreeMap<(String, u32), Part> = BTreeMap::new();
+    let hk = |k: &FormKey| (k.plugin.to_lowercase(), k.object_id);
+    let mut sizes: BTreeMap<String, BTreeMap<usize, u64>> = BTreeMap::new();
+    for k in keys(store, b"HDPT") {
+        let Some(r) = db.get(&k) else { continue };
+        for (sig, d) in &r.fields {
+            bump(
+                sizes
+                    .entry(String::from_utf8_lossy(sig).into_owned())
+                    .or_default(),
+                d.len(),
+            );
+        }
+        let extras = r
+            .all(b"HNAM")
+            .filter_map(|d| u32_at(d, 0).and_then(|id| db.reference(&r, id)))
+            .filter(|(_, x)| x.signature == *b"HDPT")
+            .map(|(k, _)| k)
+            .collect();
+        parts.insert(
+            hk(&k),
+            Part {
+                kind: r.one(b"PNAM").and_then(|d| u32_at(d, 0)),
+                data: r.one(b"DATA").and_then(|d| d.first().copied()),
+                extras,
+                conditions: r.all(b"CTDA").count(),
+                model: r.one(b"MODL").map(|d| text(d)),
+            },
+        );
+    }
+    let targets: std::collections::HashSet<(String, u32)> = parts
+        .values()
+        .flat_map(|p| p.extras.iter().map(hk))
+        .collect();
+    let mut kinds: BTreeMap<String, u64> = BTreeMap::new();
+    let mut data_by_kind: BTreeMap<String, u64> = BTreeMap::new();
+    let mut bit3: BTreeMap<String, u64> = BTreeMap::new();
+    let mut cond_by_kind: BTreeMap<String, u64> = BTreeMap::new();
+    for (k, p) in &parts {
+        let kind = format!("{:?}", p.kind);
+        bump(&mut kinds, kind.clone());
+        bump(
+            &mut data_by_kind,
+            format!("kind {kind} DATA {:02x?}", p.data),
+        );
+        bump(
+            &mut bit3,
+            format!(
+                "DATA bit 3 {} / an HNAM target {}",
+                p.data.is_some_and(|d| d & 8 != 0),
+                targets.contains(k)
+            ),
+        );
+        if p.conditions > 0 {
+            bump(&mut cond_by_kind, kind);
+        }
+    }
+    writeln!(out, "\n## H1 HDPT: {} records", parts.len())?;
+    writeln!(out, "subrecord sizes: {sizes:?}")?;
+    writeln!(out, "PNAM u32 values: {kinds:?}")?;
+    writeln!(out, "DATA byte by PNAM value: {data_by_kind:?}")?;
+    writeln!(out, "DATA bit 3 against being an HNAM target: {bit3:?}")?;
+    writeln!(out, "with CTDA, by PNAM value: {cond_by_kind:?}")?;
+    // H2: NPC_ PNAM lists.
+    let mut list_sizes: BTreeMap<usize, u64> = BTreeMap::new();
+    let mut extra_listed: BTreeMap<String, u64> = BTreeMap::new();
+    let mut kind_repeats: BTreeMap<String, u64> = BTreeMap::new();
+    let mut empty_by_race_head: BTreeMap<String, u64> = BTreeMap::new();
+    let mut listed_conditional = 0u64;
+    let mut non_hdpt = 0u64;
+    let mut race_heads: HashMap<(String, u32), [Vec<FormKey>; 2]> = HashMap::new();
+    let mut race_marks: BTreeMap<String, u64> = BTreeMap::new();
+    for k in keys(store, b"RACE") {
+        let Some(r) = db.get(&k) else { continue };
+        let mut marker = None;
+        let mut nam0 = false;
+        let mut prev_indx = false;
+        let mut h: [Vec<FormKey>; 2] = [Vec::new(), Vec::new()];
+        for (sig, d) in &r.fields {
+            match sig {
+                b"NAM0" => nam0 = true,
+                b"MNAM" => marker = Some(0),
+                b"FNAM" => marker = Some(1),
+                b"NAM1" | b"NAM3" => {
+                    marker = None;
+                    nam0 = false;
+                }
+                b"HEAD" => {
+                    bump(
+                        &mut race_marks,
+                        format!(
+                            "HEAD after NAM0 {nam0}, section {marker:?}, after INDX {prev_indx}"
+                        ),
+                    );
+                    if let (Some(i), Some((hk2, _))) =
+                        (marker, u32_at(d, 0).and_then(|id| db.reference(&r, id)))
+                    {
+                        h[i].push(hk2);
+                    }
+                }
+                _ => {}
+            }
+            prev_indx = sig == b"INDX";
+        }
+        race_heads.insert(hk(&k), h);
+    }
+    for k in keys(store, b"NPC_") {
+        let Some(r) = db.get(&k) else { continue };
+        let mut listed: Vec<FormKey> = Vec::new();
+        for d in r.all(b"PNAM") {
+            match u32_at(d, 0).and_then(|id| db.reference(&r, id)) {
+                Some((pk, pr)) if pr.signature == *b"HDPT" => listed.push(pk),
+                _ => non_hdpt += 1,
+            }
+        }
+        bump(&mut list_sizes, listed.len());
+        if listed.is_empty() {
+            let race = r
+                .one(b"RNAM")
+                .and_then(|d| u32_at(d, 0))
+                .and_then(|id| db.reference(&r, id));
+            let has = race
+                .and_then(|(rk, _)| race_heads.get(&hk(&rk)))
+                .map(|h| (!h[0].is_empty(), !h[1].is_empty()));
+            bump(
+                &mut empty_by_race_head,
+                format!("race HEAD in sections (M, F): {has:?}"),
+            );
+            continue;
+        }
+        let set: std::collections::HashSet<(String, u32)> = listed.iter().map(hk).collect();
+        let mut per_kind: BTreeMap<String, u64> = BTreeMap::new();
+        for pk in &listed {
+            let Some(p) = parts.get(&hk(pk)) else {
+                continue;
+            };
+            bump(&mut per_kind, format!("{:?}", p.kind));
+            if p.conditions > 0 {
+                listed_conditional += 1;
+            }
+            for x in &p.extras {
+                let xk = parts.get(&hk(x)).and_then(|q| q.kind);
+                bump(
+                    &mut extra_listed,
+                    format!(
+                        "extra of kind {:?} -> kind {xk:?}: listed {}",
+                        p.kind,
+                        set.contains(&hk(x))
+                    ),
+                );
+            }
+        }
+        for (kind, n) in per_kind {
+            if n > 1 {
+                bump(&mut kind_repeats, format!("kind {kind} x{n}"));
+            }
+        }
+    }
+    writeln!(
+        out,
+        "\n## H2 NPC_ PNAM lists (entries not an HDPT: {non_hdpt}); list sizes: {list_sizes:?}"
+    )?;
+    writeln!(
+        out,
+        "HNAM extras of listed parts, listed too or not: {extra_listed:?}"
+    )?;
+    writeln!(
+        out,
+        "lists naming one PNAM kind more than once: {kind_repeats:?}"
+    )?;
+    writeln!(out, "listed parts with CTDA: {listed_conditional}")?;
+    writeln!(
+        out,
+        "NPC_ without PNAM, by their race's HEAD sections: {empty_by_race_head:?}"
+    )?;
+    writeln!(out, "\n## H3 RACE HEAD placement: {race_marks:?}")?;
+    // H4: head part models against the skeletons of the races naming them.
+    let mut skeletons: HashMap<String, Option<Skel>> = HashMap::new();
+    let mut fits: BTreeMap<String, Fit> = BTreeMap::new();
+    let mut missing: BTreeMap<String, u64> = BTreeMap::new();
+    let mut done: std::collections::HashSet<(String, String)> = Default::default();
+    let mut race_skels: HashMap<(String, u32), [Option<String>; 2]> = HashMap::new();
+    for k in keys(store, b"RACE") {
+        let Some(r) = db.get(&k) else { continue };
+        let mut marker = None;
+        let mut s: [Option<String>; 2] = [None, None];
+        for (sig, d) in &r.fields {
+            match sig {
+                b"MNAM" => marker = Some(0),
+                b"FNAM" => marker = Some(1),
+                b"NAM1" | b"NAM3" => marker = None,
+                b"ANAM" => {
+                    if let Some(i) = marker {
+                        s[i] = Some(text(d));
+                    }
+                }
+                _ => {}
+            }
+        }
+        race_skels.insert(hk(&k), s);
+    }
+    for k in keys(store, b"NPC_") {
+        let Some(r) = db.get(&k) else { continue };
+        let Some((rk, _)) = r
+            .one(b"RNAM")
+            .and_then(|d| u32_at(d, 0))
+            .and_then(|id| db.reference(&r, id))
+        else {
+            continue;
+        };
+        let section = r
+            .one(b"ACBS")
+            .and_then(|d| u32_at(d, 0))
+            .map_or(0, |f| (f & 1) as usize);
+        let Some(sp) = race_skels.get(&hk(&rk)).and_then(|s| s[section].clone()) else {
+            continue;
+        };
+        let mut listed: Vec<FormKey> = r
+            .all(b"PNAM")
+            .filter_map(|d| u32_at(d, 0).and_then(|id| db.reference(&r, id)))
+            .map(|(k, _)| k)
+            .collect();
+        if listed.is_empty() {
+            if let Some(h) = race_heads.get(&hk(&rk)) {
+                listed = h[section].clone();
+            }
+        }
+        for pk in listed {
+            let Some(p) = parts.get(&hk(&pk)) else {
+                continue;
+            };
+            let Some(model) = p.model.clone() else {
+                continue;
+            };
+            if !done.insert((model.to_lowercase(), sp.to_lowercase())) {
+                continue;
+            }
+            let skel = skeletons
+                .entry(sp.to_lowercase())
+                .or_insert_with(|| skeleton(vfs, m, &sp));
+            let Some(skel) = skel else { continue };
+            fit(
+                vfs,
+                m,
+                &model,
+                skel,
+                fits.entry(format!("kind {:?}", p.kind)).or_default(),
+            );
+            // Bone names of the model missing from the skeleton.
+            let b = Budget::new(m.limits.max_memory);
+            if let Some((key, bytes)) = read_model(vfs, &model, &b) {
+                if let Ok(n) = Nif::read(&bytes, &key, fo4_core::Game::Fallout4, &m.limits, &b) {
+                    for (si, blk) in n.blocks.iter().enumerate() {
+                        if !matches!(blk.decoded, Some(Data::Mesh(_))) {
+                            continue;
+                        }
+                        match fo4_nif::skin::shape_skin(&n, si, &key, &m.limits, &b) {
+                            Ok(Some(skin)) => {
+                                for bone in &skin.bones {
+                                    if let Some(name) = pose::name(&n, bone.node) {
+                                        if !skel.pose.bones.contains_key(name) {
+                                            bump(
+                                                &mut missing,
+                                                String::from_utf8_lossy(name).into_owned(),
+                                            );
+                                        }
+                                    }
+                                }
+                            }
+                            Ok(None) => bump(&mut missing, "<shape without skin>".into()),
+                            Err(e) => bump(&mut missing, format!("<skin error {}>", e.code)),
+                        }
+                    }
+                } else {
+                    bump(&mut missing, "<model not read>".into());
+                }
+            } else {
+                bump(&mut missing, "<model not found>".into());
+            }
+        }
+    }
+    writeln!(
+        out,
+        "\n## H4 head part models x the skeleton of the NPC_'s race section ({} pairs)",
+        done.len()
+    )?;
+    for (kind, f) in &fits {
+        writeln!(out, "{kind}: {} skinned shapes, {} with every bone in the skeleton ({} bone names missing); bind {:?}; rest {:?}; rest moves a vertex [<0.001, <0.01, <0.1, <1, <10, >=10] {:?}", f.shapes, f.all_bones_named, f.missing_bones, f.bind, f.rest, f.moved)?;
+        let mut v: Vec<_> = f.bind_translations.iter().collect();
+        v.sort_by_key(|a| std::cmp::Reverse(*a.1));
+        writeln!(out, "  bind translations {:?}", &v[..v.len().min(4)])?;
+    }
+    let mut v: Vec<_> = missing.into_iter().collect();
+    v.sort_by_key(|a| std::cmp::Reverse(a.1));
+    writeln!(
+        out,
+        "missing bone names (per shape and pair) {:?}",
+        &v[..v.len().min(20)]
+    )?;
+    Ok(())
+}
+
 fn placed(
     store: &Store,
     vfs: &fo4_vfs::Vfs,
@@ -907,6 +1225,7 @@ fn placed(
     let mut groups: BTreeMap<String, u64> = BTreeMap::new();
     let mut n = 0u64;
     let mut multi: BTreeMap<String, u64> = BTreeMap::new();
+    let mut heads: BTreeMap<String, u64> = BTreeMap::new();
     let cells: Vec<FormKey> = store.cells().collect();
     for cell in &cells {
         let Ok(children) = store.children(cell, &budget.child()) else {
@@ -994,9 +1313,68 @@ fn placed(
                     );
                 }
                 bump(&mut outcomes, outcome);
+                let drawable =
+                    a.plan.is_some() && a.state.ready_at(fo4_scene::RuleLevel::Hypotheses);
+                if drawable {
+                    let h = match a.plan.as_ref().and_then(|p| p.head.as_ref()) {
+                        None => "no head parts drawn".to_string(),
+                        Some(h) if h.state.ready_at(fo4_scene::RuleLevel::Hypotheses) => {
+                            format!(
+                                "head ready, {} parts{}",
+                                h.parts.len(),
+                                if h.from_race { ", race default" } else { "" }
+                            )
+                        }
+                        Some(h) => {
+                            let codes: std::collections::BTreeSet<String> = h
+                                .blockers
+                                .iter()
+                                .filter(|e| fo4_scene::hypotheses::covering(e).is_none())
+                                .map(|e| e.code.clone())
+                                .collect();
+                            format!("head blocked by {codes:?}")
+                        }
+                    };
+                    bump(&mut heads, h);
+                }
                 for note in &a.notes {
-                    if note.starts_with("head:") {
-                        bump(&mut notes, "head: not read".into());
+                    if let Some(rest) = note.strip_prefix("head: ") {
+                        let share = rest
+                            .split_once('(')
+                            .and_then(|(_, t)| t.split_once(" vertices"))
+                            .and_then(|(t, _)| t.split_once(" of "))
+                            .and_then(|(a, b)| {
+                                Some(a.parse::<f64>().ok()? / b.parse::<f64>().ok()?)
+                            });
+                        let covered = match share {
+                            Some(x) if x < 0.01 => "covered by a worn armour, under 1 % of its vertices on the head's main bone",
+                            Some(x) if x < 0.1 => "covered by a worn armour, 1 to 10 %",
+                            Some(x) if x < 0.5 => "covered by a worn armour, 10 to 50 %",
+                            _ => "covered by a worn armour, 50 % or more",
+                        };
+                        let kind = if rest.contains("has conditions") {
+                            "a listed part has conditions"
+                        } else if rest.contains("covered by worn armour") {
+                            covered
+                        } else if rest.contains("candidate part lists") {
+                            "template or leveled candidates give different lists"
+                        } else if rest.contains("race default") {
+                            "race default parts"
+                        } else if rest.ends_with(" parts") {
+                            "listed parts"
+                        } else {
+                            ""
+                        };
+                        let kind = if kind.is_empty() {
+                            let r: Vec<&str> = rest
+                                .split_whitespace()
+                                .filter(|w| !w.contains(".esm:") && !w.contains(".esp:"))
+                                .collect();
+                            format!("other: {}", r.join(" "))
+                        } else {
+                            kind.to_string()
+                        };
+                        bump(&mut notes, format!("head: {kind}"));
                     } else if note.starts_with("skin addon") {
                         bump(&mut notes, "skin addon hidden by worn armour slots".into());
                     } else if note.starts_with("outfit: none") {
@@ -1025,6 +1403,9 @@ fn placed(
         out,
         "notes on actors (an actor may have several): {notes:?}"
     )?;
+    let mut v: Vec<_> = heads.into_iter().collect();
+    v.sort_by_key(|a| std::cmp::Reverse(a.1));
+    writeln!(out, "heads of the actors drawable under hypotheses: {v:?}")?;
     let mut v: Vec<_> = multi.into_iter().collect();
     v.sort_by_key(|a| std::cmp::Reverse(a.1));
     writeln!(

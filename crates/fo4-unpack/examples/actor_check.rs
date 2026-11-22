@@ -80,9 +80,40 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             let mut parts = Vec::new();
             let mut lowest = f64::INFINITY;
             let mut points: Vec<(usize, [f64; 3], [f64; 3])> = Vec::new();
-            for (pi, part) in plan.parts.iter().enumerate() {
-                let path = String::from_utf8_lossy(&part.path).into_owned();
-                let info = loader.assets.with_decoded(part.asset, &budget.child(), |d| {
+            // Body parts, then head parts (index 100 and up).
+            let mut items: Vec<(usize, usize, &Vec<u8>, serde_json::Value)> = plan
+                .parts
+                .iter()
+                .enumerate()
+                .map(|(pi, part)| {
+                    (
+                        pi,
+                        part.asset,
+                        &part.path,
+                        serde_json::json!({
+                            "armor": format!("{}:{:06x}", part.armor.plugin, part.armor.object_id),
+                            "addon": format!("{}:{:06x}", part.addon.plugin, part.addon.object_id),
+                            "skin": part.skin,
+                        }),
+                    )
+                })
+                .collect();
+            if let Some(head) = &plan.head {
+                for (k, h) in head.parts.iter().enumerate() {
+                    items.push((
+                        100 + k,
+                        h.asset,
+                        &h.path,
+                        serde_json::json!({
+                            "head_part": format!("{}:{:06x}", h.part.plugin, h.part.object_id),
+                            "kind": h.kind,
+                        }),
+                    ));
+                }
+            }
+            for (pi, asset, part_path, label) in items {
+                let path = String::from_utf8_lossy(part_path).into_owned();
+                let info = loader.assets.with_decoded(asset, &budget.child(), |d| {
                     let DecodedAsset::Model(n) = d else { return Err(fo4_core::Error::new("Kind", "model", 0, "model", "other")) };
                     let scratch = budget.child();
                     let mut shapes = Vec::new();
@@ -143,13 +174,10 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     }
                     Ok(shapes)
                 })?;
-                parts.push(serde_json::json!({
-                    "armor": format!("{}:{:06x}", part.armor.plugin, part.armor.object_id),
-                    "addon": format!("{}:{:06x}", part.addon.plugin, part.addon.object_id),
-                    "skin": part.skin,
-                    "model": String::from_utf8_lossy(&part.path),
-                    "shapes": info,
-                }));
+                let mut label = label;
+                label["model"] = serde_json::json!(path);
+                label["shapes"] = serde_json::json!(info);
+                parts.push(label);
             }
             // Seams: vertices of different shapes at the same bind position
             // (stored plus the shape's bind translation, within 0.05 on each
@@ -158,6 +186,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             let mut seam_pairs = 0u64;
             let mut seam_max: f64 = 0.;
             let mut seam_bind_max: f64 = 0.;
+            // The same between a head part and a body part.
+            let (mut neck_pairs, mut neck_max, mut neck_bind_max) = (0u64, 0f64, 0f64);
             points.sort_by(|a, b| a.1[0].total_cmp(&b.1[0]));
             for i in 0..points.len() {
                 let mut j = i + 1;
@@ -176,6 +206,11 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                             .sum::<f64>()
                             .sqrt();
                         seam_bind_max = seam_bind_max.max(e);
+                        if (points[j].0 / 10000 >= 100) != (points[i].0 / 10000 >= 100) {
+                            neck_pairs += 1;
+                            neck_max = neck_max.max(d);
+                            neck_bind_max = neck_bind_max.max(e);
+                        }
                     }
                     j += 1;
                 }
@@ -196,6 +231,9 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 "seam_vertex_pairs": seam_pairs,
                 "seam_max_distance_in_bind": seam_bind_max,
                 "seam_max_distance_after_posing": seam_max,
+                "head_body_seam_vertex_pairs": neck_pairs,
+                "head_body_seam_max_distance_in_bind": neck_bind_max,
+                "head_body_seam_max_distance_after_posing": neck_max,
             });
         }
         report.push(item);

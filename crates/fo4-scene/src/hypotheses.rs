@@ -56,6 +56,7 @@ pub const ACTOR_SECTION: &str = "actor_acbs_bit0_second_section_v1";
 pub const ACTOR_ADDONS: &str = "armo_race_addons_drawn_v1";
 pub const ACTOR_SLOTS: &str = "actor_worn_slots_hide_skin_v1";
 pub const ACTOR_SKINNING: &str = "actor_skin_linear_blend_v1";
+pub const ACTOR_HEAD: &str = "npc_head_parts_unmorphed_v1";
 /// A clip posing an actor (`crate::actor::clip`, `spec/actor.md`, Clip pose).
 pub const ACTOR_CLIP_SKELETON: &str = "actor_clip_skeleton_beside_nif_v1";
 pub const ACTOR_CLIP_POSE: &str = "actor_clip_pose_by_bone_name_v1";
@@ -130,6 +131,7 @@ fn actor_rule(code: &str) -> Option<&'static str> {
         "UnverifiedActorAddons" => Some(ACTOR_ADDONS),
         "UnverifiedActorSkinSlots" => Some(ACTOR_SLOTS),
         "UnverifiedActorSkinning" => Some(ACTOR_SKINNING),
+        "UnverifiedActorHeadParts" => Some(ACTOR_HEAD),
         "UnverifiedActorClipSkeleton" => Some(ACTOR_CLIP_SKELETON),
         "UnverifiedActorClipPose" => Some(ACTOR_CLIP_POSE),
         _ => None,

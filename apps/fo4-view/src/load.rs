@@ -133,9 +133,20 @@ pub fn actor_lines(
         } else {
             format!("; {}", a.notes.join("; "))
         };
+        let head: Vec<String> = build
+            .actor_head_omissions
+            .iter()
+            .filter(|o| o.instance == *index)
+            .flat_map(|o| o.causes.iter().map(|e| format!("{} {}", e.code, e.found)))
+            .collect();
+        let head = if head.is_empty() {
+            String::new()
+        } else {
+            format!("; head parts left out: {}", head.join(", "))
+        };
         match (omission, &a.plan) {
             (None, Some(plan)) => out.push(format!(
-                "actor {id} (tag {index}): drawn, section {}, {} parts{notes}",
+                "actor {id} (tag {index}): drawn, section {}, {} parts{notes}{head}",
                 plan.section + 1,
                 plan.parts.len()
             )),

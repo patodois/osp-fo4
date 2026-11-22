@@ -1,5 +1,5 @@
-//! Records of the placed actor chain: ACHR, NPC_, RACE, OTFT, ARMO, ARMA and
-//! the leveled lists LVLN and LVLI. Every layout here was established by a
+//! Records of the placed actor chain: ACHR, NPC_, RACE, HDPT, OTFT, ARMO,
+//! ARMA and the leveled lists LVLN and LVLI. Every layout here was established by a
 //! census of the winning records of one installation (`spec/actor.md`):
 //! sizes, offsets, value distributions and the share of FormIDs that resolve
 //! to a record of the expected type. Subrecords not listed stay raw: their
@@ -205,7 +205,7 @@ pub struct Npc {
     pub skin: Option<FormRef>,
     /// OTFT (DOFT).
     pub outfit: Option<FormRef>,
-    /// HDPT (PNAM, repeated); not drawn by this step.
+    /// HDPT (PNAM, repeated).
     pub head_parts: Vec<FormRef>,
     pub unread: Vec<usize>,
 }
@@ -277,8 +277,11 @@ pub struct Race {
     pub skin: Option<FormRef>,
     #[serde(serialize_with = "serialize_paths")]
     pub skeletons: [Option<Vec<u8>>; 2],
-    /// HDPT (HEAD, repeated); not drawn by this step.
+    /// HDPT (HEAD, repeated), every one.
     pub head_parts: Vec<FormRef>,
+    /// The HEAD of each section: after an NAM0 marker, then MNAM (0) or
+    /// FNAM (1), as all 141 HEAD of one installation are.
+    pub section_head_parts: [Vec<FormRef>; 2],
     pub unread: Vec<usize>,
 }
 fn serialize_paths<S: serde::Serializer>(
@@ -298,13 +301,19 @@ impl Race {
         let skin = d.form(b"WNAM")?;
         let mut skeletons: [Option<Vec<u8>>; 2] = [None, None];
         let mut section = None;
+        let mut head_group = false;
         let mut head_parts = Vec::new();
+        let mut section_head_parts: [Vec<FormRef>; 2] = [Vec::new(), Vec::new()];
         for i in 0..r.subrecords.len() {
             match &r.subrecords[i].signature {
                 b"MNAM" => section = Some(0),
                 b"FNAM" => section = Some(1),
+                b"NAM0" => head_group = true,
                 // Later groups reuse the markers for other fields.
-                b"NAM1" | b"NAM3" => section = None,
+                b"NAM1" | b"NAM3" => {
+                    section = None;
+                    head_group = false;
+                }
                 b"ANAM" => {
                     let Some(k) = section else {
                         return Err(Error::new(
@@ -330,6 +339,9 @@ impl Race {
                 b"HEAD" => {
                     d.read[i] = true;
                     let f = d.form_at(i)?;
+                    if let (true, Some(k)) = (head_group, section) {
+                        d.push(&mut section_head_parts[k], f.clone(), i)?;
+                    }
                     d.push(&mut head_parts, f, i)?;
                 }
                 _ => {}
@@ -339,6 +351,69 @@ impl Race {
             skin,
             skeletons,
             head_parts,
+            section_head_parts,
+            unread: d.unread()?,
+        })
+    }
+}
+
+/// A head part (HDPT): its model (MODL), the u32 of PNAM (a kind: 0 for
+/// the 154 parts that other parts name in HNAM but 2), the DATA byte (bit 3
+/// set in those 154 and 2 more), the further parts it names (HNAM, 0 to 3)
+/// and the number of its conditions (CTDA, 32 bytes each; 40 of 420
+/// records). TNAM (a TXST), RNAM (a FLST), NAM0 and NAM1 (morph files)
+/// stay unread.
+#[derive(Debug, Serialize)]
+pub struct Hdpt {
+    #[serde(serialize_with = "serialize_path")]
+    pub model: Option<Vec<u8>>,
+    pub kind: Option<u32>,
+    pub flags: Option<u8>,
+    pub extra_parts: Vec<FormRef>,
+    pub conditions: usize,
+    pub unread: Vec<usize>,
+}
+fn serialize_path<S: serde::Serializer>(
+    v: &Option<Vec<u8>>,
+    s: S,
+) -> std::result::Result<S::Ok, S::Error> {
+    s.serialize_some(&v.as_ref().map(|p| String::from_utf8_lossy(p).into_owned()))
+}
+impl Hdpt {
+    pub fn decode(r: &Record, ctx: Context<'_>, b: &Budget) -> Result<Self> {
+        let mut d = Reader::new(r, ctx, b"HDPT", b)?;
+        let model = match d.single(b"MODL")? {
+            Some(i) => Some(d.path_at(i)?),
+            None => None,
+        };
+        let kind = d.word(b"PNAM")?;
+        let flags = match d.single(b"DATA")? {
+            Some(i) => Some(d.sized(i, 1)?[0]),
+            None => None,
+        };
+        let mut extra_parts = Vec::new();
+        let mut conditions = 0;
+        for i in 0..r.subrecords.len() {
+            match &r.subrecords[i].signature {
+                b"HNAM" => {
+                    d.read[i] = true;
+                    let f = d.form_at(i)?;
+                    d.push(&mut extra_parts, f, i)?;
+                }
+                b"CTDA" => {
+                    d.sized(i, 32)?;
+                    d.read[i] = true;
+                    conditions += 1;
+                }
+                _ => {}
+            }
+        }
+        Ok(Self {
+            model,
+            kind,
+            flags,
+            extra_parts,
+            conditions,
             unread: d.unread()?,
         })
     }
@@ -740,6 +815,49 @@ mod tests {
     }
 
     #[test]
+    fn hdpt_reads_model_kind_flags_extras_and_counts_conditions() {
+        let o = order();
+        let ctx = Context {
+            order: &o,
+            plugin: 0,
+        };
+        let b = Budget::new(1 << 20);
+        let r = rec(
+            b"HDPT",
+            &[
+                (b"MODL", b"a\\head.nif\0".to_vec()),
+                (b"DATA", vec![3]),
+                (b"PNAM", 1u32.to_le_bytes().to_vec()),
+                (b"HNAM", id(0x880)),
+                (b"HNAM", id(0x881)),
+                (b"CTDA", vec![0; 32]),
+                (b"TNAM", id(0x890)),
+            ],
+        );
+        let h = Hdpt::decode(&r, ctx, &b).unwrap();
+        assert_eq!(h.model.as_deref(), Some(&b"a\\head.nif"[..]));
+        assert_eq!((h.kind, h.flags, h.conditions), (Some(1), Some(3), 1));
+        assert_eq!(
+            h.extra_parts
+                .iter()
+                .map(|f| key(&Some(f.clone())))
+                .collect::<Vec<_>>(),
+            [0x880, 0x881]
+        );
+        assert_eq!(h.unread, [6]);
+        let bad = rec(b"HDPT", &[(b"DATA", vec![1, 2])]);
+        assert_eq!(
+            Hdpt::decode(&bad, ctx, &b).unwrap_err().code,
+            "ActorFieldSize"
+        );
+        let cond = rec(b"HDPT", &[(b"CTDA", vec![0; 28])]);
+        assert_eq!(
+            Hdpt::decode(&cond, ctx, &b).unwrap_err().code,
+            "ActorFieldSize"
+        );
+    }
+
+    #[test]
     fn race_skeletons_follow_their_section_markers_only() {
         let o = order();
         let ctx = Context {
@@ -759,13 +877,28 @@ mod tests {
                 (b"MNAM", vec![]),
                 (b"MODL", b"other.egt\0".to_vec()),
                 (b"HEAD", id(0x870)),
+                (b"NAM0", vec![]),
+                (b"MNAM", vec![]),
+                (b"INDX", vec![0; 4]),
+                (b"HEAD", id(0x871)),
+                (b"NAM0", vec![]),
+                (b"FNAM", vec![]),
+                (b"HEAD", id(0x872)),
+                (b"HEAD", id(0x873)),
             ],
         );
         let race = Race::decode(&r, ctx, &b).unwrap();
         assert_eq!(race.skeletons[0].as_deref(), Some(&b"a\\first.nif"[..]));
         assert_eq!(race.skeletons[1].as_deref(), Some(&b"a\\second.nif"[..]));
         assert_eq!(key(&race.skin), 0x840);
-        assert_eq!(race.head_parts.len(), 1);
+        assert_eq!(race.head_parts.len(), 4);
+        // Only HEAD after NAM0 and a section marker belongs to a section.
+        assert_eq!(
+            race.section_head_parts
+                .each_ref()
+                .map(|v| v.iter().map(|f| key(&Some(f.clone()))).collect::<Vec<_>>()),
+            [vec![0x871], vec![0x872, 0x873]]
+        );
         let loose = rec(b"RACE", &[(b"ANAM", b"x.nif\0".to_vec())]);
         assert_eq!(
             Race::decode(&loose, ctx, &b).unwrap_err().code,

@@ -174,8 +174,11 @@ hypotheses against the commit before, in the cases of
 pixels differ, an interior without actors 19, the test cell alone 0, with
 `--terrain --around 1` 1,549 and from the creature's pose 4,235,
 `--walk --terrain --around 2` 470 and the `--path` walk 63 (its walked
-positions unchanged). Without `--under-hypotheses`: 1,019, 0, 0, 6,741 and
-6,026 pixels in the cases that run without rules.
+positions unchanged). Without `--under-hypotheses`: the creature's pose
+and `--terrain --around 1` 6,026 and 6,741 pixels, the two interiors and
+the test cell alone 0. (A first count of 1,019 pixels in the interior
+without actors was run-to-run variation: that frame without
+`--under-hypotheses` differs between two runs of one binary.)
 
 **Open: the root's own transform.** 1,603 files have a rotated root node
 (578 named by a base record). For 431 OBND records the box fits only when

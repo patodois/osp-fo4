@@ -47,6 +47,8 @@ pub struct Build {
     pub actors: Vec<u32>,
     /// Shapes of drawn actor models without a skin, not drawn.
     pub actor_rigid_shapes: u64,
+    /// Heads of drawn actors, or parts of them, left out, with the causes.
+    pub actor_head_omissions: Vec<Omission>,
     pub list: DrawList,
     pub instances: Vec<Identity>,
     pub omitted: Vec<Omission>,
@@ -1495,28 +1497,7 @@ impl Builder<'_, '_> {
         self.skeleton(plan.skeleton_asset)?;
         let first = self.output.list.draws.len();
         for part in &plan.parts {
-            let scratch = self.budget.child();
-            let loader = self.loader;
-            let path = &loader.assets.nodes[part.asset].path;
-            loader.assets.with_decoded(part.asset, &scratch, |d| {
-                let DecodedAsset::Model(n) = d else {
-                    return Err(error("RenderAssetKind", "actor model", 0, part.asset));
-                };
-                let mut active = Vec::new();
-                for root in n.roots.iter().filter(|r| **r >= 0) {
-                    self.actor_node(
-                        &n,
-                        path,
-                        *root as usize,
-                        world,
-                        index,
-                        plan.skeleton_asset,
-                        &mut active,
-                        0,
-                    )?;
-                }
-                Ok(())
-            })?;
+            self.actor_model(part.asset, world, index, plan.skeleton_asset)?;
         }
         if self.output.list.draws.len() == first {
             return Err(error(
@@ -1525,6 +1506,94 @@ impl Builder<'_, '_> {
                 src.offset,
                 a.reference.object_id,
             ));
+        }
+        if let Some(head) = &plan.head {
+            self.actor_head(a, head, world, index, plan.skeleton_asset)?;
+        }
+        Ok(())
+    }
+    /// Draws the skinned shapes of one actor model.
+    fn actor_model(
+        &mut self,
+        asset: usize,
+        world: Transform,
+        index: u32,
+        skeleton: usize,
+    ) -> Result<()> {
+        let scratch = self.budget.child();
+        let loader = self.loader;
+        let path = &loader.assets.nodes[asset].path;
+        loader.assets.with_decoded(asset, &scratch, |d| {
+            let DecodedAsset::Model(n) = d else {
+                return Err(error("RenderAssetKind", "actor model", 0, asset));
+            };
+            let mut active = Vec::new();
+            for root in n.roots.iter().filter(|r| **r >= 0) {
+                self.actor_node(
+                    &n,
+                    path,
+                    *root as usize,
+                    world,
+                    index,
+                    skeleton,
+                    &mut active,
+                    0,
+                )?;
+            }
+            Ok(())
+        })
+    }
+    /// Draws an actor's head parts (`npc_head_parts_unmorphed_v1`). A head
+    /// not ready at the build's level, and each part that fails, is an
+    /// entry of `Build::actor_head_omissions`; the body stays drawn.
+    fn actor_head(
+        &mut self,
+        a: &fo4_scene::actor::Actor,
+        head: &fo4_scene::actor::Head,
+        world: Transform,
+        index: u32,
+        skeleton: usize,
+    ) -> Result<()> {
+        let mut causes = Vec::new();
+        if !head.state.ready_at(self.options.level) {
+            let src = &a.source;
+            append(
+                &mut causes,
+                error(
+                    "ActorHeadNotDrawable",
+                    &src.file,
+                    src.offset,
+                    format!("{:?} at rule level {:?}", head.state, self.options.level),
+                ),
+                self.budget,
+            )?;
+            for e in head
+                .blockers
+                .iter()
+                .filter(|x| fo4_scene::hypotheses::covering(x).is_none())
+            {
+                append(&mut causes, e.clone(), self.budget)?;
+            }
+        } else {
+            self.allow(head.state.hypotheses());
+            for part in &head.parts {
+                let first = self.output.list.draws.len();
+                if let Err(e) = self.actor_model(part.asset, world, index, skeleton) {
+                    self.output.list.draws.truncate(first);
+                    append(&mut causes, e, self.budget)?;
+                }
+            }
+        }
+        if !causes.is_empty() {
+            append(
+                &mut self.output.actor_head_omissions,
+                Omission {
+                    instance: index,
+                    reference: a.reference.clone(),
+                    causes,
+                },
+                self.budget,
+            )?;
         }
         Ok(())
     }
@@ -1632,6 +1701,7 @@ fn build_inner(
             skipped_editor_marker_subtrees: 0,
             actors: Vec::new(),
             actor_rigid_shapes: 0,
+            actor_head_omissions: Vec::new(),
             list: DrawList::default(),
             instances: Vec::new(),
             omitted: Vec::new(),

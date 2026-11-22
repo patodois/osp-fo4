@@ -37,9 +37,11 @@ capsule over a cell's collision under provisional, registered rules.
 - **Actors**: placed actors (ACHR) followed to their skeleton and the
   armour addon models they wear, with record layouts measured on the game's
   plugins, and drawn by the GPU viewer standing in the skeleton's rest pose,
-  skinned once on the CPU under pending rules; heads are not read, and an
-  actor whose look the data does not settle (leveled lists, unresolved
-  outfits) is left out with its reasons ([actors](spec/actor.md)). With
+  skinned once on the CPU under pending rules, with the head parts the
+  data names drawn unmorphed (no face morphs or tints); an actor whose
+  look the data does not settle (leveled lists, unresolved outfits) is
+  left out with its reasons, and a head that is not settled leaves only
+  the head out ([actors](spec/actor.md)). With
   `--actor-clip` a named Havok animation clip (spline-compressed, decoded
   from measured layouts: [Havok animation](spec/havok-animation.md)) poses
   the actors whose skeleton it fits, looping in the window.
@@ -182,7 +184,7 @@ Placed actors are drawn by default when the level accepts their pending
 rules (`--under-hypotheses`): each one stands at its placement in its
 skeleton's rest pose with the skin and outfit models the data settles,
 skinned once at load, and the viewer prints one line per actor saying what
-was drawn or why not (for example `head: not read`). `--no-actors` leaves
+was drawn or why not (for example `head: covered by worn armour`). `--no-actors` leaves
 them out; the frames and tags are then byte-identical to those before
 actors (checked on the headless cases above and at `--around` 1 and 2). At
 the test cell with `--walk --terrain --around 1`, 1 of its 11 placed actors

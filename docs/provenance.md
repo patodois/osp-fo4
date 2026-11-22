@@ -211,3 +211,11 @@ and with the skeleton comparison of the actor step. That a block of nine
 words may be stored by rows or by columns was known in general terms and
 decided by those counts. No reader, editor, renderer or documentation of
 the format beyond the sources already cited in spec/nif.md was opened.
+
+The head parts (`fo4_plugin::actor::Hdpt`, the RACE HEAD sections, and
+their drawing under `npc_head_parts_unmorphed_v1`, [spec/actor.md](../spec/actor.md),
+Heads) were established the same way as the actor records: subrecord
+sizes, values and FormID targets counted over every winning record, and
+the head part models fitted against the race skeletons with the existing
+skinning code. No schema, editor, face-generation reader or documentation
+of these records was opened or searched for.

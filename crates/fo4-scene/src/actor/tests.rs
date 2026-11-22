@@ -138,6 +138,7 @@ fn fixture() -> Fixture {
     fs::create_dir_all(root.join("meshes/actors")).unwrap();
     fs::write(root.join("meshes/actors/skel.nif"), skeleton([5., 0., 0.])).unwrap();
     fs::write(root.join("meshes/actors/body.nif"), model()).unwrap();
+    fs::write(root.join("meshes/actors/head.nif"), model()).unwrap();
     let acbs = |flags: u32, template: u16| {
         let mut v = vec![0u8; 20];
         v[0..4].copy_from_slice(&flags.to_le_bytes());
@@ -188,7 +189,22 @@ fn fixture() -> Fixture {
     lvli.extend(lvlo(1, 0x823));
     let mut templated = sub(b"TPLT", &id(0x830));
     templated.extend(sub(b"TPTA", &[id(0x830), vec![0; 48]].concat()));
-    let references = [achr(0x900, 0x803), achr(0x901, 0x804), achr(0x902, 0x805)].concat();
+    let references = [
+        achr(0x900, 0x803),
+        achr(0x901, 0x804),
+        achr(0x902, 0x805),
+        achr(0x903, 0x807),
+    ]
+    .concat();
+    let hdpt = |conditions: usize| {
+        let mut d = sub(b"MODL", b"actors\\head.nif\0");
+        d.extend(sub(b"DATA", &[3]));
+        d.extend(sub(b"PNAM", &id(1)));
+        for _ in 0..conditions {
+            d.extend(sub(b"CTDA", &[0; 32]));
+        }
+        d
+    };
     let mut cell = sub(b"EDID", b"ActorRoom\0");
     cell.extend(sub(b"DATA", &1u16.to_le_bytes()));
     let mut body = group(
@@ -200,7 +216,10 @@ fn fixture() -> Fixture {
         ]
         .concat(),
     );
-    body.extend(npc(0x803, 0x820, &[], 0));
+    body.extend(npc(0x803, 0x820, &sub(b"PNAM", &id(0x850)), 0));
+    body.extend(npc(0x807, 0x820, &sub(b"PNAM", &id(0x851)), 0));
+    body.extend(record(b"HDPT", 0x850, 0, &hdpt(0)));
+    body.extend(record(b"HDPT", 0x851, 0, &hdpt(1)));
     body.extend(npc(0x806, 0x822, &[], 0));
     body.extend(npc(0x804, 0x820, &templated, 1));
     body.extend(npc(0x805, 0x820, &sub(b"DOFT", &id(0x840)), 0));
@@ -233,6 +252,7 @@ fn fixture() -> Fixture {
             files: vec![
                 "meshes/actors/skel.nif".into(),
                 "meshes/actors/body.nif".into(),
+                "meshes/actors/head.nif".into(),
             ],
         }],
         required_masters: vec![],
@@ -317,7 +337,7 @@ fn placed_actors_resolve_to_a_skeleton_and_addon_models_or_say_why_not() {
     let mut loader = Loader::new(&store, &v, "english", crate::RuleLevel::Hypotheses, &b);
     let scene = loader.by_editor_id("ActorRoom", &b).unwrap();
     let actors = resolve(&scene, &mut loader, &b).unwrap();
-    assert_eq!(actors.actors.len(), 3);
+    assert_eq!(actors.actors.len(), 4);
     let plain = &actors.actors[0];
     let plan = plain.plan.as_ref().expect("resolved");
     assert_eq!(plan.skeleton, b"meshes/actors/skel.nif");
@@ -344,6 +364,31 @@ fn placed_actors_resolve_to_a_skeleton_and_addon_models_or_say_why_not() {
     assert!(!hypotheses.contains(&hypotheses::ACTOR_CANDIDATES));
     assert!(plain.state.ready_at(crate::RuleLevel::Hypotheses));
     assert!(!plain.state.ready_at(crate::RuleLevel::Measured));
+    // Its listed head part, skinned like an addon, under its own rule.
+    let head = plan.head.as_ref().expect("head");
+    assert!(!head.from_race);
+    assert_eq!(head.parts.len(), 1);
+    assert_eq!(head.parts[0].path, b"meshes/actors/head.nif");
+    assert_eq!(head.parts[0].kind, Some(1));
+    let crate::State::ReadyUnderHypotheses { hypotheses: rules } = &head.state else {
+        panic!("{:?} {:?}", head.state, head.blockers)
+    };
+    assert!(rules.contains(&hypotheses::ACTOR_HEAD));
+    assert!(!hypotheses.contains(&hypotheses::ACTOR_HEAD));
+    assert!(plain.notes.iter().any(|n| n == "head: 1 parts"));
+    // A listed part with conditions leaves the head out, not the actor.
+    let conditional = &actors.actors[3];
+    let plan = conditional.plan.as_ref().expect("resolved");
+    assert!(plan.head.is_none());
+    assert!(conditional.state.ready_at(crate::RuleLevel::Hypotheses));
+    assert!(
+        conditional
+            .notes
+            .iter()
+            .any(|n| n.starts_with("head: part ") && n.ends_with("has conditions; not drawn")),
+        "{:?}",
+        conditional.notes
+    );
     // A leveled template whose two entries wear different skins.
     let leveled = &actors.actors[1];
     assert!(leveled.plan.is_none());

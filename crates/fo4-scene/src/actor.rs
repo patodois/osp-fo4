@@ -14,11 +14,11 @@ mod tests;
 use crate::{hypotheses, paths::Citation, AssetKind, Loader, Scene, State};
 use fo4_core::{Budget, Error, Result, SourceSpan};
 use fo4_plugin::{
-    actor::{Achr, Arma, Armo, Context, Leveled, Npc, Otft, Race},
+    actor::{Achr, Arma, Armo, Context, Hdpt, Leveled, Npc, Otft, Race},
     FormKey, Record,
 };
 use serde::Serialize;
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 /// Bound on the templates and leveled-list entries followed for one actor.
 pub const MAX_CANDIDATES: u64 = 256;
@@ -36,6 +36,27 @@ pub struct Part {
     pub path: Vec<u8>,
     pub asset: usize,
 }
+/// One head part model drawn for an actor (`npc_head_parts_unmorphed_v1`).
+#[derive(Debug, Serialize)]
+pub struct HeadPart {
+    pub part: FormKey,
+    /// HDPT PNAM.
+    pub kind: Option<u32>,
+    #[serde(serialize_with = "fo4_core::serialize_hex")]
+    pub path: Vec<u8>,
+    pub asset: usize,
+}
+/// An actor's head: its parts, the blockers of their models and the rule
+/// they rest on, and the state those give. A head that is not ready at a
+/// level leaves the head out, not the actor.
+#[derive(Debug, Serialize)]
+pub struct Head {
+    pub parts: Vec<HeadPart>,
+    /// The parts are the race's HEAD of the section (the NPC_ lists none).
+    pub from_race: bool,
+    pub blockers: Vec<Error>,
+    pub state: State,
+}
 /// What an actor is drawn with.
 #[derive(Debug, Serialize)]
 pub struct Plan {
@@ -46,6 +67,7 @@ pub struct Plan {
     pub skeleton: Vec<u8>,
     pub skeleton_asset: usize,
     pub parts: Vec<Part>,
+    pub head: Option<Head>,
 }
 #[derive(Debug, Serialize)]
 pub struct Actor {
@@ -111,7 +133,9 @@ struct Look {
     outfit: BTreeSet<Option<FormKey>>,
     templated: bool,
     leveled: bool,
-    head_parts: u64,
+    /// Per NPC_ visited: its PNAM head parts, sorted, or its race's HEAD of
+    /// its section when it lists none (marked true).
+    heads: BTreeSet<(Vec<FormKey>, bool)>,
     visits: u64,
 }
 fn gather(
@@ -168,19 +192,29 @@ fn gather(
             let flags = n
                 .flags
                 .ok_or_else(|| format!("base {}: no ACBS", short(key)))?;
-            look.head_parts += n.head_parts.len() as u64;
+            let Some((rr, rp)) = read(loader, &race, &work)
+                .map_err(|e| format!("race {}: {}", short(&race), e.code))?
+            else {
+                return Err(format!("race {}: no winning record", short(&race)));
+            };
+            let race_record = Race::decode(&rr, ctx(loader, rp), &work)
+                .map_err(|e| format!("race {}: {}", short(&race), e.code))?;
+            let mut heads: Vec<FormKey> =
+                n.head_parts.iter().filter_map(|f| f.key.clone()).collect();
+            let from_race = heads.is_empty();
+            if from_race {
+                heads.extend(
+                    race_record.section_head_parts[(flags & 1) as usize]
+                        .iter()
+                        .filter_map(|f| f.key.clone()),
+                );
+            }
+            heads.sort();
+            heads.dedup();
+            look.heads.insert((heads, from_race));
             let skin = match n.skin.as_ref().and_then(|f| f.key.clone()) {
                 Some(k) => Some(k),
-                None => {
-                    let Some((rr, rp)) = read(loader, &race, &work)
-                        .map_err(|e| format!("race {}: {}", short(&race), e.code))?
-                    else {
-                        return Err(format!("race {}: no winning record", short(&race)));
-                    };
-                    let race_record = Race::decode(&rr, ctx(loader, rp), &work)
-                        .map_err(|e| format!("race {}: {}", short(&race), e.code))?;
-                    race_record.skin.and_then(|f| f.key)
-                }
+                None => race_record.skin.and_then(|f| f.key),
             };
             look.race.insert(race);
             look.section.insert((flags & 1) as usize);
@@ -473,13 +507,7 @@ pub fn resolve_reference(
             "every template or leveled candidate agrees",
         )?;
     }
-    if look.head_parts > 0 {
-        note(
-            &mut actor.notes,
-            format!("head: not read ({} head parts)", look.head_parts),
-            b,
-        )?;
-    }
+
     // Race: skeleton of the section.
     let Some((rr, rp)) = read(loader, &race, &work)? else {
         note(
@@ -490,16 +518,6 @@ pub fn resolve_reference(
         return Ok(actor);
     };
     let race_record = Race::decode(&rr, ctx(loader, rp), &work)?;
-    if !race_record.head_parts.is_empty() && look.head_parts == 0 {
-        note(
-            &mut actor.notes,
-            format!(
-                "head: not read ({} race head parts)",
-                race_record.head_parts.len()
-            ),
-            b,
-        )?;
-    }
     let Some(skeleton) = race_record.skeletons[section].clone() else {
         note(
             &mut actor.notes,
@@ -697,12 +715,240 @@ pub fn resolve_reference(
     }
     actor.state = hypotheses::classify(&blockers, false, b)?;
     actor.blockers = blockers;
+    let head = match look.heads.len() {
+        0 => None,
+        1 => {
+            let (list, from_race) = look.heads.pop_first().expect("one head list");
+            head(loader, &list, from_race, &parts, src, &mut actor.notes, b)?
+        }
+        n => {
+            note(
+                &mut actor.notes,
+                format!("head: {n} candidate part lists; not drawn"),
+                b,
+            )?;
+            None
+        }
+    };
     actor.plan = Some(Plan {
         race,
         section,
         skeleton: skeleton_key,
         skeleton_asset,
         parts,
+        head,
     });
     Ok(actor)
+}
+
+/// Per bone name of the skinned shapes of model `asset`: the sum of its
+/// vertex weights and the number of vertices whose largest weight it has;
+/// and the number of vertices.
+type Profile = (BTreeMap<Vec<u8>, (f64, u64)>, u64);
+fn skin_profile(loader: &Loader<'_>, asset: usize, b: &Budget) -> Result<Profile> {
+    let scratch = b.child();
+    let out = loader.assets.with_decoded(asset, &scratch, |d| {
+        let crate::DecodedAsset::Model(n) = d else {
+            return Ok((BTreeMap::new(), 0));
+        };
+        let file = String::from_utf8_lossy(&loader.assets.nodes[asset].path).into_owned();
+        let mut bones: BTreeMap<Vec<u8>, (f64, u64)> = BTreeMap::new();
+        let mut vertices = 0u64;
+        for i in 0..n.blocks.len() {
+            let Some(fo4_nif::Data::Mesh(m)) = &n.blocks[i].decoded else {
+                continue;
+            };
+            let Some(skin) =
+                fo4_nif::skin::shape_skin(&n, i, &file, loader.vfs.limits(), &scratch)?
+            else {
+                continue;
+            };
+            let names: Vec<Option<&[u8]>> = skin
+                .bones
+                .iter()
+                .map(|bone| pose::name(&n, bone.node))
+                .collect();
+            for v in m.vertices.iter().flatten() {
+                let Some(w) = fo4_nif::skin::vertex_weights(n.bytes, v) else {
+                    continue;
+                };
+                vertices += 1;
+                let mut best: Option<(f32, usize)> = None;
+                for (weight, bone) in w.weights.iter().zip(w.bones) {
+                    let Some(Some(name)) = names.get(bone as usize) else {
+                        continue;
+                    };
+                    if *weight > 0. {
+                        bones.entry(name.to_vec()).or_default().0 += f64::from(*weight);
+                        if best.is_none_or(|(x, _)| *weight > x) {
+                            best = Some((*weight, bone as usize));
+                        }
+                    }
+                }
+                if let Some((_, k)) = best {
+                    if let Some(Some(name)) = names.get(k) {
+                        bones.entry(name.to_vec()).or_default().1 += 1;
+                    }
+                }
+            }
+        }
+        Ok((bones, vertices))
+    })?;
+    b.charge(
+        out.0.keys().map(|n| n.len() as u64 + 48).sum(),
+        "actor bone profile",
+        0,
+    )?;
+    Ok(out)
+}
+
+/// The head of an actor whose head part list is settled
+/// (`npc_head_parts_unmorphed_v1`): every listed part's model, unless a
+/// part has conditions or a worn outfit addon covers the head (has vertices
+/// whose largest weight is on the bone carrying most of the head parts'
+/// weight).
+fn head(
+    loader: &mut Loader<'_>,
+    list: &[FormKey],
+    from_race: bool,
+    parts: &[Part],
+    src: &SourceSpan,
+    notes: &mut Vec<String>,
+    b: &Budget,
+) -> Result<Option<Head>> {
+    if list.is_empty() {
+        return Ok(None);
+    }
+    let work = b.child();
+    let mut head = Head {
+        parts: Vec::new(),
+        from_race,
+        blockers: Vec::new(),
+        state: State::Blocked,
+    };
+    let mut path_rules: Vec<&'static str> = Vec::new();
+    for k in list {
+        let Some((r, plugin)) = read(loader, k, &work)? else {
+            note(
+                notes,
+                format!("head: part {} has no winning record; not drawn", short(k)),
+                b,
+            )?;
+            return Ok(None);
+        };
+        if r.signature != *b"HDPT" {
+            note(
+                notes,
+                format!("head: part {} is not an HDPT; not drawn", short(k)),
+                b,
+            )?;
+            return Ok(None);
+        }
+        let h = Hdpt::decode(&r, ctx(loader, plugin), &work)?;
+        if h.conditions > 0 {
+            note(
+                notes,
+                format!("head: part {} has conditions; not drawn", short(k)),
+                b,
+            )?;
+            return Ok(None);
+        }
+        let Some(raw) = h.model else {
+            note(
+                notes,
+                format!("head: part {} has no model; not drawn", short(k)),
+                b,
+            )?;
+            return Ok(None);
+        };
+        let resolved = match loader.assets.resolve_path(Citation::RecordModel, &raw, b) {
+            Ok(r) => r,
+            Err(e) => {
+                note(
+                    notes,
+                    format!("head: part {} model: {}; not drawn", short(k), e.code),
+                    b,
+                )?;
+                return Ok(None);
+            }
+        };
+        for p in &resolved.hypotheses {
+            if !path_rules.contains(p) {
+                path_rules.push(p);
+            }
+        }
+        let asset = loader.assets.load(AssetKind::Model, &resolved.key, b)?;
+        b.reserve(&mut head.parts, 1, "actor head", 0)?;
+        head.parts.push(HeadPart {
+            part: k.clone(),
+            kind: h.kind,
+            path: resolved.key,
+            asset,
+        });
+    }
+    // The head's main bone: the one carrying the largest share of the head
+    // parts' vertex weight. A worn outfit addon with vertices whose largest
+    // weight is on that bone covers the head.
+    let mut head_bones: BTreeMap<Vec<u8>, (f64, u64)> = BTreeMap::new();
+    for p in &head.parts {
+        for (k, v) in skin_profile(loader, p.asset, &work)?.0 {
+            let e = head_bones.entry(k).or_default();
+            e.0 += v.0;
+            e.1 += v.1;
+        }
+    }
+    let main = head_bones
+        .iter()
+        .max_by(|a, b| a.1 .0.total_cmp(&b.1 .0))
+        .map(|(k, _)| k.clone());
+    if let Some(main) = main {
+        for p in parts.iter().filter(|p| !p.skin) {
+            let (bones, total) = skin_profile(loader, p.asset, &work)?;
+            let on_main = bones.get(&main).map_or(0, |v| v.1);
+            if on_main > 0 {
+                note(
+                    notes,
+                    format!(
+                        "head: covered by worn armour {} ({on_main} of {total} vertices mostly on the head's main bone); not drawn",
+                        short(&p.armor)
+                    ),
+                    b,
+                )?;
+                return Ok(None);
+            }
+        }
+    }
+    let rule = |code: &str, found: &str| rule(code, src, found);
+    head.blockers.push(rule(
+        "UnverifiedActorHeadParts",
+        "listed head parts drawn unmorphed",
+    ));
+    for h in path_rules {
+        let code = match h {
+            hypotheses::PATH_STRIP => "HypothesisAssetDataPrefixStrip",
+            hypotheses::PATH_ROOT => "HypothesisAssetMissingRoot",
+            _ => "HypothesisAssetDataRelativeStrip",
+        };
+        head.blockers.push(rule(code, "actor head model path"));
+    }
+    let roots: Vec<usize> = head.parts.iter().map(|p| p.asset).collect();
+    for i in loader.assets.closure(&roots, &work)? {
+        for e in &loader.assets.nodes[i].blockers {
+            if !handled_by_skinning(e) {
+                b.reserve(&mut head.blockers, 1, &src.file, src.offset)?;
+                head.blockers.push(e.clone());
+            }
+        }
+    }
+    head.state = hypotheses::classify(&head.blockers, false, b)?;
+    note(
+        notes,
+        format!(
+            "head: {} parts{}",
+            head.parts.len(),
+            if from_race { " (race default)" } else { "" }
+        ),
+        b,
+    )?;
+    Ok(Some(head))
 }
