@@ -288,7 +288,7 @@ are byte-identical to the commit before. Effect surfaces whose base colour
 times scale exceeds 1 record `effect_colour_clamped_before_blend_v1`; with
 SRC_ALPHA factors an additive layer then adds at most its alpha.
 
-**CPU against GPU.** `cpu_and_gpu_frames_agree_on_falloff_palette_colour_and_alpha_clamp`
+**CPU against GPU.** `cpu_and_gpu_frames_agree_on_falloff_palette_colour_and_alpha_clamp` (since renamed, see Vertex alpha of blended lighting surfaces)
 (viewer, ignored without a GPU) draws a grey floor, a blended card whose
 vertex normals tilt away toward its corners (falloff 1 to 0 between the
 cosines 1 and 0.3) and an additive card with both palette lookups (a 2D
@@ -343,7 +343,7 @@ exceeds 1 on half or more of the texels, on 155 on none) and 2,101 effect
 shapes (1,314 on none). Counts: [blend-opacity-census.txt](blend-opacity-census.txt); unversioned
 listing: `OUT.txt.tsv`.
 
-**CPU against GPU.** `cpu_and_gpu_frames_agree_on_falloff_palette_colour_and_alpha_clamp`
+**CPU against GPU.** `cpu_and_gpu_frames_agree_on_falloff_palette_colour_and_alpha_clamp` (since renamed, see Vertex alpha of blended lighting surfaces)
 (viewer, ignored without a GPU) adds to the scene of the palette step a
 blended (SRC_ALPHA / INV_SRC_ALPHA) card with opacity 2 over a texture
 whose alpha runs from 0.2 to 0.9, drawn with a V offset of 0.25: on this
@@ -351,3 +351,44 @@ machine (Apple M5, Metal) coverage agreement 1.000000 (35,676 pixels drawn
 by both), mean channel difference 0.04 to 0.06 steps, 95th percentile 0
 to 1, largest 1; setting its opacity to 1, or its offset to 0, changes the
 CPU frame.
+
+## Vertex alpha of blended lighting surfaces
+
+The reference frame draws lighting surfaces without vertex colours (rules
+of the reference algorithm, above). A blended ground layer under a debris
+pile drew with a hard polygon edge: its shape (36 vertices) sets Shader
+Flags 2 Vertex_Colors, not Shader Flags 1 Vertex_Alpha, and stores RGB 1
+with alpha 0 to 0.93 at every vertex, the pattern of a decal faded toward
+its edges. A census of every lighting shape with a stored vertex alpha
+below 1 in the meshes of the installation (actor, LOD and terrain folders
+left out; names kept outside the repository): 6,891 with Vertex_Colors
+alone and 6,482 with both flags; on the blended ones the open boundary is
+faded to 0 (boundary mean at least 0.25 below the interior's, half its
+vertices at 0) on 233 of 702 with Vertex_Colors alone and 432 of 986 with
+both.
+
+Under `lighting_vertex_alpha_blend_v1` (pending) a blended lighting surface
+(material or NIF alpha property) whose shape sets Vertex_Colors and stores a
+vertex alpha below 1 multiplies its alpha by the vertex alpha before the
+alpha test and the blend (the mesh carries vertex colours `[1, 1, 1, a]`,
+channel mask 2): the vertex RGB stays out, and a lighting surface without
+blending keeps the frame's policy. Without the rule such a surface is drawn
+as before; the frames without hypotheses are unchanged (debris, inn, rock
+pile, boxcar and lobby views, frame and instance buffers byte-identical to
+the commit before). Under hypotheses the debris layer now fades into the
+floor instead of ending in a hard edge.
+
+**CPU against GPU.** The viewer test, renamed
+`cpu_and_gpu_frames_agree_on_falloff_palette_colour_alpha_clamp_and_vertex_alpha`,
+adds in front of the earlier cards a blended (SRC_ALPHA / INV_SRC_ALPHA)
+textured card whose vertex alpha runs from 1 to 0 across it with RGB 1:
+on this machine (Apple M5, Metal) coverage agreement 1.000000 (35,676
+pixels drawn by both), mean channel difference 0.08 to 0.11 steps, 95th
+percentile 1, largest 1; removing its vertex colours changes the CPU frame.
+
+**Texture total of the `render` example.** `--texture-mib N` raises the
+reference's decoded texture total (96 MiB) for a dense view; without it
+the reference drops the placements past the total (`LimitExceeded`), and
+which ones depends on what else is drawn, so a rule that draws more can
+make a frame lose an unrelated placement. The frames of this step use
+1024 MiB on both sides of each comparison.

@@ -568,3 +568,20 @@ words mean for an event (half extents, a box, a sphere) was recognised from
 prior knowledge and is kept only as pending rules, checked against the
 navigation meshes as far as the data allows. No editor, physics engine,
 reader of another project or game executable was opened.
+
+The step on differing swap scopes, swaps over shapes without a material,
+empty swap paths, missing textures and the vertex alpha of blended
+lighting surfaces ([spec/materials.md](../spec/materials.md), second step;
+[spec/render.md](../spec/render.md), Vertex alpha of blended lighting
+surfaces) adds no format fact. Texture slot names are those of this
+project's material reader; texture set slot positions and the Shader Flags
+bits (Vertex_Colors, Vertex_Alpha, the greyscale palette flags) come from
+the pinned nifxml copy already cited. Everything else rests on counts over
+the winning records and the meshes of one installation, taken with local
+probes whose outputs stay outside the repository, and on registered pending
+rules. Recognised from prior general knowledge and kept only as pending
+rules: that a lighting shader reads vertex alpha under Vertex_Colors, and,
+weakly, that a reference's material swap overrides its base's (the data
+was weighed on both sides of it, spec/materials.md). No editor, editor
+definition file, MIT reference, third-party reader of these formats or game
+executable was opened.

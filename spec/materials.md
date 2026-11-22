@@ -162,3 +162,141 @@ and kept only as pending rules: that a controller's clock starts at its first
 key when a cell loads, and that a shape whose material file is absent shows
 its own texture set. No other NIF reader, editor, MIT reference or game
 executable was opened for this step.
+
+## Second step: differing swap scopes, swaps over shapes without material, missing textures
+
+After the environment-map step the three largest families of the omitted
+area were material swap scopes whose readings differ (19.11 %, 3,678
+placements as their only family), swaps over a shape whose shader names no
+material (`RenderSwapWithoutMaterial`, 14.90 %, 8,792) and missing textures
+(11.71 %, 32,015); then rejected swap paths (2.36 %, 4,560). Each was
+looked at with a local probe over the bases and references the census
+named (names, paths and FormIDs kept outside the repository) and, for the
+textures, with new `coverage_census` sub-reasons. Nothing here has been
+measured in the running game.
+
+### Swap scopes whose readings differ
+
+For every reference of a refused base, every material path its models
+name was put through each swap of its stack (outermost first) and the
+four readings compared. Where they differ, the material falls in one of
+three classes, counted once per placement (a placement can hold several):
+
+- both scopes map the path, to different targets: 2,572 placements, about
+  half of the family's area proxy;
+- only the inner scope (the base's, or a SCOL part's) maps it: 779;
+- only the outer scope (the reference's, or the SCOL's) maps it: 686;
+- a swap maps a material that another swap of the stack puts in place
+  (chained): 46.
+
+Stacks: reference and base in most; reference and SCOL part base in about
+280; a base and its SCOL part, or three scopes, in a handful. The reference
+swaps are general swaps (also named by references of bases without swaps)
+whose sources are the model's own material names, not the base swap's
+targets; only the 46 chained stacks look written against an inner swap's
+result.
+
+Which material shows was settled under two pending rules, with their weak
+basis stated in [hypotheses.tsv](hypotheses.tsv):
+
+- `mswp_outer_scope_wins_v1`: each swap is compared with the path the model
+  names; where the outermost swap maps it, its target is drawn. Against the
+  inner-wins and inner-alone readings: under them the reference's entry for
+  the shared material (2,572 placements) would never show.
+- `mswp_outer_scope_replaces_v1`: where the outermost swap does not map a
+  path, the path is drawn as the model names it (the outermost swap replaces
+  the inner ones as a whole). The data points both ways. For it: of the 779
+  placements with a material only an inner scope maps, 14 share their exact
+  position with another placed reference (a door, lid or part of one
+  object); in 5 the co-located part draws the inner swap's source material
+  unswapped and in none only its target (a boxcar door whose base swaps blue
+  paint to orange sits on a blue boxcar body; refrigerator parts; a forest
+  cliff), so the replace reading keeps each object in one colour; 2 more
+  show both. Against it: in 418 of the 779 the reference swap maps nothing
+  in the model that the base swap does not map the same way, so their
+  reference swap only undoes the base's; and the 46 chained stacks look
+  written for a sequential application. Chained stacks stay refused
+  (`UnsupportedRenderSwapScopes readings differ, chained`).
+
+The draw build (`fo4_render::draw::settle`) applies the outermost swap alone
+where the readings differ and no chain exists, records the rule each path
+needs, and keeps the refusal where a rule is not usable at the build's
+level.
+
+**A finding left open: patterns in swap paths.** 68 of the 3,935 winning
+MSWP records hold 131 BNAM/SNAM pairs with a `*` in a path (77 with one in
+the source only, 35 in both, the rest with two or in the target only); every
+source with a single `*` matches two or more mounted material files, and of
+the 133 matches of the pairs with a `*` on both sides, 71 give a target
+file that exists when the matched text is carried into the target. The
+draw build compares swap paths byte for byte, so these entries are inert
+in every frame, with and without hypotheses: a reading of the game's data
+the project never registered. Most are the rock and ground swaps of two
+landscape regions, so the frames there may show unswapped materials where
+the game swaps them. Reading `*` as a pattern needs its own
+rules (what it matches, which entry wins when a literal and a pattern both
+match, what an absent substituted target does); none was added here.
+
+### Swaps over a shape without a material
+
+Every shape refused as `RenderSwapWithoutMaterial` (291 bases, 8,792
+placements) is a lighting or effect shape with its own texture set or
+source texture beside shapes that do name materials: branches on rock
+piles, the bark of a tree, an ash layer on debris. Where the base has its
+own swap the model cites every swap source in 4,063 placements, some in
+1,575 and none in 162; in the rest the swap is the reference's. No such
+shape's own first texture equals the diffuse of a swap's source or target
+material. Swap entries pair material paths, and the draw build matches them
+against the material the shader's `Name` holds; a shape without one offers
+no key. `mswp_shape_without_material_untouched_v1`: the shape keeps its own
+texture; the swap's entries are still read (their refusals stand) and apply
+to the other shapes.
+
+### Empty swap paths
+
+The swap paths the scene rejects (`swap: RejectedVfsPath`) are empty BNAM
+or SNAM paths: 37 pairs in 33 records (9 with both empty, 2 with an empty
+source, 26 with an empty target). `mswp_empty_entry_inert_v1`: such an
+entry changes nothing; the scene raises `MaterialSwapEmptyEntry` instead of
+resolving the empty path, and does not read the source of a pair whose
+target is empty.
+
+### Missing textures
+
+The asset graph cites every texture slot of a material (diffuse, normal,
+smooth-specular, greyscale, glow, environment, ...), every slot of a NIF
+texture set and the texture fields of an effect shader; a texture no
+archive holds blocked the whole placement (`MissingTexture`), though the
+unlit frame samples only a material's diffuse or base texture, a texture
+set's first slot, an effect shader's source texture and, where a palette
+flag is set, a greyscale texture. Probe over the 1,074 bases refused for it:
+about 70 % of the family's area is three environment maps cited under a
+cubemap folder that holds none while files of the same names lie under the
+shared cubemap folder (921 citations); then smooth-specular, glow and normal
+maps of materials, and texture set slots 1, 2 and 4; textures in sampled
+slots are under a tenth of the area (missing effect source textures, a
+handful of material diffuse textures, one of them present under another
+folder). No reader gap was found: the paths are as stored (none sits under a
+doubled root folder; one environment map is cited without an extension
+while a `.dds` of that name exists, and whether the game adds it is
+behaviour, in a slot the frame does not sample), and the data folder
+holds no archive the manifest leaves unmounted (`coverage_census`, data
+folder).
+
+The asset graph now records the slot of every texture citation
+(`fo4_scene::TextureSlot`); `fo4_scene::missing::unread_textures` sets apart
+a missing texture whose every citation in the placement's closure is a slot
+the frame never samples, which then carries `MissingTextureUnreadSlot`
+under `texture_missing_unread_slot_v1` (what the game draws without the
+file is behaviour). A missing texture cited from any sampled slot stays
+`MissingTexture`. `coverage_census` labels both (`missing texture`
+sub-reasons: sampled or not, citing slots, spelling class).
+
+### Rules added in this step
+
+All pending, in [hypotheses.tsv](hypotheses.tsv) with the measurement that
+would settle each: `mswp_outer_scope_wins_v1`,
+`mswp_outer_scope_replaces_v1`, `mswp_shape_without_material_untouched_v1`,
+`mswp_empty_entry_inert_v1`, `texture_missing_unread_slot_v1`, and
+`lighting_vertex_alpha_blend_v1` ([render.md](render.md), Vertex alpha of
+blended lighting surfaces).
