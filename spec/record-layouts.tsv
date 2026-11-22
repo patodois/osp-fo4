@@ -226,6 +226,14 @@ REFR.XMBR	"XMBR - MultiBound Reference"	0	4	FormID, u32 LE; somente hex	4	1	fech
 REFR.XMRK	"XMRK - Map Marker Data"	0	0	presença sem bytes	0	1	fechado
 REFR.XPPA	"XPPA - Patrol Script Marker"	0	0	presença sem bytes	0	2	fechado
 REFR.XPRD	"XPRD - Idle Time"	0	4	f32 LE	4	2	fechado
+REFR.XPRM	"XPRM word 0 (bound)"	0	4	f32 LE	32	30028	fechado
+REFR.XPRM	"XPRM word 1 (bound)"	4	4	f32 LE	32	30028	fechado
+REFR.XPRM	"XPRM word 2 (bound)"	8	4	f32 LE	32	30028	fechado
+REFR.XPRM	"XPRM word 3 (colour)"	12	4	f32 LE	32	30028	fechado
+REFR.XPRM	"XPRM word 4 (colour)"	16	4	f32 LE	32	30028	fechado
+REFR.XPRM	"XPRM word 5 (colour)"	20	4	f32 LE	32	30028	fechado
+REFR.XPRM	"XPRM word 6"	24	4	f32 LE	32	30028	fechado
+REFR.XPRM	"XPRM word 7 (kind)"	28	4	u32 LE	32	30028	fechado
 REFR.XRDS	"XRDS - Radius"	0	4	f32 LE	4	5	parcial
 REFR.XRFG	"XRFG - Reference Group"	0	4	FormID, u32 LE; somente hex	4	4	fechado
 REFR.XRNK	"XRNK - Owner Faction Rank"	0	4	u32 LE	4	1	fechado

@@ -392,3 +392,28 @@ the reference drops the placements past the total (`LimitExceeded`), and
 which ones depends on what else is drawn, so a rule that draws more can
 make a frame lose an unrelated placement. The frames of this step use
 1024 MiB on both sides of each comparison.
+
+## Texture coordinates that are not finite
+
+The draw build refused a whole placement when one vertex of one of its
+shapes held a value that is not finite (`RenderNonFiniteVertex`; 683
+placements, 2.29 % of the omitted area as their only family). Every model
+of those placements was read (local probe; names kept outside the
+repository): the values are always texture coordinates, both components a
+half-float NaN, never positions; they sit on 3 to 52 vertices of shapes of
+hundreds or thousands (building siding, door frames, ground frames, and the
+generated models of static collections that hold them), every such vertex
+used by a triangle. None of those triangles is degenerate; they cover at
+most 2.8 % of their shape's area, mostly below 0.5 %, and most of the
+vertices share their position with a vertex whose coordinate is finite, as
+the duplicates along a texture seam do. The reader decodes the other
+vertices of the same shapes to ordinary values, so this is how the files
+store them, not a reader gap.
+
+Under `nif_uv_nonfinite_triangles_left_out_v1` (pending) the triangles that
+use such a vertex are left out of the mesh, the vertex keeps an internal
+zero coordinate that no remaining triangle reads, and the rest of the
+shape is drawn; a position that is not finite stays refused. The CPU
+reference and the viewer both draw the draw list's mesh, so they leave out
+the same triangles; no shading changes. Without the rule the placement is
+refused as before.

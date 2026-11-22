@@ -264,6 +264,18 @@ REFR.XPPA: state. 2 de 2 conferidos.
 
 REFR.XPRD: state. 2 de 2 conferidos.
 
+## refr-xprm
+
+REFR.XPRM: state. 30028 de 30028 conferidos. Fonte diferente das demais seções:
+não veio do xEdit, e sim da medição do próprio projeto (`world_census`,
+[world-census.txt](world-census.txt), seção 1): 32 bytes em toda referência
+colocada que traz o campo; oito palavras de 4 bytes, sete floats (três de
+limite, positivos em quase todas; três de cor e um sétimo, todos de 0 a 1) e
+uma palavra inteira de 1 a 5 (tipo). Os rótulos (limite, cor, tipo) são
+descritivos, tomados do modelo de posição do jogador (`fo4_vm::track`), e não
+afirmam o que o jogo faz com o volume; isso fica na regra pendente
+`refr_xprm_primitive_not_drawn_v1`.
+
 ## refr-xrfg
 
 REFR.XRFG: state. 4 de 4 conferidos.

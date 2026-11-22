@@ -562,8 +562,10 @@ bound words, three colour words, one float and a kind word. That layout was
 established only by measuring every placed reference of the installation
 with `world_census` (32 bytes on all 30,028, colour and float words in 0 to
 1, kind words 1 to 5; [spec/world-census.txt](../spec/world-census.txt)).
-The plugin layout table, which still lists `REFR.XPRM` as not established,
-is left unchanged so that the coverage census does not move. What the
+The plugin layout table, which then still listed `REFR.XPRM` as not
+established, was left unchanged so that the coverage census did not move;
+the wildcard swap step below establishes it there from the same
+measurement. What the
 words mean for an event (half extents, a box, a sphere) was recognised from
 prior knowledge and is kept only as pending rules, checked against the
 navigation meshes as far as the data allows. No editor, physics engine,
@@ -615,3 +617,26 @@ recognised from prior general knowledge and are pending rules. No Havok
 SDK, converter, behaviour editor or format project, no editor, editor
 source or definition file, no other interpreter, script source or game
 executable was opened.
+
+The step on wildcard swap entries, the reference primitive, chained swap
+scopes and non-finite texture coordinates
+([spec/materials.md](../spec/materials.md), third step;
+[spec/render.md](../spec/render.md), Texture coordinates that are not
+finite; [spec/record-layouts.md](../spec/record-layouts.md), refr-xprm)
+adds one layout to the plugin layout table: `REFR.XPRM` as 32 bytes, seven
+floats and a kind word, established by the project's own measurement of
+every placed reference with `world_census`
+([spec/world-census.txt](../spec/world-census.txt), section 1), not by an
+outside source; its labels (bound, colour, kind) are descriptive names
+taken over from the player position model and claim no behaviour. Every
+other statement rests on counts over the winning records and meshes of
+one installation, taken with local probes whose outputs stay outside the
+repository, and on registered pending rules. Recognised from prior general
+knowledge and kept only as pending rules: that `*` in a path is a pattern
+standing for any run of characters (and how a target's `*` would be
+filled), and that a graphics processor gives no defined texel for a
+texture coordinate that is not a number. That one interior cell whose
+editor ID names navigation mesh generation holds 633 of the 637 placed
+statics with a model and a primitive is read from the records, not from
+any account of what that cell is for. No editor, editor definition file, MIT reference, third-party
+reader of these formats or game executable was opened.

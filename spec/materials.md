@@ -317,3 +317,91 @@ would settle each: `mswp_outer_scope_wins_v1`,
 `mswp_empty_entry_inert_v1`, `texture_missing_unread_slot_v1`, and
 `lighting_vertex_alpha_blend_v1` ([render.md](render.md), Vertex alpha of
 blended lighting surfaces).
+
+## Third step: swap patterns, chained swap scopes, missing textures
+
+Nothing here has been measured in the running game. Names, paths and
+FormIDs of the counts below stay outside the repository (local probes).
+
+### Swap patterns
+
+68 of the 3,935 winning swap records hold `*` in 131 BNAM to SNAM pairs:
+77 with one `*` in the source only, 35 with one on each side, 8 with two in
+the source only, 6 with two on each side, 4 with stars in the target only
+and 1 with one in the source and two in the target.
+Almost all are rock and ground swaps of landscape regions (a rock slab
+family to a coastal cliff, rubble rock to coastal sand, ground debris to a
+marsh or riverbed material). The draw build compared paths as bytes, so
+these entries changed nothing, with or without hypotheses.
+
+Over the placed references (every winning REFR; the base's swap, the
+reference's and those of SCOL parts, each with the NIF material names of
+the models under it): 34,509 placements sit under a scope holding a
+pattern, and in 12,939 of them a pattern matches a material their models
+name. Where source and target each hold one or two `*`, 20 of the 24
+targets formed for placed materials name a file an archive holds (a rubble
+rock decal formed into the matching coastal sand decal); patterns into a
+plain target reach 83 existing targets of 84, leaving aside one record whose
+bare `*` maps every material to a test material no archive holds, named by
+3,619 placed references of finished content. No placed material is split
+by a pattern in two ways; two patterns of one swap that match one material
+always agree; a literal source and a pattern of the same swap both match
+one material on 2,772 placements, always with different targets (15 such
+overlaps in the records: 11 with the literal entry first, 4 with the
+pattern first; one literal entry maps its material to itself).
+
+Three pending rules read them, only where the pattern rule may be relied on
+(the hypotheses level; `fo4_scene::hypotheses::usable_at`):
+
+- `mswp_wildcard_pattern_v1`: a BNAM holding `*` is a pattern over the
+  resolved key of the material a shape names (lower case, `/`, the
+  materials root), each `*` any run of characters, possibly empty,
+  separators included; the SNAM is taken as it is without `*` and with its
+  `*` filled in order by the source's runs when it holds as many; other
+  counts (`UnsupportedSwapPattern`) and splits giving different targets
+  (`AmbiguousMaterialSwap`) are refused (`fo4_scene::swap_pattern`).
+- `mswp_wildcard_literal_wins_v1`: where a literal source of the same swap
+  also matches, the literal entry's target is drawn, whatever the order.
+- `mswp_wildcard_missing_target_inert_v1`: a formed target no archive holds
+  changes nothing for that material; the scene raises
+  `MissingSwapPatternTarget` (render only) and keeps the file out of the
+  instance's assets.
+
+The scene loads, for every scope holding a pattern, the targets its
+patterns form for the materials its models name (not for a material a
+literal source of the same swap maps); the draw build forms the same target
+for the path it draws. Without the rules nothing changes: the scene loads
+no pattern target at the facts and measured levels, and the draw build
+compares such sources as bytes.
+
+### Chained swap scopes
+
+The 94 placements refused for chained scopes alone (a scope maps the
+material another put in place) were read: in most, the base's swap maps a
+rock or ground material to a regional variant and the reference's swap maps
+that variant again (a cliff material to its wet version) without mapping
+the model's own material, a swap written against another swap's targets;
+in a few both scopes map the model's material and the inner one maps the
+outer one's target again (floor marble to rough marble to dirty rough
+marble); on twelve placements the chain leads back to the material the
+model names. Under
+`mswp_chain_followed_v1` (pending) the chain is followed: from the path the
+model names, the outermost scope not yet applied that maps the current
+material applies, each scope at most once (`settle`, `Settled::Chained`).
+Beside `mswp_outer_scope_replaces_v1` this says that an outer swap replaces
+an inner one except where it maps the inner one's targets: a single order
+of application could explain the chains or the co-located cases that
+support replacement, not both, and the rules keep that tension visible.
+
+### Missing textures in sampled slots
+
+The 841 placements left with a missing texture in a slot the frame samples
+(earlier census, sub-reasons): by base, most cite a file no archive holds
+under any folder (an effect shader's source texture, a material's diffuse,
+a texture set's first slot); about one in nine names a file whose name
+exists under another folder (a material citing a props folder for a
+magazine cover the archives hold under another props folder; two test
+textures held under a shared folder). Reading the other folder would be a
+behaviour of the game's file lookup, not a reader gap; what the game draws
+without the file (a placeholder, nothing, another texel) is not known.
+They stay refused (`MissingTexture`).
