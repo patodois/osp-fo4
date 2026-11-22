@@ -12,13 +12,13 @@ Measurement datasets and photographs of the game are not distributed.
 | [citation-roots.md](citation-roots.md) | Which path roots are established for each citation type and which remain hypotheses. |
 | [collision.md](collision.md) | FO4 collision blocks, the census of their opaque Havok payloads and the open questions for a decoder. |
 | [collision-census.tsv](collision-census.tsv) | Counts and small stored header values from the collision census of one installation. |
-| [havok-container.md](havok-container.md) | Container level of the Havok collision payload (header, sections, class names, data tables), measured over one installation. |
+| [havok-container.md](havok-container.md) | Container level of the Havok collision payload and of the `.hkx` files (header and its two variants, sections, class names, data tables), measured over one installation. |
 | [havok-objects.md](havok-objects.md) | Object spans, per-class leading sizes and the convex polytope layout of the Havok collision payload, measured over one installation. |
 | [havok-bodies.md](havok-bodies.md) | Array element sizes, the body array of the top-level object (shape link and placement), Body ID against it, and the sphere, capsule, convex, scaled convex and compound shape layouts, measured over one installation. |
 | [havok-mesh.md](havok-mesh.md) | `hknpCompressedMeshShape` and its data object: array slots, sections, quantized section and shared vertices, byte 92, four-index primitives and their triangles, box trees, vertex records, units and triangles against render meshes, measured over one installation. |
 | [collision-placement.md](collision-placement.md) | Placing decoded collision in world space for a cell: collision readiness apart from render readiness, the Target node chain, units, the open body placement rule with its two levels, the API, the `cell-collision` report and its runs. |
 | [walk.md](walk.md) | First walking controller over a cell's placed collision (`fo4-walk`): capsule, collide-and-slide, step-up, slope limit, terrain under the walker, the `walk` report (paths and `--drops` point lists) and viewer walk mode (`--terrain` drawing, `--around` neighbour cells, fall recovery, waiting for a cell of the moving grid, scripted `--path` walks); a set of worlds walked as one; every movement number a provisional registered rule. |
-| [havok-container-census.tsv](havok-container-census.tsv) | Counts, holds/fails of container, object, body, shape and compressed-mesh properties, class names and signatures from the Havok census. |
+| [havok-container-census.tsv](havok-container-census.tsv) | Counts, holds/fails of container, object, body, shape and compressed-mesh properties, class names and signatures from the Havok census, for the collision payloads and the `.hkx` files. |
 | [controller-measurements.md](controller-measurements.md) | Measurement design for comparing stored NIF locals with paused runtime nodes. |
 | [dds.md](dds.md) | DDS headers, formats, surfaces, block layouts and supported decoding boundaries. |
 | [helper-visibility.md](helper-visibility.md) | Narrow editor-helper classification and explicit diagnostic visibility variants. |

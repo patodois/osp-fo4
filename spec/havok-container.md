@@ -1,4 +1,4 @@
-# Havok container in Fallout 4 collision payloads
+# Havok container in Fallout 4 collision payloads and `.hkx` files
 
 Second step after [collision.md](collision.md): the container level of the
 payload that `bhkPhysicsSystem` and `bhkRagdollSystem` carry in their
@@ -45,12 +45,57 @@ as 1.10.163, 7 plugins, 62 archive mounts, VFS fingerprint `a4316448…bc100`;
   error, counted under `havok.<kind>.error`.
 - Run on the 16 GB Mac: 91.1 s wall, peak RSS 522 MB (`/usr/bin/time -l`),
   archives read entry by entry through the VFS.
+- The same sweep also reads every winning `.hkx` file of the VFS (17,508
+  paths, 442,724,720 bytes, largest 1,473,616) as one payload of kind `hkx`,
+  with base offset 0 and no collision system: its rows are `havok.hkx.*`,
+  plus `total hkx_files` and `hkx_failed` (files the VFS could not extract,
+  0). The system measurements (object counts against the system, bodies,
+  root groups) are skipped for this kind; every other check, the class rows,
+  object spans, leading sizes and array gaps are counted as for the
+  collision payloads. With the `.hkx` files the run took 127.3 s wall, peak
+  RSS 524 MB; the collision rows are byte-identical to the run without them.
 
 ## Result
 
 `Container::read` accepts every payload: 275,154 of 275,154 physics and 188
 of 188 ragdoll, no error **[measured 275,342]**. So each rule listed below as
 enforced holds for all of them.
+
+## Header variant: 16 bytes before the section records
+
+The `.hkx` files come in two header variants, told apart by the upper u16 of
+header word 60 **[measured 17,508 files]**:
+
+| Word 60 | Files | First section record | Bytes 64 to 79 |
+| --- | ---: | ---: | --- |
+| `0x00000015` | 1,120 (behaviour, project and character files) | 64 | none: the first record |
+| `0x00100015` | 16,388 (animation clips, skeletons, the rest) | 80 | `14` and fifteen zero bytes in all 16,388 |
+
+Every collision payload has word 60 `0x00000015` (`header_word` rows, 275,342
+of 275,342). All other header words are the same in both variants and equal
+the collision values (`havok.hkx.header_word` rows). In each file the upper
+half of word 60 equals the number of bytes between the 64-byte header and
+the first section record, and every section record, start and table is then
+exactly as described below, shifted by those bytes **[measured 17,508]**: the
+reader enforces nothing new beyond the shift and accepts all 17,508 files
+(`havok.hkx.read`), against 1,120 before this rule.
+
+The reader (`Container::read`):
+
+- accepts an upper half of 0 or 16 (`HEADER_EXTRA_LENS`); any other value is
+  `UnsupportedHavokLayout` at byte 62;
+- reads the first record at 64 plus that many bytes, and requires the first
+  section to start right after the third record (64 + extra + 192);
+- keeps the extra bytes as stored (`Container::header_extra`) without
+  requiring their value. That the value 0x14 (20) and the fifteen zeros mean
+  anything, and why the two groups of files differ, is **[open]**.
+
+The `.hkx` files differ from the collision payloads in counted, not
+enforced, rules (`havok.hkx.check` rows): first-table destinations are a
+multiple of 16 in 4,703 of 17,508 files (always in the collision payloads),
+and the array header at first-table sources (non-zero n, `0x80000000 | n`)
+does not hold in any file, so not every first-table source in these files is
+an array header (see [havok-animation.md](havok-animation.md)).
 
 ## Byte order and pointer slot (question 6 of collision.md)
 
@@ -96,7 +141,9 @@ the census cannot tell a count from a constant. What the words relate to:
 
 ## Section records: bytes 64 to 255 (question 2)
 
-Three records of 64 bytes at 64, 128 and 192 **[measured 275,342]**:
+Three records of 64 bytes at 64, 128 and 192 **[measured 275,342]** (at 80,
+144 and 208 in the 16,388 `.hkx` files of the second header variant, with
+every start 16 bytes later):
 
 | Record bytes | Content |
 | --- | --- |
@@ -330,7 +377,8 @@ Questions 9 and 10 of collision.md (flags, walking) are untouched; question
 All carry the NIF file name and the absolute file offset (`base` passed to
 `Container::read` plus the payload offset of the field):
 `TruncatedHavokContainer`, `LimitExceeded` (payload over 4 GiB, or the
-`Budget`), `InvalidHavokMagic`, `UnsupportedHavokLayout`,
+`Budget`), `InvalidHavokMagic`, `UnsupportedHavokLayout` (bytes 16 to 19, or
+the upper half of word 60 at byte 62),
 `UnsupportedHavokVersion`, `UnsupportedHavokSectionCount`,
 `InvalidHavokSectionRecord`, `InvalidHavokSectionBounds`,
 `UnsupportedHavokSectionLayout`, `InvalidHavokClassName`,

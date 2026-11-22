@@ -31,7 +31,10 @@ stored payloads of the installed game with `fo4-unpack sweep --scope havok`
 documentation, converter, decompilation or third-party reader of the format
 was opened or searched for; the field and table names are descriptive labels
 chosen here. Interpretations the bytes cannot decide are marked as
-hypotheses.
+hypotheses. The second header variant of the `.hkx` files (16 bytes before
+the section records, declared by the upper half of header word 60) was
+established the same way, by running the same sweep over every winning
+`.hkx` file of the installation.
 
 The object spans and the `hknpConvexPolytopeShape` view of `fo4-havok`
 ([spec/havok-objects.md](../spec/havok-objects.md)) were established the same

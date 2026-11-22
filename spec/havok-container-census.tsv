@@ -7,6 +7,8 @@ total	nif_files	224368
 total	nif_read	224366
 total	nif_failed	2
 total	collision_view_failed	0
+total	hkx_files	17508
+total	hkx_failed	0
 havok.bhkPhysicsSystem.read	payloads	275154
 havok.bhkPhysicsSystem.read	read	275154
 havok.bhkPhysicsSystem.check	class_names_distinct	holds=275154 fails=0
@@ -82,6 +84,7 @@ havok.bhkPhysicsSystem.header_word	48|2d302e31	275154
 havok.bhkPhysicsSystem.header_word	52|ff003172	275154
 havok.bhkPhysicsSystem.header_word	56|00000000	275154
 havok.bhkPhysicsSystem.header_word	60|00000015	275154
+havok.bhkPhysicsSystem.header_extra	none	275154
 havok.bhkPhysicsSystem.version	hk_2014.1.0-r1	275154
 havok.bhkPhysicsSystem.class_name_marker	9	2685748
 havok.bhkPhysicsSystem.fill	classnames|00	2
@@ -817,6 +820,7 @@ havok.bhkRagdollSystem.header_word	48|2d302e31	188
 havok.bhkRagdollSystem.header_word	52|ff003172	188
 havok.bhkRagdollSystem.header_word	56|00000000	188
 havok.bhkRagdollSystem.header_word	60|00000015	188
+havok.bhkRagdollSystem.header_extra	none	188
 havok.bhkRagdollSystem.version	hk_2014.1.0-r1	188
 havok.bhkRagdollSystem.class_name_marker	9	1907
 havok.bhkRagdollSystem.fill	classnames|00	60
@@ -1028,3 +1032,773 @@ havok.bhkRagdollSystem.root_group	hknpRagdollData|+112|next_u32_is_0x80000000_or
 havok.bhkRagdollSystem.root_group	hknpRagdollData|+112|pointer_source_at_group_start_iff_count_nonzero	holds=188 fails=0
 havok.bhkRagdollSystem.root_group	hknpRagdollData|+128|next_u32_is_0x80000000_or_count	holds=188 fails=0
 havok.bhkRagdollSystem.root_group	hknpRagdollData|+128|pointer_source_at_group_start_iff_count_nonzero	holds=188 fails=0
+havok.hkx.read	payloads	17508
+havok.hkx.read	read	17508
+havok.hkx.check	class_names_distinct	holds=17508 fails=0
+havok.hkx.check	classnames_fill_below_16	holds=17508 fails=0
+havok.hkx.check	eight_zero_bytes_at_every_object_offset	holds=17508 fails=0
+havok.hkx.check	eight_zero_bytes_at_every_object_pointer_source	holds=17508 fails=0
+havok.hkx.check	eight_zero_bytes_at_every_pointer_source	holds=17508 fails=0
+havok.hkx.check	first_four_class_names_never_objects	holds=17508 fails=0
+havok.hkx.check	object_fill_below_16	holds=17508 fails=0
+havok.hkx.check	object_offset_multiple_of_16	holds=17508 fails=0
+havok.hkx.check	object_pointer_fill_below_16	holds=17508 fails=0
+havok.hkx.check	object_pointer_source_multiple_of_8	holds=17508 fails=0
+havok.hkx.check	object_pointer_source_not_an_object_offset	holds=17508 fails=0
+havok.hkx.check	object_pointer_sources_distinct	holds=17508 fails=0
+havok.hkx.check	object_pointer_sources_increasing	holds=17160 fails=348
+havok.hkx.check	pointer_and_object_pointer_sources_8_apart	holds=17508 fails=0
+havok.hkx.check	pointer_and_object_pointer_sources_disjoint	holds=17508 fails=0
+havok.hkx.check	pointer_destination_after_source	holds=17508 fails=0
+havok.hkx.check	pointer_destination_multiple_of_16	holds=4703 fails=12805
+havok.hkx.check	pointer_destination_not_an_object_offset	holds=17508 fails=0
+havok.hkx.check	pointer_destinations_distinct	holds=17508 fails=0
+havok.hkx.check	pointer_fill_below_16	holds=17508 fails=0
+havok.hkx.check	pointer_source_multiple_of_8	holds=17508 fails=0
+havok.hkx.check	pointer_source_u32_8_nonzero_and_u32_12_is_0x80000000_or_it	holds=0 fails=17508
+havok.hkx.check	pointer_sources_distinct	holds=17508 fails=0
+havok.hkx.check	pointer_sources_increasing	holds=373 fails=17135
+havok.hkx.check	pointer_sources_increasing_iff_no_hknpCompressedMeshShape_listed	holds=380 fails=17128
+havok.hkx.check	record_starts_read_big_endian_in_bounds	holds=0 fails=17508
+havok.hkx.check	root_class_is_fifth_class_name	holds=17508 fails=0
+havok.hkx.check	root_is_first_object	holds=17508 fails=0
+havok.hkx.check	section_record_name_padding_zero	holds=17508 fails=0
+havok.hkx.check	section_records_byte19_and_48_to_63_are_ff	holds=17508 fails=0
+havok.hkx.check	section_starts_and_offsets_multiple_of_16	holds=17508 fails=0
+havok.hkx.total	class_names	175488
+havok.hkx.total	convex_polytope_vertices	3058
+havok.hkx.total	object_bytes	414354272
+havok.hkx.total	object_pointers	164069
+havok.hkx.total	objects	148477
+havok.hkx.total	pointers	1889448
+havok.hkx.max_per_payload	class_names	59
+havok.hkx.max_per_payload	object_bytes	1472016
+havok.hkx.max_per_payload	object_pointers	6161
+havok.hkx.max_per_payload	objects	4645
+havok.hkx.max_per_payload	pointers	6929
+havok.hkx.header_word	00|57e0e057	17508
+havok.hkx.header_word	04|10c0c010	17508
+havok.hkx.header_word	08|00000000	17508
+havok.hkx.header_word	12|0000000b	17508
+havok.hkx.header_word	16|01000108	17508
+havok.hkx.header_word	20|00000003	17508
+havok.hkx.header_word	24|00000002	17508
+havok.hkx.header_word	28|00000000	17508
+havok.hkx.header_word	32|00000000	17508
+havok.hkx.header_word	36|0000004b	17508
+havok.hkx.header_word	40|325f6b68	17508
+havok.hkx.header_word	44|2e343130	17508
+havok.hkx.header_word	48|2d302e31	17508
+havok.hkx.header_word	52|ff003172	17508
+havok.hkx.header_word	56|00000000	17508
+havok.hkx.header_word	60|00000015	1120
+havok.hkx.header_word	60|00100015	16388
+havok.hkx.header_extra	none	1120
+havok.hkx.header_extra	14000000000000000000000000000000	16388
+havok.hkx.version	hk_2014.1.0-r1	17508
+havok.hkx.class_name_marker	9	175488
+havok.hkx.fill	classnames|00	47
+havok.hkx.fill	classnames|01	38
+havok.hkx.fill	classnames|02	1299
+havok.hkx.fill	classnames|03	120
+havok.hkx.fill	classnames|04	2205
+havok.hkx.fill	classnames|05	12037
+havok.hkx.fill	classnames|06	17
+havok.hkx.fill	classnames|07	59
+havok.hkx.fill	classnames|08	312
+havok.hkx.fill	classnames|09	220
+havok.hkx.fill	classnames|10	73
+havok.hkx.fill	classnames|11	812
+havok.hkx.fill	classnames|12	19
+havok.hkx.fill	classnames|13	198
+havok.hkx.fill	classnames|14	25
+havok.hkx.fill	classnames|15	27
+havok.hkx.fill	object_pointers|00	458
+havok.hkx.fill	object_pointers|04	3988
+havok.hkx.fill	object_pointers|08	12733
+havok.hkx.fill	object_pointers|12	329
+havok.hkx.fill	objects|00	162
+havok.hkx.fill	objects|04	4266
+havok.hkx.fill	objects|08	12249
+havok.hkx.fill	objects|12	831
+havok.hkx.fill	pointers|00	10034
+havok.hkx.fill	pointers|08	7474
+havok.hkx.class	BGSGamebryoSequenceGenerator	listed=209 payloads=209 objects=1427 signatures=4e708fb6x209 count_eq_system_objects=holds=0 fails=0 span_min=224 span_max=272 span_distinct=4
+havok.hkx.class	BSAssignVariablesModifier	listed=73 payloads=73 objects=283 signatures=64a6ca08x73 count_eq_system_objects=holds=0 fails=0 span_min=304 span_max=352 span_distinct=4
+havok.hkx.class	BSBehaviorGraphSwapGenerator	listed=47 payloads=47 objects=47 signatures=e7633191x47 count_eq_system_objects=holds=0 fails=0 span_min=176 span_max=208 span_distinct=3
+havok.hkx.class	BSBoneSwitchGenerator	listed=9 payloads=9 objects=27 signatures=450fc55ex9 count_eq_system_objects=holds=0 fails=0 span_min=224 span_max=240 span_distinct=2
+havok.hkx.class	BSBoneSwitchGeneratorBoneData	listed=9 payloads=9 objects=27 signatures=0977b904x9 count_eq_system_objects=holds=0 fails=0 span_min=64 span_max=64 span_distinct=1
+havok.hkx.class	BSCyclicBlendTransitionGenerator	listed=17 payloads=17 objects=81 signatures=86401931x17 count_eq_system_objects=holds=0 fails=0 span_min=304 span_max=336 span_distinct=3
+havok.hkx.class	BSDirectAtCapturePoseModifier	listed=3 payloads=3 objects=6 signatures=10a3e22bx3 count_eq_system_objects=holds=0 fails=0 span_min=128 span_max=144 span_distinct=2
+havok.hkx.class	BSDirectAtModifier	listed=15 payloads=15 objects=39 signatures=cda56038x15 count_eq_system_objects=holds=0 fails=0 span_min=448 span_max=480 span_distinct=3
+havok.hkx.class	BSEventEveryNEventsModifier	listed=40 payloads=40 objects=100 signatures=0320ef75x40 count_eq_system_objects=holds=0 fails=0 span_min=160 span_max=192 span_distinct=3
+havok.hkx.class	BSEventOnDeactivateModifier	listed=41 payloads=41 objects=220 signatures=c6b82462x41 count_eq_system_objects=holds=0 fails=0 span_min=128 span_max=160 span_distinct=3
+havok.hkx.class	BSEventOnFalseToTrueModifier	listed=2 payloads=2 objects=2 signatures=921ad1a5x2 count_eq_system_objects=holds=0 fails=0 span_min=208 span_max=224 span_distinct=2
+havok.hkx.class	BSGetTimeStepModifier	listed=29 payloads=29 objects=30 signatures=56341150x29 count_eq_system_objects=holds=0 fails=0 span_min=112 span_max=128 span_distinct=2
+havok.hkx.class	BSInterpValueModifier	listed=31 payloads=31 objects=42 signatures=4c10e936x31 count_eq_system_objects=holds=0 fails=0 span_min=128 span_max=144 span_distinct=2
+havok.hkx.class	BSIsActiveModifier	listed=109 payloads=109 objects=599 signatures=5bf1f5cfx109 count_eq_system_objects=holds=0 fails=0 span_min=128 span_max=176 span_distinct=4
+havok.hkx.class	BSLimbCycleModifier	listed=2 payloads=2 objects=4 signatures=3413bac0x2 count_eq_system_objects=holds=0 fails=0 span_min=208 span_max=208 span_distinct=1
+havok.hkx.class	BSLookAtCapturePoseModifier	listed=7 payloads=7 objects=28 signatures=10a3e22bx7 count_eq_system_objects=holds=0 fails=0 span_min=144 span_max=160 span_distinct=2
+havok.hkx.class	BSLookAtModifier	listed=31 payloads=31 objects=47 signatures=5901a37dx31 count_eq_system_objects=holds=0 fails=0 span_min=1376 span_max=4000 span_distinct=7
+havok.hkx.class	BSModifyOnceModifier	listed=56 payloads=56 objects=124 signatures=14f075d2x56 count_eq_system_objects=holds=0 fails=0 span_min=144 span_max=176 span_distinct=3
+havok.hkx.class	BSOffsetAnimationGenerator	listed=5 payloads=5 objects=5 signatures=1fc841a6x5 count_eq_system_objects=holds=0 fails=0 span_min=272 span_max=288 span_distinct=2
+havok.hkx.class	BSPassByTargetTriggerModifier	listed=1 payloads=1 objects=1 signatures=e49602afx1 count_eq_system_objects=holds=0 fails=0 span_min=224 span_max=224 span_distinct=1
+havok.hkx.class	BSRagdollContactListenerModifier	listed=34 payloads=34 objects=37 signatures=7e6d66c9x34 count_eq_system_objects=holds=0 fails=0 span_min=160 span_max=176 span_distinct=2
+havok.hkx.class	BSRandomAlarmModifier	listed=2 payloads=2 objects=6 signatures=550fec31x2 count_eq_system_objects=holds=0 fails=0 span_min=160 span_max=160 span_distinct=1
+havok.hkx.class	BSReverseSpineTwistModifier	listed=1 payloads=1 objects=1 signatures=fc8adedax1 count_eq_system_objects=holds=0 fails=0 span_min=288 span_max=288 span_distinct=1
+havok.hkx.class	BSRootTwistModifier	listed=8 payloads=8 objects=11 signatures=cbc0b864x8 count_eq_system_objects=holds=0 fails=0 span_min=176 span_max=176 span_distinct=1
+havok.hkx.class	BSSpeedSamplerModifier	listed=2 payloads=2 objects=2 signatures=6b1abbe7x2 count_eq_system_objects=holds=0 fails=0 span_min=144 span_max=144 span_distinct=1
+havok.hkx.class	BSTimerModifier	listed=43 payloads=43 objects=68 signatures=9266ffacx43 count_eq_system_objects=holds=0 fails=0 span_min=144 span_max=176 span_distinct=3
+havok.hkx.class	BSTweenerModifier	listed=1 payloads=1 objects=2 signatures=fe0a9cb4x1 count_eq_system_objects=holds=0 fails=0 span_min=240 span_max=240 span_distinct=1
+havok.hkx.class	BSiStateTaggingGenerator	listed=26 payloads=26 objects=91 signatures=c932a82ax26 count_eq_system_objects=holds=0 fails=0 span_min=176 span_max=224 span_distinct=4
+havok.hkx.class	DynamicAnimationTaggingGenerator	listed=48 payloads=48 objects=256 signatures=e7633191x48 count_eq_system_objects=holds=0 fails=0 span_min=176 span_max=224 span_distinct=4
+havok.hkx.class	hclBendStiffnessSetupObject	listed=36 payloads=36 objects=36 signatures=5ad7b372x36 count_eq_system_objects=holds=0 fails=0 span_min=112 span_max=128 span_distinct=2
+havok.hkx.class	hclCapsuleShape	listed=36 payloads=36 objects=58 signatures=dd03f524x36 count_eq_system_objects=holds=0 fails=0 span_min=96 span_max=96 span_distinct=1
+havok.hkx.class	hclClothContainer	listed=42 payloads=42 objects=42 signatures=3512912bx42 count_eq_system_objects=holds=0 fails=0 span_min=48 span_max=80 span_distinct=3
+havok.hkx.class	hclClothSetupContainer	listed=42 payloads=42 objects=42 signatures=f93ee585x42 count_eq_system_objects=holds=0 fails=0 span_min=112 span_max=112 span_distinct=1
+havok.hkx.class	hclClothSetupObject	listed=42 payloads=42 objects=42 signatures=d2536738x42 count_eq_system_objects=holds=0 fails=0 span_min=256 span_max=288 span_distinct=2
+havok.hkx.class	hclClothStateSetupObject	listed=42 payloads=42 objects=84 signatures=fa105bf7x42 count_eq_system_objects=holds=0 fails=0 span_min=96 span_max=96 span_distinct=1
+havok.hkx.class	hclCollidable	listed=36 payloads=36 objects=124 signatures=f14068bex36 count_eq_system_objects=holds=0 fails=0 span_min=176 span_max=176 span_distinct=1
+havok.hkx.class	hclLocalRangeSetupObject	listed=28 payloads=28 objects=28 signatures=af9115a9x28 count_eq_system_objects=holds=0 fails=0 span_min=224 span_max=224 span_distinct=1
+havok.hkx.class	hclMeshBoneDeformSetupObject	listed=42 payloads=42 objects=42 signatures=7b723864x42 count_eq_system_objects=holds=0 fails=0 span_min=144 span_max=336 span_distinct=6
+havok.hkx.class	hclMoveFixedParticlesSetupObject	listed=42 payloads=42 objects=42 signatures=1706fab1x42 count_eq_system_objects=holds=0 fails=0 span_min=64 span_max=64 span_distinct=1
+havok.hkx.class	hclNamedSetupMesh	listed=42 payloads=42 objects=42 signatures=124de283x42 count_eq_system_objects=holds=0 fails=0 span_min=96 span_max=112 span_distinct=2
+havok.hkx.class	hclNamedTransformSetSetupObject	listed=42 payloads=42 objects=42 signatures=955cee1dx42 count_eq_system_objects=holds=0 fails=0 span_min=80 span_max=80 span_distinct=1
+havok.hkx.class	hclScratchBufferSetupObject	listed=42 payloads=42 objects=42 signatures=78bedba8x42 count_eq_system_objects=holds=0 fails=0 span_min=64 span_max=80 span_distinct=2
+havok.hkx.class	hclSimClothBufferSetupObject	listed=42 payloads=42 objects=42 signatures=9f6a88abx42 count_eq_system_objects=holds=0 fails=0 span_min=64 span_max=64 span_distinct=1
+havok.hkx.class	hclSimClothSetupObject	listed=42 payloads=42 objects=42 signatures=0474aa25x42 count_eq_system_objects=holds=0 fails=0 span_min=448 span_max=656 span_distinct=5
+havok.hkx.class	hclSimulateSetupObject	listed=42 payloads=42 objects=42 signatures=382460d8x42 count_eq_system_objects=holds=0 fails=0 span_min=112 span_max=128 span_distinct=2
+havok.hkx.class	hclSimulationSetupMesh	listed=42 payloads=42 objects=42 signatures=efda0ea4x42 count_eq_system_objects=holds=0 fails=0 span_min=208 span_max=208 span_distinct=1
+havok.hkx.class	hclSkinSetupObject	listed=42 payloads=42 objects=42 signatures=c7d35db5x42 count_eq_system_objects=holds=0 fails=0 span_min=96 span_max=96 span_distinct=1
+havok.hkx.class	hclStandardLinkSetupObject	listed=42 payloads=42 objects=42 signatures=7e0ea82ax42 count_eq_system_objects=holds=0 fails=0 span_min=144 span_max=144 span_distinct=1
+havok.hkx.class	hclStaticDisplayBufferSetupObject	listed=42 payloads=42 objects=42 signatures=fc4a7753x42 count_eq_system_objects=holds=0 fails=0 span_min=48 span_max=64 span_distinct=2
+havok.hkx.class	hclStretchLinkSetupObject	listed=42 payloads=42 objects=42 signatures=18d53465x42 count_eq_system_objects=holds=0 fails=0 span_min=176 span_max=176 span_distinct=1
+havok.hkx.class	hclTaperedCapsuleShape	listed=22 payloads=22 objects=66 signatures=dfa58f21x22 count_eq_system_objects=holds=0 fails=0 span_min=176 span_max=176 span_distinct=1
+havok.hkx.class	hclVertexGatherSetupObject	listed=42 payloads=42 objects=42 signatures=b96bf3edx42 count_eq_system_objects=holds=0 fails=0 span_min=112 span_max=112 span_distinct=1
+havok.hkx.class	hclVolumeConstraintSetupObject	listed=34 payloads=34 objects=34 signatures=711528fax34 count_eq_system_objects=holds=0 fails=0 span_min=128 span_max=160 span_distinct=2
+havok.hkx.class	hkClass	listed=17508 payloads=0 objects=0 signatures=33d42383x17508 count_eq_system_objects=holds=0 fails=0 span_min=0 span_max=0 span_distinct=0
+havok.hkx.class	hkClassEnum	listed=17508 payloads=0 objects=0 signatures=8a3609cfx17508 count_eq_system_objects=holds=0 fails=0 span_min=0 span_max=0 span_distinct=0
+havok.hkx.class	hkClassEnumItem	listed=17508 payloads=0 objects=0 signatures=ce6f8a6cx17508 count_eq_system_objects=holds=0 fails=0 span_min=0 span_max=0 span_distinct=0
+havok.hkx.class	hkClassMember	listed=17508 payloads=0 objects=0 signatures=b0efa719x17508 count_eq_system_objects=holds=0 fails=0 span_min=0 span_max=0 span_distinct=0
+havok.hkx.class	hkMemoryResourceContainer	listed=13172 payloads=13172 objects=13172 signatures=1de13a73x13172 count_eq_system_objects=holds=0 fails=0 span_min=80 span_max=80 span_distinct=1
+havok.hkx.class	hkRefCountedProperties	listed=41 payloads=41 objects=1014 signatures=7c574867x41 count_eq_system_objects=holds=0 fails=0 span_min=32 span_max=32 span_distinct=1
+havok.hkx.class	hkRootLevelContainer	listed=17508 payloads=17508 objects=17508 signatures=2772c11ex17508 count_eq_system_objects=holds=0 fails=0 span_min=80 span_max=400 span_distinct=7
+havok.hkx.class	hkSimpleLocalFrame	listed=242 payloads=242 objects=242 signatures=798adf92x242 count_eq_system_objects=holds=0 fails=0 span_min=128 span_max=128 span_distinct=1
+havok.hkx.class	hkaAnimationBinding	listed=16145 payloads=16145 objects=16145 signatures=0faf9150x16145 count_eq_system_objects=holds=0 fails=0 span_min=128 span_max=352 span_distinct=14
+havok.hkx.class	hkaAnimationContainer	listed=16388 payloads=16388 objects=16388 signatures=26859f4cx16388 count_eq_system_objects=holds=0 fails=0 span_min=96 span_max=128 span_distinct=3
+havok.hkx.class	hkaDefaultAnimatedReferenceFrame	listed=15188 payloads=15188 objects=15188 signatures=60f8e0b8x15188 count_eq_system_objects=holds=0 fails=0 span_min=128 span_max=98480 span_distinct=443
+havok.hkx.class	hkaLosslessCompressedAnimation	listed=1085 payloads=1085 objects=1085 signatures=278bffe8x1085 count_eq_system_objects=holds=0 fails=0 span_min=3680 span_max=691920 span_distinct=346
+havok.hkx.class	hkaSkeleton	listed=241 payloads=241 objects=284 signatures=fec1cedbx241 count_eq_system_objects=holds=0 fails=0 span_min=256 span_max=18032 span_distinct=103
+havok.hkx.class	hkaSkeletonMapper	listed=43 payloads=43 objects=86 signatures=ace9849cx43 count_eq_system_objects=holds=0 fails=0 span_min=320 span_max=4512 span_distinct=60
+havok.hkx.class	hkaSplineCompressedAnimation	listed=15060 payloads=15060 objects=15060 signatures=8c3b5f7ex15060 count_eq_system_objects=holds=0 fails=0 span_min=304 span_max=308096 span_distinct=1024+
+havok.hkx.class	hkbBehaviorGraph	listed=450 payloads=450 objects=450 signatures=fdedb83bx450 count_eq_system_objects=holds=0 fails=0 span_min=448 span_max=496 span_distinct=4
+havok.hkx.class	hkbBehaviorGraphData	listed=450 payloads=450 objects=450 signatures=907a8222x450 count_eq_system_objects=holds=0 fails=0 span_min=112 span_max=7264 span_distinct=103
+havok.hkx.class	hkbBehaviorGraphStringData	listed=450 payloads=450 objects=450 signatures=1bd27f38x450 count_eq_system_objects=holds=0 fails=0 span_min=80 span_max=37808 span_distinct=168
+havok.hkx.class	hkbBehaviorReferenceGenerator	listed=84 payloads=84 objects=131 signatures=154fcfaax84 count_eq_system_objects=holds=0 fails=0 span_min=208 span_max=256 span_distinct=4
+havok.hkx.class	hkbBlenderGenerator	listed=131 payloads=131 objects=917 signatures=ce45c088x131 count_eq_system_objects=holds=0 fails=0 span_min=256 span_max=432 span_distinct=8
+havok.hkx.class	hkbBlenderGeneratorChild	listed=160 payloads=160 objects=2727 signatures=b35bbfd3x160 count_eq_system_objects=holds=0 fails=0 span_min=80 span_max=80 span_distinct=1
+havok.hkx.class	hkbBlendingTransitionEffect	listed=378 payloads=378 objects=1692 signatures=14e54c5cx378 count_eq_system_objects=holds=0 fails=0 span_min=336 span_max=384 span_distinct=4
+havok.hkx.class	hkbBoneIndexArray	listed=53 payloads=53 objects=246 signatures=3d26f425x53 count_eq_system_objects=holds=0 fails=0 span_min=64 span_max=160 span_distinct=7
+havok.hkx.class	hkbBoneWeightArray	listed=122 payloads=122 objects=1081 signatures=2c9b5751x122 count_eq_system_objects=holds=0 fails=0 span_min=64 span_max=512 span_distinct=27
+havok.hkx.class	hkbCharacterData	listed=328 payloads=328 objects=328 signatures=fec46c1fx328 count_eq_system_objects=holds=0 fails=0 span_min=240 span_max=2288 span_distinct=23
+havok.hkx.class	hkbCharacterStringData	listed=328 payloads=328 objects=328 signatures=0b9d8a52x328 count_eq_system_objects=holds=0 fails=0 span_min=304 span_max=42976 span_distinct=83
+havok.hkx.class	hkbClipGenerator	listed=235 payloads=235 objects=4505 signatures=0d4cc9f6x235 count_eq_system_objects=holds=0 fails=0 span_min=368 span_max=512 span_distinct=9
+havok.hkx.class	hkbClipTriggerArray	listed=166 payloads=166 objects=2391 signatures=f757cd66x166 count_eq_system_objects=holds=0 fails=0 span_min=64 span_max=1248 span_distinct=13
+havok.hkx.class	hkbDampingModifier	listed=24 payloads=24 objects=52 signatures=68a51d05x24 count_eq_system_objects=holds=0 fails=0 span_min=208 span_max=240 span_distinct=3
+havok.hkx.class	hkbEvaluateExpressionModifier	listed=46 payloads=46 objects=111 signatures=4a3ac449x46 count_eq_system_objects=holds=0 fails=0 span_min=144 span_max=176 span_distinct=3
+havok.hkx.class	hkbEventDrivenModifier	listed=84 payloads=84 objects=292 signatures=35ef356bx84 count_eq_system_objects=holds=0 fails=0 span_min=128 span_max=176 span_distinct=4
+havok.hkx.class	hkbEventRangeDataArray	listed=67 payloads=67 objects=102 signatures=83502c2dx67 count_eq_system_objects=holds=0 fails=0 span_min=64 span_max=352 span_distinct=7
+havok.hkx.class	hkbEventsFromRangeModifier	listed=67 payloads=67 objects=102 signatures=c9ece705x67 count_eq_system_objects=holds=0 fails=0 span_min=144 span_max=176 span_distinct=3
+havok.hkx.class	hkbExpressionCondition	listed=14 payloads=14 objects=55 signatures=78a69526x14 count_eq_system_objects=holds=0 fails=0 span_min=48 span_max=96 span_distinct=4
+havok.hkx.class	hkbExpressionDataArray	listed=46 payloads=46 objects=111 signatures=1ebfc6d7x46 count_eq_system_objects=holds=0 fails=0 span_min=80 span_max=720 span_distinct=12
+havok.hkx.class	hkbFootIkControlsModifier	listed=16 payloads=16 objects=16 signatures=f0393a52x16 count_eq_system_objects=holds=0 fails=0 span_min=256 span_max=272 span_distinct=2
+havok.hkx.class	hkbFootIkDriverInfo	listed=14 payloads=14 objects=14 signatures=f79c429dx14 count_eq_system_objects=holds=0 fails=0 span_min=240 span_max=560 span_distinct=4
+havok.hkx.class	hkbGeneratorTransitionEffect	listed=9 payloads=9 objects=68 signatures=44208f07x9 count_eq_system_objects=holds=0 fails=0 span_min=256 span_max=272 span_distinct=2
+havok.hkx.class	hkbGetHandleOnBoneModifier	listed=2 payloads=2 objects=3 signatures=702ba6fcx2 count_eq_system_objects=holds=0 fails=0 span_min=144 span_max=144 span_distinct=1
+havok.hkx.class	hkbGetUpModifier	listed=37 payloads=37 objects=39 signatures=84519a60x37 count_eq_system_objects=holds=0 fails=0 span_min=160 span_max=176 span_distinct=2
+havok.hkx.class	hkbHandIkControlsModifier	listed=2 payloads=2 objects=2 signatures=0d282dc7x2 count_eq_system_objects=holds=0 fails=0 span_min=256 span_max=368 span_distinct=2
+havok.hkx.class	hkbHandIkDriverInfo	listed=4 payloads=4 objects=4 signatures=3eab47f1x4 count_eq_system_objects=holds=0 fails=0 span_min=240 span_max=240 span_distinct=1
+havok.hkx.class	hkbJigglerGroup	listed=4 payloads=4 objects=13 signatures=99b14961x4 count_eq_system_objects=holds=0 fails=0 span_min=96 span_max=96 span_distinct=1
+havok.hkx.class	hkbJigglerModifier	listed=4 payloads=4 objects=13 signatures=1c1623adx4 count_eq_system_objects=holds=0 fails=0 span_min=192 span_max=208 span_distinct=2
+havok.hkx.class	hkbKeyframeBonesModifier	listed=42 payloads=42 objects=60 signatures=4e45d0f7x42 count_eq_system_objects=holds=0 fails=0 span_min=144 span_max=144 span_distinct=1
+havok.hkx.class	hkbLayer	listed=35 payloads=35 objects=158 signatures=2916a243x35 count_eq_system_objects=holds=0 fails=0 span_min=96 span_max=96 span_distinct=1
+havok.hkx.class	hkbLayerGenerator	listed=35 payloads=35 objects=41 signatures=b4e0c52fx35 count_eq_system_objects=holds=0 fails=0 span_min=224 span_max=320 span_distinct=6
+havok.hkx.class	hkbManualSelectorGenerator	listed=57 payloads=57 objects=134 signatures=eed8d5cdx57 count_eq_system_objects=holds=0 fails=0 span_min=240 span_max=448 span_distinct=10
+havok.hkx.class	hkbMirrorModifier	listed=6 payloads=6 objects=23 signatures=b3ef2ee5x6 count_eq_system_objects=holds=0 fails=0 span_min=112 span_max=128 span_distinct=2
+havok.hkx.class	hkbMirroredSkeletonInfo	listed=328 payloads=328 objects=328 signatures=9f13052ex328 count_eq_system_objects=holds=0 fails=0 span_min=64 span_max=304 span_distinct=15
+havok.hkx.class	hkbModifierGenerator	listed=185 payloads=185 objects=2260 signatures=c499fc9ex185 count_eq_system_objects=holds=0 fails=0 span_min=176 span_max=224 span_distinct=4
+havok.hkx.class	hkbModifierList	listed=126 payloads=126 objects=730 signatures=0ded564cx126 count_eq_system_objects=holds=0 fails=0 span_min=144 span_max=240 span_distinct=7
+havok.hkx.class	hkbPoseMatchingGenerator	listed=37 payloads=37 objects=111 signatures=b2aa2982x37 count_eq_system_objects=holds=0 fails=0 span_min=352 span_max=368 span_distinct=2
+havok.hkx.class	hkbPoweredRagdollControlsModifier	listed=42 payloads=42 objects=85 signatures=522211cbx42 count_eq_system_objects=holds=0 fails=0 span_min=192 span_max=208 span_distinct=2
+havok.hkx.class	hkbProjectData	listed=342 payloads=342 objects=342 signatures=363c1159x342 count_eq_system_objects=holds=0 fails=0 span_min=48 span_max=48 span_distinct=1
+havok.hkx.class	hkbProjectStringData	listed=342 payloads=342 objects=342 signatures=ca08c2bax342 count_eq_system_objects=holds=0 fails=0 span_min=208 span_max=416 span_distinct=6
+havok.hkx.class	hkbReferencePoseGenerator	listed=45 payloads=45 objects=106 signatures=bc1536eex45 count_eq_system_objects=holds=0 fails=0 span_min=160 span_max=176 span_distinct=2
+havok.hkx.class	hkbRigidBodyRagdollControlsModifier	listed=37 payloads=37 objects=37 signatures=b7c3fe7dx37 count_eq_system_objects=holds=0 fails=0 span_min=192 span_max=208 span_distinct=2
+havok.hkx.class	hkbStateMachine	listed=450 payloads=450 objects=2075 signatures=a5896bcfx450 count_eq_system_objects=holds=0 fails=0 span_min=368 span_max=1472 span_distinct=23
+havok.hkx.class	hkbStateMachineEventPropertyArray	listed=225 payloads=225 objects=2969 signatures=71957c2dx225 count_eq_system_objects=holds=0 fails=0 span_min=48 span_max=272 span_distinct=13
+havok.hkx.class	hkbStateMachineStateInfo	listed=449 payloads=449 objects=7230 signatures=39d76713x449 count_eq_system_objects=holds=0 fails=0 span_min=144 span_max=192 span_distinct=4
+havok.hkx.class	hkbStateMachineTransitionInfoArray	listed=379 payloads=379 objects=4727 signatures=704a19afx379 count_eq_system_objects=holds=0 fails=0 span_min=128 span_max=9984 span_distinct=33
+havok.hkx.class	hkbStringCondition	listed=2 payloads=2 objects=3 signatures=93f405f5x2 count_eq_system_objects=holds=0 fails=0 span_min=48 span_max=48 span_distinct=1
+havok.hkx.class	hkbStringEventPayload	listed=160 payloads=160 objects=774 signatures=df5fe694x160 count_eq_system_objects=holds=0 fails=0 span_min=32 span_max=112 span_distinct=6
+havok.hkx.class	hkbTimerModifier	listed=38 payloads=38 objects=56 signatures=7880c5e2x38 count_eq_system_objects=holds=0 fails=0 span_min=144 span_max=176 span_distinct=3
+havok.hkx.class	hkbTwistModifier	listed=37 payloads=37 objects=218 signatures=98d623bcx37 count_eq_system_objects=holds=0 fails=0 span_min=176 span_max=224 span_distinct=4
+havok.hkx.class	hkbVariableBindingSet	listed=222 payloads=222 objects=4137 signatures=e942f339x222 count_eq_system_objects=holds=0 fails=0 span_min=96 span_max=2704 span_distinct=47
+havok.hkx.class	hkbVariableValueSet	listed=778 payloads=778 objects=778 signatures=eb5f7e25x778 count_eq_system_objects=holds=0 fails=0 span_min=64 span_max=1392 span_distinct=40
+havok.hkx.class	hknpBreakableConstraintData	listed=1 payloads=1 objects=1 signatures=c40485c7x1 count_eq_system_objects=holds=0 fails=0 span_min=48 span_max=48 span_distinct=1
+havok.hkx.class	hknpCapsuleShape	listed=39 payloads=39 objects=933 signatures=60a75f4cx39 count_eq_system_objects=holds=0 fails=0 span_min=432 span_max=432 span_distinct=1
+havok.hkx.class	hknpCompressedMeshShape	listed=7 payloads=7 objects=10 signatures=5f60d536x7 count_eq_system_objects=holds=0 fails=0 span_min=192 span_max=192 span_distinct=1
+havok.hkx.class	hknpCompressedMeshShapeData	listed=7 payloads=7 objects=10 signatures=a2bdfc59x7 count_eq_system_objects=holds=0 fails=0 span_min=624 span_max=896 span_distinct=6
+havok.hkx.class	hknpConvexPolytopeShape	listed=22 payloads=22 objects=125 signatures=3ce9b3e3x22 count_eq_system_objects=holds=0 fails=0 span_min=400 span_max=14480 span_distinct=28
+havok.hkx.class	hknpPhysicsSceneData	listed=43 payloads=43 objects=43 signatures=701ce72cx43 count_eq_system_objects=holds=0 fails=0 span_min=64 span_max=64 span_distinct=1
+havok.hkx.class	hknpRagdollData	listed=43 payloads=43 objects=43 signatures=dc8f20abx43 count_eq_system_objects=holds=0 fails=0 span_min=848 span_max=28480 span_distinct=37
+havok.hkx.class	hknpShapeMassProperties	listed=41 payloads=41 objects=1014 signatures=e9191728x41 count_eq_system_objects=holds=0 fails=0 span_min=48 span_max=48 span_distinct=1
+havok.hkx.class	hkpFixedConstraintData	listed=1 payloads=1 objects=3 signatures=302adc45x1 count_eq_system_objects=holds=0 fails=0 span_min=224 span_max=224 span_distinct=1
+havok.hkx.class	hkpLimitedHingeConstraintData	listed=35 payloads=35 objects=238 signatures=51ea603ax35 count_eq_system_objects=holds=0 fails=0 span_min=304 span_max=304 span_distinct=1
+havok.hkx.class	hkpPositionConstraintMotor	listed=42 payloads=42 objects=42 signatures=143dd400x42 count_eq_system_objects=holds=0 fails=0 span_min=48 span_max=48 span_distinct=1
+havok.hkx.class	hkpRagdollConstraintData	listed=39 payloads=39 objects=669 signatures=b77d2036x39 count_eq_system_objects=holds=0 fails=0 span_min=416 span_max=416 span_distinct=1
+havok.hkx.object_lead	BGSGamebryoSequenceGenerator|192	1427
+havok.hkx.object_lead	BSAssignVariablesModifier|288	283
+havok.hkx.object_lead	BSBehaviorGraphSwapGenerator|160	47
+havok.hkx.object_lead	BSBoneSwitchGenerator|176	27
+havok.hkx.object_lead	BSBoneSwitchGeneratorBoneData|none	27
+havok.hkx.object_lead	BSCyclicBlendTransitionGenerator|288	81
+havok.hkx.object_lead	BSDirectAtCapturePoseModifier|96	6
+havok.hkx.object_lead	BSDirectAtModifier|432	39
+havok.hkx.object_lead	BSEventEveryNEventsModifier|144	100
+havok.hkx.object_lead	BSEventOnDeactivateModifier|112	220
+havok.hkx.object_lead	BSEventOnFalseToTrueModifier|176	2
+havok.hkx.object_lead	BSGetTimeStepModifier|96	30
+havok.hkx.object_lead	BSInterpValueModifier|112	42
+havok.hkx.object_lead	BSIsActiveModifier|112	599
+havok.hkx.object_lead	BSLimbCycleModifier|176	4
+havok.hkx.object_lead	BSLookAtCapturePoseModifier|96	28
+havok.hkx.object_lead	BSLookAtModifier|816	47
+havok.hkx.object_lead	BSModifyOnceModifier|128	124
+havok.hkx.object_lead	BSOffsetAnimationGenerator|240	5
+havok.hkx.object_lead	BSPassByTargetTriggerModifier|176	1
+havok.hkx.object_lead	BSRagdollContactListenerModifier|128	37
+havok.hkx.object_lead	BSRandomAlarmModifier|128	6
+havok.hkx.object_lead	BSReverseSpineTwistModifier|256	1
+havok.hkx.object_lead	BSRootTwistModifier|144	11
+havok.hkx.object_lead	BSSpeedSamplerModifier|112	2
+havok.hkx.object_lead	BSTimerModifier|128	68
+havok.hkx.object_lead	BSTweenerModifier|208	2
+havok.hkx.object_lead	BSiStateTaggingGenerator|160	91
+havok.hkx.object_lead	DynamicAnimationTaggingGenerator|160	256
+havok.hkx.object_lead	hclBendStiffnessSetupObject|80	36
+havok.hkx.object_lead	hclCapsuleShape|none	58
+havok.hkx.object_lead	hclClothContainer|48	36
+havok.hkx.object_lead	hclClothContainer|none	6
+havok.hkx.object_lead	hclClothSetupContainer|64	42
+havok.hkx.object_lead	hclClothSetupObject|112	42
+havok.hkx.object_lead	hclClothStateSetupObject|48	84
+havok.hkx.object_lead	hclCollidable|144	124
+havok.hkx.object_lead	hclLocalRangeSetupObject|128	28
+havok.hkx.object_lead	hclMeshBoneDeformSetupObject|80	42
+havok.hkx.object_lead	hclMoveFixedParticlesSetupObject|48	42
+havok.hkx.object_lead	hclNamedSetupMesh|48	42
+havok.hkx.object_lead	hclNamedTransformSetSetupObject|48	42
+havok.hkx.object_lead	hclScratchBufferSetupObject|48	42
+havok.hkx.object_lead	hclSimClothBufferSetupObject|48	42
+havok.hkx.object_lead	hclSimClothSetupObject|352	42
+havok.hkx.object_lead	hclSimulateSetupObject|64	42
+havok.hkx.object_lead	hclSimulationSetupMesh|none	42
+havok.hkx.object_lead	hclSkinSetupObject|80	42
+havok.hkx.object_lead	hclStandardLinkSetupObject|128	42
+havok.hkx.object_lead	hclStaticDisplayBufferSetupObject|32	42
+havok.hkx.object_lead	hclStretchLinkSetupObject|128	42
+havok.hkx.object_lead	hclTaperedCapsuleShape|none	66
+havok.hkx.object_lead	hclVertexGatherSetupObject|96	42
+havok.hkx.object_lead	hclVolumeConstraintSetupObject|96	34
+havok.hkx.object_lead	hkMemoryResourceContainer|64	13172
+havok.hkx.object_lead	hkRefCountedProperties|16	1014
+havok.hkx.object_lead	hkRootLevelContainer|16	17508
+havok.hkx.object_lead	hkSimpleLocalFrame|none	242
+havok.hkx.object_lead	hkaAnimationBinding|96	16145
+havok.hkx.object_lead	hkaAnimationContainer|96	16386
+havok.hkx.object_lead	hkaAnimationContainer|none	2
+havok.hkx.object_lead	hkaDefaultAnimatedReferenceFrame|96	15188
+havok.hkx.object_lead	hkaLosslessCompressedAnimation|224	1085
+havok.hkx.object_lead	hkaSkeleton|144	284
+havok.hkx.object_lead	hkaSkeletonMapper|192	86
+havok.hkx.object_lead	hkaSplineCompressedAnimation|176	15060
+havok.hkx.object_lead	hkbBehaviorGraph|432	450
+havok.hkx.object_lead	hkbBehaviorGraphData|112	444
+havok.hkx.object_lead	hkbBehaviorGraphData|none	6
+havok.hkx.object_lead	hkbBehaviorGraphStringData|80	444
+havok.hkx.object_lead	hkbBehaviorGraphStringData|none	6
+havok.hkx.object_lead	hkbBehaviorReferenceGenerator|160	131
+havok.hkx.object_lead	hkbBlenderGenerator|224	917
+havok.hkx.object_lead	hkbBlenderGeneratorChild|none	2727
+havok.hkx.object_lead	hkbBlendingTransitionEffect|320	1692
+havok.hkx.object_lead	hkbBoneIndexArray|64	123
+havok.hkx.object_lead	hkbBoneIndexArray|none	123
+havok.hkx.object_lead	hkbBoneWeightArray|64	548
+havok.hkx.object_lead	hkbBoneWeightArray|none	533
+havok.hkx.object_lead	hkbCharacterData|240	58
+havok.hkx.object_lead	hkbCharacterData|none	270
+havok.hkx.object_lead	hkbCharacterStringData|224	328
+havok.hkx.object_lead	hkbClipGenerator|352	4505
+havok.hkx.object_lead	hkbClipTriggerArray|32	2391
+havok.hkx.object_lead	hkbDampingModifier|192	52
+havok.hkx.object_lead	hkbEvaluateExpressionModifier|128	111
+havok.hkx.object_lead	hkbEventDrivenModifier|112	292
+havok.hkx.object_lead	hkbEventRangeDataArray|32	102
+havok.hkx.object_lead	hkbEventsFromRangeModifier|128	102
+havok.hkx.object_lead	hkbExpressionCondition|32	55
+havok.hkx.object_lead	hkbExpressionDataArray|32	111
+havok.hkx.object_lead	hkbFootIkControlsModifier|224	16
+havok.hkx.object_lead	hkbFootIkDriverInfo|80	14
+havok.hkx.object_lead	hkbGeneratorTransitionEffect|224	68
+havok.hkx.object_lead	hkbGetHandleOnBoneModifier|112	3
+havok.hkx.object_lead	hkbGetUpModifier|144	39
+havok.hkx.object_lead	hkbHandIkControlsModifier|112	2
+havok.hkx.object_lead	hkbHandIkDriverInfo|48	4
+havok.hkx.object_lead	hkbJigglerGroup|none	13
+havok.hkx.object_lead	hkbJigglerModifier|160	13
+havok.hkx.object_lead	hkbKeyframeBonesModifier|112	60
+havok.hkx.object_lead	hkbLayer|none	158
+havok.hkx.object_lead	hkbLayerGenerator|192	41
+havok.hkx.object_lead	hkbManualSelectorGenerator|208	134
+havok.hkx.object_lead	hkbMirrorModifier|96	23
+havok.hkx.object_lead	hkbMirroredSkeletonInfo|64	39
+havok.hkx.object_lead	hkbMirroredSkeletonInfo|none	289
+havok.hkx.object_lead	hkbModifierGenerator|160	2260
+havok.hkx.object_lead	hkbModifierList|112	730
+havok.hkx.object_lead	hkbPoseMatchingGenerator|304	111
+havok.hkx.object_lead	hkbPoweredRagdollControlsModifier|160	85
+havok.hkx.object_lead	hkbProjectData|none	342
+havok.hkx.object_lead	hkbProjectStringData|128	342
+havok.hkx.object_lead	hkbReferencePoseGenerator|144	106
+havok.hkx.object_lead	hkbRigidBodyRagdollControlsModifier|176	37
+havok.hkx.object_lead	hkbStateMachine|336	2075
+havok.hkx.object_lead	hkbStateMachineEventPropertyArray|32	2969
+havok.hkx.object_lead	hkbStateMachineStateInfo|128	7230
+havok.hkx.object_lead	hkbStateMachineTransitionInfoArray|48	4727
+havok.hkx.object_lead	hkbStringCondition|32	3
+havok.hkx.object_lead	hkbStringEventPayload|32	702
+havok.hkx.object_lead	hkbStringEventPayload|none	72
+havok.hkx.object_lead	hkbTimerModifier|128	56
+havok.hkx.object_lead	hkbTwistModifier|160	218
+havok.hkx.object_lead	hkbVariableBindingSet|48	4137
+havok.hkx.object_lead	hkbVariableValueSet|64	315
+havok.hkx.object_lead	hkbVariableValueSet|none	463
+havok.hkx.object_lead	hknpBreakableConstraintData|none	1
+havok.hkx.object_lead	hknpCapsuleShape|none	933
+havok.hkx.object_lead	hknpCompressedMeshShape|160	10
+havok.hkx.object_lead	hknpCompressedMeshShapeData|208	10
+havok.hkx.object_lead	hknpConvexPolytopeShape|none	125
+havok.hkx.object_lead	hknpPhysicsSceneData|48	43
+havok.hkx.object_lead	hknpRagdollData|144	43
+havok.hkx.object_lead	hknpShapeMassProperties|none	1014
+havok.hkx.object_lead	hkpFixedConstraintData|none	3
+havok.hkx.object_lead	hkpLimitedHingeConstraintData|none	238
+havok.hkx.object_lead	hkpPositionConstraintMotor|none	42
+havok.hkx.object_lead	hkpRagdollConstraintData|none	669
+havok.hkx.object_check	BGSGamebryoSequenceGenerator|destinations_follow_source_order	holds=1427 fails=0
+havok.hkx.object_check	BSAssignVariablesModifier|destinations_follow_source_order	holds=283 fails=0
+havok.hkx.object_check	BSBehaviorGraphSwapGenerator|destinations_follow_source_order	holds=47 fails=0
+havok.hkx.object_check	BSBoneSwitchGeneratorBoneData|destinations_follow_source_order	holds=27 fails=0
+havok.hkx.object_check	BSBoneSwitchGenerator|destinations_follow_source_order	holds=27 fails=0
+havok.hkx.object_check	BSCyclicBlendTransitionGenerator|destinations_follow_source_order	holds=81 fails=0
+havok.hkx.object_check	BSDirectAtCapturePoseModifier|destinations_follow_source_order	holds=6 fails=0
+havok.hkx.object_check	BSDirectAtModifier|destinations_follow_source_order	holds=39 fails=0
+havok.hkx.object_check	BSEventEveryNEventsModifier|destinations_follow_source_order	holds=100 fails=0
+havok.hkx.object_check	BSEventOnDeactivateModifier|destinations_follow_source_order	holds=220 fails=0
+havok.hkx.object_check	BSEventOnFalseToTrueModifier|destinations_follow_source_order	holds=2 fails=0
+havok.hkx.object_check	BSGetTimeStepModifier|destinations_follow_source_order	holds=30 fails=0
+havok.hkx.object_check	BSInterpValueModifier|destinations_follow_source_order	holds=42 fails=0
+havok.hkx.object_check	BSIsActiveModifier|destinations_follow_source_order	holds=599 fails=0
+havok.hkx.object_check	BSLimbCycleModifier|destinations_follow_source_order	holds=4 fails=0
+havok.hkx.object_check	BSLookAtCapturePoseModifier|destinations_follow_source_order	holds=28 fails=0
+havok.hkx.object_check	BSLookAtModifier|destinations_follow_source_order	holds=47 fails=0
+havok.hkx.object_check	BSModifyOnceModifier|destinations_follow_source_order	holds=124 fails=0
+havok.hkx.object_check	BSOffsetAnimationGenerator|destinations_follow_source_order	holds=5 fails=0
+havok.hkx.object_check	BSPassByTargetTriggerModifier|destinations_follow_source_order	holds=1 fails=0
+havok.hkx.object_check	BSRagdollContactListenerModifier|destinations_follow_source_order	holds=37 fails=0
+havok.hkx.object_check	BSRandomAlarmModifier|destinations_follow_source_order	holds=6 fails=0
+havok.hkx.object_check	BSReverseSpineTwistModifier|destinations_follow_source_order	holds=1 fails=0
+havok.hkx.object_check	BSRootTwistModifier|destinations_follow_source_order	holds=11 fails=0
+havok.hkx.object_check	BSSpeedSamplerModifier|destinations_follow_source_order	holds=2 fails=0
+havok.hkx.object_check	BSTimerModifier|destinations_follow_source_order	holds=68 fails=0
+havok.hkx.object_check	BSTweenerModifier|destinations_follow_source_order	holds=2 fails=0
+havok.hkx.object_check	BSiStateTaggingGenerator|destinations_follow_source_order	holds=91 fails=0
+havok.hkx.object_check	DynamicAnimationTaggingGenerator|destinations_follow_source_order	holds=256 fails=0
+havok.hkx.object_check	hclBendStiffnessSetupObject|destinations_follow_source_order	holds=36 fails=0
+havok.hkx.object_check	hclCapsuleShape|destinations_follow_source_order	holds=58 fails=0
+havok.hkx.object_check	hclClothContainer|destinations_follow_source_order	holds=42 fails=0
+havok.hkx.object_check	hclClothSetupContainer|destinations_follow_source_order	holds=42 fails=0
+havok.hkx.object_check	hclClothSetupObject|destinations_follow_source_order	holds=42 fails=0
+havok.hkx.object_check	hclClothStateSetupObject|destinations_follow_source_order	holds=84 fails=0
+havok.hkx.object_check	hclCollidable|destinations_follow_source_order	holds=124 fails=0
+havok.hkx.object_check	hclLocalRangeSetupObject|destinations_follow_source_order	holds=28 fails=0
+havok.hkx.object_check	hclMeshBoneDeformSetupObject|destinations_follow_source_order	holds=42 fails=0
+havok.hkx.object_check	hclMoveFixedParticlesSetupObject|destinations_follow_source_order	holds=42 fails=0
+havok.hkx.object_check	hclNamedSetupMesh|destinations_follow_source_order	holds=42 fails=0
+havok.hkx.object_check	hclNamedTransformSetSetupObject|destinations_follow_source_order	holds=42 fails=0
+havok.hkx.object_check	hclScratchBufferSetupObject|destinations_follow_source_order	holds=42 fails=0
+havok.hkx.object_check	hclSimClothBufferSetupObject|destinations_follow_source_order	holds=42 fails=0
+havok.hkx.object_check	hclSimClothSetupObject|destinations_follow_source_order	holds=42 fails=0
+havok.hkx.object_check	hclSimulateSetupObject|destinations_follow_source_order	holds=42 fails=0
+havok.hkx.object_check	hclSimulationSetupMesh|destinations_follow_source_order	holds=42 fails=0
+havok.hkx.object_check	hclSkinSetupObject|destinations_follow_source_order	holds=42 fails=0
+havok.hkx.object_check	hclStandardLinkSetupObject|destinations_follow_source_order	holds=42 fails=0
+havok.hkx.object_check	hclStaticDisplayBufferSetupObject|destinations_follow_source_order	holds=42 fails=0
+havok.hkx.object_check	hclStretchLinkSetupObject|destinations_follow_source_order	holds=42 fails=0
+havok.hkx.object_check	hclTaperedCapsuleShape|destinations_follow_source_order	holds=66 fails=0
+havok.hkx.object_check	hclVertexGatherSetupObject|destinations_follow_source_order	holds=42 fails=0
+havok.hkx.object_check	hclVolumeConstraintSetupObject|destinations_follow_source_order	holds=34 fails=0
+havok.hkx.object_check	hkMemoryResourceContainer|destinations_follow_source_order	holds=13172 fails=0
+havok.hkx.object_check	hkRefCountedProperties|destinations_follow_source_order	holds=1014 fails=0
+havok.hkx.object_check	hkRootLevelContainer|destinations_follow_source_order	holds=17508 fails=0
+havok.hkx.object_check	hkSimpleLocalFrame|destinations_follow_source_order	holds=242 fails=0
+havok.hkx.object_check	hkaAnimationBinding|destinations_follow_source_order	holds=16145 fails=0
+havok.hkx.object_check	hkaAnimationContainer|destinations_follow_source_order	holds=16388 fails=0
+havok.hkx.object_check	hkaDefaultAnimatedReferenceFrame|destinations_follow_source_order	holds=15188 fails=0
+havok.hkx.object_check	hkaLosslessCompressedAnimation|destinations_follow_source_order	holds=0 fails=1085
+havok.hkx.object_check	hkaSkeletonMapper|destinations_follow_source_order	holds=86 fails=0
+havok.hkx.object_check	hkaSkeleton|destinations_follow_source_order	holds=0 fails=284
+havok.hkx.object_check	hkaSplineCompressedAnimation|destinations_follow_source_order	holds=0 fails=15060
+havok.hkx.object_check	hkbBehaviorGraphData|destinations_follow_source_order	holds=450 fails=0
+havok.hkx.object_check	hkbBehaviorGraphStringData|destinations_follow_source_order	holds=186 fails=264
+havok.hkx.object_check	hkbBehaviorGraph|destinations_follow_source_order	holds=450 fails=0
+havok.hkx.object_check	hkbBehaviorReferenceGenerator|destinations_follow_source_order	holds=131 fails=0
+havok.hkx.object_check	hkbBlenderGeneratorChild|destinations_follow_source_order	holds=2727 fails=0
+havok.hkx.object_check	hkbBlenderGenerator|destinations_follow_source_order	holds=917 fails=0
+havok.hkx.object_check	hkbBlendingTransitionEffect|destinations_follow_source_order	holds=1692 fails=0
+havok.hkx.object_check	hkbBoneIndexArray|destinations_follow_source_order	holds=246 fails=0
+havok.hkx.object_check	hkbBoneWeightArray|destinations_follow_source_order	holds=1081 fails=0
+havok.hkx.object_check	hkbCharacterData|destinations_follow_source_order	holds=328 fails=0
+havok.hkx.object_check	hkbCharacterStringData|destinations_follow_source_order	holds=183 fails=145
+havok.hkx.object_check	hkbClipGenerator|destinations_follow_source_order	holds=4505 fails=0
+havok.hkx.object_check	hkbClipTriggerArray|destinations_follow_source_order	holds=2391 fails=0
+havok.hkx.object_check	hkbDampingModifier|destinations_follow_source_order	holds=52 fails=0
+havok.hkx.object_check	hkbEvaluateExpressionModifier|destinations_follow_source_order	holds=111 fails=0
+havok.hkx.object_check	hkbEventDrivenModifier|destinations_follow_source_order	holds=292 fails=0
+havok.hkx.object_check	hkbEventRangeDataArray|destinations_follow_source_order	holds=102 fails=0
+havok.hkx.object_check	hkbEventsFromRangeModifier|destinations_follow_source_order	holds=102 fails=0
+havok.hkx.object_check	hkbExpressionCondition|destinations_follow_source_order	holds=55 fails=0
+havok.hkx.object_check	hkbExpressionDataArray|destinations_follow_source_order	holds=111 fails=0
+havok.hkx.object_check	hkbFootIkControlsModifier|destinations_follow_source_order	holds=16 fails=0
+havok.hkx.object_check	hkbFootIkDriverInfo|destinations_follow_source_order	holds=14 fails=0
+havok.hkx.object_check	hkbGeneratorTransitionEffect|destinations_follow_source_order	holds=68 fails=0
+havok.hkx.object_check	hkbGetHandleOnBoneModifier|destinations_follow_source_order	holds=3 fails=0
+havok.hkx.object_check	hkbGetUpModifier|destinations_follow_source_order	holds=39 fails=0
+havok.hkx.object_check	hkbHandIkControlsModifier|destinations_follow_source_order	holds=2 fails=0
+havok.hkx.object_check	hkbHandIkDriverInfo|destinations_follow_source_order	holds=4 fails=0
+havok.hkx.object_check	hkbJigglerGroup|destinations_follow_source_order	holds=13 fails=0
+havok.hkx.object_check	hkbJigglerModifier|destinations_follow_source_order	holds=13 fails=0
+havok.hkx.object_check	hkbKeyframeBonesModifier|destinations_follow_source_order	holds=60 fails=0
+havok.hkx.object_check	hkbLayerGenerator|destinations_follow_source_order	holds=41 fails=0
+havok.hkx.object_check	hkbLayer|destinations_follow_source_order	holds=158 fails=0
+havok.hkx.object_check	hkbManualSelectorGenerator|destinations_follow_source_order	holds=134 fails=0
+havok.hkx.object_check	hkbMirrorModifier|destinations_follow_source_order	holds=23 fails=0
+havok.hkx.object_check	hkbMirroredSkeletonInfo|destinations_follow_source_order	holds=328 fails=0
+havok.hkx.object_check	hkbModifierGenerator|destinations_follow_source_order	holds=2260 fails=0
+havok.hkx.object_check	hkbModifierList|destinations_follow_source_order	holds=730 fails=0
+havok.hkx.object_check	hkbPoseMatchingGenerator|destinations_follow_source_order	holds=111 fails=0
+havok.hkx.object_check	hkbPoweredRagdollControlsModifier|destinations_follow_source_order	holds=85 fails=0
+havok.hkx.object_check	hkbProjectData|destinations_follow_source_order	holds=342 fails=0
+havok.hkx.object_check	hkbProjectStringData|destinations_follow_source_order	holds=2 fails=340
+havok.hkx.object_check	hkbReferencePoseGenerator|destinations_follow_source_order	holds=106 fails=0
+havok.hkx.object_check	hkbRigidBodyRagdollControlsModifier|destinations_follow_source_order	holds=37 fails=0
+havok.hkx.object_check	hkbStateMachineEventPropertyArray|destinations_follow_source_order	holds=2969 fails=0
+havok.hkx.object_check	hkbStateMachineStateInfo|destinations_follow_source_order	holds=7230 fails=0
+havok.hkx.object_check	hkbStateMachineTransitionInfoArray|destinations_follow_source_order	holds=4727 fails=0
+havok.hkx.object_check	hkbStateMachine|destinations_follow_source_order	holds=2075 fails=0
+havok.hkx.object_check	hkbStringCondition|destinations_follow_source_order	holds=3 fails=0
+havok.hkx.object_check	hkbStringEventPayload|destinations_follow_source_order	holds=774 fails=0
+havok.hkx.object_check	hkbTimerModifier|destinations_follow_source_order	holds=56 fails=0
+havok.hkx.object_check	hkbTwistModifier|destinations_follow_source_order	holds=218 fails=0
+havok.hkx.object_check	hkbVariableBindingSet|destinations_follow_source_order	holds=4137 fails=0
+havok.hkx.object_check	hkbVariableValueSet|destinations_follow_source_order	holds=778 fails=0
+havok.hkx.object_check	hknpBreakableConstraintData|destinations_follow_source_order	holds=1 fails=0
+havok.hkx.object_check	hknpCapsuleShape|destinations_follow_source_order	holds=933 fails=0
+havok.hkx.object_check	hknpCompressedMeshShapeData|destinations_follow_source_order	holds=0 fails=10
+havok.hkx.object_check	hknpCompressedMeshShape|destinations_follow_source_order	holds=10 fails=0
+havok.hkx.object_check	hknpConvexPolytopeShape|bytes_0_to_16_zero	holds=125 fails=0
+havok.hkx.object_check	hknpConvexPolytopeShape|bytes_28_to_48_zero	holds=125 fails=0
+havok.hkx.object_check	hknpConvexPolytopeShape|bytes_52_to_64_zero	holds=125 fails=0
+havok.hkx.object_check	hknpConvexPolytopeShape|bytes_76_to_80_zero	holds=125 fails=0
+havok.hkx.object_check	hknpConvexPolytopeShape|bytes_after_indices_zero	holds=125 fails=0
+havok.hkx.object_check	hknpConvexPolytopeShape|destinations_follow_source_order	holds=125 fails=0
+havok.hkx.object_check	hknpConvexPolytopeShape|every_vertex_in_some_face	holds=124 fails=1
+havok.hkx.object_check	hknpConvexPolytopeShape|f32_at_20_finite_nonnegative	holds=125 fails=0
+havok.hkx.object_check	hknpConvexPolytopeShape|face_count_at_least_3	holds=125 fails=0
+havok.hkx.object_check	hknpConvexPolytopeShape|face_counts_sum_to_index_count	holds=125 fails=0
+havok.hkx.object_check	hknpConvexPolytopeShape|face_first_is_running_sum_of_counts	holds=125 fails=0
+havok.hkx.object_check	hknpConvexPolytopeShape|face_vertices_on_own_plane_rel_1e-2	holds=125 fails=0
+havok.hkx.object_check	hknpConvexPolytopeShape|padding_face_entries_zero	holds=125 fails=0
+havok.hkx.object_check	hknpConvexPolytopeShape|plane_normals_unit_within_1e-4	holds=125 fails=0
+havok.hkx.object_check	hknpConvexPolytopeShape|vertices_behind_face_planes_rel_1e-3	holds=125 fails=0
+havok.hkx.object_check	hknpPhysicsSceneData|destinations_follow_source_order	holds=43 fails=0
+havok.hkx.object_check	hknpRagdollData|destinations_follow_source_order	holds=0 fails=43
+havok.hkx.object_check	hknpShapeMassProperties|destinations_follow_source_order	holds=1014 fails=0
+havok.hkx.object_check	hkpFixedConstraintData|destinations_follow_source_order	holds=3 fails=0
+havok.hkx.object_check	hkpLimitedHingeConstraintData|destinations_follow_source_order	holds=238 fails=0
+havok.hkx.object_check	hkpPositionConstraintMotor|destinations_follow_source_order	holds=42 fails=0
+havok.hkx.object_check	hkpRagdollConstraintData|destinations_follow_source_order	holds=669 fails=0
+havok.hkx.convex_polytope	read	125
+havok.hkx.convex_polytope_u16_16_18	323|256	35
+havok.hkx.convex_polytope_u16_16_18	451|256	85
+havok.hkx.convex_polytope_u16_16_18	67|256	5
+havok.hkx.convex_polytope_link32	hkRefCountedProperties	125
+havok.hkx.convex_polytope_padding_rows	0	102
+havok.hkx.convex_polytope_padding_rows	1	9
+havok.hkx.convex_polytope_padding_rows	2	9
+havok.hkx.convex_polytope_padding_rows	3	5
+havok.hkx.max_per_object	convex_polytope_index_count	1392
+havok.hkx.max_per_object	convex_polytope_plane_rows	452
+havok.hkx.max_per_object	convex_polytope_vertex_rows	248
+havok.hkx.array_gap	BGSGamebryoSequenceGenerator|+136	arrays=76 count_max=2 element_min=17 element_max=8 exact=33
+havok.hkx.array_gap	BSBoneSwitchGenerator|+152	arrays=27 count_max=1 element_min=1 element_max=16 exact=27
+havok.hkx.array_gap	BSLookAtModifier|+624	arrays=47 count_max=6 element_min=526 element_max=528 exact=47
+havok.hkx.array_gap	hclBendStiffnessSetupObject|+056	arrays=28 count_max=1 element_min=1 element_max=16 exact=28
+havok.hkx.array_gap	hclClothContainer|+016	arrays=36 count_max=4 element_min=6 element_max=8 exact=22
+havok.hkx.array_gap	hclClothSetupContainer|+016	arrays=42 count_max=1 element_min=1 element_max=16 exact=42
+havok.hkx.array_gap	hclClothSetupContainer|+032	arrays=42 count_max=1 element_min=1 element_max=16 exact=42
+havok.hkx.array_gap	hclClothSetupContainer|+048	arrays=42 count_max=1 element_min=1 element_max=16 exact=42
+havok.hkx.array_gap	hclClothSetupObject|+024	arrays=42 count_max=3 element_min=6 element_max=10 exact=0
+havok.hkx.array_gap	hclClothSetupObject|+040	arrays=42 count_max=1 element_min=1 element_max=16 exact=42
+havok.hkx.array_gap	hclClothSetupObject|+056	arrays=42 count_max=1 element_min=1 element_max=16 exact=42
+havok.hkx.array_gap	hclClothSetupObject|+072	arrays=42 count_max=5 element_min=7 element_max=9 exact=0
+havok.hkx.array_gap	hclClothSetupObject|+088	arrays=42 count_max=2 element_min=1 element_max=8 exact=42
+havok.hkx.array_gap	hclClothStateSetupObject|+024	arrays=84 count_max=4 element_min=6 element_max=8 exact=42
+havok.hkx.array_gap	hclLocalRangeSetupObject|+048	arrays=28 count_max=1 element_min=1 element_max=16 exact=28
+havok.hkx.array_gap	hclLocalRangeSetupObject|+064	arrays=28 count_max=1 element_min=1 element_max=16 exact=28
+havok.hkx.array_gap	hclLocalRangeSetupObject|+080	arrays=28 count_max=1 element_min=1 element_max=16 exact=28
+havok.hkx.array_gap	hclLocalRangeSetupObject|+096	arrays=28 count_max=1061997773 element_min=1 element_max=0 exact=0
+havok.hkx.array_gap	hclMeshBoneDeformSetupObject|+056	arrays=42 count_max=9 element_min=7 element_max=8 exact=42
+havok.hkx.array_gap	hclMeshBoneDeformSetupObject|inside_storage	arrays=42 count_max=1953459267 element_min=1 element_max=0 exact=0
+havok.hkx.array_gap	hclSimClothSetupObject|+264	arrays=42 count_max=1 element_min=1 element_max=16 exact=42
+havok.hkx.array_gap	hclSimClothSetupObject|+312	arrays=42 count_max=5 element_min=7 element_max=8 exact=12
+havok.hkx.array_gap	hclSimClothSetupObject|+328	arrays=36 count_max=3 element_min=38 element_max=42 exact=0
+havok.hkx.array_gap	hclSimulateSetupObject|+048	arrays=42 count_max=6 element_min=7 element_max=8 exact=30
+havok.hkx.array_gap	hclStaticDisplayBufferSetupObject|+024	arrays=42 count_max=2037280592 element_min=1 element_max=0 exact=0
+havok.hkx.array_gap	hclStretchLinkSetupObject|+040	arrays=14 count_max=2 element_min=1 element_max=8 exact=14
+havok.hkx.array_gap	hclVertexGatherSetupObject|+016	arrays=42 count_max=1 element_min=1 element_max=16 exact=42
+havok.hkx.array_gap	hkRefCountedProperties|+000	arrays=1014 count_max=1 element_min=1 element_max=16 exact=1014
+havok.hkx.array_gap	hkRootLevelContainer|+000	arrays=17508 count_max=5 element_min=21 element_max=24 exact=17508
+havok.hkx.array_gap	hkaAnimationBinding|+032	arrays=16145 count_max=120 element_min=2 element_max=2 exact=269
+havok.hkx.array_gap	hkaAnimationBinding|+048	arrays=4 count_max=1 element_min=1 element_max=16 exact=4
+havok.hkx.array_gap	hkaAnimationContainer|+016	arrays=241 count_max=2 element_min=1 element_max=8 exact=43
+havok.hkx.array_gap	hkaAnimationContainer|+032	arrays=16145 count_max=1 element_min=1 element_max=16 exact=16145
+havok.hkx.array_gap	hkaAnimationContainer|+048	arrays=16145 count_max=1 element_min=1 element_max=16 exact=16145
+havok.hkx.array_gap	hkaDefaultAnimatedReferenceFrame|+072	arrays=15188 count_max=6149 element_min=16 element_max=16 exact=15188
+havok.hkx.array_gap	hkaLosslessCompressedAnimation|+040	arrays=1085 count_max=95 element_min=24 element_max=24 exact=1085
+havok.hkx.array_gap	hkaLosslessCompressedAnimation|+056	arrays=1029 count_max=8830 element_min=4 element_max=4 exact=261
+havok.hkx.array_gap	hkaLosslessCompressedAnimation|+072	arrays=351 count_max=150 element_min=4 element_max=4 exact=84
+havok.hkx.array_gap	hkaLosslessCompressedAnimation|+088	arrays=1085 count_max=95 element_min=8 element_max=8 exact=1081
+havok.hkx.array_gap	hkaLosslessCompressedAnimation|+104	arrays=1057 count_max=40618 element_min=16 element_max=16 exact=1057
+havok.hkx.array_gap	hkaLosslessCompressedAnimation|+120	arrays=351 count_max=76 element_min=16 element_max=16 exact=351
+havok.hkx.array_gap	hkaLosslessCompressedAnimation|+136	arrays=1085 count_max=95 element_min=2 element_max=2 exact=0
+havok.hkx.array_gap	hkaLosslessCompressedAnimation|+152	arrays=1 count_max=408 element_min=4 element_max=4 exact=1
+havok.hkx.array_gap	hkaLosslessCompressedAnimation|+184	arrays=1085 count_max=95 element_min=8 element_max=8 exact=1081
+havok.hkx.array_gap	hkaLosslessCompressedAnimation|inside_storage	arrays=805 count_max=1953460038 element_min=16 element_max=0 exact=1
+havok.hkx.array_gap	hkaSkeletonMapper|+080	arrays=86 count_max=65 element_min=64 element_max=64 exact=86
+havok.hkx.array_gap	hkaSkeletonMapper|+096	arrays=50 count_max=6 element_min=110 element_max=112 exact=50
+havok.hkx.array_gap	hkaSkeletonMapper|+112	arrays=45 count_max=120 element_min=2 element_max=2 exact=9
+havok.hkx.array_gap	hkaSkeleton|+024	arrays=284 count_max=201 element_min=2 element_max=2 exact=19
+havok.hkx.array_gap	hkaSkeleton|+040	arrays=284 count_max=201 element_min=16 element_max=16 exact=284
+havok.hkx.array_gap	hkaSkeleton|+056	arrays=284 count_max=201 element_min=48 element_max=48 exact=284
+havok.hkx.array_gap	hkaSkeleton|+072	arrays=2 count_max=1 element_min=1 element_max=16 exact=2
+havok.hkx.array_gap	hkaSkeleton|+088	arrays=2 count_max=1 element_min=0 element_max=8 exact=2
+havok.hkx.array_gap	hkaSkeleton|inside_storage	arrays=3446 count_max=1767271272 element_min=33 element_max=0 exact=1988
+havok.hkx.array_gap	hkaSplineCompressedAnimation|+040	arrays=15060 count_max=120 element_min=24 element_max=24 exact=15060
+havok.hkx.array_gap	hkaSplineCompressedAnimation|+088	arrays=15060 count_max=25 element_min=4 element_max=4 exact=106
+havok.hkx.array_gap	hkaSplineCompressedAnimation|+104	arrays=15060 count_max=25 element_min=4 element_max=4 exact=106
+havok.hkx.array_gap	hkaSplineCompressedAnimation|+152	arrays=15060 count_max=1372592 element_min=1 element_max=1 exact=15060
+havok.hkx.array_gap	hkaSplineCompressedAnimation|inside_storage	arrays=57513 count_max=2037605700 element_min=16 element_max=0 exact=1
+havok.hkx.array_gap	hkbBehaviorGraphData|+032	arrays=266 count_max=299 element_min=6 element_max=6 exact=16
+havok.hkx.array_gap	hkbBehaviorGraphData|+048	arrays=132 count_max=47 element_min=6 element_max=6 exact=6
+havok.hkx.array_gap	hkbBehaviorGraphData|+064	arrays=441 count_max=1058 element_min=4 element_max=4 exact=115
+havok.hkx.array_gap	hkbBehaviorGraphData|+080	arrays=119 count_max=142 element_min=8 element_max=8 exact=58
+havok.hkx.array_gap	hkbBehaviorGraphStringData|+016	arrays=441 count_max=1058 element_min=8 element_max=8 exact=441
+havok.hkx.array_gap	hkbBehaviorGraphStringData|+048	arrays=266 count_max=299 element_min=8 element_max=8 exact=266
+havok.hkx.array_gap	hkbBehaviorGraphStringData|+064	arrays=132 count_max=47 element_min=8 element_max=8 exact=132
+havok.hkx.array_gap	hkbBehaviorGraphStringData|inside_storage	arrays=839 count_max=2036625218 element_min=1 element_max=0 exact=0
+havok.hkx.array_gap	hkbBlenderGenerator|+160	arrays=917 count_max=23 element_min=8 element_max=8 exact=712
+havok.hkx.array_gap	hkbBoneIndexArray|+048	arrays=123 count_max=48 element_min=2 element_max=2 exact=11
+havok.hkx.array_gap	hkbBoneWeightArray|+048	arrays=548 count_max=112 element_min=4 element_max=4 exact=104
+havok.hkx.array_gap	hkbCharacterData|+112	arrays=49 count_max=59 element_min=6 element_max=6 exact=3
+havok.hkx.array_gap	hkbCharacterData|+192	arrays=10 count_max=31 element_min=2 element_max=2 exact=1
+havok.hkx.array_gap	hkbCharacterData|+208	arrays=10 count_max=31 element_min=64 element_max=64 exact=10
+havok.hkx.array_gap	hkbCharacterStringData|+016	arrays=63 count_max=26 element_min=16 element_max=16 exact=63
+havok.hkx.array_gap	hkbCharacterStringData|+032	arrays=10 count_max=31 element_min=16 element_max=16 exact=10
+havok.hkx.array_gap	hkbCharacterStringData|+048	arrays=140 count_max=1 element_min=17 element_max=32 exact=140
+havok.hkx.array_gap	hkbCharacterStringData|+080	arrays=49 count_max=59 element_min=8 element_max=8 exact=49
+havok.hkx.array_gap	hkbCharacterStringData|+128	arrays=3 count_max=1 element_min=0 element_max=8 exact=3
+havok.hkx.array_gap	hkbCharacterStringData|+144	arrays=3 count_max=1 element_min=0 element_max=8 exact=3
+havok.hkx.array_gap	hkbCharacterStringData|inside_storage	arrays=408 count_max=1986815312 element_min=8 element_max=0 exact=0
+havok.hkx.array_gap	hkbClipTriggerArray|+016	arrays=2391 count_max=38 element_min=32 element_max=32 exact=2391
+havok.hkx.array_gap	hkbEventRangeDataArray|+016	arrays=102 count_max=10 element_min=31 element_max=32 exact=102
+havok.hkx.array_gap	hkbExpressionDataArray|+016	arrays=111 count_max=7 element_min=22 element_max=24 exact=111
+havok.hkx.array_gap	hkbExpressionDataArray|inside_storage	arrays=302 count_max=4294967295 element_min=1 element_max=0 exact=0
+havok.hkx.array_gap	hkbFootIkDriverInfo|+016	arrays=14 count_max=6 element_min=78 element_max=80 exact=14
+havok.hkx.array_gap	hkbHandIkControlsModifier|+088	arrays=2 count_max=2 element_min=105 element_max=112 exact=2
+havok.hkx.array_gap	hkbHandIkDriverInfo|+016	arrays=4 count_max=2 element_min=89 element_max=96 exact=4
+havok.hkx.array_gap	hkbJigglerModifier|+088	arrays=13 count_max=1 element_min=1 element_max=16 exact=13
+havok.hkx.array_gap	hkbLayerGenerator|+136	arrays=41 count_max=11 element_min=8 element_max=8 exact=23
+havok.hkx.array_gap	hkbManualSelectorGenerator|+136	arrays=134 count_max=26 element_min=8 element_max=8 exact=70
+havok.hkx.array_gap	hkbMirroredSkeletonInfo|+032	arrays=39 count_max=116 element_min=2 element_max=2 exact=3
+havok.hkx.array_gap	hkbModifierList|+088	arrays=730 count_max=12 element_min=7 element_max=8 exact=513
+havok.hkx.array_gap	hkbPoseMatchingGenerator|+160	arrays=111 count_max=4 element_min=6 element_max=8 exact=77
+havok.hkx.array_gap	hkbProjectStringData|+048	arrays=340 count_max=5 element_min=5 element_max=8 exact=340
+havok.hkx.array_gap	hkbProjectStringData|inside_storage	arrays=340 count_max=1918986307 element_min=1 element_max=0 exact=0
+havok.hkx.array_gap	hkbStateMachineEventPropertyArray|+016	arrays=2969 count_max=15 element_min=15 element_max=16 exact=2969
+havok.hkx.array_gap	hkbStateMachineStateInfo|+096	arrays=5748 count_max=164 element_min=49 element_max=0 exact=0
+havok.hkx.array_gap	hkbStateMachineTransitionInfoArray|+016	arrays=4727 count_max=138 element_min=72 element_max=72 exact=1076
+havok.hkx.array_gap	hkbStateMachine|+208	arrays=2074 count_max=139 element_min=8 element_max=8 exact=1299
+havok.hkx.array_gap	hkbVariableBindingSet|+016	arrays=4137 count_max=40 element_min=40 element_max=40 exact=4137
+havok.hkx.array_gap	hkbVariableValueSet|+016	arrays=315 count_max=299 element_min=4 element_max=4 exact=60
+havok.hkx.array_gap	hkbVariableValueSet|+032	arrays=24 count_max=7 element_min=14 element_max=16 exact=24
+havok.hkx.array_gap	hkbVariableValueSet|+048	arrays=67 count_max=50 element_min=8 element_max=8 exact=28
+havok.hkx.array_gap	hknpCompressedMeshShapeData|+016	arrays=10 count_max=1 element_min=1 element_max=16 exact=10
+havok.hkx.array_gap	hknpCompressedMeshShapeData|+080	arrays=10 count_max=1 element_min=81 element_max=96 exact=10
+havok.hkx.array_gap	hknpCompressedMeshShapeData|+096	arrays=10 count_max=10 element_min=4 element_max=4 exact=2
+havok.hkx.array_gap	hknpCompressedMeshShapeData|+112	arrays=10 count_max=30 element_min=2 element_max=2 exact=0
+havok.hkx.array_gap	hknpCompressedMeshShapeData|+144	arrays=10 count_max=31 element_min=8 element_max=8 exact=4
+havok.hkx.array_gap	hknpCompressedMeshShapeData|+160	arrays=10 count_max=1 element_min=1 element_max=16 exact=10
+havok.hkx.array_gap	hknpCompressedMeshShapeData|+184	arrays=10 count_max=2 element_min=105 element_max=112 exact=10
+havok.hkx.array_gap	hknpCompressedMeshShapeData|inside_storage	arrays=10 count_max=19 element_min=4 element_max=4 exact=0
+havok.hkx.array_gap	hknpCompressedMeshShape|+104	arrays=10 count_max=1 element_min=1 element_max=16 exact=10
+havok.hkx.array_gap	hknpCompressedMeshShape|+128	arrays=10 count_max=1 element_min=1 element_max=16 exact=10
+havok.hkx.array_gap	hknpPhysicsSceneData|+016	arrays=43 count_max=1 element_min=1 element_max=16 exact=43
+havok.hkx.array_gap	hknpRagdollData|+016	arrays=43 count_max=65 element_min=80 element_max=80 exact=43
+havok.hkx.array_gap	hknpRagdollData|+032	arrays=43 count_max=65 element_min=64 element_max=64 exact=43
+havok.hkx.array_gap	hknpRagdollData|+048	arrays=43 count_max=65 element_min=112 element_max=112 exact=43
+havok.hkx.array_gap	hknpRagdollData|+064	arrays=43 count_max=65 element_min=96 element_max=96 exact=43
+havok.hkx.array_gap	hknpRagdollData|+080	arrays=43 count_max=64 element_min=24 element_max=24 exact=19
+havok.hkx.array_gap	hknpRagdollData|+096	arrays=43 count_max=65 element_min=8 element_max=8 exact=27
+havok.hkx.array_gap	hknpRagdollData|+128	arrays=43 count_max=65 element_min=4 element_max=4 exact=9
+havok.hkx.pointer_source_is_object	hkRefCountedProperties	1014
+havok.hkx.pointer_source_is_object	hkRootLevelContainer	17508
+havok.hkx.object_pointer_target	BGSGamebryoSequenceGenerator	1880
+havok.hkx.object_pointer_target	BSAssignVariablesModifier	410
+havok.hkx.object_pointer_target	BSBehaviorGraphSwapGenerator	47
+havok.hkx.object_pointer_target	BSBoneSwitchGenerator	27
+havok.hkx.object_pointer_target	BSBoneSwitchGeneratorBoneData	27
+havok.hkx.object_pointer_target	BSCyclicBlendTransitionGenerator	90
+havok.hkx.object_pointer_target	BSDirectAtCapturePoseModifier	9
+havok.hkx.object_pointer_target	BSDirectAtModifier	92
+havok.hkx.object_pointer_target	BSEventEveryNEventsModifier	111
+havok.hkx.object_pointer_target	BSEventOnDeactivateModifier	262
+havok.hkx.object_pointer_target	BSEventOnFalseToTrueModifier	2
+havok.hkx.object_pointer_target	BSGetTimeStepModifier	30
+havok.hkx.object_pointer_target	BSInterpValueModifier	42
+havok.hkx.object_pointer_target	BSIsActiveModifier	1287
+havok.hkx.object_pointer_target	BSLimbCycleModifier	8
+havok.hkx.object_pointer_target	BSLookAtCapturePoseModifier	38
+havok.hkx.object_pointer_target	BSLookAtModifier	47
+havok.hkx.object_pointer_target	BSModifyOnceModifier	128
+havok.hkx.object_pointer_target	BSOffsetAnimationGenerator	5
+havok.hkx.object_pointer_target	BSPassByTargetTriggerModifier	1
+havok.hkx.object_pointer_target	BSRagdollContactListenerModifier	39
+havok.hkx.object_pointer_target	BSRandomAlarmModifier	6
+havok.hkx.object_pointer_target	BSReverseSpineTwistModifier	1
+havok.hkx.object_pointer_target	BSRootTwistModifier	12
+havok.hkx.object_pointer_target	BSSpeedSamplerModifier	2
+havok.hkx.object_pointer_target	BSTimerModifier	74
+havok.hkx.object_pointer_target	BSTweenerModifier	3
+havok.hkx.object_pointer_target	BSiStateTaggingGenerator	98
+havok.hkx.object_pointer_target	DynamicAnimationTaggingGenerator	275
+havok.hkx.object_pointer_target	hclBendStiffnessSetupObject	72
+havok.hkx.object_pointer_target	hclCapsuleShape	58
+havok.hkx.object_pointer_target	hclClothContainer	42
+havok.hkx.object_pointer_target	hclClothSetupContainer	42
+havok.hkx.object_pointer_target	hclClothSetupObject	42
+havok.hkx.object_pointer_target	hclClothStateSetupObject	84
+havok.hkx.object_pointer_target	hclCollidable	226
+havok.hkx.object_pointer_target	hclLocalRangeSetupObject	56
+havok.hkx.object_pointer_target	hclMeshBoneDeformSetupObject	126
+havok.hkx.object_pointer_target	hclMoveFixedParticlesSetupObject	84
+havok.hkx.object_pointer_target	hclNamedSetupMesh	168
+havok.hkx.object_pointer_target	hclNamedTransformSetSetupObject	252
+havok.hkx.object_pointer_target	hclScratchBufferSetupObject	196
+havok.hkx.object_pointer_target	hclSimClothBufferSetupObject	126
+havok.hkx.object_pointer_target	hclSimClothSetupObject	168
+havok.hkx.object_pointer_target	hclSimulateSetupObject	84
+havok.hkx.object_pointer_target	hclSimulationSetupMesh	224
+havok.hkx.object_pointer_target	hclSkinSetupObject	126
+havok.hkx.object_pointer_target	hclStandardLinkSetupObject	84
+havok.hkx.object_pointer_target	hclStaticDisplayBufferSetupObject	84
+havok.hkx.object_pointer_target	hclStretchLinkSetupObject	84
+havok.hkx.object_pointer_target	hclTaperedCapsuleShape	66
+havok.hkx.object_pointer_target	hclVertexGatherSetupObject	84
+havok.hkx.object_pointer_target	hclVolumeConstraintSetupObject	68
+havok.hkx.object_pointer_target	hkMemoryResourceContainer	13172
+havok.hkx.object_pointer_target	hkRefCountedProperties	1014
+havok.hkx.object_pointer_target	hkSimpleLocalFrame	242
+havok.hkx.object_pointer_target	hkaAnimationBinding	16145
+havok.hkx.object_pointer_target	hkaAnimationContainer	16388
+havok.hkx.object_pointer_target	hkaDefaultAnimatedReferenceFrame	15188
+havok.hkx.object_pointer_target	hkaLosslessCompressedAnimation	2170
+havok.hkx.object_pointer_target	hkaSkeleton	499
+havok.hkx.object_pointer_target	hkaSkeletonMapper	86
+havok.hkx.object_pointer_target	hkaSplineCompressedAnimation	30120
+havok.hkx.object_pointer_target	hkbBehaviorGraph	450
+havok.hkx.object_pointer_target	hkbBehaviorGraphData	450
+havok.hkx.object_pointer_target	hkbBehaviorGraphStringData	450
+havok.hkx.object_pointer_target	hkbBehaviorReferenceGenerator	172
+havok.hkx.object_pointer_target	hkbBlenderGenerator	1023
+havok.hkx.object_pointer_target	hkbBlenderGeneratorChild	2727
+havok.hkx.object_pointer_target	hkbBlendingTransitionEffect	8673
+havok.hkx.object_pointer_target	hkbBoneIndexArray	246
+havok.hkx.object_pointer_target	hkbBoneWeightArray	1081
+havok.hkx.object_pointer_target	hkbCharacterData	328
+havok.hkx.object_pointer_target	hkbCharacterStringData	328
+havok.hkx.object_pointer_target	hkbClipGenerator	5562
+havok.hkx.object_pointer_target	hkbClipTriggerArray	2391
+havok.hkx.object_pointer_target	hkbDampingModifier	52
+havok.hkx.object_pointer_target	hkbEvaluateExpressionModifier	121
+havok.hkx.object_pointer_target	hkbEventDrivenModifier	382
+havok.hkx.object_pointer_target	hkbEventRangeDataArray	102
+havok.hkx.object_pointer_target	hkbEventsFromRangeModifier	204
+havok.hkx.object_pointer_target	hkbExpressionCondition	120
+havok.hkx.object_pointer_target	hkbExpressionDataArray	111
+havok.hkx.object_pointer_target	hkbFootIkControlsModifier	17
+havok.hkx.object_pointer_target	hkbFootIkDriverInfo	14
+havok.hkx.object_pointer_target	hkbGeneratorTransitionEffect	115
+havok.hkx.object_pointer_target	hkbGetHandleOnBoneModifier	3
+havok.hkx.object_pointer_target	hkbGetUpModifier	39
+havok.hkx.object_pointer_target	hkbHandIkControlsModifier	2
+havok.hkx.object_pointer_target	hkbHandIkDriverInfo	4
+havok.hkx.object_pointer_target	hkbJigglerGroup	13
+havok.hkx.object_pointer_target	hkbJigglerModifier	13
+havok.hkx.object_pointer_target	hkbKeyframeBonesModifier	69
+havok.hkx.object_pointer_target	hkbLayer	158
+havok.hkx.object_pointer_target	hkbLayerGenerator	41
+havok.hkx.object_pointer_target	hkbManualSelectorGenerator	264
+havok.hkx.object_pointer_target	hkbMirrorModifier	52
+havok.hkx.object_pointer_target	hkbMirroredSkeletonInfo	328
+havok.hkx.object_pointer_target	hkbModifierGenerator	2367
+havok.hkx.object_pointer_target	hkbModifierList	778
+havok.hkx.object_pointer_target	hkbPoseMatchingGenerator	114
+havok.hkx.object_pointer_target	hkbPoweredRagdollControlsModifier	85
+havok.hkx.object_pointer_target	hkbProjectData	342
+havok.hkx.object_pointer_target	hkbProjectStringData	342
+havok.hkx.object_pointer_target	hkbReferencePoseGenerator	139
+havok.hkx.object_pointer_target	hkbRigidBodyRagdollControlsModifier	37
+havok.hkx.object_pointer_target	hkbStateMachine	2363
+havok.hkx.object_pointer_target	hkbStateMachineEventPropertyArray	2969
+havok.hkx.object_pointer_target	hkbStateMachineStateInfo	7230
+havok.hkx.object_pointer_target	hkbStateMachineTransitionInfoArray	4727
+havok.hkx.object_pointer_target	hkbStringCondition	8
+havok.hkx.object_pointer_target	hkbStringEventPayload	2199
+havok.hkx.object_pointer_target	hkbTimerModifier	56
+havok.hkx.object_pointer_target	hkbTwistModifier	234
+havok.hkx.object_pointer_target	hkbVariableBindingSet	4137
+havok.hkx.object_pointer_target	hkbVariableValueSet	778
+havok.hkx.object_pointer_target	hknpBreakableConstraintData	1
+havok.hkx.object_pointer_target	hknpCapsuleShape	1825
+havok.hkx.object_pointer_target	hknpCompressedMeshShape	17
+havok.hkx.object_pointer_target	hknpCompressedMeshShapeData	10
+havok.hkx.object_pointer_target	hknpConvexPolytopeShape	188
+havok.hkx.object_pointer_target	hknpPhysicsSceneData	43
+havok.hkx.object_pointer_target	hknpRagdollData	86
+havok.hkx.object_pointer_target	hknpShapeMassProperties	1014
+havok.hkx.object_pointer_target	hkpFixedConstraintData	3
+havok.hkx.object_pointer_target	hkpLimitedHingeConstraintData	238
+havok.hkx.object_pointer_target	hkpPositionConstraintMotor	2242
+havok.hkx.object_pointer_target	hkpRagdollConstraintData	669
+havok.hkx.root_class	hkRootLevelContainer	17508

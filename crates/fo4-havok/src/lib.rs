@@ -1,6 +1,7 @@
 #![forbid(unsafe_code)]
 //! Container level of the Havok payload that Fallout 4 stores in the
-//! `bhkPhysicsSystem` and `bhkRagdollSystem` ByteArrays.
+//! `bhkPhysicsSystem` and `bhkRagdollSystem` ByteArrays, and of its `.hkx`
+//! files, which add a header variant with 16 bytes before the section records.
 //!
 //! Every rule this reader enforces was measured over all the payloads of one
 //! installation; `spec/havok-container.md` tags each one with its count. No
@@ -51,6 +52,12 @@ pub use view::{Array, ARRAY_FLAG};
 pub const HEADER_LEN: usize = 64;
 /// Size of one section record.
 pub const RECORD_LEN: usize = 64;
+/// The upper u16 of header word 60 in every measured file: 0 in the collision
+/// payloads and the behaviour files, 16 in the animation, skeleton and other
+/// files whose section records start 16 bytes later. In both groups it equals
+/// the number of bytes between the header and the first section record
+/// (`spec/havok-container.md`, header variant).
+pub const HEADER_EXTRA_LENS: [usize; 2] = [0, 16];
 /// The first eight bytes of every measured payload.
 pub const MAGIC: [u8; 8] = [0x57, 0xe0, 0xe0, 0x57, 0x10, 0xc0, 0xc0, 0x10];
 /// Bytes 16..20 of every measured payload. Byte 16 equals the measured
@@ -169,6 +176,10 @@ pub struct Container<'a> {
     #[serde(skip)]
     pub bytes: &'a [u8],
     pub header: Header,
+    /// The bytes between the header and the first section record, as many as
+    /// the upper u16 of header word 60 declares (0 or 16; kept, not interpreted).
+    #[serde(serialize_with = "serialize_hex")]
+    pub header_extra: &'a [u8],
     pub version: &'a str,
     pub sections: Vec<Section<'a>>,
     pub class_names: Vec<ClassName<'a>>,
@@ -239,6 +250,13 @@ impl<'a> Ctx<'a, '_> {
     }
 }
 
+fn serialize_hex<S: serde::Serializer>(
+    bytes: &&[u8],
+    s: S,
+) -> std::result::Result<S::Ok, S::Error> {
+    s.serialize_str(&hex(bytes))
+}
+
 fn hex(bytes: &[u8]) -> String {
     bytes.iter().take(32).map(|b| format!("{b:02x}")).collect()
 }
@@ -281,6 +299,17 @@ impl<'a> Container<'a> {
             *w = c.u32(i * 4, "header")?;
         }
         let header = Header { words };
+        let extra = (header.words[15] >> 16) as usize;
+        if !HEADER_EXTRA_LENS.contains(&extra) {
+            return Err(c.err(
+                "UnsupportedHavokLayout",
+                62,
+                format!("upper half of word 60 in {HEADER_EXTRA_LENS:?}"),
+                extra,
+            ));
+        }
+        let header_extra = c.slice(HEADER_LEN, extra, "bytes after the header")?;
+        let records = HEADER_LEN + extra;
         let (version, _) = c.text(
             VERSION_AT,
             VERSION_END,
@@ -300,7 +329,7 @@ impl<'a> Container<'a> {
         }
         let mut sections: Vec<Section<'a>> = Vec::new();
         for (index, expected) in SECTION_NAMES.iter().enumerate() {
-            let record = HEADER_LEN + index * RECORD_LEN;
+            let record = records + index * RECORD_LEN;
             c.slice(record, RECORD_LEN, "section record")?;
             let (name, _) = c.text(
                 record,
@@ -327,7 +356,7 @@ impl<'a> Container<'a> {
                 }
             }
             let expected_start = match sections.last() {
-                None => HEADER_LEN + SECTION_NAMES.len() * RECORD_LEN,
+                None => records + SECTION_NAMES.len() * RECORD_LEN,
                 Some(prev) => prev.end() as usize,
             };
             if start as usize != expected_start {
@@ -363,7 +392,7 @@ impl<'a> Container<'a> {
         if last != bytes.len() {
             return Err(c.err(
                 "InvalidHavokSectionBounds",
-                HEADER_LEN + DATA * RECORD_LEN + 44,
+                records + DATA * RECORD_LEN + 44,
                 format!("last section ends at the payload length {}", bytes.len()),
                 last,
             ));
@@ -565,6 +594,7 @@ impl<'a> Container<'a> {
         Ok(Self {
             bytes,
             header,
+            header_extra,
             version,
             sections,
             class_names,

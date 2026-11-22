@@ -71,6 +71,8 @@ pub struct Kind {
     pub totals: BTreeMap<&'static str, u64>,
     pub maxima: BTreeMap<&'static str, u64>,
     pub header_words: BTreeMap<String, u64>,
+    /// Bytes between the header and the first section record, as hex.
+    pub header_extra: BTreeMap<String, u64>,
     pub versions: BTreeMap<String, u64>,
     /// Classes of objects whose offset is also a first-table source.
     pub pointer_source_is_object: BTreeMap<String, u64>,
@@ -147,6 +149,9 @@ pub struct Summary {
     pub nif_read: u64,
     pub nif_failed: u64,
     pub collision_view_failed: u64,
+    /// Winning `.hkx` files (measured as kind `hkx`) and those not extracted.
+    pub hkx_files: u64,
+    pub hkx_failed: u64,
     pub kinds: BTreeMap<String, Kind>,
 }
 
@@ -156,23 +161,26 @@ fn u32_at(bytes: &[u8], at: usize) -> Option<u32> {
 }
 
 /// Measures one payload; `body_ids` are the Body IDs of the
-/// bhkNPCollisionObject on its system; `render` holds the file's render
-/// meshes when the file has one system and identity transforms.
+/// bhkNPCollisionObject on its system, or `None` for a standalone `.hkx`
+/// file, which skips the system measurements (object counts against the
+/// system, bodies, root groups); `render` holds the file's render meshes when
+/// the file has one system and identity transforms.
 fn payload(
     k: &mut Kind,
     bytes: &[u8],
-    body_ids: &[u32],
+    body_ids: Option<&[u32]>,
     render: Option<&mesh::Render>,
     file: &str,
     base: u64,
     b: &Budget,
 ) -> Result<()> {
-    let objects = body_ids.len() as u64;
+    let objects = body_ids.map(|ids| ids.len() as u64);
     k.payloads += 1;
     // Byte order: record starts read big-endian against the payload length.
+    let extra = u32_at(bytes, 60).map_or(0, |w| (w >> 16) as usize);
     let be_in_bounds = (0..3).all(|i| {
         bytes
-            .get(84 + 64 * i..88 + 64 * i)
+            .get(extra + 84 + 64 * i..extra + 88 + 64 * i)
             .map(|w| u32::from_be_bytes([w[0], w[1], w[2], w[3]]) as usize)
             .is_some_and(|v| v <= bytes.len())
     });
@@ -193,6 +201,11 @@ fn payload(
         );
     }
     bump(&mut k.versions, c.version.to_owned(), OTHER.into());
+    bump(
+        &mut k.header_extra,
+        c.header_extra.iter().map(|x| format!("{x:02x}")).collect(),
+        OTHER.into(),
+    );
     // Always present after a successful read.
     let Some(data) = c.data() else {
         return Ok(());
@@ -258,11 +271,13 @@ fn payload(
             class.payloads += 1;
             class.objects += n;
         }
-        let check = &mut class.objects_eq_system_objects;
-        if n == objects {
-            check.holds += 1;
-        } else {
-            check.fails += 1;
+        if let Some(objects) = objects {
+            let check = &mut class.objects_eq_system_objects;
+            if n == objects {
+                check.holds += 1;
+            } else {
+                check.fails += 1;
+            }
         }
     }
     let zero = |source: u32| {
@@ -391,9 +406,14 @@ fn payload(
             .all(|n| !per_class.contains_key(n.name)),
     );
     objects_census(k, &c, file, base);
-    bodies::census(k, &c, file, base, body_ids, render);
     if let Some(root) = c.root() {
         bump(&mut k.root_class, root.class.to_owned(), OTHER.into());
+    }
+    let (Some(body_ids), Some(objects)) = (body_ids, objects) else {
+        return Ok(());
+    };
+    bodies::census(k, &c, file, base, body_ids, render);
+    if let Some(root) = c.root() {
         let at = d + root.offset as usize;
         for g in 0..ROOT_GROUPS {
             let off = 16 + 16 * g + 8;
@@ -655,6 +675,10 @@ pub fn sweep(m: &Manifest, r: &mut Reports) -> Result<()> {
     for chain in v.candidates.chunk_by(|a, b| a.key == b.key) {
         let Some(c) = chain.last() else { continue };
         let Some(key) = &c.key else { continue };
+        if key.ends_with(b".hkx") {
+            hkx_file(&v, c, m, r, &mut s)?;
+            continue;
+        }
         if !key.ends_with(b".nif") {
             continue;
         }
@@ -705,7 +729,7 @@ pub fn sweep(m: &Manifest, r: &mut Reports) -> Result<()> {
             if let Err(e) = payload(
                 kind,
                 system.payload,
-                &body_ids,
+                Some(&body_ids),
                 render.as_ref(),
                 &c.original,
                 system.payload_offset,
@@ -733,6 +757,30 @@ pub fn sweep(m: &Manifest, r: &mut Reports) -> Result<()> {
     text.push_str(&tsv(&s));
     r.tsv = Some(("havok.tsv", text));
     r.summary.havok = s;
+    Ok(())
+}
+
+/// One winning `.hkx` file, measured as a payload of kind `hkx` (no system).
+fn hkx_file(
+    v: &Vfs,
+    c: &fo4_vfs::Candidate,
+    m: &Manifest,
+    r: &mut Reports,
+    s: &mut Summary,
+) -> Result<()> {
+    s.hkx_files += 1;
+    let work = Budget::new(m.limits.max_memory);
+    let bytes = match v.read_candidate(c, &work) {
+        Ok(bytes) => bytes,
+        Err(e) => {
+            s.hkx_failed += 1;
+            return r.error(&e);
+        }
+    };
+    let kind = s.kinds.entry("hkx".to_owned()).or_default();
+    if let Err(e) = payload(kind, &bytes, None, None, &c.original, 0, &work) {
+        r.error(&e)?;
+    }
     Ok(())
 }
 
@@ -809,6 +857,8 @@ pub fn tsv(s: &Summary) -> String {
         ("nif_read", s.nif_read),
         ("nif_failed", s.nif_failed),
         ("collision_view_failed", s.collision_view_failed),
+        ("hkx_files", s.hkx_files),
+        ("hkx_failed", s.hkx_failed),
     ] {
         row("total", k, v.to_string());
     }
@@ -831,6 +881,10 @@ pub fn tsv(s: &Summary) -> String {
         }
         for (key, n) in &k.header_words {
             row(&sec("header_word"), key, n.to_string());
+        }
+        for (key, n) in &k.header_extra {
+            let key = if key.is_empty() { "none" } else { key };
+            row(&sec("header_extra"), key, n.to_string());
         }
         for (key, n) in &k.versions {
             row(&sec("version"), key, n.to_string());
@@ -994,9 +1048,9 @@ mod tests {
         let bytes = container();
         let b = Budget::new(1 << 20);
         let mut k = Kind::default();
-        payload(&mut k, &bytes, &[0, 1], None, "a.nif", 0, &b).unwrap();
-        payload(&mut k, &bytes, &[0], None, "b.nif", 0, &b).unwrap();
-        assert!(payload(&mut k, &bytes[..100], &[0], None, "c.nif", 0, &b).is_err());
+        payload(&mut k, &bytes, Some(&[0, 1]), None, "a.nif", 0, &b).unwrap();
+        payload(&mut k, &bytes, Some(&[0]), None, "b.nif", 0, &b).unwrap();
+        assert!(payload(&mut k, &bytes[..100], Some(&[0]), None, "c.nif", 0, &b).is_err());
         assert_eq!((k.payloads, k.read), (3, 2));
         assert_eq!(k.errors.get("TruncatedHavokContainer"), Some(&1));
         let c = k.checks["eight_zero_bytes_at_every_pointer_source"];
@@ -1039,5 +1093,22 @@ mod tests {
         // The root is not a top-level class the body view reads.
         assert!(text.contains("havok.bhkPhysicsSystem.view\tRoot|UnexpectedHavokClass\t2\n"));
         assert!(!text.contains("body_id_below_body_count"));
+    }
+
+    #[test]
+    fn standalone_files_skip_the_system_measurements() {
+        let bytes = container();
+        let b = Budget::new(1 << 20);
+        let mut k = Kind::default();
+        payload(&mut k, &bytes, None, None, "a.hkx", 0, &b).unwrap();
+        assert_eq!((k.payloads, k.read), (1, 1));
+        assert_eq!(k.root_class.get("Root"), Some(&1));
+        assert_eq!(k.header_extra.get(""), Some(&1));
+        assert!(k.root_counts.is_empty() && k.root_groups.is_empty());
+        let class = &k.classes["Root"];
+        assert_eq!(class.objects, 1);
+        let c = class.objects_eq_system_objects;
+        assert_eq!((c.holds, c.fails), (0, 0));
+        assert_eq!(k.checks["record_starts_read_big_endian_in_bounds"].fails, 1);
     }
 }

@@ -411,3 +411,70 @@ fn budget_bounds_the_tables() {
     let e = Container::read(&bytes, "synthetic.nif", 0, &Budget::new(16)).unwrap_err();
     assert_eq!(e.code, "LimitExceeded");
 }
+
+/// The second header variant: word 60's upper half is 16 and 16 bytes
+/// (here the measured `14 00 ..`) sit between the header and the first record.
+pub(crate) fn shifted(bytes: &[u8]) -> Vec<u8> {
+    let mut out = bytes[..HEADER_LEN].to_vec();
+    put(&mut out, 60, 0x0010_0015);
+    out.push(0x14);
+    out.extend([0u8; 15]);
+    out.extend(&bytes[HEADER_LEN..]);
+    for i in 0..3 {
+        let at = HEADER_LEN + 16 + RECORD_LEN * i + 20;
+        let start = u32::from_le_bytes([out[at], out[at + 1], out[at + 2], out[at + 3]]);
+        put(&mut out, at, start + 16);
+    }
+    out
+}
+
+#[test]
+fn reads_the_variant_with_16_bytes_after_the_header() {
+    let plain = build(&spec());
+    let a = read(&plain).unwrap();
+    assert!(a.header_extra.is_empty());
+    let bytes = shifted(&plain);
+    let c = read(&bytes).unwrap();
+    assert_eq!(c.header_extra.len(), 16);
+    assert_eq!(c.header_extra[0], 0x14);
+    assert_eq!(c.header.words[15], 0x0010_0015);
+    let starts: Vec<_> = c.sections.iter().map(|x| (x.record, x.start)).collect();
+    assert_eq!(starts, vec![(80, 272), (144, 320), (208, 320)]);
+    assert_eq!(c.class_names, a.class_names);
+    assert_eq!(c.pointers, a.pointers);
+    assert_eq!(c.object_pointers, a.object_pointers);
+    assert_eq!(c.objects, a.objects);
+    assert_eq!(c.object_bytes(), a.object_bytes());
+    // The 16 bytes are kept as stored, not required.
+    let mut b = bytes.clone();
+    b[64..80].fill(0xaa);
+    assert_eq!(read(&b).unwrap().header_extra, &[0xaa; 16]);
+}
+
+#[test]
+fn variant_errors_are_named() {
+    let bytes = shifted(&build(&spec()));
+    for n in 0..bytes.len() {
+        let e = read(&bytes[..n]).expect_err("truncated payload must fail");
+        assert!(e.source.offset >= 1000, "{e}");
+    }
+    for at in 0..bytes.len() {
+        for value in [0u8, 1, 9, 0x10, 0x7f, 0xff] {
+            let mut m = bytes.clone();
+            m[at] = value;
+            let _ = read(&m);
+        }
+    }
+    // Upper half of word 60 outside {0, 16}.
+    let mut b = bytes.clone();
+    b[62] = 8;
+    assert_eq!(code(&b), ("UnsupportedHavokLayout".into(), 1062));
+    // Upper half 0 with the records still 16 bytes later.
+    let mut b = bytes.clone();
+    b[62] = 0;
+    assert_eq!(code(&b), ("InvalidHavokSectionRecord".into(), 1064));
+    // Records at 80 with a first start that ignores the 16 bytes.
+    let mut b = bytes;
+    put(&mut b, 100, 256);
+    assert_eq!(code(&b), ("InvalidHavokSectionBounds".into(), 1100));
+}
