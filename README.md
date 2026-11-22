@@ -45,7 +45,11 @@ capsule over a cell's collision under provisional, registered rules.
   under pending rules. Conditions (CTDA) of every record are read field
   by field ([conditions](spec/conditions.md)), and a three-valued
   evaluator settles the few whose result the quest state and the data
-  decide, to choose which log entry's fragment a stage runs.
+  decide, to choose which log entry's fragment a stage runs. The story
+  manager's nodes are read to the last byte ([story
+  manager](spec/story-manager.md)); a run delivers the remote and custom
+  events scripts send each other where it raises the event itself, and the
+  script event a keyword sends starts the quest its node selects.
 - **Saves**: save files (`.fos`) read, never written, to the last byte:
   header, plugin lists, the location table, the three global data tables
   and the change-form table, with every form reference resolved against the

@@ -1,0 +1,456 @@
+# story_census: counts, record type tags, event codes, function indexes and engine native names only (spec/story-manager.md)
+# 1 records and their fields; 2 links; 3 the tree and its conditions; 4 quests; 5 the static scan of compiled scripts; 6 how each quest not flagged to start could start
+120	1 CITC equals the number of conditions	SMBN	holds
+18	1 CITC equals the number of conditions	SMEN	holds
+335	1 CITC equals the number of conditions	SMQN	holds
+97	1 DNAM low u16, high u16	SMBN	0x0000, 0x0000
+23	1 DNAM low u16, high u16	SMBN	0x0001, 0x0000
+17	1 DNAM low u16, high u16	SMEN	0x0000, 0x0000
+1	1 DNAM low u16, high u16	SMEN	0x0002, 0x0000
+28	1 DNAM low u16, high u16	SMQN	0x0000, 0x0000
+2	1 DNAM low u16, high u16	SMQN	0x0000, 0x0001
+134	1 DNAM low u16, high u16	SMQN	0x0000, 0x0002
+1	1 DNAM low u16, high u16	SMQN	0x0000, 0x0004
+5	1 DNAM low u16, high u16	SMQN	0x0000, 0x0006
+28	1 DNAM low u16, high u16	SMQN	0x0001, 0x0000
+103	1 DNAM low u16, high u16	SMQN	0x0001, 0x0001
+23	1 DNAM low u16, high u16	SMQN	0x0001, 0x0002
+5	1 DNAM low u16, high u16	SMQN	0x0001, 0x0003
+2	1 DNAM low u16, high u16	SMQN	0x0002, 0x0001
+1	1 DNAM low u16, high u16	SMQN	0x0002, 0x0002
+1	1 DNAM low u16, high u16	SMQN	0x0003, 0x0001
+1	1 DNAM low u16, high u16	SMQN	0x0003, 0x0002
+1	1 DNAM low u16, high u16	SMQN	0x0003, 0x0003
+1	1 HNAM read as f32	SMQN	0.5
+7	1 HNAM read as f32	SMQN	1
+2	1 HNAM read as f32	SMQN	12
+1	1 HNAM read as f32	SMQN	140
+6	1 HNAM read as f32	SMQN	24
+1	1 HNAM read as f32	SMQN	4
+8	1 HNAM read as f32	SMQN	48
+10	1 HNAM read as f32	SMQN	72
+1	1 MNAM	SMQN	1
+4	1 MNAM	SMQN	2
+1	1 MNAM	SMQN	3
+335	1 QNAM equals the number of NNAM	holds
+951	1 RNAM after a quest	none
+3	1 RNAM after a quest, read as f32	1152
+1	1 RNAM after a quest, read as f32	12
+22	1 RNAM after a quest, read as f32	144
+4	1 RNAM after a quest, read as f32	1728
+6	1 RNAM after a quest, read as f32	192
+1	1 RNAM after a quest, read as f32	2304
+25	1 RNAM after a quest, read as f32	24
+47	1 RNAM after a quest, read as f32	288
+25	1 RNAM after a quest, read as f32	432
+2	1 RNAM after a quest, read as f32	4320
+1	1 RNAM after a quest, read as f32	48
+2	1 RNAM after a quest, read as f32	4800
+210	1 RNAM after a quest, read as f32	576
+2	1 RNAM after a quest, read as f32	7.2000003
+5	1 RNAM after a quest, read as f32	96
+1	1 RNAM after a quest, read as f32	9600
+104	1 XNAM	SMBN	0
+2	1 XNAM	SMBN	1
+14	1 XNAM	SMBN	2
+18	1 XNAM	SMEN	0
+324	1 XNAM	SMQN	0
+8	1 XNAM	SMQN	1
+3	1 XNAM	SMQN	2
+44	1 bytes by tag	SMBN	CIS2	typed
+480	1 bytes by tag	SMBN	CITC	typed
+5952	1 bytes by tag	SMBN	CTDA	typed
+480	1 bytes by tag	SMBN	DNAM	kept as a stored word
+2550	1 bytes by tag	SMBN	EDID	typed
+480	1 bytes by tag	SMBN	PNAM	typed
+480	1 bytes by tag	SMBN	SNAM	typed
+480	1 bytes by tag	SMBN	XNAM	kept as a stored word
+72	1 bytes by tag	SMEN	CITC	typed
+64	1 bytes by tag	SMEN	CTDA	typed
+72	1 bytes by tag	SMEN	DNAM	kept as a stored word
+123	1 bytes by tag	SMEN	EDID	typed
+72	1 bytes by tag	SMEN	ENAM	typed
+72	1 bytes by tag	SMEN	PNAM	typed
+72	1 bytes by tag	SMEN	SNAM	typed
+72	1 bytes by tag	SMEN	XNAM	kept as a stored word
+115	1 bytes by tag	SMQN	CIS1	typed
+332	1 bytes by tag	SMQN	CIS2	typed
+1340	1 bytes by tag	SMQN	CITC	typed
+18432	1 bytes by tag	SMQN	CTDA	typed
+1340	1 bytes by tag	SMQN	DNAM	kept as a stored word
+8454	1 bytes by tag	SMQN	EDID	typed
+144	1 bytes by tag	SMQN	HNAM	kept as a stored word
+24	1 bytes by tag	SMQN	MNAM	kept as a stored word
+5232	1 bytes by tag	SMQN	NNAM	typed
+1340	1 bytes by tag	SMQN	PNAM	typed
+1340	1 bytes by tag	SMQN	QNAM	typed
+1428	1 bytes by tag	SMQN	RNAM	kept as a stored word
+1340	1 bytes by tag	SMQN	SNAM	typed
+1340	1 bytes by tag	SMQN	XNAM	kept as a stored word
+120	1 nodes	SMBN
+18	1 nodes	SMEN
+335	1 nodes	SMQN
+120	1 nodes with EDID	SMBN
+8	1 nodes with EDID	SMEN
+326	1 nodes with EDID	SMQN
+0	1 nodes: read errors
+38	1 subrecord order	SMBN	EDID PNAM SNAM CITC DNAM XNAM
+82	1 subrecord order	SMBN	EDID PNAM SNAM CITC condition* DNAM XNAM
+8	1 subrecord order	SMEN	EDID PNAM SNAM CITC DNAM XNAM ENAM
+9	1 subrecord order	SMEN	PNAM SNAM CITC DNAM XNAM ENAM
+1	1 subrecord order	SMEN	PNAM SNAM CITC condition* DNAM XNAM ENAM
+2	1 subrecord order	SMQN	EDID PNAM SNAM CITC DNAM XNAM HNAM QNAM
+5	1 subrecord order	SMQN	EDID PNAM SNAM CITC DNAM XNAM HNAM QNAM (NNAM [RNAM])*
+1	1 subrecord order	SMQN	EDID PNAM SNAM CITC DNAM XNAM MNAM QNAM (NNAM [RNAM])*
+39	1 subrecord order	SMQN	EDID PNAM SNAM CITC DNAM XNAM QNAM (NNAM [RNAM])*
+29	1 subrecord order	SMQN	EDID PNAM SNAM CITC condition* DNAM XNAM HNAM QNAM (NNAM [RNAM])*
+4	1 subrecord order	SMQN	EDID PNAM SNAM CITC condition* DNAM XNAM MNAM QNAM (NNAM [RNAM])*
+246	1 subrecord order	SMQN	EDID PNAM SNAM CITC condition* DNAM XNAM QNAM (NNAM [RNAM])*
+1	1 subrecord order	SMQN	PNAM SNAM CITC DNAM XNAM MNAM QNAM (NNAM [RNAM])*
+4	1 subrecord order	SMQN	PNAM SNAM CITC DNAM XNAM QNAM (NNAM [RNAM])*
+4	1 subrecord order	SMQN	PNAM SNAM CITC condition* DNAM XNAM QNAM (NNAM [RNAM])*
+1308	2 NNAM names	QUST
+76	2 PNAM names	SMBN	SMBN
+44	2 PNAM names	SMBN	SMEN
+18	2 PNAM names	SMEN	a word below 0x800 naming no record (0x5b)
+303	2 PNAM names	SMQN	SMBN
+32	2 PNAM names	SMQN	SMEN
+1	2 SNAM names	SMBN	SMBN (a node of another parent)
+74	2 SNAM names	SMBN	SMBN (a node of the same parent)
+18	2 SNAM names	SMBN	SMQN (a node of the same parent)
+27	2 SNAM names	SMBN	zero
+17	2 SNAM names	SMEN	SMEN (a node of the same parent)
+1	2 SNAM names	SMEN	zero
+21	2 SNAM names	SMQN	SMBN (a node of the same parent)
+205	2 SNAM names	SMQN	SMQN (a node of the same parent)
+109	2 SNAM names	SMQN	zero
+379	2 children by parent kind	SMBN
+76	2 children by parent kind	SMEN
+18	2 children by parent kind	not a node
+2	2 sibling order by previous links	children of SMBN	not one chain
+115	2 sibling order by previous links	children of SMBN	one chain
+2	2 sibling order by previous links	children of SMEN	not one chain
+16	2 sibling order by previous links	children of SMEN	one chain
+1	2 sibling order by previous links	children of not a node	not one chain
+11	3 condition function index on nodes	SMBN	function 14
+1	3 condition function index on nodes	SMBN	function 286
+1	3 condition function index on nodes	SMBN	function 300
+6	3 condition function index on nodes	SMBN	function 310
+19	3 condition function index on nodes	SMBN	function 359
+5	3 condition function index on nodes	SMBN	function 485
+1	3 condition function index on nodes	SMBN	function 536
+4	3 condition function index on nodes	SMBN	function 56
+11	3 condition function index on nodes	SMBN	function 560
+76	3 condition function index on nodes	SMBN	function 576
+3	3 condition function index on nodes	SMBN	function 59
+2	3 condition function index on nodes	SMBN	function 590
+2	3 condition function index on nodes	SMBN	function 629
+1	3 condition function index on nodes	SMBN	function 635
+12	3 condition function index on nodes	SMBN	function 71
+2	3 condition function index on nodes	SMBN	function 72
+19	3 condition function index on nodes	SMBN	function 74
+2	3 condition function index on nodes	SMBN	function 765
+7	3 condition function index on nodes	SMBN	function 77
+1	3 condition function index on nodes	SMBN	function 80
+1	3 condition function index on nodes	SMEN	function 353
+1	3 condition function index on nodes	SMEN	function 560
+3	3 condition function index on nodes	SMQN	function 1
+14	3 condition function index on nodes	SMQN	function 14
+2	3 condition function index on nodes	SMQN	function 203
+1	3 condition function index on nodes	SMQN	function 289
+3	3 condition function index on nodes	SMQN	function 300
+19	3 condition function index on nodes	SMQN	function 310
+74	3 condition function index on nodes	SMQN	function 359
+1	3 condition function index on nodes	SMQN	function 361
+28	3 condition function index on nodes	SMQN	function 426
+1	3 condition function index on nodes	SMQN	function 448
+2	3 condition function index on nodes	SMQN	function 46
+2	3 condition function index on nodes	SMQN	function 485
+1	3 condition function index on nodes	SMQN	function 5
+1	3 condition function index on nodes	SMQN	function 536
+8	3 condition function index on nodes	SMQN	function 543
+11	3 condition function index on nodes	SMQN	function 56
+12	3 condition function index on nodes	SMQN	function 560
+2	3 condition function index on nodes	SMQN	function 562
+173	3 condition function index on nodes	SMQN	function 576
+10	3 condition function index on nodes	SMQN	function 58
+60	3 condition function index on nodes	SMQN	function 59
+1	3 condition function index on nodes	SMQN	function 62
+1	3 condition function index on nodes	SMQN	function 625
+6	3 condition function index on nodes	SMQN	function 629
+1	3 condition function index on nodes	SMQN	function 635
+7	3 condition function index on nodes	SMQN	function 660
+1	3 condition function index on nodes	SMQN	function 67
+2	3 condition function index on nodes	SMQN	function 682
+33	3 condition function index on nodes	SMQN	function 71
+8	3 condition function index on nodes	SMQN	function 72
+1	3 condition function index on nodes	SMQN	function 726
+62	3 condition function index on nodes	SMQN	function 74
+1	3 condition function index on nodes	SMQN	function 75
+1	3 condition function index on nodes	SMQN	function 765
+17	3 condition function index on nodes	SMQN	function 77
+2	3 condition function index on nodes	SMQN	function 776
+1	3 condition function index on nodes	SMQN	function 798
+2	3 condition function index on nodes	SMQN	function 80
+1	3 condition function index on nodes	SMQN	function 84
+1013	3 distinct quests listed by any node
+1	3 distinct quests reachable from the event	ADCR
+367	3 distinct quests reachable from the event	ADIA
+9	3 distinct quests reachable from the event	AHEL
+7	3 distinct quests reachable from the event	AIPL
+16	3 distinct quests reachable from the event	AOBJ
+1	3 distinct quests reachable from the event	ASSU
+97	3 distinct quests reachable from the event	CLOC
+1	3 distinct quests reachable from the event	CRFT
+3	3 distinct quests reachable from the event	HACK
+1	3 distinct quests reachable from the event	IRON
+4	3 distinct quests reachable from the event	KILL
+16	3 distinct quests reachable from the event	LCLD
+3	3 distinct quests reachable from the event	LEVL
+3	3 distinct quests reachable from the event	LOCK
+4	3 distinct quests reachable from the event	OAAT
+3	3 distinct quests reachable from the event	REMP
+476	3 distinct quests reachable from the event	SCPT
+1	3 distinct quests reachable from the event	TMEE
+1013	3 events whose trees list one quest	1
+153	3 function 576 parameter 1 (u16, two characters)	0, K1
+37	3 function 576 parameter 1 (u16, two characters)	0, L1
+19	3 function 576 parameter 1 (u16, two characters)	0, L2
+7	3 function 576 parameter 1 (u16, two characters)	2, V1
+1	3 function 576 parameter 1 (u16, two characters)	2, V2
+9	3 function 576 parameter 1 (u16, two characters)	3, F1
+15	3 function 576 parameter 1 (u16, two characters)	3, L1
+8	3 function 576 parameter 1 (u16, two characters)	3, L2
+18	3 node depth below its event node	0
+76	3 node depth below its event node	1
+154	3 node depth below its event node	2
+95	3 node depth below its event node	3
+90	3 node depth below its event node	4
+37	3 node depth below its event node	5
+3	3 node depth below its event node	6
+1	3 nodes by event	ADCR	SMEN
+1	3 nodes by event	ADCR	SMQN
+31	3 nodes by event	ADIA	SMBN
+1	3 nodes by event	ADIA	SMEN
+60	3 nodes by event	ADIA	SMQN
+2	3 nodes by event	AHEL	SMBN
+1	3 nodes by event	AHEL	SMEN
+3	3 nodes by event	AHEL	SMQN
+1	3 nodes by event	AIPL	SMEN
+2	3 nodes by event	AIPL	SMQN
+4	3 nodes by event	AOBJ	SMBN
+1	3 nodes by event	AOBJ	SMEN
+7	3 nodes by event	AOBJ	SMQN
+1	3 nodes by event	ASSU	SMEN
+1	3 nodes by event	ASSU	SMQN
+20	3 nodes by event	CLOC	SMBN
+1	3 nodes by event	CLOC	SMEN
+79	3 nodes by event	CLOC	SMQN
+1	3 nodes by event	CRFT	SMBN
+1	3 nodes by event	CRFT	SMEN
+1	3 nodes by event	CRFT	SMQN
+1	3 nodes by event	HACK	SMBN
+1	3 nodes by event	HACK	SMEN
+3	3 nodes by event	HACK	SMQN
+1	3 nodes by event	IRON	SMEN
+1	3 nodes by event	IRON	SMQN
+1	3 nodes by event	KILL	SMEN
+2	3 nodes by event	KILL	SMQN
+7	3 nodes by event	LCLD	SMBN
+1	3 nodes by event	LCLD	SMEN
+14	3 nodes by event	LCLD	SMQN
+1	3 nodes by event	LEVL	SMEN
+3	3 nodes by event	LEVL	SMQN
+1	3 nodes by event	LOCK	SMEN
+2	3 nodes by event	LOCK	SMQN
+2	3 nodes by event	OAAT	SMBN
+1	3 nodes by event	OAAT	SMEN
+3	3 nodes by event	OAAT	SMQN
+1	3 nodes by event	REMP	SMEN
+2	3 nodes by event	REMP	SMQN
+52	3 nodes by event	SCPT	SMBN
+1	3 nodes by event	SCPT	SMEN
+150	3 nodes by event	SCPT	SMQN
+1	3 nodes by event	TMEE	SMEN
+1	3 nodes by event	TMEE	SMQN
+1	3 quest entries by event	ADCR
+386	3 quest entries by event	ADIA
+9	3 quest entries by event	AHEL
+7	3 quest entries by event	AIPL
+16	3 quest entries by event	AOBJ
+1	3 quest entries by event	ASSU
+100	3 quest entries by event	CLOC
+1	3 quest entries by event	CRFT
+3	3 quest entries by event	HACK
+1	3 quest entries by event	IRON
+4	3 quest entries by event	KILL
+17	3 quest entries by event	LCLD
+3	3 quest entries by event	LEVL
+3	3 quest entries by event	LOCK
+4	3 quest entries by event	OAAT
+3	3 quest entries by event	REMP
+748	3 quest entries by event	SCPT
+1	3 quest entries by event	TMEE
+2	3 quests per quest node	0
+181	3 quests per quest node	1
+17	3 quests per quest node	10-19
+36	3 quests per quest node	2
+13	3 quests per quest node	20-49
+37	3 quests per quest node	3-4
+49	3 quests per quest node	5-9
+3	4 quest ENAM against the nodes	ENAM SCPT, listed by no node
+987	4 quest ENAM against the nodes	ENAM equal to the event of every node listing it
+26	4 quest ENAM against the nodes	no ENAM, listed by a node
+889	4 quest ENAM against the nodes	no ENAM, listed by no node
+1905	4 quests
+1	4 quests by ENAM	ADCR
+366	4 quests by ENAM	ADIA
+9	4 quests by ENAM	AHEL
+7	4 quests by ENAM	AIPL
+16	4 quests by ENAM	AOBJ
+1	4 quests by ENAM	ASSU
+76	4 quests by ENAM	CLOC
+1	4 quests by ENAM	CRFT
+3	4 quests by ENAM	HACK
+1	4 quests by ENAM	IRON
+4	4 quests by ENAM	KILL
+16	4 quests by ENAM	LCLD
+2	4 quests by ENAM	LEVL
+3	4 quests by ENAM	LOCK
+4	4 quests by ENAM	OAAT
+3	4 quests by ENAM	REMP
+476	4 quests by ENAM	SCPT
+1	4 quests by ENAM	TMEE
+457	4 quests flagged to start with the game
+2	4 quests listed by a node and flagged to start
+2396	5 VMAD fragment blocks not read (their script's properties are not seen)	INFO
+166	5 VMAD fragment blocks not read (their script's properties are not seen)	PACK
+32	5 VMAD fragment blocks not read (their script's properties are not seen)	PERK
+632	5 VMAD fragment blocks not read (their script's properties are not seen)	SCEN
+57	5 call sites	keyword.sendstoryevent	receiver a property
+3	5 call sites	keyword.sendstoryevent	receiver a property of another object
+1	5 call sites	keyword.sendstoryeventandwait	receiver a parameter
+27	5 call sites	keyword.sendstoryeventandwait	receiver a property
+2	5 call sites	keyword.sendstoryeventandwait	receiver a property of another object
+1	5 call sites	quest.setcurrentstageid	receiver self
+697	5 call sites	quest.setstage	receiver GetOwningQuest() on self
+4	5 call sites	quest.setstage	receiver a parameter
+4399	5 call sites	quest.setstage	receiver a property
+3	5 call sites	quest.setstage	receiver a property of another object
+16	5 call sites	quest.setstage	receiver a script variable without a property
+1	5 call sites	quest.setstage	receiver an array element
+3371	5 call sites	quest.setstage	receiver self
+4	5 call sites	quest.setstage	receiver the result of another operation
+251	5 call sites	quest.start	receiver a property
+2	5 call sites	quest.start	receiver self
+1	5 call sites	quest.start	receiver the result of a call
+2	5 call sites by script attachment	keyword.sendstoryevent	ACTI script
+1	5 call sites by script attachment	keyword.sendstoryevent	FURN script
+1	5 call sites by script attachment	keyword.sendstoryevent	MSTT script
+3	5 call sites by script attachment	keyword.sendstoryevent	NPC_ script
+37	5 call sites by script attachment	keyword.sendstoryevent	a script no read VMAD attaches
+1	5 call sites by script attachment	keyword.sendstoryevent	quest alias script
+6	5 call sites by script attachment	keyword.sendstoryevent	quest script
+9	5 call sites by script attachment	keyword.sendstoryevent	quest stage fragment script
+5	5 call sites by script attachment	keyword.sendstoryeventandwait	ACTI script
+1	5 call sites by script attachment	keyword.sendstoryeventandwait	ACTI script and placed REFR script
+1	5 call sites by script attachment	keyword.sendstoryeventandwait	MSTT script
+2	5 call sites by script attachment	keyword.sendstoryeventandwait	a script no read VMAD attaches
+16	5 call sites by script attachment	keyword.sendstoryeventandwait	quest script
+1	5 call sites by script attachment	keyword.sendstoryeventandwait	quest stage fragment script
+4	5 call sites by script attachment	keyword.sendstoryeventandwait	terminal fragment script
+1	5 call sites by script attachment	quest.setcurrentstageid	quest script and quest stage fragment script
+32	5 call sites by script attachment	quest.setstage	ACTI script
+1	5 call sites by script attachment	quest.setstage	ACTI script and FURN script and placed REFR script
+1	5 call sites by script attachment	quest.setstage	ACTI script and MSTT script and placed ACHR script and placed REFR script
+59	5 call sites by script attachment	quest.setstage	ACTI script and placed REFR script
+3	5 call sites by script attachment	quest.setstage	ARMO script
+6	5 call sites by script attachment	quest.setstage	BOOK script
+1	5 call sites by script attachment	quest.setstage	CONT script
+1	5 call sites by script attachment	quest.setstage	CONT script and placed REFR script
+4	5 call sites by script attachment	quest.setstage	FURN script
+2	5 call sites by script attachment	quest.setstage	KEYM script
+4	5 call sites by script attachment	quest.setstage	MGEF script
+5	5 call sites by script attachment	quest.setstage	MISC script
+4	5 call sites by script attachment	quest.setstage	MSTT script and placed REFR script
+14	5 call sites by script attachment	quest.setstage	NPC_ script
+1	5 call sites by script attachment	quest.setstage	NPC_ script and placed ACHR script
+2	5 call sites by script attachment	quest.setstage	TACT script and placed REFR script
+1	5 call sites by script attachment	quest.setstage	TERM script
+1861	5 call sites by script attachment	quest.setstage	a script no read VMAD attaches
+84	5 call sites by script attachment	quest.setstage	placed REFR script
+255	5 call sites by script attachment	quest.setstage	quest alias script
+742	5 call sites by script attachment	quest.setstage	quest script
+2	5 call sites by script attachment	quest.setstage	quest script and quest stage fragment script
+5246	5 call sites by script attachment	quest.setstage	quest stage fragment script
+164	5 call sites by script attachment	quest.setstage	terminal fragment script
+5	5 call sites by script attachment	quest.start	ACTI script
+3	5 call sites by script attachment	quest.start	ACTI script and placed REFR script
+1	5 call sites by script attachment	quest.start	NPC_ script
+47	5 call sites by script attachment	quest.start	a script no read VMAD attaches
+3	5 call sites by script attachment	quest.start	placed REFR script
+5	5 call sites by script attachment	quest.start	quest alias script
+17	5 call sites by script attachment	quest.start	quest script
+173	5 call sites by script attachment	quest.start	quest stage fragment script
+39	5 call sites whose receiver resolves to a constant record	keyword.sendstoryevent	no
+21	5 call sites whose receiver resolves to a constant record	keyword.sendstoryevent	yes
+5	5 call sites whose receiver resolves to a constant record	keyword.sendstoryeventandwait	no
+25	5 call sites whose receiver resolves to a constant record	keyword.sendstoryeventandwait	yes
+1	5 call sites whose receiver resolves to a constant record	quest.setcurrentstageid	yes
+1904	5 call sites whose receiver resolves to a constant record	quest.setstage	no
+6591	5 call sites whose receiver resolves to a constant record	quest.setstage	yes
+48	5 call sites whose receiver resolves to a constant record	quest.start	no
+206	5 call sites whose receiver resolves to a constant record	quest.start	yes
+2750	5 constant receivers that are the calling script's own quest (not a start)	quest.setcurrentstageid
+11184	5 constant receivers that are the calling script's own quest (not a start)	quest.setstage
+2	5 constant receivers that are the calling script's own quest (not a start)	quest.start
+47	5 keywords a SCPT tree node tests (function 576, selector 0 K1)
+35	5 keywords both sent by a constant story event call and tested by a SCPT node
+42	5 keywords named as the constant receiver of a story event call
+554	5 quests named as the constant receiver of a starting call
+10282	5 scripts read
+6	6 quests not flagged that could start by	Start from a ACTI script
+1	6 quests not flagged that could start by	Start from a NPC_ script
+9	6 quests not flagged that could start by	Start from a placed REFR script
+2	6 quests not flagged that could start by	Start from a quest alias script
+15	6 quests not flagged that could start by	Start from a quest script
+130	6 quests not flagged that could start by	Start from a quest stage fragment script
+33	6 quests not flagged that could start by	a stage set from a ACTI script
+3	6 quests not flagged that could start by	a stage set from a BOOK script
+2	6 quests not flagged that could start by	a stage set from a CONT script
+2	6 quests not flagged that could start by	a stage set from a FURN script
+2	6 quests not flagged that could start by	a stage set from a MGEF script
+1	6 quests not flagged that could start by	a stage set from a MISC script
+1	6 quests not flagged that could start by	a stage set from a MSTT script
+3	6 quests not flagged that could start by	a stage set from a NPC_ script
+1	6 quests not flagged that could start by	a stage set from a TACT script
+1	6 quests not flagged that could start by	a stage set from a TERM script
+2	6 quests not flagged that could start by	a stage set from a placed ACHR script
+39	6 quests not flagged that could start by	a stage set from a placed REFR script
+8	6 quests not flagged that could start by	a stage set from a quest alias script
+118	6 quests not flagged that could start by	a stage set from a quest script
+298	6 quests not flagged that could start by	a stage set from a quest stage fragment script
+43	6 quests not flagged that could start by	a stage set from a terminal fragment script
+1	6 quests not flagged that could start by	story event ADCR
+366	6 quests not flagged that could start by	story event ADIA
+9	6 quests not flagged that could start by	story event AHEL
+7	6 quests not flagged that could start by	story event AIPL
+16	6 quests not flagged that could start by	story event AOBJ
+1	6 quests not flagged that could start by	story event ASSU
+96	6 quests not flagged that could start by	story event CLOC
+1	6 quests not flagged that could start by	story event CRFT
+3	6 quests not flagged that could start by	story event HACK
+1	6 quests not flagged that could start by	story event IRON
+4	6 quests not flagged that could start by	story event KILL
+16	6 quests not flagged that could start by	story event LCLD
+3	6 quests not flagged that could start by	story event LEVL
+3	6 quests not flagged that could start by	story event LOCK
+4	6 quests not flagged that could start by	story event OAAT
+3	6 quests not flagged that could start by	story event REMP
+476	6 quests not flagged that could start by	story event SCPT
+1	6 quests not flagged that could start by	story event TMEE
+1448	6 quests not flagged to start
+375	6 quests not flagged, by family	script call only
+54	6 quests not flagged, by family	story node and script call
+957	6 quests not flagged, by family	story node only
+62	6 quests not flagged, by family	unknown

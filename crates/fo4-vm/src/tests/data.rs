@@ -82,6 +82,14 @@ const BOX1: u32 = 0x812;
 const BOX2: u32 = 0x813;
 const BOX3: u32 = 0x814;
 const QUEST: u32 = 0x820;
+const CHILD1: u32 = 0x815;
+const CHILD2: u32 = 0x816;
+
+fn xesp(parent: u32, flags: u8) -> Vec<u8> {
+    let mut d = parent.to_le_bytes().to_vec();
+    d.extend([flags, 0, 0, 0]);
+    sub(b"XESP", &d)
+}
 
 /// One cell: a button (ACTI with a script) linked to a box without a
 /// keyword; three boxes chained by the keyword, the second initially
@@ -140,6 +148,20 @@ fn store() -> Store {
             &[sub(b"NAME", &STAT.to_le_bytes()), xlkr(KW, BOX3)].concat(),
         ),
         record(b"REFR", BOX3, 0, &sub(b"NAME", &STAT.to_le_bytes())),
+        // Enable children: of the initially disabled box, and of the first
+        // box with the opposite bit.
+        record(
+            b"REFR",
+            CHILD1,
+            0,
+            &[sub(b"NAME", &STAT.to_le_bytes()), xesp(BOX2, 0)].concat(),
+        ),
+        record(
+            b"REFR",
+            CHILD2,
+            0,
+            &[sub(b"NAME", &STAT.to_le_bytes()), xesp(BOX1, 1)].concat(),
+        ),
     ]
     .concat();
     let cell = record(b"CELL", CELL, 0, &sub(b"EDID", b"Room\0"));
@@ -384,4 +406,59 @@ fn linked_references_read_as_keyword_reference_pairs_and_keys_round_trip() {
     assert_eq!(data::key_record("test.esm:00000820#alias:2"), None);
     assert_eq!(data::signature_type(*b"QUST"), Some("quest"));
     assert_eq!(data::signature_type(*b"ZZZZ"), None);
+}
+
+#[test]
+fn is_disabled_follows_the_enable_parent_chain() {
+    use crate::host::{Host, NativeCall, Reply};
+    let store = store();
+    let b = Budget::new(1 << 24);
+    let call = |name: &str, o: usize| NativeCall {
+        script: "objectreference".into(),
+        name: name.into(),
+        receiver: Some(Val::Object(o)),
+        instance: None,
+        args: vec![Val::Bool(false)],
+        param_types: vec!["bool".into()],
+        return_type: if name == "isdisabled" { "bool" } else { "none" }.into(),
+    };
+    let mut host = crate::data::DataHost::new(&store, 1 << 24);
+    let mut w = crate::World::default();
+    let obj = |w: &mut crate::World, id: u32| {
+        crate::data::record_object(w, &store, &key(id), "objectreference", &b).unwrap()
+    };
+    let (c1, c2, box1, box2) = (
+        obj(&mut w, CHILD1),
+        obj(&mut w, CHILD2),
+        obj(&mut w, BOX1),
+        obj(&mut w, BOX2),
+    );
+    let ask = |host: &mut crate::data::DataHost<'_>, w: &mut crate::World, o| match host
+        .call(&call("isdisabled", o), w)
+    {
+        Reply::Value(Val::Bool(d)) => Some(d),
+        _ => None,
+    };
+    // The parent is initially disabled: so is its child; the opposite bit
+    // under an enabled parent: disabled.
+    assert_eq!(ask(&mut host, &mut w, c1), Some(true));
+    assert_eq!(ask(&mut host, &mut w, c2), Some(true));
+    // The run enables the first parent and disables the first box.
+    host.call(&call("enable", box2), &mut w);
+    host.call(&call("disable", box1), &mut w);
+    assert_eq!(ask(&mut host, &mut w, c1), Some(false));
+    assert_eq!(ask(&mut host, &mut w, c2), Some(false));
+    for r in [
+        rules::IS_DISABLED_CHAIN,
+        rules::XESP_FOLLOWS,
+        rules::XESP_INITIAL,
+        rules::XESP_OPPOSITE,
+        rules::XESP_PROPAGATES,
+    ] {
+        assert!(host.rules().contains(&r), "{r}");
+    }
+    // The header flag alone, as before.
+    let mut host = crate::data::DataHost::new(&store, 1 << 24);
+    host.enable_chain = false;
+    assert_eq!(ask(&mut host, &mut w, c1), Some(false));
 }

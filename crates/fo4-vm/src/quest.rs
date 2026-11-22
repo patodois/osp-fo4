@@ -75,6 +75,11 @@ pub struct QuestInfo {
     pub fragment_script: Option<String>,
     /// Fragments naming a stage the record does not hold.
     pub unmapped_fragments: usize,
+    /// ENAM: the story event code, as stored.
+    pub event: Option<[u8; 4]>,
+    /// The conditions after NEXT, which a story manager start evaluates
+    /// (`sm_quest_node_start_v1`).
+    pub event_conditions: Vec<Condition>,
 }
 impl QuestInfo {
     pub fn stage(&self, n: i32) -> Option<&StageInfo> {
@@ -146,6 +151,8 @@ impl QuestInfo {
             reference_aliases,
             fragment_script,
             unmapped_fragments: fragments.len() - mapped,
+            event: q.event,
+            event_conditions: q.event_conditions.iter().map(Condition::from).collect(),
         }))
     }
 }
@@ -231,6 +238,21 @@ pub enum Job {
         why: String,
         depth: usize,
     },
+    /// A custom event sent by `sender` (`vm_custom_events_v1`), delivered to
+    /// the instances registered for it.
+    Custom {
+        sender: ObjId,
+        event: String,
+        args: Val,
+        depth: usize,
+    },
+    /// `OnStoryScript` delivered to a quest the story manager started
+    /// (`sm_quest_node_start_v1`), with the event's six values.
+    Story {
+        quest: ObjId,
+        args: Vec<Val>,
+        depth: usize,
+    },
 }
 impl Job {
     pub fn depth(&self) -> usize {
@@ -238,15 +260,20 @@ impl Job {
             Job::Fragment { depth, .. }
             | Job::Event { depth, .. }
             | Job::StageEvent { depth, .. }
-            | Job::Open { depth, .. } => *depth,
+            | Job::Open { depth, .. }
+            | Job::Custom { depth, .. }
+            | Job::Story { depth, .. } => *depth,
         }
     }
+    /// The quest the job runs on (for a custom event, its sender).
     pub fn quest(&self) -> ObjId {
         match self {
             Job::Fragment { quest, .. }
             | Job::Event { quest, .. }
             | Job::StageEvent { quest, .. }
-            | Job::Open { quest, .. } => *quest,
+            | Job::Open { quest, .. }
+            | Job::Story { quest, .. } => *quest,
+            Job::Custom { sender, .. } => *sender,
         }
     }
 }
@@ -257,6 +284,9 @@ pub enum Change {
     StageSet(i32),
     StageRepeatRefused(i32),
     Started,
+    /// Started by the story manager for a story event (logged after
+    /// [`Change::Started`]).
+    StartedByStory,
     Stopped,
     Objective(u8, i32, Option<bool>),
     Opened(String),
@@ -346,6 +376,9 @@ pub fn info_by_key(
 pub struct RunFacts<'a, 's> {
     pub data: &'a DataHost<'s>,
     pub w: &'a mut World,
+    /// The story event being offered, when conditions are evaluated for
+    /// the story manager (`crate::story`).
+    pub event: Option<&'a crate::story::StoryEvent>,
 }
 impl RunFacts<'_, '_> {
     fn state(&mut self, k: &FormKey) -> Result<&QuestState, &'static str> {
@@ -383,6 +416,14 @@ impl Facts for RunFacts<'_, '_> {
         }
         data::global_fltv(self.data.store, g, self.data.max_memory)
     }
+    fn event_member(&mut self, code: [u8; 2]) -> Result<Option<FormKey>, &'static str> {
+        let e = self.event.ok_or("no story event is being offered")?;
+        match &code {
+            b"K1" => Ok(e.keyword.clone()),
+            b"L1" => e.location.clone(),
+            _ => Err("an event member function 576 is not evaluated for"),
+        }
+    }
 }
 
 /// The quest host: the data host, plus the quest natives answered from
@@ -403,6 +444,12 @@ pub struct QuestHost<'s> {
     /// Function indexes of undetermined conditions in the lists that left
     /// a log entry selection open, once per selection.
     pub open_functions: BTreeMap<u16, u64>,
+    /// The story manager's nodes: `Some` offers the script event raised by
+    /// `Keyword.SendStoryEvent` to them (`sm_script_event_v1`); `None`
+    /// records the call only, as before.
+    pub story: Option<Rc<fo4_plugin::story::Tree>>,
+    /// Story events offered and what they did, as text.
+    pub story_counts: BTreeMap<String, u64>,
 }
 
 /// Natives the quest host answers, lower case `script.function`.
@@ -444,9 +491,11 @@ impl<'s> QuestHost<'s> {
             stage_event: true,
             conditions: BTreeMap::new(),
             open_functions: BTreeMap::new(),
+            story: None,
+            story_counts: BTreeMap::new(),
         }
     }
-    fn using(&mut self, r: &'static str) {
+    pub(crate) fn using(&mut self, r: &'static str) {
         if !self.used.contains(&r) {
             self.used.push(r);
         }
@@ -479,7 +528,13 @@ impl<'s> QuestHost<'s> {
     /// Starts a quest that is not running (`quest_start_v1`): running,
     /// OnQuestInit queued, then its startup stages set in stored order
     /// (all but `skip`).
-    fn start_quest(&mut self, w: &mut World, o: ObjId, i: &Rc<QuestInfo>, skip: Option<i32>) {
+    pub(crate) fn start_quest(
+        &mut self,
+        w: &mut World,
+        o: ObjId,
+        i: &Rc<QuestInfo>,
+        skip: Option<i32>,
+    ) {
         self.using(rules::QUEST_START);
         self.using(rules::QUEST_ORDER);
         w.quests.state(i).running = Some(true);
@@ -586,6 +641,7 @@ impl<'s> QuestHost<'s> {
                 let mut facts = RunFacts {
                     data: &self.data,
                     w: &mut *w,
+                    event: None,
                 };
                 let t = cond::eval_list_with(
                     &e.list,
@@ -901,6 +957,28 @@ impl<'s> QuestHost<'s> {
 impl Host for QuestHost<'_> {
     fn call(&mut self, c: &NativeCall, w: &mut World) -> Reply {
         let full = c.full_name();
+        // The event natives, when their delivery is switched on; otherwise
+        // they are recorded as any other native, as before.
+        let on = if full.contains("remoteevent") {
+            w.events.remote.then_some(rules::REMOTE_EVENTS)
+        } else if full.contains("customevent") {
+            w.events.custom.map(|_| rules::CUSTOM_EVENTS)
+        } else {
+            None
+        };
+        if let (true, Some(rule)) = (crate::events::NATIVES.contains(&full.as_str()), on) {
+            let depth = w.quests.depth + 1;
+            if let Some(r) = crate::events::native(c, w, depth) {
+                self.using(rule);
+                if full == "scriptobject.sendcustomevent" {
+                    self.using(rules::CUSTOM_EVENT_ORDER);
+                }
+                return r;
+            }
+        }
+        if self.story.is_some() && crate::story::NATIVES.contains(&full.as_str()) {
+            return crate::story::send(self, c, w);
+        }
         if !NATIVES.contains(&full.as_str()) {
             let r = self.data.call(c, w);
             for u in self.data.rules() {
@@ -932,6 +1010,9 @@ impl Host for QuestHost<'_> {
 
 /// The event a stage's setting delivers (`quest_on_stage_set_v1`).
 pub const ON_STAGE_SET: &str = "onstageset";
+/// The event a quest the story manager started for a script event
+/// receives (`sm_quest_node_start_v1`).
+pub const ON_STORY_SCRIPT: &str = "onstoryscript";
 
 /// One job run by [`run_jobs`].
 #[derive(Debug, Clone)]
@@ -942,6 +1023,9 @@ pub struct JobRun {
     /// (script, outcome) per delivery; empty for an open job or an event
     /// no script handles.
     pub outcomes: Vec<(String, Outcome)>,
+    /// (script, outcome) per remote delivery of the event to the
+    /// instances registered for it (`vm_remote_events_v1`).
+    pub remote: Vec<(String, Outcome)>,
     /// The effects of this job: a range of `vm.effects` (with nested
     /// jobs, including theirs).
     pub effects: std::ops::Range<usize>,
@@ -1018,6 +1102,7 @@ pub fn run_one(vm: &mut Vm<'_>, store: &Store, job: Job, nested: bool, b: &Budge
     vm.world.quests.depth = job.depth();
     let start = vm.effects.len();
     let mut outcomes = Vec::new();
+    let mut remote = Vec::new();
     let mut notes = Vec::new();
     let deliver = |vm: &mut Vm<'_>, i: InstId, f: &str| {
         if nested {
@@ -1085,6 +1170,8 @@ pub fn run_one(vm: &mut Vm<'_>, store: &Store, job: Job, nested: bool, b: &Budge
                         Err(e) => outcomes.push((script, Outcome::Failed(e))),
                     }
                 }
+                let mut none = |_: &mut Vm<'_>, p: &[(String, String)]| p.is_empty().then(Vec::new);
+                remote = crate::events::deliver_remote(vm, *quest, event, &mut none, nested);
             }
         }
         Job::StageEvent {
@@ -1133,6 +1220,59 @@ pub fn run_one(vm: &mut Vm<'_>, store: &Store, job: Job, nested: bool, b: &Budge
                         Err(e) => outcomes.push((script, Outcome::Failed(e))),
                     }
                 }
+                let (stage, entry) = (*stage, *entry);
+                let mut two = |vm: &mut Vm<'_>, p: &[(String, String)]| {
+                    let ints = p.len() == 2 && p.iter().all(|(_, t)| t.as_str() == "int");
+                    ints.then(|| {
+                        let item = match entry {
+                            Some(k) => Val::Int(k as i32),
+                            None => vm.world.unknown(crate::Origin::Rule(
+                                rules::QUEST_ON_STAGE_SET,
+                                "the log entry selected is undetermined".into(),
+                            )),
+                        };
+                        vec![Val::Int(stage), item]
+                    })
+                };
+                remote = crate::events::deliver_remote(vm, *quest, ON_STAGE_SET, &mut two, nested);
+            }
+        }
+        Job::Custom {
+            sender,
+            event,
+            args,
+            ..
+        } => {
+            outcomes = crate::events::deliver_custom(vm, *sender, event, args.clone(), nested);
+        }
+        Job::Story { quest, args, .. } => {
+            if let Err(e) = vm.attach_scripts(*quest) {
+                outcomes.push((String::new(), Outcome::Failed(e)));
+            } else {
+                vm.rules.insert(rules::SM_QUEST_START);
+                let insts = vm.world.objects[*quest].instances.clone();
+                for i in insts {
+                    let script = vm.world.instances[i].script.clone();
+                    match vm.find_handler(i, ON_STORY_SCRIPT) {
+                        Ok(Some(f)) if f.params.len() == args.len() => {
+                            let o = if nested {
+                                vm.deliver_nested(i, ON_STORY_SCRIPT, args.clone())
+                            } else {
+                                vm.deliver(i, ON_STORY_SCRIPT, args.clone())
+                            };
+                            outcomes.push((script, o));
+                        }
+                        Ok(Some(_)) => outcomes.push((
+                            script,
+                            Outcome::Failed(VmError::BadArgument {
+                                site: None,
+                                detail: "OnStoryScript does not take the event's six values".into(),
+                            }),
+                        )),
+                        Ok(None) => {}
+                        Err(e) => outcomes.push((script, Outcome::Failed(e))),
+                    }
+                }
             }
         }
         Job::Open { .. } => {}
@@ -1142,6 +1282,7 @@ pub fn run_one(vm: &mut Vm<'_>, store: &Store, job: Job, nested: bool, b: &Budge
         seq,
         job,
         outcomes,
+        remote,
         effects: start..vm.effects.len(),
         notes,
     }
@@ -1156,6 +1297,9 @@ pub fn run_one(vm: &mut Vm<'_>, store: &Store, job: Job, nested: bool, b: &Budge
 pub fn run_jobs(vm: &mut Vm<'_>, store: &Store, max: usize, b: &Budget) -> Vec<JobRun> {
     let mut out = Vec::new();
     while out.len() < max {
+        if vm.world.quests.queue.is_empty() {
+            release_later(vm);
+        }
         let Some(job) = vm.world.quests.queue.pop_front() else {
             break;
         };
@@ -1173,8 +1317,17 @@ pub fn run_jobs(vm: &mut Vm<'_>, store: &Store, max: usize, b: &Budget) -> Vec<J
             restore(vm, siblings);
         }
         out.push(r);
+        release_later(vm);
     }
     out
+}
+
+/// Puts the custom events sent under the queued reading
+/// (`custom_event_order_v1`) behind the jobs queued now, in sending order:
+/// asked when an outermost delivery or job ends.
+pub fn release_later(vm: &mut Vm<'_>) {
+    let later = std::mem::take(&mut vm.world.events.later);
+    vm.world.quests.queue.extend(later);
 }
 
 /// Puts the jobs set aside back behind the jobs left by the one that ran.

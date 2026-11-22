@@ -42,7 +42,7 @@ condition:    CTDA [CIS1] [CIS2]
 | FULL, CNAM, NNAM | 4 | string table id (localized plugin), else text | all 4 bytes |
 | VMAD | any | read by `fo4_plugin::vmad` ([vmad.md](vmad.md)) | 1,353 of 1,353 to the last byte |
 | DNAM | 12 | u16 flags, u8 priority, u8 byte, u32 word (zero in all), u32 (0 to 7) | 1,898 |
-| ENAM | 4 | four-byte code, kept as stored | 990 |
+| ENAM | 4 | four-byte code, kept as stored: the story event code of the nodes listing the quest ([story-manager.md](story-manager.md)) | 990; equal to the event code of every node listing the quest in 987 of 987 quests with both |
 | LNAM, XNAM, QTGL, GNAM | 4 | FormID | LCTN, GLOB, GLOB, KYWD in every one |
 | CTDA | 32 | kept as stored here; field by field by `fo4_plugin::condition` ([conditions.md](conditions.md)) | 14,960 |
 | NEXT, ALED | 0 | marker | |
@@ -106,15 +106,22 @@ does not occur in this data: no subrecord follows CNAM inside an entry.
 
 - The meaning of every flag bit (DNAM, INDX, QSDT, QOBJ FNAM, QSTA, alias
   FNAM), of DNAM byte 3 and the u32 at 8, of INDX byte 3, of ALCA's high
-  half, ALCL, ALCC, ALNT, ALMI, ENAM, ALFE and ALFD. The bits the
+  half, ALCL, ALCC, ALNT, ALMI, ALFE and ALFD; of ENAM, only the code
+  `SCPT` is read (`sm_script_event_v1`).
+- What starts a quest that is not flagged to start: the story manager
+  nodes and the starting call sites of the compiled scripts are counted in
+  [story-manager.md](story-manager.md); 62 of the 1,448 such quests have
+  neither. The bits the
   interpreter relies on (DNAM bit 0 and bit 3, INDX bit 1) are named in
   pending rules (`quest_start_game_enabled_v1`, `quest_repeated_stage_v1`,
   `quest_start_v1`).
 - Conditions (CTDA) stay raw in this reader's byte accounting; their
   fields are read by `fo4_plugin::condition` ([conditions.md](conditions.md)),
   and `fo4_vm::cond` evaluates a stage's log entry conditions when the
-  stage is set ([vm.md](vm.md), Conditions); the quest's own conditions
-  (before and after NEXT), objective target and alias conditions are
+  stage is set ([vm.md](vm.md), Conditions); the conditions after NEXT
+  are evaluated when the story manager offers the quest an event
+  (`sm_quest_node_start_v1`, [story-manager.md](story-manager.md)); the
+  conditions before NEXT, objective target and alias conditions are
   counted there, not used.
 - How an alias is filled in the running game, except that the interpreter
   takes an ALFR alias of a running quest to hold its reference

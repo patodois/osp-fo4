@@ -305,6 +305,30 @@ read from them and no other copy was looked for. No editor, editor
 source or definition file, script source, decompiler, other interpreter
 or the game executable was opened or searched for.
 
+The story manager reader and the events step (`fo4_plugin::story`,
+`fo4_vm::events`, `fo4_vm::story`,
+[spec/story-manager.md](../spec/story-manager.md),
+[spec/vm.md](../spec/vm.md), Events and the story manager) add no sourced
+format fact: the layout of SMEN, SMBN and SMQN comes from measurement
+alone. Three public UESP file format pages were requested on 2026-11-22
+(`Skyrim_Mod:Mod_File_Format/SMQN`, `Skyrim_Mod:Mod_File_Format`,
+`Fallout4Mod:Mod_File_Format`); each answered HTTP 403 and nothing was read
+from them. Recognised from prior general knowledge and kept only as far as
+`story_census`, `quest_run` and `script_run` could have refuted them: the
+roles of PNAM, SNAM, CITC, QNAM and NNAM, that the code `SCPT` is the
+script event raised by `Keyword.SendStoryEvent`, how a tree is walked and
+what a quest node starts, the meaning of condition function 576's first
+parameter (a selector and an event member code) for selector 0, that a
+custom event's sender is the object `SendCustomEvent` is called on, the
+queued order of custom events, and the order of remote deliveries after
+the sender's own scripts. The handler names (`::remote_<type>_<event>`,
+`::remote_<script>_<event>`), the stored custom event names and the
+native, event and parameter names come from the installed compiled
+scripts read with `fo4-pex`. Each behaviour is a pending rule in
+[spec/hypotheses.tsv](../spec/hypotheses.tsv). No editor, editor source or
+definition file, script source, decompiler, other interpreter, script
+extender or the game executable was opened or searched for.
+
 The save file reader (`fo4-save`, [spec/save.md](../spec/save.md)) was
 established only by measuring the save files of one machine with the
 `save_census` example and by resolving their form references against the

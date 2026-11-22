@@ -145,6 +145,78 @@ pub fn global_fltv(store: &Store, k: &FormKey, max_memory: u64) -> Result<f32, &
     Ok(f32::from_le_bytes(d))
 }
 
+/// Whether the first record of an enable parent chain is enabled under the
+/// rules of `spec/enable-parent.md`, as `fo4_scene::enable` decides it:
+/// the root starts as its header flag 0x800 says, each record below it as
+/// its parent, inverted by flag bit 0 (`xesp_child_follows_parent_v1`,
+/// `xesp_initial_state_chain_v1`, `xesp_flag_bit0_opposite_v1`; bit 1 does
+/// not change presence, `xesp_flag_bit1_not_presence_v1`), a record this
+/// run enabled or disabled itself taking that state
+/// (`xesp_script_change_propagates_v1`). A chain those rules do not decide
+/// (another flag bit, an end other than a record without XESP, a record
+/// below the root with its own flag 0x800) is an `Err` with its reason.
+/// Returns the state and the rules relied on.
+pub fn chain_state(
+    ch: &fo4_plugin::enable::Chain,
+    set: &HashMap<FormKey, bool>,
+) -> Result<(bool, Vec<&'static str>), &'static str> {
+    use fo4_plugin::enable::ChainEnd;
+    let mut used = vec![rules::XESP_FOLLOWS, rules::XESP_INITIAL];
+    let bits = ch
+        .nodes
+        .iter()
+        .filter_map(|n| n.link.as_ref())
+        .fold(0u8, |a, l| a | l.flags);
+    if bits & !3 != 0 {
+        return Err("the chain carries an enable parent flag bit without a rule");
+    }
+    if bits & 1 != 0 {
+        used.push(rules::XESP_OPPOSITE);
+    }
+    if bits & 2 != 0 {
+        used.push(rules::XESP_BIT1);
+    }
+    match ch.end {
+        ChainEnd::Root => {}
+        ChainEnd::Cycle(_) => return Err("the enable parent chain loops"),
+        ChainEnd::TooDeep => return Err("the enable parent chain is too deep"),
+        _ => return Err("the enable parent chain names no record"),
+    }
+    let n = ch.nodes.len();
+    if ch
+        .nodes
+        .iter()
+        .take(n.saturating_sub(1))
+        .any(|x| x.initially_disabled)
+    {
+        return Err("a record of the chain below its root carries its own initially-disabled flag");
+    }
+    let mut nodes = ch.nodes.iter().rev();
+    let root = nodes.next().ok_or("an empty chain")?;
+    let mut touched = false;
+    let mut on = match set.get(&root.key) {
+        Some(v) => {
+            touched = true;
+            *v
+        }
+        None => !root.initially_disabled,
+    };
+    for x in nodes {
+        let opposite = x.link.as_ref().is_some_and(|l| l.flags & 1 != 0);
+        on = match set.get(&x.key) {
+            Some(v) => {
+                touched = true;
+                *v
+            }
+            None => on != opposite,
+        };
+    }
+    if touched {
+        used.push(rules::XESP_PROPAGATES);
+    }
+    Ok((on, used))
+}
+
 /// One answer of the data host, counted by `script_run --census`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Answer {
@@ -170,6 +242,10 @@ pub struct DataHost<'s> {
     changed: HashSet<(ObjId, &'static str)>,
     /// Answers by `native` and kind.
     pub answers: BTreeMap<(String, Answer), u64>,
+    /// `IsDisabled` of a reference with an enable parent follows its chain
+    /// (`vm_host_is_disabled_chain_v1`); `false` reads the header flag
+    /// alone, as before.
+    pub enable_chain: bool,
 }
 
 /// Natives of the data host, lower case `script.function`, with the rule
@@ -212,6 +288,7 @@ impl<'s> DataHost<'s> {
             disabled: HashMap::new(),
             changed: HashSet::new(),
             answers: BTreeMap::new(),
+            enable_chain: true,
         }
     }
     fn using(&mut self, r: &'static str) {
@@ -331,6 +408,32 @@ impl<'s> DataHost<'s> {
             .overrides()
             .winner(&k)
             .ok_or("the reference names no winning record")?;
+        if self.enable_chain {
+            let b = Budget::new(self.max_memory);
+            let chain = fo4_plugin::enable::chain(self.store, &k, &b)
+                .map_err(|_| "the enable parent chain could not be read")?;
+            if let Some(ch) = chain.filter(|c| c.depth() > 0) {
+                // This run's own Enable and Disable of the chain's records
+                // (`xesp_script_change_propagates_v1`).
+                let mut set: HashMap<FormKey, bool> = HashMap::new();
+                for n in &ch.nodes {
+                    let key = record_key(&n.key);
+                    let o = w
+                        .objects
+                        .iter()
+                        .position(|x| x.key.as_deref() == Some(&key));
+                    if let Some(d) = o.and_then(|o| self.disabled.get(&o)) {
+                        set.insert(n.key.clone(), !*d);
+                    }
+                }
+                let (on, used) = chain_state(&ch, &set)?;
+                self.using(rules::IS_DISABLED_CHAIN);
+                for u in used {
+                    self.using(u);
+                }
+                return Ok((Val::Bool(!on), Answer::Value));
+            }
+        }
         Ok((Val::Bool(ov.disabled), Answer::Value))
     }
     fn base_object(&mut self, c: &NativeCall, w: &mut World) -> Got {

@@ -3,6 +3,7 @@
 use super::*;
 
 mod data;
+mod events;
 mod quest;
 
 use fo4_pex::{
@@ -866,6 +867,7 @@ fn events_reach_each_instance_with_a_handler_and_the_log_names_visibility_change
         attach_notes: Vec::new(),
         quest_jobs: Vec::new(),
         quest_jobs_left: 0,
+        event_counts: Default::default(),
     };
     assert_eq!(
         bind::visibility_changes(&run),

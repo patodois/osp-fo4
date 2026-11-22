@@ -30,11 +30,14 @@
 12	cascade blocking native	scene.isplaying
 2	cascade blocking native	utility.getcurrentgametime
 2	cascade blocking native	utility.randomint
-60	cascade blocking rule	pex_array_ops_v1
+67	cascade blocking rule	pex_array_ops_v1
 6	cascade blocking rule	vmad_property_sets_variable_v1
-7834	cascade depth per stage set	1
-1716	cascade depth per stage set	2
-460	cascade depth per stage set	3-4
+7	cascade custom event outcome: blocked on an undetermined value (rule pex_array_ops_v1)
+4	cascade custom event outcome: completed
+335	cascade custom event runs with no handler
+7664	cascade depth per stage set	1
+1867	cascade depth per stage set	2
+479	cascade depth per stage set	3-4
 61	cascade depth per stage set	5-9
 55	cascade event onquestinit runs with no handler
 7	cascade event onquestshutdown outcome: completed
@@ -96,6 +99,24 @@
 4383	effects	stage set on another quest
 618	effects	stage set on the same quest
 613	effects	timer
+11	events	custom deliveries	a handler
+346	events	custom events sent	queued for delivery
+564	events	registrations	custom	made
+6	events	registrations	custom	not made: an argument or the instance is undetermined
+17	events	registrations	remote	by event	onactivate
+1	events	registrations	remote	by event	oncelldetach
+9	events	registrations	remote	by event	ondeath
+3	events	registrations	remote	by event	onitemequipped
+3	events	registrations	remote	by event	onitemunequipped
+44	events	registrations	remote	by event	onlocationchange
+1	events	registrations	remote	by event	onplayerloadgame
+1	events	registrations	remote	by event	onpoweroff
+1	events	registrations	remote	by event	onpoweron
+7	events	registrations	remote	by event	onstageset
+1	events	registrations	remote	by event	onunload
+2	events	registrations	remote	by event	onworkshopobjectdestroyed
+90	events	registrations	remote	made
+74	events	registrations	remote	not made: an argument or the instance is undetermined
 1	host answer	alias.getowningquest	a record
 199	host answer	formlist.getat	a record
 1	host answer	formlist.getat	undetermined: the index is undetermined
@@ -323,22 +344,35 @@
 47	stages set per sweep item	20-99
 345	stages set per sweep item	3-4
 116	stages set per sweep item	5-9
-95	sweep items relying on	cond_compare_ops_v1
-274	sweep items relying on	cond_ctda_layout_v1
-240	sweep items relying on	cond_flag_parameters_v1
+1	story	story event left open, by function index of an undetermined condition	function 14
+6	story	story event left open, by function index of an undetermined condition	function 310
+6	story	story event left open, by function index of an undetermined condition	function 359
+6	story	story event left open, by function index of an undetermined condition	function 560
+1	story	story event left open, by function index of an undetermined condition	function 562
+6	story	story event left open, by function index of an undetermined condition	function 59
+1	story	story event left open, by function index of an undetermined condition	function 660
+6	story	story event left open, by function index of an undetermined condition	function 77
+6	story	story event outcome	open: a node's conditions are undetermined
+6	story	story events offered	SCPT
+101	sweep items relying on	cond_compare_ops_v1
+280	sweep items relying on	cond_ctda_layout_v1
+246	sweep items relying on	cond_flag_parameters_v1
+6	sweep items relying on	cond_fn_56_quest_running_v1
+6	sweep items relying on	cond_fn_576_event_data_v1
 23	sweep items relying on	cond_fn_58_quest_stage_v1
-198	sweep items relying on	cond_fn_59_stage_done_v1
-35	sweep items relying on	cond_fn_74_global_value_v1
-274	sweep items relying on	cond_list_or_groups_v1
+204	sweep items relying on	cond_fn_59_stage_done_v1
+41	sweep items relying on	cond_fn_74_global_value_v1
+280	sweep items relying on	cond_list_or_groups_v1
 274	sweep items relying on	cond_log_entry_state_v1
-3499	sweep items relying on	pex_array_ops_v1
+6	sweep items relying on	cond_use_global_v1
+3505	sweep items relying on	pex_array_ops_v1
 9415	sweep items relying on	pex_call_dispatch_v1
-6501	sweep items relying on	pex_conditional_jump_sense_v1
+6503	sweep items relying on	pex_conditional_jump_sense_v1
 7587	sweep items relying on	pex_default_values_v1
 5833	sweep items relying on	pex_op_return_v1
 30	sweep items relying on	pex_op_string_concat_v1
 743	sweep items relying on	pex_ops_arithmetic_v1
-5140	sweep items relying on	pex_ops_compare_v1
+5146	sweep items relying on	pex_ops_compare_v1
 7663	sweep items relying on	pex_ops_not_copy_cast_v1
 1069	sweep items relying on	pex_property_get_set_v1
 495	sweep items relying on	pex_state_identifier_v1
@@ -357,6 +391,12 @@
 1242	sweep items relying on	quest_start_v1
 10071	sweep items relying on	quest_state_isolated_v1
 962	sweep items relying on	quest_stop_v1
+6	sweep items relying on	sm_node_layout_v1
+6	sweep items relying on	sm_quest_node_start_v1
+6	sweep items relying on	sm_script_event_v1
+6	sweep items relying on	sm_tree_walk_v1
+315	sweep items relying on	vm_custom_event_order_v1
+470	sweep items relying on	vm_custom_events_v1
 1289	sweep items relying on	vm_host_data_state_v1
 511	sweep items relying on	vm_host_form_from_file_v1
 184	sweep items relying on	vm_host_formlist_lnam_v1
@@ -368,11 +408,12 @@
 53	sweep items relying on	vm_object_identity_v1
 9054	sweep items relying on	vm_record_scripts_attach_v1
 294	sweep items relying on	vm_record_signature_type_v1
+156	sweep items relying on	vm_remote_events_v1
 567	sweep items relying on	vm_timer_events_v1
 9120	sweep items relying on	vmad_alias_value_v1
 10037	sweep items relying on	vmad_property_sets_variable_v1
 531	sweep items relying on	vmad_reference_scripts_v1
-4607	sweep items whose every run completed
+4606	sweep items whose every run completed
 
 ## effects of other natives, ranked
 10266	effects	other: referencealias.getreference

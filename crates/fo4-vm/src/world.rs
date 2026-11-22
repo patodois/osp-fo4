@@ -144,6 +144,8 @@ pub struct World {
     /// Quest state and the stage fragments and quest events queued
     /// (`crate::quest`).
     pub quests: crate::quest::Quests,
+    /// Remote and custom event registrations (`crate::events`).
+    pub events: crate::events::Events,
 }
 
 impl World {

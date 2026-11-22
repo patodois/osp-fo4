@@ -9,6 +9,7 @@ pub mod layout;
 pub mod quest;
 mod semantics;
 pub mod static_frame;
+pub mod story;
 mod strings;
 pub mod typed;
 pub mod vmad;

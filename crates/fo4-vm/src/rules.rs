@@ -124,8 +124,38 @@ pub const COND_FN_59: &str = "cond_fn_59_stage_done_v1";
 /// Function 74: the value of the global of parameter 1.
 pub const COND_FN_74: &str = "cond_fn_74_global_value_v1";
 
+/// Function 576 with selector 0: whether a member of the story event
+/// being offered is the record of parameter 2.
+pub const COND_FN_576: &str = "cond_fn_576_event_data_v1";
+
+/// Remote events: registration and delivery of the events the run raises.
+pub const REMOTE_EVENTS: &str = "vm_remote_events_v1";
+/// Custom events: registration and delivery.
+pub const CUSTOM_EVENTS: &str = "vm_custom_events_v1";
+/// When a custom event is delivered relative to the sender (queued).
+pub const CUSTOM_EVENT_ORDER: &str = "vm_custom_event_order_v1";
+
+/// The story manager node records' order grammar and fields.
+pub const SM_LAYOUT: &str = "sm_node_layout_v1";
+/// How an event is offered to its tree of nodes.
+pub const SM_TREE_WALK: &str = "sm_tree_walk_v1";
+/// What a quest node does when the walk reaches it.
+pub const SM_QUEST_START: &str = "sm_quest_node_start_v1";
+/// `Keyword.SendStoryEvent` raises the script event.
+pub const SM_SCRIPT_EVENT: &str = "sm_script_event_v1";
+
+/// `IsDisabled` of a reference with an enable parent follows its chain.
+pub const IS_DISABLED_CHAIN: &str = "vm_host_is_disabled_chain_v1";
+/// The enable parent rules the chain answer relies on
+/// (`spec/enable-parent.md`).
+pub const XESP_FOLLOWS: &str = "xesp_child_follows_parent_v1";
+pub const XESP_INITIAL: &str = "xesp_initial_state_chain_v1";
+pub const XESP_OPPOSITE: &str = "xesp_flag_bit0_opposite_v1";
+pub const XESP_BIT1: &str = "xesp_flag_bit1_not_presence_v1";
+pub const XESP_PROPAGATES: &str = "xesp_script_change_propagates_v1";
+
 /// Every rule above.
-pub const ALL: [&str; 55] = [
+pub const ALL: [&str; 69] = [
     ARITHMETIC,
     COMPARE,
     NOT_COPY_CAST,
@@ -181,6 +211,20 @@ pub const ALL: [&str; 55] = [
     COND_FN_58,
     COND_FN_59,
     COND_FN_74,
+    COND_FN_576,
+    REMOTE_EVENTS,
+    CUSTOM_EVENTS,
+    CUSTOM_EVENT_ORDER,
+    SM_LAYOUT,
+    SM_TREE_WALK,
+    SM_QUEST_START,
+    SM_SCRIPT_EVENT,
+    IS_DISABLED_CHAIN,
+    XESP_FOLLOWS,
+    XESP_INITIAL,
+    XESP_OPPOSITE,
+    XESP_BIT1,
+    XESP_PROPAGATES,
 ];
 
 /// The rule an opcode's meaning rests on; `None` for an opcode without a

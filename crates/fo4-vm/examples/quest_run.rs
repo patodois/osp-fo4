@@ -19,15 +19,17 @@
 //! `quest-run-names.txt` (effect logs with names, never committed) to
 //! OUT_DIR.
 use fo4_core::{Budget, Manifest};
+use fo4_plugin::story::Tree;
 use fo4_plugin::{typed::Store, FormKey};
 use fo4_vfs::Vfs;
+use fo4_vm::events::CustomOrder;
 use fo4_vm::{
     bind::{self, outcome_text, RecordScripts, VfsLibrary},
     data::Answer,
     quest::{self, Change, Job, JobRun, QuestHost, QuestInfo},
     Effect, Origin, Outcome, Vm, World,
 };
-use std::{collections::BTreeMap, fmt::Write as _, path::Path};
+use std::{collections::BTreeMap, fmt::Write as _, path::Path, rc::Rc};
 
 type E = Box<dyn std::error::Error>;
 type Counts = BTreeMap<String, u64>;
@@ -168,9 +170,25 @@ fn job_text(vm: &Vm<'_>, r: &JobRun) -> String {
         Job::Open { quest, why, depth } => {
             writeln!(s, "  [{depth}] open on {}: {why}", label(*quest))
         }
+        Job::Custom {
+            sender,
+            event,
+            depth,
+            ..
+        } => writeln!(
+            s,
+            "  [{depth}] custom event {event} from {}",
+            label(*sender)
+        ),
+        Job::Story { quest, depth, .. } => {
+            writeln!(s, "  [{depth}] event onstoryscript on {}", label(*quest))
+        }
     };
     for (script, o) in &r.outcomes {
         let _ = writeln!(s, "    {script}: {}", outcome_text(o));
+    }
+    for (script, o) in &r.remote {
+        let _ = writeln!(s, "    remote {script}: {}", outcome_text(o));
     }
     for n in &r.notes {
         let _ = writeln!(s, "    note: {n}");
@@ -203,11 +221,23 @@ fn count_jobs(c: &mut Counts, runs: &[JobRun], prefix: &str) {
                 bump(c, format!("{prefix}open runs: {why}"));
                 continue;
             }
+            Job::Custom { .. } => "custom event".to_string(),
+            Job::Story { .. } => "event onstoryscript".to_string(),
         };
         if r.outcomes.is_empty() {
             bump(c, format!("{prefix}{what} runs with no handler"));
         }
-        for (_, o) in &r.outcomes {
+        let remote: Vec<(String, Outcome)> = r
+            .remote
+            .iter()
+            .map(|(s, o)| (format!("remote {s}"), o.clone()))
+            .collect();
+        for (script, o) in r.outcomes.iter().chain(&remote) {
+            let what = if script.starts_with("remote ") {
+                format!("remote delivery of {what}")
+            } else {
+                what.clone()
+            };
             bump(c, format!("{prefix}{what} outcome: {}", outcome_kind(o)));
             match o {
                 Outcome::Blocked(b) => match &b.on {
@@ -268,13 +298,54 @@ struct Opts {
     conditions: bool,
     /// Deliver OnStageSet (`quest_on_stage_set_v1`).
     stage_event: bool,
+    /// Deliver remote events the run raises (`vm_remote_events_v1`).
+    remote: bool,
+    /// Deliver custom events (`vm_custom_events_v1`), queued or nested
+    /// (`vm_custom_event_order_v1`).
+    custom: Option<CustomOrder>,
+    /// Offer the script event to the story manager (`sm_script_event_v1`).
+    story: bool,
+    /// `IsDisabled` follows enable parent chains
+    /// (`vm_host_is_disabled_chain_v1`).
+    enable_chain: bool,
 }
 
-fn host<'s>(store: &'s Store, max: u64, o: Opts) -> QuestHost<'s> {
+/// The story manager's nodes, read once when the story manager is on.
+fn story_tree(store: &Store, o: Opts) -> Result<Option<Rc<Tree>>, E> {
+    if !o.story {
+        return Ok(None);
+    }
+    let b = Budget::new(store.limits.max_memory);
+    Ok(Some(Rc::new(Tree::read(store, &b)?)))
+}
+
+fn host<'s>(store: &'s Store, max: u64, o: Opts, tree: &Option<Rc<Tree>>) -> QuestHost<'s> {
     let mut h = QuestHost::new(store, max);
     h.evaluate = o.conditions;
     h.stage_event = o.stage_event;
+    h.data.enable_chain = o.enable_chain;
+    if o.story {
+        h.story = tree.clone();
+    }
     h
+}
+
+/// Switches the world's event delivery as the options say.
+fn events_on(vm: &mut Vm<'_>, o: Opts) {
+    vm.world.events.remote = o.remote;
+    vm.world.events.custom = o.custom;
+}
+
+/// The counts of event registrations and deliveries, and of story events.
+fn count_events(c: &mut Counts, vm: &Vm<'_>) {
+    for (k, v) in &vm.world.events.counts {
+        *c.entry(format!("events\t{k}")).or_default() += v;
+    }
+}
+fn count_story(c: &mut Counts, h: &QuestHost<'_>) {
+    for (k, v) in &h.story_counts {
+        *c.entry(format!("story\t{k}")).or_default() += v;
+    }
 }
 
 /// The condition counts of a host.
@@ -377,6 +448,7 @@ fn stages(m: &Manifest, vfs: &Vfs, store: &Store, out: &Path, opts: Opts) -> Res
     let nested = opts.nested;
     let max = m.limits.max_memory;
     let b = Budget::new(max);
+    let tree = story_tree(store, opts)?;
     let mut lib = VfsLibrary::new(vfs, max);
     let mut c = if opts.stage_event {
         stage_event_handlers(&mut lib, store, &b)?
@@ -399,7 +471,7 @@ fn stages(m: &Manifest, vfs: &Vfs, store: &Store, out: &Path, opts: Opts) -> Res
         for n in &with {
             bump(&mut c, "stages set");
             let b = b.child();
-            let mut host = host(store, max, opts);
+            let mut host = host(store, max, opts, &tree);
             let mut attach = RecordScripts::new(store, max);
             let mut runner = quest::Runner::new(store, max, MAX_JOBS);
             let mut vm = Vm::new(&mut lib, &mut host);
@@ -407,6 +479,7 @@ fn stages(m: &Manifest, vfs: &Vfs, store: &Store, out: &Path, opts: Opts) -> Res
             if nested {
                 vm.nested = Some(&mut runner);
             }
+            events_on(&mut vm, opts);
             let o = quest::quest_object(&mut vm, store, k, &b)?;
             let reply = quest::set_stage(&mut vm, store, o, i32::from(*n));
             bump(&mut c, format!("SetCurrentStageID answer: {reply:?}"));
@@ -502,6 +575,7 @@ fn stages(m: &Manifest, vfs: &Vfs, store: &Store, out: &Path, opts: Opts) -> Res
                     Change::StageSet(_) => "stage set",
                     Change::StageRepeatRefused(_) => "stage already done, not set again",
                     Change::Started => "quest started",
+                    Change::StartedByStory => "quest started by the story manager",
                     Change::Stopped => "quest stopped",
                     Change::Objective(quest::DISPLAYED, _, Some(true)) => "objective displayed",
                     Change::Objective(quest::DISPLAYED, _, _) => "objective hidden or undetermined",
@@ -527,8 +601,10 @@ fn stages(m: &Manifest, vfs: &Vfs, store: &Store, out: &Path, opts: Opts) -> Res
             for r in &runs {
                 names.push_str(&job_text(&vm, r));
             }
+            count_events(&mut c, &vm);
             drop(vm);
             count_conditions(&mut c, &host);
+            count_story(&mut c, &host);
             for ((native, a), v) in host.answers.iter().chain(host.data.answers.iter()) {
                 let a = match a {
                     Answer::Record => "a record".to_string(),
@@ -543,14 +619,49 @@ fn stages(m: &Manifest, vfs: &Vfs, store: &Store, out: &Path, opts: Opts) -> Res
     write(out, &c, &names, "stages")
 }
 
-fn new_game(m: &Manifest, vfs: &Vfs, store: &Store, out: &Path, opts: Opts) -> Result<(), E> {
+/// What `new-game` is told to do beyond the rules, on the command line:
+/// stages set from outside any script after the start (`--then
+/// EDITOR_ID:STAGE`, repeated) and queued timers fired after the jobs
+/// (`--timers N`). Neither is a rule: they are assumptions of the person
+/// running it, and the census says when they were made.
+#[derive(Default)]
+struct Then {
+    stages: Vec<(String, i32)>,
+    timers: usize,
+}
+
+fn quest_by_editor_id(store: &Store, b: &Budget, edid: &str) -> Result<FormKey, E> {
+    Ok(store
+        .winners()
+        .filter(|w| !w.deleted && w.signature == *b"QUST")
+        .map(|w| store.overrides().form_key(w.key, store.order()))
+        .find(|k| {
+            store
+                .raw(k, &b.child())
+                .ok()
+                .flatten()
+                .and_then(|r| bind::editor_id(&r))
+                .is_some_and(|e| e.eq_ignore_ascii_case(edid))
+        })
+        .ok_or("no quest of that editor ID")?)
+}
+
+fn new_game(
+    m: &Manifest,
+    vfs: &Vfs,
+    store: &Store,
+    out: &Path,
+    opts: Opts,
+    then: &Then,
+) -> Result<(), E> {
     let nested = opts.nested;
     let max = m.limits.max_memory;
     let b = Budget::new(max);
+    let tree = story_tree(store, opts)?;
     let mut lib = VfsLibrary::new(vfs, max);
     let mut c = Counts::new();
     let mut names = String::new();
-    let mut host = host(store, max, opts);
+    let mut host = host(store, max, opts, &tree);
     let mut attach = RecordScripts::new(store, max);
     let mut runner = quest::Runner::new(store, max, MAX_GAME_JOBS);
     let mut vm = Vm::new(&mut lib, &mut host);
@@ -558,6 +669,7 @@ fn new_game(m: &Manifest, vfs: &Vfs, store: &Store, out: &Path, opts: Opts) -> R
     if nested {
         vm.nested = Some(&mut runner);
     }
+    events_on(&mut vm, opts);
     let started = quest::start_new_game(&mut vm, store, &b)?;
     for (_, _, r) in &started {
         bump(
@@ -565,7 +677,40 @@ fn new_game(m: &Manifest, vfs: &Vfs, store: &Store, out: &Path, opts: Opts) -> R
             format!("quests started with the game: Start answer {r:?}"),
         );
     }
-    let top = quest::run_jobs(&mut vm, store, MAX_GAME_JOBS, &b);
+    let mut top = quest::run_jobs(&mut vm, store, MAX_GAME_JOBS, &b);
+    for (edid, n) in &then.stages {
+        bump(
+            &mut c,
+            "assumption from the command line: a stage set from outside any script after the start",
+        );
+        let k = quest_by_editor_id(store, &b, edid)?;
+        let o = quest::quest_object(&mut vm, store, &k, &b)?;
+        let reply = quest::set_stage(&mut vm, store, o, *n);
+        let _ = writeln!(names, "## --then {edid}:{n}: {reply:?}");
+        top.extend(quest::run_jobs(&mut vm, store, MAX_GAME_JOBS, &b));
+    }
+    if then.timers > 0 {
+        bump(
+            &mut c,
+            "assumption from the command line: queued timers fired after the jobs",
+        );
+        for (inst, id, o) in vm.fire_timers(then.timers) {
+            let script = vm.world.instances[inst].script.clone();
+            bump(&mut c, format!("timer outcome: {}", outcome_kind(&o)));
+            if let Outcome::Blocked(bl) = &o {
+                if let Origin::Native(n) = &bl.on {
+                    bump(&mut c, format!("timer blocking native\t{n}"));
+                }
+            }
+            let _ = writeln!(
+                names,
+                "## timer {} on {script}: {}",
+                vm.world.render(&id),
+                outcome_text(&o)
+            );
+            top.extend(quest::run_jobs(&mut vm, store, MAX_GAME_JOBS, &b));
+        }
+    }
     let runs = all_runs(&mut vm, top);
     *c.entry("jobs left in the queue when the run ended".into())
         .or_default() += vm.world.quests.queue.len() as u64;
@@ -585,6 +730,7 @@ fn new_game(m: &Manifest, vfs: &Vfs, store: &Store, out: &Path, opts: Opts) -> R
             }
             Change::StageRepeatRefused(_) => "stage already done, not set again",
             Change::Started => "quest started",
+            Change::StartedByStory => "quest started by the story manager",
             Change::Stopped => "quest stopped",
             Change::Objective(quest::DISPLAYED, _, Some(true)) => "objective displayed",
             Change::Objective(quest::DISPLAYED, _, _) => "objective hidden or undetermined",
@@ -654,8 +800,22 @@ fn new_game(m: &Manifest, vfs: &Vfs, store: &Store, out: &Path, opts: Opts) -> R
     for r in &vm.rules {
         bump(&mut c, format!("rules relied on\t{r}"));
     }
+    count_events(&mut c, &vm);
+    // Registrations left at the end, by what would raise their event.
+    let raised = ["onstageset", "onquestinit", "onquestshutdown"];
+    for r in &vm.world.events.registrations {
+        let what = if r.custom {
+            "custom event (delivered when its sender sends it)".to_string()
+        } else if raised.contains(&r.event.as_str()) {
+            format!("remote {}: raised by this run", r.event)
+        } else {
+            format!("remote {}: raised by the world, not delivered", r.event)
+        };
+        bump(&mut c, format!("registrations at the end\t{what}"));
+    }
     drop(vm);
     count_conditions(&mut c, &host);
+    count_story(&mut c, &host);
     for ((native, a), v) in host.answers.iter().chain(host.data.answers.iter()) {
         let a = match a {
             Answer::Record => "a record".to_string(),
@@ -705,6 +865,7 @@ fn one(
     let nested = opts.nested;
     let max = m.limits.max_memory;
     let b = Budget::new(max);
+    let tree = story_tree(store, opts)?;
     let k = store
         .winners()
         .filter(|w| !w.deleted && w.signature == *b"QUST")
@@ -719,7 +880,7 @@ fn one(
         })
         .ok_or("no quest of that editor ID")?;
     let mut lib = VfsLibrary::new(vfs, max);
-    let mut host = host(store, max, opts);
+    let mut host = host(store, max, opts, &tree);
     let mut attach = RecordScripts::new(store, max);
     let mut runner = quest::Runner::new(store, max, MAX_JOBS);
     let mut vm = Vm::new(&mut lib, &mut host);
@@ -727,6 +888,7 @@ fn one(
     if nested {
         vm.nested = Some(&mut runner);
     }
+    events_on(&mut vm, opts);
     let o = quest::quest_object(&mut vm, store, &k, &b)?;
     let reply = quest::set_stage(&mut vm, store, o, stage);
     println!(
@@ -749,12 +911,36 @@ fn run() -> Result<(), E> {
         a.retain(|x| x != f);
         on
     };
+    let no_custom = flag(&mut a, "--no-custom");
+    let custom_nested = flag(&mut a, "--custom-nested");
     let opts = Opts {
         nested: !flag(&mut a, "--queued"),
         conditions: !flag(&mut a, "--no-conditions"),
         stage_event: !flag(&mut a, "--no-stage-event"),
+        remote: !flag(&mut a, "--no-remote"),
+        custom: match (no_custom, custom_nested) {
+            (true, _) => None,
+            (false, true) => Some(CustomOrder::Nested),
+            (false, false) => Some(CustomOrder::Queued),
+        },
+        story: !flag(&mut a, "--no-story"),
+        enable_chain: !flag(&mut a, "--no-enable-chain"),
     };
-    let usage = "quest_run MANIFEST (stages OUT_DIR | new-game OUT_DIR | QUEST STAGE) [--queued] [--no-conditions] [--no-stage-event]";
+    let mut then = Then::default();
+    while let Some(i) = a.iter().position(|x| x == "--then" || x == "--timers") {
+        let v = a
+            .get(i + 1)
+            .cloned()
+            .ok_or("--then and --timers take a value")?;
+        if a[i] == "--then" {
+            let (q, n) = v.split_once(':').ok_or("--then EDITOR_ID:STAGE")?;
+            then.stages.push((q.to_string(), n.parse()?));
+        } else {
+            then.timers = v.parse()?;
+        }
+        a.drain(i..i + 2);
+    }
+    let usage = "quest_run MANIFEST (stages OUT_DIR | new-game OUT_DIR | QUEST STAGE) [--queued] [--no-conditions] [--no-stage-event] [--no-remote] [--no-custom | --custom-nested] [--no-story] [--no-enable-chain]; new-game also takes --then EDITOR_ID:STAGE (repeated) and --timers N, assumptions of the caller";
     if a.len() != 3 {
         return Err(usage.into());
     }
@@ -763,7 +949,7 @@ fn run() -> Result<(), E> {
     let store = Store::open(&m, &Budget::new(m.limits.max_override_memory))?;
     match a[1].as_str() {
         "stages" => stages(&m, &vfs, &store, Path::new(&a[2]), opts),
-        "new-game" => new_game(&m, &vfs, &store, Path::new(&a[2]), opts),
+        "new-game" => new_game(&m, &vfs, &store, Path::new(&a[2]), opts, &then),
         q => one(&m, &vfs, &store, q, a[2].parse()?, opts),
     }
 }

@@ -33,6 +33,15 @@
 28	event onstageset outcome: completed
 1	event onstageset outcome: failed: NoneOperand op 40
 75	event onstageset runs with no handler
+17	events	registrations	custom	made
+1	events	registrations	custom	not made: an argument or the instance is undetermined
+3	events	registrations	remote	by event	onload
+10	events	registrations	remote	by event	onlocationchange
+3	events	registrations	remote	by event	onplayerloadgame
+2	events	registrations	remote	by event	onstageset
+3	events	registrations	remote	by event	onunload
+21	events	registrations	remote	made
+2	events	registrations	remote	not made: an argument or the instance is undetermined
 1	failure	BadArgument
 1	failure	MissingFunction
 2	failure	NoneOperand op 23
@@ -68,6 +77,12 @@
 452	quests running at the end (of those the run read)
 457	quests started with the game: Start answer Value(Bool(true))
 98	quests with a stage set
+17	registrations at the end	custom event (delivered when its sender sends it)
+3	registrations at the end	remote onload: raised by the world, not delivered
+10	registrations at the end	remote onlocationchange: raised by the world, not delivered
+3	registrations at the end	remote onplayerloadgame: raised by the world, not delivered
+2	registrations at the end	remote onstageset: raised by this run
+3	registrations at the end	remote onunload: raised by the world, not delivered
 1	rules relied on	cond_ctda_layout_v1
 1	rules relied on	cond_list_or_groups_v1
 1	rules relied on	cond_log_entry_state_v1
@@ -94,12 +109,14 @@
 1	rules relied on	quest_start_game_enabled_v1
 1	rules relied on	quest_start_v1
 1	rules relied on	quest_stop_v1
+1	rules relied on	vm_custom_events_v1
 1	rules relied on	vm_host_data_state_v1
 1	rules relied on	vm_host_formlist_lnam_v1
 1	rules relied on	vm_host_global_fltv_v1
 1	rules relied on	vm_host_player_handle_v1
 1	rules relied on	vm_record_scripts_attach_v1
 1	rules relied on	vm_record_signature_type_v1
+1	rules relied on	vm_remote_events_v1
 1	rules relied on	vm_timer_events_v1
 1	rules relied on	vmad_alias_value_v1
 1	rules relied on	vmad_property_sets_variable_v1

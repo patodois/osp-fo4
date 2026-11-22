@@ -187,7 +187,7 @@ of the installation) and from the census below (calls answered).
 | --- | --- | --- | --- | --- |
 | `ObjectReference.GetLinkedRef(kw)` | the receiver's XLKR pair whose first word is `kw` (0 for none): its second word; none when no pair has it; undetermined when two do | `vm_host_linked_ref_xlkr_v1` | 88,491 XLKR on 76,079 placed records, all 8 bytes; first words 0 or a KYWD; second words a REFR, ACHR or PHZD (2 name no winning record); first words distinct within every record | 5,035 a reference, 1,057 none |
 | `GetLinkedRefChain(kw, max)`, `CountLinkedRefChain(kw, max)` | GetLinkedRef(kw) followed from the receiver until none; undetermined on a loop or past `max` | `vm_host_linked_ref_chain_v1` | as above | 288 chains, 69 empty, 52 counts; 2 loops open |
-| `ObjectReference.IsDisabled` | the record header flag 0x800 (the store's initially disabled), or this run's last Enable or Disable of the receiver | `vm_host_is_disabled_flag_v1` | 4,032 placed records carry it; read and indexed alike in all 2,001,939 | 133,317 |
+| `ObjectReference.IsDisabled` | the record header flag 0x800 (the store's initially disabled); for a reference with an enable parent (XESP), the state its chain gives under the enable parent rules, with this run's Enable and Disable of the chain's records; this run's last Enable or Disable of the receiver itself first | `vm_host_is_disabled_flag_v1`, `vm_host_is_disabled_chain_v1` and the `xesp_*` rules of [enable-parent.md](enable-parent.md) | 4,032 placed records carry it; read and indexed alike in all 2,001,939 | 133,317 |
 | `ObjectReference.GetBaseObject` | NAME; for a base bound alone, that base | `vm_host_base_object_name_v1` | one 4-byte NAME naming a winning record in all 1,789,365 placed REFR and ACHR | 161 a record |
 | `Game.GetFormFromFile(id, file)` | the load order: the plugin of that name (any case), object id `id` masked to 24 bits (12 for a light plugin); none when that plugin is not loaded or has no such record | `vm_host_form_from_file_v1` | (the manifest's load order) | 394 a record |
 | `GlobalVariable.GetValue` | the GLOB's one FLTV (f32) | `vm_host_global_fltv_v1` | one 4-byte finite FLTV in all 1,916 GLOB; 549 carry header flag 0x40, whose meaning is not read | 670 |
@@ -305,6 +305,23 @@ versioned.
 | Every scripted base alone, after | 1,251 | 2,530 | 1,319 | 1,034 | 0 | 57 | 120 |
 | Every placed scripted reference, before | 16,718 | 32,548 | 20,671 | 9,802 | 1,040 | 449 | 586 |
 | Every placed scripted reference, after | 16,718 | 32,548 | 24,655 | 6,686 | 1 | 478 | 728 |
+
+**Regenerated in the events step.** [vm-census.txt](vm-census.txt) was
+stale since the enable parent step (it lacked the `enable children:`
+lines); every scope was run again with each host, so the recording-host
+sections are now this binary's `--recording` reading rather than main's
+older one (over the placed references one handler moves from an open cast
+to a native, and two rules more are named). With `IsDisabled` following
+enable parent chains (`vm_host_is_disabled_chain_v1`), over the placed
+references 24,661 handlers complete (24,655 before), 6,678 block on a
+native's result (6,686) and 730 fail (728); the bases alone and the test
+cells do not change. `--data --no-enable-chain` reproduces the earlier
+data host census line for line. The quest host adds 412 custom events
+sent inside handlers (none delivered to a handler: a run delivers one
+event, so registrations made by another event's run are not there), 1,910
+remote registrations (1,865 for OnActivate) and 20 story events offered,
+all left open by node conditions (functions 59, 77, 310, 359, 560, and
+485 in 17); its handler outcomes equal the data host's.
 
 **Quest host** (since the conditions step, `script_run`'s default,
 `bind::Mode::Quest`; `--data` runs the data host alone as above,
@@ -503,8 +520,8 @@ Over every winning quest, 193 of the quests' own VMAD scripts, on 191
 quests, have a handler, all taking two Int; no fragment script and no
 alias script has one (alias scripts would receive nothing under the
 rule). Scripts that register for another quest's OnStageSet as a remote
-event (2 registrations in the new-game run) receive nothing: remote
-events are not delivered. `QuestHost::stage_event = false`
+event receive it after the quest's own scripts (Events and the story
+manager, below). `QuestHost::stage_event = false`
 (`quest_run --no-stage-event`) delivers nothing.
 
 **Order** (`quest_stage_fragment_order_v1`). The candidate is the
@@ -665,12 +682,99 @@ starts, under every rule above: conditions change almost nothing here
 not deliver (the player in the first cell, triggers, scenes ending,
 dialogue, remote events) rather than on the quests' start.
 
+## Events and the story manager
+
+Since the events step a run keeps the registrations scripts make
+(`fo4_vm::events`, in the run's world) and delivers the events scripts
+send each other, but only where the interpreter raises the event itself;
+the story manager's script event starts the quest a node selects
+(`fo4_vm::story`, [story-manager.md](story-manager.md)). Each part is a
+pending rule and each can be switched off (`quest_run --no-remote`,
+`--no-custom`, `--no-story`; `script_run --no-events`, `--no-story`),
+which reproduces the earlier censuses byte for byte (checked for both
+quest sweeps).
+
+| What | Rule | How |
+| --- | --- | --- |
+| `RegisterForRemoteEvent`, `UnregisterForRemoteEvent`, `UnregisterForAllRemoteEvents` | `vm_remote_events_v1` | the calling instance registers for (sender, event name); `RegisterForRemoteEvent` answers true for an object sender (undetermined otherwise, nothing registered) |
+| delivery of a remote event | `vm_remote_events_v1` | when the run delivers OnStageSet, OnQuestInit or OnQuestShutdown to a quest, or a `script_run` event to the bound reference: every registered instance receives `::remote_<type>_<event>` (a type the sender is) with the sender and the event's arguments, after the sender's own scripts, in registration order |
+| `RegisterForCustomEvent`, `UnregisterForCustomEvent`, `UnregisterForAllCustomEvents`, `SendCustomEvent` | `vm_custom_events_v1` | `SendCustomEvent(name, args)` on an object delivers `::remote_<name>(sender, args)` to every instance registered for (that object, name) |
+| when a custom event runs | `vm_custom_event_order_v1` | queued: after the outermost delivery or job running when it was sent, in sending order (a `Job::Custom`); `--custom-nested` runs it inside the call instead |
+| `Keyword.SendStoryEvent`, `SendStoryEventAndWait` | `sm_script_event_v1`, `sm_tree_walk_v1`, `sm_quest_node_start_v1`, `cond_fn_576_event_data_v1` | the event `SCPT` with the receiver as keyword is offered to its tree at once; a quest started is started as `Start` starts it, then receives `OnStoryScript` (a `Job::Story`); `AndWait` answers true, false or undetermined |
+| `IsDisabled` of a reference with an enable parent | `vm_host_is_disabled_chain_v1`, `xesp_*` | the state its chain gives (data host; `--no-enable-chain` reads the header flag alone) |
+
+The handler names are read from the compiled scripts: 683 functions are
+named `::remote_<type>_<event>`, their first parameter the sender typed
+by the type in the name; the 224 registering and 96 sending call sites of
+custom events store the name as `<script>_<event>`, and the handlers take
+the sender and a `Var` array. Events the world raises (location changes,
+cells loading, combat, deaths, tracked statistics, sleep) and the other
+17 story event codes are never raised: the registrations for them stay,
+counted.
+
+**New game, third pass** (`quest_run new-game`, events, story manager
+and the enable chain on): **the run is the same as the second pass** in
+every job, outcome, effect and blocker. 21 remote registrations are made
+(onlocationchange 10, onload 3, onunload 3, onplayerloadgame 3,
+onstageset 2) and 2 are not (an undetermined sender), 17 custom ones (one
+not); at the end 2 wait for an event the run raises (OnStageSet of a
+quest no run sets a stage of), 19 for an event of the world, 17 for a
+custom event nobody sends. No script sends a custom event or a story
+event. The queued and nested readings of custom events give the same
+counts, and so does the enable chain switched off.
+
+**Stage sweep** (`quest_run stages`): the stages' own fragments and
+OnStageSet runs are unchanged. Custom events: 564 registrations, 346
+events sent, 11 delivered to a handler (4 completed, 7 blocked on an array
+operation the rules leave open); no remote delivery happens (the 7
+OnStageSet registrations are for quests no later job in the same run sets
+a stage of); 6 story events offered, all left open by conditions of the
+nodes on the way (functions 59, 77, 310, 359, 560 on each, 14, 562 and
+660 once). One sweep item fewer completes every run (4,606 against
+4,607). Queued and nested custom events give the same counts; the enable
+chain changes nothing here either.
+
+**Where the opening stops.** The opening's main quest is not flagged to
+start, no story manager node lists it, and the only starting call sites
+the static scan resolves to it set stages in the hundreds from fragments
+and scripts of quests that wait on world events (triggers, scenes,
+activations); its first stage is set by nothing the data shows
+([story-manager.md](story-manager.md)). Set by hand after the start
+(`quest_run new-game --then`, an assumption of the caller, not a rule),
+its stage 0 fragment runs to completion (character generation set up,
+the player moved, a real-time timer of one second started); firing the
+timers (`--timers`) stops at once, because a game-time timer of another
+quest is queued beside it and `vm_timer_events_v1` does not order the two
+clocks.
+
+What would take the opening further, most first (counts from the runs
+above and [vm-blockers.txt](vm-blockers.txt)):
+
+1. **What sets the first stage of the opening's main quest**: not in any
+   record read today; the fragment blocks of INFO (2,396 VMADs), SCEN
+   (632), PACK (166) and PERK (32) stay raw, and 62 quests not flagged to
+   start have neither a node nor a constant call. Reading those blocks is
+   the next reader step.
+2. **World events**: 19 registrations of the new game wait on location
+   changes, loading and game loads; the story manager's other 17 event
+   codes list 537 quests; tracked statistics (29) and sleep (1)
+   registrations; the timers' two clocks.
+3. **Natives that steer a run** (new game): `ObjectReference.AttachMod`
+   20, `RefCollectionAlias.GetCount` 6, `Actor.GetLevel` 3,
+   `Game.IsPluginInstalled` 3, `Scene.IsPlaying` 3, `Is3DLoaded` 2,
+   `ReferenceAlias.GetReference` 2 (and 33 references of aliases without a
+   forced reference left undetermined).
+4. **Condition indexes**: 14 (one log entry selection of the new game);
+   on the story manager's nodes 576 with selectors other than 0 `K1` and
+   `L1` (59 conditions), 359 (93), 71 (45), 426 (28), 310 (25), 77 (24),
+   560 (24).
+
 ## Conditions
 
 `fo4_vm::cond` evaluates the condition lists read by
 `fo4_plugin::condition` ([conditions.md](conditions.md)) to true, false
 or undetermined. A condition is evaluated only when its function index is
-one of four, each a pending rule; every other condition is undetermined,
+one of five, each a pending rule; every other condition is undetermined,
 named by its function index. Three-valued AND and OR: a list is
 undetermined only when its determined conditions do not settle it.
 
@@ -680,6 +784,7 @@ undetermined only when its determined conditions do not settle it.
 | 58 | the current stage of the quest of parameter 1 | the quest state | `cond_fn_58_quest_stage_v1` |
 | 59 | 1 when stage (parameter 2) of the quest of parameter 1 is done, else 0 | the quest state | `cond_fn_59_stage_done_v1` |
 | 74 | the value of the GLOB of parameter 1 | FLTV, undetermined once the run may have changed it (as `GlobalVariable.GetValue`) | `cond_fn_74_global_value_v1` |
+| 576 | selector 0 with member `K1` or `L1` (parameter 1): 1 when the story event's keyword or location is the record of parameter 2 | the story event being offered (`fo4_vm::story`); undetermined outside one | `cond_fn_576_event_data_v1` |
 
 - Operator codes 0 to 5 compare the value with the comparison value
   (`cond_compare_ops_v1`); with flag bit 0x04 the comparison value is the
@@ -694,10 +799,11 @@ undetermined only when its determined conditions do not settle it.
   state of the run's world and the data host's globals
   (`quest::RunFacts`); for the census, the new-game state before any
   script runs (`cond::StaticFacts`).
-- Used today only to choose a stage's log entry (Quests, above); quest
-  conditions before and after NEXT, objective target and alias
-  conditions, and every other record type's conditions are read and
-  counted, not used.
+- Used to choose a stage's log entry (Quests, above) and by the story
+  manager (the nodes' conditions and the quest's conditions after NEXT,
+  Events and the story manager, above); quest conditions before NEXT,
+  objective target and alias conditions, and every other record type's
+  conditions are read and counted, not used.
 
 The census of every condition and of what the evaluator settles at the
 start of a new game is [conditions-census.txt](conditions-census.txt)
@@ -715,9 +821,12 @@ start of a new game is [conditions-census.txt](conditions-census.txt)
 - Stages are set and their fragments run by `quest_run` (Quests) and by
   `script_run` (quest host, isolated scenario); `bind::run` and the
   viewer keep the data host, so quest natives stay undetermined there.
-  Conditions are evaluated only for log entry selection, and only four
-  function indexes. Remote and custom events, tracked-statistics events
-  and engine events beyond those `script_run` names are never delivered.
+  Conditions are evaluated for log entry selection and for the story
+  manager, and only five function indexes. Remote events are delivered
+  only for the events a run raises itself (quest events, the events
+  `script_run` names) and custom events as they are sent; the story
+  manager receives only the script event; tracked-statistics, sleep,
+  location, combat and every other world event are never delivered.
   INFO, PACK, PERK and SCEN fragment blocks stay raw ([vmad.md](vmad.md)).
 - Opcode 34's arity between `4` and `4+n` stays open ([pex.md](pex.md));
   the interpreter reads its fourth slot as the start index.
@@ -811,3 +920,31 @@ looked for. No function index is given a name: no citable index-to-name
 table was read. No editor, editor source or definition file, script
 source, decompiler, other interpreter or the game executable was opened
 or searched for.
+
+## Provenance of the events step
+
+Recognised from prior general knowledge, used only as hypotheses that the
+censuses could refute ([story-manager.md](story-manager.md),
+[story-manager-census.txt](story-manager-census.txt), the quest sweeps
+and the handler census):
+
+- the roles of the story manager node tags (PNAM, SNAM, CITC, QNAM, NNAM,
+  ENAM) and that the code `SCPT` is the script event;
+- how an event walks a tree and what a quest node starts
+  (`sm_tree_walk_v1`, `sm_quest_node_start_v1`);
+- the meaning of condition function 576's first parameter (a selector and
+  a member code) for selector 0 with `K1` and `L1`;
+- that a custom event's sender is the object `SendCustomEvent` is called
+  on, that custom events are delivered queued, and that remote handlers
+  run after the sender's own scripts;
+- that `IsDisabled` of an enable child follows its parent (built on the
+  enable parent rules of [enable-parent.md](enable-parent.md)).
+
+Read from the installed data with this project's own readers: the native,
+event and parameter names of Keyword, Quest and ScriptObject, the handler
+names `::remote_<type>_<event>` and `::remote_<script>_<event>`, and the
+stored custom event names. Three UESP file format pages were requested on
+2026-11-22 and answered HTTP 403; nothing was read from them. No editor,
+editor source or definition file, script source, decompiler, other
+interpreter, script extender or the game executable was opened or
+searched for.

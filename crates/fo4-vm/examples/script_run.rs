@@ -117,6 +117,7 @@ fn census(
     out_dir: &Path,
     specs: &[String],
     mode: bind::Mode,
+    opts: &bind::Options,
 ) -> Result<(), E> {
     let b = Budget::new(m.limits.max_memory);
     let mut lib = VfsLibrary::new(vfs, m.limits.max_memory);
@@ -258,8 +259,9 @@ fn census(
             );
         }
         for ev in &events {
-            let r = bind::run_in(
+            let r = bind::run_with(
                 mode,
+                opts,
                 &mut lib,
                 store,
                 reference.as_ref(),
@@ -279,6 +281,9 @@ fn census(
                     .entry(format!("data answer\t{native}\t{kind}"))
                     .or_default() += n;
             }
+            for (k, n) in &r.event_counts {
+                *counts.entry(format!("events: {k}")).or_default() += n;
+            }
             for (kind, n) in &r.attached {
                 *counts
                     .entry(format!("handles given scripts when first needed: {kind}"))
@@ -291,6 +296,8 @@ fn census(
                     fo4_vm::quest::Job::Event { event, .. } => format!("event {event}"),
                     fo4_vm::quest::Job::StageEvent { .. } => "event onstageset".to_string(),
                     fo4_vm::quest::Job::Open { why, .. } => format!("open: {why}"),
+                    fo4_vm::quest::Job::Custom { .. } => "custom event".to_string(),
+                    fo4_vm::quest::Job::Story { .. } => "event onstoryscript".to_string(),
                 };
                 if j.outcomes.is_empty() {
                     bump(
@@ -889,16 +896,42 @@ fn run() -> Result<(), E> {
     } else {
         bind::Mode::Quest
     };
-    args.retain(|a| a != "--recording" && a != "--data");
-    let usage = "script_run MANIFEST CELL[@DX,DY] (list | INDEX EVENT[,EVENT...] [--timers N]) | script_run MANIFEST --census OUT_DIR (CELL[:RADIUS]... | ALL | PLACED); --data: the data host without quests; --recording: the recording host alone";
+    let no_chain = args.iter().any(|a| a == "--no-enable-chain");
+    let no_story = args.iter().any(|a| a == "--no-story");
+    let no_events = args.iter().any(|a| a == "--no-events");
+    args.retain(|a| {
+        !matches!(
+            a.as_str(),
+            "--recording" | "--data" | "--no-enable-chain" | "--no-story" | "--no-events"
+        )
+    });
+    let usage = "script_run MANIFEST CELL[@DX,DY] (list | INDEX EVENT[,EVENT...] [--timers N]) | script_run MANIFEST --census OUT_DIR (CELL[:RADIUS]... | ALL | PLACED); --data: the data host without quests; --recording: the recording host alone; --no-enable-chain: IsDisabled from the header flag alone; --no-story: no story manager; --no-events: no remote or custom event delivered";
     if args.len() < 3 {
         return Err(usage.into());
     }
     let m = Manifest::load(Path::new(&args[0]))?;
     let vfs = Vfs::mount(&m, &Budget::new(m.limits.max_vfs_memory))?;
     let store = Store::open(&m, &Budget::new(m.limits.max_override_memory))?;
+    let mut opts = bind::Options::of(mode);
+    opts.enable_chain &= !no_chain;
+    if no_events {
+        opts.remote = false;
+        opts.custom = None;
+    }
+    if mode == bind::Mode::Quest && !no_story {
+        let b = Budget::new(m.limits.max_memory);
+        opts.story = Some(std::rc::Rc::new(fo4_plugin::story::Tree::read(&store, &b)?));
+    }
     if args[1] == "--census" {
-        return census(&m, &vfs, &store, Path::new(&args[2]), &args[3..], mode);
+        return census(
+            &m,
+            &vfs,
+            &store,
+            Path::new(&args[2]),
+            &args[3..],
+            mode,
+            &opts,
+        );
     }
     let b = Budget::new(m.limits.max_memory);
     let ck = cell(&store, &args[1], &b)?;
@@ -945,7 +978,17 @@ fn run() -> Result<(), E> {
         None => 0,
     };
     let mut lib = VfsLibrary::new(&vfs, m.limits.max_memory);
-    let run = bind::run_in(mode, &mut lib, &store, Some(r), &base, &events, timers, &b)?;
+    let run = bind::run_with(
+        mode,
+        &opts,
+        &mut lib,
+        &store,
+        Some(r),
+        &base,
+        &events,
+        timers,
+        &b,
+    )?;
     print!("{}", bind::effect_log(&run));
     Ok(())
 }

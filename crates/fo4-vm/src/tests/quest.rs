@@ -8,13 +8,13 @@ use crate::{
 use fo4_core::{Budget, Limits, ReadAt, SliceSource};
 use fo4_plugin::{typed::Store, FormKey};
 
-fn sub(sig: &[u8; 4], data: &[u8]) -> Vec<u8> {
+pub(super) fn sub(sig: &[u8; 4], data: &[u8]) -> Vec<u8> {
     let mut v = sig.to_vec();
     v.extend((data.len() as u16).to_le_bytes());
     v.extend(data);
     v
 }
-fn record(sig: &[u8; 4], id: u32, data: &[u8]) -> Vec<u8> {
+pub(super) fn record(sig: &[u8; 4], id: u32, data: &[u8]) -> Vec<u8> {
     let mut out = sig.to_vec();
     out.extend((data.len() as u32).to_le_bytes());
     out.extend(0u32.to_le_bytes());
@@ -25,7 +25,7 @@ fn record(sig: &[u8; 4], id: u32, data: &[u8]) -> Vec<u8> {
     out.extend(data);
     out
 }
-fn group(kind: u32, label: [u8; 4], data: &[u8]) -> Vec<u8> {
+pub(super) fn group(kind: u32, label: [u8; 4], data: &[u8]) -> Vec<u8> {
     let mut out = b"GRUP".to_vec();
     out.extend(((24 + data.len()) as u32).to_le_bytes());
     out.extend(label);
@@ -34,18 +34,18 @@ fn group(kind: u32, label: [u8; 4], data: &[u8]) -> Vec<u8> {
     out.extend(data);
     out
 }
-fn text(v: &mut Vec<u8>, t: &str) {
+pub(super) fn text(v: &mut Vec<u8>, t: &str) {
     v.extend((t.len() as u16).to_le_bytes());
     v.extend(t.as_bytes());
 }
-fn object(v: &mut Vec<u8>, name: &str, alias: i16, id: u32) {
+pub(super) fn object(v: &mut Vec<u8>, name: &str, alias: i16, id: u32) {
     text(v, name);
     v.extend([1, 1, 0, 0]);
     v.extend(alias.to_le_bytes());
     v.extend(id.to_le_bytes());
 }
 
-struct Owned(Vec<u8>);
+pub(super) struct Owned(pub(super) Vec<u8>);
 impl ReadAt for Owned {
     fn name(&self) -> &str {
         "test.esm"
@@ -262,14 +262,14 @@ fn store() -> Store {
     .unwrap()
 }
 
-fn key(id: u32) -> FormKey {
+pub(super) fn key(id: u32) -> FormKey {
     FormKey {
         plugin: "test.esm".into(),
         object_id: id,
     }
 }
 
-fn library() -> crate::MapLibrary {
+pub(super) fn library() -> crate::MapLibrary {
     let mut lib = base();
     lib.add(assemble(
         "script Quest extends Form

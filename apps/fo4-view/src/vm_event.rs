@@ -259,4 +259,142 @@ mod tests {
         assert!(parse("x:activate").is_err());
         assert!(parse("3:jump").is_err());
     }
+
+    /// A synthetic cell: persistent parents 0x810 (enabled) and 0x811
+    /// (initially disabled); children 0x812 of 0x810, 0x813 of 0x811, 0x814
+    /// of 0x811 with the opposite bit, 0x815 of 0x813 (depth 2), and 0x816
+    /// without a parent. A script's change of 0x810 and 0x811 reaches the
+    /// children through their chains and nothing else.
+    #[test]
+    fn propagate_gives_the_children_of_changed_references_their_chain_state() {
+        use fo4_core::{Game, Limits, Manifest, Mount, PluginSpec, TestDir};
+        fn sub(sig: &[u8; 4], d: &[u8]) -> Vec<u8> {
+            let mut v = sig.to_vec();
+            v.extend((d.len() as u16).to_le_bytes());
+            v.extend(d);
+            v
+        }
+        fn record(sig: &[u8; 4], id: u32, flags: u32, d: &[u8]) -> Vec<u8> {
+            let mut v = sig.to_vec();
+            for n in [d.len() as u32, flags, id, 0] {
+                v.extend(n.to_le_bytes());
+            }
+            v.extend(131u16.to_le_bytes());
+            v.extend(0u16.to_le_bytes());
+            v.extend(d);
+            v
+        }
+        fn group(kind: u32, id: u32, d: &[u8]) -> Vec<u8> {
+            let mut v = b"GRUP".to_vec();
+            v.extend((d.len() as u32 + 24).to_le_bytes());
+            v.extend(id.to_le_bytes());
+            v.extend(kind.to_le_bytes());
+            v.extend([0; 8]);
+            v.extend(d);
+            v
+        }
+        let mut rf = sub(b"NAME", &0x801u32.to_le_bytes());
+        rf.extend(sub(b"DATA", &[0; 24]));
+        let child = |id: u32, parent: Option<(u32, u8)>| {
+            let mut v = rf.clone();
+            if let Some((p, flags)) = parent {
+                let mut d = p.to_le_bytes().to_vec();
+                d.extend([flags, 0, 0, 0]);
+                v.extend(sub(b"XESP", &d));
+            }
+            record(b"REFR", id, 0, &v)
+        };
+        let persistent = [
+            record(b"REFR", 0x810, 0, &rf),
+            record(b"REFR", 0x811, fo4_plugin::DISABLED, &rf),
+        ]
+        .concat();
+        let temporary = [
+            child(0x812, Some((0x810, 0))),
+            child(0x813, Some((0x811, 0))),
+            child(0x814, Some((0x811, 1))),
+            child(0x815, Some((0x813, 0))),
+            child(0x816, None),
+        ]
+        .concat();
+        let mut body = group(
+            2,
+            0,
+            &[
+                record(b"CELL", 0x800, 0, &sub(b"EDID", b"Room\0")),
+                group(
+                    6,
+                    0x800,
+                    &[group(8, 0x800, &persistent), group(9, 0x800, &temporary)].concat(),
+                ),
+            ]
+            .concat(),
+        );
+        body.extend(record(b"STAT", 0x801, 0, &sub(b"EDID", b"Box\0")));
+        let mut hedr = 0.95f32.to_le_bytes().to_vec();
+        hedr.extend(0u32.to_le_bytes());
+        hedr.extend(0x900u32.to_le_bytes());
+        let mut plugin = record(b"TES4", 0, 1, &sub(b"HEDR", &hedr));
+        plugin.extend(body);
+        let temp = TestDir::new("view-propagate");
+        let root = temp.join("Data");
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::write(root.join("base.esm"), plugin).unwrap();
+        let manifest = Manifest {
+            game: Game::Fallout4,
+            archive_invalidation: None,
+            root,
+            language: "english".into(),
+            plugins: vec![PluginSpec {
+                name: "base.esm".into(),
+                path: "base.esm".into(),
+            }],
+            mounts: vec![Mount::Loose {
+                plugin: None,
+                base: None,
+                files: vec![],
+            }],
+            required_masters: vec![],
+            excluded: vec![],
+            build: Some("synthetic".into()),
+            limits: Limits::default(),
+        };
+        let store = fo4_plugin::typed::Store::open(&manifest, &Budget::new(8 << 20)).unwrap();
+        let vfs = fo4_vfs::Vfs::mount(&manifest, &Budget::new(8 << 20)).unwrap();
+        let cache = Budget::new(8 << 20);
+        let mut loader =
+            fo4_scene::Loader::new(&store, &vfs, "english", RuleLevel::Hypotheses, &cache);
+        let mut scene = loader.by_editor_id("Room", &Budget::new(8 << 20)).unwrap();
+        let state = |s: &fo4_scene::Scene, id: u32| {
+            s.instances
+                .iter()
+                .find(|i| i.reference.key.object_id == id)
+                .and_then(|i| i.enable.as_ref())
+                .map(|p| p.enabled)
+        };
+        assert_eq!(state(&scene, 0x812), Some(Some(true)));
+        assert_eq!(state(&scene, 0x813), Some(Some(false)));
+        assert_eq!(state(&scene, 0x814), Some(Some(true)));
+        assert_eq!(state(&scene, 0x815), Some(Some(false)));
+        // Nothing changed: nothing moves.
+        let none = BTreeMap::new();
+        assert_eq!(propagate(&mut scene, &none, RuleLevel::Hypotheses), 0);
+        // The script disables 0x810 and enables 0x811.
+        let key = |id: u32| {
+            bind::record_key(&fo4_plugin::FormKey {
+                plugin: "base.esm".into(),
+                object_id: id,
+            })
+        };
+        let changes: BTreeMap<String, bool> = [(key(0x810), false), (key(0x811), true)].into();
+        assert_eq!(propagate(&mut scene, &changes, RuleLevel::Hypotheses), 4);
+        assert_eq!(state(&scene, 0x812), Some(Some(false)));
+        assert_eq!(state(&scene, 0x813), Some(Some(true)));
+        assert_eq!(state(&scene, 0x814), Some(Some(false)));
+        assert_eq!(state(&scene, 0x815), Some(Some(true)));
+        // The reference without a parent has no chain to follow.
+        assert_eq!(state(&scene, 0x816), None);
+        // The same changes again change nothing more.
+        assert_eq!(propagate(&mut scene, &changes, RuleLevel::Hypotheses), 0);
+    }
 }

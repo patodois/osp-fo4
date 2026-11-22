@@ -489,6 +489,13 @@ pub fn deliver(vm: &mut Vm<'_>, bound: &Bound, event: &Event) -> Vec<(String, Ou
                 let o = vm.deliver(*inst, f, args);
                 out.push((script.clone(), o));
             }
+            // The instances registered for this event of the reference
+            // (`vm_remote_events_v1`), after its own scripts.
+            let mut args = |vm: &mut Vm<'_>, p: &[(String, String)]| event_args(vm, p);
+            for (script, o) in crate::events::deliver_remote(vm, bound.object, f, &mut args, false)
+            {
+                out.push((format!("{script} (remote)"), o));
+            }
         }
         Event::Fragment(i) => {
             let Some((inst, list)) = &bound.fragments else {
@@ -559,6 +566,9 @@ pub struct Run {
     /// starting, and the jobs left queued.
     pub quest_jobs: Vec<crate::quest::JobRun>,
     pub quest_jobs_left: usize,
+    /// Registrations and deliveries of remote and custom events, and story
+    /// events offered, by text.
+    pub event_counts: std::collections::BTreeMap<String, u64>,
 }
 
 /// Which host a run uses.
@@ -730,7 +740,7 @@ pub fn run(
     run_in(Mode::Data, lib, store, reference, base, events, timers, b)
 }
 
-/// [`run`] with a chosen host.
+/// [`run`] with a chosen host, under [`Options::of`] that host.
 #[allow(clippy::too_many_arguments)]
 pub fn run_in(
     mode: Mode,
@@ -742,10 +752,61 @@ pub fn run_in(
     timers: usize,
     b: &Budget,
 ) -> std::result::Result<Run, Box<dyn std::error::Error>> {
+    let o = Options::of(mode);
+    run_with(mode, &o, lib, store, reference, base, events, timers, b)
+}
+
+/// Switches of a run beyond its host, each reproducing an earlier reading
+/// when turned off.
+#[derive(Debug, Clone)]
+pub struct Options {
+    /// Deliver remote events the run raises ([`Mode::Quest`] only;
+    /// `vm_remote_events_v1`).
+    pub remote: bool,
+    /// Deliver custom events, and when ([`Mode::Quest`] only;
+    /// `vm_custom_events_v1`, `vm_custom_event_order_v1`).
+    pub custom: Option<crate::events::CustomOrder>,
+    /// Offer the script event to these story manager nodes
+    /// ([`Mode::Quest`] only; `sm_script_event_v1`).
+    pub story: Option<std::rc::Rc<fo4_plugin::story::Tree>>,
+    /// `IsDisabled` follows enable parent chains
+    /// (`vm_host_is_disabled_chain_v1`; data and quest hosts).
+    pub enable_chain: bool,
+}
+impl Options {
+    /// The candidate readings for a host: events delivered with the quest
+    /// host, the enable chain followed with the data and quest hosts, no
+    /// story manager nodes (a caller reads them once and passes them).
+    pub fn of(mode: Mode) -> Options {
+        Options {
+            remote: mode == Mode::Quest,
+            custom: (mode == Mode::Quest).then_some(crate::events::CustomOrder::Queued),
+            story: None,
+            enable_chain: mode != Mode::Recording,
+        }
+    }
+}
+
+/// [`run_in`] with chosen [`Options`].
+#[allow(clippy::too_many_arguments)]
+pub fn run_with(
+    mode: Mode,
+    opts: &Options,
+    lib: &mut dyn Library,
+    store: &Store,
+    reference: Option<&FormKey>,
+    base: &FormKey,
+    events: &[Event],
+    timers: usize,
+    b: &Budget,
+) -> std::result::Result<Run, Box<dyn std::error::Error>> {
     let max = store.limits.max_memory;
     let mut recording = crate::RecordingHost::default();
     let mut data = DataHost::new(store, max);
+    data.enable_chain = opts.enable_chain;
     let mut quest = crate::quest::QuestHost::new(store, max);
+    quest.data.enable_chain = opts.enable_chain;
+    quest.story = opts.story.clone();
     let mut attach = RecordScripts::new(store, max);
     let mut runner = crate::quest::Runner::new(store, max, QUEST_JOBS);
     let host: &mut dyn crate::Host = match mode {
@@ -759,6 +820,8 @@ pub fn run_in(
     }
     if mode == Mode::Quest {
         vm.nested = Some(&mut runner);
+        vm.world.events.remote = opts.remote;
+        vm.world.events.custom = opts.custom;
     }
     let bound = match reference {
         Some(r) => bind_reference(&mut vm, store, r, b)?.ok_or("reference without a base")?,
@@ -769,11 +832,18 @@ pub fn run_in(
         for (script, o) in deliver(&mut vm, &bound, e) {
             outcomes.push((e.name(), script, o));
         }
+        // Custom events sent during the delivery (queued reading), and
+        // what they bring.
+        if mode == Mode::Quest && !vm.world.events.later.is_empty() {
+            let top = crate::quest::run_jobs(&mut vm, store, QUEST_JOBS, b);
+            vm.world.quests.nested_runs.extend(top);
+        }
     }
     for (inst, id, o) in vm.fire_timers(timers) {
         let script = vm.world.instances[inst].script.clone();
         outcomes.push((format!("timer:{}", vm.world.render(&id)), script, o));
     }
+    let events_counts = std::mem::take(&mut vm.world.events.counts);
     let mut quest_jobs = std::mem::take(&mut vm.world.quests.nested_runs);
     quest_jobs.sort_by_key(|r| r.seq);
     let quest_jobs_left = vm.world.quests.queue.len();
@@ -796,6 +866,13 @@ pub fn run_in(
         attach_notes: attach.notes,
         quest_jobs,
         quest_jobs_left,
+        event_counts: {
+            let mut c = events_counts;
+            for (k, v) in &quest.story_counts {
+                *c.entry(k.clone()).or_default() += v;
+            }
+            c
+        },
     })
 }
 

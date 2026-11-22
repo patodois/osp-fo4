@@ -75,11 +75,12 @@ pub enum Combine {
 /// Function indexes the evaluator evaluates, with the rule each rests on.
 /// The meanings were recognised from prior knowledge (no public table was
 /// read); the census of their parameters supports them (`spec/conditions.md`).
-pub const EVALUATED: [(u16, &str); 4] = [
+pub const EVALUATED: [(u16, &str); 5] = [
     (56, rules::COND_FN_56),
     (58, rules::COND_FN_58),
     (59, rules::COND_FN_59),
     (74, rules::COND_FN_74),
+    (576, rules::COND_FN_576),
 ];
 
 /// The rule of an evaluated function index.
@@ -102,6 +103,13 @@ pub trait Facts {
     fn stage_done(&mut self, quest: &FormKey, stage: i32) -> Result<bool, &'static str>;
     /// The value of a global.
     fn global(&mut self, global: &FormKey) -> Result<f32, &'static str>;
+    /// The record a member of the story event being offered names (`K1`
+    /// its keyword, `L1` its location; `None` for none), for function 576
+    /// (`cond_fn_576_event_data_v1`). Outside a story event there is none.
+    fn event_member(&mut self, code: [u8; 2]) -> Result<Option<FormKey>, &'static str> {
+        let _ = code;
+        Err("no story event is being offered")
+    }
 }
 
 /// The winning record of type `sig` a word names, read as a FormID
@@ -150,6 +158,22 @@ fn function_value(
         74 => {
             let g = record(facts, ctx, c.param1, file, b"GLOB")?;
             facts.global(&g)
+        }
+        576 => {
+            // Parameter 1: a u16 selector, then a two-character member code
+            // (spec/story-manager.md); only selector 0 has a candidate.
+            let p = c.param1.to_le_bytes();
+            if u16::from_le_bytes([p[0], p[1]]) != 0 {
+                return Err("a selector of function 576 without a candidate meaning");
+            }
+            let code = [p[2], p[3]];
+            if !matches!(&code, b"K1" | b"L1") {
+                return Err("an event member function 576 is not evaluated for");
+            }
+            let member = facts.event_member(code)?;
+            let want = condition::form(ctx, c.param2, file, 0)
+                .map_err(|_| "a parameter is not a FormID")?;
+            Ok(b(member == want))
         }
         _ => Err("the function is not evaluated"),
     }
