@@ -21,6 +21,7 @@ fn quad(side: f32, alpha: f32, colors: bool) -> GpuMesh {
         positions: vec![[-h, -h, 0.], [h, -h, 0.], [h, h, 0.], [-h, h, 0.]],
         uvs: vec![[0., 0.], [1., 0.], [1., 1.], [0., 1.]],
         colors: colors.then(|| vec![[1., 1., 1., alpha]; 4]),
+        normals: None,
         indices: vec![0, 1, 2, 0, 2, 3],
     }
 }
@@ -46,6 +47,7 @@ fn texture(rgba: [f32; 4]) -> GpuTexture {
 fn surface(texture: usize, blend: Option<(BlendFactor, BlendFactor)>, overlay: bool) -> Surface {
     Surface {
         texture,
+        palette: None,
         params: SurfaceParams {
             uv_scale: [1.; 2],
             uv_offset: [0.; 2],
@@ -54,6 +56,8 @@ fn surface(texture: usize, blend: Option<(BlendFactor, BlendFactor)>, overlay: b
             opacity: 1.,
             skip_zero_alpha: false,
             opaque_texture: false,
+            falloff: None,
+            palette: 0,
         },
         key: SurfaceKey {
             blend,
@@ -498,7 +502,6 @@ fn exact_depth_ties_resolve_by_list_order_in_every_run() {
             textures: vec![texture(first), texture(second)],
             surfaces: vec![surface(0, None, false), surface(1, None, false)],
             instances: vec![instance(0), instance(1)],
-            falloff_left_out: 0,
         }
     };
     let camera = fo4_scene::camera::look_at(
@@ -519,4 +522,228 @@ fn exact_depth_ties_resolve_by_list_order_in_every_run() {
     assert_eq!(centre(&a), [255, 0, 0]);
     let c = headless(&mut scene(blue, red), &camera, [0., 0., 0., 1.], true).unwrap();
     assert_eq!(centre(&c), [0, 0, 255]);
+}
+
+/// An effect scene of the draw list's own terms, drawn by the CPU
+/// reference and by the GPU path: a grey opaque floor, a blended card
+/// whose vertex normals turn away from the eye toward its edges (falloff),
+/// and an additive card with both palette lookups and vertex colours above
+/// 1 (the clamp). The frames agree within the filtering differences of the
+/// earlier comparisons; each term changes the frame where it applies.
+#[test]
+#[ignore = "needs a GPU: draws offscreen through Bevy"]
+fn cpu_and_gpu_frames_agree_on_falloff_palette_and_colour_clamp() {
+    use fo4_render::{Alpha, Draw, DrawList, Falloff, Mesh, Palette, Sidedness, Texture, Vertex};
+    let quad = |h: f64, z: f64| -> Vec<Vertex> {
+        [[-h, -h], [h, -h], [h, h], [-h, h]]
+            .iter()
+            .zip([[0., 0.], [1., 0.], [1., 1.], [0., 1.]])
+            .map(|(p, uv)| Vertex {
+                position: [p[0], p[1], z],
+                uv,
+            })
+            .collect()
+    };
+    let texture = |width: u32, height: u32, texel: &dyn Fn(u32, u32) -> [f32; 4]| Texture {
+        mips: Vec::new(),
+        width,
+        height,
+        rgba: (0..height)
+            .flat_map(|y| (0..width).flat_map(move |x| texel(x, y)))
+            .collect(),
+        mip: 0,
+        srgb: false,
+    };
+    let alpha = |enabled: u8, source: u32, destination: u32, opacity: f32| Alpha {
+        enabled,
+        source,
+        destination,
+        test_enabled: 0,
+        test_ref: 0,
+        nif_test_function: Some(4),
+        opacity,
+        nif_flags: None,
+    };
+    let draw = |instance: u32, mesh: usize, texture: usize, alpha: Alpha| Draw {
+        sidedness: Sidedness {
+            material_two_sided: Some(1),
+            nif_shader_flags_2: None,
+        },
+        instance,
+        mesh,
+        texture,
+        world: fo4_scene::transform::Transform::IDENTITY,
+        alpha,
+        uv_offset: [0.; 2],
+        uv_scale: [1.; 2],
+        raw_tile_flags: None,
+        falloff: None,
+        palette: None,
+    };
+    let tri = vec![[0, 1, 2], [0, 2, 3]];
+    let mut list = DrawList {
+        meshes: vec![
+            Mesh {
+                vertex_colors: None,
+                normals: None,
+                vertices: quad(400., 0.),
+                triangles: tri.clone(),
+            },
+            // Normals tilted outward at the corners: the falloff fades
+            // the card toward them.
+            Mesh {
+                vertex_colors: None,
+                normals: Some(
+                    [[-1., -1.], [1., -1.], [1., 1.], [-1., 1.]]
+                        .map(|[x, y]| [x * 0.9, y * 0.9, 0.45])
+                        .to_vec(),
+                ),
+                vertices: quad(120., 40.)
+                    .into_iter()
+                    .map(|v| Vertex {
+                        position: [v.position[0] - 130., v.position[1], v.position[2]],
+                        ..v
+                    })
+                    .collect(),
+                triangles: tri.clone(),
+            },
+            // Colours above 1 in RGB, alpha 0.75 (the palette's V).
+            Mesh {
+                vertex_colors: Some(vec![[2., 1.5, 1., 0.75]; 4]),
+                normals: None,
+                vertices: quad(120., 60.)
+                    .into_iter()
+                    .map(|v| Vertex {
+                        position: [v.position[0] + 130., v.position[1], v.position[2]],
+                        ..v
+                    })
+                    .collect(),
+                triangles: tri,
+            },
+        ],
+        textures: vec![
+            texture(1, 1, &|_, _| [0.5, 0.5, 0.5, 1.]),
+            texture(4, 4, &|x, y| {
+                [0.9, 0.6, 0.3, 0.25 + 0.25 * ((x + y) % 4) as f32]
+            }),
+            // Green rises along U, alpha along V.
+            texture(8, 8, &|x, y| [0.2, x as f32 / 7., 0.8, y as f32 / 7.]),
+            // The palette: a 2D table, dark and clear at U = 0, V = 0.
+            texture(8, 4, &|x, y| {
+                let (u, v) = (x as f32 / 7., y as f32 / 3.);
+                [u, v, u * v, (u * v).sqrt()]
+            }),
+        ],
+        draws: Vec::new(),
+        overlays: Vec::new(),
+        blocks: Default::default(),
+    };
+    list.draws.push(draw(1, 0, 0, alpha(0, 0, 0, 1.)));
+    let mut card = draw(2, 1, 1, alpha(1, 6, 7, 1.));
+    card.falloff = Some(Falloff {
+        start_angle: 1.,
+        stop_angle: 0.3,
+        start_opacity: 1.,
+        stop_opacity: 0.,
+    });
+    list.draws.push(card);
+    let mut additive = draw(3, 2, 2, alpha(1, 6, 0, 0.8));
+    additive.palette = Some(Palette {
+        texture: 3,
+        colour: true,
+        alpha: true,
+    });
+    list.draws.push(additive);
+    let camera = fo4_scene::camera::look_at(
+        [0., -500., 450.],
+        [0., 0., 0.],
+        fo4_scene::camera::reference_frustum(SIZE),
+        SIZE,
+    )
+    .unwrap();
+    let options = fo4_render::RenderOptions::REFERENCE;
+    let cpu_frame = |list: &DrawList| {
+        let f = fo4_render::render(
+            list,
+            &camera,
+            options,
+            &fo4_core::Limits::default(),
+            &fo4_core::Budget::new(256 << 20),
+        )
+        .unwrap();
+        let rgba: Vec<u8> = f
+            .color
+            .iter()
+            .flat_map(|c| c.map(|v| (v.clamp(0., 1.) * 255.).round() as u8))
+            .collect();
+        (rgba, f.instances)
+    };
+    let (cpu, cpu_tags) = cpu_frame(&list);
+    let mut gpu_scene = crate::scene::convert(&mut list, &options).unwrap();
+    let gpu = headless(&mut gpu_scene, &camera, options.clear, true).unwrap();
+    let gpu_tags = crate::compare::tags_from_bytes(gpu.tags.as_ref().unwrap()).unwrap();
+    let report = crate::compare::compare(&crate::compare::Inputs {
+        size: SIZE,
+        cpu: &cpu,
+        gpu: &gpu.color,
+        tags: Some((&cpu_tags, &gpu_tags)),
+        clear: crate::compare::clear_rgb(options.clear),
+    })
+    .unwrap();
+    println!(
+        "agreement {:.6}, both {}, cpu only {}, gpu only {}, mean {:?}, p95 {:?}, max {:?}",
+        report.agreement(),
+        report.both,
+        report.cpu_only,
+        report.gpu_only,
+        report.mean_abs,
+        report.p95_abs,
+        report.max_abs
+    );
+    assert!(report.agreement() > 0.999, "{}", report.agreement());
+    assert!(
+        report.mean_abs.iter().all(|m| *m < 1.5),
+        "{:?}",
+        report.mean_abs
+    );
+    assert!(
+        report.p95_abs.iter().all(|m| *m <= 4),
+        "{:?}",
+        report.p95_abs
+    );
+    // Each term shows: without it the CPU frame differs there.
+    let strips: [fn(&mut DrawList); 3] = [
+        |l: &mut DrawList| l.draws[1].falloff = None,
+        |l: &mut DrawList| l.draws[2].palette = None,
+        |l: &mut DrawList| l.meshes[2].vertex_colors = Some(vec![[1., 1., 1., 0.75]; 4]),
+    ];
+    for strip in strips {
+        let mut other = DrawList {
+            meshes: list
+                .meshes
+                .iter()
+                .map(|m| Mesh {
+                    vertex_colors: m.vertex_colors.clone(),
+                    normals: m.normals.clone(),
+                    vertices: m.vertices.clone(),
+                    triangles: m.triangles.clone(),
+                })
+                .collect(),
+            textures: list
+                .textures
+                .iter()
+                .map(|t| {
+                    texture(t.width, t.height, &|x, y| {
+                        let at = ((y * t.width + x) * 4) as usize;
+                        [t.rgba[at], t.rgba[at + 1], t.rgba[at + 2], t.rgba[at + 3]]
+                    })
+                })
+                .collect(),
+            draws: list.draws.iter().map(|d| Draw { ..*d }).collect(),
+            overlays: Vec::new(),
+            blocks: Default::default(),
+        };
+        strip(&mut other);
+        assert_ne!(cpu_frame(&other).0, cpu);
+    }
 }

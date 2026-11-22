@@ -183,6 +183,7 @@ pub fn mesh_bytes(m: &GpuMesh) -> u64 {
     let n = m.positions.len() * 12
         + m.uvs.len() * 8
         + m.colors.as_ref().map_or(0, |c| c.len() * 16)
+        + m.normals.as_ref().map_or(0, |n| n.len() * 12)
         + m.indices.len() * 2;
     n as u64
 }
@@ -203,6 +204,14 @@ pub fn mesh_key(m: &GpuMesh) -> AssetKey {
                 }
             }
             None => 0u8.hash(h),
+        }
+        // Hashed only when present, so a mesh without normals keeps the
+        // key it had before normals were carried.
+        if let Some(n) = &m.normals {
+            2u8.hash(h);
+            for p in n {
+                p.map(f32::to_bits).hash(h);
+            }
         }
         m.indices.hash(h);
     })
@@ -321,12 +330,14 @@ mod tests {
             positions: vec![[0., 0., 0.], [1., 0., 0.], [0., 1., 0.]],
             uvs: vec![[0., 0.]; 3],
             colors: None,
+            normals: None,
             indices: vec![0, 1, 2],
         };
         let same = GpuMesh {
             positions: mesh.positions.clone(),
             uvs: mesh.uvs.clone(),
             colors: None,
+            normals: None,
             indices: vec![0, 1, 2],
         };
         assert_eq!(mesh_key(&mesh), mesh_key(&same));
@@ -335,6 +346,14 @@ mod tests {
             ..same
         };
         assert_ne!(mesh_key(&mesh), mesh_key(&moved));
+        let turned = GpuMesh {
+            normals: Some(vec![[0., 0., 1.]; 3]),
+            positions: mesh.positions.clone(),
+            uvs: mesh.uvs.clone(),
+            colors: None,
+            indices: vec![0, 1, 2],
+        };
+        assert_ne!(mesh_key(&mesh), mesh_key(&turned));
         let texture = |opaque, byte| GpuTexture {
             width: 4,
             height: 4,

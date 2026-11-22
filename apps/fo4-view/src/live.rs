@@ -31,17 +31,19 @@ pub enum Slot<D, H> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct SurfaceId {
     pub texture: AssetKey,
-    pub params: [u32; 9],
+    pub palette: Option<AssetKey>,
+    pub params: [u32; crate::scene::PARAM_WORDS],
     pub blend: Option<(u32, u32)>,
     pub cull_back: bool,
     pub overlay: bool,
 }
 impl SurfaceId {
-    pub fn of(surface: &Surface, texture: AssetKey) -> Self {
+    pub fn of(surface: &Surface, texture: AssetKey, palette: Option<AssetKey>) -> Self {
         // The factors were made from these codes (`scene::blend_factor`).
         let code = |f| (0..=10u32).find(|c| crate::scene::blend_factor(*c) == Ok(f));
         Self {
             texture,
+            palette,
             params: surface.params.bits(),
             blend: surface
                 .key
@@ -146,17 +148,19 @@ impl Live {
         }
         let mut surface_ids = Vec::with_capacity(surfaces.len());
         for s in &surfaces {
-            let Some(texture) = textures.get(s.texture) else {
+            let texture = textures.get(s.texture);
+            let palette = s.palette.map(|p| textures.get(p));
+            let (Some(texture), None | Some(Some(_))) = (texture, palette) else {
                 for k in &keys {
                     self.release(k);
                 }
                 space.remove(&grid);
                 return Err(format!(
-                    "StreamSurfaceTexture: cell {grid:?} names texture {}",
-                    s.texture
+                    "StreamSurfaceTexture: cell {grid:?} names texture {} (palette {:?})",
+                    s.texture, s.palette
                 ));
             };
-            surface_ids.push(SurfaceId::of(s, *texture));
+            surface_ids.push(SurfaceId::of(s, *texture, palette.flatten().copied()));
         }
         self.cells.insert(
             grid,
@@ -215,27 +219,34 @@ impl Live {
         for cell in self.cells.values() {
             let base = out.surfaces.len();
             for s in &cell.surfaces {
-                let key = cell.textures[s.texture];
-                let index = match textures.get(&key) {
-                    Some(i) => *i,
-                    None => {
-                        let Some(Slot::Waiting(t)) = self.textures.get_mut(&key) else {
-                            return Err("StreamTextureNotHeld".into());
-                        };
-                        let t = std::mem::replace(
-                            t,
-                            GpuTexture {
-                                bytes: Vec::new(),
-                                ..*t
-                            },
-                        );
-                        out.textures.push(t);
-                        textures.insert(key, out.textures.len() - 1);
-                        out.textures.len() - 1
-                    }
+                let mut slot = |key: AssetKey| -> Result<usize, String> {
+                    Ok(match textures.get(&key) {
+                        Some(i) => *i,
+                        None => {
+                            let Some(Slot::Waiting(t)) = self.textures.get_mut(&key) else {
+                                return Err("StreamTextureNotHeld".into());
+                            };
+                            let t = std::mem::replace(
+                                t,
+                                GpuTexture {
+                                    bytes: Vec::new(),
+                                    ..*t
+                                },
+                            );
+                            out.textures.push(t);
+                            textures.insert(key, out.textures.len() - 1);
+                            out.textures.len() - 1
+                        }
+                    })
+                };
+                let index = slot(cell.textures[s.texture])?;
+                let palette = match s.palette {
+                    Some(p) => Some(slot(cell.textures[p])?),
+                    None => None,
                 };
                 out.surfaces.push(Surface {
                     texture: index,
+                    palette,
                     params: s.params,
                     key: s.key,
                 });
@@ -276,6 +287,7 @@ mod tests {
             positions: vec![[0., 0., z], [1., 0., z], [0., 1., z]],
             uvs: vec![[0., 0.]; 3],
             colors: None,
+            normals: None,
             indices: vec![0, 1, 2],
         }
     }
@@ -292,6 +304,7 @@ mod tests {
     fn surface(texture: usize) -> Surface {
         Surface {
             texture,
+            palette: None,
             params: SurfaceParams {
                 uv_scale: [1.; 2],
                 uv_offset: [0.; 2],
@@ -300,6 +313,8 @@ mod tests {
                 opacity: 1.,
                 skip_zero_alpha: false,
                 opaque_texture: false,
+                falloff: None,
+                palette: 0,
             },
             key: SurfaceKey {
                 blend: None,

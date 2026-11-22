@@ -64,6 +64,12 @@ pub struct SurfaceUniform {
     pub test_function: u32,
     pub skip_zero_alpha: u32,
     pub opaque_texture: u32,
+    /// 1: `falloff` holds an effect falloff (start and stop angle as
+    /// cosines, start and stop opacity).
+    pub falloff_on: u32,
+    /// Palette lookups: bit 0 colour, bit 1 alpha.
+    pub palette_lookups: u32,
+    pub falloff: Vec4,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -88,6 +94,12 @@ pub struct SurfaceMaterial {
     #[texture(1)]
     #[sampler(2)]
     pub texture: Handle<Image>,
+    /// The palette of a palette lookup (sampled with the texture's sampler
+    /// at its base level, the coordinates kept inside its edge texel
+    /// centres, which is a clamp to the edge); Bevy's fallback image when
+    /// the surface has none.
+    #[texture(3)]
+    pub palette: Option<Handle<Image>>,
     pub key: MaterialKey,
 }
 impl From<&SurfaceMaterial> for MaterialKey {
@@ -258,6 +270,7 @@ fn upload_meshes(world: &mut World, scene: &GpuScene) -> Result<Uploaded, String
                 positions: m.positions.clone(),
                 uvs: m.uvs.clone(),
                 colors: m.colors.clone(),
+                normals: m.normals.clone(),
                 indices: m.indices.clone(),
             }))
         })
@@ -287,6 +300,9 @@ fn bevy_mesh(m: GpuMesh) -> Mesh {
     .with_inserted_indices(Indices::U16(m.indices));
     if let Some(colors) = m.colors {
         mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors);
+    }
+    if let Some(normals) = m.normals {
+        mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
     }
     mesh
 }
@@ -358,6 +374,7 @@ fn spawn(
 fn surface_material(
     surface: &Surface,
     image: Handle<Image>,
+    palette: Option<Handle<Image>>,
     tag_pass: bool,
     rank: u32,
 ) -> SurfaceMaterial {
@@ -371,8 +388,12 @@ fn surface_material(
             test_function: p.test_function,
             skip_zero_alpha: u32::from(p.skip_zero_alpha),
             opaque_texture: u32::from(p.opaque_texture),
+            falloff_on: u32::from(p.falloff.is_some()),
+            palette_lookups: p.palette,
+            falloff: Vec4::from_array(p.falloff.unwrap_or([0.; 4])),
         },
         texture: image,
+        palette,
         key: MaterialKey {
             surface: surface.key,
             tag_pass,
@@ -449,6 +470,7 @@ fn spawn_instances(
                 materials.add(surface_material(
                     surface,
                     images[surface.texture].clone(),
+                    surface.palette.map(|p| images[p].clone()),
                     tag_pass,
                     rank,
                 ))
@@ -1214,9 +1236,13 @@ fn upload_waiting(world: &mut World, live: &mut Live) -> Result<(), String> {
                     .get(surface.texture)
                     .cloned()
                     .ok_or("StreamSurfaceTexture")?;
+                let palette = match surface.palette {
+                    Some(p) => Some(images.get(p).cloned().ok_or("StreamSurfaceTexture")?),
+                    None => None,
+                };
                 let h = world
                     .resource_mut::<Assets<SurfaceMaterial>>()
-                    .add(surface_material(surface, image, false, 0));
+                    .add(surface_material(surface, image, palette, false, 0));
                 materials.insert(*id, h.clone());
                 h
             };

@@ -16,6 +16,9 @@ pub struct GpuMesh {
     pub positions: Vec<[f32; 3]>,
     pub uvs: Vec<[f32; 2]>,
     pub colors: Option<Vec<[f32; 4]>>,
+    /// Model-space vertex normals, kept for falloff draws
+    /// (`fo4_render::Mesh::normals`).
+    pub normals: Option<Vec<[f32; 3]>>,
     pub indices: Vec<u16>,
 }
 
@@ -59,9 +62,18 @@ pub struct SurfaceParams {
     pub skip_zero_alpha: bool,
     /// The texture's sampled alpha is replaced by 1 before anything else.
     pub opaque_texture: bool,
+    /// An effect falloff (`fo4_render::Falloff`): start and stop angle
+    /// (cosines), start and stop opacity.
+    pub falloff: Option<[f32; 4]>,
+    /// The palette lookups of `Surface::palette` (`fo4_render::Palette`):
+    /// bit 0 colour, bit 1 alpha.
+    pub palette: u32,
 }
+/// Words of [`SurfaceParams::bits`].
+pub const PARAM_WORDS: usize = 15;
 impl SurfaceParams {
-    pub fn bits(&self) -> [u32; 9] {
+    pub fn bits(&self) -> [u32; PARAM_WORDS] {
+        let falloff = self.falloff.unwrap_or([0.; 4]);
         [
             self.uv_scale[0].to_bits(),
             self.uv_scale[1].to_bits(),
@@ -72,6 +84,12 @@ impl SurfaceParams {
             self.opacity.to_bits(),
             u32::from(self.skip_zero_alpha),
             u32::from(self.opaque_texture),
+            u32::from(self.falloff.is_some()),
+            falloff[0].to_bits(),
+            falloff[1].to_bits(),
+            falloff[2].to_bits(),
+            falloff[3].to_bits(),
+            self.palette,
         ]
     }
 }
@@ -101,6 +119,9 @@ impl std::hash::Hash for SurfaceKey {
 
 pub struct Surface {
     pub texture: usize,
+    /// The palette texture of an effect surface's palette lookup, an index
+    /// into the same textures as `texture`.
+    pub palette: Option<usize>,
     pub params: SurfaceParams,
     pub key: SurfaceKey,
 }
@@ -123,10 +144,6 @@ pub struct GpuScene {
     pub textures: Vec<GpuTexture>,
     pub surfaces: Vec<Surface>,
     pub instances: Vec<Instance>,
-    /// Draws with an effect falloff (`fo4_render::Falloff`), left out: the
-    /// viewer's shader has no falloff term, and drawing them without it
-    /// would show what the CPU frame fades out.
-    pub falloff_left_out: usize,
 }
 impl GpuScene {
     pub fn blended_instances(&self) -> usize {
@@ -171,6 +188,8 @@ fn surface_params(alpha: Alpha, uv_offset: [f64; 2], uv_scale: [f64; 2]) -> Surf
         opacity: alpha.opacity,
         skip_zero_alpha: alpha.enabled == 1 && alpha.source == 6,
         opaque_texture: false,
+        falloff: None,
+        palette: 0,
     }
 }
 
@@ -251,6 +270,15 @@ fn mesh(m: &fo4_render::Mesh) -> Result<GpuMesh, String> {
             indices.push(i);
         }
     }
+    let normals = match &m.normals {
+        Some(n) => {
+            if n.len() != m.vertices.len() || n.iter().flatten().any(|v| !v.is_finite()) {
+                return Err(format!("RenderFalloffNormals: {}", n.len()));
+            }
+            Some(n.iter().map(|v| v.map(|x| x as f32)).collect())
+        }
+        None => None,
+    };
     let mut positions = Vec::with_capacity(m.vertices.len());
     let mut uvs = Vec::with_capacity(m.vertices.len());
     for v in &m.vertices {
@@ -264,6 +292,7 @@ fn mesh(m: &fo4_render::Mesh) -> Result<GpuMesh, String> {
         positions,
         uvs,
         colors: m.vertex_colors.clone(),
+        normals,
         indices,
     })
 }
@@ -286,8 +315,15 @@ pub fn convert(list: &mut DrawList, options: &RenderOptions) -> Result<GpuScene,
     let mut out = GpuScene::default();
     let mut mesh_index = BTreeMap::new();
     let mut texture_index = BTreeMap::new();
-    // Texture, parameter bits, raw blend codes, culling, overlay.
-    type SurfaceIdentity = (usize, [u32; 9], Option<(u32, u32)>, bool, bool);
+    // Texture, palette, parameter bits, raw blend codes, culling, overlay.
+    type SurfaceIdentity = (
+        usize,
+        Option<usize>,
+        [u32; PARAM_WORDS],
+        Option<(u32, u32)>,
+        bool,
+        bool,
+    );
     let mut surface_index: BTreeMap<SurfaceIdentity, usize> = BTreeMap::new();
     for (di, draw) in list.draws.iter().enumerate() {
         draw.alpha.validate().map_err(|e| e.to_string())?;
@@ -317,9 +353,18 @@ pub fn convert(list: &mut DrawList, options: &RenderOptions) -> Result<GpuScene,
         if source.triangles.is_empty() {
             continue;
         }
-        if draw.falloff.is_some() {
-            out.falloff_left_out += 1;
-            continue;
+        // As the CPU: a falloff reads the mesh's normals, a palette its
+        // texture.
+        if let Some(f) = draw.falloff {
+            f.validate().map_err(|e| e.to_string())?;
+            if source.normals.is_none() {
+                return Err(format!("RenderFalloffNormals: {di}"));
+            }
+        }
+        if let Some(p) = draw.palette {
+            if p.texture >= list.textures.len() || list.blocks.contains_key(&p.texture) {
+                return Err(format!("RenderPaletteTexture: {}", p.texture));
+            }
         }
         let mesh_slot = match mesh_index.get(&draw.mesh) {
             Some(&i) => i,
@@ -329,16 +374,21 @@ pub fn convert(list: &mut DrawList, options: &RenderOptions) -> Result<GpuScene,
                 out.meshes.len() - 1
             }
         };
-        let texture_slot = match texture_index.get(&draw.texture) {
-            Some(&i) => i,
-            None => {
-                out.textures.push(texture(
-                    &list.textures[draw.texture],
-                    list.blocks.get_mut(&draw.texture),
-                )?);
-                texture_index.insert(draw.texture, out.textures.len() - 1);
-                out.textures.len() - 1
-            }
+        let mut slot = |t: usize, out: &mut GpuScene| -> Result<usize, String> {
+            Ok(match texture_index.get(&t) {
+                Some(&i) => i,
+                None => {
+                    out.textures
+                        .push(texture(&list.textures[t], list.blocks.get_mut(&t))?);
+                    texture_index.insert(t, out.textures.len() - 1);
+                    out.textures.len() - 1
+                }
+            })
+        };
+        let texture_slot = slot(draw.texture, &mut out)?;
+        let palette_slot = match draw.palette {
+            Some(p) => Some(slot(p.texture, &mut out)?),
+            None => None,
         };
         // The CPU culls only when asked, and then fails on a draw without a
         // sidedness declaration; the same error is raised here.
@@ -348,10 +398,17 @@ pub fn convert(list: &mut DrawList, options: &RenderOptions) -> Result<GpuScene,
             (draw.alpha.enabled == 1).then_some((draw.alpha.source, draw.alpha.destination));
         let params = SurfaceParams {
             opaque_texture: out.textures[texture_slot].opaque,
+            falloff: draw
+                .falloff
+                .map(|f| [f.start_angle, f.stop_angle, f.start_opacity, f.stop_opacity]),
+            palette: draw
+                .palette
+                .map_or(0, |p| u32::from(p.colour) | u32::from(p.alpha) << 1),
             ..surface_params(draw.alpha, draw.uv_offset, draw.uv_scale)
         };
         let surface_key = (
             texture_slot,
+            palette_slot,
             params.bits(),
             blend_codes,
             cull_back,
@@ -366,6 +423,7 @@ pub fn convert(list: &mut DrawList, options: &RenderOptions) -> Result<GpuScene,
                 };
                 out.surfaces.push(Surface {
                     texture: texture_slot,
+                    palette: palette_slot,
                     params,
                     key: SurfaceKey {
                         blend,
@@ -428,6 +486,7 @@ mod tests {
             uv_scale: [2., 1.],
             raw_tile_flags: None,
             falloff: None,
+            palette: None,
         }
     }
     fn list() -> DrawList {
@@ -496,20 +555,58 @@ mod tests {
     }
 
     #[test]
-    fn falloff_draws_are_left_out_and_counted() {
-        let mut l = list();
-        l.draws[1].falloff = Some(fo4_render::Falloff {
+    fn falloff_and_palette_draws_carry_their_terms_and_need_their_data() {
+        let falloff = fo4_render::Falloff {
             start_angle: 1.,
             stop_angle: 0.,
             start_opacity: 1.,
             stop_opacity: 0.,
+        };
+        let mut l = list();
+        l.draws[1].falloff = Some(falloff);
+        // Without normals the draw is refused, as by the CPU.
+        let e = convert(&mut l, &RenderOptions::REFERENCE).err().unwrap();
+        assert!(e.starts_with("RenderFalloffNormals"), "{e}");
+        l.meshes[0].normals = Some(vec![[0., 0., 1.]; 3]);
+        l.textures.push(Texture {
+            mips: Vec::new(),
+            width: 2,
+            height: 1,
+            rgba: vec![0., 0., 0., 0., 1., 1., 1., 1.],
+            mip: 0,
+            srgb: false,
+        });
+        l.draws[1].palette = Some(fo4_render::Palette {
+            texture: 1,
+            colour: false,
+            alpha: true,
         });
         let scene = convert(&mut l, &RenderOptions::REFERENCE).unwrap();
-        assert_eq!(scene.falloff_left_out, 1);
         assert_eq!(
             scene.instances.iter().map(|i| i.tag).collect::<Vec<_>>(),
-            [7, 9]
+            [7, 8, 9]
         );
+        assert_eq!(scene.meshes[0].normals.as_ref().unwrap()[0], [0., 0., 1.]);
+        let s = &scene.surfaces[scene.instances[1].surface];
+        assert_eq!(s.params.falloff, Some([1., 0., 1., 0.]));
+        assert_eq!(s.params.palette, 2);
+        let palette = s.palette.unwrap();
+        assert_eq!(scene.textures[palette].width, 2);
+        assert_ne!(palette, s.texture);
+        // The other draws keep their shared surface without either term.
+        let plain = &scene.surfaces[scene.instances[0].surface];
+        assert_eq!((plain.params.falloff, plain.palette), (None, None));
+        assert_ne!(scene.instances[0].surface, scene.instances[1].surface);
+        // A palette kept as stored blocks is refused: the lookup reads
+        // decoded texels.
+        let mut l = list();
+        l.draws[0].palette = Some(fo4_render::Palette {
+            texture: 5,
+            colour: true,
+            alpha: false,
+        });
+        let e = convert(&mut l, &RenderOptions::REFERENCE).err().unwrap();
+        assert!(e.starts_with("RenderPaletteTexture"), "{e}");
     }
 
     #[test]

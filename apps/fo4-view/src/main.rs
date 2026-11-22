@@ -64,12 +64,6 @@ fn load_scene(
         gpu.instances.len(),
         gpu.blended_instances(),
     );
-    if gpu.falloff_left_out > 0 {
-        println!(
-            "effect falloff draws left out (the viewer's shader has no falloff term): {}",
-            gpu.falloff_left_out
-        );
-    }
     // Not with --reference-textures, whose output is the reference's.
     if s.textures != cli::Textures::Reference {
         let mib = |n: usize| n as f64 / f64::from(1u32 << 20);
