@@ -1,0 +1,272 @@
+# package_census: kinds and counts only (spec/vm.md, Package destinations). Sections: 1 packages (PACK) and PKCU; 2 data inputs by type text and value;
+# 3 PLDT and PTDA by kind and what their word names; 4 procedure names; 5 scene actions of kind 1 and their packages' destinations; 6 quest alias packages (ALPC); 7 the layout table.
+4674	1 packages	PKCU FormID names	PACK
+214	1 packages	PKCU FormID names	none (zero)
+4888	1 packages	PKCU count equals the number of data inputs	true
+211	1 packages	PKCU third word	0
+2136	1 packages	PKCU third word	1
+18	1 packages	PKCU third word	10
+325	1 packages	PKCU third word	11
+30	1 packages	PKCU third word	13
+2	1 packages	PKCU third word	17
+11	1 packages	PKCU third word	18
+8	1 packages	PKCU third word	19
+337	1 packages	PKCU third word	2
+4	1 packages	PKCU third word	22
+1	1 packages	PKCU third word	23
+57	1 packages	PKCU third word	28
+638	1 packages	PKCU third word	3
+3	1 packages	PKCU third word	30
+4	1 packages	PKCU third word	32
+91	1 packages	PKCU third word	4
+2	1 packages	PKCU third word	40
+189	1 packages	PKCU third word	5
+17	1 packages	PKCU third word	6
+772	1 packages	PKCU third word	7
+26	1 packages	PKCU third word	8
+6	1 packages	PKCU third word	9
+4886	1 packages	records holding the tag	ANAM
+213	1 packages	records holding the tag	BNAM
+50	1 packages	records holding the tag	CIS1
+235	1 packages	records holding the tag	CIS2
+213	1 packages	records holding the tag	CITC
+4659	1 packages	records holding the tag	CNAM
+2924	1 packages	records holding the tag	CTDA
+4887	1 packages	records holding the tag	EDID
+212	1 packages	records holding the tag	FNAM
+13	1 packages	records holding the tag	IDLA
+13	1 packages	records holding the tag	IDLC
+23	1 packages	records holding the tag	IDLF
+13	1 packages	records holding the tag	IDLT
+4888	1 packages	records holding the tag	INAM
+4888	1 packages	records holding the tag	PDTO
+31	1 packages	records holding the tag	PFO2
+212	1 packages	records holding the tag	PKC2
+4888	1 packages	records holding the tag	PKCU
+4888	1 packages	records holding the tag	PKDT
+3992	1 packages	records holding the tag	PLDT
+213	1 packages	records holding the tag	PNAM
+4888	1 packages	records holding the tag	POBA
+4888	1 packages	records holding the tag	POCA
+4888	1 packages	records holding the tag	POEA
+207	1 packages	records holding the tag	PRCB
+4888	1 packages	records holding the tag	PSDT
+2765	1 packages	records holding the tag	PTDA
+2598	1 packages	records holding the tag	QNAM
+4886	1 packages	records holding the tag	UNAM
+167	1 packages	records holding the tag	VMAD
+4888	1 packages	records holding the tag	XNAM
+4885	1 packages	the data inputs end at	UNAM	count equals inputs true
+3	1 packages	the data inputs end at	XNAM	count equals inputs true
+4888	1 packages	winning PACK
+26450	2 data inputs	Bool	CNAM of 1 bytes
+6941	2 data inputs	Float	CNAM of 4 bytes
+1014	2 data inputs	Int	CNAM of 4 bytes
+14	2 data inputs	Location	PLDT of 12 bytes
+5795	2 data inputs	Location	PLDT of 16 bytes
+258	2 data inputs	ObjectList	CNAM of 4 bytes
+2815	2 data inputs	SingleRef	PTDA of 12 bytes
+2527	2 data inputs	TargetSelector	PTDA of 12 bytes
+334	2 data inputs	Topic	PDTO of 8 bytes
+3216	3 PLDT	kind 0	fourth word 0
+2	3 PLDT	kind 0	fourth word absent (12 bytes)
+1975	3 PLDT	kind 0	third word zero false
+1243	3 PLDT	kind 0	third word zero true
+16	3 PLDT	kind 0	word names ACHR
+2337	3 PLDT	kind 0	word names REFR
+865	3 PLDT	kind 0	word names no winning record
+48	3 PLDT	kind 1	fourth word 0
+48	3 PLDT	kind 1	third word zero true
+48	3 PLDT	kind 1	word names CELL
+4	3 PLDT	kind 10	fourth word 0
+4	3 PLDT	kind 10	third word zero false
+4	3 PLDT	kind 10	word names STAT
+7	3 PLDT	kind 11	fourth word 0
+7	3 PLDT	kind 11	third word zero false
+7	3 PLDT	kind 11	word names nothing (zero)
+605	3 PLDT	kind 12	fourth word 0
+368	3 PLDT	kind 12	third word zero false
+237	3 PLDT	kind 12	third word zero true
+605	3 PLDT	kind 12	word names nothing (zero)
+24	3 PLDT	kind 13	fourth word 0
+24	3 PLDT	kind 13	third word zero true
+24	3 PLDT	kind 13	word names nothing (zero)
+3	3 PLDT	kind 14	fourth word 0
+1	3 PLDT	kind 14	fourth word 1
+3	3 PLDT	kind 14	third word zero false
+1	3 PLDT	kind 14	third word zero true
+1	3 PLDT	kind 14	word names MISC
+2	3 PLDT	kind 14	word names STAT
+1	3 PLDT	kind 14	word names no winning record
+56	3 PLDT	kind 2	fourth word 0
+49	3 PLDT	kind 2	third word zero false
+7	3 PLDT	kind 2	third word zero true
+56	3 PLDT	kind 2	word names nothing (zero)
+545	3 PLDT	kind 3	fourth word 0
+8	3 PLDT	kind 3	fourth word absent (12 bytes)
+317	3 PLDT	kind 3	third word zero false
+236	3 PLDT	kind 3	third word zero true
+553	3 PLDT	kind 3	word names nothing (zero)
+877	3 PLDT	kind 6	fourth word 0
+4	3 PLDT	kind 6	fourth word absent (12 bytes)
+607	3 PLDT	kind 6	third word zero false
+274	3 PLDT	kind 6	third word zero true
+785	3 PLDT	kind 6	word names KYWD
+96	3 PLDT	kind 6	word names nothing (zero)
+407	3 PLDT	kind 8	fourth word 0
+338	3 PLDT	kind 8	third word zero false
+69	3 PLDT	kind 8	third word zero true
+7	3 PLDT	kind 8	word names ACTI
+7	3 PLDT	kind 8	word names CELL
+13	3 PLDT	kind 8	word names CONT
+5	3 PLDT	kind 8	word names CPTH
+10	3 PLDT	kind 8	word names DOOR
+3	3 PLDT	kind 8	word names ECZN
+4	3 PLDT	kind 8	word names GLOB
+22	3 PLDT	kind 8	word names MISC
+7	3 PLDT	kind 8	word names NPC_
+2	3 PLDT	kind 8	word names OVIS
+3	3 PLDT	kind 8	word names RACE
+157	3 PLDT	kind 8	word names STAT
+8	3 PLDT	kind 8	word names TXST
+1	3 PLDT	kind 8	word names VTYP
+6	3 PLDT	kind 8	word names WATR
+1	3 PLDT	kind 8	word names no record (the word does not resolve)
+116	3 PLDT	kind 8	word names no winning record
+35	3 PLDT	kind 8	word names nothing (zero)
+2	3 PLDT	kind 9	fourth word 0
+2	3 PLDT	kind 9	third word zero false
+2	3 PLDT	kind 9	word names STAT
+78	3 PTDA	kind 0	word names ACHR
+753	3 PTDA	kind 0	word names REFR
+586	3 PTDA	kind 0	word names no winning record
+2	3 PTDA	kind 0	word names nothing (zero)
+59	3 PTDA	kind 1	word names ACTI
+96	3 PTDA	kind 1	word names FACT
+26	3 PTDA	kind 1	word names FLST
+4	3 PTDA	kind 1	word names FURN
+1	3 PTDA	kind 1	word names IDLM
+15	3 PTDA	kind 1	word names WEAP
+67	3 PTDA	kind 2	word names ACTI
+600	3 PTDA	kind 2	word names MISC
+2	3 PTDA	kind 2	word names STAT
+505	3 PTDA	kind 2	word names no winning record
+1278	3 PTDA	kind 2	word names nothing (zero)
+355	3 PTDA	kind 3	word names KYWD
+163	3 PTDA	kind 3	word names nothing (zero)
+15	3 PTDA	kind 4	word names ACTI
+9	3 PTDA	kind 4	word names BPTD
+8	3 PTDA	kind 4	word names CELL
+3	3 PTDA	kind 4	word names CONT
+13	3 PTDA	kind 4	word names CPTH
+7	3 PTDA	kind 4	word names DOOR
+5	3 PTDA	kind 4	word names ECZN
+7	3 PTDA	kind 4	word names GLOB
+19	3 PTDA	kind 4	word names MISC
+8	3 PTDA	kind 4	word names NOCM
+16	3 PTDA	kind 4	word names NPC_
+8	3 PTDA	kind 4	word names OVIS
+4	3 PTDA	kind 4	word names RACE
+218	3 PTDA	kind 4	word names STAT
+7	3 PTDA	kind 4	word names TXST
+9	3 PTDA	kind 4	word names WATR
+2	3 PTDA	kind 4	word names no record (the word does not resolve)
+114	3 PTDA	kind 4	word names no winning record
+35	3 PTDA	kind 4	word names nothing (zero)
+1	3 PTDA	kind 5	word names DOOR
+1	3 PTDA	kind 5	word names NPC_
+1	3 PTDA	kind 5	word names STAT
+1	3 PTDA	kind 5	word names nothing (zero)
+84	3 PTDA	kind 6	word names nothing (zero)
+47	3 PTDA	kind 7	word names KYWD
+2	3 PTDA	kind 8	word names CELL
+35	3 PTDA	kind 8	word names CONT
+10	3 PTDA	kind 8	word names GLOB
+6	3 PTDA	kind 8	word names MISC
+37	3 PTDA	kind 8	word names STAT
+11	3 PTDA	kind 8	word names no winning record
+9	3 PTDA	kind 8	word names nothing (zero)
+3	4 procedures	of a package without a template	Acquire
+24	4 procedures	of a package without a template	Activate
+15	4 procedures	of a package without a template	Eat
+16	4 procedures	of a package without a template	Escort
+13	4 procedures	of a package without a template	Find
+5	4 procedures	of a package without a template	Flee
+54	4 procedures	of a package without a template	Follow
+1	4 procedures	of a package without a template	FollowTo
+32	4 procedures	of a package without a template	ForceGreet
+10	4 procedures	of a package without a template	Guard
+7	4 procedures	of a package without a template	GuardArea
+50	4 procedures	of a package without a template	Headtrack
+22	4 procedures	of a package without a template	HoldPosition
+9	4 procedures	of a package without a template	Hover
+3	4 procedures	of a package without a template	KeepAnEyeOn
+2	4 procedures	of a package without a template	LockDoors
+5	4 procedures	of a package without a template	Orbit
+91	4 procedures	of a package without a template	Patrol
+19	4 procedures	of a package without a template	Range
+124	4 procedures	of a package without a template	Sandbox
+87	4 procedures	of a package without a template	Sit
+10	4 procedures	of a package without a template	Sleep
+204	4 procedures	of a package without a template	Travel
+20	4 procedures	of a package without a template	UnlockDoors
+2	4 procedures	of a package without a template	UseIdleMarker
+1	4 procedures	of a package without a template	UseMagic
+57	4 procedures	of a package without a template	UseWeapon
+97	4 procedures	of a package without a template	Wait
+2	4 procedures	of a package without a template	Wander
+2246	5 scene package actions	Location inputs naming a placed reference	none
+1035	5 scene package actions	Location inputs naming a placed reference	one (a destination under the rule)
+7	5 scene package actions	Location inputs naming a placed reference	several (no destination under the rule)
+4	5 scene package actions	PNAM names no package read
+3292	5 scene package actions	actions of kind 1
+2	5 scene package actions	first procedure of the template	Acquire (its own)
+6	5 scene package actions	first procedure of the template	Activate
+57	5 scene package actions	first procedure of the template	Escort
+1	5 scene package actions	first procedure of the template	Escort (its own)
+5	5 scene package actions	first procedure of the template	Find
+2	5 scene package actions	first procedure of the template	Find (its own)
+1	5 scene package actions	first procedure of the template	Flee
+11	5 scene package actions	first procedure of the template	Follow
+1	5 scene package actions	first procedure of the template	Follow (its own)
+1	5 scene package actions	first procedure of the template	FollowTo
+24	5 scene package actions	first procedure of the template	Guard
+1	5 scene package actions	first procedure of the template	Headtrack (its own)
+71	5 scene package actions	first procedure of the template	Hover
+39	5 scene package actions	first procedure of the template	Orbit
+38	5 scene package actions	first procedure of the template	Patrol
+8	5 scene package actions	first procedure of the template	Sandbox
+1	5 scene package actions	first procedure of the template	Sandbox (its own)
+372	5 scene package actions	first procedure of the template	Sit
+2428	5 scene package actions	first procedure of the template	Travel
+179	5 scene package actions	first procedure of the template	Travel (its own)
+31	5 scene package actions	first procedure of the template	UseIdleMarker
+3	5 scene package actions	first procedure of the template	UseWeapon
+1	5 scene package actions	first procedure of the template	Wait
+5	5 scene package actions	first procedure of the template	Wait (its own)
+244	5 scene package actions	the action's alias is one of the scene's actors	false
+3044	5 scene package actions	the action's alias is one of the scene's actors	true
+4134	6 alias packages	ALPC values
+3012	6 alias packages	Location inputs naming a placed reference	none
+1030	6 alias packages	Location inputs naming a placed reference	one (a destination under the rule)
+92	6 alias packages	Location inputs naming a placed reference	several (no destination under the rule)
+2299	6 alias packages	aliases with packages
+7 layout	EDID	text	read
+7 layout	PKDT	12 bytes	kept as stored; fields not established
+7 layout	PSDT	12 bytes	not read; not established
+7 layout	CTDA, CIS1, CIS2	conditions	counted (fo4_plugin::condition reads them elsewhere)
+7 layout	QNAM	4 bytes	not read here
+7 layout	PKCU +0	u32	read: the count of data inputs (section 1 checks it)
+7 layout	PKCU +4	FormID	read: a PACK or zero (section 1)
+7 layout	PKCU +8	u32	kept as stored; not established
+7 layout	ANAM (in the inputs)	text	read: the input's type name
+7 layout	CNAM, PLDT, PTDA, PDTO (after an input's ANAM)	value	kept as stored (section 2 sizes)
+7 layout	PLDT +0	u32	read: a kind (section 3)
+7 layout	PLDT +4	word	read: a FormID for the kinds section 3 shows naming records; other kinds not established
+7 layout	PLDT +8	u32	kept as stored; not established
+7 layout	PLDT +12	u32	kept as stored; not established (absent in the PLDT of 12 bytes)
+7 layout	PTDA +0	u32	read: a kind (section 3)
+7 layout	PTDA +4	word	read: a FormID for the kinds section 3 shows naming records; other kinds not established
+7 layout	PTDA +8	u32	kept as stored; not established
+7 layout	UNAM, XNAM, BNAM, PRCB, CITC, FNAM, PKC2, POBA, POEA, POCA, INAM, PDTO after POBA, POEA or POCA, and the rest	various	not read; not established
+7 layout	PNAM after an ANAM Procedure	text	read: a procedure name (section 4)

@@ -1,0 +1,86 @@
+# anim_event_census: kinds and counts only (spec/vm.md, Animation events; spec/havok-behavior.md). Sections: 1 registration calls in the compiled scripts;
+# 2 where the registered names occur; 3 annotation tracks of the clips; 4 behaviour graph files and their root state machines; 5 the file chain from a NIF to its graph.
+204	1 calls	registerforanimationevent	event name	a constant text
+14	1 calls	registerforanimationevent	event name	a script variable with a stored text
+13	1 calls	registerforanimationevent	event name	a variable without a stored text
+17	1 calls	registerforanimationevent	on another script object
+214	1 calls	registerforanimationevent	on self
+2	1 calls	registerforanimationevent	sender	a copy of a value
+5	1 calls	registerforanimationevent	sender	a local never written before the call
+39	1 calls	registerforanimationevent	sender	a parameter
+14	1 calls	registerforanimationevent	sender	a property's variable
+12	1 calls	registerforanimationevent	sender	a script variable
+66	1 calls	registerforanimationevent	sender	self
+23	1 calls	registerforanimationevent	sender	the result of a method getactorref
+6	1 calls	registerforanimationevent	sender	the result of a method getlinkedref
+30	1 calls	registerforanimationevent	sender	the result of a method getref
+34	1 calls	registerforanimationevent	sender	the result of game.getplayer
+231	1 calls	registerforanimationevent	sender type	objectreference
+110	1 calls	unregisterforanimationevent	event name	a constant text
+11	1 calls	unregisterforanimationevent	event name	a script variable with a stored text
+8	1 calls	unregisterforanimationevent	event name	a variable without a stored text
+2	1 calls	unregisterforanimationevent	on another script object
+127	1 calls	unregisterforanimationevent	on self
+32	1 calls	unregisterforanimationevent	sender	a parameter
+11	1 calls	unregisterforanimationevent	sender	a property's variable
+8	1 calls	unregisterforanimationevent	sender	a script variable
+19	1 calls	unregisterforanimationevent	sender	self
+19	1 calls	unregisterforanimationevent	sender	the result of a method getactorref
+4	1 calls	unregisterforanimationevent	sender	the result of a method getlinkedref
+10	1 calls	unregisterforanimationevent	sender	the result of a method getref
+3	1 calls	unregisterforanimationevent	sender	the result of a method gettargetactor
+23	1 calls	unregisterforanimationevent	sender	the result of game.getplayer
+129	1 calls	unregisterforanimationevent	sender type	objectreference
+139	1 event names	distinct registered names (constant or stored)
+98	1 scripts	both
+105	1 scripts	calling RegisterForAnimationEvent
+111	1 scripts	declaring OnAnimationEvent
+10282	1 scripts	read
+6474	2 NIF controller sequences
+1	2 registered names found	a IDLE subrecord EDID	exact text
+5	2 registered names found	a IDLE subrecord ENAM	exact text
+1	2 registered names found	a SCEN subrecord NAM0	exact text
+18	2 registered names found	a text key of a NIF controller sequence	exact text
+5	2 registered names found	a text key of a NIF controller sequence	only ignoring case
+74	2 registered names found	an annotation text of a clip	exact text
+5	2 registered names found	an annotation text of a clip	only ignoring case
+125	2 registered names found	an event name of a behaviour graph	exact text
+4	2 registered names found	an event name of a behaviour graph	only ignoring case
+10	2 registered names found	in none of these places
+16145	3 clips	annotation tracks read
+48556	3 clips	annotations
+1440521	3 clips	tracks
+9886	3 clips	with at least one annotation
+450	4 behaviour graph files
+116	4 root machines	every state plays a Gamebryo sequence
+1	4 root machines	start state (+168) among the state ids	false
+449	4 root machines	start state (+168) among the state ids	true
+811	4 root machines	states by generator class	BGSGamebryoSequenceGenerator
+8	4 root machines	states by generator class	BSBehaviorGraphSwapGenerator
+3	4 root machines	states by generator class	BSBoneSwitchGenerator
+2	4 root machines	states by generator class	BSCyclicBlendTransitionGenerator
+2	4 root machines	states by generator class	BSOffsetAnimationGenerator
+15	4 root machines	states by generator class	BSiStateTaggingGenerator
+1	4 root machines	states by generator class	DynamicAnimationTaggingGenerator
+22	4 root machines	states by generator class	hkbBehaviorReferenceGenerator
+94	4 root machines	states by generator class	hkbBlenderGenerator
+254	4 root machines	states by generator class	hkbClipGenerator
+24	4 root machines	states by generator class	hkbLayerGenerator
+459	4 root machines	states by generator class	hkbModifierGenerator
+11	4 root machines	states by generator class	hkbReferencePoseGenerator
+259	4 root machines	states by generator class	hkbStateMachine
+1775	4 root machines	transition event (+48) within the event table	true
+1775	4 root machines	transition target (+52) among the state ids	true
+1774	4 root machines	transition with a condition (+40)	false
+1	4 root machines	transition with a condition (+40)	true
+954	4 root machines	wildcard transition event within the event table	true
+450	4 root state machines read
+1189	5 chain	NIFs naming a behaviour graph file
+13	5 chain	NIFs whose graph file under meshes is a project file	false
+1176	5 chain	NIFs whose graph file under meshes is a project file	true
+342	5 chain	project files
+2	5 chain	project files not resolving	behaviour MissingPath
+4	5 chain	project files not resolving	character MissingPath
+2	5 chain	project files not resolving	no character
+13	5 chain	project files not resolving	several characters
+321	5 chain	project files whose character and behaviour graph resolve
