@@ -1,5 +1,5 @@
-# Effect census (`effect_census`): 224366 NIF read, 2 unreadable, 86 s
-# enabled placed REFR 1776060, area proxy 3.6769e11; omitted (from bases.tsv) 256436 placements, area 1.5113e11
+# Effect census (`effect_census`): 224366 NIF read, 2 unreadable, 157 s
+# enabled placed REFR 1776060, area proxy 3.6769e11; omitted (from bases.tsv) 224708 placements, area 1.3368e11
 
 3	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min 0 to 0.1, max 0.5 to 0.75, first key 0.5 to 0.75
 9	effect controller ranges: alpha (base colour alpha) (controller not run by a manager): min 0.1 to 0.25, max 0.25 to 0.5, first key 0.1 to 0.25
@@ -818,7 +818,7 @@
 2	effect controllers: falloff start opacity (sequence, loop): stored outside key range (stored from NIF)
 146	effect controllers: falloff start opacity: controller not run by a manager
 2	effect controllers: falloff start opacity: sequence, loop
-146	effect controllers: falloff stop angle (controller not run by a manager): stored outside key range (stored from NIF)
+146	effect controllers: falloff stop angle (controller not run by a manager): stored = cosine of the first key read as degrees (stored from NIF)
 146	effect controllers: falloff stop angle: controller not run by a manager
 10	effect controllers: flags 0x0041 (controller not run by a manager)
 156	effect controllers: flags 0x0045 (controller not run by a manager)
@@ -1074,15 +1074,15 @@
 339	effect material fields: version: 2
 221	effect material fields: z write / z test: 0 1
 118	effect material fields: z write / z test: 1 1
-4910	effect shader fields: Environment Map Texture set: false
+4909	effect shader fields: Environment Map Texture set: false
 398	effect shader fields: Environment Map Texture set: true
-5033	effect shader fields: Environment Mask Texture set: false
+5032	effect shader fields: Environment Mask Texture set: false
 275	effect shader fields: Environment Mask Texture set: true
-2711	effect shader fields: Greyscale Texture set: false
+2710	effect shader fields: Greyscale Texture set: false
 2597	effect shader fields: Greyscale Texture set: true
-4757	effect shader fields: Normal Texture set: false
+4756	effect shader fields: Normal Texture set: false
 551	effect shader fields: Normal Texture set: true
-774	effect shader fields: Source Texture set: false
+773	effect shader fields: Source Texture set: false
 4534	effect shader fields: Source Texture set: true
 36	effect shader fields: base colour alpha: 0 to 0.1
 83	effect shader fields: base colour alpha: 0.1 to 0.25
@@ -1098,11 +1098,11 @@
 49	effect shader fields: base colour alpha: = 0.25
 172	effect shader fields: base colour alpha: = 0.5
 121	effect shader fields: base colour alpha: = 0.75
-2544	effect shader fields: base colour alpha: = 1
+2543	effect shader fields: base colour alpha: = 1
 25	effect shader fields: base colour alpha: = 1.5
 25	effect shader fields: base colour alpha: = 2
 125	effect shader fields: base colour rgb: 0 0 0
-2819	effect shader fields: base colour rgb: 1 1 1
+2818	effect shader fields: base colour rgb: 1 1 1
 1814	effect shader fields: base colour rgb: colour
 550	effect shader fields: base colour rgb: grey (r = g = b)
 2	effect shader fields: base colour scale: 0 to 0.1
@@ -1120,13 +1120,13 @@
 67	effect shader fields: base colour scale: = 0.25
 111	effect shader fields: base colour scale: = 0.5
 37	effect shader fields: base colour scale: = 0.75
-2100	effect shader fields: base colour scale: = 1
+2099	effect shader fields: base colour scale: = 1
 359	effect shader fields: base colour scale: = 1.5
 256	effect shader fields: base colour scale: = 10
 399	effect shader fields: base colour scale: = 2
 116	effect shader fields: base colour scale: = 5
-5308	effect shader fields: block read to the last byte: true
-5294	effect shader fields: env map min lod / unused byte: 0 0
+5307	effect shader fields: block read to the last byte: true
+5293	effect shader fields: env map min lod / unused byte: 0 0
 11	effect shader fields: env map min lod / unused byte: 1 0
 2	effect shader fields: env map min lod / unused byte: 2 0
 1	effect shader fields: env map min lod / unused byte: 3 0
@@ -1143,7 +1143,7 @@
 35	effect shader fields: environment map scale: = 0.25
 44	effect shader fields: environment map scale: = 0.5
 34	effect shader fields: environment map scale: = 0.75
-4678	effect shader fields: environment map scale: = 1
+4677	effect shader fields: environment map scale: = 1
 7	effect shader fields: environment map scale: = 1.5
 12	effect shader fields: environment map scale: = 10
 5	effect shader fields: environment map scale: = 2
@@ -1296,7 +1296,7 @@
 2	effect shader fields: falloff flag set: opacities (start stop): 1 1
 1401	effect shader fields: lighting influence (byte): 1 to 254 (128 or more)
 307	effect shader fields: lighting influence (byte): 1 to 254 (below 128)
-3600	effect shader fields: lighting influence (byte): 255
+3599	effect shader fields: lighting influence (byte): 255
 1167	effect shader fields: soft falloff depth: 10 to 100
 376	effect shader fields: soft falloff depth: 100 to 1000
 165	effect shader fields: soft falloff depth: 2 to 5
@@ -1304,7 +1304,7 @@
 3	effect shader fields: soft falloff depth: = 0
 39	effect shader fields: soft falloff depth: = 1
 115	effect shader fields: soft falloff depth: = 10
-2789	effect shader fields: soft falloff depth: = 100
+2788	effect shader fields: soft falloff depth: = 100
 6	effect shader fields: soft falloff depth: = 1000
 66	effect shader fields: soft falloff depth: = 2
 271	effect shader fields: soft falloff depth: = 5
@@ -1312,12 +1312,12 @@
 132	effect shader fields: texture clamp mode: 0
 79	effect shader fields: texture clamp mode: 1
 208	effect shader fields: texture clamp mode: 2
-4889	effect shader fields: texture clamp mode: 3
-4132	effect shader fields: uv offset / scale: offset 0 0 scale 1 1
+4888	effect shader fields: texture clamp mode: 3
+4131	effect shader fields: uv offset / scale: offset 0 0 scale 1 1
 467	effect shader fields: uv offset / scale: offset 0 0 scale other
 432	effect shader fields: uv offset / scale: offset other scale 1 1
 277	effect shader fields: uv offset / scale: offset other scale other
-5308	effect shapes
+5307	effect shapes
 186	effect shapes with BGEM: palette alpha NIF/BGEM 0/0 falloff NIF/BGEM 0/0 soft NIF/BGEM 0/0
 25	effect shapes with BGEM: palette alpha NIF/BGEM 0/0 falloff NIF/BGEM 0/0 soft NIF/BGEM 1/1
 62	effect shapes with BGEM: palette alpha NIF/BGEM 0/0 falloff NIF/BGEM 1/1 soft NIF/BGEM 0/0
@@ -1520,7 +1520,7 @@
 1	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 1 func 4 threshold 8; palette colour 1 palette alpha 1 falloff 0 soft 1 vertex colours 1 vertex alpha 0
 6	effect shapes: alpha property x flags: blend 1 src 6 dst 7 test 1 func 4 threshold 90; palette colour 0 palette alpha 0 falloff 0 soft 1 vertex colours 1 vertex alpha 0
 206	effect shapes: alpha property x flags: no alpha property; palette colour 0 palette alpha 0 falloff 0 soft 0 vertex colours 0 vertex alpha 0
-97	effect shapes: alpha property x flags: no alpha property; palette colour 0 palette alpha 0 falloff 0 soft 0 vertex colours 1 vertex alpha 0
+96	effect shapes: alpha property x flags: no alpha property; palette colour 0 palette alpha 0 falloff 0 soft 0 vertex colours 1 vertex alpha 0
 2	effect shapes: alpha property x flags: no alpha property; palette colour 0 palette alpha 0 falloff 0 soft 0 vertex colours 1 vertex alpha 1
 10	effect shapes: alpha property x flags: no alpha property; palette colour 0 palette alpha 0 falloff 0 soft 1 vertex colours 1 vertex alpha 0
 112	effect shapes: alpha property x flags: no alpha property; palette colour 1 palette alpha 0 falloff 0 soft 0 vertex colours 1 vertex alpha 0
@@ -1564,14 +1564,14 @@
 1	effect shapes: alpha property: blend 1 src 6 dst 7 test 1 func 4 threshold 8
 8	effect shapes: alpha property: blend 1 src 6 dst 7 test 1 func 4 threshold 83
 6	effect shapes: alpha property: blend 1 src 6 dst 7 test 1 func 4 threshold 90
-428	effect shapes: alpha property: no alpha property
+427	effect shapes: alpha property: no alpha property
 3726	effect shapes: controlled
 634	effect shapes: drawn texture x palette alpha 0: alpha 1 everywhere
 2336	effect shapes: drawn texture x palette alpha 0: alpha varies (min 0.00
 283	effect shapes: drawn texture x palette alpha 0: alpha varies (min 0.25
 62	effect shapes: drawn texture x palette alpha 0: alpha varies (min 0.50
 89	effect shapes: drawn texture x palette alpha 0: alpha varies (min 0.75
-777	effect shapes: drawn texture x palette alpha 0: no texture
+776	effect shapes: drawn texture x palette alpha 0: no texture
 21	effect shapes: drawn texture x palette alpha 0: texture missing or unreadable
 121	effect shapes: drawn texture x palette alpha 1: alpha 1 everywhere
 857	effect shapes: drawn texture x palette alpha 1: alpha varies (min 0.00
@@ -1603,7 +1603,7 @@
 1	effect shapes: drawn texture: BGRA8 grey, alpha 1 everywhere
 5	effect shapes: drawn texture: BGRA8 grey, alpha varies (min 0.00, max 0.75)
 4	effect shapes: drawn texture: BGRA8 grey, alpha varies (min 0.00, max 1.00)
-777	effect shapes: drawn texture: no texture
+776	effect shapes: drawn texture: no texture
 24	effect shapes: drawn texture: texture missing or unreadable
 197	effect shapes: flags 1 bit 01
 509	effect shapes: flags 1 bit 03
@@ -1618,16 +1618,16 @@
 117	effect shapes: flags 1 bit 27
 2007	effect shapes: flags 1 bit 29
 2359	effect shapes: flags 1 bit 30
-5301	effect shapes: flags 1 bit 31
-940	effect shapes: flags 2 bit 00
+5300	effect shapes: flags 1 bit 31
+939	effect shapes: flags 2 bit 00
 136	effect shapes: flags 2 bit 03
 1883	effect shapes: flags 2 bit 04
-4168	effect shapes: flags 2 bit 05
+4167	effect shapes: flags 2 bit 05
 172	effect shapes: flags 2 bit 07
 2007	effect shapes: flags 2 bit 30
 8	effect shapes: largest vertex alpha x flags: 0 (every vertex alpha 0); vertex colours flag 1 vertex alpha flag 0
 1	effect shapes: largest vertex alpha x flags: 0 (every vertex alpha 0); vertex colours flag 1 vertex alpha flag 1
-312	effect shapes: largest vertex alpha x flags: 0.5 to 1; vertex colours flag 1 vertex alpha flag 0
+311	effect shapes: largest vertex alpha x flags: 0.5 to 1; vertex colours flag 1 vertex alpha flag 0
 54	effect shapes: largest vertex alpha x flags: 0.5 to 1; vertex colours flag 1 vertex alpha flag 1
 2165	effect shapes: largest vertex alpha x flags: 1; vertex colours flag 1 vertex alpha flag 0
 301	effect shapes: largest vertex alpha x flags: 1; vertex colours flag 1 vertex alpha flag 1
@@ -1636,8 +1636,8 @@
 339	effect shapes: material: BGEM
 2	effect shapes: material: material missing
 1	effect shapes: material: material unreadable
-4966	effect shapes: material: no material named
-1582	effect shapes: not controlled
+4965	effect shapes: material: no material named
+1581	effect shapes: not controlled
 1070	effect shapes: vertex data x flags: no vertex colours; vertex colours flag 0 vertex alpha flag 0
 2	effect shapes: vertex data x flags: no vertex colours; vertex colours flag 0 vertex alpha flag 1
 68	effect shapes: vertex data x flags: no vertex data; vertex colours flag 0 vertex alpha flag 0
@@ -1673,23 +1673,23 @@
 5	effect shapes: vertex data x flags: vertex colours: rgb vary, alpha min 0.5; vertex colours flag 1 vertex alpha flag 0
 1	effect shapes: vertex data x flags: vertex colours: rgb vary, alpha min 0.5; vertex colours flag 1 vertex alpha flag 1
 1	effect shapes: vertex data x flags: vertex colours: rgb vary, alpha min 0.6; vertex colours flag 1 vertex alpha flag 1
-19	effect shapes: vertex data x flags: vertex colours: rgb vary, alpha min 0.7; vertex colours flag 1 vertex alpha flag 0
+18	effect shapes: vertex data x flags: vertex colours: rgb vary, alpha min 0.7; vertex colours flag 1 vertex alpha flag 0
 2	effect shapes: vertex data x flags: vertex colours: rgb vary, alpha min 0.7; vertex colours flag 1 vertex alpha flag 1
 23	effect shapes: vertex data x flags: vertex colours: rgb vary, alpha min 0.8; vertex colours flag 1 vertex alpha flag 0
 9	effect shapes: vertex data x flags: vertex colours: rgb vary, alpha min 0.9; vertex colours flag 1 vertex alpha flag 0
 1	effect shapes: vertex data x flags: vertex colours: rgb vary, alpha min 0.9; vertex colours flag 1 vertex alpha flag 1
 3	models by open rest tags: alpha
-1	models by open rest tags: alpha + behavior-graph + effect-emissive + effect-first-key + other + texture-transform + transform-varies
-1	models by open rest tags: alpha + behavior-graph + effect-emissive + effect-first-key + texture-transform + transform-varies
+1	models by open rest tags: alpha + behavior-graph + effect-emissive + effect-first-key + other + texture-first-key + texture-transform + transform-varies
+1	models by open rest tags: alpha + behavior-graph + effect-emissive + effect-first-key + texture-first-key + texture-transform + transform-varies
 30	models by open rest tags: alpha + behavior-graph + effect-first-key
-2	models by open rest tags: alpha + behavior-graph + effect-first-key + effect-idle + manager-loop + texture-transform + transform-varies
+2	models by open rest tags: alpha + behavior-graph + effect-first-key + effect-idle + manager-loop + texture-first-key + transform-varies
 2	models by open rest tags: alpha + behavior-graph + effect-first-key + other
 2	models by open rest tags: alpha + behavior-graph + effect-first-key + other + texture-transform + transform-varies
 2	models by open rest tags: alpha + behavior-graph + effect-first-key + transform-varies
 2	models by open rest tags: alpha + behavior-graph + other + texture-transform
 8	models by open rest tags: alpha + effect-emissive
 3	models by open rest tags: alpha + effect-emissive + effect-first-key
-1	models by open rest tags: alpha + effect-emissive + effect-first-key + other + texture-transform + transform-varies
+1	models by open rest tags: alpha + effect-emissive + effect-first-key + other + texture-first-key + texture-transform + transform-varies
 5	models by open rest tags: alpha + effect-emissive + effect-first-key + texture-transform
 2	models by open rest tags: alpha + effect-emissive + texture-transform
 33	models by open rest tags: alpha + effect-first-key
@@ -1701,21 +1701,24 @@
 1	models by open rest tags: behavior-graph + effect-emissive + effect-first-key + other + transform-varies
 34	models by open rest tags: behavior-graph + effect-first-key
 8	models by open rest tags: behavior-graph + effect-first-key + effect-idle
-46	models by open rest tags: behavior-graph + effect-first-key + effect-idle + manager-loop
-23	models by open rest tags: behavior-graph + effect-first-key + effect-idle + manager-loop + other + particle
+41	models by open rest tags: behavior-graph + effect-first-key + effect-idle + manager-loop
+13	models by open rest tags: behavior-graph + effect-first-key + effect-idle + manager-loop + other + particle
+10	models by open rest tags: behavior-graph + effect-first-key + effect-idle + manager-loop + other + particle + texture-first-key
 14	models by open rest tags: behavior-graph + effect-first-key + effect-idle + manager-loop + other + particle + visibility
 1	models by open rest tags: behavior-graph + effect-first-key + effect-idle + manager-loop + other + transform-varies + visibility
 17	models by open rest tags: behavior-graph + effect-first-key + effect-idle + manager-loop + other + visibility
-1	models by open rest tags: behavior-graph + effect-first-key + effect-idle + manager-loop + texture-transform
-1	models by open rest tags: behavior-graph + effect-first-key + effect-idle + manager-loop + transform-varies
+6	models by open rest tags: behavior-graph + effect-first-key + effect-idle + manager-loop + texture-first-key
+1	models by open rest tags: behavior-graph + effect-first-key + effect-idle + manager-loop + texture-first-key + transform-varies
 3	models by open rest tags: behavior-graph + effect-first-key + effect-idle + other
 15	models by open rest tags: behavior-graph + effect-first-key + effect-idle + other + particle
-1	models by open rest tags: behavior-graph + effect-first-key + effect-idle + other + particle + texture-transform + transform-varies + visibility
+1	models by open rest tags: behavior-graph + effect-first-key + effect-idle + other + particle + texture-first-key + transform-varies + visibility
 4	models by open rest tags: behavior-graph + effect-first-key + effect-idle + other + particle + visibility
 3	models by open rest tags: behavior-graph + effect-first-key + effect-idle + other + visibility
-8	models by open rest tags: behavior-graph + effect-first-key + manager-loop
-2	models by open rest tags: behavior-graph + effect-first-key + manager-loop + other + particle
+7	models by open rest tags: behavior-graph + effect-first-key + manager-loop
+1	models by open rest tags: behavior-graph + effect-first-key + manager-loop + other + particle
+1	models by open rest tags: behavior-graph + effect-first-key + manager-loop + other + particle + texture-first-key
 3	models by open rest tags: behavior-graph + effect-first-key + manager-loop + other + visibility
+1	models by open rest tags: behavior-graph + effect-first-key + manager-loop + texture-first-key
 1	models by open rest tags: behavior-graph + effect-first-key + other
 8	models by open rest tags: behavior-graph + effect-first-key + other + particle
 1	models by open rest tags: behavior-graph + effect-first-key + other + particle + visibility
@@ -1723,61 +1726,69 @@
 1	models by open rest tags: behavior-graph + effect-first-key + other + transform-varies
 1	models by open rest tags: behavior-graph + effect-first-key + other + transform-varies + visibility
 2	models by open rest tags: behavior-graph + effect-first-key + other + visibility
-1	models by open rest tags: behavior-graph + effect-first-key + texture-transform
-2	models by open rest tags: behavior-graph + effect-first-key + texture-transform + transform-varies + visibility
+1	models by open rest tags: behavior-graph + effect-first-key + texture-first-key + texture-transform
+2	models by open rest tags: behavior-graph + effect-first-key + texture-first-key + transform-varies + visibility
 6	models by open rest tags: behavior-graph + effect-first-key + transform-varies
 50	models by open rest tags: behavior-graph + effect-idle
-49	models by open rest tags: behavior-graph + effect-idle + manager-loop
-8	models by open rest tags: behavior-graph + effect-idle + manager-loop + other
+48	models by open rest tags: behavior-graph + effect-idle + manager-loop
+4	models by open rest tags: behavior-graph + effect-idle + manager-loop + other
 41	models by open rest tags: behavior-graph + effect-idle + manager-loop + other + particle
 11	models by open rest tags: behavior-graph + effect-idle + manager-loop + other + particle + visibility
-2	models by open rest tags: behavior-graph + effect-idle + manager-loop + other + texture-transform + visibility
+4	models by open rest tags: behavior-graph + effect-idle + manager-loop + other + texture-first-key
+2	models by open rest tags: behavior-graph + effect-idle + manager-loop + other + texture-first-key + texture-transform + visibility
 1	models by open rest tags: behavior-graph + effect-idle + manager-loop + other + transform-varies + visibility
 22	models by open rest tags: behavior-graph + effect-idle + manager-loop + other + visibility
-1	models by open rest tags: behavior-graph + effect-idle + manager-loop + texture-transform
+2	models by open rest tags: behavior-graph + effect-idle + manager-loop + texture-first-key
 2	models by open rest tags: behavior-graph + effect-idle + manager-loop + transform-varies
 1	models by open rest tags: behavior-graph + effect-idle + other
 8	models by open rest tags: behavior-graph + effect-idle + other + particle
 1	models by open rest tags: behavior-graph + effect-idle + other + particle + visibility
 38	models by open rest tags: behavior-graph + effect-idle + other + visibility
 1	models by open rest tags: behavior-graph + effect-idle + transform-varies
-60	models by open rest tags: behavior-graph + manager-loop
+54	models by open rest tags: behavior-graph + manager-loop
 5	models by open rest tags: behavior-graph + manager-loop + other
 22	models by open rest tags: behavior-graph + manager-loop + other + particle
 1	models by open rest tags: behavior-graph + manager-loop + other + particle + transform-varies
 6	models by open rest tags: behavior-graph + manager-loop + other + particle + visibility
 40	models by open rest tags: behavior-graph + manager-loop + other + visibility
+2	models by open rest tags: behavior-graph + manager-loop + texture-first-key
 1	models by open rest tags: behavior-graph + manager-loop + transform-varies
 2	models by open rest tags: effect-emissive + effect-first-key
-10	models by open rest tags: effect-emissive + effect-first-key + texture-transform
-2	models by open rest tags: effect-emissive + texture-transform
+4	models by open rest tags: effect-emissive + effect-first-key + texture-first-key + texture-transform
+6	models by open rest tags: effect-emissive + effect-first-key + texture-transform
+1	models by open rest tags: effect-emissive + texture-first-key + texture-transform
+1	models by open rest tags: effect-emissive + texture-transform
 311	models by open rest tags: effect-first-key
 6	models by open rest tags: effect-first-key + effect-idle
 15	models by open rest tags: effect-first-key + effect-idle + manager-loop
 2	models by open rest tags: effect-first-key + effect-idle + manager-loop + other
-1	models by open rest tags: effect-first-key + effect-idle + manager-loop + other + particle
+1	models by open rest tags: effect-first-key + effect-idle + manager-loop + other + particle + texture-first-key
 3	models by open rest tags: effect-first-key + effect-idle + manager-loop + other + particle + visibility
 3	models by open rest tags: effect-first-key + effect-idle + manager-loop + other + visibility
 6	models by open rest tags: effect-first-key + effect-idle + other
 18	models by open rest tags: effect-first-key + effect-idle + other + particle
 7	models by open rest tags: effect-first-key + effect-idle + other + particle + visibility
 8	models by open rest tags: effect-first-key + effect-idle + other + visibility
-146	models by open rest tags: effect-first-key + falloff
+146	models by open rest tags: effect-first-key + falloff-degrees
 6	models by open rest tags: effect-first-key + manager-loop
 1	models by open rest tags: effect-first-key + manager-loop + other + particle
 1	models by open rest tags: effect-first-key + manager-loop + other + particle + visibility
-3	models by open rest tags: effect-first-key + manager-loop + other + visibility
+1	models by open rest tags: effect-first-key + manager-loop + other + texture-first-key + visibility
+2	models by open rest tags: effect-first-key + manager-loop + other + visibility
 53	models by open rest tags: effect-first-key + other
 32	models by open rest tags: effect-first-key + other + particle
 14	models by open rest tags: effect-first-key + other + particle + visibility
-22	models by open rest tags: effect-first-key + other + texture-transform
-1	models by open rest tags: effect-first-key + other + texture-transform + transform-varies
+21	models by open rest tags: effect-first-key + other + texture-first-key
+1	models by open rest tags: effect-first-key + other + texture-first-key + transform-varies
+1	models by open rest tags: effect-first-key + other + texture-transform
 1	models by open rest tags: effect-first-key + other + texture-transform + visibility
 30	models by open rest tags: effect-first-key + other + transform-varies
 2	models by open rest tags: effect-first-key + other + transform-varies + visibility
 5	models by open rest tags: effect-first-key + other + visibility
-21	models by open rest tags: effect-first-key + texture-transform
-6	models by open rest tags: effect-first-key + texture-transform + transform-varies
+14	models by open rest tags: effect-first-key + texture-first-key
+5	models by open rest tags: effect-first-key + texture-first-key + transform-varies
+7	models by open rest tags: effect-first-key + texture-transform
+1	models by open rest tags: effect-first-key + texture-transform + transform-varies
 34	models by open rest tags: effect-first-key + transform-varies
 21	models by open rest tags: effect-first-key + transform-varies + visibility
 1	models by open rest tags: effect-first-key + visibility
@@ -1787,137 +1798,133 @@
 3	models by open rest tags: effect-idle + manager-loop + other + visibility
 1	models by open rest tags: effect-idle + other + particle
 98	models by open rest tags: manager-loop
-2	models by open rest tags: manager-loop + other
 6	models by open rest tags: manager-loop + other + particle
+2	models by open rest tags: manager-loop + other + texture-first-key
 2	models by open rest tags: manager-loop + other + visibility
 4	models by open rest tags: other + texture-transform
 31	models by open rest tags: texture-transform
 1	models by open rest tags: texture-transform + transform-varies
-1651	models: in scope
-571	models: in scope, named by placed bases
+1647	models: in scope
+570	models: in scope, named by placed bases
 13539	sequence controlled blocks on effect shaders: interpolator NiFloatInterpolator
 1495	sequence controlled blocks on effect shaders: interpolator NiPoint3Interpolator
-2596	sequences: sequence, clamp
-2596	sequences: sequence, clamp: frequency = 1
-932	sequences: sequence, clamp: length in seconds 0 to 0.1
+2587	sequences: sequence, clamp
+2587	sequences: sequence, clamp: frequency = 1
+930	sequences: sequence, clamp: length in seconds 0 to 0.1
 190	sequences: sequence, clamp: length in seconds 0.1 to 0.25
-645	sequences: sequence, clamp: length in seconds 0.25 to 0.5
+642	sequences: sequence, clamp: length in seconds 0.25 to 0.5
 78	sequences: sequence, clamp: length in seconds 0.5 to 0.75
 138	sequences: sequence, clamp: length in seconds 0.75 to 1
 93	sequences: sequence, clamp: length in seconds 1 to 1.5
 43	sequences: sequence, clamp: length in seconds 1.5 to 2
 75	sequences: sequence, clamp: length in seconds 10 to 100
 1	sequences: sequence, clamp: length in seconds 100 to 1000
-191	sequences: sequence, clamp: length in seconds 2 to 5
+188	sequences: sequence, clamp: length in seconds 2 to 5
 92	sequences: sequence, clamp: length in seconds 5 to 10
 5	sequences: sequence, clamp: length in seconds = 0.1
 46	sequences: sequence, clamp: length in seconds = 0.5
 22	sequences: sequence, clamp: length in seconds = 1
 6	sequences: sequence, clamp: length in seconds = 1.5
 17	sequences: sequence, clamp: length in seconds = 10
-19	sequences: sequence, clamp: length in seconds = 2
+18	sequences: sequence, clamp: length in seconds = 2
 3	sequences: sequence, clamp: length in seconds = 5
-1001	sequences: sequence, loop
-1001	sequences: sequence, loop: frequency = 1
+993	sequences: sequence, loop
+993	sequences: sequence, loop: frequency = 1
 54	sequences: sequence, loop: length in seconds 0 to 0.1
 107	sequences: sequence, loop: length in seconds 0.1 to 0.25
-91	sequences: sequence, loop: length in seconds 0.25 to 0.5
+90	sequences: sequence, loop: length in seconds 0.25 to 0.5
 60	sequences: sequence, loop: length in seconds 0.5 to 0.75
 21	sequences: sequence, loop: length in seconds 0.75 to 1
-51	sequences: sequence, loop: length in seconds 1 to 1.5
+50	sequences: sequence, loop: length in seconds 1 to 1.5
 59	sequences: sequence, loop: length in seconds 1.5 to 2
-147	sequences: sequence, loop: length in seconds 10 to 100
+146	sequences: sequence, loop: length in seconds 10 to 100
 13	sequences: sequence, loop: length in seconds 100 to 1000
-203	sequences: sequence, loop: length in seconds 2 to 5
+199	sequences: sequence, loop: length in seconds 2 to 5
 78	sequences: sequence, loop: length in seconds 5 to 10
 6	sequences: sequence, loop: length in seconds = 0.1
 4	sequences: sequence, loop: length in seconds = 0.5
 63	sequences: sequence, loop: length in seconds = 1
 1	sequences: sequence, loop: length in seconds = 1.5
 8	sequences: sequence, loop: length in seconds = 10
-24	sequences: sequence, loop: length in seconds = 2
+23	sequences: sequence, loop: length in seconds = 2
 11	sequences: sequence, loop: length in seconds = 5
-5308	shapes: shader BSEffectShaderProperty
-5766	shapes: shader BSLightingShaderProperty
+5307	shapes: shader BSEffectShaderProperty
+5749	shapes: shader BSLightingShaderProperty
 256	shapes: shader none
 
 # Classes (open tags || facts): models, placements, area share of all placed, omitted placements, omitted area share of all omitted
 
-146	407	25.990%	407	63.229%	rest not settled: falloff
-26	12882	2.593%	12882	6.307%	settled, effect surfaces fail: falloff + vertex alpha without its flag
-28	667	0.578%	667	1.406%	settled, effect surfaces fail: colour above 1 + vertex alpha without its flag
-30	1517	0.267%	1517	0.649%	rest not settled: effect-idle + manager-loop
-11	316	0.173%	316	0.420%	rest not settled: alpha + effect-emissive
-6	803	0.157%	803	0.382%	rest not settled: effect-idle + manager-loop + other + visibility
-5	6	0.150%	6	0.366%	rest not settled: behavior-graph + effect-idle + other + particle + visibility
-18	883	0.147%	883	0.357%	settled, effect surfaces fail: colour above 1 + falloff + vertex alpha without its flag
-8	266	0.146%	266	0.354%	rest not settled: alpha + texture-transform
-4	86	0.136%	86	0.331%	settled, effect surfaces fail: colour above 1 + env map, refraction or colour falloff + vertex alpha without its flag
-52	386	0.100%	384	0.243%	rest not settled: texture-transform
-36	977	0.090%	977	0.219%	rest not settled: alpha
-7	68	0.056%	68	0.137%	rest not settled: alpha + effect-emissive + texture-transform
-104	1370	0.040%	1370	0.097%	rest not settled: manager-loop
-95	4664	0.036%	4664	0.089%	rest not settled: behavior-graph + effect-idle + manager-loop
-25	57	0.036%	57	0.088%	rest not settled: behavior-graph + effect-idle + manager-loop + other + particle + visibility
-26	342	0.019%	342	0.046%	rest not settled: other + texture-transform
-1	121	0.018%	121	0.043%	rest not settled: manager-loop + other + particle + visibility
-68	661	0.014%	660	0.033%	rest not settled: behavior-graph + manager-loop
-8	954	0.012%	954	0.029%	settled, effect surfaces fail: falloff + palette + vertex alpha without its flag
-36	353	0.010%	353	0.025%	settled, effect surfaces fail: palette + vertex alpha without its flag
-39	83	0.009%	83	0.023%	rest not settled: behavior-graph + effect-idle + manager-loop + other + visibility
-53	370	0.008%	370	0.020%	rest not settled: other
-34	21	0.008%	21	0.019%	rest not settled: transform-varies
-24	39	0.008%	39	0.019%	rest not settled: behavior-graph + manager-loop + other + particle
-34	340	0.007%	340	0.018%	rest not settled: behavior-graph
-13	409	0.006%	9	0.003%	settled, every effect surface passes
-64	1498	0.006%	1497	0.015%	rest not settled: behavior-graph + effect-idle + manager-loop + other + particle
-2	17	0.005%	17	0.012%	rest not settled: effect-emissive
-1	118	0.004%	118	0.010%	rest not settled: behavior-graph + effect-idle + transform-varies
-58	233	0.003%	233	0.007%	rest not settled: behavior-graph + effect-idle
-1	2	0.003%	2	0.006%	settled, effect surfaces fail: alpha outside 0 to 1 + colour above 1 + env map, refraction or colour falloff + falloff + vertex alpha without its flag
-23	173	0.002%	173	0.005%	rest not settled: behavior-graph + effect-idle + other + particle
-3	803	0.002%	469	0.001%	settled, effect surfaces fail: falloff
-26	119	0.001%	119	0.003%	settled, effect surfaces fail: colour above 1 + palette + vertex alpha without its flag
-11	89	0.001%	89	0.003%	settled, effect surfaces fail: colour above 1
+236	657	25.991%	655	71.489%	settled, effect surfaces fail: colour above 1 + palette
+59	14336	2.601%	11945	5.727%	settled, every effect surface passes
+57	1639	0.726%	1400	1.988%	settled, effect surfaces fail: colour above 1
+30	1517	0.267%	1517	0.734%	rest not settled: effect-idle + manager-loop
+11	316	0.173%	316	0.475%	rest not settled: alpha + effect-emissive
+6	803	0.157%	803	0.432%	rest not settled: effect-idle + manager-loop + other + visibility
+5	6	0.150%	6	0.414%	rest not settled: behavior-graph + effect-idle + other + particle + visibility
+8	266	0.146%	266	0.401%	rest not settled: alpha + texture-transform
+7	89	0.136%	89	0.375%	settled, effect surfaces fail: colour above 1 + env map, refraction or colour falloff
+38	256	0.100%	254	0.274%	rest not settled: texture-transform
+36	977	0.090%	977	0.247%	rest not settled: alpha
+7	68	0.056%	68	0.155%	rest not settled: alpha + effect-emissive + texture-transform
+104	1370	0.040%	1370	0.109%	rest not settled: manager-loop
+25	57	0.036%	57	0.100%	rest not settled: behavior-graph + effect-idle + manager-loop + other + particle + visibility
+89	4480	0.036%	4480	0.099%	rest not settled: behavior-graph + effect-idle + manager-loop
+52	1307	0.022%	1104	0.040%	settled, effect surfaces fail: palette
+21	195	0.019%	195	0.052%	rest not settled: other + texture-first-key
+1	121	0.018%	121	0.049%	rest not settled: manager-loop + other + particle + visibility
+61	624	0.013%	623	0.037%	rest not settled: behavior-graph + manager-loop
+39	83	0.009%	83	0.026%	rest not settled: behavior-graph + effect-idle + manager-loop + other + visibility
+53	370	0.008%	370	0.023%	rest not settled: other
+34	21	0.008%	21	0.021%	rest not settled: transform-varies
+23	20	0.008%	20	0.021%	rest not settled: behavior-graph + manager-loop + other + particle
+34	340	0.007%	340	0.020%	rest not settled: behavior-graph
+2	17	0.005%	17	0.014%	rest not settled: effect-emissive
+54	745	0.004%	744	0.012%	rest not settled: behavior-graph + effect-idle + manager-loop + other + particle
+1	118	0.004%	118	0.011%	rest not settled: behavior-graph + effect-idle + transform-varies
+58	233	0.003%	233	0.008%	rest not settled: behavior-graph + effect-idle
+3	4	0.003%	2	0.004%	settled, effect surfaces fail: alpha outside 0 to 1 + colour above 1 + env map, refraction or colour falloff
+23	173	0.002%	173	0.006%	rest not settled: behavior-graph + effect-idle + other + particle
+10	753	0.002%	753	0.005%	rest not settled: behavior-graph + effect-idle + manager-loop + other + particle + texture-first-key
 6	120	0.001%	120	0.003%	rest not settled: behavior-graph + transform-varies
 1	1	0.001%	1	0.002%	rest not settled: behavior-graph + manager-loop + other + particle + transform-varies
-1	126	0.001%	126	0.002%	rest not settled: alpha + behavior-graph + effect-emissive + other + texture-transform + transform-varies
-12	1249	0.001%	1249	0.001%	rest not settled: effect-emissive + texture-transform
-1	1	0.000%	1	0.001%	rest not settled: behavior-graph + effect-idle + other + particle + texture-transform + transform-varies + visibility
-26	128	0.000%	128	0.001%	settled, effect surfaces fail: colour above 1 + palette
-1	33	0.000%	33	0.001%	rest not settled: alpha + behavior-graph + effect-emissive + texture-transform + transform-varies
-2	3	0.000%	3	0.001%	settled, effect surfaces fail: colour above 1 + env map, refraction or colour falloff + falloff + vertex alpha without its flag
+1	126	0.001%	126	0.002%	rest not settled: alpha + behavior-graph + effect-emissive + other + texture-first-key + texture-transform + transform-varies
+7	1249	0.001%	1249	0.001%	rest not settled: effect-emissive + texture-transform
+1	1	0.000%	1	0.001%	rest not settled: behavior-graph + effect-idle + other + particle + texture-first-key + transform-varies + visibility
+8	192	0.000%	192	0.001%	rest not settled: behavior-graph + effect-idle + manager-loop + texture-first-key
+3	29	0.000%	29	0.001%	rest not settled: behavior-graph + manager-loop + texture-first-key
+1	33	0.000%	33	0.001%	rest not settled: alpha + behavior-graph + effect-emissive + texture-first-key + texture-transform + transform-varies
 43	92	0.000%	92	0.001%	rest not settled: behavior-graph + manager-loop + other + visibility
+14	130	0.000%	107	0.000%	rest not settled: texture-first-key
 1	3	0.000%	3	0.000%	rest not settled: alpha + other
 9	393	0.000%	393	0.000%	rest not settled: effect-idle
 2	13	0.000%	13	0.000%	rest not settled: alpha + behavior-graph + transform-varies
-15	242	0.000%	232	0.000%	settled, effect surfaces fail: vertex alpha without its flag
-1	2	0.000%	2	0.000%	settled, effect surfaces fail: alpha outside 0 to 1 + colour above 1 + env map, refraction or colour falloff + vertex alpha without its flag
 41	78	0.000%	78	0.000%	rest not settled: behavior-graph + effect-idle + other + visibility
-2	8	0.000%	8	0.000%	rest not settled: behavior-graph + effect-idle + manager-loop + texture-transform
-1	5	0.000%	5	0.000%	rest not settled: other + texture-transform + transform-varies
-22	276	0.000%	276	0.000%	settled, effect surfaces fail: env map, refraction or colour falloff + falloff + vertex alpha without its flag
+1	5	0.000%	5	0.000%	rest not settled: other + texture-first-key + transform-varies
+25	276	0.000%	256	0.000%	settled, effect surfaces fail: env map, refraction or colour falloff
 30	25	0.000%	25	0.000%	rest not settled: alpha + behavior-graph
 30	1	0.000%	1	0.000%	rest not settled: other + transform-varies
+5	147	0.000%	147	0.000%	rest not settled: other + texture-transform
 5	22	0.000%	21	0.000%	rest not settled: behavior-graph + manager-loop + other
 8	16	0.000%	16	0.000%	rest not settled: behavior-graph + other + particle
-5	709	0.000%	709	0.000%	rest not settled: manager-loop + other + visibility
-2	2	0.000%	2	0.000%	rest not settled: behavior-graph + effect-idle + manager-loop + other + texture-transform + visibility
-9	3	0.000%	3	0.000%	settled, effect surfaces fail: colour above 1 + falloff + palette + vertex alpha without its flag
+1	19	0.000%	19	0.000%	rest not settled: behavior-graph + manager-loop + other + particle + texture-first-key
+4	709	0.000%	709	0.000%	rest not settled: manager-loop + other + visibility
+2	2	0.000%	2	0.000%	rest not settled: behavior-graph + effect-idle + manager-loop + other + texture-first-key + texture-transform + visibility
 7	1	0.000%	1	0.000%	rest not settled: manager-loop + other + particle
-7	1	0.000%	1	0.000%	rest not settled: texture-transform + transform-varies
-2	0	0.000%	0	0.000%	rest not settled: alpha + behavior-graph + effect-idle + manager-loop + texture-transform + transform-varies
+5	1	0.000%	1	0.000%	rest not settled: texture-first-key + transform-varies
+2	0	0.000%	0	0.000%	rest not settled: alpha + behavior-graph + effect-idle + manager-loop + texture-first-key + transform-varies
 2	0	0.000%	0	0.000%	rest not settled: alpha + behavior-graph + other
 2	0	0.000%	0	0.000%	rest not settled: alpha + behavior-graph + other + texture-transform
 2	0	0.000%	0	0.000%	rest not settled: alpha + behavior-graph + other + texture-transform + transform-varies
-1	0	0.000%	0	0.000%	rest not settled: alpha + effect-emissive + other + texture-transform + transform-varies
+1	0	0.000%	0	0.000%	rest not settled: alpha + effect-emissive + other + texture-first-key + texture-transform + transform-varies
 1	0	0.000%	0	0.000%	rest not settled: alpha + other + texture-transform
 1	0	0.000%	0	0.000%	rest not settled: alpha + transform-varies
 2	0	0.000%	0	0.000%	rest not settled: behavior-graph + effect-emissive + effect-idle + manager-loop + other + particle + transform-varies
 1	0	0.000%	0	0.000%	rest not settled: behavior-graph + effect-emissive + other + transform-varies
-8	0	0.000%	0	0.000%	rest not settled: behavior-graph + effect-idle + manager-loop + other
+4	0	0.000%	0	0.000%	rest not settled: behavior-graph + effect-idle + manager-loop + other
+4	0	0.000%	0	0.000%	rest not settled: behavior-graph + effect-idle + manager-loop + other + texture-first-key
 2	0	0.000%	0	0.000%	rest not settled: behavior-graph + effect-idle + manager-loop + other + transform-varies + visibility
-3	0	0.000%	0	0.000%	rest not settled: behavior-graph + effect-idle + manager-loop + transform-varies
+1	0	0.000%	0	0.000%	rest not settled: behavior-graph + effect-idle + manager-loop + texture-first-key + transform-varies
+2	0	0.000%	0	0.000%	rest not settled: behavior-graph + effect-idle + manager-loop + transform-varies
 4	0	0.000%	0	0.000%	rest not settled: behavior-graph + effect-idle + other
 6	0	0.000%	0	0.000%	rest not settled: behavior-graph + manager-loop + other + particle + visibility
 1	0	0.000%	0	0.000%	rest not settled: behavior-graph + manager-loop + transform-varies
@@ -1927,34 +1934,302 @@
 1	0	0.000%	0	0.000%	rest not settled: behavior-graph + other + transform-varies
 1	0	0.000%	0	0.000%	rest not settled: behavior-graph + other + transform-varies + visibility
 2	0	0.000%	0	0.000%	rest not settled: behavior-graph + other + visibility
-1	0	0.000%	0	0.000%	rest not settled: behavior-graph + texture-transform
-2	0	0.000%	0	0.000%	rest not settled: behavior-graph + texture-transform + transform-varies + visibility
+1	0	0.000%	0	0.000%	rest not settled: behavior-graph + texture-first-key + texture-transform
+2	0	0.000%	0	0.000%	rest not settled: behavior-graph + texture-first-key + transform-varies + visibility
+5	0	0.000%	0	0.000%	rest not settled: effect-emissive + texture-first-key + texture-transform
 3	0	0.000%	0	0.000%	rest not settled: effect-idle + manager-loop + other
-1	0	0.000%	0	0.000%	rest not settled: effect-idle + manager-loop + other + particle
+1	0	0.000%	0	0.000%	rest not settled: effect-idle + manager-loop + other + particle + texture-first-key
 3	0	0.000%	0	0.000%	rest not settled: effect-idle + manager-loop + other + particle + visibility
 6	0	0.000%	0	0.000%	rest not settled: effect-idle + other
 19	0	0.000%	0	0.000%	rest not settled: effect-idle + other + particle
 7	0	0.000%	0	0.000%	rest not settled: effect-idle + other + particle + visibility
 8	0	0.000%	0	0.000%	rest not settled: effect-idle + other + visibility
-2	0	0.000%	0	0.000%	rest not settled: manager-loop + other
+2	0	0.000%	0	0.000%	rest not settled: manager-loop + other + texture-first-key
+1	0	0.000%	0	0.000%	rest not settled: manager-loop + other + texture-first-key + visibility
 32	0	0.000%	0	0.000%	rest not settled: other + particle
 14	0	0.000%	0	0.000%	rest not settled: other + particle + visibility
 1	0	0.000%	0	0.000%	rest not settled: other + texture-transform + visibility
 2	0	0.000%	0	0.000%	rest not settled: other + transform-varies + visibility
 5	0	0.000%	0	0.000%	rest not settled: other + visibility
+2	0	0.000%	0	0.000%	rest not settled: texture-transform + transform-varies
 21	0	0.000%	0	0.000%	rest not settled: transform-varies + visibility
 1	0	0.000%	0	0.000%	rest not settled: visibility
-1	0	0.000%	0	0.000%	settled, effect surfaces fail: alpha outside 0 to 1 + colour above 1 + env map, refraction or colour falloff
-1	0	0.000%	0	0.000%	settled, effect surfaces fail: alpha outside 0 to 1 + colour above 1 + falloff + palette
-7	0	0.000%	0	0.000%	settled, effect surfaces fail: alpha outside 0 to 1 + colour above 1 + falloff + palette + vertex alpha without its flag
-1	0	0.000%	0	0.000%	settled, effect surfaces fail: alpha outside 0 to 1 + colour above 1 + palette + vertex alpha without its flag
-1	0	0.000%	0	0.000%	settled, effect surfaces fail: colour above 1 + env map, refraction or colour falloff
-3	0	0.000%	0	0.000%	settled, effect surfaces fail: colour above 1 + env map, refraction or colour falloff + falloff + palette
-1	0	0.000%	0	0.000%	settled, effect surfaces fail: colour above 1 + env map, refraction or colour falloff + falloff + palette + vertex alpha without its flag
-31	0	0.000%	0	0.000%	settled, effect surfaces fail: colour above 1 + falloff + palette
-3	0	0.000%	0	0.000%	settled, effect surfaces fail: env map, refraction or colour falloff
+9	0	0.000%	0	0.000%	settled, effect surfaces fail: alpha outside 0 to 1 + colour above 1 + palette
+4	0	0.000%	0	0.000%	settled, effect surfaces fail: colour above 1 + env map, refraction or colour falloff + palette
 2	0	0.000%	0	0.000%	settled, effect surfaces fail: env map, refraction or colour falloff + palette
-2	0	0.000%	0	0.000%	settled, effect surfaces fail: falloff + material missing or unreadable + vertex alpha without its flag
-2	0	0.000%	0	0.000%	settled, effect surfaces fail: falloff + palette
-1	0	0.000%	0	0.000%	settled, effect surfaces fail: falloff + palette + texture missing
-6	0	0.000%	0	0.000%	settled, effect surfaces fail: palette
+2	0	0.000%	0	0.000%	settled, effect surfaces fail: material missing or unreadable
+1	0	0.000%	0	0.000%	settled, effect surfaces fail: palette + texture missing
+
+# Falloff (shapes whose drawn fields enable falloff or RGB falloff): shapes, placements of their models, omitted placements
+
+1674	40368	37830	angle order: start cosine above stop (opaque facing the eye)
+96	2576	1852	angle order: start cosine below stop (opaque at grazing angles)
+8	32	32	angle order: start equal to stop
+6	0	0	angles and opacities: 0.09931967 -> cos 90 | 1 -> 0.1
+1	0	0	angles and opacities: 0.09931967 -> cos 90 | 1 -> 0.2
+2	3	3	angles and opacities: 0.44307154 -> cos 0 | 1 -> 0
+3	0	0	angles and opacities: 0.9668234 -> 0.97357893 | 0.88 -> 0.86
+2	0	0	angles and opacities: 0.9888542 -> cos 25 | 1 -> 0
+8	32	32	angles and opacities: cos 0 -> cos 0 | 0 -> 0
+77	1576	1554	angles and opacities: cos 0 -> cos 100 | 1 -> 0
+8	754	754	angles and opacities: cos 0 -> cos 110 | 1 -> 0
+17	1129	1129	angles and opacities: cos 0 -> cos 120 | 1 -> 0
+2	0	0	angles and opacities: cos 0 -> cos 120 | 1 -> 0.25
+54	314	314	angles and opacities: cos 0 -> cos 125 | 1 -> 0
+10	0	0	angles and opacities: cos 0 -> cos 160 | 0 -> 0.8
+1	3	3	angles and opacities: cos 0 -> cos 30 | 0.1 -> 1
+1	0	0	angles and opacities: cos 0 -> cos 30 | 1 -> 0
+4	0	0	angles and opacities: cos 0 -> cos 40 | 1 -> 0
+1	41	41	angles and opacities: cos 0 -> cos 40 | 1 -> 1
+37	655	635	angles and opacities: cos 0 -> cos 45 | 0 -> 0.7
+5	27	27	angles and opacities: cos 0 -> cos 45 | 1 -> 0
+1	0	0	angles and opacities: cos 0 -> cos 45 | 1 -> 0.25
+46	537	537	angles and opacities: cos 0 -> cos 50 | 1 -> 0
+7	39	39	angles and opacities: cos 0 -> cos 55 | 1 -> 0
+154	1541	1326	angles and opacities: cos 0 -> cos 60 | 1 -> 0
+1	0	0	angles and opacities: cos 0 -> cos 65 | 1 -> 0
+211	6027	4624	angles and opacities: cos 0 -> cos 70 | 1 -> 0
+1	0	0	angles and opacities: cos 0 -> cos 75 | 0.61 -> 1
+118	2756	2532	angles and opacities: cos 0 -> cos 80 | 1 -> 0
+2	1	0	angles and opacities: cos 0 -> cos 85 | 0 -> 1
+3	441	441	angles and opacities: cos 0 -> cos 85 | 1 -> 0
+1	0	0	angles and opacities: cos 0 -> cos 90 | -0.009999998 -> 1
+1	0	0	angles and opacities: cos 0 -> cos 90 | 0.3 -> 1
+2	0	0	angles and opacities: cos 0 -> cos 90 | 0.4 -> 0
+17	0	0	angles and opacities: cos 0 -> cos 90 | 0.4 -> 1
+3	57	57	angles and opacities: cos 0 -> cos 90 | 0.45 -> 1
+7	3	3	angles and opacities: cos 0 -> cos 90 | 0.75 -> 1
+1	0	0	angles and opacities: cos 0 -> cos 90 | 0.8 -> 1
+84	3851	3851	angles and opacities: cos 0 -> cos 90 | 1 -> 0
+1	0	0	angles and opacities: cos 0 -> cos 90 | 1 -> 0.25
+1	0	0	angles and opacities: cos 0 -> cos 90 | 1 -> 1
+2	0	0	angles and opacities: cos 0 -> cos 95 | 1 -> 0
+1	17	17	angles and opacities: cos 10 -> cos 35 | 1 -> 0
+3	78	78	angles and opacities: cos 10 -> cos 40 | 1 -> 0
+8	134	134	angles and opacities: cos 10 -> cos 45 | 1 -> 0
+1	0	0	angles and opacities: cos 10 -> cos 50 | 0.25 -> 1
+34	1027	1023	angles and opacities: cos 10 -> cos 60 | 1 -> 0
+10	351	351	angles and opacities: cos 10 -> cos 65 | 1 -> 0
+28	811	811	angles and opacities: cos 10 -> cos 75 | 1 -> 0
+29	9962	9417	angles and opacities: cos 10 -> cos 80 | 1 -> 0
+1	0	0	angles and opacities: cos 10 -> cos 80 | 1 -> 0.1
+7	1426	1381	angles and opacities: cos 10 -> cos 85 | 1 -> 0
+1	1	1	angles and opacities: cos 100 -> cos 0 | 1 -> 0.5
+2	0	0	angles and opacities: cos 110 -> cos 0 | 1 -> 0.1
+12	0	0	angles and opacities: cos 15 -> cos 40 | 1 -> 0
+2	0	0	angles and opacities: cos 18 -> cos 90 | 1 -> 0
+2	0	0	angles and opacities: cos 20 -> cos 30 | 1 -> 0
+5	0	0	angles and opacities: cos 20 -> cos 50 | 1 -> 0
+125	4889	4836	angles and opacities: cos 20 -> cos 70 | 1 -> 0
+1	1	1	angles and opacities: cos 20 -> cos 90 | 1 -> 0
+2	0	0	angles and opacities: cos 25 -> cos 55 | 1 -> 0
+4	0	0	angles and opacities: cos 25 -> cos 80 | 1 -> 0
+55	0	0	angles and opacities: cos 25 -> cos 85 | 1 -> 0
+3	167	167	angles and opacities: cos 30 -> cos 0 | 0 -> 1
+1	2	2	angles and opacities: cos 30 -> cos 55 | 1 -> 0
+16	16	16	angles and opacities: cos 30 -> cos 60 | 1 -> 0
+9	159	159	angles and opacities: cos 30 -> cos 70 | 1 -> 0
+9	0	0	angles and opacities: cos 30 -> cos 80 | 1 -> 0
+36	510	510	angles and opacities: cos 30 -> cos 90 | 1 -> 0
+1	0	0	angles and opacities: cos 33 -> cos 90 | 0 -> 0.25
+2	0	0	angles and opacities: cos 35 -> cos 0 | 0 -> 1
+2	0	0	angles and opacities: cos 35 -> cos 0 | 1 -> 0.25
+2	2	2	angles and opacities: cos 35 -> cos 100 | 0.9 -> 1
+2	6	5	angles and opacities: cos 35 -> cos 65 | 0.6 -> 1
+1	0	0	angles and opacities: cos 35 -> cos 65 | 1 -> 0
+1	2	1	angles and opacities: cos 35 -> cos 75 | 0.8 -> 1
+3	0	0	angles and opacities: cos 35 -> cos 75 | 1 -> 0
+1	0	0	angles and opacities: cos 35 -> cos 85 | 0.54999995 -> 0
+26	0	0	angles and opacities: cos 35 -> cos 85 | 1 -> 0
+1	0	0	angles and opacities: cos 35 -> cos 86 | 1 -> 0
+4	308	308	angles and opacities: cos 35 -> cos 90 | 1 -> 0
+2	2	0	angles and opacities: cos 40 -> cos 0 | 1 -> 0
+1	0	0	angles and opacities: cos 40 -> cos 180 | 0.5 -> 1
+1	0	0	angles and opacities: cos 40 -> cos 60 | 1 -> 0
+14	54	54	angles and opacities: cos 40 -> cos 80 | 1 -> 0
+10	118	118	angles and opacities: cos 40 -> cos 85 | 1 -> 0
+3	0	0	angles and opacities: cos 40 -> cos 90 | 0.3 -> 0.95
+8	0	0	angles and opacities: cos 40 -> cos 90 | 1 -> 0
+6	370	370	angles and opacities: cos 45 -> cos 60 | 1 -> 0
+1	0	0	angles and opacities: cos 45 -> cos 80 | 1 -> 0
+3	0	0	angles and opacities: cos 45 -> cos 85 | 1 -> 0.5
+3	19	19	angles and opacities: cos 45 -> cos 88 | 1 -> 0.20000002
+16	2	2	angles and opacities: cos 45 -> cos 90 | 1 -> 0
+10	10	10	angles and opacities: cos 5 -> cos 85 | 0.1 -> 1
+1	0	0	angles and opacities: cos 50 -> cos 10 | 0.33 -> 0.049999997
+7	207	207	angles and opacities: cos 50 -> cos 20 | 1 -> 0
+10	0	0	angles and opacities: cos 50 -> cos 70 | 1 -> 0
+11	6	6	angles and opacities: cos 50 -> cos 80 | 1 -> 0
+16	0	0	angles and opacities: cos 50 -> cos 85 | 1 -> 0
+29	1	1	angles and opacities: cos 50 -> cos 90 | 1 -> 0
+1	0	0	angles and opacities: cos 50 -> cos 90 | 1 -> 0.1
+1	0	0	angles and opacities: cos 50 -> cos 90 | 1 -> 0.5
+2	2	2	angles and opacities: cos 55 -> cos 120 | 0.5 -> 0.8
+4	4	4	angles and opacities: cos 55 -> cos 120 | 0.5 -> 1
+3	3	3	angles and opacities: cos 55 -> cos 80 | 1 -> 0
+4	36	36	angles and opacities: cos 55 -> cos 80 | 1 -> 0.2
+3	33	33	angles and opacities: cos 55 -> cos 85 | 1 -> 0.45
+2	2	2	angles and opacities: cos 60 -> cos 0 | 0 -> 1
+6	4	4	angles and opacities: cos 60 -> cos 0 | 1 -> 0
+1	0	0	angles and opacities: cos 60 -> cos 0 | 1 -> 0.35
+11	0	0	angles and opacities: cos 60 -> cos 80 | 1 -> 0
+5	17	17	angles and opacities: cos 60 -> cos 85 | 1 -> 0
+5	17	17	angles and opacities: cos 60 -> cos 90 | 0.2 -> 1
+11	3	2	angles and opacities: cos 60 -> cos 90 | 1 -> 0
+2	2	2	angles and opacities: cos 60 -> cos 90 | 1 -> 0.7000001
+2	213	213	angles and opacities: cos 65 -> cos 0 | 1 -> 0.75
+1	0	0	angles and opacities: cos 65 -> cos 70 | 1 -> 0
+8	70	69	angles and opacities: cos 65 -> cos 80 | 0 -> 1
+8	0	0	angles and opacities: cos 65 -> cos 80 | 1 -> 0
+20	0	0	angles and opacities: cos 65 -> cos 85 | 1 -> 0
+1	0	0	angles and opacities: cos 65 -> cos 90 | 1 -> 0
+1	0	0	angles and opacities: cos 66 -> cos 90 | 1 -> 0
+1	0	0	angles and opacities: cos 70 -> cos 20 | 0 -> 1
+5	0	0	angles and opacities: cos 70 -> cos 80 | 1 -> 0
+22	0	0	angles and opacities: cos 70 -> cos 90 | 1 -> 0
+45	33	31	angles and opacities: cos 75 -> cos 85 | 1 -> 0
+17	1	1	angles and opacities: cos 75 -> cos 90 | 1 -> 0.5
+4	0	0	angles and opacities: cos 80 -> cos 0 | 0 -> 1
+13	595	380	angles and opacities: cos 80 -> cos 0 | 1 -> 0
+2	229	229	angles and opacities: cos 80 -> cos 20 | 1 -> 0.70000005
+2	0	0	angles and opacities: cos 80 -> cos 30 | 0.4 -> 0.7
+8	70	69	angles and opacities: cos 80 -> cos 60 | 0 -> 1
+2	0	0	angles and opacities: cos 80 -> cos 70 | 0 -> 1
+3	0	0	angles and opacities: cos 80 -> cos 85 | 1 -> 0
+2	2	2	angles and opacities: cos 80 -> cos 90 | 0.58 -> 1
+4	0	0	angles and opacities: cos 80 -> cos 90 | 1 -> 0
+1	4	4	angles and opacities: cos 80 -> cos 90 | 1 -> 0.6
+3	0	0	angles and opacities: cos 82 -> cos 87 | 1 -> 0
+6	108	108	angles and opacities: cos 85 -> cos 90 | 1 -> 0
+1	0	0	angles and opacities: cos 90 -> cos 0 | 0 -> 1
+1	0	0	angles and opacities: cos 90 -> cos 0 | 0.1 -> 1
+12	805	299	angles and opacities: cos 90 -> cos 0 | 1 -> 0
+3	167	167	angles and opacities: cos 90 -> cos 0 | 1 -> 0.6
+11	111	111	angles and opacities: cos 90 -> cos 80 | 1 -> 0.0625
+1002	25409	23715	blend: blend 1 src 6 dst 0 test 0 func 4 threshold 0
+32	73	73	blend: blend 1 src 6 dst 0 test 1 func 4 threshold 1
+1	0	0	blend: blend 1 src 6 dst 0 test 1 func 4 threshold 16
+4	0	0	blend: blend 1 src 6 dst 0 test 1 func 4 threshold 2
+2	0	0	blend: blend 1 src 6 dst 0 test 1 func 4 threshold 255
+726	17415	15847	blend: blend 1 src 6 dst 7 test 0 func 4 threshold 0
+4	36	36	blend: blend 1 src 6 dst 7 test 1 func 4 threshold 1
+2	3	3	blend: blend 1 src 6 dst 7 test 1 func 4 threshold 128
+1	0	0	blend: blend 1 src 6 dst 7 test 1 func 4 threshold 130
+2	0	0	blend: blend 1 src 6 dst 7 test 1 func 4 threshold 2
+1	0	0	blend: blend 1 src 6 dst 7 test 1 func 4 threshold 20
+1	40	40	blend: blend 1 src 6 dst 7 test 1 func 4 threshold 57
+97	908	887	drawn texture: BC1Alpha colour, alpha 1 everywhere
+18	249	249	drawn texture: BC1Alpha grey, alpha 1 everywhere
+2	0	0	drawn texture: BC3 colour, alpha 1 everywhere
+60	2	2	drawn texture: BC3 colour, alpha varies (min 0.00, max 0.25)
+56	0	0	drawn texture: BC3 colour, alpha varies (min 0.00, max 0.50)
+268	4430	4426	drawn texture: BC3 colour, alpha varies (min 0.00, max 0.75)
+511	8815	8815	drawn texture: BC3 colour, alpha varies (min 0.00, max 1.00)
+113	2346	2155	drawn texture: BC3 colour, alpha varies (min 0.25, max 0.50)
+54	396	387	drawn texture: BC3 colour, alpha varies (min 0.25, max 0.75)
+70	1129	1124	drawn texture: BC3 colour, alpha varies (min 0.25, max 1.00)
+21	2	2	drawn texture: BC3 colour, alpha varies (min 0.50, max 0.75)
+3	167	167	drawn texture: BC3 colour, alpha varies (min 0.50, max 1.00)
+68	14973	12548	drawn texture: BC3 colour, alpha varies (min 0.75, max 1.00)
+24	3	3	drawn texture: BC3 grey, alpha 1 everywhere
+26	510	510	drawn texture: BC3 grey, alpha varies (min 0.00, max 0.75)
+264	8063	7963	drawn texture: BC3 grey, alpha varies (min 0.00, max 1.00)
+2	0	0	drawn texture: BC3 grey, alpha varies (min 0.25, max 1.00)
+1	0	0	drawn texture: BGRA8 grey, alpha varies (min 0.00, max 1.00)
+100	807	300	drawn texture: no texture
+20	176	176	drawn texture: texture missing or unreadable
+8	32	32	equal angles: opacities 0 0
+717	28697	27244	every effect shape, one vertex flag (colours 1 alpha 0), vertex alpha below 1: boundary mean at least 0.25 below interior mean; boundary vertices with alpha 0: all
+309	8721	7227	every effect shape, one vertex flag (colours 1 alpha 0), vertex alpha below 1: boundary mean at least 0.25 below interior mean; boundary vertices with alpha 0: half or more
+38	2693	2693	every effect shape, one vertex flag (colours 1 alpha 0), vertex alpha below 1: boundary mean at least 0.25 below interior mean; boundary vertices with alpha 0: none
+164	2373	2373	every effect shape, one vertex flag (colours 1 alpha 0), vertex alpha below 1: boundary mean at least 0.25 below interior mean; boundary vertices with alpha 0: under half
+70	1843	1816	every effect shape, one vertex flag (colours 1 alpha 0), vertex alpha below 1: boundary mean below interior mean; boundary vertices with alpha 0: all
+46	607	607	every effect shape, one vertex flag (colours 1 alpha 0), vertex alpha below 1: boundary mean below interior mean; boundary vertices with alpha 0: half or more
+73	1755	1747	every effect shape, one vertex flag (colours 1 alpha 0), vertex alpha below 1: boundary mean below interior mean; boundary vertices with alpha 0: none
+95	1237	1236	every effect shape, one vertex flag (colours 1 alpha 0), vertex alpha below 1: boundary mean below interior mean; boundary vertices with alpha 0: under half
+36	750	750	every effect shape, one vertex flag (colours 1 alpha 0), vertex alpha below 1: boundary mean not below interior mean; boundary vertices with alpha 0: half or more
+83	3790	3717	every effect shape, one vertex flag (colours 1 alpha 0), vertex alpha below 1: boundary mean not below interior mean; boundary vertices with alpha 0: none
+94	896	893	every effect shape, one vertex flag (colours 1 alpha 0), vertex alpha below 1: boundary mean not below interior mean; boundary vertices with alpha 0: under half
+350	3915	3780	every effect shape, one vertex flag (colours 1 alpha 0), vertex alpha below 1: every vertex on the boundary
+714	10795	10210	greyscale texture set false with palette false
+4	0	0	greyscale texture set false with palette true
+168	17228	14590	greyscale texture set true with palette false
+892	14953	14914	greyscale texture set true with palette true
+1269	33241	30508	negative cosine: false
+509	9735	9206	negative cosine: true
+403	23530	22372	one vertex flag: colours 1 alpha 0; boundary mean at least 0.25 below interior mean; boundary vertices with alpha 0: all
+187	5999	4507	one vertex flag: colours 1 alpha 0; boundary mean at least 0.25 below interior mean; boundary vertices with alpha 0: half or more
+19	1258	1258	one vertex flag: colours 1 alpha 0; boundary mean at least 0.25 below interior mean; boundary vertices with alpha 0: none
+106	2045	2045	one vertex flag: colours 1 alpha 0; boundary mean at least 0.25 below interior mean; boundary vertices with alpha 0: under half
+14	931	906	one vertex flag: colours 1 alpha 0; boundary mean below interior mean; boundary vertices with alpha 0: all
+8	142	142	one vertex flag: colours 1 alpha 0; boundary mean below interior mean; boundary vertices with alpha 0: half or more
+22	1377	1377	one vertex flag: colours 1 alpha 0; boundary mean below interior mean; boundary vertices with alpha 0: none
+56	288	288	one vertex flag: colours 1 alpha 0; boundary mean below interior mean; boundary vertices with alpha 0: under half
+7	285	285	one vertex flag: colours 1 alpha 0; boundary mean not below interior mean; boundary vertices with alpha 0: half or more
+88	2871	2311	one vertex flag: colours 1 alpha 0; boundary mean not below interior mean; boundary vertices with alpha 0: none
+76	784	783	one vertex flag: colours 1 alpha 0; boundary mean not below interior mean; boundary vertices with alpha 0: under half
+165	656	656	one vertex flag: colours 1 alpha 0; every vertex on the boundary
+15	0	0	one vertex flag: colours 1 alpha 0; no mesh
+1	0	0	opacities within 0 to 1: false
+1777	42976	39714	opacities within 0 to 1: true
+1	0	0	terms: falloff false rgb falloff true (from BGEM)
+12	72	71	terms: falloff false rgb falloff true (from NIF)
+123	18261	15602	terms: falloff true rgb falloff false (from BGEM)
+1545	24560	23959	terms: falloff true rgb falloff false (from NIF)
+97	83	82	terms: falloff true rgb falloff true (from NIF)
+150	1493	987	two sided false, soft false, palette false, feature false, colour above 1 false
+30	48	48	two sided false, soft false, palette false, feature false, colour above 1 true
+76	905	884	two sided false, soft false, palette false, feature true, colour above 1 false
+34	10	9	two sided false, soft false, palette false, feature true, colour above 1 true
+30	173	171	two sided false, soft false, palette true, feature false, colour above 1 false
+58	214	214	two sided false, soft false, palette true, feature false, colour above 1 true
+3	24	23	two sided false, soft false, palette true, feature true, colour above 1 false
+41	811	596	two sided false, soft true, palette false, feature false, colour above 1 false
+54	126	126	two sided false, soft true, palette false, feature false, colour above 1 true
+4	0	0	two sided false, soft true, palette false, feature true, colour above 1 true
+60	943	943	two sided false, soft true, palette true, feature false, colour above 1 false
+242	711	711	two sided false, soft true, palette true, feature false, colour above 1 true
+12	70	69	two sided false, soft true, palette true, feature true, colour above 1 true
+54	171	171	two sided true, soft false, palette false, feature false, colour above 1 false
+21	9	9	two sided true, soft false, palette false, feature false, colour above 1 true
+35	214	213	two sided true, soft false, palette false, feature true, colour above 1 false
+1	31	31	two sided true, soft false, palette false, feature true, colour above 1 true
+28	327	327	two sided true, soft false, palette true, feature false, colour above 1 false
+142	4465	4465	two sided true, soft false, palette true, feature false, colour above 1 true
+1	0	0	two sided true, soft false, palette true, feature true, colour above 1 false
+184	17776	15351	two sided true, soft true, palette false, feature false, colour above 1 false
+192	6372	6318	two sided true, soft true, palette false, feature false, colour above 1 true
+6	57	57	two sided true, soft true, palette false, feature true, colour above 1 false
+115	3204	3169	two sided true, soft true, palette true, feature false, colour above 1 false
+202	4822	4822	two sided true, soft true, palette true, feature false, colour above 1 true
+3	0	0	two sided true, soft true, palette true, feature true, colour above 1 true
+226	1085	1061	vertex flags: colours 0 alpha 0; no vertex colours
+15	0	0	vertex flags: colours 1 alpha 0; no vertex data
+18	0	0	vertex flags: colours 1 alpha 0; vertex colours: rgb all 1, alpha all 1
+240	3709	3689	vertex flags: colours 1 alpha 0; vertex colours: rgb all 1, alpha min 0.0
+8	19	19	vertex flags: colours 1 alpha 0; vertex colours: rgb all 1, alpha min 0.2
+1	0	0	vertex flags: colours 1 alpha 0; vertex colours: rgb all 1, alpha min 0.3
+9	354	354	vertex flags: colours 1 alpha 0; vertex colours: rgb all 1, alpha min 0.5
+6	6	6	vertex flags: colours 1 alpha 0; vertex colours: rgb all 1, alpha min 0.6
+2	101	101	vertex flags: colours 1 alpha 0; vertex colours: rgb all 1, alpha min 0.8
+79	827	320	vertex flags: colours 1 alpha 0; vertex colours: rgb vary, alpha all 1
+729	30584	27928	vertex flags: colours 1 alpha 0; vertex colours: rgb vary, alpha min 0.0
+11	123	122	vertex flags: colours 1 alpha 0; vertex colours: rgb vary, alpha min 0.1
+18	1929	1877	vertex flags: colours 1 alpha 0; vertex colours: rgb vary, alpha min 0.2
+26	2506	2506	vertex flags: colours 1 alpha 0; vertex colours: rgb vary, alpha min 0.3
+2	1	1	vertex flags: colours 1 alpha 0; vertex colours: rgb vary, alpha min 0.4
+2	7	7	vertex flags: colours 1 alpha 0; vertex colours: rgb vary, alpha min 0.7
+131	513	513	vertex flags: colours 1 alpha 1; vertex colours: rgb all 1, alpha min 0.0
+2	0	0	vertex flags: colours 1 alpha 1; vertex colours: rgb all 1, alpha min 0.1
+5	29	29	vertex flags: colours 1 alpha 1; vertex colours: rgb all 1, alpha min 0.2
+1	0	0	vertex flags: colours 1 alpha 1; vertex colours: rgb all 1, alpha min 0.5
+1	0	0	vertex flags: colours 1 alpha 1; vertex colours: rgb all 1, alpha min 0.7
+238	1183	1181	vertex flags: colours 1 alpha 1; vertex colours: rgb vary, alpha min 0.0
+3	0	0	vertex flags: colours 1 alpha 1; vertex colours: rgb vary, alpha min 0.2
+2	0	0	vertex flags: colours 1 alpha 1; vertex colours: rgb vary, alpha min 0.3
+1	0	0	vertex flags: colours 1 alpha 1; vertex colours: rgb vary, alpha min 0.4
+1	0	0	vertex flags: colours 1 alpha 1; vertex colours: rgb vary, alpha min 0.6
+1	0	0	vertex flags: colours 1 alpha 1; vertex colours: rgb vary, alpha min 0.9
+15	0	0	vertex normals on every vertex: None; skinned flag 0
+1670	42469	39207	vertex normals on every vertex: Some(true); skinned flag 0
+93	507	507	vertex normals on every vertex: Some(true); skinned flag 1

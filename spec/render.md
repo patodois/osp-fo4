@@ -222,3 +222,32 @@ give byte-identical frames and tag files in two runs of one build and in a
 second build of the same commit from another directory (31 files each); the
 first run also equals the frames of the build before the commit's last
 formatting and test-only edits.
+
+## Falloff
+
+An effect surface drawn with falloff ([effect-surfaces.md](effect-surfaces.md),
+Falloff) carries `Draw::falloff` (`Falloff`: start and stop angle as
+cosines, start and stop opacity) and its mesh keeps `Mesh::normals`
+(model-space vertex normals from the nifxml `BSVertexData` normbytes,
+`2*b/255-1`); a mesh is shared only by draws that agree on keeping
+normals. The reference rasterizer turns each vertex normal by the draw's
+rotation and then the camera's into camera axes, interpolates it with the
+camera-space position by reciprocal depth (like UV, and linearly through
+clipping), and at each sample takes the cosine between the interpolated
+normal and the direction from the interpolated point to the eye (the
+origin of camera axes), renormalising both. The factor
+(`Falloff::factor`: absolute cosine, linear between the two angles,
+constant beyond them, the start opacity when both angles are equal and so
+are the opacities) multiplies the sample's alpha after the opacity and
+before the alpha test and the blend. These are the reference's
+conventions under the pending falloff rules, not claims about the game's
+arithmetic. A falloff draw whose mesh lacks normals, or whose fields fail
+`Falloff::validate`, is refused (`RenderFalloffNormals`,
+`UnsupportedRenderFalloff`); the snapshot interchange has no field for
+either and refuses the list (`SnapshotFalloffDraws`).
+
+The GPU viewer has no falloff term in its shader: it leaves falloff draws
+out of the frames it draws and prints their count
+(`GpuScene::falloff_left_out`), so its frames keep those surfaces omitted
+as before and the CPU and GPU frames of a view with falloff surfaces
+differ there.

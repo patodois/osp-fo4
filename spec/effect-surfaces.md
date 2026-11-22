@@ -135,13 +135,97 @@ that each can be refuted alone:
 - `effect_soft_lighting_left_out_v1` (draw rule, when a shader or material
   sets them): soft depth fade, lighting influence and effect lighting do
   not change this unlit frame.
-- `effect_falloff_view_angle_v1`: registered with the measurement that
-  could refute it, not relied on by code.
+- `effect_falloff_view_angle_v1` and its companions: see Falloff below.
 
 The draw build applies the effect path only to instances whose state
 relies on `nif_controller_rest_effect_first_key_v1`; every other effect
 surface is drawn as before, so frames without hypotheses, and frames under
 hypotheses of models without settled effect controllers, are unchanged.
+
+## Falloff
+
+The coverage census of the material step left two families of effect
+surfaces as the largest omissions by area: the distant clouds, refused at
+rest for their falloff controllers (`falloff` tag; 407 placements, 70.03 %
+of the omitted area), and the mist volumes and light beams, refused at the
+draw for `falloff+vertex-alpha-one-flag` (10,989 placements, 5.46 %).
+
+### Census
+
+`effect_census` now writes a section `# Falloff` (shapes, placements of
+their models, omitted placements by key) over every effect shape in scope
+whose drawn fields (the BGEM's where one is named) enable falloff or RGB
+falloff, and labels the relation of falloff angle controllers to the
+stored field ([effect-census.txt](effect-census.txt)):
+
+- **Angle controllers.** All 146 falloff stop angle controllers in scope
+  (the distant clouds; not run by a manager; keys between 10 and 110)
+  store exactly the cosine of their first key read as degrees, and none
+  stores the first key itself. No start angle controller is in scope. The
+  pinned nifxml copy describes the enum options as "Falloff Start Angle
+  (degrees)" and "Falloff Stop Angle (degrees)" and the shader fields as
+  "At this cosine of angle falloff will be equal to ...". The 144 falloff
+  start opacity controllers of the clouds store their first key.
+- **Fields.** 1,778 shapes enable falloff or RGB falloff (1,654 through
+  the NIF, 124 through a BGEM); 109 NIF shapes and 1 material set RGB
+  falloff (155 placements of their models). Every angle but 8
+  is the cosine of a whole degree. Start cosine above stop (opaque facing
+  the eye) on 1,674 shapes, below (opaque at grazing angles) on 96, equal
+  on 8 (both opacities 0). The commonest pairs: 10 to 80 degrees (opacity
+  1 to 0), 0 to 70, 20 to 70, 0 to 90, 0 to 80. 509 shapes (9,735
+  placements of their models) store a negative cosine (an angle above 90
+  degrees). One shape (no placement) stores an opacity below 0.
+- **Blend.** SRC_ALPHA / ONE on 1,041 shapes, SRC_ALPHA / INV_SRC_ALPHA on
+  737; blending is on everywhere (the alpha test on 50 of them).
+- **Normals.** Every vertex has a normal on 1,763 shapes; 15 shapes (no
+  placement) have no vertex data.
+- **Vertex alpha.** Of the falloff shapes, 1,054 have Vertex_Colors alone
+  and a vertex alpha below 1, and none Vertex_Alpha alone. Over every
+  effect shape in scope with Vertex_Colors alone and a vertex alpha below
+  1 (2,075 shapes), the vertex alpha against the mesh's open boundary
+  (edges used by one triangle): of the 1,725 shapes with such a boundary,
+  1,026 (37,418 placements of their models) have the boundary's mean
+  vertex alpha at least 0.25 below the interior's and half or more of the
+  boundary vertices at 0, 284 a lower boundary otherwise, 213 no lower
+  boundary; 350 are cards whose every vertex lies on the boundary.
+- **Other terms of the same shapes.** 896 falloff shapes also set a
+  greyscale-to-palette flag (892 of them with a greyscale texture), 995 a
+  colour above 1, 175 a feature (environment map, refraction, ...), 1,115
+  the soft flag, 984 two-sidedness.
+
+### Rules
+
+Pending, each refutable alone ([hypotheses.tsv](hypotheses.tsv)):
+
+- `nif_controller_falloff_angle_degrees_v1` (`fo4_scene::rest`, tag
+  `falloff-degrees`, always beside `effect-first-key`): a falloff angle
+  controller's key and pose values are degrees and the field their cosine;
+  under the first-key rule such a field is settled where the stored cosine
+  equals the cosine of every driving interpolator's first key.
+- `effect_falloff_view_angle_v1` (narrowed from the earlier registration,
+  which no code relied on): the angle is the one between the surface
+  normal and the direction from the surface point to the eye; the angle
+  fields are its cosines.
+- `effect_falloff_cosine_absolute_v1`: the cosine is taken by its absolute
+  value (a face seen from behind as from the front). The census's negative
+  cosines speak partly against it.
+- `effect_falloff_linear_in_cosine_v1`: the factor is the start opacity at
+  the start cosine, the stop opacity at the stop cosine, linear in the
+  cosine between them and constant beyond; with equal angles the
+  opacities must be equal and the factor is their value.
+- `effect_falloff_multiplies_alpha_v1`: the factor multiplies the alpha
+  (texel x base colour alpha x vertex alpha where read) before the alpha
+  test and the blend, never the colour.
+- `effect_vertex_alpha_under_vertex_colors_v1`: with Vertex_Colors set and
+  Vertex_Alpha clear, the vertex alpha multiplies the alpha as when both
+  are set.
+
+The draw build gives such a surface a `Falloff` (the four fields) and keeps
+its mesh's normals; the reference rasterizer evaluates the factor per
+sample ([render.md](render.md), Falloff). The four falloff rules are
+recorded together on every instance that draws a falloff; the vertex
+alpha rule only where a vertex alpha below 1 is read under Vertex_Colors
+alone (with every vertex alpha 1 both readings agree, as before).
 
 ## What stays refused, and why
 
@@ -150,18 +234,25 @@ An effect surface of a settled model is refused with
 settle, joined by `+`:
 
 - `palette`: greyscale-to-palette colour or alpha (the lookup coordinates
-  into the greyscale texture are not given by any source here);
+  into the greyscale texture are not given by any source here; the distant
+  clouds set the palette alpha flag);
 - `feature`: environment map, refraction, glass, glow map, blood, emittance;
-- `falloff`: Use_Falloff, RGB_Falloff or the material's falloff (nifxml
-  gives the end points only; the rule above is registered, not drawn);
+- `rgb-falloff`: RGB_Falloff or the material's falloff colour flag
+  (nifxml does not describe it; whether the factor dims the colour is not
+  settled);
+- `falloff-fields`: an opacity outside 0 to 1, or two equal angles with
+  different opacities (no factor is defined);
+- `falloff-normals`: a shape with falloff without a normal on every
+  vertex; a skinned mesh with falloff is refused too
+  (`UnsupportedSkinnedFalloff`), its posed normals are not computed;
 - `colour-range`: base colour x scale outside 0 to 1 (an emissive value
-  above what the unlit frame can show; how the game maps it is unknown);
-- `vertex-alpha-one-flag`: vertex alpha below 1 with Vertex_Colors or
-  Vertex_Alpha set alone, where the two readings of the vertex flags
-  disagree (census above).
+  above what the unlit frame can show; how the game maps it is unknown;
+  the distant clouds have scale 1.5 on a white base colour);
+- `vertex-alpha-flag-alone`: vertex alpha below 1 with Vertex_Alpha set and
+  Vertex_Colors clear (no rule; no falloff shape has it).
 
-The large mist volumes are refused for `falloff+vertex-alpha-one-flag`:
-those are exactly the terms whose absence turned them white.
+The distant clouds are settled at rest by the degrees rule and are then
+refused for `palette+colour-range`.
 
 ## Coverage
 
