@@ -295,6 +295,21 @@ pub fn load_with(
     )?)))
 }
 
+/// Optional rules of the ground textures: each applies only where the
+/// level accepts it, and otherwise leaves what it covers refused.
+pub const OPTIONAL_RULES: [&str; 2] = [hypotheses::LTEX_MATERIAL, hypotheses::LAND_DEFAULT_NAMED];
+
+/// What draws a texture set's colour.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ColourTexture {
+    /// Its TX00 path (`ltex_tnam_texture_set_tx00_v1`).
+    TextureSet(String),
+    /// The MNAM material path of a texture set without TX00, whose
+    /// diffuse texture draws it (`ltex_texture_set_material_diffuse_v1`).
+    Material(String),
+}
+
 /// The colour texture of a landscape texture record under
 /// `ltex_tnam_texture_set_v1`: the TX00 path of the TXST its TNAM names.
 /// `Ok(Err(code))` is a refusal of that texture only.
@@ -303,6 +318,114 @@ pub fn colour_texture_path(
     ltex: &FormKey,
     b: &Budget,
 ) -> Result<std::result::Result<String, &'static str>> {
+    Ok(match colour_texture(store, ltex, b)? {
+        Ok(ColourTexture::TextureSet(path)) => Ok(path),
+        Ok(ColourTexture::Material(_)) => Err("TextureSetWithoutTx00"),
+        Err(code) => Err(code),
+    })
+}
+
+/// [`colour_texture_path`], with a texture set that has no TX00 but an
+/// MNAM material answered by that material
+/// (`ltex_texture_set_material_diffuse_v1`; the caller checks the rule).
+pub fn colour_texture(
+    store: &Store,
+    ltex: &FormKey,
+    b: &Budget,
+) -> Result<std::result::Result<ColourTexture, &'static str>> {
+    match texture_set_of(store, ltex, b)? {
+        Ok(txst) => texture_set_colour(store, &txst, b),
+        Err(code) => Ok(Err(code)),
+    }
+}
+
+/// The colour of texture set `txst`: TX00, else the MNAM material.
+pub fn texture_set_colour(
+    store: &Store,
+    txst: &FormKey,
+    b: &Budget,
+) -> Result<std::result::Result<ColourTexture, &'static str>> {
+    match store.overrides().winner(txst) {
+        Some(w) if w.signature == *b"TXST" => {}
+        _ => return Ok(Err("LandscapeTextureTnamNotTextureSet")),
+    }
+    let Some(set) = store.get::<Txst>(txst, b)? else {
+        return Ok(Err("LandscapeTextureTnamNotTextureSet"));
+    };
+    Ok(match (&set.data.textures[0], &set.data.material) {
+        (Some(path), _) => Ok(ColourTexture::TextureSet(path.clone())),
+        (None, Some(material)) => Ok(ColourTexture::Material(material.clone())),
+        (None, None) => Err("TextureSetWithoutColour"),
+    })
+}
+
+/// The texture set of `world`'s default ground under
+/// `land_default_texture_world_named_v1`: among the texture sets that the
+/// TNAM of some landscape texture record names, the single one whose editor
+/// ID contains, ignoring ASCII case, both the world's editor ID and
+/// `default`. `Ok(Err(code))` when there is none or more than one.
+pub fn default_texture_set(
+    store: &Store,
+    world: &FormKey,
+    b: &Budget,
+) -> Result<std::result::Result<FormKey, &'static str>> {
+    match store.overrides().winner(world) {
+        Some(w) if w.signature == *b"WRLD" => {}
+        Some(_) => return Ok(Err("NotAWorld")),
+        None => return Ok(Err("MissingWorld")),
+    }
+    let Some(w) = store.raw(world, b)? else {
+        return Ok(Err("MissingWorld"));
+    };
+    let Some(name) = editor_id(&w) else {
+        return Ok(Err("WorldWithoutEditorId"));
+    };
+    let order = store.order();
+    let keys: Vec<FormKey> = store
+        .winners()
+        .filter(|w| w.signature == *b"LTEX" && !w.deleted)
+        .map(|w| store.overrides().form_key(w.key, order))
+        .collect();
+    let mut found: Vec<FormKey> = Vec::new();
+    for ltex in &keys {
+        let Ok(txst) = texture_set_of(store, ltex, b)? else {
+            continue;
+        };
+        if found.contains(&txst) {
+            continue;
+        }
+        let Some(set) = store.raw(&txst, b)? else {
+            continue;
+        };
+        let Some(id) = editor_id(&set) else {
+            continue;
+        };
+        if id.contains(&name) && id.contains("default") {
+            b.reserve(&mut found, 1, "terrain default texture", 0)?;
+            found.push(txst);
+        }
+    }
+    Ok(match found.len() {
+        0 => Err("NoNamedDefaultTexture"),
+        1 => Ok(found.remove(0)),
+        _ => Err("SeveralNamedDefaultTextures"),
+    })
+}
+
+/// A record's editor ID in ASCII lower case, without its terminator.
+fn editor_id(record: &fo4_plugin::Record) -> Option<String> {
+    let s = record.subrecords.iter().find(|s| s.signature == *b"EDID")?;
+    let d = record.data(s);
+    let d = d.strip_suffix(&[0]).unwrap_or(d);
+    (!d.is_empty()).then(|| String::from_utf8_lossy(d).to_ascii_lowercase())
+}
+
+/// The TXST that the TNAM of landscape texture record `ltex` names.
+fn texture_set_of(
+    store: &Store,
+    ltex: &FormKey,
+    b: &Budget,
+) -> Result<std::result::Result<FormKey, &'static str>> {
     let Some(winner) = store.overrides().winner(ltex) else {
         return Ok(Err("MissingLandscapeTexture"));
     };
@@ -335,15 +458,8 @@ pub fn colour_texture_path(
         return Ok(Err("LandscapeTextureNullTnam"));
     };
     match store.overrides().winner(&txst) {
-        Some(w) if w.signature == *b"TXST" => {}
-        _ => return Ok(Err("LandscapeTextureTnamNotTextureSet")),
-    }
-    let Some(set) = store.get::<Txst>(&txst, b)? else {
-        return Ok(Err("LandscapeTextureTnamNotTextureSet"));
-    };
-    match &set.data.textures[0] {
-        Some(path) => Ok(Ok(path.clone())),
-        None => Ok(Err("TextureSetWithoutTx00")),
+        Some(w) if w.signature == *b"TXST" => Ok(Ok(txst)),
+        _ => Ok(Err("LandscapeTextureTnamNotTextureSet")),
     }
 }
 

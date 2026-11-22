@@ -16,6 +16,9 @@ struct SurfaceParams {
     skip_zero_alpha: u32,
     // Draw::instance, written as four bytes by the instance-tag pass.
     tag: u32,
+    // 1: the texture's alpha is replaced by 1 (stored BC1 blocks declared
+    // without alpha, terrain textures), as the CPU's decoded texels hold it.
+    opaque_texture: u32,
 }
 
 @group(constants::MATERIAL_BIND_GROUP) @binding(0) var<uniform> params: SurfaceParams;
@@ -55,6 +58,9 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     let lod = 0.5 * log2(max(footprint, 1.0));
     let level = min(floor(lod + 0.5), f32(textureNumLevels(diffuse) - 1u));
     var color = textureSampleLevel(diffuse, diffuse_sampler, uv, level);
+    if params.opaque_texture == 1u {
+        color.a = 1.0;
+    }
     @if(VERTEX_COLORS)
     color = color * in.color;
     color.a = color.a * params.opacity;

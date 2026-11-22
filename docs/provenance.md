@@ -94,7 +94,19 @@ base, the texture repeat and the VCLR multiplication are registered pending
 rules whose candidates come from offline measurement of the stored data of
 one installation through this repository's readers (counts, seam and edge
 continuity, texel density of placed objects), recorded in the spec. No
-reader, editor or renderer of the format was opened for them.
+reader, editor or renderer of the format was opened for them. The two
+optional ground texture rules add no source either: reading a material-only
+texture set through its MNAM uses the existing `fo4-material` reader (the
+attributed MaterialLib port above) for the diffuse slot only, and the
+default texture's candidate comes from the editor IDs, game settings and
+`.ini` files of one installation and from offline seam and terrain LOD
+comparisons through this repository's readers, all recorded in
+[spec/land.md](../spec/land.md); the game executable was not opened.
+
+The viewer's stored texture blocks use the DDS layouts already cited in
+[spec/dds.md](../spec/dds.md) and the BC formats of the GPU API in use
+(wgpu through Bevy, already dependencies); the GPU decodes them, and no
+other BC decoder or texture streaming implementation was consulted.
 
 The walking controller (`fo4-walk`, [spec/walk.md](../spec/walk.md)) is
 original work from general geometry (closest points of convex sets,

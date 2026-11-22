@@ -45,6 +45,9 @@ pub const LAND_MISSING_BASE: &str = "land_missing_base_default_v1";
 pub const LTEX_TEXTURE_SET: &str = "ltex_tnam_texture_set_tx00_v1";
 pub const LAND_TEXTURE_REPEAT: &str = "land_texture_repeat_256_v1";
 pub const LAND_VERTEX_COLORS: &str = "land_vclr_multiply_v1";
+/// Optional ground texture rules, applied only when accepted at the level.
+pub const LTEX_MATERIAL: &str = "ltex_texture_set_material_diffuse_v1";
+pub const LAND_DEFAULT_NAMED: &str = "land_default_texture_world_named_v1";
 /// A rule's standing in `spec/hypotheses.tsv`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Status {
@@ -280,6 +283,8 @@ mod tests {
             LAND_SPACING,
             LAND_DIAGONAL_SW_NE,
             LAND_DIAGONAL_NW_SE,
+            LTEX_MATERIAL,
+            LAND_DEFAULT_NAMED,
         ] {
             assert!(status(name).is_some(), "{name}");
         }

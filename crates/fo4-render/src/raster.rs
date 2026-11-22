@@ -433,6 +433,11 @@ pub fn render(
         camera,
         options,
     };
+    if let Some(i) = list.blocks.keys().next() {
+        // Stored blocks are for a GPU consumer; this reference samples
+        // only decoded texels.
+        return Err(err("CompressedTextureNotDecoded", i));
+    }
     for tex in &list.textures {
         tex.validate()?;
     }

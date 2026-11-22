@@ -10,7 +10,7 @@
 //! texture's per-vertex weight, so the frame holds the weighted sum. A
 //! texture no record names, or one that is refused, is drawn as that same
 //! grey with its weight. There is no game lighting.
-use crate::draw::{decode_texture, BuildOptions};
+use crate::draw::{block_texture, decode_texture, BuildOptions};
 use crate::{append, Alpha, Draw, DrawList, Mesh, Sidedness, Texture, Vertex};
 use fo4_core::{Budget, Limits, Result};
 use fo4_plugin::typed::Store;
@@ -22,7 +22,7 @@ use fo4_scene::terrain::layers::{
 };
 use fo4_scene::terrain::Terrain;
 use fo4_scene::transform::Transform;
-use fo4_scene::{AssetKind, Loader, RuleLevel};
+use fo4_scene::{hypotheses, AssetKind, DecodedAsset, Loader, RuleLevel};
 use serde::Serialize;
 use std::collections::BTreeMap;
 
@@ -154,37 +154,43 @@ const ADDITIVE: Alpha = Alpha {
 };
 
 /// Landscape colour textures decoded once per draw list, with the budget of
-/// the reference build options.
+/// the build options it was made with.
 pub struct TextureCache {
     options: BuildOptions,
     texture_bytes: u64,
+    block_bytes: u64,
     by_ltex: BTreeMap<FormKey, std::result::Result<usize, String>>,
+    /// The default texture of each world (`land_default_texture_world_named_v1`).
+    by_world: BTreeMap<Option<FormKey>, std::result::Result<usize, String>>,
+    /// Draw-list textures by resolved path, shared by every record naming it.
+    by_path: BTreeMap<Vec<u8>, usize>,
     white: Option<usize>,
     /// Path rules used by a loaded texture.
     pub path_rules: Vec<&'static str>,
+    /// Optional ground texture rules a drawn texture relied on.
+    pub rules: Vec<&'static str>,
 }
 impl TextureCache {
     pub fn new(options: BuildOptions) -> Self {
         Self {
             options,
             texture_bytes: 0,
+            block_bytes: 0,
             by_ltex: BTreeMap::new(),
+            by_world: BTreeMap::new(),
+            by_path: BTreeMap::new(),
             white: None,
             path_rules: Vec::new(),
+            rules: Vec::new(),
         }
     }
-    /// Landscape textures by outcome: the TX00 path's decoded size or the
-    /// refusal code.
+    /// Landscape textures by outcome: `drawn` or the refusal code.
     pub fn outcomes(&self) -> BTreeMap<String, u64> {
-        let mut m = BTreeMap::new();
-        for v in self.by_ltex.values() {
-            *m.entry(match v {
-                Ok(_) => "drawn".to_owned(),
-                Err(code) => code.clone(),
-            })
-            .or_default() += 1;
-        }
-        m
+        tally(self.by_ltex.values())
+    }
+    /// Default textures of the worlds met, by outcome.
+    pub fn default_outcomes(&self) -> BTreeMap<String, u64> {
+        tally(self.by_world.values())
     }
     fn white(&mut self, list: &mut DrawList, b: &Budget) -> Result<usize> {
         if let Some(i) = self.white {
@@ -224,51 +230,243 @@ impl TextureCache {
         if let Some(v) = self.by_ltex.get(ltex) {
             return Ok(v.clone());
         }
-        let outcome = self.load(list, store, loader, ltex, level, limits, b)?;
+        let outcome = match layers::colour_texture(store, ltex, b)? {
+            Ok(colour) => self.colour(list, loader, colour, level, limits, b)?,
+            Err(code) => Err(code.to_owned()),
+        };
         b.charge(ltex.plugin.len() as u64 + 64, "terrain textures", 0)?;
         self.by_ltex.insert(ltex.clone(), outcome.clone());
         Ok(outcome)
     }
+    /// The draw-list texture of the default ground of `world` under
+    /// `land_default_texture_world_named_v1`, or why not.
     #[allow(clippy::too_many_arguments)]
-    fn load(
+    fn default(
         &mut self,
         list: &mut DrawList,
         store: &Store,
         loader: &mut Loader<'_>,
-        ltex: &FormKey,
+        world: Option<&FormKey>,
         level: RuleLevel,
         limits: &Limits,
         b: &Budget,
     ) -> Result<std::result::Result<usize, String>> {
-        let path = match layers::colour_texture_path(store, ltex, b)? {
-            Ok(p) => p,
-            Err(code) => return Ok(Err(code.to_owned())),
-        };
-        let resolved =
-            match loader
-                .assets
-                .resolve_path(Citation::TextureSetTexture, path.as_bytes(), b)
-            {
-                Ok(r) => r,
-                Err(e) => return Ok(Err(e.code)),
-            };
-        if !rules_state(&resolved.hypotheses, fo4_scene::hypotheses::status).ready_at(level) {
-            return Ok(Err("UnverifiedRenderPathNormalization".to_owned()));
+        let key = world.cloned();
+        if let Some(v) = self.by_world.get(&key) {
+            return Ok(v.clone());
         }
-        let id = match loader.assets.load(AssetKind::Texture, &resolved.key, b) {
+        let outcome = if !accepted(hypotheses::LAND_DEFAULT_NAMED, level) {
+            Err("DefaultTextureRuleNotAccepted".to_owned())
+        } else if let Some(world) = world {
+            match layers::default_texture_set(store, world, b)? {
+                Ok(txst) => match layers::texture_set_colour(store, &txst, b)? {
+                    Ok(colour) => {
+                        let drawn = self.colour(list, loader, colour, level, limits, b)?;
+                        if drawn.is_ok() {
+                            self.rule(hypotheses::LAND_DEFAULT_NAMED, b)?;
+                        }
+                        drawn
+                    }
+                    Err(code) => Err(code.to_owned()),
+                },
+                Err(code) => Err(code.to_owned()),
+            }
+        } else {
+            Err("TerrainWithoutWorld".to_owned())
+        };
+        b.charge(128, "terrain textures", 0)?;
+        self.by_world.insert(key, outcome.clone());
+        Ok(outcome)
+    }
+    fn rule(&mut self, rule: &'static str, b: &Budget) -> Result<()> {
+        if !self.rules.contains(&rule) {
+            b.reserve(&mut self.rules, 1, "terrain textures", 0)?;
+            self.rules.push(rule);
+            self.rules.sort_unstable();
+        }
+        Ok(())
+    }
+    /// The draw-list texture of a texture set's colour: its TX00, or the
+    /// diffuse texture of its material under
+    /// `ltex_texture_set_material_diffuse_v1`.
+    fn colour(
+        &mut self,
+        list: &mut DrawList,
+        loader: &mut Loader<'_>,
+        colour: layers::ColourTexture,
+        level: RuleLevel,
+        limits: &Limits,
+        b: &Budget,
+    ) -> Result<std::result::Result<usize, String>> {
+        let path = match colour {
+            layers::ColourTexture::TextureSet(path) => path.into_bytes(),
+            layers::ColourTexture::Material(material) => {
+                if !accepted(hypotheses::LTEX_MATERIAL, level) {
+                    return Ok(Err("TextureSetWithoutTx00".to_owned()));
+                }
+                match self.material_diffuse(loader, &material, level, b)? {
+                    Ok(path) => {
+                        let drawn = self.texture(
+                            list,
+                            loader,
+                            &path,
+                            Citation::MaterialTexture,
+                            level,
+                            limits,
+                            b,
+                        )?;
+                        if drawn.is_ok() {
+                            self.rule(hypotheses::LTEX_MATERIAL, b)?;
+                        }
+                        return Ok(drawn);
+                    }
+                    Err(code) => return Ok(Err(code)),
+                }
+            }
+        };
+        self.texture(
+            list,
+            loader,
+            &path,
+            Citation::TextureSetTexture,
+            level,
+            limits,
+            b,
+        )
+    }
+    /// The diffuse path of a lighting material (BGSM), or why not.
+    fn material_diffuse(
+        &mut self,
+        loader: &mut Loader<'_>,
+        material: &str,
+        level: RuleLevel,
+        b: &Budget,
+    ) -> Result<std::result::Result<Vec<u8>, String>> {
+        let key = match self.resolve(
+            loader,
+            material.as_bytes(),
+            Citation::TextureSetMaterial,
+            level,
+            b,
+        )? {
+            Ok(k) => k,
+            Err(code) => return Ok(Err(code)),
+        };
+        let id = match loader.assets.load(AssetKind::Material, &key, b) {
             Ok(id) => id,
             Err(e) => return Ok(Err(e.code)),
         };
-        let mut texture =
-            match decode_texture(loader, id, self.options, &mut self.texture_bytes, limits, b) {
-                Ok(t) => t.texture,
-                // A failed allocation is the process's, not this texture's; any
-                // other error (limits included) refuses this texture only.
+        let scratch = b.child();
+        let found = loader.assets.with_decoded(id, &scratch, |d| {
+            let DecodedAsset::Material(m) = d else {
+                return Ok(Err("RenderAssetKind".to_owned()));
+            };
+            if !matches!(m.kind, fo4_material::Kind::Bgsm(_)) {
+                return Ok(Err("LandscapeMaterialNotLighting".to_owned()));
+            }
+            let diffuse = m
+                .texture_paths()
+                .find(|(name, _)| *name == "diffuse")
+                .map(|(_, p)| p.bytes());
+            let found = match diffuse {
+                Some(p) if !p.is_empty() => {
+                    let mut v = Vec::new();
+                    b.reserve(&mut v, p.len(), "terrain textures", 0)?;
+                    v.extend_from_slice(p);
+                    Ok(v)
+                }
+                _ => Err("LandscapeMaterialWithoutDiffuse".to_owned()),
+            };
+            Ok(found)
+        });
+        match found {
+            Ok(v) => Ok(v),
+            Err(e) if e.code == "AllocationFailed" => Err(e),
+            Err(e) => Ok(Err(e.code)),
+        }
+    }
+    /// The VFS key of a citation whose path rules are accepted at `level`.
+    fn resolve(
+        &mut self,
+        loader: &mut Loader<'_>,
+        raw: &[u8],
+        citation: Citation,
+        level: RuleLevel,
+        b: &Budget,
+    ) -> Result<std::result::Result<Vec<u8>, String>> {
+        let resolved = match loader.assets.resolve_path(citation, raw, b) {
+            Ok(r) => r,
+            Err(e) => return Ok(Err(e.code)),
+        };
+        if !rules_state(&resolved.hypotheses, fo4_scene::hypotheses::status).ready_at(level) {
+            return Ok(Err("UnverifiedRenderPathNormalization".to_owned()));
+        }
+        for h in resolved.hypotheses {
+            if !self.path_rules.contains(&h) {
+                b.reserve(&mut self.path_rules, 1, "terrain textures", 0)?;
+                self.path_rules.push(h);
+            }
+        }
+        Ok(Ok(resolved.key))
+    }
+    /// The draw-list texture of texture citation `raw`, loaded once per
+    /// resolved path: kept as blocks when the options say so, else decoded
+    /// under them; its alpha is 1 either way.
+    #[allow(clippy::too_many_arguments)]
+    fn texture(
+        &mut self,
+        list: &mut DrawList,
+        loader: &mut Loader<'_>,
+        raw: &[u8],
+        citation: Citation,
+        level: RuleLevel,
+        limits: &Limits,
+        b: &Budget,
+    ) -> Result<std::result::Result<usize, String>> {
+        let key = match self.resolve(loader, raw, citation, level, b)? {
+            Ok(k) => k,
+            Err(code) => return Ok(Err(code)),
+        };
+        if let Some(i) = self.by_path.get(&key) {
+            return Ok(Ok(*i));
+        }
+        let id = match loader.assets.load(AssetKind::Texture, &key, b) {
+            Ok(id) => id,
+            Err(e) => return Ok(Err(e.code)),
+        };
+        let kept = match self.options.blocks {
+            Some(o) => match block_texture(
+                loader,
+                id,
+                o.max_dimension,
+                o.max_bytes,
+                &mut self.block_bytes,
+                b,
+            ) {
+                Ok(t) => t,
                 Err(e) if e.code == "AllocationFailed" => return Err(e),
                 Err(e) => return Ok(Err(e.code)),
-            };
+            },
+            None => None,
+        };
+        let loaded = match kept {
+            Some(t) => t,
+            None => {
+                match decode_texture(loader, id, self.options, &mut self.texture_bytes, limits, b) {
+                    Ok(t) => t,
+                    // A failed allocation is the process's, not this texture's; any
+                    // other error (limits included) refuses this texture only.
+                    Err(e) if e.code == "AllocationFailed" => return Err(e),
+                    Err(e) => return Ok(Err(e.code)),
+                }
+            }
+        };
+        let (mut texture, mut blocks) = (loaded.texture, loaded.blocks);
         // `land_layer_weights_residual_v1`: texture alpha is not used; the
         // weight rides in the vertex alpha of the overlay passes.
+        if let Some(blocks) = &mut blocks {
+            blocks.opaque = true;
+        }
         for px in texture.rgba.as_chunks_mut::<4>().0 {
             px[3] = 1.0;
         }
@@ -277,17 +475,39 @@ impl TextureCache {
                 px[3] = 1.0;
             }
         }
-        texture.validate()?;
-        for h in resolved.hypotheses {
-            if !self.path_rules.contains(&h) {
-                b.reserve(&mut self.path_rules, 1, "terrain textures", 0)?;
-                self.path_rules.push(h);
-            }
+        match &blocks {
+            Some(k) => texture.validate_blocks(k)?,
+            None => texture.validate()?,
         }
         let i = list.textures.len();
         append(&mut list.textures, texture, b)?;
+        if let Some(k) = blocks {
+            b.charge(64, "block texture", 0)?;
+            list.blocks.insert(i, k);
+        }
+        b.charge(key.len() as u64 + 64, "terrain textures", 0)?;
+        self.by_path.insert(key, i);
         Ok(Ok(i))
     }
+}
+
+fn tally<'a>(
+    values: impl Iterator<Item = &'a std::result::Result<usize, String>>,
+) -> BTreeMap<String, u64> {
+    let mut m = BTreeMap::new();
+    for v in values {
+        *m.entry(match v {
+            Ok(_) => "drawn".to_owned(),
+            Err(code) => code.clone(),
+        })
+        .or_default() += 1;
+    }
+    m
+}
+
+/// Whether optional rule `rule` is accepted at `level`.
+fn accepted(rule: &'static str, level: RuleLevel) -> bool {
+    rules_state(&[rule], fo4_scene::hypotheses::status).ready_at(level)
 }
 
 /// What one terrain piece drew.
@@ -305,9 +525,14 @@ pub struct TexturedReport {
     pub passes: u32,
     pub overlay_triangles: u64,
     /// Sum of the weights at every quadrant vertex, by what draws them:
-    /// `texture`, `default` (no record names it), `refused` (a named
-    /// texture that could not be drawn); divided by the vertex count.
+    /// `texture`, `default_texture` (the default drawn with the texture
+    /// its world names), `default` (the default drawn grey), `refused` (a
+    /// named texture that could not be drawn); divided by the vertex count.
     pub weight_share: BTreeMap<&'static str, f64>,
+    /// The default texture: `drawn` or why not; absent when no quadrant
+    /// has a default weight.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub default_texture: Option<String>,
     pub texture_refusals: BTreeMap<String, u32>,
     pub over_unity_vertices: u32,
     pub vertex_colors: bool,
@@ -358,12 +583,35 @@ pub fn append_textured_terrain(
             }
         }
     }
+    let has_default = layers
+        .quadrants
+        .iter()
+        .any(|q| q.refusal.is_none() && q.textures.iter().any(|t| t.source == Source::Default));
+    let default = if has_default {
+        let d = cache.default(
+            list,
+            store,
+            loader,
+            terrain.world.as_ref(),
+            level,
+            limits,
+            b,
+        )?;
+        report.default_texture = Some(match &d {
+            Ok(_) => "drawn".to_owned(),
+            Err(code) => code.clone(),
+        });
+        d.ok()
+    } else {
+        None
+    };
     let white = cache.white(list, b)?;
     append_layers(
         list,
         terrain,
         &layers,
         &resolved,
+        default,
         white,
         instance,
         &mut report,
@@ -374,13 +622,15 @@ pub fn append_textured_terrain(
 
 /// Appends the passes of `layers` over `terrain`: `textures` gives the
 /// draw-list texture of each named landscape texture or why it is refused,
-/// `white` a 1 x 1 white texture for the grey passes.
+/// `default` the texture of the default when its world names one, `white`
+/// a 1 x 1 white texture for the grey passes.
 #[allow(clippy::too_many_arguments)]
 pub fn append_layers(
     list: &mut DrawList,
     terrain: &Terrain,
     layers: &Layers,
     textures: &BTreeMap<FormKey, std::result::Result<usize, String>>,
+    default: Option<usize>,
     white: usize,
     instance: u32,
     report: &mut TexturedReport,
@@ -420,10 +670,16 @@ pub fn append_layers(
         for t in &q.textures {
             let sum: f64 = t.weights.iter().map(|w| f64::from(*w)).sum();
             let drawn = match &t.source {
-                Source::Default => {
-                    *shares.entry("default").or_default() += sum;
-                    None
-                }
+                Source::Default => match default {
+                    Some(i) => {
+                        *shares.entry("default_texture").or_default() += sum;
+                        Some(i)
+                    }
+                    None => {
+                        *shares.entry("default").or_default() += sum;
+                        None
+                    }
+                },
                 Source::Ltex(key) => match textures.get(key) {
                     Some(Ok(i)) => {
                         *shares.entry("texture").or_default() += sum;
@@ -740,7 +996,18 @@ mod tests {
             (key(0xc), Err("TextureSetWithoutTx00".to_owned())),
         ]);
         let mut report = TexturedReport::default();
-        append_layers(&mut list, &t, &layers, &textures, 2, 7, &mut report, &b).unwrap();
+        append_layers(
+            &mut list,
+            &t,
+            &layers,
+            &textures,
+            None,
+            2,
+            7,
+            &mut report,
+            &b,
+        )
+        .unwrap();
         // Quadrant 0: opaque A then the overlay B; one opaque pass each for
         // the others, grey for the default and the refused texture.
         assert_eq!(list.draws.len(), 5);
@@ -818,6 +1085,49 @@ mod tests {
     }
 
     #[test]
+    fn a_named_default_draws_the_default_weight_with_its_texture() {
+        let (t, layers) = layered();
+        let b = Budget::new(64 << 20);
+        let mut list = DrawList::default();
+        list.textures.push(solid([1.0, 0.0, 0.0, 1.0]));
+        list.textures.push(solid([0.0, 1.0, 0.0, 1.0]));
+        list.textures.push(solid([1.0; 4]));
+        list.textures.push(solid([0.0, 0.0, 1.0, 1.0]));
+        let key = |id| FormKey {
+            plugin: "synthetic.esm".into(),
+            object_id: id,
+        };
+        let textures = BTreeMap::from([(key(0xa), Ok(0)), (key(0xb), Ok(1)), (key(0xc), Ok(0))]);
+        let mut report = TexturedReport::default();
+        append_layers(
+            &mut list,
+            &t,
+            &layers,
+            &textures,
+            Some(3),
+            2,
+            7,
+            &mut report,
+            &b,
+        )
+        .unwrap();
+        // Quadrant 2 (no base) is one opaque pass of the default's texture.
+        assert_eq!(
+            list.draws.iter().map(|d| d.texture).collect::<Vec<_>>(),
+            [0, 1, 0, 3, 0]
+        );
+        assert_eq!(
+            report.weight_share,
+            BTreeMap::from([("default_texture", 0.25), ("texture", 0.75)])
+        );
+        let colors = list.meshes[list.draws[3].mesh]
+            .vertex_colors
+            .as_ref()
+            .unwrap();
+        assert!(colors.iter().all(|c| *c == [1.0, 1.0, 1.0, 1.0]));
+    }
+
+    #[test]
     fn vertex_colours_multiply_every_pass() {
         let (t, mut layers) = layered();
         layers.colors = Some(vec![[0.5, 1.0, 0.25]; fo4_plugin::land::POINTS]);
@@ -832,7 +1142,18 @@ mod tests {
         };
         let textures = BTreeMap::from([(key(0xa), Ok(0)), (key(0xb), Ok(1))]);
         let mut report = TexturedReport::default();
-        append_layers(&mut list, &t, &layers, &textures, 2, 7, &mut report, &b).unwrap();
+        append_layers(
+            &mut list,
+            &t,
+            &layers,
+            &textures,
+            None,
+            2,
+            7,
+            &mut report,
+            &b,
+        )
+        .unwrap();
         assert!(report.vertex_colors);
         // An unresolved name is refused, not drawn.
         assert_eq!(report.texture_refusals["TextureNotResolved"], 1);

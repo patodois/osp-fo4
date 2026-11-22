@@ -27,7 +27,7 @@ fn load_scene(
     walk: bool,
 ) -> AnyResult<(scene::GpuScene, RenderOptions, load::Loaded)> {
     let started = std::time::Instant::now();
-    let loaded = load::cell(
+    let mut loaded = load::cell(
         &s.manifest,
         &s.data,
         &s.cell,
@@ -35,12 +35,13 @@ fn load_scene(
         walk,
         s.terrain,
         s.around,
+        load::build_options(s.textures, s.level),
     )?;
     let options = RenderOptions {
         backface_cull: s.backface_cull,
         ..RenderOptions::REFERENCE
     };
-    let gpu = scene::convert(&loaded.build.list, &options)?;
+    let gpu = scene::convert(&mut loaded.build.list, &options)?;
     println!(
         "cell {}: {} placements, {} omitted; GPU {} meshes, {} textures, {} surfaces, {} instances ({} blended)",
         s.cell,
@@ -52,6 +53,22 @@ fn load_scene(
         gpu.instances.len(),
         gpu.blended_instances(),
     );
+    // Not with --reference-textures, whose output is the reference's.
+    if s.textures != cli::Textures::Reference {
+        let mib = |n: usize| n as f64 / f64::from(1u32 << 20);
+        let (blocks, decoded): (Vec<_>, Vec<_>) = gpu
+            .textures
+            .iter()
+            .partition(|t| matches!(t.format, scene::TexelFormat::Blocks(_)));
+        println!(
+            "textures {:?}: {} as stored blocks ({:.1} MiB), {} decoded to RGBA16F ({:.1} MiB)",
+            s.textures,
+            blocks.len(),
+            mib(blocks.iter().map(|t| t.bytes.len()).sum()),
+            decoded.len(),
+            mib(decoded.iter().map(|t| t.bytes.len()).sum()),
+        );
+    }
     // Only with --around, so the default output is unchanged.
     if s.around > 0 {
         println!(
@@ -117,7 +134,7 @@ fn run() -> AnyResult<()> {
             tags,
             walk,
         } => {
-            let (gpu, options, loaded) = load_scene(&s, walk)?;
+            let (mut gpu, options, loaded) = load_scene(&s, walk)?;
             let root = Some(loaded.data_root.as_path());
             // Open the outputs first: a refused path fails before rendering.
             let mut out_file = load::output_file(&out, root)?;
@@ -131,7 +148,7 @@ fn run() -> AnyResult<()> {
             };
             drop(loaded);
             let cam = camera::look_at(eye, look, camera::reference_frustum(size), size)?;
-            let frames = gpu::headless(&gpu, &cam, options.clear, tags.is_some())?;
+            let frames = gpu::headless(&mut gpu, &cam, options.clear, tags.is_some())?;
             use std::io::Write;
             out_file.write_all(&load::png_rgba8(size, &frames.color)?)?;
             println!("{out}");

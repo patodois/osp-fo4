@@ -32,6 +32,51 @@ pub struct Mip {
     pub rgba: Vec<f32>,
     pub mip: u32,
 }
+/// Block-compressed layout of [`Blocks`]: 4 x 4 texel blocks of 8 or 16
+/// bytes, as the DDS stores them (`spec/dds.md`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub enum BlockFormat {
+    /// BC1 whose DDS declares no alpha: the reference decodes the
+    /// three-colour mode's fourth index as opaque black, so [`Blocks::opaque`]
+    /// is set.
+    Bc1,
+    /// BC1 whose fourth index of the three-colour mode is transparent black.
+    Bc1Alpha,
+    Bc2,
+    Bc3,
+    Bc4,
+    Bc5,
+    Bc7,
+}
+impl BlockFormat {
+    /// Bytes of one 4 x 4 block.
+    pub fn block_bytes(self) -> u64 {
+        match self {
+            Self::Bc1 | Self::Bc1Alpha | Self::Bc4 => 8,
+            _ => 16,
+        }
+    }
+    /// Bytes of a level of `width` x `height` texels.
+    pub fn level_bytes(self, width: u32, height: u32) -> u64 {
+        u64::from(width.div_ceil(4)) * u64::from(height.div_ceil(4)) * self.block_bytes()
+    }
+}
+/// A texture's stored blocks, kept for a GPU that decodes them itself (the
+/// viewer); the CPU reference does not sample them. They stand for the
+/// texels of the draw-list texture of the same index ([`DrawList::blocks`]),
+/// whose `rgba` and `mips` are then empty. `bytes` holds `levels` levels one
+/// after the other: level 0 has the texture's `width` and `height`, both
+/// multiples of 4; level k is `max(1, side >> k)`, each the next stored mip
+/// without gaps.
+#[derive(Debug, Clone)]
+pub struct Blocks {
+    pub format: BlockFormat,
+    pub levels: u32,
+    pub bytes: Vec<u8>,
+    /// Sampled alpha is 1 whatever the blocks hold: BC1 declared without
+    /// alpha, or a terrain texture whose alpha is unused.
+    pub opaque: bool,
+}
 #[derive(Debug)]
 pub struct Texture {
     pub mips: Vec<Mip>,
@@ -88,6 +133,52 @@ impl Texture {
                 ));
             }
             previous = m.mip;
+        }
+        Ok(())
+    }
+    /// Checks `self` as the texture whose texels are the stored blocks `b`.
+    pub fn validate_blocks(&self, b: &Blocks) -> Result<()> {
+        let invalid = |found: String| {
+            Error::new(
+                "InvalidBlockTexture",
+                "render texture",
+                0,
+                "sides multiple of 4, one stored level per mip from the base, no RGBA",
+                found,
+            )
+        };
+        if self.width == 0
+            || self.height == 0
+            || !self.width.is_multiple_of(4)
+            || !self.height.is_multiple_of(4)
+            || !self.rgba.is_empty()
+            || !self.mips.is_empty()
+            || b.levels == 0
+            || b.levels > 32
+        {
+            return Err(invalid(format!(
+                "{}x{}, {} RGBA, {} mips, {} levels",
+                self.width,
+                self.height,
+                self.rgba.len(),
+                self.mips.len(),
+                b.levels
+            )));
+        }
+        let expected: u64 = (0..b.levels)
+            .map(|k| {
+                b.format
+                    .level_bytes((self.width >> k).max(1), (self.height >> k).max(1))
+            })
+            .sum();
+        if b.bytes.len() as u64 != expected {
+            return Err(invalid(format!(
+                "{} bytes for {} levels of {}x{}",
+                b.bytes.len(),
+                b.levels,
+                self.width,
+                self.height
+            )));
         }
         Ok(())
     }
@@ -248,8 +339,22 @@ pub struct DrawList {
     /// sample of such a draw whose depth equals the stored opaque depth is
     /// kept. Every other draw keeps only samples strictly nearer than it.
     pub overlays: Vec<usize>,
+    /// Stored blocks by texture index, for a GPU consumer; empty in the
+    /// reference, and a list with any is not drawn by the CPU.
+    pub blocks: std::collections::BTreeMap<usize, Blocks>,
 }
 impl DrawList {
+    /// Validates texture `i`, as its stored blocks when it has them.
+    pub fn validate_texture(&self, i: usize) -> Result<()> {
+        let t = self
+            .textures
+            .get(i)
+            .ok_or_else(|| Error::new("RenderTextureIndex", "draw list", 0, "texture index", i))?;
+        match self.blocks.get(&i) {
+            Some(b) => t.validate_blocks(b),
+            None => t.validate(),
+        }
+    }
     /// Whether draw `i` is an overlay; fails unless `overlays` is strictly
     /// increasing and within `draws`.
     pub fn validate_overlays(&self) -> Result<()> {

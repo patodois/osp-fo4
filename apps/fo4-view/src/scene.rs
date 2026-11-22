@@ -8,7 +8,7 @@
 use crate::coords;
 use bevy::math::{Quat, Vec3};
 use bevy::render::render_resource::BlendFactor;
-use fo4_render::{Alpha, DrawList, RenderOptions};
+use fo4_render::{Alpha, BlockFormat, DrawList, RenderOptions};
 use std::collections::BTreeMap;
 
 pub struct GpuMesh {
@@ -18,11 +18,24 @@ pub struct GpuMesh {
     pub indices: Vec<u16>,
 }
 
-/// RGBA16F texels, base level first, then each coarser level in order.
+/// Texel layout of a [`GpuTexture`].
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TexelFormat {
+    /// Decoded texels converted to RGBA16F.
+    Rgba16Float,
+    /// Stored blocks uploaded as they are (`fo4_render::Blocks`).
+    Blocks(BlockFormat),
+}
+
+/// Texels, base level first, then each coarser level in order.
 pub struct GpuTexture {
     pub width: u32,
     pub height: u32,
     pub levels: u32,
+    pub format: TexelFormat,
+    /// Sampled alpha is replaced by 1 (`fo4_render::Blocks::opaque`).
+    pub opaque: bool,
+    /// Moved into the GPU image at upload.
     pub bytes: Vec<u8>,
 }
 
@@ -43,9 +56,11 @@ pub struct SurfaceParams {
     /// The CPU skips a blended sample whose alpha is exactly zero when the
     /// source factor is code 6 (source alpha).
     pub skip_zero_alpha: bool,
+    /// The texture's sampled alpha is replaced by 1 before anything else.
+    pub opaque_texture: bool,
 }
 impl SurfaceParams {
-    fn bits(&self) -> [u32; 8] {
+    fn bits(&self) -> [u32; 9] {
         [
             self.uv_scale[0].to_bits(),
             self.uv_scale[1].to_bits(),
@@ -55,6 +70,7 @@ impl SurfaceParams {
             self.test_ref.to_bits(),
             self.opacity.to_bits(),
             u32::from(self.skip_zero_alpha),
+            u32::from(self.opaque_texture),
         ]
     }
 }
@@ -147,6 +163,7 @@ fn surface_params(alpha: Alpha, uv_offset: [f64; 2], uv_scale: [f64; 2]) -> Surf
         test_ref: f32::from(alpha.test_ref),
         opacity: alpha.opacity,
         skip_zero_alpha: alpha.enabled == 1 && alpha.source == 6,
+        opaque_texture: false,
     }
 }
 
@@ -156,8 +173,22 @@ fn to_f16_bytes(rgba: &[f32], out: &mut Vec<u8>) {
     }
 }
 
-/// `t` has passed `Texture::validate` (see `convert`).
-fn texture(t: &fo4_render::Texture) -> Result<GpuTexture, String> {
+/// `t` has passed validation (see `convert`), with its stored blocks when
+/// it has them; their bytes are moved out, not copied.
+fn texture(
+    t: &fo4_render::Texture,
+    blocks: Option<&mut fo4_render::Blocks>,
+) -> Result<GpuTexture, String> {
+    if let Some(blocks) = blocks {
+        return Ok(GpuTexture {
+            width: t.width,
+            height: t.height,
+            levels: blocks.levels,
+            format: TexelFormat::Blocks(blocks.format),
+            opaque: blocks.opaque,
+            bytes: std::mem::take(&mut blocks.bytes),
+        });
+    }
     let total: usize = std::iter::once(t.rgba.len())
         .chain(t.mips.iter().map(|m| m.rgba.len()))
         .try_fold(0usize, |a, n| a.checked_add(n))
@@ -184,6 +215,8 @@ fn texture(t: &fo4_render::Texture) -> Result<GpuTexture, String> {
         width: t.width,
         height: t.height,
         levels: 1 + t.mips.len() as u32,
+        format: TexelFormat::Rgba16Float,
+        opaque: false,
         bytes,
     })
 }
@@ -229,23 +262,25 @@ fn mesh(m: &fo4_render::Mesh) -> Result<GpuMesh, String> {
 }
 
 /// Convert a validated draw list. `options` must be the CPU options the GPU
-/// frame is compared with; only bilinear filtering is implemented.
-pub fn convert(list: &DrawList, options: &RenderOptions) -> Result<GpuScene, String> {
+/// frame is compared with; only bilinear filtering is implemented. Stored
+/// blocks are moved out of `list`, which no CPU render can then draw.
+pub fn convert(list: &mut DrawList, options: &RenderOptions) -> Result<GpuScene, String> {
     if !options.bilinear {
         return Err(
             "UnsupportedViewerOption: the GPU path implements bilinear sampling only".into(),
         );
     }
-    // The CPU validates every texture of the list before drawing.
-    for t in &list.textures {
-        t.validate().map_err(|e| e.to_string())?;
+    // The CPU validates every texture of the list before drawing; stored
+    // blocks are validated as such.
+    for i in 0..list.textures.len() {
+        list.validate_texture(i).map_err(|e| e.to_string())?;
     }
     list.validate_overlays().map_err(|e| e.to_string())?;
     let mut out = GpuScene::default();
     let mut mesh_index = BTreeMap::new();
     let mut texture_index = BTreeMap::new();
     // Texture, parameter bits, raw blend codes, culling, overlay.
-    type SurfaceIdentity = (usize, [u32; 8], Option<(u32, u32)>, bool, bool);
+    type SurfaceIdentity = (usize, [u32; 9], Option<(u32, u32)>, bool, bool);
     let mut surface_index: BTreeMap<SurfaceIdentity, usize> = BTreeMap::new();
     for (di, draw) in list.draws.iter().enumerate() {
         draw.alpha.validate().map_err(|e| e.to_string())?;
@@ -253,10 +288,9 @@ pub fn convert(list: &DrawList, options: &RenderOptions) -> Result<GpuScene, Str
             .meshes
             .get(draw.mesh)
             .ok_or_else(|| format!("RenderMeshIndex: {}", draw.mesh))?;
-        let tex = list
-            .textures
-            .get(draw.texture)
-            .ok_or_else(|| format!("RenderTextureIndex: {}", draw.texture))?;
+        if draw.texture >= list.textures.len() {
+            return Err(format!("RenderTextureIndex: {}", draw.texture));
+        }
         if draw
             .uv_offset
             .iter()
@@ -287,7 +321,10 @@ pub fn convert(list: &DrawList, options: &RenderOptions) -> Result<GpuScene, Str
         let texture_slot = match texture_index.get(&draw.texture) {
             Some(&i) => i,
             None => {
-                out.textures.push(texture(tex)?);
+                out.textures.push(texture(
+                    &list.textures[draw.texture],
+                    list.blocks.get_mut(&draw.texture),
+                )?);
                 texture_index.insert(draw.texture, out.textures.len() - 1);
                 out.textures.len() - 1
             }
@@ -298,7 +335,10 @@ pub fn convert(list: &DrawList, options: &RenderOptions) -> Result<GpuScene, Str
             options.backface_cull && !draw.sidedness.double_sided().map_err(|e| e.to_string())?;
         let blend_codes =
             (draw.alpha.enabled == 1).then_some((draw.alpha.source, draw.alpha.destination));
-        let params = surface_params(draw.alpha, draw.uv_offset, draw.uv_scale);
+        let params = SurfaceParams {
+            opaque_texture: out.textures[texture_slot].opaque,
+            ..surface_params(draw.alpha, draw.uv_offset, draw.uv_scale)
+        };
         let surface_key = (
             texture_slot,
             params.bits(),
@@ -417,12 +457,13 @@ mod tests {
                 draw(9, 0, 0, alpha(1, 6, 7, None)),
             ],
             overlays: Vec::new(),
+            blocks: Default::default(),
         }
     }
 
     #[test]
     fn meshes_textures_and_equal_surfaces_are_shared() {
-        let scene = convert(&list(), &RenderOptions::REFERENCE).unwrap();
+        let scene = convert(&mut list(), &RenderOptions::REFERENCE).unwrap();
         assert_eq!(scene.meshes.len(), 1);
         assert_eq!(scene.textures.len(), 1);
         assert_eq!(scene.surfaces.len(), 2);
@@ -441,8 +482,65 @@ mod tests {
     }
 
     #[test]
+    fn stored_blocks_are_moved_and_carry_their_opaque_alpha() {
+        let mut l = list();
+        l.textures.push(Texture {
+            mips: Vec::new(),
+            width: 8,
+            height: 4,
+            rgba: Vec::new(),
+            mip: 1,
+            srgb: false,
+        });
+        l.blocks.insert(
+            1,
+            fo4_render::Blocks {
+                format: BlockFormat::Bc1,
+                levels: 3,
+                bytes: (0..32).collect(),
+                opaque: true,
+            },
+        );
+        l.draws[2].texture = 1;
+        let scene = convert(&mut l, &RenderOptions::REFERENCE).unwrap();
+        let t = &scene.textures[1];
+        assert_eq!(
+            (t.width, t.height, t.levels, t.format, t.opaque),
+            (8, 4, 3, TexelFormat::Blocks(BlockFormat::Bc1), true)
+        );
+        assert_eq!(t.bytes, (0..32).collect::<Vec<u8>>());
+        assert!(l.blocks[&1].bytes.is_empty());
+        assert!(
+            scene.surfaces[scene.instances[2].surface]
+                .params
+                .opaque_texture
+        );
+        assert!(
+            !scene.surfaces[scene.instances[0].surface]
+                .params
+                .opaque_texture
+        );
+        assert_eq!(scene.textures[0].format, TexelFormat::Rgba16Float);
+        // Blocks that do not fit their texture are refused.
+        let mut bad = list();
+        bad.blocks.insert(
+            0,
+            fo4_render::Blocks {
+                format: BlockFormat::Bc1,
+                levels: 1,
+                bytes: vec![0; 8],
+                opaque: false,
+            },
+        );
+        assert!(convert(&mut bad, &RenderOptions::REFERENCE)
+            .err()
+            .unwrap()
+            .contains("InvalidBlockTexture"));
+    }
+
+    #[test]
     fn alpha_fields_follow_the_cpu_reading() {
-        let scene = convert(&list(), &RenderOptions::REFERENCE).unwrap();
+        let scene = convert(&mut list(), &RenderOptions::REFERENCE).unwrap();
         let tested = &scene.surfaces[scene.instances[0].surface];
         assert_eq!(tested.params.test_function, TEST_REFERENCE_THRESHOLD);
         assert_eq!(tested.params.test_ref, 128.);
@@ -464,14 +562,14 @@ mod tests {
     #[test]
     fn culling_follows_the_cpu_option_and_its_errors() {
         let mut options = RenderOptions::REFERENCE;
-        let scene = convert(&list(), &options).unwrap();
+        let scene = convert(&mut list(), &options).unwrap();
         assert!(scene.surfaces.iter().all(|s| !s.key.cull_back));
         options.backface_cull = true;
-        let scene = convert(&list(), &options).unwrap();
+        let scene = convert(&mut list(), &options).unwrap();
         assert!(scene.surfaces.iter().all(|s| s.key.cull_back));
         let mut undeclared = list();
         undeclared.draws[0].sidedness = Sidedness::default();
-        let e = convert(&undeclared, &options).err().unwrap();
+        let e = convert(&mut undeclared, &options).err().unwrap();
         assert!(e.contains("MissingCullDeclarations"), "{e}");
     }
 
@@ -480,7 +578,7 @@ mod tests {
         use std::hash::{BuildHasher, Hash, Hasher};
         let mut l = list();
         l.overlays = vec![2];
-        let scene = convert(&l, &RenderOptions::REFERENCE).unwrap();
+        let scene = convert(&mut l, &RenderOptions::REFERENCE).unwrap();
         let keys: Vec<_> = scene
             .instances
             .iter()
@@ -489,7 +587,7 @@ mod tests {
         assert_eq!(keys, [false, false, true]);
         for bad in [vec![2, 2], vec![3]] {
             l.overlays = bad;
-            let e = convert(&l, &RenderOptions::REFERENCE).err().unwrap();
+            let e = convert(&mut l, &RenderOptions::REFERENCE).err().unwrap();
             assert!(e.contains("InvalidOverlayDraws"), "{e}");
         }
         // Without overlay the key hashes as the two-field key did, so the
@@ -516,21 +614,21 @@ mod tests {
     fn cpu_refusals_are_refusals_here() {
         let mut bad = list();
         bad.meshes[0].triangles[0][2] = 3;
-        assert!(convert(&bad, &RenderOptions::REFERENCE)
+        assert!(convert(&mut bad, &RenderOptions::REFERENCE)
             .err()
             .unwrap()
             .contains("RenderVertexIndex"));
         let mut bad = list();
         bad.draws[0].alpha.source = 11;
         bad.draws[0].alpha.enabled = 1;
-        assert!(convert(&bad, &RenderOptions::REFERENCE).is_err());
+        assert!(convert(&mut bad, &RenderOptions::REFERENCE).is_err());
         let mut gap = list();
         gap.textures[0].mips[0].mip = 2;
         gap.textures[0].mips[0].width = 1;
-        assert!(convert(&gap, &RenderOptions::REFERENCE).is_err());
+        assert!(convert(&mut gap, &RenderOptions::REFERENCE).is_err());
         let mut nearest = RenderOptions::REFERENCE;
         nearest.bilinear = false;
-        assert!(convert(&list(), &nearest).is_err());
+        assert!(convert(&mut list(), &nearest).is_err());
     }
 
     #[test]

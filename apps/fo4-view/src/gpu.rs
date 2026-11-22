@@ -3,7 +3,7 @@
 use crate::{
     coords,
     fly::{FlyInput, FlySettings, FlyState},
-    scene::GpuScene,
+    scene::{GpuScene, TexelFormat},
     walk::WalkView,
 };
 use bevy::{
@@ -27,6 +27,7 @@ use bevy::{
             ShaderType, SpecializedMeshPipelineError, TextureDimension, TextureFormat,
         },
         renderer::RenderDevice,
+        settings::WgpuFeatures,
         view::screenshot::{Screenshot, ScreenshotCaptured},
         RenderApp, RenderPlugin,
     },
@@ -34,6 +35,7 @@ use bevy::{
     window::{ExitCondition, PrimaryWindow},
     winit::WinitPlugin,
 };
+use fo4_render::BlockFormat;
 use fo4_scene::camera::Camera as CpuCamera;
 use std::sync::{Arc, Mutex};
 
@@ -55,6 +57,7 @@ pub struct SurfaceUniform {
     pub test_function: u32,
     pub skip_zero_alpha: u32,
     pub tag: u32,
+    pub opaque_texture: u32,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -198,7 +201,46 @@ struct Uploaded {
     images: Vec<Handle<Image>>,
 }
 
-fn upload(world: &mut World, scene: &GpuScene) -> Uploaded {
+/// The wgpu format of a texture's texels: RGBA16F for decoded texels, the
+/// matching block format (unorm: stored values, as the CPU reads them) for
+/// stored blocks.
+fn texel_format(format: TexelFormat) -> TextureFormat {
+    match format {
+        TexelFormat::Rgba16Float => TextureFormat::Rgba16Float,
+        TexelFormat::Blocks(b) => match b {
+            BlockFormat::Bc1 | BlockFormat::Bc1Alpha => TextureFormat::Bc1RgbaUnorm,
+            BlockFormat::Bc2 => TextureFormat::Bc2RgbaUnorm,
+            BlockFormat::Bc3 => TextureFormat::Bc3RgbaUnorm,
+            BlockFormat::Bc4 => TextureFormat::Bc4RUnorm,
+            BlockFormat::Bc5 => TextureFormat::Bc5RgUnorm,
+            BlockFormat::Bc7 => TextureFormat::Bc7RgbaUnorm,
+        },
+    }
+}
+
+/// Texture bytes added per frame at most (one texture at least): each
+/// frame's staging copies are freed before the next batch, so all the
+/// textures are never held twice at once.
+const UPLOAD_BATCH_BYTES: usize = 64 << 20;
+
+/// Uploads the meshes; textures follow in batches ([`upload_textures`]).
+/// Stored blocks need a device that samples BC formats.
+fn upload_meshes(world: &mut World, scene: &GpuScene) -> Result<Uploaded, String> {
+    let blocks = scene
+        .textures
+        .iter()
+        .any(|t| matches!(t.format, TexelFormat::Blocks(_)));
+    if blocks
+        && !world
+            .resource::<RenderDevice>()
+            .features()
+            .contains(WgpuFeatures::TEXTURE_COMPRESSION_BC)
+    {
+        return Err(
+            "GpuWithoutBcTextures: this device cannot sample block-compressed textures; use --reference-textures"
+                .into(),
+        );
+    }
     let mut meshes = world.resource_mut::<Assets<Mesh>>();
     let meshes = scene
         .meshes
@@ -217,37 +259,47 @@ fn upload(world: &mut World, scene: &GpuScene) -> Uploaded {
             meshes.add(mesh)
         })
         .collect();
+    Ok(Uploaded {
+        meshes,
+        images: Vec::new(),
+    })
+}
+
+/// Adds the next batch of textures, their bytes moved into the images;
+/// true once every texture has been added.
+fn upload_textures(world: &mut World, scene: &mut GpuScene, up: &mut Uploaded) -> bool {
     let mut images = world.resource_mut::<Assets<Image>>();
-    let images = scene
-        .textures
-        .iter()
-        .map(|t| {
-            let mut image = Image::new_uninit(
-                Extent3d {
-                    width: t.width,
-                    height: t.height,
-                    depth_or_array_layers: 1,
-                },
-                TextureDimension::D2,
-                TextureFormat::Rgba16Float,
-                RenderAssetUsages::RENDER_WORLD,
-            );
-            image.texture_descriptor.mip_level_count = t.levels;
-            image.data = Some(t.bytes.clone());
-            // Wrap and bilinear within one level, the level chosen in the
-            // shader: the CPU `Texture::sample_lod` with `bilinear`.
-            image.sampler = ImageSampler::Descriptor(ImageSamplerDescriptor {
-                address_mode_u: ImageAddressMode::Repeat,
-                address_mode_v: ImageAddressMode::Repeat,
-                mag_filter: ImageFilterMode::Linear,
-                min_filter: ImageFilterMode::Linear,
-                mipmap_filter: ImageFilterMode::Nearest,
-                ..default()
-            });
-            images.add(image)
-        })
-        .collect();
-    Uploaded { meshes, images }
+    let mut bytes = 0;
+    while let Some(t) = scene.textures.get_mut(up.images.len()) {
+        if bytes > 0 && bytes + t.bytes.len() > UPLOAD_BATCH_BYTES {
+            return false;
+        }
+        bytes += t.bytes.len();
+        let mut image = Image::new_uninit(
+            Extent3d {
+                width: t.width,
+                height: t.height,
+                depth_or_array_layers: 1,
+            },
+            TextureDimension::D2,
+            texel_format(t.format),
+            RenderAssetUsages::RENDER_WORLD,
+        );
+        image.texture_descriptor.mip_level_count = t.levels;
+        image.data = Some(std::mem::take(&mut t.bytes));
+        // Wrap and bilinear within one level, the level chosen in the
+        // shader: the CPU `Texture::sample_lod` with `bilinear`.
+        image.sampler = ImageSampler::Descriptor(ImageSamplerDescriptor {
+            address_mode_u: ImageAddressMode::Repeat,
+            address_mode_v: ImageAddressMode::Repeat,
+            mag_filter: ImageFilterMode::Linear,
+            min_filter: ImageFilterMode::Linear,
+            mipmap_filter: ImageFilterMode::Nearest,
+            ..default()
+        });
+        up.images.push(images.add(image));
+    }
+    true
 }
 
 fn spawn(world: &mut World, scene: &GpuScene, up: &Uploaded, tag_pass: bool, layer: usize) {
@@ -272,6 +324,7 @@ fn spawn(world: &mut World, scene: &GpuScene, up: &Uploaded, tag_pass: bool, lay
                         test_function: p.test_function,
                         skip_zero_alpha: u32::from(p.skip_zero_alpha),
                         tag,
+                        opaque_texture: u32::from(p.opaque_texture),
                     },
                     texture: up.images[surface.texture].clone(),
                     key: MaterialKey {
@@ -339,7 +392,7 @@ const READY_FRAMES: u32 = 3;
 /// then captures until two consecutive frames are byte-identical, so a frame
 /// with an asset or pipeline still loading is never returned.
 pub fn headless(
-    scene: &GpuScene,
+    scene: &mut GpuScene,
     camera: &CpuCamera,
     clear: [f32; 4],
     want_tags: bool,
@@ -367,8 +420,19 @@ pub fn headless(
     app.finish();
     app.cleanup();
 
+    let mut up = upload_meshes(app.world_mut(), scene)?;
+    while !upload_textures(app.world_mut(), scene, &mut up) {
+        app.update();
+        app.world()
+            .resource::<RenderDevice>()
+            .wgpu_device()
+            .poll(PollType::Wait {
+                submission_index: None,
+                timeout: None,
+            })
+            .map_err(|e| format!("GpuPoll: {e}"))?;
+    }
     let world = app.world_mut();
-    let up = upload(world, scene);
     let mut targets = Vec::new();
     let passes: &[bool] = if want_tags { &[false, true] } else { &[false] };
     for (k, &tag_pass) in passes.iter().enumerate() {
@@ -493,8 +557,9 @@ struct Walk {
     world: fo4_walk::World,
     active: Option<WalkView>,
 }
+/// The scene until it is spawned: its clear colour and what was uploaded.
 #[derive(Resource)]
-struct PendingScene(Option<GpuScene>, [f32; 4]);
+struct PendingScene(GpuScene, [f32; 4], Option<Uploaded>);
 #[derive(Component)]
 struct FlyCamera;
 
@@ -508,15 +573,26 @@ fn fly_pose(state: &FlyState) -> Result<(Vec3, Quat), String> {
     coords::camera_pose(&camera)
 }
 
+/// Uploads the scene a batch of textures per frame, then spawns it and the
+/// camera.
 fn spawn_window_scene(world: &mut World) {
-    let Some(mut pending) = world.get_resource_mut::<PendingScene>() else {
+    let Some(PendingScene(mut scene, clear, up)) = world.remove_resource::<PendingScene>() else {
         return;
     };
-    let clear = pending.1;
-    let Some(scene) = pending.0.take() else {
-        return;
+    let mut up = match up {
+        Some(up) => up,
+        None => match upload_meshes(world, &scene) {
+            Ok(up) => up,
+            Err(e) => {
+                eprintln!("{e}");
+                std::process::exit(2);
+            }
+        },
     };
-    let up = upload(world, &scene);
+    if !upload_textures(world, &mut scene, &mut up) {
+        world.insert_resource(PendingScene(scene, clear, Some(up)));
+        return;
+    }
     spawn(world, &scene, &up, false, 0);
     // The window's swap chain is expected to be sRGB (the shader checks the
     // real format; the clear colour cannot): an sRGB colour with the CPU's
@@ -718,9 +794,11 @@ pub fn window(
         start_walking,
     })
     .init_resource::<Readout>()
-    .insert_resource(PendingScene(Some(scene), clear))
-    .add_systems(Startup, spawn_window_scene)
-    .add_systems(Update, (fly_camera, show_readout).chain())
+    .insert_resource(PendingScene(scene, clear, None))
+    .add_systems(
+        Update,
+        (spawn_window_scene, fly_camera, show_readout).chain(),
+    )
     .run();
     Ok(())
 }

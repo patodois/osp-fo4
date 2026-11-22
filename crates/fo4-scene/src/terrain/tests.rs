@@ -79,15 +79,20 @@ fn fixture() -> Fixture {
         tnam(0x871, Some(0x810)),
         tnam(0x872, None),
         tnam(0x873, Some(0x881)),
+        tnam(0x874, Some(0x882)),
     ]
     .concat();
     let mut set = sub(b"EDID", b"GroundSet\0");
     set.extend(sub(b"TX00", b"landscape\\ground_d.dds\0"));
     let mut material_only = sub(b"EDID", b"GroundMaterial\0");
     material_only.extend(sub(b"MNAM", b"landscape\\ground.bgsm\0"));
+    // Named after the world ("World") and default, in another case.
+    let mut named_default = sub(b"EDID", b"LandscapeWORLDDefault01\0");
+    named_default.extend(sub(b"TX00", b"landscape\\default_d.dds\0"));
     let txst = [
         record(b"TXST", 0x880, 0, &set),
         record(b"TXST", 0x881, 0, &material_only),
+        record(b"TXST", 0x882, 0, &named_default),
     ]
     .concat();
     let cells = [
@@ -415,6 +420,34 @@ fn ground_textures_follow_the_registry_and_name_their_colour_texture() {
     assert_eq!(code(built(RuleLevel::Measured, &measured)), "built");
     let path = |id| layers::colour_texture_path(&store, &key(id), &b).unwrap();
     assert_eq!(path(0x870), Ok("landscape\\ground_d.dds".to_owned()));
+    let colour = |id| layers::colour_texture(&store, &key(id), &b).unwrap();
+    assert_eq!(
+        colour(0x873),
+        Ok(layers::ColourTexture::Material(
+            "landscape\\ground.bgsm".to_owned()
+        ))
+    );
+    assert_eq!(
+        colour(0x870),
+        Ok(layers::ColourTexture::TextureSet(
+            "landscape\\ground_d.dds".to_owned()
+        ))
+    );
+    // The default named after the world: the one texture set an LTEX names
+    // whose editor ID holds the world's and "default".
+    assert_eq!(
+        layers::default_texture_set(&store, &key(0x800), &b).unwrap(),
+        Ok(key(0x882))
+    );
+    assert_eq!(
+        layers::default_texture_set(&store, &key(0x810), &b).unwrap(),
+        Err("NotAWorld")
+    );
+    assert_eq!(
+        layers::default_texture_set(&store, &key(0x8fe), &b).unwrap(),
+        Err("MissingWorld")
+    );
+    assert_eq!(t.world, Some(key(0x800)));
     for (id, refusal) in [
         (0x871, "LandscapeTextureTnamNotTextureSet"),
         (0x872, "LandscapeTextureWithoutSingleTnam"),

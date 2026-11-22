@@ -27,6 +27,29 @@ pub fn walk_rules() -> Vec<&'static str> {
     rules
 }
 
+/// Stored bytes the viewer keeps as blocks at most, apart from the decoded
+/// textures' budget of the reference options.
+pub const BLOCK_BYTES: u64 = 512 << 20;
+
+/// Build options of a texture policy at `level`.
+pub fn build_options(textures: crate::cli::Textures, level: RuleLevel) -> BuildOptions {
+    match textures {
+        crate::cli::Textures::Reference => BuildOptions::reference(level),
+        crate::cli::Textures::Blocks {
+            cap,
+            alpha_tested_cap,
+        } => BuildOptions::with_blocks(
+            level,
+            fo4_render::draw::BlockOptions {
+                max_dimension: cap,
+                max_alpha_tested_dimension: alpha_tested_cap,
+                max_bytes: BLOCK_BYTES,
+            },
+        ),
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
 pub fn cell(
     manifest: &str,
     data: &str,
@@ -35,6 +58,7 @@ pub fn cell(
     walk: bool,
     terrain: bool,
     around: u32,
+    options: BuildOptions,
 ) -> AnyResult<Loaded> {
     if walk {
         fo4_walk::accept(&walk_rules(), level, fo4_scene::hypotheses::status)?;
@@ -75,13 +99,7 @@ pub fn cell(
     } else {
         None
     };
-    let mut build = fo4_render::draw::build(
-        &scene,
-        &loader,
-        limits,
-        BuildOptions::reference(level),
-        &budget,
-    )?;
+    let mut build = fo4_render::draw::build(&scene, &loader, limits, options, &budget)?;
     // The terrain of the cell and, for walking, of its neighbours. Without
     // --terrain and --walk nothing is loaded and the draw list is unchanged.
     let ground = match (&grid, walk || terrain) {
@@ -104,7 +122,7 @@ pub fn cell(
         // instance in piece order, as the CPU render does.
         let first = u32::try_from(build.instances.len())?;
         let mut last = first;
-        let mut cache = fo4_render::terrain::TextureCache::new(BuildOptions::reference(level));
+        let mut cache = fo4_render::terrain::TextureCache::new(options);
         let mut textured = Vec::new();
         for (k, t) in g.terrains.iter().enumerate() {
             last = first
@@ -134,9 +152,10 @@ pub fn cell(
             pieces.join(", ")
         );
         println!(
-            "terrain textures: {}; landscape textures {:?}",
+            "terrain textures: {}; landscape textures {:?}; default textures {:?}",
             textured.join("; "),
-            cache.outcomes()
+            cache.outcomes(),
+            cache.default_outcomes()
         );
     } else if terrain {
         let own = ground
@@ -147,8 +166,7 @@ pub fn cell(
             Some(t) => {
                 // Tagged after every placed instance, as the CPU render does.
                 let tag = u32::try_from(build.instances.len())?;
-                let mut cache =
-                    fo4_render::terrain::TextureCache::new(BuildOptions::reference(level));
+                let mut cache = fo4_render::terrain::TextureCache::new(options);
                 let r = fo4_render::terrain::append_textured_terrain(
                     &mut build.list,
                     t,
@@ -162,9 +180,10 @@ pub fn cell(
                 )?;
                 println!("terrain drawn: grid {:?}, tag {tag}", t.grid);
                 println!(
-                    "terrain textures: {}; landscape textures {:?}",
+                    "terrain textures: {}; landscape textures {:?}; default textures {:?}",
                     texture_line(&r),
-                    cache.outcomes()
+                    cache.outcomes(),
+                    cache.default_outcomes()
                 );
             }
             None => println!(
@@ -219,7 +238,7 @@ fn texture_line(r: &fo4_render::terrain::TexturedReport) -> String {
     match &r.refusal {
         Some(refusal) => format!("{:?} untextured ({})", r.grid, refusal.code),
         None => format!(
-            "{:?} {} quadrants textured, {} untextured {:?}, {} layers, {} passes, weight {:?}, texture refusals {:?}, vertex colours {}",
+            "{:?} {} quadrants textured, {} untextured {:?}, {} layers, {} passes, weight {:?}, texture refusals {:?}, default {}, vertex colours {}",
             r.grid,
             r.quadrants_textured,
             r.quadrants_untextured,
@@ -228,6 +247,7 @@ fn texture_line(r: &fo4_render::terrain::TexturedReport) -> String {
             r.passes,
             r.weight_share,
             r.texture_refusals,
+            r.default_texture.as_deref().unwrap_or("none"),
             r.vertex_colors
         ),
     }

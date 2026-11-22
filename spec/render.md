@@ -28,6 +28,25 @@ zero e profundidade 1. Arrays/cubemaps como difusa são erro. Limite agregado
 96 MiB de RGBA float32 decodificado, além do Budget geral. São preservados mip,
 dimensões, path e flag sRGB. Nunca há resampling para inventar um mip ausente.
 
+Blocos armazenados (só o visualizador GPU): com `BuildOptions::blocks`, uma
+textura BC1, BC2, BC3, BC4 ou BC5 sem sinal, ou BC7, é guardada como os blocos
+que o DDS armazena, sem decodificar: o primeiro nível com ambos os lados <=
+`max_dimension` (ou `max_alpha_tested_dimension` quando o draw que a cita tem
+teste de alpha), lados múltiplos de 4, e todos os níveis mais grossos
+armazenados, contados num orçamento próprio (`max_bytes`) de bytes armazenados.
+A textura fica na lista com `rgba` e `mips` vazios e os blocos em
+`DrawList::blocks` pelo índice; o layout de cada nível é o do DDS
+([dds.md](dds.md)). BC1 declarado sem alpha é marcado `opaque` (a referência
+decodifica o quarto índice do modo de três cores como preto opaco); o
+terreno marca todos os seus blocos `opaque`. O que não cabe (outro formato,
+lados não múltiplos de 4, nível ausente) é decodificado com os limites de
+referência acima. A rasterização CPU recusa uma lista com blocos
+(`CompressedTextureNotDecoded`) e o snapshot também (`SnapshotBlockTexture`);
+sem a opção nada muda: lista, quadros e `summary.json` da referência são
+byte a byte os de antes. A GPU decodifica os blocos no hardware; num quadro de
+teste com os mesmos níveis da referência, 99,9% dos pixels diferiram de no
+máximo 2 passos de 8 bits, sem afirmação de igualdade exata.
+
 ## Regras do algoritmo de referência
 
 Estas regras definem esta imagem CPU, não são afirmações sobre estados GPU de

@@ -164,15 +164,15 @@ fn dds() -> Vec<u8> {
     }
     v
 }
-#[test]
-fn scol_hypothesis_draws_two_textured_parts_without_the_generated_alternative() {
-    let temp = TestDir::new("render-scol");
+/// The SCOL cell with its loose files, `texture` as the parts' diffuse.
+fn scol_fixture(name: &str, texture: &[u8]) -> (TestDir, Manifest) {
+    let temp = TestDir::new(name);
     let root = temp.join("Data");
     std::fs::create_dir_all(root.join("meshes")).unwrap();
     std::fs::create_dir_all(root.join("textures")).unwrap();
     std::fs::write(root.join("meshes/generated.nif"), nif(b"")).unwrap();
     std::fs::write(root.join("meshes/part.nif"), nif(b"textures/a.dds")).unwrap();
-    std::fs::write(root.join("textures/a.dds"), dds()).unwrap();
+    std::fs::write(root.join("textures/a.dds"), texture).unwrap();
     let mut scol = sub(b"MODL", b"generated.nif\0");
     scol.extend(sub(b"ONAM", &0x801u32.to_le_bytes()));
     let mut p = Vec::new();
@@ -228,6 +228,11 @@ fn scol_hypothesis_draws_two_textured_parts_without_the_generated_alternative() 
         limits: Limits::default(),
         build: Some("synthetic".into()),
     };
+    (temp, m)
+}
+#[test]
+fn scol_hypothesis_draws_two_textured_parts_without_the_generated_alternative() {
+    let (_temp, m) = scol_fixture("render-scol", &dds());
     let b = Budget::new(32 << 20);
     let store = fo4_plugin::typed::Store::open(&m, &b).unwrap();
     let vfs = fo4_vfs::Vfs::mount(&m, &b).unwrap();
@@ -249,6 +254,7 @@ fn scol_hypothesis_draws_two_textured_parts_without_the_generated_alternative() 
             max_texture_dimension: 16,
             max_texture_bytes: 1024,
             level: fo4_scene::RuleLevel::Hypotheses,
+            blocks: None,
         },
         &Budget::new(32 << 20),
     )
@@ -263,6 +269,7 @@ fn scol_hypothesis_draws_two_textured_parts_without_the_generated_alternative() 
             max_texture_dimension: 16,
             max_texture_bytes: 1 << 20,
             level: fo4_scene::RuleLevel::Hypotheses,
+            blocks: None,
         },
         &b,
     )
@@ -291,6 +298,7 @@ fn scol_hypothesis_draws_two_textured_parts_without_the_generated_alternative() 
             max_texture_dimension: 16,
             max_texture_bytes: 1 << 20,
             level: fo4_scene::RuleLevel::Hypotheses,
+            blocks: None,
         },
         true,
         &Budget::new(32 << 20),
@@ -314,6 +322,7 @@ fn scol_hypothesis_draws_two_textured_parts_without_the_generated_alternative() 
             max_texture_dimension: 16,
             max_texture_bytes: 1 << 20,
             level: fo4_scene::RuleLevel::Hypotheses,
+            blocks: None,
         },
         &b,
     )
@@ -340,6 +349,7 @@ fn scol_hypothesis_draws_two_textured_parts_without_the_generated_alternative() 
             max_texture_dimension: 256,
             max_texture_bytes: 1 << 20,
             level: fo4_scene::RuleLevel::Hypotheses,
+            blocks: None,
         },
         &Budget::new(32 << 20),
     )
@@ -358,6 +368,7 @@ fn scol_hypothesis_draws_two_textured_parts_without_the_generated_alternative() 
             max_texture_dimension: 16,
             max_texture_bytes: 1 << 20,
             level: fo4_scene::RuleLevel::Hypotheses,
+            blocks: None,
         },
         &b,
     )
@@ -442,6 +453,7 @@ fn untextured_effect_requires_hypothesis_and_refuses_unhandled_features() {
             max_texture_dimension: 16,
             max_texture_bytes: 1024,
             level: fo4_scene::RuleLevel::Hypotheses,
+            blocks: None,
         };
         let output = build(&scene, &loader, &m.limits, options, &b).unwrap();
         if let Some(code) = expected_error {
@@ -492,4 +504,155 @@ fn visibility_helper_rule_matches_only_the_literal_mesh_label() {
         );
         assert!(!fo4_scene::model_policy::visibility_editor_marker(&n, 3));
     }
+}
+
+/// An 8 x 8 DXT1 texture without alpha and its full chain down to 1 x 1.
+fn dds_chain() -> Vec<u8> {
+    let mut h = [0u32; 31];
+    h[0] = 124;
+    h[1] = 0x21007;
+    h[2] = 8;
+    h[3] = 8;
+    h[6] = 4;
+    h[18] = 32;
+    h[19] = 4;
+    h[20] = u32::from_le_bytes(*b"DXT1");
+    h[26] = 0x401008;
+    let mut v = b"DDS ".to_vec();
+    for n in h {
+        v.extend(n.to_le_bytes());
+    }
+    for k in 0..7u8 {
+        v.extend(0xf800u16.to_le_bytes());
+        v.extend([k; 6]);
+    }
+    v
+}
+
+#[test]
+fn stored_blocks_are_kept_from_the_first_level_within_the_cap() {
+    use crate::draw::BlockOptions;
+    let blocks = |max_dimension| {
+        BuildOptions::with_blocks(
+            RuleLevel::Hypotheses,
+            BlockOptions {
+                max_dimension,
+                max_alpha_tested_dimension: 2,
+                max_bytes: 1 << 20,
+            },
+        )
+    };
+    let (_temp, m) = scol_fixture("render-blocks", &dds_chain());
+    let b = Budget::new(32 << 20);
+    let store = fo4_plugin::typed::Store::open(&m, &b).unwrap();
+    let vfs = fo4_vfs::Vfs::mount(&m, &b).unwrap();
+    let mut loader = Loader::new(&store, &vfs, "english", RuleLevel::Facts, &b);
+    let scene = loader.by_editor_id("SyntheticScolCell", &b).unwrap();
+    // The NIF has no alpha property: the plain limit applies.
+    let full = build(&scene, &loader, &m.limits, blocks(8), &b).unwrap();
+    assert!(full.omitted.is_empty(), "{:?}", full.omitted);
+    let t = &full.list.textures[0];
+    let kept = &full.list.blocks[&0];
+    assert_eq!((t.width, t.height, t.mip), (8, 8, 0));
+    assert_eq!(
+        (kept.format, kept.levels, kept.bytes.len()),
+        (crate::BlockFormat::Bc1, 4, 56)
+    );
+    // DXT1 declared without alpha: the reference reads alpha 1.
+    assert!(kept.opaque && t.rgba.is_empty() && t.mips.is_empty());
+    full.list.validate_texture(0).unwrap();
+    assert!(
+        t.validate().is_err(),
+        "without its blocks the texture has no texels"
+    );
+    let e = crate::render(
+        &full.list,
+        &fo4_scene::camera::look_at(
+            [0., -5., 0.],
+            [0., 0., 0.],
+            fo4_scene::camera::reference_frustum([8, 8]),
+            [8, 8],
+        )
+        .unwrap(),
+        crate::RenderOptions::REFERENCE,
+        &m.limits,
+        &b,
+    )
+    .unwrap_err();
+    assert_eq!(e.code, "CompressedTextureNotDecoded");
+    let e = crate::snapshot::write(&full.list, &mut std::io::sink(), &m.limits).unwrap_err();
+    assert_eq!(e.code, "SnapshotBlockTexture");
+    let half = build(&scene, &loader, &m.limits, blocks(4), &b).unwrap();
+    let t = &half.list.textures[0];
+    let kept = &half.list.blocks[&0];
+    assert_eq!(
+        (t.width, t.mip, kept.levels, kept.bytes.len()),
+        (4, 1, 3, 24)
+    );
+    assert_eq!(&kept.bytes[..2], &0xf800u16.to_le_bytes());
+    assert_eq!(kept.bytes[2], 4, "level 1 is the fifth stored block");
+    // A level whose sides are not multiples of 4 is decoded instead, under
+    // the reference limits.
+    let small = build(&scene, &loader, &m.limits, blocks(2), &b).unwrap();
+    assert!(small.list.blocks.is_empty());
+    assert_eq!(small.list.textures[0].width, 8);
+    assert_eq!(small.list.textures[0].rgba.len(), 8 * 8 * 4);
+    // The reference options never keep blocks.
+    let reference = build(
+        &scene,
+        &loader,
+        &m.limits,
+        BuildOptions::reference(RuleLevel::Hypotheses),
+        &b,
+    )
+    .unwrap();
+    assert!(reference.list.blocks.is_empty());
+    // Too small a block budget omits the object, as the decoded budget does.
+    let mut tight = blocks(8);
+    tight.blocks.as_mut().unwrap().max_bytes = 16;
+    let omitted = build(&scene, &loader, &m.limits, tight, &b).unwrap();
+    assert!(omitted.list.draws.is_empty());
+    assert_eq!(omitted.omitted[0].causes[0].code, "LimitExceeded");
+}
+
+#[test]
+fn block_textures_validate_their_level_sizes() {
+    let texture = |w: u32, h: u32| crate::Texture {
+        mips: Vec::new(),
+        width: w,
+        height: h,
+        rgba: Vec::new(),
+        mip: 0,
+        srgb: false,
+    };
+    let blocks = |levels: u32, n: usize| crate::Blocks {
+        format: crate::BlockFormat::Bc3,
+        levels,
+        bytes: vec![0; n],
+        opaque: false,
+    };
+    // 8 x 4: two blocks, then 4 x 2 and 2 x 1 one block each, 16 bytes a block.
+    texture(8, 4).validate_blocks(&blocks(3, 64)).unwrap();
+    for (t, b) in [
+        (texture(8, 4), blocks(3, 48)),
+        (texture(6, 4), blocks(1, 32)),
+        (texture(8, 4), blocks(0, 0)),
+        (texture(8, 4), blocks(33, 64)),
+    ] {
+        assert_eq!(
+            t.validate_blocks(&b).unwrap_err().code,
+            "InvalidBlockTexture"
+        );
+    }
+    let mut with_rgba = texture(8, 4);
+    with_rgba.rgba = vec![0.0; 128];
+    assert!(with_rgba.validate_blocks(&blocks(1, 32)).is_err());
+    let mut list = crate::DrawList::default();
+    list.textures.push(texture(8, 4));
+    list.blocks.insert(0, blocks(1, 32));
+    list.validate_texture(0).unwrap();
+    assert_eq!(
+        list.validate_texture(1).unwrap_err().code,
+        "RenderTextureIndex"
+    );
 }

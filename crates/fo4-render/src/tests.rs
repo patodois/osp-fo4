@@ -61,6 +61,7 @@ fn list() -> DrawList {
             raw_tile_flags: None,
         }],
         overlays: Vec::new(),
+        blocks: Default::default(),
     }
 }
 fn frame(l: &DrawList, c: &Camera, workers: usize) -> Frame {

@@ -124,7 +124,7 @@ fn run() -> AnyResult<()> {
             )?);
         }
         terrain_summary = Some(
-            serde_json::json!({"drawn":!set.terrains.is_empty(),"first_instance_tag":first,"pieces":set.pieces,"neighbours_searched":set.neighbours_searched,"textures":textures,"landscape_textures":cache.outcomes(),"texture_path_rules":cache.path_rules,"shading":TERRAIN_SHADING}),
+            serde_json::json!({"drawn":!set.terrains.is_empty(),"first_instance_tag":first,"pieces":set.pieces,"neighbours_searched":set.neighbours_searched,"textures":textures,"landscape_textures":cache.outcomes(),"default_textures":cache.default_outcomes(),"texture_rules":cache.rules,"texture_path_rules":cache.path_rules,"shading":TERRAIN_SHADING}),
         );
     } else if terrain {
         use fo4_scene::terrain::{self, Outcome};
@@ -151,7 +151,7 @@ fn run() -> AnyResult<()> {
                         limits,
                         &budget,
                     )?;
-                    serde_json::json!({"drawn":true,"instance_tag":tag,"land":t.land,"grid":t.grid,"diagonal":t.diagonal,"rules":t.rules,"state":t.state,"bounds":t.bounds(),"textures":textures,"landscape_textures":cache.outcomes(),"texture_path_rules":cache.path_rules,"shading":TERRAIN_SHADING})
+                    serde_json::json!({"drawn":true,"instance_tag":tag,"land":t.land,"grid":t.grid,"diagonal":t.diagonal,"rules":t.rules,"state":t.state,"bounds":t.bounds(),"textures":textures,"landscape_textures":cache.outcomes(),"default_textures":cache.default_outcomes(),"texture_rules":cache.rules,"texture_path_rules":cache.path_rules,"shading":TERRAIN_SHADING})
                 }
                 Outcome::Refused(r) => serde_json::json!({"drawn":false,"refusal":r}),
             },

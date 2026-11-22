@@ -118,6 +118,16 @@ pub fn write(list: &DrawList, writer: &mut impl Write, l: &Limits) -> Result<u64
             }
         }
     }
+    if !list.blocks.is_empty() {
+        // The interchange carries decoded texels only.
+        return Err(Error::new(
+            "SnapshotBlockTexture",
+            "snapshot",
+            w.bytes,
+            "decoded texels",
+            "stored blocks",
+        ));
+    }
     for t in &list.textures {
         t.validate()?;
         w.u32(t.width)?;

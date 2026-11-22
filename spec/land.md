@@ -155,10 +155,47 @@ measurement of the running game, and all the rules are `pending`:
 | `land_quadrant_layout_v1` | which vertices a quadrant covers | quadrant q: rows 16 floor(q/2) to +16, columns 16 (q mod 2) to +16; edge vertices shared |
 | `land_vtxt_position_grid_v1` | where a VTXT entry lies | position p: quadrant row floor(p/17), column p mod 17; unnamed vertices opacity 0 |
 | `land_layer_weights_residual_v1` | how layers combine | opacity is the layer's weight; base weight 1 minus their sum (0 above 1); weights interpolated across triangles; colour = sum of weight times texture colour; texture alpha unused |
-| `land_missing_base_default_v1` | a missing base, a FormID-zero layer | both stand for one default texture no record names; its identity is refused |
+| `land_missing_base_default_v1` | a missing base, a FormID-zero layer | both stand for one default texture no record names; its identity is the optional rule below |
 | `ltex_tnam_texture_set_tx00_v1` | which file draws an LTEX | TX00 of the TXST its TNAM names; a TXST without TX00 is refused |
 | `land_texture_repeat_256_v1` | texture coordinates | placeholder: one repeat per 256 world units, cell-aligned, u east, v south |
 | `land_vclr_multiply_v1` | vertex colours | VCLR bytes / 255 multiply the colour, interpolated, in the stored values |
+
+Two further rules are optional: each applies only where the level accepts
+it (today `--under-hypotheses`), and what it covers stays refused
+otherwise, as before it existed.
+
+| Rule | Decides | Candidate |
+| --- | --- | --- |
+| `ltex_texture_set_material_diffuse_v1` | a texture set with no TX00 and an MNAM material | the material's diffuse texture, if the material is a BGSM with a non-empty diffuse path; its UV and tiling fields are not applied |
+| `land_default_texture_world_named_v1` | which texture the default is | the colour (TX00, or the material's diffuse) of the single texture set that some LTEX's TNAM names and whose editor ID contains, ignoring ASCII case, the cell's worldspace editor ID and `default`; none or several is a refusal |
+
+What the installation says about the default (offline, one installation,
+one-off probes through this repository's readers; the probes are not part
+of the repository):
+
+- no record names it: none of 2,049 GMST is a landscape or default ground
+  setting; the installation's default and quality `.ini` files have no such
+  key; no WRLD subrecord, and no 4-byte-aligned value of any other
+  non-LAND record (2,146,031 scanned), resolves to an LTEX, apart from 16
+  scattered values in INFO, MESG, TERM and NAVM data;
+- of the 74 distinct texture sets that LTEX name, one has `default` in its
+  editor ID; that editor ID contains the editor ID of one of the 13
+  worldspaces (the main one), and of no other. The set has no TX00; its
+  material's diffuse decodes. Its two LTEX carry 20 vertex weights in all
+  LAND, while the default carries 83% of all ground weight;
+- the data cannot confirm it: merging the default with that set changes
+  none of 4,473,014 shared seam vertex pairs where the default has weight
+  in that worldspace; comparing the terrain LOD tiles over 131,563
+  default-only quadrants ranks it first of 74 sets, but by 0.0001 RMS, and
+  the same comparison finds a single-texture quadrant's own texture for
+  only 5 to 10 of 349 of them, so it does not discriminate;
+- in the test exterior cell, 64 placed draws (ground meshes and decals) use
+  the set's diffuse texture.
+
+The other twelve worldspaces have no such texture set; their default stays
+grey (`NoNamedDefaultTexture`). Of the 128 LTEX, the 32 whose texture set
+holds only a material all resolve to a BGSM whose diffuse decodes (18
+distinct texture sets).
 
 The repeat is a placeholder in the sense of the walk rules: the placed
 objects of one exterior cell have an area-weighted median of 0.148 world
@@ -178,11 +215,16 @@ BTXT, a VTXT position above 288, a repeated position, an opacity outside
 (`MultipleBaseLayers`, `LayerPositionOutsideQuadrant`,
 `DuplicateLayerPosition`, `LayerOpacityOutsideUnitRange`,
 `UnresolvedBaseTexture`, `UnresolvedLayerTexture`).
-`layers::colour_texture_path` returns an LTEX's TX00 path or one of
+`layers::colour_texture` returns an LTEX's colour, `TextureSet` (the TX00
+path) or `Material` (the MNAM path of a set without TX00), or one of
 `MissingLandscapeTexture`, `NotALandscapeTexture`,
 `LandscapeTextureWithoutSingleTnam`, `LandscapeTextureTnamSize`,
 `LandscapeTextureNullTnam`, `LandscapeTextureTnamNotTextureSet`,
-`TextureSetWithoutTx00`.
+`TextureSetWithoutColour`; `colour_texture_path` keeps TX00 only
+(`TextureSetWithoutTx00` for a material). `layers::default_texture_set`
+returns the texture set named as a world's default, or `MissingWorld`,
+`NotAWorld`, `WorldWithoutEditorId`, `NoNamedDefaultTexture`,
+`SeveralNamedDefaultTextures`; `texture_set_colour` reads a set's colour.
 
 ## Drawing
 
@@ -191,10 +233,25 @@ level. When built, `fo4_render::terrain::append_textured_terrain` draws it
 with its ground textures, tagged after the last placed instance:
 
 - the TX00 of each LTEX is resolved as a TXST texture citation (path rules
-  as for objects, reported in `texture_path_rules`) and decoded once per
-  draw list with the reference limits of the object textures (first level
-  at most 256 texels wide, coarser levels while a separate 96 MiB terrain
-  texture budget lasts); its alpha is set to 1;
+  as for objects, reported in `texture_path_rules`); under
+  `ltex_texture_set_material_diffuse_v1` a set without TX00 is read through
+  its MNAM (a TXST material citation) with `fo4-material`, and the
+  material's diffuse is resolved as a material texture citation, refused
+  as `LandscapeMaterialNotLighting` or `LandscapeMaterialWithoutDiffuse`
+  when it cannot draw, and as `TextureSetWithoutTx00` when the rule is not
+  accepted. Each resolved path is decoded once per draw list, whatever
+  record names it, with the limits of the build options (in the reference,
+  first level at most 256 texels wide, coarser levels while a separate
+  96 MiB terrain texture budget lasts; the viewer keeps stored blocks, see
+  [render.md](render.md)); its alpha is set to 1 (stored blocks are marked
+  opaque);
+- under `land_default_texture_world_named_v1` the default weight of the
+  terrain's worldspace is drawn like any texture with the texture its
+  world names, once per world; `default_texture` in the piece's report says
+  `drawn` or why not (`DefaultTextureRuleNotAccepted`, `TerrainWithoutWorld`
+  and the refusals above), and the summary's `default_textures` counts the
+  worlds by outcome, `texture_rules` the optional rules a drawn texture
+  used;
 - each quadrant is drawn as passes over its 512 triangles: the first pass
   opaque, its vertex colour the VCLR multiplier times the texture's weight;
   each further texture an additive overlay (source alpha times source plus
@@ -204,9 +261,10 @@ with its ground textures, tagged after the last placed instance:
   order. Overlay draws are listed in `DrawList::overlays`: their samples
   are kept at exactly the stored opaque depth (every other draw needs to be
   strictly nearer), and their tag never replaces a stored one;
-- the default texture, a refused LTEX (`landscape_textures` and
-  `texture_refusals` give the codes) and a refused quadrant are drawn as the
-  plain grey below with their weight, so the untextured share stays visible;
+- a default its world does not name, a refused LTEX (`landscape_textures`
+  and `texture_refusals` give the codes) and a refused quadrant are drawn
+  as the plain grey below with their weight, so the untextured share stays
+  visible;
 - if `layers::load` refuses, the piece is drawn plain grey as before.
 
 `append_terrain`, the plain drawing, is one opaque double-sided draw with a
@@ -215,8 +273,9 @@ the angle of the geometric normal to a fixed direction). `summary.json`
 gains a `terrain` key with the outcome or the refusal and, per piece,
 `textures`: quadrants textured and untextured with reasons, layers, passes,
 overlay triangles, `weight_share` (summed weight per quadrant vertex of
-`texture`, `default` and `refused`), texture refusals, vertices above unity
-and whether VCLR was used. Without the flag the draw list and summary are
+`texture`, `default_texture` (the default drawn with its named texture),
+`default` (drawn grey) and `refused`), texture refusals, vertices above
+unity and whether VCLR was used. Without the flag the draw list and summary are
 unchanged; frames were compared byte for byte before and after this change.
 With `--around N` ([scene.md](scene.md)) every built piece of the cells
 within N grid steps is drawn the same way, the cell first, tagged in piece
@@ -258,8 +317,10 @@ The figures of the first run are kept with the local reports, not here.
 ## Open
 
 - Live measurements in the `live_measurement` column of each rule.
-- Which texture the default is; the TXST whose only content is an MNAM
-  material (32 of 128) is refused rather than read through the material.
+- Which texture the default is: the candidate rests on an editor ID alone,
+  and nothing names a default for the other twelve worldspaces. The
+  material of a material-only texture set is read for its diffuse only;
+  its UV transform, tiling distance and other textures are not applied.
 - The texture repeat and its mirror (placeholder); the LTEX fields other
   than TNAM (MNAM, HNAM, SNAM, GNAM) are not used.
 - The seam disagreements that remain under the candidates (15.7% of

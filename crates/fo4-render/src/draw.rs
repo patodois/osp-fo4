@@ -54,15 +54,50 @@ pub struct BuildOptions {
     pub max_texture_bytes: u64,
     /// Instances whose state is not ready at this level are omitted with a cause.
     pub level: fo4_scene::RuleLevel,
+    /// Keep block-compressed textures as their stored blocks (for a GPU
+    /// consumer) instead of decoding them; `None` in the reference.
+    pub blocks: Option<BlockOptions>,
+}
+/// Limits of the textures kept as stored blocks ([`BuildOptions::blocks`]).
+/// A texture whose format or chosen level cannot be kept as blocks is
+/// decoded under the reference limits instead.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct BlockOptions {
+    /// Largest side of the first level kept.
+    pub max_dimension: u32,
+    /// The same for a texture drawn with an alpha test.
+    pub max_alpha_tested_dimension: u32,
+    /// Total stored bytes of the kept levels, apart from `max_texture_bytes`.
+    pub max_bytes: u64,
 }
 impl BuildOptions {
-    /// Texture limits of the reference renders (the `render` example and the GPU viewer).
+    /// Texture limits of the reference renders (the `render` example, and the
+    /// GPU viewer with `--reference-textures`).
     pub const fn reference(level: fo4_scene::RuleLevel) -> Self {
         Self {
             max_texture_dimension: 256,
             max_texture_bytes: 96 << 20,
             level,
+            blocks: None,
         }
+    }
+    /// The reference limits, with block-compressed textures kept as blocks.
+    pub const fn with_blocks(level: fo4_scene::RuleLevel, blocks: BlockOptions) -> Self {
+        Self {
+            blocks: Some(blocks),
+            ..Self::reference(level)
+        }
+    }
+    /// The largest first-level side of a texture kept as blocks, by whether
+    /// it is drawn with an alpha test; `None` in the reference.
+    pub fn block_dimension(&self, alpha_tested: bool) -> Option<u32> {
+        self.blocks.map(|b| {
+            if alpha_tested {
+                b.max_alpha_tested_dimension
+            } else {
+                b.max_dimension
+            }
+        })
     }
 }
 fn error(code: &str, file: &str, offset: u64, found: impl std::fmt::Display) -> Error {
@@ -165,8 +200,10 @@ struct Builder<'a, 's> {
     options: BuildOptions,
     output: Build,
     meshes: BTreeMap<(usize, usize, u8, bool), usize>,
-    textures: BTreeMap<Vec<u8>, usize>,
+    /// By path and the block limit applied (0 when decoded).
+    textures: BTreeMap<(Vec<u8>, u32), usize>,
     texture_bytes: u64,
+    block_bytes: u64,
     visits: u64,
     allow_path_strip: bool,
     allow_path_root: bool,
@@ -181,7 +218,10 @@ struct Builder<'a, 's> {
 /// A diffuse texture decoded under the reference limits, with the DDS
 /// declarations the summary reports.
 pub struct DecodedTexture {
+    /// With stored blocks, `rgba` and `mips` are empty and `blocks` holds
+    /// the texels.
     pub texture: Texture,
+    pub blocks: Option<crate::Blocks>,
     pub declared_dxgi: Option<u32>,
     pub declared_fourcc: u32,
 }
@@ -301,8 +341,108 @@ pub fn decode_texture(
     })?;
     Ok(DecodedTexture {
         texture,
+        blocks: None,
         declared_dxgi,
         declared_fourcc,
+    })
+}
+/// Keeps texture asset `id` as its stored blocks: the first single-surface
+/// level whose sides are at most `max_dimension`, and every coarser stored
+/// level after it, counted in `block_bytes` against `max_bytes`. `Ok(None)`
+/// when the texture cannot be kept so (not a 2D texture, a layout without a
+/// GPU block format, no such level, or a level whose sides are not
+/// multiples of 4); the caller then decodes it.
+pub fn block_texture(
+    loader: &Loader<'_>,
+    id: usize,
+    max_dimension: u32,
+    max_bytes: u64,
+    block_bytes: &mut u64,
+    budget: &Budget,
+) -> Result<Option<DecodedTexture>> {
+    use fo4_texture::Format;
+    let scratch = budget.child();
+    loader.assets.with_decoded(id, &scratch, |d| {
+        let DecodedAsset::Texture(t) = d else {
+            return Err(error("RenderAssetKind", "texture", 0, id));
+        };
+        if t.cubemap || t.array_size != 1 || t.depth != 1 {
+            return Ok(None);
+        }
+        let (format, opaque) = match t.format {
+            Format::Bc1 => (crate::BlockFormat::Bc1, true),
+            Format::Bc1Alpha => (crate::BlockFormat::Bc1Alpha, false),
+            Format::Bc2 => (crate::BlockFormat::Bc2, false),
+            Format::Bc3 => (crate::BlockFormat::Bc3, false),
+            Format::Bc4 => (crate::BlockFormat::Bc4, false),
+            Format::Bc5 => (crate::BlockFormat::Bc5, false),
+            Format::Bc7 => (crate::BlockFormat::Bc7, false),
+            _ => return Ok(None),
+        };
+        let plain = |s: &fo4_texture::Surface| s.array == 0 && s.face == 0 && s.depth == 1;
+        let Some(index) = t
+            .surfaces
+            .iter()
+            .position(|s| plain(s) && s.width <= max_dimension && s.height <= max_dimension)
+        else {
+            return Ok(None);
+        };
+        let s = &t.surfaces[index];
+        if !s.width.is_multiple_of(4) || !s.height.is_multiple_of(4) {
+            return Ok(None);
+        }
+        let mut chosen = Vec::new();
+        for (i, level) in t.surfaces.iter().enumerate() {
+            if !plain(level) || level.mip < s.mip {
+                continue;
+            }
+            let k = level.mip - s.mip;
+            if k as usize != chosen.len()
+                || level.width != (s.width >> k.min(31)).max(1)
+                || level.height != (s.height >> k.min(31)).max(1)
+            {
+                return Ok(None);
+            }
+            chosen.push(i);
+        }
+        let mut size = 0u64;
+        for &i in &chosen {
+            let level = &t.surfaces[i];
+            let n = t
+                .surface_bytes(i)
+                .ok_or_else(|| error("RenderBlockSurface", "texture", 0, i))?
+                .len() as u64;
+            if n != format.level_bytes(level.width, level.height) {
+                return Ok(None);
+            }
+            size = fo4_core::add(size, n, "block texture", 0)?;
+        }
+        let total = fo4_core::add(*block_bytes, size, "block texture budget", 0)?;
+        fo4_core::limit(total, max_bytes, "block texture budget", 0)?;
+        let mut bytes = Vec::new();
+        budget.reserve(&mut bytes, size as usize, "block texture", 0)?;
+        for &i in &chosen {
+            bytes.extend_from_slice(t.surface_bytes(i).unwrap_or_default());
+        }
+        *block_bytes = total;
+        Ok(Some(DecodedTexture {
+            declared_dxgi: t.dx10.map(|d| d[0]),
+            declared_fourcc: t.header[20],
+            texture: Texture {
+                mips: Vec::new(),
+                width: s.width,
+                height: s.height,
+                rgba: Vec::new(),
+                mip: s.mip,
+                srgb: t.srgb,
+            },
+            blocks: Some(crate::Blocks {
+                format,
+                levels: chosen.len() as u32,
+                bytes,
+                opaque,
+            }),
+        }))
     })
 }
 impl Builder<'_, '_> {
@@ -337,22 +477,46 @@ impl Builder<'_, '_> {
                 )
             })
     }
-    fn texture(&mut self, path: Vec<u8>) -> Result<usize> {
-        if let Some(i) = self.textures.get(&path) {
+    /// The draw-list texture of `path`; `alpha_tested` selects the block
+    /// limit when textures are kept as blocks, and is ignored otherwise.
+    fn texture(&mut self, path: Vec<u8>, alpha_tested: bool) -> Result<usize> {
+        let cap = self.options.block_dimension(alpha_tested);
+        if let Some(i) = self.textures.get(&(path.clone(), cap.unwrap_or(0))) {
             return Ok(*i);
         }
         let id = self.asset(AssetKind::Texture, &path)?;
-        let loaded = decode_texture(
-            self.loader,
-            id,
-            self.options,
-            &mut self.texture_bytes,
-            self.limits,
-            self.budget,
-        )?;
-        let (texture, declared_dxgi, declared_fourcc) =
-            (loaded.texture, loaded.declared_dxgi, loaded.declared_fourcc);
-        texture.validate()?;
+        let kept = match (cap, self.options.blocks) {
+            (Some(cap), Some(blocks)) => block_texture(
+                self.loader,
+                id,
+                cap,
+                blocks.max_bytes,
+                &mut self.block_bytes,
+                self.budget,
+            )?,
+            _ => None,
+        };
+        let loaded = match kept {
+            Some(t) => t,
+            None => decode_texture(
+                self.loader,
+                id,
+                self.options,
+                &mut self.texture_bytes,
+                self.limits,
+                self.budget,
+            )?,
+        };
+        let (texture, blocks, declared_dxgi, declared_fourcc) = (
+            loaded.texture,
+            loaded.blocks,
+            loaded.declared_dxgi,
+            loaded.declared_fourcc,
+        );
+        match &blocks {
+            Some(b) => texture.validate_blocks(b)?,
+            None => texture.validate()?,
+        }
         let index = self.output.list.textures.len();
         self.budget
             .charge(path.len() as u64 * 3 + 256, "texture identity", 0)?;
@@ -382,7 +546,11 @@ impl Builder<'_, '_> {
             self.budget,
         )?;
         append(&mut self.output.list.textures, texture, self.budget)?;
-        self.textures.insert(path, index);
+        if let Some(b) = blocks {
+            self.budget.charge(64, "block texture", 0)?;
+            self.output.list.blocks.insert(index, b);
+        }
+        self.textures.insert((path, cap.unwrap_or(0)), index);
         Ok(index)
     }
     fn constant_effect(&mut self, rgba: [f32; 4], file: &str, offset: u64) -> Result<usize> {
@@ -618,11 +786,10 @@ impl Builder<'_, '_> {
                         diffuse.offset,
                     )?
                 } else {
-                    self.texture(self.resolve_path(
-                        Citation::MaterialTexture,
-                        diffuse.bytes(),
-                        &scratch,
-                    )?)?
+                    self.texture(
+                        self.resolve_path(Citation::MaterialTexture, diffuse.bytes(), &scratch)?,
+                        m.common.alpha_test.0 != 0,
+                    )?
                 };
                 let c = &m.common;
                 let alpha = Alpha {
@@ -736,7 +903,10 @@ impl Builder<'_, '_> {
                 n.blocks[shader].data.start as u64,
             )?
         } else {
-            self.texture(self.resolve_path(Citation::NifTexture, raw, &scratch)?)?
+            self.texture(
+                self.resolve_path(Citation::NifTexture, raw, &scratch)?,
+                nif_alpha.is_some_and(|(flags, _)| (flags >> 9) & 1 == 1),
+            )?
         };
         let opacity = if kind == "BSLightingShaderProperty" {
             floats::<1>(f, "Alpha", file)?[0] as f32
@@ -1106,7 +1276,12 @@ pub fn build_with_marker_visibility(
     include_marker_subtrees: bool,
     b: &Budget,
 ) -> Result<Build> {
-    if options.max_texture_dimension == 0 || options.max_texture_bytes == 0 {
+    if options.max_texture_dimension == 0
+        || options.max_texture_bytes == 0
+        || options.blocks.is_some_and(|b| {
+            b.max_dimension == 0 || b.max_alpha_tested_dimension == 0 || b.max_bytes == 0
+        })
+    {
         return Err(error(
             "InvalidDrawOptions",
             "draw list",
@@ -1129,6 +1304,7 @@ pub fn build_with_marker_visibility(
         meshes: BTreeMap::new(),
         textures: BTreeMap::new(),
         texture_bytes: 0,
+        block_bytes: 0,
         visits: 0,
         allow_path_strip: false,
         allow_path_root: false,

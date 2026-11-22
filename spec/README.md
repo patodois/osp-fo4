@@ -97,8 +97,10 @@ the registry.
 | `land_quadrant_layout_v1` | pending | Top-down screenshot of a cell whose four quadrants have distinct base textures; offline: quadrant seams agree for 84.3% under the candidate, 51.4% or less otherwise. |
 | `land_vtxt_position_grid_v1` | pending | Photograph a layer painted in an asymmetric pattern; offline: cell edges agree for 80.6% under the candidate, 49.2% or less under the other symmetries. |
 | `land_layer_weights_residual_v1` | pending | Photograph two layers of flat colours at 0.5 and 0.5, then 0.25 and 0.25, over a third base; offline: opacities sum to at most 1 at all but 61 of 9,087,604 vertices. |
-| `land_missing_base_default_v1` | pending | Photograph a quadrant without BTXT and a FormID-zero layer at full opacity in one launch; which texture the default is stays refused. |
+| `land_missing_base_default_v1` | pending | Photograph a quadrant without BTXT and a FormID-zero layer at full opacity in one launch; which texture the default is is the next rule's candidate. |
 | `ltex_tnam_texture_set_tx00_v1` | pending | Photograph a cell before and after an overlay plugin points an LTEX TNAM at another TXST. |
+| `ltex_texture_set_material_diffuse_v1` | pending | Photograph ground of a material-only texture set before and after an overlay plugin gives its material a distinctive diffuse; offline: all 18 such materials resolve and decode. |
+| `land_default_texture_world_named_v1` | pending | Photograph default ground, then point the named texture set at a distinctive material with an overlay plugin; offline evidence is the editor ID only (seams and LOD tiles do not discriminate). |
 | `land_texture_repeat_256_v1` | pending | Placeholder. Top-down screenshot of flat ground: count texture repeats over a known distance and check the image's orientation. |
 | `land_vclr_multiply_v1` | pending | Photograph ground across a VCLR gradient and the same cell with VCLR removed; offline: shared cell edges byte-equal for 99.4% of non-white pairs. |
 | `walk_capsule_radius_v1` | pending | Walk the player into a box face of known plane and into a thin pole; the stop distances equal the radius. |

@@ -7,7 +7,7 @@ usage:
   fo4-view MANIFEST DATA_DIRECTORY CELL_EDITOR_ID [--strict|--measured|--under-hypotheses]
            --eye X,Y,Z --look X,Y,Z [--backface-cull] [--terrain] [--around N]
            [--speed UNITS_PER_SECOND] [--fast-speed UNITS_PER_SECOND] [--radians-per-pixel R]
-           [--walk]
+           [--walk] [--texture-cap N] [--alpha-tested-cap N] [--reference-textures]
       Window with a free-fly camera: W/A/S/D move, Shift moves faster, hold the
       left mouse button and move the mouse to look, R returns to the start pose.
       The title bar shows the mode, the speed and the position.
@@ -25,9 +25,16 @@ usage:
       --around N (1 to 3) also loads the exterior cells within N grid steps:
       their placed objects are drawn and, with --walk, collided; with
       --terrain their terrain is drawn too.
+      Block-compressed textures are uploaded as their stored blocks, from
+      the first stored level whose sides are at most --texture-cap (default
+      1024), or --alpha-tested-cap (default 2048) for a texture drawn with an
+      alpha test; other textures are decoded as the CPU render decodes them.
+      --reference-textures decodes every texture as the CPU render does
+      (first level at most 256 texels), for comparing frames with it.
   fo4-view MANIFEST DATA_DIRECTORY CELL_EDITOR_ID [level] --headless
            --eye X,Y,Z --look X,Y,Z --out build/FRAME.png [--tags build/TAGS.bin]
            [--size WxH] [--backface-cull] [--terrain] [--around N] [--walk]
+           [--texture-cap N] [--alpha-tested-cap N] [--reference-textures]
       One offscreen frame, no window. --tags also writes the per-pixel instance
       tags (u32 little-endian, u32::MAX = background). With --walk the walking
       world is built as in the window, the walker is dropped with its eye at
@@ -51,6 +58,32 @@ pub struct Scene {
     /// Also load the exterior cells within this many grid steps
     /// (`--around`, 0 = the cell alone), as the CPU render does.
     pub around: u32,
+    pub textures: Textures,
+}
+
+/// How the viewer keeps its textures.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Textures {
+    /// Decoded as the CPU reference decodes them (`--reference-textures`).
+    Reference,
+    /// Block-compressed textures kept as stored blocks, from the first level
+    /// whose sides are at most `cap`, or `alpha_tested_cap` for a texture
+    /// drawn with an alpha test (`--texture-cap`, `--alpha-tested-cap`).
+    Blocks { cap: u32, alpha_tested_cap: u32 },
+}
+
+/// Texture defaults: chosen by measured memory and look (README), with no
+/// claim about the game's texture streaming.
+pub const DEFAULT_TEXTURES: Textures = Textures::Blocks {
+    cap: 1024,
+    alpha_tested_cap: 2048,
+};
+
+fn texture_side(text: &str) -> Result<u32, String> {
+    text.parse::<u32>()
+        .ok()
+        .filter(|v| (4..=16384).contains(v))
+        .ok_or_else(|| format!("ExpectedTextureSide 4 to 16384: {text}"))
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -176,6 +209,9 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
     let mut walk = false;
     let mut terrain = false;
     let mut around = 0;
+    let mut reference_textures = false;
+    let mut cap = None;
+    let mut alpha_tested_cap = None;
     let mut rest = args[3..].iter();
     while let Some(arg) = rest.next() {
         let mut value = || rest.next().ok_or_else(usage);
@@ -196,9 +232,29 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             "--walk" => walk = true,
             "--terrain" => terrain = true,
             "--around" => around = radius(value()?)?,
+            "--reference-textures" => reference_textures = true,
+            "--texture-cap" => cap = Some(texture_side(value()?)?),
+            "--alpha-tested-cap" => alpha_tested_cap = Some(texture_side(value()?)?),
             _ => return Err(usage()),
         }
     }
+    let textures = match (reference_textures, DEFAULT_TEXTURES) {
+        (true, _) if cap.is_some() || alpha_tested_cap.is_some() => {
+            return Err("--reference-textures takes no texture cap".into())
+        }
+        (true, _) => Textures::Reference,
+        (
+            false,
+            Textures::Blocks {
+                cap: c,
+                alpha_tested_cap: a,
+            },
+        ) => Textures::Blocks {
+            cap: cap.unwrap_or(c),
+            alpha_tested_cap: alpha_tested_cap.unwrap_or(a),
+        },
+        (false, Textures::Reference) => Textures::Reference,
+    };
     let scene = Scene {
         manifest: args[0].clone(),
         data: args[1].clone(),
@@ -209,6 +265,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
         backface_cull,
         terrain,
         around,
+        textures,
     };
     if headless {
         Ok(Command::Headless {
@@ -275,6 +332,7 @@ mod tests {
                     backface_cull: false,
                     terrain: false,
                     around: 0,
+                    textures: DEFAULT_TEXTURES,
                 },
                 fly: DEFAULT_FLY,
                 walk: false,
@@ -317,6 +375,13 @@ mod tests {
         assert!(matches!(c, Command::Headless { walk: true, .. }));
         let c = parse(&args("m d C --eye 1,2,3 --look 4,5,6 --walk --around 1")).unwrap();
         assert!(matches!(&c, Command::Window { walk: true, scene, .. } if scene.around == 1));
+        let c = parse(&args("m d C --eye 1,2,3 --look 4,5,6 --texture-cap 512")).unwrap();
+        assert!(matches!(&c, Command::Window { scene, .. } if scene.textures
+            == Textures::Blocks { cap: 512, alpha_tested_cap: 2048 }));
+        let c = parse(&args("m d C --eye 1,2,3 --look 4,5,6 --reference-textures")).unwrap();
+        assert!(
+            matches!(&c, Command::Window { scene, .. } if scene.textures == Textures::Reference)
+        );
     }
 
     #[test]
@@ -334,6 +399,8 @@ mod tests {
             "m d C --eye 1,2,3 --look 4,5,6 --around 4",
             "m d C --eye 1,2,3 --look 4,5,6 --around x",
             "m d C --eye 1,2,3 --look 4,5,6 --around",
+            "m d C --eye 1,2,3 --look 4,5,6 --texture-cap 2",
+            "m d C --eye 1,2,3 --look 4,5,6 --reference-textures --texture-cap 512",
             "compare --cpu a --gpu b",
             "compare --cpu a --gpu b --diff c --cpu-tags x",
         ] {

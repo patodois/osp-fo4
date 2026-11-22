@@ -435,6 +435,12 @@ impl<'a> Texture<'a> {
             file: retained_file,
         })
     }
+    /// The stored bytes of surface `index` as the file holds them.
+    pub fn surface_bytes(&self, index: usize) -> Option<&'a [u8]> {
+        self.surfaces
+            .get(index)
+            .and_then(|s| self.bytes.get(s.data.clone()))
+    }
     /// Decode each surface independently; f32 preserves BC6H HDR and signed BC4/5.
     pub fn decode(&self, index: usize, l: &Limits, b: &Budget) -> Result<Vec<f32>> {
         let s = self.surfaces.get(index).ok_or_else(|| {

@@ -24,8 +24,11 @@ capsule over a cell's collision under provisional, registered rules.
   under pending rules, drawn with `render --terrain` with its ground
   textures (base and alpha layers weighted per vertex, vertex colours) under
   further pending rules, and reported by `fo4-unpack land`
-  ([terrain](spec/land.md)). The default ground texture no record names is
-  drawn grey, and the texture repeat is a placeholder.
+  ([terrain](spec/land.md)). The default ground texture, which no record
+  names, is drawn with the one texture set whose editor ID names it as its
+  worldspace's default (a pending rule; grey elsewhere), texture sets that
+  hold only a material are drawn with the material's diffuse texture, and
+  the texture repeat is a placeholder.
 - **Rendering**: a deterministic unlit CPU rasterizer and tools that compare
   its frames with photographs of the game.
 - **Walking**: a deterministic capsule controller (gravity, ground, walls,
@@ -118,6 +121,17 @@ example, to load the exterior cells within N grid steps as well: their
 objects are drawn and walked on and, with `--terrain`, their terrain is
 drawn. `--headless --walk` settles the walker from `--eye` and draws one
 frame from its eye.
+
+The viewer uploads block-compressed textures (BC1 to BC5, BC7) as the
+blocks the DDS stores, without decoding them, from the first stored level
+whose sides are at most 1024 texels (2048 for a texture drawn with an alpha
+test, such as foliage); `--texture-cap N` and `--alpha-tested-cap N` change
+the limits. Other textures are decoded as the CPU render decodes them. With
+`--around 1` at the test cell this keeps about 250 MiB of textures, draws
+every object the CPU texture budget would drop, and stays near 1.3 GB peak
+resident memory. `--reference-textures` decodes every texture as the CPU
+render does (first level at most 256 texels), for comparing frames with it;
+the CPU render never draws stored blocks.
 
 The comparison prints coverage agreement and colour differences; it defines
 no pass threshold.
