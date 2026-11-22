@@ -227,16 +227,102 @@ recorded together on every instance that draws a falloff; the vertex
 alpha rule only where a vertex alpha below 1 is read under Vertex_Colors
 alone (with every vertex alpha 1 both readings agree, as before).
 
+## Palette and colour above 1
+
+After the falloff step the distant clouds (458 placements, 74.06 % of the
+omitted area, 26.0 % of all area) were refused for `palette+colour-range`,
+and `colour-range` alone (1,308 placements), `palette` alone (943) and
+`feature` (452) were the other effect refusals.
+
+### Census
+
+`effect_census` now writes a section `# Palette, colour above 1 and
+features` over every effect shape in scope whose drawn fields (the BGEM's
+where one is named) set a greyscale-to-palette flag, a base colour times
+scale above 1, or a feature ([effect-census.txt](effect-census.txt)). It
+decodes the level the reference would draw (the first with both sides at
+most 256) of the palette and of the source texture; an unversioned
+listing (`OUT.txt.textures.tsv`) holds each texture's 8 x 8 grid of
+luminance and alpha means.
+
+- **Variants.** 2,302 shapes set a palette flag: colour alone 1,196
+  (21,314 placements of their models; 114 through a BGEM), alpha alone 499
+  (1,595; 3 through a BGEM, the distant clouds among the NIF ones), both
+  607 (5,834). 9 shapes (15 placements) name no greyscale texture, 7 (none
+  placed) one that is missing.
+- **Palette textures.** BGRA8 on 1,801 shapes (32 x 32 on 1,397), BC3 on
+  386 (the clouds' 256 x 512), BC1 with alpha on 99; at most 512 x 512.
+  They are two-dimensional: 2,218 shapes have palettes whose rows and
+  columns both differ by more than 32 of 255 steps, 67 vary only along V,
+  one is constant. On the coarse grid luminance and alpha never fall
+  along U nor along V for 640 of the 1,196 colour-only shapes and 268 of
+  the 499 alpha-only ones: dark and transparent at U = 0, V = 0, bright
+  and opaque toward U = 1, V = 1. The clouds' palette is white with an
+  alpha that rises toward the bottom right across a diagonal edge.
+- **Source textures.** BC3 on 2,071 shapes, BC1 with alpha on 225, 6
+  missing. Nearly grey: RGB spread within 32 steps on 2,132, more on 164.
+  Which channel carries the image: on the colour-only shapes the green
+  channel's deviation exceeds 32 steps on 773 of 1,196; on the alpha-only
+  shapes the alpha's on 365 of 499, while green is flat on many (the
+  clouds' source is RGB about 0.8 throughout with alpha 0.1 to 0.7; a glow
+  sprite's RGB is 1 throughout).
+- **Base colour, blend.** White base colour on most palette shapes, scale
+  above 1 on 1,657 of 2,302 (10 or more on 345); additive (SRC_ALPHA, ONE)
+  on 1,140, (SRC_ALPHA, INV_SRC_ALPHA) on 869. The commonest combination:
+  colour palette, colour above 1, falloff, Vertex_Colors alone (260
+  shapes, 9,555 placements).
+- **Colour above 1.** 2,615 effect shapes; mostly white base colours
+  with scale 2 to 10, additive (1,607 shapes), (SRC_ALPHA,
+  INV_SRC_ALPHA) on 671, without blending on 106.
+- **Features.** Environment map on 392 shapes (6,301 placements; 308
+  through the NIF flag, 84 through a BGEM; with an environment texture and
+  a scale of 0 to 100), refraction 19, fire refraction 10; no glass, glow
+  map, PBR specular, blood or emittance colour on a shape in scope.
+
+### Rules
+
+Pending ([hypotheses.tsv](hypotheses.tsv)), each refutable alone:
+
+- `effect_palette_sampled_clamped_v1`: the palette is read bilinearly at
+  the base level the frame loads, coordinates clamped to 0..1 and texel
+  indices to its edges.
+- `effect_palette_v_from_alpha_v1`: its vertical coordinate is the alpha
+  before the palette, the base colour alpha times the vertex alpha where
+  read, clamped.
+- `effect_palette_colour_u_green_v1` and
+  `effect_palette_colour_replaces_rgb_v1`: the colour lookup's horizontal
+  coordinate is the texel's green, and the palette RGB takes the texel
+  RGB's place in the colour equation (times base colour, scale and vertex
+  RGB).
+- `effect_palette_alpha_u_alpha_v1` and
+  `effect_palette_alpha_replaces_alpha_v1`: the alpha lookup's horizontal
+  coordinate is the texel's alpha, and the palette alpha takes the place
+  of the alpha before the falloff.
+- `effect_colour_clamped_before_blend_v1`: a colour above 1 is clamped
+  per channel before the test and the blend (the frame's range; alpha is
+  not clamped).
+
+The draw build gives a palette surface a `Palette` (the palette texture,
+decoded even when the viewer keeps blocks, and the two variant flags) and
+records the sampling and V rules with the variant's pair; the clamp rule
+where base colour times scale exceeds 1 in a channel. The reference
+rasterizer and the viewer apply them per sample ([render.md](render.md),
+Palette and colour above 1).
+
 ## What stays refused, and why
 
 An effect surface of a settled model is refused with
 `UnsupportedEffectSurface`, its text naming every term the frame does not
 settle, joined by `+`:
 
-- `palette`: greyscale-to-palette colour or alpha (the lookup coordinates
-  into the greyscale texture are not given by any source here; the distant
-  clouds set the palette alpha flag);
-- `feature`: environment map, refraction, glass, glow map, blood, emittance;
+- `palette-texture`: a greyscale-to-palette flag with an empty greyscale
+  slot (no palette to read; before the palette step every palette surface
+  was refused as `palette`);
+- each feature by name: `environment-map`, `refraction`,
+  `fire-refraction`, `temp-refraction`, `glass`, `glow-map`,
+  `pbr-specular`, `blood`, `emittance-colour` (before: `feature`). An
+  environment map needs a cube map sampled along a reflection vector and
+  its mask, none of which the frame reads;
 - `rgb-falloff`: RGB_Falloff or the material's falloff colour flag
   (nifxml does not describe it; whether the factor dims the colour is not
   settled);
@@ -245,19 +331,19 @@ settle, joined by `+`:
 - `falloff-normals`: a shape with falloff without a normal on every
   vertex; a skinned mesh with falloff is refused too
   (`UnsupportedSkinnedFalloff`), its posed normals are not computed;
-- `colour-range`: base colour x scale outside 0 to 1 (an emissive value
-  above what the unlit frame can show; how the game maps it is unknown;
-  the distant clouds have scale 1.5 on a white base colour);
+- `colour-negative`: base colour x scale below 0 or not finite (above 1
+  is drawn under the clamp rule; before: `colour-range` for both);
 - `vertex-alpha-flag-alone`: vertex alpha below 1 with Vertex_Alpha set and
   Vertex_Colors clear (no rule; no falloff shape has it).
 
-The distant clouds are settled at rest by the degrees rule and are then
-refused for `palette+colour-range`.
+The distant clouds are settled at rest by the degrees rule and are drawn
+since the palette step under its rules (before: refused for
+`palette+colour-range`).
 
 ## Coverage
 
-See [coverage.md](coverage.md), Effect surfaces, and Falloff and vertex
-alpha.
+See [coverage.md](coverage.md), Effect surfaces, Falloff and vertex alpha,
+and Palette and colour above 1.
 
 ## Provenance
 
@@ -279,4 +365,13 @@ falloff multiplier"), and the `BSVertexData` normal layout already in
 rules: that the falloff angle is taken against the direction to the eye,
 that two-sided surfaces turn the normal toward the eye (the absolute
 cosine), and that the effect shader reads vertex alpha whenever vertex
-colours are on. Nothing else was opened.
+colours are on. Nothing else was opened. For the palette step: the
+nifxml description of the Greyscale Texture field ("used as palette")
+and of Base Color Scale; recognised from prior knowledge and kept as
+pending rules: that the palette's second coordinate is the effect's alpha
+(base colour alpha times vertex alpha), that the colour lookup reads the
+texel's green channel, that the alpha lookup reads the texel's alpha and
+that its result replaces the alpha, that the palette colour is then tinted
+by the base colour, its scale and the vertex colour. The clamp before the
+blend is a policy of this frame. No MIT reference, other reader, editor
+or game executable was opened.

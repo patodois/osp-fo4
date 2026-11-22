@@ -246,8 +246,54 @@ arithmetic. A falloff draw whose mesh lacks normals, or whose fields fail
 `UnsupportedRenderFalloff`); the snapshot interchange has no field for
 either and refuses the list (`SnapshotFalloffDraws`).
 
-The GPU viewer has no falloff term in its shader: it leaves falloff draws
-out of the frames it draws and prints their count
-(`GpuScene::falloff_left_out`), so its frames keep those surfaces omitted
-as before and the CPU and GPU frames of a view with falloff surfaces
-differ there.
+The GPU viewer first left falloff draws out (`GpuScene::falloff_left_out`,
+removed). Since the palette step it draws them: the mesh carries its
+normals as a vertex attribute (Bevy turns them into world space and
+normalises them per vertex), the surface its four falloff fields, and the
+fragment shader takes the cosine between the interpolated world normal
+and the direction from the interpolated world position to the camera, by
+its absolute value, and multiplies the alpha by `Falloff::factor` at the
+same step as the CPU. The per-vertex normalisation is the only difference
+of method; the synthetic comparison below shows no difference beyond one
+8-bit step.
+
+## Palette and colour above 1
+
+An effect surface with a greyscale-to-palette lookup
+([effect-surfaces.md](effect-surfaces.md), Palette and colour above 1)
+carries `Draw::palette` (`Palette`: the palette's texture index and the
+colour and alpha flags). The palette is always decoded texels (the draw
+build loads it as the reference does even when the viewer keeps blocks;
+the viewer refuses a palette kept as blocks, `RenderPaletteTexture`). Per
+sample, after the texel is sampled and before the vertex colour: V is the
+draw's opacity times the interpolated vertex alpha (1 without vertex
+colours), clamped to 0..1; the colour lookup reads the palette at (texel
+green, V) and replaces the texel RGB; the alpha lookup reads it at
+(texel alpha, V) and, after the vertex colour and the opacity have been
+applied, replaces the alpha; the falloff then multiplies it. Each lookup
+is `Texture::sample_clamped`: bilinear on the palette's base level with
+the coordinates clamped to 0..1 and texel indices clamped to the edge. The
+GPU reads the same level with the surface's own sampler (repeat, linear)
+at coordinates kept within the edge texel centres, which reads exactly the
+edge texel at and beyond them, as the CPU's clamp does. The snapshot
+interchange refuses palette draws (`SnapshotPaletteDraws`).
+
+**Colour above 1.** Every sample's RGB is clamped to 0..1 before the alpha
+test and the blend, in both renderers (the CPU explicitly; the GPU in the
+shader, and its 8-bit unsigned normalised target would clamp a fragment's
+output before blending anyway). Alpha is not clamped (an opacity above 1
+without blending still scales the tested alpha). At or below 1 the clamp
+changes nothing: the lobby and vault frames, under hypotheses and without,
+are byte-identical to the commit before. Effect surfaces whose base colour
+times scale exceeds 1 record `effect_colour_clamped_before_blend_v1`; with
+SRC_ALPHA factors an additive layer then adds at most its alpha.
+
+**CPU against GPU.** `cpu_and_gpu_frames_agree_on_falloff_palette_and_colour_clamp`
+(viewer, ignored without a GPU) draws a grey floor, a blended card whose
+vertex normals tilt away toward its corners (falloff 1 to 0 between the
+cosines 1 and 0.3) and an additive card with both palette lookups (a 2D
+palette) and vertex RGB above 1, through `fo4_render::render` and through
+`scene::convert` and the headless GPU frame: on this machine coverage
+agreement 1.000000 (35,676 pixels drawn by both), mean channel difference
+0.03 to 0.06 steps, 95th percentile 0 to 1, largest 1; removing the
+falloff, the palette or the colour above 1 changes the CPU frame.
