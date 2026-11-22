@@ -498,6 +498,7 @@ fn exact_depth_ties_resolve_by_list_order_in_every_run() {
             textures: vec![texture(first), texture(second)],
             surfaces: vec![surface(0, None, false), surface(1, None, false)],
             instances: vec![instance(0), instance(1)],
+            falloff_left_out: 0,
         }
     };
     let camera = fo4_scene::camera::look_at(

@@ -123,6 +123,10 @@ pub struct GpuScene {
     pub textures: Vec<GpuTexture>,
     pub surfaces: Vec<Surface>,
     pub instances: Vec<Instance>,
+    /// Draws with an effect falloff (`fo4_render::Falloff`), left out: the
+    /// viewer's shader has no falloff term, and drawing them without it
+    /// would show what the CPU frame fades out.
+    pub falloff_left_out: usize,
 }
 impl GpuScene {
     pub fn blended_instances(&self) -> usize {
@@ -313,6 +317,10 @@ pub fn convert(list: &mut DrawList, options: &RenderOptions) -> Result<GpuScene,
         if source.triangles.is_empty() {
             continue;
         }
+        if draw.falloff.is_some() {
+            out.falloff_left_out += 1;
+            continue;
+        }
         let mesh_slot = match mesh_index.get(&draw.mesh) {
             Some(&i) => i,
             None => {
@@ -419,6 +427,7 @@ mod tests {
             uv_offset: [0.25, 0.],
             uv_scale: [2., 1.],
             raw_tile_flags: None,
+            falloff: None,
         }
     }
     fn list() -> DrawList {
@@ -439,6 +448,7 @@ mod tests {
         DrawList {
             meshes: vec![Mesh {
                 vertex_colors: None,
+                normals: None,
                 vertices,
                 triangles: vec![[0, 1, 2]],
             }],
@@ -483,6 +493,23 @@ mod tests {
         assert_eq!(t.bytes.len(), (16 + 4) * 2);
         assert_eq!(&t.bytes[..2], &half::f16::from_f32(0.25).to_le_bytes());
         assert_eq!(&t.bytes[32..34], &half::f16::from_f32(0.5).to_le_bytes());
+    }
+
+    #[test]
+    fn falloff_draws_are_left_out_and_counted() {
+        let mut l = list();
+        l.draws[1].falloff = Some(fo4_render::Falloff {
+            start_angle: 1.,
+            stop_angle: 0.,
+            start_opacity: 1.,
+            stop_opacity: 0.,
+        });
+        let scene = convert(&mut l, &RenderOptions::REFERENCE).unwrap();
+        assert_eq!(scene.falloff_left_out, 1);
+        assert_eq!(
+            scene.instances.iter().map(|i| i.tag).collect::<Vec<_>>(),
+            [7, 9]
+        );
     }
 
     #[test]
