@@ -123,6 +123,15 @@ lists), 71 (7,053), 566 (4,108), 70 (3,934), 1 (3,766), 561 (3,483), 629
 561 (3,460), 650 (3,165), 72 (569), 426 (375), 560 (308), 71 (307); most
 of these read the subject or an alias, which only a running game fills.
 
+Since the events step function 576 is evaluated too, but only while the
+story manager offers an event (`cond_fn_576_event_data_v1`,
+[story-manager.md](story-manager.md)); before any script runs there is
+none, so it stays undetermined here. The per-function lines of the census
+count each distinct reason an undetermined function gives in a list, so a
+list whose 576 conditions now give two reasons (no story event, a selector
+without a candidate) counts twice: 576 went from 64 to 66 (QUST) and 207 to
+213 (all records) with nothing else changed.
+
 Under the left-to-right reading instead of OR groups, 195 lists evaluate
 differently in that state (8 false here and true there, 182 false here
 and undetermined there, 5 undetermined here and true there): these lists
