@@ -8,18 +8,18 @@ rule in `spec/hypotheses.tsv`, off by default.
 
 ## Script VM and quests (`crates/fo4-vm`)
 
-The forced new-game opening (`quest_run`, record in `spec/quest-run-opening.txt`) reaches 65 of 104 stages.
+The forced new-game opening (`quest_run`, record in `spec/quest-run-opening.txt`) reaches 82 of 104 stages.
 It stops at, in order:
 
-1. A scene phase that waits on the player's distance to an actor whose quest alias the run never fills.
-   Needed: a census of alias fill kinds the run leaves empty, and the readings the data supports.
-2. A stage that needs the player to activate that actor.
-3. A stage set when the player sits in a piece of furniture. Furniture use is not modelled
-   (sit and get-up events, natives asking who is in the furniture).
-4. A stage fragment that opens a menu (character creation). Menu events are not modelled.
-5. Two stages with no setter found in the data; the search is not yet written down.
+1. A stage whose fragment calls into the next sequence's script, which waits on a keyword test of an actor.
+   Keywords change at run time and the run keeps no keyword state. Needed: a census of the natives that add,
+   remove and test keywords, and a keyword state per reference.
+2. Two stages set only in functions of that script that no event or fragment reaches in the run.
+3. Two stages with no setter and no reader anywhere in the data (documented in `spec/vm.md`).
 
-Not raised yet: unload, cell-load, cell-attach and cell-detach events.
+Not modelled yet: unload, cell-load, cell-attach and cell-detach events; the sit state native; actors sitting
+through packages; magic-effect receivers of furniture events. Caller actions fire at fixed seconds whatever
+path the run took, which inflates some rows of the one-thing-changed table.
 
 ## Drawing (`crates/fo4-scene`, `apps/fo4-view`)
 
