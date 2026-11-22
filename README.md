@@ -29,6 +29,11 @@ capsule over a cell's collision under provisional, registered rules.
   worldspace's default (a pending rule; grey elsewhere), texture sets that
   hold only a material are drawn with the material's diffuse texture, and
   the texture repeat is a placeholder.
+- **Scripts**: every compiled script (`.pex`) in the archives read to the
+  last byte into typed structures, with opcode arities established by the
+  census and a text disassembly (`pex_dump`); call, jump, property and
+  struct-member slots identified by name resolution, other opcode meanings
+  pending ([scripts](spec/pex.md)). Nothing runs them yet.
 - **Actors**: placed actors (ACHR) followed to their skeleton and the
   armour addon models they wear, with record layouts measured on the game's
   plugins, and drawn by the GPU viewer standing in the skeleton's rest pose,
@@ -239,6 +244,7 @@ consulted, with one attributed exception described in
 | `fo4-plugin` | Plugin records, load order, strings, typed fields. |
 | `fo4-nif`, `fo4-material`, `fo4-texture` | Model, material and texture readers. |
 | `fo4-havok` | Container and object spans of the Havok collision payload; bodies (shape link and placement); convex, sphere, capsule, scaled and compound shapes. |
+| `fo4-pex` | Compiled script (`.pex`) reader, opcode table and disassembly. |
 | `fo4-scene` | Scene assembly, rule levels and the collision of a cell. |
 | `fo4-walk` | Walking controller over the collision of a cell. |
 | `fo4-render` | CPU renderer and image comparison. |

@@ -1,0 +1,18 @@
+[package]
+name = "fo4-pex"
+description = "Bounded reader for the compiled script files (.pex) of Fallout 4"
+repository.workspace = true
+keywords = ["fallout4", "bethesda", "parser", "scripts"]
+categories = ["parser-implementations", "game-development"]
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+fo4-core.workspace = true
+serde.workspace = true
+
+[dev-dependencies]
+fo4-vfs.workspace = true
+fo4-plugin.workspace = true

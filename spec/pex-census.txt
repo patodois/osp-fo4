@@ -1,0 +1,1140 @@
+pex entries (every candidate of every mounted archive)	10282
+distinct paths	10282
+bytes	14857157
+bytes read to the last byte	14857157
+functions (winners)	30483
+instructions (winners)	267237
+instruction bytes (winners)	3428747
+header compiled u64 min|max	1456966841|1574705094
+distinct header user texts|machine texts	1|7
+wall seconds	3.8
+
+# entries by mount group (base, dlc, other) and priority
+7875	base winner
+2396	dlc winner
+11	other winner
+
+# outcomes (every entry)
+10282	read to the last byte
+
+# bytes by part (every entry read)
+1144129	1 header
+6693495	2 string table
+1117979	3 debug
+205640	4 user flags
+5695914	5 objects
+
+# checks (winners): holds, fails
+2	0	Op01 slot 1 int as relative target is not 0
+2	8	Op01 slot 1 int as relative target lands in 0..=count
+1825	0	Op01 slot 2 int as relative target is not 0
+1825	13	Op01 slot 2 int as relative target lands in 0..=count
+8	0	Op03 slot 1 int as relative target is not 0
+8	1	Op03 slot 1 int as relative target lands in 0..=count
+270	0	Op03 slot 2 int as relative target is not 0
+270	11	Op03 slot 2 int as relative target lands in 0..=count
+10	0	Op05 slot 1 int as relative target is not 0
+10	2	Op05 slot 1 int as relative target lands in 0..=count
+15	0	Op05 slot 2 int as relative target is not 0
+15	5	Op05 slot 2 int as relative target lands in 0..=count
+27	0	Op07 slot 2 int as relative target is not 0
+27	6	Op07 slot 2 int as relative target lands in 0..=count
+2	0	Op09 slot 2 int as relative target is not 0
+2	1	Op09 slot 2 int as relative target lands in 0..=count
+1495	1813	Op13 slot 1 int as relative target is not 0
+3308	608	Op13 slot 1 int as relative target lands in 0..=count
+0	3	Op14 slot 1 int as relative target is not 0
+3	0	Op14 slot 1 int as relative target lands in 0..=count
+1	0	Op15 slot 1 int as relative target is not 0
+1	0	Op15 slot 1 int as relative target lands in 0..=count
+4591	557	Op15 slot 2 int as relative target is not 0
+5148	406	Op15 slot 2 int as relative target lands in 0..=count
+149	86	Op16 slot 2 int as relative target is not 0
+235	169	Op16 slot 2 int as relative target lands in 0..=count
+41	26	Op17 slot 2 int as relative target is not 0
+67	16	Op17 slot 2 int as relative target lands in 0..=count
+160	539	Op18 slot 2 int as relative target is not 0
+699	36	Op18 slot 2 int as relative target lands in 0..=count
+134	129	Op19 slot 2 int as relative target is not 0
+263	67	Op19 slot 2 int as relative target lands in 0..=count
+24315	0	Op20 slot 0 int as relative target is not 0
+24315	0	Op20 slot 0 int as relative target lands in 0..=count
+1390	0	Op21 slot 1 int as relative target is not 0
+1390	0	Op21 slot 1 int as relative target lands in 0..=count
+28659	0	Op22 slot 1 int as relative target is not 0
+28659	0	Op22 slot 1 int as relative target lands in 0..=count
+113324	0	Op23 (name, receiver, destination, n): callee global flag == false
+113324	0	Op23 (name, receiver, destination, n): counted list length == callee params
+113324	0	Op23 (name, receiver, destination, n): destination slot declared type == callee return type
+113324	0	Op23 (name, receiver, destination, n): name resolves to a function of the type or a parent
+71560	34711	Op23 slot 3 int as relative target is not 0
+106271	7053	Op23 slot 3 int as relative target lands in 0..=count
+60	0	Op24 (name, destination, n) from the parent: callee global flag == false
+60	0	Op24 (name, destination, n) from the parent: counted list length == callee params
+60	0	Op24 (name, destination, n) from the parent: destination slot declared type == callee return type
+60	0	Op24 (name, destination, n) from the parent: name resolves to a function of the type or a parent
+41	16	Op24 slot 2 int as relative target is not 0
+57	3	Op24 slot 2 int as relative target lands in 0..=count
+8627	0	Op25 (script, name, destination, n): callee global flag == true
+8627	0	Op25 (script, name, destination, n): counted list length == callee params
+8627	0	Op25 (script, name, destination, n): destination slot declared type == callee return type
+8627	0	Op25 (script, name, destination, n): name resolves to a function of the type or a parent
+3610	4737	Op25 slot 3 int as relative target is not 0
+8347	280	Op25 slot 3 int as relative target lands in 0..=count
+39	16	Op26 slot 0 int as relative target is not 0
+55	64	Op26 slot 0 int as relative target lands in 0..=count
+3351	0	Op28 (name, receiver, value): name resolves to a property of the type or a parent
+3351	0	Op28 (name, receiver, value): value slot declared type == property type
+2939	0	Op29 (name, receiver, value): name resolves to a property of the type or a parent
+2939	0	Op29 (name, receiver, value): value slot declared type == property type
+57	100	Op30 slot 1 int as relative target is not 0
+157	8	Op30 slot 1 int as relative target lands in 0..=count
+258	205	Op32 slot 2 int as relative target is not 0
+463	13	Op32 slot 2 int as relative target lands in 0..=count
+102	62	Op33 slot 1 int as relative target is not 0
+164	5	Op33 slot 1 int as relative target lands in 0..=count
+0	81	Op34 slot 3 int as relative target is not 0
+81	0	Op34 slot 3 int as relative target lands in 0..=count
+121	0	Op36 slot 2 names a winning script or a simple type
+1415	0	Op38 (struct slot, member-name slot): member-name slot names a member of that struct
+1415	0	Op38 (struct slot, member-name slot): struct slot type names a struct of a winning script
+172	0	Op39 (struct slot, member-name slot): member-name slot names a member of that struct
+172	0	Op39 (struct slot, member-name slot): struct slot type names a struct of a winning script
+37	0	Op40 (struct slot, member-name slot): member-name slot names a member of that struct
+37	0	Op40 (struct slot, member-name slot): struct slot type names a struct of a winning script
+0	32	Op40 slot 4 int as relative target is not 0
+32	0	Op40 slot 4 int as relative target lands in 0..=count
+10	0	Op42 slot 1 int as relative target is not 0
+10	0	Op42 slot 1 int as relative target lands in 0..=count
+139	0	Op42 slot 2 int as relative target is not 0
+139	0	Op42 slot 2 int as relative target lands in 0..=count
+0	16	Op43 slot 2 int as relative target is not 0
+16	0	Op43 slot 2 int as relative target lands in 0..=count
+0	15	Op45 slot 1 int as relative target is not 0
+15	0	Op45 slot 1 int as relative target lands in 0..=count
+54	0	Op45 slot 2 int as relative target is not 0
+54	0	Op45 slot 2 int as relative target lands in 0..=count
+10043	0	debug modified time <= header compiled time
+35833	0	debug present: each property listed in exactly one group
+122	0	debug present: each struct has an order entry
+10282	0	entry file stem == object name after its last ':'
+10282	0	every string ASCII
+10282	0	every string referenced by a field
+1022	0	function of a named state also in the empty state or a parent
+287	0	global function stored in the empty state
+10282	0	header source file stem == object name after its last ':'
+10282	0	header source text ends .psc
+39227	0	member/variable value kind none or the declared simple type
+891	0	native function has no instructions and no locals
+10282	0	object auto state names one of its states
+10282	0	object has an empty-named state
+10282	0	object name ':' separators == folders below scripts/ in the entry path
+10281	0	object parent names a winning script
+35833	0	property group lists properties of its object
+7244	0	property group object is the file's object
+77	0	property read function: no params, returns the property type
+35756	0	property variable has the property type
+35756	0	property variable names a variable of the object
+35756	0	property with bit 4 also has bits 1 and 2
+12	0	property write function: one param of the property type, returns None
+9847	435	string 0 == object name
+10282	0	strings distinct (bytes) within a file
+122	0	struct order lists the stored members (as a set)
+31	91	struct order lists the stored members in stored order
+61692	0	user flag bit < 32
+61692	0	user flag name keeps one bit across files
+123069	0	user flag words use declared bits only
+
+# values (winners)
+56770	Op23 (name, receiver, destination, n): callee native
+56554	Op23 (name, receiver, destination, n): callee scripted
+2	Op24 (name, destination, n) from the parent: callee native
+58	Op24 (name, destination, n) from the parent: callee scripted
+7765	Op25 (script, name, destination, n): callee native
+862	Op25 (script, name, destination, n): callee scripted
+30371	debug function entries
+30282	debug function kind 0
+29987	debug function kind 0 paired: at the place it names, same instruction count
+295	debug function kind 0 paired: same name in another state, same instruction count
+77	debug function kind 1
+77	debug function kind 1 paired: at the place it names, same instruction count
+12	debug function kind 2
+12	debug function kind 2 paired: at the place it names, same instruction count
+239	debug presence 0
+10043	debug presence 1
+891	debug present: native function paired with an entry: true
+112	debug present: non-native function paired with an entry: false
+29480	debug present: non-native function paired with an entry: true
+7244	debug property groups
+122	debug struct orders
+29496	function flags 0
+96	function flags 1
+700	function flags 2
+191	function flags 3
+2724	function instructions 0
+4774	function instructions 1
+6819	function instructions 10-99
+205	function instructions 100-999
+3496	function instructions 2
+3386	function instructions 3
+2335	function instructions 4
+6744	function instructions 5-9
+2689	function locals 0
+6546	function locals 1
+2347	function locals 10-99
+1	function locals 100-999
+4187	function locals 2
+5007	function locals 3
+3573	function locals 4
+6133	function locals 5-9
+17557	function params 0
+9674	function params 1
+26	function params 10-99
+2469	function params 2
+396	function params 3
+142	function params 4
+219	function params 5-9
+27759	non-native function with no instructions false
+1833	non-native function with no instructions true
+356	object auto state empty false
+9926	object auto state empty true
+2534	object const byte 0
+137	object const byte 0 and debug present: false
+2397	object const byte 0 and debug present: true
+7748	object const byte 1
+102	object const byte 1 and debug present: false
+7646	object const byte 1 and debug present: true
+836	object doc empty false
+9446	object doc empty true
+2422	object name ':' separators 0
+696	object name ':' separators 1
+5403	object name ':' separators 2
+1755	object name ':' separators 3
+6	object name ':' separators 4
+1	object parent empty
+10282	objects per file 1
+35833	properties
+65	property flags 1
+12	property flags 3
+35756	property flags 7
+9886	states per object 1
+32	states per object 2
+295	states per object 3
+43	states per object 4
+26	states per object 5-9
+430153	strings (total)
+0	strings never referenced (total)
+9393	strings per file 10-99
+665	strings per file 100-999
+218	strings per file 5-9
+6	strings per file >=1000
+564	struct member const byte 0
+35	struct member value kind bool
+31	struct member value kind float
+50	struct member value kind int
+447	struct member value kind none
+1	struct member value kind string
+564	struct members
+130	structs
+6268	variable const byte 0
+2437	variable const byte 0 and a property names it: false
+3831	variable const byte 0 and a property names it: true
+32395	variable const byte 1
+470	variable const byte 1 and a property names it: false
+31925	variable const byte 1 and a property names it: true
+1226	variable value kind bool
+828	variable value kind float
+1638	variable value kind int
+34791	variable value kind none
+180	variable value kind string
+38663	variables
+
+# user flag table entries (name bit), per file
+10282	collapsedonbase bit 4
+10282	collapsedonref bit 3
+10282	conditional bit 1
+10282	default bit 2
+10282	hidden bit 0
+10282	mandatory bit 5
+
+# user flag bits set, by element
+420	object: conditional
+144	object: default
+7976	object: hidden
+3	property group: collapsedonbase
+105	property group: collapsedonref
+521	property: hidden
+9887	property: mandatory
+3	struct member: hidden
+1154	variable: conditional
+
+# opcodes (winners): opcode, arity (+n: counted list), instructions, files
+Op00	-	0	0
+Op01	3	1960	663
+Op02	3	504	230
+Op03	3	366	165
+Op04	3	192	81
+Op05	3	55	25
+Op06	3	252	79
+Op07	3	37	13
+Op08	3	126	57
+Op09	3	5	4
+Op10	2	4644	1140
+Op11	2	8	2
+Op12	2	29	12
+Op13	2	8785	2704
+Op14	2	40929	7677
+Op15	3	14795	2202
+Op16	3	2105	771
+Op17	3	333	187
+Op18	3	1192	431
+Op19	3	660	338
+Op20	1	24315	3260
+Op21	2	1390	415
+Op22	2	28659	3260
+Op23	4+n	113324	9204
+Op24	3+n	60	37
+Op25	4+n	8627	2400
+Op26	1	1225	274
+Op27	3	283	23
+Op28	3	3351	770
+Op29	3	2939	1799
+Op30	2	203	93
+Op31	2	1071	347
+Op32	3	2478	448
+Op33	3	237	46
+Op34	4	81	43
+Op35	-	0	0
+Op36	3	121	66
+Op37	1	15	13
+Op38	3	1415	116
+Op39	3	172	37
+Op40	5	37	25
+Op41	-	0	0
+Op42	3	139	73
+Op43	3	17	9
+Op44	-	0	0
+Op45	3	54	37
+Op46	1	47	15
+
+# alternative arities: each tried with the rest of the table fixed, over the files holding the opcode
+Op00	-	files 0	unmeasured (refused by the reader)
+Op01	3	files 663	alternatives reading every file: 0; every alternative fails on every file
+Op02	3	files 230	alternatives reading every file: 0; every alternative fails on every file
+Op03	3	files 165	alternatives reading every file: 0; every alternative fails on every file
+Op04	3	files 81	alternatives reading every file: 0; every alternative fails on every file
+Op05	3	files 25	alternatives reading every file: 0; every alternative fails on every file
+Op06	3	files 79	alternatives reading every file: 0; alternatives reading some files exactly: 4:1
+Op07	3	files 13	alternatives reading every file: 0; every alternative fails on every file
+Op08	3	files 57	alternatives reading every file: 0; every alternative fails on every file
+Op09	3	files 4	alternatives reading every file: 0; every alternative fails on every file
+Op10	2	files 1140	alternatives reading every file: 0; every alternative fails on every file
+Op11	2	files 2	alternatives reading every file: 0; every alternative fails on every file
+Op12	2	files 12	alternatives reading every file: 0; every alternative fails on every file
+Op13	2	files 2704	alternatives reading every file: 0; alternatives reading some files exactly: 1:19 2+n:283
+Op14	2	files 7677	alternatives reading every file: 0; every alternative fails on every file
+Op15	3	files 2202	alternatives reading every file: 0; alternatives reading some files exactly: 2:30 3+n:42
+Op16	3	files 771	alternatives reading every file: 0; alternatives reading some files exactly: 2:13 3+n:17
+Op17	3	files 187	alternatives reading every file: 0; alternatives reading some files exactly: 2:11 3+n:13
+Op18	3	files 431	alternatives reading every file: 0; alternatives reading some files exactly: 2:2 3+n:152
+Op19	3	files 338	alternatives reading every file: 0; alternatives reading some files exactly: 2:15 3+n:40
+Op20	1	files 3260	alternatives reading every file: 0; alternatives reading some files exactly: 0:22
+Op21	2	files 415	alternatives reading every file: 0; alternatives reading some files exactly: 1:12
+Op22	2	files 3260	alternatives reading every file: 0; alternatives reading some files exactly: 1:78
+Op23	4+n	files 9204	alternatives reading every file: 0; alternatives reading some files exactly: 4:2339 5:1648 5+n:3 6:206 6+n:41
+Op24	3+n	files 37	alternatives reading every file: 0; alternatives reading some files exactly: 3:10 4:19 5:1
+Op25	4+n	files 2400	alternatives reading every file: 0; alternatives reading some files exactly: 4:1190 5:345 5+n:18 6:206 6+n:2
+Op26	1	files 274	alternatives reading every file: 0; every alternative fails on every file
+Op27	3	files 23	alternatives reading every file: 0; every alternative fails on every file
+Op28	3	files 770	alternatives reading every file: 0; every alternative fails on every file
+Op29	3	files 1799	alternatives reading every file: 0; every alternative fails on every file
+Op30	2	files 93	alternatives reading every file: 0; alternatives reading some files exactly: 2+n:49
+Op31	2	files 347	alternatives reading every file: 0; every alternative fails on every file
+Op32	3	files 448	alternatives reading every file: 0; alternatives reading some files exactly: 3+n:36
+Op33	3	files 46	alternatives reading every file: 0; every alternative fails on every file
+Op34	4	files 43	alternatives reading every file: 1; alternatives reading some files exactly: 4+n:43
+Op35	-	files 0	unmeasured (refused by the reader)
+Op36	3	files 66	alternatives reading every file: 0; every alternative fails on every file
+Op37	1	files 13	alternatives reading every file: 0; every alternative fails on every file
+Op38	3	files 116	alternatives reading every file: 0; every alternative fails on every file
+Op39	3	files 37	alternatives reading every file: 0; every alternative fails on every file
+Op40	5	files 25	alternatives reading every file: 0; alternatives reading some files exactly: 5+n:20
+Op41	-	files 0	unmeasured (refused by the reader)
+Op42	3	files 73	alternatives reading every file: 0; every alternative fails on every file
+Op43	3	files 9	alternatives reading every file: 0; alternatives reading some files exactly: 3+n:8
+Op44	-	files 0	unmeasured (refused by the reader)
+Op45	3	files 37	alternatives reading every file: 0; every alternative fails on every file
+Op46	1	files 15	alternatives reading every file: 0; every alternative fails on every file
+
+# argument kinds by opcode and slot (x: counted list)
+1960	Op01 slot 0 ident
+1950	Op01 slot 1 ident
+10	Op01 slot 1 int
+122	Op01 slot 2 ident
+1838	Op01 slot 2 int
+504	Op02 slot 0 ident
+16	Op02 slot 1 float
+488	Op02 slot 1 ident
+231	Op02 slot 2 float
+273	Op02 slot 2 ident
+366	Op03 slot 0 ident
+357	Op03 slot 1 ident
+9	Op03 slot 1 int
+85	Op03 slot 2 ident
+281	Op03 slot 2 int
+192	Op04 slot 0 ident
+18	Op04 slot 1 float
+174	Op04 slot 1 ident
+42	Op04 slot 2 float
+150	Op04 slot 2 ident
+55	Op05 slot 0 ident
+43	Op05 slot 1 ident
+12	Op05 slot 1 int
+35	Op05 slot 2 ident
+20	Op05 slot 2 int
+252	Op06 slot 0 ident
+21	Op06 slot 1 float
+231	Op06 slot 1 ident
+89	Op06 slot 2 float
+163	Op06 slot 2 ident
+37	Op07 slot 0 ident
+37	Op07 slot 1 ident
+4	Op07 slot 2 ident
+33	Op07 slot 2 int
+126	Op08 slot 0 ident
+8	Op08 slot 1 float
+118	Op08 slot 1 ident
+61	Op08 slot 2 float
+65	Op08 slot 2 ident
+5	Op09 slot 0 ident
+5	Op09 slot 1 ident
+2	Op09 slot 2 ident
+3	Op09 slot 2 int
+4644	Op10 slot 0 ident
+4644	Op10 slot 1 ident
+8	Op11 slot 0 ident
+8	Op11 slot 1 ident
+29	Op12 slot 0 ident
+29	Op12 slot 1 ident
+8785	Op13 slot 0 ident
+2933	Op13 slot 1 bool
+196	Op13 slot 1 float
+1076	Op13 slot 1 ident
+3916	Op13 slot 1 int
+561	Op13 slot 1 none
+103	Op13 slot 1 string
+40929	Op14 slot 0 ident
+5	Op14 slot 1 bool
+40919	Op14 slot 1 ident
+3	Op14 slot 1 int
+1	Op14 slot 1 none
+1	Op14 slot 1 string
+14795	Op15 slot 0 ident
+12	Op15 slot 1 bool
+14782	Op15 slot 1 ident
+1	Op15 slot 1 int
+2878	Op15 slot 2 bool
+784	Op15 slot 2 float
+3922	Op15 slot 2 ident
+5554	Op15 slot 2 int
+1176	Op15 slot 2 none
+481	Op15 slot 2 string
+2105	Op16 slot 0 ident
+2105	Op16 slot 1 ident
+166	Op16 slot 2 float
+1535	Op16 slot 2 ident
+404	Op16 slot 2 int
+333	Op17 slot 0 ident
+333	Op17 slot 1 ident
+62	Op17 slot 2 float
+188	Op17 slot 2 ident
+83	Op17 slot 2 int
+1192	Op18 slot 0 ident
+1192	Op18 slot 1 ident
+272	Op18 slot 2 float
+185	Op18 slot 2 ident
+735	Op18 slot 2 int
+660	Op19 slot 0 ident
+660	Op19 slot 1 ident
+87	Op19 slot 2 float
+243	Op19 slot 2 ident
+330	Op19 slot 2 int
+24315	Op20 slot 0 int
+1390	Op21 slot 0 ident
+1390	Op21 slot 1 int
+2	Op22 slot 0 bool
+28657	Op22 slot 0 ident
+28659	Op22 slot 1 int
+113324	Op23 slot 0 ident
+113324	Op23 slot 1 ident
+113324	Op23 slot 2 ident
+113324	Op23 slot 3 int
+45999	Op23 slot x bool
+13920	Op23 slot x float
+31002	Op23 slot x ident
+25361	Op23 slot x int
+3874	Op23 slot x none
+4663	Op23 slot x string
+60	Op24 slot 0 ident
+60	Op24 slot 1 ident
+60	Op24 slot 2 int
+1	Op24 slot x bool
+49	Op24 slot x ident
+8627	Op25 slot 0 ident
+8627	Op25 slot 1 ident
+8627	Op25 slot 2 ident
+8627	Op25 slot 3 int
+868	Op25 slot x bool
+2240	Op25 slot x float
+2297	Op25 slot x ident
+1062	Op25 slot x int
+318	Op25 slot x none
+62	Op25 slot x string
+271	Op26 slot 0 bool
+26	Op26 slot 0 float
+490	Op26 slot 0 ident
+119	Op26 slot 0 int
+292	Op26 slot 0 none
+27	Op26 slot 0 string
+283	Op27 slot 0 ident
+240	Op27 slot 1 ident
+43	Op27 slot 1 string
+142	Op27 slot 2 ident
+141	Op27 slot 2 string
+3351	Op28 slot 0 ident
+3351	Op28 slot 1 ident
+3351	Op28 slot 2 ident
+2939	Op29 slot 0 ident
+2939	Op29 slot 1 ident
+2939	Op29 slot 2 ident
+203	Op30 slot 0 ident
+38	Op30 slot 1 ident
+165	Op30 slot 1 int
+1071	Op31 slot 0 ident
+1071	Op31 slot 1 ident
+2478	Op32 slot 0 ident
+2478	Op32 slot 1 ident
+2002	Op32 slot 2 ident
+476	Op32 slot 2 int
+237	Op33 slot 0 ident
+68	Op33 slot 1 ident
+169	Op33 slot 1 int
+237	Op33 slot 2 ident
+81	Op34 slot 0 ident
+81	Op34 slot 1 ident
+81	Op34 slot 2 ident
+81	Op34 slot 3 int
+121	Op36 slot 0 ident
+121	Op36 slot 1 ident
+121	Op36 slot 2 ident
+15	Op37 slot 0 ident
+1415	Op38 slot 0 ident
+1415	Op38 slot 1 ident
+1415	Op38 slot 2 ident
+172	Op39 slot 0 ident
+172	Op39 slot 1 ident
+172	Op39 slot 2 ident
+37	Op40 slot 0 ident
+37	Op40 slot 1 ident
+37	Op40 slot 2 string
+36	Op40 slot 3 ident
+1	Op40 slot 3 string
+5	Op40 slot 4 ident
+32	Op40 slot 4 int
+139	Op42 slot 0 ident
+129	Op42 slot 1 ident
+10	Op42 slot 1 int
+139	Op42 slot 2 int
+17	Op43 slot 0 ident
+17	Op43 slot 1 ident
+1	Op43 slot 2 ident
+16	Op43 slot 2 int
+54	Op45 slot 0 ident
+39	Op45 slot 1 ident
+15	Op45 slot 1 int
+54	Op45 slot 2 int
+47	Op46 slot 0 ident
+
+# identifier arguments by opcode, slot and what they name
+1593	Op01 slot 0 local
+4	Op01 slot 0 param
+351	Op01 slot 0 variable
+12	Op01 slot 0 variable of a parent
+1542	Op01 slot 1 local
+14	Op01 slot 1 param
+382	Op01 slot 1 variable
+12	Op01 slot 1 variable of a parent
+71	Op01 slot 2 local
+37	Op01 slot 2 param
+14	Op01 slot 2 variable
+467	Op02 slot 0 local
+1	Op02 slot 0 param
+36	Op02 slot 0 variable
+400	Op02 slot 1 local
+5	Op02 slot 1 param
+83	Op02 slot 1 variable
+176	Op02 slot 2 local
+20	Op02 slot 2 param
+76	Op02 slot 2 variable
+1	Op02 slot 2 variable of a parent
+304	Op03 slot 0 local
+3	Op03 slot 0 param
+55	Op03 slot 0 variable
+4	Op03 slot 0 variable of a parent
+251	Op03 slot 1 local
+23	Op03 slot 1 param
+78	Op03 slot 1 variable
+5	Op03 slot 1 variable of a parent
+43	Op03 slot 2 local
+10	Op03 slot 2 param
+32	Op03 slot 2 variable
+174	Op04 slot 0 local
+5	Op04 slot 0 param
+13	Op04 slot 0 variable
+129	Op04 slot 1 local
+6	Op04 slot 1 param
+39	Op04 slot 1 variable
+105	Op04 slot 2 local
+9	Op04 slot 2 param
+36	Op04 slot 2 variable
+50	Op05 slot 0 local
+5	Op05 slot 0 variable
+24	Op05 slot 1 local
+1	Op05 slot 1 param
+18	Op05 slot 1 variable
+23	Op05 slot 2 local
+3	Op05 slot 2 param
+9	Op05 slot 2 variable
+245	Op06 slot 0 local
+2	Op06 slot 0 param
+5	Op06 slot 0 variable
+188	Op06 slot 1 local
+4	Op06 slot 1 param
+39	Op06 slot 1 variable
+100	Op06 slot 2 local
+7	Op06 slot 2 param
+56	Op06 slot 2 variable
+37	Op07 slot 0 local
+15	Op07 slot 1 local
+17	Op07 slot 1 param
+5	Op07 slot 1 variable
+2	Op07 slot 2 local
+2	Op07 slot 2 variable
+120	Op08 slot 0 local
+6	Op08 slot 0 variable
+92	Op08 slot 1 local
+5	Op08 slot 1 param
+21	Op08 slot 1 variable
+46	Op08 slot 2 local
+1	Op08 slot 2 param
+18	Op08 slot 2 variable
+5	Op09 slot 0 local
+5	Op09 slot 1 local
+2	Op09 slot 2 local
+4638	Op10 slot 0 local
+6	Op10 slot 0 variable
+3992	Op10 slot 1 local
+77	Op10 slot 1 param
+574	Op10 slot 1 variable
+1	Op10 slot 1 variable of a parent
+8	Op11 slot 0 local
+4	Op11 slot 1 local
+1	Op11 slot 1 param
+3	Op11 slot 1 variable
+29	Op12 slot 0 local
+11	Op12 slot 1 local
+2	Op12 slot 1 param
+16	Op12 slot 1 variable
+5783	Op13 slot 0 local
+1	Op13 slot 0 other
+35	Op13 slot 0 param
+2903	Op13 slot 0 variable
+63	Op13 slot 0 variable of a parent
+185	Op13 slot 1 local
+1	Op13 slot 1 other
+375	Op13 slot 1 param
+3	Op13 slot 1 self
+502	Op13 slot 1 variable
+10	Op13 slot 1 variable of a parent
+40662	Op14 slot 0 local
+12	Op14 slot 0 param
+255	Op14 slot 0 variable
+25152	Op14 slot 1 local
+5473	Op14 slot 1 param
+5564	Op14 slot 1 self
+4692	Op14 slot 1 variable
+38	Op14 slot 1 variable of a parent
+14789	Op15 slot 0 local
+5	Op15 slot 0 variable
+1	Op15 slot 0 variable of a parent
+6143	Op15 slot 1 local
+7010	Op15 slot 1 param
+2	Op15 slot 1 self
+1586	Op15 slot 1 variable
+41	Op15 slot 1 variable of a parent
+1600	Op15 slot 2 local
+88	Op15 slot 2 param
+1	Op15 slot 2 self
+2221	Op15 slot 2 variable
+12	Op15 slot 2 variable of a parent
+2105	Op16 slot 0 local
+1906	Op16 slot 1 local
+47	Op16 slot 1 param
+145	Op16 slot 1 variable
+7	Op16 slot 1 variable of a parent
+1315	Op16 slot 2 local
+31	Op16 slot 2 param
+178	Op16 slot 2 variable
+11	Op16 slot 2 variable of a parent
+333	Op17 slot 0 local
+268	Op17 slot 1 local
+26	Op17 slot 1 param
+39	Op17 slot 1 variable
+87	Op17 slot 2 local
+9	Op17 slot 2 param
+75	Op17 slot 2 variable
+17	Op17 slot 2 variable of a parent
+1187	Op18 slot 0 local
+5	Op18 slot 0 variable
+891	Op18 slot 1 local
+89	Op18 slot 1 param
+177	Op18 slot 1 variable
+35	Op18 slot 1 variable of a parent
+105	Op18 slot 2 local
+6	Op18 slot 2 param
+73	Op18 slot 2 variable
+1	Op18 slot 2 variable of a parent
+660	Op19 slot 0 local
+472	Op19 slot 1 local
+51	Op19 slot 1 param
+123	Op19 slot 1 variable
+14	Op19 slot 1 variable of a parent
+135	Op19 slot 2 local
+7	Op19 slot 2 param
+98	Op19 slot 2 variable
+3	Op19 slot 2 variable of a parent
+1374	Op21 slot 0 local
+16	Op21 slot 0 variable
+27219	Op22 slot 0 local
+435	Op22 slot 0 param
+939	Op22 slot 0 variable
+64	Op22 slot 0 variable of a parent
+6	Op23 slot 0 local
+113313	Op23 slot 0 other
+5	Op23 slot 0 param
+26298	Op23 slot 1 local
+2383	Op23 slot 1 param
+47998	Op23 slot 1 self
+36256	Op23 slot 1 variable
+389	Op23 slot 1 variable of a parent
+112642	Op23 slot 2 local
+25	Op23 slot 2 param
+655	Op23 slot 2 variable
+2	Op23 slot 2 variable of a parent
+15798	Op23 slot x local
+2468	Op23 slot x param
+97	Op23 slot x self
+12452	Op23 slot x variable
+187	Op23 slot x variable of a parent
+60	Op24 slot 0 other
+60	Op24 slot 1 local
+45	Op24 slot x param
+4	Op24 slot x variable
+8627	Op25 slot 0 other
+2	Op25 slot 1 local
+8625	Op25 slot 1 other
+8467	Op25 slot 2 local
+1	Op25 slot 2 param
+159	Op25 slot 2 variable
+1022	Op25 slot x local
+200	Op25 slot x param
+1059	Op25 slot x variable
+16	Op25 slot x variable of a parent
+354	Op26 slot 0 local
+1	Op26 slot 0 other
+23	Op26 slot 0 param
+111	Op26 slot 0 variable
+1	Op26 slot 0 variable of a parent
+282	Op27 slot 0 local
+1	Op27 slot 0 param
+234	Op27 slot 1 local
+6	Op27 slot 1 variable
+133	Op27 slot 2 local
+9	Op27 slot 2 param
+53	Op28 slot 0 local
+3283	Op28 slot 0 other
+1	Op28 slot 0 param
+14	Op28 slot 0 variable
+2007	Op28 slot 1 local
+146	Op28 slot 1 param
+156	Op28 slot 1 self
+907	Op28 slot 1 variable
+135	Op28 slot 1 variable of a parent
+3329	Op28 slot 2 local
+2	Op28 slot 2 param
+18	Op28 slot 2 variable
+2	Op28 slot 2 variable of a parent
+4	Op29 slot 0 local
+2933	Op29 slot 0 other
+2	Op29 slot 0 param
+2721	Op29 slot 1 local
+25	Op29 slot 1 param
+31	Op29 slot 1 self
+162	Op29 slot 1 variable
+2939	Op29 slot 2 local
+91	Op30 slot 0 local
+112	Op30 slot 0 variable
+32	Op30 slot 1 local
+6	Op30 slot 1 variable
+1066	Op31 slot 0 local
+5	Op31 slot 0 variable
+295	Op31 slot 1 local
+118	Op31 slot 1 param
+654	Op31 slot 1 variable
+4	Op31 slot 1 variable of a parent
+2463	Op32 slot 0 local
+6	Op32 slot 0 param
+9	Op32 slot 0 variable
+774	Op32 slot 1 local
+324	Op32 slot 1 param
+1374	Op32 slot 1 variable
+6	Op32 slot 1 variable of a parent
+1750	Op32 slot 2 local
+148	Op32 slot 2 param
+100	Op32 slot 2 variable
+4	Op32 slot 2 variable of a parent
+151	Op33 slot 0 local
+4	Op33 slot 0 param
+82	Op33 slot 0 variable
+47	Op33 slot 1 local
+12	Op33 slot 1 param
+9	Op33 slot 1 variable
+237	Op33 slot 2 local
+9	Op34 slot 0 local
+4	Op34 slot 0 param
+68	Op34 slot 0 variable
+81	Op34 slot 1 local
+31	Op34 slot 2 local
+50	Op34 slot 2 param
+121	Op36 slot 0 local
+68	Op36 slot 1 local
+49	Op36 slot 1 param
+4	Op36 slot 1 variable
+121	Op36 slot 2 other
+13	Op37 slot 0 local
+2	Op37 slot 0 variable
+1396	Op38 slot 0 local
+1	Op38 slot 0 param
+18	Op38 slot 0 variable
+1177	Op38 slot 1 local
+220	Op38 slot 1 param
+18	Op38 slot 1 variable
+41	Op38 slot 2 local
+1364	Op38 slot 2 other
+7	Op38 slot 2 param
+3	Op38 slot 2 variable
+116	Op39 slot 0 local
+37	Op39 slot 0 param
+19	Op39 slot 0 variable
+1	Op39 slot 1 local
+163	Op39 slot 1 other
+7	Op39 slot 1 param
+1	Op39 slot 1 variable
+172	Op39 slot 2 local
+2	Op40 slot 0 local
+1	Op40 slot 0 param
+34	Op40 slot 0 variable
+36	Op40 slot 1 local
+1	Op40 slot 1 variable
+4	Op40 slot 3 local
+30	Op40 slot 3 param
+2	Op40 slot 3 variable
+4	Op40 slot 4 local
+1	Op40 slot 4 param
+57	Op42 slot 0 local
+4	Op42 slot 0 param
+78	Op42 slot 0 variable
+83	Op42 slot 1 local
+39	Op42 slot 1 param
+7	Op42 slot 1 variable
+17	Op43 slot 0 local
+8	Op43 slot 1 local
+2	Op43 slot 1 param
+7	Op43 slot 1 variable
+1	Op43 slot 2 local
+3	Op45 slot 0 local
+1	Op45 slot 0 param
+50	Op45 slot 0 variable
+37	Op45 slot 1 local
+1	Op45 slot 1 param
+1	Op45 slot 1 variable
+47	Op46 slot 0 variable
+
+# declared type class of identifier arguments naming a local, param, variable or self
+1960	Op01 slot 0 Int
+1950	Op01 slot 1 Int
+122	Op01 slot 2 Int
+504	Op02 slot 0 Float
+488	Op02 slot 1 Float
+273	Op02 slot 2 Float
+366	Op03 slot 0 Int
+357	Op03 slot 1 Int
+85	Op03 slot 2 Int
+192	Op04 slot 0 Float
+174	Op04 slot 1 Float
+150	Op04 slot 2 Float
+55	Op05 slot 0 Int
+43	Op05 slot 1 Int
+35	Op05 slot 2 Int
+252	Op06 slot 0 Float
+231	Op06 slot 1 Float
+163	Op06 slot 2 Float
+37	Op07 slot 0 Int
+37	Op07 slot 1 Int
+4	Op07 slot 2 Int
+126	Op08 slot 0 Float
+118	Op08 slot 1 Float
+65	Op08 slot 2 Float
+5	Op09 slot 0 Int
+5	Op09 slot 1 Int
+2	Op09 slot 2 Int
+4644	Op10 slot 0 Bool
+4582	Op10 slot 1 Bool
+3	Op10 slot 1 Int
+2	Op10 slot 1 String
+5	Op10 slot 1 array
+47	Op10 slot 1 object
+5	Op10 slot 1 struct
+8	Op11 slot 0 Int
+8	Op11 slot 1 Int
+29	Op12 slot 0 Float
+29	Op12 slot 1 Float
+3052	Op13 slot 0 Bool
+356	Op13 slot 0 Float
+4234	Op13 slot 0 Int
+131	Op13 slot 0 String
+109	Op13 slot 0 array
+877	Op13 slot 0 object
+25	Op13 slot 0 struct
+119	Op13 slot 1 Bool
+160	Op13 slot 1 Float
+318	Op13 slot 1 Int
+28	Op13 slot 1 String
+63	Op13 slot 1 array
+376	Op13 slot 1 object
+11	Op13 slot 1 struct
+11557	Op14 slot 0 Bool
+811	Op14 slot 0 Float
+335	Op14 slot 0 Int
+206	Op14 slot 0 String
+98	Op14 slot 0 Var
+7	Op14 slot 0 array
+27913	Op14 slot 0 object
+2	Op14 slot 0 struct
+11109	Op14 slot 1 Bool
+311	Op14 slot 1 Float
+889	Op14 slot 1 Int
+5	Op14 slot 1 String
+196	Op14 slot 1 Var
+20	Op14 slot 1 array
+28374	Op14 slot 1 object
+15	Op14 slot 1 struct
+14795	Op15 slot 0 Bool
+2892	Op15 slot 1 Bool
+855	Op15 slot 1 Float
+6169	Op15 slot 1 Int
+519	Op15 slot 1 String
+72	Op15 slot 1 array
+4257	Op15 slot 1 object
+18	Op15 slot 1 struct
+26	Op15 slot 2 Bool
+71	Op15 slot 2 Float
+616	Op15 slot 2 Int
+38	Op15 slot 2 String
+3171	Op15 slot 2 object
+2105	Op16 slot 0 Bool
+343	Op16 slot 1 Float
+1762	Op16 slot 1 Int
+177	Op16 slot 2 Float
+1358	Op16 slot 2 Int
+333	Op17 slot 0 Bool
+143	Op17 slot 1 Float
+190	Op17 slot 1 Int
+81	Op17 slot 2 Float
+107	Op17 slot 2 Int
+1192	Op18 slot 0 Bool
+377	Op18 slot 1 Float
+815	Op18 slot 1 Int
+105	Op18 slot 2 Float
+80	Op18 slot 2 Int
+660	Op19 slot 0 Bool
+179	Op19 slot 1 Float
+481	Op19 slot 1 Int
+92	Op19 slot 2 Float
+151	Op19 slot 2 Int
+1390	Op21 slot 0 Bool
+27476	Op22 slot 0 Bool
+1	Op22 slot 0 Float
+24	Op22 slot 0 Int
+8	Op22 slot 0 String
+17	Op22 slot 0 array
+1110	Op22 slot 0 object
+21	Op22 slot 0 struct
+7	Op23 slot 0 Bool
+4	Op23 slot 0 object
+113324	Op23 slot 1 object
+22055	Op23 slot 2 Bool
+2620	Op23 slot 2 Float
+3166	Op23 slot 2 Int
+65881	Op23 slot 2 None
+55	Op23 slot 2 String
+358	Op23 slot 2 array
+19149	Op23 slot 2 object
+40	Op23 slot 2 struct
+685	Op23 slot x Bool
+2200	Op23 slot x Float
+3840	Op23 slot x Int
+751	Op23 slot x String
+5	Op23 slot x Var
+525	Op23 slot x array
+22932	Op23 slot x object
+64	Op23 slot x struct
+1	Op24 slot 1 Int
+59	Op24 slot 1 None
+13	Op24 slot x Bool
+5	Op24 slot x Int
+2	Op24 slot x String
+29	Op24 slot x object
+2	Op25 slot 1 Int
+242	Op25 slot 2 Bool
+575	Op25 slot 2 Float
+463	Op25 slot 2 Int
+2561	Op25 slot 2 None
+8	Op25 slot 2 array
+4776	Op25 slot 2 object
+2	Op25 slot 2 struct
+41	Op25 slot x Bool
+738	Op25 slot x Float
+516	Op25 slot x Int
+348	Op25 slot x String
+135	Op25 slot x array
+517	Op25 slot x object
+2	Op25 slot x struct
+161	Op26 slot 0 Bool
+56	Op26 slot 0 Float
+66	Op26 slot 0 Int
+5	Op26 slot 0 String
+62	Op26 slot 0 array
+115	Op26 slot 0 object
+24	Op26 slot 0 struct
+283	Op27 slot 0 String
+240	Op27 slot 1 String
+142	Op27 slot 2 String
+2	Op28 slot 0 Bool
+13	Op28 slot 0 Float
+8	Op28 slot 0 Int
+12	Op28 slot 0 array
+30	Op28 slot 0 object
+3	Op28 slot 0 struct
+3351	Op28 slot 1 object
+458	Op28 slot 2 Bool
+136	Op28 slot 2 Float
+971	Op28 slot 2 Int
+3	Op28 slot 2 String
+247	Op28 slot 2 array
+1536	Op28 slot 2 object
+2	Op29 slot 0 Bool
+2	Op29 slot 0 Int
+2	Op29 slot 0 object
+2939	Op29 slot 1 object
+937	Op29 slot 2 Bool
+55	Op29 slot 2 Float
+1876	Op29 slot 2 Int
+2	Op29 slot 2 array
+69	Op29 slot 2 object
+203	Op30 slot 0 array
+38	Op30 slot 1 Int
+1071	Op31 slot 0 Int
+1071	Op31 slot 1 array
+12	Op32 slot 0 Bool
+37	Op32 slot 0 Float
+57	Op32 slot 0 Int
+30	Op32 slot 0 String
+194	Op32 slot 0 Var
+1234	Op32 slot 0 object
+914	Op32 slot 0 struct
+2478	Op32 slot 1 array
+2002	Op32 slot 2 Int
+237	Op33 slot 0 array
+68	Op33 slot 1 Int
+25	Op33 slot 2 Bool
+19	Op33 slot 2 Float
+15	Op33 slot 2 Int
+22	Op33 slot 2 String
+96	Op33 slot 2 Var
+56	Op33 slot 2 object
+4	Op33 slot 2 struct
+81	Op34 slot 0 array
+81	Op34 slot 1 Int
+4	Op34 slot 2 Int
+1	Op34 slot 2 String
+74	Op34 slot 2 object
+2	Op34 slot 2 struct
+121	Op36 slot 0 Bool
+121	Op36 slot 1 object
+15	Op37 slot 0 struct
+80	Op38 slot 0 Bool
+104	Op38 slot 0 Float
+302	Op38 slot 0 Int
+79	Op38 slot 0 String
+850	Op38 slot 0 object
+1415	Op38 slot 1 struct
+4	Op38 slot 2 Bool
+7	Op38 slot 2 Float
+4	Op38 slot 2 Int
+36	Op38 slot 2 object
+172	Op39 slot 0 struct
+1	Op39 slot 1 Bool
+2	Op39 slot 1 Float
+6	Op39 slot 1 object
+16	Op39 slot 2 Bool
+30	Op39 slot 2 Float
+70	Op39 slot 2 Int
+8	Op39 slot 2 String
+48	Op39 slot 2 object
+37	Op40 slot 0 array
+37	Op40 slot 1 Int
+8	Op40 slot 3 Int
+7	Op40 slot 3 String
+21	Op40 slot 3 object
+5	Op40 slot 4 Int
+139	Op42 slot 0 array
+8	Op42 slot 1 Int
+98	Op42 slot 1 object
+23	Op42 slot 1 struct
+17	Op43 slot 0 array
+16	Op43 slot 1 object
+1	Op43 slot 1 struct
+1	Op43 slot 2 Int
+54	Op45 slot 0 array
+39	Op45 slot 1 Int
+47	Op46 slot 0 array
+
+# counted list lengths
+34711	Op23 counted list 0
+55316	Op23 counted list 1
+179	Op23 counted list 10-99
+13004	Op23 counted list 2
+5763	Op23 counted list 3
+1219	Op23 counted list 4
+3132	Op23 counted list 5-9
+16	Op24 counted list 0
+38	Op24 counted list 1
+6	Op24 counted list 2
+4737	Op25 counted list 0
+2186	Op25 counted list 1
+8	Op25 counted list 10-99
+1325	Op25 counted list 2
+138	Op25 counted list 3
+16	Op25 counted list 4
+217	Op25 counted list 5-9

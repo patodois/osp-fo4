@@ -123,6 +123,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "fo4-pex"
+version = "0.1.0"
+dependencies = [
+ "fo4-core",
+ "fo4-plugin",
+ "fo4-vfs",
+ "serde",
+]
+
+[[package]]
 name = "fo4-plugin"
 version = "0.1.0"
 dependencies = [

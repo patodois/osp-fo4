@@ -166,3 +166,24 @@ which Havok skeleton belongs to an actor and how a clip's bones replace the
 skeleton NIF's nodes are registered pending rules whose candidates come from
 the offline comparisons recorded there. No animation runtime, behaviour-graph
 reader, SDK or third-party implementation was opened or searched for.
+
+The compiled script reader (`fo4-pex`, [spec/pex.md](../spec/pex.md)) was
+established only by measuring every `.pex` entry of the installed game's
+archives with the `pex_census` example. The archives hold no script
+sources, and none were read. No compiler, decompiler, disassembler, script
+virtual machine, format documentation, wiki page or third-party reader of
+this format was opened or searched for. The overall layout (the header
+words, the string table of u16-prefixed texts, the debug block, the user
+flag table, the object with its size word, structs, variables, properties
+and states, the function with its parameters, locals and instructions, the
+six value kinds, and an opcode table with three counted call opcodes) was
+recognised from prior general knowledge before it was measured. It is kept
+because the census could have refuted it and did not: all 10,282 entries
+are read to the last byte with every object size holding, and each opcode
+arity was then tested against twelve alternatives, of which none reads
+every file holding the opcode, except one case recorded as open in the
+spec. Which slots name functions, properties, struct members and jump
+targets was checked by name resolution and target ranges over every
+instruction; the candidate meanings of the opcodes, also recognised from
+prior knowledge, are registered pending rules, not facts. Field and role
+names are labels chosen here; the user flag names are the stored strings.
