@@ -1431,6 +1431,134 @@ second and every switch above (body reading, height 120):
   stages); the six others name actors' aliases, whose positions are open.
 
 
+## Dialogue outside scenes
+
+`fo4_vm::talk` speaks the lines of topics that no scene action names, as
+far as the records and the caller's assumptions settle them. Everything
+is off unless a switch turns it on; with every switch of this section off
+every versioned output is as before (checked with `cmp`, below). The
+census tool is `talk_census MANIFEST OUT.txt NAMES.txt [--player-base
+EDITOR_ID]` ([talk-census.txt](talk-census.txt), counts and kinds only;
+NAMES.txt is never versioned; 4 s wall, peak RSS about 0.4 GB).
+
+**The topic record** (`fo4_plugin::dial`, read additively, the plugin
+layout table unchanged): EDID, FULL, PNAM, BNAM, QNAM, KNAM, DATA, SNAM
+and TIFC, every one but EDID four bytes in all 46,373 winning topics; QNAM
+names a QUST in all of them. SNAM is a four-letter code (91 codes); the
+category byte of DATA (byte 1) differs within 45 codes and the last two
+bytes vary within one code, so the subtype is read from SNAM alone and
+the rest of DATA is kept as stored.
+
+**The census** ([talk-census.txt](talk-census.txt)):
+
+- Topics by whether a scene action names them (any field of an action
+  resolving to the topic): 41,695 named (57,224 lines); 1,672 in a
+  dialogue branch (BNAM) and named by none (9,423 lines); 3,006 neither
+  (35,786 lines). Every greeting (`GREE`, 476 topics, 5,987 lines), hello
+  (`HELO`, 460, 9,965) and idle (`IDLE`, 101, 5,731) topic is of the last
+  kind.
+- Lines with a stage field (TIQS with a non-negative half): 4,674 of
+  named topics, 64 of branch topics, 1,052 of the others: 485 greeting
+  lines (49 begin half, 435 end half, 1 both), 495 hello lines, 15 idle
+  lines; the topic's quest holds every stage named for all but 24 of the
+  1,052.
+- Who function 72 names: greeting lines name the player's base as
+  speaker (run-on 0) in 382 (170 with another actor base as listener)
+  and another actor base in 1,708; hello lines name the player's base as
+  speaker in 429, another actor base in 2,028; 3,795 greeting and 7,448
+  hello lines name nobody.
+- 411 greeting, hello and idle lines carry a script block (VMAD), whose
+  fragments no line outside a scene runs.
+- Eight game settings name greetings or hellos (six numbers; the names
+  file lists their values).
+
+**What makes a line play.** A greeting when the player starts a
+conversation with an actor, which only a caller assumes; a hello when the
+player comes near an actor; which line, by its conditions over the
+running quests' topics of that subtype. Each step is a pending rule
+behind its own switch:
+
+| Switch | Reading | Rule |
+| --- | --- | --- |
+| (with either below) | a line's conditions run on the speaker (run-on 0) and on the one spoken to (run-on 1); a conversation's lines are tried with the actor and with the player speaking; function 72 reads the placed actor's base or the player's base the caller names (`--player-base`) | `dialogue_conversation_parties_v1` |
+| (with either below) | the candidates are the lines of the subtype's topics whose owning quest runs; the line is known when exactly one holds and none is undetermined | `dialogue_outside_line_choice_v1` |
+| `--dialogue-priority` | the alternative: lines ordered by quest priority, topic priority, stored order; the first that holds plays when every one before it is false | `dialogue_line_priority_v1` |
+| `--greeting-on-talk` | a `GREE` line when the player starts a conversation (`--assume-talk REF@SECONDS`, a caller assumption, which also stands for the actor's being there when its enable state is undetermined) | `dialogue_greeting_on_talk_v1` |
+| `--hello-lines` | a `HELO` line when the track comes within the distance of the game setting the caller names (`--hello-distance-setting`) of an enabled placed actor at its stored position; one line per entry | `dialogue_hello_proximity_v1` |
+| `--line-stage-fields` | the line's TIQS: the first half as it begins, the second as it ends (seconds from its voice file for the speaker's voice type, or `--assume-line-seconds`) | `dialogue_line_stage_fields_v1` |
+| `--assume-line PLUGIN:OBJECTID` | caller assumption: where the choice is not settled, that line plays when its own conditions hold | none |
+
+The steps run as synthetic calls of the quest host (script `::talk`), as
+the scene steps do; a line's second half is due on the real-time clock
+and `quest_run`'s clock loop stops at it beside the world model's
+seconds (`talk::next_due`, `talk::settle`). Counts go to the census under
+`talk`; what was said and why to the names file.
+
+### Unique actor aliases
+
+The quest reader already held every alias value; `talk_census` section 7
+counts the fills of the 16,286 aliases of every winning quest: of the
+14,432 reference aliases, linked to another alias 3,469, from a location
+alias 2,306, unique actor 2,115, created at run time 1,751, forced
+reference 1,402, from the story event 1,214, no fill value 1,155, an alias
+of another quest 508, a display name only 271, by conditions only 241
+(884 collection and 970 location aliases apart). Of the 2,115 unique actor
+aliases, 1,994 name a base with exactly one placed actor in the loaded
+plugins, 117 the player's base (no placed actor), 4 a base with none,
+none a base with several.
+
+| Switch | Reading | Rule |
+| --- | --- | --- |
+| `--alias-unique-actors` | a unique actor alias without a forced reference holds the one placed actor of its base; none or several leave it without one; the player's base (`--player-base`) holds the player | `quest_alias_unique_actor_ref_v1` |
+| `--player-no-record` | the player's handle is no record's handle: comparing them answers false | `vm_player_no_record_v1` |
+| `--enable-child-flag-ignored` | a record below its enable chain's root that carries its own flag 0x800 takes its parent's state | `xesp_child_own_flag_ignored_v1` |
+
+### Actor positions
+
+| Switch | Reading | Rule |
+| --- | --- | --- |
+| `--actor-positions` (with `--placed-positions`) | a placed actor stands at its stored position until a native may have moved it (open), or the caller's assumption `--assume-actor-at REF SPACE X Y Z@SECONDS` puts it elsewhere from that second; the placed actors of the cells read near the track are loaded for hellos | `world_actor_placed_position_v1` |
+| `--actor-triggers` | an assumed move raises trigger leave and enter as the player's crossing does, the actor as the action reference | `world_actor_trigger_v1` |
+
+No AI package, path or animation is modelled: an actor is where it was
+placed or where the caller put it. A distance registration between an
+actor and the player, or between two objects that stand still, is solved
+in the windows between the caller's moves (`track::first_time`); the
+points of the moves join the track's in choosing the cells whose volumes
+are read.
+
+### The forced opening with dialogue
+
+([quest-run-opening.txt](quest-run-opening.txt); the command lines, the
+track and every record named are in the step's notes.) The world step's
+command line on its plan with one change, the wait at the fifth trigger
+held ten seconds longer so that the player passes the actor of the hello
+stop after the scene before it ends (the later waypoints shifted by ten
+seconds), plus the switches of this step:
+
+- The greeting stop: the player talks to the actor (`--assume-talk`); the
+  records do not settle the line (thousands of greeting lines of running
+  quests hold and as many are undetermined; by priority the first is
+  undetermined), so `--assume-line` names the line, which holds with the
+  player speaking; its begin half sets the stage.
+- The hello stop: the track passes the actor within the setting's
+  distance; the actor's enable state is settled only with
+  `--enable-child-flag-ignored`; `--assume-line` names the line, which
+  holds with the actor speaking; its end half, timed by its voice file,
+  sets the stage whose fragment registers the seven distance events.
+- The player's distance event is raised by the track; the side stage's
+  trigger accepts only the actor of an alias forced to a unique actor
+  alias's reference: `--alias-unique-actors` resolves it,
+  `--player-no-record` decides that the player is not that actor, and an
+  assumed move of that actor into the volume (`--actor-triggers`) sets
+  the stage; six assumed moves of actors onto the elevator raise the six
+  other distance events, and the last sets the next stage.
+- Reached: **49 of the 104 stages** (before 43), one objective. The run
+  stops next on a stage set only by an animation event handler, an
+  engine event the interpreter does not raise; the two stages with no
+  setter are off the path.
+
+
 ## Conditions
 
 `fo4_vm::cond` evaluates the condition lists read by
@@ -1835,3 +1963,29 @@ scripts with the repository's reader. No public page was requested in
 this step. No editor, editor source or definition file, script source,
 decompiler, other interpreter, script extender, physics engine or the
 game executable was opened or searched for. The game was not run.
+
+## Provenance of the talk step
+
+Recognised from prior general knowledge, used only as pending rules that
+are off by default: the names and roles of the topic subrecords (checked
+against every winning topic, above); that `GREE` and `HELO` are the
+greeting and hello subtypes (two game settings' editor ids name a
+Miscellaneous Greeting and Hello subtype text); that a greeting plays
+when the player talks to an actor and a hello when the player comes near
+one; that a dialogue condition runs on the speaker and the one spoken to;
+that a quest's dialogue is available while it runs and that higher
+priorities win; that a unique actor exists once in the world; that an
+actor starts at its editor placement and that triggers report any actor;
+that the editor ignores the initially-disabled flag of a record with an
+enable parent; that the player is no record of the plugins. The setting
+the hello distance is read from, the track's waits, the seconds of the
+assumed talk and actor moves, the positions given to them and the lines
+named by `--assume-line` are assumptions of the person running the
+opening.
+
+The topic layout, the census and every count were measured with the
+repository's own readers on the installed data; the compiled scripts were
+read only with the repository's disassembler. No public page was
+requested in this step. No editor, editor source or definition file,
+script source, decompiler, other interpreter, script extender or the game
+executable was opened or searched for. The game was not run.

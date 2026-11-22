@@ -585,3 +585,17 @@ weakly, that a reference's material swap overrides its base's (the data
 was weighed on both sides of it, spec/materials.md). No editor, editor
 definition file, MIT reference, third-party reader of these formats or game
 executable was opened.
+The talk step (`fo4_plugin::dial`, `fo4_vm::talk`, [spec/vm.md](../spec/vm.md),
+Dialogue outside scenes; [spec/talk-census.txt](../spec/talk-census.txt))
+reads the dialogue topic record (DIAL) as EDID, FULL, PNAM (an f32),
+BNAM, QNAM, KNAM, DATA, SNAM (a four-letter code) and TIFC. The names and
+roles were recognised from prior knowledge and kept only where
+`talk_census` holds them on every winning topic (every field but EDID four
+bytes, QNAM a QUST in all, SNAM printable letters); the last two bytes of
+DATA vary within one SNAM code and are kept as stored. The plugin layout
+table is unchanged. What a subtype does in the game (a greeting when the
+player talks, a hello when the player comes near), how a line is chosen,
+how unique actor aliases fill and where actors stand are pending rules.
+No editor, editor source or definition file, reader of another project,
+script source or game executable was opened.
+
