@@ -169,7 +169,7 @@ pub const XESP_BIT1: &str = "xesp_flag_bit1_not_presence_v1";
 pub const XESP_PROPAGATES: &str = "xesp_script_change_propagates_v1";
 
 /// Every rule above.
-pub const ALL: [&str; 119] = [
+pub const ALL: [&str; 130] = [
     ARITHMETIC,
     COMPARE,
     NOT_COPY_CAST,
@@ -289,6 +289,17 @@ pub const ALL: [&str; 119] = [
     WORLD_POSITION_NATIVES,
     WORLD_CELL_NATIVES,
     WORLD_LOCATION_NATIVE,
+    ALIAS_UNIQUE_ACTOR,
+    WORLD_ACTOR_POSITION,
+    WORLD_ACTOR_TRIGGER,
+    DIALOGUE_PARTIES,
+    DIALOGUE_LINE_CHOICE,
+    DIALOGUE_LINE_PRIORITY,
+    DIALOGUE_GREETING,
+    DIALOGUE_HELLO,
+    DIALOGUE_LINE_FIELDS,
+    PLAYER_NO_RECORD,
+    XESP_CHILD_FLAG_IGNORED,
 ];
 
 /// The rule an opcode's meaning rests on; `None` for an opcode without a
@@ -451,3 +462,42 @@ pub const WORLD_POSITION_NATIVES: &str = "world_position_natives_v1";
 pub const WORLD_CELL_NATIVES: &str = "world_cell_natives_v1";
 /// The current location is the parent cell's XLCN.
 pub const WORLD_LOCATION_NATIVE: &str = "world_location_native_v1";
+
+/// A reference alias filled by a unique actor (ALUA) holds the one placed
+/// actor (ACHR) of that base in the loaded plugins; none or several leave
+/// it without a reference (`crate::quest::UniqueActors`).
+pub const ALIAS_UNIQUE_ACTOR: &str = "quest_alias_unique_actor_ref_v1";
+/// A placed actor stands at its stored (`DATA`) position until a native
+/// of the run may have moved it or a caller's assumption moves it.
+pub const WORLD_ACTOR_POSITION: &str = "world_actor_placed_position_v1";
+/// An actor whose position changes (a caller's assumed move) enters and
+/// leaves trigger volumes as the player does, the actor the event's
+/// action reference.
+pub const WORLD_ACTOR_TRIGGER: &str = "world_actor_trigger_v1";
+/// A dialogue line's conditions run on the speaker (run-on 0) and the one
+/// spoken to (run-on 1); a conversation's lines are tried with either
+/// party speaking (`crate::talk`).
+pub const DIALOGUE_PARTIES: &str = "dialogue_conversation_parties_v1";
+/// A line outside a scene is one line of a topic of the subtype owned by
+/// a running quest: known only when exactly one holds and no other is
+/// undetermined.
+pub const DIALOGUE_LINE_CHOICE: &str = "dialogue_outside_line_choice_v1";
+/// The alternative choice: lines ordered by their quest's priority, the
+/// topic's priority and stored order; the first that holds plays when
+/// every line before it is false.
+pub const DIALOGUE_LINE_PRIORITY: &str = "dialogue_line_priority_v1";
+/// When the player starts a conversation with an actor, a line of a
+/// greeting topic (SNAM `GREE`) plays.
+pub const DIALOGUE_GREETING: &str = "dialogue_greeting_on_talk_v1";
+/// When the player comes within the hello distance of an enabled placed
+/// actor, a line of a hello topic (SNAM `HELO`) plays.
+pub const DIALOGUE_HELLO: &str = "dialogue_hello_proximity_v1";
+/// A line outside a scene sets its TIQS stages as it begins and ends.
+pub const DIALOGUE_LINE_FIELDS: &str = "dialogue_line_stage_fields_v1";
+/// The player's handle is not the handle of any record of the loaded
+/// plugins (no record is the player's reference).
+pub const PLAYER_NO_RECORD: &str = "vm_player_no_record_v1";
+/// A placed record below the root of its enable parent chain that
+/// carries its own flag 0x800 takes its parent's state as the other links
+/// do: the flag carries no state of its own.
+pub const XESP_CHILD_FLAG_IGNORED: &str = "xesp_child_own_flag_ignored_v1";

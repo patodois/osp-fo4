@@ -266,7 +266,7 @@ impl SceneInfo {
 }
 
 /// Two little-endian i16 of a four-byte stage field.
-fn stage_pair(d: &[u8]) -> Option<[i16; 2]> {
+pub(crate) fn stage_pair(d: &[u8]) -> Option<[i16; 2]> {
     let d: [u8; 4] = d.try_into().ok()?;
     Some([
         i16::from_le_bytes([d[0], d[1]]),
@@ -288,7 +288,7 @@ fn field_stage(h: &mut QuestHost<'_>, w: &mut World, i: &SceneInfo, n: i16) {
 
 /// Sets a stage a record field names on a quest, as `SetCurrentStageID`
 /// would (`record_set_stage_fields_v1`).
-fn set_field_stage(h: &mut QuestHost<'_>, w: &mut World, q: &FormKey, n: i16) {
+pub(crate) fn set_field_stage(h: &mut QuestHost<'_>, w: &mut World, q: &FormKey, n: i16) {
     h.using(rules::SETTER_FIELDS);
     let b = Budget::new(h.data.max_memory);
     let Ok(qo) = record_object(w, h.data.store, q, "quest", &b) else {
@@ -484,7 +484,7 @@ impl Groups {
     }
 }
 
-fn groups(store: &Store, w: &mut World) -> Rc<Groups> {
+pub(crate) fn groups(store: &Store, w: &mut World) -> Rc<Groups> {
     w.scenes
         .groups
         .get_or_insert_with(|| Rc::new(Groups::read(store)))

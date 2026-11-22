@@ -10,6 +10,7 @@ mod quest;
 mod scene;
 mod scev;
 mod stage;
+mod talk;
 mod world;
 
 use fo4_pex::{

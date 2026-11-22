@@ -249,6 +249,14 @@ pub trait Facts {
             .map_err(|_| "the reference could not be read")?
             .ok_or("the reference has no base")
     }
+    /// The base of a party of the conversation a dialogue line is tried
+    /// in (`dialogue_conversation_parties_v1`): run-on 0 the speaker,
+    /// run-on 1 the one spoken to. `None` outside a conversation (and for
+    /// any other run-on word), where the run-on reading answers as before.
+    fn party_base(&mut self, run_on: u32) -> Option<Result<FormKey, &'static str>> {
+        let _ = run_on;
+        None
+    }
     /// A value the caller assumes for every condition of a function index
     /// (a caller assumption, not a rule: `quest_run --assume-cond`).
     fn assumed(&self, function: u16) -> Option<f32> {
@@ -367,8 +375,21 @@ fn function_value(
             let want = condition::form(ctx, c.param1, file, 0)
                 .map_err(|_| "a parameter is not a FormID")?
                 .ok_or("a parameter is zero")?;
-            let r = subject(c, ctx, file, facts)?;
-            let base = facts.reference_base(&r)?;
+            let base = match facts.party_base(c.run_on) {
+                Some(party) => {
+                    if facts.switches().run_on_off {
+                        return Err("the run-on reading is off");
+                    }
+                    if c.flags() & flag::SWAP != 0 {
+                        return Err("subject and target are swapped");
+                    }
+                    party?
+                }
+                None => {
+                    let r = subject(c, ctx, file, facts)?;
+                    facts.reference_base(&r)?
+                }
+            };
             Ok(b(base == want))
         }
         84 => {

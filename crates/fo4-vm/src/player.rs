@@ -133,12 +133,14 @@ pub fn holders(
         if s.running != Some(true) {
             continue;
         }
-        let location = vm.world.quests.location_fills;
         for id in info.reference_aliases.keys() {
             let held = match i32::try_from(*id).ok().and_then(|i| s.fills.get(&i)) {
                 Some(Val::Object(o)) => vm.world.objects[*o].key.as_deref() == Some(key.as_str()),
                 Some(_) => false,
-                None => info.fill_of(*id, location).ok().flatten().as_ref() == Some(reference),
+                None => {
+                    vm.world.quests.fill(&info, *id).ok().flatten()
+                        == Some(quest::Fill::Record(reference.clone()))
+                }
             };
             if held {
                 out.push((q.clone(), *id));
@@ -148,7 +150,25 @@ pub fn holders(
     (out, open)
 }
 
-fn run_on(vm: &mut Vm<'_>, o: ObjId, handler: &str, receiver: Receiver, out: &mut Vec<Delivery>) {
+/// The arguments of an event handler: as [`bind::event_args`] gives them
+/// (the player for one object parameter), or the actor that caused the
+/// event in the player's place (`world_actor_trigger_v1`).
+fn args_of(vm: &mut Vm<'_>, params: &[(String, String)], actor: Option<ObjId>) -> Option<Vec<Val>> {
+    let player = bind::event_args(vm, params)?;
+    Some(match (actor, player.as_slice()) {
+        (Some(a), [_]) => vec![Val::Object(a)],
+        _ => player,
+    })
+}
+
+fn run_on(
+    vm: &mut Vm<'_>,
+    o: ObjId,
+    handler: &str,
+    receiver: Receiver,
+    actor: Option<ObjId>,
+    out: &mut Vec<Delivery>,
+) {
     if let Err(e) = vm.attach_scripts(o) {
         out.push(Delivery {
             receiver,
@@ -172,7 +192,7 @@ fn run_on(vm: &mut Vm<'_>, o: ObjId, handler: &str, receiver: Receiver, out: &mu
                 continue;
             }
         };
-        let outcome = match bind::event_args(vm, &func.params) {
+        let outcome = match args_of(vm, &func.params, actor) {
             Some(args) => vm.deliver(inst, handler, args),
             None => Outcome::Failed(VmError::BadArgument {
                 site: None,
@@ -200,6 +220,20 @@ pub fn deliver(
     action: Action,
     b: &Budget,
 ) -> Result<(Vec<Delivery>, usize), Box<dyn std::error::Error>> {
+    deliver_by(vm, store, reference, action, None, b)
+}
+
+/// [`deliver`] with an actor other than the player as the one who acts
+/// (`world_actor_trigger_v1`): a handler's one object parameter is that
+/// actor. `None` is the player, as [`deliver`].
+pub fn deliver_by(
+    vm: &mut Vm<'_>,
+    store: &Store,
+    reference: &FormKey,
+    action: Action,
+    actor: Option<ObjId>,
+    b: &Budget,
+) -> Result<(Vec<Delivery>, usize), Box<dyn std::error::Error>> {
     if !matches!(
         store.signature(reference).as_ref().map(|s| &s[..]),
         Some(b"REFR" | b"ACHR")
@@ -213,7 +247,7 @@ pub fn deliver(
     }
     let o = record_object(&mut vm.world, store, reference, "objectreference", b)?;
     let mut out = Vec::new();
-    run_on(vm, o, handler, Receiver::Reference, &mut out);
+    run_on(vm, o, handler, Receiver::Reference, actor, &mut out);
     let (aliases, open) = holders(vm, store, reference);
     if !aliases.is_empty() || open > 0 {
         vm.rules.insert(rules::EVENT_ALIASES);
@@ -223,9 +257,16 @@ pub fn deliver(
         let label = format!("alias {id} of {}", vm.world.objects[qo].label);
         let key = format!("{}#alias:{id}", bind::record_key(&q));
         let a = vm.world.keyed_object(&label, &key, "referencealias");
-        run_on(vm, a, handler, Receiver::Alias(qo, id as i32), &mut out);
+        run_on(
+            vm,
+            a,
+            handler,
+            Receiver::Alias(qo, id as i32),
+            actor,
+            &mut out,
+        );
     }
-    let mut args = |vm: &mut Vm<'_>, p: &[(String, String)]| bind::event_args(vm, p);
+    let mut args = |vm: &mut Vm<'_>, p: &[(String, String)]| args_of(vm, p, actor);
     for (script, outcome) in events::deliver_remote(vm, o, handler, &mut args, false) {
         out.push(Delivery {
             receiver: Receiver::Registered,

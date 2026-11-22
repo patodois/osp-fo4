@@ -184,6 +184,18 @@ fn base_of(store: &Store, k: &FormKey, b: &Budget) -> Option<FormKey> {
         .ok()?
 }
 
+/// The voice type of a placed actor (`voice_speaker_voice_type_v1`): the
+/// VTCK of its base, when its records settle it.
+pub fn reference_speaker(store: &Store, reference: &FormKey, b: &Budget) -> Speaker {
+    match base_of(store, reference, b)
+        .and_then(|n| npc_voice(store, &n, b))
+        .and_then(|v| vtyp_folder(store, &v, b))
+    {
+        Some(n) => Speaker::VoiceType(n, "the speaker's base"),
+        None => Speaker::Unknown("the speaker's base names no voice type".into()),
+    }
+}
+
 fn key(f: &FormRef) -> Option<&FormKey> {
     f.key.as_ref()
 }
@@ -350,9 +362,28 @@ pub fn line_seconds(
             }
         }
     }
-    let Some((mut line, mut info)) = chosen else {
+    let Some((line, info)) = chosen else {
         return un("no line of the topic has conditions that hold".into());
     };
+    line_audio(store, voice, line, info, speaker, used, b)
+}
+
+/// The seconds a given line lasts (`scene_dialogue_line_audio_v1`,
+/// `info_shared_response_v1`): its responses in stored order (the shared
+/// line's, under that line's id, when it has none and names one); for
+/// each, the voice file of the speaker's voice type, or the only voice
+/// file when the speaker is not settled; the sum of their seconds. `used`
+/// collects the rules relied on.
+pub fn line_audio(
+    store: &Store,
+    voice: &Voice,
+    mut line: FormKey,
+    mut info: Info,
+    speaker: &Speaker,
+    used: &mut BTreeSet<&'static str>,
+    b: &Budget,
+) -> LineTime {
+    let un = |w: String| LineTime::Undetermined(w);
     if info.responses.is_empty() {
         let Some(s) = info.shared.as_ref().and_then(|s| s.key.clone()) else {
             return un("the line has no response".into());

@@ -77,6 +77,13 @@ pub struct QuestInfo {
     /// (`quest_alias_location_ref_v1`; read only when a run turns
     /// [`Quests::location_fills`] on).
     pub location_refs: BTreeMap<u32, Result<FormKey, &'static str>>,
+    /// Reference aliases with a unique actor (ALUA): the NPC_ it names
+    /// (`quest_alias_unique_actor_ref_v1`; read only when a run gives
+    /// [`Quests::unique`]).
+    pub unique_actors: BTreeMap<u32, FormKey>,
+    /// DNAM byte 2, the priority (`dialogue_line_priority_v1` orders
+    /// lines by it).
+    pub priority: Option<u8>,
     /// The VMAD block's fragment script, lower case.
     pub fragment_script: Option<String>,
     /// Fragments naming a stage the record does not hold.
@@ -167,6 +174,19 @@ impl QuestInfo {
             .map(|a| (a.id, a.forced_reference().and_then(|f| f.key.clone())))
             .collect();
         let location_refs = location_refs(store, &q, b)?;
+        let unique_actors = q
+            .aliases
+            .iter()
+            .filter(|a| a.kind != fo4_plugin::quest::AliasKind::Location)
+            .filter_map(|a| {
+                a.values.iter().find_map(|v| match v {
+                    fo4_plugin::quest::AliasValue::UniqueActor(f) => {
+                        f.key.clone().map(|k| (a.id, k))
+                    }
+                    _ => None,
+                })
+            })
+            .collect();
         Ok(Some(QuestInfo {
             key: k.clone(),
             plugin,
@@ -176,6 +196,8 @@ impl QuestInfo {
             objectives: q.objectives.iter().map(|o| o.objective).collect(),
             reference_aliases,
             location_refs,
+            unique_actors,
+            priority: q.general.map(|g| g.priority),
             fragment_script,
             unmapped_fragments: fragments.len() - mapped,
             event: q.event,
@@ -441,6 +463,86 @@ pub struct Quests {
     /// (`quest_alias_location_ref_v1`; `quest_run --alias-location-refs`).
     /// Off by default: such an alias has no reference, as before.
     pub location_fills: bool,
+    /// The placed actors of each actor base, for reference aliases filled
+    /// by a unique actor (`quest_alias_unique_actor_ref_v1`;
+    /// `quest_run --alias-unique-actors`). `None` by default: such an
+    /// alias has no reference, as before.
+    pub unique: Option<Rc<UniqueActors>>,
+    /// The aliases (quest record key, alias id) answered from a unique
+    /// actor so far, and whether each resolved (the caller adds the rule
+    /// when any was).
+    pub unique_used: std::cell::RefCell<BTreeMap<(String, u32), bool>>,
+}
+
+/// The placed actors (ACHR) of every actor base in the loaded plugins,
+/// and the player's base as the caller names it
+/// (`quest_alias_unique_actor_ref_v1`).
+#[derive(Debug, Default)]
+pub struct UniqueActors {
+    /// Winning, not deleted ACHR by the record key of their base (NAME),
+    /// in placement order.
+    pub placed: BTreeMap<String, Vec<FormKey>>,
+    /// The NPC_ the caller names as the player's base (`quest_run
+    /// --player-base`, a caller assumption): an alias of that unique
+    /// actor holds the player.
+    pub player_base: Option<FormKey>,
+}
+impl UniqueActors {
+    /// Reads every winning placed ACHR's base.
+    pub fn read(store: &Store, b: &Budget) -> UniqueActors {
+        let mut u = UniqueActors::default();
+        for (o, _) in store.placement_cells() {
+            if o.signature != *b"ACHR" || o.deleted {
+                continue;
+            }
+            let k = store.overrides().form_key(o.key, store.order());
+            if let Ok(Some(base)) = bind::base_of(store, &k, &b.child()) {
+                u.placed.entry(bind::record_key(&base)).or_default().push(k);
+            }
+        }
+        u
+    }
+    /// What a unique actor alias holds: the player for the player's base,
+    /// else the one placed actor of that base; `Err` when none or several
+    /// are placed.
+    pub fn fill(&self, base: &FormKey) -> Result<Fill, &'static str> {
+        if self.player_base.as_ref() == Some(base) {
+            return Ok(Fill::Player);
+        }
+        match self.placed.get(&bind::record_key(base)).map(Vec::as_slice) {
+            Some([one]) => Ok(Fill::Record(one.clone())),
+            Some([_, _, ..]) => Err("several placed actors of the unique actor's base"),
+            _ => Err("no placed actor of the unique actor's base"),
+        }
+    }
+}
+
+/// What a reference alias holds without a fill a run set.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Fill {
+    Record(FormKey),
+    /// The player (a unique actor alias of the player's base).
+    Player,
+}
+
+impl Quests {
+    /// The reference an alias holds while its quest runs and no run set
+    /// its fill: [`QuestInfo::fill_of`], else, with [`Quests::unique`], the
+    /// unique actor's placed reference (`quest_alias_unique_actor_ref_v1`).
+    /// `Ok(None)`: none of them.
+    pub fn fill(&self, info: &QuestInfo, id: u32) -> Result<Option<Fill>, &'static str> {
+        let forced = info.fill_of(id, self.location_fills);
+        match (&forced, &self.unique, info.unique_actors.get(&id)) {
+            (Ok(None), Some(u), Some(base)) => {
+                let f = u.fill(base);
+                self.unique_used
+                    .borrow_mut()
+                    .insert((bind::record_key(&info.key), id), f.is_ok());
+                Ok(Some(f?))
+            }
+            _ => forced.map(|f| f.map(Fill::Record)),
+        }
+    }
 }
 
 impl Quests {
@@ -514,6 +616,9 @@ pub struct RunFacts<'a, 's> {
     pub cond: &'a CondInputs<'s>,
     /// The quest whose aliases run-on 5 names.
     pub owner: Option<FormKey>,
+    /// The conversation a dialogue line is tried in, when it is
+    /// (`crate::talk`, `dialogue_conversation_parties_v1`).
+    pub parties: Option<crate::talk::Parties>,
 }
 
 /// What the quest host gives the condition evaluator besides the state:
@@ -544,6 +649,7 @@ impl<'a, 's> RunFacts<'a, 's> {
             event,
             cond: &h.cond,
             owner,
+            parties: None,
         }
     }
 }
@@ -607,6 +713,27 @@ impl Facts for RunFacts<'_, '_> {
     fn owner(&self) -> Option<&FormKey> {
         self.owner.as_ref()
     }
+    /// The speaker's (run-on 0) or the listener's (run-on 1) base in a
+    /// conversation: the placed actor's NAME, or the NPC_ the caller names
+    /// as the player's base (`dialogue_conversation_parties_v1`).
+    fn party_base(&mut self, run_on: u32) -> Option<Result<FormKey, &'static str>> {
+        use crate::talk::Party;
+        let p = self.parties.clone()?;
+        let party = match run_on {
+            0 => p.speaker,
+            1 => p.listener,
+            _ => return None,
+        };
+        Some(match party {
+            Party::Player => self
+                .w
+                .talk
+                .player_base
+                .clone()
+                .ok_or("the player's base is not named (--player-base)"),
+            Party::Actor(k) => self.reference_base(&k),
+        })
+    }
     /// The alias as `ReferenceAlias.GetReference` answers it: the fill a
     /// run set, else the forced reference while the quest runs
     /// (`quest_alias_forced_reference_v1`).
@@ -636,9 +763,11 @@ impl Facts for RunFacts<'_, '_> {
             Some(false) => Ok(None),
             Some(true) => {
                 let id = u32::try_from(alias).map_err(|_| "no reference alias of that index")?;
-                i.fill_of(id, self.w.quests.location_fills)?
-                    .map(Some)
-                    .ok_or("the alias has no forced reference")
+                match self.w.quests.fill(&i, id)? {
+                    Some(Fill::Record(k)) => Ok(Some(k)),
+                    Some(Fill::Player) => Err("the alias holds the player"),
+                    None => Err("the alias has no forced reference"),
+                }
             }
         }
     }
@@ -1229,7 +1358,18 @@ impl<'s> QuestHost<'s> {
                         if w.quests.location_fills && i.location_refs.contains_key(&id) {
                             self.using(rules::ALIAS_LOCATION_REF);
                         }
-                        let forced = i.fill_of(id, w.quests.location_fills)?;
+                        let forced = match w.quests.fill(&i, id)? {
+                            Some(Fill::Player) => {
+                                self.using(rules::ALIAS_UNIQUE_ACTOR);
+                                let p = w.player("actor");
+                                return Ok((Val::Object(p), data::Answer::Record));
+                            }
+                            Some(Fill::Record(k)) => Some(k),
+                            None => None,
+                        };
+                        if forced.is_some() && i.unique_actors.contains_key(&id) {
+                            self.using(rules::ALIAS_UNIQUE_ACTOR);
+                        }
                         let k = forced.as_ref().ok_or("the alias has no forced reference")?;
                         if self.data.store.signature(k).is_none() {
                             return Err("the forced reference names no winning record");
@@ -1302,6 +1442,9 @@ impl Host for QuestHost<'_> {
         }
         if self.story.is_some() && crate::story::NATIVES.contains(&full.as_str()) {
             return crate::story::send(self, c, w);
+        }
+        if c.script == crate::talk::CALL {
+            return crate::talk::call(self, c, w);
         }
         if w.scenes.on
             && (crate::scene::NATIVES.contains(&full.as_str())

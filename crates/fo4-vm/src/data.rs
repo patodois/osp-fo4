@@ -160,6 +160,17 @@ pub fn chain_state(
     ch: &fo4_plugin::enable::Chain,
     set: &HashMap<FormKey, bool>,
 ) -> Result<(bool, Vec<&'static str>), &'static str> {
+    chain_state_with(ch, set, false)
+}
+
+/// [`chain_state`], with `ignore_child_flags` reading a flag 0x800 below
+/// the root as carrying no state of its own
+/// (`xesp_child_own_flag_ignored_v1`).
+pub fn chain_state_with(
+    ch: &fo4_plugin::enable::Chain,
+    set: &HashMap<FormKey, bool>,
+    ignore_child_flags: bool,
+) -> Result<(bool, Vec<&'static str>), &'static str> {
     use fo4_plugin::enable::ChainEnd;
     let mut used = vec![rules::XESP_FOLLOWS, rules::XESP_INITIAL];
     let bits = ch
@@ -189,7 +200,12 @@ pub fn chain_state(
         .take(n.saturating_sub(1))
         .any(|x| x.initially_disabled)
     {
-        return Err("a record of the chain below its root carries its own initially-disabled flag");
+        if !ignore_child_flags {
+            return Err(
+                "a record of the chain below its root carries its own initially-disabled flag",
+            );
+        }
+        used.push(rules::XESP_CHILD_FLAG_IGNORED);
     }
     let mut nodes = ch.nodes.iter().rev();
     let root = nodes.next().ok_or("an empty chain")?;
@@ -246,6 +262,12 @@ pub struct DataHost<'s> {
     /// (`vm_host_is_disabled_chain_v1`); `false` reads the header flag
     /// alone, as before.
     pub enable_chain: bool,
+    /// A record below its chain's root that carries its own
+    /// initially-disabled flag takes its parent's state as the others do
+    /// (`xesp_child_own_flag_ignored_v1`; `quest_run
+    /// --enable-child-flag-ignored`). Off by default: such a chain is
+    /// undetermined, as before.
+    pub child_flag_ignored: bool,
 }
 
 /// Natives of the data host, lower case `script.function`, with the rule
@@ -289,6 +311,7 @@ impl<'s> DataHost<'s> {
             changed: HashSet::new(),
             answers: BTreeMap::new(),
             enable_chain: true,
+            child_flag_ignored: false,
         }
     }
     fn using(&mut self, r: &'static str) {
@@ -437,7 +460,7 @@ impl<'s> DataHost<'s> {
                         set.insert(n.key.clone(), !*d);
                     }
                 }
-                let (on, used) = chain_state(&ch, &set)?;
+                let (on, used) = chain_state_with(&ch, &set, self.child_flag_ignored)?;
                 self.using(rules::IS_DISABLED_CHAIN);
                 for u in used {
                     self.using(u);

@@ -138,6 +138,10 @@ pub struct World {
     pub now: [f64; 2],
     /// The player handle (`vm_host_player_handle_v1`), once created.
     pub player: Option<ObjId>,
+    /// The player's handle is different from every record's handle
+    /// (`vm_player_no_record_v1`; `quest_run --player-no-record`). Off by
+    /// default: such a comparison is left open, as before.
+    pub player_no_record: bool,
     /// Objects standing for one placement of a base (the base census),
     /// with the base's record key.
     pub placement_bases: Vec<(ObjId, String)>,
@@ -151,6 +155,9 @@ pub struct World {
     /// The player's position, trigger volumes and distance registrations
     /// (`crate::track`); off unless a caller gives a track.
     pub place: crate::track::Place,
+    /// Dialogue outside scenes (`crate::talk`); off unless a caller turns
+    /// a switch on.
+    pub talk: crate::talk::Talk,
 }
 
 impl World {

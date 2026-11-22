@@ -741,7 +741,16 @@ impl Vm<'_> {
                 }
                 self.rules.insert(rules::IDENTITY);
                 let (kx, ky) = (&self.world.objects[*x].key, &self.world.objects[*y].key);
+                let player = self.world.player;
                 if kx.is_some() && ky.is_some() {
+                    known(false)
+                } else if self.world.player_no_record
+                    && ((player == Some(*x) && ky.is_some())
+                        || (player == Some(*y) && kx.is_some()))
+                {
+                    // The player is no record's handle
+                    // (`vm_player_no_record_v1`).
+                    self.rules.insert(rules::PLAYER_NO_RECORD);
                     known(false)
                 } else {
                     let d = format!(

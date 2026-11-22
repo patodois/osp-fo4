@@ -133,6 +133,13 @@ pub struct Switches {
     /// `--assume-los true|false`: a caller assumption, every
     /// `HasDirectLOS` answers this value.
     pub assume_los: Option<bool>,
+    /// `--actor-positions` (`world_actor_placed_position_v1`): placed
+    /// actors stand at their stored position, or where the caller's
+    /// assumption moved them.
+    pub actors: bool,
+    /// `--actor-triggers` (`world_actor_trigger_v1`): an actor's assumed
+    /// move raises trigger enter and leave as the player's does.
+    pub actor_triggers: bool,
 }
 impl Switches {
     /// Whether a shape of this kind is read (its switch on).
@@ -512,6 +519,25 @@ pub struct DistanceReg {
     pub counted: bool,
 }
 
+/// A caller's assumed move of a placed actor (`quest_run
+/// --assume-actor-at`): from that second the actor stands there.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ActorMove {
+    pub t: f64,
+    pub actor: FormKey,
+    pub space: FormKey,
+    pub pos: [f64; 3],
+}
+
+/// A placed actor near the track, at its stored position
+/// (`world_actor_placed_position_v1`, read with `--actor-positions`).
+#[derive(Debug, Clone, PartialEq)]
+pub struct PlacedActor {
+    pub key: FormKey,
+    pub space: FormKey,
+    pub pos: [f64; 3],
+}
+
 /// The model's state in a run's world; off (`on == false`) unless a caller
 /// gives a track.
 #[derive(Debug, Default)]
@@ -533,6 +559,17 @@ pub struct Place {
     pub registrations: Vec<DistanceReg>,
     /// Objects a native of the run may have moved.
     pub moved: BTreeSet<ObjId>,
+    /// The second of the last native that may have moved each object.
+    pub moved_at: BTreeMap<ObjId, f64>,
+    /// The caller's assumed actor moves, earliest first.
+    pub actor_moves: Vec<ActorMove>,
+    /// Actor moves applied so far (`world_actor_trigger_v1`).
+    pub actor_cursor: usize,
+    /// Volumes holding each moved actor, by actor key.
+    pub actor_held: BTreeMap<FormKey, BTreeSet<usize>>,
+    /// Placed actors of the cells read near the track (with
+    /// `--actor-positions`).
+    pub actors: Vec<PlacedActor>,
     /// References a native of the run deleted (`Delete`): they hold no
     /// one (`world_trigger_enabled_v1`).
     pub deleted: BTreeSet<FormKey>,
@@ -551,17 +588,54 @@ impl Place {
     pub fn count(&mut self, k: impl Into<String>) {
         *self.counts.entry(k.into()).or_default() += 1;
     }
+    /// The volumes of a space holding a standing point under the point or
+    /// body reading (none when neither is on).
+    pub fn holding(&self, space: &FormKey, p: [f64; 3]) -> BTreeSet<usize> {
+        self.volumes
+            .iter()
+            .enumerate()
+            .filter(|(_, v)| &v.space == space)
+            .filter(|(_, v)| match (self.sw.point, self.sw.body) {
+                (true, _) => v.contains(p),
+                (false, Some(h)) => v.span_body(p, p, f64::from(h)).is_some(),
+                _ => false,
+            })
+            .map(|(i, _)| i)
+            .collect()
+    }
+    /// The seconds of the caller's assumed moves of an actor.
+    fn move_times(&self, actor: &FormKey) -> Vec<f64> {
+        self.actor_moves
+            .iter()
+            .filter(|m| &m.actor == actor)
+            .map(|m| m.t)
+            .collect()
+    }
     /// Loads the volumes near the track and their crossings. The placed
     /// references read are those of the track's interior cells and, for a
     /// worldspace, of its cells whose grid square lies within one cell of
     /// the track's points there, and of its persistent cells.
-    pub fn load(
+    pub fn load(store: &Store, track: Track, sw: Switches, b: &Budget) -> Result<Place, String> {
+        Place::load_with(store, track, sw, Vec::new(), b)
+    }
+    /// [`Place::load`] with the caller's assumed actor moves: their points
+    /// join the track's in choosing the cells read.
+    pub fn load_with(
         store: &Store,
         mut track: Track,
         sw: Switches,
+        mut moves: Vec<ActorMove>,
         b: &Budget,
     ) -> Result<Place, String> {
         track.resolve(store)?;
+        for m in &mut moves {
+            if store.signature(&m.space) == Some(*b"CELL") {
+                if let Some(w) = store.world(&m.space) {
+                    m.space = w;
+                }
+            }
+        }
+        moves.sort_by(|a, b| a.t.total_cmp(&b.t));
         let mut place = Place {
             on: true,
             sw,
@@ -569,13 +643,18 @@ impl Place {
         };
         // Bounding boxes of the points by space.
         let mut boxes: BTreeMap<FormKey, ([f64; 2], [f64; 2])> = BTreeMap::new();
-        for p in &track.points {
+        let points = track
+            .points
+            .iter()
+            .map(|p| (&p.space, p.pos))
+            .chain(moves.iter().map(|m| (&m.space, m.pos)));
+        for (space, pos) in points {
             let e = boxes
-                .entry(p.space.clone())
+                .entry(space.clone())
                 .or_insert(([f64::MAX; 2], [f64::MIN; 2]));
-            for i in 0..2 {
-                e.0[i] = e.0[i].min(p.pos[i]);
-                e.1[i] = e.1[i].max(p.pos[i]);
+            for (i, x) in pos.iter().take(2).enumerate() {
+                e.0[i] = e.0[i].min(*x);
+                e.1[i] = e.1[i].max(*x);
             }
         }
         let mut cells: Vec<(FormKey, FormKey)> = Vec::new();
@@ -613,11 +692,33 @@ impl Place {
         for (cell, space) in &cells {
             let cb = b.child();
             let ch = store.children(cell, &cb).map_err(|e| e.to_string())?;
-            for kid in ch.active.iter().chain(&ch.disabled) {
+            // Placed actors (outside the active list, which holds REFR
+            // only), with `--actor-positions`.
+            let actors = ch
+                .excluded
+                .iter()
+                .filter(|k| sw.actors && k.signature == *b"ACHR");
+            for kid in ch.active.iter().chain(&ch.disabled).chain(actors) {
                 let rb = b.child();
                 let Some(r) = store.raw(&kid.key, &rb).map_err(|e| e.to_string())? else {
                     continue;
                 };
+                if sw.actors && r.signature == *b"ACHR" {
+                    if let Ok((sp, pos, _)) = stored_actor(store, store.limits.max_memory, &kid.key)
+                    {
+                        let (lo, hi) = boxes[space];
+                        let out = kid.group_kind == 8
+                            && (0..2).any(|i| pos[i] < lo[i] - margin || pos[i] > hi[i] + margin);
+                        if !out && &sp == space {
+                            place.actors.push(PlacedActor {
+                                key: kid.key.clone(),
+                                space: sp,
+                                pos,
+                            });
+                        }
+                    }
+                    continue;
+                }
                 let p = match primitive_of(&r) {
                     Ok(Some(p)) => p,
                     Ok(None) => continue,
@@ -708,6 +809,27 @@ impl Place {
                 .then(a.enter.cmp(&b.enter))
                 .then(a.volume.cmp(&b.volume))
         });
+        place.actors.sort_by(|a, b| {
+            (a.key.plugin.as_str(), a.key.object_id).cmp(&(b.key.plugin.as_str(), b.key.object_id))
+        });
+        // The volumes each moved actor holds at its stored position: held
+        // without an event (`world_actor_trigger_v1`).
+        if sw.actors {
+            let mut seen = BTreeSet::new();
+            for m in &moves {
+                if !seen.insert(m.actor.clone()) {
+                    continue;
+                }
+                if let Ok((sp, pos, _)) = stored_actor(store, store.limits.max_memory, &m.actor) {
+                    let held = place.holding(&sp, pos);
+                    if !held.is_empty() {
+                        place.count("actors standing in a trigger volume at their stored position: held without an event");
+                    }
+                    place.actor_held.insert(m.actor.clone(), held);
+                }
+            }
+        }
+        place.actor_moves = moves;
         place.track = Some(Rc::new(track));
         Ok(place)
     }
@@ -744,7 +866,6 @@ fn alias_holds(
         .map_err(|_| "an alias index that is not a number")?;
     let qk = key_record(q).ok_or("not an alias of a quest record")?;
     let info = quest::info_by_key(store, max, w, &qk).ok_or("not a quest record")?;
-    let location = w.quests.location_fills;
     let s = w.quests.state(&info);
     if s.open.is_some() {
         return Err("the quest's state is undetermined");
@@ -757,9 +878,11 @@ fn alias_holds(
         Some(false) => Ok(None),
         Some(true) => {
             let id = u32::try_from(id).map_err(|_| "no reference alias of that index")?;
-            let k = info
-                .fill_of(id, location)?
-                .ok_or("the alias has no forced reference")?;
+            let k = match w.quests.fill(&info, id)? {
+                Some(quest::Fill::Record(k)) => k,
+                Some(quest::Fill::Player) => return Ok(Some(Val::Object(w.player("actor")))),
+                None => return Err("the alias has no forced reference"),
+            };
             let b = Budget::new(max);
             let o = record_object(w, store, &k, "objectreference", &b)
                 .map_err(|_| "the forced reference could not be read")?;
@@ -792,12 +915,55 @@ pub fn reference_of(
 /// reference the run may have moved, or a record without placement is
 /// open.
 fn placed(store: &Store, max: u64, w: &mut World, o: ObjId) -> Spot {
+    let now = w.now[Clock::Real as usize];
+    placed_at(store, max, w, o, now)
+}
+
+/// [`placed`] at second `t`: a placed actor, with `--actor-positions`
+/// (`world_actor_placed_position_v1`), where the caller's last assumed
+/// move at or before `t` put it, else at its stored position; a native
+/// of the run that may have moved it after that makes it open.
+fn placed_at(store: &Store, max: u64, w: &mut World, o: ObjId, t: f64) -> Spot {
+    let Some(k) = w.objects[o].key.as_deref().and_then(key_record) else {
+        return Spot::Open(if w.place.moved.contains(&o) {
+            "a native of the run may have moved it"
+        } else {
+            "not a record"
+        });
+    };
+    if w.place.sw.actors && store.signature(&k) == Some(*b"ACHR") {
+        let assumed = w
+            .place
+            .actor_moves
+            .iter()
+            .rfind(|m| m.actor == k && m.t <= t)
+            .cloned();
+        let native = w.place.moved_at.get(&o).copied();
+        if native.is_some_and(|n| assumed.as_ref().is_none_or(|m| n > m.t)) {
+            return Spot::Open("a native of the run may have moved it");
+        }
+        w.place.used.insert(rules::WORLD_ACTOR_POSITION);
+        if let Some(m) = assumed {
+            return Spot::At {
+                space: m.space,
+                pos: m.pos,
+                facing: None,
+                record: Some(k),
+            };
+        }
+        return match stored_actor(store, max, &k) {
+            Ok((space, pos, facing)) => Spot::At {
+                space,
+                pos,
+                facing: Some(facing),
+                record: Some(k),
+            },
+            Err(why) => Spot::Open(why),
+        };
+    }
     if w.place.moved.contains(&o) {
         return Spot::Open("a native of the run may have moved it");
     }
-    let Some(k) = w.objects[o].key.as_deref().and_then(key_record) else {
-        return Spot::Open("not a record");
-    };
     let got = match w.place.stored.get(&k) {
         Some(x) => x.clone(),
         None => {
@@ -836,6 +1002,33 @@ fn stored(store: &Store, max: u64, k: &FormKey) -> Stored {
         .ok_or("the reference could not be read")?;
     let t = r.data.transform.ok_or("no placement")?;
     let space = space_of(store, k).ok_or("the reference's cell is not known")?;
+    Ok((
+        space,
+        [t[0], t[1], t[2]].map(f64::from),
+        f64::from(t[5]).to_degrees(),
+    ))
+}
+
+/// A placed actor's stored space, position and facing (`DATA` as a
+/// placed reference's, `fo4_plugin::actor::Achr`).
+fn stored_actor(store: &Store, max: u64, k: &FormKey) -> Stored {
+    if store.signature(k) != Some(*b"ACHR") {
+        return Err("not a placed actor");
+    }
+    let b = Budget::new(max);
+    let (r, plugin) = store
+        .raw_with_plugin(k, &b)
+        .ok()
+        .flatten()
+        .ok_or("the actor could not be read")?;
+    let ctx = fo4_plugin::actor::Context {
+        order: store.order(),
+        plugin,
+    };
+    let a =
+        fo4_plugin::actor::Achr::decode(&r, ctx, &b).map_err(|_| "the actor could not be read")?;
+    let t = a.transform.ok_or("no placement")?;
+    let space = space_of(store, k).ok_or("the actor's cell is not known")?;
     Ok((
         space,
         [t[0], t[1], t[2]].map(f64::from),
@@ -973,6 +1166,8 @@ pub fn observe(store: &Store, max: u64, c: &NativeCall, w: &mut World) {
         }
         return;
     }
+    let now = w.now[Clock::Real as usize];
+    w.place.moved_at.insert(o, now);
     if w.place.moved.insert(o) {
         w.place
             .count(format!("references moved by a native\t{full}"));
@@ -1273,6 +1468,11 @@ pub fn next_due(store: &Store, max: u64, w: &mut World) -> Option<f64> {
         .get(w.place.cursor)
         .map(|c| c.t)
         .filter(|t| *t > now);
+    if let Some(m) = w.place.actor_moves.get(w.place.actor_cursor) {
+        if m.t > now && best.is_none_or(|b| m.t < b) {
+            best = Some(m.t);
+        }
+    }
     if w.place.sw.distance {
         for i in 0..w.place.registrations.len() {
             if let Ok(Some(t)) = due(store, max, w, i, now) {
@@ -1290,7 +1490,9 @@ pub fn next_due(store: &Store, max: u64, w: &mut World) -> Option<f64> {
 /// between the two objects' reference points at or below the threshold
 /// (less than), at or above it (greater than). `Ok(None)`: never on the
 /// track; `Err`: a position is open. One side the player follows the
-/// track; the other must stand still.
+/// track; the other must stand still, or (an actor under
+/// `world_actor_placed_position_v1`) stand still between the caller's
+/// assumed moves.
 fn due(
     store: &Store,
     max: u64,
@@ -1305,6 +1507,23 @@ fn due(
     let from = from.max(r.since);
     let a = reference_of(store, max, w, r.a)?;
     let b = reference_of(store, max, w, r.b)?;
+    first_time(store, max, w, a, b, r.threshold, r.less, from)
+}
+
+/// The first second at or after `from` at which the distance between the
+/// reference points of `a` and `b` is at or below (`less`) or at or above
+/// the threshold; see [`due`].
+#[allow(clippy::too_many_arguments)]
+fn first_time(
+    store: &Store,
+    max: u64,
+    w: &mut World,
+    a: ObjId,
+    b: ObjId,
+    threshold: f64,
+    less: bool,
+    from: f64,
+) -> Result<Option<f64>, &'static str> {
     let player = w.player;
     let (moving, still) = match (Some(a) == player, Some(b) == player) {
         (true, true) => return Err("the player against itself"),
@@ -1312,88 +1531,98 @@ fn due(
         (false, true) => (true, a),
         (false, false) => (false, a),
     };
-    if !moving {
-        if !w.place.sw.placed {
-            return Err("a placed reference (--placed-positions off)");
-        }
-        let (
-            Spot::At {
-                space: s1, pos: p1, ..
-            },
-            Spot::At {
-                space: s2, pos: p2, ..
-            },
-        ) = (placed(store, max, w, a), placed(store, max, w, b))
-        else {
-            return Err("a placed reference's position is open");
-        };
-        if s1 != s2 {
-            return Err("two spaces");
-        }
-        let d = dist(p1, p2);
-        let holds = if r.less {
-            d <= r.threshold
-        } else {
-            d >= r.threshold
-        };
-        return Ok(holds.then_some(from));
-    }
     if !w.place.sw.placed {
         return Err("a placed reference (--placed-positions off)");
     }
-    let Spot::At { space, pos: q, .. } = placed(store, max, w, still) else {
-        return Err("the other object's position is open");
-    };
-    let Some(track) = w.place.track.clone() else {
-        return Err("no track");
-    };
-    for (t0, t1, s, p0, p1) in track.moves() {
-        if t1 < from || *s != space {
-            continue;
+    // Windows between the caller's assumed moves of the objects, in which
+    // every object but the player stands still.
+    let mut cuts = vec![from];
+    for o in [a, b] {
+        if let Some(k) = w.objects[o].key.as_deref().and_then(key_record) {
+            cuts.extend(w.place.move_times(&k).into_iter().filter(|t| *t > from));
         }
-        let dt = t1 - t0;
-        let a = [p0[0] - q[0], p0[1] - q[1], p0[2] - q[2]];
-        let d = [p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]];
-        let s_from = if dt.is_finite() && dt > 0.0 {
-            ((from - t0) / dt).clamp(0.0, 1.0)
-        } else {
-            0.0
-        };
-        let at = |s: f64| {
-            if dt.is_finite() && dt > 0.0 {
-                t0 + s * dt
-            } else {
-                t0.max(from)
-            }
-        };
-        if d == [0.0; 3] {
-            let dd = dist(p0, q);
-            let holds = if r.less {
-                dd <= r.threshold
-            } else {
-                dd >= r.threshold
+    }
+    cuts.sort_by(f64::total_cmp);
+    cuts.dedup();
+    cuts.push(f64::INFINITY);
+    let holds = |d: f64| if less { d <= threshold } else { d >= threshold };
+    for win in cuts.windows(2) {
+        let (c0, c1) = (win[0], win[1]);
+        if !moving {
+            let (
+                Spot::At {
+                    space: s1, pos: p1, ..
+                },
+                Spot::At {
+                    space: s2, pos: p2, ..
+                },
+            ) = (
+                placed_at(store, max, w, a, c0),
+                placed_at(store, max, w, b, c0),
+            )
+            else {
+                return Err("a placed reference's position is open");
             };
-            if holds {
-                return Ok(Some(at(s_from).max(from)));
+            if s1 != s2 {
+                return Err("two spaces");
+            }
+            if holds(dist(p1, p2)) {
+                return Ok(Some(c0));
             }
             continue;
         }
-        // The closed ball of the threshold's radius about the still
-        // object, met along this move.
-        let ball = sphere_span(a, d, r.threshold);
-        let s = if r.less {
-            ball.filter(|(_, hi)| *hi >= s_from)
-                .map(|(lo, _)| lo.max(s_from))
-        } else {
-            match ball {
-                None => Some(s_from),
-                Some((lo, _)) if s_from <= lo => Some(s_from),
-                Some((_, hi)) if s_from <= hi => Some(hi),
-                Some(_) => Some(s_from),
-            }
+        let Spot::At { space, pos: q, .. } = placed_at(store, max, w, still, c0) else {
+            return Err("the other object's position is open");
         };
-        if let Some(s) = s {
-            return Ok(Some(at(s).max(from)));
+        let Some(track) = w.place.track.clone() else {
+            return Err("no track");
+        };
+        for (t0, t1, s, p0, p1) in track.moves() {
+            if t1 < c0 || *s != space {
+                continue;
+            }
+            if t0 >= c1 {
+                break;
+            }
+            let dt = t1 - t0;
+            let a = [p0[0] - q[0], p0[1] - q[1], p0[2] - q[2]];
+            let d = [p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]];
+            let s_from = if dt.is_finite() && dt > 0.0 {
+                ((c0 - t0) / dt).clamp(0.0, 1.0)
+            } else {
+                0.0
+            };
+            let at = |s: f64| {
+                if dt.is_finite() && dt > 0.0 {
+                    t0 + s * dt
+                } else {
+                    t0.max(c0)
+                }
+            };
+            let found = if d == [0.0; 3] {
+                holds(dist(p0, q)).then(|| at(s_from).max(c0))
+            } else {
+                // The closed ball of the threshold's radius about the still
+                // object, met along this move.
+                let ball = sphere_span(a, d, threshold);
+                let s = if less {
+                    ball.filter(|(_, hi)| *hi >= s_from)
+                        .map(|(lo, _)| lo.max(s_from))
+                } else {
+                    match ball {
+                        None => Some(s_from),
+                        Some((lo, _)) if s_from <= lo => Some(s_from),
+                        Some((_, hi)) if s_from <= hi => Some(hi),
+                        Some(_) => Some(s_from),
+                    }
+                };
+                s.map(|s| at(s).max(c0))
+            };
+            match found {
+                Some(t) if t < c1 => return Ok(Some(t)),
+                Some(_) => break,
+                None => {}
+            }
         }
     }
     Ok(None)
@@ -1410,6 +1639,151 @@ fn enabled(vm: &mut Vm<'_>, k: &FormKey) -> Result<bool, &'static str> {
         Some(Err(why)) => Err(why),
         None => Err("the host does not keep the enable state"),
     }
+}
+
+/// Applies the caller's assumed actor moves due by `now`: with
+/// `--actor-triggers` (`world_actor_trigger_v1`, and the trigger readings
+/// the player's events need) the volumes the actor leaves and enters
+/// raise their events with the actor as the one who acts, leaves first,
+/// each by volume. Returns whether anything was raised.
+fn actor_moves(
+    vm: &mut Vm<'_>,
+    store: &Store,
+    now: f64,
+    raised: &mut Vec<Raised>,
+    runs: &mut Vec<quest::JobRun>,
+    max_jobs: usize,
+    b: &Budget,
+) -> bool {
+    let mut any = false;
+    while let Some(m) = vm
+        .world
+        .place
+        .actor_moves
+        .get(vm.world.place.actor_cursor)
+        .cloned()
+    {
+        if m.t > now {
+            break;
+        }
+        vm.world.place.actor_cursor += 1;
+        vm.world
+            .place
+            .count("actor moves assumed by the caller applied");
+        let sw = vm.world.place.sw;
+        if !sw.actors {
+            continue;
+        }
+        let new = vm.world.place.holding(&m.space, m.pos);
+        let old = vm
+            .world
+            .place
+            .actor_held
+            .get(&m.actor)
+            .cloned()
+            .unwrap_or_default();
+        let mut changes: Vec<(usize, bool)> = old
+            .difference(&new)
+            .map(|v| (*v, false))
+            .chain(new.difference(&old).map(|v| (*v, true)))
+            .collect();
+        changes.retain(|(v, _)| {
+            !vm.world
+                .place
+                .deleted
+                .contains(&vm.world.place.volumes[*v].key)
+        });
+        vm.world.place.actor_held.insert(m.actor.clone(), new);
+        if changes.is_empty() {
+            continue;
+        }
+        let why = if !sw.actor_triggers {
+            Some("--actor-triggers off")
+        } else if !sw.point && sw.body.is_none() {
+            Some("--trigger-point and --trigger-body off")
+        } else if !sw.instant {
+            Some("--trigger-instant off")
+        } else if changes.len() > 1 && !sw.order {
+            Some("several at one instant (--trigger-order off)")
+        } else {
+            None
+        };
+        if let Some(why) = why {
+            for (_, enter) in &changes {
+                vm.world.place.count(format!(
+                    "actor trigger events not raised\t{}\t{why}",
+                    if *enter { "enter" } else { "leave" }
+                ));
+            }
+            continue;
+        }
+        changes.sort_by_key(|(v, e)| (*e, *v));
+        let Ok(actor) = record_object(&mut vm.world, store, &m.actor, "actor", b) else {
+            vm.world
+                .place
+                .count("actor trigger events not raised\tthe actor could not be read");
+            continue;
+        };
+        for (v, enter) in changes {
+            let key = vm.world.place.volumes[v].key.clone();
+            match enabled(vm, &key) {
+                Ok(true) => {}
+                Ok(false) => {
+                    vm.world
+                        .place
+                        .count("actor trigger events not raised\ta disabled trigger");
+                    continue;
+                }
+                Err(_) => {
+                    vm.world.place.count(
+                        "actor trigger events not raised\tthe trigger's enable state is undetermined",
+                    );
+                    continue;
+                }
+            }
+            vm.rules.insert(rules::WORLD_ACTOR_TRIGGER);
+            vm.rules.insert(rules::WORLD_ACTOR_POSITION);
+            vm.rules.insert(if sw.body.is_some() {
+                rules::WORLD_TRIGGER_BODY
+            } else {
+                rules::WORLD_TRIGGER_POINT
+            });
+            vm.rules.insert(rules::WORLD_TRIGGER_INSTANT);
+            vm.rules.insert(match vm.world.place.volumes[v].shape {
+                Shape::Box(_) => rules::WORLD_TRIGGER_BOX,
+                Shape::Sphere(_) => rules::WORLD_TRIGGER_SPHERE,
+            });
+            let action = if enter {
+                player::Action::TriggerEnter
+            } else {
+                player::Action::TriggerLeave
+            };
+            vm.world
+                .place
+                .count(format!("actor trigger events raised\t{}", action.handler()));
+            let mut handler_runs = Vec::new();
+            match player::deliver_by(vm, store, &key, action, Some(actor), b) {
+                Ok((ds, _)) => {
+                    for d in ds {
+                        handler_runs.push((d.receiver.kind().to_string(), d.script, d.outcome));
+                    }
+                }
+                Err(e) => vm
+                    .world
+                    .place
+                    .count(format!("trigger events not delivered\t{e}")),
+            }
+            raised.push(Raised {
+                t: now,
+                event: action.handler(),
+                reference: Some(key),
+                runs: handler_runs,
+            });
+            runs.extend(quest::run_jobs(vm, store, max_jobs, b));
+            any = true;
+        }
+    }
+    any
 }
 
 /// Applies what is due at the run's present second and raises it, running
@@ -1608,6 +1982,9 @@ pub fn settle(
                 runs: handler_runs,
             });
             runs.extend(quest::run_jobs(vm, store, max_jobs, b));
+            any = true;
+        }
+        if actor_moves(vm, store, now, &mut raised, &mut runs, max_jobs, b) {
             any = true;
         }
         if sw.distance {

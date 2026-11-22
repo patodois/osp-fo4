@@ -3,6 +3,7 @@
 //! See spec/plugin.md and spec/strings.md; unhandled bytes remain available.
 pub mod actor;
 pub mod condition;
+pub mod dial;
 pub mod enable;
 pub mod info;
 pub mod land;

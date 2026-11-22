@@ -380,6 +380,10 @@ struct Opts {
     /// `--none-array-length`, `--none-array-read`, `--none-array-find`,
     /// `--none-array-change`; each off by default).
     none_arrays: fo4_vm::NoneArrays,
+    /// A flag 0x800 below an enable chain's root carries no state of its
+    /// own (`xesp_child_own_flag_ignored_v1`,
+    /// `--enable-child-flag-ignored`; off by default).
+    child_flag_ignored: bool,
 }
 
 /// The story manager's nodes, read once when the story manager is on.
@@ -410,6 +414,7 @@ fn host<'s>(
     h.evaluate = o.conditions;
     h.stage_event = o.stage_event;
     h.data.enable_chain = o.enable_chain;
+    h.data.child_flag_ignored = o.child_flag_ignored;
     if o.story {
         h.story = tree.clone();
     }
@@ -463,6 +468,10 @@ fn load_voice(m: &Manifest, vfs: &Vfs, store: &Store) -> Result<voice::Voice, E>
 fn count_switches(c: &mut Counts, o: Opts) {
     let n = o.none_arrays;
     for (on, what) in [
+        (
+            o.child_flag_ignored,
+            "a flag 0x800 below an enable chain's root carries no state of its own (--enable-child-flag-ignored)",
+        ),
         (
             n.length,
             "the length of a none array is 0 (--none-array-length)",
@@ -916,6 +925,23 @@ struct Then {
     /// The caller's track of the player (`--track FILE`, a caller
     /// assumption) and the world model's switches (`fo4_vm::track`).
     track: Option<(fo4_vm::track::Track, fo4_vm::track::Switches)>,
+    /// The caller's assumed actor moves (`--assume-actor-at`).
+    actor_moves: Vec<fo4_vm::track::ActorMove>,
+    /// Dialogue outside scenes (`fo4_vm::talk`): the switches, the
+    /// player's base and the hello distance setting the caller names
+    /// (`--player-base`, `--hello-distance-setting`).
+    talk: fo4_vm::talk::Switches,
+    player_base: Option<String>,
+    hello_setting: Option<String>,
+    /// Lines the caller assumes play where the choice is not settled
+    /// (`--assume-line`).
+    assume_lines: Vec<String>,
+    /// Reference aliases filled by a unique actor
+    /// (`quest_alias_unique_actor_ref_v1`, `--alias-unique-actors`).
+    unique_fills: bool,
+    /// The player is no record's handle (`vm_player_no_record_v1`,
+    /// `--player-no-record`).
+    player_no_record: bool,
 }
 
 /// One thing the caller makes happen.
@@ -926,6 +952,9 @@ enum What {
     /// A player action on a placed reference given by its key
     /// (`plugin.esm:0001ABCD`).
     Player(fo4_vm::player::Action, String),
+    /// The player starts a conversation with a placed actor
+    /// (`--assume-talk`).
+    Talk(String),
 }
 #[derive(Clone, Debug)]
 struct Caller {
@@ -994,6 +1023,41 @@ fn act(
             let o = quest::quest_object(vm, store, &k, b)?;
             let reply = quest::set_stage(vm, store, o, *n);
             let _ = writeln!(names, "## --then {edid}:{n}{when}: {reply:?}");
+        }
+        What::Talk(key) => {
+            bump(
+                c,
+                "assumption from the command line: the player starts a conversation with a placed actor (--assume-talk)",
+            );
+            let k = fo4_vm::player::parse_key(key)
+                .ok_or("a reference is given as plugin.esm:0001ABCD")?;
+            if store.signature(&k) != Some(*b"ACHR") {
+                return Err("--assume-talk names no winning placed actor (ACHR)".into());
+            }
+            let o = fo4_vm::data::record_object(&mut vm.world, store, &k, "actor", b)?;
+            let before = (vm.world.talk.log.len(), vm.effects.len());
+            let _ = vm.host.call(&fo4_vm::talk::talk_call(o), &mut vm.world);
+            for r in vm.host.rules() {
+                vm.rules.insert(r);
+            }
+            let _ = writeln!(names, "## --assume-talk {key}{when}");
+            for (t, x) in &vm.world.talk.log[before.0..] {
+                let _ = writeln!(names, "    talk at {t} s: {x}");
+            }
+            for e in &vm.effects[before.1..] {
+                let _ = writeln!(
+                    names,
+                    "      {}{}({}{}) = {}",
+                    "  ".repeat(e.depth),
+                    e.native,
+                    e.receiver
+                        .as_ref()
+                        .map(|x| format!("on {x}; "))
+                        .unwrap_or_default(),
+                    e.args.join(", "),
+                    e.result
+                );
+            }
         }
         What::Player(action, key) => {
             use fo4_vm::player;
@@ -1105,11 +1169,16 @@ fn world_step(
     top: &mut Vec<JobRun>,
     b: &Budget,
 ) {
-    if !vm.world.place.on {
+    if !vm.world.place.on && !vm.world.talk.on {
         return;
     }
     let before = vm.effects.len();
-    let (raised, runs) = fo4_vm::track::settle(vm, store, MAX_GAME_JOBS, b);
+    let (raised, mut runs) = fo4_vm::track::settle(vm, store, MAX_GAME_JOBS, b);
+    let talked = vm.world.talk.log.len();
+    runs.extend(fo4_vm::talk::settle(vm, store, MAX_GAME_JOBS, b));
+    for (t, x) in &vm.world.talk.log[talked..] {
+        let _ = writeln!(names, "## talk at {t} s: {x}");
+    }
     for r in &raised {
         let what = r
             .reference
@@ -1213,8 +1282,14 @@ fn clock_loop(
         // clock on a tie, before a caller's action on a tie
         // (`world_trigger_instant_v1`).
         let max = store.limits.max_memory;
-        let track_wait =
-            fo4_vm::track::next_due(store, max, &mut vm.world).map(|t| (t - now).max(0.0));
+        let track_wait = [
+            fo4_vm::track::next_due(store, max, &mut vm.world),
+            fo4_vm::talk::next_due(&vm.world),
+        ]
+        .into_iter()
+        .flatten()
+        .min_by(f64::total_cmp)
+        .map(|t| (t - now).max(0.0));
         if let Some(tw) = track_wait {
             if !stuck && next_known.is_none_or(|n| tw < n) && wait.is_none_or(|wa| tw <= wa) {
                 vm.world.now[fo4_vm::world::Clock::Real as usize] = now + tw;
@@ -1303,6 +1378,55 @@ fn clock_loop(
     Ok(fired)
 }
 
+/// The winning NPC_ of an editor ID.
+fn npc_by_editor_id(store: &Store, b: &Budget, edid: &str) -> Result<FormKey, E> {
+    Ok(store
+        .winners()
+        .filter(|w| !w.deleted && w.signature == *b"NPC_")
+        .map(|w| store.overrides().form_key(w.key, store.order()))
+        .find(|k| {
+            store
+                .raw(k, &b.child())
+                .ok()
+                .flatten()
+                .and_then(|r| bind::editor_id(&r))
+                .is_some_and(|e| e.eq_ignore_ascii_case(edid))
+        })
+        .ok_or("no NPC_ of that editor ID")?)
+}
+
+/// The DATA of the winning game setting (GMST) of an editor ID, read as
+/// an f32 (`dialogue_hello_proximity_v1` reads the hello distance so).
+fn game_setting_float(store: &Store, b: &Budget, edid: &str) -> Result<f32, E> {
+    for w in store
+        .winners()
+        .filter(|w| !w.deleted && w.signature == *b"GMST")
+    {
+        let k = store.overrides().form_key(w.key, store.order());
+        let Some(r) = store.raw(&k, &b.child())? else {
+            continue;
+        };
+        if !bind::editor_id(&r).is_some_and(|e| e.eq_ignore_ascii_case(edid)) {
+            continue;
+        }
+        let d = r
+            .subrecords
+            .iter()
+            .find(|s| s.signature == *b"DATA")
+            .map(|s| r.data(s))
+            .ok_or("the game setting has no DATA")?;
+        let a: [u8; 4] = d
+            .try_into()
+            .map_err(|_| "the game setting's DATA is not 4 bytes")?;
+        let v = f32::from_le_bytes(a);
+        if !v.is_finite() || v < 0.0 {
+            return Err("the game setting is not a finite distance".into());
+        }
+        return Ok(v);
+    }
+    Err("no game setting of that editor ID".into())
+}
+
 fn quest_by_editor_id(store: &Store, b: &Budget, edid: &str) -> Result<FormKey, E> {
     Ok(store
         .winners()
@@ -1344,7 +1468,20 @@ fn new_game(
     }
     events_on(&mut vm, opts);
     if let Some((track, sw)) = &then.track {
-        vm.world.place = fo4_vm::track::Place::load(store, track.clone(), *sw, &b)?;
+        vm.world.place = fo4_vm::track::Place::load_with(
+            store,
+            track.clone(),
+            *sw,
+            then.actor_moves.clone(),
+            &b,
+        )?;
+        if !then.actor_moves.is_empty() {
+            *c.entry(
+                "assumption from the command line: a placed actor moved to a position at a second (--assume-actor-at)"
+                    .into(),
+            )
+            .or_default() += then.actor_moves.len() as u64;
+        }
         bump(
             &mut c,
             "assumption from the command line: the player follows a track (--track)",
@@ -1377,11 +1514,81 @@ fn new_game(
             (sw.position_natives, "position and distance natives answered from the positions (--position-natives)"),
             (sw.cell_natives, "parent cell, worldspace and interior natives answered (--cell-natives)"),
             (sw.location_native, "the current location is the parent cell's (--location-native)"),
+            (sw.actors, "placed actors stand at their stored position or where the caller moved them (--actor-positions)"),
+            (sw.actor_triggers, "an actor's assumed move raises trigger events as the player's (--actor-triggers)"),
         ] {
             if on {
                 bump(&mut c, format!("switch: {what}"));
             }
         }
+    }
+    if then.player_no_record {
+        vm.world.player_no_record = true;
+        bump(
+            &mut c,
+            "switch: the player is no record's handle (--player-no-record)",
+        );
+    }
+    // Reference aliases filled by a unique actor, and the player's base
+    // as the caller names it.
+    let player_base = match &then.player_base {
+        Some(e) => {
+            bump(
+                &mut c,
+                "assumption from the command line: the NPC_ of that editor ID is the player's base (--player-base)",
+            );
+            Some(npc_by_editor_id(store, &b, e)?)
+        }
+        None => None,
+    };
+    if then.unique_fills {
+        bump(
+            &mut c,
+            "switch: reference aliases filled by a unique actor hold its one placed actor (--alias-unique-actors)",
+        );
+        let mut u = quest::UniqueActors::read(store, &b);
+        u.player_base = player_base.clone();
+        vm.world.quests.unique = Some(Rc::new(u));
+    }
+    // Dialogue outside scenes.
+    let t = then.talk;
+    if t.greeting || t.hello || t.priority {
+        vm.world.talk.on = true;
+        vm.world.talk.sw = fo4_vm::talk::Switches {
+            stage_fields: opts.line_fields,
+            ..t
+        };
+        vm.world.talk.player_base = player_base.clone();
+        for l in &then.assume_lines {
+            let k = fo4_vm::player::parse_key(l).ok_or("a line is given as plugin.esm:0001ABCD")?;
+            vm.world.talk.assume_lines.insert(k);
+            bump(
+                &mut c,
+                "assumption from the command line: a line plays where the choice outside a scene is not settled (--assume-line)",
+            );
+        }
+        for (on, what) in [
+            (t.greeting, "a greeting line plays when the player starts a conversation (--greeting-on-talk)"),
+            (t.hello, "a hello line plays when the player comes within the hello distance of a placed actor (--hello-lines)"),
+            (t.priority, "a line outside a scene is chosen by priority (--dialogue-priority)"),
+        ] {
+            if on {
+                bump(&mut c, format!("switch: {what}"));
+            }
+        }
+        if let Some(name) = &then.hello_setting {
+            bump(
+                &mut c,
+                "assumption from the command line: the hello distance is the value of the game setting named (--hello-distance-setting)",
+            );
+            let d = game_setting_float(store, &b, name)?;
+            vm.world.talk.hello_distance = Some(f64::from(d));
+        }
+        fo4_vm::talk::load_hello(&mut vm.world);
+        *c.entry("talk	hello crossings of the track".into())
+            .or_default() += vm.world.talk.crossings.len() as u64;
+        *c.entry("talk	placed actors near the track".into())
+            .or_default() += vm.world.place.actors.len() as u64;
     }
     let started = quest::start_new_game(&mut vm, store, &b)?;
     for (_, _, r) in &started {
@@ -1603,11 +1810,31 @@ fn new_game(
         .count();
     *c.entry("quests running at the end (of those the run read)".into())
         .or_default() += running as u64;
+    let unique = vm.world.quests.unique_used.borrow().clone();
+    if !unique.is_empty() {
+        vm.rules.insert(fo4_vm::rules::ALIAS_UNIQUE_ACTOR);
+    }
+    for ok in unique.values() {
+        bump(
+            &mut c,
+            format!(
+                "unique actor aliases read by the run\t{}",
+                if *ok {
+                    "resolved to one placed actor or the player"
+                } else {
+                    "not resolved: none or several placed actors"
+                }
+            ),
+        );
+    }
     for r in &vm.rules {
         bump(&mut c, format!("rules relied on\t{r}"));
     }
     for (k, v) in &vm.world.place.counts {
         *c.entry(format!("world model\t{k}")).or_default() += v;
+    }
+    for (k, v) in &vm.world.talk.counts {
+        *c.entry(format!("talk\t{k}")).or_default() += v;
     }
     count_events(&mut c, &vm);
     if opts.scenes {
@@ -1652,7 +1879,7 @@ fn new_game(
             .iter()
             .filter_map(|x| match &x.what {
                 What::Stage(q, _) => Some(q.clone()),
-                What::Player(..) => None,
+                What::Player(..) | What::Talk(_) => None,
             })
             .collect();
         next_blockers(&mut vm, m, vfs, store, opts, &quests, out)?;
@@ -2520,6 +2747,7 @@ fn run() -> Result<(), E> {
             find: flag(&mut a, "--none-array-find"),
             change: flag(&mut a, "--none-array-change"),
         },
+        child_flag_ignored: flag(&mut a, "--enable-child-flag-ignored"),
     };
     let mut switches = fo4_vm::cond::Switches::all();
     let mut assume: BTreeMap<u16, f32> = BTreeMap::new();
@@ -2547,12 +2775,55 @@ fn run() -> Result<(), E> {
     let mut then = Then {
         next_blockers: flag(&mut a, "--next-blockers"),
         recheck: flag(&mut a, "--scene-recheck").then(|| std::cell::Cell::new(0)),
+        unique_fills: flag(&mut a, "--alias-unique-actors"),
+        player_no_record: flag(&mut a, "--player-no-record"),
+        talk: fo4_vm::talk::Switches {
+            greeting: flag(&mut a, "--greeting-on-talk"),
+            hello: flag(&mut a, "--hello-lines"),
+            priority: flag(&mut a, "--dialogue-priority"),
+            stage_fields: false,
+        },
         ..Then::default()
     };
+    // The caller's assumed actor moves: REF SPACE X Y Z@SECONDS.
+    while let Some(i) = a.iter().position(|x| x == "--assume-actor-at") {
+        let usage = "--assume-actor-at REF SPACE X Y Z@SECONDS";
+        let v: Vec<String> = a.get(i + 1..i + 6).ok_or(usage)?.to_vec();
+        let (z, t) = v[4].rsplit_once('@').ok_or(usage)?;
+        let num = |s: &str| -> Result<f64, E> {
+            let x: f64 = s.parse()?;
+            if x.is_finite() {
+                Ok(x)
+            } else {
+                Err("a number that is not finite".into())
+            }
+        };
+        then.actor_moves.push(fo4_vm::track::ActorMove {
+            t: num(t)?,
+            actor: fo4_vm::player::parse_key(&v[0]).ok_or(usage)?,
+            space: fo4_vm::player::parse_key(&v[1]).ok_or(usage)?,
+            pos: [num(&v[2])?, num(&v[3])?, num(z)?],
+        });
+        a.drain(i..i + 6);
+    }
+    while let Some(i) = a.iter().position(|x| {
+        x == "--player-base" || x == "--hello-distance-setting" || x == "--assume-line"
+    }) {
+        let v = a.get(i + 1).cloned().ok_or(
+            "--player-base and --hello-distance-setting take an editor ID, --assume-line a line",
+        )?;
+        match a[i].as_str() {
+            "--player-base" => then.player_base = Some(v),
+            "--assume-line" => then.assume_lines.push(v),
+            _ => then.hello_setting = Some(v),
+        }
+        a.drain(i..i + 2);
+    }
     while let Some(i) = a.iter().position(|x| {
         x == "--then"
             || x == "--timers"
             || x == "--time-scale-global"
+            || x == "--assume-talk"
             || fo4_vm::player::Action::from_switch(x).is_some()
     }) {
         let v = a.get(i + 1).cloned().ok_or(
@@ -2568,6 +2839,11 @@ fn run() -> Result<(), E> {
         if let Some(action) = fo4_vm::player::Action::from_switch(&a[i]) {
             then.actions.push(Caller {
                 what: What::Player(action, body),
+                at,
+            });
+        } else if a[i] == "--assume-talk" {
+            then.actions.push(Caller {
+                what: What::Talk(body),
                 at,
             });
         } else if a[i] == "--then" {
@@ -2601,6 +2877,8 @@ fn run() -> Result<(), E> {
         location_native: flag(&mut a, "--location-native"),
         assume_los: None,
         body: None,
+        actors: flag(&mut a, "--actor-positions"),
+        actor_triggers: flag(&mut a, "--actor-triggers"),
     };
     let mut world_sw = world_sw;
     let mut track_file = None;
@@ -2667,6 +2945,20 @@ fn run() -> Result<(), E> {
     if then.scene_clock == 0 && then.track.is_some() {
         return Err("--track needs --scene-clock N".into());
     }
+    let talk_on = then.talk != fo4_vm::talk::Switches::default()
+        || then.actions.iter().any(|x| matches!(x.what, What::Talk(_)));
+    if talk_on && then.scene_clock == 0 {
+        return Err("--greeting-on-talk, --hello-lines, --dialogue-priority and --assume-talk need --scene-clock N".into());
+    }
+    if !then.actor_moves.is_empty() && !world_sw.actors {
+        return Err("--assume-actor-at needs --track FILE and --actor-positions".into());
+    }
+    if then.talk.hello && (!world_sw.actors || then.hello_setting.is_none()) {
+        return Err(
+            "--hello-lines needs --track FILE, --actor-positions and --hello-distance-setting EDITOR_ID"
+                .into(),
+        );
+    }
     if then.scene_clock == 0 && then.actions.iter().any(|x| x.at.is_some()) {
         return Err("an action at a second (@SECONDS) needs --scene-clock N".into());
     }
@@ -2676,7 +2968,7 @@ fn run() -> Result<(), E> {
     {
         return Err("--assume-player-choice takes 0 to 3".into());
     }
-    let usage = "quest_run MANIFEST (stages OUT_DIR | new-game OUT_DIR | fragments OUT_DIR | scenes OUT_DIR | QUEST STAGE) [--queued] [--no-conditions] [--no-stage-event] [--no-remote] [--no-custom | --custom-nested] [--no-story] [--no-enable-chain] [--no-scenes] [--no-scenes-with-quest] [--no-cond-fn-N]... [--no-cond-run-on] [--assume-cond N=VALUE]...; fragments OUT_DIR and scenes OUT_DIR run every INFO, PACK and PERK fragment and start every scene in a fresh interpreter; new-game also takes --then EDITOR_ID:STAGE[@SECONDS] (repeated), --assume-activate, --assume-trigger-enter, --assume-trigger-leave and --assume-open PLUGIN:OBJECTID[@SECONDS] (repeated), --timers N and --time-scale-global EDITOR_ID, assumptions of the caller, --scene-recheck, --stage-fields, --cond-550-clock, --alias-location-refs and --next-blockers; new-game and scenes take --scene-clock N (advance the scene clock up to N times) with --no-timer-actions, --no-line-audio, --assume-line-seconds X, --assume-player-choice N (0 to 3), --assume-packages-complete, --assume-start-scene-actions, --line-stage-fields and --assume-first-line; every mode takes --none-array-length, --none-array-read, --none-array-find and --none-array-change; new-game with --scene-clock takes --track FILE (the player's track, lines SECONDS SPACE X Y Z [FACING]) with --trigger-box, --trigger-sphere, --trigger-point or --trigger-body HEIGHT, --trigger-instant, --trigger-enabled, --trigger-order, --distance-events, --distance-once, --placed-positions, --position-natives, --cell-natives, --location-native and --assume-los true|false";
+    let usage = "quest_run MANIFEST (stages OUT_DIR | new-game OUT_DIR | fragments OUT_DIR | scenes OUT_DIR | QUEST STAGE) [--queued] [--no-conditions] [--no-stage-event] [--no-remote] [--no-custom | --custom-nested] [--no-story] [--no-enable-chain] [--no-scenes] [--no-scenes-with-quest] [--no-cond-fn-N]... [--no-cond-run-on] [--assume-cond N=VALUE]...; fragments OUT_DIR and scenes OUT_DIR run every INFO, PACK and PERK fragment and start every scene in a fresh interpreter; new-game also takes --then EDITOR_ID:STAGE[@SECONDS] (repeated), --assume-activate, --assume-trigger-enter, --assume-trigger-leave and --assume-open PLUGIN:OBJECTID[@SECONDS] (repeated), --timers N and --time-scale-global EDITOR_ID, assumptions of the caller, --scene-recheck, --stage-fields, --cond-550-clock, --alias-location-refs and --next-blockers; new-game and scenes take --scene-clock N (advance the scene clock up to N times) with --no-timer-actions, --no-line-audio, --assume-line-seconds X, --assume-player-choice N (0 to 3), --assume-packages-complete, --assume-start-scene-actions, --line-stage-fields and --assume-first-line; every mode takes --none-array-length, --none-array-read, --none-array-find, --none-array-change and --enable-child-flag-ignored; new-game with --scene-clock takes --track FILE (the player's track, lines SECONDS SPACE X Y Z [FACING]) with --trigger-box, --trigger-sphere, --trigger-point or --trigger-body HEIGHT, --trigger-instant, --trigger-enabled, --trigger-order, --distance-events, --distance-once, --placed-positions, --position-natives, --cell-natives, --location-native and --assume-los true|false, --actor-positions, --actor-triggers and --assume-actor-at REF SPACE X Y Z@SECONDS (repeated); new-game takes --alias-unique-actors, --player-base EDITOR_ID and --player-no-record, and with --scene-clock --assume-talk PLUGIN:OBJECTID[@SECONDS] (repeated), --greeting-on-talk, --hello-lines with --hello-distance-setting EDITOR_ID, --dialogue-priority and --assume-line PLUGIN:OBJECTID (repeated)";
     if a.len() != 3 {
         return Err(usage.into());
     }
