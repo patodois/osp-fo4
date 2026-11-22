@@ -47,6 +47,8 @@ pub struct LoadReport {
     /// list, its textured terrain, its collision and walking world, and
     /// converting the draw list to GPU data ([`Phases::NAMES`]).
     pub phases: [f64; 5],
+    /// The cell's placed actors, when drawn ([`crate::load::actor_summary`]).
+    pub actors: Option<String>,
 }
 
 /// Names of [`LoadReport::phases`].
@@ -110,6 +112,8 @@ pub struct Options {
     pub policy: Policy,
     /// `--scene-memory`, in bytes.
     pub scene_memory: u64,
+    /// Draw each cell's placed actors (`--no-actors` turns it off).
+    pub actors: bool,
 }
 
 /// What a kept cell holds on the loading side: its credits and the shared
@@ -331,7 +335,21 @@ impl<'a> Streamer<'a> {
         };
         let scene = loader.cell(key, &work)?;
         lap(0, report);
-        let mut build = fo4_render::draw::build(&scene, loader, limits, o.build, &work)?;
+        let mut build = if o.actors {
+            let actors = fo4_scene::actor::resolve(&scene, loader, &work)?;
+            let build = fo4_render::draw::build_with_actors(
+                &scene, &actors, loader, limits, o.build, &work,
+            )?;
+            let mut text = crate::load::actor_summary(&actors, &build);
+            for line in crate::load::actor_lines(&actors, &build) {
+                text.push_str("\n      ");
+                text.push_str(&line);
+            }
+            report.actors = Some(text);
+            build
+        } else {
+            fo4_render::draw::build(&scene, loader, limits, o.build, &work)?
+        };
         lap(1, report);
         report.placements = build.instances.len();
         report.omitted = build.omitted.len();
@@ -656,6 +674,7 @@ mod tests {
             render: RenderOptions::REFERENCE,
             policy: Policy::around(1),
             scene_memory: 256 << 20,
+            actors: false,
         }
     }
     /// Loads every waiting cell with one loader, dropped afterwards; the

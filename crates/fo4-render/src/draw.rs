@@ -43,6 +43,10 @@ pub struct TextureChoice {
 #[derive(Debug)]
 pub struct Build {
     pub skipped_editor_marker_subtrees: u64,
+    /// Instance indices of the placed actors, after the placed references.
+    pub actors: Vec<u32>,
+    /// Shapes of drawn actor models without a skin, not drawn.
+    pub actor_rigid_shapes: u64,
     pub list: DrawList,
     pub instances: Vec<Identity>,
     pub omitted: Vec<Omission>,
@@ -199,7 +203,10 @@ struct Builder<'a, 's> {
     budget: &'a Budget,
     options: BuildOptions,
     output: Build,
-    meshes: BTreeMap<(usize, usize, u8, bool), usize>,
+    /// By model, shape, effect channels, UV use and, for a skinned mesh,
+    /// the skeleton asset it is posed by.
+    meshes: BTreeMap<(usize, usize, u8, bool, Option<usize>), usize>,
+    skeletons: BTreeMap<usize, fo4_scene::actor::pose::Skeleton>,
     /// By path and the block limit applied (0 when decoded).
     textures: BTreeMap<(Vec<u8>, u32), usize>,
     texture_bytes: u64,
@@ -960,13 +967,21 @@ impl Builder<'_, '_> {
         i: usize,
         m: &fo4_nif::Mesh,
         surface: &Surface,
+        skinned: Option<(usize, &[[f64; 3]])>,
     ) -> Result<usize> {
         let model = self.asset(AssetKind::Model, path)?;
-        if let Some(index) = self
-            .meshes
-            .get(&(model, i, surface.channels, surface.requires_uv))
-        {
+        let key = (
+            model,
+            i,
+            surface.channels,
+            surface.requires_uv,
+            skinned.map(|s| s.0),
+        );
+        if let Some(index) = self.meshes.get(&key) {
             return Ok(*index);
+        }
+        if skinned.is_some_and(|(_, p)| m.vertices.as_ref().is_none_or(|v| v.len() != p.len())) {
+            return Err(error("RenderSkinnedVertexCount", "mesh", 0, i));
         }
         if m.dynamic_vertices.is_some() {
             return Err(error("UnsupportedRenderDynamicGeometry", "mesh", 0, i));
@@ -1010,11 +1025,14 @@ impl Builder<'_, '_> {
             }
             mesh.vertex_colors = Some(colors);
         }
-        for v in vertices {
-            let position = v
-                .position
-                .ok_or_else(|| error("MissingRenderPosition", "mesh", 0, i))?
-                .map(f64::from);
+        for (k, v) in vertices.iter().enumerate() {
+            let position = match skinned {
+                Some((_, p)) => p[k],
+                None => v
+                    .position
+                    .ok_or_else(|| error("MissingRenderPosition", "mesh", 0, i))?
+                    .map(f64::from),
+            };
             // Constant surfaces do not sample UV; zero is an internal lookup coordinate.
             let uv = if surface.requires_uv {
                 v.uv.ok_or_else(|| error("MissingRenderUv", "mesh", 0, i))?
@@ -1034,8 +1052,7 @@ impl Builder<'_, '_> {
         append(&mut self.output.list.meshes, mesh, self.budget)?;
         self.budget
             .charge(path.len() as u64 + 256, "mesh identity", 0)?;
-        self.meshes
-            .insert((model, i, surface.channels, surface.requires_uv), index);
+        self.meshes.insert(key, index);
         Ok(index)
     }
     #[allow(clippy::too_many_arguments)]
@@ -1160,7 +1177,7 @@ impl Builder<'_, '_> {
             };
             if let Some(mesh) = geometry {
                 let surface = self.surface(n, f, swap, file)?;
-                let mesh = self.mesh(path, mesh_index, mesh, &surface)?;
+                let mesh = self.mesh(path, mesh_index, mesh, &surface, None)?;
                 append(
                     &mut self.output.list.draws,
                     Draw {
@@ -1257,6 +1274,229 @@ impl Builder<'_, '_> {
         Ok(())
     }
 }
+impl Builder<'_, '_> {
+    /// Sets the rule flags the shared walkers read from a state's rules.
+    fn allow(&mut self, rules: &[&'static str]) {
+        use fo4_scene::hypotheses as h;
+        self.allow_effect_color = rules.contains(&h::EFFECT_COLOR);
+        self.allow_path_strip = rules.contains(&h::PATH_STRIP);
+        self.allow_path_root = rules.contains(&h::PATH_ROOT);
+        self.allow_path_relative = rules.contains(&h::PATH_DATA_RELATIVE);
+        self.allow_visibility_marker = rules.contains(&h::VISIBILITY_MARKER);
+        self.allow_marker_suffix = rules.contains(&h::MARKER_SUFFIX);
+        self.allow_editor_marker_subtrees = rules.contains(&h::NAMED_MARKER);
+        self.allow_scol_parts = rules.contains(&h::SCOL);
+    }
+    /// The rest pose of skeleton asset `id`, read once.
+    fn skeleton(&mut self, id: usize) -> Result<()> {
+        if self.skeletons.contains_key(&id) {
+            return Ok(());
+        }
+        let loader = self.loader;
+        let path = &loader.assets.nodes[id].path;
+        let file = String::from_utf8_lossy(path).into_owned();
+        let pose = loader.assets.with_decoded(id, &self.budget.child(), |d| {
+            let DecodedAsset::Model(n) = d else {
+                return Err(error("RenderAssetKind", "skeleton", 0, id));
+            };
+            fo4_scene::actor::pose::Skeleton::read(&n, &file, self.limits, self.budget)
+        })?;
+        self.skeletons.insert(id, pose);
+        Ok(())
+    }
+    /// One node of an actor model: skinned shapes are posed by `skeleton`
+    /// and drawn at `world`; shapes without a skin are counted, not drawn.
+    #[allow(clippy::too_many_arguments)]
+    fn actor_node(
+        &mut self,
+        n: &Nif<'_>,
+        path: &[u8],
+        i: usize,
+        world: Transform,
+        instance: u32,
+        skeleton: usize,
+        active: &mut Vec<usize>,
+        depth: u64,
+    ) -> Result<()> {
+        let file = String::from_utf8_lossy(path).into_owned();
+        fo4_core::limit(depth, self.limits.max_depth, "render node", 0)?;
+        self.visits = fo4_core::add(self.visits, 1, "render visits", 0)?;
+        fo4_core::limit(self.visits, self.limits.max_entries, "render visits", 0)?;
+        if active.contains(&i) {
+            return Err(error("RenderNodeCycle", &file, 0, i));
+        }
+        let block = n
+            .blocks
+            .get(i)
+            .ok_or_else(|| error("RenderNodeIndex", &file, 0, i))?;
+        let at = block.data.start as u64;
+        let marker = fo4_scene::model_policy::visibility_editor_marker(n, i);
+        let suffix = fo4_scene::model_policy::editor_marker_suffix(n, i);
+        let named = fo4_scene::model_policy::editor_marker_object(n, i);
+        if !self.include_marker_subtrees && (marker || suffix || named) {
+            let allowed = (!marker || self.allow_visibility_marker)
+                && (!suffix || self.allow_marker_suffix)
+                && (!named || self.allow_editor_marker_subtrees);
+            if !allowed {
+                return Err(error(
+                    "UnverifiedActorModelMarker",
+                    &file,
+                    at,
+                    "registered helper visibility rule",
+                ));
+            }
+            self.output.skipped_editor_marker_subtrees =
+                fo4_core::add(self.output.skipped_editor_marker_subtrees, 1, &file, at)?;
+            return Ok(());
+        }
+        let ty = &n.block_types[block.type_index as usize];
+        if matches!(
+            block_class(ty),
+            fo4_plugin::static_frame::Class::Outside | fo4_plugin::static_frame::Class::State
+        ) {
+            return Ok(());
+        }
+        let data = decoded(n, i, &file)?;
+        append(active, i, self.budget)?;
+        let result = (|| {
+            match data {
+                Data::Node { children, .. } => {
+                    for c in children.iter().filter(|c| **c >= 0) {
+                        self.actor_node(
+                            n,
+                            path,
+                            *c as usize,
+                            world,
+                            instance,
+                            skeleton,
+                            active,
+                            depth + 1,
+                        )?;
+                    }
+                }
+                Data::Mesh(m) => {
+                    let f = fields(data);
+                    let Some(skin) =
+                        fo4_nif::skin::shape_skin(n, i, &file, self.limits, self.budget)?
+                    else {
+                        self.output.actor_rigid_shapes =
+                            fo4_core::add(self.output.actor_rigid_shapes, 1, &file, at)?;
+                        return Ok(());
+                    };
+                    // 23,367 of 23,368 skinned shapes measured have exactly the
+                    // identity as their own transform; whether another one
+                    // applies is not established, so such a shape is refused.
+                    let own = fo4_scene::actor::pose::Affine::from_fields(f, &file)?;
+                    if own.is_some_and(|a| a != fo4_scene::actor::pose::Affine::IDENTITY) {
+                        return Err(error(
+                            "ActorSkinnedShapeTransform",
+                            &file,
+                            at,
+                            "identity shape transform",
+                        ));
+                    }
+                    let pose = &self.skeletons[&skeleton];
+                    let matrices =
+                        fo4_scene::actor::pose::bone_matrices(n, &skin, pose, &file, self.budget)?;
+                    let positions = fo4_scene::actor::pose::skin_positions(
+                        n,
+                        i,
+                        &matrices,
+                        &file,
+                        self.budget,
+                    )?;
+                    let surface = self.surface(n, f, None, &file)?;
+                    let mesh = self.mesh(path, i, m, &surface, Some((skeleton, &positions)))?;
+                    append(
+                        &mut self.output.list.draws,
+                        Draw {
+                            sidedness: surface.sidedness,
+                            instance,
+                            mesh,
+                            texture: surface.texture,
+                            world,
+                            alpha: surface.alpha,
+                            uv_offset: surface.offset,
+                            uv_scale: surface.scale,
+                            raw_tile_flags: surface.tile,
+                        },
+                        self.budget,
+                    )?;
+                }
+                Data::Fields(_) => {}
+            }
+            Ok(())
+        })();
+        active.pop();
+        result
+    }
+    /// Draws one resolved actor as instance `index`.
+    fn actor(&mut self, a: &fo4_scene::actor::Actor, index: u32) -> Result<()> {
+        let src = &a.source;
+        if !a.state.ready_at(self.options.level) {
+            let why = if a.plan.is_none() {
+                a.notes.join("; ")
+            } else {
+                format!("{:?} at rule level {:?}", a.state, self.options.level)
+            };
+            return Err(error("ActorNotDrawable", &src.file, src.offset, why));
+        }
+        let plan = a.plan.as_ref().ok_or_else(|| {
+            error(
+                "ActorNotDrawable",
+                &src.file,
+                src.offset,
+                a.notes.join("; "),
+            )
+        })?;
+        let p = a.transform.ok_or_else(|| {
+            error(
+                "MissingRenderTransform",
+                &src.file,
+                src.offset,
+                "ACHR DATA absent",
+            )
+        })?;
+        // Absent XSCL is 1 under achr_placement_as_refr_v1, which the state holds.
+        let world = Transform::euler(p, a.scale.unwrap_or(1.))?;
+        self.allow(a.state.hypotheses());
+        self.skeleton(plan.skeleton_asset)?;
+        let first = self.output.list.draws.len();
+        for part in &plan.parts {
+            let scratch = self.budget.child();
+            let loader = self.loader;
+            let path = &loader.assets.nodes[part.asset].path;
+            loader.assets.with_decoded(part.asset, &scratch, |d| {
+                let DecodedAsset::Model(n) = d else {
+                    return Err(error("RenderAssetKind", "actor model", 0, part.asset));
+                };
+                let mut active = Vec::new();
+                for root in n.roots.iter().filter(|r| **r >= 0) {
+                    self.actor_node(
+                        &n,
+                        path,
+                        *root as usize,
+                        world,
+                        index,
+                        plan.skeleton_asset,
+                        &mut active,
+                        0,
+                    )?;
+                }
+                Ok(())
+            })?;
+        }
+        if self.output.list.draws.len() == first {
+            return Err(error(
+                "NoDrawableGeometry",
+                &src.file,
+                src.offset,
+                a.reference.object_id,
+            ));
+        }
+        Ok(())
+    }
+}
 pub fn build(
     scene: &Scene,
     loader: &Loader<'_>,
@@ -1266,10 +1506,42 @@ pub fn build(
 ) -> Result<Build> {
     build_with_marker_visibility(scene, loader, limits, options, false, b)
 }
+/// [`build`], then the scene's placed actors as further instances, in the
+/// order of `actors` (`fo4_scene::actor::resolve`). An actor that cannot be
+/// drawn at the options' level is an omission with its reasons.
+pub fn build_with_actors(
+    scene: &Scene,
+    actors: &fo4_scene::actor::Actors,
+    loader: &Loader<'_>,
+    limits: &Limits,
+    options: BuildOptions,
+    b: &Budget,
+) -> Result<Build> {
+    build_inner(scene, Some(actors), loader, limits, options, false, b)
+}
 /// Explicit diagnostic comparison. `include_marker_subtrees` retains named marker
 /// geometry; it does not change the registered visibility policy or base flags.
 pub fn build_with_marker_visibility(
     scene: &Scene,
+    loader: &Loader<'_>,
+    limits: &Limits,
+    options: BuildOptions,
+    include_marker_subtrees: bool,
+    b: &Budget,
+) -> Result<Build> {
+    build_inner(
+        scene,
+        None,
+        loader,
+        limits,
+        options,
+        include_marker_subtrees,
+        b,
+    )
+}
+fn build_inner(
+    scene: &Scene,
+    actors: Option<&fo4_scene::actor::Actors>,
     loader: &Loader<'_>,
     limits: &Limits,
     options: BuildOptions,
@@ -1296,12 +1568,15 @@ pub fn build_with_marker_visibility(
         options,
         output: Build {
             skipped_editor_marker_subtrees: 0,
+            actors: Vec::new(),
+            actor_rigid_shapes: 0,
             list: DrawList::default(),
             instances: Vec::new(),
             omitted: Vec::new(),
             texture_choices: Vec::new(),
         },
         meshes: BTreeMap::new(),
+        skeletons: BTreeMap::new(),
         textures: BTreeMap::new(),
         texture_bytes: 0,
         block_bytes: 0,
@@ -1465,6 +1740,68 @@ pub fn build_with_marker_visibility(
                 b,
             )?;
         }
+    }
+    let Some(actors) = actors else {
+        return Ok(builder.output);
+    };
+    let mut index = u32::try_from(builder.output.instances.len())
+        .map_err(|e| error("RenderInstanceLimit", "scene", 0, e))?;
+    for a in &actors.actors {
+        b.charge(
+            (a.reference.plugin.len() + a.base.as_ref().map_or(0, |v| v.plugin.len())) as u64 + 128,
+            "draw identity",
+            0,
+        )?;
+        let mut hypotheses = Vec::new();
+        b.reserve(
+            &mut hypotheses,
+            a.state.hypotheses().len(),
+            "draw hypotheses",
+            0,
+        )?;
+        hypotheses.extend_from_slice(a.state.hypotheses());
+        append(
+            &mut builder.output.instances,
+            Identity {
+                index,
+                reference: a.reference.clone(),
+                base: a.base.clone(),
+                hypotheses,
+                editor_marker: false,
+            },
+            b,
+        )?;
+        append(&mut builder.output.actors, index, b)?;
+        let first = builder.output.list.draws.len();
+        if let Err(e) = builder.actor(a, index) {
+            builder.output.list.draws.truncate(first);
+            let mut causes = Vec::new();
+            for e in std::iter::once(&e).chain(
+                a.blockers
+                    .iter()
+                    .filter(|x| fo4_scene::hypotheses::covering(x).is_none()),
+            ) {
+                b.charge(
+                    (e.code.len() + e.expected.len() + e.found.len() + e.source.file.len() + 256)
+                        as u64,
+                    "draw omission",
+                    0,
+                )?;
+                append(&mut causes, e.clone(), b)?;
+            }
+            append(
+                &mut builder.output.omitted,
+                Omission {
+                    instance: index,
+                    reference: a.reference.clone(),
+                    causes,
+                },
+                b,
+            )?;
+        }
+        index = index
+            .checked_add(1)
+            .ok_or_else(|| error("RenderInstanceLimit", "scene", 0, index))?;
     }
     Ok(builder.output)
 }

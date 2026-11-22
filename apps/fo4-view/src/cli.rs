@@ -8,7 +8,7 @@ usage:
            --eye X,Y,Z --look X,Y,Z [--backface-cull] [--terrain] [--around N]
            [--speed UNITS_PER_SECOND] [--fast-speed UNITS_PER_SECOND] [--radians-per-pixel R]
            [--walk] [--texture-cap N] [--alpha-tested-cap N] [--reference-textures]
-           [--scene-memory MIB] [--no-stream]
+           [--scene-memory MIB] [--no-stream] [--no-actors]
            [--frame-log build/FRAMES.tsv] [--script-path X,Y;... [--script-shots build/NAME]]
       Window with a free-fly camera: W/A/S/D move, Shift moves faster, hold the
       left mouse button and move the mouse to look, R returns to the start pose.
@@ -44,6 +44,10 @@ usage:
       blocks, terrain, collision, walking world); the manifest's max_memory
       still bounds each cell read and each asset decode on its own. Credits
       are conservative, not resident memory.
+      Placed actors (ACHR) are drawn standing in their skeleton's rest
+      pose, CPU-skinned once at load, when the level accepts their rules
+      (pending: --under-hypotheses); each actor's report line says what was
+      drawn or why not. --no-actors leaves them out, as before.
       Measurement aids: --frame-log writes one line per frame (interval,
       time in the frame's update, cells drawn and uploading, entities).
       --script-path (with --walk) steers the walker through the waypoints
@@ -56,7 +60,7 @@ usage:
            --eye X,Y,Z --look X,Y,Z --out build/FRAME.png [--tags build/TAGS.bin]
            [--size WxH] [--backface-cull] [--terrain] [--around N] [--walk]
            [--texture-cap N] [--alpha-tested-cap N] [--reference-textures]
-           [--scene-memory MIB] [--path X,Y;X,Y;... [--start-pose]]
+           [--scene-memory MIB] [--path X,Y;X,Y;... [--start-pose]] [--no-actors]
       One offscreen frame, no window. --tags also writes the per-pixel instance
       tags (u32 little-endian, u32::MAX = background). With --walk the walking
       world is built as in the window, the walker is dropped with its eye at
@@ -90,6 +94,8 @@ pub struct Scene {
     pub textures: Textures,
     /// Credits the loaded scene may keep, in bytes (`--scene-memory`).
     pub scene_memory: u64,
+    /// Draw the placed actors (default; `--no-actors` turns it off).
+    pub actors: bool,
 }
 
 /// Default of `--scene-memory`: a viewer bound, not a claim about the game.
@@ -301,6 +307,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
     let mut path = None;
     let mut no_stream = false;
     let mut start_pose = false;
+    let mut actors = true;
     let mut debug = WindowDebug::default();
     let mut rest = args[3..].iter();
     while let Some(arg) = rest.next() {
@@ -329,6 +336,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             "--path" => path = Some(waypoints(value()?)?),
             "--no-stream" => no_stream = true,
             "--start-pose" => start_pose = true,
+            "--no-actors" => actors = false,
             "--frame-log" => debug.frame_log = Some(value()?.clone()),
             "--script-path" => debug.path = Some(waypoints(value()?)?),
             "--script-shots" => debug.shots = Some(value()?.clone()),
@@ -364,6 +372,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
         around,
         textures,
         scene_memory: memory,
+        actors,
     };
     let grid_moves = walk && scene.terrain && scene.around > 0;
     if debug.shots.is_some() && debug.path.is_none() {
@@ -451,6 +460,21 @@ mod tests {
         assert_eq!(out, "build/view/a.png");
         assert_eq!(tags.as_deref(), Some("build/view/a.bin"));
         assert!(!walk);
+        assert!(scene.actors, "placed actors are drawn by default");
+    }
+
+    #[test]
+    fn no_actors_turns_the_actors_off_in_both_modes() {
+        for line in [
+            "m d C --eye 1,2,3 --look 4,5,6 --no-actors",
+            "m d C --headless --eye 1,2,3 --look 4,5,6 --out a.png --no-actors",
+        ] {
+            let scene = match parse(&args(line)).unwrap() {
+                Command::Window { scene, .. } | Command::Headless { scene, .. } => scene,
+                c => panic!("{c:?}"),
+            };
+            assert!(!scene.actors, "{line}");
+        }
     }
 
     #[test]
@@ -471,6 +495,7 @@ mod tests {
                     around: 0,
                     textures: DEFAULT_TEXTURES,
                     scene_memory: 2048 << 20,
+                    actors: true,
                 },
                 fly: DEFAULT_FLY,
                 walk: false,

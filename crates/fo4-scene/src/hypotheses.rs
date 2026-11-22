@@ -48,6 +48,14 @@ pub const LAND_VERTEX_COLORS: &str = "land_vclr_multiply_v1";
 /// Optional ground texture rules, applied only when accepted at the level.
 pub const LTEX_MATERIAL: &str = "ltex_texture_set_material_diffuse_v1";
 pub const LAND_DEFAULT_NAMED: &str = "land_default_texture_world_named_v1";
+/// Placed actors (`crate::actor`, `spec/actor.md`).
+pub const ACTOR_PLACEMENT: &str = "achr_placement_as_refr_v1";
+pub const ACTOR_CANDIDATES: &str = "npc_appearance_candidates_agree_v1";
+pub const ACTOR_OUTFIT: &str = "npc_default_outfit_worn_v1";
+pub const ACTOR_SECTION: &str = "actor_acbs_bit0_second_section_v1";
+pub const ACTOR_ADDONS: &str = "armo_race_addons_drawn_v1";
+pub const ACTOR_SLOTS: &str = "actor_worn_slots_hide_skin_v1";
+pub const ACTOR_SKINNING: &str = "actor_skin_linear_blend_v1";
 /// A rule's standing in `spec/hypotheses.tsv`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Status {
@@ -107,7 +115,19 @@ pub fn covering(error: &Error) -> Option<&'static str> {
     } else if error.code == "UnverifiedEulerRotation" {
         Some(ROTATION)
     } else {
-        None
+        actor_rule(&error.code)
+    }
+}
+fn actor_rule(code: &str) -> Option<&'static str> {
+    match code {
+        "UnverifiedActorPlacement" => Some(ACTOR_PLACEMENT),
+        "UnverifiedActorCandidates" => Some(ACTOR_CANDIDATES),
+        "UnverifiedActorOutfit" => Some(ACTOR_OUTFIT),
+        "UnverifiedActorSection" => Some(ACTOR_SECTION),
+        "UnverifiedActorAddons" => Some(ACTOR_ADDONS),
+        "UnverifiedActorSkinSlots" => Some(ACTOR_SLOTS),
+        "UnverifiedActorSkinning" => Some(ACTOR_SKINNING),
+        _ => None,
     }
 }
 pub fn classify(errors: &[Error], outside: bool, b: &Budget) -> Result<State> {

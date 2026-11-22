@@ -68,6 +68,9 @@ fn change(
                     r.shared_assets,
                     mib(r.credits),
                 );
+                if let Some(a) = &r.actors {
+                    println!("    {a}");
+                }
                 out.loaded.push(grid);
                 out.worker += r.seconds;
             }
@@ -277,6 +280,7 @@ pub fn headless(
         },
         policy: Policy::around(s.around),
         scene_memory: s.scene_memory,
+        actors: s.actors,
     };
     let (mut streamer, start) = Streamer::new(&sources, &s.cell, options)?;
     println!(

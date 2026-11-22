@@ -3,6 +3,7 @@
 mod blocks;
 mod collision;
 mod geometry;
+pub mod skin;
 pub use blocks::{Data, Field, Value};
 pub use collision::{Collision, CollisionObject, Owner, System, SystemKind};
 use fo4_core::{add, limit, mul, range, Budget, Cursor, Error, Game, Limits, Result, SliceSource};

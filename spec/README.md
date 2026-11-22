@@ -6,6 +6,7 @@ Measurement datasets and photographs of the game are not distributed.
 
 | File | Scope |
 | --- | --- |
+| [actor.md](actor.md) | Placed actors: ACHR, NPC_, RACE, OTFT, ARMO, ARMA and leveled-list layouts measured on the winning records, the chain from a placed actor to a skeleton and addon models, the skeleton's rest pose and skinning, their checks and the counts of drawn and left-out actors. |
 | [ba2.md](ba2.md) | BA2 headers, entry/chunk tables, version gates, codecs and DDS reconstruction. |
 | [bsa.md](bsa.md) | Bounded BSA headers, folders, filenames, compression and version limits. |
 | [citation-roots.md](citation-roots.md) | Which path roots are established for each citation type and which remain hypotheses. |
@@ -113,3 +114,10 @@ the registry.
 | `walk_speed_run_v1` | pending | Same as the walk speed, running. |
 | `walk_no_air_control_v1` | pending | Walk off a high ledge holding the opposite direction in the air; compare landing points. |
 | `walk_triangles_block_both_sides_v1` | pending | Stand on, under and walk into single-plane mesh surfaces of both windings from each side. |
+| `achr_placement_as_refr_v1` | pending | Two copies of one actor base with XSCL 1 and 2 and one with a changed NAM6: compare getpos and head heights; only XSCL may change the size. |
+| `npc_appearance_candidates_agree_v1` | pending | Toggle each template bit of an actor whose race differs from its template's; place a leveled actor list whose entries differ only in skin and check one entry appears. |
+| `npc_default_outfit_worn_v1` | pending | An actor with a DOFT outfit of one ARMO and another SOFT outfit, photographed standing: the DOFT armour must be worn. |
+| `actor_acbs_bit0_second_section_v1` | pending | Two actors of one race and outfit differing only in ACBS bit 0: the one with the bit set must show the MOD3 models. |
+| `armo_race_addons_drawn_v1` | pending | An ARMO with two addons for the actor's race, each model replaced in turn by an overlay plugin: both must show. |
+| `actor_worn_slots_hide_skin_v1` | pending | A body armour worn, then its BOD2 bits cleared by an overlay plugin: the skin body must appear only in the second. |
+| `actor_skin_linear_blend_v1` | pending | A posed actor photographed against a render of the same pose from bone transforms read in game; another vertex blend shows at bent joints. |

@@ -1,0 +1,204 @@
+# Placed actors standing in their rest pose
+
+First step towards animated actors: a placed actor (ACHR) is followed to a
+skeleton and to the models it wears, and drawn standing in the skeleton's
+rest pose, skinned once on the CPU. No animation is read.
+
+Every layout below was established by measurement on the winning records of
+one installation (base game and six expansions, build declared 1.10.163),
+with the census method of [plugin.md](plugin.md) and
+[record-layouts.md](record-layouts.md): sizes, offsets, value distributions
+and the share of four-byte values that resolve to a winning record of the
+expected type. No format documentation, schema, editor or third-party reader
+was consulted for this step; record and field names are the four-character
+signatures stored in the data. Which records the game uses for an actor's
+look is behaviour, and each such step relies on a pending rule of
+[hypotheses.tsv](hypotheses.tsv); an actor whose look the data does not
+settle is left out with its reasons.
+
+Measurement tools (examples of `fo4-unpack`, outputs kept outside the
+repository): `record_census` (subrecord sizes and FormID resolution per
+record type), `record_dump`, `actor_census` (the tables below),
+`skin_census` (skinned NIFs), `nif_probe`, `actor_check` (rest-pose checks of
+one cell) and `hkx_census` (animation survey for the next step).
+
+## Record layouts
+
+Counts are over winning, not deleted records.
+
+| Record | Field | Layout | Measurement |
+| --- | --- | --- | --- |
+| ACHR | NAME | FormID | 4 bytes and resolves to an NPC_ in all 10,391 |
+| ACHR | DATA | six f32: position, rotation | 24 bytes in all 10,391; 5,183 of 5,678 exterior placements lie in their cell's XCLC grid square of 4,096 units; all 31,173 angles within 2 pi |
+| ACHR | XSCL | f32 | 4 bytes in all 32 |
+| NPC_ | ACBS | u32 at 0 (flags), u16 at 14 (template flags); other bytes open | 20 bytes in all 4,363 |
+| NPC_ | RNAM | FormID of a RACE | 4,363 of 4,363 |
+| NPC_ | TPLT | FormID of an NPC_ or LVLN | 3,402 (2,668 NPC_, 732 LVLN, 2 unresolved) |
+| NPC_ | TPTA | 13 FormIDs (NPC_ or LVLN), zero for none | 52 bytes in all 3,281 |
+| NPC_ | WNAM | FormID of an ARMO | 1,833 of 1,833 |
+| NPC_ | DOFT | FormID of an OTFT | 2,897 of 2,897 |
+| NPC_ | PNAM (repeated) | FormID of an HDPT | 23,252 in 2,153 records |
+| RACE | WNAM | FormID of an ARMO | 104 of 104 |
+| RACE | ANAM | NUL-terminated `.nif` path, one after MNAM and one after FNAM | 216 in 109 races: MNAM then FNAM in 107, MNAM only in 2 |
+| RACE | HEAD (repeated) | FormID of an HDPT | 141 in 16 races |
+| OTFT | INAM | FormIDs (ARMO or LVLI) | 4n bytes in all 477; 902 values, 607 ARMO and 295 LVLI |
+| ARMO | INDX, MODL pairs | u16, then a FormID of an ARMA | INDX then MODL in all 1,019; 1,387 MODL, all ARMA |
+| ARMO | RNAM | FormID of a RACE | 1,019 of 1,019 |
+| ARMO, ARMA | BOD2 | u32 word of bits (first four bytes) | 4 bytes in every one |
+| ARMA | RNAM | FormID of a RACE | 1,062 of 1,062 |
+| ARMA | MODL (repeated) | FormID of a RACE | 2,001 in 681 records |
+| ARMA | MOD2, MOD3, MOD4, MOD5 | NUL-terminated `.nif` path | 1,053, 821, 332, 310 |
+| LVLN, LVLI | LVLO | u16 at 0, FormID at 4; bytes 2, 3 and 8 to 11 open | 12 bytes in all; LVLN entries resolve to 1,836 NPC_ and 119 LVLN (1 unresolved) |
+| LVLN, LVLI | LLCT | u8 count of LVLO | equal in 375 of 375 LVLN and 2,768 of 2,768 LVLI |
+
+Further facts used by the rules:
+
+- **Template flags.** In all 3,281 NPC_ with TPTA, bit k of ACBS u16 at 14
+  is set exactly when TPTA slot k is not zero, for all 16 bits (bits 6, 13,
+  14 and 15 are never set). 27,160 of 29,298 non-zero slots equal TPLT.
+  Which bit governs which property is not established: in templated records
+  the own fields are present either way.
+- **ACBS bit 0.** Among the 197 untemplated NPC_ whose VTCK is one of the two
+  distinct VTYP of their race's VTCK (8 bytes, two FormIDs), bit 0 is set for
+  25 of 26 using the second and for none of 171 using the first.
+- **Sections.** The MNAM- and FNAM-section paths of RACE differ by one word
+  in the NAM1 group's egt paths of 98 races; the second VTYP's editor ID of
+  20 races adds the same word to the first; of the 646 ARMA whose MOD2 and
+  MOD3 differ, 607 have an `f` in MOD3's differing part and none in MOD2's
+  (3 the reverse). 36 races name two different skeletons; in them both MOD2
+  and MOD3 models fit the MNAM-section skeleton (229 and 143 skinned shapes
+  with every bone found) and not the FNAM one (14 and 9).
+- **Addons per armour.** For the ARMO's own RNAM race, 818 ARMO have one
+  serving ARMA (RNAM or MODL races), 199 have two to sixteen, 2 none. 1,094
+  of 1,387 ARMA BOD2 words have no bit outside their ARMO's word.
+
+Open, kept raw and named in each typed view's `unread`: the other ACBS
+bytes, NPC_ NAM4 and NAM6 (f32 near 1) and RACE DATA (200 bytes), SOFT (an
+OTFT, 24 NPC_), head parts and their models, LVLD, LVLM and LVLF (one byte
+each; LVLD 0 in 366 LVLN and 100 in 9), INDX values, MOD4 and MOD5, RACE
+GNAM (a BPTD), ACHR XRGD (1,423 records).
+
+Reader: `fo4_plugin::actor` (`Achr`, `Npc`, `Race`, `Otft`, `Armo`, `Arma`,
+`Leveled`), each decoding one record with its plugin's FormID context;
+wrong sizes, duplicate singletons, an ANAM outside a section and an MODL
+without INDX are named errors.
+
+## From a placed actor to what is drawn
+
+`fo4_scene::actor::resolve` takes the ACHR children of a scene's cells
+(placed and temporary groups; initially disabled and distant children are
+counted, not drawn), in plugin and object-ID order, and for each:
+
+1. **Look.** From the NPC_ (NAME) it gathers, recursively through templates
+   (the slots of the set template bits, or TPLT without TPTA) and leveled
+   lists (every LVLO entry of an LVLN whose LVLD, LVLM and LVLF are zero),
+   every candidate value of race, ACBS bit 0, skin (WNAM, else the race's
+   WNAM) and outfit (DOFT). A property with more than one candidate leaves
+   the actor out (`npc_appearance_candidates_agree_v1`).
+2. **Skeleton.** The race's ANAM of the section that ACBS bit 0 selects
+   (`actor_acbs_bit0_second_section_v1`).
+3. **Worn armours.** The skin, then the outfit's ARMO entries; a leveled
+   item list in an outfit counts only when every entry gives one ARMO
+   (`npc_default_outfit_worn_v1`). An outfit that does not resolve leaves
+   the actor out, so no bare body is drawn for it.
+4. **Addons.** Every ARMA of each worn ARMO whose races include the actor's
+   (`armo_race_addons_drawn_v1`), with MOD2 or MOD3 by section; a skin addon
+   whose BOD2 shares a bit with a worn outfit armour's BOD2 is hidden
+   (`actor_worn_slots_hide_skin_v1`). An addon without the section's model
+   leaves the actor out.
+5. **Models.** Paths resolve as record models (`Citation::RecordModel`) and
+   load into the loader's asset graph. The blockers of the models' closures
+   count as for placed references, except those that skinning reads
+   (`UnsupportedSkinning` and the `BSSkin::` blocks).
+6. **Placement.** ACHR DATA and XSCL as REFR DATA and XSCL; no NPC_ or RACE
+   size applies (`achr_placement_as_refr_v1`).
+
+Each actor carries report lines (`notes`): what was hidden or not read, such
+as `head: not read (10 head parts)`, `outfit: none declared`, or why it is
+left out. Head parts are never drawn by this step.
+
+## Rest pose and skinning
+
+Skinned shapes, their skin blocks and per-vertex weights are in
+[nif.md](nif.md) (Skinned shapes). `fo4_scene::actor::pose`:
+
+- **Node rotations act on column vectors.** A node maps a child point p to
+  `t + s * R * p`, R being its nine stored words as three rows. Over the
+  addon models measured against their race skeletons (MOD2 against the
+  MNAM-section skeleton), the models' own bone nodes, which sit flat under
+  their root, equal the skeleton's composed world translations within 0.01
+  units for 111,574 of 118,050 bones under this reading and for 4,217 under
+  the static renderer's reading (`fo4_scene::transform::Transform`, which
+  applies the rows to row vectors). The static renderer is unchanged.
+- **Skinning.** Vertex position = sum over its non-zero weights of weight x
+  (bone's world transform in the pose) x (bone's stored skin-to-bone
+  transform) x stored position (`actor_skin_linear_blend_v1`); a vertex
+  whose four weights are zero fails its shape.
+- **Bind pose check.** With each model's own bone nodes as the pose, the
+  composite transform of every bone of a shape is one translation shared
+  within 0.01 units by all its bones for 4,585 of the 5,081 shapes whose
+  bones are all in the skeleton (174 more within 0.1, 2 spread, 320 rotated
+  by more than 0.001). So the blend of the bind pose moves the stored
+  vertices rigidly, by that shared translation: (0, -0.88, 120.86) for most
+  humanoid addons, zero for most others. The rest pose is the skeleton's: it
+  moves a vertex from its bind position by less than 0.1 for 4,105 of those
+  shapes and by 10 or more for 287.
+- **Draw.** `fo4_render::draw::build_with_actors` draws each skinned shape of
+  each part at the actor's placement, after the placed references (instance
+  tags continue after theirs). Skinned meshes are kept per model, shape and
+  skeleton. Shapes without a skin are counted (`actor_rigid_shapes`), not
+  drawn. An actor not drawable at the build's level is an omission with its
+  reasons. `fo4_render::draw::build` is unchanged.
+
+Drawing the rest pose is this step's choice, not a claim that the game
+shows it.
+
+## Results
+
+**Test cell and its radius-1 neighbours** (the exterior test cell of the README's measurements, `--around 1`): 11
+placed actors (3 more initially disabled, none distant), 10 creatures and 1
+humanoid. 1 drawn (a creature with its own skin model). Left out: 4 whose
+leveled list gives 2 races and 3 skins, 5 whose leveled list gives 4 skins,
+1 humanoid whose template chain gives 2 outfits (so not drawn bare). Checks
+of the drawn one (three skinned shapes, 51 bones): bind composites shared
+within 0.015 units, rotation within 7e-4; the rest pose moves no vertex more
+than 0.025 from its bind position; its lowest vertex is 2.21 below the
+placement and 30.89 above the collision found straight below it (cell
+collision and terrain); no vertices of two of its shapes coincide within
+0.05, so it has no seam to check.
+
+**An interior with clothed humanoids** (one of the interiors with the most drawable actors of two or more parts): 23 placed, 10
+drawn (body suit and hands, heads not read); 13 left out by model blockers
+(missing texture, cloth data). Hands against suit: 202 vertex pairs within
+0.035 in the bind pose are within 0.060 after posing; the lowest vertex is
+0.36 below the placement, at the floor.
+
+**Every placed actor of the load order** (`actor_census`, A1): 9,341 placed
+(1,050 initially disabled, 3 deleted, none distant). 399 resolve and are
+drawable under hypotheses; 205 resolve but their models are blocked
+(animation controllers 108, unread NIF blocks 92, textures 10); 8,737 are
+left out: leveled lists whose LVLD, LVLM or LVLF byte is not zero 4,962,
+leveled or template candidates that disagree 3,231, outfits that do not
+resolve 445, an addon without the section's model 79, no skin 19, an armour
+without an addon for the race 1. Of all placed actors, 432 note head parts
+not read and 349 a skin addon hidden by worn armour slots.
+
+**Viewer, radius 1** (`--walk --terrain --around 1` at the test cell,
+headless, the viewer's build): load 5.93 s without actors and 5.99 s with
+them (actor resolution and model reads 0.03 s; the rest is drawing); scene
+credits 476.2 and 483.3 MiB; peak resident memory 1,309.3 and 1,323.7 MB.
+With `--no-actors` the headless frames and tags are byte-identical to those
+of the commit before (an interior, the test cell alone, `--terrain --around
+1`, `--walk --terrain --around 2` and a `--path` walk), against a viewer
+built from that commit in the same directory: one built elsewhere breaks
+coplanar depth ties differently, so it differs in a few pixels on its own.
+
+## Left as found
+
+- The static renderer composes rotated NIF nodes with the other reading of
+  the rotation words (above); for nested rotated nodes of static models that
+  reading is contradicted by these measurements. Changing it would change
+  static frames and stays with `nif_matrix_runtime_row_bridge_v1`.
+- Creature models carry extra skinned shapes that the rest pose draws, for
+  example the drawn creature's two shapes named as caps; whether the game
+  draws them in this state is not established.

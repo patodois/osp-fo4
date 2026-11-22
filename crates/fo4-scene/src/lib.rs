@@ -1,5 +1,6 @@
 #![forbid(unsafe_code)]
 //! Read-only CELL dependency closure, in Bethesda coordinates. No renderer or runtime.
+pub mod actor;
 mod assets;
 pub mod bounds;
 pub mod camera;

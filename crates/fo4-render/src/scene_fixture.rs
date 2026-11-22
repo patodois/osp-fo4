@@ -656,3 +656,279 @@ fn block_textures_validate_their_level_sizes() {
         "RenderTextureIndex"
     );
 }
+
+/// A textured skinned model: one bone "Bone" bound at z 10, and a
+/// skeleton whose rest pose puts the bone at `rest_z`.
+fn skinned_files(rest_z: f32) -> (Vec<u8>, Vec<u8>) {
+    fn av(name: u32, t: [f32; 3]) -> Vec<u8> {
+        let mut v = Vec::new();
+        for x in [name, 0, u32::MAX, 0] {
+            v.extend(x.to_le_bytes());
+        }
+        for f in [t[0], t[1], t[2], 1., 0., 0., 0., 1., 0., 0., 0., 1., 1.] {
+            v.extend(f.to_le_bytes());
+        }
+        v.extend(u32::MAX.to_le_bytes());
+        v
+    }
+    fn file(blocks: &[(&str, Vec<u8>)], strings: &[&[u8]], root: u32) -> Vec<u8> {
+        let mut v = b"Gamebryo File Format, Version 20.2.0.7\n".to_vec();
+        v.extend(0x14020007u32.to_le_bytes());
+        v.push(1);
+        for n in [12u32, blocks.len() as u32, 130] {
+            v.extend(n.to_le_bytes());
+        }
+        v.extend([0; 4]);
+        v.extend((blocks.len() as u16).to_le_bytes());
+        for (name, _) in blocks {
+            v.extend((name.len() as u32).to_le_bytes());
+            v.extend(name.as_bytes());
+        }
+        for i in 0..blocks.len() as u16 {
+            v.extend(i.to_le_bytes());
+        }
+        for (_, b) in blocks {
+            v.extend((b.len() as u32).to_le_bytes());
+        }
+        v.extend((strings.len() as u32).to_le_bytes());
+        v.extend(8u32.to_le_bytes());
+        for s in strings {
+            v.extend((s.len() as u32).to_le_bytes());
+            v.extend(*s);
+        }
+        v.extend(0u32.to_le_bytes());
+        for (_, b) in blocks {
+            v.extend(b);
+        }
+        v.extend(1u32.to_le_bytes());
+        v.extend(root.to_le_bytes());
+        v
+    }
+    let mut mesh = av(u32::MAX, [0.; 3]);
+    for f in [0f32, 0., 0., 1.] {
+        mesh.extend(f.to_le_bytes());
+    }
+    for n in [4u32, 1, u32::MAX] {
+        mesh.extend(n.to_le_bytes());
+    }
+    // Position, UV and skin: stride 24 bytes, UV at 8, skin at 12.
+    mesh.extend(((0x43u64 << 44) | (3 << 28) | (2 << 8) | 6).to_le_bytes());
+    mesh.extend(1u32.to_le_bytes());
+    mesh.extend(3u16.to_le_bytes());
+    mesh.extend((3u32 * 24 + 6).to_le_bytes());
+    // Positions (1,0,10), (1,1,10), (1,0,11) as binary16, UV zero, one bone.
+    for xyz in [
+        [0x3c00u16, 0, 0x4900],
+        [0x3c00, 0x3c00, 0x4900],
+        [0x3c00, 0, 0x4980],
+    ] {
+        for n in xyz {
+            mesh.extend(n.to_le_bytes());
+        }
+        mesh.extend([0; 2]);
+        mesh.extend([0; 4]);
+        for w in [0x3c00u16, 0, 0, 0] {
+            mesh.extend(w.to_le_bytes());
+        }
+        mesh.extend([0; 4]);
+    }
+    for i in [0u16, 1, 2] {
+        mesh.extend(i.to_le_bytes());
+    }
+    let mut shader = Vec::new();
+    for n in [0u32, u32::MAX, 0, u32::MAX, 0, 0] {
+        shader.extend(n.to_le_bytes());
+    }
+    shader.extend([0; 16]);
+    shader.extend(2i32.to_le_bytes());
+    shader.extend([0; 16]);
+    shader.extend(u32::MAX.to_le_bytes());
+    shader.extend(0u32.to_le_bytes());
+    shader.extend([0; 68]);
+    let diffuse = b"textures/a.dds";
+    let mut texture = 1u32.to_le_bytes().to_vec();
+    texture.extend((diffuse.len() as u32).to_le_bytes());
+    texture.extend(diffuse);
+    let mut root = av(1, [0.; 3]);
+    root.extend(2u32.to_le_bytes());
+    root.extend(0u32.to_le_bytes());
+    root.extend(5u32.to_le_bytes());
+    let mut instance = Vec::new();
+    for n in [3u32, 6, 1, 5, 0] {
+        instance.extend(n.to_le_bytes());
+    }
+    let mut data = 1u32.to_le_bytes().to_vec();
+    for f in [
+        0f32, 0., 0., 9., 1., 0., 0., 0., 1., 0., 0., 0., 1., 0., 0., -10., 1.,
+    ] {
+        data.extend(f.to_le_bytes());
+    }
+    let mut bone = av(0, [0., 0., 10.]);
+    bone.extend(0u32.to_le_bytes());
+    let model = file(
+        &[
+            ("BSTriShape", mesh),
+            ("BSLightingShaderProperty", shader),
+            ("BSShaderTextureSet", texture),
+            ("NiNode", root),
+            ("BSSkin::Instance", instance),
+            ("NiNode", bone),
+            ("BSSkin::BoneData", data),
+        ],
+        &[b"Bone", b"Root"],
+        3,
+    );
+    let mut skeleton_root = av(1, [0.; 3]);
+    skeleton_root.extend(1u32.to_le_bytes());
+    skeleton_root.extend(1u32.to_le_bytes());
+    let mut skeleton_bone = av(0, [0., 0., rest_z]);
+    skeleton_bone.extend(0u32.to_le_bytes());
+    let skeleton = file(
+        &[("NiNode", skeleton_root), ("NiNode", skeleton_bone)],
+        &[b"Bone", b"Root"],
+        0,
+    );
+    (model, skeleton)
+}
+#[test]
+fn a_placed_actor_is_drawn_skinned_in_its_skeleton_rest_pose_after_the_references() {
+    let temp = TestDir::new("render-actor");
+    let root = temp.join("Data");
+    std::fs::create_dir_all(root.join("meshes/actors")).unwrap();
+    std::fs::create_dir_all(root.join("textures")).unwrap();
+    let (model, skeleton) = skinned_files(12.);
+    std::fs::write(root.join("meshes/actors/body.nif"), model).unwrap();
+    std::fs::write(root.join("meshes/actors/skel.nif"), skeleton).unwrap();
+    std::fs::write(root.join("textures/a.dds"), dds()).unwrap();
+    let id = |v: u32| v.to_le_bytes().to_vec();
+    let mut placement = Vec::new();
+    for f in [100f32, 200., 300., 0., 0., 0.] {
+        placement.extend(f.to_le_bytes());
+    }
+    let achr = [sub(b"NAME", &id(0x803)), sub(b"DATA", &placement)].concat();
+    let npc = [
+        sub(b"ACBS", &[0; 20]),
+        sub(b"RNAM", &id(0x810)),
+        sub(b"WNAM", &id(0x820)),
+    ]
+    .concat();
+    let race = [
+        sub(b"MNAM", &[]),
+        sub(b"ANAM", b"actors\\skel.nif\0"),
+        sub(b"FNAM", &[]),
+        sub(b"ANAM", b"actors\\skel.nif\0"),
+    ]
+    .concat();
+    let armo = [
+        sub(b"RNAM", &id(0x810)),
+        sub(b"INDX", &[0, 0]),
+        sub(b"MODL", &id(0x821)),
+    ]
+    .concat();
+    let arma = [
+        sub(b"RNAM", &id(0x810)),
+        sub(b"MOD2", b"actors\\body.nif\0"),
+    ]
+    .concat();
+    let mut cell = sub(b"EDID", b"SyntheticActorCell\0");
+    cell.extend(sub(b"DATA", &1u16.to_le_bytes()));
+    let body = [
+        rec(b"NPC_", 0x803, 0, &npc),
+        rec(b"RACE", 0x810, 0, &race),
+        rec(b"ARMO", 0x820, 0, &armo),
+        rec(b"ARMA", 0x821, 0, &arma),
+        group(
+            2,
+            0,
+            &[
+                rec(b"CELL", 0x800, 0, &cell),
+                group(6, 0x800, &group(9, 0x800, &rec(b"ACHR", 0x804, 0, &achr))),
+            ]
+            .concat(),
+        ),
+    ]
+    .concat();
+    let mut hedr = 0.95f32.to_le_bytes().to_vec();
+    hedr.extend([0; 8]);
+    let plugin = [rec(b"TES4", 0, 1, &sub(b"HEDR", &hedr)), body].concat();
+    std::fs::write(root.join("base.esm"), plugin).unwrap();
+    let m = Manifest {
+        root,
+        game: Game::Fallout4,
+        archive_invalidation: None,
+        language: "english".into(),
+        plugins: vec![PluginSpec {
+            name: "base.esm".into(),
+            path: "base.esm".into(),
+        }],
+        mounts: vec![Mount::Loose {
+            plugin: None,
+            base: None,
+            files: vec![
+                "meshes/actors/body.nif".into(),
+                "meshes/actors/skel.nif".into(),
+                "textures/a.dds".into(),
+            ],
+        }],
+        required_masters: vec![],
+        excluded: vec![],
+        limits: Limits::default(),
+        build: Some("synthetic".into()),
+    };
+    let b = Budget::new(64 << 20);
+    let store = fo4_plugin::typed::Store::open(&m, &b).unwrap();
+    let vfs = fo4_vfs::Vfs::mount(&m, &b).unwrap();
+    let mut loader = Loader::new(&store, &vfs, "english", RuleLevel::Hypotheses, &b);
+    let scene = loader.by_editor_id("SyntheticActorCell", &b).unwrap();
+    let actors = fo4_scene::actor::resolve(&scene, &mut loader, &b).unwrap();
+    assert_eq!(actors.actors.len(), 1);
+    assert!(
+        actors.actors[0].plan.is_some(),
+        "{:?}",
+        actors.actors[0].notes
+    );
+    // Without actors the draw list is the one of the scene alone.
+    let plain = build(
+        &scene,
+        &loader,
+        &m.limits,
+        BuildOptions::reference(RuleLevel::Hypotheses),
+        &b,
+    )
+    .unwrap();
+    assert!(plain.instances.is_empty() && plain.list.draws.is_empty() && plain.actors.is_empty());
+    let with = crate::draw::build_with_actors(
+        &scene,
+        &actors,
+        &loader,
+        &m.limits,
+        BuildOptions::reference(RuleLevel::Hypotheses),
+        &b,
+    )
+    .unwrap();
+    assert!(with.omitted.is_empty(), "{:?}", with.omitted);
+    assert_eq!(with.actors, [0]);
+    assert_eq!(with.list.draws.len(), 1);
+    let d = &with.list.draws[0];
+    assert_eq!(d.world.translation, [100., 200., 300.]);
+    // Bound at z 10, rest at 12: every vertex 2 higher than stored.
+    let p: Vec<[f64; 3]> = with.list.meshes[d.mesh]
+        .vertices
+        .iter()
+        .map(|v| v.position)
+        .collect();
+    assert_eq!(p, [[1., 0., 12.], [1., 1., 12.], [1., 0., 13.]]);
+    // At the measured level the pending actor rules leave it out, with a cause.
+    let measured = crate::draw::build_with_actors(
+        &scene,
+        &actors,
+        &loader,
+        &m.limits,
+        BuildOptions::reference(RuleLevel::Measured),
+        &b,
+    )
+    .unwrap();
+    assert!(measured.list.draws.is_empty());
+    assert_eq!(measured.omitted.len(), 1);
+    assert_eq!(measured.omitted[0].causes[0].code, "ActorNotDrawable");
+}

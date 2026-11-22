@@ -21,3 +21,18 @@ interpolator e tipos de dados animados explicitamente nomeados pelo leitor. Tag
 é a string da tabela NIF, não interpretação de sua animação. Plugins: histograma
 de TODOS os tags de envelopes (inclui IDLE/AACT/ANIO/KSSM/STAG se presentes), sem
 novo decoder de campos. Assim tipos adicionais permanecem no denominador.
+
+## Skin and actor data read only in part (by measurement)
+
+- `BSSkin::Instance` word 0 (a node link) and its trailing m entries of 12
+  bytes (m up to 13; [nif.md](nif.md), Skinned shapes) are kept raw.
+- Actor records: the ACBS bytes other than the u32 at 0 and the u16 at 14,
+  NPC_ NAM4/NAM6, SOFT, the head parts (PNAM, RACE HEAD) and everything they
+  lead to, RACE DATA and GNAM, LVLD/LVLM/LVLF, LVLO bytes 2, 3 and 8 to 11,
+  ARMO INDX values, ARMA MOD4/MOD5 and ACHR XRGD are not interpreted
+  ([actor.md](actor.md)).
+- `.hkx` animation files: 16,388 of 17,508 winning files are refused by the
+  container reader at their first section record (their header word at
+  byte 60 is `0x00100015`, against `0x00000015` in the 1,120 accepted
+  behaviour and project files and in every collision payload); no animation
+  object is read.

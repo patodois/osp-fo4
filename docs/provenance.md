@@ -137,3 +137,14 @@ and declared SPDX licenses verified against offline Cargo metadata. This is a
 source and notice inventory, not a claim that unknown format behavior has been
 established. AI assistance was used for implementation and documentation; test
 results, limitations and measurement scope remain explicit.
+
+The actor records (`fo4_plugin::actor`), the skinned-shape blocks
+(`fo4_nif::skin`) and the rest pose (`fo4_scene::actor::pose`) were
+established only by measuring the installed game's winning records and NIF
+files ([spec/actor.md](../spec/actor.md), [spec/nif.md](../spec/nif.md),
+Skinned shapes): candidate layouts were counted over every record or file
+and kept only where they held. No schema, format documentation, editor,
+decompilation or third-party reader of these records, of NIF skinning or of
+Havok animation was opened or searched for at this step; record and field
+names are the stored four-character signatures, and the block and class
+names are the strings stored in the files.

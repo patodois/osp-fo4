@@ -895,3 +895,187 @@ fn collision_payload_is_charged_to_no_extra_budget() {
     assert_eq!(c.systems[0].payload.len(), 4096);
     assert!(b.used() < 4096, "payload is borrowed, not copied");
 }
+
+/// A file with the given strings; block names index them.
+pub(crate) fn nif_with_strings(strings: &[&[u8]], blocks: &[(&str, Vec<u8>)]) -> Vec<u8> {
+    let mut out = b"Gamebryo File Format, Version 20.2.0.7\n".to_vec();
+    u32s(&mut out, &[0x14020007]);
+    out.push(1);
+    u32s(&mut out, &[12, blocks.len() as u32, 130]);
+    out.extend(vec![0; 4]);
+    let mut types: Vec<&str> = Vec::new();
+    for (name, _) in blocks {
+        if !types.contains(name) {
+            types.push(name);
+        }
+    }
+    out.extend((types.len() as u16).to_le_bytes());
+    for t in &types {
+        text(&mut out, t.as_bytes());
+    }
+    for (name, _) in blocks {
+        out.extend((types.iter().position(|t| t == name).unwrap() as u16).to_le_bytes());
+    }
+    for (_, data) in blocks {
+        u32s(&mut out, &[data.len() as u32]);
+    }
+    let longest = strings.iter().map(|s| s.len()).max().unwrap_or(0) as u32;
+    u32s(&mut out, &[strings.len() as u32, longest]);
+    for s in strings {
+        text(&mut out, s);
+    }
+    u32s(&mut out, &[0]);
+    for (_, data) in blocks {
+        out.extend(data);
+    }
+    u32s(&mut out, &[1, 0]);
+    out
+}
+fn av_at(name: u32, translation: [f32; 3]) -> Vec<u8> {
+    let mut v = Vec::new();
+    u32s(&mut v, &[name, 0, u32::MAX, 0]);
+    for f in translation
+        .into_iter()
+        .chain([1., 0., 0., 0., 1., 0., 0., 0., 1., 1.])
+    {
+        u32s(&mut v, &[f32::to_bits(f)]);
+    }
+    u32s(&mut v, &[u32::MAX]);
+    v
+}
+fn half(v: f32) -> u16 {
+    // Exact for the small integers and halves used here.
+    if v == 0. {
+        return 0;
+    }
+    let bits = v.to_bits();
+    let sign = ((bits >> 16) & 0x8000) as u16;
+    let exp = ((bits >> 23) & 0xff) as i32 - 127 + 15;
+    let mant = ((bits >> 13) & 0x3ff) as u16;
+    sign | ((exp as u16) << 10) | mant
+}
+/// Root node 0 with bones 1 and 2 and a skinned shape 3 of three vertices,
+/// its instance 4 (one unread 12-byte entry) and bone data 5.
+pub(crate) fn skinned_file(bone_data_count: u32, instance_extra: usize) -> Vec<u8> {
+    let mut root = av_at(0, [0.; 3]);
+    u32s(&mut root, &[3, 1, 2, 3]);
+    let mut a = av_at(1, [0., 0., 10.]);
+    u32s(&mut a, &[0]);
+    let mut bnode = av_at(2, [0., 0., 20.]);
+    u32s(&mut bnode, &[0]);
+    let mut shape = av_at(3, [0.; 3]);
+    for f in [0., 0., 0., 1.] {
+        u32s(&mut shape, &[f32::to_bits(f)]);
+    }
+    u32s(&mut shape, &[4, u32::MAX, u32::MAX]);
+    let desc = (0x41u64 << 44) | (2 << 28) | 5;
+    shape.extend(desc.to_le_bytes());
+    u32s(&mut shape, &[1]);
+    shape.extend(3u16.to_le_bytes());
+    u32s(&mut shape, &[3 * 20 + 6]);
+    for (p, w, i) in [
+        ([0., 0., 10.], [1., 0.], [0u8, 0]),
+        ([0., 1., 20.], [1., 0.], [1, 0]),
+        ([0., 2., 15.], [0.5, 0.5], [0, 1]),
+    ] {
+        for c in p {
+            shape.extend(half(c).to_le_bytes());
+        }
+        shape.extend(0u16.to_le_bytes());
+        for c in [w[0], w[1], 0., 0.] {
+            shape.extend(half(c).to_le_bytes());
+        }
+        shape.extend([i[0], i[1], 0, 0]);
+    }
+    for t in [0u16, 1, 2] {
+        shape.extend(t.to_le_bytes());
+    }
+    let mut instance = Vec::new();
+    u32s(&mut instance, &[0, 5, 2, 1, 2, 1]);
+    instance.extend(vec![7; 12 + instance_extra]);
+    let mut data = Vec::new();
+    u32s(&mut data, &[bone_data_count]);
+    // Each bone's skin-to-bone transform is the inverse of its node: a
+    // translation by minus the node's.
+    for z in [10f32, 20.] {
+        for f in [
+            0., 0., 0., 5., 1., 0., 0., 0., 1., 0., 0., 0., 1., 0., 0., -z, 1.,
+        ] {
+            u32s(&mut data, &[f32::to_bits(f)]);
+        }
+    }
+    nif_with_strings(
+        &[b"root", b"BoneA", b"BoneB", b"Shape"],
+        &[
+            ("NiNode", root),
+            ("NiNode", a),
+            ("NiNode", bnode),
+            ("BSTriShape", shape),
+            ("BSSkin::Instance", instance),
+            ("BSSkin::BoneData", data),
+        ],
+    )
+}
+#[test]
+fn skin_instance_bone_data_and_vertex_weights_are_read() {
+    let bytes = skinned_file(2, 0);
+    let b = Budget::new(1 << 20);
+    let n = Nif::read(&bytes, "skinned", Game::Fallout4, &Limits::default(), &b).unwrap();
+    let s = skin::shape_skin(&n, 3, "skinned", &Limits::default(), &b)
+        .unwrap()
+        .unwrap();
+    assert_eq!((s.instance, s.bone_data, s.root), (4, 5, 0));
+    assert_eq!(s.bones.iter().map(|x| x.node).collect::<Vec<_>>(), [1, 2]);
+    assert_eq!(s.unread_entries, 1);
+    assert_eq!(s.unread.len(), 12);
+    assert_eq!(s.bones[1].translation, [0., 0., -20.]);
+    assert_eq!(s.bones[0].sphere, [0., 0., 0., 5.]);
+    assert_eq!(s.bones[1].to_bone([0., 1., 20.]), [0., 1., 0.]);
+    let Some(Data::Mesh(m)) = &n.blocks[3].decoded else {
+        panic!()
+    };
+    let v = &m.vertices.as_ref().unwrap()[2];
+    let w = skin::vertex_weights(n.bytes, v).unwrap();
+    assert_eq!(w.weights, [0.5, 0.5, 0., 0.]);
+    assert_eq!(w.bones, [0, 1, 0, 0]);
+    // A shape without a Skin link has no skin.
+    let plain = nif(130, &[("BSTriShape", shape(130))]);
+    let n = parse(&plain, 130, &b).unwrap();
+    assert!(skin::shape_skin(&n, 0, "plain", &Limits::default(), &b)
+        .unwrap()
+        .is_none());
+}
+#[test]
+fn skin_sizes_counts_and_links_are_checked() {
+    let b = Budget::new(1 << 20);
+    for (bytes, code) in [
+        (skinned_file(3, 0), "NifSkinBoneDataSize"),
+        (skinned_file(2, 4), "NifSkinInstanceSize"),
+    ] {
+        let n = Nif::read(&bytes, "bad", Game::Fallout4, &Limits::default(), &b).unwrap();
+        assert_eq!(
+            skin::shape_skin(&n, 3, "bad", &Limits::default(), &b)
+                .unwrap_err()
+                .code,
+            code
+        );
+    }
+    // The instance's data link must reach bone data.
+    let mut bytes = skinned_file(2, 0);
+    let at = bytes
+        .windows(24)
+        .position(|w| {
+            w == [
+                0, 0, 0, 0, 5, 0, 0, 0, 2, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 1, 0, 0, 0,
+            ]
+        })
+        .unwrap();
+    bytes[at + 4] = 1;
+    let n = Nif::read(&bytes, "bad", Game::Fallout4, &Limits::default(), &b).unwrap();
+    assert_eq!(
+        skin::shape_skin(&n, 3, "bad", &Limits::default(), &b)
+            .unwrap_err()
+            .code,
+        "UnsupportedNifSkinBoneData"
+    );
+}

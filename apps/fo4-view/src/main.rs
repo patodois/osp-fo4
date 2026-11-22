@@ -42,6 +42,7 @@ fn load_scene(
         s.around,
         load::build_options(s.textures, s.level),
         s.scene_memory,
+        s.actors,
     )?;
     let options = RenderOptions {
         backface_cull: s.backface_cull,
@@ -152,6 +153,7 @@ fn start_stream(s: &cli::Scene) -> AnyResult<Option<gpu::Stream>> {
         },
         policy: stream::Policy::around(s.around),
         scene_memory: s.scene_memory,
+        actors: s.actors,
     };
     let args = cells::WorkerArgs {
         manifest: s.manifest.clone(),

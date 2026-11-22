@@ -29,6 +29,12 @@ capsule over a cell's collision under provisional, registered rules.
   worldspace's default (a pending rule; grey elsewhere), texture sets that
   hold only a material are drawn with the material's diffuse texture, and
   the texture repeat is a placeholder.
+- **Actors**: placed actors (ACHR) followed to their skeleton and the
+  armour addon models they wear, with record layouts measured on the game's
+  plugins, and drawn by the GPU viewer standing in the skeleton's rest pose,
+  skinned once on the CPU under pending rules; heads are not read, and an
+  actor whose look the data does not settle (leveled lists, unresolved
+  outfits) is left out with its reasons ([actors](spec/actor.md)).
 - **Rendering**: a deterministic unlit CPU rasterizer and tools that compare
   its frames with photographs of the game.
 - **Walking**: a deterministic capsule controller (gravity, ground, walls,
@@ -163,6 +169,19 @@ and 584 to 674 MiB at radius 2, the same at every repeated grid change,
 with 1.54 and 1.79 GB peak resident memory; a crossing took 2 to 3.3 s
 (radius 1) and 3 to 4.5 s (radius 2) of loading. Headless frames without
 `--path` are unchanged.
+
+Placed actors are drawn by default when the level accepts their pending
+rules (`--under-hypotheses`): each one stands at its placement in its
+skeleton's rest pose with the skin and outfit models the data settles,
+skinned once at load, and the viewer prints one line per actor saying what
+was drawn or why not (for example `head: not read`). `--no-actors` leaves
+them out; the frames and tags are then byte-identical to those before
+actors (checked on the headless cases above and at `--around` 1 and 2). At
+the test cell with `--walk --terrain --around 1`, 1 of its 11 placed actors
+is drawn, loading takes 5.99 s instead of 5.93 s, with 7.1 MiB more
+credits and 14 MB more peak resident memory
+([actors](spec/actor.md#results)). The CPU render does not draw actors, so
+compare frames with `--no-actors`.
 
 The comparison prints coverage agreement and colour differences; it defines
 no pass threshold.

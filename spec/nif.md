@@ -114,3 +114,44 @@ A mudança de herança Bethesda é explícita; nenhuma simulação ou pose de pa
 `bhkSystem` (ByteArray: Data Size u32 + bytes) são lidos só no perfil BS 130,
 conforme o mesmo nif.xml. Os bytes do ByteArray não são interpretados. Fatos,
 medidas e perguntas abertas em [collision.md](collision.md).
+
+## Skinned shapes (by measurement)
+
+Read by `fo4_nif::skin` from the raw bytes of the blocks on request; the
+block reader still leaves `BSSkin::Instance` and `BSSkin::BoneData` raw, so
+static scenes read exactly as before. Unlike the rest of this file, no
+schema was consulted: every layout below was established by a census of all
+224,366 winning NIF files of one installation (the 2 refused BS 132 files
+excepted) with `fo4-unpack`'s `skin_census` example. Counts are files,
+shapes, bones or vertices as stated.
+
+- **Skin link.** 23,368 shapes have a non-null Skin link (22,017
+  `BSSubIndexTriShape`, 1,351 `BSTriShape`) and every one reaches a block of
+  type `BSSkin::Instance`; every one of them has vertex attribute 64 (12
+  bytes per vertex); 8 shapes have attribute 64 without a Skin link. The
+  shape's own transform is exactly the identity in 23,367 of them; the
+  drawing refuses the other one (`ActorSkinnedShapeTransform`) rather than
+  guess whether it applies.
+- **`BSSkin::Instance`.** Size 16 + 4n + 12m in all 23,368: word 0 a block
+  link (always a node: the root block 0 in 6,485, another node in 16,883),
+  word 4 a link to a `BSSkin::BoneData` (all), u32 n at 8, n node links (all
+  166,208 reach nodes), then u32 m and m entries of 12 bytes (m from 0 to 13;
+  0 in 6,933 instances). Word 0 and the m entries are not interpreted.
+- **`BSSkin::BoneData`.** Size 4 + 68n in all, with n equal to the
+  instance's n in all. Each bone: 4 f32 (a sphere: centre and radius), 9 f32
+  (three rows), 3 f32 (translation), 1 f32 (scale). The rows are orthonormal
+  within 0.001 for all 166,208 bones and the scale is 1.0 for all.
+- **Bone space.** Of 35,828,078 vertex-bone pairs with a non-zero weight,
+  99.85 % lie inside the bone's sphere when the vertex is mapped by rows x
+  vertex + translation (scale applied), against 35 % and 30 % as stored and
+  with the rows applied to a row vector: the 68 bytes hold the transform
+  from the shape's skin space to the bone's space, with the rows acting on
+  column vectors.
+- **Vertex skin bytes.** Four binary16 weights, then four bytes indexing the
+  instance's bones: the weights sum to 1 within 0.001 for 19,090,505 of
+  19,090,725 vertices (the other 220 are all zero); every non-zero weight's
+  index is below n (35,828,078); 21,457 zero weights have a non-zero index;
+  the weights are non-increasing in 19,089,816 vertices.
+
+How a skeleton's node transforms compose and how these blocks pose a shape
+is in [actor.md](actor.md) (Rest pose and skinning).

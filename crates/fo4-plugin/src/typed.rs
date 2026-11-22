@@ -1162,6 +1162,18 @@ impl Store {
         }
         Ok(Some(record))
     }
+    /// The record type of the winning record `key`.
+    pub fn signature(&self, key: &FormKey) -> Option<[u8; 4]> {
+        self.overrides.winner(key).map(|w| w.signature)
+    }
+    /// The winning record `key` with the index of the plugin it was read
+    /// from (for resolving its FormIDs, as `crate::actor::Context`).
+    pub fn raw_with_plugin(&self, key: &FormKey, b: &Budget) -> Result<Option<(Record, usize)>> {
+        let Some(plugin) = self.overrides.winner(key).map(|w| w.plugin) else {
+            return Ok(None);
+        };
+        Ok(self.raw(key, b)?.map(|r| (r, plugin)))
+    }
     pub fn get<T: Typed>(&self, key: &FormKey, b: &Budget) -> Result<Option<Loaded<T>>> {
         self.load(key, T::SIGNATURE, b, T::decode)
     }

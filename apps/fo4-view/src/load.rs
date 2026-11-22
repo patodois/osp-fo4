@@ -101,6 +101,63 @@ fn scoped<T>(
     Ok(out)
 }
 
+/// One line: how many placed actors the scene has, how many are drawn and
+/// how many are left out.
+pub fn actor_summary(actors: &fo4_scene::actor::Actors, build: &fo4_render::draw::Build) -> String {
+    let omitted: std::collections::BTreeSet<u32> =
+        build.omitted.iter().map(|o| o.instance).collect();
+    let drawn = build.actors.iter().filter(|i| !omitted.contains(i)).count();
+    format!(
+        "actors: {} placed ({} more initially disabled, {} distant), {} drawn, {} left out; {} rigid shapes of drawn models not drawn",
+        actors.actors.len(),
+        actors.disabled,
+        actors.distant,
+        drawn,
+        build.actors.len() - drawn,
+        build.actor_rigid_shapes,
+    )
+}
+/// One line per placed actor: drawn with what, or why not.
+pub fn actor_lines(
+    actors: &fo4_scene::actor::Actors,
+    build: &fo4_render::draw::Build,
+) -> Vec<String> {
+    let mut out = Vec::new();
+    for (a, index) in actors.actors.iter().zip(&build.actors) {
+        let id = format!("{}:{:06x}", a.reference.plugin, a.reference.object_id);
+        let omission = build.omitted.iter().find(|o| o.instance == *index);
+        let notes = if a.notes.is_empty() {
+            String::new()
+        } else {
+            format!("; {}", a.notes.join("; "))
+        };
+        match (omission, &a.plan) {
+            (None, Some(plan)) => out.push(format!(
+                "actor {id} (tag {index}): drawn, section {}, {} parts{notes}",
+                plan.section + 1,
+                plan.parts.len()
+            )),
+            (Some(o), Some(_)) => {
+                let causes: Vec<String> = o
+                    .causes
+                    .iter()
+                    .map(|e| match e.code.as_str() {
+                        "ActorNotDrawable" => format!("{} at this level", e.code),
+                        _ => format!("{} {}", e.code, e.found),
+                    })
+                    .collect();
+                out.push(format!(
+                    "actor {id} (tag {index}): not drawn: {}{notes}",
+                    causes.join(", ")
+                ))
+            }
+            (Some(_), None) => out.push(format!("actor {id} (tag {index}): not drawn{notes}")),
+            (None, None) => out.push(format!("actor {id} (tag {index}): not drawn{notes}")),
+        }
+    }
+    out
+}
+
 #[allow(clippy::too_many_arguments)]
 pub fn cell(
     manifest: &str,
@@ -112,6 +169,7 @@ pub fn cell(
     around: u32,
     options: BuildOptions,
     scene_memory: u64,
+    actors: bool,
 ) -> AnyResult<Loaded> {
     if walk {
         fo4_walk::accept(&walk_rules(), level, fo4_scene::hypotheses::status)?;
@@ -150,7 +208,26 @@ pub fn cell(
     } else {
         None
     };
-    let mut build = fo4_render::draw::build(&scene, &loader, limits, options, &budget)?;
+    let mut build = if actors {
+        // Placed actors, drawn after the placed references (`--no-actors`
+        // leaves them out and the draw list is the one before).
+        let started = std::time::Instant::now();
+        let actors = scoped(&budget, |b| {
+            fo4_scene::actor::resolve(&scene, &mut loader, b)
+        })?;
+        let resolved = started.elapsed().as_secs_f64();
+        let build = fo4_render::draw::build_with_actors(
+            &scene, &actors, &loader, limits, options, &budget,
+        )?;
+        println!("{}", actor_summary(&actors, &build));
+        for line in actor_lines(&actors, &build) {
+            println!("  {line}");
+        }
+        println!("actors resolved and their models read in {resolved:.2} s");
+        build
+    } else {
+        fo4_render::draw::build(&scene, &loader, limits, options, &budget)?
+    };
     // The terrain of the cell and, for walking, of its neighbours. Without
     // --terrain and --walk nothing is loaded and the draw list is unchanged.
     let ground = match (&grid, walk || terrain) {
