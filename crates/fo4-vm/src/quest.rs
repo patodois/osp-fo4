@@ -77,6 +77,11 @@ pub struct QuestInfo {
     /// (`quest_alias_location_ref_v1`; read only when a run turns
     /// [`Quests::location_fills`] on).
     pub location_refs: BTreeMap<u32, Result<FormKey, &'static str>>,
+    /// The same aliases' location, ref type and the references the rows
+    /// of that type name, in row order (repeats kept): what the readings
+    /// after the list's (`quest_alias_location_ref_distinct_v1`,
+    /// `quest_alias_location_ref_placed_v1`) read.
+    pub location_rows: BTreeMap<u32, LocationRows>,
     /// Reference aliases with a unique actor (ALUA): the NPC_ it names
     /// (`quest_alias_unique_actor_ref_v1`; read only when a run gives
     /// [`Quests::unique`]).
@@ -173,7 +178,7 @@ impl QuestInfo {
             .filter(|a| a.kind != fo4_plugin::quest::AliasKind::Location)
             .map(|a| (a.id, a.forced_reference().and_then(|f| f.key.clone())))
             .collect();
-        let location_refs = location_refs(store, &q, b)?;
+        let (location_refs, location_rows) = location_refs(store, &q, b)?;
         let unique_actors = q
             .aliases
             .iter()
@@ -196,6 +201,7 @@ impl QuestInfo {
             objectives: q.objectives.iter().map(|o| o.objective).collect(),
             reference_aliases,
             location_refs,
+            location_rows,
             unique_actors,
             priority: q.general.map(|g| g.priority),
             fragment_script,
@@ -243,15 +249,39 @@ pub fn special_references(
     Ok(Some(out))
 }
 
+/// An alias filled from a forced location by a ref type: the location,
+/// the ref type and the references the special reference rows of that
+/// type name, in row order with repeats.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LocationRows {
+    pub location: FormKey,
+    pub ref_type: FormKey,
+    pub listed: Vec<FormKey>,
+}
+impl LocationRows {
+    /// The distinct references the rows name, in first-row order.
+    pub fn distinct(&self) -> Vec<&FormKey> {
+        let mut out: Vec<&FormKey> = Vec::new();
+        for k in &self.listed {
+            if !out.contains(&k) {
+                out.push(k);
+            }
+        }
+        out
+    }
+}
+
+type LocationFills = (
+    BTreeMap<u32, Result<FormKey, &'static str>>,
+    BTreeMap<u32, LocationRows>,
+);
+
 /// The location fills of a quest's reference aliases
-/// (`quest_alias_location_ref_v1`).
-fn location_refs(
-    store: &Store,
-    q: &Quest,
-    b: &Budget,
-) -> fo4_core::Result<BTreeMap<u32, Result<FormKey, &'static str>>> {
+/// (`quest_alias_location_ref_v1`), and the rows behind them.
+fn location_refs(store: &Store, q: &Quest, b: &Budget) -> fo4_core::Result<LocationFills> {
     use fo4_plugin::quest::{AliasKind, AliasValue};
     let mut out = BTreeMap::new();
+    let mut rows_of = BTreeMap::new();
     for a in q.aliases.iter().filter(|a| a.kind != AliasKind::Location) {
         let Some((l, t)) = a.values.iter().find_map(|v| match v {
             AliasValue::LocationAliasReference { alias, ref_type } => Some((*alias, ref_type)),
@@ -286,6 +316,14 @@ fn location_refs(
             .filter(|(rt, _)| rt.as_ref() == Some(&t))
             .filter_map(|(_, r)| r.as_ref())
             .collect();
+        rows_of.insert(
+            a.id,
+            LocationRows {
+                location: loc.clone(),
+                ref_type: t.clone(),
+                listed: refs.iter().map(|k| (*k).clone()).collect(),
+            },
+        );
         out.insert(
             a.id,
             match refs.as_slice() {
@@ -295,7 +333,97 @@ fn location_refs(
             },
         );
     }
-    Ok(out)
+    Ok((out, rows_of))
+}
+
+/// The placed references tied to a location by their cell, with the
+/// location ref types their own `XLRT` carries
+/// (`quest_alias_location_ref_placed_v1`): every winning placed reference
+/// with an `XLRT` whose cell's `XLCN` names a location, read once when a
+/// run turns the reading on.
+#[derive(Debug, Default)]
+pub struct LocationPlaced {
+    /// Per location (record key): (placed reference, its ref types), in
+    /// placement order.
+    pub tagged: BTreeMap<String, Vec<(FormKey, Vec<FormKey>)>>,
+}
+impl LocationPlaced {
+    /// Reads every winning cell's `XLCN`, then the `XLRT` of the placed
+    /// references of the cells that have one.
+    pub fn read(store: &Store, b: &Budget) -> LocationPlaced {
+        let word = |r: &fo4_plugin::Record, plugin: usize, s: &fo4_plugin::Subrecord, d: &[u8]| {
+            let w = u32::from_le_bytes([d[0], d[1], d[2], d[3]]);
+            store
+                .order()
+                .remap(plugin, w, &r.source.file, s.offset)
+                .ok()
+                .flatten()
+        };
+        let mut location_of: BTreeMap<FormKey, FormKey> = BTreeMap::new();
+        for k in store.cells() {
+            let bb = b.child();
+            let Ok(Some((r, plugin))) = store.raw_with_plugin(&k, &bb) else {
+                continue;
+            };
+            let Some(s) = r.subrecords.iter().find(|s| s.signature == *b"XLCN") else {
+                continue;
+            };
+            let d = r.data(s);
+            if d.len() != 4 {
+                continue;
+            }
+            if let Some(l) = word(&r, plugin, s, d) {
+                location_of.insert(k, l);
+            }
+        }
+        let mut tagged: BTreeMap<String, Vec<(FormKey, Vec<FormKey>)>> = BTreeMap::new();
+        for (o, cell) in store.placement_cells() {
+            if o.deleted {
+                continue;
+            }
+            let Some(l) = location_of.get(&cell) else {
+                continue;
+            };
+            let k = store.overrides().form_key(o.key, store.order());
+            let bb = b.child();
+            let Ok(Some((r, plugin))) = store.raw_with_plugin(&k, &bb) else {
+                continue;
+            };
+            let mut types = Vec::new();
+            for s in r.subrecords.iter().filter(|s| s.signature == *b"XLRT") {
+                for c in r.data(s).as_chunks::<4>().0 {
+                    if let Some(t) = word(&r, plugin, s, c) {
+                        types.push(t);
+                    }
+                }
+            }
+            if !types.is_empty() {
+                tagged
+                    .entry(bind::record_key(l))
+                    .or_default()
+                    .push((k, types));
+            }
+        }
+        LocationPlaced { tagged }
+    }
+    /// The one placed reference of a cell the location's `XLCN` names
+    /// that carries the ref type in its `XLRT`; `Err` when none or several.
+    pub fn fill(&self, location: &FormKey, ref_type: &FormKey) -> Result<FormKey, &'static str> {
+        let found: Vec<&FormKey> = self
+            .tagged
+            .get(&bind::record_key(location))
+            .map(Vec::as_slice)
+            .unwrap_or_default()
+            .iter()
+            .filter(|(_, ts)| ts.contains(ref_type))
+            .map(|(k, _)| k)
+            .collect();
+        match found.as_slice() {
+            [one] => Ok((*one).clone()),
+            [] => Err("no placed reference of the location's cells carries that ref type"),
+            _ => Err("several placed references of the location's cells carry that ref type"),
+        }
+    }
 }
 
 /// Which state quests start from when a run first reads them.
@@ -472,6 +600,20 @@ pub struct Quests {
     /// actor so far, and whether each resolved (the caller adds the rule
     /// when any was).
     pub unique_used: std::cell::RefCell<BTreeMap<(String, u32), bool>>,
+    /// With [`Quests::location_fills`]: rows of the special reference list
+    /// that name the same reference count once
+    /// (`quest_alias_location_ref_distinct_v1`; `quest_run
+    /// --location-refs-distinct`). Off by default.
+    pub location_distinct: bool,
+    /// With [`Quests::location_fills`]: an alias whose location lists no
+    /// row of its ref type holds the one placed reference of the
+    /// location's cells carrying the type
+    /// (`quest_alias_location_ref_placed_v1`; `quest_run
+    /// --alias-location-placed-refs`). `None` by default.
+    pub location_placed: Option<Rc<LocationPlaced>>,
+    /// The rules the location readings after the list's relied on (the
+    /// caller adds them to the run's rules).
+    pub location_used: std::cell::RefCell<BTreeSet<&'static str>>,
 }
 
 /// The placed actors (ACHR) of every actor base in the loaded plugins,
@@ -531,7 +673,7 @@ impl Quests {
     /// unique actor's placed reference (`quest_alias_unique_actor_ref_v1`).
     /// `Ok(None)`: none of them.
     pub fn fill(&self, info: &QuestInfo, id: u32) -> Result<Option<Fill>, &'static str> {
-        let forced = info.fill_of(id, self.location_fills);
+        let forced = self.fill_location(info, id);
         match (&forced, &self.unique, info.unique_actors.get(&id)) {
             (Ok(None), Some(u), Some(base)) => {
                 let f = u.fill(base);
@@ -546,6 +688,40 @@ impl Quests {
 }
 
 impl Quests {
+    /// [`QuestInfo::fill_of`] with the location readings the run turns on
+    /// after the list's: repeated rows naming one reference
+    /// (`quest_alias_location_ref_distinct_v1`), then, where the list has
+    /// no row of the type, the placed references of the location's cells
+    /// (`quest_alias_location_ref_placed_v1`). With both off it is
+    /// [`QuestInfo::fill_of`].
+    pub fn fill_location(
+        &self,
+        info: &QuestInfo,
+        id: u32,
+    ) -> Result<Option<FormKey>, &'static str> {
+        let got = info.fill_of(id, self.location_fills);
+        if got.is_ok() || !self.location_fills {
+            return got;
+        }
+        let Some(rows) = info.location_rows.get(&id) else {
+            return got;
+        };
+        if self.location_distinct && rows.listed.len() > 1 {
+            if let [one] = rows.distinct().as_slice() {
+                self.location_used
+                    .borrow_mut()
+                    .insert(rules::ALIAS_LOCATION_DISTINCT);
+                return Ok(Some((*one).clone()));
+            }
+        }
+        if let (Some(p), true) = (&self.location_placed, rows.listed.is_empty()) {
+            self.location_used
+                .borrow_mut()
+                .insert(rules::ALIAS_LOCATION_PLACED);
+            return p.fill(&rows.location, &rows.ref_type).map(Some);
+        }
+        got
+    }
     fn initial(&self, info: &QuestInfo) -> QuestState {
         match self.scenario {
             Scenario::Isolated => QuestState::default(),
@@ -633,6 +809,14 @@ pub struct CondInputs<'s> {
     pub assume: BTreeMap<u16, f32>,
     /// Conditions an assumption decided.
     pub assumed: std::cell::Cell<u64>,
+    /// Function 1 read from the world model's positions
+    /// (`cond_fn_1_track_distance_v1`; `quest_run --cond-1-distance`). Off
+    /// by default.
+    pub distance: bool,
+    /// The first plugin's id 0x14 as a reference word stands for the player
+    /// (`cond_player_reference_word_v1`; `quest_run --cond-player-word`).
+    /// Off by default.
+    pub player_word: bool,
 }
 
 impl<'a, 's> RunFacts<'a, 's> {
@@ -699,6 +883,70 @@ impl Facts for RunFacts<'_, '_> {
     }
     fn switches(&self) -> &cond::Switches {
         &self.cond.switches
+    }
+    fn distance_on(&self) -> bool {
+        self.cond.distance && self.w.place.on
+    }
+    fn player_word_on(&self) -> bool {
+        self.cond.player_word
+    }
+    /// The alias's holder as [`Facts::alias_reference`] reads it, the
+    /// player included (a unique actor alias of the player's base, or a
+    /// fill a run set to the player).
+    fn alias_party(
+        &mut self,
+        quest: &FormKey,
+        alias: i32,
+    ) -> Result<Option<cond::Party>, &'static str> {
+        let player = self.w.player;
+        let s = self.state(quest)?;
+        if let (Some(Val::Object(o)), Some(p)) = (s.fills.get(&alias), player) {
+            if *o == p {
+                return Ok(Some(cond::Party::Player));
+            }
+        }
+        match self.alias_reference(quest, alias) {
+            Err("the alias holds the player") => Ok(Some(cond::Party::Player)),
+            r => r.map(|k| k.map(cond::Party::Record)),
+        }
+    }
+    /// Function 1 from the world model (`cond_fn_1_track_distance_v1`):
+    /// where [`crate::track::spot`] places both parties at the present
+    /// second, in one space.
+    fn distance(&mut self, a: &cond::Party, b: &cond::Party) -> Result<f32, &'static str> {
+        let (store, max) = (self.data.store, self.data.max_memory);
+        let mut obj = |p: &cond::Party| -> Result<ObjId, &'static str> {
+            match p {
+                cond::Party::Player => Ok(self.w.player("actor")),
+                cond::Party::Record(k) => {
+                    let b = Budget::new(max);
+                    record_object(self.w, store, k, "objectreference", &b)
+                        .map_err(|_| "a reference could not be read")
+                }
+            }
+        };
+        let (oa, ob) = (obj(a)?, obj(b)?);
+        let sa = crate::track::spot(store, max, self.w, Some(&Val::Object(oa)));
+        let sb = crate::track::spot(store, max, self.w, Some(&Val::Object(ob)));
+        match (sa, sb) {
+            (
+                crate::track::Spot::At {
+                    space: s1, pos: p1, ..
+                },
+                crate::track::Spot::At {
+                    space: s2, pos: p2, ..
+                },
+            ) => {
+                if s1 != s2 {
+                    return Err("the two are in different spaces");
+                }
+                let d =
+                    ((p1[0] - p2[0]).powi(2) + (p1[1] - p2[1]).powi(2) + (p1[2] - p2[2]).powi(2))
+                        .sqrt();
+                Ok(d as f32)
+            }
+            (crate::track::Spot::Open(why), _) | (_, crate::track::Spot::Open(why)) => Err(why),
+        }
     }
     fn max_memory(&self) -> u64 {
         self.data.max_memory
@@ -1455,6 +1703,44 @@ impl<'s> QuestHost<'s> {
     }
 }
 
+/// The natives that give an actor's base object.
+pub const BASE_OBJECT_NATIVES: [&str; 3] = [
+    "objectreference.getbaseobject",
+    "actor.getactorbase",
+    "actor.getleveledactorbase",
+];
+
+impl QuestHost<'_> {
+    /// `GetBaseObject`, `GetActorBase` and `GetLeveledActorBase` on the
+    /// player's handle answer the caller's player base
+    /// (`vm_player_base_object_v1`); `ActorBase.GetSex` on that base answers
+    /// the caller's assumed value.
+    fn player_base_native(&mut self, c: &NativeCall, w: &mut World) -> Option<Reply> {
+        let base = w.player_base_object.clone()?;
+        let full = c.full_name();
+        let Some(Val::Object(o)) = &c.receiver else {
+            return None;
+        };
+        let o = *o;
+        if BASE_OBJECT_NATIVES.contains(&full.as_str()) && Some(o) == w.player {
+            self.using(rules::PLAYER_BASE_OBJECT);
+            let b = Budget::new(self.data.max_memory);
+            return record_object(w, self.data.store, &base, "actorbase", &b)
+                .ok()
+                .map(|x| Reply::Value(Val::Object(x)));
+        }
+        if full == "actorbase.getsex"
+            && w.objects[o].key.as_deref() == Some(bind::record_key(&base).as_str())
+        {
+            return w.player_sex.map(|n| {
+                self.using(rules::PLAYER_BASE_OBJECT);
+                Reply::Value(Val::Int(n))
+            });
+        }
+        None
+    }
+}
+
 impl Host for QuestHost<'_> {
     fn call(&mut self, c: &NativeCall, w: &mut World) -> Reply {
         let full = c.full_name();
@@ -1465,6 +1751,25 @@ impl Host for QuestHost<'_> {
                 let (store, max) = (self.data.store, self.data.max_memory);
                 crate::anim::observe_play(store, max, g.as_mut(), c, w);
             }
+        }
+        // The player's base, when the caller names it and turns the reading
+        // on (`vm_player_base_object_v1`), and its sex when the caller
+        // assumes it; off, recorded as before.
+        if let Some(r) = self.player_base_native(c, w) {
+            return r;
+        }
+        // Menu registrations and furniture use, when a caller turned them
+        // on (`crate::menu`, `crate::sit`); off, recorded as before.
+        if let Some(r) = crate::menu::native(c, w) {
+            self.using(rules::MENU_EVENTS);
+            return r;
+        }
+        let sit_reply = crate::sit::native(self.data.store, self.data.max_memory, c, w);
+        for u in std::mem::take(&mut w.sits.used) {
+            self.using(u);
+        }
+        if let Some(r) = sit_reply {
+            return r;
         }
         let anim_reply = crate::anim::native(c, w);
         for u in std::mem::take(&mut w.anims.used) {

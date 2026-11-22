@@ -776,6 +776,7 @@ fn step(h: &mut QuestHost<'_>, w: &mut World, o: ObjId, i: &Rc<SceneInfo>, compl
         }
         Truth::False => {
             percent_marks(h, w, o, i, &phase.completion);
+            distance_marks(h, w, o, i, &phase.completion);
             wait(w, "completion conditions false (waits on the world)".into())
         }
         Truth::Undetermined(why) => wait(
@@ -842,6 +843,72 @@ fn percent_marks(
             let t = r.start + f64::from(v.clamp(0.0, 100.0)) / 100.0 * (d - r.start);
             if t > now && !w.scenes.percent_marks.contains(&(o, t)) {
                 w.scenes.percent_marks.push((o, t));
+            }
+        }
+    }
+}
+
+/// With `cond_fn_1_track_distance_v1`: the first second after now at
+/// which the distance of each function 1 condition of a list reaches its
+/// comparison value on the world model (the player's track and the moves
+/// known now; `crate::track::distance_first_time`), plus a microsecond so
+/// that the comparison holds there; each becomes a mark at which the
+/// scene `o` is offered its completion again (the marks of function 131,
+/// [`Scenes::percent_marks`]).
+fn distance_marks(
+    h: &mut QuestHost<'_>,
+    w: &mut World,
+    o: ObjId,
+    i: &SceneInfo,
+    list: &[Condition],
+) {
+    if !(w.scenes.clock.on && h.cond.distance && w.place.on) {
+        return;
+    }
+    let ctx = Context {
+        order: h.data.store.order(),
+        plugin: i.plugin,
+    };
+    let (store, max) = (h.data.store, h.data.max_memory);
+    let now = w.now[TimerClock::Real as usize];
+    for c in list {
+        let c = &c.ctda;
+        if c.function != cond::DISTANCE {
+            continue;
+        }
+        let fo4_plugin::condition::Comparison::Float(v) = c.comparison() else {
+            continue;
+        };
+        let less = match c.operator() {
+            4 | 5 => true,
+            2 | 3 => false,
+            _ => continue,
+        };
+        let mut used = BTreeSet::new();
+        let parties = {
+            let mut facts = RunFacts::of(h, w, None, i.quest.clone());
+            cond::distance_parties(c, ctx, &i.file, &mut facts, &mut used)
+        };
+        let Ok((a, b)) = parties else { continue };
+        let mut obj = |p: &cond::Party| -> Option<ObjId> {
+            match p {
+                cond::Party::Player => Some(w.player("actor")),
+                cond::Party::Record(k) => {
+                    record_object(w, store, k, "objectreference", &Budget::new(max)).ok()
+                }
+            }
+        };
+        let (Some(oa), Some(ob)) = (obj(&a), obj(&b)) else {
+            continue;
+        };
+        if let Ok(Some(t)) =
+            crate::track::distance_first_time(store, max, w, oa, ob, f64::from(v), less, now)
+        {
+            let t = t + 1e-6;
+            if t > now && !w.scenes.percent_marks.contains(&(o, t)) {
+                w.scenes.percent_marks.push((o, t));
+                w.place
+                    .count("distance conditions	marks at which a scene is offered again");
             }
         }
     }

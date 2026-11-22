@@ -169,7 +169,7 @@ pub const XESP_BIT1: &str = "xesp_flag_bit1_not_presence_v1";
 pub const XESP_PROPAGATES: &str = "xesp_script_change_propagates_v1";
 
 /// Every rule above.
-pub const ALL: [&str; 141] = [
+pub const ALL: [&str; 151] = [
     ARITHMETIC,
     COMPARE,
     NOT_COPY_CAST,
@@ -311,6 +311,16 @@ pub const ALL: [&str; 141] = [
     WORLD_LOAD_GRID,
     COND_FN_131,
     SCENE_CONDITIONS_END,
+    ALIAS_LOCATION_DISTINCT,
+    ALIAS_LOCATION_PLACED,
+    COND_FN_1_TRACK,
+    COND_PLAYER_WORD,
+    EVENT_ACTIVATE_ACTOR,
+    SIT_EVENTS,
+    SIT_ACTIVATE,
+    SIT_IN_USE,
+    MENU_EVENTS,
+    PLAYER_BASE_OBJECT,
 ];
 
 /// The rule an opcode's meaning rests on; `None` for an opcode without a
@@ -557,3 +567,41 @@ pub const COND_FN_131: &str = "cond_fn_131_action_percent_v1";
 /// A scene phase with completion conditions ends as soon as they hold,
 /// its timed actions still running.
 pub const SCENE_CONDITIONS_END: &str = "scene_phase_conditions_end_v1";
+/// Rows of a location's special reference list that name the same
+/// reference count once: an alias filled from the location by a ref type
+/// whose rows all name one reference holds it.
+pub const ALIAS_LOCATION_DISTINCT: &str = "quest_alias_location_ref_distinct_v1";
+/// An alias filled from a forced location by a ref type the location's
+/// list holds no row of holds the one placed reference of the location's
+/// cells that carries the type in its `XLRT`.
+pub const ALIAS_LOCATION_PLACED: &str = "quest_alias_location_ref_placed_v1";
+/// Condition function 1 is the distance between the subject and the
+/// parameter as the world model places them (the track, stored and moved
+/// positions); a scene waiting on it is offered its conditions again when
+/// the distance crosses the value.
+pub const COND_FN_1_TRACK: &str = "cond_fn_1_track_distance_v1";
+/// A condition's reference word naming the first plugin's object id 0x14,
+/// which no plugin defines, stands for the player.
+pub const COND_PLAYER_WORD: &str = "cond_player_reference_word_v1";
+/// The player's activation of a placed actor, as a caller assumes it,
+/// raises `OnActivate` on the actor's scripts, the aliases holding it and
+/// the registered instances, the player the activator; no conversation
+/// starts by it.
+pub const EVENT_ACTIVATE_ACTOR: &str = "vm_event_activate_actor_v1";
+/// `OnSit(furniture)` and `OnGetUp(furniture)` go to the sitter's scripts,
+/// the aliases holding it (the player's aliases for the player) and its
+/// registered instances; `OnExitFurniture(sitter)` to the furniture's.
+pub const SIT_EVENTS: &str = "vm_event_sit_v1";
+/// A script's `Activate(actor, true)` (default processing only) of a
+/// furniture reference makes that actor sit in it at once.
+pub const SIT_ACTIVATE: &str = "vm_furniture_activate_sits_v1";
+/// `IsFurnitureInUse` is true exactly while the run has someone sitting
+/// in the furniture.
+pub const SIT_IN_USE: &str = "vm_furniture_in_use_v1";
+/// `RegisterForMenuOpenCloseEvent` and `RegisterForLooksMenuEvent` keep
+/// their registrations; a menu event the caller assumes is delivered to
+/// the registered instances.
+pub const MENU_EVENTS: &str = "vm_menu_events_v1";
+/// The base-object natives on the player's handle answer the NPC_ the
+/// caller names as the player's base.
+pub const PLAYER_BASE_OBJECT: &str = "vm_player_base_object_v1";

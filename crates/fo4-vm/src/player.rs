@@ -219,6 +219,147 @@ fn run_on(
     }
 }
 
+/// [`run_on`] with the handler's arguments given: a handler whose
+/// parameters do not number as many fails as a bad argument.
+fn run_on_with(
+    vm: &mut Vm<'_>,
+    o: ObjId,
+    handler: &str,
+    receiver: Receiver,
+    args: &[Val],
+    out: &mut Vec<Delivery>,
+) {
+    if let Err(e) = vm.attach_scripts(o) {
+        out.push(Delivery {
+            receiver,
+            script: String::new(),
+            outcome: Outcome::Failed(e),
+        });
+        return;
+    }
+    let insts = vm.world.objects[o].instances.clone();
+    for inst in insts {
+        let script = vm.world.instances[inst].script.clone();
+        let func = match vm.find_handler(inst, handler) {
+            Ok(Some(f)) => f,
+            Ok(None) => continue,
+            Err(e) => {
+                out.push(Delivery {
+                    receiver: receiver.clone(),
+                    script,
+                    outcome: Outcome::Failed(e),
+                });
+                continue;
+            }
+        };
+        let outcome = if func.params.len() == args.len() {
+            vm.deliver(inst, handler, args.to_vec())
+        } else {
+            Outcome::Failed(VmError::BadArgument {
+                site: None,
+                detail: format!("event {handler} takes parameters the event does not give"),
+            })
+        };
+        out.push(Delivery {
+            receiver: receiver.clone(),
+            script,
+            outcome,
+        });
+    }
+}
+
+/// The quest aliases holding the player in the run's state: of every
+/// running quest whose state is settled, each reference alias whose fill a
+/// run set is the player's handle, or, without such a fill, which holds the
+/// player as a unique actor alias of the player's base
+/// (`quest_alias_unique_actor_ref_v1`); as [`holders`] orders them.
+pub fn player_holders(vm: &mut Vm<'_>, store: &Store) -> (Vec<(FormKey, u32)>, usize) {
+    let player = vm.world.player;
+    let mut out = Vec::new();
+    let mut open = 0;
+    let states: Vec<String> = vm.world.quests.states.keys().cloned().collect();
+    for qk in states {
+        let Some(q) = key_record(&qk) else { continue };
+        let Some(info) = quest::info_by_key(store, store.limits.max_memory, &mut vm.world, &q)
+        else {
+            continue;
+        };
+        let s = &vm.world.quests.states[&qk];
+        if s.open.is_some() || s.running.is_none() {
+            open += 1;
+            continue;
+        }
+        if s.running != Some(true) {
+            continue;
+        }
+        for id in info.reference_aliases.keys() {
+            let held = match i32::try_from(*id).ok().and_then(|i| s.fills.get(&i)) {
+                Some(Val::Object(o)) => Some(*o) == player,
+                Some(_) => false,
+                None => {
+                    vm.world.quests.fill(&info, *id).ok().flatten() == Some(quest::Fill::Player)
+                }
+            };
+            if held {
+                out.push((q.clone(), *id));
+            }
+        }
+    }
+    (out, open)
+}
+
+/// Delivers an engine event with the given arguments to an object the run
+/// holds: a placed reference's own scripts and the aliases holding it, or,
+/// for the player's handle, the aliases holding the player; then the
+/// instances registered for it as a remote event (the arguments after the
+/// sender). Used by furniture use (`crate::sit`).
+pub fn deliver_event(
+    vm: &mut Vm<'_>,
+    store: &Store,
+    target: ObjId,
+    handler: &str,
+    args: Vec<Val>,
+    b: &Budget,
+) -> Result<(Vec<Delivery>, usize), Box<dyn std::error::Error>> {
+    let mut out = Vec::new();
+    let key = vm.world.objects[target].key.as_deref().and_then(key_record);
+    let (aliases, open) = if Some(target) == vm.world.player {
+        player_holders(vm, store)
+    } else if let Some(k) = &key {
+        run_on_with(vm, target, handler, Receiver::Reference, &args, &mut out);
+        holders(vm, store, k)
+    } else {
+        return Err("the object is neither the player nor a record".into());
+    };
+    if !aliases.is_empty() || open > 0 {
+        vm.rules.insert(rules::EVENT_ALIASES);
+    }
+    for (q, id) in aliases {
+        let qo = record_object(&mut vm.world, store, &q, "quest", b)?;
+        let label = format!("alias {id} of {}", vm.world.objects[qo].label);
+        let akey = format!("{}#alias:{id}", bind::record_key(&q));
+        let a = vm.world.keyed_object(&label, &akey, "referencealias");
+        run_on_with(
+            vm,
+            a,
+            handler,
+            Receiver::Alias(qo, id as i32),
+            &args,
+            &mut out,
+        );
+    }
+    let n = args.len();
+    let mut rest = |_: &mut Vm<'_>, p: &[(String, String)]| (p.len() == n).then(|| args.clone());
+    for (script, outcome) in events::deliver_remote(vm, target, handler, &mut rest, false) {
+        out.push(Delivery {
+            receiver: Receiver::Registered,
+            script,
+            outcome,
+        });
+    }
+    Ok((out, open))
+}
+
 /// Delivers the event of `action` on a placed reference: to its own
 /// scripts, then to the scripts of each alias holding it, then to the
 /// instances registered for it. The jobs the handlers queue are left for

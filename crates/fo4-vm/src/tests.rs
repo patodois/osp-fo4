@@ -11,6 +11,7 @@ mod open2;
 mod quest;
 mod scene;
 mod scev;
+mod sit;
 mod stage;
 mod talk;
 mod world;

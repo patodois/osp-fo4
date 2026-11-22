@@ -975,6 +975,38 @@ struct Then {
     /// Load events (`fo4_vm::load`): `--load-in-cell`,
     /// `--load-on-arrival`, `--load-grid N`.
     loads: fo4_vm::load::Switches,
+    /// Repeated rows of a location's special references naming one
+    /// reference count once (`quest_alias_location_ref_distinct_v1`,
+    /// `--location-refs-distinct`).
+    location_distinct: bool,
+    /// The placed references of a location's cells carrying the ref type
+    /// the list holds no row of (`quest_alias_location_ref_placed_v1`,
+    /// `--alias-location-placed-refs`).
+    location_placed: bool,
+    /// Function 1 from the world model's positions
+    /// (`cond_fn_1_track_distance_v1`, `--cond-1-distance`).
+    cond_distance: bool,
+    /// The first plugin's id 0x14 as a condition's reference word is the
+    /// player (`cond_player_reference_word_v1`, `--cond-player-word`).
+    player_word: bool,
+    /// The caller may assume the activation of a placed actor
+    /// (`vm_event_activate_actor_v1`, `--activate-actors`).
+    activate_actors: bool,
+    /// Furniture use (`fo4_vm::sit`): a script's default-processing
+    /// activation of a furniture sits the activator
+    /// (`--activate-furniture-sits`), `IsFurnitureInUse` answered
+    /// (`--furniture-in-use`).
+    sit_events: bool,
+    sit_activate: bool,
+    sit_in_use: bool,
+    /// The base-object natives on the player answer the caller's player
+    /// base (`vm_player_base_object_v1`, `--player-base-object`), and the
+    /// caller's assumed sex of it (`--assume-player-sex N`).
+    player_base_object: bool,
+    player_sex: Option<i32>,
+    /// Menu event registrations kept and the caller's menu events
+    /// delivered (`fo4_vm::menu`, `--menu-events`).
+    menu_events: bool,
 }
 
 /// One thing the caller makes happen.
@@ -991,6 +1023,15 @@ enum What {
     /// A placed reference raises a named animation event
     /// (`--assume-anim-event REF EVENT`).
     Anim(String, String),
+    /// The player sits in (`true`) or gets up from a furniture reference
+    /// (`--assume-sit`, `--assume-get-up`).
+    Sit(String, bool),
+    /// A menu of the caller's name opens (`true`) or closes
+    /// (`--assume-menu NAME open|close`).
+    Menu(String, bool),
+    /// The appearance menu raises its event with the caller's number
+    /// (`--assume-looks-menu-event N`).
+    Looks(i32),
 }
 #[derive(Clone, Debug)]
 struct Caller {
@@ -1148,6 +1189,94 @@ fn act(
                 );
             }
         }
+        What::Sit(key, sitting) => {
+            let (switch, text) = if *sitting {
+                (
+                    "--assume-sit",
+                    "the player sits in a placed furniture reference",
+                )
+            } else {
+                (
+                    "--assume-get-up",
+                    "the player gets up from a placed furniture reference",
+                )
+            };
+            bump(
+                c,
+                format!("assumption from the command line: {text} ({switch})"),
+            );
+            let k = fo4_vm::player::parse_key(key)
+                .ok_or("a reference is given as plugin.esm:0001ABCD")?;
+            let base = bind::base_of(store, &k, b)?;
+            if store.signature(&k) != Some(*b"REFR")
+                || base.and_then(|x| store.signature(&x)) != Some(*b"FURN")
+            {
+                return Err(format!(
+                    "{switch} names no winning placed furniture (a REFR of a FURN)"
+                )
+                .into());
+            }
+            let f = fo4_vm::data::record_object(&mut vm.world, store, &k, "objectreference", b)?;
+            let p = vm.world.player("actor");
+            let raised = if *sitting {
+                fo4_vm::sit::sit(vm, store, p, f, b)?
+            } else {
+                fo4_vm::sit::get_up(vm, store, p, f, b)?
+            };
+            let _ = writeln!(names, "## {switch} {key}{when}");
+            sit_log(vm, &raised, c, names);
+        }
+        What::Menu(name, opening) => {
+            bump(
+                c,
+                "assumption from the command line: a menu of the caller's name opens or closes (--assume-menu)",
+            );
+            let runs = fo4_vm::menu::open_close(vm, name, *opening);
+            let _ = writeln!(
+                names,
+                "## --assume-menu {name} {}{when}: {} handler run(s)",
+                if *opening { "open" } else { "close" },
+                runs.len()
+            );
+            for (script, o) in &runs {
+                bump(
+                    c,
+                    format!("menu events	assumed by the caller	{}", outcome_kind(o)),
+                );
+                let _ = writeln!(names, "    {script}: {}", outcome_text(o));
+            }
+            if runs.is_empty() {
+                bump(
+                    c,
+                    "menu events	assumed by the caller	no registered instance",
+                );
+            }
+        }
+        What::Looks(n) => {
+            bump(
+                c,
+                "assumption from the command line: the appearance menu raises its event with the caller's number (--assume-looks-menu-event)",
+            );
+            let runs = fo4_vm::menu::looks(vm, *n);
+            let _ = writeln!(
+                names,
+                "## --assume-looks-menu-event {n}{when}: {} handler run(s)",
+                runs.len()
+            );
+            for (script, o) in &runs {
+                bump(
+                    c,
+                    format!("menu events	assumed by the caller	{}", outcome_kind(o)),
+                );
+                let _ = writeln!(names, "    {script}: {}", outcome_text(o));
+            }
+            if runs.is_empty() {
+                bump(
+                    c,
+                    "menu events	assumed by the caller	no registered instance",
+                );
+            }
+        }
         What::Player(action, key) => {
             use fo4_vm::player;
             bump(
@@ -1159,6 +1288,14 @@ fn act(
                 ),
             );
             let k = player::parse_key(key).ok_or("a reference is given as plugin.esm:0001ABCD")?;
+            if *action == player::Action::Activate && store.signature(&k) == Some(*b"ACHR") {
+                if !then.activate_actors {
+                    return Err(
+                        "--assume-activate on a placed actor needs --activate-actors".into(),
+                    );
+                }
+                vm.rules.insert(fo4_vm::rules::EVENT_ACTIVATE_ACTOR);
+            }
             let before = vm.effects.len();
             let (runs, open) = player::deliver(vm, store, &k, *action, b)?;
             let _ = writeln!(
@@ -1225,6 +1362,46 @@ fn act(
     Ok(())
 }
 
+/// Writes the sits and get-ups delivered and their handler runs to the
+/// names file and the counts.
+fn sit_log(vm: &Vm<'_>, raised: &[fo4_vm::sit::Raised], c: &mut Counts, names: &mut String) {
+    for r in raised {
+        let _ = writeln!(
+            names,
+            "## furniture at {} s: {}, {} handler run(s)",
+            r.t,
+            r.what,
+            r.runs.len()
+        );
+        if r.runs.is_empty() {
+            bump(c, "furniture events	no script has a handler");
+        }
+        for d in &r.runs {
+            bump(
+                c,
+                format!(
+                    "furniture events	{}	{}",
+                    d.receiver.kind(),
+                    outcome_kind(&d.outcome)
+                ),
+            );
+            let on = match d.receiver {
+                fo4_vm::player::Receiver::Alias(q, id) => {
+                    format!(" (alias {id} of {})", vm.world.objects[q].label)
+                }
+                _ => String::new(),
+            };
+            let _ = writeln!(
+                names,
+                "    {} {}{on}: {}",
+                d.receiver.kind(),
+                d.script,
+                outcome_text(&d.outcome)
+            );
+        }
+    }
+}
+
 /// Writes the quest and scene changes logged since `seen` to the names
 /// file with the real-time second they were reached at (the timeline of
 /// a clocked run).
@@ -1258,6 +1435,28 @@ fn world_step(
     top: &mut Vec<JobRun>,
     b: &Budget,
 ) {
+    // Sits a script's furniture activation brought (`fo4_vm::sit`).
+    if !vm.world.sits.pending.is_empty() {
+        let before = vm.effects.len();
+        let (raised, runs) = fo4_vm::sit::settle(vm, store, MAX_GAME_JOBS, b);
+        sit_log(vm, &raised, c, names);
+        for e in &vm.effects[before..] {
+            let _ = writeln!(
+                names,
+                "      {}{}({}{}) = {}",
+                "  ".repeat(e.depth),
+                e.native,
+                e.receiver
+                    .as_ref()
+                    .map(|x| format!("on {x}; "))
+                    .unwrap_or_default(),
+                e.args.join(", "),
+                e.result
+            );
+        }
+        top.extend(runs);
+        recheck(vm, store, then, c, top, b);
+    }
     if !vm.world.place.on && !vm.world.talk.on && !vm.world.anims.on && !vm.world.anims.graphs {
         return;
     }
@@ -1614,6 +1813,19 @@ fn new_game(
     let mut c = Counts::new();
     let mut names = String::new();
     let mut host = host(store, vfs, max, opts, &tree);
+    host.cond.distance = then.cond_distance;
+    host.cond.player_word = then.player_word;
+    for (on, what) in [
+        (then.cond_distance, "condition function 1 reads the distance from the world model's positions (--cond-1-distance)"),
+        (then.player_word, "a condition's reference word naming the first plugin's id 0x14 is the player (--cond-player-word)"),
+        (then.location_distinct, "repeated rows of a location's special references naming one reference count once (--location-refs-distinct)"),
+        (then.location_placed, "an alias whose location lists no row of its ref type holds the one placed reference of the location's cells carrying it (--alias-location-placed-refs)"),
+        (then.activate_actors, "the caller may assume the player activates a placed actor (--activate-actors)"),
+    ] {
+        if on {
+            bump(&mut c, format!("switch: {what}"));
+        }
+    }
     if then.anim[2] {
         host.graphs = Some(Box::new(VfsGraphs {
             vfs,
@@ -1643,6 +1855,23 @@ fn new_game(
         vm.nested = Some(&mut runner);
     }
     events_on(&mut vm, opts);
+    vm.world.quests.location_distinct = then.location_distinct;
+    vm.world.sits.activate = then.sit_activate;
+    vm.world.sits.in_use = then.sit_in_use;
+    vm.world.menus.on = then.menu_events;
+    for (on, what) in [
+        (then.sit_events, "sit and get-up events delivered to the sitter's and the furniture's receivers (--sit-events)"),
+        (then.sit_activate, "a script's default-processing activation of a furniture reference sits the activator in it (--activate-furniture-sits)"),
+        (then.sit_in_use, "IsFurnitureInUse answered from the run's sitters (--furniture-in-use)"),
+        (then.menu_events, "menu event registrations kept and the caller's menu events delivered (--menu-events)"),
+    ] {
+        if on {
+            bump(&mut c, format!("switch: {what}"));
+        }
+    }
+    if then.location_placed {
+        vm.world.quests.location_placed = Some(Rc::new(quest::LocationPlaced::read(store, &b)));
+    }
     if let Some((track, sw)) = &then.track {
         vm.world.place = fo4_vm::track::Place::load_with(
             store,
@@ -1728,6 +1957,20 @@ fn new_game(
         }
         None => None,
     };
+    if then.player_base_object {
+        vm.world.player_base_object = player_base.clone();
+        vm.world.player_sex = then.player_sex;
+        bump(
+            &mut c,
+            "switch: the base-object natives on the player answer the player's base the caller names (--player-base-object)",
+        );
+        if let Some(n) = then.player_sex {
+            bump(
+                &mut c,
+                format!("assumption from the command line: ActorBase.GetSex on the player's base answers {n} (--assume-player-sex)"),
+            );
+        }
+    }
     if then.unique_fills {
         bump(
             &mut c,
@@ -1997,6 +2240,8 @@ fn new_game(
         .count();
     *c.entry("quests running at the end (of those the run read)".into())
         .or_default() += running as u64;
+    let location_used = vm.world.quests.location_used.borrow().clone();
+    vm.rules.extend(location_used);
     let unique = vm.world.quests.unique_used.borrow().clone();
     if !unique.is_empty() {
         vm.rules.insert(fo4_vm::rules::ALIAS_UNIQUE_ACTOR);
@@ -2028,6 +2273,12 @@ fn new_game(
     }
     for (k, v) in &vm.world.loads.counts {
         *c.entry(format!("load\t{k}")).or_default() += v;
+    }
+    for (k, v) in &vm.world.sits.counts {
+        *c.entry(format!("furniture\t{k}")).or_default() += v;
+    }
+    for (k, v) in &vm.world.menus.counts {
+        *c.entry(format!("menu\t{k}")).or_default() += v;
     }
     count_events(&mut c, &vm);
     if opts.scenes {
@@ -2072,7 +2323,12 @@ fn new_game(
             .iter()
             .filter_map(|x| match &x.what {
                 What::Stage(q, _) => Some(q.clone()),
-                What::Player(..) | What::Talk(_) | What::Anim(..) => None,
+                What::Player(..)
+                | What::Talk(_)
+                | What::Anim(..)
+                | What::Sit(..)
+                | What::Menu(..)
+                | What::Looks(_) => None,
             })
             .collect();
         next_blockers(&mut vm, m, vfs, store, opts, &quests, out)?;
@@ -2269,11 +2525,10 @@ fn next_blockers(
                                 vm.world.objects[*o].key.clone()
                             }
                             Some(_) => None,
-                            None if s.running == Some(true) => info
-                                .fill_of(
-                                    u32::try_from(*i).unwrap_or(u32::MAX),
-                                    vm.world.quests.location_fills,
-                                )
+                            None if s.running == Some(true) => vm
+                                .world
+                                .quests
+                                .fill_location(&info, u32::try_from(*i).unwrap_or(u32::MAX))
                                 .ok()
                                 .flatten()
                                 .map(|k| bind::record_key(&k)),
@@ -2972,6 +3227,16 @@ fn run() -> Result<(), E> {
         recheck: flag(&mut a, "--scene-recheck").then(|| std::cell::Cell::new(0)),
         unique_fills: flag(&mut a, "--alias-unique-actors"),
         player_no_record: flag(&mut a, "--player-no-record"),
+        location_distinct: flag(&mut a, "--location-refs-distinct"),
+        location_placed: flag(&mut a, "--alias-location-placed-refs"),
+        cond_distance: flag(&mut a, "--cond-1-distance"),
+        player_word: flag(&mut a, "--cond-player-word"),
+        activate_actors: flag(&mut a, "--activate-actors"),
+        sit_events: flag(&mut a, "--sit-events"),
+        sit_activate: flag(&mut a, "--activate-furniture-sits"),
+        sit_in_use: flag(&mut a, "--furniture-in-use"),
+        player_base_object: flag(&mut a, "--player-base-object"),
+        menu_events: flag(&mut a, "--menu-events"),
         anim: [
             flag(&mut a, "--anim-events"),
             flag(&mut a, "--anim-event-case"),
@@ -3021,6 +3286,49 @@ fn run() -> Result<(), E> {
             pos: [num(&v[2])?, num(&v[3])?, num(z)?],
         });
         a.drain(i..i + 6);
+    }
+    // The caller's furniture use and menu events.
+    while let Some(i) = a.iter().position(|x| {
+        x == "--assume-sit" || x == "--assume-get-up" || x == "--assume-looks-menu-event"
+    }) {
+        let v = a.get(i + 1).cloned().ok_or(
+            "--assume-sit and --assume-get-up take PLUGIN:OBJECTID[@SECONDS], --assume-looks-menu-event N[@SECONDS]",
+        )?;
+        let (body, at) = match v.rsplit_once('@') {
+            Some((x, t)) => (x.to_string(), Some(t.parse::<f64>()?)),
+            None => (v.clone(), None),
+        };
+        let what = match a[i].as_str() {
+            "--assume-sit" => What::Sit(body, true),
+            "--assume-get-up" => What::Sit(body, false),
+            _ => What::Looks(body.parse()?),
+        };
+        then.actions.push(Caller { what, at });
+        a.drain(i..i + 2);
+    }
+    if let Some(i) = a.iter().position(|x| x == "--assume-player-sex") {
+        let v = a.get(i + 1).ok_or("--assume-player-sex N")?;
+        then.player_sex = Some(v.parse()?);
+        a.drain(i..i + 2);
+    }
+    while let Some(i) = a.iter().position(|x| x == "--assume-menu") {
+        let usage = "--assume-menu NAME open|close[@SECONDS]";
+        let name = a.get(i + 1).cloned().ok_or(usage)?;
+        let v = a.get(i + 2).cloned().ok_or(usage)?;
+        let (how, at) = match v.rsplit_once('@') {
+            Some((x, t)) => (x.to_string(), Some(t.parse::<f64>()?)),
+            None => (v.clone(), None),
+        };
+        let opening = match how.as_str() {
+            "open" => true,
+            "close" => false,
+            _ => return Err(usage.into()),
+        };
+        then.actions.push(Caller {
+            what: What::Menu(name, opening),
+            at,
+        });
+        a.drain(i..i + 3);
     }
     while let Some(i) = a.iter().position(|x| {
         x == "--player-base" || x == "--hello-distance-setting" || x == "--assume-line"
@@ -3195,6 +3503,34 @@ fn run() -> Result<(), E> {
         .actions
         .iter()
         .any(|x| matches!(x.what, What::Anim(..)));
+    let assumed_menu = then
+        .actions
+        .iter()
+        .any(|x| matches!(x.what, What::Menu(..) | What::Looks(_)));
+    if (then.player_base_object || then.player_sex.is_some()) && then.player_base.is_none() {
+        return Err(
+            "--player-base-object and --assume-player-sex need --player-base EDITOR_ID".into(),
+        );
+    }
+    if then.player_sex.is_some() && !then.player_base_object {
+        return Err("--assume-player-sex needs --player-base-object".into());
+    }
+    if (then.location_distinct || then.location_placed) && !opts.location_fills {
+        return Err(
+            "--location-refs-distinct and --alias-location-placed-refs need --alias-location-refs"
+                .into(),
+        );
+    }
+    if then.cond_distance && then.track.is_none() {
+        return Err("--cond-1-distance needs --track FILE".into());
+    }
+    let assumed_sit = then.actions.iter().any(|x| matches!(x.what, What::Sit(..)));
+    if (assumed_sit || then.sit_activate || then.sit_in_use) && !then.sit_events {
+        return Err("--assume-sit, --assume-get-up, --activate-furniture-sits and --furniture-in-use need --sit-events".into());
+    }
+    if assumed_menu && !then.menu_events {
+        return Err("--assume-menu and --assume-looks-menu-event need --menu-events".into());
+    }
     if (assumed_anim || then.anim[1]) && !then.anim[0] {
         return Err("--assume-anim-event and --anim-event-case need --anim-events".into());
     }
@@ -3216,7 +3552,7 @@ fn run() -> Result<(), E> {
     {
         return Err("--assume-player-choice takes 0 to 3".into());
     }
-    let usage = "quest_run MANIFEST (stages OUT_DIR | new-game OUT_DIR | fragments OUT_DIR | scenes OUT_DIR | QUEST STAGE) [--queued] [--no-conditions] [--no-stage-event] [--no-remote] [--no-custom | --custom-nested] [--no-story] [--no-enable-chain] [--no-scenes] [--no-scenes-with-quest] [--no-cond-fn-N]... [--no-cond-run-on] [--assume-cond N=VALUE]...; fragments OUT_DIR and scenes OUT_DIR run every INFO, PACK and PERK fragment and start every scene in a fresh interpreter; new-game also takes --then EDITOR_ID:STAGE[@SECONDS] (repeated), --assume-activate, --assume-trigger-enter, --assume-trigger-leave and --assume-open PLUGIN:OBJECTID[@SECONDS] (repeated), --timers N and --time-scale-global EDITOR_ID, assumptions of the caller, --scene-recheck, --stage-fields, --cond-550-clock, --alias-location-refs and --next-blockers; new-game and scenes take --scene-clock N (advance the scene clock up to N times) with --no-timer-actions, --no-line-audio, --assume-line-seconds X, --assume-player-choice N (0 to 3), --assume-packages-complete, --assume-start-scene-actions, --line-stage-fields and --assume-first-line; every mode takes --none-array-length, --none-array-read, --none-array-find, --none-array-change and --enable-child-flag-ignored; new-game with --scene-clock takes --track FILE (the player's track, lines SECONDS SPACE X Y Z [FACING]) with --trigger-box, --trigger-sphere, --trigger-point or --trigger-body HEIGHT, --trigger-instant, --trigger-enabled, --trigger-order, --distance-events, --distance-once, --placed-positions, --position-natives, --cell-natives, --location-native and --assume-los true|false, --actor-positions, --actor-triggers and --assume-actor-at REF SPACE X Y Z@SECONDS (repeated); new-game takes --alias-unique-actors, --player-base EDITOR_ID and --player-no-record, and with --scene-clock --assume-talk PLUGIN:OBJECTID[@SECONDS] (repeated), --greeting-on-talk, --hello-lines with --hello-distance-setting EDITOR_ID, --dialogue-priority and --assume-line PLUGIN:OBJECTID (repeated); new-game with --track and --actor-positions takes --package-destinations SECONDS; new-game takes --anim-events with --anim-event-case and --assume-anim-event PLUGIN:OBJECTID EVENT[@SECONDS] (repeated), and with --scene-clock --anim-graphs with --anim-graph-keys; new-game with --track takes --moveto-target, --load-in-cell, --load-on-arrival and --load-grid N, and --assume-load PLUGIN:OBJECTID[@SECONDS] (repeated); new-game and scenes with --scene-clock take --cond-131-clock and --phase-conditions-end";
+    let usage = "quest_run MANIFEST (stages OUT_DIR | new-game OUT_DIR | fragments OUT_DIR | scenes OUT_DIR | QUEST STAGE) [--queued] [--no-conditions] [--no-stage-event] [--no-remote] [--no-custom | --custom-nested] [--no-story] [--no-enable-chain] [--no-scenes] [--no-scenes-with-quest] [--no-cond-fn-N]... [--no-cond-run-on] [--assume-cond N=VALUE]...; fragments OUT_DIR and scenes OUT_DIR run every INFO, PACK and PERK fragment and start every scene in a fresh interpreter; new-game also takes --then EDITOR_ID:STAGE[@SECONDS] (repeated), --assume-activate, --assume-trigger-enter, --assume-trigger-leave and --assume-open PLUGIN:OBJECTID[@SECONDS] (repeated), --timers N and --time-scale-global EDITOR_ID, assumptions of the caller, --scene-recheck, --stage-fields, --cond-550-clock, --alias-location-refs and --next-blockers; new-game and scenes take --scene-clock N (advance the scene clock up to N times) with --no-timer-actions, --no-line-audio, --assume-line-seconds X, --assume-player-choice N (0 to 3), --assume-packages-complete, --assume-start-scene-actions, --line-stage-fields and --assume-first-line; every mode takes --none-array-length, --none-array-read, --none-array-find, --none-array-change and --enable-child-flag-ignored; new-game with --scene-clock takes --track FILE (the player's track, lines SECONDS SPACE X Y Z [FACING]) with --trigger-box, --trigger-sphere, --trigger-point or --trigger-body HEIGHT, --trigger-instant, --trigger-enabled, --trigger-order, --distance-events, --distance-once, --placed-positions, --position-natives, --cell-natives, --location-native and --assume-los true|false, --actor-positions, --actor-triggers and --assume-actor-at REF SPACE X Y Z@SECONDS (repeated); new-game takes --alias-unique-actors, --player-base EDITOR_ID and --player-no-record, and with --scene-clock --assume-talk PLUGIN:OBJECTID[@SECONDS] (repeated), --greeting-on-talk, --hello-lines with --hello-distance-setting EDITOR_ID, --dialogue-priority and --assume-line PLUGIN:OBJECTID (repeated); new-game with --track and --actor-positions takes --package-destinations SECONDS; new-game takes --anim-events with --anim-event-case and --assume-anim-event PLUGIN:OBJECTID EVENT[@SECONDS] (repeated), and with --scene-clock --anim-graphs with --anim-graph-keys; new-game with --track takes --moveto-target, --load-in-cell, --load-on-arrival and --load-grid N, and --assume-load PLUGIN:OBJECTID[@SECONDS] (repeated); new-game and scenes with --scene-clock take --cond-131-clock and --phase-conditions-end; new-game takes --location-refs-distinct and --alias-location-placed-refs (with --alias-location-refs), --cond-1-distance (with --track) and --cond-player-word, --activate-actors, --sit-events with --assume-sit and --assume-get-up PLUGIN:OBJECTID[@SECONDS] (repeated), --activate-furniture-sits and --furniture-in-use, --menu-events with --assume-menu NAME open|close[@SECONDS] and --assume-looks-menu-event N[@SECONDS] (repeated), and --player-base-object (with --player-base) with --assume-player-sex N";
     if a.len() != 3 {
         return Err(usage.into());
     }

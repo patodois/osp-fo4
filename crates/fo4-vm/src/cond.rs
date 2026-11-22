@@ -98,6 +98,23 @@ pub const ADDED: [(u16, &str); 5] = [
 /// default (not one of [`ADDED`], which are on by default).
 pub const ACTION_PERCENT: u16 = 131;
 
+/// The function index read from the world model's positions under
+/// `cond_fn_1_track_distance_v1`, behind its own switch and off by default
+/// (not one of [`ADDED`]).
+pub const DISTANCE: u16 = 1;
+
+/// The object id the player reference word reads as under
+/// `cond_player_reference_word_v1`: a word of the first plugin of the load
+/// order naming that id, which no plugin defines.
+pub const PLAYER_REFERENCE_ID: u32 = 0x14;
+
+/// One side of a distance: the player or a placed reference.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Party {
+    Player,
+    Record(FormKey),
+}
+
 /// Record types of placed references, for the reference word of run-on 2.
 pub const PLACED: [&[u8; 4]; 10] = [
     b"REFR", b"ACHR", b"PGRE", b"PMIS", b"PHZD", b"PARW", b"PBAR", b"PBEA", b"PCON", b"PFLA",
@@ -274,6 +291,30 @@ pub trait Facts {
         let _ = run_on;
         None
     }
+    /// Whether function 1 is read from the world model's positions
+    /// (`cond_fn_1_track_distance_v1`); off, it is not evaluated, as before.
+    fn distance_on(&self) -> bool {
+        false
+    }
+    /// Whether a reference word naming the first plugin's id 0x14, which no
+    /// plugin defines, stands for the player
+    /// (`cond_player_reference_word_v1`); off, it names no record, as
+    /// before.
+    fn player_word_on(&self) -> bool {
+        false
+    }
+    /// The reference or the player an alias of a quest holds, for function
+    /// 1 (`None`: empty).
+    fn alias_party(&mut self, quest: &FormKey, alias: i32) -> Result<Option<Party>, &'static str> {
+        self.alias_reference(quest, alias)
+            .map(|r| r.map(Party::Record))
+    }
+    /// The distance between two parties at the run's present second, in
+    /// world units (function 1).
+    fn distance(&mut self, a: &Party, b: &Party) -> Result<f32, &'static str> {
+        let _ = (a, b);
+        Err("positions are not read here")
+    }
     /// A value the caller assumes for every condition of a function index
     /// (a caller assumption, not a rule: `quest_run --assume-cond`).
     fn assumed(&self, function: u16) -> Option<f32> {
@@ -343,6 +384,90 @@ pub fn subject(
         }
         _ => Err("the condition runs on a subject the interpreter does not know"),
     }
+}
+
+/// A reference word as a party of function 1: a placed reference, or,
+/// with `cond_player_reference_word_v1`, the player for the first plugin's
+/// id 0x14 that no plugin defines.
+fn party_word(
+    raw: u32,
+    ctx: Context<'_>,
+    file: &str,
+    facts: &mut dyn Facts,
+    used: &mut BTreeSet<&'static str>,
+) -> Result<Party, &'static str> {
+    let k = condition::form(ctx, raw, file, 0)
+        .map_err(|_| "the reference word is not a FormID")?
+        .ok_or("the reference word is zero")?;
+    match facts.store().signature(&k) {
+        Some(s) if PLACED.contains(&&s) => Ok(Party::Record(k)),
+        Some(_) => Err("the reference word names no placed reference"),
+        None => {
+            let first = ctx.order.headers().first().map(|h| h.name.as_str());
+            if facts.player_word_on()
+                && k.object_id == PLAYER_REFERENCE_ID
+                && first.is_some_and(|n| n.eq_ignore_ascii_case(&k.plugin))
+            {
+                used.insert(rules::COND_PLAYER_WORD);
+                Ok(Party::Player)
+            } else {
+                Err("the reference word names no record the data defines")
+            }
+        }
+    }
+}
+
+/// Function 1 from the world model's positions
+/// (`cond_fn_1_track_distance_v1`): the subject by the run-on word (2 the
+/// reference word, 5 an alias of the owning quest), the other party by
+/// parameter 1 (a placed reference, or with the aliases flag an alias of
+/// the owning quest).
+fn distance_value(
+    c: &Ctda,
+    ctx: Context<'_>,
+    file: &str,
+    facts: &mut dyn Facts,
+    used: &mut BTreeSet<&'static str>,
+) -> Result<f32, &'static str> {
+    let (a, b) = distance_parties(c, ctx, file, facts, used)?;
+    facts.distance(&a, &b)
+}
+
+/// The two parties of a function 1 condition (see [`distance_value`]).
+pub fn distance_parties(
+    c: &Ctda,
+    ctx: Context<'_>,
+    file: &str,
+    facts: &mut dyn Facts,
+    used: &mut BTreeSet<&'static str>,
+) -> Result<(Party, Party), &'static str> {
+    if facts.switches().run_on_off {
+        return Err("the run-on reading is off");
+    }
+    if c.flags() & (flag::SWAP | flag::PACK_DATA) != 0 {
+        return Err("subject and target are swapped, or the parameters name package data");
+    }
+    let alias = |facts: &mut dyn Facts, id: i32| -> Result<Party, &'static str> {
+        let q = facts
+            .owner()
+            .cloned()
+            .ok_or("the list has no owning quest")?;
+        facts
+            .alias_party(&q, id)?
+            .ok_or("the alias holds no reference")
+    };
+    let a = match c.run_on {
+        2 => party_word(c.reference, ctx, file, facts, used)?,
+        5 => alias(facts, c.param3)?,
+        _ => return Err("the condition runs on a subject the interpreter does not know"),
+    };
+    let b = if c.flags() & flag::ALIASES != 0 {
+        let id = i32::try_from(c.param1).map_err(|_| "an alias index out of range")?;
+        alias(facts, id)?
+    } else {
+        party_word(c.param1, ctx, file, facts, used)?
+    };
+    Ok((a, b))
 }
 
 /// The function's value of one condition, as a number.
@@ -479,6 +604,17 @@ fn eval_with_text(
         let v = record(facts, ctx, c.param1, file, b"SCEN")
             .and_then(|s| facts.action_percent(&s, c.param2));
         return match v {
+            Ok(v) => compare(c, v, ctx, file, facts, used),
+            Err(why) => Truth::open(f, why),
+        };
+    }
+    if f == DISTANCE && facts.distance_on() {
+        // Function 1 read from the world model, off by default
+        // (`cond_fn_1_track_distance_v1`).
+        used.insert(rules::COND_FLAGS);
+        used.insert(rules::COND_RUN_ON);
+        used.insert(rules::COND_FN_1_TRACK);
+        return match distance_value(c, ctx, file, facts, used) {
             Ok(v) => compare(c, v, ctx, file, facts, used),
             Err(why) => Truth::open(f, why),
         };

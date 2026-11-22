@@ -1589,6 +1589,25 @@ fn due(
     first_time(store, max, w, a, b, r.threshold, r.less, from)
 }
 
+/// [`first_time`] for a caller outside the registrations (a function 1
+/// condition, `cond_fn_1_track_distance_v1`): either object may be an
+/// alias handle or the player.
+#[allow(clippy::too_many_arguments)]
+pub fn distance_first_time(
+    store: &Store,
+    max: u64,
+    w: &mut World,
+    a: ObjId,
+    b: ObjId,
+    threshold: f64,
+    less: bool,
+    from: f64,
+) -> Result<Option<f64>, &'static str> {
+    let a = reference_of(store, max, w, a)?;
+    let b = reference_of(store, max, w, b)?;
+    first_time(store, max, w, a, b, threshold, less, from)
+}
+
 /// The first second at or after `from` at which the distance between the
 /// reference points of `a` and `b` is at or below (`less`) or at or above
 /// the threshold; see [`due`].

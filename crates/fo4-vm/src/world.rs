@@ -142,6 +142,15 @@ pub struct World {
     /// (`vm_player_no_record_v1`; `quest_run --player-no-record`). Off by
     /// default: such a comparison is left open, as before.
     pub player_no_record: bool,
+    /// The NPC_ the caller names as the player's base, answered by the
+    /// base-object natives on the player's handle
+    /// (`vm_player_base_object_v1`; `quest_run --player-base-object` with
+    /// `--player-base`). `None` by default: they stay undetermined.
+    pub player_base_object: Option<fo4_plugin::FormKey>,
+    /// The value `ActorBase.GetSex` answers on the player's base: a caller
+    /// assumption (`quest_run --assume-player-sex N`), the choice character
+    /// creation makes. `None` by default.
+    pub player_sex: Option<i32>,
     /// Objects standing for one placement of a base (the base census),
     /// with the base's record key.
     pub placement_bases: Vec<(ObjId, String)>,
@@ -163,6 +172,10 @@ pub struct World {
     pub anims: crate::anim::Anims,
     /// Load events (`crate::load`).
     pub loads: crate::load::Loads,
+    /// Furniture use (`crate::sit`): off by default.
+    pub sits: crate::sit::Sits,
+    /// Menu event registrations (`crate::menu`): off by default.
+    pub menus: crate::menu::Menus,
 }
 
 impl World {
