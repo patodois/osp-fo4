@@ -474,3 +474,64 @@ its tag. A further view of the radius-2 grid shows two puddle-like surfaces
 newly drawn under the texture first-key rule (19,111 pixels). The CPU and
 GPU frames of the dog view agree as before (coverage agreement 0.999857 →
 0.999859, mean channel difference 0.19 steps both).
+
+## Falloff and vertex alpha
+
+Effect surfaces with falloff, and with vertex alpha under Vertex_Colors
+alone, are drawn under six pending rules, and falloff angle controllers are
+settled with their keys read as degrees
+([effect-surfaces.md](effect-surfaces.md), Falloff). Every cell of the load
+order (3 shards of about 1,700 s beside other builds, 1.06 GB peak),
+against the census of the material step:
+
+| Outcome | Materials | And falloff |
+| --- | ---: | ---: |
+| drawn without hypotheses | 779,237 (22.35 % of the area) | 779,237 (22.35 %) |
+| drawn only under hypotheses | 589,593 (38.73 %) | 600,643 (40.75 %) |
+| hidden by `xesp_child_follows_parent_v1` | 8,432 | 8,432 |
+| omitted | 378,249 (37.14 %) | 367,199 (35.12 %) |
+
+11,050 placements move from omitted to drawn under hypotheses (omitted area
+from 37.14 % to 35.12 % of all); nothing drawn without hypotheses changes.
+Drawn placements rely on the four falloff rules 10,845 times and on
+`effect_vertex_alpha_under_vertex_colors_v1` 11,045 times (among them 205
+placements without falloff whose only unsettled term was the vertex alpha
+under one flag; 5 falloff placements need no vertex alpha rule);
+`nif_controller_falloff_angle_degrees_v1` settles the distant clouds at
+rest, but no placement that relies on it is drawn.
+
+The sole families before → after: `UnsupportedEffectSurface
+falloff+vertex-alpha-one-flag` (10,989 placements, 5.46 % of the omitted
+area), `palette+falloff+vertex-alpha-one-flag` (943) and the plain
+`vertex-alpha-one-flag` (205) leave the omitted list or become `palette`
+(943 placements, 0.03 %); `falloff+colour-range+vertex-alpha-one-flag`
+(728) and `colour-range+vertex-alpha-one-flag` (166) become `colour-range`
+(1,308 placements, 2.09 %); `feature+falloff` and
+`feature+vertex-alpha-one-flag` become `feature` (452, 0.39 %). The
+distant clouds (`model: animation-controller blocks (falloff)`, 407
+placements, 70.03 % of the omitted area before) now reach the draw build
+and are refused for `palette+colour-range` (458 placements with 51 others,
+74.06 % of the omitted area after, 26.0 % of all area): the greyscale-to-
+palette alpha flag and a base colour scale of 1.5 on white. No placement of
+this installation is refused for `rgb-falloff`, `falloff-fields`,
+`falloff-normals` or `vertex-alpha-flag-alone` as its first draw refusal.
+
+Test views (drawn under hypotheses, before → after): lobby 141 → 146
+(omitted area 37.20 % → 3.73 %), vault 146 → 214 (81.62 % → 51.38 %), test
+cell 123 → 123, radius 1 668 → 669 (8.68 % → 8.59 %), radius 2 1,797 →
+1,798 (6.46 % → 6.42 %).
+
+**Frames** (the `render` example, CPU, 1280 x 720, against the build of the
+commit before): without `--under-hypotheses` the lobby and vault frames
+are byte-identical. Under hypotheses the lobby differs in 919,872 pixels
+(the camera stands among five mist volumes: a soft grey veil over the
+room, hard-edged where the volumes cut walls and floor, since the soft
+depth fade is left out) and the vault in 290,358 (light beams and mist
+over the upper half; additive beams saturate to white near the ceiling
+lights). Every differing pixel of the lobby, and all but 9 of the vault,
+carries the tag of a newly drawn placement; the 9 are behind a blended
+surface whose background placement the CPU reference now leaves out at
+its decoded-texture limit (`LimitExceeded`; one placement in the vault
+view, a limit of the reference renderer, not of the viewer's policy). The
+GPU viewer leaves the falloff draws out ([render.md](render.md),
+Falloff); its frames were not rendered for this step.

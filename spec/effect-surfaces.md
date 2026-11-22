@@ -256,7 +256,8 @@ refused for `palette+colour-range`.
 
 ## Coverage
 
-See [coverage.md](coverage.md), Effect surfaces.
+See [coverage.md](coverage.md), Effect surfaces, and Falloff and vertex
+alpha.
 
 ## Provenance
 
@@ -270,4 +271,12 @@ as pending rules or refusals: that a sequence's clock starts at its first
 key when a cell loads, that soft effects fade near geometry and that
 falloff depends on the angle between the view and the surface normal. No
 other NIF reader, editor, MIT reference or game executable was opened for
-this step.
+this step. For the falloff step, further: the enum option descriptions of
+`EffectShaderControlledVariable` 1 and 2 ("(degrees)"), the field
+descriptions of the four falloff fields and of the opacities ("Alpha
+falloff multiplier"), and the `BSVertexData` normal layout already in
+[nif.md](nif.md). Recognised from prior knowledge and kept as pending
+rules: that the falloff angle is taken against the direction to the eye,
+that two-sided surfaces turn the normal toward the eye (the absolute
+cosine), and that the effect shader reads vertex alpha whenever vertex
+colours are on. Nothing else was opened.
