@@ -1,6 +1,6 @@
 # script_run --census: counts only (spec/vm.md, Census)
 # Each scope three times: the recording host alone, the data host, and the quest host (script_run's default).
-# Every section regenerated with one binary in the scene-events step (spec/vm.md, Census).
+# Every section regenerated with one binary in the second opening step (spec/vm.md, Census).
 
 ## the two test cells of the survey (one interior; one exterior with radius 1); recording host alone, no record's scripts attached (script_run --recording)
 10	targets: scripted DOOR, TERM and ACTI placed in the cells named
@@ -68,8 +68,8 @@
 10	enable children: handlers completed, REFR, state unchanged
 4	enable children: not all completed, ACHR without a chain
 54	enable children: not all completed, REFR, disabled -> enabled
-21	enable children: not all completed, REFR, disabled -> enabled, drawable under every pending rule
-33	enable children: not all completed, REFR, disabled -> enabled, not drawable
+44	enable children: not all completed, REFR, disabled -> enabled, drawable under every pending rule
+10	enable children: not all completed, REFR, disabled -> enabled, not drawable
 5	enable children: not all completed, REFR, enabled -> disabled
 3	enable children: not all completed, REFR, enabled -> disabled, drawable under every pending rule
 2	enable children: not all completed, REFR, enabled -> disabled, not drawable
@@ -250,8 +250,8 @@
 2383	visibility change enable of a reference of the loaded cells
 715	visibility change: disable of an enabled REFR, handlers completed
 4	visibility change: disable of an enabled REFR, handlers completed, target an enable parent
-2	visibility change: disable of an enabled REFR, handlers completed, target drawable under every pending rule
-713	visibility change: disable of an enabled REFR, handlers completed, target not drawable
+5	visibility change: disable of an enabled REFR, handlers completed, target drawable under every pending rule
+710	visibility change: disable of an enabled REFR, handlers completed, target not drawable
 751	visibility change: disable of an enabled REFR, handlers not all completed
 6	visibility change: disable of an initially disabled REFR, handlers completed
 1	visibility change: disable of an initially disabled REFR, handlers completed, target an enable parent
@@ -335,8 +335,8 @@
 6	enable children: handlers completed, ACHR, disabled -> enabled, drawable under every pending rule
 1	enable children: handlers completed, ACHR, disabled -> enabled, not drawable
 49	enable children: handlers completed, REFR, disabled -> enabled
-12	enable children: handlers completed, REFR, disabled -> enabled, drawable under every pending rule
-37	enable children: handlers completed, REFR, disabled -> enabled, not drawable
+35	enable children: handlers completed, REFR, disabled -> enabled, drawable under every pending rule
+14	enable children: handlers completed, REFR, disabled -> enabled, not drawable
 16	enable children: handlers completed, REFR, enabled -> disabled
 8	enable children: handlers completed, REFR, enabled -> disabled, drawable under every pending rule
 8	enable children: handlers completed, REFR, enabled -> disabled, not drawable
@@ -551,8 +551,8 @@
 57	visibility change enable of another record
 1540	visibility change: disable of an enabled REFR, handlers completed
 8	visibility change: disable of an enabled REFR, handlers completed, target an enable parent
-3	visibility change: disable of an enabled REFR, handlers completed, target drawable under every pending rule
-1537	visibility change: disable of an enabled REFR, handlers completed, target not drawable
+6	visibility change: disable of an enabled REFR, handlers completed, target drawable under every pending rule
+1534	visibility change: disable of an enabled REFR, handlers completed, target not drawable
 88	visibility change: disable of an enabled REFR, handlers not all completed
 33	visibility change: disable of an initially disabled REFR, handlers completed
 1	visibility change: disable of an initially disabled REFR, handlers completed, target an enable parent
@@ -642,8 +642,8 @@
 1	enable children: handlers completed, ACHR, disabled -> enabled, not drawable
 2	enable children: handlers completed, ACHR, not decided
 125	enable children: handlers completed, REFR, disabled -> enabled
-34	enable children: handlers completed, REFR, disabled -> enabled, drawable under every pending rule
-91	enable children: handlers completed, REFR, disabled -> enabled, not drawable
+57	enable children: handlers completed, REFR, disabled -> enabled, drawable under every pending rule
+68	enable children: handlers completed, REFR, disabled -> enabled, not drawable
 59	enable children: handlers completed, REFR, enabled -> disabled
 33	enable children: handlers completed, REFR, enabled -> disabled, drawable under every pending rule
 26	enable children: handlers completed, REFR, enabled -> disabled, not drawable
@@ -973,8 +973,8 @@
 57	visibility change enable of another record
 1542	visibility change: disable of an enabled REFR, handlers completed
 9	visibility change: disable of an enabled REFR, handlers completed, target an enable parent
-4	visibility change: disable of an enabled REFR, handlers completed, target drawable under every pending rule
-1538	visibility change: disable of an enabled REFR, handlers completed, target not drawable
+7	visibility change: disable of an enabled REFR, handlers completed, target drawable under every pending rule
+1535	visibility change: disable of an enabled REFR, handlers completed, target not drawable
 88	visibility change: disable of an enabled REFR, handlers not all completed
 33	visibility change: disable of an initially disabled REFR, handlers completed
 1	visibility change: disable of an initially disabled REFR, handlers completed, target an enable parent

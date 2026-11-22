@@ -366,6 +366,15 @@ and 1 to 2 more runs change two to four drawable placements in each scope.
 The same totals split differently; no line appears or disappears except
 those run counts.
 
+**Regenerated again in the second opening step** (all nine sections, one
+binary built from main before that step's changes). Six pairs of lines
+move and nothing else, one in each section of the bases alone and of
+the placed references: the drawable / not drawable split of the enable
+children made enabled (bases alone) and of the enabled references
+disabled (placed references), under each of the three hosts, each pair
+with the same total, because the scene crates changed since the
+scene-events step.
+
 ### Blockers
 
 Before this step, over every placed scripted reference, the natives whose
