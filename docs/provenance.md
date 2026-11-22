@@ -556,3 +556,15 @@ knowledge and kept as pending rules: that an environment map adds a
 reflection to the colour, and that an opacity above 1 acts on a blend
 through a clamped alpha. No NIF reader, renderer, editor, MIT reference
 or game executable was opened.
+The player position model (`fo4_vm::track`, [spec/vm.md](../spec/vm.md),
+Player position) reads the `XPRM` subrecord of placed references as three
+bound words, three colour words, one float and a kind word. That layout was
+established only by measuring every placed reference of the installation
+with `world_census` (32 bytes on all 30,028, colour and float words in 0 to
+1, kind words 1 to 5; [spec/world-census.txt](../spec/world-census.txt)).
+The plugin layout table, which still lists `REFR.XPRM` as not established,
+is left unchanged so that the coverage census does not move. What the
+words mean for an event (half extents, a box, a sphere) was recognised from
+prior knowledge and is kept only as pending rules, checked against the
+navigation meshes as far as the data allows. No editor, physics engine,
+reader of another project or game executable was opened.

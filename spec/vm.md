@@ -1243,9 +1243,12 @@ line plays) that the scene and phase fields do not need.
 
 ### The forced opening continued
 
-[quest-run-opening.txt](quest-run-opening.txt) holds the stops in order
-by kind, where the run ends, how far it gets, and the run's needs by
-kind; the concrete records and the command line are in the step's notes.
+The second opening step's [quest-run-opening.txt](quest-run-opening.txt)
+held the stops in order by kind, where the run ends, how far it gets, and
+the run's needs by kind (since the world step the file holds the run with
+a track, Player position below, its section 2 comparing the trigger stops
+with this run's); the concrete records and the command line are in the
+step's notes.
 Continuing from stop 10 above with the switches of this step and the
 caller assumptions that exist:
 
@@ -1294,6 +1297,139 @@ those with no world model: position and movement 35, UI menus and player
 controls 19 (the character creation and attribute menus among them),
 inventory 5, combat 0, cells and loading 0, animation 38, sound, music,
 video and imagespace 21.
+
+## Player position
+
+`fo4_vm::track` is a first world model of where the player is, for the
+quest host. It replaces the hand-written "the player entered trigger X"
+assumptions of the forced opening by one caller input, a track, and
+derives the events from the plugins' own geometry. Everything it does is
+off unless `quest_run new-game` is given `--track FILE` (with
+`--scene-clock`); with no track every versioned output is as before
+(checked with `cmp`, below).
+
+**The track** (a caller assumption, never game behaviour) is a text file
+outside the repository: lines `SECONDS SPACE X Y Z [FACING]`, the space a
+worldspace or an interior cell as `plugin.esm:0001ABCD` (an exterior cell
+names its worldspace), seconds of the real-time clock. Between two points
+of one space the player moves in a straight line at constant speed; a
+point in another space is reached at its second; before the first point
+the player's position is open; after the last the player stays. Every
+point is counted as an assumption. `track_plan MANIFEST SPACE PLAN
+OUT_TRACK SPEED [LIFT]` (an example of `fo4-vm`) writes such a track from
+waypoints (`SECONDS X Y Z`): it walks between them along the space's
+navigation meshes (`fo4_nav::NavGraph`, edge links of kind 0, the funnel),
+leaving each waypoint so as to reach the next at its second at SPEED units
+per second, and lifts every point LIFT units above the mesh plane under
+it; the plan, the speed and the lift are the caller's.
+
+**What the model reads.** The `XPRM` of a placed reference is 32 bytes on
+every one of the 30,028 placed references that carry one: three bound
+words, three colour words in 0 to 1, a float in 0 to 1 and a kind word
+1 to 5 ([world-census.txt](world-census.txt), section 1; a layout measured
+here, kept in `fo4_vm::track::Primitive` without changing the plugin
+layout table). Volumes are the placed **activators** with a primitive in
+the track's interior cells and, for a worldspace, in its cells within one
+grid square of the track's points and its persistent cells; the
+reference's placement transform is `fo4_scene::transform::Transform::euler`
+of its `DATA`, its scale `XSCL`.
+
+| Switch | Reading | Rule |
+| --- | --- | --- |
+| `--trigger-box` | kind 1 is a box of half extents the bound words times the scale | `world_trigger_box_v1` |
+| `--trigger-sphere` | kind 2 is a sphere of radius the first bound word times the scale | `world_trigger_sphere_v1` |
+| `--trigger-point` | a trigger holds the player while the player's reference point is in its closed volume | `world_trigger_point_v1` |
+| `--trigger-body HEIGHT` | the alternative: while a vertical segment HEIGHT units up from the reference point meets the volume (the height a caller assumption) | `world_trigger_body_v1` |
+| `--trigger-instant` | enter and leave are raised at the second the hold changes, after timers and scene clock steps due then, before a caller's action due then | `world_trigger_instant_v1` |
+| `--trigger-enabled` | a disabled (or deleted) trigger holds no one; enabling or disabling it with the player inside raises its event | `world_trigger_enabled_v1` |
+| `--trigger-order` | several events at one second: leaves, then enters, each by reference key | `world_trigger_order_v1` |
+| `--distance-events` | distance registrations raise their event on the registering instance at the first second the condition holds (at or below, at or above the threshold, between the two reference points) | `world_distance_events_v1` |
+| `--distance-once` | a registration ends with its event | `world_distance_once_v1` |
+| `--placed-positions` | a placed reference other than an actor stands at its `DATA` position until a native of the run moves it | `world_placed_position_v1` |
+| `--position-natives` | `GetPositionX/Y/Z`, `GetDistance`, `GetAngleZ` from the positions | `world_position_natives_v1` |
+| `--cell-natives` | `GetParentCell` (the exterior cell by the 4,096-unit grid), `GetWorldSpace`, `Cell.IsInterior` | `world_cell_natives_v1` |
+| `--location-native` | `GetCurrentLocation` is the parent cell's `XLCN` | `world_location_native_v1` |
+| `--assume-los true\|false` | caller assumption: every `HasDirectLOS` answers this value; no geometry test is made | none |
+
+A trigger event is raised only when every rule it needs is on (its
+shape, the point or body reading, the instant reading, the order reading
+when several fall on one second); otherwise the change is counted with
+the switch that was off and nothing is raised. The hold of a volume is
+computed exactly along the track's straight moves (slab clipping for a
+box, the sphere's quadratic, the box swept by the body segment clipped by
+its face planes, the sphere against the body by a convex search); a move
+that only touches a volume raises nothing. The event is delivered as
+`--assume-trigger-enter` delivers it (`fo4_vm::player`), with the player
+as the action reference. Whether a trigger is enabled is the host's
+`IsDisabled` state (`Host::reference_disabled`, which counts no native
+call); a reference a native deletes is gone. A distance registration made
+by a native call is kept with the calling instance, the two objects (an
+alias stands for the reference it holds) and the threshold; its due second
+is solved on the track's moves against a placed reference standing still;
+an actor's position is open (no actor movement model). A native that moves
+a reference (`MoveTo`, `SetPosition`, `MoveToNode`, `TranslateTo` and two
+more) makes its position open; a `MoveTo` of the player is compared with
+the track and counted (the track is the caller's word). `quest_run`'s
+clock loop asks the model for its next due second beside the timers and
+the scene clock, and settles it after each step (`track::next_due`,
+`track::settle`); every count goes to the census under `world model`.
+
+**The data's own checks** ([world-census.txt](world-census.txt)):
+
+- Kind words by base: 1 on 27,204 references (6,929 activators, the rest
+  statics, decals, acoustic spaces and a few others), 2 on 220 (202
+  activators) with three equal bound words on all 220, 3 on 1,940 statics,
+  4 on 642 sound markers, 5 on 22 statics. The model reads kinds 1 and 2
+  of activators only.
+- Of 4,106 upright unscaled boxes of activators with a trigger handler,
+  the bottom lies within 1 unit of the highest navigation mesh plane at or
+  below the centre for 345 under the half-extent reading and for 10 under
+  the full-extent reading; 1,576 reach into the ground under the
+  half-extent reading (1,869 have no plane at or below the centre in
+  their cell).
+- The exterior grid: all 1,026,944 temporary placed references of
+  exterior cells lie in their own cell's square of 4,096 units.
+- Placed activators with a primitive: 4,395 boxes and 192 spheres with a
+  trigger handler (enter, leave or both), 2,384 with no script; 181 are
+  initially disabled, 500 have an enable parent, 471 are tilted.
+- Scripts: 289 declare a trigger-enter handler with code and 84 a leave
+  one; 25 a less-than and 12 a greater-than distance handler; call sites:
+  42 less-than and 15 greater-than registrations (13 thresholds between
+  100 and 500, 31 a variable), 19 unregistrations; position natives by
+  name: `GetDistance` 201, `GetPositionX/Y/Z` 150, `GetAngleZ` 42,
+  `GetParentCell` 69, `GetWorldSpace` 12, `GetCurrentLocation` 172,
+  `HasDirectLOS` 26 (a caller assumption), `HasDetectionLOS` 79 and the
+  line-of-sight registrations 12 (not modelled), `MoveTo` 1,425 (observed).
+
+`world_census MANIFEST OUT.txt NAMES.txt` writes the census (counts only;
+NAMES.txt is never versioned); 25 s wall, peak RSS about 1 GB.
+
+**The forced opening with a track**
+([quest-run-opening.txt](quest-run-opening.txt); the track, its plan and
+the command lines are in the step's notes). The previous step's command
+line, its eight `--assume-trigger-enter` removed, with a track of 63
+points planned on the navigation meshes from 13 waypoints at 300 units per
+second and every switch above (body reading, height 120):
+
+- **All eight trigger stops are passed by the geometry**, none by an
+  assumption (before: eight by assumption). Under the point reading seven
+  are: one box's bottom lies 6 units above the mesh walked under it, and
+  the run stops there (40 stages).
+- The track raises 26 enters on 21 triggers, 13 of which the previous run
+  never assumed: helper quests' triggers along the way, one of which sets
+  one more stage of the opening quest; 14 triggers delete themselves; the
+  track crosses one stage's trigger on its way to the previous stage's,
+  so two stages are set in the other order.
+- The last stage's fragment blocks on `HasDirectLOS`, passed only by the
+  caller's `--assume-los true`. Reached: **43 of the 104 stages** (before
+  42), one objective displayed then hidden.
+- Next: the two stages set by lines spoken outside scenes, which the
+  interpreter does not speak; one of them registers the distance events.
+  Set by the caller (`--then`) at a second before the track steps onto
+  the elevator, the registrations are made (seven), the player's is raised
+  where the track comes within its threshold and sets the next stage (46
+  stages); the six others name actors' aliases, whose positions are open.
+
 
 ## Conditions
 
@@ -1676,3 +1812,26 @@ public page was requested in this step. No editor, editor source or
 definition file, script source, decompiler, other interpreter, script
 extender or the game executable was opened or searched for. The game was
 not run.
+
+## Provenance of the world step
+
+Recognised from prior general knowledge, used only as pending rules that
+are off by default: that a primitive's bound words are half sizes and its
+kind 1 a box and kind 2 a sphere (checked against the data as above);
+that a trigger tests the player's body and that the reference point of an
+actor is at its feet (the two readings `world_trigger_point_v1` and
+`world_trigger_body_v1`); that a disabled reference has no collision; that
+distance registrations are one-shot; that placed statics keep their
+editor position; that a cell names its location; the meaning of the
+position, cell and line-of-sight natives (their declarations are the
+compiled scripts'). The caller's values in the opening's notes (a running
+speed of 300 units per second, a body of 120 units, a lift of 1 unit, the
+waypoints' seconds) are assumptions of the person running it.
+
+The `XPRM` layout, the kind words, the ground check, the exterior grid and
+every count were measured with the repository's own readers on the
+installed data, the navigation meshes with `fo4-nav`, the compiled
+scripts with the repository's reader. No public page was requested in
+this step. No editor, editor source or definition file, script source,
+decompiler, other interpreter, script extender, physics engine or the
+game executable was opened or searched for. The game was not run.
