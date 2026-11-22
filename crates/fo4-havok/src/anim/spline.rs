@@ -353,22 +353,22 @@ impl<'a> Reader<'a, '_> {
             curve: None,
         };
         if spline_bits == 0 {
-            for c in 0..3 {
+            for (c, slot) in t.components.iter_mut().enumerate() {
                 if static_bits >> c & 1 == 1 {
-                    t.components[c] = Component::Static(self.f32("static value")?);
+                    *slot = Component::Static(self.f32("static value")?);
                 }
             }
             return Ok(t);
         }
         let (count, degree, knots) = self.curve_head(frames, b)?;
         self.align(4)?;
-        for c in 0..3 {
+        for (c, slot) in t.components.iter_mut().enumerate() {
             if spline_bits >> c & 1 == 1 {
                 let min = self.f32("range minimum")?;
                 let max = self.f32("range maximum")?;
-                t.components[c] = Component::Spline { min, max };
+                *slot = Component::Spline { min, max };
             } else if static_bits >> c & 1 == 1 {
-                t.components[c] = Component::Static(self.f32("static value")?);
+                *slot = Component::Static(self.f32("static value")?);
             }
         }
         let mut points = Vec::new();
