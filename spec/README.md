@@ -32,7 +32,6 @@ Measurement datasets and photographs of the game are not distributed.
 | [material-research.md](material-research.md) | Material layout research, source boundaries and the attributed MIT exception. |
 | [material.md](material.md) | BGSM/BGEM binary layouts, numeric fields, versions and unsupported semantics. |
 | [nif-render-layouts.md](nif-render-layouts.md) | Additional NIF/texture/snapshot layouts used by the CPU reference renderer. |
-| [nif.md](nif.md) | NIF framing, blocks, links, meshes, vertex layouts and bounded structural readers. |
 | [pex.md](pex.md) | Compiled scripts (`.pex`): header, string table, debug information, user flags, objects, structs, variables, properties, states, functions and instructions as measured over every entry of one installation; opcode arities established by alternative readings, argument kinds, the claimed opcode roles and their checks, the disassembly. |
 | [pex-census.txt](pex-census.txt) | Counts from the `.pex` census (`pex_census`). |
 | [nif.md](nif.md) | NIF framing, blocks, links, meshes, vertex layouts, node rotation words and bounded structural readers. |
