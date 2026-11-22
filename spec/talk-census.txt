@@ -1,0 +1,574 @@
+# talk_census: kinds and counts only (spec/vm.md, Dialogue outside scenes, and Unique actor aliases). Sections: 1 topics (DIAL); 2 topics and lines by subtype code and whether a scene action names the topic;
+# 3 lines with a stage field (TIQS); 4 lines by whom function 72 names as speaker (run-on 0) and listener (run-on 1); 5 lines with a script block; 6 game settings naming greetings or hellos; 7 reference aliases by fill and unique actor aliases by placed actors.
+46373	1 topics	QNAM names	QUST
+2	1 topics	by subtype and category byte	ACAC	7
+3	1 topics	by subtype and category byte	ACYI	0
+6	1 topics	by subtype and category byte	ACYI	3
+19	1 topics	by subtype and category byte	AGRE	4
+1	1 topics	by subtype and category byte	ALIL	0
+25	1 topics	by subtype and category byte	ALIL	5
+1	1 topics	by subtype and category byte	ALKL	0
+19	1 topics	by subtype and category byte	ALKL	3
+2	1 topics	by subtype and category byte	ALTC	0
+63	1 topics	by subtype and category byte	ALTC	5
+1	1 topics	by subtype and category byte	ALTN	0
+40	1 topics	by subtype and category byte	ALTN	5
+3	1 topics	by subtype and category byte	ASKF	1
+2	1 topics	by subtype and category byte	ASKG	1
+3	1 topics	by subtype and category byte	ASSA	0
+5	1 topics	by subtype and category byte	ASSA	3
+5	1 topics	by subtype and category byte	ATCK	0
+71	1 topics	by subtype and category byte	ATCK	3
+2	1 topics	by subtype and category byte	AVTH	0
+31	1 topics	by subtype and category byte	AVTH	3
+1	1 topics	by subtype and category byte	BASH	0
+4	1 topics	by subtype and category byte	BASH	3
+2	1 topics	by subtype and category byte	BGST	0
+6	1 topics	by subtype and category byte	BGST	3
+2	1 topics	by subtype and category byte	BLED	0
+30	1 topics	by subtype and category byte	BLED	3
+1	1 topics	by subtype and category byte	BLOC	0
+4	1 topics	by subtype and category byte	BLOC	3
+1	1 topics	by subtype and category byte	BREA	7
+2	1 topics	by subtype and category byte	BRIB	1
+3	1 topics	by subtype and category byte	COLO	0
+38	1 topics	by subtype and category byte	COLO	5
+3	1 topics	by subtype and category byte	COTN	0
+55	1 topics	by subtype and category byte	COTN	5
+31	1 topics	by subtype and category byte	CRIL	3
+1619	1 topics	by subtype and category byte	CUST	0
+5	1 topics	by subtype and category byte	DETH	0
+101	1 topics	by subtype and category byte	DETH	3
+3	1 topics	by subtype and category byte	DFDA	0
+10	1 topics	by subtype and category byte	DFDA	5
+1	1 topics	by subtype and category byte	ENBZ	7
+1	1 topics	by subtype and category byte	EXBZ	7
+16	1 topics	by subtype and category byte	FEXT	4
+2	1 topics	by subtype and category byte	FLAT	1
+6	1 topics	by subtype and category byte	FLBK	3
+4	1 topics	by subtype and category byte	FLEE	0
+25	1 topics	by subtype and category byte	FLEE	3
+1	1 topics	by subtype and category byte	FRJT	1
+2	1 topics	by subtype and category byte	GBYE	7
+3	1 topics	by subtype and category byte	GIFF	1
+3	1 topics	by subtype and category byte	GREE	0
+473	1 topics	by subtype and category byte	GREE	7
+1	1 topics	by subtype and category byte	GRNT	7
+1	1 topics	by subtype and category byte	HEAL	1
+11	1 topics	by subtype and category byte	HELO	0
+449	1 topics	by subtype and category byte	HELO	7
+7	1 topics	by subtype and category byte	HIT_	0
+102	1 topics	by subtype and category byte	HIT_	3
+8	1 topics	by subtype and category byte	IDAT	0
+348	1 topics	by subtype and category byte	IDAT	7
+6	1 topics	by subtype and category byte	IDLE	0
+95	1 topics	by subtype and category byte	IDLE	7
+2	1 topics	by subtype and category byte	IMNG	0
+39	1 topics	by subtype and category byte	IMNG	7
+1	1 topics	by subtype and category byte	IMNU	0
+2	1 topics	by subtype and category byte	IMNU	7
+1	1 topics	by subtype and category byte	IMPT	0
+2	1 topics	by subtype and category byte	IMPT	7
+1	1 topics	by subtype and category byte	IMQU	0
+2	1 topics	by subtype and category byte	IMQU	7
+2	1 topics	by subtype and category byte	INTI	1
+2	1 topics	by subtype and category byte	LOIL	0
+20	1 topics	by subtype and category byte	LOIL	5
+4	1 topics	by subtype and category byte	LOTC	0
+52	1 topics	by subtype and category byte	LOTC	5
+3	1 topics	by subtype and category byte	LOTN	0
+35	1 topics	by subtype and category byte	LOTN	5
+1	1 topics	by subtype and category byte	LWBS	7
+19	1 topics	by subtype and category byte	MREF	4
+1	1 topics	by subtype and category byte	MUNC	3
+4	1 topics	by subtype and category byte	MURD	0
+4	1 topics	by subtype and category byte	MURD	3
+3	1 topics	by subtype and category byte	NOTA	0
+43	1 topics	by subtype and category byte	NOTA	5
+3	1 topics	by subtype and category byte	NOTC	0
+96	1 topics	by subtype and category byte	NOTC	5
+1	1 topics	by subtype and category byte	NOTI	0
+18	1 topics	by subtype and category byte	NOTI	7
+1	1 topics	by subtype and category byte	NOTL	0
+32	1 topics	by subtype and category byte	NOTL	5
+2	1 topics	by subtype and category byte	OBCO	0
+6	1 topics	by subtype and category byte	OBCO	7
+1	1 topics	by subtype and category byte	ORAV	0
+10	1 topics	by subtype and category byte	ORAV	3
+8	1 topics	by subtype and category byte	ORFB	3
+1	1 topics	by subtype and category byte	ORFL	0
+8	1 topics	by subtype and category byte	ORFL	3
+1	1 topics	by subtype and category byte	ORTC	0
+10	1 topics	by subtype and category byte	ORTC	3
+1	1 topics	by subtype and category byte	OUTB	7
+4	1 topics	by subtype and category byte	PAAC	7
+1	1 topics	by subtype and category byte	PACO	7
+3	1 topics	by subtype and category byte	PADR	7
+1	1 topics	by subtype and category byte	PAFI	7
+1	1 topics	by subtype and category byte	PAFU	7
+2	1 topics	by subtype and category byte	PATR	7
+6	1 topics	by subtype and category byte	PATT	3
+10	1 topics	by subtype and category byte	PICC	3
+2	1 topics	by subtype and category byte	PICT	7
+2	1 topics	by subtype and category byte	PIRN	7
+1	1 topics	by subtype and category byte	POAT	0
+23	1 topics	by subtype and category byte	POAT	3
+18	1 topics	by subtype and category byte	PRJT	4
+19	1 topics	by subtype and category byte	REFU	4
+2	1 topics	by subtype and category byte	RELE	1
+1	1 topics	by subtype and category byte	RQST	0
+13	1 topics	by subtype and category byte	RQST	3
+33	1 topics	by subtype and category byte	RUMO	0
+27	1 topics	by subtype and category byte	SCCH	7
+967	1 topics	by subtype and category byte	SCEN	0
+40705	1 topics	by subtype and category byte	SCEN	2
+2	1 topics	by subtype and category byte	SERU	6
+17	1 topics	by subtype and category byte	SHOW	4
+2	1 topics	by subtype and category byte	STAY	1
+4	1 topics	by subtype and category byte	STEA	0
+11	1 topics	by subtype and category byte	STEA	3
+3	1 topics	by subtype and category byte	STFN	3
+4	1 topics	by subtype and category byte	TAUT	0
+111	1 topics	by subtype and category byte	TAUT	3
+1	1 topics	by subtype and category byte	THGR	0
+18	1 topics	by subtype and category byte	THGR	3
+1	1 topics	by subtype and category byte	TITG	7
+18	1 topics	by subtype and category byte	TRAD	4
+22	1 topics	by subtype and category byte	TRES	3
+3	1 topics	by subtype and category byte	WFPI	0
+83	1 topics	by subtype and category byte	WFPI	7
+1672	1 topics	subrecords	BNAM	4 bytes
+46373	1 topics	subrecords	DATA	4 bytes
+984	1 topics	subrecords	EDID	a text
+958	1 topics	subrecords	FULL	4 bytes
+1588	1 topics	subrecords	KNAM	4 bytes
+46373	1 topics	subrecords	PNAM	4 bytes
+46373	1 topics	subrecords	QNAM	4 bytes
+46373	1 topics	subrecords	SNAM	4 bytes
+46373	1 topics	subrecords	TIFC	4 bytes
+91	1 topics	subtype codes
+45	1 topics	subtype codes stored with more than one category byte
+46373	1 topics	winning topics
+11	2 lines by subtype	ACYI	named by no scene action, in no branch
+223	2 lines by subtype	AGRE	named by no scene action, in no branch
+193	2 lines by subtype	ALIL	named by no scene action, in no branch
+111	2 lines by subtype	ALKL	named by no scene action, in no branch
+441	2 lines by subtype	ALTC	named by no scene action, in no branch
+270	2 lines by subtype	ALTN	named by no scene action, in no branch
+76	2 lines by subtype	ASKF	in a dialogue branch, named by no scene action
+35	2 lines by subtype	ASKG	in a dialogue branch, named by no scene action
+24	2 lines by subtype	ASSA	named by no scene action, in no branch
+331	2 lines by subtype	ATCK	named by no scene action, in no branch
+160	2 lines by subtype	AVTH	named by no scene action, in no branch
+13	2 lines by subtype	BASH	named by no scene action, in no branch
+15	2 lines by subtype	BGST	named by no scene action, in no branch
+129	2 lines by subtype	BLED	named by no scene action, in no branch
+16	2 lines by subtype	BLOC	named by no scene action, in no branch
+9	2 lines by subtype	BREA	named by no scene action, in no branch
+45	2 lines by subtype	BRIB	in a dialogue branch, named by no scene action
+258	2 lines by subtype	COLO	named by no scene action, in no branch
+453	2 lines by subtype	COTN	named by no scene action, in no branch
+347	2 lines by subtype	CRIL	named by no scene action, in no branch
+8932	2 lines by subtype	CUST	in a dialogue branch, named by no scene action
+242	2 lines by subtype	DETH	named by no scene action, in no branch
+45	2 lines by subtype	DFDA	named by no scene action, in no branch
+2	2 lines by subtype	ENBZ	named by no scene action, in no branch
+2	2 lines by subtype	EXBZ	named by no scene action, in no branch
+91	2 lines by subtype	FEXT	named by no scene action, in no branch
+26	2 lines by subtype	FLAT	in a dialogue branch, named by no scene action
+43	2 lines by subtype	FLBK	named by no scene action, in no branch
+118	2 lines by subtype	FLEE	named by no scene action, in no branch
+18	2 lines by subtype	FRJT	in a dialogue branch, named by no scene action
+7	2 lines by subtype	GBYE	named by no scene action, in no branch
+54	2 lines by subtype	GIFF	in a dialogue branch, named by no scene action
+5987	2 lines by subtype	GREE	named by no scene action, in no branch
+3	2 lines by subtype	GRNT	named by no scene action, in no branch
+9965	2 lines by subtype	HELO	named by no scene action, in no branch
+534	2 lines by subtype	HIT_	named by no scene action, in no branch
+3715	2 lines by subtype	IDAT	named by no scene action, in no branch
+5731	2 lines by subtype	IDLE	named by no scene action, in no branch
+172	2 lines by subtype	IMNG	named by no scene action, in no branch
+18	2 lines by subtype	IMNU	named by no scene action, in no branch
+20	2 lines by subtype	IMPT	named by no scene action, in no branch
+18	2 lines by subtype	IMQU	named by no scene action, in no branch
+48	2 lines by subtype	INTI	in a dialogue branch, named by no scene action
+129	2 lines by subtype	LOIL	named by no scene action, in no branch
+352	2 lines by subtype	LOTC	named by no scene action, in no branch
+211	2 lines by subtype	LOTN	named by no scene action, in no branch
+3	2 lines by subtype	LWBS	named by no scene action, in no branch
+111	2 lines by subtype	MREF	named by no scene action, in no branch
+1	2 lines by subtype	MUNC	named by no scene action, in no branch
+25	2 lines by subtype	MURD	named by no scene action, in no branch
+272	2 lines by subtype	NOTA	named by no scene action, in no branch
+1432	2 lines by subtype	NOTC	named by no scene action, in no branch
+72	2 lines by subtype	NOTI	named by no scene action, in no branch
+178	2 lines by subtype	NOTL	named by no scene action, in no branch
+25	2 lines by subtype	OBCO	named by no scene action, in no branch
+49	2 lines by subtype	ORAV	named by no scene action, in no branch
+47	2 lines by subtype	ORFB	named by no scene action, in no branch
+36	2 lines by subtype	ORFL	named by no scene action, in no branch
+51	2 lines by subtype	ORTC	named by no scene action, in no branch
+3	2 lines by subtype	OUTB	named by no scene action, in no branch
+4	2 lines by subtype	PAAC	named by no scene action, in no branch
+46	2 lines by subtype	PADR	named by no scene action, in no branch
+7	2 lines by subtype	PAFI	named by no scene action, in no branch
+29	2 lines by subtype	PATR	named by no scene action, in no branch
+23	2 lines by subtype	PATT	named by no scene action, in no branch
+19	2 lines by subtype	PICC	named by no scene action, in no branch
+95	2 lines by subtype	POAT	named by no scene action, in no branch
+98	2 lines by subtype	PRJT	named by no scene action, in no branch
+130	2 lines by subtype	REFU	named by no scene action, in no branch
+8	2 lines by subtype	RELE	in a dialogue branch, named by no scene action
+56	2 lines by subtype	RQST	named by no scene action, in no branch
+158	2 lines by subtype	RUMO	in a dialogue branch, named by no scene action
+151	2 lines by subtype	SCCH	named by a scene action
+10	2 lines by subtype	SCCH	named by no scene action, in no branch
+57073	2 lines by subtype	SCEN	named by a scene action
+140	2 lines by subtype	SHOW	named by no scene action, in no branch
+23	2 lines by subtype	STAY	in a dialogue branch, named by no scene action
+63	2 lines by subtype	STEA	named by no scene action, in no branch
+15	2 lines by subtype	STFN	named by no scene action, in no branch
+1196	2 lines by subtype	TAUT	named by no scene action, in no branch
+57	2 lines by subtype	THGR	named by no scene action, in no branch
+118	2 lines by subtype	TRAD	named by no scene action, in no branch
+98	2 lines by subtype	TRES	named by no scene action, in no branch
+868	2 lines by subtype	WFPI	named by no scene action, in no branch
+2	2 topics by subtype	ACAC	named by no scene action, in no branch
+9	2 topics by subtype	ACYI	named by no scene action, in no branch
+19	2 topics by subtype	AGRE	named by no scene action, in no branch
+26	2 topics by subtype	ALIL	named by no scene action, in no branch
+20	2 topics by subtype	ALKL	named by no scene action, in no branch
+65	2 topics by subtype	ALTC	named by no scene action, in no branch
+41	2 topics by subtype	ALTN	named by no scene action, in no branch
+3	2 topics by subtype	ASKF	in a dialogue branch, named by no scene action
+2	2 topics by subtype	ASKG	in a dialogue branch, named by no scene action
+8	2 topics by subtype	ASSA	named by no scene action, in no branch
+76	2 topics by subtype	ATCK	named by no scene action, in no branch
+33	2 topics by subtype	AVTH	named by no scene action, in no branch
+5	2 topics by subtype	BASH	named by no scene action, in no branch
+8	2 topics by subtype	BGST	named by no scene action, in no branch
+32	2 topics by subtype	BLED	named by no scene action, in no branch
+5	2 topics by subtype	BLOC	named by no scene action, in no branch
+1	2 topics by subtype	BREA	named by no scene action, in no branch
+2	2 topics by subtype	BRIB	in a dialogue branch, named by no scene action
+41	2 topics by subtype	COLO	named by no scene action, in no branch
+58	2 topics by subtype	COTN	named by no scene action, in no branch
+31	2 topics by subtype	CRIL	named by no scene action, in no branch
+1619	2 topics by subtype	CUST	in a dialogue branch, named by no scene action
+106	2 topics by subtype	DETH	named by no scene action, in no branch
+13	2 topics by subtype	DFDA	named by no scene action, in no branch
+1	2 topics by subtype	ENBZ	named by no scene action, in no branch
+1	2 topics by subtype	EXBZ	named by no scene action, in no branch
+16	2 topics by subtype	FEXT	named by no scene action, in no branch
+2	2 topics by subtype	FLAT	in a dialogue branch, named by no scene action
+6	2 topics by subtype	FLBK	named by no scene action, in no branch
+29	2 topics by subtype	FLEE	named by no scene action, in no branch
+1	2 topics by subtype	FRJT	in a dialogue branch, named by no scene action
+2	2 topics by subtype	GBYE	named by no scene action, in no branch
+3	2 topics by subtype	GIFF	in a dialogue branch, named by no scene action
+476	2 topics by subtype	GREE	named by no scene action, in no branch
+1	2 topics by subtype	GRNT	named by no scene action, in no branch
+1	2 topics by subtype	HEAL	in a dialogue branch, named by no scene action
+460	2 topics by subtype	HELO	named by no scene action, in no branch
+109	2 topics by subtype	HIT_	named by no scene action, in no branch
+356	2 topics by subtype	IDAT	named by no scene action, in no branch
+101	2 topics by subtype	IDLE	named by no scene action, in no branch
+41	2 topics by subtype	IMNG	named by no scene action, in no branch
+3	2 topics by subtype	IMNU	named by no scene action, in no branch
+3	2 topics by subtype	IMPT	named by no scene action, in no branch
+3	2 topics by subtype	IMQU	named by no scene action, in no branch
+2	2 topics by subtype	INTI	in a dialogue branch, named by no scene action
+22	2 topics by subtype	LOIL	named by no scene action, in no branch
+56	2 topics by subtype	LOTC	named by no scene action, in no branch
+38	2 topics by subtype	LOTN	named by no scene action, in no branch
+1	2 topics by subtype	LWBS	named by no scene action, in no branch
+19	2 topics by subtype	MREF	named by no scene action, in no branch
+1	2 topics by subtype	MUNC	named by no scene action, in no branch
+8	2 topics by subtype	MURD	named by no scene action, in no branch
+46	2 topics by subtype	NOTA	named by no scene action, in no branch
+99	2 topics by subtype	NOTC	named by no scene action, in no branch
+19	2 topics by subtype	NOTI	named by no scene action, in no branch
+33	2 topics by subtype	NOTL	named by no scene action, in no branch
+8	2 topics by subtype	OBCO	named by no scene action, in no branch
+11	2 topics by subtype	ORAV	named by no scene action, in no branch
+8	2 topics by subtype	ORFB	named by no scene action, in no branch
+9	2 topics by subtype	ORFL	named by no scene action, in no branch
+11	2 topics by subtype	ORTC	named by no scene action, in no branch
+1	2 topics by subtype	OUTB	named by no scene action, in no branch
+4	2 topics by subtype	PAAC	named by no scene action, in no branch
+1	2 topics by subtype	PACO	named by no scene action, in no branch
+3	2 topics by subtype	PADR	named by no scene action, in no branch
+1	2 topics by subtype	PAFI	named by no scene action, in no branch
+1	2 topics by subtype	PAFU	named by no scene action, in no branch
+2	2 topics by subtype	PATR	named by no scene action, in no branch
+6	2 topics by subtype	PATT	named by no scene action, in no branch
+10	2 topics by subtype	PICC	named by no scene action, in no branch
+2	2 topics by subtype	PICT	named by no scene action, in no branch
+2	2 topics by subtype	PIRN	named by no scene action, in no branch
+24	2 topics by subtype	POAT	named by no scene action, in no branch
+18	2 topics by subtype	PRJT	named by no scene action, in no branch
+19	2 topics by subtype	REFU	named by no scene action, in no branch
+2	2 topics by subtype	RELE	in a dialogue branch, named by no scene action
+14	2 topics by subtype	RQST	named by no scene action, in no branch
+33	2 topics by subtype	RUMO	in a dialogue branch, named by no scene action
+23	2 topics by subtype	SCCH	named by a scene action
+4	2 topics by subtype	SCCH	named by no scene action, in no branch
+41672	2 topics by subtype	SCEN	named by a scene action
+2	2 topics by subtype	SERU	named by no scene action, in no branch
+17	2 topics by subtype	SHOW	named by no scene action, in no branch
+2	2 topics by subtype	STAY	in a dialogue branch, named by no scene action
+15	2 topics by subtype	STEA	named by no scene action, in no branch
+3	2 topics by subtype	STFN	named by no scene action, in no branch
+115	2 topics by subtype	TAUT	named by no scene action, in no branch
+19	2 topics by subtype	THGR	named by no scene action, in no branch
+1	2 topics by subtype	TITG	named by no scene action, in no branch
+18	2 topics by subtype	TRAD	named by no scene action, in no branch
+22	2 topics by subtype	TRES	named by no scene action, in no branch
+86	2 topics by subtype	WFPI	named by no scene action, in no branch
+1	3 lines with a stage field	COTN	named by no scene action, in no branch	end half
+11	3 lines with a stage field	CUST	in a dialogue branch, named by no scene action	begin half
+9	3 lines with a stage field	CUST	in a dialogue branch, named by no scene action	both halves
+42	3 lines with a stage field	CUST	in a dialogue branch, named by no scene action	end half
+49	3 lines with a stage field	GREE	named by no scene action, in no branch	begin half
+1	3 lines with a stage field	GREE	named by no scene action, in no branch	both halves
+435	3 lines with a stage field	GREE	named by no scene action, in no branch	end half
+7	3 lines with a stage field	HELO	named by no scene action, in no branch	begin half
+1	3 lines with a stage field	HELO	named by no scene action, in no branch	both halves
+487	3 lines with a stage field	HELO	named by no scene action, in no branch	end half
+12	3 lines with a stage field	IDAT	named by no scene action, in no branch	begin half
+18	3 lines with a stage field	IDAT	named by no scene action, in no branch	end half
+1	3 lines with a stage field	IDLE	named by no scene action, in no branch	begin half
+14	3 lines with a stage field	IDLE	named by no scene action, in no branch	end half
+6	3 lines with a stage field	NOTA	named by no scene action, in no branch	begin half
+1	3 lines with a stage field	NOTC	named by no scene action, in no branch	begin half
+10	3 lines with a stage field	NOTI	named by no scene action, in no branch	begin half
+3	3 lines with a stage field	PAAC	named by no scene action, in no branch	end half
+2	3 lines with a stage field	RUMO	in a dialogue branch, named by no scene action	end half
+4	3 lines with a stage field	SCCH	named by a scene action	begin half
+3	3 lines with a stage field	SCCH	named by a scene action	end half
+734	3 lines with a stage field	SCEN	named by a scene action	begin half
+74	3 lines with a stage field	SCEN	named by a scene action	both halves
+3859	3 lines with a stage field	SCEN	named by a scene action	end half
+5	3 lines with a stage field	STEA	named by no scene action, in no branch	end half
+1	3 lines with a stage field	WFPI	named by no scene action, in no branch	end half
+93	3 lines with a stage field: the topic's quest holds every stage named	no	named by a scene action
+24	3 lines with a stage field: the topic's quest holds every stage named	no	named by no scene action, in no branch
+64	3 lines with a stage field: the topic's quest holds every stage named	yes	in a dialogue branch, named by no scene action
+4581	3 lines with a stage field: the topic's quest holds every stage named	yes	named by a scene action
+1028	3 lines with a stage field: the topic's quest holds every stage named	yes	named by no scene action, in no branch
+11	4 lines by who they name	ACYI	no function 72 on speaker or listener
+222	4 lines by who they name	AGRE	no function 72 on speaker or listener
+1	4 lines by who they name	AGRE	speaker another actor base
+186	4 lines by who they name	ALIL	no function 72 on speaker or listener
+7	4 lines by who they name	ALIL	speaker another actor base
+100	4 lines by who they name	ALKL	no function 72 on speaker or listener
+11	4 lines by who they name	ALKL	speaker another actor base
+392	4 lines by who they name	ALTC	no function 72 on speaker or listener
+49	4 lines by who they name	ALTC	speaker another actor base
+250	4 lines by who they name	ALTN	no function 72 on speaker or listener
+20	4 lines by who they name	ALTN	speaker another actor base
+2	4 lines by who they name	ASKF	listener another actor base
+72	4 lines by who they name	ASKF	no function 72 on speaker or listener
+2	4 lines by who they name	ASKF	speaker the player's base
+34	4 lines by who they name	ASKG	no function 72 on speaker or listener
+1	4 lines by who they name	ASKG	speaker the player's base
+24	4 lines by who they name	ASSA	no function 72 on speaker or listener
+307	4 lines by who they name	ATCK	no function 72 on speaker or listener
+24	4 lines by who they name	ATCK	speaker another actor base
+155	4 lines by who they name	AVTH	no function 72 on speaker or listener
+5	4 lines by who they name	AVTH	speaker another actor base
+13	4 lines by who they name	BASH	no function 72 on speaker or listener
+15	4 lines by who they name	BGST	no function 72 on speaker or listener
+108	4 lines by who they name	BLED	no function 72 on speaker or listener
+21	4 lines by who they name	BLED	speaker another actor base
+16	4 lines by who they name	BLOC	no function 72 on speaker or listener
+9	4 lines by who they name	BREA	no function 72 on speaker or listener
+41	4 lines by who they name	BRIB	no function 72 on speaker or listener
+4	4 lines by who they name	BRIB	speaker the player's base
+237	4 lines by who they name	COLO	no function 72 on speaker or listener
+21	4 lines by who they name	COLO	speaker another actor base
+428	4 lines by who they name	COTN	no function 72 on speaker or listener
+25	4 lines by who they name	COTN	speaker another actor base
+337	4 lines by who they name	CRIL	no function 72 on speaker or listener
+10	4 lines by who they name	CRIL	speaker another actor base
+16	4 lines by who they name	CUST	listener another actor base, speaker the player's base
+6249	4 lines by who they name	CUST	no function 72 on speaker or listener
+2590	4 lines by who they name	CUST	speaker another actor base
+77	4 lines by who they name	CUST	speaker the player's base
+199	4 lines by who they name	DETH	no function 72 on speaker or listener
+43	4 lines by who they name	DETH	speaker another actor base
+36	4 lines by who they name	DFDA	no function 72 on speaker or listener
+9	4 lines by who they name	DFDA	speaker another actor base
+2	4 lines by who they name	ENBZ	no function 72 on speaker or listener
+2	4 lines by who they name	EXBZ	no function 72 on speaker or listener
+91	4 lines by who they name	FEXT	no function 72 on speaker or listener
+25	4 lines by who they name	FLAT	no function 72 on speaker or listener
+1	4 lines by who they name	FLAT	speaker the player's base
+42	4 lines by who they name	FLBK	no function 72 on speaker or listener
+1	4 lines by who they name	FLBK	speaker another actor base
+110	4 lines by who they name	FLEE	no function 72 on speaker or listener
+8	4 lines by who they name	FLEE	speaker another actor base
+17	4 lines by who they name	FRJT	no function 72 on speaker or listener
+1	4 lines by who they name	FRJT	speaker another actor base
+6	4 lines by who they name	GBYE	no function 72 on speaker or listener
+1	4 lines by who they name	GBYE	speaker another actor base
+2	4 lines by who they name	GIFF	listener another actor base
+51	4 lines by who they name	GIFF	no function 72 on speaker or listener
+1	4 lines by who they name	GIFF	speaker the player's base
+170	4 lines by who they name	GREE	listener another actor base, speaker the player's base
+95	4 lines by who they name	GREE	listener the player's base
+3	4 lines by who they name	GREE	listener the player's base, speaker another actor base
+3795	4 lines by who they name	GREE	no function 72 on speaker or listener
+1705	4 lines by who they name	GREE	speaker another actor base
+7	4 lines by who they name	GREE	speaker another record
+212	4 lines by who they name	GREE	speaker the player's base
+3	4 lines by who they name	GRNT	speaker the player's base
+23	4 lines by who they name	HELO	listener another actor base
+49	4 lines by who they name	HELO	listener another actor base, speaker another actor base
+255	4 lines by who they name	HELO	listener another actor base, speaker the player's base
+36	4 lines by who they name	HELO	listener the player's base
+1	4 lines by who they name	HELO	listener the player's base, speaker another actor base
+7448	4 lines by who they name	HELO	no function 72 on speaker or listener
+1978	4 lines by who they name	HELO	speaker another actor base
+1	4 lines by who they name	HELO	speaker another record
+174	4 lines by who they name	HELO	speaker the player's base
+1	4 lines by who they name	HIT_	listener the player's base
+450	4 lines by who they name	HIT_	no function 72 on speaker or listener
+83	4 lines by who they name	HIT_	speaker another actor base
+11	4 lines by who they name	IDAT	listener another actor base
+10	4 lines by who they name	IDAT	listener another actor base, speaker the player's base
+3	4 lines by who they name	IDAT	listener the player's base, speaker another actor base
+2608	4 lines by who they name	IDAT	no function 72 on speaker or listener
+462	4 lines by who they name	IDAT	speaker another actor base
+1	4 lines by who they name	IDAT	speaker another record
+620	4 lines by who they name	IDAT	speaker the player's base
+12	4 lines by who they name	IDLE	listener another actor base, speaker the player's base
+1	4 lines by who they name	IDLE	listener the player's base
+5019	4 lines by who they name	IDLE	no function 72 on speaker or listener
+699	4 lines by who they name	IDLE	speaker another actor base
+118	4 lines by who they name	IMNG	listener another actor base, speaker the player's base
+10	4 lines by who they name	IMNG	no function 72 on speaker or listener
+44	4 lines by who they name	IMNG	speaker the player's base
+10	4 lines by who they name	IMNU	no function 72 on speaker or listener
+8	4 lines by who they name	IMNU	speaker the player's base
+10	4 lines by who they name	IMPT	no function 72 on speaker or listener
+10	4 lines by who they name	IMPT	speaker the player's base
+10	4 lines by who they name	IMQU	no function 72 on speaker or listener
+8	4 lines by who they name	IMQU	speaker the player's base
+46	4 lines by who they name	INTI	no function 72 on speaker or listener
+2	4 lines by who they name	INTI	speaker the player's base
+123	4 lines by who they name	LOIL	no function 72 on speaker or listener
+6	4 lines by who they name	LOIL	speaker another actor base
+316	4 lines by who they name	LOTC	no function 72 on speaker or listener
+36	4 lines by who they name	LOTC	speaker another actor base
+202	4 lines by who they name	LOTN	no function 72 on speaker or listener
+9	4 lines by who they name	LOTN	speaker another actor base
+3	4 lines by who they name	LWBS	no function 72 on speaker or listener
+111	4 lines by who they name	MREF	no function 72 on speaker or listener
+1	4 lines by who they name	MUNC	speaker another actor base
+25	4 lines by who they name	MURD	no function 72 on speaker or listener
+252	4 lines by who they name	NOTA	no function 72 on speaker or listener
+20	4 lines by who they name	NOTA	speaker another actor base
+1272	4 lines by who they name	NOTC	no function 72 on speaker or listener
+160	4 lines by who they name	NOTC	speaker another actor base
+3	4 lines by who they name	NOTI	listener another actor base, speaker another actor base
+68	4 lines by who they name	NOTI	no function 72 on speaker or listener
+1	4 lines by who they name	NOTI	speaker another actor base
+172	4 lines by who they name	NOTL	no function 72 on speaker or listener
+6	4 lines by who they name	NOTL	speaker another actor base
+24	4 lines by who they name	OBCO	no function 72 on speaker or listener
+1	4 lines by who they name	OBCO	speaker another actor base
+49	4 lines by who they name	ORAV	no function 72 on speaker or listener
+47	4 lines by who they name	ORFB	no function 72 on speaker or listener
+36	4 lines by who they name	ORFL	no function 72 on speaker or listener
+51	4 lines by who they name	ORTC	no function 72 on speaker or listener
+3	4 lines by who they name	OUTB	no function 72 on speaker or listener
+1	4 lines by who they name	PAAC	listener another record, speaker the player's base
+3	4 lines by who they name	PAAC	speaker the player's base
+45	4 lines by who they name	PADR	no function 72 on speaker or listener
+1	4 lines by who they name	PADR	speaker the player's base
+7	4 lines by who they name	PAFI	no function 72 on speaker or listener
+28	4 lines by who they name	PATR	no function 72 on speaker or listener
+1	4 lines by who they name	PATR	speaker the player's base
+23	4 lines by who they name	PATT	no function 72 on speaker or listener
+19	4 lines by who they name	PICC	no function 72 on speaker or listener
+92	4 lines by who they name	POAT	no function 72 on speaker or listener
+3	4 lines by who they name	POAT	speaker another actor base
+96	4 lines by who they name	PRJT	no function 72 on speaker or listener
+2	4 lines by who they name	PRJT	speaker another actor base
+129	4 lines by who they name	REFU	no function 72 on speaker or listener
+1	4 lines by who they name	REFU	speaker another actor base
+7	4 lines by who they name	RELE	no function 72 on speaker or listener
+1	4 lines by who they name	RELE	speaker the player's base
+56	4 lines by who they name	RQST	no function 72 on speaker or listener
+131	4 lines by who they name	RUMO	listener another actor base, speaker the player's base
+14	4 lines by who they name	RUMO	no function 72 on speaker or listener
+13	4 lines by who they name	RUMO	speaker the player's base
+120	4 lines by who they name	SCCH	no function 72 on speaker or listener
+39	4 lines by who they name	SCCH	speaker another actor base
+2	4 lines by who they name	SCCH	speaker the player's base
+31	4 lines by who they name	SCEN	listener another actor base
+4	4 lines by who they name	SCEN	listener the player's base
+52492	4 lines by who they name	SCEN	no function 72 on speaker or listener
+4533	4 lines by who they name	SCEN	speaker another actor base
+1	4 lines by who they name	SCEN	speaker another record
+12	4 lines by who they name	SCEN	speaker the player's base
+131	4 lines by who they name	SHOW	no function 72 on speaker or listener
+9	4 lines by who they name	SHOW	speaker another actor base
+1	4 lines by who they name	STAY	listener another actor base
+21	4 lines by who they name	STAY	no function 72 on speaker or listener
+1	4 lines by who they name	STAY	speaker the player's base
+50	4 lines by who they name	STEA	no function 72 on speaker or listener
+13	4 lines by who they name	STEA	speaker another actor base
+15	4 lines by who they name	STFN	no function 72 on speaker or listener
+993	4 lines by who they name	TAUT	no function 72 on speaker or listener
+203	4 lines by who they name	TAUT	speaker another actor base
+57	4 lines by who they name	THGR	no function 72 on speaker or listener
+98	4 lines by who they name	TRAD	no function 72 on speaker or listener
+20	4 lines by who they name	TRAD	speaker another actor base
+91	4 lines by who they name	TRES	no function 72 on speaker or listener
+7	4 lines by who they name	TRES	speaker another actor base
+406	4 lines by who they name	WFPI	no function 72 on speaker or listener
+461	4 lines by who they name	WFPI	speaker another actor base
+1	4 lines by who they name	WFPI	speaker another record
+2	5 lines with a script block	ALTN	named by no scene action, in no branch
+6	5 lines with a script block	ASKG	in a dialogue branch, named by no scene action
+282	5 lines with a script block	CUST	in a dialogue branch, named by no scene action
+283	5 lines with a script block	GREE	named by no scene action, in no branch
+125	5 lines with a script block	HELO	named by no scene action, in no branch
+11	5 lines with a script block	IDAT	named by no scene action, in no branch
+3	5 lines with a script block	IDLE	named by no scene action, in no branch
+18	5 lines with a script block	INTI	in a dialogue branch, named by no scene action
+1	5 lines with a script block	LOTN	named by no scene action, in no branch
+15	5 lines with a script block	NOTI	named by no scene action, in no branch
+1	5 lines with a script block	REFU	named by no scene action, in no branch
+51	5 lines with a script block	SCCH	named by a scene action
+4813	5 lines with a script block	SCEN	named by a scene action
+6	6 game settings whose editor ID names greetings or hellos	first letter f
+2	6 game settings whose editor ID names greetings or hellos	first letter s
+6	7 aliases by fill	collection alias	a display name only (ALDN)
+24	7 aliases by fill	collection alias	an alias of another quest (ALEQ)
+32	7 aliases by fill	collection alias	by conditions only (CTDA)
+176	7 aliases by fill	collection alias	created at run time (ALCO)
+544	7 aliases by fill	collection alias	from a location alias (ALFA)
+11	7 aliases by fill	collection alias	linked to another alias (ALNA)
+91	7 aliases by fill	collection alias	no fill value
+16	7 aliases by fill	location alias	an alias of another quest (ALEQ)
+168	7 aliases by fill	location alias	by conditions only (CTDA)
+571	7 aliases by fill	location alias	forced location (ALFL)
+86	7 aliases by fill	location alias	from a location alias (ALFA)
+111	7 aliases by fill	location alias	from the story event (ALFE)
+18	7 aliases by fill	location alias	no fill value
+271	7 aliases by fill	reference alias	a display name only (ALDN)
+508	7 aliases by fill	reference alias	an alias of another quest (ALEQ)
+241	7 aliases by fill	reference alias	by conditions only (CTDA)
+1751	7 aliases by fill	reference alias	created at run time (ALCO)
+1402	7 aliases by fill	reference alias	forced reference (ALFR)
+2306	7 aliases by fill	reference alias	from a location alias (ALFA)
+1214	7 aliases by fill	reference alias	from the story event (ALFE)
+3469	7 aliases by fill	reference alias	linked to another alias (ALNA)
+1155	7 aliases by fill	reference alias	no fill value
+2115	7 aliases by fill	reference alias	unique actor (ALUA)
+4	7 unique actor aliases by placed actors of the base	reference alias	no placed actor of the base
+1994	7 unique actor aliases by placed actors of the base	reference alias	one placed actor of the base (resolved)
+117	7 unique actor aliases by placed actors of the base	reference alias	the player's base
