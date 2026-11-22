@@ -1007,7 +1007,18 @@ impl<'a> Loader<'a> {
             list.push((r, base));
         }
         scopes(base, &mut list, b)?;
-        for (swap, under) in list {
+        // Every material another scope's swap can put in place: literal
+        // targets of the instance's swaps, and what patterns form from them.
+        let mut placed: Vec<Vec<u8>> = Vec::new();
+        for swap in missing::swaps_of(reference, Some(base)) {
+            for (_, t) in missing::swap_pairs(&self.assets, swap, b)? {
+                if !t.is_empty() && !swap_pattern::is_pattern(&t) && !placed.contains(&t) {
+                    b.reserve(&mut placed, 1, &swap.record.source.file, 0)?;
+                    placed.push(t);
+                }
+            }
+        }
+        for (swap, under) in &list {
             let work = b.child();
             let src = &swap.record.source;
             let mut models = Vec::new();
@@ -1027,50 +1038,95 @@ impl<'a> Loader<'a> {
                     }
                 }
             }
-            let pairs = missing::swap_pairs(&self.assets, swap, &work)?;
-            // Literal sources, an empty target's included.
-            let mut literal: Vec<Vec<u8>> = Vec::new();
-            for e in &swap.data.entries {
-                if let (b"BNAM", SwapValue::Path(p)) = (&e.signature, &e.value) {
-                    if let Ok(r) =
-                        self.assets
-                            .resolve_path(Citation::SwapMaterial, p.as_bytes(), &work)
-                    {
-                        if !swap_pattern::is_pattern(&r.key) {
-                            work.reserve(&mut literal, 1, &src.file, src.offset)?;
-                            literal.push(r.key);
-                        }
+            let formed = self.pattern_targets(swap, &materials, true, roots, blockers, b)?;
+            for t in formed {
+                if !placed.contains(&t) {
+                    b.reserve(&mut placed, 1, &src.file, src.offset)?;
+                    placed.push(t);
+                }
+            }
+        }
+        // The same for materials other scopes put in place, as the draw
+        // build's readings of two or more scopes can reach them.
+        for _ in 0..4 {
+            let mut more = Vec::new();
+            for (swap, _) in &list {
+                for t in self.pattern_targets(swap, &placed, true, roots, blockers, b)? {
+                    if !placed.contains(&t) && !more.contains(&t) {
+                        b.reserve(&mut more, 1, &swap.record.source.file, 0)?;
+                        more.push(t);
                     }
                 }
             }
-            for m in &materials {
-                if literal.contains(m) {
+            if more.is_empty() {
+                break;
+            }
+            b.reserve(&mut placed, more.len(), "material swap", 0)?;
+            placed.extend(more);
+        }
+        Ok(())
+    }
+    /// The targets the patterns of `swap` form for `materials` (a material
+    /// a literal source of the swap maps is left to that entry): each one
+    /// an archive holds joins `roots`; for one none holds, with `blocker`,
+    /// `MissingSwapPatternTarget` is raised. Returns every target formed.
+    fn pattern_targets(
+        &mut self,
+        swap: &Loaded<Mswp>,
+        materials: &[Vec<u8>],
+        blocker: bool,
+        roots: &mut Vec<usize>,
+        blockers: &mut Vec<Error>,
+        b: &Budget,
+    ) -> Result<Vec<Vec<u8>>> {
+        let work = b.child();
+        let src = &swap.record.source;
+        let pairs = missing::swap_pairs(&self.assets, swap, &work)?;
+        // Literal sources, an empty target's included.
+        let mut literal: Vec<Vec<u8>> = Vec::new();
+        for e in &swap.data.entries {
+            if let (b"BNAM", SwapValue::Path(p)) = (&e.signature, &e.value) {
+                if let Ok(r) = self
+                    .assets
+                    .resolve_path(Citation::SwapMaterial, p.as_bytes(), &work)
+                {
+                    if !swap_pattern::is_pattern(&r.key) {
+                        work.reserve(&mut literal, 1, &src.file, src.offset)?;
+                        literal.push(r.key);
+                    }
+                }
+            }
+        }
+        let mut formed = Vec::new();
+        for m in materials {
+            if literal.contains(m) {
+                continue;
+            }
+            for (f, t) in &pairs {
+                if !swap_pattern::is_pattern(f) {
                     continue;
                 }
-                for (f, t) in &pairs {
-                    if !swap_pattern::is_pattern(f) {
-                        continue;
+                let target = match swap_pattern::apply(f, t, m, &work) {
+                    Ok(Some(t)) => t,
+                    Ok(None) => continue,
+                    Err(e) if matches!(e.code.as_str(), "AllocationFailed" | "LimitExceeded") => {
+                        return Err(e)
                     }
-                    let target = match swap_pattern::apply(f, t, m, &work) {
-                        Ok(Some(t)) => t,
-                        Ok(None) => continue,
-                        Err(e)
-                            if matches!(e.code.as_str(), "AllocationFailed" | "LimitExceeded") =>
-                        {
-                            return Err(e)
-                        }
-                        Err(mut e) => {
+                    Err(mut e) => {
+                        if blocker {
                             e.source = Box::new(src.clone());
                             push_error(blockers, e, b)?;
-                            continue;
                         }
-                    };
-                    let id = self.assets.load(AssetKind::Material, &target, &work)?;
-                    let absent = self.assets.nodes[id]
-                        .blockers
-                        .iter()
-                        .any(|e| e.code == "MissingMaterial");
-                    if absent {
+                        continue;
+                    }
+                };
+                let id = self.assets.load(AssetKind::Material, &target, &work)?;
+                let absent = self.assets.nodes[id]
+                    .blockers
+                    .iter()
+                    .any(|e| e.code == "MissingMaterial");
+                if absent {
+                    if blocker {
                         push_error(
                             blockers,
                             error(
@@ -1081,14 +1137,18 @@ impl<'a> Loader<'a> {
                             ),
                             b,
                         )?;
-                    } else if !roots.contains(&id) {
-                        b.reserve(roots, 1, &src.file, src.offset)?;
-                        roots.push(id);
                     }
+                } else if !roots.contains(&id) {
+                    b.reserve(roots, 1, &src.file, src.offset)?;
+                    roots.push(id);
+                }
+                if !formed.contains(&target) {
+                    b.reserve(&mut formed, 1, &src.file, src.offset)?;
+                    formed.push(target);
                 }
             }
         }
-        Ok(())
+        Ok(formed)
     }
     /// Explicit TXST resolution for consumers holding a documented TXST reference.
     /// Unknown model companions are never guessed to be FormIDs.
