@@ -126,6 +126,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "fo4-nav"
+version = "0.1.0"
+dependencies = [
+ "fo4-core",
+ "fo4-plugin",
+ "fo4-render",
+ "fo4-scene",
+ "fo4-vfs",
+ "fo4-walk",
+ "serde",
+]
+
+[[package]]
 name = "fo4-nif"
 version = "0.1.0"
 dependencies = [

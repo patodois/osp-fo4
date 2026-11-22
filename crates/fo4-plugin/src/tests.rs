@@ -1842,6 +1842,26 @@ fn typed_winners_cell_membership_and_raw_ranges() {
         object_id: 0x800,
     };
     let work = Budget::new(1 << 20);
+    // Every occurrence, overridden ones included, reads back from its plugin.
+    let refr: Vec<usize> = store
+        .overrides()
+        .history
+        .iter()
+        .enumerate()
+        .filter(|(_, o)| o.signature == *b"REFR")
+        .map(|(i, _)| i)
+        .collect();
+    assert_eq!(refr.len(), 2);
+    let (first, plugin) = store.raw_occurrence(refr[0], &work).unwrap();
+    assert_eq!(plugin, 0);
+    assert!(!first.deleted() && first.disabled());
+    let (second, plugin) = store.raw_occurrence(refr[1], &work).unwrap();
+    assert_eq!(plugin, 1);
+    assert!(second.deleted());
+    assert_eq!(
+        store.raw_occurrence(usize::MAX, &work).unwrap_err().code,
+        "InvalidOccurrence"
+    );
     let c = store.get::<Cell>(&key, &work).unwrap().unwrap();
     assert_eq!(c.data.common.editor_id.as_deref(), Some("TestRoom"));
     assert_eq!(c.data.common.uninterpreted.len(), 1);

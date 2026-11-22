@@ -362,3 +362,41 @@ used only under hypotheses, supported only by the `root_transform_census`
 counts of model boxes against the OBND boxes of one installation (editor
 bounds, not the running game). No reader, editor, renderer or
 documentation of the format beyond the pinned nifxml copy was opened.
+
+The navigation mesh reader (`fo4-nav`, [spec/navmesh.md](../spec/navmesh.md))
+was established only by measuring the `NAVM` and `NAVI` records of one
+installation with the `nav_census` example, reading the plugins through
+`fo4-plugin` and checking the result against the cells, placed doors,
+terrain and collision the project already reads. No editor, editor source
+or definition file, navmesh tool, format write-up, wiki page, other
+implementation, decompilation or game executable was opened or searched
+for, and no external dependency was added. Recognised from prior general
+knowledge before it was measured, and kept only because the census could
+have refuted it and did not: the record signatures `NAVM` and `NAVI` and
+the subrecord names `NVNM`, `ONAM`, `NNAM`, `MNAM`, `NVER`, `NVMI`,
+`NVPP`; `NVNM` opening with a version and a constant check word, then a
+world word that is zero inside and the parent cell FormID or the grid as
+two `i16`; the section order vertices, triangles, edge links, door
+triangles, cover data, cover-to-triangle mappings, waypoints, grid, with
+vertices as three `f32`; a triangle as three `u16` vertices and three
+`i16` edge words with -1 for none followed by flag and cover fields (from
+an older, shorter layout; the 21-byte size was measured); an edge link as a
+type word, a navmesh FormID and a triangle; a door link as a triangle, a
+word and a door reference; waypoints as a position, a triangle and flags;
+cover entries as pairs of vertex indices with a data word; the grid as a
+division count, two square sizes, bounds and one triangle list per square;
+`NVMI` as navmesh, flags, an approximate position, a float, lists of
+connected navmeshes and doors, an island flag with island data and the
+parent world and cell; `NVPP` as preferred-pathing lists. Found by
+measurement and not recalled: the triangle bits that mark edge links and
+cover, the cover mapping packing, the edge byte of an edge link, which half
+of the grid word is x, the grid's square numbering and the bracket its
+lists satisfy, the island byte matching an `NVMI` flag, and the `ONAM`,
+`NNAM` and `MNAM` framings. Two recalled details did not hold: cover
+entries are not plain vertex pairs, and the grid does not list exactly the
+triangles overlapping each square. The path search (`fo4_nav::path`: A*
+over triangle centroids and a funnel) is this project's own, written from
+general graph-search and geometry knowledge; it claims nothing about the
+game's planner. Every meaning is a pending rule in
+[spec/hypotheses.tsv](../spec/hypotheses.tsv); records and anything read
+from them stay outside the repository.

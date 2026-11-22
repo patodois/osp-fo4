@@ -1,0 +1,461 @@
+# navmesh census: 7 plugins
+store diagnostics (records the plugin index could not place)	0
+
+# records, bytes and outcomes
+8	deleted (winning)
+1189	door link names: REFR of DOOR
+552	door link: door placed in another cell
+637	door link: door placed in the mesh's own cell
+144	edge link target: no record
+419848	edge link target: winning live NAVM
+399275	edge link to another mesh: kind 0
+1596	edge link to another mesh: kind 1
+1596	edge link to another mesh: kind 2
+8691	edge link to its own mesh: kind 1
+8690	edge link to its own mesh: kind 2
+419992	edges: edge link
+14472430	edges: neighbour
+1625095	edges: open
+0	grid: listed but not meeting (bounding box, slack +0.001, square = row (y) x divisions + column (x))
+404307	grid: listed but not meeting (bounding box, slack -0.001, square = row (y) x divisions + column (x))
+1029278	grid: listed but not meeting (bounding box, slack -16, square = row (y) x divisions + column (x))
+9463310	grid: listed but not meeting (triangle, slack +0.001, square = column (x) x divisions + row (y))
+71121	grid: listed but not meeting (triangle, slack +0.001, square = row (y) x divisions + column (x))
+51920	grid: listed but not meeting (triangle, slack +16, square = row (y) x divisions + column (x))
+486833	grid: listed but not meeting (triangle, slack -0.001, square = row (y) x divisions + column (x))
+1146532	grid: meeting but not listed (bounding box, slack +0.001, square = row (y) x divisions + column (x))
+554218	grid: meeting but not listed (bounding box, slack -0.001, square = row (y) x divisions + column (x))
+408940	grid: meeting but not listed (bounding box, slack -16, square = row (y) x divisions + column (x))
+9829634	grid: meeting but not listed (triangle, slack +0.001, square = column (x) x divisions + row (y))
+437445	grid: meeting but not listed (triangle, slack +0.001, square = row (y) x divisions + column (x))
+1251164	grid: meeting but not listed (triangle, slack +16, square = row (y) x divisions + column (x))
+118	grid: meeting but not listed (triangle, slack -0.001, square = row (y) x divisions + column (x))
+11497	group parent: exterior cell, header word 2 non-zero
+906	group parent: interior cell, header word 2 zero
+174550	mutual link (other mesh) edge end points: largest distance 0 (identical)
+19452	mutual link (other mesh) edge end points: largest distance < 0.01
+45362	mutual link (other mesh) edge end points: largest distance < 1
+136516	mutual link (other mesh) edge end points: largest distance < 16
+26478	mutual link (other mesh) edge end points: largest distance >= 16
+3	mutual link (own mesh) edge end points: largest distance 0 (identical)
+17378	mutual link (own mesh) edge end points: largest distance >= 16
+418954	mutual link edge end points: reversed order closer
+785	mutual link edge end points: same order closer
+399166	mutual link kinds: kind 0 <-> kind 0
+3	mutual link kinds: kind 1 <-> kind 1
+10284	mutual link kinds: kind 1 <-> kind 2
+10284	mutual link kinds: kind 2 <-> kind 1
+2	mutual link kinds: kind 2 <-> kind 2
+7893	occurrences by plugin index: 0
+85	occurrences by plugin index: 1
+8	occurrences by plugin index: 2
+2623	occurrences by plugin index: 3
+1	occurrences by plugin index: 4
+37	occurrences by plugin index: 5
+1918	occurrences by plugin index: 6
+154	occurrences: overridden
+12411	occurrences: winning
+118070	payload bytes MNAM
+2294	payload bytes NNAM
+218240999	payload bytes NVNM
+392	payload bytes ONAM
+154	read to the last byte (overridden)
+12403	read to the last byte (winning)
+218520167	record payload bytes (live)
+218520167	record payload bytes read to the last byte
+158412	subrecord framing bytes
+11432	terrain built for the parent cell
+4	terrain refused: NoHeights
+61	terrain refused: NoLand
+2146	vertex outside the terrain footprint
+12403	winning live meshes checked
+
+# NVNM bytes by section (every occurrence read to the last byte)
+200912	header
+52977716	vertices
+117244319	triangles
+4739880	edge links
+62188	door links
+14379796	cover segments
+3537424	cover mappings
+323756	waypoints
+24775008	grid
+218240999	total
+
+# sizes per occurrence read
+MNAM groups: n 12557 min 0 max 510 sum 4453
+NNAM entries: n 100 min 4 max 153 sum 1147
+cover mappings per mesh: n 12557 min 0 max 3059 sum 871799
+cover segments per mesh: n 12557 min 0 max 4122 sum 1791196
+door links per mesh: n 12557 min 0 max 19 sum 1196
+edge links per mesh: n 12557 min 0 max 250 sum 426332
+grid divisions: n 12557 min 1 max 12 sum 68885
+grid triangle entries per mesh: n 12557 min 1 max 16916 sum 10796304
+triangles per mesh: n 12557 min 1 max 14988 sum 5580671
+vertices per mesh: n 12557 min 3 max 11645 sum 4410624
+waypoints per mesh: n 12557 min 0 max 426 sum 15196
+
+# MNAM group FormID names (3 distinct, 24 most frequent)
+4310	REFR
+92	no record
+42	unresolved
+
+# ONAM names (3 distinct, 24 most frequent)
+91	STAT
+6	FURN
+1	ACTI
+
+# ONAM size (1 distinct, 24 most frequent)
+98	4
+
+# cover segment data word (9717 distinct, 24 most frequent)
+59206	0x3ff8
+29931	0x093b
+29717	0x7ff8
+28578	0x0910
+27771	0x124b
+26211	0x1253
+23851	0x125b
+22771	0x4832
+19277	0x493b
+18794	0x0131
+14634	0x0939
+14421	0x493a
+14352	0x0a43
+13721	0x0110
+13646	0x0810
+12972	0x1b6b
+12538	0x1b73
+12097	0x1249
+12087	0x1b7b
+11985	0x4932
+11645	0x0010
+10962	0x1251
+10760	0x483a
+10592	0x0931
+1328677	(other values)
+
+# cover segment flags word (104 distinct, 24 most frequent)
+685070	0x0000
+354487	0x0002
+115941	0x8000
+75548	0x8002
+68427	0x0004
+62501	0x0006
+52737	0x0003
+49939	0x0008
+40605	0x0001
+34189	0x0020
+28942	0x0012
+27867	0x000a
+16307	0x8004
+15308	0x000c
+14988	0x8006
+12606	0x8012
+11542	0x8008
+11184	0x0022
+10431	0x0021
+6672	0x8020
+6259	0x0005
+5844	0x0023
+5527	0x0014
+5505	0x0016
+72770	(other values)
+
+# door link word (1 distinct, 24 most frequent)
+1196	0xe48b73f3
+
+# edge link edge byte (3 distinct, 24 most frequent)
+223406	2
+119841	1
+83085	0
+
+# edge link kind word (3 distinct, 24 most frequent)
+405549	0
+10392	1
+10391	2
+
+# header word 2 is zero (2 distinct, 24 most frequent)
+11651	false
+906	true
+
+# record flags (3 distinct, 24 most frequent)
+12349	0x40000
+108	0x4040000
+100	0x80040000
+
+# record version (1 distinct, 24 most frequent)
+12557	131
+
+# subrecord sequence (3 distinct, 24 most frequent)
+12457	NVNM MNAM
+98	NVNM ONAM NNAM MNAM
+2	NVNM NNAM MNAM
+
+# triangle byte 16 (12 distinct, 24 most frequent)
+3962532	0x00
+1184865	0x04
+292745	0x10
+105692	0x02
+33763	0x01
+427	0x05
+246	0x14
+218	0x12
+97	0x03
+62	0x11
+23	0x06
+1	0x15
+
+# triangle byte 17 (19 distinct, 24 most frequent)
+3372435	0x00
+1787529	0x40
+113706	0x44
+106557	0x04
+65591	0x02
+49771	0x42
+46724	0x01
+32707	0x41
+1301	0x03
+1193	0x43
+1001	0x46
+962	0x06
+615	0x45
+563	0x05
+12	0x10
+1	0x07
+1	0x11
+1	0x12
+1	0x14
+
+# triangle byte 18 (5 distinct, 24 most frequent)
+5551701	0x08
+27741	0x00
+1161	0x0c
+50	0x0a
+18	0x04
+
+# triangle byte 19 (8 distinct, 24 most frequent)
+4769343	0x00
+371506	0x02
+273806	0x01
+104912	0x04
+44408	0x03
+9710	0x06
+6948	0x05
+38	0x07
+
+# triangle byte 19 bits 3-7 (1 distinct, 24 most frequent)
+5505839	0
+
+# triangle byte 20 (1 distinct, 24 most frequent)
+5580671	0x00
+
+# triangle bytes 12-15 (f32) (2 distinct, 24 most frequent)
+4462003	largest finite f32
+1118668	other finite
+
+# waypoint flags (1 distinct, 24 most frequent)
+15196	0x0
+
+# consistency checks over the winning live meshes (holds, fails)
+45549	2	MNAM triangle < triangles
+100	0	NNAM entries strictly ascending
+1147	0	NNAM entry < vertex count
+270268	42	a segment with bit 15 does not start where the previous one ends
+1223173	259439	a segment without bit 15 starts where the previous one ends
+860718	0	cover mapping edge (packed % 4) < 3
+858645	1724	cover mapping names an edge whose byte-19 bit is set
+857801	2568	cover mapping names an open edge (word -1, no link bit)
+860718	0	cover mapping segment index < segments
+860369	349	cover mapping triangle (packed / 4) < triangles
+12097	306	cover mappings per mesh equal the cover bits set in byte 19
+767221	997046	cover segment named by at least one mapping
+1520572	2007962	cover segment point word < vertex count
+1189	0	door link FormID resolves
+1189	0	door link names a placed reference of a DOOR
+1189	0	door link triangle < triangles
+419739	80	edge link is mutual (linked triangle links back to this triangle)
+419992	0	edge link named by exactly one triangle edge with the link bit
+419848	144	edge link names a winning live NAVM
+402467	17381	edge link names another mesh
+419819	29	edge link triangle < triangles of the linked mesh
+14892422	0	edge word is -1, a triangle index, or (link bit) an edge-link index
+5505839	0	every triangle listed in at least one square
+4015764	2148	exterior vertex inside its cell (grid x 4096) footprint
+11345	0	first cover segment has flags bit 15
+12381	22	grid max 0 = vertex maximum
+12387	16	grid max 1 = vertex maximum
+0	12403	grid max 2 = vertex maximum
+10120	2283	grid max z = the larger of the vertex maximum z and the largest triangle word
+5106	7297	grid mesh with every square exact: bounding box, slack +0.001, square = row (y) x divisions + column (x)
+5091	7312	grid mesh with every square exact: bounding box, slack -0.001, square = row (y) x divisions + column (x)
+4433	7970	grid mesh with every square exact: bounding box, slack -16, square = row (y) x divisions + column (x)
+4684	7719	grid mesh with every square exact: triangle, slack +0.001, square = column (x) x divisions + row (y)
+6571	5832	grid mesh with every square exact: triangle, slack +0.001, square = row (y) x divisions + column (x)
+4935	7468	grid mesh with every square exact: triangle, slack +16, square = row (y) x divisions + column (x)
+6562	5841	grid mesh with every square exact: triangle, slack -0.001, square = row (y) x divisions + column (x)
+12381	22	grid min 0 = vertex minimum
+12386	17	grid min 1 = vertex minimum
+12388	15	grid min 2 = vertex minimum
+12403	0	grid size 0 = (max - min) / divisions within 1e-3
+12403	0	grid size 1 = (max - min) / divisions within 1e-3
+12403	0	grid square count = divisions squared
+246996	425406	grid square lists exactly the triangles meeting it: bounding box, slack +0.001, square = row (y) x divisions + column (x)
+285187	387215	grid square lists exactly the triangles meeting it: bounding box, slack -0.001, square = row (y) x divisions + column (x)
+221640	450762	grid square lists exactly the triangles meeting it: bounding box, slack -16, square = row (y) x divisions + column (x)
+66764	605638	grid square lists exactly the triangles meeting it: triangle, slack +0.001, square = column (x) x divisions + row (y)
+499279	173123	grid square lists exactly the triangles meeting it: triangle, slack +0.001, square = row (y) x divisions + column (x)
+280527	391875	grid square lists exactly the triangles meeting it: triangle, slack +16, square = row (y) x divisions + column (x)
+503850	168552	grid square lists exactly the triangles meeting it: triangle, slack -0.001, square = row (y) x divisions + column (x)
+10644719	0	grid triangle < triangles
+419739	0	mutual link: edge byte = the linked triangle's edge that links back
+399171	20568	mutual link: same kind word both ways
+419739	0	mutual link: the back link's edge byte = this edge
+14472430	0	neighbour is not the triangle itself
+14472366	46	neighbour names it back across the same two vertices (any order)
+14472342	70	neighbour names it back across the same two vertices (reversed)
+14472412	18	neighbour names this triangle back
+14861	335	waypoint triangle < triangles
+14268	593	waypoint x, y inside its triangle
+11497	0	word 2 non-zero: it names the world whose group holds the parent cell
+906	0	word 2 zero: word 3 is the FormID of the group's parent cell
+11497	0	word 3 high half = cell grid x and low half = grid y
+360	11137	word 3 low half = cell grid x and high half = grid y
+
+# exterior mesh vertex z minus terrain height at its x, y (parent cell's LAND, default diagonal) (4010598 values)
+992	[ -1024,   -256)
+4274	[  -256,    -64)
+29187	[   -64,    -16)
+93888	[   -16,     -4)
+142711	[    -4,     -1)
+1694493	[    -1,      1)
+228458	[     1,      4)
+442296	[     4,     16)
+611739	[    16,     64)
+490554	[    64,    256)
+203865	[   256,   1024)
+62449	[  1024,   4096)
+5692	[  4096,   +inf)
+quantiles: 1% -15.03 | 5% -2.10 | 25% 0.00 | 50% 1.32 | 75% 37.05 | 95% 357.23 | 99% 1439.70
+
+# triangle bytes 12-15 (finite values) minus the triangle's highest vertex z (1106164 values)
+118097	[  -inf,  -4096)
+260583	[ -4096,  -1024)
+265091	[ -1024,   -256)
+68154	[  -256,    -64)
+16269	[   -64,    -16)
+2368	[   -16,     -4)
+528	[    -4,     -1)
+546	[    -1,      1)
+608	[     1,      4)
+2437	[     4,     16)
+11746	[    16,     64)
+64396	[    64,    256)
+128948	[   256,   1024)
+115461	[  1024,   4096)
+50932	[  4096,   +inf)
+quantiles: 1% -8422.02 | 5% -6536.74 | 25% -1621.53 | 50% -461.14 | 75% 335.38 | 95% 3830.00 | 99% 6814.21
+
+# waypoint z minus its triangle's plane at x, y (14268 values)
+29	[   -64,    -16)
+436	[   -16,     -4)
+832	[    -4,     -1)
+11751	[    -1,      1)
+703	[     1,      4)
+464	[     4,     16)
+47	[    16,     64)
+6	[    64,    256)
+quantiles: 1% -8.13 | 5% -2.54 | 25% -0.00 | 50% 0.00 | 75% 0.00 | 95% 2.74 | 99% 9.92
+
+# exterior vertices outside their cell footprint: distance outside (2148 values)
+1684	[    -1,      1)
+426	[     1,      4)
+1	[     4,     16)
+4	[    16,     64)
+27	[    64,    256)
+6	[   256,   1024)
+quantiles: 1% 0.00 | 5% 0.01 | 25% 0.09 | 50% 0.31 | 75% 0.88 | 95% 2.08 | 99% 105.09
+
+# door link: horizontal distance from the placed door to its triangle's centroid (1189 values)
+9	[     4,     16)
+407	[    16,     64)
+693	[    64,    256)
+72	[   256,   1024)
+6	[  1024,   4096)
+2	[  4096,   +inf)
+quantiles: 1% 18.99 | 5% 33.75 | 25% 54.53 | 50% 79.42 | 75% 117.48 | 95% 361.12 | 99% 767.79
+
+# NAVI records
+6	NAVI occurrences: overridden
+1	NAVI occurrences: winning
+2588489	NAVI payload bytes
+7	NAVI read to the last byte
+12567	NVMI entries
+7798	NVMI entries in the NAVI of plugin index 0
+106	NVMI entries in the NAVI of plugin index 1
+25	NVMI entries in the NAVI of plugin index 2
+2645	NVMI entries in the NAVI of plugin index 3
+23	NVMI entries in the NAVI of plugin index 4
+37	NVMI entries in the NAVI of plugin index 5
+1933	NVMI entries in the NAVI of plugin index 6
+8	NVMI names: NAVM (deleted)
+196	NVPP sets (plugin index 0)
+196	NVPP sets (plugin index 1)
+196	NVPP sets (plugin index 2)
+196	NVPP sets (plugin index 3)
+196	NVPP sets (plugin index 4)
+196	NVPP sets (plugin index 5)
+196	NVPP sets (plugin index 6)
+1	distinct NAVI FormIDs
+7	distinct NVPP payloads across occurrences
+66368	island triangles
+78117	island vertices
+12143	navmeshes named by NVMI in 1 NAVI occurrence(s)
+146	navmeshes named by NVMI in 2 NAVI occurrence(s)
+22	navmeshes named by NVMI in 6 NAVI occurrence(s)
+
+# NVMI f32 after the position (2 distinct, 24 most frequent)
+11109	zero
+1458	non-zero
+
+# NVMI flags (4 distinct, 24 most frequent)
+7506	0x20
+4977	0x0
+72	0x40
+12	0x60
+
+# NVMI list entries name (2 distinct, 24 most frequent)
+30735	NAVM
+11	NAVM (deleted)
+
+# NVMI pair first word (1 distinct, 24 most frequent)
+1201	0xe48b73f3
+
+# NVPP pair first word names (1 distinct, 24 most frequent)
+98	NAVM
+
+# NVPP set members name (1 distinct, 24 most frequent)
+45388	NAVM
+
+# NAVI consistency checks (holds, fails)
+10401	2158	NVMI first and second lists together = the meshes its edge links name
+10182	2377	NVMI first list = other meshes named by kind-0 edge links
+9627	2932	NVMI first list = the meshes its edge links name
+12559	8	NVMI names a winning live NAVM
+12449	110	NVMI navmesh has an occurrence in the plugin of this NAVI occurrence
+12555	4	NVMI pair second words = the doors its door links name
+806	0	NVMI parent (world zero) = the mesh's parent cell
+11753	0	NVMI parent word (world set) = the mesh's grid word
+12558	1	NVMI position inside the mesh's vertex box
+9766	2793	NVMI second list = other meshes named by kind-1 or kind-2 edge links
+12559	0	NVMI second list disjoint from the first
+12559	0	NVMI world = the mesh's header world (both resolved)
+98	0	NVPP pair second word < set count
+3428	4088	island corners = its vertices' box
+66368	0	island triangle vertex < island vertices
+3941	74176	island vertex equals a vertex of the mesh
+12303	100	winning live NAVM named by an NVMI of some NAVI occurrence
+1933	10470	winning live NAVM named by an NVMI of the winning NAVI
+
+# timing
+total wall seconds	22.0

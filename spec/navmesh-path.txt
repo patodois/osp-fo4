@@ -1,0 +1,179 @@
+# navmesh test cells and sample paths (fo4_nav::NavGraph, this project's own search)
+
+# test cell 1 (interior, radius 0, 1 cells)
+navmeshes in the cell	39
+navmeshes in all 1 cells	39
+vertices (cell)	535
+triangles (cell)	523
+edge links (cell)	0
+door links (cell)	0
+waypoints (cell)	0
+vertices (all cells)	535
+triangles (all cells)	523
+edge links (all cells)	0
+door links (all cells)	0
+waypoints (all cells)	0
+load wall seconds	0.00
+
+## graph, edge-link kind 0 followed
+nodes (triangles)	523
+neighbour arcs	1042
+edge-link arcs	0
+edge links to meshes not loaded	0
+edge links not followed (kind)	0
+edge links with a triangle outside the linked mesh	0
+invalid edge words	0
+connected components	39
+largest components (triangles)	300 30 25 22 12 12 11 9
+components of one triangle	3
+sample path: between the two triangles of the largest component found by a double sweep over centroid distance
+straight-line distance between the two centroids	5194.3
+corridor triangles	31
+meshes crossed	1
+edge-link crossings	0
+polyline points (start, corners, goal)	7
+polyline length	5322.1
+centroid route length (what A* minimised)	6627.1
+polyline length / straight line	1.025
+nodes expanded	151
+search wall seconds	0.0000
+
+## graph, every edge-link kind followed
+nodes (triangles)	523
+neighbour arcs	1042
+edge-link arcs	0
+edge links to meshes not loaded	0
+edge links not followed (kind)	0
+edge links with a triangle outside the linked mesh	0
+invalid edge words	0
+connected components	39
+largest components (triangles)	300 30 25 22 12 12 11 9
+components of one triangle	3
+sample path: between the two triangles of the largest component found by a double sweep over centroid distance
+straight-line distance between the two centroids	5194.3
+corridor triangles	31
+meshes crossed	1
+edge-link crossings	0
+polyline points (start, corners, goal)	7
+polyline length	5322.1
+centroid route length (what A* minimised)	6627.1
+polyline length / straight line	1.025
+nodes expanded	151
+search wall seconds	0.0000
+
+## heights of the cell's own navmesh vertices against collision
+collision world entries (placed collision, then with terrain)	9886	9886
+vertices with no surface on their vertical line	7
+vertex z minus the nearest surface on its vertical line: n 528 | 5% -8.71 | 25% 0.00 | 50% 0.00 | 75% 6.11 | 95% 281.84 | max 703.92
+12	[-inf, -64)
+12	[-64, -16)
+36	[-16, -4)
+14	[-4, -1)
+2	[-1, -0.25)
+268	[-0.25, 0.25)
+6	[0.25, 1)
+30	[1, 4)
+50	[4, 16)
+8	[16, 64)
+90	[64, +inf)
+vertex z minus the highest surface at or below z + 64: n 524 | 5% -47.95 | 25% -5.83 | 50% 0.00 | 75% 6.55 | 95% 462.52 | max 703.92
+0	[-inf, -64)
+49	[-64, -16)
+88	[-16, -4)
+16	[-4, -1)
+1	[-1, -0.25)
+206	[-0.25, 0.25)
+5	[0.25, 1)
+19	[1, 4)
+35	[4, 16)
+7	[16, 64)
+98	[64, +inf)
+
+# test cell 2 (exterior, radius 1, 9 cells)
+navmeshes in the cell	7
+navmeshes in all 9 cells	38
+vertices (cell)	1229
+triangles (cell)	1855
+edge links (cell)	143
+door links (cell)	0
+waypoints (cell)	0
+vertices (all cells)	12471
+triangles (all cells)	17876
+edge links (all cells)	1419
+door links (all cells)	0
+waypoints (all cells)	0
+load wall seconds	0.00
+
+## graph, edge-link kind 0 followed
+nodes (triangles)	17876
+neighbour arcs	48974
+edge-link arcs	908
+edge links to meshes not loaded	473
+edge links not followed (kind)	38
+edge links with a triangle outside the linked mesh	0
+invalid edge words	0
+connected components	18
+largest components (triangles)	17347 94 92 90 77 71 49 27
+components of one triangle	6
+sample path: between the two triangles of the largest component found by a double sweep over centroid distance
+straight-line distance between the two centroids	17248.2
+corridor triangles	257
+meshes crossed	5
+edge-link crossings	4
+polyline points (start, corners, goal)	40
+polyline length	17793.0
+centroid route length (what A* minimised)	21116.4
+polyline length / straight line	1.032
+nodes expanded	9533
+search wall seconds	0.0010
+
+## graph, every edge-link kind followed
+nodes (triangles)	17876
+neighbour arcs	48974
+edge-link arcs	946
+edge links to meshes not loaded	473
+edge links not followed (kind)	0
+edge links with a triangle outside the linked mesh	0
+invalid edge words	0
+connected components	12
+largest components (triangles)	17637 102 94 27 6 3 2 1
+components of one triangle	5
+sample path: between the two triangles of the largest component found by a double sweep over centroid distance
+straight-line distance between the two centroids	17248.2
+corridor triangles	257
+meshes crossed	5
+edge-link crossings	4
+polyline points (start, corners, goal)	40
+polyline length	17793.0
+centroid route length (what A* minimised)	21116.4
+polyline length / straight line	1.032
+nodes expanded	9951
+search wall seconds	0.0010
+
+## heights of the cell's own navmesh vertices against collision
+collision world entries (placed collision, then with terrain)	8199	26631
+vertices with no surface on their vertical line	0
+vertex z minus the nearest surface on its vertical line: n 1229 | 5% -2.68 | 25% 0.00 | 50% 0.00 | 75% 7.87 | 95% 60.04 | max 467.30
+0	[-inf, -64)
+1	[-64, -16)
+40	[-16, -4)
+50	[-4, -1)
+31	[-1, -0.25)
+625	[-0.25, 0.25)
+35	[0.25, 1)
+65	[1, 4)
+204	[4, 16)
+117	[16, 64)
+61	[64, +inf)
+vertex z minus the highest surface at or below z + 64: n 1229 | 5% -4.29 | 25% 0.00 | 50% 0.00 | 75% 7.59 | 95% 60.04 | max 467.30
+0	[-inf, -64)
+18	[-64, -16)
+48	[-16, -4)
+53	[-4, -1)
+26	[-1, -0.25)
+617	[-0.25, 0.25)
+32	[0.25, 1)
+61	[1, 4)
+200	[4, 16)
+113	[16, 64)
+61	[64, +inf)

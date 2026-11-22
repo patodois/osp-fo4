@@ -1162,6 +1162,34 @@ impl Store {
         }
         Ok(Some(record))
     }
+    /// Any indexed occurrence (winning or overridden) read again from its
+    /// plugin, with the index of that plugin for resolving its FormIDs.
+    /// `occurrence` is an index into `overrides().history`.
+    pub fn raw_occurrence(&self, occurrence: usize, b: &Budget) -> Result<(Record, usize)> {
+        let o = self.overrides.history.get(occurrence).ok_or_else(|| {
+            Error::new(
+                "InvalidOccurrence",
+                "plugin store",
+                0,
+                self.overrides.history.len(),
+                occurrence,
+            )
+        })?;
+        let s = &self.sources[o.plugin].1;
+        s.check_stable()?;
+        let record = crate::record_at(s.as_ref(), o.offset, s.len(), &self.limits, b)?;
+        s.check_stable()?;
+        if record.signature != o.signature || record.deleted() != o.deleted {
+            return Err(Error::new(
+                "IndexedRecordChanged",
+                &record.source.file,
+                record.source.offset,
+                "indexed occurrence type/flags",
+                "different record on reread",
+            ));
+        }
+        Ok((record, o.plugin))
+    }
     /// The record type of the winning record `key`.
     pub fn signature(&self, key: &FormKey) -> Option<[u8; 4]> {
         self.overrides.winner(key).map(|w| w.signature)

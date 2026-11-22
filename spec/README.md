@@ -46,6 +46,9 @@ Measurement datasets and photographs of the game are not distributed.
 | [save-census.txt](save-census.txt) | Counts from the save census (`save_census`): no content of any save. |
 | [audio.md](audio.md) | Sound files and the records that tie them to the world: the RIFF `WAVE` and `XWMA` containers and the voice container (`FUZE`, lip half kept raw) read to the last byte, their header fields and chunks, PCM decoded and the WMA-family payload left raw with its packets counted, the sound-family records and their links, how stored sound paths resolve, placed emitters, and what the test cells place and assign; what stays open. |
 | [audio-census.txt](audio-census.txt) | Counts from the audio census (`audio_census`): files, containers, header fields, chunks, decoding, record subrecords, links, path readings and the test cells, numbered. No name or path. |
+| [navmesh.md](navmesh.md) | Navigation meshes: the `NAVM` record and its `NVNM` geometry read to the last byte (vertices, triangles with their neighbour words and flag bytes, edge links, door links, cover segments and mappings, waypoints, search grid), the `ONAM`, `NNAM` and `MNAM` companions, the `NAVI` record (`NVMI` entries, `NVPP`); the consistency censuses and what they refute; heights against terrain and collision; the project's own path search and the test cells; what stays open. |
+| [navmesh-census.txt](navmesh-census.txt) | Counts from the navmesh census (`nav_census`): records, bytes by section, field histograms, consistency checks with holds and fails, height distributions. No name, FormID or coordinate. |
+| [navmesh-path.txt](navmesh-path.txt) | Counts from `nav_path` for the two test cells, numbered: meshes, triangles, components, a sample path's length, vertex heights against collision. |
 | [path-census.md](path-census.md) | Path accounting and independent candidate-resolution comparisons. |
 | [photo-metrics.md](photo-metrics.md) | Prospective forward silhouette and persistent reverse-photo metrics, with explicit limits. |
 | [plugin.md](plugin.md) | Plugin envelopes, groups, subrecords, compression, FormIDs, overrides and flags. |
@@ -204,3 +207,19 @@ the registry.
 | `misc_cvpa_not_in_frame_v1` | pending | Place, by an overlay plugin, two copies of one clutter MISC with and without CVPA side by side; photograph both and drop the player onto both in one launch: any difference refutes it. |
 | `refr_xrfg_not_in_frame_v1` | pending | Place, by an overlay plugin, a copy of a grouped reference without XRFG beside the original; photograph both and walk into both in one launch: any difference refutes it; then disable the group's RNAM reference by console and check that the grouped reference stays visible (it would refute a reading in which the group gates presence). |
 | `nif_root_transform_replaced_v1` | pending | Photograph, in one launch, a placed STAT whose model's root node is rotated (an asymmetric model, for example a sign) beside its drawing with the root applied and with the root left out from the same camera words; then place, by an overlay plugin, a copy of that model whose root rotation is zeroed in a loose NIF: if the game ignores the root, both look the same; walk into both to check the collision. |
+| `nav_nvnm_layout_v1` | pending | Write one test-cell navmesh back in this layout with one triangle removed into an overlay plugin and send an actor across that spot in the running game: it must route around the gap; a file the game refuses rejects the layout. |
+| `nav_header_parent_v1` | pending | Change word 3 of one exterior navmesh to a neighbouring grid in an overlay plugin and observe whether actors of that cell still find paths in the running game. |
+| `nav_triangle_v1` | pending | As nav_nvnm_layout_v1: a removed neighbour word must cut the walkable surface for actors in the running game. |
+| `nav_triangle_link_bits_v1` | pending | Clear one link bit of a seam triangle between two exterior cells in an overlay plugin: actors in the running game must stop crossing that seam there. |
+| `nav_triangle_cover_bits_v1` | pending | None planned: cover use by actors is not measured here. |
+| `nav_edge_link_v1` | pending | Remove the kind-1 and kind-2 links of a purpose-built cell with a ledge in an overlay plugin and see whether an actor still drops down or climbs there in the running game. |
+| `nav_door_link_v1` | pending | Lock or disable a linked door in a purpose-built cell and see whether actors stop routing through it in the running game. |
+| `nav_cover_segment_v1` | pending | None planned: cover use by actors is not measured here. |
+| `nav_cover_map_v1` | pending | None planned: cover use by actors is not measured here. |
+| `nav_waypoint_v1` | pending | None planned: what actors do with waypoints is not measured here. |
+| `nav_grid_v1` | pending | None planned: the grid is a lookup structure; its contents can only be checked offline. |
+| `nav_record_companions_v1` | pending | None planned. |
+| `navi_nvmi_layout_v1` | pending | None planned: what the game derives from NVMI is not measured here. |
+| `navi_nvpp_layout_v1` | pending | None planned. |
+| `navi_occurrences_combined_v1` | pending | Load only the base master and one DLC and check in the running game that actors in a base-game cell still path. |
+| `nav_path_search_v1` | pending | Record an actor's track between two marked points of a test cell in the running game and compare it with the polyline; a difference measures the game's planner, not this search. |

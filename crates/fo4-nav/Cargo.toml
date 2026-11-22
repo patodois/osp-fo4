@@ -1,0 +1,21 @@
+[package]
+name = "fo4-nav"
+description = "Bounded reader for the navigation meshes of Fallout 4 plugins and a path search over them"
+repository.workspace = true
+keywords = ["fallout4", "bethesda", "parser", "navmesh", "pathfinding"]
+categories = ["parser-implementations", "game-development"]
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+fo4-core.workspace = true
+fo4-plugin.workspace = true
+serde.workspace = true
+
+[dev-dependencies]
+fo4-scene.workspace = true
+fo4-render.workspace = true
+fo4-vfs.workspace = true
+fo4-walk.workspace = true
