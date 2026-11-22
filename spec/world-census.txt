@@ -1,0 +1,106 @@
+# world_census: kinds and counts only (spec/vm.md, Player position). Sections: 1 the XPRM of every winning placed reference; 2 placed activators with a primitive;
+# 3 boxes against the navigation mesh under the two readings of the bound words; 4 the exterior grid of 4096 units; 5 compiled scripts: handlers, distance registrations and position natives by call name.
+8	1 bound words by kind	1	a zero bound among others
+1	1 bound words by kind	1	only the first bound non-zero
+220	1 bound words by kind	1	three equal bounds
+26975	1 bound words by kind	1	three positive bounds, not all equal
+220	1 bound words by kind	2	three equal bounds
+1940	1 bound words by kind	3	three positive bounds, not all equal
+642	1 bound words by kind	4	three positive bounds, not all equal
+22	1 bound words by kind	5	three positive bounds, not all equal
+6929	1 by kind word and base record type	1	ACTI
+1269	1 by kind word and base record type	1	ASPC
+7	1 by kind word and base record type	1	CONT
+2	1 by kind word and base record type	1	DOOR
+5	1 by kind word and base record type	1	FURN
+8013	1 by kind word and base record type	1	STAT
+10979	1 by kind word and base record type	1	TXST
+202	1 by kind word and base record type	2	ACTI
+18	1 by kind word and base record type	2	STAT
+1940	1 by kind word and base record type	3	STAT
+642	1 by kind word and base record type	4	SOUN
+22	1 by kind word and base record type	5	STAT
+27204	1 colour words by kind	1	three in 0 to 1
+220	1 colour words by kind	2	three in 0 to 1
+1940	1 colour words by kind	3	three in 0 to 1
+642	1 colour words by kind	4	three in 0 to 1
+22	1 colour words by kind	5	three in 0 to 1
+30028	1 placed references with an XPRM of 32 bytes
+27204	1 word 6 by kind	1	in 0 to 1
+220	1 word 6 by kind	2	in 0 to 1
+1940	1 word 6 by kind	3	in 0 to 1
+642	1 word 6 by kind	4	in 0 to 1
+22	1 word 6 by kind	5	in 0 to 1
+18	2 placed activators with a primitive	kind 1 (box: --trigger-box)	a leave handler
+3332	2 placed activators with a primitive	kind 1 (box: --trigger-box)	an enter handler
+1045	2 placed activators with a primitive	kind 1 (box: --trigger-box)	enter and leave handlers
+3528	2 placed activators with a primitive	kind 1 (box: --trigger-box)	in an exterior cell
+3401	2 placed activators with a primitive	kind 1 (box: --trigger-box)	in an interior cell
+178	2 placed activators with a primitive	kind 1 (box: --trigger-box)	initially disabled
+2374	2 placed activators with a primitive	kind 1 (box: --trigger-box)	no script
+3849	2 placed activators with a primitive	kind 1 (box: --trigger-box)	persistent
+160	2 placed activators with a primitive	kind 1 (box: --trigger-box)	scripts without a trigger handler
+459	2 placed activators with a primitive	kind 1 (box: --trigger-box)	tilted (a first or second rotation word not zero)
+491	2 placed activators with a primitive	kind 1 (box: --trigger-box)	with an enable parent
+40	2 placed activators with a primitive	kind 2 (sphere: --trigger-sphere)	an enter handler
+152	2 placed activators with a primitive	kind 2 (sphere: --trigger-sphere)	enter and leave handlers
+194	2 placed activators with a primitive	kind 2 (sphere: --trigger-sphere)	in an exterior cell
+8	2 placed activators with a primitive	kind 2 (sphere: --trigger-sphere)	in an interior cell
+3	2 placed activators with a primitive	kind 2 (sphere: --trigger-sphere)	initially disabled
+10	2 placed activators with a primitive	kind 2 (sphere: --trigger-sphere)	no script
+37	2 placed activators with a primitive	kind 2 (sphere: --trigger-sphere)	persistent
+12	2 placed activators with a primitive	kind 2 (sphere: --trigger-sphere)	tilted (a first or second rotation word not zero)
+9	2 placed activators with a primitive	kind 2 (sphere: --trigger-sphere)	with an enable parent
+82	3 upright boxes of activators with a trigger handler (unscaled), bottom against the highest mesh plane at or below the centre in the box's cell	bound words as full extents	1 to 16 units above the plane
+1041	3 upright boxes of activators with a trigger handler (unscaled), bottom against the highest mesh plane at or below the centre in the box's cell	bound words as full extents	16 to 64 units above the plane
+426	3 upright boxes of activators with a trigger handler (unscaled), bottom against the highest mesh plane at or below the centre in the box's cell	bound words as full extents	below the plane (the box reaches into the ground)
+678	3 upright boxes of activators with a trigger handler (unscaled), bottom against the highest mesh plane at or below the centre in the box's cell	bound words as full extents	more than 64 units above the plane
+1869	3 upright boxes of activators with a trigger handler (unscaled), bottom against the highest mesh plane at or below the centre in the box's cell	bound words as full extents	no plane at or below the centre
+10	3 upright boxes of activators with a trigger handler (unscaled), bottom against the highest mesh plane at or below the centre in the box's cell	bound words as full extents	within 1 unit of the plane
+123	3 upright boxes of activators with a trigger handler (unscaled), bottom against the highest mesh plane at or below the centre in the box's cell	bound words as half extents	1 to 16 units above the plane
+42	3 upright boxes of activators with a trigger handler (unscaled), bottom against the highest mesh plane at or below the centre in the box's cell	bound words as half extents	16 to 64 units above the plane
+1576	3 upright boxes of activators with a trigger handler (unscaled), bottom against the highest mesh plane at or below the centre in the box's cell	bound words as half extents	below the plane (the box reaches into the ground)
+151	3 upright boxes of activators with a trigger handler (unscaled), bottom against the highest mesh plane at or below the centre in the box's cell	bound words as half extents	more than 64 units above the plane
+1869	3 upright boxes of activators with a trigger handler (unscaled), bottom against the highest mesh plane at or below the centre in the box's cell	bound words as half extents	no plane at or below the centre
+345	3 upright boxes of activators with a trigger handler (unscaled), bottom against the highest mesh plane at or below the centre in the box's cell	bound words as half extents	within 1 unit of the plane
+1026944	4 placed references of exterior cells (temporary children)	position in the cell's grid square
+2	5 call sites by name	findclosestreferenceoftype	not modelled
+27	5 call sites by name	getanglex	not modelled
+34	5 call sites by name	getangley	not modelled
+42	5 call sites by name	getanglez	answered (--position-natives)
+172	5 call sites by name	getcurrentlocation	answered (--location-native)
+201	5 call sites by name	getdistance	answered (--position-natives)
+18	5 call sites by name	getheadingangle	not modelled
+69	5 call sites by name	getparentcell	answered (--cell-natives)
+54	5 call sites by name	getpositionx	answered (--position-natives)
+41	5 call sites by name	getpositiony	answered (--position-natives)
+55	5 call sites by name	getpositionz	answered (--position-natives)
+12	5 call sites by name	getworldspace	answered (--cell-natives)
+79	5 call sites by name	hasdetectionlos	not modelled
+26	5 call sites by name	hasdirectlos	a caller assumption (--assume-los)
+13	5 call sites by name	isininterior	a scripted function
+65	5 call sites by name	isinlocation	a scripted function
+3	5 call sites by name	isinterior	answered (--cell-natives)
+1425	5 call sites by name	moveto	observed (the reference is no longer at its stored place)
+28	5 call sites by name	movetonode	observed (the reference is no longer at its stored place)
+6	5 call sites by name	registerfordetectionlosgain	not modelled
+2	5 call sites by name	registerfordetectionloslost	not modelled
+2	5 call sites by name	registerfordirectlosgain	not modelled
+2	5 call sites by name	registerfordirectloslost	not modelled
+15	5 call sites by name	registerfordistancegreaterthanevent	raised (--distance-events)
+42	5 call sites by name	registerfordistancelessthanevent	raised (--distance-events)
+21	5 call sites by name	setposition	observed (the reference is no longer at its stored place)
+21	5 call sites by name	translateto	observed (the reference is no longer at its stored place)
+19	5 call sites by name	unregisterfordistanceevents	answered (--distance-events)
+13	5 distance registrations by threshold argument	a literal 100 to under 500
+5	5 distance registrations by threshold argument	a literal 2000 or more
+5	5 distance registrations by threshold argument	a literal 500 to under 2000
+3	5 distance registrations by threshold argument	a literal under 100
+31	5 distance registrations by threshold argument	a variable
+12	5 scripts declaring a handler with code	ondistancegreaterthan
+25	5 scripts declaring a handler with code	ondistancelessthan
+5	5 scripts declaring a handler with code	ongainlos
+4	5 scripts declaring a handler with code	onlostlos
+289	5 scripts declaring a handler with code	ontriggerenter
+84	5 scripts declaring a handler with code	ontriggerleave
+10282	5 scripts read
