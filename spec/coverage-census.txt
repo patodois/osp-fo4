@@ -1,25 +1,25 @@
 # Coverage census (every cell of the load order, each alone; 3 shards)
 
-cells 62393 read, 1 failed (1882 s)
+cells 62393 read, 1 failed (2091 s)
   cell failure DeletedCell: 1
 placements 1785401 (area proxy 3.6741e11 square units; 73200 without OBND, area 0); deleted 531, initially disabled 4032
   drawn without hypotheses             779020  43.63%  area  22.31%
-  drawn only under hypotheses          680843  38.13%  area  72.87%
+  drawn only under hypotheses          682246  38.21%  area  73.06%
   hidden by rule editor_marker_hidden_v1    23059   1.29%  area   0.77%
-  hidden by rule xesp_child_follows_parent_v1     8517   0.48%  area   1.01%
+  hidden by rule xesp_child_follows_parent_v1     8522   0.48%  area   1.01%
   outside the visual slice               6831   0.38%  area   0.00%
-  omitted                              287131  16.08%  area   3.04%
-  drawn with the root transform left out    19447   1.09%  area   0.72%
+  omitted                              285723  16.00%  area   2.85%
+  drawn with the root transform left out    19472   1.09%  area   0.73%
 
 by placement kind:
   actor, hidden                           138   0.01%  area   0.00%
   actor, omitted                         8632   0.48%  area   0.01%
   actor, under hypotheses                 571   0.03%  area   0.00%
   reference, drawn                     779020  43.63%  area  22.31%
-  reference, hidden                     31438   1.76%  area   1.78%
-  reference, omitted                   278499  15.60%  area   3.03%
+  reference, hidden                     31443   1.76%  area   1.78%
+  reference, omitted                   277091  15.52%  area   2.83%
   reference, outside                     6831   0.38%  area   0.00%
-  reference, under hypotheses          680272  38.10%  area  72.87%
+  reference, under hypotheses          681675  38.18%  area  73.06%
 
 with an enable parent (XESP), by the start state the chain gives under its rules:
   actor, chain not decided, omitted         2   0.00%  area   0.00%
@@ -30,8 +30,8 @@ with an enable parent (XESP), by the start state the chain gives under its rules
   reference, chain not decided, hidden by another rule        8   0.00%  area   0.00%
   reference, chain not decided, omitted      462   0.03%  area   0.00%
   reference, chain says disabled, hidden by another rule      914   0.05%  area   0.01%
-  reference, chain says disabled, not drawn: disabled through the chain     8379   0.47%  area   1.01%
-  reference, chain says disabled, omitted     9145   0.51%  area   0.13%
+  reference, chain says disabled, not drawn: disabled through the chain     8384   0.47%  area   1.01%
+  reference, chain says disabled, omitted     9140   0.51%  area   0.13%
   reference, chain says enabled, drawn under hypotheses    11926   0.67%  area   0.51%
   reference, chain says enabled, hidden by another rule      559   0.03%  area   0.10%
   reference, chain says enabled, omitted     4733   0.27%  area   0.13%
@@ -43,633 +43,633 @@ outside, by base type:
 ## Omitted, by family of reasons, sole family (resolving it alone would draw the placement under hypotheses)
 
 by placements:
-     27132   9.45%  area   0.00%  record: BaseTypeOutsideSlice TXST
-      7682   2.68%  area   0.00%  draw: NoDrawableGeometry
-      5658   1.97%  area   0.26%  actor: not resolved (leveled list)
-      4518   1.57%  area   0.01%  record: MISC.CDIX
-      3880   1.35%  area   0.45%  record: REFR.XRGD
-      3829   1.33%  area   2.17%  record: REFR.XATR
-      2784   0.97%  area   0.95%  record: REFR.XALP
-      2686   0.94%  area   0.04%  record: REFR.XOWN
-      2513   0.88%  area   3.56%  record: REFR.XPRM
-      2281   0.79%  area   1.91%  record: REFR.XEZN
-      2281   0.79%  area   0.01%  record: REFR.XLIB
-      1897   0.66%  area   0.76%  model: animation-controller blocks (transform-varies)
-      1756   0.61%  area   0.08%  record: VMAD
-      1400   0.49%  area   1.12%  record: REFR.XRNK
-      1248   0.43%  area   0.24%  record: DOOR.FNAM
-      1226   0.43%  area   1.18%  record: MSTT.DSTA
-      1153   0.40%  area   0.05%  actor: not resolved (outfit)
+     37865  13.25%  area   0.00%  record: BaseTypeOutsideSlice TXST
+      7683   2.69%  area   0.00%  draw: NoDrawableGeometry
+      5658   1.98%  area   0.28%  actor: not resolved (leveled list)
+      4518   1.58%  area   0.01%  record: MISC.CDIX
+      3880   1.36%  area   0.48%  record: REFR.XRGD
+      3829   1.34%  area   2.32%  record: REFR.XATR
+      2784   0.97%  area   1.02%  record: REFR.XALP
+      2686   0.94%  area   0.05%  record: REFR.XOWN
+      2281   0.80%  area   2.04%  record: REFR.XEZN
+      2281   0.80%  area   0.01%  record: REFR.XLIB
+      2044   0.72%  area   0.00%  draw: MissingDocumentedReferenceScale
+      1897   0.66%  area   0.81%  model: animation-controller blocks (transform-varies)
+      1756   0.61%  area   0.09%  record: VMAD
+      1400   0.49%  area   1.19%  record: REFR.XRNK
+      1248   0.44%  area   0.26%  record: DOOR.FNAM
+      1226   0.43%  area   1.25%  record: MSTT.DSTA
+      1153   0.40%  area   0.06%  actor: not resolved (outfit)
       1123   0.39%  area   0.05%  actor: not resolved (template)
-       841   0.29%  area   0.39%  render asset: MissingTexture
-       759   0.26%  area   0.29%  record: REFR.XLRT
-       720   0.25%  area   1.04%  model: animation-controller blocks (manager-loop)
-       683   0.24%  area   2.29%  draw: RenderNonFiniteVertex
+       841   0.29%  area   0.41%  render asset: MissingTexture
+       760   0.27%  area   0.31%  record: REFR.XLRT
+       720   0.25%  area   1.11%  model: animation-controller blocks (manager-loop)
        681   0.24%  area   0.00%  record: LIGH.DATA
-       674   0.23%  area   0.00%  record: BaseTypeOutsideSlice ARMO
-       558   0.19%  area   0.00%  record: BaseTypeOutsideSlice WEAP
-       551   0.19%  area   2.94%  model: animation-controller blocks (behavior-graph)
-       469   0.16%  area   0.44%  render asset: MissingMaterial
-       323   0.11%  area   0.25%  record: STAT.NVNM
-       296   0.10%  area   0.13%  model: MissingModel
-       246   0.09%  area   3.28%  model: animation-controller blocks (texture-transform)
+       674   0.24%  area   0.00%  record: BaseTypeOutsideSlice ARMO
+       558   0.20%  area   0.00%  record: BaseTypeOutsideSlice WEAP
+       556   0.19%  area   3.15%  model: animation-controller blocks (behavior-graph)
+       469   0.16%  area   0.47%  render asset: MissingMaterial
+       324   0.11%  area   0.27%  record: STAT.NVNM
+       296   0.10%  area   0.14%  model: MissingModel
+       246   0.09%  area   3.50%  model: animation-controller blocks (texture-transform)
        232   0.08%  area   0.02%  actor: animation-controller blocks (behavior-graph)
-       227   0.08%  area   2.94%  model: animation-controller blocks (alpha)
+       227   0.08%  area   3.14%  model: animation-controller blocks (alpha)
        218   0.08%  area   0.01%  actor draw: ActorSkinBoneMissing
-       218   0.08%  area   0.07%  record: RuntimeEnableParent XESP.own_flag
+       218   0.08%  area   0.08%  record: RuntimeEnableParent XESP.own_flag
        183   0.06%  area   0.01%  actor: not resolved (skin)
-       163   0.06%  area   0.00%  draw: MissingDocumentedReferenceScale
        138   0.05%  area   0.00%  record: CONT.DATA
-        94   0.03%  area   0.48%  draw: UnsupportedRenderSwapScopes readings differ, chained
         93   0.03%  area   0.00%  record: REFR.XPDD
         58   0.02%  area   0.00%  record: MISC.YNAM
-  ... 30 more
+        56   0.02%  area   0.12%  draw: UnsupportedColorOnlyEffectFeatures 3221225472
+        51   0.02%  area   0.00%  record: KEYM.DATA
+        48   0.02%  area   0.00%  record: REFR.XIS2
+  ... 27 more
 by area:
-  area   3.56%      2513   0.88%  record: REFR.XPRM
-  area   3.28%       246   0.09%  model: animation-controller blocks (texture-transform)
-  area   2.94%       227   0.08%  model: animation-controller blocks (alpha)
-  area   2.94%       551   0.19%  model: animation-controller blocks (behavior-graph)
-  area   2.29%       683   0.24%  draw: RenderNonFiniteVertex
-  area   2.17%      3829   1.33%  record: REFR.XATR
-  area   1.91%      2281   0.79%  record: REFR.XEZN
-  area   1.18%      1226   0.43%  record: MSTT.DSTA
-  area   1.12%      1400   0.49%  record: REFR.XRNK
-  area   1.04%       720   0.25%  model: animation-controller blocks (manager-loop)
-  area   0.95%      2784   0.97%  record: REFR.XALP
-  area   0.76%      1897   0.66%  model: animation-controller blocks (transform-varies)
-  area   0.48%        94   0.03%  draw: UnsupportedRenderSwapScopes readings differ, chained
-  area   0.45%      3880   1.35%  record: REFR.XRGD
-  area   0.44%        29   0.01%  record: SCOL.FLTR
-  area   0.44%       469   0.16%  render asset: MissingMaterial
-  area   0.39%       841   0.29%  render asset: MissingTexture
-  area   0.29%       759   0.26%  record: REFR.XLRT
-  area   0.26%      5658   1.97%  actor: not resolved (leveled list)
-  area   0.25%       323   0.11%  record: STAT.NVNM
-  area   0.24%      1248   0.43%  record: DOOR.FNAM
-  area   0.21%         5   0.00%  model citation: RejectedVfsPath
-  area   0.17%        17   0.01%  model: animation-controller blocks (effect-emissive)
-  area   0.13%       296   0.10%  model: MissingModel
-  area   0.11%        56   0.02%  draw: UnsupportedColorOnlyEffectFeatures 3221225472
-  area   0.08%      1756   0.61%  record: VMAD
-  area   0.07%       218   0.08%  record: RuntimeEnableParent XESP.own_flag
-  area   0.05%      1153   0.40%  actor: not resolved (outfit)
+  area   3.50%       246   0.09%  model: animation-controller blocks (texture-transform)
+  area   3.15%       556   0.19%  model: animation-controller blocks (behavior-graph)
+  area   3.14%       227   0.08%  model: animation-controller blocks (alpha)
+  area   2.32%      3829   1.34%  record: REFR.XATR
+  area   2.04%      2281   0.80%  record: REFR.XEZN
+  area   1.25%      1226   0.43%  record: MSTT.DSTA
+  area   1.19%      1400   0.49%  record: REFR.XRNK
+  area   1.11%       720   0.25%  model: animation-controller blocks (manager-loop)
+  area   1.02%      2784   0.97%  record: REFR.XALP
+  area   0.81%      1897   0.66%  model: animation-controller blocks (transform-varies)
+  area   0.48%      3880   1.36%  record: REFR.XRGD
+  area   0.47%        29   0.01%  record: SCOL.FLTR
+  area   0.47%       469   0.16%  render asset: MissingMaterial
+  area   0.41%       841   0.29%  render asset: MissingTexture
+  area   0.31%       760   0.27%  record: REFR.XLRT
+  area   0.28%      5658   1.98%  actor: not resolved (leveled list)
+  area   0.27%       324   0.11%  record: STAT.NVNM
+  area   0.26%      1248   0.44%  record: DOOR.FNAM
+  area   0.23%         5   0.00%  model citation: RejectedVfsPath
+  area   0.18%        17   0.01%  model: animation-controller blocks (effect-emissive)
+  area   0.14%       296   0.10%  model: MissingModel
+  area   0.12%        56   0.02%  draw: UnsupportedColorOnlyEffectFeatures 3221225472
+  area   0.09%      1756   0.61%  record: VMAD
+  area   0.08%       218   0.08%  record: RuntimeEnableParent XESP.own_flag
+  area   0.06%      1153   0.40%  actor: not resolved (outfit)
   area   0.05%      1123   0.39%  actor: not resolved (template)
   area   0.05%         1   0.00%  record: REFR.XHLT
-  area   0.04%      2686   0.94%  record: REFR.XOWN
-  area   0.04%         1   0.00%  record: REFR.XCVR
+  area   0.05%      2686   0.94%  record: REFR.XOWN
+  area   0.05%         1   0.00%  record: REFR.XCVR
   area   0.04%        23   0.01%  record: SCOL.MODC
   area   0.02%       232   0.08%  actor: animation-controller blocks (behavior-graph)
   area   0.02%         8   0.00%  record: REFR.XLCM
   area   0.01%       218   0.08%  actor draw: ActorSkinBoneMissing
-  area   0.01%      2281   0.79%  record: REFR.XLIB
+  area   0.01%      2281   0.80%  record: REFR.XLIB
   area   0.01%       183   0.06%  actor: not resolved (skin)
-  area   0.01%      4518   1.57%  record: MISC.CDIX
+  area   0.01%      4518   1.58%  record: MISC.CDIX
   area   0.01%        11   0.00%  record: REFR.XBSD
-  (omitted with two or more families: 203245)
+  area   0.00%        48   0.02%  record: REFR.XIS2
+  area   0.00%       681   0.24%  record: LIGH.DATA
+  area   0.00%        93   0.03%  record: REFR.XPDD
+  (omitted with two or more families: 192505)
 
 ## Omitted, every family of reasons (once per placement)
 
 by placements:
-     62525  21.78%  area   0.38%  record: LIGH.DATA
-     59883  20.86%  area   0.34%  record: REFR.XRDS
-     59395  20.69%  area   0.32%  record: REFR.XLIG
-     43214  15.05%  area   0.00%  record: BaseTypeOutsideSlice TXST
-     27875   9.71%  area  33.93%  record: ACTI.FNAM
-     27875   9.71%  area  33.93%  record: ACTI.PNAM
-     26772   9.32%  area   4.15%  record: VMAD
-     21285   7.41%  area  10.52%  model: UnsupportedNifBlock BSSkin::Instance
-     21275   7.41%  area  10.52%  model: UnsupportedSkinning BSTriShape
-     20327   7.08%  area   4.09%  record: REFR.XPRM
-     18120   6.31%  area   1.40%  record: FURN.FNAM
-     18120   6.31%  area   1.40%  record: FURN.MNAM
-     18120   6.31%  area   1.40%  record: FURN.PNAM
-     18120   6.31%  area   1.40%  record: FURN.SNAM
-     18120   6.31%  area   1.40%  record: FURN.WBDT
-     17445   6.08%  area   0.98%  record: CONT.DATA
-     16614   5.79%  area   0.94%  record: CONT.CNTO
-     16614   5.79%  area   0.94%  record: CONT.COCT
-     13109   4.57%  area   0.77%  record: CONT.QNAM
-     13109   4.57%  area   0.77%  record: CONT.SNAM
-     13086   4.56%  area  15.66%  model: animation-controller blocks (behavior-graph)
-     11641   4.05%  area  19.51%  model: animation-controller blocks (manager-loop)
-     11495   4.00%  area   1.91%  record: REFR.XRGD
-     10171   3.54%  area   0.03%  record: REFR.INAM
-     10171   3.54%  area   0.03%  record: REFR.PDTO
-     10171   3.54%  area   0.03%  record: REFR.XPPA
-     10171   3.54%  area   0.03%  record: REFR.XPRD
-      9847   3.43%  area   0.01%  record: REFR.XBSD
-      9837   3.43%  area   0.00%  record: BaseTypeOutsideSlice BNDS
-      9634   3.36%  area  22.14%  model: animation-controller blocks (effect-idle)
-      9298   3.24%  area   1.59%  model: animation-controller blocks (transform-varies)
-      7682   2.68%  area   0.00%  draw: NoDrawableGeometry
-      7275   2.53%  area  14.25%  model: animation-controller blocks (other)
-      7167   2.50%  area   1.47%  record: FLOR.FNAM
-      7167   2.50%  area   1.47%  record: FLOR.PFIG
-      7167   2.50%  area   1.47%  record: FLOR.PFPC
-      7167   2.50%  area   1.47%  record: FLOR.PNAM
-      7167   2.50%  area   1.47%  record: FLOR.SNAM
-      7137   2.49%  area   1.47%  record: FLOR.ATTX
-      7045   2.45%  area   0.21%  record: REFR.XOWN
-  ... 182 more
+     62525  21.88%  area   0.41%  record: LIGH.DATA
+     59883  20.96%  area   0.37%  record: REFR.XRDS
+     59395  20.79%  area   0.34%  record: REFR.XLIG
+     43214  15.12%  area   0.00%  record: BaseTypeOutsideSlice TXST
+     27875   9.76%  area  36.22%  record: ACTI.FNAM
+     27875   9.76%  area  36.22%  record: ACTI.PNAM
+     26772   9.37%  area   4.43%  record: VMAD
+     21285   7.45%  area  11.23%  model: UnsupportedNifBlock BSSkin::Instance
+     21275   7.45%  area  11.23%  model: UnsupportedSkinning BSTriShape
+     18120   6.34%  area   1.49%  record: FURN.FNAM
+     18120   6.34%  area   1.49%  record: FURN.MNAM
+     18120   6.34%  area   1.49%  record: FURN.PNAM
+     18120   6.34%  area   1.49%  record: FURN.SNAM
+     18120   6.34%  area   1.49%  record: FURN.WBDT
+     17445   6.11%  area   1.05%  record: CONT.DATA
+     16614   5.81%  area   1.00%  record: CONT.CNTO
+     16614   5.81%  area   1.00%  record: CONT.COCT
+     13109   4.59%  area   0.82%  record: CONT.QNAM
+     13109   4.59%  area   0.82%  record: CONT.SNAM
+     13086   4.58%  area  16.72%  model: animation-controller blocks (behavior-graph)
+     11641   4.07%  area  20.83%  model: animation-controller blocks (manager-loop)
+     11495   4.02%  area   2.04%  record: REFR.XRGD
+     10171   3.56%  area   0.03%  record: REFR.INAM
+     10171   3.56%  area   0.03%  record: REFR.PDTO
+     10171   3.56%  area   0.03%  record: REFR.XPPA
+     10171   3.56%  area   0.03%  record: REFR.XPRD
+      9847   3.45%  area   0.01%  record: REFR.XBSD
+      9837   3.44%  area   0.00%  record: BaseTypeOutsideSlice BNDS
+      9634   3.37%  area  23.64%  model: animation-controller blocks (effect-idle)
+      9298   3.25%  area   1.70%  model: animation-controller blocks (transform-varies)
+      7683   2.69%  area   0.00%  draw: NoDrawableGeometry
+      7275   2.55%  area  15.21%  model: animation-controller blocks (other)
+      7167   2.51%  area   1.57%  record: FLOR.FNAM
+      7167   2.51%  area   1.57%  record: FLOR.PFIG
+      7167   2.51%  area   1.57%  record: FLOR.PFPC
+      7167   2.51%  area   1.57%  record: FLOR.PNAM
+      7167   2.51%  area   1.57%  record: FLOR.SNAM
+      7137   2.50%  area   1.57%  record: FLOR.ATTX
+      7045   2.47%  area   0.22%  record: REFR.XOWN
+      6938   2.43%  area   0.01%  record: ALCH.DATA
+  ... 179 more
 by area:
-  area  33.93%     27875   9.71%  record: ACTI.FNAM
-  area  33.93%     27875   9.71%  record: ACTI.PNAM
-  area  22.50%       905   0.32%  model: UnsupportedNifBlock BSWaterShaderProperty
-  area  22.14%      9634   3.36%  model: animation-controller blocks (effect-idle)
-  area  19.51%     11641   4.05%  model: animation-controller blocks (manager-loop)
-  area  15.66%     13086   4.56%  model: animation-controller blocks (behavior-graph)
-  area  15.35%      1827   0.64%  model: animation-controller blocks (alpha)
-  area  14.25%      7275   2.53%  model: animation-controller blocks (other)
-  area  13.17%      4419   1.54%  model: UnsupportedNifBlock NiBlendBoolInterpolator
-  area  12.51%      2323   0.81%  model: animation-controller blocks (visibility)
-  area  10.52%     21285   7.41%  model: UnsupportedNifBlock BSSkin::Instance
-  area  10.52%     21275   7.41%  model: UnsupportedSkinning BSTriShape
-  area   9.99%      2145   0.75%  model: animation-controller blocks (texture-transform)
-  area   8.48%      4774   1.66%  model: particle-system blocks
-  area   7.76%      1809   0.63%  model: animation-controller blocks (effect-emissive)
-  area   7.41%      2292   0.80%  model: animation-controller blocks (particle)
-  area   4.29%      4089   1.42%  record: REFR.XEZN
-  area   4.15%     26772   9.32%  record: VMAD
-  area   4.09%     20327   7.08%  record: REFR.XPRM
-  area   4.03%       179   0.06%  record: REFR.XWCN
-  area   4.03%       179   0.06%  record: REFR.XWCU
-  area   2.44%      1366   0.48%  model: UnsupportedNifBlock BSPositionData
-  area   2.41%      5558   1.94%  record: REFR.XATR
-  area   2.29%       683   0.24%  draw: RenderNonFiniteVertex
-  area   1.91%     11495   4.00%  record: REFR.XRGD
-  area   1.59%      9298   3.24%  model: animation-controller blocks (transform-varies)
-  area   1.47%      7167   2.50%  record: FLOR.FNAM
-  area   1.47%      7167   2.50%  record: FLOR.PFIG
-  area   1.47%      7167   2.50%  record: FLOR.PFPC
-  area   1.47%      7167   2.50%  record: FLOR.PNAM
-  area   1.47%      7167   2.50%  record: FLOR.SNAM
-  area   1.47%      7137   2.49%  record: FLOR.ATTX
-  area   1.40%     18120   6.31%  record: FURN.FNAM
-  area   1.40%     18120   6.31%  record: FURN.MNAM
-  area   1.40%     18120   6.31%  record: FURN.PNAM
-  area   1.40%     18120   6.31%  record: FURN.SNAM
-  area   1.40%     18120   6.31%  record: FURN.WBDT
-  area   1.39%      1577   0.55%  model: UnsupportedNifBlock BSWindModifier
-  area   1.27%      2394   0.83%  record: REFR.XLRT
-  area   1.26%      1260   0.44%  record: MSTT.DSTA
+  area  36.22%     27875   9.76%  record: ACTI.FNAM
+  area  36.22%     27875   9.76%  record: ACTI.PNAM
+  area  24.02%       905   0.32%  model: UnsupportedNifBlock BSWaterShaderProperty
+  area  23.64%      9634   3.37%  model: animation-controller blocks (effect-idle)
+  area  20.83%     11641   4.07%  model: animation-controller blocks (manager-loop)
+  area  16.72%     13086   4.58%  model: animation-controller blocks (behavior-graph)
+  area  16.39%      1827   0.64%  model: animation-controller blocks (alpha)
+  area  15.21%      7275   2.55%  model: animation-controller blocks (other)
+  area  14.06%      4419   1.55%  model: UnsupportedNifBlock NiBlendBoolInterpolator
+  area  13.36%      2323   0.81%  model: animation-controller blocks (visibility)
+  area  11.23%     21285   7.45%  model: UnsupportedNifBlock BSSkin::Instance
+  area  11.23%     21275   7.45%  model: UnsupportedSkinning BSTriShape
+  area  10.67%      2145   0.75%  model: animation-controller blocks (texture-transform)
+  area   9.05%      4774   1.67%  model: particle-system blocks
+  area   8.28%      1809   0.63%  model: animation-controller blocks (effect-emissive)
+  area   7.91%      2292   0.80%  model: animation-controller blocks (particle)
+  area   4.58%      4089   1.43%  record: REFR.XEZN
+  area   4.43%     26772   9.37%  record: VMAD
+  area   4.30%       179   0.06%  record: REFR.XWCN
+  area   4.30%       179   0.06%  record: REFR.XWCU
+  area   2.61%      1366   0.48%  model: UnsupportedNifBlock BSPositionData
+  area   2.58%      5558   1.95%  record: REFR.XATR
+  area   2.04%     11495   4.02%  record: REFR.XRGD
+  area   1.70%      9298   3.25%  model: animation-controller blocks (transform-varies)
+  area   1.57%      7167   2.51%  record: FLOR.FNAM
+  area   1.57%      7167   2.51%  record: FLOR.PFIG
+  area   1.57%      7167   2.51%  record: FLOR.PFPC
+  area   1.57%      7167   2.51%  record: FLOR.PNAM
+  area   1.57%      7167   2.51%  record: FLOR.SNAM
+  area   1.57%      7137   2.50%  record: FLOR.ATTX
+  area   1.49%     18120   6.34%  record: FURN.FNAM
+  area   1.49%     18120   6.34%  record: FURN.MNAM
+  area   1.49%     18120   6.34%  record: FURN.PNAM
+  area   1.49%     18120   6.34%  record: FURN.SNAM
+  area   1.49%     18120   6.34%  record: FURN.WBDT
+  area   1.48%      1577   0.55%  model: UnsupportedNifBlock BSWindModifier
+  area   1.35%      2394   0.84%  record: REFR.XLRT
+  area   1.35%      1260   0.44%  record: MSTT.DSTA
+  area   1.28%      1628   0.57%  record: REFR.XRNK
+  area   1.19%      5284   1.85%  record: DOOR.FNAM
 
 ## Omitted, full set of families
 
 by placements:
-     54009  18.81%  area   0.29%  record: LIGH.DATA + record: REFR.XLIG + record: REFR.XRDS
-     27132   9.45%  area   0.00%  record: BaseTypeOutsideSlice TXST
-     10733   3.74%  area   0.00%  record: BaseTypeOutsideSlice TXST + record: REFR.XPRM
-      9970   3.47%  area   0.38%  record: FURN.FNAM + record: FURN.MNAM + record: FURN.PNAM + record: FURN.SNAM + record: FURN.WBDT
-      9472   3.30%  area   0.00%  record: BaseTypeOutsideSlice BNDS + record: REFR.XBSD
-      8663   3.02%  area   0.00%  record: REFR.INAM + record: REFR.PDTO + record: REFR.XPPA + record: REFR.XPRD
-      7774   2.71%  area   1.76%  record: ACTI.FNAM + record: ACTI.PNAM
-      7682   2.68%  area   0.00%  draw: NoDrawableGeometry
-      6428   2.24%  area   1.34%  record: FLOR.ATTX + record: FLOR.FNAM + record: FLOR.PFIG + record: FLOR.PFPC + record: FLOR.PNAM + record: FLOR.SNAM
-      5658   1.97%  area   0.26%  actor: not resolved (leveled list)
-      5463   1.90%  area   0.41%  model: UnsupportedNifBlock BSSkin::Instance + model: UnsupportedSkinning BSTriShape + record: CONT.CNTO + record: CONT.COCT + record: CONT.DATA + record: CONT.QNAM + record: CONT.SNAM
-      5040   1.76%  area   0.00%  record: BaseTypeOutsideSlice TXST + record: REFR.XPDD
-      4518   1.57%  area   0.01%  record: MISC.CDIX
+     54009  18.90%  area   0.31%  record: LIGH.DATA + record: REFR.XLIG + record: REFR.XRDS
+     37865  13.25%  area   0.00%  record: BaseTypeOutsideSlice TXST
+      9971   3.49%  area   0.41%  record: FURN.FNAM + record: FURN.MNAM + record: FURN.PNAM + record: FURN.SNAM + record: FURN.WBDT
+      9472   3.32%  area   0.00%  record: BaseTypeOutsideSlice BNDS + record: REFR.XBSD
+      8663   3.03%  area   0.00%  record: REFR.INAM + record: REFR.PDTO + record: REFR.XPPA + record: REFR.XPRD
+      7774   2.72%  area   1.88%  record: ACTI.FNAM + record: ACTI.PNAM
+      7683   2.69%  area   0.00%  draw: NoDrawableGeometry
+      6428   2.25%  area   1.43%  record: FLOR.ATTX + record: FLOR.FNAM + record: FLOR.PFIG + record: FLOR.PFPC + record: FLOR.PNAM + record: FLOR.SNAM
+      5658   1.98%  area   0.28%  actor: not resolved (leveled list)
+      5463   1.91%  area   0.44%  model: UnsupportedNifBlock BSSkin::Instance + model: UnsupportedSkinning BSTriShape + record: CONT.CNTO + record: CONT.COCT + record: CONT.DATA + record: CONT.QNAM + record: CONT.SNAM
+      5273   1.85%  area   0.00%  record: BaseTypeOutsideSlice TXST + record: REFR.XPDD
+      4518   1.58%  area   0.01%  record: MISC.CDIX
       4209   1.47%  area   0.00%  record: MISC.YNAM + record: MISC.ZNAM
-      3880   1.35%  area   0.45%  record: REFR.XRGD
-      3829   1.33%  area   2.17%  record: REFR.XATR
-      3298   1.15%  area   0.37%  model: UnsupportedNifBlock BSSkin::Instance + model: UnsupportedSkinning BSTriShape + record: REFR.XRGD
-      3210   1.12%  area   0.45%  record: ACTI.FNAM + record: ACTI.PNAM + record: MissingModelPath + record: REFR.XPRM + record: VMAD
-      2784   0.97%  area   0.95%  record: REFR.XALP
-      2686   0.94%  area   0.04%  record: REFR.XOWN
-      2513   0.88%  area   3.56%  record: REFR.XPRM
+      3880   1.36%  area   0.48%  record: REFR.XRGD
+      3829   1.34%  area   2.32%  record: REFR.XATR
+      3298   1.15%  area   0.40%  model: UnsupportedNifBlock BSSkin::Instance + model: UnsupportedSkinning BSTriShape + record: REFR.XRGD
+      3217   1.13%  area   0.48%  record: ACTI.FNAM + record: ACTI.PNAM + record: MissingModelPath + record: VMAD
+      2784   0.97%  area   1.02%  record: REFR.XALP
+      2686   0.94%  area   0.05%  record: REFR.XOWN
       2372   0.83%  area   0.00%  model: animation-controller blocks (transform-varies) + record: LIGH.DATA + record: REFR.XLIG + record: REFR.XRDS
-      2281   0.79%  area   1.91%  record: REFR.XEZN
-      2281   0.79%  area   0.01%  record: REFR.XLIB
-      2131   0.74%  area   0.00%  record: ACTI.FNAM + record: ACTI.PNAM + record: MissingModelPath + record: REFR.XPRM
-      2077   0.72%  area   0.10%  record: FURN.FNAM + record: FURN.FNPR + record: FURN.MNAM + record: FURN.PNAM + record: FURN.SNAM + record: FURN.WBDT
-      1956   0.68%  area   0.43%  model: animation-controller blocks (behavior-graph) + model: animation-controller blocks (effect-idle) + model: animation-controller blocks (manager-loop) + record: ACTI.FNAM + record: ACTI.PNAM + record: VMAD
-      1897   0.66%  area   0.76%  model: animation-controller blocks (transform-varies)
+      2281   0.80%  area   2.04%  record: REFR.XEZN
+      2281   0.80%  area   0.01%  record: REFR.XLIB
+      2133   0.75%  area   0.00%  record: ACTI.FNAM + record: ACTI.PNAM + record: MissingModelPath
+      2077   0.73%  area   0.11%  record: FURN.FNAM + record: FURN.FNPR + record: FURN.MNAM + record: FURN.PNAM + record: FURN.SNAM + record: FURN.WBDT
+      2044   0.72%  area   0.00%  draw: MissingDocumentedReferenceScale
+      1956   0.68%  area   0.45%  model: animation-controller blocks (behavior-graph) + model: animation-controller blocks (effect-idle) + model: animation-controller blocks (manager-loop) + record: ACTI.FNAM + record: ACTI.PNAM + record: VMAD
+      1897   0.66%  area   0.81%  model: animation-controller blocks (transform-varies)
       1867   0.65%  area   0.01%  record: LIGH.DATA + record: REFR.XRDS
-      1791   0.62%  area   0.00%  record: ALCH.DATA + record: ALCH.DESC + record: ALCH.DNAM + record: ALCH.EFID + record: ALCH.EFIT + record: ALCH.ENIT + record: CTDA
-  ... 1764 more
+      1791   0.63%  area   0.00%  record: ALCH.DATA + record: ALCH.DESC + record: ALCH.DNAM + record: ALCH.EFID + record: ALCH.EFIT + record: ALCH.ENIT + record: CTDA
+      1756   0.61%  area   0.09%  record: VMAD
+  ... 1740 more
 by area:
-  area  18.20%       721   0.25%  model: UnsupportedNifBlock BSWaterShaderProperty + record: ACTI.FNAM + record: ACTI.PNAM
-  area   5.68%       315   0.11%  model: animation-controller blocks (alpha) + model: animation-controller blocks (effect-emissive)
-  area   5.52%      1146   0.40%  model: animation-controller blocks (effect-idle) + model: animation-controller blocks (manager-loop)
-  area   4.89%       758   0.26%  model: UnsupportedNifBlock NiBlendBoolInterpolator + model: animation-controller blocks (effect-idle) + model: animation-controller blocks (manager-loop) + model: animation-controller blocks (other) + model: animation-controller blocks (visibility)
-  area   4.83%         1   0.00%  model: UnsupportedNifBlock BSSkin::Instance + model: UnsupportedNifBlock NiBlendBoolInterpolator + model: UnsupportedSkinning BSTriShape + model: animation-controller blocks (behavior-graph) + model: animation-controller blocks (effect-idle) + model: animation-controller blocks (other) + model: animation-controller blocks (particle) + model: animation-controller blocks (visibility) + model: particle-system blocks + record: ACTI.FNAM + record: ACTI.PNAM
-  area   4.74%       256   0.09%  model: animation-controller blocks (alpha) + model: animation-controller blocks (texture-transform)
-  area   3.99%       175   0.06%  model: UnsupportedNifBlock BSWaterShaderProperty + record: ACTI.FNAM + record: ACTI.PNAM + record: REFR.XWCN + record: REFR.XWCU
-  area   3.56%      2513   0.88%  record: REFR.XPRM
-  area   3.28%       246   0.09%  model: animation-controller blocks (texture-transform)
-  area   2.94%       227   0.08%  model: animation-controller blocks (alpha)
-  area   2.94%       551   0.19%  model: animation-controller blocks (behavior-graph)
-  area   2.90%       211   0.07%  model: UnsupportedNifBlock BSSkin::Instance + model: UnsupportedSkinning BSTriShape + model: animation-controller blocks (effect-idle) + model: animation-controller blocks (manager-loop)
-  area   2.29%       683   0.24%  draw: RenderNonFiniteVertex
-  area   2.27%        12   0.00%  model: animation-controller blocks (behavior-graph) + record: REFR.XEZN
-  area   2.17%      3829   1.33%  record: REFR.XATR
-  area   1.91%      2281   0.79%  record: REFR.XEZN
-  area   1.79%        66   0.02%  model: animation-controller blocks (alpha) + model: animation-controller blocks (effect-emissive) + model: animation-controller blocks (texture-transform)
-  area   1.76%      7774   2.71%  record: ACTI.FNAM + record: ACTI.PNAM
-  area   1.34%      6428   2.24%  record: FLOR.ATTX + record: FLOR.FNAM + record: FLOR.PFIG + record: FLOR.PFPC + record: FLOR.PNAM + record: FLOR.SNAM
-  area   1.18%      1226   0.43%  record: MSTT.DSTA
-  area   1.12%      1400   0.49%  record: REFR.XRNK
-  area   1.04%       720   0.25%  model: animation-controller blocks (manager-loop)
-  area   0.95%      2784   0.97%  record: REFR.XALP
-  area   0.95%         1   0.00%  model: UnsupportedNifBlock BSPositionData + model: UnsupportedNifBlock NiBlendBoolInterpolator + model: UnsupportedNifField NiPSysEmitterInitialRadiusCtlr.Controller Body + model: UnsupportedNifField NiPSysEmitterLifeSpanCtlr.Controller Body + model: animation-controller blocks (behavior-graph) + model: animation-controller blocks (effect-idle) + model: animation-controller blocks (manager-loop) + model: animation-controller blocks (other) + model: animation-controller blocks (particle) + model: animation-controller blocks (visibility) + model: particle-system blocks + record: ACTI.FNAM + record: ACTI.PNAM
-  area   0.76%      1897   0.66%  model: animation-controller blocks (transform-varies)
-  area   0.54%       114   0.04%  model: UnsupportedNifBlock BSWindModifier + model: UnsupportedNifBlock NiBlendBoolInterpolator + model: animation-controller blocks (manager-loop) + model: animation-controller blocks (other) + model: animation-controller blocks (particle) + model: animation-controller blocks (visibility) + model: particle-system blocks
-  area   0.51%      1557   0.54%  model: animation-controller blocks (behavior-graph) + model: animation-controller blocks (effect-idle) + model: animation-controller blocks (manager-loop) + record: ACTI.FNAM + record: ACTI.PNAM + record: REFR.XAPD + record: REFR.XAPR + record: VMAD
-  area   0.50%       134   0.05%  model: UnsupportedNifBlock BSPositionData + model: UnsupportedNifBlock BSWindModifier + model: animation-controller blocks (other) + model: particle-system blocks
-  area   0.48%        94   0.03%  draw: UnsupportedRenderSwapScopes readings differ, chained
-  area   0.45%      3210   1.12%  record: ACTI.FNAM + record: ACTI.PNAM + record: MissingModelPath + record: REFR.XPRM + record: VMAD
+  area  19.43%       721   0.25%  model: UnsupportedNifBlock BSWaterShaderProperty + record: ACTI.FNAM + record: ACTI.PNAM
+  area   6.07%       316   0.11%  model: animation-controller blocks (alpha) + model: animation-controller blocks (effect-emissive)
+  area   5.89%      1146   0.40%  model: animation-controller blocks (effect-idle) + model: animation-controller blocks (manager-loop)
+  area   5.23%       758   0.27%  model: UnsupportedNifBlock NiBlendBoolInterpolator + model: animation-controller blocks (effect-idle) + model: animation-controller blocks (manager-loop) + model: animation-controller blocks (other) + model: animation-controller blocks (visibility)
+  area   5.16%         1   0.00%  model: UnsupportedNifBlock BSSkin::Instance + model: UnsupportedNifBlock NiBlendBoolInterpolator + model: UnsupportedSkinning BSTriShape + model: animation-controller blocks (behavior-graph) + model: animation-controller blocks (effect-idle) + model: animation-controller blocks (other) + model: animation-controller blocks (particle) + model: animation-controller blocks (visibility) + model: particle-system blocks + record: ACTI.FNAM + record: ACTI.PNAM
+  area   5.06%       256   0.09%  model: animation-controller blocks (alpha) + model: animation-controller blocks (texture-transform)
+  area   4.26%       175   0.06%  model: UnsupportedNifBlock BSWaterShaderProperty + record: ACTI.FNAM + record: ACTI.PNAM + record: REFR.XWCN + record: REFR.XWCU
+  area   3.50%       246   0.09%  model: animation-controller blocks (texture-transform)
+  area   3.15%       556   0.19%  model: animation-controller blocks (behavior-graph)
+  area   3.14%       227   0.08%  model: animation-controller blocks (alpha)
+  area   3.09%       211   0.07%  model: UnsupportedNifBlock BSSkin::Instance + model: UnsupportedSkinning BSTriShape + model: animation-controller blocks (effect-idle) + model: animation-controller blocks (manager-loop)
+  area   2.42%        12   0.00%  model: animation-controller blocks (behavior-graph) + record: REFR.XEZN
+  area   2.32%      3829   1.34%  record: REFR.XATR
+  area   2.04%      2281   0.80%  record: REFR.XEZN
+  area   1.91%        66   0.02%  model: animation-controller blocks (alpha) + model: animation-controller blocks (effect-emissive) + model: animation-controller blocks (texture-transform)
+  area   1.88%      7774   2.72%  record: ACTI.FNAM + record: ACTI.PNAM
+  area   1.43%      6428   2.25%  record: FLOR.ATTX + record: FLOR.FNAM + record: FLOR.PFIG + record: FLOR.PFPC + record: FLOR.PNAM + record: FLOR.SNAM
+  area   1.25%      1226   0.43%  record: MSTT.DSTA
+  area   1.19%      1400   0.49%  record: REFR.XRNK
+  area   1.11%       720   0.25%  model: animation-controller blocks (manager-loop)
+  area   1.02%      2784   0.97%  record: REFR.XALP
+  area   1.01%         1   0.00%  model: UnsupportedNifBlock BSPositionData + model: UnsupportedNifBlock NiBlendBoolInterpolator + model: UnsupportedNifField NiPSysEmitterInitialRadiusCtlr.Controller Body + model: UnsupportedNifField NiPSysEmitterLifeSpanCtlr.Controller Body + model: animation-controller blocks (behavior-graph) + model: animation-controller blocks (effect-idle) + model: animation-controller blocks (manager-loop) + model: animation-controller blocks (other) + model: animation-controller blocks (particle) + model: animation-controller blocks (visibility) + model: particle-system blocks + record: ACTI.FNAM + record: ACTI.PNAM
+  area   0.81%      1897   0.66%  model: animation-controller blocks (transform-varies)
+  area   0.58%       114   0.04%  model: UnsupportedNifBlock BSWindModifier + model: UnsupportedNifBlock NiBlendBoolInterpolator + model: animation-controller blocks (manager-loop) + model: animation-controller blocks (other) + model: animation-controller blocks (particle) + model: animation-controller blocks (visibility) + model: particle-system blocks
+  area   0.54%      1557   0.54%  model: animation-controller blocks (behavior-graph) + model: animation-controller blocks (effect-idle) + model: animation-controller blocks (manager-loop) + record: ACTI.FNAM + record: ACTI.PNAM + record: REFR.XAPD + record: REFR.XAPR + record: VMAD
+  area   0.53%       134   0.05%  model: UnsupportedNifBlock BSPositionData + model: UnsupportedNifBlock BSWindModifier + model: animation-controller blocks (other) + model: particle-system blocks
+  area   0.48%      3217   1.13%  record: ACTI.FNAM + record: ACTI.PNAM + record: MissingModelPath + record: VMAD
+  area   0.48%      3880   1.36%  record: REFR.XRGD
+  area   0.47%        29   0.01%  record: SCOL.FLTR
+  area   0.47%       469   0.16%  render asset: MissingMaterial
 
 ## Omitted, by exact sole reason
 
 by placements:
-     27132   9.45%  area   0.00%  record: BaseTypeOutsideSlice TXST
-      7682   2.68%  area   0.00%  draw: NoDrawableGeometry
-      5658   1.97%  area   0.26%  actor: not resolved (leveled list)
-      4518   1.57%  area   0.01%  record: UninterpretedVisualSubrecord MISC.CDIX
-      3869   1.35%  area   0.45%  record: UninterpretedVisualSubrecord REFR.XRGD.layout_not_established
-      3829   1.33%  area   2.17%  record: RuntimeRecordState REFR.XATR
-      2784   0.97%  area   0.95%  record: UninterpretedVisualSubrecord REFR.XALP.layout_not_established
-      2686   0.94%  area   0.04%  record: UninterpretedVisualSubrecord REFR.XOWN.layout_not_established
-      2513   0.88%  area   3.56%  record: UninterpretedVisualSubrecord REFR.XPRM.layout_not_established
-      2281   0.79%  area   1.91%  record: RuntimeRecordState REFR.XEZN
-      2281   0.79%  area   0.01%  record: RuntimeRecordState REFR.XLIB
-      1756   0.61%  area   0.08%  record: RuntimeCondition VMAD
-      1400   0.49%  area   1.12%  record: RuntimeRecordState REFR.XRNK
-      1248   0.43%  area   0.24%  record: UninterpretedVisualSubrecord DOOR.FNAM.layout_not_established
-      1225   0.43%  area   1.11%  record: RuntimeRecordState MSTT.DSTA
-      1153   0.40%  area   0.05%  actor: not resolved (outfit)
+     37865  13.25%  area   0.00%  record: BaseTypeOutsideSlice TXST
+      7683   2.69%  area   0.00%  draw: NoDrawableGeometry
+      5658   1.98%  area   0.28%  actor: not resolved (leveled list)
+      4518   1.58%  area   0.01%  record: UninterpretedVisualSubrecord MISC.CDIX
+      3869   1.35%  area   0.48%  record: UninterpretedVisualSubrecord REFR.XRGD.layout_not_established
+      3829   1.34%  area   2.32%  record: RuntimeRecordState REFR.XATR
+      2784   0.97%  area   1.02%  record: UninterpretedVisualSubrecord REFR.XALP.layout_not_established
+      2686   0.94%  area   0.05%  record: UninterpretedVisualSubrecord REFR.XOWN.layout_not_established
+      2281   0.80%  area   2.04%  record: RuntimeRecordState REFR.XEZN
+      2281   0.80%  area   0.01%  record: RuntimeRecordState REFR.XLIB
+      2044   0.72%  area   0.00%  draw: MissingDocumentedReferenceScale
+      1756   0.61%  area   0.09%  record: RuntimeCondition VMAD
+      1400   0.49%  area   1.19%  record: RuntimeRecordState REFR.XRNK
+      1248   0.44%  area   0.26%  record: UninterpretedVisualSubrecord DOOR.FNAM.layout_not_established
+      1225   0.43%  area   1.19%  record: RuntimeRecordState MSTT.DSTA
+      1153   0.40%  area   0.06%  actor: not resolved (outfit)
       1123   0.39%  area   0.05%  actor: not resolved (template)
-       841   0.29%  area   0.39%  render asset: MissingTexture
-       759   0.26%  area   0.29%  record: RuntimeRecordState REFR.XLRT
-       683   0.24%  area   2.29%  draw: RenderNonFiniteVertex
+       841   0.29%  area   0.41%  render asset: MissingTexture
+       760   0.27%  area   0.31%  record: RuntimeRecordState REFR.XLRT
        681   0.24%  area   0.00%  record: UnsupportedUsedFieldLayout LIGH.DATA.Flags.Unknown_0_13_21_and_unmapped_bits
-       674   0.23%  area   0.00%  record: BaseTypeOutsideSlice ARMO
-       558   0.19%  area   0.00%  record: BaseTypeOutsideSlice WEAP
-       551   0.19%  area   2.94%  model: UnsupportedAnimationRuntime BSBehaviorGraphExtraData;target_in_visual=None;rest=behavior-graph
-       469   0.16%  area   0.44%  render asset: MissingMaterial
-       310   0.11%  area   0.24%  record: UninterpretedVisualSubrecord STAT.NVNM.layout_not_established
-       296   0.10%  area   0.13%  model: MissingModel
+       674   0.24%  area   0.00%  record: BaseTypeOutsideSlice ARMO
+       558   0.20%  area   0.00%  record: BaseTypeOutsideSlice WEAP
+       556   0.19%  area   3.15%  model: UnsupportedAnimationRuntime BSBehaviorGraphExtraData;target_in_visual=None;rest=behavior-graph
+       469   0.16%  area   0.47%  render asset: MissingMaterial
+       311   0.11%  area   0.26%  record: UninterpretedVisualSubrecord STAT.NVNM.layout_not_established
+       296   0.10%  area   0.14%  model: MissingModel
        232   0.08%  area   0.02%  actor: UnsupportedAnimationRuntime BSBehaviorGraphExtraData;target_in_visual=None;rest=behavior-graph
        218   0.08%  area   0.01%  actor draw: ActorSkinBoneMissing
-       218   0.08%  area   0.07%  record: RuntimeEnableParent XESP.own_flag
+       218   0.08%  area   0.08%  record: RuntimeEnableParent XESP.own_flag
        183   0.06%  area   0.01%  actor: not resolved (skin)
-       163   0.06%  area   0.00%  draw: MissingDocumentedReferenceScale
        138   0.05%  area   0.00%  record: UninterpretedVisualSubrecord CONT.DATA
-        94   0.03%  area   0.48%  draw: UnsupportedRenderSwapScopes readings differ, chained
         93   0.03%  area   0.00%  record: UninterpretedVisualSubrecord REFR.XPDD.layout_not_established
         58   0.02%  area   0.00%  record: UninterpretedVisualSubrecord MISC.YNAM
-        56   0.02%  area   0.11%  draw: UnsupportedColorOnlyEffectFeatures 3221225472
+        56   0.02%  area   0.12%  draw: UnsupportedColorOnlyEffectFeatures 3221225472
         51   0.02%  area   0.00%  record: UninterpretedVisualSubrecord KEYM.DATA
         48   0.02%  area   0.00%  record: RuntimeRecordState REFR.XIS2
         47   0.02%  area   0.00%  draw: UnsupportedEffectSurface rgb-falloff
-  ... 24 more
+        29   0.01%  area   0.47%  record: UninterpretedVisualSubrecord SCOL.FLTR.unverified_size
+        23   0.01%  area   0.04%  record: UninterpretedVisualSubrecord SCOL.MODC.unverified_size
+        18   0.01%  area   0.00%  actor: not resolved (skin addon fallout.esm)
+  ... 21 more
 by area:
-  area   3.56%      2513   0.88%  record: UninterpretedVisualSubrecord REFR.XPRM.layout_not_established
-  area   2.94%       551   0.19%  model: UnsupportedAnimationRuntime BSBehaviorGraphExtraData;target_in_visual=None;rest=behavior-graph
-  area   2.29%       683   0.24%  draw: RenderNonFiniteVertex
-  area   2.17%      3829   1.33%  record: RuntimeRecordState REFR.XATR
-  area   1.91%      2281   0.79%  record: RuntimeRecordState REFR.XEZN
-  area   1.12%      1400   0.49%  record: RuntimeRecordState REFR.XRNK
-  area   1.11%      1225   0.43%  record: RuntimeRecordState MSTT.DSTA
-  area   0.95%      2784   0.97%  record: UninterpretedVisualSubrecord REFR.XALP.layout_not_established
-  area   0.48%        94   0.03%  draw: UnsupportedRenderSwapScopes readings differ, chained
-  area   0.45%      3869   1.35%  record: UninterpretedVisualSubrecord REFR.XRGD.layout_not_established
-  area   0.44%        29   0.01%  record: UninterpretedVisualSubrecord SCOL.FLTR.unverified_size
-  area   0.44%       469   0.16%  render asset: MissingMaterial
-  area   0.39%       841   0.29%  render asset: MissingTexture
-  area   0.29%       759   0.26%  record: RuntimeRecordState REFR.XLRT
-  area   0.26%      5658   1.97%  actor: not resolved (leveled list)
-  area   0.24%      1248   0.43%  record: UninterpretedVisualSubrecord DOOR.FNAM.layout_not_established
-  area   0.24%       310   0.11%  record: UninterpretedVisualSubrecord STAT.NVNM.layout_not_established
-  area   0.21%         5   0.00%  model citation: RejectedVfsPath
-  area   0.13%       296   0.10%  model: MissingModel
-  area   0.11%        56   0.02%  draw: UnsupportedColorOnlyEffectFeatures 3221225472
-  area   0.08%      1756   0.61%  record: RuntimeCondition VMAD
-  area   0.07%       218   0.08%  record: RuntimeEnableParent XESP.own_flag
+  area   3.15%       556   0.19%  model: UnsupportedAnimationRuntime BSBehaviorGraphExtraData;target_in_visual=None;rest=behavior-graph
+  area   2.32%      3829   1.34%  record: RuntimeRecordState REFR.XATR
+  area   2.04%      2281   0.80%  record: RuntimeRecordState REFR.XEZN
+  area   1.19%      1400   0.49%  record: RuntimeRecordState REFR.XRNK
+  area   1.19%      1225   0.43%  record: RuntimeRecordState MSTT.DSTA
+  area   1.02%      2784   0.97%  record: UninterpretedVisualSubrecord REFR.XALP.layout_not_established
+  area   0.48%      3869   1.35%  record: UninterpretedVisualSubrecord REFR.XRGD.layout_not_established
+  area   0.47%        29   0.01%  record: UninterpretedVisualSubrecord SCOL.FLTR.unverified_size
+  area   0.47%       469   0.16%  render asset: MissingMaterial
+  area   0.41%       841   0.29%  render asset: MissingTexture
+  area   0.31%       760   0.27%  record: RuntimeRecordState REFR.XLRT
+  area   0.28%      5658   1.98%  actor: not resolved (leveled list)
+  area   0.26%      1248   0.44%  record: UninterpretedVisualSubrecord DOOR.FNAM.layout_not_established
+  area   0.26%       311   0.11%  record: UninterpretedVisualSubrecord STAT.NVNM.layout_not_established
+  area   0.23%         5   0.00%  model citation: RejectedVfsPath
+  area   0.14%       296   0.10%  model: MissingModel
+  area   0.12%        56   0.02%  draw: UnsupportedColorOnlyEffectFeatures 3221225472
+  area   0.09%      1756   0.61%  record: RuntimeCondition VMAD
+  area   0.08%       218   0.08%  record: RuntimeEnableParent XESP.own_flag
   area   0.06%         1   0.00%  record: UninterpretedVisualSubrecord MSTT.DSTA.unverified_size
-  area   0.05%      1153   0.40%  actor: not resolved (outfit)
+  area   0.06%      1153   0.40%  actor: not resolved (outfit)
   area   0.05%      1123   0.39%  actor: not resolved (template)
   area   0.05%         1   0.00%  record: RuntimeRecordState REFR.XHLT
-  area   0.04%      2686   0.94%  record: UninterpretedVisualSubrecord REFR.XOWN.layout_not_established
-  area   0.04%         1   0.00%  record: UninterpretedVisualSubrecord REFR.XCVR.layout_not_established
+  area   0.05%      2686   0.94%  record: UninterpretedVisualSubrecord REFR.XOWN.layout_not_established
+  area   0.05%         1   0.00%  record: UninterpretedVisualSubrecord REFR.XCVR.layout_not_established
   area   0.04%        23   0.01%  record: UninterpretedVisualSubrecord SCOL.MODC.unverified_size
   area   0.02%       232   0.08%  actor: UnsupportedAnimationRuntime BSBehaviorGraphExtraData;target_in_visual=None;rest=behavior-graph
   area   0.02%         8   0.00%  record: UninterpretedVisualSubrecord REFR.XLCM.layout_not_established
   area   0.01%       218   0.08%  actor draw: ActorSkinBoneMissing
-  area   0.01%      2281   0.79%  record: RuntimeRecordState REFR.XLIB
+  area   0.01%      2281   0.80%  record: RuntimeRecordState REFR.XLIB
   area   0.01%        13   0.00%  record: UninterpretedVisualSubrecord STAT.NVNM.unverified_size
   area   0.01%       183   0.06%  actor: not resolved (skin)
-  area   0.01%      4518   1.57%  record: UninterpretedVisualSubrecord MISC.CDIX
+  area   0.01%      4518   1.58%  record: UninterpretedVisualSubrecord MISC.CDIX
   area   0.01%        11   0.00%  record: UninterpretedVisualSubrecord REFR.XBSD.layout_not_established
   area   0.00%        48   0.02%  record: RuntimeRecordState REFR.XIS2
   area   0.00%       681   0.24%  record: UnsupportedUsedFieldLayout LIGH.DATA.Flags.Unknown_0_13_21_and_unmapped_bits
   area   0.00%        93   0.03%  record: UninterpretedVisualSubrecord REFR.XPDD.layout_not_established
+  area   0.00%        11   0.00%  record: UninterpretedVisualSubrecord REFR.XRGD.unverified_size
+  area   0.00%       138   0.05%  record: UninterpretedVisualSubrecord CONT.DATA
+  area   0.00%         4   0.00%  draw: UnsupportedColorOnlyEffectFeatures 2684354624
 
 ## Omitted, every exact reason (once per placement)
 
 by placements:
-     62525  21.78%  area   0.38%  record: UnsupportedUsedFieldLayout LIGH.DATA.Flags.Unknown_0_13_21_and_unmapped_bits
-     59883  20.86%  area   0.34%  record: UninterpretedVisualSubrecord REFR.XRDS.layout_not_established
-     59395  20.69%  area   0.32%  record: UninterpretedVisualSubrecord REFR.XLIG.FOV_EndDistance_NearClip_Volumetric_and_Fade24_offsets_not_independently_established
-     43214  15.05%  area   0.00%  record: BaseTypeOutsideSlice TXST
-     27875   9.71%  area  33.93%  record: UninterpretedVisualSubrecord ACTI.FNAM.layout_not_established
-     27875   9.71%  area  33.93%  record: UninterpretedVisualSubrecord ACTI.PNAM.layout_not_established
-     26772   9.32%  area   4.15%  record: RuntimeCondition VMAD
-     21285   7.41%  area  10.52%  model: UnsupportedNifBlock BSSkin::Instance
-     21275   7.41%  area  10.52%  model: UnsupportedSkinning BSTriShape
-     20327   7.08%  area   4.09%  record: UninterpretedVisualSubrecord REFR.XPRM.layout_not_established
-     18120   6.31%  area   1.40%  record: UninterpretedVisualSubrecord FURN.FNAM.layout_not_established
-     18120   6.31%  area   1.40%  record: UninterpretedVisualSubrecord FURN.MNAM.layout_not_established
-     18120   6.31%  area   1.40%  record: UninterpretedVisualSubrecord FURN.PNAM.layout_not_established
-     18120   6.31%  area   1.40%  record: UninterpretedVisualSubrecord FURN.SNAM.layout_not_established
-     18120   6.31%  area   1.40%  record: UninterpretedVisualSubrecord FURN.WBDT.layout_not_established
-     17445   6.08%  area   0.98%  record: UninterpretedVisualSubrecord CONT.DATA
-     16614   5.79%  area   0.94%  record: UninterpretedVisualSubrecord CONT.CNTO
-     16614   5.79%  area   0.94%  record: UninterpretedVisualSubrecord CONT.COCT
-     13109   4.57%  area   0.77%  record: UninterpretedVisualSubrecord CONT.QNAM
-     13109   4.57%  area   0.77%  record: UninterpretedVisualSubrecord CONT.SNAM
-     13086   4.56%  area  15.66%  model: UnsupportedAnimationRuntime BSBehaviorGraphExtraData;target_in_visual=None;rest=behavior-graph
-     11641   4.05%  area  19.51%  model: UnsupportedAnimationRuntime NiControllerSequence;target_in_visual=None;rest=manager-loop
-     11484   4.00%  area   1.91%  record: UninterpretedVisualSubrecord REFR.XRGD.layout_not_established
-     10171   3.54%  area   0.03%  record: RuntimeRecordState REFR.INAM
-     10171   3.54%  area   0.03%  record: RuntimeRecordState REFR.XPPA
-     10171   3.54%  area   0.03%  record: RuntimeRecordState REFR.XPRD
-     10171   3.54%  area   0.03%  record: UninterpretedVisualSubrecord REFR.PDTO.layout_not_established
-      9847   3.43%  area   0.01%  record: UninterpretedVisualSubrecord REFR.XBSD.layout_not_established
-      9837   3.43%  area   0.00%  record: BaseTypeOutsideSlice BNDS
-      9409   3.28%  area  22.10%  model: UnsupportedAnimationRuntime NiBlendFloatInterpolator;target_in_visual=None;rest=effect-idle
-      9369   3.26%  area  22.01%  model: UnsupportedAnimationRuntime BSEffectShaderPropertyFloatController;target_in_visual=Some(true);rest=effect-idle
-      9298   3.24%  area   1.59%  model: UnsupportedAnimationRuntime NiTransformController;target_in_visual=Some(true);rest=transform-varies
-      9289   3.24%  area   1.59%  model: UnsupportedAnimationRuntime NiTransformData;target_in_visual=None;rest=transform-varies
-      9289   3.24%  area   1.59%  model: UnsupportedAnimationRuntime NiTransformInterpolator;target_in_visual=None;rest=transform-varies
-      8955   3.12%  area  17.91%  model: UnsupportedAnimationRuntime NiFloatInterpolator;target_in_visual=None;rest=manager-loop
-      8692   3.03%  area  14.93%  model: UnsupportedAnimationRuntime NiFloatData;target_in_visual=None;rest=manager-loop
-      8615   3.00%  area  18.59%  model: UnsupportedAnimationRuntime NiTransformInterpolator;target_in_visual=None;rest=manager-loop
-      8557   2.98%  area  17.53%  model: UnsupportedAnimationRuntime NiTransformData;target_in_visual=None;rest=manager-loop
-      7682   2.68%  area   0.00%  draw: NoDrawableGeometry
-      7167   2.50%  area   1.47%  record: UninterpretedVisualSubrecord FLOR.FNAM
-      7167   2.50%  area   1.47%  record: UninterpretedVisualSubrecord FLOR.PFIG
-      7167   2.50%  area   1.47%  record: UninterpretedVisualSubrecord FLOR.PFPC
-      7167   2.50%  area   1.47%  record: UninterpretedVisualSubrecord FLOR.PNAM
-      7167   2.50%  area   1.47%  record: UninterpretedVisualSubrecord FLOR.SNAM
-      7137   2.49%  area   1.47%  record: UninterpretedVisualSubrecord FLOR.ATTX
-      7045   2.45%  area   0.21%  record: UninterpretedVisualSubrecord REFR.XOWN.layout_not_established
-      6938   2.42%  area   0.01%  record: UninterpretedVisualSubrecord ALCH.DATA
-      6938   2.42%  area   0.01%  record: UninterpretedVisualSubrecord ALCH.DESC
-      6938   2.42%  area   0.01%  record: UninterpretedVisualSubrecord ALCH.DNAM
-      6938   2.42%  area   0.01%  record: UninterpretedVisualSubrecord ALCH.EFID
-      6938   2.42%  area   0.01%  record: UninterpretedVisualSubrecord ALCH.EFIT
-      6938   2.42%  area   0.01%  record: UninterpretedVisualSubrecord ALCH.ENIT
-      6903   2.40%  area   8.08%  model: UnsupportedAnimationRuntime NiFloatInterpolator;target_in_visual=None;rest=effect-idle
-      6832   2.38%  area   0.50%  record: MissingModelPath
-      6644   2.31%  area   8.02%  model: UnsupportedAnimationRuntime NiFloatData;target_in_visual=None;rest=effect-idle
-      5658   1.97%  area   0.26%  actor: not resolved (leveled list)
-      5590   1.95%  area   0.01%  record: UninterpretedVisualSubrecord MISC.CDIX
-      5558   1.94%  area   2.41%  record: RuntimeRecordState REFR.XATR
-      5473   1.91%  area   0.08%  record: RuntimeCondition CTDA
-      5386   1.88%  area   0.00%  record: UninterpretedVisualSubrecord REFR.XPDD.layout_not_established
-      5322   1.85%  area   0.24%  record: UninterpretedVisualSubrecord CONT.TNAM
-      5315   1.85%  area   0.01%  record: UninterpretedVisualSubrecord MISC.YNAM
-      5284   1.84%  area   1.11%  record: UninterpretedVisualSubrecord DOOR.FNAM.layout_not_established
-      5015   1.75%  area   0.00%  record: UninterpretedVisualSubrecord MISC.ZNAM
-      4774   1.66%  area   8.48%  model: UnsupportedAnimationRuntime NiPSysEmitterCtlr;target_in_visual=Some(false);rest=particle
-      4774   1.66%  area   8.48%  model: UnsupportedAnimationRuntime NiPSysUpdateCtlr;target_in_visual=Some(false);rest=particle
-      4774   1.66%  area   8.48%  model: UnsupportedAnimationRuntime NiParticleSystem;target_in_visual=None;rest=particle
-      4774   1.66%  area   8.48%  model: UnsupportedNifBlock BSPSysLODModifier
-      4774   1.66%  area   8.48%  model: UnsupportedNifBlock BSPSysSimpleColorModifier
-      4774   1.66%  area   8.48%  model: UnsupportedNifBlock NiPSysAgeDeathModifier
-      4774   1.66%  area   8.48%  model: UnsupportedNifBlock NiPSysBoundUpdateModifier
-      4774   1.66%  area   8.48%  model: UnsupportedNifBlock NiPSysData
-      4774   1.66%  area   8.48%  model: UnsupportedNifBlock NiPSysPositionModifier
-      4774   1.66%  area   8.48%  model: UnsupportedNifBlock NiPSysSpawnModifier
-      4538   1.58%  area   8.47%  model: UnsupportedNifBlock NiPSysGravityModifier
-      4419   1.54%  area  13.17%  model: UnsupportedAnimationRuntime NiBlendBoolInterpolator;target_in_visual=None;rest=other
-      4419   1.54%  area  13.17%  model: UnsupportedNifBlock NiBlendBoolInterpolator
-      4158   1.45%  area   8.48%  model: UnsupportedNifBlock BSPSysScaleModifier
-      4089   1.42%  area   4.29%  record: RuntimeRecordState REFR.XEZN
-      3564   1.24%  area   0.25%  record: UninterpretedVisualSubrecord FURN.FNPR.layout_not_established
-  ... 237 more
+     62525  21.88%  area   0.41%  record: UnsupportedUsedFieldLayout LIGH.DATA.Flags.Unknown_0_13_21_and_unmapped_bits
+     59883  20.96%  area   0.37%  record: UninterpretedVisualSubrecord REFR.XRDS.layout_not_established
+     59395  20.79%  area   0.34%  record: UninterpretedVisualSubrecord REFR.XLIG.FOV_EndDistance_NearClip_Volumetric_and_Fade24_offsets_not_independently_established
+     43214  15.12%  area   0.00%  record: BaseTypeOutsideSlice TXST
+     27875   9.76%  area  36.22%  record: UninterpretedVisualSubrecord ACTI.FNAM.layout_not_established
+     27875   9.76%  area  36.22%  record: UninterpretedVisualSubrecord ACTI.PNAM.layout_not_established
+     26772   9.37%  area   4.43%  record: RuntimeCondition VMAD
+     21285   7.45%  area  11.23%  model: UnsupportedNifBlock BSSkin::Instance
+     21275   7.45%  area  11.23%  model: UnsupportedSkinning BSTriShape
+     18120   6.34%  area   1.49%  record: UninterpretedVisualSubrecord FURN.FNAM.layout_not_established
+     18120   6.34%  area   1.49%  record: UninterpretedVisualSubrecord FURN.MNAM.layout_not_established
+     18120   6.34%  area   1.49%  record: UninterpretedVisualSubrecord FURN.PNAM.layout_not_established
+     18120   6.34%  area   1.49%  record: UninterpretedVisualSubrecord FURN.SNAM.layout_not_established
+     18120   6.34%  area   1.49%  record: UninterpretedVisualSubrecord FURN.WBDT.layout_not_established
+     17445   6.11%  area   1.05%  record: UninterpretedVisualSubrecord CONT.DATA
+     16614   5.81%  area   1.00%  record: UninterpretedVisualSubrecord CONT.CNTO
+     16614   5.81%  area   1.00%  record: UninterpretedVisualSubrecord CONT.COCT
+     13109   4.59%  area   0.82%  record: UninterpretedVisualSubrecord CONT.QNAM
+     13109   4.59%  area   0.82%  record: UninterpretedVisualSubrecord CONT.SNAM
+     13086   4.58%  area  16.72%  model: UnsupportedAnimationRuntime BSBehaviorGraphExtraData;target_in_visual=None;rest=behavior-graph
+     11641   4.07%  area  20.83%  model: UnsupportedAnimationRuntime NiControllerSequence;target_in_visual=None;rest=manager-loop
+     11484   4.02%  area   2.04%  record: UninterpretedVisualSubrecord REFR.XRGD.layout_not_established
+     10171   3.56%  area   0.03%  record: RuntimeRecordState REFR.INAM
+     10171   3.56%  area   0.03%  record: RuntimeRecordState REFR.XPPA
+     10171   3.56%  area   0.03%  record: RuntimeRecordState REFR.XPRD
+     10171   3.56%  area   0.03%  record: UninterpretedVisualSubrecord REFR.PDTO.layout_not_established
+      9847   3.45%  area   0.01%  record: UninterpretedVisualSubrecord REFR.XBSD.layout_not_established
+      9837   3.44%  area   0.00%  record: BaseTypeOutsideSlice BNDS
+      9409   3.29%  area  23.59%  model: UnsupportedAnimationRuntime NiBlendFloatInterpolator;target_in_visual=None;rest=effect-idle
+      9369   3.28%  area  23.50%  model: UnsupportedAnimationRuntime BSEffectShaderPropertyFloatController;target_in_visual=Some(true);rest=effect-idle
+      9298   3.25%  area   1.70%  model: UnsupportedAnimationRuntime NiTransformController;target_in_visual=Some(true);rest=transform-varies
+      9289   3.25%  area   1.70%  model: UnsupportedAnimationRuntime NiTransformData;target_in_visual=None;rest=transform-varies
+      9289   3.25%  area   1.70%  model: UnsupportedAnimationRuntime NiTransformInterpolator;target_in_visual=None;rest=transform-varies
+      8955   3.13%  area  19.12%  model: UnsupportedAnimationRuntime NiFloatInterpolator;target_in_visual=None;rest=manager-loop
+      8692   3.04%  area  15.94%  model: UnsupportedAnimationRuntime NiFloatData;target_in_visual=None;rest=manager-loop
+      8615   3.02%  area  19.85%  model: UnsupportedAnimationRuntime NiTransformInterpolator;target_in_visual=None;rest=manager-loop
+      8557   2.99%  area  18.71%  model: UnsupportedAnimationRuntime NiTransformData;target_in_visual=None;rest=manager-loop
+      7683   2.69%  area   0.00%  draw: NoDrawableGeometry
+      7167   2.51%  area   1.57%  record: UninterpretedVisualSubrecord FLOR.FNAM
+      7167   2.51%  area   1.57%  record: UninterpretedVisualSubrecord FLOR.PFIG
+      7167   2.51%  area   1.57%  record: UninterpretedVisualSubrecord FLOR.PFPC
+      7167   2.51%  area   1.57%  record: UninterpretedVisualSubrecord FLOR.PNAM
+      7167   2.51%  area   1.57%  record: UninterpretedVisualSubrecord FLOR.SNAM
+      7137   2.50%  area   1.57%  record: UninterpretedVisualSubrecord FLOR.ATTX
+      7045   2.47%  area   0.22%  record: UninterpretedVisualSubrecord REFR.XOWN.layout_not_established
+      6938   2.43%  area   0.01%  record: UninterpretedVisualSubrecord ALCH.DATA
+      6938   2.43%  area   0.01%  record: UninterpretedVisualSubrecord ALCH.DESC
+      6938   2.43%  area   0.01%  record: UninterpretedVisualSubrecord ALCH.DNAM
+      6938   2.43%  area   0.01%  record: UninterpretedVisualSubrecord ALCH.EFID
+      6938   2.43%  area   0.01%  record: UninterpretedVisualSubrecord ALCH.EFIT
+      6938   2.43%  area   0.01%  record: UninterpretedVisualSubrecord ALCH.ENIT
+      6903   2.42%  area   8.63%  model: UnsupportedAnimationRuntime NiFloatInterpolator;target_in_visual=None;rest=effect-idle
+      6832   2.39%  area   0.54%  record: MissingModelPath
+      6644   2.33%  area   8.56%  model: UnsupportedAnimationRuntime NiFloatData;target_in_visual=None;rest=effect-idle
+      5658   1.98%  area   0.28%  actor: not resolved (leveled list)
+      5590   1.96%  area   0.01%  record: UninterpretedVisualSubrecord MISC.CDIX
+      5558   1.95%  area   2.58%  record: RuntimeRecordState REFR.XATR
+      5473   1.92%  area   0.09%  record: RuntimeCondition CTDA
+      5386   1.89%  area   0.00%  record: UninterpretedVisualSubrecord REFR.XPDD.layout_not_established
+      5322   1.86%  area   0.25%  record: UninterpretedVisualSubrecord CONT.TNAM
+      5315   1.86%  area   0.01%  record: UninterpretedVisualSubrecord MISC.YNAM
+      5284   1.85%  area   1.19%  record: UninterpretedVisualSubrecord DOOR.FNAM.layout_not_established
+      5015   1.76%  area   0.01%  record: UninterpretedVisualSubrecord MISC.ZNAM
+      4774   1.67%  area   9.05%  model: UnsupportedAnimationRuntime NiPSysEmitterCtlr;target_in_visual=Some(false);rest=particle
+      4774   1.67%  area   9.05%  model: UnsupportedAnimationRuntime NiPSysUpdateCtlr;target_in_visual=Some(false);rest=particle
+      4774   1.67%  area   9.05%  model: UnsupportedAnimationRuntime NiParticleSystem;target_in_visual=None;rest=particle
+      4774   1.67%  area   9.05%  model: UnsupportedNifBlock BSPSysLODModifier
+      4774   1.67%  area   9.05%  model: UnsupportedNifBlock BSPSysSimpleColorModifier
+      4774   1.67%  area   9.05%  model: UnsupportedNifBlock NiPSysAgeDeathModifier
+      4774   1.67%  area   9.05%  model: UnsupportedNifBlock NiPSysBoundUpdateModifier
+      4774   1.67%  area   9.05%  model: UnsupportedNifBlock NiPSysData
+      4774   1.67%  area   9.05%  model: UnsupportedNifBlock NiPSysPositionModifier
+      4774   1.67%  area   9.05%  model: UnsupportedNifBlock NiPSysSpawnModifier
+      4538   1.59%  area   9.04%  model: UnsupportedNifBlock NiPSysGravityModifier
+      4419   1.55%  area  14.06%  model: UnsupportedAnimationRuntime NiBlendBoolInterpolator;target_in_visual=None;rest=other
+      4419   1.55%  area  14.06%  model: UnsupportedNifBlock NiBlendBoolInterpolator
+      4158   1.46%  area   9.05%  model: UnsupportedNifBlock BSPSysScaleModifier
+      4089   1.43%  area   4.58%  record: RuntimeRecordState REFR.XEZN
+      3564   1.25%  area   0.27%  record: UninterpretedVisualSubrecord FURN.FNPR.layout_not_established
+      3520   1.23%  area   2.79%  model: UnsupportedNifBlock NiPSysRotationModifier
+  ... 234 more
 by area:
-  area  33.93%     27875   9.71%  record: UninterpretedVisualSubrecord ACTI.FNAM.layout_not_established
-  area  33.93%     27875   9.71%  record: UninterpretedVisualSubrecord ACTI.PNAM.layout_not_established
-  area  22.50%       905   0.32%  model: UnsupportedNifBlock BSWaterShaderProperty
-  area  22.10%      9409   3.28%  model: UnsupportedAnimationRuntime NiBlendFloatInterpolator;target_in_visual=None;rest=effect-idle
-  area  22.01%      9369   3.26%  model: UnsupportedAnimationRuntime BSEffectShaderPropertyFloatController;target_in_visual=Some(true);rest=effect-idle
-  area  19.51%     11641   4.05%  model: UnsupportedAnimationRuntime NiControllerSequence;target_in_visual=None;rest=manager-loop
-  area  18.59%      8615   3.00%  model: UnsupportedAnimationRuntime NiTransformInterpolator;target_in_visual=None;rest=manager-loop
-  area  17.91%      8955   3.12%  model: UnsupportedAnimationRuntime NiFloatInterpolator;target_in_visual=None;rest=manager-loop
-  area  17.53%      8557   2.98%  model: UnsupportedAnimationRuntime NiTransformData;target_in_visual=None;rest=manager-loop
-  area  15.66%     13086   4.56%  model: UnsupportedAnimationRuntime BSBehaviorGraphExtraData;target_in_visual=None;rest=behavior-graph
-  area  15.35%      1826   0.64%  model: UnsupportedAnimationRuntime NiFloatData;target_in_visual=None;rest=alpha
-  area  15.35%      1826   0.64%  model: UnsupportedAnimationRuntime NiFloatInterpolator;target_in_visual=None;rest=alpha
-  area  15.27%      1589   0.55%  model: UnsupportedAnimationRuntime BSEffectShaderPropertyFloatController;target_in_visual=Some(true);rest=alpha
-  area  14.93%      8692   3.03%  model: UnsupportedAnimationRuntime NiFloatData;target_in_visual=None;rest=manager-loop
-  area  13.17%      4419   1.54%  model: UnsupportedAnimationRuntime NiBlendBoolInterpolator;target_in_visual=None;rest=other
-  area  13.17%      4419   1.54%  model: UnsupportedNifBlock NiBlendBoolInterpolator
-  area  12.51%      2323   0.81%  model: UnsupportedAnimationRuntime NiBoolInterpolator;target_in_visual=None;rest=visibility
-  area  12.51%      2323   0.81%  model: UnsupportedAnimationRuntime NiVisController;target_in_visual=Some(true);rest=visibility
-  area  12.51%      2312   0.81%  model: UnsupportedAnimationRuntime NiBlendBoolInterpolator;target_in_visual=None;rest=visibility
-  area  12.48%      2243   0.78%  model: UnsupportedAnimationRuntime NiBoolData;target_in_visual=None;rest=visibility
-  area  10.52%     21285   7.41%  model: UnsupportedNifBlock BSSkin::Instance
-  area  10.52%     21275   7.41%  model: UnsupportedSkinning BSTriShape
-  area   9.99%      2145   0.75%  model: UnsupportedAnimationRuntime BSEffectShaderPropertyFloatController;target_in_visual=Some(true);rest=texture-transform
-  area   9.99%      2142   0.75%  model: UnsupportedAnimationRuntime NiFloatData;target_in_visual=None;rest=texture-transform
-  area   9.99%      2142   0.75%  model: UnsupportedAnimationRuntime NiFloatInterpolator;target_in_visual=None;rest=texture-transform
-  area   8.48%      4774   1.66%  model: UnsupportedAnimationRuntime NiPSysEmitterCtlr;target_in_visual=Some(false);rest=particle
-  area   8.48%      4774   1.66%  model: UnsupportedAnimationRuntime NiPSysUpdateCtlr;target_in_visual=Some(false);rest=particle
-  area   8.48%      4774   1.66%  model: UnsupportedAnimationRuntime NiParticleSystem;target_in_visual=None;rest=particle
-  area   8.48%      4774   1.66%  model: UnsupportedNifBlock BSPSysLODModifier
-  area   8.48%      4158   1.45%  model: UnsupportedNifBlock BSPSysScaleModifier
-  area   8.48%      4774   1.66%  model: UnsupportedNifBlock BSPSysSimpleColorModifier
-  area   8.48%      4774   1.66%  model: UnsupportedNifBlock NiPSysAgeDeathModifier
-  area   8.48%      4774   1.66%  model: UnsupportedNifBlock NiPSysBoundUpdateModifier
-  area   8.48%      4774   1.66%  model: UnsupportedNifBlock NiPSysData
-  area   8.48%      4774   1.66%  model: UnsupportedNifBlock NiPSysPositionModifier
-  area   8.48%      4774   1.66%  model: UnsupportedNifBlock NiPSysSpawnModifier
-  area   8.47%      4538   1.58%  model: UnsupportedNifBlock NiPSysGravityModifier
-  area   8.08%      6903   2.40%  model: UnsupportedAnimationRuntime NiFloatInterpolator;target_in_visual=None;rest=effect-idle
-  area   8.02%      6644   2.31%  model: UnsupportedAnimationRuntime NiFloatData;target_in_visual=None;rest=effect-idle
-  area   7.45%      1521   0.53%  model: UnsupportedAnimationRuntime BSEffectShaderPropertyFloatController;target_in_visual=Some(true);rest=effect-emissive
-  area   7.45%      1518   0.53%  model: UnsupportedAnimationRuntime NiFloatData;target_in_visual=None;rest=effect-emissive
-  area   7.45%      1518   0.53%  model: UnsupportedAnimationRuntime NiFloatInterpolator;target_in_visual=None;rest=effect-emissive
-  area   7.41%      2292   0.80%  model: UnsupportedAnimationRuntime NiBlendFloatInterpolator;target_in_visual=None;rest=other
-  area   7.41%      2292   0.80%  model: UnsupportedAnimationRuntime NiBoolInterpolator;target_in_visual=None;rest=particle
-  area   7.41%      2292   0.80%  model: UnsupportedAnimationRuntime NiFloatInterpolator;target_in_visual=None;rest=particle
-  area   7.40%      2287   0.80%  model: UnsupportedAnimationRuntime NiBoolData;target_in_visual=None;rest=particle
-  area   7.08%      1445   0.50%  model: UnsupportedAnimationRuntime NiFloatData;target_in_visual=None;rest=particle
-  area   6.74%      2188   0.76%  model: UnsupportedNifBlock NiPSysBoxEmitter
-  area   6.16%      1844   0.64%  model: UnsupportedNifBlock BSPSysSubTexModifier
-  area   4.29%      4089   1.42%  record: RuntimeRecordState REFR.XEZN
-  area   4.15%     26772   9.32%  record: RuntimeCondition VMAD
-  area   4.09%     20327   7.08%  record: UninterpretedVisualSubrecord REFR.XPRM.layout_not_established
-  area   4.03%       179   0.06%  record: UninterpretedVisualSubrecord REFR.XWCN.layout_not_established
-  area   4.02%       178   0.06%  record: UninterpretedVisualSubrecord REFR.XWCU.layout_not_established
-  area   2.62%      3520   1.23%  model: UnsupportedNifBlock NiPSysRotationModifier
-  area   2.44%      1366   0.48%  model: UnsupportedNifBlock BSPositionData
-  area   2.44%      1366   0.48%  model: UnsupportedNifBlock NiPSysMeshEmitter
-  area   2.41%      5558   1.94%  record: RuntimeRecordState REFR.XATR
-  area   2.29%       683   0.24%  draw: RenderNonFiniteVertex
-  area   2.06%       476   0.17%  model: UnsupportedAnimationRuntime BSEffectShaderPropertyColorController;target_in_visual=Some(true);rest=effect-emissive
-  area   2.06%       475   0.17%  model: UnsupportedAnimationRuntime NiPoint3Interpolator;target_in_visual=None;rest=effect-emissive
-  area   2.06%       475   0.17%  model: UnsupportedAnimationRuntime NiPosData;target_in_visual=None;rest=effect-emissive
-  area   1.94%      3237   1.13%  model: UnsupportedAnimationRuntime NiPSysModifierActiveCtlr;target_in_visual=Some(false);rest=particle
-  area   1.91%     11484   4.00%  record: UninterpretedVisualSubrecord REFR.XRGD.layout_not_established
-  area   1.87%      3196   1.11%  model: UnsupportedNifBlock NiPSysDragModifier
-  area   1.75%      1427   0.50%  model: UnsupportedNifBlock NiPSysCylinderEmitter
-  area   1.59%      9298   3.24%  model: UnsupportedAnimationRuntime NiTransformController;target_in_visual=Some(true);rest=transform-varies
-  area   1.59%      9289   3.24%  model: UnsupportedAnimationRuntime NiTransformData;target_in_visual=None;rest=transform-varies
-  area   1.59%      9289   3.24%  model: UnsupportedAnimationRuntime NiTransformInterpolator;target_in_visual=None;rest=transform-varies
-  area   1.47%      7167   2.50%  record: UninterpretedVisualSubrecord FLOR.FNAM
-  area   1.47%      7167   2.50%  record: UninterpretedVisualSubrecord FLOR.PFIG
-  area   1.47%      7167   2.50%  record: UninterpretedVisualSubrecord FLOR.PFPC
-  area   1.47%      7167   2.50%  record: UninterpretedVisualSubrecord FLOR.PNAM
-  area   1.47%      7167   2.50%  record: UninterpretedVisualSubrecord FLOR.SNAM
-  area   1.47%      7137   2.49%  record: UninterpretedVisualSubrecord FLOR.ATTX
-  area   1.41%      1815   0.63%  model: UnsupportedAnimationRuntime NiBoolTimelineInterpolator;target_in_visual=None;rest=particle
-  area   1.40%     18120   6.31%  record: UninterpretedVisualSubrecord FURN.FNAM.layout_not_established
-  area   1.40%     18120   6.31%  record: UninterpretedVisualSubrecord FURN.MNAM.layout_not_established
-  area   1.40%     18120   6.31%  record: UninterpretedVisualSubrecord FURN.PNAM.layout_not_established
-  area   1.40%     18120   6.31%  record: UninterpretedVisualSubrecord FURN.SNAM.layout_not_established
+  area  36.22%     27875   9.76%  record: UninterpretedVisualSubrecord ACTI.FNAM.layout_not_established
+  area  36.22%     27875   9.76%  record: UninterpretedVisualSubrecord ACTI.PNAM.layout_not_established
+  area  24.02%       905   0.32%  model: UnsupportedNifBlock BSWaterShaderProperty
+  area  23.59%      9409   3.29%  model: UnsupportedAnimationRuntime NiBlendFloatInterpolator;target_in_visual=None;rest=effect-idle
+  area  23.50%      9369   3.28%  model: UnsupportedAnimationRuntime BSEffectShaderPropertyFloatController;target_in_visual=Some(true);rest=effect-idle
+  area  20.83%     11641   4.07%  model: UnsupportedAnimationRuntime NiControllerSequence;target_in_visual=None;rest=manager-loop
+  area  19.85%      8615   3.02%  model: UnsupportedAnimationRuntime NiTransformInterpolator;target_in_visual=None;rest=manager-loop
+  area  19.12%      8955   3.13%  model: UnsupportedAnimationRuntime NiFloatInterpolator;target_in_visual=None;rest=manager-loop
+  area  18.71%      8557   2.99%  model: UnsupportedAnimationRuntime NiTransformData;target_in_visual=None;rest=manager-loop
+  area  16.72%     13086   4.58%  model: UnsupportedAnimationRuntime BSBehaviorGraphExtraData;target_in_visual=None;rest=behavior-graph
+  area  16.39%      1826   0.64%  model: UnsupportedAnimationRuntime NiFloatData;target_in_visual=None;rest=alpha
+  area  16.39%      1826   0.64%  model: UnsupportedAnimationRuntime NiFloatInterpolator;target_in_visual=None;rest=alpha
+  area  16.30%      1589   0.56%  model: UnsupportedAnimationRuntime BSEffectShaderPropertyFloatController;target_in_visual=Some(true);rest=alpha
+  area  15.94%      8692   3.04%  model: UnsupportedAnimationRuntime NiFloatData;target_in_visual=None;rest=manager-loop
+  area  14.06%      4419   1.55%  model: UnsupportedAnimationRuntime NiBlendBoolInterpolator;target_in_visual=None;rest=other
+  area  14.06%      4419   1.55%  model: UnsupportedNifBlock NiBlendBoolInterpolator
+  area  13.36%      2323   0.81%  model: UnsupportedAnimationRuntime NiBoolInterpolator;target_in_visual=None;rest=visibility
+  area  13.36%      2323   0.81%  model: UnsupportedAnimationRuntime NiVisController;target_in_visual=Some(true);rest=visibility
+  area  13.36%      2312   0.81%  model: UnsupportedAnimationRuntime NiBlendBoolInterpolator;target_in_visual=None;rest=visibility
+  area  13.33%      2243   0.79%  model: UnsupportedAnimationRuntime NiBoolData;target_in_visual=None;rest=visibility
+  area  11.23%     21285   7.45%  model: UnsupportedNifBlock BSSkin::Instance
+  area  11.23%     21275   7.45%  model: UnsupportedSkinning BSTriShape
+  area  10.67%      2145   0.75%  model: UnsupportedAnimationRuntime BSEffectShaderPropertyFloatController;target_in_visual=Some(true);rest=texture-transform
+  area  10.66%      2142   0.75%  model: UnsupportedAnimationRuntime NiFloatData;target_in_visual=None;rest=texture-transform
+  area  10.66%      2142   0.75%  model: UnsupportedAnimationRuntime NiFloatInterpolator;target_in_visual=None;rest=texture-transform
+  area   9.05%      4774   1.67%  model: UnsupportedAnimationRuntime NiPSysEmitterCtlr;target_in_visual=Some(false);rest=particle
+  area   9.05%      4774   1.67%  model: UnsupportedAnimationRuntime NiPSysUpdateCtlr;target_in_visual=Some(false);rest=particle
+  area   9.05%      4774   1.67%  model: UnsupportedAnimationRuntime NiParticleSystem;target_in_visual=None;rest=particle
+  area   9.05%      4774   1.67%  model: UnsupportedNifBlock BSPSysLODModifier
+  area   9.05%      4158   1.46%  model: UnsupportedNifBlock BSPSysScaleModifier
+  area   9.05%      4774   1.67%  model: UnsupportedNifBlock BSPSysSimpleColorModifier
+  area   9.05%      4774   1.67%  model: UnsupportedNifBlock NiPSysAgeDeathModifier
+  area   9.05%      4774   1.67%  model: UnsupportedNifBlock NiPSysBoundUpdateModifier
+  area   9.05%      4774   1.67%  model: UnsupportedNifBlock NiPSysData
+  area   9.05%      4774   1.67%  model: UnsupportedNifBlock NiPSysPositionModifier
+  area   9.05%      4774   1.67%  model: UnsupportedNifBlock NiPSysSpawnModifier
+  area   9.04%      4538   1.59%  model: UnsupportedNifBlock NiPSysGravityModifier
+  area   8.63%      6903   2.42%  model: UnsupportedAnimationRuntime NiFloatInterpolator;target_in_visual=None;rest=effect-idle
+  area   8.56%      6644   2.33%  model: UnsupportedAnimationRuntime NiFloatData;target_in_visual=None;rest=effect-idle
+  area   7.96%      1521   0.53%  model: UnsupportedAnimationRuntime BSEffectShaderPropertyFloatController;target_in_visual=Some(true);rest=effect-emissive
+  area   7.96%      1518   0.53%  model: UnsupportedAnimationRuntime NiFloatData;target_in_visual=None;rest=effect-emissive
+  area   7.96%      1518   0.53%  model: UnsupportedAnimationRuntime NiFloatInterpolator;target_in_visual=None;rest=effect-emissive
+  area   7.91%      2292   0.80%  model: UnsupportedAnimationRuntime NiBlendFloatInterpolator;target_in_visual=None;rest=other
+  area   7.91%      2292   0.80%  model: UnsupportedAnimationRuntime NiBoolInterpolator;target_in_visual=None;rest=particle
+  area   7.91%      2292   0.80%  model: UnsupportedAnimationRuntime NiFloatInterpolator;target_in_visual=None;rest=particle
+  area   7.90%      2287   0.80%  model: UnsupportedAnimationRuntime NiBoolData;target_in_visual=None;rest=particle
+  area   7.56%      1445   0.51%  model: UnsupportedAnimationRuntime NiFloatData;target_in_visual=None;rest=particle
+  area   7.19%      2188   0.77%  model: UnsupportedNifBlock NiPSysBoxEmitter
+  area   6.57%      1844   0.65%  model: UnsupportedNifBlock BSPSysSubTexModifier
+  area   4.58%      4089   1.43%  record: RuntimeRecordState REFR.XEZN
+  area   4.43%     26772   9.37%  record: RuntimeCondition VMAD
+  area   4.30%       179   0.06%  record: UninterpretedVisualSubrecord REFR.XWCN.layout_not_established
+  area   4.29%       178   0.06%  record: UninterpretedVisualSubrecord REFR.XWCU.layout_not_established
+  area   2.79%      3520   1.23%  model: UnsupportedNifBlock NiPSysRotationModifier
+  area   2.61%      1366   0.48%  model: UnsupportedNifBlock BSPositionData
+  area   2.61%      1366   0.48%  model: UnsupportedNifBlock NiPSysMeshEmitter
+  area   2.58%      5558   1.95%  record: RuntimeRecordState REFR.XATR
+  area   2.20%       476   0.17%  model: UnsupportedAnimationRuntime BSEffectShaderPropertyColorController;target_in_visual=Some(true);rest=effect-emissive
+  area   2.20%       475   0.17%  model: UnsupportedAnimationRuntime NiPoint3Interpolator;target_in_visual=None;rest=effect-emissive
+  area   2.20%       475   0.17%  model: UnsupportedAnimationRuntime NiPosData;target_in_visual=None;rest=effect-emissive
+  area   2.07%      3237   1.13%  model: UnsupportedAnimationRuntime NiPSysModifierActiveCtlr;target_in_visual=Some(false);rest=particle
+  area   2.04%     11484   4.02%  record: UninterpretedVisualSubrecord REFR.XRGD.layout_not_established
+  area   2.00%      3196   1.12%  model: UnsupportedNifBlock NiPSysDragModifier
+  area   1.87%      1427   0.50%  model: UnsupportedNifBlock NiPSysCylinderEmitter
+  area   1.70%      9298   3.25%  model: UnsupportedAnimationRuntime NiTransformController;target_in_visual=Some(true);rest=transform-varies
+  area   1.70%      9289   3.25%  model: UnsupportedAnimationRuntime NiTransformData;target_in_visual=None;rest=transform-varies
+  area   1.70%      9289   3.25%  model: UnsupportedAnimationRuntime NiTransformInterpolator;target_in_visual=None;rest=transform-varies
+  area   1.57%      7167   2.51%  record: UninterpretedVisualSubrecord FLOR.FNAM
+  area   1.57%      7167   2.51%  record: UninterpretedVisualSubrecord FLOR.PFIG
+  area   1.57%      7167   2.51%  record: UninterpretedVisualSubrecord FLOR.PFPC
+  area   1.57%      7167   2.51%  record: UninterpretedVisualSubrecord FLOR.PNAM
+  area   1.57%      7167   2.51%  record: UninterpretedVisualSubrecord FLOR.SNAM
+  area   1.57%      7137   2.50%  record: UninterpretedVisualSubrecord FLOR.ATTX
+  area   1.51%      1815   0.64%  model: UnsupportedAnimationRuntime NiBoolTimelineInterpolator;target_in_visual=None;rest=particle
+  area   1.49%     18120   6.34%  record: UninterpretedVisualSubrecord FURN.FNAM.layout_not_established
+  area   1.49%     18120   6.34%  record: UninterpretedVisualSubrecord FURN.MNAM.layout_not_established
+  area   1.49%     18120   6.34%  record: UninterpretedVisualSubrecord FURN.PNAM.layout_not_established
+  area   1.49%     18120   6.34%  record: UninterpretedVisualSubrecord FURN.SNAM.layout_not_established
+  area   1.49%     18120   6.34%  record: UninterpretedVisualSubrecord FURN.WBDT.layout_not_established
+  area   1.48%      1577   0.55%  model: UnsupportedNifBlock BSWindModifier
 
 ## Drawn only under hypotheses, by pending rule
 
 by placements:
-    270902  39.79%  area  26.01%  mswp_fnam_folder_label_v1
-    219348  32.22%  area  58.15%  effect_color_only_v1
-    124733  18.32%  area  18.67%  bgsm_blend_factors_alpha_function_v1
-     69484  10.21%  area   3.07%  base_prps_not_in_frame_v1
-     58483   8.59%  area   1.18%  refr_xrfg_not_in_frame_v1
-     56307   8.27%  area  13.86%  scol_parts_static_frame_v1
-     53512   7.86%  area   5.72%  lighting_vertex_alpha_blend_v1
-     32804   4.82%  area  18.06%  uv_scale_then_offset_v1
-     31111   4.57%  area   0.91%  texture_missing_unread_slot_v1
-     29112   4.28%  area   3.78%  blend_alpha_clamped_before_blend_v1
-     28597   4.20%  area   0.01%  misc_cvpa_not_in_frame_v1
-     24787   3.64%  area  11.23%  bgsm_opacity_above_one_test_v1
-     15390   2.26%  area  39.89%  effect_surface_texture_base_colour_v1
-     15390   2.26%  area  39.89%  nif_controller_rest_effect_first_key_v1
-     15348   2.25%  area  39.89%  effect_blend_after_opaque_back_to_front_v1
-     15348   2.25%  area  39.89%  effect_blend_factors_add_v1
-     14802   2.17%  area   4.19%  effect_vertex_alpha_under_vertex_colors_v1
-     14399   2.11%  area  38.90%  effect_soft_lighting_left_out_v1
-     14143   2.08%  area  38.91%  effect_falloff_cosine_absolute_v1
-     14143   2.08%  area  38.91%  effect_falloff_linear_in_cosine_v1
-     14143   2.08%  area  38.91%  effect_falloff_multiplies_alpha_v1
-     14143   2.08%  area  38.91%  effect_falloff_view_angle_v1
-     12912   1.90%  area   3.01%  nif_controller_rest_manager_idle_v1
-     11971   1.76%  area   0.70%  xesp_child_follows_parent_v1
-     11971   1.76%  area   0.70%  xesp_initial_state_chain_v1
-      8972   1.32%  area   1.22%  mswp_shape_without_material_untouched_v1
-      4888   0.72%  area   2.11%  mswp_scopes_readings_agree_v1
+    271254  39.76%  area  25.99%  mswp_fnam_folder_label_v1
+    219454  32.17%  area  58.02%  effect_color_only_v1
+    124802  18.29%  area  18.64%  bgsm_blend_factors_alpha_function_v1
+     69614  10.20%  area   3.09%  base_prps_not_in_frame_v1
+     58537   8.58%  area   1.18%  refr_xrfg_not_in_frame_v1
+     56441   8.27%  area  13.87%  scol_parts_static_frame_v1
+     53326   7.82%  area   5.69%  lighting_vertex_alpha_blend_v1
+     32892   4.82%  area  18.02%  uv_scale_then_offset_v1
+     31142   4.56%  area   0.91%  texture_missing_unread_slot_v1
+     28938   4.24%  area   3.78%  blend_alpha_clamped_before_blend_v1
+     28597   4.19%  area   0.01%  misc_cvpa_not_in_frame_v1
+     23539   3.45%  area   8.79%  bgsm_opacity_above_one_test_v1
+     15390   2.26%  area  39.78%  effect_surface_texture_base_colour_v1
+     15390   2.26%  area  39.78%  nif_controller_rest_effect_first_key_v1
+     15348   2.25%  area  39.78%  effect_blend_after_opaque_back_to_front_v1
+     15348   2.25%  area  39.78%  effect_blend_factors_add_v1
+     14802   2.17%  area   4.18%  effect_vertex_alpha_under_vertex_colors_v1
+     14399   2.11%  area  38.80%  effect_soft_lighting_left_out_v1
+     14143   2.07%  area  38.80%  effect_falloff_cosine_absolute_v1
+     14143   2.07%  area  38.80%  effect_falloff_linear_in_cosine_v1
+     14143   2.07%  area  38.80%  effect_falloff_multiplies_alpha_v1
+     14143   2.07%  area  38.80%  effect_falloff_view_angle_v1
+     12912   1.89%  area   3.00%  nif_controller_rest_manager_idle_v1
+     12714   1.86%  area   4.89%  mswp_wildcard_pattern_v1
+     11971   1.75%  area   0.70%  xesp_child_follows_parent_v1
+     11971   1.75%  area   0.70%  xesp_initial_state_chain_v1
+      9013   1.32%  area   1.22%  mswp_shape_without_material_untouched_v1
+      5006   0.73%  area   2.93%  mswp_wildcard_missing_target_inert_v1
+      4991   0.73%  area   2.13%  mswp_scopes_readings_agree_v1
       4760   0.70%  area   1.00%  nif_controller_rest_texture_first_key_v1
-      4581   0.67%  area   0.18%  mswp_empty_entry_inert_v1
-      2767   0.41%  area   1.09%  mswp_outer_scope_wins_v1
-      2518   0.37%  area  36.94%  effect_colour_clamped_before_blend_v1
-      1746   0.26%  area  35.76%  effect_palette_sampled_clamped_v1
-      1746   0.26%  area  35.76%  effect_palette_v_from_alpha_v1
-      1698   0.25%  area   0.36%  bgsm_missing_parent_own_fields_v1
-      1420   0.21%  area   0.03%  nif_controller_rest_transform_constant_v1
-      1339   0.20%  area  35.70%  effect_palette_alpha_replaces_alpha_v1
-      1339   0.20%  area  35.70%  effect_palette_alpha_u_alpha_v1
-      1338   0.20%  area   0.07%  effect_palette_colour_replaces_rgb_v1
-      1338   0.20%  area   0.07%  effect_palette_colour_u_green_v1
-      1202   0.18%  area   0.47%  mswp_outer_scope_replaces_v1
-  ... 17 more
+      4588   0.67%  area   0.18%  mswp_empty_entry_inert_v1
+      2861   0.42%  area   1.04%  mswp_outer_scope_wins_v1
+      2736   0.40%  area   1.02%  mswp_wildcard_literal_wins_v1
+      2518   0.37%  area  36.85%  effect_colour_clamped_before_blend_v1
+      1746   0.26%  area  35.67%  effect_palette_sampled_clamped_v1
+      1746   0.26%  area  35.67%  effect_palette_v_from_alpha_v1
+      1728   0.25%  area   0.38%  bgsm_missing_parent_own_fields_v1
+      1421   0.21%  area   0.03%  nif_controller_rest_transform_constant_v1
+      1339   0.20%  area  35.61%  effect_palette_alpha_replaces_alpha_v1
+      1339   0.20%  area  35.61%  effect_palette_alpha_u_alpha_v1
+  ... 23 more
 by area:
-  area  58.15%    219348  32.22%  effect_color_only_v1
-  area  39.89%     15390   2.26%  effect_surface_texture_base_colour_v1
-  area  39.89%     15390   2.26%  nif_controller_rest_effect_first_key_v1
-  area  39.89%     15348   2.25%  effect_blend_after_opaque_back_to_front_v1
-  area  39.89%     15348   2.25%  effect_blend_factors_add_v1
-  area  38.91%     14143   2.08%  effect_falloff_cosine_absolute_v1
-  area  38.91%     14143   2.08%  effect_falloff_linear_in_cosine_v1
-  area  38.91%     14143   2.08%  effect_falloff_multiplies_alpha_v1
-  area  38.91%     14143   2.08%  effect_falloff_view_angle_v1
-  area  38.90%     14399   2.11%  effect_soft_lighting_left_out_v1
-  area  36.94%      2518   0.37%  effect_colour_clamped_before_blend_v1
-  area  35.76%      1746   0.26%  effect_palette_sampled_clamped_v1
-  area  35.76%      1746   0.26%  effect_palette_v_from_alpha_v1
-  area  35.70%      1339   0.20%  effect_palette_alpha_replaces_alpha_v1
-  area  35.70%      1339   0.20%  effect_palette_alpha_u_alpha_v1
-  area  35.69%       407   0.06%  nif_controller_falloff_angle_degrees_v1
-  area  26.01%    270902  39.79%  mswp_fnam_folder_label_v1
-  area  18.67%    124733  18.32%  bgsm_blend_factors_alpha_function_v1
-  area  18.06%     32804   4.82%  uv_scale_then_offset_v1
-  area  13.86%     56307   8.27%  scol_parts_static_frame_v1
-  area  11.23%     24787   3.64%  bgsm_opacity_above_one_test_v1
-  area   5.72%     53512   7.86%  lighting_vertex_alpha_blend_v1
-  area   4.19%     14802   2.17%  effect_vertex_alpha_under_vertex_colors_v1
-  area   3.78%     29112   4.28%  blend_alpha_clamped_before_blend_v1
-  area   3.07%     69484  10.21%  base_prps_not_in_frame_v1
-  area   3.01%     12912   1.90%  nif_controller_rest_manager_idle_v1
-  area   2.11%      4888   0.72%  mswp_scopes_readings_agree_v1
-  area   1.22%      8972   1.32%  mswp_shape_without_material_untouched_v1
-  area   1.18%     58483   8.59%  refr_xrfg_not_in_frame_v1
-  area   1.09%      2767   0.41%  mswp_outer_scope_wins_v1
+  area  58.02%    219454  32.17%  effect_color_only_v1
+  area  39.78%     15390   2.26%  effect_surface_texture_base_colour_v1
+  area  39.78%     15390   2.26%  nif_controller_rest_effect_first_key_v1
+  area  39.78%     15348   2.25%  effect_blend_after_opaque_back_to_front_v1
+  area  39.78%     15348   2.25%  effect_blend_factors_add_v1
+  area  38.80%     14143   2.07%  effect_falloff_cosine_absolute_v1
+  area  38.80%     14143   2.07%  effect_falloff_linear_in_cosine_v1
+  area  38.80%     14143   2.07%  effect_falloff_multiplies_alpha_v1
+  area  38.80%     14143   2.07%  effect_falloff_view_angle_v1
+  area  38.80%     14399   2.11%  effect_soft_lighting_left_out_v1
+  area  36.85%      2518   0.37%  effect_colour_clamped_before_blend_v1
+  area  35.67%      1746   0.26%  effect_palette_sampled_clamped_v1
+  area  35.67%      1746   0.26%  effect_palette_v_from_alpha_v1
+  area  35.61%      1339   0.20%  effect_palette_alpha_replaces_alpha_v1
+  area  35.61%      1339   0.20%  effect_palette_alpha_u_alpha_v1
+  area  35.60%       407   0.06%  nif_controller_falloff_angle_degrees_v1
+  area  25.99%    271254  39.76%  mswp_fnam_folder_label_v1
+  area  18.64%    124802  18.29%  bgsm_blend_factors_alpha_function_v1
+  area  18.02%     32892   4.82%  uv_scale_then_offset_v1
+  area  13.87%     56441   8.27%  scol_parts_static_frame_v1
+  area   8.79%     23539   3.45%  bgsm_opacity_above_one_test_v1
+  area   5.69%     53326   7.82%  lighting_vertex_alpha_blend_v1
+  area   4.89%     12714   1.86%  mswp_wildcard_pattern_v1
+  area   4.18%     14802   2.17%  effect_vertex_alpha_under_vertex_colors_v1
+  area   3.78%     28938   4.24%  blend_alpha_clamped_before_blend_v1
+  area   3.09%     69614  10.20%  base_prps_not_in_frame_v1
+  area   3.00%     12912   1.89%  nif_controller_rest_manager_idle_v1
+  area   2.93%      5006   0.73%  mswp_wildcard_missing_target_inert_v1
+  area   2.13%      4991   0.73%  mswp_scopes_readings_agree_v1
+  area   1.22%      9013   1.32%  mswp_shape_without_material_untouched_v1
+  area   1.18%     58537   8.58%  refr_xrfg_not_in_frame_v1
+  area   1.04%      2861   0.42%  mswp_outer_scope_wins_v1
+  area   1.02%      2736   0.40%  mswp_wildcard_literal_wins_v1
   area   1.00%      4760   0.70%  nif_controller_rest_texture_first_key_v1
-  area   0.91%     31111   4.57%  texture_missing_unread_slot_v1
-  area   0.70%     11971   1.76%  xesp_child_follows_parent_v1
-  area   0.70%     11971   1.76%  xesp_initial_state_chain_v1
-  area   0.47%      1202   0.18%  mswp_outer_scope_replaces_v1
-  area   0.36%      1698   0.25%  bgsm_missing_parent_own_fields_v1
-  area   0.19%       407   0.06%  effect_environment_adds_to_colour_v1
-  area   0.19%       407   0.06%  effect_environment_left_out_v1
-  area   0.18%      4581   0.67%  mswp_empty_entry_inert_v1
-  area   0.07%      1338   0.20%  effect_palette_colour_replaces_rgb_v1
+  area   0.91%     31142   4.56%  texture_missing_unread_slot_v1
+  area   0.70%     11971   1.75%  xesp_child_follows_parent_v1
+  area   0.70%     11971   1.75%  xesp_initial_state_chain_v1
+  area   0.60%      1149   0.17%  mswp_outer_scope_replaces_v1
+  area   0.45%       254   0.04%  mswp_chain_followed_v1
+  area   0.38%      1728   0.25%  bgsm_missing_parent_own_fields_v1
 
 ## Drawn only under hypotheses, by set of pending rules
 
 by placements:
-    145051  21.30%  area   5.56%  mswp_fnam_folder_label_v1
-    108685  15.96%  area   4.95%  effect_color_only_v1
-     50997   7.49%  area   1.48%  base_prps_not_in_frame_v1
-     31067   4.56%  area  10.35%  effect_color_only_v1 + scol_parts_static_frame_v1
-     30341   4.46%  area   0.41%  refr_xrfg_not_in_frame_v1
-     27231   4.00%  area   0.01%  misc_cvpa_not_in_frame_v1
-     26299   3.86%  area   1.24%  bgsm_blend_factors_alpha_function_v1
-     20494   3.01%  area   0.83%  effect_color_only_v1 + mswp_fnam_folder_label_v1
-     17803   2.61%  area   0.45%  mswp_fnam_folder_label_v1 + refr_xrfg_not_in_frame_v1
-     16343   2.40%  area   6.07%  bgsm_blend_factors_alpha_function_v1 + mswp_fnam_folder_label_v1
+    141064  20.68%  area   5.15%  mswp_fnam_folder_label_v1
+    108685  15.93%  area   4.93%  effect_color_only_v1
+     50997   7.47%  area   1.48%  base_prps_not_in_frame_v1
+     31067   4.55%  area  10.33%  effect_color_only_v1 + scol_parts_static_frame_v1
+     30341   4.45%  area   0.41%  refr_xrfg_not_in_frame_v1
+     27231   3.99%  area   0.01%  misc_cvpa_not_in_frame_v1
+     26299   3.85%  area   1.24%  bgsm_blend_factors_alpha_function_v1
+     20116   2.95%  area   0.82%  effect_color_only_v1 + mswp_fnam_folder_label_v1
+     17696   2.59%  area   0.45%  mswp_fnam_folder_label_v1 + refr_xrfg_not_in_frame_v1
      16070   2.36%  area   1.19%  bgsm_blend_factors_alpha_function_v1 + lighting_vertex_alpha_blend_v1
-     14563   2.14%  area   0.31%  texture_missing_unread_slot_v1
-     12367   1.82%  area   0.92%  bgsm_blend_factors_alpha_function_v1 + blend_alpha_clamped_before_blend_v1 + lighting_vertex_alpha_blend_v1
-      9947   1.46%  area   6.53%  bgsm_opacity_above_one_test_v1 + uv_scale_then_offset_v1
-      8941   1.31%  area   1.07%  effect_color_only_v1 + mswp_fnam_folder_label_v1 + scol_parts_static_frame_v1
-      8606   1.26%  area   2.04%  bgsm_blend_factors_alpha_function_v1 + effect_blend_after_opaque_back_to_front_v1 + effect_blend_factors_add_v1 + effect_color_only_v1 + effect_falloff_cosine_absolute_v1 + effect_falloff_linear_in_cosine_v1 + effect_falloff_multiplies_alpha_v1 + effect_falloff_view_angle_v1 + effect_soft_lighting_left_out_v1 + effect_surface_texture_base_colour_v1 + effect_vertex_alpha_under_vertex_colors_v1 + nif_controller_rest_effect_first_key_v1 + nif_controller_rest_manager_idle_v1 + uv_scale_then_offset_v1
+     15898   2.33%  area   5.99%  bgsm_blend_factors_alpha_function_v1 + mswp_fnam_folder_label_v1
+     14563   2.13%  area   0.31%  texture_missing_unread_slot_v1
+     12367   1.81%  area   0.92%  bgsm_blend_factors_alpha_function_v1 + blend_alpha_clamped_before_blend_v1 + lighting_vertex_alpha_blend_v1
+      9947   1.46%  area   6.52%  bgsm_opacity_above_one_test_v1 + uv_scale_then_offset_v1
+      8804   1.29%  area   1.06%  effect_color_only_v1 + mswp_fnam_folder_label_v1 + scol_parts_static_frame_v1
+      8606   1.26%  area   2.03%  bgsm_blend_factors_alpha_function_v1 + effect_blend_after_opaque_back_to_front_v1 + effect_blend_factors_add_v1 + effect_color_only_v1 + effect_falloff_cosine_absolute_v1 + effect_falloff_linear_in_cosine_v1 + effect_falloff_multiplies_alpha_v1 + effect_falloff_view_angle_v1 + effect_soft_lighting_left_out_v1 + effect_surface_texture_base_colour_v1 + effect_vertex_alpha_under_vertex_colors_v1 + nif_controller_rest_effect_first_key_v1 + nif_controller_rest_manager_idle_v1 + uv_scale_then_offset_v1
       7844   1.15%  area   0.30%  xesp_child_follows_parent_v1 + xesp_initial_state_chain_v1
       7221   1.06%  area   0.97%  scol_parts_static_frame_v1
-      6848   1.01%  area   0.16%  effect_color_only_v1 + mswp_fnam_folder_label_v1 + texture_missing_unread_slot_v1
-      6774   0.99%  area   0.40%  bgsm_blend_factors_alpha_function_v1 + lighting_vertex_alpha_blend_v1 + mswp_fnam_folder_label_v1
-  ... 664 more
+      6775   0.99%  area   0.15%  effect_color_only_v1 + mswp_fnam_folder_label_v1 + texture_missing_unread_slot_v1
+      6351   0.93%  area   0.37%  bgsm_blend_factors_alpha_function_v1 + lighting_vertex_alpha_blend_v1 + mswp_fnam_folder_label_v1
+  ... 859 more
 by area:
-  area  35.66%       406   0.06%  effect_blend_after_opaque_back_to_front_v1 + effect_blend_factors_add_v1 + effect_color_only_v1 + effect_colour_clamped_before_blend_v1 + effect_falloff_cosine_absolute_v1 + effect_falloff_linear_in_cosine_v1 + effect_falloff_multiplies_alpha_v1 + effect_falloff_view_angle_v1 + effect_palette_alpha_replaces_alpha_v1 + effect_palette_alpha_u_alpha_v1 + effect_palette_sampled_clamped_v1 + effect_palette_v_from_alpha_v1 + effect_soft_lighting_left_out_v1 + effect_surface_texture_base_colour_v1 + nif_controller_falloff_angle_degrees_v1 + nif_controller_rest_effect_first_key_v1
-  area  10.35%     31067   4.56%  effect_color_only_v1 + scol_parts_static_frame_v1
-  area   6.53%      9947   1.46%  bgsm_opacity_above_one_test_v1 + uv_scale_then_offset_v1
-  area   6.07%     16343   2.40%  bgsm_blend_factors_alpha_function_v1 + mswp_fnam_folder_label_v1
-  area   5.56%    145051  21.30%  mswp_fnam_folder_label_v1
-  area   4.95%    108685  15.96%  effect_color_only_v1
-  area   2.51%      1357   0.20%  bgsm_opacity_above_one_test_v1 + mswp_fnam_folder_label_v1 + uv_scale_then_offset_v1
-  area   2.36%      1838   0.27%  uv_scale_then_offset_v1
-  area   2.04%      8606   1.26%  bgsm_blend_factors_alpha_function_v1 + effect_blend_after_opaque_back_to_front_v1 + effect_blend_factors_add_v1 + effect_color_only_v1 + effect_falloff_cosine_absolute_v1 + effect_falloff_linear_in_cosine_v1 + effect_falloff_multiplies_alpha_v1 + effect_falloff_view_angle_v1 + effect_soft_lighting_left_out_v1 + effect_surface_texture_base_colour_v1 + effect_vertex_alpha_under_vertex_colors_v1 + nif_controller_rest_effect_first_key_v1 + nif_controller_rest_manager_idle_v1 + uv_scale_then_offset_v1
-  area   1.66%      3328   0.49%  mswp_fnam_folder_label_v1 + uv_scale_then_offset_v1
-  area   1.48%     50997   7.49%  base_prps_not_in_frame_v1
-  area   1.38%      3148   0.46%  bgsm_blend_factors_alpha_function_v1 + blend_alpha_clamped_before_blend_v1 + lighting_vertex_alpha_blend_v1 + mswp_fnam_folder_label_v1
-  area   1.24%     26299   3.86%  bgsm_blend_factors_alpha_function_v1
+  area  35.56%       406   0.06%  effect_blend_after_opaque_back_to_front_v1 + effect_blend_factors_add_v1 + effect_color_only_v1 + effect_colour_clamped_before_blend_v1 + effect_falloff_cosine_absolute_v1 + effect_falloff_linear_in_cosine_v1 + effect_falloff_multiplies_alpha_v1 + effect_falloff_view_angle_v1 + effect_palette_alpha_replaces_alpha_v1 + effect_palette_alpha_u_alpha_v1 + effect_palette_sampled_clamped_v1 + effect_palette_v_from_alpha_v1 + effect_soft_lighting_left_out_v1 + effect_surface_texture_base_colour_v1 + nif_controller_falloff_angle_degrees_v1 + nif_controller_rest_effect_first_key_v1
+  area  10.33%     31067   4.55%  effect_color_only_v1 + scol_parts_static_frame_v1
+  area   6.52%      9947   1.46%  bgsm_opacity_above_one_test_v1 + uv_scale_then_offset_v1
+  area   5.99%     15898   2.33%  bgsm_blend_factors_alpha_function_v1 + mswp_fnam_folder_label_v1
+  area   5.15%    141064  20.68%  mswp_fnam_folder_label_v1
+  area   4.93%    108685  15.93%  effect_color_only_v1
+  area   2.41%      1253   0.18%  mswp_fnam_folder_label_v1 + mswp_wildcard_missing_target_inert_v1 + mswp_wildcard_pattern_v1 + uv_scale_then_offset_v1
+  area   2.35%      1838   0.27%  uv_scale_then_offset_v1
+  area   2.03%      8606   1.26%  bgsm_blend_factors_alpha_function_v1 + effect_blend_after_opaque_back_to_front_v1 + effect_blend_factors_add_v1 + effect_color_only_v1 + effect_falloff_cosine_absolute_v1 + effect_falloff_linear_in_cosine_v1 + effect_falloff_multiplies_alpha_v1 + effect_falloff_view_angle_v1 + effect_soft_lighting_left_out_v1 + effect_surface_texture_base_colour_v1 + effect_vertex_alpha_under_vertex_colors_v1 + nif_controller_rest_effect_first_key_v1 + nif_controller_rest_manager_idle_v1 + uv_scale_then_offset_v1
+  area   1.48%     50997   7.47%  base_prps_not_in_frame_v1
+  area   1.33%      2966   0.43%  bgsm_blend_factors_alpha_function_v1 + blend_alpha_clamped_before_blend_v1 + lighting_vertex_alpha_blend_v1 + mswp_fnam_folder_label_v1
+  area   1.24%     26299   3.85%  bgsm_blend_factors_alpha_function_v1
   area   1.19%     16070   2.36%  bgsm_blend_factors_alpha_function_v1 + lighting_vertex_alpha_blend_v1
-  area   1.07%      8941   1.31%  effect_color_only_v1 + mswp_fnam_folder_label_v1 + scol_parts_static_frame_v1
+  area   1.12%      2114   0.31%  mswp_fnam_folder_label_v1 + uv_scale_then_offset_v1
+  area   1.06%      8804   1.29%  effect_color_only_v1 + mswp_fnam_folder_label_v1 + scol_parts_static_frame_v1
   area   0.97%      7221   1.06%  scol_parts_static_frame_v1
-  area   0.92%     12367   1.82%  bgsm_blend_factors_alpha_function_v1 + blend_alpha_clamped_before_blend_v1 + lighting_vertex_alpha_blend_v1
-  area   0.83%     20494   3.01%  effect_color_only_v1 + mswp_fnam_folder_label_v1
-  area   0.79%      2653   0.39%  bgsm_opacity_above_one_test_v1 + nif_controller_rest_texture_first_key_v1
+  area   0.92%     12367   1.81%  bgsm_blend_factors_alpha_function_v1 + blend_alpha_clamped_before_blend_v1 + lighting_vertex_alpha_blend_v1
+  area   0.82%     20116   2.95%  effect_color_only_v1 + mswp_fnam_folder_label_v1
+  area   0.78%      2653   0.39%  bgsm_opacity_above_one_test_v1 + nif_controller_rest_texture_first_key_v1
   area   0.69%      5240   0.77%  base_prps_not_in_frame_v1 + effect_color_only_v1
 
 ## Sub-reasons: UV fields of drawn placements
 
-       857  area   0.85% of omitted,   0.03% of all  drawn only under hypotheses; a draw with UV offset not 0
-       516  area   1.08% of omitted,   0.03% of all  drawn only under hypotheses; a draw with UV offset not 0 and scale not 1
-     31426  area 431.21% of omitted,  13.10% of all  drawn only under hypotheses; a draw with UV scale not 1
-    647473  area 1965.22% of omitted,  59.71% of all  drawn only under hypotheses; every draw at UV offset 0 and scale 1
-    779020  area 734.19% of omitted,  22.31% of all  drawn without hypotheses; every draw at UV offset 0 and scale 1
+       857  area   0.90% of omitted,   0.03% of all  drawn only under hypotheses; a draw with UV offset not 0
+       516  area   1.16% of omitted,   0.03% of all  drawn only under hypotheses; a draw with UV offset not 0 and scale not 1
+     31514  area 460.59% of omitted,  13.11% of all  drawn only under hypotheses; a draw with UV scale not 1
+    648788  area 2104.67% of omitted,  59.90% of all  drawn only under hypotheses; every draw at UV offset 0 and scale 1
+    779020  area 783.84% of omitted,  22.31% of all  drawn without hypotheses; every draw at UV offset 0 and scale 1
 
 ## Sub-reasons: data folder
 
@@ -681,73 +681,62 @@ by area:
          4  area   0.10% of omitted,   0.00% of all  not read: swap source only; cited as swap source; absent from every mounted archive and loose folder; file name nowhere
         23  area   0.08% of omitted,   0.00% of all  not read: swap target of a material no model cites; cited as swap target (source not cited); absent from every mounted archive and loose folder; file name nowhere
         29  area   0.01% of omitted,   0.00% of all  read: effect shader name; cited as name (effect); absent from every mounted archive and loose folder; file name nowhere
-         1  area   0.02% of omitted,   0.00% of all  read: material parent; cited as material parent; absent from every mounted archive and loose folder; file name nowhere
-       755  area   0.47% of omitted,   0.01% of all  read: swap target of a cited material; cited as swap target (source cited); absent from every mounted archive and loose folder; file name nowhere
+         1  area   0.03% of omitted,   0.00% of all  read: material parent; cited as material parent; absent from every mounted archive and loose folder; file name nowhere
+       755  area   0.50% of omitted,   0.01% of all  read: swap target of a cited material; cited as swap target (source cited); absent from every mounted archive and loose folder; file name nowhere
 
 ## Sub-reasons: missing material, any, path classes (per placement and file)
 
-       812  area   0.67% of omitted,   0.02% of all  absent from every mounted archive and loose folder; file name nowhere
+       812  area   0.72% of omitted,   0.02% of all  absent from every mounted archive and loose folder; file name nowhere
 
 ## Sub-reasons: missing material, any, placements
 
          2  area   0.05% of omitted,   0.00% of all  not read: swap source only + read: swap target of a cited material
         23  area   0.08% of omitted,   0.00% of all  not read: swap target of a material no model cites + read: swap target of a cited material
         29  area   0.01% of omitted,   0.00% of all  read: effect shader name
-         1  area   0.02% of omitted,   0.00% of all  read: material parent + read: swap target of a cited material
-       729  area   0.32% of omitted,   0.01% of all  read: swap target of a cited material
+         1  area   0.03% of omitted,   0.00% of all  read: material parent + read: swap target of a cited material
+       729  area   0.34% of omitted,   0.01% of all  read: swap target of a cited material
 
 ## Sub-reasons: missing material, sole family, placements
 
          2  area   0.05% of omitted,   0.00% of all  not read: swap source only + read: swap target of a cited material
         23  area   0.08% of omitted,   0.00% of all  not read: swap target of a material no model cites + read: swap target of a cited material
          2  area   0.01% of omitted,   0.00% of all  read: effect shader name
-         1  area   0.02% of omitted,   0.00% of all  read: material parent + read: swap target of a cited material
-       441  area   0.28% of omitted,   0.01% of all  read: swap target of a cited material
+         1  area   0.03% of omitted,   0.00% of all  read: material parent + read: swap target of a cited material
+       441  area   0.30% of omitted,   0.01% of all  read: swap target of a cited material
 
 ## Sub-reasons: missing texture, any, files (per placement)
 
         88  area   0.00% of omitted,   0.00% of all  a sampled slot; effect Source Texture; absent at its path; file name under one other folder
-       521  area   0.34% of omitted,   0.01% of all  a sampled slot; effect Source Texture; absent from every mounted archive and loose folder; file name nowhere
+       521  area   0.36% of omitted,   0.01% of all  a sampled slot; effect Source Texture; absent from every mounted archive and loose folder; file name nowhere
         12  area   0.00% of omitted,   0.00% of all  a sampled slot; material diffuse; absent at its path; file name under one other folder
          5  area   0.00% of omitted,   0.00% of all  a sampled slot; material diffuse; absent at its path; file name under several other folders
-       356  area   0.16% of omitted,   0.00% of all  a sampled slot; material diffuse; absent from every mounted archive and loose folder; file name nowhere
+       356  area   0.17% of omitted,   0.00% of all  a sampled slot; material diffuse; absent from every mounted archive and loose folder; file name nowhere
         15  area   0.01% of omitted,   0.00% of all  a sampled slot; texture set slot 0; absent at its path; file name under one other folder
        158  area   0.00% of omitted,   0.00% of all  a sampled slot; texture set slot 0; absent from every mounted archive and loose folder; file name nowhere
          1  area   0.00% of omitted,   0.00% of all  unsampled slots only; material envmap; absent at its path; file name under one other folder
         12  area   0.00% of omitted,   0.00% of all  unsampled slots only; material normal; absent at its path; file name under one other folder
-       706  area   0.32% of omitted,   0.01% of all  unsampled slots only; material normal; absent from every mounted archive and loose folder; file name nowhere
+       706  area   0.34% of omitted,   0.01% of all  unsampled slots only; material normal; absent from every mounted archive and loose folder; file name nowhere
          1  area   0.00% of omitted,   0.00% of all  unsampled slots only; material smooth_spec; absent at its path; file name under one other folder
-       706  area   0.32% of omitted,   0.01% of all  unsampled slots only; material smooth_spec; absent from every mounted archive and loose folder; file name nowhere
+       706  area   0.34% of omitted,   0.01% of all  unsampled slots only; material smooth_spec; absent from every mounted archive and loose folder; file name nowhere
         14  area   0.01% of omitted,   0.00% of all  unsampled slots only; texture set slot 1; absent at its path; file name under one other folder
        157  area   0.00% of omitted,   0.00% of all  unsampled slots only; texture set slot 1; absent from every mounted archive and loose folder; file name nowhere
 
 ## Sub-reasons: missing texture, any, placements
 
-       609  area   0.34% of omitted,   0.01% of all  a sampled slot; effect Source Texture
+       609  area   0.36% of omitted,   0.01% of all  a sampled slot; effect Source Texture
         11  area   0.00% of omitted,   0.00% of all  a sampled slot; material diffuse + unsampled slots only; material normal
-       359  area   0.16% of omitted,   0.00% of all  a sampled slot; material diffuse + unsampled slots only; material normal + unsampled slots only; material smooth_spec
+       359  area   0.17% of omitted,   0.00% of all  a sampled slot; material diffuse + unsampled slots only; material normal + unsampled slots only; material smooth_spec
          1  area   0.00% of omitted,   0.00% of all  a sampled slot; texture set slot 0
          1  area   0.00% of omitted,   0.00% of all  a sampled slot; texture set slot 0 + unsampled slots only; material envmap + unsampled slots only; texture set slot 1
        170  area   0.01% of omitted,   0.00% of all  a sampled slot; texture set slot 0 + unsampled slots only; texture set slot 1
 
 ## Sub-reasons: missing texture, sole family, placements
 
-       318  area   0.22% of omitted,   0.01% of all  a sampled slot; effect Source Texture
+       318  area   0.23% of omitted,   0.01% of all  a sampled slot; effect Source Texture
         11  area   0.00% of omitted,   0.00% of all  a sampled slot; material diffuse + unsampled slots only; material normal
-       349  area   0.16% of omitted,   0.00% of all  a sampled slot; material diffuse + unsampled slots only; material normal + unsampled slots only; material smooth_spec
+       349  area   0.17% of omitted,   0.00% of all  a sampled slot; material diffuse + unsampled slots only; material normal + unsampled slots only; material smooth_spec
          1  area   0.00% of omitted,   0.00% of all  a sampled slot; texture set slot 0 + unsampled slots only; material envmap + unsampled slots only; texture set slot 1
        162  area   0.01% of omitted,   0.00% of all  a sampled slot; texture set slot 0 + unsampled slots only; texture set slot 1
-
-## Sub-reasons: swap scopes, placements
-
-         1  area   0.00% of omitted,   0.00% of all  readings differ, chained; scopes base+SCOL part base; different MSWP records; one pair each; FNAM present
-        26  area   0.02% of omitted,   0.00% of all  readings differ, chained; scopes reference+SCOL part base; different MSWP records; more than four pairs in one; FNAM present
-         1  area   0.01% of omitted,   0.00% of all  readings differ, chained; scopes reference+SCOL part base; different MSWP records; two to four pairs; FNAM present
-         1  area   0.01% of omitted,   0.00% of all  readings differ, chained; scopes reference+base; different MSWP records; more than four pairs in one; FNAM absent
-        36  area   0.36% of omitted,   0.01% of all  readings differ, chained; scopes reference+base; different MSWP records; more than four pairs in one; FNAM present
-         5  area   0.01% of omitted,   0.00% of all  readings differ, chained; scopes reference+base; different MSWP records; one pair each; FNAM present
-        21  area   0.06% of omitted,   0.00% of all  readings differ, chained; scopes reference+base; different MSWP records; two to four pairs; FNAM present
-         3  area   0.01% of omitted,   0.00% of all  readings differ, chained; scopes reference+base; one MSWP record; more than four pairs in one; FNAM present
 
 ## Sub-reasons: texture transform, any, controlled shaders (per placement)
 
@@ -755,23 +744,23 @@ by area:
 
 ## Sub-reasons: texture transform, any, controllers (per placement)
 
-      4015  area  32.05% of omitted,   0.97% of all  effect, not settled by the effect first-key rule; BSEffectShaderPropertyFloatController; U offset
+      4015  area  34.21% of omitted,   0.97% of all  effect, not settled by the effect first-key rule; BSEffectShaderPropertyFloatController; U offset
        108  area   0.00% of omitted,   0.00% of all  effect, not settled by the effect first-key rule; BSEffectShaderPropertyFloatController; U scale
-      4270  area  36.79% of omitted,   1.12% of all  effect, not settled by the effect first-key rule; BSEffectShaderPropertyFloatController; V offset
+      4270  area  39.27% of omitted,   1.12% of all  effect, not settled by the effect first-key rule; BSEffectShaderPropertyFloatController; V offset
          1  area   0.00% of omitted,   0.00% of all  lighting, first key differs from stored; U offset; stored 0; manager flag true; in a sequence false
          1  area   0.00% of omitted,   0.00% of all  lighting, first key differs from stored; V offset; stored 0; manager flag true; in a sequence false
 
 ## Sub-reasons: texture transform, any, placements
 
          1  area   0.00% of omitted,   0.00% of all  effect, not settled by the effect first-key rule + lighting, first key differs from stored; other families 9
-       246  area   3.28% of omitted,   0.10% of all  effect, not settled by the effect first-key rule; other families 0
-       365  area   4.74% of omitted,   0.14% of all  effect, not settled by the effect first-key rule; other families 1
+       246  area   3.50% of omitted,   0.10% of all  effect, not settled by the effect first-key rule; other families 0
+       365  area   5.06% of omitted,   0.14% of all  effect, not settled by the effect first-key rule; other families 1
         30  area   0.01% of omitted,   0.00% of all  effect, not settled by the effect first-key rule; other families 11
          3  area   0.00% of omitted,   0.00% of all  effect, not settled by the effect first-key rule; other families 12
        123  area   0.02% of omitted,   0.00% of all  effect, not settled by the effect first-key rule; other families 15
          1  area   0.00% of omitted,   0.00% of all  effect, not settled by the effect first-key rule; other families 16
          2  area   0.00% of omitted,   0.00% of all  effect, not settled by the effect first-key rule; other families 19
-      1361  area   1.87% of omitted,   0.06% of all  effect, not settled by the effect first-key rule; other families 2
+      1361  area   1.99% of omitted,   0.06% of all  effect, not settled by the effect first-key rule; other families 2
          5  area   0.07% of omitted,   0.00% of all  effect, not settled by the effect first-key rule; other families 3
          1  area   0.00% of omitted,   0.00% of all  effect, not settled by the effect first-key rule; other families 4
          2  area   0.00% of omitted,   0.00% of all  effect, not settled by the effect first-key rule; other families 6
@@ -780,12 +769,12 @@ by area:
 
 ## Sub-reasons: texture transform, sole family, controllers (per placement)
 
-       725  area  10.74% of omitted,   0.33% of all  effect, not settled by the effect first-key rule; BSEffectShaderPropertyFloatController; U offset
-       725  area  10.74% of omitted,   0.33% of all  effect, not settled by the effect first-key rule; BSEffectShaderPropertyFloatController; V offset
+       725  area  11.46% of omitted,   0.33% of all  effect, not settled by the effect first-key rule; BSEffectShaderPropertyFloatController; U offset
+       725  area  11.46% of omitted,   0.33% of all  effect, not settled by the effect first-key rule; BSEffectShaderPropertyFloatController; V offset
 
 ## Sub-reasons: texture transform, sole family, placements
 
-       246  area   3.28% of omitted,   0.10% of all  effect, not settled by the effect first-key rule
+       246  area   3.50% of omitted,   0.10% of all  effect, not settled by the effect first-key rule
 
 ## Placed children not read as placements
 
