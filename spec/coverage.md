@@ -15,7 +15,8 @@ time), or for one test view (a cell, with `--around N` the exterior cells
 around it, as the viewer loads them), it loads the scene at the hypotheses
 level, resolves the placed actors and builds the viewer's draw list
 (`fo4_render::draw::build_with_actors`, the viewer's texture policy: stored
-blocks up to 1024, alpha-tested up to 2048, 512 MiB). Every placement of
+blocks up to 1024, alpha-tested up to 2048, 512 MiB) at second 0 of the
+game clock (`BuildOptions::time`, [controller-clock.md](controller-clock.md)). Every placement of
 that build (placed references and placed actors, as the viewer counts
 "placements") gets one outcome:
 
@@ -759,3 +760,46 @@ under a pipe of a coastal factory takes the regional forest floor its
 swap's pattern names, the rubble along a flooded subway tunnel takes the
 wet riverbed material, and debris piles of a coastal dock whose swaps
 chain are drawn.
+
+## The game clock and loops that nothing starts
+
+After the clock rules and the unstarted loop rule
+([controller-clock.md](controller-clock.md); the draw built at second 0 of
+the clock; three shards of 1,940 to 2,028 s, peak 1.0 GB):
+
+| Outcome | before | after |
+| --- | ---: | ---: |
+| drawn without hypotheses | 779,020 (22.31 % of the area) | 779,020 (22.31 %) |
+| drawn only under hypotheses | 682,246 (73.06 %) | 683,146 (73.28 %) |
+| hidden through the enable parent chain | 8,522 | 8,528 |
+| omitted | 285,723 (2.85 %) | 284,817 (2.63 %) |
+
+Nothing moves out of "drawn without hypotheses"; frames without hypotheses
+of six views are byte-identical to the commit before. As sole families,
+texture-transform controllers (246 placements, 3.50 % of the omitted area)
+drop to 74 with no area, alpha controllers (227, 3.14 %) to 225 with
+0.09 %, and manager loops (720, 1.11 %) leave the list: together 0.22 % of
+all the area, the whole of the drop. What is left of the first two is
+outside the clock (zero spans, inactive controllers, TBC keys). With
+those families gone, other families become the only one of more
+placements: effect-shader emissive controllers not run by a manager
+(`effect-emissive`, 17 to 371 placements, 6.65 % of the smaller omitted
+area), effect-shader controllers run by a manager (`effect-idle`, 1,167,
+6.39 %) and behaviour graphs (556 to 844, 3.51 %); transform-varies
+controllers stay at 1,897 (0.88 %).
+
+Rules relied on by drawn placements: `nif_controller_clock_free_running_v1`
+7,069 (27.8 % of all the area: at a build time every free-running alpha or
+UV controller the clock runs is evaluated, so the effect models the
+first-key rules already drew, the large mist volumes among them, rely on
+it too), `nif_controller_cycle_loop_v1` 6,259, `nif_key_quadratic_hermite_v1`
+6,942, `nif_controller_cycle_clamp_v1` 832, `nif_key_linear_v1` 298,
+`nif_controller_rest_loop_unstarted_v1` 716 (0.03 %). No placement is
+refused by the clock's own checks at second 0 (`UnsettledClockField`,
+`UnsettledClockMaterialField`, `UnsettledControllerTime`).
+
+**Frames** (the `render` example, CPU, 1280 x 720, `--texture-mib 1024`):
+floating debris on the water of a flooded interior scrolls between
+`--time 0`, `4` and `8`, and the steam over a row of pods drifts; the CPU
+and the viewer's headless frame of the debris view at `--time 4` agree in
+coverage (0.999997; 95th percentile colour difference 0).
