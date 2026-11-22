@@ -426,3 +426,15 @@ flag bit 0 inverts the link ("opposite of parent") and bit 1 is a fade
 choice, and that a script's Enable or Disable of a parent reaches its
 children. No editor, editor source, script source or game executable was
 opened.
+
+Animation controllers at rest ([spec/controller-rest.md](../spec/controller-rest.md))
+use the pinned nifxml copy of spec/nif.md for `TimeControllerFlags`,
+`CycleType`, `NiQuatTransform` (quaternion stored w, x, y, z), the four
+shader controlled-variable enums and the `NiControllerManager` description.
+Recognised from prior knowledge and used only as pending rules that the
+`controller_census` counts could refute: that a controller manager's
+sequences play when started by name and are otherwise idle, that a keyframe
+interpolator gives only its keys' values, and the standard rotation matrix
+of a unit quaternion (its row reading was checked against the stored node
+words of the installation, never the transpose alone). No other NIF reader,
+renderer, editor or game executable was opened.

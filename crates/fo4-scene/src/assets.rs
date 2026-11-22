@@ -353,6 +353,9 @@ impl<'a> Assets<'a> {
                         &work,
                     )?;
                     let policy = ModelPolicy::inspect_with(&n, self.vfs, self.path_policy, &work)?;
+                    // What each animation block is at rest, by what uses it
+                    // (`crate::rest`); each tag is its own blocker.
+                    let rest = crate::rest::tags(&n, &work)?;
                     self.nodes[i].texture_audit = policy.texture_citations(&n, &self.allocation)?;
                     for (index, block) in n.blocks.iter().enumerate() {
                         if policy.visual[index] && n.block_types[block.type_index as usize] == "BSEffectShaderProperty"
@@ -445,7 +448,7 @@ impl<'a> Assets<'a> {
                         }
                         if class == Class::State {
                             let a = model_policy::animation(&n, &policy, index, &self.allocation)?;
-                            let found = format!("{};target_in_visual={:?}", ty, a.target_in_visual);
+                            let visual = a.target_in_visual;
                             self.allocation.reserve(
                                 &mut self.nodes[i].animations,
                                 1,
@@ -453,16 +456,18 @@ impl<'a> Assets<'a> {
                                 block.data.start as u64,
                             )?;
                             self.nodes[i].animations.push(a);
-                            self.block(
-                                i,
-                                Error::new(
-                                    "UnsupportedAnimationRuntime",
-                                    &c.original,
-                                    block.data.start as u64,
-                                    "static state without controller evaluation",
-                                    found,
-                                ),
-                            )?;
+                            for tag in rest.get(index).map_or(&[][..], Vec::as_slice) {
+                                self.block(
+                                    i,
+                                    Error::new(
+                                        "UnsupportedAnimationRuntime",
+                                        &c.original,
+                                        block.data.start as u64,
+                                        "static state without controller evaluation",
+                                        format!("{ty};target_in_visual={visual:?};rest={tag}"),
+                                    ),
+                                )?;
+                            }
                         }
                         for e in &block.diagnostics {
                             self.block(i, e.clone())?;

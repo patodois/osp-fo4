@@ -42,6 +42,13 @@ pub const ENABLE_FOLLOWS: &str = "xesp_child_follows_parent_v1";
 pub const ENABLE_INITIAL: &str = "xesp_initial_state_chain_v1";
 pub const ENABLE_OPPOSITE: &str = "xesp_flag_bit0_opposite_v1";
 pub const ENABLE_BIT1: &str = "xesp_flag_bit1_not_presence_v1";
+/// Animation-controller blocks at rest (`crate::rest`,
+/// `spec/controller-rest.md`).
+pub const REST_MANAGER_IDLE: &str = "nif_controller_rest_manager_idle_v1";
+pub const REST_IDLE_TRANSFORM: &str = "nif_controller_rest_idle_transform_v1";
+pub const REST_IDLE_SHADER: &str = "nif_controller_rest_idle_shader_v1";
+pub const REST_TRANSFORM_CONSTANT: &str = "nif_controller_rest_transform_constant_v1";
+pub const REST_UNRENDERED: &str = "nif_controller_rest_unrendered_v1";
 /// A script's Enable or Disable reaching enable children (the viewer's
 /// `--script-event`).
 pub const ENABLE_SCRIPT: &str = "xesp_script_change_propagates_v1";
@@ -145,6 +152,15 @@ pub fn covering(error: &Error) -> Option<&'static str> {
         Some(SWAP_FOLDER)
     } else if error.code == "RuntimeEnableParent" {
         crate::enable::rule(&error.found)
+    } else if error.code == "UnsupportedAnimationRuntime" {
+        match error.found.rsplit_once(";rest=").map(|(_, t)| t) {
+            Some(crate::rest::MANAGER_IDLE) => Some(REST_MANAGER_IDLE),
+            Some(crate::rest::IDLE_TRANSFORM) => Some(REST_IDLE_TRANSFORM),
+            Some(crate::rest::IDLE_SHADER) => Some(REST_IDLE_SHADER),
+            Some(crate::rest::TRANSFORM_CONSTANT) => Some(REST_TRANSFORM_CONSTANT),
+            Some(crate::rest::UNRENDERED) => Some(REST_UNRENDERED),
+            _ => None,
+        }
     } else {
         record_field_rule(error).or_else(|| actor_rule(&error.code))
     }
@@ -371,6 +387,11 @@ mod tests {
             ENABLE_OPPOSITE,
             ENABLE_BIT1,
             ENABLE_SCRIPT,
+            REST_MANAGER_IDLE,
+            REST_IDLE_TRANSFORM,
+            REST_IDLE_SHADER,
+            REST_TRANSFORM_CONSTANT,
+            REST_UNRENDERED,
         ] {
             assert!(status(name).is_some(), "{name}");
         }

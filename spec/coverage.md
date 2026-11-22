@@ -281,4 +281,68 @@ left of it is `XESP.own_flag` and the other undecided texts.
 
 Test views: lobby and vault unchanged (no XESP); test cell +1 drawn under
 hypotheses, radius 1 +9, radius 2 +12. Frames without hypotheses are
-byte-identical (below, Frames of this step).
+byte-identical (below, Frames of enable parents and controllers at rest).
+
+## Controllers at rest
+
+Under the five rest rules of [controller-rest.md](controller-rest.md) the
+animation-controller blocks of a model are no longer refused as one
+family: each block carries a rest tag, five tags have a pending rule, and
+the census splits the family by the tags left undecided
+(`model: animation-controller blocks (TAG)`). Every cell of the load order
+(3 shards of about 1,550 s, 1.06 GB peak), against the census with enable
+parents alone:
+
+| Outcome | Enable parents alone | And controllers at rest |
+| --- | ---: | ---: |
+| drawn only under hypotheses | 538,375 | 540,393 |
+| hidden by `xesp_child_follows_parent_v1` | 6,857 | 6,902 |
+| omitted | 429,204 | 427,141 |
+
+2,018 references and 6 actors move from omitted to drawn under
+hypotheses (omitted area from 42.39 % to 42.37 % of all); 45 placements
+whose chain starts disabled, omitted before for their controllers, are now
+counted as hidden by the chain rule. By rule, drawn placements rely on
+`nif_controller_rest_transform_constant_v1` 1,409 times,
+`nif_controller_rest_manager_idle_v1` and `..._idle_transform_v1` 568,
+`..._unrendered_v1` 41 (`..._idle_shader_v1` never as the only open
+reason). Most of the 22,607 placements whose models the rules decide stay
+omitted for other reasons (doors' FNAM and VMAD, missing materials).
+
+The area does not move: the largest share of the old family belongs to
+large effects (mist volumes, light beams) whose controllers are left
+undecided on purpose. As sole families the controller blocks now rank
+`texture-transform` first (5,500 placements, 2.99 % of the omitted area),
+then `transform-varies` (1,868), `effect-emissive` (950), `manager-loop`
+(675), `alpha` (650), `behavior-graph` (341); `falloff` with
+`texture-transform` holds 61.39 % of the omitted area in 407 placements,
+and `effect-idle` with `manager-loop` 6.41 % in 13,391.
+
+A first version of the rules, which counted every manager-run controller
+and every sequence as idle, moved more (see controller-rest.md) but drew
+the lobby and vault test views under a white veil of effects; it was
+narrowed before this census.
+
+Test views (drawn only under hypotheses, enable parents alone and with
+controllers at rest): lobby 139 → 141 (two sliding doors), vault 146 →
+146, test cell 123 → 123, radius 1 665 → 666, radius 2 1,784 → 1,789
+(exterior light fixtures under `..._unrendered_v1`, debris under
+`..._transform_constant_v1`).
+
+### Frames of enable parents and controllers at rest
+
+Viewer, headless, 1280 x 720, the eight test views, against the build of
+the commit before this step (`b631d74`). Without `--under-hypotheses` the
+six views that run without it (lobby, vault, test cell, dog view, radius 1,
+dog view without actors) give byte-identical colour frames and tag files;
+the two walk views refuse to run without the hypotheses
+(`WalkRuleNotAccepted`), as before. Under hypotheses: lobby, vault, dog
+view, dog view without actors and the `--path` walk are byte-identical;
+the test cell and radius 1 differ in 45 pixels (a small piece of debris
+on the ground whose enable parent chain says enabled), the
+`--walk --terrain --around 2` view in 40 pixels (one newly drawn
+placement); in each, every differing pixel carries the new instance's tag
+and every other pixel keeps its tag. The first, wider version
+of the rest rules changed 921,588 pixels of the lobby frame and 335,677 of
+the vault frame (white effects in front of the camera); none of that
+remains.

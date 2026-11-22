@@ -142,9 +142,12 @@ after the event, same camera; frames kept outside the repository):
 | --- | --- | --- | ---: |
 | exterior, terminal fragment | `fragment:2` | 10 MISC references appear, one STAT disappears (opposite flag) | 48,377 |
 | interior, lighting terminal | `fragment:1` | a ceiling light STAT disappears (opposite flag), others not drawable | 6,939 |
-| interior, button activator | `activate` | a small pipe STAT appears | 2,831 |
+| interior, button activator | `activate` | a small pipe STAT appears; with the controller rest rules of [controller-rest.md](controller-rest.md) also a bookshelf appears and another disappears | 2,831 before those rules, 377,679 with them |
 
-In each pair the tags show the change on the children's instances only.
+In each pair the instance tags of the differing pixels are those of the
+changed children (the ones that appear after, or the ones that disappear
+before); every other pixel keeps its tag (or its tag plus one, after an
+instance the event inserts).
 The data host's `IsDisabled` still answers from the header flag alone, not
 from a chain; a script that reads a child's state is answered as before.
 

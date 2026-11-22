@@ -211,7 +211,12 @@ fn family(key: &str) -> String {
         "UnsupportedAnimationRuntime" | "UnsupportedNifBlock" if particle => {
             format!("{o}: particle-system blocks")
         }
-        "UnsupportedAnimationRuntime" => format!("{o}: animation-controller blocks"),
+        // Split by what the blocks are at rest (`fo4_scene::rest`): the tag
+        // names why the rest state is not decided.
+        "UnsupportedAnimationRuntime" => match found.rsplit_once(";rest=") {
+            Some((_, tag)) => format!("{o}: animation-controller blocks ({tag})"),
+            None => format!("{o}: animation-controller blocks"),
+        },
         "UninterpretedVisualSubrecord"
         | "UnsupportedUsedFieldLayout"
         | "RuntimeRecordState"

@@ -12,6 +12,7 @@ pub mod lighting;
 pub mod model_policy;
 pub mod paths;
 pub mod readiness;
+pub mod rest;
 pub mod terrain;
 pub mod transform;
 pub use assets::{Asset, AssetKind, Assets, Cycle, CycleEdge, DecodedAsset};

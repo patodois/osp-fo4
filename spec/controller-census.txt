@@ -1,0 +1,1260 @@
+# controller_census: models refused for animation-controller blocks (spec/controller-rest.md)
+# Counts only. Tolerances: translation 0.001, rotation word 0.001, scale 0.0001.
+winning NIF read 224366, unreadable 2 (51 s)
+1191	block read to the last byte: BSBehaviorGraphExtraData: yes
+767	block read to the last byte: BSEffectShaderPropertyColorController: yes
+7398	block read to the last byte: BSEffectShaderPropertyFloatController: yes
+77	block read to the last byte: BSLagBoneController: no
+87	block read to the last byte: BSLightingShaderPropertyColorController: yes
+1006	block read to the last byte: BSLightingShaderPropertyFloatController: yes
+2	block read to the last byte: BSLightingShaderPropertyUShortController: no
+258	block read to the last byte: BSNiAlphaPropertyTestRefController: yes
+68	block read to the last byte: BSProceduralLightningController: no
+4307	block read to the last byte: NiBlendBoolInterpolator: no
+6242	block read to the last byte: NiBlendFloatInterpolator: yes
+722	block read to the last byte: NiBlendPoint3Interpolator: yes
+5121	block read to the last byte: NiBoolData: yes
+9037	block read to the last byte: NiBoolInterpolator: yes
+7328	block read to the last byte: NiBoolTimelineInterpolator: yes
+1630	block read to the last byte: NiControllerManager: yes
+6474	block read to the last byte: NiControllerSequence: yes
+1630	block read to the last byte: NiDefaultAVObjectPalette: yes
+22835	block read to the last byte: NiFloatData: yes
+26547	block read to the last byte: NiFloatInterpolator: yes
+122	block read to the last byte: NiLightColorController: yes
+138	block read to the last byte: NiLightDimmerController: yes
+110	block read to the last byte: NiLightRadiusController: yes
+1630	block read to the last byte: NiMultiTargetTransformController: yes
+25	block read to the last byte: NiPathInterpolator: no
+2867	block read to the last byte: NiPoint3Interpolator: yes
+2781	block read to the last byte: NiPosData: yes
+6474	block read to the last byte: NiTextKeyExtraData: yes
+14181	block read to the last byte: NiTransformController: yes
+28942	block read to the last byte: NiTransformData: yes
+40871	block read to the last byte: NiTransformInterpolator: yes
+1187	block read to the last byte: NiVisController: yes
+1191	block: BSBehaviorGraphExtraData
+767	block: BSEffectShaderPropertyColorController
+7398	block: BSEffectShaderPropertyFloatController
+77	block: BSLagBoneController
+87	block: BSLightingShaderPropertyColorController
+1006	block: BSLightingShaderPropertyFloatController
+2	block: BSLightingShaderPropertyUShortController
+258	block: BSNiAlphaPropertyTestRefController
+68	block: BSProceduralLightningController
+4307	block: NiBlendBoolInterpolator
+6242	block: NiBlendFloatInterpolator
+722	block: NiBlendPoint3Interpolator
+5121	block: NiBoolData
+9037	block: NiBoolInterpolator
+7328	block: NiBoolTimelineInterpolator
+1630	block: NiControllerManager
+6474	block: NiControllerSequence
+1630	block: NiDefaultAVObjectPalette
+22835	block: NiFloatData
+26547	block: NiFloatInterpolator
+122	block: NiLightColorController
+138	block: NiLightDimmerController
+110	block: NiLightRadiusController
+1630	block: NiMultiTargetTransformController
+25	block: NiPathInterpolator
+2867	block: NiPoint3Interpolator
+2781	block: NiPosData
+6474	block: NiTextKeyExtraData
+14181	block: NiTransformController
+28942	block: NiTransformData
+40871	block: NiTransformInterpolator
+1187	block: NiVisController
+767	controlled variable: BSEffectShaderPropertyColorController 0
+1042	controlled variable: BSEffectShaderPropertyFloatController 0
+146	controlled variable: BSEffectShaderPropertyFloatController 2
+148	controlled variable: BSEffectShaderPropertyFloatController 3
+2103	controlled variable: BSEffectShaderPropertyFloatController 5
+1395	controlled variable: BSEffectShaderPropertyFloatController 6
+323	controlled variable: BSEffectShaderPropertyFloatController 7
+1819	controlled variable: BSEffectShaderPropertyFloatController 8
+422	controlled variable: BSEffectShaderPropertyFloatController 9
+2	controlled variable: BSLightingShaderPropertyColorController 0
+85	controlled variable: BSLightingShaderPropertyColorController 1
+123	controlled variable: BSLightingShaderPropertyFloatController 0
+2	controlled variable: BSLightingShaderPropertyFloatController 1
+2	controlled variable: BSLightingShaderPropertyFloatController 10
+219	controlled variable: BSLightingShaderPropertyFloatController 11
+105	controlled variable: BSLightingShaderPropertyFloatController 12
+184	controlled variable: BSLightingShaderPropertyFloatController 20
+44	controlled variable: BSLightingShaderPropertyFloatController 21
+270	controlled variable: BSLightingShaderPropertyFloatController 22
+43	controlled variable: BSLightingShaderPropertyFloatController 23
+2	controlled variable: BSLightingShaderPropertyFloatController 3
+2	controlled variable: BSLightingShaderPropertyFloatController 4
+2	controlled variable: BSLightingShaderPropertyFloatController 5
+2	controlled variable: BSLightingShaderPropertyFloatController 6
+2	controlled variable: BSLightingShaderPropertyFloatController 7
+2	controlled variable: BSLightingShaderPropertyFloatController 8
+2	controlled variable: BSLightingShaderPropertyFloatController 9
+2466	controller drives: alpha
+370	controller drives: light
+1777	controller drives: other
+1346	controller drives: shader emissive
+767	controller drives: shader emissive colour (effect)
+294	controller drives: shader falloff
+131	controller drives: shader lighting terms
+12	controller drives: shader other
+4500	controller drives: texture transform
+15811	controller drives: transform
+1187	controller drives: visibility
+68	controller flags: alpha: active false, manager controlled false, cycle 2
+520	controller flags: alpha: active true, manager controlled false, cycle 0
+83	controller flags: alpha: active true, manager controlled false, cycle 2
+192	controller flags: alpha: active true, manager controlled true, cycle 0
+1603	controller flags: alpha: active true, manager controlled true, cycle 2
+3	controller flags: light: active false, manager controlled true, cycle 2
+46	controller flags: light: active true, manager controlled true, cycle 0
+321	controller flags: light: active true, manager controlled true, cycle 2
+1707	controller flags: other: active true, manager controlled false, cycle 2
+70	controller flags: other: active true, manager controlled true, cycle 2
+26	controller flags: shader emissive colour (effect): active false, manager controlled false, cycle 2
+154	controller flags: shader emissive colour (effect): active true, manager controlled false, cycle 0
+67	controller flags: shader emissive colour (effect): active true, manager controlled false, cycle 2
+47	controller flags: shader emissive colour (effect): active true, manager controlled true, cycle 0
+473	controller flags: shader emissive colour (effect): active true, manager controlled true, cycle 2
+29	controller flags: shader emissive: active false, manager controlled false, cycle 2
+196	controller flags: shader emissive: active true, manager controlled false, cycle 0
+114	controller flags: shader emissive: active true, manager controlled false, cycle 2
+104	controller flags: shader emissive: active true, manager controlled true, cycle 0
+903	controller flags: shader emissive: active true, manager controlled true, cycle 2
+292	controller flags: shader falloff: active true, manager controlled false, cycle 0
+2	controller flags: shader falloff: active true, manager controlled true, cycle 2
+4	controller flags: shader lighting terms: active false, manager controlled false, cycle 2
+5	controller flags: shader lighting terms: active true, manager controlled false, cycle 0
+4	controller flags: shader lighting terms: active true, manager controlled false, cycle 2
+12	controller flags: shader lighting terms: active true, manager controlled true, cycle 0
+106	controller flags: shader lighting terms: active true, manager controlled true, cycle 2
+12	controller flags: shader other: active true, manager controlled true, cycle 2
+10	controller flags: texture transform: active false, manager controlled false, cycle 0
+39	controller flags: texture transform: active false, manager controlled false, cycle 2
+1973	controller flags: texture transform: active true, manager controlled false, cycle 0
+334	controller flags: texture transform: active true, manager controlled false, cycle 2
+623	controller flags: texture transform: active true, manager controlled true, cycle 0
+1521	controller flags: texture transform: active true, manager controlled true, cycle 2
+2	controller flags: transform: active false, manager controlled false, cycle 0
+135	controller flags: transform: active false, manager controlled false, cycle 2
+281	controller flags: transform: active true, manager controlled false, cycle 0
+11	controller flags: transform: active true, manager controlled false, cycle 1
+13688	controller flags: transform: active true, manager controlled false, cycle 2
+1694	controller flags: transform: active true, manager controlled true, cycle 2
+119	controller flags: visibility: active false, manager controlled false, cycle 2
+6	controller flags: visibility: active false, manager controlled true, cycle 2
+22	controller flags: visibility: active true, manager controlled false, cycle 0
+44	controller flags: visibility: active true, manager controlled false, cycle 2
+10	controller flags: visibility: active true, manager controlled true, cycle 0
+986	controller flags: visibility: active true, manager controlled true, cycle 2
+168	controller target: alpha: BSEffectShaderProperty, in visual closure false
+1931	controller target: alpha: BSEffectShaderProperty, in visual closure true
+105	controller target: alpha: BSLightingShaderProperty, in visual closure true
+258	controller target: alpha: NiAlphaProperty, in visual closure true
+4	controller target: alpha: none, in visual closure false
+370	controller target: light: NiPointLight, in visual closure true
+8	controller target: other: BSLeafAnimNode, in visual closure true
+2	controller target: other: BSLightingShaderProperty, in visual closure true
+1767	controller target: other: NiNode, in visual closure true
+81	controller target: shader emissive colour (effect): BSEffectShaderProperty, in visual closure false
+682	controller target: shader emissive colour (effect): BSEffectShaderProperty, in visual closure true
+4	controller target: shader emissive colour (effect): none, in visual closure false
+100	controller target: shader emissive: BSEffectShaderProperty, in visual closure false
+938	controller target: shader emissive: BSEffectShaderProperty, in visual closure true
+304	controller target: shader emissive: BSLightingShaderProperty, in visual closure true
+4	controller target: shader emissive: none, in visual closure false
+294	controller target: shader falloff: BSEffectShaderProperty, in visual closure true
+131	controller target: shader lighting terms: BSLightingShaderProperty, in visual closure true
+12	controller target: shader other: BSLightingShaderProperty, in visual closure true
+265	controller target: texture transform: BSEffectShaderProperty, in visual closure false
+3694	controller target: texture transform: BSEffectShaderProperty, in visual closure true
+541	controller target: texture transform: BSLightingShaderProperty, in visual closure true
+8	controller target: transform: BSLeafAnimNode, in visual closure true
+88	controller target: transform: BSValueNode, in visual closure true
+18	controller target: transform: NiBillboardNode, in visual closure true
+15697	controller target: transform: NiNode, in visual closure true
+602	controller target: visibility: BSValueNode, in visual closure true
+46	controller target: visibility: NiBillboardNode, in visual closure true
+529	controller target: visibility: NiNode, in visual closure true
+10	controller target: visibility: NiParticleSystem, in visual closure false
+2245	controller: no transform data
+942	controller: rotation vs first key: XYZ keys, not compared
+166	controller: rotation vs first key: differs
+637	controller: rotation vs first key: equal
+10120	controller: rotation vs first key: no value
+942	controller: rotation vs key at start time: XYZ keys, not compared
+161	controller: rotation vs key at start time: differs
+639	controller: rotation vs key at start time: equal
+10123	controller: rotation vs key at start time: no value
+1	controller: rotation vs pose: differs
+2544	controller: rotation vs pose: equal
+376	controller: rotation vs pose: matches as both readings (symmetric)
+2168	controller: rotation vs pose: matches as rows of the quaternion matrix
+11565	controller: rotation vs pose: no value
+601	controller: scale vs first key: equal
+11264	controller: scale vs first key: no value
+601	controller: scale vs key at start time: equal
+11264	controller: scale vs key at start time: no value
+1110	controller: scale vs pose: equal
+13000	controller: scale vs pose: no value
+7	controller: transform interpolator type NiPathInterpolator
+50	controller: translation equal to no key
+10433	controller: translation equal to some key
+167	controller: translation vs first key: differs
+10316	controller: translation vs first key: equal
+1382	controller: translation vs first key: no value
+159	controller: translation vs key at start time: differs
+10324	controller: translation vs key at start time: equal
+1382	controller: translation vs key at start time: no value
+60	controller: translation vs pose: differs
+2293	controller: translation vs pose: equal
+11757	controller: translation vs pose: no value
+210	models by set of driven classes: 
+27	models by set of driven classes: alpha
+3	models by set of driven classes: alpha + light + other + shader emissive + shader emissive colour (effect) + shader lighting terms + shader other + texture transform + transform
+2	models by set of driven classes: alpha + light + other + shader emissive + shader emissive colour (effect) + shader lighting terms + shader other + texture transform + transform + visibility
+4	models by set of driven classes: alpha + light + other + shader emissive + shader emissive colour (effect) + shader lighting terms + shader other + transform + visibility
+9	models by set of driven classes: alpha + light + other + shader emissive + shader emissive colour (effect) + shader other + texture transform + transform
+4	models by set of driven classes: alpha + light + other + shader emissive + shader emissive colour (effect) + shader other + texture transform + transform + visibility
+4	models by set of driven classes: alpha + light + other + shader emissive + shader emissive colour (effect) + shader other + transform
+6	models by set of driven classes: alpha + light + other + shader emissive + shader other + texture transform + transform
+3	models by set of driven classes: alpha + light + other + shader emissive + shader other + texture transform + transform + visibility
+2	models by set of driven classes: alpha + light + other + shader emissive + shader other + transform
+4	models by set of driven classes: alpha + light + other + shader emissive colour (effect) + shader other + texture transform + transform + visibility
+4	models by set of driven classes: alpha + light + other + shader emissive colour (effect) + shader other + transform
+1	models by set of driven classes: alpha + light + other + shader lighting terms + shader other + texture transform + transform
+9	models by set of driven classes: alpha + light + other + shader other + texture transform + transform
+3	models by set of driven classes: alpha + light + other + shader other + texture transform + transform + visibility
+5	models by set of driven classes: alpha + light + other + shader other + transform
+2	models by set of driven classes: alpha + other + shader emissive + shader emissive colour (effect) + shader lighting terms + shader other + texture transform + transform
+8	models by set of driven classes: alpha + other + shader emissive + shader emissive colour (effect) + shader lighting terms + shader other + texture transform + transform + visibility
+2	models by set of driven classes: alpha + other + shader emissive + shader emissive colour (effect) + shader lighting terms + shader other + transform + visibility
+27	models by set of driven classes: alpha + other + shader emissive + shader emissive colour (effect) + shader other + texture transform + transform
+8	models by set of driven classes: alpha + other + shader emissive + shader emissive colour (effect) + shader other + texture transform + transform + visibility
+38	models by set of driven classes: alpha + other + shader emissive + shader emissive colour (effect) + shader other + transform
+5	models by set of driven classes: alpha + other + shader emissive + shader emissive colour (effect) + shader other + transform + visibility
+1	models by set of driven classes: alpha + other + shader emissive + shader emissive colour (effect) + texture transform + transform
+8	models by set of driven classes: alpha + other + shader emissive + shader lighting terms + shader other + texture transform + transform
+3	models by set of driven classes: alpha + other + shader emissive + shader lighting terms + shader other + texture transform + transform + visibility
+24	models by set of driven classes: alpha + other + shader emissive + shader other + texture transform + transform
+19	models by set of driven classes: alpha + other + shader emissive + shader other + texture transform + transform + visibility
+20	models by set of driven classes: alpha + other + shader emissive + shader other + transform
+14	models by set of driven classes: alpha + other + shader emissive + shader other + transform + visibility
+1	models by set of driven classes: alpha + other + shader emissive colour (effect) + shader falloff + shader lighting terms + shader other + texture transform + transform
+3	models by set of driven classes: alpha + other + shader emissive colour (effect) + shader lighting terms + shader other + texture transform + transform
+1	models by set of driven classes: alpha + other + shader emissive colour (effect) + shader lighting terms + shader other + transform + visibility
+3	models by set of driven classes: alpha + other + shader emissive colour (effect) + shader other + texture transform + transform
+19	models by set of driven classes: alpha + other + shader emissive colour (effect) + shader other + texture transform + transform + visibility
+12	models by set of driven classes: alpha + other + shader emissive colour (effect) + shader other + transform
+3	models by set of driven classes: alpha + other + shader emissive colour (effect) + shader other + transform + visibility
+25	models by set of driven classes: alpha + other + shader lighting terms + shader other + texture transform + transform
+1	models by set of driven classes: alpha + other + shader lighting terms + shader other + texture transform + transform + visibility
+1	models by set of driven classes: alpha + other + shader lighting terms + shader other + transform
+112	models by set of driven classes: alpha + other + shader other + texture transform + transform
+21	models by set of driven classes: alpha + other + shader other + texture transform + transform + visibility
+58	models by set of driven classes: alpha + other + shader other + transform
+12	models by set of driven classes: alpha + other + shader other + transform + visibility
+2	models by set of driven classes: alpha + other + texture transform + transform
+22	models by set of driven classes: alpha + other + transform
+2	models by set of driven classes: alpha + other + transform + visibility
+6	models by set of driven classes: alpha + shader emissive
+30	models by set of driven classes: alpha + shader emissive + shader emissive colour (effect)
+2	models by set of driven classes: alpha + shader emissive + shader emissive colour (effect) + shader lighting terms + texture transform + transform + visibility
+8	models by set of driven classes: alpha + shader emissive + shader emissive colour (effect) + texture transform
+4	models by set of driven classes: alpha + shader emissive + shader emissive colour (effect) + texture transform + transform
+3	models by set of driven classes: alpha + shader emissive + shader emissive colour (effect) + texture transform + transform + visibility
+2	models by set of driven classes: alpha + shader emissive + shader emissive colour (effect) + transform
+6	models by set of driven classes: alpha + shader emissive + shader emissive colour (effect) + transform + visibility
+2	models by set of driven classes: alpha + shader emissive + shader falloff
+2	models by set of driven classes: alpha + shader emissive + shader lighting terms + texture transform + transform + visibility
+25	models by set of driven classes: alpha + shader emissive + texture transform
+4	models by set of driven classes: alpha + shader emissive + texture transform + transform
+1	models by set of driven classes: alpha + shader emissive + texture transform + visibility
+1	models by set of driven classes: alpha + shader emissive + transform
+10	models by set of driven classes: alpha + shader emissive colour (effect)
+29	models by set of driven classes: alpha + shader emissive colour (effect) + texture transform
+6	models by set of driven classes: alpha + shader emissive colour (effect) + texture transform + transform
+1	models by set of driven classes: alpha + shader emissive colour (effect) + texture transform + transform + visibility
+2	models by set of driven classes: alpha + shader emissive colour (effect) + transform
+1	models by set of driven classes: alpha + shader emissive colour (effect) + transform + visibility
+74	models by set of driven classes: alpha + texture transform
+5	models by set of driven classes: alpha + texture transform + transform
+1	models by set of driven classes: alpha + texture transform + transform + visibility
+1	models by set of driven classes: alpha + texture transform + visibility
+17	models by set of driven classes: alpha + transform
+11	models by set of driven classes: alpha + transform + visibility
+1	models by set of driven classes: light + other + shader emissive + shader emissive colour (effect) + shader other + transform
+3	models by set of driven classes: light + other + shader emissive + shader other + texture transform + transform
+2	models by set of driven classes: light + other + shader emissive + shader other + texture transform + transform + visibility
+1	models by set of driven classes: light + other + shader emissive + shader other + transform + visibility
+2	models by set of driven classes: light + other + shader emissive colour (effect) + shader other + texture transform + transform
+1	models by set of driven classes: light + other + shader emissive colour (effect) + transform
+1	models by set of driven classes: light + other + shader lighting terms + shader other + texture transform + transform
+1	models by set of driven classes: light + other + shader other + texture transform + transform
+14	models by set of driven classes: light + other + transform
+15	models by set of driven classes: other
+1	models by set of driven classes: other + shader emissive + shader emissive colour (effect) + shader lighting terms + shader other + texture transform + transform
+3	models by set of driven classes: other + shader emissive + shader emissive colour (effect) + shader other + texture transform + transform
+2	models by set of driven classes: other + shader emissive + shader emissive colour (effect) + shader other + texture transform + transform + visibility
+13	models by set of driven classes: other + shader emissive + shader emissive colour (effect) + shader other + transform
+1	models by set of driven classes: other + shader emissive + shader emissive colour (effect) + shader other + transform + visibility
+2	models by set of driven classes: other + shader emissive + shader lighting terms + shader other + texture transform + transform
+17	models by set of driven classes: other + shader emissive + shader other + texture transform + transform
+5	models by set of driven classes: other + shader emissive + shader other + texture transform + transform + visibility
+65	models by set of driven classes: other + shader emissive + shader other + transform
+58	models by set of driven classes: other + shader emissive + shader other + transform + visibility
+2	models by set of driven classes: other + shader emissive + transform
+1	models by set of driven classes: other + shader emissive colour (effect) + shader other + texture transform + transform + visibility
+3	models by set of driven classes: other + shader emissive colour (effect) + transform
+16	models by set of driven classes: other + shader lighting terms + shader other + texture transform + transform
+2	models by set of driven classes: other + shader lighting terms + shader other + texture transform + transform + visibility
+1	models by set of driven classes: other + shader lighting terms + shader other + transform
+1	models by set of driven classes: other + shader lighting terms + shader other + transform + visibility
+91	models by set of driven classes: other + shader other + texture transform + transform
+3	models by set of driven classes: other + shader other + texture transform + transform + visibility
+678	models by set of driven classes: other + transform
+111	models by set of driven classes: other + transform + visibility
+46	models by set of driven classes: shader emissive
+2	models by set of driven classes: shader emissive + shader emissive colour (effect)
+8	models by set of driven classes: shader emissive + shader emissive colour (effect) + texture transform
+22	models by set of driven classes: shader emissive + texture transform
+22	models by set of driven classes: shader emissive + texture transform + transform
+5	models by set of driven classes: shader emissive + transform
+2	models by set of driven classes: shader emissive + visibility
+43	models by set of driven classes: shader emissive colour (effect)
+2	models by set of driven classes: shader emissive colour (effect) + texture transform
+1	models by set of driven classes: shader emissive colour (effect) + transform
+2	models by set of driven classes: shader falloff
+144	models by set of driven classes: shader falloff + texture transform
+7	models by set of driven classes: shader lighting terms + texture transform
+247	models by set of driven classes: texture transform
+23	models by set of driven classes: texture transform + transform
+1298	models by set of driven classes: transform
+30	models by set of driven classes: transform + visibility
+18	models by set of driven classes: visibility
+576	models with transform interpolators: stored pose equals every start key false
+1985	models with transform interpolators: stored pose equals every start key true
+563	models: also with particle-system blocks
+2564	models: base records naming those models
+639	models: every controller block read to the last byte: no
+3431	models: every controller block read to the last byte: yes
+1237	models: of them named by placed bases
+76008	models: placements of those models (placed REFR, enabled)
+4070	models: refused for animation-controller blocks
+1479	placements by set of driven classes: 
+744	placements by set of driven classes: alpha
+0	placements by set of driven classes: alpha + light + other + shader emissive + shader emissive colour (effect) + shader lighting terms + shader other + texture transform + transform
+0	placements by set of driven classes: alpha + light + other + shader emissive + shader emissive colour (effect) + shader lighting terms + shader other + texture transform + transform + visibility
+0	placements by set of driven classes: alpha + light + other + shader emissive + shader emissive colour (effect) + shader lighting terms + shader other + transform + visibility
+8	placements by set of driven classes: alpha + light + other + shader emissive + shader emissive colour (effect) + shader other + texture transform + transform
+41	placements by set of driven classes: alpha + light + other + shader emissive + shader emissive colour (effect) + shader other + texture transform + transform + visibility
+27	placements by set of driven classes: alpha + light + other + shader emissive + shader emissive colour (effect) + shader other + transform
+1	placements by set of driven classes: alpha + light + other + shader emissive + shader other + texture transform + transform
+0	placements by set of driven classes: alpha + light + other + shader emissive + shader other + texture transform + transform + visibility
+64	placements by set of driven classes: alpha + light + other + shader emissive + shader other + transform
+0	placements by set of driven classes: alpha + light + other + shader emissive colour (effect) + shader other + texture transform + transform + visibility
+0	placements by set of driven classes: alpha + light + other + shader emissive colour (effect) + shader other + transform
+0	placements by set of driven classes: alpha + light + other + shader lighting terms + shader other + texture transform + transform
+5	placements by set of driven classes: alpha + light + other + shader other + texture transform + transform
+0	placements by set of driven classes: alpha + light + other + shader other + texture transform + transform + visibility
+94	placements by set of driven classes: alpha + light + other + shader other + transform
+0	placements by set of driven classes: alpha + other + shader emissive + shader emissive colour (effect) + shader lighting terms + shader other + texture transform + transform
+0	placements by set of driven classes: alpha + other + shader emissive + shader emissive colour (effect) + shader lighting terms + shader other + texture transform + transform + visibility
+0	placements by set of driven classes: alpha + other + shader emissive + shader emissive colour (effect) + shader lighting terms + shader other + transform + visibility
+996	placements by set of driven classes: alpha + other + shader emissive + shader emissive colour (effect) + shader other + texture transform + transform
+5	placements by set of driven classes: alpha + other + shader emissive + shader emissive colour (effect) + shader other + texture transform + transform + visibility
+431	placements by set of driven classes: alpha + other + shader emissive + shader emissive colour (effect) + shader other + transform
+15	placements by set of driven classes: alpha + other + shader emissive + shader emissive colour (effect) + shader other + transform + visibility
+33	placements by set of driven classes: alpha + other + shader emissive + shader emissive colour (effect) + texture transform + transform
+16	placements by set of driven classes: alpha + other + shader emissive + shader lighting terms + shader other + texture transform + transform
+3	placements by set of driven classes: alpha + other + shader emissive + shader lighting terms + shader other + texture transform + transform + visibility
+320	placements by set of driven classes: alpha + other + shader emissive + shader other + texture transform + transform
+79	placements by set of driven classes: alpha + other + shader emissive + shader other + texture transform + transform + visibility
+33	placements by set of driven classes: alpha + other + shader emissive + shader other + transform
+1	placements by set of driven classes: alpha + other + shader emissive + shader other + transform + visibility
+0	placements by set of driven classes: alpha + other + shader emissive colour (effect) + shader falloff + shader lighting terms + shader other + texture transform + transform
+0	placements by set of driven classes: alpha + other + shader emissive colour (effect) + shader lighting terms + shader other + texture transform + transform
+0	placements by set of driven classes: alpha + other + shader emissive colour (effect) + shader lighting terms + shader other + transform + visibility
+7	placements by set of driven classes: alpha + other + shader emissive colour (effect) + shader other + texture transform + transform
+5	placements by set of driven classes: alpha + other + shader emissive colour (effect) + shader other + texture transform + transform + visibility
+0	placements by set of driven classes: alpha + other + shader emissive colour (effect) + shader other + transform
+17	placements by set of driven classes: alpha + other + shader emissive colour (effect) + shader other + transform + visibility
+208	placements by set of driven classes: alpha + other + shader lighting terms + shader other + texture transform + transform
+0	placements by set of driven classes: alpha + other + shader lighting terms + shader other + texture transform + transform + visibility
+0	placements by set of driven classes: alpha + other + shader lighting terms + shader other + transform
+4571	placements by set of driven classes: alpha + other + shader other + texture transform + transform
+926	placements by set of driven classes: alpha + other + shader other + texture transform + transform + visibility
+2553	placements by set of driven classes: alpha + other + shader other + transform
+38	placements by set of driven classes: alpha + other + shader other + transform + visibility
+99	placements by set of driven classes: alpha + other + texture transform + transform
+167	placements by set of driven classes: alpha + other + transform
+19	placements by set of driven classes: alpha + other + transform + visibility
+0	placements by set of driven classes: alpha + shader emissive
+654	placements by set of driven classes: alpha + shader emissive + shader emissive colour (effect)
+0	placements by set of driven classes: alpha + shader emissive + shader emissive colour (effect) + shader lighting terms + texture transform + transform + visibility
+62	placements by set of driven classes: alpha + shader emissive + shader emissive colour (effect) + texture transform
+126	placements by set of driven classes: alpha + shader emissive + shader emissive colour (effect) + texture transform + transform
+0	placements by set of driven classes: alpha + shader emissive + shader emissive colour (effect) + texture transform + transform + visibility
+0	placements by set of driven classes: alpha + shader emissive + shader emissive colour (effect) + transform
+0	placements by set of driven classes: alpha + shader emissive + shader emissive colour (effect) + transform + visibility
+0	placements by set of driven classes: alpha + shader emissive + shader falloff
+0	placements by set of driven classes: alpha + shader emissive + shader lighting terms + texture transform + transform + visibility
+1475	placements by set of driven classes: alpha + shader emissive + texture transform
+6	placements by set of driven classes: alpha + shader emissive + texture transform + transform
+0	placements by set of driven classes: alpha + shader emissive + texture transform + visibility
+0	placements by set of driven classes: alpha + shader emissive + transform
+271	placements by set of driven classes: alpha + shader emissive colour (effect)
+17	placements by set of driven classes: alpha + shader emissive colour (effect) + texture transform
+6	placements by set of driven classes: alpha + shader emissive colour (effect) + texture transform + transform
+0	placements by set of driven classes: alpha + shader emissive colour (effect) + texture transform + transform + visibility
+0	placements by set of driven classes: alpha + shader emissive colour (effect) + transform
+0	placements by set of driven classes: alpha + shader emissive colour (effect) + transform + visibility
+1335	placements by set of driven classes: alpha + texture transform
+0	placements by set of driven classes: alpha + texture transform + transform
+0	placements by set of driven classes: alpha + texture transform + transform + visibility
+0	placements by set of driven classes: alpha + texture transform + visibility
+0	placements by set of driven classes: alpha + transform
+0	placements by set of driven classes: alpha + transform + visibility
+0	placements by set of driven classes: light + other + shader emissive + shader emissive colour (effect) + shader other + transform
+13	placements by set of driven classes: light + other + shader emissive + shader other + texture transform + transform
+2	placements by set of driven classes: light + other + shader emissive + shader other + texture transform + transform + visibility
+0	placements by set of driven classes: light + other + shader emissive + shader other + transform + visibility
+0	placements by set of driven classes: light + other + shader emissive colour (effect) + shader other + texture transform + transform
+0	placements by set of driven classes: light + other + shader emissive colour (effect) + transform
+0	placements by set of driven classes: light + other + shader lighting terms + shader other + texture transform + transform
+0	placements by set of driven classes: light + other + shader other + texture transform + transform
+10	placements by set of driven classes: light + other + transform
+4	placements by set of driven classes: other
+0	placements by set of driven classes: other + shader emissive + shader emissive colour (effect) + shader lighting terms + shader other + texture transform + transform
+13	placements by set of driven classes: other + shader emissive + shader emissive colour (effect) + shader other + texture transform + transform
+0	placements by set of driven classes: other + shader emissive + shader emissive colour (effect) + shader other + texture transform + transform + visibility
+835	placements by set of driven classes: other + shader emissive + shader emissive colour (effect) + shader other + transform
+1	placements by set of driven classes: other + shader emissive + shader emissive colour (effect) + shader other + transform + visibility
+0	placements by set of driven classes: other + shader emissive + shader lighting terms + shader other + texture transform + transform
+131	placements by set of driven classes: other + shader emissive + shader other + texture transform + transform
+3	placements by set of driven classes: other + shader emissive + shader other + texture transform + transform + visibility
+382	placements by set of driven classes: other + shader emissive + shader other + transform
+129	placements by set of driven classes: other + shader emissive + shader other + transform + visibility
+56	placements by set of driven classes: other + shader emissive + transform
+0	placements by set of driven classes: other + shader emissive colour (effect) + shader other + texture transform + transform + visibility
+70	placements by set of driven classes: other + shader emissive colour (effect) + transform
+0	placements by set of driven classes: other + shader lighting terms + shader other + texture transform + transform
+2	placements by set of driven classes: other + shader lighting terms + shader other + texture transform + transform + visibility
+0	placements by set of driven classes: other + shader lighting terms + shader other + transform
+0	placements by set of driven classes: other + shader lighting terms + shader other + transform + visibility
+13371	placements by set of driven classes: other + shader other + texture transform + transform
+0	placements by set of driven classes: other + shader other + texture transform + transform + visibility
+24404	placements by set of driven classes: other + transform
+1026	placements by set of driven classes: other + transform + visibility
+1976	placements by set of driven classes: shader emissive
+0	placements by set of driven classes: shader emissive + shader emissive colour (effect)
+0	placements by set of driven classes: shader emissive + shader emissive colour (effect) + texture transform
+39	placements by set of driven classes: shader emissive + texture transform
+5	placements by set of driven classes: shader emissive + texture transform + transform
+1	placements by set of driven classes: shader emissive + transform
+10	placements by set of driven classes: shader emissive + visibility
+236	placements by set of driven classes: shader emissive colour (effect)
+0	placements by set of driven classes: shader emissive colour (effect) + texture transform
+0	placements by set of driven classes: shader emissive colour (effect) + transform
+0	placements by set of driven classes: shader falloff
+407	placements by set of driven classes: shader falloff + texture transform
+45	placements by set of driven classes: shader lighting terms + texture transform
+6451	placements by set of driven classes: texture transform
+68	placements by set of driven classes: texture transform + transform
+9275	placements by set of driven classes: transform
+0	placements by set of driven classes: transform + visibility
+86	placements by set of driven classes: visibility
+12906	placements of models with transform interpolators: stored pose equals every start key false
+30632	placements of models with transform interpolators: stored pose equals every start key true
+395	rest: decided models by sequence cycle types [Some(2)]
+150	rest: decided models by sequence cycle types []
+874	rest: decided models' sequences, cycle type Some(2)
+21967	rest: decided placements by sequence cycle types [Some(2)]
+640	rest: decided placements by sequence cycle types []
+23	rest: models by tag set: alpha
+2	rest: models by tag set: alpha + behavior-graph
+6	rest: models by tag set: alpha + behavior-graph + effect-emissive
+2	rest: models by tag set: alpha + behavior-graph + effect-emissive + effect-idle + manager-idle + manager-loop + other + particle + texture-transform + transform-varies
+1	rest: models by tag set: alpha + behavior-graph + effect-emissive + effect-idle + manager-idle + manager-loop + texture-transform
+1	rest: models by tag set: alpha + behavior-graph + effect-emissive + idle-transform + manager-idle + texture-transform + transform-varies + unrendered
+3	rest: models by tag set: alpha + behavior-graph + effect-emissive + other + particle + texture-transform
+3	rest: models by tag set: alpha + behavior-graph + effect-emissive + other + particle + texture-transform + transform-constant + transform-varies
+1	rest: models by tag set: alpha + behavior-graph + effect-emissive + other + particle + transform-varies
+30	rest: models by tag set: alpha + behavior-graph + effect-emissive + texture-transform
+1	rest: models by tag set: alpha + behavior-graph + effect-emissive + texture-transform + transform-varies
+2	rest: models by tag set: alpha + behavior-graph + effect-emissive + texture-transform + transform-varies + unrendered + visibility
+2	rest: models by tag set: alpha + behavior-graph + effect-idle + idle-shader + manager-idle + manager-loop + texture-transform + transform-varies
+2	rest: models by tag set: alpha + behavior-graph + idle-shader + idle-transform + manager-idle + texture-transform + transform-varies
+2	rest: models by tag set: alpha + behavior-graph + other + particle + texture-transform
+1	rest: models by tag set: alpha + behavior-graph + other + particle + texture-transform + transform-constant
+1	rest: models by tag set: alpha + behavior-graph + other + particle + transform-varies
+3	rest: models by tag set: alpha + behavior-graph + texture-transform
+1	rest: models by tag set: alpha + behavior-graph + unrendered
+39	rest: models by tag set: alpha + effect-emissive
+2	rest: models by tag set: alpha + effect-emissive + falloff
+2	rest: models by tag set: alpha + effect-emissive + other + particle + texture-transform + transform-varies
+1	rest: models by tag set: alpha + effect-emissive + other + particle + texture-transform + transform-varies + visibility
+1	rest: models by tag set: alpha + effect-emissive + other + particle + transform-varies
+29	rest: models by tag set: alpha + effect-emissive + texture-transform
+8	rest: models by tag set: alpha + effect-emissive + texture-transform + transform-varies
+2	rest: models by tag set: alpha + effect-emissive + texture-transform + transform-varies + unrendered + visibility
+3	rest: models by tag set: alpha + effect-emissive + texture-transform + transform-varies + visibility
+1	rest: models by tag set: alpha + effect-emissive + texture-transform + visibility
+3	rest: models by tag set: alpha + effect-emissive + transform-varies
+7	rest: models by tag set: alpha + effect-emissive + transform-varies + visibility
+2	rest: models by tag set: alpha + other + particle
+4	rest: models by tag set: alpha + other + particle + texture-transform
+1	rest: models by tag set: alpha + other + particle + texture-transform + transform-varies + visibility
+1	rest: models by tag set: alpha + other + particle + texture-transform + visibility
+8	rest: models by tag set: alpha + other + particle + transform-varies
+65	rest: models by tag set: alpha + texture-transform
+4	rest: models by tag set: alpha + texture-transform + transform-varies
+8	rest: models by tag set: alpha + transform-varies
+11	rest: models by tag set: alpha + transform-varies + visibility
+154	rest: models by tag set: behavior-graph
+1	rest: models by tag set: behavior-graph + effect-emissive
+2	rest: models by tag set: behavior-graph + effect-emissive + texture-transform
+1	rest: models by tag set: behavior-graph + effect-emissive + texture-transform + transform-varies
+1	rest: models by tag set: behavior-graph + effect-emissive + transform-varies
+4	rest: models by tag set: behavior-graph + effect-idle + idle-shader + idle-transform + manager-idle
+14	rest: models by tag set: behavior-graph + effect-idle + idle-shader + idle-transform + manager-idle + manager-loop
+12	rest: models by tag set: behavior-graph + effect-idle + idle-shader + idle-transform + manager-idle + manager-loop + other + particle
+12	rest: models by tag set: behavior-graph + effect-idle + idle-shader + idle-transform + manager-idle + manager-loop + other + particle + visibility
+5	rest: models by tag set: behavior-graph + effect-idle + idle-shader + idle-transform + manager-idle + manager-loop + other + visibility
+1	rest: models by tag set: behavior-graph + effect-idle + idle-shader + idle-transform + manager-idle + manager-loop + texture-transform
+3	rest: models by tag set: behavior-graph + effect-idle + idle-shader + idle-transform + manager-idle + other
+11	rest: models by tag set: behavior-graph + effect-idle + idle-shader + idle-transform + manager-idle + other + particle
+1	rest: models by tag set: behavior-graph + effect-idle + idle-shader + idle-transform + manager-idle + other + particle + texture-transform + transform-varies + visibility
+3	rest: models by tag set: behavior-graph + effect-idle + idle-shader + idle-transform + manager-idle + other + particle + visibility
+2	rest: models by tag set: behavior-graph + effect-idle + idle-shader + idle-transform + manager-idle + other + visibility
+4	rest: models by tag set: behavior-graph + effect-idle + idle-shader + manager-idle
+28	rest: models by tag set: behavior-graph + effect-idle + idle-shader + manager-idle + manager-loop
+4	rest: models by tag set: behavior-graph + effect-idle + idle-shader + manager-idle + manager-loop + other
+13	rest: models by tag set: behavior-graph + effect-idle + idle-shader + manager-idle + manager-loop + other + particle
+2	rest: models by tag set: behavior-graph + effect-idle + idle-shader + manager-idle + manager-loop + other + particle + visibility
+1	rest: models by tag set: behavior-graph + effect-idle + idle-shader + manager-idle + manager-loop + other + transform-constant + transform-varies + visibility
+4	rest: models by tag set: behavior-graph + effect-idle + idle-shader + manager-idle + manager-loop + other + visibility
+1	rest: models by tag set: behavior-graph + effect-idle + idle-shader + manager-idle + manager-loop + transform-varies
+1	rest: models by tag set: behavior-graph + effect-idle + idle-shader + manager-idle + manager-loop + unrendered
+2	rest: models by tag set: behavior-graph + effect-idle + idle-shader + manager-idle + other + particle
+3	rest: models by tag set: behavior-graph + effect-idle + idle-shader + manager-idle + transform-varies
+29	rest: models by tag set: behavior-graph + effect-idle + idle-transform + manager-idle
+28	rest: models by tag set: behavior-graph + effect-idle + idle-transform + manager-idle + manager-loop
+4	rest: models by tag set: behavior-graph + effect-idle + idle-transform + manager-idle + manager-loop + other
+14	rest: models by tag set: behavior-graph + effect-idle + idle-transform + manager-idle + manager-loop + other + particle
+8	rest: models by tag set: behavior-graph + effect-idle + idle-transform + manager-idle + manager-loop + other + particle + visibility
+1	rest: models by tag set: behavior-graph + effect-idle + idle-transform + manager-idle + manager-loop + other + transform-varies + visibility
+21	rest: models by tag set: behavior-graph + effect-idle + idle-transform + manager-idle + manager-loop + other + visibility
+1	rest: models by tag set: behavior-graph + effect-idle + idle-transform + manager-idle + other
+11	rest: models by tag set: behavior-graph + effect-idle + idle-transform + manager-idle + other + particle
+3	rest: models by tag set: behavior-graph + effect-idle + idle-transform + manager-idle + other + particle + visibility
+8	rest: models by tag set: behavior-graph + effect-idle + idle-transform + manager-idle + other + visibility
+31	rest: models by tag set: behavior-graph + effect-idle + manager-idle
+41	rest: models by tag set: behavior-graph + effect-idle + manager-idle + manager-loop
+27	rest: models by tag set: behavior-graph + effect-idle + manager-idle + manager-loop + other + particle
+3	rest: models by tag set: behavior-graph + effect-idle + manager-idle + manager-loop + other + particle + visibility
+2	rest: models by tag set: behavior-graph + effect-idle + manager-idle + manager-loop + other + texture-transform + unrendered + visibility
+12	rest: models by tag set: behavior-graph + effect-idle + manager-idle + manager-loop + other + visibility
+2	rest: models by tag set: behavior-graph + effect-idle + manager-idle + manager-loop + transform-constant + transform-varies
+6	rest: models by tag set: behavior-graph + effect-idle + manager-idle + other + particle
+1	rest: models by tag set: behavior-graph + effect-idle + manager-idle + other + particle + transform-constant
+1	rest: models by tag set: behavior-graph + effect-idle + manager-idle + other + transform-varies + visibility
+33	rest: models by tag set: behavior-graph + effect-idle + manager-idle + other + visibility
+1	rest: models by tag set: behavior-graph + effect-idle + manager-idle + transform-varies
+18	rest: models by tag set: behavior-graph + idle-shader + idle-transform + manager-idle
+12	rest: models by tag set: behavior-graph + idle-shader + idle-transform + manager-idle + manager-loop
+1	rest: models by tag set: behavior-graph + idle-shader + idle-transform + manager-idle + manager-loop + other
+2	rest: models by tag set: behavior-graph + idle-shader + idle-transform + manager-idle + manager-loop + other + particle
+5	rest: models by tag set: behavior-graph + idle-shader + idle-transform + manager-idle + manager-loop + other + visibility
+4	rest: models by tag set: behavior-graph + idle-shader + idle-transform + manager-idle + other + particle
+3	rest: models by tag set: behavior-graph + idle-shader + idle-transform + manager-idle + other + transform-varies + visibility
+1	rest: models by tag set: behavior-graph + idle-shader + idle-transform + manager-idle + other + visibility
+69	rest: models by tag set: behavior-graph + idle-shader + manager-idle
+18	rest: models by tag set: behavior-graph + idle-shader + manager-idle + manager-loop
+1	rest: models by tag set: behavior-graph + idle-shader + manager-idle + manager-loop + other + particle
+14	rest: models by tag set: behavior-graph + idle-shader + manager-idle + manager-loop + other + visibility
+1	rest: models by tag set: behavior-graph + idle-shader + manager-idle + manager-loop + transform-varies
+1	rest: models by tag set: behavior-graph + idle-shader + manager-idle + other + particle
+19	rest: models by tag set: behavior-graph + idle-shader + manager-idle + other + visibility
+1	rest: models by tag set: behavior-graph + idle-shader + manager-idle + transform-varies
+83	rest: models by tag set: behavior-graph + idle-transform + manager-idle
+22	rest: models by tag set: behavior-graph + idle-transform + manager-idle + manager-loop
+2	rest: models by tag set: behavior-graph + idle-transform + manager-idle + manager-loop + other
+7	rest: models by tag set: behavior-graph + idle-transform + manager-idle + manager-loop + other + particle
+1	rest: models by tag set: behavior-graph + idle-transform + manager-idle + manager-loop + other + particle + transform-varies
+6	rest: models by tag set: behavior-graph + idle-transform + manager-idle + manager-loop + other + particle + visibility
+14	rest: models by tag set: behavior-graph + idle-transform + manager-idle + manager-loop + other + visibility
+3	rest: models by tag set: behavior-graph + idle-transform + manager-idle + other + particle
+1	rest: models by tag set: behavior-graph + idle-transform + manager-idle + other + particle + visibility
+38	rest: models by tag set: behavior-graph + idle-transform + manager-idle + other + visibility
+2	rest: models by tag set: behavior-graph + idle-transform + manager-idle + transform-varies
+8	rest: models by tag set: behavior-graph + manager-idle + manager-loop
+2	rest: models by tag set: behavior-graph + manager-idle + manager-loop + other
+12	rest: models by tag set: behavior-graph + manager-idle + manager-loop + other + particle
+7	rest: models by tag set: behavior-graph + manager-idle + manager-loop + other + visibility
+9	rest: models by tag set: behavior-graph + manager-idle + other + particle
+1	rest: models by tag set: behavior-graph + manager-idle + other + transform-varies + visibility
+30	rest: models by tag set: behavior-graph + manager-idle + other + visibility
+2	rest: models by tag set: behavior-graph + other
+7	rest: models by tag set: behavior-graph + other + particle
+6	rest: models by tag set: behavior-graph + other + particle + transform-varies
+2	rest: models by tag set: behavior-graph + other + transform-varies
+7	rest: models by tag set: behavior-graph + texture-transform
+1	rest: models by tag set: behavior-graph + texture-transform + transform-constant
+2	rest: models by tag set: behavior-graph + texture-transform + transform-varies
+4	rest: models by tag set: behavior-graph + texture-transform + unrendered
+5	rest: models by tag set: behavior-graph + transform-constant
+6	rest: models by tag set: behavior-graph + transform-constant + transform-varies
+83	rest: models by tag set: behavior-graph + transform-varies
+2	rest: models by tag set: behavior-graph + transform-varies + visibility
+2	rest: models by tag set: behavior-graph + unrendered
+73	rest: models by tag set: effect-emissive
+18	rest: models by tag set: effect-emissive + other + particle + texture-transform + transform-varies
+26	rest: models by tag set: effect-emissive + texture-transform
+1	rest: models by tag set: effect-emissive + texture-transform + transform-constant + transform-varies
+2	rest: models by tag set: effect-emissive + texture-transform + transform-varies
+1	rest: models by tag set: effect-emissive + transform-constant
+7	rest: models by tag set: effect-idle + idle-shader + idle-transform + manager-idle
+1	rest: models by tag set: effect-idle + idle-shader + idle-transform + manager-idle + manager-loop
+2	rest: models by tag set: effect-idle + idle-shader + idle-transform + manager-idle + manager-loop + other
+1	rest: models by tag set: effect-idle + idle-shader + idle-transform + manager-idle + manager-loop + other + particle
+17	rest: models by tag set: effect-idle + idle-shader + idle-transform + manager-idle + other + particle
+14	rest: models by tag set: effect-idle + idle-shader + idle-transform + manager-idle + other + particle + visibility
+6	rest: models by tag set: effect-idle + idle-shader + idle-transform + manager-idle + other + visibility
+10	rest: models by tag set: effect-idle + idle-shader + idle-transform + manager-idle + transform-varies
+4	rest: models by tag set: effect-idle + idle-shader + manager-idle + manager-loop
+1	rest: models by tag set: effect-idle + idle-shader + manager-idle + manager-loop + other + particle
+1	rest: models by tag set: effect-idle + idle-shader + manager-idle + manager-loop + other + visibility
+1	rest: models by tag set: effect-idle + idle-shader + manager-idle + other + particle + visibility
+9	rest: models by tag set: effect-idle + idle-transform + manager-idle
+9	rest: models by tag set: effect-idle + idle-transform + manager-idle + manager-loop
+3	rest: models by tag set: effect-idle + idle-transform + manager-idle + manager-loop + other + visibility
+5	rest: models by tag set: effect-idle + idle-transform + manager-idle + other
+25	rest: models by tag set: effect-idle + idle-transform + manager-idle + other + particle
+6	rest: models by tag set: effect-idle + idle-transform + manager-idle + other + particle + visibility
+3	rest: models by tag set: effect-idle + idle-transform + manager-idle + other + visibility
+5	rest: models by tag set: effect-idle + manager-idle
+56	rest: models by tag set: effect-idle + manager-idle + manager-loop
+1	rest: models by tag set: effect-idle + manager-idle + manager-loop + other
+4	rest: models by tag set: effect-idle + manager-idle + manager-loop + other + particle + visibility
+5	rest: models by tag set: effect-idle + manager-idle + manager-loop + other + visibility
+2	rest: models by tag set: effect-idle + manager-idle + other
+9	rest: models by tag set: effect-idle + manager-idle + other + particle
+4	rest: models by tag set: effect-idle + manager-idle + other + visibility
+2	rest: models by tag set: falloff
+144	rest: models by tag set: falloff + texture-transform
+9	rest: models by tag set: idle-shader + idle-transform + manager-idle
+2	rest: models by tag set: idle-shader + idle-transform + manager-idle + manager-loop + other
+7	rest: models by tag set: idle-shader + idle-transform + manager-idle + other + particle
+1	rest: models by tag set: idle-shader + idle-transform + manager-idle + other + particle + visibility
+1	rest: models by tag set: idle-shader + idle-transform + manager-idle + other + visibility
+1	rest: models by tag set: idle-shader + idle-transform + manager-idle + transform-varies
+3	rest: models by tag set: idle-shader + manager-idle
+17	rest: models by tag set: idle-shader + manager-idle + manager-loop
+1	rest: models by tag set: idle-shader + manager-idle + manager-loop + other + visibility
+1	rest: models by tag set: idle-shader + manager-idle + other + particle
+381	rest: models by tag set: idle-transform + manager-idle
+34	rest: models by tag set: idle-transform + manager-idle + manager-loop
+2	rest: models by tag set: idle-transform + manager-idle + manager-loop + other + particle
+10	rest: models by tag set: idle-transform + manager-idle + other + particle
+1	rest: models by tag set: idle-transform + manager-idle + other + particle + visibility
+2	rest: models by tag set: idle-transform + manager-idle + other + visibility
+1	rest: models by tag set: idle-transform + manager-idle + transform-varies
+2	rest: models by tag set: idle-transform + manager-idle + unrendered
+47	rest: models by tag set: manager-idle + manager-loop
+4	rest: models by tag set: manager-idle + manager-loop + other + particle
+1	rest: models by tag set: manager-idle + manager-loop + other + visibility
+36	rest: models by tag set: manager-idle + other + particle
+8	rest: models by tag set: manager-idle + other + particle + visibility
+2	rest: models by tag set: manager-idle + other + visibility
+12	rest: models by tag set: other
+50	rest: models by tag set: other + particle
+75	rest: models by tag set: other + particle + texture-transform
+1	rest: models by tag set: other + particle + texture-transform + transform-constant
+1	rest: models by tag set: other + particle + texture-transform + transform-constant + transform-varies
+3	rest: models by tag set: other + particle + texture-transform + transform-varies
+29	rest: models by tag set: other + particle + transform-varies
+15	rest: models by tag set: other + particle + transform-varies + visibility
+1	rest: models by tag set: other + particle + unrendered
+3	rest: models by tag set: other + transform-constant
+1	rest: models by tag set: other + transform-constant + transform-varies
+12	rest: models by tag set: other + transform-varies
+165	rest: models by tag set: texture-transform
+2	rest: models by tag set: texture-transform + transform-constant
+3	rest: models by tag set: texture-transform + transform-constant + transform-varies
+10	rest: models by tag set: texture-transform + transform-varies
+7	rest: models by tag set: texture-transform + unrendered
+136	rest: models by tag set: transform-constant
+216	rest: models by tag set: transform-constant + transform-varies
+2	rest: models by tag set: transform-constant + transform-varies + unrendered
+1	rest: models by tag set: transform-constant + transform-varies + visibility
+811	rest: models by tag set: transform-varies
+2	rest: models by tag set: transform-varies + unrendered
+12	rest: models by tag set: transform-varies + visibility
+14	rest: models by tag set: unrendered
+2	rest: models by tag set: unrendered + visibility
+18	rest: models by tag set: visibility
+545	rest: models decided by the rest rules
+23	rest: models not decided: alpha
+3	rest: models not decided: alpha + behavior-graph
+6	rest: models not decided: alpha + behavior-graph + effect-emissive
+2	rest: models not decided: alpha + behavior-graph + effect-emissive + effect-idle + manager-loop + other + particle + texture-transform + transform-varies
+1	rest: models not decided: alpha + behavior-graph + effect-emissive + effect-idle + manager-loop + texture-transform
+3	rest: models not decided: alpha + behavior-graph + effect-emissive + other + particle + texture-transform
+3	rest: models not decided: alpha + behavior-graph + effect-emissive + other + particle + texture-transform + transform-varies
+1	rest: models not decided: alpha + behavior-graph + effect-emissive + other + particle + transform-varies
+30	rest: models not decided: alpha + behavior-graph + effect-emissive + texture-transform
+2	rest: models not decided: alpha + behavior-graph + effect-emissive + texture-transform + transform-varies
+2	rest: models not decided: alpha + behavior-graph + effect-emissive + texture-transform + transform-varies + visibility
+2	rest: models not decided: alpha + behavior-graph + effect-idle + manager-loop + texture-transform + transform-varies
+3	rest: models not decided: alpha + behavior-graph + other + particle + texture-transform
+1	rest: models not decided: alpha + behavior-graph + other + particle + transform-varies
+3	rest: models not decided: alpha + behavior-graph + texture-transform
+2	rest: models not decided: alpha + behavior-graph + texture-transform + transform-varies
+39	rest: models not decided: alpha + effect-emissive
+2	rest: models not decided: alpha + effect-emissive + falloff
+2	rest: models not decided: alpha + effect-emissive + other + particle + texture-transform + transform-varies
+1	rest: models not decided: alpha + effect-emissive + other + particle + texture-transform + transform-varies + visibility
+1	rest: models not decided: alpha + effect-emissive + other + particle + transform-varies
+29	rest: models not decided: alpha + effect-emissive + texture-transform
+8	rest: models not decided: alpha + effect-emissive + texture-transform + transform-varies
+5	rest: models not decided: alpha + effect-emissive + texture-transform + transform-varies + visibility
+1	rest: models not decided: alpha + effect-emissive + texture-transform + visibility
+3	rest: models not decided: alpha + effect-emissive + transform-varies
+7	rest: models not decided: alpha + effect-emissive + transform-varies + visibility
+2	rest: models not decided: alpha + other + particle
+4	rest: models not decided: alpha + other + particle + texture-transform
+1	rest: models not decided: alpha + other + particle + texture-transform + transform-varies + visibility
+1	rest: models not decided: alpha + other + particle + texture-transform + visibility
+8	rest: models not decided: alpha + other + particle + transform-varies
+65	rest: models not decided: alpha + texture-transform
+4	rest: models not decided: alpha + texture-transform + transform-varies
+8	rest: models not decided: alpha + transform-varies
+11	rest: models not decided: alpha + transform-varies + visibility
+331	rest: models not decided: behavior-graph
+1	rest: models not decided: behavior-graph + effect-emissive
+2	rest: models not decided: behavior-graph + effect-emissive + texture-transform
+1	rest: models not decided: behavior-graph + effect-emissive + texture-transform + transform-varies
+1	rest: models not decided: behavior-graph + effect-emissive + transform-varies
+68	rest: models not decided: behavior-graph + effect-idle
+112	rest: models not decided: behavior-graph + effect-idle + manager-loop
+8	rest: models not decided: behavior-graph + effect-idle + manager-loop + other
+66	rest: models not decided: behavior-graph + effect-idle + manager-loop + other + particle
+25	rest: models not decided: behavior-graph + effect-idle + manager-loop + other + particle + visibility
+2	rest: models not decided: behavior-graph + effect-idle + manager-loop + other + texture-transform + visibility
+2	rest: models not decided: behavior-graph + effect-idle + manager-loop + other + transform-varies + visibility
+42	rest: models not decided: behavior-graph + effect-idle + manager-loop + other + visibility
+1	rest: models not decided: behavior-graph + effect-idle + manager-loop + texture-transform
+3	rest: models not decided: behavior-graph + effect-idle + manager-loop + transform-varies
+4	rest: models not decided: behavior-graph + effect-idle + other
+31	rest: models not decided: behavior-graph + effect-idle + other + particle
+1	rest: models not decided: behavior-graph + effect-idle + other + particle + texture-transform + transform-varies + visibility
+6	rest: models not decided: behavior-graph + effect-idle + other + particle + visibility
+1	rest: models not decided: behavior-graph + effect-idle + other + transform-varies + visibility
+43	rest: models not decided: behavior-graph + effect-idle + other + visibility
+4	rest: models not decided: behavior-graph + effect-idle + transform-varies
+60	rest: models not decided: behavior-graph + manager-loop
+5	rest: models not decided: behavior-graph + manager-loop + other
+22	rest: models not decided: behavior-graph + manager-loop + other + particle
+1	rest: models not decided: behavior-graph + manager-loop + other + particle + transform-varies
+6	rest: models not decided: behavior-graph + manager-loop + other + particle + visibility
+40	rest: models not decided: behavior-graph + manager-loop + other + visibility
+1	rest: models not decided: behavior-graph + manager-loop + transform-varies
+2	rest: models not decided: behavior-graph + other
+24	rest: models not decided: behavior-graph + other + particle
+6	rest: models not decided: behavior-graph + other + particle + transform-varies
+1	rest: models not decided: behavior-graph + other + particle + visibility
+2	rest: models not decided: behavior-graph + other + transform-varies
+4	rest: models not decided: behavior-graph + other + transform-varies + visibility
+88	rest: models not decided: behavior-graph + other + visibility
+12	rest: models not decided: behavior-graph + texture-transform
+2	rest: models not decided: behavior-graph + texture-transform + transform-varies
+92	rest: models not decided: behavior-graph + transform-varies
+2	rest: models not decided: behavior-graph + transform-varies + visibility
+74	rest: models not decided: effect-emissive
+18	rest: models not decided: effect-emissive + other + particle + texture-transform + transform-varies
+26	rest: models not decided: effect-emissive + texture-transform
+3	rest: models not decided: effect-emissive + texture-transform + transform-varies
+21	rest: models not decided: effect-idle
+70	rest: models not decided: effect-idle + manager-loop
+3	rest: models not decided: effect-idle + manager-loop + other
+2	rest: models not decided: effect-idle + manager-loop + other + particle
+4	rest: models not decided: effect-idle + manager-loop + other + particle + visibility
+9	rest: models not decided: effect-idle + manager-loop + other + visibility
+7	rest: models not decided: effect-idle + other
+51	rest: models not decided: effect-idle + other + particle
+21	rest: models not decided: effect-idle + other + particle + visibility
+13	rest: models not decided: effect-idle + other + visibility
+10	rest: models not decided: effect-idle + transform-varies
+2	rest: models not decided: falloff
+144	rest: models not decided: falloff + texture-transform
+98	rest: models not decided: manager-loop
+2	rest: models not decided: manager-loop + other
+6	rest: models not decided: manager-loop + other + particle
+2	rest: models not decided: manager-loop + other + visibility
+15	rest: models not decided: other
+105	rest: models not decided: other + particle
+76	rest: models not decided: other + particle + texture-transform
+4	rest: models not decided: other + particle + texture-transform + transform-varies
+29	rest: models not decided: other + particle + transform-varies
+15	rest: models not decided: other + particle + transform-varies + visibility
+10	rest: models not decided: other + particle + visibility
+13	rest: models not decided: other + transform-varies
+5	rest: models not decided: other + visibility
+174	rest: models not decided: texture-transform
+13	rest: models not decided: texture-transform + transform-varies
+1033	rest: models not decided: transform-varies
+13	rest: models not decided: transform-varies + visibility
+20	rest: models not decided: visibility
+289	rest: models with tag alpha
+1189	rest: models with tag behavior-graph
+274	rest: models with tag effect-emissive
+635	rest: models with tag effect-idle
+148	rest: models with tag falloff
+413	rest: models with tag idle-shader
+996	rest: models with tag idle-transform
+1630	rest: models with tag manager-idle
+597	rest: models with tag manager-loop
+875	rest: models with tag other
+563	rest: models with tag particle
+653	rest: models with tag texture-transform
+388	rest: models with tag transform-constant
+1348	rest: models with tag transform-varies
+45	rest: models with tag unrendered
+404	rest: models with tag visibility
+651	rest: placements by tag set: alpha
+2	rest: placements by tag set: alpha + behavior-graph
+163	rest: placements by tag set: alpha + behavior-graph + effect-emissive
+0	rest: placements by tag set: alpha + behavior-graph + effect-emissive + effect-idle + manager-idle + manager-loop + other + particle + texture-transform + transform-varies
+0	rest: placements by tag set: alpha + behavior-graph + effect-emissive + effect-idle + manager-idle + manager-loop + texture-transform
+33	rest: placements by tag set: alpha + behavior-graph + effect-emissive + idle-transform + manager-idle + texture-transform + transform-varies + unrendered
+0	rest: placements by tag set: alpha + behavior-graph + effect-emissive + other + particle + texture-transform
+126	rest: placements by tag set: alpha + behavior-graph + effect-emissive + other + particle + texture-transform + transform-constant + transform-varies
+0	rest: placements by tag set: alpha + behavior-graph + effect-emissive + other + particle + transform-varies
+12	rest: placements by tag set: alpha + behavior-graph + effect-emissive + texture-transform
+6	rest: placements by tag set: alpha + behavior-graph + effect-emissive + texture-transform + transform-varies
+0	rest: placements by tag set: alpha + behavior-graph + effect-emissive + texture-transform + transform-varies + unrendered + visibility
+0	rest: placements by tag set: alpha + behavior-graph + effect-idle + idle-shader + manager-idle + manager-loop + texture-transform + transform-varies
+99	rest: placements by tag set: alpha + behavior-graph + idle-shader + idle-transform + manager-idle + texture-transform + transform-varies
+0	rest: placements by tag set: alpha + behavior-graph + other + particle + texture-transform
+0	rest: placements by tag set: alpha + behavior-graph + other + particle + texture-transform + transform-constant
+0	rest: placements by tag set: alpha + behavior-graph + other + particle + transform-varies
+13	rest: placements by tag set: alpha + behavior-graph + texture-transform
+0	rest: placements by tag set: alpha + behavior-graph + unrendered
+762	rest: placements by tag set: alpha + effect-emissive
+0	rest: placements by tag set: alpha + effect-emissive + falloff
+0	rest: placements by tag set: alpha + effect-emissive + other + particle + texture-transform + transform-varies
+0	rest: placements by tag set: alpha + effect-emissive + other + particle + texture-transform + transform-varies + visibility
+0	rest: placements by tag set: alpha + effect-emissive + other + particle + transform-varies
+1542	rest: placements by tag set: alpha + effect-emissive + texture-transform
+6	rest: placements by tag set: alpha + effect-emissive + texture-transform + transform-varies
+0	rest: placements by tag set: alpha + effect-emissive + texture-transform + transform-varies + unrendered + visibility
+0	rest: placements by tag set: alpha + effect-emissive + texture-transform + transform-varies + visibility
+0	rest: placements by tag set: alpha + effect-emissive + texture-transform + visibility
+0	rest: placements by tag set: alpha + effect-emissive + transform-varies
+0	rest: placements by tag set: alpha + effect-emissive + transform-varies + visibility
+91	rest: placements by tag set: alpha + other + particle
+42	rest: placements by tag set: alpha + other + particle + texture-transform
+0	rest: placements by tag set: alpha + other + particle + texture-transform + transform-varies + visibility
+0	rest: placements by tag set: alpha + other + particle + texture-transform + visibility
+0	rest: placements by tag set: alpha + other + particle + transform-varies
+1280	rest: placements by tag set: alpha + texture-transform
+0	rest: placements by tag set: alpha + texture-transform + transform-varies
+0	rest: placements by tag set: alpha + transform-varies
+0	rest: placements by tag set: alpha + transform-varies + visibility
+706	rest: placements by tag set: behavior-graph
+0	rest: placements by tag set: behavior-graph + effect-emissive
+0	rest: placements by tag set: behavior-graph + effect-emissive + texture-transform
+0	rest: placements by tag set: behavior-graph + effect-emissive + texture-transform + transform-varies
+1	rest: placements by tag set: behavior-graph + effect-emissive + transform-varies
+3	rest: placements by tag set: behavior-graph + effect-idle + idle-shader + idle-transform + manager-idle
+1961	rest: placements by tag set: behavior-graph + effect-idle + idle-shader + idle-transform + manager-idle + manager-loop
+124	rest: placements by tag set: behavior-graph + effect-idle + idle-shader + idle-transform + manager-idle + manager-loop + other + particle
+44	rest: placements by tag set: behavior-graph + effect-idle + idle-shader + idle-transform + manager-idle + manager-loop + other + particle + visibility
+17	rest: placements by tag set: behavior-graph + effect-idle + idle-shader + idle-transform + manager-idle + manager-loop + other + visibility
+8	rest: placements by tag set: behavior-graph + effect-idle + idle-shader + idle-transform + manager-idle + manager-loop + texture-transform
+0	rest: placements by tag set: behavior-graph + effect-idle + idle-shader + idle-transform + manager-idle + other
+177	rest: placements by tag set: behavior-graph + effect-idle + idle-shader + idle-transform + manager-idle + other + particle
+1	rest: placements by tag set: behavior-graph + effect-idle + idle-shader + idle-transform + manager-idle + other + particle + texture-transform + transform-varies + visibility
+4	rest: placements by tag set: behavior-graph + effect-idle + idle-shader + idle-transform + manager-idle + other + particle + visibility
+57	rest: placements by tag set: behavior-graph + effect-idle + idle-shader + idle-transform + manager-idle + other + visibility
+148	rest: placements by tag set: behavior-graph + effect-idle + idle-shader + manager-idle
+283	rest: placements by tag set: behavior-graph + effect-idle + idle-shader + manager-idle + manager-loop
+0	rest: placements by tag set: behavior-graph + effect-idle + idle-shader + manager-idle + manager-loop + other
+773	rest: placements by tag set: behavior-graph + effect-idle + idle-shader + manager-idle + manager-loop + other + particle
+0	rest: placements by tag set: behavior-graph + effect-idle + idle-shader + manager-idle + manager-loop + other + particle + visibility
+0	rest: placements by tag set: behavior-graph + effect-idle + idle-shader + manager-idle + manager-loop + other + transform-constant + transform-varies + visibility
+0	rest: placements by tag set: behavior-graph + effect-idle + idle-shader + manager-idle + manager-loop + other + visibility
+0	rest: placements by tag set: behavior-graph + effect-idle + idle-shader + manager-idle + manager-loop + transform-varies
+71	rest: placements by tag set: behavior-graph + effect-idle + idle-shader + manager-idle + manager-loop + unrendered
+0	rest: placements by tag set: behavior-graph + effect-idle + idle-shader + manager-idle + other + particle
+27	rest: placements by tag set: behavior-graph + effect-idle + idle-shader + manager-idle + transform-varies
+176	rest: placements by tag set: behavior-graph + effect-idle + idle-transform + manager-idle
+1481	rest: placements by tag set: behavior-graph + effect-idle + idle-transform + manager-idle + manager-loop
+0	rest: placements by tag set: behavior-graph + effect-idle + idle-transform + manager-idle + manager-loop + other
+359	rest: placements by tag set: behavior-graph + effect-idle + idle-transform + manager-idle + manager-loop + other + particle
+13	rest: placements by tag set: behavior-graph + effect-idle + idle-transform + manager-idle + manager-loop + other + particle + visibility
+0	rest: placements by tag set: behavior-graph + effect-idle + idle-transform + manager-idle + manager-loop + other + transform-varies + visibility
+35	rest: placements by tag set: behavior-graph + effect-idle + idle-transform + manager-idle + manager-loop + other + visibility
+0	rest: placements by tag set: behavior-graph + effect-idle + idle-transform + manager-idle + other
+0	rest: placements by tag set: behavior-graph + effect-idle + idle-transform + manager-idle + other + particle
+2	rest: placements by tag set: behavior-graph + effect-idle + idle-transform + manager-idle + other + particle + visibility
+0	rest: placements by tag set: behavior-graph + effect-idle + idle-transform + manager-idle + other + visibility
+22	rest: placements by tag set: behavior-graph + effect-idle + manager-idle
+1287	rest: placements by tag set: behavior-graph + effect-idle + manager-idle + manager-loop
+274	rest: placements by tag set: behavior-graph + effect-idle + manager-idle + manager-loop + other + particle
+0	rest: placements by tag set: behavior-graph + effect-idle + manager-idle + manager-loop + other + particle + visibility
+2	rest: placements by tag set: behavior-graph + effect-idle + manager-idle + manager-loop + other + texture-transform + unrendered + visibility
+31	rest: placements by tag set: behavior-graph + effect-idle + manager-idle + manager-loop + other + visibility
+0	rest: placements by tag set: behavior-graph + effect-idle + manager-idle + manager-loop + transform-constant + transform-varies
+12	rest: placements by tag set: behavior-graph + effect-idle + manager-idle + other + particle
+0	rest: placements by tag set: behavior-graph + effect-idle + manager-idle + other + particle + transform-constant
+0	rest: placements by tag set: behavior-graph + effect-idle + manager-idle + other + transform-varies + visibility
+21	rest: placements by tag set: behavior-graph + effect-idle + manager-idle + other + visibility
+118	rest: placements by tag set: behavior-graph + effect-idle + manager-idle + transform-varies
+469	rest: placements by tag set: behavior-graph + idle-shader + idle-transform + manager-idle
+30	rest: placements by tag set: behavior-graph + idle-shader + idle-transform + manager-idle + manager-loop
+0	rest: placements by tag set: behavior-graph + idle-shader + idle-transform + manager-idle + manager-loop + other
+3	rest: placements by tag set: behavior-graph + idle-shader + idle-transform + manager-idle + manager-loop + other + particle
+20	rest: placements by tag set: behavior-graph + idle-shader + idle-transform + manager-idle + manager-loop + other + visibility
+343	rest: placements by tag set: behavior-graph + idle-shader + idle-transform + manager-idle + other + particle
+3	rest: placements by tag set: behavior-graph + idle-shader + idle-transform + manager-idle + other + transform-varies + visibility
+29	rest: placements by tag set: behavior-graph + idle-shader + idle-transform + manager-idle + other + visibility
+13	rest: placements by tag set: behavior-graph + idle-shader + manager-idle
+29	rest: placements by tag set: behavior-graph + idle-shader + manager-idle + manager-loop
+0	rest: placements by tag set: behavior-graph + idle-shader + manager-idle + manager-loop + other + particle
+62	rest: placements by tag set: behavior-graph + idle-shader + manager-idle + manager-loop + other + visibility
+0	rest: placements by tag set: behavior-graph + idle-shader + manager-idle + manager-loop + transform-varies
+0	rest: placements by tag set: behavior-graph + idle-shader + manager-idle + other + particle
+8	rest: placements by tag set: behavior-graph + idle-shader + manager-idle + other + visibility
+0	rest: placements by tag set: behavior-graph + idle-shader + manager-idle + transform-varies
+1095	rest: placements by tag set: behavior-graph + idle-transform + manager-idle
+166	rest: placements by tag set: behavior-graph + idle-transform + manager-idle + manager-loop
+21	rest: placements by tag set: behavior-graph + idle-transform + manager-idle + manager-loop + other
+0	rest: placements by tag set: behavior-graph + idle-transform + manager-idle + manager-loop + other + particle
+1	rest: placements by tag set: behavior-graph + idle-transform + manager-idle + manager-loop + other + particle + transform-varies
+0	rest: placements by tag set: behavior-graph + idle-transform + manager-idle + manager-loop + other + particle + visibility
+10	rest: placements by tag set: behavior-graph + idle-transform + manager-idle + manager-loop + other + visibility
+12	rest: placements by tag set: behavior-graph + idle-transform + manager-idle + other + particle
+0	rest: placements by tag set: behavior-graph + idle-transform + manager-idle + other + particle + visibility
+316	rest: placements by tag set: behavior-graph + idle-transform + manager-idle + other + visibility
+122	rest: placements by tag set: behavior-graph + idle-transform + manager-idle + transform-varies
+76	rest: placements by tag set: behavior-graph + manager-idle + manager-loop
+1	rest: placements by tag set: behavior-graph + manager-idle + manager-loop + other
+4	rest: placements by tag set: behavior-graph + manager-idle + manager-loop + other + particle
+0	rest: placements by tag set: behavior-graph + manager-idle + manager-loop + other + visibility
+23	rest: placements by tag set: behavior-graph + manager-idle + other + particle
+0	rest: placements by tag set: behavior-graph + manager-idle + other + transform-varies + visibility
+4	rest: placements by tag set: behavior-graph + manager-idle + other + visibility
+4	rest: placements by tag set: behavior-graph + other
+57	rest: placements by tag set: behavior-graph + other + particle
+46	rest: placements by tag set: behavior-graph + other + particle + transform-varies
+9	rest: placements by tag set: behavior-graph + other + transform-varies
+0	rest: placements by tag set: behavior-graph + texture-transform
+1	rest: placements by tag set: behavior-graph + texture-transform + transform-constant
+2	rest: placements by tag set: behavior-graph + texture-transform + transform-varies
+0	rest: placements by tag set: behavior-graph + texture-transform + unrendered
+3	rest: placements by tag set: behavior-graph + transform-constant
+101	rest: placements by tag set: behavior-graph + transform-constant + transform-varies
+1383	rest: placements by tag set: behavior-graph + transform-varies
+0	rest: placements by tag set: behavior-graph + transform-varies + visibility
+2	rest: placements by tag set: behavior-graph + unrendered
+2162	rest: placements by tag set: effect-emissive
+5	rest: placements by tag set: effect-emissive + other + particle + texture-transform + transform-varies
+34	rest: placements by tag set: effect-emissive + texture-transform
+0	rest: placements by tag set: effect-emissive + texture-transform + transform-constant + transform-varies
+0	rest: placements by tag set: effect-emissive + texture-transform + transform-varies
+0	rest: placements by tag set: effect-emissive + transform-constant
+0	rest: placements by tag set: effect-idle + idle-shader + idle-transform + manager-idle
+0	rest: placements by tag set: effect-idle + idle-shader + idle-transform + manager-idle + manager-loop
+0	rest: placements by tag set: effect-idle + idle-shader + idle-transform + manager-idle + manager-loop + other
+0	rest: placements by tag set: effect-idle + idle-shader + idle-transform + manager-idle + manager-loop + other + particle
+0	rest: placements by tag set: effect-idle + idle-shader + idle-transform + manager-idle + other + particle
+0	rest: placements by tag set: effect-idle + idle-shader + idle-transform + manager-idle + other + particle + visibility
+0	rest: placements by tag set: effect-idle + idle-shader + idle-transform + manager-idle + other + visibility
+0	rest: placements by tag set: effect-idle + idle-shader + idle-transform + manager-idle + transform-varies
+0	rest: placements by tag set: effect-idle + idle-shader + manager-idle + manager-loop
+0	rest: placements by tag set: effect-idle + idle-shader + manager-idle + manager-loop + other + particle
+0	rest: placements by tag set: effect-idle + idle-shader + manager-idle + manager-loop + other + visibility
+0	rest: placements by tag set: effect-idle + idle-shader + manager-idle + other + particle + visibility
+391	rest: placements by tag set: effect-idle + idle-transform + manager-idle
+0	rest: placements by tag set: effect-idle + idle-transform + manager-idle + manager-loop
+0	rest: placements by tag set: effect-idle + idle-transform + manager-idle + manager-loop + other + visibility
+0	rest: placements by tag set: effect-idle + idle-transform + manager-idle + other
+0	rest: placements by tag set: effect-idle + idle-transform + manager-idle + other + particle
+0	rest: placements by tag set: effect-idle + idle-transform + manager-idle + other + particle + visibility
+0	rest: placements by tag set: effect-idle + idle-transform + manager-idle + other + visibility
+349	rest: placements by tag set: effect-idle + manager-idle
+15040	rest: placements by tag set: effect-idle + manager-idle + manager-loop
+0	rest: placements by tag set: effect-idle + manager-idle + manager-loop + other
+121	rest: placements by tag set: effect-idle + manager-idle + manager-loop + other + particle + visibility
+803	rest: placements by tag set: effect-idle + manager-idle + manager-loop + other + visibility
+0	rest: placements by tag set: effect-idle + manager-idle + other
+0	rest: placements by tag set: effect-idle + manager-idle + other + particle
+0	rest: placements by tag set: effect-idle + manager-idle + other + visibility
+0	rest: placements by tag set: falloff
+407	rest: placements by tag set: falloff + texture-transform
+164	rest: placements by tag set: idle-shader + idle-transform + manager-idle
+0	rest: placements by tag set: idle-shader + idle-transform + manager-idle + manager-loop + other
+0	rest: placements by tag set: idle-shader + idle-transform + manager-idle + other + particle
+0	rest: placements by tag set: idle-shader + idle-transform + manager-idle + other + particle + visibility
+0	rest: placements by tag set: idle-shader + idle-transform + manager-idle + other + visibility
+0	rest: placements by tag set: idle-shader + idle-transform + manager-idle + transform-varies
+0	rest: placements by tag set: idle-shader + manager-idle
+191	rest: placements by tag set: idle-shader + manager-idle + manager-loop
+13	rest: placements by tag set: idle-shader + manager-idle + manager-loop + other + visibility
+0	rest: placements by tag set: idle-shader + manager-idle + other + particle
+21747	rest: placements by tag set: idle-transform + manager-idle
+122	rest: placements by tag set: idle-transform + manager-idle + manager-loop
+0	rest: placements by tag set: idle-transform + manager-idle + manager-loop + other + particle
+0	rest: placements by tag set: idle-transform + manager-idle + other + particle
+0	rest: placements by tag set: idle-transform + manager-idle + other + particle + visibility
+0	rest: placements by tag set: idle-transform + manager-idle + other + visibility
+1	rest: placements by tag set: idle-transform + manager-idle + transform-varies
+56	rest: placements by tag set: idle-transform + manager-idle + unrendered
+1011	rest: placements by tag set: manager-idle + manager-loop
+1	rest: placements by tag set: manager-idle + manager-loop + other + particle
+696	rest: placements by tag set: manager-idle + manager-loop + other + visibility
+1	rest: placements by tag set: manager-idle + other + particle
+0	rest: placements by tag set: manager-idle + other + particle + visibility
+0	rest: placements by tag set: manager-idle + other + visibility
+0	rest: placements by tag set: other
+716	rest: placements by tag set: other + particle
+582	rest: placements by tag set: other + particle + texture-transform
+0	rest: placements by tag set: other + particle + texture-transform + transform-constant
+0	rest: placements by tag set: other + particle + texture-transform + transform-constant + transform-varies
+1	rest: placements by tag set: other + particle + texture-transform + transform-varies
+803	rest: placements by tag set: other + particle + transform-varies
+0	rest: placements by tag set: other + particle + transform-varies + visibility
+13	rest: placements by tag set: other + particle + unrendered
+0	rest: placements by tag set: other + transform-constant
+0	rest: placements by tag set: other + transform-constant + transform-varies
+344	rest: placements by tag set: other + transform-varies
+5869	rest: placements by tag set: texture-transform
+48	rest: placements by tag set: texture-transform + transform-constant
+1	rest: placements by tag set: texture-transform + transform-constant + transform-varies
+15	rest: placements by tag set: texture-transform + transform-varies
+50	rest: placements by tag set: texture-transform + unrendered
+605	rest: placements by tag set: transform-constant
+301	rest: placements by tag set: transform-constant + transform-varies
+0	rest: placements by tag set: transform-constant + transform-varies + unrendered
+0	rest: placements by tag set: transform-constant + transform-varies + visibility
+5680	rest: placements by tag set: transform-varies
+0	rest: placements by tag set: transform-varies + unrendered
+0	rest: placements by tag set: transform-varies + visibility
+35	rest: placements by tag set: unrendered
+10	rest: placements by tag set: unrendered + visibility
+86	rest: placements by tag set: visibility
+22607	rest: placements decided by the rest rules
+164	rest: placements decided, relying on idle-shader
+21967	rest: placements decided, relying on idle-transform
+21967	rest: placements decided, relying on manager-idle
+605	rest: placements decided, relying on transform-constant
+91	rest: placements decided, relying on unrendered
+651	rest: placements not decided: alpha
+2	rest: placements not decided: alpha + behavior-graph
+163	rest: placements not decided: alpha + behavior-graph + effect-emissive
+0	rest: placements not decided: alpha + behavior-graph + effect-emissive + effect-idle + manager-loop + other + particle + texture-transform + transform-varies
+0	rest: placements not decided: alpha + behavior-graph + effect-emissive + effect-idle + manager-loop + texture-transform
+0	rest: placements not decided: alpha + behavior-graph + effect-emissive + other + particle + texture-transform
+126	rest: placements not decided: alpha + behavior-graph + effect-emissive + other + particle + texture-transform + transform-varies
+0	rest: placements not decided: alpha + behavior-graph + effect-emissive + other + particle + transform-varies
+12	rest: placements not decided: alpha + behavior-graph + effect-emissive + texture-transform
+39	rest: placements not decided: alpha + behavior-graph + effect-emissive + texture-transform + transform-varies
+0	rest: placements not decided: alpha + behavior-graph + effect-emissive + texture-transform + transform-varies + visibility
+0	rest: placements not decided: alpha + behavior-graph + effect-idle + manager-loop + texture-transform + transform-varies
+0	rest: placements not decided: alpha + behavior-graph + other + particle + texture-transform
+0	rest: placements not decided: alpha + behavior-graph + other + particle + transform-varies
+13	rest: placements not decided: alpha + behavior-graph + texture-transform
+99	rest: placements not decided: alpha + behavior-graph + texture-transform + transform-varies
+762	rest: placements not decided: alpha + effect-emissive
+0	rest: placements not decided: alpha + effect-emissive + falloff
+0	rest: placements not decided: alpha + effect-emissive + other + particle + texture-transform + transform-varies
+0	rest: placements not decided: alpha + effect-emissive + other + particle + texture-transform + transform-varies + visibility
+0	rest: placements not decided: alpha + effect-emissive + other + particle + transform-varies
+1542	rest: placements not decided: alpha + effect-emissive + texture-transform
+6	rest: placements not decided: alpha + effect-emissive + texture-transform + transform-varies
+0	rest: placements not decided: alpha + effect-emissive + texture-transform + transform-varies + visibility
+0	rest: placements not decided: alpha + effect-emissive + texture-transform + visibility
+0	rest: placements not decided: alpha + effect-emissive + transform-varies
+0	rest: placements not decided: alpha + effect-emissive + transform-varies + visibility
+91	rest: placements not decided: alpha + other + particle
+42	rest: placements not decided: alpha + other + particle + texture-transform
+0	rest: placements not decided: alpha + other + particle + texture-transform + transform-varies + visibility
+0	rest: placements not decided: alpha + other + particle + texture-transform + visibility
+0	rest: placements not decided: alpha + other + particle + transform-varies
+1280	rest: placements not decided: alpha + texture-transform
+0	rest: placements not decided: alpha + texture-transform + transform-varies
+0	rest: placements not decided: alpha + transform-varies
+0	rest: placements not decided: alpha + transform-varies + visibility
+2288	rest: placements not decided: behavior-graph
+0	rest: placements not decided: behavior-graph + effect-emissive
+0	rest: placements not decided: behavior-graph + effect-emissive + texture-transform
+0	rest: placements not decided: behavior-graph + effect-emissive + texture-transform + transform-varies
+1	rest: placements not decided: behavior-graph + effect-emissive + transform-varies
+349	rest: placements not decided: behavior-graph + effect-idle
+5083	rest: placements not decided: behavior-graph + effect-idle + manager-loop
+0	rest: placements not decided: behavior-graph + effect-idle + manager-loop + other
+1530	rest: placements not decided: behavior-graph + effect-idle + manager-loop + other + particle
+57	rest: placements not decided: behavior-graph + effect-idle + manager-loop + other + particle + visibility
+2	rest: placements not decided: behavior-graph + effect-idle + manager-loop + other + texture-transform + visibility
+0	rest: placements not decided: behavior-graph + effect-idle + manager-loop + other + transform-varies + visibility
+83	rest: placements not decided: behavior-graph + effect-idle + manager-loop + other + visibility
+8	rest: placements not decided: behavior-graph + effect-idle + manager-loop + texture-transform
+0	rest: placements not decided: behavior-graph + effect-idle + manager-loop + transform-varies
+0	rest: placements not decided: behavior-graph + effect-idle + other
+189	rest: placements not decided: behavior-graph + effect-idle + other + particle
+1	rest: placements not decided: behavior-graph + effect-idle + other + particle + texture-transform + transform-varies + visibility
+6	rest: placements not decided: behavior-graph + effect-idle + other + particle + visibility
+0	rest: placements not decided: behavior-graph + effect-idle + other + transform-varies + visibility
+78	rest: placements not decided: behavior-graph + effect-idle + other + visibility
+145	rest: placements not decided: behavior-graph + effect-idle + transform-varies
+301	rest: placements not decided: behavior-graph + manager-loop
+22	rest: placements not decided: behavior-graph + manager-loop + other
+7	rest: placements not decided: behavior-graph + manager-loop + other + particle
+1	rest: placements not decided: behavior-graph + manager-loop + other + particle + transform-varies
+0	rest: placements not decided: behavior-graph + manager-loop + other + particle + visibility
+92	rest: placements not decided: behavior-graph + manager-loop + other + visibility
+0	rest: placements not decided: behavior-graph + manager-loop + transform-varies
+4	rest: placements not decided: behavior-graph + other
+435	rest: placements not decided: behavior-graph + other + particle
+46	rest: placements not decided: behavior-graph + other + particle + transform-varies
+0	rest: placements not decided: behavior-graph + other + particle + visibility
+9	rest: placements not decided: behavior-graph + other + transform-varies
+3	rest: placements not decided: behavior-graph + other + transform-varies + visibility
+357	rest: placements not decided: behavior-graph + other + visibility
+1	rest: placements not decided: behavior-graph + texture-transform
+2	rest: placements not decided: behavior-graph + texture-transform + transform-varies
+1606	rest: placements not decided: behavior-graph + transform-varies
+0	rest: placements not decided: behavior-graph + transform-varies + visibility
+2162	rest: placements not decided: effect-emissive
+5	rest: placements not decided: effect-emissive + other + particle + texture-transform + transform-varies
+34	rest: placements not decided: effect-emissive + texture-transform
+0	rest: placements not decided: effect-emissive + texture-transform + transform-varies
+740	rest: placements not decided: effect-idle
+15040	rest: placements not decided: effect-idle + manager-loop
+0	rest: placements not decided: effect-idle + manager-loop + other
+0	rest: placements not decided: effect-idle + manager-loop + other + particle
+121	rest: placements not decided: effect-idle + manager-loop + other + particle + visibility
+803	rest: placements not decided: effect-idle + manager-loop + other + visibility
+0	rest: placements not decided: effect-idle + other
+0	rest: placements not decided: effect-idle + other + particle
+0	rest: placements not decided: effect-idle + other + particle + visibility
+0	rest: placements not decided: effect-idle + other + visibility
+0	rest: placements not decided: effect-idle + transform-varies
+0	rest: placements not decided: falloff
+407	rest: placements not decided: falloff + texture-transform
+1324	rest: placements not decided: manager-loop
+0	rest: placements not decided: manager-loop + other
+1	rest: placements not decided: manager-loop + other + particle
+709	rest: placements not decided: manager-loop + other + visibility
+0	rest: placements not decided: other
+730	rest: placements not decided: other + particle
+582	rest: placements not decided: other + particle + texture-transform
+1	rest: placements not decided: other + particle + texture-transform + transform-varies
+803	rest: placements not decided: other + particle + transform-varies
+0	rest: placements not decided: other + particle + transform-varies + visibility
+0	rest: placements not decided: other + particle + visibility
+344	rest: placements not decided: other + transform-varies
+0	rest: placements not decided: other + visibility
+5967	rest: placements not decided: texture-transform
+16	rest: placements not decided: texture-transform + transform-varies
+5982	rest: placements not decided: transform-varies
+0	rest: placements not decided: transform-varies + visibility
+96	rest: placements not decided: visibility
+4828	rest: placements with tag alpha
+13160	rest: placements with tag behavior-graph
+4852	rest: placements with tag effect-emissive
+24235	rest: placements with tag effect-idle
+407	rest: placements with tag falloff
+5174	rest: placements with tag idle-shader
+29715	rest: placements with tag idle-transform
+51230	rest: placements with tag manager-idle
+25184	rest: placements with tag manager-loop
+7280	rest: placements with tag other
+4774	rest: placements with tag particle
+10185	rest: placements with tag texture-transform
+1186	rest: placements with tag transform-constant
+9235	rest: placements with tag transform-varies
+272	rest: placements with tag unrendered
+2408	rest: placements with tag visibility
+1495	sequence controlled block: BSEffectShaderPropertyColorController
+13539	sequence controlled block: BSEffectShaderPropertyFloatController
+479	sequence controlled block: BSLightingShaderPropertyColorController
+3324	sequence controlled block: BSLightingShaderPropertyFloatController
+20	sequence controlled block: BSLightingShaderPropertyUShortController
+583	sequence controlled block: BSNiAlphaPropertyTestRefController
+498	sequence controlled block: BSProceduralLightningController
+639	sequence controlled block: NiLightColorController
+679	sequence controlled block: NiLightDimmerController
+611	sequence controlled block: NiLightRadiusController
+5482	sequence controlled block: NiPSysEmitterCtlr
+3	sequence controlled block: NiPSysEmitterDeclinationVarCtlr
+182	sequence controlled block: NiPSysEmitterInitialRadiusCtlr
+118	sequence controlled block: NiPSysEmitterLifeSpanCtlr
+329	sequence controlled block: NiPSysEmitterSpeedCtlr
+91	sequence controlled block: NiPSysGravityStrengthCtlr
+12	sequence controlled block: NiPSysInitialRotSpeedCtlr
+12	sequence controlled block: NiPSysInitialRotSpeedVarCtlr
+6226	sequence controlled block: NiPSysModifierActiveCtlr
+26779	sequence controlled block: NiTransformController
+5668	sequence controlled block: NiVisController
+1001	sequence cycle type: Some(0)
+5473	sequence cycle type: Some(2)
+49	sequence: interpolator without a node
+9680	sequence: no transform data
+12040	sequence: rotation vs first key: XYZ keys, not compared
+694	sequence: rotation vs first key: differs
+1585	sequence: rotation vs first key: equal
+2713	sequence: rotation vs first key: no value
+12040	sequence: rotation vs key at start time: XYZ keys, not compared
+694	sequence: rotation vs key at start time: differs
+1585	sequence: rotation vs key at start time: equal
+2713	sequence: rotation vs key at start time: no value
+370	sequence: rotation vs pose: differs
+6874	sequence: rotation vs pose: equal
+1840	sequence: rotation vs pose: matches as both readings (symmetric)
+5034	sequence: rotation vs pose: matches as rows of the quaternion matrix
+19468	sequence: rotation vs pose: no value
+283	sequence: scale vs first key: differs
+3428	sequence: scale vs first key: equal
+13321	sequence: scale vs first key: no value
+283	sequence: scale vs key at start time: differs
+3428	sequence: scale vs key at start time: equal
+13321	sequence: scale vs key at start time: no value
+7578	sequence: scale vs pose: equal
+19134	sequence: scale vs pose: no value
+18	sequence: transform interpolator type NiPathInterpolator
+1717	sequence: translation equal to no key
+4355	sequence: translation equal to some key
+2369	sequence: translation vs first key: differs
+3703	sequence: translation vs first key: equal
+10960	sequence: translation vs first key: no value
+2361	sequence: translation vs key at start time: differs
+3701	sequence: translation vs key at start time: equal
+10970	sequence: translation vs key at start time: no value
+1874	sequence: translation vs pose: differs
+10337	sequence: translation vs pose: equal
+14501	sequence: translation vs pose: no value
+
+## worst differences (largest absolute word difference)
+1.319264	controller: rotation vs first key
+1.319264	controller: rotation vs key at start time
+1.000001	controller: rotation vs pose
+0.000000	controller: scale vs first key
+0.000000	controller: scale vs key at start time
+0.000000	controller: scale vs pose
+3485.930664	controller: translation vs first key
+3485.930664	controller: translation vs key at start time
+81.325546	controller: translation vs pose
+1.997085	sequence: rotation vs first key
+1.997085	sequence: rotation vs key at start time
+1.993044	sequence: rotation vs pose
+24.000004	sequence: scale vs first key
+24.000004	sequence: scale vs key at start time
+0.000000	sequence: scale vs pose
+47554.492188	sequence: translation vs first key
+47554.492188	sequence: translation vs key at start time
+33792.003906	sequence: translation vs pose
