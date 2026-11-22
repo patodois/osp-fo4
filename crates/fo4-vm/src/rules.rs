@@ -169,7 +169,7 @@ pub const XESP_BIT1: &str = "xesp_flag_bit1_not_presence_v1";
 pub const XESP_PROPAGATES: &str = "xesp_script_change_propagates_v1";
 
 /// Every rule above.
-pub const ALL: [&str; 92] = [
+pub const ALL: [&str; 101] = [
     ARITHMETIC,
     COMPARE,
     NOT_COPY_CAST,
@@ -262,6 +262,15 @@ pub const ALL: [&str; 92] = [
     SHARED_RESPONSE,
     DPDS_SECONDS,
     PLAYER_CHOICE,
+    EVENT_ALIASES,
+    SETTER_EVENT_ENTRY,
+    SETTER_SCAN,
+    SETTER_FIELDS,
+    SCENE_RECHECK,
+    COND_FN_550_CLOCK,
+    START_SCENE_ACTION,
+    ALIAS_LOCATION_REF,
+    EVENT_OPEN,
 ];
 
 /// The rule an opcode's meaning rests on; `None` for an opcode without a
@@ -327,6 +336,38 @@ pub const DPDS_SECONDS: &str = "audio_xwma_dpds_seconds_v1";
 /// Player dialogue under a chosen choice: the player's topic and the
 /// answer topic it pairs with, played one after the other.
 pub const PLAYER_CHOICE: &str = "scene_player_dialogue_choice_v1";
+
+/// An event of a placed reference also runs on the scripts of every quest
+/// alias holding it, after the reference's own scripts.
+pub const EVENT_ALIASES: &str = "vm_event_alias_scripts_v1";
+/// The stage-setter table: an engine event runs the script function of its
+/// name, and calls on `self` and parent calls carry it to the functions
+/// they call.
+pub const SETTER_EVENT_ENTRY: &str = "setter_event_entry_v1";
+/// The stage-setter table: a call's quest and stage resolved through the
+/// attachment's VMAD values, struct members, array elements and the calls
+/// of functions passing a parameter on.
+pub const SETTER_SCAN: &str = "setter_static_scan_v1";
+/// The INFO field TIQS and the SCEN and phase field SCQS set a stage of
+/// the owning quest.
+pub const SETTER_FIELDS: &str = "record_set_stage_fields_v1";
+
+/// A scene stopped on its phase's conditions offers the phase again when
+/// the run's quest state changes.
+pub const SCENE_RECHECK: &str = "scene_condition_recheck_v1";
+
+/// Function 550 answered from the actions the scene clock completed.
+pub const COND_FN_550_CLOCK: &str = "cond_fn_550_clock_actions_v1";
+
+/// A start-scene action (kind 4) starts the scene its LCEP names.
+pub const START_SCENE_ACTION: &str = "scene_start_scene_action_v1";
+
+/// A reference alias filled from a forced location's special reference of
+/// its location ref type.
+pub const ALIAS_LOCATION_REF: &str = "quest_alias_location_ref_v1";
+
+/// A placed reference opening runs OnOpen with the opener on its scripts.
+pub const EVENT_OPEN: &str = "vm_event_open_v1";
 
 /// The registry the rules are checked against.
 pub const REGISTRY: &str = include_str!("../../../spec/hypotheses.tsv");

@@ -440,7 +440,7 @@ fn bind(
 /// The arguments an event function receives: none, or the player handle
 /// for one object parameter (`vm_event_handlers_v1`). `None` when the
 /// function takes other parameters.
-fn event_args(vm: &mut Vm<'_>, params: &[(String, String)]) -> Option<Vec<Val>> {
+pub(crate) fn event_args(vm: &mut Vm<'_>, params: &[(String, String)]) -> Option<Vec<Val>> {
     match params {
         [] => Some(Vec::new()),
         [(_, t)]

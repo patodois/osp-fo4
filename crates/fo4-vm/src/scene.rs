@@ -92,6 +92,9 @@ pub struct PhaseInfo {
     pub end: Option<String>,
     /// Kinds of the actions whose start and end phases include this one.
     pub actions: Vec<u16>,
+    /// SCQS: the stages of the owning quest set when the phase begins and
+    /// when it completes (`record_set_stage_fields_v1`), -1 for none.
+    pub stage_fields: [i16; 2],
 }
 
 /// The player's topics of a player dialogue action (kind 3) with the
@@ -109,6 +112,8 @@ pub const PLAYER_CHOICES: [([u8; 4], [u8; 4]); 4] = [
 #[derive(Debug, Clone, Default)]
 pub struct ActionInfo {
     pub kind: u16,
+    /// INAM: the action's index, as conditions of function 550 name it.
+    pub index: u32,
     pub start: usize,
     pub end: usize,
     /// ALID: the speaker or actor alias, -1 for none.
@@ -121,6 +126,8 @@ pub struct ActionInfo {
     pub low: Option<f32>,
     /// Kind 0: the topic DATA names.
     pub topic: Option<FormKey>,
+    /// Kind 4: the scene LCEP names.
+    pub scene: Option<FormKey>,
     /// Kind 3: the topics of [`PLAYER_CHOICES`], resolved.
     pub choices: Vec<(Option<FormKey>, Option<FormKey>)>,
 }
@@ -133,6 +140,7 @@ impl ActionInfo {
         };
         ActionInfo {
             kind: a.kind,
+            index: a.index,
             start: a.start as usize,
             end: a.end as usize,
             alias: a.alias,
@@ -140,6 +148,7 @@ impl ActionInfo {
             seconds: (a.kind == TIMER).then(|| a.float(b"SNAM")).flatten(),
             low: (a.kind == TIMER).then(|| a.float(b"TNAM")).flatten(),
             topic: (a.kind == LINE).then(|| topic(b"DATA")).flatten(),
+            scene: (a.kind == START_SCENE).then(|| topic(b"LCEP")).flatten(),
             choices: if a.kind == PLAYER_DIALOGUE {
                 PLAYER_CHOICES
                     .iter()
@@ -157,6 +166,7 @@ pub const LINE: u16 = 0;
 pub const PACKAGE: u16 = 1;
 pub const TIMER: u16 = 2;
 pub const PLAYER_DIALOGUE: u16 = 3;
+pub const START_SCENE: u16 = 4;
 
 /// What the records say about one scene.
 #[derive(Debug, Clone)]
@@ -171,6 +181,9 @@ pub struct SceneInfo {
     pub phases: Vec<PhaseInfo>,
     /// Every action, in stored order.
     pub actions: Vec<ActionInfo>,
+    /// The scene's SCQS: the stages of the owning quest set when the scene
+    /// begins and when it ends (`record_set_stage_fields_v1`), -1 for none.
+    pub stage_fields: [i16; 2],
     /// Phase fragments whose flag byte is neither begin nor end, or whose
     /// phase the record does not hold (not run, counted).
     pub unplaced: usize,
@@ -205,8 +218,16 @@ impl SceneInfo {
                     .filter(|a| (a.start as usize) <= i && i <= a.end as usize)
                     .map(|a| a.kind)
                     .collect(),
+                stage_fields: p.scqs.as_deref().and_then(stage_pair).unwrap_or([-1, -1]),
             })
             .collect();
+        let stage_fields = s
+            .fields
+            .iter()
+            .find(|f| f.place == "scene" && f.tag == *b"SCQS")
+            .and_then(|f| r.subrecords.get(f.index))
+            .and_then(|x| stage_pair(r.data(x)))
+            .unwrap_or([-1, -1]);
         let (mut begin, mut end, mut unplaced) = (None, None, 0);
         if let Some(i) = s.vmad {
             let sub = &r.subrecords[i];
@@ -239,8 +260,38 @@ impl SceneInfo {
             phases,
             actions: s.actions.iter().map(ActionInfo::of).collect(),
             unplaced,
+            stage_fields,
         }))
     }
+}
+
+/// Two little-endian i16 of a four-byte stage field.
+fn stage_pair(d: &[u8]) -> Option<[i16; 2]> {
+    let d: [u8; 4] = d.try_into().ok()?;
+    Some([
+        i16::from_le_bytes([d[0], d[1]]),
+        i16::from_le_bytes([d[2], d[3]]),
+    ])
+}
+
+/// Sets a stage a scene or phase field names on the scene's owning quest,
+/// when the fields are read (`Scenes::stage_fields`,
+/// `record_set_stage_fields_v1`): as `SetCurrentStageID` would, the jobs
+/// it brings queued behind the step running now.
+fn field_stage(h: &mut QuestHost<'_>, w: &mut World, i: &SceneInfo, n: i16) {
+    if !w.scenes.stage_fields || n < 0 {
+        return;
+    }
+    let Some(q) = i.quest.clone() else { return };
+    h.using(rules::SETTER_FIELDS);
+    let b = Budget::new(h.data.max_memory);
+    let Ok(qo) = record_object(w, h.data.store, &q, "quest", &b) else {
+        return;
+    };
+    let Some(qi) = quest::info(h.data.store, h.data.max_memory, w, qo) else {
+        return;
+    };
+    let _ = h.set_stage(w, qo, &qi, i32::from(n));
 }
 
 /// The state of one scene.
@@ -312,6 +363,10 @@ pub struct Clock {
     pub assume_player_choice: Option<usize>,
     /// Caller assumption: a package action completes as soon as it starts.
     pub assume_packages: bool,
+    /// Caller assumption: a start-scene action (kind 4) completes as soon
+    /// as it starts, and starts the scene its LCEP names
+    /// (`scene_start_scene_action_v1`).
+    pub assume_start_scenes: bool,
 }
 
 /// One started action of a playing scene.
@@ -346,6 +401,14 @@ pub struct Scenes {
     pub clock: Clock,
     /// Started actions by (scene handle, action index).
     pub actions: BTreeMap<(ObjId, usize), ActionRun>,
+    /// Answer condition function 550 from the actions the clock completed
+    /// (`cond_fn_550_clock_actions_v1`; `quest_run --cond-550-clock`). Off
+    /// by default: no action counts as complete, as before.
+    pub action_conditions: bool,
+    /// Apply the scene's and its phases' SCQS stage fields
+    /// (`record_set_stage_fields_v1`; `quest_run --stage-fields`). Off by
+    /// default: no record field sets a stage, as before.
+    pub stage_fields: bool,
 }
 
 /// What the groups of kind 10 hold: scenes by quest, INFO owners.
@@ -474,6 +537,7 @@ pub(crate) fn start(
             Change::Started
         },
     ));
+    field_stage(h, w, i, i.stage_fields[0]);
     h.using(rules::SCENE_PHASES);
     if let Some(f) = &i.begin {
         queue(w, o, Step::Fragment(f.clone(), "begin".into()));
@@ -552,6 +616,7 @@ fn step(h: &mut QuestHost<'_>, w: &mut World, o: ObjId, i: &Rc<SceneInfo>, compl
         state(w, i).playing = Some(false);
         clear_actions(w, o);
         w.scenes.log.push((o, Change::Ended));
+        field_stage(h, w, i, i.stage_fields[1]);
         return;
     };
     let wait = |w: &mut World, why: String| {
@@ -573,6 +638,7 @@ fn step(h: &mut QuestHost<'_>, w: &mut World, o: ObjId, i: &Rc<SceneInfo>, compl
             ),
             Truth::True => {
                 w.scenes.log.push((o, Change::PhaseEntered(p)));
+                field_stage(h, w, i, phase.stage_fields[0]);
                 if w.scenes.clock.on {
                     start_actions(h, w, o, i, p);
                 }
@@ -621,6 +687,7 @@ fn step(h: &mut QuestHost<'_>, w: &mut World, o: ObjId, i: &Rc<SceneInfo>, compl
         Truth::True => {
             state(w, i).next = p + 1;
             w.scenes.log.push((o, Change::PhaseCompleted(p)));
+            field_stage(h, w, i, phase.stage_fields[1]);
             if let Some(f) = &phase.end {
                 queue(w, o, Step::Fragment(f.clone(), format!("phase {p} end")));
             }
@@ -734,6 +801,10 @@ fn action_time(
             Some(0.0),
             "package: assumed complete from the command line".into(),
         ),
+        START_SCENE if clock.assume_start_scenes => (
+            Some(0.0),
+            "start-scene: assumed complete from the command line".into(),
+        ),
         PLAYER_DIALOGUE => match clock.assume_player_choice {
             None => (None, "player dialogue: waits on the player".into()),
             Some(n) => {
@@ -793,7 +864,49 @@ fn start_actions(h: &mut QuestHost<'_>, w: &mut World, o: ObjId, i: &SceneInfo, 
                 .log
                 .push((o, Change::ActionCompleted(j, a.kind, now)));
         }
+        // Under the caller's assumption a start-scene action starts the
+        // scene its LCEP names (`scene_start_scene_action_v1`).
+        if a.kind == START_SCENE && w.scenes.clock.assume_start_scenes {
+            h.using(rules::START_SCENE_ACTION);
+            let b = Budget::new(h.data.max_memory);
+            let Some(k) = a.scene.clone() else { continue };
+            let Ok(so) = record_object(w, h.data.store, &k, "scene", &b) else {
+                continue;
+            };
+            if let Some(si) = info(h.data.store, h.data.max_memory, w, so) {
+                let _ = start(h, w, so, &si, false);
+            }
+        }
     }
+}
+
+/// Offers again the phase of every scene stopped on its start or
+/// completion conditions (`scene_condition_recheck_v1`): a completion step
+/// for a scene waiting on its completion conditions, an entry step for one
+/// waiting on its start conditions. A caller calls it after the run's
+/// quest state changed (`quest_run --scene-recheck`); without it a scene
+/// stopped on conditions stays stopped, as before. Returns the scenes
+/// offered again.
+pub fn recheck(w: &mut World) -> usize {
+    let mut last: BTreeMap<ObjId, Option<Step>> = BTreeMap::new();
+    for (o, ch) in &w.scenes.log {
+        let step = match ch {
+            Change::Waiting(_, why) if why.starts_with("completion conditions") => {
+                Some(Step::Complete)
+            }
+            Change::Waiting(_, why) if why.starts_with("start conditions") => Some(Step::Enter),
+            _ => None,
+        };
+        last.insert(*o, step);
+    }
+    let mut n = 0;
+    for (o, step) in last {
+        if let Some(step) = step {
+            queue(w, o, step);
+            n += 1;
+        }
+    }
+    n
 }
 
 /// Real seconds from now until the next started action is due, when one

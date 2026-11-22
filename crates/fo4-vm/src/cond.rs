@@ -228,6 +228,11 @@ pub trait Facts {
         let _ = (scene, action);
         Err("scene state is not read here")
     }
+    /// The rule the answer of function 550 rests on besides its own, when
+    /// it reads the scene clock's actions (`cond_fn_550_clock_actions_v1`).
+    fn action_rule(&self) -> Option<&'static str> {
+        None
+    }
     /// How many actors of a base have died (function 84).
     fn dead_count(&mut self, base: &FormKey) -> Result<f32, &'static str> {
         let _ = base;
@@ -435,6 +440,11 @@ fn eval_with_text(
     used.insert(rule);
     if f == 72 {
         used.insert(rules::COND_RUN_ON);
+    }
+    if f == 550 {
+        if let Some(r) = facts.action_rule() {
+            used.insert(r);
+        }
     }
     let v = match function_value(c, cis2, ctx, file, facts) {
         Ok(v) => v,

@@ -8,6 +8,7 @@ mod events;
 mod quest;
 mod scene;
 mod scev;
+mod stage;
 
 use fo4_pex::{
     Function, Header, Instruction, Member, NamedFunction, Object, Pex, Property, Sections, State,

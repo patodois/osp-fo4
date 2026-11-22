@@ -71,6 +71,12 @@ pub struct QuestInfo {
     pub objectives: BTreeSet<u16>,
     /// Reference aliases (ALST) by id, with their ALFR when they have one.
     pub reference_aliases: BTreeMap<u32, Option<FormKey>>,
+    /// Reference aliases filled from a location alias with a location ref
+    /// type (ALFA, ALRT): the reference the forced location's special
+    /// reference list (LCSR) names for that type, or why none
+    /// (`quest_alias_location_ref_v1`; read only when a run turns
+    /// [`Quests::location_fills`] on).
+    pub location_refs: BTreeMap<u32, Result<FormKey, &'static str>>,
     /// The VMAD block's fragment script, lower case.
     pub fragment_script: Option<String>,
     /// Fragments naming a stage the record does not hold.
@@ -82,6 +88,25 @@ pub struct QuestInfo {
     pub event_conditions: Vec<Condition>,
 }
 impl QuestInfo {
+    /// The reference an alias holds while the quest runs and no run set
+    /// its fill: its forced reference (`quest_alias_forced_reference_v1`),
+    /// else, with `location` on, the location's special reference
+    /// (`quest_alias_location_ref_v1`). `Ok(None)`: neither.
+    pub fn fill_of(&self, id: u32, location: bool) -> Result<Option<FormKey>, &'static str> {
+        let forced = self
+            .reference_aliases
+            .get(&id)
+            .ok_or("no reference alias of that index")?;
+        if let Some(k) = forced {
+            return Ok(Some(k.clone()));
+        }
+        if location {
+            if let Some(r) = self.location_refs.get(&id) {
+                return r.clone().map(Some);
+            }
+        }
+        Ok(None)
+    }
     pub fn stage(&self, n: i32) -> Option<&StageInfo> {
         self.stages.iter().find(|s| i32::from(s.stage) == n)
     }
@@ -141,6 +166,7 @@ impl QuestInfo {
             .filter(|a| a.kind != fo4_plugin::quest::AliasKind::Location)
             .map(|a| (a.id, a.forced_reference().and_then(|f| f.key.clone())))
             .collect();
+        let location_refs = location_refs(store, &q, b)?;
         Ok(Some(QuestInfo {
             key: k.clone(),
             plugin,
@@ -149,12 +175,105 @@ impl QuestInfo {
             stages,
             objectives: q.objectives.iter().map(|o| o.objective).collect(),
             reference_aliases,
+            location_refs,
             fragment_script,
             unmapped_fragments: fragments.len() - mapped,
             event: q.event,
             event_conditions: q.event_conditions.iter().map(Condition::from).collect(),
         }))
     }
+}
+
+/// One row of a location's special reference list: (location ref type,
+/// placed reference), each `None` when its word resolves to no record.
+pub type SpecialReference = (Option<FormKey>, Option<FormKey>);
+
+/// The rows of a location's special reference list (LCSR): 16 bytes each,
+/// a location ref type, a placed reference, its world or cell, a grid word
+/// (`quest_alias_location_ref_v1`); (ref type, reference) resolved through
+/// the location's plugin. `None` when the list does not divide into rows.
+pub fn special_references(
+    store: &Store,
+    location: &FormKey,
+    b: &Budget,
+) -> fo4_core::Result<Option<Vec<SpecialReference>>> {
+    let Some((r, plugin)) = store.raw_with_plugin(location, b)? else {
+        return Ok(None);
+    };
+    let mut out = Vec::new();
+    for s in r.subrecords.iter().filter(|s| s.signature == *b"LCSR") {
+        let d = r.data(s);
+        if d.len() % 16 != 0 {
+            return Ok(None);
+        }
+        for row in d.chunks(16) {
+            let w = |o: usize| u32::from_le_bytes([row[o], row[o + 1], row[o + 2], row[o + 3]]);
+            let f = |id: u32| {
+                store
+                    .order()
+                    .remap(plugin, id, &r.source.file, s.offset)
+                    .ok()
+                    .flatten()
+            };
+            out.push((f(w(0)), f(w(4))));
+        }
+    }
+    Ok(Some(out))
+}
+
+/// The location fills of a quest's reference aliases
+/// (`quest_alias_location_ref_v1`).
+fn location_refs(
+    store: &Store,
+    q: &Quest,
+    b: &Budget,
+) -> fo4_core::Result<BTreeMap<u32, Result<FormKey, &'static str>>> {
+    use fo4_plugin::quest::{AliasKind, AliasValue};
+    let mut out = BTreeMap::new();
+    for a in q.aliases.iter().filter(|a| a.kind != AliasKind::Location) {
+        let Some((l, t)) = a.values.iter().find_map(|v| match v {
+            AliasValue::LocationAliasReference { alias, ref_type } => Some((*alias, ref_type)),
+            _ => None,
+        }) else {
+            continue;
+        };
+        let Some(t) = t.as_ref().and_then(|t| t.key.clone()) else {
+            out.insert(a.id, Err("the alias names no location ref type"));
+            continue;
+        };
+        let loc = q
+            .aliases
+            .iter()
+            .find(|x| x.kind == AliasKind::Location && i64::from(x.id) == i64::from(l))
+            .and_then(|x| {
+                x.values.iter().find_map(|v| match v {
+                    AliasValue::ForcedLocation(f) => f.key.clone(),
+                    _ => None,
+                })
+            });
+        let Some(loc) = loc else {
+            out.insert(a.id, Err("the location alias has no forced location"));
+            continue;
+        };
+        let Some(rows) = special_references(store, &loc, b)? else {
+            out.insert(a.id, Err("the location's special references do not read"));
+            continue;
+        };
+        let refs: Vec<&FormKey> = rows
+            .iter()
+            .filter(|(rt, _)| rt.as_ref() == Some(&t))
+            .filter_map(|(_, r)| r.as_ref())
+            .collect();
+        out.insert(
+            a.id,
+            match refs.as_slice() {
+                [one] => Ok((*one).clone()),
+                [] => Err("no special reference of that type in the location"),
+                _ => Err("several special references of that type in the location"),
+            },
+        );
+    }
+    Ok(out)
 }
 
 /// Which state quests start from when a run first reads them.
@@ -318,6 +437,10 @@ pub struct Quests {
     pub seq: u64,
     /// Jobs a [`Runner`] ran inside other runs.
     pub nested_runs: Vec<JobRun>,
+    /// Fill reference aliases from their location's special references
+    /// (`quest_alias_location_ref_v1`; `quest_run --alias-location-refs`).
+    /// Off by default: such an alias has no reference, as before.
+    pub location_fills: bool,
 }
 
 impl Quests {
@@ -512,12 +635,8 @@ impl Facts for RunFacts<'_, '_> {
             None => Err("whether the quest runs is undetermined"),
             Some(false) => Ok(None),
             Some(true) => {
-                let forced = u32::try_from(alias)
-                    .ok()
-                    .and_then(|a| i.reference_aliases.get(&a))
-                    .ok_or("no reference alias of that index")?;
-                forced
-                    .clone()
+                let id = u32::try_from(alias).map_err(|_| "no reference alias of that index")?;
+                i.fill_of(id, self.w.quests.location_fills)?
                     .map(Some)
                     .ok_or("the alias has no forced reference")
             }
@@ -572,7 +691,32 @@ impl Facts for RunFacts<'_, '_> {
     /// The run completes no action of a scene (each waits on the world):
     /// an action is complete in no state the run settles
     /// (`cond_fn_550_scene_action_complete_v1`).
-    fn scene_action_complete(&mut self, scene: &FormKey, _: u32) -> Result<bool, &'static str> {
+    ///
+    /// With the scene clock on and `Scenes::action_conditions`, an action
+    /// the clock completed is complete, any other is not
+    /// (`cond_fn_550_clock_actions_v1`).
+    fn action_rule(&self) -> Option<&'static str> {
+        (self.w.scenes.clock.on && self.w.scenes.action_conditions)
+            .then_some(rules::COND_FN_550_CLOCK)
+    }
+    fn scene_action_complete(&mut self, scene: &FormKey, index: u32) -> Result<bool, &'static str> {
+        if self.w.scenes.clock.on && self.w.scenes.action_conditions {
+            let key = bind::record_key(scene);
+            let Some(o) = self
+                .w
+                .objects
+                .iter()
+                .position(|x| x.key.as_deref() == Some(&key))
+            else {
+                return Ok(false);
+            };
+            let Some(Some(info)) = self.w.scenes.infos.get(&key).cloned() else {
+                return Ok(false);
+            };
+            return Ok(info.actions.iter().enumerate().any(|(j, a)| {
+                a.index == index && self.w.scenes.actions.get(&(o, j)).is_some_and(|r| r.done)
+            }));
+        }
         self.scene_playing(scene).map(|_| false)
     }
 }
@@ -1080,10 +1224,12 @@ impl<'s> QuestHost<'s> {
                     None => Err("whether the quest runs is undetermined"),
                     Some(false) => Ok((Val::None, data::Answer::NoRecord)),
                     Some(true) => {
-                        let forced = u32::try_from(id)
-                            .ok()
-                            .and_then(|id| i.reference_aliases.get(&id))
-                            .ok_or("no reference alias of that index")?;
+                        let id =
+                            u32::try_from(id).map_err(|_| "no reference alias of that index")?;
+                        if w.quests.location_fills && i.location_refs.contains_key(&id) {
+                            self.using(rules::ALIAS_LOCATION_REF);
+                        }
+                        let forced = i.fill_of(id, w.quests.location_fills)?;
                         let k = forced.as_ref().ok_or("the alias has no forced reference")?;
                         if self.data.store.signature(k).is_none() {
                             return Err("the forced reference names no winning record");

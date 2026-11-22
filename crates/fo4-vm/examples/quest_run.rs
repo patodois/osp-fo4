@@ -18,6 +18,21 @@
 //! (counts, type tags and native function names only) and
 //! `quest-run-names.txt` (effect logs with names, never committed) to
 //! OUT_DIR.
+//!
+//! `new-game` also takes what the caller makes happen from outside any
+//! script, each counted as an assumption: `--then EDITOR_ID:STAGE`, and the
+//! player actions `--assume-activate`, `--assume-trigger-enter`,
+//! `--assume-trigger-leave` and `--assume-open` on a placed reference given
+//! as `plugin.esm:0001ABCD` (`fo4_vm::player`); each at once after the
+//! start, or with `@SECONDS` when the real-time clock reaches that second
+//! (with `--scene-clock`). `--next-blockers` writes
+//! `quest-run-next-blockers.txt` (counts and kinds) and
+//! `quest-run-next-blockers-names.txt` (never committed): the stages the
+//! stopped scenes and the caller's quests wait on and what in the data can
+//! set them (`fo4_vm::setters`). The readings `--scene-recheck`,
+//! `--stage-fields`, `--cond-550-clock`, `--alias-location-refs` and the
+//! assumption `--assume-start-scene-actions` are off by default: without
+//! them every earlier census reproduces byte for byte.
 use fo4_core::{Budget, Manifest};
 use fo4_plugin::story::Tree;
 use fo4_plugin::{typed::Store, FormKey};
@@ -42,6 +57,9 @@ fn bump(m: &mut Counts, k: impl Into<String>) {
 const MAX_JOBS: usize = 256;
 /// Jobs run after a new game starts.
 const MAX_GAME_JOBS: usize = 100_000;
+/// The next stages `--next-blockers` lists for a quest the caller set a
+/// stage on.
+const NEXT_STAGES: usize = 3;
 
 fn bucket(n: usize) -> &'static str {
     match n {
@@ -342,6 +360,17 @@ struct Opts {
     /// Start a quest's scenes with FNAM bit 0x1 with the quest
     /// (`scene_begin_on_quest_start_v1`).
     scenes_with_quest: bool,
+    /// The SCQS fields of scenes and phases set stages
+    /// (`record_set_stage_fields_v1`, `--stage-fields`; off by default).
+    stage_fields: bool,
+    /// Function 550 reads the actions the scene clock completed
+    /// (`cond_fn_550_clock_actions_v1`, `--cond-550-clock`; off by
+    /// default).
+    action_conditions: bool,
+    /// Reference aliases filled from their location's special references
+    /// (`quest_alias_location_ref_v1`, `--alias-location-refs`; off by
+    /// default).
+    location_fills: bool,
 }
 
 /// The story manager's nodes, read once when the story manager is on.
@@ -384,6 +413,9 @@ fn events_on(vm: &mut Vm<'_>, o: Opts) {
     vm.world.events.custom = o.custom;
     vm.world.scenes.on = o.scenes;
     vm.world.scenes.begin_on_quest_start = o.scenes && o.scenes_with_quest;
+    vm.world.scenes.stage_fields = o.scenes && o.stage_fields;
+    vm.world.scenes.action_conditions = o.scenes && o.action_conditions;
+    vm.world.quests.location_fills = o.location_fills;
     if o.scenes {
         GROUPS.with(|g| vm.world.scenes.groups = g.borrow().clone());
         CLOCK.with(|c| vm.world.scenes.clock = c.borrow().clone());
@@ -448,6 +480,12 @@ fn count_clock(c: &mut Counts, steps: usize) {
             bump(
                 c,
                 "assumption from the command line: package actions complete as they start",
+            );
+        }
+        if k.assume_start_scenes {
+            bump(
+                c,
+                "assumption from the command line: start-scene actions complete as they start",
             );
         }
     });
@@ -800,7 +838,19 @@ fn stages(m: &Manifest, vfs: &Vfs, store: &Store, out: &Path, opts: Opts) -> Res
 /// running it, and the census says when they were made.
 #[derive(Default)]
 struct Then {
-    stages: Vec<(String, i32)>,
+    /// What the caller makes happen from outside any script, in
+    /// command-line order: stages set (`--then`) and player actions
+    /// (`--assume-activate`, `--assume-trigger-enter`,
+    /// `--assume-trigger-leave`), each at once after the start, or at a
+    /// second of the real-time clock (`@SECONDS`, with the scene clock).
+    actions: Vec<Caller>,
+    /// Write the stages the stopped scenes wait on and what in the data
+    /// can set them (`--next-blockers`).
+    next_blockers: bool,
+    /// Offer again the scenes stopped on conditions after the quest state
+    /// changed (`--scene-recheck`, `scene_condition_recheck_v1`), with the
+    /// length of the quest log at the last offer.
+    recheck: Option<std::cell::Cell<usize>>,
     timers: usize,
     /// Order game-time timers against real-time ones through the
     /// time-scale global (`vm_timer_time_scale_v1`), when timers are fired:
@@ -810,6 +860,160 @@ struct Then {
     /// Advances of the scene clock (`--scene-clock N`), interleaved with
     /// the timers by due time; 0 leaves the clock off.
     scene_clock: usize,
+}
+
+/// One thing the caller makes happen.
+#[derive(Clone, Debug)]
+enum What {
+    /// A stage set from outside any script (`--then EDITOR_ID:STAGE`).
+    Stage(String, i32),
+    /// A player action on a placed reference given by its key
+    /// (`plugin.esm:0001ABCD`).
+    Player(fo4_vm::player::Action, String),
+}
+#[derive(Clone, Debug)]
+struct Caller {
+    what: What,
+    /// The real-time second it happens at; `None`: at once after the start.
+    at: Option<f64>,
+}
+
+/// With `--scene-recheck`: while the quest state changed since the last
+/// offer, offers again the scenes stopped on conditions and runs the jobs
+/// that brings (`scene_condition_recheck_v1`).
+fn recheck(
+    vm: &mut Vm<'_>,
+    store: &Store,
+    then: &Then,
+    c: &mut Counts,
+    top: &mut Vec<JobRun>,
+    b: &Budget,
+) {
+    let Some(seen) = &then.recheck else { return };
+    for _ in 0..16 {
+        let now = vm.world.quests.log.len();
+        if now == seen.get() {
+            break;
+        }
+        seen.set(now);
+        let n = scene::recheck(&mut vm.world);
+        if n == 0 {
+            break;
+        }
+        vm.rules.insert(fo4_vm::rules::SCENE_RECHECK);
+        *c.entry(
+            "scene recheck: scenes stopped on conditions offered again after a quest state change"
+                .into(),
+        )
+        .or_default() += n as u64;
+        top.extend(quest::run_jobs(vm, store, MAX_GAME_JOBS, b));
+    }
+}
+
+/// Does what the caller assumes: sets the stage or delivers the player
+/// action's event, then runs the jobs it brings. Counted as an assumption.
+#[allow(clippy::too_many_arguments)]
+fn act(
+    vm: &mut Vm<'_>,
+    store: &Store,
+    then: &Then,
+    x: &Caller,
+    c: &mut Counts,
+    names: &mut String,
+    top: &mut Vec<JobRun>,
+    b: &Budget,
+) -> Result<(), E> {
+    let when = x.at.map(|t| format!("@{t}")).unwrap_or_default();
+    match &x.what {
+        What::Stage(edid, n) => {
+            bump(
+                c,
+                if x.at.is_some() {
+                    "assumption from the command line: a stage set from outside any script at a second of the real-time clock"
+                } else {
+                    "assumption from the command line: a stage set from outside any script after the start"
+                },
+            );
+            let k = quest_by_editor_id(store, b, edid)?;
+            let o = quest::quest_object(vm, store, &k, b)?;
+            let reply = quest::set_stage(vm, store, o, *n);
+            let _ = writeln!(names, "## --then {edid}:{n}{when}: {reply:?}");
+        }
+        What::Player(action, key) => {
+            use fo4_vm::player;
+            bump(
+                c,
+                format!(
+                    "assumption from the command line: {} ({})",
+                    action.text(),
+                    action.switch()
+                ),
+            );
+            let k = player::parse_key(key).ok_or("a reference is given as plugin.esm:0001ABCD")?;
+            let before = vm.effects.len();
+            let (runs, open) = player::deliver(vm, store, &k, *action, b)?;
+            let _ = writeln!(
+                names,
+                "## {} {key}{when}: {} handler run(s)",
+                action.switch(),
+                runs.len()
+            );
+            if runs.is_empty() {
+                bump(
+                    c,
+                    format!("player events	{}	no script has a handler", action.handler()),
+                );
+            }
+            if open > 0 {
+                *c.entry(format!(
+                    "player events	{}	quests left out: whether they run is undetermined",
+                    action.handler()
+                ))
+                .or_default() += open as u64;
+            }
+            for r in &runs {
+                bump(
+                    c,
+                    format!(
+                        "player events	{}	{}	{}",
+                        action.handler(),
+                        r.receiver.kind(),
+                        outcome_kind(&r.outcome)
+                    ),
+                );
+                let on = match r.receiver {
+                    fo4_vm::player::Receiver::Alias(q, id) => {
+                        format!(" (alias {id} of {})", vm.world.objects[q].label)
+                    }
+                    _ => String::new(),
+                };
+                let _ = writeln!(
+                    names,
+                    "    {} {}{on}: {}",
+                    r.receiver.kind(),
+                    r.script,
+                    outcome_text(&r.outcome)
+                );
+            }
+            for e in &vm.effects[before..] {
+                let _ = writeln!(
+                    names,
+                    "      {}{}({}{}) = {}",
+                    "  ".repeat(e.depth),
+                    e.native,
+                    e.receiver
+                        .as_ref()
+                        .map(|x| format!("on {x}; "))
+                        .unwrap_or_default(),
+                    e.args.join(", "),
+                    e.result
+                );
+            }
+        }
+    }
+    top.extend(quest::run_jobs(vm, store, MAX_GAME_JOBS, b));
+    recheck(vm, store, then, c, top, b);
+    Ok(())
 }
 
 /// Writes the quest and scene changes logged since `seen` to the names
@@ -848,9 +1052,19 @@ fn clock_loop(
     names: &mut String,
     top: &mut Vec<JobRun>,
     b: &Budget,
-) -> Vec<(usize, fo4_vm::Val, Outcome)> {
+) -> Result<Vec<(usize, fo4_vm::Val, Outcome)>, E> {
     let mut fired = Vec::new();
     let (mut timers, mut steps) = (then.timers, then.scene_clock);
+    // The caller's timed actions, earliest first (command-line order on a
+    // tie).
+    let mut pending: Vec<Caller> = then
+        .actions
+        .iter()
+        .filter(|x| x.at.is_some())
+        .cloned()
+        .collect();
+    pending.sort_by(|a, b| a.at.partial_cmp(&b.at).unwrap_or(std::cmp::Ordering::Equal));
+    let mut pending = std::collections::VecDeque::from(pending);
     let mut seen = (0, 0);
     timeline(
         vm,
@@ -868,6 +1082,33 @@ fn clock_loop(
         } else {
             None
         };
+        let now = vm.world.now[fo4_vm::world::Clock::Real as usize];
+        let wait = pending
+            .front()
+            .and_then(|x| x.at)
+            .map(|t| (t - now).max(0.0));
+        // A caller's action comes after timers and the scene clock on a tie,
+        // and when neither has anything due.
+        let next_known = match (timer, due) {
+            (Some(Some(t)), Some(d)) => Some(t.min(d)),
+            (Some(Some(t)), None) => Some(t),
+            (None, Some(d)) => Some(d),
+            _ => None,
+        };
+        let stuck = matches!(timer, Some(None));
+        if let Some(wa) = wait {
+            if !stuck && next_known.is_none_or(|n| wa < n) {
+                let x = pending.pop_front().expect("a pending action");
+                let t = now + wa;
+                vm.world.now[fo4_vm::world::Clock::Real as usize] = t;
+                if let Some(s) = scale {
+                    vm.world.now[fo4_vm::world::Clock::GameTime as usize] += wa * s / 3600.0;
+                }
+                act(vm, store, then, &x, c, names, top, b)?;
+                timeline(vm, &mut seen, names, "a caller's action");
+                continue;
+            }
+        }
         let fire = match (timer, due) {
             (None, None) => break,
             // A queue that cannot be ordered: fire to record why, then stop.
@@ -904,6 +1145,7 @@ fn clock_loop(
             };
             fired.push(x);
             top.extend(quest::run_jobs(vm, store, MAX_GAME_JOBS, b));
+            recheck(vm, store, then, c, top, b);
             timeline(vm, &mut seen, names, "a timer fired");
         } else {
             let t = scene::advance_clock(&mut vm.world, scale);
@@ -912,10 +1154,19 @@ fn clock_loop(
             let _ = writeln!(names, "## scene clock advanced to {t:?} s");
             steps -= 1;
             top.extend(quest::run_jobs(vm, store, MAX_GAME_JOBS, b));
+            recheck(vm, store, then, c, top, b);
             timeline(vm, &mut seen, names, "the scene clock advanced");
         }
     }
-    fired
+    // Actions left after the clocks stopped: in order, each at its second.
+    while let Some(x) = pending.pop_front() {
+        let now = vm.world.now[fo4_vm::world::Clock::Real as usize];
+        let t = x.at.unwrap_or(now).max(now);
+        vm.world.now[fo4_vm::world::Clock::Real as usize] = t;
+        act(vm, store, then, &x, c, names, top, b)?;
+        timeline(vm, &mut seen, names, "a caller's action");
+    }
+    Ok(fired)
 }
 
 fn quest_by_editor_id(store: &Store, b: &Budget, edid: &str) -> Result<FormKey, E> {
@@ -966,16 +1217,33 @@ fn new_game(
         );
     }
     let mut top = quest::run_jobs(&mut vm, store, MAX_GAME_JOBS, &b);
-    for (edid, n) in &then.stages {
+    if opts.location_fills {
         bump(
             &mut c,
-            "assumption from the command line: a stage set from outside any script after the start",
+            "switch: reference aliases filled from their location's special references (--alias-location-refs)",
         );
-        let k = quest_by_editor_id(store, &b, edid)?;
-        let o = quest::quest_object(&mut vm, store, &k, &b)?;
-        let reply = quest::set_stage(&mut vm, store, o, *n);
-        let _ = writeln!(names, "## --then {edid}:{n}: {reply:?}");
-        top.extend(quest::run_jobs(&mut vm, store, MAX_GAME_JOBS, &b));
+    }
+    if opts.action_conditions {
+        bump(
+            &mut c,
+            "switch: condition function 550 reads the actions the scene clock completed (--cond-550-clock)",
+        );
+    }
+    if opts.stage_fields {
+        bump(
+            &mut c,
+            "switch: the stage fields of scenes and phases set stages (--stage-fields)",
+        );
+    }
+    if let Some(seen) = &then.recheck {
+        bump(
+            &mut c,
+            "switch: scenes stopped on conditions offered again after a quest state change (--scene-recheck)",
+        );
+        seen.set(vm.world.quests.log.len());
+    }
+    for x in then.actions.iter().filter(|x| x.at.is_none()) {
+        act(&mut vm, store, then, x, &mut c, &mut names, &mut top, &b)?;
     }
     let scale_global = then
         .time_scale
@@ -998,7 +1266,7 @@ fn new_game(
             &mut names,
             &mut top,
             &b,
-        );
+        )?;
         for (inst, id, o) in fired {
             let script = vm.world.instances[inst].script.clone();
             bump(&mut c, format!("timer outcome: {}", outcome_kind(&o)));
@@ -1199,6 +1467,17 @@ fn new_game(
             );
         }
     }
+    if then.next_blockers {
+        let quests: Vec<String> = then
+            .actions
+            .iter()
+            .filter_map(|x| match &x.what {
+                What::Stage(q, _) => Some(q.clone()),
+                What::Player(..) => None,
+            })
+            .collect();
+        next_blockers(&mut vm, m, vfs, store, opts, &quests, out)?;
+    }
     // Registrations left at the end, by what would raise their event.
     let raised = ["onstageset", "onquestinit", "onquestshutdown"];
     for r in &vm.world.events.registrations {
@@ -1224,6 +1503,328 @@ fn new_game(
         *c.entry(format!("host answer\t{native}\t{a}")).or_default() += v;
     }
     write(out, &c, &names, "new-game")
+}
+
+/// The stages the stopped scenes wait on and what in the data can set each
+/// (`fo4_vm::setters`), with the state each setter's need has in the run:
+/// `quest-run-next-blockers.txt` (counts and kinds only) and
+/// `quest-run-next-blockers-names.txt` (never committed).
+fn next_blockers(
+    vm: &mut Vm<'_>,
+    m: &Manifest,
+    vfs: &Vfs,
+    store: &Store,
+    opts: Opts,
+    quests: &[String],
+    out: &Path,
+) -> Result<(), E> {
+    use fo4_vm::setters::{self, Need, On, ScenePoint};
+    let b = Budget::new(m.limits.max_memory);
+    let mut waits = setters::scene_waits(&mut vm.world, store);
+    // The quests the caller set stages on: their next stages not done, in
+    // stage order after the highest one done (up to NEXT_STAGES).
+    let mut seen = std::collections::BTreeSet::new();
+    for edid in quests {
+        let k = quest_by_editor_id(store, &b, edid)?;
+        if !seen.insert(k.clone()) {
+            continue;
+        }
+        let Some(info) = quest::info_by_key(store, store.limits.max_memory, &mut vm.world, &k)
+        else {
+            continue;
+        };
+        let o = quest::quest_object(vm, store, &k, &b)?;
+        let st = vm.world.quests.state(&info).clone();
+        let top = info
+            .stages
+            .iter()
+            .filter(|s| st.is_done(i32::from(s.stage)) == Some(true))
+            .map(|s| s.stage)
+            .max();
+        for s in info
+            .stages
+            .iter()
+            .filter(|s| top.is_none_or(|t| s.stage > t))
+            .filter(|s| st.is_done(i32::from(s.stage)) != Some(true))
+            .take(NEXT_STAGES)
+        {
+            waits.push(setters::Wait {
+                scene: o,
+                phase: usize::MAX,
+                list: "next stage of a quest the caller set a stage on",
+                function: 0,
+                quest: k.clone(),
+                stage: i32::from(s.stage),
+                done: st.is_done(i32::from(s.stage)),
+            });
+        }
+    }
+    let lib = setters::read_all_scripts(vfs, m.limits.max_memory)?;
+    let (atts, _) = setters::attachments(store, &setters::owners(store), &b)?;
+    let tree = story_tree(store, opts)?;
+    let t = setters::table(&lib, &atts, store, tree.as_deref(), &b)?;
+    let label =
+        |k: &FormKey| bind::label(store, k, &b.child()).unwrap_or_else(|_| bind::record_key(k));
+    let mut c = Counts::new();
+    let mut names = String::new();
+    *c.entry("waits: stages a stopped scene phase or the caller's quests wait on".into())
+        .or_default() += waits.len() as u64;
+    for w in &waits {
+        let what = if w.phase == usize::MAX {
+            w.list.to_string()
+        } else {
+            format!("{} conditions\tfunction {}", w.list, w.function)
+        };
+        bump(
+            &mut c,
+            format!(
+                "waits\t{what}\tthe stage {}",
+                match w.done {
+                    Some(false) => "is not done in the run",
+                    _ => "is undetermined in the run",
+                }
+            ),
+        );
+        let list = t.of_stage(&w.quest, w.stage);
+        bump(
+            &mut c,
+            format!("setters of a waited stage\t{}", bucket(list.len())),
+        );
+        if w.phase == usize::MAX {
+            let _ = writeln!(
+                names,
+                "## {} next stage {}: {} setter(s)",
+                label(&w.quest),
+                w.stage,
+                list.len()
+            );
+        } else {
+            let _ = writeln!(
+                names,
+                "## {} phase {} waits ({} conditions, function {}) on {} stage {}: {} setter(s)",
+                vm.world.objects[w.scene].label,
+                w.phase,
+                w.list,
+                w.function,
+                label(&w.quest),
+                w.stage,
+                list.len()
+            );
+        }
+        if list.is_empty() {
+            bump(
+                &mut c,
+                "waited stages with no setter in the data: only a caller assumption passes them (--then)",
+            );
+        }
+        for st in list {
+            // The need's state in this run, and the switch that delivers
+            // it when it is a player action.
+            let (status, hint) = match &st.need {
+                Need::Stage(q, n) => {
+                    let qi = quest::info_by_key(store, store.limits.max_memory, &mut vm.world, q);
+                    let done = qi.and_then(|i| vm.world.quests.state(&i).is_done(*n));
+                    (
+                        match done {
+                            Some(true) => "a chain: the stage is done in the run",
+                            Some(false) => "a chain: the stage is not done in the run",
+                            None => "a chain: the stage is undetermined in the run",
+                        }
+                        .to_string(),
+                        format!("{} stage {n}", label(q)),
+                    )
+                }
+                Need::QuestStart(q) => {
+                    let qi = quest::info_by_key(store, store.limits.max_memory, &mut vm.world, q);
+                    let r = qi.and_then(|i| vm.world.quests.state(&i).running);
+                    (
+                        format!("the quest runs in the run: {r:?}"),
+                        label(q),
+                    )
+                }
+                Need::Event(e, On::Record(k, sg)) => {
+                    let assumable = fo4_vm::player::Action::ALL
+                        .into_iter()
+                        .find(|a| a.handler() == e);
+                    match (assumable, &sg[..]) {
+                        (Some(a), b"REFR" | b"ACHR") => (
+                            format!("a player action a caller can assume ({})", a.switch()),
+                            format!("{} {}", a.switch(), bind::record_key(k)),
+                        ),
+                        (Some(_), _) => (
+                            "a player action on a placement of a base object (which placement is the caller's)".into(),
+                            label(k),
+                        ),
+                        _ => ("an engine event the interpreter does not raise".into(), label(k)),
+                    }
+                }
+                Need::Event(e, On::Alias(q, i)) => {
+                    let assumable = fo4_vm::player::Action::ALL
+                        .into_iter()
+                        .find(|a| a.handler() == e);
+                    let qi = quest::info_by_key(store, store.limits.max_memory, &mut vm.world, q);
+                    let held = qi.and_then(|info| {
+                        let s = vm.world.quests.state(&info);
+                        match s.fills.get(&i32::from(*i)) {
+                            Some(fo4_vm::Val::Object(o)) => {
+                                vm.world.objects[*o].key.clone()
+                            }
+                            Some(_) => None,
+                            None if s.running == Some(true) => info
+                                .fill_of(
+                                    u32::try_from(*i).unwrap_or(u32::MAX),
+                                    vm.world.quests.location_fills,
+                                )
+                                .ok()
+                                .flatten()
+                                .map(|k| bind::record_key(&k)),
+                            None => None,
+                        }
+                    });
+                    match (assumable, held) {
+                        (Some(a), Some(r)) => (
+                            format!(
+                                "a player action on the reference an alias holds in the run, a caller can assume ({})",
+                                a.switch()
+                            ),
+                            format!("{} {r}", a.switch()),
+                        ),
+                        (Some(_), None) => (
+                            "a player action on an alias that holds no reference in the run".into(),
+                            format!("alias {i} of {}", label(q)),
+                        ),
+                        _ => (
+                            "an engine event the interpreter does not raise".into(),
+                            format!("alias {i} of {}", label(q)),
+                        ),
+                    }
+                }
+                Need::Scene(k, p) => {
+                    let o = fo4_vm::data::record_object(&mut vm.world, store, k, "scene", &b)?;
+                    let changes: Vec<&scene::Change> = vm
+                        .world
+                        .scenes
+                        .log
+                        .iter()
+                        .filter(|(x, _)| *x == o)
+                        .map(|x| &x.1)
+                        .collect();
+                    let reached = match p {
+                        ScenePoint::Begin => changes
+                            .iter()
+                            .any(|c| matches!(c, scene::Change::Started | scene::Change::StartedWithQuest)),
+                        ScenePoint::End => changes.iter().any(|c| matches!(c, scene::Change::Ended)),
+                        ScenePoint::Phase(i, _) | ScenePoint::PhaseField(i, false) => changes
+                            .iter()
+                            .any(|c| matches!(c, scene::Change::PhaseEntered(x) if *x == *i as usize)),
+                        ScenePoint::PhaseField(i, true) => changes
+                            .iter()
+                            .any(|c| matches!(c, scene::Change::PhaseCompleted(x) if *x == *i as usize)),
+                    };
+                    (
+                        if changes.is_empty() {
+                            "a scene the run never started".to_string()
+                        } else if reached {
+                            "a scene point the run reached".to_string()
+                        } else {
+                            "a scene point the run has not reached".to_string()
+                        },
+                        need_target_text(&st.need, &label),
+                    )
+                }
+                n @ Need::Line(..) => (
+                    "a dialogue line: the interpreter speaks no line itself (only scene actions time them)".into(),
+                    need_target_text(n, &label),
+                ),
+                n => (
+                    "an event the interpreter does not raise".into(),
+                    need_target_text(n, &label),
+                ),
+            };
+            bump(
+                &mut c,
+                format!(
+                    "setters of a waited stage by kind and need\t{}\t{}",
+                    st.kind,
+                    st.need.text(store)
+                ),
+            );
+            bump(
+                &mut c,
+                format!("setters of a waited stage: the need in this run\t{status}"),
+            );
+            let _ = writeln!(
+                names,
+                "    {} | {} | {status} | {hint} | {}",
+                st.kind,
+                st.need.text(store),
+                st.site
+            );
+        }
+    }
+    // Every scene stopped at the end, by reason; for a stop on conditions,
+    // the function indexes of its list.
+    for (o, (p, why)) in setters::scene_stops(&vm.world) {
+        let reason = why.split(" (").next().unwrap_or("").to_string();
+        bump(&mut c, format!("scenes stopped at the end\t{reason}"));
+        let funcs = scene::info(store, store.limits.max_memory, &mut vm.world, o)
+            .and_then(|i| {
+                let ph = i.phases.get(p)?;
+                let list = if why.starts_with("start") {
+                    &ph.start
+                } else {
+                    &ph.completion
+                };
+                Some(
+                    list.iter()
+                        .map(|c| c.ctda.function.to_string())
+                        .collect::<Vec<_>>()
+                        .join(" "),
+                )
+            })
+            .unwrap_or_default();
+        let _ = writeln!(
+            names,
+            "# stopped: {} phase {p}: {why}; condition functions of the list: [{funcs}]",
+            vm.world.objects[o].label
+        );
+    }
+    let mut s = String::new();
+    writeln!(
+        s,
+        "# quest_run new-game --next-blockers: counts and kinds only (spec/vm.md, Stage setters)"
+    )?;
+    for (k, v) in &c {
+        writeln!(s, "{v}\t{k}")?;
+    }
+    std::fs::create_dir_all(out)?;
+    std::fs::write(out.join("quest-run-next-blockers.txt"), s)?;
+    std::fs::write(out.join("quest-run-next-blockers-names.txt"), names)?;
+    Ok(())
+}
+
+/// The record a setter's need names, with its label.
+fn need_target_text(n: &fo4_vm::setters::Need, label: &dyn Fn(&FormKey) -> String) -> String {
+    use fo4_vm::setters::{Need, ScenePoint};
+    match n {
+        Need::Scene(k, p) => format!(
+            "{} {}",
+            label(k),
+            match p {
+                ScenePoint::Begin => "begin".to_string(),
+                ScenePoint::End => "end".to_string(),
+                ScenePoint::Phase(i, f) => format!("phase {i} fragment flag {f}"),
+                ScenePoint::PhaseField(i, e) =>
+                    format!("phase {i} {}", if *e { "end" } else { "begin" }),
+            }
+        ),
+        Need::Line(k, e) => format!("{} {}", label(k), if *e { "end" } else { "begin" }),
+        Need::Package(k, _) | Need::Perk(k, _) | Need::Terminal(k, _) | Need::QuestStart(k) => {
+            label(k)
+        }
+        Need::Stage(k, n) => format!("{} stage {n}", label(k)),
+        _ => String::new(),
+    }
 }
 
 /// The GLOB whose editor ID the caller named: the role
@@ -1716,6 +2317,9 @@ fn run() -> Result<(), E> {
         enable_chain: !flag(&mut a, "--no-enable-chain"),
         scenes: !flag(&mut a, "--no-scenes"),
         scenes_with_quest: !flag(&mut a, "--no-scenes-with-quest"),
+        stage_fields: flag(&mut a, "--stage-fields"),
+        action_conditions: flag(&mut a, "--cond-550-clock"),
+        location_fills: flag(&mut a, "--alias-location-refs"),
     };
     let mut switches = fo4_vm::cond::Switches::all();
     let mut assume: BTreeMap<u16, f32> = BTreeMap::new();
@@ -1740,18 +2344,40 @@ fn run() -> Result<(), E> {
         a.drain(i..i + 2);
     }
     COND.with(|c| *c.borrow_mut() = (switches, assume));
-    let mut then = Then::default();
-    while let Some(i) = a
-        .iter()
-        .position(|x| x == "--then" || x == "--timers" || x == "--time-scale-global")
-    {
-        let v = a
-            .get(i + 1)
-            .cloned()
-            .ok_or("--then, --timers and --time-scale-global take a value")?;
-        if a[i] == "--then" {
-            let (q, n) = v.split_once(':').ok_or("--then EDITOR_ID:STAGE")?;
-            then.stages.push((q.to_string(), n.parse()?));
+    let mut then = Then {
+        next_blockers: flag(&mut a, "--next-blockers"),
+        recheck: flag(&mut a, "--scene-recheck").then(|| std::cell::Cell::new(0)),
+        ..Then::default()
+    };
+    while let Some(i) = a.iter().position(|x| {
+        x == "--then"
+            || x == "--timers"
+            || x == "--time-scale-global"
+            || fo4_vm::player::Action::from_switch(x).is_some()
+    }) {
+        let v = a.get(i + 1).cloned().ok_or(
+            "--then, --timers, --time-scale-global and the --assume-<action> switches take a value",
+        )?;
+        // An optional `@SECONDS`: when the caller's action happens.
+        let (body, at) = match v.rsplit_once('@') {
+            Some((x, t)) if a[i] != "--timers" && a[i] != "--time-scale-global" => {
+                (x.to_string(), Some(t.parse::<f64>()?))
+            }
+            _ => (v.clone(), None),
+        };
+        if let Some(action) = fo4_vm::player::Action::from_switch(&a[i]) {
+            then.actions.push(Caller {
+                what: What::Player(action, body),
+                at,
+            });
+        } else if a[i] == "--then" {
+            let (q, n) = body
+                .split_once(':')
+                .ok_or("--then EDITOR_ID:STAGE[@SECONDS]")?;
+            then.actions.push(Caller {
+                what: What::Stage(q.to_string(), n.parse()?),
+                at,
+            });
         } else if a[i] == "--timers" {
             then.timers = v.parse()?;
         } else {
@@ -1763,6 +2389,7 @@ fn run() -> Result<(), E> {
     let mut clock = scene::Clock {
         timers: !flag(&mut a, "--no-timer-actions"),
         assume_packages: flag(&mut a, "--assume-packages-complete"),
+        assume_start_scenes: flag(&mut a, "--assume-start-scene-actions"),
         ..scene::Clock::default()
     };
     let line_audio = !flag(&mut a, "--no-line-audio");
@@ -1780,10 +2407,14 @@ fn run() -> Result<(), E> {
         a.drain(i..i + 2);
     }
     let assumed = clock.assume_packages
+        || clock.assume_start_scenes
         || clock.assume_line_seconds.is_some()
         || clock.assume_player_choice.is_some();
     if then.scene_clock == 0 && (assumed || !clock.timers || !line_audio) {
         return Err("the scene action switches and assumptions need --scene-clock N".into());
+    }
+    if then.scene_clock == 0 && then.actions.iter().any(|x| x.at.is_some()) {
+        return Err("an action at a second (@SECONDS) needs --scene-clock N".into());
     }
     if clock
         .assume_player_choice
@@ -1791,7 +2422,7 @@ fn run() -> Result<(), E> {
     {
         return Err("--assume-player-choice takes 0 to 3".into());
     }
-    let usage = "quest_run MANIFEST (stages OUT_DIR | new-game OUT_DIR | fragments OUT_DIR | scenes OUT_DIR | QUEST STAGE) [--queued] [--no-conditions] [--no-stage-event] [--no-remote] [--no-custom | --custom-nested] [--no-story] [--no-enable-chain] [--no-scenes] [--no-scenes-with-quest] [--no-cond-fn-N]... [--no-cond-run-on] [--assume-cond N=VALUE]...; fragments OUT_DIR and scenes OUT_DIR run every INFO, PACK and PERK fragment and start every scene in a fresh interpreter; new-game also takes --then EDITOR_ID:STAGE (repeated) --timers N and --time-scale-global EDITOR_ID, assumptions of the caller; new-game and scenes take --scene-clock N (advance the scene clock up to N times) with --no-timer-actions, --no-line-audio, --assume-line-seconds X, --assume-player-choice N (0 to 3) and --assume-packages-complete";
+    let usage = "quest_run MANIFEST (stages OUT_DIR | new-game OUT_DIR | fragments OUT_DIR | scenes OUT_DIR | QUEST STAGE) [--queued] [--no-conditions] [--no-stage-event] [--no-remote] [--no-custom | --custom-nested] [--no-story] [--no-enable-chain] [--no-scenes] [--no-scenes-with-quest] [--no-cond-fn-N]... [--no-cond-run-on] [--assume-cond N=VALUE]...; fragments OUT_DIR and scenes OUT_DIR run every INFO, PACK and PERK fragment and start every scene in a fresh interpreter; new-game also takes --then EDITOR_ID:STAGE[@SECONDS] (repeated), --assume-activate, --assume-trigger-enter, --assume-trigger-leave and --assume-open PLUGIN:OBJECTID[@SECONDS] (repeated), --timers N and --time-scale-global EDITOR_ID, assumptions of the caller, --scene-recheck, --stage-fields, --cond-550-clock, --alias-location-refs and --next-blockers; new-game and scenes take --scene-clock N (advance the scene clock up to N times) with --no-timer-actions, --no-line-audio, --assume-line-seconds X, --assume-player-choice N (0 to 3), --assume-packages-complete and --assume-start-scene-actions";
     if a.len() != 3 {
         return Err(usage.into());
     }
