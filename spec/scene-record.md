@@ -125,8 +125,9 @@ refused; 1,074,725 bytes typed and 738,866 kept as stored.
 
 INFO and PACK records themselves are not read here beyond what the
 fragments need: an INFO's owning quest comes from the group that holds it;
-its flags, conditions and response data, and a package's data, stay with
-the generic readers. The INFO's topic (the group of kind 7 that holds it)
+its flags, conditions and response data stay with the generic readers;
+a package's data inputs are read by `fo4_plugin::pack`
+([package-census.txt](package-census.txt)). The INFO's topic (the group of kind 7 that holds it)
 is not indexed by the store and is not read.
 
 ## Rules

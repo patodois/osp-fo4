@@ -1559,6 +1559,104 @@ seconds), plus the switches of this step:
   setter are off the path.
 
 
+## Animation events
+
+`fo4_vm::anim`, behind four switches of `quest_run new-game`, all off by
+default ([animation-event-census.txt](animation-event-census.txt) for the
+census, [havok-behavior.md](havok-behavior.md) for the graph files):
+
+| Switch | Reading | Rule |
+| --- | --- | --- |
+| `--anim-events` | `RegisterForAnimationEvent(sender, name)` keeps (instance, sender, name) until `UnregisterForAnimationEvent`; an animation event the run raises runs `OnAnimationEvent(sender, name)` on every registered instance, in registration order; the register call keeps its recorded, undetermined result | `vm_anim_event_registration_v1` |
+| `--anim-event-case` | names compare ignoring case, in registrations and in a graph's event table; the handler gets the registration's spelling (without it, a handler comparing the name with its own text would be undetermined) | `anim_event_name_case_v1` |
+| `--anim-graphs` (with `--scene-clock`) | a placed reference runs the behaviour graph its base model names, from the root machine's start state when the run first plays an animation on it; `PlayAnimation(event)` takes the current state's transition of that event, else a wildcard one, at once; a conditioned transition leaves the graph undetermined; `PlayAnimation` is still recorded as before | `anim_graph_model_transition_v1` |
+| `--anim-graph-keys` (with `--anim-graphs`) | a state whose generator plays a Gamebryo sequence schedules the sequence's text keys that name events of the graph at the entry plus their time over the frequency; each is raised as an animation event of the reference and sent to its graph; leaving the state drops the rest | `anim_graph_sequence_keys_v1` |
+
+The caller's alternative is `--assume-anim-event PLUGIN:OBJECTID EVENT[@SECONDS]`
+(with `--anim-events`): the reference raises that event at that second,
+delivered to the registrations only (not sent to a graph). The world
+model's loop takes the keys' due seconds with the track's and the talk's
+(`anim::next_due`, `anim::settle`); the names file logs each graph read,
+state entered, key raised and handler run.
+
+What the census finds ([animation-event-census.txt](animation-event-census.txt)):
+105 compiled scripts register, 111 declare the handler; the sender is most
+often the registering reference itself, the player, or an alias's
+reference; of 139 distinct registered names, 125 occur in behaviour graph
+event tables (4 more only in another case), 74 as clip annotation texts (5
+more), 18 as NIF text keys (5 more), 5 as an idle record's ENAM and 1 in a
+scene field; 10 occur in none of these. The two the forced opening waits on next occur only as NIF
+text keys (of the two activators' sequences) and in their graphs' event
+tables, not as clip annotations: no idle or scene action is involved, so
+the data tie is `PlayAnimation` in a stage fragment and a script function
+the fragment calls, through the activator's graph to its sequence's key.
+
+## Package destinations
+
+`fo4_plugin::pack` reads the package record as far as its data inputs
+([package-census.txt](package-census.txt), section 7 for the layout table:
+what is read and what is not established). `quest_run new-game
+--package-destinations N` (with `--track` and `--actor-positions`) applies
+`pack_location_destination_v1`: a scene action of kind 1 whose package
+holds exactly one Location input naming a placed reference puts the actor
+its alias holds at that reference's stored position N seconds (the
+caller's) after the action starts, as an actor move of the world model
+(`track::schedule_move`); the move is dropped if its scene stops first; no
+path, no speed. 1,035 of the 3,292 scene package actions have such a
+destination. Without the switch no package moves anyone.
+
+## The forced opening with animation events and the vault
+
+(The command lines, the tracks and every record named are in the step's
+notes; no versioned output of the earlier openings changes.) On the talk
+step's command line:
+
+- The two stages the talk step stopped on, and a third the same handler
+  sets, come from the opening quest's animation event handler. With the
+  four switches above the stage fragment's `PlayAnimation` on two
+  activators runs their graphs: one enters the state playing its only
+  moving sequence, whose keys raise two of the awaited events (and three
+  others its own control script waits on); the other, left by earlier
+  fragments in a state whose transition the new event takes, enters a
+  delay state whose last key moves it to the descent state, whose key
+  raises the third. All three stages came from the data under the four
+  rules; with any one of `--anim-events`, `--anim-graphs` or
+  `--anim-graph-keys` off none of them is reached, and without
+  `--anim-event-case` the elevator's is not (the script's name differs in
+  case from the key's). With the caller's `--assume-anim-event` for the
+  two events the talk step stopped on, instead of the graph switches,
+  their stages are reached at the seconds the caller gives (the third,
+  not assumed, is not).
+- The track then follows the elevator down to the automatic load door
+  under it (the caller's: riding the platform until the descent
+  sequence's end), the door's stored destination in the interior (the
+  caller's: the load takes no time), the interior elevator's descent
+  until its sequence's finishing key, and a walk along the navigation mesh
+  through three set-stage triggers. Reached: **59 of the 104 stages**
+  (before 49), two objectives.
+- With `--package-destinations 10` and the player held twice on the
+  track (before a helper quest's trigger until the stage its trigger
+  needs is done, and before the trigger that stops the elevator scene
+  until the scene's package actions have taken the five neighbours to the
+  elevator), five of the talk step's seven assumed actor moves come from
+  the data (the elevator scene's package actions name the elevator's
+  centre marker); the spouse's two remain assumed (her package names
+  several placed references, and on the way she follows the player).
+  The same 59 stages are reached (also with 5 s; with 30 s the elevator
+  scene stops before the actors arrive, their moves are dropped and the
+  run stops 12 stages earlier, as it does without the switch on that
+  track).
+- The run stops next on stages set by an alias script's handler of an
+  animation event of the actor itself (registered only in the handler of
+  the actor's 3D load, an event the interpreter does not raise), and on a
+  vault scene phase whose completion condition reads how far one of its
+  dialogue actions has run (function 131, which the command line's
+  assumption answers with a fixed value); the details are in the step's
+  notes.
+- With every switch of this step off, the talk step's command line gives
+  the talk step's run byte for byte (census, names and next-blocker
+  files).
+
 ## Conditions
 
 `fo4_vm::cond` evaluates the condition lists read by
@@ -1989,3 +2087,31 @@ read only with the repository's disassembler. No public page was
 requested in this step. No editor, editor source or definition file,
 script source, decompiler, other interpreter, script extender or the game
 executable was opened or searched for. The game was not run.
+
+## Provenance of the animation step
+
+Recognised from prior general knowledge, used only as pending rules that
+are off by default: that `RegisterForAnimationEvent` delivers
+`OnAnimationEvent` to the registered instance until it unregisters; that
+event names are case-insensitive; that a reference's model runs the
+behaviour graph its extra data names, starting in the start state; that
+`PlayAnimation` sends the graph an event; that a transition is taken on
+its event, local before wildcard; that a Gamebryo sequence generator plays
+the NIF sequence of its name and that the sequence's text keys become
+events at their times; that a package's Location input is where it takes
+the actor. The meaning of the PACK subrecords' tags (PKCU's count and
+template, ANAM type names, PLDT and PTDA) and of the behaviour classes were
+recognised from their stored names and kept only as far as the censuses
+hold. NIF field names come from the nifxml copy already cited. The waits
+and the descent on the track, the load through the automatic door, the
+seconds of package arrival and the events assumed by the caller are
+assumptions of the person running the opening.
+
+The behaviour layouts, the annotation layout, the PACK layout and every
+count were measured with the repository's own readers on the installed
+data (first proposed from local probes whose outputs stay outside the
+repository); the compiled scripts were read only with the repository's
+disassembler. No public page was requested. No editor, editor source or
+definition file, Havok SDK, converter or format project, script source,
+decompiler, other interpreter, script extender or the game executable was
+opened or searched for. The game was not run.

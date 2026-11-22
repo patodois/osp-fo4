@@ -598,4 +598,20 @@ player talks, a hello when the player comes near), how a line is chosen,
 how unique actor aliases fill and where actors stand are pending rules.
 No editor, editor source or definition file, reader of another project,
 script source or game executable was opened.
-
+The animation step (`fo4_havok::Machine`, `fo4_havok::annotation_tracks`,
+`fo4_scene::anim_graph`, `fo4_plugin::pack`, `fo4_vm::anim`;
+[spec/havok-behavior.md](../spec/havok-behavior.md),
+[spec/havok-animation.md](../spec/havok-animation.md), Annotation tracks,
+[spec/vm.md](../spec/vm.md), Animation events and Package destinations)
+reads the behaviour project, character and graph files, the annotation
+tracks of the clips and the package record's data inputs. Every offset was
+proposed from local probes of a few files and then counted over every file
+or record of one installation (`anim_event_census`, `package_census`); the
+class names are the stored ones and the NIF field names those of the
+pinned nifxml copy already cited. The roles of the behaviour classes and
+of the PACK subrecords, and every behaviour the run relies on (deliveries,
+case, transitions, text keys as events, package destinations), were
+recognised from prior general knowledge and are pending rules. No Havok
+SDK, converter, behaviour editor or format project, no editor, editor
+source or definition file, no other interpreter, script source or game
+executable was opened.

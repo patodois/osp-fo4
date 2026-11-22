@@ -161,7 +161,29 @@ on is not stored in the clip.
 | 24 | u32 transform-track count |
 | 28 | u32 float-track count (1 in 4 spline objects, 0 elsewhere) |
 | 32 | link to an `hkaDefaultAnimatedReferenceFrame` (14,218 spline, 970 lossless) or nothing |
-| 40 | array of 24-byte annotation tracks, as many as transform tracks in every object; not read further |
+| 40 | array of 24-byte annotation tracks, as many as transform tracks in every object; read by `annotation_tracks` (Annotation tracks, below) |
+
+### Annotation tracks
+
+`fo4_havok::annotation_tracks` reads the array at +40 of either class.
+Established on every clip of the installation (`anim_event_census`,
+[animation-event-census.txt](animation-event-census.txt), section 3; the
+layout was first proposed from a local probe and then counted):
+
+| Bytes | Content | Check |
+| --- | --- | --- |
+| track +0 | text pointer: the track's name | a NUL-terminated text in every track |
+| track +8 | array of 16-byte annotations (count at +16, flag word at +20) | flag word `0x80000000 | count`, storage pointer exactly when the count is not zero |
+| annotation +0 | f32: a time in clip seconds | finite and within [0, duration] in every annotation (enforced) |
+| annotation +4 | u32 | 0 in every annotation (enforced) |
+| annotation +8 | text pointer: the annotation's text | a NUL-terminated text in every annotation |
+
+All 16,145 clips read: 1,440,521 tracks, 48,556 annotations, 9,886 clips
+with at least one. What the game does with an
+annotation (that it raises an animation event of its text) is prior
+knowledge and is not used by the run: the opening's events come from NIF
+text keys instead ([havok-behavior.md](havok-behavior.md),
+[vm.md](vm.md), Animation events).
 
 ### `hkaSplineCompressedAnimation`: block table
 
