@@ -11,6 +11,12 @@
 //! tracks and durations as the labels say is checked only as far as the spec
 //! states (counts, references, unit quaternions, agreement with the skeleton
 //! NIFs); the runtime use stays a hypothesis.
+mod spline;
+pub use spline::{
+    de_boor, Component, Curve, DecodedSpline, Quantised, RotationTrack, Track, TrackPose,
+    VectorTrack, ROTATION_40, ROTATION_48, VECTOR_16,
+};
+
 use crate::view::{norm, Array, View};
 use crate::Container;
 use fo4_core::{Budget, Result};
@@ -408,6 +414,8 @@ pub struct SplineAnimation<'a> {
     /// Storage of the byte array at +152.
     #[serde(skip)]
     pub data: &'a [u8],
+    /// Absolute file offset of `data`'s first byte (`base` included).
+    pub data_at: u64,
 }
 impl<'a> SplineAnimation<'a> {
     pub fn read(
@@ -497,6 +505,7 @@ impl<'a> SplineAnimation<'a> {
             block_offsets: offsets,
             float_offsets,
             data,
+            data_at: v.abs(start),
         })
     }
     /// Bytes of block `i`: from its offset to the next block's, or to the

@@ -106,6 +106,228 @@ struct SkelInfo {
     path: String,
     name: Vec<u8>,
     bones: usize,
+    pose: Vec<hk::BonePose>,
+}
+
+/// Quaternion product a * b, both (x, y, z, w).
+fn qmul(a: [f64; 4], b: [f64; 4]) -> [f64; 4] {
+    [
+        a[3] * b[0] + a[0] * b[3] + a[1] * b[2] - a[2] * b[1],
+        a[3] * b[1] - a[0] * b[2] + a[1] * b[3] + a[2] * b[0],
+        a[3] * b[2] + a[0] * b[1] - a[1] * b[0] + a[2] * b[3],
+        a[3] * b[3] - a[0] * b[0] - a[1] * b[1] - a[2] * b[2],
+    ]
+}
+/// Angle in degrees between two rotations given as unit quaternions.
+fn angle(a: [f64; 4], b: [f64; 4]) -> f64 {
+    let d: f64 = (0..4).map(|i| a[i] * b[i]).sum::<f64>().abs().min(1.0);
+    2.0 * d.acos().to_degrees()
+}
+fn deg_bucket(v: f64) -> &'static str {
+    if v < 0.1 {
+        "<0.1"
+    } else if v < 1.0 {
+        "<1"
+    } else if v < 10.0 {
+        "<10"
+    } else if v < 45.0 {
+        "<45"
+    } else {
+        ">=45"
+    }
+}
+
+/// Track decoding of one spline object: errors, kinds, quantised norms,
+/// block-boundary continuity and, when the clip's actor-folder skeleton fits
+/// its binding, frame 0 against the reference pose.
+#[allow(clippy::too_many_arguments)]
+fn track_census(
+    k: &hk::Container<'_>,
+    i: usize,
+    name: &str,
+    skeletons: &[SkelInfo],
+    out: &mut BTreeMap<String, u64>,
+    checks: &mut BTreeMap<String, [u64; 2]>,
+    worst: &mut BTreeMap<String, f64>,
+    b: &Budget,
+) {
+    let Ok(s) = hk::SplineAnimation::read(k, i, name, 0, b) else {
+        return;
+    };
+    bump(out, "clips".into());
+    let d = match s.decode(name, b) {
+        Ok(d) => d,
+        Err(e) => {
+            bump(
+                out,
+                format!("clips not decoded: {} expected {}", e.code, e.expected),
+            );
+            if out.len() < 300 {
+                eprintln!("{name}: {e}");
+            }
+            return;
+        }
+    };
+    bump(out, "clips decoded".into());
+    *out.entry("blocks decoded".into()).or_default() += d.blocks.len() as u64;
+    let mut max_norm_dev: f64 = 0.0;
+    for tracks in &d.blocks {
+        for t in tracks {
+            for (kind, v) in [("translation", &t.translation), ("scale", &t.scale)] {
+                let key = if v.curve.is_some() {
+                    "spline"
+                } else if v.flags & 0x0f != 0 {
+                    "static"
+                } else {
+                    "absent"
+                };
+                bump(out, format!("track {kind} {key}"));
+                if let Some(c) = &v.curve {
+                    bump(out, format!("curve {kind} degree {}", c.degree));
+                }
+            }
+            let (key, quats): (&str, Vec<[f32; 4]>) = match &t.rotation {
+                hk::RotationTrack::Absent => ("absent", vec![]),
+                hk::RotationTrack::Static(q) => ("static", vec![*q]),
+                hk::RotationTrack::Spline(c) => {
+                    bump(out, format!("curve rotation degree {}", c.degree));
+                    for w in c.points.windows(2) {
+                        let dot: f64 = (0..4)
+                            .map(|j| f64::from(w[0][j]) * f64::from(w[1][j]))
+                            .sum();
+                        check(
+                            checks,
+                            "rotation control points: next one in the same hemisphere (dot >= 0)",
+                            dot >= 0.0,
+                        );
+                    }
+                    ("spline", c.points.clone())
+                }
+            };
+            bump(
+                out,
+                format!(
+                    "track rotation {key} {}",
+                    if t.mask[0] >> 2 & 15 == 1 {
+                        "40-bit"
+                    } else {
+                        "48-bit"
+                    }
+                ),
+            );
+            for q in quats {
+                let n = q
+                    .iter()
+                    .map(|x| f64::from(*x) * f64::from(*x))
+                    .sum::<f64>()
+                    .sqrt();
+                max_norm_dev = max_norm_dev.max((n - 1.0).abs());
+                *out.entry("quantised rotations".into()).or_default() += 1;
+                check(checks, "quantised rotation of unit norm within 1e-6 (stored fields' squares sum to at most 1)", (n - 1.0).abs() <= 1e-6);
+            }
+        }
+    }
+    let wn = worst
+        .entry("largest quantised rotation norm deviation".into())
+        .or_default();
+    *wn = wn.max(max_norm_dev);
+    // Block boundaries: last frame of block j against frame 0 of block j + 1.
+    for j in 1..d.blocks.len() {
+        let last = f64::from(d.frames_per_block - 1);
+        for (a, bb) in d.blocks[j - 1].iter().zip(&d.blocks[j]) {
+            let pa = a.sample(last);
+            let pb = bb.sample(0.0);
+            let kinds = |v: &hk::VectorTrack| {
+                if v.curve.is_some() {
+                    "spline"
+                } else if v.flags & 15 != 0 {
+                    "static"
+                } else {
+                    "absent"
+                }
+            };
+            let rk = |r: &hk::RotationTrack| match r {
+                hk::RotationTrack::Absent => "absent",
+                hk::RotationTrack::Static(_) => "static",
+                hk::RotationTrack::Spline(_) => "spline",
+            };
+            for (label, diff) in [
+                (
+                    format!(
+                        "translation {}->{}",
+                        kinds(&a.translation),
+                        kinds(&bb.translation)
+                    ),
+                    dist(pa.translation, pb.translation),
+                ),
+                (
+                    format!(
+                        "rotation {}->{} (degrees)",
+                        rk(&a.rotation),
+                        rk(&bb.rotation)
+                    ),
+                    angle(pa.rotation, pb.rotation),
+                ),
+                (
+                    format!("scale {}->{}", kinds(&a.scale), kinds(&bb.scale)),
+                    dist(pa.scale, pb.scale),
+                ),
+            ] {
+                bump(out, format!("boundary {label}"));
+                let w = worst
+                    .entry(format!("boundary {label}: largest difference"))
+                    .or_default();
+                *w = w.max(diff);
+            }
+        }
+    }
+    // Frame 0 against the reference pose of the actor-folder skeleton.
+    let Some(bind) = k.objects.iter().position(|o| o.class == hk::BINDING) else {
+        return;
+    };
+    let Ok(bind) = hk::Binding::read(k, bind, name, 0, b) else {
+        return;
+    };
+    let parts: Vec<&str> = name.split('/').collect();
+    if parts.len() < 4 || parts[1] != "actors" {
+        return;
+    }
+    let path = format!("meshes/actors/{}/characterassets/skeleton.hkx", parts[2]);
+    let Some(sk) = skeletons.iter().find(|x| {
+        x.path == path
+            && x.name == bind.skeleton_name
+            && bind
+                .transform_tracks
+                .iter()
+                .all(|t| (*t as usize) < x.bones)
+    }) else {
+        return;
+    };
+    let idle = name.rsplit('/').next().is_some_and(|f| f.contains("idle"));
+    let group = if idle { "idle clips" } else { "other clips" };
+    bump(out, format!("frame 0 vs reference pose: {group}"));
+    let pose = d.sample(0.0);
+    for (t, p) in pose.iter().enumerate() {
+        let r = &sk.pose[bind.transform_tracks[t] as usize];
+        let rq = r.rotation.map(f64::from);
+        let a = angle(p.rotation, rq);
+        let dt = dist(p.translation, r.translation.map(f64::from));
+        bump(
+            out,
+            format!(
+                "frame 0 vs reference pose: {group}: track rotation angle {}",
+                deg_bucket(a)
+            ),
+        );
+        bump(
+            out,
+            format!(
+                "frame 0 vs reference pose: {group}: track translation distance {}",
+                bucket(dt)
+            ),
+        );
+        let _ = qmul;
+    }
 }
 
 fn run() -> Result<(), Box<dyn std::error::Error>> {
@@ -237,6 +459,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                             path: name.clone(),
                             name: s.name.to_vec(),
                             bones: s.bones.len(),
+                            pose: s.pose.clone(),
                         });
                     }),
                 ),
@@ -309,6 +532,33 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         }
         skeletons.extend(file_skeletons);
     }
+    // Second pass: track data of every spline object.
+    let mut tracks = BTreeMap::<String, u64>::new();
+    let mut worst = BTreeMap::<String, f64>::new();
+    for p in &paths {
+        let name = String::from_utf8_lossy(p).into_owned();
+        let b = Budget::new(m.limits.max_memory);
+        let Ok(bytes) = vfs.read_path_bytes(p, &b) else {
+            continue;
+        };
+        let Ok(k) = hk::Container::read(&bytes, &name, 0, &b) else {
+            continue;
+        };
+        for (i, o) in k.objects.iter().enumerate() {
+            if o.class == hk::SPLINE {
+                track_census(
+                    &k,
+                    i,
+                    &name,
+                    &skeletons,
+                    &mut tracks,
+                    &mut checks,
+                    &mut worst,
+                    &b,
+                );
+            }
+        }
+    }
     // Bindings against skeletons of the same name.
     for (file, sname, max, distinct) in &bindings {
         let same: Vec<_> = skeletons.iter().filter(|s| &s.name == sname).collect();
@@ -352,6 +602,13 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     writeln!(out, "\n# values")?;
     for (k, n) in &values {
         writeln!(out, "{n}\t{k}")?;
+    }
+    writeln!(out, "\n# track data")?;
+    for (k, n) in &tracks {
+        writeln!(out, "{n}\t{k}")?;
+    }
+    for (k, v) in &worst {
+        writeln!(out, "{v:.3e}\t{k}")?;
     }
     writeln!(out, "\n# skeleton.hkx against skeleton.nif")?;
     for (k, n) in &nif_cmp {

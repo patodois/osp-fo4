@@ -177,3 +177,144 @@ played on is not stored in the clip.
 
 Blocks per object: 1 in 14,364, 2 in 603, 3 to 9 or more in 93. Block i is
 the data from its offset to the next block's offset, or to the end.
+
+## Track data of `hkaSplineCompressedAnimation`
+
+`SplineAnimation::decode_block` reads the transform tracks of one block;
+`decode` reads all blocks and `DecodedSpline::sample(t)` gives each track's
+local translation, rotation and scale at clip time t. Established by byte
+consumption over every block, then by the value checks below. Exploration
+used a local copy of the `.hkx` files (`hkx_dump`) and throwaway scripts
+outside the repository; every number here was then counted by
+`anim_census` with the Rust reader over the whole installation. All 15,060
+spline objects decode, 16,063 blocks; the 1,085 lossless objects and the
+float tracks of the 4 spline objects that have one are not decoded.
+
+### Bytes of a block
+
+A block starts with 4 mask bytes per transform track and 4 per float track
+(the u32 at +68). Then, track by track, translation, rotation and scale:
+
+| Mask byte | Content |
+| --- | --- |
+| 0 | bits 0-1 translation code, 2-5 rotation code, 6-7 scale code: 69 (codes 1, 1, 1) in 1,287,665 track-blocks, 73 (1, 2, 1) in 135,732 |
+| 1, 3 | translation, scale: bits 0-2 static x, y, z; bits 4-6 spline x, y, z; bits 3 and 7 never set; no component both static and spline (1,423,397 each) |
+| 2 | rotation: low four bits static, high four bits spline |
+
+- **Translation or scale without a spline bit**: one f32 per static
+  component, in x, y, z order.
+- **With a spline bit**: u16 m, u8 degree, m + degree + 2 knot bytes, zero
+  bytes to a multiple of 4, then per component in x, y, z order two f32
+  (minimum, maximum) if spline or one f32 if static, then m + 1 rows of one
+  u16 per spline component, then zero bytes to a multiple of 4.
+- **Rotation**: when any of the high four bits is set, u16 m, u8 degree,
+  m + degree + 2 knot bytes, then m + 1 quantised rotations; otherwise, when
+  any low bit is set, one quantised rotation; otherwise nothing. Then zero
+  bytes to a multiple of 4. A quantised rotation is 5 bytes for code 1 and
+  6 bytes for code 2. Before 6-byte spline control points the position is
+  first taken to a multiple of 2.
+- The transform data ends exactly at the block's u32 of the array at +104
+  (the float offset), and the bytes from there to the block end are zero
+  when there is no float track.
+
+Under these rules the transform data of all 16,063 blocks ends exactly at
+its float offset, with every alignment and trailing byte zero (enforced,
+`InvalidHavokSplineBlock`). Alternatives fail: knots m + degree + 1 bytes
+(1,259 blocks consumed exactly), m + degree + 3 (6,193), rotation sizes 6
+and 5 swapped (593), 4 and 6 (1,565); a 4-byte alignment before rotation
+data (235 of a 3,304-block sample). Consumption cannot see the 2-byte
+alignment before 6-byte rotations (the end alignment to 4 absorbs it); the
+values decide it: without it 199,997 of 1,416,402 6-byte control points
+have stored components whose squares sum above 1 (impossible for a unit
+quaternion, below), with it none. Every 6-byte static rotation already
+starts at an even position, so whether the alignment applies there is not
+decidable; the reader applies it, which changes nothing in the measured
+data. Translation and scale code 1 is the only one stored; the reader
+refuses other codes rather than guess their size.
+
+Curves: degree 1 (473,496 rotation, 55,221 translation, 106 scale curves)
+or 3 (130,019, 38,236, 389). In every curve the first degree + 1 knots are
+0, the last degree + 1 equal the block's frames minus 1, and the knots do
+not decrease (enforced): a clamped knot vector in frames of the block, with
+as many knots as control points plus degree plus 1.
+
+Track-blocks by kind: translation static 1,111,090, spline 93,457, absent
+218,850; rotation static 508,907 (440,079 of 5 bytes), spline 603,515
+(570,847 of 5 bytes), absent 310,975; scale absent 1,422,782, spline 495,
+static 120.
+
+### Values
+
+- **Quantised rotation, 5 bytes** (40 bits, little-endian): three 12-bit
+  fields at bits 0, 12 and 24 read as `(v - 2047) / 2047 / sqrt 2`; bits 36
+  and 37 the index (x, y, z, w = 0 to 3) of the component the fields leave
+  out, the fields filling the other three in order; bit 38 its sign; bit 39
+  never set. The left-out component is `sqrt(1 - sum of squares)`.
+- **Quantised rotation, 6 bytes**: three u16, the low 15 bits read as
+  `(v - 16383) / 16383 / sqrt 2`; the top bits of the first two words are
+  the index (first word low), the third word's top bit the sign.
+- Evidence: in all 39,506,983 quantised rotations the fields' squares sum
+  to at most 1 (largest norm deviation of the result 5.1e-8), and in the
+  sampled control points below the left-out component is always the
+  largest in magnitude. Over 7,549,551 5-byte
+  control points of a sample, consecutive points of a curve differ by
+  1 - |dot| above 0.1 in 0.050 % of pairs under this reading; with the sign
+  at bit 39, no sign, the index at bits 37-38 or 38-39, the fields in cyclic
+  or reverse order, the share is 0.28 % to 0.46 %, and fields at bits 4, 16
+  and 28 give 71 %. For 6-byte points the chosen index and sign words give
+  0.32 %, the other five assignments 1.07 % to 1.55 %. In the decoded idle
+  and other clips below, 50,386 and 309,534 tracks are within 0.1 degree of
+  the skeleton's reference rotation at frame 0. Whether the stored constants
+  are exactly 2047, 16383 and 1/sqrt 2 in the writer's arithmetic is not
+  established; they reproduce the reference rotations within the
+  quantisation step.
+- **Control points of translation and scale**: `min + (max - min) * v /
+  65535` per spline component.
+- **Curve**: the clamped B-spline of the stored degree, knots and control
+  points evaluated by de Boor's recursion at u = frame within the block;
+  rotations evaluated on the four components, then normalised. Only 4 of
+  38,394,557 consecutive rotation control points have a negative dot
+  product, so component-wise evaluation does not cross between q and -q.
+- **Time**: frame `t / frame duration`, clamped to the clip; block
+  `floor(frame / (frames per block - 1))` (at most the last); u = the frame
+  minus the block's first frame. Consecutive blocks share their boundary
+  frame.
+- **Absent components**: translation 0, rotation identity, scale 1.
+
+Checks of the values:
+
+- **Block boundaries.** At every boundary of the 696 objects with more than
+  one block, the last frame of block j against frame 0 of block j + 1
+  (largest difference): rotation spline to spline 3.4e-6 degrees over
+  37,372 boundaries, static or spline mixes at most 0.15 degrees, absent to
+  anything 0; translation static to static 0.0024 units (64,872), spline to
+  spline 0.092 (3,420), absent on one side at most 0.0020 (186); scale at
+  most 0.0022. Since a component can change kind between blocks, the
+  boundaries where one side is absent (157 rotation, 186 translation, 11
+  scale) are what establishes the absent values above.
+- **Interior of curves.** Pairs of spline objects with the same file name,
+  frame count and track count were compared track by track where both store
+  a rotation curve with different knots and the two agree at both block
+  ends (19,577 track pairs): the evaluated rotations agree at every frame
+  within 1 - |dot| below 1e-5 (0.5 degree) for 54.3 % of pairs with the
+  stored knots and 28.3 % with uniformly spaced knots of the same count;
+  2,393 pairs agree with the stored knots and not with uniform ones (above
+  1e-4), 15 the reverse. Many such pairs are different motions, so this
+  supports the stored-knot evaluation without proving it frame by frame.
+- **Frame 0 against the reference pose**, for clips whose binding fits the
+  `characterassets/skeleton.hkx` of their actor folder (1,861 clips with
+  "idle" in the file name, 11,018 others; one comparison per track):
+  translation within 0.001 of the bone's reference translation for 133,687
+  of 168,211 idle tracks (79 %), rotation within 1 degree for 53,800 (32 %)
+  and 45 degrees or more for 24,610. A pose differs from the reference pose
+  where the clip moves the bone, so this bounds nothing; it shows the static
+  translations reproducing the bone offsets. In one dog idle of 65 tracks,
+  57 translations equal the reference translation within 0.001 (not the
+  body's spline, one body bone and six mouth bones) and 33 rotations are
+  within 1 degree.
+
+Not decoded: float tracks (the 4 objects with one store 20, 40 or 60 bytes
+after the float offset), translation or scale codes other than 1 (none
+stored), the lossless class, and the reference-frame object (an array
+of 16-byte samples at +72 whose count equals the frame count in 4,922 of the
+spline objects of a 6,000-object sample that link one; not read).

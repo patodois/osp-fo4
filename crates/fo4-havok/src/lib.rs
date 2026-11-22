@@ -31,10 +31,11 @@ mod objects;
 mod shapes;
 mod view;
 pub use anim::{
-    root_entries, AnimationContainer, AnimationHeader, Binding, BonePose, RootEntry, Skeleton,
-    SplineAnimation, ANIMATION_CONTAINER, ANNOTATION_TRACK, BINDING, LOSSLESS, LOSSLESS_KIND,
-    POSE_UNIT_TOLERANCE, ROOT_ENTRY, ROOT_LEVEL, SKELETON, SKELETON_BONE, SKELETON_POSE, SPLINE,
-    SPLINE_KIND,
+    de_boor, root_entries, AnimationContainer, AnimationHeader, Binding, BonePose, Component,
+    Curve, DecodedSpline, Quantised, RootEntry, RotationTrack, Skeleton, SplineAnimation, Track,
+    TrackPose, VectorTrack, ANIMATION_CONTAINER, ANNOTATION_TRACK, BINDING, LOSSLESS,
+    LOSSLESS_KIND, POSE_UNIT_TOLERANCE, ROOT_ENTRY, ROOT_LEVEL, ROTATION_40, ROTATION_48, SKELETON,
+    SKELETON_BONE, SKELETON_POSE, SPLINE, SPLINE_KIND, VECTOR_16,
 };
 pub use bodies::{
     Body, PhysicsSystem, BODY, PHYSICS_SYSTEM, RAGDOLL, RAGDOLL_ARRAY, SYSTEM_ARRAYS,

@@ -16,6 +16,8 @@ bytes	442724720
 16145	0	binding tracks not negative
 16145	0	binding transform tracks == animation +24
 1085	0	lossless annotation tracks == transform tracks
+39506983	0	quantised rotation of unit norm within 1e-6 (stored fields' squares sum to at most 1)
+38394557	4	rotation control points: next one in the same hemisphere (dot >= 0)
 284	0	skeleton bone names distinct
 274	10	skeleton name is bone 0 name
 15060	0	spline annotation tracks == transform tracks
@@ -102,6 +104,97 @@ bytes	442724720
 5	spline frame duration 5.000000
 1	spline frame duration 8.600000
 15060	spline frames per block 256
+
+# track data
+16063	blocks decoded
+18722	boundary rotation absent->absent (degrees)
+41	boundary rotation absent->spline (degrees)
+1	boundary rotation absent->static (degrees)
+115	boundary rotation spline->absent (degrees)
+37372	boundary rotation spline->spline (degrees)
+3598	boundary rotation spline->static (degrees)
+1077	boundary rotation static->spline (degrees)
+23846	boundary rotation static->static (degrees)
+84689	boundary scale absent->absent
+10	boundary scale spline->absent
+50	boundary scale spline->spline
+1	boundary scale static->absent
+22	boundary scale static->static
+15337	boundary translation absent->absent
+27	boundary translation absent->spline
+19	boundary translation absent->static
+132	boundary translation spline->absent
+3420	boundary translation spline->spline
+805	boundary translation spline->static
+8	boundary translation static->absent
+152	boundary translation static->spline
+64872	boundary translation static->static
+15060	clips
+15060	clips decoded
+473496	curve rotation degree 1
+130019	curve rotation degree 3
+106	curve scale degree 1
+389	curve scale degree 3
+55221	curve translation degree 1
+38236	curve translation degree 3
+1861	frame 0 vs reference pose: idle clips
+50386	frame 0 vs reference pose: idle clips: track rotation angle <0.1
+3414	frame 0 vs reference pose: idle clips: track rotation angle <1
+27354	frame 0 vs reference pose: idle clips: track rotation angle <10
+62447	frame 0 vs reference pose: idle clips: track rotation angle <45
+24610	frame 0 vs reference pose: idle clips: track rotation angle >=45
+133687	frame 0 vs reference pose: idle clips: track translation distance <0.001
+4707	frame 0 vs reference pose: idle clips: track translation distance <0.01
+1357	frame 0 vs reference pose: idle clips: track translation distance <0.1
+3516	frame 0 vs reference pose: idle clips: track translation distance <1
+24944	frame 0 vs reference pose: idle clips: track translation distance >=1
+11018	frame 0 vs reference pose: other clips
+309534	frame 0 vs reference pose: other clips: track rotation angle <0.1
+20988	frame 0 vs reference pose: other clips: track rotation angle <1
+158781	frame 0 vs reference pose: other clips: track rotation angle <10
+360421	frame 0 vs reference pose: other clips: track rotation angle <45
+153324	frame 0 vs reference pose: other clips: track rotation angle >=45
+778808	frame 0 vs reference pose: other clips: track translation distance <0.001
+26063	frame 0 vs reference pose: other clips: track translation distance <0.01
+10105	frame 0 vs reference pose: other clips: track translation distance <0.1
+24215	frame 0 vs reference pose: other clips: track translation distance <1
+163857	frame 0 vs reference pose: other clips: track translation distance >=1
+39506983	quantised rotations
+276739	track rotation absent 40-bit
+34236	track rotation absent 48-bit
+570847	track rotation spline 40-bit
+32668	track rotation spline 48-bit
+440079	track rotation static 40-bit
+68828	track rotation static 48-bit
+1422782	track scale absent
+495	track scale spline
+120	track scale static
+218850	track translation absent
+93457	track translation spline
+1111090	track translation static
+0.000e0	boundary rotation absent->absent (degrees): largest difference
+0.000e0	boundary rotation absent->spline (degrees): largest difference
+0.000e0	boundary rotation absent->static (degrees): largest difference
+0.000e0	boundary rotation spline->absent (degrees): largest difference
+3.415e-6	boundary rotation spline->spline (degrees): largest difference
+1.486e-1	boundary rotation spline->static (degrees): largest difference
+9.864e-2	boundary rotation static->spline (degrees): largest difference
+1.119e-1	boundary rotation static->static (degrees): largest difference
+0.000e0	boundary scale absent->absent: largest difference
+9.779e-4	boundary scale spline->absent: largest difference
+2.225e-3	boundary scale spline->spline: largest difference
+1.003e-3	boundary scale static->absent: largest difference
+2.112e-6	boundary scale static->static: largest difference
+0.000e0	boundary translation absent->absent: largest difference
+7.887e-4	boundary translation absent->spline: largest difference
+1.852e-3	boundary translation absent->static: largest difference
+1.987e-3	boundary translation spline->absent: largest difference
+9.185e-2	boundary translation spline->spline: largest difference
+1.739e-2	boundary translation spline->static: largest difference
+1.244e-3	boundary translation static->absent: largest difference
+1.682e-3	boundary translation static->spline: largest difference
+2.373e-3	boundary translation static->static: largest difference
+5.079e-8	largest quantised rotation norm deviation
 
 # skeleton.hkx against skeleton.nif
 537	bone parent: none named in the NIF
