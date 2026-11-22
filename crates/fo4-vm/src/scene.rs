@@ -16,6 +16,14 @@
 //! are false; conditions the evaluator leaves undetermined) stops the
 //! scene where it is, counted by reason. After the last phase the scene's
 //! end fragment runs and it stops playing.
+//!
+//! With the scene clock on ([`Clock::on`], `scene_clock_v1`) actions start
+//! when their start phase is entered and hold every phase they span until
+//! they complete; an action whose time the records settle (a timer's
+//! seconds, `scen_timer_action_seconds_v1`; a spoken line's audio,
+//! `scene_dialogue_line_audio_v1`) or the caller assumes completes when
+//! the caller advances the clock past it ([`advance_clock`]); every other
+//! action waits as before.
 use crate::{
     bind,
     cond::{self, Combine, Truth},
@@ -23,7 +31,8 @@ use crate::{
     host::{NativeCall, Reply},
     quest::{self, Job, QuestHost, RunFacts},
     rules,
-    world::{InstId, ObjId, Val, World},
+    voice::{self, LineTime, Speaker},
+    world::{Clock as TimerClock, InstId, ObjId, Val, World},
     VmError,
 };
 use fo4_core::Budget;
@@ -85,6 +94,70 @@ pub struct PhaseInfo {
     pub actions: Vec<u16>,
 }
 
+/// The player's topics of a player dialogue action (kind 3) with the
+/// topic of the answer each pairs with, in the order
+/// `--assume-player-choice` numbers them (prior knowledge of the tags'
+/// letters: positive, negative, neutral, question; `spec/voice.md`).
+pub const PLAYER_CHOICES: [([u8; 4], [u8; 4]); 4] = [
+    (*b"PTOP", *b"NPOT"),
+    (*b"NTOP", *b"NNGT"),
+    (*b"NETO", *b"NNUT"),
+    (*b"QTOP", *b"NQUT"),
+];
+
+/// One action, as the scene clock needs it.
+#[derive(Debug, Clone, Default)]
+pub struct ActionInfo {
+    pub kind: u16,
+    pub start: usize,
+    pub end: usize,
+    /// ALID: the speaker or actor alias, -1 for none.
+    pub alias: i32,
+    /// FNAM, as stored.
+    pub flags: Option<u32>,
+    /// Kind 2: the SNAM after the end phase as an f32 (seconds under
+    /// `scen_timer_action_seconds_v1`) and the TNAM, when stored.
+    pub seconds: Option<f32>,
+    pub low: Option<f32>,
+    /// Kind 0: the topic DATA names.
+    pub topic: Option<FormKey>,
+    /// Kind 3: the topics of [`PLAYER_CHOICES`], resolved.
+    pub choices: Vec<(Option<FormKey>, Option<FormKey>)>,
+}
+impl ActionInfo {
+    fn of(a: &fo4_plugin::scen::Action) -> Self {
+        let topic = |t: &[u8; 4]| {
+            a.field(t)
+                .and_then(|f| f.form.as_ref())
+                .and_then(|f| f.key.clone())
+        };
+        ActionInfo {
+            kind: a.kind,
+            start: a.start as usize,
+            end: a.end as usize,
+            alias: a.alias,
+            flags: a.flags,
+            seconds: (a.kind == TIMER).then(|| a.float(b"SNAM")).flatten(),
+            low: (a.kind == TIMER).then(|| a.float(b"TNAM")).flatten(),
+            topic: (a.kind == LINE).then(|| topic(b"DATA")).flatten(),
+            choices: if a.kind == PLAYER_DIALOGUE {
+                PLAYER_CHOICES
+                    .iter()
+                    .map(|(p, r)| (topic(p), topic(r)))
+                    .collect()
+            } else {
+                Vec::new()
+            },
+        }
+    }
+}
+
+/// Action kinds the clock times (`scen_record_layout_v1`).
+pub const LINE: u16 = 0;
+pub const PACKAGE: u16 = 1;
+pub const TIMER: u16 = 2;
+pub const PLAYER_DIALOGUE: u16 = 3;
+
 /// What the records say about one scene.
 #[derive(Debug, Clone)]
 pub struct SceneInfo {
@@ -96,6 +169,8 @@ pub struct SceneInfo {
     pub begin: Option<String>,
     pub end: Option<String>,
     pub phases: Vec<PhaseInfo>,
+    /// Every action, in stored order.
+    pub actions: Vec<ActionInfo>,
     /// Phase fragments whose flag byte is neither begin nor end, or whose
     /// phase the record does not hold (not run, counted).
     pub unplaced: usize,
@@ -162,6 +237,7 @@ impl SceneInfo {
             begin,
             end,
             phases,
+            actions: s.actions.iter().map(ActionInfo::of).collect(),
             unplaced,
         }))
     }
@@ -205,6 +281,46 @@ pub enum Change {
     Stopped,
     Refused(String),
     Opened(String),
+    /// The scene clock (only with [`Clock::on`]): an action started in a
+    /// phase (its index in the record, its kind, how its time was settled
+    /// or why it is not), ...
+    ActionStarted(usize, usize, u16, String),
+    /// ... an action completed (index, kind, at that real-time second), ...
+    ActionCompleted(usize, u16, f64),
+    /// ... and a phase that waits only on actions with a due time.
+    OnClock(usize),
+}
+
+/// The scene clock and the caller's assumptions (`quest_run
+/// --scene-clock`, `--assume-line-seconds`, `--assume-player-choice`,
+/// `--assume-packages-complete`). Off by default: phases wait on every
+/// action as before.
+#[derive(Debug, Clone, Default)]
+pub struct Clock {
+    /// `scene_clock_v1`: actions start, are timed and complete.
+    pub on: bool,
+    /// `scen_timer_action_seconds_v1`: a timer action lasts its seconds.
+    pub timers: bool,
+    /// `scene_dialogue_line_audio_v1`: a spoken line lasts its audio; the
+    /// voice files and topics it is read from.
+    pub voice: Option<Rc<voice::Voice>>,
+    /// Caller assumption: a line whose audio does not settle its time
+    /// lasts this many seconds.
+    pub assume_line_seconds: Option<f64>,
+    /// Caller assumption: the player picks this choice
+    /// ([`PLAYER_CHOICES`]) in player dialogue.
+    pub assume_player_choice: Option<usize>,
+    /// Caller assumption: a package action completes as soon as it starts.
+    pub assume_packages: bool,
+}
+
+/// One started action of a playing scene.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ActionRun {
+    pub kind: u16,
+    /// Real-time second it completes at, when settled.
+    pub due: Option<f64>,
+    pub done: bool,
 }
 
 /// Every scene's state (kept in [`World`]).
@@ -227,6 +343,9 @@ pub struct Scenes {
     pub groups: Option<Rc<Groups>>,
     /// (scene handle, change) in order.
     pub log: Vec<(ObjId, Change)>,
+    pub clock: Clock,
+    /// Started actions by (scene handle, action index).
+    pub actions: BTreeMap<(ObjId, usize), ActionRun>,
 }
 
 /// What the groups of kind 10 hold: scenes by quest, INFO owners.
@@ -346,6 +465,7 @@ pub(crate) fn start(
     let s = state(w, i);
     s.playing = Some(true);
     s.next = 0;
+    clear_actions(w, o);
     w.scenes.log.push((
         o,
         if with_quest {
@@ -430,6 +550,7 @@ fn step(h: &mut QuestHost<'_>, w: &mut World, o: ObjId, i: &Rc<SceneInfo>, compl
             queue(w, o, Step::Fragment(f.clone(), "end".into()));
         }
         state(w, i).playing = Some(false);
+        clear_actions(w, o);
         w.scenes.log.push((o, Change::Ended));
         return;
     };
@@ -452,6 +573,9 @@ fn step(h: &mut QuestHost<'_>, w: &mut World, o: ObjId, i: &Rc<SceneInfo>, compl
             ),
             Truth::True => {
                 w.scenes.log.push((o, Change::PhaseEntered(p)));
+                if w.scenes.clock.on {
+                    start_actions(h, w, o, i, p);
+                }
                 if let Some(f) = &phase.begin {
                     queue(w, o, Step::Fragment(f.clone(), format!("phase {p} begin")));
                 }
@@ -460,7 +584,33 @@ fn step(h: &mut QuestHost<'_>, w: &mut World, o: ObjId, i: &Rc<SceneInfo>, compl
         }
         return;
     }
-    if let Some(k) = phase.actions.iter().min() {
+    if w.scenes.clock.on {
+        // Every action spanning the phase holds it until it completes
+        // (`scene_clock_v1`); one without a due time waits as before.
+        let mut untimed: Option<u16> = None;
+        let mut timed = false;
+        for (j, a) in i.actions.iter().enumerate() {
+            if !(a.start <= p && p <= a.end) {
+                continue;
+            }
+            match w.scenes.actions.get(&(o, j)) {
+                Some(r) if r.done => {}
+                Some(r) if r.due.is_some() => timed = true,
+                _ => untimed = Some(untimed.map_or(a.kind, |k| k.min(a.kind))),
+            }
+        }
+        if let Some(k) = untimed {
+            wait(
+                w,
+                format!("an action runs in the phase: {}", action_kind(k)),
+            );
+            return;
+        }
+        if timed {
+            w.scenes.log.push((o, Change::OnClock(p)));
+            return;
+        }
+    } else if let Some(k) = phase.actions.iter().min() {
         wait(
             w,
             format!("an action runs in the phase: {}", action_kind(*k)),
@@ -485,6 +635,210 @@ fn step(h: &mut QuestHost<'_>, w: &mut World, o: ObjId, i: &Rc<SceneInfo>, compl
             ),
         ),
     }
+}
+
+fn clear_actions(w: &mut World, o: ObjId) {
+    w.scenes.actions.retain(|(s, _), _| *s != o);
+}
+
+/// The seconds of one line of a topic, or why they are not settled, with
+/// the caller's assumption applied when it is given.
+fn line_time(
+    h: &mut QuestHost<'_>,
+    w: &mut World,
+    i: &SceneInfo,
+    topic: Option<&FormKey>,
+    speaker: &Speaker,
+) -> (Option<f64>, String) {
+    let clock = w.scenes.clock.clone();
+    let audio = match (&clock.voice, topic) {
+        (None, _) => LineTime::Undetermined("line audio off".into()),
+        (Some(_), None) => LineTime::Undetermined("the action names no topic".into()),
+        (Some(v), Some(t)) => {
+            let store = h.data.store;
+            let b = Budget::new(h.data.max_memory);
+            let mut used = BTreeSet::new();
+            let mut cond_used = BTreeSet::new();
+            let quest = i.quest.clone();
+            let mut eval = |info: &fo4_plugin::info::Info, plugin: usize, file: &str| {
+                let ctx = Context {
+                    order: store.order(),
+                    plugin,
+                };
+                let mut facts = RunFacts::of(h, w, None, quest.clone());
+                cond::eval_list_with(
+                    &info.conditions,
+                    ctx,
+                    file,
+                    &mut facts,
+                    Combine::OrGroups,
+                    &mut cond_used,
+                )
+            };
+            let t = voice::line_seconds(store, v, t, speaker, &mut eval, &mut used, &b);
+            for u in used.into_iter().chain(cond_used) {
+                h.using(u);
+            }
+            t
+        }
+    };
+    match (audio, clock.assume_line_seconds) {
+        (LineTime::Seconds(x), _) => (Some(x), "seconds from its audio".into()),
+        (LineTime::Undetermined(why), Some(x)) => (
+            Some(x),
+            format!("assumed seconds from the command line ({why})"),
+        ),
+        (LineTime::Undetermined(why), None) => (None, format!("undetermined: {why}")),
+    }
+}
+
+/// How long an action lasts once started, or why that is not settled
+/// (the second part: a short text the census counts).
+fn action_time(
+    h: &mut QuestHost<'_>,
+    w: &mut World,
+    i: &SceneInfo,
+    a: &ActionInfo,
+) -> (Option<f64>, String) {
+    let clock = w.scenes.clock.clone();
+    match a.kind {
+        TIMER if clock.timers => {
+            h.using(rules::TIMER_ACTION);
+            match (a.seconds, a.low, a.flags.unwrap_or(0)) {
+                (_, _, f) if f != 0 => (
+                    None,
+                    "timer: undetermined (a flag bit is set; no bit is read)".into(),
+                ),
+                (_, Some(_), _) => (
+                    None,
+                    "timer: undetermined (a second value, TNAM, is stored)".into(),
+                ),
+                (Some(x), None, _) if x.is_finite() && x >= 0.0 => {
+                    (Some(f64::from(x)), "timer: seconds from the record".into())
+                }
+                _ => (None, "timer: undetermined (no seconds stored)".into()),
+            }
+        }
+        LINE => {
+            let speaker = match &i.quest {
+                Some(q) => {
+                    let b = Budget::new(h.data.max_memory);
+                    voice::speaker(h.data.store, q, a.alias, &b)
+                }
+                None => Speaker::Unknown("the scene has no quest".into()),
+            };
+            let (t, how) = line_time(h, w, i, a.topic.as_ref(), &speaker);
+            (t, format!("line: {how}"))
+        }
+        PACKAGE if clock.assume_packages => (
+            Some(0.0),
+            "package: assumed complete from the command line".into(),
+        ),
+        PLAYER_DIALOGUE => match clock.assume_player_choice {
+            None => (None, "player dialogue: waits on the player".into()),
+            Some(n) => {
+                h.using(rules::PLAYER_CHOICE);
+                let Some((player, answer)) = a.choices.get(n).cloned() else {
+                    return (
+                        None,
+                        "player dialogue: the assumed choice is not stored".into(),
+                    );
+                };
+                let me = Speaker::Unknown("the player's voice type is not in the records".into());
+                let (p, ph) = line_time(h, w, i, player.as_ref(), &me);
+                let speaker = match &i.quest {
+                    Some(q) => {
+                        let b = Budget::new(h.data.max_memory);
+                        voice::speaker(h.data.store, q, a.alias, &b)
+                    }
+                    None => Speaker::Unknown("the scene has no quest".into()),
+                };
+                let (r, rh) = line_time(h, w, i, answer.as_ref(), &speaker);
+                let how = format!(
+                    "player dialogue: assumed choice {n} from the command line; player line {ph}; answer {rh}"
+                );
+                match (p, r) {
+                    (Some(p), Some(r)) => (Some(p + r), how),
+                    _ => (None, how),
+                }
+            }
+        },
+        k => (None, format!("{}: not timed", action_kind(k))),
+    }
+}
+
+/// Starts the actions whose start phase is `p` (`scene_clock_v1`).
+fn start_actions(h: &mut QuestHost<'_>, w: &mut World, o: ObjId, i: &SceneInfo, p: usize) {
+    h.using(rules::SCENE_CLOCK);
+    for (j, a) in i.actions.iter().enumerate() {
+        if a.start != p {
+            continue;
+        }
+        let (t, how) = action_time(h, w, i, a);
+        let now = w.now[TimerClock::Real as usize];
+        let done = t == Some(0.0);
+        w.scenes
+            .log
+            .push((o, Change::ActionStarted(p, j, a.kind, how)));
+        w.scenes.actions.insert(
+            (o, j),
+            ActionRun {
+                kind: a.kind,
+                due: t.map(|x| now + x),
+                done,
+            },
+        );
+        if done {
+            w.scenes
+                .log
+                .push((o, Change::ActionCompleted(j, a.kind, now)));
+        }
+    }
+}
+
+/// Real seconds from now until the next started action is due, when one
+/// is (`scene_clock_v1`).
+pub fn next_due(w: &World) -> Option<f64> {
+    let now = w.now[TimerClock::Real as usize];
+    w.scenes
+        .actions
+        .values()
+        .filter(|r| !r.done)
+        .filter_map(|r| r.due)
+        .min_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
+        .map(|d| (d - now).max(0.0))
+}
+
+/// Advances the real-time clock to the next due action (the game-time
+/// clock by `scale` real seconds per game hour over 3600, when the caller
+/// knows the time scale), completes every action due by then and queues
+/// the completion step of each scene that had one. Returns the real-time
+/// second reached, or `None` when no started action has a due time. A
+/// caller assumption like firing timers: the caller says how far.
+pub fn advance_clock(w: &mut World, scale: Option<f64>) -> Option<f64> {
+    let dt = next_due(w)?;
+    let now = w.now[TimerClock::Real as usize];
+    let t = now + dt;
+    w.now[TimerClock::Real as usize] = t;
+    if let Some(s) = scale {
+        w.now[TimerClock::GameTime as usize] += dt * s / 3600.0;
+    }
+    let mut scenes = Vec::new();
+    let mut done = Vec::new();
+    for (&(o, j), r) in w.scenes.actions.iter_mut() {
+        if !r.done && r.due.is_some_and(|d| d <= t) {
+            r.done = true;
+            done.push((o, Change::ActionCompleted(j, r.kind, t)));
+            if !scenes.contains(&o) {
+                scenes.push(o);
+            }
+        }
+    }
+    w.scenes.log.extend(done);
+    for o in scenes {
+        queue(w, o, Step::Complete);
+    }
+    Some(t)
 }
 
 /// The scene natives (and the steps), answered by the quest host when
@@ -530,6 +884,7 @@ pub(crate) fn call(h: &mut QuestHost<'_>, c: &NativeCall, w: &mut World) -> Repl
             h.using(rules::SCENE_START);
             let s = state(w, &i);
             s.playing = Some(false);
+            clear_actions(w, o);
             w.scenes.log.push((o, Change::Stopped));
             none(c)
         }

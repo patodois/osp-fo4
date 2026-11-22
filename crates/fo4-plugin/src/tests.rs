@@ -2659,3 +2659,57 @@ fn enable_parent_chains_are_read_to_the_last_byte_and_end_by_name() {
     let groups: Vec<u32> = store.placement_groups().map(|(_, _, g)| g).collect();
     assert_eq!(groups, [9; 7]);
 }
+
+#[test]
+fn topic_children_keep_their_topic_and_stored_order() {
+    use crate::typed::Store;
+    // A quest whose children group (kind 10) holds two topics, each with
+    // a children group of kind 7 holding its lines.
+    let topic_a = group(
+        7,
+        0x901u32.to_le_bytes(),
+        &[
+            record(b"INFO", 0x903, 0, &sub(b"ENAM", &[0; 4])),
+            record(b"INFO", 0x902, 0, &sub(b"ENAM", &[0; 4])),
+        ]
+        .concat(),
+    );
+    let topic_b = group(
+        7,
+        0x904u32.to_le_bytes(),
+        &record(b"INFO", 0x905, 0, &sub(b"ENAM", &[0; 4])),
+    );
+    let children = [
+        record(b"DIAL", 0x904, 0, &sub(b"PNAM", &[0; 4])),
+        topic_b,
+        record(b"DIAL", 0x901, 0, &sub(b"PNAM", &[0; 4])),
+        topic_a,
+    ]
+    .concat();
+    let mut body = record(b"QUST", 0x900, 0, &sub(b"EDID", b"Q\0"));
+    body.extend(group(10, 0x900u32.to_le_bytes(), &children));
+    let body = group(0, *b"QUST", &body);
+    let sources: Vec<(String, Box<dyn ReadAt>)> = vec![(
+        "base.esm".into(),
+        Box::new(OwnedSource(plugin(MASTER, &[], 0, &body))),
+    )];
+    let store = Store::from_sources(
+        fo4_core::Game::Fallout4,
+        sources,
+        Limits::default(),
+        &Budget::new(8 << 20),
+    )
+    .unwrap();
+    let got: Vec<(u32, u32)> = store
+        .topic_children()
+        .map(|(o, t)| (o.key as u32, t.object_id))
+        .collect();
+    // Grouped by topic (lower key first), stored order within a topic.
+    assert_eq!(got, [(0x903, 0x901), (0x902, 0x901), (0x905, 0x904)]);
+    // The quest group still owns every record below it.
+    let owners: Vec<(u32, u32)> = store
+        .placement_groups()
+        .map(|(_, cell, g)| (cell.object_id, g))
+        .collect();
+    assert_eq!(owners, [(0x900, 10); 5]);
+}

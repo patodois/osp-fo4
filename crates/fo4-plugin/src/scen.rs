@@ -165,6 +165,20 @@ pub struct Action {
     pub fields: Vec<ActionField>,
 }
 
+impl Action {
+    /// The first field after the end phase with this tag.
+    pub fn field(&self, tag: &[u8; 4]) -> Option<&ActionField> {
+        self.fields.iter().find(|f| f.tag == *tag)
+    }
+    /// The first field after the end phase with this tag, when it is four
+    /// bytes, read as a little-endian f32 (what the value means is the
+    /// caller's rule to say).
+    pub fn float(&self, tag: &[u8; 4]) -> Option<f32> {
+        let d: [u8; 4] = self.field(tag)?.data.as_slice().try_into().ok()?;
+        Some(f32::from_le_bytes(d))
+    }
+}
+
 /// One SCEN record, every subrecord placed.
 #[derive(Debug, Clone, Serialize)]
 pub struct Scene {
@@ -742,6 +756,10 @@ mod tests {
             a.fields.iter().map(|f| f.tag).collect::<Vec<_>>(),
             [*b"LCEP", *b"INTT", *b"CITC"]
         );
+        assert_eq!(a.field(b"INTT").map(|f| f.data.len()), Some(2));
+        assert_eq!(a.float(b"INTT"), None);
+        assert_eq!(a.float(b"NONE"), None);
+        assert_eq!(s.actions[0].float(b"PNAM"), Some(f32::from_bits(0x1234)));
         assert_eq!(s.quest.raw, 0x55);
         // Every subrecord placed exactly once.
         assert_eq!(s.fields.len(), r.subrecords.len());

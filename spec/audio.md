@@ -151,6 +151,14 @@ between the halves; 6,244 lip halves empty, the others between 128 and 268,642 b
 `01 00 00 00` in 150,139 files and `54 4f 4d 33` in 1,682. **[open]**: the
 lip half's layout.
 
+**Seconds from the header** (`fo4_audio::header_seconds`): PCM whole
+frames over the rate; the WMA family the last `dpds` word over 2 x
+channels x rate (`audio_xwma_dpds_seconds_v1`). For the voice files the
+stored `data` bytes fitted on those seconds give 4,101 bytes per second
+against the declared 4,000 (mono) and 7,982 against 8,000 (stereo), with a
+near-constant two-packet intercept, which supports the reading without
+decoding ([voice.md](voice.md), Duration).
+
 ## Decoding
 
 | Format | Files | Status |

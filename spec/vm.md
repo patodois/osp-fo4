@@ -910,6 +910,91 @@ What would take the opening further, most first:
    `Game.IsPluginInstalled` 3, `Is3DLoaded` 2,
    `ReferenceAlias.GetReference` 2 (`Scene.IsPlaying` 3 is answered now).
 
+## Scene clock
+
+Since the scene-events step a scene's actions can let time pass
+(`fo4_vm::scene`, `scene_clock_v1`), only when the caller asks for it
+(`quest_run --scene-clock N`, `new-game` and `scenes`); without it every
+census reproduces byte for byte (checked with `cmp`: the four
+`quest-run-*.txt`, `conditions-census.txt`, `conditions-blockers.txt`,
+`story-manager-census.txt`, `fragment-census.txt`, and the quest-host
+sections of `vm-census.txt` for the test cells and the bases alone).
+
+| What | Rule | How |
+| --- | --- | --- |
+| actions | `scene_clock_v1` | an action starts when its start phase is entered and holds every phase from its start to its end phase until it completes; a phase whose spanning actions are complete goes on to its completion conditions as before; an action whose time is not settled holds its phases with the earlier reason (by kind) |
+| the clock | `scene_clock_v1` | the real-time clock timers count on (`World::now`); `scene::advance_clock` moves it to the next due action, completes every action due by then and queues each scene's completion step; the game-time clock moves with it by the time scale when the caller knows it. `quest_run` interleaves clock advances with timer firings (`--timers`), earliest first, timers first on a tie (`Vm::next_timer_wait` gives the wait the next firing takes) |
+| timer actions (kind 2) | `scen_timer_action_seconds_v1` | the SNAM after the end phase as f32 seconds; undetermined with a TNAM (174 actions, all lower than SNAM) or any FNAM bit (5); `--no-timer-actions` turns the rule off |
+| dialogue actions (kind 0) | `scene_dialogue_line_audio_v1` and the rules of [voice.md](voice.md) | the seconds of the line's audio: the first line of the topic whose conditions hold, its responses, the speaker's voice files, the seconds their headers declare; `--no-line-audio` turns it off |
+| caller assumptions | none (counted as assumptions) | `--assume-line-seconds X`: a line whose audio does not settle its time (or every line with `--no-line-audio`) lasts X s; `--assume-player-choice N`: player dialogue (kind 3) lasts the player's line of choice N then its answer (`scene_player_dialogue_choice_v1`); `--assume-packages-complete`: a package action (kind 1) completes as it starts |
+
+Start-scene (4), response (5) and radio (6) actions are not timed. The
+census counts every action started by how its time was settled or why not
+(`scene clock: action started`), every action completed, and every phase
+that waits only on actions with a due time.
+
+**Scene sweep with the clock** (`quest_run MANIFEST scenes OUT_DIR
+--scene-clock 200`, [scene-clock-census.txt](scene-clock-census.txt)):
+scenes run to their end, of 4,773 started:
+
+| Variant | Run to their end | Phases entered | Phases completed |
+| --- | ---: | ---: | ---: |
+| no clock (as before) | 34 | 4,617 | 50 |
+| timer actions only | 41 | 4,747 | 192 |
+| line audio only | 599 | 6,034 | 2,054 |
+| clock alone (both rules) | 651 | 6,306 | 2,387 |
+| + `--assume-line-seconds 3` | 1,281 | 7,800 | 4,530 |
+| + `--assume-player-choice 0` | 651 | 6,306 | 2,387 |
+| + `--assume-packages-complete` | 866 | 7,630 | 3,957 |
+| + line seconds and player choice | 2,117 | 10,106 | 7,756 |
+| + line seconds and packages | 1,635 | 9,968 | 7,096 |
+| + all three | 2,822 | 13,779 | 12,278 |
+
+With the clock alone, 2,843 dialogue actions are timed by their audio and
+317 timer actions by their seconds; 1,262 phase stops still wait on a line,
+mostly because several voice types hold it and the speaker alias is filled
+by the world (228), the topic holds no line (457), or which line plays is
+undetermined (function 59 in 122, 426 in 20, others below 15). Player choice
+alone changes nothing: the player's voice type is not in the records, so
+the player's line is timed only with `--assume-line-seconds`. With every
+assumption the stops left are radio (433), start-scene actions (436),
+response lines (193), timers with a TNAM or a flag (54), conditions (118
+false completion, 450 undetermined start, 354 undetermined completion) and
+6 package actions whose start phase was passed over.
+
+**New game with the clock** (`quest_run new-game --time-scale-global
+<time-scale global> --scene-clock 200`, section 4 of the census): two
+clock advances complete three timer actions and two phases of the 46
+scenes that start; nothing else changes (no objective).
+
+**The forced opening with the clock** (`quest_run new-game --then <opening
+quest>:0 --timers 50 --time-scale-global <time-scale global>`, every stop in
+order; the stage reached is the opening quest's stage 0 in every variant,
+no objective is displayed in any, and the stage 0 timer polls every second
+throughout):
+
+1. Without `--assume-cond 555=1`, with or without the clock: the first
+   scene stops in phase 0 on its completion conditions of function 555
+   (undetermined).
+2. With `--assume-cond 555=1` and the clock: phase 1 holds a 3-second timer
+   action, which completes at 3 s, and a line whose topic holds no line
+   (stored line count 0): it waits, a dialogue action not timed. Adding
+   `--assume-player-choice 0` or `--assume-packages-complete` changes
+   nothing there.
+3. Adding `--assume-line-seconds 3`: phase 1 completes at 3 s; phases 2, 3
+   and 4 each hold one line whose choice is undetermined (function 70) and
+   complete at 6, 9 and 12 s on the assumed seconds; phase 4 then stops on
+   its completion condition, function 131 of the scene itself compared
+   with >= 50 (undetermined). The same with every assumption.
+4. Exploring further with `--assume-cond 131=50` as well: phases 5 and 6
+   (lines, function 70; then 70 and 72) complete at 15 and 18 s, phase 7 at
+   once, phase 8's package action completes on the assumption, and phase 8
+   stops on its completion condition, function 59: stage 20 of the opening
+   quest done, false. No run sets that stage: the next stop is a world
+   event (the opening quest's own script sets stages from animation and
+   distance events, none of them stage 20; what sets it is not
+   determined).
+
 ## Conditions
 
 `fo4_vm::cond` evaluates the condition lists read by
@@ -1210,3 +1295,28 @@ censuses could refute ([conditions.md](conditions.md), Blockers;
 No public page was requested in this step. No editor, editor source or
 definition file, script source, decompiler, other interpreter, script
 extender or the game executable was opened or searched for.
+
+## Provenance of the scene-events step
+
+Recognised from prior general knowledge, used only as hypotheses that the
+censuses could refute ([voice.md](voice.md),
+[voice-census.txt](voice-census.txt),
+[scene-clock-census.txt](scene-clock-census.txt)):
+
+- that a scene action runs over the span of phases its start and end
+  phases give and that a phase waits for the actions in it
+  (`scene_clock_v1`); the real-time clock is this project's reading;
+- that the kind-2 SNAM after the end phase is a duration in seconds and
+  that a TNAM may bound a random time (`scen_timer_action_seconds_v1`);
+- that a dialogue action lasts its line's audio and how a line, its
+  responses, their voice files and the speaker's voice type are tied
+  ([voice.md](voice.md), Prior knowledge used);
+- that the `dpds` words count decoded bytes (`audio_xwma_dpds_seconds_v1`);
+- the letters of the player dialogue topics (`scene_player_dialogue_choice_v1`);
+- the comparison operator codes (`cond_compare_ops_v1`, earlier) to read
+  the opening's phase 4 condition as `>= 50`.
+
+No public page was requested in this step. No editor, editor source or
+definition file, script source, decompiler, other interpreter, audio
+decoder or tool, script extender or the game executable was opened or
+searched for. The game was not run.

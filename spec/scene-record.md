@@ -138,12 +138,35 @@ is not indexed by the store and is not read.
 | `vmad_fragment_instance_v1` | the fragment script instance on the record's handle and the parameters in the sweeps |
 | `scene_start_v1`, `scene_phase_progression_v1`, `scene_begin_on_quest_start_v1`, `vm_host_owning_quest_v1` | what a run does with them ([vm.md](vm.md)) |
 
+## Fields the scene clock reads
+
+Since the scene-events step `fo4_vm::scene` reads three kinds of action
+field after the end phase ([voice-census.txt](voice-census.txt), part 4;
+[vm.md](vm.md), Scene clock):
+
+- **Timer (kind 2)**: SNAM as a little-endian f32, round values in all
+  1,201 actions (2 in 228, 1 in 185, 3 in 166, 5 in 133, 0.5 in 70, 10 in
+  62 ... up to 86,000; zero in 3), read as seconds under
+  `scen_timer_action_seconds_v1`. TNAM, in 174 actions, is lower than
+  SNAM in all 174 (0 to 45); 5 actions set FNAM bit 0x80000. Both leave
+  the time undetermined.
+- **Dialogue (kind 0)**: DATA, the topic ([voice.md](voice.md)); DMIN and
+  DMAX read as f32 are 1 and 10 in 13,430 and 13,467 actions, not used.
+- **Player dialogue (kind 3)**: the topic fields stored in the order PTOP
+  NTOP NETO QTOP NPOT NNGT NNUT NQUT in 2,929 of 3,159 actions (the four
+  player topics alone in 183), paired by position under the caller's
+  `--assume-player-choice` (`scene_player_dialogue_choice_v1`).
+- ALID -2 occurs in dialogue actions of the opening's first scene; it is
+  read only as "no alias of the quest" (`voice::speaker`).
+
 ## What is not known
 
 - What the kept fields mean (WNAM, VNAM, the flag words of scenes, actors
-  and actions beyond bit 0x1 of the scene, the timer action's words, the
-  start-scene action's INTT and SSPN, the radio and dialogue action fields
-  other than their topics).
+  and actions beyond bit 0x1 of the scene, the timer action's TNAM and
+  flag bit, the start-scene action's INTT and SSPN, the radio and dialogue
+  action fields other than their topics).
 - What the two phase fragments with flag 0 attach to.
-- Which INFO a topic plays, in what order lines are chosen, and when a
-  package's begin, end and change fragments run: these are world events.
+- Which INFO a topic plays and in what order lines are chosen (read under
+  pending rules since the scene-events step, [voice.md](voice.md), not
+  measured in the game), and when a package's begin, end and change
+  fragments run: these are world events.

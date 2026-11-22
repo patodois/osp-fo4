@@ -4,6 +4,7 @@
 pub mod actor;
 pub mod condition;
 pub mod enable;
+pub mod info;
 pub mod land;
 pub mod layout;
 pub mod quest;

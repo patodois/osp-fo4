@@ -1,0 +1,1030 @@
+# quest_run scenes --scene-clock 200: counts only (spec/vm.md, Scene clock)
+# Every scene started in a fresh interpreter, as in quest-run-scenes.txt; the scene clock advanced up to 200 times per scene.
+# Section 1: one row per variant. Section 2: the full census of the clock alone. Section 3: the full census with every assumption.
+# Section 4: quest_run new-game --time-scale-global <time-scale global> --scene-clock 200.
+
+## 1 summary: variant; phases entered; completed; passed over; scenes run to their end; phase stops by the kind of action waited on (0 to 6); stops on completion conditions false; on start conditions undetermined; on completion conditions undetermined
+no clock (spec/quest-run-scenes.txt)	4617	50	32	34	2500	663	167	690	29	11	400	9	172	98
+clock alone: timer actions and line audio	6306	2387	35	651	1262	1692	26	1026	71	11	432	16	203	123
+clock, timer actions only (--no-line-audio)	4747	192	32	41	2578	774	18	691	40	11	431	10	177	107
+clock, line audio only (--no-timer-actions)	6034	2054	35	599	1228	1565	221	1025	51	11	400	13	194	111
+clock + --assume-line-seconds 3	7800	4530	53	1281	0	2244	39	1149	92	11	432	23	222	137
+clock + --assume-player-choice 0	6306	2387	35	651	1262	1692	26	1026	71	11	432	16	203	123
+clock + --assume-packages-complete	7630	3957	44	866	1392	4	35	1520	144	17	432	81	234	292
+clock + line seconds 3 + player choice 0	10106	7756	62	2117	0	2570	39	0	246	102	433	24	306	141
+clock + line seconds 3 + packages complete	9968	7096	79	1635	0	6	54	1761	208	17	432	110	266	346
+clock + all three assumptions	13779	12278	111	2822	0	6	54	0	436	193	433	118	450	354
+
+## 2 clock alone
+1	assumption from the command line: the scene clock advanced (--scene-clock)
+1	blocking native	actor.hasperk
+2	blocking native	actor.isdead
+1	blocking native	actor.playidlewithtarget
+1	blocking native	location.isloaded
+2	blocking native	objectreference.getcurrentlocation
+1	blocking native	objectreference.getdistance
+3	blocking native	objectreference.is3dloaded
+3	blocking native	objectreference.raidtargetsavailable
+4	blocking native	quest.getcurrentstageid
+4	blocking native	quest.isrunning
+12	blocking native	quest.isstagedone
+4	blocking native	refcollectionalias.getcount
+43	blocking native	referencealias.getreference
+2	blocking native	sound.play
+1	blocking native	utility.getcurrentgametime
+1	blocking native	utility.randomint
+1	blocking rule	pex_array_ops_v1
+1	custom event outcome: blocked on an undetermined value (rule pex_array_ops_v1)
+2	custom event runs with no handler
+1	effects	actor state
+8	effects	actor value changed
+4	effects	alias fill changed
+11	effects	disable
+18	effects	enable
+4	effects	event registration
+1	effects	faction
+20	effects	global set
+2	effects	items added, removed or equipped
+9	effects	lock or open state
+18	effects	move
+1	effects	object placed
+5	effects	objective completed
+4	effects	objective displayed or hidden
+165	effects	scene
+27	effects	stage set on another quest
+2	effects	stage set on the same quest
+4	effects	timer
+9	event onstageset outcome: completed
+19	event onstageset runs with no handler
+1	events	custom deliveries	a handler
+3	events	custom events sent	queued for delivery
+1	events	registrations	custom	made
+1	events	registrations	remote	by event	onactivate
+1	events	registrations	remote	made
+1	events	registrations	remote	not made: an argument or the instance is undetermined
+1	failure	BadArgument
+2	failure	MissingFunction
+2	failure	MissingScript
+23	failure	NoneOperand op 23
+1	failure	NoneOperand op 32
+2	failure	NoneOperand op 34
+1	failure	StepLimit
+10	fragment outcome: blocked on a native's result
+13	fragment outcome: completed
+1	fragment outcome: failed: NoneOperand op 23
+1	log entry condition lists	undetermined
+1	log entry selections left open, by function index of an undetermined condition	function 59
+1	log entry selections with conditions evaluated	open
+22	open runs: whether setting the stage started the quest
+1	open runs: which log entry's fragment runs depends on conditions
+189	phases of the started scene entered	0
+3678	phases of the started scene entered	1
+6	phases of the started scene entered	10-19
+579	phases of the started scene entered	2
+204	phases of the started scene entered	3-4
+117	phases of the started scene entered	5-9
+5	quest changes	objective completed (or not)
+4	quest changes	objective displayed
+1	quest changes	objective hidden or undetermined
+1	quest changes	stage already done, not set again
+28	quest changes	stage set
+2802	scene clock advances per scene	0
+1525	scene clock advances per scene	1
+7	scene clock advances per scene	10-19
+201	scene clock advances per scene	2
+1	scene clock advances per scene	20-99
+131	scene clock advances per scene	3-4
+106	scene clock advances per scene	5-9
+34	scene fragment (begin) outcome: blocked on a native's result
+80	scene fragment (begin) outcome: completed
+1	scene fragment (begin) outcome: failed: MissingFunction
+2	scene fragment (begin) outcome: failed: MissingScript
+2	scene fragment (begin) outcome: failed: NoneOperand op 34
+6	scene fragment (end) outcome: blocked on a native's result
+43	scene fragment (end) outcome: completed
+4	scene fragment (end) outcome: failed: NoneOperand op 23
+1	scene fragment (end) outcome: failed: StepLimit
+12	scene fragment (phase begin) outcome: blocked on a native's result
+82	scene fragment (phase begin) outcome: completed
+1	scene fragment (phase begin) outcome: failed: BadArgument
+1	scene fragment (phase begin) outcome: failed: MissingFunction
+6	scene fragment (phase begin) outcome: failed: NoneOperand op 23
+23	scene fragment (phase end) outcome: blocked on a native's result
+14	scene fragment (phase end) outcome: completed
+12	scene fragment (phase end) outcome: failed: NoneOperand op 23
+1	scene fragment (phase end) outcome: failed: NoneOperand op 32
+16611	scene steps
+2387	scenes	phase completed
+6306	scenes	phase entered
+35	scenes	phase passed over (start conditions false)
+2843	scenes	scene clock: action completed	kind 0
+317	scenes	scene clock: action completed	kind 2
+2843	scenes	scene clock: action started	kind 0	line: seconds from its audio
+27	scenes	scene clock: action started	kind 0	line: undetermined: a response has no voice file
+31	scenes	scene clock: action started	kind 0	line: undetermined: no line of the topic has conditions that hold
+4	scenes	scene clock: action started	kind 0	line: undetermined: no voice file of the speaker's voice type
+79	scenes	scene clock: action started	kind 0	line: undetermined: several voice types hold the line and the speaker's is not settled (the action names no alias)
+228	scenes	scene clock: action started	kind 0	line: undetermined: several voice types hold the line and the speaker's is not settled (the alias is filled by the world)
+15	scenes	scene clock: action started	kind 0	line: undetermined: several voice types hold the line and the speaker's is not settled (the forced reference's base names no voice type)
+1	scenes	scene clock: action started	kind 0	line: undetermined: several voice types hold the line and the speaker's is not settled (the unique actor names no voice type)
+5	scenes	scene clock: action started	kind 0	line: undetermined: the action names no topic
+44	scenes	scene clock: action started	kind 0	line: undetermined: the line has no response
+457	scenes	scene clock: action started	kind 0	line: undetermined: the topic holds no line
+7	scenes	scene clock: action started	kind 0	line: undetermined: which line of the topic plays is undetermined (function 1)
+1	scenes	scene clock: action started	kind 0	line: undetermined: which line of the topic plays is undetermined (function 1, 58)
+1	scenes	scene clock: action started	kind 0	line: undetermined: which line of the topic plays is undetermined (function 1, 71, 560)
+14	scenes	scene clock: action started	kind 0	line: undetermined: which line of the topic plays is undetermined (function 1, 71, 72)
+11	scenes	scene clock: action started	kind 0	line: undetermined: which line of the topic plays is undetermined (function 14)
+1	scenes	scene clock: action started	kind 0	line: undetermined: which line of the topic plays is undetermined (function 263)
+4	scenes	scene clock: action started	kind 0	line: undetermined: which line of the topic plays is undetermined (function 27)
+4	scenes	scene clock: action started	kind 0	line: undetermined: which line of the topic plays is undetermined (function 359)
+20	scenes	scene clock: action started	kind 0	line: undetermined: which line of the topic plays is undetermined (function 426)
+2	scenes	scene clock: action started	kind 0	line: undetermined: which line of the topic plays is undetermined (function 432)
+1	scenes	scene clock: action started	kind 0	line: undetermined: which line of the topic plays is undetermined (function 44, 77)
+4	scenes	scene clock: action started	kind 0	line: undetermined: which line of the topic plays is undetermined (function 448)
+5	scenes	scene clock: action started	kind 0	line: undetermined: which line of the topic plays is undetermined (function 46)
+3	scenes	scene clock: action started	kind 0	line: undetermined: which line of the topic plays is undetermined (function 46, 59)
+1	scenes	scene clock: action started	kind 0	line: undetermined: which line of the topic plays is undetermined (function 46, 77)
+2	scenes	scene clock: action started	kind 0	line: undetermined: which line of the topic plays is undetermined (function 47)
+1	scenes	scene clock: action started	kind 0	line: undetermined: which line of the topic plays is undetermined (function 47, 59)
+1	scenes	scene clock: action started	kind 0	line: undetermined: which line of the topic plays is undetermined (function 47, 72)
+1	scenes	scene clock: action started	kind 0	line: undetermined: which line of the topic plays is undetermined (function 50)
+1	scenes	scene clock: action started	kind 0	line: undetermined: which line of the topic plays is undetermined (function 507)
+1	scenes	scene clock: action started	kind 0	line: undetermined: which line of the topic plays is undetermined (function 510)
+2	scenes	scene clock: action started	kind 0	line: undetermined: which line of the topic plays is undetermined (function 543)
+2	scenes	scene clock: action started	kind 0	line: undetermined: which line of the topic plays is undetermined (function 544)
+1	scenes	scene clock: action started	kind 0	line: undetermined: which line of the topic plays is undetermined (function 56, 59)
+1	scenes	scene clock: action started	kind 0	line: undetermined: which line of the topic plays is undetermined (function 560)
+11	scenes	scene clock: action started	kind 0	line: undetermined: which line of the topic plays is undetermined (function 566)
+5	scenes	scene clock: action started	kind 0	line: undetermined: which line of the topic plays is undetermined (function 58)
+5	scenes	scene clock: action started	kind 0	line: undetermined: which line of the topic plays is undetermined (function 58, 566)
+2	scenes	scene clock: action started	kind 0	line: undetermined: which line of the topic plays is undetermined (function 58, 59)
+1	scenes	scene clock: action started	kind 0	line: undetermined: which line of the topic plays is undetermined (function 58, 72)
+122	scenes	scene clock: action started	kind 0	line: undetermined: which line of the topic plays is undetermined (function 59)
+3	scenes	scene clock: action started	kind 0	line: undetermined: which line of the topic plays is undetermined (function 59, 359)
+1	scenes	scene clock: action started	kind 0	line: undetermined: which line of the topic plays is undetermined (function 59, 510)
+1	scenes	scene clock: action started	kind 0	line: undetermined: which line of the topic plays is undetermined (function 59, 544)
+5	scenes	scene clock: action started	kind 0	line: undetermined: which line of the topic plays is undetermined (function 59, 566)
+1	scenes	scene clock: action started	kind 0	line: undetermined: which line of the topic plays is undetermined (function 59, 682)
+1	scenes	scene clock: action started	kind 0	line: undetermined: which line of the topic plays is undetermined (function 59, 70)
+1	scenes	scene clock: action started	kind 0	line: undetermined: which line of the topic plays is undetermined (function 59, 72)
+1	scenes	scene clock: action started	kind 0	line: undetermined: which line of the topic plays is undetermined (function 59, 84)
+1	scenes	scene clock: action started	kind 0	line: undetermined: which line of the topic plays is undetermined (function 605)
+1	scenes	scene clock: action started	kind 0	line: undetermined: which line of the topic plays is undetermined (function 610)
+3	scenes	scene clock: action started	kind 0	line: undetermined: which line of the topic plays is undetermined (function 660)
+1	scenes	scene clock: action started	kind 0	line: undetermined: which line of the topic plays is undetermined (function 682)
+60	scenes	scene clock: action started	kind 0	line: undetermined: which line of the topic plays is undetermined (function 70)
+1	scenes	scene clock: action started	kind 0	line: undetermined: which line of the topic plays is undetermined (function 70, 682)
+10	scenes	scene clock: action started	kind 0	line: undetermined: which line of the topic plays is undetermined (function 71)
+1	scenes	scene clock: action started	kind 0	line: undetermined: which line of the topic plays is undetermined (function 71, 359)
+1	scenes	scene clock: action started	kind 0	line: undetermined: which line of the topic plays is undetermined (function 71, 566)
+25	scenes	scene clock: action started	kind 0	line: undetermined: which line of the topic plays is undetermined (function 72)
+1	scenes	scene clock: action started	kind 0	line: undetermined: which line of the topic plays is undetermined (function 758)
+1	scenes	scene clock: action started	kind 0	line: undetermined: which line of the topic plays is undetermined (function 765)
+1	scenes	scene clock: action started	kind 0	line: undetermined: which line of the topic plays is undetermined (function 77)
+1920	scenes	scene clock: action started	kind 1	kind 1 (a package: actor movement): not timed
+317	scenes	scene clock: action started	kind 2	timer: seconds from the record
+1	scenes	scene clock: action started	kind 2	timer: undetermined (a flag bit is set; no bit is read)
+33	scenes	scene clock: action started	kind 2	timer: undetermined (a second value, TNAM, is stored)
+1329	scenes	scene clock: action started	kind 3	player dialogue: waits on the player
+100	scenes	scene clock: action started	kind 4	kind 4 (starts another scene): not timed
+17	scenes	scene clock: action started	kind 5	kind 5 (a response line: audio): not timed
+437	scenes	scene clock: action started	kind 6	kind 6 (radio: audio): not timed
+2369	scenes	scene clock: phase waits on actions with a due time
+651	scenes	scene ended (last phase completed)
+4774	scenes	scene started
+1	scenes	scene state became undetermined	Start of a scene whose state is undetermined
+20	scenes	scene stopped by a script
+1262	scenes	scene stopped in a phase	an action runs in the phase: kind 0 (a dialogue line: audio)
+1692	scenes	scene stopped in a phase	an action runs in the phase: kind 1 (a package: actor movement)
+26	scenes	scene stopped in a phase	an action runs in the phase: kind 2 (a timer: the clock)
+1026	scenes	scene stopped in a phase	an action runs in the phase: kind 3 (player dialogue: the player)
+71	scenes	scene stopped in a phase	an action runs in the phase: kind 4 (starts another scene)
+11	scenes	scene stopped in a phase	an action runs in the phase: kind 5 (a response line: audio)
+432	scenes	scene stopped in a phase	an action runs in the phase: kind 6 (radio: audio)
+16	scenes	scene stopped in a phase	completion conditions false (waits on the world)
+41	scenes	scene stopped in a phase	completion conditions undetermined (function 1)
+1	scenes	scene stopped in a phase	completion conditions undetermined (function 1, 27)
+2	scenes	scene stopped in a phase	completion conditions undetermined (function 1, 310)
+1	scenes	scene stopped in a phase	completion conditions undetermined (function 1, 360)
+1	scenes	scene stopped in a phase	completion conditions undetermined (function 1, 58)
+1	scenes	scene stopped in a phase	completion conditions undetermined (function 1, 580)
+1	scenes	scene stopped in a phase	completion conditions undetermined (function 1, 59)
+1	scenes	scene stopped in a phase	completion conditions undetermined (function 1, 67, 555)
+1	scenes	scene stopped in a phase	completion conditions undetermined (function 1, 74)
+4	scenes	scene stopped in a phase	completion conditions undetermined (function 131)
+3	scenes	scene stopped in a phase	completion conditions undetermined (function 159)
+1	scenes	scene stopped in a phase	completion conditions undetermined (function 289)
+1	scenes	scene stopped in a phase	completion conditions undetermined (function 310)
+3	scenes	scene stopped in a phase	completion conditions undetermined (function 327)
+1	scenes	scene stopped in a phase	completion conditions undetermined (function 35)
+3	scenes	scene stopped in a phase	completion conditions undetermined (function 359, 555)
+1	scenes	scene stopped in a phase	completion conditions undetermined (function 359, 811)
+1	scenes	scene stopped in a phase	completion conditions undetermined (function 46)
+1	scenes	scene stopped in a phase	completion conditions undetermined (function 513)
+16	scenes	scene stopped in a phase	completion conditions undetermined (function 555)
+3	scenes	scene stopped in a phase	completion conditions undetermined (function 56)
+1	scenes	scene stopped in a phase	completion conditions undetermined (function 58)
+19	scenes	scene stopped in a phase	completion conditions undetermined (function 59)
+6	scenes	scene stopped in a phase	completion conditions undetermined (function 613, 614)
+1	scenes	scene stopped in a phase	completion conditions undetermined (function 633)
+2	scenes	scene stopped in a phase	completion conditions undetermined (function 67)
+4	scenes	scene stopped in a phase	completion conditions undetermined (function 67, 555)
+1	scenes	scene stopped in a phase	completion conditions undetermined (function 67, 613, 614)
+1	scenes	scene stopped in a phase	completion conditions undetermined (function 784)
+32	scenes	scene stopped in a phase	start conditions undetermined (function 1)
+1	scenes	scene stopped in a phase	start conditions undetermined (function 1, 14)
+2	scenes	scene stopped in a phase	start conditions undetermined (function 1, 27)
+9	scenes	scene stopped in a phase	start conditions undetermined (function 1, 59)
+1	scenes	scene stopped in a phase	start conditions undetermined (function 1, 71, 72)
+4	scenes	scene stopped in a phase	start conditions undetermined (function 1, 72)
+15	scenes	scene stopped in a phase	start conditions undetermined (function 14)
+1	scenes	scene stopped in a phase	start conditions undetermined (function 14, 72)
+3	scenes	scene stopped in a phase	start conditions undetermined (function 159)
+1	scenes	scene stopped in a phase	start conditions undetermined (function 18)
+1	scenes	scene stopped in a phase	start conditions undetermined (function 182)
+6	scenes	scene stopped in a phase	start conditions undetermined (function 248)
+1	scenes	scene stopped in a phase	start conditions undetermined (function 289)
+1	scenes	scene stopped in a phase	start conditions undetermined (function 323)
+5	scenes	scene stopped in a phase	start conditions undetermined (function 359)
+1	scenes	scene stopped in a phase	start conditions undetermined (function 414)
+1	scenes	scene stopped in a phase	start conditions undetermined (function 414, 660)
+2	scenes	scene stopped in a phase	start conditions undetermined (function 448)
+1	scenes	scene stopped in a phase	start conditions undetermined (function 45)
+4	scenes	scene stopped in a phase	start conditions undetermined (function 46)
+1	scenes	scene stopped in a phase	start conditions undetermined (function 46, 59)
+1	scenes	scene stopped in a phase	start conditions undetermined (function 47)
+1	scenes	scene stopped in a phase	start conditions undetermined (function 5)
+1	scenes	scene stopped in a phase	start conditions undetermined (function 507)
+1	scenes	scene stopped in a phase	start conditions undetermined (function 510)
+1	scenes	scene stopped in a phase	start conditions undetermined (function 56, 543)
+1	scenes	scene stopped in a phase	start conditions undetermined (function 56, 58)
+8	scenes	scene stopped in a phase	start conditions undetermined (function 58)
+1	scenes	scene stopped in a phase	start conditions undetermined (function 58, 289)
+1	scenes	scene stopped in a phase	start conditions undetermined (function 58, 613)
+68	scenes	scene stopped in a phase	start conditions undetermined (function 59)
+1	scenes	scene stopped in a phase	start conditions undetermined (function 59, 660)
+3	scenes	scene stopped in a phase	start conditions undetermined (function 59, 84)
+4	scenes	scene stopped in a phase	start conditions undetermined (function 613, 614)
+3	scenes	scene stopped in a phase	start conditions undetermined (function 660)
+2	scenes	scene stopped in a phase	start conditions undetermined (function 67)
+1	scenes	scene stopped in a phase	start conditions undetermined (function 70)
+1	scenes	scene stopped in a phase	start conditions undetermined (function 71, 359)
+2	scenes	scene stopped in a phase	start conditions undetermined (function 72)
+3	scenes	scene stopped in a phase	start conditions undetermined (function 77)
+1	scenes	scene stopped in a phase	start conditions undetermined (function 773)
+1	scenes	scene stopped in a phase	start conditions undetermined (function 792)
+4	scenes	scene stopped in a phase	start conditions undetermined (function 799)
+4773	scenes started by the sweep
+651	started scenes that ran to their end
+
+33336	effects	other: utility.wait
+141	effects	other: referencealias.getreference
+30	effects	other: game.getplayer
+19	effects	other: objectreference.getlinkedref
+17	effects	other: globalvariable.getvalue
+17	effects	other: sound.play
+14	effects	other: quest.isstagedone
+13	effects	other: game.stopdialoguecamera
+10	effects	other: utility.getcurrentrealtime
+5	effects	other: inputenablelayer.create
+5	effects	other: objectreference.playanimation
+4	effects	other: actor.addperk
+4	effects	other: actor.playidle
+4	effects	other: game.startdialoguecameraorcenterontarget
+4	effects	other: inputenablelayer.enablefighting
+4	effects	other: quest.getcurrentstageid
+4	effects	other: quest.isrunning
+3	effects	other: actor.changeanimarchetype
+3	effects	other: musictype.add
+3	effects	other: objectreference.blockactivation
+3	effects	other: objectreference.getcurrentlocation
+3	effects	other: objectreference.is3dloaded
+3	effects	other: objectreference.raidtargetsavailable
+3	effects	other: scriptobject.sendcustomevent
+2	effects	other: actor.isdead
+2	effects	other: actor.playidleaction
+2	effects	other: game.getformfromfile
+2	effects	other: locationalias.getlocation
+2	effects	other: scriptobject.registerforanimationevent
+2	effects	other: utility.getcurrentgametime
+2	effects	other: utility.randomint
+1	effects	other: actor.changeanimflavor
+1	effects	other: actor.drawweapon
+1	effects	other: actor.hasperk
+1	effects	other: actor.playidlewithtarget
+1	effects	other: actor.playsubgraphanimation
+1	effects	other: actor.setalpha
+1	effects	other: actor.setghost
+1	effects	other: actor.startcombat
+1	effects	other: faction.setenemy
+1	effects	other: formlist.getat
+1	effects	other: formlist.getsize
+1	effects	other: inputenablelayer.disableplayercontrols
+1	effects	other: location.isloaded
+1	effects	other: location.reset
+1	effects	other: objectreference.activate
+1	effects	other: objectreference.getdistance
+1	effects	other: objectreference.getlinkedrefchain
+1	effects	other: objectreference.ignorefriendlyhits
+1	effects	other: objectreference.preloadtargetarea
+1	effects	other: objectreference.waitforanimationevent
+1	effects	other: quest.completeallobjectives
+
+## 3 clock and every assumption (--assume-line-seconds 3 --assume-player-choice 0 --assume-packages-complete)
+1	assumption from the command line: a line whose audio does not settle its time lasts 3 s
+1	assumption from the command line: package actions complete as they start
+1	assumption from the command line: the player picks choice 0
+1	assumption from the command line: the scene clock advanced (--scene-clock)
+1	blocking native	actor.hasdetectionlos
+1	blocking native	actor.hasperk
+2	blocking native	actor.isdead
+4	blocking native	actor.playidlewithtarget
+1	blocking native	location.isloaded
+4	blocking native	objectreference.getcurrentlocation
+1	blocking native	objectreference.getdistance
+2	blocking native	objectreference.getitemcount
+4	blocking native	objectreference.is3dloaded
+3	blocking native	objectreference.raidtargetsavailable
+4	blocking native	quest.getcurrentstageid
+5	blocking native	quest.isrunning
+43	blocking native	quest.isstagedone
+1	blocking native	quest.isstopping
+4	blocking native	refcollectionalias.getcount
+72	blocking native	referencealias.getreference
+2	blocking native	sound.play
+1	blocking native	utility.getcurrentgametime
+1	blocking native	utility.randomint
+1	blocking object without the script	record GLOB
+5	blocking rule	pex_array_ops_v1
+4	custom event outcome: blocked on an undetermined value (rule pex_array_ops_v1)
+6	custom event runs with no handler
+5	effects	actor state
+13	effects	actor value changed
+8	effects	alias fill changed
+27	effects	disable
+31	effects	enable
+19	effects	event registration
+4	effects	faction
+65	effects	global set
+12	effects	items added, removed or equipped
+13	effects	lock or open state
+4	effects	message
+24	effects	move
+1	effects	object placed
+14	effects	objective completed
+14	effects	objective displayed or hidden
+1	effects	quest stopped
+251	effects	scene
+56	effects	stage set on another quest
+4	effects	stage set on the same quest
+7	effects	timer
+1	event onquestshutdown runs with no handler
+20	event onstageset outcome: completed
+41	event onstageset runs with no handler
+4	events	custom deliveries	a handler
+10	events	custom events sent	queued for delivery
+16	events	registrations	custom	made
+1	events	registrations	remote	by event	onactivate
+1	events	registrations	remote	made
+1	events	registrations	remote	not made: an argument or the instance is undetermined
+3	failure	BadArgument
+3	failure	MissingFunction
+2	failure	MissingScript
+35	failure	NoneOperand op 23
+10	failure	NoneOperand op 32
+2	failure	NoneOperand op 34
+3	failure	StepLimit
+14	fragment outcome: blocked on a native's result
+38	fragment outcome: completed
+1	fragment outcome: failed: NoneOperand op 23
+1	log entry condition lists	undetermined
+1	log entry selections left open, by function index of an undetermined condition	function 59
+1	log entry selections with conditions evaluated	open
+43	open runs: whether setting the stage started the quest
+1	open runs: which log entry's fragment runs depends on conditions
+189	phases of the started scene entered	0
+1755	phases of the started scene entered	1
+146	phases of the started scene entered	10-19
+832	phases of the started scene entered	2
+9	phases of the started scene entered	20-99
+1079	phases of the started scene entered	3-4
+763	phases of the started scene entered	5-9
+14	quest changes	objective completed (or not)
+14	quest changes	objective displayed
+2	quest changes	objective hidden or undetermined
+1	quest changes	quest stopped
+1	quest changes	stage already done, not set again
+59	quest changes	stage set
+998	scene clock advances per scene	0
+1294	scene clock advances per scene	1
+145	scene clock advances per scene	10-19
+644	scene clock advances per scene	2
+13	scene clock advances per scene	20-99
+913	scene clock advances per scene	3-4
+766	scene clock advances per scene	5-9
+34	scene fragment (begin) outcome: blocked on a native's result
+80	scene fragment (begin) outcome: completed
+1	scene fragment (begin) outcome: failed: MissingFunction
+2	scene fragment (begin) outcome: failed: MissingScript
+2	scene fragment (begin) outcome: failed: NoneOperand op 34
+32	scene fragment (end) outcome: blocked on a native's result
+1	scene fragment (end) outcome: blocked on a scripted call on an object without that script
+76	scene fragment (end) outcome: completed
+1	scene fragment (end) outcome: failed: BadArgument
+5	scene fragment (end) outcome: failed: NoneOperand op 23
+1	scene fragment (end) outcome: failed: StepLimit
+25	scene fragment (phase begin) outcome: blocked on a native's result
+125	scene fragment (phase begin) outcome: completed
+1	scene fragment (phase begin) outcome: failed: BadArgument
+1	scene fragment (phase begin) outcome: failed: MissingFunction
+14	scene fragment (phase begin) outcome: failed: NoneOperand op 23
+2	scene fragment (phase begin) outcome: failed: NoneOperand op 32
+51	scene fragment (phase end) outcome: blocked on a native's result
+1	scene fragment (phase end) outcome: blocked on an undetermined value (rule pex_array_ops_v1)
+83	scene fragment (phase end) outcome: completed
+1	scene fragment (phase end) outcome: failed: BadArgument
+1	scene fragment (phase end) outcome: failed: MissingFunction
+15	scene fragment (phase end) outcome: failed: NoneOperand op 23
+8	scene fragment (phase end) outcome: failed: NoneOperand op 32
+2	scene fragment (phase end) outcome: failed: StepLimit
+43485	scene steps
+12278	scenes	phase completed
+13779	scenes	phase entered
+111	scenes	phase passed over (start conditions false)
+9704	scenes	scene clock: action completed	kind 0
+2393	scenes	scene clock: action completed	kind 1
+505	scenes	scene clock: action completed	kind 2
+2693	scenes	scene clock: action completed	kind 3
+67	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (a response has no voice file)
+113	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (no line of the topic has conditions that hold)
+15	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (no voice file of the speaker's voice type)
+89	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (several voice types hold the line and the speaker's is not settled (the action names no alias))
+720	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (several voice types hold the line and the speaker's is not settled (the alias is filled by the world))
+16	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (several voice types hold the line and the speaker's is not settled (the forced reference's base names no voice type))
+9	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (several voice types hold the line and the speaker's is not settled (the unique actor names no voice type))
+23	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (the action names no topic)
+102	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (the line has no response)
+724	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (the topic holds no line)
+23	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 1))
+1	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 1, 46, 566))
+1	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 1, 58))
+1	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 1, 59))
+1	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 1, 71))
+1	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 1, 71, 560))
+17	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 1, 71, 72))
+2	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 1, 72))
+4	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 1, 72, 566))
+56	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 14))
+2	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 14, 426))
+1	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 14, 70))
+1	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 14, 72))
+2	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 157))
+11	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 161))
+1	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 162))
+1	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 250, 359))
+2	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 263))
+1	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 264))
+27	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 27))
+1	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 310))
+10	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 359))
+37	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 426))
+1	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 426, 566))
+2	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 432))
+1	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 44, 77))
+7	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 448))
+13	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 46))
+3	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 46, 59))
+1	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 46, 77))
+2	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 47))
+1	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 47, 544))
+2	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 47, 59))
+1	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 47, 72))
+1	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 50))
+2	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 507))
+2	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 510))
+3	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 543))
+5	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 544))
+4	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 56))
+2	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 56, 59))
+2	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 560))
+26	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 566))
+10	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 58))
+12	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 58, 566))
+5	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 58, 59))
+1	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 58, 72))
+314	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 59))
+3	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 59, 359))
+1	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 59, 426))
+1	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 59, 510))
+1	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 59, 544))
+8	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 59, 566))
+1	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 59, 682))
+6	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 59, 70))
+1	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 59, 72))
+1	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 59, 84))
+2	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 605))
+3	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 610))
+1	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 640, 699))
+3	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 660))
+2	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 67))
+1	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 682))
+186	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 70))
+1	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 70, 566))
+1	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 70, 682))
+1	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 70, 71))
+1	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 70, 84, 566))
+28	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 71))
+1	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 71, 359))
+1	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 71, 566))
+91	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 72))
+1	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 758))
+1	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 765))
+5	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 77))
+3	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 80))
+10	scenes	scene clock: action started	kind 0	line: assumed seconds from the command line (which line of the topic plays is undetermined (function 84))
+6833	scenes	scene clock: action started	kind 0	line: seconds from its audio
+2393	scenes	scene clock: action started	kind 1	package: assumed complete from the command line
+505	scenes	scene clock: action started	kind 2	timer: seconds from the record
+5	scenes	scene clock: action started	kind 2	timer: undetermined (a flag bit is set; no bit is read)
+42	scenes	scene clock: action started	kind 2	timer: undetermined (a second value, TNAM, is stored)
+2	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (a response has no voice file); answer assumed seconds from the command line (a response has no voice file)
+3	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (a response has no voice file); answer assumed seconds from the command line (the topic holds no line)
+2	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (a response has no voice file); answer seconds from its audio
+2	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (no line of the topic has conditions that hold); answer assumed seconds from the command line (no line of the topic has conditions that hold)
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (no line of the topic has conditions that hold); answer assumed seconds from the command line (the action names no topic)
+21	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (several voice types hold the line and the speaker's is not settled (the player's voice type is not in the records)); answer assumed seconds from the command line (a response has no voice file)
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (several voice types hold the line and the speaker's is not settled (the player's voice type is not in the records)); answer assumed seconds from the command line (no line of the topic has conditions that hold)
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (several voice types hold the line and the speaker's is not settled (the player's voice type is not in the records)); answer assumed seconds from the command line (no voice file of the speaker's voice type)
+22	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (several voice types hold the line and the speaker's is not settled (the player's voice type is not in the records)); answer assumed seconds from the command line (several voice types hold the line and the speaker's is not settled (the alias is filled by the world))
+113	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (several voice types hold the line and the speaker's is not settled (the player's voice type is not in the records)); answer assumed seconds from the command line (the action names no topic)
+8	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (several voice types hold the line and the speaker's is not settled (the player's voice type is not in the records)); answer assumed seconds from the command line (the line has no response)
+187	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (several voice types hold the line and the speaker's is not settled (the player's voice type is not in the records)); answer assumed seconds from the command line (the topic holds no line)
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (several voice types hold the line and the speaker's is not settled (the player's voice type is not in the records)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 1))
+5	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (several voice types hold the line and the speaker's is not settled (the player's voice type is not in the records)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 14))
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (several voice types hold the line and the speaker's is not settled (the player's voice type is not in the records)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 359))
+5	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (several voice types hold the line and the speaker's is not settled (the player's voice type is not in the records)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 426))
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (several voice types hold the line and the speaker's is not settled (the player's voice type is not in the records)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 46))
+12	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (several voice types hold the line and the speaker's is not settled (the player's voice type is not in the records)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 47))
+57	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (several voice types hold the line and the speaker's is not settled (the player's voice type is not in the records)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 544))
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (several voice types hold the line and the speaker's is not settled (the player's voice type is not in the records)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 544, 566))
+6	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (several voice types hold the line and the speaker's is not settled (the player's voice type is not in the records)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 566))
+2	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (several voice types hold the line and the speaker's is not settled (the player's voice type is not in the records)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 58))
+25	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (several voice types hold the line and the speaker's is not settled (the player's voice type is not in the records)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 59))
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (several voice types hold the line and the speaker's is not settled (the player's voice type is not in the records)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 59, 359))
+10	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (several voice types hold the line and the speaker's is not settled (the player's voice type is not in the records)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 644))
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (several voice types hold the line and the speaker's is not settled (the player's voice type is not in the records)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 682))
+56	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (several voice types hold the line and the speaker's is not settled (the player's voice type is not in the records)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 70))
+2	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (several voice types hold the line and the speaker's is not settled (the player's voice type is not in the records)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 70, 544))
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (several voice types hold the line and the speaker's is not settled (the player's voice type is not in the records)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 70, 566))
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (several voice types hold the line and the speaker's is not settled (the player's voice type is not in the records)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 71))
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (several voice types hold the line and the speaker's is not settled (the player's voice type is not in the records)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 71, 426))
+6	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (several voice types hold the line and the speaker's is not settled (the player's voice type is not in the records)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 72))
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (several voice types hold the line and the speaker's is not settled (the player's voice type is not in the records)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 80))
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (several voice types hold the line and the speaker's is not settled (the player's voice type is not in the records)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 84))
+1808	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (several voice types hold the line and the speaker's is not settled (the player's voice type is not in the records)); answer seconds from its audio
+2	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (the action names no topic); answer assumed seconds from the command line (the action names no topic)
+2	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (the line has no response); answer assumed seconds from the command line (several voice types hold the line and the speaker's is not settled (the alias is filled by the world))
+4	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (the line has no response); answer assumed seconds from the command line (the line has no response)
+2	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (the line has no response); answer assumed seconds from the command line (the topic holds no line)
+2	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (the line has no response); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 426))
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (the line has no response); answer seconds from its audio
+12	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (the topic holds no line); answer assumed seconds from the command line (the topic holds no line)
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 1, 72)); answer assumed seconds from the command line (the topic holds no line)
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 14)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 14))
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 14)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 14, 426, 644))
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 14)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 14, 59))
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 14)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 544))
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 14, 70, 544)); answer assumed seconds from the command line (several voice types hold the line and the speaker's is not settled (the alias is filled by the world))
+2	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 214)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 544))
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 250)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 250))
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 359)); answer seconds from its audio
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 448)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 448))
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 46)); answer assumed seconds from the command line (no line of the topic has conditions that hold)
+5	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 46)); answer seconds from its audio
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 46, 59)); answer assumed seconds from the command line (the topic holds no line)
+7	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 47)); answer assumed seconds from the command line (the action names no topic)
+2	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 47)); answer assumed seconds from the command line (the topic holds no line)
+2	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 47)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 14, 47))
+27	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 47)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 47))
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 47)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 544))
+5	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 47)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 59))
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 47)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 70))
+9	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 47)); answer seconds from its audio
+3	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 47, 59)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 47))
+3	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 47, 59)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 47, 59))
+2	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 47, 59)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 59))
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 47, 59)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 70))
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 48)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 48))
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 491)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 491))
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 50)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 50))
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 506)); answer seconds from its audio
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 507)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 507))
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 510)); answer assumed seconds from the command line (the action names no topic)
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 510)); answer assumed seconds from the command line (the topic holds no line)
+4	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 510)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 510))
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 56, 59)); answer seconds from its audio
+3	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 58)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 58))
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 58)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 58, 544))
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 58, 59)); answer assumed seconds from the command line (the topic holds no line)
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 58, 59)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 58, 59))
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 58, 59)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 58, 59, 544))
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 58, 59)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 59))
+2	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 59)); answer assumed seconds from the command line (a response has no voice file)
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 59)); answer assumed seconds from the command line (no line of the topic has conditions that hold)
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 59)); answer assumed seconds from the command line (several voice types hold the line and the speaker's is not settled (the alias is filled by the world))
+6	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 59)); answer assumed seconds from the command line (the action names no topic)
+10	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 59)); answer assumed seconds from the command line (the topic holds no line)
+3	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 59)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 544))
+74	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 59)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 59))
+2	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 59)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 59, 544))
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 59)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 59, 566))
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 59)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 59, 70))
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 59)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 59, 84))
+20	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 59)); answer seconds from its audio
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 59, 71)); answer assumed seconds from the command line (the topic holds no line)
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 59, 84)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 59))
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 59, 84)); answer seconds from its audio
+5	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 640, 699)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 430, 699))
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 67)); answer assumed seconds from the command line (the action names no topic)
+10	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 682)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 682))
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 682)); answer seconds from its audio
+2	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 70)); answer assumed seconds from the command line (several voice types hold the line and the speaker's is not settled (the alias is filled by the world))
+4	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 70)); answer assumed seconds from the command line (the action names no topic)
+11	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 70)); answer assumed seconds from the command line (the topic holds no line)
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 70)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 566))
+6	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 70)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 70))
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 70)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 70, 544))
+22	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 70)); answer seconds from its audio
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 71)); answer assumed seconds from the command line (the topic holds no line)
+2	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 71)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 71))
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 71, 448)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 71, 448))
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 72)); answer assumed seconds from the command line (the topic holds no line)
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 788)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 14, 544))
+1	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 84)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 544))
+3	scenes	scene clock: action started	kind 3	player dialogue: assumed choice 0 from the command line; player line assumed seconds from the command line (which line of the topic plays is undetermined (function 84)); answer assumed seconds from the command line (which line of the topic plays is undetermined (function 84))
+371	scenes	scene clock: action started	kind 4	kind 4 (starts another scene): not timed
+197	scenes	scene clock: action started	kind 5	kind 5 (a response line: audio): not timed
+438	scenes	scene clock: action started	kind 6	kind 6 (radio: audio): not timed
+12450	scenes	scene clock: phase waits on actions with a due time
+2822	scenes	scene ended (last phase completed)
+4774	scenes	scene started
+2	scenes	scene state became undetermined	Start of a scene whose state is undetermined
+21	scenes	scene stopped by a script
+6	scenes	scene stopped in a phase	an action runs in the phase: kind 1 (a package: actor movement)
+54	scenes	scene stopped in a phase	an action runs in the phase: kind 2 (a timer: the clock)
+436	scenes	scene stopped in a phase	an action runs in the phase: kind 4 (starts another scene)
+193	scenes	scene stopped in a phase	an action runs in the phase: kind 5 (a response line: audio)
+433	scenes	scene stopped in a phase	an action runs in the phase: kind 6 (radio: audio)
+118	scenes	scene stopped in a phase	completion conditions false (waits on the world)
+137	scenes	scene stopped in a phase	completion conditions undetermined (function 1)
+1	scenes	scene stopped in a phase	completion conditions undetermined (function 1, 131)
+1	scenes	scene stopped in a phase	completion conditions undetermined (function 1, 157)
+1	scenes	scene stopped in a phase	completion conditions undetermined (function 1, 159)
+6	scenes	scene stopped in a phase	completion conditions undetermined (function 1, 27)
+1	scenes	scene stopped in a phase	completion conditions undetermined (function 1, 27, 660)
+2	scenes	scene stopped in a phase	completion conditions undetermined (function 1, 310)
+1	scenes	scene stopped in a phase	completion conditions undetermined (function 1, 323)
+1	scenes	scene stopped in a phase	completion conditions undetermined (function 1, 360)
+2	scenes	scene stopped in a phase	completion conditions undetermined (function 1, 550)
+4	scenes	scene stopped in a phase	completion conditions undetermined (function 1, 566)
+2	scenes	scene stopped in a phase	completion conditions undetermined (function 1, 58)
+1	scenes	scene stopped in a phase	completion conditions undetermined (function 1, 580)
+2	scenes	scene stopped in a phase	completion conditions undetermined (function 1, 59)
+1	scenes	scene stopped in a phase	completion conditions undetermined (function 1, 59, 67)
+2	scenes	scene stopped in a phase	completion conditions undetermined (function 1, 67)
+1	scenes	scene stopped in a phase	completion conditions undetermined (function 1, 67, 555)
+3	scenes	scene stopped in a phase	completion conditions undetermined (function 1, 74)
+12	scenes	scene stopped in a phase	completion conditions undetermined (function 131)
+1	scenes	scene stopped in a phase	completion conditions undetermined (function 141)
+6	scenes	scene stopped in a phase	completion conditions undetermined (function 159)
+1	scenes	scene stopped in a phase	completion conditions undetermined (function 162)
+4	scenes	scene stopped in a phase	completion conditions undetermined (function 248)
+3	scenes	scene stopped in a phase	completion conditions undetermined (function 289)
+1	scenes	scene stopped in a phase	completion conditions undetermined (function 310)
+6	scenes	scene stopped in a phase	completion conditions undetermined (function 327)
+1	scenes	scene stopped in a phase	completion conditions undetermined (function 35)
+1	scenes	scene stopped in a phase	completion conditions undetermined (function 359)
+3	scenes	scene stopped in a phase	completion conditions undetermined (function 359, 555)
+1	scenes	scene stopped in a phase	completion conditions undetermined (function 359, 811)
+4	scenes	scene stopped in a phase	completion conditions undetermined (function 46)
+1	scenes	scene stopped in a phase	completion conditions undetermined (function 513)
+1	scenes	scene stopped in a phase	completion conditions undetermined (function 543)
+1	scenes	scene stopped in a phase	completion conditions undetermined (function 550)
+29	scenes	scene stopped in a phase	completion conditions undetermined (function 555)
+4	scenes	scene stopped in a phase	completion conditions undetermined (function 56)
+10	scenes	scene stopped in a phase	completion conditions undetermined (function 58)
+50	scenes	scene stopped in a phase	completion conditions undetermined (function 59)
+1	scenes	scene stopped in a phase	completion conditions undetermined (function 59, 359)
+1	scenes	scene stopped in a phase	completion conditions undetermined (function 59, 67)
+1	scenes	scene stopped in a phase	completion conditions undetermined (function 59, 67, 555)
+1	scenes	scene stopped in a phase	completion conditions undetermined (function 59, 792)
+11	scenes	scene stopped in a phase	completion conditions undetermined (function 594)
+6	scenes	scene stopped in a phase	completion conditions undetermined (function 613, 614)
+1	scenes	scene stopped in a phase	completion conditions undetermined (function 633)
+10	scenes	scene stopped in a phase	completion conditions undetermined (function 67)
+7	scenes	scene stopped in a phase	completion conditions undetermined (function 67, 555)
+1	scenes	scene stopped in a phase	completion conditions undetermined (function 67, 613, 614)
+1	scenes	scene stopped in a phase	completion conditions undetermined (function 72, 327, 784)
+2	scenes	scene stopped in a phase	completion conditions undetermined (function 74)
+2	scenes	scene stopped in a phase	completion conditions undetermined (function 784)
+132	scenes	scene stopped in a phase	start conditions undetermined (function 1)
+1	scenes	scene stopped in a phase	start conditions undetermined (function 1, 14)
+2	scenes	scene stopped in a phase	start conditions undetermined (function 1, 27)
+1	scenes	scene stopped in a phase	start conditions undetermined (function 1, 359)
+11	scenes	scene stopped in a phase	start conditions undetermined (function 1, 414)
+12	scenes	scene stopped in a phase	start conditions undetermined (function 1, 555)
+10	scenes	scene stopped in a phase	start conditions undetermined (function 1, 59)
+2	scenes	scene stopped in a phase	start conditions undetermined (function 1, 71, 72)
+7	scenes	scene stopped in a phase	start conditions undetermined (function 1, 72)
+15	scenes	scene stopped in a phase	start conditions undetermined (function 14)
+1	scenes	scene stopped in a phase	start conditions undetermined (function 14, 72)
+3	scenes	scene stopped in a phase	start conditions undetermined (function 159)
+1	scenes	scene stopped in a phase	start conditions undetermined (function 18)
+1	scenes	scene stopped in a phase	start conditions undetermined (function 182)
+12	scenes	scene stopped in a phase	start conditions undetermined (function 231)
+6	scenes	scene stopped in a phase	start conditions undetermined (function 248)
+2	scenes	scene stopped in a phase	start conditions undetermined (function 255)
+1	scenes	scene stopped in a phase	start conditions undetermined (function 27)
+1	scenes	scene stopped in a phase	start conditions undetermined (function 289)
+1	scenes	scene stopped in a phase	start conditions undetermined (function 310)
+1	scenes	scene stopped in a phase	start conditions undetermined (function 323)
+7	scenes	scene stopped in a phase	start conditions undetermined (function 359)
+3	scenes	scene stopped in a phase	start conditions undetermined (function 414)
+1	scenes	scene stopped in a phase	start conditions undetermined (function 414, 660)
+3	scenes	scene stopped in a phase	start conditions undetermined (function 448)
+1	scenes	scene stopped in a phase	start conditions undetermined (function 45)
+8	scenes	scene stopped in a phase	start conditions undetermined (function 46)
+2	scenes	scene stopped in a phase	start conditions undetermined (function 46, 59)
+2	scenes	scene stopped in a phase	start conditions undetermined (function 47)
+1	scenes	scene stopped in a phase	start conditions undetermined (function 5)
+1	scenes	scene stopped in a phase	start conditions undetermined (function 507)
+1	scenes	scene stopped in a phase	start conditions undetermined (function 510)
+2	scenes	scene stopped in a phase	start conditions undetermined (function 56)
+1	scenes	scene stopped in a phase	start conditions undetermined (function 56, 543)
+1	scenes	scene stopped in a phase	start conditions undetermined (function 56, 58)
+1	scenes	scene stopped in a phase	start conditions undetermined (function 56, 59, 72)
+1	scenes	scene stopped in a phase	start conditions undetermined (function 560)
+11	scenes	scene stopped in a phase	start conditions undetermined (function 58)
+1	scenes	scene stopped in a phase	start conditions undetermined (function 58, 289)
+2	scenes	scene stopped in a phase	start conditions undetermined (function 58, 359)
+2	scenes	scene stopped in a phase	start conditions undetermined (function 58, 59)
+1	scenes	scene stopped in a phase	start conditions undetermined (function 58, 613)
+133	scenes	scene stopped in a phase	start conditions undetermined (function 59)
+1	scenes	scene stopped in a phase	start conditions undetermined (function 59, 660)
+3	scenes	scene stopped in a phase	start conditions undetermined (function 59, 84)
+4	scenes	scene stopped in a phase	start conditions undetermined (function 613, 614)
+4	scenes	scene stopped in a phase	start conditions undetermined (function 660)
+2	scenes	scene stopped in a phase	start conditions undetermined (function 67)
+2	scenes	scene stopped in a phase	start conditions undetermined (function 70)
+8	scenes	scene stopped in a phase	start conditions undetermined (function 71)
+1	scenes	scene stopped in a phase	start conditions undetermined (function 71, 359)
+2	scenes	scene stopped in a phase	start conditions undetermined (function 72)
+4	scenes	scene stopped in a phase	start conditions undetermined (function 77)
+1	scenes	scene stopped in a phase	start conditions undetermined (function 773)
+1	scenes	scene stopped in a phase	start conditions undetermined (function 792)
+4	scenes	scene stopped in a phase	start conditions undetermined (function 799)
+4	scenes	scene stopped in a phase	start conditions undetermined (function 84)
+4773	scenes started by the sweep
+2822	started scenes that ran to their end
+
+166670	effects	other: utility.wait
+242	effects	other: referencealias.getreference
+55	effects	other: game.getplayer
+46	effects	other: globalvariable.getvalue
+45	effects	other: quest.isstagedone
+30	effects	other: sound.play
+23	effects	other: actor.playidle
+20	effects	other: game.stopdialoguecamera
+19	effects	other: objectreference.getlinkedref
+12	effects	other: objectreference.playanimation
+10	effects	other: scriptobject.sendcustomevent
+10	effects	other: utility.getcurrentrealtime
+6	effects	other: actor.changeanimarchetype
+6	effects	other: quest.isrunning
+5	effects	other: faction.setenemy
+5	effects	other: game.getformfromfile
+5	effects	other: game.startdialoguecameraorcenterontarget
+5	effects	other: inputenablelayer.create
+5	effects	other: objectreference.getcurrentlocation
+4	effects	other: actor.addperk
+4	effects	other: actor.playidlewithtarget
+4	effects	other: actor.playsubgraphanimation
+4	effects	other: actor.removeperk
+4	effects	other: inputenablelayer.enablefighting
+4	effects	other: musictype.add
+4	effects	other: objectreference.blockactivation
+4	effects	other: objectreference.is3dloaded
+4	effects	other: quest.getcurrentstageid
+3	effects	other: objectreference.raidtargetsavailable
+2	effects	other: actor.changeanimflavor
+2	effects	other: actor.isdead
+2	effects	other: actor.playidleaction
+2	effects	other: actor.setalpha
+2	effects	other: actor.setghost
+2	effects	other: locationalias.getlocation
+2	effects	other: objectreference.activate
+2	effects	other: objectreference.getitemcount
+2	effects	other: objectreference.preloadtargetarea
+2	effects	other: quest.completeallobjectives
+2	effects	other: scriptobject.registerforanimationevent
+2	effects	other: scriptobject.unregisterforhitevent
+2	effects	other: utility.getcurrentgametime
+2	effects	other: utility.randomint
+1	effects	other: actor.drawweapon
+1	effects	other: actor.hasdetectionlos
+1	effects	other: actor.hasperk
+1	effects	other: actor.startcombat
+1	effects	other: formlist.getat
+1	effects	other: formlist.getsize
+1	effects	other: game.showspecialmenu
+1	effects	other: inputenablelayer.disableplayercontrols
+1	effects	other: inputenablelayer.enableplayercontrols
+1	effects	other: location.isloaded
+1	effects	other: location.reset
+1	effects	other: objectreference.getdistance
+1	effects	other: objectreference.getlinkedrefchain
+1	effects	other: objectreference.ignorefriendlyhits
+1	effects	other: objectreference.waitforanimationevent
+1	effects	other: quest.isstopping
+
+## 4 new game with the clock
+1	assumption from the command line: the scene clock advanced (--scene-clock)
+3	blocking native	actor.getlevel
+3	blocking native	game.isplugininstalled
+20	blocking native	objectreference.attachmod
+2	blocking native	objectreference.is3dloaded
+6	blocking native	refcollectionalias.getcount
+2	blocking native	referencealias.getreference
+1	blocking rule	pex_array_ops_v1
+1	blocking rule	pex_ops_not_copy_cast_v1
+0	distinct objectives displayed
+15	effects	alias fill changed
+3	effects	enable
+41	effects	event registration
+7	effects	items added, removed or equipped
+12	effects	lock or open state
+8	effects	move
+29	effects	object placed
+1	effects	quest made active
+1	effects	quest started
+7	effects	quest stopped
+43	effects	scene
+17	effects	stage set on another quest
+4	effects	timer
+9	event onquestinit outcome: blocked on a native's result
+1	event onquestinit outcome: blocked on an undetermined value (rule pex_array_ops_v1)
+12	event onquestinit outcome: completed
+1	event onquestinit outcome: failed: BadArgument
+1	event onquestinit outcome: failed: NoneOperand op 28
+436	event onquestinit runs with no handler
+7	event onquestshutdown runs with no handler
+21	event onstageset outcome: blocked on a native's result
+28	event onstageset outcome: completed
+1	event onstageset outcome: failed: NoneOperand op 40
+75	event onstageset runs with no handler
+17	events	registrations	custom	made
+1	events	registrations	custom	not made: an argument or the instance is undetermined
+3	events	registrations	remote	by event	onload
+10	events	registrations	remote	by event	onlocationchange
+3	events	registrations	remote	by event	onplayerloadgame
+2	events	registrations	remote	by event	onstageset
+3	events	registrations	remote	by event	onunload
+21	events	registrations	remote	made
+2	events	registrations	remote	not made: an argument or the instance is undetermined
+1	failure	BadArgument
+1	failure	MissingFunction
+2	failure	NoneOperand op 23
+1	failure	NoneOperand op 28
+1	failure	NoneOperand op 40
+6	fragment outcome: blocked on a native's result
+1	fragment outcome: blocked on an undetermined value (rule pex_ops_not_copy_cast_v1)
+62	fragment outcome: completed
+1	fragment outcome: failed: MissingFunction
+2	fragment outcome: failed: NoneOperand op 23
+24	host answer	formlist.getat	a record
+22	host answer	formlist.getsize	a value
+1	host answer	globalvariable.getvalue	a value
+7	host answer	quest.isrunning	a value
+9	host answer	quest.isstagedone	a value
+17	host answer	quest.setcurrentstageid	a value
+458	host answer	quest.start	a value
+7	host answer	quest.stop	none
+2	host answer	referencealias.forcerefto	none
+24	host answer	referencealias.getreference	a record
+33	host answer	referencealias.getreference	undetermined: the alias has no forced reference
+678	jobs at depth	1
+83	jobs at depth	2
+3	jobs at depth	3-4
+0	jobs left in the queue when the run ended
+764	jobs run
+2	log entry condition lists	undetermined
+1	log entry selections left open, by function index of an undetermined condition	function 14
+1	log entry selections with conditions evaluated	open
+1	open runs: which log entry's fragment runs depends on conditions
+459	quest changes	quest started
+7	quest changes	quest stopped
+125	quest changes	stage set
+452	quests running at the end (of those the run read)
+457	quests started with the game: Start answer Value(Bool(true))
+98	quests with a stage set
+17	registrations at the end	custom event (delivered when its sender sends it)
+3	registrations at the end	remote onload: raised by the world, not delivered
+10	registrations at the end	remote onlocationchange: raised by the world, not delivered
+3	registrations at the end	remote onplayerloadgame: raised by the world, not delivered
+2	registrations at the end	remote onstageset: raised by this run
+3	registrations at the end	remote onunload: raised by the world, not delivered
+1	rules relied on	cond_ctda_layout_v1
+1	rules relied on	cond_list_or_groups_v1
+1	rules relied on	cond_log_entry_state_v1
+1	rules relied on	pex_array_ops_v1
+1	rules relied on	pex_call_dispatch_v1
+1	rules relied on	pex_conditional_jump_sense_v1
+1	rules relied on	pex_default_values_v1
+1	rules relied on	pex_op_return_v1
+1	rules relied on	pex_ops_arithmetic_v1
+1	rules relied on	pex_ops_compare_v1
+1	rules relied on	pex_ops_not_copy_cast_v1
+1	rules relied on	pex_property_get_set_v1
+1	rules relied on	pex_state_identifier_v1
+1	rules relied on	pex_struct_ops_v1
+1	rules relied on	pex_truth_of_values_v1
+1	rules relied on	quest_alias_forced_reference_v1
+1	rules relied on	quest_fragment_entry_v1
+1	rules relied on	quest_fragment_instance_v1
+1	rules relied on	quest_on_stage_set_v1
+1	rules relied on	quest_qust_layout_v1
+1	rules relied on	quest_set_stage_v1
+1	rules relied on	quest_stage_fragment_order_v1
+1	rules relied on	quest_stage_log_entry_v1
+1	rules relied on	quest_start_game_enabled_v1
+1	rules relied on	quest_start_v1
+1	rules relied on	quest_stop_v1
+1	rules relied on	scen_timer_action_seconds_v1
+1	rules relied on	scene_begin_on_quest_start_v1
+1	rules relied on	scene_clock_v1
+1	rules relied on	scene_phase_progression_v1
+1	rules relied on	scene_start_v1
+1	rules relied on	vm_custom_events_v1
+1	rules relied on	vm_host_data_state_v1
+1	rules relied on	vm_host_formlist_lnam_v1
+1	rules relied on	vm_host_global_fltv_v1
+1	rules relied on	vm_host_player_handle_v1
+1	rules relied on	vm_record_scripts_attach_v1
+1	rules relied on	vm_record_signature_type_v1
+1	rules relied on	vm_remote_events_v1
+1	rules relied on	vm_timer_events_v1
+1	rules relied on	vmad_alias_value_v1
+1	rules relied on	vmad_property_sets_variable_v1
+1	rules relied on	vmad_reference_scripts_v1
+2	scene clock advances
+100	scene steps
+2	scenes	phase completed
+48	scenes	phase entered
+3	scenes	scene clock: action completed	kind 2
+11	scenes	scene clock: action started	kind 0	line: undetermined: the topic holds no line
+29	scenes	scene clock: action started	kind 1	kind 1 (a package: actor movement): not timed
+3	scenes	scene clock: action started	kind 2	timer: seconds from the record
+1	scenes	scene clock: action started	kind 3	player dialogue: waits on the player
+29	scenes	scene clock: action started	kind 6	kind 6 (radio: audio): not timed
+2	scenes	scene clock: phase waits on actions with a due time
+2	scenes	scene start refused	its quest is not running
+1	scenes	scene started
+46	scenes	scene started with its quest
+5	scenes	scene stopped in a phase	an action runs in the phase: kind 0 (a dialogue line: audio)
+8	scenes	scene stopped in a phase	an action runs in the phase: kind 1 (a package: actor movement)
+30	scenes	scene stopped in a phase	an action runs in the phase: kind 6 (radio: audio)
+2	scenes	scene stopped in a phase	completion conditions undetermined (function 613, 614)
+1	scenes	scene stopped in a phase	completion conditions undetermined (function 67)
+1	scenes	scene stopped in a phase	completion conditions undetermined (function 67, 613, 614)
+1	scenes	scene stopped in a phase	start conditions undetermined (function 613, 614)
+1	time-scale global at the end (vm_timer_time_scale_v1)	20
+1	timers asked	game time, hours	interval 4.0
+1	timers asked	real time, seconds	interval 1800.0
+2	timers asked	real time, seconds	interval 900.0
+3	visibility	enable of a placed REFR not flagged
+
+57	effects	other: referencealias.getreference
+54	effects	other: objectreference.attachmod
+29	effects	other: scriptobject.registerfortrackedstatsevent
+24	effects	other: formlist.getat
+22	effects	other: formlist.getsize
+18	effects	other: formlist.addform
+17	effects	other: game.getplayer
+14	effects	other: faction.setally
+14	effects	other: objectreference.blockactivation
+9	effects	other: quest.isstagedone
+8	effects	other: objectreference.addkeyword
+7	effects	other: leveleditem.addform
+7	effects	other: quest.isrunning
+5	effects	other: actor.addperk
+3	effects	other: actor.allowpcdialogue
+3	effects	other: actor.getlevel
+3	effects	other: game.isplugininstalled
+3	effects	other: utility.wait
+2	effects	other: faction.setenemy
+2	effects	other: objectreference.is3dloaded
+1	effects	other: globalvariable.getvalue
+1	effects	other: locationalias.getlocation
+1	effects	other: objectreference.setdestroyed
+1	effects	other: scriptobject.registerforplayersleep

@@ -7,6 +7,7 @@ mod data;
 mod events;
 mod quest;
 mod scene;
+mod scev;
 
 use fo4_pex::{
     Function, Header, Instruction, Member, NamedFunction, Object, Pex, Property, Sections, State,
@@ -706,12 +707,17 @@ fn the_time_scale_orders_game_time_timers_against_real_time_ones() {
     let i = new_ref(&mut vm, "clocked2");
     vm.deliver(i, "onload", vec![]);
     // Both clocks queued: without a scale the firing stops.
+    assert_eq!(vm.next_timer_wait(None), None);
     let x = vm.fire_timer_scaled(None).unwrap();
     assert!(matches!(x.2, Outcome::Failed(VmError::Timers(_))));
     // One game hour at scale 20 is 180 real seconds: the real-time timer
-    // (100 s) fires first, then the game-time one.
+    // (100 s) fires first, then the game-time one; the wait a caller can
+    // ask beforehand is the one the firing takes.
+    assert_eq!(vm.next_timer_wait(Some(20.0)), Some(100.0));
     assert_eq!(vm.fire_timer_scaled(Some(20.0)).unwrap().1, Val::Int(8));
+    assert_eq!(vm.next_timer_wait(Some(20.0)), Some(80.0));
     assert_eq!(vm.fire_timer_scaled(Some(20.0)).unwrap().1, Val::Int(7));
+    assert_eq!(vm.next_timer_wait(Some(20.0)), None);
     assert!(vm.rules.contains(rules::TIME_SCALE));
     // At scale 0 the game clock stands still: nothing is due.
     vm.deliver(i, "onload", vec![]);

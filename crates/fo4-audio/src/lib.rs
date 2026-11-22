@@ -199,3 +199,30 @@ pub fn packets(w: &Wave) -> Option<u64> {
     let a = u64::from(w.format.block_align);
     (a > 0 && w.data.length.is_multiple_of(a)).then(|| w.data.length / a)
 }
+
+/// Seconds of audio a file's header declares, without decoding
+/// (`spec/voice.md`, Duration). For integer PCM: whole frames of the
+/// `data` chunk over the sample rate (`audio_pcm_layout_v1`). For the
+/// WMA family: the last `dpds` word read as the count of decoded 16-bit
+/// bytes up to the end of the last packet, over 2 x channels x sample
+/// rate (`audio_xwma_dpds_seconds_v1`, pending: the census supports it
+/// against the stored byte rate, nothing decoded confirms it). `None`
+/// when the fields needed are zero or absent, or for another tag.
+pub fn header_seconds(w: &Wave) -> Option<f64> {
+    let f = &w.format;
+    let rate = f64::from(f.sample_rate);
+    if rate <= 0.0 || f.channels == 0 {
+        return None;
+    }
+    match f.tag {
+        format::TAG_PCM => {
+            let a = u64::from(f.block_align);
+            (a > 0).then(|| (w.data.length / a) as f64 / rate)
+        }
+        format::TAG_WMA2 => {
+            let last = f64::from(*w.dpds.last()?);
+            Some(last / (2.0 * f64::from(f.channels) * rate))
+        }
+        _ => None,
+    }
+}

@@ -2,7 +2,7 @@
 use crate::format::{WaveFormat, TAG_PCM, TAG_WMA2};
 use crate::pcm::{self, Pcm, Status};
 use crate::wave::{self, Cue, Smpl};
-use crate::{fuz, packets, Container, Sound};
+use crate::{fuz, header_seconds, packets, Container, Sound};
 use fo4_core::Budget;
 
 fn budget() -> Budget {
@@ -270,4 +270,46 @@ fn chunk_views_frame_exactly_or_refuse() {
     assert_eq!(sub.len(), 2);
     assert_eq!(sub[0].pad, Some(0));
     assert!(wave::list(&list[..list.len() - 1], &budget()).is_none());
+}
+
+#[test]
+fn header_seconds_from_dpds_and_from_pcm_frames() {
+    // Three packets whose last dpds word is 12,288 decoded bytes: mono,
+    // 16-bit, 44,100 Hz gives 12,288 / 88,200 seconds.
+    let x = xwma(3, 31);
+    let s = Sound::read(&x, "x", &budget()).unwrap();
+    let secs = header_seconds(&s.wave).unwrap();
+    assert!((secs - 12_288.0 / 88_200.0).abs() < 1e-12);
+    // The voice container gives the seconds of its audio half.
+    let mut f = b"FUZE".to_vec();
+    f.extend_from_slice(&1u32.to_le_bytes());
+    f.extend_from_slice(&4u32.to_le_bytes());
+    f.extend_from_slice(&[1, 0, 0, 0]);
+    f.extend_from_slice(&x);
+    let v = Sound::read(&f, "v", &budget()).unwrap();
+    assert_eq!(header_seconds(&v.wave), Some(secs));
+    // PCM: whole frames over the rate (two channels, 16 bits: 4-byte frames).
+    let p = riff(
+        b"WAVE",
+        &[
+            chunk(b"fmt ", &fmt(TAG_PCM, 2, 8_000, 4, 16, None)),
+            chunk(b"data", &[0; 4 * 8_000 + 2]),
+        ],
+    );
+    let w = Sound::read(&p, "p", &budget()).unwrap();
+    assert_eq!(header_seconds(&w.wave), Some(1.0));
+    // No dpds word, or a zero rate: nothing declared.
+    let empty = riff(
+        b"XWMA",
+        &[
+            chunk(b"fmt ", &fmt(TAG_WMA2, 1, 44_100, 31, 16, Some(&[]))),
+            chunk(b"dpds", &[]),
+            chunk(b"data", &[]),
+        ],
+    );
+    let e = Sound::read(&empty, "e", &budget()).unwrap();
+    assert_eq!(header_seconds(&e.wave), None);
+    let mut z = s.wave.clone();
+    z.format.sample_rate = 0;
+    assert_eq!(header_seconds(&z), None);
 }

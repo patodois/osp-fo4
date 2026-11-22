@@ -169,7 +169,7 @@ pub const XESP_BIT1: &str = "xesp_flag_bit1_not_presence_v1";
 pub const XESP_PROPAGATES: &str = "xesp_script_change_propagates_v1";
 
 /// Every rule above.
-pub const ALL: [&str; 83] = [
+pub const ALL: [&str; 92] = [
     ARITHMETIC,
     COMPARE,
     NOT_COPY_CAST,
@@ -253,6 +253,15 @@ pub const ALL: [&str; 83] = [
     SCENE_BEGIN_ON_QUEST_START,
     OWNING_QUEST,
     TIME_SCALE,
+    SCENE_CLOCK,
+    TIMER_ACTION,
+    LINE_AUDIO,
+    LINE_CHOICE,
+    VOICE_PATH,
+    SPEAKER_VOICE_TYPE,
+    SHARED_RESPONSE,
+    DPDS_SECONDS,
+    PLAYER_CHOICE,
 ];
 
 /// The rule an opcode's meaning rests on; `None` for an opcode without a
@@ -293,6 +302,31 @@ pub const OWNING_QUEST: &str = "vm_host_owning_quest_v1";
 /// A game-time timer due after its hours times 3600 over the time-scale
 /// global, against real-time timers.
 pub const TIME_SCALE: &str = "vm_timer_time_scale_v1";
+/// The scene clock: actions start with their start phase, hold the phases
+/// they span until they complete, and complete when the caller advances
+/// the real-time clock past their due time.
+pub const SCENE_CLOCK: &str = "scene_clock_v1";
+/// A timer action (kind 2) lasts the seconds its SNAM after the end phase
+/// holds.
+pub const TIMER_ACTION: &str = "scen_timer_action_seconds_v1";
+/// A dialogue action (kind 0) completes after the duration of its line's
+/// audio.
+pub const LINE_AUDIO: &str = "scene_dialogue_line_audio_v1";
+/// The line a topic plays: the first in stored order whose conditions hold.
+pub const LINE_CHOICE: &str = "scene_dialogue_line_choice_v1";
+/// The voice file path of a response.
+pub const VOICE_PATH: &str = "voice_path_convention_v1";
+/// The speaker's voice type from the alias, its forced reference or its
+/// unique actor.
+pub const SPEAKER_VOICE_TYPE: &str = "voice_speaker_voice_type_v1";
+/// A line without responses plays those of the line its DNAM names.
+pub const SHARED_RESPONSE: &str = "info_shared_response_v1";
+/// The seconds a WMA-family voice file declares: its last `dpds` word over
+/// 2 x channels x rate (read by the caller with `fo4_audio`).
+pub const DPDS_SECONDS: &str = "audio_xwma_dpds_seconds_v1";
+/// Player dialogue under a chosen choice: the player's topic and the
+/// answer topic it pairs with, played one after the other.
+pub const PLAYER_CHOICE: &str = "scene_player_dialogue_choice_v1";
 
 /// The registry the rules are checked against.
 pub const REGISTRY: &str = include_str!("../../../spec/hypotheses.tsv");

@@ -735,6 +735,9 @@ pub struct Store {
     pub limits: Limits,
     sources: Vec<(String, Box<dyn ReadAt>)>,
     memberships: Vec<Membership>,
+    /// Records held by a group of kind 7 (topic children), with the
+    /// group's label (`spec/voice.md`), in stored order per label.
+    topics: Vec<Membership>,
     cell_kinds: HashMap<u64, (usize, CellKind)>,
     /// Exterior CELL occurrence and the compact WRLD key of its enclosing
     /// world children group (kind 1).
@@ -845,6 +848,7 @@ impl Store {
         let order = LoadOrder::new(headers, &allocation)?;
         let mut overrides = Overrides::new();
         let mut memberships = Vec::new();
+        let mut topics = Vec::new();
         let mut cell_kinds = HashMap::new();
         let mut cell_worlds = HashMap::new();
         let mut diagnostics = Vec::new();
@@ -947,6 +951,16 @@ impl Store {
                             cell_worlds.remove(&key);
                         }
                     }
+                    if let Some(g) = groups.last().filter(|g| g.kind == 7) {
+                        if let Some(topic) = compact_label(&order, plugin, g)? {
+                            allocation.reserve(&mut topics, 1, s.name(), r.source.offset)?;
+                            topics.push(Membership {
+                                history,
+                                cell: topic,
+                                group_kind: 7,
+                            });
+                        }
+                    }
                     if let Some(g) = groups.iter().rev().find(|g| matches!(g.kind, 8..=10)) {
                         let cell = compact_label(&order, plugin, g)?.ok_or_else(|| {
                             Error::new(
@@ -1002,6 +1016,8 @@ impl Store {
             }
         }
         memberships.sort_unstable_by_key(|m| m.cell);
+        // Stable: records of one topic keep their stored order.
+        topics.sort_by_key(|m| m.cell);
         let mut winning_indices = Vec::new();
         for (index, r) in overrides.history.iter().enumerate() {
             if overrides
@@ -1035,6 +1051,7 @@ impl Store {
             limits,
             sources,
             memberships,
+            topics,
             cell_kinds,
             cell_worlds,
             winning_indices,
@@ -1104,6 +1121,23 @@ impl Store {
                 self.overrides.form_key(m.cell, &self.order),
                 m.group_kind,
             ))
+        })
+    }
+    /// Winning records held directly by a group of kind 7 (a topic's
+    /// children: INFO records under their DIAL), with the topic the
+    /// group's label names, grouped by topic in stored order (plugin
+    /// order, then file order).
+    pub fn topic_children(&self) -> impl Iterator<Item = (&crate::Override, FormKey)> + '_ {
+        self.topics.iter().filter_map(|m| {
+            let record = &self.overrides.history[m.history];
+            if !self
+                .overrides
+                .winner_id(record.key)
+                .is_some_and(|w| std::ptr::eq(w, record))
+            {
+                return None;
+            }
+            Some((record, self.overrides.form_key(m.cell, &self.order)))
         })
     }
     pub fn kind(&self, key: &FormKey) -> Option<CellKind> {

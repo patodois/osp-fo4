@@ -345,6 +345,23 @@ scripts read with `fo4-pex`. Each behaviour is a pending rule in
 definition file, script source, decompiler, other interpreter, script
 extender or the game executable was opened or searched for.
 
+The scene-events step (`fo4_vm::scene` scene clock, `fo4_vm::voice`,
+`fo4_plugin::info`, `Store::topic_children`, `fo4_audio::header_seconds`;
+[spec/voice.md](../spec/voice.md), [spec/vm.md](../spec/vm.md), Scene
+clock) adds no sourced layout. The TRDA size and its response number byte,
+the voice file path convention, the speaker's folder, the timer action's
+SNAM and the fit of stored data bytes on the seconds the `dpds` table gives
+were measured on one installation with `voice_census`; that scene actions
+span phases and are waited for, that a timer action stores seconds, that a
+dialogue action lasts its line's audio, how lines, responses, shared lines,
+voice files and voice types are tied, that `dpds` words count decoded
+bytes and the letters of the player dialogue topics were recognised from
+prior general knowledge and are used only as pending rules the census and
+the sweeps could refute. No page was requested; no editor, editor source
+or definition file, script source, decompiler, other interpreter, audio
+decoder or tool (including any voice container or lip tool), script
+extender or game executable was opened or searched for.
+
 The fragments step (`fo4_plugin::vmad` INFO, PACK, SCEN and PERK blocks,
 `fo4_plugin::scen`, `fo4_vm::scene`; [spec/scene-record.md](../spec/scene-record.md),
 [spec/vm.md](../spec/vm.md), Scenes and fragments) adds no sourced layout:

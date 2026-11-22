@@ -16,4 +16,6 @@ fo4-plugin.workspace = true
 fo4-vfs.workspace = true
 
 [dev-dependencies]
+# Examples read voice file headers; the library takes the seconds from its caller.
+fo4-audio = { path = "../fo4-audio" }
 fo4-scene.workspace = true

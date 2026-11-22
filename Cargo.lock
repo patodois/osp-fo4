@@ -247,6 +247,7 @@ dependencies = [
 name = "fo4-vm"
 version = "0.1.0"
 dependencies = [
+ "fo4-audio",
  "fo4-core",
  "fo4-pex",
  "fo4-plugin",

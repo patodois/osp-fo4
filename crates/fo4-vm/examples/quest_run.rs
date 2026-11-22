@@ -28,7 +28,7 @@ use fo4_vm::{
     data::Answer,
     quest::{self, Change, Job, JobRun, QuestHost, QuestInfo},
     scene::{self, Step},
-    Effect, Origin, Outcome, Vm, World,
+    voice, Effect, Origin, Outcome, Vm, World,
 };
 use std::{collections::BTreeMap, fmt::Write as _, path::Path, rc::Rc};
 
@@ -386,7 +386,71 @@ fn events_on(vm: &mut Vm<'_>, o: Opts) {
     vm.world.scenes.begin_on_quest_start = o.scenes && o.scenes_with_quest;
     if o.scenes {
         GROUPS.with(|g| vm.world.scenes.groups = g.borrow().clone());
+        CLOCK.with(|c| vm.world.scenes.clock = c.borrow().clone());
     }
+}
+
+/// The voice files of the mounted archives with the seconds their headers
+/// declare (`fo4_audio::header_seconds`, `audio_xwma_dpds_seconds_v1`),
+/// and the lines of every topic.
+fn load_voice(m: &Manifest, vfs: &Vfs, store: &Store) -> Result<voice::Voice, E> {
+    let mut v = voice::Voice {
+        topics: voice::Topics::read(store),
+        ..voice::Voice::default()
+    };
+    let c = &vfs.candidates;
+    for (i, x) in c.iter().enumerate() {
+        let Some(k) = &x.key else { continue };
+        let winner = c.get(i + 1).and_then(|n| n.key.as_ref()) != Some(k);
+        if !winner || voice::parse_path(k).is_none() {
+            continue;
+        }
+        let b = Budget::new(m.limits.max_payload);
+        let bytes = vfs.read_candidate(x, &b)?;
+        let secs = fo4_audio::Sound::read(&bytes, &x.original, &b)
+            .ok()
+            .and_then(|s| fo4_audio::header_seconds(&s.wave));
+        v.files.add(k, secs);
+    }
+    Ok(v)
+}
+
+/// Counts the caller's scene clock assumptions, when made.
+fn count_clock(c: &mut Counts, steps: usize) {
+    if steps == 0 {
+        return;
+    }
+    bump(
+        c,
+        "assumption from the command line: the scene clock advanced (--scene-clock)",
+    );
+    CLOCK.with(|k| {
+        let k = k.borrow();
+        if !k.timers {
+            bump(c, "switch: timer actions not timed (--no-timer-actions)");
+        }
+        if k.voice.is_none() {
+            bump(c, "switch: lines not timed by their audio (--no-line-audio)");
+        }
+        if let Some(x) = k.assume_line_seconds {
+            bump(
+                c,
+                format!("assumption from the command line: a line whose audio does not settle its time lasts {x} s"),
+            );
+        }
+        if let Some(n) = k.assume_player_choice {
+            bump(
+                c,
+                format!("assumption from the command line: the player picks choice {n}"),
+            );
+        }
+        if k.assume_packages {
+            bump(
+                c,
+                "assumption from the command line: package actions complete as they start",
+            );
+        }
+    });
 }
 
 thread_local! {
@@ -397,6 +461,8 @@ thread_local! {
         const { std::cell::RefCell::new((fo4_vm::cond::Switches::all(), BTreeMap::new())) };
     /// The groups of kind 10, read once per process when scenes are on.
     static GROUPS: std::cell::RefCell<Option<Rc<scene::Groups>>> = const { std::cell::RefCell::new(None) };
+    /// The scene clock and the caller's assumptions, set once per process.
+    static CLOCK: std::cell::RefCell<scene::Clock> = std::cell::RefCell::new(scene::Clock::default());
 }
 
 /// The counts of what scenes did in a run.
@@ -415,6 +481,15 @@ fn count_scenes(c: &mut Counts, vm: &Vm<'_>, prefix: &str) {
             scene::Change::Stopped => "scene stopped by a script".to_string(),
             scene::Change::Refused(why) => format!("scene start refused\t{why}"),
             scene::Change::Opened(why) => format!("scene state became undetermined\t{why}"),
+            scene::Change::ActionStarted(_, _, k, how) => {
+                format!("scene clock: action started\tkind {k}\t{how}")
+            }
+            scene::Change::ActionCompleted(_, k, _) => {
+                format!("scene clock: action completed\tkind {k}")
+            }
+            scene::Change::OnClock(_) => {
+                "scene clock: phase waits on actions with a due time".to_string()
+            }
         };
         bump(c, format!("{prefix}scenes\t{what}"));
     }
@@ -732,6 +807,115 @@ struct Then {
     /// the editor ID of that global, named by the caller
     /// (`--time-scale-global`); `None` keeps the earlier stop.
     time_scale: Option<String>,
+    /// Advances of the scene clock (`--scene-clock N`), interleaved with
+    /// the timers by due time; 0 leaves the clock off.
+    scene_clock: usize,
+}
+
+/// Writes the quest and scene changes logged since `seen` to the names
+/// file with the real-time second they were reached at (the timeline of
+/// a clocked run).
+fn timeline(vm: &Vm<'_>, seen: &mut (usize, usize), names: &mut String, what: &str) {
+    let now = vm.world.now[fo4_vm::world::Clock::Real as usize];
+    let q = &vm.world.quests.log[seen.0..];
+    let sc = &vm.world.scenes.log[seen.1..];
+    if q.is_empty() && sc.is_empty() {
+        return;
+    }
+    let _ = writeln!(names, "## timeline at {now} s after {what}");
+    for (o, ch) in q {
+        let _ = writeln!(names, "    quest {}: {ch:?}", vm.world.objects[*o].label);
+    }
+    for (o, ch) in sc {
+        let _ = writeln!(names, "    scene {}: {ch:?}", vm.world.objects[*o].label);
+    }
+    *seen = (vm.world.quests.log.len(), vm.world.scenes.log.len());
+}
+
+/// Fires timers and advances the scene clock, earliest due first
+/// (timers first on a tie), up to `then.timers` timers and
+/// `then.scene_clock` clock advances; the jobs each brings run before the
+/// next. Timers fire under `vm_timer_time_scale_v1` when the caller names
+/// the time-scale global, else on one clock as `Vm::fire_timer_scaled`
+/// orders them. Returns the timers fired.
+#[allow(clippy::too_many_arguments)]
+fn clock_loop(
+    vm: &mut Vm<'_>,
+    store: &Store,
+    then: &Then,
+    scale_global: &Option<FormKey>,
+    c: &mut Counts,
+    names: &mut String,
+    top: &mut Vec<JobRun>,
+    b: &Budget,
+) -> Vec<(usize, fo4_vm::Val, Outcome)> {
+    let mut fired = Vec::new();
+    let (mut timers, mut steps) = (then.timers, then.scene_clock);
+    let mut seen = (0, 0);
+    timeline(
+        vm,
+        &mut seen,
+        names,
+        "the start and the stages set from the command line",
+    );
+    loop {
+        let scale = scale_global
+            .as_ref()
+            .and_then(|g| time_scale(vm, store, g, b));
+        let timer = (timers > 0 && !vm.world.timers.is_empty()).then(|| vm.next_timer_wait(scale));
+        let due = if steps > 0 {
+            scene::next_due(&vm.world)
+        } else {
+            None
+        };
+        let fire = match (timer, due) {
+            (None, None) => break,
+            // A queue that cannot be ordered: fire to record why, then stop.
+            (Some(None), _) => true,
+            (Some(Some(t)), Some(d)) => t <= d,
+            (Some(Some(_)), None) => true,
+            (None, Some(_)) => false,
+        };
+        if fire {
+            let before = vm.effects.len();
+            let Some(x) = vm.fire_timer_scaled(scale) else {
+                timers = 0;
+                continue;
+            };
+            let _ = writeln!(names, "## timer fired (time scale {scale:?})");
+            for e in &vm.effects[before..] {
+                let _ = writeln!(
+                    names,
+                    "    {}{}({}{}) = {}",
+                    "  ".repeat(e.depth),
+                    e.native,
+                    e.receiver
+                        .as_ref()
+                        .map(|x| format!("on {x}; "))
+                        .unwrap_or_default(),
+                    e.args.join(", "),
+                    e.result
+                );
+            }
+            timers = if matches!(x.2, Outcome::Failed(_)) {
+                0
+            } else {
+                timers - 1
+            };
+            fired.push(x);
+            top.extend(quest::run_jobs(vm, store, MAX_GAME_JOBS, b));
+            timeline(vm, &mut seen, names, "a timer fired");
+        } else {
+            let t = scene::advance_clock(&mut vm.world, scale);
+            vm.rules.insert(fo4_vm::rules::SCENE_CLOCK);
+            bump(c, "scene clock advances");
+            let _ = writeln!(names, "## scene clock advanced to {t:?} s");
+            steps -= 1;
+            top.extend(quest::run_jobs(vm, store, MAX_GAME_JOBS, b));
+            timeline(vm, &mut seen, names, "the scene clock advanced");
+        }
+    }
+    fired
 }
 
 fn quest_by_editor_id(store: &Store, b: &Budget, edid: &str) -> Result<FormKey, E> {
@@ -797,7 +981,40 @@ fn new_game(
         .time_scale
         .as_deref()
         .and_then(|n| time_scale_global(store, &b, n));
-    if then.timers > 0 {
+    count_clock(&mut c, then.scene_clock);
+    if then.scene_clock > 0 {
+        if then.timers > 0 {
+            bump(
+                &mut c,
+                "assumption from the command line: queued timers fired after the jobs",
+            );
+        }
+        let fired = clock_loop(
+            &mut vm,
+            store,
+            then,
+            &scale_global,
+            &mut c,
+            &mut names,
+            &mut top,
+            &b,
+        );
+        for (inst, id, o) in fired {
+            let script = vm.world.instances[inst].script.clone();
+            bump(&mut c, format!("timer outcome: {}", outcome_kind(&o)));
+            if let Outcome::Blocked(bl) = &o {
+                if let Origin::Native(n) = &bl.on {
+                    bump(&mut c, format!("timer blocking native\t{n}"));
+                }
+            }
+            let _ = writeln!(
+                names,
+                "## timer {} on {script}: {}",
+                vm.world.render(&id),
+                outcome_text(&o)
+            );
+        }
+    } else if then.timers > 0 {
         bump(
             &mut c,
             "assumption from the command line: queued timers fired after the jobs",
@@ -1272,7 +1489,14 @@ fn fragments(m: &Manifest, vfs: &Vfs, store: &Store, out: &Path, opts: Opts) -> 
 /// as not playing (`quest_state_isolated_v1`, as the stage sweep takes the
 /// quest it sets a stage of), `Scene.Start` asked of the host, then the
 /// steps and jobs it brings, up to [`MAX_JOBS`].
-fn scenes(m: &Manifest, vfs: &Vfs, store: &Store, out: &Path, opts: Opts) -> Result<(), E> {
+fn scenes(
+    m: &Manifest,
+    vfs: &Vfs,
+    store: &Store,
+    out: &Path,
+    opts: Opts,
+    steps: usize,
+) -> Result<(), E> {
     if !opts.scenes {
         return Err("the scenes sweep needs scenes on".into());
     }
@@ -1287,6 +1511,7 @@ fn scenes(m: &Manifest, vfs: &Vfs, store: &Store, out: &Path, opts: Opts) -> Res
         .filter(|w| !w.deleted && w.signature == *b"SCEN")
         .map(|w| store.overrides().form_key(w.key, store.order()))
         .collect();
+    count_clock(&mut c, steps);
     for k in &keys {
         let bb = b.child();
         bump(&mut c, "scenes started by the sweep");
@@ -1328,7 +1553,31 @@ fn scenes(m: &Manifest, vfs: &Vfs, store: &Store, out: &Path, opts: Opts) -> Res
         };
         let _ = vm.host.call(&call, &mut vm.world);
         let _ = writeln!(names, "## {}", vm.world.objects[o].label);
-        let top = quest::run_jobs(&mut vm, store, MAX_JOBS, &bb);
+        let mut top = quest::run_jobs(&mut vm, store, MAX_JOBS, &bb);
+        // The scene clock, advanced up to `steps` times (an assumption of
+        // the caller, as firing timers is); the jobs each brings run
+        // before the next.
+        let mut advanced = 0;
+        while advanced < steps && top.len() < MAX_JOBS {
+            if scene::advance_clock(&mut vm.world, None).is_none() {
+                break;
+            }
+            vm.rules.insert(fo4_vm::rules::SCENE_CLOCK);
+            advanced += 1;
+            top.extend(quest::run_jobs(&mut vm, store, MAX_JOBS, &bb));
+        }
+        if steps > 0 {
+            bump(
+                &mut c,
+                format!("scene clock advances per scene\t{}", bucket(advanced)),
+            );
+            if scene::next_due(&vm.world).is_some() {
+                bump(
+                    &mut c,
+                    "scenes with actions still due when the advances ran out",
+                );
+            }
+        }
         let runs = all_runs(&mut vm, top);
         count_jobs(&mut c, &runs, "");
         for r in &runs {
@@ -1510,7 +1759,39 @@ fn run() -> Result<(), E> {
         }
         a.drain(i..i + 2);
     }
-    let usage = "quest_run MANIFEST (stages OUT_DIR | new-game OUT_DIR | fragments OUT_DIR | scenes OUT_DIR | QUEST STAGE) [--queued] [--no-conditions] [--no-stage-event] [--no-remote] [--no-custom | --custom-nested] [--no-story] [--no-enable-chain] [--no-scenes] [--no-scenes-with-quest] [--no-cond-fn-N]... [--no-cond-run-on] [--assume-cond N=VALUE]...; fragments OUT_DIR and scenes OUT_DIR run every INFO, PACK and PERK fragment and start every scene in a fresh interpreter; new-game also takes --then EDITOR_ID:STAGE (repeated) --timers N and --time-scale-global EDITOR_ID, assumptions of the caller";
+    // The scene clock and the caller's assumptions about scene actions.
+    let mut clock = scene::Clock {
+        timers: !flag(&mut a, "--no-timer-actions"),
+        assume_packages: flag(&mut a, "--assume-packages-complete"),
+        ..scene::Clock::default()
+    };
+    let line_audio = !flag(&mut a, "--no-line-audio");
+    while let Some(i) = a.iter().position(|x| {
+        x == "--scene-clock" || x == "--assume-line-seconds" || x == "--assume-player-choice"
+    }) {
+        let v = a.get(i + 1).cloned().ok_or(
+            "--scene-clock, --assume-line-seconds and --assume-player-choice take a value",
+        )?;
+        match a[i].as_str() {
+            "--scene-clock" => then.scene_clock = v.parse()?,
+            "--assume-line-seconds" => clock.assume_line_seconds = Some(v.parse()?),
+            _ => clock.assume_player_choice = Some(v.parse()?),
+        }
+        a.drain(i..i + 2);
+    }
+    let assumed = clock.assume_packages
+        || clock.assume_line_seconds.is_some()
+        || clock.assume_player_choice.is_some();
+    if then.scene_clock == 0 && (assumed || !clock.timers || !line_audio) {
+        return Err("the scene action switches and assumptions need --scene-clock N".into());
+    }
+    if clock
+        .assume_player_choice
+        .is_some_and(|n| n >= scene::PLAYER_CHOICES.len())
+    {
+        return Err("--assume-player-choice takes 0 to 3".into());
+    }
+    let usage = "quest_run MANIFEST (stages OUT_DIR | new-game OUT_DIR | fragments OUT_DIR | scenes OUT_DIR | QUEST STAGE) [--queued] [--no-conditions] [--no-stage-event] [--no-remote] [--no-custom | --custom-nested] [--no-story] [--no-enable-chain] [--no-scenes] [--no-scenes-with-quest] [--no-cond-fn-N]... [--no-cond-run-on] [--assume-cond N=VALUE]...; fragments OUT_DIR and scenes OUT_DIR run every INFO, PACK and PERK fragment and start every scene in a fresh interpreter; new-game also takes --then EDITOR_ID:STAGE (repeated) --timers N and --time-scale-global EDITOR_ID, assumptions of the caller; new-game and scenes take --scene-clock N (advance the scene clock up to N times) with --no-timer-actions, --no-line-audio, --assume-line-seconds X, --assume-player-choice N (0 to 3) and --assume-packages-complete";
     if a.len() != 3 {
         return Err(usage.into());
     }
@@ -1521,11 +1802,21 @@ fn run() -> Result<(), E> {
         let g = Rc::new(scene::Groups::read(&store));
         GROUPS.with(|x| *x.borrow_mut() = Some(g));
     }
+    if then.scene_clock > 0 {
+        if !opts.scenes {
+            return Err("--scene-clock needs scenes on".into());
+        }
+        clock.on = true;
+        if line_audio {
+            clock.voice = Some(Rc::new(load_voice(&m, &vfs, &store)?));
+        }
+        CLOCK.with(|x| *x.borrow_mut() = clock);
+    }
     match a[1].as_str() {
         "stages" => stages(&m, &vfs, &store, Path::new(&a[2]), opts),
         "new-game" => new_game(&m, &vfs, &store, Path::new(&a[2]), opts, &then),
         "fragments" => fragments(&m, &vfs, &store, Path::new(&a[2]), opts),
-        "scenes" => scenes(&m, &vfs, &store, Path::new(&a[2]), opts),
+        "scenes" => scenes(&m, &vfs, &store, Path::new(&a[2]), opts, then.scene_clock),
         q => one(&m, &vfs, &store, q, a[2].parse()?, opts),
     }
 }
