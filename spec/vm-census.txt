@@ -1,6 +1,6 @@
 # script_run --census: counts only (spec/vm.md, Census)
-# Each scope three times, all regenerated in the events step: the recording host alone, the data host,
-# and the quest host (script_run's default).
+# Each scope three times: the recording host alone, the data host, and the quest host (script_run's default).
+# Every section regenerated with one binary in the scene-events step (spec/vm.md, Census).
 
 ## the two test cells of the survey (one interior; one exterior with radius 1); recording host alone, no record's scripts attached (script_run --recording)
 10	targets: scripted DOOR, TERM and ACTI placed in the cells named
@@ -62,8 +62,8 @@
 1	enable children: handlers completed, REFR, disabled -> enabled, drawable under every pending rule
 6	enable children: handlers completed, REFR, disabled -> enabled, not drawable
 12	enable children: handlers completed, REFR, enabled -> disabled
-2	enable children: handlers completed, REFR, enabled -> disabled, drawable under every pending rule
-10	enable children: handlers completed, REFR, enabled -> disabled, not drawable
+6	enable children: handlers completed, REFR, enabled -> disabled, drawable under every pending rule
+6	enable children: handlers completed, REFR, enabled -> disabled, not drawable
 2	enable children: handlers completed, REFR, not decided
 10	enable children: handlers completed, REFR, state unchanged
 4	enable children: not all completed, ACHR without a chain
@@ -75,6 +75,7 @@
 2	enable children: not all completed, REFR, enabled -> disabled, not drawable
 2	enable children: not all completed, REFR, not decided
 1	enable children: runs (handlers completed) changing 1 drawable placements
+1	enable children: runs (handlers completed) changing 2-4 drawable placements
 1	enable children: runs (handlers completed) changing 5-9 drawable placements
 4	enable children: runs (handlers completed) whose changes reach 0 children
 4	enable children: runs (handlers completed) whose changes reach >=10 children
@@ -166,11 +167,11 @@
 1	enable children: handlers completed, ACHR, not decided
 1	enable children: handlers completed, ACHR, state unchanged
 23	enable children: handlers completed, REFR, disabled -> enabled
-1	enable children: handlers completed, REFR, disabled -> enabled, drawable under every pending rule
-22	enable children: handlers completed, REFR, disabled -> enabled, not drawable
+3	enable children: handlers completed, REFR, disabled -> enabled, drawable under every pending rule
+20	enable children: handlers completed, REFR, disabled -> enabled, not drawable
 34	enable children: handlers completed, REFR, enabled -> disabled
-3	enable children: handlers completed, REFR, enabled -> disabled, drawable under every pending rule
-31	enable children: handlers completed, REFR, enabled -> disabled, not drawable
+9	enable children: handlers completed, REFR, enabled -> disabled, drawable under every pending rule
+25	enable children: handlers completed, REFR, enabled -> disabled, not drawable
 2	enable children: handlers completed, REFR, not decided
 46	enable children: handlers completed, REFR, state unchanged
 4	enable children: not all completed, ACHR without a chain
@@ -181,6 +182,7 @@
 1	enable children: not all completed, REFR, enabled -> disabled, drawable under every pending rule
 1	enable children: not all completed, REFR, enabled -> disabled, not drawable
 2	enable children: runs (handlers completed) changing 1 drawable placements
+2	enable children: runs (handlers completed) changing 2-4 drawable placements
 1	enable children: runs (handlers completed) changing 5-9 drawable placements
 3002	enable children: runs (handlers completed) whose changes reach 0 children
 3	enable children: runs (handlers completed) whose changes reach 1 children
@@ -336,8 +338,8 @@
 12	enable children: handlers completed, REFR, disabled -> enabled, drawable under every pending rule
 37	enable children: handlers completed, REFR, disabled -> enabled, not drawable
 16	enable children: handlers completed, REFR, enabled -> disabled
-4	enable children: handlers completed, REFR, enabled -> disabled, drawable under every pending rule
-12	enable children: handlers completed, REFR, enabled -> disabled, not drawable
+8	enable children: handlers completed, REFR, enabled -> disabled, drawable under every pending rule
+8	enable children: handlers completed, REFR, enabled -> disabled, not drawable
 4	enable children: handlers completed, REFR, not decided
 11	enable children: handlers completed, REFR, state unchanged
 4	enable children: not all completed, ACHR without a chain
@@ -347,6 +349,7 @@
 1	enable children: not all completed, REFR, enabled -> disabled
 1	enable children: not all completed, REFR, enabled -> disabled, drawable under every pending rule
 1	enable children: runs (handlers completed) changing 1 drawable placements
+1	enable children: runs (handlers completed) changing 2-4 drawable placements
 1	enable children: runs (handlers completed) changing 5-9 drawable placements
 1	enable children: runs (handlers completed) changing >=10 drawable placements
 7	enable children: runs (handlers completed) whose changes reach 0 children
@@ -450,17 +453,17 @@
 1	enable children: handlers completed, ACHR, not decided
 1	enable children: handlers completed, ACHR, state unchanged
 41	enable children: handlers completed, REFR, disabled -> enabled
-14	enable children: handlers completed, REFR, disabled -> enabled, drawable under every pending rule
-27	enable children: handlers completed, REFR, disabled -> enabled, not drawable
+16	enable children: handlers completed, REFR, disabled -> enabled, drawable under every pending rule
+25	enable children: handlers completed, REFR, disabled -> enabled, not drawable
 40	enable children: handlers completed, REFR, enabled -> disabled
-5	enable children: handlers completed, REFR, enabled -> disabled, drawable under every pending rule
-35	enable children: handlers completed, REFR, enabled -> disabled, not drawable
+11	enable children: handlers completed, REFR, enabled -> disabled, drawable under every pending rule
+29	enable children: handlers completed, REFR, enabled -> disabled, not drawable
 3	enable children: handlers completed, REFR, not decided
 54	enable children: handlers completed, REFR, state unchanged
 8	enable children: not all completed, ACHR without a chain
 60	enable children: not all completed, REFR, state unchanged
 3	enable children: runs (handlers completed) changing 1 drawable placements
-1	enable children: runs (handlers completed) changing 2-4 drawable placements
+3	enable children: runs (handlers completed) changing 2-4 drawable placements
 1	enable children: runs (handlers completed) changing 5-9 drawable placements
 1	enable children: runs (handlers completed) changing >=10 drawable placements
 3906	enable children: runs (handlers completed) whose changes reach 0 children
@@ -557,8 +560,8 @@
 6	visibility change: disable of an initially disabled REFR, handlers not all completed
 2577	visibility change: enable of an enabled REFR, handlers completed
 7	visibility change: enable of an enabled REFR, handlers completed, target an enable parent
-112	visibility change: enable of an enabled REFR, handlers completed, target drawable under every pending rule
-2465	visibility change: enable of an enabled REFR, handlers completed, target not drawable
+192	visibility change: enable of an enabled REFR, handlers completed, target drawable under every pending rule
+2385	visibility change: enable of an enabled REFR, handlers completed, target not drawable
 73	visibility change: enable of an enabled REFR, handlers not all completed
 25	visibility change: enable of an initially disabled REFR, handlers completed
 5	visibility change: enable of an initially disabled REFR, handlers completed, target an enable parent
@@ -639,11 +642,11 @@
 1	enable children: handlers completed, ACHR, disabled -> enabled, not drawable
 2	enable children: handlers completed, ACHR, not decided
 125	enable children: handlers completed, REFR, disabled -> enabled
-32	enable children: handlers completed, REFR, disabled -> enabled, drawable under every pending rule
-93	enable children: handlers completed, REFR, disabled -> enabled, not drawable
+34	enable children: handlers completed, REFR, disabled -> enabled, drawable under every pending rule
+91	enable children: handlers completed, REFR, disabled -> enabled, not drawable
 59	enable children: handlers completed, REFR, enabled -> disabled
-26	enable children: handlers completed, REFR, enabled -> disabled, drawable under every pending rule
-33	enable children: handlers completed, REFR, enabled -> disabled, not drawable
+33	enable children: handlers completed, REFR, enabled -> disabled, drawable under every pending rule
+26	enable children: handlers completed, REFR, enabled -> disabled, not drawable
 9	enable children: handlers completed, REFR, not decided
 11	enable children: handlers completed, REFR, state unchanged
 4	enable children: not all completed, ACHR without a chain
@@ -653,6 +656,7 @@
 1	enable children: not all completed, REFR, enabled -> disabled
 1	enable children: not all completed, REFR, enabled -> disabled, drawable under every pending rule
 1	enable children: runs (handlers completed) changing 1 drawable placements
+1	enable children: runs (handlers completed) changing 2-4 drawable placements
 1	enable children: runs (handlers completed) changing 5-9 drawable placements
 2	enable children: runs (handlers completed) changing >=10 drawable placements
 7	enable children: runs (handlers completed) whose changes reach 0 children
@@ -810,17 +814,17 @@
 3	enable children: handlers completed, ACHR, not decided
 1	enable children: handlers completed, ACHR, state unchanged
 117	enable children: handlers completed, REFR, disabled -> enabled
-34	enable children: handlers completed, REFR, disabled -> enabled, drawable under every pending rule
-83	enable children: handlers completed, REFR, disabled -> enabled, not drawable
+38	enable children: handlers completed, REFR, disabled -> enabled, drawable under every pending rule
+79	enable children: handlers completed, REFR, disabled -> enabled, not drawable
 83	enable children: handlers completed, REFR, enabled -> disabled
-27	enable children: handlers completed, REFR, enabled -> disabled, drawable under every pending rule
-56	enable children: handlers completed, REFR, enabled -> disabled, not drawable
+36	enable children: handlers completed, REFR, enabled -> disabled, drawable under every pending rule
+47	enable children: handlers completed, REFR, enabled -> disabled, not drawable
 8	enable children: handlers completed, REFR, not decided
 54	enable children: handlers completed, REFR, state unchanged
 8	enable children: not all completed, ACHR without a chain
 60	enable children: not all completed, REFR, state unchanged
 3	enable children: runs (handlers completed) changing 1 drawable placements
-1	enable children: runs (handlers completed) changing 2-4 drawable placements
+3	enable children: runs (handlers completed) changing 2-4 drawable placements
 1	enable children: runs (handlers completed) changing 5-9 drawable placements
 2	enable children: runs (handlers completed) changing >=10 drawable placements
 3906	enable children: runs (handlers completed) whose changes reach 0 children
@@ -978,8 +982,8 @@
 6	visibility change: disable of an initially disabled REFR, handlers not all completed
 2577	visibility change: enable of an enabled REFR, handlers completed
 7	visibility change: enable of an enabled REFR, handlers completed, target an enable parent
-112	visibility change: enable of an enabled REFR, handlers completed, target drawable under every pending rule
-2465	visibility change: enable of an enabled REFR, handlers completed, target not drawable
+192	visibility change: enable of an enabled REFR, handlers completed, target drawable under every pending rule
+2385	visibility change: enable of an enabled REFR, handlers completed, target not drawable
 73	visibility change: enable of an enabled REFR, handlers not all completed
 26	visibility change: enable of an initially disabled REFR, handlers completed
 6	visibility change: enable of an initially disabled REFR, handlers completed, target an enable parent

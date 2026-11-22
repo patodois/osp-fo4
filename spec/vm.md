@@ -350,6 +350,22 @@ earlier census except the drawability split of 2,577 enabled
 references (7 drawable then, 112 now), which the scene loader decides,
 not this step.
 
+**Regenerated again in the scene-events step** (all nine sections, one
+binary built from main before that step's changes; `script_run` is not
+touched by it). Every count of handlers, outcomes, natives, rules, events
+and enable children is unchanged; only the drawability split moves,
+because the scene loader now settles more models (effect-shader surfaces,
+`ce0bedd`, the one `fo4-scene` change since the events step). Over the
+placed references (data and quest hosts) 192 of the 2,577 enabled
+references the handlers enable are drawable (112 before); enable children
+drawable under every pending rule: disabled to enabled 16 of 41 (data) and
+38 of 117 (quest) against 14 and 34, enabled to disabled 11 of 40 and 36
+of 83 against 5 and 27; the bases alone and the test cells move the same
+way (for example 6 of 12 enabled to disabled in the test cells, 2 before),
+and 1 to 2 more runs change two to four drawable placements in each scope.
+The same totals split differently; no line appears or disappears except
+those run counts.
+
 ### Blockers
 
 Before this step, over every placed scripted reference, the natives whose
@@ -985,12 +1001,9 @@ binary with the switches on). With them on:
 - `script_run --census` (quest host): handler outcomes are unchanged; the
   bases alone and the placed references gain one line each, the runs
   relying on `cond_fn_629_quest_variable_v1` (44 and 20), inserted into
-  [vm-census.txt](vm-census.txt). The other lines of that file are kept as
-  the events step wrote them: today's binary, with or without this step,
-  draws a few more enable children and visibility targets than they say
-  (the data host, which evaluates no condition, shows the same
-  difference), a change of an earlier step that this one does not
-  regenerate.
+  [vm-census.txt](vm-census.txt). The other lines of that file were kept
+  as the events step wrote them (stale in their drawability split); the
+  scene-events step regenerated the whole file (Census, above).
 - The forced opening (`quest_run new-game --then <opening quest>:0
   --timers 50 --time-scale-global <time-scale global>`) is unchanged:
   its first scene still stops in phase 0 on two completion conditions of
