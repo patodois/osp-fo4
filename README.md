@@ -39,6 +39,11 @@ capsule over a cell's collision under provisional, registered rules.
   as blocked, and `script_run` binds a placed reference's scripts from VMAD
   and delivers one event; opcode meanings are supported by data-flow, idiom
   and execution checks, not measured ([interpreter](spec/vm.md)).
+- **Saves**: save files (`.fos`) read, never written, to the last byte:
+  header, plugin lists, the location table, the three global data tables
+  and the change-form table, with every form reference resolved against the
+  plugin data; payloads beyond a moved reference's place stay raw
+  ([saves](spec/save.md)).
 - **Actors**: placed actors (ACHR) followed to their skeleton and the
   armour addon models they wear, with record layouts measured on the game's
   plugins, and drawn by the GPU viewer standing in the skeleton's rest pose,
@@ -252,6 +257,7 @@ consulted, with one attributed exception described in
 | `fo4-nif`, `fo4-material`, `fo4-texture` | Model, material and texture readers. |
 | `fo4-havok` | Container and object spans of the Havok collision payload; bodies (shape link and placement); convex, sphere, capsule, scaled and compound shapes. |
 | `fo4-pex` | Compiled script (`.pex`) reader, opcode table and disassembly. |
+| `fo4-save` | Read-only save file (`.fos`) reader: container to the last byte, change-form table, form references; census and dump examples. |
 | `fo4-vm` | Interpreter over `fo4-pex` under pending rules, recording host, VMAD binding, `script_run` and `vm_checks`. |
 | `fo4-scene` | Scene assembly, rule levels and the collision of a cell. |
 | `fo4-walk` | Walking controller over the collision of a cell. |

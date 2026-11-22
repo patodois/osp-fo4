@@ -35,6 +35,7 @@ const FORBIDDEN_EXTENSIONS: &[&str] = &[
     "exe",
     "dll",
     "fos",
+    "f4se",
 ];
 const SIGNATURES: &[(&[u8], &str)] = &[
     (b"BTDX", "BA2"),
@@ -43,6 +44,7 @@ const SIGNATURES: &[(&[u8], &str)] = &[
     (b"BSA\0", "BSA"),
     (b"Gamebryo File Format", "NIF"),
     (b"RIFF", "RIFF audio"),
+    (b"FO4_SAVEGAME", "save"),
 ];
 const SKIPPED_ROOT_DIRECTORIES: &[&str] =
     &[".git", ".progress-git", "target", ".cargo-home", "reports"];

@@ -39,6 +39,7 @@ const EXTENSIONS: &[&str] = &[
     "exe",
     "dll",
     "fos",
+    "f4se",
 ];
 const SIGNATURE_CASES: &[(&[u8], &str)] = &[
     (b"BTDX", "BA2"),
@@ -47,6 +48,7 @@ const SIGNATURE_CASES: &[(&[u8], &str)] = &[
     (b"BSA\0", "BSA"),
     (b"Gamebryo File Format", "NIF"),
     (b"RIFF", "RIFF audio"),
+    (b"FO4_SAVEGAME", "save"),
 ];
 const ROOT_SKIP_CASES: &[&str] = &[".git", ".progress-git", "target", ".cargo-home", "reports"];
 #[test]
@@ -76,7 +78,7 @@ fn every_requested_extension_is_rejected_even_for_empty_files() {
         fs::write(root.join(format!("generated.{ext}")), []).unwrap();
     }
     let violations = scan_repository(&root).unwrap();
-    assert_eq!(violations.len(), 28);
+    assert_eq!(violations.len(), EXTENSIONS.len());
     for &ext in EXTENSIONS {
         assert!(violations.contains(&Violation {
             path: format!("generated.{ext}").into(),
@@ -94,7 +96,7 @@ fn every_signature_is_rejected_with_innocent_extension() {
         fs::write(root.join(format!("notes-{i}.txt")), bytes).unwrap();
     }
     let violations = scan_repository(&root).unwrap();
-    assert_eq!(violations.len(), 6);
+    assert_eq!(violations.len(), SIGNATURE_CASES.len());
     for (i, &(_, format)) in SIGNATURE_CASES.iter().enumerate() {
         assert!(violations.contains(&Violation {
             path: format!("notes-{i}.txt").into(),

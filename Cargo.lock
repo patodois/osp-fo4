@@ -158,6 +158,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "fo4-save"
+version = "0.1.0"
+dependencies = [
+ "fo4-core",
+ "fo4-plugin",
+ "serde",
+]
+
+[[package]]
 name = "fo4-scene"
 version = "0.1.0"
 dependencies = [

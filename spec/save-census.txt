@@ -1,0 +1,417 @@
+save files	8
+bytes	41556124
+bytes framed by the reader	41556124
+wall seconds (plugin index included)	2.5
+
+# outcomes
+8	read to the last byte
+
+# bytes by part (all files)
+128	01 magic and header size word
+893	02 header
+7864320	03 screenshot
+2560	04 form version, game version, plugin block
+800	05 location table
+221007	06 global data tables 1 and 2
+640283	07 change-form entry headers
+9689087	08 change-form payloads
+22885430	09 global data table 3
+251496	10 form id array
+56	11 second array
+64	12 closing block
+
+# bytes interpreted and kept raw (all files)
+898440	interpreted: every other byte
+9689087	raw: change-form payloads
+64	raw: closing block
+23104213	raw: global data bodies
+7864320	raw: screenshot
+
+# checks: holds, fails
+17305	0	change forms: compressed stored length < output length
+55319	0	change forms: reference appears once per file
+17305	0	change forms: second length not 0 -> exact zlib stream of that output length
+38014	0	change forms: stored payload does not start with a zlib header 0x78
+55319	0	change forms: width code is the smallest that holds both lengths
+13376	0	form id array: an entry a change form indexes is not zero
+62136	0	form id array: nonzero entries distinct
+2	0	form version 68 iff game version text starts with the manifest's declared build (form version 68)
+6	0	form version 68 iff game version text starts with the manifest's declared build (form version 69)
+8	0	game version text is four dot-separated decimal numbers
+8	0	global data table 1: types ascending and distinct
+8	0	global data table 2: types ascending and distinct
+8	0	global data table 3: types ascending and distinct
+8	0	header: both f32 finite, >= 0, the second greater
+8	0	header: text 3 begins <digits>d.<digits>h.<digits>m.
+8	0	header: text 4 is ASCII letters and digits only
+8	0	header: u16 field is 0 or 1
+8	0	header: word 3 (candidate level) >= 1
+8	0	location table: the 15 reserved words are zero
+8922	0	moved: three position f32 finite, |x| < 2^20
+8922	0	moved: three rotation f32 finite, |x| <= 2 pi + 0.01
+56	0	plugins: first-list name at the same index of the manifest's load order
+56	0	plugins: first-list name ends .esm
+56	0	plugins: first-list name is a file in the data folder
+8	0	plugins: second list empty iff form version 68
+54	0	plugins: second-list name ends .esl
+0	54	plugins: second-list name is a file in the data folder
+
+# widths and sizes: files, min, max
+8	103	115	header size word
+8	0	12	text 1 (candidate character name) bytes
+8	9	15	text 2 (candidate location) bytes
+8	33	35	text 3 (candidate play time) bytes
+8	9	9	text 4 (candidate race editor id) bytes
+
+# stored values and counts
+2	form version 68
+6	form version 69
+8	global data table 1 count 12
+2	global data table 2 count 14
+6	global data table 2 count 15
+8	global data table 3 count 8
+8	header version 15
+8	screenshot 640 x 384
+1966080	screenshot pixels
+1966080	screenshot pixels whose 4th byte is 255
+8	u64 as a Windows file time, distance to file modification time: <= 10 s
+
+# plugin lists (files)
+8	first list: 7 names
+2	second list: 0 names
+6	second list: 9 names
+
+# global data: files, min length, max length, total
+8	2193	2193	17544	table 1 type    0
+8	30	30	240	table 1 type    1
+8	81	101	748	table 1 type    2
+8	9578	9725	77506	table 1 type    3
+8	4	4	32	table 1 type    4
+8	9	24	102	table 1 type    5
+8	63	92	649	table 1 type    6
+8	12	30	175	table 1 type    7
+8	157	157	1256	table 1 type    8
+8	10	116	398	table 1 type    9
+8	1393	1426	11189	table 1 type   10
+8	5366	9920	54856	table 1 type   11
+8	23	23	184	table 2 type  100
+8	38	38	304	table 2 type  101
+8	65	250	825	table 2 type  102
+8	5	5	40	table 2 type  103
+8	5382	6251	48094	table 2 type  105
+8	525	525	4200	table 2 type  106
+8	3	3	24	table 2 type  109
+8	5	5	40	table 2 type  110
+8	4	4	32	table 2 type  111
+8	37	37	296	table 2 type  113
+8	1	1	8	table 2 type  114
+8	2	2	16	table 2 type  115
+8	8	64	253	table 2 type  116
+8	1	13	44	table 2 type  117
+6	40	40	240	table 2 type  118
+8	627	5657	24812	table 3 type 1000
+8	2780418	2890994	22859359	table 3 type 1001
+8	4	218	635	table 3 type 1002
+8	8	8	64	table 3 type 1003
+8	4	4	32	table 3 type 1004
+8	0	0	0	table 3 type 1005
+8	1	1	8	table 3 type 1006
+8	1	1	8	table 3 type 1007
+
+# change forms by type (low six bits of the type byte)
+31765	type 0
+14962	type 1
+1	type 4
+437	type 6
+2736	type 7
+3807	type 8
+638	type 9
+12	type 28
+128	type 30
+18	type 35
+393	type 36
+76	type 39
+270	type 42
+12	type 43
+40	type 44
+24	type 49
+
+# change forms: entries, min, max, total stored length
+31765	0	1119	1475851	type  0 stored length
+14962	100	28153	7907311	type  1 stored length
+1	235	235	235	type  4 stored length
+437	2	175	5636	type  6 stored length
+2736	0	0	0	type  7 stored length
+3807	2	1139	210791	type  8 stored length
+638	3	2666	27765	type  9 stored length
+12	16	16	192	type 28 stored length
+128	23	562	9366	type 30 stored length
+18	8	24	224	type 35 stored length
+393	26	1221	38930	type 36 stored length
+76	26	40	2355	type 39 stored length
+270	7	313	8375	type 42 stored length
+12	39	50	512	type 43 stored length
+40	8	134	1304	type 44 stored length
+24	10	10	240	type 49 stored length
+
+# change forms: stored or compressed
+6228	type  0 compressed
+25537	type  0 stored
+9677	type  1 compressed
+5285	type  1 stored
+1	type  4 stored
+77	type  6 compressed
+360	type  6 stored
+2736	type  7 stored
+865	type  8 compressed
+2942	type  8 stored
+41	type  9 compressed
+597	type  9 stored
+12	type 28 stored
+65	type 30 compressed
+63	type 30 stored
+18	type 35 stored
+247	type 36 compressed
+146	type 36 stored
+47	type 39 compressed
+29	type 39 stored
+35	type 42 compressed
+235	type 42 stored
+8	type 43 compressed
+4	type 43 stored
+15	type 44 compressed
+25	type 44 stored
+24	type 49 stored
+4013986	8472459	compressed bytes stored, bytes after inflating
+
+# change forms: version byte
+12091	file form version 68, entry version 68
+2930	file form version 68, entry version 69
+40298	file form version 69, entry version 69
+
+# change forms: width code (top two bits of the type byte)
+39432	width code 0
+15887	width code 1
+
+# change forms: flag bits set, by type (bit: entries; bits never set omitted)
+type 0 (31765)	0:18329 1:1274 2:1117 3:4 4:15 5:472 6:214 7:15 8:21 10:1226 11:10 12:218 23:167 25:18342 27:230 28:3635 31:9722
+type 1 (14962)	0:1461 1:7648 2:70 3:533 4:76 5:5515 8:361 10:428 11:195 18:10613 25:6399 27:4222 28:142 29:360 31:6993
+type 4 (1)	1:1
+type 6 (437)	1:136 29:261 30:276 31:106
+type 7 (2736)	30:2644 31:2736
+type 8 (3807)	1:3807 26:3801 27:512 28:3671 29:13 31:892
+type 9 (638)	1:49 3:25 5:7 6:577 9:25 10:24 11:8 12:7 14:8
+type 28 (12)	31:12
+type 30 (128)	2:128
+type 35 (18)	31:18
+type 36 (393)	31:393
+type 39 (76)	0:72 31:4
+type 42 (270)	31:270
+type 43 (12)	31:12
+type 44 (40)	31:40
+type 49 (24)	31:24
+
+# change forms: reference kind (top two bits)
+1373	created
+40570	direct
+13376	indexed
+
+# change forms: what the reference names (candidate reading)
+14523	ACHR
+437	CELL
+12	ECZN
+128	FACT
+270	FLST
+2735	INFO
+24	INNR
+40	LVLI
+638	NPC_
+75	PHZD
+3771	QUST
+30404	REFR
+391	SCEN
+18	SMQN
+1373	created (0xFF)
+472	light slot (0xFE), plugin not installed
+8	no winning record
+
+# change forms: record type named, by change-form type
+type 0	REFR 30404, created (0xFF) 1196, light slot (0xFE), plugin not installed 165
+type 1	ACHR 14523, light slot (0xFE), plugin not installed 255, created (0xFF) 176, no winning record 8
+type 4	created (0xFF) 1
+type 6	CELL 437
+type 7	INFO 2735, light slot (0xFE), plugin not installed 1
+type 8	QUST 3771, light slot (0xFE), plugin not installed 36
+type 9	NPC_ 638
+type 28	ECZN 12
+type 30	FACT 128
+type 35	SMQN 18
+type 36	SCEN 391, light slot (0xFE), plugin not installed 2
+type 39	PHZD 75, light slot (0xFE), plugin not installed 1
+type 42	FLST 270
+type 43	light slot (0xFE), plugin not installed 12
+type 44	LVLI 40
+type 49	INNR 24
+
+# change forms under alternative readings: entries, naming a winning record, same record type as the candidate
+55319	53431	50919	big-endian word, 0-based index
+55319	53466	53466	big-endian word, 1-based index (candidate)
+55319	4936	2259	little-endian word, 0-based index
+55319	4936	2259	little-endian word, 1-based index
+
+# form id array: what each entry names
+882	form version 68: ACHR
+46	form version 68: ACTI
+130	form version 68: ALCH
+14	form version 68: AMMO
+180	form version 68: ARMO
+122	form version 68: AVIF
+52	form version 68: BOOK
+108	form version 68: CELL
+22	form version 68: CONT
+6	form version 68: CSTY
+6	form version 68: DIAL
+6	form version 68: ECZN
+6	form version 68: EFSH
+10	form version 68: EXPL
+122	form version 68: FACT
+144	form version 68: FLST
+38	form version 68: FURN
+1024	form version 68: GLOB
+6	form version 68: HAZD
+20	form version 68: IDLE
+8	form version 68: IMAD
+1081	form version 68: INFO
+16	form version 68: INNR
+20	form version 68: KEYM
+188	form version 68: KYWD
+6	form version 68: LCRT
+110	form version 68: LCTN
+2	form version 68: LIGH
+150	form version 68: LVLI
+280	form version 68: MESG
+2	form version 68: MGEF
+104	form version 68: MISC
+4	form version 68: MSTT
+8	form version 68: MUSC
+221	form version 68: NAVM
+18	form version 68: NOTE
+518	form version 68: NPC_
+708	form version 68: OMOD
+92	form version 68: OTFT
+176	form version 68: PACK
+30	form version 68: PERK
+10	form version 68: PHZD
+6	form version 68: PROJ
+940	form version 68: QUST
+7016	form version 68: REFR
+8	form version 68: RFCT
+402	form version 68: SCEN
+68	form version 68: SNDR
+2	form version 68: SOPM
+14	form version 68: SPEL
+2	form version 68: STAT
+4	form version 68: TERM
+14	form version 68: VTYP
+36	form version 68: WEAP
+16	form version 68: WRLD
+8	form version 68: WTHR
+730	form version 68: zero
+2638	form version 69: ACHR
+138	form version 69: ACTI
+390	form version 69: ALCH
+42	form version 69: AMMO
+540	form version 69: ARMO
+287	form version 69: AVIF
+156	form version 69: BOOK
+324	form version 69: CELL
+64	form version 69: CONT
+18	form version 69: CSTY
+18	form version 69: DIAL
+18	form version 69: ECZN
+18	form version 69: EFSH
+30	form version 69: EXPL
+366	form version 69: FACT
+432	form version 69: FLST
+114	form version 69: FURN
+3072	form version 69: GLOB
+18	form version 69: HAZD
+60	form version 69: IDLE
+24	form version 69: IMAD
+3188	form version 69: INFO
+48	form version 69: INNR
+60	form version 69: KEYM
+563	form version 69: KYWD
+18	form version 69: LCRT
+330	form version 69: LCTN
+6	form version 69: LIGH
+450	form version 69: LVLI
+840	form version 69: MESG
+6	form version 69: MGEF
+312	form version 69: MISC
+12	form version 69: MSTT
+24	form version 69: MUSC
+332	form version 69: NAVM
+54	form version 69: NOTE
+1553	form version 69: NPC_
+2124	form version 69: OMOD
+276	form version 69: OTFT
+512	form version 69: PACK
+90	form version 69: PERK
+30	form version 69: PHZD
+18	form version 69: PROJ
+2820	form version 69: QUST
+21018	form version 69: REFR
+24	form version 69: RFCT
+1206	form version 69: SCEN
+204	form version 69: SNDR
+6	form version 69: SOPM
+42	form version 69: SPEL
+6	form version 69: STAT
+12	form version 69: TERM
+42	form version 69: VTYP
+108	form version 69: WEAP
+48	form version 69: WRLD
+24	form version 69: WTHR
+1731	form version 69: light slot (0xFE), plugin not installed
+62866	~ entries
+13376	~ entries indexed by a change form
+
+# second array: lengths (files) and what each entry names
+6	WRLD
+2	~ length 0
+6	~ length 1
+
+# moved references: change forms of types 0 and 1 with flag bit 1, candidate layout at payload byte 0
+892	type 0: bytes 0-2 name CELL
+382	type 0: bytes 0-2 name WRLD
+24	type 0: distance to the plugin DATA position (0, 1)
+40	type 0: distance to the plugin DATA position 0 (equal)
+14	type 0: distance to the plugin DATA position [1, 128)
+1274	type 0: entries
+72	type 0: exterior: position / 4096 against the plugin cell grid, Chebyshev distance 0 (same cell)
+6	type 0: exterior: position / 4096 against the plugin cell grid, Chebyshev distance >= 5
+78	type 0: plugin cell exterior: bytes 0-2 name its world
+1196	type 0: record not in the plugin data
+3316	type 1: bytes 0-2 name CELL
+4291	type 1: bytes 0-2 name WRLD
+11	type 1: bytes 0-2 name created (0xFF)
+30	type 1: bytes 0-2 name light slot (0xFE), plugin not installed
+54	type 1: distance to the plugin DATA position (0, 1)
+377	type 1: distance to the plugin DATA position 0 (equal)
+399	type 1: distance to the plugin DATA position >= 4096
+2392	type 1: distance to the plugin DATA position [1, 128)
+4202	type 1: distance to the plugin DATA position [128, 4096)
+7648	type 1: entries
+1646	type 1: exterior: position / 4096 against the plugin cell grid, Chebyshev distance 0 (same cell)
+145	type 1: exterior: position / 4096 against the plugin cell grid, Chebyshev distance 1
+285	type 1: exterior: position / 4096 against the plugin cell grid, Chebyshev distance 2-4
+1913	type 1: exterior: position / 4096 against the plugin cell grid, Chebyshev distance >= 5
+71	type 1: plugin cell exterior: bytes 0-2 name another form
+3918	type 1: plugin cell exterior: bytes 0-2 name its world
+312	type 1: plugin cell interior or outside a world: bytes 0-2 name another form
+3123	type 1: plugin cell interior or outside a world: bytes 0-2 name that cell
+224	type 1: record not in the plugin data
+
+# closing block (files)
+8	8 bytes, u32 words 4 0

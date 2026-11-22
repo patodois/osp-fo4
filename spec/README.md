@@ -40,6 +40,8 @@ Measurement datasets and photographs of the game are not distributed.
 | [vm-census.txt](vm-census.txt) | Counts from the handler census (`script_run --census`): the test cells, every scripted DOOR, TERM and ACTI base, and every placed scripted reference, each before and after the data host. |
 | [vm-blockers.txt](vm-blockers.txt) | The natives whose result blocked handlers, ranked, the kinds of objects without a script instance, and the data host's answers, from the handler census, before and after the data host. |
 | [vm-host-data-census.txt](vm-host-data-census.txt) | Counts from the census of the data the data host reads (`host_data_census`): XLKR, NAME, the initially-disabled flag, FLTV, LNAM, record types against declared property types. |
+| [save.md](save.md) | Save files (`.fos`): the container read to the last byte (header, screenshot span, versions, plugin lists, location table, three global data tables, change-form table, form id array, second array, closing block), change-form entries by type, version, compression and flag bits, form references resolved against the plugin data under alternative readings, the moved-reference prefix checked against plugin placements; what stays raw and open. |
+| [save-census.txt](save-census.txt) | Counts from the save census (`save_census`): no content of any save. |
 | [path-census.md](path-census.md) | Path accounting and independent candidate-resolution comparisons. |
 | [photo-metrics.md](photo-metrics.md) | Prospective forward silhouette and persistent reverse-photo metrics, with explicit limits. |
 | [plugin.md](plugin.md) | Plugin envelopes, groups, subrecords, compression, FormIDs, overrides and flags. |
@@ -169,3 +171,13 @@ the registry.
 | `vm_record_signature_type_v1` | pending | Test in a script a placed activator against Furniture and Activator and a quest against Quest, and show the results through a notification call. |
 | `vm_record_scripts_attach_v1` | pending | A hand-assembled activator script reads a property of a quest script and of an alias script and shows them through a notification call. |
 | `vmad_alias_value_v1` | pending | Give a script a property naming an alias of a running quest and show the alias's reference through a notification call. |
+| `save_container_layout_v1` | pending | Have the running game write new saves in several situations (new game, interior, exterior, after installing and after removing a light plugin) and read each: any file refused or framed differently rejects the rule. |
+| `save_header_fields_v1` | pending | Write two saves of one character a level apart in the running game and compare each header field with the load menu and the character screen. |
+| `save_screenshot_rgba_v1` | pending | Save in front of a scene with one large area of a known primary colour and compare the decoded pixels with the load-menu thumbnail. |
+| `save_plugin_lists_v1` | pending | Install two light plugins, place one object from each in a test cell, move both in the running game and save: the change forms must name ids whose slots follow the second list's order. |
+| `save_change_form_entry_v1` | pending | Read a save written after moving one placed object in the running game: exactly one more entry naming that object must appear, framed the same way. |
+| `save_change_form_zlib_v1` | pending | Same saves as save_change_form_entry_v1: the payload of a heavily changed actor must inflate exactly before and after it changes size class. |
+| `save_ref_id_kinds_v1` | pending | In a purpose-built cell, move a placed object of the first master, a placed object of a DLC and drop an item, then save: the three change forms must name those forms under the rule (kinds 1, 0 and 2). |
+| `save_form_id_array_v1` | pending | Same saves as save_ref_id_kinds_v1: the DLC object's entry must carry that DLC's index in the first list. |
+| `save_change_form_type_record_v1` | pending | Change one form of each record type in the running game (move a reference, change a cell, finish a dialogue line, advance a quest) and save: each new entry must carry its type. |
+| `save_refr_move_layout_v1` | pending | Move a placed object by a known offset in a known cell with the console and save: the payload's first bytes must name that cell and hold the position and rotation the console reports. |

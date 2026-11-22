@@ -271,3 +271,36 @@ refuted them and did not; each behaviour is a pending rule in
 [spec/hypotheses.tsv](../spec/hypotheses.tsv). No editor, editor source
 or definition file, wiki page, script source, decompiler, other
 interpreter or the game executable was opened or searched for.
+
+The save file reader (`fo4-save`, [spec/save.md](../spec/save.md)) was
+established only by measuring the save files of one machine with the
+`save_census` example and by resolving their form references against the
+plugin data that `fo4-plugin` reads. No save editor, save reader or its
+source, format write-up, wiki page, decompilation, script extender or game
+executable was opened or searched for. Recognised from prior general
+knowledge before it was measured, and kept only because the census could
+have refuted it and did not: the magic and the header size word; the order
+and meaning of the header fields (save number, character name, level,
+location, play time, race, sex, experience, file time, screenshot width and
+height); the screenshot as four bytes per pixel in RGBA order; the form
+version byte and the game version text; the plugin block with a u8-counted
+list of names and a u16-counted list of light plugins; the location table
+(six offsets in the order form id array, closing table, global tables 1
+and 2, change forms, global table 3; four counts; fifteen unused words);
+global data entries as type and length words with types numbered from 0,
+100 and 1000; the change-form entry (three-byte reference, flag word, type
+byte whose top two bits select the width of the two lengths, version byte,
+zlib when the second length is not zero); the three-byte reference with an
+index into the form id array, a form of the first master or a created form
+in its top two bits; the form id array and an array of worldspaces after
+global table 3; a table at the end of the file; the numbering of
+change-form types against record types; flag bit 1 of a placed reference
+as a move whose payload starts with the cell or world, position and
+rotation. The byte order of the reference, the base of its index and the
+table of change-form types against record types were decided by counts
+over alternative readings, not taken from memory. Two recalled details did
+not hold or were not used: the count of global table 3 is exact (it was
+recalled as possibly one short), and the closing table does not read as a
+count followed by entries, so it is kept raw. Every meaning is a pending
+rule in [spec/hypotheses.tsv](../spec/hypotheses.tsv); the save files and
+anything read from them stay outside the repository.
