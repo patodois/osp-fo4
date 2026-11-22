@@ -1091,7 +1091,7 @@ is performed. Every assumption is counted as one in the census.
 | `--assume-open` | caller assumption; OnOpen with the player as opener | `vm_event_open_v1`, `vm_event_alias_scripts_v1` |
 | `--then Q:S@SECONDS` | caller assumption: a stage set from outside any script at that second | none |
 | `--scene-recheck` | a scene stopped on its phase's conditions is offered that phase again after any change of quest state | `scene_condition_recheck_v1` |
-| `--stage-fields` | scene and phase SCQS set stages when a scene starts or ends and a phase is entered or completed (INFO TIQS is not applied: no run speaks a line) | `record_set_stage_fields_v1` |
+| `--stage-fields` | scene and phase SCQS set stages when a scene starts or ends and a phase is entered or completed (INFO TIQS only with `--line-stage-fields`, below) | `record_set_stage_fields_v1` |
 | `--cond-550-clock` | function 550 reads the actions the scene clock completed | `cond_fn_550_clock_actions_v1` |
 | `--alias-location-refs` | a reference alias filled from a location alias with a ref type holds the location's special reference | `quest_alias_location_ref_v1` |
 | `--assume-start-scene-actions` | caller assumption: a start-scene action completes as it starts; it starts the scene LCEP names | `scene_start_scene_action_v1` |
@@ -1147,7 +1147,153 @@ caller), no objective displayed. Exploring past the stop with the stage
 set by hand (`--then <quest>:<stage>@91`) and `--assume-player-choice 0`:
 a sixth scene starts and runs through two player dialogue actions to its
 phase whose field sets one more stage (17 stages); the next stages need a
-dialogue line's TIQS, which no run applies.
+dialogue line's TIQS, which no run applied then. The second opening step
+continues from this stop (None arrays, Line stage fields and The forced
+opening continued, below).
+
+### None arrays
+
+The stop above is an array property that no record stores. The compiled
+helper the alias's open handler calls takes six arrays (references,
+aliases, factions, forms, locations, location aliases) from the alias
+script's array properties and reads the length of each to decide whether
+any restriction applies; the alias's VMAD entry stores two of the
+script's properties (an int and a bool) and none of its array
+properties, the script declares them with no initial value, and no
+instruction of any script stores into them. Every one of the 13 script
+entries of that script leaves its three array properties so.
+
+`array_census MANIFEST OUT.txt NAMES.txt` (an example of `fo4-vm`;
+[array-census.txt](array-census.txt), counts only; 9 s wall, peak RSS
+about 1.1 GB) reads every compiled script and every script entry of every
+winning VMAD (own scripts, alias scripts, the TERM, QUST, INFO, PACK,
+SCEN and PERK fragment blocks), and checks the binder by binding every
+entry that stores an array value in a fresh interpreter and reading the
+variable back:
+
+- **Not a reader or binder gap.** The records store 2,440 array values
+  for declared array properties (kinds 11 to 14 and 17, none empty); the
+  binder carries all 2,440 as arrays of the stored length (13,028
+  elements, 46 of them undetermined object values naming no winning
+  record, 31 none). One stored value is kind 0 (none). No array value is
+  stored for a property not declared as an array, and every VMAD reads.
+- **The none is in the data.** No compiled array variable has an initial
+  value other than none (733 array variables). Of the declared array
+  properties of the script entries, 9,845 are stored by no record:
+  3,489 in alias scripts and 6,356 in own scripts, 8,597 of them behind a
+  variable no instruction of any script stores into, so they stay none
+  until a script sets them (247 distinct properties, 213 of them never
+  stored into by an instruction).
+- **How the opcodes meet it.** Of the 4,161 array opcode sites, 1,512 read
+  a script variable behind a property that no instruction stores into,
+  456 a parameter (as in the helper above), 1,095 a local, 880 a
+  variable an instruction stores into, 5 a variable behind no property no
+  instruction stores into, 213 a temporary.
+- **In the versioned censuses** (the four `quest-run-*.txt`, the three
+  sections of [scene-clock-census.txt](scene-clock-census.txt), the
+  forced opening and the nine sections of [vm-census.txt](vm-census.txt)),
+  run outcomes that end on an array opcode meeting none: the length of
+  none (blocked, undetermined) 933, opcode 32 (failed) 146, 34: 451, 40:
+  5, 42: 423, 46: 111; 33, 43 and 45 meet none nowhere.
+
+What an opcode does on none is engine behaviour that nothing read
+settles. Four readings, each a pending rule behind its own switch, off by
+default (with all four off every run is as before):
+
+| Switch | Reading | Rule |
+| --- | --- | --- |
+| `--none-array-length` | opcode 31 on none stores 0 | `pex_array_none_length_v1` |
+| `--none-array-read` | opcode 32 on none stores the element type's default and the run goes on | `pex_array_none_read_v1` |
+| `--none-array-find` | opcodes 34 and 40 on none store -1 | `pex_array_none_find_v1` |
+| `--none-array-change` | opcodes 33, 42, 43, 45, 46 on none change nothing and make no array | `pex_array_none_change_v1` |
+
+`quest_run` takes them in every mode (`fo4_vm::NoneArrays`, a field of
+the interpreter). With all four on, every run outcome of the new game and
+the three sweeps that ended on an array opcode meeting none goes on: new
+game 2 (both complete), stage sweep 139 (121 more outcomes complete, 15
+more block on a native's result, 8 more fail on a call on none, and the
+story manager sees 8 more events it cannot decide), fragment sweep 5 and
+scene sweep 2 (all complete). These runs are in the step's notes, not
+versioned.
+
+### Line stage fields
+
+`--line-stage-fields` (with `--scene-clock`; off by default,
+`scene_line_stage_fields_v1`) applies the INFO TIQS of the line a dialogue
+action plays when the scene clock times the action: kind 0, and kind 3
+under `--assume-player-choice` (the player's line, then the answer from
+the second the player's line ends). The line is known only when exactly
+one line of the action's topic has conditions that hold and every other
+line's are false; several lines that hold, or a line whose conditions are
+undetermined, leave it undetermined, unless the caller passes
+`--assume-first-line` (the first of them in stored order plays; counted as
+an assumption). The first half is set when the line begins (at once at
+the action's start), the second when it ends; a half due later is
+scheduled on the clock (`scene::LineEvent`), the clock stops at it, and a
+`Step::LineFields` job sets it ahead of the scene's completion step. A
+line whose time is not settled sets only its first half. Each decision is
+logged (`scene::Change::LineField`) and counted (`scenes / scene clock:
+line stage fields`).
+
+A switch apart from `--stage-fields`, not folded into it, because
+`--stage-fields` already produces a versioned output
+([quest-run-next-blockers.txt](quest-run-next-blockers.txt)) that must
+reproduce, and because the line reading rests on a second rule (which
+line plays) that the scene and phase fields do not need.
+
+### The forced opening continued
+
+[quest-run-opening.txt](quest-run-opening.txt) holds the stops in order
+by kind, where the run ends, how far it gets, and the run's needs by
+kind; the concrete records and the command line are in the step's notes.
+Continuing from stop 10 above with the switches of this step and the
+caller assumptions that exist:
+
+10. The open handler's stop: `--none-array-length`. The stage is set; the
+    next scene starts and its first line's TIQS sets the next stage
+    (`--line-stage-fields`).
+11. Player dialogue in that scene: `--assume-player-choice 0`. The scene
+    runs to its end; a line's TIQS end half sets a stage, whose fragment
+    starts a scene whose end sets the next; a third scene's phase field
+    sets one more.
+12. The next stage's setter is the activation handler of an alias's
+    reference: `--assume-activate`. Its fragment and the scenes it starts
+    set seven more stages (one by a line's TIQS).
+13. Six stages in turn, each set by a placed trigger's trigger-enter
+    handler: `--assume-trigger-enter` six times; between them stage
+    fragments, scene fields and one line's TIQS set seven more, and the
+    quest's first objective is displayed.
+14. A helper quest's trigger: `--assume-trigger-enter`; its stage fragment
+    sets the opening quest's stage, which hides the objective.
+
+There the run ends: no caller assumption passes. The last stage's fragment
+blocks on a line-of-sight native; the next two stages are set only by the
+TIQS of two lines no scene action names (topics of 4 and of 106 lines:
+dialogue outside scenes), and the second of them is the stage whose
+fragment registers the distance events; the stage after them is set only
+by the quest's distance event, which the interpreter does not raise (and
+whose registration the run never reaches); the two after that have no
+setter in the data; a side stage needs a trigger only one alias's actor
+may enter, the alias forced to the reference of a unique-actor alias,
+which no reading resolves.
+
+Reached: **42 of the opening quest's 104 stages** (one, as before, set by
+the caller; four set by lines' TIQS), **one objective** displayed (and
+hidden again by the last stage). The caller assumed 8 trigger entries, 2
+activations, 1 opening, 1 player choice, 2 condition values (12
+conditions), line seconds for 45 lines, 49 package actions complete, 2
+start-scene actions complete and one stage. By kind, the run needs what
+the interpreter has no model for at: player movement into triggers (8
+stops) and player position and view (2 at the end), player interaction
+(3: two activations, one door), UI menus (the dialogue choice in 6 player
+dialogue actions; the stage with no setter, a candidate menu closing from
+prior knowledge), actor movement (49 package actions; the side trigger),
+dialogue outside scenes (2 lines at the end); inventory, combat and cell
+loads stop nothing. Over the natives the opening quest's family calls,
+those with no world model: position and movement 35, UI menus and player
+controls 19 (the character creation and attribute menus among them),
+inventory 5, combat 0, cells and loading 0, animation 38, sound, music,
+video and imagespace 21.
 
 ## Conditions
 
@@ -1504,3 +1650,29 @@ the repository's own readers on the installed data. No public page was
 requested in this step. No editor, editor source or definition file,
 script source, decompiler, other interpreter, script extender or the game
 executable was opened or searched for. The game was not run.
+
+## Provenance of the second opening step
+
+Recognised from prior general knowledge, used only as pending rules that
+are off by default:
+
+- that the length of an array never assigned reads as 0, and that an
+  array operation on such an array is reported and the script goes on
+  with a default element, -1 from a find, no change from a write
+  (`pex_array_none_length_v1`, `pex_array_none_read_v1`,
+  `pex_array_none_find_v1`, `pex_array_none_change_v1`);
+- that a line spoken in a scene is one line of its topic chosen by its
+  conditions, and that its TIQS stages are set as it begins and ends
+  (`scene_line_stage_fields_v1`, with the earlier
+  `record_set_stage_fields_v1` and `scene_dialogue_line_choice_v1`);
+- in the notes only, as candidates for what the stops stand for: that a
+  stage no record or script sets is set when a menu closes, and that an
+  alias filled from a unique actor holds that actor's placed reference.
+
+The array census, the stops of the forced opening and every count were
+measured with the repository's own readers on the installed data; the
+compiled scripts were read only with the repository's disassembler. No
+public page was requested in this step. No editor, editor source or
+definition file, script source, decompiler, other interpreter, script
+extender or the game executable was opened or searched for. The game was
+not run.
