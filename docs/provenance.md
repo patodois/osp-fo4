@@ -34,7 +34,15 @@ chosen here. Interpretations the bytes cannot decide are marked as
 hypotheses. The second header variant of the `.hkx` files (16 bytes before
 the section records, declared by the upper half of header word 60) was
 established the same way, by running the same sweep over every winning
-`.hkx` file of the installation.
+`.hkx` file of the installation. The animation and skeleton objects of those
+files (`fo4_havok::anim`, [spec/havok-animation.md](../spec/havok-animation.md))
+were established the same way, from the container's own tables and counts
+over every object, and the skeleton's rotation words were identified by
+comparing composed reference poses with the skeleton NIFs stored beside
+them. No Havok SDK, header, documentation, converter, decompilation or
+third-party reader or schema of these classes or of animation compression
+was opened or searched for; layouts recognised from general knowledge were
+kept only where a census that could refute them held.
 
 The object spans and the `hknpConvexPolytopeShape` view of `fo4-havok`
 ([spec/havok-objects.md](../spec/havok-objects.md)) were established the same

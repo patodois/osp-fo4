@@ -15,17 +15,27 @@
 //! [`Sphere`], [`Capsule`], [`ConvexShape`], [`ScaledConvex`] and
 //! [`Compound`] (`spec/havok-bodies.md`), and the compressed mesh
 //! [`CompressedMesh`] with its [`MeshData`], box trees and vertex records
-//! (`spec/havok-mesh.md`). A payload
+//! (`spec/havok-mesh.md`). The animation and skeleton objects of the `.hkx`
+//! files are read by [`Skeleton`], [`Binding`], [`AnimationContainer`],
+//! [`AnimationHeader`] and [`SplineAnimation`] (`spec/havok-animation.md`).
+//! A payload
 //! outside the measured profile is a named error carrying the file offset;
 //! nothing here panics.
 use fo4_core::{Budget, Error, Result};
 use serde::Serialize;
 
+mod anim;
 mod bodies;
 mod mesh;
 mod objects;
 mod shapes;
 mod view;
+pub use anim::{
+    root_entries, AnimationContainer, AnimationHeader, Binding, BonePose, RootEntry, Skeleton,
+    SplineAnimation, ANIMATION_CONTAINER, ANNOTATION_TRACK, BINDING, LOSSLESS, LOSSLESS_KIND,
+    POSE_UNIT_TOLERANCE, ROOT_ENTRY, ROOT_LEVEL, SKELETON, SKELETON_BONE, SKELETON_POSE, SPLINE,
+    SPLINE_KIND,
+};
 pub use bodies::{
     Body, PhysicsSystem, BODY, PHYSICS_SYSTEM, RAGDOLL, RAGDOLL_ARRAY, SYSTEM_ARRAYS,
     UNIT_TOLERANCE,

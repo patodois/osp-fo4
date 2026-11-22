@@ -1,0 +1,293 @@
+winning .hkx paths	17508
+bytes	442724720
+
+# outcomes
+16388	animation container: read
+16145	binding: read
+1120	container read, word 60 upper half 0
+16388	container read, word 60 upper half 16
+1085	lossless animation header: read
+17508	root entries: read
+284	skeleton: read
+15060	spline animation: read
+
+# checks: holds, fails
+16145	0	binding float tracks == animation +28
+16145	0	binding tracks not negative
+16145	0	binding transform tracks == animation +24
+1085	0	lossless annotation tracks == transform tracks
+284	0	skeleton bone names distinct
+274	10	skeleton name is bone 0 name
+15060	0	spline annotation tracks == transform tracks
+15060	0	spline block duration == (frames per block - 1) x frame duration, exact f32
+15060	0	spline block duration == (frames per block - 1) x frame duration, rel 1e-6
+15060	0	spline block inverse x block duration == 1 within 1e-6
+15060	0	spline data length multiple of 16
+15060	0	spline frames == round(duration / frame duration) + 1
+14218	842	spline has a reference frame
+
+# values
+2	animation container lists skeletons|animations|bindings|unread: 0|0|0|[0, 0]
+16145	animation container lists skeletons|animations|bindings|unread: 0|1|1|[0, 0]
+198	animation container lists skeletons|animations|bindings|unread: 1|0|0|[0, 0]
+43	animation container lists skeletons|animations|bindings|unread: 2|0|0|[0, 0]
+15096	binding byte 80 0
+108	binding byte 80 1
+941	binding byte 80 2
+16141	binding float tracks 0
+4	binding float tracks 1
+16145	binding unread count 0
+3	binding: skeletons of its name 0, fitting 0, actor folder skeleton.hkx absent or other name
+142	binding: skeletons of its name 1, fitting 1, actor folder skeleton.hkx absent or other name
+443	binding: skeletons of its name 1, fitting 1, actor folder skeleton.hkx fits
+6	binding: skeletons of its name 2, fitting 1, actor folder skeleton.hkx absent or other name
+64	binding: skeletons of its name 2, fitting 1, actor folder skeleton.hkx fits
+8	binding: skeletons of its name 2, fitting 2, actor folder skeleton.hkx absent or other name
+58	binding: skeletons of its name 2, fitting 2, actor folder skeleton.hkx fits
+7	binding: skeletons of its name 3, fitting 1, actor folder skeleton.hkx absent or other name
+9	binding: skeletons of its name 3, fitting 2, actor folder skeleton.hkx absent or other name
+2221	binding: skeletons of its name 3, fitting 3, actor folder skeleton.hkx absent or other name
+15	binding: skeletons of its name 3, fitting 3, actor folder skeleton.hkx does not fit
+13169	binding: skeletons of its name 3, fitting 3, actor folder skeleton.hkx fits
+42	root entry name|class: Cloth Container|hclClothContainer
+42	root entry name|class: Cloth Setup Data|hclClothSetupContainer
+16388	root entry name|class: Merged Animation Container|hkaAnimationContainer
+43	root entry name|class: Physics Ragdoll|hknpRagdollData
+43	root entry name|class: Physics Scene Data|hknpPhysicsSceneData
+13172	root entry name|class: Resource Data|hkMemoryResourceContainer
+86	root entry name|class: SkeletonMapper|hkaSkeletonMapper
+242	root entry name|class: SyncAnimOffset|hkSimpleLocalFrame
+450	root entry name|class: hkbBehaviorGraph|hkbBehaviorGraph
+328	root entry name|class: hkbCharacterData|hkbCharacterData
+342	root entry name|class: hkbProjectData|hkbProjectData
+83	skeleton bone flags {0, 1}
+198	skeleton bone flags {0}
+3	skeleton bone flags {1}
+284	skeleton largest |scale - 1| <0.001
+282	skeleton unread counts [0, 0]
+2	skeleton unread counts [1, 1]
+14364	spline blocks 1
+603	spline blocks 2
+47	spline blocks 3
+10	spline blocks 4
+16	spline blocks 5
+5	spline blocks 6
+2	spline blocks 7
+5	spline blocks 8
+8	spline blocks 9
+14717	spline frame duration 0.033333
+1	spline frame duration 0.033337
+2	spline frame duration 0.100000
+22	spline frame duration 0.166667
+1	spline frame duration 0.200000
+2	spline frame duration 0.300000
+222	spline frame duration 0.333333
+2	spline frame duration 0.500000
+18	spline frame duration 0.666667
+1	spline frame duration 0.833333
+11	spline frame duration 1.000000
+5	spline frame duration 1.066667
+1	spline frame duration 1.333333
+1	spline frame duration 1.500000
+13	spline frame duration 1.600000
+4	spline frame duration 10.000000
+1	spline frame duration 12.933333
+3	spline frame duration 2.000000
+3	spline frame duration 2.166667
+4	spline frame duration 2.200000
+3	spline frame duration 2.633333
+14	spline frame duration 3.000000
+2	spline frame duration 3.333333
+1	spline frame duration 3.500000
+5	spline frame duration 5.000000
+1	spline frame duration 8.600000
+15060	spline frames per block 256
+
+# skeleton.hkx against skeleton.nif
+537	bone parent: none named in the NIF
+154	bone parent: other name in the NIF
+40	bone parent: root bone
+2054	bone parent: same name in the NIF
+2785	bones
+2248	bones found in the NIF
+1191	bones with a matching parent chain
+9	files: bones found in the NIF all
+31	files: bones found in the NIF not all
+40	files: compared
+37	files: matching chain, largest rotation difference <0.001
+1	files: matching chain, largest rotation difference <0.01
+1	files: matching chain, largest rotation difference <0.1
+1	files: matching chain, largest rotation difference >=1
+28	files: matching chain, largest translation distance <0.001
+6	files: matching chain, largest translation distance <0.01
+3	files: matching chain, largest translation distance <0.1
+1	files: matching chain, largest translation distance <1
+2	files: matching chain, largest translation distance >=1
+150	files: no skeleton.nif beside it
+41	q(w,x,y,z) rows: world rotation largest element difference <0.001
+9	q(w,x,y,z) rows: world rotation largest element difference <0.1
+334	q(w,x,y,z) rows: world rotation largest element difference <1
+1864	q(w,x,y,z) rows: world rotation largest element difference >=1
+80	q(w,x,y,z) rows: world translation distance <0.001
+9	q(w,x,y,z) rows: world translation distance <0.1
+6	q(w,x,y,z) rows: world translation distance <1
+2153	q(w,x,y,z) rows: world translation distance >=1
+37	q(w,x,y,z) transposed: world rotation largest element difference <0.001
+2	q(w,x,y,z) transposed: world rotation largest element difference <0.01
+6	q(w,x,y,z) transposed: world rotation largest element difference <0.1
+329	q(w,x,y,z) transposed: world rotation largest element difference <1
+1874	q(w,x,y,z) transposed: world rotation largest element difference >=1
+78	q(w,x,y,z) transposed: world translation distance <0.001
+9	q(w,x,y,z) transposed: world translation distance <0.1
+6	q(w,x,y,z) transposed: world translation distance <1
+2155	q(w,x,y,z) transposed: world translation distance >=1
+2126	q(x,y,z,w) rows: world rotation largest element difference <0.001
+43	q(x,y,z,w) rows: world rotation largest element difference <0.01
+3	q(x,y,z,w) rows: world rotation largest element difference <0.1
+18	q(x,y,z,w) rows: world rotation largest element difference <1
+58	q(x,y,z,w) rows: world rotation largest element difference >=1
+1919	q(x,y,z,w) rows: world translation distance <0.001
+161	q(x,y,z,w) rows: world translation distance <0.01
+57	q(x,y,z,w) rows: world translation distance <0.1
+2	q(x,y,z,w) rows: world translation distance <1
+109	q(x,y,z,w) rows: world translation distance >=1
+87	q(x,y,z,w) transposed: world rotation largest element difference <0.001
+4	q(x,y,z,w) transposed: world rotation largest element difference <0.01
+17	q(x,y,z,w) transposed: world rotation largest element difference <0.1
+197	q(x,y,z,w) transposed: world rotation largest element difference <1
+1943	q(x,y,z,w) transposed: world rotation largest element difference >=1
+180	q(x,y,z,w) transposed: world translation distance <0.001
+5	q(x,y,z,w) transposed: world translation distance <0.1
+4	q(x,y,z,w) transposed: world translation distance <1
+2059	q(x,y,z,w) transposed: world translation distance >=1
+
+# class	files	objects
+BGSGamebryoSequenceGenerator	209	1427
+BSAssignVariablesModifier	73	283
+BSBehaviorGraphSwapGenerator	47	47
+BSBoneSwitchGenerator	9	27
+BSBoneSwitchGeneratorBoneData	9	27
+BSCyclicBlendTransitionGenerator	17	81
+BSDirectAtCapturePoseModifier	3	6
+BSDirectAtModifier	15	39
+BSEventEveryNEventsModifier	40	100
+BSEventOnDeactivateModifier	41	220
+BSEventOnFalseToTrueModifier	2	2
+BSGetTimeStepModifier	29	30
+BSInterpValueModifier	31	42
+BSIsActiveModifier	109	599
+BSLimbCycleModifier	2	4
+BSLookAtCapturePoseModifier	7	28
+BSLookAtModifier	31	47
+BSModifyOnceModifier	56	124
+BSOffsetAnimationGenerator	5	5
+BSPassByTargetTriggerModifier	1	1
+BSRagdollContactListenerModifier	34	37
+BSRandomAlarmModifier	2	6
+BSReverseSpineTwistModifier	1	1
+BSRootTwistModifier	8	11
+BSSpeedSamplerModifier	2	2
+BSTimerModifier	43	68
+BSTweenerModifier	1	2
+BSiStateTaggingGenerator	26	91
+DynamicAnimationTaggingGenerator	48	256
+hclBendStiffnessSetupObject	36	36
+hclCapsuleShape	36	58
+hclClothContainer	42	42
+hclClothSetupContainer	42	42
+hclClothSetupObject	42	42
+hclClothStateSetupObject	42	84
+hclCollidable	36	124
+hclLocalRangeSetupObject	28	28
+hclMeshBoneDeformSetupObject	42	42
+hclMoveFixedParticlesSetupObject	42	42
+hclNamedSetupMesh	42	42
+hclNamedTransformSetSetupObject	42	42
+hclScratchBufferSetupObject	42	42
+hclSimClothBufferSetupObject	42	42
+hclSimClothSetupObject	42	42
+hclSimulateSetupObject	42	42
+hclSimulationSetupMesh	42	42
+hclSkinSetupObject	42	42
+hclStandardLinkSetupObject	42	42
+hclStaticDisplayBufferSetupObject	42	42
+hclStretchLinkSetupObject	42	42
+hclTaperedCapsuleShape	22	66
+hclVertexGatherSetupObject	42	42
+hclVolumeConstraintSetupObject	34	34
+hkMemoryResourceContainer	13172	13172
+hkRefCountedProperties	41	1014
+hkRootLevelContainer	17508	17508
+hkSimpleLocalFrame	242	242
+hkaAnimationBinding	16145	16145
+hkaAnimationContainer	16388	16388
+hkaDefaultAnimatedReferenceFrame	15188	15188
+hkaLosslessCompressedAnimation	1085	1085
+hkaSkeleton	241	284
+hkaSkeletonMapper	43	86
+hkaSplineCompressedAnimation	15060	15060
+hkbBehaviorGraph	450	450
+hkbBehaviorGraphData	450	450
+hkbBehaviorGraphStringData	450	450
+hkbBehaviorReferenceGenerator	84	131
+hkbBlenderGenerator	131	917
+hkbBlenderGeneratorChild	160	2727
+hkbBlendingTransitionEffect	378	1692
+hkbBoneIndexArray	53	246
+hkbBoneWeightArray	122	1081
+hkbCharacterData	328	328
+hkbCharacterStringData	328	328
+hkbClipGenerator	235	4505
+hkbClipTriggerArray	166	2391
+hkbDampingModifier	24	52
+hkbEvaluateExpressionModifier	46	111
+hkbEventDrivenModifier	84	292
+hkbEventRangeDataArray	67	102
+hkbEventsFromRangeModifier	67	102
+hkbExpressionCondition	14	55
+hkbExpressionDataArray	46	111
+hkbFootIkControlsModifier	16	16
+hkbFootIkDriverInfo	14	14
+hkbGeneratorTransitionEffect	9	68
+hkbGetHandleOnBoneModifier	2	3
+hkbGetUpModifier	37	39
+hkbHandIkControlsModifier	2	2
+hkbHandIkDriverInfo	4	4
+hkbJigglerGroup	4	13
+hkbJigglerModifier	4	13
+hkbKeyframeBonesModifier	42	60
+hkbLayer	35	158
+hkbLayerGenerator	35	41
+hkbManualSelectorGenerator	57	134
+hkbMirrorModifier	6	23
+hkbMirroredSkeletonInfo	328	328
+hkbModifierGenerator	185	2260
+hkbModifierList	126	730
+hkbPoseMatchingGenerator	37	111
+hkbPoweredRagdollControlsModifier	42	85
+hkbProjectData	342	342
+hkbProjectStringData	342	342
+hkbReferencePoseGenerator	45	106
+hkbRigidBodyRagdollControlsModifier	37	37
+hkbStateMachine	450	2075
+hkbStateMachineEventPropertyArray	225	2969
+hkbStateMachineStateInfo	449	7230
+hkbStateMachineTransitionInfoArray	379	4727
+hkbStringCondition	2	3
+hkbStringEventPayload	160	774
+hkbTimerModifier	38	56
+hkbTwistModifier	37	218
+hkbVariableBindingSet	222	4137
+hkbVariableValueSet	778	778
+hknpBreakableConstraintData	1	1
+hknpCapsuleShape	39	933
+hknpCompressedMeshShape	7	10
+hknpCompressedMeshShapeData	7	10
+hknpConvexPolytopeShape	22	125
+hknpPhysicsSceneData	43	43
+hknpRagdollData	43	43
+hknpShapeMassProperties	41	1014
+hkpFixedConstraintData	1	3
+hkpLimitedHingeConstraintData	35	238
+hkpPositionConstraintMotor	42	42
+hkpRagdollConstraintData	39	669

@@ -108,6 +108,9 @@ impl<'a, 'c> View<'a, 'c> {
                 )
             })
     }
+    pub fn u8(&self, field: usize) -> Result<u8> {
+        Ok(self.get(field, 1)?[0])
+    }
     pub fn u16(&self, field: usize) -> Result<u16> {
         let b = self.get(field, 2)?;
         Ok(u16::from_le_bytes([b[0], b[1]]))
@@ -157,6 +160,37 @@ impl<'a, 'c> View<'a, 'c> {
                 "none",
             )
         })
+    }
+    /// Destination, relative to the object's offset, of the first-table
+    /// entry whose source is `field`.
+    pub fn pointer(&self, field: usize) -> Option<usize> {
+        let source = (self.span.offset as usize).checked_add(field)?;
+        let p = self
+            .c
+            .pointers
+            .iter()
+            .find(|p| p.source as usize == source)?;
+        (p.destination as usize).checked_sub(self.span.offset as usize)
+    }
+    /// The NUL-terminated bytes that the first-table entry with source
+    /// `field` points to; the NUL must lie inside the span.
+    pub fn string(&self, field: usize, what: &str) -> Result<&'a [u8]> {
+        let at = self.pointer(field).ok_or_else(|| {
+            self.err(
+                field,
+                format!("first-table entry for the {what} text"),
+                "none",
+            )
+        })?;
+        let rest = self.bytes.get(at..).unwrap_or(&[]);
+        let nul = rest.iter().position(|c| *c == 0).ok_or_else(|| {
+            self.err(
+                at,
+                format!("NUL-terminated {what} inside the span"),
+                "no NUL",
+            )
+        })?;
+        Ok(&rest[..nul])
     }
     /// Checks the array slot at `field` with elements of `element` bytes:
     /// the u32 at +12 is [`ARRAY_FLAG`] OR the count at +8; a first-table
