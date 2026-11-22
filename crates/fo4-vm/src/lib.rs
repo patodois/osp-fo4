@@ -40,6 +40,7 @@ pub mod rules;
 pub mod scene;
 pub mod setters;
 pub mod story;
+pub mod track;
 pub mod vars;
 pub mod voice;
 pub mod world;

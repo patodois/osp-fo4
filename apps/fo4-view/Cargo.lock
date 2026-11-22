@@ -2071,6 +2071,7 @@ dependencies = [
  "fo4-core",
  "fo4-pex",
  "fo4-plugin",
+ "fo4-scene",
  "fo4-vfs",
 ]
 

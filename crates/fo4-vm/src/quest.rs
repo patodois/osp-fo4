@@ -1265,6 +1265,22 @@ impl<'s> QuestHost<'s> {
 impl Host for QuestHost<'_> {
     fn call(&mut self, c: &NativeCall, w: &mut World) -> Reply {
         let full = c.full_name();
+        // The player position model, when a caller gave a track
+        // (`crate::track`); off, nothing changes.
+        if w.place.on {
+            let (store, max) = (self.data.store, self.data.max_memory);
+            crate::track::observe(store, max, c, w);
+            let got = crate::track::call(store, max, c, w);
+            for u in std::mem::take(&mut w.place.used) {
+                self.using(u);
+            }
+            if let Some((reply, rule)) = got {
+                if let Some(r) = rule {
+                    self.using(r);
+                }
+                return reply;
+            }
+        }
         // The event natives, when their delivery is switched on; otherwise
         // they are recorded as any other native, as before.
         let on = if full.contains("remoteevent") {
@@ -1319,6 +1335,19 @@ impl Host for QuestHost<'_> {
     }
     fn rules(&self) -> &[&'static str] {
         &self.used
+    }
+    fn reference_disabled(
+        &mut self,
+        w: &mut World,
+        k: &FormKey,
+    ) -> Option<Result<bool, &'static str>> {
+        let r = self.data.reference_disabled(w, k);
+        for u in self.data.rules() {
+            if !self.used.contains(u) {
+                self.used.push(u);
+            }
+        }
+        r
     }
 }
 

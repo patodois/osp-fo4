@@ -913,6 +913,9 @@ struct Then {
     /// Advances of the scene clock (`--scene-clock N`), interleaved with
     /// the timers by due time; 0 leaves the clock off.
     scene_clock: usize,
+    /// The caller's track of the player (`--track FILE`, a caller
+    /// assumption) and the world model's switches (`fo4_vm::track`).
+    track: Option<(fo4_vm::track::Track, fo4_vm::track::Switches)>,
 }
 
 /// One thing the caller makes happen.
@@ -1089,6 +1092,63 @@ fn timeline(vm: &Vm<'_>, seen: &mut (usize, usize), names: &mut String, what: &s
     *seen = (vm.world.quests.log.len(), vm.world.scenes.log.len());
 }
 
+/// With a track: raises what the world model has due at the run's present
+/// second (`fo4_vm::track::settle`), runs the jobs it brings and offers
+/// stopped scenes again; writes what was raised to the names file. Off,
+/// nothing happens.
+fn world_step(
+    vm: &mut Vm<'_>,
+    store: &Store,
+    then: &Then,
+    c: &mut Counts,
+    names: &mut String,
+    top: &mut Vec<JobRun>,
+    b: &Budget,
+) {
+    if !vm.world.place.on {
+        return;
+    }
+    let before = vm.effects.len();
+    let (raised, runs) = fo4_vm::track::settle(vm, store, MAX_GAME_JOBS, b);
+    for r in &raised {
+        let what = r
+            .reference
+            .as_ref()
+            .map(|k| format!(" on {}", bind::record_key(k)))
+            .unwrap_or_default();
+        let _ = writeln!(names, "## world model at {} s: {}{what}", r.t, r.event);
+        for (kind, script, o) in &r.runs {
+            let _ = writeln!(names, "    {kind} {script}: {}", outcome_text(o));
+            bump(
+                c,
+                format!(
+                    "world model\thandler runs\t{}\t{kind}\t{}",
+                    r.event,
+                    outcome_kind(o)
+                ),
+            );
+        }
+    }
+    if !raised.is_empty() {
+        for e in &vm.effects[before..] {
+            let _ = writeln!(
+                names,
+                "      {}{}({}{}) = {}",
+                "  ".repeat(e.depth),
+                e.native,
+                e.receiver
+                    .as_ref()
+                    .map(|x| format!("on {x}; "))
+                    .unwrap_or_default(),
+                e.args.join(", "),
+                e.result
+            );
+        }
+    }
+    top.extend(runs);
+    recheck(vm, store, then, c, top, b);
+}
+
 /// Fires timers and advances the scene clock, earliest due first
 /// (timers first on a tie), up to `then.timers` timers and
 /// `then.scene_clock` clock advances; the jobs each brings run before the
@@ -1149,6 +1209,23 @@ fn clock_loop(
             _ => None,
         };
         let stuck = matches!(timer, Some(None));
+        // The world model's next due second: after timers and the scene
+        // clock on a tie, before a caller's action on a tie
+        // (`world_trigger_instant_v1`).
+        let max = store.limits.max_memory;
+        let track_wait =
+            fo4_vm::track::next_due(store, max, &mut vm.world).map(|t| (t - now).max(0.0));
+        if let Some(tw) = track_wait {
+            if !stuck && next_known.is_none_or(|n| tw < n) && wait.is_none_or(|wa| tw <= wa) {
+                vm.world.now[fo4_vm::world::Clock::Real as usize] = now + tw;
+                if let Some(s) = scale {
+                    vm.world.now[fo4_vm::world::Clock::GameTime as usize] += tw * s / 3600.0;
+                }
+                world_step(vm, store, then, c, names, top, b);
+                timeline(vm, &mut seen, names, "the player's track");
+                continue;
+            }
+        }
         if let Some(wa) = wait {
             if !stuck && next_known.is_none_or(|n| wa < n) {
                 let x = pending.pop_front().expect("a pending action");
@@ -1158,6 +1235,7 @@ fn clock_loop(
                     vm.world.now[fo4_vm::world::Clock::GameTime as usize] += wa * s / 3600.0;
                 }
                 act(vm, store, then, &x, c, names, top, b)?;
+                world_step(vm, store, then, c, names, top, b);
                 timeline(vm, &mut seen, names, "a caller's action");
                 continue;
             }
@@ -1199,6 +1277,7 @@ fn clock_loop(
             fired.push(x);
             top.extend(quest::run_jobs(vm, store, MAX_GAME_JOBS, b));
             recheck(vm, store, then, c, top, b);
+            world_step(vm, store, then, c, names, top, b);
             timeline(vm, &mut seen, names, "a timer fired");
         } else {
             let t = scene::advance_clock(&mut vm.world, scale);
@@ -1208,6 +1287,7 @@ fn clock_loop(
             steps -= 1;
             top.extend(quest::run_jobs(vm, store, MAX_GAME_JOBS, b));
             recheck(vm, store, then, c, top, b);
+            world_step(vm, store, then, c, names, top, b);
             timeline(vm, &mut seen, names, "the scene clock advanced");
         }
     }
@@ -1217,6 +1297,7 @@ fn clock_loop(
         let t = x.at.unwrap_or(now).max(now);
         vm.world.now[fo4_vm::world::Clock::Real as usize] = t;
         act(vm, store, then, &x, c, names, top, b)?;
+        world_step(vm, store, then, c, names, top, b);
         timeline(vm, &mut seen, names, "a caller's action");
     }
     Ok(fired)
@@ -1262,6 +1343,46 @@ fn new_game(
         vm.nested = Some(&mut runner);
     }
     events_on(&mut vm, opts);
+    if let Some((track, sw)) = &then.track {
+        vm.world.place = fo4_vm::track::Place::load(store, track.clone(), *sw, &b)?;
+        bump(
+            &mut c,
+            "assumption from the command line: the player follows a track (--track)",
+        );
+        *c.entry("assumption from the command line: points of the player's track".into())
+            .or_default() += track.points.len() as u64;
+        if let Some(h) = sw.body {
+            bump(
+                &mut c,
+                format!("assumption from the command line: the player's body reaches {h} units up from the reference point (--trigger-body)"),
+            );
+        }
+        if let Some(v) = sw.assume_los {
+            bump(
+                &mut c,
+                format!("assumption from the command line: every HasDirectLOS answers {v} (--assume-los)"),
+            );
+        }
+        for (on, what) in [
+            (sw.boxes, "an activator's primitive of kind 1 is a box of half extents its bounds (--trigger-box)"),
+            (sw.spheres, "an activator's primitive of kind 2 is a sphere (--trigger-sphere)"),
+            (sw.point, "a trigger holds the player's reference point in its closed volume (--trigger-point)"),
+            (sw.body.is_some(), "a trigger holds the player while a vertical segment up from the reference point meets its closed volume (--trigger-body)"),
+            (sw.instant, "trigger events are raised at the second the hold changes (--trigger-instant)"),
+            (sw.enabled, "a disabled trigger holds no one; enabling or disabling it with the player inside raises its event (--trigger-enabled)"),
+            (sw.order, "trigger events at one second: leaves, then enters, by reference (--trigger-order)"),
+            (sw.distance, "distance registrations raise their event when the condition holds (--distance-events)"),
+            (sw.distance_once, "a distance registration ends with its event (--distance-once)"),
+            (sw.placed, "placed references other than actors stand at their stored position (--placed-positions)"),
+            (sw.position_natives, "position and distance natives answered from the positions (--position-natives)"),
+            (sw.cell_natives, "parent cell, worldspace and interior natives answered (--cell-natives)"),
+            (sw.location_native, "the current location is the parent cell's (--location-native)"),
+        ] {
+            if on {
+                bump(&mut c, format!("switch: {what}"));
+            }
+        }
+    }
     let started = quest::start_new_game(&mut vm, store, &b)?;
     for (_, _, r) in &started {
         bump(
@@ -1298,6 +1419,7 @@ fn new_game(
     for x in then.actions.iter().filter(|x| x.at.is_none()) {
         act(&mut vm, store, then, x, &mut c, &mut names, &mut top, &b)?;
     }
+    world_step(&mut vm, store, then, &mut c, &mut names, &mut top, &b);
     let scale_global = then
         .time_scale
         .as_deref()
@@ -1483,6 +1605,9 @@ fn new_game(
         .or_default() += running as u64;
     for r in &vm.rules {
         bump(&mut c, format!("rules relied on\t{r}"));
+    }
+    for (k, v) in &vm.world.place.counts {
+        *c.entry(format!("world model\t{k}")).or_default() += v;
     }
     count_events(&mut c, &vm);
     if opts.scenes {
@@ -1709,7 +1834,7 @@ fn next_blockers(
                             "a player action on a placement of a base object (which placement is the caller's)".into(),
                             label(k),
                         ),
-                        _ => ("an engine event the interpreter does not raise".into(), label(k)),
+                        _ => (event_not_raised(&vm.world, e), label(k)),
                     }
                 }
                 Need::Event(e, On::Alias(q, i)) => {
@@ -1748,7 +1873,7 @@ fn next_blockers(
                             format!("alias {i} of {}", label(q)),
                         ),
                         _ => (
-                            "an engine event the interpreter does not raise".into(),
+                            event_not_raised(&vm.world, e),
                             format!("alias {i} of {}", label(q)),
                         ),
                     }
@@ -1858,6 +1983,18 @@ fn next_blockers(
 }
 
 /// The record a setter's need names, with its label.
+/// The need of an engine event no caller assumption delivers: with the
+/// world model's distance events on, a distance event is raised from the
+/// track once its registration is made.
+fn event_not_raised(w: &World, e: &str) -> String {
+    if w.place.on && w.place.sw.distance && e.starts_with("ondistance") {
+        "an engine event the world model raises from the track once registered (--distance-events)"
+            .into()
+    } else {
+        "an engine event the interpreter does not raise".into()
+    }
+}
+
 fn need_target_text(n: &fo4_vm::setters::Need, label: &dyn Fn(&FormKey) -> String) -> String {
     use fo4_vm::setters::{Need, ScenePoint};
     match n {
@@ -2448,6 +2585,54 @@ fn run() -> Result<(), E> {
         }
         a.drain(i..i + 2);
     }
+    // The player's track and the world model's readings (`fo4_vm::track`).
+    let world_sw = fo4_vm::track::Switches {
+        boxes: flag(&mut a, "--trigger-box"),
+        spheres: flag(&mut a, "--trigger-sphere"),
+        point: flag(&mut a, "--trigger-point"),
+        instant: flag(&mut a, "--trigger-instant"),
+        enabled: flag(&mut a, "--trigger-enabled"),
+        order: flag(&mut a, "--trigger-order"),
+        distance: flag(&mut a, "--distance-events"),
+        distance_once: flag(&mut a, "--distance-once"),
+        placed: flag(&mut a, "--placed-positions"),
+        position_natives: flag(&mut a, "--position-natives"),
+        cell_natives: flag(&mut a, "--cell-natives"),
+        location_native: flag(&mut a, "--location-native"),
+        assume_los: None,
+        body: None,
+    };
+    let mut world_sw = world_sw;
+    let mut track_file = None;
+    while let Some(i) = a
+        .iter()
+        .position(|x| x == "--track" || x == "--assume-los" || x == "--trigger-body")
+    {
+        let v = a.get(i + 1).cloned().ok_or(
+            "--track FILE, --assume-los true|false and --trigger-body HEIGHT take a value",
+        )?;
+        match a[i].as_str() {
+            "--track" => track_file = Some(v),
+            "--trigger-body" => world_sw.body = Some(v.parse()?),
+            _ => world_sw.assume_los = Some(v.parse()?),
+        }
+        a.drain(i..i + 2);
+    }
+    match track_file {
+        Some(f) => {
+            let text = std::fs::read_to_string(&f)?;
+            then.track = Some((fo4_vm::track::Track::parse(&text)?, world_sw));
+        }
+        None if world_sw != fo4_vm::track::Switches::default() => {
+            return Err("the world model's switches need --track FILE".into());
+        }
+        None => {}
+    }
+    if world_sw.point && world_sw.body.is_some() {
+        return Err(
+            "--trigger-point and --trigger-body are two readings of one thing: give one".into(),
+        );
+    }
     // The scene clock and the caller's assumptions about scene actions.
     let mut clock = scene::Clock {
         timers: !flag(&mut a, "--no-timer-actions"),
@@ -2479,6 +2664,9 @@ fn run() -> Result<(), E> {
     if then.scene_clock == 0 && (assumed || !clock.timers || !line_audio) {
         return Err("the scene action switches and assumptions need --scene-clock N".into());
     }
+    if then.scene_clock == 0 && then.track.is_some() {
+        return Err("--track needs --scene-clock N".into());
+    }
     if then.scene_clock == 0 && then.actions.iter().any(|x| x.at.is_some()) {
         return Err("an action at a second (@SECONDS) needs --scene-clock N".into());
     }
@@ -2488,7 +2676,7 @@ fn run() -> Result<(), E> {
     {
         return Err("--assume-player-choice takes 0 to 3".into());
     }
-    let usage = "quest_run MANIFEST (stages OUT_DIR | new-game OUT_DIR | fragments OUT_DIR | scenes OUT_DIR | QUEST STAGE) [--queued] [--no-conditions] [--no-stage-event] [--no-remote] [--no-custom | --custom-nested] [--no-story] [--no-enable-chain] [--no-scenes] [--no-scenes-with-quest] [--no-cond-fn-N]... [--no-cond-run-on] [--assume-cond N=VALUE]...; fragments OUT_DIR and scenes OUT_DIR run every INFO, PACK and PERK fragment and start every scene in a fresh interpreter; new-game also takes --then EDITOR_ID:STAGE[@SECONDS] (repeated), --assume-activate, --assume-trigger-enter, --assume-trigger-leave and --assume-open PLUGIN:OBJECTID[@SECONDS] (repeated), --timers N and --time-scale-global EDITOR_ID, assumptions of the caller, --scene-recheck, --stage-fields, --cond-550-clock, --alias-location-refs and --next-blockers; new-game and scenes take --scene-clock N (advance the scene clock up to N times) with --no-timer-actions, --no-line-audio, --assume-line-seconds X, --assume-player-choice N (0 to 3), --assume-packages-complete, --assume-start-scene-actions, --line-stage-fields and --assume-first-line; every mode takes --none-array-length, --none-array-read, --none-array-find and --none-array-change";
+    let usage = "quest_run MANIFEST (stages OUT_DIR | new-game OUT_DIR | fragments OUT_DIR | scenes OUT_DIR | QUEST STAGE) [--queued] [--no-conditions] [--no-stage-event] [--no-remote] [--no-custom | --custom-nested] [--no-story] [--no-enable-chain] [--no-scenes] [--no-scenes-with-quest] [--no-cond-fn-N]... [--no-cond-run-on] [--assume-cond N=VALUE]...; fragments OUT_DIR and scenes OUT_DIR run every INFO, PACK and PERK fragment and start every scene in a fresh interpreter; new-game also takes --then EDITOR_ID:STAGE[@SECONDS] (repeated), --assume-activate, --assume-trigger-enter, --assume-trigger-leave and --assume-open PLUGIN:OBJECTID[@SECONDS] (repeated), --timers N and --time-scale-global EDITOR_ID, assumptions of the caller, --scene-recheck, --stage-fields, --cond-550-clock, --alias-location-refs and --next-blockers; new-game and scenes take --scene-clock N (advance the scene clock up to N times) with --no-timer-actions, --no-line-audio, --assume-line-seconds X, --assume-player-choice N (0 to 3), --assume-packages-complete, --assume-start-scene-actions, --line-stage-fields and --assume-first-line; every mode takes --none-array-length, --none-array-read, --none-array-find and --none-array-change; new-game with --scene-clock takes --track FILE (the player's track, lines SECONDS SPACE X Y Z [FACING]) with --trigger-box, --trigger-sphere, --trigger-point or --trigger-body HEIGHT, --trigger-instant, --trigger-enabled, --trigger-order, --distance-events, --distance-once, --placed-positions, --position-natives, --cell-natives, --location-native and --assume-los true|false";
     if a.len() != 3 {
         return Err(usage.into());
     }

@@ -169,7 +169,7 @@ pub const XESP_BIT1: &str = "xesp_flag_bit1_not_presence_v1";
 pub const XESP_PROPAGATES: &str = "xesp_script_change_propagates_v1";
 
 /// Every rule above.
-pub const ALL: [&str; 106] = [
+pub const ALL: [&str; 119] = [
     ARITHMETIC,
     COMPARE,
     NOT_COPY_CAST,
@@ -276,6 +276,19 @@ pub const ALL: [&str; 106] = [
     NONE_ARRAY_FIND,
     NONE_ARRAY_CHANGE,
     LINE_STAGE_FIELDS,
+    WORLD_TRIGGER_BOX,
+    WORLD_TRIGGER_SPHERE,
+    WORLD_TRIGGER_POINT,
+    WORLD_TRIGGER_BODY,
+    WORLD_TRIGGER_INSTANT,
+    WORLD_TRIGGER_ENABLED,
+    WORLD_TRIGGER_ORDER,
+    WORLD_DISTANCE_EVENTS,
+    WORLD_DISTANCE_ONCE,
+    WORLD_PLACED_POSITION,
+    WORLD_POSITION_NATIVES,
+    WORLD_CELL_NATIVES,
+    WORLD_LOCATION_NATIVE,
 ];
 
 /// The rule an opcode's meaning rests on; `None` for an opcode without a
@@ -399,3 +412,42 @@ pub fn status(name: &str) -> Option<&'static str> {
         (c.next() == Some(name)).then(|| c.nth(4)).flatten()
     })
 }
+
+/// An activator reference's `XPRM` of kind 1 is a box: half extents the
+/// three bound words times the reference's scale, centred on the
+/// reference, along its rotated axes (`crate::track`).
+pub const WORLD_TRIGGER_BOX: &str = "world_trigger_box_v1";
+/// An activator reference's `XPRM` of kind 2 is a sphere of radius the
+/// first bound word times the scale, centred on the reference.
+pub const WORLD_TRIGGER_SPHERE: &str = "world_trigger_sphere_v1";
+/// A trigger holds the player while the player's reference point lies in
+/// its closed volume; an instant's touch raises nothing.
+pub const WORLD_TRIGGER_POINT: &str = "world_trigger_point_v1";
+/// A trigger holds the player while a vertical segment from the
+/// player's reference point up a caller-given height meets its closed
+/// volume (the alternative to `WORLD_TRIGGER_POINT`).
+pub const WORLD_TRIGGER_BODY: &str = "world_trigger_body_v1";
+/// Trigger enter and leave are raised at the second the hold changes on
+/// the real-time clock, before what is due later.
+pub const WORLD_TRIGGER_INSTANT: &str = "world_trigger_instant_v1";
+/// A disabled trigger holds no one; enabling or disabling it with the
+/// player inside raises enter or leave.
+pub const WORLD_TRIGGER_ENABLED: &str = "world_trigger_enabled_v1";
+/// Several trigger events at one instant: leaves first, then enters,
+/// each in reference key order.
+pub const WORLD_TRIGGER_ORDER: &str = "world_trigger_order_v1";
+/// Distance registrations raise their event on the registering instance
+/// at the first second the condition holds.
+pub const WORLD_DISTANCE_EVENTS: &str = "world_distance_events_v1";
+/// A distance registration ends when its event is raised.
+pub const WORLD_DISTANCE_ONCE: &str = "world_distance_once_v1";
+/// A placed reference other than an actor stands at its stored position
+/// until a native of the run may have moved it.
+pub const WORLD_PLACED_POSITION: &str = "world_placed_position_v1";
+/// Position, distance and facing natives answered from the positions.
+pub const WORLD_POSITION_NATIVES: &str = "world_position_natives_v1";
+/// Parent cell, worldspace and interior natives answered from the
+/// position's space and the exterior grid.
+pub const WORLD_CELL_NATIVES: &str = "world_cell_natives_v1";
+/// The current location is the parent cell's XLCN.
+pub const WORLD_LOCATION_NATIVE: &str = "world_location_native_v1";

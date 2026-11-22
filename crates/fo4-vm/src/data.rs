@@ -399,8 +399,19 @@ impl<'s> DataHost<'s> {
     fn is_disabled(&mut self, c: &NativeCall, w: &mut World) -> Got {
         let (o, k) =
             Self::record_of(w, c.receiver.as_ref()).ok_or("the receiver is not an object")?;
-        if let Some(d) = self.disabled.get(&o) {
-            return Ok((Val::Bool(*d), Answer::Value));
+        self.disabled_of(w, Some(o), k)
+            .map(|d| (Val::Bool(d), Answer::Value))
+    }
+    /// `IsDisabled` of a reference: this run's own `Enable` or `Disable`
+    /// of its handle `o`, else its enable parent chain or header flag.
+    fn disabled_of(
+        &mut self,
+        w: &World,
+        o: Option<ObjId>,
+        k: Option<FormKey>,
+    ) -> Result<bool, &'static str> {
+        if let Some(d) = o.and_then(|o| self.disabled.get(&o)) {
+            return Ok(*d);
         }
         let k = k.ok_or("the receiver is not a record")?;
         let ov = self
@@ -431,10 +442,10 @@ impl<'s> DataHost<'s> {
                 for u in used {
                     self.using(u);
                 }
-                return Ok((Val::Bool(!on), Answer::Value));
+                return Ok(!on);
             }
         }
-        Ok((Val::Bool(ov.disabled), Answer::Value))
+        Ok(ov.disabled)
     }
     fn base_object(&mut self, c: &NativeCall, w: &mut World) -> Got {
         let (o, k) =
@@ -629,5 +640,22 @@ impl Host for DataHost<'_> {
     }
     fn rules(&self) -> &[&'static str] {
         &self.used
+    }
+    fn reference_disabled(
+        &mut self,
+        w: &mut World,
+        k: &FormKey,
+    ) -> Option<Result<bool, &'static str>> {
+        let key = record_key(k);
+        let o = w
+            .objects
+            .iter()
+            .position(|x| x.key.as_deref() == Some(&key));
+        let r = self.disabled_of(w, o, Some(k.clone()));
+        if r.is_ok() {
+            self.using(rules::IS_DISABLED);
+            self.using(rules::DATA_STATE);
+        }
+        Some(r)
     }
 }

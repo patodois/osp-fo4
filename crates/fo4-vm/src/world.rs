@@ -148,6 +148,9 @@ pub struct World {
     pub events: crate::events::Events,
     /// Scene state and the steps of playing scenes (`crate::scene`).
     pub scenes: crate::scene::Scenes,
+    /// The player's position, trigger volumes and distance registrations
+    /// (`crate::track`); off unless a caller gives a track.
+    pub place: crate::track::Place,
 }
 
 impl World {

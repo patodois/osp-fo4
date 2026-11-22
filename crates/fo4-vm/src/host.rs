@@ -48,6 +48,16 @@ pub trait Host {
     fn rules(&self) -> &[&'static str] {
         &[]
     }
+    /// Whether a placed reference is disabled in the run, as the host's
+    /// `IsDisabled` would answer it, without counting a native call
+    /// (`crate::track`): `None` when the host keeps no such state.
+    fn reference_disabled(
+        &mut self,
+        _world: &mut World,
+        _reference: &fo4_plugin::FormKey,
+    ) -> Option<Result<bool, &'static str>> {
+        None
+    }
 }
 
 /// A host that provides no native.
