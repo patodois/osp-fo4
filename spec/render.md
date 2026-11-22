@@ -215,3 +215,10 @@ list, so the CPU rasterizer and the GPU viewer draw the same list as before.
   scale is not 1 is now drawn only under `uv_scale_then_offset_v1`, which the
   instance's identity records; without `--under-hypotheses` such a surface
   is refused (`UnsupportedUvTransform`).
+
+Measured after this change: the eight headless test views (with and
+without `--under-hypotheses`) and two further views of the radius-2 grid
+give byte-identical frames and tag files in two runs of one build and in a
+second build of the same commit from another directory (31 files each); the
+first run also equals the frames of the build before the commit's last
+formatting and test-only edits.

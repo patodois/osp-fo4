@@ -1,0 +1,260 @@
+# Sub-reasons of coverage_census (every cell of the load order, each alone; 3 shards)
+
+Before: the census code alone (commit d7bab2e behaviour). After: commit 5a70ea8.
+Area columns: share of the omitted area of that run, and of all placements' area.
+
+# Before
+## Sub-reasons: UV fields of drawn placements
+
+       531  area   0.04% of omitted,   0.02% of all  drawn only under hypotheses; a draw with UV offset not 0
+       406  area   0.01% of omitted,   0.00% of all  drawn only under hypotheses; a draw with UV offset not 0 and scale not 1
+     14072  area  13.77% of omitted,   5.78% of all  drawn only under hypotheses; a draw with UV scale not 1
+    524815  area  62.94% of omitted,  26.41% of all  drawn only under hypotheses; every draw at UV offset 0 and scale 1
+       165  area   0.01% of omitted,   0.01% of all  drawn without hypotheses; a draw with UV offset not 0
+      1673  area   4.08% of omitted,   1.71% of all  drawn without hypotheses; a draw with UV scale not 1
+    779237  area  53.26% of omitted,  22.35% of all  drawn without hypotheses; every draw at UV offset 0 and scale 1
+
+## Sub-reasons: data folder
+
+         0  area   0.00% of omitted,   0.00% of all  archives the manifest does not mount
+        93  area   0.00% of omitted,   0.00% of all  loose files
+
+## Sub-reasons: missing material, any, files (per placement)
+
+         7  area   0.00% of omitted,   0.00% of all  not read: swap source only; cited as swap source; absent at its path; file name under one other folder
+    115202  area  33.58% of omitted,  14.09% of all  not read: swap source only; cited as swap source; absent from every mounted archive and loose folder; file name nowhere
+        93  area   0.01% of omitted,   0.00% of all  not read: swap target of a material no model cites; cited as swap source, swap target (source not cited); absent from every mounted archive and loose folder; file name nowhere
+     33091  area  17.79% of omitted,   7.47% of all  not read: swap target of a material no model cites; cited as swap target (source not cited); absent from every mounted archive and loose folder; file name nowhere
+        29  area   0.00% of omitted,   0.00% of all  read: effect shader name; cited as name (effect); absent from every mounted archive and loose folder; file name nowhere
+      1765  area   0.67% of omitted,   0.28% of all  read: material parent; cited as material parent; absent from every mounted archive and loose folder; file name nowhere
+       755  area   0.03% of omitted,   0.01% of all  read: swap target of a cited material; cited as swap target (source cited); absent from every mounted archive and loose folder; file name nowhere
+
+## Sub-reasons: missing material, any, path classes (per placement and file)
+
+         7  area   0.00% of omitted,   0.00% of all  absent at its path; file name under one other folder
+    150935  area  52.09% of omitted,  21.86% of all  absent from every mounted archive and loose folder; file name nowhere
+
+## Sub-reasons: missing material, any, placements
+
+     22429  area   3.32% of omitted,   1.39% of all  not read: swap source only
+     12041  area   6.86% of omitted,   2.88% of all  not read: swap source only + not read: swap target of a material no model cites
+       233  area   0.10% of omitted,   0.04% of all  not read: swap source only + not read: swap target of a material no model cites + read: material parent
+       109  area   0.01% of omitted,   0.00% of all  not read: swap source only + read: material parent
+         2  area   0.00% of omitted,   0.00% of all  not read: swap source only + read: swap target of a cited material
+     11072  area   0.91% of omitted,   0.38% of all  not read: swap target of a material no model cites
+         1  area   0.00% of omitted,   0.00% of all  not read: swap target of a material no model cites + read: material parent
+        23  area   0.01% of omitted,   0.00% of all  not read: swap target of a material no model cites + read: swap target of a cited material
+        29  area   0.00% of omitted,   0.00% of all  read: effect shader name
+      1421  area   0.55% of omitted,   0.23% of all  read: material parent
+         1  area   0.00% of omitted,   0.00% of all  read: material parent + read: swap target of a cited material
+       729  area   0.02% of omitted,   0.01% of all  read: swap target of a cited material
+
+## Sub-reasons: missing material, sole family, placements
+
+     22283  area   3.31% of omitted,   1.39% of all  not read: swap source only
+     11172  area   6.82% of omitted,   2.86% of all  not read: swap source only + not read: swap target of a material no model cites
+       196  area   0.07% of omitted,   0.03% of all  not read: swap source only + not read: swap target of a material no model cites + read: material parent
+       109  area   0.01% of omitted,   0.00% of all  not read: swap source only + read: material parent
+         2  area   0.00% of omitted,   0.00% of all  not read: swap source only + read: swap target of a cited material
+     10541  area   0.90% of omitted,   0.38% of all  not read: swap target of a material no model cites
+         1  area   0.00% of omitted,   0.00% of all  not read: swap target of a material no model cites + read: material parent
+        23  area   0.01% of omitted,   0.00% of all  not read: swap target of a material no model cites + read: swap target of a cited material
+         2  area   0.00% of omitted,   0.00% of all  read: effect shader name
+      1395  area   0.55% of omitted,   0.23% of all  read: material parent
+         1  area   0.00% of omitted,   0.00% of all  read: material parent + read: swap target of a cited material
+       441  area   0.02% of omitted,   0.01% of all  read: swap target of a cited material
+
+## Sub-reasons: swap scopes, placements
+
+         2  area   0.00% of omitted,   0.00% of all  readings agree; scopes base+SCOL part base; different MSWP records; more than four pairs in one; FNAM present
+        55  area   0.58% of omitted,   0.24% of all  readings agree; scopes base+SCOL part base; one MSWP record; more than four pairs in one; FNAM present
+         2  area   0.00% of omitted,   0.00% of all  readings agree; scopes reference+SCOL part base; different MSWP records; more than four pairs in one; FNAM present
+         1  area   0.00% of omitted,   0.00% of all  readings agree; scopes reference+SCOL part base; different MSWP records; one pair each; FNAM present
+         8  area   0.00% of omitted,   0.00% of all  readings agree; scopes reference+SCOL part base; one MSWP record; one pair each; FNAM present
+         1  area   0.00% of omitted,   0.00% of all  readings agree; scopes reference+SCOL part base; one MSWP record; two to four pairs; FNAM absent
+         2  area   0.07% of omitted,   0.03% of all  readings agree; scopes reference+base+SCOL part base; different MSWP records; more than four pairs in one; FNAM present
+        74  area   0.01% of omitted,   0.00% of all  readings agree; scopes reference+base; different MSWP records; more than four pairs in one; FNAM present
+         1  area   0.00% of omitted,   0.00% of all  readings agree; scopes reference+base; different MSWP records; one pair each; FNAM absent
+        13  area   0.00% of omitted,   0.00% of all  readings agree; scopes reference+base; different MSWP records; one pair each; FNAM present
+        45  area   0.01% of omitted,   0.00% of all  readings agree; scopes reference+base; different MSWP records; two to four pairs; FNAM present
+        42  area   0.03% of omitted,   0.01% of all  readings agree; scopes reference+base; one MSWP record; more than four pairs in one; FNAM present
+        30  area   0.00% of omitted,   0.00% of all  readings agree; scopes reference+base; one MSWP record; one pair each; FNAM absent
+        73  area   0.01% of omitted,   0.00% of all  readings agree; scopes reference+base; one MSWP record; one pair each; FNAM present
+       612  area   0.03% of omitted,   0.01% of all  readings agree; scopes reference+base; one MSWP record; two to four pairs; FNAM absent
+        71  area   0.07% of omitted,   0.03% of all  readings agree; scopes reference+base; one MSWP record; two to four pairs; FNAM present
+         1  area   0.00% of omitted,   0.00% of all  readings differ; scopes base+SCOL part base; different MSWP records; one pair each; FNAM present
+        58  area   0.02% of omitted,   0.01% of all  readings differ; scopes reference+SCOL part base; different MSWP records; more than four pairs in one; FNAM present
+        43  area   0.00% of omitted,   0.00% of all  readings differ; scopes reference+SCOL part base; different MSWP records; one pair each; FNAM present
+         8  area   0.01% of omitted,   0.00% of all  readings differ; scopes reference+SCOL part base; different MSWP records; two to four pairs; FNAM present
+       917  area   0.55% of omitted,   0.23% of all  readings differ; scopes reference+base; different MSWP records; more than four pairs in one; FNAM present
+       153  area   0.00% of omitted,   0.00% of all  readings differ; scopes reference+base; different MSWP records; one pair each; FNAM absent
+       461  area   0.06% of omitted,   0.02% of all  readings differ; scopes reference+base; different MSWP records; one pair each; FNAM present
+       121  area   0.01% of omitted,   0.00% of all  readings differ; scopes reference+base; different MSWP records; two to four pairs; FNAM absent
+       519  area   0.32% of omitted,   0.14% of all  readings differ; scopes reference+base; different MSWP records; two to four pairs; FNAM present
+         3  area   0.00% of omitted,   0.00% of all  readings differ; scopes reference+base; one MSWP record; more than four pairs in one; FNAM present
+
+## Sub-reasons: texture transform, any, controlled shaders (per placement)
+
+       765  area   0.48% of omitted,   0.20% of all  NIF offset 0 and scale 1; material UV fields equal the NIF's
+       532  area   0.07% of omitted,   0.03% of all  NIF offset 0 and scale 1; no material
+         5  area   0.00% of omitted,   0.00% of all  NIF offset 0, scale not 1; no material
+         2  area   0.00% of omitted,   0.00% of all  NIF offset not 0, scale 1; no material
+
+## Sub-reasons: texture transform, any, controllers (per placement)
+
+      4015  area   2.32% of omitted,   0.97% of all  effect, not settled by the effect first-key rule; BSEffectShaderPropertyFloatController; U offset
+       108  area   0.00% of omitted,   0.00% of all  effect, not settled by the effect first-key rule; BSEffectShaderPropertyFloatController; U scale
+      4270  area   2.66% of omitted,   1.12% of all  effect, not settled by the effect first-key rule; BSEffectShaderPropertyFloatController; V offset
+       932  area   0.48% of omitted,   0.20% of all  lighting, first key = stored; U offset; stored 0; manager flag false; in a sequence false
+         2  area   0.00% of omitted,   0.00% of all  lighting, first key = stored; U offset; stored 1; manager flag false; in a sequence false
+       757  area   0.48% of omitted,   0.20% of all  lighting, first key = stored; U scale; stored 1; manager flag false; in a sequence false
+      1288  area   0.55% of omitted,   0.23% of all  lighting, first key = stored; V offset; stored 0; manager flag false; in a sequence false
+       759  area   0.48% of omitted,   0.20% of all  lighting, first key = stored; V scale; stored 1; manager flag false; in a sequence false
+         1  area   0.00% of omitted,   0.00% of all  lighting, first key differs from stored; U offset; stored 0; manager flag true; in a sequence false
+         1  area   0.00% of omitted,   0.00% of all  lighting, first key differs from stored; V offset; stored 0; manager flag true; in a sequence false
+
+## Sub-reasons: texture transform, any, placements
+
+        30  area   0.00% of omitted,   0.00% of all  effect, not settled by the effect first-key rule + lighting, first key = stored; other families 12
+         3  area   0.00% of omitted,   0.00% of all  effect, not settled by the effect first-key rule + lighting, first key = stored; other families 13
+       123  area   0.00% of omitted,   0.00% of all  effect, not settled by the effect first-key rule + lighting, first key = stored; other families 15
+         1  area   0.00% of omitted,   0.00% of all  effect, not settled by the effect first-key rule + lighting, first key = stored; other families 16
+         2  area   0.00% of omitted,   0.00% of all  effect, not settled by the effect first-key rule + lighting, first key = stored; other families 19
+         2  area   0.00% of omitted,   0.00% of all  effect, not settled by the effect first-key rule + lighting, first key = stored; other families 9
+         1  area   0.00% of omitted,   0.00% of all  effect, not settled by the effect first-key rule + lighting, first key differs from stored; other families 9
+       246  area   0.24% of omitted,   0.10% of all  effect, not settled by the effect first-key rule; other families 0
+       365  area   0.34% of omitted,   0.14% of all  effect, not settled by the effect first-key rule; other families 1
+      1361  area   0.14% of omitted,   0.06% of all  effect, not settled by the effect first-key rule; other families 2
+         5  area   0.00% of omitted,   0.00% of all  effect, not settled by the effect first-key rule; other families 3
+         1  area   0.00% of omitted,   0.00% of all  effect, not settled by the effect first-key rule; other families 4
+         2  area   0.00% of omitted,   0.00% of all  effect, not settled by the effect first-key rule; other families 6
+         3  area   0.00% of omitted,   0.00% of all  effect, not settled by the effect first-key rule; other families 7
+      4716  area   1.54% of omitted,   0.64% of all  lighting, first key = stored; other families 0
+       259  area   0.22% of omitted,   0.09% of all  lighting, first key = stored; other families 1
+         1  area   0.00% of omitted,   0.00% of all  lighting, first key = stored; other families 11
+         1  area   0.00% of omitted,   0.00% of all  lighting, first key = stored; other families 12
+         1  area   0.00% of omitted,   0.00% of all  lighting, first key = stored; other families 14
+         1  area   0.00% of omitted,   0.00% of all  lighting, first key = stored; other families 15
+         2  area   0.00% of omitted,   0.00% of all  lighting, first key = stored; other families 16
+         5  area   0.00% of omitted,   0.00% of all  lighting, first key = stored; other families 17
+        95  area   0.01% of omitted,   0.00% of all  lighting, first key = stored; other families 2
+        11  area   0.01% of omitted,   0.00% of all  lighting, first key = stored; other families 3
+       288  area   0.05% of omitted,   0.02% of all  lighting, first key = stored; other families 4
+         4  area   0.01% of omitted,   0.00% of all  lighting, first key = stored; other families 5
+         1  area   0.00% of omitted,   0.00% of all  lighting, first key = stored; other families 6
+
+## Sub-reasons: texture transform, sole family, controlled shaders (per placement)
+
+     14943  area   3.54% of omitted,   1.49% of all  NIF offset 0 and scale 1; material UV fields equal the NIF's
+       713  area   0.01% of omitted,   0.01% of all  NIF offset 0 and scale 1; no material
+        47  area   0.00% of omitted,   0.00% of all  NIF offset 0, scale not 1; no material
+
+## Sub-reasons: texture transform, sole family, controllers (per placement)
+
+       725  area   0.78% of omitted,   0.33% of all  effect, not settled by the effect first-key rule; BSEffectShaderPropertyFloatController; U offset
+       725  area   0.78% of omitted,   0.33% of all  effect, not settled by the effect first-key rule; BSEffectShaderPropertyFloatController; V offset
+     15640  area   3.55% of omitted,   1.49% of all  lighting, first key = stored; U offset; stored 0; manager flag false; in a sequence false
+     14943  area   3.54% of omitted,   1.49% of all  lighting, first key = stored; U scale; stored 1; manager flag false; in a sequence false
+     15104  area   3.54% of omitted,   1.49% of all  lighting, first key = stored; V offset; stored 0; manager flag false; in a sequence false
+     14943  area   3.54% of omitted,   1.49% of all  lighting, first key = stored; V scale; stored 1; manager flag false; in a sequence false
+
+## Sub-reasons: texture transform, sole family, placements
+
+       246  area   0.24% of omitted,   0.10% of all  effect, not settled by the effect first-key rule
+      4716  area   1.54% of omitted,   0.64% of all  lighting, first key = stored
+
+# After
+## Sub-reasons: UV fields of drawn placements
+
+       712  area   0.06% of omitted,   0.02% of all  drawn only under hypotheses; a draw with UV offset not 0
+       406  area   0.01% of omitted,   0.00% of all  drawn only under hypotheses; a draw with UV offset not 0 and scale not 1
+     21167  area  27.27% of omitted,  10.13% of all  drawn only under hypotheses; a draw with UV scale not 1
+    566737  area  76.93% of omitted,  28.57% of all  drawn only under hypotheses; every draw at UV offset 0 and scale 1
+    779237  area  60.18% of omitted,  22.35% of all  drawn without hypotheses; every draw at UV offset 0 and scale 1
+
+## Sub-reasons: data folder
+
+         0  area   0.00% of omitted,   0.00% of all  archives the manifest does not mount
+        93  area   0.00% of omitted,   0.00% of all  loose files
+
+## Sub-reasons: missing material, any, files (per placement)
+
+         4  area   0.01% of omitted,   0.00% of all  not read: swap source only; cited as swap source; absent from every mounted archive and loose folder; file name nowhere
+        23  area   0.01% of omitted,   0.00% of all  not read: swap target of a material no model cites; cited as swap target (source not cited); absent from every mounted archive and loose folder; file name nowhere
+        29  area   0.00% of omitted,   0.00% of all  read: effect shader name; cited as name (effect); absent from every mounted archive and loose folder; file name nowhere
+         1  area   0.00% of omitted,   0.00% of all  read: material parent; cited as material parent; absent from every mounted archive and loose folder; file name nowhere
+       755  area   0.04% of omitted,   0.01% of all  read: swap target of a cited material; cited as swap target (source cited); absent from every mounted archive and loose folder; file name nowhere
+
+## Sub-reasons: missing material, any, path classes (per placement and file)
+
+       812  area   0.06% of omitted,   0.02% of all  absent from every mounted archive and loose folder; file name nowhere
+
+## Sub-reasons: missing material, any, placements
+
+         2  area   0.00% of omitted,   0.00% of all  not read: swap source only + read: swap target of a cited material
+        23  area   0.01% of omitted,   0.00% of all  not read: swap target of a material no model cites + read: swap target of a cited material
+        29  area   0.00% of omitted,   0.00% of all  read: effect shader name
+         1  area   0.00% of omitted,   0.00% of all  read: material parent + read: swap target of a cited material
+       729  area   0.03% of omitted,   0.01% of all  read: swap target of a cited material
+
+## Sub-reasons: missing material, sole family, placements
+
+         2  area   0.00% of omitted,   0.00% of all  not read: swap source only + read: swap target of a cited material
+        23  area   0.01% of omitted,   0.00% of all  not read: swap target of a material no model cites + read: swap target of a cited material
+         2  area   0.00% of omitted,   0.00% of all  read: effect shader name
+         1  area   0.00% of omitted,   0.00% of all  read: material parent + read: swap target of a cited material
+       441  area   0.02% of omitted,   0.01% of all  read: swap target of a cited material
+
+## Sub-reasons: swap scopes, placements
+
+         2  area   0.00% of omitted,   0.00% of all  readings differ; scopes base+SCOL part base; different MSWP records; more than four pairs in one; FNAM present
+         1  area   0.00% of omitted,   0.00% of all  readings differ; scopes base+SCOL part base; different MSWP records; one pair each; FNAM present
+       222  area   0.20% of omitted,   0.07% of all  readings differ; scopes reference+SCOL part base; different MSWP records; more than four pairs in one; FNAM present
+        46  area   0.01% of omitted,   0.00% of all  readings differ; scopes reference+SCOL part base; different MSWP records; one pair each; FNAM present
+         9  area   0.01% of omitted,   0.00% of all  readings differ; scopes reference+SCOL part base; different MSWP records; two to four pairs; FNAM present
+         2  area   0.08% of omitted,   0.03% of all  readings differ; scopes reference+base+SCOL part base; different MSWP records; more than four pairs in one; FNAM present
+      1620  area   2.10% of omitted,   0.78% of all  readings differ; scopes reference+base; different MSWP records; more than four pairs in one; FNAM present
+       153  area   0.00% of omitted,   0.00% of all  readings differ; scopes reference+base; different MSWP records; one pair each; FNAM absent
+       560  area   0.08% of omitted,   0.03% of all  readings differ; scopes reference+base; different MSWP records; one pair each; FNAM present
+       121  area   0.01% of omitted,   0.00% of all  readings differ; scopes reference+base; different MSWP records; two to four pairs; FNAM absent
+       939  area   0.49% of omitted,   0.18% of all  readings differ; scopes reference+base; different MSWP records; two to four pairs; FNAM present
+         3  area   0.00% of omitted,   0.00% of all  readings differ; scopes reference+base; one MSWP record; more than four pairs in one; FNAM present
+
+## Sub-reasons: texture transform, any, controlled shaders (per placement)
+
+         1  area   0.00% of omitted,   0.00% of all  NIF offset 0 and scale 1; no material
+
+## Sub-reasons: texture transform, any, controllers (per placement)
+
+      4015  area   2.62% of omitted,   0.97% of all  effect, not settled by the effect first-key rule; BSEffectShaderPropertyFloatController; U offset
+       108  area   0.00% of omitted,   0.00% of all  effect, not settled by the effect first-key rule; BSEffectShaderPropertyFloatController; U scale
+      4270  area   3.01% of omitted,   1.12% of all  effect, not settled by the effect first-key rule; BSEffectShaderPropertyFloatController; V offset
+         1  area   0.00% of omitted,   0.00% of all  lighting, first key differs from stored; U offset; stored 0; manager flag true; in a sequence false
+         1  area   0.00% of omitted,   0.00% of all  lighting, first key differs from stored; V offset; stored 0; manager flag true; in a sequence false
+
+## Sub-reasons: texture transform, any, placements
+
+         1  area   0.00% of omitted,   0.00% of all  effect, not settled by the effect first-key rule + lighting, first key differs from stored; other families 9
+       246  area   0.27% of omitted,   0.10% of all  effect, not settled by the effect first-key rule; other families 0
+       365  area   0.39% of omitted,   0.14% of all  effect, not settled by the effect first-key rule; other families 1
+        30  area   0.00% of omitted,   0.00% of all  effect, not settled by the effect first-key rule; other families 12
+         3  area   0.00% of omitted,   0.00% of all  effect, not settled by the effect first-key rule; other families 13
+       123  area   0.00% of omitted,   0.00% of all  effect, not settled by the effect first-key rule; other families 15
+         1  area   0.00% of omitted,   0.00% of all  effect, not settled by the effect first-key rule; other families 16
+         2  area   0.00% of omitted,   0.00% of all  effect, not settled by the effect first-key rule; other families 19
+      1361  area   0.15% of omitted,   0.06% of all  effect, not settled by the effect first-key rule; other families 2
+         5  area   0.01% of omitted,   0.00% of all  effect, not settled by the effect first-key rule; other families 3
+         1  area   0.00% of omitted,   0.00% of all  effect, not settled by the effect first-key rule; other families 4
+         2  area   0.00% of omitted,   0.00% of all  effect, not settled by the effect first-key rule; other families 6
+         3  area   0.00% of omitted,   0.00% of all  effect, not settled by the effect first-key rule; other families 7
+         2  area   0.00% of omitted,   0.00% of all  effect, not settled by the effect first-key rule; other families 9
+
+## Sub-reasons: texture transform, sole family, controllers (per placement)
+
+       725  area   0.88% of omitted,   0.33% of all  effect, not settled by the effect first-key rule; BSEffectShaderPropertyFloatController; U offset
+       725  area   0.88% of omitted,   0.33% of all  effect, not settled by the effect first-key rule; BSEffectShaderPropertyFloatController; V offset
+
+## Sub-reasons: texture transform, sole family, placements
+
+       246  area   0.27% of omitted,   0.10% of all  effect, not settled by the effect first-key rule
+

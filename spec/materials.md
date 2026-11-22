@@ -144,7 +144,14 @@ Registered in [hypotheses.tsv](hypotheses.tsv), each pending:
 
 ## Coverage and frames
 
-See [coverage.md](coverage.md), Materials, swap scopes and texture
+Whole load order, against the census before: 47,360 placements move from
+omitted to drawn under hypotheses and 235 to hidden by the enable parent
+chain (omitted area 41.96 % to 37.14 % of all); 1,838 move from drawn to
+drawn under `uv_scale_then_offset_v1`. Missing materials as a sole family
+fall from 46,166 placements to 469, texture-transform controllers from
+4,962 to 246; swap scopes whose readings differ rise from 2,284 to 3,678
+(placements no longer kept out by unread swap files). Details, test views
+and frames: [coverage.md](coverage.md), Materials, swap scopes and texture
 transforms.
 
 ## Provenance

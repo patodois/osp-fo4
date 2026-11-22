@@ -408,3 +408,69 @@ model is drawn whole (43,365 pixels); its effect shape has an emissive
 multiple of 0 at its first key. Neither covers the room. The CPU and GPU frames of the skylight view agree as before
 (coverage agreement 1.000000 against 0.999997; mean channel difference 2.8
 to 3.0 steps against 3.0 to 3.2).
+
+## Materials, swap scopes and texture transforms
+
+The census now gives the sub-reasons of missing materials, swap scopes and
+texture-transform controllers ([materials.md](materials.md); sections in
+[materials-census.txt](materials-census.txt)). Missing material files the
+draw build never reads are set aside (a lookup of this project, no rule),
+and five pending rules cover what the data settles: swap scopes whose
+readings agree, a material whose missing parent it never reads, a lighting
+shader's own texture set for a missing material (used by no placement
+here), lighting-shader UV controllers stored at their first key, and the
+order of UV scale and offset. Every cell of the load order (3 shards of
+about 2,000 s beside other builds, 1.09 GB peak), against the census of
+effect surfaces:
+
+| Outcome | Effect surfaces | And materials |
+| --- | ---: | ---: |
+| drawn without hypotheses | 781,075 (24.07 % of the area) | 779,237 (22.35 %) |
+| drawn only under hypotheses | 540,395 (32.21 %) | 589,593 (38.73 %) |
+| hidden by `xesp_child_follows_parent_v1` | 8,197 | 8,432 |
+| omitted | 425,844 (41.96 %) | 378,249 (37.14 %) |
+
+47,360 placements move from omitted to drawn under hypotheses and 235 to
+hidden by the chain rule (omitted area from 41.96 % to 37.14 % of all);
+1,838 placements drawn without hypotheses, whose surfaces have a UV offset
+other than 0 or a UV scale other than 1, are now drawn only under
+`uv_scale_then_offset_v1` (1.72 % of the area leaves the frames drawn
+without `--under-hypotheses`). By rule, drawn placements rely on
+`uv_scale_then_offset_v1` 22,290 times, `nif_controller_rest_texture_first_key_v1`
+4,417, `mswp_scopes_readings_agree_v1` 1,153 and
+`bgsm_missing_parent_own_fields_v1` 430 (counted once per placement).
+
+`render asset: MissingMaterial` as a sole family goes from 46,166
+placements (11.69 % of the omitted area) to 469 (0.04 %): swap targets
+whose source a model cites and two effect-shader names. Texture-transform
+controllers alone go from 4,962 to 246 (0.27 %; effect-shader UV
+controllers stored away from their first key). Swap scopes whose readings
+differ rise from 2,284 to 3,678 placements (2.98 % of the omitted area):
+placements that missing swap files kept out before now reach the draw
+build and meet the same refusal; `RenderSwapWithoutMaterial` likewise rises
+from 6,846 to 8,792. The largest sole families left by area: the distant
+clouds (`model: animation-controller blocks (falloff)`, 407 placements,
+70.03 % of the omitted area), the mist volumes
+(`UnsupportedEffectSurface falloff+vertex-alpha-one-flag`, 5.46 %), swap
+scopes whose readings differ (2.98 %), `RenderSwapWithoutMaterial` (2.32 %),
+opacity 2.0 with blending (2.03 %), missing textures (32,015 placements,
+1.83 %), `colour-range+vertex-alpha-one-flag` (1.55 %).
+
+Test views (drawn under hypotheses, before → after): lobby 141 → 141,
+vault 146 → 146, test cell 123 → 123, radius 1 666 → 668 (omitted area
+8.75 % → 8.68 %), radius 2 1,789 → 1,797 (6.54 % → 6.46 %; one placement
+moves from drawn to drawn under the UV rule).
+
+**Frames** (viewer, headless, 1280 x 720, the eight test views against the
+build of `d7bab2e`): without `--under-hypotheses` every view is
+byte-identical, colour frames and tag files (no placement that leaves the
+frames drawn without hypotheses is in them). Under hypotheses: the dog view
+and the dog view without actors differ in 3,943 pixels (a barrier beside the
+road, kept out before by missing swap files no shape reads, now drawn), the
+radius 1 view in 20 pixels (a distant small object of the same kind);
+lobby, vault, test cell and both walk views are byte-identical; every
+differing pixel carries the new instance's tag and every other pixel keeps
+its tag. A further view of the radius-2 grid shows two puddle-like surfaces
+newly drawn under the texture first-key rule (19,111 pixels). The CPU and
+GPU frames of the dog view agree as before (coverage agreement 0.999857 →
+0.999859, mean channel difference 0.19 steps both).
