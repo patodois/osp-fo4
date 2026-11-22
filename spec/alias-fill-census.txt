@@ -1,4 +1,4 @@
-# alias_fill_census: kinds and counts only (spec/vm.md, Alias fills from placed references). Sections: 1 reference and collection aliases of every winning quest by fill and what the existing readings give;
+# alias_fill_census: kinds and counts only (spec/vm.md, Alias fills from repeated and placed rows). Sections: 1 reference and collection aliases of every winning quest by fill and what the existing readings give;
 # 2 aliases filled from a forced location by a ref type: placed references carrying the type, by how they are tied to the location, against the special reference list; 3 placed references carrying XLRT; 4 flag bits of the aliases the list does not resolve to one row.
 6	1 aliases by fill	collection alias	a display name only (ALDN): empty
 24	1 aliases by fill	collection alias	an alias of another quest (ALEQ): empty

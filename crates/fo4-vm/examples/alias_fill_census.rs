@@ -1,7 +1,7 @@
 #![forbid(unsafe_code)]
 //! The fills of reference aliases that a run's readings leave empty, and
 //! what else in the records could fill them (`spec/vm.md`, Alias fills
-//! from placed references): `alias_fill_census MANIFEST OUT.txt NAMES.txt
+//! from repeated and placed rows): `alias_fill_census MANIFEST OUT.txt NAMES.txt
 //! [--player-base EDITOR_ID]`.
 //!
 //! OUT.txt holds counts and kinds only (`spec/alias-fill-census.txt`);
@@ -462,7 +462,7 @@ fn run() -> Result<(), E> {
         }
     }
     let mut out = String::from(
-        "# alias_fill_census: kinds and counts only (spec/vm.md, Alias fills from placed references). Sections: 1 reference and collection aliases of every winning quest by fill and what the existing readings give;\n# 2 aliases filled from a forced location by a ref type: placed references carrying the type, by how they are tied to the location, against the special reference list; 3 placed references carrying XLRT; 4 flag bits of the aliases the list does not resolve to one row.\n",
+        "# alias_fill_census: kinds and counts only (spec/vm.md, Alias fills from repeated and placed rows). Sections: 1 reference and collection aliases of every winning quest by fill and what the existing readings give;\n# 2 aliases filled from a forced location by a ref type: placed references carrying the type, by how they are tied to the location, against the special reference list; 3 placed references carrying XLRT; 4 flag bits of the aliases the list does not resolve to one row.\n",
     );
     for (k, v) in &c {
         let _ = writeln!(out, "{v}\t{k}");

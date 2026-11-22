@@ -1739,7 +1739,10 @@ line without `--assume-cond 131=50`, with `--moveto-target`,
   assumed events, 60.
 - The run stops next on a scene phase waiting on the player's distance to
   an alias's actor (function 1, an alias parameter; the alias fills from a
-  location reference type the location's special references do not list),
+  location reference type whose two rows in the location's special
+  references name the same actor, which the list reading counts as
+  several: the load step's notes said the list did not hold the type, a
+  misreading the sit step corrected),
   on a stage set when the player activates that actor, on two stages no
   setter in the data sets, and on the stage a later scene's phase sets:
   that scene is started only by a start-scene action of another scene,
@@ -1754,6 +1757,173 @@ line without `--assume-cond 131=50`, with `--moveto-target`,
 - With every switch of this step off, the command line gives the
   animation step's run byte for byte (census, names and next-blocker
   files).
+
+## Alias fills from repeated and placed rows
+
+The census tool is `alias_fill_census`
+([alias-fill-census.txt](alias-fill-census.txt), counts and kinds only).
+Of the 14,432 reference aliases of the winning quests, the readings that
+exist fill 4,286 (a forced reference 1,402; a unique actor's one placed
+actor 1,994 or the player 117; a location's one special reference row
+773); the rest stay empty by kind: linked to another alias 3,469, created
+at run time 1,751, from the story event 1,214, no fill value 1,155, an
+alias of another quest 508, from a location alias whose location is not
+forced 1,024, a display name only 271, by conditions only 241, a unique
+actor with no placed actor 4, and from a forced location by a ref type
+with no row of the type 279, with rows naming several distinct references
+184, or with **several rows that all name one reference 46** (the opening's
+suit giver among them: its two rows are byte-identical).
+
+| Switch | Reading | Rule |
+| --- | --- | --- |
+| `--location-refs-distinct` (with `--alias-location-refs`) | rows of a location's special reference list naming the same reference count once | `quest_alias_location_ref_distinct_v1` |
+| `--alias-location-placed-refs` (with `--alias-location-refs`) | where the list holds no row of the alias's ref type, the one placed reference of a cell whose `XLCN` names the location and whose own `XLRT` carries the type (`quest::LocationPlaced`, read once per run) | `quest_alias_location_ref_placed_v1` |
+
+The second reading is tested against the list itself: of the 790 aliases
+the list resolves to one row, the placed references of the location's
+cells carrying the type name the same reference in 569 and never another
+(221 none); the reference's own `XLCN` as the tie agrees far less. It
+gives one reference to 210 of the 419 aliases (collection aliases
+included) whose list holds no row of their type. Each alias reading after
+the list's is used through `Quests::fill_location`; with both switches off
+it is `QuestInfo::fill_of`.
+
+## Distance conditions
+
+`--cond-1-distance` (with `--track`) evaluates condition function 1
+(`cond_fn_1_track_distance_v1`): the subject by the run-on word (2 the
+reference word, 5 an alias of the owning quest), the other party by
+parameter 1 (a placed reference, or with the aliases flag an alias of the
+owning quest, the player included when a unique actor alias of the
+player's base holds it), each where `track::spot` puts it at the run's
+second; different spaces or an open position leave it undetermined. A
+scene whose completion list is false and holds such a condition is
+offered it again a microsecond after the second the distance on the track
+crosses the value (`track::distance_first_time`, the marks of function
+131). `--cond-player-word` (`cond_player_reference_word_v1`) reads a
+reference word naming the first plugin's id 0x14, which no plugin
+defines, as the player: the conditions census counts 7,725 run-on-2
+reference words naming no record below 0x800.
+
+## Activation of actors
+
+`--assume-activate` on a placed actor (ACHR) needs `--activate-actors`
+(`vm_event_activate_actor_v1`): the event goes where an activation of any
+reference goes (the actor's scripts, the aliases holding it, the
+registered instances), the player the activator; no conversation starts.
+
+## Furniture use
+
+`fo4_vm::sit`, behind `--sit-events` (`vm_event_sit_v1`), off by default:
+`OnSit(furniture)` and `OnGetUp(furniture)` go to the sitter's receivers
+(for the player, the scripts of the aliases holding the player and the
+player's registered instances; for a placed actor, its own scripts too),
+`OnExitFurniture(sitter)` to the furniture's own scripts, the aliases
+holding it and its registered instances. A sit comes from the caller
+(`--assume-sit REF[@SECONDS]`, `--assume-get-up REF[@SECONDS]`, a REFR of
+a FURN, the player the sitter) or, with `--activate-furniture-sits`
+(`vm_furniture_activate_sits_v1`), from a script's
+`Activate(actor, true)` on a furniture reference, delivered after the
+calling job; a sitter already in another furniture leaves it without an
+event. `--furniture-in-use` (`vm_furniture_in_use_v1`) answers
+`IsFurnitureInUse` from the run's sitters. `GetSitState` stays recorded
+(what its values mean is not in the data).
+
+What the census finds ([sit-menu-census.txt](sit-menu-census.txt)): the
+compiled scripts declare three furniture events; 18 `OnSit` handlers with
+code, all taking the furniture, extend ReferenceAlias (15) or
+ActiveMagicEffect (3), none a furniture's own script; 19 `OnGetUp`; 6
+`OnExitFurniture`, attached to furniture and activator bases and to
+aliases of furniture references. The handlers mostly test or set stages
+(`GetStageDone`, `SetStage`, `GetOwningQuest`, `GetRef`). 38 `Activate`
+call sites pass a literal true for default processing only, 352 a literal
+false.
+
+## Menus
+
+`fo4_vm::menu`, behind `--menu-events` (`vm_menu_events_v1`), off by
+default: `RegisterForMenuOpenCloseEvent(name)` and
+`RegisterForLooksMenuEvent` keep their registrations (and the unregister
+natives remove them); the caller's `--assume-menu NAME open|close[@SECONDS]`
+runs `OnMenuOpenCloseEvent(name, opening)` on the instances registered for
+that name, and `--assume-looks-menu-event N[@SECONDS]` runs
+`OnLooksMenuEvent(N)`. No menu name is stored in the repository: the
+caller passes it. Nothing a menu does to the player record is performed.
+The census counts 25 menu natives and 3 menu events, 11 open-and-close
+registrations (10 with a literal name, 6 distinct names) and 9 handlers;
+the opening's family registers only for the appearance menu's event (its
+handler plays comments) and enters character creation by
+`SetInCharGen` 4 times (the census's section 6 reads the scripts the
+quests attach, not their scenes' fragment scripts; in the run two scene
+fragments call `ShowRaceMenu` and `ShowSpecialMenu` once each, recorded
+as effects). No stage of the opening waits on a menu event: the early
+stage no setter sets, which the caller gives with `--then`, has no
+registered menu handler that could set it either.
+
+## The player's base object
+
+`--player-base-object` (with `--player-base`, `vm_player_base_object_v1`)
+answers `GetBaseObject`, `GetActorBase` and `GetLeveledActorBase` on the
+player's handle with the NPC_ the caller names; `ActorBase.GetSex` on it
+answers `--assume-player-sex N` (the caller's: character creation chooses
+it), else stays undetermined.
+
+## The forced opening with furniture use
+
+([quest-run-opening.txt](quest-run-opening.txt); the command lines, the
+tracks and every record named are in the step's notes.) On the load step's
+command line, with its track walking on (the caller's) to the suit giver
+in the vault, along the corridor to the cryopods and to the player's pod:
+
+- The vault scene's phase waiting on the distance to the suit giver
+  passes from the data: the alias holds the actor of its two identical
+  rows (`--location-refs-distinct`), the condition reads the player's word
+  (`--cond-player-word`) and the distance from the track and the actor's
+  stored position (`--cond-1-distance`), and the scene is offered again
+  as the track crosses 350 units.
+- The stages after it come from three assumed activations (the suit
+  giver and the spouse, both actors under `--activate-actors`, and the
+  player's cryopod), two trigger crossings of the walk, and stage, phase
+  and line fields. The cryopod's stage fragment enters character creation
+  and activates the pod for the player with default processing only;
+  under `--sit-events` and `--activate-furniture-sits` the player sits,
+  the player alias's `OnSit` handler sets the stage whose fragment starts
+  the scene whose start-scene action starts the scene the first vault
+  scene waited on.
+- Reached: **82 of the 104 stages** (before 65). The run stops next where
+  the last stage's fragment calls into the next sequence quest's script,
+  which blocks on whether the spouse actor carries a keyword (keywords
+  change at run time; the run keeps no keyword state); the two stages
+  after it are set only in that script's functions no event or fragment
+  of the script reaches, and two stages of the opening quest have no
+  setter at all.
+- With one thing changed (the record's section 11): without
+  `--location-refs-distinct`, or without the suit giver's activation, 75
+  stages; without `--activate-furniture-sits` or `--sit-events`, 75;
+  without the cryopod's activation, 73; without the spouse's, 81; the
+  caller's `--assume-sit` on the cryopod at the activation's second
+  instead of the scripted sit, 82. Without `--cond-1-distance` (or the
+  player word) the run still reaches 82: the caller's activation of the
+  suit giver sets the stage the scene waits for whatever the scene's
+  phase does, so the distance reading only lets the scene's phase pass
+  from the data before it.
+- With every switch of this step off, the load step's command line gives
+  the load step's run byte for byte (census, names and next-blocker
+  files).
+
+### The two stages with no setter
+
+Read statically (the stage-setter table, the stage records, every
+condition, every compiled call): each has one log entry with no
+conditions, an editor note and no log text, no flag, and one of them an
+empty stage fragment. No set-stage call, record field or startup flag
+names the opening quest and either stage as constants; no call on the
+opening quest leaves its stage open; 5 calls passing one of the two
+numbers leave their quest open, all in other quests' families; 53 calls
+leave quest and stage open (base object, alias and unattached scripts);
+no condition of any record tests either stage. Nothing in the data read
+sets or reads them: what else could (the console, code outside the
+compiled scripts) is not in the data.
 
 ## Conditions
 
@@ -2234,3 +2404,23 @@ disassembler. No public page was requested. No editor, editor source or
 definition file, Havok SDK, converter or format project, script source,
 decompiler, other interpreter, script extender or the game executable was
 opened or searched for. The game was not run.
+
+## Provenance of the sit step
+
+Recognised from prior general knowledge, used only as pending rules that
+are off by default: that function 1 is the distance between two
+references and that the player's reference is the engine-made id 0x14;
+that activating an actor raises its activation event; that sitting raises
+`OnSit` and getting up `OnGetUp` and `OnExitFurniture`, that a furniture's
+default activation by an actor makes the actor use it and that the
+default-processing flag skips the activation event and its block; what
+the menu events and their registrations are; that the player's base is
+the NPC_ the caller names. That the player's sex is chosen in character
+creation is prior knowledge used only to leave it to the caller. Every
+count was measured with the repository's own readers on the installed
+data (`alias_fill_census`, `sit_menu_census`; local probes whose outputs
+stay outside the repository); the compiled scripts were read only with
+the repository's disassembler. No public page was requested. No editor,
+editor source or definition file, other interpreter, script extender,
+decompiler or the game executable was opened or searched for. The game
+was not run.

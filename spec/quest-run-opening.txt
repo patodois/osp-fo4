@@ -1,8 +1,9 @@
-# quest_run new-game, the forced opening with load events and scene action progress (load step): kinds and counts only (spec/vm.md, The forced opening with load events)
+# quest_run new-game, the forced opening with alias fills, distance conditions, actor activation and furniture use (sit step): kinds and counts only (spec/vm.md, The forced opening with furniture use)
 # Section 1: stops in order: what stopped the run, what passed it, whether the data (under pending readings) or a caller assumption passed it, the kind of world the stop stands for.
 # Section 2: the two dialogue stops' candidate lines. Section 3: unique actor aliases, actor positions and what they raised. Section 4: animation events and graphs. Section 5: package destinations.
 # Section 6: where the run ends. Section 7: how far it gets. Section 8: the run's natives of the opening quest's family by the kind of world model they would need.
-# Section 9: the caller's assumptions. Section 10: the final run's --next-blockers counts. Section 11: stages reached with one thing changed on the final command line. Section 12: load events and scene action progress.
+# Section 9: the caller's assumptions. Section 10: the final run's --next-blockers counts. Section 11: stages reached with one thing changed on the final command line. Section 12: load events and scene action progress. Section 13: the sit step's readings and assumptions.
+# Section 14: the two stages with no setter in the data.
 
 ## 1 stops passed, in order
 1	the first scene's phase 0 on a condition function the evaluator does not answer	--assume-cond (one function)	a caller assumption	not read: a condition function
@@ -34,78 +35,86 @@
 27	the next stage, the stage field of a phase of the interior's scene after a phase whose completion reads how far its own dialogue action has run (function 131)	--cond-131-clock (the share of the action's seconds on the scene clock; the fixed value no longer given)	the data under pending readings	none (a reading of the scene clock)
 28	the next three stages in turn, each set by the animation event handler of an alias script that registers when its actor's 3D loads in the interior, each followed by the scene's phase waiting on it	a stage fragment moves the three actors to markers in the interior the track is in: --moveto-target puts them there, --load-in-cell raises OnLoad, --cell-natives answers their parent cell; the animation event itself is the caller's (--assume-anim-event, at the second the actor's phase begins plus the length of the furniture idle clip whose last annotation names the event)	the data under pending readings, with a caller assumption	a load event (data) and an actor's idle ending (animation; the caller's)
 29	two stages in between, the stage fields of the phases after the first two of those	--stage-fields	the data under pending readings	none (a reading)
+30	the scene the last of those stages starts waits on the player's distance to an alias's actor (function 1 run on the player's reference word, an alias parameter); the alias is filled from a location ref type whose two rows in the location's special references name the same actor	--location-refs-distinct fills the alias; --cond-1-distance with --cond-player-word reads the distance from the track and the actor's stored position, the scene offered its conditions again as the track crosses it; the track walks to the actor (the caller's)	the data under pending readings, with a caller assumption	player movement (distance to an actor); an alias fill reading
+31	the next stage, set by an alias script's activation handler when the player activates that actor	--activate-actors and --assume-activate on the actor	the data under pending readings, with a caller assumption	player interaction (activating an actor)
+32	the next three stages: a line's TIQS end half, a scene's end field and a stage fragment; then two stages in turn, each a trigger-enter handler on the way to the cryopods	--line-stage-fields, --stage-fields; the track crossing each trigger's box (the caller's walk)	the data under pending readings, with a caller assumption	player movement into a trigger (the track is the caller's)
+33	the next stage, the end field of the escort scene	--stage-fields	the data under pending readings	none (a reading)
+34	the next stage, set when the player activates the spouse, held by an alias a stage fragment set	--assume-activate on her (--activate-actors)	a caller assumption	player interaction (activating an actor)
+35	the next stage, a phase field of the scene that stage's fragment starts	--stage-fields	the data under pending readings	none (a reading)
+36	the next stage, set when the player activates the cryopod (an alias filled from a location's special reference); its fragment enters character creation and sets two more	--assume-activate on the cryopod	the data under pending readings, with a caller assumption	player interaction (activation); character creation entered (no menu event raised)
+37	the next stage, set by the player alias's sit handler when the furniture is that cryopod	the fragment above activates the cryopod for the player with default processing only: --sit-events, --activate-furniture-sits	the data under pending readings	furniture use (sitting)
+38	the next six stages: a line's TIQS, phase fields of the scenes the sit stage's fragment starts (one of them started by a start-scene action) and two stage fragments	--line-stage-fields, --stage-fields, --assume-start-scene-actions	the data under pending readings, with a caller assumption	none (readings); a start-scene action assumed complete
 
 ## 2 the two dialogue stops: the candidate lines of running quests' topics of the subtype, tried with either party speaking (final run)
 6132	greeting (the player talks to the actor): candidate line and speaker pairs
 1787	greeting (the player talks to the actor): pairs whose conditions hold
-1788	greeting (the player talks to the actor): pairs whose conditions are undetermined
+1784	greeting (the player talks to the actor): pairs whose conditions are undetermined
 14034	hello (the player comes near the actor): candidate line and speaker pairs
 4777	hello (the player comes near the actor): pairs whose conditions hold
 3979	hello (the player comes near the actor): pairs whose conditions are undetermined
-15	conversations tried whose line the records leave undetermined
+27	conversations tried whose line the records leave undetermined
 2	lines chosen by --assume-line (each holds)
 1	hello lines timed by their voice file
 1	greeting lines timed by the assumed seconds (the player's voice type is not in the records)
-14	entries of the track within the hello distance of a placed actor at its stored position
+26	entries of the track within the hello distance of a placed actor at its stored position
 76	placed actors near the track
 
 ## 3 unique actor aliases, actor positions and what they raised (final run)
 799	unique actor aliases the run read, resolved to one placed actor or the player
 1	unique actor aliases the run read, not resolved (no placed actor of the base)
 0	actor moves assumed by the caller (--assume-actor-at)
-37	actor moves applied (the caller's and the package destinations')
+40	actor moves applied (the caller's and the package destinations')
 22	trigger events raised by an actor's move
 7	distance registrations made
 7	distance events raised
 16	references a native moved, by native
 
 ## 4 animation events and graphs (final run)
-23	animation	PlayAnimation followed
+30	animation	PlayAnimation followed
 2	animation	PlayAnimation not followed	the reference or the event is undetermined
 9	animation	deliveries	a handler ran
-12	animation	graph events not taken	no transition of the state or wildcard
-30	animation	graph events taken
-7	animation	graph states entered	a sequence of cycle type 0
-13	animation	graph states entered	a sequence of cycle type 2
+15	animation	graph events not taken	no transition of the state or wildcard
+41	animation	graph events taken
+8	animation	graph states entered	a sequence of cycle type 0
+23	animation	graph states entered	a sequence of cycle type 2
 9	animation	graph states entered	the generator is not a sequence generator
 1	animation	graph states entered	the sequence is not in the model
-10	animation	graphs read
+14	animation	graphs read
 13	animation	registrations	made
 9	animation	registrations	removed
-48	animation	text keys not scheduled	the text is no event name of the graph
-19	animation	text keys raised
+71	animation	text keys not scheduled	the text is no event name of the graph
+26	animation	text keys raised
 3	animation events	assumed by the caller	completed
 6	animation events	raised from the data	completed
-13	animation events	raised from the data	no registered instance
+20	animation events	raised from the data	no registered instance
 
 ## 5 package destinations (final run)
-5	world model	package destinations	actor moves dropped: the scene stopped first
-40	world model	package destinations	actor moves scheduled
-33	world model	package destinations	no actor move	no Location input names a placed reference
+6	world model	package destinations	actor moves dropped: the scene stopped first
+44	world model	package destinations	actor moves scheduled
+36	world model	package destinations	no actor move	no Location input names a placed reference
 1	world model	package destinations	no actor move	several Location inputs name placed references
 2	world model	package destinations	no actor move	the action's alias holds no placed reference in the run
 
 ## 6 where the run ends (no caller assumption passes)
-the scene the last of the three stages starts waits on the player's distance to an alias's actor (function 1 with an alias parameter); the alias fills from its location by a reference type the location's special references do not list (the actor carries that type on its own placement)	a reading of function 1 from the track and the actor's position, and a reading that fills such an alias from the placed references carrying the type in the location's cells	player movement (distance to an actor); an alias fill reading
-the next stage is set when the player activates that alias's actor (the alias holds no reference in the run)	the same fill reading and the caller's --assume-activate on the actor	player interaction (activation)
-two stages of the opening quest have no setter in the data	only --then	unknown (no setter)
-the scene the three stages advanced waits, in its last phase, on a stage a later stage's fragment sets; that stage is set when the player activates the cryopod alias, and its fragment enters character creation	a caller's activation of the pod, then a model of the character creation menu	player interaction (activation); character creation (a menu)
-the scene started with the vault waits on a stage only a later scene's phase sets; that scene is started only by a start-scene action of another scene, itself started by a stage fragment run when the player sits in the cryopod (the player alias's OnSit)	the chain above, then a sit event of the player in a furniture (not modelled)	furniture use (sitting); then the chain of scenes (modelled)
+the next stage is set at the end of the last stage's fragment, after a call into the next sequence quest's script that blocks on whether the spouse actor carries a keyword (scripts add and remove keywords on actors at run time; the run keeps no keyword state)	a reading of an actor's keywords (the record's keywords with the run's AddKeyword and RemoveKeyword)	actor state (keywords)
+the two stages after it are set only in two functions of that sequence quest's script that no event or fragment of the script reaches	the sequence itself once the stop above passes (its scenes, timers and animation)	the chain after the stop above
+two stages of the opening quest have no setter in the data (section 14)	only --then	unknown (no setter)
 
 ## 7 reached
-65	stages of the opening quest set (of 104), one by the caller (animation step: 59)
-2	objectives of the opening quest displayed
+82	stages of the opening quest set (of 104), one by the caller (load step: 65)
+5	objectives of the opening quest displayed
 
 ## 8 natives of the opening quest's family with no world model, by kind
-70	player or actor position and movement
-28	UI menus and player controls (character creation among them)
-6	inventory and items
+86	player or actor position and movement
+35	UI menus and player controls (character creation among them)
+23	inventory and items
 0	combat and actor values
 3	cells, 3D and loading
-90	animation and idles
-31	sound, music, video and imagespace
+104	animation and idles
+39	sound, music, video and imagespace
 
 ## 9 caller assumptions of the final run
+1	assumption from the command line: ActorBase.GetSex on the player's base answers 0 (--assume-player-sex)
 2	assumption from the command line: a line plays where the choice outside a scene is not settled (--assume-line)
 1	assumption from the command line: a line whose audio does not settle its time lasts 3 s
 2	assumption from the command line: a placed actor moved to a position at a second (--assume-actor-at)
@@ -116,71 +125,80 @@ the scene started with the vault waits on a stage only a later scene's phase set
 1	assumption from the command line: every HasDirectLOS answers true (--assume-los)
 1	assumption from the command line: every condition of function 555 has the value 1
 1	assumption from the command line: package actions complete as they start
-81	assumption from the command line: points of the player's track
+102	assumption from the command line: points of the player's track
 1	assumption from the command line: queued timers fired after the jobs
 1	assumption from the command line: start-scene actions complete as they start
 1	assumption from the command line: the NPC_ of that editor ID is the player's base (--player-base)
 1	assumption from the command line: the hello distance is the value of the game setting named (--hello-distance-setting)
-2	assumption from the command line: the player activates a placed reference (--assume-activate)
+5	assumption from the command line: the player activates a placed reference (--assume-activate)
 1	assumption from the command line: the player follows a track (--track)
 1	assumption from the command line: the player opens a placed reference (a door or a container) (--assume-open)
 1	assumption from the command line: the player picks choice 0
 1	assumption from the command line: the player starts a conversation with a placed actor (--assume-talk)
 1	assumption from the command line: the player's body reaches 120 units up from the reference point (--trigger-body)
 1	assumption from the command line: the scene clock advanced (--scene-clock)
-76	package actions assumed complete (actor movement)
+83	package actions assumed complete (actor movement)
 6	player dialogue actions on the assumed choice (the dialogue menu)
-55	scene lines timed by the assumed seconds
+68	scene lines timed by the assumed seconds
 
 ## 10 the final run's --next-blockers
 1	scenes stopped at the end	an action runs in the phase: kind 5
 29	scenes stopped at the end	an action runs in the phase: kind 6
-2	scenes stopped at the end	completion conditions false
-17	scenes stopped at the end	completion conditions undetermined
+16	scenes stopped at the end	completion conditions undetermined
 1	scenes stopped at the end	start conditions undetermined
-2	setters of a waited stage	0
 3	setters of a waited stage	1
-1	setters of a waited stage by kind and need	a call in a quest alias script, through a function passing a parameter on	engine event onactivate on a quest alias
 1	setters of a waited stage by kind and need	a call in a quest stage fragment	a stage of a quest set (its stage fragment)
-1	setters of a waited stage by kind and need	a scene phase field SCQS, second half	a scene phase ends
-1	setters of a waited stage: the need in this run	a chain: the stage is not done in the run
-1	setters of a waited stage: the need in this run	a player action on an alias that holds no reference in the run
-1	setters of a waited stage: the need in this run	a scene the run never started
-2	waited stages with no setter in the data: only a caller assumption passes them (--then)
-2	waits	completion conditions	function 59	the stage is not done in the run
+2	setters of a waited stage by kind and need	a call in a quest's own script	a function no engine event or fragment of its script reaches
+1	setters of a waited stage: the need in this run	a chain: the stage is done in the run
+2	setters of a waited stage: the need in this run	an event the interpreter does not raise
 3	waits	next stage of a quest the caller set a stage on	the stage is not done in the run
-5	waits: stages a stopped scene phase or the caller's quests wait on
+3	waits: stages a stopped scene phase or the caller's quests wait on
 
 ## 11 stages of the opening quest set with one thing changed on the final command line
-65	the final run (the animation step's command line without the fixed value of function 131, with --moveto-target, --load-in-cell, --cond-131-clock and three assumed animation events)
-60	without the three assumed animation events
-60	without --moveto-target
-60	without --load-in-cell
-65	without --load-in-cell, the three loads assumed by the caller (--assume-load) at the second of the fragment that moves the actors
-42	without --cond-131-clock and without a fixed value of function 131
-62	the fixed value 50 of function 131 (--assume-cond) instead of --cond-131-clock
-65	with --phase-conditions-end
-65	with --load-on-arrival
-65	with --load-grid 2
-65	without the caller's start stage (--then at once)
-64	without the caller's stage at a second of the clock (--then @18)
-65	without firing timers (--timers, --time-scale-global)
-62	without the fixed value of function 555 (--assume-cond)
-9	without the assumed seconds of a line whose audio does not settle them (--assume-line-seconds)
-14	without package actions assumed complete (--assume-packages-complete)
-65	without start-scene actions assumed complete (--assume-start-scene-actions)
-64	without the first assumed activation
-18	without the assumed opening of a door
-20	without the assumed player dialogue choice (--assume-player-choice)
-22	without the second assumed activation
-57	the trigger point reading instead of the assumed body height (--trigger-point for --trigger-body 120)
-65	without the assumed line of sight (--assume-los)
-65	without the player's base named (--player-base)
-65	without the assumed conversation (--assume-talk)
-44	without the two assumed lines (--assume-line)
-46	without the spouse's two assumed moves (--assume-actor-at)
-47	without package destinations (--package-destinations)
-47	the track without the two holds (the caller's waits), with the package destinations
+82	the final run (the load step's command line on a track that walks on to the suit giver and the cryopods, with --location-refs-distinct, --cond-1-distance, --cond-player-word, --activate-actors, three assumed activations, --sit-events, --activate-furniture-sits, --player-base-object and --assume-player-sex)
+75	without --location-refs-distinct
+82	without --cond-1-distance
+82	without --cond-player-word
+75	without --activate-actors and the two assumed activations of actors
+75	without the assumed activation of the suit giver
+81	without the assumed activation of the spouse
+73	without the assumed activation of the cryopod
+75	without --activate-furniture-sits
+82	the caller's --assume-sit on the cryopod at the activation's second instead of --activate-furniture-sits
+75	without --sit-events (and --activate-furniture-sits)
+82	without --player-base-object and --assume-player-sex
+82	without --assume-player-sex
+82	with --alias-location-placed-refs
+82	with --furniture-in-use
+82	with --menu-events
+78	the load step's track (ending at the vault corridor's last trigger)
+78	the track ending by the suit giver (no walk to the cryopods)
+77	without --moveto-target
+77	without --load-in-cell
+82	without --load-in-cell, the three loads assumed by the caller (--assume-load) at the second of the fragment that moves the actors
+59	without --cond-131-clock and without a fixed value of function 131
+79	the fixed value 50 of function 131 (--assume-cond) instead of --cond-131-clock
+82	with --phase-conditions-end
+82	with --load-on-arrival
+77	without the three assumed animation events
+82	without the caller's start stage (--then at once)
+81	without the caller's stage at a second of the clock (--then @18)
+82	without firing timers (--timers, --time-scale-global)
+79	without the fixed value of function 555 (--assume-cond)
+17	without the assumed seconds of a line whose audio does not settle them (--assume-line-seconds)
+24	without package actions assumed complete (--assume-packages-complete)
+77	without start-scene actions assumed complete (--assume-start-scene-actions)
+81	without the first assumed activation
+35	without the assumed opening of a door
+37	without the assumed player dialogue choice (--assume-player-choice)
+39	without the second assumed activation
+74	the trigger point reading instead of the assumed body height (--trigger-point for --trigger-body 120)
+78	without the assumed line of sight (--assume-los)
+75	without the player's base named (--player-base, and so without --player-base-object and --assume-player-sex)
+82	without the assumed conversation (--assume-talk)
+61	without the two assumed lines (--assume-line)
+63	without the spouse's two assumed moves (--assume-actor-at)
+64	without package destinations (--package-destinations)
 
 ## 12 load events and scene action progress (final run)
 3	load	loads	a handler ran	a script of a quest alias holding the reference
@@ -193,3 +211,38 @@ the scene started with the vault waits on a stage only a later scene's phase set
 1	switch: MoveTo with zero offsets puts the reference at its target's position (--moveto-target)
 1	switch: a reference that comes into the player's interior cell loads (--load-in-cell)
 1	switch: condition function 131 reads how far a scene action has run on the clock (--cond-131-clock)
+
+## 13 the sit step's readings and assumptions (final run)
+1	furniture	furniture activations not read as a sit: with events (the furniture's activation is not modelled)
+3	furniture	furniture activations read as a sit: default processing only
+3	furniture	sits
+2	furniture	sits	the sitter's earlier furniture left without an event (when is not known)
+5	furniture events	a script of a quest alias holding the reference	completed
+1	world model	distance conditions	marks at which a scene is offered again
+1	rules relied on	cond_fn_1_track_distance_v1
+1	rules relied on	cond_player_reference_word_v1
+1	rules relied on	quest_alias_location_ref_distinct_v1
+1	rules relied on	vm_event_activate_actor_v1
+1	rules relied on	vm_event_sit_v1
+1	rules relied on	vm_furniture_activate_sits_v1
+1	rules relied on	vm_player_base_object_v1
+1	switch: a condition's reference word naming the first plugin's id 0x14 is the player (--cond-player-word)
+1	switch: a script's default-processing activation of a furniture reference sits the activator in it (--activate-furniture-sits)
+1	switch: condition function 1 reads the distance from the world model's positions (--cond-1-distance)
+1	switch: repeated rows of a location's special references naming one reference count once (--location-refs-distinct)
+1	switch: sit and get-up events delivered to the sitter's and the furniture's receivers (--sit-events)
+1	switch: the base-object natives on the player answer the player's base the caller names (--player-base-object)
+1	switch: the caller may assume the player activates a placed actor (--activate-actors)
+1	assumption from the command line: ActorBase.GetSex on the player's base answers 0 (--assume-player-sex)
+
+## 14 the two stages of the opening quest no setter in the data sets (a static reading of the records and compiled scripts, kinds and counts)
+2	stages of the opening quest the stage-setter table finds no setter for; each has one log entry with no conditions, an editor note and no log text, and no stage flag
+1	of the two has a stage fragment, a function with no instruction; the other has no fragment
+0	set-stage calls of the compiled scripts naming the opening quest and either stage as constants (quest, alias, placed reference and base object scripts; quest, terminal, dialogue line, scene, package and perk fragments; scripts no record attaches)
+0	record fields naming either stage (dialogue line TIQS, scene and phase SCQS) and startup flags on either
+0	set-stage calls on the opening quest whose stage the scan leaves open
+5	set-stage calls passing one of the two numbers whose quest the scan leaves open, all in other quests' families: a package fragment whose owning quest is not read (1), a placed reference's own script whose quest property has no record value (2), a script no record attaches (2)
+53	set-stage calls whose quest and stage the scan both leave open: base object scripts (38), alias scripts with a script variable (14), a script no record attaches (1)
+0	conditions of any record testing either stage (function 59 on that stage, function 58 compared with that number)
+6	compiled call sites passing either number as a literal argument, all set-stage calls of other quests (the 5 above among them)
+none	what else could set them is not in the data read: the console or code outside the compiled scripts
