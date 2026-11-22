@@ -1608,10 +1608,10 @@ destination. Without the switch no package moves anyone.
 
 ## The forced opening with animation events and the vault
 
-([quest-run-opening.txt](quest-run-opening.txt), regenerated from this
-run and its variants by the load step, the record that replaces the talk
-step's; the command lines, the tracks and every record named are in the
-step's notes.) On the talk step's command line:
+(The load step first regenerated [quest-run-opening.txt](quest-run-opening.txt)
+from this run and its variants, then replaced it with its own run, Load
+events below; the command lines, the tracks and every record named are in
+the step's notes.) On the talk step's command line:
 
 - The two stages the talk step stopped on, and a third the same handler
   sets, come from the opening quest's animation event handler. With the
@@ -1657,6 +1657,102 @@ step's notes.) On the talk step's command line:
   notes.
 - With every switch of this step off, the talk step's command line gives
   the talk step's run byte for byte (census, names and next-blocker
+  files).
+
+## Load events
+
+`fo4_vm::load`, behind switches of `quest_run new-game` (with `--track`),
+all off by default ([load-event-census.txt](load-event-census.txt) for the
+census): a placed reference's `OnLoad` runs on its own scripts, the scripts
+of the quest aliases holding it and the instances registered for the
+remote event, as a caller's `--assume-load PLUGIN:OBJECTID[@SECONDS]`
+delivers it (`player::Action::Load`, an assumption, not a player action).
+
+| Switch | Reading | Rule |
+| --- | --- | --- |
+| `--moveto-target` | `MoveTo(target, 0, 0, 0, ...)` puts the receiver at the target's settled position and space at once (an offset, or an open target, leaves the receiver's position open as before) | `world_moveto_target_v1` |
+| `--load-in-cell` | a reference moved into (by a moving native) or enabled in the interior cell the track is in loads at once | `world_load_reference_enters_v1` |
+| `--load-on-arrival` | when the track reaches an interior cell (the instant load through a door), its enabled scripted references and the alias-held references standing there load at that second | `world_load_player_arrives_v1` |
+| `--load-grid N` | in a worldspace, references within N grid squares of the player's load as they come into range | `world_load_exterior_grid_v1` |
+
+A reference loads once until the player's area leaves it; `OnUnload`,
+`OnCellLoad`, `OnCellAttach` and `OnCellDetach` are not raised; a
+reference whose enable state is undetermined does not load. The loads of
+a second are settled before and after the track's events of that second
+(`load::settle` in the world model's loop, `load::next_due` the seconds the
+track changes area); the names file logs each load and handler run, the
+census counts them under `load`.
+
+What the census finds ([load-event-census.txt](load-event-census.txt)):
+402 compiled scripts declare `OnLoad` with code, 186 `OnUnload`, 54
+`OnCellLoad`, 57 `OnCellAttach`, 42 `OnCellDetach`; 54 `OnLoad` handlers
+sit in the script's auto state (a script waiting for its load, like the
+one the opening needs), 25 register for animation events and 33 for remote
+events; 2,977 attachments of a script with `OnLoad` sit on placed
+references of interior cells and 3,783 of exterior cells, 81 on unique
+actor aliases. The handler the opening needs moves its script out of its
+waiting state and registers for an animation event of its actor when the
+actor's parent cell is the interior the run is in.
+
+## Scene action progress
+
+Condition function 131 sits only in scene phase completion lists (52
+conditions, [action-percent-census.txt](action-percent-census.txt)), always
+`at least` an integer from 1 to 99, its first parameter the scene itself
+and its second the index of one of its dialogue, response or player
+dialogue actions, in 48 of 52 an action ending in that phase. Two readings,
+each off by default:
+
+| Switch | Reading | Rule |
+| --- | --- | --- |
+| `--cond-131-clock` (with `--scene-clock`) | the function is how far the named action has run on the scene clock, in percent: 0 not started, 100 completed, the elapsed share of a timed running action's seconds; a running untimed action is undetermined; a scene waiting on false completion conditions with such a condition is offered them again when the share reaches the value | `cond_fn_131_action_percent_v1` |
+| `--phase-conditions-end` (with `--scene-clock`) | a phase with a non-empty completion list ends as soon as the list holds, its timed actions still running | `scene_phase_conditions_end_v1` |
+
+`--assume-cond 131=VALUE` remains the caller's alternative (it takes
+precedence over the reading). Without `--phase-conditions-end` the clock
+still holds a phase until its actions complete, so the reading answers 100
+there; with it the phase ends at the share.
+
+## The forced opening with load events
+
+([quest-run-opening.txt](quest-run-opening.txt); the command lines and
+every record named are in the step's notes.) The animation step's command
+line without `--assume-cond 131=50`, with `--moveto-target`,
+`--load-in-cell` and `--cond-131-clock`:
+
+- Function 131 from the clock passes, by data, the phases the fixed value
+  passed and those it held below their threshold (two neighbour scenes
+  outside and the vault scene); without the fixed value and without the
+  reading the run stops at 42 stages, at the first scene's phase.
+- The stage fragment run as the track reaches the vault moves three actors
+  to markers in the vault: under `--moveto-target` they stand there, under
+  `--load-in-cell` their 3D loads at once, and their alias script's
+  `OnLoad` finds their parent cell to be the vault (`--cell-natives`) and
+  registers for the actor's own animation event.
+- That event (the end of an idle) is raised in the data only by a
+  furniture's synchronised idle clip, whose last annotation names it,
+  reached through the package's sit procedure, the furniture's keyword and
+  the character's behaviour graph: a chain the run does not model. It
+  stays the caller's (`--assume-anim-event`), at the second each actor's
+  sit phase begins plus the clip's length.
+- Reached: **65 of the 104 stages** (before 59); without the three
+  assumed events, 60.
+- The run stops next on a scene phase waiting on the player's distance to
+  an alias's actor (function 1, an alias parameter; the alias fills from a
+  location reference type the location's special references do not list),
+  on a stage set when the player activates that actor, on two stages no
+  setter in the data sets, and on the stage a later scene's phase sets:
+  that scene is started only by a start-scene action of another scene,
+  itself started by a stage fragment run when the player sits in a
+  cryopod (an `OnSit` event of the player's alias), after the player
+  activates the pod (whose fragment enters character creation).
+- `--load-on-arrival` (the vault's scripted and alias-held references
+  loading as the track arrives), `--load-grid 2` (several hundred loads
+  outside) and `--phase-conditions-end` each leave the 65 stages as they
+  are; the stages reached with each earlier assumption removed are in the
+  record's section 11.
+- With every switch of this step off, the command line gives the
+  animation step's run byte for byte (census, names and next-blocker
   files).
 
 ## Conditions
@@ -2112,6 +2208,27 @@ assumptions of the person running the opening.
 The behaviour layouts, the annotation layout, the PACK layout and every
 count were measured with the repository's own readers on the installed
 data (first proposed from local probes whose outputs stay outside the
+repository); the compiled scripts were read only with the repository's
+disassembler. No public page was requested. No editor, editor source or
+definition file, Havok SDK, converter or format project, script source,
+decompiler, other interpreter, script extender or the game executable was
+opened or searched for. The game was not run.
+
+## Provenance of the load step
+
+Recognised from prior general knowledge, used only as pending rules that
+are off by default: that `MoveTo` with zero offsets places the receiver at
+its target; that a reference's 3D loads when it comes into, or the player
+comes into, a loaded cell or grid and that `OnLoad` then runs; that
+function 131 is how far a scene action has run, and that a phase's
+completion conditions can end it while its actions run. That an animation
+event named as an idle record's event text is raised at the end of a
+furniture's synchronised idle clip whose last annotation carries it, and
+that the package's sit procedure and the furniture's keyword lead to that
+clip, is prior knowledge used only to search the data and to explain why
+the event stays the caller's. Every count was measured with the
+repository's own readers on the installed data (`load_census`,
+`action_percent_census`; local probes whose outputs stay outside the
 repository); the compiled scripts were read only with the repository's
 disassembler. No public page was requested. No editor, editor source or
 definition file, Havok SDK, converter or format project, script source,
