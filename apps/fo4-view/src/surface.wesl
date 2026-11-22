@@ -4,6 +4,7 @@
 // wrap, vertex colour, opacity, alpha test, zero-alpha skip. Blending is set
 // on the pipeline, not here.
 import bevy_pbr::render::forward_io::VertexOutput;
+import bevy_pbr::render::mesh_functions::get_tag;
 @if(TARGET_SRGB) import bevy_render::color_operations::srgb_to_linear;
 
 struct SurfaceParams {
@@ -14,8 +15,6 @@ struct SurfaceParams {
     // NiAlphaProperty function 0..7, 8 = CPU reference threshold (>=), 9 = no test.
     test_function: u32,
     skip_zero_alpha: u32,
-    // Draw::instance, written as four bytes by the instance-tag pass.
-    tag: u32,
     // 1: the texture's alpha is replaced by 1 (stored BC1 blocks declared
     // without alpha, terrain textures), as the CPU's decoded texels hold it.
     opaque_texture: u32,
@@ -73,7 +72,8 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     @if(INSTANCE_TAG) {
         // Byte k of the tag in channel k: an RGBA8 unorm target stores the
         // tag's little-endian bytes, the layout of `Frame::instance_bytes`.
-        return unpack4x8unorm(params.tag);
+        // The tag is the instance's `MeshTag` (`Draw::instance`).
+        return unpack4x8unorm(get_tag(in.instance_index));
     } @else {
         // The CPU writes its working values as stored bytes. On an sRGB
         // target the hardware encodes on store, so decode first to store the

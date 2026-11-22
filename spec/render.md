@@ -119,3 +119,46 @@ tamanho decodificado exato. [nif-render-layouts.md](nif-render-layouts.md) regis
 A regra literal VisibilityEditorMarker:0 é separada e pendente; veja
 [helper-visibility.md](helper-visibility.md). A API de comparação pode reter
 subárvores explicitamente sem modificar o estado ou os vereditos da Scene.
+
+## Viewer frames that repeat (GPU)
+
+Two causes made the headless GPU frames depend on the run and on the build,
+both in the order in which Bevy issues opaque draws, which decides exact
+depth ties (the pipelines use a strict depth test, so the first draw at a
+tie wins, as in the CPU frame):
+
+- **Run to run.** With indirect drawing (Bevy's default on this GPU) the
+  draws of a batch are laid out by GPU preprocessing; without
+  `--under-hypotheses` the lobby view differed in 36 to 1,019 pixels of one
+  model's two coplanar shapes between runs of one binary (2 of 6 runs).
+  The headless cameras now carry `NoIndirectDrawing`: 20 runs of the same
+  view then gave one frame.
+- **Build to build.** Bevy sorts opaque draws by pipeline, then by the
+  slot each material's bind group got; the slots follow the order in which
+  materials are prepared, a hash order of asset ids that includes the type
+  id, which changes when the source tree is built from another path. Two
+  builds of one source in two directories differed in 6 of the 8 test views
+  (up to 69,164 pixels). Headless spawning now gives every surface a
+  pipeline of its own (`MaterialKey::rank`, specialised in spawn order), so
+  each pipeline holds one material and the material slot no longer decides
+  anything; the tag pass shares the colour pass's per-surface materials and
+  reads each instance's tag from its `MeshTag` instead of one material per
+  tag. Exact ties between draws of one surface follow the mesh upload
+  order and then the spawn order, both the draw list's.
+
+The windowed viewer is unchanged (indirect drawing, shared pipelines).
+
+Measured with the eight headless test views of the earlier steps: two
+builds of one source from two directories now give byte-identical frames
+and tag files in every view, with and without `--under-hypotheses`; a
+second run of each view repeats the first; twenty runs of the lobby
+without hypotheses give one frame and one tag file. Against the commit
+before, the frames change only where exact ties now resolve to the first
+draw of the list: under hypotheses the test cell 3,859 pixels, the dog
+view 68, radius 1 3, the walk 24, the `--path` walk 31 (its walked
+positions unchanged), the dog view without actors 70, lobby and vault 0;
+without hypotheses the lobby 3,416, the test cell 6,042, radius 1 439, and
+the tags (not the colours) of both dog views. A GPU test
+(`exact_depth_ties_resolve_by_list_order_in_every_run`, ignored without a
+GPU) draws two coplanar quads twice and with their textures swapped; a
+test without GPU checks the ranks, materials and tags that spawning gives.

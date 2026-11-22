@@ -20,7 +20,7 @@ use bevy::{
     image::{ImageAddressMode, ImageFilterMode, ImageSampler, ImageSamplerDescriptor},
     input::mouse::AccumulatedMouseMotion,
     math::{Mat4, Vec3A},
-    mesh::{Indices, MeshVertexBufferLayoutRef, PrimitiveTopology},
+    mesh::{Indices, MeshTag, MeshVertexBufferLayoutRef, PrimitiveTopology},
     pbr::{MaterialPipeline, MaterialPipelineKey},
     prelude::*,
     render::{
@@ -63,7 +63,6 @@ pub struct SurfaceUniform {
     pub opacity: f32,
     pub test_function: u32,
     pub skip_zero_alpha: u32,
-    pub tag: u32,
     pub opaque_texture: u32,
 }
 
@@ -72,6 +71,13 @@ pub struct MaterialKey {
     pub surface: crate::scene::SurfaceKey,
     /// Instance-tag pass: no blending, depth written, tag bytes as colour.
     pub tag_pass: bool,
+    /// A pipeline of its own for this surface (its index plus one; 0:
+    /// shared by key). Bevy orders opaque draws by pipeline, then by the
+    /// slot each material was given, which follows a hash of asset ids that
+    /// changes from build to build; with one pipeline per surface,
+    /// specialised in spawn order, exact depth ties resolve the same way in
+    /// every build and run (headless frames).
+    pub rank: u32,
 }
 
 #[derive(Asset, TypePath, AsBindGroup, Clone, Debug)]
@@ -327,7 +333,14 @@ fn upload_textures(world: &mut World, scene: &mut GpuScene, up: &mut Uploaded) -
     true
 }
 
-fn spawn(world: &mut World, scene: &GpuScene, up: &Uploaded, tag_pass: bool, layer: usize) {
+fn spawn(
+    world: &mut World,
+    scene: &GpuScene,
+    up: &Uploaded,
+    tag_pass: bool,
+    layer: usize,
+    ranked: bool,
+) {
     spawn_instances(
         world,
         &scene.surfaces,
@@ -336,16 +349,17 @@ fn spawn(world: &mut World, scene: &GpuScene, up: &Uploaded, tag_pass: bool, lay
         &up.images,
         tag_pass,
         layer,
+        ranked,
     );
 }
 
-/// The material of `surface` drawing `image`; `tag` is written by the
-/// tag pass.
+/// The material of `surface` drawing `image`, with its own pipeline when
+/// `rank` is not 0 ([`MaterialKey::rank`]).
 fn surface_material(
     surface: &Surface,
     image: Handle<Image>,
-    tag: u32,
     tag_pass: bool,
+    rank: u32,
 ) -> SurfaceMaterial {
     let p = surface.params;
     SurfaceMaterial {
@@ -356,13 +370,13 @@ fn surface_material(
             opacity: p.opacity,
             test_function: p.test_function,
             skip_zero_alpha: u32::from(p.skip_zero_alpha),
-            tag,
             opaque_texture: u32::from(p.opaque_texture),
         },
         texture: image,
         key: MaterialKey {
             surface: surface.key,
             tag_pass,
+            rank,
         },
     }
 }
@@ -371,6 +385,7 @@ fn surface_material(
 type InstanceBundle = (
     Mesh3d,
     MeshMaterial3d<SurfaceMaterial>,
+    MeshTag,
     Transform,
     NoFrustumCulling,
     RenderLayers,
@@ -386,6 +401,8 @@ fn instance_bundle(
     (
         Mesh3d(mesh),
         MeshMaterial3d(material),
+        // `Draw::instance`, read by the tag pass's shader.
+        MeshTag::new(instance.tag),
         Transform {
             translation: instance.translation,
             rotation: instance.rotation,
@@ -398,7 +415,9 @@ fn instance_bundle(
 }
 
 /// Spawns `instances`, whose surfaces index `surfaces`, with the uploaded
-/// `meshes` and `images` their indices name; returns the entities.
+/// `meshes` and `images` their indices name; returns the entities. With
+/// `ranked` each surface has a pipeline of its own ([`MaterialKey::rank`]).
+#[allow(clippy::too_many_arguments)]
 fn spawn_instances(
     world: &mut World,
     surfaces: &[Surface],
@@ -407,23 +426,31 @@ fn spawn_instances(
     images: &[Handle<Image>],
     tag_pass: bool,
     layer: usize,
+    ranked: bool,
 ) -> Vec<Entity> {
     let mut materials = world.resource_mut::<Assets<SurfaceMaterial>>();
     let mut handles = std::collections::BTreeMap::new();
     let mut entities = Vec::with_capacity(instances.len());
     for instance in instances {
         let surface = &surfaces[instance.surface];
-        // The tag pass needs the tag in the material, so it shares per
-        // (surface, tag); the colour pass shares per surface.
-        let tag = if tag_pass { instance.tag } else { 0 };
+        // One material per surface in both passes: the tag pass reads each
+        // instance's tag from its `MeshTag`.
+        let rank = if ranked {
+            u32::try_from(instance.surface)
+                .ok()
+                .and_then(|r| r.checked_add(1))
+                .unwrap_or(u32::MAX)
+        } else {
+            0
+        };
         let material = handles
-            .entry((instance.surface, tag))
+            .entry(instance.surface)
             .or_insert_with(|| {
                 materials.add(surface_material(
                     surface,
                     images[surface.texture].clone(),
-                    tag,
                     tag_pass,
+                    rank,
                 ))
             })
             .clone();
@@ -434,7 +461,15 @@ fn spawn_instances(
             layer,
         ));
     }
-    world.spawn_batch(entities).collect()
+    if !ranked {
+        return world.spawn_batch(entities).collect();
+    }
+    // Bevy specialises and queues the newest entity first: spawned last to
+    // first, the first instance of the list gets the first pipeline and is
+    // drawn first, so it wins an exact depth tie as in the CPU frame.
+    let mut spawned: Vec<Entity> = world.spawn_batch(entities.into_iter().rev()).collect();
+    spawned.reverse();
+    spawned
 }
 
 fn camera_bundle(
@@ -523,7 +558,7 @@ pub fn headless(
     let mut targets = Vec::new();
     let passes: &[bool] = if want_tags { &[false, true] } else { &[false] };
     for (k, &tag_pass) in passes.iter().enumerate() {
-        spawn(world, scene, &up, tag_pass, k);
+        spawn(world, scene, &up, tag_pass, k, true);
         let mut target = Image::new_target_texture(width, height, TextureFormat::Rgba8Unorm, None);
         target.asset_usage = RenderAssetUsages::RENDER_WORLD;
         let target = world.resource_mut::<Assets<Image>>().add(target);
@@ -535,6 +570,9 @@ pub fn headless(
         world.spawn((
             camera_bundle(pose, camera.frustum, false, clear, k as isize, k),
             RenderTarget::Image(target.clone().into()),
+            // Indirect drawing orders a batch's draws on the GPU, which
+            // changes exact depth ties from run to run.
+            bevy::render::view::NoIndirectDrawing,
         ));
         targets.push(target);
     }
@@ -712,7 +750,7 @@ fn spawn_window_scene(world: &mut World) {
         world.insert_resource(PendingScene(scene, clear, Some(up)));
         return;
     }
-    spawn(world, &scene, &up, false, 0);
+    spawn(world, &scene, &up, false, 0, false);
     if let Some(PendingClip(animation)) = world.remove_resource::<PendingClip>() {
         let playing = crate::clip::Playing::new(animation, &scene, &up.meshes);
         world.insert_resource(playing);
@@ -1178,7 +1216,7 @@ fn upload_waiting(world: &mut World, live: &mut Live) -> Result<(), String> {
                     .ok_or("StreamSurfaceTexture")?;
                 let h = world
                     .resource_mut::<Assets<SurfaceMaterial>>()
-                    .add(surface_material(surface, image, 0, false));
+                    .add(surface_material(surface, image, false, 0));
                 materials.insert(*id, h.clone());
                 h
             };

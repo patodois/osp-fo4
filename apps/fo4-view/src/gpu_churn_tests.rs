@@ -433,3 +433,89 @@ fn equal_surfaces_share_one_material_while_any_cell_draws_them() {
 fn the_moving_grid_builds_instance_data_on_the_cpu() {
     assert!(!stream_pbr().use_gpu_instance_buffer_builder);
 }
+
+/// Without a GPU: headless spawning gives every surface a material and a
+/// pipeline rank of its own, in surface order, in both passes, and every
+/// instance its tag as a `MeshTag`; the window's spawning ranks nothing.
+/// Before this, the tag pass made one material per tag and the colour pass
+/// shared pipelines, so the order of draws at exact depth ties followed the
+/// material slots, which Bevy assigns in a hash order of asset ids that
+/// changes with the build.
+#[test]
+fn headless_surfaces_have_pipelines_of_their_own_in_surface_order() {
+    let (meshes, textures, surfaces, instances) = cell([0, 0]);
+    let mut world = World::new();
+    world.insert_resource(Assets::<SurfaceMaterial>::default());
+    let images: Vec<Handle<Image>> = textures.iter().map(|_| Handle::default()).collect();
+    let meshes: Vec<Handle<Mesh>> = meshes.iter().map(|_| Handle::default()).collect();
+    for (tag_pass, ranked) in [(false, true), (true, true), (false, false)] {
+        let before = world.resource::<Assets<SurfaceMaterial>>().len();
+        let entities = spawn_instances(
+            &mut world, &surfaces, &instances, &meshes, &images, tag_pass, 0, ranked,
+        );
+        assert_eq!(
+            world.resource::<Assets<SurfaceMaterial>>().len() - before,
+            surfaces.len()
+        );
+        for (e, i) in entities.iter().zip(&instances) {
+            let handle = world
+                .get::<MeshMaterial3d<SurfaceMaterial>>(*e)
+                .unwrap()
+                .0
+                .clone();
+            let m = world
+                .resource::<Assets<SurfaceMaterial>>()
+                .get(&handle)
+                .unwrap();
+            let rank = if ranked { i.surface as u32 + 1 } else { 0 };
+            assert_eq!((m.key.rank, m.key.tag_pass), (rank, tag_pass));
+            assert_eq!(world.get::<MeshTag>(*e).unwrap().value, i.tag);
+        }
+    }
+}
+
+/// Two coplanar quads of two surfaces: the frame is the same in every run,
+/// and the surface whose instance comes first in the list wins the exact
+/// depth tie, as in the CPU frame. Needs a GPU.
+#[test]
+#[ignore = "needs a GPU: draws offscreen through Bevy"]
+fn exact_depth_ties_resolve_by_list_order_in_every_run() {
+    let red = [1., 0., 0., 1.];
+    let blue = [0., 0., 1., 1.];
+    let scene = |first: [f32; 4], second: [f32; 4]| {
+        let at = coords::instance_transform(&fo4_scene::transform::Transform::IDENTITY).unwrap();
+        let instance = |surface: usize| Instance {
+            mesh: 0,
+            surface,
+            tag: surface as u32,
+            translation: at.0,
+            rotation: at.1,
+            scale: at.2,
+        };
+        GpuScene {
+            meshes: vec![quad(400., 1., false)],
+            draw_meshes: BTreeMap::new(),
+            textures: vec![texture(first), texture(second)],
+            surfaces: vec![surface(0, None, false), surface(1, None, false)],
+            instances: vec![instance(0), instance(1)],
+        }
+    };
+    let camera = fo4_scene::camera::look_at(
+        [0., -300., 400.],
+        [0., 0., 0.],
+        fo4_scene::camera::reference_frustum(SIZE),
+        SIZE,
+    )
+    .unwrap();
+    let centre = |f: &Frames| {
+        let at = ((SIZE[1] / 2 * SIZE[0] + SIZE[0] / 2) * 4) as usize;
+        f.color[at..at + 3].to_vec()
+    };
+    let a = headless(&mut scene(red, blue), &camera, [0., 0., 0., 1.], true).unwrap();
+    let b = headless(&mut scene(red, blue), &camera, [0., 0., 0., 1.], true).unwrap();
+    assert_eq!(a.color, b.color);
+    assert_eq!(a.tags, b.tags);
+    assert_eq!(centre(&a), [255, 0, 0]);
+    let c = headless(&mut scene(blue, red), &camera, [0., 0., 0., 1.], true).unwrap();
+    assert_eq!(centre(&c), [0, 0, 255]);
+}

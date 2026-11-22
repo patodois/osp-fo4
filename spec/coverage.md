@@ -246,7 +246,7 @@ cell 2, radius 1 9, radius 2 24; their outcomes are unchanged.
 
 **Frames** against the commit before: without `--under-hypotheses` every
 test view repeats byte for byte except the lobby, which differs in 36
-pixels of one instance, the run-to-run difference of the next section, not
+pixels of one instance, the run-to-run difference fixed next ([render.md](render.md), Viewer frames that repeat), not
 this change. Under hypotheses: lobby 11,097 pixels differ (wall panels
 and a door frame turned), test cell 663, dog view 15,256, radius 1 1,326,
 `--walk --terrain --around 2` 288, dog view without actors 24,174; vault
