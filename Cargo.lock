@@ -190,6 +190,7 @@ dependencies = [
  "fo4-havok",
  "fo4-material",
  "fo4-nif",
+ "fo4-pex",
  "fo4-plugin",
  "fo4-render",
  "fo4-scene",

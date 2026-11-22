@@ -1,0 +1,171 @@
+records with VMAD (winners, not deleted)	20147
+VMAD bytes	4403029
+VMAD bytes read (scripts and TERM blocks)	2102984
+.pex objects indexed	10282
+wall seconds	7.5
+
+# outcomes by record type
+781	ACHR read
+931	ACTI read
+14	ARMO read
+187	BOOK read
+98	CONT read
+19	DOOR read
+19	FLOR read
+242	FURN read
+5611	INFO read
+4	KEYM read
+4	LIGH read
+244	MGEF read
+104	MISC read
+49	MSTT read
+5	NOTE read
+566	NPC_ read
+167	PACK read
+35	PERK read
+4	PGRE read
+1353	QUST read
+8767	REFR read
+634	SCEN read
+1	STAT read
+4	TACT read
+301	TERM read
+3	WEAP read
+
+# bytes after what is read, by record type
+781	ACHR no bytes after what is read
+931	ACTI no bytes after what is read
+14	ARMO no bytes after what is read
+187	BOOK no bytes after what is read
+98	CONT no bytes after what is read
+19	DOOR no bytes after what is read
+19	FLOR no bytes after what is read
+242	FURN no bytes after what is read
+353405	INFO bytes after what is read: bytes
+2396	INFO bytes after what is read: records
+3215	INFO no bytes after what is read
+4	KEYM no bytes after what is read
+4	LIGH no bytes after what is read
+244	MGEF no bytes after what is read
+104	MISC no bytes after what is read
+49	MSTT no bytes after what is read
+5	NOTE no bytes after what is read
+566	NPC_ no bytes after what is read
+29411	PACK bytes after what is read: bytes
+166	PACK bytes after what is read: records
+1	PACK no bytes after what is read
+7019	PERK bytes after what is read: bytes
+32	PERK bytes after what is read: records
+3	PERK no bytes after what is read
+4	PGRE no bytes after what is read
+1756252	QUST bytes after what is read: bytes
+1300	QUST bytes after what is read: records
+53	QUST no bytes after what is read
+8767	REFR no bytes after what is read
+153958	SCEN bytes after what is read: bytes
+632	SCEN bytes after what is read: records
+2	SCEN no bytes after what is read
+1	STAT no bytes after what is read
+4	TACT no bytes after what is read
+301	TERM no bytes after what is read
+3	WEAP no bytes after what is read
+
+# values
+133	TERM block fragments 1
+23	TERM block fragments 10
+68	TERM block fragments 2
+32	TERM block fragments 3
+10	TERM block fragments 4
+8	TERM block fragments 5
+5	TERM block fragments 6
+3	TERM block fragments 7
+6	TERM block fragments 8
+6	TERM block fragments 9
+294	TERM block script flags 0
+294	TERM block version 3
+893	TERM fragment byte 1
+882	TERM fragment function params 1 returns none
+7	TERM without a block
+20147	VMAD subrecords per record 1
+14052	list script flags 0
+4188	list script flags 1
+145	list script flags 3
+117	object value FormID 0 (alias -1)
+757	object value alias -1 on ACHR
+2302	object value alias -1 on ACTI
+52	object value alias -1 on ARMO
+275	object value alias -1 on BOOK
+886	object value alias -1 on CONT
+46	object value alias -1 on DOOR
+49	object value alias -1 on FLOR
+958	object value alias -1 on FURN
+6758	object value alias -1 on INFO
+4	object value alias -1 on KEYM
+3	object value alias -1 on LIGH
+981	object value alias -1 on MGEF
+207	object value alias -1 on MISC
+47	object value alias -1 on MSTT
+88	object value alias -1 on NOTE
+3512	object value alias -1 on NPC_
+1	object value alias -1 on PACK
+12	object value alias -1 on PERK
+8329	object value alias -1 on QUST
+6228	object value alias -1 on REFR
+5	object value alias -1 on TACT
+718	object value alias -1 on TERM
+2	object value alias -1 on WEAP
+9	object value alias >=0 on ACHR
+134	object value alias >=0 on ACTI
+18	object value alias >=0 on BOOK
+41	object value alias >=0 on CONT
+4	object value alias >=0 on DOOR
+13	object value alias >=0 on FURN
+2	object value alias >=0 on KEYM
+18	object value alias >=0 on MGEF
+3	object value alias >=0 on MISC
+3	object value alias >=0 on NPC_
+3375	object value alias >=0 on QUST
+276	object value alias >=0 on REFR
+7	object value alias >=0 on TERM
+36123	object value zero word 0
+1	property kind 0 flags 1
+22997	property kind 1 flags 1
+5	property kind 1 flags 3
+1333	property kind 11 flags 1
+108	property kind 12 flags 1
+21	property kind 13 flags 1
+78	property kind 14 flags 1
+700	property kind 17 flags 1
+695	property kind 2 flags 1
+3870	property kind 3 flags 1
+2	property kind 3 flags 3
+799	property kind 4 flags 1
+12278	property kind 5 flags 1
+37	property kind 5 flags 3
+36	property kind 7 flags 1
+3813	scripts per VMAD 0
+14590	scripts per VMAD 1
+1550	scripts per VMAD 2
+125	scripts per VMAD 3
+44	scripts per VMAD 4
+25	scripts per VMAD 5
+4601	struct member kind 1 flags 1
+885	struct member kind 2 flags 1
+2712	struct member kind 3 flags 1
+296	struct member kind 4 flags 1
+385	struct member kind 5 flags 1
+1	version 5
+20146	version 6
+
+# checks: holds, fails
+627	0	TERM block property kind fits the declared type (kind 0 excepted)
+627	16	TERM block property names a property of the script or a parent
+290	4	TERM block script name is a .pex object of the archives
+882	11	TERM fragment function declared by the block script
+893	0	TERM fragment index >= 1
+294	0	TERM fragment indices distinct within a block
+893	0	TERM fragment script == block script
+42119	0	list property kind fits the declared type (kind 0 excepted)
+42119	194	list property names a property of the script or a parent
+18384	1	list script name is a .pex object of the archives
+31570	533	object value FormID (alias -1, not 0) names a winning record

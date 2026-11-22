@@ -8,6 +8,7 @@ mod semantics;
 pub mod static_frame;
 mod strings;
 pub mod typed;
+pub mod vmad;
 pub mod writer;
 use fo4_core::{
     add, limit, range, read_bytes_inside_operation, zlib, Budget, Cursor, Error, Limits, ReadAt,

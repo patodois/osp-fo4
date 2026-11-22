@@ -187,3 +187,18 @@ targets was checked by name resolution and target ranges over every
 instruction; the candidate meanings of the opcodes, also recognised from
 prior knowledge, are registered pending rules, not facts. Field and role
 names are labels chosen here; the user flag names are the stored strings.
+
+The VMAD reader (`fo4_plugin::vmad`, [spec/vmad.md](../spec/vmad.md)) was
+established the same way, by measuring every VMAD subrecord of the winning
+records with the `vmad_census` example and cross-checking its script and
+property names and kinds against the `.pex` declarations read above. Its
+layout (the version and object-format words, the script list with flags and
+properties, the property kinds with the three-word object value, structs and
+arrays, and the TERM fragment block) was recognised from prior general
+knowledge before it was measured, and is kept because that census could
+have refuted it and did not. The fragment blocks of the other record types
+are kept as stored bytes. No editor, editor source or definition file,
+format documentation, wiki page or third-party reader of this subrecord was
+opened or searched for. The `spec/static-records.tsv` rows that mark VMAD as
+raw state predate this reader and keep their scope (static frames do not run
+scripts).
