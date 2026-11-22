@@ -251,3 +251,34 @@ this change. Under hypotheses: lobby 11,097 pixels differ (wall panels
 and a door frame turned), test cell 663, dog view 15,256, radius 1 1,326,
 `--walk --terrain --around 2` 288, dog view without actors 24,174; vault
 and the `--path` walk byte-identical (the walked positions unchanged).
+
+## Enable parents
+
+Under the enable parent rules ([enable-parent.md](enable-parent.md)) a
+placement with an XESP is no longer refused for it alone: its chain decides
+whether it starts enabled, and one that starts disabled is counted
+**hidden by `xesp_child_follows_parent_v1`**. The census now also counts
+the placements with an XESP by the start state their chain gives and their
+outcome. Every cell of the load order (62,393 cells, 3 shards of about
+1,500 s, 1.1 GB peak each):
+
+| Outcome | Before | After |
+| --- | ---: | ---: |
+| drawn without hypotheses | 781,075 | 781,075 |
+| drawn only under hypotheses | 527,821 | 538,375 |
+| hidden by `xesp_child_follows_parent_v1` | — | 6,857 |
+| omitted | 446,615 | 429,204 |
+
+10,665 references go from not drawn to drawn under hypotheses; 7,636
+references whose chain starts disabled stay out, now as hidden rather than
+omitted; 135 actors whose chain starts disabled go out (111 were drawn, 24
+were refused by the draw build); 16,796 references and 299 actors with an
+XESP stay omitted for other reasons; the chains of 470 references and 2
+actors are not decided (a cycle, or a record of the chain with its own flag
+0x800 beside its XESP). The sole family
+`record: RuntimeEnableParent XESP` (17,968 placements) is gone; what is
+left of it is `XESP.own_flag` and the other undecided texts.
+
+Test views: lobby and vault unchanged (no XESP); test cell +1 drawn under
+hypotheses, radius 1 +9, radius 2 +12. Frames without hypotheses are
+byte-identical (below, Frames of this step).

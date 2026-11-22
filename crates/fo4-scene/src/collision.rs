@@ -995,6 +995,14 @@ impl Builder<'_, '_> {
                 format!("{:?} at {:?}", i.collision, self.level),
             );
         }
+        if i.disabled_by_enable_parent() {
+            return self.skip(
+                i,
+                base,
+                "DisabledThroughEnableParent",
+                hypotheses::ENABLE_FOLLOWS.into(),
+            );
+        }
         let Some(base) = base else {
             return self.skip(i, None, "MissingBase", String::new());
         };

@@ -37,6 +37,14 @@ pub const REFERENCE_GROUP: &str = "refr_xrfg_not_in_frame_v1";
 /// The root node's own transform of a placed model (`spec/nif.md`, Root
 /// node transform).
 pub const ROOT_TRANSFORM: &str = "nif_root_transform_replaced_v1";
+/// Enable parents (`crate::enable`, `spec/enable-parent.md`).
+pub const ENABLE_FOLLOWS: &str = "xesp_child_follows_parent_v1";
+pub const ENABLE_INITIAL: &str = "xesp_initial_state_chain_v1";
+pub const ENABLE_OPPOSITE: &str = "xesp_flag_bit0_opposite_v1";
+pub const ENABLE_BIT1: &str = "xesp_flag_bit1_not_presence_v1";
+/// A script's Enable or Disable reaching enable children (the viewer's
+/// `--script-event`).
+pub const ENABLE_SCRIPT: &str = "xesp_script_change_propagates_v1";
 /// Base types whose PRPS `BASE_PROPERTIES` covers: those measured.
 const PROPERTY_BASES: [&str; 8] = [
     "STAT", "ACTI", "FURN", "CONT", "FLOR", "LIGH", "MSTT", "TERM",
@@ -135,6 +143,8 @@ pub fn covering(error: &Error) -> Option<&'static str> {
         Some(ROTATION)
     } else if error.code == "RuntimeMaterialSwapFilter" {
         Some(SWAP_FOLDER)
+    } else if error.code == "RuntimeEnableParent" {
+        crate::enable::rule(&error.found)
     } else {
         record_field_rule(error).or_else(|| actor_rule(&error.code))
     }
@@ -356,6 +366,11 @@ mod tests {
             MISC_COMPONENTS,
             REFERENCE_GROUP,
             ROOT_TRANSFORM,
+            ENABLE_FOLLOWS,
+            ENABLE_INITIAL,
+            ENABLE_OPPOSITE,
+            ENABLE_BIT1,
+            ENABLE_SCRIPT,
         ] {
             assert!(status(name).is_some(), "{name}");
         }

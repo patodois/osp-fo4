@@ -238,8 +238,10 @@ pub fn cell(
     // --script-event: the references the run disables leave the scene
     // before anything is built. Without it nothing changes.
     #[cfg(feature = "script-event")]
+    let mut script_changes = None;
+    #[cfg(feature = "script-event")]
     if let Some(ev) = script_event {
-        crate::vm_event::apply(
+        script_changes = Some(crate::vm_event::apply(
             ev,
             &store,
             &vfs,
@@ -248,7 +250,7 @@ pub fn cell(
             &mut loader,
             &budget,
             level,
-        )?;
+        )?);
     }
     let mut animation = None;
     if clip.is_some() && !actors {
@@ -258,9 +260,14 @@ pub fn cell(
         // Placed actors, drawn after the placed references (`--no-actors`
         // leaves them out and the draw list is the one before).
         let started = std::time::Instant::now();
-        let actors = scoped(&budget, |b| {
+        #[allow(unused_mut)]
+        let mut actors = scoped(&budget, |b| {
             fo4_scene::actor::resolve(&scene, &mut loader, b)
         })?;
+        #[cfg(feature = "script-event")]
+        if let Some(c) = &script_changes {
+            crate::vm_event::propagate_actors(&mut actors, c, level);
+        }
         let resolved = started.elapsed().as_secs_f64();
         let build = match clip {
             // Without --actor-clip the draw list is the rest-pose one.

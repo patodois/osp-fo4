@@ -1547,6 +1547,14 @@ impl Builder<'_, '_> {
             };
             return Err(error("ActorNotDrawable", &src.file, src.offset, why));
         }
+        if a.disabled_by_enable_parent() {
+            return Err(error(
+                "DisabledThroughEnableParent",
+                &src.file,
+                src.offset,
+                fo4_scene::hypotheses::ENABLE_FOLLOWS,
+            ));
+        }
         let plan = a.plan.as_ref().ok_or_else(|| {
             error(
                 "ActorNotDrawable",
@@ -1866,6 +1874,16 @@ fn build_inner(
                     &src.file,
                     src.offset,
                     format!("{:?} at rule level {:?}", i.state, options.level),
+                ));
+            }
+            // Ready only at the hypotheses level when it has an XESP: the
+            // enable parent rules say whether it starts enabled.
+            if i.disabled_by_enable_parent() {
+                return Err(error(
+                    "DisabledThroughEnableParent",
+                    &src.file,
+                    src.offset,
+                    fo4_scene::hypotheses::ENABLE_FOLLOWS,
                 ));
             }
             let base = i

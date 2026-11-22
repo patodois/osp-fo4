@@ -417,3 +417,12 @@ general graph-search and geometry knowledge; it claims nothing about the
 game's planner. Every meaning is a pending rule in
 [spec/hypotheses.tsv](../spec/hypotheses.tsv); records and anything read
 from them stay outside the repository.
+Enable parents ([spec/enable-parent.md](../spec/enable-parent.md)) use the
+XESP layout of the published record definitions already cited in
+spec/plugin.md. Recognised from prior knowledge and used only as pending
+rules that the `enable_parent_census` counts could have refuted: that a
+record with an XESP is present exactly when its parent is enabled, that
+flag bit 0 inverts the link ("opposite of parent") and bit 1 is a fade
+choice, and that a script's Enable or Disable of a parent reaches its
+children. No editor, editor source, script source or game executable was
+opened.

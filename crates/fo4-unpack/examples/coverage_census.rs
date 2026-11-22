@@ -73,6 +73,9 @@ struct Census {
     /// Drawn with the root node's own transform left out
     /// (`nif_root_transform_replaced_v1`, under hypotheses).
     root_left_out: Tally,
+    /// Placements with an XESP, by kind, the start state their chain gives
+    /// under the enable parent rules and outcome (`spec/enable-parent.md`).
+    enable: BTreeMap<String, Tally>,
     no_bounds: u64,
     /// Omitted placements whose reasons are this one only.
     sole: BTreeMap<String, Tally>,
@@ -276,6 +279,9 @@ fn instance_outcome(
     if first.is_some_and(|e| e.code == "EditorMarkerHiddenUnderHypothesis") {
         return Outcome::Hidden(fo4_scene::hypotheses::MARKER.into());
     }
+    if first.is_some_and(|e| e.code == "DisabledThroughEnableParent") {
+        return Outcome::Hidden(hypotheses::ENABLE_FOLLOWS.into());
+    }
     match &i.state {
         State::Outside => Outcome::Outside(
             i.base
@@ -375,6 +381,26 @@ impl Census {
     }
 }
 
+/// The enable tally key of a placement with an XESP.
+fn enable_key(kind: &str, p: &fo4_scene::enable::Presence, outcome: &Outcome) -> String {
+    let start = match p.enabled {
+        Some(true) => "chain says enabled",
+        Some(false) => "chain says disabled",
+        None => "chain not decided",
+    };
+    let o = match outcome {
+        Outcome::Drawn => "drawn",
+        Outcome::UnderHypotheses(_) => "drawn under hypotheses",
+        Outcome::Hidden(rule) if rule == hypotheses::ENABLE_FOLLOWS => {
+            "not drawn: disabled through the chain"
+        }
+        Outcome::Hidden(_) => "hidden by another rule",
+        Outcome::Outside(_) => "outside",
+        Outcome::Omitted(_) => "omitted",
+    };
+    format!("{kind}, {start}, {o}")
+}
+
 fn base_key_info(c: &Census, base: &str) -> (String, String, String) {
     c.base_info
         .iter()
@@ -444,6 +470,12 @@ fn cell(
             i.base.as_ref().and_then(|v| v.common.bounds),
             i.reference.data.scale,
         );
+        if let Some(p) = &i.enable {
+            c.enable
+                .entry(enable_key("reference", p, &outcome))
+                .or_default()
+                .add(a.unwrap_or(0.));
+        }
         c.count(
             &outcome,
             "reference",
@@ -467,6 +499,13 @@ fn cell(
         let outcome = match o {
             None if rules.is_empty() => Outcome::Drawn,
             None => Outcome::UnderHypotheses(rules),
+            Some(o)
+                if o.causes
+                    .first()
+                    .is_some_and(|e| e.code == "DisabledThroughEnableParent") =>
+            {
+                Outcome::Hidden(hypotheses::ENABLE_FOLLOWS.into())
+            }
             Some(_) if a.plan.is_none() => {
                 let note = a.notes.first().map_or("no plan", String::as_str);
                 let note: String = note
@@ -504,6 +543,12 @@ fn cell(
                     }
                 }
             }
+        }
+        if let Some(p) = &a.enable {
+            c.enable
+                .entry(enable_key("actor", p, &outcome))
+                .or_default()
+                .add(area(bounds, a.scale).unwrap_or(0.));
         }
         c.count(
             &outcome,
@@ -615,6 +660,13 @@ fn summary(c: &Census, scope: &str, elapsed: f64) -> String {
     let _ = writeln!(out, "\nby placement kind:");
     for ((kind, name), t) in &c.by_type {
         line(&mut out, &format!("{kind}, {name}"), *t);
+    }
+    let _ = writeln!(
+        out,
+        "\nwith an enable parent (XESP), by the start state the chain gives under its rules:"
+    );
+    for (k, t) in &c.enable {
+        line(&mut out, k, *t);
     }
     let _ = writeln!(out, "\noutside, by base type:");
     for (k, t) in &c.outside {
@@ -738,6 +790,7 @@ fn dump(c: &Census) -> String {
     }
     for (sec, map) in [
         ("hidden", &c.hidden),
+        ("enable", &c.enable),
         ("outside", &c.outside),
         ("sole", &c.sole),
         ("any", &c.any),
@@ -810,6 +863,7 @@ fn load(c: &mut Census, text: &str) -> AnyResult<()> {
             "cell_failures" => *c.cell_failures.entry(key.into()).or_default() += t.n,
             "exclusions" => *c.exclusions.entry(key.into()).or_default() += t.n,
             "hidden" => add(c.hidden.entry(key.into()).or_default()),
+            "enable" => add(c.enable.entry(key.into()).or_default()),
             "outside" => add(c.outside.entry(key.into()).or_default()),
             "sole" => add(c.sole.entry(key.into()).or_default()),
             "any" => add(c.any.entry(key.into()).or_default()),

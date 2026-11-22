@@ -58,6 +58,21 @@ pub(crate) fn fixture(runtime: bool, unknown: bool) -> Fixture {
     fixture_with_cell(runtime, unknown, &[])
 }
 fn fixture_with_cell(runtime: bool, unknown: bool, extra: &[u8]) -> Fixture {
+    fixture_with(unknown, extra, |rf| {
+        let mut rf = rf.to_vec();
+        if runtime {
+            rf.extend(sub(b"XESP", &[0; 8]));
+        }
+        let mut references = record(b"REFR", 0x802, 0, &rf);
+        references.extend(record(b"REFR", 0x803, fo4_plugin::DELETED, &rf));
+        references.extend(record(b"REFR", 0x804, fo4_plugin::DISABLED, &rf));
+        references.extend(record(b"ACHR", 0x805, 0, &[]));
+        group(9, 0x800, &references)
+    })
+}
+/// A fixture whose cell children groups are `children(rf)`, `rf` being a
+/// placed reference's NAME, DATA and XSCL.
+fn fixture_with(unknown: bool, extra: &[u8], children: impl FnOnce(&[u8]) -> Vec<u8>) -> Fixture {
     let temp = TestDir::new("scene-case11");
     let root = temp.join("Data");
     fs::create_dir_all(root.join("meshes")).unwrap();
@@ -75,19 +90,13 @@ fn fixture_with_cell(runtime: bool, unknown: bool, extra: &[u8]) -> Fixture {
     }
     rf.extend(sub(b"DATA", &tr));
     rf.extend(sub(b"XSCL", &0.7f32.to_le_bytes()));
-    if runtime {
-        rf.extend(sub(b"XESP", &[0; 8]));
-    }
-    let mut references = record(b"REFR", 0x802, 0, &rf);
-    references.extend(record(b"REFR", 0x803, fo4_plugin::DELETED, &rf));
-    references.extend(record(b"REFR", 0x804, fo4_plugin::DISABLED, &rf));
-    references.extend(record(b"ACHR", 0x805, 0, &[]));
+    let references = children(&rf);
     let mut body = group(
         2,
         0,
         &[
             record(b"CELL", 0x800, 0, &cell),
-            group(6, 0x800, &group(9, 0x800, &references)),
+            group(6, 0x800, &references),
         ]
         .concat(),
     );
@@ -1364,4 +1373,87 @@ fn placed_lights_expose_data_and_keep_unknown_type_and_modifiers() {
         assert!(!scene.lighting_data.cell_fields.is_empty());
         assert!(crate::lighting::describe(&scene, &store, &Budget::new(0)).is_err());
     }
+}
+
+#[test]
+fn enable_parent_chains_decide_presence_only_under_their_rules() {
+    use crate::hypotheses::{ENABLE_FOLLOWS, ENABLE_INITIAL, ENABLE_OPPOSITE};
+    let xesp = |rf: &[u8], parent: u32, flags: u8| {
+        let mut v = rf.to_vec();
+        let mut d = parent.to_le_bytes().to_vec();
+        d.extend([flags, 0, 0, 0]);
+        v.extend(sub(b"XESP", &d));
+        v
+    };
+    // Persistent parents: 0x810 enabled, 0x811 initially disabled.
+    // Children: 0x812 of 0x810, 0x813 of 0x811, 0x814 of 0x811 opposite,
+    // 0x815 of 0x813 (depth 2), 0x816 in a cycle with itself.
+    let f = fixture_with(false, &[], |rf| {
+        let persistent = [
+            record(b"REFR", 0x810, 0, rf),
+            record(b"REFR", 0x811, fo4_plugin::DISABLED, rf),
+        ]
+        .concat();
+        let temporary = [
+            record(b"REFR", 0x812, 0, &xesp(rf, 0x810, 0)),
+            record(b"REFR", 0x813, 0, &xesp(rf, 0x811, 0)),
+            record(b"REFR", 0x814, 0, &xesp(rf, 0x811, 1)),
+            record(b"REFR", 0x815, 0, &xesp(rf, 0x813, 0)),
+            record(b"REFR", 0x816, 0, &xesp(rf, 0x816, 0)),
+        ]
+        .concat();
+        [group(8, 0x800, &persistent), group(9, 0x800, &temporary)].concat()
+    });
+    let store = Store::open(&f.manifest, &Budget::new(8 << 20)).unwrap();
+    let v = Vfs::mount(&f.manifest, &Budget::new(8 << 20)).unwrap();
+    let mut loader = Loader::new(
+        &store,
+        &v,
+        "english",
+        RuleLevel::Hypotheses,
+        &Budget::new(8 << 20),
+    );
+    let s = loader
+        .by_editor_id("SyntheticRoom", &Budget::new(8 << 20))
+        .unwrap();
+    let get = |id: u32| {
+        s.instances
+            .iter()
+            .find(|i| i.reference.key.object_id == id)
+            .unwrap()
+    };
+    assert_eq!(s.disabled.len(), 1);
+    assert!(get(0x810).enable.is_none());
+    let start = |id: u32| get(id).enable.as_ref().unwrap().enabled;
+    assert_eq!(start(0x812), Some(true));
+    assert_eq!(start(0x813), Some(false));
+    assert_eq!(start(0x814), Some(true));
+    assert_eq!(start(0x815), Some(false));
+    assert_eq!(start(0x816), None);
+    assert!(get(0x813).disabled_by_enable_parent());
+    assert!(!get(0x812).disabled_by_enable_parent());
+    // Ready only under hypotheses, with each part's rule.
+    let child = get(0x814);
+    assert!(child.state.ready_at(RuleLevel::Hypotheses));
+    assert!(!child.state.ready_at(RuleLevel::Measured));
+    for rule in [ENABLE_FOLLOWS, ENABLE_INITIAL, ENABLE_OPPOSITE] {
+        assert!(child.state.hypotheses().contains(&rule), "{rule}");
+        assert!(child.collision.hypotheses().contains(&rule), "{rule}");
+    }
+    assert!(!get(0x812).state.hypotheses().contains(&ENABLE_OPPOSITE));
+    // The cycle stays blocked by a text no rule covers.
+    let cycle = get(0x816);
+    assert!(matches!(cycle.state, State::Blocked));
+    assert!(cycle
+        .blockers
+        .iter()
+        .any(|e| e.code == "RuntimeEnableParent" && e.found == crate::enable::FOUND_CYCLE));
+    // A script enabling the disabled root reaches the depth-2 child.
+    let root = fo4_plugin::FormKey {
+        plugin: "base.esm".into(),
+        object_id: 0x811,
+    };
+    let p = get(0x815).enable.as_ref().unwrap();
+    assert!(p.depends_on(&root));
+    assert_eq!(p.with(&|k| (*k == root).then_some(true)), Some(true));
 }

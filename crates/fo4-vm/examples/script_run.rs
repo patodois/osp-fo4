@@ -31,7 +31,11 @@
 //! ranked by handlers, and the objects without a script instance by kind
 //! and by the engine class of the type called), and `vm-visibility.txt`
 //! (every visibility change of a placed REFR by handlers that completed,
-//! names).
+//! names), and `vm-enable-children.txt` (names): every placed record whose
+//! enable parent chain names a reference a run enables or disables, with
+//! the state its chain gives before and after the run under the enable
+//! parent rules (`spec/enable-parent.md`) and whether the scene would draw
+//! it; their counts go to `vm-census.txt` (`enable children:` lines).
 use fo4_core::{Budget, Manifest};
 use fo4_plugin::{typed::Store, FormKey};
 use fo4_vfs::Vfs;
@@ -216,6 +220,8 @@ fn census(
     }
     let mut names = String::new();
     let mut visibility = String::new();
+    let mut enable_lines = String::new();
+    let enable_index = EnableIndex::build(store, &b)?;
     let cells_of: std::collections::HashMap<FormKey, FormKey> = store
         .placement_cells()
         .map(|(o, c)| (store.overrides().form_key(o.key, store.order()), c))
@@ -498,6 +504,46 @@ fn census(
                     )?;
                 }
             }
+            let completed = r
+                .outcomes
+                .iter()
+                .all(|o| matches!(o.2, Outcome::Completed(_)));
+            let mut last: BTreeMap<String, bool> = BTreeMap::new();
+            for (k, shown) in bind::visibility_changes(&r) {
+                last.insert(k, shown);
+            }
+            if !last.is_empty() {
+                checked += 1;
+                if checked.is_multiple_of(200) {
+                    loader.reset_asset_cache(&cache);
+                }
+                // Where to reproduce it: the bound reference's cell and its
+                // index there (`script_run CELL INDEX EVENT`, `--script-event`).
+                let place = match reference
+                    .as_ref()
+                    .and_then(|r| cells_of.get(r).map(|c| (r, c)))
+                {
+                    Some((r, c)) => {
+                        let edid = store
+                            .raw(c, &b)?
+                            .and_then(|x| bind::editor_id(&x))
+                            .unwrap_or_default();
+                        let index = bind::placed(store, c, &b)?.iter().position(|k| k == r);
+                        format!("{edid} {index:?}")
+                    }
+                    None => String::new(),
+                };
+                enable_index.effects(
+                    store,
+                    &mut loader,
+                    &last,
+                    completed,
+                    &format!("{label}\t{}\t{place}", ev.name()),
+                    &mut counts,
+                    &mut enable_lines,
+                    &b,
+                )?;
+            }
             bump(
                 &mut counts,
                 format!("runs with {} effects", bucket(r.effects.len())),
@@ -510,6 +556,7 @@ fn census(
     std::fs::create_dir_all(out_dir)?;
     std::fs::write(out_dir.join("vm-census-names.txt"), names)?;
     std::fs::write(out_dir.join("vm-visibility.txt"), visibility)?;
+    std::fs::write(out_dir.join("vm-enable-children.txt"), enable_lines)?;
     // Names leave the counts file: origin and failure lines name natives
     // and scripts, so only their number of distinct values is kept there.
     let mut agg = String::new();
@@ -571,6 +618,187 @@ fn census(
     }
     std::fs::write(out_dir.join("vm-blockers.txt"), text)?;
     Ok(())
+}
+
+/// Placed records by the enable parent their XESP names.
+struct EnableIndex {
+    children: std::collections::HashMap<FormKey, Vec<FormKey>>,
+}
+impl EnableIndex {
+    fn build(store: &Store, b: &Budget) -> Result<Self, E> {
+        let mut children: std::collections::HashMap<FormKey, Vec<FormKey>> = Default::default();
+        let placed: Vec<FormKey> = store
+            .placement_cells()
+            .filter(|(o, _)| !o.deleted && matches!(&o.signature, b"REFR" | b"ACHR"))
+            .map(|(o, _)| store.overrides().form_key(o.key, store.order()))
+            .collect();
+        for k in placed {
+            let b = b.child();
+            let Some((r, plugin)) = store.raw_with_plugin(&k, &b)? else {
+                continue;
+            };
+            if let Ok(Some(l)) = fo4_plugin::enable::read(&r, plugin, store) {
+                if let Some(p) = l.parent {
+                    children.entry(p).or_default().push(k);
+                }
+            }
+        }
+        Ok(Self { children })
+    }
+    /// Counts what the visibility changes `last` of one run do to the
+    /// enable children of the changed references, transitively.
+    #[allow(clippy::too_many_arguments)]
+    fn effects(
+        &self,
+        store: &Store,
+        loader: &mut fo4_scene::Loader<'_>,
+        last: &BTreeMap<String, bool>,
+        completed: bool,
+        label: &str,
+        counts: &mut Counts,
+        lines: &mut String,
+        b: &Budget,
+    ) -> Result<(), E> {
+        let level = fo4_scene::RuleLevel::Hypotheses;
+        let done = if completed {
+            "handlers completed"
+        } else {
+            "not all completed"
+        };
+        let mut seen = std::collections::BTreeSet::new();
+        let mut queue: Vec<FormKey> = last
+            .keys()
+            .filter_map(|k| fo4_vm::data::key_record(k))
+            .collect();
+        let set = |k: &FormKey| last.get(&bind::record_key(k)).copied();
+        let mut reached = 0u64;
+        let mut drawable_changes = 0u64;
+        while let Some(p) = queue.pop() {
+            let Some(kids) = self.children.get(&p) else {
+                continue;
+            };
+            for c in kids {
+                if !seen.insert(c.clone()) {
+                    continue;
+                }
+                queue.push(c.clone());
+                reached += 1;
+                let b = b.child();
+                let sig = store.signature(c).unwrap_or(*b"????");
+                let sig = String::from_utf8_lossy(&sig).into_owned();
+                let (presence, drawable, why) = if sig == "ACHR" {
+                    let Some(r) = store.raw(c, &b)? else { continue };
+                    let a = fo4_scene::actor::resolve_reference(loader, c, &r.source, &b)?;
+                    let ok = a.plan.is_some() && a.state.ready_at(level);
+                    let why = if a.plan.is_none() {
+                        "no plan".to_string()
+                    } else {
+                        uncovered(&a.blockers)
+                    };
+                    (a.enable, ok, why)
+                } else {
+                    match loader.instance(c, &b) {
+                        Ok(i) => {
+                            let ok = i.state.ready_at(level) && !i.editor_marker;
+                            let why = if i.editor_marker {
+                                "editor marker".to_string()
+                            } else {
+                                uncovered(&i.blockers)
+                            };
+                            (i.enable, ok, why)
+                        }
+                        Err(e) => (None, false, e.code),
+                    }
+                };
+                let Some(p) = presence else {
+                    bump(
+                        counts,
+                        format!("enable children: {done}, {sig} without a chain"),
+                    );
+                    continue;
+                };
+                let (before, after) = (p.enabled, p.with(&set));
+                let change = match (before, after) {
+                    (Some(x), Some(y)) if x == y => "state unchanged",
+                    (Some(false), Some(true)) => "disabled -> enabled",
+                    (Some(true), Some(false)) => "enabled -> disabled",
+                    _ => "not decided",
+                };
+                bump(counts, format!("enable children: {done}, {sig}, {change}"));
+                if before == after || before.is_none() || after.is_none() {
+                    continue;
+                }
+                bump(
+                    counts,
+                    format!(
+                        "enable children: {done}, {sig}, {change}, {}",
+                        if drawable {
+                            "drawable under every pending rule"
+                        } else {
+                            "not drawable"
+                        }
+                    ),
+                );
+                if drawable && completed {
+                    drawable_changes += 1;
+                }
+                let at = store
+                    .raw(c, &b)?
+                    .and_then(|x| {
+                        let d = x.subrecords.iter().find(|s| s.signature == *b"DATA")?;
+                        let d = x.data(d);
+                        (d.len() >= 12).then(|| {
+                            [0, 4, 8]
+                                .map(|o| f32::from_le_bytes([d[o], d[o + 1], d[o + 2], d[o + 3]]))
+                        })
+                    })
+                    .map(|p| format!("{:.0},{:.0},{:.0}", p[0], p[1], p[2]))
+                    .unwrap_or_default();
+                writeln!(
+                    lines,
+                    "{label}\t{}\t{sig}\t{change}\t{}\t{why}\tdepth {}\t{at}",
+                    bind::record_key(c),
+                    if drawable { "drawable" } else { "not drawable" },
+                    p.chain.depth()
+                )?;
+            }
+        }
+        bump(
+            counts,
+            format!(
+                "enable children: runs ({done}) whose changes reach {} children",
+                bucket(reached as usize)
+            ),
+        );
+        if drawable_changes > 0 {
+            bump(
+                counts,
+                format!(
+                    "enable children: runs (handlers completed) changing {} drawable placements",
+                    bucket(drawable_changes as usize)
+                ),
+            );
+        }
+        Ok(())
+    }
+}
+
+/// The codes of blockers no registered rule covers.
+fn uncovered(blockers: &[fo4_core::Error]) -> String {
+    let mut v: Vec<String> = blockers
+        .iter()
+        .filter(|e| fo4_scene::hypotheses::covering(e).is_none())
+        .map(|e| {
+            if e.code == "RuntimeEnableParent" || e.code == "UninterpretedVisualSubrecord" {
+                format!("{} {}", e.code, e.found)
+            } else {
+                e.code.clone()
+            }
+        })
+        .collect();
+    v.sort();
+    v.dedup();
+    v.join(" ")
 }
 
 /// Engine types a blocked call's type is classified by: the first of these

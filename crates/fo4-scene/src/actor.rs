@@ -87,6 +87,17 @@ pub struct Actor {
     pub notes: Vec<String>,
     pub blockers: Vec<Error>,
     pub state: State,
+    /// For an actor with an XESP: its chain and whether the rules say it
+    /// starts enabled (`crate::enable`).
+    pub enable: Option<crate::enable::Presence>,
+}
+impl Actor {
+    /// Whether the enable parent rules say this actor starts disabled.
+    pub fn disabled_by_enable_parent(&self) -> bool {
+        self.enable
+            .as_ref()
+            .is_some_and(|p| p.enabled == Some(false))
+    }
 }
 #[derive(Debug, Serialize, Default)]
 pub struct Actors {
@@ -98,9 +109,9 @@ pub struct Actors {
 impl Actors {
     /// Actors with a plan whose state is drawable at `level`.
     pub fn drawable(&self, level: crate::RuleLevel) -> impl Iterator<Item = &Actor> {
-        self.actors
-            .iter()
-            .filter(move |a| a.plan.is_some() && a.state.ready_at(level))
+        self.actors.iter().filter(move |a| {
+            a.plan.is_some() && a.state.ready_at(level) && !a.disabled_by_enable_parent()
+        })
     }
 }
 
@@ -437,6 +448,7 @@ pub fn resolve_reference(
         notes: Vec::new(),
         blockers: Vec::new(),
         state: State::Blocked,
+        enable: None,
     };
     let work = b.child();
     let Some((r, plugin)) = read(loader, key, &work)? else {
@@ -500,6 +512,15 @@ pub fn resolve_reference(
         "UnverifiedActorPlacement",
         "ACHR DATA/XSCL placed as REFR",
     )?;
+    if r.subrecords
+        .iter()
+        .any(|s| s.signature == fo4_plugin::enable::XESP)
+    {
+        if let Some(chain) = fo4_plugin::enable::chain(loader.plugins, key, &work)? {
+            crate::enable::blockers(&chain, src, &mut blockers, b)?;
+            actor.enable = Some(crate::enable::Presence::of(chain));
+        }
+    }
     rules(
         &mut blockers,
         "UnverifiedActorSection",

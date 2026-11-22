@@ -5,6 +5,10 @@
 //! (`vm_disable_hides_reference_v1`): a disable takes a drawn reference out
 //! of the scene, an enable of an initially disabled one puts it in, made
 //! as the cell load makes an active one. Every other native stays log-only.
+//! The changes then reach the enable children of the changed references
+//! (`xesp_script_change_propagates_v1`): every instance whose enable parent
+//! chain names a changed reference takes the state its chain now gives,
+//! with the opposite flag, and is drawn or left out by it.
 //!
 //! The interpreter is linked only with `--features script-event`; without
 //! the feature the option is refused and the build links nothing new
@@ -67,7 +71,7 @@ pub fn apply(
     loader: &mut fo4_scene::Loader<'_>,
     budget: &Budget,
     level: RuleLevel,
-) -> AnyResult<()> {
+) -> AnyResult<BTreeMap<String, bool>> {
     if level != RuleLevel::Hypotheses {
         return Err(format!(
             "ScriptEventRuleLevel: --script-event relies on the pending rules {:?} (--under-hypotheses)",
@@ -96,6 +100,7 @@ pub fn apply(
     for (k, shown) in bind::visibility_changes(&run) {
         last.insert(k, shown);
     }
+    let changes = last.clone();
     for (k, shown) in last {
         let at = scene
             .instances
@@ -119,7 +124,9 @@ pub fn apply(
             (false, None) => {
                 println!("script-event: {k} disabled, but it is not a drawn instance of the loaded cells")
             }
-            (true, Some(_)) => println!("script-event: {k} enabled; it is already drawn"),
+            (true, Some(_)) => println!(
+                "script-event: {k} enabled; it is already a scene instance (drawn unless its enable parent chain says otherwise)"
+            ),
             (true, None) => {
                 let Some(d) = scene
                     .disabled
@@ -154,7 +161,83 @@ pub fn apply(
             }
         }
     }
-    Ok(())
+    propagate(scene, &changes, level);
+    Ok(changes)
+}
+
+/// Gives every instance whose enable parent chain names a changed
+/// reference (or the instance itself) the state the chain now gives
+/// (`xesp_script_change_propagates_v1`); returns how many changed. The
+/// actors of the frame are resolved after this: [`propagate_actors`].
+#[cfg(feature = "script-event")]
+pub fn propagate(
+    scene: &mut fo4_scene::Scene,
+    changes: &BTreeMap<String, bool>,
+    level: RuleLevel,
+) -> usize {
+    let set = |k: &fo4_plugin::FormKey| changes.get(&bind::record_key(k)).copied();
+    let mut changed = 0;
+    for (n, inst) in scene.instances.iter_mut().enumerate() {
+        let Some(p) = &inst.enable else { continue };
+        let reached = p
+            .chain
+            .nodes
+            .iter()
+            .any(|x| changes.contains_key(&bind::record_key(&x.key)));
+        if !reached {
+            continue;
+        }
+        let (before, after) = (p.enabled, p.with(&set));
+        if before == after {
+            continue;
+        }
+        inst.set_enabled(after);
+        changed += 1;
+        println!(
+            "script-event: {} enable child: start {before:?}, now {after:?} under {} (scene instance {n}; drawable at this level: {})",
+            bind::record_key(&inst.reference.key),
+            fo4_scene::hypotheses::ENABLE_SCRIPT,
+            inst.state.ready_at(level) && !inst.editor_marker && after == Some(true)
+        );
+    }
+    // Initially disabled references with an XESP stay out: the rules do not
+    // decide a record that carries its own flag beside an enable parent.
+    changed
+}
+
+/// [`propagate`] for the placed actors.
+#[cfg(feature = "script-event")]
+pub fn propagate_actors(
+    actors: &mut fo4_scene::actor::Actors,
+    changes: &BTreeMap<String, bool>,
+    level: RuleLevel,
+) -> usize {
+    let set = |k: &fo4_plugin::FormKey| changes.get(&bind::record_key(k)).copied();
+    let mut changed = 0;
+    for a in &mut actors.actors {
+        let Some(p) = &mut a.enable else { continue };
+        if !p
+            .chain
+            .nodes
+            .iter()
+            .any(|x| changes.contains_key(&bind::record_key(&x.key)))
+        {
+            continue;
+        }
+        let (before, after) = (p.enabled, p.with(&set));
+        if before == after {
+            continue;
+        }
+        p.enabled = after;
+        changed += 1;
+        println!(
+            "script-event: {} enable child (actor): start {before:?}, now {after:?} under {} (drawable at this level: {})",
+            bind::record_key(&a.reference),
+            fo4_scene::hypotheses::ENABLE_SCRIPT,
+            a.plan.is_some() && a.state.ready_at(level) && after == Some(true)
+        );
+    }
+    changed
 }
 
 #[cfg(all(test, feature = "script-event"))]

@@ -1086,6 +1086,26 @@ impl Store {
             Some((record, self.overrides.form_key(m.cell, &self.order)))
         })
     }
+    /// Winning placed occurrences with their parent CELL and the kind of
+    /// the group that holds them (8 persistent, 9 temporary, 10 distant
+    /// children; `spec/plugin.md`).
+    pub fn placement_groups(&self) -> impl Iterator<Item = (&crate::Override, FormKey, u32)> + '_ {
+        self.memberships.iter().filter_map(|m| {
+            let record = &self.overrides.history[m.history];
+            if !self
+                .overrides
+                .winner_id(record.key)
+                .is_some_and(|w| std::ptr::eq(w, record))
+            {
+                return None;
+            }
+            Some((
+                record,
+                self.overrides.form_key(m.cell, &self.order),
+                m.group_kind,
+            ))
+        })
+    }
     pub fn kind(&self, key: &FormKey) -> Option<CellKind> {
         let w = self.overrides.winner(key)?;
         let (history, kind) = self.cell_kinds.get(&w.key)?;

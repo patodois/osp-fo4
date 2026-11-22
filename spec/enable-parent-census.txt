@@ -1,0 +1,88 @@
+# enable_parent_census: XESP of every winning placed record (spec/enable-parent.md)
+# Counts only. chain: fo4_plugin::enable::chain from each placed record with XESP.
+# state: the readings of the pending rules (root's own header flag 0x800; flag bit 0 inverts).
+placed records read 2001939; with XESP 39461
+38101	chain: depth 1
+1331	chain: depth 2
+29	chain: depth 3
+3	chain: ends at cycle
+39458	chain: ends at root (no XESP)
+36396	chain: flag bits used along the chain 0x00
+2927	chain: flag bits used along the chain 0x01
+50	chain: flag bits used along the chain 0x02
+85	chain: flag bits used along the chain 0x03
+56	chain: root record type ACHR
+3	chain: root record type PHZD
+39399	chain: root record type REFR
+10391	placed ACHR
+3	placed ACHR: deleted (not read)
+1050	placed ACHR: header flag 0x800
+46373	placed DIAL
+185	placed DLBR
+102433	placed INFO
+43482	placed LAND
+12403	placed NAVM
+8	placed NAVM: deleted (not read)
+522	placed PGRE
+1	placed PGRE: header flag 0x800
+2401	placed PHZD
+1	placed PHZD: deleted (not read)
+67	placed PHZD: header flag 0x800
+2	placed PMIS
+1778974	placed REFR
+548	placed REFR: deleted (not read)
+2914	placed REFR: header flag 0x800
+4773	placed SCEN
+20441	state: chain says disabled, child header flag 0x800 clear
+500	state: chain says disabled, child header flag 0x800 set
+540	state: chain says disabled, direct parent opposite flag 0, root flag 0x800 clear
+18919	state: chain says disabled, direct parent opposite flag 0, root flag 0x800 set
+1455	state: chain says disabled, direct parent opposite flag 1, root flag 0x800 clear
+27	state: chain says disabled, direct parent opposite flag 1, root flag 0x800 set
+18151	state: chain says enabled, child header flag 0x800 clear
+366	state: chain says enabled, child header flag 0x800 set
+17527	state: chain says enabled, direct parent opposite flag 0, root flag 0x800 clear
+177	state: chain says enabled, direct parent opposite flag 0, root flag 0x800 set
+1	state: chain says enabled, direct parent opposite flag 1, root flag 0x800 clear
+812	state: chain says enabled, direct parent opposite flag 1, root flag 0x800 set
+39461	xesp: XESP per record 1
+20337	xesp: another cell: child Some(Exterior), parent Some(Exterior), parent persistent group (8)
+1186	xesp: another cell: child Some(Exterior), parent Some(Interior), parent persistent group (8)
+145	xesp: another cell: child Some(Interior), parent Some(Exterior), parent persistent group (8)
+74	xesp: another cell: child Some(Interior), parent Some(Interior), parent persistent group (8)
+39446	xesp: bytes 5..7 all zero
+15	xesp: bytes 5..7 not all zero
+1	xesp: bytes 5..7 not all zero: ff 00 00, flag byte 0x00
+14	xesp: bytes 5..7 not all zero: ff ff ff, flag byte 0x00
+4292	xesp: child in persistent group (8)
+35169	xesp: child in temporary group (9)
+408	xesp: children per parent 1
+154	xesp: children per parent 10-19
+75	xesp: children per parent 100+
+291	xesp: children per parent 2
+103	xesp: children per parent 20-49
+296	xesp: children per parent 3-4
+291	xesp: children per parent 5-9
+75	xesp: children per parent 50-99
+1	xesp: distinct parents 1693
+1	xesp: distinct parents that carry XESP 135
+37110	xesp: flag byte 0x00
+2227	xesp: flag byte 0x01
+56	xesp: flag byte 0x02
+68	xesp: flag byte 0x03
+21742	xesp: parent cell: another cell
+17719	xesp: parent cell: same cell
+19763	xesp: parent header flag 0x800
+39461	xesp: parent in persistent group (8)
+39	xesp: parent record type ACHR
+3	xesp: parent record type PHZD
+39419	xesp: parent record type REFR
+2497	xesp: placed ACHR with XESP
+162	xesp: placed ACHR with XESP and header flag 0x800
+57	xesp: placed PGRE with XESP
+1	xesp: placed PGRE with XESP and header flag 0x800
+93	xesp: placed PHZD with XESP
+15	xesp: placed PHZD with XESP and header flag 0x800
+36814	xesp: placed REFR with XESP
+688	xesp: placed REFR with XESP and header flag 0x800
+39461	xesp: size 8

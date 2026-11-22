@@ -5,6 +5,7 @@ mod assets;
 pub mod bounds;
 pub mod camera;
 pub mod collision;
+pub mod enable;
 pub mod grid;
 pub mod hypotheses;
 pub mod lighting;
@@ -80,6 +81,21 @@ pub enum State {
     Blocked,
     Outside,
 }
+impl Instance {
+    /// Whether the enable parent rules say this instance starts (or, after
+    /// [`Instance::set_enabled`], is) disabled.
+    pub fn disabled_by_enable_parent(&self) -> bool {
+        self.enable
+            .as_ref()
+            .is_some_and(|p| p.enabled == Some(false))
+    }
+    /// Replaces the enabled state the chain gives (`xesp_script_change_propagates_v1`).
+    pub fn set_enabled(&mut self, enabled: Option<bool>) {
+        if let Some(p) = &mut self.enable {
+            p.enabled = enabled;
+        }
+    }
+}
 impl State {
     pub fn drawable_readiness(&self) -> bool {
         self.ready_at(RuleLevel::Hypotheses)
@@ -104,6 +120,10 @@ impl State {
 }
 #[derive(Debug, Serialize)]
 pub struct Instance {
+    /// For a reference with an XESP: its chain and whether the rules say it
+    /// starts enabled ([`enable`]). The draw build and collision leave out
+    /// an instance whose `enabled` is `Some(false)`.
+    pub enable: Option<enable::Presence>,
     pub editor_marker: bool,
     pub visibility_hypotheses: Vec<&'static str>,
     pub reference: Loaded<Refr>,
@@ -396,18 +416,18 @@ impl<'a> Loader<'a> {
                 b,
             )?;
         }
-        if reference.data.enable_parent.is_some() {
-            push_error(
-                &mut blockers,
-                error(
-                    "RuntimeEnableParent",
-                    src,
-                    "runtime-independent placement",
-                    "XESP",
-                ),
-                b,
-            )?;
-        }
+        // Presence through the enable parent chain, every part under its
+        // pending rule (`enable`).
+        let enable = match &reference.data.enable_parent {
+            None => None,
+            Some(_) => match fo4_plugin::enable::chain(self.plugins, key, b)? {
+                Some(chain) => {
+                    enable::blockers(&chain, src, &mut blockers, b)?;
+                    Some(enable::Presence::of(chain))
+                }
+                None => None,
+            },
+        };
         b.measure(AllocationKind::Diagnostics, || {
             runtime(&reference.record, &mut blockers, b)?;
             unhandled(&reference.record, &reference.data.common, &mut blockers, b)
@@ -532,6 +552,7 @@ impl<'a> Loader<'a> {
         }
         let visibility = visibility(&reference.record, b)?;
         Ok(Instance {
+            enable,
             editor_marker,
             visibility_hypotheses,
             reference,

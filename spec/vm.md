@@ -358,8 +358,8 @@ one for an active reference (`fo4_scene::Loader::instance`), and drawn if
 it is ready at the level. Every other native stays log-only. Without the
 option nothing changes.
 
-**No visible effect exists in the installed data under the current
-rules.** The placed census classifies every visibility change of a placed
+**Before enable parents were followed, no visible effect existed in the
+installed data under the rules of that step.** The placed census classifies every visibility change of a placed
 REFR made by handlers that all completed (4,175): 1,540 disables of an
 enabled REFR, 33 of an initially disabled one, 2,577 enables of an enabled
 one, 25 of an initially disabled one. For each, the target's instance is
@@ -376,6 +376,22 @@ unsupported NIF block. 21 of the changes fall on 14 distinct targets that
 are enable parents of other placed references (from 1 to 19 each); those
 children carry XESP and are never drawn either, so following enable
 parents would be the next step for a visible effect.
+
+**Enable children** ([enable-parent.md](enable-parent.md)). The scene now
+decides a placement with an XESP through its parent chain under pending
+rules, and the viewer gives every instance (and placed actor) whose chain
+names a reference the log changes the state its chain now gives
+(`xesp_script_change_propagates_v1`, `vm_event::propagate` and
+`propagate_actors`), printing each change. `script_run --census` follows
+the children of every changed reference: in the test cells one child
+changes, an editor marker; over every placed scripted reference six runs
+whose handlers complete change at least one placement the scene draws
+under every pending rule (one run 11 references, one 6 actors and 2
+references, four one reference each). Three of them were rendered before
+and after the event: 48,377, 6,939 and 2,831 pixels differ, all on the
+children's instances. A visible effect of a script therefore exists in the
+installed data under the pending rules, through enable parents only; the
+statement below describes the step before.
 
 One case shows the path end to end: activating a door in an interior cell
 runs a handler to completion that reads the door's linked reference by

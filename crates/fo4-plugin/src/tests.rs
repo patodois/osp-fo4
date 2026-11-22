@@ -2588,3 +2588,74 @@ fn writer_refuses_what_the_reader_would_reject() {
         );
     }
 }
+
+#[test]
+fn enable_parent_chains_are_read_to_the_last_byte_and_end_by_name() {
+    use crate::enable::{chain, ChainEnd};
+    use crate::typed::Store;
+    let xesp = |parent: u32, flags: u8| {
+        let mut d = parent.to_le_bytes().to_vec();
+        d.extend([flags, 7, 8, 9]);
+        sub(b"XESP", &d)
+    };
+    let placed = |extra: Vec<u8>| {
+        let mut p = sub(b"NAME", &0x801u32.to_le_bytes());
+        p.extend(extra);
+        p
+    };
+    // 0x802 -> 0x803 (opposite) -> 0x804 (root, disabled); 0x805 <-> 0x806 cycle;
+    // 0x807 names a missing record; 0x808 a short XESP.
+    let children = [
+        record(b"REFR", 0x802, 0, &placed(xesp(0x803, 0))),
+        record(b"REFR", 0x803, 0, &placed(xesp(0x804, 1))),
+        record(b"REFR", 0x804, DISABLED, &placed(Vec::new())),
+        record(b"REFR", 0x805, 0, &placed(xesp(0x806, 0))),
+        record(b"REFR", 0x806, 0, &placed(xesp(0x805, 0))),
+        record(b"REFR", 0x807, 0, &placed(xesp(0x8ff, 0))),
+        record(b"REFR", 0x808, 0, &placed(sub(b"XESP", &[1, 2, 3]))),
+    ]
+    .concat();
+    let cell = record(b"CELL", 0x800, 0, &sub(b"DATA", &1u16.to_le_bytes()));
+    let refs = group(
+        6,
+        0x800u32.to_le_bytes(),
+        &group(9, 0x800u32.to_le_bytes(), &children),
+    );
+    let mut body = group(2, [0; 4], &[cell, refs].concat());
+    body.extend(record(b"STAT", 0x801, 0, &sub(b"MODL", b"test.nif\0")));
+    let sources: Vec<(String, Box<dyn ReadAt>)> = vec![(
+        "base.esm".into(),
+        Box::new(OwnedSource(plugin(MASTER, &[], 0, &body))),
+    )];
+    let store = Store::from_sources(
+        fo4_core::Game::Fallout4,
+        sources,
+        Limits::default(),
+        &Budget::new(8 << 20),
+    )
+    .unwrap();
+    let k = |id| FormKey {
+        plugin: "base.esm".into(),
+        object_id: id,
+    };
+    let b = Budget::new(1 << 20);
+    let c = chain(&store, &k(0x802), &b).unwrap().unwrap();
+    assert_eq!(c.end, ChainEnd::Root);
+    assert_eq!(c.depth(), 2);
+    let link = c.nodes[0].link.as_ref().unwrap();
+    assert_eq!((link.raw, link.flags, link.reserved), (0x803, 0, [7, 8, 9]));
+    assert_eq!(c.nodes[1].link.as_ref().unwrap().flags, 1);
+    assert!(c.nodes[2].initially_disabled && !c.nodes[0].initially_disabled);
+    let c = chain(&store, &k(0x805), &b).unwrap().unwrap();
+    assert_eq!(c.end, ChainEnd::Cycle(k(0x805)));
+    assert_eq!(c.depth(), 1);
+    let c = chain(&store, &k(0x807), &b).unwrap().unwrap();
+    assert_eq!(c.end, ChainEnd::MissingParent(k(0x8ff)));
+    assert_eq!(
+        chain(&store, &k(0x808), &b).unwrap_err().code,
+        "EnableParentSize"
+    );
+    assert!(chain(&store, &k(0x8fe), &b).unwrap().is_none());
+    let groups: Vec<u32> = store.placement_groups().map(|(_, _, g)| g).collect();
+    assert_eq!(groups, [9; 7]);
+}
