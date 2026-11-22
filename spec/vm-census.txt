@@ -1,0 +1,103 @@
+# script_run --census: counts only (spec/vm.md, Census)
+
+## the two test cells of the survey (one interior; one exterior with radius 1)
+10	targets: scripted DOOR, TERM and ACTI placed in the cells named
+22	handlers run
+5	blocked at opcode 22
+1	blocked at opcode 23
+4	event activate handlers
+3	event cell-detach handlers
+2	event load handlers
+4	event reset handlers
+8	event trigger-enter handlers
+1	event trigger-leave handlers
+10	objects bound
+6	outcome blocked on a native result
+16	outcome completed
+19	runs relying on pex_call_dispatch_v1
+13	runs relying on pex_conditional_jump_sense_v1
+3	runs relying on pex_default_values_v1
+5	runs relying on pex_op_return_v1
+2	runs relying on pex_ops_arithmetic_v1
+7	runs relying on pex_ops_compare_v1
+12	runs relying on pex_ops_not_copy_cast_v1
+13	runs relying on pex_state_identifier_v1
+6	runs relying on pex_truth_of_values_v1
+22	runs relying on vm_event_handlers_v1
+3	runs relying on vm_host_player_handle_v1
+6	runs relying on vm_timer_events_v1
+22	runs relying on vmad_property_sets_variable_v1
+22	runs relying on vmad_reference_scripts_v1
+3	runs with 0 effects
+9	runs with 1 effects
+10	runs with 2-4 effects
+1	visibility change disable of a reference of the loaded cells
+1	visibility change enable of a reference of the loaded cells
+4	distinct blocking origins
+0	distinct failures
+6	handlers blocked by the ten most frequent origins (3, 1, 1, 1)
+
+## every winning scripted DOOR, TERM and ACTI base, bound alone
+1251	targets: every winning scripted DOOR, TERM and ACTI base, bound alone
+2530	handlers run
+29	binding note: property not declared
+9	blocked at opcode 21
+840	blocked at opcode 22
+424	blocked at opcode 23
+15	blocked at opcode 28
+26	blocked at opcode 29
+480	event activate handlers
+60	event cell-attach handlers
+50	event cell-detach handlers
+885	event fragment handlers
+72	event init handlers
+319	event load handlers
+119	event reset handlers
+298	event trigger-enter handlers
+110	event trigger-leave handlers
+137	event unload handlers
+1251	objects bound
+54	objects without an event function with instructions
+902	outcome blocked on a native result
+335	outcome blocked on a scripted call or property of an object without that script
+7	outcome blocked on rule pex_array_ops_v1
+5	outcome blocked on rule pex_ops_compare_v1
+60	outcome blocked on rule pex_ops_not_copy_cast_v1
+5	outcome blocked on rule vm_object_identity_v1
+1113	outcome completed
+1	outcome failed: IndexOutOfRange op 32
+3	outcome failed: MissingFunction
+79	outcome failed: NoneOperand op 23
+2	outcome failed: NoneOperand op 28
+1	outcome failed: NoneOperand op 32
+3	outcome failed: NoneOperand op 34
+1	outcome failed: NoneOperand op 42
+13	outcome failed: NoneOperand op 46
+285	runs relying on pex_array_ops_v1
+2291	runs relying on pex_call_dispatch_v1
+1518	runs relying on pex_conditional_jump_sense_v1
+828	runs relying on pex_default_values_v1
+363	runs relying on pex_op_return_v1
+129	runs relying on pex_ops_arithmetic_v1
+885	runs relying on pex_ops_compare_v1
+1320	runs relying on pex_ops_not_copy_cast_v1
+71	runs relying on pex_property_get_set_v1
+503	runs relying on pex_state_identifier_v1
+19	runs relying on pex_struct_ops_v1
+182	runs relying on pex_truth_of_values_v1
+2495	runs relying on vm_event_handlers_v1
+498	runs relying on vm_host_player_handle_v1
+5	runs relying on vm_object_identity_v1
+54	runs relying on vm_timer_events_v1
+2495	runs relying on vmad_property_sets_variable_v1
+2495	runs relying on vmad_reference_scripts_v1
+571	runs with 0 effects
+874	runs with 1 effects
+965	runs with 2-4 effects
+62	runs with 5-9 effects
+23	runs with >=10 effects
+4	visibility change disable of another record
+8	visibility change enable of another record
+152	distinct blocking origins
+61	distinct failures
+776	handlers blocked by the ten most frequent origins (306, 89, 83, 46, 45, 44, 43, 43, 43, 34)

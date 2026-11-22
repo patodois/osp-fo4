@@ -1,0 +1,210 @@
+# vm_checks: counts only (spec/vm.md, Checks)
+30483	functions
+343	functions statically pure with simple parameters (run)
+1	op 06 with a literal zero in slot 2
+11070	op 14 with one declared type in both slots: bool
+10	op 14 with one declared type in both slots: float
+5	op 14 with one declared type in both slots: int
+120	op 14 with one declared type in both slots: object
+10282	scripts
+
+# A1 slot types under the candidate meaning: holds, fails
+1960	0	op 01 slot 0 is Int
+504	0	op 02 slot 0 is Float
+366	0	op 03 slot 0 is Int
+192	0	op 04 slot 0 is Float
+55	0	op 05 slot 0 is Int
+252	0	op 06 slot 0 is Float
+37	0	op 07 slot 0 is Int
+126	0	op 08 slot 0 is Float
+5	0	op 09 slot 0 is Int
+4644	0	op 10 slot 0 is Bool
+8	0	op 11 slot 0 is Int
+29	0	op 12 slot 0 is Float
+8785	0	op 13 slots 0 and 1 have one type (none into object, array or struct slots)
+29724	11205	op 14 slots 0 and 1 have different types
+14795	0	op 15 slot 0 is Bool
+2105	0	op 16 slot 0 is Bool
+333	0	op 17 slot 0 is Bool
+1192	0	op 18 slot 0 is Bool
+660	0	op 19 slot 0 is Bool
+283	0	op 27 slot 0 is String
+3351	0	op 28 slot 2 has the property's type
+2939	0	op 29 slot 2 has the property's type
+203	0	op 30 slot 0 is an array
+1071	0	op 31 slot 0 is Int and slot 1 an array
+2478	0	op 32 slot 0 has the element type of slot 1
+237	0	op 33 slot 2 has the element type of slot 0
+81	0	op 34 slot 1 is Int, slot 2 has the element type of slot 0
+121	0	op 36 slot 0 is Bool
+15	0	op 37 slot 0 is a struct
+1415	0	op 38 slot 0 has the member's type
+172	0	op 39 slot 2 has the member's type
+37	0	op 40 slot 1 is Int, slot 0 an array of structs
+139	0	op 42 slot 1 has the element type of slot 0
+17	0	op 43 slot 1 has the element type of slot 0
+
+# A2 data flow: reads of temporaries not written on every path before them, per destination reading
+15	candidate destinations: of these, reads of temporaries no instruction of the function writes
+15	candidate destinations: temporary reads not written on every path before
+op 01 in 1400 functions: candidate (destination slot 0) 8; no destination 362; destination slot 1 357; destination slot 2 362
+op 02 in 343 functions: candidate (destination slot 0) 0; no destination 720; destination slot 1 706; destination slot 2 720
+op 03 in 266 functions: candidate (destination slot 0) 0; no destination 368; destination slot 1 367; destination slot 2 368
+op 04 in 130 functions: candidate (destination slot 0) 0; no destination 208; destination slot 1 207; destination slot 2 206
+op 05 in 36 functions: candidate (destination slot 0) 0; no destination 72; destination slot 1 72; destination slot 2 72
+op 06 in 130 functions: candidate (destination slot 0) 0; no destination 288; destination slot 1 276; destination slot 2 286
+op 07 in 16 functions: candidate (destination slot 0) 0; no destination 64; destination slot 1 64; destination slot 2 64
+op 08 in 84 functions: candidate (destination slot 0) 0; no destination 188; destination slot 1 188; destination slot 2 185
+op 09 in 4 functions: candidate (destination slot 0) 0; no destination 2; destination slot 1 2; destination slot 2 2
+op 10 in 2408 functions: candidate (destination slot 0) 2; no destination 6162; destination slot 1 6160
+op 11 in 5 functions: candidate (destination slot 0) 0; no destination 16; destination slot 1 16
+op 12 in 13 functions: candidate (destination slot 0) 0; no destination 56; destination slot 1 56
+op 13 in 4768 functions: candidate (destination slot 0) 12; no destination 5396; destination slot 1 5384
+op 14 in 15307 functions: candidate (destination slot 0) 0; no destination 48436; destination slot 1 45691
+op 15 in 5127 functions: candidate (destination slot 0) 0; no destination 27726; destination slot 1 27726; destination slot 2 27726
+op 16 in 1547 functions: candidate (destination slot 0) 8; no destination 3676; destination slot 1 3676; destination slot 2 3676
+op 17 in 270 functions: candidate (destination slot 0) 0; no destination 574; destination slot 1 574; destination slot 2 574
+op 18 in 798 functions: candidate (destination slot 0) 0; no destination 2054; destination slot 1 2054; destination slot 2 2054
+op 19 in 482 functions: candidate (destination slot 0) 0; no destination 1162; destination slot 1 1162; destination slot 2 1162
+op 27 in 47 functions: candidate (destination slot 0) 0; no destination 410; destination slot 1 264; destination slot 2 399
+op 28 in 1524 functions: candidate (destination slot 2) 0; no destination 6108; destination slot 0 6108; destination slot 1 5921
+op 29 in 2229 functions: candidate (no destination) 0; destination slot 0 0; destination slot 1 0; destination slot 2 0
+op 30 in 159 functions: candidate (destination slot 0) 0; no destination 4; destination slot 1 4
+op 31 in 737 functions: candidate (destination slot 0) 0; no destination 1696; destination slot 1 1696
+op 32 in 1027 functions: candidate (destination slot 0) 0; no destination 4224; destination slot 1 4224; destination slot 2 4221
+op 33 in 113 functions: candidate (no destination) 0; destination slot 0 0; destination slot 1 0; destination slot 2 0
+op 34 in 76 functions: candidate (destination slot 1) 0; no destination 66; destination slot 0 66; destination slot 2 66
+op 36 in 82 functions: candidate (destination slot 0) 0; no destination 220; destination slot 1 220; destination slot 2 220
+op 37 in 14 functions: candidate (destination slot 0) 0; no destination 4
+op 38 in 345 functions: candidate (destination slot 0) 0; no destination 2458; destination slot 1 2458; destination slot 2 2458
+op 39 in 72 functions: candidate (no destination) 0; destination slot 0 0; destination slot 1 0; destination slot 2 0
+op 40 in 31 functions: candidate (destination slot 1) 0; no destination 8; destination slot 0 8; destination slot 3 8; destination slot 4 8
+op 42 in 98 functions: candidate (no destination) 0; destination slot 0 0; destination slot 1 0
+op 43 in 14 functions: candidate (no destination) 0; destination slot 0 0; destination slot 1 0; destination slot 2 0
+op 45 in 47 functions: candidate (no destination) 0; destination slot 0 0; destination slot 1 0
+op 46 in 17 functions: candidate (no destination) 0; destination slot 0 0
+
+# A2 temporaries written by the candidate destination and read later on some path
+199	op 01 temporary destination read later: true
+373	op 02 temporary destination read later: true
+198	op 03 temporary destination read later: true
+112	op 04 temporary destination read later: true
+4	op 05 temporary destination read later: false
+38	op 05 temporary destination read later: true
+166	op 06 temporary destination read later: true
+33	op 07 temporary destination read later: true
+98	op 08 temporary destination read later: true
+1	op 09 temporary destination read later: true
+2	op 10 temporary destination read later: false
+4629	op 10 temporary destination read later: true
+8	op 11 temporary destination read later: true
+29	op 12 temporary destination read later: true
+2851	op 13 temporary destination read later: true
+25071	op 14 temporary destination read later: true
+26	op 15 temporary destination read later: false
+14732	op 15 temporary destination read later: true
+2104	op 16 temporary destination read later: true
+328	op 17 temporary destination read later: true
+1176	op 18 temporary destination read later: true
+657	op 19 temporary destination read later: true
+14413	op 23 temporary destination read later: false
+28772	op 23 temporary destination read later: true
+1	op 24 temporary destination read later: true
+125	op 25 temporary destination read later: false
+5137	op 25 temporary destination read later: true
+2	op 27 temporary destination read later: false
+245	op 27 temporary destination read later: true
+3234	op 28 temporary destination read later: true
+2	op 30 temporary destination read later: true
+895	op 31 temporary destination read later: true
+2204	op 32 temporary destination read later: true
+34	op 34 temporary destination read later: true
+121	op 36 temporary destination read later: true
+2	op 37 temporary destination read later: true
+1306	op 38 temporary destination read later: true
+4	op 40 temporary destination read later: true
+
+# A3 idioms
+1	::State read by op 13
+1	::State read by op 26
+1	::State written by op 13
+2	array loop: exit by op 22 on op 16 with the index in slot 1; index update no update op 1 or 3 of the index
+555	array loop: exit by op 22 on op 16 with the index in slot 1; index update op 1 by Int(1)
+1	array loop: exit by op 22 on op 16 with the index in slot 1; index update op 3 by Int(1)
+4	array loop: exit by op 22 on op 17 with the index in slot 1; index update op 1 by Int(1)
+1482	backward jumps
+4888	comparison result copied next
+1431	comparison result other
+12746	comparison result read next by a conditional jump
+20	comparison result returned next
+537	functions returning a value whose end is reachable past the last instruction: false
+35	functions returning a value whose end is reachable past the last instruction: true
+1482	loop exit test by op 22
+2	op 21 guard by opcode 10 of the object then a call or property on the object in the fall-through: object none there under the candidate: false
+13	op 21 guard by opcode 15 of the object and none then a call or property on the object in the fall-through: object none there under the candidate: false
+1390	op 21 operand bool
+129	op 22 guard by a cast of the object to Bool then a call or property on the object in the fall-through: object none there under the candidate: false
+574	op 22 guard by the object itself then a call or property on the object in the fall-through: object none there under the candidate: false
+2	op 22 on literal true: target past a backward jump to it or before: false
+17	op 22 operand array
+27476	op 22 operand bool
+1	op 22 operand float
+24	op 22 operand int
+2	op 22 operand literal true
+1110	op 22 operand object
+8	op 22 operand string
+21	op 22 operand struct
+0	scripts declaring a variable named ::State
+3872	variables of a simple type storing none: false
+2045	variables of a simple type storing none: true
+
+# B execution of statically pure functions (at most 24 argument tuples each), per reading
+1	AddSubSwapped: functions with every run completed: false
+342	AddSubSwapped: functions with every run completed: true
+919	AddSubSwapped: runs completed
+1	AddSubSwapped: runs completed with an open result
+6	AddSubSwapped: runs failed BadArgument
+343	Candidate: functions with every run completed: true
+925	Candidate: runs completed
+1	Candidate: runs completed with an open result
+4	CastAsCopy: functions with every run completed: false
+339	CastAsCopy: functions with every run completed: true
+853	CastAsCopy: runs completed
+73	CastAsCopy: runs failed TypeMismatch op 14
+343	EqualNegated: functions with every run completed: true
+925	EqualNegated: runs completed
+1	EqualNegated: runs completed with an open result
+3	JumpSenseSwapped: functions with every run completed: false
+340	JumpSenseSwapped: functions with every run completed: true
+922	JumpSenseSwapped: runs completed
+1	JumpSenseSwapped: runs completed with an open result
+3	JumpSenseSwapped: runs failed StepLimit
+343	LessGreaterSwapped: functions with every run completed: true
+925	LessGreaterSwapped: runs completed
+1	LessGreaterSwapped: runs completed with an open result
+343	MulDivSwapped: functions with every run completed: true
+925	MulDivSwapped: runs completed
+1	MulDivSwapped: runs completed with an open result
+343	PropertySwapped: functions with every run completed: true
+925	PropertySwapped: runs completed
+1	PropertySwapped: runs completed with an open result
+343	StrictSwapped: functions with every run completed: true
+925	StrictSwapped: runs completed
+1	StrictSwapped: runs completed with an open result
+889	AddSubSwapped: result differs from the candidate's: false
+37	AddSubSwapped: result differs from the candidate's: true
+851	CastAsCopy: result differs from the candidate's: false
+75	CastAsCopy: result differs from the candidate's: true
+889	EqualNegated: result differs from the candidate's: false
+37	EqualNegated: result differs from the candidate's: true
+754	JumpSenseSwapped: result differs from the candidate's: false
+172	JumpSenseSwapped: result differs from the candidate's: true
+761	LessGreaterSwapped: result differs from the candidate's: false
+165	LessGreaterSwapped: result differs from the candidate's: true
+918	MulDivSwapped: result differs from the candidate's: false
+8	MulDivSwapped: result differs from the candidate's: true
+926	PropertySwapped: result differs from the candidate's: false
+911	StrictSwapped: result differs from the candidate's: false
+15	StrictSwapped: result differs from the candidate's: true
+
+wall seconds	1.6

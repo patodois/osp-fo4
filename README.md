@@ -33,7 +33,12 @@ capsule over a cell's collision under provisional, registered rules.
   last byte into typed structures, with opcode arities established by the
   census and a text disassembly (`pex_dump`); call, jump, property and
   struct-member slots identified by name resolution, other opcode meanings
-  pending ([scripts](spec/pex.md)). Nothing runs them yet.
+  pending ([scripts](spec/pex.md)). A small interpreter (`fo4-vm`) runs
+  them under those pending rules: native functions are only recorded in an
+  effect log, a native result that would steer control flow stops the run
+  as blocked, and `script_run` binds a placed reference's scripts from VMAD
+  and delivers one event; opcode meanings are supported by data-flow, idiom
+  and execution checks, not measured ([interpreter](spec/vm.md)).
 - **Actors**: placed actors (ACHR) followed to their skeleton and the
   armour addon models they wear, with record layouts measured on the game's
   plugins, and drawn by the GPU viewer standing in the skeleton's rest pose,
@@ -247,6 +252,7 @@ consulted, with one attributed exception described in
 | `fo4-nif`, `fo4-material`, `fo4-texture` | Model, material and texture readers. |
 | `fo4-havok` | Container and object spans of the Havok collision payload; bodies (shape link and placement); convex, sphere, capsule, scaled and compound shapes. |
 | `fo4-pex` | Compiled script (`.pex`) reader, opcode table and disassembly. |
+| `fo4-vm` | Interpreter over `fo4-pex` under pending rules, recording host, VMAD binding, `script_run` and `vm_checks`. |
 | `fo4-scene` | Scene assembly, rule levels and the collision of a cell. |
 | `fo4-walk` | Walking controller over the collision of a cell. |
 | `fo4-render` | CPU renderer and image comparison. |
