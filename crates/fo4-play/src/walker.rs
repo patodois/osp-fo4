@@ -313,8 +313,22 @@ impl Walker {
                 .map(|p| p.space.clone())
         });
         let here = here.map(|s| norm(&s));
+        // Each still reference goes with the first named reference placed
+        // in its own space; one in no named reference's space goes with
+        // the first.
+        let max = run.store.limits.max_memory;
+        let space_of = |k: &FormKey| {
+            fo4_vm::track::stored_position(run.store, max, k)
+                .ok()
+                .map(|(s, _)| norm(&s))
+        };
+        let spaces: Vec<Option<FormKey>> = o.references.iter().map(space_of).collect();
+        let mut alsos: Vec<Vec<FormKey>> = vec![Vec::new(); o.references.len()];
+        for k in &o.also {
+            alsos[crate::elevator::still_owner(&spaces, &space_of(k))].push(k.clone());
+        }
         for (i, k) in o.references.iter().enumerate() {
-            let also: &[FormKey] = if i == 0 { &o.also } else { &[] };
+            let also: &[FormKey] = &alsos[i];
             let mut e = crate::elevator::Elevator::build(m, run.store, vfs, k, also, i as u32)
                 .map_err(|e| format!("PlayElevator {}: {e}", fo4_vm::bind::record_key(k)))?;
             if here.as_ref() == Some(&e.space) {

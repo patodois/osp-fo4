@@ -38,6 +38,16 @@ type E = Box<dyn std::error::Error>;
 /// (second, translation) points.
 pub type Track = Vec<(f64, [f64; 3])>;
 
+/// Which named reference a still reference (`--play-elevator-also`) goes
+/// with: the first whose space is the still reference's own, else the
+/// first (index 0). `spaces`: the named references' spaces, in order.
+pub fn still_owner(spaces: &[Option<FormKey>], space: &Option<FormKey>) -> usize {
+    spaces
+        .iter()
+        .position(|x| x.is_some() && x == space)
+        .unwrap_or(0)
+}
+
 /// One node of the model a sequence moves and some collision hangs under.
 #[derive(Debug, Clone)]
 pub struct Node {
@@ -597,5 +607,15 @@ mod tests {
         let e = elevator();
         let b = e.bounds().unwrap();
         assert!(b.0[0] <= -100.0 + 1e-6 && b.1[0] >= 100.0 - 1e-6);
+    }
+
+    #[test]
+    fn a_still_reference_goes_with_the_named_reference_of_its_own_space() {
+        let spaces = vec![Some(key(1)), Some(key(2)), None];
+        assert_eq!(still_owner(&spaces, &Some(key(2))), 1);
+        assert_eq!(still_owner(&spaces, &Some(key(1))), 0);
+        // In no named reference's space, or unread: the first, as before.
+        assert_eq!(still_owner(&spaces, &Some(key(3))), 0);
+        assert_eq!(still_owner(&spaces, &None), 0);
     }
 }
