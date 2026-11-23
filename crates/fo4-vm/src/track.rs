@@ -500,6 +500,169 @@ pub fn intervals(track: &Track, v: &Volume, body: Option<u32>) -> Vec<(f64, f64)
     out
 }
 
+/// One volume's intervals over a track's finite moves so far, folded as
+/// [`intervals`] folds them (before its final stay and its filter): the
+/// crossings of a track that grows point by point (`spec/play.md`, the
+/// stepped run; [`Place::extend`]).
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct Folded(pub Vec<(f64, f64)>);
+impl Folded {
+    /// Folds one move (`step_of`) as [`intervals`] does.
+    pub fn push(&mut self, v: &Volume, body: Option<u32>, mv: Move<'_>) {
+        let (t0, t1, space, a, b) = mv;
+        if *space != v.space {
+            return;
+        }
+        let span = match body {
+            Some(h) => v.span_body(a, b, f64::from(h)),
+            None => v.span(a, b),
+        };
+        let Some((s0, s1)) = span else {
+            return;
+        };
+        let (e, l) = if t1.is_infinite() {
+            (t0, f64::INFINITY)
+        } else {
+            (t0 + s0 * (t1 - t0), t0 + s1 * (t1 - t0))
+        };
+        match self.0.last_mut() {
+            Some(last) if last.1 >= e => last.1 = last.1.max(l),
+            _ => self.0.push((e, l)),
+        }
+    }
+    /// The intervals with the stay after the last point, as [`intervals`]
+    /// returns them for the track folded so far.
+    pub fn finish(&self, v: &Volume, body: Option<u32>, last: &Point) -> Vec<(f64, f64)> {
+        let mut out = self.clone();
+        out.push(
+            v,
+            body,
+            (last.t, f64::INFINITY, &last.space, last.pos, last.pos),
+        );
+        out.0.retain(|(e, l)| l > e);
+        out.0
+    }
+}
+
+/// One move of a track between two points, as the track's moves read it:
+/// a move to a point in another space is a stay at the earlier point.
+pub fn step_of<'a>(a: &'a Point, b: &Point) -> Move<'a> {
+    if a.space == b.space {
+        (a.t, b.t, &a.space, a.pos, b.pos)
+    } else {
+        (a.t, b.t, &a.space, a.pos, a.pos)
+    }
+}
+
+/// The crossings of every volume on a track, ordered as
+/// [`Place::load_with`] orders them, from their folds.
+fn crossings_of(
+    volumes: &[Volume],
+    folds: &[Folded],
+    body: Option<u32>,
+    last: &Point,
+) -> Vec<Crossing> {
+    let mut out = Vec::new();
+    for (i, (f, v)) in folds.iter().zip(volumes).enumerate() {
+        for (e, l) in f.finish(v, body, last) {
+            out.push(Crossing {
+                t: e,
+                volume: i,
+                enter: true,
+            });
+            if l.is_finite() {
+                out.push(Crossing {
+                    t: l,
+                    volume: i,
+                    enter: false,
+                });
+            }
+        }
+    }
+    out.sort_by(|a, b| {
+        a.t.total_cmp(&b.t)
+            .then(a.enter.cmp(&b.enter))
+            .then(a.volume.cmp(&b.volume))
+    });
+    out
+}
+
+/// The folds of a track the run grows point by point ([`Place::cut`],
+/// [`Place::extend`]).
+#[derive(Debug, Clone, Default)]
+pub struct Folds {
+    /// One per volume, as [`Place::volumes`].
+    pub volumes: Vec<Folded>,
+    /// Times the crossings already applied changed when the track was cut
+    /// or grown (they should not: counted to check it).
+    pub prefix_changed: u64,
+}
+
+/// The exterior grid squares and interior cells whose references a run
+/// has read ([`Place::load_with`] reads the cells about the track's
+/// points), so that the cells about a new point are read once.
+#[derive(Debug, Clone, Default)]
+pub struct Region {
+    pub squares: BTreeMap<FormKey, BTreeSet<(i64, i64)>>,
+    pub interiors: BTreeSet<FormKey>,
+}
+impl Region {
+    /// What [`Place::load_with`] read about these points: each interior
+    /// cell, and each worldspace's squares within one of the points' box.
+    pub fn of(store: &Store, points: &[Point]) -> Region {
+        let mut r = Region::default();
+        let mut boxes: BTreeMap<FormKey, ([i64; 2], [i64; 2])> = BTreeMap::new();
+        for p in points {
+            if store.signature(&p.space) == Some(*b"CELL") {
+                r.interiors.insert(p.space.clone());
+                continue;
+            }
+            let g = square(p.pos);
+            let e = boxes
+                .entry(p.space.clone())
+                .or_insert(([i64::MAX; 2], [i64::MIN; 2]));
+            for i in 0..2 {
+                e.0[i] = e.0[i].min([g.0, g.1][i]);
+                e.1[i] = e.1[i].max([g.0, g.1][i]);
+            }
+        }
+        for (space, (lo, hi)) in boxes {
+            let set = r.squares.entry(space).or_default();
+            for i in lo[0] - 1..=hi[0] + 1 {
+                for j in lo[1] - 1..=hi[1] + 1 {
+                    set.insert((i, j));
+                }
+            }
+        }
+        r
+    }
+    /// Whether the cells about a point have been read; if not, marks them
+    /// read.
+    pub fn claim(&mut self, store: &Store, p: &Point) -> bool {
+        if store.signature(&p.space) == Some(*b"CELL") {
+            return !self.interiors.insert(p.space.clone());
+        }
+        let g = square(p.pos);
+        let set = self.squares.entry(p.space.clone()).or_default();
+        let around: Vec<(i64, i64)> = (-1..=1)
+            .flat_map(|i| (-1..=1).map(move |j| (g.0 + i, g.1 + j)))
+            .collect();
+        if around.iter().all(|x| set.contains(x)) {
+            return true;
+        }
+        set.extend(around);
+        false
+    }
+}
+
+/// The exterior grid square of a position.
+fn square(p: [f64; 3]) -> (i64, i64) {
+    (
+        (p[0] / CELL_SIZE).floor() as i64,
+        (p[1] / CELL_SIZE).floor() as i64,
+    )
+}
+
 /// One change of a volume's geometric hold.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Crossing {
@@ -823,6 +986,14 @@ pub struct Place {
     /// Stored positions read so far: (space, position, facing in degrees)
     /// or why there is none.
     stored: BTreeMap<FormKey, Stored>,
+    /// Placed actors' stored positions read so far, as `stored` (the
+    /// records do not change during a run; reading one searches every
+    /// placement for its cell, so it is read once).
+    stored_actors: BTreeMap<FormKey, Stored>,
+    /// The folds of the track when it grows point by point
+    /// ([`Place::cut`], [`Place::extend`]); `None` when the whole track was
+    /// given at load.
+    pub folds: Option<Folds>,
     /// Exterior cells found by worldspace and grid square.
     grid_cells: BTreeMap<(FormKey, i64, i64), Result<FormKey, &'static str>>,
 }
@@ -852,6 +1023,134 @@ impl Place {
             .filter(|m| &m.actor == actor)
             .map(|m| m.t)
             .collect()
+    }
+    /// Cuts the track at second `now` and folds what is kept: from here
+    /// the track grows only by [`Place::extend`] (`spec/play.md`, the
+    /// stepped run). Returns the points dropped and whether any point was
+    /// kept; `None` without a track. With no point kept the track is left
+    /// as it is.
+    pub fn cut(&mut self, now: f64) -> Option<(usize, bool)> {
+        let track = self.track.clone()?;
+        let mut folds = Folds {
+            volumes: vec![Folded::default(); self.volumes.len()],
+            prefix_changed: 0,
+        };
+        let kept: Vec<Point> = track
+            .points
+            .iter()
+            .filter(|p| p.t <= now)
+            .cloned()
+            .collect();
+        let dropped = track.points.len() - kept.len();
+        if kept.is_empty() {
+            self.folds = Some(folds);
+            return Some((dropped, false));
+        }
+        for pair in kept.windows(2) {
+            let mv = step_of(&pair[0], &pair[1]);
+            for (f, v) in folds.volumes.iter_mut().zip(&self.volumes) {
+                f.push(v, self.sw.body, mv);
+            }
+        }
+        self.folds = Some(folds);
+        self.track = Some(Rc::new(Track { points: kept }));
+        self.rebuild();
+        Some((dropped, true))
+    }
+    /// Appends points to a cut track ([`Place::cut`]), folds their moves
+    /// into the volumes' crossings as [`intervals`] folds a whole track and
+    /// rebuilds the crossing list, keeping the cursor (the crossings
+    /// already applied must not change: counted in
+    /// [`Folds::prefix_changed`]). Returns the new moves. A point before
+    /// the track's last second is refused.
+    pub fn extend(&mut self, points: &[Point]) -> Result<Vec<(Point, Point)>, String> {
+        if points.is_empty() {
+            return Ok(Vec::new());
+        }
+        let body = self.sw.body;
+        let Some(rc) = self.track.as_mut() else {
+            return Err(
+                "PlayNoTrack: the play mode needs the run's --track (its first point is the start)"
+                    .into(),
+            );
+        };
+        let track = Rc::make_mut(rc);
+        let mut prev = track.points.last().cloned();
+        for p in points {
+            if !p.t.is_finite() || prev.as_ref().is_some_and(|q| p.t < q.t) {
+                return Err(format!(
+                    "PlayTrackBack: a point at {} s before the track's last second",
+                    p.t
+                ));
+            }
+            prev = Some(p.clone());
+        }
+        let mut last = track.points.last().cloned();
+        let mut moves = Vec::new();
+        for p in points {
+            if let Some(a) = &last {
+                moves.push((a.clone(), p.clone()));
+            }
+            track.points.push(p.clone());
+            last = Some(p.clone());
+        }
+        let folds = self.folds.get_or_insert_with(|| Folds {
+            volumes: vec![Folded::default(); self.volumes.len()],
+            prefix_changed: 0,
+        });
+        for (a, b) in &moves {
+            let mv = step_of(a, b);
+            for (f, v) in folds.volumes.iter_mut().zip(&self.volumes) {
+                f.push(v, body, mv);
+            }
+        }
+        self.rebuild();
+        Ok(moves)
+    }
+    /// Adds the volumes this place does not hold (by reference), folding
+    /// the whole track so far into their crossings; the crossing list is
+    /// rebuilt by the next [`Place::rebuild`]. Returns how many were added.
+    pub fn add_volumes(&mut self, volumes: Vec<Volume>) -> usize {
+        let have: BTreeSet<FormKey> = self.volumes.iter().map(|v| v.key.clone()).collect();
+        let points = self
+            .track
+            .as_ref()
+            .map(|t| t.points.clone())
+            .unwrap_or_default();
+        let folds = self.folds.get_or_insert_with(Folds::default);
+        let mut added = 0;
+        for v in volumes {
+            if have.contains(&v.key) {
+                continue;
+            }
+            let mut f = Folded::default();
+            for pair in points.windows(2) {
+                f.push(&v, self.sw.body, step_of(&pair[0], &pair[1]));
+            }
+            self.volumes.push(v);
+            folds.volumes.push(f);
+            added += 1;
+        }
+        added
+    }
+    /// The crossing list from the folds of a cut track, as
+    /// [`Place::load_with`] orders it, the cursor kept.
+    pub fn rebuild(&mut self) {
+        let Some(track) = self.track.clone() else {
+            return;
+        };
+        let Some(last) = track.points.last() else {
+            return;
+        };
+        let Some(folds) = self.folds.as_mut() else {
+            return;
+        };
+        let crossings = crossings_of(&self.volumes, &folds.volumes, self.sw.body, last);
+        let n = self.cursor.min(self.crossings.len());
+        if crossings.get(..n) != Some(&self.crossings[..n]) {
+            folds.prefix_changed += 1;
+        }
+        self.crossings = crossings;
     }
     /// Loads the volumes near the track and their crossings. The placed
     /// references read are those of the track's interior cells and, for a
@@ -1196,7 +1495,15 @@ fn placed_at(store: &Store, max: u64, w: &mut World, o: ObjId, t: f64) -> Spot {
                 record: Some(k),
             };
         }
-        return match stored_actor(store, max, &k) {
+        let got = match w.place.stored_actors.get(&k) {
+            Some(x) => x.clone(),
+            None => {
+                let x = stored_actor(store, max, &k);
+                w.place.stored_actors.insert(k.clone(), x.clone());
+                x
+            }
+        };
+        return match got {
             Ok((space, pos, facing)) => Spot::At {
                 space,
                 pos,

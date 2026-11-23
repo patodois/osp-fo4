@@ -2097,7 +2097,8 @@ impl Host for QuestHost<'_> {
         }
         if w.scenes.on
             && (crate::scene::NATIVES.contains(&full.as_str())
-                || (c.script == "scene" && c.name == crate::scene::STEP))
+                || (c.script == "scene"
+                    && (c.name == crate::scene::STEP || c.name == crate::scene::MARKS)))
         {
             return crate::scene::call(self, c, w);
         }

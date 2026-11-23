@@ -67,6 +67,11 @@ pub const NATIVES: [&str; 6] = [
 /// the host (no script calls it).
 pub const STEP: &str = "::step";
 
+/// The synthetic call of [`recheck_distance_marks`]: the function 1 marks
+/// of a scene waiting on its completion conditions computed again (no
+/// script calls it).
+pub const MARKS: &str = "::distance marks";
+
 /// What an action kind waits on, as the census reads the kinds (the field
 /// each kind stores names a DIAL, PACK or SCEN: `spec/fragment-census.txt`).
 pub fn action_kind(kind: u16) -> &'static str {
@@ -1937,6 +1942,20 @@ pub(crate) fn call(h: &mut QuestHost<'_>, c: &NativeCall, w: &mut World) -> Repl
                 None => Reply::Undetermined,
             }
         }
+        ("scene", n) if n == MARKS => {
+            // The phase the scene waits in: its completion conditions'
+            // function 1 marks on the world model as it stands now.
+            let s = state(w, &i);
+            let (true, p) = (s.playing == Some(true), s.next) else {
+                return Reply::Value(Val::Bool(false));
+            };
+            let Some(phase) = i.phases.get(p).cloned() else {
+                return Reply::Value(Val::Bool(false));
+            };
+            let before = w.scenes.percent_marks.len();
+            distance_marks(h, w, o, &i, &phase.completion);
+            Reply::Value(Val::Bool(w.scenes.percent_marks.len() > before))
+        }
         ("scene", n) if n == STEP => {
             if matches!(c.args.first(), Some(Val::Str(_))) {
                 apply_line_events(h, w, o);
@@ -2037,6 +2056,63 @@ pub fn line_fields_call(scene: ObjId) -> NativeCall {
         param_types: vec!["string".into()],
         return_type: "none".into(),
     }
+}
+
+/// The synthetic call of [`recheck_distance_marks`] on one scene.
+pub fn marks_call(scene: ObjId) -> NativeCall {
+    NativeCall {
+        script: "scene".into(),
+        name: MARKS.into(),
+        receiver: Some(Val::Object(scene)),
+        instance: None,
+        args: Vec::new(),
+        param_types: Vec::new(),
+        return_type: "bool".into(),
+    }
+}
+
+/// The scenes waiting on false completion conditions with a function 1
+/// condition and no mark left (`cond_fn_1_track_distance_v1`): when the
+/// player's track grew after they began to wait (the play mode knows the
+/// track only to its horizon, `spec/play.md`), their marks are computed
+/// again on the longer track, as [`distance_marks`] computed them when
+/// they began to wait, without offering their completion (no new wait
+/// is logged). Returns the scenes that got a mark. The host's rules are
+/// left for the caller to take.
+pub fn recheck_distance_marks(host: &mut dyn crate::Host, w: &mut World) -> usize {
+    let mut last: BTreeMap<ObjId, Option<usize>> = BTreeMap::new();
+    for (o, ch) in &w.scenes.log {
+        let p = match ch {
+            Change::Waiting(p, why) if why.starts_with("completion conditions false") => Some(*p),
+            _ => None,
+        };
+        last.insert(*o, p);
+    }
+    let mut marked = 0;
+    for (o, p) in last {
+        let Some(p) = p else { continue };
+        if w.scenes.percent_marks.iter().any(|(s, _)| *s == o) {
+            continue;
+        }
+        let Some(key) = w.objects.get(o).and_then(|x| x.key.clone()) else {
+            continue;
+        };
+        let Some(Some(info)) = w.scenes.infos.get(&key).cloned() else {
+            continue;
+        };
+        let distance = info.phases.get(p).is_some_and(|ph| {
+            ph.completion
+                .iter()
+                .any(|x| x.ctda.function == cond::DISTANCE)
+        });
+        if !distance {
+            continue;
+        }
+        if let Reply::Value(Val::Bool(true)) = host.call(&marks_call(o), w) {
+            marked += 1;
+        }
+    }
+    marked
 }
 
 /// The synthetic call of a step job.

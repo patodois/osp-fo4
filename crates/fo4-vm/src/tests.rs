@@ -18,6 +18,7 @@ mod scene;
 mod scev;
 mod sit;
 mod stage;
+mod stepped;
 mod talk;
 mod vault;
 mod world;

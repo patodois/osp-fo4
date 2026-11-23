@@ -279,11 +279,143 @@ pub struct Talk {
     pub log: Vec<(f64, String)>,
     /// Counts by text.
     pub counts: BTreeMap<String, u64>,
+    /// The hello volumes when the track grows point by point
+    /// ([`Talk::cut`], [`Talk::extend`]): one per placed actor (`None`:
+    /// the actor has none), with its folds; empty when hello lines are off
+    /// or the whole track was given at load.
+    pub hello_folds: Vec<Option<(Volume, track::Folded)>>,
+    /// The hello distance when the folds are kept.
+    pub hello_folded: Option<f64>,
+    /// Times the hello crossings already applied changed when the track
+    /// was cut or grown (they should not: counted to check it).
+    pub prefix_changed: u64,
 }
 impl Talk {
     pub fn count(&mut self, k: impl Into<String>) {
         *self.counts.entry(k.into()).or_default() += 1;
     }
+    /// After [`track::Place::cut`]: the hello volumes about the placed
+    /// actors (as [`load_hello`] makes them) folded over the kept track,
+    /// and the hello crossings rebuilt. Nothing when hello lines are off.
+    pub fn cut(&mut self, place: &track::Place) {
+        let Some(d) = self.hello_distance else {
+            return;
+        };
+        if !(self.sw.hello && place.sw.actors) {
+            return;
+        }
+        self.hello_folded = Some(d);
+        self.hello_folds = place
+            .actors
+            .iter()
+            .map(|a| hello_volume(a, d).map(|v| (v, track::Folded::default())))
+            .collect();
+        let points = place
+            .track
+            .as_ref()
+            .map(|t| t.points.clone())
+            .unwrap_or_default();
+        for pair in points.windows(2) {
+            let mv = track::step_of(&pair[0], &pair[1]);
+            for (v, f) in self.hello_folds.iter_mut().flatten() {
+                f.push(v, None, mv);
+            }
+        }
+        self.rebuild(place);
+    }
+    /// Folds a grown track's new moves ([`track::Place::extend`]) into the
+    /// hello crossings and rebuilds them, the cursor kept.
+    pub fn extend(&mut self, place: &track::Place, moves: &[(track::Point, track::Point)]) {
+        for (a, b) in moves {
+            let mv = track::step_of(a, b);
+            for (v, f) in self.hello_folds.iter_mut().flatten() {
+                f.push(v, None, mv);
+            }
+        }
+        self.rebuild(place);
+    }
+    /// Adds the hello volume of a placed actor appended to the place's
+    /// actors, folded over the whole track so far (when the folds are
+    /// kept); rebuilt by the next [`Talk::rebuild`].
+    pub fn add_actor(&mut self, place: &track::Place, a: &track::PlacedActor) {
+        let Some(d) = self.hello_folded else {
+            return;
+        };
+        let points = place
+            .track
+            .as_ref()
+            .map(|t| t.points.clone())
+            .unwrap_or_default();
+        let h = hello_volume(a, d).map(|v| {
+            let mut f = track::Folded::default();
+            for pair in points.windows(2) {
+                f.push(&v, None, track::step_of(&pair[0], &pair[1]));
+            }
+            (v, f)
+        });
+        self.hello_folds.push(h);
+    }
+    /// The hello crossings from the folds, as [`load_hello`] orders them,
+    /// the cursor kept.
+    pub fn rebuild(&mut self, place: &track::Place) {
+        if self.hello_folds.is_empty() {
+            return;
+        }
+        let Some(last) = place.track.as_ref().and_then(|t| t.points.last()) else {
+            return;
+        };
+        let mut out = Vec::new();
+        for (i, h) in self.hello_folds.iter().enumerate() {
+            let Some((v, f)) = h else { continue };
+            for (e, l) in f.finish(v, None, last) {
+                out.push(HelloCrossing {
+                    t: e,
+                    actor: i,
+                    enter: true,
+                });
+                if l.is_finite() {
+                    out.push(HelloCrossing {
+                        t: l,
+                        actor: i,
+                        enter: false,
+                    });
+                }
+            }
+        }
+        out.sort_by(|a, b| {
+            a.t.total_cmp(&b.t)
+                .then(a.enter.cmp(&b.enter))
+                .then(a.actor.cmp(&b.actor))
+        });
+        let n = self.cursor.min(self.crossings.len());
+        if out.get(..n) != Some(&self.crossings[..n]) {
+            self.prefix_changed += 1;
+        }
+        self.crossings = out;
+    }
+}
+
+/// The hello volume about a placed actor at its stored position, as
+/// [`load_hello`] makes it.
+fn hello_volume(a: &track::PlacedActor, d: f64) -> Option<Volume> {
+    let frame = Transform::euler(
+        [
+            a.pos[0] as f32,
+            a.pos[1] as f32,
+            a.pos[2] as f32,
+            0.0,
+            0.0,
+            0.0,
+        ],
+        1.0,
+    )
+    .ok()?;
+    Some(Volume {
+        key: a.key.clone(),
+        space: a.space.clone(),
+        frame,
+        shape: Shape::Sphere(d),
+    })
 }
 
 /// The player's crossings of the hello distance about every placed actor
