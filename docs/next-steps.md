@@ -3,8 +3,7 @@
 This page is the hand-over point. Everything on `main` builds and passes its tests; anyone (a person or an
 agent) can continue from here. Read `AGENTS.md` first: it holds the rules of evidence and the clean-room rules.
 
-State on 2026-11-24 (vault, cast, light, home, character graph, fight, live window, museum, live world, run library, seen, past-the-museum, faces, third-fight and poses steps). Nothing below has been checked against the running game: every behaviour is a pending
-State on 2026-11-24 (vault, cast, light, home, character graph, fight, live window, museum, live world, run library, seen, past-the-museum, faces, third-fight and town-chain steps). Nothing below has been checked against the running game: every behaviour is a pending
+State on 2026-11-24 (vault, cast, light, home, character graph, fight, live window, museum, live world, run library, seen, past-the-museum, faces, third-fight, poses and town-chain steps). Nothing below has been checked against the running game: every behaviour is a pending
 rule in `spec/hypotheses.tsv`, off by default.
 
 ## Script VM and quests (`crates/fo4-vm`)
