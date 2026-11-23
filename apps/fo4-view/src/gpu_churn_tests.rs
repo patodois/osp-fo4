@@ -1759,6 +1759,9 @@ fn cpu_and_gpu_frames_agree_on_a_timeline_cast_frame() {
         dead: tl::Dead::Standing,
         sit_marker: false,
         look: fo4_scene::actor::Readings::default(),
+        model_graph_idle: false,
+        skinned_models: false,
+        memory_report: None,
         ride: None,
     };
     let applied = tl::apply(&mut scene, &mut loader, &p.frame, level, &b).unwrap();

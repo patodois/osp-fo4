@@ -677,7 +677,57 @@ fn a_ride_model_is_drawn_on_its_own_nodes_and_a_moved_node_carries_its_children(
         .ride
         .as_deref()
         .is_some_and(|l| l.contains("1 skinned shapes")));
-    assert!(crate::timeline::ride::report(&cast, Some(None)).starts_with("ride\tdrawn\t"));
+    assert!(crate::timeline::ride::report(&cast, &[(0, None)]).starts_with("ride\tdrawn\t"));
+    // Another extra than the ride's says nothing of the ride being drawn.
+    let other = crate::timeline::ride::report(&cast, &[(1, None)]);
+    assert!(
+        other.starts_with("ride\t")
+            && !other.starts_with("ride\tdrawn")
+            && other.contains("\t1 skinned")
+    );
+    // --skinned-models-own-nodes: the same placement, refused for its skin,
+    // added once on its own nodes; not again where the ride already is.
+    assert_eq!(cast.skinned, None);
+    crate::timeline::ride::add_skinned(
+        &mut cast,
+        &loader,
+        &scene,
+        crate::RuleLevel::Hypotheses,
+        &b,
+    )
+    .unwrap();
+    let (first, added, _) = cast.skinned.clone().unwrap();
+    assert_eq!((first, added), (1, 0));
+    let mut alone = crate::timeline::cast::Cast::default();
+    crate::timeline::ride::add_skinned(
+        &mut alone,
+        &loader,
+        &scene,
+        crate::RuleLevel::Hypotheses,
+        &b,
+    )
+    .unwrap();
+    let (first, added, text) = alone.skinned.clone().unwrap();
+    assert_eq!((first, added), (0, 1));
+    assert!(text.starts_with("1 placed references"));
+    let a = &alone.actors.actors[0];
+    assert_eq!(a.reference.object_id, 0x909);
+    let crate::State::ReadyUnderHypotheses { hypotheses: rules } = &a.state else {
+        panic!("{:?}", a.state)
+    };
+    assert!(rules.contains(&hypotheses::MODEL_OWN_NODES_EVERY));
+    assert!(alone.rules.contains(hypotheses::MODEL_OWN_NODES_EVERY));
+    assert!(crate::timeline::ride::report_skinned(&alone, &[(0, None)])
+        .contains("drawn 1, left out by the build 0\n"));
+    assert!(crate::timeline::ride::report_skinned(
+        &alone,
+        &[(0, Some("NoDrawableGeometry 1".into()))]
+    )
+    .contains("drawn 0, left out by the build 1 (1 NoDrawableGeometry)"));
+    assert_eq!(
+        crate::timeline::ride::report_skinned(&crate::timeline::cast::Cast::default(), &[]),
+        ""
+    );
     // A sequence the model does not hold: not added, said why.
     let mut cast = crate::timeline::cast::Cast::default();
     let o = crate::timeline::ride::Options {

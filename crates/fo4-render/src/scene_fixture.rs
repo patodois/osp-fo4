@@ -723,6 +723,34 @@ fn stored_blocks_are_kept_from_the_first_level_within_the_cap() {
     );
     assert_eq!(&kept.bytes[..2], &0xf800u16.to_le_bytes());
     assert_eq!(kept.bytes[2], 4, "level 1 is the fifth stored block");
+    // The level a cap keeps, without keeping it (the sharing of one path's
+    // entries between the plain and alpha-tested caps compares these).
+    let id = loader
+        .assets
+        .nodes
+        .iter()
+        .position(|a| a.kind == fo4_scene::AssetKind::Texture)
+        .unwrap();
+    assert_eq!(
+        crate::draw::block_level(&loader, id, 8, &b).unwrap(),
+        Some(0)
+    );
+    assert_eq!(
+        crate::draw::block_level(&loader, id, 4, &b).unwrap(),
+        Some(1)
+    );
+    assert_eq!(crate::draw::block_level(&loader, id, 0, &b).unwrap(), None);
+    // Where the memory goes: one texture of stored blocks, drawn by a
+    // placed reference only.
+    let report = crate::memory::report(&half);
+    assert!(report.starts_with("textures\t1\t"), "{report}");
+    assert!(report.contains("  as stored blocks\t0.0 MiB\n"), "{report}");
+    assert!(
+        report.contains("  drawn by placed references only\t1\t"),
+        "{report}"
+    );
+    assert!(report.contains("paths kept more than once\t0;"), "{report}");
+    assert!(report.contains("actors drawn\t0;"), "{report}");
     // A level whose sides are not multiples of 4 is decoded instead, under
     // the reference limits.
     let small = build(&scene, &loader, &m.limits, blocks(2), &b).unwrap();

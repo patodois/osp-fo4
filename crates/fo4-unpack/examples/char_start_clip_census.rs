@@ -770,6 +770,7 @@ fn run() -> Result<(), E> {
         folder: true,
         cycle: true,
         sit: false,
+        flag_one: false,
     };
     let _ = writeln!(names, "# walks: actor, outcome");
     let mut clips: BTreeMap<String, (f64, u8, bool)> = BTreeMap::new();

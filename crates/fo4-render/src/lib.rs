@@ -3,6 +3,7 @@
 pub mod compare;
 pub mod draw;
 pub mod maps;
+pub mod memory;
 pub mod persistent;
 pub mod png;
 mod raster;

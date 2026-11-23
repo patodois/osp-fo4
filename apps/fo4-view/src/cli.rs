@@ -133,10 +133,11 @@ usage:
            [--timeline-dead-lying | --timeline-dead-left-out] [--timeline-sit-marker]
            [--timeline-cast [--timeline-target-rotation] [--actor-missing-bone-bind]
            [--actor-start-clip] [--actor-subgraph-keywords] [--actor-clip-folder]
-           [--actor-start-clip-loop] [--actor-sit-clip]
-           [--actor-template-bits] [--actor-leveled-seed SEED
+           [--actor-start-clip-loop] [--actor-sit-clip] [--actor-subgraph-flag-one]
+           [--actor-model-graph-idle] [--actor-template-bits] [--actor-leveled-seed SEED
            [--actor-leveled-chance-none] [--actor-leveled-use-all]]
-           [--timeline-ride-model PLUGIN:HEX [--timeline-ride SEQUENCE,START]]]
+           [--timeline-ride-model PLUGIN:HEX [--timeline-ride SEQUENCE,START]]
+           [--skinned-models-own-nodes]] [--memory-report FILE]
            [--look-at X,Y,Z | --look-at-actor nearest|speaker]
            [--overlay build/OVERLAY.txt] --out build/FRAME.png
            [--tags build/TAGS.bin] [--size WxH] [--terrain] [--around N] [...]
@@ -183,10 +184,20 @@ usage:
       --actor-leveled-chance-none reads a leveled item list's LVLD as a
       chance of nothing rolled from the seed, --actor-leveled-use-all gives
       every entry of a list whose LVLF has bit 2 (pending rules).
+      --actor-subgraph-flag-one lets a race without subgraph entries of flag
+      word 0 take its entries of flag word 1 (no target keywords);
+      --actor-model-graph-idle draws an actor's part model whose own graph's
+      start state plays no sequence as stored (pending rules,
+      spec/character-graph.md and spec/actor.md).
       --timeline-ride-model draws the named reference by its skinned shapes
       on its own nodes; --timeline-ride SEQUENCE,START puts the nodes that
       sequence moves where it has them at the frame's second, the sequence
       starting at the run's second START (the caller's; pending rules).
+      --skinned-models-own-nodes draws every placed reference the draw
+      refuses for a skinned shape by its skinned shapes on its own nodes
+      (a pending rule; rigid shapes, controllers and material swap left out).
+      --memory-report FILE writes where the frame's texture and mesh bytes
+      go (measurement only).
       --look-at and --look-at-actor aim the camera from the same eye at a
       point, the nearest drawn actor or the line's speaker (presentation).
       Not with --eye, --look, --walk, --path, --actor-clip or --script-event.
@@ -520,6 +531,9 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
     let mut dead = fo4_scene::timeline::Dead::Standing;
     let mut sit_marker = false;
     let mut look_readings = fo4_scene::actor::Readings::default();
+    let mut model_graph_idle = false;
+    let mut skinned_models = false;
+    let mut memory_report: Option<String> = None;
     let mut ride_model = None;
     let mut ride_sequence = None;
     let mut aim = fo4_scene::timeline::Aim::Track;
@@ -599,6 +613,9 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             }
             "--timeline-sit-marker" => sit_marker = true,
             "--actor-template-bits" => look_readings.template_bits = true,
+            "--actor-model-graph-idle" => model_graph_idle = true,
+            "--skinned-models-own-nodes" => skinned_models = true,
+            "--memory-report" => memory_report = Some(value()?.to_string()),
             "--actor-leveled-chance-none" => look_readings.chance_none = true,
             "--actor-leveled-use-all" => look_readings.use_all = true,
             "--timeline-ride-model" => {
@@ -667,6 +684,9 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             dead,
             sit_marker,
             look: look_readings,
+            model_graph_idle,
+            skinned_models,
+            memory_report: memory_report.clone(),
             ride: ride_model.clone().map(|reference| fo4_scene::timeline::ride::Options {
                 reference,
                 sequence: ride_sequence,
@@ -684,6 +704,9 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
                 && dead == fo4_scene::timeline::Dead::Standing
                 && !sit_marker
                 && !look_readings.any()
+                && !model_graph_idle
+                && !skinned_models
+                && memory_report.is_none()
                 && ride_model.is_none()
                 && ride_sequence.is_none()
                 && aim == fo4_scene::timeline::Aim::Track =>
@@ -723,6 +746,8 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             || missing_bones_at_bind
             || pose.any()
             || look_readings.any()
+            || model_graph_idle
+            || skinned_models
             || ride_model.is_some())
             && !timeline_cast
         {

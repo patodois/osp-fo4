@@ -14,7 +14,7 @@ type AnyResult<T> = Result<T, Box<dyn std::error::Error>>;
 const TERRAIN_SHADING: &str = "ground textures weighted per vertex under the pending terrain texture rules, times VCLR; untextured weight as flat neutral grey per triangle by geometric normal; unlit, not game lighting";
 fn run() -> AnyResult<()> {
     let args: Vec<_> = std::env::args().skip(1).collect();
-    const USAGE: &str = "usage: render MANIFEST DATA_DIRECTORY CELL_EDITOR_ID build/OUTPUT [--strict|--measured|--under-hypotheses] [--eye X,Y,Z --look X,Y,Z] [--instance-ids] [--collision-overlay] [--terrain] [--around N] [--texture-mib N] [--time SECONDS] [--clock-emissive-multiple] [--clock-emissive-colour] [--clock-falloff] [--clock-translation] [--clock-rotation] [--clock-rotation-xyz] [--clock-scale] [--timeline FILE --at SECONDS --eye-height UNITS [--look-heading DEGREES] [--timeline-nowait] [--timeline-child-flag-agrees] [--timeline-dead-lying | --timeline-dead-left-out] [--timeline-sit-marker] [--timeline-cast [--timeline-target-rotation] [--actor-missing-bone-bind] [--actor-start-clip] [--actor-subgraph-keywords] [--actor-clip-folder] [--actor-start-clip-loop] [--actor-sit-clip] [--actor-template-bits] [--actor-leveled-seed SEED [--actor-leveled-chance-none] [--actor-leveled-use-all]] [--timeline-ride-model PLUGIN:HEX [--timeline-ride SEQUENCE,START]]] [--look-at X,Y,Z | --look-at-actor nearest|speaker]] [--light-cell] [--light-inherits] [--light-points [--light-reference-radius] [--light-fade]] [--light-fog] [--sky-weather] [--light-weather] [--fog-weather] [--assume-hour H] [--assume-weather N] [--exposure-eye] [--exposure-white] [--exposure-cinematic] [--light-vertex-normals] (with --timeline, CELL_EDITOR_ID - draws the player's cell)";
+    const USAGE: &str = "usage: render MANIFEST DATA_DIRECTORY CELL_EDITOR_ID build/OUTPUT [--strict|--measured|--under-hypotheses] [--eye X,Y,Z --look X,Y,Z] [--instance-ids] [--collision-overlay] [--terrain] [--around N] [--texture-mib N] [--time SECONDS] [--clock-emissive-multiple] [--clock-emissive-colour] [--clock-falloff] [--clock-translation] [--clock-rotation] [--clock-rotation-xyz] [--clock-scale] [--timeline FILE --at SECONDS --eye-height UNITS [--look-heading DEGREES] [--timeline-nowait] [--timeline-child-flag-agrees] [--timeline-dead-lying | --timeline-dead-left-out] [--timeline-sit-marker] [--timeline-cast [--timeline-target-rotation] [--actor-missing-bone-bind] [--actor-start-clip] [--actor-subgraph-keywords] [--actor-clip-folder] [--actor-start-clip-loop] [--actor-sit-clip] [--actor-subgraph-flag-one] [--actor-model-graph-idle] [--actor-template-bits] [--actor-leveled-seed SEED [--actor-leveled-chance-none] [--actor-leveled-use-all]] [--timeline-ride-model PLUGIN:HEX [--timeline-ride SEQUENCE,START]] [--skinned-models-own-nodes]] [--look-at X,Y,Z | --look-at-actor nearest|speaker]] [--light-cell] [--light-inherits] [--light-points [--light-reference-radius] [--light-fade]] [--light-fog] [--sky-weather] [--light-weather] [--fog-weather] [--assume-hour H] [--assume-weather N] [--exposure-eye] [--exposure-white] [--exposure-cinematic] [--light-vertex-normals] (with --timeline, CELL_EDITOR_ID - draws the player's cell)";
     if args.len() < 4 {
         return Err(USAGE.into());
     }
@@ -52,6 +52,8 @@ fn run() -> AnyResult<()> {
     // --timeline-ride-model, --timeline-ride (`fo4_scene::timeline::ride`).
     let mut ride_model: Option<fo4_plugin::FormKey> = None;
     let mut ride_sequence: Option<(usize, f64)> = None;
+    // --skinned-models-own-nodes (`fo4_scene::timeline::ride::add_skinned`).
+    let mut skinned_models = false;
     // The light step's readings (`fo4_scene::light`), off by default, and
     // the caller's hour and weather for an exterior.
     let mut light_switches = fo4_scene::light::Switches::default();
@@ -126,6 +128,8 @@ fn run() -> AnyResult<()> {
             "--timeline-target-rotation" => cast_options.target_rotation = true,
             "--actor-missing-bone-bind" => cast_options.missing_bones_at_bind = true,
             "--actor-template-bits" => cast_options.look.template_bits = true,
+            "--actor-model-graph-idle" => cast_options.model_graph_idle = true,
+            "--skinned-models-own-nodes" => skinned_models = true,
             "--actor-leveled-chance-none" => cast_options.look.chance_none = true,
             "--actor-leveled-use-all" => cast_options.look.use_all = true,
             "--timeline-ride-model" => {
@@ -211,13 +215,13 @@ fn run() -> AnyResult<()> {
         )
         .into());
     }
-    if (ride_model.is_some() && !timeline_cast)
+    if ((ride_model.is_some() || skinned_models) && !timeline_cast)
         || (ride_sequence.is_some() && ride_model.is_none())
         || ((cast_options.look.chance_none || cast_options.look.use_all)
             && cast_options.look.leveled_seed.is_none())
     {
         return Err(format!(
-            "--timeline-ride-model needs --timeline-cast, --timeline-ride needs --timeline-ride-model, --actor-leveled-chance-none and --actor-leveled-use-all need --actor-leveled-seed\n{USAGE}"
+            "--timeline-ride-model and --skinned-models-own-nodes need --timeline-cast, --timeline-ride needs --timeline-ride-model, --actor-leveled-chance-none and --actor-leveled-use-all need --actor-leveled-seed\n{USAGE}"
         )
         .into());
     }
@@ -348,6 +352,11 @@ fn run() -> AnyResult<()> {
             poses.get_or_insert_with(Default::default).insert(k, pose);
         }
     }
+    // --skinned-models-own-nodes: every placement refused for its skinned
+    // shapes as one more actor, after the ride.
+    if let (Some(c), true) = (&mut cast, skinned_models) {
+        fo4_scene::timeline::ride::add_skinned(c, &loader, &scene, policy, &budget)?;
+    }
     let mut built = match (&cast, poses) {
         (Some(c), Some(poses)) => {
             fo4_render::draw::build_with_posed_actors(
@@ -452,10 +461,8 @@ fn run() -> AnyResult<()> {
                 );
                 // --timeline-ride-model: whether the build drew the ride.
                 let text = text
-                    + &fo4_scene::timeline::ride::report(
-                        c,
-                        d.extras.first().map(|(_, w)| w.as_deref()),
-                    );
+                    + &fo4_scene::timeline::ride::report(c, &d.extras)
+                    + &fo4_scene::timeline::ride::report_skinned(c, &d.extras);
                 rules.extend(c.rules.iter().copied());
                 if !d.bind_bones.is_empty() {
                     rules.insert(fo4_scene::hypotheses::ACTOR_MISSING_BONE_BIND);

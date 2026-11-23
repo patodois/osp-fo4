@@ -99,6 +99,12 @@ pub const CLOCK_TRANSLATION: &str = "clock-translation";
 pub const CLOCK_ROTATION: &str = "clock-rotation";
 pub const CLOCK_ROTATION_XYZ: &str = "clock-rotation-xyz";
 pub const CLOCK_SCALE: &str = "clock-scale";
+/// A behaviour graph extra data block, and the effect-shader controllers
+/// its manager runs, in an actor's part model whose own graph's root start
+/// state plays no sequence (`actor_model_graph_start_no_sequence_v1`);
+/// given only by `crate::timeline::cast` with its switch on, in place of
+/// [`BEHAVIOR_GRAPH`] and [`EFFECT_IDLE`].
+pub const GRAPH_START_IDLE: &str = "graph-start-idle";
 /// Tolerance of "equal" between a stored effect-shader field and a key.
 pub const EFFECT_TOLERANCE: f32 = 1e-4;
 
@@ -136,6 +142,7 @@ pub fn rule(tag: &str) -> Option<&'static str> {
         CLOCK_ROTATION => h::CLOCK_ROTATION_QUATERNION,
         CLOCK_ROTATION_XYZ => h::CLOCK_ROTATION_XYZ,
         CLOCK_SCALE => h::CLOCK_SCALE,
+        GRAPH_START_IDLE => h::ACTOR_MODEL_GRAPH_START_IDLE,
         _ => return None,
     })
 }
@@ -1541,6 +1548,11 @@ mod tests {
         assert_eq!(
             covering(&e(EFFECT_FIRST_KEY)),
             Some(crate::hypotheses::REST_EFFECT_FIRST_KEY)
+        );
+        // Given only by the cast's --actor-model-graph-idle.
+        assert_eq!(
+            covering(&e(GRAPH_START_IDLE)),
+            Some(crate::hypotheses::ACTOR_MODEL_GRAPH_START_IDLE)
         );
         for open in [
             PARTICLE,

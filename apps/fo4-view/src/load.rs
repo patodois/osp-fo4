@@ -72,8 +72,11 @@ pub fn walk_rules() -> Vec<&'static str> {
 }
 
 /// Stored bytes the viewer keeps as blocks at most, apart from the decoded
-/// textures' budget of the reference options.
-pub const BLOCK_BYTES: u64 = 512 << 20;
+/// textures' budget of the reference options. 640 MiB since the poses step:
+/// the town frame of the museum step's furthest run at 1470 s keeps 539 MiB
+/// of blocks with every actor drawn (`--memory-report`; 512 MiB refused 9
+/// of its actors). A viewer bound, not a claim about the game.
+pub const BLOCK_BYTES: u64 = 640 << 20;
 
 /// Build options of a texture policy at `level`.
 pub fn build_options(textures: crate::cli::Textures, level: RuleLevel) -> BuildOptions {
@@ -374,6 +377,11 @@ pub fn cell(
                 poses.get_or_insert_with(Default::default).insert(k, pose);
             }
         }
+        // --skinned-models-own-nodes: every placement refused for its
+        // skinned shapes as one more actor, after the ride.
+        if args.skinned_models {
+            fo4_scene::timeline::ride::add_skinned(c, &loader, &scene, level, &budget)?;
+        }
     }
     let cast_actors = timeline_cast.as_ref().and_then(|c| c.cast.as_ref());
     let mut build = if let Some(c) = cast_actors {
@@ -389,6 +397,9 @@ pub fn cell(
             )?,
         };
         println!("timeline cast: {}", actor_summary(&c.actors, &build));
+        if let Some(f) = timeline.and_then(|(a, _)| a.memory_report.as_ref()) {
+            std::fs::write(f, fo4_render::memory::report(&build))?;
+        }
         for line in actor_lines(&c.actors, &build) {
             println!("  {line}");
         }

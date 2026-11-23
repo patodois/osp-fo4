@@ -443,6 +443,7 @@ fn run() -> Result<(), E> {
         folder: true,
         cycle: false,
         sit: true,
+        flag_one: false,
     };
     let frames: Vec<f64> = sits.iter().map(|s| s.0).collect();
     for (i, (s, who, f)) in sits.iter().enumerate() {

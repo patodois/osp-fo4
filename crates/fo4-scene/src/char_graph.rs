@@ -61,10 +61,16 @@ pub struct Switches {
     /// actor ([`crate::timeline::Pose::Seated`]) posed by its furniture's
     /// clip ([`furniture_clip`]).
     pub sit: bool,
+    /// [`hypotheses::CHAR_GRAPH_SUBGRAPH_FLAG_ONE`]
+    /// (`--actor-subgraph-flag-one`, with [`Switches::subgraph`]): a race
+    /// whose subgraph entries hold none of flag word 0 without target
+    /// keywords takes its entries of flag word 1 without target keywords
+    /// in their place ([`pick_entry_with`]).
+    pub flag_one: bool,
 }
 impl Switches {
     pub fn any(&self) -> bool {
-        self.start || self.subgraph || self.folder || self.cycle || self.sit
+        self.start || self.subgraph || self.folder || self.cycle || self.sit || self.flag_one
     }
     /// Turns on the switch a command-line flag names; `false` for any
     /// other argument.
@@ -75,6 +81,7 @@ impl Switches {
             "--actor-clip-folder" => &mut self.folder,
             "--actor-start-clip-loop" => &mut self.cycle,
             "--actor-sit-clip" => &mut self.sit,
+            "--actor-subgraph-flag-one" => &mut self.flag_one,
             _ => return false,
         };
         *slot = true;
@@ -299,22 +306,43 @@ pub fn pick_entry<'e>(
     entries: &'e [Entry],
     keywords: &BTreeSet<FormKey>,
 ) -> std::result::Result<&'e Entry, String> {
-    let fits: Vec<&Entry> = entries
-        .iter()
-        .filter(|e| e.flags == 0 && e.target_keywords.is_empty())
+    pick_entry_with(entries, keywords, false).map(|(e, _)| e)
+}
+
+/// [`pick_entry`], and with `flag_one`
+/// ([`hypotheses::CHAR_GRAPH_SUBGRAPH_FLAG_ONE`]) among the entries of
+/// flag word 1 without target keywords when `entries` hold none of flag
+/// word 0 without target keywords; the flag word the entries were taken
+/// from with the entry.
+pub fn pick_entry_with<'e>(
+    entries: &'e [Entry],
+    keywords: &BTreeSet<FormKey>,
+    flag_one: bool,
+) -> std::result::Result<(&'e Entry, u32), String> {
+    let movement = |word: u32| {
+        entries
+            .iter()
+            .filter(move |e| e.flags == word && e.target_keywords.is_empty())
+    };
+    let word = if flag_one && movement(0).next().is_none() && movement(1).next().is_some() {
+        1
+    } else {
+        0
+    };
+    let fits: Vec<&Entry> = movement(word)
         .filter(|e| e.actor_keywords.iter().all(|k| keywords.contains(k)))
         .collect();
     let Some(most) = fits.iter().map(|e| e.actor_keywords.len()).max() else {
-        return Err(
-            "no entry of flag word 0 without target keywords fits the actor's keywords".into(),
-        );
+        return Err(format!(
+            "no entry of flag word {word} without target keywords fits the actor's keywords"
+        ));
     };
     let best: Vec<&&Entry> = fits
         .iter()
         .filter(|e| e.actor_keywords.len() == most)
         .collect();
     match best.as_slice() {
-        [one] => Ok(one),
+        [one] => Ok((one, word)),
         _ => Err(format!(
             "{} entries tie with {most} of the actor's keywords",
             best.len()
@@ -692,8 +720,13 @@ fn walk(
                             "the subgraph race has no winning record",
                         )));
                     };
-                    let e = match pick_entry(&entries, keywords) {
-                        Ok(e) => e.clone(),
+                    let e = match pick_entry_with(&entries, keywords, w.switches.flag_one) {
+                        Ok((e, word)) => {
+                            if word == 1 {
+                                w.rules.insert(hypotheses::CHAR_GRAPH_SUBGRAPH_FLAG_ONE);
+                            }
+                            e.clone()
+                        }
                         Err(why) => return Ok(Err(w.refuse("GraphSubgraphEntry", why))),
                     };
                     w.step(

@@ -240,6 +240,7 @@ pub fn add(
         keyword_base: None,
     };
     b.reserve(&mut cast.actors.actors, 1, "timeline ride", 0)?;
+    cast.ride_index = Some(cast.actors.actors.len());
     cast.actors.actors.push(a);
     cast.ride = Some(text);
     cast.rules.insert(hypotheses::MODEL_OWN_NODES);
@@ -249,12 +250,169 @@ pub fn add(
     Ok(posed.map(|(s, _)| (POSE_KEY, s)))
 }
 
+/// Whether an error is one of the draw's refusals of a skinned shape.
+fn skin_refusal(e: &Error) -> bool {
+    e.code == "UnsupportedSkinning"
+        || (e.code == "UnsupportedNifBlock" && e.found.starts_with("BSSkin::"))
+}
+
+/// `model_skinned_own_nodes_every_placement_v1` (`--skinned-models-own-nodes`):
+/// every placed reference of the loaded `scene` that the draw refuses at
+/// `level` with one of its skinned shapes among the reasons (not an editor
+/// marker, not left out by its enable chain, not already in the cast) is
+/// added to `cast` as one more actor drawn by its model's skinned shapes on
+/// the model's own nodes at their stored transforms, as [`add`] draws the
+/// ride's model without a sequence: its rigid shapes, its controllers and
+/// its material swap are left out, its other refusals not read. Writes
+/// [`Cast::skinned`].
+pub fn add_skinned(
+    cast: &mut Cast,
+    loader: &Loader<'_>,
+    scene: &Scene,
+    level: crate::RuleLevel,
+    b: &Budget,
+) -> Result<(), Error> {
+    let first = cast.actors.actors.len();
+    let (mut refused, mut other) = (0usize, 0usize);
+    for inst in &scene.instances {
+        if inst.state.ready_at(level)
+            || inst.editor_marker
+            || inst
+                .enable
+                .as_ref()
+                .is_some_and(|p| p.enabled == Some(false))
+            || !inst.blockers.iter().any(skin_refusal)
+        {
+            continue;
+        }
+        refused += 1;
+        let key = super::norm(&inst.reference.key);
+        if cast
+            .actors
+            .actors
+            .iter()
+            .any(|a| super::norm(&a.reference) == key)
+        {
+            continue;
+        }
+        let (Some(base), Some(place)) = (&inst.base, inst.reference.data.transform) else {
+            other += 1;
+            continue;
+        };
+        let Some(&asset) = base.assets.first() else {
+            other += 1;
+            continue;
+        };
+        if loader.assets.nodes[asset].kind != crate::AssetKind::Model {
+            other += 1;
+            continue;
+        }
+        let path = loader.assets.nodes[asset].path.clone();
+        let src = inst.reference.record.source.clone();
+        let mut blockers = vec![rule(
+            "UnverifiedModelOwnNodesEvery",
+            &src,
+            "skinned shapes on the model's own nodes",
+        )];
+        for e in &inst.blockers {
+            if e.code.starts_with("HypothesisAsset") {
+                b.reserve(&mut blockers, 1, &src.file, src.offset)?;
+                blockers.push(e.clone());
+            }
+        }
+        let state = hypotheses::classify(&blockers, false, b)?;
+        let a = actor::Actor {
+            reference: inst.reference.key.clone(),
+            source: src,
+            base: Some(base.key.clone()),
+            transform: Some(place),
+            scale: inst.reference.data.scale,
+            plan: Some(actor::Plan {
+                race: base.key.clone(),
+                section: 0,
+                skeleton: path.clone(),
+                skeleton_asset: asset,
+                parts: vec![actor::Part {
+                    armor: base.key.clone(),
+                    addon: base.key.clone(),
+                    skin: false,
+                    path,
+                    asset,
+                }],
+                head: None,
+            }),
+            notes: Vec::new(),
+            blockers,
+            state,
+            enable: None,
+            missing_bones_at_bind: false,
+            pose: None,
+            look: None,
+            keyword_base: None,
+        };
+        b.reserve(&mut cast.actors.actors, 1, "timeline skinned models", 0)?;
+        cast.actors.actors.push(a);
+    }
+    let added = cast.actors.actors.len() - first;
+    if added > 0 {
+        cast.rules.insert(hypotheses::MODEL_OWN_NODES_EVERY);
+    }
+    cast.skinned = Some((
+        first,
+        added,
+        format!(
+            "{refused} placed references of the loaded cells refused with a skinned shape among the reasons; {added} added on their models' own nodes ({}), {other} without a model or a placement",
+            hypotheses::MODEL_OWN_NODES_EVERY
+        ),
+    ));
+    Ok(())
+}
+
+/// The overlay's line on the placed references [`add_skinned`] added
+/// (presentation): how many the build drew and its reasons for the
+/// others, counted. `extras` are `fo4_render`'s cast actors after the
+/// markers' (cast index, why left out).
+pub fn report_skinned(cast: &Cast, extras: &[(usize, Option<String>)]) -> String {
+    let Some((first, added, text)) = &cast.skinned else {
+        return String::new();
+    };
+    let mut drawn = 0usize;
+    let mut why: BTreeMap<String, usize> = BTreeMap::new();
+    for (k, w) in extras {
+        if *k < *first || *k >= first + added {
+            continue;
+        }
+        match w {
+            None => drawn += 1,
+            Some(w) => {
+                let code = w.split(' ').next().unwrap_or("").to_string();
+                *why.entry(code).or_default() += 1;
+            }
+        }
+    }
+    let left: Vec<String> = why.iter().map(|(c, n)| format!("{n} {c}")).collect();
+    format!(
+        "skinned models\t{text}; drawn {drawn}, left out by the build {}{}\n",
+        added - drawn,
+        if left.is_empty() {
+            String::new()
+        } else {
+            format!(" ({})", left.join(", "))
+        }
+    )
+}
+
 /// The overlay's line on the ride (presentation): what [`add`] wrote, and
-/// whether the build drew it (`drawn`: `None`) or why not.
-pub fn report(cast: &Cast, drawn: Option<Option<&str>>) -> String {
+/// whether the build drew it or why not, from `fo4_render`'s cast actors
+/// after the markers' (`extras`: cast index, why left out).
+pub fn report(cast: &Cast, extras: &[(usize, Option<String>)]) -> String {
     let Some(line) = &cast.ride else {
         return String::new();
     };
+    let drawn = cast
+        .ride_index
+        .and_then(|k| extras.iter().find(|(x, _)| *x == k))
+        .map(|(_, w)| w.as_deref());
     match drawn {
         Some(None) => format!("ride\tdrawn\t{line}\n"),
         Some(Some(why)) => format!("ride\tleft out by the build: {why}\t{line}\n"),

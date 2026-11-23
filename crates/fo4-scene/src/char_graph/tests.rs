@@ -271,6 +271,7 @@ const ON: Switches = Switches {
     folder: true,
     cycle: false,
     sit: false,
+    flag_one: false,
 };
 
 #[test]
@@ -356,6 +357,37 @@ fn subgraph_entries_ties_and_race_projects() {
         .contains("2 entries tie"));
     assert_eq!(pick_entry(&entries, &has(&[1, 2, 3])).unwrap().index, 3);
     assert!(pick_entry(&entries[1..3], &has(&[])).is_err());
+    // --actor-subgraph-flag-one: flag word 1 only where flag word 0 (without
+    // target keywords) has no entry at all.
+    assert_eq!(
+        pick_entry_with(&entries, &has(&[1, 2]), true).map(|(e, w)| (e.index, w)),
+        Err("2 entries tie with 1 of the actor's keywords".into())
+    );
+    let creature = [
+        e(0, &[7], &[], 1),
+        e(1, &[], &[], 1),
+        e(2, &[], &[8], 1),
+        e(3, &[], &[8], 2),
+        e(4, &[], &[], 3),
+    ];
+    assert!(pick_entry(&creature, &has(&[])).is_err());
+    assert_eq!(
+        pick_entry_with(&creature, &has(&[]), false).unwrap_err(),
+        "no entry of flag word 0 without target keywords fits the actor's keywords"
+    );
+    assert_eq!(
+        pick_entry_with(&creature, &has(&[]), true).map(|(e, w)| (e.index, w)),
+        Ok((1, 1))
+    );
+    assert_eq!(
+        pick_entry_with(&creature, &has(&[7]), true).map(|(e, w)| (e.index, w)),
+        Ok((0, 1))
+    );
+    assert!(pick_entry_with(&creature[2..], &has(&[]), true)
+        .unwrap_err()
+        .contains("flag word 0"));
+    let mut s = Switches::default();
+    assert!(s.set_flag("--actor-subgraph-flag-one") && s.flag_one && s.any());
 }
 
 #[test]

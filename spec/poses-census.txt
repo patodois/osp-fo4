@@ -1,0 +1,195 @@
+# Rest poses, markers, skinned models of placed records other than actors, the shaft's parts (poses_census; counts only)
+
+## 1. Characters the frames draw in the rest pose (every look reading on, seed 1)
+second 17: 3 characters
+  3	posed
+second 418: 37 characters
+  37	posed
+second 560: 23 characters
+  23	posed
+second 1345: 44 characters
+  27	posed
+  17	rest pose: its start clip refused, GraphSubgraphEntry
+second 1470: 44 characters
+  27	posed
+  17	rest pose: its start clip refused, GraphSubgraphEntry
+second 1650: 10 characters
+  10	posed
+distinct actors in the rest pose	17
+by race, keyword source and subgraph entries:
+  1	race 0, keywords from the NPC_ the template bits chose, 8 keywords; subgraph race with 10 entries, 0 of flag word 0 without target keywords (0 of them without actor keywords); entries the keywords fit by flag word {1: 1, 2: 5, 3: 1}; no entry of flag word 0 without target keywords to be near; --actor-subgraph-flag-one picks an entry of flag word 1
+  4	race 1, keywords from the NPC_ the template bits chose, 2 keywords; subgraph race with 6 entries, 0 of flag word 0 without target keywords (0 of them without actor keywords); entries the keywords fit by flag word {1: 1, 2: 3, 3: 2}; no entry of flag word 0 without target keywords to be near; --actor-subgraph-flag-one picks an entry of flag word 1
+  4	race 2, keywords from the NPC_ the template bits chose, 5 keywords; subgraph race with 6 entries, 0 of flag word 0 without target keywords (0 of them without actor keywords); entries the keywords fit by flag word {1: 1, 2: 2}; no entry of flag word 0 without target keywords to be near; --actor-subgraph-flag-one picks an entry of flag word 1
+  1	race 2, keywords from the NPC_ the template bits chose, 6 keywords; subgraph race with 6 entries, 0 of flag word 0 without target keywords (0 of them without actor keywords); entries the keywords fit by flag word {1: 1, 2: 2}; no entry of flag word 0 without target keywords to be near; --actor-subgraph-flag-one picks an entry of flag word 1
+  1	race 3, keywords from the NPC_ the template bits chose, 2 keywords; subgraph race with 8 entries, 0 of flag word 0 without target keywords (0 of them without actor keywords); entries the keywords fit by flag word {1: 1, 2: 1, 3: 3}; no entry of flag word 0 without target keywords to be near; --actor-subgraph-flag-one picks an entry of flag word 1
+  3	race 4, keywords from the NPC_ the template bits chose, 3 keywords; subgraph race with 8 entries, 0 of flag word 0 without target keywords (0 of them without actor keywords); entries the keywords fit by flag word {1: 1, 2: 1, 3: 3}; no entry of flag word 0 without target keywords to be near; --actor-subgraph-flag-one picks an entry of flag word 1
+  1	race 4, keywords from the NPC_ the template bits chose, 4 keywords; subgraph race with 8 entries, 0 of flag word 0 without target keywords (0 of them without actor keywords); entries the keywords fit by flag word {1: 1, 2: 1, 3: 3}; no entry of flag word 0 without target keywords to be near; --actor-subgraph-flag-one picks an entry of flag word 1
+  2	race 5, keywords from the NPC_ the template bits chose, 2 keywords; subgraph race with 21 entries, 0 of flag word 0 without target keywords (0 of them without actor keywords); entries the keywords fit by flag word {1: 1, 2: 3, 3: 2}; no entry of flag word 0 without target keywords to be near; --actor-subgraph-flag-one picks an entry of flag word 1
+where the nearest entries' missing keywords are stored (per actor):
+
+## 2. Markers of the frames (every look reading on, seed 1)
+second 17: 1 markers
+  1	skin: none (NPC_ and RACE WNAM absent); outfit: none declared; no model to draw
+second 418: 6 markers
+  4	Blocked: RejectedVfsPath (a path); MissingTexture (a path)
+  1	Blocked: UnsupportedAnimationRuntime BSEffectShaderPropertyFloatController
+  1	skin: none (NPC_ and RACE WNAM absent); outfit: none declared; no model to draw
+second 560: 6 markers
+  5	Blocked: RejectedVfsPath (a path); MissingTexture (a path)
+  1	Blocked: UnsupportedAnimationRuntime NiTransformController
+second 1345: 40 markers
+  6	Blocked: UnsupportedAnimationRuntime BSBehaviorGraphExtraData
+  7	Blocked: UnsupportedAnimationRuntime BSBehaviorGraphExtraData; UnsupportedNifField BSLagBoneController.Controller Body
+  18	Blocked: UnsupportedAnimationRuntime BSEffectShaderPropertyFloatController
+  2	Blocked: UnsupportedAnimationRuntime BSLagBoneController; UnsupportedNifField BSLagBoneController.Controller Body
+  2	Blocked: UnsupportedAnimationRuntime NiTransformController
+  2	outfit: leveled item list N with LVLD or LVLM not zero (meaning not established); outfit: unresolved; actor not drawn
+  2	outfit: none declared; addon N: no model (MOD2) for section N; actor not drawn
+  1	skin: none (NPC_ and RACE WNAM absent); outfit: none declared; no model to draw
+second 1470: 40 markers
+  6	Blocked: UnsupportedAnimationRuntime BSBehaviorGraphExtraData
+  7	Blocked: UnsupportedAnimationRuntime BSBehaviorGraphExtraData; UnsupportedNifField BSLagBoneController.Controller Body
+  18	Blocked: UnsupportedAnimationRuntime BSEffectShaderPropertyFloatController
+  2	Blocked: UnsupportedAnimationRuntime BSLagBoneController; UnsupportedNifField BSLagBoneController.Controller Body
+  2	Blocked: UnsupportedAnimationRuntime NiTransformController
+  2	outfit: leveled item list N with LVLD or LVLM not zero (meaning not established); outfit: unresolved; actor not drawn
+  2	outfit: none declared; addon N: no model (MOD2) for section N; actor not drawn
+  1	skin: none (NPC_ and RACE WNAM absent); outfit: none declared; no model to draw
+second 1650: 2 markers
+  1	Blocked: UnsupportedAnimationRuntime NiTransformController
+  1	skin addon N: hidden by worn armour slots; addon N: no model (MOD3) for section N; actor not drawn
+distinct actors drawn as markers	54
+marker actors by the open blocker families of their models (family on part):
+  9	(a path) on a texture or another file + (a path) on an outfit piece
+  9	(a path) on an outfit piece + rest behavior-graph on an outfit piece + rest other on an outfit piece + rest transform-varies on an outfit piece
+  7	no plan
+  5	rest behavior-graph on an outfit piece
+  20	rest behavior-graph on the skin (body) + rest effect-idle on the skin (body)
+  4	rest transform-varies on an outfit piece
+actors per family and part:
+  9	(a path) on a texture or another file
+  18	(a path) on an outfit piece
+  14	rest behavior-graph on an outfit piece
+  20	rest behavior-graph on the skin (body)
+  20	rest effect-idle on the skin (body)
+  9	rest other on an outfit piece
+  13	rest transform-varies on an outfit piece
+behaviour graph extra data of those actors' models (per actor and model):
+  14	an outfit piece model (with a controller manager): names another graph file; its graph's start state plays no sequence; controls base skeleton U8(0)
+  1	the skin (body) model (no controller manager): names another graph file; its graph's start state plays no sequence; controls base skeleton U8(0)
+  15	the skin (body) model (with a controller manager): names another graph file; its graph's start state plays a sequence driving an effect controller; controls base skeleton U8(0)
+  5	the skin (body) model (with a controller manager): names another graph file; its graph's start state plays no sequence; controls base skeleton U8(0)
+open blockers by family and code (over those actors):
+  9	(a path)	MissingTexture
+  9	(a path)	RejectedVfsPath
+  4	(a path)	RuntimeEnableParent
+  17	(a path)	UnsupportedNifField
+  35	rest behavior-graph	UnsupportedAnimationRuntime
+  324	rest effect-idle	UnsupportedAnimationRuntime
+  17	rest other	UnsupportedAnimationRuntime
+  105	rest transform-varies	UnsupportedAnimationRuntime
+
+### Races of the load order holding subgraph entries (SAKD/STKD/SGNM/SAPT/SRAF runs)
+RACE records	110
+  83	races holding their own entries
+  25	races naming another race's entries (SRAC)
+  2	races whose subgraph race holds no entry
+races holding entries	83
+entries by flag word and keywords (all holders):
+  7	flag word 0x0, target keywords none, actor keywords none
+  65	flag word 0x0, target keywords none, actor keywords some
+  40	flag word 0x1, target keywords none, actor keywords none
+  157	flag word 0x1, target keywords none, actor keywords some
+  138	flag word 0x1, target keywords some, actor keywords none
+  2716	flag word 0x1, target keywords some, actor keywords some
+  2	flag word 0x10000, target keywords none, actor keywords none
+  1	flag word 0x10000, target keywords none, actor keywords some
+  1	flag word 0x10001, target keywords none, actor keywords none
+  138	flag word 0x10001, target keywords some, actor keywords none
+  40	flag word 0x10002, target keywords some, actor keywords none
+  4	flag word 0x10002, target keywords some, actor keywords some
+  2	flag word 0x10004, target keywords none, actor keywords none
+  334	flag word 0x2, target keywords some, actor keywords none
+  123	flag word 0x2, target keywords some, actor keywords some
+  1	flag word 0x3, target keywords none, actor keywords none
+  1	flag word 0x3, target keywords none, actor keywords some
+  66	flag word 0x3, target keywords some, actor keywords none
+holders by the entries they have:
+  26	word 0 without target keywords: no; word 1 without target keywords: no; word 1 with target keywords: no
+  5	word 0 without target keywords: no; word 1 without target keywords: no; word 1 with target keywords: yes
+  38	word 0 without target keywords: no; word 1 without target keywords: yes; word 1 with target keywords: no
+  5	word 0 without target keywords: no; word 1 without target keywords: yes; word 1 with target keywords: yes
+  5	word 0 without target keywords: yes; word 1 without target keywords: no; word 1 with target keywords: no
+  3	word 0 without target keywords: yes; word 1 without target keywords: no; word 1 with target keywords: yes
+  1	word 0 without target keywords: yes; word 1 without target keywords: yes; word 1 with target keywords: yes
+
+## 3. Skinned models of placed records other than actors (base records of the placed kinds with MODL)
+models with skinned shapes	322
+by what moves their bones (lines starting with two spaces: by base kind and by size):
+  1	  1 skinned shapes, 1 bones
+  137	  1 skinned shapes, 2 to 5 bones
+  21	  1 skinned shapes, 6 to 20 bones
+  14	  1 skinned shapes, more than 20 bones
+  51	  2 to 5 skinned shapes, 2 to 5 bones
+  31	  2 to 5 skinned shapes, 6 to 20 bones
+  46	  2 to 5 skinned shapes, more than 20 bones
+  3	  6 to 20 skinned shapes, 2 to 5 bones
+  6	  6 to 20 skinned shapes, 6 to 20 bones
+  8	  6 to 20 skinned shapes, more than 20 bones
+  87	  base kinds ACTI
+  3	  base kinds ACTI+CONT
+  1	  base kinds ACTI+CONT+TACT
+  2	  base kinds ACTI+FURN
+  1	  base kinds ACTI+MISC+TACT
+  3	  base kinds ACTI+MSTT
+  8	  base kinds ACTI+STAT
+  1	  base kinds ACTI+TACT
+  1	  base kinds AMMO
+  73	  base kinds CONT
+  1	  base kinds CONT+MISC
+  5	  base kinds CONT+STAT
+  1	  base kinds CONT+TERM
+  5	  base kinds DOOR
+  2	  base kinds DOOR+STAT
+  31	  base kinds FURN
+  2	  base kinds MISC
+  52	  base kinds MSTT
+  21	  base kinds MSTT+STAT
+  19	  base kinds STAT
+  1	  base kinds TACT
+  2	  base kinds TERM
+  4	  more than 20 skinned shapes, more than 20 bones
+  2	a manager whose 2 sequences move no bone; a behaviour graph; physics none
+  1	a manager whose 3 sequences move no bone; a behaviour graph; physics none
+  1	a manager whose 32 sequences move no bone; a behaviour graph; physics none
+  3	a manager whose 4 sequences move no bone; a behaviour graph; physics none
+  1	a manager whose 4 sequences move no bone; no behaviour graph; physics none
+  8	a manager whose 5 sequences move no bone; a behaviour graph; physics none
+  104	a manager, all of its sequences moving bones; a behaviour graph; physics none
+  124	a manager, all of its sequences moving bones; no behaviour graph; physics none
+  1	a manager, some of its sequences moving bones; a behaviour graph; physics none
+  29	no controller manager; a behaviour graph; physics none
+  48	no controller manager; no behaviour graph; physics none
+placed references (REFR) of those models	21341
+  4	a manager whose 4 sequences move no bone; a behaviour graph; physics none
+  153	a manager whose 5 sequences move no bone; a behaviour graph; physics none
+  1106	a manager, all of its sequences moving bones; a behaviour graph; physics none
+  14232	a manager, all of its sequences moving bones; no behaviour graph; physics none
+  157	a manager, some of its sequences moving bones; a behaviour graph; physics none
+  411	no controller manager; a behaviour graph; physics none
+  5278	no controller manager; no behaviour graph; physics none
+
+## 4. The shaft model's parts, block by block
+reference subrecords: XMSP 1, XLRT 1, XESP 0, XLKR 0
+base subrecords: MODS 1, PNAM 1, FNAM 1
+controller sequences	9
+  1	BSEffectShaderPropertyColorController: an effect field run by the manager (effect-idle)
+  3	BSEffectShaderPropertyFloatController: an effect field run by the manager (effect-idle)
+  1	behaviour graph extra data: the graph that starts the sequences
+  1	sequence of cycle type 0: controlled blocks by interpolator kind [NiBoolInterpolator, NiFloatInterpolator, NiPoint3Interpolator, NiTransformInterpolator]
+  8	sequence of cycle type 2: controlled blocks by interpolator kind [NiBoolInterpolator, NiFloatInterpolator, NiPoint3Interpolator, NiTransformInterpolator]
+  1	shape BSTriShape: rigid, BSEffectShaderProperty, alpha property true, shader controllers BSEffectShaderPropertyColorController+BSEffectShaderPropertyFloatController+BSEffectShaderPropertyFloatController: left out by the ride reading (rigid shape)
+  1	shape BSTriShape: rigid, BSEffectShaderProperty, alpha property true, shader controllers BSEffectShaderPropertyFloatController: left out by the ride reading (rigid shape)
+  1	shape BSTriShape: skinned, BSLightingShaderProperty, alpha property false, shader controllers BSLightingShaderPropertyFloatController: drawn by the ride reading (skinned on the model's own nodes)
+  4	shape BSTriShape: skinned, BSLightingShaderProperty, alpha property false, shader controllers none: drawn by the ride reading (skinned on the model's own nodes)
+  1	visibility controller: its target's visibility over time is not read (UnsupportedAnimationRuntime, no rest rule)

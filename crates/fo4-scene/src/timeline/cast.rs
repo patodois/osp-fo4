@@ -48,6 +48,12 @@ pub struct Options {
     /// (`crate::actor::Readings`: `--actor-template-bits`,
     /// `--actor-leveled-seed`).
     pub look: actor::Readings,
+    /// `actor_model_graph_start_no_sequence_v1` (`--actor-model-graph-idle`):
+    /// a part model of the actor (skin or outfit piece) whose own behaviour
+    /// graph's root start state plays no sequence ([`graph_start_idle`]) has
+    /// its graph extra data and its manager-run effect-shader controllers
+    /// settled: the model is drawn as stored.
+    pub model_graph_idle: bool,
 }
 
 /// The frame's actors resolved as characters, in the order of the markers.
@@ -71,6 +77,13 @@ pub struct Cast {
     /// (`super::ride::add`), which then follows the markers' actors in
     /// [`Cast::actors`].
     pub ride: Option<String>,
+    /// The cast index of the ride's model when [`super::ride::add`] added it.
+    pub ride_index: Option<usize>,
+    /// With `--skinned-models-own-nodes`: the first cast index of the
+    /// placed references added by `super::ride::add_skinned` (they follow
+    /// the markers' actors and the ride), how many were added, and the
+    /// overlay's text on them.
+    pub skinned: Option<(usize, usize, String)>,
 }
 
 impl Cast {
@@ -173,6 +186,76 @@ fn target_rotation(
     })
 }
 
+/// A path lower case with forward slashes, for comparing a blocker's file
+/// with a part's model.
+fn path_text(p: &[u8]) -> String {
+    String::from_utf8_lossy(p)
+        .to_ascii_lowercase()
+        .replace('\\', "/")
+}
+
+/// Under [`Options::model_graph_idle`]: for each part model of `a` (skin or
+/// outfit piece) with a behaviour graph blocker, the root start state of
+/// the graph the model names (`crate::anim_graph::model_graph`); where it
+/// plays no sequence, the model's `behavior-graph` and `effect-idle`
+/// blockers take the tag `graph-start-idle`
+/// (`actor_model_graph_start_no_sequence_v1`) and the actor's state is
+/// classified again. A graph that cannot be read leaves the blockers.
+fn graph_start_idle(loader: &Loader<'_>, a: &mut actor::Actor, b: &Budget) -> Result<(), Error> {
+    use crate::rest;
+    let Some(plan) = &a.plan else {
+        return Ok(());
+    };
+    let tagged = |e: &Error, tag: &str| e.found.ends_with(&format!(";rest={tag}"));
+    let mut idle: Vec<String> = Vec::new();
+    for p in &plan.parts {
+        let file = path_text(&loader.assets.nodes[p.asset].path);
+        let has_graph = a.blockers.iter().any(|e| {
+            tagged(e, rest::BEHAVIOR_GRAPH) && path_text(e.source.file.as_bytes()) == file
+        });
+        if !has_graph || idle.contains(&file) {
+            continue;
+        }
+        let model = file.strip_prefix("meshes/").unwrap_or(&file);
+        let Ok(g) = crate::anim_graph::model_graph(loader.vfs(), model, &loader.plugins.limits, b)
+        else {
+            continue;
+        };
+        if g.machine
+            .state(g.machine.start)
+            .is_some_and(|s| s.sequence.is_none())
+        {
+            b.reserve(&mut idle, 1, "timeline cast", 0)?;
+            idle.push(file);
+        }
+    }
+    if retag_graph_start_idle(&mut a.blockers, &idle) {
+        a.state = hypotheses::classify(&a.blockers, false, b)?;
+    }
+    Ok(())
+}
+
+/// The `behavior-graph` and `effect-idle` blockers of the files `idle`
+/// (lower case, forward slashes) retagged `graph-start-idle`; whether any was.
+fn retag_graph_start_idle(blockers: &mut [Error], idle: &[String]) -> bool {
+    use crate::rest;
+    let mut any = false;
+    for e in blockers {
+        let tag = e
+            .found
+            .rsplit_once(";rest=")
+            .map(|(h, t)| (h.to_string(), t));
+        let Some((head, t)) = tag else { continue };
+        if (t == rest::BEHAVIOR_GRAPH || t == rest::EFFECT_IDLE)
+            && idle.contains(&path_text(e.source.file.as_bytes()))
+        {
+            e.found = format!("{head};rest={}", rest::GRAPH_START_IDLE);
+            any = true;
+        }
+    }
+    any
+}
+
 /// Resolves each marker's actor as a character standing at the marker's
 /// place (see the module). Needs `RuleLevel::Hypotheses`: every rule of
 /// the cast is pending.
@@ -216,6 +299,9 @@ pub fn resolve(
             }
         }
         a.missing_bones_at_bind = options.missing_bones_at_bind;
+        if options.model_graph_idle {
+            graph_start_idle(loader, &mut a, b)?;
+        }
         let mut facing = "not placed (no stored placement)".to_string();
         if let Some(stored) = a.transform {
             let here = (0..3).all(|i| f64::from(stored[i]) == m.pos[i]);
@@ -551,4 +637,49 @@ pub fn report(
         );
     }
     s
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_model_whose_graph_starts_idle_has_its_graph_and_effect_blockers_settled() {
+        let e = |file: &str, tag: &str| {
+            Error::new(
+                "UnsupportedAnimationRuntime",
+                file,
+                0,
+                "x",
+                format!(
+                    "BSEffectShaderPropertyFloatController;target_in_visual=Some(true);rest={tag}"
+                ),
+            )
+        };
+        let mut blockers = vec![
+            e("Meshes\\A\\Body.nif", "behavior-graph"),
+            e("Meshes\\A\\Body.nif", "effect-idle"),
+            e("Meshes\\A\\Body.nif", "transform-varies"),
+            e("Meshes\\B\\Hat.nif", "effect-idle"),
+        ];
+        assert!(!retag_graph_start_idle(&mut blockers, &[]));
+        assert!(retag_graph_start_idle(
+            &mut blockers,
+            &["meshes/a/body.nif".to_string()]
+        ));
+        let covered: Vec<Option<&str>> = blockers.iter().map(hypotheses::covering).collect();
+        assert_eq!(
+            covered,
+            [
+                Some(hypotheses::ACTOR_MODEL_GRAPH_START_IDLE),
+                Some(hypotheses::ACTOR_MODEL_GRAPH_START_IDLE),
+                None,
+                None
+            ]
+        );
+        let state = hypotheses::classify(&blockers[..2], false, &Budget::new(1 << 20)).unwrap();
+        assert!(state
+            .hypotheses()
+            .contains(&hypotheses::ACTOR_MODEL_GRAPH_START_IDLE));
+    }
 }

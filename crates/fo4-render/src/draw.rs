@@ -574,6 +574,33 @@ pub fn decode_texture(
         declared_fourcc,
     })
 }
+/// The mip number of the level [`block_texture`] would keep of texture
+/// asset `id` under `max_dimension` (the first single-surface level whose
+/// sides are at most it), without keeping anything; `None` where it would
+/// keep none at that first step.
+pub fn block_level(
+    loader: &Loader<'_>,
+    id: usize,
+    max_dimension: u32,
+    budget: &Budget,
+) -> Result<Option<u32>> {
+    let scratch = budget.child();
+    loader.assets.with_decoded(id, &scratch, |d| {
+        let DecodedAsset::Texture(t) = d else {
+            return Err(error("RenderAssetKind", "texture", 0, id));
+        };
+        Ok(t.surfaces
+            .iter()
+            .find(|s| {
+                s.array == 0
+                    && s.face == 0
+                    && s.depth == 1
+                    && s.width <= max_dimension
+                    && s.height <= max_dimension
+            })
+            .map(|s| s.mip))
+    })
+}
 /// Keeps texture asset `id` as its stored blocks: the first single-surface
 /// level whose sides are at most `max_dimension`, and every coarser stored
 /// level after it, counted in `block_bytes` against `max_bytes`. `Ok(None)`
@@ -724,6 +751,24 @@ impl Builder<'_, '_> {
             return Ok(*i);
         }
         let id = self.asset(AssetKind::Texture, &path)?;
+        // The same path kept under the other block cap with the same first
+        // level holds the same blocks: that entry is shared, not kept twice.
+        if let (Some(cap), Some(blocks)) = (cap, self.options.blocks) {
+            for other in [blocks.max_dimension, blocks.max_alpha_tested_dimension] {
+                let Some(&i) = self.textures.get(&(path.clone(), other)) else {
+                    continue;
+                };
+                if other == cap || !self.output.list.blocks.contains_key(&i) {
+                    continue;
+                }
+                if block_level(self.loader, id, cap, self.budget)?
+                    == Some(self.output.list.textures[i].mip)
+                {
+                    self.textures.insert((path, cap), i);
+                    return Ok(i);
+                }
+            }
+        }
         let kept = match (cap, self.options.blocks) {
             (Some(cap), Some(blocks)) => block_texture(
                 self.loader,
@@ -2361,8 +2406,9 @@ impl Builder<'_, '_> {
     fn allow(&mut self, rules: &[&'static str]) {
         use fo4_scene::hypotheses as h;
         self.allow_effect_color = rules.contains(&h::EFFECT_COLOR);
-        self.allow_effect_surface =
-            rules.contains(&h::REST_EFFECT_FIRST_KEY) || rules.contains(&h::CLOCK_FREE_RUNNING);
+        self.allow_effect_surface = rules.contains(&h::REST_EFFECT_FIRST_KEY)
+            || rules.contains(&h::CLOCK_FREE_RUNNING)
+            || rules.contains(&h::ACTOR_MODEL_GRAPH_START_IDLE);
         self.clock_rest = rules.contains(&h::CLOCK_FREE_RUNNING);
         self.allow_missing_embedded = rules.contains(&h::MISSING_MATERIAL_EMBEDDED);
         self.texture_first_key = rules.contains(&h::REST_TEXTURE_FIRST_KEY);

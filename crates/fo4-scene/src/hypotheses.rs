@@ -280,6 +280,15 @@ pub const MODEL_OWN_NODES: &str = "model_skinned_own_nodes_v1";
 /// The nodes a caller's sequence translates, at the frame's second
 /// (`crate::timeline::ride`, `--timeline-ride`).
 pub const TIMELINE_RIDE: &str = "timeline_ride_sequence_nodes_v1";
+/// An actor's part model whose own behaviour graph's root start state plays
+/// no sequence drawn as stored, its graph extra data and manager-run
+/// effect-shader controllers settled (`crate::timeline::cast`,
+/// `--actor-model-graph-idle`).
+pub const ACTOR_MODEL_GRAPH_START_IDLE: &str = "actor_model_graph_start_no_sequence_v1";
+/// Every placed reference of a frame refused for its skinned shapes drawn
+/// by those shapes on its model's own nodes (`crate::timeline::ride::add_skinned`,
+/// `--skinned-models-own-nodes`).
+pub const MODEL_OWN_NODES_EVERY: &str = "model_skinned_own_nodes_every_placement_v1";
 /// A clip posing an actor (`crate::actor::clip`, `spec/actor.md`, Clip pose).
 pub const ACTOR_CLIP_SKELETON: &str = "actor_clip_skeleton_beside_nif_v1";
 pub const ACTOR_CLIP_POSE: &str = "actor_clip_pose_by_bone_name_v1";
@@ -290,6 +299,10 @@ pub const CHAR_GRAPH_START: &str = "char_graph_start_state_clip_v1";
 /// A swap generator playing the race's keyword-matched subgraph entry of
 /// flag word 0 (`crate::char_graph`, `--actor-subgraph-keywords`).
 pub const CHAR_GRAPH_SUBGRAPH: &str = "char_graph_swap_subgraph_keywords_v1";
+/// A race without entries of flag word 0 (no target keywords) taking its
+/// entries of flag word 1 without target keywords in their place
+/// (`crate::char_graph::pick_entry_with`, `--actor-subgraph-flag-one`).
+pub const CHAR_GRAPH_SUBGRAPH_FLAG_ONE: &str = "char_graph_swap_subgraph_flag_one_v1";
 /// A clip text's file name found in the subgraph entry's animation folders
 /// in order (`crate::char_graph`, `--actor-clip-folder`).
 pub const CHAR_GRAPH_CLIP_FOLDER: &str = "char_graph_clip_folder_order_v1";
@@ -454,6 +467,7 @@ fn actor_rule(code: &str) -> Option<&'static str> {
         "UnverifiedActorLeveledChanceNone" => Some(ACTOR_LEVELED_CHANCE_NONE),
         "UnverifiedActorLeveledUseAll" => Some(ACTOR_LEVELED_USE_ALL),
         "UnverifiedModelOwnNodes" => Some(MODEL_OWN_NODES),
+        "UnverifiedModelOwnNodesEvery" => Some(MODEL_OWN_NODES_EVERY),
         "UnverifiedTimelineRide" => Some(TIMELINE_RIDE),
         "UnverifiedActorClipSkeleton" => Some(ACTOR_CLIP_SKELETON),
         "UnverifiedActorClipPose" => Some(ACTOR_CLIP_POSE),
@@ -646,6 +660,9 @@ mod tests {
             ACTOR_CLIP_POSE,
             CHAR_GRAPH_START,
             CHAR_GRAPH_SUBGRAPH,
+            CHAR_GRAPH_SUBGRAPH_FLAG_ONE,
+            ACTOR_MODEL_GRAPH_START_IDLE,
+            MODEL_OWN_NODES_EVERY,
             CHAR_GRAPH_CLIP_FOLDER,
             CHAR_GRAPH_CLIP_LOOP,
             CHAR_GRAPH_FURNITURE,

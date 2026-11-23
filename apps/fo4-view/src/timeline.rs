@@ -46,6 +46,13 @@ pub struct Args {
     /// `--actor-template-bits`, `--actor-leveled-seed`
     /// (`fo4_scene::actor::Readings`).
     pub look: fo4_scene::actor::Readings,
+    /// `--actor-model-graph-idle` (`actor_model_graph_start_no_sequence_v1`).
+    pub model_graph_idle: bool,
+    /// `--skinned-models-own-nodes` (`model_skinned_own_nodes_every_placement_v1`).
+    pub skinned_models: bool,
+    /// `--memory-report FILE`: where the frame build's memory goes
+    /// (`fo4_render::memory::report`; measurement only).
+    pub memory_report: Option<String>,
     /// `--timeline-ride-model`, `--timeline-ride`
     /// (`fo4_scene::timeline::ride`).
     pub ride: Option<tl::ride::Options>,
@@ -105,6 +112,7 @@ pub fn cast(
             missing_bones_at_bind: a.missing_bones_at_bind,
             pose: a.pose,
             look: a.look,
+            model_graph_idle: a.model_graph_idle,
         };
         Some(tl::cast::resolve(
             loader, scene, &markers.0, options, level, budget,
@@ -134,7 +142,9 @@ pub fn finish(
             let d = fo4_render::timeline::cast_markers(build, cast, level, budget)?;
             let tags: Vec<u32> = d.fallback.iter().map(|f| f.1).collect();
             let text = tl::cast::report(cast, &d.characters, &d.fallback, &d.heads, &d.bind_bones);
-            let text = text + &tl::ride::report(cast, d.extras.first().map(|(_, w)| w.as_deref()));
+            let text = text
+                + &tl::ride::report(cast, &d.extras)
+                + &tl::ride::report_skinned(cast, &d.extras);
             rules.extend(cast.rules.iter().copied());
             if !d.bind_bones.is_empty() {
                 rules.insert(fo4_scene::hypotheses::ACTOR_MISSING_BONE_BIND);

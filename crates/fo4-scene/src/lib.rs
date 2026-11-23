@@ -194,6 +194,10 @@ pub struct Loader<'a> {
     language: &'a str,
 }
 impl<'a> Loader<'a> {
+    /// The mounted files the loader reads.
+    pub fn vfs(&self) -> &'a Vfs {
+        self.vfs
+    }
     pub fn new(
         plugins: &'a Store,
         vfs: &'a Vfs,
