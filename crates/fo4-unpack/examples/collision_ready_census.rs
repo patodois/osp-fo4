@@ -357,7 +357,7 @@ fn run() -> Result<(), E> {
                     bearing_name(b),
                 ));
                 if b == Some(Bearing::Moved) {
-                    if let Some(asset) = i.blocker_assets.get(bk).copied().flatten() {
+                    if let Some(asset) = bearings.assets.get(bk).copied().flatten() {
                         let model = bearings.models.iter().find(|x| x.asset == asset);
                         if let Some(model) = model {
                             let movers = model.reads.movers.clone();

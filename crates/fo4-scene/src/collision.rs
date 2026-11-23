@@ -997,26 +997,70 @@ impl Builder<'_, '_> {
         self.state.as_ref().unwrap_or(&i.collision).hypotheses()
     }
 
-    /// Where each blocker of `i` lies against the collision of the model it
-    /// was raised in (`None` for a blocker not raised in a model file).
-    fn bearings(&mut self, i: &Instance) -> Result<Vec<Option<readiness::Bearing>>> {
+    /// The model asset node a blocker raised in a model file came from:
+    /// the instance's model node holding that very blocker (code, place and
+    /// found value).
+    fn model_asset_of(&self, i: &Instance, e: &fo4_core::Error) -> Option<usize> {
+        i.assets.iter().copied().find(|a| {
+            self.loader.assets.nodes.get(*a).is_some_and(|n| {
+                n.kind == AssetKind::Model
+                    && n.blockers.iter().any(|x| {
+                        x.code == e.code
+                            && x.source.file == e.source.file
+                            && x.source.offset == e.source.offset
+                            && x.found == e.found
+                    })
+            })
+        })
+    }
+
+    /// Fills [`model::Reads`] of the decoded model `m` once (a model with
+    /// placed bodies only).
+    fn fill_reads(&mut self, m: usize) -> Result<()> {
+        let model = &self.out.models[m];
+        if model.bodies.is_empty() || !model.reads.spans.is_empty() {
+            return Ok(());
+        }
+        let (asset, path) = (model.asset, model.path.clone());
+        let scratch = self.budget.child();
+        let keep = self.budget;
+        let bodies = &self.out.models[m].bodies;
+        let reads = self.loader.assets.with_decoded(asset, &scratch, |d| {
+            let DecodedAsset::Model(n) = d else {
+                return Err(Error::new("CollisionAssetKind", &path, 0, "model", asset));
+            };
+            model::reads(&n, bodies, &path, keep)
+        })?;
+        drop(scratch);
+        self.out.models[m].reads = reads;
+        Ok(())
+    }
+
+    /// For each blocker of `i`: the model asset it was raised in and where
+    /// it lies against that model's collision (`None` for a blocker not
+    /// raised in a model file).
+    fn bearings(
+        &mut self,
+        i: &Instance,
+    ) -> Result<Vec<(Option<usize>, Option<readiness::Bearing>)>> {
         let mut out = Vec::new();
         self.budget
             .reserve(&mut out, i.blockers.len(), "collision readiness", 0)?;
         for (k, e) in i.blockers.iter().enumerate() {
             let origin = i.blocker_origins.get(k).copied();
-            let asset = i.blocker_assets.get(k).copied().flatten();
-            let bearing = match (origin, asset) {
-                (Some(readiness::Origin::Model), Some(a))
-                    if self.loader.assets.nodes.get(a).map(|n| n.kind)
-                        == Some(AssetKind::Model) =>
-                {
-                    let m = self.model(a)?;
-                    Some(readiness::bearing(e, &self.out.models[m].reads))
-                }
+            let asset = match origin {
+                Some(readiness::Origin::Model) => self.model_asset_of(i, e),
                 _ => None,
             };
-            out.push(bearing);
+            let bearing = match asset {
+                Some(a) => {
+                    let m = self.model(a)?;
+                    self.fill_reads(m)?;
+                    Some(readiness::bearing(e, &self.out.models[m].reads))
+                }
+                None => None,
+            };
+            out.push((asset, bearing));
         }
         Ok(out)
     }
@@ -1045,7 +1089,7 @@ impl Builder<'_, '_> {
             || i.base.as_ref().is_some_and(crate::base_cites_swap);
         let aside = |k: usize| {
             let origin = i.blocker_origins.get(k).copied();
-            if bearings.get(k).copied().flatten() == Some(readiness::Bearing::OffChain) {
+            if bearings.get(k).and_then(|b| b.1) == Some(readiness::Bearing::OffChain) {
                 Some(hypotheses::COLLISION_OFF_CHAIN)
             } else if switches.reference_alpha
                 && origin.unwrap_or(readiness::Origin::Record) == readiness::Origin::Record
@@ -1243,6 +1287,9 @@ pub struct Bearings {
     /// For each of the instance's blockers: `None` when it was not raised
     /// in a model file.
     pub of: Vec<Option<readiness::Bearing>>,
+    /// For each of the instance's blockers: the model asset node it was
+    /// raised in.
+    pub assets: Vec<Option<usize>>,
     pub models: Vec<ModelCollision>,
 }
 
@@ -1274,9 +1321,10 @@ pub fn bearings(
         force: true,
         state: None,
     };
-    let of = builder.bearings(instance)?;
+    let read = builder.bearings(instance)?;
     Ok(Bearings {
-        of,
+        of: read.iter().map(|x| x.1).collect(),
+        assets: read.iter().map(|x| x.0).collect(),
         models: builder.out.models,
     })
 }

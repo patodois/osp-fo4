@@ -819,30 +819,48 @@ fn model_nif_with(ty: &str, data: Vec<u8>) -> Vec<u8> {
     )
 }
 
+/// [`decode_bytes`] with the model's [`model::Reads`] filled.
+fn decode_reads(bytes: &[u8]) -> ModelCollision {
+    let b = Budget::new(1 << 24);
+    let n = fo4_nif::Nif::read(
+        bytes,
+        "synthetic.nif",
+        fo4_core::Game::Fallout4,
+        &Limits::default(),
+        &b,
+    )
+    .unwrap();
+    let mut m = model::decode(&n, 0, "synthetic.nif", &Limits::default(), &b).unwrap();
+    // The decode itself leaves them empty.
+    assert_eq!(m.reads, model::Reads::default());
+    m.reads = model::reads(&n, &m.bodies, "synthetic.nif", &b).unwrap();
+    m
+}
+
 #[test]
 fn reads_name_the_blocks_a_body_reads_and_what_moves_them() {
-    let m = decode_bytes(&model_nif_with("NiPSysData", vec![0; 8]));
+    let m = decode_reads(&model_nif_with("NiPSysData", vec![0; 8]));
     assert_eq!(m.reads.read, vec![true, true, true, true, false]);
     assert!(m.reads.movers.is_empty());
     assert_eq!(m.reads.block_at(m.reads.spans[4].start), Some(4));
     assert_eq!(m.reads.block_at(m.reads.spans[4].end - 1), Some(4));
     // A transform controller on the body's node moves the chain.
     let tc = controller(1, &(-1i32).to_le_bytes());
-    let m = decode_bytes(&model_nif_with("NiTransformController", tc));
+    let m = decode_reads(&model_nif_with("NiTransformController", tc));
     assert_eq!(m.reads.movers, vec![(4, model::Link::Target)]);
     assert!(m.reads.moved());
     // A multi-target controller hanging on the root moves nothing by its
     // own Target; its extra target on the body's node does.
     let none = controller(0, &0u16.to_le_bytes());
-    let m = decode_bytes(&model_nif_with("NiMultiTargetTransformController", none));
+    let m = decode_reads(&model_nif_with("NiMultiTargetTransformController", none));
     assert!(m.reads.movers.is_empty());
     let mut tail = 1u16.to_le_bytes().to_vec();
     tail.extend(1i32.to_le_bytes());
     let extra = controller(0, &tail);
-    let m = decode_bytes(&model_nif_with("NiMultiTargetTransformController", extra));
+    let m = decode_reads(&model_nif_with("NiMultiTargetTransformController", extra));
     assert_eq!(m.reads.movers, vec![(4, model::Link::ExtraTarget)]);
     // A model without a placed body reads nothing.
-    let m = decode_bytes(&model_nif(7));
+    let m = decode_reads(&model_nif(7));
     assert!(m.bodies.is_empty());
     assert_eq!(m.reads, model::Reads::default());
 }
@@ -869,8 +887,6 @@ fn a_model_blocker_off_the_collision_chain_is_set_aside_only_behind_its_switch()
         .position(|e| e.code == "UnsupportedNifBlock")
         .unwrap();
     assert_eq!(i.blocker_origins[k], readiness::Origin::Model);
-    assert!(i.blocker_assets[k].is_some());
-    assert_eq!(i.blocker_assets.len(), i.blockers.len());
     let limits = Limits::default();
     let options = Options {
         level: RuleLevel::Hypotheses,
@@ -878,6 +894,8 @@ fn a_model_blocker_off_the_collision_chain_is_set_aside_only_behind_its_switch()
     };
     let bearings = super::bearings(i, &loader, &limits, options, &b).unwrap();
     assert_eq!(bearings.of[k], Some(readiness::Bearing::OffChain));
+    assert!(bearings.assets[k].is_some());
+    assert_eq!(bearings.of.len(), i.blockers.len());
     // Off by default: refused, as before.
     let off = cell(&scene, &loader, &limits, options, &b).unwrap();
     assert!(off.instances.is_empty());

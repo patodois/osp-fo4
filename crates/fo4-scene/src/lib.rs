@@ -146,10 +146,6 @@ pub struct Instance {
     pub blockers: Vec<Error>,
     /// Where each of `blockers` was raised (same order).
     pub blocker_origins: Vec<readiness::Origin>,
-    /// The asset node each of `blockers` was raised in (same order), for
-    /// those raised by a model, material or texture file.
-    #[serde(skip)]
-    pub blocker_assets: Vec<Option<usize>>,
     /// Readiness of the reference's collision: `state` without the blockers
     /// only the renderer reads, which it sets aside under registered rules
     /// ([`readiness`]).
@@ -533,9 +529,6 @@ impl<'a> Loader<'a> {
         // Missing textures cited only in slots the frame never samples keep
         // a narrower code that a pending rule covers (`missing`).
         let unread = missing::unread_textures(&self.assets, &assets, b)?;
-        let mut blocker_assets = Vec::new();
-        b.reserve(&mut blocker_assets, blockers.len(), &src.file, src.offset)?;
-        blocker_assets.resize(blockers.len(), None);
         for i in &assets {
             let node = &self.assets.nodes[*i];
             let read = missing.iter().find(|m| m.node == *i).map(|m| m.read);
@@ -560,8 +553,6 @@ impl<'a> Loader<'a> {
                     push_error(&mut blockers, e, b)
                 })?;
                 b.reserve(&mut origins, 1, &src.file, src.offset)?;
-                b.reserve(&mut blocker_assets, 1, &src.file, src.offset)?;
-                blocker_assets.push(Some(*i));
                 origins.push(match node.kind {
                     AssetKind::Model if node.citation_blockers.contains(&k) => {
                         readiness::Origin::ModelCitation
@@ -614,9 +605,6 @@ impl<'a> Loader<'a> {
         let more = blockers.len().saturating_sub(origins.len());
         b.reserve(&mut origins, more, &src.file, src.offset)?;
         origins.resize(blockers.len(), readiness::Origin::Record);
-        let more = blockers.len().saturating_sub(blocker_assets.len());
-        b.reserve(&mut blocker_assets, more, &src.file, src.offset)?;
-        blocker_assets.resize(blockers.len(), None);
         let cites_swap = reference
             .data
             .material_swap
@@ -646,7 +634,6 @@ impl<'a> Loader<'a> {
             state,
             blockers,
             blocker_origins: origins,
-            blocker_assets,
             collision,
             assets,
         })

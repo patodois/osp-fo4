@@ -89,8 +89,8 @@ pub struct ModelCollision {
     pub render_points: Vec<[f64; 3]>,
     pub render: Vec<RenderRange>,
     pub render_error: Option<fo4_core::Error>,
-    /// The blocks the placed bodies read and what moves them
-    /// ([`Reads`]); empty for a model with no placed body.
+    /// The blocks the placed bodies read and what moves them ([`Reads`]);
+    /// filled only where the readiness switches ask it, else empty.
     #[serde(skip)]
     pub reads: Reads,
 }
@@ -141,9 +141,14 @@ impl Reads {
     }
 }
 
-/// [`Reads`] of the placed bodies of `out`.
-fn reads(n: &Nif<'_>, bodies: &[BodyCollision], file: &str, keep: &Budget) -> Result<Reads> {
+/// [`Reads`] of `bodies`, placed bodies of `n` (empty without a body).
+/// Not part of [`decode`]: the collision cell build asks it only under its
+/// readiness switches, so a build without them keeps its accounting.
+pub fn reads(n: &Nif<'_>, bodies: &[BodyCollision], file: &str, keep: &Budget) -> Result<Reads> {
     let mut r = Reads::default();
+    if bodies.is_empty() {
+        return Ok(r);
+    }
     keep.reserve(&mut r.spans, n.blocks.len(), file, 0)?;
     keep.reserve(&mut r.read, n.blocks.len(), file, 0)?;
     for b in &n.blocks {
@@ -576,9 +581,6 @@ pub fn decode(
                 )?;
             }
         }
-    }
-    if !out.bodies.is_empty() {
-        out.reads = reads(n, &out.bodies, file, keep)?;
     }
     Ok(out)
 }
