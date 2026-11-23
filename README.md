@@ -1,13 +1,23 @@
 # osp-fo4
 
-Rust libraries that read Fallout 4's data files and draw its static scenes on
-the CPU, for people who own the game. Nothing here contains game files or
-decompiled code: every behaviour is either a documented format fact or a rule
-checked against measurements of the running game.
+An open-source, clean-room reimplementation of Fallout 4's engine (Bethesda's
+Creation Engine) in Rust, for people who own the game: readers for its data
+files, a CPU reference renderer and a GPU viewer, a walking controller, and a
+script interpreter that runs the opening quests without the original
+executable. Nothing here contains game files or decompiled code: every
+behaviour is either a documented format fact or a named pending rule waiting
+for a measurement of the running game.
 
-It is a reference, not a playable engine. There is no lighting, animation,
-physics or gameplay yet, apart from a first walking controller that moves a
-capsule over a cell's collision under provisional, registered rules.
+It is not a playable game yet. The data can be read, cells drawn and walked,
+and the quests of the first hour run headless under stated assumptions; fights,
+menus, sound, saving and character movement are not started. The milestones
+and their state are in [docs/next-steps.md](docs/next-steps.md#milestones).
+
+Looking for something else? The same formats serve Skyrim Special Edition only
+in part (BSA 105 archives); the cross-game work lives in
+[rewrite-bridge](https://github.com/patodois/rewrite-bridge), and the plugin
+that measures the running game in
+[osp-f4se-measure](https://github.com/patodois/osp-f4se-measure).
 
 To continue the work, start at [docs/next-steps.md](docs/next-steps.md): it lists where each part stops and what is needed next.
 
