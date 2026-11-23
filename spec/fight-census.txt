@@ -1,0 +1,344 @@
+# fight_census: kinds and counts only (spec/vm.md, The first fight). Sections: 0 names read from the scripts; 1 fight event handlers; 2 what they call; 3 the records attaching them;
+# 4 fight natives over every script and the event registrations; 5 the next main quest: its aliases with fight handlers and the calls those reach; 6 auto states declared only by an ancestor.
+9	0 names read from the scripts	fight events
+30	0 names read from the scripts	fight natives
+10282	0 scripts read
+48	1 fight handlers with code	oncombatstatechanged
+114	1 fight handlers with code	ondeath
+1	1 fight handlers with code	ondeferredkill
+89	1 fight handlers with code	ondying
+121	1 fight handlers with code	onhit
+1	1 fight handlers with code	onkill
+3	1 fight handlers with code	onstorykillactor
+5	1 fight handlers with code	ontraphitstart
+47	1 fight handlers with code by parameter types	oncombatstatechanged	(actor, int)
+1	1 fight handlers with code by parameter types	oncombatstatechanged	(objectreference, actor, int)
+100	1 fight handlers with code by parameter types	ondeath	(actor)
+14	1 fight handlers with code by parameter types	ondeath	(objectreference, actor)
+1	1 fight handlers with code by parameter types	ondeferredkill	(actor)
+81	1 fight handlers with code by parameter types	ondying	(actor)
+8	1 fight handlers with code by parameter types	ondying	(objectreference, actor)
+121	1 fight handlers with code by parameter types	onhit	(objectreference, objectreference, form, projectile, bool, bool, bool, bool, string)
+1	1 fight handlers with code by parameter types	onkill	(actor)
+3	1 fight handlers with code by parameter types	onstorykillactor	(objectreference, objectreference, location, int, int)
+5	1 fight handlers with code by parameter types	ontraphitstart	(objectreference, float, float, float, float, float, float, int, bool, int)
+1	1 fight handlers with code by state	oncombatstatechanged	another state
+32	1 fight handlers with code by state	oncombatstatechanged	the empty state
+15	1 fight handlers with code by state	oncombatstatechanged	the script's auto state
+2	1 fight handlers with code by state	ondeath	another state
+96	1 fight handlers with code by state	ondeath	the empty state
+16	1 fight handlers with code by state	ondeath	the script's auto state
+1	1 fight handlers with code by state	ondeferredkill	the script's auto state
+1	1 fight handlers with code by state	ondying	another state
+79	1 fight handlers with code by state	ondying	the empty state
+9	1 fight handlers with code by state	ondying	the script's auto state
+3	1 fight handlers with code by state	onhit	another state
+101	1 fight handlers with code by state	onhit	the empty state
+17	1 fight handlers with code by state	onhit	the script's auto state
+1	1 fight handlers with code by state	onkill	the empty state
+3	1 fight handlers with code by state	onstorykillactor	the empty state
+3	1 fight handlers with code by state	ontraphitstart	another state
+2	1 fight handlers with code by state	ontraphitstart	the script's auto state
+14	1 fight handlers with code by type extended	oncombatstatechanged	activemagiceffect
+23	1 fight handlers with code by type extended	oncombatstatechanged	actor
+1	1 fight handlers with code by type extended	oncombatstatechanged	refcollectionalias
+10	1 fight handlers with code by type extended	oncombatstatechanged	referencealias
+5	1 fight handlers with code by type extended	ondeath	activemagiceffect
+48	1 fight handlers with code by type extended	ondeath	actor
+14	1 fight handlers with code by type extended	ondeath	refcollectionalias
+47	1 fight handlers with code by type extended	ondeath	referencealias
+1	1 fight handlers with code by type extended	ondeferredkill	actor
+38	1 fight handlers with code by type extended	ondying	activemagiceffect
+19	1 fight handlers with code by type extended	ondying	actor
+8	1 fight handlers with code by type extended	ondying	refcollectionalias
+24	1 fight handlers with code by type extended	ondying	referencealias
+17	1 fight handlers with code by type extended	onhit	activemagiceffect
+25	1 fight handlers with code by type extended	onhit	actor
+39	1 fight handlers with code by type extended	onhit	objectreference
+8	1 fight handlers with code by type extended	onhit	quest
+7	1 fight handlers with code by type extended	onhit	refcollectionalias
+25	1 fight handlers with code by type extended	onhit	referencealias
+1	1 fight handlers with code by type extended	onkill	activemagiceffect
+3	1 fight handlers with code by type extended	onstorykillactor	quest
+5	1 fight handlers with code by type extended	ontraphitstart	objectreference
+48	1 scripts declaring a handler with code	oncombatstatechanged
+113	1 scripts declaring a handler with code	ondeath
+1	1 scripts declaring a handler with code	ondeferredkill
+88	1 scripts declaring a handler with code	ondying
+121	1 scripts declaring a handler with code	onhit
+1	1 scripts declaring a handler with code	onkill
+3	1 scripts declaring a handler with code	onstorykillactor
+5	1 scripts declaring a handler with code	ontraphitstart
+80	2 calls in the fight handlers by name	oncombatstatechanged	another call
+2	2 calls in the fight handlers by name	oncombatstatechanged	getactorref
+10	2 calls in the fight handlers by name	oncombatstatechanged	getplayer
+1	2 calls in the fight handlers by name	oncombatstatechanged	getstage
+9	2 calls in the fight handlers by name	oncombatstatechanged	getstagedone
+24	2 calls in the fight handlers by name	oncombatstatechanged	getvalue
+1	2 calls in the fight handlers by name	oncombatstatechanged	getvaluepercentage
+12	2 calls in the fight handlers by name	oncombatstatechanged	gotostate
+1	2 calls in the fight handlers by name	oncombatstatechanged	registerforhitevent
+7	2 calls in the fight handlers by name	oncombatstatechanged	setstage
+1	2 calls in the fight handlers by name	oncombatstatechanged	startcombat
+4	2 calls in the fight handlers by name	oncombatstatechanged	trytosetstage
+181	2 calls in the fight handlers by name	ondeath	another call
+15	2 calls in the fight handlers by name	ondeath	getactorref
+29	2 calls in the fight handlers by name	ondeath	getowningquest
+13	2 calls in the fight handlers by name	ondeath	getplayer
+1	2 calls in the fight handlers by name	ondeath	getref
+6	2 calls in the fight handlers by name	ondeath	getreference
+10	2 calls in the fight handlers by name	ondeath	getstage
+4	2 calls in the fight handlers by name	ondeath	getstagedone
+2	2 calls in the fight handlers by name	ondeath	getvalue
+25	2 calls in the fight handlers by name	ondeath	gotostate
+4	2 calls in the fight handlers by name	ondeath	increment
+13	2 calls in the fight handlers by name	ondeath	isdead
+1	2 calls in the fight handlers by name	ondeath	registerforhitevent
+25	2 calls in the fight handlers by name	ondeath	setstage
+3	2 calls in the fight handlers by name	ondeath	trytosetstage
+3	2 calls in the fight handlers by name	ondeferredkill	another call
+1	2 calls in the fight handlers by name	ondeferredkill	gotostate
+259	2 calls in the fight handlers by name	ondying	another call
+1	2 calls in the fight handlers by name	ondying	getactorref
+11	2 calls in the fight handlers by name	ondying	getowningquest
+15	2 calls in the fight handlers by name	ondying	getplayer
+1	2 calls in the fight handlers by name	ondying	getreference
+15	2 calls in the fight handlers by name	ondying	getstage
+28	2 calls in the fight handlers by name	ondying	getstagedone
+16	2 calls in the fight handlers by name	ondying	getvalue
+11	2 calls in the fight handlers by name	ondying	gotostate
+3	2 calls in the fight handlers by name	ondying	increment
+34	2 calls in the fight handlers by name	ondying	setstage
+2	2 calls in the fight handlers by name	ondying	trytosetstage
+275	2 calls in the fight handlers by name	onhit	another call
+8	2 calls in the fight handlers by name	onhit	getactorref
+1	2 calls in the fight handlers by name	onhit	getcombatstate
+1	2 calls in the fight handlers by name	onhit	getcombattarget
+10	2 calls in the fight handlers by name	onhit	getowningquest
+36	2 calls in the fight handlers by name	onhit	getplayer
+5	2 calls in the fight handlers by name	onhit	getref
+4	2 calls in the fight handlers by name	onhit	getreference
+1	2 calls in the fight handlers by name	onhit	getstage
+12	2 calls in the fight handlers by name	onhit	getstagedone
+20	2 calls in the fight handlers by name	onhit	getvalue
+12	2 calls in the fight handlers by name	onhit	getvaluepercentage
+20	2 calls in the fight handlers by name	onhit	gotostate
+2	2 calls in the fight handlers by name	onhit	isdead
+11	2 calls in the fight handlers by name	onhit	kill
+79	2 calls in the fight handlers by name	onhit	registerforhitevent
+26	2 calls in the fight handlers by name	onhit	setstage
+2	2 calls in the fight handlers by name	onhit	startcombat
+1	2 calls in the fight handlers by name	onhit	stopcombat
+4	2 calls in the fight handlers by name	onhit	trytosetstage
+3	2 calls in the fight handlers by name	onkill	another call
+3	2 calls in the fight handlers by name	onkill	getplayer
+1	2 calls in the fight handlers by name	onstorykillactor	another call
+51	2 calls in the fight handlers by name	ontraphitstart	another call
+8	2 calls in the fight handlers by name	ontraphitstart	getplayer
+3	2 calls in the fight handlers by name	ontraphitstart	gotostate
+35	2 fight handlers making at least one call of the name	oncombatstatechanged	another call
+2	2 fight handlers making at least one call of the name	oncombatstatechanged	getactorref
+9	2 fight handlers making at least one call of the name	oncombatstatechanged	getplayer
+1	2 fight handlers making at least one call of the name	oncombatstatechanged	getstage
+3	2 fight handlers making at least one call of the name	oncombatstatechanged	getstagedone
+10	2 fight handlers making at least one call of the name	oncombatstatechanged	getvalue
+1	2 fight handlers making at least one call of the name	oncombatstatechanged	getvaluepercentage
+10	2 fight handlers making at least one call of the name	oncombatstatechanged	gotostate
+1	2 fight handlers making at least one call of the name	oncombatstatechanged	registerforhitevent
+4	2 fight handlers making at least one call of the name	oncombatstatechanged	setstage
+1	2 fight handlers making at least one call of the name	oncombatstatechanged	startcombat
+4	2 fight handlers making at least one call of the name	oncombatstatechanged	trytosetstage
+92	2 fight handlers making at least one call of the name	ondeath	another call
+5	2 fight handlers making at least one call of the name	ondeath	getactorref
+25	2 fight handlers making at least one call of the name	ondeath	getowningquest
+13	2 fight handlers making at least one call of the name	ondeath	getplayer
+1	2 fight handlers making at least one call of the name	ondeath	getref
+3	2 fight handlers making at least one call of the name	ondeath	getreference
+9	2 fight handlers making at least one call of the name	ondeath	getstage
+4	2 fight handlers making at least one call of the name	ondeath	getstagedone
+2	2 fight handlers making at least one call of the name	ondeath	getvalue
+15	2 fight handlers making at least one call of the name	ondeath	gotostate
+4	2 fight handlers making at least one call of the name	ondeath	increment
+3	2 fight handlers making at least one call of the name	ondeath	isdead
+1	2 fight handlers making at least one call of the name	ondeath	registerforhitevent
+23	2 fight handlers making at least one call of the name	ondeath	setstage
+3	2 fight handlers making at least one call of the name	ondeath	trytosetstage
+1	2 fight handlers making at least one call of the name	ondeferredkill	another call
+1	2 fight handlers making at least one call of the name	ondeferredkill	gotostate
+73	2 fight handlers making at least one call of the name	ondying	another call
+1	2 fight handlers making at least one call of the name	ondying	getactorref
+6	2 fight handlers making at least one call of the name	ondying	getowningquest
+12	2 fight handlers making at least one call of the name	ondying	getplayer
+1	2 fight handlers making at least one call of the name	ondying	getreference
+7	2 fight handlers making at least one call of the name	ondying	getstage
+13	2 fight handlers making at least one call of the name	ondying	getstagedone
+12	2 fight handlers making at least one call of the name	ondying	getvalue
+11	2 fight handlers making at least one call of the name	ondying	gotostate
+3	2 fight handlers making at least one call of the name	ondying	increment
+22	2 fight handlers making at least one call of the name	ondying	setstage
+2	2 fight handlers making at least one call of the name	ondying	trytosetstage
+97	2 fight handlers making at least one call of the name	onhit	another call
+7	2 fight handlers making at least one call of the name	onhit	getactorref
+1	2 fight handlers making at least one call of the name	onhit	getcombatstate
+1	2 fight handlers making at least one call of the name	onhit	getcombattarget
+7	2 fight handlers making at least one call of the name	onhit	getowningquest
+23	2 fight handlers making at least one call of the name	onhit	getplayer
+3	2 fight handlers making at least one call of the name	onhit	getref
+4	2 fight handlers making at least one call of the name	onhit	getreference
+1	2 fight handlers making at least one call of the name	onhit	getstage
+6	2 fight handlers making at least one call of the name	onhit	getstagedone
+9	2 fight handlers making at least one call of the name	onhit	getvalue
+11	2 fight handlers making at least one call of the name	onhit	getvaluepercentage
+17	2 fight handlers making at least one call of the name	onhit	gotostate
+2	2 fight handlers making at least one call of the name	onhit	isdead
+10	2 fight handlers making at least one call of the name	onhit	kill
+67	2 fight handlers making at least one call of the name	onhit	registerforhitevent
+18	2 fight handlers making at least one call of the name	onhit	setstage
+2	2 fight handlers making at least one call of the name	onhit	startcombat
+1	2 fight handlers making at least one call of the name	onhit	stopcombat
+4	2 fight handlers making at least one call of the name	onhit	trytosetstage
+1	2 fight handlers making at least one call of the name	onkill	another call
+1	2 fight handlers making at least one call of the name	onkill	getplayer
+1	2 fight handlers making at least one call of the name	onstorykillactor	another call
+5	2 fight handlers making at least one call of the name	ontraphitstart	another call
+4	2 fight handlers making at least one call of the name	ontraphitstart	getplayer
+3	2 fight handlers making at least one call of the name	ontraphitstart	gotostate
+144	3 attachments of a script with the handler, by record type	oncombatstatechanged	ACHR
+20	3 attachments of a script with the handler, by record type	oncombatstatechanged	MGEF
+269	3 attachments of a script with the handler, by record type	oncombatstatechanged	NPC_
+138	3 attachments of a script with the handler, by record type	ondeath	ACHR
+5	3 attachments of a script with the handler, by record type	ondeath	MGEF
+261	3 attachments of a script with the handler, by record type	ondeath	NPC_
+2	3 attachments of a script with the handler, by record type	ondeferredkill	NPC_
+64	3 attachments of a script with the handler, by record type	ondying	ACHR
+58	3 attachments of a script with the handler, by record type	ondying	MGEF
+144	3 attachments of a script with the handler, by record type	ondying	NPC_
+274	3 attachments of a script with the handler, by record type	onhit	ACHR
+62	3 attachments of a script with the handler, by record type	onhit	ACTI
+7	3 attachments of a script with the handler, by record type	onhit	BOOK
+27	3 attachments of a script with the handler, by record type	onhit	MGEF
+6	3 attachments of a script with the handler, by record type	onhit	MISC
+13	3 attachments of a script with the handler, by record type	onhit	MSTT
+144	3 attachments of a script with the handler, by record type	onhit	NPC_
+4	3 attachments of a script with the handler, by record type	onhit	PGRE
+11	3 attachments of a script with the handler, by record type	onhit	QUST
+3690	3 attachments of a script with the handler, by record type	onhit	REFR
+1	3 attachments of a script with the handler, by record type	onhit	STAT
+2	3 attachments of a script with the handler, by record type	onkill	MGEF
+3	3 attachments of a script with the handler, by record type	onstorykillactor	QUST
+16	3 attachments of a script with the handler, by record type	ontraphitstart	ACTI
+4	3 attachments of a script with the handler, by record type	ontraphitstart	FURN
+1	3 attachments of a script with the handler, by record type	ontraphitstart	REFR
+65	3 attachments on quest aliases of a script with the handler, by the alias's fill	oncombatstatechanged	a created object
+112	3 attachments on quest aliases of a script with the handler, by the alias's fill	oncombatstatechanged	a location's reference of a ref type
+33	3 attachments on quest aliases of a script with the handler, by the alias's fill	oncombatstatechanged	a unique actor
+34	3 attachments on quest aliases of a script with the handler, by the alias's fill	oncombatstatechanged	another fill (conditions, a list or none)
+1379	3 attachments on quest aliases of a script with the handler, by the alias's fill	ondeath	a created object
+9	3 attachments on quest aliases of a script with the handler, by the alias's fill	ondeath	a forced reference
+280	3 attachments on quest aliases of a script with the handler, by the alias's fill	ondeath	a location's reference of a ref type
+382	3 attachments on quest aliases of a script with the handler, by the alias's fill	ondeath	a unique actor
+2	3 attachments on quest aliases of a script with the handler, by the alias's fill	ondeath	an alias the quest record does not list
+141	3 attachments on quest aliases of a script with the handler, by the alias's fill	ondeath	another fill (conditions, a list or none)
+125	3 attachments on quest aliases of a script with the handler, by the alias's fill	ondying	a created object
+9	3 attachments on quest aliases of a script with the handler, by the alias's fill	ondying	a forced reference
+181	3 attachments on quest aliases of a script with the handler, by the alias's fill	ondying	a location's reference of a ref type
+336	3 attachments on quest aliases of a script with the handler, by the alias's fill	ondying	a unique actor
+2	3 attachments on quest aliases of a script with the handler, by the alias's fill	ondying	an alias the quest record does not list
+84	3 attachments on quest aliases of a script with the handler, by the alias's fill	ondying	another fill (conditions, a list or none)
+1445	3 attachments on quest aliases of a script with the handler, by the alias's fill	onhit	a created object
+7	3 attachments on quest aliases of a script with the handler, by the alias's fill	onhit	a forced reference
+96	3 attachments on quest aliases of a script with the handler, by the alias's fill	onhit	a location's reference of a ref type
+128	3 attachments on quest aliases of a script with the handler, by the alias's fill	onhit	a unique actor
+4	3 attachments on quest aliases of a script with the handler, by the alias's fill	onhit	an alias the quest record does not list
+62	3 attachments on quest aliases of a script with the handler, by the alias's fill	onhit	another fill (conditions, a list or none)
+81	4 fight event registrations by the function they stand in	registerforhitevent	a fight event's own handler
+25	4 fight event registrations by the function they stand in	registerforhitevent	an init handler (OnInit, OnAliasInit)
+119	4 fight event registrations by the function they stand in	registerforhitevent	another function
+9	4 fight native call sites over every script	allowbleedoutdialogue
+5	4 fight native call sites over every script	docombatspellapply
+2	4 fight native call sites over every script	getallcombattargets
+30	4 fight native call sites over every script	getcombatstate
+12	4 fight native call sites over every script	getcombattarget
+18	4 fight native call sites over every script	getdeadcount
+16	4 fight native call sites over every script	gethealthav
+13	4 fight native call sites over every script	getkiller
+550	4 fight native call sites over every script	isdead
+18	4 fight native call sites over every script	isessential
+64	4 fight native call sites over every script	isincombat
+180	4 fight native call sites over every script	kill
+12	4 fight native call sites over every script	killsilent
+225	4 fight native call sites over every script	registerforhitevent
+12	4 fight native call sites over every script	resethealthandlimbs
+2	4 fight native call sites over every script	resurrect
+16	4 fight native call sites over every script	setcombatstyle
+213	4 fight native call sites over every script	setessential
+35	4 fight native call sites over every script	setnobleedoutrecovery
+185	4 fight native call sites over every script	startcombat
+117	4 fight native call sites over every script	stopcombat
+50	4 fight native call sites over every script	stopcombatalarm
+53	4 fight native call sites over every script	unregisterforallhitevents
+18	4 fight native call sites over every script	unregisterforhitevent
+6	5 the quest: aliases with a fight handler, by events and fill	oncombatstatechanged ondeath ondying onhit	a location's reference of a ref type
+7	5 the quest: aliases with a fight handler, by events and fill	ondeath	a location's reference of a ref type
+5	5 the quest: aliases with a fight handler, by events and fill	ondeath	another fill (conditions, a list or none)
+1	5 the quest: aliases with a fight handler, by events and fill	ondeath ondying	a unique actor
+1	5 the quest: aliases with a fight handler, by events and fill	ondeath ondying	another fill (conditions, a list or none)
+6	5 the quest: functions with code reached from its aliases' fight handlers	oncombatstatechanged	15
+2	5 the quest: functions with code reached from its aliases' fight handlers	ondeath	15
+7	5 the quest: functions with code reached from its aliases' fight handlers	ondeath	5
+6	5 the quest: functions with code reached from its aliases' fight handlers	ondeath	6
+5	5 the quest: functions with code reached from its aliases' fight handlers	ondeath	7
+2	5 the quest: functions with code reached from its aliases' fight handlers	ondying	15
+6	5 the quest: functions with code reached from its aliases' fight handlers	ondying	6
+6	5 the quest: functions with code reached from its aliases' fight handlers	onhit	15
+3	5 the quest: its own scripts	read
+6	5 the quest: natives reached from its aliases' fight handlers	oncombatstatechanged	getcurrentstageid
+6	5 the quest: natives reached from its aliases' fight handlers	oncombatstatechanged	getlocation
+6	5 the quest: natives reached from its aliases' fight handlers	oncombatstatechanged	getowningquest
+6	5 the quest: natives reached from its aliases' fight handlers	oncombatstatechanged	getplayer
+6	5 the quest: natives reached from its aliases' fight handlers	oncombatstatechanged	getreference
+6	5 the quest: natives reached from its aliases' fight handlers	oncombatstatechanged	ischild
+6	5 the quest: natives reached from its aliases' fight handlers	oncombatstatechanged	isdead
+6	5 the quest: natives reached from its aliases' fight handlers	oncombatstatechanged	isinfaction
+6	5 the quest: natives reached from its aliases' fight handlers	oncombatstatechanged	isstagedone
+6	5 the quest: natives reached from its aliases' fight handlers	oncombatstatechanged	setcurrentstageid
+2	5 the quest: natives reached from its aliases' fight handlers	ondeath	getcurrentstageid
+2	5 the quest: natives reached from its aliases' fight handlers	ondeath	getlocation
+20	5 the quest: natives reached from its aliases' fight handlers	ondeath	getowningquest
+2	5 the quest: natives reached from its aliases' fight handlers	ondeath	getplayer
+7	5 the quest: natives reached from its aliases' fight handlers	ondeath	getreference
+2	5 the quest: natives reached from its aliases' fight handlers	ondeath	ischild
+7	5 the quest: natives reached from its aliases' fight handlers	ondeath	isdead
+2	5 the quest: natives reached from its aliases' fight handlers	ondeath	isinfaction
+12	5 the quest: natives reached from its aliases' fight handlers	ondeath	isobjectivecompleted
+14	5 the quest: natives reached from its aliases' fight handlers	ondeath	isstagedone
+20	5 the quest: natives reached from its aliases' fight handlers	ondeath	setcurrentstageid
+12	5 the quest: natives reached from its aliases' fight handlers	ondeath	setobjectivecompleted
+12	5 the quest: natives reached from its aliases' fight handlers	ondeath	setobjectivedisplayed
+12	5 the quest: natives reached from its aliases' fight handlers	ondeath	setobjectivefailed
+12	5 the quest: natives reached from its aliases' fight handlers	ondeath	updatecurrentinstanceglobal
+2	5 the quest: natives reached from its aliases' fight handlers	ondying	getcurrentstageid
+2	5 the quest: natives reached from its aliases' fight handlers	ondying	getlocation
+8	5 the quest: natives reached from its aliases' fight handlers	ondying	getowningquest
+2	5 the quest: natives reached from its aliases' fight handlers	ondying	getplayer
+2	5 the quest: natives reached from its aliases' fight handlers	ondying	getreference
+2	5 the quest: natives reached from its aliases' fight handlers	ondying	ischild
+2	5 the quest: natives reached from its aliases' fight handlers	ondying	isdead
+2	5 the quest: natives reached from its aliases' fight handlers	ondying	isinfaction
+2	5 the quest: natives reached from its aliases' fight handlers	ondying	isstagedone
+8	5 the quest: natives reached from its aliases' fight handlers	ondying	setcurrentstageid
+6	5 the quest: natives reached from its aliases' fight handlers	onhit	getcurrentstageid
+6	5 the quest: natives reached from its aliases' fight handlers	onhit	getlocation
+6	5 the quest: natives reached from its aliases' fight handlers	onhit	getowningquest
+6	5 the quest: natives reached from its aliases' fight handlers	onhit	getplayer
+6	5 the quest: natives reached from its aliases' fight handlers	onhit	getreference
+6	5 the quest: natives reached from its aliases' fight handlers	onhit	ischild
+6	5 the quest: natives reached from its aliases' fight handlers	onhit	isdead
+6	5 the quest: natives reached from its aliases' fight handlers	onhit	isinfaction
+6	5 the quest: natives reached from its aliases' fight handlers	onhit	isstagedone
+6	5 the quest: natives reached from its aliases' fight handlers	onhit	registerforhitevent
+6	5 the quest: natives reached from its aliases' fight handlers	onhit	setcurrentstageid
+73	6 scripts declaring no auto state whose nearest ancestor declaring one does
+19	6 those scripts whose fight handler stands only in the ancestor's auto state	ondeath
+19	6 those scripts whose fight handler stands only in the ancestor's auto state	ondying
+2	6 those scripts whose fight handler stands only in the ancestor's auto state	onhit
