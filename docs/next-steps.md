@@ -3,7 +3,7 @@
 This page is the hand-over point. Everything on `main` builds and passes its tests; anyone (a person or an
 agent) can continue from here. Read `AGENTS.md` first: it holds the rules of evidence and the clean-room rules.
 
-State on 2026-11-23 (vault and cast steps). Nothing below has been checked against the running game: every behaviour is a pending
+State on 2026-11-23 (vault, cast and light steps). Nothing below has been checked against the running game: every behaviour is a pending
 rule in `spec/hypotheses.tsv`, off by default.
 
 ## Script VM and quests (`crates/fo4-vm`)
@@ -122,7 +122,14 @@ What the frames show is missing, in order of what blocks a playable opening:
    sequences and a behaviour graph), but the run records no event that starts it, and a sequence player,
    skinned non-actor models and riding a moving node are missing (`spec/timeline.md`, The elevator second).
 4. Sound: the run times lines by their voice files but nothing plays them.
-5. Lighting and sky: frames are unlit and the exterior sky is the clear colour.
+5. Lighting and sky (light step, `spec/light.md`): behind nine switches, off by default, frames are lit from the
+   data under pending rules (interior cell light and its template's inherited fields, placed lights as points,
+   fog; outside, the climate's one weather at the caller's `--assume-hour`: sky gradient, ambient cube, fog).
+   What is still wrong: the vault is washed out (379 placed lights summed without tone mapping or exposure, the image
+   space record not read), surfaces are flat-shaded (face normals; no vertex normals, normal maps, specular or
+   shadows), no sun or moon light (the data stores no direction for it), no clouds, spots drawn as points. Next:
+   read the image space (exposure and tone curve) and the vertex normals; the light bench of
+   `spec/light-measurement.md` would settle the falloff.
 6. The run itself stops at stage 1000 (Script VM and quests, above).
 
 ## Measurements wanted

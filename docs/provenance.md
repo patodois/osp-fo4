@@ -745,3 +745,21 @@ knowledge and are pending rules or caller assumptions. No behaviour or
 animation tool or library of any project, Havok SDK, editor, editor source
 or definition file, script source or game executable was opened or
 searched for.
+
+The light step (`fo4_plugin::weather`, `fo4_scene::light`,
+`fo4_render::render_lit`; [spec/light.md](../spec/light.md),
+[spec/light-census.txt](../spec/light-census.txt)) reads CELL.XCLL, LGTM
+DATA and DALC, LIGH DATA and FNAM, and REFR XRDS through the layouts
+already sourced in [spec/record-layouts.tsv](../spec/record-layouts.tsv),
+and the CLMT and WTHR subrecords the census measures on every winning
+record of the load order: CLMT WLST as 12-byte entries whose first word
+resolves to a WTHR, TNAM as 6 bytes; WTHR DALC as the LGTM.DALC layout
+(same tag and size), NAM0 as four-byte colours in rows of one per DALC,
+FNAM as f32 values, IMSP as FormIDs. No public source was consulted for
+these two records (no network in this step); their shapes are
+measurements of the data and the roles the light rules give their rows,
+slots and values (sky, fog, time of day, the unit of the climate's times)
+were recognised from prior general knowledge and are pending rules with
+the data hints their rows record. No editor, editor source or definition
+file, reader of another project, shader of another project or game
+executable was opened.
