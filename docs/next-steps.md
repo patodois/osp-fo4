@@ -42,29 +42,34 @@ a location's rows; actors' animation (character graphs).
 ## Drawing (`crates/fo4-scene`, `apps/fo4-view`)
 
 The coverage census (`spec/coverage.md`) leaves 2.63 % of the placed area undrawn under hypotheses at second 0
-of the game clock, but 28.77 % at any later second: the distant clouds and other effects whose falloff or
-emissive tracks move are refused there (`UnsettledClockField`). With the three switches below the census is the
-same at every time and leaves 2.46 %.
+of the game clock with every clock switch off, but 28.77 % at any later second (the distant clouds and other
+effects whose falloff or emissive tracks move, `UnsettledClockField`). With the effect switches on it leaves
+2.46 % at every second; with every switch on (effect fields and moving geometry) 2.44 % at every second (283,164
+placements omitted, 1,299 fewer).
 
-The clock now also drives the effect emissive multiple, emissive colour and falloff fields, each behind its
-own switch, off by default (`--clock-emissive-multiple`, `--clock-emissive-colour`, `--clock-falloff`;
-`spec/controller-clock.md`, Effect fields on the clock). The families that lead what is still refused:
+The clock drives, each behind its own switch, off by default: the effect emissive multiple, emissive colour and
+falloff fields (`--clock-emissive-multiple`, `--clock-emissive-colour`, `--clock-falloff`), and since this step
+the nodes that free-running transform controllers move (`--clock-translation`, `--clock-rotation`,
+`--clock-rotation-xyz`, `--clock-scale`; `spec/controller-clock.md`, Moving geometry; census
+`spec/motion-census.txt`). Only the drawn geometry moves: the collision of a moving node (88 models, 1,175
+placements) stays where it is stored, and the viewer's moving grid does not take `--time`. The families that
+lead what is still refused:
 
-1. Effect controllers run by a manager (`effect-idle`). The census (`spec/effect-clock-census.txt`, section 2)
-   found no NIF field marking a default sequence; the one marker is the behaviour graph's start state (295 of 465
-   models). A rule needs a sequence player (a sequence's own timing, its transform interpolators) and settles
-   `behavior-graph` at the same time; it contradicts the unstarted-loop rule (`spec/controller-clock.md`, Effect
-   controllers run by a manager).
+1. Effect controllers run by a manager (`effect-idle`). This step's census of their sequences
+   (`spec/motion-census.txt`, section 3; `spec/controller-clock.md`, Sequences of the manager-run effect models)
+   found no data-only signal (list order, a flag, text keys, the placed reference, the base record) that picks
+   one sequence to play from load: the signals disagree on most models. The one marker remains the behaviour
+   graph's start state; a rule needs a sequence player (a sequence's own timing and its transform interpolators,
+   which the transform track of this step can now evaluate) and settles `behavior-graph` at the same time.
 2. Models whose sequence is chosen by a behaviour graph (same machinery as 1).
-3. Moving geometry (transform controllers): needs world transforms over time, rotation key rules, the viewer's
-   instance data per frame and the walking world kept in step. Not started.
+3. Moving geometry left out: TBC keys (93 varying tracks), moving root nodes (`UnsettledClockRootTransform`),
+   path interpolators; moving collision with its node (the walking world kept in step) is not started.
 4. Record runtime state on placements (several refused subrecord families, listed in the census).
 
-Open checks: the viewer window has still not been exercised by hand with `--time` (nor with the new switches);
-the CPU-against-viewer tag differences are explained (coplanar overlapping placements and edges, `spec/render.md`,
-Instance tags of the CPU and the viewer) but not removed. The viewer's GPU tests fail at random when run in
-parallel (shader loading between concurrent apps, also on the commit before); run them with
-`cargo test -- --ignored --test-threads=1`.
+Open checks: the viewer window has still not been exercised by hand with `--time` (nor with any clock switch;
+the per-frame path is tested headless through `GpuScene::at_time`); the CPU-against-viewer tag differences are
+explained (coplanar overlapping placements and edges, `spec/render.md`, Instance tags of the CPU and the viewer)
+but not removed. The viewer's GPU tests now pass in parallel (`spec/render.md`, Viewer GPU tests in parallel).
 
 ## Toward a playable game
 

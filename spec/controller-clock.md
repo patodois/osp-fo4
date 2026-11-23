@@ -387,6 +387,12 @@ controllers moving one node (`AmbiguousClockField`).
 | `nif_clock_transform_rotation_xyz_v1` | `--clock-rotation-xyz` | radians, X then Y then Z: the only reading of 24 that gives the stored rotation on 84 tracks, among the matching ones on every other; per-angle interpolation is prior knowledge. Medium at load, weak between keys. |
 | `nif_clock_transform_scale_v1` | `--clock-scale` | the census; prior knowledge as for translation. Weak. |
 
+With every switch on, the census over time omits 283,164 placements (2.44 %
+of the area) at every second, 1,299 fewer than with the effect switches
+alone; `transform-varies` as a sole family falls from 1,897 placements to
+431, and 66 placements are refused for a moving root node
+([coverage.md](coverage.md), Moving geometry on the clock).
+
 Only the drawn geometry moves. The collision of a placement is placed from
 the stored model; a walker meets it where it is stored, and the viewer's
 moving grid does not take `--time`.

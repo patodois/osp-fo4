@@ -1,7 +1,8 @@
-# Coverage census at several seconds of the game clock, with the clock's switches off and on
-# (coverage_census --times 0,1.7,7.3,45, and again with --clock-emissive-multiple --clock-emissive-colour
-# --clock-falloff; every cell of the load order, 3 shards). Second 0 with the switches off is
-# coverage-census.txt (identical but for the elapsed seconds). Per run: the outcomes and the sole families.
+# Coverage census at several seconds of the game clock, with the clock's switches off, with the effect
+# switches on, and with every switch on (coverage_census --times 0,1.7,7.3,45; again with
+# --clock-emissive-multiple --clock-emissive-colour --clock-falloff; again with those and --clock-translation
+# --clock-rotation --clock-rotation-xyz --clock-scale; every cell of the load order, 3 shards). Second 0 with the
+# switches off is coverage-census.txt (identical but for the elapsed seconds). Per run: the outcomes and the sole families.
 
 # Coverage census (every cell of the load order, each alone; 3 shards; second 1.7 of the game clock)
 
@@ -708,3 +709,407 @@ by area:
   area   0.00%        93   0.03%  record: REFR.XPDD
   area   0.00%         1   0.00%  model: animation-controller blocks (visibility)
   (omitted with two or more families: 189246)
+
+
+# Coverage census (every cell of the load order, each alone; 3 shards; second 0 of the game clock, --clock-emissive-multiple, --clock-emissive-colour, --clock-falloff, --clock-translation, --clock-rotation, --clock-rotation-xyz, --clock-scale)
+
+cells 62393 read, 1 failed (9094 s)
+  cell failure DeletedCell: 1
+placements 1785401 (area proxy 3.6741e11 square units; 73200 without OBND, area 0); deleted 531, initially disabled 4032
+  drawn without hypotheses             779020  43.63%  area  22.31%
+  drawn only under hypotheses          684760  38.35%  area  73.47%
+  hidden by rule editor_marker_hidden_v1    23059   1.29%  area   0.77%
+  hidden by rule xesp_child_follows_parent_v1     8567   0.48%  area   1.01%
+  outside the visual slice               6831   0.38%  area   0.00%
+  omitted                              283164  15.86%  area   2.44%
+  drawn with the root transform left out    19475   1.09%  area   0.73%
+
+## Omitted, by family of reasons, sole family (resolving it alone would draw the placement under hypotheses)
+
+by placements:
+     37865  13.37%  area   0.00%  record: BaseTypeOutsideSlice TXST
+      7787   2.75%  area   0.00%  draw: NoDrawableGeometry
+      5658   2.00%  area   0.33%  actor: not resolved (leveled list)
+      5031   1.78%  area   0.59%  record: REFR.XRGD
+      4821   1.70%  area   0.01%  record: MISC.CDIX
+      3829   1.35%  area   2.71%  record: REFR.XATR
+      2784   0.98%  area   1.19%  record: REFR.XALP
+      2686   0.95%  area   0.05%  record: REFR.XOWN
+      2282   0.81%  area   2.38%  record: REFR.XEZN
+      2281   0.81%  area   0.01%  record: REFR.XLIB
+      2044   0.72%  area   0.00%  draw: MissingDocumentedReferenceScale
+      1758   0.62%  area   0.10%  record: VMAD
+      1408   0.50%  area   1.40%  record: REFR.XRNK
+      1248   0.44%  area   0.30%  record: DOOR.FNAM
+      1226   0.43%  area   1.47%  record: MSTT.DSTA
+      1167   0.41%  area   6.88%  model: animation-controller blocks (effect-idle)
+      1153   0.41%  area   0.07%  actor: not resolved (outfit)
+      1123   0.40%  area   0.06%  actor: not resolved (template)
+       854   0.30%  area   3.81%  model: animation-controller blocks (behavior-graph)
+       841   0.30%  area   0.48%  render asset: MissingTexture
+       768   0.27%  area   0.00%  record: LIGH.DATA
+       760   0.27%  area   0.36%  record: REFR.XLRT
+       674   0.24%  area   0.00%  record: BaseTypeOutsideSlice ARMO
+       558   0.20%  area   0.00%  record: BaseTypeOutsideSlice WEAP
+       469   0.17%  area   0.55%  render asset: MissingMaterial
+       431   0.15%  area   0.03%  model: animation-controller blocks (transform-varies)
+       327   0.12%  area   0.32%  record: STAT.NVNM
+       296   0.10%  area   0.16%  model: MissingModel
+       232   0.08%  area   0.03%  actor: animation-controller blocks (behavior-graph)
+       225   0.08%  area   0.09%  model: animation-controller blocks (alpha)
+       222   0.08%  area   0.02%  actor draw: ActorSkinBoneMissing
+       218   0.08%  area   0.09%  record: RuntimeEnableParent XESP.own_flag
+       183   0.06%  area   0.01%  actor: not resolved (skin)
+       138   0.05%  area   0.00%  record: CONT.DATA
+        93   0.03%  area   0.00%  record: REFR.XPDD
+        74   0.03%  area   0.00%  model: animation-controller blocks (texture-transform)
+        66   0.02%  area   0.11%  draw: UnsettledClockRootTransform
+        58   0.02%  area   0.00%  record: MISC.YNAM
+        56   0.02%  area   0.14%  draw: UnsupportedColorOnlyEffectFeatures 3221225472
+        51   0.02%  area   0.00%  record: KEYM.DATA
+  ... 27 more
+by area:
+  area   6.88%      1167   0.41%  model: animation-controller blocks (effect-idle)
+  area   3.81%       854   0.30%  model: animation-controller blocks (behavior-graph)
+  area   2.71%      3829   1.35%  record: REFR.XATR
+  area   2.38%      2282   0.81%  record: REFR.XEZN
+  area   1.47%      1226   0.43%  record: MSTT.DSTA
+  area   1.40%      1408   0.50%  record: REFR.XRNK
+  area   1.19%      2784   0.98%  record: REFR.XALP
+  area   0.59%      5031   1.78%  record: REFR.XRGD
+  area   0.55%        29   0.01%  record: SCOL.FLTR
+  area   0.55%       469   0.17%  render asset: MissingMaterial
+  area   0.48%       841   0.30%  render asset: MissingTexture
+  area   0.36%       760   0.27%  record: REFR.XLRT
+  area   0.33%      5658   2.00%  actor: not resolved (leveled list)
+  area   0.32%       327   0.12%  record: STAT.NVNM
+  area   0.30%      1248   0.44%  record: DOOR.FNAM
+  area   0.27%         5   0.00%  model citation: RejectedVfsPath
+  area   0.21%        17   0.01%  model: animation-controller blocks (effect-emissive)
+  area   0.16%       296   0.10%  model: MissingModel
+  area   0.14%        56   0.02%  draw: UnsupportedColorOnlyEffectFeatures 3221225472
+  area   0.11%        66   0.02%  draw: UnsettledClockRootTransform
+  area   0.11%        41   0.01%  record: SCOL.MODC
+  area   0.10%      1758   0.62%  record: VMAD
+  area   0.09%       225   0.08%  model: animation-controller blocks (alpha)
+  area   0.09%       218   0.08%  record: RuntimeEnableParent XESP.own_flag
+  area   0.07%      1153   0.41%  actor: not resolved (outfit)
+  area   0.06%      1123   0.40%  actor: not resolved (template)
+  area   0.06%         1   0.00%  record: REFR.XHLT
+  area   0.05%      2686   0.95%  record: REFR.XOWN
+  area   0.05%         1   0.00%  record: REFR.XCVR
+  area   0.03%       232   0.08%  actor: animation-controller blocks (behavior-graph)
+  area   0.03%       431   0.15%  model: animation-controller blocks (transform-varies)
+  area   0.02%         8   0.00%  record: REFR.XLCM
+  area   0.02%       222   0.08%  actor draw: ActorSkinBoneMissing
+  area   0.01%      2281   0.81%  record: REFR.XLIB
+  area   0.01%      4821   1.70%  record: MISC.CDIX
+  area   0.01%       183   0.06%  actor: not resolved (skin)
+  area   0.01%        11   0.00%  record: REFR.XBSD
+  area   0.00%        48   0.02%  record: REFR.XIS2
+  area   0.00%       768   0.27%  record: LIGH.DATA
+  area   0.00%        93   0.03%  record: REFR.XPDD
+  (omitted with two or more families: 189122)
+
+
+# Coverage census (every cell of the load order, each alone; 3 shards; second 1.7 of the game clock, --clock-emissive-multiple, --clock-emissive-colour, --clock-falloff, --clock-translation, --clock-rotation, --clock-rotation-xyz, --clock-scale)
+
+cells 62393 read, 1 failed (9094 s)
+  cell failure DeletedCell: 1
+placements 1785401 (area proxy 3.6741e11 square units; 73200 without OBND, area 0); deleted 531, initially disabled 4032
+  drawn without hypotheses             779020  43.63%  area  22.31%
+  drawn only under hypotheses          684760  38.35%  area  73.47%
+  hidden by rule editor_marker_hidden_v1    23059   1.29%  area   0.77%
+  hidden by rule xesp_child_follows_parent_v1     8567   0.48%  area   1.01%
+  outside the visual slice               6831   0.38%  area   0.00%
+  omitted                              283164  15.86%  area   2.44%
+  drawn with the root transform left out    19475   1.09%  area   0.73%
+
+## Omitted, by family of reasons, sole family (resolving it alone would draw the placement under hypotheses)
+
+by placements:
+     37865  13.37%  area   0.00%  record: BaseTypeOutsideSlice TXST
+      7787   2.75%  area   0.00%  draw: NoDrawableGeometry
+      5658   2.00%  area   0.33%  actor: not resolved (leveled list)
+      5031   1.78%  area   0.59%  record: REFR.XRGD
+      4821   1.70%  area   0.01%  record: MISC.CDIX
+      3829   1.35%  area   2.71%  record: REFR.XATR
+      2784   0.98%  area   1.19%  record: REFR.XALP
+      2686   0.95%  area   0.05%  record: REFR.XOWN
+      2282   0.81%  area   2.38%  record: REFR.XEZN
+      2281   0.81%  area   0.01%  record: REFR.XLIB
+      2044   0.72%  area   0.00%  draw: MissingDocumentedReferenceScale
+      1758   0.62%  area   0.10%  record: VMAD
+      1408   0.50%  area   1.40%  record: REFR.XRNK
+      1248   0.44%  area   0.30%  record: DOOR.FNAM
+      1226   0.43%  area   1.47%  record: MSTT.DSTA
+      1167   0.41%  area   6.88%  model: animation-controller blocks (effect-idle)
+      1153   0.41%  area   0.07%  actor: not resolved (outfit)
+      1123   0.40%  area   0.06%  actor: not resolved (template)
+       854   0.30%  area   3.81%  model: animation-controller blocks (behavior-graph)
+       841   0.30%  area   0.48%  render asset: MissingTexture
+       768   0.27%  area   0.00%  record: LIGH.DATA
+       760   0.27%  area   0.36%  record: REFR.XLRT
+       674   0.24%  area   0.00%  record: BaseTypeOutsideSlice ARMO
+       558   0.20%  area   0.00%  record: BaseTypeOutsideSlice WEAP
+       469   0.17%  area   0.55%  render asset: MissingMaterial
+       431   0.15%  area   0.03%  model: animation-controller blocks (transform-varies)
+       327   0.12%  area   0.32%  record: STAT.NVNM
+       296   0.10%  area   0.16%  model: MissingModel
+       232   0.08%  area   0.03%  actor: animation-controller blocks (behavior-graph)
+       225   0.08%  area   0.09%  model: animation-controller blocks (alpha)
+       222   0.08%  area   0.02%  actor draw: ActorSkinBoneMissing
+       218   0.08%  area   0.09%  record: RuntimeEnableParent XESP.own_flag
+       183   0.06%  area   0.01%  actor: not resolved (skin)
+       138   0.05%  area   0.00%  record: CONT.DATA
+        93   0.03%  area   0.00%  record: REFR.XPDD
+        74   0.03%  area   0.00%  model: animation-controller blocks (texture-transform)
+        66   0.02%  area   0.11%  draw: UnsettledClockRootTransform
+        58   0.02%  area   0.00%  record: MISC.YNAM
+        56   0.02%  area   0.14%  draw: UnsupportedColorOnlyEffectFeatures 3221225472
+        51   0.02%  area   0.00%  record: KEYM.DATA
+  ... 27 more
+by area:
+  area   6.88%      1167   0.41%  model: animation-controller blocks (effect-idle)
+  area   3.81%       854   0.30%  model: animation-controller blocks (behavior-graph)
+  area   2.71%      3829   1.35%  record: REFR.XATR
+  area   2.38%      2282   0.81%  record: REFR.XEZN
+  area   1.47%      1226   0.43%  record: MSTT.DSTA
+  area   1.40%      1408   0.50%  record: REFR.XRNK
+  area   1.19%      2784   0.98%  record: REFR.XALP
+  area   0.59%      5031   1.78%  record: REFR.XRGD
+  area   0.55%        29   0.01%  record: SCOL.FLTR
+  area   0.55%       469   0.17%  render asset: MissingMaterial
+  area   0.48%       841   0.30%  render asset: MissingTexture
+  area   0.36%       760   0.27%  record: REFR.XLRT
+  area   0.33%      5658   2.00%  actor: not resolved (leveled list)
+  area   0.32%       327   0.12%  record: STAT.NVNM
+  area   0.30%      1248   0.44%  record: DOOR.FNAM
+  area   0.27%         5   0.00%  model citation: RejectedVfsPath
+  area   0.21%        17   0.01%  model: animation-controller blocks (effect-emissive)
+  area   0.16%       296   0.10%  model: MissingModel
+  area   0.14%        56   0.02%  draw: UnsupportedColorOnlyEffectFeatures 3221225472
+  area   0.11%        66   0.02%  draw: UnsettledClockRootTransform
+  area   0.11%        41   0.01%  record: SCOL.MODC
+  area   0.10%      1758   0.62%  record: VMAD
+  area   0.09%       225   0.08%  model: animation-controller blocks (alpha)
+  area   0.09%       218   0.08%  record: RuntimeEnableParent XESP.own_flag
+  area   0.07%      1153   0.41%  actor: not resolved (outfit)
+  area   0.06%      1123   0.40%  actor: not resolved (template)
+  area   0.06%         1   0.00%  record: REFR.XHLT
+  area   0.05%      2686   0.95%  record: REFR.XOWN
+  area   0.05%         1   0.00%  record: REFR.XCVR
+  area   0.03%       232   0.08%  actor: animation-controller blocks (behavior-graph)
+  area   0.03%       431   0.15%  model: animation-controller blocks (transform-varies)
+  area   0.02%         8   0.00%  record: REFR.XLCM
+  area   0.02%       222   0.08%  actor draw: ActorSkinBoneMissing
+  area   0.01%      2281   0.81%  record: REFR.XLIB
+  area   0.01%      4821   1.70%  record: MISC.CDIX
+  area   0.01%       183   0.06%  actor: not resolved (skin)
+  area   0.01%        11   0.00%  record: REFR.XBSD
+  area   0.00%        48   0.02%  record: REFR.XIS2
+  area   0.00%       768   0.27%  record: LIGH.DATA
+  area   0.00%        93   0.03%  record: REFR.XPDD
+  (omitted with two or more families: 189122)
+
+
+# Coverage census (every cell of the load order, each alone; 3 shards; second 7.3 of the game clock, --clock-emissive-multiple, --clock-emissive-colour, --clock-falloff, --clock-translation, --clock-rotation, --clock-rotation-xyz, --clock-scale)
+
+cells 62393 read, 1 failed (9094 s)
+  cell failure DeletedCell: 1
+placements 1785401 (area proxy 3.6741e11 square units; 73200 without OBND, area 0); deleted 531, initially disabled 4032
+  drawn without hypotheses             779020  43.63%  area  22.31%
+  drawn only under hypotheses          684760  38.35%  area  73.47%
+  hidden by rule editor_marker_hidden_v1    23059   1.29%  area   0.77%
+  hidden by rule xesp_child_follows_parent_v1     8567   0.48%  area   1.01%
+  outside the visual slice               6831   0.38%  area   0.00%
+  omitted                              283164  15.86%  area   2.44%
+  drawn with the root transform left out    19475   1.09%  area   0.73%
+
+## Omitted, by family of reasons, sole family (resolving it alone would draw the placement under hypotheses)
+
+by placements:
+     37865  13.37%  area   0.00%  record: BaseTypeOutsideSlice TXST
+      7787   2.75%  area   0.00%  draw: NoDrawableGeometry
+      5658   2.00%  area   0.33%  actor: not resolved (leveled list)
+      5031   1.78%  area   0.59%  record: REFR.XRGD
+      4821   1.70%  area   0.01%  record: MISC.CDIX
+      3829   1.35%  area   2.71%  record: REFR.XATR
+      2784   0.98%  area   1.19%  record: REFR.XALP
+      2686   0.95%  area   0.05%  record: REFR.XOWN
+      2282   0.81%  area   2.38%  record: REFR.XEZN
+      2281   0.81%  area   0.01%  record: REFR.XLIB
+      2044   0.72%  area   0.00%  draw: MissingDocumentedReferenceScale
+      1758   0.62%  area   0.10%  record: VMAD
+      1408   0.50%  area   1.40%  record: REFR.XRNK
+      1248   0.44%  area   0.30%  record: DOOR.FNAM
+      1226   0.43%  area   1.47%  record: MSTT.DSTA
+      1167   0.41%  area   6.88%  model: animation-controller blocks (effect-idle)
+      1153   0.41%  area   0.07%  actor: not resolved (outfit)
+      1123   0.40%  area   0.06%  actor: not resolved (template)
+       854   0.30%  area   3.81%  model: animation-controller blocks (behavior-graph)
+       841   0.30%  area   0.48%  render asset: MissingTexture
+       768   0.27%  area   0.00%  record: LIGH.DATA
+       760   0.27%  area   0.36%  record: REFR.XLRT
+       674   0.24%  area   0.00%  record: BaseTypeOutsideSlice ARMO
+       558   0.20%  area   0.00%  record: BaseTypeOutsideSlice WEAP
+       469   0.17%  area   0.55%  render asset: MissingMaterial
+       431   0.15%  area   0.03%  model: animation-controller blocks (transform-varies)
+       327   0.12%  area   0.32%  record: STAT.NVNM
+       296   0.10%  area   0.16%  model: MissingModel
+       232   0.08%  area   0.03%  actor: animation-controller blocks (behavior-graph)
+       225   0.08%  area   0.09%  model: animation-controller blocks (alpha)
+       222   0.08%  area   0.02%  actor draw: ActorSkinBoneMissing
+       218   0.08%  area   0.09%  record: RuntimeEnableParent XESP.own_flag
+       183   0.06%  area   0.01%  actor: not resolved (skin)
+       138   0.05%  area   0.00%  record: CONT.DATA
+        93   0.03%  area   0.00%  record: REFR.XPDD
+        74   0.03%  area   0.00%  model: animation-controller blocks (texture-transform)
+        66   0.02%  area   0.11%  draw: UnsettledClockRootTransform
+        58   0.02%  area   0.00%  record: MISC.YNAM
+        56   0.02%  area   0.14%  draw: UnsupportedColorOnlyEffectFeatures 3221225472
+        51   0.02%  area   0.00%  record: KEYM.DATA
+  ... 27 more
+by area:
+  area   6.88%      1167   0.41%  model: animation-controller blocks (effect-idle)
+  area   3.81%       854   0.30%  model: animation-controller blocks (behavior-graph)
+  area   2.71%      3829   1.35%  record: REFR.XATR
+  area   2.38%      2282   0.81%  record: REFR.XEZN
+  area   1.47%      1226   0.43%  record: MSTT.DSTA
+  area   1.40%      1408   0.50%  record: REFR.XRNK
+  area   1.19%      2784   0.98%  record: REFR.XALP
+  area   0.59%      5031   1.78%  record: REFR.XRGD
+  area   0.55%        29   0.01%  record: SCOL.FLTR
+  area   0.55%       469   0.17%  render asset: MissingMaterial
+  area   0.48%       841   0.30%  render asset: MissingTexture
+  area   0.36%       760   0.27%  record: REFR.XLRT
+  area   0.33%      5658   2.00%  actor: not resolved (leveled list)
+  area   0.32%       327   0.12%  record: STAT.NVNM
+  area   0.30%      1248   0.44%  record: DOOR.FNAM
+  area   0.27%         5   0.00%  model citation: RejectedVfsPath
+  area   0.21%        17   0.01%  model: animation-controller blocks (effect-emissive)
+  area   0.16%       296   0.10%  model: MissingModel
+  area   0.14%        56   0.02%  draw: UnsupportedColorOnlyEffectFeatures 3221225472
+  area   0.11%        66   0.02%  draw: UnsettledClockRootTransform
+  area   0.11%        41   0.01%  record: SCOL.MODC
+  area   0.10%      1758   0.62%  record: VMAD
+  area   0.09%       225   0.08%  model: animation-controller blocks (alpha)
+  area   0.09%       218   0.08%  record: RuntimeEnableParent XESP.own_flag
+  area   0.07%      1153   0.41%  actor: not resolved (outfit)
+  area   0.06%      1123   0.40%  actor: not resolved (template)
+  area   0.06%         1   0.00%  record: REFR.XHLT
+  area   0.05%      2686   0.95%  record: REFR.XOWN
+  area   0.05%         1   0.00%  record: REFR.XCVR
+  area   0.03%       232   0.08%  actor: animation-controller blocks (behavior-graph)
+  area   0.03%       431   0.15%  model: animation-controller blocks (transform-varies)
+  area   0.02%         8   0.00%  record: REFR.XLCM
+  area   0.02%       222   0.08%  actor draw: ActorSkinBoneMissing
+  area   0.01%      2281   0.81%  record: REFR.XLIB
+  area   0.01%      4821   1.70%  record: MISC.CDIX
+  area   0.01%       183   0.06%  actor: not resolved (skin)
+  area   0.01%        11   0.00%  record: REFR.XBSD
+  area   0.00%        48   0.02%  record: REFR.XIS2
+  area   0.00%       768   0.27%  record: LIGH.DATA
+  area   0.00%        93   0.03%  record: REFR.XPDD
+  (omitted with two or more families: 189122)
+
+
+# Coverage census (every cell of the load order, each alone; 3 shards; second 45 of the game clock, --clock-emissive-multiple, --clock-emissive-colour, --clock-falloff, --clock-translation, --clock-rotation, --clock-rotation-xyz, --clock-scale)
+
+cells 62393 read, 1 failed (9094 s)
+  cell failure DeletedCell: 1
+placements 1785401 (area proxy 3.6741e11 square units; 73200 without OBND, area 0); deleted 531, initially disabled 4032
+  drawn without hypotheses             779020  43.63%  area  22.31%
+  drawn only under hypotheses          684760  38.35%  area  73.47%
+  hidden by rule editor_marker_hidden_v1    23059   1.29%  area   0.77%
+  hidden by rule xesp_child_follows_parent_v1     8567   0.48%  area   1.01%
+  outside the visual slice               6831   0.38%  area   0.00%
+  omitted                              283164  15.86%  area   2.44%
+  drawn with the root transform left out    19475   1.09%  area   0.73%
+
+## Omitted, by family of reasons, sole family (resolving it alone would draw the placement under hypotheses)
+
+by placements:
+     37865  13.37%  area   0.00%  record: BaseTypeOutsideSlice TXST
+      7787   2.75%  area   0.00%  draw: NoDrawableGeometry
+      5658   2.00%  area   0.33%  actor: not resolved (leveled list)
+      5031   1.78%  area   0.59%  record: REFR.XRGD
+      4821   1.70%  area   0.01%  record: MISC.CDIX
+      3829   1.35%  area   2.71%  record: REFR.XATR
+      2784   0.98%  area   1.19%  record: REFR.XALP
+      2686   0.95%  area   0.05%  record: REFR.XOWN
+      2282   0.81%  area   2.38%  record: REFR.XEZN
+      2281   0.81%  area   0.01%  record: REFR.XLIB
+      2044   0.72%  area   0.00%  draw: MissingDocumentedReferenceScale
+      1758   0.62%  area   0.10%  record: VMAD
+      1408   0.50%  area   1.40%  record: REFR.XRNK
+      1248   0.44%  area   0.30%  record: DOOR.FNAM
+      1226   0.43%  area   1.47%  record: MSTT.DSTA
+      1167   0.41%  area   6.88%  model: animation-controller blocks (effect-idle)
+      1153   0.41%  area   0.07%  actor: not resolved (outfit)
+      1123   0.40%  area   0.06%  actor: not resolved (template)
+       854   0.30%  area   3.81%  model: animation-controller blocks (behavior-graph)
+       841   0.30%  area   0.48%  render asset: MissingTexture
+       768   0.27%  area   0.00%  record: LIGH.DATA
+       760   0.27%  area   0.36%  record: REFR.XLRT
+       674   0.24%  area   0.00%  record: BaseTypeOutsideSlice ARMO
+       558   0.20%  area   0.00%  record: BaseTypeOutsideSlice WEAP
+       469   0.17%  area   0.55%  render asset: MissingMaterial
+       431   0.15%  area   0.03%  model: animation-controller blocks (transform-varies)
+       327   0.12%  area   0.32%  record: STAT.NVNM
+       296   0.10%  area   0.16%  model: MissingModel
+       232   0.08%  area   0.03%  actor: animation-controller blocks (behavior-graph)
+       225   0.08%  area   0.09%  model: animation-controller blocks (alpha)
+       222   0.08%  area   0.02%  actor draw: ActorSkinBoneMissing
+       218   0.08%  area   0.09%  record: RuntimeEnableParent XESP.own_flag
+       183   0.06%  area   0.01%  actor: not resolved (skin)
+       138   0.05%  area   0.00%  record: CONT.DATA
+        93   0.03%  area   0.00%  record: REFR.XPDD
+        74   0.03%  area   0.00%  model: animation-controller blocks (texture-transform)
+        66   0.02%  area   0.11%  draw: UnsettledClockRootTransform
+        58   0.02%  area   0.00%  record: MISC.YNAM
+        56   0.02%  area   0.14%  draw: UnsupportedColorOnlyEffectFeatures 3221225472
+        51   0.02%  area   0.00%  record: KEYM.DATA
+  ... 27 more
+by area:
+  area   6.88%      1167   0.41%  model: animation-controller blocks (effect-idle)
+  area   3.81%       854   0.30%  model: animation-controller blocks (behavior-graph)
+  area   2.71%      3829   1.35%  record: REFR.XATR
+  area   2.38%      2282   0.81%  record: REFR.XEZN
+  area   1.47%      1226   0.43%  record: MSTT.DSTA
+  area   1.40%      1408   0.50%  record: REFR.XRNK
+  area   1.19%      2784   0.98%  record: REFR.XALP
+  area   0.59%      5031   1.78%  record: REFR.XRGD
+  area   0.55%        29   0.01%  record: SCOL.FLTR
+  area   0.55%       469   0.17%  render asset: MissingMaterial
+  area   0.48%       841   0.30%  render asset: MissingTexture
+  area   0.36%       760   0.27%  record: REFR.XLRT
+  area   0.33%      5658   2.00%  actor: not resolved (leveled list)
+  area   0.32%       327   0.12%  record: STAT.NVNM
+  area   0.30%      1248   0.44%  record: DOOR.FNAM
+  area   0.27%         5   0.00%  model citation: RejectedVfsPath
+  area   0.21%        17   0.01%  model: animation-controller blocks (effect-emissive)
+  area   0.16%       296   0.10%  model: MissingModel
+  area   0.14%        56   0.02%  draw: UnsupportedColorOnlyEffectFeatures 3221225472
+  area   0.11%        66   0.02%  draw: UnsettledClockRootTransform
+  area   0.11%        41   0.01%  record: SCOL.MODC
+  area   0.10%      1758   0.62%  record: VMAD
+  area   0.09%       225   0.08%  model: animation-controller blocks (alpha)
+  area   0.09%       218   0.08%  record: RuntimeEnableParent XESP.own_flag
+  area   0.07%      1153   0.41%  actor: not resolved (outfit)
+  area   0.06%      1123   0.40%  actor: not resolved (template)
+  area   0.06%         1   0.00%  record: REFR.XHLT
+  area   0.05%      2686   0.95%  record: REFR.XOWN
+  area   0.05%         1   0.00%  record: REFR.XCVR
+  area   0.03%       232   0.08%  actor: animation-controller blocks (behavior-graph)
+  area   0.03%       431   0.15%  model: animation-controller blocks (transform-varies)
+  area   0.02%         8   0.00%  record: REFR.XLCM
+  area   0.02%       222   0.08%  actor draw: ActorSkinBoneMissing
+  area   0.01%      2281   0.81%  record: REFR.XLIB
+  area   0.01%      4821   1.70%  record: MISC.CDIX
+  area   0.01%       183   0.06%  actor: not resolved (skin)
+  area   0.01%        11   0.00%  record: REFR.XBSD
+  area   0.00%        48   0.02%  record: REFR.XIS2
+  area   0.00%       768   0.27%  record: LIGH.DATA
+  area   0.00%        93   0.03%  record: REFR.XPDD
+  (omitted with two or more families: 189122)

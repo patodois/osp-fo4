@@ -863,3 +863,40 @@ multiple track. With every switch off, the CPU frames of eleven views
 (with and without hypotheses, with and without `--time`) and the viewer's
 headless frames of seven views are byte-identical to the commit before,
 frame and tag buffers.
+
+## Moving geometry on the clock
+
+`coverage_census --times 0,1.7,7.3,45` once more with every switch of the
+clock on (the three effect switches and `--clock-translation
+--clock-rotation --clock-rotation-xyz --clock-scale`;
+[controller-clock.md](controller-clock.md), Moving geometry), and once
+with every switch off. Every cell of the load order, 3 shards of 8,741 to
+9,096 s each per run (two runs side by side), peak 0.82 GB. The new
+sections are at the end of
+[coverage-clock-census.txt](coverage-clock-census.txt).
+
+| Run | Drawn under hypotheses | Hidden through the chain | Omitted | Omitted area |
+| --- | ---: | ---: | ---: | ---: |
+| effect switches on (before), every time | 683,490 | 8,538 | 284,463 | 2.46 % |
+| every switch on, every time | 684,760 | 8,567 | 283,164 | 2.44 % |
+
+Drawn without hypotheses: 779,020 in both. The census is again the same
+at every second: 1,299 fewer placements are omitted, 1,270 more are drawn
+under hypotheses and 29 more are hidden through the enable parent chain.
+As a sole family, `transform-varies` falls from 1,897 placements (0.94 %
+of the omitted area) to 431 (0.03 %), as any family from 9,298 to 1,264;
+what is left of it is TBC keys, path interpolators and models whose other
+tags stay open. A new draw refusal, a transform controller moving a root
+node (`UnsettledClockRootTransform`), is the sole reason of 66 placements
+(0.11 % of the omitted area). Drawn placements rely on
+`nif_clock_transform_rotation_xyz_v1` 1,133 times (0.02 % of all the
+area), `nif_clock_transform_translation_v1` 181, the quaternion rule 3 and
+the scale rule on none; `nif_controller_clock_free_running_v1` 8,312 →
+9,582. The area moved is small (the moving models have small bounds); the largest families left by area are still
+`effect-idle` (1,167 placements, 6.88 % of the omitted area) and behaviour
+graphs (854, 3.81 %).
+
+With every switch off the run reproduces the committed outputs: second 0,
+merged without a note, is [coverage-census.txt](coverage-census.txt) but
+for its elapsed seconds; seconds 1.7, 7.3 and 45 are the switches-off
+sections of the clock census but for the elapsed seconds.

@@ -546,7 +546,7 @@ percentile 0, largest 1 (Apple M5, Metal); the two times give different
 frames and no moving draw has a surface of its own.
 
 **Frames** (local, `render` example, 1280 x 720, `--texture-mib 1024`): a
-raider windmill of an exterior turns its sails between seconds 0, 1.5 and
+windmill of an exterior turns its sails between seconds 0, 1.5 and
 3 with the switches on (120,003 and 135,519 pixels change between the
 frames) and is left out without them; an industrial fan behind a grille in
 an interior turns its blades between 0, 0.1 and 0.2 s.
