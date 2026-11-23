@@ -624,6 +624,13 @@ pub struct Quests {
     /// (`quest_alias_location_ref_placed_v1`; `quest_run
     /// --alias-location-placed-refs`). `None` by default.
     pub location_placed: Option<Rc<LocationPlaced>>,
+    /// With [`Quests::location_fills`]: where several reference aliases of
+    /// a quest name the same location and ref type and its rows name as
+    /// many distinct references of the type, the aliases hold them one
+    /// each, the lowest alias id the first reference in row order
+    /// (`quest_alias_location_ref_shared_v1`; `quest_run
+    /// --location-refs-shared`). Off by default.
+    pub location_shared: bool,
     /// The rules the location readings after the list's relied on (the
     /// caller adds them to the run's rules).
     pub location_used: std::cell::RefCell<BTreeSet<&'static str>>,
@@ -734,6 +741,27 @@ impl Quests {
                     .borrow_mut()
                     .insert(rules::ALIAS_LOCATION_DISTINCT);
                 return Ok(Some((*one).clone()));
+            }
+        }
+        if self.location_shared {
+            let distinct = rows.distinct();
+            if distinct.len() > 1 {
+                // The quest's aliases of the same location and ref type,
+                // by id (the map's order).
+                let sharing: Vec<u32> = info
+                    .location_rows
+                    .iter()
+                    .filter(|(_, r)| r.location == rows.location && r.ref_type == rows.ref_type)
+                    .map(|(a, _)| *a)
+                    .collect();
+                if sharing.len() == distinct.len() {
+                    if let Some(i) = sharing.iter().position(|a| *a == id) {
+                        self.location_used
+                            .borrow_mut()
+                            .insert(rules::ALIAS_LOCATION_SHARED);
+                        return Ok(Some(distinct[i].clone()));
+                    }
+                }
             }
         }
         if let (Some(p), true) = (&self.location_placed, rows.listed.is_empty()) {
@@ -1968,6 +1996,16 @@ impl Host for QuestHost<'_> {
         // Whether a menu is open and which message box button is pressed,
         // when the caller assumes them; off, recorded as before.
         if let Some(r) = crate::menu::menu_mode(c, w) {
+            return r;
+        }
+        // The fight's registrations and the natives that read its events,
+        // when a caller turned them on (`crate::fight`); off, recorded as
+        // before.
+        let fight_reply = crate::fight::native(c, w);
+        for u in std::mem::take(&mut w.fights.used) {
+            self.using(u);
+        }
+        if let Some(r) = fight_reply {
             return r;
         }
         // Keywords of references, when a caller turned a reading on

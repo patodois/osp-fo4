@@ -6,6 +6,7 @@ mod anim;
 mod cond2;
 mod data;
 mod events;
+mod fight;
 mod graph;
 mod home;
 mod kw;

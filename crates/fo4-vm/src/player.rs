@@ -94,6 +94,9 @@ pub enum Receiver {
     Alias(ObjId, i32),
     /// An instance registered for the event as a remote event.
     Registered,
+    /// An instance registered for the reference's hit events
+    /// (`crate::fight`).
+    HitRegistered,
 }
 impl Receiver {
     pub fn kind(&self) -> &'static str {
@@ -101,6 +104,7 @@ impl Receiver {
             Receiver::Reference => "a script of the reference",
             Receiver::Alias(..) => "a script of a quest alias holding the reference",
             Receiver::Registered => "an instance registered for the remote event",
+            Receiver::HitRegistered => "an instance registered for the reference's hits",
         }
     }
 }

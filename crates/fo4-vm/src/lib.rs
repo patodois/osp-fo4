@@ -33,6 +33,7 @@ pub mod cond;
 pub mod data;
 pub mod events;
 mod exec;
+pub mod fight;
 pub mod host;
 pub mod keyword;
 pub mod line;
@@ -419,6 +420,11 @@ pub struct Vm<'a> {
     /// (`rules::TEXT_EQUAL_IGNORE_CASE`); off by default: undetermined, as
     /// before.
     pub texts_ignore_case: bool,
+    /// An instance whose script declares no auto state starts in the auto
+    /// state of the nearest ancestor that declares one
+    /// (`rules::AUTO_STATE_INHERITED`); off by default: the script's own
+    /// (empty) auto state, as before.
+    pub auto_state_inherited: bool,
     steps: u64,
     depth: usize,
 }
@@ -441,6 +447,7 @@ impl<'a> Vm<'a> {
             variant: Variant::Candidate,
             none_arrays: NoneArrays::default(),
             texts_ignore_case: false,
+            auto_state_inherited: false,
             steps: 0,
             depth: 0,
         }
@@ -538,7 +545,13 @@ impl<'a> Vm<'a> {
                 });
             }
         }
-        let state = chain[0].auto_state.clone();
+        let mut state = chain[0].auto_state.clone();
+        if state.is_empty() && self.auto_state_inherited {
+            if let Some(s) = chain.iter().find(|s| !s.auto_state.is_empty()) {
+                state = s.auto_state.clone();
+                self.rules.insert(rules::AUTO_STATE_INHERITED);
+            }
+        }
         if !state.is_empty() {
             self.rules.insert(rules::STATE);
         }

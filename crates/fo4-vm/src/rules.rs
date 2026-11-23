@@ -169,7 +169,7 @@ pub const XESP_BIT1: &str = "xesp_flag_bit1_not_presence_v1";
 pub const XESP_PROPAGATES: &str = "xesp_script_change_propagates_v1";
 
 /// Every rule above.
-pub const ALL: [&str; 169] = [
+pub const ALL: [&str; 177] = [
     ARITHMETIC,
     COMPARE,
     NOT_COPY_CAST,
@@ -339,6 +339,14 @@ pub const ALL: [&str; 169] = [
     LINE_START_SCENE,
     COND_FN_70_PLAYER_SEX,
     INFO_GROUPS,
+    ALIAS_LOCATION_SHARED,
+    HIT_EVENTS,
+    HIT_INIT_REGISTRATION,
+    COMBAT_STATE_EVENTS,
+    DEATH_EVENTS,
+    DEAD_STATE,
+    COMBAT_STATE_NATIVES,
+    AUTO_STATE_INHERITED,
 ];
 
 /// The rule an opcode's meaning rests on; `None` for an opcode without a
@@ -693,3 +701,29 @@ pub const COND_FN_70_PLAYER_SEX: &str = "cond_fn_70_player_sex_v1";
 /// hold too; a line other lines name as their group is not a line that
 /// plays.
 pub const INFO_GROUPS: &str = "dialogue_info_group_conditions_v1";
+/// Several reference aliases of a quest naming the same location and ref
+/// type, its rows naming as many distinct references of the type: the
+/// aliases hold them one each, by alias id and row order.
+pub const ALIAS_LOCATION_SHARED: &str = "quest_alias_location_ref_shared_v1";
+/// Hit event registrations are kept; a hit the caller assumes delivers
+/// `OnHit` to the instances registered for the target or an alias holding
+/// it, once per registration.
+pub const HIT_EVENTS: &str = "fight_hit_registrations_v1";
+/// A script of the target or of an alias holding it whose init handler
+/// (never delivered by the run) registers for hit events on its own
+/// object counts as registered before the first hit the run raises there.
+pub const HIT_INIT_REGISTRATION: &str = "fight_hit_init_registration_v1";
+/// A combat state change the caller assumes delivers
+/// `OnCombatStateChanged(target, state)` to the actor's receivers.
+pub const COMBAT_STATE_EVENTS: &str = "fight_combat_state_events_v1";
+/// A death the caller assumes delivers `OnDying(killer)` then
+/// `OnDeath(killer)` to the actor's receivers.
+pub const DEATH_EVENTS: &str = "fight_death_events_v1";
+/// `IsDead` on an actor whose death the run raised answers true.
+pub const DEAD_STATE: &str = "fight_dead_state_v1";
+/// `IsInCombat` on the player and on actors, and `GetCombatState` on
+/// actors, answered from the run's assumed combat states and deaths.
+pub const COMBAT_STATE_NATIVES: &str = "fight_combat_state_natives_v1";
+/// An instance of a script that declares no auto state starts in the auto
+/// state of its nearest ancestor that declares one.
+pub const AUTO_STATE_INHERITED: &str = "pex_auto_state_inherited_v1";

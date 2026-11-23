@@ -420,6 +420,10 @@ struct Opts {
     /// (`pex_text_equal_ignore_case_v1`, `--text-equal-ignore-case`; off by
     /// default).
     texts_ignore_case: bool,
+    /// An instance of a script declaring no auto state starts in its
+    /// nearest ancestor's (`pex_auto_state_inherited_v1`,
+    /// `--auto-state-inherited`; off by default).
+    auto_state_inherited: bool,
 }
 
 /// The story manager's nodes, read once when the story manager is on.
@@ -475,6 +479,7 @@ fn events_on(vm: &mut Vm<'_>, o: Opts) {
     }
     vm.none_arrays = o.none_arrays;
     vm.texts_ignore_case = o.texts_ignore_case;
+    vm.auto_state_inherited = o.auto_state_inherited;
     if o.scenes {
         GROUPS.with(|g| vm.world.scenes.groups = g.borrow().clone());
         CLOCK.with(|c| vm.world.scenes.clock = c.borrow().clone());
@@ -554,6 +559,10 @@ fn count_switches(c: &mut Counts, o: Opts) {
         (
             o.texts_ignore_case,
             "== on texts that differ only in case is true (--text-equal-ignore-case)",
+        ),
+        (
+            o.auto_state_inherited,
+            "an instance of a script declaring no auto state starts in its nearest ancestor's (--auto-state-inherited)",
         ),
     ] {
         if on {
@@ -1074,6 +1083,23 @@ struct Then {
     /// reference count once (`quest_alias_location_ref_distinct_v1`,
     /// `--location-refs-distinct`).
     location_distinct: bool,
+    /// Aliases sharing a location and ref type hold its distinct references
+    /// one each (`quest_alias_location_ref_shared_v1`,
+    /// `--location-refs-shared`).
+    location_shared: bool,
+    /// The fight's readings (`fo4_vm::fight`): hit registrations kept and the
+    /// caller's hits delivered (`--hit-events`), registrations of init
+    /// handlers the run never delivers read as made
+    /// (`--hit-init-registrations`), the caller's combat state changes
+    /// and deaths delivered (`--combat-state-events`, `--death-events`),
+    /// `IsDead` on the run's dead (`--dead-state`), `IsInCombat` and
+    /// `GetCombatState` from the run's states (`--combat-state-natives`).
+    hit_events: bool,
+    hit_init: bool,
+    combat_events: bool,
+    death_events: bool,
+    dead_state: bool,
+    combat_natives: bool,
     /// The placed references of a location's cells carrying the ref type
     /// the list holds no row of (`quest_alias_location_ref_placed_v1`,
     /// `--alias-location-placed-refs`).
@@ -1167,6 +1193,14 @@ enum What {
     /// The appearance menu raises its event with the caller's number
     /// (`--assume-looks-menu-event N`).
     Looks(i32),
+    /// The player hits a placed actor (`--assume-hit REF`).
+    Hit(String),
+    /// A placed actor's combat state changes toward a target, the player or
+    /// a placed actor (`--assume-combat-state REF TARGET STATE`).
+    Combat(String, String, i32),
+    /// A placed actor dies with a killer, the player or a placed actor
+    /// (`--assume-death REF KILLER`).
+    Death(String, String),
 }
 #[derive(Clone, Debug)]
 struct Caller {
@@ -1184,7 +1218,13 @@ impl Caller {
     fn target(&self) -> String {
         match &self.what {
             What::Stage(q, n) => format!("{q}:{n}"),
-            What::Player(_, k) | What::Talk(k) | What::Anim(k, _) | What::Sit(k, _) => k.clone(),
+            What::Player(_, k)
+            | What::Talk(k)
+            | What::Anim(k, _)
+            | What::Sit(k, _)
+            | What::Hit(k)
+            | What::Combat(k, _, _)
+            | What::Death(k, _) => k.clone(),
             What::Menu(m, _) => m.clone(),
             What::Looks(n) => n.to_string(),
         }
@@ -1433,6 +1473,10 @@ fn act(
             let _ = writeln!(names, "## {switch} {key}{when}");
             sit_log(vm, &raised, c, names);
         }
+        What::Hit(..) | What::Combat(..) | What::Death(..) => {
+            fight_act(vm, store, &x.what, &when, c, names, b)?;
+            top.extend(quest::run_jobs(vm, store, MAX_GAME_JOBS, b));
+        }
         What::Menu(name, opening) => {
             bump(
                 c,
@@ -1571,6 +1615,127 @@ fn act(
 
 /// Writes the sits and get-ups delivered and their handler runs to the
 /// names file and the counts.
+/// A placed actor or the player, named as the fight assumptions name them
+/// (`plugin.esm:0001ABCD` of a placed actor, or `player`).
+fn fight_object(vm: &mut Vm<'_>, store: &Store, key: &str, b: &Budget) -> Result<fo4_vm::ObjId, E> {
+    if key == "player" {
+        return Ok(vm.world.player("actor"));
+    }
+    let k = fo4_vm::player::parse_key(key)
+        .ok_or("an actor is given as plugin.esm:0001ABCD or player")?;
+    if store.signature(&k) != Some(*b"ACHR") {
+        return Err("a fight assumption names no winning placed actor (ACHR)".into());
+    }
+    Ok(fo4_vm::data::record_object(
+        &mut vm.world,
+        store,
+        &k,
+        "actor",
+        b,
+    )?)
+}
+
+/// Does what a fight assumption assumes (`fo4_vm::fight`) and writes the
+/// handler runs it brings.
+fn fight_act(
+    vm: &mut Vm<'_>,
+    store: &Store,
+    what: &What,
+    when: &str,
+    c: &mut Counts,
+    names: &mut String,
+    b: &Budget,
+) -> Result<(), E> {
+    let before = vm.effects.len();
+    let (raised, switch) = match what {
+        What::Hit(key) => {
+            bump(
+                c,
+                "assumption from the command line: the player hits a placed actor (--assume-hit)",
+            );
+            let t = fight_object(vm, store, key, b)?;
+            let p = vm.world.player("actor");
+            (
+                fo4_vm::fight::hit(vm, store, t, p, b)?,
+                format!("--assume-hit {key}"),
+            )
+        }
+        What::Combat(key, target, state) => {
+            bump(
+                c,
+                format!("assumption from the command line: a placed actor's combat state changes to {state} toward {} (--assume-combat-state)", if target == "player" { "the player" } else { "a placed actor" }),
+            );
+            let a = fight_object(vm, store, key, b)?;
+            let t = fight_object(vm, store, target, b)?;
+            (
+                fo4_vm::fight::combat_state(vm, store, a, t, *state, b)?,
+                format!("--assume-combat-state {key} {target} {state}"),
+            )
+        }
+        What::Death(key, killer) => {
+            bump(
+                c,
+                format!("assumption from the command line: a placed actor dies, killed by {} (--assume-death)", if killer == "player" { "the player" } else { "a placed actor" }),
+            );
+            let a = fight_object(vm, store, key, b)?;
+            let k = fight_object(vm, store, killer, b)?;
+            (
+                fo4_vm::fight::death(vm, store, a, k, b)?,
+                format!("--assume-death {key} {killer}"),
+            )
+        }
+        _ => return Ok(()),
+    };
+    let _ = writeln!(
+        names,
+        "## {switch}{when} at {} s: {}, {} handler run(s)",
+        raised.t,
+        raised.what,
+        raised.runs.len()
+    );
+    if raised.runs.is_empty() {
+        bump(c, "fight events	no script has a handler");
+    }
+    for d in &raised.runs {
+        bump(
+            c,
+            format!(
+                "fight events	{}	{}",
+                d.receiver.kind(),
+                outcome_kind(&d.outcome)
+            ),
+        );
+        let on = match d.receiver {
+            fo4_vm::player::Receiver::Alias(q, id) => {
+                format!(" (alias {id} of {})", vm.world.objects[q].label)
+            }
+            _ => String::new(),
+        };
+        let _ = writeln!(
+            names,
+            "    {} {}{on}: {}",
+            d.receiver.kind(),
+            d.script,
+            outcome_text(&d.outcome)
+        );
+    }
+    for e in &vm.effects[before..] {
+        let _ = writeln!(
+            names,
+            "      {}{}({}{}) = {}",
+            "  ".repeat(e.depth),
+            e.native,
+            e.receiver
+                .as_ref()
+                .map(|x| format!("on {x}; "))
+                .unwrap_or_default(),
+            e.args.join(", "),
+            e.result
+        );
+    }
+    Ok(())
+}
+
 fn sit_log(vm: &Vm<'_>, raised: &[fo4_vm::sit::Raised], c: &mut Counts, names: &mut String) {
     for r in raised {
         let _ = writeln!(
@@ -2098,6 +2263,13 @@ fn new_game(
         (!then.cond_player_sex_for.is_empty(), "condition function 70 on the player compares its parameter with the caller's assumed sex in the records of the quests the caller names (--cond-70-player-sex-for)"),
         (then.location_distinct, "repeated rows of a location's special references naming one reference count once (--location-refs-distinct)"),
         (then.location_placed, "an alias whose location lists no row of its ref type holds the one placed reference of the location's cells carrying it (--alias-location-placed-refs)"),
+        (then.location_shared, "aliases of a quest sharing a location and ref type hold its distinct references one each, by alias id and row order (--location-refs-shared)"),
+        (then.hit_events, "hit event registrations kept; the caller's hits delivered to the registered instances, once per registration (--hit-events)"),
+        (then.hit_init, "a receiver whose init handler the run never delivers registers on its own object counts as registered (--hit-init-registrations)"),
+        (then.combat_events, "the caller's combat state changes delivered to the actor's receivers (--combat-state-events)"),
+        (then.death_events, "the caller's deaths delivered to the actor's receivers, dying then death (--death-events)"),
+        (then.dead_state, "IsDead on an actor the run killed answers true (--dead-state)"),
+        (then.combat_natives, "IsInCombat and GetCombatState answered from the run's combat states (--combat-state-natives)"),
         (then.activate_actors, "the caller may assume the player activates a placed actor (--activate-actors)"),
     ] {
         if on {
@@ -2138,6 +2310,13 @@ fn new_game(
     }
     events_on(&mut vm, opts);
     vm.world.quests.location_distinct = then.location_distinct;
+    vm.world.quests.location_shared = then.location_shared;
+    vm.world.fights.hits = then.hit_events;
+    vm.world.fights.init_registrations = then.hit_init;
+    vm.world.fights.combat_events = then.combat_events;
+    vm.world.fights.death_events = then.death_events;
+    vm.world.fights.dead_state = then.dead_state;
+    vm.world.fights.combat_natives = then.combat_natives;
     vm.world.sits.activate = then.sit_activate;
     vm.world.sits.in_use = then.sit_in_use;
     vm.world.sits.activate_events = then.sit_activate_events;
@@ -2659,6 +2838,9 @@ fn new_game(
     for (k, v) in &vm.world.menus.counts {
         *c.entry(format!("menu\t{k}")).or_default() += v;
     }
+    for (k, v) in &vm.world.fights.counts {
+        *c.entry(format!("fight\t{k}")).or_default() += v;
+    }
     for (k, v) in &vm.world.keywords.counts {
         *c.entry(format!("keyword\t{k}")).or_default() += v;
     }
@@ -2719,7 +2901,10 @@ fn new_game(
                 | What::Anim(..)
                 | What::Sit(..)
                 | What::Menu(..)
-                | What::Looks(_) => None,
+                | What::Looks(_)
+                | What::Hit(_)
+                | What::Combat(..)
+                | What::Death(..) => None,
             })
             .collect();
         next_blockers(&mut vm, m, vfs, store, opts, &quests, then.outer_calls, out)?;
@@ -3601,6 +3786,7 @@ fn run() -> Result<(), E> {
         action_percent: flag(&mut a, "--cond-131-clock"),
         conditions_end: flag(&mut a, "--phase-conditions-end"),
         texts_ignore_case: flag(&mut a, "--text-equal-ignore-case"),
+        auto_state_inherited: flag(&mut a, "--auto-state-inherited"),
     };
     let mut switches = fo4_vm::cond::Switches::all();
     let mut assume: BTreeMap<u16, f32> = BTreeMap::new();
@@ -3650,6 +3836,13 @@ fn run() -> Result<(), E> {
         player_no_record: flag(&mut a, "--player-no-record"),
         location_distinct: flag(&mut a, "--location-refs-distinct"),
         location_placed: flag(&mut a, "--alias-location-placed-refs"),
+        location_shared: flag(&mut a, "--location-refs-shared"),
+        hit_events: flag(&mut a, "--hit-events"),
+        hit_init: flag(&mut a, "--hit-init-registrations"),
+        combat_events: flag(&mut a, "--combat-state-events"),
+        death_events: flag(&mut a, "--death-events"),
+        dead_state: flag(&mut a, "--dead-state"),
+        combat_natives: flag(&mut a, "--combat-state-natives"),
         cond_distance: flag(&mut a, "--cond-1-distance"),
         player_word: flag(&mut a, "--cond-player-word"),
         cond_player_sex: flag(&mut a, "--cond-70-player-sex"),
@@ -3762,6 +3955,37 @@ fn run() -> Result<(), E> {
             pos: [num(&v[2])?, num(&v[3])?, num(z)?],
         });
         a.drain(i..i + 6);
+    }
+    // The caller's fight events: REF[@SECONDS], REF TARGET STATE[@SECONDS],
+    // REF KILLER[@SECONDS].
+    while let Some(i) = a
+        .iter()
+        .position(|x| x == "--assume-hit" || x == "--assume-combat-state" || x == "--assume-death")
+    {
+        let usage = "--assume-hit REF[@SECONDS], --assume-combat-state REF TARGET|player STATE[@SECONDS], --assume-death REF KILLER|player[@SECONDS]";
+        let n = match a[i].as_str() {
+            "--assume-hit" => 1,
+            "--assume-death" => 2,
+            _ => 3,
+        };
+        let mut v: Vec<String> = a.get(i + 1..i + 1 + n).ok_or(usage)?.to_vec();
+        let last = v.pop().ok_or(usage)?;
+        let (body, at) = match last.rsplit_once('@') {
+            Some((x, t)) => (x.to_string(), Some(t.parse::<f64>()?)),
+            None => (last, None),
+        };
+        v.push(body);
+        let what = match a[i].as_str() {
+            "--assume-hit" => What::Hit(v[0].clone()),
+            "--assume-death" => What::Death(v[0].clone(), v[1].clone()),
+            _ => What::Combat(v[0].clone(), v[1].clone(), v[2].parse()?),
+        };
+        then.actions.push(Caller {
+            what,
+            at,
+            after: None,
+        });
+        a.drain(i..i + 1 + n);
     }
     // The caller's furniture use and menu events.
     while let Some(i) = a.iter().position(|x| {
@@ -4094,6 +4318,25 @@ fn run() -> Result<(), E> {
     {
         return Err("--furniture-graph-events needs --anim-graphs and a scripted activation reading (--activate-furniture-sits, --activate-furniture-events or --activate-furniture-get-up)".into());
     }
+    let assumed = |f: fn(&What) -> bool| then.actions.iter().any(|x| f(&x.what));
+    if (assumed(|w| matches!(w, What::Hit(_))) || then.hit_init) && !then.hit_events {
+        return Err("--assume-hit and --hit-init-registrations need --hit-events".into());
+    }
+    if assumed(|w| matches!(w, What::Combat(..))) && !then.combat_events {
+        return Err("--assume-combat-state needs --combat-state-events".into());
+    }
+    if assumed(|w| matches!(w, What::Death(..))) && !then.death_events {
+        return Err("--assume-death needs --death-events".into());
+    }
+    if then.combat_natives && then.player_combat.is_some() {
+        return Err(
+            "--combat-state-natives and --assume-player-in-combat answer the same native: give one"
+                .into(),
+        );
+    }
+    if then.location_shared && !opts.location_fills {
+        return Err("--location-refs-shared needs --alias-location-refs".into());
+    }
     if assumed_menu && !then.menu_events {
         return Err("--assume-menu and --assume-looks-menu-event need --menu-events".into());
     }
@@ -4123,7 +4366,7 @@ fn run() -> Result<(), E> {
     {
         return Err("--assume-player-choice takes 0 to 3".into());
     }
-    let usage = "quest_run MANIFEST (stages OUT_DIR | new-game OUT_DIR | fragments OUT_DIR | scenes OUT_DIR | QUEST STAGE) [--queued] [--no-conditions] [--no-stage-event] [--no-remote] [--no-custom | --custom-nested] [--no-story] [--no-enable-chain] [--no-scenes] [--no-scenes-with-quest] [--no-cond-fn-N]... [--no-cond-run-on] [--assume-cond N=VALUE]... [--assume-cond-for QUEST N=VALUE]...; fragments OUT_DIR and scenes OUT_DIR run every INFO, PACK and PERK fragment and start every scene in a fresh interpreter; new-game also takes --then EDITOR_ID:STAGE[@SECONDS] (repeated), --assume-activate, --assume-trigger-enter, --assume-trigger-leave and --assume-open PLUGIN:OBJECTID[@SECONDS] (repeated), --timers N and --time-scale-global EDITOR_ID, assumptions of the caller, --scene-recheck, --stage-fields, --cond-550-clock, --alias-location-refs and --next-blockers; new-game and scenes take --scene-clock N (advance the scene clock up to N times) with --no-timer-actions, --no-line-audio, --assume-line-seconds X, --assume-player-choice N (0 to 3), --assume-player-choice-for SCENE|QUEST N and --assume-first-line-for SCENE|QUEST (as PLUGIN:OBJECTID, repeated; a scene's over its quest's), --assume-packages-complete, --assume-start-scene-actions, --line-stage-fields, --line-fragments, --line-start-scene and --assume-first-line; every mode takes --none-array-length, --none-array-read, --none-array-find, --none-array-change, --enable-child-flag-ignored and --text-equal-ignore-case; new-game with --scene-clock takes --track FILE (the player's track, lines SECONDS SPACE X Y Z [FACING]) with --trigger-box, --trigger-sphere, --trigger-point or --trigger-body HEIGHT, --trigger-instant, --trigger-enabled, --trigger-order, --distance-events, --distance-once, --placed-positions, --position-natives, --cell-natives, --location-native and --assume-los true|false, --actor-positions, --actor-triggers and --assume-actor-at REF SPACE X Y Z@SECONDS (repeated); new-game takes --alias-unique-actors, --player-base EDITOR_ID and --player-no-record, and with --scene-clock --assume-talk PLUGIN:OBJECTID[@SECONDS] (repeated), --greeting-on-talk, --hello-lines with --hello-distance-setting EDITOR_ID, --dialogue-priority, --info-groups and --assume-line PLUGIN:OBJECTID (repeated); new-game with --track and --actor-positions takes --package-destinations SECONDS; new-game takes --anim-events with --anim-event-case and --assume-anim-event PLUGIN:OBJECTID|player EVENT[@SECONDS] (repeated), and with --scene-clock --anim-graphs with --anim-graph-keys, --anim-graph-start-settled and --anim-sequence-case; new-game with --track takes --moveto-target, --load-doors, --load-in-cell, --load-on-arrival and --load-grid N, and --assume-load PLUGIN:OBJECTID[@SECONDS] (repeated); new-game and scenes with --scene-clock take --cond-131-clock and --phase-conditions-end; new-game takes --location-refs-distinct and --alias-location-placed-refs (with --alias-location-refs), --cond-1-distance (with --track), --cond-player-word and --cond-70-player-sex or --cond-70-player-sex-for QUEST (repeated; with --player-base-object and --assume-player-sex), --activate-actors, --sit-events with --assume-sit and --assume-get-up PLUGIN:OBJECTID[@SECONDS] (repeated), --activate-furniture-sits, --activate-furniture-events, --activate-furniture-get-up, --furniture-in-use and --sit-state, with --anim-graphs --furniture-graph-events SIT_EVENT GET_UP_EVENT, --menu-events with --assume-menu NAME open|close[@SECONDS] and --assume-looks-menu-event N[@SECONDS] (repeated), --assume-menu-mode true|false, --assume-message-button N, --assume-player-in-combat true|false, and --player-base-object (with --player-base) with --assume-player-sex N, --keywords-records and --keywords-runtime, and --collection-location-refs, and with --anim-events --assume-anim-registration true|false; new-game and scenes with --scene-clock take --scene-actions-skipped-start; new-game with --scene-clock takes --action-after TARGET@SECONDS EDITOR_ID:STAGE (repeated); new-game takes --scene-recheck-variables, and with --next-blockers --setters-outer-calls";
+    let usage = "quest_run MANIFEST (stages OUT_DIR | new-game OUT_DIR | fragments OUT_DIR | scenes OUT_DIR | QUEST STAGE) [--queued] [--no-conditions] [--no-stage-event] [--no-remote] [--no-custom | --custom-nested] [--no-story] [--no-enable-chain] [--no-scenes] [--no-scenes-with-quest] [--no-cond-fn-N]... [--no-cond-run-on] [--assume-cond N=VALUE]... [--assume-cond-for QUEST N=VALUE]...; fragments OUT_DIR and scenes OUT_DIR run every INFO, PACK and PERK fragment and start every scene in a fresh interpreter; new-game also takes --then EDITOR_ID:STAGE[@SECONDS] (repeated), --assume-activate, --assume-trigger-enter, --assume-trigger-leave and --assume-open PLUGIN:OBJECTID[@SECONDS] (repeated), --timers N and --time-scale-global EDITOR_ID, assumptions of the caller, --scene-recheck, --stage-fields, --cond-550-clock, --alias-location-refs and --next-blockers; new-game and scenes take --scene-clock N (advance the scene clock up to N times) with --no-timer-actions, --no-line-audio, --assume-line-seconds X, --assume-player-choice N (0 to 3), --assume-player-choice-for SCENE|QUEST N and --assume-first-line-for SCENE|QUEST (as PLUGIN:OBJECTID, repeated; a scene's over its quest's), --assume-packages-complete, --assume-start-scene-actions, --line-stage-fields, --line-fragments, --line-start-scene and --assume-first-line; every mode takes --none-array-length, --none-array-read, --none-array-find, --none-array-change, --enable-child-flag-ignored, --text-equal-ignore-case and --auto-state-inherited; new-game with --scene-clock takes --track FILE (the player's track, lines SECONDS SPACE X Y Z [FACING]) with --trigger-box, --trigger-sphere, --trigger-point or --trigger-body HEIGHT, --trigger-instant, --trigger-enabled, --trigger-order, --distance-events, --distance-once, --placed-positions, --position-natives, --cell-natives, --location-native and --assume-los true|false, --actor-positions, --actor-triggers and --assume-actor-at REF SPACE X Y Z@SECONDS (repeated); new-game takes --alias-unique-actors, --player-base EDITOR_ID and --player-no-record, and with --scene-clock --assume-talk PLUGIN:OBJECTID[@SECONDS] (repeated), --greeting-on-talk, --hello-lines with --hello-distance-setting EDITOR_ID, --dialogue-priority, --info-groups and --assume-line PLUGIN:OBJECTID (repeated); new-game with --track and --actor-positions takes --package-destinations SECONDS; new-game takes --anim-events with --anim-event-case and --assume-anim-event PLUGIN:OBJECTID|player EVENT[@SECONDS] (repeated), and with --scene-clock --anim-graphs with --anim-graph-keys, --anim-graph-start-settled and --anim-sequence-case; new-game with --track takes --moveto-target, --load-doors, --load-in-cell, --load-on-arrival and --load-grid N, and --assume-load PLUGIN:OBJECTID[@SECONDS] (repeated); new-game and scenes with --scene-clock take --cond-131-clock and --phase-conditions-end; new-game takes --location-refs-distinct and --alias-location-placed-refs and --location-refs-shared (with --alias-location-refs), --cond-1-distance (with --track), --cond-player-word and --cond-70-player-sex or --cond-70-player-sex-for QUEST (repeated; with --player-base-object and --assume-player-sex), --activate-actors, --sit-events with --assume-sit and --assume-get-up PLUGIN:OBJECTID[@SECONDS] (repeated), --activate-furniture-sits, --activate-furniture-events, --activate-furniture-get-up, --furniture-in-use and --sit-state, with --anim-graphs --furniture-graph-events SIT_EVENT GET_UP_EVENT, --menu-events with --assume-menu NAME open|close[@SECONDS] and --assume-looks-menu-event N[@SECONDS] (repeated), --assume-menu-mode true|false, --assume-message-button N, --assume-player-in-combat true|false, and --player-base-object (with --player-base) with --assume-player-sex N, --keywords-records and --keywords-runtime, and --collection-location-refs, and with --anim-events --assume-anim-registration true|false; new-game and scenes with --scene-clock take --scene-actions-skipped-start; new-game with --scene-clock takes --action-after TARGET@SECONDS EDITOR_ID:STAGE (repeated); new-game takes --scene-recheck-variables, and with --next-blockers --setters-outer-calls; new-game takes --hit-events with --hit-init-registrations and --assume-hit PLUGIN:OBJECTID[@SECONDS], --combat-state-events with --assume-combat-state PLUGIN:OBJECTID TARGET STATE[@SECONDS], --death-events with --assume-death PLUGIN:OBJECTID KILLER[@SECONDS] (TARGET and KILLER a placed actor or player; repeated), --dead-state and --combat-state-natives (not with --assume-player-in-combat)";
     if a.len() != 3 {
         return Err(usage.into());
     }

@@ -178,6 +178,9 @@ pub struct World {
     pub menus: crate::menu::Menus,
     /// Keywords of references (`crate::keyword`): off by default.
     pub keywords: crate::keyword::Keywords,
+    /// The fight's events and the natives that read them
+    /// (`crate::fight`): off by default.
+    pub fights: crate::fight::Fights,
 }
 
 impl World {
