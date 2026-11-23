@@ -1832,7 +1832,9 @@ a FURN, the player the sitter) or, with `--activate-furniture-sits`
 calling job; a sitter already in another furniture leaves it without an
 event. `--furniture-in-use` (`vm_furniture_in_use_v1`) answers
 `IsFurnitureInUse` from the run's sitters. `GetSitState` stays recorded
-(what its values mean is not in the data).
+(what its values mean is not in the data). The exit step adds the
+activation with events, the activation by the sitter and the furniture's
+graph events (Furniture activation and the furniture's graph, below).
 
 What the census finds ([sit-menu-census.txt](sit-menu-census.txt)): the
 compiled scripts declare three furniture events; 18 `OnSit` handlers with
@@ -1863,7 +1865,10 @@ quests attach, not their scenes' fragment scripts; in the run two scene
 fragments call `ShowRaceMenu` and `ShowSpecialMenu` once each, recorded
 as effects). No stage of the opening waits on a menu event: the early
 stage no setter sets, which the caller gives with `--then`, has no
-registered menu handler that could set it either.
+registered menu handler that could set it either. The caller can also answer
+`Utility.IsInMenuMode` (`--assume-menu-mode`) and the button of
+`Message.Show` (`--assume-message-button`), with or without
+`--menu-events` (exit step).
 
 ## The player's base object
 
@@ -2267,6 +2272,159 @@ caller's 14 events of the spouse:
   gives the keyword step's run byte for byte (census, names and
   next-blocker files).
 
+## Furniture activation and the furniture's graph
+
+`fo4_vm::sit` and `fo4_vm::anim`, three readings, each behind its own
+switch, off by default (with them off every earlier output reproduces byte
+for byte):
+
+| Switch | Reading | Rule |
+| --- | --- | --- |
+| `--activate-furniture-events` (with `--sit-events`) | a script's `Activate(actor, false)` (default processing with events) on a furniture reference the run does not have the actor sitting in sits the actor there, as `--activate-furniture-sits` reads the default-processing-only call; the furniture's `OnActivate` is not delivered (counted) | `vm_furniture_activate_events_sits_v1` |
+| `--activate-furniture-get-up` (with `--sit-events`) | a script's `Activate(actor, true or false)` on the furniture the run has the actor sitting in gets it up (`OnGetUp`, `OnExitFurniture` as under `vm_event_sit_v1`), delivered after the calling job before that job's sits | `vm_furniture_activate_get_up_v1` |
+| `--furniture-graph-events SIT GET_UP` (with `--anim-graphs` and a scripted activation reading) | the sits and get-ups a script's activation brings send the furniture reference's behaviour graph, within the call, the caller's first or second event name; the graph is read when first needed and takes the event as it takes `PlayAnimation`'s, its keys raised under `--anim-graph-keys`; caller-assumed sits send nothing | `anim_furniture_sit_graph_events_v1` |
+
+No event name is stored in the repository: the caller names both. What the
+data gives (a local probe over the winning FURN records with
+`fo4_scene::anim_graph`, outputs outside the repository): 782 winning FURN,
+309 distinct models, 93 of which chain to a behaviour graph (224 records;
+557 records have no graph extra data, 1 a project naming no character).
+Over the root machines' transitions two pairs of names recur as the on and
+off events of use: the pair the forced opening uses is held by 20 graphs,
+9 take its first name from their start state and 22 take its second from
+at least one state (26 transitions); another pair is taken from the start
+state by 12 graphs, with 12 off transitions. So the data shows that
+furniture graphs wait on such events, not which pair a given furniture
+receives nor that the engine sends one: the caller chooses, and the rule
+is weak.
+
+The player's postwar cryopod is the case the forced opening needs. Its
+graph (13 events, 14 states, every state a Gamebryo sequence state) has
+two families of states, an idle family and a cryo family. Its start state
+is an unoccupied idle state; a wildcard transition on an instant-occupied
+event (the one a stage fragment plays with `PlayAnimation`) enters the
+occupied state of the game start, whose transitions take the get-up name
+of the pair above to the game-start sequence (11.2 s, ending on a key that
+moves the graph on) and from there to the exit sequence (5.33 s, ending on
+the key the exit scene's fragment registers for). The exit sequence's end
+key is therefore raised 16.53 s after the get-up event, from the data.
+
+`--assume-menu-mode true|false` and `--assume-message-button N` are caller
+assumptions (`fo4_vm::menu::menu_mode`): `Utility.IsInMenuMode` and
+`Message.Show` answer the caller's value; without them both stay recorded
+and undetermined, as before. `--assume-anim-event player EVENT[@SECONDS]`
+lets the caller's animation event come from the player's handle.
+
+## The forced opening to the end of the prewar quest
+
+([quest-run-opening.txt](quest-run-opening.txt), its section 18; the
+command lines and every record named are in the step's notes.) On the graph
+step's command line with the scene clock's advances raised from 200 to 400
+(a caller assumption: the run uses 196 of them either way), the three
+readings above, the player's camera event and the menu-mode answer:
+
+- **What plays the pod's sequence.** The pod's exit is not a scene action,
+  a package, an idle or a `PlayAnimation`: the exit scene's actions are two
+  lines, a 0.1 s timer and a start-scene action. The exit scene's second
+  phase begins with a stage of the vault's dialogue quest whose fragment
+  activates the pod for the player (default processing with events) while
+  the player sits in it: the earlier fragment that moved the player to the
+  postwar vault activated the same pod for the player (with events) and
+  played the instant-occupied event on it. Why the graph readings did not
+  reach the key before: neither activation was read (only
+  default-processing-only activations sat anyone), and nothing sent the pod's
+  graph the get-up event its occupied state waits on (`PlayAnimation` is the
+  only graph input the host had). With the three readings the earlier
+  activation sits the player in the pod, the exit scene's activation gets
+  the player up and sends the get-up event, the graph runs its two
+  sequences, and the exit key is raised from the data at 811.20 s: the
+  next main quest's player alias handler (registered by both of the exit
+  scene's phase-end fragments) sets that quest's stage 2.
+- **What stage 1000 then needs.** Stage 2's fragment registers the next
+  main quest for a camera event of the player; that quest's handler of it
+  sets stage 1000 of the opening quest after a loop that waits while a menu
+  is open. The camera event is a character's: it occurs as the annotation at
+  the first instant of two short first-person clips in a folder of the
+  pod's exit (`char_graph_census` with the event names: 5 clips annotate it,
+  the other 3 paired animations; no behaviour, character or project file names
+  the two clips). Which clip the player plays, and when, is not read (as for
+  the spouse, Character behaviour graphs above). So the event is the
+  caller's (`--assume-anim-event player`, at 812 s, held until stage 2 of
+  the next quest is done with `--action-after`), and `IsInMenuMode` the
+  caller's false. At the get-up's own second (794.67 s) the event would come
+  before the registration and set nothing.
+- Reached: **87 of the 104 stages** (before 86). Stage 1000's fragment
+  completes the objectives, sets the helper quest's last stage and stops the
+  opening quest: the prewar quest ends.
+- With one thing changed (record section 11): every variant of the graph
+  step's list that reached 86 now reaches 87, and six that missed earlier
+  stages but still reached the pod (85, 85, 85, 82, 43 and 39 become 86, 86,
+  86, 83, 44 and 40; the three without `--action-after` reach it because
+  their caller actions happen at fixed seconds) also gain stage 1000; the
+  others stop where they did. Without any
+  one of `--activate-furniture-events`, `--activate-furniture-get-up` or
+  `--furniture-graph-events`, without the player's event or without the menu
+  answer: 86. With the other use event pair as the caller's names: 86 (the
+  pod's graph takes neither). With the player's event at the get-up's second,
+  not held: 86. With 200 advances: 87. With `--phase-conditions-end`: 87.
+- What stops next: nothing of the opening quest is left on the run's way
+  (The opening's stages off the run's path, below). The exit scene's looping
+  successor waits on stage 100 of the vault's dialogue quest, and stage 5000
+  remains a waited stage of a quest the caller set a stage on (both below).
+
+### The exit scene's looping successor
+
+The looping scene's second phase completes when the vault's dialogue quest
+has stage 100. Its two setters are one script on one placed trigger: its
+enter handler (the player, once) sets stage 98, waits a second and shows a
+message box; the third button (index 2) calls the function that sets
+stage 100, plays the exit elevator's event and resets the vault's lights; the
+first two open the attributes or appearance menus, whose closing (the
+registered menu event) shows the box again. So the data requires the player
+to walk into that trigger and choose in a message box (a menu choice). No
+enable parent gates the trigger; that in the game it lies past the vault's
+door, which the next main quest's console sequence opens on the player's own
+animation events (its stage fragments register for them), is prior
+knowledge, not checked against the geometry. With the caller's trigger entry at 900 s (held until stage
+1000) and button 2 (`--assume-message-button 2`), the looping scene ends and
+the vault exit scene starts (record section 11, labelled variant): this
+skips the next quest's walk through the vault, so it is not in the final
+run, and it changes no stage of the opening quest.
+
+### The failure stage
+
+Stage 5000 is set by fourteen placed triggers around the prewar area; its
+fragment sets off a blast and kills the player and the spouse. It is the
+opening's failure for a player who leaves the play area: a run that plays
+the opening is not meant to reach it, and the track does not walk there.
+
+### Phase completion conditions and the clock's advances
+
+The graph step's variant with `--phase-conditions-end` stopped at 83 stages
+with the main sequence scene in its 21st phase. It is the caller's advance
+cap, not a host bug and not evidence for or against the reading: with
+`--scene-clock 200` that run used all 200 advances by 785.59 s (the phase's
+3 s assumed line would have ended at 786.69 s), because completion
+conditions that end phases at the scene clock's shares add due seconds.
+With 400 advances the same variant uses 209 and reaches the graph step's 86
+stages; on the exit step's command line it reaches the same stages as the
+final run (record section 11). The reading changes when phases end, not
+which stages the run reaches.
+
+### The opening's stages off the run's path
+
+[quest-run-opening-unset.txt](quest-run-opening-unset.txt) classes the 17
+stages the best run does not set: one debug start (a log entry of the start
+stage that the opening's debug global selects), four of the player's other
+choices or actions (a conversation before an introduction, the refusal to
+sign, looking away from the spouse, an optional farewell line), one whose
+reaching depends on an order the data does not settle (a scene stopped by
+the stage its line's end half sets, before the phase that sets this one),
+nine with no setter in the stage-setter table (earlier records counted two,
+the sit step's full static reading of two of them), one whose only setter is
+a helper stage nothing sets, and the failure stage. None is a stage the run
+should reach and does not, except possibly the ordering one.
+
 ## Conditions
 
 `fo4_vm::cond` evaluates the condition lists read by
@@ -2401,7 +2559,9 @@ binary with the switches on). With them on:
   of functions 131 and 1.
 - A character's behaviour graph is not followed: its root machine plays no
   Gamebryo sequence and the clips its states play are not read; actors'
-  animation events stay the caller's.
+  animation events (the player's among them) stay the caller's. A
+  furniture's graph takes use events only from the sits and get-ups a
+  script's activation brings, with names the caller gives.
 - Opcode 34's arity between `4` and `4+n` stays open ([pex.md](pex.md));
   the interpreter reads its fourth slot as the start index.
 
@@ -2816,3 +2976,26 @@ was requested. No behaviour or animation tool, converter or library of
 any project, Havok SDK, editor, editor source or definition file, other
 interpreter, script extender, decompiler or the game executable was
 opened or searched for. The game was not run.
+
+## Provenance of the exit step
+
+Recognised from prior general knowledge, used only as pending rules that
+are off by default, as caller assumptions or to search the data: that
+activating a furniture makes an actor use it whether or not the
+activation's events are raised, and that activating the furniture one sits
+in stands one up; that a furniture's animation follows its user's (the
+furniture graphs' on and off event pairs were then found by measurement);
+that the player's camera event at the pod's exit comes from the player's
+exit animation (two clips of the pod's exit folder annotate it at their
+start; used only to choose the caller's second); that the trigger at the
+vault's exit elevator lies past the vault's door. Every count was measured
+with the repository's own readers on the installed data: the compiled
+scripts with the repository's disassembler, records with its record dump,
+the pod's graph and the furniture graphs with `fo4_scene::anim_graph`
+(local probes whose outputs stay outside the repository), the player's
+event with `char_graph_census`, the stages off the run's path with the
+stage-setter table and a probe of conditions and literal call sites. No
+public page was requested. No behaviour or animation tool, converter or
+library of any project, Havok SDK, editor, editor source or definition
+file, other interpreter, script extender, decompiler or the game executable
+was opened or searched for. The game was not run.

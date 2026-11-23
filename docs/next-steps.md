@@ -8,25 +8,27 @@ rule in `spec/hypotheses.tsv`, off by default.
 
 ## Script VM and quests (`crates/fo4-vm`)
 
-The forced opening (`quest_run`, record in `spec/quest-run-opening.txt`) reaches 86 of 104 stages
-(graph step; before it 83). The next sequence quest's main scene now runs to its end: the spouse's 14
-animation events are the caller's (`--assume-anim-event`), at the second the script snaps her into the
-furniture plus each annotation time of the one clip that names them; the scene's phase fragments call the
-two sequence functions that set the next two stages, and the second's stage fragment sets the next, which
-starts the next main quest and its exit scene. A scene waiting on a quest script variable is now offered
-again when a script writes it (`--scene-recheck-variables`); at the clip's seconds the run does not need it
-(each phase finds the value when its lines end), at later seconds it does. The stage-setter table follows
-calls from other scripts into quest script functions (`stage_census`; `--setters-outer-calls` for
-`--next-blockers`). The run stops at, in order:
+The forced opening (`quest_run`, record in `spec/quest-run-opening.txt`) reaches 87 of 104 stages
+(exit step; before it 86): the prewar quest ends. The player's postwar pod now opens from the data: a
+scripted activation with events sits the player in it (`--activate-furniture-events`), the exit scene's
+activation by the sitter gets the player up (`--activate-furniture-get-up`), and the get-up sends the pod's
+behaviour graph a use event the caller names (`--furniture-graph-events`), whose two sequences raise the key
+the exit scene's fragment registered for. The last stage needs the player's own camera event (a character's
+animation, the caller's `--assume-anim-event player`) and `IsInMenuMode` answered (the caller's
+`--assume-menu-mode false`). The graph step's `--phase-conditions-end` stop was the caller's cap of scene clock
+advances, not a host bug. The 17 stages the run does not set are classed in
+`spec/quest-run-opening-unset.txt`: a debug start, four other choices or actions of the player, one that
+depends on an order the data does not settle, nine with no setter, one with no path, and the failure stage
+(the player leaving the area dies). What is left:
 
-1. Stage 1000: set only by the next main quest's handler of an animation event of the player's cryopod
-   (a NIF text key and graph event of the pod), registered by the exit scene's fragment; the run raises no
-   such event. Next: find what plays the pod's sequence in the exit scene (a scene fragment, a package, the
-   activation) and whether the activator graph reading reaches the key, before assuming the event.
-2. The exit scene's looping successor waits on a vault dialogue quest stage set by a placed trigger (the
-   player entering it) or a menu closing; stage 5000 by fourteen placed triggers: both are track or caller
-   actions.
-3. Sixteen earlier stages are on no path the run takes (two of them have no setter in the data).
+1. The exit scene's looping successor waits on the vault dialogue quest's stage set by one trigger's
+   script when the player walks in and picks the last button of a message box (`--assume-message-button`);
+   in the game the trigger is past the vault door, which the next main quest's console sequence opens on the
+   player's animation events. A labelled variant assumes the walk and the button and ends the scene. Next:
+   the next main quest's stages (the wrist computer, the door console), which wait on the player's animation events.
+2. The one stage whose reaching depends on order (a scene stopped by the stage its line's end half sets
+   before the phase that would set it): a measurement or a reading of when a line's end-half stage is set
+   against its phase's end would settle it.
 
 Character behaviour graphs (`char_graph_census`, `spec/character-graph-census.txt`): a race names its
 behaviour project, and the project, character and root graph resolve, but which clip an actor plays is held
@@ -37,7 +39,8 @@ animation events come from the data instead of the caller.
 Not modelled yet: unload, cell-load, cell-attach and cell-detach events; the sit state native; actors sitting
 through packages; magic-effect receivers of furniture events; keyword data, `ResetKeyword`, keywords in
 conditions, template flags and object modifications for keywords; collection aliases filled other than from
-a location's rows; actors' animation (character graphs).
+a location's rows; actors' animation (character graphs); a furniture's `OnActivate` on a script's activation;
+use events sent to a furniture's graph by the caller's own sits and get-ups.
 
 ## Drawing (`crates/fo4-scene`, `apps/fo4-view`)
 
