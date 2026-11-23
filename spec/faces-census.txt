@@ -1,0 +1,359 @@
+# Why a run timeline's actors fall back to a marker, and what the look readings change (faces_census; counts only)
+
+## 1. The timeline's actors as the cast resolves them
+actors placed by the timeline	226
+### every reading off
+  5	a plan, blocked: MissingTexture + RejectedVfsPath
+  4	a plan, blocked: MissingTexture + RejectedVfsPath + RuntimeEnableParent
+  39	a plan, blocked: RuntimeEnableParent
+  1	a plan, blocked: RuntimeEnableParent + UnsupportedAnimationRuntime
+  2	a plan, blocked: UnsupportedAnimationRuntime
+  53	a plan, ready under hypotheses (drawn unless the build refuses it)
+  1	no plan: addon K: no model (MOD3) for section 2; actor not drawn
+  10	no plan: leveled list: race: N candidates, skin: N candidates
+  3	no plan: leveled list: race: N candidates, skin: N candidates, outfit: N candidates
+  19	no plan: leveled list: section (ACBS bit 0): N candidates
+  3	no plan: leveled list: section (ACBS bit 0): N candidates, skin: N candidates
+  3	no plan: leveled list: section (ACBS bit 0): N candidates, skin: N candidates, outfit: N candidates
+  26	no plan: leveled list: skin: N candidates
+  28	no plan: leveled list: skin: N candidates, outfit: N candidates
+  7	no plan: outfit: leveled item list K with LVLD/LVLM/LVLF not zero (meaning not established); outfit: unresolved; actor not drawn
+  2	no plan: outfit: none declared; addon K: no model (MOD2) for section 1; actor not drawn
+  2	no plan: skin: none (NPC_ and RACE WNAM absent); outfit: none declared; no model to draw
+  10	no plan: template: outfit: N candidates
+  2	no plan: template: section (ACBS bit 0): N candidates, skin: N candidates
+  3	no plan: template: skin: N candidates
+  3	no plan: template: skin: N candidates, outfit: N candidates
+  ready actors relying on npc_appearance_candidates_agree_v1	3
+### --actor-template-bits
+  5	a plan, blocked: MissingTexture + RejectedVfsPath
+  4	a plan, blocked: MissingTexture + RejectedVfsPath + RuntimeEnableParent
+  39	a plan, blocked: RuntimeEnableParent
+  1	a plan, blocked: RuntimeEnableParent + UnsupportedAnimationRuntime
+  3	a plan, blocked: UnsupportedAnimationRuntime
+  66	a plan, ready under hypotheses (drawn unless the build refuses it)
+  1	no plan: addon K: no model (MOD3) for section 2; actor not drawn
+  3	no plan: leveled list: race: N candidates, skin: N candidates
+  19	no plan: leveled list: section (ACBS bit 0): N candidates
+  3	no plan: leveled list: section (ACBS bit 0): N candidates, skin: N candidates
+  42	no plan: leveled list: skin: N candidates
+  19	no plan: leveled list: skin: N candidates, outfit: N candidates
+  1	no plan: outfit: leveled item list K gives N different armours; outfit: unresolved; actor not drawn
+  16	no plan: outfit: leveled item list K with LVLD/LVLM/LVLF not zero (meaning not established); outfit: unresolved; actor not drawn
+  2	no plan: outfit: none declared; addon K: no model (MOD2) for section 1; actor not drawn
+  2	no plan: skin: none (NPC_ and RACE WNAM absent); outfit: none declared; no model to draw
+  ready actors relying on keywords' NPC_ settled (for the start clip)	118
+  ready actors relying on npc_appearance_candidates_agree_v1	13
+  ready actors relying on npc_template_bits_traits_inventory_v1	13
+### --actor-leveled-seed
+  5	a plan, blocked: MissingTexture + RejectedVfsPath
+  4	a plan, blocked: MissingTexture + RejectedVfsPath + RuntimeEnableParent
+  40	a plan, blocked: RuntimeEnableParent
+  1	a plan, blocked: RuntimeEnableParent + UnsupportedAnimationRuntime
+  8	a plan, blocked: UnsupportedAnimationRuntime
+  74	a plan, ready under hypotheses (drawn unless the build refuses it)
+  1	no plan: addon K: no model (MOD3) for section 2; actor not drawn
+  1	no plan: leveled list: outfit: N candidates
+  10	no plan: leveled list: race: N candidates, skin: N candidates
+  3	no plan: leveled list: race: N candidates, skin: N candidates, outfit: N candidates
+  6	no plan: leveled list: section (ACBS bit 0): N candidates
+  3	no plan: leveled list: section (ACBS bit 0): N candidates, skin: N candidates
+  3	no plan: leveled list: section (ACBS bit 0): N candidates, skin: N candidates, outfit: N candidates
+  28	no plan: leveled list: skin: N candidates
+  11	no plan: leveled list: skin: N candidates, outfit: N candidates
+  6	no plan: outfit: leveled item list K with LVLD or LVLM not zero (meaning not established); outfit: unresolved; actor not drawn
+  2	no plan: outfit: none declared; addon K: no model (MOD2) for section 1; actor not drawn
+  2	no plan: skin: none (NPC_ and RACE WNAM absent); outfit: none declared; no model to draw
+  10	no plan: template: outfit: N candidates
+  2	no plan: template: section (ACBS bit 0): N candidates, skin: N candidates
+  3	no plan: template: skin: N candidates
+  3	no plan: template: skin: N candidates, outfit: N candidates
+  ready actors relying on keywords' NPC_ settled (for the start clip)	102
+  ready actors relying on npc_appearance_candidates_agree_v1	23
+  ready actors relying on npc_leveled_entry_seeded_pick_v1	21
+  ready actors relying on npc_leveled_list_flags_v1	16
+  ready actors relying on npc_template_all_bits_v1	2
+### --actor-leveled-seed --actor-leveled-chance-none --actor-leveled-use-all
+  5	a plan, blocked: MissingTexture + RejectedVfsPath
+  4	a plan, blocked: MissingTexture + RejectedVfsPath + RuntimeEnableParent
+  40	a plan, blocked: RuntimeEnableParent
+  1	a plan, blocked: RuntimeEnableParent + UnsupportedAnimationRuntime
+  11	a plan, blocked: UnsupportedAnimationRuntime
+  2	a plan, blocked: UnsupportedAnimationRuntime + UnsupportedNifField
+  75	a plan, ready under hypotheses (drawn unless the build refuses it)
+  1	no plan: addon K: no model (MOD3) for section 2; actor not drawn
+  1	no plan: leveled list: outfit: N candidates
+  10	no plan: leveled list: race: N candidates, skin: N candidates
+  3	no plan: leveled list: race: N candidates, skin: N candidates, outfit: N candidates
+  6	no plan: leveled list: section (ACBS bit 0): N candidates
+  3	no plan: leveled list: section (ACBS bit 0): N candidates, skin: N candidates
+  3	no plan: leveled list: section (ACBS bit 0): N candidates, skin: N candidates, outfit: N candidates
+  28	no plan: leveled list: skin: N candidates
+  11	no plan: leveled list: skin: N candidates, outfit: N candidates
+  2	no plan: outfit: none declared; addon K: no model (MOD2) for section 1; actor not drawn
+  2	no plan: skin: none (NPC_ and RACE WNAM absent); outfit: none declared; no model to draw
+  10	no plan: template: outfit: N candidates
+  2	no plan: template: section (ACBS bit 0): N candidates, skin: N candidates
+  3	no plan: template: skin: N candidates
+  3	no plan: template: skin: N candidates, outfit: N candidates
+  ready actors relying on keywords' NPC_ settled (for the start clip)	104
+  ready actors relying on npc_appearance_candidates_agree_v1	23
+  ready actors relying on npc_leveled_entry_seeded_pick_v1	22
+  ready actors relying on npc_leveled_item_chance_none_seeded_v1	2
+  ready actors relying on npc_leveled_item_flag_use_all_v1	16
+  ready actors relying on npc_leveled_list_flags_v1	16
+  ready actors relying on npc_template_all_bits_v1	3
+### --actor-template-bits --actor-leveled-seed
+  5	a plan, blocked: MissingTexture + RejectedVfsPath
+  4	a plan, blocked: MissingTexture + RejectedVfsPath + RuntimeEnableParent
+  40	a plan, blocked: RuntimeEnableParent
+  1	a plan, blocked: RuntimeEnableParent + UnsupportedAnimationRuntime
+  29	a plan, blocked: UnsupportedAnimationRuntime
+  122	a plan, ready under hypotheses (drawn unless the build refuses it)
+  1	no plan: addon K: no model (MOD3) for section 2; actor not drawn
+  20	no plan: outfit: leveled item list K with LVLD or LVLM not zero (meaning not established); outfit: unresolved; actor not drawn
+  2	no plan: outfit: none declared; addon K: no model (MOD2) for section 1; actor not drawn
+  2	no plan: skin: none (NPC_ and RACE WNAM absent); outfit: none declared; no model to draw
+  ready actors relying on keywords' NPC_ settled (for the start clip)	201
+  ready actors relying on npc_appearance_candidates_agree_v1	62
+  ready actors relying on npc_leveled_entry_seeded_pick_v1	56
+  ready actors relying on npc_leveled_list_flags_v1	25
+  ready actors relying on npc_template_bits_traits_inventory_v1	62
+### all four
+  5	a plan, blocked: MissingTexture + RejectedVfsPath
+  4	a plan, blocked: MissingTexture + RejectedVfsPath + RuntimeEnableParent
+  40	a plan, blocked: RuntimeEnableParent
+  1	a plan, blocked: RuntimeEnableParent + UnsupportedAnimationRuntime
+  37	a plan, blocked: UnsupportedAnimationRuntime
+  9	a plan, blocked: UnsupportedAnimationRuntime + UnsupportedNifField
+  122	a plan, ready under hypotheses (drawn unless the build refuses it)
+  1	no plan: addon K: no model (MOD3) for section 2; actor not drawn
+  3	no plan: outfit: leveled item list K with LVLD or LVLM not zero (meaning not established); outfit: unresolved; actor not drawn
+  2	no plan: outfit: none declared; addon K: no model (MOD2) for section 1; actor not drawn
+  2	no plan: skin: none (NPC_ and RACE WNAM absent); outfit: none declared; no model to draw
+  ready actors relying on keywords' NPC_ settled (for the start clip)	218
+  ready actors relying on npc_appearance_candidates_agree_v1	61
+  ready actors relying on npc_leveled_entry_seeded_pick_v1	56
+  ready actors relying on npc_leveled_item_chance_none_seeded_v1	3
+  ready actors relying on npc_leveled_item_flag_use_all_v1	22
+  ready actors relying on npc_leveled_list_flags_v1	24
+  ready actors relying on npc_template_bits_traits_inventory_v1	61
+
+## 2. The chains of the timeline's actors
+bases of the timeline's actors:
+  124	NPC_ with a template
+  102	NPC_ without a template
+NPC_ reached through templates and leveled entries	268
+template bits set among them:
+  79	bit  0
+  74	bit  1
+  126	bit  2
+  99	bit  3
+  92	bit  4
+  124	bit  5
+  72	bit  7
+  110	bit  8
+  109	bit  9
+  122	bit 10
+  131	bit 11
+  92	bit 12
+LVLN reached: 22 (by bytes)
+  6	LVLD Some(0) LVLM Some(0) LVLF Some(0)
+  1	LVLD Some(0) LVLM Some(0) LVLF Some(1)
+  1	LVLD Some(0) LVLM Some(0) LVLF Some(2)
+  14	LVLD Some(0) LVLM Some(0) LVLF Some(3)
+LVLN reached (by entries and distinct levels):
+  3	1 entries, 1 levels
+  1	10 entries, 10 levels
+  1	14 entries, 1 levels
+  1	3 entries, 3 levels
+  1	4 entries, 1 levels
+  3	4 entries, 4 levels
+  1	5 entries, 1 levels
+  1	5 entries, 3 levels
+  2	5 entries, 5 levels
+  3	6 entries, 6 levels
+  2	7 entries, 7 levels
+  1	8 entries, 4 levels
+  2	8 entries, 8 levels
+LVLI reached through the outfits of those NPC_: 156 (by bytes, entries and entry records)
+  1	LVLD Some(0) LVLM Some(0) LVLF Some(0), 2 entries of ARMO
+  1	LVLD Some(0) LVLM Some(0) LVLF Some(0), 3 entries of ARMO
+  1	LVLD Some(0) LVLM Some(0) LVLF Some(0), 5 entries of ARMO
+  1	LVLD Some(0) LVLM Some(0) LVLF Some(0), 5 entries of LVLI
+  2	LVLD Some(0) LVLM Some(0) LVLF Some(2), 2 entries of ARMO
+  2	LVLD Some(0) LVLM Some(0) LVLF Some(2), 2 entries of LVLI
+  2	LVLD Some(0) LVLM Some(0) LVLF Some(2), 3 entries of ARMO
+  1	LVLD Some(0) LVLM Some(0) LVLF Some(2), 3 entries of LVLI
+  2	LVLD Some(0) LVLM Some(0) LVLF Some(2), 4 entries of ARMO
+  2	LVLD Some(0) LVLM Some(0) LVLF Some(2), 5 entries of ARMO
+  1	LVLD Some(0) LVLM Some(0) LVLF Some(2), 8 entries of ARMO
+  62	LVLD Some(0) LVLM Some(0) LVLF Some(3), 1 entries of ARMO
+  1	LVLD Some(0) LVLM Some(0) LVLF Some(3), 1 entries of LVLI
+  1	LVLD Some(0) LVLM Some(0) LVLF Some(3), 2 entries of ARMO
+  1	LVLD Some(0) LVLM Some(0) LVLF Some(3), 2 entries of LVLI
+  2	LVLD Some(0) LVLM Some(0) LVLF Some(3), 3 entries of ARMO
+  29	LVLD Some(0) LVLM Some(0) LVLF Some(3), 3 entries of LVLI
+  2	LVLD Some(0) LVLM Some(0) LVLF Some(3), 4 entries of ARMO
+  1	LVLD Some(0) LVLM Some(0) LVLF Some(3), 4 entries of LVLI
+  1	LVLD Some(0) LVLM Some(0) LVLF Some(3), 5 entries of ARMO
+  5	LVLD Some(0) LVLM Some(0) LVLF Some(3), 7 entries of LVLI
+  1	LVLD Some(0) LVLM Some(0) LVLF Some(3), 8 entries of ARMO
+  2	LVLD Some(0) LVLM Some(0) LVLF Some(3), 8 entries of ARMO+LVLI
+  2	LVLD Some(0) LVLM Some(0) LVLF Some(4), 2 entries of LVLI
+  1	LVLD Some(0) LVLM Some(0) LVLF Some(4), 3 entries of LVLI
+  1	LVLD Some(0) LVLM Some(0) LVLF Some(4), 4 entries of LVLI
+  1	LVLD Some(0) LVLM Some(0) LVLF Some(4), 5 entries of LVLI
+  2	LVLD Some(0) LVLM Some(0) LVLF Some(4), 6 entries of LVLI
+  3	LVLD Some(0) LVLM Some(0) LVLF Some(4), 7 entries of LVLI
+  1	LVLD Some(0) LVLM Some(4) LVLF Some(4), 4 entries of ARMO+LVLI
+  1	LVLD Some(10) LVLM Some(0) LVLF Some(2), 3 entries of ARMO
+  1	LVLD Some(20) LVLM Some(0) LVLF Some(0), 4 entries of ARMO
+  1	LVLD Some(25) LVLM Some(0) LVLF Some(2), 3 entries of ARMO
+  1	LVLD Some(25) LVLM Some(0) LVLF Some(3), 16 entries of ARMO
+  1	LVLD Some(35) LVLM Some(0) LVLF Some(0), 9 entries of ARMO
+  3	LVLD Some(50) LVLM Some(0) LVLF Some(0), 2 entries of ARMO
+  1	LVLD Some(50) LVLM Some(0) LVLF Some(0), 7 entries of ARMO
+  5	LVLD Some(50) LVLM Some(0) LVLF Some(3), 1 entries of LVLI
+  1	LVLD Some(50) LVLM Some(0) LVLF Some(3), 2 entries of LVLI
+  1	LVLD Some(67) LVLM Some(0) LVLF Some(3), 2 entries of ARMO
+  1	LVLD Some(70) LVLM Some(0) LVLF Some(0), 1 entries of ARMO
+  4	LVLD Some(75) LVLM Some(0) LVLF Some(3), 2 entries of LVLI
+
+## 3. Every NPC_ with TPTA: own field present, by template bit clear / set
+NPC_ with TPTA	3279
+field	bit	clear	own present	share	set	own present	share
+RNAM	0	1206	1206	1.000	2073	2073	1.000
+RNAM	1	421	421	1.000	2858	2858	1.000
+RNAM	2	1036	1036	1.000	2243	2243	1.000
+RNAM	3	641	641	1.000	2638	2638	1.000
+RNAM	4	1182	1182	1.000	2097	2097	1.000
+RNAM	5	803	803	1.000	2476	2476	1.000
+RNAM	6	3279	3279	1.000	0	0	-
+RNAM	7	1437	1437	1.000	1842	1842	1.000
+RNAM	8	788	788	1.000	2491	2491	1.000
+RNAM	9	973	973	1.000	2306	2306	1.000
+RNAM	10	614	614	1.000	2665	2665	1.000
+RNAM	11	186	186	1.000	3093	3093	1.000
+RNAM	12	787	787	1.000	2492	2492	1.000
+WNAM	0	1206	540	0.448	2073	1080	0.521
+WNAM	1	421	243	0.577	2858	1377	0.482
+WNAM	2	1036	432	0.417	2243	1188	0.530
+WNAM	3	641	327	0.510	2638	1293	0.490
+WNAM	4	1182	634	0.536	2097	986	0.470
+WNAM	5	803	272	0.339	2476	1348	0.544
+WNAM	6	3279	1620	0.494	0	0	-
+WNAM	7	1437	705	0.491	1842	915	0.497
+WNAM	8	788	236	0.299	2491	1384	0.556
+WNAM	9	973	449	0.461	2306	1171	0.508
+WNAM	10	614	276	0.450	2665	1344	0.504
+WNAM	11	186	49	0.263	3093	1571	0.508
+WNAM	12	787	435	0.553	2492	1185	0.476
+PNAM	0	1206	648	0.537	2073	795	0.384
+PNAM	1	421	137	0.325	2858	1306	0.457
+PNAM	2	1036	609	0.588	2243	834	0.372
+PNAM	3	641	262	0.409	2638	1181	0.448
+PNAM	4	1182	548	0.464	2097	895	0.427
+PNAM	5	803	539	0.671	2476	904	0.365
+PNAM	6	3279	1443	0.440	0	0	-
+PNAM	7	1437	608	0.423	1842	835	0.453
+PNAM	8	788	458	0.581	2491	985	0.395
+PNAM	9	973	472	0.485	2306	971	0.421
+PNAM	10	614	411	0.669	2665	1032	0.387
+PNAM	11	186	141	0.758	3093	1302	0.421
+PNAM	12	787	310	0.394	2492	1133	0.455
+DOFT	0	1206	805	0.667	2073	1369	0.660
+DOFT	1	421	204	0.485	2858	1970	0.689
+DOFT	2	1036	763	0.736	2243	1411	0.629
+DOFT	3	641	367	0.573	2638	1807	0.685
+DOFT	4	1182	810	0.685	2097	1364	0.650
+DOFT	5	803	671	0.836	2476	1503	0.607
+DOFT	6	3279	2174	0.663	0	0	-
+DOFT	7	1437	863	0.601	1842	1311	0.712
+DOFT	8	788	687	0.872	2491	1487	0.597
+DOFT	9	973	655	0.673	2306	1519	0.659
+DOFT	10	614	527	0.858	2665	1647	0.618
+DOFT	11	186	152	0.817	3093	2022	0.654
+DOFT	12	787	452	0.574	2492	1722	0.691
+KWDA	0	1206	909	0.754	2073	1418	0.684
+KWDA	1	421	336	0.798	2858	1991	0.697
+KWDA	2	1036	710	0.685	2243	1617	0.721
+KWDA	3	641	512	0.799	2638	1815	0.688
+KWDA	4	1182	827	0.700	2097	1500	0.715
+KWDA	5	803	508	0.633	2476	1819	0.735
+KWDA	6	3279	2327	0.710	0	0	-
+KWDA	7	1437	1088	0.757	1842	1239	0.673
+KWDA	8	788	419	0.532	2491	1908	0.766
+KWDA	9	973	707	0.727	2306	1620	0.703
+KWDA	10	614	415	0.676	2665	1912	0.717
+KWDA	11	186	130	0.699	3093	2197	0.710
+KWDA	12	787	666	0.846	2492	1661	0.667
+
+## 4. The moving platform's model as the draw sees it
+draw state "Blocked"; collision "Blocked"
+blockers (code, first part of found, covering rule): count
+  MissingDocumentedReferenceScale	XSCL absent	refr_absent_xscl_identity_v1	1
+  RuntimeMaterialSwapFilter	FNAM	mswp_fnam_folder_label_v1	2
+  RuntimeRecordState	REFR.XLRT	none	1
+  UninterpretedVisualSubrecord	ACTI.FNAM.layout_not_established	none	1
+  UninterpretedVisualSubrecord	ACTI.MODT.layout_not_established	modt_not_in_frame_v1	1
+  UninterpretedVisualSubrecord	ACTI.PNAM.layout_not_established	none	1
+  UnsupportedAnimationRuntime	BSBehaviorGraphExtraData	none	1
+  UnsupportedAnimationRuntime	BSEffectShaderPropertyColorController	none	1
+  UnsupportedAnimationRuntime	BSEffectShaderPropertyFloatController	none	3
+  UnsupportedAnimationRuntime	BSLightingShaderPropertyFloatController	nif_controller_rest_idle_shader_v1	1
+  UnsupportedAnimationRuntime	NiBlendBoolInterpolator	none	2
+  UnsupportedAnimationRuntime	NiBlendFloatInterpolator	nif_controller_rest_idle_shader_v1	1
+  UnsupportedAnimationRuntime	NiBlendFloatInterpolator	none	3
+  UnsupportedAnimationRuntime	NiBlendPoint3Interpolator	none	1
+  UnsupportedAnimationRuntime	NiBoolData	none	1
+  UnsupportedAnimationRuntime	NiBoolInterpolator	none	9
+  UnsupportedAnimationRuntime	NiControllerManager	nif_controller_rest_manager_idle_v1	1
+  UnsupportedAnimationRuntime	NiControllerSequence	nif_controller_rest_loop_unstarted_v1	1
+  UnsupportedAnimationRuntime	NiControllerSequence	nif_controller_rest_manager_idle_v1	8
+  UnsupportedAnimationRuntime	NiDefaultAVObjectPalette	nif_controller_rest_manager_idle_v1	1
+  UnsupportedAnimationRuntime	NiFloatData	nif_controller_rest_idle_shader_v1	8
+  UnsupportedAnimationRuntime	NiFloatData	nif_controller_rest_loop_unstarted_v1	4
+  UnsupportedAnimationRuntime	NiFloatData	none	24
+  UnsupportedAnimationRuntime	NiFloatInterpolator	nif_controller_rest_idle_shader_v1	8
+  UnsupportedAnimationRuntime	NiFloatInterpolator	nif_controller_rest_loop_unstarted_v1	4
+  UnsupportedAnimationRuntime	NiFloatInterpolator	none	24
+  UnsupportedAnimationRuntime	NiMultiTargetTransformController	nif_controller_rest_manager_idle_v1	1
+  UnsupportedAnimationRuntime	NiPoint3Interpolator	nif_controller_rest_loop_unstarted_v1	1
+  UnsupportedAnimationRuntime	NiPoint3Interpolator	none	8
+  UnsupportedAnimationRuntime	NiPosData	nif_controller_rest_loop_unstarted_v1	1
+  UnsupportedAnimationRuntime	NiPosData	none	8
+  UnsupportedAnimationRuntime	NiTextKeyExtraData	nif_controller_rest_manager_idle_v1	9
+  UnsupportedAnimationRuntime	NiTransformData	nif_controller_rest_idle_transform_v1	60
+  UnsupportedAnimationRuntime	NiTransformData	nif_controller_rest_loop_unstarted_v1	6
+  UnsupportedAnimationRuntime	NiTransformInterpolator	nif_controller_rest_idle_transform_v1	80
+  UnsupportedAnimationRuntime	NiTransformInterpolator	nif_controller_rest_loop_unstarted_v1	10
+  UnsupportedAnimationRuntime	NiVisController	none	1
+  UnsupportedMaterialFields	alpha_blend.enabled_factors_unsourced(1,6,7)	bgsm_blend_factors_alpha_function_v1	6
+  UnsupportedNifBlock	BSSkin::Instance	none	5
+  UnsupportedNifBlock	NiBlendBoolInterpolator	none	1
+  UnsupportedSkinning	BSTriShape	none	5
+  UnverifiedEffectColorOnly	explicit empty Source Texture	effect_color_only_v1	1
+  UnverifiedEulerRotation	nonzero REFR.DATA Euler angles	refr_rotation_zyx_v2	1
+
+## 5. Base records of the placed kinds with a model (MODL): skinned models
+bases with a model path that resolves	37660
+distinct models	27497
+  106	  of base kind ACTI
+  1	  of base kind AMMO
+  84	  of base kind CONT
+  7	  of base kind DOOR
+  33	  of base kind FURN
+  4	  of base kind MISC
+  76	  of base kind MSTT
+  55	  of base kind STAT
+  4	  of base kind TACT
+  3	  of base kind TERM
+  48	  with a controller manager false, with a behaviour graph false
+  29	  with a controller manager false, with a behaviour graph true
+  125	  with a controller manager true, with a behaviour graph false
+  120	  with a controller manager true, with a behaviour graph true
+  1	models not decoded
+  303	models not read
+  27193	models read
+  322	models with skinned shapes

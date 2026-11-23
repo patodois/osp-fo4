@@ -369,7 +369,8 @@ yet):
 
 - `walk_collision_marker_box_v1`: a placed reference whose base is a static with no model and which stores a
   32-byte `XPRM` of kind word 1 is a solid box (half extents the bound words times the scale, centred, rotated),
-  added as one hull (`marker_boxes`, `add_boxes`). Its enable state is reported, not applied.
+  added as one hull (`marker_boxes`, `add_boxes`). Its enable state is reported, and applied only under
+  `walk_collision_marker_box_presence_v1` (below).
 - `walk_animated_model_collision_as_stored_v1`: `fo4_scene::collision::instance_as_stored` places one
   reference's collision whatever its readiness says (an animated model), each node at its stored transform.
 - `walk_platform_sequence_ride_v1`: a piece of a `WorldSet` moves along a track of translations (`Ride`); a
@@ -395,6 +396,33 @@ bottom (500.234 s): what takes the walker through that door is not modelled (the
 needs an activation; the caller's track passes it). Not done: applying the boxes' and the shaft's enable state,
 the play mode building these pieces (`fo4-play`, request in `spec/play.md`), the hatches' collision closing
 over the walker's head (it does not happen in this ride: the walker stands on the platform below them).
+
+### The ride's loose ends (the faces step)
+
+Two readings in `fo4_walk::platform`, each behind its own switch of `ride_check`, off by default:
+
+- `walk_collision_marker_box_presence_v1` (`--box-presence`, with `--timeline FILE` for the run's changes, else
+  an empty run): a collision marker's box stands only while the run's frame at that second has its reference
+  present (`presence`: `fo4_scene::timeline::presence`, the run's own Enable or Disable, else its enable chain
+  under the enable parent rules with the run's changes, else its flag 0x800); an undecided box is left out. Still
+  boxes are looked at again every quarter second of the walk; boxes that ride (`--ride-boxes`) once, at the start.
+- `walk_ride_rider_passes_terrain_v1` (`--ride-through-terrain`, `Ride::pass_terrain`): while the walker stands on
+  a ride's piece, the walking world's terrain sources are hidden; shown again when it steps off.
+
+Why the walker slid at the bottom (`ride_check --trace`, the last steep contact of each tick): from 499.0 s, about
+1.2 s before the descent ends, the walker's capsule meets the terrain of the shaft's own exterior cell (contact
+normals of slope 0.54 and steeper) and is pushed out sideways: the shaft goes about 300 units below that cell's
+terrain surface at its axis, and nothing in the data read here holes the terrain there (the cell's XCLC flag word
+has its four quad bits clear in all nine cells about it). Whether the game's terrain has a hole there, or its
+player is carried through it, is not read: the reading passes the rider through.
+
+| Variant (as the seen step's, the ride from 481.567 s) | Where the walker is at 502 s |
+| --- | --- |
+| shaft and walkway as stored, the ride | at the shaft's bottom (4,826.6), 166 units sideways from where it rode down |
+| the same with `--ride-through-terrain` | at the bottom (4,826.6) right under where it rode down: no slide |
+| + the boxes still, with `--box-presence` and the run's timeline | the platform's box present, the eight gate boxes absent (initially disabled, not enabled by the run before 502 s): the walker walks onto the box at the top and stays on it (the box does not ride) |
+| + the boxes riding (`--ride-boxes`) with `--box-presence` | rides down on the box: at the bottom (4,830.9), 234 units sideways (the terrain again) |
+| the same with `--ride-through-terrain` | rides down on the box to 4,827.1 right under where it rode down |
 
 ## Open
 

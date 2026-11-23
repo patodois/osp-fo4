@@ -4,6 +4,7 @@ This page is the hand-over point. Everything on `main` builds and passes its tes
 agent) can continue from here. Read `AGENTS.md` first: it holds the rules of evidence and the clean-room rules.
 
 State on 2026-11-24 (vault, cast, light, home, character graph, fight, live window, museum, live world, run library, seen and past-the-museum steps). Nothing below has been checked against the running game: every behaviour is a pending
+State on 2026-11-24 (vault, cast, light, home, character graph, fight, live window, museum, live world, run library, seen and faces steps). Nothing below has been checked against the running game: every behaviour is a pending
 rule in `spec/hypotheses.tsv`, off by default.
 
 ## Script VM and quests (`crates/fo4-vm`)
@@ -110,13 +111,23 @@ Characters (`spec/character-graph.md`): behind four switches (`--actor-start-cli
 graph reaches from its root (a standing idle) instead of the rest pose; the CPU render and the headless viewer
 agree (vault frame at 560 s: coverage 1.000000, same tag on every pixel). What is left:
 
-1. Actors whose base has a template (3 in the opening): read which template supplies keywords.
+1. Leveled and templated actors (faces step, `spec/actor.md`, Picked looks): behind four switches
+   (`--actor-template-bits`, `--actor-leveled-seed SEED`, `--actor-leveled-chance-none`,
+   `--actor-leveled-use-all`) the template slot of bits 0, 8 and 12 gives the traits, outfit and keywords, and
+   the caller's seed picks one entry of each leveled list (a caller assumption: only play knows the game's
+   pick); of the furthest run's 226 actors those without a plan fall from 122 to 8. Of the six sheet seconds,
+   1345 s and 1470 s keep 40 markers each: outfit pieces, hair and insects' wings whose controllers no rest
+   reading settles (effect shaders run by a manager, behaviour graphs, lag bones, moving transforms). Next:
+   those controller families (the `effect-idle` family of `spec/coverage.md`), a level filter for the pick (the
+   LVLO levels are read, not used), and which seed or entry the run's world model chose, if it ever chooses.
 2. Sitting and death (seen step, `spec/timeline.md`, Deaths and furniture): behind switches a dead actor is
    left out or drawn lying (a placeholder: the race's death clips are chosen on events the run does not raise,
    the ragdoll is physics), and an actor the run seats stands at its furniture's nearest marker (FURN SNAM)
    posed by its race's furniture entry. The run seats only the player, so the sit pose is exercised by
    synthetic tests only; next: a package-driven sit in the run, and a death clip if an event reading ever
-   picks one.
+   picks one. Faces step: with the picked looks the museum's dead raiders lie as characters (6 of 7 at 1650 s;
+   the placeholder pose, half under the floor); the dead insects stay lying boxes (their wings' effect-shader
+   controllers).
 3. Everything after the start state: transitions on events (dialogue, alarm, walking), blends of several
    children, bone-weighted and additive layers, the offset clip; the clip's start second is the run's second 0.
 4. A viewer window path (the poses are headless only, as the rest of `--timeline`).
@@ -185,7 +196,8 @@ What the frames show is missing, in order of what blocks a playable opening:
    it down 4,140 units from the second the run enters the descent's state (`ride_check`, headless; the second
    taken from the run's names file). Next: `fo4-play` building those pieces and starting the ride from the
    run's state (request in `spec/play.md`, The elevator ride), the timeline recording sequence starts, the
-   enable state of collision-marker boxes, the load door at the shaft's bottom; the run's cost (`fo4-vm`'s distance dues search
+   load door at the shaft's bottom (faces step: the boxes' presence from the run's frame and the rider passing
+   the terrain below the shaft are read behind `ride_check` switches, `spec/walk.md`, The ride's loose ends); the run's cost (`fo4-vm`'s distance dues search
    every placement each turn: 407 s for 480 s of input); the lines' audio; then the library run in `fo4-vm`
    (`spec/play.md`, Request) so `fo4-play` stops compiling the example.
 2. Characters stand in the rest pose (arms out) and do not move between the run's places. Next: the run's
@@ -200,6 +212,10 @@ What the frames show is missing, in order of what blocks a playable opening:
    straight line outside the geometry: the data holds the platform (an activator with NIF controller
    sequences and a behaviour graph), but the run records no event that starts it, and a sequence player,
    skinned non-actor models and riding a moving node are missing (`spec/timeline.md`, The elevator second).
+   Faces step: the outside elevator's shaft model is drawn by its skinned shapes on its own nodes
+   (`--timeline-ride-model`) and its platform at the descent's place from the caller's start second
+   (`--timeline-ride SEQUENCE,START`; `spec/timeline.md`, Drawing the shaft and the ride); its lights and
+   effects are left out; 322 models of the placed kinds are skinned the same way and still refused elsewhere.
 4. Sound: the run times lines by their voice files but nothing plays them.
 5. Lighting and sky (light step, `spec/light.md`): behind nine switches, off by default, frames are lit from the
    data under pending rules (interior cell light and its template's inherited fields, placed lights as points,

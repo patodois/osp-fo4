@@ -457,6 +457,57 @@ the commit before, under hypotheses and without (their actors are left out
 for other reasons); an exterior cell with four newly drawn creatures
 differs, in a view of one, in 85,424 of 921,600 pixels.
 
+## Picked looks (the faces step)
+
+The cast of a run timeline (`spec/timeline.md`) left most of the town's and the museum's people as marker boxes:
+their looks are leveled or templated and the candidates disagree. Census `faces_census`
+([faces-census.txt](faces-census.txt), outputs with keys outside git): of the 226 actors the museum step's furthest
+run places, none has a leveled list (LVLN) as its base; 124 have a templated NPC_ and 102 an untemplated one.
+With every reading off, 122 have no plan: leveled candidates that disagree 92 (on the skin alone 26, skin and outfit
+28, ACBS bit 0 alone 19, race and skin 10, the others combined), template candidates that disagree 18, an outfit's
+leveled item list with a non-zero byte 7, an addon without the section's model 3, no skin and no outfit 2.
+
+What the records store is format fact: TPTA holds 13 template slots, bit k of ACBS u16 at 14 is set exactly when
+slot k is (all 3,281 NPC_ with TPTA), an LVLN or LVLI holds its LVLO entries (level u16, the entry's FormID) and
+three bytes LVLD, LVLM, LVLF whose meaning no source in use establishes. Over the 22 LVLN those 226 actors reach,
+LVLD and LVLM are 0 and LVLF 0 to 3; over the 156 LVLI their outfits reach, LVLD is 0 in 120 and 10 to 75 in 21
+(percent-like values), LVLM 0 but in one (4), and LVLF 4 only in lists whose entries are all leveled item lists
+(15 lists, 2 to 7 entries) or in that one list. Which template slot gives which property, which entry the game
+picks and what the bytes mean are behaviour. Section 3 of the census asks the data which bit goes with which own
+field: over the 3,279 NPC_ with TPTA, an own DOFT is present in 87 % with bit 8 clear and 60 % with it set, an own
+KWDA in 85 % with bit 12 clear and 67 % set, an own PNAM in 54 % with bit 0 clear and 38 % set; but other bits
+show differences as large (DOFT: bit 10 86 % / 62 %, bit 5 84 % / 61 %; PNAM: bit 11 76 % / 42 %), so the data
+does not single out a bit for a property. The mapping below is prior knowledge, a pending rule.
+
+Four readings, each behind its own switch of the CPU render and the headless viewer (with `--timeline-cast`),
+off by default (`fo4_scene::actor::Readings`, `resolve_reference_with`; with all off it is `resolve_reference`):
+
+| Switch | Rule | Reading |
+| --- | --- | --- |
+| `--actor-template-bits` | `npc_template_bits_traits_inventory_v1` | traits (race, ACBS bit 0, skin, head parts) through slot 0 when bit 0 is set, the outfit through slot 8 when bit 8 is set, the keywords (for the start clip) through slot 12 when bit 12 is set; otherwise the NPC_'s own |
+| `--actor-leveled-seed SEED` | `npc_leveled_entry_seeded_pick_v1` | each leveled list reached yields one entry: FNV-1a 64 of the seed, the placed reference's key and the list's key, modulo the entries (`pick_index`); a caller assumption for the game's choice (levels, counts and chances not evaluated); lists with LVLD or LVLM not zero stay refused |
+| `--actor-leveled-chance-none` (with the seed) | `npc_leveled_item_chance_none_seeded_v1` | an outfit's leveled item list whose LVLD is not zero gives nothing when the seed's roll (`chance_roll`, 0 to 99) is below LVLD, else its picked entry: LVLD read as a percent chance of nothing |
+| `--actor-leveled-use-all` (with the seed) | `npc_leveled_item_flag_use_all_v1` | an outfit's leveled item list whose LVLF has bit 2 set gives every entry |
+
+Each actor a reading settles carries the rule's blocker, its overlay `character` line ends with `look:` (the
+lists picked, entry k of n, and the readings used), and the actor's keywords come from the one NPC_ the readings
+settle for them (`Actor::keyword_base`), so its start clip can be reached.
+
+| Readings (seed 1) | No plan | A plan | of which ready under hypotheses (enable-parent blockers aside, which the cast clears) |
+| --- | ---: | ---: | ---: |
+| every reading off | 122 | 104 | 53 (+39) |
+| `--actor-template-bits` | 108 | 118 | 66 (+39) |
+| `--actor-leveled-seed` | 94 | 132 | 74 (+40) |
+| the seed, chance and use-all | 88 | 138 | 75 (+40) |
+| the template bits and the seed | 25 | 201 | 122 (+40) |
+| all four | 8 | 218 | 122 (+40) |
+
+With all four, the 8 left without a plan are an outfit list with LVLM 4 (3), an addon without the section's model
+(3) and no skin and no outfit (2); 56 more have a plan their models block: 47 for an outfit piece or hair whose
+controllers no rest reading settles (effect shaders run by a manager, moving transforms, a behaviour graph, a lag
+bone controller), 9 for a texture path the archives refuse. Which entry and piece the game shows is
+not claimed: another seed gives other people.
+
 ## Height against the ground
 
 Two drawn actors looked as if they floated: the creature of the test cell

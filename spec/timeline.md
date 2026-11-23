@@ -159,6 +159,36 @@ For the timeline to carry it, `fo4-vm`'s writer would add an `event` line per se
 graph starts, with a fixed grammar: `sequence REF NAME` (REF a record key, NAME the sequence's name as the
 model stores it), read by this reader as the death and sit lines are.
 
+### Drawing the shaft and the ride (the faces step)
+
+The draw refuses the shaft model for several reasons at once (census section 4, `faces_census --shaft`): its five
+skinned shapes (`UnsupportedSkinning` on each `BSTriShape`, `UnsupportedNifBlock` on each `BSSkin::Instance`: the
+platform, the hatches and the lights are skinned to the model's own nodes), the controllers its graph and its
+manager run that no rest reading settles (effect-shader controllers run by the manager, visibility controllers, the
+behaviour graph's extra data), and record fields not read (ACTI PNAM and FNAM, REFR XLRT). The skinned shapes are
+the visible parts: the model's other shapes are a sky dome cap and the platform's dirt; its walls are collision
+only. Skinned models are not rare among placed records that are not actors: of the 27,193 models of the load
+order's placed kinds read, 322 hold skinned shapes (activators 106, containers 84, movable statics 76, statics 55,
+furniture 33 and others; 245 also run by a controller manager, 149 by a behaviour graph; census section 5), and
+the coverage census counts 21,285 placements refused for `BSSkin::Instance` (`spec/coverage-census.txt`).
+
+Two readings behind switches of the CPU render and the headless viewer (with `--timeline-cast`), off by default
+(`fo4_scene::timeline::ride`):
+
+| Switch | Rule | Reading |
+| --- | --- | --- |
+| `--timeline-ride-model PLUGIN:HEX` | `model_skinned_own_nodes_v1` | the named reference, when it is placed in the frame's space (in a worldspace, inside the horizontal box of the loaded cells' placed references) and the run's frame does not have it absent, is drawn by its skinned shapes, each skinned as an actor's shape is (`actor_skin_linear_blend_v1`) with the model itself as the skeleton, its nodes at their stored transforms; its rigid shapes, controllers and material swap are left out; drawn as one more actor of the cast (after the markers' actors), with an overlay `ride` line |
+| `--timeline-ride SEQUENCE,START` | `timeline_ride_sequence_nodes_v1` | the nodes the model's sequence number SEQUENCE translates take its translation keys at `S - START` (clamped to the sequence; before START where it starts), START being the run's second the caller gives (the run knows it, the timeline does not record it yet) |
+
+On the museum step's furthest run with sequence 8 from 481.567 s (the descent, the second the run's names file
+gives for its graph state): at 416 s, looking from the track at the platform's box, the platform, its rails and
+the hatches stand at the top of the shaft where the walking world's collision-marker box is (before: a hole with a
+character standing over it); at 490 s, 8.4 s into the descent, the platform has gone 1,061 units down the shaft
+and its rim stands at the eye (120 units above the track), while the caller's track has gone 1,138 units down: the
+track and the sequence's keys differ by 77 units there (the keys do not move at a constant speed). The rest pose of the stored nodes would put the platform at the shaft's bottom (its node is
+stored there): before the ride the sequence's start is used. A placeholder of how the model looks: its lights'
+glow, its swap of materials and its moving lights are not drawn.
+
 ## Deaths and furniture (`--timeline-deaths`, `--timeline-sits`)
 
 Two switches of `quest_run new-game --timeline FILE`, off by default (with them off the file is byte for byte

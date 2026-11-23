@@ -936,3 +936,25 @@ lock event, that a negative faction rank is no membership, that the player's
 strength is chosen at the start. No public page was requested; no editor,
 editor source or definition file, other implementation, game executable or
 game run was opened or searched for.
+The faces step (`fo4_scene::actor::Readings` and `resolve_reference_with`,
+`fo4_scene::timeline::ride`, `actor::pose::node_worlds_with`, the box presence
+and terrain pass of `fo4_walk::platform`, the `faces_census` example and
+`ride_check --trace`; [spec/faces-census.txt](../spec/faces-census.txt),
+[spec/actor.md](../spec/actor.md), Picked looks,
+[spec/timeline.md](../spec/timeline.md), Drawing the shaft and the ride,
+[spec/walk.md](../spec/walk.md), The ride's loose ends) measured with the
+repository's own readers only: the template slots and bits of NPC_ (which own
+fields are present by bit, over the 3,279 records with TPTA), the bytes,
+entries and levels of the LVLN and LVLI an opening's actors reach, the block
+types of the 27,193 models of the placed kinds, the draw blockers of the
+elevator's shaft model, and the walker's contacts during the ride. Recognised
+from prior general knowledge and kept as pending rules: that template bit 0
+carries an actor's traits, bit 8 its inventory and bit 12 its keywords; that
+the game picks one entry of a leveled list (here the caller's seed stands for
+its choice); that LVLD is a percent chance of nothing and LVLF bit 2 makes a
+list give every entry; that a model's skinned shapes are bound to its own
+nodes; that a platform's rider passes the terrain below a shaft. The pick's
+hash is FNV-1a, a public-domain hash chosen for being deterministic and
+simple, not taken from any implementation of the game. No source was
+consulted (no network), and no editor, editor source or definition file,
+other implementation, game executable or game run was opened or searched for.
