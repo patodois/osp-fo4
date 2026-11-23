@@ -586,6 +586,9 @@ the registry.
 | `vm_sit_ended_by_track_v1` | pending | Sit the player at the opening's first furniture and walk away: GetSitState 0 once away supports it |
 | `play_elevator_run_sequence_v1` | pending | Ride the vault elevator and record the player's height over time: the descent the graph starts (4,140 units over 18.667 s) supports it |
 | `play_elevator_end_load_door_v1` | pending | Ride the elevator and note the second the interior loads: at the descent's end supports it |
+| `play_elevator_held_pose_v1` | pending | Walk onto the gear door's walkway after its load event: a floor where the held translation puts it supports it; a door that travels first refutes the at-once part. Behind `--play-elevator-held-pose`, off by default |
+| `play_player_moveto_v1` | pending | Play the opening past its prewar part and note where and when the player first stands in the postwar vault: the MoveTo's target and second support it. Behind `--play-player-moveto`, off by default |
+| `play_player_sit_furniture_v1` | pending | Play the opening past its prewar part and note where the player first stands in the postwar vault: inside the cryopod the fragment activates supports it. Behind `--play-player-sits`, off by default |
 | `quest_record_partial_previous_v1` | pending | Set the town dialogue quest's 50 with the add-on installed and read the town chain's first quest's GetStageDone(20) and IsRunning: true at both supports it |
 | `quest_set_stage_absent_open_v1` | pending | Call SetStage with a stage a quest does not hold and read its state before and after: unchanged answers support a refusal |
 | `inventory_container_changed_event_v1` | pending | Take the museum's musket with a test listener on the next main quest's 62: set as the item reaches the player supports it |

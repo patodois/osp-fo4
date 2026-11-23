@@ -75,8 +75,28 @@ pub mod rules {
     /// collision box (grown by the activation's reach) takes the walker
     /// through, as an activation of it would (`--play-elevator-door`).
     pub const ELEVATOR_END_DOOR: &str = "play_elevator_end_load_door_v1";
+    /// Under `ELEVATOR_RUN_SEQUENCE`, a node a sequence controls with a
+    /// transform interpolator but no translation keys moves, from the
+    /// second the run starts the sequence, to the translation the
+    /// interpolator holds it at (the drawing side's
+    /// `nif_sequence_interpolator_held_pose_v1`) and stays there after, as a
+    /// keyed node holds its last key (`--play-elevator-held-pose`).
+    pub const ELEVATOR_HELD_POSE: &str = "play_elevator_held_pose_v1";
+    /// A `MoveTo` the run calls on the player with zero offsets and a
+    /// target whose place the world model settles puts the walker at the
+    /// target's position in the target's space (the walking world of its
+    /// cell built), at the walker's second when the run asks for the next
+    /// slice (`--play-player-moveto`).
+    pub const PLAYER_MOVETO: &str = "play_player_moveto_v1";
+    /// A sit the run gives the player (a script's activation of a
+    /// furniture read as a sit, or the caller's sit) in a furniture placed
+    /// in another space than the walker's puts the walker at the furniture
+    /// reference's stored position in that space, as `PLAYER_MOVETO` puts
+    /// it at a target; in the walker's own space it is not followed (the
+    /// walk stands for the way there) (`--play-player-sits`).
+    pub const PLAYER_SIT: &str = "play_player_sit_furniture_v1";
     /// Every rule above.
-    pub const ALL: [&str; 10] = [
+    pub const ALL: [&str; 13] = [
         PLAYER_FEET,
         RUN_CLOCK,
         ACTIVATE_RAY,
@@ -87,6 +107,9 @@ pub mod rules {
         BOUNDS_NOT_STATIC,
         ELEVATOR_RUN_SEQUENCE,
         ELEVATOR_END_DOOR,
+        ELEVATOR_HELD_POSE,
+        PLAYER_MOVETO,
+        PLAYER_SIT,
     ];
 }
 

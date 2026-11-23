@@ -42,7 +42,18 @@
 //! (`play_elevator_run_sequence_v1`); `--play-elevator-also REF` places
 //! another reference's collision as stored, still; `--play-elevator-door`
 //! takes the walker through the nearest load door within the reach when a
-//! ride that carried it ends (`play_elevator_end_load_door_v1`).
+//! ride that carried it ends (`play_elevator_end_load_door_v1`);
+//! `--play-player-moveto` puts the walker where a `MoveTo` the run calls on
+//! the player with zero offsets puts it (`play_player_moveto_v1`), and
+//! `--play-player-sits` at the furniture the run seats the player in
+//! (`play_player_sit_furniture_v1`).
+//! `--play-elevator-held-pose` moves a node a sequence controls without
+//! translation keys to the translation the sequence holds it at
+//! (`play_elevator_held_pose_v1`). `--play-collision-off-chain` and
+//! `--play-collision-reference-alpha` give every walking world's cell build
+//! the drawing side's collision readiness readings
+//! (`collision_model_blockers_off_chain_v1`,
+//! `refr_xalp_collision_unchanged_v1`; `fo4_scene::readiness::Switches`).
 //! `--probe-ray X Y Z HEADING PITCH REACH --probe-ref KEY` prints what a ray
 //! from that eye meets and where the reference's collision is, then stops
 //! (an aid for choosing where an input aims).
@@ -113,8 +124,16 @@ fn run() -> Result<(), E> {
     let follow_grid = flag(&mut a, "--play-follow-grid");
     let activatable = flag(&mut a, "--play-pick-bounds-activatable");
     let elevator_door = flag(&mut a, "--play-elevator-door");
+    let held_pose = flag(&mut a, "--play-elevator-held-pose");
+    let player_moveto = flag(&mut a, "--play-player-moveto");
+    let player_sits = flag(&mut a, "--play-player-sits");
+    let collision = fo4_scene::readiness::Switches {
+        off_chain: flag(&mut a, "--play-collision-off-chain"),
+        reference_alpha: flag(&mut a, "--play-collision-reference-alpha"),
+    };
     let mut elevators = walker::Elevators {
         door: elevator_door,
+        held_pose,
         ..walker::Elevators::default()
     };
     while let Some(i) = a
@@ -134,6 +153,9 @@ fn run() -> Result<(), E> {
     }
     if elevators.references.is_empty() && (elevator_door || !elevators.also.is_empty()) {
         return Err("--play-elevator-also and --play-elevator-door need --play-elevator".into());
+    }
+    if elevators.references.is_empty() && held_pose {
+        return Err("--play-elevator-held-pose needs --play-elevator".into());
     }
     if elevator_door && !(load_doors && reach.is_some()) {
         return Err("--play-elevator-door needs --play-load-doors and --play-reach".into());
@@ -196,6 +218,7 @@ fn run() -> Result<(), E> {
                     around,
                     live: live_world,
                     doors: load_doors,
+                    collision,
                 },
             )?;
             let world::Built {
@@ -273,9 +296,16 @@ fn run() -> Result<(), E> {
                 fo4_vm::bind::record_key(&cell)
             );
             let _ = writeln!(report, "{text}");
+            if collision.off_chain {
+                let _ = writeln!(report, "switch: a refused collision whose model blockers lie off the blocks its bodies read enters the walking world (--play-collision-off-chain, {})", fo4_scene::hypotheses::COLLISION_OFF_CHAIN);
+            }
+            if collision.reference_alpha {
+                let _ = writeln!(report, "switch: a reference's unread alpha does not refuse its collision (--play-collision-reference-alpha, {})", fo4_scene::hypotheses::REFERENCE_ALPHA_COLLISION);
+            }
             drop((store, vfs));
             let mut opts = walker::Options {
                 reach,
+                collision,
                 ..walker::Options::default()
             };
             if let Some(v) = walk_speed {
@@ -322,6 +352,14 @@ fn run() -> Result<(), E> {
                 let _ = writeln!(report, "switch: the activation crosses load doors (--play-load-doors): {} among the loaded references", doors.len());
                 w = w.with_doors(walker::Doors { doors, around });
             }
+            if player_moveto {
+                let _ = writeln!(report, "switch: the walker goes where the run's MoveTo with zero offsets puts the player (--play-player-moveto)");
+                w = w.with_player_moves();
+            }
+            if player_sits {
+                let _ = writeln!(report, "switch: the walker goes to the furniture the run seats the player in (--play-player-sits)");
+                w = w.with_player_sits();
+            }
             if follow_grid {
                 let _ = writeln!(report, "policy: the walking world is built again about the walker's grid square when it leaves it (--play-follow-grid, {around} cells about it)");
                 w = w.with_grid(walker::Grid::new(around));
@@ -331,6 +369,9 @@ fn run() -> Result<(), E> {
             }
             if !elevators.references.is_empty() {
                 let _ = writeln!(report, "switch: the collision of {} named reference(s) moves as the sequences the run's graph starts on them move its nodes, {} other reference(s) placed as stored (--play-elevator, --play-elevator-also){}", elevators.references.len(), elevators.also.len(), if elevators.door { "; a ride that carried the walker ends at the nearest load door within the reach (--play-elevator-door)" } else { "" });
+                if elevators.held_pose {
+                    let _ = writeln!(report, "switch: a node a sequence controls without translation keys moves to the translation the sequence holds it at (--play-elevator-held-pose)");
+                }
                 w = w.with_elevators(elevators.clone());
             }
             for (k, v) in &built_counts {
@@ -410,7 +451,33 @@ fn run() -> Result<(), E> {
                 fo4_vm::bind::record_key(cell)
             );
         }
-        for d in &l.doors {
+        for d in l
+            .doors
+            .iter()
+            .filter(|d| d.rule != fo4_play::rules::LOAD_DOOR)
+        {
+            let _ = writeln!(
+                report,
+                "player {} followed at {} s: to {} in {}: cell {}, position {:?}, feet settled at {:?}; walking world built in {:.2} s\n{}",
+                if d.rule == fo4_play::rules::PLAYER_SIT { "sit" } else { "MoveTo" },
+                d.t,
+                fo4_vm::bind::record_key(&d.to.to),
+                fo4_vm::bind::record_key(&d.to.space),
+                fo4_vm::bind::record_key(&d.cell),
+                d.to.pos,
+                d.feet,
+                d.seconds,
+                d.report
+            );
+        }
+        for (t, why) in &l.player_moves {
+            let _ = writeln!(report, "player place at {t} s: {why}");
+        }
+        for d in l
+            .doors
+            .iter()
+            .filter(|d| d.rule == fo4_play::rules::LOAD_DOOR)
+        {
             let _ = writeln!(
                 report,
                 "load door at {} s: {} to {} in {}: cell {}, teleport {:?}, feet settled at {:?}; walking world built in {:.2} s\n{}",

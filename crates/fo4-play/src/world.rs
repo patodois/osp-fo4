@@ -29,6 +29,11 @@ pub struct Options {
     pub live: bool,
     /// Read the load doors among the loaded references ([`Built::doors`]).
     pub doors: bool,
+    /// The drawing side's collision readiness readings the cell build
+    /// takes (`fo4_scene::readiness::Switches`, given to the loader with
+    /// `Loader::set_collision_switches`; `--play-collision-off-chain`,
+    /// `--play-collision-reference-alpha`). All off: the loader's default.
+    pub collision: fo4_scene::readiness::Switches,
 }
 
 /// A placed door whose `XTEL` names a door: where it takes the player
@@ -195,6 +200,9 @@ pub fn build(
     let limits = &m.limits;
     let budget = Budget::new(8 << 30).with_scope_limit(limits.max_memory);
     let mut loader = Loader::new(store, vfs, &m.language, level, &budget);
+    if o.collision.any() {
+        loader.set_collision_switches(o.collision);
+    }
     let mut scene = loader.cell(cell, &budget)?;
     let mut grid = None;
     if o.around > 0 {

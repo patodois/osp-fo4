@@ -17,7 +17,10 @@
 //! The parts are pieces of the walking world's [`WorldSet`] under the key
 //! kind [`KIND`]; they are put in again whenever the walking world is built
 //! again (a load door, the moving grid). Only translations are read: a
-//! sequence's rotation and scale keys are not applied.
+//! sequence's rotation and scale keys are not applied. With
+//! `--play-elevator-held-pose` a node a sequence controls without
+//! translation keys moves to the translation the sequence's interpolator
+//! holds it at ([`Source::Held`], `play_elevator_held_pose_v1`).
 use crate::live::Key;
 use fo4_core::{Budget, Manifest};
 use fo4_plugin::{typed::Store, FormKey};
@@ -88,6 +91,75 @@ pub struct Elevator {
     /// A ride that carried the walker ended at this second (taken by the
     /// walker for the end door).
     pub ended: Option<f64>,
+    /// The (node, sequence) tracks read from a held translation
+    /// (`play_elevator_held_pose_v1`); 0 without it.
+    pub held: usize,
+}
+
+/// Where a moving node's translation comes from while a sequence plays.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Source {
+    /// The sequence's translation keys for the node
+    /// (`play_elevator_run_sequence_v1`).
+    Keys(fo4_scene::clock::Keys),
+    /// The translation the sequence's interpolator holds the node at, for
+    /// a node it controls without translation keys
+    /// (`play_elevator_held_pose_v1` over the drawing side's
+    /// `nif_sequence_interpolator_held_pose_v1`,
+    /// `fo4_scene::sequence::held_pose`).
+    Held([f32; 3]),
+}
+
+impl Source {
+    /// The source of a node's translation in a sequence: its translation
+    /// keys when the sequence's data holds some; else the held translation
+    /// when the caller read one (only under `play_elevator_held_pose_v1`);
+    /// else the data's empty key group, which gives no track, as before
+    /// the held reading; `None` when the sequence links no data for it.
+    pub fn of(keys: Option<fo4_scene::clock::NodeKeys>, held: Option<[f32; 3]>) -> Option<Source> {
+        match (keys, held) {
+            (Some(k), _) if !k.translation.keys.is_empty() => Some(Source::Keys(k.translation)),
+            (_, Some(h)) => Some(Source::Held(h)),
+            (Some(k), None) => Some(Source::Keys(k.translation)),
+            (None, None) => None,
+        }
+    }
+
+    /// The node's translation at key time `t` (the model's own axes).
+    pub fn sample(&self, t: f64) -> Option<[f32; 3]> {
+        match self {
+            Source::Keys(k) => k.sample(t),
+            Source::Held(h) => Some(*h),
+        }
+    }
+
+    /// The node's offset from its stored translation over the sequence's
+    /// span (seconds), sampled [`SAMPLES_PER_SECOND`] times a second, in
+    /// world axes (turned and scaled by the placement `frame`, whose
+    /// `origin` is taken off): (seconds from the sequence's start, offset).
+    /// Empty when a sample has no value.
+    pub fn track(
+        &self,
+        s: &fo4_scene::sequence::Sequence,
+        span: f64,
+        stored: [f32; 3],
+        frame: fo4_scene::transform::Transform,
+        origin: [f64; 3],
+    ) -> Track {
+        let steps = (span * SAMPLES_PER_SECOND).ceil().max(1.0) as usize;
+        let mut track = Vec::new();
+        for k in 0..=steps {
+            let dt = (k as f64 / SAMPLES_PER_SECOND).min(span);
+            let st = f64::from(s.start) + dt * f64::from(s.frequency);
+            let Some(v) = self.sample(st) else {
+                return Vec::new();
+            };
+            let local: [f64; 3] = std::array::from_fn(|i| f64::from(v[i] - stored[i]));
+            let w = frame.apply(local);
+            track.push((dt, std::array::from_fn(|i| w[i] - origin[i])));
+        }
+        track
+    }
 }
 
 fn sample(track: &Track, t: f64) -> [f64; 3] {
@@ -117,7 +189,10 @@ fn sample(track: &Track, t: f64) -> [f64; 3] {
 impl Elevator {
     /// Builds the collision of `reference` as stored and of the `also`
     /// references (still), and reads which nodes the model's sequences
-    /// move. `index` keeps the pieces of several references apart.
+    /// move. `index` keeps the pieces of several references apart. With
+    /// `held_pose`, a node a sequence controls without translation keys
+    /// moves to the translation the sequence holds it at
+    /// (`play_elevator_held_pose_v1`, [`Source::of`]).
     pub fn build(
         m: &Manifest,
         store: &Store,
@@ -125,6 +200,7 @@ impl Elevator {
         reference: &FormKey,
         also: &[FormKey],
         index: u32,
+        held_pose: bool,
     ) -> Result<Elevator, E> {
         let level = RuleLevel::Hypotheses;
         let budget = Budget::new(8 << 30).with_scope_limit(m.limits.max_memory);
@@ -168,7 +244,8 @@ impl Elevator {
             .ok_or("PlayElevator: the reference's model is not among its assets")?;
         let origin = frame.apply([0.0; 3]);
         // (node name, block, tracks by sequence) of every node a sequence
-        // moves by translation keys.
+        // moves by translation keys (or, with `held_pose`, holds).
+        let mut held_tracks = 0;
         let read = loader.assets.with_decoded(id, &budget.child(), |d| {
             let DecodedAsset::Model(n) = d else {
                 return Ok(Vec::new());
@@ -185,22 +262,19 @@ impl Elevator {
                     let Some((block, stored)) = fo4_scene::sequence::node(&n, name) else {
                         continue;
                     };
-                    let Some(keys) = fo4_scene::sequence::node_keys(&n, s, name, &budget.child())?
-                    else {
+                    let keys = fo4_scene::sequence::node_keys(&n, s, name, &budget.child())?;
+                    let held = if held_pose {
+                        fo4_scene::sequence::held_pose(&n, s, name, &budget.child())?
+                            .and_then(|p| p.translation)
+                    } else {
+                        None
+                    };
+                    let Some(source) = Source::of(keys, held) else {
                         continue;
                     };
-                    let steps = (span * SAMPLES_PER_SECOND).ceil().max(1.0) as usize;
-                    let mut track = Vec::new();
-                    for k in 0..=steps {
-                        let dt = (k as f64 / SAMPLES_PER_SECOND).min(span);
-                        let st = f64::from(s.start) + dt * f64::from(s.frequency);
-                        let Some(v) = keys.translation.sample(st) else {
-                            track.clear();
-                            break;
-                        };
-                        let local: [f64; 3] = std::array::from_fn(|i| f64::from(v[i] - stored[i]));
-                        let w = frame.apply(local);
-                        track.push((dt, std::array::from_fn(|i| w[i] - origin[i])));
+                    let track = source.track(s, span, stored, frame, origin);
+                    if !track.is_empty() && matches!(source, Source::Held(_)) {
+                        held_tracks += 1;
                     }
                     if track.is_empty() {
                         continue;
@@ -284,6 +358,7 @@ impl Elevator {
             last: 0.0,
             log: Vec::new(),
             ended: None,
+            held: held_tracks,
         })
     }
 
@@ -540,6 +615,7 @@ mod tests {
             last: 0.0,
             log: Vec::new(),
             ended: None,
+            held: 0,
         }
     }
 
@@ -607,6 +683,142 @@ mod tests {
         let e = elevator();
         let b = e.bounds().unwrap();
         assert!(b.0[0] <= -100.0 + 1e-6 && b.1[0] >= 100.0 - 1e-6);
+    }
+
+    fn sequence(name: &str, seconds: f32) -> fo4_scene::sequence::Sequence {
+        fo4_scene::sequence::Sequence {
+            block: 0,
+            name: name.into(),
+            start: 0.0,
+            stop: seconds,
+            cycle: 0,
+            frequency: 1.0,
+            blocks: Vec::new(),
+            text_keys: false,
+        }
+    }
+
+    fn keys(points: &[(f32, [f32; 3])]) -> fo4_scene::clock::NodeKeys {
+        fo4_scene::clock::NodeKeys {
+            rotation: None,
+            translation: fo4_scene::clock::Keys {
+                components: 3,
+                kind: if points.is_empty() {
+                    0
+                } else {
+                    fo4_scene::clock::LINEAR
+                },
+                keys: points
+                    .iter()
+                    .map(|(time, value)| fo4_scene::clock::Key {
+                        time: *time,
+                        value: *value,
+                        forward: [0.0; 3],
+                        backward: [0.0; 3],
+                        tbc: [0.0; 3],
+                    })
+                    .collect(),
+            },
+            scale: fo4_scene::clock::Keys {
+                components: 1,
+                kind: 0,
+                keys: Vec::new(),
+            },
+        }
+    }
+
+    #[test]
+    fn a_node_takes_its_keys_and_only_under_the_switch_its_held_translation() {
+        let moving = keys(&[(0.0, [0.0; 3]), (1.0, [0.0, 0.0, 10.0])]);
+        let empty = keys(&[]);
+        let held = Some([5.0, 0.0, 0.0]);
+        // Translation keys win over a held translation.
+        assert!(matches!(
+            Source::of(Some(moving.clone()), held),
+            Some(Source::Keys(k)) if k.keys.len() == 2
+        ));
+        // Without translation keys: the held translation when the caller
+        // read one (the switch), else the empty group as before.
+        assert_eq!(
+            Source::of(Some(empty.clone()), held),
+            Some(Source::Held([5.0, 0.0, 0.0]))
+        );
+        assert_eq!(Source::of(None, held), Some(Source::Held([5.0, 0.0, 0.0])));
+        let before = Source::of(Some(empty.clone()), None).unwrap();
+        assert_eq!(before, Source::Keys(empty.translation.clone()));
+        let frame = fo4_scene::transform::Transform::euler([0.0; 6], 1.0).unwrap();
+        let s = sequence("Open", 1.0);
+        assert!(before.track(&s, 1.0, [0.0; 3], frame, [0.0; 3]).is_empty());
+        assert_eq!(Source::of(None, None), None);
+    }
+
+    #[test]
+    fn a_held_translation_is_a_constant_offset_turned_by_the_placement() {
+        // Placed at (100, 0, 0), turned a quarter about z, scale 2.
+        let half_pi = std::f32::consts::FRAC_PI_2;
+        let frame =
+            fo4_scene::transform::Transform::euler([100.0, 0.0, 0.0, 0.0, 0.0, half_pi], 2.0)
+                .unwrap();
+        let origin = frame.apply([0.0; 3]);
+        let s = sequence("Open", 0.5);
+        let stored = [1.0, 2.0, 3.0];
+        let tr = Source::Held([4.0, 2.0, 3.0]).track(&s, 0.5, stored, frame, origin);
+        assert_eq!(tr.len(), 31);
+        assert_eq!(tr.first().unwrap().0, 0.0);
+        assert_eq!(tr.last().unwrap().0, 0.5);
+        // The local offset (3, 0, 0) scaled by 2 and turned by the frame,
+        // the same at every sample.
+        let want = frame.apply([3.0, 0.0, 0.0]);
+        let want: [f64; 3] = std::array::from_fn(|i| want[i] - origin[i]);
+        assert!((want[0].hypot(want[1]) - 6.0).abs() < 1e-9 && want[2].abs() < 1e-9);
+        for (_, v) in &tr {
+            assert_eq!(*v, want);
+        }
+        // Keys are sampled over the span: half way at half the span.
+        let k = Source::of(
+            Some(keys(&[(0.0, [0.0; 3]), (1.0, [0.0, 0.0, 10.0])])),
+            None,
+        )
+        .unwrap()
+        .track(&sequence("Up", 1.0), 1.0, [0.0; 3], frame, origin);
+        assert!((k[30].1[2] - 10.0).abs() < 1e-9, "{:?}", k[30]);
+    }
+
+    #[test]
+    fn a_held_part_moves_when_the_run_starts_its_sequence_and_stays() {
+        let frame = fo4_scene::transform::Transform::euler([0.0; 6], 1.0).unwrap();
+        let open = Source::Held([0.0, 0.0, 40.0]).track(
+            &sequence("Open", 1.0),
+            1.0,
+            [0.0; 3],
+            frame,
+            [0.0; 3],
+        );
+        let mut e = elevator();
+        e.nodes[0].tracks = BTreeMap::from([("Open".to_string(), open)]);
+        let mut lib = fo4_vm::MapLibrary::default();
+        let mut host = fo4_vm::NoHost;
+        let mut vm = fo4_vm::Vm::new(&mut lib, &mut host);
+        let o = vm.world.object(
+            "the door",
+            Some(fo4_vm::bind::record_key(&key(5))),
+            &["objectreference"],
+        );
+        let mut set: WorldSet<Key> = WorldSet::new();
+        e.insert(&mut set, 0.0).unwrap();
+        let mut c =
+            Character::new(Params::PROVISIONAL, Settings::DEFAULT, [0.0, 0.0, 5.0]).unwrap();
+        c.settle(&set, 600);
+        // Closed (stored) until the run starts the sequence at 2 s.
+        e.advance(&mut set, &mut c, 1.9).unwrap();
+        assert!(set.get(&e.key(1)).unwrap().bounds.unwrap().max[2].abs() < 1e-6);
+        vm.world.anims.started.push((2.0, o, "Open".into()));
+        assert!(e.follow(&vm));
+        for t in [2.0, 2.5, 3.0, 9.0] {
+            e.advance(&mut set, &mut c, t).unwrap();
+            let top = set.get(&e.key(1)).unwrap().bounds.unwrap().max[2];
+            assert!((top - 40.0).abs() < 1e-6, "{t}: {top}");
+        }
     }
 
     #[test]

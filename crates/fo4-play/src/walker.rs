@@ -45,6 +45,10 @@ pub struct Options {
     /// outcome does not depend on it; the live world and the walking world
     /// change only between slices.
     pub slice: f64,
+    /// The collision readiness readings every walking world the walker
+    /// builds again takes (a load door, the moving grid), as the first one
+    /// took them ([`crate::world::Options::collision`]).
+    pub collision: fo4_scene::readiness::Switches,
 }
 impl Default for Options {
     fn default() -> Self {
@@ -54,6 +58,7 @@ impl Default for Options {
             reach: None,
             settle_ticks: 600,
             slice: 0.0,
+            collision: fo4_scene::readiness::Switches::default(),
         }
     }
 }
@@ -105,11 +110,20 @@ pub struct Log {
     /// The moving platforms (`--play-elevator`): their build report and
     /// what they did, (second, text).
     pub elevators: Vec<(f64, String)>,
+    /// The run's `MoveTo` calls and sits of the player the walker did not
+    /// follow (`--play-player-moveto`, `--play-player-sits`): (second, why).
+    pub player_moves: Vec<(f64, String)>,
 }
 
-/// One load door crossed ([`Log::doors`]).
+/// One load door crossed, or one `MoveTo` of the player the walker
+/// followed ([`Log::doors`]).
 #[derive(Debug, Clone)]
 pub struct Crossed {
+    /// The rule that took the walker: [`crate::rules::LOAD_DOOR`] (`door`
+    /// is the door activated), [`crate::rules::PLAYER_MOVETO`] (`door` is
+    /// the `MoveTo`'s target) or [`crate::rules::PLAYER_SIT`] (`door` is the
+    /// furniture).
+    pub rule: &'static str,
     pub t: f64,
     pub door: FormKey,
     pub to: LoadDoor,
@@ -157,12 +171,121 @@ pub struct Elevators {
     /// A ride that carried the walker ends at the nearest load door within
     /// the reach (`--play-elevator-door`).
     pub door: bool,
+    /// A node a sequence controls without translation keys moves to the
+    /// translation the sequence holds it at (`--play-elevator-held-pose`,
+    /// `play_elevator_held_pose_v1`).
+    pub held_pose: bool,
 }
 
 /// The longest standing slice while moving platforms are named (seconds):
 /// the run's graphs may start a sequence in it, which the platforms read
 /// between slices (a setting of the play mode).
 pub const ELEVATOR_STAND: f64 = 0.1;
+
+/// The drawing side's rules the collision switches rely on.
+fn collision_rules(c: fo4_scene::readiness::Switches) -> std::collections::BTreeSet<&'static str> {
+    let mut out = std::collections::BTreeSet::new();
+    if c.off_chain {
+        out.insert(fo4_scene::hypotheses::COLLISION_OFF_CHAIN);
+    }
+    if c.reference_alpha {
+        out.insert(fo4_scene::hypotheses::REFERENCE_ALPHA_COLLISION);
+    }
+    out
+}
+
+/// Where the run puts the player, for the walker to go to: (target,
+/// place, rule).
+pub type Place = (FormKey, LoadDoor, &'static str);
+
+/// The place a `MoveTo` of the player gives (`play_player_moveto_v1`): its
+/// target's settled spot when its offsets are zero; else why not.
+pub fn move_place(m: &fo4_vm::track::PlayerMove) -> Result<Place, String> {
+    match (&m.target, m.zero_offsets) {
+        (
+            fo4_vm::track::Spot::At {
+                space, pos, record, ..
+            },
+            true,
+        ) => {
+            let to = LoadDoor {
+                to: record.clone().unwrap_or_else(|| space.clone()),
+                space: norm(space),
+                pos: *pos,
+                rot: [0.0; 3],
+            };
+            Ok((to.to.clone(), to, crate::rules::PLAYER_MOVETO))
+        }
+        (fo4_vm::track::Spot::At { .. }, false) => {
+            Err("a MoveTo of the player not followed: offsets that are not zero".into())
+        }
+        (fo4_vm::track::Spot::Open(why), _) => Err(format!(
+            "a MoveTo of the player not followed: target open: {why}"
+        )),
+    }
+}
+
+/// The place a sit of the player in the furniture reference `k` gives
+/// (`play_player_sit_furniture_v1`): the furniture's stored place `at`
+/// when it stands in another space than the walker's (`here`); in the
+/// walker's own space the walk itself stands for the way to it, and the
+/// sit is not followed.
+pub fn sit_place(
+    k: FormKey,
+    at: Result<(FormKey, [f64; 3]), String>,
+    here: Option<&FormKey>,
+) -> Result<Place, String> {
+    let (space, pos) =
+        at.map_err(|e| format!("a sit of the player not followed: the furniture's place: {e}"))?;
+    let space = norm(&space);
+    if here.map(norm).as_ref() == Some(&space) {
+        return Err(format!(
+            "a sit of the player not followed: {} stands in the walker's space",
+            fo4_vm::bind::record_key(&k)
+        ));
+    }
+    Ok((
+        k.clone(),
+        LoadDoor {
+            to: k,
+            space,
+            pos,
+            rot: [0.0; 3],
+        },
+        crate::rules::PLAYER_SIT,
+    ))
+}
+
+/// Notes for the log: (second, text).
+pub type Notes = Vec<(f64, String)>;
+
+/// Of the places the run gave the player since the last look, (second,
+/// place or why not), the last in the run's order (a stable sort by
+/// second keeps the order of equal seconds), and the notes to log: the
+/// places not followed, and those a later one replaces.
+pub fn latest_place(mut found: Vec<(f64, Result<Place, String>)>) -> (Option<(f64, Place)>, Notes) {
+    found.sort_by(|a, b| a.0.total_cmp(&b.0));
+    let mut last: Option<(f64, Place)> = None;
+    let mut notes = Vec::new();
+    for (t, r) in found {
+        match r {
+            Ok(x) => {
+                if let Some((t0, (k, _, rule))) = &last {
+                    notes.push((
+                        *t0,
+                        format!(
+                            "replaced by a later place at {t} s ({}, {rule})",
+                            fo4_vm::bind::record_key(k)
+                        ),
+                    ));
+                }
+                last = Some((t, x));
+            }
+            Err(why) => notes.push((t, why)),
+        }
+    }
+    (last, notes)
+}
 
 /// The walker driven by a scripted input.
 pub struct Walker {
@@ -175,6 +298,15 @@ pub struct Walker {
     nowait: bool,
     doors: Option<Doors>,
     door: Option<(FormKey, LoadDoor)>,
+    /// Follow the run's `MoveTo` calls on the player
+    /// (`play_player_moveto_v1`): the calls read so far and the one to
+    /// follow.
+    player_moves: Option<usize>,
+    /// Follow the run's sits of the player (`play_player_sit_furniture_v1`):
+    /// the sits and get-ups read so far.
+    player_sits: Option<usize>,
+    /// Where the run last put the player, to go to: (target, place, rule).
+    moved: Option<Place>,
     boxes: Option<pick::Boxes>,
     /// Boxes of statics left out (`play_activate_bounds_not_static_v1`),
     /// also in the walking worlds built later.
@@ -223,6 +355,9 @@ impl Walker {
             nowait: false,
             doors: None,
             door: None,
+            player_moves: None,
+            player_sits: None,
+            moved: None,
             boxes: None,
             statics_out: false,
             script,
@@ -236,7 +371,10 @@ impl Walker {
             still: true,
             visibility: Default::default(),
             end,
-            log: Rc::new(RefCell::new(Log::default())),
+            log: Rc::new(RefCell::new(Log {
+                rules: collision_rules(opts.collision),
+                ..Log::default()
+            })),
         })
     }
 
@@ -286,6 +424,94 @@ impl Walker {
         self
     }
 
+    /// Follows the run's `MoveTo` calls on the player
+    /// (`--play-player-moveto`, `play_player_moveto_v1`).
+    pub fn with_player_moves(mut self) -> Walker {
+        self.player_moves = Some(0);
+        self
+    }
+
+    /// Follows the run's sits of the player (`--play-player-sits`,
+    /// `play_player_sit_furniture_v1`).
+    pub fn with_player_sits(mut self) -> Walker {
+        self.player_sits = Some(0);
+        self
+    }
+
+    /// Reads the `MoveTo` calls the run made on the player
+    /// (`play_player_moveto_v1`) and the sits it gave the player
+    /// (`play_player_sit_furniture_v1`) since the last look, each under its
+    /// switch: the last of them in the run's order is the place the walker
+    /// goes to; a `MoveTo` with an offset or an open target, and a sit in a
+    /// furniture with no stored place, are logged as not followed.
+    fn follow_player_places(&mut self, run: &View<'_, '_>) {
+        let mut found: Vec<(f64, Result<Place, String>)> = Vec::new();
+        if let Some(seen) = self.player_moves {
+            let moves = &run.vm.world.place.player_moves;
+            for m in moves.iter().skip(seen) {
+                let r = move_place(m);
+                found.push((m.t, r));
+            }
+            self.player_moves = Some(moves.len());
+        }
+        if let Some(seen) = self.player_sits {
+            let w = &run.vm.world;
+            let changes = &w.sits.changes;
+            for (t, sitter, furniture, sits) in changes.iter().skip(seen) {
+                if !*sits || w.player != Some(*sitter) {
+                    continue;
+                }
+                let key = w.objects[*furniture]
+                    .key
+                    .as_deref()
+                    .and_then(fo4_vm::player::parse_key);
+                let r = match key {
+                    Some(k) => {
+                        let at = fo4_vm::track::stored_position(
+                            run.store,
+                            run.store.limits.max_memory,
+                            &k,
+                        )
+                        .map_err(|e| e.to_string());
+                        sit_place(k, at, self.space.as_ref())
+                    }
+                    None => Err(
+                        "a sit of the player not followed: the furniture is not a placed reference"
+                            .into(),
+                    ),
+                };
+                found.push((*t, r));
+            }
+            self.player_sits = Some(changes.len());
+        }
+        let mut log = self.log.borrow_mut();
+        if self.character.is_none() {
+            // Before the walker's start the caller's first point stands
+            // for where the player is.
+            for (t, _) in found {
+                log.player_moves.push((
+                    t,
+                    "before the walker's start: the caller's first point stands for it".into(),
+                ));
+            }
+            return;
+        }
+        let (last, notes) = latest_place(found);
+        log.player_moves.extend(notes);
+        if last.is_some() {
+            if let (Some((k, _, rule)), Some((t, _))) = (&self.moved, &last) {
+                log.player_moves.push((
+                    *t,
+                    format!(
+                        "a later place replaces one not yet reached ({}, {rule})",
+                        fo4_vm::bind::record_key(k)
+                    ),
+                ));
+            }
+            self.moved = last.map(|(_, x)| x);
+        }
+    }
+
     /// Whether a platform moves between two seconds.
     fn elevators_moving(&self, from: f64, to: f64) -> bool {
         self.elevators.iter().any(|e| e.moving(from, to))
@@ -329,8 +555,9 @@ impl Walker {
         }
         for (i, k) in o.references.iter().enumerate() {
             let also: &[FormKey] = &alsos[i];
-            let mut e = crate::elevator::Elevator::build(m, run.store, vfs, k, also, i as u32)
-                .map_err(|e| format!("PlayElevator {}: {e}", fo4_vm::bind::record_key(k)))?;
+            let mut e =
+                crate::elevator::Elevator::build(m, run.store, vfs, k, also, i as u32, o.held_pose)
+                    .map_err(|e| format!("PlayElevator {}: {e}", fo4_vm::bind::record_key(k)))?;
             if here.as_ref() == Some(&e.space) {
                 e.insert(self.live.space_mut(), self.t)
                     .map_err(|e| e.to_string())?;
@@ -344,6 +571,18 @@ impl Walker {
             log.rules
                 .insert(fo4_scene::hypotheses::ANIMATED_COLLISION_AS_STORED);
             log.rules.insert(fo4_walk::platform::rules::PLATFORM_RIDE);
+            if o.held_pose {
+                log.elevators.push((
+                    self.t,
+                    format!(
+                        "{}: {} (node, sequence) track(s) from a held translation",
+                        fo4_vm::bind::record_key(k),
+                        e.held
+                    ),
+                ));
+                log.rules.insert(crate::rules::ELEVATOR_HELD_POSE);
+                log.rules.insert(fo4_scene::hypotheses::SEQUENCE_HELD_POSE);
+            }
             drop(log);
             self.elevators.push(e);
         }
@@ -697,10 +936,17 @@ impl Walker {
         Ok(())
     }
 
-    /// Through a load door: the walking world of the door's destination,
-    /// the walker settled at the teleport position, the point given to the
-    /// run at the activation's second.
-    fn cross(&mut self, run: &View<'_, '_>, door: FormKey, to: LoadDoor) -> Result<Next, String> {
+    /// Through a load door (or to a `MoveTo`'s target, under `rule`): the
+    /// walking world of the destination, the walker settled at the
+    /// teleport position, the point given to the run at the walker's
+    /// present second.
+    fn cross(
+        &mut self,
+        run: &View<'_, '_>,
+        door: FormKey,
+        to: LoadDoor,
+        rule: &'static str,
+    ) -> Result<Next, String> {
         let started = std::time::Instant::now();
         let (m, _) = run.sources;
         let b = Budget::new(m.limits.max_memory);
@@ -725,8 +971,9 @@ impl Walker {
         self.last = Some(p.clone());
         self.still = false;
         let mut log = self.log.borrow_mut();
-        log.rules.insert(crate::rules::LOAD_DOOR);
+        log.rules.insert(rule);
         log.doors.push(Crossed {
+            rule,
             t: self.t,
             door,
             to,
@@ -806,6 +1053,7 @@ impl Walker {
                 around,
                 live: follows,
                 doors: self.doors.is_some(),
+                collision: self.opts.collision,
             },
         )
         .map_err(|e| e.to_string())?;
@@ -859,10 +1107,15 @@ impl Driver for Walker {
             .and_then(|()| self.follow(run.vm));
         if followed.is_ok() {
             self.follow_elevators(run);
+            self.follow_player_places(run);
         }
-        let crossed = match (followed, self.door.take()) {
+        let next = match self.door.take() {
+            Some((door, to)) => Some((door, to, crate::rules::LOAD_DOOR)),
+            None => self.moved.take(),
+        };
+        let crossed = match (followed, next) {
             (Err(why), _) => Some(Err(why)),
-            (Ok(()), Some((door, to))) => Some(self.cross(run, door, to)),
+            (Ok(()), Some((door, to, rule))) => Some(self.cross(run, door, to, rule)),
             (Ok(()), None) => None,
         };
         let stats = self.live.stats.clone();
@@ -908,6 +1161,135 @@ impl Driver for Walker {
 mod tests {
     use super::*;
     use fo4_core::Budget;
+
+    fn k(n: u32) -> FormKey {
+        FormKey {
+            plugin: "a.esm".into(),
+            object_id: n,
+        }
+    }
+
+    #[test]
+    fn a_moveto_with_zero_offsets_and_a_settled_target_is_a_place() {
+        let at = fo4_vm::track::Spot::At {
+            space: k(1),
+            pos: [1.0, 2.0, 3.0],
+            facing: Some(90.0),
+            record: Some(k(7)),
+        };
+        let m = fo4_vm::track::PlayerMove {
+            t: 4.0,
+            target: at.clone(),
+            zero_offsets: true,
+        };
+        let (key, to, rule) = move_place(&m).unwrap();
+        assert_eq!(key, k(7));
+        assert_eq!(
+            (to.to, to.space, to.pos),
+            (k(7), norm(&k(1)), [1.0, 2.0, 3.0])
+        );
+        assert_eq!(rule, crate::rules::PLAYER_MOVETO);
+        let off = fo4_vm::track::PlayerMove {
+            zero_offsets: false,
+            ..m.clone()
+        };
+        assert!(move_place(&off).unwrap_err().contains("offsets"));
+        let open = fo4_vm::track::PlayerMove {
+            target: fo4_vm::track::Spot::Open("no track"),
+            ..m
+        };
+        assert!(move_place(&open).unwrap_err().contains("no track"));
+    }
+
+    #[test]
+    fn a_sit_is_followed_only_into_another_space() {
+        let (key, to, rule) = sit_place(k(5), Ok((k(2), [1.0, 2.0, 3.0])), Some(&k(1))).unwrap();
+        assert_eq!(
+            (key, to.space, to.pos, rule),
+            (k(5), k(2), [1.0, 2.0, 3.0], crate::rules::PLAYER_SIT)
+        );
+        assert!(sit_place(k(5), Ok((k(2), [0.0; 3])), None).is_ok());
+        let same = sit_place(k(5), Ok((k(1), [0.0; 3])), Some(&k(1))).unwrap_err();
+        assert!(same.contains("the walker's space"), "{same}");
+        let open = sit_place(k(5), Err("unplaced".into()), Some(&k(1))).unwrap_err();
+        assert!(open.contains("unplaced"), "{open}");
+    }
+
+    #[test]
+    fn the_last_place_in_the_runs_order_wins() {
+        let place = |n: u32, rule: &'static str| {
+            Ok((
+                k(n),
+                LoadDoor {
+                    to: k(n),
+                    space: k(1),
+                    pos: [0.0; 3],
+                    rot: [0.0; 3],
+                },
+                rule,
+            ))
+        };
+        assert_eq!(latest_place(Vec::new()), (None, Vec::new()));
+        // A MoveTo, then a sit 0.04 s later, given out of order; one
+        // refusal in between.
+        let found = vec![
+            (2.04, place(9, crate::rules::PLAYER_SIT)),
+            (2.0, place(8, crate::rules::PLAYER_MOVETO)),
+            (2.02, Err("not followed".to_string())),
+        ];
+        let (last, notes) = latest_place(found);
+        let (t, (key, _, rule)) = last.unwrap();
+        assert_eq!((t, key, rule), (2.04, k(9), crate::rules::PLAYER_SIT));
+        assert_eq!(notes.len(), 2);
+        assert_eq!(notes[0], (2.02, "not followed".to_string()));
+        assert_eq!(notes[1].0, 2.0);
+        assert!(notes[1]
+            .1
+            .starts_with("replaced by a later place at 2.04 s"));
+        // Equal seconds keep the run's order.
+        let (last, _) = latest_place(vec![
+            (3.0, place(1, crate::rules::PLAYER_MOVETO)),
+            (3.0, place(2, crate::rules::PLAYER_SIT)),
+        ]);
+        assert_eq!(last.unwrap().1 .0, k(2));
+    }
+
+    #[test]
+    fn the_collision_switches_are_off_by_default_and_name_their_rules() {
+        let o = Options::default();
+        assert!(!o.collision.any());
+        assert_eq!(crate::world::Options::default().collision, o.collision);
+        assert!(collision_rules(o.collision).is_empty());
+        let w = Walker::new(
+            floor(),
+            Vec::new(),
+            Script::parse("1 forward on").unwrap(),
+            o,
+        )
+        .unwrap();
+        assert!(w.log.borrow().rules.is_empty());
+        let on = Options {
+            collision: fo4_scene::readiness::Switches {
+                off_chain: true,
+                reference_alpha: true,
+            },
+            ..Options::default()
+        };
+        let w = Walker::new(
+            floor(),
+            Vec::new(),
+            Script::parse("1 forward on").unwrap(),
+            on,
+        )
+        .unwrap();
+        let rules: Vec<&str> = w.log.borrow().rules.iter().copied().collect();
+        let mut want = vec![
+            fo4_scene::hypotheses::COLLISION_OFF_CHAIN,
+            fo4_scene::hypotheses::REFERENCE_ALPHA_COLLISION,
+        ];
+        want.sort();
+        assert_eq!(rules, want);
+    }
 
     fn floor() -> World {
         let b = Budget::new(1 << 24);

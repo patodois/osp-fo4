@@ -73,6 +73,11 @@ pub struct Sits {
     pub pending_get_ups: Vec<(ObjId, ObjId)>,
     /// (real-time second, what happened), in order.
     pub log: Vec<(f64, String)>,
+    /// The sits and get-ups the run raised, in order: (real-time second,
+    /// sitter, furniture, `true` for a sit); kept for a caller that steps
+    /// the run (the play mode's `--play-player-sits`), read by nothing in
+    /// the run.
+    pub changes: Vec<(f64, ObjId, ObjId, bool)>,
     pub counts: BTreeMap<String, u64>,
     /// Rules relied on inside a native call, taken by the host after it.
     pub used: Vec<&'static str>,
@@ -304,6 +309,7 @@ pub fn sit(
         vm.world.objects[sitter].label, vm.world.objects[furniture].label
     );
     vm.world.sits.log.push((t, what.clone()));
+    vm.world.sits.changes.push((t, sitter, furniture, true));
     let (runs, _) =
         player::deliver_event(vm, store, sitter, "onsit", vec![Val::Object(furniture)], b)?;
     out.push(Raised { t, what, runs });
@@ -336,6 +342,7 @@ pub fn get_up(
         vm.world.objects[sitter].label, vm.world.objects[furniture].label
     );
     vm.world.sits.log.push((t, what.clone()));
+    vm.world.sits.changes.push((t, sitter, furniture, false));
     let (mut runs, _) = player::deliver_event(
         vm,
         store,

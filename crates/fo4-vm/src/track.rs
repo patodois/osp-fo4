@@ -934,6 +934,17 @@ pub struct PlacedActor {
     pub pos: [f64; 3],
 }
 
+/// A `MoveTo` the run called on the player ([`Place::player_moves`]).
+#[derive(Debug, Clone, PartialEq)]
+pub struct PlayerMove {
+    /// The run's second of the call.
+    pub t: f64,
+    /// Where the target stands then.
+    pub target: Spot,
+    /// Whether the three offsets after the target are all zero.
+    pub zero_offsets: bool,
+}
+
 /// The model's state in a run's world; off (`on == false`) unless a caller
 /// gives a track.
 #[derive(Debug, Default)]
@@ -960,6 +971,10 @@ pub struct Place {
     /// Where a `MoveTo` with zero offsets put an object, at the second of
     /// that native (`world_moveto_target_v1`): (second, space, position).
     pub native_at: BTreeMap<ObjId, (f64, FormKey, [f64; 3])>,
+    /// The run's `MoveTo` calls on the player, in order (kept for a caller
+    /// that steps the run: the play mode follows them under its own
+    /// switch; the run itself only compares them with the track).
+    pub player_moves: Vec<PlayerMove>,
     /// The caller's assumed actor moves, earliest first.
     pub actor_moves: Vec<ActorMove>,
     /// Actor moves applied so far (`world_actor_trigger_v1`).
@@ -1787,6 +1802,15 @@ pub fn observe(store: &Store, max: u64, c: &NativeCall, w: &mut World) {
     if w.player == Some(o) {
         if full == "objectreference.moveto" {
             let target = spot(store, max, w, c.args.first());
+            let zero_offsets = c
+                .args
+                .get(1..4)
+                .is_some_and(|x| x.iter().all(|v| matches!(v, Val::Float(f) if *f == 0.0)));
+            w.place.player_moves.push(PlayerMove {
+                t: w.now[Clock::Real as usize],
+                target: target.clone(),
+                zero_offsets,
+            });
             let here = spot(store, max, w, Some(&Val::Object(o)));
             let what = match (here, target) {
                 (
