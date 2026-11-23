@@ -2097,14 +2097,28 @@ impl Builder<'_, '_> {
             n.block_types[n.blocks[shader].type_index as usize] == "BSEffectShaderProperty";
         let switches = self.options.clock;
         for i in 0..n.blocks.len() {
-            // The effect fields behind their switches, in slots 5 to 10.
-            let field = fo4_scene::rest::effect_clock_field(n, i)
-                .filter(|(c, v)| effect && switches.effect_field(*c, *v));
-            let Some(variable) = fo4_scene::rest::clock_field(n, i).or(field.map(|(c, v)| {
-                // Out of the range of `clock_field`'s variables.
-                100 + u32::from(c) * 10 + v
-            })) else {
-                continue;
+            // Alpha and UV fields, and the effect fields behind their
+            // switches (slots 5 to 10).
+            let slot = match fo4_scene::rest::clock_field(n, i) {
+                Some(variable) => match (effect, variable) {
+                    (true, 5) | (false, 12) => crate::TRACK_OPACITY,
+                    (true, 6) | (false, 20) => crate::TRACK_U_OFFSET,
+                    (true, 7) | (false, 21) => crate::TRACK_U_SCALE,
+                    (true, 8) | (false, 22) => crate::TRACK_V_OFFSET,
+                    (true, 9) | (false, 23) => crate::TRACK_V_SCALE,
+                    _ => continue,
+                },
+                None => match fo4_scene::rest::effect_clock_field(n, i)
+                    .filter(|(c, v)| effect && switches.effect_field(*c, *v))
+                {
+                    Some((true, _)) => crate::TRACK_EMISSIVE_COLOUR,
+                    Some((false, 0)) => crate::TRACK_EMISSIVE_MULTIPLE,
+                    Some((false, 1)) => crate::TRACK_FALLOFF_START_ANGLE,
+                    Some((false, 2)) => crate::TRACK_FALLOFF_STOP_ANGLE,
+                    Some((false, 3)) => crate::TRACK_FALLOFF_START_OPACITY,
+                    Some((false, 4)) => crate::TRACK_FALLOFF_STOP_OPACITY,
+                    _ => continue,
+                },
             };
             let target = n
                 .blocks
@@ -2116,20 +2130,6 @@ impl Builder<'_, '_> {
             }
             let Ok(track) = fo4_scene::clock::track(n, i, self.budget)? else {
                 continue;
-            };
-            let slot = match (effect, variable) {
-                (true, 5) | (false, 12) => crate::TRACK_OPACITY,
-                (true, 6) | (false, 20) => crate::TRACK_U_OFFSET,
-                (true, 7) | (false, 21) => crate::TRACK_U_SCALE,
-                (true, 8) | (false, 22) => crate::TRACK_V_OFFSET,
-                (true, 9) | (false, 23) => crate::TRACK_V_SCALE,
-                (true, 100) => crate::TRACK_EMISSIVE_MULTIPLE,
-                (true, 101) => crate::TRACK_FALLOFF_START_ANGLE,
-                (true, 102) => crate::TRACK_FALLOFF_STOP_ANGLE,
-                (true, 103) => crate::TRACK_FALLOFF_START_OPACITY,
-                (true, 104) => crate::TRACK_FALLOFF_STOP_OPACITY,
-                (true, 110) => crate::TRACK_EMISSIVE_COLOUR,
-                _ => continue,
             };
             if out[slot].is_some() {
                 return Err(error(
