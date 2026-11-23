@@ -1,26 +1,63 @@
-# quest_run new-game: the next main quest's stages and the vault dialogue quest's, by number and role (kinds only; spec/vm.md, The forced run through the vault)
-# A static reading of the stage records (log entries, editor notes read for their role only, fragments), the stage-setter table (stage_census, with other scripts' calls), every condition of every record testing the stage (functions 58 and 59), the compiled scripts the setters run, and the behaviour graphs of the door console, the vault door and the wrist computer's furniture; the run is the vault step's final run (spec/quest-run-vault.txt).
-# Columns: quest, stage, what sets it in the data, what it needs in the run, what its fragment does (role), the final run (set, or why not).
-# Needs: data (the data and the pending readings set it), caller (a player action or event the caller assumes), other quest (set by another quest's stage), none (no setter).
-
+# quest_run new-game: the next main quest's stages, the vault dialogue quest's and the household robot's postwar dialogue quest's, by number and role (kinds only; spec/vm.md, The forced run through the vault and The walk home)
+# A static reading of the stage records (log entries, editor notes read for their role only, fragments), the stage-setter table (stage_census, with other scripts' calls), every condition of every record testing the stage (functions 58 and 59), the compiled scripts the setters run, the robot's dialogue lines and scenes (topics, line fields, start-scene fields), and the behaviour graphs of the door console, the vault door and the wrist computer's furniture; the run is the home step's furthest run (spec/quest-run-home.txt).
+# Columns: quest, stage, what sets it in the data, what it needs in the run, what its fragment does (role), the furthest run (set, or why not).
+# Needs: data (the data and the pending readings set it), caller (a player action or event the caller assumes), other quest (set by another quest's stage), none (no setter); not modelled names what the interpreter does not model (combat, deaths, inventory, locks).
 ## 1 the next main quest: the postwar vault
 next main	0	the opening's sequence quest's stage that moves the player to the postwar vault; a placed trigger's enter handler through the shared helper	data	starts the exit scene, enables the spouse's body by the player's sex, sets the vault dialogue quest's stage 50, sets the game hour and the time scale	set (exit step)
 next main	2	the player alias's handler of the pod's exit key (registered by both phase-end fragments of the exit scene)	data (pod graph readings of the exit step)	blocks the spouses' activation, registers the quest for the player's camera event	set (exit step)
 next main	1	the quest script's handler of the player's camera event	caller (the player's event, the caller's menu-mode answer)	sets the opening quest's last stage, then this one: shows the first objective	set (exit step)
-next main	3	a placed trigger's enter handler through the shared helper (the corridor out of the cryo room)	caller (trigger entry)	disables the blocked door's enable parent, unlocks and opens the first door	set
+next main	3	a placed trigger's enter handler through the shared helper (the corridor out of the cryo room)	data (the caller's walk crosses the trigger's volume, --track)	disables the blocked door's enable parent, unlocks and opens the first door	set
 next main	4	the wrist computer's skeleton alias: the default activation alias script (by the player, with its combat check; the skeleton's own script asks the same)	caller (activation) and the caller's combat answer	registers the quest for the player's wrist computer animation event, blocks the skeleton and the wrist computer furniture, sets the tutorial quest's stage	set
 next main	6	the quest script's handler of the player's wrist computer animation event	caller (the player's event)	sets the tutorial quest's stage when its later stage is not done	set
 next main	5	the door console alias's activation handler when the wrist computer stage is not done (plays a failure sound)	caller (activation before the wrist computer)	starts the console scene	not set: alternative (the run activates the console after the wrist computer; set in a labelled variant)
 next main	7	the door console alias's activation handler when the wrist computer stage is done and this one is not (the player not in combat, not sitting)	caller (activation), the caller's combat answer, the sit state from the run's sitters	gives and equips the wrist computer, activates the console furniture for the player (a sit under the exit step's reading), registers the quest for three of the player's events and the console's end key, the alias for a fourth player event	set
 next main	9	the console alias's button function, called by the quest script's handler of the player's plug-in event, or by the alias's activation once the player's unplug event moved it on	caller (the player's event; or the player's other event and an activation)	plays the console's third stage event, registers the quest for the console's fourth stage key, closes two exit doors	set (a labelled variant takes the other way)
 next main	8	the quest script's handler of the console's fourth stage key	data (the console graph's start settled, its sequences found ignoring case, the handler's text comparison ignoring case)	plays the vault door's opening event, enables the klaxons, registers for the door's two keys, sets the vault dialogue quest's stage 95	set
-next main	10	the exterior elevator trigger's enter handler (waits for the ride, then sets the stage); a placed trigger's enter handler through the shared helper; six stage fragments of add-on quests	caller (trigger entry outside; the ride up is not modelled)	sets the tutorial stage and the vault dialogue quest's stage 110, an achievement, the next objective, sets stage 15	set
+next main	10	the exterior elevator trigger's enter handler (waits for the ride, then sets the stage); a placed trigger's enter handler through the shared helper; six stage fragments of add-on quests	data (the walk reaches the autoload door at the top of the exit elevator's shaft, whose teleport position lies in the trigger's volume, --load-doors; the ride up is the caller's track)	sets the tutorial stage and the vault dialogue quest's stage 110, an achievement, the next objective, sets stage 15	set
 next main	15	this quest's stage 10 fragment; stage fragments of add-on and faction quests	data	starts three radio and faction quests	set
-next main	20	a placed trigger's enter handler outside the vault, through the shared helper; six add-on quest stage fragments	caller (trigger entry)	objectives	set
-next main	22	the end of two lines of the household robot's postwar dialogue	not reached	-	beyond the run's end: a conversation with the robot
-next main	25 to 200	dialogue lines (the robot, the settlement's people), triggers, alias deaths and combat events, a terminal item, timers, other quests' stage fragments	not reached	the walk to the settlement and the town, the fight, the power armor	beyond the run's end (counts in section 3)
-next main	75	nothing	none	-	no setter in the table
-next main	1000	nothing	none	-	no setter in the table (flag 0x04 stage)
+next main	20	a placed trigger's enter handler outside the vault, through the shared helper; six add-on quest stage fragments	data (the caller's walk crosses the trigger's volume, --track)	objectives	set
+
+next main	22	the end of two lines of the household robot's postwar dialogue (the third phase of its speech challenge scene; a line for each player sex)	data (line fragments, line start scenes, function 70 on the player in the robot's quest, info groups) and caller (the conversation, the player's choices, the speech check's condition)	gives the player an item	set (home step)
+next main	25	this quest's stage 30 fragment	data	moves the robot from one faction to another and takes three dogs out of one (the insect hunt)	set (home step)
+next main	30	the end of six lines of the robot's speech challenge (the answers of its fourth phase), the robot quest's stage 50 fragment, the robot alias's death or dying	data (line fragments) and caller (the player's choice)	objectives; sets 25	set (home step)
+next main	32	hit or combat state change events of three aliases (the first insects)	not modelled (combat)	objectives	not set: no combat is modelled
+next main	34	death or dying events of those three aliases, through the quest script	not modelled (deaths)	objectives; sets 40 when 38 is done	not set: no combat is modelled
+next main	36	hit or combat state change events of three other aliases	not modelled (combat)	objectives	not set: no combat is modelled
+next main	38	death or dying events of those three aliases, through the quest script	not modelled (deaths)	objectives; sets 40 when 34 is done	not set: no combat is modelled
+next main	40	stages 34 and 38; the quest script's timer handler (its starter not traced)	data after 34 and 38	sets the robot quest's stage 100	not set: waits on 34 and 38
+next main	50	the robot quest's stages 200 and 275; the end of two lines	data (the robot quest) or dialogue	objectives; the robot leaves a faction	not set: beyond the run's end
+next main	55	four placed triggers; another quest's stage fragment	caller (trigger entry)	objectives; disables four references, sets another quest's stage, starts a quest, sets a global	not set: beyond the run's end (the walk to the town)
+next main	60	a placed trigger	caller (trigger entry)	starts a quest	not set: beyond the run's end
+next main	61	two other quests' stage fragments	other quest	stops a quest	not set: beyond the run's end
+next main	62	an alias's container change event	not modelled (inventory)	an objective	not set: beyond the run's end
+next main	65	this quest's stage 70 fragment; a scene's end fragment; the end of two lines	data	completes objectives, sets another quest's stage, packages	not set: beyond the run's end
+next main	70	the player alias's location change event; a placed trigger	caller (trigger entry; location change events are not modelled)	sets 65 and another quest's stage, stops a quest, moves an actor, blocks an activation	not set: beyond the run's end
+next main	75	nothing	none	sets another quest's stage, a package	no setter in the table
+next main	77	a placed trigger	caller (trigger entry)	nothing	not set: beyond the run's end
+next main	78	a placed trigger	caller (trigger entry)	enables seven actors	not set: beyond the run's end
+next main	80	an alias's activation	caller (activation)	sets another quest's stage; six failsafe calls	not set: beyond the run's end
+next main	85	death events of seven aliases through the quest script; another quest's stage fragment	not modelled (deaths) or other quest	sets another quest's stage, packages, starts a quest, moves an actor, factions	not set: beyond the run's end
+next main	87	a placed trigger	caller (trigger entry)	stops a quest	not set: beyond the run's end
+next main	88	a placed trigger	caller (trigger entry)	starts a quest, unlocks two references	not set: beyond the run's end
+next main	89	another quest's stage fragment	other quest	sets another quest's stage	not set: beyond the run's end
+next main	90	the end of fifteen lines; two other quests' stage fragments	dialogue or other quest	three fragments: other quests' stages, packages, factions	not set: beyond the run's end
+next main	95	a terminal's menu item	caller (terminal use)	nothing	not set: beyond the run's end
+next main	100	this quest's stage 90 fragment; an alias's lock state change event	data after 90; not modelled (locks)	sets another quest's stage	not set: beyond the run's end
+next main	105	an alias's item added event	not modelled (inventory)	nothing	not set: beyond the run's end
+next main	110	an alias's activation	caller (activation)	sets another quest's stage	not set: beyond the run's end
+next main	115	a base activator's script on activation	caller (activation)	sets another quest's stage	not set: beyond the run's end
+next main	120	another quest's stage fragment	other quest	enables a reference	not set: beyond the run's end
+next main	122	death events of five aliases; a patch quest's stage fragment	not modelled (deaths) or other quest	sets another quest's stage	not set: beyond the run's end
+next main	123	other quests' stage fragments	other quest	sets another quest's stage	not set: beyond the run's end
+next main	125	a scene's begin fragment	data (scene)	stops a quest	not set: beyond the run's end
+next main	127	the same scene's end fragment	data (scene)	a package	not set: beyond the run's end
+next main	128	a line's own script's begin and end events	not modelled (a line's own script)	nothing	not set: beyond the run's end
+next main	130	four other quests' stage fragments	other quest	enables a reference; sets another quest's stage, moves five actors, packages, keywords	not set: beyond the run's end
+next main	135	a placed trigger	caller (trigger entry)	moves an actor, a package, starts a quest	not set: beyond the run's end
+next main	140	two other quests' stage fragments	other quest	sets another quest's stage	not set: beyond the run's end
+next main	150	two other quests' stage fragments; two lines' own scripts	other quest; not modelled (a line's own script)	sets stages, a map marker, enables a reference	not set: beyond the run's end
+next main	200	four other quests' stage fragments	other quest	stops a quest	not set: beyond the run's end
+next main	1000	nothing	none	the robot leaves factions, unblocks an activation, sets another quest's stage	no setter in the table (flag 0x04 stage)
 
 ## 2 the vault dialogue quest (starts with the game)
 vault dialogue	40	the first half of a phase field of the exit scene (its second phase begins)	data	activates the player's pod for the player (the exit step's get-up), blocks two doors	set (exit step)
@@ -31,19 +68,40 @@ vault dialogue	57	the spouse's pod alias: the default activation alias script	ca
 vault dialogue	58	the quest script's handler of the spouse pod's transition key	data after 56	starts a scene when 60 is not done and the player sees the pod; names and enables the spouse's body activator	not set: optional (after 56)
 vault dialogue	60	the spouses' aliases and the body activator alias (default activation alias script), the two placed spouse bodies (default reference activation script)	caller (activation)	takes the ring from the spouse, starts a scene	not set: optional
 vault dialogue	65	a collection alias's death handler (the vault's pests)	not modelled (death)	starts a scene, empties the collection	not set: no combat is modelled
-vault dialogue	70, 72, 74	three placed triggers' enter handlers through the shared helper	caller (trigger entry)	each starts one of the player's spoken remarks	not set: optional (the run assumes no walk through them)
+vault dialogue	70, 72	two placed triggers' enter handlers through the shared helper	data (the caller's walk crosses the trigger's volume, --track)	each starts one of the player's spoken remarks	set (home step: the walk crosses them)
+vault dialogue	74	a placed trigger's enter handler through the shared helper	caller (trigger entry)	starts one of the player's spoken remarks	not set: optional (the walk does not cross it)
 vault dialogue	80	a placed trigger's enter handler through the shared helper	caller (trigger entry)	nothing	not set: optional
 vault dialogue	90	nothing	none	nothing	no setter in the table
 vault dialogue	95	the next main quest's stage 8 fragment	data	stops the player's loop scene, starts the door opening scene, unblocks two doors	set
-vault dialogue	97	a placed trigger's enter handler through the shared helper (past the vault door)	caller (trigger entry)	asks for a save	set
-vault dialogue	98	the exit trigger's enter handler (once, by the player)	caller (trigger entry)	starts the character changes scene; the handler then waits and shows a message box	set
+vault dialogue	97	a placed trigger's enter handler through the shared helper (past the vault door)	data (the caller's walk crosses the trigger's volume, --track)	asks for a save	set
+vault dialogue	98	the exit trigger's enter handler (once, by the player)	data (the caller's walk crosses the trigger's volume, --track) and caller (the message box's button)	starts the character changes scene; the handler then waits and shows a message box	set
 vault dialogue	100	the exit trigger's button function: the message box's third button, or the menus' close events showing the box again	caller (message box button)	stops the character changes scene, starts the exit scene; the handler plays the exit elevator's event, resets the lights	set
 vault dialogue	110	the next main quest's stage 10 fragment	data	starts the scene outside the vault	set
 
-## 3 counts
-54	stages of the next main quest; 18 of the vault dialogue quest
-12	next main quest stages the final run sets (0, 1, 2, 3, 4, 6, 7, 8, 9, 10, 15, 20); 3 of them before this step (0, 1, 2)
-8	vault dialogue quest stages the final run sets (40, 50, 55, 95, 97, 98, 100, 110); 3 of them before this step
+## 3 the household robot's postwar dialogue quest (starts with the game)
+robot	5	this quest's stage 300 fragment; another quest's stage fragment	data after 300 or other quest	the robot joins the settlement's workshop	not set: beyond the run's end
+robot	10	the first half of the robot's postwar greeting line (outside scenes; the line names the introduction scene)	caller (the conversation and the line choice, --assume-talk, --assume-line) and data (info groups)	nothing	set (home step)
+robot	15	the second half of the fetch-food scene's first phase field (the introduction's start-scene action starts that scene)	data (start-scene action under the caller's assumption)	registers the quest for the robot's animation event and plays the robot's idle	set (home step)
+robot	20	the quest script's handler of the robot's animation event	caller (the robot's animation event, --assume-anim-event)	nothing	set (home step)
+robot	30	the second half of two greeting lines (after the food; the lines name the after-food scene)	caller (a second conversation and the line choice) and data (function 70, info groups)	gives the player an item, sets 35	set (home step)
+robot	35	this quest's stage 30 fragment; the first half of two lines	data	nothing	set (home step)
+robot	40	the first half of eight lines (the speech challenge's last line among them)	data	nothing	set (home step)
+robot	50	the second half of three lines	caller (the player's choice in the patrol scene, --assume-player-choice-for the scene) and data (line stage fields)	sets the next main quest's stage 30, starts a search quest, enables a holotape marker when the next main quest's stage 22 is done	set (home step: the end of the patrol scene's answer)
+robot	100	the next main quest's stage 40 fragment; the second half of six lines; a search scene's end field	data after the next main quest's 40	stops a scene, a package, enables a holotape marker when the next main quest's stage 22 is done	not set: waits on combat (the next main quest's 40)
+robot	105	the first half of a line; a search scene's begin field	dialogue	nothing	not set: beyond the run's end
+robot	200	a line's end fragment; the second half of five lines	dialogue	sets the next main quest's stage 50	not set: beyond the run's end
+robot	250	this quest's stage 300 fragment; a follower scene's second phase field	data	the robot becomes available as a companion	not set: beyond the run's end
+robot	275	a line's own script's begin and end events	not modelled (a line's own script)	sets the next main quest's stage 50 when its stages 50 and 55 are not done	not set: beyond the run's end
+robot	300	the end field of the last phase of the scene played when the player skipped the robot	data (another way)	sets 250 and 5, enables a holotape marker	not set: an alternative (the run talks to the robot)
+robot	500	death or dying events of the robot's alias	not modelled (deaths)	stops the quest	not set: no combat is modelled
+robot	1000	nothing	none	nothing	no setter in the table
+
+## 4 counts
+54	stages of the next main quest; 18 of the vault dialogue quest; 16 of the robot's postwar dialogue quest
+15	next main quest stages the furthest run sets (0, 1, 2, 3, 4, 6, 7, 8, 9, 10, 15, 20, 22, 25, 30); 12 of them before this step
+10	vault dialogue quest stages the furthest run sets (40, 50, 55, 70, 72, 95, 97, 98, 100, 110); 8 of them before this step (70 and 72 come from triggers the walk crosses)
+7	robot quest stages the furthest run sets (10, 15, 20, 30, 35, 40, 50); none before this step
 1	next main quest stage in the vault the run does not set: 5 (an alternative order of the player's actions)
-9	vault dialogue quest stages the run does not set: optional actions (56, 57, 58, 60, 70, 72, 74, 80), a death (65); plus 90 with no setter
-41	next main quest stages after 20, beyond the run's end; 2 of them with no setter (75, 1000)
+8	vault dialogue quest stages the run does not set: optional actions (56, 57, 58, 60, 74, 80), a death (65); plus 90 with no setter
+38	next main quest stages after 30 the run does not set: 4 wait on combat (32, 34, 36, 38), 1 on them (40), 31 lie beyond the run's end, 2 have no setter (75, 1000)
+9	robot quest stages the run does not set: 1 waits on combat (100, through the next main quest's 40), 1 on a death (500), 1 is another way (300), 5 lie beyond the run's end, 1 has no setter (1000)

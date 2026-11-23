@@ -763,3 +763,20 @@ were recognised from prior general knowledge and are pending rules with
 the data hints their rows record. No editor, editor source or definition
 file, reader of another project, shader of another project or game
 executable was opened.
+The home step (`fo4_vm::track::teleport_of` and the load-door passage,
+`fo4_vm::line`, condition function 70 on the player in `fo4_vm::cond`, info
+groups in `fo4_vm::talk`; [spec/vm.md](../spec/vm.md), The walk home;
+[spec/quest-run-home.txt](../spec/quest-run-home.txt),
+[spec/quest-run-vault-stages.txt](../spec/quest-run-vault-stages.txt)) reads
+the `XTEL` of placed doors past its established first word (three position
+and three rotation words, a reading measured over the 1,204 stored values
+and kept as a pending rule, not a layout fact: the plugin layout table is
+unchanged), and the `TSCE`, `INTV` and `GNAM` words of dialogue lines as
+FormIDs and a phase index under pending rules. That a load door moves the
+player to its teleport marker, that a line's fragments run as it begins and
+ends and its start-scene field starts the scene after it, what condition
+function 70 compares, and that an info group's conditions apply to its lines
+were recognised from prior general knowledge and are pending rules. No
+behaviour or animation tool or library of any project, editor, editor source
+or definition file, script source or game executable was opened or searched
+for.

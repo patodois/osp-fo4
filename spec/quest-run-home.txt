@@ -1,0 +1,131 @@
+# quest_run new-game, the walk home (home step): the vault step's final run with its five trigger entries replaced by a walked track, and the household robot's conversation; kinds and counts only (spec/vm.md, The walk home)
+# Section 1: the trigger entries the track replaces. Section 2: stops passed after the vault, in order. Section 3: how far the run gets, by quest. Section 4: the caller's assumptions of the furthest run.
+# Section 5: the home step's readings in the furthest run. Section 6: the furthest run's --next-blockers. Section 7: stages set with one thing changed. Section 8: where the run ends and what stops next.
+# Stage numbers only; spec/quest-run-vault-stages.txt says what sets each stage. The track, its plans, the command lines and every record named are in the step's notes, outside the repository.
+
+## 1 the vault step's caller trigger entries, now from the track (entry | second the track enters the trigger's volume | without --load-doors)
+the corridor trigger out of the cryo room (next main 3)	845.761	845.761
+the save trigger past the vault door (vault dialogue 97)	934.448	934.448
+the exit trigger on the elevator platform (vault dialogue 98, 100 with the button)	945.301	945.301
+the exterior elevator trigger (next main 10, 15)	955.367	968.000
+the settlement trigger (next main 20)	1005.072	1005.072
+5	of the 5 caller trigger entries reproduced by the track's crossings of the triggers' volumes (the exterior one through the load door's teleport position under --load-doors, else at the caller's first point outside)
+
+## 2 stops passed after the vault, in order (stop | what passed it | data or caller | the kind of world it stands for)
+the ride up the exit elevator	the exit trigger's button function plays the elevator's ascent event, which its graph does not take from its start state (undetermined, nothing scheduled); the caller's track rides from the platform to the shaft's top in the ascent sequence's 9.87 s	caller assumption	player movement on a moving platform
+the surface (next main 10)	the track reaches the automatic load door at the shaft's top; under --load-doors the player stands at the position its XTEL stores, inside the exterior elevator trigger's box (the body reading meets it)	data and caller	a load door; player movement between spaces
+the settlement (next main 20)	the track planned on the worldspace's navigation meshes from the door's destination enters the settlement trigger	data and caller	player movement
+the robot's greeting (robot quest 10)	the player talks to the robot (--assume-talk, held until next main 20); the postwar greeting (--assume-line) holds with its info group's conditions (--info-groups); its first half sets the stage	data and caller	a conversation; the line choice
+the introduction scene	the greeting's start-scene field starts it as the line ends (--line-start-scene); the player's choices in it are the caller's (--assume-player-choice-for, 3)	data and caller	a conversation
+the speech challenge scene	the answer to the question of phase 8 (counting from 0): of three lines that may hold, the caller plays the first (--assume-first-line-for), whose condition is the caller's (--assume-cond-for, function 544); its start-scene field starts the challenge	caller assumption	the player's speech check
+next main 22	the challenge's third phase: the line for the caller's player sex (--cond-70-player-sex-for the robot's quest) ends; its end fragment sets the stage (--line-fragments)	data and caller	a spoken line
+next main 30 and 25	the fourth phase's answer lines end; their end fragments set 30, whose fragment sets 25	data and caller	a spoken line
+robot quest 15 and 40	the introduction's start-scene action starts the fetch-food scene (its first phase's end field sets 15); the challenge's last line's first half sets 40	data (pending readings)	scenes
+robot quest 50	the patrol scene (started by the challenge's last line) with the player's choice 0 for that scene (--assume-player-choice-for naming the scene): its answer's end half sets 50, whose fragment sets next main 30 again and starts a search quest	data and caller	a conversation; the player's choice
+robot quest 20	the robot's own animation event (--assume-anim-event, held until robot 15)	caller assumption	the robot's animation
+robot quest 30 and 35	a second greeting (--assume-talk, held until robot 20) plays the caller's after-food line (--assume-line), whose end half sets 30, whose fragment sets 35	data and caller	a conversation; the line choice
+
+## 3 reached (furthest run)
+87	stages of the opening quest set (vault step: 87): 0 10 12 15 20 22 30 65 70 75 80 85 90 93 95 97 100 110 200 210 220 230 240 245 250 252 260 263 270 300 305 310 400 402 405 410 425 435 440 450 455 460 465 470 475 490 495 500 505 510 515 530 600 620 625 630 632 635 640 644 645 646 647 648 649 675 680 690 692 694 700 705 710 715 720 730 740 750 752 753 760 770 780 805 810 900 1000
+15	stages of the next main quest set (vault step: 12): 0 1 2 3 4 6 7 8 9 10 15 20 22 25 30
+10	stages of the vault dialogue quest set (vault step: 8): 40 50 55 70 72 95 97 98 100 110
+7	stages of the robot's postwar dialogue quest set (vault step: 0): 10 15 20 30 35 40 50
+
+## 4 caller assumptions of the furthest run
+1	assumption from the command line: ActorBase.GetSex on the player's base answers 0 (--assume-player-sex)
+1	assumption from the command line: IsInCombat on the player answers false (--assume-player-in-combat)
+1	assumption from the command line: IsInMenuMode answers false (--assume-menu-mode)
+1	assumption from the command line: Message.Show answers button 2 (--assume-message-button)
+4	assumption from the command line: a line plays where the choice outside a scene is not settled (--assume-line)
+1	assumption from the command line: a line whose audio does not settle its time lasts 3 s
+1	assumption from the command line: a made animation event registration answers true (--assume-anim-registration)
+2	assumption from the command line: a placed actor moved to a position at a second (--assume-actor-at)
+22	assumption from the command line: a placed reference raises a named animation event (--assume-anim-event)
+1	assumption from the command line: a stage set from outside any script after the start
+1	assumption from the command line: a stage set from outside any script at a second of the real-time clock
+34	assumption from the command line: a timed caller action waits for a stage before it happens (--action-after)
+5	assumption from the command line: conditions decided by an assumed value
+1	assumption from the command line: every HasDirectLOS answers true (--assume-los)
+1	assumption from the command line: every condition of function 544 in the records of the robot's quest has the value 1 (--assume-cond-for)
+1	assumption from the command line: every condition of function 555 has the value 1
+1	assumption from the command line: package actions complete as they start
+179	assumption from the command line: points of the player's track
+1	assumption from the command line: queued timers fired after the jobs
+1	assumption from the command line: start-scene actions complete as they start
+1	assumption from the command line: the NPC_ of that editor ID is the player's base (--player-base)
+1	assumption from the command line: the hello distance is the value of the game setting named (--hello-distance-setting)
+7	assumption from the command line: the player activates a placed reference (--assume-activate)
+1	assumption from the command line: the player follows a track (--track)
+1	assumption from the command line: the player opens a placed reference (a door or a container) (--assume-open)
+1	assumption from the command line: the player picks choice 0
+1	assumption from the command line: the player picks choice 0 in the after-food scene (--assume-player-choice-for)
+1	assumption from the command line: the player picks choice 0 in the patrol scene (--assume-player-choice-for)
+1	assumption from the command line: the player picks choice 3 in the robot's quest (--assume-player-choice-for)
+4	assumption from the command line: the player raises a named animation event (--assume-anim-event player)
+3	assumption from the command line: the player starts a conversation with a placed actor (--assume-talk)
+1	assumption from the command line: the player's body reaches 120 units up from the reference point (--trigger-body)
+1	assumption from the command line: the scene clock advanced (--scene-clock)
+1	assumption from the command line: where several lines of a topic may hold in the robot's quest, the first plays (--assume-first-line-for)
+
+## 5 the home step's readings (furthest run)
+7	lines	line fragments queued	begin
+2	lines	line fragments queued	end
+2	lines	line fragments scheduled	end
+7	lines	line start scene scheduled as the line ends
+2	lines	line start scene: not started	Start of a scene that is playing
+5	lines	line start scene: started
+1	rules relied on	cond_fn_70_player_sex_v1
+1	rules relied on	dialogue_info_group_conditions_v1
+1	rules relied on	dialogue_line_fragments_v1
+1	rules relied on	dialogue_line_start_scene_v1
+1	rules relied on	world_load_door_xtel_v1
+1	switch: a line outside a scene holds only when the group it names holds too; a group does not play (--info-groups)
+1	switch: a line the run plays runs its begin and end fragments (--line-fragments)
+1	switch: a line the run plays starts the scene its TSCE names as it ends (--line-start-scene)
+1	switch: condition function 70 on the player compares its parameter with the caller's assumed sex in the records of the quests the caller names (--cond-70-player-sex-for)
+1	switch: where the track changes space the player passes through the old space's load door to its teleport position (--load-doors)
+3	world model	load doors	space changes of the track
+2	world model	load doors	space changes through a load door: the player placed at its teleport position	the door within 256 units of the track's last point
+1	world model	load doors	space changes with no load door of the old space leading to the new: the caller's next point kept
+1204	XTEL subrecords (a local probe over every placed reference, outputs outside the repository): all 36 bytes; the door each names resolves and names the first door back
+960	XTEL: the three position words within 128 units of the destination door's stored position (641 within 64, 1,108 within 256, 4 beyond 2,048)
+1139	XTEL: the first two of the three rotation words zero (all three within 7 in magnitude)
+29847	dialogue lines with a GNAM (the same probe over every winning INFO): every one names an INFO of its topic with no responses and no GNAM of its own
+2653	greeting lines with a GNAM: 2,638 of their groups carry conditions; 1,280 of the lines carry none of their own
+
+## 6 the furthest run's --next-blockers
+1	scenes stopped at the end	an action runs in the phase: kind 5
+31	scenes stopped at the end	an action runs in the phase: kind 6
+1	scenes stopped at the end	completion conditions false
+16	scenes stopped at the end	completion conditions undetermined
+5	scenes stopped at the end	start conditions undetermined
+2	setters of a waited stage	10-19
+14	setters of a waited stage by kind and need	a call in a placed REFR's own script, through a function passing a parameter on	engine event ontriggerenter on a placed REFR
+6	setters of a waited stage by kind and need	a call in a quest's own script, reached by a call from a quest alias script	engine event ondeath on a quest alias
+6	setters of a waited stage by kind and need	a call in a quest's own script, reached by a call from a quest alias script	engine event ondying on a quest alias
+14	setters of a waited stage: the need in this run	a player action a caller can assume (--assume-trigger-enter)
+12	setters of a waited stage: the need in this run	an engine event the interpreter does not raise
+1	waits	completion conditions	function 59	the stage is not done in the run
+1	waits	next stage of a quest the caller set a stage on	the stage is not done in the run
+2	waits: stages a stopped scene phase or the caller's quests wait on
+
+## 7 stages set with one thing changed (next main quest, vault dialogue quest, robot quest)
+15	10	7	the furthest run: next main 0 1 2 3 4 6 7 8 9 10 15 20 22 25 30; vault dialogue 40 50 55 70 72 95 97 98 100 110; robot 10 15 20 30 35 40 50; opening quest 87
+15	10	7	without --load-doors (the exterior trigger entered at the caller's first point outside): next main 0 1 2 3 4 6 7 8 9 10 15 20 22 25 30; vault dialogue 40 50 55 70 72 95 97 98 100 110; robot 10 15 20 30 35 40 50; opening quest 87
+15	10	7	without --load-doors, the door's teleport position typed in the track by hand: next main 0 1 2 3 4 6 7 8 9 10 15 20 22 25 30; vault dialogue 40 50 55 70 72 95 97 98 100 110; robot 10 15 20 30 35 40 50; opening quest 87
+12	10	1	without --line-start-scene: next main 0 1 2 3 4 6 7 8 9 10 15 20; vault dialogue 40 50 55 70 72 95 97 98 100 110; robot 10; opening quest 87
+14	10	7	without --line-fragments: next main 0 1 2 3 4 6 7 8 9 10 15 20 25 30; vault dialogue 40 50 55 70 72 95 97 98 100 110; robot 10 15 20 30 35 40 50; opening quest 87
+14	10	3	without --cond-70-player-sex-for: next main 0 1 2 3 4 6 7 8 9 10 15 20 25 30; vault dialogue 40 50 55 70 72 95 97 98 100 110; robot 10 15 20; opening quest 87
+14	10	4	without --info-groups (the caller's assumed robot lines also play to the prewar robot): next main 0 1 2 3 4 6 7 8 9 10 15 20 25 30; vault dialogue 40 50 55 70 72 95 97 98 100 110; robot 30 35 40 50; opening quest 87
+14	10	7	with the general choice 0 instead of --assume-player-choice-for 3: next main 0 1 2 3 4 6 7 8 9 10 15 20 25 30; vault dialogue 40 50 55 70 72 95 97 98 100 110; robot 10 15 20 30 35 40 50; opening quest 87
+14	10	7	without --assume-cond-for (function 544): next main 0 1 2 3 4 6 7 8 9 10 15 20 25 30; vault dialogue 40 50 55 70 72 95 97 98 100 110; robot 10 15 20 30 35 40 50; opening quest 87
+14	10	7	without --assume-first-line-for: next main 0 1 2 3 4 6 7 8 9 10 15 20 25 30; vault dialogue 40 50 55 70 72 95 97 98 100 110; robot 10 15 20 30 35 40 50; opening quest 87
+15	10	6	without the choices for the after-food and patrol scenes (the robot quest's choice 3 there too): next main 0 1 2 3 4 6 7 8 9 10 15 20 22 25 30; vault dialogue 40 50 55 70 72 95 97 98 100 110; robot 10 15 20 30 35 40; opening quest 87
+
+## 8 where the run ends and what stops next
+4	next main quest stages that wait on combat: hit, combat state and death events of six insect aliases (32, 34, 36, 38); 40 waits on them (or on a quest timer whose start is not traced)
+1	the robot quest's 100 waits on the next main quest's 40; its 200 and its companion stages on more of its lines
+1	the walk to the town (next main 55 and later: triggers, a location change, deaths, dialogue, a terminal) lies beyond the run's end
+1	the ride up the exit elevator: the elevator's graph does not take the ascent event from its start state; the ride is the caller's track
+1	the player's own animation events, the robot's food event, the player's choices, the speech check and the line chosen in each greeting remain the caller's
+7	vault dialogue quest stages left optional or waiting on a death (56, 57, 58, 60, 74, 80; 65); 90 has no setter

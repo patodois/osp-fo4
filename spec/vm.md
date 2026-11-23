@@ -2534,6 +2534,141 @@ held until the stage before it with `--action-after`):
   the town; the vault dialogue quest's optional stages wait on the player's
   other actions (the spouse's pod and ring, spoken remarks).
 
+## The walk home
+
+([quest-run-home.txt](quest-run-home.txt) records the run;
+[quest-run-vault-stages.txt](quest-run-vault-stages.txt) maps every stage of
+the next main quest, the vault dialogue quest and the household robot's
+postwar dialogue quest; the track, its plans, the command lines and every
+record named are in the step's notes.) The home step replaces the five
+trigger entries the vault step assumed by a walked track and carries the
+forced run into the robot's conversation. Five readings, each behind its
+own switch, off by default (with them off every earlier output reproduces
+byte for byte), and three caller assumptions scoped to one quest:
+
+| Switch | Reading | Rule |
+| --- | --- | --- |
+| `--load-doors` (with `--track`) | where the track changes space, the player passes through the placed load door of the old space whose `XTEL` names a door placed in the new space (the one nearest the track's last point there; for a worldspace among its cells within one grid square of that point and its persistent doors within two) and stands, at that point's second, at the position and facing the `XTEL` stores; the caller's later points follow (`track::teleport_of`, `Place::doors`) | `world_load_door_xtel_v1` |
+| `--line-fragments` (with `--scene-clock`) | a line the run plays (a scene's dialogue action, a player dialogue action's two lines under the caller's choice, a greeting or hello) runs its fragment block's begin fragment as it begins and its end fragment as it ends, on the line's fragment script instance, with the speaker's reference as the argument (`line`, `Step::LineFragment`) | `dialogue_line_fragments_v1` |
+| `--line-start-scene` (with `--scene-clock`) | a line the run plays that stores a `TSCE` starts that scene as the line ends, offering first the phase its `INTV` stores; a playing scene is left as it is (`line::start_scene`, `scene::start_at`) | `dialogue_line_start_scene_v1` |
+| `--cond-70-player-sex`, or `--cond-70-player-sex-for QUEST` (with `--player-base-object`, `--assume-player-sex`) | condition function 70 run on the player word compares its first parameter with the caller's assumed sex; the second form only in the condition lists of the quests named | `cond_fn_70_player_sex_v1` |
+| `--info-groups` | a line outside scenes whose `GNAM` names a group (an INFO of its topic with no responses) holds only when the group's conditions hold too; a group is not a line that plays (`talk::Group`) | `dialogue_info_group_conditions_v1` |
+| `--assume-player-choice-for SCENE\|QUEST N`, `--assume-first-line-for SCENE\|QUEST`, `--assume-cond-for QUEST N=VALUE` | the caller's choice in the player dialogue of one scene or of that quest's scenes (a scene's over its quest's), the first of several lines that may hold there, the value of every condition of function N in that quest's records (over the general `--assume-player-choice`, `--assume-first-line`, `--assume-cond`) | caller assumptions |
+
+**What the data holds for the walk.** The postwar vault is its own interior
+cell (two navigation meshes); the corridor trigger, the save trigger and the
+exit trigger are placed there, the exterior elevator trigger in the vault's
+exterior cell and the stage 20 trigger in the settlement, a box of 1,024 by
+1,205 units holding the robot's placed position. The caller's track (179
+points) is the exit step's track to 680 s, then the postwar vault from the
+pod's get-up (811.21 s) planned on its meshes from nine waypoints, a ride up
+the exit elevator's shaft, and the exterior planned on 59 meshes of the
+worldspace from three waypoints (a path of 12,452 units down to the
+settlement, reached 9.5 s after the plan's second). Crossed by the walk,
+from the triggers' volumes: the corridor trigger at 845.76 s (stage 3), the
+save trigger at 934.45 s (vault dialogue 97), the exit trigger at 945.30 s
+(98 and, with the message box's button, 100), the exterior elevator trigger
+at 955.367 s (stage 10, then 15) and the settlement's trigger at 1,005.07 s
+(stage 20): all five of the vault step's entries. The walk also crosses two
+triggers of the vault dialogue quest's spoken remarks (70 and 72); the run
+raises 63 trigger enters from the track (the vault step's run: 41).
+
+**The ride and the move to the surface.** The exit trigger's button
+function plays the interior elevator's ascent event, enables an enable
+marker whose child is a trigger that enables and disables other references,
+waits and fades the screen; no script moves the player. The elevator's
+graph starts in a state that takes only the descent event, so the run's
+`PlayAnimation` of the ascent answers undetermined and schedules nothing;
+the ascent sequence lasts 9.87 s, which the caller's ride takes (one point:
+from the platform to the reference point of the door at the shaft's top,
+from 945.5 s to 955.367 s). At the top of the shaft stands an automatic
+load door (a load marker model with an `XTEL`) whose teleport position lies
+in the exterior cell inside the exterior elevator trigger's box: 2.5 units
+under its bottom, so the body reading (`--trigger-body 120`) meets it and
+the point reading would not. Under `--load-doors` the run inserts that
+position at 955.367 s and the trigger is entered there; without it the
+caller types the position (the exit step did so for the prewar descent, whose
+door the rule now finds 4.7 units from the track's point). The trigger's
+script then waits 12 s and sets stage 10; the interpreter does not time
+`Utility.Wait`, so the stage is set at once.
+
+What the data gives for the `XTEL` reading (a local probe over every placed
+reference, outputs outside the repository): 1,204 `XTEL`, all 36 bytes; the
+first word resolves to a placed door in every one and that door's own `XTEL`
+names the first door back; the six following words are finite in all, the
+last three within 7 in magnitude (radians-like) and the first two of those
+zero in 1,139; the three position words lie within 64 units of the
+destination door's stored position in 641, within 128 in 960, within 256 in
+1,108, and beyond 2,048 in 4; word 7 is 0 in 1,178 and 2 in 26; word 8 is
+nonzero in 78. The automatic doors of the two vault elevators are among
+the far ones: their teleport positions lie over 1,000 units from the
+destination doors' stored positions.
+
+**The robot's conversation.** The run's greeting of the robot (the caller's
+`--assume-talk` held until stage 20, the line the caller's `--assume-line`)
+plays the postwar greeting, whose first half sets the robot quest's stage 10
+and whose `TSCE` names the introduction scene; under `--line-start-scene`
+the scene starts as the line ends. Its eleven phases alternate the robot's
+lines and the player's choices (scoped to the robot's quest:
+`--assume-player-choice-for`, the question, 3). The answer to the question
+of phase 8 (counting from 0) has three lines: two that loop back to that phase (by the
+player's sex, function 70) and one whose condition (function 544, on 941
+lines, here the caller's `--assume-cond-for ... 544=1`) leads to the speech
+challenge scene through its `TSCE`; the caller's `--assume-first-line-for`
+plays the first, which starts it. The challenge's third phase is a line for
+each player sex (`--cond-70-player-sex-for` the robot's quest picks the
+caller's), whose end fragment sets the next main quest's stage 22 (gives an
+item); its fourth phase's answers end with fragments that set stage 30,
+whose fragment sets 25 (the robot joins the insect hunt's faction); its last
+line's first half sets the robot quest's 40, and its last `TSCE` starts the
+patrol scene. In parallel the introduction's start-scene action starts the
+fetch-food scene (robot quest 15, the robot registers for its own animation
+event); the robot's event is the caller's (`--assume-anim-event`, robot
+quest 20) and a second greeting (the caller's line) sets 30 and 35. With the
+player's choice 0 in the after-food and patrol scenes (the caller's
+`--assume-player-choice-for` naming each scene, which comes before the
+quest's choice), the patrol scene's answer ends with the robot quest's
+stage 50 (its fragment sets the next main quest's 30, already done, and
+starts a search quest).
+
+**Without the scoped readings.** `--cond-70-player-sex` over the whole run
+settles 31 line choices of the opening's scenes that were undetermined;
+those lines are then timed by their audio instead of the caller's 3 s, the opening's scenes
+run later than the caller's track and gates were set for, and the opening
+stops at 31 of its 104 stages. The robot's quest is therefore named with
+`--cond-70-player-sex-for`. `--info-groups` changes the candidate counts of
+every greeting and hello in the opening but not the lines played; without it
+the robot's postwar greeting holds for any speaker, and the caller's
+`--assume-line` plays it to the prewar robot at 366 s. `--line-fragments`
+runs five begin fragments in the opening's scenes (they send a placed
+reference's graph events; the opening's stages are unchanged).
+
+- With one thing changed (record section 7; next main / vault dialogue /
+  robot quest stages, the opening's 87 in every one): without
+  `--load-doors` the exterior trigger is entered at the caller's first
+  point outside (968 s instead of 955.367 s) and every stage is the same,
+  as with the door's position typed in the track by hand; without
+  `--line-start-scene` the greeting starts no scene (12 / 10 / 1); without
+  `--line-fragments` stage 22 is not set, 30 and 25 come through the robot
+  quest's 50 (14 / 10 / 7); without `--cond-70-player-sex-for` the
+  challenge's line and the after-food line are undetermined (14 / 10 / 3);
+  without `--info-groups` the caller's assumed robot lines also play to the
+  prewar robot at 366 s and the postwar greeting is not chosen (14 / 10 /
+  4); with the general choice 0, without the speech check's condition or
+  without the first-line assumption the challenge does not start (14 / 10
+  / 7: no 22, 50 from the patrol scene); without the two scene choices the
+  patrol scene's answer is the question's and 50 is not set (15 / 10 / 6).
+
+- Reached: the next main quest **15 of 54 stages** (vault step: 12), the
+  vault dialogue quest **10 of 18** (8), the robot's postwar dialogue quest
+  **7 of 16** (none); the opening quest's 87 unchanged.
+- What stops next: the next main quest's stages 32 to 38 are hit, combat
+  state and death events of six insect aliases (no combat is modelled), and
+  40 waits on them (or on a quest timer whose start is not traced); the robot
+  quest's 100 waits on 40 and its 200 on more of its lines. The walk to
+  the town (stages 55 and later: triggers, a location change, deaths,
+  dialogue, a terminal) is beyond the run's end.
+
 ### The stage set by order in the opening
 
 The stage of the opening quest whose reaching was classed as depending on
@@ -3151,3 +3286,23 @@ behaviour or animation tool, converter or library of any project, Havok
 SDK, editor, editor source or definition file, other interpreter, script
 extender, decompiler or the game executable was opened or searched for.
 The game was not run.
+
+## Provenance of the home step
+
+Recognised from prior general knowledge, used only as pending rules that
+are off by default or as caller assumptions: that a load door moves the
+player to its teleport marker; that a dialogue line's begin and end
+fragments run as it starts and finishes and that its start-scene field
+starts the scene after it is said, at the phase stored with it; what
+condition function 70 compares (the subject's sex, 0 male, 1 female); that
+a line's info group carries conditions its lines share. Every count was
+measured with the repository's own readers on the installed data: records
+with its record dump and local probes over the placed references, the
+`XTEL` and `GNAM` subrecords and the robot's topics, lines and scenes (outputs
+outside the repository), the compiled scripts with the repository's
+disassembler, the elevator's graph with `fo4_scene::anim_graph`, the
+navigation meshes with `track_plan`, the timeline with
+`fo4_scene::timeline`. No public page was requested. No behaviour or
+animation tool, converter or library of any project, editor, editor source
+or definition file, other interpreter, script extender, decompiler or the
+game executable was opened or searched for. The game was not run.

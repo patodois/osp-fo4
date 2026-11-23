@@ -4,36 +4,36 @@ This page is the hand-over point. Everything on `main` builds and passes its tes
 agent) can continue from here. Read `AGENTS.md` first: it holds the rules of evidence and the clean-room rules.
 
 State on 2026-11-23 (vault, cast and light steps). Nothing below has been checked against the running game: every behaviour is a pending
+State on 2026-11-23 (home step). Nothing below has been checked against the running game: every behaviour is a pending
 rule in `spec/hypotheses.tsv`, off by default.
 
 ## Script VM and quests (`crates/fo4-vm`)
 
 The forced opening (`quest_run`, record in `spec/quest-run-opening.txt`) reaches 87 of 104 stages: the
-prewar quest ends. The vault step carries the forced run on through the postwar vault (record in
-`spec/quest-run-vault.txt`, every stage mapped in `spec/quest-run-vault-stages.txt`): the next main quest reaches
-12 of its 54 stages (before 3) and the vault dialogue quest 8 of 18 (before 3). The corridor trigger, the wrist
-computer's skeleton, the door console, the walk past the vault door, the exit trigger with its message box and the
-exterior triggers are the caller's (`--assume-trigger-enter`, `--assume-activate`, `--assume-message-button`), as are
-the player's three animation events (wrist computer, plug-in) and the player's combat state
-(`--assume-player-in-combat`). From the data under four new readings: `GetSitState` from the run's sitters
-(`--sit-state`), the console's graph taken to have played its start sequence since load
-(`--anim-graph-start-settled`), its sequences found ignoring case (`--anim-sequence-case`), and the handler's text
-comparison ignoring case (`--text-equal-ignore-case`); the console's fourth stage key then opens the vault door
-(its graph's keys 22.5 s and 43.3 s later). The order question of the opening's stage 120 is settled from the data:
-it is reached only on the refusal way (`spec/quest-run-opening-unset.txt`, now classed an alternative). What is
-left:
+prewar quest ends. The vault step carried the forced run through the postwar vault (`spec/quest-run-vault.txt`);
+the home step walks it (record in `spec/quest-run-home.txt`, every stage of the three quests mapped in
+`spec/quest-run-vault-stages.txt`): the vault step's five caller trigger entries now come from a walked track
+crossing the triggers' volumes, the move to the surface from the vault elevator's automatic load door and its
+stored teleport position (`--load-doors`), and the household robot's conversation from its lines' start-scene
+fields and fragments (`--line-start-scene`, `--line-fragments`), condition function 70 on the player in the robot's
+quest (`--cond-70-player-sex-for`) and the info groups of lines outside scenes (`--info-groups`). The next main
+quest reaches 15 of its 54 stages (before 12), the vault dialogue quest 10 of 18 (before 8), the robot's postwar
+dialogue quest 7 of 16 (before none). The caller still gives the walk's waypoints, the ride up the elevator (its
+graph does not take the ascent event from its start state), the two conversations and their lines, the player's
+choices in the robot's scenes (by quest and by scene), the speech check's condition, the robot's food animation event and the player's
+own events (wrist computer, plug-in). What is left:
 
-1. The next main quest's next stages wait on a conversation with the household robot (the end halves of its
-   postwar lines, stage 22) and on triggers and dialogue on the way to the settlement and the town; the robot's
-   postwar dialogue quest is set by line halves, scene phases and the robot's animation event. The talk host
-   (`--assume-talk`, `--greeting-on-talk`, `--assume-line`) is where to start.
-2. The vault's exit elevator: its graph event is played, but the player's ride and move to the surface are not
-   modelled, so the exterior trigger's entry is the caller's. A track through the postwar vault and the exterior
-   (`track_plan`) would let the triggers come from the player's walk instead of `--assume-trigger-enter`.
-3. The player's own animation events (here the wrist computer and the console's plug-in) still come from the
-   caller: reading character graphs (below) would let them come from the data.
-4. The vault dialogue quest's optional stages (the spouse's pod and ring, three spoken remarks, a trigger) are the
-   player's other actions; the pests' death stage needs combat, which is not modelled.
+1. The next main quest's stages 32 to 38 are hit, combat state and death events of six insect aliases, and 40
+   waits on them: combat is not modelled. The robot quest's 100 waits on that 40; its 200 and the companion stages on more of its lines.
+2. The walk to the town (stages 55 and later: triggers, a location change event, deaths, dialogue, a terminal) lies beyond the
+   run's end; the track can be extended there (`track_plan` on the worldspace's meshes).
+3. The elevator ride: the interior elevator's graph starts in a state that takes only the descent event, so the
+   ascent is not played; reading the platform's motion would let the ride come from the data.
+4. The player's own animation events and the robot's food event still come from the caller: reading character
+   graphs (below) would let them come from the data.
+5. `--cond-70-player-sex` over the whole run settles 31 line choices of the opening and times them by their audio,
+   which moves the opening's scenes past the caller's track and gates (the opening then stops at 31 stages): the
+   opening's track and gates would need retiming before the reading can apply everywhere.
 
 Character behaviour graphs (`char_graph_census`, `spec/character-graph-census.txt`): a race names its
 behaviour project, and the project, character and root graph resolve, but which clip an actor plays is held
