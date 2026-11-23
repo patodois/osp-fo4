@@ -2923,6 +2923,110 @@ Readings and outputs added, each off by default:
   a known value is set (off: the run's value is dropped and the stored `FLTV` is answered again, the museum
   step's reading). No recorded run reaches such a set with it on; a synthetic test exercises it.
 
+## Past the museum
+
+([quest-run-onward-census.txt](quest-run-onward-census.txt) is the census of
+what the data holds behind the stops (`stops_census`, command line in
+`docs/provenance.md`); [quest-run-onward.txt](quest-run-onward.txt) records
+the run; [quest-run-vault-stages.txt](quest-run-vault-stages.txt) maps every
+stage; the track, its plans, the command lines and every record named are in
+the step's notes.) The museum step's run stopped at the next main quest's
+100 with four stops ahead of it: a terminal's menu item (95), an item added
+(105), two activations (110, 115), then other quests and a third fight. Each
+was taken in that order: census first, then the smallest reading that lets
+the run pass, behind its own switch, or a caller assumption where only play
+can say.
+
+**The terminal (95).** 1,069 terminal records, 294 with a fragment block:
+every fragment's index is a menu item's id (`ITID`), and every fragment
+function takes one object reference. The museum's terminal by the leader's
+room has one fragment, for its first item: it unlocks the basement gate
+(`Lock(false)`) and sets 95. Picking the item is the caller's
+(`--assume-terminal-item REF ID`); running its fragment is a reading. The
+gate's alias carries the default stage setter on lock state change (100,
+needs 90): the museum step reached 100 only through the caller's lockpick
+(`--assume-unlock`), whose event `--lock-events` raises; a script's own
+`Lock` raised nothing. A second reading raises the event for a script's
+lock change: the terminal now sets 95 and, through the gate's handler, 100
+(at 1740 s instead of the lockpick's 1795 s; the lockpick is kept as a
+labelled variant). Under that reading the game-start scripts' own `Lock`
+calls on unrelated doors raise their events too (no handler runs).
+
+**The item added (105).** 31 `OnItemAdded` handlers with code (19 on
+reference aliases); the 33 scripts with an item added or removed handler
+all add an inventory event filter in their chain (79 calls, all on
+themselves: 36 in an init handler, 30 in `OnLoad`, 13 elsewhere; 69 pass a
+form, 10 none). The power armour's alias adds the fusion core as its filter
+in `OnAliasInit` (which the interpreter never delivers) and sets 105 when
+the core is added after 90 and before 110. The caller puts the core into
+the frame (`--assume-item-added HOLDER ITEM N SOURCE`); three readings carry
+it: the filters kept and the event delivered to the instances whose filter
+names the item, the init handler's filter counted as kept (as the fight's
+hit registrations are), and the frame's count raised from the caller's
+known 0. The frame's own base script, which adds its filter in `OnLoad`, is
+not delivered to (no load event reaches it).
+
+**The activations (110, 115).** Both are the caller's `--assume-activate`.
+The frame's alias handler asks the player's power armour state, which the
+engine script answers from `HasPerk` of a perk (the player's base lists 3
+perks, 5 bytes each: perk and rank; not that one), the player's keyword
+(answered by the keyword step's reading) and the core count on the frame (1
+after the core): 110. The mounted gun's handler compares the player's
+strength actor value with 8: actor values are the player's choice at the
+start (`--assume-actor-value player AVIF N`, a caller assumption, 10 in the
+run): 115.
+
+**On to the third fight.** Stage 90's fragment stopped at the leader's
+`AddToFaction`, whose engine function asks `IsInFaction` first: the museum
+quest's 60 (the roof's triggers need it) was never set. 3,756 actor bases
+list factions (`SNAM`, 5 bytes: faction and a signed rank; 934 with a
+negative rank), 3,402 name a template. A reading answers `IsInFaction` from
+the base's list and the run's own faction changes: the fragment completes,
+60 is set, and the walk out of the balcony door (straight moves off the
+meshes: the balcony and the roof are islands no street mesh reaches) enters
+the roof's stage 75 trigger as it arrives (the raiders' wave and the boss's
+taunt scene start), leaves the roof's safe zone (76: the quest script's
+300 s failsafe timer starts, but the caller's timer budget is spent long
+before), and walking back along the street re-enters a far trigger the walk
+to the town passed before 75: 77 (the creature enabled, the next main
+quest's 120). The caller's death of the creature (a placed unique actor)
+sets the museum quest's 79 and with it the next main quest's 123.
+
+| Switch | Reading | Rule |
+| --- | --- | --- |
+| `--terminal-fragments` | the caller's pick of a terminal's menu item runs the fragment the terminal record's block names for the item's id, with the placed terminal as argument (`terminal`) | `terminal_menu_item_fragment_v1` |
+| `--lock-events-script` (with `--lock-state`) | a script's `Lock` that changes the held lock raises `OnLockStateChanged` after the call | `vm_lock_state_event_script_v1` |
+| `--item-added-events` | inventory event filters kept; the caller's item added delivered to the instances whose filter names it (`inventory`) | `inventory_item_added_event_v1` |
+| `--inventory-filter-init` (with `--item-added-events`) | an init handler's filter on itself counts as kept | `inventory_filter_init_registration_v1` |
+| `--item-added-counts` | the holder's known count raised by the item added | `inventory_item_added_count_v1` |
+| `--perks-base` (with `--player-base-object`) | `HasPerk` on the player from its base's `PRKR` and the run's perk changes | `actor_perk_base_list_v1` |
+| `--factions-base` | `IsInFaction` from the actor's base `SNAM` (rank 0 or more) and the run's faction changes | `actor_faction_base_list_v1` |
+| `--assume-terminal-item REF ID[@S]`, `--assume-item-added HOLDER ITEM N player\|none[@S]`, `--assume-actor-value HOLDER\|player AVIF N` | the player picks a terminal's item; puts items into a holder; an actor value | caller assumptions |
+
+- Reached: the next main quest **40 of 54 stages** (museum step: 34; adds 95,
+  105, 110, 115, 120, 123; 100 now from the terminal), the museum quest 13
+  (adds 60, 75, 76, 77, 79), the robot's quest 10 of 16, the vault dialogue
+  quest 10 of 18 and the opening 87 of 104 unchanged; no stage set before
+  the leader's conversation moved (every quest's stages compared with the
+  museum step's run).
+- What stops next: 122, the third fight's five raiders (their aliases are
+  filled from the museum quest's aliases, which create their actors: 548
+  aliases are filled from another quest's alias, the next main quest's six
+  name five created objects and one unique actor; neither fill is read, and
+  a created actor has no record a caller's death could name); 130 needs 122
+  and 123 (the town quest's 70 and 75); 125 and 127 a scene no scan names a
+  starter for; 128 a line's own script (3,292 lines carry scripts of their
+  own: their begin and end events are not delivered); 135 a trigger after
+  130; 140, 150 and 200 other quests' stages after it; 62 the musket picked
+  up (a container change event, not delivered), 78 behind the locked door,
+  75 and 1000 no setter.
+- The robot's quest stays at 10 of 16: 250 waits on a fourth conversation
+  back at its home after the next main quest's 55, whose line group also
+  asks condition function 566 (not answered); 275 is a line's own script
+  (its begin and end events are not delivered); 5 comes with 300 or a later
+  quest of the town; 300 is the other way (the player skips the robot); 500
+  its death; 1000 has no setter.
+
 ## Conditions
 
 `fo4_vm::cond` evaluates the condition lists read by
@@ -3600,3 +3704,25 @@ regenerated byte for byte, and the furthest runs were profiled with the
 system's sampling profiler. No public page was requested. No editor, editor
 source or definition file, other interpreter, script extender, decompiler or
 the game executable was opened or searched for. The game was not run.
+
+## Provenance of the step past the museum
+
+Every count was measured with the repository's own readers on the installed
+data: terminal records, inventory filters, perk and faction lists, actor
+value calls, aliases filled from another quest and dialogue lines' own
+scripts with `stops_census`, the compiled scripts with the repository's
+disassembler, the walk with `track_plan`, the run with `quest_run`, and the
+records named in the notes with a local probe (never versioned). Recognised
+from prior general knowledge, used only as pending rules that are off by
+default or as caller assumptions: that picking a terminal's item runs its
+fragment, that a script's lock change raises the same event as the player's
+unlock, that inventory events reach only instances whose filter names the
+item and that a none filter names every item, that an added item counts,
+that a perk not listed is not held and that the player is not in power
+armour when activating the frame, that a negative faction rank is no
+membership, and that the player's strength is chosen at the start. The
+terminal, the power armour, the mounted gun and the creature were
+recognised from editor ids read in the notes only. No public page was
+requested. No editor, editor source or definition file, other interpreter,
+script extender, decompiler or the game executable was opened or searched
+for. The game was not run.

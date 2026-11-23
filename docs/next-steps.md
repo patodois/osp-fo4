@@ -4,6 +4,7 @@ This page is the hand-over point. Everything on `main` builds and passes its tes
 agent) can continue from here. Read `AGENTS.md` first: it holds the rules of evidence and the clean-room rules.
 
 State on 2026-11-24 (vault, cast, light, home, character graph, fight, live window, museum, live world, run library and seen steps). Nothing below has been checked against the running game: every behaviour is a pending
+State on 2026-11-24 (vault, cast, light, home, character graph, fight, live window, museum, live world, run library and past-the-museum steps). Nothing below has been checked against the running game: every behaviour is a pending
 rule in `spec/hypotheses.tsv`, off by default.
 
 ## Script VM and quests (`crates/fo4-vm`)
@@ -21,15 +22,27 @@ arriving through the back door, whose outer side no navigation mesh reaches (a l
 itself is still not modelled: the caller assumes the seven raiders' deaths, and five new readings behind their
 own switches carry the run on (a property on an object without an instance of its script, globals the run
 sets, locks the run holds and the caller's unlock with its event, a scene's response actions). The next main
-quest reaches 34 of its 54 stages (before 29), the robot's postwar dialogue quest 10 of 16, the vault dialogue
+quest reached 34 of its 54 stages there (before 29). The step past the museum (record in
+`spec/quest-run-onward.txt`, census `spec/quest-run-onward-census.txt`) takes the museum's four stops in order,
+each behind its own switch: the terminal's first item runs its fragment and its lock change raises the gate's
+event (95, 100), the core the caller puts into the power armour reaches the alias whose init handler named it
+(105), the two activations pass on the player's perk list and the caller's strength (110, 115), and the
+leader's faction answer from his base record lets stage 90's fragment finish, so the walk out onto the roof and
+along the street sets the museum quest's 75, 76 and 77 and the creature's death 79: the next main quest reaches
+**40 of 54** (adds 95, 105, 110, 115, 120, 123), the robot's postwar dialogue quest 10 of 16, the vault dialogue
 quest 10 of 18 and the opening 87, unchanged. The earlier recorded runs with `--auto-state-inherited` set the
 same stages at the same seconds. The caller still gives the walk's waypoints, the ride up the elevator, the
 conversations with the robot and their lines, the player's choices, the speech check's condition, the robot's
-food event, the player's own events, the fights' events, the inner door's activation and the gate's unlock.
+food event, the player's own events, the fights' events, the inner door's activation, the terminal's item (or
+the gate's unlock), the core put into the power armour, the two activations, the player's strength and the walk
+off the meshes from the balcony to the roof and down to the street.
 What is left:
 
-1. After 100: a terminal's menu item (95), an item added (105: inventory is not modelled), two activations the
-   caller does not assume yet (110, 115), then other quests' stages, a scene and a third fight (120 to 150).
+1. After 123: 122, the third fight's five raiders: the next main quest's aliases are filled from the museum
+   quest's aliases (`ALEQ`, not read), which create their actors (`ALCO`, not read; a created actor has no record
+   a caller's death can name); then 130 (needs 122 and 123), 135 (a trigger after 130), 140, 150 and 200 (other
+   quests' stages after it); 125 and 127 a scene no scan names a starter for; 128 and the robot's 275 a line's
+   own script (begin and end events not delivered); 62 a container change (the musket picked up).
 2. The robot's 250: a fourth conversation after the next main quest's 55, back at its home (the run does not
    walk back); the follower lines' group also asks condition function 566, which the run does not answer (a
    labelled variant assuming both from the town sets 250: `spec/quest-run-museum.txt`, section 7).

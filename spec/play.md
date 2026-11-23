@@ -331,6 +331,10 @@ from its names file.
 - The reach of an activation, the walker's speed and its tick are the caller's; the activation key and the
   crosshair are the eye's ray (no prompt, no activation distance from the data).
 - Sound, menus, combat, the player's animation events: still the caller's.
+- Terminal menus, putting items into a container and actor values: the run's readings past the museum
+  (`spec/vm.md`, Past the museum) take them from the command line (`--assume-terminal-item`,
+  `--assume-item-added`, `--assume-actor-value`); a driver's input carries player actions only, so the stepped
+  run gets them from its command line as `quest_run` does.
 
 ## Rules
 
