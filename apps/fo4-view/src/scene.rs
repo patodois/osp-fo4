@@ -71,9 +71,12 @@ pub struct SurfaceParams {
     /// `fo4_render::Draw::colour`: an RGB multiplier after the vertex
     /// colour (1 without one).
     pub colour: Option<[f32; 3]>,
+    /// Lit by the scene's light (`GpuScene::light`), as the CPU's
+    /// `fo4_render::Lighting::lit` marks the draw.
+    pub lit: bool,
 }
 /// Words of [`SurfaceParams::bits`].
-pub const PARAM_WORDS: usize = 18;
+pub const PARAM_WORDS: usize = 19;
 impl SurfaceParams {
     pub fn bits(&self) -> [u32; PARAM_WORDS] {
         let falloff = self.falloff.unwrap_or([0.; 4]);
@@ -97,6 +100,7 @@ impl SurfaceParams {
             colour[0].to_bits(),
             colour[1].to_bits(),
             colour[2].to_bits(),
+            u32::from(self.lit),
         ]
     }
 }
@@ -210,6 +214,74 @@ pub struct GpuScene {
     /// Instances the game clock moves (empty without a build time and the
     /// clock's transform switches).
     pub moving: Vec<Moving>,
+    /// The frame's light (`fo4_scene::light`) as the surface shader reads
+    /// it ([`light_words`]); `None` without the light switches.
+    pub light: Option<GpuLight>,
+}
+
+/// A frame's light for the surface shader: the storage buffer's values and
+/// whether a sky fills the background.
+#[derive(Debug, Clone, PartialEq)]
+pub struct GpuLight {
+    pub words: Vec<f32>,
+    pub sky: bool,
+}
+
+/// Rows of four values before the first point in [`light_words`].
+pub const LIGHT_HEADER_ROWS: usize = 14;
+
+/// The storage buffer of `surface.wesl` for `light`, rows of four f32 in
+/// game axes: 0 ambient and the point count; 1 the directional colour and
+/// whether there is one; 2 the direction toward it and whether anything
+/// lights surfaces (`Light::lit`; else only the fog applies); 3 to 8 the ambient
+/// cube's entries for a normal toward +X, -X, +Y, -Y, +Z, -Z (row 3's
+/// fourth value: whether there is one); 9 the fog colour and whether there
+/// is fog; 10 its near, far and maximum; 11 to 13 the sky's zenith (and
+/// whether there is a sky), lower sky (and the elevation sine of its stop)
+/// and horizon; then two rows per point: position and radius, colour.
+pub fn light_words(light: &fo4_scene::light::Light) -> Vec<f32> {
+    let mut w = vec![0f32; 4 * (LIGHT_HEADER_ROWS + 2 * light.points.len())];
+    let row = |r: usize, v: [f32; 4], w: &mut Vec<f32>| w[4 * r..4 * r + 4].copy_from_slice(&v);
+    let rgb = |c: [f32; 3], x: f32| [c[0], c[1], c[2], x];
+    let count = if light.lit { light.points.len() } else { 0 };
+    row(0, rgb(light.ambient, count as f32), &mut w);
+    let lit = if light.lit { 1. } else { 0. };
+    match (light.lit, light.directional) {
+        (true, Some((c, d))) => {
+            row(1, rgb(c, 1.), &mut w);
+            row(2, [d[0] as f32, d[1] as f32, d[2] as f32, lit], &mut w);
+        }
+        _ => row(2, [0., 0., 0., lit], &mut w),
+    }
+    if let (true, Some(cube)) = (light.lit, light.cube) {
+        for (k, e) in cube.iter().enumerate() {
+            row(3 + k, rgb(*e, if k == 0 { 1. } else { 0. }), &mut w);
+        }
+    }
+    if let Some(f) = light.fog {
+        row(9, rgb(f.colour, 1.), &mut w);
+        row(10, [f.near as f32, f.far as f32, f.max, 0.], &mut w);
+    }
+    if let Some(s) = light.sky {
+        row(11, rgb(s.zenith, 1.), &mut w);
+        row(12, rgb(s.lower, fo4_scene::light::Sky::LOWER_AT), &mut w);
+        row(13, rgb(s.horizon, 0.), &mut w);
+    }
+    for (k, p) in light.points.iter().enumerate() {
+        let r = LIGHT_HEADER_ROWS + 2 * k;
+        row(
+            r,
+            [
+                p.position[0] as f32,
+                p.position[1] as f32,
+                p.position[2] as f32,
+                p.radius as f32,
+            ],
+            &mut w,
+        );
+        row(r + 1, rgb(p.colour, 0.), &mut w);
+    }
+    w
 }
 impl GpuScene {
     /// Sets every animated surface's params to their values at `seconds`
@@ -281,6 +353,7 @@ fn surface_params(alpha: Alpha, uv_offset: [f64; 2], uv_scale: [f64; 2]) -> Surf
         falloff: None,
         palette: 0,
         colour: None,
+        lit: false,
     }
 }
 
@@ -392,6 +465,26 @@ fn mesh(m: &fo4_render::Mesh) -> Result<GpuMesh, String> {
 /// frame is compared with; only bilinear filtering is implemented. Stored
 /// blocks are moved out of `list`, which no CPU render can then draw.
 pub fn convert(list: &mut DrawList, options: &RenderOptions) -> Result<GpuScene, String> {
+    convert_lit(list, options, None)
+}
+
+/// [`convert`] with a frame's light: the draws `lit` marks get lit
+/// surfaces of their own and the scene keeps the light's buffer, as the
+/// CPU's `fo4_render::render_lit` lights them.
+pub fn convert_lit(
+    list: &mut DrawList,
+    options: &RenderOptions,
+    light: Option<(&fo4_scene::light::Light, &[bool])>,
+) -> Result<GpuScene, String> {
+    if let Some((_, lit)) = light {
+        if lit.len() != list.draws.len() {
+            return Err(format!(
+                "RenderLighting: {} lit flags for {} draws",
+                lit.len(),
+                list.draws.len()
+            ));
+        }
+    }
     if !options.bilinear {
         return Err(
             "UnsupportedViewerOption: the GPU path implements bilinear sampling only".into(),
@@ -505,6 +598,7 @@ pub fn convert(list: &mut DrawList, options: &RenderOptions) -> Result<GpuScene,
                 .palette
                 .map_or(0, |p| u32::from(p.colour) | u32::from(p.alpha) << 1),
             colour: draw.colour,
+            lit: light.is_some_and(|(l, lit)| (l.lit || l.fog.is_some()) && lit[di]),
             ..surface_params(draw.alpha, draw.uv_offset, draw.uv_scale)
         };
         let moved = animations.get(&di).and_then(|a| a.motion.clone());
@@ -565,6 +659,10 @@ pub fn convert(list: &mut DrawList, options: &RenderOptions) -> Result<GpuScene,
         }
     }
     out.draw_meshes = mesh_index;
+    out.light = light.map(|(l, _)| GpuLight {
+        words: light_words(l),
+        sky: l.sky.is_some(),
+    });
     Ok(out)
 }
 

@@ -59,6 +59,7 @@ fn surface(texture: usize, blend: Option<(BlendFactor, BlendFactor)>, overlay: b
             falloff: None,
             palette: 0,
             colour: None,
+            lit: false,
         },
         key: SurfaceKey {
             blend,
@@ -518,6 +519,7 @@ fn exact_depth_ties_resolve_by_list_order_in_every_run() {
             instances: vec![instance(0), instance(1)],
             animated: Vec::new(),
             moving: Vec::new(),
+            light: None,
         }
     };
     let camera = fo4_scene::camera::look_at(
@@ -1834,5 +1836,218 @@ fn cpu_and_gpu_frames_agree_on_a_timeline_cast_frame() {
         report.p95_abs.iter().all(|m| *m <= 4),
         "{:?}",
         report.p95_abs
+    );
+}
+
+/// A synthetic frame under a light (`fo4_scene::light`): a floor and a
+/// wall lit by an ambient colour, an ambient cube, a directional light and
+/// two points, fogged by distance, a marker left unlit, and the sky
+/// filling the background. The CPU's `render_lit` and the GPU frame of
+/// `convert_lit` agree on coverage and tags, closely on colour, and the
+/// sky agrees in the background.
+#[test]
+#[ignore = "needs a GPU: draws offscreen through Bevy"]
+fn cpu_and_gpu_frames_agree_on_a_lit_frame() {
+    use fo4_render::{Alpha, Draw, DrawList, Mesh, Sidedness, Texture, Vertex};
+    use fo4_scene::light::{Fog, Light, Point, Sky};
+    let quad = |corners: [[f64; 3]; 4]| -> Vec<Vertex> {
+        corners
+            .iter()
+            .zip([[0., 0.], [1., 0.], [1., 1.], [0., 1.]])
+            .map(|(p, uv)| Vertex { position: *p, uv })
+            .collect()
+    };
+    let texture = |rgba: [f32; 4]| Texture {
+        mips: Vec::new(),
+        width: 1,
+        height: 1,
+        rgba: rgba.to_vec(),
+        mip: 0,
+        srgb: false,
+    };
+    let draw = |instance: u32, mesh: usize, texture: usize| Draw {
+        sidedness: Sidedness {
+            material_two_sided: Some(1),
+            nif_shader_flags_2: None,
+        },
+        instance,
+        mesh,
+        texture,
+        world: fo4_scene::transform::Transform::IDENTITY,
+        alpha: Alpha {
+            enabled: 0,
+            source: 0,
+            destination: 0,
+            test_enabled: 0,
+            test_ref: 0,
+            nif_test_function: Some(4),
+            opacity: 1.,
+            nif_flags: None,
+        },
+        uv_offset: [0.; 2],
+        uv_scale: [1.; 2],
+        raw_tile_flags: None,
+        falloff: None,
+        palette: None,
+        colour: None,
+    };
+    let tri = vec![[0, 1, 2], [0, 2, 3]];
+    let mut list = DrawList {
+        meshes: vec![
+            Mesh {
+                vertex_colors: None,
+                normals: None,
+                vertices: quad([
+                    [-800., -800., 0.],
+                    [800., -800., 0.],
+                    [800., 800., 0.],
+                    [-800., 800., 0.],
+                ]),
+                triangles: tri.clone(),
+            },
+            Mesh {
+                vertex_colors: None,
+                normals: None,
+                vertices: quad([
+                    [-800., 600., 0.],
+                    [800., 600., 0.],
+                    [800., 600., 400.],
+                    [-800., 600., 400.],
+                ]),
+                triangles: tri,
+            },
+        ],
+        textures: vec![texture([0.8, 0.8, 0.8, 1.]), texture([0.6, 0.7, 0.9, 1.])],
+        draws: Vec::new(),
+        overlays: Vec::new(),
+        blocks: Default::default(),
+        animations: Vec::new(),
+    };
+    list.draws.push(draw(0, 0, 0));
+    list.draws.push(draw(1, 1, 1));
+    let b = fo4_core::Budget::new(64 << 20);
+    let tags =
+        fo4_render::timeline::append_markers(&mut list, &[[-200., 200., 0.]], 2, &b).unwrap();
+    assert_eq!(tags, vec![2]);
+    // The floor and the wall are lit, the marker is not.
+    let lit: Vec<bool> = (0..list.draws.len()).map(|i| i < 2).collect();
+    let light = Light {
+        ambient: [0.15, 0.12, 0.1],
+        cube: Some([
+            [0.05, 0.05, 0.05],
+            [0.1, 0.05, 0.05],
+            [0.05, 0.1, 0.05],
+            [0.05, 0.05, 0.1],
+            [0.2, 0.2, 0.25],
+            [0.05, 0.05, 0.05],
+        ]),
+        directional: Some(([0.3, 0.25, 0.2], fo4_scene::light::toward(30, 200))),
+        points: vec![
+            Point {
+                position: [150., 100., 120.],
+                radius: 500.,
+                colour: [1., 0.6, 0.3],
+            },
+            Point {
+                position: [-300., 500., 250.],
+                radius: 400.,
+                colour: [0.3, 0.5, 1.],
+            },
+        ],
+        fog: Some(Fog {
+            near: 300.,
+            far: 2000.,
+            max: 0.5,
+            colour: [0.4, 0.45, 0.5],
+        }),
+        sky: Some(Sky {
+            zenith: [0.1, 0.2, 0.3],
+            lower: [0.45, 0.6, 0.75],
+            horizon: [0.85, 0.7, 0.55],
+        }),
+        lit: true,
+        rules: Default::default(),
+        report: Vec::new(),
+    };
+    let camera = fo4_scene::camera::look_at(
+        [0., -300., 120.],
+        [0., 600., 260.],
+        fo4_scene::camera::reference_frustum(SIZE),
+        SIZE,
+    )
+    .unwrap();
+    let options = fo4_render::RenderOptions::REFERENCE;
+    let f = fo4_render::render_lit(
+        &list,
+        &camera,
+        options,
+        Some(fo4_render::Lighting {
+            light: &light,
+            lit: &lit,
+        }),
+        &fo4_core::Limits::default(),
+        &fo4_core::Budget::new(256 << 20),
+    )
+    .unwrap();
+    let cpu: Vec<u8> = f
+        .color
+        .iter()
+        .flat_map(|c| c.map(|v| (v.clamp(0., 1.) * 255.).round() as u8))
+        .collect();
+    let mut gpu_scene =
+        crate::scene::convert_lit(&mut list, &options, Some((&light, &lit))).unwrap();
+    assert!(gpu_scene.light.as_ref().is_some_and(|l| l.sky));
+    let gpu = headless(&mut gpu_scene, &camera, options.clear, true).unwrap();
+    let gpu_tags = crate::compare::tags_from_bytes(gpu.tags.as_ref().unwrap()).unwrap();
+    assert!(f.instances.contains(&2) && gpu_tags.contains(&2), "marker");
+    let report = crate::compare::compare(&crate::compare::Inputs {
+        size: SIZE,
+        cpu: &cpu,
+        gpu: &gpu.color,
+        tags: Some((&f.instances, &gpu_tags)),
+        clear: crate::compare::clear_rgb(options.clear),
+    })
+    .unwrap();
+    // The background (sky) of both, compared byte by byte.
+    let mut sky_max = 0u8;
+    let mut sky_pixels = 0u64;
+    for (k, (c, g)) in f.instances.iter().zip(&gpu_tags).enumerate() {
+        if *c == u32::MAX && *g == u32::MAX {
+            sky_pixels += 1;
+            for i in 0..3 {
+                sky_max = sky_max.max(cpu[4 * k + i].abs_diff(gpu.color[4 * k + i]));
+            }
+        }
+    }
+    println!(
+        "lit frame: agreement {:.6}, same tag {:?} of {}, mean {:?}, p95 {:?}, max {:?}; sky {} px, max {}",
+        report.agreement(),
+        report.same_tag,
+        report.both,
+        report.mean_abs,
+        report.p95_abs,
+        report.max_abs,
+        sky_pixels,
+        sky_max
+    );
+    assert!(sky_pixels > 1000, "{sky_pixels}");
+    assert!(sky_max <= 2, "{sky_max}");
+    assert!(report.agreement() > 0.999, "{}", report.agreement());
+    assert!(
+        report.same_tag.unwrap() as f64 > 0.999 * report.both as f64,
+        "{:?}",
+        report.same_tag
+    );
+    assert!(
+        report.p95_abs.iter().all(|m| *m <= 2),
+        "{:?}",
+        report.p95_abs
+    );
+    // Every pixel drawn by both within a few steps (rounding of the
+    // normal, the point and the light in f32 against the CPU's f64).
+    assert!(
+        report.max_abs.iter().all(|m| *m <= 8),
+        "{:?}",
+        report.max_abs
     );
 }

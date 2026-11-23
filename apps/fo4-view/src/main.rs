@@ -54,12 +54,17 @@ fn load_scene(
         s.clip.as_ref(),
         s.script_event.as_ref(),
         s.timeline.as_ref().zip(prepared.as_ref()),
+        (s.light, s.light_assumptions),
     )?;
     let options = RenderOptions {
         backface_cull: s.backface_cull,
         ..RenderOptions::REFERENCE
     };
-    let gpu = scene::convert(&mut loaded.build.list, &options)?;
+    let gpu = scene::convert_lit(
+        &mut loaded.build.list,
+        &options,
+        loaded.light.as_ref().map(|(l, lit)| (l, lit.as_slice())),
+    )?;
     // Only with --time, so the default output is unchanged.
     if let Some(t) = s.time {
         println!(

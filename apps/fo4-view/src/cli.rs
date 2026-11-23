@@ -141,6 +141,23 @@ usage:
       --look-at and --look-at-actor aim the camera from the same eye at a
       point, the nearest drawn actor or the line's speaker (presentation).
       Not with --eye, --look, --walk, --path, --actor-clip or --script-event.
+  fo4-view ... --headless [--light-cell] [--light-inherits] [--light-points
+           [--light-reference-radius] [--light-fade]] [--light-fog]
+           [--sky-weather] [--light-weather] [--fog-weather]
+           [--assume-hour H] [--assume-weather N]
+      Light and sky (headless, with or without --timeline; spec/light.md),
+      each a pending rule off by default, as the CPU render draws them: an
+      interior cell's ambient and directional colour (--light-cell), the
+      fields its Inherits word names from its lighting template
+      (--light-inherits), placed lights as points with a linear falloff to
+      their radius (--light-points; --light-reference-radius adds the
+      reference's XRDS, --light-fade multiplies by the base's fade value),
+      the cell's fog (--light-fog); outside, the climate's weather at the
+      caller's hour (--assume-hour; --assume-weather N where the climate
+      lists several): the sky as a gradient of its colour rows
+      (--sky-weather), its directional ambient as an ambient cube
+      (--light-weather) and its fog (--fog-weather). Effect surfaces and
+      markers stay unlit.
   fo4-view compare --cpu CPU.png --gpu GPU.png --diff build/DIFF.png
            [--cpu-tags CPU.bin --gpu-tags GPU.bin]
       Coverage agreement and colour differences of two frames of one pose.";
@@ -178,6 +195,11 @@ pub struct Scene {
     /// A run timeline's frame (`--timeline`, headless only); `eye` and
     /// `look` are then unused.
     pub timeline: Option<crate::timeline::Args>,
+    /// The light step's switches (`--light-cell` and the others, headless
+    /// only; all off by default) and the caller's hour and weather
+    /// (`--assume-hour`, `--assume-weather`).
+    pub light: fo4_scene::light::Switches,
+    pub light_assumptions: fo4_scene::light::Assumptions,
 }
 
 /// Default of `--scene-memory`: a viewer bound, not a claim about the game.
@@ -421,9 +443,11 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
     let mut missing_bones_at_bind = false;
     let mut child_flag_agrees = false;
     let mut aim = fo4_scene::timeline::Aim::Track;
+    let mut light = fo4_scene::light::Switches::default();
+    let mut light_assumptions = fo4_scene::light::Assumptions::default();
     let mut rest = args[3..].iter();
     while let Some(arg) = rest.next() {
-        if clock.set_flag(arg) {
+        if clock.set_flag(arg) || light.set_flag(arg) {
             continue;
         }
         let mut value = || rest.next().ok_or_else(usage);
@@ -469,6 +493,17 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             "--timeline-target-rotation" => target_rotation = true,
             "--actor-missing-bone-bind" => missing_bones_at_bind = true,
             "--timeline-child-flag-agrees" => child_flag_agrees = true,
+            "--assume-hour" => {
+                light_assumptions.hour = Some(
+                    finite(value()?)
+                        .ok()
+                        .filter(|h| (0. ..=24.).contains(h))
+                        .ok_or_else(usage)?,
+                )
+            }
+            "--assume-weather" => {
+                light_assumptions.weather = Some(value()?.parse::<usize>().map_err(|_| usage())?)
+            }
             "--look-at" => aim = fo4_scene::timeline::Aim::Point(point(value()?)?),
             "--look-at-actor" => {
                 aim = match value()?.as_str() {
@@ -578,7 +613,22 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
         time,
         clock,
         timeline,
+        light,
+        light_assumptions,
     };
+    if (light.any() || light_assumptions != fo4_scene::light::Assumptions::default())
+        && (!headless || walk || scene.script_event.is_some())
+    {
+        return Err(
+            "the light switches apply to --headless without --walk or --script-event".into(),
+        );
+    }
+    if (light.reference_radius || light.fade) && !light.points
+        || light.inherits && !(light.cell || light.fog)
+        || light_assumptions != fo4_scene::light::Assumptions::default() && !light.weather()
+    {
+        return Err("--light-reference-radius and --light-fade need --light-points, --light-inherits needs --light-cell or --light-fog, --assume-hour and --assume-weather need a weather switch".into());
+    }
     if scene.script_event.is_some() && (!headless || walk) {
         return Err("--script-event applies to --headless without --walk".into());
     }
@@ -853,6 +903,8 @@ mod tests {
                     time: None,
                     clock: fo4_scene::clock::Switches::default(),
                     timeline: None,
+                    light: fo4_scene::light::Switches::default(),
+                    light_assumptions: fo4_scene::light::Assumptions::default(),
                 },
                 fly: DEFAULT_FLY,
                 walk: false,

@@ -21,6 +21,9 @@ pub struct Loaded {
     pub animation: Option<crate::clip::Animation>,
     /// `--timeline`: the frame's camera and overlay.
     pub timeline: Option<crate::timeline::Drawn>,
+    /// The light switches: the frame's light and which draws it lights
+    /// (`fo4_render::Lighting`); `None` with every switch off.
+    pub light: Option<(fo4_scene::light::Light, Vec<bool>)>,
 }
 
 /// The manifest with its data root, the plugins and the mounted archives.
@@ -188,6 +191,7 @@ pub fn cell(
     clip: Option<&crate::clip::Options>,
     script_event: Option<&crate::vm_event::ScriptEvent>,
     timeline: Option<(&crate::timeline::Args, &crate::timeline::Prepared)>,
+    light: (fo4_scene::light::Switches, fo4_scene::light::Assumptions),
 ) -> AnyResult<Loaded> {
     if walk {
         fo4_walk::accept(&walk_rules(), level, fo4_scene::hypotheses::status)?;
@@ -455,13 +459,35 @@ pub fn cell(
             ),
         }
     }
+    // Draws before this index (the build's and the terrain's) are lit by
+    // the light switches, but for effect shader surfaces; the markers after
+    // it are not (as the CPU render).
+    let lit_until = build.list.draws.len();
     // --timeline: the actors' markers after every other draw, the camera
     // and the overlay.
-    let drawn = match (timeline, &applied, timeline_cast) {
+    let mut drawn = match (timeline, &applied, timeline_cast) {
         (Some((args, p)), Some(a), Some(c)) => Some(crate::timeline::finish(
             p, args, c, level, a, &mut build, &budget,
         )?),
         _ => None,
+    };
+    // The light switches: the frame's light (`fo4_scene::light`).
+    let light = match fo4_scene::light::frame(&store, &scene, light.0, light.1, &budget)? {
+        Some(l) => {
+            let effects: std::collections::BTreeSet<usize> =
+                build.effect_draws.iter().copied().collect();
+            let lit = (0..build.list.draws.len())
+                .map(|i| i < lit_until && !effects.contains(&i))
+                .collect();
+            for line in &l.report {
+                println!("light: {line}");
+            }
+            if let Some(d) = &mut drawn {
+                d.overlay.push_str(&fo4_scene::light::overlay(&l));
+            }
+            Some((l, lit))
+        }
+        None => None,
     };
     let walk = if walk {
         // The same collision and world the `walk` report uses.
@@ -513,6 +539,7 @@ pub fn cell(
         walk,
         animation,
         timeline: drawn,
+        light,
     })
 }
 

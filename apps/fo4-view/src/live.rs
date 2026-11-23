@@ -316,6 +316,7 @@ mod tests {
                 falloff: None,
                 palette: 0,
                 colour: None,
+                lit: false,
             },
             key: SurfaceKey {
                 blend: None,

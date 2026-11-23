@@ -10,6 +10,7 @@ use crate::{
     stream::AssetKey,
     walk::WalkView,
 };
+use bevy::render::storage::ShaderBuffer;
 use bevy::{
     asset::{embedded_asset, embedded_path, AssetPath, RenderAssetUsages},
     camera::{
@@ -72,6 +73,8 @@ pub struct SurfaceUniform {
     pub falloff: Vec4,
     /// `SurfaceParams::colour` (RGB; 1 without one).
     pub tint: Vec4,
+    /// Bit 0: lit by the light buffer (`SurfaceParams::lit`).
+    pub mode: u32,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -86,6 +89,9 @@ pub struct MaterialKey {
     /// specialised in spawn order, exact depth ties resolve the same way in
     /// every build and run (headless frames).
     pub rank: u32,
+    /// The sky of the light buffer ([`spawn_sky`]): the shader's `sky`
+    /// entry point, at the far depth, kept only where nothing is drawn.
+    pub sky: bool,
 }
 
 #[derive(Asset, TypePath, AsBindGroup, Clone, Debug)]
@@ -102,7 +108,34 @@ pub struct SurfaceMaterial {
     /// the surface has none.
     #[texture(3)]
     pub palette: Option<Handle<Image>>,
+    /// The frame's light (`scene::light_words`), one buffer for every
+    /// material; a buffer without light when the frame has none.
+    #[storage(4, read_only)]
+    pub lights: Handle<ShaderBuffer>,
     pub key: MaterialKey,
+}
+
+/// The light buffer every material binds ([`SurfaceMaterial::lights`]).
+#[derive(Resource, Clone)]
+struct LightBuffer(Handle<ShaderBuffer>);
+
+/// Inserts the light buffer of `light` (a buffer without light for `None`)
+/// and returns its handle.
+fn insert_light_buffer(
+    world: &mut World,
+    light: Option<&crate::scene::GpuLight>,
+) -> Handle<ShaderBuffer> {
+    let words = match light {
+        Some(l) => l.words.clone(),
+        None => vec![0f32; 4 * crate::scene::LIGHT_HEADER_ROWS],
+    };
+    // An app has the asset store; a bare world (the tests') gets one.
+    world.init_resource::<Assets<ShaderBuffer>>();
+    let handle = world
+        .resource_mut::<Assets<ShaderBuffer>>()
+        .add(ShaderBuffer::new(words, RenderAssetUsages::RENDER_WORLD));
+    world.insert_resource(LightBuffer(handle.clone()));
+    handle
 }
 impl From<&SurfaceMaterial> for MaterialKey {
     fn from(m: &SurfaceMaterial) -> Self {
@@ -154,6 +187,12 @@ impl Material for SurfaceMaterial {
             } else {
                 CompareFunction::Greater
             });
+            // The sky writes the far depth (0, reverse Z) and no depth: it
+            // passes only where nothing has been drawn, before or after it.
+            if key.sky {
+                depth.depth_compare = Some(CompareFunction::GreaterEqual);
+                depth.depth_write_enabled = Some(false);
+            }
         }
         // Material pipelines always have a fragment stage with one target.
         let Some(fragment) = descriptor.fragment.as_mut() else {
@@ -164,6 +203,8 @@ impl Material for SurfaceMaterial {
             .first()
             .and_then(Option::as_ref)
             .is_some_and(|t| t.format.is_srgb());
+        // The module holds two entry points: the surfaces' and the sky's.
+        fragment.entry_point = Some(if key.sky { "sky" } else { "fragment" }.into());
         if key.tag_pass {
             fragment.shader_defs.push("INSTANCE_TAG".into());
         } else if srgb {
@@ -388,6 +429,7 @@ fn uniform(p: &crate::scene::SurfaceParams) -> SurfaceUniform {
             let c = p.colour.unwrap_or([1.; 3]);
             Vec4::new(c[0], c[1], c[2], 1.)
         },
+        mode: u32::from(p.lit),
     }
 }
 
@@ -397,6 +439,7 @@ fn surface_material(
     surface: &Surface,
     image: Handle<Image>,
     palette: Option<Handle<Image>>,
+    lights: Handle<ShaderBuffer>,
     tag_pass: bool,
     rank: u32,
 ) -> SurfaceMaterial {
@@ -404,10 +447,12 @@ fn surface_material(
         params: uniform(&surface.params),
         texture: image,
         palette,
+        lights,
         key: MaterialKey {
             surface: surface.key,
             tag_pass,
             rank,
+            sky: false,
         },
     }
 }
@@ -459,6 +504,10 @@ fn spawn_instances(
     layer: usize,
     ranked: bool,
 ) -> Vec<Entity> {
+    let lights = match world.get_resource::<LightBuffer>() {
+        Some(b) => b.0.clone(),
+        None => insert_light_buffer(world, None),
+    };
     let mut materials = world.resource_mut::<Assets<SurfaceMaterial>>();
     let mut handles = std::collections::BTreeMap::new();
     let mut entities = Vec::with_capacity(instances.len());
@@ -481,6 +530,7 @@ fn spawn_instances(
                     surface,
                     images[surface.texture].clone(),
                     surface.palette.map(|p| images[p].clone()),
+                    lights.clone(),
                     tag_pass,
                     rank,
                 ))
@@ -502,6 +552,82 @@ fn spawn_instances(
     let mut spawned: Vec<Entity> = world.spawn_batch(entities.into_iter().rev()).collect();
     spawned.reverse();
     spawned
+}
+
+/// The sky of a headless colour frame: a cube around the eye on the colour
+/// pass's layer whose material colours each pixel by its view direction
+/// from the light buffer's sky at the far depth, so that it shows only
+/// where nothing is drawn and blended surfaces blend over it (as
+/// `fo4_render::render_lit` fills the background before any draw).
+fn spawn_sky(
+    world: &mut World,
+    eye: Vec3,
+    layer: usize,
+    lights: Handle<ShaderBuffer>,
+    up: &Uploaded,
+) {
+    let half = 100.0f32;
+    let mut mesh = Mesh::new(
+        PrimitiveTopology::TriangleList,
+        RenderAssetUsages::RENDER_WORLD,
+    );
+    let corners: Vec<[f32; 3]> = (0..8)
+        .map(|k| {
+            [
+                if k & 1 == 0 { -half } else { half },
+                if k & 2 == 0 { -half } else { half },
+                if k & 4 == 0 { -half } else { half },
+            ]
+        })
+        .collect();
+    mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, corners);
+    mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, vec![[0f32, 1., 0.]; 8]);
+    mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, vec![[0f32, 0.]; 8]);
+    mesh.insert_indices(Indices::U16(vec![
+        0, 1, 3, 0, 3, 2, 4, 6, 7, 4, 7, 5, 0, 4, 5, 0, 5, 1, 2, 3, 7, 2, 7, 6, 0, 2, 6, 0, 6, 4,
+        1, 5, 7, 1, 7, 3,
+    ]));
+    let mesh = world.resource_mut::<Assets<Mesh>>().add(mesh);
+    let image = up.images.first().cloned().unwrap_or_default();
+    let material = SurfaceMaterial {
+        params: SurfaceUniform {
+            uv_scale: Vec2::ONE,
+            uv_offset: Vec2::ZERO,
+            test_ref: 0.,
+            opacity: 1.,
+            test_function: crate::scene::TEST_ALWAYS,
+            skip_zero_alpha: 0,
+            opaque_texture: 0,
+            falloff_on: 0,
+            palette_lookups: 0,
+            falloff: Vec4::ZERO,
+            tint: Vec4::ONE,
+            mode: 0,
+        },
+        texture: image,
+        palette: None,
+        lights,
+        key: MaterialKey {
+            surface: crate::scene::SurfaceKey {
+                blend: None,
+                cull_back: false,
+                overlay: false,
+            },
+            tag_pass: false,
+            rank: 0,
+            sky: true,
+        },
+    };
+    let material = world
+        .resource_mut::<Assets<SurfaceMaterial>>()
+        .add(material);
+    world.spawn((
+        Mesh3d(mesh),
+        MeshMaterial3d(material),
+        Transform::from_translation(eye),
+        NoFrustumCulling,
+        RenderLayers::layer(layer),
+    ));
 }
 
 fn camera_bundle(
@@ -611,6 +737,8 @@ pub fn headless(
             .map_err(|e| format!("GpuPoll: {e}"))?;
     }
     let world = app.world_mut();
+    let lights = insert_light_buffer(world, scene.light.as_ref());
+    let sky = scene.light.as_ref().is_some_and(|l| l.sky);
     let mut targets = Vec::new();
     let passes: &[bool] = if want_tags { &[false, true] } else { &[false] };
     for (k, &tag_pass) in passes.iter().enumerate() {
@@ -623,6 +751,10 @@ pub fn headless(
         // as is, like the CPU frame's clear value.
         let [r, g, b, a] = if tag_pass { [1.; 4] } else { clear };
         let clear = Color::LinearRgba(LinearRgba::new(r, g, b, a));
+        // The sky on the colour pass's layer (never on the tag pass's).
+        if sky && !tag_pass {
+            spawn_sky(world, pose.0, k, lights.clone(), &up);
+        }
         world.spawn((
             camera_bundle(pose, camera.frustum, false, clear, k as isize, k),
             RenderTarget::Image(target.clone().into()),
@@ -1361,9 +1493,13 @@ fn upload_waiting(world: &mut World, live: &mut Live) -> Result<(), String> {
                     Some(p) => Some(images.get(p).cloned().ok_or("StreamSurfaceTexture")?),
                     None => None,
                 };
+                let lights = match world.get_resource::<LightBuffer>() {
+                    Some(b) => b.0.clone(),
+                    None => insert_light_buffer(world, None),
+                };
                 let h = world
                     .resource_mut::<Assets<SurfaceMaterial>>()
-                    .add(surface_material(surface, image, palette, false, 0));
+                    .add(surface_material(surface, image, palette, lights, false, 0));
                 materials.insert(*id, h.clone());
                 h
             };
