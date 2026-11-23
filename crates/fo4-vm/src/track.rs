@@ -990,6 +990,8 @@ pub struct Place {
     /// records do not change during a run; reading one searches every
     /// placement for its cell, so it is read once).
     stored_actors: BTreeMap<FormKey, Stored>,
+    /// The placements' cells, read when first needed.
+    cells: Option<Rc<Cells>>,
     /// The folds of the track when it grows point by point
     /// ([`Place::cut`], [`Place::extend`]); `None` when the whole track was
     /// given at load.
@@ -1000,6 +1002,12 @@ pub struct Place {
 impl Place {
     pub fn count(&mut self, k: impl Into<String>) {
         *self.counts.entry(k.into()).or_default() += 1;
+    }
+    /// The placements' cells ([`Cells`]), read once.
+    fn cells(&mut self, store: &Store) -> Rc<Cells> {
+        self.cells
+            .get_or_insert_with(|| Rc::new(Cells::read(store)))
+            .clone()
     }
     /// The volumes of a space holding a standing point under the point or
     /// body reading (none when neither is on).
@@ -1248,8 +1256,12 @@ impl Place {
                     continue;
                 };
                 if sw.actors && r.signature == *b"ACHR" {
-                    if let Ok((sp, pos, _)) = stored_actor(store, store.limits.max_memory, &kid.key)
-                    {
+                    if let Ok((sp, pos, _)) = stored_actor(
+                        store,
+                        store.limits.max_memory,
+                        &kid.key,
+                        Some(&place.cells(store)),
+                    ) {
                         let (lo, hi) = boxes[space];
                         let out = kid.group_kind == 8
                             && (0..2).any(|i| pos[i] < lo[i] - margin || pos[i] > hi[i] + margin);
@@ -1364,7 +1376,12 @@ impl Place {
                 if !seen.insert(m.actor.clone()) {
                     continue;
                 }
-                if let Ok((sp, pos, _)) = stored_actor(store, store.limits.max_memory, &m.actor) {
+                if let Ok((sp, pos, _)) = stored_actor(
+                    store,
+                    store.limits.max_memory,
+                    &m.actor,
+                    Some(&place.cells(store)),
+                ) {
                     let held = place.holding(&sp, pos);
                     if !held.is_empty() {
                         place.count("actors standing in a trigger volume at their stored position: held without an event");
@@ -1498,7 +1515,8 @@ fn placed_at(store: &Store, max: u64, w: &mut World, o: ObjId, t: f64) -> Spot {
         let got = match w.place.stored_actors.get(&k) {
             Some(x) => x.clone(),
             None => {
-                let x = stored_actor(store, max, &k);
+                let cells = w.place.cells(store);
+                let x = stored_actor(store, max, &k, Some(&cells));
                 w.place.stored_actors.insert(k.clone(), x.clone());
                 x
             }
@@ -1519,7 +1537,8 @@ fn placed_at(store: &Store, max: u64, w: &mut World, o: ObjId, t: f64) -> Spot {
     let got = match w.place.stored.get(&k) {
         Some(x) => x.clone(),
         None => {
-            let x = stored(store, max, &k);
+            let cells = w.place.cells(store);
+            let x = stored(store, max, &k, Some(&cells));
             w.place.stored.insert(k.clone(), x.clone());
             x
         }
@@ -1558,7 +1577,7 @@ fn moved_to(w: &mut World, o: ObjId, k: FormKey) -> Spot {
 
 /// A placed reference's stored space, position and facing (`DATA`, the
 /// third rotation word in degrees).
-fn stored(store: &Store, max: u64, k: &FormKey) -> Stored {
+fn stored(store: &Store, max: u64, k: &FormKey, cells: Option<&Cells>) -> Stored {
     match store.signature(k).as_ref().map(|s| &s[..]) {
         Some(b"REFR") => {}
         Some(b"ACHR") => return Err("an actor (no actor movement model)"),
@@ -1571,7 +1590,11 @@ fn stored(store: &Store, max: u64, k: &FormKey) -> Stored {
         .flatten()
         .ok_or("the reference could not be read")?;
     let t = r.data.transform.ok_or("no placement")?;
-    let space = space_of(store, k).ok_or("the reference's cell is not known")?;
+    let space = match cells {
+        Some(c) => c.space(store, k),
+        None => space_of(store, k),
+    }
+    .ok_or("the reference's cell is not known")?;
     Ok((
         space,
         [t[0], t[1], t[2]].map(f64::from),
@@ -1587,9 +1610,9 @@ pub fn stored_position(
     k: &FormKey,
 ) -> Result<(FormKey, [f64; 3]), &'static str> {
     let got = if store.signature(k) == Some(*b"ACHR") {
-        stored_actor(store, max, k)
+        stored_actor(store, max, k, None)
     } else {
-        stored(store, max, k)
+        stored(store, max, k, None)
     };
     got.map(|(space, pos, _)| (space, pos))
 }
@@ -1608,7 +1631,7 @@ pub fn schedule_move(w: &mut World, m: ActorMove) {
 
 /// A placed actor's stored space, position and facing (`DATA` as a
 /// placed reference's, `fo4_plugin::actor::Achr`).
-fn stored_actor(store: &Store, max: u64, k: &FormKey) -> Stored {
+fn stored_actor(store: &Store, max: u64, k: &FormKey, cells: Option<&Cells>) -> Stored {
     if store.signature(k) != Some(*b"ACHR") {
         return Err("not a placed actor");
     }
@@ -1625,12 +1648,41 @@ fn stored_actor(store: &Store, max: u64, k: &FormKey) -> Stored {
     let a =
         fo4_plugin::actor::Achr::decode(&r, ctx, &b).map_err(|_| "the actor could not be read")?;
     let t = a.transform.ok_or("no placement")?;
-    let space = space_of(store, k).ok_or("the actor's cell is not known")?;
+    let space = match cells {
+        Some(c) => c.space(store, k),
+        None => space_of(store, k),
+    }
+    .ok_or("the actor's cell is not known")?;
     Ok((
         space,
         [t[0], t[1], t[2]].map(f64::from),
         f64::from(t[5]).to_degrees(),
     ))
+}
+
+/// The parent cell of every winning placement, by its winning record, read
+/// once: finding one placement's cell searches every placement
+/// (`space_of`), and a run asks for many.
+#[derive(Debug, Default)]
+pub struct Cells(std::collections::HashMap<usize, FormKey>);
+impl Cells {
+    pub fn read(store: &Store) -> Cells {
+        let mut m = std::collections::HashMap::new();
+        for (r, c) in store.placement_cells() {
+            // The first membership of a record, as `space_of` finds it.
+            m.entry(std::ptr::from_ref(r) as usize).or_insert(c);
+        }
+        Cells(m)
+    }
+    /// [`space_of`] through the index.
+    fn space(&self, store: &Store, k: &FormKey) -> Option<FormKey> {
+        let w = store.overrides().winner(k)?;
+        let cell = self.0.get(&(std::ptr::from_ref(w) as usize))?.clone();
+        match store.world(&cell) {
+            Some(world) => Some(world),
+            None => Some(cell),
+        }
+    }
 }
 
 /// The space (interior cell or worldspace) of a placed reference's cell.

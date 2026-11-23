@@ -14,6 +14,7 @@ use crate::{
 };
 use fo4_core::Budget;
 use fo4_plugin::{typed::Store, FormKey, Record};
+use std::cell::RefCell;
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 /// The engine script type of a record handle by record type
@@ -268,6 +269,11 @@ pub struct DataHost<'s> {
     /// --enable-child-flag-ignored`). Off by default: such a chain is
     /// undetermined, as before.
     pub child_flag_ignored: bool,
+    /// Globals' stored values read so far ([`DataHost::global_stored`]):
+    /// the records do not change during a run.
+    globals: RefCell<HashMap<FormKey, Result<f32, &'static str>>>,
+    /// References' bases read so far ([`DataHost::base_stored`]).
+    bases: RefCell<HashMap<FormKey, Result<FormKey, &'static str>>>,
 }
 
 /// Natives of the data host, lower case `script.function`, with the rule
@@ -312,7 +318,31 @@ impl<'s> DataHost<'s> {
             answers: BTreeMap::new(),
             enable_chain: true,
             child_flag_ignored: false,
+            globals: RefCell::new(HashMap::new()),
+            bases: RefCell::new(HashMap::new()),
         }
+    }
+    /// A global's stored value ([`global_fltv`]), read once per run.
+    pub fn global_stored(&self, k: &FormKey) -> Result<f32, &'static str> {
+        if let Some(x) = self.globals.borrow().get(k) {
+            return *x;
+        }
+        let x = global_fltv(self.store, k, self.max_memory);
+        self.globals.borrow_mut().insert(k.clone(), x);
+        x
+    }
+    /// A placed reference's base (`NAME`, `crate::bind::base_of`), read
+    /// once per run; as the condition evaluator names its failures.
+    pub fn base_stored(&self, reference: &FormKey) -> Result<FormKey, &'static str> {
+        if let Some(x) = self.bases.borrow().get(reference) {
+            return x.clone();
+        }
+        let b = Budget::new(self.max_memory);
+        let x = crate::bind::base_of(self.store, reference, &b)
+            .map_err(|_| "the reference could not be read")
+            .and_then(|o| o.ok_or("the reference has no base"));
+        self.bases.borrow_mut().insert(reference.clone(), x.clone());
+        x
     }
     fn using(&mut self, r: &'static str) {
         if !self.used.contains(&r) {
@@ -524,11 +554,14 @@ impl<'s> DataHost<'s> {
     /// Whether a native of this run may have changed the value of the
     /// global or form list `k` (so the data no longer answers it).
     pub fn value_changed(&self, w: &World, k: &FormKey) -> bool {
+        // The changed facts are few; the world's objects many.
         let key = record_key(k);
-        w.objects
-            .iter()
-            .enumerate()
-            .any(|(o, x)| x.key.as_deref() == Some(&key) && self.changed.contains(&(o, "value")))
+        self.changed.iter().any(|(o, fact)| {
+            *fact == "value"
+                && w.objects
+                    .get(*o)
+                    .is_some_and(|x| x.key.as_deref() == Some(&key))
+        })
     }
     /// The entries of a form list (`vm_host_formlist_lnam_v1`): its LNAM
     /// subrecords in stored order.

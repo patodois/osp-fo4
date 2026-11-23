@@ -934,7 +934,7 @@ impl Facts for RunFacts<'_, '_> {
         if self.data.value_changed(self.w, g) {
             return Err("changed by this run");
         }
-        data::global_fltv(self.data.store, g, self.data.max_memory)
+        self.data.global_stored(g)
     }
     fn event_member(&mut self, code: [u8; 2]) -> Result<Option<FormKey>, &'static str> {
         let e = self.event.ok_or("no story event is being offered")?;
@@ -1024,6 +1024,9 @@ impl Facts for RunFacts<'_, '_> {
     }
     fn max_memory(&self) -> u64 {
         self.data.max_memory
+    }
+    fn reference_base(&mut self, reference: &FormKey) -> Result<FormKey, &'static str> {
+        self.data.base_stored(reference)
     }
     fn assumed(&self, function: u16) -> Option<f32> {
         let scoped = self
