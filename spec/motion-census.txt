@@ -1,0 +1,1000 @@
+# motion_census: free-running transform controllers and manager-run sequences (spec/controller-clock.md)
+# Counts only. Each line: count, placements of the models (enabled REFR), area proxy as % of all placements' area, label.
+winning NIF read 224366, unreadable 2; placements 1776060 (area proxy 3.6769e11) (155 s)
+14119	9892	0.065%	1 controllers: NiTransformController; free-running
+64	1	0.000%	1 controllers: NiTransformController; manager flag
+7	353	0.000%	1 free: interpolator NiPathInterpolator
+14112	9883	0.065%	1 free: interpolator NiTransformInterpolator
+7	353	0.000%	1 free: not a clock track: interpolator type
+137	0	0.000%	1 free: not a clock track: not active
+2298	1531	0.022%	1 free: not a clock track: span not positive
+2339	1186	0.022%	1 free: rest tag with the switches off transform-constant
+11780	9235	0.045%	1 free: rest tag with the switches off transform-varies
+40	0	0.000%	1 track: data keys; translation TBC (varies), rotation XYZ [TBC, TBC, TBC] (varies), scale none
+2	0	0.000%	1 track: data keys; translation TBC (varies), rotation none, scale none
+14	0	0.000%	1 track: data keys; translation linear (varies), rotation XYZ [TBC, TBC, TBC] (varies), scale none
+7	0	0.000%	1 track: data keys; translation linear (varies), rotation XYZ [TBC, TBC, TBC], scale none
+3	0	0.000%	1 track: data keys; translation linear (varies), rotation XYZ [TBC, linear, TBC] (varies), scale none
+1	0	0.000%	1 track: data keys; translation linear (varies), rotation XYZ [linear, TBC, TBC] (varies), scale none
+2	0	0.000%	1 track: data keys; translation linear (varies), rotation XYZ [linear, linear, linear] (varies), scale TBC (varies)
+5	0	0.000%	1 track: data keys; translation linear (varies), rotation XYZ [linear, linear, linear] (varies), scale none
+4	13	0.003%	1 track: data keys; translation linear (varies), rotation XYZ [linear, linear, quadratic] (varies), scale none
+1	395	0.000%	1 track: data keys; translation linear (varies), rotation XYZ [linear, quadratic, linear] (varies), scale none
+1	0	0.000%	1 track: data keys; translation linear (varies), rotation XYZ [quadratic, linear, linear] (varies), scale none
+1	0	0.000%	1 track: data keys; translation linear (varies), rotation XYZ [quadratic, quadratic, quadratic] (varies), scale TBC (varies)
+26	257	0.001%	1 track: data keys; translation linear (varies), rotation XYZ [quadratic, quadratic, quadratic] (varies), scale none
+12	1	0.000%	1 track: data keys; translation linear (varies), rotation XYZ [quadratic, quadratic, quadratic] (varies), scale pose
+16	76	0.001%	1 track: data keys; translation linear (varies), rotation XYZ [quadratic, quadratic, quadratic] (varies), scale quadratic
+4	33	0.000%	1 track: data keys; translation linear (varies), rotation XYZ [quadratic, quadratic, quadratic] (varies), scale quadratic (varies)
+13	1	0.000%	1 track: data keys; translation linear (varies), rotation XYZ [quadratic, quadratic, quadratic], scale none
+31	190	0.001%	1 track: data keys; translation linear (varies), rotation XYZ [quadratic, quadratic, quadratic], scale quadratic
+7850	3559	0.008%	1 track: data keys; translation linear (varies), rotation none, scale none
+35	97	0.002%	1 track: data keys; translation linear (varies), rotation none, scale pose
+7	59	0.002%	1 track: data keys; translation linear (varies), rotation none, scale quadratic (varies)
+1923	0	0.000%	1 track: data keys; translation linear (varies), rotation pose, scale none
+20	0	0.000%	1 track: data keys; translation linear (varies), rotation pose, scale pose
+2	0	0.000%	1 track: data keys; translation linear (varies), rotation quaternion linear (varies), scale linear
+226	23	0.000%	1 track: data keys; translation linear (varies), rotation quaternion linear (varies), scale none
+39	94	0.000%	1 track: data keys; translation linear (varies), rotation quaternion linear (varies), scale pose
+1	0	0.000%	1 track: data keys; translation linear (varies), rotation quaternion linear, scale none
+2	0	0.000%	1 track: data keys; translation linear (varies), rotation quaternion linear, scale pose
+5	8	0.001%	1 track: data keys; translation linear, rotation XYZ [quadratic, quadratic, quadratic] (varies), scale pose
+6	11	0.001%	1 track: data keys; translation linear, rotation XYZ [quadratic, quadratic, quadratic] (varies), scale quadratic
+48	0	0.000%	1 track: data keys; translation linear, rotation none, scale none
+13	0	0.000%	1 track: data keys; translation linear, rotation quaternion linear (varies), scale none
+3	0	0.000%	1 track: data keys; translation linear, rotation quaternion linear, scale linear
+9	0	0.000%	1 track: data keys; translation linear, rotation quaternion linear, scale none
+4	0	0.000%	1 track: data keys; translation none, rotation XYZ [TBC, TBC, TBC], scale none
+50	657	0.000%	1 track: data keys; translation none, rotation XYZ [linear, linear, linear] (varies), scale none
+8	0	0.000%	1 track: data keys; translation none, rotation XYZ [linear, linear, linear], scale none
+20	373	0.003%	1 track: data keys; translation none, rotation XYZ [linear, linear, quadratic] (varies), scale none
+11	814	0.004%	1 track: data keys; translation none, rotation XYZ [linear, quadratic, linear] (varies), scale none
+19	201	0.009%	1 track: data keys; translation none, rotation XYZ [quadratic, linear, linear] (varies), scale none
+6	46	0.000%	1 track: data keys; translation none, rotation XYZ [quadratic, linear, quadratic] (varies), scale none
+2	3	0.001%	1 track: data keys; translation none, rotation XYZ [quadratic, quadratic, linear] (varies), scale none
+152	4490	0.013%	1 track: data keys; translation none, rotation XYZ [quadratic, quadratic, quadratic] (varies), scale none
+3	58	0.000%	1 track: data keys; translation none, rotation XYZ [quadratic, quadratic, quadratic] (varies), scale pose
+70	806	0.003%	1 track: data keys; translation none, rotation XYZ [quadratic, quadratic, quadratic] (varies), scale quadratic
+8	34	0.000%	1 track: data keys; translation none, rotation XYZ [quadratic, quadratic, quadratic], scale none
+135	853	0.003%	1 track: data keys; translation none, rotation XYZ [quadratic, quadratic, quadratic], scale quadratic
+2	0	0.000%	1 track: data keys; translation none, rotation XYZ [quadratic, quadratic, quadratic], scale quadratic (varies)
+1	0	0.000%	1 track: data keys; translation none, rotation XYZ [step, linear, linear] (varies), scale none
+1	0	0.000%	1 track: data keys; translation none, rotation none, scale TBC
+3	0	0.000%	1 track: data keys; translation none, rotation none, scale TBC (varies)
+104	0	0.000%	1 track: data keys; translation none, rotation none, scale linear (varies)
+21	0	0.000%	1 track: data keys; translation none, rotation none, scale quadratic
+5	0	0.000%	1 track: data keys; translation none, rotation none, scale quadratic (varies)
+26	25	0.000%	1 track: data keys; translation none, rotation quaternion linear (varies), scale none
+6	0	0.000%	1 track: data keys; translation none, rotation quaternion linear (varies), scale pose
+1	67	0.000%	1 track: data keys; translation none, rotation quaternion linear (varies), scale quadratic
+3	27	0.001%	1 track: data keys; translation none, rotation quaternion linear (varies), scale quadratic (varies)
+12	0	0.000%	1 track: data keys; translation none, rotation quaternion linear, scale quadratic
+1	0	0.000%	1 track: data keys; translation pose (varies), rotation XYZ [quadratic, quadratic, quadratic] (varies), scale quadratic
+3	0	0.000%	1 track: data keys; translation pose (varies), rotation XYZ [quadratic, quadratic, quadratic], scale none
+1	0	0.000%	1 track: data keys; translation pose (varies), rotation XYZ [quadratic, quadratic, quadratic], scale quadratic
+52	0	0.000%	1 track: data keys; translation pose (varies), rotation quaternion linear (varies), scale pose
+3	0	0.000%	1 track: data keys; translation pose, rotation XYZ [quadratic, quadratic, quadratic] (varies), scale none
+98	12	0.001%	1 track: data keys; translation pose, rotation XYZ [quadratic, quadratic, quadratic] (varies), scale quadratic
+6	0	0.000%	1 track: data keys; translation pose, rotation XYZ [quadratic, quadratic, quadratic], scale none
+11	0	0.000%	1 track: data keys; translation pose, rotation XYZ [quadratic, quadratic, quadratic], scale quadratic
+1	0	0.000%	1 track: data keys; translation pose, rotation none, scale quadratic
+5	0	0.000%	1 track: data keys; translation pose, rotation quaternion linear (varies), scale none
+393	94	0.000%	1 track: data keys; translation pose, rotation quaternion linear (varies), scale pose
+2	71	0.000%	1 track: data keys; translation pose, rotation quaternion linear, scale pose
+27	0	0.000%	1 track: data keys; translation quadratic (varies), rotation XYZ [TBC, TBC, TBC] (varies), scale none
+5	0	0.000%	1 track: data keys; translation quadratic (varies), rotation XYZ [quadratic, quadratic, quadratic] (varies), scale none
+1	0	0.000%	1 track: data keys; translation quadratic (varies), rotation none, scale none
+19	0	0.000%	1 track: data keys; translation step (varies), rotation XYZ [step, step, step] (varies), scale none
+4	0	0.000%	1 track: data keys; translation step (varies), rotation none, scale none
+135	246	0.001%	1 track: varies false; collision under the node false; drawn geometry under the node false; the node is a root false
+4	0	0.000%	1 track: varies false; collision under the node false; drawn geometry under the node false; the node is a root true
+41	655	0.001%	1 track: varies false; collision under the node false; drawn geometry under the node true; the node is a root false
+49	1	0.000%	1 track: varies false; collision under the node false; drawn geometry under the node true; the node is a root true
+26	0	0.000%	1 track: varies false; collision under the node true; drawn geometry under the node false; the node is a root false
+13	231	0.001%	1 track: varies false; collision under the node true; drawn geometry under the node true; the node is a root false
+1	126	0.001%	1 track: varies false; collision under the node true; drawn geometry under the node true; the node is a root true
+138	566	0.001%	1 track: varies false; cycle clamp; seconds per cycle 1 to 5 s; frequency 1 true, phase 0 true
+2	0	0.000%	1 track: varies false; cycle clamp; seconds per cycle 30 to 300 s; frequency 1 true, phase 0 true
+69	392	0.002%	1 track: varies false; cycle clamp; seconds per cycle 5 to 30 s; frequency 1 true, phase 0 true
+58	0	0.000%	1 track: varies false; cycle clamp; seconds per cycle below 1 s; frequency 1 true, phase 0 true
+2	0	0.000%	1 track: varies false; cycle loop; seconds per cycle 1 to 5 s; frequency 1 true, phase 0 true
+10496	4652	0.013%	1 track: varies true; collision under the node false; drawn geometry under the node false; the node is a root false
+290	0	0.000%	1 track: varies true; collision under the node false; drawn geometry under the node false; the node is a root true
+395	3443	0.014%	1 track: varies true; collision under the node false; drawn geometry under the node true; the node is a root false
+11	0	0.000%	1 track: varies true; collision under the node false; drawn geometry under the node true; the node is a root true
+69	47	0.000%	1 track: varies true; collision under the node true; drawn geometry under the node false; the node is a root false
+142	1100	0.018%	1 track: varies true; collision under the node true; drawn geometry under the node true; the node is a root false
+5	53	0.002%	1 track: varies true; collision under the node true; drawn geometry under the node true; the node is a root true
+465	1571	0.006%	1 track: varies true; cycle clamp; seconds per cycle 1 to 5 s; frequency 1 true, phase 0 true
+304	500	0.006%	1 track: varies true; cycle clamp; seconds per cycle 30 to 300 s; frequency 1 true, phase 0 true
+28	0	0.000%	1 track: varies true; cycle clamp; seconds per cycle 300 s or more; frequency 1 true, phase 0 true
+10230	445	0.007%	1 track: varies true; cycle clamp; seconds per cycle 5 to 30 s; frequency 1 true, phase 0 true
+100	109	0.003%	1 track: varies true; cycle clamp; seconds per cycle below 1 s; frequency 1 true, phase 0 true
+110	3481	0.010%	1 track: varies true; cycle loop; seconds per cycle 1 to 5 s; frequency 1 true, phase 0 true
+28	3555	0.015%	1 track: varies true; cycle loop; seconds per cycle 30 to 300 s; frequency 1 true, phase 0 true
+78	1986	0.005%	1 track: varies true; cycle loop; seconds per cycle 5 to 30 s; frequency 1 true, phase 0 true
+58	0	0.000%	1 track: varies true; cycle loop; seconds per cycle below 1 s; frequency 1 true, phase 0 true
+3	0	0.000%	1 track: varies true; cycle reverse; seconds per cycle 1 to 5 s; frequency 1 true, phase 0 true
+4	344	0.000%	1 track: varies true; cycle reverse; seconds per cycle below 1 s; frequency 1 true, phase 0 true
+2	0	0.000%	1 varying track: XYZ at load (two or three angles not 0) matches degrees + X then Y then Z
+2	0	0.000%	1 varying track: XYZ at load (two or three angles not 0) matches degrees + X then Z then Y
+2	0	0.000%	1 varying track: XYZ at load (two or three angles not 0) matches degrees + Y then X then Z
+2	0	0.000%	1 varying track: XYZ at load (two or three angles not 0) matches degrees + Y then Z then X
+2	0	0.000%	1 varying track: XYZ at load (two or three angles not 0) matches degrees + Z then X then Y
+2	0	0.000%	1 varying track: XYZ at load (two or three angles not 0) matches degrees + Z then Y then X
+2	0	0.000%	1 varying track: XYZ at load (two or three angles not 0) matches degrees - X then Y then Z
+2	0	0.000%	1 varying track: XYZ at load (two or three angles not 0) matches degrees - X then Z then Y
+2	0	0.000%	1 varying track: XYZ at load (two or three angles not 0) matches degrees - Y then X then Z
+2	0	0.000%	1 varying track: XYZ at load (two or three angles not 0) matches degrees - Y then Z then X
+2	0	0.000%	1 varying track: XYZ at load (two or three angles not 0) matches degrees - Z then X then Y
+2	0	0.000%	1 varying track: XYZ at load (two or three angles not 0) matches degrees - Z then Y then X
+8	155	0.001%	1 varying track: XYZ at load (two or three angles not 0) matches exactly []
+16	234	0.002%	1 varying track: XYZ at load (two or three angles not 0) matches exactly [radians + X then Y then Z; radians + X then Z then Y; radians + Y then X then Z]
+3	11	0.001%	1 varying track: XYZ at load (two or three angles not 0) matches exactly [radians + X then Y then Z; radians + X then Z then Y; radians + Z then X then Y]
+1	3	0.001%	1 varying track: XYZ at load (two or three angles not 0) matches exactly [radians + X then Y then Z; radians + X then Z then Y]
+16	9	0.002%	1 varying track: XYZ at load (two or three angles not 0) matches exactly [radians + X then Y then Z; radians + Y then X then Z; radians + Y then Z then X]
+24	4	0.002%	1 varying track: XYZ at load (two or three angles not 0) matches exactly [radians + X then Y then Z; radians + Y then X then Z]
+84	4	0.001%	1 varying track: XYZ at load (two or three angles not 0) matches exactly [radians + X then Y then Z]
+208	2730	0.008%	1 varying track: XYZ at load (two or three angles not 0) matches radians + X then Y then Z
+80	2384	0.007%	1 varying track: XYZ at load (two or three angles not 0) matches radians + X then Z then Y
+120	2729	0.008%	1 varying track: XYZ at load (two or three angles not 0) matches radians + Y then X then Z
+63	2492	0.005%	1 varying track: XYZ at load (two or three angles not 0) matches radians + Y then Z then X
+48	2150	0.005%	1 varying track: XYZ at load (two or three angles not 0) matches radians + Z then X then Y
+45	2139	0.004%	1 varying track: XYZ at load (two or three angles not 0) matches radians + Z then Y then X
+10	35	0.001%	1 varying track: XYZ at load (two or three angles not 0) matches radians - X then Y then Z
+14	379	0.001%	1 varying track: XYZ at load (two or three angles not 0) matches radians - X then Z then Y
+10	35	0.001%	1 varying track: XYZ at load (two or three angles not 0) matches radians - Y then X then Z
+27	35	0.001%	1 varying track: XYZ at load (two or three angles not 0) matches radians - Y then Z then X
+29	379	0.001%	1 varying track: XYZ at load (two or three angles not 0) matches radians - Z then X then Y
+29	379	0.001%	1 varying track: XYZ at load (two or three angles not 0) matches radians - Z then Y then X
+4	8	0.000%	1 varying track: XYZ at load against the stored rotation (all angles 0): readings that match 0
+18	498	0.000%	1 varying track: XYZ at load against the stored rotation (all angles 0): readings that match 12
+271	1616	0.025%	1 varying track: XYZ at load against the stored rotation (all angles 0): readings that match 24
+15	559	0.000%	1 varying track: XYZ at load against the stored rotation (one angle not 0): readings that match 0
+5	34	0.000%	1 varying track: XYZ at load against the stored rotation (one angle not 0): readings that match 12
+4	751	0.000%	1 varying track: XYZ at load against the stored rotation (one angle not 0): readings that match 24
+60	2396	0.007%	1 varying track: XYZ at load against the stored rotation (one angle not 0): readings that match 6
+8	155	0.001%	1 varying track: XYZ at load against the stored rotation (two or three angles not 0): readings that match 0
+84	4	0.001%	1 varying track: XYZ at load against the stored rotation (two or three angles not 0): readings that match 1
+10	35	0.001%	1 varying track: XYZ at load against the stored rotation (two or three angles not 0): readings that match 12
+2	0	0.000%	1 varying track: XYZ at load against the stored rotation (two or three angles not 0): readings that match 18
+25	4	0.002%	1 varying track: XYZ at load against the stored rotation (two or three angles not 0): readings that match 2
+35	246	0.004%	1 varying track: XYZ at load against the stored rotation (two or three angles not 0): readings that match 3
+52	2448	0.003%	1 varying track: XYZ at load against the stored rotation (two or three angles not 0): readings that match 6
+16	114	0.000%	1 varying track: XYZ key counts (3 = 3 or more) [1, 1, 2]
+26	916	0.003%	1 varying track: XYZ key counts (3 = 3 or more) [1, 1, 3]
+40	0	0.000%	1 varying track: XYZ key counts (3 = 3 or more) [1, 2, 1]
+9	1209	0.004%	1 varying track: XYZ key counts (3 = 3 or more) [1, 3, 1]
+1	0	0.000%	1 varying track: XYZ key counts (3 = 3 or more) [1, 3, 3]
+9	42	0.009%	1 varying track: XYZ key counts (3 = 3 or more) [2, 1, 1]
+4	0	0.000%	1 varying track: XYZ key counts (3 = 3 or more) [2, 1, 2]
+1	0	0.000%	1 varying track: XYZ key counts (3 = 3 or more) [2, 2, 1]
+123	579	0.006%	1 varying track: XYZ key counts (3 = 3 or more) [2, 2, 2]
+54	374	0.005%	1 varying track: XYZ key counts (3 = 3 or more) [2, 2, 3]
+79	887	0.001%	1 varying track: XYZ key counts (3 = 3 or more) [2, 3, 2]
+13	162	0.001%	1 varying track: XYZ key counts (3 = 3 or more) [3, 1, 1]
+7	46	0.000%	1 varying track: XYZ key counts (3 = 3 or more) [3, 1, 3]
+87	1124	0.005%	1 varying track: XYZ key counts (3 = 3 or more) [3, 2, 2]
+7	8	0.001%	1 varying track: XYZ key counts (3 = 3 or more) [3, 2, 3]
+9	2103	0.001%	1 varying track: XYZ key counts (3 = 3 or more) [3, 3, 2]
+200	959	0.006%	1 varying track: XYZ key counts (3 = 3 or more) [3, 3, 3]
+124	64	0.001%	1 varying track: XYZ largest absolute angle 0
+136	3962	0.014%	1 varying track: XYZ largest absolute angle 2 pi to 360
+1	0	0.000%	1 varying track: XYZ largest absolute angle above 360
+108	1445	0.007%	1 varying track: XYZ largest absolute angle pi to 2 pi
+316	3076	0.017%	1 varying track: XYZ largest absolute angle within pi
+161	0	0.000%	1 varying track: quaternion at load equals stored false; first key equals stored false
+608	213	0.002%	1 varying track: quaternion at load equals stored true; first key equals stored true
+70	119	0.000%	1 varying track: quaternion keys 11 to 100; consecutive keys in one hemisphere true; largest step 1 to 10 degrees
+38	119	0.000%	1 varying track: quaternion keys 11 to 100; consecutive keys in one hemisphere true; largest step 10 to 45 degrees
+8	23	0.000%	1 varying track: quaternion keys 11 to 100; consecutive keys in one hemisphere true; largest step 45 to 90 degrees
+13	71	0.000%	1 varying track: quaternion keys 11 to 100; consecutive keys in one hemisphere true; largest step below 1 degree
+23	0	0.000%	1 varying track: quaternion keys 2; consecutive keys in one hemisphere true; largest step below 1 degree
+10	71	0.000%	1 varying track: quaternion keys 3 to 10; consecutive keys in one hemisphere true; largest step 1 to 10 degrees
+1	0	0.000%	1 varying track: quaternion keys 3 to 10; consecutive keys in one hemisphere true; largest step 10 to 45 degrees
+4	0	0.000%	1 varying track: quaternion keys 3 to 10; consecutive keys in one hemisphere true; largest step 45 to 90 degrees
+6	71	0.000%	1 varying track: quaternion keys 3 to 10; consecutive keys in one hemisphere true; largest step below 1 degree
+121	0	0.000%	1 varying track: quaternion keys more than 100; consecutive keys in one hemisphere true; largest step 1 to 10 degrees
+356	0	0.000%	1 varying track: quaternion keys more than 100; consecutive keys in one hemisphere true; largest step 10 to 45 degrees
+68	0	0.000%	1 varying track: quaternion keys more than 100; consecutive keys in one hemisphere true; largest step 45 to 90 degrees
+8	27	0.001%	1 varying track: quaternion keys more than 100; consecutive keys in one hemisphere true; largest step 90 degrees or more
+43	67	0.000%	1 varying track: quaternion keys more than 100; consecutive keys in one hemisphere true; largest step below 1 degree
+1943	0	0.000%	1 varying track: rotation without keys, pose equals stored
+8011	3688	0.011%	1 varying track: rotation without keys, pose unset
+93	0	0.000%	1 varying track: rules [-]
+3	27	0.001%	1 varying track: rules [nif_clock_transform_rotation_quaternion_v1, nif_clock_transform_scale_v1, nif_controller_clock_free_running_v1, nif_controller_cycle_clamp_v1, nif_key_quadratic_hermite_v1]
+267	94	0.000%	1 varying track: rules [nif_clock_transform_rotation_quaternion_v1, nif_clock_transform_translation_v1, nif_controller_clock_free_running_v1, nif_controller_cycle_clamp_v1, nif_key_linear_v1]
+52	0	0.000%	1 varying track: rules [nif_clock_transform_rotation_quaternion_v1, nif_clock_transform_translation_v1, nif_controller_clock_free_running_v1, nif_controller_cycle_clamp_v1]
+444	186	0.001%	1 varying track: rules [nif_clock_transform_rotation_quaternion_v1, nif_controller_clock_free_running_v1, nif_controller_cycle_clamp_v1]
+4	33	0.000%	1 varying track: rules [nif_clock_transform_rotation_xyz_v1, nif_clock_transform_scale_v1, nif_clock_transform_translation_v1, nif_controller_clock_free_running_v1, nif_controller_cycle_clamp_v1, nif_key_linear_v1, nif_key_quadratic_hermite_v1]
+44	465	0.002%	1 varying track: rules [nif_clock_transform_rotation_xyz_v1, nif_clock_transform_translation_v1, nif_controller_clock_free_running_v1, nif_controller_cycle_clamp_v1, nif_key_linear_v1, nif_key_quadratic_hermite_v1]
+5	0	0.000%	1 varying track: rules [nif_clock_transform_rotation_xyz_v1, nif_clock_transform_translation_v1, nif_controller_clock_free_running_v1, nif_controller_cycle_clamp_v1, nif_key_linear_v1]
+4	0	0.000%	1 varying track: rules [nif_clock_transform_rotation_xyz_v1, nif_clock_transform_translation_v1, nif_controller_clock_free_running_v1, nif_controller_cycle_clamp_v1, nif_key_quadratic_hermite_v1]
+19	0	0.000%	1 varying track: rules [nif_clock_transform_rotation_xyz_v1, nif_clock_transform_translation_v1, nif_controller_clock_free_running_v1, nif_controller_cycle_loop_v1, nif_key_constant_step_v1]
+13	269	0.003%	1 varying track: rules [nif_clock_transform_rotation_xyz_v1, nif_clock_transform_translation_v1, nif_controller_clock_free_running_v1, nif_controller_cycle_loop_v1, nif_key_linear_v1, nif_key_quadratic_hermite_v1]
+2	0	0.000%	1 varying track: rules [nif_clock_transform_rotation_xyz_v1, nif_clock_transform_translation_v1, nif_controller_clock_free_running_v1, nif_controller_cycle_loop_v1, nif_key_quadratic_hermite_v1]
+3	0	0.000%	1 varying track: rules [nif_clock_transform_rotation_xyz_v1, nif_clock_transform_translation_v1, nif_controller_clock_free_running_v1, nif_controller_cycle_reverse_v1, nif_key_linear_v1, nif_key_quadratic_hermite_v1]
+1	0	0.000%	1 varying track: rules [nif_clock_transform_rotation_xyz_v1, nif_controller_clock_free_running_v1, nif_controller_cycle_clamp_v1, nif_key_constant_step_v1, nif_key_linear_v1]
+24	7	0.000%	1 varying track: rules [nif_clock_transform_rotation_xyz_v1, nif_controller_clock_free_running_v1, nif_controller_cycle_clamp_v1, nif_key_linear_v1, nif_key_quadratic_hermite_v1]
+1	0	0.000%	1 varying track: rules [nif_clock_transform_rotation_xyz_v1, nif_controller_clock_free_running_v1, nif_controller_cycle_clamp_v1, nif_key_linear_v1]
+267	1264	0.008%	1 varying track: rules [nif_clock_transform_rotation_xyz_v1, nif_controller_clock_free_running_v1, nif_controller_cycle_clamp_v1, nif_key_quadratic_hermite_v1]
+30	1086	0.018%	1 varying track: rules [nif_clock_transform_rotation_xyz_v1, nif_controller_clock_free_running_v1, nif_controller_cycle_loop_v1, nif_key_linear_v1, nif_key_quadratic_hermite_v1]
+49	657	0.000%	1 varying track: rules [nif_clock_transform_rotation_xyz_v1, nif_controller_clock_free_running_v1, nif_controller_cycle_loop_v1, nif_key_linear_v1]
+70	4060	0.009%	1 varying track: rules [nif_clock_transform_rotation_xyz_v1, nif_controller_clock_free_running_v1, nif_controller_cycle_loop_v1, nif_key_quadratic_hermite_v1]
+4	344	0.000%	1 varying track: rules [nif_clock_transform_rotation_xyz_v1, nif_controller_clock_free_running_v1, nif_controller_cycle_reverse_v1, nif_key_linear_v1, nif_key_quadratic_hermite_v1]
+7	59	0.002%	1 varying track: rules [nif_clock_transform_scale_v1, nif_clock_transform_translation_v1, nif_controller_clock_free_running_v1, nif_controller_cycle_clamp_v1, nif_key_linear_v1, nif_key_quadratic_hermite_v1]
+104	0	0.000%	1 varying track: rules [nif_clock_transform_scale_v1, nif_controller_clock_free_running_v1, nif_controller_cycle_clamp_v1, nif_key_linear_v1]
+5	0	0.000%	1 varying track: rules [nif_clock_transform_scale_v1, nif_controller_clock_free_running_v1, nif_controller_cycle_clamp_v1, nif_key_quadratic_hermite_v1]
+2	0	0.000%	1 varying track: rules [nif_clock_transform_scale_v1, nif_controller_clock_free_running_v1, nif_controller_cycle_loop_v1, nif_key_quadratic_hermite_v1]
+3	0	0.000%	1 varying track: rules [nif_clock_transform_translation_v1, nif_controller_clock_free_running_v1, nif_controller_cycle_clamp_v1, nif_key_constant_step_v1]
+9798	677	0.005%	1 varying track: rules [nif_clock_transform_translation_v1, nif_controller_clock_free_running_v1, nif_controller_cycle_clamp_v1, nif_key_linear_v1]
+4	0	0.000%	1 varying track: rules [nif_clock_transform_translation_v1, nif_controller_clock_free_running_v1, nif_controller_cycle_clamp_v1]
+1	0	0.000%	1 varying track: rules [nif_clock_transform_translation_v1, nif_controller_clock_free_running_v1, nif_controller_cycle_loop_v1, nif_key_constant_step_v1]
+84	3128	0.005%	1 varying track: rules [nif_clock_transform_translation_v1, nif_controller_clock_free_running_v1, nif_controller_cycle_loop_v1, nif_key_linear_v1]
+1	0	0.000%	1 varying track: rules [nif_clock_transform_translation_v1, nif_controller_clock_free_running_v1, nif_controller_cycle_loop_v1, nif_key_quadratic_hermite_v1]
+6	0	0.000%	1 varying track: scale at load equals stored false
+351	1121	0.008%	1 varying track: scale at load equals stored true
+567	250	0.002%	1 varying track: scale without keys, pose equals stored
+10484	7615	0.038%	1 varying track: scale without keys, pose unset
+45	0	0.000%	1 varying track: the clock reads it no (XYZ angle key type without a reading); runs with the transform switches on false
+6	0	0.000%	1 varying track: the clock reads it no (scale key type without a reading); runs with the transform switches on false
+42	0	0.000%	1 varying track: the clock reads it no (translation key type without a reading); runs with the transform switches on false
+11315	8673	0.045%	1 varying track: the clock reads it yes; runs with the transform switches on true
+198	71	0.002%	1 varying track: translation at load equals stored false
+10170	4665	0.016%	1 varying track: translation at load equals stored true
+57	0	0.000%	1 varying track: translation without keys, pose differs
+499	106	0.002%	1 varying track: translation without keys, pose equals stored
+484	7280	0.033%	1 varying track: translation without keys, pose unset
+920	4341	0.013%	2m models with a varying free-running transform track: a moving node has drawn geometry under it false
+224	4332	0.032%	2m models with a varying free-running transform track: a moving node has drawn geometry under it true
+89	0	0.000%	2m models with a varying free-running transform track: collision under a moving node false; a track runs with the switches false
+967	7498	0.024%	2m models with a varying free-running transform track: collision under a moving node false; a track runs with the switches true
+88	1175	0.020%	2m models with a varying free-running transform track: collision under a moving node true; a track runs with the switches true
+506	3118	0.019%	2m models with a varying free-running transform track: decided off false, on false
+638	5555	0.026%	2m models with a varying free-running transform track: decided off false, on true
+1	6	0.000%	2m models with a varying free-running transform track: open tags off [alpha + behavior-graph + transform-varies] -> on [alpha + behavior-graph]
+1	0	0.000%	2m models with a varying free-running transform track: open tags off [alpha + transform-varies] -> on [alpha]
+2	0	0.000%	2m models with a varying free-running transform track: open tags off [behavior-graph + effect-emissive + effect-idle + other + particle + transform-varies] -> on [behavior-graph + effect-emissive + effect-idle + other + particle]
+1	126	0.001%	2m models with a varying free-running transform track: open tags off [behavior-graph + effect-emissive + other + particle + texture-transform + transform-varies] -> on [behavior-graph + effect-emissive + other + particle + texture-transform + transform-varies]
+1	0	0.000%	2m models with a varying free-running transform track: open tags off [behavior-graph + effect-emissive + other + particle + transform-varies] -> on [behavior-graph + effect-emissive + other + particle]
+1	33	0.000%	2m models with a varying free-running transform track: open tags off [behavior-graph + effect-emissive + texture-transform + transform-varies] -> on [behavior-graph + effect-emissive + texture-transform]
+1	1	0.000%	2m models with a varying free-running transform track: open tags off [behavior-graph + effect-idle + other + particle + transform-varies + visibility] -> on [behavior-graph + effect-idle + other + particle + visibility]
+1	0	0.000%	2m models with a varying free-running transform track: open tags off [behavior-graph + effect-idle + other + transform-varies + visibility] -> on [behavior-graph + effect-idle + other + transform-varies + visibility]
+1	0	0.000%	2m models with a varying free-running transform track: open tags off [behavior-graph + effect-idle + other + transform-varies + visibility] -> on [behavior-graph + effect-idle + other + visibility]
+2	0	0.000%	2m models with a varying free-running transform track: open tags off [behavior-graph + effect-idle + transform-varies] -> on [behavior-graph + effect-idle + transform-varies]
+4	118	0.004%	2m models with a varying free-running transform track: open tags off [behavior-graph + effect-idle + transform-varies] -> on [behavior-graph + effect-idle]
+10	47	0.001%	2m models with a varying free-running transform track: open tags off [behavior-graph + other + particle + transform-varies] -> on [behavior-graph + other + particle]
+5	3	0.000%	2m models with a varying free-running transform track: open tags off [behavior-graph + other + transform-varies + visibility] -> on [behavior-graph + other + visibility]
+2	0	0.000%	2m models with a varying free-running transform track: open tags off [behavior-graph + transform-varies + visibility] -> on [behavior-graph + transform-varies + visibility]
+5	208	0.001%	2m models with a varying free-running transform track: open tags off [behavior-graph + transform-varies] -> on [behavior-graph + transform-varies]
+90	1423	0.007%	2m models with a varying free-running transform track: open tags off [behavior-graph + transform-varies] -> on [behavior-graph]
+1	0	0.000%	2m models with a varying free-running transform track: open tags off [effect-emissive + other + particle + transform-varies] -> on [effect-emissive + other + particle]
+15	0	0.000%	2m models with a varying free-running transform track: open tags off [other + particle + transform-varies + visibility] -> on [other + particle + visibility]
+1	1	0.000%	2m models with a varying free-running transform track: open tags off [other + particle + transform-varies] -> on [other + particle + transform-varies]
+56	808	0.004%	2m models with a varying free-running transform track: open tags off [other + particle + transform-varies] -> on [other + particle]
+62	344	0.000%	2m models with a varying free-running transform track: open tags off [other + transform-varies] -> on [other + transform-varies]
+196	0	0.000%	2m models with a varying free-running transform track: open tags off [other + transform-varies] -> on [other]
+1	0	0.000%	2m models with a varying free-running transform track: open tags off [texture-transform + transform-varies] -> on [texture-transform]
+2	0	0.000%	2m models with a varying free-running transform track: open tags off [transform-varies + visibility] -> on [transform-varies + visibility]
+7	0	0.000%	2m models with a varying free-running transform track: open tags off [transform-varies + visibility] -> on [visibility]
+638	5555	0.026%	2m models with a varying free-running transform track: open tags off [transform-varies] -> on [none]
+37	0	0.000%	2m models with a varying free-running transform track: open tags off [transform-varies] -> on [transform-varies]
+48	2074	0.000%	2m placements by base record type: ACTI
+2	396	0.000%	2m placements by base record type: CONT
+13	624	0.000%	2m placements by base record type: FURN
+7	2887	0.000%	2m placements by base record type: LIGH
+44	1540	0.000%	2m placements by base record type: MSTT
+28	1150	0.000%	2m placements by base record type: STAT
+2	2	0.000%	2m placements by base record type: TACT
+12	480	0.000%	3 models whose base records carry subrecord ACTI.ATTX
+2	127	0.000%	3 models whose base records carry subrecord ACTI.CIS1
+2	127	0.000%	3 models whose base records carry subrecord ACTI.CIS2
+4	130	0.000%	3 models whose base records carry subrecord ACTI.CITC
+4	130	0.000%	3 models whose base records carry subrecord ACTI.CTDA
+9	1618	0.000%	3 models whose base records carry subrecord ACTI.DEST
+3	186	0.000%	3 models whose base records carry subrecord ACTI.DMDL
+3	186	0.000%	3 models whose base records carry subrecord ACTI.DMDT
+2	5	0.000%	3 models whose base records carry subrecord ACTI.DSTA
+9	1618	0.000%	3 models whose base records carry subrecord ACTI.DSTD
+9	1618	0.000%	3 models whose base records carry subrecord ACTI.DSTF
+77	5379	0.000%	3 models whose base records carry subrecord ACTI.EDID
+77	5379	0.000%	3 models whose base records carry subrecord ACTI.FNAM
+1	13	0.000%	3 models whose base records carry subrecord ACTI.FTYP
+38	2739	0.000%	3 models whose base records carry subrecord ACTI.FULL
+19	418	0.000%	3 models whose base records carry subrecord ACTI.KSIZ
+19	418	0.000%	3 models whose base records carry subrecord ACTI.KWDA
+77	5379	0.000%	3 models whose base records carry subrecord ACTI.MODL
+8	27	0.000%	3 models whose base records carry subrecord ACTI.MODS
+77	5379	0.000%	3 models whose base records carry subrecord ACTI.MODT
+5	260	0.000%	3 models whose base records carry subrecord ACTI.NTRM
+77	5379	0.000%	3 models whose base records carry subrecord ACTI.OBND
+77	5379	0.000%	3 models whose base records carry subrecord ACTI.PNAM
+18	2068	0.000%	3 models whose base records carry subrecord ACTI.PRPS
+21	1595	0.000%	3 models whose base records carry subrecord ACTI.PTRN
+3	353	0.000%	3 models whose base records carry subrecord ACTI.RADR
+1	1	0.000%	3 models whose base records carry subrecord ACTI.STCP
+49	4656	0.000%	3 models whose base records carry subrecord ACTI.VMAD
+4	802	0.000%	3 models whose base records carry subrecord ACTI.VNAM
+4	69	0.000%	3 models whose base records carry subrecord FURN.ATTX
+1	5	0.000%	3 models whose base records carry subrecord FURN.COCT
+2	24	0.000%	3 models whose base records carry subrecord FURN.DEST
+1	23	0.000%	3 models whose base records carry subrecord FURN.DMDL
+1	23	0.000%	3 models whose base records carry subrecord FURN.DMDT
+2	24	0.000%	3 models whose base records carry subrecord FURN.DSTD
+2	24	0.000%	3 models whose base records carry subrecord FURN.DSTF
+10	107	0.000%	3 models whose base records carry subrecord FURN.EDID
+1	8	0.000%	3 models whose base records carry subrecord FURN.ENAM
+10	107	0.000%	3 models whose base records carry subrecord FURN.FNAM
+2	32	0.000%	3 models whose base records carry subrecord FURN.FNPR
+1	23	0.000%	3 models whose base records carry subrecord FURN.FTYP
+6	83	0.000%	3 models whose base records carry subrecord FURN.FULL
+10	107	0.000%	3 models whose base records carry subrecord FURN.KSIZ
+10	107	0.000%	3 models whose base records carry subrecord FURN.KWDA
+10	107	0.000%	3 models whose base records carry subrecord FURN.MNAM
+10	107	0.000%	3 models whose base records carry subrecord FURN.MODL
+1	12	0.000%	3 models whose base records carry subrecord FURN.MODS
+10	107	0.000%	3 models whose base records carry subrecord FURN.MODT
+1	8	0.000%	3 models whose base records carry subrecord FURN.NAM0
+1	5	0.000%	3 models whose base records carry subrecord FURN.NVNM
+10	107	0.000%	3 models whose base records carry subrecord FURN.OBND
+2	36	0.000%	3 models whose base records carry subrecord FURN.OBTE
+2	36	0.000%	3 models whose base records carry subrecord FURN.OBTS
+10	107	0.000%	3 models whose base records carry subrecord FURN.PNAM
+2	28	0.000%	3 models whose base records carry subrecord FURN.PRPS
+3	51	0.000%	3 models whose base records carry subrecord FURN.PTRN
+10	107	0.000%	3 models whose base records carry subrecord FURN.SNAM
+2	36	0.000%	3 models whose base records carry subrecord FURN.STOP
+5	78	0.000%	3 models whose base records carry subrecord FURN.VMAD
+10	107	0.000%	3 models whose base records carry subrecord FURN.WBDT
+6	40	0.000%	3 models whose base records carry subrecord FURN.XMRK
+6	214	0.000%	3 models whose base records carry subrecord LIGH.DATA
+6	214	0.000%	3 models whose base records carry subrecord LIGH.EDID
+6	214	0.000%	3 models whose base records carry subrecord LIGH.FNAM
+2	35	0.000%	3 models whose base records carry subrecord LIGH.FULL
+2	35	0.000%	3 models whose base records carry subrecord LIGH.KSIZ
+2	35	0.000%	3 models whose base records carry subrecord LIGH.KWDA
+1	86	0.000%	3 models whose base records carry subrecord LIGH.LNAM
+6	214	0.000%	3 models whose base records carry subrecord LIGH.MODL
+6	214	0.000%	3 models whose base records carry subrecord LIGH.MODT
+2	87	0.000%	3 models whose base records carry subrecord LIGH.NAM0
+6	214	0.000%	3 models whose base records carry subrecord LIGH.OBND
+1	21	0.000%	3 models whose base records carry subrecord LIGH.PRPS
+2	35	0.000%	3 models whose base records carry subrecord LIGH.PTRN
+39	3068	0.000%	3 models whose base records carry subrecord MSTT.DATA
+3	359	0.000%	3 models whose base records carry subrecord MSTT.DEST
+2	51	0.000%	3 models whose base records carry subrecord MSTT.DMDL
+2	51	0.000%	3 models whose base records carry subrecord MSTT.DMDT
+3	359	0.000%	3 models whose base records carry subrecord MSTT.DSTD
+3	359	0.000%	3 models whose base records carry subrecord MSTT.DSTF
+39	3068	0.000%	3 models whose base records carry subrecord MSTT.EDID
+1	308	0.000%	3 models whose base records carry subrecord MSTT.FULL
+39	3068	0.000%	3 models whose base records carry subrecord MSTT.MODL
+10	508	0.000%	3 models whose base records carry subrecord MSTT.MODS
+39	3068	0.000%	3 models whose base records carry subrecord MSTT.MODT
+39	3068	0.000%	3 models whose base records carry subrecord MSTT.OBND
+6	1328	0.000%	3 models whose base records carry subrecord MSTT.SNAM
+9	575	0.000%	3 models whose base records carry subrecord MSTT.VMAD
+18	853	0.000%	3 models whose base records carry subrecord STAT.DNAM
+18	853	0.000%	3 models whose base records carry subrecord STAT.EDID
+3	734	0.000%	3 models whose base records carry subrecord STAT.FULL
+18	853	0.000%	3 models whose base records carry subrecord STAT.MODL
+1	1	0.000%	3 models whose base records carry subrecord STAT.MODS
+18	853	0.000%	3 models whose base records carry subrecord STAT.MODT
+18	853	0.000%	3 models whose base records carry subrecord STAT.OBND
+1	1	0.000%	3 models whose base records carry subrecord STAT.PRPS
+1	1	0.000%	3 models whose base records carry subrecord STAT.PTRN
+1	4	0.000%	3 models whose base records carry subrecord TACT.EDID
+1	4	0.000%	3 models whose base records carry subrecord TACT.FNAM
+1	4	0.000%	3 models whose base records carry subrecord TACT.FULL
+1	4	0.000%	3 models whose base records carry subrecord TACT.MODL
+1	4	0.000%	3 models whose base records carry subrecord TACT.MODT
+1	4	0.000%	3 models whose base records carry subrecord TACT.OBND
+1	4	0.000%	3 models whose base records carry subrecord TACT.PNAM
+1	4	0.000%	3 models whose base records carry subrecord TACT.VNAM
+1	5	0.000%	3 models whose base records carry subrecord TERM.ANAM
+1	8	0.000%	3 models whose base records carry subrecord TERM.BSIZ
+1	3	0.000%	3 models whose base records carry subrecord TERM.BTXT
+1	1	0.000%	3 models whose base records carry subrecord TERM.CIS2
+1	1	0.000%	3 models whose base records carry subrecord TERM.CNTO
+1	6	0.000%	3 models whose base records carry subrecord TERM.COCT
+1	1	0.000%	3 models whose base records carry subrecord TERM.CTDA
+1	8	0.000%	3 models whose base records carry subrecord TERM.EDID
+1	8	0.000%	3 models whose base records carry subrecord TERM.FNAM
+1	8	0.000%	3 models whose base records carry subrecord TERM.FULL
+1	8	0.000%	3 models whose base records carry subrecord TERM.ISIZ
+1	5	0.000%	3 models whose base records carry subrecord TERM.ITID
+1	5	0.000%	3 models whose base records carry subrecord TERM.ITXT
+1	8	0.000%	3 models whose base records carry subrecord TERM.KSIZ
+1	8	0.000%	3 models whose base records carry subrecord TERM.KWDA
+1	8	0.000%	3 models whose base records carry subrecord TERM.MNAM
+1	8	0.000%	3 models whose base records carry subrecord TERM.MODL
+1	8	0.000%	3 models whose base records carry subrecord TERM.MODT
+1	3	0.000%	3 models whose base records carry subrecord TERM.NAM0
+1	8	0.000%	3 models whose base records carry subrecord TERM.OBND
+1	8	0.000%	3 models whose base records carry subrecord TERM.PNAM
+1	1	0.000%	3 models whose base records carry subrecord TERM.RNAM
+1	8	0.000%	3 models whose base records carry subrecord TERM.SNAM
+1	3	0.000%	3 models whose base records carry subrecord TERM.TNAM
+1	2	0.000%	3 models whose base records carry subrecord TERM.UNAM
+1	2	0.000%	3 models whose base records carry subrecord TERM.VMAD
+1	8	0.000%	3 models whose base records carry subrecord TERM.WBDT
+1	5	0.000%	3 models whose base records carry subrecord TERM.WNAM
+1	8	0.000%	3 models whose base records carry subrecord TERM.XMRK
+1	1	0.000%	3 models whose base records carry subrecord WEAP.APPR
+1	1	0.000%	3 models whose base records carry subrecord WEAP.BAMT
+1	1	0.000%	3 models whose base records carry subrecord WEAP.BIDS
+1	1	0.000%	3 models whose base records carry subrecord WEAP.CRDT
+1	1	0.000%	3 models whose base records carry subrecord WEAP.DAMA
+1	1	0.000%	3 models whose base records carry subrecord WEAP.DESC
+1	1	0.000%	3 models whose base records carry subrecord WEAP.DNAM
+1	1	0.000%	3 models whose base records carry subrecord WEAP.EDID
+1	1	0.000%	3 models whose base records carry subrecord WEAP.EITM
+1	1	0.000%	3 models whose base records carry subrecord WEAP.ETYP
+1	1	0.000%	3 models whose base records carry subrecord WEAP.FNAM
+1	1	0.000%	3 models whose base records carry subrecord WEAP.FULL
+1	1	0.000%	3 models whose base records carry subrecord WEAP.INAM
+1	1	0.000%	3 models whose base records carry subrecord WEAP.INRD
+1	1	0.000%	3 models whose base records carry subrecord WEAP.KSIZ
+1	1	0.000%	3 models whose base records carry subrecord WEAP.KWDA
+1	1	0.000%	3 models whose base records carry subrecord WEAP.LNAM
+1	1	0.000%	3 models whose base records carry subrecord WEAP.MO4T
+1	1	0.000%	3 models whose base records carry subrecord WEAP.MOD4
+1	1	0.000%	3 models whose base records carry subrecord WEAP.MODL
+1	1	0.000%	3 models whose base records carry subrecord WEAP.MODT
+1	1	0.000%	3 models whose base records carry subrecord WEAP.OBND
+1	1	0.000%	3 models whose base records carry subrecord WEAP.OBTE
+1	1	0.000%	3 models whose base records carry subrecord WEAP.OBTF
+1	1	0.000%	3 models whose base records carry subrecord WEAP.OBTS
+1	1	0.000%	3 models whose base records carry subrecord WEAP.PTRN
+1	1	0.000%	3 models whose base records carry subrecord WEAP.STOP
+1	1	0.000%	3 models whose base records carry subrecord WEAP.WAMD
+1	1	0.000%	3 models whose base records carry subrecord WEAP.WZMD
+1	1	0.000%	3 models whose base records carry subrecord WEAP.YNAM
+1	1	0.000%	3 models whose base records carry subrecord WEAP.ZNAM
+465	9634	0.672%	3 models: a manager with Cumulative set false
+465	9634	0.672%	3 models: an effect controller run by a manager
+16	0	0.000%	3 models: behaviour graph named false; looping none; start-gives-stored none
+30	393	0.000%	3 models: behaviour graph named false; looping none; start-gives-stored one
+14	2040	0.299%	3 models: behaviour graph named false; looping one; start-gives-stored none
+5	213	0.089%	3 models: behaviour graph named false; looping one; start-gives-stored one
+1	0	0.000%	3 models: behaviour graph named false; looping several; start-gives-stored none
+22	67	0.036%	3 models: behaviour graph named false; looping several; start-gives-stored one
+15	279	0.005%	3 models: behaviour graph named true; looping none; start-gives-stored none
+47	251	0.153%	3 models: behaviour graph named true; looping none; start-gives-stored one
+71	79	0.001%	3 models: behaviour graph named true; looping none; start-gives-stored several
+30	926	0.007%	3 models: behaviour graph named true; looping one; start-gives-stored none
+84	2634	0.024%	3 models: behaviour graph named true; looping one; start-gives-stored one
+35	1863	0.026%	3 models: behaviour graph named true; looping one; start-gives-stored several
+17	3	0.029%	3 models: behaviour graph named true; looping several; start-gives-stored none
+47	196	0.001%	3 models: behaviour graph named true; looping several; start-gives-stored one
+31	690	0.002%	3 models: behaviour graph named true; looping several; start-gives-stored several
+31	279	0.005%	3 models: looping sequences none; sequences whose start keys give every compared stored field none; the first sequence loops false
+77	644	0.154%	3 models: looping sequences none; sequences whose start keys give every compared stored field one; the first sequence loops false
+71	79	0.001%	3 models: looping sequences none; sequences whose start keys give every compared stored field several; the first sequence loops false
+27	926	0.007%	3 models: looping sequences one; sequences whose start keys give every compared stored field none; the first sequence loops false
+17	2040	0.299%	3 models: looping sequences one; sequences whose start keys give every compared stored field none; the first sequence loops true
+66	835	0.005%	3 models: looping sequences one; sequences whose start keys give every compared stored field one; the first sequence loops false
+23	2012	0.108%	3 models: looping sequences one; sequences whose start keys give every compared stored field one; the first sequence loops true
+28	1658	0.025%	3 models: looping sequences one; sequences whose start keys give every compared stored field several; the first sequence loops false
+7	205	0.000%	3 models: looping sequences one; sequences whose start keys give every compared stored field several; the first sequence loops true
+9	2	0.029%	3 models: looping sequences several; sequences whose start keys give every compared stored field none; the first sequence loops false
+9	1	0.000%	3 models: looping sequences several; sequences whose start keys give every compared stored field none; the first sequence loops true
+10	3	0.000%	3 models: looping sequences several; sequences whose start keys give every compared stored field one; the first sequence loops false
+59	260	0.037%	3 models: looping sequences several; sequences whose start keys give every compared stored field one; the first sequence loops true
+15	34	0.000%	3 models: looping sequences several; sequences whose start keys give every compared stored field several; the first sequence loops false
+16	656	0.002%	3 models: looping sequences several; sequences whose start keys give every compared stored field several; the first sequence loops true
+72	2255	0.389%	3 models: managers 1, sequences 1, every sequence in a manager's list true
+72	1651	0.190%	3 models: managers 1, sequences 2, every sequence in a manager's list true
+71	463	0.010%	3 models: managers 1, sequences 3, every sequence in a manager's list true
+250	5265	0.082%	3 models: managers 1, sequences 4 or more, every sequence in a manager's list true
+88	2713	0.424%	3 models: the NIF names a behaviour graph false
+377	6921	0.248%	3 models: the NIF names a behaviour graph true
+229	3655	0.073%	3 models: the only looping sequence is the first false; the only start-gives-stored sequence is the first false; the two signals pick one same sequence false
+13	333	0.000%	3 models: the only looping sequence is the first false; the only start-gives-stored sequence is the first false; the two signals pick one same sequence true
+176	1389	0.192%	3 models: the only looping sequence is the first false; the only start-gives-stored sequence is the first true; the two signals pick one same sequence false
+25	2245	0.299%	3 models: the only looping sequence is the first true; the only start-gives-stored sequence is the first false; the two signals pick one same sequence false
+22	2012	0.108%	3 models: the only looping sequence is the first true; the only start-gives-stored sequence is the first true; the two signals pick one same sequence true
+9634	0	0.000%	3 placed references carrying subrecord DATA
+146	0	0.000%	3 placed references carrying subrecord EDID
+1	0	0.000%	3 placed references carrying subrecord INAM
+9634	0	0.000%	3 placed references carrying subrecord NAME
+2	0	0.000%	3 placed references carrying subrecord ONAM
+1	0	0.000%	3 placed references carrying subrecord PDTO
+599	0	0.000%	3 placed references carrying subrecord VMAD
+2	0	0.000%	3 placed references carrying subrecord XACT
+1	0	0.000%	3 placed references carrying subrecord XAMC
+1714	0	0.000%	3 placed references carrying subrecord XAPD
+1714	0	0.000%	3 placed references carrying subrecord XAPR
+116	0	0.000%	3 placed references carrying subrecord XATP
+194	0	0.000%	3 placed references carrying subrecord XATR
+512	0	0.000%	3 placed references carrying subrecord XEMI
+256	0	0.000%	3 placed references carrying subrecord XESP
+8	0	0.000%	3 placed references carrying subrecord XEZN
+50	0	0.000%	3 placed references carrying subrecord XIS2
+58	0	0.000%	3 placed references carrying subrecord XLIG
+2795	0	0.000%	3 placed references carrying subrecord XLKR
+55	0	0.000%	3 placed references carrying subrecord XLKT
+5	0	0.000%	3 placed references carrying subrecord XLOC
+184	0	0.000%	3 placed references carrying subrecord XLRT
+4080	0	0.000%	3 placed references carrying subrecord XLYR
+3	0	0.000%	3 placed references carrying subrecord XMBR
+53	0	0.000%	3 placed references carrying subrecord XMSP
+31	0	0.000%	3 placed references carrying subrecord XOWN
+8	0	0.000%	3 placed references carrying subrecord XPLK
+1	0	0.000%	3 placed references carrying subrecord XPPA
+1	0	0.000%	3 placed references carrying subrecord XPRD
+1	0	0.000%	3 placed references carrying subrecord XPRM
+5	0	0.000%	3 placed references carrying subrecord XRDO
+116	0	0.000%	3 placed references carrying subrecord XRDS
+1359	0	0.000%	3 placed references carrying subrecord XRFG
+182	0	0.000%	3 placed references carrying subrecord XRGD
+20	0	0.000%	3 placed references carrying subrecord XRNK
+845	0	0.000%	3 placed references carrying subrecord XSCL
+77	5379	0.000%	3 placements by base record type: ACTI
+10	107	0.000%	3 placements by base record type: FURN
+6	214	0.000%	3 placements by base record type: LIGH
+39	3068	0.000%	3 placements by base record type: MSTT
+18	853	0.000%	3 placements by base record type: STAT
+1	4	0.000%	3 placements by base record type: TACT
+1	8	0.000%	3 placements by base record type: TERM
+1	1	0.000%	3 placements by base record type: WEAP
+1	1	0.003%	3 sequences: clamp (first in the list false); drives [BSNiAlphaPropertyTestRefController + effect UV + effect alpha + effect emissive colour + effect emissive multiple + light + lighting shader + particles + transform + visibility]
+15	222	0.000%	3 sequences: clamp (first in the list false); drives [BSNiAlphaPropertyTestRefController + effect UV + effect alpha + effect emissive colour + effect emissive multiple + transform]
+4	1	0.000%	3 sequences: clamp (first in the list false); drives [BSNiAlphaPropertyTestRefController + effect UV + effect alpha + effect emissive multiple + lighting shader + particles + transform + visibility]
+1	1	0.000%	3 sequences: clamp (first in the list false); drives [BSNiAlphaPropertyTestRefController + effect UV + effect alpha + lighting shader + transform]
+3	0	0.000%	3 sequences: clamp (first in the list false); drives [BSNiAlphaPropertyTestRefController + effect UV + effect alpha + lighting shader]
+9	3	0.000%	3 sequences: clamp (first in the list false); drives [BSNiAlphaPropertyTestRefController + effect UV + effect alpha + particles + transform]
+15	1731	0.017%	3 sequences: clamp (first in the list false); drives [BSNiAlphaPropertyTestRefController + effect UV + effect alpha + transform]
+2	6	0.001%	3 sequences: clamp (first in the list false); drives [BSNiAlphaPropertyTestRefController + effect UV + effect emissive colour]
+1	0	0.000%	3 sequences: clamp (first in the list false); drives [BSNiAlphaPropertyTestRefController + effect alpha]
+2	0	0.000%	3 sequences: clamp (first in the list false); drives [BSNiAlphaPropertyTestRefController + lighting shader + visibility]
+2	0	0.000%	3 sequences: clamp (first in the list false); drives [BSProceduralLightningController + effect UV + effect alpha + effect emissive colour + effect emissive multiple + lighting shader + transform]
+1	0	0.000%	3 sequences: clamp (first in the list false); drives [BSProceduralLightningController + effect UV + effect alpha + effect emissive colour + effect emissive multiple + transform]
+19	0	0.000%	3 sequences: clamp (first in the list false); drives [BSProceduralLightningController + effect UV + effect alpha + effect emissive colour + light + particles + transform + visibility]
+1	0	0.000%	3 sequences: clamp (first in the list false); drives [BSProceduralLightningController + effect UV + effect alpha + effect emissive multiple + light + transform + visibility]
+2	0	0.000%	3 sequences: clamp (first in the list false); drives [BSProceduralLightningController + effect UV + effect alpha + effect emissive multiple + light + transform]
+1	0	0.000%	3 sequences: clamp (first in the list false); drives [BSProceduralLightningController + effect alpha + effect emissive colour + effect emissive multiple + light]
+2	0	0.000%	3 sequences: clamp (first in the list false); drives [BSProceduralLightningController + effect alpha + effect emissive colour + effect emissive multiple + lighting shader + transform]
+2	0	0.000%	3 sequences: clamp (first in the list false); drives [effect UV + effect alpha + effect emissive colour + effect emissive multiple + light + lighting shader + particles + transform]
+10	0	0.000%	3 sequences: clamp (first in the list false); drives [effect UV + effect alpha + effect emissive colour + effect emissive multiple + light + particles + transform + visibility]
+8	2	0.007%	3 sequences: clamp (first in the list false); drives [effect UV + effect alpha + effect emissive colour + effect emissive multiple + lighting shader + particles + transform + visibility]
+7	2	0.007%	3 sequences: clamp (first in the list false); drives [effect UV + effect alpha + effect emissive colour + effect emissive multiple + lighting shader + transform + visibility]
+1	0	0.000%	3 sequences: clamp (first in the list false); drives [effect UV + effect alpha + effect emissive colour + effect emissive multiple + lighting shader + transform]
+3	1	0.000%	3 sequences: clamp (first in the list false); drives [effect UV + effect alpha + effect emissive colour + effect emissive multiple + transform + visibility]
+2	2	0.000%	3 sequences: clamp (first in the list false); drives [effect UV + effect alpha + effect emissive colour + effect emissive multiple + transform]
+1	0	0.000%	3 sequences: clamp (first in the list false); drives [effect UV + effect alpha + effect emissive colour + effect falloff + lighting shader]
+2	40	0.000%	3 sequences: clamp (first in the list false); drives [effect UV + effect alpha + effect emissive colour + light + lighting shader + particles + transform + visibility]
+3	0	0.000%	3 sequences: clamp (first in the list false); drives [effect UV + effect alpha + effect emissive colour + lighting shader + particles]
+5	0	0.000%	3 sequences: clamp (first in the list false); drives [effect UV + effect alpha + effect emissive colour + lighting shader + visibility]
+10	5	0.029%	3 sequences: clamp (first in the list false); drives [effect UV + effect alpha + effect emissive colour + particles + transform + visibility]
+72	0	0.000%	3 sequences: clamp (first in the list false); drives [effect UV + effect alpha + effect emissive colour + visibility]
+2	1	0.000%	3 sequences: clamp (first in the list false); drives [effect UV + effect alpha + effect emissive colour]
+1	1	0.000%	3 sequences: clamp (first in the list false); drives [effect UV + effect alpha + effect emissive multiple + light + particles + transform]
+2	0	0.000%	3 sequences: clamp (first in the list false); drives [effect UV + effect alpha + effect emissive multiple + light + transform]
+10	57	0.000%	3 sequences: clamp (first in the list false); drives [effect UV + effect alpha + effect emissive multiple + lighting shader + transform + visibility]
+20	8	0.000%	3 sequences: clamp (first in the list false); drives [effect UV + effect alpha + effect emissive multiple + particles + transform + visibility]
+11	0	0.000%	3 sequences: clamp (first in the list false); drives [effect UV + effect alpha + effect emissive multiple + particles + visibility]
+7	5	0.000%	3 sequences: clamp (first in the list false); drives [effect UV + effect alpha + effect emissive multiple + particles]
+40	1	0.000%	3 sequences: clamp (first in the list false); drives [effect UV + effect alpha + effect emissive multiple + transform + visibility]
+2	1	0.000%	3 sequences: clamp (first in the list false); drives [effect UV + effect alpha + effect emissive multiple + transform]
+31	12	0.000%	3 sequences: clamp (first in the list false); drives [effect UV + effect alpha + effect emissive multiple + visibility]
+3	3	0.001%	3 sequences: clamp (first in the list false); drives [effect UV + effect alpha + effect emissive multiple]
+4	0	0.000%	3 sequences: clamp (first in the list false); drives [effect UV + effect alpha + light + lighting shader + particles + visibility]
+3	0	0.000%	3 sequences: clamp (first in the list false); drives [effect UV + effect alpha + light + lighting shader]
+3	5	0.000%	3 sequences: clamp (first in the list false); drives [effect UV + effect alpha + light + particles + transform]
+2	0	0.000%	3 sequences: clamp (first in the list false); drives [effect UV + effect alpha + light + particles]
+6	0	0.000%	3 sequences: clamp (first in the list false); drives [effect UV + effect alpha + lighting shader + particles + transform + visibility]
+7	180	0.000%	3 sequences: clamp (first in the list false); drives [effect UV + effect alpha + lighting shader + particles + transform]
+5	0	0.000%	3 sequences: clamp (first in the list false); drives [effect UV + effect alpha + lighting shader + particles]
+11	0	0.000%	3 sequences: clamp (first in the list false); drives [effect UV + effect alpha + lighting shader + visibility]
+3	8	0.000%	3 sequences: clamp (first in the list false); drives [effect UV + effect alpha + lighting shader]
+28	2	0.147%	3 sequences: clamp (first in the list false); drives [effect UV + effect alpha + particles + transform + visibility]
+7	308	0.000%	3 sequences: clamp (first in the list false); drives [effect UV + effect alpha + particles + transform]
+6	0	0.000%	3 sequences: clamp (first in the list false); drives [effect UV + effect alpha + particles + visibility]
+12	136	0.001%	3 sequences: clamp (first in the list false); drives [effect UV + effect alpha + particles]
+22	0	0.000%	3 sequences: clamp (first in the list false); drives [effect UV + effect alpha + transform + visibility]
+10	55	0.004%	3 sequences: clamp (first in the list false); drives [effect UV + effect alpha + transform]
+4	0	0.000%	3 sequences: clamp (first in the list false); drives [effect UV + effect alpha + visibility]
+31	130	0.004%	3 sequences: clamp (first in the list false); drives [effect UV + effect alpha]
+22	0	0.000%	3 sequences: clamp (first in the list false); drives [effect UV + effect emissive colour + effect emissive multiple + transform + visibility]
+4	0	0.000%	3 sequences: clamp (first in the list false); drives [effect UV + effect emissive colour + visibility]
+2	2	0.000%	3 sequences: clamp (first in the list false); drives [effect UV + effect emissive multiple + light + particles + transform + visibility]
+2	8	0.000%	3 sequences: clamp (first in the list false); drives [effect UV + effect emissive multiple + light + transform]
+21	1	0.000%	3 sequences: clamp (first in the list false); drives [effect UV + effect emissive multiple + transform + visibility]
+110	6	0.000%	3 sequences: clamp (first in the list false); drives [effect UV + effect emissive multiple + transform]
+20	0	0.000%	3 sequences: clamp (first in the list false); drives [effect UV + effect emissive multiple]
+1	3	0.001%	3 sequences: clamp (first in the list false); drives [effect UV + particles]
+10	0	0.000%	3 sequences: clamp (first in the list false); drives [effect UV + transform + visibility]
+47	2	0.000%	3 sequences: clamp (first in the list false); drives [effect UV + visibility]
+4	15	0.000%	3 sequences: clamp (first in the list false); drives [effect alpha + effect emissive colour + effect emissive multiple + lighting shader + transform + visibility]
+4	15	0.000%	3 sequences: clamp (first in the list false); drives [effect alpha + effect emissive colour + effect emissive multiple + lighting shader + visibility]
+3	148	0.000%	3 sequences: clamp (first in the list false); drives [effect alpha + effect emissive colour + effect emissive multiple + lighting shader]
+6	0	0.000%	3 sequences: clamp (first in the list false); drives [effect alpha + effect emissive colour + effect emissive multiple + transform + visibility]
+1	66	0.001%	3 sequences: clamp (first in the list false); drives [effect alpha + effect emissive colour + effect emissive multiple + transform]
+2	0	0.000%	3 sequences: clamp (first in the list false); drives [effect alpha + effect emissive colour + effect emissive multiple + visibility]
+7	0	0.000%	3 sequences: clamp (first in the list false); drives [effect alpha + effect emissive colour + effect emissive multiple]
+4	0	0.000%	3 sequences: clamp (first in the list false); drives [effect alpha + effect emissive colour + light + transform]
+6	0	0.000%	3 sequences: clamp (first in the list false); drives [effect alpha + effect emissive colour + light]
+4	0	0.000%	3 sequences: clamp (first in the list false); drives [effect alpha + effect emissive colour + lighting shader]
+5	0	0.000%	3 sequences: clamp (first in the list false); drives [effect alpha + effect emissive colour + transform + visibility]
+36	0	0.000%	3 sequences: clamp (first in the list false); drives [effect alpha + effect emissive colour + transform]
+10	0	0.000%	3 sequences: clamp (first in the list false); drives [effect alpha + effect emissive colour]
+7	3	0.001%	3 sequences: clamp (first in the list false); drives [effect alpha + effect emissive multiple + lighting shader + particles + transform + visibility]
+6	3	0.001%	3 sequences: clamp (first in the list false); drives [effect alpha + effect emissive multiple + lighting shader + particles + transform]
+2	0	0.000%	3 sequences: clamp (first in the list false); drives [effect alpha + effect emissive multiple + lighting shader + particles]
+6	0	0.000%	3 sequences: clamp (first in the list false); drives [effect alpha + effect emissive multiple + particles + transform]
+5	0	0.000%	3 sequences: clamp (first in the list false); drives [effect alpha + effect emissive multiple + transform + visibility]
+2	0	0.000%	3 sequences: clamp (first in the list false); drives [effect alpha + effect emissive multiple + transform]
+3	0	0.000%	3 sequences: clamp (first in the list false); drives [effect alpha + effect emissive multiple + visibility]
+3	0	0.000%	3 sequences: clamp (first in the list false); drives [effect alpha + effect emissive multiple]
+4	93	0.001%	3 sequences: clamp (first in the list false); drives [effect alpha + light + particles + transform]
+1	1	0.000%	3 sequences: clamp (first in the list false); drives [effect alpha + light + particles]
+3	0	0.000%	3 sequences: clamp (first in the list false); drives [effect alpha + light]
+2	0	0.000%	3 sequences: clamp (first in the list false); drives [effect alpha + lighting shader + particles + transform + visibility]
+13	2	0.003%	3 sequences: clamp (first in the list false); drives [effect alpha + lighting shader + transform]
+27	0	0.000%	3 sequences: clamp (first in the list false); drives [effect alpha + lighting shader]
+9	33	0.000%	3 sequences: clamp (first in the list false); drives [effect alpha + particles + transform]
+12	127	0.002%	3 sequences: clamp (first in the list false); drives [effect alpha + particles]
+36	31	0.001%	3 sequences: clamp (first in the list false); drives [effect alpha + transform + visibility]
+28	444	0.000%	3 sequences: clamp (first in the list false); drives [effect alpha + transform]
+31	7	0.000%	3 sequences: clamp (first in the list false); drives [effect alpha + visibility]
+83	1175	0.010%	3 sequences: clamp (first in the list false); drives [effect alpha]
+2	1	0.000%	3 sequences: clamp (first in the list false); drives [effect emissive colour + effect emissive multiple + transform + visibility]
+24	834	0.000%	3 sequences: clamp (first in the list false); drives [effect emissive colour + effect emissive multiple + transform]
+86	1	0.000%	3 sequences: clamp (first in the list false); drives [effect emissive colour + effect emissive multiple]
+12	70	0.000%	3 sequences: clamp (first in the list false); drives [effect emissive colour + transform]
+2	0	0.000%	3 sequences: clamp (first in the list false); drives [effect emissive colour]
+1	0	0.000%	3 sequences: clamp (first in the list false); drives [effect emissive multiple + light + visibility]
+4	0	0.000%	3 sequences: clamp (first in the list false); drives [effect emissive multiple + lighting shader + particles + transform]
+5	87	0.000%	3 sequences: clamp (first in the list false); drives [effect emissive multiple + lighting shader]
+1	0	0.000%	3 sequences: clamp (first in the list false); drives [effect emissive multiple + particles]
+22	0	0.000%	3 sequences: clamp (first in the list false); drives [effect emissive multiple + transform + visibility]
+45	4	0.000%	3 sequences: clamp (first in the list false); drives [effect emissive multiple + transform]
+51	14	0.000%	3 sequences: clamp (first in the list false); drives [effect emissive multiple + visibility]
+45	23	0.000%	3 sequences: clamp (first in the list false); drives [effect emissive multiple]
+1	0	0.000%	3 sequences: clamp (first in the list false); drives [particles + transform]
+13	158	0.000%	3 sequences: clamp (first in the list false); drives [particles]
+4	0	0.000%	3 sequences: clamp (first in the list false); drives [transform]
+1	1	0.003%	3 sequences: clamp (first in the list true); drives [BSNiAlphaPropertyTestRefController + effect UV + effect alpha + effect emissive colour + effect emissive multiple + light + lighting shader + particles + transform + visibility]
+2	181	0.000%	3 sequences: clamp (first in the list true); drives [BSNiAlphaPropertyTestRefController + effect UV + effect alpha + effect emissive colour + effect emissive multiple + transform]
+1	1	0.000%	3 sequences: clamp (first in the list true); drives [BSNiAlphaPropertyTestRefController + effect UV + effect alpha + effect emissive multiple + lighting shader + particles + transform + visibility]
+1	1	0.000%	3 sequences: clamp (first in the list true); drives [BSNiAlphaPropertyTestRefController + effect UV + effect alpha + lighting shader + transform]
+3	0	0.000%	3 sequences: clamp (first in the list true); drives [BSNiAlphaPropertyTestRefController + effect UV + effect alpha + lighting shader]
+1	0	0.000%	3 sequences: clamp (first in the list true); drives [BSNiAlphaPropertyTestRefController + effect alpha]
+1	0	0.000%	3 sequences: clamp (first in the list true); drives [BSProceduralLightningController + effect UV + effect alpha + effect emissive colour + effect emissive multiple + light + particles + transform]
+5	0	0.000%	3 sequences: clamp (first in the list true); drives [BSProceduralLightningController + effect UV + effect alpha + effect emissive colour + effect emissive multiple + lighting shader + transform + visibility]
+2	0	0.000%	3 sequences: clamp (first in the list true); drives [BSProceduralLightningController + effect UV + effect alpha + effect emissive colour + effect emissive multiple + lighting shader + transform]
+2	0	0.000%	3 sequences: clamp (first in the list true); drives [BSProceduralLightningController + effect UV + effect alpha + effect emissive colour + effect emissive multiple + particles + transform]
+1	0	0.000%	3 sequences: clamp (first in the list true); drives [BSProceduralLightningController + effect UV + effect alpha + effect emissive colour + effect emissive multiple + transform]
+2	0	0.000%	3 sequences: clamp (first in the list true); drives [BSProceduralLightningController + effect UV + effect alpha + effect emissive colour + light + particles + transform + visibility]
+3	0	0.000%	3 sequences: clamp (first in the list true); drives [BSProceduralLightningController + effect UV + effect alpha + effect emissive colour + transform + visibility]
+1	0	0.000%	3 sequences: clamp (first in the list true); drives [BSProceduralLightningController + effect UV + effect alpha + effect emissive multiple + light + transform]
+4	0	0.000%	3 sequences: clamp (first in the list true); drives [BSProceduralLightningController + effect UV + effect alpha + effect emissive multiple + transform]
+2	0	0.000%	3 sequences: clamp (first in the list true); drives [BSProceduralLightningController + effect UV + effect alpha + light + particles + transform]
+1	0	0.000%	3 sequences: clamp (first in the list true); drives [BSProceduralLightningController + effect UV + effect alpha + light + transform]
+1	0	0.000%	3 sequences: clamp (first in the list true); drives [BSProceduralLightningController + effect UV + effect emissive colour + effect emissive multiple + lighting shader + particles + transform]
+2	0	0.000%	3 sequences: clamp (first in the list true); drives [BSProceduralLightningController + effect UV + effect emissive colour + effect emissive multiple]
+2	0	0.000%	3 sequences: clamp (first in the list true); drives [effect UV + effect alpha + effect emissive colour + effect emissive multiple + light + lighting shader + particles + transform + visibility]
+2	0	0.000%	3 sequences: clamp (first in the list true); drives [effect UV + effect alpha + effect emissive colour + effect emissive multiple + light + lighting shader + particles + transform]
+2	0	0.000%	3 sequences: clamp (first in the list true); drives [effect UV + effect alpha + effect emissive colour + effect emissive multiple + light + particles + transform + visibility]
+2	0	0.000%	3 sequences: clamp (first in the list true); drives [effect UV + effect alpha + effect emissive colour + effect emissive multiple + light]
+1	2	0.007%	3 sequences: clamp (first in the list true); drives [effect UV + effect alpha + effect emissive colour + effect emissive multiple + lighting shader + particles + transform + visibility]
+6	753	0.002%	3 sequences: clamp (first in the list true); drives [effect UV + effect alpha + effect emissive colour + effect emissive multiple + lighting shader + particles]
+2	2	0.007%	3 sequences: clamp (first in the list true); drives [effect UV + effect alpha + effect emissive colour + effect emissive multiple + lighting shader + transform + visibility]
+1	0	0.000%	3 sequences: clamp (first in the list true); drives [effect UV + effect alpha + effect emissive colour + effect emissive multiple + lighting shader + transform]
+2	0	0.000%	3 sequences: clamp (first in the list true); drives [effect UV + effect alpha + effect emissive colour + effect emissive multiple + transform + visibility]
+2	2	0.000%	3 sequences: clamp (first in the list true); drives [effect UV + effect alpha + effect emissive colour + effect emissive multiple + transform]
+1	0	0.000%	3 sequences: clamp (first in the list true); drives [effect UV + effect alpha + effect emissive colour + effect falloff + lighting shader]
+1	40	0.000%	3 sequences: clamp (first in the list true); drives [effect UV + effect alpha + effect emissive colour + light + lighting shader + particles + transform + visibility]
+2	0	0.000%	3 sequences: clamp (first in the list true); drives [effect UV + effect alpha + effect emissive colour + light + particles + transform + visibility]
+1	0	0.000%	3 sequences: clamp (first in the list true); drives [effect UV + effect alpha + effect emissive colour + lighting shader + particles]
+1	0	0.000%	3 sequences: clamp (first in the list true); drives [effect UV + effect alpha + effect emissive colour + lighting shader + visibility]
+4	5	0.029%	3 sequences: clamp (first in the list true); drives [effect UV + effect alpha + effect emissive colour + particles + transform + visibility]
+1	0	0.000%	3 sequences: clamp (first in the list true); drives [effect UV + effect alpha + effect emissive colour + particles + transform]
+12	0	0.000%	3 sequences: clamp (first in the list true); drives [effect UV + effect alpha + effect emissive colour + visibility]
+1	1	0.000%	3 sequences: clamp (first in the list true); drives [effect UV + effect alpha + effect emissive multiple + light + particles + transform]
+2	57	0.000%	3 sequences: clamp (first in the list true); drives [effect UV + effect alpha + effect emissive multiple + lighting shader + transform + visibility]
+2	8	0.000%	3 sequences: clamp (first in the list true); drives [effect UV + effect alpha + effect emissive multiple + particles + transform + visibility]
+2	0	0.000%	3 sequences: clamp (first in the list true); drives [effect UV + effect alpha + effect emissive multiple + particles + visibility]
+5	5	0.000%	3 sequences: clamp (first in the list true); drives [effect UV + effect alpha + effect emissive multiple + particles]
+4	1	0.000%	3 sequences: clamp (first in the list true); drives [effect UV + effect alpha + effect emissive multiple + transform + visibility]
+2	1	0.000%	3 sequences: clamp (first in the list true); drives [effect UV + effect alpha + effect emissive multiple + transform]
+4	12	0.000%	3 sequences: clamp (first in the list true); drives [effect UV + effect alpha + effect emissive multiple + visibility]
+5	22	0.002%	3 sequences: clamp (first in the list true); drives [effect UV + effect alpha + effect emissive multiple]
+2	0	0.000%	3 sequences: clamp (first in the list true); drives [effect UV + effect alpha + light + lighting shader + particles + visibility]
+1	0	0.000%	3 sequences: clamp (first in the list true); drives [effect UV + effect alpha + light + particles]
+2	0	0.000%	3 sequences: clamp (first in the list true); drives [effect UV + effect alpha + lighting shader + particles + transform + visibility]
+7	180	0.000%	3 sequences: clamp (first in the list true); drives [effect UV + effect alpha + lighting shader + particles + transform]
+2	0	0.000%	3 sequences: clamp (first in the list true); drives [effect UV + effect alpha + lighting shader + particles]
+1	0	0.000%	3 sequences: clamp (first in the list true); drives [effect UV + effect alpha + lighting shader + transform]
+1	0	0.000%	3 sequences: clamp (first in the list true); drives [effect UV + effect alpha + lighting shader + visibility]
+1	8	0.000%	3 sequences: clamp (first in the list true); drives [effect UV + effect alpha + lighting shader]
+4	2	0.147%	3 sequences: clamp (first in the list true); drives [effect UV + effect alpha + particles + transform + visibility]
+12	308	0.000%	3 sequences: clamp (first in the list true); drives [effect UV + effect alpha + particles + transform]
+12	136	0.001%	3 sequences: clamp (first in the list true); drives [effect UV + effect alpha + particles]
+2	0	0.000%	3 sequences: clamp (first in the list true); drives [effect UV + effect alpha + transform + visibility]
+10	55	0.004%	3 sequences: clamp (first in the list true); drives [effect UV + effect alpha + transform]
+16	119	0.004%	3 sequences: clamp (first in the list true); drives [effect UV + effect alpha]
+1	0	0.000%	3 sequences: clamp (first in the list true); drives [effect UV + effect emissive colour + visibility]
+1	2	0.000%	3 sequences: clamp (first in the list true); drives [effect UV + effect emissive multiple + light + particles + transform + visibility]
+1	0	0.000%	3 sequences: clamp (first in the list true); drives [effect UV + effect emissive multiple + light + particles + transform]
+10	6	0.000%	3 sequences: clamp (first in the list true); drives [effect UV + effect emissive multiple + transform]
+1	0	0.000%	3 sequences: clamp (first in the list true); drives [effect UV + effect emissive multiple]
+3	3	0.001%	3 sequences: clamp (first in the list true); drives [effect UV + particles]
+1	0	0.000%	3 sequences: clamp (first in the list true); drives [effect UV + transform + visibility]
+1	18	0.000%	3 sequences: clamp (first in the list true); drives [effect UV]
+2	0	0.000%	3 sequences: clamp (first in the list true); drives [effect alpha + effect emissive colour + effect emissive multiple + light + lighting shader + particles + transform + visibility]
+1	0	0.000%	3 sequences: clamp (first in the list true); drives [effect alpha + effect emissive colour + effect emissive multiple + lighting shader + particles + transform + visibility]
+1	15	0.000%	3 sequences: clamp (first in the list true); drives [effect alpha + effect emissive colour + effect emissive multiple + lighting shader + transform + visibility]
+1	148	0.000%	3 sequences: clamp (first in the list true); drives [effect alpha + effect emissive colour + effect emissive multiple + lighting shader]
+1	0	0.000%	3 sequences: clamp (first in the list true); drives [effect alpha + effect emissive colour + effect emissive multiple + particles + transform + visibility]
+6	0	0.000%	3 sequences: clamp (first in the list true); drives [effect alpha + effect emissive colour + effect emissive multiple + particles + transform]
+2	0	0.000%	3 sequences: clamp (first in the list true); drives [effect alpha + effect emissive colour + effect emissive multiple + transform + visibility]
+3	233	0.001%	3 sequences: clamp (first in the list true); drives [effect alpha + effect emissive colour + effect emissive multiple + transform]
+1	0	0.000%	3 sequences: clamp (first in the list true); drives [effect alpha + effect emissive colour + effect emissive multiple + visibility]
+1	0	0.000%	3 sequences: clamp (first in the list true); drives [effect alpha + effect emissive colour + effect emissive multiple]
+1	0	0.000%	3 sequences: clamp (first in the list true); drives [effect alpha + effect emissive colour + lighting shader]
+1	0	0.000%	3 sequences: clamp (first in the list true); drives [effect alpha + effect emissive colour + transform + visibility]
+4	0	0.000%	3 sequences: clamp (first in the list true); drives [effect alpha + effect emissive colour + transform]
+1	17	0.000%	3 sequences: clamp (first in the list true); drives [effect alpha + effect emissive colour + visibility]
+2	3	0.001%	3 sequences: clamp (first in the list true); drives [effect alpha + effect emissive multiple + lighting shader + particles + transform + visibility]
+2	3	0.001%	3 sequences: clamp (first in the list true); drives [effect alpha + effect emissive multiple + lighting shader + particles + transform]
+1	4	0.000%	3 sequences: clamp (first in the list true); drives [effect alpha + effect emissive multiple + particles + transform]
+1	0	0.000%	3 sequences: clamp (first in the list true); drives [effect alpha + effect emissive multiple + particles]
+1	0	0.000%	3 sequences: clamp (first in the list true); drives [effect alpha + effect emissive multiple + transform + visibility]
+1	0	0.000%	3 sequences: clamp (first in the list true); drives [effect alpha + effect emissive multiple + transform]
+1	0	0.000%	3 sequences: clamp (first in the list true); drives [effect alpha + effect emissive multiple + visibility]
+1	0	0.000%	3 sequences: clamp (first in the list true); drives [effect alpha + effect emissive multiple]
+3	93	0.001%	3 sequences: clamp (first in the list true); drives [effect alpha + light + particles + transform]
+1	1	0.000%	3 sequences: clamp (first in the list true); drives [effect alpha + light + particles]
+1	0	0.000%	3 sequences: clamp (first in the list true); drives [effect alpha + lighting shader + particles + transform + visibility]
+2	2	0.003%	3 sequences: clamp (first in the list true); drives [effect alpha + lighting shader + transform]
+1	0	0.000%	3 sequences: clamp (first in the list true); drives [effect alpha + lighting shader + visibility]
+3	0	0.000%	3 sequences: clamp (first in the list true); drives [effect alpha + lighting shader]
+4	33	0.000%	3 sequences: clamp (first in the list true); drives [effect alpha + particles + transform]
+11	142	0.002%	3 sequences: clamp (first in the list true); drives [effect alpha + particles]
+2	24	0.000%	3 sequences: clamp (first in the list true); drives [effect alpha + transform + visibility]
+6	444	0.000%	3 sequences: clamp (first in the list true); drives [effect alpha + transform]
+3	7	0.000%	3 sequences: clamp (first in the list true); drives [effect alpha + visibility]
+7	1175	0.010%	3 sequences: clamp (first in the list true); drives [effect alpha]
+1	1	0.000%	3 sequences: clamp (first in the list true); drives [effect emissive colour + effect emissive multiple + transform + visibility]
+4	0	0.000%	3 sequences: clamp (first in the list true); drives [effect emissive colour + effect emissive multiple + transform]
+6	1	0.000%	3 sequences: clamp (first in the list true); drives [effect emissive colour + effect emissive multiple]
+2	70	0.000%	3 sequences: clamp (first in the list true); drives [effect emissive colour + transform]
+1	0	0.000%	3 sequences: clamp (first in the list true); drives [effect emissive colour]
+1	0	0.000%	3 sequences: clamp (first in the list true); drives [effect emissive multiple + light + visibility]
+2	0	0.000%	3 sequences: clamp (first in the list true); drives [effect emissive multiple + lighting shader + particles + transform]
+1	71	0.000%	3 sequences: clamp (first in the list true); drives [effect emissive multiple + lighting shader]
+1	0	0.000%	3 sequences: clamp (first in the list true); drives [effect emissive multiple + particles]
+2	0	0.000%	3 sequences: clamp (first in the list true); drives [effect emissive multiple + transform + visibility]
+4	4	0.000%	3 sequences: clamp (first in the list true); drives [effect emissive multiple + transform]
+17	14	0.000%	3 sequences: clamp (first in the list true); drives [effect emissive multiple + visibility]
+11	23	0.000%	3 sequences: clamp (first in the list true); drives [effect emissive multiple]
+1	0	0.000%	3 sequences: clamp (first in the list true); drives [particles]
+1	157	0.000%	3 sequences: clamp; length 1 to 5 s; frequency 1 true; weight 1 true; text keys 2; accumulation root named true; names an effect controller false; no effect field compared
+3	0	0.000%	3 sequences: clamp; length 1 to 5 s; frequency 1 true; weight 1 true; text keys 2; accumulation root named true; names an effect controller false; start keys give the stored fields
+4	1	0.000%	3 sequences: clamp; length 1 to 5 s; frequency 1 true; weight 1 true; text keys 2; accumulation root named true; names an effect controller true; end keys give the stored fields
+63	222	0.005%	3 sequences: clamp; length 1 to 5 s; frequency 1 true; weight 1 true; text keys 2; accumulation root named true; names an effect controller true; neither end gives the stored fields
+3	0	0.000%	3 sequences: clamp; length 1 to 5 s; frequency 1 true; weight 1 true; text keys 2; accumulation root named true; names an effect controller true; no effect field compared
+10	2	0.000%	3 sequences: clamp; length 1 to 5 s; frequency 1 true; weight 1 true; text keys 2; accumulation root named true; names an effect controller true; start and end keys give the stored fields
+31	0	0.000%	3 sequences: clamp; length 1 to 5 s; frequency 1 true; weight 1 true; text keys 2; accumulation root named true; names an effect controller true; start keys give the stored fields
+11	19	0.000%	3 sequences: clamp; length 1 to 5 s; frequency 1 true; weight 1 true; text keys 3; accumulation root named true; names an effect controller true; end keys give the stored fields
+73	2290	0.063%	3 sequences: clamp; length 1 to 5 s; frequency 1 true; weight 1 true; text keys 3; accumulation root named true; names an effect controller true; neither end gives the stored fields
+1	33	0.000%	3 sequences: clamp; length 1 to 5 s; frequency 1 true; weight 1 true; text keys 3; accumulation root named true; names an effect controller true; no effect field compared
+17	1192	0.010%	3 sequences: clamp; length 1 to 5 s; frequency 1 true; weight 1 true; text keys 3; accumulation root named true; names an effect controller true; start and end keys give the stored fields
+23	77	0.002%	3 sequences: clamp; length 1 to 5 s; frequency 1 true; weight 1 true; text keys 3; accumulation root named true; names an effect controller true; start keys give the stored fields
+1	3	0.000%	3 sequences: clamp; length 30 to 300 s; frequency 1 true; weight 1 true; text keys 2; accumulation root named true; names an effect controller true; neither end gives the stored fields
+1	0	0.000%	3 sequences: clamp; length 30 to 300 s; frequency 1 true; weight 1 true; text keys 2; accumulation root named true; names an effect controller true; start keys give the stored fields
+1	1	0.000%	3 sequences: clamp; length 30 to 300 s; frequency 1 true; weight 1 true; text keys 3; accumulation root named true; names an effect controller true; end keys give the stored fields
+3	2	0.147%	3 sequences: clamp; length 30 to 300 s; frequency 1 true; weight 1 true; text keys 3; accumulation root named true; names an effect controller true; neither end gives the stored fields
+1	1	0.000%	3 sequences: clamp; length 30 to 300 s; frequency 1 true; weight 1 true; text keys 3; accumulation root named true; names an effect controller true; start and end keys give the stored fields
+5	5	0.002%	3 sequences: clamp; length 30 to 300 s; frequency 1 true; weight 1 true; text keys 3; accumulation root named true; names an effect controller true; start keys give the stored fields
+1	0	0.000%	3 sequences: clamp; length 5 to 30 s; frequency 1 true; weight 1 true; text keys 2; accumulation root named true; names an effect controller false; no effect field compared
+2	0	0.000%	3 sequences: clamp; length 5 to 30 s; frequency 1 true; weight 1 true; text keys 2; accumulation root named true; names an effect controller true; end keys give the stored fields
+29	2	0.000%	3 sequences: clamp; length 5 to 30 s; frequency 1 true; weight 1 true; text keys 2; accumulation root named true; names an effect controller true; neither end gives the stored fields
+3	2	0.000%	3 sequences: clamp; length 5 to 30 s; frequency 1 true; weight 1 true; text keys 2; accumulation root named true; names an effect controller true; start and end keys give the stored fields
+14	3	0.000%	3 sequences: clamp; length 5 to 30 s; frequency 1 true; weight 1 true; text keys 2; accumulation root named true; names an effect controller true; start keys give the stored fields
+2	3	0.000%	3 sequences: clamp; length 5 to 30 s; frequency 1 true; weight 1 true; text keys 3; accumulation root named true; names an effect controller true; end keys give the stored fields
+38	94	0.050%	3 sequences: clamp; length 5 to 30 s; frequency 1 true; weight 1 true; text keys 3; accumulation root named true; names an effect controller true; neither end gives the stored fields
+1	0	0.000%	3 sequences: clamp; length 5 to 30 s; frequency 1 true; weight 1 true; text keys 3; accumulation root named true; names an effect controller true; no effect field compared
+13	4	0.000%	3 sequences: clamp; length 5 to 30 s; frequency 1 true; weight 1 true; text keys 3; accumulation root named true; names an effect controller true; start and end keys give the stored fields
+18	1218	0.025%	3 sequences: clamp; length 5 to 30 s; frequency 1 true; weight 1 true; text keys 3; accumulation root named true; names an effect controller true; start keys give the stored fields
+19	158	0.000%	3 sequences: clamp; length below 1 s; frequency 1 true; weight 1 true; text keys 2; accumulation root named true; names an effect controller false; no effect field compared
+1	0	0.000%	3 sequences: clamp; length below 1 s; frequency 1 true; weight 1 true; text keys 2; accumulation root named true; names an effect controller false; start keys give the stored fields
+11	921	0.000%	3 sequences: clamp; length below 1 s; frequency 1 true; weight 1 true; text keys 2; accumulation root named true; names an effect controller true; end keys give the stored fields
+423	5006	0.083%	3 sequences: clamp; length below 1 s; frequency 1 true; weight 1 true; text keys 2; accumulation root named true; names an effect controller true; neither end gives the stored fields
+62	309	0.003%	3 sequences: clamp; length below 1 s; frequency 1 true; weight 1 true; text keys 2; accumulation root named true; names an effect controller true; no effect field compared
+175	988	0.169%	3 sequences: clamp; length below 1 s; frequency 1 true; weight 1 true; text keys 2; accumulation root named true; names an effect controller true; start and end keys give the stored fields
+58	1268	0.004%	3 sequences: clamp; length below 1 s; frequency 1 true; weight 1 true; text keys 2; accumulation root named true; names an effect controller true; start keys give the stored fields
+36	489	0.000%	3 sequences: clamp; length below 1 s; frequency 1 true; weight 1 true; text keys 3; accumulation root named true; names an effect controller true; end keys give the stored fields
+412	613	0.035%	3 sequences: clamp; length below 1 s; frequency 1 true; weight 1 true; text keys 3; accumulation root named true; names an effect controller true; neither end gives the stored fields
+25	8	0.001%	3 sequences: clamp; length below 1 s; frequency 1 true; weight 1 true; text keys 3; accumulation root named true; names an effect controller true; no effect field compared
+112	124	0.001%	3 sequences: clamp; length below 1 s; frequency 1 true; weight 1 true; text keys 3; accumulation root named true; names an effect controller true; start and end keys give the stored fields
+59	755	0.001%	3 sequences: clamp; length below 1 s; frequency 1 true; weight 1 true; text keys 3; accumulation root named true; names an effect controller true; start keys give the stored fields
+2	181	0.000%	3 sequences: loop (first in the list false); drives [BSNiAlphaPropertyTestRefController + effect UV + effect alpha + effect emissive colour + effect emissive multiple + transform]
+6	0	0.000%	3 sequences: loop (first in the list false); drives [BSNiAlphaPropertyTestRefController + effect UV + effect alpha + lighting shader]
+2	3	0.000%	3 sequences: loop (first in the list false); drives [BSNiAlphaPropertyTestRefController + effect UV + effect alpha + particles + transform]
+1	6	0.001%	3 sequences: loop (first in the list false); drives [BSNiAlphaPropertyTestRefController + effect UV + effect emissive colour]
+1	0	0.000%	3 sequences: loop (first in the list false); drives [BSNiAlphaPropertyTestRefController + lighting shader + visibility]
+9	0	0.000%	3 sequences: loop (first in the list false); drives [BSProceduralLightningController + effect UV + effect alpha + effect emissive colour + light + particles + transform + visibility]
+1	0	0.000%	3 sequences: loop (first in the list false); drives [BSProceduralLightningController + effect UV + effect alpha + effect emissive multiple + light + transform]
+1	0	0.000%	3 sequences: loop (first in the list false); drives [BSProceduralLightningController + effect UV + effect emissive colour + effect emissive multiple + lighting shader + particles + transform]
+3	0	0.000%	3 sequences: loop (first in the list false); drives [BSProceduralLightningController + effect alpha + effect emissive colour + effect emissive multiple + light]
+1	0	0.000%	3 sequences: loop (first in the list false); drives [effect UV + effect alpha + effect emissive colour + effect emissive multiple + light + lighting shader + particles + transform]
+7	0	0.000%	3 sequences: loop (first in the list false); drives [effect UV + effect alpha + effect emissive colour + effect emissive multiple + light + particles + transform + visibility]
+1	0	0.000%	3 sequences: loop (first in the list false); drives [effect UV + effect alpha + effect emissive colour + effect emissive multiple + light + particles + transform]
+4	0	0.000%	3 sequences: loop (first in the list false); drives [effect UV + effect alpha + effect emissive colour + effect emissive multiple + light]
+1	2	0.007%	3 sequences: loop (first in the list false); drives [effect UV + effect alpha + effect emissive colour + effect emissive multiple + lighting shader + particles + transform + visibility]
+6	753	0.002%	3 sequences: loop (first in the list false); drives [effect UV + effect alpha + effect emissive colour + effect emissive multiple + lighting shader + particles]
+2	2	0.007%	3 sequences: loop (first in the list false); drives [effect UV + effect alpha + effect emissive colour + effect emissive multiple + lighting shader + transform + visibility]
+1	2	0.000%	3 sequences: loop (first in the list false); drives [effect UV + effect alpha + effect emissive colour + effect emissive multiple + transform]
+1	0	0.000%	3 sequences: loop (first in the list false); drives [effect UV + effect alpha + effect emissive colour + effect falloff + lighting shader]
+1	40	0.000%	3 sequences: loop (first in the list false); drives [effect UV + effect alpha + effect emissive colour + light + lighting shader + particles + transform + visibility]
+4	0	0.000%	3 sequences: loop (first in the list false); drives [effect UV + effect alpha + effect emissive colour + light + particles + transform + visibility]
+2	0	0.000%	3 sequences: loop (first in the list false); drives [effect UV + effect alpha + effect emissive colour + lighting shader + particles]
+1	0	0.000%	3 sequences: loop (first in the list false); drives [effect UV + effect alpha + effect emissive colour + lighting shader + visibility]
+7	5	0.029%	3 sequences: loop (first in the list false); drives [effect UV + effect alpha + effect emissive colour + particles + transform + visibility]
+1	1	0.000%	3 sequences: loop (first in the list false); drives [effect UV + effect alpha + effect emissive colour]
+1	0	0.000%	3 sequences: loop (first in the list false); drives [effect UV + effect alpha + effect emissive multiple + light + transform]
+6	8	0.000%	3 sequences: loop (first in the list false); drives [effect UV + effect alpha + effect emissive multiple + particles + transform + visibility]
+2	0	0.000%	3 sequences: loop (first in the list false); drives [effect UV + effect alpha + effect emissive multiple + particles + visibility]
+5	5	0.000%	3 sequences: loop (first in the list false); drives [effect UV + effect alpha + effect emissive multiple + particles]
+7	1	0.000%	3 sequences: loop (first in the list false); drives [effect UV + effect alpha + effect emissive multiple + transform + visibility]
+4	1	0.000%	3 sequences: loop (first in the list false); drives [effect UV + effect alpha + effect emissive multiple + transform]
+4	12	0.000%	3 sequences: loop (first in the list false); drives [effect UV + effect alpha + effect emissive multiple + visibility]
+5	22	0.002%	3 sequences: loop (first in the list false); drives [effect UV + effect alpha + effect emissive multiple]
+4	0	0.000%	3 sequences: loop (first in the list false); drives [effect UV + effect alpha + light + lighting shader + particles + visibility]
+3	5	0.000%	3 sequences: loop (first in the list false); drives [effect UV + effect alpha + light + particles + transform]
+1	0	0.000%	3 sequences: loop (first in the list false); drives [effect UV + effect alpha + light + particles]
+3	0	0.000%	3 sequences: loop (first in the list false); drives [effect UV + effect alpha + light + transform]
+2	0	0.000%	3 sequences: loop (first in the list false); drives [effect UV + effect alpha + lighting shader + particles + transform + visibility]
+1	23	0.000%	3 sequences: loop (first in the list false); drives [effect UV + effect alpha + lighting shader + particles + transform]
+3	0	0.000%	3 sequences: loop (first in the list false); drives [effect UV + effect alpha + lighting shader + particles]
+13	184	0.000%	3 sequences: loop (first in the list false); drives [effect UV + effect alpha + lighting shader + transform]
+2	0	0.000%	3 sequences: loop (first in the list false); drives [effect UV + effect alpha + lighting shader + visibility]
+3	8	0.000%	3 sequences: loop (first in the list false); drives [effect UV + effect alpha + lighting shader]
+4	0	0.000%	3 sequences: loop (first in the list false); drives [effect UV + effect alpha + particles + transform + visibility]
+2	308	0.000%	3 sequences: loop (first in the list false); drives [effect UV + effect alpha + particles + transform]
+3	0	0.000%	3 sequences: loop (first in the list false); drives [effect UV + effect alpha + particles + visibility]
+14	136	0.001%	3 sequences: loop (first in the list false); drives [effect UV + effect alpha + particles]
+3	0	0.000%	3 sequences: loop (first in the list false); drives [effect UV + effect alpha + transform + visibility]
+19	127	0.040%	3 sequences: loop (first in the list false); drives [effect UV + effect alpha + transform]
+2	0	0.000%	3 sequences: loop (first in the list false); drives [effect UV + effect alpha + visibility]
+15	1	0.000%	3 sequences: loop (first in the list false); drives [effect UV + effect alpha]
+1	0	0.000%	3 sequences: loop (first in the list false); drives [effect UV + effect emissive colour + visibility]
+2	2	0.000%	3 sequences: loop (first in the list false); drives [effect UV + effect emissive multiple + light + particles + transform + visibility]
+1	8	0.000%	3 sequences: loop (first in the list false); drives [effect UV + effect emissive multiple + light + transform]
+2	0	0.000%	3 sequences: loop (first in the list false); drives [effect UV + effect emissive multiple + transform + visibility]
+4	0	0.000%	3 sequences: loop (first in the list false); drives [effect UV + lighting shader + particles]
+6	1	0.000%	3 sequences: loop (first in the list false); drives [effect UV + particles + transform]
+9	2	0.000%	3 sequences: loop (first in the list false); drives [effect UV + visibility]
+6	18	0.000%	3 sequences: loop (first in the list false); drives [effect UV]
+1	15	0.000%	3 sequences: loop (first in the list false); drives [effect alpha + effect emissive colour + effect emissive multiple + lighting shader + transform + visibility]
+3	0	0.000%	3 sequences: loop (first in the list false); drives [effect alpha + effect emissive colour + effect emissive multiple + transform + visibility]
+3	233	0.001%	3 sequences: loop (first in the list false); drives [effect alpha + effect emissive colour + effect emissive multiple + transform]
+1	0	0.000%	3 sequences: loop (first in the list false); drives [effect alpha + effect emissive colour + effect emissive multiple + visibility]
+20	0	0.000%	3 sequences: loop (first in the list false); drives [effect alpha + effect emissive colour + effect emissive multiple]
+2	0	0.000%	3 sequences: loop (first in the list false); drives [effect alpha + effect emissive colour + light + transform]
+2	0	0.000%	3 sequences: loop (first in the list false); drives [effect alpha + effect emissive colour + lighting shader]
+1	0	0.000%	3 sequences: loop (first in the list false); drives [effect alpha + effect emissive colour + transform + visibility]
+6	0	0.000%	3 sequences: loop (first in the list false); drives [effect alpha + effect emissive colour + transform]
+1	17	0.000%	3 sequences: loop (first in the list false); drives [effect alpha + effect emissive colour + visibility]
+5	0	0.000%	3 sequences: loop (first in the list false); drives [effect alpha + effect emissive colour]
+1	0	0.000%	3 sequences: loop (first in the list false); drives [effect alpha + effect emissive multiple + light]
+1	4	0.000%	3 sequences: loop (first in the list false); drives [effect alpha + effect emissive multiple + particles + transform]
+2	0	0.000%	3 sequences: loop (first in the list false); drives [effect alpha + effect emissive multiple + particles]
+1	0	0.000%	3 sequences: loop (first in the list false); drives [effect alpha + effect emissive multiple + transform + visibility]
+3	0	0.000%	3 sequences: loop (first in the list false); drives [effect alpha + effect emissive multiple]
+3	93	0.001%	3 sequences: loop (first in the list false); drives [effect alpha + light + particles + transform]
+1	1	0.000%	3 sequences: loop (first in the list false); drives [effect alpha + light + particles]
+1	0	0.000%	3 sequences: loop (first in the list false); drives [effect alpha + lighting shader + particles + transform + visibility]
+4	0	0.000%	3 sequences: loop (first in the list false); drives [effect alpha + lighting shader + particles]
+1	0	0.000%	3 sequences: loop (first in the list false); drives [effect alpha + lighting shader + visibility]
+5	0	0.000%	3 sequences: loop (first in the list false); drives [effect alpha + lighting shader]
+6	33	0.000%	3 sequences: loop (first in the list false); drives [effect alpha + particles + transform]
+12	134	0.002%	3 sequences: loop (first in the list false); drives [effect alpha + particles]
+3	24	0.000%	3 sequences: loop (first in the list false); drives [effect alpha + transform + visibility]
+2	1	0.000%	3 sequences: loop (first in the list false); drives [effect alpha + transform]
+2	0	0.000%	3 sequences: loop (first in the list false); drives [effect alpha + visibility]
+11	1175	0.010%	3 sequences: loop (first in the list false); drives [effect alpha]
+2	0	0.000%	3 sequences: loop (first in the list false); drives [effect emissive colour + effect emissive multiple + light + transform]
+1	1	0.000%	3 sequences: loop (first in the list false); drives [effect emissive colour + effect emissive multiple + transform + visibility]
+2	640	0.000%	3 sequences: loop (first in the list false); drives [effect emissive colour + effect emissive multiple + transform]
+1	0	0.000%	3 sequences: loop (first in the list false); drives [effect emissive colour + light + lighting shader + particles + transform]
+2	70	0.000%	3 sequences: loop (first in the list false); drives [effect emissive colour + transform]
+3	0	0.000%	3 sequences: loop (first in the list false); drives [effect emissive colour]
+1	0	0.000%	3 sequences: loop (first in the list false); drives [effect emissive multiple + light + visibility]
+1	71	0.000%	3 sequences: loop (first in the list false); drives [effect emissive multiple + lighting shader]
+1	2	0.000%	3 sequences: loop (first in the list false); drives [effect emissive multiple + transform]
+1	0	0.000%	3 sequences: loop (first in the list false); drives [particles]
+5	0	0.000%	3 sequences: loop (first in the list false); drives [transform]
+1	41	0.000%	3 sequences: loop (first in the list true); drives [BSNiAlphaPropertyTestRefController + effect UV + effect alpha + effect emissive colour + effect emissive multiple + transform]
+1	3	0.000%	3 sequences: loop (first in the list true); drives [BSNiAlphaPropertyTestRefController + effect UV + effect alpha + particles + transform]
+5	1731	0.017%	3 sequences: loop (first in the list true); drives [BSNiAlphaPropertyTestRefController + effect UV + effect alpha + transform]
+1	6	0.001%	3 sequences: loop (first in the list true); drives [BSNiAlphaPropertyTestRefController + effect UV + effect emissive colour]
+1	0	0.000%	3 sequences: loop (first in the list true); drives [BSProceduralLightningController + effect UV + effect alpha + effect emissive multiple + light + transform + visibility]
+1	0	0.000%	3 sequences: loop (first in the list true); drives [BSProceduralLightningController + effect UV + effect alpha + effect emissive multiple + transform]
+1	0	0.000%	3 sequences: loop (first in the list true); drives [BSProceduralLightningController + effect alpha + effect emissive colour + effect emissive multiple + light]
+1	1	0.000%	3 sequences: loop (first in the list true); drives [effect UV + effect alpha + effect emissive colour + effect emissive multiple + transform + visibility]
+1	1	0.000%	3 sequences: loop (first in the list true); drives [effect UV + effect alpha + effect emissive colour]
+1	0	0.000%	3 sequences: loop (first in the list true); drives [effect UV + effect alpha + effect emissive multiple + light + transform]
+1	0	0.000%	3 sequences: loop (first in the list true); drives [effect UV + effect alpha + effect emissive multiple + particles + visibility]
+2	1	0.000%	3 sequences: loop (first in the list true); drives [effect UV + effect alpha + effect emissive multiple]
+1	0	0.000%	3 sequences: loop (first in the list true); drives [effect UV + effect alpha + light + lighting shader]
+2	5	0.000%	3 sequences: loop (first in the list true); drives [effect UV + effect alpha + light + particles + transform]
+3	0	0.000%	3 sequences: loop (first in the list true); drives [effect UV + effect alpha + light + transform]
+9	184	0.000%	3 sequences: loop (first in the list true); drives [effect UV + effect alpha + lighting shader + transform]
+2	0	0.000%	3 sequences: loop (first in the list true); drives [effect UV + effect alpha + lighting shader]
+1	0	0.000%	3 sequences: loop (first in the list true); drives [effect UV + effect alpha + particles + transform + visibility]
+1	0	0.000%	3 sequences: loop (first in the list true); drives [effect UV + effect alpha + particles + transform]
+3	0	0.000%	3 sequences: loop (first in the list true); drives [effect UV + effect alpha + particles + visibility]
+4	803	0.157%	3 sequences: loop (first in the list true); drives [effect UV + effect alpha + transform + visibility]
+13	776	0.177%	3 sequences: loop (first in the list true); drives [effect UV + effect alpha + transform]
+2	0	0.000%	3 sequences: loop (first in the list true); drives [effect UV + effect alpha + visibility]
+2	11	0.000%	3 sequences: loop (first in the list true); drives [effect UV + effect alpha]
+2	0	0.000%	3 sequences: loop (first in the list true); drives [effect UV + effect emissive colour + effect emissive multiple + transform + visibility]
+1	8	0.000%	3 sequences: loop (first in the list true); drives [effect UV + effect emissive multiple + light + transform]
+2	1	0.000%	3 sequences: loop (first in the list true); drives [effect UV + effect emissive multiple + transform + visibility]
+1	86	0.000%	3 sequences: loop (first in the list true); drives [effect UV + effect emissive multiple + transform]
+3	2	0.001%	3 sequences: loop (first in the list true); drives [effect UV + effect emissive multiple + visibility]
+2	213	0.089%	3 sequences: loop (first in the list true); drives [effect UV + transform]
+3	2	0.000%	3 sequences: loop (first in the list true); drives [effect UV + visibility]
+3	0	0.000%	3 sequences: loop (first in the list true); drives [effect UV]
+8	0	0.000%	3 sequences: loop (first in the list true); drives [effect alpha + effect emissive colour + effect emissive multiple]
+2	0	0.000%	3 sequences: loop (first in the list true); drives [effect alpha + effect emissive colour + light + transform]
+2	0	0.000%	3 sequences: loop (first in the list true); drives [effect alpha + effect emissive colour + light]
+1	0	0.000%	3 sequences: loop (first in the list true); drives [effect alpha + effect emissive colour + lighting shader]
+2	0	0.000%	3 sequences: loop (first in the list true); drives [effect alpha + effect emissive colour + transform]
+3	0	0.000%	3 sequences: loop (first in the list true); drives [effect alpha + effect emissive colour]
+1	0	0.000%	3 sequences: loop (first in the list true); drives [effect alpha + effect emissive multiple + light]
+1	0	0.000%	3 sequences: loop (first in the list true); drives [effect alpha + effect emissive multiple + lighting shader + particles]
+1	0	0.000%	3 sequences: loop (first in the list true); drives [effect alpha + effect emissive multiple + particles + transform]
+2	0	0.000%	3 sequences: loop (first in the list true); drives [effect alpha + effect emissive multiple + particles]
+3	0	0.000%	3 sequences: loop (first in the list true); drives [effect alpha + effect emissive multiple]
+4	0	0.000%	3 sequences: loop (first in the list true); drives [effect alpha + lighting shader + particles]
+2	0	0.000%	3 sequences: loop (first in the list true); drives [effect alpha + lighting shader]
+3	0	0.000%	3 sequences: loop (first in the list true); drives [effect alpha + particles + transform]
+1	1	0.000%	3 sequences: loop (first in the list true); drives [effect alpha + particles]
+3	7	0.001%	3 sequences: loop (first in the list true); drives [effect alpha + transform + visibility]
+1	0	0.000%	3 sequences: loop (first in the list true); drives [effect alpha + transform]
+2	0	0.000%	3 sequences: loop (first in the list true); drives [effect alpha + visibility]
+6	441	0.001%	3 sequences: loop (first in the list true); drives [effect alpha]
+1	0	0.000%	3 sequences: loop (first in the list true); drives [effect emissive colour + effect emissive multiple + light + transform]
+3	834	0.000%	3 sequences: loop (first in the list true); drives [effect emissive colour + effect emissive multiple + transform]
+1	16	0.000%	3 sequences: loop (first in the list true); drives [effect emissive multiple + lighting shader]
+1	0	0.000%	3 sequences: loop (first in the list true); drives [transform]
+1	0	0.000%	3 sequences: loop; length 1 to 5 s; frequency 1 true; weight 1 true; text keys 2; accumulation root named true; names an effect controller false; no effect field compared
+14	1	0.000%	3 sequences: loop; length 1 to 5 s; frequency 1 true; weight 1 true; text keys 2; accumulation root named true; names an effect controller false; start keys give the stored fields
+115	1303	0.054%	3 sequences: loop; length 1 to 5 s; frequency 1 true; weight 1 true; text keys 2; accumulation root named true; names an effect controller true; neither end gives the stored fields
+3	33	0.000%	3 sequences: loop; length 1 to 5 s; frequency 1 true; weight 1 true; text keys 2; accumulation root named true; names an effect controller true; no effect field compared
+30	18	0.000%	3 sequences: loop; length 1 to 5 s; frequency 1 true; weight 1 true; text keys 2; accumulation root named true; names an effect controller true; start and end keys give the stored fields
+41	2046	0.056%	3 sequences: loop; length 1 to 5 s; frequency 1 true; weight 1 true; text keys 2; accumulation root named true; names an effect controller true; start keys give the stored fields
+13	45	0.001%	3 sequences: loop; length 1 to 5 s; frequency 1 true; weight 1 true; text keys 3; accumulation root named true; names an effect controller true; neither end gives the stored fields
+2	71	0.000%	3 sequences: loop; length 1 to 5 s; frequency 1 true; weight 1 true; text keys 3; accumulation root named true; names an effect controller true; start and end keys give the stored fields
+3	0	0.000%	3 sequences: loop; length 1 to 5 s; frequency 1 true; weight 1 true; text keys 3; accumulation root named true; names an effect controller true; start keys give the stored fields
+6	1512	0.298%	3 sequences: loop; length 30 to 300 s; frequency 1 true; weight 1 true; text keys 2; accumulation root named true; names an effect controller true; neither end gives the stored fields
+1	1175	0.010%	3 sequences: loop; length 30 to 300 s; frequency 1 true; weight 1 true; text keys 2; accumulation root named true; names an effect controller true; start and end keys give the stored fields
+1	5	0.000%	3 sequences: loop; length 30 to 300 s; frequency 1 true; weight 1 true; text keys 2; accumulation root named true; names an effect controller true; start keys give the stored fields
+7	755	0.002%	3 sequences: loop; length 30 to 300 s; frequency 1 true; weight 1 true; text keys 3; accumulation root named true; names an effect controller true; neither end gives the stored fields
+1	15	0.000%	3 sequences: loop; length 30 to 300 s; frequency 1 true; weight 1 true; text keys 3; accumulation root named true; names an effect controller true; no effect field compared
+1	18	0.000%	3 sequences: loop; length 30 to 300 s; frequency 1 true; weight 1 true; text keys 3; accumulation root named true; names an effect controller true; start and end keys give the stored fields
+2	1	0.000%	3 sequences: loop; length 30 to 300 s; frequency 1 true; weight 1 true; text keys 3; accumulation root named true; names an effect controller true; start keys give the stored fields
+2	1	0.000%	3 sequences: loop; length 5 to 30 s; frequency 1 true; weight 1 true; text keys 2; accumulation root named true; names an effect controller false; start keys give the stored fields
+6	0	0.000%	3 sequences: loop; length 5 to 30 s; frequency 1 true; weight 1 true; text keys 2; accumulation root named true; names an effect controller true; end keys give the stored fields
+27	489	0.000%	3 sequences: loop; length 5 to 30 s; frequency 1 true; weight 1 true; text keys 2; accumulation root named true; names an effect controller true; neither end gives the stored fields
+1	0	0.000%	3 sequences: loop; length 5 to 30 s; frequency 1 true; weight 1 true; text keys 2; accumulation root named true; names an effect controller true; no effect field compared
+1	0	0.000%	3 sequences: loop; length 5 to 30 s; frequency 1 true; weight 1 true; text keys 2; accumulation root named true; names an effect controller true; start and end keys give the stored fields
+3	0	0.000%	3 sequences: loop; length 5 to 30 s; frequency 1 true; weight 1 true; text keys 2; accumulation root named true; names an effect controller true; start keys give the stored fields
+4	1	0.002%	3 sequences: loop; length 5 to 30 s; frequency 1 true; weight 1 true; text keys 3; accumulation root named true; names an effect controller true; end keys give the stored fields
+21	167	0.034%	3 sequences: loop; length 5 to 30 s; frequency 1 true; weight 1 true; text keys 3; accumulation root named true; names an effect controller true; neither end gives the stored fields
+9	341	0.000%	3 sequences: loop; length 5 to 30 s; frequency 1 true; weight 1 true; text keys 3; accumulation root named true; names an effect controller true; start and end keys give the stored fields
+5	319	0.090%	3 sequences: loop; length 5 to 30 s; frequency 1 true; weight 1 true; text keys 3; accumulation root named true; names an effect controller true; start keys give the stored fields
+7	0	0.000%	3 sequences: loop; length below 1 s; frequency 1 true; weight 1 true; text keys 2; accumulation root named true; names an effect controller false; no effect field compared
+1	0	0.000%	3 sequences: loop; length below 1 s; frequency 1 true; weight 1 true; text keys 2; accumulation root named true; names an effect controller true; end keys give the stored fields
+79	468	0.030%	3 sequences: loop; length below 1 s; frequency 1 true; weight 1 true; text keys 2; accumulation root named true; names an effect controller true; neither end gives the stored fields
+14	1	0.001%	3 sequences: loop; length below 1 s; frequency 1 true; weight 1 true; text keys 2; accumulation root named true; names an effect controller true; no effect field compared
+27	679	0.000%	3 sequences: loop; length below 1 s; frequency 1 true; weight 1 true; text keys 2; accumulation root named true; names an effect controller true; start and end keys give the stored fields
+14	15	0.000%	3 sequences: loop; length below 1 s; frequency 1 true; weight 1 true; text keys 2; accumulation root named true; names an effect controller true; start keys give the stored fields
+10	17	0.000%	3 sequences: loop; length below 1 s; frequency 1 true; weight 1 true; text keys 3; accumulation root named true; names an effect controller true; neither end gives the stored fields
+4	74	0.000%	3 sequences: loop; length below 1 s; frequency 1 true; weight 1 true; text keys 3; accumulation root named true; names an effect controller true; start and end keys give the stored fields
+7	8	0.001%	3 sequences: loop; length below 1 s; frequency 1 true; weight 1 true; text keys 3; accumulation root named true; names an effect controller true; start keys give the stored fields
