@@ -54,6 +54,23 @@ fn cell(id: u32, x: i32, y: i32, lands: &[Vec<u8>]) -> Vec<u8> {
     }
     out
 }
+/// A collision marker's box (a modelless static's reference with an XPRM
+/// box of kind 1) near the cell's origin, with record flags `flags`.
+fn marker(id: u32, flags: u32) -> Vec<u8> {
+    let mut d = sub(b"NAME", &0x8b0u32.to_le_bytes());
+    let mut place = Vec::new();
+    for x in [300f32, 300., 30., 0., 0., 0.] {
+        place.extend(x.to_le_bytes());
+    }
+    d.extend(sub(b"DATA", &place));
+    let mut x = Vec::new();
+    for v in [10f32, 10., 5., 0., 0., 0., 0.] {
+        x.extend(v.to_le_bytes());
+    }
+    x.extend(1u32.to_le_bytes());
+    d.extend(sub(b"XPRM", &x));
+    record(b"REFR", id, flags, &d)
+}
 struct Fixture {
     _temp: TestDir,
     store: Store,
@@ -63,7 +80,12 @@ struct Fixture {
 /// cell at (5, 5); and an interior cell.
 fn fixture() -> Fixture {
     let cells = [
-        cell(0x810, 0, 0, &[land(0x811, true)]),
+        cell(
+            0x810,
+            0,
+            0,
+            &[land(0x811, true), marker(0x812, 0), marker(0x813, 0x800)],
+        ),
         cell(0x820, 1, 0, &[land(0x821, true)]),
         cell(0x830, 0, 1, &[]),
         cell(0x840, 0, -1, &[land(0x841, false)]),
@@ -79,7 +101,12 @@ fn fixture() -> Fixture {
     .concat();
     let mut interior = sub(b"EDID", b"Room\0");
     interior.extend(sub(b"DATA", &1u16.to_le_bytes()));
-    let mut body = group(0, u32::from_le_bytes(*b"WRLD"), &world);
+    let mut body = group(
+        0,
+        u32::from_le_bytes(*b"STAT"),
+        &record(b"STAT", 0x8b0, 0, &sub(b"EDID", b"Marker\0")),
+    );
+    body.extend(group(0, u32::from_le_bytes(*b"WRLD"), &world));
     body.extend(group(
         0,
         u32::from_le_bytes(*b"CELL"),
@@ -270,4 +297,84 @@ fn a_larger_radius_keeps_the_first_ring_and_adds_the_next() {
     assert_eq!(m.cells_scanned, 0);
     assert_eq!(piece_name([0, 1]), "north");
     assert_eq!(piece_name([3, -1]), "ring_3");
+}
+
+/// `walk_collision_marker_box_presence_v1`: a box stands while the run's
+/// frame has its reference present (its flag 0x800 at the start, then the
+/// run's Enable).
+#[test]
+fn a_collision_marker_box_is_present_as_the_runs_frame_says() {
+    use crate::platform::{marker_box, presence};
+    use fo4_scene::timeline::Timeline;
+    let f = fixture();
+    let b = budget();
+    let shown = marker_box(&f.store, &key(0x812), &b).unwrap().unwrap();
+    let flagged = marker_box(&f.store, &key(0x813), &b).unwrap().unwrap();
+    assert!(flagged.initially_disabled && !shown.initially_disabled);
+    let empty = Timeline::default().at(0.);
+    assert_eq!(presence(&f.store, &empty, &shown, &b).unwrap(), Some(true));
+    assert_eq!(
+        presence(&f.store, &empty, &flagged, &b).unwrap(),
+        Some(false)
+    );
+    let t =
+        Timeline::parse("osp-run-timeline\t1\nvisibility\t2\tbase.esm:00000813\tenabled\tplain\n")
+            .unwrap();
+    assert_eq!(
+        presence(&f.store, &t.at(1.), &flagged, &b).unwrap(),
+        Some(false)
+    );
+    assert_eq!(
+        presence(&f.store, &t.at(3.), &flagged, &b).unwrap(),
+        Some(true)
+    );
+}
+
+/// `walk_ride_rider_passes_terrain_v1`: a deck sinking below the terrain
+/// leaves its rider on the terrain unless the rider passes it.
+#[test]
+fn a_rider_passes_the_terrain_only_with_the_reading() {
+    use crate::platform::Ride;
+    use crate::WorldSet;
+    let f = fixture();
+    let b = budget();
+    let mut g = load_around(&f.store, &key(0x810), RuleLevel::Hypotheses, false, &b).unwrap();
+    let mut ground = World::new();
+    g.add_to(&mut ground, &b).unwrap();
+    let mut deck = World::new();
+    let corners: Vec<[f64; 3]> = (0..8)
+        .map(|i| {
+            [
+                if i & 1 == 0 { 400.0 } else { 700.0 },
+                if i & 2 == 0 { -100.0 } else { 200.0 },
+                if i & 4 == 0 { 190.0 } else { 200.0 },
+            ]
+        })
+        .collect();
+    deck.add_hull(&corners, 0.0, "deck", &b).unwrap();
+    let track = vec![(1., [0., 0., 0.]), (3., [0., 0., -300.])];
+    let dt = Settings::DEFAULT.tick;
+    for pass in [false, true] {
+        let mut set: WorldSet<u32> = WorldSet::new();
+        set.insert(0, ground.clone()).unwrap();
+        let mut ride = Ride::new(&mut set, 1, deck.clone(), track.clone(), 0., &b).unwrap();
+        ride.pass_terrain = pass;
+        let mut c =
+            Character::new(Params::PROVISIONAL, Settings::DEFAULT, [550.0, 50.0, 260.0]).unwrap();
+        c.settle(&set, 600);
+        assert!((c.feet[2] - 200.0).abs() < 0.5, "{:?}", c.feet);
+        let mut t = 0.;
+        while t < 4. {
+            ride.advance(&mut set, &mut c, t + dt, &b).unwrap();
+            c.tick(&set, Input::default());
+            t += dt;
+        }
+        if pass {
+            assert!((c.feet[2] + 100.0).abs() < 0.5, "{:?}", c.feet);
+            assert!(set.hidden_count() > 0);
+        } else {
+            assert!(c.feet[2] > 0.0, "{:?}", c.feet);
+            assert_eq!(set.hidden_count(), 0);
+        }
+    }
 }

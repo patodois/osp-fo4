@@ -17,6 +17,17 @@
 //!   plays and from when are the caller's: the run's animation graph knows
 //!   the sequence and its start (`fo4_vm`'s world model), the timeline does
 //!   not record it yet.
+//! - `walk_collision_marker_box_presence_v1` ([`rules::BOX_PRESENCE`]): a
+//!   collision marker's box stands in the walking world only while a frame
+//!   of the run at that second has its reference present
+//!   ([`presence`]: `fo4_scene::timeline::presence`, the run's own Enable
+//!   or Disable, else its enable chain under the enable parent rules with
+//!   the run's changes, else its initially-disabled flag); a box whose
+//!   presence is undecided is left out.
+//! - `walk_ride_rider_passes_terrain_v1` ([`rules::RIDE_PASSES_TERRAIN`]):
+//!   while the walker stands on a ride's piece, the terrain's triangles do
+//!   not touch it ([`Ride::pass_terrain`]): a platform whose shaft goes
+//!   below the terrain carries its rider through it.
 use crate::controller::Character;
 use crate::geometry::V3;
 use crate::set::WorldSet;
@@ -29,6 +40,8 @@ use fo4_scene::transform::Transform;
 pub mod rules {
     pub const COLLISION_MARKER_BOX: &str = "walk_collision_marker_box_v1";
     pub const PLATFORM_RIDE: &str = "walk_platform_sequence_ride_v1";
+    pub const BOX_PRESENCE: &str = "walk_collision_marker_box_presence_v1";
+    pub const RIDE_PASSES_TERRAIN: &str = "walk_ride_rider_passes_terrain_v1";
 }
 
 /// A collision marker's box ([`rules::COLLISION_MARKER_BOX`]).
@@ -142,6 +155,18 @@ pub fn marker_boxes(store: &Store, lo: V3, hi: V3, b: &Budget) -> Result<Vec<Mar
     Ok(out)
 }
 
+/// Whether the box's reference is present in `frame` of a run
+/// ([`rules::BOX_PRESENCE`]): `fo4_scene::timeline::presence`; `None` when
+/// the rules leave it undecided (or it has no winning record).
+pub fn presence(
+    store: &Store,
+    frame: &fo4_scene::timeline::Frame,
+    m: &MarkerBox,
+    b: &Budget,
+) -> Result<Option<bool>> {
+    Ok(fo4_scene::timeline::presence(store, frame, &m.reference, b)?.present())
+}
+
 /// The eight corners of a box in world axes.
 pub fn corners(m: &MarkerBox) -> Result<[V3; 8]> {
     let t = Transform::euler(m.placement, m.scale)?;
@@ -183,6 +208,11 @@ pub struct Ride<K> {
     pub offset: V3,
     /// How far the ride carried a walker in all, vertically.
     pub carried: f64,
+    /// [`rules::RIDE_PASSES_TERRAIN`]: while the walker stands on this
+    /// piece, the set's terrain sources are hidden. Off by default.
+    pub pass_terrain: bool,
+    /// The terrain sources this ride hid (piece key, source).
+    hidden: Vec<(K, u32)>,
 }
 
 impl<K: Ord + Clone> Ride<K> {
@@ -202,6 +232,8 @@ impl<K: Ord + Clone> Ride<K> {
             track,
             offset: [0.; 3],
             carried: 0.,
+            pass_terrain: false,
+            hidden: Vec::new(),
         };
         r.offset = r.offset_at(second);
         let moved = r.moved(r.offset, b)?;
@@ -249,16 +281,19 @@ impl<K: Ord + Clone> Ride<K> {
         second: f64,
         b: &Budget,
     ) -> Result<f64> {
-        let to = self.offset_at(second);
-        if to == self.offset {
-            return Ok(0.);
-        }
-        let delta: V3 = std::array::from_fn(|i| to[i] - self.offset[i]);
         let on = walker.grounded
             && walker
                 .ground
                 .and_then(|g| set.source(g.source))
                 .is_some_and(|(k, _)| *k == self.key);
+        if self.pass_terrain {
+            self.hide_terrain(set, on);
+        }
+        let to = self.offset_at(second);
+        if to == self.offset {
+            return Ok(0.);
+        }
+        let delta: V3 = std::array::from_fn(|i| to[i] - self.offset[i]);
         let moved = self.moved(to, b)?;
         set.insert(self.key.clone(), moved)?;
         self.offset = to;
@@ -271,5 +306,35 @@ impl<K: Ord + Clone> Ride<K> {
         } else {
             Ok(0.)
         }
+    }
+
+    /// Hides every terrain source of `set` (`hide`), or shows again those
+    /// this ride hid.
+    fn hide_terrain(&mut self, set: &mut WorldSet<K>, hide: bool) {
+        if !hide {
+            for (k, s) in self.hidden.drain(..) {
+                set.set_hidden(&k, s, false);
+            }
+            return;
+        }
+        if !self.hidden.is_empty() {
+            return;
+        }
+        let terrain: Vec<(K, u32)> = set
+            .pieces()
+            .flat_map(|(k, w, _)| {
+                w.sources
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, s)| s.terrain.is_some())
+                    .map(|(i, _)| (k.clone(), i as u32))
+                    .collect::<Vec<_>>()
+            })
+            .filter(|(k, s)| !set.is_hidden(k, *s))
+            .collect();
+        for (k, s) in &terrain {
+            set.set_hidden(k, *s, true);
+        }
+        self.hidden = terrain;
     }
 }
