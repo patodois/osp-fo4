@@ -1,0 +1,103 @@
+# stops_census: kinds and counts only (spec/vm.md, Past the museum). Sections: 1 terminals: menu items, fragments, placed terminals; 2 Lock calls and lock
+# state handlers; 3 inventory events and their filters; 4 perks; 5 actor values; 6 aliases filled from another quest's alias; 7 factions.
+1256	1 conditions of menu items
+882	1 fragment functions by parameter types	(objectreference)
+3	1 fragment functions calling	additem
+3	1 fragment functions calling	disable
+9	1 fragment functions calling	enable
+7	1 fragment functions calling	lock
+45	1 fragment functions calling	setopen
+143	1 fragment functions calling	setstage
+12	1 fragment functions calling	unlock
+893	1 fragments
+11	1 fragments whose function the scripts do not hold
+893	1 fragments whose index is an item's ITID
+453	1 fragments whose item has conditions
+201	1 fragments whose item opens another terminal
+3356	1 menu items (ITXT)
+715	1 menu items by their ANAM byte	4
+93	1 menu items by their ANAM byte	5
+70	1 menu items by their ANAM byte	6
+2478	1 menu items by their ANAM byte	8
+99	1 menu items holding another subrecord	CIS1
+194	1 menu items holding another subrecord	CIS2
+857	1 menu items holding another subrecord	RNAM
+2435	1 menu items holding another subrecord	UNAM
+615	1 menu items with a TNAM (another terminal)
+823	1 menu items with conditions
+790	1 placed references of terminal bases
+139	1 placed references of terminal bases with a fragment block
+1069	1 terminal records (TERM)
+19	1 terminal records whose VMAD attaches scripts
+301	1 terminal records with a VMAD
+294	1 terminal records with a fragment block
+48	2 Lock call sites by the first argument	the literal false
+62	2 Lock call sites by the first argument	the literal true
+1	2 Lock call sites inside an OnLockStateChanged handler
+6	2 OnLockStateChanged handlers with code by type extended	objectreference
+1	2 OnLockStateChanged handlers with code by type extended	referencealias
+79	3 AddInventoryEventFilter call sites by receiver	self
+69	3 AddInventoryEventFilter call sites by the argument's engine type	form
+10	3 AddInventoryEventFilter call sites by the argument's engine type	none
+7	3 inventory event names read from the scripts
+30	3 inventory filter call sites by the function they stand in	addinventoryeventfilter	OnLoad
+36	3 inventory filter call sites by the function they stand in	addinventoryeventfilter	an init handler
+13	3 inventory filter call sites by the function they stand in	addinventoryeventfilter	another function
+2	3 inventory filter call sites by the function they stand in	removeallinventoryeventfilters	an inventory handler
+4	3 inventory filter call sites by the function they stand in	removeallinventoryeventfilters	another function
+8	3 inventory filter call sites by the function they stand in	removeinventoryeventfilter	an inventory handler
+4	3 inventory filter call sites by the function they stand in	removeinventoryeventfilter	another function
+29	3 inventory handlers with code by type extended	oncontainerchanged	objectreference
+1	3 inventory handlers with code by type extended	oncontainerchanged	refcollectionalias
+8	3 inventory handlers with code by type extended	oncontainerchanged	referencealias
+1	3 inventory handlers with code by type extended	onitemadded	actor
+11	3 inventory handlers with code by type extended	onitemadded	objectreference
+19	3 inventory handlers with code by type extended	onitemadded	referencealias
+2	3 inventory handlers with code by type extended	onitemequipped	actor
+3	3 inventory handlers with code by type extended	onitemequipped	referencealias
+7	3 inventory handlers with code by type extended	onitemremoved	objectreference
+8	3 inventory handlers with code by type extended	onitemremoved	referencealias
+1	3 inventory handlers with code by type extended	onitemunequipped	actor
+2	3 inventory handlers with code by type extended	onitemunequipped	referencealias
+33	3 scripts declaring an OnItemAdded or OnItemRemoved handler with code
+33	3 those scripts whose chain calls an inventory filter native
+4398	4 PRKR subrecords by size	5
+3	4 PRKR subrecords of the player's base
+2278	4 actor bases (NPC_) with PRKR
+1	4 functions with code of the engine scripts calling HasPerk	actor
+91	4 perk native call sites by the receiver's engine type	addperk	actor
+48	4 perk native call sites by the receiver's engine type	hasperk	actor
+75	4 perk native call sites by the receiver's engine type	removeperk	actor
+37	5 value call sites by the receiver's engine type	getbasevalue	actor
+69	5 value call sites by the receiver's engine type	getbasevalue	objectreference
+346	5 value call sites by the receiver's engine type	getvalue	actor
+1	5 value call sites by the receiver's engine type	getvalue	form
+1229	5 value call sites by the receiver's engine type	getvalue	globalvariable
+192	5 value call sites by the receiver's engine type	getvalue	objectreference
+15	5 value call sites by the receiver's engine type	modvalue	actor
+2	5 value call sites by the receiver's engine type	modvalue	objectreference
+761	5 value call sites by the receiver's engine type	setvalue	actor
+1	5 value call sites by the receiver's engine type	setvalue	form
+1994	5 value call sites by the receiver's engine type	setvalue	globalvariable
+247	5 value call sites by the receiver's engine type	setvalue	objectreference
+22	5 value call sites by the receiver's engine type	setvalue	refcollectionalias
+548	6 aliases filled from another quest's alias
+5	6 the quest: its aliases filled from another quest's alias, by how that alias is filled	a created object
+1	6 the quest: its aliases filled from another quest's alias, by how that alias is filled	a unique actor
+35	6 those aliases by how the alias they name is filled	a created object
+36	6 those aliases by how the alias they name is filled	a forced reference
+16	6 those aliases by how the alias they name is filled	a location alias
+80	6 those aliases by how the alias they name is filled	a location's reference
+8	6 those aliases by how the alias they name is filled	a story event's data
+39	6 those aliases by how the alias they name is filled	a unique actor
+334	6 those aliases by how the alias they name is filled	another fill (conditions, a list or none)
+934	7 SNAM subrecords by size and rank	5	a negative rank byte
+8134	7 SNAM subrecords by size and rank	5	a rank byte of 0 or more
+1	7 SNAM subrecords of the player's base
+3402	7 actor bases naming a template (TPLT)
+3756	7 actor bases with SNAM
+480	7 faction call sites	addtofaction
+248	7 faction call sites	isinfaction
+21	7 faction call sites	removefromallfactions
+391	7 faction call sites	removefromfaction
+15	7 faction call sites	setfactionrank
