@@ -18,3 +18,6 @@ fo4-havok.workspace = true
 fo4-material.workspace = true
 fo4-texture.workspace = true
 serde.workspace = true
+
+[dev-dependencies]
+fo4-havok = { workspace = true, features = ["fixture"] }

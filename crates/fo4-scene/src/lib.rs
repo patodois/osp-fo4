@@ -5,6 +5,7 @@ pub mod anim_graph;
 mod assets;
 pub mod bounds;
 pub mod camera;
+pub mod char_graph;
 pub mod clock;
 pub mod collision;
 pub mod enable;

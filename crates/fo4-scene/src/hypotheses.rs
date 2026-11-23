@@ -263,6 +263,19 @@ pub const ACTOR_TEMPLATE_ALL_BITS: &str = "npc_template_all_bits_v1";
 /// A clip posing an actor (`crate::actor::clip`, `spec/actor.md`, Clip pose).
 pub const ACTOR_CLIP_SKELETON: &str = "actor_clip_skeleton_beside_nif_v1";
 pub const ACTOR_CLIP_POSE: &str = "actor_clip_pose_by_bone_name_v1";
+/// A character graph followed from its root by start states, stored
+/// initial values, highest weights and stored indices to a clip, drawn at
+/// the clip generator's start time (`crate::char_graph`, `--actor-start-clip`).
+pub const CHAR_GRAPH_START: &str = "char_graph_start_state_clip_v1";
+/// A swap generator playing the race's keyword-matched subgraph entry of
+/// flag word 0 (`crate::char_graph`, `--actor-subgraph-keywords`).
+pub const CHAR_GRAPH_SUBGRAPH: &str = "char_graph_swap_subgraph_keywords_v1";
+/// A clip text's file name found in the subgraph entry's animation folders
+/// in order (`crate::char_graph`, `--actor-clip-folder`).
+pub const CHAR_GRAPH_CLIP_FOLDER: &str = "char_graph_clip_folder_order_v1";
+/// A start clip drawn at the frame's second, folded by the clip
+/// generator's mode (`crate::char_graph::clip_time`, `--actor-start-clip-loop`).
+pub const CHAR_GRAPH_CLIP_LOOP: &str = "char_graph_clip_mode_loop_v1";
 /// A rule's standing in `spec/hypotheses.tsv`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Status {
@@ -566,6 +579,10 @@ mod tests {
             ACTOR_SKINNING,
             ACTOR_CLIP_SKELETON,
             ACTOR_CLIP_POSE,
+            CHAR_GRAPH_START,
+            CHAR_GRAPH_SUBGRAPH,
+            CHAR_GRAPH_CLIP_FOLDER,
+            CHAR_GRAPH_CLIP_LOOP,
             SWAP_FOLDER,
             OPACITY_ABOVE_ONE,
             BASE_PROPERTIES,

@@ -1,0 +1,220 @@
+# char_start_clip_census: kinds and counts only (spec/character-graph.md). Sections: 0 the run's actors; 1 their races' graph files and objects by class; 2 state machines; 3 clip generators; 4 behaviour references; 5 blenders; 6 manual selectors; 7 variables;
+# 8 the stored path from each file's root; 9 subgraph entries and the actors' keywords; 10 the walk with every switch on; 11 layout checks over every behaviour graph file of the installation; 12 sitting: the timeline's event kinds and the furniture records' subgraph entries.
+9	0 actors not resolved (no plan: the cast step's reasons)
+84	0 actors resolved to a race and a section
+93	0 actors the timeline places
+4	0 distinct race sections
+3	0 distinct races
+2	1 distinct projects
+2	1 graph files by how they are reached	a race project's root graph
+8	1 graph files by how they are reached	named by a behaviour reference
+46	1 graph files by how they are reached	named by a subgraph entry
+7	1 graph files holding another generator class (not read)	BSBoneSwitchGenerator
+3	1 graph files holding another generator class (not read)	BSCyclicBlendTransitionGenerator
+19	1 graph files holding another generator class (not read)	hkbLayerGenerator
+7	1 graph files holding another generator class (not read)	hkbReferencePoseGenerator
+2	1 graph files named but not mounted
+54	1 graph files read
+2	1 objects by class	BSBehaviorGraphSwapGenerator
+5	1 objects by class	BSOffsetAnimationGenerator
+76	1 objects by class	BSiStateTaggingGenerator
+52	1 objects by class	DynamicAnimationTaggingGenerator
+69	1 objects by class	hkbBehaviorReferenceGenerator
+490	1 objects by class	hkbBlenderGenerator
+1265	1 objects by class	hkbBlenderGeneratorChild
+1653	1 objects by class	hkbClipGenerator
+41	1 objects by class	hkbManualSelectorGenerator
+664	1 objects by class	hkbModifierGenerator
+7	1 objects by class	hkbPoseMatchingGenerator
+561	1 objects by class	hkbStateMachine
+1868	1 objects by class	hkbStateMachineStateInfo
+1159	1 objects by class	hkbStateMachineTransitionInfoArray
+1551	1 objects by class	hkbVariableBindingSet
+54	1 objects by class	hkbVariableValueSet
+89	1 objects of other generator classes (not read)
+4	1 race sections whose project, character and graph resolve
+2	1 swap generators
+3	10 actors whose walk is refused, by code	GraphActorKeywords
+2	10 actors whose walk is refused, by code	GraphUnreadClass
+79	10 actors whose walk reaches a clip
+7	10 distinct clips reached
+1	10 distinct clips reached by mode byte, length and fit to the actor's skeleton	1 10.33 s true
+1	10 distinct clips reached by mode byte, length and fit to the actor's skeleton	1 11.87 s true
+1	10 distinct clips reached by mode byte, length and fit to the actor's skeleton	1 12.93 s true
+1	10 distinct clips reached by mode byte, length and fit to the actor's skeleton	1 3.97 s true
+1	10 distinct clips reached by mode byte, length and fit to the actor's skeleton	1 4.43 s true
+1	10 distinct clips reached by mode byte, length and fit to the actor's skeleton	1 6.70 s true
+1	10 distinct clips reached by mode byte, length and fit to the actor's skeleton	1 9.20 s true
+79	10 generators on the reaching paths by class	BSBehaviorGraphSwapGenerator
+158	10 generators on the reaching paths by class	BSOffsetAnimationGenerator
+79	10 generators on the reaching paths by class	BSiStateTaggingGenerator
+79	10 generators on the reaching paths by class	hkbBehaviorReferenceGenerator
+158	10 generators on the reaching paths by class	hkbBlenderGenerator
+79	10 generators on the reaching paths by class	hkbClipGenerator
+79	10 generators on the reaching paths by class	hkbManualSelectorGenerator
+395	10 generators on the reaching paths by class	hkbModifierGenerator
+1027	10 generators on the reaching paths by class	hkbStateMachine
+79	10 walks reaching a clip by blenders taken at a tie	1
+79	10 walks reaching a clip by generators on the path	20 or more
+79	10 walks reaching a clip by graph files opened	3
+79	10 walks reaching a clip by start time	0
+79	10 walks reaching a clip by the clip generator's mode byte	1
+450	11 behaviour graph files of the installation
+6494	11 bindings by bit byte	-1
+4960	11 bindings by kind byte	0
+1534	11 bindings by kind byte	1
+697	11 blenders by flag bit 0x10 and a child weight outside 0 to 1	false false
+107	11 blenders by flag bit 0x10 and a child weight outside 0 to 1	true false
+224	11 blenders by flag bit 0x10 and a child weight outside 0 to 1	true true
+537	11 bound start states by the variable's type byte	Some(3)
+4504	11 clip generators by binding index	-1
+2374	11 clip generators by mode byte	0
+1846	11 clip generators by mode byte	1
+284	11 clip generators by mode byte	2
+1682	11 generators of classes not read
+1	11 generators the reader refuses	hkbClipGenerator InvalidHavokClipGenerator
+450	11 graph files whose 16-byte value count equals their variables of type byte 6 to 8	true
+450	11 graph files whose link value count equals their variables of type byte 5	true
+450	11 graph files whose variable types, initial words and names agree in count
+4960	11 kind-0 bindings whose index is one of the graph's variables	true
+134	11 manual selectors whose stored index is one of their generators	true
+4818	11 other generators read
+47	11 swap generators
+4	12 furniture records by flag-word-2 entries whose target keywords all are the furniture's	2 entries without actor keywords tie
+259	12 furniture records by flag-word-2 entries whose target keywords all are the furniture's	none
+509	12 furniture records by flag-word-2 entries whose target keywords all are the furniture's	one entry without actor keywords has the most
+10	12 furniture records by flag-word-2 entries whose target keywords all are the furniture's	only entries that also need actor keywords
+223	12 subgraph entries of flag word 2 (their behaviour files' names say furniture in most) of the first actor race's subgraph race
+139	12 timeline events by kind (none says who sits on what)	actor (a place)
+190	12 timeline events by kind (none says who sits on what)	line
+13	12 timeline events by kind (none says who sits on what)	objective
+102	12 timeline events by kind (none says who sits on what)	player
+484	12 timeline events by kind (none says who sits on what)	quest
+3245	12 timeline events by kind (none says who sits on what)	scene
+246	12 timeline events by kind (none says who sits on what)	stage
+60	12 timeline events by kind (none says who sits on what)	visibility
+782	12 winning furniture records (FURN)
+4	2 bound start states whose variable's stored value is one of the machine's states	false
+248	2 bound start states whose variable's stored value is one of the machine's states	true
+561	2 state machines
+252	2 state machines by start state	bound to a variable of type byte Some(3)
+309	2 state machines by start state	stored
+561	2 state machines whose stored start state is one of their states	true
+1868	2 states
+1658	2 transitions out of a state
+91	2 transitions with a condition link
+0	2 transitions with no event (index below 0)
+771	2 wildcard transitions
+48472	3 clip generator and subgraph entry pairs: the file name in one of the entry's folders	false
+378483	3 clip generator and subgraph entry pairs: the file name in one of the entry's folders	true
+59146	3 clip generator and subgraph entry pairs: the text below its first part in one of the entry's folders	false
+367809	3 clip generator and subgraph entry pairs: the text below its first part in one of the entry's folders	true
+1653	3 clip generators
+1517	3 clip generators by crop	none
+136	3 clip generators by crop	some
+808	3 clip generators by mode byte	0
+800	3 clip generators by mode byte	1
+45	3 clip generators by mode byte	2
+1515	3 clip generators by playback speed	1
+138	3 clip generators by playback speed	not 1
+1652	3 clip generators by start time	0
+1	3 clip generators by start time	not 0
+28	3 clip generators outside subgraph files: the text with .hkx under the project folder mounted	false
+307	3 clip generators outside subgraph files: the text with .hkx under the project folder mounted	true
+1653	3 clip texts by extension	hkt
+737	3 clip texts by first part and number of parts	Animations 2
+691	3 clip texts by first part and number of parts	Animations 3
+115	3 clip texts by first part and number of parts	Animations 4
+49	3 clip texts by first part and number of parts	Animations 5
+44	3 clip texts by first part and number of parts	Animations 6
+17	3 clip texts by first part and number of parts	other 5
+69	4 behaviour references
+5	4 behaviour references whose text under the project folder is mounted	false
+64	4 behaviour references whose text under the project folder is mounted	true
+1265	5 blender children
+14	5 blender children whose weight is bound
+497	5 blenders
+219	5 blenders by children sharing the highest stored weight	1
+265	5 blenders by children sharing the highest stored weight	2
+13	5 blenders by children sharing the highest stored weight	3
+320	5 blenders by flag bit 0x10 and a child weight outside 0 to 1	false false
+47	5 blenders by flag bit 0x10 and a child weight outside 0 to 1	true false
+130	5 blenders by flag bit 0x10 and a child weight outside 0 to 1	true true
+281	5 blenders by flag word	0x0000
+10	5 blenders by flag word	0x0001
+3	5 blenders by flag word	0x0004
+23	5 blenders by flag word	0x0008
+2	5 blenders by flag word	0x0009
+25	5 blenders by flag word	0x0010
+96	5 blenders by flag word	0x0011
+1	5 blenders by flag word	0x0014
+9	5 blenders by flag word	0x0018
+1	5 blenders by flag word	0x0019
+45	5 blenders by flag word	0x0031
+1	5 blenders by flag word	0x0040
+41	6 manual selectors
+35	6 manual selectors by index	bound
+6	6 manual selectors by index	stored
+41	6 manual selectors whose stored index is one of their generators	true
+3218	7 variables
+1293	7 variables by type byte	0
+58	7 variables by type byte	1
+598	7 variables by type byte	3
+1233	7 variables by type byte	4
+25	7 variables by type byte	5
+8	7 variables by type byte	7
+3	7 variables by type byte	8
+213	7 variables with a non-zero stored initial word, by type byte	0
+4	7 variables with a non-zero stored initial word, by type byte	1
+53	7 variables with a non-zero stored initial word, by type byte	3
+528	7 variables with a non-zero stored initial word, by type byte	4
+6	7 variables with a non-zero stored initial word, by type byte	5
+5	7 variables with a non-zero stored initial word, by type byte	7
+3	7 variables with a non-zero stored initial word, by type byte	8
+1	8 graph files by generators on the stored path from the root to a clip	10-19
+2	8 graph files by generators on the stored path from the root to a clip	2
+3	8 graph files by generators on the stored path from the root to a clip	3
+1	8 graph files by generators on the stored path from the root to a clip	4
+10	8 graph files by generators on the stored path from the root to a clip	5-9
+37	8 graph files by generators on the stored path from the root to a clip	no clip
+16	8 graph files by where the stored path from the root ends	a behaviour reference
+17	8 graph files by where the stored path from the root ends	a clip generator
+2	8 graph files by where the stored path from the root ends	a swap generator
+2	8 graph files by where the stored path from the root ends	an unread class BSBoneSwitchGenerator
+1	8 graph files by where the stored path from the root ends	an unread class BSCyclicBlendTransitionGenerator
+16	8 graph files by where the stored path from the root ends	an unread class hkbLayerGenerator
+33	9 actors by entries of flag word 0 their keywords fit	1 (0 with keywords)
+48	9 actors by entries of flag word 0 their keywords fit	2 (1 with keywords)
+16	9 actors by own keyword count	2
+13	9 actors by own keyword count	3
+35	9 actors by own keyword count	4
+10	9 actors by own keyword count	5
+6	9 actors by own keyword count	6
+1	9 actors by own keyword count	7
+48	9 actors by the entry picked	an entry with keywords
+33	9 actors by the entry picked	the entry without keywords
+3	9 actors whose keywords are not read	the base has a template (TPLT): its keywords are not read
+81	9 actors whose keywords are read
+3	9 entries of flag word 0 by actor and target keyword counts	0 0
+50	9 entries of flag word 0 by actor and target keyword counts	1 0
+52	9 entries of flag word 0 by actor and target keyword counts	2 0
+12	9 entries of flag word 0 by actor and target keyword counts	3 0
+8	9 entries of flag word 0 by actor and target keyword counts	4 0
+2	9 races of the actors by where their subgraph entries are	the race SRAC names
+1	9 races of the actors by where their subgraph entries are	the race itself
+5205	9 subgraph entries
+125	9 subgraph entries by flag word	0x00000000
+4442	9 subgraph entries by flag word	0x00000001
+446	9 subgraph entries by flag word	0x00000002
+2	9 subgraph entries by flag word	0x00000003
+4	9 subgraph entries by flag word	0x00010000
+126	9 subgraph entries by flag word	0x00010001
+58	9 subgraph entries by flag word	0x00010002
+2	9 subgraph entries by flag word	0x00010004
+5205	9 subgraph entries whose behaviour file is mounted	true
+3	9 subgraph entries without keywords, by flag word	0x00000000
+2	9 subgraph entries without keywords, by flag word	0x00000001
+2	9 subgraph entries without keywords, by flag word	0x00000003
+2	9 subgraph entries without keywords, by flag word	0x00010000
+2	9 subgraph entries without keywords, by flag word	0x00010001
+2	9 subgraph entries without keywords, by flag word	0x00010004

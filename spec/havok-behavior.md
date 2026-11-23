@@ -61,8 +61,10 @@ winning `.hkx` of one installation.
 Root machines' states by generator class: `BGSGamebryoSequenceGenerator`
 811, `hkbModifierGenerator` 459, `hkbStateMachine` 259, `hkbClipGenerator`
 254, `hkbBlenderGenerator` 94, others 86; in 116 root machines every state
-plays a Gamebryo sequence. Everything else of these classes (blend times,
-flags, variables, the transition effects, nested machines) is **not read**.
+plays a Gamebryo sequence. Blend times and the transition effects are
+**not read**; the generators below the root, variable bindings and the
+graph's variables are read as far as following a graph from its root to a
+clip needs ([character-graph.md](character-graph.md), Objects read).
 
 ## Errors
 
@@ -85,7 +87,9 @@ their event tables 15,845 names
 ([character-graph-census.txt](character-graph-census.txt), `char_graph_census`;
 [vm.md](vm.md), Character behaviour graphs). A character's root machine
 plays no Gamebryo sequence: its states run modifier generators and nested
-machines, and which clip a state plays is held in classes these readers do
-not read (clip generators, behaviour references, nested machines,
-transition conditions and variables).
+machines. Which clip the graph reaches from its root when nothing has
+happened yet (through nested machines, blenders, selectors, behaviour
+references, the race's subgraph entries and clip generators) is in
+[character-graph.md](character-graph.md); transition conditions are still
+not read.
 
