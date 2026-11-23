@@ -445,17 +445,92 @@ would tilt or roll the parts) are not. The recorded run's next stage is at
 934.4 s (the vault dialogue quest's 97), then the exit elevator's ride up
 (945 to 955 s) and the exterior at 968 s: 262 of 274 to 960 s.
 
+**Up the ramp, up the exit elevator and out** (the exit step, `e5` in its
+notes). Three play switches and one caller assumption of the run, each off
+or absent by default:
+
+1. `--play-elevator-rigid` (`play_elevator_rigid_v1`, `elevator::Part`,
+   `elevator::Readings`): in place of the translations, a named reference's
+   collision sources go by the deepest node of their body's chain that any
+   of the model's sequences sets through a transform interpolator (the
+   drawing side's `sequence::chain_pose` at each sequence's start); sources
+   no sequence sets stay still. For each part and sequence the motion the
+   sequence gives the chain up to that node (the chain as stored against the
+   chain as posed, under the reference's placement; `fo4_walk::Motion::between`)
+   is sampled 60 times a second over the span; the part rides those motions
+   as a `fo4_walk::platform::RigidRide` from the second the run's graph
+   starts the sequence, and holds its motion under a sequence that does not
+   set it. Moving, the end of a ride that carried the walker, leaving and the
+   box read the rigid rides as they read the translation rides. The held pose
+   switch is not read under it (the chain pose holds the held translation).
+   On the opening's four named references the rides change no stage to
+   930 s; the postwar gear door's ramp turns down to the floor and the walk
+   goes on as the drawing side's local probe did, byte for byte in track,
+   censuses, names and timeline (only the report's summary lines differ).
+2. The postwar vault's exit elevator named (`--play-elevator`). Named as
+   stored, its collision blocks the way into it at x -5,161.6 (the walk
+   loses the vault dialogue quest's 98 and 100): the stored pose, which is
+   also the pose of its graph's start state, holds its platform near the top
+   of the shaft and a gate leaf (three sources under one node) down across
+   the doorway. Its graph's start state takes only the descent event; the
+   descent's state and, through the text key at its end, the idle state hold
+   the platform 1,574 units lower and the gate leaf raised 177 units, and
+   both take the ascent event the exit trigger's button function plays. No
+   script of the run sends the descent, so the run's `PlayAnimation` of the
+   ascent took no transition. The caller's assumption `quest_run
+   --assume-graph-event REF EVENT[@SECONDS]` (`anim_graph_caller_event_v1`,
+   `spec/vm.md`, The caller's graph event) sends the descent at 800 s, after
+   the run puts the player into the postwar vault: the platform descends by
+   823.8 s and stands open; the button function's ascent at 945.35 s is then
+   the graph's own transition, and the walker on the platform rides 9.87 s
+   up the shaft. The ride ends at 955.22 s and `--play-elevator-door` takes
+   the walker through the shaft top's automatic load door (176.5 units from
+   its feet) to the exterior's teleport position.
+3. The vault's exterior elevator named (`--play-elevator`), and the
+   walkway's still reference given to the outside shaft by name
+   (`--play-elevator-also-with REF OWNER`, a caller option: the walkway is
+   placed in the worldspace the exterior elevator stands in, so naming that
+   elevator would otherwise take the walkway away from the prewar shaft and
+   lose the prewar walk). The teleport position stands over the open shaft:
+   without the exterior elevator the walker falls through the terrain's pit
+   and out of the world. With it the walker settles on its closed hatch
+   (46 units below the teleport position); the exterior trigger's script
+   plays the rise at 955.35 s (a wildcard transition), the hatch opens, the
+   walker drops onto the rising platform and is carried to the surface
+   (z 8,966.8 at 966.8 s, the recorded run's 8,968.4 at 968 s).
+4. `--play-elevator-door-onward` (`play_elevator_end_door_onward_v1`): when
+   the exterior rise ends with the walker on it, the nearest load door in its
+   box (1,067 units from the walker's feet) leads back into the postwar vault
+   (the walking world holds two load doors into it); with the switch, doors that lead into the space the walker left by its last
+   change of space are left out, so the ride's end takes the walker nowhere
+   and it stays outside. Without it the walker is taken back into the vault
+   at 967.2 s.
+
+The opening walked with all of them (the wire step's arguments, the walkway
+given by name, the input carried on from 955 s by `toward` commands along the
+recorded exterior track to 1,015 s): against the recorded run, **274 of 274
+stages to 960 s in the same order** (199 at the same second, the rest from
+1.74 s earlier to 2.91 s later: the tutorial stage set riding up the shaft
+comes 2.9 s later than on the caller's straight ride), 276 of 277 to 1,000 s (the tutorial quest's 360 and
+370 at 980.66 s; its second 360 at 999.3 s missing). The walker leaves the
+platform at 968 s along the recorded track and stops at 998 s
+(x -83,776, y 91,159) against a dirt cliff piece whose face rises at 45.6
+degrees, just past the walker's provisional 45-degree slope limit; the
+recorded run's next stage (the next main quest's 20, at 1,005 s, from the
+settlement's trigger) is not reached. This is the whole of M3's headless
+walk: from the start to the exterior.
+
 ## What the play mode does not do yet
 
-- The elevators ride only headless, and only those the caller names (`--play-elevator`); only a sequence's
-  translations are read (held translations with `--play-elevator-held-pose`), never rotations: the postwar
-  gear door's open walkway stands 50 units above the floor the walker comes from (above); the window does not
-  take the switches.
-- The exit elevator of the postwar vault and its load door at the top are not named or tried yet; the
-  player's activation of its button would come from the input.
+- The elevators ride only headless, and only those the caller names (`--play-elevator`); the window does not
+  take the switches. The exit elevator's descent before the player reaches it is the caller's assumption
+  (`--assume-graph-event`): nothing in the run's data sends it.
+- The exterior's collision platform that an enable marker holds while the elevator rises (the exterior
+  trigger's script disables the marker after waiting 12 s; the interpreter does not time the wait) is not
+  read: the walker stands on the exterior elevator's own hatch and platform instead.
 - Plain doors: no collision is placed for any door, so none blocks the walker; the open state is not read.
-- Moving collision with a node (an animated door, a platform) is not modelled; the live world moves only what
-  the run moves.
+- Moving collision with a node (an animated door, a platform) is modelled only for the references the caller
+  names (above); the live world moves only what the run moves.
 - The window has not been opened by anyone; its live drawing is untested beyond its pieces.
 - The reach of an activation, the walker's speed and its tick are the caller's; the activation key and the
   crosshair are the eye's ray (no prompt, no activation distance from the data).
@@ -483,3 +558,6 @@ would tilt or roll the parts) are not. The recorded run's next stage is at
 | `play_player_moveto_v1` | `--play-player-moveto` | the run's own `MoveTo` calls on the player; that `MoveTo` places at once is the API's meaning (prior knowledge); the slice-end delay and settling are this reading's | weak |
 | `play_player_sit_furniture_v1` | `--play-player-sits` | the run's own sits (a fragment's activation of the player's pod); that an activated sitter goes to the furniture at once is prior knowledge; the reference's place standing for the marker is this reading's | weak |
 | `collision_model_blockers_off_chain_v1`, `refr_xalp_collision_unchanged_v1` | `--play-collision-off-chain`, `--play-collision-reference-alpha` | the drawing side's rules (`spec/collision-placement.md`), given to the play mode's cell builds | weak |
+| `play_elevator_rigid_v1` | `--play-elevator-rigid` | the drawing side's `nif_sequence_chain_pose_v1` (weak to medium) and `walk_platform_rigid_motion_v1` (weak) given to the named references; the grouping by the deepest set node and the part holding its motion are this reading's | weak |
+| `play_elevator_end_door_onward_v1` | `--play-elevator-door-onward` | the recorded track stays outside after the exterior rise; that a ride's end never takes the walker back is this reading's | weak |
+| `anim_graph_caller_event_v1` | `quest_run --assume-graph-event REF EVENT[@SECONDS]` | a caller assumption: no script of the run sends the exit elevator its descent; that it waits at the bottom open is prior knowledge | weak |

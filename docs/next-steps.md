@@ -3,7 +3,7 @@
 This page is the hand-over point. Everything on `main` builds and passes its tests; anyone (a person or an
 agent) can continue from here. Read `AGENTS.md` first: it holds the rules of evidence and the clean-room rules.
 
-State on 2026-11-24 (vault, cast, light, home, character graph, fight, live window, museum, live world, run library, seen, past-the-museum, faces, third-fight, poses, town-chain, layers, wire and rotate steps). Nothing below has been checked against the running game: every behaviour is a pending
+State on 2026-11-24 (vault, cast, light, home, character graph, fight, live window, museum, live world, run library, seen, past-the-museum, faces, third-fight, poses, town-chain, layers, wire, rotate and exit steps). Nothing below has been checked against the running game: every behaviour is a pending
 rule in `spec/hypotheses.tsv`, off by default.
 
 ## Script VM and quests (`crates/fo4-vm`)
@@ -113,10 +113,26 @@ What is left:
    the walker goes up the ramp, across the walkway and down to the exit elevator's room (the vault dialogue
    quest's 97, 98 and 100 added). It stands there from 945.8 s: the next recorded stage (946.05 s) comes from
    a trigger box 109 to 214 units up the shaft that the recorded player enters riding the exit elevator up.
-   Next (run side): a `fo4-play` switch for the rigid reading (request in `spec/walk.md`, Platforms that turn), then the
-   exit elevator: its parts in the pose the run's graph holds them at (named as stored, its collision stands
-   across the way at x -5,161.6 and the walk loses 98 and 100), its ascent (the graph's start state takes only
-   the descent event) and its load door to the exterior (955 to 968 s), which ends M3's walk headless.
+   Exit step (`spec/play.md`, Up the ramp, up the exit elevator and out): the rigid reading is a `fo4-play`
+   switch (`--play-elevator-rigid`, `play_elevator_rigid_v1`); named as stored, the exit elevator blocks its
+   doorway because its stored pose (its graph's start state) holds the gate leaf down and the platform at the
+   top, and no script of the run sends it the descent whose end pose (platform down, gate raised) the ascent
+   starts from: the caller's `--assume-graph-event` (`anim_graph_caller_event_v1`) sends it at 800 s, the run's
+   own ascent then plays at 945.35 s and carries the walker up; the ride's end door takes it outside, where
+   the exterior elevator (named, its rise played by the exterior trigger's script) holds it and lifts it to
+   the surface, and `--play-elevator-door-onward` (`play_elevator_end_door_onward_v1`) keeps the rise's end
+   from taking it back into the vault. **274 of 274 stages to 960 s**, 276 of 277 to 1,000 s; the walker
+   walks the recorded exterior track from 968 s and stops at 998 s against a dirt cliff face of 45.6 degrees
+   (the walker's provisional slope limit is 45), before the settlement's trigger (the next main quest's 20 at
+   1,005 s). Next: that slope (a walker parameter, drawing side) or a route around it, then the window.
+   Also open (run-side enable state, not done): under the pod the run seats the player in at 730.1 s, the
+   dream sequence's cell has two floor pieces whose collision is refused only for `XESP.own_flag` (a record
+   below the root of their enable chain carries its own initially-disabled flag). The readiness that refuses
+   them is the drawing side's (`fo4_scene` readiness, `RuntimeEnableParent`); the existing reading
+   `xesp_child_flag_agrees_chain_v1` (`enable::Presence::with_agreeing_child_flags`) decides such chains for
+   the timeline's actors only. A collision readiness switch applying it (drawing side), then the play mode's
+   dormant piece for a chain it decides disabled, would put them in; the walker is seated in the pod then, so
+   no stage depends on it.
 6. The player's own animation events and the robot's food event still come from the caller: reading character
    graphs (below) would let them come from the data.
 7. `--cond-70-player-sex` over the whole run settles 31 line choices of the opening and times them by their audio,
@@ -222,7 +238,7 @@ under pending rules, never "matches the game": that needs the measurements liste
 | M0 | Read the game's data: archives, plugins, models, textures, collision, scripts | done |
 | M1 | Draw a cell and walk it with collision (CPU render and viewer) | done |
 | M2 | Run the quests of the opening, the vault, the town and the museum headless | mostly: assumed fights, a few stages open |
-| M3 | Play the opening in the window from input, start to the vault exit | headless to 930 s of about 968 in the repository (262 of 262 stages; stops at the postwar gear door's ramp); with the rotate step's rigid reading, as a local probe, to 946 s (265 of 265; stops at the exit elevator's ride up); the window has never been opened or watched |
+| M3 | Play the opening in the window from input, start to the vault exit | headless from the start to the exterior (274 of 274 stages to 960 s; outside at 955.35 s, on the surface at 967 s; the walk goes on to 998 s, where a 45.6-degree slope stops it) with the exit step's switches and one caller assumption (the exit elevator's descent); what M3 still lacks: the window has never been opened or watched, and the headless walk needs the caller's input, its waypoints and that assumption |
 | M4 | People: animated poses, movement between places, faces | start poses and faces drawn; no clip playback over time, no movement |
 | M5 | Fights: weapons, damage, death, enemy behaviour | not started (deaths are the caller's assumptions) |
 | M6 | Screens: dialogue choices, inventory, the wrist device, containers, map | not started (subtitles in the title bar only) |

@@ -2315,6 +2315,41 @@ assumptions (`fo4_vm::menu::menu_mode`): `Utility.IsInMenuMode` and
 and undetermined, as before. `--assume-anim-event player EVENT[@SECONDS]`
 lets the caller's animation event come from the player's handle.
 
+## The caller's graph event
+
+`quest_run new-game --assume-graph-event REF EVENT[@SECONDS]` (with
+`--anim-graphs`; repeated; none by default) is a caller assumption: at its
+second the placed reference's behaviour graph receives the event as a
+script's `ObjectReference.PlayAnimation(EVENT)` on the reference would send
+it (`anim_graph_caller_event_v1`, `anim::caller_event`). The run asks its
+host the native call from outside any script, so the graph is read when
+first needed, the transition of its state or a wildcard is taken under
+`anim_graph_model_transition_v1`, the entered state's sequence is started
+(`anims.started`, which the timeline's sequence lines and the play mode's
+moving platforms read) and, with `--anim-graph-keys`, its text keys are
+raised; the host's reply is not used. The names file logs the sequences the
+event started; the census counts the assumption and an event that started
+none.
+
+Why it exists: the postwar vault's exit elevator has the prewar vault
+elevator's model and graph. The graph's start state plays a sequence that
+holds the stored pose (the platform near the top of its shaft, a gate leaf
+across the doorway) and takes only the descent event; the descent's state,
+and through the text key at its end the idle state, take the ascent event.
+In the prewar vault the run's own load event sends that elevator its
+descent; in the postwar vault no script of the run sends the exit elevator
+anything before the exit trigger's button function plays the ascent, so the
+ascent took no transition and nothing was scheduled (the vault step's and
+home step's runs, above). With the descent assumed at 800 s (after the run
+puts the player into the postwar vault, before the walk reaches the
+elevator), the descent plays 23.8 s, its last text key takes the graph to
+the idle state, and the button function's ascent at 945.35 s is the graph's
+own transition: the exit elevator's ascent sequence starts on the run's
+clock. That the elevator waits at the bottom, open, when the player reaches
+it is prior knowledge of the game, not in the data; what sends it there in
+the game is not known. The play mode's use of it: `spec/play.md`, Up the
+ramp, up the exit elevator and out.
+
 ## The forced opening to the end of the prewar quest
 
 ([quest-run-opening.txt](quest-run-opening.txt), its section 18; the
@@ -4031,3 +4066,20 @@ pending rules off by default: that `MoveTo` places its receiver at once and
 that an actor activated into a furniture goes to it. No public page was
 requested; no editor source, other interpreter, decompiler or the game
 executable was opened or searched for. The game was not run.
+
+## Provenance of the exit step (run side)
+
+The exit elevator's and the exterior elevator's graphs, sequences and poses
+were read with the drawing side's `collision_ready_census --door` and
+`ride_check --pose REF N --pose-rigid` on the installed data, the run's
+calls and graph events from its own log (`quest-run-names.txt` of the step's
+play runs and of the live window step's recorded run), the load doors and
+enable markers with `record_dump`, and the contacts at the exterior's
+teleport position with a temporary probe kept out of the repository. The
+references were recognised from editor ids read in the notes only. Prior
+general knowledge, used only in pending rules off by default or caller
+assumptions: that the exit elevator waits at the bottom of its shaft with
+its gate open when the player reaches it, and that a ride's end does not
+take the player back where it came from. No public page was requested; no
+editor source, other interpreter, decompiler or the game executable was
+opened or searched for. The game was not run.
