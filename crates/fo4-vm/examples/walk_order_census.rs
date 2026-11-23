@@ -32,11 +32,11 @@
 //!   reading where locked doors are closed
 //!   (`walk_door_lock_record_closed_v1`).
 //!
-//! A triangle minus one convex volume falls into as many pieces as the
-//! free arcs of its boundary, so each triangle becomes a node per free
-//! arc and the pieces are joined across the free parts of shared edges
-//! (exact for one volume per triangle; triangles where two volumes meet
-//! the boundary are counted). From each entry (the arrival position of a
+//! The geometry is `fo4_vm::walk_order`: a triangle minus one convex
+//! volume falls into as many pieces as the free arcs of its boundary, so
+//! each triangle becomes a node per free arc and the pieces are joined
+//! across the free parts of shared edges (exact for one volume per
+//! triangle; triangles where two volumes meet the boundary are counted). From each entry (the arrival position of a
 //! load door leading into the cell) the census says which stage triggers
 //! the walk can reach with every door open and with the locked doors
 //! closed, which single door opens a trigger that is shut, and, for each
