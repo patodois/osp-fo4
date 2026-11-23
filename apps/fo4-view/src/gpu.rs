@@ -35,7 +35,7 @@ use bevy::{
         view::screenshot::{Screenshot, ScreenshotCaptured},
         RenderApp, RenderPlugin,
     },
-    shader::ShaderRef,
+    shader::{ShaderCacheError, ShaderRef},
     window::{ExitCondition, PrimaryWindow},
     winit::WinitPlugin,
 };
@@ -542,6 +542,30 @@ pub struct Frames {
 const MAX_FRAMES: u32 = 600;
 const READY_FRAMES: u32 = 3;
 
+/// Whether every pipeline of `app`'s render world is ready: `Ok(true)`
+/// when none is waiting, `Ok(false)` while some are queued, being created,
+/// or waiting for a shader or a shader import that the asset server is
+/// still loading (Bevy keeps those in an error state for one frame and
+/// retries them, `ShaderNotLoaded` and `ShaderImportNotYetAvailable`), and
+/// `Err` for a pipeline that failed for good. Shaders load on Bevy's task
+/// pools, which every app of a process shares, so how many frames the
+/// loads take depends on what else the process runs (tests in parallel).
+pub(crate) fn pipelines_ready(app: &App) -> Result<bool, String> {
+    let cache = app.sub_app(RenderApp).world().resource::<PipelineCache>();
+    for p in cache.pipelines() {
+        if let CachedPipelineState::Err(e) = &p.state {
+            if !matches!(
+                e,
+                ShaderCacheError::ShaderNotLoaded(_)
+                    | ShaderCacheError::ShaderImportNotYetAvailable
+            ) {
+                return Err(format!("PipelineError: {e}"));
+            }
+        }
+    }
+    Ok(cache.waiting_pipelines().next().is_none())
+}
+
 /// One offscreen frame of `camera`. Renders until no pipeline is waiting,
 /// then captures until two consecutive frames are byte-identical, so a frame
 /// with an asset or pipeline still loading is never returned.
@@ -623,18 +647,7 @@ pub fn headless(
                 timeout: None,
             })
             .map_err(|e| format!("GpuPoll: {e}"))?;
-        let cache = app.sub_app(RenderApp).world().resource::<PipelineCache>();
-        if let Some(e) = cache.pipelines().find_map(|p| match &p.state {
-            CachedPipelineState::Err(e) => Some(e.to_string()),
-            _ => None,
-        }) {
-            return Err(format!("PipelineError: {e}"));
-        }
-        ready = if cache.waiting_pipelines().next().is_none() {
-            ready + 1
-        } else {
-            0
-        };
+        ready = if pipelines_ready(&app)? { ready + 1 } else { 0 };
         if ready < READY_FRAMES {
             continue;
         }
@@ -756,7 +769,9 @@ struct PendingClock(f64);
 
 /// The window's game clock (`--time`): every animated surface's material,
 /// its params as converted and its tracks; each frame the params at the
-/// clock's time are written to the material.
+/// clock's time are written to the material. Instances the clock moves
+/// (behind its transform switches): each frame their entity's transform is
+/// set from the same chain as the CPU's.
 #[derive(Resource)]
 struct SurfaceClock {
     start: f64,
@@ -766,6 +781,7 @@ struct SurfaceClock {
         crate::scene::SurfaceParams,
         crate::scene::Animated,
     )>,
+    moving: Vec<(Entity, fo4_render::Motion)>,
 }
 
 /// Advances the game clock with the frame clock and sets the animated
@@ -774,6 +790,7 @@ fn advance_clock(
     time: Res<Time>,
     clock: Option<ResMut<SurfaceClock>>,
     mut materials: ResMut<Assets<SurfaceMaterial>>,
+    mut transforms: Query<&mut Transform>,
 ) {
     let Some(mut c) = clock else {
         return;
@@ -791,6 +808,22 @@ fn advance_clock(
         };
         if let Some(mut m) = materials.get_mut(handle) {
             m.params = uniform(&p);
+        }
+    }
+    for (entity, motion) in &c.moving {
+        let (translation, rotation, scale) = match crate::scene::moving_transform(motion, t) {
+            Ok(v) => v,
+            Err(e) => {
+                eprintln!("{e}");
+                std::process::exit(2);
+            }
+        };
+        if let Ok(mut tr) = transforms.get_mut(*entity) {
+            *tr = Transform {
+                translation,
+                rotation,
+                scale,
+            };
         }
     }
 }
@@ -844,10 +877,15 @@ fn spawn_window_scene(world: &mut World) {
             };
             entries.push((handle, scene.surfaces[a.surface].params, a));
         }
+        let moving = std::mem::take(&mut scene.moving)
+            .into_iter()
+            .filter_map(|m| entities.get(m.instance).map(|e| (*e, m.motion)))
+            .collect();
         world.insert_resource(SurfaceClock {
             start,
             started: None,
             entries,
+            moving,
         });
     }
     if let Some(PendingClip(animation)) = world.remove_resource::<PendingClip>() {

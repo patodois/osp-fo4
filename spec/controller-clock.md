@@ -171,12 +171,12 @@ Tensions, written into the rule texts:
   on purpose ([controller-rest.md](controller-rest.md)); the
   loop-unstarted rule keeps that exclusion. No rule says what starts their
   sequences (below, Effect controllers run by a manager).
-- Transform controllers whose keys move a node (`transform-varies`): the
-  clock's time and keys would give their values, but a moving node changes
-  a draw's world transform and the collision placement, not a surface
-  parameter: the viewer's instance data, the walking world and the
-  rotation interpolations (quaternion keys, XYZ Euler keys, TBC) would each
-  need their own machinery and rules. Left refused.
+- Transform controllers whose keys move a node (`transform-varies`) are
+  run by the clock only behind their switches (below, Moving geometry);
+  without them they stay refused. With them, what stays refused: TBC keys
+  and XYZ angle groups without keys (93 varying tracks), a moving root
+  node (`UnsettledClockRootTransform`), path interpolators, zero spans and
+  inactive controllers; the collision of a moving node is not moved.
 - Free-running controllers of the effect emissive multiple, emissive
   colour and falloff fields are run by the clock only behind their
   switches (below, Effect fields on the clock); without them the
@@ -294,6 +294,148 @@ sequence where the graph has none; a single looping sequence without a
 graph, read as playing from load, contradicts that rule directly, and its
 name (a word for idle) is a convention, not a field. The family stays
 refused; the census lines `2 ...` keep the counts for a later step.
+
+## Moving geometry (switches, off by default)
+
+`motion_census MANIFEST OUT.txt` (an example of `fo4-unpack`;
+[motion-census.txt](motion-census.txt), section 1; every winning NIF, about
+110 s alone) reads every transform controller (`NiTransformController`; no
+`NiKeyframeController` occurs) and, for one that runs by itself (not
+Manager Controlled where the model has a manager, named by no sequence),
+its timing, interpolator, keys and target node
+(`fo4_scene::clock::transform_track`). Placements are enabled placed
+references of the base records naming each model (each model counted once
+per line); the area proxy is `coverage_census`'s, as a share of all
+placements' area.
+
+- 14,119 free-running transform controllers (models with 9,892 placements);
+  64 more carry the manager flag in a model with a manager. Not a clock
+  track: span not positive 2,298, inactive 137, path interpolator 7. Of the
+  11,677 tracks, 269 never leave the stored transform (most are the
+  `transform-constant` rule's) and 11,408 vary.
+- Interpolator: `NiTransformInterpolator` on every track; the frequency is
+  1 and the phase 0 on every one.
+- Cycle of the varying tracks: clamp 11,127, loop 274, reverse 7. Seconds
+  per cycle: clamped tracks mostly 5 to 30 s (10,230), looping tracks 1 to
+  300 s.
+- Key types of the channels that vary: translation on 10,401 (linear
+  10,246, quadratic 33, step 23, TBC 42, a pose value away from the stored
+  one 57); rotation on 1,394, by quaternion keys on 766 (all linear; no
+  quadratic or TBC quaternion keys occur) and by XYZ angle keys on 628
+  (each axis linear, quadratic or step; TBC on 85); scale on 131 (linear
+  104, quadratic 21, TBC 6). A channel without keys holds a pose value equal
+  to the stored one or no pose value, except 57 translations.
+- The clock reads 11,315 of the varying tracks; 93 have TBC keys (or an
+  empty XYZ group) and stay refused.
+- What they move: 553 varying tracks have drawn geometry under their node,
+  10,855 do not (helper nodes, light and effect nodes); 306 target a root
+  node (16 with geometry under it). By model: 1,144 models with a varying
+  track (8,673 placements, 0.045 % of all placements' area), 224 of them
+  (4,332 placements, 0.032 %) move drawn geometry.
+- Collision: 216 varying tracks have a collision object under their node;
+  88 models (1,175 placements) with a moving node carry collision there,
+  which moving the drawn geometry leaves behind.
+- Rest tags: 638 models (5,555 placements, 0.026 % of the area) have
+  `transform-varies` as their only open tag and are decided with the
+  transform switches on; 506 stay undecided for other tags (behaviour
+  graphs, particles, `other`).
+
+**Rotation key forms, from the data alone.** NiTransformData stores
+rotation keys either as quaternions or as three float key groups (nifxml
+Rotation Type XYZ). Quaternion keys: every one is linear; consecutive keys
+always lie in one hemisphere; the largest step between consecutive keys is
+10 to 90 degrees on most tracks, so spherical, normalised linear and
+componentwise linear interpolation differ visibly between keys; the key at
+load equals the node's stored rotation words under `rest::quaternion_rows`
+on 608 of 769 tracks (the reading the earlier census found for pose
+values). Nothing in the data tells the three interpolations apart; slerp
+is prior knowledge (weak). XYZ keys: each of the 24 readings of the three
+angles at load (6 axis orders, two signs, radians or degrees) was composed
+and compared with the stored rotation words: where two or three angles turn
+(not whole turns), "radians, X applied first, then Y, then Z,
+counter-clockwise" is the only matching reading on 84 tracks and among the
+matching ones on every other track that some reading matches (8 match
+none); degrees never single one out. That settles the order and unit at
+load as far as these tracks go (medium: few placements behind them); that
+each angle is interpolated apart before composing is prior knowledge.
+
+**Switches** (`fo4_scene::clock::Switches`; `render`, `fo4-view` and
+`coverage_census` flags `--clock-translation`, `--clock-rotation`,
+`--clock-rotation-xyz`, `--clock-scale`; the scene must be loaded with the
+same switches). A free-running transform controller of rest tag
+`transform-varies` whose varying channels the switches on all cover, and
+whose keys the clock reads (`rest::transform_clock`), is tagged `clock`
+with its cycle tag, the key tags of its varying channels and a tag per
+varying channel (`clock-translation`, `clock-rotation`,
+`clock-rotation-xyz`, `clock-scale`). With a build time, the draw build
+gives the target node its local transform at that time
+(`TransformTrack::local`: the controller's time by the clock and cycle
+rules, each channel by its rule, a channel that never varies kept at its
+stored words exactly), and each draw under a moving node keeps its chain
+(`fo4_render::Motion`: the transform above the first moving node, then
+each moving node and the fixed nodes below it) in its animation, so that
+`DrawList::at_time` and the viewer give its world transform at any other
+time. Without a time such a model is omitted (`UnsettledControllerTime`).
+A moving root node is refused (`UnsettledClockRootTransform`: the root
+transform rule leaves a root's own transform out), and so are two
+controllers moving one node (`AmbiguousClockField`).
+
+| Rule | Switch | Basis and weakness |
+| --- | --- | --- |
+| `nif_clock_transform_translation_v1` | `--clock-translation` | the census above; that the controller runs from load and its keys replace the node's translation is the prior knowledge of `nif_controller_clock_free_running_v1`; the keyless reading (pose value, else stored) is prior knowledge the data cannot separate. Weak. |
+| `nif_clock_transform_rotation_quaternion_v1` | `--clock-rotation` | linear quaternion keys read by slerp along the shorter arc: the data has only linear keys in one hemisphere; slerp is prior knowledge. Weak. |
+| `nif_clock_transform_rotation_xyz_v1` | `--clock-rotation-xyz` | radians, X then Y then Z: the only reading of 24 that gives the stored rotation on 84 tracks, among the matching ones on every other; per-angle interpolation is prior knowledge. Medium at load, weak between keys. |
+| `nif_clock_transform_scale_v1` | `--clock-scale` | the census; prior knowledge as for translation. Weak. |
+
+Only the drawn geometry moves. The collision of a placement is placed from
+the stored model; a walker meets it where it is stored, and the viewer's
+moving grid does not take `--time`.
+
+## Sequences of the manager-run effect models
+
+[motion-census.txt](motion-census.txt), section 3, reads the 465 models
+whose effect-shader controllers a manager runs (`effect-idle`; 9,634
+placements) without reading behaviour graph files (only whether the NIF
+names one: 377 do, 88 do not). Every model has one manager, `Cumulative`
+clear, and every sequence of the model is in its list.
+
+- 2,249 sequences: 483 loop, 1,766 clamp. Frequency 1, weight 1 and an
+  accumulation root name on every one; two or three text keys on every one
+  (the generic start and end and, on 940, more). Lengths: clamped mostly
+  below 1 s (1,393), looping mostly 1 to 5 s (222) or below 1 s (163).
+- What they drive: effect alpha, UV, emissive multiple and colour fields,
+  and on 1,140 sequences also transforms (the multi-target transform
+  controller), on others visibility, particles, lights and lighting-shader
+  fields.
+- The stored effect fields against each sequence's keys: start and end
+  give them on 406 sequences, the start only on 305, the end only on 78,
+  neither on 1,320, nothing compared on 140.
+- Data-only signals by model: the manager's first sequence (always one); a
+  single looping sequence (168 models; none in 179, several in 118); a
+  single sequence whose start keys give every compared stored field (235;
+  none in 93, several in 137). The first sequence is the only looping one
+  in 47 models and the only start-gives-stored one in 198; the two last
+  signals pick one same sequence in 35 models (2,345 placements). Among the
+  88 models without a graph, 19 have a single looping sequence (2,253
+  placements), and in 14 of them (2,040 placements) its start keys do not
+  give the stored fields.
+- Placements: activators 5,379, movable statics 3,068, statics 853, lights
+  214, furniture 107 and a few others. The placed references carry the
+  common subrecords (DATA, NAME; layers 4,080, linked references 2,795,
+  activate parents 1,714, scripts 599, emittance 512, enable parents 256);
+  none is a field that names or indexes a sequence, and the base records
+  likewise.
+
+No rule was added. No data-only signal singles out one sequence to play
+from load over a delimited subset: the signals disagree with one another
+on most models; the subset where two of them agree (35 models) is defined
+by the agreement, not by a field; and on the clearest candidate, a single
+looping sequence without a graph, the stored fields are not the loop's
+start in most placements, so neither "the loop plays from load" nor
+`nif_controller_rest_loop_unstarted_v1` gains from the data. The family
+stays refused (`effect-idle`); the behaviour graph's start state remains
+the one marker found (`effect-clock-census.txt`, section 2), outside this
+step.
 
 ## Measurements that would settle the rules
 

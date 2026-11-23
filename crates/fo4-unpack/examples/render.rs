@@ -14,7 +14,7 @@ type AnyResult<T> = Result<T, Box<dyn std::error::Error>>;
 const TERRAIN_SHADING: &str = "ground textures weighted per vertex under the pending terrain texture rules, times VCLR; untextured weight as flat neutral grey per triangle by geometric normal; unlit, not game lighting";
 fn run() -> AnyResult<()> {
     let args: Vec<_> = std::env::args().skip(1).collect();
-    const USAGE: &str = "usage: render MANIFEST DATA_DIRECTORY CELL_EDITOR_ID build/OUTPUT [--strict|--measured|--under-hypotheses] [--eye X,Y,Z --look X,Y,Z] [--instance-ids] [--collision-overlay] [--terrain] [--around N] [--texture-mib N] [--time SECONDS] [--clock-emissive-multiple] [--clock-emissive-colour] [--clock-falloff]";
+    const USAGE: &str = "usage: render MANIFEST DATA_DIRECTORY CELL_EDITOR_ID build/OUTPUT [--strict|--measured|--under-hypotheses] [--eye X,Y,Z --look X,Y,Z] [--instance-ids] [--collision-overlay] [--terrain] [--around N] [--texture-mib N] [--time SECONDS] [--clock-emissive-multiple] [--clock-emissive-colour] [--clock-falloff] [--clock-translation] [--clock-rotation] [--clock-rotation-xyz] [--clock-scale]";
     if args.len() < 4 {
         return Err(USAGE.into());
     }

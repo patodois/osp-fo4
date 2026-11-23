@@ -89,6 +89,16 @@ pub const CLOCK_STEP: &str = "clock-step";
 pub const CLOCK_EMISSIVE_MULTIPLE: &str = "clock-emissive-multiple";
 pub const CLOCK_EMISSIVE_COLOUR: &str = "clock-emissive-colour";
 pub const CLOCK_FALLOFF: &str = "clock-falloff";
+/// The channels of a free-running transform controller [`CLOCK`] runs,
+/// given only with their switches on (`crate::clock::Switches`): its
+/// translation (`nif_clock_transform_translation_v1`), quaternion rotation
+/// (`nif_clock_transform_rotation_quaternion_v1`), XYZ angle rotation
+/// (`nif_clock_transform_rotation_xyz_v1`) and scale
+/// (`nif_clock_transform_scale_v1`) keys, each where it varies.
+pub const CLOCK_TRANSLATION: &str = "clock-translation";
+pub const CLOCK_ROTATION: &str = "clock-rotation";
+pub const CLOCK_ROTATION_XYZ: &str = "clock-rotation-xyz";
+pub const CLOCK_SCALE: &str = "clock-scale";
 /// Tolerance of "equal" between a stored effect-shader field and a key.
 pub const EFFECT_TOLERANCE: f32 = 1e-4;
 
@@ -122,6 +132,10 @@ pub fn rule(tag: &str) -> Option<&'static str> {
         CLOCK_EMISSIVE_MULTIPLE => h::CLOCK_EMISSIVE_MULTIPLE,
         CLOCK_EMISSIVE_COLOUR => h::CLOCK_EMISSIVE_COLOUR,
         CLOCK_FALLOFF => h::CLOCK_FALLOFF,
+        CLOCK_TRANSLATION => h::CLOCK_TRANSLATION,
+        CLOCK_ROTATION => h::CLOCK_ROTATION_QUATERNION,
+        CLOCK_ROTATION_XYZ => h::CLOCK_ROTATION_XYZ,
+        CLOCK_SCALE => h::CLOCK_SCALE,
         _ => return None,
     })
 }
@@ -187,6 +201,81 @@ fn clock_tags(t: &crate::clock::Track) -> [&'static str; 2] {
             _ => CLOCK_STEP,
         },
     ]
+}
+/// The transform track of block `i` when the clock runs it with
+/// `switches`: a transform controller (`NiTransformController`,
+/// `NiKeyframeController`) not run by a manager whose interpolator does not
+/// hold only the stored transform (rest tag `transform-varies`), whose
+/// track the clock can run (`crate::clock::transform_track`) and whose
+/// varying channels the switches all cover
+/// (`crate::clock::TransformTrack::runs_with`). `None` with every transform
+/// switch off. The rest tags ([`tags_with`]) and the draw build read the
+/// same answer.
+pub fn transform_clock(
+    n: &Nif<'_>,
+    i: usize,
+    switches: crate::clock::Switches,
+    b: &Budget,
+) -> Result<Option<crate::clock::TransformTrack>> {
+    if !switches.any_transform() {
+        return Ok(None);
+    }
+    let ty = type_of(n, i);
+    if !matches!(ty, "NiTransformController" | "NiKeyframeController") {
+        return Ok(None);
+    }
+    let Some(f) = block_fields(n, i) else {
+        return Ok(None);
+    };
+    let Some(flags) = word(f, "Controller Flags") else {
+        return Ok(None);
+    };
+    let has_manager = (0..n.blocks.len()).any(|k| type_of(n, k) == "NiControllerManager");
+    if flags & 0x20 != 0 && has_manager {
+        return Ok(None);
+    }
+    let target = links(f, &["Target"]).first().copied();
+    let ips = links(f, &["Interpolator", "Visibility Interpolator"]);
+    if let (Some(t), [ip]) = (target, ips.as_slice()) {
+        if transform_constant(n, *ip, t) {
+            return Ok(None);
+        }
+    }
+    Ok(crate::clock::transform_track(n, i, b)?
+        .ok()
+        .filter(|t| t.runs_with(switches)))
+}
+/// The tags of a transform track the clock runs: its cycle tag, the key
+/// tags of its varying channels and a tag per varying channel.
+fn transform_clock_tags(t: &crate::clock::TransformTrack) -> Vec<&'static str> {
+    use crate::clock as c;
+    let mut out = vec![match t.timing.cycle() {
+        c::CYCLE_LOOP => CLOCK_LOOP,
+        c::CYCLE_REVERSE => CLOCK_REVERSE,
+        _ => CLOCK_CLAMP,
+    }];
+    for k in t.varying_key_kinds() {
+        out.push(match k {
+            c::LINEAR => CLOCK_LINEAR,
+            c::QUADRATIC => CLOCK_QUADRATIC,
+            _ => CLOCK_STEP,
+        });
+    }
+    let v = t.varies();
+    if v[c::TRANSLATION] {
+        out.push(CLOCK_TRANSLATION);
+    }
+    if v[c::ROTATION] {
+        out.push(if t.rotation_xyz() == Some(true) {
+            CLOCK_ROTATION_XYZ
+        } else {
+            CLOCK_ROTATION
+        });
+    }
+    if v[c::SCALE] {
+        out.push(CLOCK_SCALE);
+    }
+    out
 }
 /// What a controller type drives, with the shader controlled variable
 /// (nifxml EffectShaderControlledVariable, EffectShaderControlledColor,
@@ -992,14 +1081,28 @@ pub fn tags_with(
                 } else {
                     None
                 };
-                let tag = if clocked.is_some() { CLOCK } else { tag };
+                // A free-running transform controller whose varying
+                // channels the switches all cover.
+                let moving = if tag == TRANSFORM_VARIES {
+                    transform_clock(n, i, switches, b)?
+                } else {
+                    None
+                };
+                let tag = if clocked.is_some() || moving.is_some() {
+                    CLOCK
+                } else {
+                    tag
+                };
                 let field_tags: Vec<&'static str> = match (&clocked, effect_clock) {
                     (Some(_), Some((color, variable))) => {
                         std::iter::once(effect_clock_tag(color, variable))
                             .chain((!color && matches!(variable, 1 | 2)).then_some(FALLOFF_DEGREES))
                             .collect()
                     }
-                    _ => Vec::new(),
+                    _ => moving
+                        .as_ref()
+                        .map(transform_clock_tags)
+                        .unwrap_or_default(),
                 };
                 let extra: Vec<&'static str> = clocked
                     .as_ref()

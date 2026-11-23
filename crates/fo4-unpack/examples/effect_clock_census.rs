@@ -262,6 +262,7 @@ fn run() -> Result<(), E> {
         emissive_multiple: true,
         emissive_colour: true,
         falloff: true,
+        ..clock::Switches::OFF
     };
     let mut c = Counts::new();
     let mut names = String::new();

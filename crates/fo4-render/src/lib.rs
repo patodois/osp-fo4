@@ -522,6 +522,63 @@ pub struct Animation {
     /// terms of [`Draw::colour`] when a colour or multiple track exists.
     pub colour: [f32; 3],
     pub scale: f32,
+    /// The draw's world transform over time where free-running transform
+    /// controllers move nodes above it (behind the clock's transform
+    /// switches); `None`: the draw's world is fixed.
+    pub motion: Option<Motion>,
+}
+/// The world transform of a draw under nodes that free-running transform
+/// controllers move on the game clock (`fo4_scene::clock::TransformTrack`,
+/// behind the clock's transform switches): `pre` (the placement and the
+/// fixed nodes above the first moving one), then for each moving node, top
+/// down, its local transform at the time followed by the fixed nodes below
+/// it (`after`, down to the next moving node or the shape).
+#[derive(Debug, Clone, PartialEq)]
+pub struct Motion {
+    pub pre: fo4_scene::transform::Transform,
+    pub steps: Vec<MotionStep>,
+}
+/// A moving node of a [`Motion`] and the fixed transform below it.
+#[derive(Debug, Clone, PartialEq)]
+pub struct MotionStep {
+    pub node: fo4_scene::clock::TransformTrack,
+    pub after: fo4_scene::transform::Transform,
+}
+impl Motion {
+    /// The world transform `seconds` after load: `pre`, then each step's
+    /// local transform and fixed transform, composed parent first. A value
+    /// that is not finite, or a scale that is not positive, is an error.
+    pub fn world(&self, seconds: f64) -> Result<fo4_scene::transform::Transform> {
+        let mut w = self.pre;
+        for s in &self.steps {
+            let local = s.node.local(seconds).ok_or_else(|| {
+                Error::new(
+                    "ClockTrackValue",
+                    "draw list",
+                    s.node.node as u64,
+                    "a node transform at the time",
+                    seconds,
+                )
+            })?;
+            w = w.compose(local).compose(s.after);
+        }
+        let finite = w
+            .rotation
+            .iter()
+            .flatten()
+            .chain(&w.translation)
+            .all(|v| v.is_finite());
+        if !finite || !(w.scale.is_finite() && w.scale > 0.) {
+            return Err(Error::new(
+                "ClockTrackValue",
+                "draw list",
+                0,
+                "a finite world transform with a positive scale",
+                format!("{w:?}"),
+            ));
+        }
+        Ok(w)
+    }
 }
 impl Animation {
     /// An animation of UV, opacity or falloff tracks alone (the colour terms
@@ -532,7 +589,12 @@ impl Animation {
             tracks,
             colour: [1.; 3],
             scale: 1.,
+            motion: None,
         }
+    }
+    /// Whether a surface field is tracked (not only the world transform).
+    pub fn has_tracks(&self) -> bool {
+        self.tracks.iter().any(Option::is_some)
     }
     fn value(&self, slot: usize, seconds: f64) -> Result<Option<[f32; 3]>> {
         let Some(t) = &self.tracks[slot] else {
@@ -688,7 +750,8 @@ impl DrawList {
         self.overlays.binary_search(&draw).is_ok()
     }
     /// Sets every animated draw's clock fields to their values at
-    /// `seconds` of the game clock after load ([`Animation::fields`]).
+    /// `seconds` of the game clock after load ([`Animation::fields`]), and
+    /// a moving draw's world transform ([`Motion::world`]).
     pub fn at_time(&mut self, seconds: f64) -> Result<()> {
         for a in &self.animations {
             let d = self.draws.get_mut(a.draw).ok_or_else(|| {
@@ -696,6 +759,9 @@ impl DrawList {
             })?;
             let f = a.fields(seconds, d.clock_fields())?;
             d.set_clock_fields(f);
+            if let Some(m) = &a.motion {
+                d.world = m.world(seconds)?;
+            }
         }
         Ok(())
     }

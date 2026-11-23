@@ -24,9 +24,9 @@ pub const CYCLE_REVERSE: u32 = 1;
 pub const CYCLE_CLAMP: u32 = 2;
 
 /// Readings of the clock that are off by default, one switch per pending
-/// rule (`spec/controller-clock.md`, Effect fields on the clock). With every
-/// switch off the scene's rest tags and the draw build are those of the
-/// alpha and UV clock alone.
+/// rule (`spec/controller-clock.md`, Effect fields on the clock and Moving
+/// geometry). With every switch off the scene's rest tags and the draw
+/// build are those of the alpha and UV clock alone.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct Switches {
     /// A free-running controller of an effect shader's emissive multiple
@@ -40,8 +40,29 @@ pub struct Switches {
     /// The same for the four falloff fields (EffectShaderControlledVariable
     /// 1 to 4), the angles read as degrees (`effect_clock_falloff_v1`).
     pub falloff: bool,
+    /// A free-running transform controller's translation keys move its
+    /// node on the clock (`nif_clock_transform_translation_v1`).
+    pub translation: bool,
+    /// The same for quaternion rotation keys
+    /// (`nif_clock_transform_rotation_quaternion_v1`).
+    pub rotation: bool,
+    /// The same for rotation keys stored as three angle key groups
+    /// (`nif_clock_transform_rotation_xyz_v1`).
+    pub rotation_xyz: bool,
+    /// The same for scale keys (`nif_clock_transform_scale_v1`).
+    pub scale: bool,
 }
 impl Switches {
+    /// Every switch off.
+    pub const OFF: Self = Self {
+        emissive_multiple: false,
+        emissive_colour: false,
+        falloff: false,
+        translation: false,
+        rotation: false,
+        rotation_xyz: false,
+        scale: false,
+    };
     /// Whether the switch of an effect-shader field (colour controller,
     /// controlled variable) is on.
     pub fn effect_field(&self, color: bool, variable: u32) -> bool {
@@ -52,32 +73,52 @@ impl Switches {
             _ => false,
         }
     }
+    /// Whether any switch of a transform channel is on.
+    pub fn any_transform(&self) -> bool {
+        self.translation || self.rotation || self.rotation_xyz || self.scale
+    }
     pub fn any(&self) -> bool {
-        self.emissive_multiple || self.emissive_colour || self.falloff
+        self.emissive_multiple || self.emissive_colour || self.falloff || self.any_transform()
     }
     /// The command-line flags of the switches (`render`, `fo4-view`,
     /// `coverage_census`).
-    pub const FLAGS: [&'static str; 3] = [
+    pub const FLAGS: [&'static str; 7] = [
         "--clock-emissive-multiple",
         "--clock-emissive-colour",
         "--clock-falloff",
+        "--clock-translation",
+        "--clock-rotation",
+        "--clock-rotation-xyz",
+        "--clock-scale",
     ];
+    fn slots(&mut self) -> [&mut bool; 7] {
+        [
+            &mut self.emissive_multiple,
+            &mut self.emissive_colour,
+            &mut self.falloff,
+            &mut self.translation,
+            &mut self.rotation,
+            &mut self.rotation_xyz,
+            &mut self.scale,
+        ]
+    }
     /// Turns on the switch `flag` names; `false` for another argument.
     pub fn set_flag(&mut self, flag: &str) -> bool {
-        match flag {
-            "--clock-emissive-multiple" => self.emissive_multiple = true,
-            "--clock-emissive-colour" => self.emissive_colour = true,
-            "--clock-falloff" => self.falloff = true,
-            _ => return false,
+        match Self::FLAGS.iter().position(|f| *f == flag) {
+            Some(k) => {
+                *self.slots()[k] = true;
+                true
+            }
+            None => false,
         }
-        true
     }
     /// The flags of the switches that are on.
     pub fn flags(&self) -> Vec<&'static str> {
-        [self.emissive_multiple, self.emissive_colour, self.falloff]
-            .iter()
+        let mut s = *self;
+        s.slots()
+            .into_iter()
             .zip(Self::FLAGS)
-            .filter_map(|(on, f)| on.then_some(f))
+            .filter_map(|(on, f)| (*on).then_some(f))
             .collect()
     }
 }
@@ -122,6 +163,17 @@ impl Keys {
     /// decreases.
     pub fn read(f: &[Field], components: usize, b: &Budget) -> Result<Option<Self>> {
         let mut it = f.iter();
+        let out = Self::read_group(&mut it, components, b)?;
+        Ok(out.filter(|_| it.next().is_none()))
+    }
+    /// Reads one key group (Num Keys, Interpolation, the keys) from `it`,
+    /// leaving the fields after it; `Ok(None)` when the fields are not the
+    /// reader's or a key time decreases.
+    pub fn read_group(
+        it: &mut std::slice::Iter<'_, Field>,
+        components: usize,
+        b: &Budget,
+    ) -> Result<Option<Self>> {
         let mut next = |name: &str| it.next().filter(|x| x.name == name);
         let Some(count) = next("Num Keys").and_then(number) else {
             return Ok(None);
@@ -132,7 +184,7 @@ impl Keys {
             keys: Vec::new(),
         };
         if count == 0 || !(1..=3).contains(&components) {
-            return Ok((count == 0 && it.next().is_none()).then_some(out));
+            return Ok((count == 0).then_some(out));
         }
         let Some(kind) = next("Interpolation").and_then(number) else {
             return Ok(None);
@@ -172,7 +224,7 @@ impl Keys {
             out.keys.push(k);
         }
         let ordered = out.keys.windows(2).all(|w| w[0].time <= w[1].time);
-        Ok((it.next().is_none() && ordered).then_some(out))
+        Ok(ordered.then_some(out))
     }
     /// Whether every key holds the same value (and, for quadratic keys,
     /// zero tangents): the group gives that value at every time.
@@ -509,6 +561,661 @@ pub fn track(n: &Nif<'_>, ctl: usize, b: &Budget) -> Result<std::result::Result<
     Ok(Ok(Track { timing, keys }))
 }
 
+/// The rotation keys of an `NiTransformData` (nifxml `NiKeyframeData`),
+/// in the reader's field order.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Rotation {
+    /// Quaternion keys: nifxml `KeyType` of the group and (time, w x y z).
+    Quaternion {
+        kind: u32,
+        keys: Vec<(f32, [f32; 4])>,
+    },
+    /// Rotation Type XYZ: three float key groups, X, Y and Z.
+    Xyz(Box<[Keys; 3]>),
+}
+/// The keys of an `NiTransformData`: rotation (`None` without rotation
+/// keys), translation (three components) and scale (one).
+#[derive(Debug, Clone, PartialEq)]
+pub struct NodeKeys {
+    pub rotation: Option<Rotation>,
+    pub translation: Keys,
+    pub scale: Keys,
+}
+impl NodeKeys {
+    /// Reads an `NiTransformData`'s fields; `Ok(None)` when the field
+    /// sequence is not the reader's or a key time decreases.
+    pub fn read(f: &[Field], b: &Budget) -> Result<Option<Self>> {
+        let mut it = f.iter();
+        fn take<'a>(it: &mut std::slice::Iter<'a, Field>, name: &str) -> Option<&'a Field> {
+            it.next().filter(|x| x.name == name)
+        }
+        let Some(nrot) = take(&mut it, "Num Rotation Keys").and_then(number) else {
+            return Ok(None);
+        };
+        let mut rotation = None;
+        if nrot > 0 {
+            let Some(kind) = take(&mut it, "Rotation Type").and_then(number) else {
+                return Ok(None);
+            };
+            if kind == XYZ {
+                let mut axes = Vec::new();
+                for _ in 0..3 {
+                    let Some(k) = Keys::read_group(&mut it, 1, b)? else {
+                        return Ok(None);
+                    };
+                    axes.push(k);
+                }
+                let Ok(axes) = <[Keys; 3]>::try_from(axes) else {
+                    return Ok(None);
+                };
+                rotation = Some(Rotation::Xyz(Box::new(axes)));
+            } else {
+                let mut keys = Vec::new();
+                b.reserve(&mut keys, nrot as usize, "clock rotation keys", 0)?;
+                for _ in 0..nrot {
+                    let Some(t) = take(&mut it, "Key Time").and_then(float) else {
+                        return Ok(None);
+                    };
+                    let mut q = [0f32; 4];
+                    for c in &mut q {
+                        let Some(v) = take(&mut it, "Quaternion Value").and_then(float) else {
+                            return Ok(None);
+                        };
+                        *c = v;
+                    }
+                    if kind == TBC {
+                        for _ in 0..3 {
+                            if take(&mut it, "Tension Bias Continuity").is_none() {
+                                return Ok(None);
+                            }
+                        }
+                    }
+                    keys.push((t, q));
+                }
+                if !keys.windows(2).all(|w| w[0].0 <= w[1].0) {
+                    return Ok(None);
+                }
+                rotation = Some(Rotation::Quaternion { kind, keys });
+            }
+        }
+        let Some(translation) = Keys::read_group(&mut it, 3, b)? else {
+            return Ok(None);
+        };
+        let Some(scale) = Keys::read_group(&mut it, 1, b)? else {
+            return Ok(None);
+        };
+        Ok(it.next().is_none().then_some(Self {
+            rotation,
+            translation,
+            scale,
+        }))
+    }
+}
+
+/// The order in which the three angles of XYZ rotation keys compose
+/// (`nif_clock_transform_rotation_xyz_v1`): the rotation about axis
+/// `XYZ_ORDER[0]` applies first to a child point, then `XYZ_ORDER[1]`, then
+/// `XYZ_ORDER[2]` (0: X, 1: Y, 2: Z), each by its angle in radians,
+/// counter-clockwise looking down the axis. Chosen from the data
+/// (`transform_clock_census`, XYZ readings against the stored rotation).
+pub const XYZ_ORDER: [usize; 3] = [0, 1, 2];
+
+/// Rows (row-major, acting on column vectors, as a node's rotation words)
+/// of the rotation by `angle` radians about axis `k`.
+fn axis_rows(k: usize, angle: f64) -> [[f64; 3]; 3] {
+    let (s, c) = angle.sin_cos();
+    match k {
+        0 => [[1., 0., 0.], [0., c, -s], [0., s, c]],
+        1 => [[c, 0., s], [0., 1., 0.], [-s, 0., c]],
+        _ => [[c, -s, 0.], [s, c, 0.], [0., 0., 1.]],
+    }
+}
+fn mat_mul(a: [[f64; 3]; 3], b: [[f64; 3]; 3]) -> [[f64; 3]; 3] {
+    std::array::from_fn(|i| std::array::from_fn(|j| (0..3).map(|k| a[i][k] * b[k][j]).sum()))
+}
+/// Rotation words of three angles (X, Y, Z, radians) composed in `order`
+/// (the first entry applied first to a child point).
+pub fn xyz_rows(angles: [f64; 3], order: [usize; 3]) -> [f64; 9] {
+    let m = order
+        .iter()
+        .fold([[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]], |acc, &k| {
+            mat_mul(axis_rows(k, angles[k]), acc)
+        });
+    std::array::from_fn(|i| m[i / 3][i % 3])
+}
+/// Rotation words of a quaternion (w, x y z), as `crate::rest::quaternion_rows`.
+pub fn quaternion_rows(q: [f64; 4]) -> [f64; 9] {
+    let [w, x, y, z] = q;
+    [
+        1. - 2. * (y * y + z * z),
+        2. * (x * y - w * z),
+        2. * (x * z + w * y),
+        2. * (x * y + w * z),
+        1. - 2. * (x * x + z * z),
+        2. * (y * z - w * x),
+        2. * (x * z - w * y),
+        2. * (y * z + w * x),
+        1. - 2. * (x * x + y * y),
+    ]
+}
+/// Spherical linear interpolation from `a` to `b` at `s` in 0 to 1, along
+/// the shorter arc (`b` negated when the two lie in opposite hemispheres),
+/// normalised; `None` for a zero quaternion.
+pub fn slerp(a: [f64; 4], b: [f64; 4], s: f64) -> Option<[f64; 4]> {
+    let norm = |q: [f64; 4]| q.iter().map(|v| v * v).sum::<f64>().sqrt();
+    let (na, nb) = (norm(a), norm(b));
+    if !(na > 0. && nb > 0.) {
+        return None;
+    }
+    let a = a.map(|v| v / na);
+    let mut b = b.map(|v| v / nb);
+    let mut d: f64 = (0..4).map(|i| a[i] * b[i]).sum();
+    if d < 0. {
+        b = b.map(|v| -v);
+        d = -d;
+    }
+    let (p, q) = if d > 1. - 1e-9 {
+        (1. - s, s)
+    } else {
+        let theta = d.min(1.).acos();
+        let sin = theta.sin();
+        (((1. - s) * theta).sin() / sin, (s * theta).sin() / sin)
+    };
+    let r: [f64; 4] = std::array::from_fn(|i| p * a[i] + q * b[i]);
+    let n = norm(r);
+    (n > 0. && n.is_finite()).then(|| r.map(|v| v / n))
+}
+
+/// A transform controller's channels (`TransformTrack::varies`).
+pub const TRANSLATION: usize = 0;
+pub const ROTATION: usize = 1;
+pub const SCALE: usize = 2;
+
+/// A free-running transform controller the clock runs: its timing, its
+/// target node's stored local transform words, its interpolator's pose
+/// values (`None` where nifxml's `#INV_FLT#` marks them unset) and its
+/// keys (`None`: an interpolator without data).
+#[derive(Debug, Clone, PartialEq)]
+pub struct TransformTrack {
+    pub timing: Timing,
+    /// The controller's target node.
+    pub node: usize,
+    pub stored_translation: [f32; 3],
+    /// Rotation words, rows acting on column vectors.
+    pub stored_rotation: [f32; 9],
+    pub stored_scale: f32,
+    pub pose_translation: Option<[f32; 3]>,
+    pub pose_rotation: Option<[f32; 4]>,
+    pub pose_scale: Option<f32>,
+    pub keys: Option<NodeKeys>,
+}
+/// The local transform words a [`TransformTrack`] gives: translation,
+/// rotation words (rows acting on column vectors) and scale.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct LocalWords {
+    pub translation: [f64; 3],
+    pub rotation: [f64; 9],
+    pub scale: f64,
+}
+impl LocalWords {
+    /// The node transform of these words (`crate::transform::Transform`
+    /// holds the rotation transposed).
+    pub fn transform(&self) -> crate::transform::Transform {
+        crate::transform::Transform {
+            rotation: std::array::from_fn(|i| std::array::from_fn(|j| self.rotation[j * 3 + i])),
+            translation: self.translation,
+            scale: self.scale,
+        }
+    }
+}
+fn close_words(a: &[f64], b: &[f32], tolerance: f32) -> bool {
+    a.len() == b.len()
+        && a.iter()
+            .zip(b)
+            .all(|(x, y)| (x - f64::from(*y)).abs() <= f64::from(tolerance))
+}
+impl TransformTrack {
+    fn translation_keys(&self) -> Option<&Keys> {
+        self.keys
+            .as_ref()
+            .map(|k| &k.translation)
+            .filter(|k| !k.keys.is_empty())
+    }
+    fn scale_keys(&self) -> Option<&Keys> {
+        self.keys
+            .as_ref()
+            .map(|k| &k.scale)
+            .filter(|k| !k.keys.is_empty())
+    }
+    fn rotation_keys(&self) -> Option<&Rotation> {
+        self.keys.as_ref().and_then(|k| k.rotation.as_ref())
+    }
+    /// The words of each channel at key time `time` (the controller's
+    /// time, `Timing::time`): a channel with keys takes their value
+    /// (translation and scale by key type, quaternion keys by
+    /// [`slerp`] between linear keys or the earlier key of step keys, XYZ
+    /// keys each angle by its key type composed in [`XYZ_ORDER`]); a
+    /// channel without keys takes the interpolator's pose value where set
+    /// and the node's stored value otherwise. `None` for a key type
+    /// without a reading or a value that is not finite.
+    pub fn words_at(&self, time: f64) -> Option<LocalWords> {
+        let stored_t = self.stored_translation.map(f64::from);
+        let translation = match self.translation_keys() {
+            Some(k) => k.sample(time)?.map(f64::from),
+            None => self.pose_translation.map_or(stored_t, |p| p.map(f64::from)),
+        };
+        let scale = match self.scale_keys() {
+            Some(k) => f64::from(k.sample(time)?[0]),
+            None => f64::from(self.pose_scale.unwrap_or(self.stored_scale)),
+        };
+        let rotation = match self.rotation_keys() {
+            Some(Rotation::Xyz(axes)) => {
+                let mut angles = [0f64; 3];
+                for (a, k) in angles.iter_mut().zip(axes.iter()) {
+                    if k.keys.is_empty() {
+                        return None;
+                    }
+                    *a = f64::from(k.sample(time)?[0]);
+                }
+                xyz_rows(angles, XYZ_ORDER)
+            }
+            Some(Rotation::Quaternion { kind, keys }) => {
+                quaternion_rows(quaternion_at(*kind, keys, time)?)
+            }
+            None => match self.pose_rotation {
+                Some(q) => quaternion_rows(q.map(f64::from)),
+                None => self.stored_rotation.map(f64::from),
+            },
+        };
+        let all = translation
+            .iter()
+            .chain(&rotation)
+            .chain(std::iter::once(&scale));
+        let mut all = all;
+        all.all(|v| v.is_finite()).then_some(LocalWords {
+            translation,
+            rotation,
+            scale,
+        })
+    }
+    /// The node's local transform `seconds` after its model loaded: a
+    /// channel that never varies ([`Self::varies`]) keeps the stored words
+    /// exactly.
+    pub fn local(&self, seconds: f64) -> Option<crate::transform::Transform> {
+        let w = self.words_at(self.timing.time(seconds)?)?;
+        let v = self.varies();
+        Some(
+            LocalWords {
+                translation: if v[TRANSLATION] {
+                    w.translation
+                } else {
+                    self.stored_translation.map(f64::from)
+                },
+                rotation: if v[ROTATION] {
+                    w.rotation
+                } else {
+                    self.stored_rotation.map(f64::from)
+                },
+                scale: if v[SCALE] {
+                    w.scale
+                } else {
+                    f64::from(self.stored_scale)
+                },
+            }
+            .transform(),
+        )
+    }
+    /// Whether each channel (translation, rotation, scale) can take words
+    /// other than the node's stored ones, within `crate::rest::TOLERANCE`:
+    /// a key or a set pose value away from them, or quadratic keys with a
+    /// tangent other than 0.
+    pub fn varies(&self) -> [bool; 3] {
+        let [tt, tr, ts] = crate::rest::TOLERANCE;
+        let st = self.stored_translation;
+        let ss = [self.stored_scale];
+        let group = |k: &Keys, stored: &[f32], tol: f32| {
+            let n = k.components;
+            k.keys.iter().any(|x| {
+                !close_words(
+                    &x.value[..n]
+                        .iter()
+                        .map(|v| f64::from(*v))
+                        .collect::<Vec<_>>(),
+                    stored,
+                    tol,
+                )
+            }) || (k.kind == QUADRATIC
+                && k.keys.iter().any(|x| {
+                    x.forward[..n]
+                        .iter()
+                        .chain(&x.backward[..n])
+                        .any(|v| *v != 0.)
+                }))
+        };
+        let translation = match self.translation_keys() {
+            Some(k) => group(k, &st, tt),
+            None => self
+                .pose_translation
+                .is_some_and(|p| !close_words(&p.map(f64::from), &st, tt)),
+        };
+        let scale = match self.scale_keys() {
+            Some(k) => group(k, &ss, ts),
+            None => self
+                .pose_scale
+                .is_some_and(|p| !close_words(&[f64::from(p)], &ss, ts)),
+        };
+        let sr = &self.stored_rotation;
+        let rotation = match self.rotation_keys() {
+            Some(Rotation::Quaternion { keys, .. }) => keys
+                .iter()
+                .any(|(_, q)| !close_words(&quaternion_rows(q.map(f64::from)), sr, tr)),
+            Some(Rotation::Xyz(axes)) => {
+                axes.iter().any(|k| !k.constant())
+                    || axes.iter().any(|k| k.keys.is_empty())
+                    || !close_words(
+                        &xyz_rows(
+                            std::array::from_fn(|i| f64::from(axes[i].keys[0].value[0])),
+                            XYZ_ORDER,
+                        ),
+                        sr,
+                        tr,
+                    )
+            }
+            None => self
+                .pose_rotation
+                .is_some_and(|q| !close_words(&quaternion_rows(q.map(f64::from)), sr, tr)),
+        };
+        [translation, rotation, scale]
+    }
+    /// The form of the rotation keys: `Some(true)` for XYZ angle keys,
+    /// `Some(false)` for quaternion keys or a pose quaternion, `None`
+    /// without either.
+    pub fn rotation_xyz(&self) -> Option<bool> {
+        match self.rotation_keys() {
+            Some(Rotation::Xyz(_)) => Some(true),
+            Some(Rotation::Quaternion { .. }) => Some(false),
+            None => self.pose_rotation.map(|_| false),
+        }
+    }
+    /// The key types (nifxml `KeyType`) whose key rules the channels that
+    /// vary rely on: translation and scale groups, each XYZ angle group, and
+    /// step quaternion keys (linear quaternion keys are read by [`slerp`]
+    /// under the rotation rule alone).
+    pub fn varying_key_kinds(&self) -> Vec<u32> {
+        let v = self.varies();
+        let mut out = Vec::new();
+        if v[TRANSLATION] {
+            out.extend(self.translation_keys().map(|k| k.kind));
+        }
+        if v[SCALE] {
+            out.extend(self.scale_keys().map(|k| k.kind));
+        }
+        if v[ROTATION] {
+            match self.rotation_keys() {
+                Some(Rotation::Quaternion { kind: CONSTANT, .. }) => out.push(CONSTANT),
+                Some(Rotation::Xyz(axes)) => out.extend(axes.iter().map(|k| k.kind)),
+                _ => {}
+            }
+        }
+        out.sort_unstable();
+        out.dedup();
+        out
+    }
+    /// Whether the switches cover every channel that varies, and the clock
+    /// has a reading for each of their key types; `false` when nothing
+    /// varies.
+    pub fn runs_with(&self, s: Switches) -> bool {
+        let v = self.varies();
+        if !v.iter().any(|x| *x) {
+            return false;
+        }
+        let rotation_ok = !v[ROTATION]
+            || match self.rotation_xyz() {
+                Some(true) => s.rotation_xyz,
+                Some(false) => s.rotation,
+                None => false,
+            };
+        (!v[TRANSLATION] || s.translation)
+            && (!v[SCALE] || s.scale)
+            && rotation_ok
+            && self.unread().is_none()
+    }
+    /// Why the clock cannot sample a channel that varies: a key type
+    /// without a reading (TBC, quadratic quaternion keys), an XYZ angle
+    /// group without keys.
+    pub fn unread(&self) -> Option<Refusal> {
+        let v = self.varies();
+        let float_ok = |k: u32| matches!(k, LINEAR | QUADRATIC | CONSTANT);
+        if v[TRANSLATION] && self.translation_keys().is_some_and(|k| !float_ok(k.kind)) {
+            return Some("translation key type without a reading");
+        }
+        if v[SCALE] && self.scale_keys().is_some_and(|k| !float_ok(k.kind)) {
+            return Some("scale key type without a reading");
+        }
+        if v[ROTATION] {
+            match self.rotation_keys() {
+                Some(Rotation::Quaternion { kind, .. }) if !matches!(*kind, LINEAR | CONSTANT) => {
+                    return Some("quaternion key type without a reading")
+                }
+                Some(Rotation::Xyz(axes)) => {
+                    if axes.iter().any(|k| k.keys.is_empty()) {
+                        return Some("XYZ angle group without keys");
+                    }
+                    if axes.iter().any(|k| !float_ok(k.kind)) {
+                        return Some("XYZ angle key type without a reading");
+                    }
+                }
+                _ => {}
+            }
+        }
+        None
+    }
+    /// The rules a local transform of this track relies on: the
+    /// free-running clock and its cycle type, the key types of the
+    /// channels that vary, and each varying channel's own rule.
+    pub fn rules(&self) -> Vec<&'static str> {
+        let v = self.varies();
+        let mut out = vec![
+            h::CLOCK_FREE_RUNNING,
+            self.timing.rule().unwrap_or(h::CLOCK_FREE_RUNNING),
+        ];
+        for k in self.varying_key_kinds() {
+            match k {
+                LINEAR => out.push(h::CLOCK_KEY_LINEAR),
+                QUADRATIC => out.push(h::CLOCK_KEY_QUADRATIC),
+                CONSTANT => out.push(h::CLOCK_KEY_STEP),
+                _ => {}
+            }
+        }
+        if v[TRANSLATION] {
+            out.push(h::CLOCK_TRANSLATION);
+        }
+        if v[ROTATION] {
+            out.push(if self.rotation_xyz() == Some(true) {
+                h::CLOCK_ROTATION_XYZ
+            } else {
+                h::CLOCK_ROTATION_QUATERNION
+            });
+        }
+        if v[SCALE] {
+            out.push(h::CLOCK_SCALE);
+        }
+        out.sort_unstable();
+        out.dedup();
+        out
+    }
+}
+/// The quaternion of keys of type `kind` at key time `time`: the first
+/// key's before it, the last key's after it, between two linear keys their
+/// [`slerp`], between two step keys the earlier one; `None` for another
+/// key type.
+pub fn quaternion_at(kind: u32, keys: &[(f32, [f32; 4])], time: f64) -> Option<[f64; 4]> {
+    let first = keys.first()?;
+    let last = keys.last()?;
+    if !matches!(kind, LINEAR | CONSTANT) || !time.is_finite() {
+        return None;
+    }
+    let q = |k: &(f32, [f32; 4])| k.1.map(f64::from);
+    if time <= f64::from(first.0) {
+        return slerp(q(first), q(first), 0.);
+    }
+    if time >= f64::from(last.0) {
+        return slerp(q(last), q(last), 0.);
+    }
+    let i = keys.iter().rposition(|k| f64::from(k.0) <= time)?;
+    let (a, z) = (keys.get(i)?, keys.get(i + 1)?);
+    let span = f64::from(z.0) - f64::from(a.0);
+    if span <= 0. {
+        return slerp(q(z), q(z), 0.);
+    }
+    if kind == CONSTANT {
+        return slerp(q(a), q(a), 0.);
+    }
+    slerp(q(a), q(z), (time - f64::from(a.0)) / span)
+}
+
+fn floats_of(f: &[Field], name: &str) -> Vec<f32> {
+    f.iter()
+        .filter(|x| x.name == name)
+        .filter_map(float)
+        .collect()
+}
+/// A transform controller (`NiTransformController`, `NiKeyframeController`)
+/// that runs by itself: Manager Controlled clear (or no manager in the
+/// model) and named by no sequence.
+pub fn free_transform_controller(n: &Nif<'_>, ctl: usize) -> bool {
+    if !matches!(
+        type_of(n, ctl),
+        "NiTransformController" | "NiKeyframeController"
+    ) {
+        return false;
+    }
+    let Some(timing) = block_fields(n, ctl).and_then(Timing::read) else {
+        return false;
+    };
+    let has_manager = (0..n.blocks.len()).any(|i| type_of(n, i) == "NiControllerManager");
+    !(timing.manager() && has_manager) && !in_sequence(n, ctl)
+}
+
+/// The transform track of controller block `ctl` when the clock can run
+/// it: a free-running [`free_transform_controller`] with the timing
+/// [`track`] requires, one `NiTransformInterpolator` (with an
+/// `NiTransformData` or none) and a target node with stored transform
+/// words. Otherwise the reason, by name. Whether its channels vary and
+/// whether the clock reads their keys is the track's
+/// ([`TransformTrack::varies`], [`TransformTrack::unread`]).
+pub fn transform_track(
+    n: &Nif<'_>,
+    ctl: usize,
+    b: &Budget,
+) -> Result<std::result::Result<TransformTrack, Refusal>> {
+    if !matches!(
+        type_of(n, ctl),
+        "NiTransformController" | "NiKeyframeController"
+    ) {
+        return Ok(Err("not a transform controller"));
+    }
+    let Some(f) = block_fields(n, ctl) else {
+        return Ok(Err("controller not decoded"));
+    };
+    let Some(timing) = Timing::read(f) else {
+        return Ok(Err("no timing fields"));
+    };
+    let has_manager = (0..n.blocks.len()).any(|i| type_of(n, i) == "NiControllerManager");
+    if timing.manager() && has_manager {
+        return Ok(Err("manager controlled"));
+    }
+    if in_sequence(n, ctl) {
+        return Ok(Err("named by a sequence"));
+    }
+    if !timing.active() {
+        return Ok(Err("not active"));
+    }
+    if timing.backwards() {
+        return Ok(Err("play backwards"));
+    }
+    if timing.app_init() {
+        return Ok(Err("anim type APP_INIT"));
+    }
+    if timing.rule().is_none() {
+        return Ok(Err("cycle type 3"));
+    }
+    let span = timing.stop - timing.start;
+    if !(span > 0. && span.is_finite()) {
+        return Ok(Err("span not positive"));
+    }
+    if !(timing.frequency.is_finite() && timing.phase.is_finite()) {
+        return Ok(Err("frequency or phase not finite"));
+    }
+    let [node] = links(f, "Target")[..] else {
+        return Ok(Err("not one target"));
+    };
+    let Some(nf) = block_fields(n, node) else {
+        return Ok(Err("target not decoded"));
+    };
+    let (st, sr, ss) = (
+        floats_of(nf, "Translation"),
+        floats_of(nf, "Rotation"),
+        floats_of(nf, "Scale"),
+    );
+    let (Ok(st), Ok(sr), Ok([ss])) = (
+        <[f32; 3]>::try_from(st),
+        <[f32; 9]>::try_from(sr),
+        <[f32; 1]>::try_from(ss),
+    ) else {
+        return Ok(Err("target without transform words"));
+    };
+    let ips = links(f, "Interpolator");
+    let [ip] = ips.as_slice() else {
+        return Ok(Err("not one interpolator"));
+    };
+    if type_of(n, *ip) != "NiTransformInterpolator" {
+        return Ok(Err("interpolator type"));
+    }
+    let Some(ipf) = block_fields(n, *ip) else {
+        return Ok(Err("interpolator not decoded"));
+    };
+    let (pt, pq, ps) = (
+        floats_of(ipf, "Translation"),
+        floats_of(ipf, "Quaternion"),
+        floats_of(ipf, "Scale"),
+    );
+    let (Ok(pt), Ok(pq), Ok([ps])) = (
+        <[f32; 3]>::try_from(pt),
+        <[f32; 4]>::try_from(pq),
+        <[f32; 1]>::try_from(ps),
+    ) else {
+        return Ok(Err("interpolator without pose fields"));
+    };
+    let unset = crate::rest::INVALID;
+    let keys = match links(ipf, "Data").first().copied() {
+        None => None,
+        Some(d) => {
+            if type_of(n, d) != "NiTransformData" {
+                return Ok(Err("data type"));
+            }
+            let Some(df) = block_fields(n, d) else {
+                return Ok(Err("data not decoded"));
+            };
+            let Some(k) = NodeKeys::read(df, b)? else {
+                return Ok(Err("keys not read"));
+            };
+            Some(k)
+        }
+    };
+    Ok(Ok(TransformTrack {
+        timing,
+        node,
+        stored_translation: st,
+        stored_rotation: sr,
+        stored_scale: ss,
+        pose_translation: (pt[0] != unset).then_some(pt),
+        pose_rotation: (pq[0] != unset).then_some(pq),
+        pose_scale: (ps != unset).then_some(ps),
+        keys,
+    }))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -689,5 +1396,204 @@ mod tests {
                 Some(h::CLOCK_CYCLE_CLAMP)
             ]
         );
+    }
+
+    /// An NiTransformData's fields: quaternion or XYZ rotation keys,
+    /// linear translation keys, linear scale keys.
+    fn transform_data(
+        quaternions: &[(f32, [f32; 4])],
+        xyz: Option<[Vec<(f32, f32)>; 3]>,
+        translations: &[(f32, [f32; 3])],
+        scales: &[(f32, f32)],
+    ) -> Vec<Field> {
+        let mut v = Vec::new();
+        match &xyz {
+            Some(axes) => {
+                v.push(f("Num Rotation Keys", Value::U32(1)));
+                v.push(f("Rotation Type", Value::U32(XYZ)));
+                for a in axes {
+                    v.extend(group(
+                        LINEAR,
+                        &a.iter().map(|(t, x)| (*t, *x, 0., 0.)).collect::<Vec<_>>(),
+                    ));
+                }
+            }
+            None => {
+                v.push(f("Num Rotation Keys", Value::U32(quaternions.len() as u32)));
+                if !quaternions.is_empty() {
+                    v.push(f("Rotation Type", Value::U32(LINEAR)));
+                }
+                for (t, q) in quaternions {
+                    v.push(fl("Key Time", *t));
+                    for c in q {
+                        v.push(fl("Quaternion Value", *c));
+                    }
+                }
+            }
+        }
+        v.push(f("Num Keys", Value::U32(translations.len() as u32)));
+        if !translations.is_empty() {
+            v.push(f("Interpolation", Value::U32(LINEAR)));
+        }
+        for (t, x) in translations {
+            v.push(fl("Key Time", *t));
+            for c in x {
+                v.push(fl("Key Value", *c));
+            }
+        }
+        v.extend(group(
+            LINEAR,
+            &scales
+                .iter()
+                .map(|(t, x)| (*t, *x, 0., 0.))
+                .collect::<Vec<_>>(),
+        ));
+        v
+    }
+    fn moving(keys: Vec<Field>, pose_scale: Option<f32>) -> TransformTrack {
+        let b = Budget::new(1 << 20);
+        TransformTrack {
+            timing: timing(0, 0., 2.),
+            node: 1,
+            stored_translation: [0.; 3],
+            stored_rotation: [1., 0., 0., 0., 1., 0., 0., 0., 1.],
+            stored_scale: 1.,
+            pose_translation: None,
+            pose_rotation: None,
+            pose_scale,
+            keys: Some(NodeKeys::read(&keys, &b).unwrap().unwrap()),
+        }
+    }
+
+    #[test]
+    fn transform_keys_are_read_in_field_order_and_move_their_channels() {
+        let b = Budget::new(1 << 20);
+        // A quarter turn about Z over two seconds, a translation from the
+        // stored origin to (10, 0, 0), no scale keys.
+        let (s, c) = (
+            std::f32::consts::FRAC_PI_4.sin(),
+            std::f32::consts::FRAC_PI_4.cos(),
+        );
+        let data = transform_data(
+            &[(0., [1., 0., 0., 0.]), (2., [c, 0., 0., s])],
+            None,
+            &[(0., [0., 0., 0.]), (2., [10., 0., 0.])],
+            &[],
+        );
+        let t = moving(data, None);
+        assert_eq!(t.varies(), [true, true, false]);
+        assert_eq!(t.rotation_xyz(), Some(false));
+        let half = t.local(1.).unwrap();
+        assert!((half.translation[0] - 5.).abs() < 1e-9);
+        // Slerp half-way: an eighth of a turn; a point on X goes to
+        // (cos 45, sin 45). `Transform::apply` reads rotation transposed.
+        let p = half.apply([1., 0., 0.]);
+        let r = std::f64::consts::FRAC_1_SQRT_2;
+        assert!(
+            (p[0] - 5. - r).abs() < 1e-6 && (p[1] - r).abs() < 1e-6,
+            "{p:?}"
+        );
+        assert_eq!(half.scale, 1.);
+        // Looping: a whole cycle later the same.
+        let again = t.local(3.).unwrap();
+        assert!((again.translation[0] - 5.).abs() < 1e-9);
+        let mut rules = t.rules();
+        rules.sort_unstable();
+        assert_eq!(
+            rules,
+            [
+                h::CLOCK_ROTATION_QUATERNION,
+                h::CLOCK_TRANSLATION,
+                h::CLOCK_FREE_RUNNING,
+                h::CLOCK_CYCLE_LOOP,
+                h::CLOCK_KEY_LINEAR,
+            ]
+            .iter()
+            .copied()
+            .collect::<std::collections::BTreeSet<_>>()
+            .into_iter()
+            .collect::<Vec<_>>()
+        );
+        // Each varying channel needs its own switch.
+        let mut sw = Switches::OFF;
+        assert!(!t.runs_with(sw));
+        sw.translation = true;
+        assert!(!t.runs_with(sw));
+        sw.rotation_xyz = true;
+        assert!(!t.runs_with(sw));
+        sw.rotation = true;
+        assert!(t.runs_with(sw));
+        // A field sequence that is not the reader's is refused.
+        let mut bad = transform_data(&[], None, &[(0., [0.; 3])], &[]);
+        bad.push(fl("Key Time", 1.));
+        assert!(NodeKeys::read(&bad, &b).unwrap().is_none());
+    }
+
+    #[test]
+    fn xyz_angles_compose_x_then_y_then_z_and_keyless_channels_hold_pose_or_stored() {
+        // X a quarter turn, then Z a quarter turn: X goes to Y under Z
+        // alone, and Y goes to Z under X, then stays Z under Z.
+        let q = std::f32::consts::FRAC_PI_2;
+        let data = transform_data(
+            &[],
+            Some([
+                vec![(0., q), (2., q)],
+                vec![(0., 0.), (2., 0.)],
+                vec![(0., 0.), (2., 2. * q)],
+            ]),
+            &[],
+            &[(0., 1.), (2., 3.)],
+        );
+        let t = moving(data, Some(7.));
+        assert_eq!(t.varies(), [false, true, true]);
+        assert_eq!(t.rotation_xyz(), Some(true));
+        let w = t.local(1.).unwrap();
+        // At one second: X a quarter turn, Z a quarter turn, scale 2.
+        let px = w.apply([1., 0., 0.]);
+        let py = w.apply([0., 1., 0.]);
+        assert!((px[1] - 2.).abs() < 1e-6 && px[0].abs() < 1e-6, "{px:?}");
+        assert!((py[2] - 2.).abs() < 1e-6, "{py:?}");
+        let rows = xyz_rows([f64::from(q), 0., f64::from(q)], XYZ_ORDER);
+        let z_then_x = xyz_rows([f64::from(q), 0., f64::from(q)], [2, 1, 0]);
+        assert_ne!(rows, z_then_x);
+        assert!(t.rules().contains(&h::CLOCK_ROTATION_XYZ));
+        assert!(t.rules().contains(&h::CLOCK_SCALE));
+        assert!(!t.rules().contains(&h::CLOCK_TRANSLATION));
+        // Translation has no keys and no pose: the stored words, exactly.
+        assert_eq!(w.translation, [0.; 3]);
+        // Scale keys win over the pose; without them the pose holds.
+        let pose_only = TransformTrack {
+            keys: None,
+            ..t.clone()
+        };
+        assert_eq!(pose_only.varies(), [false, false, true]);
+        assert_eq!(pose_only.local(5.).unwrap().scale, 7.);
+        // An empty XYZ angle group has no reading.
+        let mut empty = t.clone();
+        if let Some(NodeKeys {
+            rotation: Some(Rotation::Xyz(axes)),
+            ..
+        }) = &mut empty.keys
+        {
+            axes[1].keys.clear();
+        }
+        assert_eq!(empty.unread(), Some("XYZ angle group without keys"));
+        assert!(!empty.runs_with(Switches {
+            rotation_xyz: true,
+            scale: true,
+            ..Switches::OFF
+        }));
+    }
+
+    #[test]
+    fn slerp_takes_the_shorter_arc_and_normalises() {
+        let a = [1., 0., 0., 0.];
+        let b = [-0.5f64.sqrt(), 0., 0., -0.5f64.sqrt()];
+        // b is the same rotation as -b: the shorter arc from a.
+        let m = slerp(a, b, 0.5).unwrap();
+        let n: f64 = m.iter().map(|v| v * v).sum();
+        assert!((n - 1.).abs() < 1e-12);
+        assert!(m[0] > 0. && m[3] > 0., "{m:?}");
+        assert_eq!(slerp([0.; 4], a, 0.5), None);
     }
 }

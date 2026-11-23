@@ -1148,7 +1148,7 @@ fn load(c: &mut Census, text: &str) -> AnyResult<()> {
 
 fn run() -> AnyResult<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
-    const USAGE: &str = "coverage_census MANIFEST OUT_DIR (--all [--every N] [--limit N] [--shard K/N] | --view CELL_EDITOR_ID [--around N] | --merge DIR...) [--times S[,S...]] [--clock-emissive-multiple] [--clock-emissive-colour] [--clock-falloff]";
+    const USAGE: &str = "coverage_census MANIFEST OUT_DIR (--all [--every N] [--limit N] [--shard K/N] | --view CELL_EDITOR_ID [--around N] | --merge DIR...) [--times S[,S...]] [--clock-emissive-multiple] [--clock-emissive-colour] [--clock-falloff] [--clock-translation] [--clock-rotation] [--clock-rotation-xyz] [--clock-scale]";
     if args.len() < 3 {
         return Err(USAGE.into());
     }

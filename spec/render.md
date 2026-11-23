@@ -511,3 +511,63 @@ without a GPU) draws two overlapping coplanar placements of one surface
 like the debris, blended and opaque, in both list orders: where one
 placement covers a pixel the tags agree exactly; where both do each
 renderer gives one of the two, and the split differs.
+
+## Moving geometry on the clock
+
+Behind the clock's transform switches (`fo4_scene::clock::Switches`, off
+by default; `render` and `fo4-view` flags `--clock-translation`,
+`--clock-rotation`, `--clock-rotation-xyz`, `--clock-scale`;
+[controller-clock.md](controller-clock.md), Moving geometry) a node that a
+free-running transform controller moves takes, in a build with a time, its
+local transform at that time, and every draw below it keeps the chain of
+moving nodes in its animation (`fo4_render::Animation::motion`,
+`fo4_render::Motion`: the transform above the first moving node, then each
+moving node's track and the fixed nodes below it, composed parent first).
+`DrawList::at_time` sets such a draw's world transform (`Draw::world`)
+from the chain; the build's own world is computed by the same function, so
+a build at one time and `at_time` from another build agree exactly. Nothing
+new enters the draw: both renderers read `Draw::world` as before. An
+animation that only moves (no tracked surface field) gives the viewer no
+surface of its own; the viewer keeps the moving instances
+(`GpuScene::moving`) and sets their transforms from the same chain
+(`scene::moving_transform`), in the window every frame (`advance_clock`)
+and in a test with `GpuScene::at_time`. Only drawn geometry moves; the
+collision placed from the model stays where it is stored.
+
+**CPU against GPU.** The viewer's ignored GPU test
+`cpu_and_gpu_frames_agree_on_clock_moved_geometry` draws over a grey floor
+a card that a looping translation track slides and a card under two moving
+nodes (a pivot turned by linear quaternion keys, below it a node tilted by
+XYZ angle keys and scaled by scale keys): at 0.5 s (the list converted at
+that time) and at 1.5 s (the GPU scene moved by the window's update path)
+coverage agreement 1.000000, the same instance tag on every one of 35,676
+pixels drawn by both, mean channel difference below 0.04 steps, 95th
+percentile 0, largest 1 (Apple M5, Metal); the two times give different
+frames and no moving draw has a surface of its own.
+
+**Frames** (local, `render` example, 1280 x 720, `--texture-mib 1024`): a
+raider windmill of an exterior turns its sails between seconds 0, 1.5 and
+3 with the switches on (120,003 and 135,519 pixels change between the
+frames) and is left out without them; an industrial fan behind a grille in
+an interior turns its blades between 0, 0.1 and 0.2 s.
+
+## Viewer GPU tests in parallel
+
+The viewer's GPU tests failed at random when run in parallel
+(`PipelineError: ... shader could not be loaded`, `Shader import not yet
+available`): reproduced on main in 8 of 10 runs of the ignored tests. The
+shared state is Bevy's task pools (`IoTaskPool`, `AsyncComputeTaskPool`,
+`ComputeTaskPool`), process-wide statics that every `App` of a process
+uses: the shaders and shader imports of each test's app load on them, so
+with several apps at once a pipeline can be queued before its shader has
+loaded. Bevy's pipeline cache then holds the pipeline in an error state
+for a frame and retries it (`ShaderNotLoaded`, `ShaderImportNotYetAvailable`
+are the retried errors of `PipelineCache::process_pipeline`); the headless
+frame (`gpu::headless`) returned at the first error of any kind. It now
+waits on those two errors as it waits on queued pipelines
+(`gpu::pipelines_ready`: ready when no pipeline is waiting, an error only
+for a pipeline that failed for good), and the moving-grid test's capture
+helper waits on the same readiness before it compares captures (it
+compared frames after a fixed four updates). The tests stay parallel: ten
+consecutive parallel runs of the ignored GPU tests pass. Frames are not
+affected: a pipeline that was ready drew the same bytes before.

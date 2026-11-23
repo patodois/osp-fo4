@@ -2266,7 +2266,7 @@ fn effect_colour_and_multiple_follow_the_clock_behind_their_switches() {
     let on = Switches {
         emissive_multiple: true,
         emissive_colour: true,
-        falloff: false,
+        ..Switches::OFF
     };
     let run = |level: RuleLevel, time: Option<f64>, clock: Switches| {
         let mut loader = Loader::new(&store, &vfs, "english", level, &b);
@@ -2356,6 +2356,195 @@ fn effect_colour_and_multiple_follow_the_clock_behind_their_switches() {
     assert_ne!(a, frame(&list));
     // Below the hypotheses level nothing with a controller is drawn.
     let (_, out) = run(RuleLevel::Measured, Some(0.5), on);
+    assert!(out.list.draws.is_empty());
+    drop(temp);
+}
+
+/// A lighting model whose shape hangs under a node (block 5, stored at the
+/// origin) that a free-running looping NiTransformController moves with
+/// linear translation keys from the origin to (10, 0, 0) over one second.
+/// With the clock's switches off the model keeps its `transform-varies`
+/// tag and is refused; with the translation switch on the scene tags it for
+/// the clock, the build omits it without a time and draws it at the time's
+/// translation with one, keeping the chain for every other time; the
+/// rotation switch alone does not cover a moving translation.
+#[test]
+fn a_moving_node_is_drawn_at_the_build_time_only_behind_its_switch() {
+    use fo4_scene::{clock::Switches, hypotheses as h};
+    let temp = TestDir::new("transform-clock");
+    let root = temp.join("Data");
+    std::fs::create_dir_all(root.join("meshes")).unwrap();
+    std::fs::create_dir_all(root.join("textures")).unwrap();
+    std::fs::write(root.join("textures/a.dds"), dds()).unwrap();
+    let mut blocks = model_blocks(b"textures/a.dds", None, None, (b"", b""), None);
+    // The root (block 3, unnamed here) holds the moving node as its one
+    // child, and is the file's only root.
+    let r = &mut blocks[3].1;
+    let n = r.len();
+    r[n - 4..].copy_from_slice(&5u32.to_le_bytes());
+    r[..4].copy_from_slice(&u32::MAX.to_le_bytes());
+    let mut mover = Vec::new();
+    for x in [u32::MAX, 0, 6, 0] {
+        mover.extend(x.to_le_bytes());
+    }
+    for f in [0f32, 0., 0., 1., 0., 0., 0., 1., 0., 0., 0., 1., 1.] {
+        mover.extend(f.to_le_bytes());
+    }
+    for x in [u32::MAX, 1, 0] {
+        mover.extend(x.to_le_bytes());
+    }
+    blocks.push(("NiNode", mover));
+    let mut ctl = (-1i32).to_le_bytes().to_vec();
+    ctl.extend(8u16.to_le_bytes());
+    for v in [1f32, 0., 0., 1.] {
+        ctl.extend(v.to_le_bytes());
+    }
+    for x in [5i32, 7] {
+        ctl.extend(x.to_le_bytes());
+    }
+    blocks.push(("NiTransformController", ctl));
+    let mut ip = Vec::new();
+    for _ in 0..8 {
+        ip.extend((-3.402_823_4e38f32).to_le_bytes());
+    }
+    ip.extend(8i32.to_le_bytes());
+    blocks.push(("NiTransformInterpolator", ip));
+    let mut data = 0u32.to_le_bytes().to_vec();
+    for x in [2u32, 1] {
+        data.extend(x.to_le_bytes());
+    }
+    for (t, x) in [(0f32, 0f32), (1., 10.)] {
+        for v in [t, x, 0., 0.] {
+            data.extend(v.to_le_bytes());
+        }
+    }
+    data.extend(0u32.to_le_bytes());
+    blocks.push(("NiTransformData", data));
+    let mut bytes = nif_file(blocks, b"EditorMarker:27", b"");
+    bytes.truncate(bytes.len() - 16);
+    for x in [1u32, 3] {
+        bytes.extend(x.to_le_bytes());
+    }
+    std::fs::write(root.join("meshes/mover.nif"), bytes).unwrap();
+    let mut reference = sub(b"NAME", &0x801u32.to_le_bytes());
+    reference.extend(sub(b"DATA", &[0; 24]));
+    reference.extend(sub(b"XSCL", &1f32.to_le_bytes()));
+    let mut cell = sub(b"EDID", b"MoverCell\0");
+    cell.extend(sub(b"DATA", &1u16.to_le_bytes()));
+    let mut hedr = 0.95f32.to_le_bytes().to_vec();
+    hedr.extend([0; 8]);
+    let plugin = [
+        rec(b"TES4", 0, 1, &sub(b"HEDR", &hedr)),
+        rec(b"STAT", 0x801, 0, &sub(b"MODL", b"mover.nif\0")),
+        group(
+            2,
+            0,
+            &[
+                rec(b"CELL", 0x800, 0, &cell),
+                group(
+                    6,
+                    0x800,
+                    &group(9, 0x800, &rec(b"REFR", 0x802, 0, &reference)),
+                ),
+            ]
+            .concat(),
+        ),
+    ]
+    .concat();
+    std::fs::write(root.join("base.esm"), plugin).unwrap();
+    let m = Manifest {
+        root,
+        game: Game::Fallout4,
+        archive_invalidation: None,
+        language: "english".into(),
+        plugins: vec![PluginSpec {
+            name: "base.esm".into(),
+            path: "base.esm".into(),
+        }],
+        mounts: vec![Mount::Loose {
+            plugin: None,
+            base: None,
+            files: vec!["meshes/mover.nif".into(), "textures/a.dds".into()],
+        }],
+        required_masters: vec![],
+        excluded: vec![],
+        limits: Limits::default(),
+        build: Some("synthetic".into()),
+    };
+    let b = Budget::new(32 << 20);
+    let store = fo4_plugin::typed::Store::open(&m, &b).unwrap();
+    let vfs = fo4_vfs::Vfs::mount(&m, &b).unwrap();
+    let run = |level: RuleLevel, time: Option<f64>, clock: Switches| {
+        let mut loader = Loader::new(&store, &vfs, "english", level, &b);
+        loader.set_clock_switches(clock, &b);
+        let scene = loader.by_editor_id("MoverCell", &b).unwrap();
+        let options = BuildOptions {
+            max_texture_dimension: 16,
+            max_texture_bytes: 1 << 20,
+            level,
+            blocks: None,
+            time,
+            clock,
+        };
+        let state = scene.instances[0].state.hypotheses().to_vec();
+        (
+            state,
+            build(&scene, &loader, &m.limits, options, &b).unwrap(),
+        )
+    };
+    let translation = Switches {
+        translation: true,
+        ..Switches::OFF
+    };
+    // Switches off, or only the rotation switch: refused at every time.
+    for clock in [
+        Switches::OFF,
+        Switches {
+            rotation: true,
+            rotation_xyz: true,
+            scale: true,
+            ..Switches::OFF
+        },
+    ] {
+        let (state, out) = run(RuleLevel::Hypotheses, Some(0.25), clock);
+        assert!(out.list.draws.is_empty(), "{clock:?}");
+        assert!(!state.contains(&h::CLOCK_TRANSLATION));
+        assert!(out.list.animations.is_empty());
+    }
+    let (state, out) = run(RuleLevel::Hypotheses, None, translation);
+    for rule in [
+        h::CLOCK_TRANSLATION,
+        h::CLOCK_FREE_RUNNING,
+        h::CLOCK_CYCLE_LOOP,
+        h::CLOCK_KEY_LINEAR,
+    ] {
+        assert!(state.contains(&rule), "{rule} {state:?}");
+    }
+    assert!(out.list.draws.is_empty());
+    assert_eq!(out.omitted[0].causes[0].code, "UnsettledControllerTime");
+    let (_, out) = run(RuleLevel::Hypotheses, Some(0.25), translation);
+    assert_eq!(out.list.draws.len(), 1, "{:?}", out.omitted);
+    assert_eq!(out.list.draws[0].world.translation, [2.5, 0., 0.]);
+    assert!(out.instances[0].hypotheses.contains(&h::CLOCK_TRANSLATION));
+    assert_eq!(out.list.animations.len(), 1);
+    let a = &out.list.animations[0];
+    assert!(!a.has_tracks());
+    assert_eq!(a.motion.as_ref().map(|m| m.steps.len()), Some(1));
+    let mut list = out.list;
+    // The same chain at other times, and a build at another time agrees.
+    for (t, x) in [(0.75, 7.5), (1.25, 2.5), (0., 0.)] {
+        list.at_time(t).unwrap();
+        assert!(
+            (list.draws[0].world.translation[0] - x).abs() < 1e-9,
+            "{t} {:?}",
+            list.draws[0].world
+        );
+    }
+    list.at_time(0.75).unwrap();
+    let (_, later) = run(RuleLevel::Hypotheses, Some(0.75), translation);
+    assert_eq!(later.list.draws[0].world, list.draws[0].world);
+    // Below the hypotheses level nothing with a controller is drawn.
+    let (_, out) = run(RuleLevel::Measured, Some(0.25), translation);
     assert!(out.list.draws.is_empty());
     drop(temp);
 }

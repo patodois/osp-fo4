@@ -63,6 +63,9 @@ fn load_scene(
             "clock: drawn at {t} s of the game clock, {} animated surfaces",
             gpu.animated.len()
         );
+        if !gpu.moving.is_empty() {
+            println!("clock: {} moving instances", gpu.moving.len());
+        }
     }
     println!(
         "cell {}: {} placements, {} omitted; GPU {} meshes, {} textures, {} surfaces, {} instances ({} blended)",

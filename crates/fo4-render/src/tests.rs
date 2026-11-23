@@ -872,6 +872,7 @@ fn an_animation_drives_the_colour_and_falloff_and_the_frame_takes_the_colour() {
         tracks,
         colour: [0.5, 0.25, 0.1],
         scale: 7.,
+        motion: None,
     };
     let held = ClockFields {
         uv_offset: [0.; 2],

@@ -233,11 +233,24 @@ fn frame(app: &mut App) {
         .unwrap();
 }
 
-/// A few frames, then the target's bytes once two captures in a row agree.
+/// Frames until no pipeline has waited for three frames in a row (as
+/// `headless` does: the shaders load on task pools that parallel tests
+/// share, so the number of frames is not fixed), then the target's bytes
+/// once two captures in a row agree.
 fn capture(app: &mut App, target: &Handle<Image>) -> Vec<u8> {
-    for _ in 0..4 {
+    let mut ready = 0;
+    for _ in 0..600 {
         frame(app);
+        ready = if crate::gpu::pipelines_ready(app).unwrap() {
+            ready + 1
+        } else {
+            0
+        };
+        if ready >= 3 {
+            break;
+        }
     }
+    assert!(ready >= 3, "pipelines still waiting after 600 frames");
     let mut previous: Option<Vec<u8>> = None;
     for _ in 0..20 {
         let slot: Arc<Mutex<Option<Vec<u8>>>> = Arc::default();
@@ -504,6 +517,7 @@ fn exact_depth_ties_resolve_by_list_order_in_every_run() {
             surfaces: vec![surface(0, None, false), surface(1, None, false)],
             instances: vec![instance(0), instance(1)],
             animated: Vec::new(),
+            moving: Vec::new(),
         }
     };
     let camera = fo4_scene::camera::look_at(
@@ -952,6 +966,7 @@ fn cpu_and_gpu_frames_agree_on_clock_driven_uv_opacity_colour_and_falloff() {
         tracks: glow,
         colour: [1., 0.5, 0.25],
         scale: 1.,
+        motion: None,
     });
     // The falloff: stop opacity 1 to 0.1 and stop angle 60 to 20 degrees.
     list.draws.push(Draw {
@@ -1184,4 +1199,262 @@ fn coplanar_placements_disagree_on_tags_only_where_they_overlap() {
     }
     // The overlap does split differently.
     assert!(differ > 0);
+}
+
+/// Geometry that free-running transform controllers move on the game clock
+/// (`fo4_render::Motion`, behind the clock's transform switches): over a
+/// grey floor, a card that a looping translation track slides, and a card
+/// under two moving nodes, a pivot turned about Z by linear quaternion keys
+/// (slerp) and below it a node tilted about X by XYZ angle keys and grown
+/// by scale keys. The CPU reference at a time (`DrawList::at_time`) and the
+/// GPU frame of the list converted at that time agree; the GPU scene moved
+/// to a second time (`GpuScene::at_time`, the window's per-frame update)
+/// agrees with the CPU at that time; the two times draw different frames,
+/// and no moving draw gets a surface of its own. Needs a GPU.
+#[test]
+#[ignore = "needs a GPU: draws offscreen through Bevy"]
+fn cpu_and_gpu_frames_agree_on_clock_moved_geometry() {
+    use fo4_render::{
+        Alpha, Animation, Draw, DrawList, Mesh, Motion, MotionStep, Sidedness, Texture, Vertex,
+    };
+    use fo4_scene::clock::{Key, Keys, NodeKeys, Rotation, Timing, TransformTrack};
+    use fo4_scene::transform::Transform as T;
+    let quad = |h: f64| -> Vec<Vertex> {
+        [[-h, -h], [h, -h], [h, h], [-h, h]]
+            .iter()
+            .zip([[0., 0.], [1., 0.], [1., 1.], [0., 1.]])
+            .map(|(p, uv)| Vertex {
+                position: [p[0], p[1], 0.],
+                uv,
+            })
+            .collect()
+    };
+    let texture = |width: u32, height: u32, texel: &dyn Fn(u32, u32) -> [f32; 4]| Texture {
+        mips: Vec::new(),
+        width,
+        height,
+        rgba: (0..height)
+            .flat_map(|y| (0..width).flat_map(move |x| texel(x, y)))
+            .collect(),
+        mip: 0,
+        srgb: false,
+    };
+    let alpha = Alpha {
+        enabled: 0,
+        source: 6,
+        destination: 7,
+        test_enabled: 0,
+        test_ref: 0,
+        nif_test_function: Some(4),
+        opacity: 1.,
+        nif_flags: None,
+    };
+    let draw = |instance: u32, mesh: usize, texture: usize| Draw {
+        sidedness: Sidedness {
+            material_two_sided: Some(1),
+            nif_shader_flags_2: None,
+        },
+        instance,
+        mesh,
+        texture,
+        world: T::IDENTITY,
+        alpha,
+        uv_offset: [0.; 2],
+        uv_scale: [1.; 2],
+        raw_tile_flags: None,
+        falloff: None,
+        palette: None,
+        colour: None,
+    };
+    let tri = vec![[0, 1, 2], [0, 2, 3]];
+    let mesh = |vertices: Vec<Vertex>| Mesh {
+        vertex_colors: None,
+        normals: None,
+        vertices,
+        triangles: tri.clone(),
+    };
+    let key = |time: f32, value: [f32; 3]| Key {
+        time,
+        value,
+        forward: [0.; 3],
+        backward: [0.; 3],
+        tbc: [0.; 3],
+    };
+    let group = |components: usize, keys: Vec<Key>| Keys {
+        components,
+        kind: fo4_scene::clock::LINEAR,
+        keys,
+    };
+    let empty = |components: usize| Keys {
+        components,
+        kind: 0,
+        keys: Vec::new(),
+    };
+    let node = |keys: NodeKeys| TransformTrack {
+        timing: Timing {
+            flags: 8,
+            frequency: 1.,
+            phase: 0.,
+            start: 0.,
+            stop: 2.,
+        },
+        node: 0,
+        stored_translation: [0.; 3],
+        stored_rotation: [1., 0., 0., 0., 1., 0., 0., 0., 1.],
+        stored_scale: 1.,
+        pose_translation: None,
+        pose_rotation: None,
+        pose_scale: None,
+        keys: Some(keys),
+    };
+    let at = |x: f64, y: f64, z: f64| T {
+        translation: [x, y, z],
+        ..T::IDENTITY
+    };
+    let slide = node(NodeKeys {
+        rotation: None,
+        translation: group(3, vec![key(0., [0.; 3]), key(2., [0., 260., 0.])]),
+        scale: empty(1),
+    });
+    let half = std::f32::consts::FRAC_PI_4;
+    let pivot = node(NodeKeys {
+        rotation: Some(Rotation::Quaternion {
+            kind: fo4_scene::clock::LINEAR,
+            keys: vec![
+                (0., [1., 0., 0., 0.]),
+                (2., [half.cos(), 0., 0., half.sin()]),
+            ],
+        }),
+        translation: empty(3),
+        scale: empty(1),
+    });
+    let tilt = node(NodeKeys {
+        rotation: Some(Rotation::Xyz(Box::new([
+            group(1, vec![key(0., [0.; 3]), key(2., [0.7, 0., 0.])]),
+            group(1, vec![key(0., [0.; 3])]),
+            group(1, vec![key(0., [0.; 3])]),
+        ]))),
+        translation: empty(3),
+        scale: group(1, vec![key(0., [1., 0., 0.]), key(2., [1.6, 0., 0.])]),
+    });
+    let mut list = DrawList {
+        meshes: vec![mesh(quad(400.)), mesh(quad(70.)), mesh(quad(60.))],
+        textures: vec![
+            texture(1, 1, &|_, _| [0.5, 0.5, 0.5, 1.]),
+            texture(8, 8, &|x, y| [x as f32 / 7., y as f32 / 7., 0.3, 1.]),
+            texture(4, 4, &|x, _| [0.9, 0.6 - 0.1 * x as f32, 0.2, 1.]),
+        ],
+        draws: vec![draw(1, 0, 0), draw(2, 1, 1), draw(3, 2, 2)],
+        overlays: Vec::new(),
+        blocks: Default::default(),
+        animations: Vec::new(),
+    };
+    list.animations.push(Animation {
+        motion: Some(Motion {
+            pre: at(-230., -120., 40.),
+            steps: vec![MotionStep {
+                node: slide,
+                after: T::IDENTITY,
+            }],
+        }),
+        ..Animation::new(1, Default::default())
+    });
+    list.animations.push(Animation {
+        motion: Some(Motion {
+            pre: at(170., -60., 70.),
+            steps: vec![
+                MotionStep {
+                    node: pivot,
+                    after: at(90., 0., 0.),
+                },
+                MotionStep {
+                    node: tilt,
+                    after: T::IDENTITY,
+                },
+            ],
+        }),
+        ..Animation::new(2, Default::default())
+    });
+    let camera = fo4_scene::camera::look_at(
+        [0., -500., 450.],
+        [0., 0., 0.],
+        fo4_scene::camera::reference_frustum(SIZE),
+        SIZE,
+    )
+    .unwrap();
+    let options = fo4_render::RenderOptions::REFERENCE;
+    let cpu_frame = |list: &DrawList| {
+        let f = fo4_render::render(
+            list,
+            &camera,
+            options,
+            &fo4_core::Limits::default(),
+            &fo4_core::Budget::new(256 << 20),
+        )
+        .unwrap();
+        let rgba: Vec<u8> = f
+            .color
+            .iter()
+            .flat_map(|c| c.map(|v| (v.clamp(0., 1.) * 255.).round() as u8))
+            .collect();
+        (rgba, f.instances)
+    };
+    let agree = |cpu: &(Vec<u8>, Vec<u32>), gpu: &Frames| {
+        let gpu_tags = crate::compare::tags_from_bytes(gpu.tags.as_ref().unwrap()).unwrap();
+        let report = crate::compare::compare(&crate::compare::Inputs {
+            size: SIZE,
+            cpu: &cpu.0,
+            gpu: &gpu.color,
+            tags: Some((&cpu.1, &gpu_tags)),
+            clear: crate::compare::clear_rgb(options.clear),
+        })
+        .unwrap();
+        let same_tag = cpu
+            .1
+            .iter()
+            .zip(&gpu_tags)
+            .filter(|(a, b)| **a != u32::MAX && a == b)
+            .count();
+        let drawn = cpu.1.iter().filter(|a| **a != u32::MAX).count();
+        println!(
+            "agreement {:.6}, same tag {same_tag} of {drawn}, mean {:?}, p95 {:?}, max {:?}",
+            report.agreement(),
+            report.mean_abs,
+            report.p95_abs,
+            report.max_abs
+        );
+        assert!(report.agreement() > 0.999, "{}", report.agreement());
+        assert!(same_tag as f64 > 0.999 * drawn as f64, "{same_tag} {drawn}");
+        assert!(
+            report.mean_abs.iter().all(|m| *m < 1.5),
+            "{:?}",
+            report.mean_abs
+        );
+        assert!(
+            report.p95_abs.iter().all(|m| *m <= 4),
+            "{:?}",
+            report.p95_abs
+        );
+    };
+    let (t1, t2) = (0.5, 1.5);
+    list.at_time(t1).unwrap();
+    assert!((list.draws[1].world.translation[1] - (-120. + 65.)).abs() < 1e-9);
+    let cpu1 = cpu_frame(&list);
+    let mut gpu_scene = crate::scene::convert(&mut list, &options).unwrap();
+    let mut later = crate::scene::convert(&mut list, &options).unwrap();
+    assert_eq!(gpu_scene.moving.len(), 2);
+    assert!(gpu_scene.animated.is_empty());
+    assert_eq!(gpu_scene.surfaces.len(), 3);
+    let gpu1 = headless(&mut gpu_scene, &camera, options.clear, true).unwrap();
+    agree(&cpu1, &gpu1);
+    list.at_time(t2).unwrap();
+    let cpu2 = cpu_frame(&list);
+    assert_ne!(cpu1.0, cpu2.0);
+    // The nested card at the second time: the pivot an eighth of a turn
+    // and three quarters of the way (slerp), the tilt node's scale 1.45.
+    assert!((list.draws[2].world.scale - 1.45).abs() < 1e-6);
+    later.at_time(t2).unwrap();
+    let gpu2 = headless(&mut later, &camera, options.clear, true).unwrap();
+    agree(&cpu2, &gpu2);
+    assert_ne!(gpu1.color, gpu2.color);
 }

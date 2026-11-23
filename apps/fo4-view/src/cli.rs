@@ -11,6 +11,7 @@ usage:
            [--scene-memory MIB] [--no-stream] [--no-actors]
            [--actor-clip ARCHIVE_PATH.hkx [--actor-clip-time SECONDS]] [--time SECONDS]
            [--clock-emissive-multiple] [--clock-emissive-colour] [--clock-falloff]
+           [--clock-translation] [--clock-rotation] [--clock-rotation-xyz] [--clock-scale]
            [--frame-log build/FRAMES.tsv] [--script-path X,Y;... [--script-shots build/NAME]]
       Window with a free-fly camera: W/A/S/D move, Shift moves faster, hold the
       left mouse button and move the mouse to look, R returns to the start pose.
@@ -65,6 +66,11 @@ usage:
       --clock-emissive-multiple, --clock-emissive-colour and --clock-falloff
       (off by default) let the clock drive those effect fields too, each
       under its own pending rule (the CPU render's flags of the same names).
+      --clock-translation, --clock-rotation, --clock-rotation-xyz and
+      --clock-scale (off by default) let free-running transform controllers
+      move their nodes' drawn geometry on the clock (each channel and
+      rotation key form under its own pending rule; collision stays where
+      it is stored).
       Measurement aids: --frame-log writes one line per frame (interval,
       time in the frame's update, cells drawn and uploading, entities).
       --script-path (with --walk) steers the walker through the waypoints
@@ -575,13 +581,17 @@ mod tests {
         };
         assert_eq!(scene.clip.map(|c| c.time), Some(0.));
         let c = parse(&args(
-            "m d C --headless --eye 1,2,3 --look 4,5,6 --out a.png --time 2 --clock-falloff",
+            "m d C --headless --eye 1,2,3 --look 4,5,6 --out a.png --time 2 --clock-falloff --clock-rotation-xyz",
         ))
         .unwrap();
         let Command::Headless { scene, .. } = c else {
             panic!("{c:?}")
         };
-        assert_eq!(scene.clock.flags(), ["--clock-falloff"]);
+        assert_eq!(
+            scene.clock.flags(),
+            ["--clock-falloff", "--clock-rotation-xyz"]
+        );
+        assert!(scene.clock.rotation_xyz && !scene.clock.rotation);
         for (line, error) in [
             ("m d C --eye 1,2,3 --look 4,5,6 --actor-clip-time 1", "--actor-clip-time needs --actor-clip"),
             ("m d C --eye 1,2,3 --look 4,5,6 --actor-clip a.hkx --no-actors", "--actor-clip poses the drawn actors: not with --no-actors"),

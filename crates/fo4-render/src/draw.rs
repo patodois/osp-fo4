@@ -109,11 +109,7 @@ impl BuildOptions {
             level,
             blocks: None,
             time: None,
-            clock: fo4_scene::clock::Switches {
-                emissive_multiple: false,
-                emissive_colour: false,
-                falloff: false,
-            },
+            clock: fo4_scene::clock::Switches::OFF,
         }
     }
     /// The reference limits, with block-compressed textures kept as blocks.
@@ -401,6 +397,13 @@ struct Builder<'a, 's> {
     texture_first_key: bool,
     /// The instance relies on `nif_controller_clock_free_running_v1`.
     clock_rest: bool,
+    /// The instance relies on a transform channel rule of the clock
+    /// (`nif_clock_transform_*_v1`): nodes that free-running transform
+    /// controllers move are drawn at the build time.
+    transform_clock: bool,
+    /// The moving nodes of the model being drawn, by node block, with
+    /// their tracks (`fo4_scene::rest::transform_clock`).
+    node_tracks: BTreeMap<usize, fo4_scene::clock::TransformTrack>,
     allow_scol_parts: bool,
     allow_editor_marker_subtrees: bool,
     allow_marker_suffix: bool,
@@ -1757,6 +1760,7 @@ impl Builder<'_, '_> {
         path: &[u8],
         i: usize,
         parent: Transform,
+        motion: Option<&crate::Motion>,
         instance: u32,
         swap: &[&Loaded<Mswp>],
         active: &mut Vec<usize>,
@@ -1835,7 +1839,35 @@ impl Builder<'_, '_> {
         }
         let data = decoded(n, i, file)?;
         let f = fields(data);
-        let world = if f.iter().any(|f| f.name == "Translation") {
+        // A node a free-running transform controller moves (behind the
+        // clock's transform switches) takes its track's local transform at
+        // the build time, and the draws below it keep the chain of moving
+        // nodes (`crate::Motion`) for every other time.
+        let mut here: Option<crate::Motion> = None;
+        let world = if let Some(track) = self.node_tracks.get(&i).cloned() {
+            if depth == 0 {
+                return Err(error(
+                    "UnsettledClockRootTransform",
+                    file,
+                    block.data.start as u64,
+                    "a transform controller moving a root node",
+                ));
+            }
+            let time = self.options.time.ok_or_else(|| {
+                error("UnsettledControllerTime", file, block.data.start as u64, i)
+            })?;
+            let mut m = motion.cloned().unwrap_or(crate::Motion {
+                pre: parent,
+                steps: Vec::new(),
+            });
+            m.steps.push(crate::MotionStep {
+                node: track,
+                after: Transform::IDENTITY,
+            });
+            let w = m.world(time)?;
+            here = Some(m);
+            w
+        } else if f.iter().any(|f| f.name == "Translation") {
             let local = Transform::from_fields(f, file)?;
             // A root node's own transform is left out, the placement standing
             // in its place, only under `nif_root_transform_replaced_v1`; at
@@ -1845,10 +1877,20 @@ impl Builder<'_, '_> {
                 && self.draw_rule(fo4_scene::hypotheses::ROOT_TRANSFORM)?
             {
                 parent
+            } else if let Some(m) = motion {
+                let mut m = m.clone();
+                if let Some(last) = m.steps.last_mut() {
+                    last.after = last.after.compose(local);
+                }
+                let time = self.options.time.unwrap_or(0.);
+                let w = m.world(time)?;
+                here = Some(m);
+                w
             } else {
                 parent.compose(local)
             }
         } else {
+            here = motion.cloned();
             parent
         };
         append(active, i, self.budget)?;
@@ -1860,6 +1902,7 @@ impl Builder<'_, '_> {
                         path,
                         *c as usize,
                         world,
+                        here.as_ref(),
                         instance,
                         swap,
                         active,
@@ -1884,7 +1927,7 @@ impl Builder<'_, '_> {
             if let Some(mesh) = geometry {
                 let surface = self.surface(n, f, swap, file, Some(mesh))?;
                 let mesh = self.mesh(path, mesh_index, mesh, &surface, None)?;
-                self.animate(&surface)?;
+                self.animate(&surface, here.as_ref())?;
                 append(
                     &mut self.output.list.draws,
                     Draw {
@@ -1956,18 +1999,21 @@ impl Builder<'_, '_> {
                         return Err(error("RenderAssetKind", "model", 0, id));
                     };
                     let mut active = Vec::new();
+                    self.node_tracks = self.moving_nodes(&n, path)?;
                     for root in n.roots.iter().filter(|r| **r >= 0) {
                         self.node(
                             &n,
                             path,
                             *root as usize,
                             world,
+                            None,
                             instance,
                             swap,
                             &mut active,
                             0,
                         )?;
                     }
+                    self.node_tracks.clear();
                     Ok(())
                 })?;
             }
@@ -2060,10 +2106,41 @@ impl Builder<'_, '_> {
         }
         Ok(())
     }
+    /// The nodes of model `n` that free-running transform controllers move
+    /// on the clock, with their tracks: only with a build time, for an
+    /// instance relying on a transform channel rule; two controllers moving
+    /// one node are refused (`AmbiguousClockField`).
+    fn moving_nodes(
+        &self,
+        n: &Nif<'_>,
+        path: &[u8],
+    ) -> Result<BTreeMap<usize, fo4_scene::clock::TransformTrack>> {
+        let mut out = BTreeMap::new();
+        if self.options.time.is_none() || !self.transform_clock {
+            return Ok(out);
+        }
+        for i in 0..n.blocks.len() {
+            let Some(t) = fo4_scene::rest::transform_clock(n, i, self.options.clock, self.budget)?
+            else {
+                continue;
+            };
+            if out.contains_key(&t.node) {
+                return Err(error(
+                    "AmbiguousClockField",
+                    &String::from_utf8_lossy(path),
+                    n.blocks[i].data.start as u64,
+                    format!("two transform controllers move node {}", t.node),
+                ));
+            }
+            out.insert(t.node, t);
+        }
+        Ok(out)
+    }
     /// Records the animation of the draw about to be appended for
-    /// `surface`, when the clock drives one of its fields.
-    fn animate(&mut self, surface: &Surface) -> Result<()> {
-        if surface.clock.iter().all(Option::is_none) {
+    /// `surface`, when the clock drives one of its fields or moves a node
+    /// above it.
+    fn animate(&mut self, surface: &Surface, motion: Option<&crate::Motion>) -> Result<()> {
+        if surface.clock.iter().all(Option::is_none) && motion.is_none() {
             return Ok(());
         }
         let draw = self.output.list.draws.len();
@@ -2074,6 +2151,7 @@ impl Builder<'_, '_> {
                 tracks: surface.clock.clone(),
                 colour: surface.colour_terms.0,
                 scale: surface.colour_terms.1,
+                motion: motion.cloned(),
             },
             self.budget,
         )
@@ -2223,6 +2301,7 @@ impl Builder<'_, '_> {
             tracks,
             colour: s.colour_terms.0,
             scale: s.colour_terms.1,
+            motion: None,
         };
         let f = a.fields(
             time,
@@ -2404,7 +2483,7 @@ impl Builder<'_, '_> {
                             self.budget,
                         )?;
                     }
-                    self.animate(&surface)?;
+                    self.animate(&surface, None)?;
                     append(
                         &mut self.output.list.draws,
                         Draw {
@@ -2701,6 +2780,8 @@ fn build_inner(
         allow_missing_embedded: false,
         texture_first_key: false,
         clock_rest: false,
+        transform_clock: false,
+        node_tracks: BTreeMap::new(),
         allow_scol_parts: false,
         allow_editor_marker_subtrees: false,
         allow_marker_suffix: false,
@@ -2767,6 +2848,14 @@ fn build_inner(
             .state
             .hypotheses()
             .contains(&fo4_scene::hypotheses::CLOCK_FREE_RUNNING);
+        builder.transform_clock = [
+            fo4_scene::hypotheses::CLOCK_TRANSLATION,
+            fo4_scene::hypotheses::CLOCK_ROTATION_QUATERNION,
+            fo4_scene::hypotheses::CLOCK_ROTATION_XYZ,
+            fo4_scene::hypotheses::CLOCK_SCALE,
+        ]
+        .iter()
+        .any(|r| i.state.hypotheses().contains(r));
         // Effect shaders of a model settled by the first-key rule, or run
         // by the clock, are drawn by `draw::effect`.
         builder.allow_effect_surface = builder.clock_rest

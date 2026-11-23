@@ -178,6 +178,25 @@ pub struct Animated {
     pub held: fo4_render::ClockFields,
 }
 
+/// An instance whose world transform free-running transform controllers
+/// move on the game clock (`fo4_render::Motion`): its transform is set
+/// again at any time from the same chain as the CPU's `DrawList::at_time`.
+pub struct Moving {
+    /// Index into `GpuScene::instances`.
+    pub instance: usize,
+    pub motion: fo4_render::Motion,
+}
+/// The instance transform (translation, rotation, scale in Bevy's axes) of
+/// `motion` at `seconds` of the game clock.
+pub fn moving_transform(
+    motion: &fo4_render::Motion,
+    seconds: f64,
+) -> Result<(Vec3, Quat, Vec3), String> {
+    let world = motion.world(seconds).map_err(|e| e.to_string())?;
+    coords::instance_transform(&world)
+        .ok_or_else(|| format!("UnsupportedInstanceShear: moving instance {world:?}"))
+}
+
 #[derive(Default)]
 pub struct GpuScene {
     pub meshes: Vec<GpuMesh>,
@@ -188,6 +207,9 @@ pub struct GpuScene {
     pub instances: Vec<Instance>,
     /// Surfaces the game clock drives (empty without a build time).
     pub animated: Vec<Animated>,
+    /// Instances the game clock moves (empty without a build time and the
+    /// clock's transform switches).
+    pub moving: Vec<Moving>,
 }
 impl GpuScene {
     /// Sets every animated surface's params to their values at `seconds`
@@ -201,6 +223,16 @@ impl GpuScene {
                 .ok_or_else(|| format!("RenderSurfaceIndex: {}", a.surface))?
                 .params;
             self.surfaces[a.surface].params = animated_params(base, a, seconds)?;
+        }
+        for m in &self.moving {
+            let (translation, rotation, scale) = moving_transform(&m.motion, seconds)?;
+            let i = self
+                .instances
+                .get_mut(m.instance)
+                .ok_or_else(|| format!("RenderInstanceIndex: {}", m.instance))?;
+            i.translation = translation;
+            i.rotation = rotation;
+            i.scale = scale;
         }
         Ok(())
     }
@@ -475,7 +507,9 @@ pub fn convert(list: &mut DrawList, options: &RenderOptions) -> Result<GpuScene,
             colour: draw.colour,
             ..surface_params(draw.alpha, draw.uv_offset, draw.uv_scale)
         };
-        let animated = animations.get(&di).copied();
+        let moved = animations.get(&di).and_then(|a| a.motion.clone());
+        // A surface of its own only where a surface field is tracked.
+        let animated = animations.get(&di).copied().filter(|a| a.has_tracks());
         let surface_key = (
             texture_slot,
             palette_slot,
@@ -523,6 +557,12 @@ pub fn convert(list: &mut DrawList, options: &RenderOptions) -> Result<GpuScene,
             rotation,
             scale,
         });
+        if let Some(motion) = moved {
+            out.moving.push(Moving {
+                instance: out.instances.len() - 1,
+                motion,
+            });
+        }
     }
     out.draw_meshes = mesh_index;
     Ok(out)

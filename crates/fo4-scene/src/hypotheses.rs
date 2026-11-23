@@ -152,6 +152,13 @@ pub const REST_LOOP_UNSTARTED: &str = "nif_controller_rest_loop_unstarted_v1";
 pub const CLOCK_EMISSIVE_MULTIPLE: &str = "effect_clock_emissive_multiple_v1";
 pub const CLOCK_EMISSIVE_COLOUR: &str = "effect_clock_emissive_colour_v1";
 pub const CLOCK_FALLOFF: &str = "effect_clock_falloff_v1";
+/// Free-running transform controllers moving their node on the game clock,
+/// one rule per channel and rotation key form, behind their switches
+/// (`crate::clock::Switches`, off by default; `crate::clock::TransformTrack`).
+pub const CLOCK_TRANSLATION: &str = "nif_clock_transform_translation_v1";
+pub const CLOCK_ROTATION_QUATERNION: &str = "nif_clock_transform_rotation_quaternion_v1";
+pub const CLOCK_ROTATION_XYZ: &str = "nif_clock_transform_rotation_xyz_v1";
+pub const CLOCK_SCALE: &str = "nif_clock_transform_scale_v1";
 pub const UV_SCALE_THEN_OFFSET: &str = "uv_scale_then_offset_v1";
 pub const MISSING_PARENT: &str = "bgsm_missing_parent_own_fields_v1";
 /// A missing texture cited only in slots the unlit frame never samples
@@ -555,6 +562,10 @@ mod tests {
             CLOCK_EMISSIVE_MULTIPLE,
             CLOCK_EMISSIVE_COLOUR,
             CLOCK_FALLOFF,
+            CLOCK_TRANSLATION,
+            CLOCK_ROTATION_QUATERNION,
+            CLOCK_ROTATION_XYZ,
+            CLOCK_SCALE,
         ] {
             assert!(status(name).is_some(), "{name}");
         }
