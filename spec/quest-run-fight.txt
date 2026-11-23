@@ -1,0 +1,150 @@
+# quest_run new-game, the first fight and the road to the town (fight step): the home step's furthest run with the caller's fight events, the robot's third conversation and a walked track on to the town and its museum; kinds and counts only (spec/vm.md, The first fight)
+# Section 1: the caller's fight events and what each raised. Section 2: stops passed after the robot's conversation, in order. Section 3: the walk to the town: each placed stage trigger and the seconds the track enters it. Section 4: how far the run gets, by quest.
+# Section 5: the caller's assumptions of the furthest run. Section 6: the fight step's readings in the furthest run. Section 7: the furthest run's --next-blockers. Section 8: stages set with one thing changed. Section 9: where the run ends and what stops next.
+# Stage numbers only; spec/quest-run-vault-stages.txt says what sets each stage. The track, its plans, the command lines and every record named are in the step's notes, outside the repository.
+
+## 1 the caller's fight events (kind | the actor's role | second | handler runs | stages the handlers set)
+combat-state	the first house, insect 1	1315	1	next main 32
+hit	the first house, insect 1	1316	1	-
+combat-state	the first house, insect 2	1316	1	-
+death	the first house, insect 1	1317	2	-
+hit	the first house, insect 2	1317	1	-
+combat-state	the first house, insect 3	1317	1	-
+death	the first house, insect 2	1318	2	-
+hit	the first house, insect 3	1318	1	-
+death	the first house, insect 3	1319	2	next main 34
+combat-state	the second house, insect 1	1332	1	next main 36
+hit	the second house, insect 1	1333	1	-
+combat-state	the second house, insect 2	1333	1	-
+death	the second house, insect 1	1334	2	-
+hit	the second house, insect 2	1334	1	-
+combat-state	the second house, insect 3	1334	1	-
+death	the second house, insect 2	1335	2	-
+hit	the second house, insect 3	1335	1	-
+death	the second house, insect 3	1336	2	next main 38, next main 40, robot 100
+
+## 2 stops passed after the robot's conversation, in order (stop | what passed it | data or caller | the kind of world it stands for)
+the six insects' aliases filled	the next main quest's six insect aliases name one location alias and two ref types, three each; the location's rows name three distinct placed insects of each type; under --location-refs-shared the aliases hold them one each	data (pending readings)	alias fills
+the first house (next main 32, 34)	the caller's combat state of each insect toward the player reaches its alias's aggro script (32 at the first); the caller's hits reach the aggro scripts through the registration their alias init handler makes (--hit-init-registrations), each registering again; the caller's deaths reach the alias's death counter script, which waits in its parent's auto state (--auto-state-inherited) and increments the quest's first counter: the third death sets 34	data and caller	a fight
+the second house (next main 36, 38, 40; robot 100)	the same for the three insects of the second house and the quest's second counter: 36, then 38, whose fragment sets 40 (34 done), whose fragment sets the robot quest's 100 (stops the first search scene)	data and caller	a fight
+the robot's search conversation (robot 105, 200; next main 50)	a third conversation with the robot (--assume-talk, held until robot 100) plays the caller's after-search greeting (--assume-line), whose first half sets 105 and whose start-scene field starts the second search scene; the player's choice in it (the robot quest's 3) ends with a line whose second half sets 200, whose fragment sets next main 50	data and caller	a conversation; the line choice
+the road to the town (next main 55, 60)	the track planned on the worldspace's meshes from the second house to the town crosses one of the four stage 55 triggers around the town and the town's stage 60 trigger	data and caller	player movement
+the museum (next main 70, 65, 61)	the track reaches the museum's front door; under --load-doors the player stands at its teleport position, inside the stage 70 trigger (its fragment sets 65 and another quest's stage that sets 61)	data and caller	a load door; player movement
+the museum's upper floor (next main 78, 77, 88)	the track planned on the museum's mesh crosses the upper rooms' trigger (78: enables the raiders), the upper floor's large trigger (77) and the player-only trigger (88)	data and caller	player movement
+the inner door (next main 80)	the player's activation of the inner door (--assume-activate, held until 78) reaches its alias's default activation script	caller assumption	the player's activation
+
+## 3 the walk to the town: placed stage triggers of the next main quest (trigger | seconds the track enters its volume, or none)
+stage 55 trigger, one of four around the town	not entered
+stage 55 trigger, one of four around the town	not entered
+stage 55 trigger, one of four around the town	not entered
+stage 55 trigger, one of four around the town	1444.503
+stage 60 trigger in the town (turned off by 70)	1469.770
+stage 70 trigger inside the museum's front door	1485.000
+stage 77 trigger on the museum's upper floor	1512.680
+stage 78 trigger by the museum's upper rooms (turned off by 85)	1529.521
+stage 87 trigger on the upper floor (needs 85 done)	1517.120 1544.751
+stage 88 trigger on the upper floor (the player only)	1519.720
+
+## 4 reached (furthest run; the stage and the second the run sets it)
+87	stages of the opening quest set (home step: 87): 0 10 12 15 20 22 30 65 70 75 80 85 90 93 95 97 100 110 200 210 220 230 240 245 250 252 260 263 270 300 305 310 400 402 405 410 425 435 440 450 455 460 465 470 475 490 495 500 505 510 515 530 600 620 625 630 632 635 640 644 645 646 647 648 649 675 680 690 692 694 700 705 710 715 720 730 740 750 752 753 760 770 780 805 810 900 1000
+29	stages of the next main quest set (home step: 15): 0 1 2 3 4 6 7 8 9 10 15 20 22 25 30 32 34 36 38 40 50 55 60 61 65 70 77 88 89
+10	stages of the vault dialogue quest set (home step: 10): 40 50 55 70 72 95 97 98 100 110
+10	stages of the robot's postwar dialogue quest set (home step: 7): 10 15 20 30 35 40 50 100 105 200
+next main stages new in this step, with the second: 32 1315.00, 34 1319.00, 36 1332.00, 38 1336.00, 40 1336.00, 50 1371.96, 55 1444.50, 60 1469.77, 70 1485.00, 65 1485.00, 61 1485.00, 77 1512.68, 88 1519.72, 89 1529.98
+robot stages new in this step, with the second: 100 1336.00, 105 1338.00, 200 1371.96
+
+## 5 caller assumptions of the furthest run
+1	assumption from the command line: ActorBase.GetSex on the player's base answers 0 (--assume-player-sex)
+1	assumption from the command line: IsInMenuMode answers false (--assume-menu-mode)
+1	assumption from the command line: Message.Show answers button 2 (--assume-message-button)
+5	assumption from the command line: a line plays where the choice outside a scene is not settled (--assume-line)
+1	assumption from the command line: a line whose audio does not settle its time lasts 3 s
+1	assumption from the command line: a made animation event registration answers true (--assume-anim-registration)
+6	assumption from the command line: a placed actor dies, killed by the player (--assume-death)
+2	assumption from the command line: a placed actor moved to a position at a second (--assume-actor-at)
+6	assumption from the command line: a placed actor's combat state changes to 1 toward the player (--assume-combat-state)
+22	assumption from the command line: a placed reference raises a named animation event (--assume-anim-event)
+1	assumption from the command line: a stage set from outside any script after the start
+1	assumption from the command line: a stage set from outside any script at a second of the real-time clock
+54	assumption from the command line: a timed caller action waits for a stage before it happens (--action-after)
+5	assumption from the command line: conditions decided by an assumed value
+1	assumption from the command line: every HasDirectLOS answers true (--assume-los)
+1	assumption from the command line: every condition of function 544 in the records of the quest the caller names 1 of 1 has the value 1 (--assume-cond-for, in key order)
+1	assumption from the command line: every condition of function 555 has the value 1
+1	assumption from the command line: package actions complete as they start
+349	assumption from the command line: points of the player's track
+1	assumption from the command line: queued timers fired after the jobs
+1	assumption from the command line: start-scene actions complete as they start
+1	assumption from the command line: the NPC_ of that editor ID is the player's base (--player-base)
+1	assumption from the command line: the hello distance is the value of the game setting named (--hello-distance-setting)
+7	assumption from the command line: the player activates a placed reference (--assume-activate)
+1	assumption from the command line: the player follows a track (--track)
+6	assumption from the command line: the player hits a placed actor (--assume-hit)
+1	assumption from the command line: the player opens a placed reference (a door or a container) (--assume-open)
+1	assumption from the command line: the player picks choice 0
+1	assumption from the command line: the player picks choice 0 in the scene or the scenes of the quest the caller names 2 of 3 (--assume-player-choice-for, in key order)
+1	assumption from the command line: the player picks choice 0 in the scene or the scenes of the quest the caller names 3 of 3 (--assume-player-choice-for, in key order)
+1	assumption from the command line: the player picks choice 3 in the scene or the scenes of the quest the caller names 1 of 3 (--assume-player-choice-for, in key order)
+4	assumption from the command line: the player raises a named animation event (--assume-anim-event player)
+4	assumption from the command line: the player starts a conversation with a placed actor (--assume-talk)
+1	assumption from the command line: the player's body reaches 120 units up from the reference point (--trigger-body)
+1	assumption from the command line: the scene clock advanced (--scene-clock)
+1	assumption from the command line: where several lines of a topic may hold in the scene or the scenes of the quest the caller names 1 of 1, the first plays (--assume-first-line-for, in key order)
+
+## 6 the fight step's readings (furthest run)
+6	assumption from the command line: a placed actor's combat state changes to 1 toward the player (--assume-combat-state)
+3	fight	IsInCombat answered from the run's combat states on the player: false
+6	fight	combat state changes
+6	fight	deaths
+6	fight	hit registrations	kept
+6	fight	hit registrations	read from an init handler the run never delivered
+0	fight	hit registrations	removed
+6	fight	hits
+6	fight	hits	delivered to an instance registered by the init reading
+18	fight events	a script of a quest alias holding the reference	completed
+6	fight events	an instance registered for the reference's hits	completed
+1	rules relied on	fight_combat_state_events_v1
+1	rules relied on	fight_combat_state_natives_v1
+1	rules relied on	fight_death_events_v1
+1	rules relied on	fight_hit_init_registration_v1
+1	rules relied on	fight_hit_registrations_v1
+1	rules relied on	pex_auto_state_inherited_v1
+1	rules relied on	quest_alias_location_ref_shared_v1
+1	switch: IsDead on an actor the run killed answers true (--dead-state)
+1	switch: IsInCombat and GetCombatState answered from the run's combat states (--combat-state-natives)
+1	switch: a receiver whose init handler the run never delivers registers on its own object counts as registered (--hit-init-registrations)
+1	switch: aliases of a quest sharing a location and ref type hold its distinct references one each, by alias id and row order (--location-refs-shared)
+1	switch: an instance of a script declaring no auto state starts in its nearest ancestor's (--auto-state-inherited)
+1	switch: hit event registrations kept; the caller's hits delivered to the registered instances, once per registration (--hit-events)
+1	switch: the caller's combat state changes delivered to the actor's receivers (--combat-state-events)
+1	switch: the caller's deaths delivered to the actor's receivers, dying then death (--death-events)
+
+## 7 the furthest run's --next-blockers
+2	scenes stopped at the end	an action runs in the phase: kind 5
+31	scenes stopped at the end	an action runs in the phase: kind 6
+17	scenes stopped at the end	completion conditions undetermined
+5	scenes stopped at the end	start conditions undetermined
+1	setters of a waited stage	10-19
+14	setters of a waited stage by kind and need	a call in a placed REFR's own script, through a function passing a parameter on	engine event ontriggerenter on a placed REFR
+14	setters of a waited stage: the need in this run	a player action a caller can assume (--assume-trigger-enter)
+1	waits	next stage of a quest the caller set a stage on	the stage is not done in the run
+1	waits: stages a stopped scene phase or the caller's quests wait on
+
+## 8 stages set with one thing changed (next main quest, vault dialogue quest, robot quest)
+29	10	10	the furthest run: next main 0 1 2 3 4 6 7 8 9 10 15 20 22 25 30 32 34 36 38 40 50 55 60 61 65 70 77 88 89; vault dialogue 10; robot 10 15 20 30 35 40 50 100 105 200; opening quest 87
+25	10	7	without --auto-state-inherited (the death counters' handlers stand only in their parent's auto state): next main 0 1 2 3 4 6 7 8 9 10 15 20 22 25 30 32 36 55 60 61 65 70 77 88 89; vault dialogue 10; robot 10 15 20 30 35 40 50; opening quest 87
+23	10	7	without --location-refs-shared (the six insect aliases empty): next main 0 1 2 3 4 6 7 8 9 10 15 20 22 25 30 55 60 61 65 70 77 88 89; vault dialogue 10; robot 10 15 20 30 35 40 50; opening quest 87
+29	10	10	without --hit-init-registrations (no hit reaches the aliases): next main 0 1 2 3 4 6 7 8 9 10 15 20 22 25 30 32 34 36 38 40 50 55 60 61 65 70 77 88 89; vault dialogue 10; robot 10 15 20 30 35 40 50 100 105 200; opening quest 87
+29	10	10	without --combat-state-events and the caller's combat states (32 and 36 from the hits): next main 0 1 2 3 4 6 7 8 9 10 15 20 22 25 30 32 34 36 38 40 50 55 60 61 65 70 77 88 89; vault dialogue 10; robot 10 15 20 30 35 40 50 100 105 200; opening quest 87
+25	10	7	with the caller's hits only (no combat states, no deaths): next main 0 1 2 3 4 6 7 8 9 10 15 20 22 25 30 32 36 55 60 61 65 70 77 88 89; vault dialogue 10; robot 10 15 20 30 35 40 50; opening quest 87
+29	10	10	with the caller's --assume-player-in-combat false instead of --combat-state-natives: next main 0 1 2 3 4 6 7 8 9 10 15 20 22 25 30 32 34 36 38 40 50 55 60 61 65 70 77 88 89; vault dialogue 10; robot 10 15 20 30 35 40 50 100 105 200; opening quest 87
+28	10	8	without the robot's third conversation: next main 0 1 2 3 4 6 7 8 9 10 15 20 22 25 30 32 34 36 38 40 55 60 61 65 70 77 88 89; vault dialogue 10; robot 10 15 20 30 35 40 50 100; opening quest 87
+23	10	7	without the caller's fight events: next main 0 1 2 3 4 6 7 8 9 10 15 20 22 25 30 55 60 61 65 70 77 88 89; vault dialogue 10; robot 10 15 20 30 35 40 50; opening quest 87
+
+## 9 where the run ends and what stops next
+1	next main 85: death events of seven raider aliases in the museum (a second fight: their aliases fill from the museum location's ref types, and their deaths would be the caller's); 87 waits on 85
+1	next main 90 and later: the end of lines of the town's dialogue (a conversation in the museum), other quests' fragments, a terminal's menu item, a lock state change, an item added; the run does not reach them
+1	next main 62 and 105: inventory events (a container change, an item added) are not modelled
+1	the fight itself: the caller gives who is hit, whose combat state changes toward whom and who dies, and when; nothing aims, loses health or decides to attack, and no active magic effect receives an event
+1	the walk: the caller gives the waypoints (the track is planned on the navigation meshes between them), the three conversations with the robot and their lines, the player's choices, the inner door's activation
+1	the robot quest's 250, 275, 300, 5 (companion and workshop stages) wait on more of its dialogue or another way; 500 on its death
