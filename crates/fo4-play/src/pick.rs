@@ -60,7 +60,16 @@ pub fn object_bounds(scene: &fo4_scene::Scene, refs: &[Option<FormKey>]) -> (Box
             (Some(bounds), Some(t)) => {
                 fo4_scene::transform::Transform::euler(t, i.reference.data.scale.unwrap_or(1.0))
                     .ok()
-                    .map(|f| boxes.push(k.clone(), f, bounds))
+                    .map(|f| {
+                        let pushed = boxes.push(k.clone(), f, bounds);
+                        if pushed {
+                            boxes.kinds.resize(boxes.items.len() - 1, None);
+                            boxes
+                                .kinds
+                                .push(i.base.as_ref().map(|b| b.record.signature));
+                        }
+                        pushed
+                    })
             }
             _ => None,
         };
@@ -89,6 +98,9 @@ pub struct Hit {
 #[derive(Debug, Clone, Default)]
 pub struct Boxes {
     pub items: Vec<(FormKey, fo4_scene::transform::Transform, [f64; 3], [f64; 3])>,
+    /// The record type of each item's base, where [`object_bounds`] read
+    /// it (items pushed otherwise have none).
+    pub kinds: Vec<Option<[u8; 4]>>,
 }
 impl Boxes {
     /// The box of a reference's base bounds placed by its transform; `None`
@@ -106,6 +118,21 @@ impl Boxes {
         }
         self.items.push((reference, frame, lo, hi));
         true
+    }
+    /// The boxes whose base is not of one of these record types
+    /// (`--play-pick-bounds-activatable` leaves out the static types,
+    /// `play_activate_bounds_not_static_v1`); a box of unknown type is kept.
+    pub fn without_kinds(&self, kinds: &[[u8; 4]]) -> Boxes {
+        let mut out = Boxes::default();
+        for (n, item) in self.items.iter().enumerate() {
+            let kind = self.kinds.get(n).copied().flatten();
+            if kind.is_some_and(|k| kinds.contains(&k)) {
+                continue;
+            }
+            out.items.push(item.clone());
+            out.kinds.push(kind);
+        }
+        out
     }
     /// The first box the ray meets within `reach`: (distance, index).
     fn first(
@@ -189,7 +216,23 @@ pub fn first_of(
     reach: f64,
     skip: &dyn Fn(&FormKey) -> bool,
 ) -> Option<Hit> {
-    let hit = collision(world, refs, eye, dir, reach, skip);
+    first_where(world, refs, boxes, eye, dir, reach, &|_| true, skip)
+}
+
+/// [`first_of`] meeting only the primitives whose source `keep` keeps
+/// (the sources a live world shows, `crate::live`).
+#[allow(clippy::too_many_arguments)]
+pub fn first_where(
+    world: &World,
+    refs: &[Option<FormKey>],
+    boxes: Option<&Boxes>,
+    eye: V3,
+    dir: V3,
+    reach: f64,
+    keep: &dyn Fn(u32) -> bool,
+    skip: &dyn Fn(&FormKey) -> bool,
+) -> Option<Hit> {
+    let hit = collision(world, refs, eye, dir, reach, keep, skip);
     let d = g::unit(dir)?;
     let boxed = boxes.and_then(|b| b.first(eye, d, reach, skip).map(|(t, i)| (t, i, b)));
     match (hit, boxed) {
@@ -209,6 +252,7 @@ fn collision(
     eye: V3,
     dir: V3,
     reach: f64,
+    keep: &dyn Fn(u32) -> bool,
     skip: &dyn Fn(&FormKey) -> bool,
 ) -> Option<Hit> {
     let d = g::unit(dir)?;
@@ -222,6 +266,9 @@ fn collision(
     let mut best: Option<(f64, u32)> = None;
     for i in candidates {
         let e = &world.entries[i as usize];
+        if !keep(e.source) {
+            continue;
+        }
         if refs
             .get(e.source as usize)
             .and_then(Option::as_ref)

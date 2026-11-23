@@ -11,10 +11,15 @@
 //! still on the ground, the slice runs to the next command with no point:
 //! the player stands at the last one.
 use crate::input::{Command, Controls, Script};
+use crate::live::{Decision, Live, RunState};
+use crate::world::LoadDoor;
 use crate::{pick, Act, Driver, Next, PlayerAction, Point, Slice, View};
+use fo4_core::Budget;
 use fo4_plugin::FormKey;
+use fo4_scene::timeline::norm;
 use fo4_walk::{Character, Params, Settings, World};
 use std::cell::RefCell;
+use std::collections::BTreeMap;
 use std::rc::Rc;
 
 /// A tick that moves the walker's feet less than this (world units) from
@@ -34,6 +39,12 @@ pub struct Options {
     /// Ticks the walker may take to settle on the ground under the start
     /// point before the input begins.
     pub settle_ticks: u64,
+    /// The shortest slice given to the run (seconds; `--play-slice`): the
+    /// walker's ticks are joined into one slice until it lasts this long,
+    /// a command or an activation ends it (0: one tick a slice). The run's
+    /// outcome does not depend on it; the live world and the walking world
+    /// change only between slices.
+    pub slice: f64,
 }
 impl Default for Options {
     fn default() -> Self {
@@ -42,6 +53,7 @@ impl Default for Options {
             settings: Settings::DEFAULT,
             reach: None,
             settle_ticks: 600,
+            slice: 0.0,
         }
     }
 }
@@ -74,15 +86,76 @@ pub struct Log {
     pub activations: Vec<Activation>,
     /// The controls after each command: (second, heading, pitch).
     pub looks: Vec<(f64, f64, f64)>,
+    /// Each `toward` that arrived: (second, feet).
+    pub arrivals: Vec<(f64, [f64; 3])>,
+    /// Wall seconds spent in the walker's ticks.
+    pub tick_seconds: f64,
+    /// The live world's counts and costs, kept across load doors: (applies,
+    /// references entered, left, moved, seconds, longest).
+    pub live: Option<crate::live::Stats>,
+    /// Each load door crossed: (second, door, the door it names, the
+    /// space, the teleport position, the settled feet, wall seconds to
+    /// build the new walking world, its report).
+    pub doors: Vec<Crossed>,
+    /// Each time the walking world was built again about the walker
+    /// (`--play-follow-grid`): (second, cell, feet, wall seconds).
+    pub grid: Vec<(f64, FormKey, [f64; 3], f64)>,
     /// Rules relied on.
     pub rules: std::collections::BTreeSet<&'static str>,
 }
 
+/// One load door crossed ([`Log::doors`]).
+#[derive(Debug, Clone)]
+pub struct Crossed {
+    pub t: f64,
+    pub door: FormKey,
+    pub to: LoadDoor,
+    pub cell: FormKey,
+    pub feet: [f64; 3],
+    pub seconds: f64,
+    pub report: String,
+}
+
+/// How the walker crosses load doors (`--play-load-doors`,
+/// `play_load_door_activation_v1`): the load doors of the walking world and
+/// how to build the next one.
+#[derive(Debug, Clone, Default)]
+pub struct Doors {
+    pub doors: BTreeMap<FormKey, LoadDoor>,
+    /// Cells about the destination's cell (grid steps).
+    pub around: u32,
+}
+
+/// The walking world follows the walker over a worldspace's grid
+/// (`--play-follow-grid`): the cells `around` the walker's square, built
+/// again when it stands in another square.
+#[derive(Debug, Clone, Default)]
+pub struct Grid {
+    pub around: u32,
+    centre: Option<(FormKey, [i32; 2])>,
+}
+impl Grid {
+    pub fn new(around: u32) -> Grid {
+        Grid {
+            around,
+            centre: None,
+        }
+    }
+}
+
 /// The walker driven by a scripted input.
 pub struct Walker {
-    world: World,
-    refs: Vec<Option<FormKey>>,
+    grid: Option<Grid>,
+    live: Live,
+    /// The run's state as the live world reads it (`--play-live-world`).
+    state: RunState,
+    nowait: bool,
+    doors: Option<Doors>,
+    door: Option<(FormKey, LoadDoor)>,
     boxes: Option<pick::Boxes>,
+    /// Boxes of statics left out (`play_activate_bounds_not_static_v1`),
+    /// also in the walking worlds built later.
+    statics_out: bool,
     script: Script,
     opts: Options,
     next_event: usize,
@@ -117,10 +190,16 @@ impl Walker {
             .end()
             .or_else(|| script.events.last().map(|e| e.t))
             .unwrap_or(0.0);
+        let live = Live::fixed(world, refs).map_err(|e| e.to_string())?;
         Ok(Walker {
-            world,
-            refs,
+            grid: None,
+            live,
+            state: RunState::default(),
+            nowait: false,
+            doors: None,
+            door: None,
             boxes: None,
+            statics_out: false,
             script,
             opts,
             next_event: 0,
@@ -143,12 +222,49 @@ impl Walker {
         self
     }
 
+    /// Leaves out the object bounds of statics in the walking worlds built
+    /// later too (`play_activate_bounds_not_static_v1`); the caller filters
+    /// the boxes it gives [`Walker::with_boxes`].
+    pub fn with_static_boxes_left_out(mut self) -> Walker {
+        self.statics_out = true;
+        self
+    }
+
+    /// Walks a live world instead (`--play-live-world`,
+    /// `play_live_collision_follows_run_v1`): the run's state at each slice
+    /// changes what the walker collides with and what the activation meets;
+    /// `nowait` reads the NoWait forms as the plain natives.
+    pub fn with_live(mut self, live: Live, nowait: bool) -> Walker {
+        self.live = live;
+        self.nowait = nowait;
+        self
+    }
+
+    /// Crosses the load doors the activation meets
+    /// (`play_load_door_activation_v1`).
+    pub fn with_doors(mut self, doors: Doors) -> Walker {
+        self.doors = Some(doors);
+        self
+    }
+
+    /// Builds the walking world again about the walker's grid square when
+    /// it leaves it (`--play-follow-grid`).
+    pub fn with_grid(mut self, grid: Grid) -> Walker {
+        self.grid = Some(grid);
+        self
+    }
+
+    /// The walking world as it stands.
+    pub fn live(&self) -> &Live {
+        &self.live
+    }
+
     /// Places the walker at the run's first point, settled on the ground.
     fn start(&mut self, now: f64, first: Option<&Point>) -> Result<Vec<Point>, String> {
         let first = first.ok_or("PlayNoTrack")?.clone();
         let mut c = Character::new(self.opts.params, self.opts.settings, first.pos)
             .map_err(|e| e.to_string())?;
-        let ticks = c.settle(&self.world, self.opts.settle_ticks);
+        let ticks = c.settle(self.live.space(), self.opts.settle_ticks);
         c.ticks = 0;
         self.t = now;
         self.space = Some(first.space.clone());
@@ -178,24 +294,32 @@ impl Walker {
         let dir = self.controls.look();
         let reach = self.opts.reach.unwrap_or(0.0);
         let vis = &self.visibility;
-        let hit = pick::first_of(
-            &self.world,
-            &self.refs,
-            self.boxes.as_ref(),
-            eye,
-            dir,
-            reach,
-            &|k| vis.disabled(k),
-        );
+        let live = &self.live;
+        let hit = if live.follows() {
+            live.pick(self.boxes.as_ref(), eye, dir, reach, &|k| {
+                live.decision(k) == Some(Decision::Absent)
+            })
+        } else {
+            pick::first_of(
+                live.base()?,
+                live.base_refs(),
+                self.boxes.as_ref(),
+                eye,
+                dir,
+                reach,
+                &|k| vis.disabled(k),
+            )
+        };
         if let Some(pick::Hit {
             via: pick::Via::Bounds { .. },
             ..
         }) = &hit
         {
-            self.log
-                .borrow_mut()
-                .rules
-                .insert(crate::rules::ACTIVATE_BOUNDS);
+            let mut log = self.log.borrow_mut();
+            log.rules.insert(crate::rules::ACTIVATE_BOUNDS);
+            if self.statics_out {
+                log.rules.insert(crate::rules::BOUNDS_NOT_STATIC);
+            }
         }
         let mut log = self.log.borrow_mut();
         log.rules.insert(crate::rules::ACTIVATE_RAY);
@@ -209,14 +333,19 @@ impl Walker {
                     )),
                     None,
                 ),
-                Some(k) => (
-                    Ok((k.clone(), h.distance)),
-                    Some(Act {
-                        at: self.t,
-                        action: PlayerAction::Activate,
-                        reference: k,
-                    }),
-                ),
+                Some(k) => {
+                    if let Some(d) = self.doors.as_ref().and_then(|d| d.doors.get(&norm(&k))) {
+                        self.door = Some((k.clone(), d.clone()));
+                    }
+                    (
+                        Ok((k.clone(), h.distance)),
+                        Some(Act {
+                            at: self.t,
+                            action: PlayerAction::Activate,
+                            reference: k,
+                        }),
+                    )
+                }
             },
         };
         log.activations.push((self.t, eye, dir, record));
@@ -257,6 +386,33 @@ impl Walker {
     /// `now` and `first`: the run's present second and its track's first
     /// point (read once, at the first slice).
     pub fn step(&mut self, now: f64, first: Option<&Point>) -> Result<Next, String> {
+        let from = self.t;
+        let mut out = match self.step_one(now, first)? {
+            Next::Slice(s) => s,
+            n => return Ok(n),
+        };
+        // Join ticks while the slice is short, nothing was activated and
+        // the walker moves (a standing slice already runs to the next
+        // command).
+        while self.opts.slice > 0.0
+            && out.actions.is_empty()
+            && self.door.is_none()
+            && out.until - from < self.opts.slice
+            && !out.points.is_empty()
+        {
+            match self.step_one(out.until, first)? {
+                Next::Slice(s) => {
+                    out.points.extend(s.points);
+                    out.actions = s.actions;
+                    out.until = s.until;
+                }
+                _ => break,
+            }
+        }
+        Ok(Next::Slice(out))
+    }
+
+    fn step_one(&mut self, now: f64, first: Option<&Point>) -> Result<Next, String> {
         let mut points = Vec::new();
         let mut actions = Vec::new();
         if self.character.is_none() {
@@ -272,6 +428,19 @@ impl Walker {
             .get(self.next_event)
             .map_or(self.end, |e| e.t)
             .min(self.end);
+        if self.controls.target.is_some() {
+            if let Some(c) = &self.character {
+                let speed = if self.controls.run {
+                    self.opts.params.run_speed
+                } else {
+                    self.opts.params.walk_speed
+                };
+                let step = (next_command.max(self.t) - self.t).min(self.opts.settings.tick);
+                if self.controls.steer(c.feet, 0.5 * speed * step.max(1e-9)) {
+                    self.log.borrow_mut().arrivals.push((self.t, c.feet));
+                }
+            }
+        }
         let keys = {
             let c = &self.controls;
             c.forward || c.back || c.left || c.right
@@ -298,10 +467,13 @@ impl Walker {
         let dt = to - self.t;
         let c = self.character.as_mut().ok_or("PlayNoWalker")?;
         c.settings.tick = dt;
-        let s = c.tick(&self.world, self.controls.walker());
+        let started = std::time::Instant::now();
+        let s = c.tick(self.live.space(), self.controls.walker());
+        let took = started.elapsed().as_secs_f64();
         c.settings.tick = tick;
         {
             let mut log = self.log.borrow_mut();
+            log.tick_seconds += took;
             log.ticks += 1;
             log.blocked += u64::from(s.blocked);
             log.stepped += u64::from(s.stepped);
@@ -342,9 +514,194 @@ impl Walker {
     }
 }
 
+impl Walker {
+    /// Applies the run's state to the live world when it changed.
+    fn follow(&mut self, vm: &fo4_vm::Vm<'_>) -> Result<(), String> {
+        if !self.live.follows() || !self.state.update(vm) {
+            return Ok(());
+        }
+        self.apply_state()
+    }
+
+    fn apply_state(&mut self) -> Result<(), String> {
+        let b = Budget::new(1 << 32);
+        self.live
+            .apply(&self.state, &b)
+            .map_err(|e| e.to_string())?;
+        let mut log = self.log.borrow_mut();
+        log.rules.insert(crate::rules::LIVE_COLLISION);
+        Ok(())
+    }
+
+    /// Through a load door: the walking world of the door's destination,
+    /// the walker settled at the teleport position, the point given to the
+    /// run at the activation's second.
+    fn cross(&mut self, run: &View<'_, '_>, door: FormKey, to: LoadDoor) -> Result<Next, String> {
+        let started = std::time::Instant::now();
+        let (m, _) = run.sources;
+        let b = Budget::new(m.limits.max_memory);
+        let cell = crate::world::start_cell(run.store, &to.space, to.pos, &b)
+            .map_err(|e| e.to_string())?;
+        let report = self.load(run, &cell)?;
+        if let Some(g) = &mut self.grid {
+            g.centre = (run.store.signature(&to.space) == Some(*b"WRLD"))
+                .then(|| (to.space.clone(), crate::world::square(to.pos)));
+        }
+        let mut c = Character::new(self.opts.params, self.opts.settings, to.pos)
+            .map_err(|e| e.to_string())?;
+        c.settle(self.live.space(), self.opts.settle_ticks);
+        c.ticks = 0;
+        let p = Point {
+            t: self.t,
+            space: to.space.clone(),
+            pos: c.feet,
+            facing: None,
+        };
+        self.space = Some(to.space.clone());
+        self.last = Some(p.clone());
+        self.still = false;
+        let mut log = self.log.borrow_mut();
+        log.rules.insert(crate::rules::LOAD_DOOR);
+        log.doors.push(Crossed {
+            t: self.t,
+            door,
+            to,
+            cell,
+            feet: c.feet,
+            seconds: started.elapsed().as_secs_f64(),
+            report,
+        });
+        log.points += 1;
+        log.track.push(p.clone());
+        drop(log);
+        self.character = Some(c);
+        Ok(Next::Slice(Slice {
+            points: vec![p],
+            until: self.t,
+            actions: Vec::new(),
+        }))
+    }
+
+    /// With `--play-follow-grid`: when the walker's feet stand in another
+    /// grid square of a worldspace than the one the walking world was
+    /// built about, the walking world is built again about the cell
+    /// there (a policy of the play mode, as the viewer's moving grid).
+    fn follow_grid(&mut self, run: &View<'_, '_>) -> Result<(), String> {
+        let (Some(g), Some(c), Some(space)) = (&self.grid, &self.character, &self.space) else {
+            return Ok(());
+        };
+        if run.store.signature(space) != Some(*b"WRLD") {
+            return Ok(());
+        }
+        let sq = crate::world::square(c.feet);
+        let here = Some((space.clone(), sq));
+        if g.centre.is_none() {
+            if let Some(g) = &mut self.grid {
+                g.centre = here;
+            }
+            return Ok(());
+        }
+        if g.centre == here {
+            return Ok(());
+        }
+        let started = std::time::Instant::now();
+        let (m, _) = run.sources;
+        let b = Budget::new(m.limits.max_memory);
+        let space = space.clone();
+        let feet = c.feet;
+        let cell =
+            crate::world::start_cell(run.store, &space, feet, &b).map_err(|e| e.to_string())?;
+        self.load(run, &cell)?;
+        if let Some(g) = &mut self.grid {
+            g.centre = here;
+        }
+        self.log
+            .borrow_mut()
+            .grid
+            .push((self.t, cell, feet, started.elapsed().as_secs_f64()));
+        Ok(())
+    }
+
+    /// Builds the walking world about `cell` in place of the present one
+    /// (the live world's state applied again); returns its report.
+    fn load(&mut self, run: &View<'_, '_>, cell: &FormKey) -> Result<String, String> {
+        let around = self
+            .grid
+            .as_ref()
+            .map(|g| g.around)
+            .or(self.doors.as_ref().map(|d| d.around))
+            .unwrap_or(0);
+        let (m, vfs) = run.sources;
+        let follows = self.live.follows();
+        let mut built = crate::world::build(
+            m,
+            run.store,
+            vfs,
+            cell,
+            crate::world::Options {
+                around,
+                live: follows,
+                doors: self.doors.is_some(),
+            },
+        )
+        .map_err(|e| e.to_string())?;
+        let stats = self.live.stats.clone();
+        self.live = match built.live.take() {
+            Some((dormant, info)) => Live::new(
+                built.world,
+                built.refs,
+                dormant,
+                info,
+                built.space.clone(),
+                self.nowait,
+            ),
+            None => Live::fixed(built.world, built.refs),
+        }
+        .map_err(|e| e.to_string())?;
+        self.live.stats = stats;
+        if follows {
+            self.apply_state()?;
+        }
+        if self.boxes.is_some() {
+            self.boxes = Some(if self.statics_out {
+                built.boxes.without_kinds(&crate::rules::STATIC_KINDS)
+            } else {
+                built.boxes
+            });
+        }
+        if let Some(d) = &mut self.doors {
+            d.doors = built.doors;
+        }
+        Ok(built.report)
+    }
+}
+
 impl Driver for Walker {
     fn next(&mut self, run: &View<'_, '_>) -> Next {
         let _ = self.visibility.update(run.vm);
+        let followed = self.follow_grid(run).and_then(|()| self.follow(run.vm));
+        let crossed = match (followed, self.door.take()) {
+            (Err(why), _) => Some(Err(why)),
+            (Ok(()), Some((door, to))) => Some(self.cross(run, door, to)),
+            (Ok(()), None) => None,
+        };
+        let stats = self.live.stats.clone();
+        if self.live.follows() {
+            self.log.borrow_mut().live = Some(stats);
+        }
+        match crossed {
+            Some(Ok(n)) => return n,
+            Some(Err(why)) => {
+                self.log.borrow_mut().activations.push((
+                    self.t,
+                    [0.0; 3],
+                    [0.0; 3],
+                    Err(format!("the walker stopped: {why}")),
+                ));
+                return Next::Stop;
+            }
+            None => {}
+        }
         let first = run
             .vm
             .world
@@ -458,6 +815,41 @@ mod tests {
         let log = w.log.borrow();
         assert_eq!(log.activations.len(), 1);
         assert!(log.rules.contains(crate::rules::ACTIVATE_RAY));
+    }
+
+    #[test]
+    fn joined_slices_give_the_same_points_and_actions() {
+        let text = "0 face 0\n1 forward on\n1.5 turn 30\n2.005 forward off\n2.5 activate\n3 toward 100 50\n5 end\n";
+        let start = Point {
+            t: 0.0,
+            space: key(1),
+            pos: [0.0, 0.0, 5.0],
+            facing: None,
+        };
+        let run = |slice: f64| {
+            let opts = Options {
+                reach: Some(250.0),
+                slice,
+                ..Options::default()
+            };
+            let mut w = Walker::new(
+                floor(),
+                vec![None, Some(key(7))],
+                Script::parse(text).unwrap(),
+                opts,
+            )
+            .unwrap();
+            let s = slices(&mut w, &start);
+            let n = s.len();
+            let pts: Vec<Point> = s.iter().flat_map(|x| x.points.clone()).collect();
+            let acts: Vec<Act> = s.iter().flat_map(|x| x.actions.clone()).collect();
+            (n, pts, acts)
+        };
+        let (n1, p1, a1) = run(0.0);
+        let (n2, p2, a2) = run(0.25);
+        assert_eq!(p1, p2);
+        assert_eq!(a1, a2);
+        assert!(n2 * 3 < n1, "{n1} {n2}");
     }
 
     #[test]

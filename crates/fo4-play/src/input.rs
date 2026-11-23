@@ -9,6 +9,10 @@
 //! - `face DEGREES`: the heading, degrees from +X towards +Y (the mouse
 //!   turned to it); `turn DEGREES`: the heading changed by that much;
 //! - `pitch DEGREES`: the eye's angle above the horizontal (up positive);
+//! - `toward X Y`: walk to a point: at each of the walker's ticks the
+//!   heading turns to the point (horizontally) and forward is held, until
+//!   the walker is within half a tick's move of it (a player steering by
+//!   eye; `face`, `turn` or `forward off` ends it and lets forward go);
 //! - `activate`: the activation key, on what the crosshair points at;
 //! - `end`: the input is over at that second.
 use std::fmt;
@@ -30,6 +34,8 @@ pub enum Command {
     Face(f64),
     Turn(f64),
     Pitch(f64),
+    /// Walk to a point (x, y).
+    Toward(f64, f64),
     Activate,
     End,
 }
@@ -112,11 +118,13 @@ impl Script {
                     }
                     Command::Pitch(p)
                 }
+                Some("toward") => Command::Toward(num(value(2)?)?, num(value(3)?)?),
                 Some("activate") => Command::Activate,
                 Some("end") => Command::End,
-                _ => return Err(bad("expected SECONDS forward|back|left|right|run on|off, face|turn|pitch DEGREES, activate or end")),
+                _ => return Err(bad("expected SECONDS forward|back|left|right|run on|off, face|turn|pitch DEGREES, toward X Y, activate or end")),
             };
             let extra = match command {
+                Command::Toward(..) => 4,
                 Command::Key(..) | Command::Face(_) | Command::Turn(_) | Command::Pitch(_) => 3,
                 Command::Activate | Command::End => 2,
             };
@@ -148,21 +156,38 @@ pub struct Controls {
     pub heading: f64,
     /// Degrees above the horizontal.
     pub pitch: f64,
+    /// The point a `toward` command walks to.
+    pub target: Option<[f64; 2]>,
 }
 impl Controls {
     /// Applies a command; `Activate` and `End` change nothing here.
     pub fn apply(&mut self, c: Command) {
         match c {
             Command::Key(k, on) => match k {
-                Key::Forward => self.forward = on,
+                Key::Forward => {
+                    self.forward = on;
+                    if !on {
+                        self.target = None;
+                    }
+                }
                 Key::Back => self.back = on,
                 Key::Left => self.left = on,
                 Key::Right => self.right = on,
                 Key::Run => self.run = on,
             },
-            Command::Face(d) => self.heading = d,
-            Command::Turn(d) => self.heading += d,
+            Command::Face(d) => {
+                self.heading = d;
+                self.drop_target();
+            }
+            Command::Turn(d) => {
+                self.heading += d;
+                self.drop_target();
+            }
             Command::Pitch(p) => self.pitch = p,
+            Command::Toward(x, y) => {
+                self.target = Some([x, y]);
+                self.forward = true;
+            }
             Command::Activate | Command::End => {}
         }
     }
@@ -176,6 +201,28 @@ impl Controls {
             heading: self.heading.to_radians(),
             run: self.run,
         }
+    }
+    /// Ends a walk to a point: its forward key is let go.
+    fn drop_target(&mut self) {
+        if self.target.take().is_some() {
+            self.forward = false;
+        }
+    }
+    /// Steers to the target from the walker's feet: the heading toward it,
+    /// and when it is within `arrive` units, forward let go and the target
+    /// dropped. Returns whether it arrived.
+    pub fn steer(&mut self, feet: [f64; 3], arrive: f64) -> bool {
+        let Some([x, y]) = self.target else {
+            return false;
+        };
+        let (dx, dy) = (x - feet[0], y - feet[1]);
+        if dx.hypot(dy) <= arrive {
+            self.target = None;
+            self.forward = false;
+            return true;
+        }
+        self.heading = dy.atan2(dx).to_degrees();
+        false
     }
     /// The eye's unit direction.
     pub fn look(&self) -> [f64; 3] {
@@ -214,6 +261,7 @@ mod tests {
             ("0 jump on\n", 1),
             ("0 pitch 120\n", 1),
             ("0 activate now\n", 1),
+            ("0 toward 1\n", 1),
             ("-1 end\n", 1),
             ("x face 0\n", 1),
         ] {
@@ -238,5 +286,26 @@ mod tests {
         }
         .look();
         assert!((l[2] - 1.0).abs() < 1e-12);
+    }
+}
+
+#[cfg(test)]
+mod steer_tests {
+    use super::*;
+
+    #[test]
+    fn toward_steers_to_the_point_and_stops_there() {
+        let s = Script::parse("0 toward 100 100\n").unwrap();
+        let mut c = Controls::default();
+        c.apply(s.events[0].command);
+        assert!(c.forward && c.target == Some([100.0, 100.0]));
+        assert!(!c.steer([0.0, 0.0, 0.0], 1.0));
+        assert!((c.heading - 45.0).abs() < 1e-12);
+        assert!(c.steer([99.5, 100.0, 0.0], 1.0));
+        assert!(!c.forward && c.target.is_none());
+        // A face command ends the walk to a point.
+        c.apply(Command::Toward(5.0, 0.0));
+        c.apply(Command::Face(10.0));
+        assert!(c.target.is_none() && !c.forward);
     }
 }

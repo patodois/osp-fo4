@@ -20,10 +20,12 @@ use fo4_vm::Vm;
 
 pub mod input;
 pub mod link;
+pub mod live;
 pub mod pick;
 mod run;
 pub mod state;
 pub mod walker;
+pub mod world;
 
 pub use fo4_vm::player::Action as PlayerAction;
 pub use fo4_vm::track::Point;
@@ -44,8 +46,36 @@ pub mod rules {
     /// the walking world holds no collision for, placed by the reference's
     /// transform (`--play-pick-bounds`).
     pub const ACTIVATE_BOUNDS: &str = "play_activate_object_bounds_v1";
+    /// The walking world follows the run's state at each slice as a
+    /// timeline frame at that second does: the collision of a reference
+    /// the frame would not draw leaves, of one it would draw enters, of a
+    /// moved one moves by the move's translation (`--play-live-world`).
+    pub const LIVE_COLLISION: &str = "play_live_collision_follows_run_v1";
+    /// The activation of a placed door whose `XTEL` names a door puts the
+    /// walker at the `XTEL` position in that door's space at the
+    /// activation's second (`--play-load-doors`).
+    pub const LOAD_DOOR: &str = "play_load_door_activation_v1";
+    /// The run reads trigger volumes and placed actors about the walker's
+    /// points as it reaches them, as it reads them about the caller's track
+    /// (`--play-region-walker`).
+    pub const REGION: &str = "play_region_around_walker_v1";
+    /// Under the object bounds reading, the boxes of references whose base
+    /// is a static, a static collection or a movable static are left out
+    /// (`--play-pick-bounds-activatable`).
+    pub const BOUNDS_NOT_STATIC: &str = "play_activate_bounds_not_static_v1";
+    /// The record types `BOUNDS_NOT_STATIC` leaves out.
+    pub const STATIC_KINDS: [[u8; 4]; 3] = [*b"STAT", *b"SCOL", *b"MSTT"];
     /// Every rule above.
-    pub const ALL: [&str; 4] = [PLAYER_FEET, RUN_CLOCK, ACTIVATE_RAY, ACTIVATE_BOUNDS];
+    pub const ALL: [&str; 8] = [
+        PLAYER_FEET,
+        RUN_CLOCK,
+        ACTIVATE_RAY,
+        ACTIVATE_BOUNDS,
+        LIVE_COLLISION,
+        LOAD_DOOR,
+        REGION,
+        BOUNDS_NOT_STATIC,
+    ];
 }
 
 /// One player action of a slice: an activation (or another action of
@@ -131,6 +161,28 @@ pub type Counts = std::collections::BTreeMap<String, u64>;
 
 /// What a run gives back: its driver and the play counts.
 pub type Played = (Option<Box<dyn Driver>>, Counts);
+
+/// The play mode's own switches for the run (the walker's are its
+/// driver's).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Options {
+    /// Read trigger volumes and placed actors about the walker's points as
+    /// it reaches them (`--play-region-walker`,
+    /// `play_region_around_walker_v1`).
+    pub region: bool,
+}
+
+/// [`new_game`] with the play mode's own switches.
+pub fn new_game_with(
+    args: Vec<String>,
+    driver: Option<Box<dyn Driver>>,
+    options: Options,
+) -> Result<Played, Box<dyn std::error::Error>> {
+    run::play::install_options(options);
+    let out = new_game(args, driver);
+    run::play::install_options(Options::default());
+    out
+}
 
 /// Runs `quest_run` with these arguments (`MANIFEST new-game OUT_DIR
 /// [switches...]`): with a driver, its clock loop is stepped by the

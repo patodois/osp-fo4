@@ -35,6 +35,9 @@ pub struct Status {
     /// The run's last enable (`true`) or disable of each reference, when it
     /// changed since the last status.
     pub visibility: Option<BTreeMap<FormKey, bool>>,
+    /// The run's visibility changes and moves as the live world reads them
+    /// (`crate::live::RunState`), when they changed since the last status.
+    pub run: Option<crate::live::RunState>,
 }
 
 /// The driver on the run's thread.
@@ -46,6 +49,7 @@ pub struct Link {
     visibility: Visibility,
     /// Statuses that carried the visibility.
     sent_visibility: usize,
+    run: crate::live::RunState,
 }
 
 impl Link {
@@ -57,6 +61,7 @@ impl Link {
             timeline: None,
             visibility: Visibility::default(),
             sent_visibility: 0,
+            run: crate::live::RunState::default(),
         }
     }
 
@@ -70,6 +75,7 @@ impl Link {
             self.timeline = run.timeline();
         }
         let changed = self.visibility.update(run.vm) || self.sent_visibility == 0;
+        let moved = self.run.update(run.vm);
         let now = run.now();
         let mut status = Status {
             now,
@@ -90,6 +96,9 @@ impl Link {
         if changed {
             self.sent_visibility += 1;
             status.visibility = Some(self.visibility.state.clone());
+        }
+        if moved {
+            status.run = Some(self.run.clone());
         }
         status
     }
@@ -254,6 +263,7 @@ mod tests {
             subtitles: vec!["Hello.".into()],
             stage: Some(("Q".into(), 20, 10.0)),
             visibility: None,
+            run: None,
         };
         assert_eq!(
             title(&s),

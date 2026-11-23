@@ -23,6 +23,8 @@ use std::collections::VecDeque;
 thread_local! {
     /// The driver of the next run on this thread ([`install`]).
     static DRIVER: RefCell<Option<Box<dyn Driver>>> = const { RefCell::new(None) };
+    /// The play options of the next run on this thread ([`install_options`]).
+    static OPTIONS: RefCell<crate::Options> = RefCell::new(crate::Options::default());
     /// Counts of the last stepped run ([`take_counts`]).
     static COUNTS: RefCell<BTreeMap<String, u64>> = const { RefCell::new(BTreeMap::new()) };
 }
@@ -30,6 +32,11 @@ thread_local! {
 /// Installs the driver of the next run on this thread.
 pub(crate) fn install(d: Option<Box<dyn Driver>>) {
     DRIVER.with_borrow_mut(|x| *x = d);
+}
+
+/// Installs the play options of the next run on this thread.
+pub(crate) fn install_options(o: crate::Options) {
+    OPTIONS.with_borrow_mut(|x| *x = o);
 }
 
 /// Takes the driver back after the run.
@@ -128,6 +135,8 @@ struct Feed {
     /// Hello volumes by placed actor (`None`: the actor has none), with
     /// their folds; empty when hello lines are off.
     hello: Vec<Option<(Volume, Folded)>>,
+    /// The hello distance when hello crossings are read.
+    hello_on: Option<f64>,
     body: Option<u32>,
     /// Points the caller's track had after the run's start (dropped: the
     /// driver's points take their place).
@@ -137,6 +146,73 @@ struct Feed {
     prefix_changed: u64,
     /// The caller's track as the run loaded it.
     loaded: Option<Rc<Track>>,
+    /// With `--play-region-walker` (`play_region_around_walker_v1`): the
+    /// exterior grid squares whose cells the run has read, by worldspace,
+    /// and the interior cells read.
+    region: Option<Region>,
+}
+
+/// What the run has read about the player's points ([`Feed::grow`]).
+#[derive(Debug, Clone, Default)]
+struct Region {
+    squares: BTreeMap<FormKey, std::collections::BTreeSet<(i64, i64)>>,
+    interiors: std::collections::BTreeSet<FormKey>,
+}
+impl Region {
+    /// What `Place::load_with` read about these points: each interior
+    /// cell, and each worldspace's squares within one of the points' box.
+    fn of(store: &Store, points: &[Point]) -> Region {
+        let mut r = Region::default();
+        let mut boxes: BTreeMap<FormKey, ([i64; 2], [i64; 2])> = BTreeMap::new();
+        for p in points {
+            if store.signature(&p.space) == Some(*b"CELL") {
+                r.interiors.insert(p.space.clone());
+                continue;
+            }
+            let g = square(p.pos);
+            let e = boxes
+                .entry(p.space.clone())
+                .or_insert(([i64::MAX; 2], [i64::MIN; 2]));
+            for i in 0..2 {
+                e.0[i] = e.0[i].min([g.0, g.1][i]);
+                e.1[i] = e.1[i].max([g.0, g.1][i]);
+            }
+        }
+        for (space, (lo, hi)) in boxes {
+            let set = r.squares.entry(space).or_default();
+            for i in lo[0] - 1..=hi[0] + 1 {
+                for j in lo[1] - 1..=hi[1] + 1 {
+                    set.insert((i, j));
+                }
+            }
+        }
+        r
+    }
+    /// Whether the cells about a point have been read; if not, marks them
+    /// read.
+    fn claim(&mut self, store: &Store, p: &Point) -> bool {
+        if store.signature(&p.space) == Some(*b"CELL") {
+            return !self.interiors.insert(p.space.clone());
+        }
+        let g = square(p.pos);
+        let set = self.squares.entry(p.space.clone()).or_default();
+        let around: Vec<(i64, i64)> = (-1..=1)
+            .flat_map(|i| (-1..=1).map(move |j| (g.0 + i, g.1 + j)))
+            .collect();
+        if around.iter().all(|x| set.contains(x)) {
+            return true;
+        }
+        set.extend(around);
+        false
+    }
+}
+
+/// The exterior grid square of a position (`fo4_vm::track`'s cell size).
+fn square(p: [f64; 3]) -> (i64, i64) {
+    (
+        (p[0] / crate::world::CELL_SIZE).floor() as i64,
+        (p[1] / crate::world::CELL_SIZE).floor() as i64,
+    )
 }
 impl Feed {
     /// Keeps the caller's track up to the run's present second (the
@@ -148,10 +224,12 @@ impl Feed {
         let mut feed = Feed {
             volumes: vec![Folded::default(); w.place.volumes.len()],
             hello: Vec::new(),
+            hello_on: None,
             body,
             dropped: 0,
             prefix_changed: 0,
             loaded: None,
+            region: None,
         };
         let Some(track) = w.place.track.clone() else {
             return feed;
@@ -168,6 +246,7 @@ impl Feed {
             return feed;
         }
         if let (Some(d), true) = (w.talk.hello_distance, w.talk.sw.hello && w.place.sw.actors) {
+            feed.hello_on = Some(d);
             feed.hello = w
                 .place
                 .actors
@@ -177,6 +256,9 @@ impl Feed {
         }
         for pair in kept.windows(2) {
             feed.fold(w, step_of(&pair[0], &pair[1]));
+        }
+        if OPTIONS.with_borrow(|o| o.region) {
+            feed.region = Some(Region::default());
         }
         w.place.track = Some(Rc::new(Track { points: kept }));
         feed.rebuild(w);
@@ -258,6 +340,100 @@ impl Feed {
             self.prefix_changed += 1;
         }
         w.talk.crossings = out;
+    }
+    /// With `--play-region-walker`: reads the trigger volumes and placed
+    /// actors about each new point whose cells the run has not read yet
+    /// (`Place::load_with` about that one point), appends those it does not
+    /// hold, folds the whole track so far into their crossings and rebuilds
+    /// the crossing lists. Returns how many volumes and actors were added.
+    fn grow(
+        &mut self,
+        w: &mut World,
+        store: &Store,
+        points: &[Point],
+        b: &Budget,
+    ) -> Result<(usize, usize), E> {
+        let Some(mut region) = self.region.take() else {
+            return Ok((0, 0));
+        };
+        if region.squares.is_empty() && region.interiors.is_empty() {
+            if let Some(t) = &self.loaded {
+                region = Region::of(store, &t.points);
+            }
+        }
+        let mut added = (0, 0);
+        for p in points {
+            if region.claim(store, p) {
+                continue;
+            }
+            count("play: regions read about the walker's points", 1);
+            let around = fo4_vm::track::Place::load_with(
+                store,
+                Track {
+                    points: vec![p.clone()],
+                },
+                w.place.sw,
+                Vec::new(),
+                b,
+            )?;
+            let have: std::collections::BTreeSet<FormKey> =
+                w.place.volumes.iter().map(|v| v.key.clone()).collect();
+            let actors: std::collections::BTreeSet<FormKey> =
+                w.place.actors.iter().map(|a| a.key.clone()).collect();
+            let track = w.place.track.clone();
+            let moves: Vec<(Point, Point)> = track
+                .as_ref()
+                .map(|t| {
+                    t.points
+                        .windows(2)
+                        .map(|x| (x[0].clone(), x[1].clone()))
+                        .collect()
+                })
+                .unwrap_or_default();
+            for v in around.volumes {
+                if have.contains(&v.key) {
+                    continue;
+                }
+                let mut f = Folded::default();
+                for (a, c) in &moves {
+                    f.push(&v, self.body, step_of(a, c));
+                }
+                w.place.volumes.push(v);
+                self.volumes.push(f);
+                added.0 += 1;
+            }
+            let hello = self.hello_on;
+            for a in around.actors {
+                if actors.contains(&a.key) {
+                    continue;
+                }
+                if let Some(d) = hello {
+                    let h = hello_volume(&a, d).map(|v| {
+                        let mut f = Folded::default();
+                        for (x, c) in &moves {
+                            f.push(&v, None, step_of(x, c));
+                        }
+                        (v, f)
+                    });
+                    self.hello.push(h);
+                }
+                w.place.actors.push(a);
+                added.1 += 1;
+            }
+        }
+        self.region = Some(region);
+        if added != (0, 0) {
+            count(
+                "play: trigger volumes read about the walker's points",
+                added.0 as u64,
+            );
+            count(
+                "play: placed actors read about the walker's points",
+                added.1 as u64,
+            );
+            self.rebuild(w);
+        }
+        Ok(added)
     }
     /// Appends the slice's points (none before the track's last second).
     fn extend(&mut self, w: &mut World, s: &Slice) -> Result<(), E> {
@@ -545,6 +721,16 @@ fn stepped(
                         }
                         let moved = !s.points.is_empty();
                         feed.extend(&mut vm.world, &s)?;
+                        if moved && feed.region.is_some() {
+                            let (v, a) = feed.grow(&mut vm.world, store, &s.points, b)?;
+                            if v + a > 0 {
+                                vm.rules.insert(crate::rules::REGION);
+                                let _ = writeln!(
+                                    names,
+                                    "## play: {v} trigger volumes and {a} placed actors read about the walker"
+                                );
+                            }
+                        }
                         if moved
                             && then.cond_distance
                             && reoffer_distance_waits(vm, store, names, top, b) > 0

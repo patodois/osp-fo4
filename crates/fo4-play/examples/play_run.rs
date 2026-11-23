@@ -16,120 +16,33 @@
 //! object bounds of references with no collision,
 //! `play_activate_object_bounds_v1`), `--walk-speed UNITS` and `--run-speed UNITS` (the caller's
 //! values of the walker's speed rules), `--play-tick SECONDS` (the walker's
-//! fixed tick). `--replay STEP` gives the run its own track back in slices
+//! fixed tick), `--play-slice SECONDS` (ticks joined into slices that long,
+//! for speed: the run's outcome does not depend on it). `--replay STEP` gives the run its own track back in slices
 //! of STEP seconds instead (the stepped loop's check). Writes `quest_run`'s
 //! outputs to OUT_DIR and `play.txt` (what the walker did, the play counts)
 //! and `play-track.txt` (the run's track as `--track` reads it).
+//! `--play-live-world` makes the walking world follow the run's state
+//! (`play_live_collision_follows_run_v1`; `--play-nowait` reads the NoWait
+//! forms as the plain natives, as `--timeline-nowait` does for frames);
+//! `--play-load-doors` crosses the load doors the activation meets
+//! (`play_load_door_activation_v1`); `--play-region-walker` reads trigger
+//! volumes and placed actors about the walker's points
+//! (`play_region_around_walker_v1`); `--play-follow-grid` builds the
+//! walking world again about the walker's grid square when it leaves it (a
+//! policy of the play mode, as the viewer's moving grid).
+//! `--play-pick-bounds-activatable` leaves out the object bounds of
+//! statics (`play_activate_bounds_not_static_v1`).
 //! `--probe-ray X Y Z HEADING PITCH REACH --probe-ref KEY` prints what a ray
 //! from that eye meets and where the reference's collision is, then stops
 //! (an aid for choosing where an input aims).
 use fo4_core::{Budget, Manifest};
-use fo4_play::{input::Script, walker, Driver, Replay};
-use fo4_plugin::{typed::Store, FormKey};
-use fo4_scene::{Loader, RuleLevel};
+use fo4_play::{input::Script, walker, world, Driver, Replay};
+use fo4_plugin::typed::Store;
 use fo4_vfs::Vfs;
 use std::fmt::Write as _;
 use std::path::Path;
 
 type E = Box<dyn std::error::Error>;
-
-/// The cell under a point: the interior cell itself, or the exterior cell
-/// of the worldspace whose grid square holds it.
-fn start_cell(store: &Store, space: &FormKey, pos: [f64; 3], b: &Budget) -> Result<FormKey, E> {
-    match store.signature(space) {
-        Some(s) if s == *b"CELL" => Ok(space.clone()),
-        Some(s) if s == *b"WRLD" => {
-            let g = [
-                (pos[0] / 4096.0).floor() as i32,
-                (pos[1] / 4096.0).floor() as i32,
-            ];
-            for c in store.cells() {
-                if store.world(&c).as_ref() != Some(space) {
-                    continue;
-                }
-                if fo4_scene::grid::grid_of(store, &c, &b.child())? == Some(g) {
-                    return Ok(c);
-                }
-            }
-            Err(format!("PlayStartCell: no exterior cell at grid {g:?}").into())
-        }
-        _ => Err("PlayStartCell: the track's space names no winning CELL or WRLD".into()),
-    }
-}
-
-/// The walking world, the placed reference of each of its sources, the
-/// object bounds of the references with no collision, and a report.
-type WalkWorld = (
-    fo4_walk::World,
-    Vec<Option<FormKey>>,
-    fo4_play::pick::Boxes,
-    String,
-);
-
-/// The walking world of the start cell and the cells about it, with the
-/// placed reference of each source.
-fn walk_world(
-    m: &Manifest,
-    store: &Store,
-    vfs: &Vfs,
-    cell: &FormKey,
-    around: u32,
-) -> Result<WalkWorld, E> {
-    let level = RuleLevel::Hypotheses;
-    let limits = &m.limits;
-    let budget = Budget::new(8 << 30).with_scope_limit(limits.max_memory);
-    let mut loader = Loader::new(store, vfs, &m.language, level, &budget);
-    let mut scene = loader.cell(cell, &budget)?;
-    let mut grid = None;
-    if around > 0 {
-        let a = fo4_scene::grid::around(store, &scene.cell.key, around, &budget)?;
-        fo4_scene::grid::absorb_around(&mut loader, &mut scene, &a, &budget)?;
-        grid = Some(a);
-    }
-    let options = fo4_scene::collision::Options {
-        level,
-        body_placement: None,
-    };
-    let c = fo4_scene::collision::cell(&scene, &loader, limits, options, &budget)?;
-    let placement = c
-        .body_placement
-        .ok_or("PlayWalkWorld: no body placement level")?;
-    let mut world = fo4_walk::World::build(&c, placement, &budget)?;
-    let refs_before = fo4_play::pick::references(&world, &c);
-    let mut ground = match &grid {
-        Some(a) => fo4_walk::terrain::load_with(store, a, level, &budget)?,
-        None => fo4_walk::terrain::load_around(store, &scene.cell.key, level, true, &budget)?,
-    };
-    ground.add_to(&mut world, &budget)?;
-    // Terrain sources come after the cell's: no reference.
-    let mut refs = refs_before;
-    refs.resize(world.sources.len(), None);
-    // The object bounds of the placed references with no collision in the
-    // world (used under --play-pick-bounds).
-    let (boxes, no_bounds) = fo4_play::pick::object_bounds(&scene, &refs);
-    let why: std::collections::BTreeMap<String, usize> =
-        c.unplaced.iter().fold(Default::default(), |mut m, u| {
-            *m.entry(u.code.clone()).or_default() += 1;
-            m
-        });
-    let report = format!(
-        "walk world: {} triangles, {} hulls, {} spheres, {} capsules from {} instances ({} not placed); {} sources, {} with a placed reference",
-        world.stats.triangles,
-        world.stats.hulls,
-        world.stats.spheres,
-        world.stats.capsules,
-        world.stats.instances,
-        c.unplaced.len(),
-        refs.len(),
-        refs.iter().filter(|r| r.is_some()).count()
-    ) + &format!(
-        "\nreferences with no collision in the world and object bounds: {} ({} without usable bounds); collision not placed, by code: {why:?}; placed models with no collision object: {}",
-        boxes.items.len(),
-        no_bounds,
-        c.without_collision.len()
-    );
-    Ok((world, refs, boxes, report))
-}
 
 fn value<T: std::str::FromStr>(a: &mut Vec<String>, flag: &str) -> Result<Option<T>, E>
 where
@@ -174,8 +87,25 @@ fn run() -> Result<(), E> {
     let walk_speed: Option<f64> = value(&mut a, "--walk-speed")?;
     let run_speed: Option<f64> = value(&mut a, "--run-speed")?;
     let tick: Option<f64> = value(&mut a, "--play-tick")?;
-    let pick_bounds = a.iter().any(|x| x == "--play-pick-bounds");
-    a.retain(|x| x != "--play-pick-bounds");
+    let slice: Option<f64> = value(&mut a, "--play-slice")?;
+    let flag = |a: &mut Vec<String>, f: &str| {
+        let on = a.iter().any(|x| x == f);
+        a.retain(|x| x != f);
+        on
+    };
+    let pick_bounds = flag(&mut a, "--play-pick-bounds");
+    let live_world = flag(&mut a, "--play-live-world");
+    let nowait = flag(&mut a, "--play-nowait");
+    let load_doors = flag(&mut a, "--play-load-doors");
+    let region = flag(&mut a, "--play-region-walker");
+    let follow_grid = flag(&mut a, "--play-follow-grid");
+    let activatable = flag(&mut a, "--play-pick-bounds-activatable");
+    if activatable && !pick_bounds {
+        return Err("--play-pick-bounds-activatable needs --play-pick-bounds".into());
+    }
+    if nowait && !live_world {
+        return Err("--play-nowait needs --play-live-world".into());
+    }
     let probe: Vec<String> = match a.iter().position(|x| x == "--probe-ray") {
         Some(i) => {
             let end = a.len().min(i + 9);
@@ -217,9 +147,30 @@ fn run() -> Result<(), E> {
             let space = resolved.points[0].space.clone();
             let cell = match store.signature(&first.space) {
                 Some(s) if s == *b"CELL" => first.space.clone(),
-                _ => start_cell(&store, &space, first.pos, &b)?,
+                _ => world::start_cell(&store, &space, first.pos, &b)?,
             };
-            let (world, refs, boxes, text) = walk_world(&m, &store, &vfs, &cell, around)?;
+            let built = world::build(
+                &m,
+                &store,
+                &vfs,
+                &cell,
+                world::Options {
+                    around,
+                    live: live_world,
+                    doors: load_doors,
+                },
+            )?;
+            let world::Built {
+                world,
+                refs,
+                boxes,
+                report: text,
+                live,
+                doors,
+                counts: built_counts,
+                space: built_space,
+                ..
+            } = built;
             // --probe-ray X Y Z HEADING PITCH REACH: what the ray from that
             // eye meets, and the sources of the references the caller names
             // (--probe-ref KEY), then stop (an aid for choosing where to aim).
@@ -267,6 +218,14 @@ fn run() -> Result<(), E> {
                             println!("source {s} of {k}: {n} entries, bounds {b:?}");
                         }
                     }
+                    for (r, f, lo, hi) in &boxes.items {
+                        if *r == key {
+                            println!(
+                                "object bounds of {k}: low {lo:?} high {hi:?}, placed at {:?} scale {} rotation {:?}",
+                                f.translation, f.scale, f.rotation
+                            );
+                        }
+                    }
                 }
                 return Ok(());
             }
@@ -290,6 +249,16 @@ fn run() -> Result<(), E> {
             if let Some(v) = tick {
                 opts.settings.tick = v;
             }
+            if let Some(v) = slice {
+                if !(v.is_finite() && v >= 0.0) {
+                    return Err("--play-slice takes seconds, 0 or more".into());
+                }
+                opts.slice = v;
+                let _ = writeln!(
+                    report,
+                    "walker slices joined to {v} s at least (--play-slice)"
+                );
+            }
             for (name, rule, v, origin) in opts.params.provenance() {
                 let _ = writeln!(report, "walker {name} {v} ({rule}, {origin:?})");
             }
@@ -297,9 +266,44 @@ fn run() -> Result<(), E> {
             if let Some(r) = reach {
                 let _ = writeln!(report, "activation reach {r} units (caller assumption)");
             }
-            let mut w = walker::Walker::new(world, refs, script, opts)?;
+            let mut w = match live {
+                Some((dormant, info)) => {
+                    let _ = writeln!(
+                        report,
+                        "switch: the walking world follows the run's state (--play-live-world{})",
+                        if nowait { ", --play-nowait" } else { "" }
+                    );
+                    let live =
+                        fo4_play::live::Live::new(world, refs, dormant, info, built_space, nowait)?;
+                    walker::Walker::new(fo4_walk::World::new(), Vec::new(), script, opts)?
+                        .with_live(live, nowait)
+                }
+                None => walker::Walker::new(world, refs, script, opts)?,
+            };
+            if load_doors {
+                let _ = writeln!(report, "switch: the activation crosses load doors (--play-load-doors): {} among the loaded references", doors.len());
+                w = w.with_doors(walker::Doors { doors, around });
+            }
+            if follow_grid {
+                let _ = writeln!(report, "policy: the walking world is built again about the walker's grid square when it leaves it (--play-follow-grid, {around} cells about it)");
+                w = w.with_grid(walker::Grid::new(around));
+            }
+            if region {
+                let _ = writeln!(report, "switch: trigger volumes and placed actors are read about the walker's points (--play-region-walker)");
+            }
+            for (k, v) in &built_counts {
+                let _ = writeln!(report, "{k}\t{v}");
+            }
             if pick_bounds {
                 let _ = writeln!(report, "switch: the activation's ray meets the object bounds of references with no collision (--play-pick-bounds)");
+                let boxes = if activatable {
+                    let kept = boxes.without_kinds(&fo4_play::rules::STATIC_KINDS);
+                    let _ = writeln!(report, "switch: object bounds of statics, static collections and movable statics left out (--play-pick-bounds-activatable): {} of {} boxes kept", kept.items.len(), boxes.items.len());
+                    w = w.with_static_boxes_left_out();
+                    kept
+                } else {
+                    boxes
+                };
                 w = w.with_boxes(boxes);
             }
             let log = w.log.clone();
@@ -308,7 +312,7 @@ fn run() -> Result<(), E> {
         _ => return Err(usage.into()),
     };
     let prepared = started.elapsed().as_secs_f64();
-    let (_, counts) = fo4_play::new_game(args, Some(driver))?;
+    let (_, counts) = fo4_play::new_game_with(args, Some(driver), fo4_play::Options { region })?;
     let _ = writeln!(
         report,
         "seconds: walk world {prepared:.2}, run {:.2}",
@@ -331,6 +335,44 @@ fn run() -> Result<(), E> {
             "walker: {} ticks, {} slices ({} standing), {} points, {} blocked, {} stepped, {} airborne",
             l.ticks, l.slices, l.standing_slices, l.points, l.blocked, l.stepped, l.airborne
         );
+        let _ = writeln!(
+            report,
+            "cost: walker ticks {:.6} s in all, {:.3} us a tick",
+            l.tick_seconds,
+            1e6 * l.tick_seconds / (l.ticks.max(1) as f64)
+        );
+        for (t, feet) in &l.arrivals {
+            let _ = writeln!(report, "toward: arrived at {t} s at {feet:?}");
+        }
+        if let Some(s) = &l.live {
+            let _ = writeln!(
+                report,
+                "live world: {} applies of the run's state, {} references entered (or came back), {} left, {} moved; {:.6} s in all, longest {:.6} s",
+                s.applies, s.entered, s.left, s.moved, s.seconds, s.longest
+            );
+        }
+        for (t, cell, feet, secs) in &l.grid {
+            let _ = writeln!(
+                report,
+                "grid: at {t} s the walking world built again about cell {} (feet {feet:?}) in {secs:.2} s",
+                fo4_vm::bind::record_key(cell)
+            );
+        }
+        for d in &l.doors {
+            let _ = writeln!(
+                report,
+                "load door at {} s: {} to {} in {}: cell {}, teleport {:?}, feet settled at {:?}; walking world built in {:.2} s\n{}",
+                d.t,
+                fo4_vm::bind::record_key(&d.door),
+                fo4_vm::bind::record_key(&d.to.to),
+                fo4_vm::bind::record_key(&d.to.space),
+                fo4_vm::bind::record_key(&d.cell),
+                d.to.pos,
+                d.feet,
+                d.seconds,
+                d.report
+            );
+        }
         for r in &l.rules {
             let _ = writeln!(report, "rule relied on\t{r}");
         }
