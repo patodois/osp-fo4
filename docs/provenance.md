@@ -827,3 +827,18 @@ recognised from prior general knowledge and are pending rules. No combat,
 behaviour or animation tool or library of any project, editor, editor source
 or definition file, script source or game executable was opened or searched
 for.
+
+The play mode (`fo4-play`, [spec/play.md](../spec/play.md)) is this
+project's own code over its own crates: the stepped clock loop is
+`quest_run`'s loop (compiled from the example's source, three patch points)
+with a horizon; the crossing folds repeat `fo4_vm::track::intervals` move by
+move; the scripted input format, the walker's slices, the eye ray against the
+walking world's primitives (Möller and Trumbore's ray and triangle test, a
+textbook method recalled from general knowledge; a ternary and bisection
+search for widened convex bodies) and the object bounds box (OBND as
+`spec/plugin.md` reads it) are local work. Recognised from prior general
+knowledge and kept as pending rules: that a crosshair is a ray from the eye,
+that activation picks the first object it meets within a reach, that script
+time and frame time run together. No source was consulted (no network in
+this step); no game executable, editor, other implementation or game run was
+opened.

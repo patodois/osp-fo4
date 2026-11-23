@@ -4,6 +4,7 @@ This page is the hand-over point. Everything on `main` builds and passes its tes
 agent) can continue from here. Read `AGENTS.md` first: it holds the rules of evidence and the clean-room rules.
 
 State on 2026-11-23 (vault, cast, light, home, character graph and fight steps). Nothing below has been checked against the running game: every behaviour is a pending
+State on 2026-11-23 (vault, cast, light, home, character graph and live window steps). Nothing below has been checked against the running game: every behaviour is a pending
 rule in `spec/hypotheses.tsv`, off by default.
 
 ## Script VM and quests (`crates/fo4-vm`)
@@ -131,9 +132,21 @@ CPU and viewer agree (coverage 1.000000, same tag on every pixel at 560 s; a syn
 
 What the frames show is missing, in order of what blocks a playable opening:
 
-1. Input instead of a file: the track is the caller's. Next: a window mode that runs `fo4_vm` live, the
-   walker (`fo4-walk`) giving the player's position each tick in place of the track, the run's clock driven
-   by the frame clock; triggers and distance events then come from where the player walks.
+1. Input instead of a file (live window step, `spec/play.md`, `crates/fo4-play`): the run is now stepped by
+   input. `quest_run`'s clock loop runs with a horizon (compiled from the example's source: `fo4-vm` has no
+   library entry point for a run; the request is in `spec/play.md`), the track folded point by point; a
+   scripted input drives the walker over the start cell's collision (`play_run`) and its feet feed the run,
+   E's ray activates what it meets (`--play-pick-bounds` for references with no collision, the front door
+   among them). Checks: the run's own track replayed in slices gives `quest_run`'s outputs byte for byte on
+   the first minute and with the whole furthest run in one slice; in 0.05 s slices the furthest run differs
+   only by two waits logged when a scene waiting on a distance condition is offered again (every stage at the
+   same second). The first minute walked: the same 160 stages in the same order, 10 of them 0.014 s later
+   (the walker's capsule slides near one corner). The window (`fo4-view --play-run`, `--features
+   script-event`) feeds the same loop from the keyboard and mouse, subtitles in the title bar; it has not
+   been opened by anyone. Next: the run's visibility changes in the walking world and in the window's scene
+   (doors opening, references enabled, collision with them), load doors walked (a change of space), the
+   lines' audio; then the library run in `fo4-vm` (`spec/play.md`, Request) so `fo4-play` stops compiling
+   the example.
 2. Characters stand in the rest pose (arms out) and do not move between the run's places. Next: the run's
    animation events and packages to clips (the character graph classes the readers do not read yet,
    `spec/character-graph-census.txt`), a walk between places. 13 actors are still markers: 9 whose outfit
