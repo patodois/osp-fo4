@@ -29,6 +29,7 @@ use std::{
 pub mod anim;
 pub mod bind;
 pub mod blockers;
+pub mod chain;
 pub mod cond;
 pub mod data;
 pub mod events;
@@ -794,6 +795,11 @@ impl<'a> Vm<'a> {
     /// fail.
     pub fn next_timer_wait(&self, scale: Option<f64>) -> Option<f64> {
         self.pick_timer(scale).ok().flatten().map(|(_, dt)| dt)
+    }
+    /// The index in the queue of the timer [`Vm::fire_timer_scaled`] would
+    /// fire next; `None` when it would fire none or fail.
+    pub fn next_timer_index(&self, scale: Option<f64>) -> Option<usize> {
+        self.pick_timer(scale).ok().flatten().map(|(i, _)| i)
     }
     /// The timer due first and the real seconds until it is due, or why
     /// the queue cannot be ordered.

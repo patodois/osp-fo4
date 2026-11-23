@@ -64,6 +64,8 @@ mod setup;
 mod sweep;
 
 use caller::*;
+#[cfg(test)]
+pub(crate) use game::{drop_spent_timers, timer_key};
 use next::*;
 use report::*;
 use setup::*;
@@ -315,6 +317,23 @@ pub struct Then {
     /// A line's begin and end delivered to its own scripts
     /// (`dialogue_line_script_events_v1`, `--line-script-events`).
     pub line_script_events: bool,
+    /// A flag-0x4000 quest record carrying only `EDID` and `VMAD` read from
+    /// the occurrence before it (`quest_record_partial_previous_v1`,
+    /// `--quest-partial-previous`).
+    pub quest_partial_previous: bool,
+    /// The caller's container changes raise `OnContainerChanged`
+    /// (`inventory_container_changed_event_v1`,
+    /// `--container-change-events`); its location changes raise
+    /// `OnLocationChange` (`world_location_change_event_v1`,
+    /// `--location-change-events`).
+    pub container_events: bool,
+    pub location_events: bool,
+    /// `Location.IsChild` from the location records' parents
+    /// (`world_location_is_child_parent_chain_v1`, `--location-parents`).
+    pub location_parents: bool,
+    /// The timer budget (`timers`) counts per timer
+    /// (`vm_timer_budget_per_timer_v1`, `--timers-per-timer`).
+    pub timers_per_timer: bool,
     /// The caller's actor values (`--assume-actor-value HOLDER|player AVIF
     /// N`): what `GetValue` answers.
     pub actor_values: Vec<((String, String), f32)>,
@@ -439,6 +458,14 @@ pub enum What {
     /// a source (`player` or `none`) (`--assume-item-added HOLDER ITEM N
     /// SOURCE`).
     ItemAdded(String, String, i32, String),
+    /// A placed reference moves from one container to another, each a
+    /// holder, `player` or `none` (`--assume-container-change REF NEW
+    /// OLD`).
+    ContainerChange(String, String, String),
+    /// An actor (`player` or a placed actor) leaves a location for another,
+    /// each a location or `none` (`--assume-location-change ACTOR OLD
+    /// NEW`).
+    LocationChange(String, String, String),
 }
 #[derive(Clone, Debug)]
 pub struct Caller {
@@ -465,7 +492,9 @@ impl Caller {
             | What::Death(k, _)
             | What::Unlock(k)
             | What::Terminal(k, _)
-            | What::ItemAdded(k, ..) => k.clone(),
+            | What::ItemAdded(k, ..)
+            | What::ContainerChange(k, ..)
+            | What::LocationChange(k, ..) => k.clone(),
             What::Menu(m, _) => m.clone(),
             What::Looks(n) => n.to_string(),
         }

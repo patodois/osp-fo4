@@ -151,11 +151,37 @@ impl QuestInfo {
     /// Reads a quest's record and its VMAD block; `None` when the key
     /// names no winning QUST.
     pub fn load(store: &Store, k: &FormKey, b: &Budget) -> fo4_core::Result<Option<Self>> {
+        Ok(Self::load_with(store, k, b, false)?.map(|x| x.0))
+    }
+    /// [`QuestInfo::load`]; with `partial` a winning record whose record
+    /// flag word has [`PARTIAL_RECORD`] set and that carries no subrecord
+    /// but `EDID` and `VMAD` is read from the occurrence before it, its own
+    /// VMAD kept when it carries one (`quest_record_partial_previous_v1`).
+    /// The flag is whether that reading was applied.
+    pub fn load_with(
+        store: &Store,
+        k: &FormKey,
+        b: &Budget,
+        partial: bool,
+    ) -> fo4_core::Result<Option<(Self, bool)>> {
         if store.signature(k) != Some(*b"QUST") {
             return Ok(None);
         }
-        let Some((r, plugin)) = store.raw_with_plugin(k, b)? else {
+        let Some((winner, winner_plugin)) = store.raw_with_plugin(k, b)? else {
             return Ok(None);
+        };
+        let before = if partial && partial_only_script(&winner) {
+            match store.overrides().winner(k).and_then(|w| w.previous) {
+                Some(p) => Some(store.raw_occurrence(p as usize, b)?),
+                None => None,
+            }
+        } else {
+            None
+        };
+        let merged = before.is_some();
+        let (r, plugin, winner) = match before {
+            Some((pr, pp)) => (pr, pp, Some(winner)),
+            None => (winner, winner_plugin, None),
         };
         let ctx = Context {
             order: store.order(),
@@ -164,9 +190,19 @@ impl QuestInfo {
         let q = Quest::read(&r, ctx, b)?;
         let mut fragments: BTreeMap<(u16, i32), String> = BTreeMap::new();
         let mut fragment_script = None;
-        if let Some(i) = q.vmad {
-            let s = &r.subrecords[i];
-            let v = Vmad::read(r.data(s), r.signature, &r.source.file, s.offset, b)?;
+        // Under the partial reading the winner's VMAD when it carries one,
+        // else the record's.
+        let vmad = winner
+            .as_ref()
+            .and_then(|wr| {
+                wr.subrecords
+                    .iter()
+                    .find(|s| s.signature == *b"VMAD")
+                    .map(|s| (wr, s))
+            })
+            .or_else(|| q.vmad.map(|i| (&r, &r.subrecords[i])));
+        if let Some((vr, s)) = vmad {
+            let v = Vmad::read(vr.data(s), vr.signature, &vr.source.file, s.offset, b)?;
             if let Some(block) = &v.quest {
                 if !block.script.name.is_empty() {
                     fragment_script = Some(fo4_pex::index::lower(block.script.name));
@@ -252,27 +288,43 @@ impl QuestInfo {
                 }
             }
         }
-        Ok(Some(QuestInfo {
-            key: k.clone(),
-            plugin,
-            file: r.source.file.clone(),
-            flags: q.general.map(|g| g.flags),
-            stages,
-            objectives: q.objectives.iter().map(|o| o.objective).collect(),
-            reference_aliases,
-            location_refs,
-            location_rows,
-            collections,
-            unique_actors,
-            priority: q.general.map(|g| g.priority),
-            fragment_script,
-            unmapped_fragments: fragments.len() - mapped,
-            event: q.event,
-            event_conditions: q.event_conditions.iter().map(Condition::from).collect(),
-            created,
-            external,
-        }))
+        Ok(Some((
+            QuestInfo {
+                key: k.clone(),
+                plugin,
+                file: r.source.file.clone(),
+                flags: q.general.map(|g| g.flags),
+                stages,
+                objectives: q.objectives.iter().map(|o| o.objective).collect(),
+                reference_aliases,
+                location_refs,
+                location_rows,
+                collections,
+                unique_actors,
+                priority: q.general.map(|g| g.priority),
+                fragment_script,
+                unmapped_fragments: fragments.len() - mapped,
+                event: q.event,
+                event_conditions: q.event_conditions.iter().map(Condition::from).collect(),
+                created,
+                external,
+            },
+            merged,
+        )))
     }
+}
+
+/// The record flag bit the partial reading follows
+/// (`quest_record_partial_previous_v1`).
+pub const PARTIAL_RECORD: u32 = 0x4000;
+
+/// Whether a record carries [`PARTIAL_RECORD`] and no subrecord but `EDID`
+/// and `VMAD`.
+pub fn partial_only_script(r: &fo4_plugin::Record) -> bool {
+    r.flags & PARTIAL_RECORD != 0
+        && r.subrecords
+            .iter()
+            .all(|s| matches!(&s.signature, b"EDID" | b"VMAD"))
 }
 
 /// One row of a location's special reference list: (location ref type,
@@ -715,6 +767,15 @@ pub struct Quests {
     /// The rules the two readings above relied on (the caller adds them to
     /// the run's rules).
     pub fill_used: std::cell::RefCell<BTreeSet<&'static str>>,
+    /// A winning quest record whose flag word has [`PARTIAL_RECORD`] and
+    /// that carries no subrecord but `EDID` and `VMAD` is read from the
+    /// occurrence before it, its own VMAD kept
+    /// (`quest_record_partial_previous_v1`; `quest_run
+    /// --quest-partial-previous`). Off by default: the winner is read as
+    /// it stands, as before.
+    pub partial_previous: bool,
+    /// The quests read that way, by record key, in the order read.
+    pub partial_read: Vec<String>,
 }
 
 /// The key of the reference the run makes for a created alias
@@ -1008,10 +1069,31 @@ pub fn info(store: &Store, max_memory: u64, w: &mut World, o: ObjId) -> Option<R
         return i.clone();
     }
     let k = key_record(&key)?;
-    let b = Budget::new(max_memory);
-    let i = QuestInfo::load(store, &k, &b).ok().flatten().map(Rc::new);
+    let i = load_cached(store, max_memory, w, &k);
     w.quests.infos.insert(key, i.clone());
     i
+}
+
+/// Reads a quest's record for the run's cache, under the partial reading
+/// when the run turns it on ([`Quests::partial_previous`]).
+fn load_cached(
+    store: &Store,
+    max_memory: u64,
+    w: &mut World,
+    k: &FormKey,
+) -> Option<Rc<QuestInfo>> {
+    let b = Budget::new(max_memory);
+    let (i, merged) = QuestInfo::load_with(store, k, &b, w.quests.partial_previous)
+        .ok()
+        .flatten()?;
+    if merged {
+        w.quests
+            .fill_used
+            .borrow_mut()
+            .insert(rules::QUEST_PARTIAL_PREVIOUS);
+        w.quests.partial_read.push(bind::record_key(k));
+    }
+    Some(Rc::new(i))
 }
 
 /// The record of a quest by key, cached in the world as [`info`] caches it.
@@ -1025,8 +1107,7 @@ pub fn info_by_key(
     if let Some(i) = w.quests.infos.get(&key) {
         return i.clone();
     }
-    let b = Budget::new(max_memory);
-    let i = QuestInfo::load(store, k, &b).ok().flatten().map(Rc::new);
+    let i = load_cached(store, max_memory, w, k);
     w.quests.infos.insert(key, i.clone());
     i
 }

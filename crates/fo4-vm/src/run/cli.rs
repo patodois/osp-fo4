@@ -171,6 +171,11 @@ pub fn parse(mut a: Vec<String>) -> Result<Command, E> {
         alias_created: flag(&mut a, "--alias-created-refs"),
         alias_external: flag(&mut a, "--alias-external"),
         line_script_events: flag(&mut a, "--line-script-events"),
+        quest_partial_previous: flag(&mut a, "--quest-partial-previous"),
+        container_events: flag(&mut a, "--container-change-events"),
+        location_events: flag(&mut a, "--location-change-events"),
+        location_parents: flag(&mut a, "--location-parents"),
+        timers_per_timer: flag(&mut a, "--timers-per-timer"),
         timeline_deaths: flag(&mut a, "--timeline-deaths"),
         timeline_sits: flag(&mut a, "--timeline-sits"),
         timeline_sequences: flag(&mut a, "--timeline-sequences"),
@@ -398,6 +403,52 @@ pub fn parse(mut a: Vec<String>) -> Result<Command, E> {
             after: None,
         });
         a.drain(i..i + 5);
+    }
+    // The caller's container changes: REF NEW OLD[@SECONDS], NEW and OLD a
+    // holder, player or none.
+    while let Some(i) = a.iter().position(|x| x == "--assume-container-change") {
+        let usage = "--assume-container-change PLUGIN:OBJECTID PLUGIN:OBJECTID|player|none PLUGIN:OBJECTID|player|none[@SECONDS]";
+        let v: Vec<String> = a.get(i + 1..i + 4).ok_or(usage)?.to_vec();
+        let (old, at) = match v[2].rsplit_once('@') {
+            Some((x, t)) => (x.to_string(), Some(t.parse::<f64>()?)),
+            None => (v[2].clone(), None),
+        };
+        crate::player::parse_key(&v[0]).ok_or(usage)?;
+        for h in [&v[1], &old] {
+            if h != "player" && h != "none" {
+                crate::player::parse_key(h).ok_or(usage)?;
+            }
+        }
+        then.actions.push(Caller {
+            what: What::ContainerChange(v[0].clone(), v[1].clone(), old),
+            at,
+            after: None,
+        });
+        a.drain(i..i + 4);
+    }
+    // The caller's location changes: ACTOR OLD NEW[@SECONDS], ACTOR player,
+    // a placed actor or EDITOR_ID#ALIAS, OLD and NEW a location or none.
+    while let Some(i) = a.iter().position(|x| x == "--assume-location-change") {
+        let usage = "--assume-location-change PLUGIN:OBJECTID|EDITOR_ID#ALIAS|player PLUGIN:OBJECTID|none PLUGIN:OBJECTID|none[@SECONDS]";
+        let v: Vec<String> = a.get(i + 1..i + 4).ok_or(usage)?.to_vec();
+        let (new, at) = match v[2].rsplit_once('@') {
+            Some((x, t)) => (x.to_string(), Some(t.parse::<f64>()?)),
+            None => (v[2].clone(), None),
+        };
+        if v[0] != "player" && !v[0].contains('#') {
+            crate::player::parse_key(&v[0]).ok_or(usage)?;
+        }
+        for l in [&v[1], &new] {
+            if l != "none" {
+                crate::player::parse_key(l).ok_or(usage)?;
+            }
+        }
+        then.actions.push(Caller {
+            what: What::LocationChange(v[0].clone(), v[1].clone(), new),
+            at,
+            after: None,
+        });
+        a.drain(i..i + 4);
     }
     // The caller's actor values: HOLDER|player AVIF N.
     while let Some(i) = a.iter().position(|x| x == "--assume-actor-value") {
@@ -766,6 +817,9 @@ pub fn parse(mut a: Vec<String>) -> Result<Command, E> {
                 .into(),
         );
     }
+    if then.timers_per_timer && then.timers == 0 {
+        return Err("--timers-per-timer needs --timers N".into());
+    }
     if then.sit_end_walk.is_some() && !then.sit_events {
         return Err("--sit-end-walk needs --sit-events".into());
     }
@@ -813,7 +867,7 @@ pub fn parse(mut a: Vec<String>) -> Result<Command, E> {
     {
         return Err("--assume-player-choice takes 0 to 3".into());
     }
-    let usage = "quest_run MANIFEST (stages OUT_DIR | new-game OUT_DIR | fragments OUT_DIR | scenes OUT_DIR | QUEST STAGE) [--queued] [--no-conditions] [--no-stage-event] [--no-remote] [--no-custom | --custom-nested] [--no-story] [--no-enable-chain] [--no-scenes] [--no-scenes-with-quest] [--no-cond-fn-N]... [--no-cond-run-on] [--assume-cond N=VALUE]... [--assume-cond-for QUEST N=VALUE]...; fragments OUT_DIR and scenes OUT_DIR run every INFO, PACK and PERK fragment and start every scene in a fresh interpreter; new-game also takes --then EDITOR_ID:STAGE[@SECONDS] (repeated), --assume-activate, --assume-trigger-enter, --assume-trigger-leave and --assume-open PLUGIN:OBJECTID[@SECONDS] (repeated), --timers N and --time-scale-global EDITOR_ID, assumptions of the caller, --scene-recheck, --stage-fields, --cond-550-clock, --alias-location-refs and --next-blockers; new-game and scenes take --scene-clock N (advance the scene clock up to N times) with --no-timer-actions, --no-line-audio, --assume-line-seconds X, --assume-player-choice N (0 to 3), --assume-player-choice-for SCENE|QUEST N and --assume-first-line-for SCENE|QUEST (as PLUGIN:OBJECTID, repeated; a scene's over its quest's), --assume-packages-complete, --assume-start-scene-actions, --line-stage-fields, --line-fragments, --line-start-scene and --assume-first-line; every mode takes --none-array-length, --none-array-read, --none-array-find, --none-array-change, --enable-child-flag-ignored, --text-equal-ignore-case and --auto-state-inherited; new-game with --scene-clock takes --track FILE (the player's track, lines SECONDS SPACE X Y Z [FACING]) with --trigger-box, --trigger-sphere, --trigger-point or --trigger-body HEIGHT, --trigger-instant, --trigger-enabled, --trigger-order, --distance-events, --distance-once, --placed-positions, --position-natives, --cell-natives, --location-native and --assume-los true|false, --actor-positions, --actor-triggers and --assume-actor-at REF SPACE X Y Z@SECONDS (repeated); new-game takes --alias-unique-actors, --player-base EDITOR_ID and --player-no-record, and with --scene-clock --assume-talk PLUGIN:OBJECTID[@SECONDS] (repeated), --greeting-on-talk, --hello-lines with --hello-distance-setting EDITOR_ID, --dialogue-priority, --info-groups and --assume-line PLUGIN:OBJECTID (repeated); new-game with --track and --actor-positions takes --package-destinations SECONDS; new-game takes --anim-events with --anim-event-case and --assume-anim-event PLUGIN:OBJECTID|player EVENT[@SECONDS] (repeated), and with --scene-clock --anim-graphs with --anim-graph-keys, --anim-graph-start-settled and --anim-sequence-case; new-game with --track takes --moveto-target, --load-doors, --load-in-cell, --load-on-arrival and --load-grid N, and --assume-load PLUGIN:OBJECTID[@SECONDS] (repeated); new-game and scenes with --scene-clock take --cond-131-clock and --phase-conditions-end; new-game takes --location-refs-distinct and --alias-location-placed-refs and --location-refs-shared (with --alias-location-refs), --cond-1-distance (with --track), --cond-player-word and --cond-70-player-sex or --cond-70-player-sex-for QUEST (repeated; with --player-base-object and --assume-player-sex), --activate-actors, --sit-events with --assume-sit and --assume-get-up PLUGIN:OBJECTID[@SECONDS] (repeated), --activate-furniture-sits, --activate-furniture-events, --activate-furniture-get-up, --furniture-in-use and --sit-state, with --anim-graphs --furniture-graph-events SIT_EVENT GET_UP_EVENT, --menu-events with --assume-menu NAME open|close[@SECONDS] and --assume-looks-menu-event N[@SECONDS] (repeated), --assume-menu-mode true|false, --assume-message-button N, --assume-player-in-combat true|false, and --player-base-object (with --player-base) with --assume-player-sex N, --keywords-records and --keywords-runtime, and --collection-location-refs, and with --anim-events --assume-anim-registration true|false; new-game and scenes with --scene-clock take --scene-actions-skipped-start; new-game with --scene-clock takes --action-after TARGET@SECONDS EDITOR_ID:STAGE (repeated); new-game takes --scene-recheck-variables, and with --next-blockers --setters-outer-calls; new-game takes --hit-events with --hit-init-registrations and --assume-hit PLUGIN:OBJECTID[@SECONDS], --combat-state-events with --assume-combat-state PLUGIN:OBJECTID TARGET STATE[@SECONDS], --death-events with --assume-death PLUGIN:OBJECTID KILLER[@SECONDS] (TARGET and KILLER a placed actor or player; repeated), --dead-state and --combat-state-natives (not with --assume-player-in-combat); new-game takes --global-values with --global-value-undetermined, --lock-state, --lock-events, --assume-unlock PLUGIN:OBJECTID[@SECONDS], --assume-item-count HOLDER|player ITEM N, --property-implicit-instance, --npc-response-lines, --timeline-deaths, --timeline-sits and --census-run-state; new-game takes --lock-events-script (with --lock-state), --terminal-fragments with --assume-terminal-item PLUGIN:OBJECTID ID[@SECONDS], --item-added-events with --inventory-filter-init, --item-added-counts, --assume-item-added HOLDER|player ITEM N player|none[@SECONDS], --perks-base (with --player-base-object), --factions-base and --assume-actor-value HOLDER|player AVIF N; new-game takes --alias-created-refs, --alias-external, --line-script-events, --timeline-sequences and --sit-end-walk UNITS (with --track and --sit-events), and the fight assumptions name the reference an alias holds as EDITOR_ID#ALIAS";
+    let usage = "quest_run MANIFEST (stages OUT_DIR | new-game OUT_DIR | fragments OUT_DIR | scenes OUT_DIR | QUEST STAGE) [--queued] [--no-conditions] [--no-stage-event] [--no-remote] [--no-custom | --custom-nested] [--no-story] [--no-enable-chain] [--no-scenes] [--no-scenes-with-quest] [--no-cond-fn-N]... [--no-cond-run-on] [--assume-cond N=VALUE]... [--assume-cond-for QUEST N=VALUE]...; fragments OUT_DIR and scenes OUT_DIR run every INFO, PACK and PERK fragment and start every scene in a fresh interpreter; new-game also takes --then EDITOR_ID:STAGE[@SECONDS] (repeated), --assume-activate, --assume-trigger-enter, --assume-trigger-leave and --assume-open PLUGIN:OBJECTID[@SECONDS] (repeated), --timers N and --time-scale-global EDITOR_ID, assumptions of the caller, --scene-recheck, --stage-fields, --cond-550-clock, --alias-location-refs and --next-blockers; new-game and scenes take --scene-clock N (advance the scene clock up to N times) with --no-timer-actions, --no-line-audio, --assume-line-seconds X, --assume-player-choice N (0 to 3), --assume-player-choice-for SCENE|QUEST N and --assume-first-line-for SCENE|QUEST (as PLUGIN:OBJECTID, repeated; a scene's over its quest's), --assume-packages-complete, --assume-start-scene-actions, --line-stage-fields, --line-fragments, --line-start-scene and --assume-first-line; every mode takes --none-array-length, --none-array-read, --none-array-find, --none-array-change, --enable-child-flag-ignored, --text-equal-ignore-case and --auto-state-inherited; new-game with --scene-clock takes --track FILE (the player's track, lines SECONDS SPACE X Y Z [FACING]) with --trigger-box, --trigger-sphere, --trigger-point or --trigger-body HEIGHT, --trigger-instant, --trigger-enabled, --trigger-order, --distance-events, --distance-once, --placed-positions, --position-natives, --cell-natives, --location-native and --assume-los true|false, --actor-positions, --actor-triggers and --assume-actor-at REF SPACE X Y Z@SECONDS (repeated); new-game takes --alias-unique-actors, --player-base EDITOR_ID and --player-no-record, and with --scene-clock --assume-talk PLUGIN:OBJECTID[@SECONDS] (repeated), --greeting-on-talk, --hello-lines with --hello-distance-setting EDITOR_ID, --dialogue-priority, --info-groups and --assume-line PLUGIN:OBJECTID (repeated); new-game with --track and --actor-positions takes --package-destinations SECONDS; new-game takes --anim-events with --anim-event-case and --assume-anim-event PLUGIN:OBJECTID|player EVENT[@SECONDS] (repeated), and with --scene-clock --anim-graphs with --anim-graph-keys, --anim-graph-start-settled and --anim-sequence-case; new-game with --track takes --moveto-target, --load-doors, --load-in-cell, --load-on-arrival and --load-grid N, and --assume-load PLUGIN:OBJECTID[@SECONDS] (repeated); new-game and scenes with --scene-clock take --cond-131-clock and --phase-conditions-end; new-game takes --location-refs-distinct and --alias-location-placed-refs and --location-refs-shared (with --alias-location-refs), --cond-1-distance (with --track), --cond-player-word and --cond-70-player-sex or --cond-70-player-sex-for QUEST (repeated; with --player-base-object and --assume-player-sex), --activate-actors, --sit-events with --assume-sit and --assume-get-up PLUGIN:OBJECTID[@SECONDS] (repeated), --activate-furniture-sits, --activate-furniture-events, --activate-furniture-get-up, --furniture-in-use and --sit-state, with --anim-graphs --furniture-graph-events SIT_EVENT GET_UP_EVENT, --menu-events with --assume-menu NAME open|close[@SECONDS] and --assume-looks-menu-event N[@SECONDS] (repeated), --assume-menu-mode true|false, --assume-message-button N, --assume-player-in-combat true|false, and --player-base-object (with --player-base) with --assume-player-sex N, --keywords-records and --keywords-runtime, and --collection-location-refs, and with --anim-events --assume-anim-registration true|false; new-game and scenes with --scene-clock take --scene-actions-skipped-start; new-game with --scene-clock takes --action-after TARGET@SECONDS EDITOR_ID:STAGE (repeated); new-game takes --scene-recheck-variables, and with --next-blockers --setters-outer-calls; new-game takes --hit-events with --hit-init-registrations and --assume-hit PLUGIN:OBJECTID[@SECONDS], --combat-state-events with --assume-combat-state PLUGIN:OBJECTID TARGET STATE[@SECONDS], --death-events with --assume-death PLUGIN:OBJECTID KILLER[@SECONDS] (TARGET and KILLER a placed actor or player; repeated), --dead-state and --combat-state-natives (not with --assume-player-in-combat); new-game takes --global-values with --global-value-undetermined, --lock-state, --lock-events, --assume-unlock PLUGIN:OBJECTID[@SECONDS], --assume-item-count HOLDER|player ITEM N, --property-implicit-instance, --npc-response-lines, --timeline-deaths, --timeline-sits and --census-run-state; new-game takes --lock-events-script (with --lock-state), --terminal-fragments with --assume-terminal-item PLUGIN:OBJECTID ID[@SECONDS], --item-added-events with --inventory-filter-init, --item-added-counts, --assume-item-added HOLDER|player ITEM N player|none[@SECONDS], --perks-base (with --player-base-object), --factions-base and --assume-actor-value HOLDER|player AVIF N; new-game takes --alias-created-refs, --alias-external, --line-script-events, --timeline-sequences and --sit-end-walk UNITS (with --track and --sit-events), and the fight assumptions name the reference an alias holds as EDITOR_ID#ALIAS; new-game takes --quest-partial-previous, --container-change-events with --assume-container-change PLUGIN:OBJECTID HOLDER|player|none HOLDER|player|none[@SECONDS], --location-change-events with --assume-location-change PLUGIN:OBJECTID|EDITOR_ID#ALIAS|player LOCATION|none LOCATION|none[@SECONDS] (repeated), --location-parents and --timers-per-timer (with --timers N)";
     if a.len() != 3 {
         return Err(usage.into());
     }

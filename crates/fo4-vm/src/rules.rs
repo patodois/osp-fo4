@@ -169,7 +169,7 @@ pub const XESP_BIT1: &str = "xesp_flag_bit1_not_presence_v1";
 pub const XESP_PROPAGATES: &str = "xesp_script_change_propagates_v1";
 
 /// Every rule above.
-pub const ALL: [&str; 197] = [
+pub const ALL: [&str; 203] = [
     ARITHMETIC,
     COMPARE,
     NOT_COPY_CAST,
@@ -367,6 +367,12 @@ pub const ALL: [&str; 197] = [
     ALIAS_EXTERNAL_LIVE,
     LINE_SCRIPT_EVENTS,
     SIT_ENDED_BY_TRACK,
+    QUEST_PARTIAL_PREVIOUS,
+    QUEST_STAGE_ABSENT_OPEN,
+    CONTAINER_CHANGED_EVENT,
+    LOCATION_CHANGE_EVENT,
+    LOCATION_IS_CHILD_PARENT,
+    TIMER_BUDGET_PER_TIMER,
 ];
 
 /// The rule an opcode's meaning rests on; `None` for an opcode without a
@@ -829,3 +835,31 @@ pub const LINE_SCRIPT_EVENTS: &str = "dialogue_line_script_events_v1";
 /// than the caller's distance from the furniture's placed position, or
 /// into another space.
 pub const SIT_ENDED_BY_TRACK: &str = "vm_sit_ended_by_track_v1";
+/// A winning quest record whose record flag word has bit 0x4000 and that
+/// carries no subrecord but `EDID` and `VMAD` is read from the occurrence
+/// before it (stages, log entries, aliases, flag word, objectives,
+/// conditions), its own VMAD kept.
+pub const QUEST_PARTIAL_PREVIOUS: &str = "quest_record_partial_previous_v1";
+/// What the run does when a stage the quest record (as read) does not
+/// hold is set: the quest's whole state becomes undetermined
+/// (`crate::quest`, `set_stage`). The run's default since the quest
+/// step; registered on its own so a measurement can settle it. The run's
+/// census counts it under `quest_set_stage_v1`, as before.
+pub const QUEST_STAGE_ABSENT_OPEN: &str = "quest_set_stage_absent_open_v1";
+/// The caller's container change of a placed reference raises
+/// `OnContainerChanged(new, old)` on the reference's own scripts, the
+/// aliases holding it and the instances registered for it.
+pub const CONTAINER_CHANGED_EVENT: &str = "inventory_container_changed_event_v1";
+/// The caller's location change of an actor raises
+/// `OnLocationChange(old, new)` on the actor's own scripts, the aliases
+/// holding it and the instances registered for it.
+pub const LOCATION_CHANGE_EVENT: &str = "world_location_change_event_v1";
+/// The caller's timer budget (`--timers N`) counts per timer (the
+/// instance, its clock and its id) instead of for the whole run: a timer
+/// that has fired N times is dropped from the queue when it comes due
+/// again, and the others go on firing.
+pub const TIMER_BUDGET_PER_TIMER: &str = "vm_timer_budget_per_timer_v1";
+/// `Location.IsChild(other)` answers whether the chain of `other`'s
+/// parent locations (`PNAM` of the location records) reaches the
+/// receiver; a location with no `PNAM` ends the chain.
+pub const LOCATION_IS_CHILD_PARENT: &str = "world_location_is_child_parent_chain_v1";

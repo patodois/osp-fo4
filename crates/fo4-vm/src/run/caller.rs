@@ -248,7 +248,10 @@ pub(super) fn act(
             fight_act(vm, store, &x.what, &when, c, names, b)?;
             top.extend(quest::run_jobs(vm, store, MAX_GAME_JOBS, b));
         }
-        What::Terminal(..) | What::ItemAdded(..) => {
+        What::Terminal(..)
+        | What::ItemAdded(..)
+        | What::ContainerChange(..)
+        | What::LocationChange(..) => {
             stop_act(vm, store, &x.what, &when, c, names, b)?;
             top.extend(quest::run_jobs(vm, store, MAX_GAME_JOBS, b));
         }
@@ -536,6 +539,83 @@ pub(super) fn stop_act(
             (
                 crate::inventory::item_added(vm, store, h, i, *n, s, b)?,
                 "items added",
+            )
+        }
+        What::ContainerChange(item, new, old) => {
+            bump(
+                c,
+                "assumption from the command line: a placed reference changes container (--assume-container-change)",
+            );
+            let k = crate::player::parse_key(item)
+                .ok_or("--assume-container-change takes PLUGIN:OBJECTID")?;
+            if !matches!(
+                store.signature(&k).as_ref().map(|s| &s[..]),
+                Some(b"REFR" | b"ACHR")
+            ) {
+                return Err("--assume-container-change names no winning placed reference".into());
+            }
+            let i = crate::data::record_object(&mut vm.world, store, &k, "objectreference", b)?;
+            let mut holder = |x: &str| -> Result<Option<crate::ObjId>, E> {
+                Ok(match x {
+                    "none" => None,
+                    "player" => Some(vm.world.player("actor")),
+                    _ => {
+                        let hk = crate::player::parse_key(x)
+                            .ok_or("--assume-container-change takes a holder as PLUGIN:OBJECTID, player or none")?;
+                        Some(crate::data::record_object(
+                            &mut vm.world,
+                            store,
+                            &hk,
+                            "objectreference",
+                            b,
+                        )?)
+                    }
+                })
+            };
+            let n = holder(new)?;
+            let o = holder(old)?;
+            let _ = writeln!(
+                names,
+                "## --assume-container-change {item} {new} {old}{when}"
+            );
+            (
+                crate::chain::container_changed(vm, store, i, n, o, b)?,
+                "container changes",
+            )
+        }
+        What::LocationChange(actor, old, new) => {
+            bump(
+                c,
+                "assumption from the command line: an actor changes location (--assume-location-change)",
+            );
+            let a = fight_object(vm, store, actor, b)?;
+            let mut location = |x: &str| -> Result<Option<crate::ObjId>, E> {
+                if x == "none" {
+                    return Ok(None);
+                }
+                let lk = crate::player::parse_key(x).ok_or(
+                    "--assume-location-change takes a location as PLUGIN:OBJECTID or none",
+                )?;
+                if store.signature(&lk) != Some(*b"LCTN") {
+                    return Err("--assume-location-change names no winning location".into());
+                }
+                Ok(Some(crate::data::record_object(
+                    &mut vm.world,
+                    store,
+                    &lk,
+                    "location",
+                    b,
+                )?))
+            };
+            let o = location(old)?;
+            let n = location(new)?;
+            let _ = writeln!(
+                names,
+                "## --assume-location-change {actor} {old} {new}{when}"
+            );
+            (
+                crate::chain::location_changed(vm, store, a, o, n, b)?,
+                "location changes",
             )
         }
         _ => return Ok(()),

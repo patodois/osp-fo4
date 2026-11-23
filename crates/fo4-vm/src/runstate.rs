@@ -94,6 +94,8 @@ pub struct RunState {
     /// The inventory readings and the filters they keep
     /// (`crate::inventory`).
     pub inventory: crate::inventory::Inventory,
+    /// The container and location change readings (`crate::chain`).
+    pub chain: crate::chain::Switches,
     /// (real-time second, what happened), in order.
     pub log: Vec<(f64, String)>,
     pub counts: BTreeMap<String, u64>,
@@ -118,6 +120,7 @@ impl RunState {
             || self.factions
             || !self.actor_values.is_empty()
             || self.inventory.any()
+            || self.chain.any()
     }
 }
 
@@ -153,6 +156,9 @@ pub fn native(store: &Store, max: u64, c: &NativeCall, w: &mut World) -> Option<
     let full = c.full_name();
     if crate::inventory::NATIVES.contains(&full.as_str()) {
         return crate::inventory::native(c, w);
+    }
+    if full == crate::chain::IS_CHILD {
+        return crate::chain::native(store, max, c, w);
     }
     if !NATIVES.contains(&full.as_str()) || !w.runstate.any() {
         return None;

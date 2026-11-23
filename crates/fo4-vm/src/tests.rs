@@ -3,6 +3,7 @@
 use super::*;
 
 mod anim;
+mod chain;
 mod cond2;
 mod data;
 mod events;

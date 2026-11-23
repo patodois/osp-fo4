@@ -226,6 +226,11 @@ pub(super) fn new_game(
         (then.alias_external, "a reference alias filled from another quest's alias holds what that alias holds whenever it is read (--alias-external)"),
         (then.line_script_events, "a line the run plays delivers its begin and end to the scripts its record attaches of its own (--line-script-events)"),
         (then.sit_end_walk.is_some(), "the player's sit ends, as a get-up, when the track takes the player farther than the caller's distance from the furniture's placed position (--sit-end-walk)"),
+        (then.quest_partial_previous, "a winning quest record with flag bit 0x4000 that carries only EDID and VMAD is read from the occurrence before it, its own VMAD kept (--quest-partial-previous)"),
+        (then.container_events, "the caller's container change raises OnContainerChanged on the reference's receivers (--container-change-events)"),
+        (then.location_events, "the caller's location change raises OnLocationChange on the actor's receivers (--location-change-events)"),
+        (then.location_parents, "Location.IsChild answers from the chain of the other location's parent locations (--location-parents)"),
+        (then.timers_per_timer, "the timer budget counts per timer; a timer that used it up is dropped when it comes due again (--timers-per-timer)"),
         (!then.actor_values.is_empty(), "the caller assumes actor values (--assume-actor-value)"),
     ] {
         if on {
@@ -294,6 +299,10 @@ pub(super) fn new_game(
     vm.world.quests.external_fills = then.alias_external;
     vm.world.scenes.line_scripts = then.line_script_events;
     vm.world.sits.end_walk = then.sit_end_walk;
+    vm.world.quests.partial_previous = then.quest_partial_previous;
+    vm.world.runstate.chain.container = then.container_events;
+    vm.world.runstate.chain.location = then.location_events;
+    vm.world.runstate.chain.parents = then.location_parents;
     vm.world.runstate.actor_values = then.actor_values.iter().cloned().collect();
     vm.world.sits.activate = then.sit_activate;
     vm.world.sits.in_use = then.sit_in_use;
@@ -913,7 +922,9 @@ pub(super) fn new_game(
                 | What::Death(..)
                 | What::Unlock(_)
                 | What::Terminal(..)
-                | What::ItemAdded(..) => None,
+                | What::ItemAdded(..)
+                | What::ContainerChange(..)
+                | What::LocationChange(..) => None,
             })
             .collect();
         next_blockers(&mut vm, m, vfs, store, opts, &quests, then.outer_calls, out)?;
@@ -1038,6 +1049,9 @@ pub struct NewGame<'r, 'v> {
     input: Option<Input>,
     ended: bool,
     counts: InputCounts,
+    /// Firings so far of each timer (instance, clock, id) under
+    /// `--timers-per-timer` (`vm_timer_budget_per_timer_v1`).
+    timer_uses: BTreeMap<String, usize>,
 }
 
 impl<'r, 'v> NewGame<'r, 'v> {
@@ -1079,6 +1093,7 @@ impl<'r, 'v> NewGame<'r, 'v> {
             input: None,
             ended: false,
             counts: InputCounts::new(),
+            timer_uses: BTreeMap::new(),
         };
         run.note("the start and the stages set from the command line");
         run
@@ -1380,6 +1395,25 @@ impl<'r, 'v> NewGame<'r, 'v> {
             .scale_global
             .as_ref()
             .and_then(|g| time_scale(self.vm, store, g, b));
+        // Per timer: a timer that used up its own budget is dropped when it
+        // comes due again (`vm_timer_budget_per_timer_v1`).
+        let mut next_key = None;
+        if self.then.timers_per_timer && self.timers > 0 {
+            let (dropped, key) = drop_spent_timers(self.vm, scale, &self.timer_uses, self.timers);
+            next_key = key;
+            for _ in 0..dropped {
+                bump(
+                    self.c,
+                    "timers dropped when due again: their own budget used up (--timers-per-timer)",
+                );
+                let _ = writeln!(
+                    self.names,
+                    "## timer dropped at {} s: its own budget of {} firings used up",
+                    self.now(),
+                    self.timers
+                );
+            }
+        }
         let timer = (self.timers > 0 && !self.vm.world.timers.is_empty())
             .then(|| self.vm.next_timer_wait(scale));
         let due = if self.steps > 0 {
@@ -1501,6 +1535,11 @@ impl<'r, 'v> NewGame<'r, 'v> {
             }
             self.timers = if matches!(x.2, Outcome::Failed(_)) {
                 0
+            } else if self.then.timers_per_timer {
+                if let Some(k) = next_key {
+                    *self.timer_uses.entry(k).or_default() += 1;
+                }
+                self.timers
             } else {
                 self.timers - 1
             };
@@ -1727,4 +1766,32 @@ impl<'r, 'v> NewGame<'r, 'v> {
         }
         n as u64
     }
+}
+
+/// A timer's identity for the per-timer budget: its instance, clock and id.
+pub(crate) fn timer_key(t: &crate::world::Timer) -> String {
+    format!("{}\t{:?}\t{:?}", t.instance, t.clock, t.id)
+}
+
+/// Under `vm_timer_budget_per_timer_v1`: drops from the queue each timer
+/// due next that has fired `budget` times (`uses`, by [`timer_key`]),
+/// until the one due next has budget left. Returns how many were dropped
+/// and the key of the timer due next.
+pub(crate) fn drop_spent_timers(
+    vm: &mut Vm<'_>,
+    scale: Option<f64>,
+    uses: &BTreeMap<String, usize>,
+    budget: usize,
+) -> (usize, Option<String>) {
+    let mut dropped = 0;
+    while let Some(i) = vm.next_timer_index(scale) {
+        let key = timer_key(&vm.world.timers[i]);
+        if uses.get(&key).copied().unwrap_or(0) < budget {
+            return (dropped, Some(key));
+        }
+        vm.world.timers.remove(i);
+        vm.rules.insert(crate::rules::TIMER_BUDGET_PER_TIMER);
+        dropped += 1;
+    }
+    (dropped, None)
 }

@@ -582,3 +582,9 @@ the registry.
 | `vm_sit_ended_by_track_v1` | pending | Sit the player at the opening's first furniture and walk away: GetSitState 0 once away supports it |
 | `play_elevator_run_sequence_v1` | pending | Ride the vault elevator and record the player's height over time: the descent the graph starts (4,140 units over 18.667 s) supports it |
 | `play_elevator_end_load_door_v1` | pending | Ride the elevator and note the second the interior loads: at the descent's end supports it |
+| `quest_record_partial_previous_v1` | pending | Set the town dialogue quest's 50 with the add-on installed and read the town chain's first quest's GetStageDone(20) and IsRunning: true at both supports it |
+| `quest_set_stage_absent_open_v1` | pending | Call SetStage with a stage a quest does not hold and read its state before and after: unchanged answers support a refusal |
+| `inventory_container_changed_event_v1` | pending | Take the museum's musket with a test listener on the next main quest's 62: set as the item reaches the player supports it |
+| `world_location_change_event_v1` | pending | Leave the museum after the reward conversation with a test listener on the town dialogue quest's 200: set as the player steps out supports it |
+| `world_location_is_child_parent_chain_v1` | pending | Call the museum's location's IsChild on the town's location and the reverse: false then true supports it |
+| `vm_timer_budget_per_timer_v1` | pending | A budget of the run: the furthest run's stages with a larger budget equal to these support it |
