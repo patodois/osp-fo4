@@ -831,3 +831,81 @@ fn a_walker_crosses_from_one_world_of_a_set_to_the_next_and_falls_when_one_is_re
     d.settle(&set, 600);
     assert!(d.grounded && near(d.feet[2], 0.0, 1e-6));
 }
+
+#[test]
+fn a_hidden_source_is_passed_through_and_shown_again_it_blocks() {
+    let b = budget();
+    // A floor and a wall across x = 100 (one source each).
+    let mut w = World::new();
+    w.add_triangles(&rect(-500.0, 500.0, -500.0, 500.0, 0.0), "floor", &b)
+        .unwrap();
+    let wall = w
+        .add_triangles(
+            &[
+                [
+                    [100.0, -200.0, 0.0],
+                    [100.0, 200.0, 0.0],
+                    [100.0, 200.0, 300.0],
+                ],
+                [
+                    [100.0, -200.0, 0.0],
+                    [100.0, 200.0, 300.0],
+                    [100.0, -200.0, 300.0],
+                ],
+            ],
+            "wall",
+            &b,
+        )
+        .unwrap();
+    let mut set = WorldSet::new();
+    set.insert(0u8, w).unwrap();
+    let walk = |set: &WorldSet<u8>| {
+        let mut c = character([0.0, 0.0, 10.0]);
+        c.settle(set, 600);
+        for _ in 0..240 {
+            c.tick(set, ahead(0.0));
+        }
+        c.feet[0]
+    };
+    let blocked = walk(&set);
+    assert!(blocked < 100.0 - P.radius + 1e-6, "{blocked}");
+    assert!(set.set_hidden(&0, wall, true));
+    assert!(set.is_hidden(&0, wall) && set.hidden_count() == 1);
+    assert!(walk(&set) > 100.0 + P.radius, "{}", walk(&set));
+    // The floor stays under a hidden wall's source; a source that does not
+    // exist is refused.
+    assert!(set.ray_down(0.0, 0.0, 50.0).is_some());
+    assert!(!set.set_hidden(&0, 9, true) && !set.set_hidden(&1, 0, true));
+    assert!(set.set_hidden(&0, wall, false));
+    assert_eq!(walk(&set), blocked);
+    // A hidden floor: the ray passes, the walker falls.
+    set.set_hidden(&0, 0, true);
+    assert!(set.ray_down(0.0, 0.0, 50.0).is_none());
+}
+
+#[test]
+fn copied_sources_move_with_their_primitives() {
+    let b = budget();
+    let w = mixed_world(&b);
+    let n = w.sources.len() as u32;
+    let all: Vec<u32> = (0..n).collect();
+    let d = [300.0, -40.0, 25.0];
+    let moved = w.copy_sources(&all, d, &b).unwrap();
+    assert_eq!(moved.entries.len(), w.entries.len());
+    assert_eq!(moved.sources, w.sources);
+    for (a, m) in w.entries.iter().zip(&moved.entries) {
+        assert_eq!(a.source, m.source);
+        for (k, dk) in d.iter().enumerate() {
+            assert!(near(m.bounds.min[k], a.bounds.min[k] + dk, 1e-9));
+            assert!(near(m.bounds.max[k], a.bounds.max[k] + dk, 1e-9));
+        }
+    }
+    let at = w.ray_down(0.0, 0.0, 500.0).unwrap();
+    let to = moved.ray_down(d[0], d[1], 500.0 + d[2]).unwrap();
+    assert!(near(to.z, at.z + d[2], 1e-9));
+    // One source only, renumbered from zero; an unknown one is refused.
+    let one = w.copy_sources(&[n - 1], [0.0; 3], &b).unwrap();
+    assert_eq!(one.sources.len(), 1);
+    assert!(one.entries.iter().all(|e| e.source == 0));
+    assert!(w.copy_sources(&[n], [0.0; 3], &b).is_err());
+}

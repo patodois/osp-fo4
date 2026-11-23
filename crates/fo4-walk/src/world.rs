@@ -461,6 +461,75 @@ impl World {
         Ok(())
     }
 
+    /// A world of the primitives of `sources` moved by `delta` (world
+    /// units), each source kept with its [`Source`] and numbered in the
+    /// order given, with this world's rules and the same column size: the
+    /// collision of a placed reference the run moved
+    /// (`spec/play.md`, The live world). A source out of range is refused.
+    pub fn copy_sources(&self, sources: &[u32], delta: V3, b: &Budget) -> Result<World> {
+        let mut w = World::new();
+        for r in &self.rules {
+            w.add_rule(r, b)?;
+        }
+        let mut map: std::collections::BTreeMap<u32, u32> = std::collections::BTreeMap::new();
+        for s in sources {
+            let src = self
+                .sources
+                .get(*s as usize)
+                .ok_or_else(|| Error::new("UnknownSource", FILE, 0, "a source of the world", *s))?;
+            if map.contains_key(s) {
+                continue;
+            }
+            if src.instance.is_some() {
+                w.stats.instances += 1;
+            }
+            let n = w.add_source(src.clone(), b)?;
+            map.insert(*s, n);
+        }
+        let at = |p: V3| g::add(p, delta);
+        for e in &self.entries {
+            let Some(&source) = map.get(&e.source) else {
+                continue;
+            };
+            match e.prim {
+                Prim::Triangle(t) => {
+                    grow(&mut w.entries, 1, b)?;
+                    w.push_triangle(t.map(at), source);
+                }
+                Prim::Sphere { center, radius } => w.push(
+                    Prim::Sphere {
+                        center: at(center),
+                        radius,
+                    },
+                    source,
+                    b,
+                )?,
+                Prim::Capsule { points, radius } => w.push(
+                    Prim::Capsule {
+                        points: points.map(at),
+                        radius,
+                    },
+                    source,
+                    b,
+                )?,
+                Prim::Hull {
+                    start,
+                    count,
+                    radius,
+                } => {
+                    let pts: Vec<V3> = self
+                        .hull_points(start, count)
+                        .iter()
+                        .map(|p| at(*p))
+                        .collect();
+                    w.push_hull(&pts, radius, source, b)?;
+                }
+            }
+        }
+        w.rebuild(self.cell_or_default(), b)?;
+        Ok(w)
+    }
+
     /// Points of a hull primitive.
     pub fn hull_points(&self, start: u32, count: u32) -> &[V3] {
         self.points
@@ -593,6 +662,17 @@ impl World {
     /// `(x, y)`: tops of triangles (either winding), spheres, capsules and
     /// widened hulls. Triangles seen exactly edge-on are not hit.
     pub fn ray_down(&self, x: f64, y: f64, z_from: f64) -> Option<RayHit> {
+        self.ray_down_where(x, y, z_from, &|_| true)
+    }
+
+    /// [`World::ray_down`] over the primitives whose source `keep` keeps.
+    pub fn ray_down_where(
+        &self,
+        x: f64,
+        y: f64,
+        z_from: f64,
+        keep: &dyn Fn(u32) -> bool,
+    ) -> Option<RayHit> {
         let q = Aabb {
             min: [x, y, f64::NEG_INFINITY],
             max: [x, y, z_from],
@@ -602,6 +682,9 @@ impl World {
         let mut best: Option<RayHit> = None;
         for i in cand {
             let e = &self.entries[i as usize];
+            if !keep(e.source) {
+                continue;
+            }
             if let Some((z, normal)) = self.top_on_line(e, x, y) {
                 if z <= z_from + 1e-9 && best.is_none_or(|b| z > b.z) {
                     best = Some(RayHit {

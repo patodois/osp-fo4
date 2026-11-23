@@ -52,6 +52,13 @@ world does. Adding or removing one world rebuilds no other world's broad
 phase; it renumbers the set in O(worlds). `WorldSet::ray_down` and
 `WorldSet::source` answer across the set. The set adds no rule.
 
+A source of a piece can be hidden (`WorldSet::set_hidden`): its primitives
+keep their numbers, but no contact, `ray_down` or activation ray meets them;
+with nothing hidden the set answers exactly as before (the play mode's live
+world, `spec/play.md`). `World::copy_sources(sources, delta)` copies the
+primitives of some sources moved by a translation into a world of their own
+(a reference the run moved). Neither adds a rule.
+
 `World::ray_down(x, y, z_from)` returns the highest surface at or below
 `z_from` on the vertical line through (x, y): the plane of a triangle the line
 crosses (either winding; normal turned up), or the top of a sphere, capsule or
