@@ -159,6 +159,29 @@ but not removed. The viewer's GPU tests now pass in parallel (`spec/render.md`, 
 
 ## Toward a playable game
 
+### Milestones
+
+The ladder the steps are picked from. A step is chosen to move the lowest milestone that is not done; a step
+that does not move one needs a reason written in its notes. "Done" here means built and tested on `main`
+under pending rules, never "matches the game": that needs the measurements listed at the end of this page.
+
+| # | Milestone | State |
+|---|---|---|
+| M0 | Read the game's data: archives, plugins, models, textures, collision, scripts | done |
+| M1 | Draw a cell and walk it with collision (CPU render and viewer) | done |
+| M2 | Run the quests of the opening, the vault, the town and the museum headless | mostly: assumed fights, a few stages open |
+| M3 | Play the opening in the window from input, start to the vault exit | built headless; the window has never been opened or watched |
+| M4 | People: animated poses, movement between places, faces | start poses and faces drawn; no clip playback over time, no movement |
+| M5 | Fights: weapons, damage, death, enemy behaviour | not started (deaths are the caller's assumptions) |
+| M6 | Screens: dialogue choices, inventory, the wrist device, containers, map | not started (subtitles in the title bar only) |
+| M7 | Sound: voice, effects, music | not started (lines are timed by their files, nothing plays) |
+| M8 | Saving and loading | not started |
+| M9 | Packages and schedules: people living in the world away from quests | not started |
+| M10 | The open world streamed at speed with distant terrain | streaming walks; frame rate and far terrain open |
+
+Order of work from here: M3 (watch the window and fix what is seen), then M4 movement, M6 dialogue choices
+and M5, because those four are what stands between the headless run and a person playing the first hour.
+
 The opening run is now visible (`spec/timeline.md`), and since the cast step its people appear as people. `quest_run new-game --timeline FILE` writes what the run
 did, second by second, in a neutral versioned text file (track points with their cells, actor places with the
 rule or assumption behind each, references enabled, disabled and moved, scene lines with speaker, seconds and
