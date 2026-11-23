@@ -14,7 +14,19 @@
 //!
 //! `ride_check MANIFEST OUT_DIR --cell PLUGIN:HEX --start X,Y,Z [--toward S,X,Y ...]
 //!  --end S [--walk-speed U] [--boxes] [--also PLUGIN:HEX ...] [--elevator PLUGIN:HEX --sequence N --node NAME
-//!  --ride-from S [--ride-boxes]] [--trace] [--box-presence [--timeline FILE]] [--ride-through-terrain]`
+//!  --ride-from S [--ride-boxes]] [--trace] [--box-presence [--timeline FILE]] [--ride-through-terrain]
+//!  [--collision-off-chain] [--collision-reference-alpha] [--pose PLUGIN:HEX N ...]`
+//!
+//! `--collision-off-chain` builds the walking world with the collision
+//! readiness switch `readiness::Switches::off_chain`
+//! (`collision_model_blockers_off_chain_v1`), `--collision-reference-alpha`
+//! with `readiness::Switches::reference_alpha`
+//! (`refr_xalp_collision_unchanged_v1`). `--pose REF N` places the
+//! reference's collision as stored with each node of its collision chains
+//! moved by the translation the model's sequence N (from 0) holds it at
+//! (`nif_sequence_interpolator_held_pose_v1`; the offsets of a chain's
+//! nodes added, turned by the placement, rotations not applied); which
+//! sequence is the caller's.
 //!
 //! `--ride-boxes` makes the collision-marker boxes inside the moving node's
 //! reach ride too (instead of the node's own collision alone).
@@ -95,7 +107,7 @@ fn describe(
 
 fn run() -> Result<(), E> {
     let a: Vec<String> = std::env::args().skip(1).collect();
-    const USAGE: &str = "ride_check MANIFEST OUT_DIR --cell PLUGIN:HEX --start X,Y,Z [--toward S,X,Y ...] --end S [--walk-speed U] [--boxes] [--also PLUGIN:HEX ...] [--elevator PLUGIN:HEX --sequence N --node NAME [--node NAME ...] --ride-from S [--ride-boxes]] [--trace] [--box-presence [--timeline FILE]] [--ride-through-terrain]";
+    const USAGE: &str = "ride_check MANIFEST OUT_DIR --cell PLUGIN:HEX --start X,Y,Z [--toward S,X,Y ...] --end S [--walk-speed U] [--boxes] [--also PLUGIN:HEX ...] [--elevator PLUGIN:HEX --sequence N --node NAME [--node NAME ...] --ride-from S [--ride-boxes]] [--trace] [--box-presence [--timeline FILE]] [--ride-through-terrain] [--collision-off-chain] [--collision-reference-alpha] [--pose PLUGIN:HEX N ...]";
     if a.len() < 2 {
         return Err(USAGE.into());
     }
@@ -108,6 +120,8 @@ fn run() -> Result<(), E> {
     let mut also: Vec<fo4_plugin::FormKey> = Vec::new();
     let mut trace = false;
     let (mut box_presence, mut through_terrain) = (false, false);
+    let (mut off_chain, mut reference_alpha) = (false, false);
+    let mut poses: Vec<(fo4_plugin::FormKey, usize)> = Vec::new();
     let mut timeline_file: Option<String> = None;
     let mut it = a[2..].iter();
     while let Some(x) = it.next() {
@@ -132,6 +146,12 @@ fn run() -> Result<(), E> {
             "--box-presence" => box_presence = true,
             "--timeline" => timeline_file = Some(val()?.clone()),
             "--ride-through-terrain" => through_terrain = true,
+            "--collision-off-chain" => off_chain = true,
+            "--collision-reference-alpha" => reference_alpha = true,
+            "--pose" => {
+                let k = tl::parse_key(val()?).ok_or(USAGE)?;
+                poses.push((k, val()?.parse::<usize>()?));
+            }
             _ => return Err(USAGE.into()),
         }
     }
@@ -159,6 +179,24 @@ fn run() -> Result<(), E> {
     // The walking world as the play mode builds it.
     let t0 = std::time::Instant::now();
     let mut loader = Loader::new(&store, &vfs, &m.language, level, &budget);
+    loader.set_collision_switches(fo4_scene::readiness::Switches {
+        off_chain,
+        reference_alpha,
+    });
+    if off_chain {
+        let _ = writeln!(
+            report,
+            "switch: collision readiness sets aside model blockers off the collision chain ({})",
+            fo4_scene::hypotheses::COLLISION_OFF_CHAIN
+        );
+    }
+    if reference_alpha {
+        let _ = writeln!(
+            report,
+            "switch: collision readiness sets aside a reference's unread alpha ({})",
+            fo4_scene::hypotheses::REFERENCE_ALPHA_COLLISION
+        );
+    }
     let mut scene = loader.cell(&cell, &budget)?;
     let around = fo4_scene::grid::around(&store, &scene.cell.key, 1, &budget)?;
     fo4_scene::grid::absorb_around(&mut loader, &mut scene, &around, &budget)?;
@@ -203,6 +241,77 @@ fn run() -> Result<(), E> {
             ac.unplaced.len()
         );
         set.insert(10 + ai as u32, aw)?;
+    }
+    // References posed by a sequence's held translations.
+    for (pi, (k, si)) in poses.iter().enumerate() {
+        let inst = loader.instance(k, &budget)?;
+        let pc =
+            fo4_scene::collision::instance_as_stored(&inst, &loader, &m.limits, options, &budget)?;
+        let pw = World::build(&pc, placement, &budget)?;
+        let model = inst
+            .base
+            .as_ref()
+            .and_then(|b| b.common.model.path.clone())
+            .ok_or("the posed reference's base has no model")?;
+        let place = inst.reference.data.transform.ok_or("no placement")?;
+        let frame =
+            fo4_scene::transform::Transform::euler(place, inst.reference.data.scale.unwrap_or(1.))?;
+        let mk = format!("meshes/{}", model.replace('\\', "/")).to_ascii_lowercase();
+        let bytes = vfs.read(&mk, &budget.child())?;
+        let n = fo4_nif::Nif::read(&bytes, &mk, Game::Fallout4, &m.limits, &budget.child())?;
+        let seqs = fo4_scene::sequence::sequences(&n);
+        let s = seqs.get(*si).ok_or("--pose: no such sequence")?;
+        let origin = frame.apply([0.; 3]);
+        // The held offset of every node of a chain, added.
+        let offset = |chain: &[usize]| -> Result<[f64; 3], E> {
+            let mut local = [0.; 3];
+            for b in chain {
+                let Some(name) = block_name(&n, *b) else {
+                    continue;
+                };
+                let Some(held) = fo4_scene::sequence::held_pose(&n, s, &name, &budget)?
+                    .and_then(|p| p.translation)
+                else {
+                    continue;
+                };
+                let Some((_, stored)) = fo4_scene::sequence::node(&n, &name) else {
+                    continue;
+                };
+                for i in 0..3 {
+                    local[i] += f64::from(held[i] - stored[i]);
+                }
+            }
+            let w = frame.apply(local);
+            Ok(std::array::from_fn(|i| w[i] - origin[i]))
+        };
+        let mut groups: Vec<([f64; 3], Vec<u32>)> = Vec::new();
+        for (si, src) in pw.sources.iter().enumerate() {
+            let d = match src.instance {
+                Some(k) => {
+                    let i = &pc.instances[k];
+                    offset(&pc.model(i).bodies[i.body].chain)?
+                }
+                None => [0.; 3],
+            };
+            match groups.iter_mut().find(|g| g.0 == d) {
+                Some(g) => g.1.push(si as u32),
+                None => groups.push((d, vec![si as u32])),
+            }
+        }
+        for (gi, (d, g)) in groups.iter().enumerate() {
+            let _ = writeln!(
+                report,
+                "pose {}: sequence {si} ({}): {} sources moved by {:.1} {:.1} {:.1}",
+                tl::key_text(k),
+                fo4_scene::hypotheses::SEQUENCE_HELD_POSE,
+                g.len(),
+                d[0],
+                d[1],
+                d[2]
+            );
+            let part = pw.copy_sources(g, *d, &budget)?;
+            set.insert(1000 + 100 * pi as u32 + gi as u32, part)?;
+        }
     }
     // The animated reference's collision as stored, split by the nodes the
     // caller names (a source goes with the first named node in its chain).
@@ -488,6 +597,20 @@ fn run() -> Result<(), E> {
     std::fs::write(out.join("ride.txt"), &report)?;
     print!("{report}");
     Ok(())
+}
+
+/// The `Name` of a block.
+fn block_name(n: &fo4_nif::Nif<'_>, b: usize) -> Option<String> {
+    let data = n.blocks.get(b)?.decoded.as_ref()?;
+    fo4_scene::model_policy::fields(data)
+        .iter()
+        .find_map(|f| match (f.name, &f.value) {
+            ("Name", fo4_nif::Value::StringIndex(s)) => n
+                .strings
+                .get(*s as usize)
+                .map(|x| String::from_utf8_lossy(x).into_owned()),
+            _ => None,
+        })
 }
 
 fn main() {
