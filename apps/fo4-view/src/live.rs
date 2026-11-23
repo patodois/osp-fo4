@@ -317,6 +317,7 @@ mod tests {
                 palette: 0,
                 colour: None,
                 lit: false,
+                smooth: false,
             },
             key: SurfaceKey {
                 blend: None,

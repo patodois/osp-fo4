@@ -89,6 +89,11 @@ pub struct BuildOptions {
     /// held at their stored value. The scene must be loaded with the same
     /// switches (`fo4_scene::Loader::set_clock_switches`).
     pub clock: fo4_scene::clock::Switches,
+    /// `light_vertex_normals_v1` (`--light-vertex-normals`): every mesh
+    /// that stores vertex normals keeps them (not only falloff draws'), so
+    /// that a lit draw is lit with them; skinned or posed meshes do not
+    /// (their posed normals are not computed). Off: as before.
+    pub vertex_normals: bool,
 }
 /// Limits of the textures kept as stored blocks ([`BuildOptions::blocks`]).
 /// A texture whose format or chosen level cannot be kept as blocks is
@@ -113,6 +118,7 @@ impl BuildOptions {
             blocks: None,
             time: None,
             clock: fo4_scene::clock::Switches::OFF,
+            vertex_normals: false,
         }
     }
     /// The reference limits, with block-compressed textures kept as blocks.
@@ -1665,6 +1671,20 @@ impl Builder<'_, '_> {
                     return Err(error("RenderNonFiniteNormal", "mesh", 0, i));
                 }
                 normals.push(n.map(f64::from));
+            }
+            mesh.normals = Some(normals);
+        } else if self.options.vertex_normals
+            && skinned.is_none()
+            && vertices
+                .iter()
+                .all(|v| v.normal.is_some_and(|n| n.iter().all(|x| x.is_finite())))
+            && !vertices.is_empty()
+        {
+            let mut normals = Vec::new();
+            self.budget
+                .reserve(&mut normals, vertices.len(), "vertex normals", 0)?;
+            for v in vertices {
+                normals.push(v.normal.unwrap_or_default().map(f64::from));
             }
             mesh.normals = Some(normals);
         }

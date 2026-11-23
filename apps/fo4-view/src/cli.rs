@@ -130,9 +130,10 @@ usage:
   fo4-view MANIFEST DATA_DIRECTORY CELL_EDITOR_ID|- --under-hypotheses --headless
            --timeline FILE --at SECONDS --eye-height UNITS [--look-heading DEGREES]
            [--timeline-nowait] [--timeline-child-flag-agrees]
+           [--timeline-dead-lying | --timeline-dead-left-out] [--timeline-sit-marker]
            [--timeline-cast [--timeline-target-rotation] [--actor-missing-bone-bind]
            [--actor-start-clip] [--actor-subgraph-keywords] [--actor-clip-folder]
-           [--actor-start-clip-loop]]
+           [--actor-start-clip-loop] [--actor-sit-clip]]
            [--look-at X,Y,Z | --look-at-actor nearest|speaker]
            [--overlay build/OVERLAY.txt] --out build/FRAME.png
            [--tags build/TAGS.bin] [--size WxH] [--terrain] [--around N] [...]
@@ -164,7 +165,13 @@ usage:
       folders) to reach a file; --actor-start-clip-loop poses at the
       frame's second, looping where the generator's mode says so (pending
       rules, spec/character-graph.md); an actor refused keeps the rest pose,
-      with the reason in the overlay.
+      with the reason in the overlay. The run's death and sit lines
+      (spec/timeline.md, Deaths and furniture): --timeline-dead-lying draws
+      a dead actor lying at its last place (a placeholder),
+      --timeline-dead-left-out leaves it out; --timeline-sit-marker puts a
+      sitting actor at its furniture's marker nearest it, facing the
+      marker's heading, and --actor-sit-clip poses it by the clip its race's
+      subgraph entry for the furniture's keywords reaches (pending rules).
       --look-at and --look-at-actor aim the camera from the same eye at a
       point, the nearest drawn actor or the line's speaker (presentation).
       Not with --eye, --look, --walk, --path, --actor-clip or --script-event.
@@ -495,6 +502,8 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
     let mut missing_bones_at_bind = false;
     let mut pose = fo4_scene::char_graph::Switches::default();
     let mut child_flag_agrees = false;
+    let mut dead = fo4_scene::timeline::Dead::Standing;
+    let mut sit_marker = false;
     let mut aim = fo4_scene::timeline::Aim::Track;
     let mut light = fo4_scene::light::Switches::default();
     let mut light_assumptions = fo4_scene::light::Assumptions::default();
@@ -560,6 +569,17 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             "--timeline-target-rotation" => target_rotation = true,
             "--actor-missing-bone-bind" => missing_bones_at_bind = true,
             "--timeline-child-flag-agrees" => child_flag_agrees = true,
+            "--timeline-dead-lying" | "--timeline-dead-left-out" => {
+                if dead != fo4_scene::timeline::Dead::Standing {
+                    return Err("one of --timeline-dead-lying and --timeline-dead-left-out".into());
+                }
+                dead = if arg == "--timeline-dead-lying" {
+                    fo4_scene::timeline::Dead::Lying
+                } else {
+                    fo4_scene::timeline::Dead::LeftOut
+                };
+            }
+            "--timeline-sit-marker" => sit_marker = true,
             "--assume-hour" => {
                 light_assumptions.hour = Some(
                     finite(value()?)
@@ -613,6 +633,8 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             missing_bones_at_bind,
             pose,
             aim,
+            dead,
+            sit_marker,
         }),
         (None, None, None)
             if look_heading.is_none()
@@ -623,13 +645,15 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
                 && !missing_bones_at_bind
                 && !pose.any()
                 && !child_flag_agrees
+                && dead == fo4_scene::timeline::Dead::Standing
+                && !sit_marker
                 && aim == fo4_scene::timeline::Aim::Track =>
         {
             None
         }
         _ => {
             return Err(
-                "--timeline needs --at and --eye-height; --look-heading, --timeline-nowait, --timeline-child-flag-agrees, --timeline-cast, --timeline-target-rotation, --actor-missing-bone-bind, the start clip flags, --look-at, --look-at-actor and --overlay need --timeline"
+                "--timeline needs --at and --eye-height; --look-heading, --timeline-nowait, --timeline-child-flag-agrees, --timeline-dead-lying, --timeline-dead-left-out, --timeline-sit-marker, --timeline-cast, --timeline-target-rotation, --actor-missing-bone-bind, the start clip flags, --look-at, --look-at-actor and --overlay need --timeline"
                     .into(),
             )
         }
@@ -694,7 +718,8 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
     }
     if (light.reference_radius || light.fade) && !light.points
         || light.inherits && !(light.cell || light.fog)
-        || light_assumptions != fo4_scene::light::Assumptions::default() && !light.weather()
+        || light_assumptions != fo4_scene::light::Assumptions::default()
+            && !(light.weather() || light.image_space())
     {
         return Err("--light-reference-radius and --light-fade need --light-points, --light-inherits needs --light-cell or --light-fog, --assume-hour and --assume-weather need a weather switch".into());
     }

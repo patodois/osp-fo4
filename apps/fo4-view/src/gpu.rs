@@ -73,7 +73,8 @@ pub struct SurfaceUniform {
     pub falloff: Vec4,
     /// `SurfaceParams::colour` (RGB; 1 without one).
     pub tint: Vec4,
-    /// Bit 0: lit by the light buffer (`SurfaceParams::lit`).
+    /// Bit 0: lit by the light buffer (`SurfaceParams::lit`); bit 1: lit
+    /// with the vertex normals (`SurfaceParams::smooth`).
     pub mode: u32,
 }
 
@@ -429,7 +430,7 @@ fn uniform(p: &crate::scene::SurfaceParams) -> SurfaceUniform {
             let c = p.colour.unwrap_or([1.; 3]);
             Vec4::new(c[0], c[1], c[2], 1.)
         },
-        mode: u32::from(p.lit),
+        mode: u32::from(p.lit) | u32::from(p.smooth) << 1,
     }
 }
 

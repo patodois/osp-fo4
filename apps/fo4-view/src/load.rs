@@ -528,12 +528,25 @@ pub fn cell(
     };
     // The light switches: the frame's light (`fo4_scene::light`).
     let light = match fo4_scene::light::frame(&store, &scene, light.0, light.1, &budget)? {
-        Some(l) => {
+        Some(mut l) => {
             let effects: std::collections::BTreeSet<usize> =
                 build.effect_draws.iter().copied().collect();
-            let lit = (0..build.list.draws.len())
+            let lit: Vec<bool> = (0..build.list.draws.len())
                 .map(|i| i < lit_until && !effects.contains(&i))
                 .collect();
+            // `--exposure-eye`: the mean light on what the timeline's
+            // camera sees, measured with the reference frame's camera as the
+            // CPU render measures it (with --eye: `main`).
+            if let (true, Some(d)) = (l.exposure.eye, &drawn) {
+                let size = fo4_scene::camera::REFERENCE_SIZE;
+                let cam = fo4_scene::camera::look_at(
+                    d.eye,
+                    d.look,
+                    fo4_scene::camera::reference_frustum(size),
+                    size,
+                )?;
+                l.expose_seen(&fo4_render::seen_lit_points(&build.list, &lit, &cam));
+            }
             for line in &l.report {
                 println!("light: {line}");
             }

@@ -74,6 +74,9 @@ pub struct SurfaceParams {
     /// Lit by the scene's light (`GpuScene::light`), as the CPU's
     /// `fo4_render::Lighting::lit` marks the draw.
     pub lit: bool,
+    /// Lit with the mesh's vertex normals (a lit draw whose mesh keeps
+    /// normals: `light_vertex_normals_v1`), as the CPU's raster does.
+    pub smooth: bool,
 }
 /// Words of [`SurfaceParams::bits`].
 pub const PARAM_WORDS: usize = 19;
@@ -100,7 +103,7 @@ impl SurfaceParams {
             colour[0].to_bits(),
             colour[1].to_bits(),
             colour[2].to_bits(),
-            u32::from(self.lit),
+            u32::from(self.lit) | u32::from(self.smooth) << 1,
         ]
     }
 }
@@ -228,7 +231,7 @@ pub struct GpuLight {
 }
 
 /// Rows of four values before the first point in [`light_words`].
-pub const LIGHT_HEADER_ROWS: usize = 14;
+pub const LIGHT_HEADER_ROWS: usize = 17;
 
 /// The storage buffer of `surface.wesl` for `light`, rows of four f32 in
 /// game axes: 0 ambient and the point count; 1 the directional colour and
@@ -238,7 +241,10 @@ pub const LIGHT_HEADER_ROWS: usize = 14;
 /// fourth value: whether there is one); 9 the fog colour and whether there
 /// is fog; 10 its near, far and maximum; 11 to 13 the sky's zenith (and
 /// whether there is a sky), lower sky (and the elevation sine of its stop)
-/// and horizon; then two rows per point: position and radius, colour.
+/// and horizon; 14 the exposure (`fo4_scene::light::Exposure`): scale,
+/// white, and flags (bit 0 scale, bit 1 white, bit 2 cinematic and tint) as
+/// a float; 15 saturation, brightness, contrast, tint amount; 16 the tint's
+/// colour; then two rows per point: position and radius, colour.
 pub fn light_words(light: &fo4_scene::light::Light) -> Vec<f32> {
     let mut w = vec![0f32; 4 * (LIGHT_HEADER_ROWS + 2 * light.points.len())];
     let row = |r: usize, v: [f32; 4], w: &mut Vec<f32>| w[4 * r..4 * r + 4].copy_from_slice(&v);
@@ -267,6 +273,24 @@ pub fn light_words(light: &fo4_scene::light::Light) -> Vec<f32> {
         row(12, rgb(s.lower, fo4_scene::light::Sky::LOWER_AT), &mut w);
         row(13, rgb(s.horizon, 0.), &mut w);
     }
+    let x = &light.exposure;
+    let flags = u8::from(x.scale.is_some())
+        | u8::from(x.white.is_some()) << 1
+        | u8::from(x.cinematic.is_some() || x.tint.is_some()) << 2;
+    row(
+        14,
+        [
+            x.scale.unwrap_or(1.),
+            x.white.unwrap_or(1.),
+            f32::from(flags),
+            0.,
+        ],
+        &mut w,
+    );
+    let [sat, bright, contrast] = x.cinematic.unwrap_or([1.; 3]);
+    let [amount, tr, tg, tb] = x.tint.unwrap_or([0., 1., 1., 1.]);
+    row(15, [sat, bright, contrast, amount], &mut w);
+    row(16, [tr, tg, tb, 0.], &mut w);
     for (k, p) in light.points.iter().enumerate() {
         let r = LIGHT_HEADER_ROWS + 2 * k;
         row(
@@ -354,6 +378,7 @@ fn surface_params(alpha: Alpha, uv_offset: [f64; 2], uv_scale: [f64; 2]) -> Surf
         palette: 0,
         colour: None,
         lit: false,
+        smooth: false,
     }
 }
 
@@ -599,6 +624,9 @@ pub fn convert_lit(
                 .map_or(0, |p| u32::from(p.colour) | u32::from(p.alpha) << 1),
             colour: draw.colour,
             lit: light.is_some_and(|(l, lit)| (l.lit || l.fog.is_some()) && lit[di]),
+            smooth: light.is_some_and(|(l, lit)| (l.lit || l.fog.is_some()) && lit[di])
+                && draw.falloff.is_none()
+                && source.normals.is_some(),
             ..surface_params(draw.alpha, draw.uv_offset, draw.uv_scale)
         };
         let moved = animations.get(&di).and_then(|a| a.motion.clone());

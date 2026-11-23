@@ -368,6 +368,7 @@ fn scol_hypothesis_draws_two_textured_parts_without_the_generated_alternative() 
             blocks: None,
             time: None,
             clock: Default::default(),
+            vertex_normals: false,
         },
         &Budget::new(32 << 20),
     )
@@ -385,6 +386,7 @@ fn scol_hypothesis_draws_two_textured_parts_without_the_generated_alternative() 
             blocks: None,
             time: None,
             clock: Default::default(),
+            vertex_normals: false,
         },
         &b,
     )
@@ -416,6 +418,7 @@ fn scol_hypothesis_draws_two_textured_parts_without_the_generated_alternative() 
             blocks: None,
             time: None,
             clock: Default::default(),
+            vertex_normals: false,
         },
         true,
         &Budget::new(32 << 20),
@@ -442,6 +445,7 @@ fn scol_hypothesis_draws_two_textured_parts_without_the_generated_alternative() 
             blocks: None,
             time: None,
             clock: Default::default(),
+            vertex_normals: false,
         },
         &b,
     )
@@ -471,6 +475,7 @@ fn scol_hypothesis_draws_two_textured_parts_without_the_generated_alternative() 
             blocks: None,
             time: None,
             clock: Default::default(),
+            vertex_normals: false,
         },
         &Budget::new(32 << 20),
     )
@@ -492,6 +497,7 @@ fn scol_hypothesis_draws_two_textured_parts_without_the_generated_alternative() 
             blocks: None,
             time: None,
             clock: Default::default(),
+            vertex_normals: false,
         },
         &b,
     )
@@ -579,6 +585,7 @@ fn untextured_effect_requires_hypothesis_and_refuses_unhandled_features() {
             blocks: None,
             time: None,
             clock: Default::default(),
+            vertex_normals: false,
         };
         let output = build(&scene, &loader, &m.limits, options, &b).unwrap();
         if let Some(code) = expected_error {
@@ -1163,6 +1170,7 @@ fn effect_surface_build_with(x: EffectFixture) -> crate::draw::Build {
         blocks: None,
         time: None,
         clock: Default::default(),
+        vertex_normals: false,
     };
     build(&scene, &loader, &m.limits, options, &b).unwrap()
 }
@@ -1371,6 +1379,7 @@ fn a_missing_material_falls_back_to_the_shaders_own_texture_only_under_its_rule(
         blocks: None,
         time: None,
         clock: Default::default(),
+        vertex_normals: false,
     };
     let part = nif_named(
         b"textures/a.dds",
@@ -1447,6 +1456,7 @@ fn a_surface_with_uv_fields_other_than_identity_needs_the_uv_order_rule() {
         blocks: None,
         time: None,
         clock: Default::default(),
+        vertex_normals: false,
     };
     let measured = build(&scene, &loader, &m.limits, options(RuleLevel::Measured), &b).unwrap();
     assert!(measured.list.draws.is_empty());
@@ -1540,6 +1550,7 @@ fn a_swap_leaves_a_shape_without_material_to_its_own_texture_under_its_rule() {
         blocks: None,
         time: None,
         clock: Default::default(),
+        vertex_normals: false,
     };
     let run = |swap: &[u8]| {
         let part = nif_with_helper(b"textures/a.dds", None, b"PlainLabel");
@@ -1611,6 +1622,7 @@ fn a_blended_lighting_surface_takes_its_vertex_alpha_only_under_its_rule() {
         blocks: None,
         time: None,
         clock: Default::default(),
+        vertex_normals: false,
     };
     // Normal bytes, then RGBA: a vertex alpha of 0, 128 and 255.
     let colours = |a: [u8; 3]| a.map(|a| [128, 128, 255, 0, 200, 100, 50, a]);
@@ -1685,6 +1697,7 @@ fn swap_patterns_match_names_only_under_their_rules() {
         blocks: None,
         time: None,
         clock: Default::default(),
+        vertex_normals: false,
     };
     let run = |swap: &[u8], policy: RuleLevel| {
         let part = nif_named(
@@ -1776,6 +1789,7 @@ fn triangles_on_a_non_finite_texture_coordinate_are_left_out_only_under_their_ru
         blocks: None,
         time: None,
         clock: Default::default(),
+        vertex_normals: false,
     };
     let mut part = nif_with_helper(b"textures/a.dds", None, b"PlainLabel");
     // Vertex 0's position (1, 0, 0) then its first UV half: a NaN.
@@ -1951,6 +1965,7 @@ fn free_running_controllers_are_drawn_at_the_build_time_only_under_the_clock_rul
             blocks: None,
             time,
             clock: Default::default(),
+            vertex_normals: false,
         };
         let state = scene.instances[0].state.hypotheses().to_vec();
         (
@@ -2126,6 +2141,7 @@ fn effect_colour_and_multiple_follow_the_clock_behind_their_switches() {
             blocks: None,
             time,
             clock,
+            vertex_normals: false,
         };
         let state = (
             matches!(scene.instances[0].state, fo4_scene::State::Blocked),
@@ -2332,6 +2348,7 @@ fn a_moving_node_is_drawn_at_the_build_time_only_behind_its_switch() {
             blocks: None,
             time,
             clock,
+            vertex_normals: false,
         };
         let state = scene.instances[0].state.hypotheses().to_vec();
         (
@@ -2461,6 +2478,7 @@ fn a_swap_pattern_reaches_the_material_another_scope_put_in_place() {
             blocks: None,
             time: None,
             clock: Default::default(),
+            vertex_normals: false,
         };
         let out = build(&scene, &loader, &m.limits, options, &b).unwrap();
         drop(temp);
@@ -2550,6 +2568,7 @@ fn a_timeline_frame_leaves_out_what_the_run_disabled_and_moves_what_it_moved() {
         blocks: None,
         time: None,
         clock: Default::default(),
+        vertex_normals: false,
     };
     // The draws of the frame at second `s`, or the error applying it.
     let draws_at = |t: &Timeline, s: f64, level: RuleLevel| {

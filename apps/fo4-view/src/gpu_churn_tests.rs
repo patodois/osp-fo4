@@ -60,6 +60,7 @@ fn surface(texture: usize, blend: Option<(BlendFactor, BlendFactor)>, overlay: b
             palette: 0,
             colour: None,
             lit: false,
+            smooth: false,
         },
         key: SurfaceKey {
             blend,
@@ -1755,6 +1756,8 @@ fn cpu_and_gpu_frames_agree_on_a_timeline_cast_frame() {
         missing_bones_at_bind: false,
         pose: fo4_scene::char_graph::Switches::default(),
         aim: Aim::Point([60., 100., 250.]),
+        dead: tl::Dead::Standing,
+        sit_marker: false,
     };
     let applied = tl::apply(&mut scene, &mut loader, &p.frame, level, &b).unwrap();
     let c = crate::timeline::cast(&p, &args, &scene, &mut loader, level, &b).unwrap();
@@ -1849,6 +1852,20 @@ fn cpu_and_gpu_frames_agree_on_a_timeline_cast_frame() {
 #[test]
 #[ignore = "needs a GPU: draws offscreen through Bevy"]
 fn cpu_and_gpu_frames_agree_on_a_lit_frame() {
+    lit_frame_agrees(false);
+}
+
+/// The same lit frame with the wall lit by its vertex normals (tilted)
+/// and every exposure part set (`frame_exposure_seen_light_v1`'s scale,
+/// `image_space_hdr_white_v1`, `image_space_cinematic_tint_v1`,
+/// `light_vertex_normals_v1`): the CPU and the viewer still agree.
+#[test]
+#[ignore = "needs a GPU: draws offscreen through Bevy"]
+fn cpu_and_gpu_frames_agree_on_an_exposed_frame_with_vertex_normals() {
+    lit_frame_agrees(true);
+}
+
+fn lit_frame_agrees(exposed: bool) {
     use fo4_render::{Alpha, Draw, DrawList, Mesh, Sidedness, Texture, Vertex};
     use fo4_scene::light::{Fog, Light, Point, Sky};
     let quad = |corners: [[f64; 3]; 4]| -> Vec<Vertex> {
@@ -1969,7 +1986,24 @@ fn cpu_and_gpu_frames_agree_on_a_lit_frame() {
         lit: true,
         rules: Default::default(),
         report: Vec::new(),
+        exposure: Default::default(),
     };
+    let mut light = light;
+    if exposed {
+        light.exposure = fo4_scene::light::Exposure {
+            eye: true,
+            scale: Some(0.7),
+            white: Some(1.5),
+            cinematic: Some([0.8, 1.1, 1.05]),
+            tint: Some([0.2, 1., 0.6, 0.3]),
+        };
+        list.meshes[1].normals = Some(vec![
+            [0.3, -0.9, 0.2],
+            [-0.3, -0.9, 0.2],
+            [-0.2, -0.9, -0.3],
+            [0.2, -0.9, -0.3],
+        ]);
+    }
     let camera = fo4_scene::camera::look_at(
         [0., -300., 120.],
         [0., 600., 260.],
@@ -1998,6 +2032,14 @@ fn cpu_and_gpu_frames_agree_on_a_lit_frame() {
     let mut gpu_scene =
         crate::scene::convert_lit(&mut list, &options, Some((&light, &lit))).unwrap();
     assert!(gpu_scene.light.as_ref().is_some_and(|l| l.sky));
+    assert_eq!(
+        gpu_scene
+            .surfaces
+            .iter()
+            .filter(|x| x.params.smooth)
+            .count(),
+        usize::from(exposed)
+    );
     let gpu = headless(&mut gpu_scene, &camera, options.clear, true).unwrap();
     let gpu_tags = crate::compare::tags_from_bytes(gpu.tags.as_ref().unwrap()).unwrap();
     assert!(f.instances.contains(&2) && gpu_tags.contains(&2), "marker");

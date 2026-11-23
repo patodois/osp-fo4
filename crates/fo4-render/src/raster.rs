@@ -95,6 +95,84 @@ struct DrawLight<'a> {
     light: &'a fo4_scene::light::Light,
     points: Vec<usize>,
 }
+/// Most points [`seen_lit_points`] returns.
+pub const SEEN_POINTS: usize = 20_000;
+
+/// The centroids of the triangles of the draws `lit` marks whose centroid
+/// lies in front of `camera`, between its near and far distances and inside
+/// its frame, each with the triangle's face normal turned toward the eye
+/// (world axes), in draw and triangle order; with more than
+/// [`SEEN_POINTS`], every k-th of them (k the smallest that keeps at most
+/// that many). What `frame_exposure_seen_light_v1` measures the light on
+/// (`fo4_scene::light::Light::expose_seen`): the CPU render and the viewer
+/// call it with the same list, flags and camera.
+pub fn seen_lit_points(
+    list: &DrawList,
+    lit: &[bool],
+    camera: &Camera,
+) -> Vec<([f64; 3], [f64; 3])> {
+    let [w, h] = camera.size;
+    let mut all = Vec::new();
+    for (di, draw) in list.draws.iter().enumerate() {
+        if !lit.get(di).copied().unwrap_or(false) {
+            continue;
+        }
+        let Some(mesh) = list.meshes.get(draw.mesh) else {
+            continue;
+        };
+        for tri in &mesh.triangles {
+            let Some(v) = tri
+                .iter()
+                .map(|i| {
+                    mesh.vertices
+                        .get(*i as usize)
+                        .map(|v| draw.world.apply(v.position))
+                })
+                .collect::<Option<Vec<[f64; 3]>>>()
+            else {
+                continue;
+            };
+            let c: [f64; 3] = std::array::from_fn(|i| (v[0][i] + v[1][i] + v[2][i]) / 3.);
+            let a = camera.coordinates(c);
+            if !(a[0] >= camera.frustum[4] && a[0] <= camera.frustum[5]) {
+                continue;
+            }
+            let Some(q) = camera.project_coordinates(a) else {
+                continue;
+            };
+            if !(q.pixel[0] >= 0.
+                && q.pixel[0] < f64::from(w)
+                && q.pixel[1] >= 0.
+                && q.pixel[1] < f64::from(h))
+            {
+                continue;
+            }
+            let e1: [f64; 3] = std::array::from_fn(|i| v[1][i] - v[0][i]);
+            let e2: [f64; 3] = std::array::from_fn(|i| v[2][i] - v[0][i]);
+            let mut n = [
+                e1[1] * e2[2] - e1[2] * e2[1],
+                e1[2] * e2[0] - e1[0] * e2[2],
+                e1[0] * e2[1] - e1[1] * e2[0],
+            ];
+            let l = n.iter().map(|x| x * x).sum::<f64>().sqrt();
+            if !(l > 0. && l.is_finite()) {
+                continue;
+            }
+            n = n.map(|x| x / l);
+            let to_eye: [f64; 3] = std::array::from_fn(|i| camera.translation[i] - c[i]);
+            if (0..3).map(|i| n[i] * to_eye[i]).sum::<f64>() < 0. {
+                n = n.map(|x| -x);
+            }
+            all.push((c, n));
+        }
+    }
+    if all.len() <= SEEN_POINTS {
+        return all;
+    }
+    let k = all.len().div_ceil(SEEN_POINTS);
+    all.into_iter().step_by(k).collect()
+}
+
 /// The sine of the elevation of the view direction through the centre of
 /// pixel `(x, y)` of `camera` (game axes, Z up).
 pub fn pixel_elevation(camera: &Camera, x: u32, y: u32) -> f64 {
@@ -440,13 +518,36 @@ impl Raster<'_> {
                 // A lit draw: the colour times the light at the surface
                 // point (game axes), then the fog by distance from the eye
                 // (`light_sum_clamped_v1`).
-                if let (Some(d), Some(n)) = (lit, face) {
+                if let (Some(d), Some(face_n)) = (lit, face) {
                     let point: [f64; 3] = std::array::from_fn(|j| {
                         (0..3)
                             .map(|i| weight[i] * v[i].a[j] / v[i].a[0])
                             .sum::<f64>()
                             / inv
                     });
+                    // With the mesh's vertex normals kept for a lit draw
+                    // (`light_vertex_normals_v1`): the normal interpolated
+                    // by reciprocal depth, turned toward the eye.
+                    let mut n = face_n;
+                    if draw.falloff.is_none() && v.iter().all(|c| c.normal.is_some()) {
+                        let mut m = [0.; 3];
+                        for i in 0..3 {
+                            let normal = v[i].normal.unwrap_or_default();
+                            for j in 0..3 {
+                                m[j] += weight[i] * normal[j] / v[i].a[0];
+                            }
+                        }
+                        let length = m.iter().map(|x| x * x).sum::<f64>().sqrt();
+                        if length > 0. && length.is_finite() {
+                            if (0..3).map(|j| -m[j] * point[j]).sum::<f64>() < 0. {
+                                m = m.map(|x| -x);
+                            }
+                            let m = m.map(|x| x / length);
+                            n = std::array::from_fn(|i| {
+                                (0..3).map(|k| m[k] * self.camera.rotation[k][i]).sum()
+                            });
+                        }
+                    }
                     let world: [f64; 3] = std::array::from_fn(|i| {
                         self.camera.translation[i]
                             + (0..3)
@@ -458,6 +559,12 @@ impl Raster<'_> {
                         for (value, component) in color.iter_mut().zip(l) {
                             *value *= component;
                         }
+                        // `frame_exposure_eye_light_v1`.
+                        if let Some(k) = d.light.exposure.scale {
+                            for value in &mut color[..3] {
+                                *value *= k;
+                            }
+                        }
                     }
                     if let Some(fog) = &d.light.fog {
                         let distance = point.iter().map(|x| x * x).sum::<f64>().sqrt();
@@ -465,6 +572,12 @@ impl Raster<'_> {
                         for (value, component) in color.iter_mut().zip(fog.colour) {
                             *value = *value * (1. - f) + component * f;
                         }
+                    }
+                    // `image_space_hdr_white_v1`, `image_space_cinematic_tint_v1`.
+                    let x = &d.light.exposure;
+                    if x.white.is_some() || x.cinematic.is_some() || x.tint.is_some() {
+                        let mapped = x.map([color[0], color[1], color[2]]);
+                        color[..3].copy_from_slice(&mapped);
                     }
                 }
                 color[3] *= draw.alpha.opacity;
@@ -706,6 +819,14 @@ pub fn render_lit(
                     })
                     .ok_or_else(|| err("RenderFalloffNormals", di))?;
                 Some(n)
+            }
+            // A lit draw whose mesh keeps normals (only under
+            // `BuildOptions::vertex_normals`: otherwise only falloff draws,
+            // never lit, keep them) is lit with them.
+            None if lighting.is_some_and(|g| g.lit.get(di).copied().unwrap_or(false)) => {
+                mesh.normals.as_ref().filter(|n| {
+                    n.len() == mesh.vertices.len() && n.iter().flatten().all(|v| v.is_finite())
+                })
             }
             None => None,
         };

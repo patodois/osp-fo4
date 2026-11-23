@@ -49,6 +49,7 @@ fn load_scene(
         fo4_render::draw::BuildOptions {
             time: s.time,
             clock: s.clock,
+            vertex_normals: s.light.vertex_normals,
             ..load::build_options(s.textures, s.level)
         },
         s.scene_memory,
@@ -59,6 +60,23 @@ fn load_scene(
         (s.light, s.light_assumptions),
         play_live,
     )?;
+    // `--exposure-eye` with the caller's eye and look (a timeline frame's
+    // camera is measured in `load::cell`), the reference frame's camera as
+    // the CPU render's.
+    if loaded.timeline.is_none() {
+        if let Some((l, lit)) = &mut loaded.light {
+            if l.exposure.eye {
+                let size = camera::REFERENCE_SIZE;
+                let cam = camera::look_at(s.eye, s.look, camera::reference_frustum(size), size)?;
+                let points = fo4_render::seen_lit_points(&loaded.build.list, lit, &cam);
+                if l.expose_seen(&points).is_some() {
+                    if let Some(line) = l.report.last() {
+                        println!("light: {line}");
+                    }
+                }
+            }
+        }
+    }
     let options = RenderOptions {
         backface_cull: s.backface_cull,
         ..RenderOptions::REFERENCE
@@ -68,6 +86,11 @@ fn load_scene(
         &options,
         loaded.light.as_ref().map(|(l, lit)| (l, lit.as_slice())),
     )?;
+    // Only with --light-vertex-normals: how many lit surfaces take them.
+    if s.light.vertex_normals {
+        let n = gpu.surfaces.iter().filter(|x| x.params.smooth).count();
+        println!("light: {n} lit surfaces lit with their meshes' vertex normals");
+    }
     // Only with --time, so the default output is unchanged.
     if let Some(t) = s.time {
         println!(

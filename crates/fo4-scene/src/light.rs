@@ -65,9 +65,24 @@ pub struct Switches {
     /// `--fog-weather`: an exterior frame's fog from the weather's fog row
     /// and distances ([`hypotheses::WEATHER_FOG`]).
     pub weather_fog: bool,
+    /// `--exposure-eye`: a lit colour divided by the mean light falling on
+    /// what the eye sees ([`hypotheses::EXPOSURE_EYE`], [`Light::expose_seen`]).
+    pub exposure_eye: bool,
+    /// `--exposure-white`: a lit colour tone mapped with the white of the
+    /// frame's image space ([`hypotheses::IMAGE_SPACE_WHITE`]).
+    pub exposure_white: bool,
+    /// `--exposure-cinematic`: a lit colour's saturation, brightness,
+    /// contrast and tint from the frame's image space
+    /// ([`hypotheses::IMAGE_SPACE_CINEMATIC`]).
+    pub exposure_cinematic: bool,
+    /// `--light-vertex-normals`: a lit surface whose mesh stores vertex
+    /// normals is lit with them, interpolated, instead of its face normal
+    /// ([`hypotheses::LIGHT_VERTEX_NORMALS`]; the draw build keeps the
+    /// normals, `fo4_render::draw::BuildOptions::vertex_normals`).
+    pub vertex_normals: bool,
 }
 impl Switches {
-    const FLAGS: [&'static str; 9] = [
+    const FLAGS: [&'static str; 13] = [
         "--light-cell",
         "--light-inherits",
         "--light-points",
@@ -77,8 +92,12 @@ impl Switches {
         "--sky-weather",
         "--light-weather",
         "--fog-weather",
+        "--exposure-eye",
+        "--exposure-white",
+        "--exposure-cinematic",
+        "--light-vertex-normals",
     ];
-    fn slots(&mut self) -> [&mut bool; 9] {
+    fn slots(&mut self) -> [&mut bool; 13] {
         [
             &mut self.cell,
             &mut self.inherits,
@@ -89,6 +108,10 @@ impl Switches {
             &mut self.sky,
             &mut self.weather_ambient,
             &mut self.weather_fog,
+            &mut self.exposure_eye,
+            &mut self.exposure_white,
+            &mut self.exposure_cinematic,
+            &mut self.vertex_normals,
         ]
     }
     /// Sets the switch a command-line flag names; false for any other text.
@@ -117,6 +140,71 @@ impl Switches {
     /// Whether a switch of the exterior's weather is on.
     pub fn weather(&self) -> bool {
         self.sky || self.weather_ambient || self.weather_fog
+    }
+    /// Whether a switch reading the frame's image space is on.
+    pub fn image_space(&self) -> bool {
+        self.exposure_white || self.exposure_cinematic
+    }
+}
+
+/// The share of the seen triangles whose light the exposure brings to 1
+/// or below (`frame_exposure_seen_light_v1`): chosen.
+pub const EXPOSURE_QUANTILE: f64 = 0.9;
+
+/// What maps a lit colour to the frame ([`Light::exposure`]), each part
+/// under its own switch; with every part `None` a lit colour is as before
+/// (`light_sum_clamped_v1`).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize)]
+pub struct Exposure {
+    /// [`hypotheses::EXPOSURE_EYE`]: the eye's reading is asked
+    /// (`--exposure-eye`); [`Light::expose_seen`] sets `scale`.
+    pub eye: bool,
+    /// The factor a lit colour is multiplied by after the light (before the
+    /// fog): one over the mean light falling on what the eye sees.
+    pub scale: Option<f32>,
+    /// [`hypotheses::IMAGE_SPACE_WHITE`]: after the fog, each channel `x`
+    /// becomes `x (1 + x / W^2) / (1 + x)`.
+    pub white: Option<f32>,
+    /// [`hypotheses::IMAGE_SPACE_CINEMATIC`]: saturation, brightness,
+    /// contrast (the image space's CNAM words), applied after the white.
+    pub cinematic: Option<[f32; 3]>,
+    /// The tint's amount and colour (TNAM words), after the cinematic.
+    pub tint: Option<[f32; 4]>,
+}
+impl Exposure {
+    /// Whether any part changes a lit colour.
+    pub fn any(&self) -> bool {
+        self.scale.is_some()
+            || self.white.is_some()
+            || self.cinematic.is_some()
+            || self.tint.is_some()
+    }
+    /// A lit colour after the fog: the white's tone curve, then the
+    /// cinematic values and the tint (each part only where set). The
+    /// scale is applied by the renderer before the fog.
+    pub fn map(&self, c: [f32; 3]) -> [f32; 3] {
+        let mut c = c;
+        if let Some(w) = self.white {
+            for x in &mut c {
+                let v = x.max(0.);
+                *x = v * (1. + v / (w * w)) / (1. + v);
+            }
+        }
+        if let Some([saturation, brightness, contrast]) = self.cinematic {
+            let grey = (c[0] + c[1] + c[2]) / 3.;
+            for x in &mut c {
+                *x = grey + saturation * (*x - grey);
+                *x *= brightness;
+                *x = 0.5 + contrast * (*x - 0.5);
+            }
+        }
+        if let Some([amount, r, g, b]) = self.tint {
+            let grey = (c[0] + c[1] + c[2]) / 3.;
+            for (x, t) in c.iter_mut().zip([r, g, b]) {
+                *x += amount * (t * grey - *x);
+            }
+        }
+        c
     }
 }
 
@@ -213,8 +301,53 @@ pub struct Light {
     pub rules: BTreeSet<&'static str>,
     /// One line per reading, for the overlay (`light\t...`).
     pub report: Vec<String>,
+    /// What maps a lit colour to the frame beyond the clamp (`--exposure-*`).
+    pub exposure: Exposure,
 }
 impl Light {
+    /// Under [`hypotheses::EXPOSURE_EYE`] (asked by `--exposure-eye`): the
+    /// scale a lit colour takes, one over the light that nine in ten
+    /// ([`EXPOSURE_QUANTILE`]) of `points` stay at or below (the triangles
+    /// of the lit draws the camera sees, each a centroid and a unit normal
+    /// toward the eye, chosen by the renderer: `fo4_render::seen_lit_points`),
+    /// each one's light the mean over the three channels of [`Light::at`];
+    /// nothing when that light is not positive, no point is given or the
+    /// reading is not asked. Returns that light when it applied.
+    pub fn expose_seen(&mut self, points: &[([f64; 3], [f64; 3])]) -> Option<f32> {
+        if !self.exposure.eye || !self.lit {
+            return None;
+        }
+        if points.is_empty() {
+            self.report
+                .push("exposure: no lit triangle in view, no scale".into());
+            return None;
+        }
+        let mut each: Vec<f32> = points
+            .iter()
+            .map(|(p, n)| self.at(*p, *n).iter().sum::<f32>() / 3.)
+            .collect();
+        each.sort_by(f32::total_cmp);
+        let at = |q: f64| each[((each.len() - 1) as f64 * q).floor() as usize];
+        let (median, mean) = (
+            at(0.5),
+            each.iter().map(|x| f64::from(*x)).sum::<f64>() / each.len() as f64,
+        );
+        // The light nine in ten of the seen triangles stay at or below.
+        let l = at(EXPOSURE_QUANTILE);
+        if !(l > 0. && l.is_finite()) {
+            self.report
+                .push("exposure: no light falls on what is seen, no scale".into());
+            return None;
+        }
+        self.exposure.scale = Some(1. / l);
+        self.rules.insert(hypotheses::EXPOSURE_EYE);
+        self.report.push(format!(
+            "exposure: the light nine in ten of {} lit triangles in view stay at or below {l:.4} (median {median:.4}, mean {mean:.4}; face normals toward the eye, three channels); lit colours times {:.4}",
+            points.len(),
+            1. / l
+        ));
+        Some(l)
+    }
     /// The light falling on a surface at `p` with unit normal `n` (game
     /// axes), before it multiplies the surface colour: ambient, the cube,
     /// the directional term and the points (`light_sum_clamped_v1` clamps
@@ -492,6 +625,87 @@ fn error(
 }
 
 /// The climate and weather of an exterior scene, as read.
+/// The image space record's words a frame applies (`--exposure-white`,
+/// `--exposure-cinematic`): HNAM word 5 as the white, CNAM's three words as
+/// saturation, brightness and contrast, TNAM's four as the tint's amount
+/// and colour (labels from prior general knowledge of the record, not from
+/// the data; `spec/seen-census.txt`, section 4).
+fn read_image_space(
+    store: &Store,
+    light: &mut Light,
+    found: Option<(FormKey, String)>,
+    switches: Switches,
+    b: &Budget,
+) -> Result<()> {
+    let Some((key, from)) = found else {
+        say(
+            &mut light.report,
+            "image space: none found for the frame".into(),
+        );
+        return Ok(());
+    };
+    let Some(r) = store.raw(&key, b)? else {
+        say(&mut light.report, "image space: no winning record".into());
+        return Ok(());
+    };
+    let words = |sig: &[u8; 4]| -> Vec<f32> {
+        r.subrecords
+            .iter()
+            .find(|s| s.signature == *sig)
+            .map(|s| {
+                r.data(s)
+                    .as_chunks::<4>()
+                    .0
+                    .iter()
+                    .map(|c| f32::from_le_bytes(*c))
+                    .collect()
+            })
+            .unwrap_or_default()
+    };
+    if switches.exposure_white {
+        match words(b"HNAM").get(5).copied() {
+            Some(w) if w > 0. && w.is_finite() => {
+                light.exposure.white = Some(w);
+                light.rules.insert(hypotheses::IMAGE_SPACE_WHITE);
+                say(
+                    &mut light.report,
+                    format!("image space white {w} (HNAM word 5) from {from}"),
+                );
+            }
+            _ => say(
+                &mut light.report,
+                format!("image space white: HNAM word 5 not a positive number in {from}"),
+            ),
+        }
+    }
+    if switches.exposure_cinematic {
+        let c = words(b"CNAM");
+        let t = words(b"TNAM");
+        match (
+            <[f32; 3]>::try_from(c.as_slice()),
+            <[f32; 4]>::try_from(t.as_slice()),
+        ) {
+            (Ok(c), Ok(t)) if c.iter().chain(&t).all(|v| v.is_finite()) => {
+                light.exposure.cinematic = Some(c);
+                light.exposure.tint = Some(t);
+                light.rules.insert(hypotheses::IMAGE_SPACE_CINEMATIC);
+                say(
+                    &mut light.report,
+                    format!(
+                        "image space saturation {} brightness {} contrast {} (CNAM), tint {} of {} {} {} (TNAM) from {from}",
+                        c[0], c[1], c[2], t[0], t[1], t[2], t[3]
+                    ),
+                );
+            }
+            _ => say(
+                &mut light.report,
+                format!("image space cinematic: CNAM or TNAM not as measured in {from}"),
+            ),
+        }
+    }
+    Ok(())
+}
+
 struct Exterior {
     weather: Weather,
     times: Option<[u8; 6]>,
@@ -589,8 +803,24 @@ pub fn frame(
         lit: false,
         rules: BTreeSet::new(),
         report: Vec::new(),
+        exposure: Exposure {
+            eye: switches.exposure_eye,
+            ..Exposure::default()
+        },
     };
     let interior = scene.kind == Some(CellKind::Interior);
+    // The frame's image space: the interior cell's XCIM, or the weather
+    // slot's IMSP entry (found below).
+    let mut image_space: Option<(FormKey, String)> = None;
+    if interior && switches.image_space() {
+        image_space = scene
+            .cell
+            .data
+            .image_space
+            .as_ref()
+            .and_then(|r| r.key.clone())
+            .map(|k| (k, "the interior cell's image space (XCIM)".to_string()));
+    }
     if interior && (switches.cell || switches.fog) {
         let cell = cell_values(
             &scene.cell.record,
@@ -695,7 +925,7 @@ pub fn frame(
             }
         }
     }
-    if !interior && switches.weather() {
+    if !interior && (switches.weather() || switches.image_space()) {
         match exterior(store, &scene.cell.key, &assumptions, b)? {
             Err(why) => say(&mut light.report, format!("weather undecided: {why}")),
             Ok(e) => {
@@ -729,6 +959,19 @@ pub fn frame(
                     }
                 };
                 if let Some(slot) = slot.filter(|s| *s < e.weather.slots()) {
+                    if switches.image_space() {
+                        image_space = e
+                            .weather
+                            .image_spaces
+                            .get(slot)
+                            .and_then(|r| r.key.clone())
+                            .map(|k| {
+                                (
+                                    k,
+                                    format!("the weather's image space of slot {slot} (IMSP)"),
+                                )
+                            });
+                    }
                     say(
                         &mut light.report,
                         format!(
@@ -824,6 +1067,9 @@ pub fn frame(
                 }
             }
         }
+    }
+    if switches.image_space() {
+        read_image_space(store, &mut light, image_space, switches, b)?;
     }
     if switches.points {
         let (mut adjusted, mut faded) = (0u64, 0u64);
@@ -948,6 +1194,7 @@ mod tests {
             lit: true,
             rules: BTreeSet::new(),
             report: Vec::new(),
+            exposure: Exposure::default(),
         };
         // Facing up under the point at distance 100: half its colour.
         let c = l.at([0., 0., 0.], [0., 0., 1.]);
@@ -1033,5 +1280,69 @@ mod tests {
         assert!(!s.set_flag("--light-everything"));
         assert_eq!(s.flags(), vec!["--light-points", "--sky-weather"]);
         assert!(s.weather() && s.any());
+    }
+
+    /// The exposure's parts (`frame_exposure_eye_light_v1`,
+    /// `image_space_hdr_white_v1`, `image_space_cinematic_tint_v1`): the
+    /// scale is one over the light at the eye; a white of 1 leaves a colour
+    /// as it is, another compresses it; neutral cinematic values and a tint
+    /// of amount 0 change nothing.
+    #[test]
+    fn exposure_scales_by_the_light_at_the_eye_and_maps_by_the_image_space() {
+        let mut l = Light {
+            ambient: [2., 2., 2.],
+            cube: None,
+            directional: None,
+            points: Vec::new(),
+            fog: None,
+            sky: None,
+            lit: true,
+            rules: BTreeSet::new(),
+            report: Vec::new(),
+            exposure: Exposure::default(),
+        };
+        let up = [0., 0., 1.];
+        assert_eq!(l.expose_seen(&[([0.; 3], up)]), None);
+        l.exposure.eye = true;
+        assert_eq!(l.expose_seen(&[]), None);
+        assert_eq!(l.expose_seen(&[([0.; 3], up), ([5.; 3], up)]), Some(2.));
+        // The quantile, not the mean: nine dim points and one bright.
+        l.points.push(Point {
+            position: [100., 0., 1.],
+            radius: 10.,
+            colour: [30., 30., 30.],
+        });
+        let mut pts = vec![([0.; 3], up); 9];
+        pts.push(([100., 0., 0.], up));
+        assert_eq!(l.expose_seen(&pts), Some(2.));
+        assert_eq!(l.exposure.scale, Some(0.5));
+        assert!(l.rules.contains(hypotheses::EXPOSURE_EYE));
+        let c = [0.2, 1.5, 4.];
+        let x = Exposure {
+            white: Some(1.),
+            ..Exposure::default()
+        };
+        for (a, b) in x.map(c).iter().zip(c) {
+            assert!((a - b).abs() < 1e-6);
+        }
+        let x = Exposure {
+            white: Some(2.),
+            cinematic: Some([1., 1., 1.]),
+            tint: Some([0., 1., 0., 0.]),
+            ..Exposure::default()
+        };
+        let m = x.map([1., 1., 1.]);
+        assert!((m[0] - 0.625).abs() < 1e-6, "{m:?}");
+        let grey = Exposure {
+            cinematic: Some([0., 1., 1.]),
+            ..Exposure::default()
+        };
+        let g = grey.map([0.3, 0.6, 0.9]);
+        assert!(
+            g.iter()
+                .all(|v| (v - g[0]).abs() < 1e-6 && (v - 0.6).abs() < 1e-6),
+            "{g:?}"
+        );
+        assert!(!Exposure::default().any());
     }
 }

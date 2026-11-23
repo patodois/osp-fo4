@@ -14,7 +14,7 @@ type AnyResult<T> = Result<T, Box<dyn std::error::Error>>;
 const TERRAIN_SHADING: &str = "ground textures weighted per vertex under the pending terrain texture rules, times VCLR; untextured weight as flat neutral grey per triangle by geometric normal; unlit, not game lighting";
 fn run() -> AnyResult<()> {
     let args: Vec<_> = std::env::args().skip(1).collect();
-    const USAGE: &str = "usage: render MANIFEST DATA_DIRECTORY CELL_EDITOR_ID build/OUTPUT [--strict|--measured|--under-hypotheses] [--eye X,Y,Z --look X,Y,Z] [--instance-ids] [--collision-overlay] [--terrain] [--around N] [--texture-mib N] [--time SECONDS] [--clock-emissive-multiple] [--clock-emissive-colour] [--clock-falloff] [--clock-translation] [--clock-rotation] [--clock-rotation-xyz] [--clock-scale] [--timeline FILE --at SECONDS --eye-height UNITS [--look-heading DEGREES] [--timeline-nowait] [--timeline-child-flag-agrees] [--timeline-cast [--timeline-target-rotation] [--actor-missing-bone-bind] [--actor-start-clip] [--actor-subgraph-keywords] [--actor-clip-folder] [--actor-start-clip-loop]] [--look-at X,Y,Z | --look-at-actor nearest|speaker]] [--light-cell] [--light-inherits] [--light-points [--light-reference-radius] [--light-fade]] [--light-fog] [--sky-weather] [--light-weather] [--fog-weather] [--assume-hour H] [--assume-weather N] (with --timeline, CELL_EDITOR_ID - draws the player's cell)";
+    const USAGE: &str = "usage: render MANIFEST DATA_DIRECTORY CELL_EDITOR_ID build/OUTPUT [--strict|--measured|--under-hypotheses] [--eye X,Y,Z --look X,Y,Z] [--instance-ids] [--collision-overlay] [--terrain] [--around N] [--texture-mib N] [--time SECONDS] [--clock-emissive-multiple] [--clock-emissive-colour] [--clock-falloff] [--clock-translation] [--clock-rotation] [--clock-rotation-xyz] [--clock-scale] [--timeline FILE --at SECONDS --eye-height UNITS [--look-heading DEGREES] [--timeline-nowait] [--timeline-child-flag-agrees] [--timeline-dead-lying | --timeline-dead-left-out] [--timeline-sit-marker] [--timeline-cast [--timeline-target-rotation] [--actor-missing-bone-bind] [--actor-start-clip] [--actor-subgraph-keywords] [--actor-clip-folder] [--actor-start-clip-loop] [--actor-sit-clip]] [--look-at X,Y,Z | --look-at-actor nearest|speaker]] [--light-cell] [--light-inherits] [--light-points [--light-reference-radius] [--light-fade]] [--light-fog] [--sky-weather] [--light-weather] [--fog-weather] [--assume-hour H] [--assume-weather N] [--exposure-eye] [--exposure-white] [--exposure-cinematic] [--light-vertex-normals] (with --timeline, CELL_EDITOR_ID - draws the player's cell)";
     if args.len() < 4 {
         return Err(USAGE.into());
     }
@@ -105,6 +105,20 @@ fn run() -> AnyResult<()> {
             "--timeline" => timeline_file = Some(rest.next().ok_or(USAGE)?.clone()),
             "--timeline-nowait" => timeline_readings.nowait = true,
             "--timeline-child-flag-agrees" => timeline_readings.child_flag_agrees = true,
+            "--timeline-dead-lying" | "--timeline-dead-left-out" => {
+                if timeline_readings.dead != fo4_scene::timeline::Dead::Standing {
+                    return Err(format!(
+                        "one of --timeline-dead-lying and --timeline-dead-left-out\n{USAGE}"
+                    )
+                    .into());
+                }
+                timeline_readings.dead = if arg == "--timeline-dead-lying" {
+                    fo4_scene::timeline::Dead::Lying
+                } else {
+                    fo4_scene::timeline::Dead::LeftOut
+                };
+            }
+            "--timeline-sit-marker" => timeline_readings.sit_marker = true,
             "--timeline-cast" => timeline_cast = true,
             "--timeline-target-rotation" => cast_options.target_rotation = true,
             "--actor-missing-bone-bind" => cast_options.missing_bones_at_bind = true,
@@ -166,7 +180,7 @@ fn run() -> AnyResult<()> {
     if (light_switches.reference_radius || light_switches.fade) && !light_switches.points
         || light_switches.inherits && !(light_switches.cell || light_switches.fog)
         || light_assumptions != fo4_scene::light::Assumptions::default()
-            && !light_switches.weather()
+            && !(light_switches.weather() || light_switches.image_space())
     {
         return Err(format!(
             "--light-reference-radius and --light-fade need --light-points, --light-inherits needs --light-cell or --light-fog, --assume-hour and --assume-weather need a weather switch\n{USAGE}"
@@ -202,6 +216,7 @@ fn run() -> AnyResult<()> {
     }
     build_options.time = time;
     build_options.clock = switches;
+    build_options.vertex_normals = light_switches.vertex_normals;
     let mut manifest = Manifest::load(Path::new(&args[0]))?;
     manifest.root = Path::new(&args[1]).canonicalize()?;
     let limits = &manifest.limits;
@@ -401,10 +416,22 @@ fn run() -> AnyResult<()> {
                 )
             }
             None => {
-                let at: Vec<[f64; 3]> = markers.iter().map(|m| m.pos).collect();
+                let at: Vec<([f64; 3], bool)> = markers
+                    .iter()
+                    .map(|m| {
+                        (
+                            m.pos,
+                            matches!(m.pose, fo4_scene::timeline::Pose::Lying { .. }),
+                        )
+                    })
+                    .collect();
                 let first = fo4_render::timeline::next_tag(&built.list);
-                let tags =
-                    fo4_render::timeline::append_markers(&mut built.list, &at, first, &budget)?;
+                let tags = fo4_render::timeline::append_markers_posed(
+                    &mut built.list,
+                    &at,
+                    first,
+                    &budget,
+                )?;
                 let drawn = markers
                     .iter()
                     .map(|m| (m.reference.clone(), m.pos))
@@ -514,6 +541,7 @@ fn run() -> AnyResult<()> {
     // switch off, and then the render is the unlit one.
     let light =
         fo4_scene::light::frame(&store, &scene, light_switches, light_assumptions, &budget)?;
+    let mut light = light;
     let lit: Vec<bool> = match &light {
         Some(_) => {
             let effects: std::collections::BTreeSet<usize> =
@@ -524,6 +552,13 @@ fn run() -> AnyResult<()> {
         }
         None => Vec::new(),
     };
+    // `--exposure-eye`: the mean light on what the camera sees
+    // (`Light::expose_seen`).
+    if let Some(l) = &mut light {
+        if l.exposure.eye {
+            l.expose_seen(&fo4_render::seen_lit_points(&built.list, &lit, &camera));
+        }
+    }
     let mut frame = fo4_render::render_lit(
         &built.list,
         &camera,

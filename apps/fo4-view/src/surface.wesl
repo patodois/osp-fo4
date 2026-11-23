@@ -31,7 +31,8 @@ struct SurfaceParams {
     // `fo4_render::Draw::colour`: an RGB multiplier after the vertex colour
     // (an effect colour the game clock drives); 1 otherwise.
     tint: vec4<f32>,
-    // Bit 0: lit by `lights`.
+    // Bit 0: lit by `lights`; bit 1: lit with the interpolated vertex
+    // normal (`light_vertex_normals_v1`).
     mode: u32,
 }
 
@@ -42,7 +43,7 @@ struct SurfaceParams {
 // `scene::light_words`: rows of four values in game axes (Z up).
 @group(constants::MATERIAL_BIND_GROUP) @binding(4) var<storage, read> lights: array<vec4<f32>>;
 
-const LIGHT_HEADER_ROWS: u32 = 14u;
+const LIGHT_HEADER_ROWS: u32 = 17u;
 
 // Bevy's axes (Y up) to the game's (Z up): (x, y, z) -> (x, -z, y).
 fn to_game(v: vec3<f32>) -> vec3<f32> {
@@ -189,11 +190,21 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
         let p = to_game(in.world_position.xyz);
         let eye = to_game(view.world_position);
         var n = normalize(to_game(face));
+        if (params.mode & 2u) != 0u {
+            let m = to_game(in.world_normal);
+            if length(m) > 0.0 {
+                n = normalize(m);
+            }
+        }
         if dot(n, eye - p) < 0.0 {
             n = -n;
         }
         if lights[2u].w > 0.5 {
             color = vec4<f32>(color.rgb * light_at(p, n), color.a);
+            // `frame_exposure_eye_light_v1`.
+            if (u32(lights[14u].z) & 1u) != 0u {
+                color = vec4<f32>(color.rgb * lights[14u].x, color.a);
+            }
         }
         if lights[9u].w > 0.5 {
             let near = lights[10u].x;
@@ -207,6 +218,25 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
             }
             let f = max(min(t, lights[10u].z), 0.0);
             color = vec4<f32>(color.rgb * (1.0 - f) + lights[9u].xyz * f, color.a);
+        }
+        // `image_space_hdr_white_v1`, `image_space_cinematic_tint_v1`
+        // (`fo4_scene::light::Exposure::map`).
+        let flags = u32(lights[14u].z);
+        if (flags & 2u) != 0u {
+            let w = lights[14u].y;
+            let v = max(color.rgb, vec3<f32>(0.0));
+            color = vec4<f32>(v * (vec3<f32>(1.0) + v / (w * w)) / (vec3<f32>(1.0) + v), color.a);
+        }
+        if (flags & 4u) != 0u {
+            let c = lights[15u];
+            var rgb = color.rgb;
+            let grey = (rgb.r + rgb.g + rgb.b) / 3.0;
+            rgb = vec3<f32>(grey) + c.x * (rgb - vec3<f32>(grey));
+            rgb = rgb * c.y;
+            rgb = vec3<f32>(0.5) + c.z * (rgb - vec3<f32>(0.5));
+            let grey2 = (rgb.r + rgb.g + rgb.b) / 3.0;
+            rgb = rgb + c.w * (lights[16u].xyz * grey2 - rgb);
+            color = vec4<f32>(rgb, color.a);
         }
     }
     color.a = color.a * params.opacity;

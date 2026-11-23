@@ -950,6 +950,7 @@ fn light(points: Vec<fo4_scene::light::Point>) -> fo4_scene::light::Light {
         lit: true,
         rules: Default::default(),
         report: Vec::new(),
+        exposure: Default::default(),
     }
 }
 
