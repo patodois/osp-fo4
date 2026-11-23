@@ -1021,13 +1021,38 @@ fn sites(lib: &MapLibrary, counts: &mut BTreeMap<String, u64>) -> Vec<Site> {
 
 /// Builds the table: the static scan of `lib` over `atts`, the record
 /// fields that set a stage, the startup stages and how each quest can
-/// start (`tree`: the story manager's nodes).
+/// start (`tree`: the story manager's nodes). Calls from other scripts
+/// into a quest script's functions are not followed (as [`table_with`]
+/// with `outer` false).
 pub fn table(
     lib: &MapLibrary,
     atts: &[Attachment],
     store: &Store,
     tree: Option<&Tree>,
     b: &Budget,
+) -> Result<Table> {
+    table_with(lib, atts, store, tree, b, false)
+}
+
+/// [`table`], and with `outer` a call in a quest's own script that no
+/// engine event or fragment of its own script reaches is followed one
+/// call outward (`setter_outer_call_entry_v1`): every call of its
+/// function by name from another script's function, on a receiver whose
+/// declared type is the function's script or extends it, the attached
+/// script being that type or extending it, and the receiver resolved to
+/// that quest by the caller's attachment (`GetOwningQuest()` on the
+/// caller's own record, a property whose stored value names the quest, or
+/// the owning quest of an alias property of that quest). The setter then
+/// needs what reaches the caller (its fragment slot or its event); a
+/// caller nothing reaches either, or a receiver the scan does not
+/// resolve, is counted and left out.
+pub fn table_with(
+    lib: &MapLibrary,
+    atts: &[Attachment],
+    store: &Store,
+    tree: Option<&Tree>,
+    b: &Budget,
+    outer: bool,
 ) -> Result<Table> {
     let mut t = Table::default();
     let mut counts = BTreeMap::new();
@@ -1038,6 +1063,25 @@ pub fn table(
         events: engine_events(lib),
         entries: BTreeMap::new(),
     };
+    // Every call by the method name it calls (op 23), for the outer calls.
+    let mut calls: BTreeMap<String, Vec<(Rc<Func>, usize)>> = BTreeMap::new();
+    if outer {
+        for s in lib.scripts.values() {
+            for f in functions(s) {
+                for (at, ins) in f.code.iter().enumerate() {
+                    if ins.op != 23 {
+                        continue;
+                    }
+                    if let Some(n) = ins.args.first().and_then(ident) {
+                        calls
+                            .entry(n.to_string())
+                            .or_default()
+                            .push((f.clone(), at));
+                    }
+                }
+            }
+        }
+    }
     // Attachments by script, and the attached scripts below each script.
     let mut by_script: BTreeMap<&str, Vec<&Attachment>> = BTreeMap::new();
     for a in atts {
@@ -1090,6 +1134,23 @@ pub fn table(
         for a in list {
             let entries = scan.entries(&a.script, &site.func.name, &a.slots);
             let pairs = pairs(lib, site, a);
+            if outer && entries.is_empty() && a.signature == *b"QUST" && a.part == Part::Own {
+                let callers = outer_callers(lib, &calls, &below, &mut scan, site, a, &mut t);
+                if !callers.is_empty() {
+                    for (ca, ce) in callers {
+                        let needs = needs_of(&ce, Some(ca));
+                        push(
+                            &mut t,
+                            site,
+                            &pairs,
+                            format!("{}, reached by a call from {}", a.kind(), ca.kind()),
+                            needs,
+                            Some(a),
+                        );
+                    }
+                    continue;
+                }
+            }
             emit(&mut t, site, pairs, a.kind(), &entries, Some(a));
         }
     }
@@ -1284,6 +1345,13 @@ fn emit(
     entries: &BTreeSet<Entry>,
     a: Option<&Attachment>,
 ) {
+    let needs = needs_of(entries, a);
+    push(t, site, &pairs, attach, needs, a);
+}
+
+/// What each entry needs, on the attachment `a` (an empty list: the
+/// function is not reached).
+fn needs_of(entries: &BTreeSet<Entry>, a: Option<&Attachment>) -> Vec<Need> {
     let on = match a {
         Some(a) => match a.part {
             Part::Alias(i) => On::Alias(a.record.clone(), i),
@@ -1322,6 +1390,18 @@ fn emit(
     if needs.is_empty() {
         needs.push(Need::Unreached);
     }
+    needs
+}
+
+/// Pushes one setter (or starter) per need and (quest, stage) pair.
+fn push(
+    t: &mut Table,
+    site: &Site,
+    pairs: &[(Resolved<FormKey>, Resolved<i32>)],
+    attach: String,
+    needs: Vec<Need>,
+    a: Option<&Attachment>,
+) {
     let kind = if site.depth == 0 {
         format!("a call in {attach}")
     } else {
@@ -1348,7 +1428,7 @@ fn emit(
             }
             continue;
         }
-        for (quest, s) in &pairs {
+        for (quest, s) in pairs {
             t.setters.push(Setter {
                 quest: quest.clone(),
                 stage: s.clone(),
@@ -1359,6 +1439,80 @@ fn emit(
             });
         }
     }
+}
+
+/// The callers one call outward of a function no entry of its own script
+/// reaches (`setter_outer_call_entry_v1`, [`table_with`]): each caller's
+/// attachment with the entries that reach the caller.
+fn outer_callers<'a>(
+    lib: &MapLibrary,
+    calls: &BTreeMap<String, Vec<(Rc<Func>, usize)>>,
+    below: &BTreeMap<String, Vec<&'a Attachment>>,
+    scan: &mut Scan<'_>,
+    site: &Site,
+    a: &Attachment,
+    t: &mut Table,
+) -> Vec<(&'a Attachment, BTreeSet<Entry>)> {
+    let mut out: Vec<(&'a Attachment, BTreeSet<Entry>)> = Vec::new();
+    for (f, at) in calls.get(&site.func.name).into_iter().flatten() {
+        let ins = &f.code[*at];
+        let Some(recv) = ins.args.get(1) else {
+            continue;
+        };
+        if ident(recv) == Some("self") {
+            continue;
+        }
+        let rt = decl_type(lib, f, recv).unwrap_or_default();
+        if !is_a(lib, &rt, &site.func.script) || !is_a(lib, &a.script, &rt) {
+            continue;
+        }
+        let src = trace(lib, f, *at, recv);
+        if !matches!(src, Src::OwningQuest | Src::Prop(_) | Src::OwningQuestOf(_)) {
+            t.count("outer calls\tcall sites by outcome\tthe receiver is not resolved");
+            continue;
+        }
+        let list: Vec<&'a Attachment> = below.get(&f.script).cloned().unwrap_or_default();
+        if list.is_empty() {
+            t.count("outer calls\tcall sites by outcome\tthe caller's script is attached by no read VMAD");
+            continue;
+        }
+        let (mut named, mut reached) = (false, false);
+        for ca in list {
+            let names_quest = match &src {
+                Src::OwningQuest => ca.quest.as_ref() == Some(&a.record),
+                Src::Prop(p) => ca.objects.get(p).is_some_and(|v| v.contains(&a.record)),
+                Src::OwningQuestOf(p) => ca
+                    .aliases
+                    .get(p)
+                    .is_some_and(|v| v.iter().any(|x| x.0 == a.record)),
+                _ => false,
+            };
+            if !names_quest {
+                continue;
+            }
+            named = true;
+            let entries = scan.entries(&ca.script, &f.name, &ca.slots);
+            if entries.is_empty() {
+                continue;
+            }
+            reached = true;
+            t.count(format!(
+                "outer calls\tcallers followed, by attachment\t{}",
+                ca.kind()
+            ));
+            out.push((ca, entries));
+        }
+        t.count(match (named, reached) {
+            (false, _) => {
+                "outer calls\tcall sites by outcome\tno attachment of the caller names the quest"
+            }
+            (true, false) => {
+                "outer calls\tcall sites by outcome\tnothing reaches the caller either"
+            }
+            (true, true) => "outer calls\tcall sites by outcome\tfollowed",
+        });
+    }
+    out
 }
 
 // ---- Record fields -------------------------------------------------------

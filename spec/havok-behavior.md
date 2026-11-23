@@ -75,3 +75,17 @@ links do not fit is the view's named error, with the file and offset.
 
 The annotation tracks of the animation clips are in
 [havok-animation.md](havok-animation.md) (Annotation tracks).
+
+## Character graphs
+
+A race's MODL texts after its NAM3 marker name a behaviour project file;
+the project, character and graph files of 45 of the 46 such projects
+resolve with the readers above, their root machines hold 127 states and
+their event tables 15,845 names
+([character-graph-census.txt](character-graph-census.txt), `char_graph_census`;
+[vm.md](vm.md), Character behaviour graphs). A character's root machine
+plays no Gamebryo sequence: its states run modifier generators and nested
+machines, and which clip a state plays is held in classes these readers do
+not read (clip generators, behaviour references, nested machines,
+transition conditions and variables).
+

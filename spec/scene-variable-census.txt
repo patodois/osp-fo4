@@ -1,0 +1,57 @@
+# scene_variable_census: kinds and counts only (spec/vm.md, Scenes offered again when a script variable is written). Sections: 1 phase conditions of every scene by function (629 reads a quest script variable; 660 carries a CIS2 text and is not evaluated);
+# 2 the function 629 conditions of scene phases; 3 the distinct (quest, variable) pairs they read and the instructions that write each; 4 those conditions by the kinds of writer of their variable.
+85	1 phase conditions	completion	629
+4	1 phase conditions	completion	660
+1457	1 phase conditions	completion	another function
+450	1 phase conditions	start	629
+11	1 phase conditions	start	660
+2249	1 phase conditions	start	another function
+21285	1 phases
+73	1 phases whose completion list holds a condition of function 629
+4	1 phases whose completion list holds a condition of function 660
+403	1 phases whose start list holds a condition of function 629
+11	1 phases whose start list holds a condition of function 660
+104	1 scenes holding a condition of function 629 in a phase list
+8	1 scenes holding a condition of function 660 in a phase list
+4773	1 scenes read
+488	2 function 629 conditions of scene phases	CIS2 text shape	begins with :: and ends with _var
+47	2 function 629 conditions of scene phases	CIS2 text shape	other
+85	2 function 629 conditions of scene phases	by list	completion
+450	2 function 629 conditions of scene phases	by list	start
+124	2 function 629 conditions of scene phases	comparison value	0
+139	2 function 629 conditions of scene phases	comparison value	1
+136	2 function 629 conditions of scene phases	comparison value	an integer from 2 to 9
+136	2 function 629 conditions of scene phases	comparison value	an integer of 10 or more
+436	2 function 629 conditions of scene phases	operator code	0
+8	2 function 629 conditions of scene phases	operator code	1
+15	2 function 629 conditions of scene phases	operator code	2
+58	2 function 629 conditions of scene phases	operator code	3
+17	2 function 629 conditions of scene phases	operator code	4
+1	2 function 629 conditions of scene phases	operator code	5
+64	2 function 629 conditions of scene phases	quest	another quest
+471	2 function 629 conditions of scene phases	quest	the scene's owning quest
+113	2 function 629 conditions of scene phases	the variable	declared, bool, behind a property
+19	2 function 629 conditions of scene phases	the variable	declared, bool, no property
+375	2 function 629 conditions of scene phases	the variable	declared, int, behind a property
+28	2 function 629 conditions of scene phases	the variable	declared, int, no property
+121	3 distinct (quest, variable) pairs read by scene phase conditions
+102	3 pairs by number of writer kinds	1
+18	3 pairs by number of writer kinds	2
+1	3 pairs by number of writer kinds	3
+63	3 pairs with a writer of kind	a property write from another script
+1	3 pairs with a writer of kind	a remote or custom event handler
+10	3 pairs with a writer of kind	a stage fragment
+2	3 pairs with a writer of kind	an engine event handler onanimationevent
+4	3 pairs with a writer of kind	an engine event handler onquestinit
+1	3 pairs with a writer of kind	an engine event handler ontimer
+1	3 pairs with a writer of kind	an engine event handler ontimergametime
+58	3 pairs with a writer of kind	another function of the quest's scripts
+1	3 pairs with a writer of kind	no writer found
+6	4 function 629 conditions of scene phases	no writer found: the value is the initial one in every run
+41	4 function 629 conditions of scene phases	written by event handlers and by functions or fragments
+12	4 function 629 conditions of scene phases	written only by event handlers
+476	4 function 629 conditions of scene phases	written only by functions, fragments or accessors
+32	4 function 629 conditions of scene phases whose variable a handler writes	an engine event handler onanimationevent
+8	4 function 629 conditions of scene phases whose variable a handler writes	an engine event handler onquestinit
+1	4 function 629 conditions of scene phases whose variable a handler writes	an engine event handler ontimer
+1	4 function 629 conditions of scene phases whose variable a handler writes	an engine event handler ontimergametime

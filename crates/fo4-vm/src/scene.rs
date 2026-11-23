@@ -466,6 +466,14 @@ pub struct Scenes {
     /// offered them again, where a function 131 condition reaches its
     /// comparison value on the clock: (scene handle, second).
     pub percent_marks: Vec<(ObjId, f64)>,
+    /// Script variables written since the caller last looked, as (the
+    /// object the instance is attached to, the variable's lower-case
+    /// name), kept only while a caller offers waiting scenes again when a
+    /// variable their conditions read is written
+    /// (`scene_condition_recheck_variable_v1`; `quest_run
+    /// --scene-recheck-variables`). `None` by default: no write is kept,
+    /// as before.
+    pub variable_writes: Option<BTreeSet<(ObjId, String)>>,
 }
 
 /// A line's TIQS half due at a second of the real-time clock
@@ -1521,6 +1529,83 @@ pub fn recheck(w: &mut World) -> usize {
     let mut n = 0;
     for (o, step) in last {
         if let Some(step) = step {
+            queue(w, o, step);
+            n += 1;
+        }
+    }
+    n
+}
+
+/// Offers again the phase of every scene stopped on its start or
+/// completion conditions when one of those conditions reads a quest
+/// script variable (function 629) that `written` names: the quest the
+/// condition's first parameter names, the variable its CIS2 names
+/// (`scene_condition_recheck_variable_v1`). A caller calls it with the
+/// writes kept in [`Scenes::variable_writes`] since its last call
+/// (`quest_run --scene-recheck-variables`). Returns the scenes offered
+/// again.
+pub fn recheck_variables(
+    store: &Store,
+    w: &mut World,
+    written: &BTreeSet<(ObjId, String)>,
+) -> usize {
+    if written.is_empty() {
+        return 0;
+    }
+    // The written variables by the record key of their object.
+    let mut by_key: BTreeSet<(String, &str)> = BTreeSet::new();
+    for (o, n) in written {
+        if let Some(k) = w.objects.get(*o).and_then(|x| x.key.clone()) {
+            by_key.insert((k, n.as_str()));
+        }
+    }
+    let mut last: BTreeMap<ObjId, Option<(usize, Step)>> = BTreeMap::new();
+    for (o, ch) in &w.scenes.log {
+        let step = match ch {
+            Change::Waiting(p, why) if why.starts_with("completion conditions") => {
+                Some((*p, Step::Complete))
+            }
+            Change::Waiting(p, why) if why.starts_with("start conditions") => {
+                Some((*p, Step::Enter))
+            }
+            _ => None,
+        };
+        last.insert(*o, step);
+    }
+    let mut n = 0;
+    for (o, step) in last {
+        let Some((p, step)) = step else { continue };
+        let Some(key) = w.objects.get(o).and_then(|x| x.key.clone()) else {
+            continue;
+        };
+        let Some(Some(i)) = w.scenes.infos.get(&key).cloned() else {
+            continue;
+        };
+        let Some(phase) = i.phases.get(p) else {
+            continue;
+        };
+        let list = if step == Step::Complete {
+            &phase.completion
+        } else {
+            &phase.start
+        };
+        let ctx = Context {
+            order: store.order(),
+            plugin: i.plugin,
+        };
+        let reads = list.iter().any(|c| {
+            if c.ctda.function != cond::QUEST_VARIABLE {
+                return false;
+            }
+            let Some(name) = c.cis2.as_deref() else {
+                return false;
+            };
+            let Ok(Some(q)) = fo4_plugin::condition::form(ctx, c.ctda.param1, &i.file, 0) else {
+                return false;
+            };
+            by_key.contains(&(bind::record_key(&q), fo4_pex::index::lower(name).as_str()))
+        });
+        if reads {
             queue(w, o, step);
             n += 1;
         }

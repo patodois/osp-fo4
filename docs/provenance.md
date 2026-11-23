@@ -697,3 +697,20 @@ recognised from prior general knowledge and are pending rules or caller
 assumptions. No editor, editor source or definition file, reader of
 another project, script source or game executable was opened.
 
+The graph step (`fo4_vm::scene::recheck_variables`, `fo4_vm::setters::table_with`,
+[spec/vm.md](../spec/vm.md), Scenes offered again when a script variable is
+written, Character behaviour graphs, Calls from other scripts in the
+stage-setter table; [spec/scene-variable-census.txt](../spec/scene-variable-census.txt),
+[spec/character-graph-census.txt](../spec/character-graph-census.txt)) reads
+no new format: scene conditions as the conditions step reads them, the
+RACE MODL texts after the NAM3 marker as texts, the behaviour project,
+character and graph files and the clips' annotation tracks with
+`fo4_havok`'s existing readers, and a byte search of stored bytes for a
+clip's path (no field interpreted). That a playing scene keeps testing its
+phase conditions, that a race names its characters' behaviour project and
+that a call on a fragment's owning quest runs that quest's script were
+recognised from prior general knowledge and are pending rules or used only
+to search the data. No behaviour or animation tool or library of any
+project, Havok SDK, editor, editor source or definition file, script
+source or game executable was opened or searched for.
+

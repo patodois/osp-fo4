@@ -103,6 +103,11 @@ pub const ACTION_PERCENT: u16 = 131;
 /// (not one of [`ADDED`]).
 pub const DISTANCE: u16 = 1;
 
+/// The function index of a quest script variable (CIS2 names it;
+/// `cond_fn_629_quest_variable_v1`), which waiting scenes are offered
+/// again on under `scene_condition_recheck_variable_v1`.
+pub const QUEST_VARIABLE: u16 = 629;
+
 /// The object id the player reference word reads as under
 /// `cond_player_reference_word_v1`: a word of the first plugin of the load
 /// order naming that id, which no plugin defines.

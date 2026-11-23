@@ -943,6 +943,14 @@ struct Then {
     /// changed (`--scene-recheck`, `scene_condition_recheck_v1`), with the
     /// length of the quest log at the last offer.
     recheck: Option<std::cell::Cell<usize>>,
+    /// Offer again the scenes stopped on conditions after a quest script
+    /// variable one of those conditions reads was written
+    /// (`--scene-recheck-variables`, `scene_condition_recheck_variable_v1`).
+    recheck_variables: bool,
+    /// The stage-setter table of `--next-blockers` follows calls from other
+    /// scripts into a quest script's functions (`--setters-outer-calls`,
+    /// `setter_outer_call_entry_v1`).
+    outer_calls: bool,
     timers: usize,
     /// Order game-time timers against real-time ones through the
     /// time-scale global (`vm_timer_time_scale_v1`), when timers are fired:
@@ -1094,7 +1102,11 @@ fn gate_done(vm: &mut Vm<'_>, store: &Store, x: &Caller, b: &Budget) -> bool {
 
 /// With `--scene-recheck`: while the quest state changed since the last
 /// offer, offers again the scenes stopped on conditions and runs the jobs
-/// that brings (`scene_condition_recheck_v1`).
+/// that brings (`scene_condition_recheck_v1`). With
+/// `--scene-recheck-variables`: while scripts wrote quest script variables
+/// since the last offer, offers again the scenes stopped on conditions
+/// that read one of them (`scene_condition_recheck_variable_v1`; not when
+/// the quest state reading has just offered every stopped scene).
 fn recheck(
     vm: &mut Vm<'_>,
     store: &Store,
@@ -1103,23 +1115,50 @@ fn recheck(
     top: &mut Vec<JobRun>,
     b: &Budget,
 ) {
-    let Some(seen) = &then.recheck else { return };
+    if then.recheck.is_none() && !then.recheck_variables {
+        return;
+    }
     for _ in 0..16 {
-        let now = vm.world.quests.log.len();
-        if now == seen.get() {
-            break;
+        let mut n = 0;
+        if let Some(seen) = &then.recheck {
+            let now = vm.world.quests.log.len();
+            if now != seen.get() {
+                seen.set(now);
+                n = scene::recheck(&mut vm.world);
+                if n > 0 {
+                    vm.rules.insert(fo4_vm::rules::SCENE_RECHECK);
+                    *c.entry(
+                        "scene recheck: scenes stopped on conditions offered again after a quest state change"
+                            .into(),
+                    )
+                    .or_default() += n as u64;
+                }
+            }
         }
-        seen.set(now);
-        let n = scene::recheck(&mut vm.world);
+        if then.recheck_variables {
+            let written = vm
+                .world
+                .scenes
+                .variable_writes
+                .as_mut()
+                .map(std::mem::take)
+                .unwrap_or_default();
+            if n == 0 {
+                let k = scene::recheck_variables(store, &mut vm.world, &written);
+                if k > 0 {
+                    vm.rules.insert(fo4_vm::rules::SCENE_RECHECK_VARIABLE);
+                    *c.entry(
+                        "scene recheck: scenes stopped on conditions offered again after a quest script variable they read was written"
+                            .into(),
+                    )
+                    .or_default() += k as u64;
+                }
+                n = k;
+            }
+        }
         if n == 0 {
             break;
         }
-        vm.rules.insert(fo4_vm::rules::SCENE_RECHECK);
-        *c.entry(
-            "scene recheck: scenes stopped on conditions offered again after a quest state change"
-                .into(),
-        )
-        .or_default() += n as u64;
         top.extend(quest::run_jobs(vm, store, MAX_GAME_JOBS, b));
     }
 }
@@ -1977,6 +2016,9 @@ fn new_game(
     vm.world.keywords.runtime = then.keywords_runtime;
     vm.world.quests.collection_fills = then.collection_fills;
     vm.world.anims.assume_registration = then.anim_registration;
+    if then.recheck_variables {
+        vm.world.scenes.variable_writes = Some(Default::default());
+    }
     let gated = then.actions.iter().filter(|x| x.after.is_some()).count() as u64;
     if gated > 0 {
         *c.entry("assumption from the command line: a timed caller action waits for a stage before it happens (--action-after)".into())
@@ -2190,6 +2232,12 @@ fn new_game(
             "switch: scenes stopped on conditions offered again after a quest state change (--scene-recheck)",
         );
         seen.set(vm.world.quests.log.len());
+    }
+    if then.recheck_variables {
+        bump(
+            &mut c,
+            "switch: scenes stopped on conditions offered again after a quest script variable they read was written (--scene-recheck-variables)",
+        );
     }
     for x in then.actions.iter().filter(|x| x.at.is_none()) {
         act(&mut vm, store, then, x, &mut c, &mut names, &mut top, &b)?;
@@ -2481,7 +2529,7 @@ fn new_game(
                 | What::Looks(_) => None,
             })
             .collect();
-        next_blockers(&mut vm, m, vfs, store, opts, &quests, out)?;
+        next_blockers(&mut vm, m, vfs, store, opts, &quests, then.outer_calls, out)?;
     }
     // Registrations left at the end, by what would raise their event.
     let raised = ["onstageset", "onquestinit", "onquestshutdown"];
@@ -2514,6 +2562,7 @@ fn new_game(
 /// (`fo4_vm::setters`), with the state each setter's need has in the run:
 /// `quest-run-next-blockers.txt` (counts and kinds only) and
 /// `quest-run-next-blockers-names.txt` (never committed).
+#[allow(clippy::too_many_arguments)]
 fn next_blockers(
     vm: &mut Vm<'_>,
     m: &Manifest,
@@ -2521,6 +2570,7 @@ fn next_blockers(
     store: &Store,
     opts: Opts,
     quests: &[String],
+    outer_calls: bool,
     out: &Path,
 ) -> Result<(), E> {
     use fo4_vm::setters::{self, Need, On, ScenePoint};
@@ -2567,7 +2617,7 @@ fn next_blockers(
     let lib = setters::read_all_scripts(vfs, m.limits.max_memory)?;
     let (atts, _) = setters::attachments(store, &setters::owners(store), &b)?;
     let tree = story_tree(store, opts)?;
-    let t = setters::table(&lib, &atts, store, tree.as_deref(), &b)?;
+    let t = setters::table_with(&lib, &atts, store, tree.as_deref(), &b, outer_calls)?;
     let label =
         |k: &FormKey| bind::label(store, k, &b.child()).unwrap_or_else(|_| bind::record_key(k));
     let mut c = Counts::new();
@@ -3375,6 +3425,8 @@ fn run() -> Result<(), E> {
     let mut then = Then {
         next_blockers: flag(&mut a, "--next-blockers"),
         recheck: flag(&mut a, "--scene-recheck").then(|| std::cell::Cell::new(0)),
+        recheck_variables: flag(&mut a, "--scene-recheck-variables"),
+        outer_calls: flag(&mut a, "--setters-outer-calls"),
         unique_fills: flag(&mut a, "--alias-unique-actors"),
         player_no_record: flag(&mut a, "--player-no-record"),
         location_distinct: flag(&mut a, "--location-refs-distinct"),
@@ -3756,7 +3808,7 @@ fn run() -> Result<(), E> {
     {
         return Err("--assume-player-choice takes 0 to 3".into());
     }
-    let usage = "quest_run MANIFEST (stages OUT_DIR | new-game OUT_DIR | fragments OUT_DIR | scenes OUT_DIR | QUEST STAGE) [--queued] [--no-conditions] [--no-stage-event] [--no-remote] [--no-custom | --custom-nested] [--no-story] [--no-enable-chain] [--no-scenes] [--no-scenes-with-quest] [--no-cond-fn-N]... [--no-cond-run-on] [--assume-cond N=VALUE]...; fragments OUT_DIR and scenes OUT_DIR run every INFO, PACK and PERK fragment and start every scene in a fresh interpreter; new-game also takes --then EDITOR_ID:STAGE[@SECONDS] (repeated), --assume-activate, --assume-trigger-enter, --assume-trigger-leave and --assume-open PLUGIN:OBJECTID[@SECONDS] (repeated), --timers N and --time-scale-global EDITOR_ID, assumptions of the caller, --scene-recheck, --stage-fields, --cond-550-clock, --alias-location-refs and --next-blockers; new-game and scenes take --scene-clock N (advance the scene clock up to N times) with --no-timer-actions, --no-line-audio, --assume-line-seconds X, --assume-player-choice N (0 to 3), --assume-packages-complete, --assume-start-scene-actions, --line-stage-fields and --assume-first-line; every mode takes --none-array-length, --none-array-read, --none-array-find, --none-array-change and --enable-child-flag-ignored; new-game with --scene-clock takes --track FILE (the player's track, lines SECONDS SPACE X Y Z [FACING]) with --trigger-box, --trigger-sphere, --trigger-point or --trigger-body HEIGHT, --trigger-instant, --trigger-enabled, --trigger-order, --distance-events, --distance-once, --placed-positions, --position-natives, --cell-natives, --location-native and --assume-los true|false, --actor-positions, --actor-triggers and --assume-actor-at REF SPACE X Y Z@SECONDS (repeated); new-game takes --alias-unique-actors, --player-base EDITOR_ID and --player-no-record, and with --scene-clock --assume-talk PLUGIN:OBJECTID[@SECONDS] (repeated), --greeting-on-talk, --hello-lines with --hello-distance-setting EDITOR_ID, --dialogue-priority and --assume-line PLUGIN:OBJECTID (repeated); new-game with --track and --actor-positions takes --package-destinations SECONDS; new-game takes --anim-events with --anim-event-case and --assume-anim-event PLUGIN:OBJECTID EVENT[@SECONDS] (repeated), and with --scene-clock --anim-graphs with --anim-graph-keys; new-game with --track takes --moveto-target, --load-in-cell, --load-on-arrival and --load-grid N, and --assume-load PLUGIN:OBJECTID[@SECONDS] (repeated); new-game and scenes with --scene-clock take --cond-131-clock and --phase-conditions-end; new-game takes --location-refs-distinct and --alias-location-placed-refs (with --alias-location-refs), --cond-1-distance (with --track) and --cond-player-word, --activate-actors, --sit-events with --assume-sit and --assume-get-up PLUGIN:OBJECTID[@SECONDS] (repeated), --activate-furniture-sits and --furniture-in-use, --menu-events with --assume-menu NAME open|close[@SECONDS] and --assume-looks-menu-event N[@SECONDS] (repeated), and --player-base-object (with --player-base) with --assume-player-sex N, --keywords-records and --keywords-runtime, and --collection-location-refs, and with --anim-events --assume-anim-registration true|false; new-game and scenes with --scene-clock take --scene-actions-skipped-start; new-game with --scene-clock takes --action-after TARGET@SECONDS EDITOR_ID:STAGE (repeated)";
+    let usage = "quest_run MANIFEST (stages OUT_DIR | new-game OUT_DIR | fragments OUT_DIR | scenes OUT_DIR | QUEST STAGE) [--queued] [--no-conditions] [--no-stage-event] [--no-remote] [--no-custom | --custom-nested] [--no-story] [--no-enable-chain] [--no-scenes] [--no-scenes-with-quest] [--no-cond-fn-N]... [--no-cond-run-on] [--assume-cond N=VALUE]...; fragments OUT_DIR and scenes OUT_DIR run every INFO, PACK and PERK fragment and start every scene in a fresh interpreter; new-game also takes --then EDITOR_ID:STAGE[@SECONDS] (repeated), --assume-activate, --assume-trigger-enter, --assume-trigger-leave and --assume-open PLUGIN:OBJECTID[@SECONDS] (repeated), --timers N and --time-scale-global EDITOR_ID, assumptions of the caller, --scene-recheck, --stage-fields, --cond-550-clock, --alias-location-refs and --next-blockers; new-game and scenes take --scene-clock N (advance the scene clock up to N times) with --no-timer-actions, --no-line-audio, --assume-line-seconds X, --assume-player-choice N (0 to 3), --assume-packages-complete, --assume-start-scene-actions, --line-stage-fields and --assume-first-line; every mode takes --none-array-length, --none-array-read, --none-array-find, --none-array-change and --enable-child-flag-ignored; new-game with --scene-clock takes --track FILE (the player's track, lines SECONDS SPACE X Y Z [FACING]) with --trigger-box, --trigger-sphere, --trigger-point or --trigger-body HEIGHT, --trigger-instant, --trigger-enabled, --trigger-order, --distance-events, --distance-once, --placed-positions, --position-natives, --cell-natives, --location-native and --assume-los true|false, --actor-positions, --actor-triggers and --assume-actor-at REF SPACE X Y Z@SECONDS (repeated); new-game takes --alias-unique-actors, --player-base EDITOR_ID and --player-no-record, and with --scene-clock --assume-talk PLUGIN:OBJECTID[@SECONDS] (repeated), --greeting-on-talk, --hello-lines with --hello-distance-setting EDITOR_ID, --dialogue-priority and --assume-line PLUGIN:OBJECTID (repeated); new-game with --track and --actor-positions takes --package-destinations SECONDS; new-game takes --anim-events with --anim-event-case and --assume-anim-event PLUGIN:OBJECTID EVENT[@SECONDS] (repeated), and with --scene-clock --anim-graphs with --anim-graph-keys; new-game with --track takes --moveto-target, --load-in-cell, --load-on-arrival and --load-grid N, and --assume-load PLUGIN:OBJECTID[@SECONDS] (repeated); new-game and scenes with --scene-clock take --cond-131-clock and --phase-conditions-end; new-game takes --location-refs-distinct and --alias-location-placed-refs (with --alias-location-refs), --cond-1-distance (with --track) and --cond-player-word, --activate-actors, --sit-events with --assume-sit and --assume-get-up PLUGIN:OBJECTID[@SECONDS] (repeated), --activate-furniture-sits and --furniture-in-use, --menu-events with --assume-menu NAME open|close[@SECONDS] and --assume-looks-menu-event N[@SECONDS] (repeated), and --player-base-object (with --player-base) with --assume-player-sex N, --keywords-records and --keywords-runtime, and --collection-location-refs, and with --anim-events --assume-anim-registration true|false; new-game and scenes with --scene-clock take --scene-actions-skipped-start; new-game with --scene-clock takes --action-after TARGET@SECONDS EDITOR_ID:STAGE (repeated); new-game takes --scene-recheck-variables, and with --next-blockers --setters-outer-calls";
     if a.len() != 3 {
         return Err(usage.into());
     }

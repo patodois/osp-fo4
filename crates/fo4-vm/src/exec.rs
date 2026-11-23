@@ -241,9 +241,27 @@ impl Vm<'_> {
                     None => return Err(Self::bad(f, "::State without an instance")),
                 }
             }
-            Place::Var(i, k) => self.world.instances[i].vars[k].value = v,
+            Place::Var(i, k) => {
+                self.world.instances[i].vars[k].value = v;
+                self.variable_written(i, k);
+            }
         }
         Ok(())
+    }
+    /// Keeps a write of an instance's variable for the callers that offer
+    /// waiting scenes again on it (`scene::Scenes::variable_writes`, only
+    /// while they keep them).
+    fn variable_written(&mut self, i: InstId, k: usize) {
+        if self.world.scenes.variable_writes.is_none() {
+            return;
+        }
+        let Some(o) = self.world.instances[i].object else {
+            return;
+        };
+        let name = self.world.instances[i].vars[k].name.clone();
+        if let Some(set) = self.world.scenes.variable_writes.as_mut() {
+            set.insert((o, name));
+        }
     }
     fn ident<'l>(f: &Frame, l: &'l Lit) -> R<&'l str> {
         match l {
@@ -655,6 +673,7 @@ impl Vm<'_> {
                             return Err(Self::mismatch(f, ty, found));
                         }
                         self.world.instances[inst].vars[k].value = v;
+                        self.variable_written(inst, k);
                         Val::None
                     }
                 });

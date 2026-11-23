@@ -169,7 +169,7 @@ pub const XESP_BIT1: &str = "xesp_flag_bit1_not_presence_v1";
 pub const XESP_PROPAGATES: &str = "xesp_script_change_propagates_v1";
 
 /// Every rule above.
-pub const ALL: [&str; 155] = [
+pub const ALL: [&str; 157] = [
     ARITHMETIC,
     COMPARE,
     NOT_COPY_CAST,
@@ -325,6 +325,8 @@ pub const ALL: [&str; 155] = [
     KEYWORD_RUNTIME,
     COLLECTION_LOCATION,
     SCENE_ACTION_SKIPPED_START,
+    SCENE_RECHECK_VARIABLE,
+    SETTER_OUTER_CALL,
 ];
 
 /// The rule an opcode's meaning rests on; `None` for an opcode without a
@@ -627,3 +629,11 @@ pub const COLLECTION_LOCATION: &str = "quest_collection_alias_location_refs_v1";
 /// A scene action whose start phase the scene skipped starts with the first
 /// later phase it spans that the scene enters.
 pub const SCENE_ACTION_SKIPPED_START: &str = "scene_action_skipped_start_v1";
+/// A scene stopped on its phase's conditions offers the phase again when a
+/// quest script variable one of those conditions reads (function 629) is
+/// written.
+pub const SCENE_RECHECK_VARIABLE: &str = "scene_condition_recheck_variable_v1";
+/// The stage-setter table follows a call from another script's function
+/// into a quest script's function that no entry of its own script reaches,
+/// one call outward, where the caller's attachment names that quest.
+pub const SETTER_OUTER_CALL: &str = "setter_outer_call_entry_v1";

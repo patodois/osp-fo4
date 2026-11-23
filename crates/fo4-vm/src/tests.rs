@@ -6,6 +6,7 @@ mod anim;
 mod cond2;
 mod data;
 mod events;
+mod graph;
 mod kw;
 mod load3d;
 mod open2;

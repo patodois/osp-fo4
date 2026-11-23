@@ -66,9 +66,18 @@ fn need_target(n: &Need, label: &dyn Fn(&FormKey) -> String) -> String {
 }
 
 fn run() -> Result<(), E> {
-    let a: Vec<String> = std::env::args().skip(1).collect();
+    let mut a: Vec<String> = std::env::args().skip(1).collect();
+    // `--no-outer-calls` reproduces the earlier census: calls from other
+    // scripts into a quest script's functions not followed.
+    let outer = match a.iter().position(|x| x == "--no-outer-calls") {
+        Some(i) => {
+            a.remove(i);
+            false
+        }
+        None => true,
+    };
     if a.len() != 3 {
-        return Err("stage_census MANIFEST OUT.txt NAMES.txt".into());
+        return Err("stage_census MANIFEST OUT.txt NAMES.txt [--no-outer-calls]".into());
     }
     let m = Manifest::load(Path::new(&a[0]))?;
     let b = Budget::new(m.limits.max_memory);
@@ -77,7 +86,7 @@ fn run() -> Result<(), E> {
     let lib = setters::read_all_scripts(&vfs, m.limits.max_memory)?;
     let (atts, vmad_counts) = setters::attachments(&store, &setters::owners(&store), &b)?;
     let tree = Tree::read(&store, &b)?;
-    let t = setters::table(&lib, &atts, &store, Some(&tree), &b)?;
+    let t = setters::table_with(&lib, &atts, &store, Some(&tree), &b, outer)?;
     let label = |k: &FormKey| -> String {
         bind::label(&store, k, &b.child()).unwrap_or_else(|_| bind::record_key(k))
     };

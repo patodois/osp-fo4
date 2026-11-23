@@ -1,0 +1,47 @@
+# char_graph_census: kinds and counts only (spec/vm.md, Character behaviour graphs; spec/havok-behavior.md). Sections: 0 the caller's input; 1 races and the behaviour project files they name;
+# 2 the caller's actor (base, race, chain, root graph); 3 graph files and clips holding the caller's events; 4 where those clips are named (a byte search of their paths below the animations folder); 5 what the readers do not read on the way from an actor to a clip.
+14	0 caller's events
+46	1 distinct project files named by races
+1	1 race projects not resolving	project MissingPath
+45	1 race projects whose character and behaviour graph resolve
+15845	1 race projects: root graph event table entries
+127	1 race projects: root machine states
+8	1 race projects: root machine states by generator class	BSBehaviorGraphSwapGenerator
+2	1 race projects: root machine states by generator class	hkbBlenderGenerator
+87	1 race projects: root machine states by generator class	hkbModifierGenerator
+30	1 race projects: root machine states by generator class	hkbStateMachine
+2	1 races by MODL texts ending in .hkx after NAM3	0
+2	1 races by MODL texts ending in .hkx after NAM3	1
+106	1 races by MODL texts ending in .hkx after NAM3	2
+110	1 races read
+74	1 races with two such texts	the same file twice
+32	1 races with two such texts	two files
+1	2 the caller's actor	base	NPC_
+1	2 the caller's actor	base has a template (TPLT)	false
+14	2 the caller's actor	caller's events the root graph's event table holds
+1	2 the caller's actor	distinct project files of its race	1
+1	2 the caller's actor	its race's chain	resolves
+1	2 the caller's actor	race	read, 2 MODL texts ending in .hkx after NAM3
+1	2 the caller's actor	record type	ACHR
+4	2 the caller's actor	root machine states
+3	2 the caller's actor	root machine states by generator class	hkbModifierGenerator
+1	2 the caller's actor	root machine states by generator class	hkbStateMachine
+70	3 the caller's events	behaviour graph files holding at least one in their event table
+14	3 the caller's events	behaviour graph files whose event table holds it	70
+1	3 the caller's events	clips naming at least one of them
+1	3 the caller's events	clips naming every one of them
+1	3 the caller's events	clips naming one of the events more than once	false
+1	3 the caller's events	clips whose annotation times lie within the clip's duration	true
+14	3 the caller's events	clips whose annotations name it	1
+1	3 the caller's events	clips whose first annotation times follow the caller's order of the events	true
+973	4 where the clips are named (a byte search of the path below the animations folder)	behaviour, character and project files by the longest part of a clip's path they hold, in path parts of 4	0
+147	4 where the clips are named (a byte search of the path below the animations folder)	behaviour, character and project files by the longest part of a clip's path they hold, in path parts of 4	1
+0	4 where the clips are named (a byte search of the path below the animations folder)	behaviour, character and project files naming a clip
+1	4 where the clips are named (a byte search of the path below the animations folder)	clip files by the behaviour, character and project files naming them	0
+0	4 where the clips are named (a byte search of the path below the animations folder)	winning records' subrecords holding a clip's last two path parts
+1	5 not read by the repository's readers	hkbBehaviorReferenceGenerator fields (the behaviour file a state runs)
+1	5 not read by the repository's readers	hkbClipGenerator fields (the clip a state plays, its mode, its start time)
+1	5 not read by the repository's readers	how a furniture's keywords or an actor's keywords select a graph state
+1	5 not read by the repository's readers	nested state machines below the root (only the root machine is read)
+1	5 not read by the repository's readers	the character file's animation list
+1	5 not read by the repository's readers	transition conditions and the graph's variables
