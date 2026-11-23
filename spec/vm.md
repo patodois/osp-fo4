@@ -3259,6 +3259,22 @@ at 1901.6 s, before it is due.
   quest's next stages wait on its actors' location changes and the
   settlement's workshop events.
 
+## Records for a stepping caller (the wire step)
+
+Two records the run keeps and reads nowhere itself, for a caller that steps
+it (the play mode, `spec/play.md`, Past the gear door): every `MoveTo` the
+run calls on the player, with the second, the target's spot as the world
+model settles it and whether the three offsets are zero
+(`track::Place::player_moves`, `track::PlayerMove`; noted in
+`track::observe` beside the existing comparison with the track), and every
+sit and get-up the run raises, with the second, the sitter and the
+furniture (`sit::Sits::changes`). No output of `quest_run` changes: the
+census still counts the player's `MoveTo` against the track only. In the
+opening run the player gets three `MoveTo` calls (two within 256 units of
+the track, one at 794.6 s to a marker in a third cell) and, under the sit
+readings, five sits, among them the player's pod in the postwar vault
+0.04 s after that `MoveTo`.
+
 ## Conditions
 
 `fo4_vm::cond` evaluates the condition lists read by
@@ -4003,3 +4019,15 @@ door were recognised from editor ids read in the notes only. No public page
 was requested. No editor, editor source or definition file, other
 interpreter, script extender, decompiler or the game executable was opened
 or searched for. The game was not run.
+
+## Provenance of the wire step
+
+The run's `MoveTo` calls on the player and its sits were read from the
+run's own log (`quest-run-names.txt` of the step's play runs); the gear
+doors' sequences and held poses from the drawing side's census and
+`ride_check` on the installed data. The references were recognised from
+editor ids read in the notes only. Prior general knowledge, used only in
+pending rules off by default: that `MoveTo` places its receiver at once and
+that an actor activated into a furniture goes to it. No public page was
+requested; no editor source, other interpreter, decompiler or the game
+executable was opened or searched for. The game was not run.

@@ -3,7 +3,7 @@
 This page is the hand-over point. Everything on `main` builds and passes its tests; anyone (a person or an
 agent) can continue from here. Read `AGENTS.md` first: it holds the rules of evidence and the clean-room rules.
 
-State on 2026-11-24 (vault, cast, light, home, character graph, fight, live window, museum, live world, run library, seen, past-the-museum, faces, third-fight, poses, town-chain and layers steps). Nothing below has been checked against the running game: every behaviour is a pending
+State on 2026-11-24 (vault, cast, light, home, character graph, fight, live window, museum, live world, run library, seen, past-the-museum, faces, third-fight, poses, town-chain, layers and wire steps). Nothing below has been checked against the running game: every behaviour is a pending
 rule in `spec/hypotheses.tsv`, off by default.
 
 ## Script VM and quests (`crates/fo4-vm`)
@@ -94,8 +94,17 @@ What is left:
    switches on, its elevator reading following held translations, the gear door named with
    `--play-elevator`, the run with `--load-on-arrival`) matches the recorded run's **232 of 232 stages to
    700 s** in the same order (before: 222 of 232); without the door's load event 221 of 232, the switches
-   alone 222 of 232. Next, on the run side: those changes behind `fo4-play` switches (requests in the step's
-   report).
+   alone 222 of 232. Wire step (`spec/play.md`, Past the gear door, out of the pod and back to it): those changes
+   are `fo4-play` switches (`--play-collision-off-chain`, `--play-collision-reference-alpha`,
+   `--play-elevator-held-pose`; the gear door named and `--load-on-arrival` in the opening's arguments): the
+   headless walk matches **232 of 232 stages to 700 s** byte for byte with the probe. Past 700 s, with
+   `--play-player-moveto` and `--play-player-sits` (the walker goes where the run's `MoveTo` and its sit in
+   the pod of the postwar vault put the player) and the postwar gear door named, the walk out of the pod along
+   the recorded track matches **262 of 262 stages to 930 s**. It stops at 929.1 s at the open postwar gear
+   door: its walkway stands about 50 units above the floor on the console's side, more than the walker's
+   step, because the parts' open-pose rotations are not applied (translations only). Next: rotations of
+   moving collision (a `fo4-walk` piece moved by a rigid transform, the drawing side's), then the exit
+   elevator's ride up and its load door (945 to 968 s), which ends M3's walk headless.
 6. The player's own animation events and the robot's food event still come from the caller: reading character
    graphs (below) would let them come from the data.
 7. `--cond-70-player-sex` over the whole run settles 31 line choices of the opening and times them by their audio,
@@ -201,7 +210,7 @@ under pending rules, never "matches the game": that needs the measurements liste
 | M0 | Read the game's data: archives, plugins, models, textures, collision, scripts | done |
 | M1 | Draw a cell and walk it with collision (CPU render and viewer) | done |
 | M2 | Run the quests of the opening, the vault, the town and the museum headless | mostly: assumed fights, a few stages open |
-| M3 | Play the opening in the window from input, start to the vault exit | built headless; the window has never been opened or watched |
+| M3 | Play the opening in the window from input, start to the vault exit | headless to 930 s of about 968 (262 of 262 stages; stops at the postwar gear door: rotations of moving collision); the window has never been opened or watched |
 | M4 | People: animated poses, movement between places, faces | start poses and faces drawn; no clip playback over time, no movement |
 | M5 | Fights: weapons, damage, death, enemy behaviour | not started (deaths are the caller's assumptions) |
 | M6 | Screens: dialogue choices, inventory, the wrist device, containers, map | not started (subtitles in the title bar only) |

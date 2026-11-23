@@ -379,11 +379,80 @@ before 700 s). To 700 s 222 of 232 (the ten after the pit). The refusal is
 the drawing side's readiness reading (`fo4-scene`, `fo4-walk`), not the play
 mode's.
 
+**Past the gear door, out of the pod and back to it** (the wire step, `w1` and
+`w7` in its notes). Five switches, each off by default:
+
+1. `--play-collision-off-chain` and `--play-collision-reference-alpha` give
+   every walking world's cell build the drawing side's collision readiness
+   readings (`collision_model_blockers_off_chain_v1`,
+   `refr_xalp_collision_unchanged_v1`; `fo4_scene::readiness::Switches`
+   through `Loader::set_collision_switches`); the walker carries them into
+   the worlds it builds again (a load door, the moving grid). The vault's
+   entrance room floor then comes from the cell build, not from a still
+   reference the caller names.
+2. `--play-elevator-held-pose`: a node a sequence controls through a transform
+   interpolator without translation keys moves, from the second the run's
+   graph starts that sequence, to the translation the interpolator holds it
+   at (`nif_sequence_interpolator_held_pose_v1`), and stays there
+   (`play_elevator_held_pose_v1`, `elevator::Source::Held`). Keyed nodes
+   follow their keys as before; the two elevators then key 6 and 9 nodes
+   instead of 2 and 3, with no change in the stages.
+3. The gear door at the opening is named as a moving reference
+   (`--play-elevator`) and the run takes `quest_run`'s existing
+   `--load-on-arrival`: the door stands closed as stored at load; its load
+   event, raised as the walker arrives in the vault (500.36 s), plays the
+   graph event whose state plays the held-pose sequence, and its parts stand
+   open from then (no new flag: the opening's arguments gain those two).
+4. `--play-player-moveto`: a `MoveTo` the run calls on the player with zero
+   offsets and a settled target puts the walker there (the walking world of
+   the target's cell built), at the end of the slice the call ran in
+   (`play_player_moveto_v1`; `fo4_vm::track::Place::player_moves`).
+5. `--play-player-sits`: a sit the run gives the player in a furniture
+   placed in another space than the walker's puts the walker at the
+   furniture's stored place (`play_player_sit_furniture_v1`;
+   `fo4_vm::sit::Sits::changes`); in the walker's own space the walk stands
+   for the way there. When both fall in one slice the later wins; before
+   the walker's start neither is followed.
+
+The opening walked with 1 to 3 (the chain step's command line with the gear
+door named, the entrance room no longer named, `--load-on-arrival`; input
+to 700 s): against the recorded run (the live window step's furthest run),
+**232 of 232 stages to 700 s in the same order** (before: 222 of 232, the
+walker in the pit at 581.8 s), 172 at the same second, the rest from 1.74 s
+earlier to 0.66 s later; the run, standing at the input's end, goes on to
+245 of 245 to 800 s and to 814.3 s (250 stages, all the recorded run's to
+that second). It equals the drawing side's local probe of these changes
+byte for byte (track, census, names, timeline).
+
+With 4 and 5 and the postwar gear door named too, the input carried past
+700 s by `toward` commands along the recorded track in the postwar vault
+(from 834 s; each held back until a walker at 250 units a second can have
+reached the point before, so a short leg is not cut across a corner): at
+730.1 s the run seats the player in the pod of the dream sequence's cell
+(the walker drops there: no floor under that pod's place), at 794.6 s a
+`MoveTo` puts it at a marker in that cell and 0.04 s later the vault
+dialogue quest's fragment seats it in its own pod in the postwar vault,
+where the walker stands; it walks out with the recorded track, the
+overseer's console sits it in its own space (not followed), and the run's
+graph opens the postwar gear door (its opening sequence from 885.7 s, the
+held pose from 929.0 s). **262 of 262 stages to 930 s in the same order**
+(199 at the same second, the rest from 1.74 s earlier to 2.50 s later).
+At 929.1 s the walker stops at the open door's edge (x about -3,513): the
+door's walkway stands about 50 units above the floor on the console's side
+(the prewar walk came down it), more than the walker's 20-unit step; only
+the parts' translations are applied, and the open pose's rotations (which
+would tilt or roll the parts) are not. The recorded run's next stage is at
+934.4 s (the vault dialogue quest's 97), then the exit elevator's ride up
+(945 to 955 s) and the exterior at 968 s: 262 of 274 to 960 s.
+
 ## What the play mode does not do yet
 
 - The elevators ride only headless, and only those the caller names (`--play-elevator`); only a sequence's
-  translations are read; the window does not take the switches; the vault's floor past the interior elevator
-  comes only from a still reference the caller names, and at the gear door the walker drops into the pit (above).
+  translations are read (held translations with `--play-elevator-held-pose`), never rotations: the postwar
+  gear door's open walkway stands 50 units above the floor the walker comes from (above); the window does not
+  take the switches.
+- The exit elevator of the postwar vault and its load door at the top are not named or tried yet; the
+  player's activation of its button would come from the input.
 - Plain doors: no collision is placed for any door, so none blocks the walker; the open state is not read.
 - Moving collision with a node (an animated door, a platform) is not modelled; the live world moves only what
   the run moves.
@@ -410,3 +479,7 @@ mode's.
 | `play_activate_bounds_not_static_v1` | `--play-pick-bounds-activatable` | that statics are not activated is prior knowledge; needed because a static's box holds the activator whole | weak |
 | `play_elevator_run_sequence_v1` | `--play-elevator REF` (with `--play-elevator-also REF`) | the run's graph starts the named reference's sequences (`anims.started`); the parts follow their translation keys; that a platform moves with the sequence its graph plays and carries its rider is prior knowledge | weak |
 | `play_elevator_end_load_door_v1` | `--play-elevator-door` | the descent ends at the second the caller's recorded track changes space at the shaft's door; which door and when are this reading's | weak |
+| `play_elevator_held_pose_v1` | `--play-elevator-held-pose` | the held pose is the drawing side's reading (`nif_sequence_interpolator_held_pose_v1`, weak); that the collision goes there at once and stays is this reading's | weak |
+| `play_player_moveto_v1` | `--play-player-moveto` | the run's own `MoveTo` calls on the player; that `MoveTo` places at once is the API's meaning (prior knowledge); the slice-end delay and settling are this reading's | weak |
+| `play_player_sit_furniture_v1` | `--play-player-sits` | the run's own sits (a fragment's activation of the player's pod); that an activated sitter goes to the furniture at once is prior knowledge; the reference's place standing for the marker is this reading's | weak |
+| `collision_model_blockers_off_chain_v1`, `refr_xalp_collision_unchanged_v1` | `--play-collision-off-chain`, `--play-collision-reference-alpha` | the drawing side's rules (`spec/collision-placement.md`), given to the play mode's cell builds | weak |
