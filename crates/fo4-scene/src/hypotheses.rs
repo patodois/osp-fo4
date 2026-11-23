@@ -276,6 +276,39 @@ pub const CHAR_GRAPH_CLIP_FOLDER: &str = "char_graph_clip_folder_order_v1";
 /// A start clip drawn at the frame's second, folded by the clip
 /// generator's mode (`crate::char_graph::clip_time`, `--actor-start-clip-loop`).
 pub const CHAR_GRAPH_CLIP_LOOP: &str = "char_graph_clip_mode_loop_v1";
+/// A dead actor (the run's `death` event lines) not drawn from its death
+/// on (`crate::timeline::Dead::LeftOut`, `--timeline-dead-left-out`).
+pub const TIMELINE_DEAD_LEFT_OUT: &str = "timeline_dead_actor_left_out_v1";
+/// A dead actor drawn lying at its last place, a placeholder
+/// (`crate::timeline::Dead::Lying`, `--timeline-dead-lying`).
+pub const TIMELINE_DEAD_LYING: &str = "timeline_dead_actor_lying_placeholder_v1";
+/// A sitting actor (the run's `sit` event lines) at its furniture's marker
+/// nearest its place (`crate::timeline::Readings::sit_marker`,
+/// `--timeline-sit-marker`).
+pub const TIMELINE_SIT_MARKER: &str = "timeline_sit_marker_nearest_v1";
+/// A furniture's markers read from its FURN SNAM entries
+/// (`crate::furniture`).
+pub const FURNITURE_MARKER_SNAM: &str = "furniture_marker_snam_v1";
+/// A sitter posed by the start clip of its race's subgraph entry of flag
+/// word 2 matching the furniture's keywords (`crate::char_graph::furniture_clip`,
+/// `--actor-sit-clip`).
+pub const CHAR_GRAPH_FURNITURE: &str = "char_graph_furniture_entry_keywords_v1";
+/// The collision of one animated model's placed reference placed as
+/// stored, its nodes at their stored transforms
+/// (`crate::collision::instance_as_stored`).
+pub const ANIMATED_COLLISION_AS_STORED: &str = "walk_animated_model_collision_as_stored_v1";
+/// A lit colour divided by the mean light falling on what the eye sees
+/// (`crate::light::Light::expose_seen`, `--exposure-eye`).
+pub const EXPOSURE_EYE: &str = "frame_exposure_seen_light_v1";
+/// A lit colour tone mapped with the white of the frame's image space
+/// (`crate::light::Exposure::white`, `--exposure-white`).
+pub const IMAGE_SPACE_WHITE: &str = "image_space_hdr_white_v1";
+/// A lit colour's saturation, brightness, contrast and tint from the
+/// frame's image space (`crate::light::Exposure`, `--exposure-cinematic`).
+pub const IMAGE_SPACE_CINEMATIC: &str = "image_space_cinematic_tint_v1";
+/// A lit surface lit with its mesh's vertex normals
+/// (`--light-vertex-normals`).
+pub const LIGHT_VERTEX_NORMALS: &str = "light_vertex_normals_v1";
 /// A rule's standing in `spec/hypotheses.tsv`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Status {
@@ -583,6 +616,16 @@ mod tests {
             CHAR_GRAPH_SUBGRAPH,
             CHAR_GRAPH_CLIP_FOLDER,
             CHAR_GRAPH_CLIP_LOOP,
+            CHAR_GRAPH_FURNITURE,
+            TIMELINE_DEAD_LEFT_OUT,
+            TIMELINE_DEAD_LYING,
+            TIMELINE_SIT_MARKER,
+            FURNITURE_MARKER_SNAM,
+            ANIMATED_COLLISION_AS_STORED,
+            EXPOSURE_EYE,
+            IMAGE_SPACE_WHITE,
+            IMAGE_SPACE_CINEMATIC,
+            LIGHT_VERTEX_NORMALS,
             SWAP_FOLDER,
             OPACITY_ABOVE_ONE,
             BASE_PROPERTIES,

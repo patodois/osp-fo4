@@ -226,6 +226,23 @@ pub fn resolve(
                     hypotheses::TIMELINE_ACTOR_ROTATION
                 )
             };
+            match &m.pose {
+                super::Pose::Standing => {}
+                super::Pose::Lying { .. } => {
+                    rotation = super::lying_rotation(rotation);
+                    facing = format!(
+                        "{facing}, then laid down a quarter turn ({}, a placeholder)",
+                        hypotheses::TIMELINE_DEAD_LYING
+                    );
+                }
+                super::Pose::Seated { heading, seat, .. } => {
+                    rotation = [0., 0., *heading];
+                    facing = format!(
+                        "the heading of its furniture's marker {seat} ({})",
+                        hypotheses::TIMELINE_SIT_MARKER
+                    );
+                }
+            }
             a.transform = Some([
                 m.pos[0] as f32,
                 m.pos[1] as f32,
@@ -305,7 +322,16 @@ pub fn start_poses(
             section: plan.section,
             keywords: keywords.as_ref().map_err(|s| s.as_str()),
         };
-        let reached = match char_graph::start_clip(vfs, loader.plugins, &input, switches, b)? {
+        // A seated actor under --actor-sit-clip: its furniture's clip.
+        let seated = match &cast.markers[k].pose {
+            super::Pose::Seated { base, .. } if switches.sit => Some(base.clone()),
+            _ => None,
+        };
+        let walked = match &seated {
+            Some(f) => char_graph::furniture_clip(vfs, loader.plugins, &input, f, switches, b)?,
+            None => char_graph::start_clip(vfs, loader.plugins, &input, switches, b)?,
+        };
+        let reached = match walked {
             Ok(x) => x,
             Err(r) => {
                 cast.poses[k] = format!(
@@ -396,8 +422,14 @@ pub fn start_poses(
         if switches.cycle {
             cast.rules.insert(hypotheses::CHAR_GRAPH_CLIP_LOOP);
         }
-        cast.poses[k] = format!(
-            "posed by its start clip {} at {t:.3} s of {:.3} s (mode {}{}; {} generators from the root{}{})",
+        cast.poses[k] =
+            format!(
+            "posed by {} {} at {t:.3} s of {:.3} s (mode {}{}; {} generators from the root{}{})",
+            if seated.is_some() {
+                "its furniture's clip"
+            } else {
+                "its start clip"
+            },
             reached.clip,
             c.duration(),
             reached.generator.mode,

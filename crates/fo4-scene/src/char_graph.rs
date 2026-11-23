@@ -57,10 +57,14 @@ pub struct Switches {
     pub folder: bool,
     /// [`hypotheses::CHAR_GRAPH_CLIP_LOOP`] (`--actor-start-clip-loop`).
     pub cycle: bool,
+    /// [`hypotheses::CHAR_GRAPH_FURNITURE`] (`--actor-sit-clip`): a seated
+    /// actor ([`crate::timeline::Pose::Seated`]) posed by its furniture's
+    /// clip ([`furniture_clip`]).
+    pub sit: bool,
 }
 impl Switches {
     pub fn any(&self) -> bool {
-        self.start || self.subgraph || self.folder || self.cycle
+        self.start || self.subgraph || self.folder || self.cycle || self.sit
     }
     /// Turns on the switch a command-line flag names; `false` for any
     /// other argument.
@@ -70,6 +74,7 @@ impl Switches {
             "--actor-subgraph-keywords" => &mut self.subgraph,
             "--actor-clip-folder" => &mut self.folder,
             "--actor-start-clip-loop" => &mut self.cycle,
+            "--actor-sit-clip" => &mut self.sit,
             _ => return false,
         };
         *slot = true;
@@ -455,7 +460,24 @@ pub fn start_clip(
         Err(e) => return Ok(Err(w.refuse("GraphProjectChain", e))),
     };
     let (project, behavior) = chain;
-    let mut file = behavior.clone();
+    let file = behavior.clone();
+    walk(vfs, store, actor, &mut w, project, behavior, file, b)
+}
+
+/// The walk from the root of graph file `file` down to a clip (see the
+/// module); `project` and `behavior` are the race's, for the clip's folder
+/// and the result.
+#[allow(clippy::too_many_arguments)]
+fn walk(
+    vfs: &Vfs,
+    store: &Store,
+    actor: &Actor<'_>,
+    w: &mut Walk<'_>,
+    project: String,
+    behavior: String,
+    mut file: String,
+    b: &Budget,
+) -> Result<std::result::Result<StartClip, Refusal>> {
     let mut files = 0usize;
     'files: loop {
         files += 1;
@@ -720,6 +742,118 @@ pub fn start_clip(
             at = n;
         }
     }
+}
+
+/// The subgraph entry [`hypotheses::CHAR_GRAPH_FURNITURE`] picks for a
+/// furniture's keywords: an entry of flag word 2 without actor keywords
+/// whose target keywords all are the furniture's, the one with the most; a
+/// tie or none refused.
+pub fn pick_furniture_entry<'e>(
+    entries: &'e [Entry],
+    keywords: &BTreeSet<FormKey>,
+) -> std::result::Result<&'e Entry, String> {
+    let fits: Vec<&Entry> = entries
+        .iter()
+        .filter(|e| e.flags == 2 && e.actor_keywords.is_empty())
+        .filter(|e| !e.target_keywords.is_empty())
+        .filter(|e| e.target_keywords.iter().all(|k| keywords.contains(k)))
+        .collect();
+    let Some(most) = fits.iter().map(|e| e.target_keywords.len()).max() else {
+        return Err(
+            "no entry of flag word 2 without actor keywords has target keywords all the furniture's"
+                .into(),
+        );
+    };
+    let best: Vec<&&Entry> = fits
+        .iter()
+        .filter(|e| e.target_keywords.len() == most)
+        .collect();
+    match best.as_slice() {
+        [one] => Ok(one),
+        _ => Err(format!(
+            "{} entries tie with {most} of the furniture's keywords",
+            best.len()
+        )),
+    }
+}
+
+/// The clip a sitter is posed by (`--actor-sit-clip`,
+/// [`hypotheses::CHAR_GRAPH_FURNITURE`]): the race's subgraph entry
+/// [`pick_furniture_entry`] picks for the furniture base's keywords (KWDA),
+/// walked from its behaviour file's root with the start clip readings
+/// ([`start_clip`]; [`Switches::start`] and [`Switches::sit`] must be on).
+pub fn furniture_clip(
+    vfs: &Vfs,
+    store: &Store,
+    actor: &Actor<'_>,
+    furniture: &FormKey,
+    switches: &Switches,
+    b: &Budget,
+) -> Result<std::result::Result<StartClip, Refusal>> {
+    let mut w = Walk {
+        steps: Vec::new(),
+        rules: BTreeSet::new(),
+        ties: 0,
+        subgraph: None,
+        switches,
+    };
+    if !(switches.start && switches.sit) {
+        return Ok(Err(w.refuse(
+            "GraphStartSwitchOff",
+            format!(
+                "{} and {} must be on (--actor-start-clip, --actor-sit-clip)",
+                hypotheses::CHAR_GRAPH_START,
+                hypotheses::CHAR_GRAPH_FURNITURE
+            ),
+        )));
+    }
+    w.rules.insert(hypotheses::CHAR_GRAPH_START);
+    w.rules.insert(hypotheses::CHAR_GRAPH_FURNITURE);
+    w.rules.insert(hypotheses::ACTOR_SECTION);
+    let Some(race) = store.raw(actor.race, b)? else {
+        return Ok(Err(w.refuse("GraphRace", "the race has no winning record")));
+    };
+    let Some(project_text) = race_project(&race, actor.section) else {
+        return Ok(Err(w.refuse(
+            "GraphRaceProject",
+            format!("no MODL after NAM3 in section {}", actor.section),
+        )));
+    };
+    let (project, behavior) = match project_chain(vfs, &project_text, b) {
+        Ok(x) => x,
+        Err(e) => return Ok(Err(w.refuse("GraphProjectChain", e))),
+    };
+    let Some((fr, fp)) = store.raw_with_plugin(furniture, b)? else {
+        return Ok(Err(w.refuse(
+            "GraphFurniture",
+            "the furniture base has no winning record",
+        )));
+    };
+    let keywords: BTreeSet<FormKey> = record_keywords(store, &fr, fp)?.into_iter().collect();
+    let Some((_, entries)) = subgraphs(store, actor.race, b)? else {
+        return Ok(Err(w.refuse(
+            "GraphSubgraphRace",
+            "the subgraph race has no winning record",
+        )));
+    };
+    let e = match pick_furniture_entry(&entries, &keywords) {
+        Ok(e) => e.clone(),
+        Err(why) => return Ok(Err(w.refuse("GraphFurnitureEntry", why))),
+    };
+    let Some(file) = key_under("meshes", &e.behavior) else {
+        return Ok(Err(w.refuse(
+            "GraphSubgraphPath",
+            "the entry's behaviour text is not a valid path",
+        )));
+    };
+    w.step(
+        &file,
+        0,
+        "furniture entry",
+        format!("subgraph entry {} of {}", e.index, entries.len()),
+    );
+    w.subgraph = Some(e);
+    walk(vfs, store, actor, &mut w, project, behavior, file, b)
 }
 
 /// The project, character and graph files of a project text (under

@@ -620,6 +620,20 @@ impl Timeline {
                         f.spoken.push((e.t, l.clone()));
                     }
                 }
+                What::Note(text) => match body_note(text) {
+                    Some(BodyNote::Death(Some(k))) => {
+                        f.dead.entry(k).or_insert(e.t);
+                    }
+                    Some(BodyNote::Sit(who, furniture)) => {
+                        f.sitting.insert(who, (e.t, furniture));
+                    }
+                    Some(BodyNote::GetUp(who, furniture))
+                        if f.sitting.get(&who).is_some_and(|(_, x)| *x == furniture) =>
+                    {
+                        f.sitting.remove(&who);
+                    }
+                    _ => {}
+                },
                 _ => {}
             }
         }
@@ -664,6 +678,72 @@ pub struct Readings {
     /// other chain when every such flag agrees with the start state the
     /// chain gives. Off: such an actor's presence stays undecided.
     pub child_flag_agrees: bool,
+    /// What a frame does with an actor the run has dead (the `death`
+    /// event lines, `spec/timeline.md`, Deaths and furniture). Off: drawn
+    /// as before, standing.
+    pub dead: Dead,
+    /// `timeline_sit_marker_nearest_v1` (`--timeline-sit-marker`): an
+    /// actor the run has sitting in a furniture reference (the `sit` and
+    /// `get-up` event lines) stands at the furniture's marker nearest its
+    /// place, read as `furniture_marker_snam_v1` reads the furniture's
+    /// markers ([`crate::furniture`]), facing the marker's heading. Off:
+    /// drawn as before.
+    pub sit_marker: bool,
+}
+
+/// What a frame does with a dead actor ([`Readings::dead`]).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum Dead {
+    /// Drawn as before (standing where the run last put it).
+    #[default]
+    Standing,
+    /// `timeline_dead_actor_left_out_v1` (`--timeline-dead-left-out`):
+    /// not drawn from its death on.
+    LeftOut,
+    /// `timeline_dead_actor_lying_placeholder_v1` (`--timeline-dead-lying`):
+    /// drawn lying at its last place, its pose turned a quarter turn about
+    /// its own side axis (a placeholder: the data's death clips and ragdoll
+    /// are not read, `spec/timeline.md`).
+    Lying,
+}
+
+/// Who a `sit` or `get-up` event line names.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Sitter {
+    Player,
+    Actor(FormKey),
+}
+
+/// A `death`, `sit` or `get-up` event line's text (`spec/timeline.md`,
+/// Deaths and furniture), read back; `None` for any other text.
+pub fn body_note(text: &str) -> Option<BodyNote> {
+    let w: Vec<&str> = text.split(' ').collect();
+    let who = |s: &str| -> Option<Sitter> {
+        if s == "player" {
+            Some(Sitter::Player)
+        } else {
+            parse_key(s).map(|k| Sitter::Actor(norm(&k)))
+        }
+    };
+    match w.as_slice() {
+        ["death", r] => Some(BodyNote::Death(if *r == "-" {
+            None
+        } else {
+            Some(norm(&parse_key(r)?))
+        })),
+        ["sit", s, f] => Some(BodyNote::Sit(who(s)?, norm(&parse_key(f)?))),
+        ["get-up", s, f] => Some(BodyNote::GetUp(who(s)?, norm(&parse_key(f)?))),
+        _ => None,
+    }
+}
+
+/// A `death`, `sit` or `get-up` event line ([`body_note`]).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum BodyNote {
+    /// The dead reference, `None` for `-` (no record).
+    Death(Option<FormKey>),
+    Sit(Sitter, FormKey),
+    GetUp(Sitter, FormKey),
 }
 
 /// The state at one second ([`Timeline::at`]). Every map is keyed by the
@@ -697,6 +777,12 @@ pub struct Frame {
     pub rules: BTreeSet<&'static str>,
     /// The readings the frame was taken with.
     pub readings: Readings,
+    /// Actors the run has dead at or before this second, with the second
+    /// of the `death` line ([`body_note`]); kept whatever the readings.
+    pub dead: BTreeMap<FormKey, f64>,
+    /// Who sits in which furniture reference at this second, with the
+    /// second of the `sit` line; kept whatever the readings.
+    pub sitting: BTreeMap<Sitter, (f64, FormKey)>,
 }
 
 fn xy_dir(a: [f64; 3], b: [f64; 3]) -> Option<[f64; 2]> {
@@ -1055,6 +1141,12 @@ pub fn apply(
                     out.elsewhere += 1;
                     continue;
                 };
+                // An actor the run enabled is drawn by the frame's markers
+                // or cast (`markers`), never as a placed instance: loading
+                // it as one failed (`RecordTypeMismatch`).
+                if scene.disabled[d].signature != *b"REFR" {
+                    continue;
+                }
                 let child = scene.disabled.remove(d);
                 let scope = budget.child();
                 let instance = loader.instance(&child.key, &scope)?;
@@ -1131,6 +1223,39 @@ pub struct Marker {
     pub reference: FormKey,
     pub pos: [f64; 3],
     pub source: String,
+    /// How the actor is drawn there: standing unless a reading of the
+    /// run's deaths or sits says otherwise ([`Readings::dead`],
+    /// [`Readings::sit_marker`]).
+    pub pose: Pose,
+}
+
+/// How a marked actor is drawn ([`Marker::pose`]).
+#[derive(Debug, Clone, Default, PartialEq)]
+pub enum Pose {
+    /// As before: standing at its place.
+    #[default]
+    Standing,
+    /// Dead from `since`, drawn lying (`timeline_dead_actor_lying_placeholder_v1`).
+    Lying { since: f64 },
+    /// Sitting from `since` in the furniture reference `furniture` (base
+    /// `base`), placed at its marker `seat` facing `heading` (radians about
+    /// the vertical axis, the placement rotation's convention)
+    /// (`timeline_sit_marker_nearest_v1`).
+    Seated {
+        since: f64,
+        furniture: FormKey,
+        base: FormKey,
+        seat: usize,
+        heading: f32,
+    },
+}
+
+/// The rotation a dead actor lying is drawn with
+/// (`timeline_dead_actor_lying_placeholder_v1`, a placeholder): its
+/// placement's rotation about the vertical axis kept, then a quarter turn
+/// about the world's X axis, so that its up axis lies along the ground.
+pub fn lying_rotation(rotation: [f32; 3]) -> [f32; 3] {
+    [std::f32::consts::FRAC_PI_2, 0., rotation[2]]
 }
 
 /// How a frame decides whether an actor is present ([`presence`]).
@@ -1258,11 +1383,69 @@ pub fn markers(
         let (p, r) = presence_with_rules(store, frame, k, b)?;
         rules.extend(r);
         match p.present() {
-            Some(true) => out.push(Marker {
-                reference: k.clone(),
-                pos,
-                source: source.clone(),
-            }),
+            Some(true) => {
+                let mut m = Marker {
+                    reference: k.clone(),
+                    pos,
+                    source: source.clone(),
+                    pose: Pose::Standing,
+                };
+                if let Some(t) = frame.dead.get(k) {
+                    match frame.readings.dead {
+                        Dead::Standing => {}
+                        Dead::LeftOut => {
+                            rules.insert(hypotheses::TIMELINE_DEAD_LEFT_OUT);
+                            left.push(format!(
+                                "{}: dead from {t} s ({})",
+                                key_text(k),
+                                hypotheses::TIMELINE_DEAD_LEFT_OUT
+                            ));
+                            continue;
+                        }
+                        Dead::Lying => {
+                            rules.insert(hypotheses::TIMELINE_DEAD_LYING);
+                            m.pose = Pose::Lying { since: *t };
+                            m.source = format!(
+                                "{source}; dead from {t} s, drawn lying at its last place (placeholder, {})",
+                                hypotheses::TIMELINE_DEAD_LYING
+                            );
+                        }
+                    }
+                } else if let (true, Some((t, f))) = (
+                    frame.readings.sit_marker,
+                    frame.sitting.get(&Sitter::Actor(k.clone())),
+                ) {
+                    match crate::furniture::seat_near(store, f, pos, b)? {
+                        Ok(seat) => {
+                            rules.insert(hypotheses::TIMELINE_SIT_MARKER);
+                            rules.insert(hypotheses::FURNITURE_MARKER_SNAM);
+                            m.pos = seat.pos;
+                            m.source = format!(
+                                "{source}; sitting in {} from {t} s at its marker {} of {} ({}, {})",
+                                key_text(f),
+                                seat.index,
+                                seat.of,
+                                hypotheses::TIMELINE_SIT_MARKER,
+                                hypotheses::FURNITURE_MARKER_SNAM
+                            );
+                            m.pose = Pose::Seated {
+                                since: *t,
+                                furniture: f.clone(),
+                                base: seat.base,
+                                seat: seat.index,
+                                heading: seat.heading,
+                            };
+                        }
+                        Err(why) => {
+                            m.source = format!(
+                                "{source}; sitting in {} from {t} s, standing: {why}",
+                                key_text(f)
+                            );
+                        }
+                    }
+                }
+                out.push(m);
+            }
             Some(false) => left.push(format!("{}: disabled", key_text(k))),
             None => left.push(format!(
                 "{}: presence undetermined by its enable chain",
@@ -1337,6 +1520,15 @@ pub fn overlay(t: &Timeline, f: &Frame, camera: &str) -> String {
             l.text.as_deref().unwrap_or("(no text)")
         );
     };
+    if f.readings.sit_marker {
+        if let Some((at, furniture)) = f.sitting.get(&Sitter::Player) {
+            let _ = writeln!(
+                s,
+                "sitting\tplayer in {} from {at} s (the run's sit): the camera stays on the track, the run's own model of the player's place",
+                t.label(furniture)
+            );
+        }
+    }
     for (at, l) in &f.spoken {
         line(&mut s, "spoken", *at, l);
     }
@@ -1588,6 +1780,63 @@ mod tests {
         ] {
             assert!(Timeline::parse(&format!("{ok}{bad}")).is_err(), "{bad}");
         }
+    }
+
+    /// The death, sit and get-up event lines are read back (the writer's
+    /// grammar, `spec/timeline.md`); a frame keeps who is dead from when and
+    /// who sits where, a get-up ending only its own sit.
+    #[test]
+    fn a_frame_keeps_the_runs_deaths_and_sits() {
+        assert_eq!(
+            body_note("death base.esm:00000030"),
+            Some(BodyNote::Death(Some(k(0x30))))
+        );
+        assert_eq!(body_note("death -"), Some(BodyNote::Death(None)));
+        assert_eq!(
+            body_note("sit player Base.esm:00000050"),
+            Some(BodyNote::Sit(Sitter::Player, k(0x50)))
+        );
+        assert_eq!(body_note("sit player"), None);
+        assert_eq!(body_note("an enable of something"), None);
+        let ev = |t: f64, text: &str| Event {
+            t,
+            what: What::Note(text.into()),
+        };
+        let t = Timeline {
+            events: vec![
+                ev(1., "death base.esm:00000030"),
+                ev(2., "death base.esm:00000030"),
+                ev(2., "sit base.esm:00000031 base.esm:00000050"),
+                ev(3., "sit player base.esm:00000051"),
+                ev(4., "get-up base.esm:00000031 base.esm:00000052"),
+                ev(5., "get-up base.esm:00000031 base.esm:00000050"),
+            ],
+            ..Timeline::default()
+        };
+        let f = t.at(0.5);
+        assert!(f.dead.is_empty() && f.sitting.is_empty());
+        let f = t.at(4.5);
+        assert_eq!(f.dead.get(&k(0x30)), Some(&1.));
+        assert_eq!(f.sitting.get(&Sitter::Actor(k(0x31))), Some(&(2., k(0x50))));
+        assert_eq!(f.sitting.get(&Sitter::Player), Some(&(3., k(0x51))));
+        let f = t.at(5.);
+        assert!(!f.sitting.contains_key(&Sitter::Actor(k(0x31))));
+        // Readings off: the overlay is as before; the player's sit is said
+        // only with the sit reading.
+        assert!(!overlay(&t, &f, "c").contains("sitting"));
+        let on = t.at_with(
+            5.,
+            Readings {
+                sit_marker: true,
+                ..Readings::default()
+            },
+        );
+        assert!(overlay(&t, &on, "c").contains("sitting\tplayer"));
+        // The lying placeholder keeps the rotation about the vertical.
+        assert_eq!(
+            lying_rotation([0.3, 0.2, 1.5]),
+            [std::f32::consts::FRAC_PI_2, 0., 1.5]
+        );
     }
 
     #[test]

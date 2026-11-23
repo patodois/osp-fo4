@@ -38,6 +38,11 @@ pub struct Args {
     pub pose: fo4_scene::char_graph::Switches,
     /// `--look-at`, `--look-at-actor` (presentation).
     pub aim: tl::Aim,
+    /// `--timeline-dead-lying`, `--timeline-dead-left-out`
+    /// (`fo4_scene::timeline::Dead`).
+    pub dead: tl::Dead,
+    /// `--timeline-sit-marker` (`timeline_sit_marker_nearest_v1`).
+    pub sit_marker: bool,
 }
 
 /// The timeline read and its frame at the second.
@@ -53,6 +58,8 @@ pub fn prepare(a: &Args) -> AnyResult<Prepared> {
         tl::Readings {
             nowait: a.nowait,
             child_flag_agrees: a.child_flag_agrees,
+            dead: a.dead,
+            sit_marker: a.sit_marker,
         },
     );
     Ok(Prepared { timeline, frame })
@@ -127,9 +134,13 @@ pub fn finish(
             (d.markers, d.first, tags, Some(text), d.drawn)
         }
         None => {
-            let at: Vec<[f64; 3]> = markers.iter().map(|m| m.pos).collect();
+            let at: Vec<([f64; 3], bool)> = markers
+                .iter()
+                .map(|m| (m.pos, matches!(m.pose, tl::Pose::Lying { .. })))
+                .collect();
             let first = fo4_render::timeline::next_tag(&build.list);
-            let tags = fo4_render::timeline::append_markers(&mut build.list, &at, first, budget)?;
+            let tags =
+                fo4_render::timeline::append_markers_posed(&mut build.list, &at, first, budget)?;
             let drawn = markers
                 .iter()
                 .map(|m| (m.reference.clone(), m.pos))

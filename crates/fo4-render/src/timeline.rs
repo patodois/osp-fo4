@@ -66,6 +66,20 @@ pub fn append_markers(
     first_tag: u32,
     b: &Budget,
 ) -> Result<Vec<u32>> {
+    let posed: Vec<([f64; 3], bool)> = at.iter().map(|p| (*p, false)).collect();
+    append_markers_posed(list, &posed, first_tag, b)
+}
+
+/// [`append_markers`] with, for each marker, whether it is drawn lying (a
+/// dead actor under `timeline_dead_actor_lying_placeholder_v1`: the box
+/// turned as `fo4_scene::timeline::lying_rotation` turns a character).
+/// With no marker lying the draws are exactly [`append_markers`]'s.
+pub fn append_markers_posed(
+    list: &mut DrawList,
+    at: &[([f64; 3], bool)],
+    first_tag: u32,
+    b: &Budget,
+) -> Result<Vec<u32>> {
     let mut tags = Vec::new();
     if at.is_empty() {
         return Ok(tags);
@@ -85,7 +99,7 @@ pub fn append_markers(
         },
         b,
     )?;
-    for (k, p) in at.iter().enumerate() {
+    for (k, (p, lying)) in at.iter().enumerate() {
         let tag = u32::try_from(k)
             .ok()
             .and_then(|k| first_tag.checked_add(k))
@@ -102,9 +116,20 @@ pub fn append_markers(
                 instance: tag,
                 mesh,
                 texture,
-                world: Transform {
-                    translation: *p,
-                    ..Transform::IDENTITY
+                world: if *lying {
+                    let r = fo4_scene::timeline::lying_rotation([0.; 3]);
+                    Transform {
+                        translation: *p,
+                        ..fo4_scene::transform::Transform::euler(
+                            [0., 0., 0., r[0], r[1], r[2]],
+                            1.,
+                        )?
+                    }
+                } else {
+                    Transform {
+                        translation: *p,
+                        ..Transform::IDENTITY
+                    }
                 },
                 alpha: Alpha {
                     enabled: 0,
@@ -213,8 +238,17 @@ pub fn cast_markers(
         }
     }
     out.first = first_free_tag(build);
-    let at: Vec<[f64; 3]> = refused.iter().map(|(k, _)| cast.markers[*k].pos).collect();
-    let tags = append_markers(&mut build.list, &at, out.first, b)?;
+    let at: Vec<([f64; 3], bool)> = refused
+        .iter()
+        .map(|(k, _)| {
+            let m = &cast.markers[*k];
+            (
+                m.pos,
+                matches!(m.pose, fo4_scene::timeline::Pose::Lying { .. }),
+            )
+        })
+        .collect();
+    let tags = append_markers_posed(&mut build.list, &at, out.first, b)?;
     for ((k, why), tag) in refused.into_iter().zip(tags) {
         out.markers.push(cast.markers[k].clone());
         out.fallback.push((k, tag, why));
@@ -526,5 +560,174 @@ mod tests {
             .filter(|c| c[0] > 0.9 && c[1] > 0.9 && c[2] < 0.1)
             .count();
         assert!(magenta > 100 && yellow > 10, "{magenta} {yellow}");
+    }
+
+    /// The run's death and sit lines in a frame, each under its switch: a
+    /// dead actor left out or drawn lying (its character turned, its marker
+    /// box laid down), a sitting actor at its furniture's marker nearest it
+    /// facing the marker's heading; with the readings off every marker and
+    /// draw is as before.
+    #[test]
+    fn deaths_and_sits_move_lay_down_or_leave_out_the_cast() {
+        use crate::fixture::{actor_room_with, rec, sub, Placed, ACTOR_BASE, ACTOR_ROOM};
+        use fo4_scene::timeline::{
+            self as tl, cast, Dead, Event, Pose, Readings, Spot, Timeline, What,
+        };
+        use fo4_scene::{hypotheses, Loader, RuleLevel};
+        let temp = fo4_core::TestDir::new("timeline-dead-sit");
+        let root = temp.join("Data");
+        // A furniture base with two markers of 24 bytes: offsets (40, 0, 0)
+        // heading 0.25 and (-40, 0, 0) heading 0.75.
+        let mut snam = Vec::new();
+        for (x, h) in [(40f32, 0.25f32), (-40., 0.75)] {
+            for v in [x, 0., 0., h] {
+                snam.extend(v.to_le_bytes());
+            }
+            snam.extend([0u8; 8]);
+        }
+        let furn = rec(
+            b"FURN",
+            0x940,
+            0,
+            &[sub(b"MNAM", &3u32.to_le_bytes()), sub(b"SNAM", &snam)].concat(),
+        );
+        let placed = |id: u32, base: u32, data: [f32; 6]| Placed {
+            id,
+            base,
+            data,
+            scale: None,
+        };
+        let m = actor_room_with(
+            &root,
+            &[
+                placed(0x900, ACTOR_BASE, [100., 200., 0., 0., 0., 0.5]),
+                placed(0x901, ACTOR_BASE, [0., 300., 0., 0., 0., 0.]),
+            ],
+            &[placed(0x950, 0x940, [500., 0., 0., 0., 0., 1.])],
+            &furn,
+        );
+        let b = Budget::new(64 << 20);
+        let store = fo4_plugin::typed::Store::open(&m, &b).unwrap();
+        let vfs = fo4_vfs::Vfs::mount(&m, &b).unwrap();
+        let mut loader = Loader::new(&store, &vfs, "english", RuleLevel::Hypotheses, &b);
+        let scene = loader.by_editor_id(ACTOR_ROOM, &b).unwrap();
+        let space = tl::scene_space(&store, &scene);
+        let key = |id: u32| fo4_plugin::FormKey {
+            plugin: "base.esm".into(),
+            object_id: id,
+        };
+        let actor = |r: u32, pos: [f64; 3]| Event {
+            t: 0.,
+            what: What::Actor {
+                reference: key(r),
+                at: Spot::At {
+                    space: space.clone(),
+                    pos,
+                },
+                source: "world_actor_placed_position_v1".into(),
+            },
+        };
+        let note = |t: f64, text: &str| Event {
+            t,
+            what: What::Note(text.into()),
+        };
+        let t = Timeline {
+            events: vec![
+                Event {
+                    t: 0.,
+                    what: What::Player {
+                        space: space.clone(),
+                        cell: None,
+                        pos: [0., -500., 0.],
+                        facing: None,
+                    },
+                },
+                actor(0x900, [100., 200., 0.]),
+                actor(0x901, [0., 300., 0.]),
+                note(1., "sit base.esm:00000900 base.esm:00000950"),
+                note(1., "death base.esm:00000901"),
+            ],
+            ..Timeline::default()
+        };
+        let frame = |r: Readings| t.at_with(2., r);
+        // Off: as before.
+        let (off, _, rules) = tl::markers(&store, &frame(Readings::default()), &space, &b).unwrap();
+        assert_eq!(off.len(), 2);
+        assert!(off.iter().all(|m| m.pose == Pose::Standing));
+        assert!(!rules.contains(hypotheses::TIMELINE_SIT_MARKER));
+        // Left out.
+        let (left_out, left, rules) = tl::markers(
+            &store,
+            &frame(Readings {
+                dead: Dead::LeftOut,
+                ..Readings::default()
+            }),
+            &space,
+            &b,
+        )
+        .unwrap();
+        assert_eq!(left_out.len(), 1);
+        assert!(left.iter().any(|l| l.contains("dead from 1 s")), "{left:?}");
+        assert!(rules.contains(hypotheses::TIMELINE_DEAD_LEFT_OUT));
+        // Lying and seated.
+        let on = frame(Readings {
+            dead: Dead::Lying,
+            sit_marker: true,
+            ..Readings::default()
+        });
+        let (marks, _, rules) = tl::markers(&store, &on, &space, &b).unwrap();
+        assert!(rules.contains(hypotheses::TIMELINE_DEAD_LYING));
+        assert!(rules.contains(hypotheses::TIMELINE_SIT_MARKER));
+        assert!(rules.contains(hypotheses::FURNITURE_MARKER_SNAM));
+        let seated = marks.iter().find(|m| m.reference == key(0x900)).unwrap();
+        // The marker nearer the actor: the furniture turned by 1 radian
+        // about the vertical, its two markers 40 units either side.
+        let w = fo4_scene::transform::Transform::euler([500., 0., 0., 0., 0., 1.], 1.).unwrap();
+        let (a, z) = (w.apply([40., 0., 0.]), w.apply([-40., 0., 0.]));
+        let d = |p: [f64; 3]| (p[0] - 100.).hypot(p[1] - 200.);
+        let (want, heading) = if d(a) <= d(z) { (a, 1.25) } else { (z, 1.75) };
+        assert_eq!(seated.pos, want);
+        match &seated.pose {
+            Pose::Seated {
+                heading: h, base, ..
+            } => {
+                assert!((h - heading).abs() < 1e-6, "{h}");
+                assert_eq!(*base, key(0x940));
+            }
+            p => panic!("{p:?}"),
+        }
+        let dead = marks.iter().find(|m| m.reference == key(0x901)).unwrap();
+        assert_eq!(dead.pose, Pose::Lying { since: 1. });
+        // The cast: the dead actor laid down, the sitter at the marker's
+        // heading.
+        let c = cast::resolve(
+            &mut loader,
+            &scene,
+            &marks,
+            cast::Options::default(),
+            RuleLevel::Hypotheses,
+            &b,
+        )
+        .unwrap();
+        let k = |r: u32| {
+            c.markers
+                .iter()
+                .position(|m| m.reference == key(r))
+                .unwrap()
+        };
+        let t0 = c.actors.actors[k(0x901)].transform.unwrap();
+        assert_eq!([t0[3], t0[4], t0[5]], tl::lying_rotation([0., 0., 0.]));
+        let t1 = c.actors.actors[k(0x900)].transform.unwrap();
+        assert!((t1[5] - heading).abs() < 1e-6 && t1[3] == 0. && t1[4] == 0.);
+        assert!(c.facing[k(0x900)].contains(hypotheses::TIMELINE_SIT_MARKER));
+        // A lying marker box is laid down; upright ones are as before.
+        let mut list = crate::DrawList::default();
+        let tags =
+            append_markers_posed(&mut list, &[([0.; 3], true), ([5.; 3], false)], 7, &b).unwrap();
+        assert_eq!(tags, [7, 8]);
+        assert_ne!(list.draws[0].world.rotation, Transform::IDENTITY.rotation);
+        let mut plain = crate::DrawList::default();
+        append_markers(&mut plain, &[[5.; 3]], 8, &b).unwrap();
+        assert_eq!(plain.draws[0].world, list.draws[1].world);
     }
 }

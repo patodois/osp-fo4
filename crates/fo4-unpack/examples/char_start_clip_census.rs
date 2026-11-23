@@ -769,6 +769,7 @@ fn run() -> Result<(), E> {
         subgraph: true,
         folder: true,
         cycle: true,
+        sit: false,
     };
     let _ = writeln!(names, "# walks: actor, outcome");
     let mut clips: BTreeMap<String, (f64, u8, bool)> = BTreeMap::new();

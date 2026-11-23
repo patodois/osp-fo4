@@ -279,6 +279,7 @@ fn run() -> Result<(), E> {
             let readings = Readings {
                 nowait,
                 child_flag_agrees,
+                ..Readings::default()
             };
             let f = t.at_with(*s, readings);
             let player_space = f.player.as_ref().map(|p| p.space.clone());

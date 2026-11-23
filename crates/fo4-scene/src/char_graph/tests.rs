@@ -270,6 +270,7 @@ const ON: Switches = Switches {
     subgraph: true,
     folder: true,
     cycle: false,
+    sit: false,
 };
 
 #[test]
@@ -378,4 +379,44 @@ fn clip_time_follows_the_mode_only_under_the_loop_switch() {
     assert!(clip_time(&g(2, 0., 1.), 4., 10., true).is_err());
     assert!(clip_time(&g(1, 0., 2.), 4., 10., true).is_err());
     assert!(clip_time(&g(1, 0., 1.), 0., 10., true).is_err());
+}
+
+/// A furniture's entry: flag word 2, no actor keywords, every target
+/// keyword the furniture's, the most of them; a tie or none refused
+/// (`char_graph_furniture_entry_keywords_v1`).
+#[test]
+fn a_furniture_entry_is_the_word_2_entry_with_the_most_of_its_keywords() {
+    let kw = |id: u32| FormKey {
+        plugin: "base.esm".into(),
+        object_id: id,
+    };
+    let entry = |index: usize, flags: u32, actor: &[u32], target: &[u32]| Entry {
+        index,
+        actor_keywords: actor.iter().map(|i| kw(*i)).collect(),
+        target_keywords: target.iter().map(|i| kw(*i)).collect(),
+        behavior: format!("b{index}.hkx"),
+        folders: Vec::new(),
+        flags,
+    };
+    let entries = [
+        entry(0, 0, &[], &[1]),
+        entry(1, 2, &[], &[1]),
+        entry(2, 2, &[], &[1, 2]),
+        entry(3, 2, &[9], &[1, 2, 3]),
+        entry(4, 2, &[], &[4]),
+        entry(5, 2, &[], &[5]),
+        entry(6, 2, &[], &[5]),
+    ];
+    let has = |ids: &[u32]| ids.iter().map(|i| kw(*i)).collect::<BTreeSet<FormKey>>();
+    assert_eq!(
+        pick_furniture_entry(&entries, &has(&[1, 2, 3]))
+            .unwrap()
+            .index,
+        2
+    );
+    assert_eq!(pick_furniture_entry(&entries, &has(&[1])).unwrap().index, 1);
+    assert!(pick_furniture_entry(&entries, &has(&[5]))
+        .unwrap_err()
+        .contains("tie"));
+    assert!(pick_furniture_entry(&entries, &has(&[7])).is_err());
 }

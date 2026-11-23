@@ -5,10 +5,10 @@
 use fo4_core::{Game, Limits, Manifest, Mount, PluginSpec};
 use std::path::Path;
 
-fn sub(tag: &[u8; 4], data: &[u8]) -> Vec<u8> {
+pub(crate) fn sub(tag: &[u8; 4], data: &[u8]) -> Vec<u8> {
     [tag.as_slice(), &(data.len() as u16).to_le_bytes(), data].concat()
 }
-fn rec(tag: &[u8; 4], id: u32, flags: u32, data: &[u8]) -> Vec<u8> {
+pub(crate) fn rec(tag: &[u8; 4], id: u32, flags: u32, data: &[u8]) -> Vec<u8> {
     let mut v = tag.to_vec();
     for n in [data.len() as u32, flags, id, 0] {
         v.extend(n.to_le_bytes());
@@ -210,6 +210,17 @@ pub struct Placed {
 /// STAT without a model), with the loose files they need, and returns the
 /// manifest. Object ids from 0x900 are free for placed records.
 pub fn actor_room(root: &Path, actors: &[Placed], markers: &[Placed]) -> Manifest {
+    actor_room_with(root, actors, markers, &[])
+}
+
+/// [`actor_room`] with `records` (whole records, written as they are)
+/// added to the plugin's top level, before the cell (bases of `markers`).
+pub fn actor_room_with(
+    root: &Path,
+    actors: &[Placed],
+    markers: &[Placed],
+    records: &[u8],
+) -> Manifest {
     std::fs::create_dir_all(root.join("meshes/actors")).expect("synthetic folder");
     std::fs::create_dir_all(root.join("textures")).expect("synthetic folder");
     let (model, skeleton) = skinned_files(12.);
@@ -269,6 +280,7 @@ pub fn actor_room(root: &Path, actors: &[Placed], markers: &[Placed]) -> Manifes
         rec(b"ARMO", 0x820, 0, &armo),
         rec(b"ARMA", 0x821, 0, &arma),
         rec(b"STAT", MARKER_BASE, 0, &[]),
+        records.to_vec(),
         group(
             2,
             0,
