@@ -13,7 +13,7 @@ publish = false
 [workspace]
 
 [features]
-script-event = ["dep:fo4-vm"]
+script-event = ["dep:fo4-vm", "dep:fo4-play"]
 
 [dependencies]
 fo4-core = { path = "../../crates/fo4-core" }
@@ -25,6 +25,9 @@ fo4-walk = { path = "../../crates/fo4-walk" }
 # Only with `--features script-event` (`--script-event`): the default build
 # does not link the interpreter (spec/vm.md, Visible effect).
 fo4-vm = { path = "../../crates/fo4-vm", optional = true }
+# Only with `--features script-event` (`--play-run`): the run driven by the
+# walker (spec/play.md).
+fo4-play = { path = "../../crates/fo4-play", optional = true }
 # Bevy already depends on `half`; used here for f32 -> f16 texture upload.
 half = { version = "2", default-features = false }
 bevy = { version = "0.20", default-features = false, features = [

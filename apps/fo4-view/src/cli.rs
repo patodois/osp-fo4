@@ -13,6 +13,7 @@ usage:
            [--clock-emissive-multiple] [--clock-emissive-colour] [--clock-falloff]
            [--clock-translation] [--clock-rotation] [--clock-rotation-xyz] [--clock-scale]
            [--frame-log build/FRAMES.tsv] [--script-path X,Y;... [--script-shots build/NAME]]
+           [--play-run SWITCHES_FILE --play-out DIR [--play-reach UNITS] [--play-pick-bounds]]
       Window with a free-fly camera: W/A/S/D move, Shift moves faster, hold the
       left mouse button and move the mouse to look, R returns to the start pose.
       The title bar shows the mode, the speed and the position.
@@ -79,6 +80,16 @@ usage:
       window when its cells are drawn again; --script-shots captures the
       window at the start pose before the walk (NAME-start.png) and after
       the return (NAME-return.png), from the same camera pose.
+      --play-run (with --walk --under-hypotheses; a viewer built with
+      --features script-event; not with the moving grid) plays the opening:
+      quest_run new-game runs on its own thread with the switches the file
+      lists (one per line, --track FILE among them: its first point is the
+      start, where the walker is put), the walker's feet each frame and the
+      frame clock drive it, E activates what the eye's ray meets within
+      --play-reach units (the caller's number), and the title bar shows the
+      run's second, the last stage and the line being spoken. The run's
+      outputs (--timeline among its switches) go to --play-out when the
+      window closes (spec/play.md).
   fo4-view MANIFEST DATA_DIRECTORY CELL_EDITOR_ID [level] --headless
            --eye X,Y,Z --look X,Y,Z --out build/FRAME.png [--tags build/TAGS.bin]
            [--size WxH] [--backface-cull] [--terrain] [--around N] [--walk]
@@ -265,6 +276,8 @@ pub enum Command {
         stream: bool,
         /// Measurement aids.
         debug: WindowDebug,
+        /// The play mode (`--play-run`): the walker drives a quest run.
+        play: Option<Play>,
     },
     Headless {
         scene: Scene,
@@ -285,6 +298,24 @@ pub enum Command {
         diff: String,
         tags: Option<(String, String)>,
     },
+}
+
+/// The window's play mode (`--play-run FILE --play-out DIR`, with
+/// `--walk`; `spec/play.md`): the walker's feet each frame and the
+/// activation key (E) drive `quest_run new-game` on its own thread.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Play {
+    /// `quest_run new-game`'s switches, one per line (`--track FILE`
+    /// among them: its first point is the start).
+    pub run: String,
+    /// Where the run writes its outputs when the window closes.
+    pub out: String,
+    /// How far the activation reaches from the eye (`--play-reach`, the
+    /// caller's number; without it the key does nothing).
+    pub reach: Option<f64>,
+    /// The activation also meets the object bounds of references with no
+    /// collision (`--play-pick-bounds`, `play_activate_object_bounds_v1`).
+    pub bounds: bool,
 }
 
 /// Measurement aids of the window (`--frame-log`, `--script-path`,
@@ -457,6 +488,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
     let mut aim = fo4_scene::timeline::Aim::Track;
     let mut light = fo4_scene::light::Switches::default();
     let mut light_assumptions = fo4_scene::light::Assumptions::default();
+    let (mut play_run, mut play_out, mut play_reach, mut play_bounds) = (None, None, None, false);
     let mut rest = args[3..].iter();
     while let Some(arg) = rest.next() {
         if clock.set_flag(arg) || light.set_flag(arg) || pose.set_flag(arg) {
@@ -495,6 +527,16 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             "--script-path" => debug.path = Some(waypoints(value()?)?),
             "--script-shots" => debug.shots = Some(value()?.clone()),
             "--script-event" => script_event = Some(crate::vm_event::parse(value()?)?),
+            "--play-run" => play_run = Some(value()?.clone()),
+            "--play-out" => play_out = Some(value()?.clone()),
+            "--play-reach" => {
+                let r = finite(value()?)?;
+                if r <= 0.0 {
+                    return Err("--play-reach takes a positive distance".into());
+                }
+                play_reach = Some(r);
+            }
+            "--play-pick-bounds" => play_bounds = true,
             "--timeline" => timeline_file = Some(value()?.clone()),
             "--at" => timeline_at = Some(not_negative(value()?)?),
             "--eye-height" => eye_height = Some(finite(value()?)?),
@@ -650,6 +692,31 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
         return Err("--actor-clip poses the drawn actors: not with --no-actors".into());
     }
     let grid_moves = walk && scene.terrain && scene.around > 0;
+    let play = match (play_run, play_out) {
+        (Some(run), Some(out)) => Some(Play {
+            run,
+            out,
+            reach: play_reach,
+            bounds: play_bounds,
+        }),
+        (None, None) if play_reach.is_none() && !play_bounds => None,
+        _ => {
+            return Err(
+                "--play-run FILE needs --play-out DIR; --play-reach and --play-pick-bounds need --play-run"
+                    .into(),
+            )
+        }
+    };
+    if play.is_some()
+        && (headless
+            || !walk
+            || level != RuleLevel::Hypotheses
+            || grid_moves && !no_stream
+            || debug.path.is_some()
+            || scene.script_event.is_some())
+    {
+        return Err("--play-run applies to the window with --walk and --under-hypotheses, not with the moving grid (add --no-stream), --script-path or --script-event".into());
+    }
     if debug.shots.is_some() && debug.path.is_none() {
         return Err("--script-shots needs --script-path".into());
     }
@@ -705,6 +772,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             walk,
             stream: grid_moves && !no_stream,
             debug,
+            play,
         })
     }
 }
@@ -908,6 +976,49 @@ mod tests {
     }
 
     #[test]
+    fn play_needs_the_walker_and_its_outputs() {
+        let ok = parse(&args(
+            "m d C --under-hypotheses --walk --eye 1,2,3 --look 4,5,6 --play-run s.txt --play-out o --play-reach 150 --play-pick-bounds",
+        ))
+        .unwrap();
+        let Command::Window { play: Some(p), .. } = ok else {
+            panic!("{ok:?}")
+        };
+        assert_eq!(
+            p,
+            Play {
+                run: "s.txt".into(),
+                out: "o".into(),
+                reach: Some(150.0),
+                bounds: true
+            }
+        );
+        for bad in [
+            "m d C --under-hypotheses --walk --eye 1,2,3 --look 4,5,6 --play-run s.txt",
+            "m d C --under-hypotheses --eye 1,2,3 --look 4,5,6 --play-run s.txt --play-out o",
+            "m d C --walk --eye 1,2,3 --look 4,5,6 --play-run s.txt --play-out o",
+            "m d C --under-hypotheses --walk --headless --out a.png --eye 1,2,3 --look 4,5,6 --play-run s.txt --play-out o",
+            "m d C --under-hypotheses --walk --terrain --around 1 --eye 1,2,3 --look 4,5,6 --play-run s.txt --play-out o",
+            "m d C --under-hypotheses --walk --eye 1,2,3 --look 4,5,6 --play-reach 10",
+            "m d C --under-hypotheses --walk --eye 1,2,3 --look 4,5,6 --play-run s.txt --play-out o --play-reach -1",
+        ] {
+            assert!(parse(&args(bad)).is_err(), "{bad}");
+        }
+        let c = parse(&args(
+            "m d C --under-hypotheses --walk --terrain --around 1 --no-stream --eye 1,2,3 --look 4,5,6 --play-run s.txt --play-out o",
+        ))
+        .unwrap();
+        assert!(matches!(
+            c,
+            Command::Window {
+                play: Some(_),
+                stream: false,
+                ..
+            }
+        ));
+    }
+
+    #[test]
     fn window_defaults_and_options() {
         let c = parse(&args("m d C --eye 1,2,3 --look 4,5,6")).unwrap();
         assert_eq!(
@@ -938,6 +1049,7 @@ mod tests {
                 walk: false,
                 stream: false,
                 debug: WindowDebug::default(),
+                play: None,
             }
         );
         let c = parse(&args(

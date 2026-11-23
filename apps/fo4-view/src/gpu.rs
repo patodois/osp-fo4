@@ -1259,6 +1259,7 @@ pub fn window(
     aids: Aids,
     clip: Option<crate::clip::Animation>,
     time: Option<f64>,
+    play: Option<crate::play::PlayRun>,
 ) -> Result<(), String> {
     fly_pose(&start)?;
     let start_walking = walk.is_some();
@@ -1311,9 +1312,62 @@ pub fn window(
         app.insert_resource(PendingClock(t))
             .add_systems(Update, advance_clock.after(spawn_window_scene));
     }
+    #[cfg(feature = "script-event")]
+    if let Some(p) = play {
+        app.insert_resource(Playing(p, String::new()))
+            .add_systems(Update, play_frame.after(fly_camera).before(show_readout));
+    }
+    #[cfg(not(feature = "script-event"))]
+    if let Some(p) = play {
+        match p {}
+    }
     aids.add_to(&mut app);
     app.run();
     Ok(())
+}
+
+/// The play mode's link to the run, and its last title text.
+#[cfg(feature = "script-event")]
+#[derive(Resource)]
+struct Playing(crate::play::PlayRun, String);
+
+/// The play mode, each frame after the walker moved: the frame's seconds,
+/// the walker's feet and, when E was pressed, what the eye's ray meets go
+/// to the run; the run's second, last stage and spoken lines join the
+/// title bar. While flying (Tab) the player stands where the walker left.
+#[cfg(feature = "script-event")]
+fn play_frame(
+    time: Res<Time>,
+    keys: Res<ButtonInput<KeyCode>>,
+    walk: Option<Res<Walk>>,
+    mut playing: ResMut<Playing>,
+    mut readout: ResMut<Readout>,
+) {
+    let dt = time.delta_secs_f64();
+    let Playing(p, title) = &mut *playing;
+    let walker = walk
+        .as_deref()
+        .and_then(|w| w.active.as_ref().map(|v| (w, v)));
+    let (feet, activated) = match walker {
+        Some((w, v)) => {
+            let act = if keys.just_pressed(KeyCode::KeyE) {
+                w.space
+                    .get(&[0, 0])
+                    .and_then(|world| p.pick(world, v.character.eye(), v.look.forward()))
+            } else {
+                None
+            };
+            (v.character.feet, act)
+        }
+        None => (p.frames.last(), None),
+    };
+    if let Some(t) = p.frame(dt, feet, activated) {
+        *title = t;
+    }
+    if !title.is_empty() {
+        readout.text.push_str(" | ");
+        readout.text.push_str(title);
+    }
 }
 
 /// Texture and mesh bytes uploaded per frame at most for streamed cells

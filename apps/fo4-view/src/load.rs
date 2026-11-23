@@ -24,6 +24,11 @@ pub struct Loaded {
     /// The light switches: the frame's light and which draws it lights
     /// (`fo4_render::Lighting`); `None` with every switch off.
     pub light: Option<(fo4_scene::light::Light, Vec<bool>)>,
+    /// With `--walk`, for the play mode's activation: the placed reference
+    /// of each source of the walking world and the object bounds of the
+    /// scene's references it holds no collision for.
+    #[cfg(feature = "script-event")]
+    pub pick: Option<(Vec<Option<fo4_plugin::FormKey>>, fo4_play::pick::Boxes)>,
 }
 
 /// The manifest with its data root, the plugins and the mounted archives.
@@ -519,6 +524,8 @@ pub fn cell(
         }
         None => None,
     };
+    #[cfg(feature = "script-event")]
+    let mut pick = None;
     let walk = if walk {
         // The same collision and world the `walk` report uses.
         let options = fo4_scene::collision::Options {
@@ -530,6 +537,12 @@ pub fn cell(
             .body_placement
             .ok_or("BodyPlacementRuleNotAccepted: no body placement level at this rule level")?;
         let mut world = fo4_walk::World::build(&c, placement, &budget)?;
+        #[cfg(feature = "script-event")]
+        {
+            let refs = fo4_play::pick::references(&world, &c);
+            let (boxes, _) = fo4_play::pick::object_bounds(&scene, &refs);
+            pick = Some((refs, boxes));
+        }
         if let Some(mut g) = ground {
             g.add_to(&mut world, &budget)?;
             let pieces: Vec<String> = g
@@ -563,6 +576,11 @@ pub fn cell(
             mib(budget.scope_max()),
         );
     }
+    // The terrain's sources come after the cell's: no reference.
+    #[cfg(feature = "script-event")]
+    if let (Some((refs, _)), Some(w)) = (pick.as_mut(), walk.as_ref()) {
+        refs.resize(w.sources.len(), None);
+    }
     Ok(Loaded {
         build,
         data_root: manifest.root.clone(),
@@ -570,6 +588,8 @@ pub fn cell(
         animation,
         timeline: drawn,
         light,
+        #[cfg(feature = "script-event")]
+        pick,
     })
 }
 

@@ -11,6 +11,7 @@ mod gpu;
 mod live;
 mod load;
 mod path;
+mod play;
 mod scene;
 mod script;
 mod stream;
@@ -291,13 +292,18 @@ fn run() -> AnyResult<()> {
             Ok(())
         }
         Command::Window {
-            scene: s,
+            scene: mut s,
             fly,
             walk,
             stream,
             debug,
+            play,
         } => {
             let aids = window_aids(&s, debug)?;
+            // --play-run: the run starts on its own thread at the track's
+            // first point, where the walker is put.
+            #[allow(unused_mut)]
+            let mut play = play.as_ref().map(|p| play::start(p, &mut s)).transpose()?;
             if stream {
                 match start_stream(&s)? {
                     Some(link) => {
@@ -312,6 +318,11 @@ fn run() -> AnyResult<()> {
                 }
             }
             let (gpu, options, loaded) = load_scene(&s, walk)?;
+            #[cfg(feature = "script-event")]
+            if let (Some(p), Some((refs, boxes))) = (play.as_mut(), loaded.pick.clone()) {
+                p.refs = refs;
+                p.boxes = boxes;
+            }
             // Keep only the walking world; the draw list was converted.
             let load::Loaded {
                 walk: world,
@@ -330,6 +341,7 @@ fn run() -> AnyResult<()> {
                 aids,
                 animation,
                 s.time,
+                play,
             )?;
             Ok(())
         }

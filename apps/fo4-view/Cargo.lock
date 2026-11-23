@@ -1952,6 +1952,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "fo4-audio"
+version = "0.1.0"
+dependencies = [
+ "fo4-core",
+ "serde",
+]
+
+[[package]]
 name = "fo4-core"
 version = "0.1.0"
 dependencies = [
@@ -1991,6 +1999,20 @@ version = "0.1.0"
 dependencies = [
  "fo4-core",
  "serde",
+]
+
+[[package]]
+name = "fo4-play"
+version = "0.1.0"
+dependencies = [
+ "fo4-audio",
+ "fo4-core",
+ "fo4-pex",
+ "fo4-plugin",
+ "fo4-scene",
+ "fo4-vfs",
+ "fo4-vm",
+ "fo4-walk",
 ]
 
 [[package]]
@@ -2055,6 +2077,7 @@ version = "0.1.0"
 dependencies = [
  "bevy",
  "fo4-core",
+ "fo4-play",
  "fo4-plugin",
  "fo4-render",
  "fo4-scene",
