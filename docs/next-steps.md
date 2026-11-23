@@ -3,7 +3,7 @@
 This page is the hand-over point. Everything on `main` builds and passes its tests; anyone (a person or an
 agent) can continue from here. Read `AGENTS.md` first: it holds the rules of evidence and the clean-room rules.
 
-State on 2026-11-24 (vault, cast, light, home, character graph, fight, live window, museum and live world steps). Nothing below has been checked against the running game: every behaviour is a pending
+State on 2026-11-24 (vault, cast, light, home, character graph, fight, live window, museum, live world and run library steps). Nothing below has been checked against the running game: every behaviour is a pending
 rule in `spec/hypotheses.tsv`, off by default.
 
 ## Script VM and quests (`crates/fo4-vm`)
@@ -136,14 +136,15 @@ CPU and viewer agree (coverage 1.000000, same tag on every pixel at 560 s; a syn
 What the frames show is missing, in order of what blocks a playable opening:
 
 1. Input instead of a file (live window step, `spec/play.md`, `crates/fo4-play`): the run is now stepped by
-   input. `quest_run`'s clock loop runs with a horizon (compiled from the example's source: `fo4-vm` has no
-   library entry point for a run; the request is in `spec/play.md`), the track folded point by point; a
+   input. The run is `fo4-vm`'s library run (`fo4_vm::run`, `quest_run`'s code; the example is a thin
+   caller), its clock loop stepped with a horizon (`NewGame::advance_to`), the track folded point by point; a
    scripted input drives the walker over the start cell's collision (`play_run`) and its feet feed the run,
    E's ray activates what it meets (`--play-pick-bounds` for references with no collision, the front door
    among them). Checks: the run's own track replayed in slices gives `quest_run`'s outputs byte for byte on
    the first minute and with the whole furthest run in one slice; in 0.05 s slices the furthest run differs
    only by two waits logged when a scene waiting on a distance condition is offered again (every stage at the
-   same second). The first minute walked: the same 160 stages in the same order, 10 of them 0.014 s later
+   same second), and with `--play-recheck-marks` (the waiting scenes' marks computed again instead) by
+   nothing: census, names, both next-blocker files and timeline byte for byte. The first minute walked: the same 160 stages in the same order, 10 of them 0.014 s later
    (the walker's capsule slides near one corner). The window (`fo4-view --play-run`, `--features
    script-event`) feeds the same loop from the keyboard and mouse, subtitles in the title bar; it has not
    been opened by anyone. Live world step: behind switches the walking world follows the run's Enable,
@@ -155,9 +156,11 @@ What the frames show is missing, in order of what blocks a playable opening:
    (`spec/door-census.txt`), so no plain door reading was implemented. The opening walked headless reaches
    the vault: 197 of the recorded run's 202 stages to 480 s in the same order, then the walker falls into the
    elevator shaft at 416.5 s (the platform has no placed collision). Next: the elevator platforms (their
-   collision and their ride), moving collision with a node; the run's cost (`fo4-vm`'s distance dues search
-   every placement each turn: 407 s for 480 s of input); the lines' audio; then the library run in `fo4-vm`
-   (`spec/play.md`, Request) so `fo4-play` stops compiling the example.
+   collision and their ride), moving collision with a node; the lines' audio. Run library step: the run's
+   cost fell from 232 s to 51 to 72 s of wall time for the 480 s of input on this machine (stored positions,
+   placements' cells, globals and bases read once; `spec/play.md`, Costs), now mostly the walking world's
+   rebuilds about the walker (`--play-follow-grid`, decompressing the cells' models) and the condition
+   evaluator's line choices: about real time over this walk headless, not yet in a window.
 2. Characters stand in the rest pose (arms out) and do not move between the run's places. Next: the run's
    animation events and packages to clips (the character graph classes the readers do not read yet,
    `spec/character-graph-census.txt`), a walk between places. 13 actors are still markers: 9 whose outfit

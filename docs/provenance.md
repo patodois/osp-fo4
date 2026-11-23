@@ -830,8 +830,9 @@ for.
 
 The play mode (`fo4-play`, [spec/play.md](../spec/play.md)) is this
 project's own code over its own crates: the stepped clock loop is
-`quest_run`'s loop (compiled from the example's source, three patch points)
-with a horizon; the crossing folds repeat `fo4_vm::track::intervals` move by
+`quest_run`'s loop with a horizon (first compiled from the example's source
+through three patch points, since the run library step `fo4_vm::run`'s
+`NewGame`); the crossing folds repeat `fo4_vm::track::intervals` move by
 move; the scripted input format, the walker's slices, the eye ray against the
 walking world's primitives (Möller and Trumbore's ray and triangle test, a
 textbook method recalled from general knowledge; a ternary and bisection
@@ -873,5 +874,17 @@ knowledge and kept as pending rules: that collision goes with what is drawn,
 that activating a load door moves the player at once, that statics are not
 activated. That an empty `ONAM` on a placed door may mean "open by default"
 was recalled from a field's published name and is not used. No editor, editor
+source or definition file, other implementation, game executable or game run
+was opened or searched for.
+
+The run library step (`fo4_vm::run`, the `quest_run` example as a thin
+caller, `fo4-play`'s `Stepper`; [spec/play.md](../spec/play.md),
+[spec/vm.md](../spec/vm.md), The quest run as a library) moves the
+repository's own code and adds caches of what the records store; it reads no
+new record layout. The one new pending rule
+(`vm_global_runtime_value_undetermined_v1`) is the conservative reading of a
+global set to a value the run does not know, from no data and no source. The
+hot spots were found with the operating system's sampling profiler on the
+repository's own runs. No public page was requested; no editor, editor
 source or definition file, other implementation, game executable or game run
 was opened or searched for.

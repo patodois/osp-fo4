@@ -8,72 +8,77 @@ checked against the running game: every behaviour reading is a pending rule of `
 
 ## How the run is stepped
 
-`fo4-vm`'s library holds the pieces of a run (the interpreter, the quest host, the scene clock, the world
-model's `settle` and `next_due` functions); the new-game run itself (setting up the host and the world model
-from the command line, the clock loop that interleaves timers, the scene clock, the caller's actions and the
-world model's dues) lives in `quest_run`, an example, and takes the whole track up front:
-`fo4_vm::track::Place::load_with` reads the volumes near the track and computes every trigger crossing of the
-whole track at load, `fo4_vm::talk::load_hello` every hello crossing, and the clock loop runs to the end.
+The run is `fo4-vm`'s library run (`fo4_vm::run`, the code of every `quest_run` mode): the command line read
+into a `Command` (`Options`, `Then`, `Settings`; `fo4_vm::run::parse`), the new-game setup (the host and the
+world model from the switches), and the clock loop as an object, `fo4_vm::run::NewGame`. Each turn of the
+loop takes the earliest of the next timer, the next scene clock due, the next timed caller action and the
+world model's next due second (the next crossing, a distance registration's first second on the track, an
+assumed actor move, a hello crossing, a line half, an animation or load due), moves the run's clock there and
+runs what is due. `quest_run new-game` runs the loop to its end at once (`NewGame::run_to_end`) over the
+whole track the caller gave: `fo4_vm::track::Place::load_with` computes every trigger crossing of the track
+at load, `fo4_vm::talk::load_hello` every hello crossing. The `quest_run` example is a thin caller
+(`fo4_vm::run::main_with`); the voice files' seconds come from the caller (`HeaderSeconds`), which reads them
+with `fo4-audio`.
 
-What the clock loop does between two track points: at each turn it takes the earliest of the next timer, the
-next scene clock due, the next timed caller action and the world model's next due second (the next crossing,
-a distance registration's first second on the track, an assumed actor move, a hello crossing, a line half, an
-animation or load due), moves the run's clock there and runs what is due. The world model's dues are read from
-the track at each turn (crossings from the list computed at load). So the run consumes the whole track up
-front only through the crossing lists and through one lookahead (below); everything else is asked again each
-turn.
-
-Two ways to feed it input were possible:
+Two ways to feed the run input were possible:
 
 - Re-run `quest_run` with the track walked so far. Measured on the opening's first minute (the furthest run's
-  switches with the track cut at 60 s): 43 to 86 s per run on this machine (the whole furthest run: 179 to
-  345 s). A window needs the run's state every frame: re-running is not usable.
-- Step the run: the same clock loop with a horizon. This is what `fo4-play` does.
+  switches with the track cut at 60 s): 43 to 86 s per run on this machine before this step's caches. A
+  window needs the run's state every frame: re-running is not usable.
+- Step the run: the same loop with a horizon. This is what `fo4-play` does.
 
-The stepped loop (`fo4-play`, `run::play`): the new-game code is `quest_run`'s own source, compiled into
-`fo4-play` by its `build.rs`, which patches exactly three places (each must match once or the build stops,
-naming it): the file's inner attributes are dropped, `run()` takes its arguments from the caller
-(`run_with`), and `new_game` calls `play::play_loop` where it called `clock_loop`. With no driver installed,
-`play_loop` calls `clock_loop` itself. With a driver:
+The stepped run (`fo4_vm::run::NewGame`, driven by `fo4-play`'s `Driver` through a `fo4_vm::run::Stepper`;
+`quest_run`'s own new-game code, no copy):
 
-- At the loop's start the caller's track is cut to the run's present second (second 0): its first point is the
-  start; its points choose the cells the world model reads (as without play); its later points are replaced by
-  the driver's.
-- Each turn computes the same candidates as the clock loop. When the earliest lies after the horizon (the
-  second the driver's last slice reached), or nothing is due, the driver is asked for the next slice: track
-  points (none while the player stands still), the second `until` it reaches, and the player's actions. The
-  player stands at the last point until `until`.
+- `begin_input` cuts the caller's track to the run's present second (second 0): its first point is the
+  start; its points chose the cells the world model read (as without play); its later points are replaced
+  by the driver's (`Place::cut`, `Talk::cut`). The loop then runs what is due at the present second.
+- Each turn computes the same candidates as `quest_run`'s loop. When the earliest lies after the horizon
+  (the second the last slice reached), or nothing is due, the loop returns and the driver is asked for the
+  next slice: track points (none while the player stands still), the second `until` it reaches, and the
+  player's actions. `advance_to(until, points, actions)` gives them to the run; the player stands at the
+  last point until `until`.
 - New points are folded into the crossing lists move by move, exactly as `fo4_vm::track::intervals` folds the
-  whole track (a unit test checks every prefix of a synthetic track against `intervals`); the crossings
-  already applied must not change (counted: 0 in every run below).
+  whole track (`Place::extend`, `Talk::extend`; a unit test checks every prefix of a synthetic track, and a
+  cut track grown in slices, against the whole track's crossings and hello crossings); the crossings already
+  applied must not change (counted: 0 in every run below).
 - An action of a slice joins the caller's timed actions before those of the same second (the input first on
   a tie).
-- `Finish` ends the input: the loop goes on as the clock loop does after the track's end. `Stop` (a window
-  closing) ends the run where it is.
+- `finish_input` ends the input: the loop goes on as `quest_run`'s does after the track's end. `stop` (a
+  window closing) ends the run where it is.
 
 The one lookahead: with `--cond-1-distance` (`cond_fn_1_track_distance_v1`) a scene phase that starts waiting
 on completion conditions with a function 1 condition gets a mark at the first second the whole track brings
 the two parties within the distance. The stepped run knows only the track to the horizon then. So when the
 track grows, each scene waiting on false completion conditions with a function 1 condition and no mark left
-is offered its completion again (`fo4_vm::scene::step_call`), which reads its marks on the longer track; an
-offer that finds the conditions still false logs one more wait than `quest_run` does.
+is, by default, offered its completion again (`fo4_vm::scene::step_call`), which reads its marks on the
+longer track; an offer that finds the conditions still false logs one more wait than `quest_run` does. With
+`--play-recheck-marks` (`fo4_play::Options::recheck_marks`, `fo4_vm::run::Stepping::recheck_marks`; a policy
+of the play mode, no game claim) the marks of those scenes are computed again on the longer track
+(`fo4_vm::scene::recheck_distance_marks`) and nothing is offered, so no wait is logged that `quest_run` does
+not log (checked below).
 
-### Request to `fo4-vm`
+### What `fo4-vm` gives the play mode
 
-The play mode compiles an example's source and calls its private functions; a change to `quest_run.rs`
-(another step is editing it) may break `fo4-play`'s build until the patch points or the helpers it calls
-(`act`, `world_step`, `recheck`, `gate_done`, `timeline`, `time_scale`, `Then`, `Caller`) are matched again.
-The fix belongs in `fo4-vm`:
+The request the earlier steps wrote here is done: the play mode no longer compiles `quest_run`'s source
+(the patching `build.rs` is gone) and calls only the library:
 
-1. A library run: `fo4_vm::run::NewGame` built from the parsed switches (today's `Then` and `Opts`, made
-   public with their parser), owning the host, the library, the attachments and the runner, with
-   `fn advance_to(&mut self, until: f64, points: &[track::Point], actions: &[(f64, player::Action, FormKey)])
-   -> Result<(), Error>` (the stepped loop above), `fn finish(self) -> Outputs` (the census, the names and the
-   timeline) and read access to `&Vm`. `quest_run new-game` would become one `advance_to(f64::INFINITY, ...)`.
-2. `track::Place::extend(&mut self, points: &[Point])` folding crossings as the play mode does, and the same
-   for `talk::Talk`'s hello crossings.
-3. `scene::recheck_distance_marks(h, w)` recomputing the function 1 marks of the scenes waiting on completion
-   conditions when the track grew, without logging a new wait when nothing changed.
+1. `fo4_vm::run::NewGame`, built from the parsed switches inside `fo4_vm::run::main_with` (a run object
+   borrows the host, the library, the attachments and the runner that the run's setup owns, so a caller
+   steps it from a `Stepper` instead of owning it), with `begin_input(Stepping)`, `advance_to(until, points,
+   actions)` (actions as `(second, fo4_vm::player::Action, FormKey)`), `finish_input`, `stop`, read access
+   to the run (`vm`, `store`, `sources`, `now`, `loaded_track`, `timeline_now`) and the input counts
+   (`take_input_counts`, the play mode's `play.txt`). `quest_run new-game` is `run_to_end`, the loop over the
+   whole track; it is not `advance_to(f64::INFINITY, ...)`, which would cut and fold the track (the same
+   crossings, checked on the furthest run as one slice by the earlier step, but not the same census line of
+   the track's points).
+2. `track::Place::cut`, `Place::extend`, `Place::add_volumes`, `Place::rebuild` and `talk::Talk::cut`,
+   `Talk::extend`, `Talk::add_actor`, `Talk::rebuild` (the hello crossings), with `track::Folded`,
+   `track::step_of`, `track::Region` (the cells read about points, for `--play-region-walker`).
+3. `scene::recheck_distance_marks(host, world)`: the function 1 marks of the scenes waiting on completion
+   conditions, computed again when the track grew, without logging a new wait.
+4. The cache of stored positions: placed actors' stored positions are read once per run, and the
+   placements' cells are indexed once (`track::Cells`); before, each question searched every placement.
 
 ## Checks of the stepped loop (outputs outside git)
 
@@ -85,11 +90,14 @@ loaded it, with the points `--load-doors` adds):
 | first minute (furthest run's switches, track cut at 60 s), 0.1 s | 5 | SAME | SAME | SAME | SAME |
 | furthest run (`spec/quest-run-home.txt`), whole track in one slice | 1 | SAME | SAME | SAME | SAME |
 | furthest run, 0.05 s | 171 | 2 lines | 8 lines | SAME | 2 lines |
+| furthest run, 0.05 s, `--play-recheck-marks` | 171 | SAME | SAME | SAME | SAME |
 
-In the last row the differences are the two re-offers above (a greeting scene in the postwar vault waiting on a
+In the third row the differences are the two re-offers above (a greeting scene in the postwar vault waiting on a
 distance condition, offered again at 567.125 s and 573.792 s): two more waits in the scene log; its phase then
 completes at the same second as in `quest_run` (584.069 s), and every stage of the run (288) is set at the same
-second.
+second. With `--play-recheck-marks` (run library step) the scene's mark is computed again once on the grown
+track instead, and the stepped run writes `quest_run`'s files byte for byte (against `quest_run` on main's
+binaries; the census wording of the earlier step's files has changed since).
 
 ## The walker as input (`play_run`)
 
@@ -268,11 +276,28 @@ with the caller's two activations removed, `--walk-speed 300 --play-reach 150 --
   bottom is a persistent reference the falling walker passes; nothing activates it (in the run it is passed by
   the caller's track under `world_load_door_xtel_v1`).
 
-The run took 407 s of wall time for 480 s of input on this machine (busy with other work): the play mode is
-not real time over this run. Where the time goes (sampled): `fo4_vm::track::next_due` asks each distance
-registration for its first due second at every turn of the loop, which reads stored positions through a
-linear search over every placement (`space_of`); with a slice every tick (o3) the 480 s did not finish in 14
-minutes. The request to `fo4-vm` (below) gains an item: cache stored positions.
+### Costs
+
+The live world step measured 407 s of wall time for the 480 s of input (`o4`, machine busy with other work).
+Where the time went (sampled): every turn of the loop asked each distance registration for its first due
+second, which read placed actors' stored positions, each read searching every placement for its cell. The run
+library step reads them once per run, and, profiled again, the next two hot spots as well: the placements'
+cells indexed once (the world model's load read every actor near the track the same way), and the condition
+evaluator's globals' stored values and references' bases read once per run (with a changed global looked up
+among the run's changed facts). On this machine, the two runs at once, before and after (main's binaries
+and the step's final ones, the lower figure on a quieter machine; outputs byte for byte the same):
+
+| Run | Before | After |
+| --- | --- | --- |
+| the opening walked (`o4`, 480 s of input, 512 slices) | 232 s wall (215 s user) | 51 to 72 s wall (42 to 59 s user) |
+| the museum step's furthest run (`quest_run`, about 1800 s of the run's clock) | 288 s wall (276 s user) | 24 to 35 s wall (16 to 25 s user) |
+| the home step's furthest run given back in 0.05 s slices (171 slices) | 316 s wall | 52 s wall |
+
+What is left in the opening walk: most of the time is the walking world built again about the walker's grid
+square (`--play-follow-grid`: reading and decompressing the cells' models, `fo4_play::world::build`), then
+the run's line choices outside scenes (the conditions of every candidate line at each hello and greeting) and
+the record reads behind them (each read checks its plugin file on disk: about two thirds of the replay's wall
+time is system time). The headless walk now runs at about the speed of its input; a window adds drawing.
 
 ## What the play mode does not do yet
 
