@@ -168,6 +168,10 @@ pub struct Elevators {
     pub references: Vec<FormKey>,
     /// Other references whose collision is placed as stored, still.
     pub also: Vec<FormKey>,
+    /// Still references the caller gives to a named reference (the
+    /// reference, the named one): they go into that one's walking worlds
+    /// whatever their own space (`--play-elevator-also-with REF OWNER`).
+    pub also_with: Vec<(FormKey, FormKey)>,
     /// A ride that carried the walker ends at the nearest load door within
     /// the reach (`--play-elevator-door`).
     pub door: bool,
@@ -175,6 +179,14 @@ pub struct Elevators {
     /// translation the sequence holds it at (`--play-elevator-held-pose`,
     /// `play_elevator_held_pose_v1`).
     pub held_pose: bool,
+    /// The end door leaves out the load doors that lead into the space the
+    /// walker left by its last change of space (`--play-elevator-door-onward`,
+    /// `play_elevator_end_door_onward_v1`).
+    pub door_onward: bool,
+    /// The parts move by the rigid motion their chain makes under each
+    /// sequence, in place of the translations (`--play-elevator-rigid`,
+    /// `play_elevator_rigid_v1`).
+    pub rigid: bool,
 }
 
 /// The longest standing slice while moving platforms are named (seconds):
@@ -317,6 +329,9 @@ pub struct Walker {
     controls: Controls,
     character: Option<Character>,
     space: Option<FormKey>,
+    /// The space the walker left by its last change of space (a load
+    /// door, a `MoveTo`, a sit), for `play_elevator_end_door_onward_v1`.
+    left: Option<FormKey>,
     t: f64,
     last: Option<Point>,
     still: bool,
@@ -366,6 +381,7 @@ impl Walker {
             controls: Controls::default(),
             character: None,
             space: None,
+            left: None,
             t: 0.0,
             last: None,
             still: true,
@@ -553,10 +569,20 @@ impl Walker {
         for k in &o.also {
             alsos[crate::elevator::still_owner(&spaces, &space_of(k))].push(k.clone());
         }
+        for (k, owner) in &o.also_with {
+            let i = o.references.iter().position(|r| r == owner).ok_or(
+                "PlayElevator: --play-elevator-also-with names no --play-elevator reference",
+            )?;
+            alsos[i].push(k.clone());
+        }
         for (i, k) in o.references.iter().enumerate() {
             let also: &[FormKey] = &alsos[i];
+            let readings = crate::elevator::Readings {
+                held_pose: o.held_pose,
+                rigid: o.rigid,
+            };
             let mut e =
-                crate::elevator::Elevator::build(m, run.store, vfs, k, also, i as u32, o.held_pose)
+                crate::elevator::Elevator::build(m, run.store, vfs, k, also, i as u32, readings)
                     .map_err(|e| format!("PlayElevator {}: {e}", fo4_vm::bind::record_key(k)))?;
             if here.as_ref() == Some(&e.space) {
                 e.insert(self.live.space_mut(), self.t)
@@ -571,7 +597,11 @@ impl Walker {
             log.rules
                 .insert(fo4_scene::hypotheses::ANIMATED_COLLISION_AS_STORED);
             log.rules.insert(fo4_walk::platform::rules::PLATFORM_RIDE);
-            if o.held_pose {
+            if o.rigid {
+                log.rules.insert(crate::rules::ELEVATOR_RIGID);
+                log.rules.insert(fo4_scene::hypotheses::SEQUENCE_CHAIN_POSE);
+                log.rules.insert(fo4_walk::platform::rules::RIGID_MOTION);
+            } else if o.held_pose {
                 log.elevators.push((
                     self.t,
                     format!(
@@ -594,6 +624,10 @@ impl Walker {
     /// that carried it ended (`play_elevator_end_load_door_v1`).
     fn follow_elevators(&mut self, run: &View<'_, '_>) {
         let door = self.elevator_options.as_ref().is_some_and(|o| o.door);
+        let onward = self
+            .elevator_options
+            .as_ref()
+            .is_some_and(|o| o.door_onward);
         for e in &mut self.elevators {
             let before = e.log.len();
             e.follow(run.vm);
@@ -619,10 +653,28 @@ impl Walker {
                 ));
                 continue;
             };
+            // With the onward reading, the doors back into the space the
+            // walker came from are left out.
+            let onward_doors;
+            let candidates = match (onward, &self.left) {
+                (true, Some(left)) => {
+                    onward_doors = crate::elevator::onward(&doors.doors, left);
+                    let n = doors.doors.len() - onward_doors.len();
+                    if n > 0 {
+                        log.rules.insert(crate::rules::ELEVATOR_END_DOOR_ONWARD);
+                        log.elevators.push((
+                            at,
+                            format!("the ride ended: {n} of the walking world's load doors lead back into the space the walker came from, left out"),
+                        ));
+                    }
+                    &onward_doors
+                }
+                _ => &doors.doors,
+            };
             match crate::elevator::nearest_door(
                 run.store,
                 m.limits.max_memory,
-                &doors.doors,
+                candidates,
                 space,
                 c.feet,
                 bounds,
@@ -967,7 +1019,7 @@ impl Walker {
             pos: c.feet,
             facing: None,
         };
-        self.space = Some(to.space.clone());
+        self.left = self.space.replace(to.space.clone());
         self.last = Some(p.clone());
         self.still = false;
         let mut log = self.log.borrow_mut();

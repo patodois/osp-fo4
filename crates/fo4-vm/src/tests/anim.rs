@@ -261,3 +261,31 @@ fn a_furniture_event_takes_the_graphs_transition_only_with_graphs_followed() {
         1
     );
 }
+
+#[test]
+fn the_callers_graph_event_takes_the_transition_a_play_animation_would() {
+    let store = store();
+    let mut lib = lib();
+    let mut host = QuestHost::new(&store, 1 << 20);
+    host.graphs = Some(Box::new(NoGraphs));
+    let mut vm = Vm::new(&mut lib, &mut host);
+    let o = vm.world.object(
+        "ref",
+        Some("test.esm:00000801".into()),
+        &["objectreference"],
+    );
+    anim::begin(&mut vm.world, o, graph(), 0.0);
+    // Graphs not followed: the event reaches no graph.
+    assert!(anim::caller_event(&mut vm, o, "Go").is_empty());
+    assert_eq!(vm.world.anims.runs[&o].state, 0);
+    vm.world.anims.graphs = true;
+    vm.world.now[crate::world::Clock::Real as usize] = 4.0;
+    assert_eq!(anim::caller_event(&mut vm, o, "Go"), ["SB"]);
+    assert_eq!(vm.world.anims.runs[&o].state, 1);
+    assert_eq!(vm.world.anims.started.last().unwrap().0, 4.0);
+    assert!(vm.rules.contains(&rules::ANIM_GRAPH_CALLER_EVENT));
+    assert!(vm.rules.contains(&rules::ANIM_GRAPH));
+    // An event the state and the wildcards do not take starts nothing.
+    assert!(anim::caller_event(&mut vm, o, "Ping").is_empty());
+    assert_eq!(vm.world.anims.runs[&o].state, 1);
+}

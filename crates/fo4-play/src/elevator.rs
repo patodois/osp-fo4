@@ -21,12 +21,24 @@
 //! `--play-elevator-held-pose` a node a sequence controls without
 //! translation keys moves to the translation the sequence's interpolator
 //! holds it at ([`Source::Held`], `play_elevator_held_pose_v1`).
+//!
+//! With `--play-elevator-rigid` ([`Readings::rigid`],
+//! `play_elevator_rigid_v1`) the translations are not read: the sources go
+//! by the deepest node of their body's chain that any of the model's
+//! sequences sets ([`Part`]), and each part moves by the rigid motion its
+//! chain makes under the sequence the run starts, every channel of each
+//! node the sequence sets read (`fo4_scene::sequence::chain_pose`,
+//! `nif_sequence_chain_pose_v1`), riding as a `platform::RigidRide`
+//! (`walk_platform_rigid_motion_v1`).
 use crate::live::Key;
 use fo4_core::{Budget, Manifest};
 use fo4_plugin::{typed::Store, FormKey};
 use fo4_scene::{AssetKind, DecodedAsset, Loader, RuleLevel};
 use fo4_vfs::Vfs;
-use fo4_walk::{platform::Ride, Character, World, WorldSet};
+use fo4_walk::{
+    platform::{Ride, RigidRide},
+    Character, Motion, World, WorldSet,
+};
 use std::collections::BTreeMap;
 
 /// The key kind of the platforms' pieces in the walking world.
@@ -69,6 +81,38 @@ struct Group {
     base: World,
 }
 
+/// (second, motion) points of a part under the rigid reading.
+pub type MotionTrack = Vec<(f64, Motion)>;
+
+/// What a named reference's parts follow ([`Elevator::build`]).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Readings {
+    /// A node a sequence controls without translation keys moves to the
+    /// translation the sequence holds it at (`play_elevator_held_pose_v1`,
+    /// [`Source::of`]); read only without [`Readings::rigid`].
+    pub held_pose: bool,
+    /// The parts move by the rigid motion their chain makes under each
+    /// sequence ([`Part`], `play_elevator_rigid_v1`), in place of the
+    /// translation reading.
+    pub rigid: bool,
+}
+
+/// One moving part under the rigid reading (`play_elevator_rigid_v1`): the
+/// collision sources whose body chains have the same deepest node that any
+/// of the model's sequences sets through a transform interpolator.
+#[derive(Debug, Clone)]
+pub struct Part {
+    /// The deepest set node (a block index of the model).
+    pub block: usize,
+    /// The motion each sequence gives the part from its stored place, in
+    /// world axes: (seconds from the sequence's start, motion); a sequence
+    /// that sets no node of the part's chain has none.
+    pub tracks: BTreeMap<String, MotionTrack>,
+    /// Where it stands now: absolute seconds.
+    track: MotionTrack,
+    base: World,
+}
+
 /// One named reference's collision and rides.
 #[derive(Debug)]
 pub struct Elevator {
@@ -94,6 +138,10 @@ pub struct Elevator {
     /// The (node, sequence) tracks read from a held translation
     /// (`play_elevator_held_pose_v1`); 0 without it.
     pub held: usize,
+    /// The parts under the rigid reading (`play_elevator_rigid_v1`); empty
+    /// without it.
+    pub parts: Vec<Part>,
+    rigid_rides: Vec<RigidRide<Key>>,
 }
 
 /// Where a moving node's translation comes from while a sequence plays.
@@ -162,6 +210,126 @@ impl Source {
     }
 }
 
+/// A rigid track's motion at `t` (absolute or relative seconds, as the
+/// track's): the first before the first point, the last after the last,
+/// between two points [`Motion::lerp`]; the identity for an empty track.
+pub fn motion_at(track: &[(f64, Motion)], t: f64) -> Motion {
+    let (Some(first), Some(last)) = (track.first(), track.last()) else {
+        return Motion::IDENTITY;
+    };
+    if t <= first.0 {
+        return first.1;
+    }
+    if t >= last.0 {
+        return last.1;
+    }
+    for w in track.windows(2) {
+        let (a, z) = (&w[0], &w[1]);
+        if t < z.0 {
+            let k = if z.0 > a.0 {
+                (t - a.0) / (z.0 - a.0)
+            } else {
+                1.0
+            };
+            return Motion::lerp(&a.1, &z.1, k);
+        }
+    }
+    last.1
+}
+
+/// The parts of the rigid reading (`play_elevator_rigid_v1`) of the model
+/// `d`: each source of `ew` built from a collision instance of `ec` goes
+/// with the deepest node of its body's chain that any of the model's
+/// sequences sets (`fo4_scene::sequence::chain_pose` at each sequence's
+/// start). Each part has, per sequence, the rigid motions the sequence
+/// gives its chain up to that node over the sequence's span, sampled
+/// [`SAMPLES_PER_SECOND`] times a second: each the motion between the
+/// chain as stored and as the sequence poses it at that key time, both
+/// under the placement `frame` (none for a sequence that sets no node of
+/// the chain or poses a sample as no rigid motion). Returns (deepest node,
+/// sources, tracks) per part, in the order of their first source, and the
+/// still sources (no collision instance, or a chain no sequence sets).
+#[allow(clippy::type_complexity)]
+fn rigid_parts(
+    d: DecodedAsset<'_>,
+    ec: &fo4_scene::collision::CellCollision,
+    ew: &World,
+    frame: fo4_scene::transform::Transform,
+    b: &Budget,
+) -> fo4_core::Result<(
+    Vec<(usize, Vec<u32>, BTreeMap<String, MotionTrack>)>,
+    Vec<u32>,
+)> {
+    let DecodedAsset::Model(n) = d else {
+        return Ok((Vec::new(), (0..ew.sources.len() as u32).collect()));
+    };
+    let seqs = fo4_scene::sequence::sequences(&n);
+    let track_of = |s: &fo4_scene::sequence::Sequence,
+                    prefix: &[usize],
+                    rlo: bool|
+     -> fo4_core::Result<MotionTrack> {
+        if s.frequency.is_nan() || s.frequency <= 0.0 {
+            return Ok(Vec::new());
+        }
+        let span = f64::from(s.stop - s.start) / f64::from(s.frequency);
+        let steps = (span * SAMPLES_PER_SECOND).ceil().max(1.0) as usize;
+        let mut track = Vec::new();
+        for k in 0..=steps {
+            let dt = (k as f64 / SAMPLES_PER_SECOND).min(span);
+            let st = f64::from(s.start) + dt * f64::from(s.frequency);
+            let Some(p) = fo4_scene::sequence::chain_pose(&n, s, prefix, rlo, st, &b.child())?
+            else {
+                return Ok(Vec::new());
+            };
+            let Some(m) = Motion::between(&frame.compose(p.stored), &frame.compose(p.posed)) else {
+                return Ok(Vec::new());
+            };
+            track.push((dt, m));
+        }
+        Ok(track)
+    };
+    let mut parts: Vec<(usize, Vec<u32>, BTreeMap<String, MotionTrack>)> = Vec::new();
+    let mut stills = Vec::new();
+    for (si, src) in ew.sources.iter().enumerate() {
+        let Some(k) = src.instance else {
+            stills.push(si as u32);
+            continue;
+        };
+        let inst = &ec.instances[k];
+        let rlo = inst.rules.contains(&fo4_scene::hypotheses::ROOT_TRANSFORM);
+        let chain = &ec.model(inst).bodies[inst.body].chain;
+        let mut deepest: Option<usize> = None;
+        for s in &seqs {
+            let start = f64::from(s.start);
+            if let Some(p) = fo4_scene::sequence::chain_pose(&n, s, chain, rlo, start, &b.child())?
+            {
+                let at = chain.iter().position(|x| *x == p.deepest).unwrap_or(0);
+                if deepest.is_none_or(|d| at > d) {
+                    deepest = Some(at);
+                }
+            }
+        }
+        let Some(at) = deepest else {
+            stills.push(si as u32);
+            continue;
+        };
+        let block = chain[at];
+        if let Some(p) = parts.iter_mut().find(|p| p.0 == block) {
+            p.1.push(si as u32);
+            continue;
+        }
+        let mut tracks = BTreeMap::new();
+        for s in &seqs {
+            let t = track_of(s, &chain[..=at], rlo)?;
+            if !t.is_empty() {
+                tracks.insert(s.name.clone(), t);
+            }
+        }
+        parts.push((block, vec![si as u32], tracks));
+    }
+    Ok((parts, stills))
+}
+
 fn sample(track: &Track, t: f64) -> [f64; 3] {
     let (Some(first), Some(last)) = (track.first(), track.last()) else {
         return [0.0; 3];
@@ -190,9 +358,11 @@ impl Elevator {
     /// Builds the collision of `reference` as stored and of the `also`
     /// references (still), and reads which nodes the model's sequences
     /// move. `index` keeps the pieces of several references apart. With
-    /// `held_pose`, a node a sequence controls without translation keys
-    /// moves to the translation the sequence holds it at
-    /// (`play_elevator_held_pose_v1`, [`Source::of`]).
+    /// [`Readings::held_pose`], a node a sequence controls without
+    /// translation keys moves to the translation the sequence holds it at
+    /// (`play_elevator_held_pose_v1`, [`Source::of`]); with
+    /// [`Readings::rigid`] the parts are read as [`Part`]s instead
+    /// (`play_elevator_rigid_v1`).
     pub fn build(
         m: &Manifest,
         store: &Store,
@@ -200,7 +370,7 @@ impl Elevator {
         reference: &FormKey,
         also: &[FormKey],
         index: u32,
-        held_pose: bool,
+        readings: Readings,
     ) -> Result<Elevator, E> {
         let level = RuleLevel::Hypotheses;
         let budget = Budget::new(8 << 30).with_scope_limit(m.limits.max_memory);
@@ -242,9 +412,38 @@ impl Elevator {
                         == want
             })
             .ok_or("PlayElevator: the reference's model is not among its assets")?;
+        if readings.rigid {
+            let (read, still) = loader.assets.with_decoded(id, &budget.child(), |d| {
+                rigid_parts(d, &ec, &ew, frame, &budget)
+            })?;
+            let mut parts = Vec::new();
+            for (block, srcs, tracks) in read {
+                parts.push(Part {
+                    block,
+                    tracks,
+                    track: vec![(0.0, Motion::IDENTITY)],
+                    base: ew.copy_sources(&srcs, [0.0; 3], &budget)?,
+                });
+            }
+            let stills = ew.copy_sources(&still, [0.0; 3], &budget)?;
+            return Self::finish(
+                m,
+                store,
+                &mut loader,
+                options,
+                reference,
+                also,
+                index,
+                stills,
+                (Vec::new(), Vec::new(), 0),
+                parts,
+                &budget,
+            );
+        }
         let origin = frame.apply([0.0; 3]);
         // (node name, block, tracks by sequence) of every node a sequence
         // moves by translation keys (or, with `held_pose`, holds).
+        let held_pose = readings.held_pose;
         let mut held_tracks = 0;
         let read = loader.assets.with_decoded(id, &budget.child(), |d| {
             let DecodedAsset::Model(n) = d else {
@@ -333,15 +532,46 @@ impl Elevator {
                 track: vec![(0.0, [0.0; 3])],
             })
             .collect();
+        Self::finish(
+            m,
+            store,
+            &mut loader,
+            options,
+            reference,
+            also,
+            index,
+            stills,
+            (nodes, groups, held_tracks),
+            Vec::new(),
+            &budget,
+        )
+    }
+
+    /// The still references' collision and the reference's space, with
+    /// the moving parts read by [`Elevator::build`].
+    #[allow(clippy::too_many_arguments)]
+    fn finish(
+        m: &Manifest,
+        store: &Store,
+        loader: &mut Loader<'_>,
+        options: fo4_scene::collision::Options,
+        reference: &FormKey,
+        also: &[FormKey],
+        index: u32,
+        stills: World,
+        (nodes, groups, held): (Vec<Node>, Vec<Group>, usize),
+        parts: Vec<Part>,
+        budget: &Budget,
+    ) -> Result<Elevator, E> {
         let mut also_worlds = Vec::new();
         for k in also {
-            let i = loader.instance(k, &budget)?;
+            let i = loader.instance(k, budget)?;
             let c =
-                fo4_scene::collision::instance_as_stored(&i, &loader, &m.limits, options, &budget)?;
+                fo4_scene::collision::instance_as_stored(&i, loader, &m.limits, options, budget)?;
             let p = c
                 .body_placement
                 .ok_or("PlayElevator: no body placement level")?;
-            also_worlds.push(World::build(&c, p, &budget)?);
+            also_worlds.push(World::build(&c, p, budget)?);
         }
         let (space, _) = fo4_vm::track::stored_position(store, m.limits.max_memory, reference)
             .map_err(|e| format!("PlayElevator: {e}"))?;
@@ -358,7 +588,9 @@ impl Elevator {
             last: 0.0,
             log: Vec::new(),
             ended: None,
-            held: held_tracks,
+            held,
+            parts,
+            rigid_rides: Vec::new(),
         })
     }
 
@@ -368,6 +600,17 @@ impl Elevator {
 
     /// The moving parts and the sources under them, for the report.
     pub fn summary(&self) -> String {
+        if !self.parts.is_empty() {
+            return format!(
+                "{} still sources, {} rigid parts ({} sources) under {} set nodes, {} (part, sequence) motion tracks, {} other references still",
+                self.stills.sources.len(),
+                self.parts.len(),
+                self.parts.iter().map(|p| p.base.sources.len()).sum::<usize>(),
+                self.parts.len(),
+                self.parts.iter().map(|p| p.tracks.len()).sum::<usize>(),
+                self.also.len()
+            );
+        }
         format!(
             "{} still sources, {} moving parts ({} sources) under {} moved nodes, {} other references still",
             self.stills.sources.len(),
@@ -416,6 +659,13 @@ impl Elevator {
             let r = Ride::new(set, self.key(1 + gi as u32), base, track, second, &b)?;
             self.rides.push(r);
         }
+        self.rigid_rides.clear();
+        let first = 1 + self.groups.len() as u32;
+        for (pi, p) in self.parts.iter().enumerate() {
+            let key = self.key(first + pi as u32);
+            let r = RigidRide::new(set, key, p.base.clone(), p.track.clone(), second, &b)?;
+            self.rigid_rides.push(r);
+        }
         self.last = second;
         Ok(())
     }
@@ -424,6 +674,7 @@ impl Elevator {
     /// where they stand; [`Elevator::insert`] puts the pieces in again.
     pub fn leave(&mut self) {
         self.rides.clear();
+        self.rigid_rides.clear();
     }
 
     /// Reads the sequences the run's graph started on the reference since
@@ -450,9 +701,27 @@ impl Elevator {
                     None => vec![(*t, here)],
                 };
             }
+            if self.parts.is_empty() {
+                self.log.push((
+                    *t,
+                    format!("the run's graph starts sequence {name}: {moved} moving node(s) keyed"),
+                ));
+                continue;
+            }
+            let mut set = 0;
+            for p in &mut self.parts {
+                let here = motion_at(&p.track, *t);
+                p.track = match p.tracks.get(name) {
+                    Some(tr) => {
+                        set += 1;
+                        tr.iter().map(|(dt, m)| (t + dt, *m)).collect()
+                    }
+                    None => vec![(*t, here)],
+                };
+            }
             self.log.push((
                 *t,
-                format!("the run's graph starts sequence {name}: {moved} moving node(s) keyed"),
+                format!("the run's graph starts sequence {name}: {set} rigid part(s) set"),
             ));
         }
         self.seen = started.len();
@@ -463,6 +732,9 @@ impl Elevator {
                     r.track = track;
                 }
             }
+            for (p, r) in self.parts.iter().zip(&mut self.rigid_rides) {
+                r.track = p.track.clone();
+            }
         }
         any
     }
@@ -470,12 +742,23 @@ impl Elevator {
     /// Whether a part's track runs (a sequence plays on it) between the
     /// two seconds: the walker ticks through it, so a ride's end is seen.
     pub fn moving(&self, from: f64, to: f64) -> bool {
-        self.rides
-            .iter()
-            .any(|r| match (r.track.first(), r.track.last()) {
-                (Some(a), Some(z)) => r.track.len() > 1 && z.0 > from && a.0 < to,
-                _ => false,
-            })
+        let runs = |first: Option<f64>, last: Option<f64>, len: usize| match (first, last) {
+            (Some(a), Some(z)) => len > 1 && z > from && a < to,
+            _ => false,
+        };
+        self.rides.iter().any(|r| {
+            runs(
+                r.track.first().map(|p| p.0),
+                r.track.last().map(|p| p.0),
+                r.track.len(),
+            )
+        }) || self.rigid_rides.iter().any(|r| {
+            runs(
+                r.track.first().map(|p| p.0),
+                r.track.last().map(|p| p.0),
+                r.track.len(),
+            )
+        })
     }
 
     /// Moves the parts to their place at `second`, carrying the walker
@@ -488,19 +771,34 @@ impl Elevator {
     ) -> Result<f64, E> {
         let b = Budget::new(1 << 32);
         let mut carried = 0.0;
-        for r in &mut self.rides {
-            carried += r.advance(set, walker, second, &b)?;
-            let end = r.track.last().map_or(0.0, |p| p.0);
-            let on = walker.grounded
+        // Whether the walker stands on the piece of `key` after its ride
+        // advanced.
+        let on = |set: &WorldSet<Key>, walker: &Character, key: Key| {
+            walker.grounded
                 && walker
                     .ground
                     .and_then(|g| set.source(g.source))
-                    .is_some_and(|(k, _)| *k == r.key);
-            if self.last < end && second >= end && on && r.carried != 0.0 {
-                self.ended = Some(end);
-                self.log
-                    .push((end, "a ride that carried the walker ended".into()));
+                    .is_some_and(|(k, _)| *k == key)
+        };
+        let mut ended: Vec<f64> = Vec::new();
+        for r in &mut self.rides {
+            carried += r.advance(set, walker, second, &b)?;
+            let end = r.track.last().map_or(0.0, |p| p.0);
+            if self.last < end && second >= end && on(set, walker, r.key) && r.carried != 0.0 {
+                ended.push(end);
             }
+        }
+        for r in &mut self.rigid_rides {
+            carried += r.advance(set, walker, second, &b)?;
+            let end = r.track.last().map_or(0.0, |p| p.0);
+            if self.last < end && second >= end && on(set, walker, r.key) && r.carried != 0.0 {
+                ended.push(end);
+            }
+        }
+        for end in ended {
+            self.ended = Some(end);
+            self.log
+                .push((end, "a ride that carried the walker ended".into()));
         }
         self.last = second;
         Ok(carried)
@@ -514,6 +812,7 @@ impl Elevator {
         let mut out: Option<([f64; 3], [f64; 3])> = None;
         let worlds = std::iter::once(&self.stills)
             .chain(self.groups.iter().map(|g| &g.base))
+            .chain(self.parts.iter().map(|p| &p.base))
             .chain(&self.also);
         for w in worlds {
             let Some(b) = w.bounds else { continue };
@@ -527,6 +826,21 @@ impl Elevator {
         }
         out
     }
+}
+
+/// The load doors of `doors` that do not lead into the space `left` (the
+/// space the walker left by its last change of space): the candidates of a
+/// ride's end door under `play_elevator_end_door_onward_v1`.
+pub fn onward(
+    doors: &BTreeMap<FormKey, crate::world::LoadDoor>,
+    left: &FormKey,
+) -> BTreeMap<FormKey, crate::world::LoadDoor> {
+    let left = fo4_scene::timeline::norm(left);
+    doors
+        .iter()
+        .filter(|(_, d)| fo4_scene::timeline::norm(&d.space) != left)
+        .map(|(k, d)| (k.clone(), d.clone()))
+        .collect()
 }
 
 /// The load door nearest `feet` among `doors` whose stored position in
@@ -616,6 +930,8 @@ mod tests {
             log: Vec::new(),
             ended: None,
             held: 0,
+            parts: Vec::new(),
+            rigid_rides: Vec::new(),
         }
     }
 
@@ -819,6 +1135,148 @@ mod tests {
             let top = set.get(&e.key(1)).unwrap().bounds.unwrap().max[2];
             assert!((top - 40.0).abs() < 1e-6, "{t}: {top}");
         }
+    }
+
+    /// Under the rigid reading: a floor (part 0) that a sequence named `Up`
+    /// raises 100 units over one second, and a small floor far below (the
+    /// second part) that a sequence named `Turn` turns a quarter about the
+    /// vertical through (500, 0) over one second.
+    fn rigid_elevator() -> Elevator {
+        let up: MotionTrack = (0..=60)
+            .map(|k| {
+                let f = k as f64 / 60.0;
+                (f, Motion::translation([0.0, 0.0, 100.0 * f]))
+            })
+            .collect();
+        let turn: MotionTrack = (0..=60)
+            .map(|k| {
+                let half = std::f64::consts::FRAC_PI_4 * k as f64 / 60.0;
+                let m = Motion {
+                    rotation: [half.cos(), 0.0, 0.0, half.sin()],
+                    pivot: [500.0, 0.0, -500.0],
+                    translation: [0.0; 3],
+                };
+                (k as f64 / 60.0, m)
+            })
+            .collect();
+        let b = Budget::new(1 << 24);
+        let far = floor(-500.0, 20.0)
+            .copy_sources(&[0], [520.0, 0.0, 0.0], &b)
+            .unwrap();
+        let mut e = elevator();
+        e.nodes.clear();
+        e.groups.clear();
+        e.parts = vec![
+            Part {
+                block: 7,
+                tracks: BTreeMap::from([("Up".to_string(), up)]),
+                track: vec![(0.0, Motion::IDENTITY)],
+                base: floor(0.0, 100.0),
+            },
+            Part {
+                block: 9,
+                tracks: BTreeMap::from([("Turn".to_string(), turn)]),
+                track: vec![(0.0, Motion::IDENTITY)],
+                base: far,
+            },
+        ];
+        e
+    }
+
+    #[test]
+    fn a_rigid_track_is_sampled_by_its_motions() {
+        assert!(motion_at(&[], 1.0).is_identity());
+        let a = Motion::translation([0.0, 0.0, 10.0]);
+        let z = Motion::translation([0.0, 0.0, 30.0]);
+        let tr = vec![(1.0, a), (3.0, z)];
+        assert_eq!(motion_at(&tr, 0.0), a);
+        assert_eq!(motion_at(&tr, 9.0), z);
+        assert!((motion_at(&tr, 2.0).translation[2] - 20.0).abs() < 1e-9);
+        assert_eq!(
+            Readings::default(),
+            Readings {
+                held_pose: false,
+                rigid: false
+            }
+        );
+    }
+
+    #[test]
+    fn a_rigid_part_follows_its_sequence_and_one_it_does_not_set_holds() {
+        let mut lib = fo4_vm::MapLibrary::default();
+        let mut host = fo4_vm::NoHost;
+        let mut vm = fo4_vm::Vm::new(&mut lib, &mut host);
+        let o = vm.world.object(
+            "the platform",
+            Some(fo4_vm::bind::record_key(&key(5))),
+            &["objectreference"],
+        );
+        let mut e = rigid_elevator();
+        assert!(e.summary().contains("2 rigid parts"), "{}", e.summary());
+        let mut set: WorldSet<Key> = WorldSet::new();
+        e.insert(&mut set, 0.0).unwrap();
+        let mut c =
+            Character::new(Params::PROVISIONAL, Settings::DEFAULT, [0.0, 0.0, 5.0]).unwrap();
+        c.settle(&set, 600);
+        assert!(c.grounded && c.feet[2].abs() < 1e-3);
+        assert!(!e.moving(0.0, 10.0));
+        // The run turns part 1 from 1 s: part 0 is not set and holds.
+        vm.world.anims.started.push((1.0, o, "Turn".into()));
+        assert!(e.follow(&vm));
+        assert!(e.log.last().unwrap().1.ends_with("1 rigid part(s) set"));
+        assert!(e.moving(1.5, 1.6));
+        // Then raises part 0 from 2 s: part 1 holds the turn's end.
+        vm.world.anims.started.push((2.0, o, "Up".into()));
+        assert!(e.follow(&vm));
+        assert!(e.moving(1.5, 2.5) && !e.moving(3.5, 9.0));
+        let tick = Settings::DEFAULT.tick;
+        let mut t = 1.0;
+        while t < 2.5 {
+            t += tick;
+            e.advance(&mut set, &mut c, t).unwrap();
+            c.tick(&set, fo4_walk::Input::default());
+        }
+        assert!((c.feet[2] - 50.0).abs() < 3.0, "{:?}", c.feet);
+        assert!(e.ended.is_none());
+        while t < 3.5 {
+            t += tick;
+            e.advance(&mut set, &mut c, t).unwrap();
+            c.tick(&set, fo4_walk::Input::default());
+        }
+        assert!((c.feet[2] - 100.0).abs() < 1e-3, "{:?}", c.feet);
+        assert_eq!(e.ended, Some(3.0));
+        assert!((e.rigid_rides[1].motion.angle_degrees() - 90.0).abs() < 1e-6);
+        // The far piece turned a quarter about (500, 0): from x 500..540
+        // to y 0..40.
+        let far = set.get(&e.key(2)).unwrap().bounds.unwrap();
+        assert!(
+            (far.min[0] - 480.0).abs() < 1e-6 && (far.max[1] - 40.0).abs() < 1e-6,
+            "{far:?}"
+        );
+        // Built again: each part stands where its ride left it, and the box
+        // holds the parts as stored.
+        let mut again: WorldSet<Key> = WorldSet::new();
+        e.insert(&mut again, t).unwrap();
+        let top = again.get(&e.key(1)).unwrap().bounds.unwrap().max[2];
+        assert!((top - 100.0).abs() < 1.0, "{top}");
+        let b = e.bounds().unwrap();
+        assert!(b.0[2] <= -500.0 + 1e-6 && b.1[0] >= 540.0 - 1e-6, "{b:?}");
+        e.leave();
+        assert!(!e.moving(0.0, 10.0));
+    }
+
+    #[test]
+    fn the_onward_doors_leave_out_those_back_into_the_space_left() {
+        let door = |space: u32| crate::world::LoadDoor {
+            to: key(100 + space),
+            space: key(space),
+            pos: [0.0; 3],
+            rot: [0.0; 3],
+        };
+        let doors = BTreeMap::from([(key(10), door(1)), (key(11), door(2)), (key(12), door(1))]);
+        let kept = onward(&doors, &key(1));
+        assert_eq!(kept.keys().cloned().collect::<Vec<_>>(), [key(11)]);
+        assert_eq!(onward(&doors, &key(3)).len(), 3);
     }
 
     #[test]

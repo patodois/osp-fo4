@@ -516,6 +516,36 @@ pub fn observe_play(
     graph_event(w, o, &event, now);
 }
 
+/// The caller's graph event (`rules::ANIM_GRAPH_CALLER_EVENT`, `quest_run
+/// --assume-graph-event REF EVENT`): sent from outside any script, through
+/// the host, as a script's `PlayAnimation(event)` on `o` would be (the host
+/// observes the call under `rules::ANIM_GRAPH`, [`observe_play`]; its reply
+/// is not used). Returns the names of the sequences the graph started.
+pub fn caller_event(vm: &mut Vm<'_>, o: ObjId, event: &str) -> Vec<String> {
+    let call = NativeCall {
+        script: "objectreference".into(),
+        name: "playanimation".into(),
+        receiver: Some(Val::Object(o)),
+        instance: None,
+        args: vec![Val::Str(event.into())],
+        param_types: vec!["string".into()],
+        return_type: "bool".into(),
+    };
+    let before = vm.world.anims.started.len();
+    let _ = vm.host.call(&call, &mut vm.world);
+    for u in vm.host.rules() {
+        vm.rules.insert(u);
+    }
+    for u in std::mem::take(&mut vm.world.anims.used) {
+        vm.rules.insert(u);
+    }
+    vm.rules.insert(rules::ANIM_GRAPH_CALLER_EVENT);
+    vm.world.anims.started[before..]
+        .iter()
+        .map(|x| x.2.clone())
+        .collect()
+}
+
 /// The reference's graph in the run, read when first needed and started in
 /// its start state (`rules::ANIM_GRAPH`); `false` where it is refused
 /// (counted under `what`, or as a newly refused graph).

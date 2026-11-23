@@ -82,6 +82,21 @@ pub mod rules {
     /// `nif_sequence_interpolator_held_pose_v1`) and stays there after, as a
     /// keyed node holds its last key (`--play-elevator-held-pose`).
     pub const ELEVATOR_HELD_POSE: &str = "play_elevator_held_pose_v1";
+    /// Under `ELEVATOR_RUN_SEQUENCE`, in place of the translations: a named
+    /// reference's collision sources go by the deepest node of their
+    /// body's chain that any of the model's sequences sets through a
+    /// transform interpolator, and each such part moves, from the second
+    /// the run starts a sequence, by the rigid motion the sequence gives
+    /// its chain up to that node (the drawing side's
+    /// `nif_sequence_chain_pose_v1` and `walk_platform_rigid_motion_v1`),
+    /// holding the last motion after; a part the sequence does not set
+    /// keeps its motion (`--play-elevator-rigid`).
+    pub const ELEVATOR_RIGID: &str = "play_elevator_rigid_v1";
+    /// Under `ELEVATOR_END_DOOR`, the load doors whose `XTEL` leads into
+    /// the space the walker left by its last change of space (a load door,
+    /// a `MoveTo` or a sit) are left out: a ride's end does not take the
+    /// walker back where it came from (`--play-elevator-door-onward`).
+    pub const ELEVATOR_END_DOOR_ONWARD: &str = "play_elevator_end_door_onward_v1";
     /// A `MoveTo` the run calls on the player with zero offsets and a
     /// target whose place the world model settles puts the walker at the
     /// target's position in the target's space (the walking world of its
@@ -96,7 +111,7 @@ pub mod rules {
     /// walk stands for the way there) (`--play-player-sits`).
     pub const PLAYER_SIT: &str = "play_player_sit_furniture_v1";
     /// Every rule above.
-    pub const ALL: [&str; 13] = [
+    pub const ALL: [&str; 15] = [
         PLAYER_FEET,
         RUN_CLOCK,
         ACTIVATE_RAY,
@@ -108,6 +123,8 @@ pub mod rules {
         ELEVATOR_RUN_SEQUENCE,
         ELEVATOR_END_DOOR,
         ELEVATOR_HELD_POSE,
+        ELEVATOR_RIGID,
+        ELEVATOR_END_DOOR_ONWARD,
         PLAYER_MOVETO,
         PLAYER_SIT,
     ];

@@ -432,6 +432,10 @@ pub enum What {
     /// A placed reference raises a named animation event
     /// (`--assume-anim-event REF EVENT`).
     Anim(String, String),
+    /// A placed reference's behaviour graph receives an event as a
+    /// script's `PlayAnimation` would send it (`--assume-graph-event REF
+    /// EVENT`).
+    Graph(String, String),
     /// The player sits in (`true`) or gets up from a furniture reference
     /// (`--assume-sit`, `--assume-get-up`).
     Sit(String, bool),
@@ -486,6 +490,7 @@ impl Caller {
             What::Player(_, k)
             | What::Talk(k)
             | What::Anim(k, _)
+            | What::Graph(k, _)
             | What::Sit(k, _)
             | What::Hit(k)
             | What::Combat(k, _, _)

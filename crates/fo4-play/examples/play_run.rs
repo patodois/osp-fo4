@@ -40,16 +40,22 @@
 //! placed as stored and split by the nodes its model's sequences move, as
 //! the sequences the run's graph starts on it move those nodes
 //! (`play_elevator_run_sequence_v1`); `--play-elevator-also REF` places
-//! another reference's collision as stored, still; `--play-elevator-door`
+//! another reference's collision as stored, still, with the named reference
+//! of its own space (else the first); `--play-elevator-also-with REF OWNER`
+//! with the named reference OWNER whatever its space; `--play-elevator-door`
 //! takes the walker through the nearest load door within the reach when a
-//! ride that carried it ends (`play_elevator_end_load_door_v1`);
+//! ride that carried it ends (`play_elevator_end_load_door_v1`), and with
+//! `--play-elevator-door-onward` not through a door back into the space
+//! the walker came from (`play_elevator_end_door_onward_v1`);
 //! `--play-player-moveto` puts the walker where a `MoveTo` the run calls on
 //! the player with zero offsets puts it (`play_player_moveto_v1`), and
 //! `--play-player-sits` at the furniture the run seats the player in
 //! (`play_player_sit_furniture_v1`).
 //! `--play-elevator-held-pose` moves a node a sequence controls without
 //! translation keys to the translation the sequence holds it at
-//! (`play_elevator_held_pose_v1`). `--play-collision-off-chain` and
+//! (`play_elevator_held_pose_v1`). `--play-elevator-rigid` moves each part
+//! instead by the rigid motion the sequence gives the chain above it, every
+//! channel read (`play_elevator_rigid_v1`). `--play-collision-off-chain` and
 //! `--play-collision-reference-alpha` give every walking world's cell build
 //! the drawing side's collision readiness readings
 //! (`collision_model_blockers_off_chain_v1`,
@@ -125,6 +131,8 @@ fn run() -> Result<(), E> {
     let activatable = flag(&mut a, "--play-pick-bounds-activatable");
     let elevator_door = flag(&mut a, "--play-elevator-door");
     let held_pose = flag(&mut a, "--play-elevator-held-pose");
+    let rigid = flag(&mut a, "--play-elevator-rigid");
+    let door_onward = flag(&mut a, "--play-elevator-door-onward");
     let player_moveto = flag(&mut a, "--play-player-moveto");
     let player_sits = flag(&mut a, "--play-player-sits");
     let collision = fo4_scene::readiness::Switches {
@@ -134,6 +142,8 @@ fn run() -> Result<(), E> {
     let mut elevators = walker::Elevators {
         door: elevator_door,
         held_pose,
+        rigid,
+        door_onward,
         ..walker::Elevators::default()
     };
     while let Some(i) = a
@@ -151,11 +161,29 @@ fn run() -> Result<(), E> {
         }
         a.drain(i..i + 2);
     }
+    while let Some(i) = a.iter().position(|x| x == "--play-elevator-also-with") {
+        let usage = "--play-elevator-also-with takes PLUGIN:OBJECTID PLUGIN:OBJECTID";
+        let key = |j: usize| a.get(i + j).and_then(|v| fo4_vm::player::parse_key(v));
+        let (k, owner) = (key(1).ok_or(usage)?, key(2).ok_or(usage)?);
+        if !elevators.references.contains(&owner) {
+            return Err(
+                "--play-elevator-also-with names an owner that is no --play-elevator reference"
+                    .into(),
+            );
+        }
+        elevators.also_with.push((k, owner));
+        a.drain(i..i + 3);
+    }
     if elevators.references.is_empty() && (elevator_door || !elevators.also.is_empty()) {
         return Err("--play-elevator-also and --play-elevator-door need --play-elevator".into());
     }
-    if elevators.references.is_empty() && held_pose {
-        return Err("--play-elevator-held-pose needs --play-elevator".into());
+    if elevators.references.is_empty() && (held_pose || rigid) {
+        return Err(
+            "--play-elevator-held-pose and --play-elevator-rigid need --play-elevator".into(),
+        );
+    }
+    if door_onward && !elevator_door {
+        return Err("--play-elevator-door-onward needs --play-elevator-door".into());
     }
     if elevator_door && !(load_doors && reach.is_some()) {
         return Err("--play-elevator-door needs --play-load-doors and --play-reach".into());
@@ -368,9 +396,15 @@ fn run() -> Result<(), E> {
                 let _ = writeln!(report, "switch: trigger volumes and placed actors are read about the walker's points (--play-region-walker)");
             }
             if !elevators.references.is_empty() {
-                let _ = writeln!(report, "switch: the collision of {} named reference(s) moves as the sequences the run's graph starts on them move its nodes, {} other reference(s) placed as stored (--play-elevator, --play-elevator-also){}", elevators.references.len(), elevators.also.len(), if elevators.door { "; a ride that carried the walker ends at the nearest load door within the reach (--play-elevator-door)" } else { "" });
+                let _ = writeln!(report, "switch: the collision of {} named reference(s) moves as the sequences the run's graph starts on them move its nodes, {} other reference(s) placed as stored (--play-elevator, --play-elevator-also){}", elevators.references.len(), elevators.also.len() + elevators.also_with.len(), if elevators.door { "; a ride that carried the walker ends at the nearest load door within the reach (--play-elevator-door)" } else { "" });
                 if elevators.held_pose {
                     let _ = writeln!(report, "switch: a node a sequence controls without translation keys moves to the translation the sequence holds it at (--play-elevator-held-pose)");
+                }
+                if elevators.door_onward {
+                    let _ = writeln!(report, "switch: a ride's end leaves out the load doors back into the space the walker came from (--play-elevator-door-onward)");
+                }
+                if elevators.rigid {
+                    let _ = writeln!(report, "switch: each part moves by the rigid motion the sequence gives the chain above it, every channel read, in place of the translations (--play-elevator-rigid)");
                 }
                 w = w.with_elevators(elevators.clone());
             }

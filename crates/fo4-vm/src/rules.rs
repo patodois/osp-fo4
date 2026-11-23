@@ -169,7 +169,7 @@ pub const XESP_BIT1: &str = "xesp_flag_bit1_not_presence_v1";
 pub const XESP_PROPAGATES: &str = "xesp_script_change_propagates_v1";
 
 /// Every rule above.
-pub const ALL: [&str; 203] = [
+pub const ALL: [&str; 204] = [
     ARITHMETIC,
     COMPARE,
     NOT_COPY_CAST,
@@ -334,6 +334,7 @@ pub const ALL: [&str; 203] = [
     ANIM_GRAPH_START_SETTLED,
     TEXT_EQUAL_IGNORE_CASE,
     ANIM_SEQUENCE_CASE,
+    ANIM_GRAPH_CALLER_EVENT,
     WORLD_LOAD_DOOR,
     LINE_FRAGMENTS,
     LINE_START_SCENE,
@@ -706,6 +707,13 @@ pub const TEXT_EQUAL_IGNORE_CASE: &str = "pex_text_equal_ignore_case_v1";
 /// A graph state's sequence name finds the model's sequence of that name
 /// ignoring ASCII case where none has the exact name.
 pub const ANIM_SEQUENCE_CASE: &str = "anim_graph_sequence_name_case_v1";
+/// The caller's graph event (`--assume-graph-event REF EVENT[@SECONDS]`)
+/// reaches the placed reference's behaviour graph at its second as a
+/// script's `PlayAnimation(EVENT)` on the reference would
+/// (`anim_graph_model_transition_v1`), from outside any script: the
+/// graph read when first needed, the transition of its state or a
+/// wildcard taken, the entered state's sequence started.
+pub const ANIM_GRAPH_CALLER_EVENT: &str = "anim_graph_caller_event_v1";
 /// Where the caller's track changes space, the player passes through the
 /// load door of the old space whose `XTEL` names a door in the new space
 /// (the one nearest the track's last point there) and stands at the

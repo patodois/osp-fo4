@@ -914,6 +914,7 @@ pub(super) fn new_game(
                 What::Player(..)
                 | What::Talk(_)
                 | What::Anim(..)
+                | What::Graph(..)
                 | What::Sit(..)
                 | What::Menu(..)
                 | What::Looks(_)

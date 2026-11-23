@@ -172,6 +172,32 @@ pub(super) fn act(
                 );
             }
         }
+        What::Graph(key, event) => {
+            bump(
+                c,
+                "assumption from the command line: a placed reference's behaviour graph receives an event as PlayAnimation sends it (--assume-graph-event)",
+            );
+            let k = crate::player::parse_key(key)
+                .ok_or("a reference is given as plugin.esm:0001ABCD")?;
+            if store.signature(&k) != Some(*b"REFR") {
+                return Err("--assume-graph-event names no winning placed REFR".into());
+            }
+            let o = crate::data::record_object(&mut vm.world, store, &k, "objectreference", b)?;
+            let started = crate::anim::caller_event(vm, o, event);
+            if started.is_empty() {
+                bump(c, "animation graphs	the caller's event started no sequence");
+            }
+            let _ = writeln!(
+                names,
+                "## --assume-graph-event {key} {event}{when}: sequence(s) started: {}",
+                if started.is_empty() {
+                    "none".to_string()
+                } else {
+                    started.join(", ")
+                }
+            );
+            top.extend(quest::run_jobs(vm, store, MAX_GAME_JOBS, b));
+        }
         What::Talk(key) => {
             bump(
                 c,
