@@ -1,0 +1,22 @@
+[package]
+name = "fo4-play"
+description = "A Fallout 4 quest run driven by input: the walker's positions and the player's activations fed to the run slice by slice, under pending rules"
+repository.workspace = true
+keywords = ["fallout4", "bethesda", "scripts", "character-controller"]
+categories = ["game-development", "simulation"]
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+fo4-core.workspace = true
+fo4-plugin.workspace = true
+fo4-vfs.workspace = true
+fo4-scene.workspace = true
+fo4-walk.workspace = true
+fo4-pex = { path = "../fo4-pex" }
+fo4-vm = { path = "../fo4-vm" }
+# The run's code (`quest_run new-game`, compiled from fo4-vm's example by
+# build.rs) reads voice file headers.
+fo4-audio = { path = "../fo4-audio" }
