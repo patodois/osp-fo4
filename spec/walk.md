@@ -424,6 +424,51 @@ player is carried through it, is not read: the reading passes the rider through.
 | + the boxes riding (`--ride-boxes`) with `--box-presence` | rides down on the box: at the bottom (4,830.9), 234 units sideways (the terrain again) |
 | the same with `--ride-through-terrain` | rides down on the box to 4,827.1 right under where it rode down |
 
+### Platforms that turn (the rotate step)
+
+The postwar gear door's open pose (the same model as the prewar vault's) holds the tilt of its ramp only as
+constant XYZ rotation keys: the sequences that hold the open pose set the ramp's node with no translation keys,
+no set translation or quaternion on the interpolator, and XYZ keys of 0, -7.25 and 0 degrees (X, Y, Z; the
+closed pose 0, 0, 0); the door wheel turns 120 degrees the same way and a helper blocker 20 degrees, while the
+walkway's parts move by held translations. The translation-only readings (`ride_check --pose`,
+`play_elevator_run_sequence_v1`, `play_elevator_held_pose_v1`) leave the ramp flat, 48 to 50 units above the
+floor, with its end against the walker's path: the walk that came down it in the prewar vault dropped 50 units
+off its end, and the walk up it in the postwar vault stopped at its end face.
+
+Two readings, both used only when a caller asks (`ride_check --pose-rigid`, with `--pose REF N`):
+
+- `nif_sequence_chain_pose_v1` (`fo4_scene::sequence::chain_pose`, `block_local`): a sequence poses a body's
+  node chain at a key time as the chain composed root first, the way the collision placement composes it, up to
+  the deepest node the sequence sets through a transform interpolator; each node it sets takes the whole local
+  transform the sequence gives it (keys, else the interpolator's set value, else stored; rotation keys read as
+  the clock reads them), every other node its stored one.
+- `walk_platform_rigid_motion_v1` (`fo4_walk::Motion`, `World::copy_sources_moved`, `platform::RigidRide`): a
+  piece moves by a turn about a pivot and a translation, every point moved and every radius kept; the motion
+  between the stored and the posed chain turns about the deepest set node's stored origin; along a track of
+  motions a walker grounded on the piece is carried as a point of it. `Ride` and `World::copy_sources` are
+  unchanged.
+
+`ride_check --pose-rigid` takes the pose at the sequence's stop time and puts one piece per deepest set node.
+On the open door: the ramp's two bodies turn 7.25 degrees about the model's Y axis through the ramp node (its end
+comes down to about 2 above the floor), the wheel 120 degrees about its axle, the helper 20 degrees; the walkway
+parts move as before (their keys equal the stored rotations, so their turns are below a hundredth of a degree).
+
+| Walk (`ride_check`, both collision switches) | Translations (`--pose DOOR 3`) | Rigid (`--pose DOOR 3 --pose-rigid`) |
+| --- | --- | --- |
+| prewar vault, entrance room floor at 520.67 s to 700 s | reaches every target, flat at 50.1 on the ramp, then a drop to the floor | the same targets and end, down the ramp from 48 to 0 over about 1.2 s |
+| postwar vault, console side at 928.2 s along the walk's commands to 944 s | stops at x -3,512.6 against the ramp's end face from 929.2 s | up the ramp (z 37.6 at 929.9 s), across the walkway at 55.6 to 56.9, past the door at 935 s, down to the exit elevator's room (z -122 at 944 s) |
+
+The play mode does not read these yet (`fo4-play` is the run side's). What a local probe of it did, outside the
+repository, and what the run side would add behind its own switch, off by default: in `elevator::Elevator::build`,
+group a named reference's collision sources by the deepest chain block any of the model's sequences sets
+(`sequence::chain_pose` at the sequence's start; sources whose chain no sequence sets stay still); for each group
+and sequence, sample `chain_pose` over the group's chain up to that block at `SAMPLES_PER_SECOND` along the
+sequence's span and turn each sample into `Motion::between(frame.compose(stored), frame.compose(posed))`; put
+each group in as a `platform::RigidRide` instead of a `Ride`, its track the started sequence's motions from the
+second the run's graph starts it (a group the sequence does not set holds its motion), and look at those rides
+in `moving`, `advance` (the ended ride and its load door as for `Ride`), `leave` and `bounds`. With the
+opening's arguments and that probe the walk matches 265 of 265 stages to 946 s (`docs/next-steps.md`).
+
 ## Open
 
 | Question | Status |

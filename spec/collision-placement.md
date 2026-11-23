@@ -238,6 +238,29 @@ probe of that change, outside the repository, matched the recorded run's
 232 of 232 stages to 700 s with the door's load event raised
 (`--load-on-arrival`).
 
+The open pose's turns (the rotate step, `spec/walk.md`, Platforms that turn):
+the held-pose sequences also set thirteen chain nodes through XYZ rotation
+keys (two of them also hold a translation); for three the keys differ from the stored
+rotation (the ramp 7.25 degrees, the wheel 120, a helper blocker 20). The
+held-pose reading leaves a keyed channel out, so those turns were never
+applied. `nif_sequence_chain_pose_v1` (`sequence::chain_pose`) poses a
+body's chain with every channel the sequence gives each node it sets;
+`ride_check --pose-rigid` moves each body's collision by the rigid motion of
+its chain (`walk_platform_rigid_motion_v1`).
+
+The cell where the run seats the player in a pod at 730.1 s (the walker
+drops there): `collision_ready_census` with probes at the pod's place finds
+no surface with the switches off or on. Under the point, refused references
+placed as stored: the pod itself (furniture: record fields, animation and an
+unread block) and two static floor pieces 41 units under the pod's origin,
+each refused only by `RuntimeEnableParent` with the finding `XESP.own_flag`
+(a record of the enable chain below its root carries its own initially
+disabled flag beside its XESP, which no registered rule decides for
+collision). The cell's load: 825 references refused, 189 of them with
+collision, 67 of those carrying that finding; the two collision switches settle
+none. Left as it is: that floor's presence is the run's enable state, and the
+walker sits in the pod for the whole period.
+
 ## What the API returns
 
 `CellCollision` holds the decoded models (`ModelCollision`: bodies with their
