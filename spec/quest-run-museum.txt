@@ -1,0 +1,80 @@
+# quest_run new-game, the museum (museum step): the fight step's run on a walk through the museum in the order its data forces, the second fight, the leader's conversation and the basement gate; kinds and counts only (spec/vm.md, The museum's order)
+# Section 1: the order a walk through the museum forces (walk_order_census, spec/walk-order-census.txt). Section 2: the walk and the stage triggers it enters. Section 3: the caller's events and what each set.
+# Section 4: how far the run gets, by quest. Section 5: the caller's assumptions added in this step. Section 6: this step's readings. Section 7: the order the data leaves open (the back door). Section 8: the earlier runs with the inherited auto state. Section 9: what stops next.
+# Stage numbers only; spec/quest-run-vault-stages.txt says what sets each stage. Quest 1 is the next main quest, quest 2 the museum's own quest (its raiders), quest 3 the town's dialogue quest. The track, its plan, the command lines and every record named are in the step's notes.
+
+## 1 the order a walk through the museum forces (the navigation mesh, the stage triggers, the doors that store a lock, the stage conditions)
+surface	one navigation mesh of 2,002 triangles, one piece; links of kinds 1 and 2 (10 each) change no reach
+locked doors	5 store a lock record (XLOC): the inner door to the leader's room (quest 1's alias 20, level byte 255), its exit door (alias 31, 255), the balcony's load door (alias 99, 255), the basement gate (alias 56, 25); one more stores level 50
+the inner door	alone splits the surface (from a margin of 1 unit): 1,742 triangle pieces on the front door's side, 262 behind; the exit door and the balcony door split nothing up to 32 units
+behind the inner door	quest 1's stage 78 trigger (off from 85), 86 trigger, 88 trigger (player only, just inside the doorway), quest 3's stage 15 trigger, the exit door, the balcony door, the back door's arrival
+front door, every door open	78 is entered only after 77, 87 and 88 (the previous step's walk)
+front door, locked doors closed	reached: 70, 77, 87 (needs 85), 135 (needs 130), quest 2's 10, 13, 14, 25, 50, 51; shut: 78, 86, 88, quest 3's 15, each opened by the inner door alone
+front door, locked doors closed: entered first	77 after quest 2's 13, one of its 14 and one of its 25 triggers; quest 2's 50 after the same; 87 after 77 and all of these; the way round the level-50 door is through quest 2's 13 trigger
+the inner door's unlock	only the leader's beckon scene (its first phase's end calls the quest script's door function: unlock, open); 85 starts that scene; 85 needs seven raiders' deaths; four of the seven are placed initially disabled and enabled by quest 2's stages 25 and 50 (and by 78, which enables any still disabled)
+78 from the front door	never: behind the inner door, which opens only after 85, and 78's trigger is off from 85
+78 first	only through the back door, whose arrival lies inside 78's trigger; the back door's exterior side is a navigation mesh island of 111 triangles joined to no street mesh (12 more for the balcony's), even with every link kind followed
+data order (front door)	70 -> quest 2's 10, 13 (the north rooms, around the level-50 door), 14, 25, 50 -> 77 -> quest 2's 51 -> 87's trigger entered before 85 (nothing set) -> the inner door's activation (80) -> the seven deaths (85) -> the beckon scene unlocks the inner door -> 87 (re-entered) -> 88 -> 89, 90 -> 100 (basement gate)
+
+## 2 the walk (the fight step's track to the front door, then the museum's mesh around every door storing a lock record until the run unlocks it; trigger | seconds entered)
+quest 1's 70, quest 1's 135 (needs 130: nothing), quest 2's 10	1485 (the front door's arrival)
+quest 2's 13	1488.725 (the north room: the way round the level-50 door)
+quest 2's 14 (one of three)	1504.144 (the west wing)
+quest 1's 135 again (nothing)	1511.711
+quest 2's 25 (one of two)	1522.230
+quest 2's 25 (the other), quest 2's 50	1531.743, 1531.754
+quest 1's 77	1532.117
+quest 2's 51	1535.715
+quest 1's 87 (needs 85: nothing)	1537.794, left 1547.260
+quest 1's 87 again	1603.794
+quest 1's 88 (player only)	1607.686
+not entered	quest 1's 78 and 86, quest 3's 15, two of quest 2's 14 triggers
+other triggers	four of quest 2's intercom triggers in the north rooms and the west wing (1489 to 1501), a raider wait point's trigger
+the walk	front door, the north rooms, the west wing, the basement and the west stairs up; held before the inner door 1540 to 1544, on the stairs' landing 1548 to 1600, in the leader's room 1608 to 1745, then down to the basement gate (1790); it meets a door storing a lock record only at the inner door, at 1607.54, after the run unlocked it (1564) (a check in the step's notes)
+
+## 3 the caller's events and what each set (event | the target's role | second | stages set)
+activation	the inner door (held until quest 1's 77)	1541	quest 1's 80 (and the door's scene: the leader speaks through the door)
+combat state 1 toward the player, then death	the seven raiders of quest 1's aliases, one every two seconds (held until quest 2's 50)	1551 to 1564	the seventh death: quest 1's 85 (the count's global reaches its total)
+unlock	the basement gate (held until quest 1's 90)	1795	quest 1's 100 (the gate alias's lock state change handler)
+item count	the player holds no fusion core	-	stage 90's fragment does not take the core branch
+after 85 (data)	the beckon scene starts; its first phase (a package, assumed complete) ends at once and its end unlocks and opens the inner door; its second phase's line waits on 87	1564	-
+after 88 (data)	the leader's conversation (24 phases and a nested scene) starts; its first line's end sets quest 3's 5, whose fragment sets quest 1's 89	1607.686, 1617.949	quest 1's 89
+the conversation	player dialogue (choice 0) and response actions alternate; a response line's end in the nested scene sets 90 (its fragment: the leader's faction, packages, another quest's stage); the scene ends	1617.949 to 1793.835	quest 1's 90 at 1732.423
+
+## 4 how far the run gets
+quest 1 (next main)	34 of 54	before this step 29; adds 80, 85, 87, 89 (now from the conversation), 90, 100; no longer 88 before 85
+robot	10 of 16	unchanged
+vault dialogue	10 of 18	unchanged
+opening	87 of 104	unchanged
+
+## 5 the caller's assumptions added in this step
+--assume-activate on the inner door, held until 77
+--assume-combat-state and --assume-death for seven raiders, held until quest 2's 50
+--assume-unlock on the basement gate, held until 90 (the player picks its lock)
+--assume-item-count: the player holds no fusion core
+the walk's waypoints (the order of section 1, held while the run's scenes play)
+
+## 6 this step's readings (switch | rule | what it settles in the run)
+--property-implicit-instance	pex_property_implicit_instance_v1	the raider death counter reads two globals' value property: without it every death blocks
+--global-values	vm_global_runtime_value_v1	the count rises one per death to the total of 7: 85 at the seventh
+--lock-state	vm_lock_state_v1	stage 90's fragment asks whether the gate is locked (stored lock record: yes)
+--lock-events	vm_lock_state_event_v1	the caller's unlock reaches the gate alias's handler: 100
+--npc-response-lines	scene_npc_response_choice_v1	the conversation's response actions play and are timed: without it the conversation holds at its third phase and 90 is not set
+--timeline-deaths, --timeline-sits	(output only)	the timeline's death, sit and get-up event lines (spec/timeline.md)
+
+## 7 the order the data leaves open: the back door (a labelled variant, outside the furthest run)
+the variant	the town's track to quest 1's 60, then the back door's exterior island (off every mesh: the caller's assumption) and through it, held at the arrival
+stages	quest 1's 78 at the arrival (1483), the seven deaths held until 78: 85 at 1548; 61, 65, 70, 77 and quest 2's stages not set (the front door not used)
+reading	78 can be set only by arriving through the back door; no walk on the meshes reaches that door's outer side
+
+## 8 the earlier steps' runs with --auto-state-inherited (main's binaries)
+opening (exit step's furthest run)	the same 250 stages of every quest at the same seconds; names and next-blockers files the same; the census adds the switch line and the rule relied on
+vault (vault step's furthest run)	the same 272 stages at the same seconds; the same as above
+home (home step's furthest run)	the same 287 stages at the same seconds; the same as above
+
+## 9 what stops next
+quest 1's 95	a terminal's menu item: terminal use is not modelled
+quest 1's 105	an alias's item added event: inventory is not modelled
+quest 1's 110, 115	an alias's activation and a base activator's script on activation: the caller's, not assumed in this run
+quest 1's 120 to 150	other quests' fragments, a scene, deaths of five aliases (another fight), a trigger after 130
+robot 250, 5	a fourth conversation with the robot after quest 1's 55 (its follower lines' group also asks condition function 566, which the run does not answer), at the robot's home: the run does not walk back
