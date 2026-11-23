@@ -203,6 +203,7 @@ pub(super) fn new_game(
         (then.dead_state, "IsDead on an actor the run killed answers true (--dead-state)"),
         (then.combat_natives, "IsInCombat and GetCombatState answered from the run's combat states (--combat-state-natives)"),
         (then.global_values, "a global the run sets answers its new value (--global-values)"),
+        (then.global_value_undetermined, "a global set to an undetermined value answers undetermined until a known value is set (--global-value-undetermined)"),
         (then.lock_state, "IsLocked answers the run's Lock calls, before any whether the record stores a lock (--lock-state)"),
         (!then.item_counts.is_empty(), "the caller assumes item counts (--assume-item-count)"),
         (then.lock_events, "the caller's unlock raises the lock state change event on the reference's receivers (--lock-events)"),
@@ -258,6 +259,7 @@ pub(super) fn new_game(
         rec.sits = then.timeline_sits;
     }
     vm.world.runstate.globals = then.global_values;
+    vm.world.runstate.undetermined_values = then.global_value_undetermined;
     vm.world.runstate.locks = then.lock_state;
     vm.world.runstate.lock_events = then.lock_events;
     vm.world.runstate.item_counts = then.item_counts.iter().cloned().collect();
@@ -800,6 +802,17 @@ pub(super) fn new_game(
     }
     for (k, v) in &vm.world.quests.collection_counts {
         *c.entry(format!("collection alias\t{k}")).or_default() += v;
+    }
+    if then.census_run_state {
+        for (k, v) in &vm.world.runstate.counts {
+            *c.entry(format!("run state\t{k}")).or_default() += v;
+        }
+        if !vm.world.runstate.log.is_empty() {
+            let _ = writeln!(names, "## run state changes the run kept");
+            for (t, what) in &vm.world.runstate.log {
+                let _ = writeln!(names, "    {t} s: {what}");
+            }
+        }
     }
     if !vm.world.keywords.log.is_empty() {
         let _ = writeln!(names, "## keyword changes the run kept");

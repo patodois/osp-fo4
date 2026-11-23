@@ -8,7 +8,10 @@
 //! value `GetValue` answers from then on; before it, the stored `FLTV` as
 //! the data host reads it) and `rules::LOCK_STATE` (`ObjectReference.Lock`
 //! changes the lock `IsLocked` answers; before it, whether the placed
-//! reference stores a lock record). The caller's `--assume-item-count`
+//! reference stores a lock record), and `rules::GLOBAL_VALUE_UNDETERMINED`
+//! (a `SetValue` whose value is undetermined leaves the global undetermined
+//! for `GetValue` until a known value is set; without it `GetValue`
+//! answers the stored `FLTV` again). The caller's `--assume-item-count`
 //! answers `GetItemCount` of one item on one holder; it is an assumption,
 //! not a reading. Nothing is measured in the running game.
 use crate::{
@@ -37,6 +40,12 @@ pub const NATIVES: [&str; 5] = [
 pub struct RunState {
     /// `rules::GLOBAL_RUNTIME_VALUE` (`quest_run --global-values`).
     pub globals: bool,
+    /// `rules::GLOBAL_VALUE_UNDETERMINED` (`quest_run
+    /// --global-value-undetermined`, with `globals`).
+    pub undetermined_values: bool,
+    /// Globals a `SetValue` left undetermined under that reading, by
+    /// record key.
+    pub open_values: std::collections::BTreeSet<String>,
     /// `rules::LOCK_STATE` (`quest_run --lock-state`).
     pub locks: bool,
     /// `rules::LOCK_STATE_EVENT` (`quest_run --lock-events`): the caller's
@@ -116,14 +125,23 @@ pub fn native(store: &Store, max: u64, c: &NativeCall, w: &mut World) -> Option<
                 Some(Val::Float(f)) => *f,
                 Some(Val::Int(i)) => *i as f32,
                 _ => {
-                    // An undetermined value: the global's value is open
-                    // from now on.
+                    // An undetermined value: the run's value is dropped
+                    // (and, under the undetermined reading, the global
+                    // answers undetermined until a known value is set).
                     w.runstate.values.remove(&k);
                     w.runstate
                         .count("global values\tset to an undetermined value");
+                    if w.runstate.undetermined_values {
+                        w.runstate.using(rules::GLOBAL_VALUE_UNDETERMINED);
+                        w.runstate.open_values.insert(k.clone());
+                        w.runstate
+                            .log
+                            .push((now, format!("global {k} set to an undetermined value")));
+                    }
                     return None;
                 }
             };
+            w.runstate.open_values.remove(&k);
             w.runstate.values.insert(k.clone(), v);
             w.runstate.log.push((now, format!("global {k} set to {v}")));
             w.runstate.count("global values\tset");
@@ -131,6 +149,13 @@ pub fn native(store: &Store, max: u64, c: &NativeCall, w: &mut World) -> Option<
         }
         "globalvariable.getvalue" if w.runstate.globals => {
             let k = receiver_key(c, w)?;
+            if w.runstate.undetermined_values && w.runstate.open_values.contains(&k) {
+                w.runstate.using(rules::GLOBAL_RUNTIME_VALUE);
+                w.runstate.using(rules::GLOBAL_VALUE_UNDETERMINED);
+                w.runstate
+                    .count("global values\tanswered undetermined (set to an undetermined value)");
+                return Some(Reply::Undetermined);
+            }
             let v = *w.runstate.values.get(&k)?;
             w.runstate.using(rules::GLOBAL_RUNTIME_VALUE);
             w.runstate.count("global values\tanswered from the run");

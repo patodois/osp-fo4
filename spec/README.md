@@ -530,6 +530,7 @@ the registry.
 | `pex_auto_state_inherited_v1` | pending | Kill one of the first house's insects with a test script logging its alias's counter script state and the quest's counter: the death counted supports it. |
 | `pex_property_implicit_instance_v1` | pending | Read and write a global variable's value property from a hand-assembled test script and show both through a notification call: values equal to GetValue and SetValue support it. |
 | `vm_global_runtime_value_v1` | pending | Set a global from a test script and read it back: the set value supports it. |
+| `vm_global_runtime_value_undetermined_v1` | pending | Set a global from a test script to a value computed from game state and read it back: the set value, never the stored one, is consistent with it. |
 | `vm_lock_state_v1` | pending | Try a door storing a lock record and one storing none; unlock the first from a test script and try again: refused, then open, supports it. |
 | `vm_lock_state_event_v1` | pending | Pick the museum's basement gate lock after the leader's conversation with a test script logging OnLockStateChanged on the gate: one call and the next main quest's 100 support it. |
 | `scene_npc_response_choice_v1` | pending | Answer the leader's first question with each of the four choices in four plays: the response line from the topic at the chosen index each time supports it. |

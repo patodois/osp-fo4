@@ -271,6 +271,14 @@ pub struct Then {
     /// `--lock-state`), and the caller's item counts
     /// (`--assume-item-count HOLDER|player ITEM N`) (`crate::runstate`).
     pub global_values: bool,
+    /// A global set to an undetermined value answers undetermined until a
+    /// known value is set (`vm_global_runtime_value_undetermined_v1`,
+    /// `--global-value-undetermined`, with `--global-values`).
+    pub global_value_undetermined: bool,
+    /// The run state's counts and log (globals, locks, item counts) written
+    /// to the census and the names file (`--census-run-state`; output
+    /// only).
+    pub census_run_state: bool,
     pub lock_state: bool,
     pub lock_events: bool,
     pub item_counts: Vec<((String, String), i32)>,

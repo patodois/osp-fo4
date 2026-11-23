@@ -1105,7 +1105,7 @@ fn line_time(
 
 /// How long an action lasts once started, or why that is not settled
 /// (the second part: a short text the census counts).
-fn action_time(
+pub(crate) fn action_time(
     h: &mut QuestHost<'_>,
     w: &mut World,
     i: &SceneInfo,
@@ -1244,7 +1244,7 @@ fn topic_truths(
 /// the player speaks it: the topic's line for kind 0; under an assumed
 /// choice, the player's line then the answer for kind 3
 /// (`scene_player_dialogue_choice_v1`).
-fn line_segments(
+pub(crate) fn line_segments(
     h: &mut QuestHost<'_>,
     w: &mut World,
     i: &SceneInfo,

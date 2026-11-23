@@ -460,3 +460,120 @@ fn every_rule_of_the_museum_step_is_registered_pending() {
         assert!(rules::ALL.contains(&r), "{r}");
     }
 }
+
+#[test]
+fn a_global_set_to_an_undetermined_value_answers_undetermined_only_under_its_switch() {
+    let s = store();
+    let b = Budget::new(1 << 24);
+    let mut l = lib();
+    let mut host = QuestHost::new(&s, 1 << 24);
+    let mut vm = Vm::new(&mut l, &mut host);
+    let w = &mut vm.world;
+    let g = crate::data::record_object(w, &s, &key(GLOB), "globalvariable", &b).unwrap();
+    let set = |v: Val| {
+        call(
+            "globalvariable",
+            "setvalue",
+            Val::Object(g),
+            vec![v],
+            "none",
+        )
+    };
+    let get = call(
+        "globalvariable",
+        "getvalue",
+        Val::Object(g),
+        vec![],
+        "float",
+    );
+    w.runstate.globals = true;
+    runstate::native(&s, 1 << 24, &set(Val::Float(3.0)), w);
+    // Off: an undetermined set drops the run's value; GetValue goes back
+    // to the data host's stored value, as before.
+    assert!(runstate::native(&s, 1 << 24, &set(Val::None), w).is_none());
+    assert!(runstate::native(&s, 1 << 24, &get, w).is_none());
+    assert!(!w.runstate.used.contains(&rules::GLOBAL_VALUE_UNDETERMINED));
+    // On: undetermined until a known value is set.
+    w.runstate.undetermined_values = true;
+    assert!(runstate::native(&s, 1 << 24, &set(Val::None), w).is_none());
+    assert!(matches!(
+        runstate::native(&s, 1 << 24, &get, w),
+        Some(Reply::Undetermined)
+    ));
+    runstate::native(&s, 1 << 24, &set(Val::Int(5)), w);
+    assert!(matches!(
+        runstate::native(&s, 1 << 24, &get, w),
+        Some(Reply::Value(Val::Float(x))) if x == 5.0
+    ));
+    assert!(w.runstate.used.contains(&rules::GLOBAL_VALUE_UNDETERMINED));
+    assert_eq!(
+        rules::status(rules::GLOBAL_VALUE_UNDETERMINED),
+        Some("pending")
+    );
+    assert!(rules::ALL.contains(&rules::GLOBAL_VALUE_UNDETERMINED));
+}
+
+#[test]
+fn a_response_action_plays_the_topic_at_the_assumed_choice_only_under_its_switch() {
+    use crate::scene::{self, ActionInfo, SceneInfo, NPC_RESPONSE};
+    let s = store();
+    let mut host = QuestHost::new(&s, 1 << 24);
+    let mut w = crate::World::default();
+    let topics = [key(0x9a0), key(0x9a1), key(0x9a2)];
+    let a = ActionInfo {
+        kind: NPC_RESPONSE,
+        responses: vec![
+            Some(topics[0].clone()),
+            Some(topics[1].clone()),
+            None,
+            Some(topics[2].clone()),
+        ],
+        ..ActionInfo::default()
+    };
+    let i = SceneInfo {
+        key: key(0x9b0),
+        plugin: 0,
+        file: "test.esm".into(),
+        flags: 0,
+        quest: None,
+        begin: None,
+        end: None,
+        phases: Vec::new(),
+        actions: vec![a.clone()],
+        stage_fields: [-1, -1],
+        unplaced: 0,
+    };
+    w.scenes.clock.on = true;
+    w.scenes.clock.assume_line_seconds = Some(3.0);
+    // Off: the response action is not timed and plays no line.
+    let (t, why) = scene::action_time(&mut host, &mut w, &i, &a);
+    assert_eq!(t, None, "{why}");
+    assert!(scene::line_segments(&mut host, &mut w, &i, &a).is_empty());
+    // On, without a choice: it waits on the player's choice.
+    w.scenes.clock.npc_responses = true;
+    let (t, why) = scene::action_time(&mut host, &mut w, &i, &a);
+    assert_eq!(
+        (t, why.as_str()),
+        (None, "response: waits on the player's choice")
+    );
+    // On, with each choice: the topic at that index, timed as a line.
+    for (n, want) in [
+        (0, Some(&topics[0])),
+        (1, Some(&topics[1])),
+        (2, None),
+        (3, Some(&topics[2])),
+    ] {
+        w.scenes.clock.assume_player_choice = Some(n);
+        let (t, why) = scene::action_time(&mut host, &mut w, &i, &a);
+        assert_eq!(t, Some(3.0), "{why}");
+        assert!(
+            why.starts_with(&format!("response: assumed choice {n} ")),
+            "{why}"
+        );
+        let segs = scene::line_segments(&mut host, &mut w, &i, &a);
+        assert_eq!(segs.len(), 1);
+        assert_eq!(segs[0].0.as_ref(), want, "choice {n}");
+        assert_eq!((segs[0].1, segs[0].2, segs[0].3), (0.0, Some(3.0), false));
+    }
+    assert!(crate::Host::rules(&host).contains(&rules::NPC_RESPONSE_CHOICE));
+}

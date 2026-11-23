@@ -169,7 +169,7 @@ pub const XESP_BIT1: &str = "xesp_flag_bit1_not_presence_v1";
 pub const XESP_PROPAGATES: &str = "xesp_script_change_propagates_v1";
 
 /// Every rule above.
-pub const ALL: [&str; 185] = [
+pub const ALL: [&str; 186] = [
     ARITHMETIC,
     COMPARE,
     NOT_COPY_CAST,
@@ -355,6 +355,7 @@ pub const ALL: [&str; 185] = [
     WALK_DOOR_LOCK_RECORD_CLOSED,
     NPC_RESPONSE_CHOICE,
     LOCK_STATE_EVENT,
+    GLOBAL_VALUE_UNDETERMINED,
 ];
 
 /// The rule an opcode's meaning rests on; `None` for an opcode without a
@@ -762,3 +763,7 @@ pub const NPC_RESPONSE_CHOICE: &str = "scene_npc_response_choice_v1";
 /// A placed reference's lock changing raises `OnLockStateChanged()` on its
 /// own scripts and the aliases holding it.
 pub const LOCK_STATE_EVENT: &str = "vm_lock_state_event_v1";
+/// A `GlobalVariable.SetValue` with an undetermined value leaves the
+/// global undetermined for `GetValue` until a known value is set
+/// (`quest_run --global-value-undetermined`, with `--global-values`).
+pub const GLOBAL_VALUE_UNDETERMINED: &str = "vm_global_runtime_value_undetermined_v1";
