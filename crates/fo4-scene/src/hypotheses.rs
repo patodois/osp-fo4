@@ -167,6 +167,17 @@ pub const MISSING_TEXTURE_UNREAD: &str = "texture_missing_unread_slot_v1";
 /// A script's Enable or Disable reaching enable children (the viewer's
 /// `--script-event`).
 pub const ENABLE_SCRIPT: &str = "xesp_script_change_propagates_v1";
+/// A run's Disable or Enable of a placed reference (`fo4_vm`; a timeline
+/// frame, `crate::timeline`).
+pub const DISABLE_HIDES: &str = "vm_disable_hides_reference_v1";
+/// The exterior cell whose grid square holds a position (`crate::timeline`).
+pub const WORLD_CELL: &str = "world_cell_natives_v1";
+/// A reference a run moved, drawn at its new position with its stored
+/// rotation and scale (`crate::timeline`).
+pub const TIMELINE_MOVE: &str = "timeline_move_stored_rotation_v1";
+/// The NoWait forms of Enable and Disable read as the plain natives
+/// (`crate::timeline::Readings::nowait`).
+pub const TIMELINE_NOWAIT: &str = "timeline_nowait_visibility_v1";
 /// Base types whose PRPS `BASE_PROPERTIES` covers: those measured.
 const PROPERTY_BASES: [&str; 8] = [
     "STAT", "ACTI", "FURN", "CONT", "FLOR", "LIGH", "MSTT", "TERM",
@@ -518,6 +529,10 @@ mod tests {
             ENABLE_INITIAL,
             ENABLE_OPPOSITE,
             ENABLE_BIT1,
+            DISABLE_HIDES,
+            WORLD_CELL,
+            TIMELINE_MOVE,
+            TIMELINE_NOWAIT,
             ENABLE_SCRIPT,
             REST_MANAGER_IDLE,
             REST_IDLE_TRANSFORM,

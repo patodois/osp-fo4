@@ -2649,3 +2649,110 @@ fn a_swap_pattern_reaches_the_material_another_scope_put_in_place() {
     assert!(rules.contains(&SWAP_PATTERN), "{rules:?}");
     assert!(rules.contains(&SWAP_CHAIN), "{rules:?}");
 }
+
+/// A run timeline's frame on a loaded cell (`fo4_scene::timeline`): the
+/// placed reference is drawn as stored before the run changes it; a frame
+/// after the run disabled it leaves it out (`vm_disable_hides_reference_v1`)
+/// and needs the pending level; a frame after the run moved it draws it at
+/// the new place with its stored rotation (`timeline_move_stored_rotation_v1`);
+/// a move to another space or to an unknown place leaves it out.
+#[test]
+fn a_timeline_frame_leaves_out_what_the_run_disabled_and_moves_what_it_moved() {
+    use fo4_scene::timeline::{self as tl, Event, Spot, Timeline, What};
+    let mut part = nif_with_helper(b"textures/a.dds", None, b"PlainLabel");
+    let at = part.windows(12).position(|w| w == b"EditorMarker").unwrap();
+    part[at + 11] = b'X';
+    let (_temp, m) = fixture_placing("render-timeline", &dds(), part, 0x801);
+    let b = Budget::new(32 << 20);
+    let store = fo4_plugin::typed::Store::open(&m, &b).unwrap();
+    let vfs = fo4_vfs::Vfs::mount(&m, &b).unwrap();
+    let key = |id: u32| fo4_plugin::FormKey {
+        plugin: "base.esm".into(),
+        object_id: id,
+    };
+    let event = |t: f64, what: What| Event { t, what };
+    let timeline = |moved: Spot| Timeline {
+        events: vec![
+            event(
+                1.0,
+                What::Move {
+                    reference: key(0x803),
+                    at: moved,
+                    source: "world_moveto_target_v1".into(),
+                },
+            ),
+            event(
+                2.0,
+                What::Visibility {
+                    reference: key(0x803),
+                    shown: false,
+                    nowait: false,
+                },
+            ),
+        ],
+        ..Timeline::default()
+    };
+    let here = Spot::At {
+        space: key(0x800),
+        pos: [50., 60., 70.],
+    };
+    let options = BuildOptions {
+        max_texture_dimension: 16,
+        max_texture_bytes: 1 << 20,
+        level: RuleLevel::Hypotheses,
+        blocks: None,
+        time: None,
+        clock: Default::default(),
+    };
+    // The draws of the frame at second `s`, or the error applying it.
+    let draws_at = |t: &Timeline, s: f64, level: RuleLevel| {
+        let mut loader = Loader::new(&store, &vfs, "english", RuleLevel::Facts, &b);
+        let mut scene = loader.by_editor_id("SyntheticScolCell", &b).unwrap();
+        assert_eq!(tl::scene_space(&store, &scene), key(0x800));
+        let applied = tl::apply(&mut scene, &mut loader, &t.at(s), level, &b)?;
+        let built = build(&scene, &loader, &m.limits, options, &b).unwrap();
+        Ok::<_, fo4_core::Error>((
+            built
+                .list
+                .draws
+                .iter()
+                .map(|d| d.world.translation)
+                .collect::<Vec<_>>(),
+            applied,
+        ))
+    };
+    let t = timeline(here.clone());
+    let (before, applied) = draws_at(&t, 0.5, RuleLevel::Facts).unwrap();
+    assert!(!before.is_empty());
+    assert!(applied.rules.is_empty());
+    // Moved: drawn the same, shifted by the new position.
+    let (moved, applied) = draws_at(&t, 1.5, RuleLevel::Hypotheses).unwrap();
+    assert_eq!(moved.len(), before.len());
+    for (a, b) in before.iter().zip(&moved) {
+        let d: Vec<f64> = (0..3).map(|i| b[i] - a[i]).collect();
+        assert_eq!(d, vec![50., 60., 70.]);
+    }
+    assert_eq!(applied.moved.len(), 1);
+    assert!(applied.rules.contains(fo4_scene::hypotheses::TIMELINE_MOVE));
+    // The pending rules need the pending level.
+    let refused = draws_at(&t, 1.5, RuleLevel::Measured).unwrap_err();
+    assert_eq!(refused.code, "TimelineRuleLevel");
+    // Disabled: not drawn.
+    let (gone, applied) = draws_at(&t, 2.5, RuleLevel::Hypotheses).unwrap();
+    assert!(gone.is_empty());
+    assert_eq!(applied.hidden, vec![key(0x803)]);
+    assert!(applied.rules.contains(fo4_scene::hypotheses::DISABLE_HIDES));
+    // Moved to another space, or to a place the run leaves open: left out.
+    let away = Spot::At {
+        space: key(0x900),
+        pos: [0.; 3],
+    };
+    for spot in [
+        away,
+        Spot::Open("a native of the run may have moved it".into()),
+    ] {
+        let (left, applied) = draws_at(&timeline(spot), 1.5, RuleLevel::Hypotheses).unwrap();
+        assert!(left.is_empty());
+        assert_eq!(applied.moved_out.len(), 1);
+    }
+}

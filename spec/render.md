@@ -571,3 +571,20 @@ helper waits on the same readiness before it compares captures (it
 compared frames after a fixed four updates). The tests stay parallel: ten
 consecutive parallel runs of the ignored GPU tests pass. Frames are not
 affected: a pipeline that was ready drew the same bytes before.
+
+## Frames of a run timeline
+
+`render ... --timeline FILE --at SECONDS --eye-height UNITS` and the headless viewer's `--timeline`
+draw a quest run at a second of its real-time clock (`spec/timeline.md`): CELL `-` loads the cell the
+player's track is in; before the draw list is built, the references the run disabled leave the scene,
+the initially disabled ones it enabled are loaded into it, enable children follow and moved references
+take their new position (`fo4_scene::timeline::apply`, every piece under a pending rule; any change
+needs `--under-hypotheses`); placed actors are not skinned but drawn as placeholder markers
+(`fo4_render::timeline::append_markers`: an upright magenta box with a yellow roof, opaque and
+double-sided, tagged after every other draw, presentation only) where the run puts them when their
+presence holds; the camera is the caller's eye height above the track's position, looking level along
+its movement or the caller's heading. The overlay (stages, objectives, the line being spoken, what was
+applied, the rules relied on) is written beside the frame (`overlay.txt` in the CPU render's output
+folder, `--overlay FILE` in the viewer), never into the image. Without `--timeline` neither path changes:
+the frames of the earlier views compare byte for byte. The markers are ordinary draws of the draw list,
+so the CPU and the viewer draw them alike (`cpu_and_gpu_frames_agree_on_a_timeline_frame`).

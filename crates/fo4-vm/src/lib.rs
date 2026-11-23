@@ -46,6 +46,7 @@ pub mod setters;
 pub mod sit;
 pub mod story;
 pub mod talk;
+pub mod timeline;
 pub mod track;
 pub mod vars;
 pub mod voice;

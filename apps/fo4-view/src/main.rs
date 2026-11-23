@@ -14,6 +14,7 @@ mod path;
 mod scene;
 mod script;
 mod stream;
+mod timeline;
 mod vm_event;
 mod walk;
 
@@ -34,6 +35,7 @@ fn load_scene(
     walk: bool,
 ) -> AnyResult<(scene::GpuScene, RenderOptions, load::Loaded)> {
     let started = std::time::Instant::now();
+    let prepared = s.timeline.as_ref().map(timeline::prepare).transpose()?;
     let mut loaded = load::cell(
         &s.manifest,
         &s.data,
@@ -51,6 +53,7 @@ fn load_scene(
         s.actors,
         s.clip.as_ref(),
         s.script_event.as_ref(),
+        s.timeline.as_ref().zip(prepared.as_ref()),
     )?;
     let options = RenderOptions {
         backface_cull: s.backface_cull,
@@ -255,10 +258,20 @@ fn run() -> AnyResult<()> {
                 .as_deref()
                 .map(|t| load::output_file(t, root))
                 .transpose()?;
-            let (eye, look) = match &loaded.walk {
-                Some(world) => settled_pose(world, s.eye, s.look)?,
-                None => (s.eye, s.look),
+            let (eye, look) = match (&loaded.timeline, &loaded.walk) {
+                (Some(t), _) => (t.eye, t.look),
+                (None, Some(world)) => settled_pose(world, s.eye, s.look)?,
+                (None, None) => (s.eye, s.look),
             };
+            // --timeline: the overlay beside the frame (opened first).
+            if let Some(t) = &loaded.timeline {
+                for line in t.overlay.lines() {
+                    println!("timeline: {line}");
+                }
+                if let Some(f) = s.timeline.as_ref().and_then(|a| a.overlay.as_deref()) {
+                    load::write(f, root, t.overlay.as_bytes())?;
+                }
+            }
             drop(loaded);
             let cam = camera::look_at(eye, look, camera::reference_frustum(size), size)?;
             let frames = gpu::headless(&mut gpu, &cam, options.clear, tags.is_some())?;

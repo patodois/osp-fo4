@@ -111,6 +111,22 @@ usage:
       the frame from where the walk ends, looking along its last leg;
       with --start-pose, from the settled start pose instead (the frame
       without --path), with the cells kept when the walk ends.
+  fo4-view MANIFEST DATA_DIRECTORY CELL_EDITOR_ID|- --under-hypotheses --headless
+           --timeline FILE --at SECONDS --eye-height UNITS [--look-heading DEGREES]
+           [--timeline-nowait] [--overlay build/OVERLAY.txt] --out build/FRAME.png
+           [--tags build/TAGS.bin] [--size WxH] [--terrain] [--around N] [...]
+      One frame of a quest run's timeline (quest_run new-game --timeline,
+      spec/timeline.md) at second SECONDS of the run, as the CPU render's
+      --timeline draws it: CELL - loads the cell the player's track is in;
+      the references the run disabled are left out, those it enabled put
+      in, those it moved moved (pending rules); placed actors are drawn as
+      placeholder markers where the run puts them, not skinned; the camera
+      is EYE_HEIGHT units above the track's position, looking level along
+      its movement or along --look-heading (degrees counter-clockwise from
+      +X); the overlay (stages, objectives, the line being spoken, what was
+      applied) is printed and written to --overlay. --timeline-nowait also
+      applies the NoWait forms of Enable and Disable (a pending rule).
+      Not with --eye, --look, --walk, --path, --actor-clip or --script-event.
   fo4-view compare --cpu CPU.png --gpu GPU.png --diff build/DIFF.png
            [--cpu-tags CPU.bin --gpu-tags GPU.bin]
       Coverage agreement and colour differences of two frames of one pose.";
@@ -145,6 +161,9 @@ pub struct Scene {
     /// The clock's switches (`--clock-emissive-multiple`,
     /// `--clock-emissive-colour`, `--clock-falloff`; all off by default).
     pub clock: fo4_scene::clock::Switches,
+    /// A run timeline's frame (`--timeline`, headless only); `eye` and
+    /// `look` are then unused.
+    pub timeline: Option<crate::timeline::Args>,
 }
 
 /// Default of `--scene-memory`: a viewer bound, not a claim about the game.
@@ -302,6 +321,13 @@ fn not_negative(text: &str) -> Result<f64, String> {
         .ok_or_else(|| format!("ExpectedSecondsNotNegative: {text}"))
 }
 
+fn finite(text: &str) -> Result<f64, String> {
+    text.parse::<f64>()
+        .ok()
+        .filter(|v| v.is_finite())
+        .ok_or_else(|| format!("ExpectedFiniteNumber: {text}"))
+}
+
 fn positive(text: &str) -> Result<f64, String> {
     text.parse::<f64>()
         .ok()
@@ -370,6 +396,12 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
     let mut script_event = None;
     let mut time = None;
     let mut clock = fo4_scene::clock::Switches::default();
+    let mut timeline_file = None;
+    let mut timeline_at = None;
+    let mut eye_height = None;
+    let mut look_heading = None;
+    let mut timeline_nowait = false;
+    let mut overlay = None;
     let mut rest = args[3..].iter();
     while let Some(arg) = rest.next() {
         if clock.set_flag(arg) {
@@ -408,6 +440,12 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             "--script-path" => debug.path = Some(waypoints(value()?)?),
             "--script-shots" => debug.shots = Some(value()?.clone()),
             "--script-event" => script_event = Some(crate::vm_event::parse(value()?)?),
+            "--timeline" => timeline_file = Some(value()?.clone()),
+            "--at" => timeline_at = Some(not_negative(value()?)?),
+            "--eye-height" => eye_height = Some(finite(value()?)?),
+            "--look-heading" => look_heading = Some(finite(value()?)?),
+            "--timeline-nowait" => timeline_nowait = true,
+            "--overlay" => overlay = Some(value()?.clone()),
             _ => return Err(usage()),
         }
     }
@@ -428,13 +466,48 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
         },
         (false, Textures::Reference) => Textures::Reference,
     };
+    let timeline = match (timeline_file, timeline_at, eye_height) {
+        (Some(file), Some(at), Some(eye_height)) => Some(crate::timeline::Args {
+            file,
+            at,
+            eye_height,
+            heading: look_heading,
+            nowait: timeline_nowait,
+            overlay,
+        }),
+        (None, None, None) if look_heading.is_none() && !timeline_nowait && overlay.is_none() => {
+            None
+        }
+        _ => {
+            return Err(
+                "--timeline needs --at and --eye-height; --look-heading, --timeline-nowait and --overlay need --timeline"
+                    .into(),
+            )
+        }
+    };
+    if timeline.is_some() {
+        if eye.is_some() || look.is_some() {
+            return Err("--timeline places the camera: no --eye or --look".into());
+        }
+        if !headless || walk || path.is_some() || script_event.is_some() || clip_path.is_some() {
+            return Err(
+                "--timeline applies to --headless without --walk, --path, --script-event or --actor-clip"
+                    .into(),
+            );
+        }
+        // Actors are drawn as the timeline's markers, not skinned.
+        actors = false;
+    } else if args[2] == "-" {
+        return Err("CELL - (the player's cell) needs --timeline".into());
+    }
+    let unused = timeline.as_ref().map(|_| [0.; 3]);
     let scene = Scene {
         manifest: args[0].clone(),
         data: args[1].clone(),
         cell: args[2].clone(),
         level,
-        eye: eye.ok_or_else(usage)?,
-        look: look.ok_or_else(usage)?,
+        eye: eye.or(unused).ok_or_else(usage)?,
+        look: look.or(unused).ok_or_else(usage)?,
         backface_cull,
         terrain,
         around,
@@ -452,6 +525,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
         script_event,
         time,
         clock,
+        timeline,
     };
     if scene.script_event.is_some() && (!headless || walk) {
         return Err("--script-event applies to --headless without --walk".into());
@@ -643,6 +717,33 @@ mod tests {
     }
 
     #[test]
+    fn a_timeline_frame_takes_its_camera_and_cell_from_the_run() {
+        let c = parse(&args(
+            "m d - --under-hypotheses --headless --timeline build/t.tsv --at 12.5 \
+             --eye-height 120 --out build/a.png --overlay build/a.txt",
+        ))
+        .unwrap();
+        let Command::Headless { scene, .. } = c else {
+            panic!("{c:?}")
+        };
+        let t = scene.timeline.unwrap();
+        assert_eq!((t.at, t.eye_height, t.heading), (12.5, 120., None));
+        assert_eq!(t.overlay.as_deref(), Some("build/a.txt"));
+        assert!(!t.nowait);
+        assert!(!scene.actors, "actors are the timeline's markers");
+        for line in [
+            "m d - --under-hypotheses --headless --out a.png",
+            "m d C --under-hypotheses --headless --timeline t --at 1 --out a.png",
+            "m d C --under-hypotheses --headless --timeline t --at 1 --eye-height 1 --eye 1,2,3 --look 4,5,6 --out a.png",
+            "m d C --under-hypotheses --timeline t --at 1 --eye-height 1",
+            "m d C --under-hypotheses --headless --timeline t --at 1 --eye-height 1 --walk --out a.png",
+            "m d C --under-hypotheses --headless --eye 1,2,3 --look 4,5,6 --out a.png --look-heading 3",
+        ] {
+            assert!(parse(&args(line)).is_err(), "{line}");
+        }
+    }
+
+    #[test]
     fn no_actors_turns_the_actors_off_in_both_modes() {
         for line in [
             "m d C --eye 1,2,3 --look 4,5,6 --no-actors",
@@ -679,6 +780,7 @@ mod tests {
                     script_event: None,
                     time: None,
                     clock: fo4_scene::clock::Switches::default(),
+                    timeline: None,
                 },
                 fly: DEFAULT_FLY,
                 walk: false,

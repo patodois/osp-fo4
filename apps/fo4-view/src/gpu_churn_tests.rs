@@ -1458,3 +1458,202 @@ fn cpu_and_gpu_frames_agree_on_clock_moved_geometry() {
     agree(&cpu2, &gpu2);
     assert_ne!(gpu1.color, gpu2.color);
 }
+
+/// A synthetic run timeline's frame (`fo4_scene::timeline`): a floor and
+/// a wall card, two actors standing where the timeline puts them at the
+/// second (one moved by an assumed move after its stored place), drawn as
+/// the timeline markers (`fo4_render::timeline`), seen from the camera the
+/// frame gives (eye height above the track, looking along its move). The
+/// CPU reference and the GPU frame of the same list agree; the markers
+/// show in both under their own tags.
+#[test]
+#[ignore = "needs a GPU: draws offscreen through Bevy"]
+fn cpu_and_gpu_frames_agree_on_a_timeline_frame() {
+    use fo4_render::{Alpha, Draw, DrawList, Mesh, Sidedness, Texture, Vertex};
+    use fo4_scene::timeline::{self as tl, Event, Spot, Timeline, What};
+    let key = |id: u32| fo4_plugin::FormKey {
+        plugin: "base.esm".into(),
+        object_id: id,
+    };
+    let room = key(0x800);
+    let event = |t: f64, what: What| Event { t, what };
+    let actor = |t: f64, id: u32, pos: [f64; 3]| {
+        event(
+            t,
+            What::Actor {
+                reference: key(id),
+                at: Spot::At {
+                    space: room.clone(),
+                    pos,
+                },
+                source: "test".into(),
+            },
+        )
+    };
+    let player = |t: f64, pos: [f64; 3]| {
+        event(
+            t,
+            What::Player {
+                space: room.clone(),
+                cell: Some(room.clone()),
+                pos,
+                facing: None,
+            },
+        )
+    };
+    let t = Timeline {
+        events: vec![
+            player(0., [0., -600., 0.]),
+            actor(0., 0x900, [-150., 0., 0.]),
+            actor(0., 0x901, [400., 300., 0.]),
+            actor(5., 0x901, [150., 50., 0.]),
+            player(10., [0., -200., 0.]),
+        ],
+        ..Timeline::default()
+    };
+    let text = t.write();
+    let frame = Timeline::parse(&text).unwrap().at(7.5);
+    let (eye, look, from) = tl::eye_look(&frame, 120., None).unwrap();
+    assert_eq!(eye, [0., -300., 120.]);
+    assert_eq!(from, "the track's current move");
+    let at: Vec<[f64; 3]> = frame
+        .actors
+        .values()
+        .map(|(_, s, _)| match s {
+            Spot::At { pos, .. } => *pos,
+            Spot::Open(_) => unreachable!(),
+        })
+        .collect();
+    assert_eq!(at, vec![[-150., 0., 0.], [150., 50., 0.]]);
+    let quad = |corners: [[f64; 3]; 4]| -> Vec<Vertex> {
+        corners
+            .iter()
+            .zip([[0., 0.], [1., 0.], [1., 1.], [0., 1.]])
+            .map(|(p, uv)| Vertex { position: *p, uv })
+            .collect()
+    };
+    let texture = |rgba: [f32; 4]| Texture {
+        mips: Vec::new(),
+        width: 1,
+        height: 1,
+        rgba: rgba.to_vec(),
+        mip: 0,
+        srgb: false,
+    };
+    let draw = |instance: u32, mesh: usize, texture: usize| Draw {
+        sidedness: Sidedness {
+            material_two_sided: Some(1),
+            nif_shader_flags_2: None,
+        },
+        instance,
+        mesh,
+        texture,
+        world: fo4_scene::transform::Transform::IDENTITY,
+        alpha: Alpha {
+            enabled: 0,
+            source: 0,
+            destination: 0,
+            test_enabled: 0,
+            test_ref: 0,
+            nif_test_function: Some(4),
+            opacity: 1.,
+            nif_flags: None,
+        },
+        uv_offset: [0.; 2],
+        uv_scale: [1.; 2],
+        raw_tile_flags: None,
+        falloff: None,
+        palette: None,
+        colour: None,
+    };
+    let tri = vec![[0, 1, 2], [0, 2, 3]];
+    let mut list = DrawList {
+        meshes: vec![
+            Mesh {
+                vertex_colors: None,
+                normals: None,
+                vertices: quad([
+                    [-800., -800., 0.],
+                    [800., -800., 0.],
+                    [800., 800., 0.],
+                    [-800., 800., 0.],
+                ]),
+                triangles: tri.clone(),
+            },
+            Mesh {
+                vertex_colors: None,
+                normals: None,
+                vertices: quad([
+                    [-800., 600., 0.],
+                    [800., 600., 0.],
+                    [800., 600., 400.],
+                    [-800., 600., 400.],
+                ]),
+                triangles: tri,
+            },
+        ],
+        textures: vec![texture([0.4, 0.4, 0.4, 1.]), texture([0.2, 0.3, 0.6, 1.])],
+        draws: Vec::new(),
+        overlays: Vec::new(),
+        blocks: Default::default(),
+        animations: Vec::new(),
+    };
+    list.draws.push(draw(0, 0, 0));
+    list.draws.push(draw(1, 1, 1));
+    let first = fo4_render::timeline::next_tag(&list);
+    let b = fo4_core::Budget::new(64 << 20);
+    let tags = fo4_render::timeline::append_markers(&mut list, &at, first, &b).unwrap();
+    assert_eq!(tags, vec![2, 3]);
+    let camera =
+        fo4_scene::camera::look_at(eye, look, fo4_scene::camera::reference_frustum(SIZE), SIZE)
+            .unwrap();
+    let options = fo4_render::RenderOptions::REFERENCE;
+    let f = fo4_render::render(
+        &list,
+        &camera,
+        options,
+        &fo4_core::Limits::default(),
+        &fo4_core::Budget::new(256 << 20),
+    )
+    .unwrap();
+    let cpu: Vec<u8> = f
+        .color
+        .iter()
+        .flat_map(|c| c.map(|v| (v.clamp(0., 1.) * 255.).round() as u8))
+        .collect();
+    let mut gpu_scene = crate::scene::convert(&mut list, &options).unwrap();
+    let gpu = headless(&mut gpu_scene, &camera, options.clear, true).unwrap();
+    let gpu_tags = crate::compare::tags_from_bytes(gpu.tags.as_ref().unwrap()).unwrap();
+    for tag in [2u32, 3] {
+        assert!(f.instances.contains(&tag), "CPU marker {tag}");
+        assert!(gpu_tags.contains(&tag), "GPU marker {tag}");
+    }
+    let report = crate::compare::compare(&crate::compare::Inputs {
+        size: SIZE,
+        cpu: &cpu,
+        gpu: &gpu.color,
+        tags: Some((&f.instances, &gpu_tags)),
+        clear: crate::compare::clear_rgb(options.clear),
+    })
+    .unwrap();
+    println!(
+        "timeline frame: agreement {:.6}, same tag {:?} of {}, mean {:?}, p95 {:?}, max {:?}",
+        report.agreement(),
+        report.same_tag,
+        report.both,
+        report.mean_abs,
+        report.p95_abs,
+        report.max_abs
+    );
+    assert!(report.agreement() > 0.999, "{}", report.agreement());
+    assert!(
+        report.same_tag.unwrap() as f64 > 0.999 * report.both as f64,
+        "{:?}",
+        report.same_tag
+    );
+    assert!(
+        report.p95_abs.iter().all(|m| *m <= 4),
+        "{:?}",
+        report.p95_abs
+    );
+}

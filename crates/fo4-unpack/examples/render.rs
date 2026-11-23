@@ -14,7 +14,7 @@ type AnyResult<T> = Result<T, Box<dyn std::error::Error>>;
 const TERRAIN_SHADING: &str = "ground textures weighted per vertex under the pending terrain texture rules, times VCLR; untextured weight as flat neutral grey per triangle by geometric normal; unlit, not game lighting";
 fn run() -> AnyResult<()> {
     let args: Vec<_> = std::env::args().skip(1).collect();
-    const USAGE: &str = "usage: render MANIFEST DATA_DIRECTORY CELL_EDITOR_ID build/OUTPUT [--strict|--measured|--under-hypotheses] [--eye X,Y,Z --look X,Y,Z] [--instance-ids] [--collision-overlay] [--terrain] [--around N] [--texture-mib N] [--time SECONDS] [--clock-emissive-multiple] [--clock-emissive-colour] [--clock-falloff] [--clock-translation] [--clock-rotation] [--clock-rotation-xyz] [--clock-scale]";
+    const USAGE: &str = "usage: render MANIFEST DATA_DIRECTORY CELL_EDITOR_ID build/OUTPUT [--strict|--measured|--under-hypotheses] [--eye X,Y,Z --look X,Y,Z] [--instance-ids] [--collision-overlay] [--terrain] [--around N] [--texture-mib N] [--time SECONDS] [--clock-emissive-multiple] [--clock-emissive-colour] [--clock-falloff] [--clock-translation] [--clock-rotation] [--clock-rotation-xyz] [--clock-scale] [--timeline FILE --at SECONDS --eye-height UNITS [--look-heading DEGREES] [--timeline-nowait]] (with --timeline, CELL_EDITOR_ID - draws the player's cell)";
     if args.len() < 4 {
         return Err(USAGE.into());
     }
@@ -35,6 +35,14 @@ fn run() -> AnyResult<()> {
     let mut time: Option<f64> = None;
     // The clock's readings that are off by default (`clock::Switches`).
     let mut switches = fo4_scene::clock::Switches::default();
+    // A run timeline (`fo4_scene::timeline`): the frame at second `--at` of
+    // the run, the camera on the player's track; without it nothing below
+    // changes.
+    let mut timeline_file: Option<String> = None;
+    let mut timeline_at: Option<f64> = None;
+    let mut eye_height: Option<f64> = None;
+    let mut look_heading: Option<f64> = None;
+    let mut timeline_readings = fo4_scene::timeline::Readings::default();
     let mut rest = args[4..].iter();
     while let Some(arg) = rest.next() {
         if switches.set_flag(arg) {
@@ -68,6 +76,20 @@ fn run() -> AnyResult<()> {
                         .ok_or(USAGE)?,
                 );
             }
+            "--timeline" => timeline_file = Some(rest.next().ok_or(USAGE)?.clone()),
+            "--timeline-nowait" => timeline_readings.nowait = true,
+            "--at" | "--eye-height" | "--look-heading" => {
+                let v = rest
+                    .next()
+                    .and_then(|v| v.parse::<f64>().ok())
+                    .filter(|v| v.is_finite())
+                    .ok_or(USAGE)?;
+                *(match arg.as_str() {
+                    "--at" => &mut timeline_at,
+                    "--eye-height" => &mut eye_height,
+                    _ => &mut look_heading,
+                }) = Some(v);
+            }
             "--eye" | "--look" => {
                 let point = point(rest.next().ok_or(USAGE)?)?;
                 *(if arg == "--eye" { &mut eye } else { &mut look }) = Some(point);
@@ -76,6 +98,23 @@ fn run() -> AnyResult<()> {
         }
     }
     if eye.is_some() != look.is_some() {
+        return Err(USAGE.into());
+    }
+    let timeline = match (&timeline_file, timeline_at, eye_height) {
+        (Some(f), Some(at), Some(_)) if eye.is_none() => {
+            let t = fo4_scene::timeline::Timeline::parse(&std::fs::read_to_string(f)?)?;
+            let frame = t.at_with(at, timeline_readings);
+            Some((t, frame))
+        }
+        (None, None, None) if look_heading.is_none() && !timeline_readings.nowait => None,
+        _ => {
+            return Err(format!(
+                "--timeline needs --at and --eye-height and takes no --eye or --look\n{USAGE}"
+            )
+            .into())
+        }
+    };
+    if timeline.is_none() && args[2] == "-" {
         return Err(USAGE.into());
     }
     let policy = match level_name {
@@ -116,7 +155,15 @@ fn run() -> AnyResult<()> {
     if switches.any() {
         loader.set_clock_switches(switches, &budget);
     }
-    let mut scene = loader.by_editor_id(&args[2], &budget)?;
+    let mut cell_rule = None;
+    let mut scene = match &timeline {
+        Some((_, frame)) if args[2] == "-" => {
+            let (cell, rule) = fo4_scene::timeline::player_cell(&store, frame, &budget)?;
+            cell_rule = rule;
+            loader.cell(&cell, &budget)?
+        }
+        _ => loader.by_editor_id(&args[2], &budget)?,
+    };
     // --around N: the placed references of the exterior cells within N grid
     // steps join the scene (and, with --terrain, their terrain the draw
     // list). Without the flag the scene is the cell's alone.
@@ -126,6 +173,15 @@ fn run() -> AnyResult<()> {
         let loads = fo4_scene::grid::absorb_around(&mut loader, &mut scene, &a, &budget)?;
         grid = Some((a, loads));
     }
+    let applied = match &timeline {
+        Some((_, frame)) => {
+            let mut a =
+                fo4_scene::timeline::apply(&mut scene, &mut loader, frame, policy, &budget)?;
+            a.rules.extend(cell_rule);
+            Some(a)
+        }
+        None => None,
+    };
     let mut built = fo4_render::draw::build(&scene, &loader, limits, build_options, &budget)?;
     // Without --terrain nothing below changes the draw list or the summary.
     let mut terrain_summary = None;
@@ -184,6 +240,32 @@ fn run() -> AnyResult<()> {
             },
         );
     }
+    // The actors of the timeline's frame as placeholder markers, after
+    // every other draw.
+    let mut timeline_summary = None;
+    if let (Some((t, frame)), Some(applied)) = (&timeline, &applied) {
+        let space = fo4_scene::timeline::scene_space(&store, &scene);
+        let (markers, left, mut rules) =
+            fo4_scene::timeline::markers(&store, frame, &space, &budget)?;
+        let at: Vec<[f64; 3]> = markers.iter().map(|m| m.pos).collect();
+        let first = fo4_render::timeline::next_tag(&built.list);
+        let tags = fo4_render::timeline::append_markers(&mut built.list, &at, first, &budget)?;
+        rules.extend(applied.rules.iter().copied());
+        rules.extend(frame.rules.iter().copied());
+        let (e, l, from) =
+            fo4_scene::timeline::eye_look(frame, eye_height.unwrap_or_default(), look_heading)?;
+        let camera = fo4_scene::timeline::camera_text(e, l, eye_height.unwrap_or_default(), &from);
+        let mut overlay = fo4_scene::timeline::overlay(t, frame, &camera);
+        overlay.push_str(&fo4_scene::timeline::report(
+            frame, applied, &markers, &left, &rules, first, &tags,
+        ));
+        eye = Some(e);
+        look = Some(l);
+        timeline_summary = Some((
+            overlay,
+            serde_json::json!({"second":frame.second,"cell":scene.cell.key,"hidden":applied.hidden.len(),"shown":applied.shown.len(),"elsewhere":applied.elsewhere,"chain_changed":applied.chain_changed,"moved":applied.moved.len(),"moved_out":applied.moved_out.len(),"nowait_left":frame.nowait_left,"markers":tags,"actors_left_out":left,"rules":rules,"camera":"presentation: the caller's eye height above the player's track position, looking level along the track's movement or the caller's heading","overlay":"overlay.txt"}),
+        ));
+    }
     let mut min = [f64::INFINITY; 3];
     let mut max = [f64::NEG_INFINITY; 3];
     for draw in &built.list.draws {
@@ -210,7 +292,11 @@ fn run() -> AnyResult<()> {
                 camera::reference_frustum(camera::REFERENCE_SIZE),
                 camera::REFERENCE_SIZE,
             )?,
-            "explicit_eye_and_look",
+            if timeline_summary.is_some() {
+                "timeline_track"
+            } else {
+                "explicit_eye_and_look"
+            },
         ),
         _ => {
             // An overview from outside the bounds, not a reconstruction of a player camera.
@@ -275,6 +361,10 @@ fn run() -> AnyResult<()> {
     }
     if let (Some(o), Some(map)) = (overlay, summary.as_object_mut()) {
         map.insert("collision_overlay".into(), o);
+    }
+    if let (Some((overlay, t)), Some(map)) = (timeline_summary, summary.as_object_mut()) {
+        files::output_bytes(&out.join("overlay.txt"), overlay.as_bytes())?;
+        map.insert("timeline".into(), t);
     }
     if let (Some(t), Some(map)) = (terrain_summary, summary.as_object_mut()) {
         map.insert("terrain".into(), t);

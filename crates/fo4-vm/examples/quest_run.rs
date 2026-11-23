@@ -48,6 +48,15 @@ use fo4_vm::{
 use std::{collections::BTreeMap, fmt::Write as _, path::Path, rc::Rc};
 
 type E = Box<dyn std::error::Error>;
+
+// `new-game --timeline FILE`: the run's timeline recorder and its file
+// (`fo4_vm::timeline`), shown each step of the clock loop by `timeline`;
+// it only reads the run.
+thread_local! {
+    static RUN_TIMELINE: std::cell::RefCell<Option<(std::path::PathBuf, fo4_vm::timeline::Recorder)>> =
+        const { std::cell::RefCell::new(None) };
+}
+
 type Counts = BTreeMap<String, u64>;
 fn bump(m: &mut Counts, k: impl Into<String>) {
     *m.entry(k.into()).or_default() += 1;
@@ -1521,6 +1530,11 @@ fn sit_log(vm: &Vm<'_>, raised: &[fo4_vm::sit::Raised], c: &mut Counts, names: &
 /// file with the real-time second they were reached at (the timeline of
 /// a clocked run).
 fn timeline(vm: &Vm<'_>, seen: &mut (usize, usize), names: &mut String, what: &str) {
+    RUN_TIMELINE.with_borrow_mut(|r| {
+        if let Some((_, r)) = r {
+            r.observe(vm)
+        }
+    });
     let now = vm.world.now[fo4_vm::world::Clock::Real as usize];
     let q = &vm.world.quests.log[seen.0..];
     let sc = &vm.world.scenes.log[seen.1..];
@@ -2385,6 +2399,12 @@ fn new_game(
             );
             top.extend(quest::run_jobs(&mut vm, store, MAX_GAME_JOBS, &b));
         }
+    }
+    // --timeline: one more look at the end, then the file (reads only).
+    if let Some((file, mut rec)) = RUN_TIMELINE.take() {
+        rec.observe(&vm);
+        let t = rec.finish(&vm, store, Some((vfs, &m.language)), &Budget::new(max));
+        std::fs::write(&file, t.write())?;
     }
     let runs = all_runs(&mut vm, top);
     *c.entry("jobs left in the queue when the run ended".into())
@@ -3415,6 +3435,11 @@ fn run() -> Result<(), E> {
         a.retain(|x| x != f);
         on
     };
+    if let Some(i) = a.iter().position(|x| x == "--timeline") {
+        let f = a.get(i + 1).cloned().ok_or("--timeline FILE")?;
+        RUN_TIMELINE.set(Some((f.into(), fo4_vm::timeline::Recorder::new())));
+        a.drain(i..i + 2);
+    }
     let no_custom = flag(&mut a, "--no-custom");
     let custom_nested = flag(&mut a, "--custom-nested");
     let opts = Opts {

@@ -19,6 +19,8 @@ pub struct Loaded {
     pub walk: Option<fo4_walk::World>,
     /// `--actor-clip`: what the window needs to pose the actors again.
     pub animation: Option<crate::clip::Animation>,
+    /// `--timeline`: the frame's camera and overlay.
+    pub timeline: Option<crate::timeline::Drawn>,
 }
 
 /// The manifest with its data root, the plugins and the mounted archives.
@@ -185,6 +187,7 @@ pub fn cell(
     actors: bool,
     clip: Option<&crate::clip::Options>,
     script_event: Option<&crate::vm_event::ScriptEvent>,
+    timeline: Option<(&crate::timeline::Args, &crate::timeline::Prepared)>,
 ) -> AnyResult<Loaded> {
     if walk {
         fo4_walk::accept(&walk_rules(), level, fo4_scene::hypotheses::status)?;
@@ -213,7 +216,16 @@ pub fn cell(
     if options.clock.any() {
         loader.set_clock_switches(options.clock, &budget);
     }
-    let mut scene = scoped(&budget, |b| loader.by_editor_id(cell, b))?;
+    let mut cell_rule = None;
+    let mut scene = match timeline {
+        // CELL -: the cell the player's track is in at the second.
+        Some((_, p)) if cell == "-" => {
+            let (key, rule) = fo4_scene::timeline::player_cell(&store, &p.frame, &budget)?;
+            cell_rule = rule;
+            scoped(&budget, |b| loader.cell(&key, b))?
+        }
+        _ => scoped(&budget, |b| loader.by_editor_id(cell, b))?,
+    };
     // --around N: the placed references of the exterior cells within N grid
     // steps join the scene, as in the CPU render. Without it nothing changes.
     let grid = if around > 0 {
@@ -238,6 +250,27 @@ pub fn cell(
         Some(a)
     } else {
         None
+    };
+    // --timeline: the run's changes at the second, before anything is
+    // built. Without it nothing changes.
+    let applied = match timeline {
+        Some((_, p)) => {
+            let mut a =
+                fo4_scene::timeline::apply(&mut scene, &mut loader, &p.frame, level, &budget)?;
+            a.rules.extend(cell_rule);
+            println!(
+                "timeline: second {} in cell {}; {} hidden, {} shown, {} enable children changed, {} moved, {} moved out",
+                p.frame.second,
+                fo4_scene::timeline::key_text(&scene.cell.key),
+                a.hidden.len(),
+                a.shown.len(),
+                a.chain_changed,
+                a.moved.len(),
+                a.moved_out.len()
+            );
+            Some(a)
+        }
+        None => None,
     };
     // --script-event: the references the run disables leave the scene
     // before anything is built. Without it nothing changes.
@@ -399,6 +432,20 @@ pub fn cell(
             ),
         }
     }
+    // --timeline: the actors' markers after every other draw, the camera
+    // and the overlay.
+    let drawn = match (timeline, &applied) {
+        (Some((args, p)), Some(a)) => Some(crate::timeline::finish(
+            p,
+            args,
+            &store,
+            &scene,
+            a,
+            &mut build.list,
+            &budget,
+        )?),
+        _ => None,
+    };
     let walk = if walk {
         // The same collision and world the `walk` report uses.
         let options = fo4_scene::collision::Options {
@@ -448,6 +495,7 @@ pub fn cell(
         data_root: manifest.root.clone(),
         walk,
         animation,
+        timeline: drawn,
     })
 }
 

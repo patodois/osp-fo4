@@ -18,6 +18,7 @@ pub mod readiness;
 pub mod rest;
 pub mod swap_pattern;
 pub mod terrain;
+pub mod timeline;
 pub mod transform;
 pub use assets::{
     Asset, AssetKind, Assets, Cited, CitingShader, Cycle, CycleEdge, DecodedAsset, TextureSlot,
