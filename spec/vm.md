@@ -1925,6 +1925,167 @@ no condition of any record tests either stage. Nothing in the data read
 sets or reads them: what else could (the console, code outside the
 compiled scripts) is not in the data.
 
+## Keywords
+
+`fo4_vm::keyword`, two readings each behind its own switch, both off by
+default (the natives are then recorded and undetermined, as before):
+
+| Switch | Reading | Rule |
+| --- | --- | --- |
+| `--keywords-records` | `HasKeyword` on a placed reference (and `Form.HasKeyword` with a placed reference as receiver) answers from its base's `KWDA`, an actor base's with its race's (`RNAM`); an absent keyword answers false only where the records read cover every source: an actor base with a template (`TPLT`, its flags not read), a leveled actor base, and weapon and armour bases (object modifications not read) leave it open. The player's keywords are its base's where the caller names it (`--player-base-object`). | `vm_keyword_records_v1` |
+| `--keywords-runtime` | `AddKeyword` and `RemoveKeyword` change the receiver's keywords, the last change of a keyword winning over the records; a change with an undetermined keyword leaves the receiver's keywords open. The calls still answer none. | `vm_keyword_runtime_v1` |
+
+The changes are kept whenever either switch is on, so that the records
+reading alone leaves open a keyword the run changed. `ResetKeyword`,
+`HasKeywordInFormList`, `WornHasKeyword`, the keyword data natives and the
+condition functions on keywords are not read.
+
+What the census finds ([keyword-census.txt](keyword-census.txt),
+`keyword_census`; names read from the scripts): 13 natives whose name
+holds keyword; 274 `HasKeyword` call sites over every script, 125
+`AddKeyword`, 82 `RemoveKeyword`, 4 `ResetKeyword`, 53 `SetKeywordData`, 7
+`GetKeywordData`, every keyword argument a variable or property. In the
+records, 11,216 winning records of 24 types carry `KWDA` (actor bases
+2,936, misc items 2,643, terminals 1,033, furniture 773, armour 692,
+activators 678, …), every `KSIZ` agrees with its `KWDA` and every entry
+names a winning `KYWD`; no placed record carries `KWDA` or `KSIZ` itself.
+3,402 actor bases have a template (2,398 of them also their own `KWDA`).
+Of the placed records, the reading settles 1,780,981 and leaves 11,309
+open where a keyword is absent (9,715 placed actors whose base has a
+template, 1,594 weapon and armour references). The opening's family
+calls `HasKeyword` once, `AddKeyword` twice and `RemoveKeyword` five
+times, all from quest scripts.
+
+## Collection aliases from a location's rows
+
+`--collection-location-refs` (`quest_collection_alias_location_refs_v1`,
+off by default): a collection alias (`ALCS`) filled from a forced location
+by a ref type holds, while its quest runs, the distinct references of the
+location's special reference rows of that type, in first-row order (none
+while the quest does not run); `RefCollectionAlias.GetCount`, `GetAt` and
+`Find` answer from it, `AddRef`, `RemoveRef` and `RemoveAll` change it.
+Collections filled any other way stay undetermined (counted). The
+contents a run read are kept with the quest's state, as alias fills are.
+
+## Scene actions whose start phase was skipped
+
+With the scene clock, an action holds every phase it spans until it
+completes, and starts with its start phase. An action whose start phase
+the scene skips (start conditions false) therefore never started and held
+every later phase it spans. `--scene-actions-skipped-start`
+(`scene_action_skipped_start_v1`, off by default) starts it with the first
+later phase it spans that the scene enters. Other readings (it never runs
+and holds nothing) are not implemented; under
+`--assume-packages-complete` they give the same phases for the opening.
+
+## Animation event registrations answered by the caller
+
+`RegisterForAnimationEvent` returns whether the registration was made; the
+run keeps registrations (`--anim-events`) but leaves the returned value
+undetermined, since whether the sender's graph knows the event (a
+character's graph is not followed) is not read. `--assume-anim-registration
+true|false` is a caller assumption: every registration the run makes
+answers that value (a registration whose instance, sender or name is
+undetermined still answers undetermined).
+
+## Caller actions held until a stage
+
+Caller actions (`--then …@S`, `--assume-activate`, `--assume-open`,
+`--assume-talk`, `--assume-anim-event`, `--assume-sit`, the menu events)
+happen at a fixed second of the real-time clock whatever path the run
+took. In a run where an earlier step did not happen, a later action still
+fires at its second and can set stages out of the story's order: in the
+sit step's one-thing-changed table, the rows without the door's opening
+(35) and without the second activation (39) counted stages set that way.
+`--action-after TARGET@SECONDS EDITOR_ID:STAGE` (repeated; a caller
+assumption, not a rule) holds every timed caller action on that target at
+that second until that stage of that quest is done: it happens at its
+second when the stage is done by then, else at the second the stage is
+done, and never when the stage is never done (each outcome counted). The
+target is the action's reference key, menu name, looks event number or
+`EDITOR_ID:STAGE` for `--then`; a gate naming no caller action is counted
+and ignored, so a command line keeps its gates when one action is left
+out. Without `--action-after` actions fire at their seconds, as before.
+The player's track and the caller's actor moves (`--assume-actor-at`)
+are not caller actions of this kind and are not held: a trigger they
+cross still raises its event at its second.
+
+## The forced opening with keywords
+
+([quest-run-opening.txt](quest-run-opening.txt); the command lines, the
+tracks and every record named are in the step's notes.) On the sit step's
+command line, with this step's readings and the caller's gates:
+
+- The last stage's fragment calls into the next sequence quest's script,
+  which tests whether the spouse actor carries a keyword: neither her base
+  nor her race carries it, so `HasKeyword` answers false from the records
+  (`--keywords-records`) and the script adds it (kept by
+  `--keywords-runtime`). The script then blocks activation of the
+  references of a collection alias filled from the location's rows
+  (`--collection-location-refs`: the collection's script loops over
+  `GetCount` and `GetAt`), enables and moves the sequence's actors,
+  registers for 14 of the spouse's animation events (answered true by the
+  caller's `--assume-anim-registration`, the result steers the script)
+  and starts the sequence's main scene; the fragment then sets the next
+  stage. Reached: **83 of the 104 stages** (before 82).
+- The main scene skips its second phase while two package actions
+  starting there span the next four; with
+  `--scene-actions-skipped-start` they start with the third phase and
+  complete under `--assume-packages-complete`, and phases 3 to 7 run on
+  the scene clock. The 8th phase waits on a quest script variable that
+  only the sequence script's handler of the spouse's animation events
+  sets; most phases up to the 23rd wait on further values of it. The
+  event names occur in the data as annotation texts of a clip and event
+  names of a behaviour graph; a character's graph is not followed, so the
+  events are not raised. A run in which the caller assumes the 14 events
+  (seconds not from the data) runs the handler 14 times but the scene
+  still waits: the run offers waiting scenes again when the quest state
+  changes, not when a script variable does.
+- Every timed caller action is held until the stage the story sets before
+  it (`--action-after`); in the final run all eleven happen at their
+  seconds, so the final run's stages are those of the same command line
+  without the gates.
+- With one thing changed (the record's section 11, every row with the
+  gates): without `--keywords-records`, `--collection-location-refs` or
+  `--assume-anim-registration`, 82 (each stops the sequence script before
+  the fragment sets the stage); without `--keywords-runtime` or
+  `--scene-actions-skipped-start`, 83 (the one keyword test is on a
+  keyword nothing changed before it, and the scene sets no stage of the
+  opening quest before its 8th phase). Without the gates, 83 as well; but
+  without the gates and without the door's opening 36 stages (the sit
+  step's 35 plus this step's), with them 17; without the second
+  activation 40 against 22; the first activation, 82 either way. Rows
+  where an early step fails fall the same way against the sit step's
+  table: without `--location-refs-distinct` or the suit giver's
+  activation 65 (sit step 75), without the caller's start stage 7 (82),
+  without the assumed line seconds 4 (17), without package actions
+  assumed complete 10 (24). The track and the caller's actor moves are not held:
+  without the start stage, two stages set by trigger crossings of the
+  track and of an assumed actor move still come at their seconds.
+- With every switch of this step off, the sit step's command line gives
+  the sit step's run byte for byte (census, names and next-blocker
+  files).
+
+### The two stages set in the sequence script's functions
+
+Every compiled script was scanned for calls of the sequence script's
+functions by name. The function setting the first of the two stages is
+called once, by the begin fragment of the main scene's 22nd phase; the
+function setting the second twice, by the end fragment of the main
+scene's 27th phase and by the end fragment of another scene of the
+sequence quest. Neither is called by the sequence script itself or by any
+event handler; the function that starts the sequence has four callers
+(the opening's stage fragment and three in two other quests' scripts),
+and the script's eight other functions are called from fragments of its
+scenes and dialogue lines (7) and from another quest's script (1). The
+stage-setter table classes the two as reached by no engine event or
+fragment of their own script because it does not follow calls from other
+scripts' fragments into a quest script's functions. No new rule is
+needed to reach them: the scene fragment readings run phase fragments as
+the phases begin and end. What stops the run short of them is the scene's
+8th phase above. The stage after them is set by the second one's stage
+fragment.
+
 ## Conditions
 
 `fo4_vm::cond` evaluates the condition lists read by
@@ -2050,6 +2211,11 @@ binary with the switches on). With them on:
   INFO, PACK and PERK fragments run only in the fragment sweep, scenes
   only where a run starts them, phases only where the data decides
   ([scene-record.md](scene-record.md), Scenes and fragments above).
+- Caller actions happen at fixed seconds unless the caller holds them
+  until a stage (`--action-after`); the track and the actor moves the
+  caller assumes (`--assume-actor-at`) always do. Scenes waiting on conditions are
+  offered again when the quest state changes, not when a script variable
+  changes.
 - Opcode 34's arity between `4` and `4+n` stays open ([pex.md](pex.md));
   the interpreter reads its fourth slot as the start index.
 
@@ -2424,3 +2590,21 @@ the repository's disassembler. No public page was requested. No editor,
 editor source or definition file, other interpreter, script extender,
 decompiler or the game executable was opened or searched for. The game
 was not run.
+
+## Provenance of the keyword step
+
+Recognised from prior general knowledge, used only as pending rules that
+are off by default: that a placed reference carries its base object's
+keywords and an actor its race's; what `HasKeyword`, `AddKeyword` and
+`RemoveKeyword` do; that a collection alias filled from a location's ref
+type holds the references of that type, and what its count, index, find,
+add and remove natives do. That `RegisterForAnimationEvent` answers
+whether the registration was made is prior knowledge used only to leave
+the answer to the caller. The reading of a scene action whose start
+phase was skipped has no source. Every count was measured with the
+repository's own readers on the installed data (`keyword_census`; local
+probes whose outputs stay outside the repository); the compiled scripts
+were read only with the repository's disassembler. No public page was
+requested. No editor, editor source or definition file, other
+interpreter, script extender, decompiler or the game executable was
+opened or searched for. The game was not run.

@@ -8,18 +8,30 @@ rule in `spec/hypotheses.tsv`, off by default.
 
 ## Script VM and quests (`crates/fo4-vm`)
 
-The forced new-game opening (`quest_run`, record in `spec/quest-run-opening.txt`) reaches 82 of 104 stages.
-It stops at, in order:
+The forced new-game opening (`quest_run`, record in `spec/quest-run-opening.txt`) reaches 83 of 104 stages
+(keyword step; before it 82). The keyword test that stopped the sit step's run now passes from the records
+(`--keywords-records`, `--keywords-runtime`), the next sequence quest's collection alias is filled from its
+location's rows (`--collection-location-refs`), and that quest's main scene starts and runs to its 8th phase.
+The run stops at, in order:
 
-1. A stage whose fragment calls into the next sequence's script, which waits on a keyword test of an actor.
-   Keywords change at run time and the run keeps no keyword state. Needed: a census of the natives that add,
-   remove and test keywords, and a keyword state per reference.
-2. Two stages set only in functions of that script that no event or fragment reaches in the run.
+1. The main scene's 8th phase waits on a quest script variable that only the handler of the spouse's
+   animation events sets (14 events, whose names occur in the data as clip annotations and behaviour graph events). Needed: either
+   a character's behaviour graph followed to the clip's annotation times, or the caller's assumed events;
+   and, in both cases, waiting scenes offered again when a quest script variable changes (today the
+   recheck follows quest state only: a run assuming the 14 events still stops there).
+2. Two stages set in two functions of the sequence script that the scene's later phase fragments call,
+   then the stage the second one's fragment sets. No new rule is needed for the calls; the stage-setter
+   table should follow calls from other scripts' fragments into quest script functions.
 3. Two stages with no setter and no reader anywhere in the data (documented in `spec/vm.md`).
 
+Caller actions can now wait for the stage the story sets before them (`--action-after`); the final run gates
+all eleven timed ones, so the one-thing-changed table no longer counts stages those actions set out of order. The player's
+track and the actor moves (`--assume-actor-at`) still happen at fixed seconds.
+
 Not modelled yet: unload, cell-load, cell-attach and cell-detach events; the sit state native; actors sitting
-through packages; magic-effect receivers of furniture events. Caller actions fire at fixed seconds whatever
-path the run took, which inflates some rows of the one-thing-changed table.
+through packages; magic-effect receivers of furniture events; keyword data, `ResetKeyword`, keywords in
+conditions, template flags and object modifications for keywords; collection aliases filled other than from
+a location's rows.
 
 ## Drawing (`crates/fo4-scene`, `apps/fo4-view`)
 
