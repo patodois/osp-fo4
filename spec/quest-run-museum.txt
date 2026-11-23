@@ -67,6 +67,8 @@ the variant	the town's track to quest 1's 60, then the back door's exterior isla
 stages	quest 1's 78 at the arrival (1483), the seven deaths held until 78: 85 at 1548; 61, 65, 70, 77 and quest 2's stages not set (the front door not used)
 reading	78 can be set only by arriving through the back door; no walk on the meshes reaches that door's outer side
 
+the robot's fourth conversation (another labelled variant)	the furthest run plus a fourth conversation with the robot held until quest 1's 55 (1450, the player in the town: the run has no distance check for a conversation), the caller's line (a follower greeting) and condition function 566 assumed true for the robot's quest: the greeting's start-scene field starts the follower scene, the player's choice ends its first phase and its second phase's field sets the robot's 250 (1466.375); nothing else changes
+
 ## 8 the earlier steps' runs with --auto-state-inherited (main's binaries)
 opening (exit step's furthest run)	the same 250 stages of every quest at the same seconds; names and next-blockers files the same; the census adds the switch line and the rule relied on
 vault (vault step's furthest run)	the same 272 stages at the same seconds; the same as above
@@ -77,4 +79,4 @@ quest 1's 95	a terminal's menu item: terminal use is not modelled
 quest 1's 105	an alias's item added event: inventory is not modelled
 quest 1's 110, 115	an alias's activation and a base activator's script on activation: the caller's, not assumed in this run
 quest 1's 120 to 150	other quests' fragments, a scene, deaths of five aliases (another fight), a trigger after 130
-robot 250, 5	a fourth conversation with the robot after quest 1's 55 (its follower lines' group also asks condition function 566, which the run does not answer), at the robot's home: the run does not walk back
+robot 250, 5	a fourth conversation with the robot after quest 1's 55 (its follower lines' group also asks condition function 566, which the run does not answer), at the robot's home: the run does not walk back (250 set in the labelled variant of section 7)

@@ -2894,7 +2894,8 @@ furniture); reading them is the viewer's side.
   105 (an item added: inventory), 110 and 115 (activations the caller does
   not assume), 120 to 150 (other quests, a scene, a third fight); the
   robot's 250 waits on a fourth conversation after 55 back at its home,
-  whose follower lines' group also asks condition function 566.
+  whose follower lines' group also asks condition function 566 (a labelled
+  variant assuming both from the town sets it).
 
 ## Conditions
 

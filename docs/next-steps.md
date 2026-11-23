@@ -32,7 +32,8 @@ What is left:
 1. After 100: a terminal's menu item (95), an item added (105: inventory is not modelled), two activations the
    caller does not assume yet (110, 115), then other quests' stages, a scene and a third fight (120 to 150).
 2. The robot's 250: a fourth conversation after the next main quest's 55, back at its home (the run does not
-   walk back); the follower lines' group also asks condition function 566, which the run does not answer.
+   walk back); the follower lines' group also asks condition function 566, which the run does not answer (a
+   labelled variant assuming both from the town sets 250: `spec/quest-run-museum.txt`, section 7).
 3. The fights themselves: nothing aims, loses health or decides to attack; no active magic effect receives an
    event; `GetDeadCount` and health natives are not answered.
 4. The walk is checked against the census by hand (a script in the step's notes): the run itself does not stop
