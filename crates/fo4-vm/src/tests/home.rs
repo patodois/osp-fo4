@@ -768,3 +768,33 @@ fn a_greeting_line_holds_only_with_its_group_and_a_group_does_not_play() {
     );
     assert!(rules::ALL.contains(&rules::INFO_GROUPS));
 }
+
+#[test]
+fn the_callers_choice_for_a_scene_comes_before_its_quests_and_the_general_one() {
+    let info = |scene: u32| scene::SceneInfo {
+        key: key(scene),
+        plugin: 0,
+        file: "test.esm".into(),
+        flags: 0,
+        quest: Some(key(QS)),
+        begin: None,
+        end: None,
+        phases: Vec::new(),
+        actions: Vec::new(),
+        stage_fields: [-1, -1],
+        unplaced: 0,
+    };
+    let mut c = scene::Clock {
+        assume_player_choice: Some(0),
+        ..scene::Clock::default()
+    };
+    assert_eq!(c.choice_in(&info(SC)), Some(0));
+    c.choice_for.insert(crate::bind::record_key(&key(QS)), 3);
+    assert_eq!(c.choice_in(&info(SC)), Some(3));
+    c.choice_for.insert(crate::bind::record_key(&key(SC2)), 1);
+    assert_eq!(c.choice_in(&info(SC2)), Some(1));
+    assert_eq!(c.choice_in(&info(SC)), Some(3));
+    assert!(!c.first_line_in(&info(SC)));
+    c.first_line_for.insert(crate::bind::record_key(&key(SC2)));
+    assert!(c.first_line_in(&info(SC2)) && !c.first_line_in(&info(SC)));
+}

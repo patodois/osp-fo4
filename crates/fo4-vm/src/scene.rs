@@ -399,11 +399,12 @@ pub struct Clock {
     /// in stored order plays, for its stage fields
     /// (`scene_line_stage_fields_v1` with `quest_run --assume-first-line`).
     pub assume_first_line: bool,
-    /// Caller assumptions scoped to the scenes of one quest (`quest_run
-    /// --assume-player-choice-for QUEST N`, `--assume-first-line-for
-    /// QUEST`), by the quest's record key: the choice the player picks in
-    /// those scenes (over [`Clock::assume_player_choice`]), and the first
-    /// of several lines that may hold plays there.
+    /// Caller assumptions scoped to one scene or to the scenes of one
+    /// quest (`quest_run --assume-player-choice-for SCENE|QUEST N`,
+    /// `--assume-first-line-for SCENE|QUEST`), by the record key: the
+    /// choice the player picks there (a scene's over its quest's, both over
+    /// [`Clock::assume_player_choice`]), and the first of several lines
+    /// that may hold plays there.
     pub choice_for: BTreeMap<String, usize>,
     pub first_line_for: BTreeSet<String>,
     /// `pack_location_destination_v1` (`quest_run --package-destinations
@@ -421,19 +422,26 @@ pub struct Clock {
 }
 impl Clock {
     /// The choice the caller assumes the player picks in a scene's player
-    /// dialogue: the one given for the scene's quest, else the general one.
+    /// dialogue: the one given for the scene, else for its quest, else the
+    /// general one.
     pub fn choice_in(&self, i: &SceneInfo) -> Option<usize> {
-        i.quest
-            .as_ref()
-            .and_then(|q| self.choice_for.get(&bind::record_key(q)).copied())
+        self.choice_for
+            .get(&bind::record_key(&i.key))
+            .copied()
+            .or_else(|| {
+                i.quest
+                    .as_ref()
+                    .and_then(|q| self.choice_for.get(&bind::record_key(q)).copied())
+            })
             .or(self.assume_player_choice)
     }
     /// Whether the caller assumes the first of several lines that may hold
-    /// plays in this scene (scoped to its quest).
+    /// plays in this scene (scoped to it or to its quest).
     pub fn first_line_in(&self, i: &SceneInfo) -> bool {
-        i.quest
-            .as_ref()
-            .is_some_and(|q| self.first_line_for.contains(&bind::record_key(q)))
+        self.first_line_for.contains(&bind::record_key(&i.key))
+            || i.quest
+                .as_ref()
+                .is_some_and(|q| self.first_line_for.contains(&bind::record_key(q)))
     }
 }
 
