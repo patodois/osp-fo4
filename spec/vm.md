@@ -2835,8 +2835,8 @@ behind it lie the 78 and 88 triggers (88 just inside the doorway), the 86
 trigger, the town quest's 15 trigger, the exit door, the balcony door and
 the arrival of the museum's back door. From the front door, with the locked
 doors closed, 78, 86 and 88 are shut, each opened by the inner door alone;
-with every door open every walk to 78 enters 77, 87 and 88 first (the
-previous walk). Only the leader's beckon scene unlocks the inner door (its
+with every door open every walk to 78 enters 77, 87 and 88 first (and the
+museum quest's 25, 50 and 51 and the town quest's 15: the previous walk). Only the leader's beckon scene unlocks the inner door (its
 first phase's end calls the quest script's door function), and 85 starts
 that scene: 78 can never be set on a walk from the front door. Its trigger
 lies at the arrival of the back door, whose exterior side is an island of

@@ -150,7 +150,7 @@ done; the frame is left as it was and no path is invented.
 ## Deaths and furniture (`--timeline-deaths`, `--timeline-sits`)
 
 Two switches of `quest_run new-game --timeline FILE`, off by default (with them off the file is byte for byte
-what it was), add `event` lines (format version 1, the `event` kind's TEXT field) with a fixed grammar of
+what it was; with them on every other output of the run is unchanged, checked on the museum step's run), add `event` lines (format version 1, the `event` kind's TEXT field) with a fixed grammar of
 space-separated words:
 
 | TEXT | Switch | Meaning |
@@ -170,7 +170,7 @@ pending rule.
 
 What the run does not know: who sits or lies through a package (the scenes' and aliases' sit and sandbox
 packages are not run; a package action completes under the caller's `--assume-packages-complete` without
-moving or seating anyone), which of a furniture's markers an actor takes, and when an actor an alias's package
+seating anyone; `--package-destinations` only moves an actor to a placed location), which of a furniture's markers an actor takes, and when an actor an alias's package
 moves gets up. In the museum step's furthest run the run's sitters are the player's alone: six sits and five
 get-ups in the prewar house and the postwar vault (the exit step's readings of furniture activation), the last
 sit (the vault's console, 870 s) never ended by the run; the people in the museum are drawn where their records

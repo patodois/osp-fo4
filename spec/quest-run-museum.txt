@@ -9,7 +9,7 @@ locked doors	5 store a lock record (XLOC): the inner door to the leader's room (
 the inner door	alone splits the surface (from a margin of 1 unit): 1,742 triangle pieces on the front door's side, 262 behind; the exit door and the balcony door split nothing up to 32 units
 behind the inner door	quest 1's stage 78 trigger (off from 85), 86 trigger, 88 trigger (player only, just inside the doorway), quest 3's stage 15 trigger, the exit door, the balcony door, the back door's arrival
 front door, every door open	78 is entered only after 77, 87 and 88 (the previous step's walk)
-front door, locked doors closed	reached: 70, 77, 87 (needs 85), 135 (needs 130), quest 2's 10, 13, 14, 25, 50, 51; shut: 78, 86, 88, quest 3's 15, each opened by the inner door alone
+front door, locked doors closed	reached: 70, 77, 87 (needs 85), 135 (needs 130), quest 2's 10, 13, two of its three 14 triggers, 25, 50, 51; shut: 78, 86, 88, quest 3's 15, each opened by the inner door alone, and the third 14 trigger, which meets no triangle of the mesh (shut with every door open too)
 front door, locked doors closed: entered first	77 after quest 2's 13, one of its 14 and one of its 25 triggers; quest 2's 50 after the same; 87 after 77 and all of these; the way round the level-50 door is through quest 2's 13 trigger
 the inner door's unlock	only the leader's beckon scene (its first phase's end calls the quest script's door function: unlock, open); 85 starts that scene; 85 needs seven raiders' deaths; four of the seven are placed initially disabled and enabled by quest 2's stages 25 and 50 (and by 78, which enables any still disabled)
 78 from the front door	never: behind the inner door, which opens only after 85, and 78's trigger is off from 85
