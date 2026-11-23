@@ -445,3 +445,69 @@ summary of the `render` example has no `time` key. Frames without
 hypotheses of six views (two interiors with clock-driven effects among
 them) are byte-identical to the commit before, frame and instance
 buffers; under hypotheses and without a time three of them are too.
+
+**Effect colour and falloff on the clock.** Behind their switches
+(`fo4_scene::clock::Switches`, off by default; `render` and `fo4-view`
+flags `--clock-emissive-multiple`, `--clock-emissive-colour`,
+`--clock-falloff`; [controller-clock.md](controller-clock.md), Effect fields
+on the clock) the animation also carries an effect surface's emissive
+multiple, emissive colour and falloff fields (`fo4_render::Animation` slots
+5 to 10, `Animation::fields` with `ClockFields`). The colour reaches the
+frame through a new per-draw field, `Draw::colour` (base colour times
+multiple; absent from the summary and from every draw without it): both
+renderers multiply the sample's RGB by it right after the vertex colour,
+where the mesh's vertex colours would otherwise hold the tint (the mesh of
+such a draw holds vertex colours without tint). The viewer passes it as a
+fourth uniform vector (`SurfaceParams::colour`, 1 without one; multiplying
+by 1 changes no other surface's bytes). The falloff fields reach
+`Draw::falloff`, which both renderers already read. The snapshot
+interchange refuses a draw with a colour (`SnapshotColourDraws`); the
+reference rasterizer refuses a colour below 0 or not finite
+(`RenderDrawColour`). The viewer's ignored GPU test, renamed
+`cpu_and_gpu_frames_agree_on_clock_driven_uv_opacity_colour_and_falloff`,
+adds to its two cards an opaque card whose emissive multiple a looping
+track drives and a blended falloff card whose stop opacity and stop angle
+tracks drive: on this machine (Apple M5, Metal) coverage agreement
+1.000000 at both times, mean channel difference 0.03 to 0.06 steps, 95th
+percentile 0 to 1, largest 1.
+
+## Instance tags of the CPU and the viewer
+
+The step of the game clock compared the CPU frame and the viewer's
+headless frame of a flooded interior view at second 4 (`--time 4
+--reference-textures --no-actors` against the `render` example at the
+reference texture total): coverage agreement 0.999997, but the same
+instance tag on only 96.87 % of the pixels both drew. Reproduced here
+(858,946 pixels drawn by both, 26,927 with another tag). The differing
+pixels fall in two classes:
+
+- **Coplanar placements (26,907 pixels, all but 20).** One pair of
+  placements: two references of one floating debris base, at the same
+  height and rotation, 224 units apart, whose blended cards overlap. In
+  exact arithmetic their depths are equal over the overlap. The CPU
+  computes depth in f64 from f64 placements and rounds it to f32: the two
+  tie, and the tag keeps the first drawn (strictly nearer replaces it); for
+  blended triangles that is the far-first centroid order, for opaque ones
+  the list order. The viewer's f32 transforms and depth split the tie by
+  rounding, so over the overlap each renderer gives all its pixels to one
+  of the two, not the same one. The colour follows: 26,674 of these pixels
+  differ by more than 2 steps (the two translucent layers blended in the
+  other order; the CPU orders blended triangles by centroid, the viewer
+  blended instances by origin), against 677 of the 832,019 pixels with the
+  same tag. A second view (a vault interior at second 4) agrees on 99.978 %
+  of the tags; its 171 differing pixels are again consecutive placements
+  overlapping (two pairs, 138 pixels) and edge pixels.
+- **Edges (20 pixels).** Every other differing pixel has the viewer's tag
+  on a neighbouring pixel of the CPU frame: a boundary between two
+  instances moved by one pixel.
+
+Neither class is a disagreement of the rules or of the draw list: both
+renderers draw the same list, and outside overlaps of coplanar placements
+their tags agree. Making the viewer reproduce the CPU's ties would need
+f64 depth and per-triangle ordering of blended draws on the GPU; that was
+not attempted. A viewer GPU test
+(`coplanar_placements_disagree_on_tags_only_where_they_overlap`, ignored
+without a GPU) draws two overlapping coplanar placements of one surface
+like the debris, blended and opaque, in both list orders: where one
+placement covers a pixel the tags agree exactly; where both do each
+renderer gives one of the two, and the split differs.

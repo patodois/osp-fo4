@@ -803,3 +803,63 @@ floating debris on the water of a flooded interior scrolls between
 `--time 0`, `4` and `8`, and the steam over a row of pods drifts; the CPU
 and the viewer's headless frame of the debris view at `--time 4` agree in
 coverage (0.999997; 95th percentile colour difference 0).
+
+## The census over time, and the effect fields behind their switches
+
+`coverage_census --times 0,1.7,7.3,45` builds each loaded cell at those
+seconds of the game clock (one census per time), once with the clock's
+switches off and once with `--clock-emissive-multiple
+--clock-emissive-colour --clock-falloff` ([controller-clock.md](controller-clock.md),
+Effect fields on the clock). Every cell of the load order, 3 shards of
+8,268 to 8,562 s each for the four times (two runs side by side), peak
+0.83 GB. Outcomes and sole families of each run:
+[coverage-clock-census.txt](coverage-clock-census.txt); second 0 with the
+switches off is [coverage-census.txt](coverage-census.txt), which the run
+reproduced byte for byte except its elapsed seconds.
+
+| Run | Drawn under hypotheses | Hidden through the chain | Omitted | Omitted area |
+| --- | ---: | ---: | ---: | ---: |
+| switches off, second 0 | 683,146 | 8,528 | 284,817 | 2.63 % |
+| switches off, second 1.7 | 681,927 | 8,528 | 286,036 | 28.77 % |
+| switches off, second 7.3 | 681,940 | 8,528 | 286,023 | 28.77 % |
+| switches off, second 45 | 681,932 | 8,528 | 286,031 | 28.77 % |
+| switches on, every time | 683,490 | 8,538 | 284,463 | 2.46 % |
+
+Drawn without hypotheses: 779,020 in every run.
+
+**Without the switches the omitted area depends on the time.** At any
+second but 0, 1,206 to 1,219 placements are refused by the draw build for
+`UnsettledClockField` (90.88 % of the larger omitted area): a free-running
+emissive, colour or falloff track of a model the first-key rules settle
+has moved away from its stored value, and the frame never mixes fields of
+two instants. They are the distant clouds (407 placements, whose falloff
+stop angle and start opacity loop over 30 to 300 s; about 26 % of all the
+area) and about 800 placements whose emissive multiple or colour tracks
+move (the only other fields that refusal checks).
+At second 0 the tracks start on their stored values, so the census of
+earlier steps, taken there, did not see this.
+
+**With the switches on the census does not change with time.** Those
+placements are drawn at every time; 344 more placements are drawn under
+hypotheses and 10 more are hidden through the enable parent chain (models
+whose only open tag was `effect-emissive`): the sole family
+`effect-emissive` falls from 371 placements (6.65 % of the omitted area)
+to 17 (0.21 %), and the omitted area from 2.63 % to 2.46 % of all. Drawn
+placements rely on `effect_clock_falloff_v1` 407 times (the clouds, about
+26 % of all the area), `effect_clock_emissive_multiple_v1` 1,379 (0.31 %),
+`effect_clock_emissive_colour_v1` 904 (under 0.01 %);
+`nif_controller_clock_free_running_v1` 7,069 → 8,312 times,
+`effect_colour_clamped_before_blend_v1` 2,522 → 2,880. Nothing drawn
+without hypotheses changes. The largest sole families left by area:
+`effect-idle` (1,167 placements, 6.83 % of the omitted area),
+behaviour graphs (844, 3.75 %), then record runtime state (`REFR.XATR`,
+`XEZN`, `MSTT.DSTA`, `XRNK`, `XALP`) and transform-varies (1,897, 0.94 %).
+
+**Frames** (the `render` example, CPU, 1280 x 720, `--texture-mib 1024`,
+local): a broken flickering light tube of a vault interior is left out
+without the switches at seconds 0.3 and 1.7 (8,857 pixels of its tag) and
+drawn with them at every time, its brightness following its emissive
+multiple track. With every switch off, the CPU frames of eleven views
+(with and without hypotheses, with and without `--time`) and the viewer's
+headless frames of seven views are byte-identical to the commit before,
+frame and tag buffers.

@@ -118,8 +118,12 @@ gives at the build time a value other than the stored one is refused
 (`UnsettledClockField`): a frame of the clock never mixes fields at the
 stored value with fields at the clock's. At time 0 the first-key rules
 already require the stored value, so those surfaces draw there; at other
-times the 199 models above can lose such surfaces. The window holds those
-fields at the start time's value while the UV fields and opacity move.
+times they are refused: the census at seconds 1.7, 7.3 and 45 refuses
+1,206 to 1,219 placements so, the distant clouds among them, and the
+omitted area rises from 2.63 % to 28.77 % of all ([coverage.md](coverage.md),
+The census over time). The switches below carry those fields instead. The
+window holds them at the start time's value while the UV fields and opacity
+move.
 
 Without a time nothing changes: an instance that relies on
 `nif_controller_clock_free_running_v1` is omitted
@@ -165,18 +169,131 @@ Tensions, written into the rule texts:
 - Effect-shader controllers run by a manager (`effect-idle`): the effect
   surface rules exist now, but the idle rules leave effect controllers out
   on purpose ([controller-rest.md](controller-rest.md)); the
-  loop-unstarted rule keeps that exclusion. The largest remaining family
-  by area.
+  loop-unstarted rule keeps that exclusion. No rule says what starts their
+  sequences (below, Effect controllers run by a manager).
 - Transform controllers whose keys move a node (`transform-varies`): the
   clock's time and keys would give their values, but a moving node changes
   a draw's world transform and the collision placement, not a surface
   parameter: the viewer's instance data, the walking world and the
   rotation interpolations (quaternion keys, XYZ Euler keys, TBC) would each
   need their own machinery and rules. Left refused.
-- Free-running controllers of other fields (emissive, colour, falloff,
-  visibility, lights) are not run by the clock; the first-key and rest
-  rules decide them as before.
+- Free-running controllers of the effect emissive multiple, emissive
+  colour and falloff fields are run by the clock only behind their
+  switches (below, Effect fields on the clock); without them the
+  first-key and rest rules decide them as before. Visibility and light
+  controllers are not run by the clock.
 - Behaviour graphs, visibility controllers, particle systems.
+
+## Effect fields on the clock (switches, off by default)
+
+`effect_clock_census MANIFEST OUT.txt` (an example of `fo4-unpack`;
+[effect-clock-census.txt](effect-clock-census.txt), every winning NIF, 50 s)
+counts every controller of an effect shader by the field it drives
+(nifxml EffectShaderControlledVariable and EffectShaderControlledColor), by
+what runs it, and for a free-running one by its clock track, with its rest
+tag with the clock's switches off and on. Free-running controllers of the
+three fields the draw's animation did not carry:
+
+| Field | Controllers (placements) | Clock tracks | Vary | Stored is not the clock at load | Today's rest tag |
+| --- | ---: | ---: | ---: | ---: | --- |
+| emissive multiple (variable 0, Base Color Scale) | 314 (9,238) | 229 | 215 | 48 | first key 248, `effect-emissive` 56 |
+| emissive colour (colour 0, Base Color RGB) | 257 (2,427) | 204 | 200 | 22 | first key 217, `effect-emissive` 30 |
+| falloff (variables 1 to 4) | 292 (407) | 292 | 292 | 0 | first key 292 (all on the distant clouds) |
+
+The controllers without a track: span not positive, inactive with
+APP_INIT, TBC keys, another interpolator type (85 emissive multiple, 53
+emissive colour). Most emissive multiple tracks reach values above 1 (201
+of 215 varying ones); 99 emissive colour tracks have a component above 1;
+none goes below 0. The falloff tracks are 146 start opacities (within 0 to
+1) and 146 stop angles (63 to 73 degrees on 144, 25 to 123 on 2), all
+looping quadratic keys of 30 to 300 s per cycle. Manager-run controllers of
+these fields: 723 emissive multiple and 506 emissive colour controllers
+named by sequences (below).
+
+By model: 13 models (1,497 placements) have `effect-emissive` as their only
+open tag and are decided with the switches on; 260 models (2,465
+placements) are decided either way and hold a free-running emissive,
+colour or falloff track that varies, so that without the switches the draw
+refuses them at any time where the track has moved
+(`UnsettledClockField`), and with them draws them; 69 models (424
+placements) stay undecided for other tags.
+
+**Switches** (`fo4_scene::clock::Switches`; `render`, `fo4-view` and
+`coverage_census` flags `--clock-emissive-multiple`,
+`--clock-emissive-colour`, `--clock-falloff`; the scene must be loaded with
+the same switches, `Loader::set_clock_switches`). With a switch on:
+
+- the rest tags (`rest::tags_with`): a free-running effect controller of
+  that field that is not settled by the first-key rule and that the clock
+  runs is tagged `clock` with its cycle and key tags and a field tag
+  (`clock-emissive-multiple`, `clock-emissive-colour`, `clock-falloff`; an
+  angle also `falloff-degrees`), each covered by its rule;
+- the draw build: with a time, the field's track (first-key settled
+  controllers included) joins the draw's animation (`fo4_render::Animation`
+  slots 5 to 10). The emissive colour and multiple give the draw's colour
+  (`Draw::colour` = base colour x multiple, each tracked or held, applied
+  after the vertex colour in both renderers; the mesh's vertex colours then
+  hold no tint), the falloff tracks give the draw's falloff fields (an
+  angle's key read as degrees, the field its cosine). The colour's range
+  over the whole track must stay at or above 0 (`colour-negative`
+  otherwise) and records `effect_colour_clamped_before_blend_v1` where it
+  can exceed 1; a falloff track's opacities must stay within 0 to 1
+  (`falloff-fields` otherwise) and the falloff must pass its validation at
+  each time; falloff tracks of a surface whose falloff is not drawn are
+  dropped. A BGEM value of the field wins at every time
+  (`effect_material_over_controller_v1`), as for alpha and UV.
+
+With every switch off the rest tags, the draw lists, the frames and the
+committed census outputs are those of before (see coverage.md).
+
+| Rule | Basis and weakness |
+| --- | --- |
+| `effect_clock_emissive_multiple_v1` | the census above; that the clock runs this field as it runs alpha and UV is the same prior knowledge as `nif_controller_clock_free_running_v1`; the field's pairing with Base Color Scale is the first-key rule's by-name pairing. Weak. |
+| `effect_clock_emissive_colour_v1` | the same, the pairing with Base Color RGB. Weak. |
+| `effect_clock_falloff_v1` | the same; the degrees reading of angle keys is `nif_controller_falloff_angle_degrees_v1`'s. Weak. |
+
+## Effect controllers run by a manager
+
+Of the census's models, 465 (9,634 placements) hold an effect controller
+run by a manager (`effect-idle`). What the data says about what starts
+their sequences:
+
+- No field of `NiControllerManager` or `NiControllerSequence` marks a
+  default or idle sequence (nifxml: the manager holds a cumulative flag,
+  its sequences and an object palette; a sequence its name, controlled
+  blocks, weight, text keys, cycle type, frequency, start and stop times
+  and an accumulation root name).
+- 377 models have a behaviour graph (`BSBehaviorGraphExtraData`; 6,921
+  placements): its root state machine's start state plays a sequence that
+  names an effect controller in 295 of them (6,601 placements), plays no
+  sequence in 79 (312), another sequence in 2; one graph is not read.
+  These models also carry the open `behavior-graph` tag.
+- 88 models have no graph (2,713 placements). In those with a single
+  sequence (the manager's only one), the sequence loops in 14 models
+  (2,253 placements) and drives effect UV and alpha controllers (1,811 of
+  those placements also transform interpolators through the manager's
+  multi-target transform controller); the names of the most placed of
+  them are words for idle (local listing). The others
+  (clamped single sequences, or two to twelve sequences with words for
+  open, close, wind, on, off) have few or no placements.
+- The sequence names of 251 of the 465 models are held, all or some, as
+  strings by compiled scripts (6,365 placements); 5,332 placements carry a
+  script on the reference or its base.
+- The stored fields of the manager-run controllers match the first key of
+  some of their sequences and the last key of others; no class of
+  sequence holds the stored value throughout.
+
+No rule was added. The one marker in the data is the behaviour graph's
+start state, a statement of the graph format and not of the NIF: a rule
+"the start state's sequence plays from load" would also have to settle the
+`behavior-graph` tag, evaluate a sequence's own timing (its start, stop,
+frequency and cycle type, apart from the controllers') and its transform
+interpolators (moving geometry, below), and would contradict
+`nif_controller_rest_loop_unstarted_v1` for the same kind of looping
+sequence where the graph has none; a single looping sequence without a
+graph, read as playing from load, contradicts that rule directly, and its
+name (a word for idle) is a convention, not a field. The family stays
+refused; the census lines `2 ...` keep the counts for a later step.
 
 ## Measurements that would settle the rules
 

@@ -35,19 +35,30 @@ a location's rows.
 
 ## Drawing (`crates/fo4-scene`, `apps/fo4-view`)
 
-The coverage census (`spec/coverage.md`) leaves 2.63 % of the placed area undrawn under hypotheses.
-The families that lead what is still refused:
+The coverage census (`spec/coverage.md`) leaves 2.63 % of the placed area undrawn under hypotheses at second 0
+of the game clock, but 28.77 % at any later second: the distant clouds and other effects whose falloff or
+emissive tracks move are refused there (`UnsettledClockField`). With the three switches below the census is the
+same at every time and leaves 2.46 %.
 
-1. Effect surfaces whose emissive fields are driven by free-running controllers (the draw clock carries only
-   UV transform and opacity so far).
-2. Effect controllers run by a manager (excluded by the existing idle rules).
-3. Models whose sequence is chosen by a behaviour graph.
-4. Moving geometry (transform controllers): needs world transforms over time and rotation key rules.
-5. Record runtime state on placements (several refused subrecord families, listed in the census).
+The clock now also drives the effect emissive multiple, emissive colour and falloff fields, each behind its
+own switch, off by default (`--clock-emissive-multiple`, `--clock-emissive-colour`, `--clock-falloff`;
+`spec/controller-clock.md`, Effect fields on the clock). The families that lead what is still refused:
 
-Open checks: the viewer window has not been exercised by hand with `--time`; the coverage census ran at
-time 0 only; a CPU-against-viewer comparison on real data agreed on 96.9 % of instance tags and the rest
-was not investigated.
+1. Effect controllers run by a manager (`effect-idle`). The census (`spec/effect-clock-census.txt`, section 2)
+   found no NIF field marking a default sequence; the one marker is the behaviour graph's start state (295 of 465
+   models). A rule needs a sequence player (a sequence's own timing, its transform interpolators) and settles
+   `behavior-graph` at the same time; it contradicts the unstarted-loop rule (`spec/controller-clock.md`, Effect
+   controllers run by a manager).
+2. Models whose sequence is chosen by a behaviour graph (same machinery as 1).
+3. Moving geometry (transform controllers): needs world transforms over time, rotation key rules, the viewer's
+   instance data per frame and the walking world kept in step. Not started.
+4. Record runtime state on placements (several refused subrecord families, listed in the census).
+
+Open checks: the viewer window has still not been exercised by hand with `--time` (nor with the new switches);
+the CPU-against-viewer tag differences are explained (coplanar overlapping placements and edges, `spec/render.md`,
+Instance tags of the CPU and the viewer) but not removed. The viewer's GPU tests fail at random when run in
+parallel (shader loading between concurrent apps, also on the commit before); run them with
+`cargo test -- --ignored --test-threads=1`.
 
 ## Toward a playable game
 
