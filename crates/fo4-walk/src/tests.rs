@@ -1003,3 +1003,179 @@ fn a_ride_carries_the_walker_standing_on_it_and_no_one_else() {
         }
     }
 }
+
+/// A motion read between a stored and a posed transform turns about the
+/// stored origin and moves it to the posed one; `unapply` undoes `apply`;
+/// unequal scales or words that are not a rotation are refused
+/// (`walk_platform_rigid_motion_v1`).
+#[test]
+fn a_motion_between_two_placements_turns_about_the_stored_origin() {
+    use crate::Motion;
+    use fo4_scene::transform::Transform;
+    // Stored: at (100, 0, 50), a quarter turn about z (words transposed in
+    // `Transform`), scale 2. Posed: the same place turned back to the axes
+    // and raised by 10.
+    let quarter = [[0., -1., 0.], [1., 0., 0.], [0., 0., 1.]];
+    let stored = Transform {
+        rotation: quarter,
+        translation: [100., 0., 50.],
+        scale: 2.,
+    };
+    let posed = Transform {
+        rotation: [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]],
+        translation: [100., 0., 60.],
+        scale: 2.,
+    };
+    let m = Motion::between(&stored, &posed).unwrap();
+    assert_eq!(m.pivot, [100., 0., 50.]);
+    assert_eq!(m.translation, [0., 0., 10.]);
+    assert!(near(m.angle_degrees(), 90., 1e-9), "{m:?}");
+    // Every local point goes where the posed transform puts it.
+    for p in [[0., 0., 0.], [1., 0., 0.], [3., -2., 7.]] {
+        let (a, z) = (stored.apply(p), posed.apply(p));
+        let got = m.apply(a);
+        assert!((0..3).all(|i| near(got[i], z[i], 1e-9)), "{got:?} {z:?}");
+        let back = m.unapply(got);
+        assert!((0..3).all(|i| near(back[i], a[i], 1e-9)), "{back:?}");
+    }
+    // The same placement: no motion.
+    assert!(Motion::between(&stored, &stored).unwrap().is_identity());
+    // Refused: another scale, a shear.
+    assert_eq!(
+        Motion::between(&stored, &Transform { scale: 3., ..posed }),
+        None
+    );
+    let shear = Transform {
+        rotation: [[1., 0.5, 0.], [0., 1., 0.], [0., 0., 1.]],
+        ..posed
+    };
+    assert_eq!(Motion::between(&stored, &shear), None);
+    // Halfway: half the turn about the same pivot, half the rise.
+    let h = Motion::lerp(&Motion::IDENTITY, &m, 0.5);
+    assert!(near(h.angle_degrees(), 45., 1e-9), "{h:?}");
+    assert!(near(h.translation[2], 5., 1e-12));
+}
+
+/// A piece copied under a motion has every point moved and its radii
+/// kept; a translation-only motion copies as `copy_sources` does
+/// (`walk_platform_rigid_motion_v1`).
+#[test]
+fn a_piece_copied_under_a_turn_moves_its_points_and_keeps_its_radii() {
+    use crate::Motion;
+    let b = budget();
+    let mut w = World::new();
+    w.add_hull(&cuboid([0., -10., 0.], [200., 10., 4.]), 2., "plank", &b)
+        .unwrap();
+    w.add_sphere([200., 0., 0.], 5., "knob", &b).unwrap();
+    // A turn of 30 degrees about +y through the origin (right-hand sense)
+    // takes (200, 0, 0) to (173.2, 0, -100): the plank's far end goes down.
+    let a = 30f64.to_radians() / 2.;
+    let m = Motion {
+        rotation: [a.cos(), 0., a.sin(), 0.],
+        pivot: [0.; 3],
+        translation: [0.; 3],
+    };
+    let c = w.copy_sources_moved(&[0, 1], &m, &b).unwrap();
+    assert_eq!(c.sources, w.sources);
+    let far = c.hull_points(0, 8)[1];
+    assert!(
+        near(far[0], 200. * 30f64.to_radians().cos(), 1e-9),
+        "{far:?}"
+    );
+    assert!(
+        near(far[2], -200. * 30f64.to_radians().sin(), 1e-9),
+        "{far:?}"
+    );
+    match (c.entries[0].prim, c.entries[1].prim) {
+        (Prim::Hull { radius, .. }, Prim::Sphere { center, radius: r }) => {
+            assert_eq!((radius, r), (2., 5.));
+            assert!(near(center[2], -100., 1e-9), "{center:?}");
+        }
+        other => panic!("{other:?}"),
+    }
+    // A pure translation lands where `copy_sources` puts the piece.
+    let t = w
+        .copy_sources_moved(&[0, 1], &Motion::translation([1., 2., 3.]), &b)
+        .unwrap();
+    let u = w.copy_sources(&[0, 1], [1., 2., 3.], &b).unwrap();
+    assert_eq!(t.points, u.points);
+    assert_eq!(t.entries, u.entries);
+}
+
+/// A ramp hinged at one end that turns down to the floor carries a walker
+/// standing on it by the change of the motion, and lets one walk up it
+/// from the floor once it lies low; a walker elsewhere stays
+/// (`walk_platform_rigid_motion_v1` with `walk_platform_sequence_ride_v1`).
+#[test]
+fn a_rigid_ride_turns_a_ramp_down_to_the_floor_and_carries_its_rider() {
+    use crate::platform::RigidRide;
+    use crate::Motion;
+    let b = budget();
+    let mut ground = World::new();
+    floor(&mut ground, &b);
+    // A ramp 400 long, 48 to 50 above the floor, hinged at x = 0.
+    let mut ramp = World::new();
+    ramp.add_hull(&cuboid([0., -60., 48.], [400., 60., 50.]), 0., "ramp", &b)
+        .unwrap();
+    // Turned by asin(48 / 400) about +y through the hinge: the far end
+    // goes down to the floor.
+    let angle = (48f64 / 400.).asin();
+    let down = Motion {
+        rotation: [(angle / 2.).cos(), 0., (angle / 2.).sin(), 0.],
+        pivot: [0., 0., 49.],
+        translation: [0.; 3],
+    };
+    let track = vec![(1., Motion::IDENTITY), (2., down)];
+    let dt = Settings::DEFAULT.tick;
+    // A rider at the middle of the ramp goes down by about half the drop.
+    let mut set: WorldSet<u32> = WorldSet::new();
+    set.insert(0, ground.clone()).unwrap();
+    let mut ride = RigidRide::new(&mut set, 1, ramp.clone(), track.clone(), 0., &b).unwrap();
+    let mut ch = character([200., 0., 100.]);
+    ch.settle(&set, 600);
+    assert!(ch.grounded && near(ch.feet[2], 50., 0.5), "{:?}", ch.feet);
+    let mut t = 0.;
+    while t < 3. {
+        ride.advance(&mut set, &mut ch, t + dt, &b).unwrap();
+        ch.tick(&set, Input::default());
+        t += dt;
+    }
+    assert!(ch.grounded, "{:?}", ch.feet);
+    assert!(near(ch.feet[2], 50. - 24., 1.5), "{:?}", ch.feet);
+    assert!(
+        near(ride.carried, ch.feet[2] - 50., 1.5),
+        "{}",
+        ride.carried
+    );
+    // From the floor beyond the far end the walker walks up the lowered
+    // ramp (its end below the step height); with the ramp unturned the
+    // 50-unit edge stops it.
+    for (second, climbs) in [(3., true), (0., false)] {
+        let mut set: WorldSet<u32> = WorldSet::new();
+        set.insert(0, ground.clone()).unwrap();
+        let r = RigidRide::new(&mut set, 1, ramp.clone(), track.clone(), second, &b).unwrap();
+        assert_eq!(r.motion, if climbs { down } else { Motion::IDENTITY });
+        let mut ch = character([480., 0., 5.]);
+        ch.settle(&set, 600);
+        for _ in 0..240 {
+            ch.tick(&set, ahead(std::f64::consts::PI));
+        }
+        if climbs {
+            assert!(ch.feet[0] < 300. && ch.feet[2] > 10., "{:?}", ch.feet);
+        } else {
+            assert!(ch.feet[0] > 400. && ch.feet[2] < 1., "{:?}", ch.feet);
+        }
+    }
+}
+
+#[test]
+fn the_rigid_motion_rule_is_registered_and_pending() {
+    assert_eq!(
+        hypotheses::status(crate::platform::rules::RIGID_MOTION),
+        Some(Status::Pending)
+    );
+    assert_eq!(
+        hypotheses::status(hypotheses::SEQUENCE_CHAIN_POSE),
+        Some(Status::Pending)
+    );
+}

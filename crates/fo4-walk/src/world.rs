@@ -2,6 +2,7 @@
 //! as convex primitives, with a uniform grid over the horizontal plane as
 //! the broad phase.
 use crate::geometry::{self as g, Aabb, V3};
+use crate::motion::Motion;
 use crate::rules;
 use fo4_core::{Budget, Error, Result};
 use fo4_scene::collision::{BodyPlacement, CellCollision, ShapeClass, WorldShape};
@@ -467,6 +468,24 @@ impl World {
     /// collision of a placed reference the run moved
     /// (`spec/play.md`, The live world). A source out of range is refused.
     pub fn copy_sources(&self, sources: &[u32], delta: V3, b: &Budget) -> Result<World> {
+        self.copy_with(sources, &|p| g::add(p, delta), b)
+    }
+
+    /// A world of the primitives of `sources` moved by the rigid motion
+    /// `motion` (`walk_platform_rigid_motion_v1`): every point of a
+    /// triangle, sphere, capsule or hull goes where [`Motion::apply`] puts
+    /// it, radii kept; otherwise as [`World::copy_sources`].
+    pub fn copy_sources_moved(
+        &self,
+        sources: &[u32],
+        motion: &Motion,
+        b: &Budget,
+    ) -> Result<World> {
+        self.copy_with(sources, &|p| motion.apply(p), b)
+    }
+
+    /// The primitives of `sources`, each point taken through `at`.
+    fn copy_with(&self, sources: &[u32], at: &dyn Fn(V3) -> V3, b: &Budget) -> Result<World> {
         let mut w = World::new();
         for r in &self.rules {
             w.add_rule(r, b)?;
@@ -486,7 +505,6 @@ impl World {
             let n = w.add_source(src.clone(), b)?;
             map.insert(*s, n);
         }
-        let at = |p: V3| g::add(p, delta);
         for e in &self.entries {
             let Some(&source) = map.get(&e.source) else {
                 continue;

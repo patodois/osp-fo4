@@ -238,6 +238,192 @@ pub fn held_pose(n: &Nif<'_>, s: &Sequence, node: &str, b: &Budget) -> Result<Op
     }))
 }
 
+/// The local transform `s` gives the chain block `block` at key time
+/// `time` (`nif_sequence_chain_pose_v1`): the sequence's controlled block
+/// for the block's name must name an `NiTransformInterpolator`; each
+/// channel takes its keys at `time` where its data holds some (translation
+/// and scale as the clock samples them, quaternion rotation keys as
+/// `nif_clock_transform_rotation_quaternion_v1` reads them, XYZ rotation
+/// keys composed as `nif_clock_transform_rotation_xyz_v1` composes them),
+/// else the interpolator's own value where set ([`UNSET`]), else the
+/// block's stored words ([`crate::clock::TransformTrack::words_at`]).
+/// `Ok(None)` when the sequence does not control the block so, the block is
+/// not a node with stored transform words, its data is not the reader's or
+/// a key type has no reading.
+pub fn block_local(
+    n: &Nif<'_>,
+    s: &Sequence,
+    block: usize,
+    time: f64,
+    b: &Budget,
+) -> Result<Option<crate::transform::Transform>> {
+    let Some(Data::Node { fields: nf, .. }) = n.blocks.get(block).and_then(|x| x.decoded.as_ref())
+    else {
+        return Ok(None);
+    };
+    let Some(name) = nf
+        .iter()
+        .find(|x| x.name == "Name")
+        .and_then(|x| text(n, &x.value))
+    else {
+        return Ok(None);
+    };
+    let Some(ip) = s
+        .blocks
+        .iter()
+        .find(|(x, ip)| {
+            *x == name && ip.is_some_and(|i| type_of(n, i) == "NiTransformInterpolator")
+        })
+        .and_then(|(_, ip)| *ip)
+    else {
+        return Ok(None);
+    };
+    let Some(f) = fields(n, ip) else {
+        return Ok(None);
+    };
+    let words = |fs: &[Field], name: &str| -> Vec<f32> {
+        fs.iter()
+            .filter(|x| x.name == name)
+            .filter_map(|x| float(&x.value))
+            .collect()
+    };
+    let (Ok(st), Ok(sr), Ok([ss])) = (
+        <[f32; 3]>::try_from(words(nf, "Translation").as_slice()),
+        <[f32; 9]>::try_from(words(nf, "Rotation").as_slice()),
+        <[f32; 1]>::try_from(words(nf, "Scale").as_slice()),
+    ) else {
+        return Ok(None);
+    };
+    let keys = match f
+        .iter()
+        .find(|x| x.name == "Data")
+        .and_then(|x| link(&x.value))
+    {
+        None => None,
+        Some(d) => {
+            if type_of(n, d) != "NiTransformData" {
+                return Ok(None);
+            }
+            let Some(df) = fields(n, d) else {
+                return Ok(None);
+            };
+            let Some(k) = NodeKeys::read(df, b)? else {
+                return Ok(None);
+            };
+            Some(k)
+        }
+    };
+    let set = |v: &[f32]| v.iter().all(|x| x.is_finite() && x.abs() < UNSET);
+    let pt = words(f, "Translation");
+    let pq = words(f, "Quaternion");
+    let ps = words(f, "Scale");
+    let track = crate::clock::TransformTrack {
+        timing: crate::clock::Timing {
+            flags: 0,
+            frequency: s.frequency,
+            phase: 0.,
+            start: s.start,
+            stop: s.stop,
+        },
+        node: block,
+        stored_translation: st,
+        stored_rotation: sr,
+        stored_scale: ss,
+        pose_translation: <[f32; 3]>::try_from(pt.as_slice()).ok().filter(|v| set(v)),
+        pose_rotation: <[f32; 4]>::try_from(pq.as_slice()).ok().filter(|v| set(v)),
+        pose_scale: <[f32; 1]>::try_from(ps.as_slice())
+            .ok()
+            .filter(|v| set(v))
+            .map(|[v]| v),
+        keys,
+    };
+    Ok(track.words_at(time).map(|w| w.transform()))
+}
+
+/// A collision body's chain posed by a sequence: the composition of its
+/// node transforms, root first, as stored and as the sequence poses it.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ChainPose {
+    pub stored: crate::transform::Transform,
+    pub posed: crate::transform::Transform,
+    /// The chain blocks the sequence sets.
+    pub controlled: usize,
+    /// The deepest chain block the sequence sets: the composition stops
+    /// there (the nodes below it move with it).
+    pub deepest: usize,
+}
+
+/// The chain `chain` (blocks root first, Target last, as
+/// `collision::model` reads them) as stored and as `s` poses it at key time
+/// `time` (`nif_sequence_chain_pose_v1`): composed root first, as the
+/// collision placement composes it, up to the deepest block the sequence
+/// sets through a transform interpolator ([`block_local`]); a block the
+/// sequence sets takes its local transform from [`block_local`], every
+/// other block its stored one (a block without stored transform words
+/// adds nothing, as in the placement). With `root_left_out` the root's own
+/// transform is left out of both (`nif_root_transform_replaced_v1`).
+/// `Ok(None)` when the sequence sets no block of the chain or a block it
+/// controls is not read.
+pub fn chain_pose(
+    n: &Nif<'_>,
+    s: &Sequence,
+    chain: &[usize],
+    root_left_out: bool,
+    time: f64,
+    b: &Budget,
+) -> Result<Option<ChainPose>> {
+    use crate::transform::Transform;
+    let controls = |block: usize| -> bool {
+        let Some(Data::Node { fields: nf, .. }) =
+            n.blocks.get(block).and_then(|x| x.decoded.as_ref())
+        else {
+            return false;
+        };
+        let Some(name) = nf
+            .iter()
+            .find(|x| x.name == "Name")
+            .and_then(|x| text(n, &x.value))
+        else {
+            return false;
+        };
+        s.blocks.iter().any(|(x, ip)| {
+            *x == name && ip.is_some_and(|i| type_of(n, i) == "NiTransformInterpolator")
+        })
+    };
+    let first = usize::from(root_left_out);
+    let Some(deepest) = (first..chain.len()).rev().find(|k| controls(chain[*k])) else {
+        return Ok(None);
+    };
+    let (mut stored, mut posed) = (Transform::IDENTITY, Transform::IDENTITY);
+    let mut controlled = 0;
+    for &block in &chain[first..=deepest] {
+        let own = match n.blocks.get(block).and_then(|x| x.decoded.as_ref()) {
+            Some(Data::Node { fields: nf, .. }) if nf.iter().any(|f| f.name == "Translation") => {
+                Some(Transform::from_fields(nf, "sequence chain")?)
+            }
+            _ => None,
+        };
+        if let Some(t) = own {
+            stored = stored.compose(t);
+        }
+        if controls(block) {
+            let Some(t) = block_local(n, s, block, time, b)? else {
+                return Ok(None);
+            };
+            posed = posed.compose(t);
+            controlled += 1;
+        } else if let Some(t) = own {
+            posed = posed.compose(t);
+        }
+    }
+    Ok(Some(ChainPose {
+        stored,
+        posed,
+        controlled,
+        deepest: chain[deepest],
+    }))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -363,5 +549,111 @@ mod tests {
             .unwrap()
             .unwrap();
         assert_eq!(p.translation, None);
+    }
+
+    /// A node's fields: name, stored translation, rotation words (identity)
+    /// and scale 1.
+    fn node_fields(name: u32, t: [f32; 3]) -> Vec<Field> {
+        let mut f = vec![field("Name", Value::StringIndex(name))];
+        f.extend(t.map(|v| fl("Translation", v)));
+        for k in 0..9 {
+            f.push(fl("Rotation", if k % 4 == 0 { 1. } else { 0. }));
+        }
+        f.push(fl("Scale", 1.));
+        f
+    }
+
+    /// Root (10, 0, 0) -> part (5, 0, 0) -> tail (0, 3, 0), the sequence
+    /// setting the part with XYZ rotation keys: a quarter turn about Z, no
+    /// translation keys and an unset interpolator translation.
+    fn chain_nif() -> Nif<'static> {
+        let mut n = nif(2, [f32::MIN; 3]);
+        let u = |name: &'static str, v: u32| field(name, Value::U32(v));
+        let mut d = vec![u("Num Rotation Keys", 1), u("Rotation Type", 4)];
+        for angle in [0., 0., std::f32::consts::FRAC_PI_2] {
+            d.extend([
+                u("Num Keys", 1),
+                u("Interpolation", 1),
+                fl("Key Time", 0.),
+                fl("Key Value", angle),
+            ]);
+        }
+        d.extend([u("Num Keys", 0), u("Num Keys", 0)]);
+        n.blocks[2].decoded = Some(Data::Fields(d));
+        n.strings.extend([b"root".to_vec(), b"tail".to_vec()]);
+        let node = |f: Vec<Field>, children: Vec<i32>| Block {
+            type_index: 3,
+            data: 0..0,
+            decoded: Some(Data::Node {
+                fields: f,
+                children,
+            }),
+            raw_tail: 0..0,
+            diagnostics: Vec::new(),
+        };
+        n.block_types.push("NiNode".into());
+        n.blocks.push(node(node_fields(2, [10., 0., 0.]), vec![4]));
+        n.blocks.push(node(node_fields(1, [5., 0., 0.]), vec![5]));
+        n.blocks.push(node(node_fields(3, [0., 3., 0.]), vec![]));
+        n
+    }
+
+    #[test]
+    fn a_sequence_poses_a_chain_with_its_rotation_keys_up_to_its_deepest_node() {
+        let n = chain_nif();
+        let s = &sequences(&n)[0];
+        let b = Budget::new(1 << 20);
+        // The part's local transform: the stored translation (the
+        // interpolator's is unset), turned a quarter about Z.
+        let l = block_local(&n, s, 4, 0., &b).unwrap().unwrap();
+        let p = l.apply([1., 0., 0.]);
+        assert!(
+            (p[0] - 5.).abs() < 1e-6 && (p[1] - 1.).abs() < 1e-6,
+            "{p:?}"
+        );
+        // Blocks the sequence does not set: none.
+        assert_eq!(block_local(&n, s, 3, 0., &b).unwrap(), None);
+        assert_eq!(block_local(&n, s, 1, 0., &b).unwrap(), None);
+        let c = chain_pose(&n, s, &[3, 4, 5], false, 0., &b)
+            .unwrap()
+            .unwrap();
+        assert_eq!((c.controlled, c.deepest), (1, 4));
+        // Composed to the part: the tail below it is left out.
+        assert_eq!(c.stored.apply([0.; 3]), [15., 0., 0.]);
+        let q = c.posed.apply([1., 0., 0.]);
+        assert!(
+            (q[0] - 15.).abs() < 1e-6 && (q[1] - 1.).abs() < 1e-6,
+            "{q:?}"
+        );
+        // The root left out of both.
+        let r = chain_pose(&n, s, &[3, 4, 5], true, 0., &b)
+            .unwrap()
+            .unwrap();
+        assert_eq!(r.stored.apply([0.; 3]), [5., 0., 0.]);
+        // A chain the sequence does not set.
+        assert_eq!(chain_pose(&n, s, &[3, 5], false, 0., &b).unwrap(), None);
+        // Translation keys win over the stored translation.
+        let mut n = chain_nif();
+        let Some(Data::Fields(d)) = n.blocks[2].decoded.as_mut() else {
+            unreachable!()
+        };
+        let at = d.len() - 2;
+        d.splice(
+            at..at + 1,
+            [
+                field("Num Keys", Value::U32(1)),
+                field("Interpolation", Value::U32(1)),
+                fl("Key Time", 0.),
+                fl("Key Value", 7.),
+                fl("Key Value", 0.),
+                fl("Key Value", 0.),
+            ],
+        );
+        let s = &sequences(&n)[0];
+        let c = chain_pose(&n, s, &[3, 4, 5], false, 0., &b)
+            .unwrap()
+            .unwrap();
+        let q = c.posed.apply([0.; 3]);
+        assert!((q[0] - 17.).abs() < 1e-6, "{q:?}");
     }
 }

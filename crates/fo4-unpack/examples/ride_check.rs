@@ -15,7 +15,7 @@
 //! `ride_check MANIFEST OUT_DIR --cell PLUGIN:HEX --start X,Y,Z [--toward S,X,Y ...]
 //!  --end S [--walk-speed U] [--boxes] [--also PLUGIN:HEX ...] [--elevator PLUGIN:HEX --sequence N --node NAME
 //!  --ride-from S [--ride-boxes]] [--trace] [--box-presence [--timeline FILE]] [--ride-through-terrain]
-//!  [--collision-off-chain] [--collision-reference-alpha] [--pose PLUGIN:HEX N ...]`
+//!  [--collision-off-chain] [--collision-reference-alpha] [--pose PLUGIN:HEX N ...] [--pose-rigid]`
 //!
 //! `--collision-off-chain` builds the walking world with the collision
 //! readiness switch `readiness::Switches::off_chain`
@@ -26,7 +26,12 @@
 //! moved by the translation the model's sequence N (from 0) holds it at
 //! (`nif_sequence_interpolator_held_pose_v1`; the offsets of a chain's
 //! nodes added, turned by the placement, rotations not applied); which
-//! sequence is the caller's.
+//! sequence is the caller's. With `--pose-rigid` each such reference's
+//! collision moves instead by the rigid motion its chain makes under the
+//! sequence at the sequence's stop time (`nif_sequence_chain_pose_v1`:
+//! every channel of each node the sequence sets, rotation keys included;
+//! `walk_platform_rigid_motion_v1`: a turn about the deepest set node's
+//! stored origin and a translation), one piece per deepest set node.
 //!
 //! `--ride-boxes` makes the collision-marker boxes inside the moving node's
 //! reach ride too (instead of the node's own collision alone).
@@ -107,7 +112,7 @@ fn describe(
 
 fn run() -> Result<(), E> {
     let a: Vec<String> = std::env::args().skip(1).collect();
-    const USAGE: &str = "ride_check MANIFEST OUT_DIR --cell PLUGIN:HEX --start X,Y,Z [--toward S,X,Y ...] --end S [--walk-speed U] [--boxes] [--also PLUGIN:HEX ...] [--elevator PLUGIN:HEX --sequence N --node NAME [--node NAME ...] --ride-from S [--ride-boxes]] [--trace] [--box-presence [--timeline FILE]] [--ride-through-terrain] [--collision-off-chain] [--collision-reference-alpha] [--pose PLUGIN:HEX N ...]";
+    const USAGE: &str = "ride_check MANIFEST OUT_DIR --cell PLUGIN:HEX --start X,Y,Z [--toward S,X,Y ...] --end S [--walk-speed U] [--boxes] [--also PLUGIN:HEX ...] [--elevator PLUGIN:HEX --sequence N --node NAME [--node NAME ...] --ride-from S [--ride-boxes]] [--trace] [--box-presence [--timeline FILE]] [--ride-through-terrain] [--collision-off-chain] [--collision-reference-alpha] [--pose PLUGIN:HEX N ...] [--pose-rigid]";
     if a.len() < 2 {
         return Err(USAGE.into());
     }
@@ -122,6 +127,7 @@ fn run() -> Result<(), E> {
     let (mut box_presence, mut through_terrain) = (false, false);
     let (mut off_chain, mut reference_alpha) = (false, false);
     let mut poses: Vec<(fo4_plugin::FormKey, usize)> = Vec::new();
+    let mut pose_rigid = false;
     let mut timeline_file: Option<String> = None;
     let mut it = a[2..].iter();
     while let Some(x) = it.next() {
@@ -148,6 +154,7 @@ fn run() -> Result<(), E> {
             "--ride-through-terrain" => through_terrain = true,
             "--collision-off-chain" => off_chain = true,
             "--collision-reference-alpha" => reference_alpha = true,
+            "--pose-rigid" => pose_rigid = true,
             "--pose" => {
                 let k = tl::parse_key(val()?).ok_or(USAGE)?;
                 poses.push((k, val()?.parse::<usize>()?));
@@ -158,6 +165,9 @@ fn run() -> Result<(), E> {
     let (Some(cell), Some(start), Some(end)) = (cell, start, end) else {
         return Err(USAGE.into());
     };
+    if pose_rigid && poses.is_empty() {
+        return Err(USAGE.into());
+    }
     // `--box-presence`: the run's frames decide each box's presence; without
     // `--timeline`, an empty run (every box at its start state).
     let timeline = match &timeline_file {
@@ -261,6 +271,23 @@ fn run() -> Result<(), E> {
         let n = fo4_nif::Nif::read(&bytes, &mk, Game::Fallout4, &m.limits, &budget.child())?;
         let seqs = fo4_scene::sequence::sequences(&n);
         let s = seqs.get(*si).ok_or("--pose: no such sequence")?;
+        if pose_rigid {
+            let key = 1000 + 100 * pi as u32;
+            pose_rigid_pieces(
+                &mut set,
+                key,
+                &pw,
+                &pc,
+                &n,
+                s,
+                *si,
+                frame,
+                k,
+                &mut report,
+                &budget,
+            )?;
+            continue;
+        }
         let origin = frame.apply([0.; 3]);
         // The held offset of every node of a chain, added.
         let offset = |chain: &[usize]| -> Result<[f64; 3], E> {
@@ -596,6 +623,91 @@ fn run() -> Result<(), E> {
     std::fs::write(out.join("ride-track.txt"), lines)?;
     std::fs::write(out.join("ride.txt"), &report)?;
     print!("{report}");
+    Ok(())
+}
+
+/// `--pose-rigid`: the posed reference's collision (`pw`, built from `pc`)
+/// put into `set` from key `key` on, one piece per deepest node the
+/// sequence sets in a body's chain, each moved by the rigid motion of its
+/// chain at the sequence's stop time (`nif_sequence_chain_pose_v1`,
+/// `walk_platform_rigid_motion_v1`); sources whose chain the sequence does
+/// not set stay as stored.
+#[allow(clippy::too_many_arguments)]
+fn pose_rigid_pieces(
+    set: &mut WorldSet<u32>,
+    key: u32,
+    pw: &World,
+    pc: &fo4_scene::collision::CellCollision,
+    n: &fo4_nif::Nif<'_>,
+    s: &fo4_scene::sequence::Sequence,
+    si: usize,
+    frame: fo4_scene::transform::Transform,
+    reference: &fo4_plugin::FormKey,
+    report: &mut String,
+    budget: &Budget,
+) -> Result<(), E> {
+    // (deepest set node, motion, sources); `None` for sources left as stored.
+    let mut groups: Vec<(Option<usize>, fo4_walk::Motion, Vec<u32>)> = Vec::new();
+    for (k, src) in pw.sources.iter().enumerate() {
+        let pose = match src.instance {
+            Some(i) => {
+                let inst = &pc.instances[i];
+                let root_left_out = inst.rules.contains(&fo4_scene::hypotheses::ROOT_TRANSFORM);
+                let chain = &pc.model(inst).bodies[inst.body].chain;
+                fo4_scene::sequence::chain_pose(
+                    n,
+                    s,
+                    chain,
+                    root_left_out,
+                    f64::from(s.stop),
+                    budget,
+                )?
+            }
+            None => None,
+        };
+        let (deepest, motion) = match pose {
+            Some(p) => {
+                let m =
+                    fo4_walk::Motion::between(&frame.compose(p.stored), &frame.compose(p.posed))
+                        .ok_or(
+                        "--pose-rigid: a chain's pose is not a rigid motion of its stored place",
+                    )?;
+                (Some(p.deepest), m)
+            }
+            None => (None, fo4_walk::Motion::IDENTITY),
+        };
+        match groups.iter_mut().find(|g| g.0 == deepest) {
+            Some(g) => g.2.push(k as u32),
+            None => groups.push((deepest, motion, vec![k as u32])),
+        }
+    }
+    let _ = writeln!(
+        report,
+        "pose {}: sequence {si} at its stop time, rigid ({}, {})",
+        tl::key_text(reference),
+        fo4_scene::hypotheses::SEQUENCE_CHAIN_POSE,
+        fo4_walk::platform::rules::RIGID_MOTION
+    );
+    for (gi, (deepest, m, g)) in groups.iter().enumerate() {
+        let axis = m.axis().unwrap_or([0.; 3]);
+        let _ = writeln!(
+            report,
+            "  {} sources {}: turn {:.2} degrees about {:.3} {:.3} {:.3} through {:.1} {:.1} {:.1}, then moved by {:.1} {:.1} {:.1}",
+            g.len(),
+            deepest.map_or("not set by the sequence".into(), |b| format!("under set block {b}")),
+            m.angle_degrees(),
+            axis[0],
+            axis[1],
+            axis[2],
+            m.pivot[0],
+            m.pivot[1],
+            m.pivot[2],
+            m.translation[0],
+            m.translation[1],
+            m.translation[2]
+        );
+        set.insert(key + gi as u32, pw.copy_sources_moved(g, m, budget)?)?;
+    }
     Ok(())
 }
 

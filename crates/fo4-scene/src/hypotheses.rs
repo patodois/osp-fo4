@@ -237,6 +237,9 @@ pub const COLLISION_OFF_CHAIN: &str = "collision_model_blockers_off_chain_v1";
 /// A sequence's transform interpolator that links no keys holds its node at
 /// the interpolator's own transform (`crate::sequence::held_pose`).
 pub const SEQUENCE_HELD_POSE: &str = "nif_sequence_interpolator_held_pose_v1";
+/// A sequence poses a collision body's chain with the full local transform
+/// it gives each node it sets (`crate::sequence::chain_pose`).
+pub const SEQUENCE_CHAIN_POSE: &str = "nif_sequence_chain_pose_v1";
 /// A reference's unread `XALP` leaves its collision as stored
 /// (`crate::readiness`, behind `readiness::Switches::reference_alpha`).
 pub const REFERENCE_ALPHA_COLLISION: &str = "refr_xalp_collision_unchanged_v1";
@@ -652,6 +655,7 @@ mod tests {
             RENDER_INPUTS_COLLISION,
             COLLISION_OFF_CHAIN,
             SEQUENCE_HELD_POSE,
+            SEQUENCE_CHAIN_POSE,
             REFERENCE_ALPHA_COLLISION,
             LAND_OF_CELL,
             LAND_ACCUMULATION,

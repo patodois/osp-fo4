@@ -28,8 +28,15 @@
 //!   while the walker stands on a ride's piece, the terrain's triangles do
 //!   not touch it ([`Ride::pass_terrain`]): a platform whose shaft goes
 //!   below the terrain carries its rider through it.
+//! - `walk_platform_rigid_motion_v1` ([`rules::RIGID_MOTION`]): a piece
+//!   moves by a rigid motion, a turn about a pivot and a translation
+//!   ([`crate::Motion`], [`crate::World::copy_sources_moved`]); along a
+//!   track of motions ([`RigidRide`]) a walker grounded on the piece is
+//!   carried as a point of it. Asked for by its caller only (`ride_check
+//!   --pose-rigid`); [`Ride`] is unchanged.
 use crate::controller::Character;
 use crate::geometry::V3;
+use crate::motion::Motion;
 use crate::set::WorldSet;
 use crate::world::World;
 use fo4_core::{Budget, Result};
@@ -42,6 +49,7 @@ pub mod rules {
     pub const PLATFORM_RIDE: &str = "walk_platform_sequence_ride_v1";
     pub const BOX_PRESENCE: &str = "walk_collision_marker_box_presence_v1";
     pub const RIDE_PASSES_TERRAIN: &str = "walk_ride_rider_passes_terrain_v1";
+    pub const RIGID_MOTION: &str = "walk_platform_rigid_motion_v1";
 }
 
 /// A collision marker's box ([`rules::COLLISION_MARKER_BOX`]).
@@ -311,30 +319,153 @@ impl<K: Ord + Clone> Ride<K> {
     /// Hides every terrain source of `set` (`hide`), or shows again those
     /// this ride hid.
     fn hide_terrain(&mut self, set: &mut WorldSet<K>, hide: bool) {
-        if !hide {
-            for (k, s) in self.hidden.drain(..) {
-                set.set_hidden(&k, s, false);
+        hide_terrain(set, &mut self.hidden, hide);
+    }
+}
+
+/// Hides every terrain source of `set` not hidden yet (`hide`), keeping
+/// them in `hidden`, or shows again those in `hidden`.
+fn hide_terrain<K: Ord + Clone>(set: &mut WorldSet<K>, hidden: &mut Vec<(K, u32)>, hide: bool) {
+    if !hide {
+        for (k, s) in hidden.drain(..) {
+            set.set_hidden(&k, s, false);
+        }
+        return;
+    }
+    if !hidden.is_empty() {
+        return;
+    }
+    let terrain: Vec<(K, u32)> = set
+        .pieces()
+        .flat_map(|(k, w, _)| {
+            w.sources
+                .iter()
+                .enumerate()
+                .filter(|(_, s)| s.terrain.is_some())
+                .map(|(i, _)| (k.clone(), i as u32))
+                .collect::<Vec<_>>()
+        })
+        .filter(|(k, s)| !set.is_hidden(k, *s))
+        .collect();
+    for (k, s) in &terrain {
+        set.set_hidden(k, *s, true);
+    }
+    *hidden = terrain;
+}
+
+/// A piece of a [`WorldSet`] that moves along a track of rigid motions
+/// (each from the piece as built), carrying a walker that stands on it as
+/// a point of the piece ([`rules::RIGID_MOTION`] with
+/// [`rules::PLATFORM_RIDE`]).
+#[derive(Debug, Clone)]
+pub struct RigidRide<K> {
+    /// The piece's key in the set.
+    pub key: K,
+    /// The piece as built, unmoved.
+    base: World,
+    /// (second, motion) points, seconds increasing; before the first the
+    /// first motion holds, after the last the last; between two points
+    /// [`Motion::lerp`].
+    pub track: Vec<(f64, Motion)>,
+    /// The motion the piece stands at now.
+    pub motion: Motion,
+    /// How far the ride carried a walker in all, vertically.
+    pub carried: f64,
+    /// As [`Ride::pass_terrain`]. Off by default.
+    pub pass_terrain: bool,
+    hidden: Vec<(K, u32)>,
+}
+
+impl<K: Ord + Clone> RigidRide<K> {
+    /// A ride of `base`, put into `set` under `key` at the track's motion
+    /// at `second`.
+    pub fn new(
+        set: &mut WorldSet<K>,
+        key: K,
+        base: World,
+        track: Vec<(f64, Motion)>,
+        second: f64,
+        b: &Budget,
+    ) -> Result<Self> {
+        let mut r = Self {
+            key,
+            base,
+            track,
+            motion: Motion::IDENTITY,
+            carried: 0.,
+            pass_terrain: false,
+            hidden: Vec::new(),
+        };
+        r.motion = r.motion_at(second);
+        let moved = r.moved(&r.motion, b)?;
+        set.insert(r.key.clone(), moved)?;
+        Ok(r)
+    }
+
+    /// The track's motion at `second`.
+    pub fn motion_at(&self, second: f64) -> Motion {
+        let (Some(first), Some(last)) = (self.track.first(), self.track.last()) else {
+            return Motion::IDENTITY;
+        };
+        if second <= first.0 {
+            return first.1;
+        }
+        if second >= last.0 {
+            return last.1;
+        }
+        for w in self.track.windows(2) {
+            let (a, z) = (&w[0], &w[1]);
+            if second < z.0 {
+                let k = if z.0 > a.0 {
+                    (second - a.0) / (z.0 - a.0)
+                } else {
+                    1.
+                };
+                return Motion::lerp(&a.1, &z.1, k);
             }
-            return;
         }
-        if !self.hidden.is_empty() {
-            return;
+        last.1
+    }
+
+    fn moved(&self, motion: &Motion, b: &Budget) -> Result<World> {
+        let all: Vec<u32> = (0..self.base.sources.len() as u32).collect();
+        self.base.copy_sources_moved(&all, motion, b)
+    }
+
+    /// Moves the piece to its motion at `second`; a walker grounded on the
+    /// piece goes first where the change of motion takes its feet (the
+    /// point of the piece under them). Returns the vertical move given to
+    /// the walker (0 when it does not stand on the piece).
+    pub fn advance(
+        &mut self,
+        set: &mut WorldSet<K>,
+        walker: &mut Character,
+        second: f64,
+        b: &Budget,
+    ) -> Result<f64> {
+        let on = walker.grounded
+            && walker
+                .ground
+                .and_then(|g| set.source(g.source))
+                .is_some_and(|(k, _)| *k == self.key);
+        if self.pass_terrain {
+            hide_terrain(set, &mut self.hidden, on);
         }
-        let terrain: Vec<(K, u32)> = set
-            .pieces()
-            .flat_map(|(k, w, _)| {
-                w.sources
-                    .iter()
-                    .enumerate()
-                    .filter(|(_, s)| s.terrain.is_some())
-                    .map(|(i, _)| (k.clone(), i as u32))
-                    .collect::<Vec<_>>()
-            })
-            .filter(|(k, s)| !set.is_hidden(k, *s))
-            .collect();
-        for (k, s) in &terrain {
-            set.set_hidden(k, *s, true);
+        let to = self.motion_at(second);
+        if to == self.motion {
+            return Ok(0.);
         }
-        self.hidden = terrain;
+        let moved = self.moved(&to, b)?;
+        set.insert(self.key.clone(), moved)?;
+        let from = std::mem::replace(&mut self.motion, to);
+        if on {
+            let feet = to.apply(from.unapply(walker.feet));
+            let dz = feet[2] - walker.feet[2];
+            walker.feet = feet;
+            self.carried += dz;
+            Ok(dz)
+        } else {
+            Ok(0.)
+        }
     }
 }
