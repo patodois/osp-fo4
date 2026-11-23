@@ -1,0 +1,361 @@
+# Collision refused by readiness in the cells a walk loads (collision_ready_census; counts and kinds only).
+# Each cell loaded with the cells about it within 1, at the hypotheses level, as the play mode's walking world.
+# off: as main builds it; off-chain: with readiness::Switches::off_chain (collision_model_blockers_off_chain_v1);
+# on: with off_chain and reference_alpha (refr_xalp_collision_unchanged_v1).
+
+## Cell load 1 (1856 instances)
+collision instances placed	off 1482	off-chain 1487	on 1487
+references refused (CollisionNotReady)	off 340	off-chain 336	on 336
+triangles, hulls of the placed collision	off 101002, 604	off-chain 101462, 605	on 101462, 605
+
+## Cell load 2 (1956 instances)
+collision instances placed	off 1540	off-chain 1545	on 1545
+references refused (CollisionNotReady)	off 340	off-chain 336	on 336
+triangles, hulls of the placed collision	off 92889, 661	off-chain 93349, 662	on 93349, 662
+
+## Cell load 3 (1911 instances)
+collision instances placed	off 1351	off-chain 1355	on 1355
+references refused (CollisionNotReady)	off 361	off-chain 357	on 357
+triangles, hulls of the placed collision	off 109449, 557	off-chain 109881, 558	on 109881, 558
+
+## Cell load 4 (1879 instances)
+collision instances placed	off 1339	off-chain 1345	on 1345
+references refused (CollisionNotReady)	off 369	off-chain 363	on 363
+triangles, hulls of the placed collision	off 121273, 511	off-chain 121817, 512	on 121817, 512
+
+## Cell load 5 (1170 instances)
+collision instances placed	off 1174	off-chain 1177	on 1177
+references refused (CollisionNotReady)	off 50	off-chain 47	on 47
+triangles, hulls of the placed collision	off 131636, 413	off-chain 131748, 414	on 131748, 414
+
+## Cell load 6 (779 instances)
+collision instances placed	off 800	off-chain 803	on 803
+references refused (CollisionNotReady)	off 38	off-chain 35	on 35
+triangles, hulls of the placed collision	off 93270, 250	off-chain 93382, 251	on 93382, 251
+
+## Cell load 7 (965 instances)
+collision instances placed	off 281	off-chain 289	on 292
+references refused (CollisionNotReady)	off 520	off-chain 515	on 512
+triangles, hulls of the placed collision	off 9747, 167	off-chain 15821, 167	on 16625, 167
+probe 1 off	hit 246.3 units below the point
+probe 1 on	hit 246.3 units below the point
+probe 2 off	hit 246.3 units below the point
+probe 2 on	hit 246.3 units below the point
+probe 3 off	no hit
+probe 3 on	hit 50.1 units below the point
+probe 4 off	no hit
+probe 4 on	hit 48.2 units below the point
+probe 5 off	hit 266.3 units below the point
+probe 5 on	hit 266.3 units below the point
+probe 6 off	hit 266.3 units below the point
+probe 6 on	hit 266.3 units below the point
+probe 7 off	hit 100.1 units below the point
+probe 7 on	hit 100.1 units below the point
+probe 8 off	hit 100.1 units below the point
+probe 8 on	hit 100.1 units below the point
+probe 9 off	hit 100.0 units below the point
+probe 9 on	hit 100.0 units below the point
+probe 10 off	no hit
+probe 10 on	hit 100.0 units below the point
+probe 11 off	no hit
+probe 11 on	hit 100.0 units below the point
+probe 12 off	hit 100.0 units below the point
+probe 12 on	hit 100.0 units below the point
+probe 13 off	hit 100.0 units below the point
+probe 13 on	hit 100.0 units below the point
+probe 1 under the point, refused references placed as stored	
+probe 2 under the point, refused references placed as stored	
+probe 3 under the point, refused references placed as stored	50.1 below: STAT (UnsupportedAnimationRuntime, UnsupportedNifBlock)
+probe 4 under the point, refused references placed as stored	48.2 below: STAT (UnsupportedAnimationRuntime, UnsupportedNifBlock)
+probe 5 under the point, refused references placed as stored	
+probe 6 under the point, refused references placed as stored	49.9 below: ACTI (RuntimeCondition, UninterpretedVisualSubrecord, UnsupportedAnimationRuntime, UnsupportedNifBlock, UnsupportedNifField)
+probe 7 under the point, refused references placed as stored	43.2 below: ACTI (RuntimeCondition, UninterpretedVisualSubrecord, UnsupportedAnimationRuntime, UnsupportedNifBlock, UnsupportedNifField)
+probe 8 under the point, refused references placed as stored	43.2 below: ACTI (RuntimeCondition, UninterpretedVisualSubrecord, UnsupportedAnimationRuntime, UnsupportedNifBlock, UnsupportedNifField)
+probe 9 under the point, refused references placed as stored	
+probe 10 under the point, refused references placed as stored	100.0 below: STAT (UninterpretedVisualSubrecord)
+probe 11 under the point, refused references placed as stored	100.0 below: STAT (UninterpretedVisualSubrecord)
+probe 12 under the point, refused references placed as stored	
+probe 13 under the point, refused references placed as stored	
+
+## References refused, once each over the cell loads
+refused (off)	900
+of which their models place no collision	601
+of which their models place collision (holes in the walking world)	299
+of those, settled by the switches	15
+of those, settled by the off-chain switch alone	12
+of those, still refused with the switches	284
+
+### By base record type (with collision): settled, still refused
+ACTI	0	188
+CONT	0	7
+DOOR	0	32
+FURN	0	30
+MISC	0	1
+MSTT	1	19
+STAT	14	6
+TERM	0	1
+
+### Refusing blockers (with collision), references per kind: bearing, origin, code, kind; settled, still refused
+chain-moved	model	UnsupportedAnimationRuntime	BSBehaviorGraphExtraData rest=behavior-graph	0	16
+chain-moved	model	UnsupportedAnimationRuntime	BSEffectShaderPropertyColorController rest=effect-idle	0	1
+chain-moved	model	UnsupportedAnimationRuntime	BSEffectShaderPropertyFloatController rest=effect-idle	0	16
+chain-moved	model	UnsupportedAnimationRuntime	NiBlendBoolInterpolator rest=other	0	16
+chain-moved	model	UnsupportedAnimationRuntime	NiBlendBoolInterpolator rest=visibility	0	2
+chain-moved	model	UnsupportedAnimationRuntime	NiBlendFloatInterpolator rest=effect-idle	0	16
+chain-moved	model	UnsupportedAnimationRuntime	NiBlendFloatInterpolator rest=other	0	16
+chain-moved	model	UnsupportedAnimationRuntime	NiBlendPoint3Interpolator rest=effect-idle	0	1
+chain-moved	model	UnsupportedAnimationRuntime	NiBoolData rest=particle	0	16
+chain-moved	model	UnsupportedAnimationRuntime	NiBoolData rest=visibility	0	2
+chain-moved	model	UnsupportedAnimationRuntime	NiBoolInterpolator rest=particle	0	16
+chain-moved	model	UnsupportedAnimationRuntime	NiBoolInterpolator rest=visibility	0	2
+chain-moved	model	UnsupportedAnimationRuntime	NiBoolTimelineInterpolator rest=particle	0	15
+chain-moved	model	UnsupportedAnimationRuntime	NiFloatData rest=effect-idle	0	16
+chain-moved	model	UnsupportedAnimationRuntime	NiFloatData rest=particle	0	16
+chain-moved	model	UnsupportedAnimationRuntime	NiFloatInterpolator rest=effect-idle	0	16
+chain-moved	model	UnsupportedAnimationRuntime	NiFloatInterpolator rest=particle	0	16
+chain-moved	model	UnsupportedAnimationRuntime	NiPSysEmitterCtlr rest=particle	0	16
+chain-moved	model	UnsupportedAnimationRuntime	NiPSysEmitterLifeSpanCtlr rest=particle	0	1
+chain-moved	model	UnsupportedAnimationRuntime	NiPSysEmitterSpeedCtlr rest=particle	0	2
+chain-moved	model	UnsupportedAnimationRuntime	NiPSysModifierActiveCtlr rest=particle	0	15
+chain-moved	model	UnsupportedAnimationRuntime	NiPSysUpdateCtlr rest=particle	0	16
+chain-moved	model	UnsupportedAnimationRuntime	NiParticleSystem rest=particle	0	16
+chain-moved	model	UnsupportedAnimationRuntime	NiPathInterpolator rest=other	0	1
+chain-moved	model	UnsupportedAnimationRuntime	NiPoint3Interpolator rest=effect-idle	0	1
+chain-moved	model	UnsupportedAnimationRuntime	NiPosData rest=effect-idle	0	1
+chain-moved	model	UnsupportedAnimationRuntime	NiVisController rest=visibility	0	2
+not-in-a-model	record	RuntimeCondition	VMAD	0	181
+not-in-a-model	record	RuntimeRecordState	DOOR.NTRM	0	3
+not-in-a-model	record	RuntimeRecordState	FURN.OBTE	0	14
+not-in-a-model	record	RuntimeRecordState	REFR.ONAM	0	10
+not-in-a-model	record	RuntimeRecordState	REFR.XIS2	0	1
+not-in-a-model	record	RuntimeRecordState	REFR.XLRT	0	66
+not-in-a-model	record	UninterpretedVisualSubrecord	ACTI.ATTX.layout_not_established	0	5
+not-in-a-model	record	UninterpretedVisualSubrecord	ACTI.FNAM.layout_not_established	0	188
+not-in-a-model	record	UninterpretedVisualSubrecord	ACTI.PNAM.layout_not_established	0	188
+not-in-a-model	record	UninterpretedVisualSubrecord	ACTI.RADR.layout_not_established	0	2
+not-in-a-model	record	UninterpretedVisualSubrecord	CONT.DATA	0	7
+not-in-a-model	record	UninterpretedVisualSubrecord	CONT.QNAM	0	7
+not-in-a-model	record	UninterpretedVisualSubrecord	CONT.SNAM	0	7
+not-in-a-model	record	UninterpretedVisualSubrecord	DOOR.FNAM.layout_not_established	0	32
+not-in-a-model	record	UninterpretedVisualSubrecord	FURN.ATTX.layout_not_established	0	1
+not-in-a-model	record	UninterpretedVisualSubrecord	FURN.FNAM.layout_not_established	0	30
+not-in-a-model	record	UninterpretedVisualSubrecord	FURN.MNAM.layout_not_established	0	30
+not-in-a-model	record	UninterpretedVisualSubrecord	FURN.OBTS.layout_not_established	0	14
+not-in-a-model	record	UninterpretedVisualSubrecord	FURN.PNAM.layout_not_established	0	30
+not-in-a-model	record	UninterpretedVisualSubrecord	FURN.SNAM.layout_not_established	0	30
+not-in-a-model	record	UninterpretedVisualSubrecord	FURN.WBDT.layout_not_established	0	30
+not-in-a-model	record	UninterpretedVisualSubrecord	MISC.CDIX	0	1
+not-in-a-model	record	UninterpretedVisualSubrecord	REFR.XACT.layout_not_established	0	10
+not-in-a-model	record	UninterpretedVisualSubrecord	REFR.XALP.layout_not_established	3	0
+not-in-a-model	record	UninterpretedVisualSubrecord	REFR.XLOC.layout_not_established	0	4
+not-in-a-model	record	UninterpretedVisualSubrecord	REFR.XOWN.layout_not_established	0	1
+not-in-a-model	record	UninterpretedVisualSubrecord	REFR.XRGD.layout_not_established	0	10
+not-in-a-model	record	UninterpretedVisualSubrecord	TERM.BSIZ	0	1
+not-in-a-model	record	UninterpretedVisualSubrecord	TERM.FNAM	0	1
+not-in-a-model	record	UninterpretedVisualSubrecord	TERM.ISIZ	0	1
+not-in-a-model	record	UninterpretedVisualSubrecord	TERM.MNAM	0	1
+not-in-a-model	record	UninterpretedVisualSubrecord	TERM.PNAM	0	1
+not-in-a-model	record	UninterpretedVisualSubrecord	TERM.SNAM	0	1
+not-in-a-model	record	UninterpretedVisualSubrecord	TERM.WBDT	0	1
+not-in-a-model	record	UninterpretedVisualSubrecord	TERM.XMRK	0	1
+off-chain	model	UnsupportedAnimationRuntime	BSBehaviorGraphExtraData rest=behavior-graph	5	21
+off-chain	model	UnsupportedAnimationRuntime	BSEffectShaderPropertyColorController rest=effect-idle	0	4
+off-chain	model	UnsupportedAnimationRuntime	BSEffectShaderPropertyFloatController rest=effect-idle	0	11
+off-chain	model	UnsupportedAnimationRuntime	NiBlendBoolInterpolator rest=other	1	5
+off-chain	model	UnsupportedAnimationRuntime	NiBlendBoolInterpolator rest=visibility	0	1
+off-chain	model	UnsupportedAnimationRuntime	NiBlendFloatInterpolator rest=effect-idle	0	11
+off-chain	model	UnsupportedAnimationRuntime	NiBlendFloatInterpolator rest=other	1	4
+off-chain	model	UnsupportedAnimationRuntime	NiBlendPoint3Interpolator rest=effect-idle	0	4
+off-chain	model	UnsupportedAnimationRuntime	NiBoolData rest=particle	1	4
+off-chain	model	UnsupportedAnimationRuntime	NiBoolInterpolator rest=particle	1	4
+off-chain	model	UnsupportedAnimationRuntime	NiBoolInterpolator rest=visibility	0	1
+off-chain	model	UnsupportedAnimationRuntime	NiBoolTimelineInterpolator rest=particle	0	4
+off-chain	model	UnsupportedAnimationRuntime	NiFloatData rest=effect-idle	0	10
+off-chain	model	UnsupportedAnimationRuntime	NiFloatData rest=particle	0	4
+off-chain	model	UnsupportedAnimationRuntime	NiFloatInterpolator rest=effect-idle	0	10
+off-chain	model	UnsupportedAnimationRuntime	NiFloatInterpolator rest=particle	1	4
+off-chain	model	UnsupportedAnimationRuntime	NiPSysEmitterCtlr rest=particle	1	4
+off-chain	model	UnsupportedAnimationRuntime	NiPSysModifierActiveCtlr rest=particle	0	4
+off-chain	model	UnsupportedAnimationRuntime	NiPSysUpdateCtlr rest=particle	1	4
+off-chain	model	UnsupportedAnimationRuntime	NiParticleSystem rest=particle	1	4
+off-chain	model	UnsupportedAnimationRuntime	NiPoint3Interpolator rest=effect-idle	0	4
+off-chain	model	UnsupportedAnimationRuntime	NiPosData rest=effect-idle	0	4
+off-chain	model	UnsupportedAnimationRuntime	NiTransformController rest=transform-varies	5	1
+off-chain	model	UnsupportedAnimationRuntime	NiTransformData rest=transform-varies	5	1
+off-chain	model	UnsupportedAnimationRuntime	NiTransformInterpolator rest=transform-varies	5	1
+off-chain	model	UnsupportedAnimationRuntime	NiVisController rest=visibility	0	1
+off-chain	model	UnsupportedNifBlock	BSPSysInheritVelocityModifier	0	4
+off-chain	model	UnsupportedNifBlock	BSPSysLODModifier	1	20
+off-chain	model	UnsupportedNifBlock	BSPSysScaleModifier	1	20
+off-chain	model	UnsupportedNifBlock	BSPSysSimpleColorModifier	1	20
+off-chain	model	UnsupportedNifBlock	BSPSysSubTexModifier	0	19
+off-chain	model	UnsupportedNifBlock	BSPositionData	1	16
+off-chain	model	UnsupportedNifBlock	BSSkin::Instance	2	21
+off-chain	model	UnsupportedNifBlock	BSWindModifier	0	4
+off-chain	model	UnsupportedNifBlock	NiBlendBoolInterpolator	1	21
+off-chain	model	UnsupportedNifBlock	NiPSysAgeDeathModifier	1	20
+off-chain	model	UnsupportedNifBlock	NiPSysBombModifier	0	1
+off-chain	model	UnsupportedNifBlock	NiPSysBoundUpdateModifier	1	20
+off-chain	model	UnsupportedNifBlock	NiPSysBoxEmitter	0	20
+off-chain	model	UnsupportedNifBlock	NiPSysColliderManager	0	15
+off-chain	model	UnsupportedNifBlock	NiPSysCylinderEmitter	0	1
+off-chain	model	UnsupportedNifBlock	NiPSysData	1	20
+off-chain	model	UnsupportedNifBlock	NiPSysDragModifier	0	19
+off-chain	model	UnsupportedNifBlock	NiPSysGravityModifier	1	20
+off-chain	model	UnsupportedNifBlock	NiPSysMeshEmitter	1	16
+off-chain	model	UnsupportedNifBlock	NiPSysPositionModifier	1	20
+off-chain	model	UnsupportedNifBlock	NiPSysRotationModifier	0	19
+off-chain	model	UnsupportedNifBlock	NiPSysSpawnModifier	1	20
+off-chain	model	UnsupportedNifBlock	NiPathInterpolator	0	1
+off-chain	model	UnsupportedNifField	NiPSysEmitterLifeSpanCtlr.Controller Body	0	1
+off-chain	model	UnsupportedNifField	NiPSysEmitterSpeedCtlr.Controller Body	0	2
+
+### Still refused with the switches: what refuses them (references)
+chain-moved UnsupportedAnimationRuntime + record RuntimeCondition + record UninterpretedVisualSubrecord	1
+chain-moved UnsupportedAnimationRuntime + record RuntimeRecordState + record UninterpretedVisualSubrecord	15
+record RuntimeCondition	19
+record RuntimeCondition + record RuntimeRecordState	1
+record RuntimeCondition + record RuntimeRecordState + record UninterpretedVisualSubrecord	46
+record RuntimeCondition + record UninterpretedVisualSubrecord	114
+record RuntimeRecordState	1
+record RuntimeRecordState + record UninterpretedVisualSubrecord	18
+record UninterpretedVisualSubrecord	69
+
+### Block types moving a chain node in those models (references)
+NiControllerSequence by SequenceNode	16
+NiMultiTargetTransformController by ExtraTarget	16
+
+## Animated reference 1 at load
+reference subrecords	NAME,DATA
+reference record flags	0x40000000
+base record type	STAT
+base subrecords	EDID,OBND,MODL,MODT,DNAM
+base record flags	0x0
+collision readiness	refused
+collision placed as stored	1 instances from 1 bodies
+behaviour graph cited by the model	true
+graph root machine	10 states, start state generator BGSGamebryoSequenceGenerator, start state's sequence a name the model does not hold
+graph state 1 (start)	sequence: a name the model does not hold; event 0 to state 2
+graph state 2	sequence: a name the model does not hold; event 16 to state 10, event 1 to state 3
+graph state 3	sequence: a name the model does not hold; event 2 to state 4
+graph state 4	sequence: a name the model does not hold; event 6 to state 5
+graph state 5	sequence: a name the model does not hold; event 7 to state 6
+graph state 6	sequence: a name the model does not hold; event 8 to state 7
+graph state 7	sequence: a name the model does not hold; event 9 to state 8, event 12 to state 9
+graph state 8	sequence: a name the model does not hold; no transitions
+graph state 9	sequence: a name the model does not hold; event 14 to state 8
+graph state 10	sequence: a name the model does not hold; event 1 to state 3
+graph wildcard	event 3 to state 1
+graph wildcard	event 2 to state 4
+graph wildcard	event 6 to state 5
+graph wildcard	event 8 to state 7
+controller sequences	0
+collision bodies placed as stored	1
+
+## Animated reference 2 at load
+reference subrecords	NAME,XMSP,DATA
+reference record flags	0x0
+base record type	STAT
+base subrecords	EDID,OBND,MODL,MODT,DNAM
+base record flags	0x0
+collision readiness	refused
+collision placed as stored	4 instances from 3 bodies
+behaviour graph cited by the model	true
+graph root machine	4 states, start state generator BGSGamebryoSequenceGenerator, start state's sequence a name the model does not hold
+graph state 1 (start)	sequence: the model's sequence 1 ignoring case; event 0 to state 2
+graph state 2	sequence: a name the model does not hold; event 1 to state 3
+graph state 3	sequence: a name the model does not hold; event 2 to state 4
+graph state 4	sequence: a name the model does not hold; no transitions
+graph wildcard	event 3 to state 1
+controller sequences	1
+collision bodies placed as stored	3
+sequence 1	cycle 0, 3.333 s, 2 controlled blocks, chain nodes controlled by a transform interpolator under 0 body chain links
+
+## Animated reference 3 at load
+reference subrecords	EDID,VMAD,NAME,XLYR,XMSP,DATA
+reference record flags	0x0
+reference scripts	1
+base record type	ACTI
+base subrecords	EDID,OBND,MODL,MODT,PNAM,FNAM
+base record flags	0x4000010
+collision readiness	refused
+collision placed as stored	27 instances from 24 bodies
+behaviour graph cited by the model	true
+graph root machine	5 states, start state generator BGSGamebryoSequenceGenerator, start state's sequence a name the model does not hold
+graph state 1 (start)	sequence: the model's sequence 1 ignoring case; event 0 to state 2
+graph state 2	sequence: the model's sequence 2 ignoring case; event 1 to state 3
+graph state 3	sequence: the model's sequence 3 ignoring case; event 2 to state 4
+graph state 4	sequence: a name the model does not hold; no transitions
+graph state 5	sequence: the model's sequence 4; event 7 to state 1
+graph wildcard	event 3 to state 1
+graph wildcard	event 8 to state 5
+controller sequences	4
+collision bodies placed as stored	24
+sequence 1	cycle 2, 0.033 s, 135 controlled blocks, chain nodes controlled by a transform interpolator under 61 body chain links
+	chain block 1074 (1 bodies): pose translation 0.0 from stored, no rotation; no translation keys; XYZ rotation keys
+	chain block 1156 (2 bodies): pose translation 0.0 from stored, no rotation; no translation keys; XYZ rotation keys
+	chain block 1158 (1 bodies): pose no translation, no rotation; no translation keys; XYZ rotation keys
+	chain block 1319 (10 bodies): pose translation 0.0 from stored, no rotation; no translation keys; no rotation keys
+	chain block 1320 (5 bodies): pose no translation, no rotation; no translation keys; XYZ rotation keys
+	chain block 1321 (5 bodies): pose no translation, no rotation; no translation keys; XYZ rotation keys
+	chain block 1322 (5 bodies): pose no translation, no rotation; no translation keys; XYZ rotation keys
+	chain block 1323 (5 bodies): pose no translation, no rotation; no translation keys; XYZ rotation keys
+	chain block 1436 (2 bodies): pose no translation, no rotation; no translation keys; XYZ rotation keys
+	chain block 1441 (7 bodies): pose no translation, no rotation; translation keys 0.0 then 0.0 from stored (2 keys); no rotation keys
+	chain block 1442 (5 bodies): pose translation 0.0 from stored, no rotation; no translation keys; no rotation keys
+	chain block 1443 (3 bodies): pose no translation, no rotation; no translation keys; XYZ rotation keys
+	chain block 1444 (3 bodies): pose no translation, no rotation; no translation keys; XYZ rotation keys
+	chain block 1445 (3 bodies): pose no translation, no rotation; no translation keys; XYZ rotation keys
+	chain block 1446 (3 bodies): pose no translation, no rotation; no translation keys; XYZ rotation keys
+	chain block 1469 (1 bodies): pose no translation, no rotation; no translation keys; XYZ rotation keys
+sequence 2	cycle 2, 43.333 s, 135 controlled blocks, chain nodes controlled by a transform interpolator under 61 body chain links
+	chain block 1074 (1 bodies): pose no translation, no rotation; translation keys 0.0 then 407.8 from stored (343 keys); XYZ rotation keys
+	chain block 1156 (2 bodies): pose no translation, no rotation; translation keys 0.0 then 496.2 from stored (635 keys); XYZ rotation keys
+	chain block 1158 (1 bodies): pose no translation, no rotation; no translation keys; XYZ rotation keys
+	chain block 1319 (10 bodies): pose no translation, no rotation; translation keys 0.0 then 499.9 from stored (104 keys); no rotation keys
+	chain block 1320 (5 bodies): pose no translation, no rotation; no translation keys; XYZ rotation keys
+	chain block 1321 (5 bodies): pose no translation, no rotation; no translation keys; XYZ rotation keys
+	chain block 1322 (5 bodies): pose no translation, no rotation; no translation keys; XYZ rotation keys
+	chain block 1323 (5 bodies): pose no translation, no rotation; no translation keys; XYZ rotation keys
+	chain block 1436 (2 bodies): pose no translation, no rotation; no translation keys; XYZ rotation keys
+	chain block 1441 (7 bodies): pose no translation, no rotation; translation keys 0.0 then 648.1 from stored (105 keys); no rotation keys
+	chain block 1442 (5 bodies): pose no translation, no rotation; translation keys 0.0 then 137.4 from stored (52 keys); no rotation keys
+	chain block 1443 (3 bodies): pose no translation, no rotation; no translation keys; XYZ rotation keys
+	chain block 1444 (3 bodies): pose no translation, no rotation; no translation keys; XYZ rotation keys
+	chain block 1445 (3 bodies): pose no translation, no rotation; no translation keys; XYZ rotation keys
+	chain block 1446 (3 bodies): pose no translation, no rotation; no translation keys; XYZ rotation keys
+	chain block 1469 (1 bodies): pose no translation, no rotation; no translation keys; XYZ rotation keys
+sequence 3	cycle 2, 0.333 s, 135 controlled blocks, chain nodes controlled by a transform interpolator under 61 body chain links
+	chain block 1074 (1 bodies): pose translation 407.8 from stored, no rotation; no translation keys; XYZ rotation keys
+	chain block 1156 (2 bodies): pose translation 496.2 from stored, no rotation; no translation keys; XYZ rotation keys
+	chain block 1158 (1 bodies): pose no translation, no rotation; no translation keys; XYZ rotation keys
+	chain block 1319 (10 bodies): pose translation 499.9 from stored, no rotation; no translation keys; no rotation keys
+	chain block 1320 (5 bodies): pose no translation, no rotation; no translation keys; XYZ rotation keys
+	chain block 1321 (5 bodies): pose no translation, no rotation; no translation keys; XYZ rotation keys
+	chain block 1322 (5 bodies): pose no translation, no rotation; no translation keys; XYZ rotation keys
+	chain block 1323 (5 bodies): pose no translation, no rotation; no translation keys; XYZ rotation keys
+	chain block 1436 (2 bodies): pose no translation, no rotation; no translation keys; XYZ rotation keys
+	chain block 1441 (7 bodies): pose translation 648.1 from stored, no rotation; no translation keys; no rotation keys
+	chain block 1442 (5 bodies): pose translation 137.4 from stored, no rotation; no translation keys; no rotation keys
+	chain block 1443 (3 bodies): pose no translation, no rotation; no translation keys; XYZ rotation keys
+	chain block 1444 (3 bodies): pose no translation, no rotation; no translation keys; XYZ rotation keys
+	chain block 1445 (3 bodies): pose no translation, no rotation; no translation keys; XYZ rotation keys
+	chain block 1446 (3 bodies): pose no translation, no rotation; no translation keys; XYZ rotation keys
+	chain block 1469 (1 bodies): pose no translation, no rotation; no translation keys; XYZ rotation keys
+sequence 4	cycle 2, 0.033 s, 135 controlled blocks, chain nodes controlled by a transform interpolator under 61 body chain links
+	chain block 1074 (1 bodies): pose translation 407.8 from stored, no rotation; no translation keys; XYZ rotation keys
+	chain block 1156 (2 bodies): pose translation 496.2 from stored, no rotation; no translation keys; XYZ rotation keys
+	chain block 1158 (1 bodies): pose no translation, no rotation; no translation keys; XYZ rotation keys
+	chain block 1319 (10 bodies): pose translation 499.9 from stored, no rotation; no translation keys; no rotation keys
+	chain block 1320 (5 bodies): pose no translation, no rotation; no translation keys; XYZ rotation keys
+	chain block 1321 (5 bodies): pose no translation, no rotation; no translation keys; XYZ rotation keys
+	chain block 1322 (5 bodies): pose no translation, no rotation; no translation keys; XYZ rotation keys
+	chain block 1323 (5 bodies): pose no translation, no rotation; no translation keys; XYZ rotation keys
+	chain block 1436 (2 bodies): pose no translation, no rotation; no translation keys; XYZ rotation keys
+	chain block 1441 (7 bodies): pose translation 648.1 from stored, no rotation; no translation keys; no rotation keys
+	chain block 1442 (5 bodies): pose translation 137.4 from stored, no rotation; no translation keys; no rotation keys
+	chain block 1443 (3 bodies): pose no translation, no rotation; no translation keys; XYZ rotation keys
+	chain block 1444 (3 bodies): pose no translation, no rotation; no translation keys; XYZ rotation keys
+	chain block 1445 (3 bodies): pose no translation, no rotation; no translation keys; XYZ rotation keys
+	chain block 1446 (3 bodies): pose no translation, no rotation; no translation keys; XYZ rotation keys
+	chain block 1469 (1 bodies): pose no translation, no rotation; no translation keys; XYZ rotation keys

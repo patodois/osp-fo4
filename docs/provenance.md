@@ -1018,3 +1018,24 @@ direction `IsChild` asks, that timers run until stopped, and that stage flag
 0x04 marks a stage set at shutdown (not applied). No public page was
 requested; no editor, editor source or definition file, other
 implementation, game executable or game run was opened or searched for.
+
+The layers step's collision readiness switches and held poses
+([spec/collision-placement.md](../spec/collision-placement.md), Blockers off
+the collision chain, [spec/collision-ready-census.txt](../spec/collision-ready-census.txt))
+read the NIF blocks, links and field names as `fo4-nif` already reads them
+(nifxml for `Target`, `Extra Target`, the controlled blocks' `Node Name`
+and the transform interpolator's `Translation`, `Quaternion` and `Data`),
+the collision chains as `fo4_scene::collision::model` already builds them,
+the behaviour graph as `fo4-havok` reads it, and the reference's VMAD and
+the compiled script as `fo4-plugin` and `fo4-pex` read them. `XALP` is
+named after xEdit's published field name (an alpha); its bytes stay
+unread. The census command line: `collision_ready_census MANIFEST OUT
+--around 1 --cell <the house's exterior cell> --cell <five cells the walk
+crosses outside> --cell <the vault> --probe <the vault> X,Y,Z (thirteen
+points on the recorded walk) --door <the entrance's exterior shell> --door
+<the entrance room> --door <the gear door>` (keys in the step's notes).
+Recognised from prior general knowledge and kept as pending rules: that a
+reference's alpha is a fade of its drawing only, and that a transform
+interpolator without keys holds its node at its own transform. No public
+page was requested; no editor, editor source or definition file, other
+implementation, game executable or game run was opened or searched for.

@@ -3,7 +3,7 @@
 This page is the hand-over point. Everything on `main` builds and passes its tests; anyone (a person or an
 agent) can continue from here. Read `AGENTS.md` first: it holds the rules of evidence and the clean-room rules.
 
-State on 2026-11-24 (vault, cast, light, home, character graph, fight, live window, museum, live world, run library, seen, past-the-museum, faces, third-fight, poses and town-chain steps). Nothing below has been checked against the running game: every behaviour is a pending
+State on 2026-11-24 (vault, cast, light, home, character graph, fight, live window, museum, live world, run library, seen, past-the-museum, faces, third-fight, poses, town-chain and layers steps). Nothing below has been checked against the running game: every behaviour is a pending
 rule in `spec/hypotheses.tsv`, off by default.
 
 ## Script VM and quests (`crates/fo4-vm`)
@@ -82,7 +82,20 @@ What is left:
    (the caller's recorded track rode only to the door's height); past the interior elevator the floor comes
    from the entrance room the caller names as a still reference (its collision is refused as the cell is
    built), and at 581.8 s the walker drops into the pit under the gear door, whose collision is refused the
-   same way (a request to the drawing side: collision readiness for animated models).
+   same way. Layers step (`spec/collision-placement.md`, Blockers off the collision chain;
+   `spec/collision-ready-census.txt`): behind `readiness::Switches` (off by default) the cell build admits a
+   refused collision whose model blockers lie off the blocks its bodies read
+   (`collision_model_blockers_off_chain_v1`: the entrance room's floor among 12) and a reference's unread
+   alpha (`refr_xalp_collision_unchanged_v1`: two pieces of the vault corridor's floor among 3); the gear
+   door's data says closed at load and open after its load event (its script plays the graph event whose
+   state plays a sequence that holds the open pose, `nif_sequence_interpolator_held_pose_v1`). With both
+   switches and the door in that pose, `ride_check`'s walker follows the recorded walk's targets from 520.67 s
+   to 700 s. A local probe of the requested `fo4-play` change (never versioned: its walking world with both
+   switches on, its elevator reading following held translations, the gear door named with
+   `--play-elevator`, the run with `--load-on-arrival`) matches the recorded run's **232 of 232 stages to
+   700 s** in the same order (before: 222 of 232); without the door's load event 221 of 232, the switches
+   alone 222 of 232. Next, on the run side: those changes behind `fo4-play` switches (requests in the step's
+   report).
 6. The player's own animation events and the robot's food event still come from the caller: reading character
    graphs (below) would let them come from the data.
 7. `--cond-70-player-sex` over the whole run settles 31 line choices of the opening and times them by their audio,

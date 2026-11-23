@@ -156,6 +156,88 @@ blockers of a SCOL's own generated model count as needed even when its parts
 are placed instead; a swap's material files count as render inputs under
 `render_inputs_collision_unchanged_v1` as well as the swap rule.
 
+### Blockers off the collision chain
+
+The opening's walk (`fo4-play`, `spec/play.md`) found holes in its walking
+world where the cell build refuses a model's collision for blockers the
+collision never reads: particle systems, unread blocks and fields, and
+animation blocks that move nothing the bodies hang on. Behind switches, off
+by default (`readiness::Switches`, `Loader::set_collision_switches`), the
+cell build asks a second reading of an instance whose collision is refused,
+and only of such an instance (an instance already ready keeps its state and
+rules byte for byte):
+
+- `off_chain` (`collision_model_blockers_off_chain_v1`): the model decode
+  records which blocks its placed bodies read (`collision::model::Reads`:
+  every node of each body's chain from a root to its Target, the
+  `bhkNPCollisionObject`, its `bhkPhysicsSystem`) and the blocks that can
+  move a chain node (an animation-state block whose `Target` or
+  `Extra Target` names a chain block, the own `Target` of a controller
+  manager or a multi-target transform controller left out as the object it
+  hangs on; a controller sequence whose controlled block names a chain
+  node). A model blocker of the five codes raised on a block
+  (`UnsupportedNifBlock`, `UnsupportedNifBlockSemantics`,
+  `UnsupportedNifBlockTail`, `UnsupportedNifField`,
+  `UnsupportedAnimationRuntime`) lies off the chain when its offset falls in
+  a block no body reads; an animation blocker only when nothing moves a
+  chain node (`readiness::bearing`, `readiness::Bearing`: off-chain,
+  on-chain, chain-moved, no body, unlocated). An off-chain blocker is set
+  aside under the rule; every other blocker counts as before.
+  The model a blocker was raised in is the instance's model node holding
+  that blocker; the reads are computed only when a switch asks them, so a
+  build with every switch off keeps its memory accounting byte for byte.
+- `reference_alpha` (`refr_xalp_collision_unchanged_v1`): a reference's
+  unread `XALP` (two bytes; xEdit's published name: alpha) is set aside.
+
+A set-aside blocker relies on the better standing of its own covering rule
+and the switch's rule, as a render-only blocker does
+(`readiness::collision_state_set_aside`). The placed instance lists the rule
+in its rules and the placement's `scene_rules`.
+
+Census (`collision_ready_census`, `spec/collision-ready-census.txt`): the
+seven cell loads of the opening's walk (the house and the cells the walk
+crosses outside, each with the cells about it; the vault) refuse 900
+references, 299 of them with collision. The off-chain switch settles 12 (11
+statics, 1 movable static), among them the vault entrance room's floor past
+the interior platform; the alpha switch 3 more, among them two pieces of the
+vault corridor's floor. The other 284 stay refused: 268 by record fields
+and script conditions alone (`UninterpretedVisualSubrecord` of activator,
+furniture, door, container and terminal fields, `RuntimeCondition` of a
+script, `RuntimeRecordState`), 16 by animation that moves a chain node
+together with record fields (in each, a controller sequence names a chain
+node and a multi-target controller has one among its extra targets).
+
+The gear door at the vault's entrance (census section "Animated reference
+3"): an activator whose model holds 24 placed bodies and four controller
+sequences. The stored pose is the pose of the first sequence and the start
+of the second; the second runs 43.3 s of translation keys to a pose 137 to
+648 units away; the third and fourth link no translation keys and their
+interpolators store exactly that end pose. Its graph's start state plays the
+first sequence (its name matches ignoring case only); a wildcard transition
+on the graph's last event enters the state that plays the fourth. The
+reference's one script plays that event when its 3D loads (its load event in
+its waiting state). What the data says, then: at load the door stands
+closed, and its load event leads to the open pose (the fourth sequence
+holds it). That an interpolator without keys holds its node at its own
+stored transform is the pending rule
+`nif_sequence_interpolator_held_pose_v1` (`sequence::held_pose`); the load
+event, the graph and the moving collision are the run side's
+(`fo4-play`'s elevator reading takes translation keys only).
+
+`ride_check` (the walker over the vault cell, from the entrance room's floor
+at 520.67 s along the recorded walk's targets to 700 s): with every switch
+off the walker falls (no floor); with `--collision-off-chain` it reaches
+the entrance room's edge and drops 190 units into the pit before the gear
+door; with `--collision-off-chain --collision-reference-alpha --pose DOOR
+3` (the door's collision with each chain node moved by the fourth
+sequence's held translation, rotations not applied) it crosses the door's
+bridge and the corridor and reaches every target of the recorded walk up to
+700 s (the last at 679.8 s), grounded. The play mode does not set these
+switches or follow held poses (`fo4-play` belongs to the run side): a local
+probe of that change, outside the repository, matched the recorded run's
+232 of 232 stages to 700 s with the door's load event raised
+(`--load-on-arrival`).
+
 ## What the API returns
 
 `CellCollision` holds the decoded models (`ModelCollision`: bodies with their
@@ -283,3 +365,4 @@ drop report now agrees with the throw-away diagnostic at every point
 | Vertex records (convex pieces with a radius) as collision | **[hypothesis]**; exposed as points and radius only |
 | Editor-marker references and ragdoll systems | not placed, by name |
 | Whether a material swap or a missing render input changes collision | **[hypothesis]**, two pending rules (Collision readiness) |
+| Whether blocks off the collision chain, or a reference's alpha, change collision | **[hypothesis]**, two pending rules behind switches (Blockers off the collision chain) |
