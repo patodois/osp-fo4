@@ -1,0 +1,44 @@
+# quest_run new-game on the town chain: the furthest run of the town chain's step (spec/vm.md, The town chain), kinds, roles and counts only.
+# The command lines and every record named are in the step's notes; the census behind each stop is spec/quest-run-chain-census.txt; spec/quest-run-vault-stages.txt maps every stage.
+# Quests by role: the next main quest, the museum's own quest, the town quest (the leader's), the town's dialogue quest, the town chain's first quest (the settlement quest after the museum), the robot's postwar dialogue quest, the vault dialogue quest, the opening.
+
+## 1 what the run is
+base	the third fight's furthest run (spec/quest-run-third.txt): every reading and caller assumption of it, with the additions below
+readings	--quest-partial-previous --container-change-events --location-change-events --location-parents (each its own pending rule, off by default)
+caller	the museum's dummy musket taken by the player at 1905 s, on the street beside it (--assume-container-change REF player none)
+caller	the player leaves the museum's location for the town's at 2080 s, held until the town's dialogue quest's 100 (--assume-location-change player OLD NEW; after the caller's lobby entry and conversation)
+
+## 2 the stops in order: census, reading, what the run does
+town chain	what starts its first quest	no Start call, no story manager node, no start-game bit, no story event; only stage sets (the town's dialogue quest's 50 and 200 fragments); its winning record is an add-on override with record flag bit 0x4000 carrying EDID and VMAD only; 18 winning records carry the bit (7 quests); 2,586 constant setters name a stage the winning quest record does not hold (199 a fragment's own call: 124 under a flagged winner whose earlier occurrence holds the stage)	a flagged quest winner carrying only EDID and VMAD is read from the occurrence before it (quest_record_partial_previous_v1); the default for the stages no record holds is registered (quest_set_stage_absent_open_v1)	the town's dialogue quest's 50 (2016.8 s) sets the first town quest's 20: it starts (10, 20) and its 20 fragment sets the town quest's 100
+62	a container change	38 scripts handle it with code; 3,945 attachments have it in their chain (164 quest alias scripts, 137 of them one shared script); none adds an inventory filter	the caller's container change raises OnContainerChanged(new, old) on the reference's receivers (inventory_container_changed_event_v1)	the musket's alias handler: 62 at 1905 s
+200	a location change	43 scripts handle it with code (73 quest alias attachments); the town's dialogue quest's player alias sets its 200 on leaving the museum's location after its 100, through a check asking IsChild; 429 of 487 winning location records name a parent location, at most 3 links deep; 35 IsChild call sites	the caller's location change raises OnLocationChange(old, new) on the actor's receivers (world_location_change_event_v1); IsChild from the chain of the other location's parents (world_location_is_child_parent_chain_v1)	the dialogue quest's 200 at 2080 s sets the next main quest's 200 (its fragment stops the quest) and the first town quest's 50
+140	other quests' stage fragments	set only by the first town quest's stage 1 (no setter) and the second town quest's stage 0 (set only by other quests' stage 0 fragments, back to quests of the end game or to none)	-	not set
+75, 1000	no setter	widened once: no constant setter, no setter of the quest with an unresolved stage, 96 attachments naming the quest (none with an integer property equal to the stage), 24 and 20 setters with the stage number in scripts no loaded record attaches; 1000 carries stage flag 0x04 (654 stages carry it, 577 with no setter)	-	not set
+robot 275	a line's own script	the only line of a companion topic; the topic's one scene (the rejected pickup before the town) asks function 59 of the next main quest twice; no record but 35 navigation meshes holds a word naming the scene, no script starts it	-	not set
+timers	the caller's budget	--timers 50 is spent by the opening's one-second timer within 51 s	the budget counts per timer (vm_timer_budget_per_timer_v1)	302 timers fire, 6 dropped; no stage set otherwise or at another second; the museum quest's failsafe started at 1891 s is cancelled at 1901.6 s
+
+## 3 stages reached (the third fight's run -> this run)
+54	next main quest: 47 -> 49 (adds 62, 200)
+16	robot's postwar dialogue quest: 10 -> 10
+18	vault dialogue quest: 10 -> 10
+104	opening: 87 -> 87
+-	museum quest: 13 -> 13; town quest: 12 -> 13 (adds 100); town's dialogue quest: 5 -> 6 (adds 200); the town chain's first quest: 0 -> 3 (10, 20, 50)
+356	stages the third fight's run sets: every one at the same second, in the same order (the 7 new ones fall between them)
+7	stages this run sets beyond them
+
+## 4 variants (one reading or caller action left out each; next main quest stages)
+49	the furthest run (fin; rerun byte for byte as fin2)
+49	without --quest-partial-previous: the next main quest's 200 is set all the same (the dialogue quest's 200 fragment sets it before it sets the first town quest's 50); the first town quest is opened by the 50 fragment and sets nothing, the town quest has no 100
+48	without --container-change-events, or without the pickup: no 62
+48	without --location-change-events, without --location-parents (the check blocks on IsChild), or without the location change: no 200
+49	with --timers-per-timer: the same stages at the same seconds
+
+## 5 what stops next
+next main 140	nothing the run reaches sets it (section 2)
+next main 75, 1000	no setter in the data (section 2)
+next main 78	behind the locked inner door and off from 85 (the museum step)
+next main 5	the other way (the console activated before the wrist computer; a labelled variant of an earlier step)
+first town quest	its next stages wait on its actors' location changes (a quest script's remote location change handler) and the settlement's workshop events, and on lines and scenes the run does not reach
+robot 250	a fourth conversation back at the robot's home after the next main quest's 55; the follower lines' group asks condition function 566 (not answered: no new data)
+robot 275	the only line of a scene nothing in the data starts
+robot 5, 300, 500, 1000	as before (spec/quest-run-third.txt)

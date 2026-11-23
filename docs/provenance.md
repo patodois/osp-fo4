@@ -993,3 +993,28 @@ its movement graph; that a part model's own graph whose start state plays no seq
 that a skinned placed model's bones rest at their stored nodes. The memory hash is FNV-1a, chosen for being simple.
 No source was consulted (no network), and no editor, editor source or definition file, other implementation,
 game executable or game run was opened or searched for.
+
+The town chain's step (`fo4_vm::quest::QuestInfo::load_with`, `fo4_vm::chain`
+with its container and location changes and `Location.IsChild`, the stepped
+run's per-timer budget, `fo4_play::elevator::still_owner`, the
+`chain_census` example; [spec/vm.md](../spec/vm.md), The town chain,
+[spec/play.md](../spec/play.md), The elevator ride,
+[spec/quest-run-chain-census.txt](../spec/quest-run-chain-census.txt))
+reads the record header's flag word, the load order's occurrences of a
+record (`fo4-plugin`'s override history) and a quest record's subrecords as
+`fo4-plugin` already read them, a location record's `PNAM` as a FormID
+(the field name is xEdit's published one), stage `INDX` flags as stored, and
+the compiled scripts as `fo4-pex` reads them. The census command line:
+`chain_census MANIFEST OUT NAMES --quest <the town chain's first quest>
+--quest <its second> --quest <the main quest after the successor> --chain
+<the next main quest>:140 --chain <the next main quest>:200 --stage <the
+next main quest>:75 --stage <the next main quest>:1000 --line <the robot's
+275 line>` (keys in the step's notes). Recognised from prior general
+knowledge and kept as pending rules or caller assumptions: that record flag
+bit 0x4000 marks an override carrying only its changed subrecords, that a
+container change event carries the new and the old container, that a
+location change event comes as an actor crosses into another location, the
+direction `IsChild` asks, that timers run until stopped, and that stage flag
+0x04 marks a stage set at shutdown (not applied). No public page was
+requested; no editor, editor source or definition file, other
+implementation, game executable or game run was opened or searched for.

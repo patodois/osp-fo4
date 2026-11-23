@@ -4,6 +4,7 @@ This page is the hand-over point. Everything on `main` builds and passes its tes
 agent) can continue from here. Read `AGENTS.md` first: it holds the rules of evidence and the clean-room rules.
 
 State on 2026-11-24 (vault, cast, light, home, character graph, fight, live window, museum, live world, run library, seen, past-the-museum, faces, third-fight and poses steps). Nothing below has been checked against the running game: every behaviour is a pending
+State on 2026-11-24 (vault, cast, light, home, character graph, fight, live window, museum, live world, run library, seen, past-the-museum, faces, third-fight and town-chain steps). Nothing below has been checked against the running game: every behaviour is a pending
 rule in `spec/hypotheses.tsv`, off by default.
 
 ## Script VM and quests (`crates/fo4-vm`)
@@ -41,16 +42,31 @@ the other quest's alias holds when read (`--alias-external`), the caller's death
 (`EDITOR_ID#ALIAS`), and a line's begin and end reach the line's own scripts (`--line-script-events`); with the
 five raiders' deaths, the caller's entry into the lobby trigger (whose stage 135 fragment starts the scene no
 scan had named a starter for) and the caller's conversation with the town's leader, the next main quest reaches
-**47 of 54** (adds 122, 125, 127, 128, 130, 135, 150).
+**47 of 54** (adds 122, 125, 127, 128, 130, 135, 150). The town chain's step
+(record in `spec/quest-run-chain.txt`, census `spec/quest-run-chain-census.txt`,
+`spec/vm.md`, The town chain): the town chain's first quest's winning record
+is an add-on override with record flag bit 0x4000 carrying only its script,
+read from the occurrence before it (`--quest-partial-previous`); the caller's
+musket pickup raises the container change (`--container-change-events`, 62);
+the caller's leaving the museum's location raises the location change
+(`--location-change-events`) and `IsChild` answers from the locations'
+parents (`--location-parents`), so the town dialogue quest's 200 sets the next
+main quest's 200: **49 of 54** (adds 62, 200). 140 is set only by other
+quests' stage 0 and 1 fragments nothing reachable sets; 75 and 1000 have no
+setter in the data; the timer budget per timer (`--timers-per-timer`) moves
+no stage.
 What is left:
 
-1. After 150: 140 and 200, the town chain's next quests (their stage fragments set 140, 150 and 200) are not
-   started in the run; the town's dialogue quest's 50 fragment sets a stage of one of them that its record does
-   not hold (the quest's state is left undetermined: the run's treatment of a missing stage); 200 also from the
-   town dialogue quest's 200 (an alias's location change event, not modelled); 62 a container change (the
-   musket picked up); 78 behind the locked inner door; the robot's 275 a line's own script of a companion line
-   the run does not play. The created reference's place (`ALCA`) and level (`ALCL`) are not read, and the
-   borrowed alias is a live link against the knowledge that such fills are made at the quest's start.
+1. After 200: 140 is set only by the town chain's first quest's stage 1 (nothing sets it) and the second town
+   quest's stage 0 (set only by other quests' stage 0 fragments, back to the end game): nothing the run reaches
+   sets it; 78 behind the locked inner door; 75 and 1000 no setter (1000 carries stage flag 0x04, read by prior
+   knowledge as a stage set at shutdown, which no reading applies); the robot's 275 is the only line of a
+   companion topic whose one scene nothing in the data starts. The town chain's first quest runs from 20 (with
+   `--quest-partial-previous`); its next stages wait on its actors' location changes and the settlement's
+   workshop events. The created reference's place (`ALCA`) and level (`ALCL`) are not read, and the borrowed
+   alias is a live link against the knowledge that such fills are made at the quest's start. The run's default
+   for a stage no record holds is unchanged (`quest_set_stage_absent_open_v1`: 2,312 constant setters still
+   name one with the partial reading on).
 2. The robot's 250: a fourth conversation after the next main quest's 55, back at its home (the run does not
    walk back); the follower lines' group also asks condition function 566, which the run does not answer: its
    5,986 conditions compare with 1 or 0 a first parameter that is zero, a small number or a record of 17 types,
@@ -64,7 +80,10 @@ What is left:
 5. The elevator ride (`spec/play.md`, The elevator ride): the play mode moves the collision of the
    references the caller names as the sequences the run's graph starts move their nodes (translations only);
    the outside descent leaves the walker 1,626 units below the shaft's door, which the end-door reading takes
-   (the caller's recorded track rode only to the door's height); past the interior elevator the walker falls.
+   (the caller's recorded track rode only to the door's height); past the interior elevator the floor comes
+   from the entrance room the caller names as a still reference (its collision is refused as the cell is
+   built), and at 581.8 s the walker drops into the pit under the gear door, whose collision is refused the
+   same way (a request to the drawing side: collision readiness for animated models).
 6. The player's own animation events and the robot's food event still come from the caller: reading character
    graphs (below) would let them come from the data.
 7. `--cond-70-player-sex` over the whole run settles 31 line choices of the opening and times them by their audio,

@@ -3143,6 +3143,122 @@ before. The play mode's elevator ride: `spec/play.md`, The elevator ride.
   deaths 40; without the lobby trigger 42; without the conversation or
   `--line-script-events` 45.
 
+## The town chain
+
+([quest-run-chain-census.txt](quest-run-chain-census.txt) is the census of
+what the data holds behind the stops (`chain_census`, command line in
+`docs/provenance.md`); [quest-run-chain.txt](quest-run-chain.txt) records
+the run; [quest-run-vault-stages.txt](quest-run-vault-stages.txt) maps every
+stage; the command lines and the records named are in the step's notes.)
+The third fight stopped the next main quest at 47 of 54: 140 and 200 wait on
+the town chain's next quests, 62 on a container change, 75 and 1000 have no
+setter, 78 is behind the locked door.
+
+**What starts the town chain (140, 200).** The town chain's first quest
+(the settlement quest after the museum) is started by nothing but stage
+sets: no `Start` call, no story manager node lists it, its flag word has no
+start-game bit and it has no story event; the town's dialogue quest's 50
+fragment sets its 20 and that quest's 200 fragment its 50. Its winning
+record is an add-on's override whose record flag word has bit 0x4000 and
+that carries only `EDID` and `VMAD`: the run reads no stage there, so the 50
+fragment set a stage the record does not hold and left the quest's state
+undetermined. In the whole data 18 winning records carry the bit (11
+locations, 7 quests: 6 with `EDID` and `VMAD`, 1 with `EDID` only, all with
+an earlier occurrence, 6 holding stages there). 2,586 constant setters name
+a stage the winning quest record does not hold; 199 of them are a fragment's
+own call: 124 name a flagged winner whose earlier occurrence holds the
+stage, 75 other winners (274 and 2,311 counting every kind; 1 names a
+flagged winner whose earlier occurrence lacks the stage too). A reading
+(`--quest-partial-previous`) reads such a winner from the occurrence before
+it, its own VMAD kept (the earlier one when it carries none): the first quest then starts at 20 (its startup stage
+10 with it) and its 20 fragment sets the town quest's 100. The run's default
+for the stages no record holds is unchanged and is registered on its own
+(`quest_set_stage_absent_open_v1`).
+
+The next main quest's 140 is set only by two fragments: the first quest's
+stage 1 (nothing sets it) and the second town quest's stage 0, which only
+other quests' stage 0 fragments set, back to quests of the end game or to
+none (`chain_census`, section 3, chain 1). Nothing the run can reach sets
+140. Its 200 has four setters: the same two, the main quest after the
+successor's stage 0 (the same kind of chain), and the town's dialogue
+quest's 200, whose player alias sets it when the player leaves the museum's
+location after that quest's 100 (the default player-change-location
+script). A location change is not delivered by the run, and the script's
+check asks `Location.IsChild`, which nothing answered. Two readings and a
+caller assumption follow it: the caller's location change raises
+`OnLocationChange` on the actor's receivers (`--location-change-events`,
+`--assume-location-change ACTOR OLD NEW`), and `IsChild` answers from the
+chain of the other location's parents (`PNAM`; 429 of the 487 winning
+location records name one, at most 3 links deep; 35 call sites;
+`--location-parents`). With the player leaving the museum's location for the
+town's at 2080 s (held until the town dialogue quest's 100, after the
+caller's lobby entry and conversation), the dialogue quest's 200 sets the
+next main quest's 200 (whose fragment stops it) and the first town quest's
+50.
+
+**The musket (62).** 38 scripts handle the container change with code;
+3,945 attachments have the handler in their chain (3,672 placed references'
+own scripts, 164 quest alias scripts, 137 of those one shared script); 189
+store an integer property; none adds an inventory filter. The next main
+quest's alias of the museum's dummy musket carries that shared alias script
+with stage 62 (it sets the stage when the new container is the player). The
+caller's pickup (`--assume-container-change REF player none`, at 1905 s on
+the street beside it) raises `OnContainerChanged(player, none)` on its
+receivers (`--container-change-events`): 62 is set.
+
+**No setter (75, 1000).** Widened once: no constant setter; no setter of the
+next main quest whose stage the scan does not resolve; 96 attachments store
+a property naming the quest (fragments of lines, stages, scenes, a terminal
+and a perk, placed references, aliases), none with an integer property
+equal to 75 or 1000; 24 and 20 setters with that stage number name a quest
+the scan does not resolve, all in scripts no loaded record attaches. No
+package or perk fragment sets them. 1000 carries stage flag 0x04, as do 654
+stages of the winning quests (577 of them with no setter in the table);
+prior knowledge reads that flag as a stage set when the quest shuts down,
+which no reading here applies. The data shows no setter for either.
+
+**The robot's 275.** Its line is the only line of a companion topic whose
+one scene is the companion's rejected pickup before the town; that line has
+no conditions, the scene asks function 59 on the next main quest twice
+(operator code 0, value 0); no record but 35 navigation meshes holds a word
+naming the scene, and no script starts it. Nothing in the data starts the
+scene, so no reading here can play the line; condition function 566 stays
+unanswered (no new data).
+
+**The timer budget.** Per timer (`--timers-per-timer`, with `--timers 50`)
+the furthest run fires 302 timers instead of 50 (the opening's, the vault
+dialogue quest's and five radio and relay quests' 50 each, two others
+once) and drops 6; no stage of any quest is set otherwise or at another
+second. The museum quest's 300 s failsafe is started at 1891 s and cancelled
+at 1901.6 s, before it is due.
+
+| Switch | Reading | Rule |
+| --- | --- | --- |
+| `--quest-partial-previous` | a flag-0x4000 quest winner carrying only `EDID` and `VMAD` is read from the occurrence before it, its own VMAD kept when it carries one (`quest::QuestInfo::load_with`) | `quest_record_partial_previous_v1` |
+| (default) | a stage the quest record does not hold, once set, leaves the quest's state undetermined | `quest_set_stage_absent_open_v1` |
+| `--container-change-events` | the caller's container change raises `OnContainerChanged(new, old)` on the reference's receivers (`chain`) | `inventory_container_changed_event_v1` |
+| `--location-change-events` | the caller's location change raises `OnLocationChange(old, new)` on the actor's receivers (`chain`) | `world_location_change_event_v1` |
+| `--location-parents` | `Location.IsChild` from the chain of the other location's parents (`PNAM`) | `world_location_is_child_parent_chain_v1` |
+| `--timers-per-timer` (with `--timers N`) | the timer budget counts per timer; a timer that used it up is dropped when it comes due again | `vm_timer_budget_per_timer_v1` |
+| `--assume-container-change REF NEW OLD[@S]`, `--assume-location-change ACTOR OLD NEW[@S]` | a reference changes container; an actor changes location | caller assumptions |
+
+- Reached: the next main quest **49 of 54 stages** (adds 62 at 1905 s and 200
+  at 2080 s), the town quest 13 (adds 100), the town's dialogue quest 6 (adds
+  200), the town chain's first quest 3 (10 and 20 at 2016.8 s, 50 at 2080 s);
+  the robot's quest 10 of 16, the vault dialogue quest 10 of 18 and the
+  opening 87 of 104 unchanged; every stage the third fight's run set is set
+  again at the same second and in the same order.
+- Variants (one left out; next main quest stages): without
+  `--quest-partial-previous` still 49 (the dialogue quest's 200 fragment sets
+  the next main quest's 200 before it sets the first town quest's 50, which
+  then opens that quest); without the container reading or the pickup 48;
+  without the location reading, the parents reading or the location change
+  48; with `--timers-per-timer` the same stages at the same seconds.
+- What stops next: 140 (nothing the run reaches sets it), 75 and 1000 (no
+  setter), 78 (behind the locked door), 5 (the other way); the first town
+  quest's next stages wait on its actors' location changes and the
+  settlement's workshop events.
+
 ## Conditions
 
 `fo4_vm::cond` evaluates the condition lists read by
@@ -3864,3 +3980,26 @@ lobby, the leader, the reward and the elevators were recognised from editor
 ids read in the notes only. No public page was requested. No editor, editor
 source or definition file, other interpreter, script extender, decompiler
 or the game executable was opened or searched for. The game was not run.
+
+## Provenance of the chain step
+
+Every count was measured with the repository's own readers on the installed
+data: the flag-0x4000 records, the setters naming a stage the record does
+not hold, the setter chains, the container change scripts, the widened
+search for stages with no setter, the robot's line and scene and the
+locations' parents with `chain_census`, the compiled scripts with the
+repository's disassembler (the step's notes), the run with `quest_run` and
+the play mode with `play_run`; the records and references named in the
+notes with local probes (never versioned). Recognised from prior general
+knowledge, used only as pending rules that are off by default or as caller
+assumptions: that a record flag bit marks an override carrying only its
+changed subrecords, that a container change event carries the new and the
+old container, that a location change event comes as an actor crosses into
+another location, that a location record's `PNAM` is its parent (xEdit's
+published field name) and the direction `IsChild` asks, that timers run
+until stopped, and that stage flag 0x04 marks a stage set at shutdown (not
+applied). The town chain's quests, the musket, the locations and the gear
+door were recognised from editor ids read in the notes only. No public page
+was requested. No editor, editor source or definition file, other
+interpreter, script extender, decompiler or the game executable was opened
+or searched for. The game was not run.

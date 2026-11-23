@@ -1,0 +1,220 @@
+# chain_census: kinds and counts only (spec/vm.md, The town chain). Sections: 1 winning records with record flag bit 0x4000; 2 constant
+# setters naming a stage the winning quest does not hold; 3 the quests and chains named (numbered); 4 the container change event; 5 the
+# stages named with no setter (numbered); 6 the lines named (numbered); 7 locations: parents and the location change event.
+11	1 winning records with record flag bit 0x4000	by record type	LCTN
+7	1 winning records with record flag bit 0x4000	by record type	QUST
+1	1 winning records with record flag bit 0x4000	by record type and the tags they carry	LCTN	ACEC EDID
+1	1 winning records with record flag bit 0x4000	by record type and the tags they carry	LCTN	ACEP ACID ACPR ACSR ACUN EDID
+1	1 winning records with record flag bit 0x4000	by record type and the tags they carry	LCTN	ACEP ACID ACPR ACUN EDID
+1	1 winning records with record flag bit 0x4000	by record type and the tags they carry	LCTN	ACEP ACID ACSR ACUN EDID
+1	1 winning records with record flag bit 0x4000	by record type and the tags they carry	LCTN	ACID ACSR EDID
+1	1 winning records with record flag bit 0x4000	by record type and the tags they carry	LCTN	ACUN EDID
+4	1 winning records with record flag bit 0x4000	by record type and the tags they carry	LCTN	EDID
+1	1 winning records with record flag bit 0x4000	by record type and the tags they carry	LCTN	EDID RCEC RCSR
+1	1 winning records with record flag bit 0x4000	by record type and the tags they carry	QUST	EDID
+6	1 winning records with record flag bit 0x4000	by record type and the tags they carry	QUST	EDID VMAD
+1	1 winning records with record flag bit 0x4000	quests: stages held, by them and by the occurrence before	none, none
+6	1 winning records with record flag bit 0x4000	quests: stages held, by them and by the occurrence before	none, some
+2	1 winning records with record flag bit 0x4000	the occurrence before carries tags they do not	LCTN	none
+9	1 winning records with record flag bit 0x4000	the occurrence before carries tags they do not	LCTN	some
+7	1 winning records with record flag bit 0x4000	the occurrence before carries tags they do not	QUST	some
+3	1 winning records with record flag bit 0x4000	the occurrence before carries the bit too	LCTN
+11	1 winning records with record flag bit 0x4000	with an earlier occurrence	LCTN
+7	1 winning records with record flag bit 0x4000	with an earlier occurrence	QUST
+2586	2 constant setters naming a stage the winning quest record does not hold	all
+4	2 constant setters naming a stage the winning quest record does not hold	by kind	a call in a base object's script (ACTI)
+10	2 constant setters naming a stage the winning quest record does not hold	by kind	a call in a base object's script (ACTI), through a function passing a parameter on
+2	2 constant setters naming a stage the winning quest record does not hold	by kind	a call in a base object's script (CONT), through a function passing a parameter on
+1	2 constant setters naming a stage the winning quest record does not hold	by kind	a call in a base object's script (MISC), through a function passing a parameter on
+2	2 constant setters naming a stage the winning quest record does not hold	by kind	a call in a base object's script (NPC_)
+11	2 constant setters naming a stage the winning quest record does not hold	by kind	a call in a dialogue line (INFO) fragment
+2	2 constant setters naming a stage the winning quest record does not hold	by kind	a call in a dialogue line (INFO)'s own script, through a function passing a parameter on
+1	2 constant setters naming a stage the winning quest record does not hold	by kind	a call in a package fragment
+2	2 constant setters naming a stage the winning quest record does not hold	by kind	a call in a placed ACHR's own script, through a function passing a parameter on
+17	2 constant setters naming a stage the winning quest record does not hold	by kind	a call in a placed REFR's own script
+43	2 constant setters naming a stage the winning quest record does not hold	by kind	a call in a placed REFR's own script, through a function passing a parameter on
+1258	2 constant setters naming a stage the winning quest record does not hold	by kind	a call in a quest alias script
+45	2 constant setters naming a stage the winning quest record does not hold	by kind	a call in a quest alias script, through a function passing a parameter on
+173	2 constant setters naming a stage the winning quest record does not hold	by kind	a call in a quest stage fragment
+758	2 constant setters naming a stage the winning quest record does not hold	by kind	a call in a quest's own script
+111	2 constant setters naming a stage the winning quest record does not hold	by kind	a call in a quest's own script, reached by a call from a quest alias script
+6	2 constant setters naming a stage the winning quest record does not hold	by kind	a call in a quest's own script, reached by a call from a quest stage fragment
+2	2 constant setters naming a stage the winning quest record does not hold	by kind	a call in a quest's own script, through a function passing a parameter on
+4	2 constant setters naming a stage the winning quest record does not hold	by kind	a call in a scene fragment
+4	2 constant setters naming a stage the winning quest record does not hold	by kind	a call in a terminal fragment
+27	2 constant setters naming a stage the winning quest record does not hold	by kind	a dialogue line (INFO) field TIQS, first half
+90	2 constant setters naming a stage the winning quest record does not hold	by kind	a dialogue line (INFO) field TIQS, second half
+2	2 constant setters naming a stage the winning quest record does not hold	by kind	a scene field SCQS, first half
+4	2 constant setters naming a stage the winning quest record does not hold	by kind	a scene field SCQS, second half
+1	2 constant setters naming a stage the winning quest record does not hold	by kind	a scene phase field SCQS, first half
+6	2 constant setters naming a stage the winning quest record does not hold	by kind	a scene phase field SCQS, second half
+1	2 constant setters naming a stage the winning quest record does not hold	by the record	the winner carries bit 0x4000; the occurrence before does not hold the stage
+274	2 constant setters naming a stage the winning quest record does not hold	by the record	the winner carries bit 0x4000; the occurrence before holds the stage
+2311	2 constant setters naming a stage the winning quest record does not hold	by the record	the winner does not carry bit 0x4000
+199	2 constant setters naming a stage the winning quest record does not hold	fragments (a fragment's own call)
+124	2 constant setters naming a stage the winning quest record does not hold	fragments by the record	the winner carries bit 0x4000; the occurrence before holds the stage
+75	2 constant setters naming a stage the winning quest record does not hold	fragments by the record	the winner does not carry bit 0x4000
+1	3 chain 1	paths back by how they end	a need other than a stage: an engine event
+1	3 chain 1	paths back by how they end	a stage with no setter (its quest has no start(s) in the table)
+1	3 chain 1	paths back by how they end	a stage with no setter (its quest has some start(s) in the table)
+1	3 chain 1	paths back by how they end	four steps back: not followed further
+4	3 chain 2	paths back by how they end	a need other than a stage: an engine event
+4	3 chain 2	paths back by how they end	a stage with no setter (its quest has no start(s) in the table)
+1	3 chain 2	paths back by how they end	a stage with no setter (its quest has some start(s) in the table)
+3	3 chain 2	paths back by how they end	four steps back: not followed further
+1	3 quest 1	flag word (DNAM), read from the occurrence before the winner (bit 0x4000)	0x0100
+19	3 quest 1	setters of its stages by kind and need (held by the record read)	a call in a quest stage fragment	another stage or quest start (a chain)
+2	3 quest 1	setters of its stages by kind and need (held by the record read)	a call in a quest's own script	an engine event
+2	3 quest 1	setters of its stages by kind and need (held by the record read)	a call in a scene fragment	a scene's progress
+21	3 quest 1	setters of its stages by kind and need (held by the record read)	a dialogue line (INFO) field TIQS, first half	a dialogue line
+10	3 quest 1	setters of its stages by kind and need (held by the record read)	a dialogue line (INFO) field TIQS, second half	a dialogue line
+2	3 quest 1	setters of its stages by kind and need (held by the record read)	a scene field SCQS, first half	a scene's progress
+2	3 quest 1	setters of its stages by kind and need (held by the record read)	a scene field SCQS, second half	a scene's progress
+2	3 quest 1	setters of its stages by kind and need (held by the record read)	a scene phase field SCQS, second half	a scene's progress
+12	3 quest 1	setters whose stage the scan does not resolve	a call in a quest's own script, through a function passing a parameter on
+1	3 quest 1	stages	35
+1	3 quest 1	stages held with no setter in the table	7
+1	3 quest 1	starts in the setter table	0
+1	3 quest 1	starts with the game (flag bit 0x1)	false
+1	3 quest 1	startup stages (INDX flag 0x2)	1
+1	3 quest 1	story event (ENAM)	none
+1	3 quest 1	story manager quest nodes listing it	0
+1	3 quest 2	flag word (DNAM), read from the winner	0x0000
+5	3 quest 2	setters of its stages by kind and need (held by the record read)	a call in a placed REFR's own script, through a function passing a parameter on	a player action on an object
+1	3 quest 2	setters of its stages by kind and need (held by the record read)	a call in a quest alias script, through a function passing a parameter on	an engine event
+21	3 quest 2	setters of its stages by kind and need (held by the record read)	a call in a quest stage fragment	another stage or quest start (a chain)
+1	3 quest 2	setters of its stages by kind and need (held by the record read)	a call in a quest's own script	a custom event of a script
+2	3 quest 2	setters of its stages by kind and need (held by the record read)	a call in a quest's own script	an engine event
+4	3 quest 2	setters of its stages by kind and need (held by the record read)	a dialogue line (INFO) field TIQS, first half	a dialogue line
+6	3 quest 2	setters of its stages by kind and need (held by the record read)	a dialogue line (INFO) field TIQS, second half	a dialogue line
+2	3 quest 2	setters of its stages by kind and need (held by the record read)	a scene field SCQS, first half	a scene's progress
+4	3 quest 2	setters of its stages by kind and need (held by the record read)	a scene field SCQS, second half	a scene's progress
+1	3 quest 2	setters of its stages by kind and need (held by the record read)	a scene phase field SCQS, first half	a scene's progress
+6	3 quest 2	setters of its stages by kind and need (held by the record read)	a scene phase field SCQS, second half	a scene's progress
+1	3 quest 2	setters of its stages by kind and need (held by the record read)	a startup stage (INDX flag 0x2)	another stage or quest start (a chain)
+8	3 quest 2	setters whose stage the scan does not resolve	a call in a quest's own script, through a function passing a parameter on
+1	3 quest 2	stages	30
+1	3 quest 2	stages held with no setter in the table	1
+1	3 quest 2	starts by kind	a Start call in a quest stage fragment
+1	3 quest 2	starts in the setter table	1
+1	3 quest 2	starts with the game (flag bit 0x1)	false
+1	3 quest 2	startup stages (INDX flag 0x2)	1
+1	3 quest 2	story event (ENAM)	none
+1	3 quest 2	story manager quest nodes listing it	0
+1	3 quest 3	flag word (DNAM), read from the winner	0x0100
+2	3 quest 3	setters of its stages by kind and need (held by the record read)	a call in a placed REFR's own script, through a function passing a parameter on	a player action on an object
+1	3 quest 3	setters of its stages by kind and need (held by the record read)	a call in a quest alias script, through a function passing a parameter on	an engine event
+9	3 quest 3	setters of its stages by kind and need (held by the record read)	a call in a quest stage fragment	another stage or quest start (a chain)
+1	3 quest 3	setters of its stages by kind and need (held by the record read)	a call in a scene fragment	a scene's progress
+4	3 quest 3	setters of its stages by kind and need (held by the record read)	a dialogue line (INFO) field TIQS, first half	a dialogue line
+6	3 quest 3	setters of its stages by kind and need (held by the record read)	a dialogue line (INFO) field TIQS, second half	a dialogue line
+2	3 quest 3	setters of its stages by kind and need (held by the record read)	a scene field SCQS, second half	a scene's progress
+1	3 quest 3	stages	14
+1	3 quest 3	stages held with no setter in the table	1
+1	3 quest 3	starts in the setter table	0
+1	3 quest 3	starts with the game (flag bit 0x1)	false
+1	3 quest 3	startup stages (INDX flag 0x2)	0
+1	3 quest 3	story event (ENAM)	none
+1	3 quest 3	story manager quest nodes listing it	0
+3945	4 the container change event	attachments whose chain adds an inventory filter	false
+3	4 the container change event	attachments whose chain handles it, by kind	a base object's script (ACTI)
+5	4 the container change event	attachments whose chain handles it, by kind	a base object's script (ARMO)
+30	4 the container change event	attachments whose chain handles it, by kind	a base object's script (BOOK)
+4	4 the container change event	attachments whose chain handles it, by kind	a base object's script (KEYM)
+21	4 the container change event	attachments whose chain handles it, by kind	a base object's script (MISC)
+3	4 the container change event	attachments whose chain handles it, by kind	a base object's script (MSTT)
+2	4 the container change event	attachments whose chain handles it, by kind	a base object's script (NOTE)
+1	4 the container change event	attachments whose chain handles it, by kind	a base object's script (STAT)
+2	4 the container change event	attachments whose chain handles it, by kind	a base object's script (WEAP)
+34	4 the container change event	attachments whose chain handles it, by kind	a placed ACHR's own script
+4	4 the container change event	attachments whose chain handles it, by kind	a placed PGRE's own script
+3672	4 the container change event	attachments whose chain handles it, by kind	a placed REFR's own script
+164	4 the container change event	attachments whose chain handles it, by kind	a quest alias script
+3756	4 the container change event	attachments whose chain handles it, by the integer properties they store	none
+189	4 the container change event	attachments whose chain handles it, by the integer properties they store	some
+5	4 the container change event	attachments whose chain handles it, by whether the handler's script is shared by ten attachments or more, and kind	false	a base object's script (ARMO)
+7	4 the container change event	attachments whose chain handles it, by whether the handler's script is shared by ten attachments or more, and kind	false	a base object's script (BOOK)
+3	4 the container change event	attachments whose chain handles it, by whether the handler's script is shared by ten attachments or more, and kind	false	a base object's script (KEYM)
+5	4 the container change event	attachments whose chain handles it, by whether the handler's script is shared by ten attachments or more, and kind	false	a base object's script (MISC)
+2	4 the container change event	attachments whose chain handles it, by whether the handler's script is shared by ten attachments or more, and kind	false	a base object's script (NOTE)
+2	4 the container change event	attachments whose chain handles it, by whether the handler's script is shared by ten attachments or more, and kind	false	a base object's script (WEAP)
+18	4 the container change event	attachments whose chain handles it, by whether the handler's script is shared by ten attachments or more, and kind	false	a placed REFR's own script
+27	4 the container change event	attachments whose chain handles it, by whether the handler's script is shared by ten attachments or more, and kind	false	a quest alias script
+3	4 the container change event	attachments whose chain handles it, by whether the handler's script is shared by ten attachments or more, and kind	true	a base object's script (ACTI)
+23	4 the container change event	attachments whose chain handles it, by whether the handler's script is shared by ten attachments or more, and kind	true	a base object's script (BOOK)
+1	4 the container change event	attachments whose chain handles it, by whether the handler's script is shared by ten attachments or more, and kind	true	a base object's script (KEYM)
+16	4 the container change event	attachments whose chain handles it, by whether the handler's script is shared by ten attachments or more, and kind	true	a base object's script (MISC)
+3	4 the container change event	attachments whose chain handles it, by whether the handler's script is shared by ten attachments or more, and kind	true	a base object's script (MSTT)
+1	4 the container change event	attachments whose chain handles it, by whether the handler's script is shared by ten attachments or more, and kind	true	a base object's script (STAT)
+34	4 the container change event	attachments whose chain handles it, by whether the handler's script is shared by ten attachments or more, and kind	true	a placed ACHR's own script
+4	4 the container change event	attachments whose chain handles it, by whether the handler's script is shared by ten attachments or more, and kind	true	a placed PGRE's own script
+3654	4 the container change event	attachments whose chain handles it, by whether the handler's script is shared by ten attachments or more, and kind	true	a placed REFR's own script
+137	4 the container change event	attachments whose chain handles it, by whether the handler's script is shared by ten attachments or more, and kind	true	a quest alias script
+38	4 the container change event	scripts defining its handler with code
+18	5 setters whose quest the scan does not resolve, by reason	a property of another object
+36	5 setters whose quest the scan does not resolve, by reason	a property of the called object
+568	5 setters whose quest the scan does not resolve, by reason	a property without a record value
+24	5 setters whose quest the scan does not resolve, by reason	a script variable without a property
+6	5 setters whose quest the scan does not resolve, by reason	a struct property without a stored value
+1144	5 setters whose quest the scan does not resolve, by reason	no attachment gives the value
+27	5 setters whose quest the scan does not resolve, by reason	the owning quest of the record is not read
+32	5 setters whose quest the scan does not resolve, by reason	the result of a call
+1	5 stage 1	attachments storing a property that names its quest, by kind; their chain calls a set stage function; an integer property equals the stage	a base object's script (ACTI)	false	false
+1	5 stage 1	attachments storing a property that names its quest, by kind; their chain calls a set stage function; an integer property equals the stage	a base object's script (ACTI)	true	false
+1	5 stage 1	attachments storing a property that names its quest, by kind; their chain calls a set stage function; an integer property equals the stage	a base object's script (NPC_)	false	false
+29	5 stage 1	attachments storing a property that names its quest, by kind; their chain calls a set stage function; an integer property equals the stage	a dialogue line (INFO) fragment	true	false
+3	5 stage 1	attachments storing a property that names its quest, by kind; their chain calls a set stage function; an integer property equals the stage	a dialogue line (INFO)'s own script	false	false
+1	5 stage 1	attachments storing a property that names its quest, by kind; their chain calls a set stage function; an integer property equals the stage	a perk fragment	true	false
+21	5 stage 1	attachments storing a property that names its quest, by kind; their chain calls a set stage function; an integer property equals the stage	a placed REFR's own script	false	false
+7	5 stage 1	attachments storing a property that names its quest, by kind; their chain calls a set stage function; an integer property equals the stage	a placed REFR's own script	true	false
+1	5 stage 1	attachments storing a property that names its quest, by kind; their chain calls a set stage function; an integer property equals the stage	a quest alias script	false	false
+2	5 stage 1	attachments storing a property that names its quest, by kind; their chain calls a set stage function; an integer property equals the stage	a quest alias script	true	false
+21	5 stage 1	attachments storing a property that names its quest, by kind; their chain calls a set stage function; an integer property equals the stage	a quest stage fragment	true	false
+3	5 stage 1	attachments storing a property that names its quest, by kind; their chain calls a set stage function; an integer property equals the stage	a quest's own script	true	false
+2	5 stage 1	attachments storing a property that names its quest, by kind; their chain calls a set stage function; an integer property equals the stage	a scene fragment	false	false
+2	5 stage 1	attachments storing a property that names its quest, by kind; their chain calls a set stage function; an integer property equals the stage	a scene fragment	true	false
+1	5 stage 1	attachments storing a property that names its quest, by kind; their chain calls a set stage function; an integer property equals the stage	a terminal fragment	true	false
+1	5 stage 1	constant setters	0
+1	5 stage 1	its stage flags (INDX)	0x00
+1	5 stage 1	setters of its quest whose stage the scan does not resolve	0
+24	5 stage 1	setters of this stage number whose quest the scan does not resolve, by reason	no attachment gives the value
+1	5 stage 2	attachments storing a property that names its quest, by kind; their chain calls a set stage function; an integer property equals the stage	a base object's script (ACTI)	false	false
+1	5 stage 2	attachments storing a property that names its quest, by kind; their chain calls a set stage function; an integer property equals the stage	a base object's script (ACTI)	true	false
+1	5 stage 2	attachments storing a property that names its quest, by kind; their chain calls a set stage function; an integer property equals the stage	a base object's script (NPC_)	false	false
+29	5 stage 2	attachments storing a property that names its quest, by kind; their chain calls a set stage function; an integer property equals the stage	a dialogue line (INFO) fragment	true	false
+3	5 stage 2	attachments storing a property that names its quest, by kind; their chain calls a set stage function; an integer property equals the stage	a dialogue line (INFO)'s own script	false	false
+1	5 stage 2	attachments storing a property that names its quest, by kind; their chain calls a set stage function; an integer property equals the stage	a perk fragment	true	false
+21	5 stage 2	attachments storing a property that names its quest, by kind; their chain calls a set stage function; an integer property equals the stage	a placed REFR's own script	false	false
+7	5 stage 2	attachments storing a property that names its quest, by kind; their chain calls a set stage function; an integer property equals the stage	a placed REFR's own script	true	false
+1	5 stage 2	attachments storing a property that names its quest, by kind; their chain calls a set stage function; an integer property equals the stage	a quest alias script	false	false
+2	5 stage 2	attachments storing a property that names its quest, by kind; their chain calls a set stage function; an integer property equals the stage	a quest alias script	true	false
+21	5 stage 2	attachments storing a property that names its quest, by kind; their chain calls a set stage function; an integer property equals the stage	a quest stage fragment	true	false
+3	5 stage 2	attachments storing a property that names its quest, by kind; their chain calls a set stage function; an integer property equals the stage	a quest's own script	true	false
+2	5 stage 2	attachments storing a property that names its quest, by kind; their chain calls a set stage function; an integer property equals the stage	a scene fragment	false	false
+2	5 stage 2	attachments storing a property that names its quest, by kind; their chain calls a set stage function; an integer property equals the stage	a scene fragment	true	false
+1	5 stage 2	attachments storing a property that names its quest, by kind; their chain calls a set stage function; an integer property equals the stage	a terminal fragment	true	false
+1	5 stage 2	constant setters	0
+1	5 stage 2	its stage flags (INDX)	0x04
+1	5 stage 2	setters of its quest whose stage the scan does not resolve	0
+20	5 stage 2	setters of this stage number whose quest the scan does not resolve, by reason	no attachment gives the value
+972	5 stages of the winning quests by INDX flag bit; the table has a constant setter for them	bit 0x02	true
+577	5 stages of the winning quests by INDX flag bit; the table has a constant setter for them	bit 0x04	false
+77	5 stages of the winning quests by INDX flag bit; the table has a constant setter for them	bit 0x04	true
+26	5 stages of the winning quests by INDX flag bit; the table has a constant setter for them	bit 0x08	true
+1720	5 stages of the winning quests by INDX flag bit; the table has a constant setter for them	no bit	false
+9489	5 stages of the winning quests by INDX flag bit; the table has a constant setter for them	no bit	true
+1	6 line 1	lines of its topic	1
+1	6 line 1	lines of its topic by their condition functions	the line	none
+2	6 line 1	the scene's conditions: function, operator, comparison, first parameter's type	59	0	Float(0.0)	QUST
+35	6 line 1	winning records holding a word naming the scene, by type and tag	NAVM	NVNM
+1	6 line 1	winning records holding a word naming the topic, by type and tag	SCEN	DATA
+35	7 locations	IsChild call sites
+4	7 locations	attachments whose chain handles the location change, by kind	a base object's script (NPC_)
+73	7 locations	attachments whose chain handles the location change, by kind	a quest alias script
+58	7 locations	parent links up to a location without one	0
+349	7 locations	parent links up to a location without one	1
+79	7 locations	parent links up to a location without one	2
+1	7 locations	parent links up to a location without one	3
+43	7 locations	scripts defining the location change handler with code
+429	7 locations	winning location records	with a parent (PNAM) that is a location
+58	7 locations	winning location records	without a parent (PNAM)

@@ -351,16 +351,39 @@ run): **204 of 204 stages to 500 s in the same order** (before: 197 of 202 to
 the others from 0.096 s earlier to 0.033 s later; to 520 s 209 of 210 (one
 opening stage the recorded run sets before 520 s is missing). At about 520 s the
 walker, walking off the interior platform toward the vault along the
-recorded track, falls (not investigated: a gap between the platform and the
-vault's floor in the walking world, perhaps the elevator's own gate or the
-vault's first door, which hold no collision here); past 520 s the walk is
-lost (220 of 232 stages to 700 s, the rest after the fall).
+recorded track, fell; past 520 s the walk was lost (220 of 232 stages to
+700 s, the rest after the fall).
+
+**Past the interior platform** (the chain step, `efin2` in its notes). The
+fall's reason: the vault entrance room that holds the floor beyond the
+platform (a static placed at the interior elevator's own position) has its
+collision refused as the cell is built (`CollisionNotReady`: its readiness
+is blocked by the model's controllers, particles and material fields, as
+520 of the interior cell's references are), so the walking world has no
+floor past the platform. `--play-elevator-also` places a reference's
+collision as stored, but the still references went with the first named
+reference only (the outside shaft), so one in the vault's cell never entered
+its walking world: each now goes with the first named reference placed in
+its own space (`elevator::still_owner`; the earlier runs, whose still
+reference is in the first one's space, are unchanged byte for byte). With
+the entrance room named as a still reference the walker steps off the
+platform onto the floor, crosses the entrance and walks the recorded track
+to 581.8 s: **all 222 stages the recorded run sets to 600 s, in the same
+order** (167 at the same second, the others from 1.74 s earlier to 0.66 s
+later; to 520 s 209 of 210, the opening's stage 632 coming 0.66 s after
+520 s). At 581.8 s it drops about 190 units into the pit under the vault's
+gear door: the gear door (an activator with an animated model) holds the
+walkway there and its collision is refused the same way; placed as stored
+it stands closed across the path (the run's graph starts no sequence on it
+before 700 s). To 700 s 222 of 232 (the ten after the pit). The refusal is
+the drawing side's readiness reading (`fo4-scene`, `fo4-walk`), not the play
+mode's.
 
 ## What the play mode does not do yet
 
 - The elevators ride only headless, and only those the caller names (`--play-elevator`); only a sequence's
-  translations are read; the window does not take the switches; past the interior elevator the walker falls
-  (above).
+  translations are read; the window does not take the switches; the vault's floor past the interior elevator
+  comes only from a still reference the caller names, and at the gear door the walker drops into the pit (above).
 - Plain doors: no collision is placed for any door, so none blocks the walker; the open state is not read.
 - Moving collision with a node (an animated door, a platform) is not modelled; the live world moves only what
   the run moves.
