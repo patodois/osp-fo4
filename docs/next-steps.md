@@ -4,6 +4,7 @@ This page is the hand-over point. Everything on `main` builds and passes its tes
 agent) can continue from here. Read `AGENTS.md` first: it holds the rules of evidence and the clean-room rules.
 
 State on 2026-11-23 (vault, cast, light and home steps). Nothing below has been checked against the running game: every behaviour is a pending
+State on 2026-11-23 (vault, cast, light and character graph steps). Nothing below has been checked against the running game: every behaviour is a pending
 rule in `spec/hypotheses.tsv`, off by default.
 
 ## Script VM and quests (`crates/fo4-vm`)
@@ -34,16 +35,17 @@ own events (wrist computer, plug-in). What is left:
    which moves the opening's scenes past the caller's track and gates (the opening then stops at 31 stages): the
    opening's track and gates would need retiming before the reading can apply everywhere.
 
-Character behaviour graphs (`char_graph_census`, `spec/character-graph-census.txt`): a race names its
-behaviour project, and the project, character and root graph resolve, but which clip an actor plays is held
-in classes the readers do not read (clip generators, behaviour references, nested machines, transition
-conditions and variables, how furniture keywords select a state). Reading those is what would let actor
-animation events come from the data instead of the caller.
+Character behaviour graphs (`char_graph_census`, `spec/character-graph-census.txt`; `char_start_clip_census`,
+`spec/character-graph.md`): a race names its behaviour project; the readers now follow a graph from its root
+through nested machines, blenders, selectors, behaviour references and the race's subgraph entries to the clip
+it starts in (79 of the opening's 84 resolved actors). Transition conditions and what raises an event are
+still not read; following transitions on events is what would let actor animation events come from the data
+instead of the caller.
 
 Not modelled yet: unload, cell-load, cell-attach and cell-detach events; the sit state's transitional values (only sitting or not, `--sit-state`); combat; actors sitting
-through packages; magic-effect receivers of furniture events; keyword data, `ResetKeyword`, keywords in
+through packages (and sitting poses: `spec/character-graph.md`, Sitting); magic-effect receivers of furniture events; keyword data, `ResetKeyword`, keywords in
 conditions, template flags and object modifications for keywords; collection aliases filled other than from
-a location's rows; actors' animation (character graphs); a furniture's `OnActivate` on a script's activation;
+a location's rows; actors' animation after their start state (character graphs: transitions on events); a furniture's `OnActivate` on a script's activation;
 use events sent to a furniture's graph by the caller's own sits and get-ups.
 
 ## Drawing (`crates/fo4-scene`, `apps/fo4-view`)
@@ -72,6 +74,19 @@ lead what is still refused:
 3. Moving geometry left out: TBC keys (93 varying tracks), moving root nodes (`UnsettledClockRootTransform`),
    path interpolators; moving collision with its node (the walking world kept in step) is not started.
 4. Record runtime state on placements (several refused subrecord families, listed in the census).
+
+Characters (`spec/character-graph.md`): behind four switches (`--actor-start-clip`, `--actor-subgraph-keywords`,
+`--actor-clip-folder`, `--actor-start-clip-loop`) a timeline frame's characters stand in the clip their race's
+graph reaches from its root (a standing idle) instead of the rest pose; the CPU render and the headless viewer
+agree (vault frame at 560 s: coverage 1.000000, same tag on every pixel). What is left:
+
+1. Actors whose base has a template (3 in the opening): read which template supplies keywords.
+2. Sitting: the timeline does not say who sits on what (its writer is `fo4-vm`'s); furniture keywords pick a
+   subgraph entry in 509 of 782 furniture records and the furniture graph starts in a sitting idle, but where on
+   the furniture the actor sits (the model's markers) is not read.
+3. Everything after the start state: transitions on events (dialogue, alarm, walking), blends of several
+   children, bone-weighted and additive layers, the offset clip; the clip's start second is the run's second 0.
+4. A viewer window path (the poses are headless only, as the rest of `--timeline`).
 
 Open checks: the viewer window has still not been exercised by hand with `--time` (nor with any clock switch;
 the per-frame path is tested headless through `GpuScene::at_time`); the CPU-against-viewer tag differences are

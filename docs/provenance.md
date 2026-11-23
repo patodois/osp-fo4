@@ -780,3 +780,32 @@ were recognised from prior general knowledge and are pending rules. No
 behaviour or animation tool or library of any project, editor, editor source
 or definition file, script source or game executable was opened or searched
 for.
+
+The character graph step (`fo4_havok` behaviour nodes, `fo4_scene::char_graph`,
+`fo4_scene::timeline::cast::start_poses`; [spec/character-graph.md](../spec/character-graph.md),
+[spec/character-start-clip-census.txt](../spec/character-start-clip-census.txt))
+reads more of the behaviour graph `.hkx` files: the variable binding sets,
+the graph data's variable types, initial words and names, and the modifier,
+tagging, offset, blender (and blender child), manual selector, behaviour
+reference, swap and clip generator classes, with offsets measured on the
+installation's 450 behaviour graph files by printing objects field by field
+(bytes, first-table pointers, second-table links) and checked over all of
+them by `char_start_clip_census`. Class names are the stored ones; the field
+labels are this project's. From RACE it reads the MODL after NAM3 by section
+marker, SRAC, and the runs of SAKD, STKD, SGNM, SAPT closed by SRAF, and
+the KWDA of NPC_ and RACE, measured on the winning records. No public
+source was consulted (no network in this step). Recognised from prior
+general knowledge, and kept as pending rules or named readings: that the
+objects are state machines, blenders, selectors and clip generators as
+their class names say; that a graph sits in its start states until an
+event; that a variable keeps its stored value until set; the binding
+element's field order (member path, variable index, bit, kind); the clip
+generator's field order after its trigger link (crop, start time, speed,
+duration, fraction, binding index, mode, flags), checked against value
+ranges; that clip mode 1 loops and 0 plays once; that the blender flag bit
+0x10 marks weights read as positions (checked: every blender with a weight
+outside 0 to 1 has it); that a subgraph entry's SAPT texts are folders
+searched for a clip and its SAKD and STKD actor and target keywords. No
+Havok SDK or header, behaviour editor, converter, editor, editor source or
+definition file, reader of another project, animation tool or library, or
+game executable was opened or searched for.
