@@ -102,6 +102,9 @@ pub struct Log {
     pub grid: Vec<(f64, FormKey, [f64; 3], f64)>,
     /// Rules relied on.
     pub rules: std::collections::BTreeSet<&'static str>,
+    /// The moving platforms (`--play-elevator`): their build report and
+    /// what they did, (second, text).
+    pub elevators: Vec<(f64, String)>,
 }
 
 /// One load door crossed ([`Log::doors`]).
@@ -143,8 +146,28 @@ impl Grid {
     }
 }
 
+/// The moving platforms the caller names (`--play-elevator`,
+/// [`crate::elevator`]).
+#[derive(Debug, Clone, Default)]
+pub struct Elevators {
+    /// The references whose collision moves.
+    pub references: Vec<FormKey>,
+    /// Other references whose collision is placed as stored, still.
+    pub also: Vec<FormKey>,
+    /// A ride that carried the walker ends at the nearest load door within
+    /// the reach (`--play-elevator-door`).
+    pub door: bool,
+}
+
+/// The longest standing slice while moving platforms are named (seconds):
+/// the run's graphs may start a sequence in it, which the platforms read
+/// between slices (a setting of the play mode).
+pub const ELEVATOR_STAND: f64 = 0.1;
+
 /// The walker driven by a scripted input.
 pub struct Walker {
+    elevator_options: Option<Elevators>,
+    elevators: Vec<crate::elevator::Elevator>,
     grid: Option<Grid>,
     live: Live,
     /// The run's state as the live world reads it (`--play-live-world`).
@@ -192,6 +215,8 @@ impl Walker {
             .unwrap_or(0.0);
         let live = Live::fixed(world, refs).map_err(|e| e.to_string())?;
         Ok(Walker {
+            elevator_options: None,
+            elevators: Vec::new(),
             grid: None,
             live,
             state: RunState::default(),
@@ -252,6 +277,123 @@ impl Walker {
     pub fn with_grid(mut self, grid: Grid) -> Walker {
         self.grid = Some(grid);
         self
+    }
+
+    /// Moving platforms (`--play-elevator`, `play_elevator_run_sequence_v1`):
+    /// built at the first slice beside the walking world.
+    pub fn with_elevators(mut self, e: Elevators) -> Walker {
+        self.elevator_options = Some(e);
+        self
+    }
+
+    /// Whether a platform moves between two seconds.
+    fn elevators_moving(&self, from: f64, to: f64) -> bool {
+        self.elevators.iter().any(|e| e.moving(from, to))
+    }
+
+    /// Builds the platforms the caller named, once, and puts them into the
+    /// walking world.
+    fn build_elevators(&mut self, run: &View<'_, '_>) -> Result<(), String> {
+        let Some(o) = self.elevator_options.clone() else {
+            return Ok(());
+        };
+        if !self.elevators.is_empty() || o.references.is_empty() {
+            return Ok(());
+        }
+        let (m, vfs) = run.sources;
+        // The space the walking world stands in: the walker's, else the
+        // run's first point's.
+        let here = self.space.clone().or_else(|| {
+            run.vm
+                .world
+                .place
+                .track
+                .as_ref()
+                .and_then(|t| t.points.first())
+                .map(|p| p.space.clone())
+        });
+        let here = here.map(|s| norm(&s));
+        for (i, k) in o.references.iter().enumerate() {
+            let also: &[FormKey] = if i == 0 { &o.also } else { &[] };
+            let mut e = crate::elevator::Elevator::build(m, run.store, vfs, k, also, i as u32)
+                .map_err(|e| format!("PlayElevator {}: {e}", fo4_vm::bind::record_key(k)))?;
+            if here.as_ref() == Some(&e.space) {
+                e.insert(self.live.space_mut(), self.t)
+                    .map_err(|e| e.to_string())?;
+            }
+            let mut log = self.log.borrow_mut();
+            log.elevators.push((
+                self.t,
+                format!("{}: {}", fo4_vm::bind::record_key(k), e.summary()),
+            ));
+            log.rules.insert(crate::rules::ELEVATOR_RUN_SEQUENCE);
+            log.rules
+                .insert(fo4_scene::hypotheses::ANIMATED_COLLISION_AS_STORED);
+            log.rules.insert(fo4_walk::platform::rules::PLATFORM_RIDE);
+            drop(log);
+            self.elevators.push(e);
+        }
+        Ok(())
+    }
+
+    /// Reads the sequences the run started on the platforms; with the end
+    /// door, takes the walker through the nearest load door when a ride
+    /// that carried it ended (`play_elevator_end_load_door_v1`).
+    fn follow_elevators(&mut self, run: &View<'_, '_>) {
+        let door = self.elevator_options.as_ref().is_some_and(|o| o.door);
+        for e in &mut self.elevators {
+            let before = e.log.len();
+            e.follow(run.vm);
+            let ended = e.ended.take();
+            let mut log = self.log.borrow_mut();
+            for (t, x) in &e.log[before..] {
+                log.elevators.push((
+                    *t,
+                    format!("{}: {x}", fo4_vm::bind::record_key(&e.reference)),
+                ));
+            }
+            let (Some(at), true, Some(c), Some(space), Some(doors)) =
+                (ended, door, &self.character, &self.space, &self.doors)
+            else {
+                continue;
+            };
+            let (m, _) = run.sources;
+            let reach = self.opts.reach.unwrap_or(0.0);
+            let Some(bounds) = e.bounds() else {
+                log.elevators.push((
+                    at,
+                    "the ride ended: the reference has no collision box".into(),
+                ));
+                continue;
+            };
+            match crate::elevator::nearest_door(
+                run.store,
+                m.limits.max_memory,
+                &doors.doors,
+                space,
+                c.feet,
+                bounds,
+                reach,
+            ) {
+                Some((k, d, dist)) => {
+                    log.rules.insert(crate::rules::ELEVATOR_END_DOOR);
+                    log.elevators.push((
+                        at,
+                        format!(
+                            "the ride ended: load door {} at {dist:.1} units takes the walker",
+                            fo4_vm::bind::record_key(k)
+                        ),
+                    ));
+                    if self.door.is_none() {
+                        self.door = Some((k.clone(), d.clone()));
+                    }
+                }
+                None => log.elevators.push((
+                    at,
+                    "the ride ended: no load door inside the reference's collision box".into(),
+                )),
+            }
+        }
     }
 
     /// The walking world as it stands.
@@ -447,9 +589,13 @@ impl Walker {
         };
         let grounded = self.character.as_ref().is_some_and(|c| c.grounded);
         self.log.borrow_mut().slices += 1;
-        // Standing: no key, on the ground and not moved by the last tick.
-        if !keys && self.still && grounded {
-            let until = next_command.max(self.t);
+        // Standing: no key, on the ground and not moved by the last tick
+        // (nor by a moving platform).
+        if !keys && self.still && grounded && !self.elevators_moving(self.t, next_command) {
+            let mut until = next_command.max(self.t);
+            if !self.elevators.is_empty() {
+                until = until.min(self.t + ELEVATOR_STAND);
+            }
             self.t = until;
             actions.extend(self.commands());
             let mut log = self.log.borrow_mut();
@@ -466,6 +612,10 @@ impl Walker {
         let to = (self.t + tick).min(next_command.max(self.t + 1e-9));
         let dt = to - self.t;
         let c = self.character.as_mut().ok_or("PlayNoWalker")?;
+        for e in &mut self.elevators {
+            e.advance(self.live.space_mut(), c, to)
+                .map_err(|e| e.to_string())?;
+        }
         c.settings.tick = dt;
         let started = std::time::Instant::now();
         let s = c.tick(self.live.space(), self.controls.walker());
@@ -672,6 +822,16 @@ impl Walker {
         if let Some(d) = &mut self.doors {
             d.doors = built.doors;
         }
+        let t = self.t;
+        let here = norm(&built.space);
+        for e in &mut self.elevators {
+            if e.space == here {
+                e.insert(self.live.space_mut(), t)
+                    .map_err(|e| e.to_string())?;
+            } else {
+                e.leave();
+            }
+        }
         Ok(built.report)
     }
 }
@@ -679,7 +839,13 @@ impl Walker {
 impl Driver for Walker {
     fn next(&mut self, run: &View<'_, '_>) -> Next {
         let _ = self.visibility.update(run.vm);
-        let followed = self.follow_grid(run).and_then(|()| self.follow(run.vm));
+        let followed = self
+            .build_elevators(run)
+            .and_then(|()| self.follow_grid(run))
+            .and_then(|()| self.follow(run.vm));
+        if followed.is_ok() {
+            self.follow_elevators(run);
+        }
         let crossed = match (followed, self.door.take()) {
             (Err(why), _) => Some(Err(why)),
             (Ok(()), Some((door, to))) => Some(self.cross(run, door, to)),

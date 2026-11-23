@@ -306,6 +306,12 @@ impl Live {
         &self.set
     }
 
+    /// The walking world, to put pieces of its own into (the moving
+    /// platforms, [`crate::elevator`]).
+    pub fn space_mut(&mut self) -> &mut WorldSet<Key> {
+        &mut self.set
+    }
+
     /// The world as loaded.
     pub fn base(&self) -> Option<&World> {
         self.set.get(&BASE)

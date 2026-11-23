@@ -16,6 +16,7 @@ use fo4_plugin::{typed::Store, FormKey};
 use fo4_scene::timeline::Timeline;
 use fo4_vm::Vm;
 
+pub mod elevator;
 pub mod input;
 pub mod link;
 pub mod live;
@@ -63,8 +64,19 @@ pub mod rules {
     pub const BOUNDS_NOT_STATIC: &str = "play_activate_bounds_not_static_v1";
     /// The record types `BOUNDS_NOT_STATIC` leaves out.
     pub const STATIC_KINDS: [[u8; 4]; 3] = [*b"STAT", *b"SCOL", *b"MSTT"];
+    /// The collision of a reference the caller names, placed as stored and
+    /// split by the nodes its model's sequences move, follows the
+    /// translation keys of each sequence the run's animation graph starts
+    /// on it from the second the run starts it; before any, its stored
+    /// transforms (`--play-elevator REF`).
+    pub const ELEVATOR_RUN_SEQUENCE: &str = "play_elevator_run_sequence_v1";
+    /// When a ride that carried the walker ends, the load door placed
+    /// nearest the walker's feet among those inside the named reference's
+    /// collision box (grown by the activation's reach) takes the walker
+    /// through, as an activation of it would (`--play-elevator-door`).
+    pub const ELEVATOR_END_DOOR: &str = "play_elevator_end_load_door_v1";
     /// Every rule above.
-    pub const ALL: [&str; 8] = [
+    pub const ALL: [&str; 10] = [
         PLAYER_FEET,
         RUN_CLOCK,
         ACTIVATE_RAY,
@@ -73,6 +85,8 @@ pub mod rules {
         LOAD_DOOR,
         REGION,
         BOUNDS_NOT_STATIC,
+        ELEVATOR_RUN_SEQUENCE,
+        ELEVATOR_END_DOOR,
     ];
 }
 

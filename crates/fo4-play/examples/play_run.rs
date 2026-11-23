@@ -36,6 +36,13 @@
 //! condition when the track grows, instead of offering them their
 //! completion again (a policy of the play mode: the stepped run then logs
 //! no wait `quest_run` does not log).
+//! `--play-elevator REF` (repeated) moves the collision of a reference,
+//! placed as stored and split by the nodes its model's sequences move, as
+//! the sequences the run's graph starts on it move those nodes
+//! (`play_elevator_run_sequence_v1`); `--play-elevator-also REF` places
+//! another reference's collision as stored, still; `--play-elevator-door`
+//! takes the walker through the nearest load door within the reach when a
+//! ride that carried it ends (`play_elevator_end_load_door_v1`).
 //! `--probe-ray X Y Z HEADING PITCH REACH --probe-ref KEY` prints what a ray
 //! from that eye meets and where the reference's collision is, then stops
 //! (an aid for choosing where an input aims).
@@ -105,6 +112,32 @@ fn run() -> Result<(), E> {
     let recheck_marks = flag(&mut a, "--play-recheck-marks");
     let follow_grid = flag(&mut a, "--play-follow-grid");
     let activatable = flag(&mut a, "--play-pick-bounds-activatable");
+    let elevator_door = flag(&mut a, "--play-elevator-door");
+    let mut elevators = walker::Elevators {
+        door: elevator_door,
+        ..walker::Elevators::default()
+    };
+    while let Some(i) = a
+        .iter()
+        .position(|x| x == "--play-elevator" || x == "--play-elevator-also")
+    {
+        let k = a
+            .get(i + 1)
+            .and_then(|v| fo4_vm::player::parse_key(v))
+            .ok_or("--play-elevator and --play-elevator-also take PLUGIN:OBJECTID")?;
+        if a[i] == "--play-elevator" {
+            elevators.references.push(k);
+        } else {
+            elevators.also.push(k);
+        }
+        a.drain(i..i + 2);
+    }
+    if elevators.references.is_empty() && (elevator_door || !elevators.also.is_empty()) {
+        return Err("--play-elevator-also and --play-elevator-door need --play-elevator".into());
+    }
+    if elevator_door && !(load_doors && reach.is_some()) {
+        return Err("--play-elevator-door needs --play-load-doors and --play-reach".into());
+    }
     if activatable && !pick_bounds {
         return Err("--play-pick-bounds-activatable needs --play-pick-bounds".into());
     }
@@ -296,6 +329,10 @@ fn run() -> Result<(), E> {
             if region {
                 let _ = writeln!(report, "switch: trigger volumes and placed actors are read about the walker's points (--play-region-walker)");
             }
+            if !elevators.references.is_empty() {
+                let _ = writeln!(report, "switch: the collision of {} named reference(s) moves as the sequences the run's graph starts on them move its nodes, {} other reference(s) placed as stored (--play-elevator, --play-elevator-also){}", elevators.references.len(), elevators.also.len(), if elevators.door { "; a ride that carried the walker ends at the nearest load door within the reach (--play-elevator-door)" } else { "" });
+                w = w.with_elevators(elevators.clone());
+            }
             for (k, v) in &built_counts {
                 let _ = writeln!(report, "{k}\t{v}");
             }
@@ -387,6 +424,9 @@ fn run() -> Result<(), E> {
                 d.seconds,
                 d.report
             );
+        }
+        for (t, x) in &l.elevators {
+            let _ = writeln!(report, "elevator at {t} s: {x}");
         }
         for r in &l.rules {
             let _ = writeln!(report, "rule relied on\t{r}");
