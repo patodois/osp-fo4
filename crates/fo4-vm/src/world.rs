@@ -181,6 +181,8 @@ pub struct World {
     /// The fight's events and the natives that read them
     /// (`crate::fight`): off by default.
     pub fights: crate::fight::Fights,
+    /// Globals, locks and item counts the run holds (`crate::runstate`).
+    pub runstate: crate::runstate::RunState,
 }
 
 impl World {

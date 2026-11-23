@@ -424,6 +424,11 @@ struct Opts {
     /// nearest ancestor's (`pex_auto_state_inherited_v1`,
     /// `--auto-state-inherited`; off by default).
     auto_state_inherited: bool,
+    /// A property on an object without an instance of its script runs on
+    /// one made for it when the script's chain declares no variable
+    /// (`pex_property_implicit_instance_v1`, `--property-implicit-instance`;
+    /// off by default).
+    property_implicit_instance: bool,
 }
 
 /// The story manager's nodes, read once when the story manager is on.
@@ -480,6 +485,7 @@ fn events_on(vm: &mut Vm<'_>, o: Opts) {
     vm.none_arrays = o.none_arrays;
     vm.texts_ignore_case = o.texts_ignore_case;
     vm.auto_state_inherited = o.auto_state_inherited;
+    vm.property_implicit_instance = o.property_implicit_instance;
     if o.scenes {
         GROUPS.with(|g| vm.world.scenes.groups = g.borrow().clone());
         CLOCK.with(|c| vm.world.scenes.clock = c.borrow().clone());
@@ -564,6 +570,10 @@ fn count_switches(c: &mut Counts, o: Opts) {
             o.auto_state_inherited,
             "an instance of a script declaring no auto state starts in its nearest ancestor's (--auto-state-inherited)",
         ),
+        (
+            o.property_implicit_instance,
+            "a property on an object without an instance of its script runs on one made for it when the script's chain declares no variable (--property-implicit-instance)",
+        ),
     ] {
         if on {
             bump(c, format!("switch: {what}"));
@@ -622,6 +632,12 @@ fn count_clock(c: &mut Counts, steps: usize) {
             bump(
                 c,
                 "switch: an action whose start phase was skipped starts with the first later phase it spans that is entered (--scene-actions-skipped-start)",
+            );
+        }
+        if k.npc_responses {
+            bump(
+                c,
+                "switch: a response action plays the topic at the index of the player's assumed choice in its scene, timed as a line (--npc-response-lines)",
             );
         }
         if k.assume_first_line {
@@ -1100,6 +1116,19 @@ struct Then {
     death_events: bool,
     dead_state: bool,
     combat_natives: bool,
+    /// Globals the run sets answer their new value
+    /// (`vm_global_runtime_value_v1`, `--global-values`), locks the run
+    /// sets and the stored lock record (`vm_lock_state_v1`,
+    /// `--lock-state`), and the caller's item counts
+    /// (`--assume-item-count HOLDER|player ITEM N`) (`fo4_vm::runstate`).
+    global_values: bool,
+    lock_state: bool,
+    lock_events: bool,
+    item_counts: Vec<((String, String), i32)>,
+    /// The timeline also writes the run's deaths and who sits where
+    /// (`--timeline-deaths`, `--timeline-sits`; `spec/timeline.md`).
+    timeline_deaths: bool,
+    timeline_sits: bool,
     /// The placed references of a location's cells carrying the ref type
     /// the list holds no row of (`quest_alias_location_ref_placed_v1`,
     /// `--alias-location-placed-refs`).
@@ -1201,6 +1230,8 @@ enum What {
     /// A placed actor dies with a killer, the player or a placed actor
     /// (`--assume-death REF KILLER`).
     Death(String, String),
+    /// The player unlocks a placed reference (`--assume-unlock REF`).
+    Unlock(String),
 }
 #[derive(Clone, Debug)]
 struct Caller {
@@ -1224,7 +1255,8 @@ impl Caller {
             | What::Sit(k, _)
             | What::Hit(k)
             | What::Combat(k, _, _)
-            | What::Death(k, _) => k.clone(),
+            | What::Death(k, _)
+            | What::Unlock(k) => k.clone(),
             What::Menu(m, _) => m.clone(),
             What::Looks(n) => n.to_string(),
         }
@@ -1473,7 +1505,7 @@ fn act(
             let _ = writeln!(names, "## {switch} {key}{when}");
             sit_log(vm, &raised, c, names);
         }
-        What::Hit(..) | What::Combat(..) | What::Death(..) => {
+        What::Hit(..) | What::Combat(..) | What::Death(..) | What::Unlock(_) => {
             fight_act(vm, store, &x.what, &when, c, names, b)?;
             top.extend(quest::run_jobs(vm, store, MAX_GAME_JOBS, b));
         }
@@ -1682,6 +1714,19 @@ fn fight_act(
             (
                 fo4_vm::fight::death(vm, store, a, k, b)?,
                 format!("--assume-death {key} {killer}"),
+            )
+        }
+        What::Unlock(key) => {
+            bump(
+                c,
+                "assumption from the command line: the player unlocks a placed reference (--assume-unlock)",
+            );
+            let k =
+                fo4_vm::player::parse_key(key).ok_or("--assume-unlock takes PLUGIN:OBJECTID")?;
+            let o = fo4_vm::data::record_object(&mut vm.world, store, &k, "objectreference", b)?;
+            (
+                fo4_vm::runstate::unlock(vm, store, o, b)?,
+                format!("--assume-unlock {key}"),
             )
         }
         _ => return Ok(()),
@@ -2270,6 +2315,10 @@ fn new_game(
         (then.death_events, "the caller's deaths delivered to the actor's receivers, dying then death (--death-events)"),
         (then.dead_state, "IsDead on an actor the run killed answers true (--dead-state)"),
         (then.combat_natives, "IsInCombat and GetCombatState answered from the run's combat states (--combat-state-natives)"),
+        (then.global_values, "a global the run sets answers its new value (--global-values)"),
+        (then.lock_state, "IsLocked answers the run's Lock calls, before any whether the record stores a lock (--lock-state)"),
+        (!then.item_counts.is_empty(), "the caller assumes item counts (--assume-item-count)"),
+        (then.lock_events, "the caller's unlock raises the lock state change event on the reference's receivers (--lock-events)"),
         (then.activate_actors, "the caller may assume the player activates a placed actor (--activate-actors)"),
     ] {
         if on {
@@ -2317,6 +2366,16 @@ fn new_game(
     vm.world.fights.death_events = then.death_events;
     vm.world.fights.dead_state = then.dead_state;
     vm.world.fights.combat_natives = then.combat_natives;
+    RUN_TIMELINE.with_borrow_mut(|r| {
+        if let Some((_, rec)) = r.as_mut() {
+            rec.deaths = then.timeline_deaths;
+            rec.sits = then.timeline_sits;
+        }
+    });
+    vm.world.runstate.globals = then.global_values;
+    vm.world.runstate.locks = then.lock_state;
+    vm.world.runstate.lock_events = then.lock_events;
+    vm.world.runstate.item_counts = then.item_counts.iter().cloned().collect();
     vm.world.sits.activate = then.sit_activate;
     vm.world.sits.in_use = then.sit_in_use;
     vm.world.sits.activate_events = then.sit_activate_events;
@@ -2904,7 +2963,8 @@ fn new_game(
                 | What::Looks(_)
                 | What::Hit(_)
                 | What::Combat(..)
-                | What::Death(..) => None,
+                | What::Death(..)
+                | What::Unlock(_) => None,
             })
             .collect();
         next_blockers(&mut vm, m, vfs, store, opts, &quests, then.outer_calls, out)?;
@@ -3787,6 +3847,7 @@ fn run() -> Result<(), E> {
         conditions_end: flag(&mut a, "--phase-conditions-end"),
         texts_ignore_case: flag(&mut a, "--text-equal-ignore-case"),
         auto_state_inherited: flag(&mut a, "--auto-state-inherited"),
+        property_implicit_instance: flag(&mut a, "--property-implicit-instance"),
     };
     let mut switches = fo4_vm::cond::Switches::all();
     let mut assume: BTreeMap<u16, f32> = BTreeMap::new();
@@ -3843,6 +3904,11 @@ fn run() -> Result<(), E> {
         death_events: flag(&mut a, "--death-events"),
         dead_state: flag(&mut a, "--dead-state"),
         combat_natives: flag(&mut a, "--combat-state-natives"),
+        global_values: flag(&mut a, "--global-values"),
+        lock_state: flag(&mut a, "--lock-state"),
+        lock_events: flag(&mut a, "--lock-events"),
+        timeline_deaths: flag(&mut a, "--timeline-deaths"),
+        timeline_sits: flag(&mut a, "--timeline-sits"),
         cond_distance: flag(&mut a, "--cond-1-distance"),
         player_word: flag(&mut a, "--cond-player-word"),
         cond_player_sex: flag(&mut a, "--cond-70-player-sex"),
@@ -3986,6 +4052,38 @@ fn run() -> Result<(), E> {
             after: None,
         });
         a.drain(i..i + 1 + n);
+    }
+    // The caller's unlocks: REF[@SECONDS].
+    while let Some(i) = a.iter().position(|x| x == "--assume-unlock") {
+        let v = a
+            .get(i + 1)
+            .cloned()
+            .ok_or("--assume-unlock PLUGIN:OBJECTID[@SECONDS]")?;
+        let (body, at) = match v.rsplit_once('@') {
+            Some((x, t)) => (x.to_string(), Some(t.parse::<f64>()?)),
+            None => (v.clone(), None),
+        };
+        then.actions.push(Caller {
+            what: What::Unlock(body),
+            at,
+            after: None,
+        });
+        a.drain(i..i + 2);
+    }
+    // The caller's item counts: HOLDER|player ITEM N.
+    while let Some(i) = a.iter().position(|x| x == "--assume-item-count") {
+        let usage = "--assume-item-count PLUGIN:OBJECTID|player PLUGIN:OBJECTID N";
+        let v: Vec<String> = a.get(i + 1..i + 4).ok_or(usage)?.to_vec();
+        let key = |s: &str| -> Result<String, E> {
+            if s == "player" {
+                return Ok(s.to_string());
+            }
+            let k = fo4_vm::player::parse_key(s).ok_or(usage)?;
+            Ok(fo4_vm::bind::record_key(&k))
+        };
+        then.item_counts
+            .push(((key(&v[0])?, key(&v[1])?), v[2].parse()?));
+        a.drain(i..i + 4);
     }
     // The caller's furniture use and menu events.
     while let Some(i) = a.iter().position(|x| {
@@ -4161,6 +4259,7 @@ fn run() -> Result<(), E> {
         assume_start_scenes: flag(&mut a, "--assume-start-scene-actions"),
         assume_first_line: flag(&mut a, "--assume-first-line"),
         start_skipped: flag(&mut a, "--scene-actions-skipped-start"),
+        npc_responses: flag(&mut a, "--npc-response-lines"),
         ..scene::Clock::default()
     };
     let line_audio = !flag(&mut a, "--no-line-audio");
@@ -4220,6 +4319,7 @@ fn run() -> Result<(), E> {
         || !clock.choice_for.is_empty()
         || !clock.first_line_for.is_empty()
         || clock.start_skipped
+        || clock.npc_responses
         || opts.line_fields
         || opts.lines.fragments
         || opts.lines.start_scene;

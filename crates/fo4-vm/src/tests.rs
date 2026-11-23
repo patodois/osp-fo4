@@ -11,6 +11,7 @@ mod graph;
 mod home;
 mod kw;
 mod load3d;
+mod museum;
 mod open2;
 mod quest;
 mod scene;
@@ -86,6 +87,9 @@ fn assemble(src: &str) -> Script {
         }],
     };
     let mut state = 0usize;
+    // `getprop TYPE NAME`: a property with a read function and no variable;
+    // the lines after it, up to the next `func`, are that function's.
+    let mut in_read: Option<usize> = None;
     for line in src.lines().map(str::trim).filter(|l| !l.is_empty()) {
         let w: Vec<&str> = tokens(line);
         match w[0] {
@@ -118,6 +122,27 @@ fn assemble(src: &str) -> Script {
                 read: None,
                 write: None,
             }),
+            "getprop" => {
+                o.properties.push(Property {
+                    type_name: s(w[1]),
+                    name: s(w[2]),
+                    doc: empty,
+                    user_flags: 0,
+                    flags: PROPERTY_READ,
+                    variable: None,
+                    read: Some(Function {
+                        return_type: s(w[1]),
+                        doc: empty,
+                        user_flags: 0,
+                        flags: 0,
+                        params: Vec::new(),
+                        locals: Vec::new(),
+                        code: Vec::new(),
+                    }),
+                    write: None,
+                });
+                in_read = Some(o.properties.len() - 1);
+            }
             "struct" => o.structs.push(Struct {
                 name: s(w[1]),
                 members: Vec::new(),
@@ -147,6 +172,7 @@ fn assemble(src: &str) -> Script {
                 };
             }
             "func" => {
+                in_read = None;
                 let mut flags = 0;
                 let mut params = Vec::new();
                 let mut i = 3;
@@ -178,16 +204,22 @@ fn assemble(src: &str) -> Script {
             }
             "local" => {
                 let l = (s(w[2]), s(w[1]));
-                let f = o.states[state].functions.last_mut().unwrap();
-                f.function.locals.push(l);
+                let f = match in_read {
+                    Some(p) => o.properties[p].read.as_mut().unwrap(),
+                    None => &mut o.states[state].functions.last_mut().unwrap().function,
+                };
+                f.locals.push(l);
             }
             op => {
                 let op: u8 = op.parse().unwrap_or_else(|_| panic!("line {line}"));
                 let vals: Vec<Value> = w[1..].iter().map(|t| lit(t, &mut s)).collect();
                 let shape = OPCODES.get(usize::from(op)).copied().flatten();
                 let fixed = shape.map_or(vals.len(), |x| usize::from(x.fixed));
-                let f = o.states[state].functions.last_mut().unwrap();
-                f.function.code.push(Instruction {
+                let f = match in_read {
+                    Some(p) => o.properties[p].read.as_mut().unwrap(),
+                    None => &mut o.states[state].functions.last_mut().unwrap().function,
+                };
+                f.code.push(Instruction {
                     offset: 0,
                     op,
                     args: vals[..fixed].to_vec(),

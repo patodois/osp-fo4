@@ -132,6 +132,9 @@ pub struct ActionInfo {
     pub package: Option<FormKey>,
     /// Kind 3: the topics of [`PLAYER_CHOICES`], resolved.
     pub choices: Vec<(Option<FormKey>, Option<FormKey>)>,
+    /// Kind 5: the topics its first four tags of [`PLAYER_CHOICES`] name,
+    /// resolved, in that order.
+    pub responses: Vec<Option<FormKey>>,
 }
 impl ActionInfo {
     fn of(a: &fo4_plugin::scen::Action) -> Self {
@@ -160,6 +163,11 @@ impl ActionInfo {
             } else {
                 Vec::new()
             },
+            responses: if a.kind == NPC_RESPONSE {
+                PLAYER_CHOICES.iter().map(|(p, _)| topic(p)).collect()
+            } else {
+                Vec::new()
+            },
         }
     }
 }
@@ -170,6 +178,8 @@ pub const PACKAGE: u16 = 1;
 pub const TIMER: u16 = 2;
 pub const PLAYER_DIALOGUE: u16 = 3;
 pub const START_SCENE: u16 = 4;
+/// The response line kind (`scene_npc_response_choice_v1`).
+pub const NPC_RESPONSE: u16 = 5;
 
 /// What the records say about one scene.
 #[derive(Debug, Clone)]
@@ -419,6 +429,11 @@ pub struct Clock {
     /// scene enters. Off: such an action never starts and holds every
     /// phase it spans, as before.
     pub start_skipped: bool,
+    /// `scene_npc_response_choice_v1` (`quest_run --npc-response-lines`): a
+    /// response action (kind 5) plays the topic at the index of the choice
+    /// the caller assumes the player picks in the scene, spoken by the
+    /// action's alias and timed as a line. Off: not timed, as before.
+    pub npc_responses: bool,
 }
 impl Clock {
     /// The choice the caller assumes the player picks in a scene's player
@@ -1158,6 +1173,27 @@ fn action_time(
                 }
             }
         },
+        NPC_RESPONSE if clock.npc_responses => match clock.choice_in(i) {
+            None => (None, "response: waits on the player's choice".into()),
+            Some(n) => {
+                h.using(rules::NPC_RESPONSE_CHOICE);
+                let Some(topic) = a.responses.get(n).cloned() else {
+                    return (None, "response: the assumed choice is not stored".into());
+                };
+                let speaker = match &i.quest {
+                    Some(q) => {
+                        let b = Budget::new(h.data.max_memory);
+                        voice::speaker(h.data.store, q, a.alias, &b)
+                    }
+                    None => Speaker::Unknown("the scene has no quest".into()),
+                };
+                let (t, how) = line_time(h, w, i, topic.as_ref(), &speaker);
+                (
+                    t,
+                    format!("response: assumed choice {n} from the command line; line {how}"),
+                )
+            }
+        },
         k => (None, format!("{}: not timed", action_kind(k))),
     }
 }
@@ -1238,6 +1274,17 @@ fn line_segments(
                 out.push((answer, p, r.map(|r| p + r), false));
             }
             out
+        }
+        NPC_RESPONSE if w.scenes.clock.npc_responses => {
+            let Some(n) = w.scenes.clock.choice_in(i) else {
+                return Vec::new();
+            };
+            let Some(topic) = a.responses.get(n).cloned() else {
+                return Vec::new();
+            };
+            let sp = speaker(h);
+            let (t, _) = line_time(h, w, i, topic.as_ref(), &sp);
+            vec![(topic, 0.0, t, false)]
         }
         _ => Vec::new(),
     }
@@ -1590,7 +1637,10 @@ fn start_actions(h: &mut QuestHost<'_>, w: &mut World, o: ObjId, i: &SceneInfo, 
             },
         );
         let lines_on = w.scenes.lines.fragments || w.scenes.lines.start_scene;
-        if (w.scenes.line_fields || lines_on) && matches!(a.kind, LINE | PLAYER_DIALOGUE) {
+        let response = a.kind == NPC_RESPONSE && w.scenes.clock.npc_responses;
+        if (w.scenes.line_fields || lines_on)
+            && (matches!(a.kind, LINE | PLAYER_DIALOGUE) || response)
+        {
             line_fields(h, w, o, i, j, a, now);
         }
         if a.kind == PACKAGE {

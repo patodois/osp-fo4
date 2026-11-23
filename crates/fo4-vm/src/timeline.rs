@@ -69,7 +69,23 @@ pub struct Recorder {
     package_moves: Vec<crate::track::ActorMove>,
     /// Times [`Recorder::observe`] ran.
     pub observations: usize,
+    /// Write the actors the run killed as `event` lines `death REF`
+    /// (`quest_run --timeline-deaths`; `spec/timeline.md`, Deaths and
+    /// furniture); off by default: nothing more is written.
+    pub deaths: bool,
+    /// Write who the run has sitting in which furniture reference as
+    /// `event` lines `sit WHO FURNITURE` and `get-up WHO FURNITURE`
+    /// (`quest_run --timeline-sits`); off by default.
+    pub sits: bool,
+    dead_seen: BTreeSet<ObjId>,
+    sitting_seen: BTreeMap<ObjId, ObjId>,
 }
+
+/// The event text of a death (`--timeline-deaths`).
+pub const DEATH: &str = "death";
+/// The event texts of a sit and a get-up (`--timeline-sits`).
+pub const SIT: &str = "sit";
+pub const GET_UP: &str = "get-up";
 
 fn object_key(w: &World, o: ObjId) -> Option<FormKey> {
     w.objects
@@ -124,6 +140,51 @@ impl Recorder {
         self.observations += 1;
         let w = &vm.world;
         let now = w.now[Clock::Real as usize];
+        if self.deaths {
+            for o in &w.fights.dead {
+                if !self.dead_seen.insert(*o) {
+                    continue;
+                }
+                let who = object_key(w, *o).map(|k| tl::key_text(&k));
+                self.events.push(Event {
+                    t: now,
+                    what: What::Note(format!("{DEATH} {}", who.as_deref().unwrap_or("-"))),
+                });
+            }
+        }
+        if self.sits {
+            let name = |o: ObjId| -> String {
+                if w.player == Some(o) {
+                    return "player".into();
+                }
+                object_key(w, o)
+                    .map(|k| tl::key_text(&k))
+                    .unwrap_or_else(|| "-".into())
+            };
+            let gone: Vec<(ObjId, ObjId)> = self
+                .sitting_seen
+                .iter()
+                .filter(|(s, f)| w.sits.sitting.get(s) != Some(f))
+                .map(|(s, f)| (*s, *f))
+                .collect();
+            for (s, f) in gone {
+                self.sitting_seen.remove(&s);
+                self.events.push(Event {
+                    t: now,
+                    what: What::Note(format!("{GET_UP} {} {}", name(s), name(f))),
+                });
+            }
+            for (s, f) in &w.sits.sitting {
+                if self.sitting_seen.get(s) == Some(f) {
+                    continue;
+                }
+                self.sitting_seen.insert(*s, *f);
+                self.events.push(Event {
+                    t: now,
+                    what: What::Note(format!("{SIT} {} {}", name(*s), name(*f))),
+                });
+            }
+        }
         for e in vm.effects.iter().skip(self.effects) {
             let shown = match e.native.as_str() {
                 "objectreference.enable" | "objectreference.enablenowait" => true,

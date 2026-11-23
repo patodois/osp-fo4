@@ -2008,6 +2008,15 @@ impl Host for QuestHost<'_> {
         if let Some(r) = fight_reply {
             return r;
         }
+        // Globals, locks and the caller's item counts, when a caller turned
+        // them on (`crate::runstate`); off, recorded as before.
+        let rs_reply = crate::runstate::native(self.data.store, self.data.max_memory, c, w);
+        for u in std::mem::take(&mut w.runstate.used) {
+            self.using(u);
+        }
+        if let Some(r) = rs_reply {
+            return r;
+        }
         // Keywords of references, when a caller turned a reading on
         // (`crate::keyword`); off, recorded as before.
         let kw_reply = crate::keyword::native(self.data.store, self.data.max_memory, c, w);

@@ -169,7 +169,7 @@ pub const XESP_BIT1: &str = "xesp_flag_bit1_not_presence_v1";
 pub const XESP_PROPAGATES: &str = "xesp_script_change_propagates_v1";
 
 /// Every rule above.
-pub const ALL: [&str; 177] = [
+pub const ALL: [&str; 185] = [
     ARITHMETIC,
     COMPARE,
     NOT_COPY_CAST,
@@ -347,6 +347,14 @@ pub const ALL: [&str; 177] = [
     DEAD_STATE,
     COMBAT_STATE_NATIVES,
     AUTO_STATE_INHERITED,
+    PROPERTY_IMPLICIT_INSTANCE,
+    GLOBAL_RUNTIME_VALUE,
+    LOCK_STATE,
+    WALK_NAVMESH_SURFACE,
+    WALK_DOOR_BOUNDS_BLOCK,
+    WALK_DOOR_LOCK_RECORD_CLOSED,
+    NPC_RESPONSE_CHOICE,
+    LOCK_STATE_EVENT,
 ];
 
 /// The rule an opcode's meaning rests on; `None` for an opcode without a
@@ -727,3 +735,30 @@ pub const COMBAT_STATE_NATIVES: &str = "fight_combat_state_natives_v1";
 /// An instance of a script that declares no auto state starts in the auto
 /// state of its nearest ancestor that declares one.
 pub const AUTO_STATE_INHERITED: &str = "pex_auto_state_inherited_v1";
+/// A property read or written on an object that carries no instance of the
+/// declared script runs the property's functions on an instance made for
+/// it, when the declared script's chain declares no variable (as a scripted
+/// method call does).
+pub const PROPERTY_IMPLICIT_INSTANCE: &str = "pex_property_implicit_instance_v1";
+/// `GlobalVariable.SetValue` changes the value `GetValue` answers from then
+/// on in the run.
+pub const GLOBAL_RUNTIME_VALUE: &str = "vm_global_runtime_value_v1";
+/// `ObjectReference.Lock` changes the lock `IsLocked` answers; before any,
+/// a placed reference is locked when its record stores a lock record.
+pub const LOCK_STATE: &str = "vm_lock_state_v1";
+/// The player walks only on a cell's navigation mesh triangles, joined
+/// across shared edges and edge links of kind 0 (`walk_order_census`).
+pub const WALK_NAVMESH_SURFACE: &str = "walk_navmesh_surface_v1";
+/// A closed door blocks the walk where the standing player comes within a
+/// radius of its base's object bounds placed by the reference
+/// (`walk_order_census`).
+pub const WALK_DOOR_BOUNDS_BLOCK: &str = "walk_door_bounds_block_v1";
+/// A placed door whose record stores a lock record is closed to the
+/// player's walk until a script unlocks it (`walk_order_census`).
+pub const WALK_DOOR_LOCK_RECORD_CLOSED: &str = "walk_door_lock_record_closed_v1";
+/// A scene's response action (kind 5) plays the topic of its four at the
+/// index of the choice the player picks in the scene.
+pub const NPC_RESPONSE_CHOICE: &str = "scene_npc_response_choice_v1";
+/// A placed reference's lock changing raises `OnLockStateChanged()` on its
+/// own scripts and the aliases holding it.
+pub const LOCK_STATE_EVENT: &str = "vm_lock_state_event_v1";

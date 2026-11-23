@@ -629,6 +629,18 @@ impl Vm<'_> {
                 let insts = self.instance_of(o, &rtype)?;
                 match insts.as_slice() {
                     [i] => Ok(*i),
+                    [] if self.property_implicit_instance => {
+                        match self.implicit_instance(o, &rtype)? {
+                            Some(i) => {
+                                self.rules.insert(rules::PROPERTY_IMPLICIT_INSTANCE);
+                                Ok(i)
+                            }
+                            None => Err(Stop::blocked(Block {
+                                on: Origin::NoInstance(rtype, self.world.object_kind(o)),
+                                at: Some(Self::site(f)),
+                            })),
+                        }
+                    }
                     [] => Err(Stop::blocked(Block {
                         on: Origin::NoInstance(rtype, self.world.object_kind(o)),
                         at: Some(Self::site(f)),

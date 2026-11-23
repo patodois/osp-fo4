@@ -43,6 +43,7 @@ pub mod player;
 pub mod program;
 pub mod quest;
 pub mod rules;
+pub mod runstate;
 pub mod scene;
 pub mod setters;
 pub mod sit;
@@ -52,6 +53,7 @@ pub mod timeline;
 pub mod track;
 pub mod vars;
 pub mod voice;
+pub mod walk_order;
 pub mod world;
 
 pub use host::{Host, NativeCall, NoHost, RecordingHost, Reply};
@@ -425,6 +427,11 @@ pub struct Vm<'a> {
     /// (`rules::AUTO_STATE_INHERITED`); off by default: the script's own
     /// (empty) auto state, as before.
     pub auto_state_inherited: bool,
+    /// A property on an object without an instance of the declared script
+    /// runs on an instance made for it when that script's chain declares no
+    /// variable (`rules::PROPERTY_IMPLICIT_INSTANCE`); off by default: the
+    /// run blocks, as before.
+    pub property_implicit_instance: bool,
     steps: u64,
     depth: usize,
 }
@@ -448,6 +455,7 @@ impl<'a> Vm<'a> {
             none_arrays: NoneArrays::default(),
             texts_ignore_case: false,
             auto_state_inherited: false,
+            property_implicit_instance: false,
             steps: 0,
             depth: 0,
         }
