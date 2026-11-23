@@ -631,6 +631,7 @@ impl Builder<'_, '_> {
             clock: Default::default(),
             colour: colour_clock.then_some(tint),
             colour_terms: (terms.color, terms.scale),
+            effect: true,
         };
         self.clock_surface(&mut surface, tracks, file, at)?;
         self.clock_held(n, shader, f, &terms.material_fields, file, at)?;

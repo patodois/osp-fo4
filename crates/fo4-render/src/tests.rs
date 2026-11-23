@@ -931,3 +931,179 @@ fn an_animation_drives_the_colour_and_falloff_and_the_frame_takes_the_colour() {
         "RenderDrawColour"
     );
 }
+
+fn light(points: Vec<fo4_scene::light::Point>) -> fo4_scene::light::Light {
+    fo4_scene::light::Light {
+        ambient: [0.1, 0.2, 0.3],
+        cube: Some([
+            [0.05, 0., 0.],
+            [0.2, 0., 0.],
+            [0., 0.05, 0.],
+            [0., 0.07, 0.],
+            [0., 0., 0.01],
+            [0., 0., 0.03],
+        ]),
+        directional: Some(([0.3, 0.3, 0.3], [-0.6, 0.8, 0.])),
+        points,
+        fog: None,
+        sky: None,
+        lit: true,
+        rules: Default::default(),
+        report: Vec::new(),
+    }
+}
+
+/// The full-screen quad of [`list`] (forward distance 1, white) lit per
+/// sample: the light at the sample's point with the face normal turned
+/// toward the eye, as `Light::at` gives it, then the fog.
+#[test]
+fn a_lit_draw_is_its_colour_times_the_light_at_each_sample() {
+    let mut l = list();
+    l.textures[0].rgba = vec![1., 1., 1., 1.];
+    let point = |x: usize, y: usize| [1., 1. - (y as f64 + 0.5) / 2., (x as f64 + 0.5) / 2. - 1.];
+    let points = vec![
+        fo4_scene::light::Point {
+            position: [0.5, 0.5, 0.5],
+            radius: 1.2,
+            colour: [0.4, 0.1, 0.],
+        },
+        // Behind the quad: its cosine is negative, it adds nothing.
+        fo4_scene::light::Point {
+            position: [2., 0., 0.],
+            radius: 5.,
+            colour: [1., 1., 1.],
+        },
+    ];
+    let mut lt = light(points);
+    let lit = [true];
+    let check = |lt: &fo4_scene::light::Light| {
+        let f = render_lit(
+            &l,
+            &camera(),
+            RenderOptions {
+                bilinear: false,
+                backface_cull: false,
+                workers: 1,
+                clear: [0., 0., 0., 1.],
+            },
+            Some(Lighting {
+                light: lt,
+                lit: &lit,
+            }),
+            &Limits::default(),
+            &Budget::new(8 << 20),
+        )
+        .unwrap();
+        for y in 0..4 {
+            for x in 0..4 {
+                let p = point(x, y);
+                let mut c = lt.at(p, [-1., 0., 0.]);
+                if let Some(fog) = &lt.fog {
+                    let d = p.iter().map(|v| v * v).sum::<f64>().sqrt();
+                    let t = fog.fraction(d);
+                    c = std::array::from_fn(|k| c[k] * (1. - t) + fog.colour[k] * t);
+                }
+                for k in 0..3 {
+                    let got = f.color[y * 4 + x][k];
+                    assert!(
+                        (got - c[k].clamp(0., 1.)).abs() < 1e-5,
+                        "{x} {y} {k} {got} {c:?}"
+                    );
+                }
+            }
+        }
+        f
+    };
+    let f = check(&lt);
+    // The point in front reaches the upper right samples only.
+    assert!(f.color[3][0] > f.color[12][0], "{:?}", f.color);
+    lt.fog = Some(fo4_scene::light::Fog {
+        near: 1.,
+        far: 2.,
+        max: 0.6,
+        colour: [0., 1., 0.],
+    });
+    check(&lt);
+    // Not lit: as `render`.
+    let unlit = render_lit(
+        &l,
+        &camera(),
+        RenderOptions::REFERENCE,
+        Some(Lighting {
+            light: &lt,
+            lit: &[false],
+        }),
+        &Limits::default(),
+        &Budget::new(8 << 20),
+    )
+    .unwrap();
+    let plain = render(
+        &l,
+        &camera(),
+        RenderOptions::REFERENCE,
+        &Limits::default(),
+        &Budget::new(8 << 20),
+    )
+    .unwrap();
+    assert_eq!(unlit.color, plain.color);
+    assert_eq!(unlit.instances, plain.instances);
+    // One flag per draw.
+    let e = render_lit(
+        &l,
+        &camera(),
+        RenderOptions::REFERENCE,
+        Some(Lighting {
+            light: &lt,
+            lit: &[],
+        }),
+        &Limits::default(),
+        &Budget::new(8 << 20),
+    )
+    .unwrap_err();
+    assert_eq!(e.code, "RenderLighting");
+}
+
+/// The sky fills the background by each pixel's elevation; the tags stay
+/// the background's.
+#[test]
+fn the_sky_fills_the_background_by_elevation() {
+    let mut l = list();
+    l.draws.clear();
+    let mut lt = light(Vec::new());
+    lt.sky = Some(fo4_scene::light::Sky {
+        zenith: [0., 0., 1.],
+        lower: [0., 1., 0.],
+        horizon: [1., 0., 0.],
+    });
+    let c = fo4_scene::camera::look_at(
+        [0., 0., 0.],
+        [1., 0., 0.3],
+        [-1., 1., 1., -1., 0.1, 100.],
+        [8, 8],
+    )
+    .unwrap();
+    let f = render_lit(
+        &l,
+        &c,
+        RenderOptions::REFERENCE,
+        Some(Lighting {
+            light: &lt,
+            lit: &[],
+        }),
+        &Limits::default(),
+        &Budget::new(8 << 20),
+    )
+    .unwrap();
+    for y in 0..8u32 {
+        for x in 0..8u32 {
+            let s = pixel_elevation(&c, x, y) as f32;
+            let want = lt.sky.unwrap().colour(s);
+            let got = f.color[(y * 8 + x) as usize];
+            assert_eq!([got[0], got[1], got[2]], want, "{x} {y}");
+            assert_eq!(got[3], RenderOptions::REFERENCE.clear[3]);
+        }
+    }
+    // The top row looks higher than the bottom one.
+    assert!(pixel_elevation(&c, 0, 0) > pixel_elevation(&c, 0, 7));
+    assert!(f.instances.iter().all(|t| *t == u32::MAX));
+}

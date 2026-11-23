@@ -12,7 +12,7 @@ pub mod terrain;
 pub mod timeline;
 use fo4_core::{Budget, Error, Result};
 use fo4_scene::transform::Transform;
-pub use raster::{render, Frame, RenderOptions, Statistics};
+pub use raster::{pixel_elevation, render, render_lit, Frame, Lighting, RenderOptions, Statistics};
 use serde::Serialize;
 #[derive(Debug, Clone, Copy)]
 pub struct Vertex {

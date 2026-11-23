@@ -14,7 +14,7 @@ type AnyResult<T> = Result<T, Box<dyn std::error::Error>>;
 const TERRAIN_SHADING: &str = "ground textures weighted per vertex under the pending terrain texture rules, times VCLR; untextured weight as flat neutral grey per triangle by geometric normal; unlit, not game lighting";
 fn run() -> AnyResult<()> {
     let args: Vec<_> = std::env::args().skip(1).collect();
-    const USAGE: &str = "usage: render MANIFEST DATA_DIRECTORY CELL_EDITOR_ID build/OUTPUT [--strict|--measured|--under-hypotheses] [--eye X,Y,Z --look X,Y,Z] [--instance-ids] [--collision-overlay] [--terrain] [--around N] [--texture-mib N] [--time SECONDS] [--clock-emissive-multiple] [--clock-emissive-colour] [--clock-falloff] [--clock-translation] [--clock-rotation] [--clock-rotation-xyz] [--clock-scale] [--timeline FILE --at SECONDS --eye-height UNITS [--look-heading DEGREES] [--timeline-nowait] [--timeline-child-flag-agrees] [--timeline-cast [--timeline-target-rotation] [--actor-missing-bone-bind]] [--look-at X,Y,Z | --look-at-actor nearest|speaker]] (with --timeline, CELL_EDITOR_ID - draws the player's cell)";
+    const USAGE: &str = "usage: render MANIFEST DATA_DIRECTORY CELL_EDITOR_ID build/OUTPUT [--strict|--measured|--under-hypotheses] [--eye X,Y,Z --look X,Y,Z] [--instance-ids] [--collision-overlay] [--terrain] [--around N] [--texture-mib N] [--time SECONDS] [--clock-emissive-multiple] [--clock-emissive-colour] [--clock-falloff] [--clock-translation] [--clock-rotation] [--clock-rotation-xyz] [--clock-scale] [--timeline FILE --at SECONDS --eye-height UNITS [--look-heading DEGREES] [--timeline-nowait] [--timeline-child-flag-agrees] [--timeline-cast [--timeline-target-rotation] [--actor-missing-bone-bind]] [--look-at X,Y,Z | --look-at-actor nearest|speaker]] [--light-cell] [--light-inherits] [--light-points [--light-reference-radius] [--light-fade]] [--light-fog] [--sky-weather] [--light-weather] [--fog-weather] [--assume-hour H] [--assume-weather N] (with --timeline, CELL_EDITOR_ID - draws the player's cell)";
     if args.len() < 4 {
         return Err(USAGE.into());
     }
@@ -49,9 +49,13 @@ fn run() -> AnyResult<()> {
     let mut timeline_cast = false;
     let mut cast_options = fo4_scene::timeline::cast::Options::default();
     let mut aim = fo4_scene::timeline::Aim::Track;
+    // The light step's readings (`fo4_scene::light`), off by default, and
+    // the caller's hour and weather for an exterior.
+    let mut light_switches = fo4_scene::light::Switches::default();
+    let mut light_assumptions = fo4_scene::light::Assumptions::default();
     let mut rest = args[4..].iter();
     while let Some(arg) = rest.next() {
-        if switches.set_flag(arg) {
+        if switches.set_flag(arg) || light_switches.set_flag(arg) {
             continue;
         }
         match arg.as_str() {
@@ -79,6 +83,21 @@ fn run() -> AnyResult<()> {
                     rest.next()
                         .and_then(|v| v.parse::<f64>().ok())
                         .filter(|t| t.is_finite() && *t >= 0.)
+                        .ok_or(USAGE)?,
+                );
+            }
+            "--assume-hour" => {
+                light_assumptions.hour = Some(
+                    rest.next()
+                        .and_then(|v| v.parse::<f64>().ok())
+                        .filter(|h| (0. ..=24.).contains(h))
+                        .ok_or(USAGE)?,
+                );
+            }
+            "--assume-weather" => {
+                light_assumptions.weather = Some(
+                    rest.next()
+                        .and_then(|v| v.parse::<usize>().ok())
                         .ok_or(USAGE)?,
                 );
             }
@@ -142,6 +161,16 @@ fn run() -> AnyResult<()> {
     };
     if timeline.is_none() && args[2] == "-" {
         return Err(USAGE.into());
+    }
+    if (light_switches.reference_radius || light_switches.fade) && !light_switches.points
+        || light_switches.inherits && !(light_switches.cell || light_switches.fog)
+        || light_assumptions != fo4_scene::light::Assumptions::default()
+            && !light_switches.weather()
+    {
+        return Err(format!(
+            "--light-reference-radius and --light-fade need --light-points, --light-inherits needs --light-cell or --light-fog, --assume-hour and --assume-weather need a weather switch\n{USAGE}"
+        )
+        .into());
     }
     if cast_options != fo4_scene::timeline::cast::Options::default() && !timeline_cast {
         return Err(format!(
@@ -304,6 +333,10 @@ fn run() -> AnyResult<()> {
             },
         );
     }
+    // Draws before this index (the build's and the terrain's) are lit by
+    // the light switches, but for effect shader surfaces; the markers after
+    // it are not.
+    let lit_until = built.list.draws.len();
     // The actors of the timeline's frame as placeholder markers, after
     // every other draw; with --timeline-cast only for the actors the build
     // could not draw as characters.
@@ -437,10 +470,27 @@ fn run() -> AnyResult<()> {
             )
         }
     };
-    let mut frame = fo4_render::render(
+    // The frame's light (`fo4_scene::light`); `None` with every light
+    // switch off, and then the render is the unlit one.
+    let light =
+        fo4_scene::light::frame(&store, &scene, light_switches, light_assumptions, &budget)?;
+    let lit: Vec<bool> = match &light {
+        Some(_) => {
+            let effects: std::collections::BTreeSet<usize> =
+                built.effect_draws.iter().copied().collect();
+            (0..built.list.draws.len())
+                .map(|i| i < lit_until && !effects.contains(&i))
+                .collect()
+        }
+        None => Vec::new(),
+    };
+    let mut frame = fo4_render::render_lit(
         &built.list,
         &camera,
         fo4_render::RenderOptions::REFERENCE,
+        light
+            .as_ref()
+            .map(|light| fo4_render::Lighting { light, lit: &lit }),
         limits,
         &budget,
     )?;
@@ -478,7 +528,17 @@ fn run() -> AnyResult<()> {
     if let (Some(o), Some(map)) = (overlay, summary.as_object_mut()) {
         map.insert("collision_overlay".into(), o);
     }
-    if let (Some((overlay, t)), Some(map)) = (timeline_summary, summary.as_object_mut()) {
+    if let (Some(l), Some(map)) = (&light, summary.as_object_mut()) {
+        map.insert(
+            "light".into(),
+            serde_json::json!({"switches":light_switches.flags(),"assumptions":light_assumptions,"rules":l.rules,"points":l.points.len(),"lit_draws":lit.iter().filter(|v| **v).count(),"sky":l.sky.is_some(),"fog":l.fog,"report":l.report}),
+        );
+    }
+    if let (Some((mut overlay, t)), Some(map)) = (timeline_summary, summary.as_object_mut()) {
+        // The light's lines are absent without its switches.
+        if let Some(l) = &light {
+            overlay.push_str(&fo4_scene::light::overlay(l));
+        }
         files::output_bytes(&out.join("overlay.txt"), overlay.as_bytes())?;
         map.insert("timeline".into(), t);
     }

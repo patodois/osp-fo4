@@ -588,3 +588,19 @@ applied, the rules relied on) is written beside the frame (`overlay.txt` in the 
 folder, `--overlay FILE` in the viewer), never into the image. Without `--timeline` neither path changes:
 the frames of the earlier views compare byte for byte. The markers are ordinary draws of the draw list,
 so the CPU and the viewer draw them alike (`cpu_and_gpu_frames_agree_on_a_timeline_frame`).
+
+## Lit frames and the sky
+
+`render_lit` (and `render`, which is `render_lit` without light) takes a frame's light
+(`fo4_scene::light::Light`, [light.md](light.md)) and a flag per draw: a flagged draw's sample colour
+(texture, vertex colour, effect tint) is multiplied by the light at the sample's point, with the
+triangle's face normal turned toward the eye, then mixed with the fog by distance from the eye, before
+the opacity, the palette alpha, the falloff, the clamp, the test and the blend, which are unchanged. A
+light with a sky fills the frame's background with the sky's gradient by each pixel's view direction
+before any draw (`pixel_elevation`); the background tag stays `u32::MAX`. Without light, or with no draw
+flagged and no sky, the frame is the unlit one byte for byte. The viewer does the same in
+`surface.wesl` from a storage buffer (`scene::light_words`) and a sky pass ordered before its colour pass
+(`gpu::spawn_sky`); the synthetic test `cpu_and_gpu_frames_agree_on_a_lit_frame` compares the two.
+Normals: the CPU takes the cross product of the clipped triangle's camera-space edges, the viewer the
+cross product of the screen derivatives of the world position; both describe the same plane, so the
+difference is rounding.

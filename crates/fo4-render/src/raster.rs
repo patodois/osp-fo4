@@ -81,6 +81,32 @@ impl Frame {
 fn err(code: &str, found: impl std::fmt::Display) -> Error {
     Error::new(code, "raster", 0, "valid bounded draw list", found)
 }
+/// What [`render_lit`] lights: a frame's light (`fo4_scene::light`) and,
+/// for each draw of the list, whether it is lit (`lit[i]`); the sky, when
+/// the light has one, fills the background instead of the clear colour.
+#[derive(Debug, Clone, Copy)]
+pub struct Lighting<'a> {
+    pub light: &'a fo4_scene::light::Light,
+    pub lit: &'a [bool],
+}
+/// The light of one lit draw: the points whose sphere reaches the draw's
+/// bounds (`Light::at_some` gives the same light with them alone).
+struct DrawLight<'a> {
+    light: &'a fo4_scene::light::Light,
+    points: Vec<usize>,
+}
+/// The sine of the elevation of the view direction through the centre of
+/// pixel `(x, y)` of `camera` (game axes, Z up).
+pub fn pixel_elevation(camera: &Camera, x: u32, y: u32) -> f64 {
+    let [l, r, t, b, _, _] = camera.frustum;
+    let [w, h] = camera.size;
+    let u = (f64::from(x) + 0.5) / f64::from(w);
+    let v = 1. - (f64::from(y) + 0.5) / f64::from(h);
+    let d_camera = [1., b + v * (t - b), l + u * (r - l)];
+    let d: [f64; 3] =
+        std::array::from_fn(|i| (0..3).map(|k| d_camera[k] * camera.rotation[k][i]).sum());
+    d[2] / d.iter().map(|x| x * x).sum::<f64>().sqrt()
+}
 #[derive(Clone, Copy, Default)]
 struct Clip {
     a: [f64; 3],
@@ -230,6 +256,7 @@ impl Raster<'_> {
         tex: &Texture,
         palette: Option<&Texture>,
         overlay: bool,
+        lit: Option<&DrawLight<'_>>,
     ) -> Result<()> {
         let mut p = [[0.; 2]; 3];
         for i in 0..3 {
@@ -255,6 +282,33 @@ impl Raster<'_> {
         if !area.is_finite() {
             return Err(err("RenderNonFiniteTriangle", area));
         }
+        // A lit draw's normal: the triangle's face normal turned toward
+        // the eye (the origin of camera axes), in game axes for the light.
+        let face = match lit {
+            Some(_) => {
+                let e1: [f64; 3] = std::array::from_fn(|i| v[1].a[i] - v[0].a[i]);
+                let e2: [f64; 3] = std::array::from_fn(|i| v[2].a[i] - v[0].a[i]);
+                let mut n = [
+                    e1[1] * e2[2] - e1[2] * e2[1],
+                    e1[2] * e2[0] - e1[0] * e2[2],
+                    e1[0] * e2[1] - e1[1] * e2[0],
+                ];
+                let length = n.iter().map(|x| x * x).sum::<f64>().sqrt();
+                if length <= 0. || !length.is_finite() {
+                    return Ok(());
+                }
+                if (0..3).map(|i| -n[i] * v[0].a[i]).sum::<f64>() < 0. {
+                    n = n.map(|x| -x);
+                }
+                let n_camera = n.map(|x| x / length);
+                Some(std::array::from_fn::<f64, 3, _>(|i| {
+                    (0..3)
+                        .map(|k| n_camera[k] * self.camera.rotation[k][i])
+                        .sum()
+                }))
+            }
+            None => None,
+        };
         let weights_dx = [
             -(p[2][1] - p[1][1]) / area,
             -(p[0][1] - p[2][1]) / area,
@@ -383,6 +437,36 @@ impl Raster<'_> {
                         *value *= component;
                     }
                 }
+                // A lit draw: the colour times the light at the surface
+                // point (game axes), then the fog by distance from the eye
+                // (`light_sum_clamped_v1`).
+                if let (Some(d), Some(n)) = (lit, face) {
+                    let point: [f64; 3] = std::array::from_fn(|j| {
+                        (0..3)
+                            .map(|i| weight[i] * v[i].a[j] / v[i].a[0])
+                            .sum::<f64>()
+                            / inv
+                    });
+                    let world: [f64; 3] = std::array::from_fn(|i| {
+                        self.camera.translation[i]
+                            + (0..3)
+                                .map(|k| point[k] * self.camera.rotation[k][i])
+                                .sum::<f64>()
+                    });
+                    if d.light.lit {
+                        let l = d.light.at_some(world, n, d.points.iter().copied());
+                        for (value, component) in color.iter_mut().zip(l) {
+                            *value *= component;
+                        }
+                    }
+                    if let Some(fog) = &d.light.fog {
+                        let distance = point.iter().map(|x| x * x).sum::<f64>().sqrt();
+                        let f = fog.fraction(distance);
+                        for (value, component) in color.iter_mut().zip(fog.colour) {
+                            *value = *value * (1. - f) + component * f;
+                        }
+                    }
+                }
                 color[3] *= draw.alpha.opacity;
                 if let Some(a) = palette_alpha {
                     color[3] = a;
@@ -448,10 +532,11 @@ impl Raster<'_> {
         texture: &Texture,
         palette: Option<&Texture>,
         overlay: bool,
+        lit: Option<&DrawLight<'_>>,
     ) -> Result<()> {
         clipped(v, self.camera, |t| {
             self.frame.statistics.clipped_triangles += 1;
-            self.triangle(t, draw, texture, palette, overlay)
+            self.triangle(t, draw, texture, palette, overlay, lit)
         })
     }
 }
@@ -462,7 +547,33 @@ pub fn render(
     l: &Limits,
     b: &Budget,
 ) -> Result<Frame> {
+    render_lit(list, camera, options, None, l, b)
+}
+/// [`render`] with a frame's light: the draws `lighting.lit` marks are lit
+/// and fogged, and the light's sky fills the background
+/// (`fo4_scene::light`, `spec/light.md`). With `None` it is [`render`].
+pub fn render_lit(
+    list: &DrawList,
+    camera: &Camera,
+    options: RenderOptions,
+    lighting: Option<Lighting<'_>>,
+    l: &Limits,
+    b: &Budget,
+) -> Result<Frame> {
     camera.validate()?;
+    if let Some(g) = &lighting {
+        if g.lit.len() != list.draws.len() || camera.scale != 1. {
+            return Err(err(
+                "RenderLighting",
+                format!(
+                    "{} lit flags for {} draws, camera scale {}",
+                    g.lit.len(),
+                    list.draws.len(),
+                    camera.scale
+                ),
+            ));
+        }
+    }
     l.validate("render")?;
     if options.workers == 0 || options.workers > 4 || options.clear.iter().any(|x| !x.is_finite()) {
         return Err(err("InvalidRenderOptions", options.workers));
@@ -473,6 +584,15 @@ pub fn render(
     let mut color = Vec::new();
     b.reserve(&mut color, n, "frame color", 0)?;
     color.resize(n, options.clear);
+    // The sky fills the background by each pixel's view direction.
+    if let Some(sky) = lighting.and_then(|g| g.light.sky) {
+        let w = camera.size[0] as usize;
+        for (at, c) in color.iter_mut().enumerate() {
+            let s = pixel_elevation(camera, (at % w) as u32, (at / w) as u32) as f32;
+            let [r, g, bl] = sky.colour(s);
+            *c = [r, g, bl, options.clear[3]];
+        }
+    }
     let mut instances = Vec::new();
     b.reserve(&mut instances, n, "frame instances", 0)?;
     instances.resize(n, u32::MAX);
@@ -524,6 +644,8 @@ pub fn render(
     list.validate_overlays()?;
     let mut transparent = Vec::new();
     let mut ordinal = 0;
+    // The light of each lit draw, kept for its blended triangles.
+    let mut draw_lights: Vec<Option<DrawLight<'_>>> = Vec::new();
     for (di, draw) in list.draws.iter().enumerate() {
         draw.alpha.validate()?;
         let mesh = list
@@ -592,6 +714,39 @@ pub fn render(
                 std::array::from_fn(|i| (0..3).map(|j| draw.world.rotation[j][i] * n[j]).sum());
             std::array::from_fn(|i| (0..3).map(|j| camera.rotation[i][j] * w[j]).sum())
         };
+        // A lit draw's points: those whose sphere reaches the bounds of
+        // its vertices in game axes.
+        let draw_light = match lighting {
+            Some(g) if g.lit[di] && (g.light.lit || g.light.fog.is_some()) => {
+                let mut lo = [f64::INFINITY; 3];
+                let mut hi = [f64::NEG_INFINITY; 3];
+                for v in &mesh.vertices {
+                    let p = draw.world.apply(v.position);
+                    for k in 0..3 {
+                        lo[k] = lo[k].min(p[k]);
+                        hi[k] = hi[k].max(p[k]);
+                    }
+                }
+                let mut points = Vec::new();
+                for (k, p) in g.light.points.iter().enumerate() {
+                    let d2: f64 = (0..3)
+                        .map(|i| {
+                            let e = (lo[i] - p.position[i]).max(p.position[i] - hi[i]).max(0.);
+                            e * e
+                        })
+                        .sum();
+                    if d2 < p.radius * p.radius {
+                        scratch.reserve(&mut points, 1, "draw lights", 0)?;
+                        points.push(k);
+                    }
+                }
+                Some(DrawLight {
+                    light: g.light,
+                    points,
+                })
+            }
+            _ => None,
+        };
         for tri in &mesh.triangles {
             ordinal = fo4_core::add(ordinal, 1, "triangles", 0)?;
             fo4_core::limit(ordinal, l.max_entries, "triangles", 0)?;
@@ -629,8 +784,19 @@ pub fn render(
                     &scratch,
                 )?;
             } else {
-                raster.emit(v, draw, tex, palette, list.is_overlay(di))?;
+                raster.emit(
+                    v,
+                    draw,
+                    tex,
+                    palette,
+                    list.is_overlay(di),
+                    draw_light.as_ref(),
+                )?;
             }
+        }
+        if lighting.is_some() {
+            scratch.reserve(&mut draw_lights, 1, "draw lights", 0)?;
+            draw_lights.push(draw_light);
         }
     }
     transparent.sort_unstable_by(|a, b| {
@@ -646,6 +812,7 @@ pub fn render(
             &list.textures[d.texture],
             d.palette.map(|p| &list.textures[p.texture]),
             list.is_overlay(t.draw),
+            draw_lights.get(t.draw).and_then(Option::as_ref),
         )?;
     }
     Ok(raster.frame)

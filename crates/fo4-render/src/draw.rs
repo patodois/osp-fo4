@@ -54,6 +54,9 @@ pub struct Build {
     pub instances: Vec<Identity>,
     pub omitted: Vec<Omission>,
     pub texture_choices: Vec<TextureChoice>,
+    /// Indices into `list.draws` of the draws of effect shader surfaces,
+    /// increasing: a frame's light leaves them unlit (`fo4_scene::light`).
+    pub effect_draws: Vec<usize>,
 }
 /// One skinned actor mesh of a posed build ([`build_with_posed_actors`]),
 /// kept so that a caller can pose it again: the draw-list mesh, the skeleton
@@ -348,6 +351,9 @@ struct Surface {
     /// base colour and scale of its animation.
     colour: Option<[f32; 3]>,
     colour_terms: ([f32; 3], f32),
+    /// An effect shader's surface (not a lighting shader's): drawn unlit
+    /// under a frame's light (`Build::effect_draws`).
+    effect: bool,
 }
 struct Builder<'a, 's> {
     loader: &'a Loader<'s>,
@@ -1381,6 +1387,7 @@ impl Builder<'_, '_> {
                     clock: Default::default(),
                     colour: None,
                     colour_terms: ([1.; 3], 1.),
+                    effect: !lighting,
                 })
             })?;
             // A controller drives the NIF shader's field; the draw takes the
@@ -1583,6 +1590,7 @@ impl Builder<'_, '_> {
             clock: Default::default(),
             colour: None,
             colour_terms: ([1.; 3], 1.),
+            effect: !lighting,
         };
         let tracks = self.shader_clock(n, shader, file)?;
         self.clock_surface(
@@ -1931,6 +1939,10 @@ impl Builder<'_, '_> {
                 let surface = self.surface(n, f, swap, file, Some(mesh))?;
                 let mesh = self.mesh(path, mesh_index, mesh, &surface, None)?;
                 self.animate(&surface, here.as_ref())?;
+                if surface.effect {
+                    let at = self.output.list.draws.len();
+                    append(&mut self.output.effect_draws, at, self.budget)?;
+                }
                 append(
                     &mut self.output.list.draws,
                     Draw {
@@ -2504,6 +2516,10 @@ impl Builder<'_, '_> {
                         )?;
                     }
                     self.animate(&surface, None)?;
+                    if surface.effect {
+                        let at = self.output.list.draws.len();
+                        append(&mut self.output.effect_draws, at, self.budget)?;
+                    }
                     append(
                         &mut self.output.list.draws,
                         Draw {
@@ -2781,6 +2797,7 @@ fn build_inner(
             instances: Vec::new(),
             omitted: Vec::new(),
             texture_choices: Vec::new(),
+            effect_draws: Vec::new(),
         },
         meshes: BTreeMap::new(),
         posed: poses
