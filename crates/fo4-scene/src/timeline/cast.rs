@@ -44,6 +44,10 @@ pub struct Options {
     /// The character graph's readings (`crate::char_graph::Switches`):
     /// with any on, [`start_poses`] poses the actors by their start clip.
     pub pose: char_graph::Switches,
+    /// The look's readings of a templated or leveled actor
+    /// (`crate::actor::Readings`: `--actor-template-bits`,
+    /// `--actor-leveled-seed`).
+    pub look: actor::Readings,
 }
 
 /// The frame's actors resolved as characters, in the order of the markers.
@@ -63,6 +67,10 @@ pub struct Cast {
     pub poses: Vec<String>,
     /// Actors [`start_poses`] posed by their start clip.
     pub posed: usize,
+    /// With `--timeline-ride-model`: the overlay's text on the ride's model
+    /// (`super::ride::add`), which then follows the markers' actors in
+    /// [`Cast::actors`].
+    pub ride: Option<String>,
 }
 
 impl Cast {
@@ -192,7 +200,21 @@ pub fn resolve(
     for m in markers {
         let k = norm(&m.reference);
         let src = span(loader.plugins, &k);
-        let mut a = actor::resolve_reference(loader, &k, &src, b)?;
+        let mut a = actor::resolve_reference_with(loader, &k, &src, options.look, b)?;
+        if a.look.is_some() && a.plan.is_some() {
+            if a.look
+                .as_deref()
+                .is_some_and(|l| l.contains(hypotheses::ACTOR_LEVELED_PICK))
+            {
+                out.rules.insert(hypotheses::ACTOR_LEVELED_PICK);
+            }
+            if a.look
+                .as_deref()
+                .is_some_and(|l| l.contains(hypotheses::ACTOR_TEMPLATE_BITS))
+            {
+                out.rules.insert(hypotheses::ACTOR_TEMPLATE_BITS);
+            }
+        }
         a.missing_bones_at_bind = options.missing_bones_at_bind;
         let mut facing = "not placed (no stored placement)".to_string();
         if let Some(stored) = a.transform {
@@ -313,9 +335,12 @@ pub fn start_poses(
         if !a.state.ready_at(level) {
             continue;
         }
-        let keywords = match &a.base {
-            Some(base) => char_graph::actor_keywords(loader.plugins, base, &plan.race, b)?,
-            None => Err("no base".to_string()),
+        let keywords = match (&a.keyword_base, &a.base) {
+            (Some((npc, by_bits)), _) => {
+                char_graph::npc_keywords(loader.plugins, npc, &plan.race, *by_bits, b)?
+            }
+            (None, Some(base)) => char_graph::actor_keywords(loader.plugins, base, &plan.race, b)?,
+            (None, None) => Err("no base".to_string()),
         };
         let input = char_graph::Actor {
             race: &plan.race,
@@ -504,9 +529,13 @@ pub fn report(
             Some(p) if !p.is_empty() => format!("; {p}"),
             _ => String::new(),
         };
+        let look = match &cast.actors.actors[*k].look {
+            Some(l) => format!("; look: {l}"),
+            None => String::new(),
+        };
         let _ = writeln!(
             s,
-            "character\ttag {tag}\t{}\tfacing {}{bind}{pose}",
+            "character\ttag {tag}\t{}\tfacing {}{bind}{pose}{look}",
             place(*k),
             cast.facing[*k]
         );

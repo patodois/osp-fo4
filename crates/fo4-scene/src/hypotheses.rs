@@ -260,6 +260,26 @@ pub const ACTOR_SKINNING: &str = "actor_skin_linear_blend_v1";
 pub const ACTOR_HEAD: &str = "npc_head_parts_unmorphed_v1";
 pub const ACTOR_LEVELED_FLAGS: &str = "npc_leveled_list_flags_v1";
 pub const ACTOR_TEMPLATE_ALL_BITS: &str = "npc_template_all_bits_v1";
+/// A templated NPC_'s look by template bit: bit 0 its traits (race, ACBS
+/// bit 0, skin, head parts), bit 8 its outfit, bit 12 its keywords
+/// (`crate::actor::Readings::template_bits`, `--actor-template-bits`).
+pub const ACTOR_TEMPLATE_BITS: &str = "npc_template_bits_traits_inventory_v1";
+/// One entry of each leveled list an actor reaches, picked by the caller's
+/// seed (`crate::actor::Readings::leveled_seed`, `--actor-leveled-seed`).
+pub const ACTOR_LEVELED_PICK: &str = "npc_leveled_entry_seeded_pick_v1";
+/// A leveled item list's LVLD read as the percent chance it gives nothing,
+/// drawn from the caller's seed (`crate::actor::Readings::chance_none`,
+/// `--actor-leveled-chance-none`).
+pub const ACTOR_LEVELED_CHANCE_NONE: &str = "npc_leveled_item_chance_none_seeded_v1";
+/// A leveled item list whose LVLF has bit 2 set gives every entry
+/// (`crate::actor::Readings::use_all`, `--actor-leveled-use-all`).
+pub const ACTOR_LEVELED_USE_ALL: &str = "npc_leveled_item_flag_use_all_v1";
+/// A model's skinned shapes skinned to its own nodes (`crate::timeline::ride`,
+/// `--timeline-ride-model`).
+pub const MODEL_OWN_NODES: &str = "model_skinned_own_nodes_v1";
+/// The nodes a caller's sequence translates, at the frame's second
+/// (`crate::timeline::ride`, `--timeline-ride`).
+pub const TIMELINE_RIDE: &str = "timeline_ride_sequence_nodes_v1";
 /// A clip posing an actor (`crate::actor::clip`, `spec/actor.md`, Clip pose).
 pub const ACTOR_CLIP_SKELETON: &str = "actor_clip_skeleton_beside_nif_v1";
 pub const ACTOR_CLIP_POSE: &str = "actor_clip_pose_by_bone_name_v1";
@@ -429,6 +449,12 @@ fn actor_rule(code: &str) -> Option<&'static str> {
         "UnverifiedActorHeadParts" => Some(ACTOR_HEAD),
         "UnverifiedActorLeveledFlags" => Some(ACTOR_LEVELED_FLAGS),
         "UnverifiedActorTemplateAllBits" => Some(ACTOR_TEMPLATE_ALL_BITS),
+        "UnverifiedActorTemplateBits" => Some(ACTOR_TEMPLATE_BITS),
+        "UnverifiedActorLeveledPick" => Some(ACTOR_LEVELED_PICK),
+        "UnverifiedActorLeveledChanceNone" => Some(ACTOR_LEVELED_CHANCE_NONE),
+        "UnverifiedActorLeveledUseAll" => Some(ACTOR_LEVELED_USE_ALL),
+        "UnverifiedModelOwnNodes" => Some(MODEL_OWN_NODES),
+        "UnverifiedTimelineRide" => Some(TIMELINE_RIDE),
         "UnverifiedActorClipSkeleton" => Some(ACTOR_CLIP_SKELETON),
         "UnverifiedActorClipPose" => Some(ACTOR_CLIP_POSE),
         _ => None,
@@ -610,6 +636,12 @@ mod tests {
             LTEX_MATERIAL,
             LAND_DEFAULT_NAMED,
             ACTOR_SKINNING,
+            ACTOR_TEMPLATE_BITS,
+            ACTOR_LEVELED_PICK,
+            ACTOR_LEVELED_CHANCE_NONE,
+            ACTOR_LEVELED_USE_ALL,
+            MODEL_OWN_NODES,
+            TIMELINE_RIDE,
             ACTOR_CLIP_SKELETON,
             ACTOR_CLIP_POSE,
             CHAR_GRAPH_START,

@@ -28,6 +28,93 @@ pub const MAX_CHAIN: u32 = 8;
 /// 13, 14 and 15 never are; `spec/actor.md`).
 pub const TEMPLATE_BITS: u16 = 0b1_1111_1011_1111;
 
+/// Readings of a templated or leveled actor's look beyond the agreeing
+/// candidates (`spec/actor.md`, Picked looks), each a pending rule behind
+/// its own switch, off by default. With both off [`resolve_reference_with`]
+/// is [`resolve_reference`].
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Readings {
+    /// `npc_template_bits_traits_inventory_v1` (`--actor-template-bits`): a
+    /// templated NPC_ takes its traits (race, ACBS bit 0, skin and head
+    /// parts) through TPTA slot 0 when bit 0 of its ACBS u16 at 14 is set,
+    /// its outfit through slot 8 when bit 8 is set and its keywords through
+    /// slot 12 when bit 12 is set (TPLT for every slot without TPTA), and
+    /// each of these from itself when the bit is clear. No other bit is
+    /// followed for the look.
+    pub template_bits: bool,
+    /// `npc_leveled_entry_seeded_pick_v1` (`--actor-leveled-seed SEED`):
+    /// each leveled list the actor's chain reaches (LVLN, and LVLI under
+    /// its outfit) yields the one entry [`pick_index`] gives, in stored
+    /// order. The caller's seed stands for the game's choice, which only
+    /// play can answer: levels, chances and LVLF are not evaluated.
+    pub leveled_seed: Option<u64>,
+    /// `npc_leveled_item_chance_none_seeded_v1` (`--actor-leveled-chance-none`,
+    /// with the seed): a leveled item list under the outfit whose LVLD is
+    /// not zero gives nothing when [`chance_roll`] is below LVLD, else its
+    /// picked entry (LVLD read as a percent chance of nothing). Off: such
+    /// a list stays refused.
+    pub chance_none: bool,
+    /// `npc_leveled_item_flag_use_all_v1` (`--actor-leveled-use-all`, with
+    /// the seed): a leveled item list under the outfit whose LVLF has bit
+    /// 2 set gives every entry (each followed as the pick follows one).
+    pub use_all: bool,
+}
+impl Readings {
+    /// Whether any reading is on.
+    pub fn any(&self) -> bool {
+        self.template_bits || self.leveled_seed.is_some() || self.chance_none || self.use_all
+    }
+}
+
+/// What [`Readings::leveled_seed`] and its companions did with the
+/// leveled lists of one actor.
+#[derive(Debug, Default)]
+struct Picks {
+    /// (list, entry, entries) of each list one entry was picked from.
+    entries: BTreeSet<(FormKey, usize, usize)>,
+    /// Lists that gave nothing ([`Readings::chance_none`]).
+    none: BTreeSet<FormKey>,
+    /// Lists that gave every entry ([`Readings::use_all`]).
+    all: BTreeSet<FormKey>,
+    /// Lists whose LVLD was rolled ([`Readings::chance_none`]).
+    rolled: BTreeSet<FormKey>,
+}
+
+/// The roll [`Readings::chance_none`] compares with a list's LVLD: the
+/// 64-bit FNV-1a hash of [`pick_index`]'s bytes followed by the bytes of
+/// the word `none`, modulo 100.
+pub fn chance_roll(seed: u64, reference: &FormKey, list: &FormKey) -> u8 {
+    (fnv(seed, reference, list, b"none") % 100) as u8
+}
+
+fn fnv(seed: u64, reference: &FormKey, list: &FormKey, tail: &[u8]) -> u64 {
+    let mut h: u64 = 0xcbf2_9ce4_8422_2325;
+    let mut eat = |bytes: &[u8]| {
+        for x in bytes {
+            h ^= u64::from(*x);
+            h = h.wrapping_mul(0x0000_0100_0000_01b3);
+        }
+    };
+    eat(&seed.to_le_bytes());
+    for k in [reference, list] {
+        eat(k.plugin.as_bytes());
+        eat(&[0]);
+        eat(&k.object_id.to_le_bytes());
+    }
+    eat(tail);
+    h
+}
+
+/// The entry of a leveled list `list` with `entries` entries (at least
+/// one) that [`Readings::leveled_seed`] picks for the placed actor
+/// `reference`: the 64-bit FNV-1a hash of the seed's eight bytes (little
+/// endian), the reference's plugin name, a zero byte, its object id (four
+/// bytes, little endian), the list's plugin name, a zero byte and its
+/// object id, modulo `entries`. A caller assumption, not the game's choice.
+pub fn pick_index(seed: u64, reference: &FormKey, list: &FormKey, entries: usize) -> usize {
+    (fnv(seed, reference, list, &[]) % entries.max(1) as u64) as usize
+}
+
 /// One armour addon model drawn for an actor.
 #[derive(Debug, Serialize)]
 pub struct Part {
@@ -102,6 +189,17 @@ pub struct Actor {
     /// the skeleton asset is the key, as before.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub pose: Option<usize>,
+    /// Under [`Readings`]: how the look was settled (the leveled entries
+    /// picked, the template bits followed), for the overlay; `None` when no
+    /// reading took part.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub look: Option<String>,
+    /// Under [`Readings`]: the one NPC_ whose own keywords (KWDA) are the
+    /// actor's, with whether [`Readings::template_bits`] chose it (its own
+    /// template then does not refuse its keywords); `None` without the
+    /// readings or when not one.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub keyword_base: Option<(FormKey, bool)>,
 }
 impl Actor {
     /// Whether the enable parent rules say this actor starts disabled.
@@ -168,12 +266,92 @@ struct Look {
     /// its section when it lists none (marked true).
     heads: BTreeSet<(Vec<FormKey>, bool)>,
     visits: u64,
+    /// The leveled lists [`Readings::leveled_seed`] picked from: list,
+    /// entry, entries.
+    picks: Picks,
+    /// A template bit was followed for one property group
+    /// ([`Readings::template_bits`]).
+    bits: bool,
+    /// The NPC_s whose own values were taken.
+    own: BTreeSet<FormKey>,
+}
+
+/// The property groups [`Readings::template_bits`] follows one template
+/// bit for; `All` is the reading without it (every candidate).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Group {
+    All,
+    Traits,
+    Inventory,
+    Keywords,
+}
+impl Group {
+    fn bit(self) -> usize {
+        match self {
+            Self::All | Self::Traits => 0,
+            Self::Inventory => 8,
+            Self::Keywords => 12,
+        }
+    }
+}
+
+/// What one actor's chain is gathered under: the readings, the placed
+/// reference (for the pick) and the property group.
+#[derive(Clone, Copy)]
+struct Walk<'a> {
+    readings: Readings,
+    reference: &'a FormKey,
+    group: Group,
+}
+
+/// An NPC_'s own traits: race, ACBS bit 0, skin (its WNAM, else its
+/// race's) and head part list (its PNAM, else its race's HEAD of its
+/// section, marked true).
+type Traits = (FormKey, usize, Option<FormKey>, (Vec<FormKey>, bool));
+fn own_traits(
+    loader: &Loader<'_>,
+    key: &FormKey,
+    n: &Npc,
+    work: &Budget,
+) -> std::result::Result<Traits, String> {
+    let race = n
+        .race
+        .as_ref()
+        .and_then(|f| f.key.clone())
+        .ok_or_else(|| format!("base {}: no race", short(key)))?;
+    let flags = n
+        .flags
+        .ok_or_else(|| format!("base {}: no ACBS", short(key)))?;
+    let Some((rr, rp)) =
+        read(loader, &race, work).map_err(|e| format!("race {}: {}", short(&race), e.code))?
+    else {
+        return Err(format!("race {}: no winning record", short(&race)));
+    };
+    let race_record = Race::decode(&rr, ctx(loader, rp), work)
+        .map_err(|e| format!("race {}: {}", short(&race), e.code))?;
+    let mut heads: Vec<FormKey> = n.head_parts.iter().filter_map(|f| f.key.clone()).collect();
+    let from_race = heads.is_empty();
+    if from_race {
+        heads.extend(
+            race_record.section_head_parts[(flags & 1) as usize]
+                .iter()
+                .filter_map(|f| f.key.clone()),
+        );
+    }
+    heads.sort();
+    heads.dedup();
+    let skin = match n.skin.as_ref().and_then(|f| f.key.clone()) {
+        Some(k) => Some(k),
+        None => race_record.skin.and_then(|f| f.key),
+    };
+    Ok((race, (flags & 1) as usize, skin, (heads, from_race)))
 }
 fn gather(
     loader: &Loader<'_>,
     key: &FormKey,
     depth: u32,
     look: &mut Look,
+    walk: Walk<'_>,
     b: &Budget,
 ) -> std::result::Result<(), String> {
     look.visits += 1;
@@ -207,59 +385,77 @@ fn gather(
                 return Err(format!("template: leveled list {} is empty", short(key)));
             }
             look.leveled = true;
-            for e in &l.entries {
+            // Under the caller's seed one entry, else every entry.
+            let range = match walk.readings.leveled_seed {
+                Some(seed) => {
+                    let i = pick_index(seed, walk.reference, key, l.entries.len());
+                    look.picks.entries.insert((key.clone(), i, l.entries.len()));
+                    i..i + 1
+                }
+                None => 0..l.entries.len(),
+            };
+            for e in &l.entries[range] {
                 let k = e
                     .reference
                     .key
                     .clone()
                     .ok_or_else(|| format!("leveled list {}: null entry", short(key)))?;
-                gather(loader, &k, depth + 1, look, b)?;
+                gather(loader, &k, depth + 1, look, walk, b)?;
+            }
+            Ok(())
+        }
+        b"NPC_" if walk.group != Group::All => {
+            let n = Npc::decode(&r, ctx(loader, plugin), &work)
+                .map_err(|e| format!("base {}: {}", short(key), e.code))?;
+            let bit = walk.group.bit();
+            if n.template_flags.unwrap_or(0) & (1 << bit) != 0 {
+                look.templated = true;
+                look.bits = true;
+                let target = match &n.template_slots {
+                    Some(slots) => slots
+                        .get(bit)
+                        .and_then(|s| s.as_ref())
+                        .and_then(|f| f.key.clone()),
+                    None => n.template.as_ref().and_then(|f| f.key.clone()),
+                };
+                let Some(t) = target else {
+                    return Err(format!(
+                        "template: base {} sets template bit {bit} but names no template for it",
+                        short(key)
+                    ));
+                };
+                return gather(loader, &t, depth + 1, look, walk, b);
+            }
+            look.own.insert(key.clone());
+            match walk.group {
+                Group::Traits => {
+                    let (race, section, skin, heads) = own_traits(loader, key, &n, &work)?;
+                    look.heads.insert(heads);
+                    look.race.insert(race);
+                    look.section.insert(section);
+                    look.skin.insert(skin);
+                }
+                Group::Inventory => {
+                    look.outfit.insert(n.outfit.and_then(|f| f.key));
+                }
+                Group::Keywords | Group::All => {}
             }
             Ok(())
         }
         b"NPC_" => {
             let n = Npc::decode(&r, ctx(loader, plugin), &work)
                 .map_err(|e| format!("base {}: {}", short(key), e.code))?;
-            let race = n
-                .race
-                .as_ref()
-                .and_then(|f| f.key.clone())
-                .ok_or_else(|| format!("base {}: no race", short(key)))?;
-            let flags = n
-                .flags
-                .ok_or_else(|| format!("base {}: no ACBS", short(key)))?;
-            let Some((rr, rp)) = read(loader, &race, &work)
-                .map_err(|e| format!("race {}: {}", short(&race), e.code))?
-            else {
-                return Err(format!("race {}: no winning record", short(&race)));
-            };
-            let race_record = Race::decode(&rr, ctx(loader, rp), &work)
-                .map_err(|e| format!("race {}: {}", short(&race), e.code))?;
-            let mut heads: Vec<FormKey> =
-                n.head_parts.iter().filter_map(|f| f.key.clone()).collect();
-            let from_race = heads.is_empty();
-            if from_race {
-                heads.extend(
-                    race_record.section_head_parts[(flags & 1) as usize]
-                        .iter()
-                        .filter_map(|f| f.key.clone()),
-                );
-            }
-            heads.sort();
-            heads.dedup();
-            let skin = match n.skin.as_ref().and_then(|f| f.key.clone()) {
-                Some(k) => Some(k),
-                None => race_record.skin.and_then(|f| f.key),
-            };
+            let (race, section, skin, heads) = own_traits(loader, key, &n, &work)?;
             let tf = n.template_flags.unwrap_or(0);
             // With every template bit set, every property comes from the
             // templates: the own values are no candidates.
             if tf & TEMPLATE_BITS == TEMPLATE_BITS {
                 look.all_bits = true;
             } else {
-                look.heads.insert((heads, from_race));
+                look.own.insert(key.clone());
+                look.heads.insert(heads);
                 look.race.insert(race);
-                look.section.insert((flags & 1) as usize);
+                look.section.insert(section);
                 look.skin.insert(skin);
                 look.outfit.insert(n.outfit.and_then(|f| f.key));
             }
@@ -287,7 +483,7 @@ fn gather(
                     ));
                 }
                 for t in &targets {
-                    gather(loader, t, depth + 1, look, b)?;
+                    gather(loader, t, depth + 1, look, walk, b)?;
                 }
             }
             Ok(())
@@ -301,11 +497,14 @@ fn gather(
 }
 
 /// The armours an outfit puts on: its ARMO entries, and the one ARMO every
-/// entry of a leveled item list gives.
+/// entry of a leveled item list gives; under [`Readings::leveled_seed`] the
+/// ARMO the entries picked in each list lead to (`picks` gathers them).
 fn outfit_armors(
     loader: &Loader<'_>,
     key: &FormKey,
     notes: &mut Vec<String>,
+    walk: Walk<'_>,
+    picks: &mut Picks,
     b: &Budget,
 ) -> Result<std::result::Result<Vec<FormKey>, String>> {
     let Some((r, plugin)) = read(loader, key, b)? else {
@@ -319,6 +518,12 @@ fn outfit_armors(
         };
         match loader.plugins.signature(&k) {
             Some(s) if s == *b"ARMO" => out.push(k),
+            Some(s) if s == *b"LVLI" && walk.readings.leveled_seed.is_some() => {
+                match picked_item(loader, &k, 0, walk, picks, b)? {
+                    Ok(a) => out.extend(a),
+                    Err(reason) => return Ok(Err(reason)),
+                }
+            }
             Some(s) if s == *b"LVLI" => {
                 let mut found = BTreeSet::new();
                 if let Err(reason) = leveled_items(loader, &k, 0, &mut found, &mut 0, b)? {
@@ -404,6 +609,87 @@ fn leveled_items(
     Ok(Ok(()))
 }
 
+/// The armours the entry [`Readings::leveled_seed`] picks in leveled item
+/// list `key` leads to (through nested lists, one entry picked in each):
+/// none when it leads to an item other than an armour. A list whose LVLM
+/// is not zero stays refused, and one whose LVLD is not zero unless
+/// [`Readings::chance_none`] rolls it; with [`Readings::use_all`] a list
+/// whose LVLF has bit 2 set gives every entry.
+fn picked_item(
+    loader: &Loader<'_>,
+    key: &FormKey,
+    depth: u32,
+    walk: Walk<'_>,
+    picks: &mut Picks,
+    b: &Budget,
+) -> Result<std::result::Result<Vec<FormKey>, String>> {
+    if depth > MAX_CHAIN {
+        return Ok(Err("outfit: leveled item lists too deep".into()));
+    }
+    let work = b.child();
+    let Some((r, plugin)) = read(loader, key, &work)? else {
+        return Ok(Err(format!(
+            "outfit: list {} has no winning record",
+            short(key)
+        )));
+    };
+    let l = Leveled::decode(&r, ctx(loader, plugin), &work)?;
+    let chance = l.bytes[0].unwrap_or(0);
+    if l.bytes[1].is_some_and(|v| v != 0) || (chance != 0 && !walk.readings.chance_none) {
+        return Ok(Err(format!(
+            "outfit: leveled item list {} with LVLD or LVLM not zero (meaning not established)",
+            short(key)
+        )));
+    }
+    if l.entries.is_empty() {
+        return Ok(Err(format!(
+            "outfit: leveled item list {} is empty",
+            short(key)
+        )));
+    }
+    let seed = walk.readings.leveled_seed.unwrap_or(0);
+    if chance != 0 {
+        picks.rolled.insert(key.clone());
+        if chance_roll(seed, walk.reference, key) < chance {
+            picks.none.insert(key.clone());
+            return Ok(Ok(Vec::new()));
+        }
+    }
+    let range = if walk.readings.use_all && l.bytes[2].is_some_and(|v| v & 4 != 0) {
+        picks.all.insert(key.clone());
+        0..l.entries.len()
+    } else {
+        let i = pick_index(seed, walk.reference, key, l.entries.len());
+        picks.entries.insert((key.clone(), i, l.entries.len()));
+        i..i + 1
+    };
+    let mut out = Vec::new();
+    for e in &l.entries[range] {
+        let Some(k) = e.reference.key.clone() else {
+            return Ok(Err("outfit: null leveled entry".into()));
+        };
+        match loader.plugins.signature(&k) {
+            Some(s) if s == *b"ARMO" => {
+                if !out.contains(&k) {
+                    out.push(k);
+                }
+            }
+            Some(s) if s == *b"LVLI" => match picked_item(loader, &k, depth + 1, walk, picks, b)? {
+                Ok(v) => {
+                    for a in v {
+                        if !out.contains(&a) {
+                            out.push(a);
+                        }
+                    }
+                }
+                Err(reason) => return Ok(Err(reason)),
+            },
+            _ => {}
+        }
+    }
+    Ok(Ok(out))
+}
+
 /// Codes of the asset graph that actor skinning reads instead of the
 /// static frame: they are set aside for actor models only.
 fn handled_by_skinning(e: &Error) -> bool {
@@ -450,6 +736,18 @@ pub fn resolve_reference(
     source: &SourceSpan,
     b: &Budget,
 ) -> Result<Actor> {
+    resolve_reference_with(loader, key, source, Readings::default(), b)
+}
+
+/// [`resolve_reference`] under the look's [`Readings`]: with every reading
+/// off it is [`resolve_reference`].
+pub fn resolve_reference_with(
+    loader: &mut Loader<'_>,
+    key: &FormKey,
+    source: &SourceSpan,
+    readings: Readings,
+    b: &Budget,
+) -> Result<Actor> {
     let mut actor = Actor {
         reference: key.clone(),
         source: source.clone(),
@@ -463,6 +761,8 @@ pub fn resolve_reference(
         enable: None,
         missing_bones_at_bind: false,
         pose: None,
+        look: None,
+        keyword_base: None,
     };
     let work = b.child();
     let Some((r, plugin)) = read(loader, key, &work)? else {
@@ -482,9 +782,32 @@ pub fn resolve_reference(
         return Ok(actor);
     }
     let mut look = Look::default();
-    if let Err(reason) = gather(loader, &base, 0, &mut look, &work) {
+    let walk = |group| Walk {
+        readings,
+        reference: key,
+        group,
+    };
+    let gathered = if readings.template_bits {
+        gather(loader, &base, 0, &mut look, walk(Group::Traits), &work)
+            .and_then(|_| gather(loader, &base, 0, &mut look, walk(Group::Inventory), &work))
+    } else {
+        gather(loader, &base, 0, &mut look, walk(Group::All), &work)
+    };
+    if let Err(reason) = gathered {
         note(&mut actor.notes, reason, b)?;
         return Ok(actor);
+    }
+    // The keywords' NPC_ under the readings: through bit 12, or the one
+    // NPC_ whose own values were taken.
+    if readings.template_bits {
+        let mut k = Look::default();
+        if gather(loader, &base, 0, &mut k, walk(Group::Keywords), &work).is_ok()
+            && k.own.len() == 1
+        {
+            actor.keyword_base = k.own.pop_first().map(|n| (n, true));
+        }
+    } else if readings.leveled_seed.is_some() && look.own.len() == 1 {
+        actor.keyword_base = look.own.first().map(|n| (n.clone(), false));
     }
     let mut unsettled = Vec::new();
     for (name, n) in [
@@ -575,6 +898,13 @@ pub fn resolve_reference(
             "every template bit set: no own values",
         )?;
     }
+    if look.bits {
+        rules(
+            &mut blockers,
+            "UnverifiedActorTemplateBits",
+            "template bit 0 traits, bit 8 outfit, bit 12 keywords",
+        )?;
+    }
     // Race: skeleton of the section.
     let Some((rr, rp)) = read(loader, &race, &work)? else {
         note(
@@ -610,7 +940,14 @@ pub fn resolve_reference(
     match &outfit {
         Some(o) => {
             rules(&mut blockers, "UnverifiedActorOutfit", "DOFT outfit worn")?;
-            match outfit_armors(loader, o, &mut actor.notes, &work)? {
+            match outfit_armors(
+                loader,
+                o,
+                &mut actor.notes,
+                walk(Group::All),
+                &mut look.picks,
+                &work,
+            )? {
                 Ok(list) => {
                     for k in list {
                         worn.push((k, false));
@@ -628,6 +965,67 @@ pub fn resolve_reference(
             }
         }
         None => note(&mut actor.notes, "outfit: none declared".into(), b)?,
+    }
+    if !look.picks.entries.is_empty() {
+        rules(
+            &mut blockers,
+            "UnverifiedActorLeveledPick",
+            "one entry of each leveled list by the caller's seed",
+        )?;
+    }
+    if !look.picks.rolled.is_empty() {
+        rules(
+            &mut blockers,
+            "UnverifiedActorLeveledChanceNone",
+            "LVLD as a percent chance of nothing, rolled from the caller's seed",
+        )?;
+    }
+    if !look.picks.all.is_empty() {
+        rules(
+            &mut blockers,
+            "UnverifiedActorLeveledUseAll",
+            "LVLF bit 2: every entry",
+        )?;
+    }
+    if readings.any() {
+        let mut parts: Vec<String> = Vec::new();
+        if !look.picks.entries.is_empty() {
+            let picked: Vec<String> = look
+                .picks
+                .entries
+                .iter()
+                .map(|(l, i, n)| format!("{} entry {} of {n}", short(l), i + 1))
+                .collect();
+            parts.push(format!(
+                "leveled entries picked by seed {} ({}): {}",
+                readings.leveled_seed.unwrap_or(0),
+                hypotheses::ACTOR_LEVELED_PICK,
+                picked.join(", ")
+            ));
+        }
+        if !look.picks.none.is_empty() {
+            parts.push(format!(
+                "{} leveled item lists gave nothing ({})",
+                look.picks.none.len(),
+                hypotheses::ACTOR_LEVELED_CHANCE_NONE
+            ));
+        }
+        if !look.picks.all.is_empty() {
+            parts.push(format!(
+                "{} leveled item lists gave every entry ({})",
+                look.picks.all.len(),
+                hypotheses::ACTOR_LEVELED_USE_ALL
+            ));
+        }
+        if look.bits {
+            parts.push(format!(
+                "template bits followed ({})",
+                hypotheses::ACTOR_TEMPLATE_BITS
+            ));
+        }
+        if !parts.is_empty() {
+            actor.look = Some(parts.join("; "));
+        }
     }
     let mut armors = Vec::new();
     for (k, is_skin) in &worn {

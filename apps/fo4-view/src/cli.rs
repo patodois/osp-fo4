@@ -133,7 +133,10 @@ usage:
            [--timeline-dead-lying | --timeline-dead-left-out] [--timeline-sit-marker]
            [--timeline-cast [--timeline-target-rotation] [--actor-missing-bone-bind]
            [--actor-start-clip] [--actor-subgraph-keywords] [--actor-clip-folder]
-           [--actor-start-clip-loop] [--actor-sit-clip]]
+           [--actor-start-clip-loop] [--actor-sit-clip]
+           [--actor-template-bits] [--actor-leveled-seed SEED
+           [--actor-leveled-chance-none] [--actor-leveled-use-all]]
+           [--timeline-ride-model PLUGIN:HEX [--timeline-ride SEQUENCE,START]]]
            [--look-at X,Y,Z | --look-at-actor nearest|speaker]
            [--overlay build/OVERLAY.txt] --out build/FRAME.png
            [--tags build/TAGS.bin] [--size WxH] [--terrain] [--around N] [...]
@@ -172,6 +175,18 @@ usage:
       sitting actor at its furniture's marker nearest it, facing the
       marker's heading, and --actor-sit-clip poses it by the clip its race's
       subgraph entry for the furniture's keywords reaches (pending rules).
+      A templated or leveled actor (spec/actor.md, Picked looks):
+      --actor-template-bits takes its traits, outfit and keywords through
+      the template slots of bits 0, 8 and 12; --actor-leveled-seed SEED
+      picks one entry of each leveled list from the caller's seed (a
+      caller assumption for the game's choice; pending rules);
+      --actor-leveled-chance-none reads a leveled item list's LVLD as a
+      chance of nothing rolled from the seed, --actor-leveled-use-all gives
+      every entry of a list whose LVLF has bit 2 (pending rules).
+      --timeline-ride-model draws the named reference by its skinned shapes
+      on its own nodes; --timeline-ride SEQUENCE,START puts the nodes that
+      sequence moves where it has them at the frame's second, the sequence
+      starting at the run's second START (the caller's; pending rules).
       --look-at and --look-at-actor aim the camera from the same eye at a
       point, the nearest drawn actor or the line's speaker (presentation).
       Not with --eye, --look, --walk, --path, --actor-clip or --script-event.
@@ -504,6 +519,9 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
     let mut child_flag_agrees = false;
     let mut dead = fo4_scene::timeline::Dead::Standing;
     let mut sit_marker = false;
+    let mut look_readings = fo4_scene::actor::Readings::default();
+    let mut ride_model = None;
+    let mut ride_sequence = None;
     let mut aim = fo4_scene::timeline::Aim::Track;
     let mut light = fo4_scene::light::Switches::default();
     let mut light_assumptions = fo4_scene::light::Assumptions::default();
@@ -580,6 +598,19 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
                 };
             }
             "--timeline-sit-marker" => sit_marker = true,
+            "--actor-template-bits" => look_readings.template_bits = true,
+            "--actor-leveled-chance-none" => look_readings.chance_none = true,
+            "--actor-leveled-use-all" => look_readings.use_all = true,
+            "--timeline-ride-model" => {
+                ride_model = Some(fo4_scene::timeline::parse_key(value()?).ok_or_else(usage)?)
+            }
+            "--timeline-ride" => {
+                let (k, s) = value()?.split_once(',').ok_or_else(usage)?;
+                ride_sequence = Some((k.parse::<usize>().map_err(|_| usage())?, finite(s)?));
+            }
+            "--actor-leveled-seed" => {
+                look_readings.leveled_seed = Some(value()?.parse::<u64>().map_err(|_| usage())?)
+            }
             "--assume-hour" => {
                 light_assumptions.hour = Some(
                     finite(value()?)
@@ -635,6 +666,11 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             aim,
             dead,
             sit_marker,
+            look: look_readings,
+            ride: ride_model.clone().map(|reference| fo4_scene::timeline::ride::Options {
+                reference,
+                sequence: ride_sequence,
+            }),
         }),
         (None, None, None)
             if look_heading.is_none()
@@ -647,6 +683,9 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
                 && !child_flag_agrees
                 && dead == fo4_scene::timeline::Dead::Standing
                 && !sit_marker
+                && !look_readings.any()
+                && ride_model.is_none()
+                && ride_sequence.is_none()
                 && aim == fo4_scene::timeline::Aim::Track =>
         {
             None
@@ -671,7 +710,22 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
         // Actors are drawn as the timeline's markers, or with
         // --timeline-cast as its characters: never the cell's own.
         actors = false;
-        if (target_rotation || missing_bones_at_bind || pose.any()) && !timeline_cast {
+        if (ride_sequence.is_some() && ride_model.is_none())
+            || ((look_readings.chance_none || look_readings.use_all)
+                && look_readings.leveled_seed.is_none())
+        {
+            return Err(
+                "--timeline-ride needs --timeline-ride-model; --actor-leveled-chance-none and --actor-leveled-use-all need --actor-leveled-seed"
+                    .into(),
+            );
+        }
+        if (target_rotation
+            || missing_bones_at_bind
+            || pose.any()
+            || look_readings.any()
+            || ride_model.is_some())
+            && !timeline_cast
+        {
             return Err(
                 "--timeline-target-rotation, --actor-missing-bone-bind and the start clip flags need --timeline-cast"
                     .into(),

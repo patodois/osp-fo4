@@ -104,6 +104,19 @@ pub fn node_worlds(
     l: &Limits,
     b: &Budget,
 ) -> Result<BTreeMap<usize, Affine>> {
+    node_worlds_with(n, file, &BTreeMap::new(), l, b)
+}
+
+/// [`node_worlds`] with the local translation of each node block in
+/// `translations` replaced by the given one (a moving part's place in a
+/// sequence, `crate::timeline::ride`).
+pub fn node_worlds_with(
+    n: &Nif<'_>,
+    file: &str,
+    translations: &BTreeMap<usize, [f64; 3]>,
+    l: &Limits,
+    b: &Budget,
+) -> Result<BTreeMap<usize, Affine>> {
     let mut out = BTreeMap::new();
     let mut stack: Vec<(usize, Affine, u64)> = Vec::new();
     b.reserve(&mut stack, n.roots.len(), file, 0)?;
@@ -129,9 +142,13 @@ pub fn node_worlds(
                 i,
             ));
         }
-        let world = match Affine::from_fields(fields, file)? {
-            Some(local) => parent.compose(&local),
-            None => parent,
+        let world = match (Affine::from_fields(fields, file)?, translations.get(&i)) {
+            (Some(local), Some(t)) => parent.compose(&Affine {
+                translation: *t,
+                ..local
+            }),
+            (Some(local), None) => parent.compose(&local),
+            (None, _) => parent,
         };
         b.charge(96, file, 0)?;
         out.insert(i, world);
@@ -152,8 +169,18 @@ pub struct Skeleton {
 }
 impl Skeleton {
     pub fn read(n: &Nif<'_>, file: &str, l: &Limits, b: &Budget) -> Result<Self> {
+        Self::of_worlds(n, node_worlds(n, file, l, b)?, file, b)
+    }
+    /// The named nodes of `worlds` (from [`node_worlds`] or
+    /// [`node_worlds_with`]); the first of a repeated name is kept.
+    pub fn of_worlds(
+        n: &Nif<'_>,
+        worlds: BTreeMap<usize, Affine>,
+        file: &str,
+        b: &Budget,
+    ) -> Result<Self> {
         let mut s = Self::default();
-        for (i, world) in node_worlds(n, file, l, b)? {
+        for (i, world) in worlds {
             let Some(name) = name(n, i) else { continue };
             if s.bones.contains_key(name) {
                 s.repeated_names += 1;

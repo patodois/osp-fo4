@@ -14,7 +14,7 @@
 //!
 //! `ride_check MANIFEST OUT_DIR --cell PLUGIN:HEX --start X,Y,Z [--toward S,X,Y ...]
 //!  --end S [--walk-speed U] [--boxes] [--also PLUGIN:HEX ...] [--elevator PLUGIN:HEX --sequence N --node NAME
-//!  --ride-from S [--ride-boxes]]`
+//!  --ride-from S [--ride-boxes]] [--trace] [--box-presence [--timeline FILE]] [--ride-through-terrain]`
 //!
 //! `--ride-boxes` makes the collision-marker boxes inside the moving node's
 //! reach ride too (instead of the node's own collision alone).
@@ -32,9 +32,70 @@ fn v3(s: &str) -> Result<Vec<f64>, E> {
     Ok(s.split(',').map(str::parse).collect::<Result<_, _>>()?)
 }
 
+/// The boxes placed at `second`: with `presence`, those the run's frame at
+/// that second has present (`walk_collision_marker_box_presence_v1`;
+/// undecided left out); without it, every box.
+fn present_boxes(
+    store: &Store,
+    timeline: &tl::Timeline,
+    boxes: &[platform::MarkerBox],
+    second: f64,
+    presence: bool,
+    b: &Budget,
+) -> Result<Vec<platform::MarkerBox>, E> {
+    if !presence {
+        return Ok(boxes.to_vec());
+    }
+    let frame = timeline.at(second);
+    let mut out = Vec::new();
+    for m in boxes {
+        if platform::presence(store, &frame, m, b)? == Some(true) {
+            out.push(m.clone());
+        }
+    }
+    Ok(out)
+}
+
+/// `--trace`: what a steep contact of a tick was (piece, source, the
+/// collision instance's reference, the contact's normal).
+fn describe(
+    set: &WorldSet<u32>,
+    c: &fo4_scene::collision::CellCollision,
+    e: Option<&fo4_scene::collision::CellCollision>,
+    g: &fo4_walk::Ground,
+) -> String {
+    let Some((k, src)) = set.source(g.source) else {
+        return "unknown".into();
+    };
+    let who = match (src.instance, src.label.as_ref()) {
+        (_, Some(l)) => l.clone(),
+        (Some(i), None) => {
+            let coll = if *k == 0 { Some(c) } else { e };
+            match coll.and_then(|cc| cc.instances.get(i).map(|x| (cc, x))) {
+                Some((cc, x)) => format!(
+                    "{} body {} leaf {}",
+                    tl::key_text(&cc.placements[x.placement].reference),
+                    x.body,
+                    x.leaf
+                ),
+                None => format!("instance {i}"),
+            }
+        }
+        (None, None) => "terrain or other".into(),
+    };
+    let who = match src.terrain {
+        Some(g) => format!("{who} of grid {} {}", g[0], g[1]),
+        None => who,
+    };
+    format!(
+        "piece {k} source {} {who} normal {:.2} {:.2} {:.2}",
+        g.source, g.normal[0], g.normal[1], g.normal[2]
+    )
+}
+
 fn run() -> Result<(), E> {
     let a: Vec<String> = std::env::args().skip(1).collect();
-    const USAGE: &str = "ride_check MANIFEST OUT_DIR --cell PLUGIN:HEX --start X,Y,Z [--toward S,X,Y ...] --end S [--walk-speed U] [--boxes] [--also PLUGIN:HEX ...] [--elevator PLUGIN:HEX --sequence N --node NAME [--node NAME ...] --ride-from S [--ride-boxes]]";
+    const USAGE: &str = "ride_check MANIFEST OUT_DIR --cell PLUGIN:HEX --start X,Y,Z [--toward S,X,Y ...] --end S [--walk-speed U] [--boxes] [--also PLUGIN:HEX ...] [--elevator PLUGIN:HEX --sequence N --node NAME [--node NAME ...] --ride-from S [--ride-boxes]] [--trace] [--box-presence [--timeline FILE]] [--ride-through-terrain]";
     if a.len() < 2 {
         return Err(USAGE.into());
     }
@@ -45,6 +106,9 @@ fn run() -> Result<(), E> {
     let mut nodes: Vec<String> = Vec::new();
     let mut speed = None;
     let mut also: Vec<fo4_plugin::FormKey> = Vec::new();
+    let mut trace = false;
+    let (mut box_presence, mut through_terrain) = (false, false);
+    let mut timeline_file: Option<String> = None;
     let mut it = a[2..].iter();
     while let Some(x) = it.next() {
         let mut val = || it.next().ok_or(USAGE);
@@ -64,12 +128,25 @@ fn run() -> Result<(), E> {
             "--sequence" => sequence = Some(val()?.parse::<usize>()?),
             "--node" => nodes.push(val()?.clone()),
             "--ride-from" => ride_from = Some(val()?.parse::<f64>()?),
+            "--trace" => trace = true,
+            "--box-presence" => box_presence = true,
+            "--timeline" => timeline_file = Some(val()?.clone()),
+            "--ride-through-terrain" => through_terrain = true,
             _ => return Err(USAGE.into()),
         }
     }
     let (Some(cell), Some(start), Some(end)) = (cell, start, end) else {
         return Err(USAGE.into());
     };
+    // `--box-presence`: the run's frames decide each box's presence; without
+    // `--timeline`, an empty run (every box at its start state).
+    let timeline = match &timeline_file {
+        Some(f) => tl::Timeline::parse(&std::fs::read_to_string(f)?)?,
+        None => tl::Timeline::default(),
+    };
+    if (timeline_file.is_some() && !box_presence) || (box_presence && !boxes) {
+        return Err(USAGE.into());
+    }
     let out = Path::new(&a[1]);
     std::fs::create_dir_all(out)?;
     let m = Manifest::load(Path::new(&a[0]))?;
@@ -94,6 +171,13 @@ fn run() -> Result<(), E> {
     let mut base = World::build(&c, placement, &budget)?;
     let mut ground = fo4_walk::terrain::load_with(&store, &around, level, &budget)?;
     ground.add_to(&mut base, &budget)?;
+    for t in ground.terrains.iter().filter(|_| trace) {
+        let _ = writeln!(
+            report,
+            "terrain grid {} {}: XCLC flags {:#x}",
+            t.grid[0], t.grid[1], t.grid_flags
+        );
+    }
     let _ = writeln!(
         report,
         "walking world: {} triangles, {} hulls from {} instances, {:.1} s",
@@ -123,6 +207,7 @@ fn run() -> Result<(), E> {
     // The animated reference's collision as stored, split by the nodes the
     // caller names (a source goes with the first named node in its chain).
     let mut moving: Vec<(World, Track)> = Vec::new();
+    let mut elevator_collision = None;
     let mut node_reach: Option<([f64; 3], [f64; 3])> = None;
     if let Some(ek) = &elevator {
         let inst = loader.instance(ek, &budget)?;
@@ -205,9 +290,12 @@ fn run() -> Result<(), E> {
             );
             moving.push((ew.copy_sources(&groups[ni], [0.; 3], &budget)?, track));
         }
+        elevator_collision = Some(ec);
     }
     // Collision-marker boxes about the start, or about the animated reference's collision.
     let mut rides: Vec<platform::Ride<u32>> = Vec::new();
+    // The boxes whose presence is followed second by second (still boxes).
+    let mut box_watch: Option<(Vec<platform::MarkerBox>, Vec<platform::MarkerBox>)> = None;
     if boxes {
         let (lo, hi) = match node_reach {
             Some((lo, hi)) => (
@@ -220,9 +308,28 @@ fn run() -> Result<(), E> {
             ),
         };
         let found = platform::marker_boxes(&store, lo, hi, &budget)?;
+        let first_second = toward.first().map_or(0., |x| x.0);
+        let shown = present_boxes(
+            &store,
+            &timeline,
+            &found,
+            first_second,
+            box_presence,
+            &budget,
+        )?;
         let mut bw = World::new();
-        let srcs = platform::add_boxes(&mut bw, &found, &budget)?;
-        let _ = writeln!(report, "collision-marker boxes: {}", srcs.len());
+        let srcs = platform::add_boxes(&mut bw, &shown, &budget)?;
+        if box_presence {
+            let _ = writeln!(
+                report,
+                "collision-marker boxes: {} found, {} placed at {first_second} s ({})",
+                found.len(),
+                srcs.len(),
+                platform::rules::BOX_PRESENCE
+            );
+        } else {
+            let _ = writeln!(report, "collision-marker boxes: {}", srcs.len());
+        }
         for mb in &found {
             let _ = writeln!(
                 report,
@@ -248,6 +355,9 @@ fn run() -> Result<(), E> {
             rides.push(platform::Ride::new(&mut set, 4, bw, rel, 0., &budget)?);
         } else {
             set.insert(2, bw)?;
+            if box_presence {
+                box_watch = Some((found, shown));
+            }
         }
     }
     for (k, (mw, track)) in moving.into_iter().enumerate() {
@@ -259,6 +369,16 @@ fn run() -> Result<(), E> {
             0.,
             &budget,
         )?);
+    }
+    for r in &mut rides {
+        r.pass_terrain = through_terrain;
+    }
+    if through_terrain {
+        let _ = writeln!(
+            report,
+            "a rider passes the terrain ({})",
+            platform::rules::RIDE_PASSES_TERRAIN
+        );
     }
     for (k, w, _) in set.pieces() {
         if let Some(bx) = w.bounds {
@@ -286,7 +406,12 @@ fn run() -> Result<(), E> {
     let mut w = Character::new(params, settings, [start[0], start[1], start[2]])?;
     w.settle(&set, 600);
     let mut t = toward.first().map_or(0., |x| x.0);
-    let mut lines = String::from("# SECONDS X Y Z GROUNDED GROUND_PIECE CARRIED\n");
+    let mut lines = String::from(if trace {
+        "# SECONDS X Y Z GROUNDED GROUND_PIECE CARRIED [WALL: piece, source, reference, normal]\n"
+    } else {
+        "# SECONDS X Y Z GROUNDED GROUND_PIECE CARRIED\n"
+    });
+    let mut walls: Vec<String> = Vec::new();
     let mut aim: Option<(f64, f64)> = None;
     let mut next = 0;
     let mut min_z = w.feet[2];
@@ -312,15 +437,43 @@ fn run() -> Result<(), E> {
         }
         let s = w.tick(&set, input);
         t += dt;
+        if trace {
+            if let Some(g) = &s.wall {
+                let d = describe(&set, &c, elevator_collision.as_ref(), g);
+                if walls.last() != Some(&d) {
+                    walls.push(d);
+                }
+            }
+        }
         min_z = min_z.min(s.feet[2]);
         if t >= log_at - 1e-9 {
+            if let Some((found, shown)) = &mut box_watch {
+                let now = present_boxes(&store, &timeline, found, t, true, &budget)?;
+                if now != *shown {
+                    let mut bw = World::new();
+                    platform::add_boxes(&mut bw, &now, &budget)?;
+                    set.insert(2, bw)?;
+                    let _ = writeln!(
+                        report,
+                        "collision-marker boxes at {t:.3} s: {} placed",
+                        now.len()
+                    );
+                    *shown = now;
+                }
+            }
             let piece = s
                 .ground
                 .and_then(|g| set.source(g.source))
                 .map_or("-".into(), |(k, _)| k.to_string());
+            let wall = if trace && !walls.is_empty() {
+                format!(" [{}]", walls.join(" | "))
+            } else {
+                String::new()
+            };
+            walls.clear();
             let _ = writeln!(
                 lines,
-                "{t:.3} {:.2} {:.2} {:.2} {} {piece} {carried:.2}",
+                "{t:.3} {:.2} {:.2} {:.2} {} {piece} {carried:.2}{wall}",
                 s.feet[0], s.feet[1], s.feet[2], s.grounded
             );
             log_at += 0.25;

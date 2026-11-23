@@ -226,6 +226,15 @@ fn fixture() -> Fixture {
         achr(0x904, 0x808),
         achr(0x905, 0x809),
         achr(0x906, 0x80a),
+        achr(0x907, 0x80b),
+        achr(0x908, 0x80d),
+        {
+            // A placed activator whose model is the skinned body
+            // (`crate::timeline::ride`).
+            let mut d = sub(b"NAME", &id(0x860));
+            d.extend(sub(b"DATA", &placement));
+            record(b"REFR", 0x909, 0, &d)
+        },
     ]
     .concat();
     let hdpt = |conditions: usize| {
@@ -268,6 +277,44 @@ fn fixture() -> Fixture {
     body.extend(record(b"LVLN", 0x830, 0, &lvln));
     body.extend(record(b"LVLI", 0x841, 0, &lvli));
     body.extend(record(b"OTFT", 0x840, 0, &sub(b"INAM", &id(0x841))));
+    // Template bit 8 alone: the outfit through TPTA slot 8, the traits own.
+    let mut bit8 = sub(b"TPLT", &id(0x80c));
+    let slots: Vec<u8> = (0..13)
+        .flat_map(|k| if k == 8 { id(0x80c) } else { vec![0; 4] })
+        .collect();
+    bit8.extend(sub(b"TPTA", &slots));
+    body.extend(npc(0x80b, 0x822, &bit8, 1 << 8));
+    body.extend(npc(0x80c, 0x820, &sub(b"DOFT", &id(0x842)), 0));
+    body.extend(record(b"OTFT", 0x842, 0, &sub(b"INAM", &id(0x823))));
+    // An outfit of a list giving every entry (LVLF 4) and a list with LVLD 100.
+    body.extend(npc(0x80d, 0x820, &sub(b"DOFT", &id(0x847)), 0));
+    body.extend(record(
+        b"OTFT",
+        0x847,
+        0,
+        &sub(b"INAM", &[id(0x844), id(0x843)].concat()),
+    ));
+    let mut every = sub(b"LVLF", &[4]);
+    every.extend(sub(b"LLCT", &[2]));
+    every.extend(lvlo(1, 0x845));
+    every.extend(lvlo(1, 0x846));
+    body.extend(record(b"LVLI", 0x844, 0, &every));
+    for (list, armour) in [(0x845, 0x823), (0x846, 0x824)] {
+        let mut one = sub(b"LLCT", &[1]);
+        one.extend(lvlo(1, armour));
+        body.extend(record(b"LVLI", list, 0, &one));
+    }
+    let mut none = sub(b"LVLD", &[100]);
+    none.extend(sub(b"LLCT", &[1]));
+    none.extend(lvlo(1, 0x822));
+    body.extend(record(b"LVLI", 0x843, 0, &none));
+    body.extend(armo(0x824, 0x821));
+    body.extend(record(
+        b"ACTI",
+        0x860,
+        0,
+        &sub(b"MODL", b"actors\\body.nif\0"),
+    ));
     let mut hedr = 0.95f32.to_le_bytes().to_vec();
     hedr.extend(0u32.to_le_bytes());
     hedr.extend(0x900u32.to_le_bytes());
@@ -385,7 +432,7 @@ fn placed_actors_resolve_to_a_skeleton_and_addon_models_or_say_why_not() {
     let mut loader = Loader::new(&store, &v, "english", crate::RuleLevel::Hypotheses, &b);
     let scene = loader.by_editor_id("ActorRoom", &b).unwrap();
     let actors = resolve(&scene, &mut loader, &b).unwrap();
-    assert_eq!(actors.actors.len(), 7);
+    assert_eq!(actors.actors.len(), 9);
     let plain = &actors.actors[0];
     let plan = plain.plan.as_ref().expect("resolved");
     assert_eq!(plan.skeleton, b"meshes/actors/skel.nif");
@@ -477,5 +524,224 @@ fn placed_actors_resolve_to_a_skeleton_and_addon_models_or_say_why_not() {
             .any(|n| n == "outfit: unresolved; actor not drawn"),
         "{:?}",
         outfit.notes
+    );
+}
+
+fn key(id: u32) -> FormKey {
+    FormKey {
+        plugin: "base.esm".into(),
+        object_id: id,
+    }
+}
+
+#[test]
+fn the_pick_and_the_roll_are_the_seeds_and_stay_in_range() {
+    for seed in 0..50u64 {
+        let i = pick_index(seed, &key(0x900), &key(0x830), 3);
+        assert!(i < 3);
+        assert_eq!(i, pick_index(seed, &key(0x900), &key(0x830), 3));
+        assert!(chance_roll(seed, &key(0x900), &key(0x830)) < 100);
+    }
+    // Different seeds reach different entries.
+    let seen: BTreeSet<usize> = (0..50u64)
+        .map(|s| pick_index(s, &key(0x900), &key(0x830), 3))
+        .collect();
+    assert_eq!(seen.len(), 3);
+    assert_eq!(pick_index(7, &key(0x900), &key(0x830), 1), 0);
+}
+
+#[test]
+fn template_bits_and_the_seeded_pick_settle_looks_the_candidates_leave_open() {
+    let f = fixture();
+    let store = Store::open(&f.manifest, &Budget::new(8 << 20)).unwrap();
+    let v = Vfs::mount(&f.manifest, &Budget::new(8 << 20)).unwrap();
+    let b = Budget::new(64 << 20);
+    let mut loader = Loader::new(&store, &v, "english", crate::RuleLevel::Hypotheses, &b);
+    let src = SourceSpan::new("test", 0, 0);
+    let with = |template_bits, seed: Option<u64>, items: bool| Readings {
+        template_bits,
+        leveled_seed: seed,
+        chance_none: items,
+        use_all: items,
+    };
+    let mut go =
+        |id: u32, r: Readings| resolve_reference_with(&mut loader, &key(id), &src, r, &b).unwrap();
+    let rules = |a: &Actor| match &a.state {
+        crate::State::ReadyUnderHypotheses { hypotheses } => hypotheses.clone(),
+        s => panic!("{s:?} {:?}", a.notes),
+    };
+    // Template bit 8 alone: own and template candidates disagree; the bit
+    // reading takes the traits from the NPC_ and the outfit from slot 8.
+    let off = go(0x907, Readings::default());
+    assert!(off.plan.is_none());
+    assert_eq!(
+        off.notes,
+        ["template: skin: 2 candidates, outfit: 2 candidates"]
+    );
+    assert!(off.look.is_none() && off.keyword_base.is_none());
+    let bits = go(0x907, with(true, None, false));
+    let plan = bits.plan.as_ref().expect("settled");
+    assert_eq!(plan.parts.len(), 1);
+    assert_eq!(plan.parts[0].armor, key(0x823));
+    assert!(rules(&bits).contains(&hypotheses::ACTOR_TEMPLATE_BITS));
+    assert!(!rules(&bits).contains(&hypotheses::ACTOR_LEVELED_PICK));
+    assert_eq!(bits.keyword_base, Some((key(0x80b), true)));
+    assert!(bits
+        .look
+        .as_deref()
+        .is_some_and(|l| l.contains("template bits")));
+    // A leveled template whose entries wear different skins: with the bits
+    // and a seed, the entry picked; with the seed alone, settled only when
+    // the picked entry agrees with the NPC_'s own skin.
+    let entries = [0x820, 0x822];
+    let seeds: Vec<(u64, usize)> = (0..64u64)
+        .map(|s| (s, pick_index(s, &key(0x901), &key(0x830), 2)))
+        .collect();
+    for (want, skin) in entries.iter().enumerate() {
+        let (seed, _) = *seeds.iter().find(|(_, i)| *i == want).unwrap();
+        let a = go(0x901, with(true, Some(seed), false));
+        let plan = a.plan.as_ref().expect("picked");
+        assert_eq!(plan.parts[0].armor, key(*skin));
+        assert!(rules(&a).contains(&hypotheses::ACTOR_LEVELED_PICK));
+        assert!(a
+            .look
+            .as_deref()
+            .is_some_and(|l| l.contains(&format!("entry {} of 2", want + 1))));
+        let alone = go(0x901, with(false, Some(seed), false));
+        assert_eq!(alone.plan.is_some(), want == 0, "{:?}", alone.notes);
+    }
+    // Leveled item lists under the outfit: LVLF 4 refused without the
+    // readings; picked with the seed, where the LVLD 100 list stays
+    // refused; rolled to nothing with the chance reading; every entry
+    // with the use-all reading.
+    let off = go(0x908, Readings::default());
+    assert!(off.plan.is_none());
+    let seed = go(0x908, with(false, Some(1), false));
+    assert!(seed.plan.is_none());
+    assert!(
+        seed.notes
+            .iter()
+            .any(|n| n.contains("LVLD or LVLM not zero")),
+        "{:?}",
+        seed.notes
+    );
+    let chance = go(
+        0x908,
+        Readings {
+            chance_none: true,
+            ..with(false, Some(1), false)
+        },
+    );
+    assert_eq!(chance.plan.as_ref().expect("rolled").parts.len(), 1);
+    assert!(rules(&chance).contains(&hypotheses::ACTOR_LEVELED_CHANCE_NONE));
+    assert!(!rules(&chance).contains(&hypotheses::ACTOR_LEVELED_USE_ALL));
+    let all = go(0x908, with(false, Some(1), true));
+    let plan = all.plan.as_ref().expect("every entry");
+    let armours: Vec<u32> = plan.parts.iter().map(|p| p.armor.object_id).collect();
+    assert_eq!(armours, [0x823, 0x824]);
+    assert!(rules(&all).contains(&hypotheses::ACTOR_LEVELED_USE_ALL));
+    assert!(all
+        .look
+        .as_deref()
+        .is_some_and(|l| l.contains("gave nothing")));
+}
+
+#[test]
+fn a_ride_model_is_drawn_on_its_own_nodes_and_a_moved_node_carries_its_children() {
+    let f = fixture();
+    let store = Store::open(&f.manifest, &Budget::new(8 << 20)).unwrap();
+    let v = Vfs::mount(&f.manifest, &Budget::new(8 << 20)).unwrap();
+    let b = Budget::new(64 << 20);
+    let mut loader = Loader::new(&store, &v, "english", crate::RuleLevel::Hypotheses, &b);
+    let limits = Limits::default();
+    let mut cast = crate::timeline::cast::Cast::default();
+    let o = crate::timeline::ride::Options {
+        reference: key(0x909),
+        sequence: None,
+    };
+    let scene = loader.by_editor_id("ActorRoom", &b).unwrap();
+    let frame = crate::timeline::Timeline::default().at(0.);
+    let pose =
+        crate::timeline::ride::add(&mut cast, &mut loader, &scene, &frame, &o, 0., &limits, &b)
+            .unwrap();
+    assert!(pose.is_none());
+    assert_eq!(cast.actors.actors.len(), 1);
+    let a = &cast.actors.actors[0];
+    let plan = a.plan.as_ref().unwrap();
+    assert_eq!(plan.skeleton_asset, plan.parts[0].asset);
+    let crate::State::ReadyUnderHypotheses { hypotheses: rules } = &a.state else {
+        panic!("{:?}", a.state)
+    };
+    assert!(rules.contains(&hypotheses::MODEL_OWN_NODES));
+    assert!(cast
+        .ride
+        .as_deref()
+        .is_some_and(|l| l.contains("1 skinned shapes")));
+    assert!(crate::timeline::ride::report(&cast, Some(None)).starts_with("ride\tdrawn\t"));
+    // A sequence the model does not hold: not added, said why.
+    let mut cast = crate::timeline::cast::Cast::default();
+    let o = crate::timeline::ride::Options {
+        reference: key(0x909),
+        sequence: Some((0, 5.)),
+    };
+    let pose =
+        crate::timeline::ride::add(&mut cast, &mut loader, &scene, &frame, &o, 6., &limits, &b)
+            .unwrap();
+    assert!(pose.is_none() && cast.actors.actors.is_empty());
+    assert!(cast
+        .ride
+        .as_deref()
+        .is_some_and(|l| l.contains("no sequence 0")));
+    // A reference outside the loaded cells: not drawn.
+    let mut cast = crate::timeline::cast::Cast::default();
+    let o = crate::timeline::ride::Options {
+        reference: key(0x999),
+        sequence: None,
+    };
+    crate::timeline::ride::add(&mut cast, &mut loader, &scene, &frame, &o, 0., &limits, &b)
+        .unwrap();
+    assert!(cast
+        .ride
+        .as_deref()
+        .is_some_and(|l| l.contains("not placed in")));
+    // The run disables it: not drawn.
+    let t = crate::timeline::Timeline::parse(
+        "osp-run-timeline\t1\nvisibility\t1\tbase.esm:00000909\tdisabled\tplain\n",
+    )
+    .unwrap();
+    let mut cast = crate::timeline::cast::Cast::default();
+    let o = crate::timeline::ride::Options {
+        reference: key(0x909),
+        sequence: None,
+    };
+    crate::timeline::ride::add(
+        &mut cast,
+        &mut loader,
+        &scene,
+        &t.at(2.),
+        &o,
+        2.,
+        &limits,
+        &b,
+    )
+    .unwrap();
+    assert!(cast.ride.as_deref().is_some_and(|l| l.contains("absent")));
+    // A node's translation replaced: its child follows it.
+    let bytes = skeleton([5., 0., 0.]);
+    let n = fo4_nif::Nif::read(&bytes, "skel.nif", Game::Fallout4, &limits, &b).unwrap();
+    let rest = pose::Skeleton::read(&n, "skel.nif", &limits, &b).unwrap();
+    let moved: BTreeMap<usize, [f64; 3]> = [(1usize, [0., 0., 30.])].into_iter().collect();
+    let worlds = pose::node_worlds_with(&n, "skel.nif", &moved, &limits, &b).unwrap();
+    let ride = pose::Skeleton::of_worlds(&n, worlds, "skel.nif", &b).unwrap();
+    for name in [&b"BoneA"[..], b"BoneB"] {
+        let (r, m) = (rest.bones[name].translation, ride.bones[name].translation);
+        assert!(
+            (m[2] - r[2] - 20.).abs() < 1e-9 && (m[0] - r[0]).abs() < 1e-9,
+            "{r:?} {m:?}"
+        );
+    }
+    assert_eq!(
+        rest.bones[&b"Root"[..]].translation,
+        ride.bones[&b"Root"[..]].translation
     );
 }

@@ -183,6 +183,10 @@ pub struct CastDrawn {
     /// lacks skinned at its bind transform
     /// (`actor_missing_bone_bind_pose_v1`).
     pub bind_bones: Vec<usize>,
+    /// The cast's actors after its markers' (the ride's model,
+    /// `fo4_scene::timeline::ride`): cast index and why the build left it
+    /// out (`None`: drawn). No marker stands for them.
+    pub extras: Vec<(usize, Option<String>)>,
 }
 
 /// After `crate::draw::build_with_actors` drew `cast.actors` (and anything
@@ -197,6 +201,18 @@ pub fn cast_markers(
     let mut out = CastDrawn::default();
     let mut refused: Vec<(usize, String)> = Vec::new();
     for (k, index) in build.actors.iter().enumerate() {
+        if k >= cast.markers.len() {
+            let why = build
+                .omitted
+                .iter()
+                .find(|o| o.instance == *index)
+                .map(|o| {
+                    let causes: Vec<&fo4_core::Error> = o.causes.iter().collect();
+                    fo4_scene::timeline::cast::summary(&causes)
+                });
+            out.extras.push((k, why));
+            continue;
+        }
         let why = build
             .omitted
             .iter()
@@ -423,7 +439,38 @@ mod tests {
             let text = cast::report(&c, &d.characters, &d.fallback, &d.heads, &d.bind_bones);
             assert!(text.contains("2 drawn as characters"), "{text}");
             assert!(text.contains("marker instead"), "{text}");
+            assert!(d.extras.is_empty());
         }
+        // An actor after the markers' (the ride's model,
+        // `fo4_scene::timeline::ride`): drawn or not, no marker stands for it.
+        let mut c = cast::resolve(
+            &mut loader,
+            &scene,
+            &markers,
+            cast::Options::default(),
+            RuleLevel::Hypotheses,
+            &b,
+        )
+        .unwrap();
+        let mut more = cast::resolve(
+            &mut loader,
+            &scene,
+            &markers[..1],
+            cast::Options::default(),
+            RuleLevel::Hypotheses,
+            &b,
+        )
+        .unwrap();
+        c.actors.actors.push(more.actors.actors.remove(0));
+        let options = crate::draw::BuildOptions::reference(RuleLevel::Hypotheses);
+        let mut build =
+            crate::draw::build_with_actors(&scene, &c.actors, &loader, &m.limits, options, &b)
+                .unwrap();
+        let d = cast_markers(&mut build, &c, RuleLevel::Hypotheses, &b).unwrap();
+        assert_eq!(d.characters.len(), 2);
+        assert_eq!(d.fallback.len(), 1);
+        assert_eq!(d.extras, [(3, None)]);
+        assert_eq!(d.drawn.len(), 3);
     }
 
     /// A posed build draws an actor whose `Actor::pose` names one of the

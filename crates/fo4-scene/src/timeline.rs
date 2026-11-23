@@ -28,6 +28,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
 
 pub mod cast;
+pub mod ride;
 
 /// First word of a timeline file.
 pub const MAGIC: &str = "osp-run-timeline";

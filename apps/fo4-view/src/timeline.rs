@@ -43,6 +43,12 @@ pub struct Args {
     pub dead: tl::Dead,
     /// `--timeline-sit-marker` (`timeline_sit_marker_nearest_v1`).
     pub sit_marker: bool,
+    /// `--actor-template-bits`, `--actor-leveled-seed`
+    /// (`fo4_scene::actor::Readings`).
+    pub look: fo4_scene::actor::Readings,
+    /// `--timeline-ride-model`, `--timeline-ride`
+    /// (`fo4_scene::timeline::ride`).
+    pub ride: Option<tl::ride::Options>,
 }
 
 /// The timeline read and its frame at the second.
@@ -98,6 +104,7 @@ pub fn cast(
             target_rotation: a.target_rotation,
             missing_bones_at_bind: a.missing_bones_at_bind,
             pose: a.pose,
+            look: a.look,
         };
         Some(tl::cast::resolve(
             loader, scene, &markers.0, options, level, budget,
@@ -127,6 +134,7 @@ pub fn finish(
             let d = fo4_render::timeline::cast_markers(build, cast, level, budget)?;
             let tags: Vec<u32> = d.fallback.iter().map(|f| f.1).collect();
             let text = tl::cast::report(cast, &d.characters, &d.fallback, &d.heads, &d.bind_bones);
+            let text = text + &tl::ride::report(cast, d.extras.first().map(|(_, w)| w.as_deref()));
             rules.extend(cast.rules.iter().copied());
             if !d.bind_bones.is_empty() {
                 rules.insert(fo4_scene::hypotheses::ACTOR_MISSING_BONE_BIND);

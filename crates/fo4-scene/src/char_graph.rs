@@ -260,6 +260,19 @@ pub fn actor_keywords(
     race: &FormKey,
     b: &Budget,
 ) -> Result<std::result::Result<BTreeSet<FormKey>, String>> {
+    npc_keywords(store, base, race, false, b)
+}
+
+/// [`actor_keywords`] of the NPC_ `base`; with `template_read` (the
+/// template bit reading, `crate::actor::Readings::template_bits`, chose
+/// this NPC_ for the keywords) its own template does not refuse them.
+pub fn npc_keywords(
+    store: &Store,
+    base: &FormKey,
+    race: &FormKey,
+    template_read: bool,
+    b: &Budget,
+) -> Result<std::result::Result<BTreeSet<FormKey>, String>> {
     let Some((r, p)) = store.raw_with_plugin(base, b)? else {
         return Ok(Err("the base has no winning record".into()));
     };
@@ -269,7 +282,7 @@ pub fn actor_keywords(
             String::from_utf8_lossy(&r.signature)
         )));
     }
-    if r.subrecords.iter().any(|s| s.signature == *b"TPLT") {
+    if !template_read && r.subrecords.iter().any(|s| s.signature == *b"TPLT") {
         return Ok(Err(
             "the base has a template (TPLT): its keywords are not read".into(),
         ));

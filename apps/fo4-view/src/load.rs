@@ -353,6 +353,28 @@ pub fn cell(
     } else {
         None
     };
+    // --timeline-ride-model: the ride's model as one more actor of the
+    // cast, posed with --timeline-ride.
+    let mut poses = poses;
+    if let (Some((args, p)), Some(c)) = (
+        timeline,
+        timeline_cast.as_mut().and_then(|c| c.cast.as_mut()),
+    ) {
+        if let Some(o) = &args.ride {
+            if let Some((k, pose)) = fo4_scene::timeline::ride::add(
+                c,
+                &mut loader,
+                &scene,
+                &p.frame,
+                o,
+                p.frame.second,
+                limits,
+                &budget,
+            )? {
+                poses.get_or_insert_with(Default::default).insert(k, pose);
+            }
+        }
+    }
     let cast_actors = timeline_cast.as_ref().and_then(|c| c.cast.as_ref());
     let mut build = if let Some(c) = cast_actors {
         let build = match poses {
