@@ -909,3 +909,96 @@ fn copied_sources_move_with_their_primitives() {
     assert!(one.entries.iter().all(|e| e.source == 0));
     assert!(w.copy_sources(&[n], [0.0; 3], &b).is_err());
 }
+
+/// A collision marker's box is a hull of its eight corners, rotated and
+/// scaled by its placement (`walk_collision_marker_box_v1`); a walker
+/// stands on its top.
+#[test]
+fn a_collision_marker_box_is_a_solid_box_a_walker_stands_on() {
+    use crate::platform::{add_boxes, corners, MarkerBox};
+    let b = budget();
+    let m = MarkerBox {
+        reference: fo4_plugin::FormKey {
+            plugin: "base.esm".into(),
+            object_id: 0x900,
+        },
+        placement: [100., 0., 50., 0., 0., std::f32::consts::FRAC_PI_2],
+        scale: 2.,
+        half: [10., 20., 5.],
+        enable_parent: false,
+        initially_disabled: false,
+    };
+    let c = corners(&m).unwrap();
+    let (mut lo, mut hi) = ([f64::INFINITY; 3], [f64::NEG_INFINITY; 3]);
+    for p in &c {
+        for i in 0..3 {
+            lo[i] = lo[i].min(p[i]);
+            hi[i] = hi[i].max(p[i]);
+        }
+    }
+    // A quarter turn swaps the horizontal extents; the scale doubles them.
+    for (got, want) in lo.iter().zip([60., -20., 40.]) {
+        assert!(near(*got, want, 1e-4), "{lo:?}");
+    }
+    for (got, want) in hi.iter().zip([140., 20., 60.]) {
+        assert!(near(*got, want, 1e-4), "{hi:?}");
+    }
+    let mut w = World::new();
+    let s = add_boxes(&mut w, &[m], &b).unwrap();
+    assert_eq!(s.len(), 1);
+    assert!(w.sources[s[0] as usize]
+        .label
+        .as_deref()
+        .is_some_and(|l| l.contains(crate::platform::rules::COLLISION_MARKER_BOX)));
+    let mut ch = character([100., 0., 200.]);
+    ch.settle(&w, 600);
+    assert!(ch.grounded);
+    assert!(near(ch.feet[2], 60., 0.5), "{:?}", ch.feet);
+}
+
+/// A ride moves its piece along its track and carries a walker grounded on
+/// it by the same amount; a walker standing elsewhere stays
+/// (`walk_platform_sequence_ride_v1`).
+#[test]
+fn a_ride_carries_the_walker_standing_on_it_and_no_one_else() {
+    use crate::platform::Ride;
+    let b = budget();
+    let mut ground = World::new();
+    floor(&mut ground, &b);
+    let mut deck = World::new();
+    deck.add_hull(
+        &cuboid([-100., -100., 490.], [100., 100., 500.]),
+        0.,
+        "deck",
+        &b,
+    )
+    .unwrap();
+    let track = vec![(1., [0., 0., 0.]), (3., [0., 0., -400.])];
+    let dt = Settings::DEFAULT.tick;
+    for (start, carried) in [([0., 0., 600.], true), ([500., 500., 50.], false)] {
+        let mut set: WorldSet<u32> = WorldSet::new();
+        set.insert(0, ground.clone()).unwrap();
+        // Down 400 units between 1 s and 3 s; before 1 s at its first offset.
+        let mut ride = Ride::new(&mut set, 1, deck.clone(), track.clone(), 0., &b).unwrap();
+        assert_eq!(ride.offset_at(2.), [0., 0., -200.]);
+        let mut ch = character(start);
+        ch.settle(&set, 600);
+        assert!(ch.grounded);
+        let z0 = ch.feet[2];
+        let mut t = 0.;
+        while t < 4. {
+            ride.advance(&mut set, &mut ch, t + dt, &b).unwrap();
+            ch.tick(&set, Input::default());
+            t += dt;
+        }
+        assert!(ch.grounded, "{:?}", ch.feet);
+        if carried {
+            assert!(near(z0, 500., 0.5), "{z0}");
+            assert!(near(ch.feet[2], 100., 0.5), "{:?}", ch.feet);
+            assert!(near(ride.carried, -400., 1e-6), "{}", ride.carried);
+        } else {
+            assert!(near(ch.feet[2], z0, 1e-9), "{:?}", ch.feet);
+            assert_eq!(ride.carried, 0.);
+        }
+    }
+}

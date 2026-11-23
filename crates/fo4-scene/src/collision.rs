@@ -681,6 +681,9 @@ struct Builder<'l, 'a> {
     status: &'l dyn Fn(&str) -> Option<Status>,
     cache: HashMap<usize, usize>,
     out: CellCollision,
+    /// [`instance_as_stored`]: the instance's collision readiness is not
+    /// asked (`walk_animated_model_collision_as_stored_v1`).
+    force: bool,
 }
 
 fn append<T>(v: &mut Vec<T>, item: T, b: &Budget) -> Result<()> {
@@ -886,6 +889,12 @@ impl Builder<'_, '_> {
                 for r in i.collision.hypotheses() {
                     add(r, self.budget)?;
                 }
+                if self.force {
+                    add(hypotheses::ANIMATED_COLLISION_AS_STORED, self.budget)?;
+                    if i.reference.data.scale.is_none() {
+                        add(hypotheses::SCALE, self.budget)?;
+                    }
+                }
                 for r in [
                     hypotheses::COLLISION_UNITS,
                     hypotheses::TARGET_FRAME,
@@ -987,7 +996,7 @@ impl Builder<'_, '_> {
                 "collision of editor markers is not placed".into(),
             );
         }
-        if !i.collision.ready_at(self.level) {
+        if !self.force && !i.collision.ready_at(self.level) {
             return self.skip(
                 i,
                 base,
@@ -1016,7 +1025,7 @@ impl Builder<'_, '_> {
         };
         let scale = match i.reference.data.scale {
             Some(s) => s,
-            None if i.collision.hypotheses().contains(&hypotheses::SCALE) => 1.0,
+            None if self.force || i.collision.hypotheses().contains(&hypotheses::SCALE) => 1.0,
             None => {
                 return self.skip(
                     i,
@@ -1076,6 +1085,7 @@ pub fn cell_with(
             unplaced: Vec::new(),
             without_collision: Vec::new(),
         },
+        force: false,
     };
     let mut order: Vec<&Instance> = Vec::new();
     b.reserve(&mut order, scene.instances.len(), "cell collision", 0)?;
@@ -1087,6 +1097,49 @@ pub fn cell_with(
     for i in order {
         builder.instance(i)?;
     }
+    Ok(builder.out)
+}
+
+/// The collision of one placed instance whatever its collision readiness
+/// says (`walk_animated_model_collision_as_stored_v1`, a pending rule): the
+/// model's collision objects placed as for any reference, each node at its
+/// stored transform (no controller, sequence or behaviour graph is run), an
+/// absent scale read as 1 (`refr_absent_xscl_identity_v1`). For a model
+/// whose collision the readiness refuses because of its animation runtime
+/// (an elevator shaft and its platform): the caller moves the parts a
+/// sequence moves (`fo4_walk::platform`). Every rule of every placed leaf
+/// must still be accepted at `options.level`.
+pub fn instance_as_stored(
+    instance: &Instance,
+    loader: &Loader<'_>,
+    limits: &Limits,
+    options: Options,
+    b: &Budget,
+) -> Result<CellCollision> {
+    let placement = match options.body_placement {
+        Some(v) => Some(v),
+        None => default_body_placement(options.level, hypotheses::status),
+    };
+    let mut builder = Builder {
+        loader,
+        limits,
+        budget: b,
+        level: options.level,
+        placement,
+        status: &hypotheses::status,
+        cache: HashMap::new(),
+        out: CellCollision {
+            level: options.level,
+            body_placement: placement,
+            models: Vec::new(),
+            placements: Vec::new(),
+            instances: Vec::new(),
+            unplaced: Vec::new(),
+            without_collision: Vec::new(),
+        },
+        force: true,
+    };
+    builder.instance(instance)?;
     Ok(builder.out)
 }
 
