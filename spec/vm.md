@@ -2880,7 +2880,7 @@ run's deaths and sits as `event` lines (`spec/timeline.md`, Deaths and
 furniture); reading them is the viewer's side.
 
 - Reached: the next main quest **34 of 54 stages** (fight step: 29; adds
-  80, 85, 87, 89, 90, 100, and 88 now after 85), the robot's quest 10 of 16,
+  80, 85, 87, 90, 100; 88 and 89 now after 85), the robot's quest 10 of 16,
   the vault dialogue quest 10 of 18 and the opening 87 of 104 unchanged.
 - The order the data leaves open, recorded as a labelled variant: the
   player on the back door's island (off the meshes) arrives inside the 78

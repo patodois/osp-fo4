@@ -42,7 +42,7 @@ after 88 (data)	the leader's conversation (24 phases and a nested scene) starts;
 the conversation	player dialogue (choice 0) and response actions alternate; a response line's end in the nested scene sets 90 (its fragment: the leader's faction, packages, another quest's stage); the scene ends	1617.949 to 1793.835	quest 1's 90 at 1732.423
 
 ## 4 how far the run gets
-quest 1 (next main)	34 of 54	before this step 29; adds 80, 85, 87, 89 (now from the conversation), 90, 100; no longer 88 before 85
+quest 1 (next main)	34 of 54	before this step 29; adds 80, 85, 87, 90, 100; 88 and 89 now after 85 (89 from the conversation)
 robot	10 of 16	unchanged
 vault dialogue	10 of 18	unchanged
 opening	87 of 104	unchanged
