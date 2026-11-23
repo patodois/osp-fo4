@@ -743,6 +743,10 @@ impl Vm<'_> {
                 if x == y {
                     known(true)
                 } else if x.eq_ignore_ascii_case(y) {
+                    if self.texts_ignore_case {
+                        self.rules.insert(rules::TEXT_EQUAL_IGNORE_CASE);
+                        return known(true);
+                    }
                     self.unknown(Origin::Rule(
                         rules::COMPARE,
                         "equality of texts that differ only in case".into(),

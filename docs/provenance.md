@@ -729,3 +729,19 @@ behaviour or animation tool or library of any project, Havok SDK, editor,
 editor source or definition file, script source or game executable was
 opened or searched for.
 
+The vault step (`fo4_vm::sit` `GetSitState`, `fo4_vm::menu::menu_mode`,
+`fo4_vm::anim::settle_start`, the text equality of `fo4_vm`'s interpreter;
+[spec/vm.md](../spec/vm.md), The forced run through the vault;
+[spec/quest-run-vault-stages.txt](../spec/quest-run-vault-stages.txt),
+[spec/quest-run-vault.txt](../spec/quest-run-vault.txt)) reads no new
+format: the quest records, the compiled scripts and the behaviour graphs of
+the door console, the vault door and the wrist computer's furniture as
+earlier steps read them. The documented values of the sit state native,
+that a NIF sequence of cycle type 2 plays once, that the engine's names and
+the scripting language's text comparisons ignore case, and that the
+player's elevator ride from the vault to the surface happens between the
+exit trigger and the exterior trigger were recognised from prior general
+knowledge and are pending rules or caller assumptions. No behaviour or
+animation tool or library of any project, Havok SDK, editor, editor source
+or definition file, script source or game executable was opened or
+searched for.

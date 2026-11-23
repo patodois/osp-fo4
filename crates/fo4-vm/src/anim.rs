@@ -79,6 +79,17 @@ pub struct Anims {
     /// Raise the text keys of the sequences the graphs play
     /// (`rules::ANIM_GRAPH_KEYS`, `--anim-graph-keys`).
     pub keys: bool,
+    /// A graph read when first needed has played its start state's
+    /// sequence to its end since load: the transitions that sequence's own
+    /// keys take are followed at once, nothing raised to scripts
+    /// (`rules::ANIM_GRAPH_START_SETTLED`, `--anim-graph-start-settled`);
+    /// off: the graph waits in its start state, as before.
+    pub start_settled: bool,
+    /// A state's sequence name finds the model's sequence ignoring ASCII
+    /// case where no sequence has the exact name
+    /// (`rules::ANIM_SEQUENCE_CASE`, `--anim-sequence-case`); off: exact
+    /// names only, as before.
+    pub sequence_case: bool,
     pub registrations: Vec<Registration>,
     /// The value `RegisterForAnimationEvent` answers where the
     /// registration is made: a caller assumption
@@ -231,7 +242,11 @@ fn enter(w: &mut World, o: ObjId, to: i32, now: f64) {
     if !w.anims.keys {
         return;
     }
-    let Some(seq) = state.sequence.as_deref().and_then(|s| g.sequence(s)) else {
+    let Some(seq) = state
+        .sequence
+        .as_deref()
+        .and_then(|s| sequence_of(&mut w.anims, &g, s))
+    else {
         w.anims.count(if state.sequence.is_some() {
             "graph states entered\tthe sequence is not in the model"
         } else {
@@ -270,7 +285,8 @@ fn enter(w: &mut World, o: ObjId, to: i32, now: f64) {
 
 /// Starts following a reference's graph (`rules::ANIM_GRAPH`): in the
 /// root machine's start state, none of that state's keys raised (when it
-/// was entered is not known).
+/// was entered is not known); under [`Anims::start_settled`] then moved on
+/// by [`settle_start`].
 pub fn begin(w: &mut World, o: ObjId, g: Rc<ModelGraph>, now: f64) {
     let start = g.machine.start;
     w.anims.using(rules::ANIM_GRAPH);
@@ -289,6 +305,104 @@ pub fn begin(w: &mut World, o: ObjId, g: Rc<ModelGraph>, now: f64) {
             open: None,
         },
     );
+    if w.anims.start_settled {
+        settle_start(w, o, now);
+    }
+}
+
+/// The model's sequence a state names: the exact name, else under
+/// [`Anims::sequence_case`] the first whose name differs only in ASCII case
+/// (`rules::ANIM_SEQUENCE_CASE`).
+fn sequence_of<'g>(
+    a: &mut Anims,
+    g: &'g ModelGraph,
+    name: &str,
+) -> Option<&'g fo4_scene::anim_graph::Sequence> {
+    if let Some(s) = g.sequence(name) {
+        return Some(s);
+    }
+    if !a.sequence_case {
+        return None;
+    }
+    let s = g
+        .sequences
+        .iter()
+        .find(|s| s.name.eq_ignore_ascii_case(name))?;
+    a.using(rules::ANIM_SEQUENCE_CASE);
+    a.count("graph states entered\ta sequence found ignoring case");
+    Some(s)
+}
+
+/// Most transitions [`settle_start`] follows.
+pub const SETTLE_STEPS: usize = 16;
+
+/// Under `rules::ANIM_GRAPH_START_SETTLED`: from the start state, while the
+/// state's sequence plays once (cycle type 2), the first of its text keys,
+/// in time order, that names an event the state itself takes moves the
+/// graph to that transition's state; no key is raised to scripts and none
+/// is scheduled. Stops at a state whose sequence loops or is missing, at a
+/// conditional transition, or after [`SETTLE_STEPS`].
+pub fn settle_start(w: &mut World, o: ObjId, now: f64) {
+    let Some(run) = w.anims.runs.get(&o) else {
+        return;
+    };
+    let g = run.graph.clone();
+    let mut state = run.state;
+    let mut steps = 0;
+    while steps < SETTLE_STEPS {
+        let Some(s) = g.machine.state(state) else {
+            break;
+        };
+        let Some(seq) = s
+            .sequence
+            .as_deref()
+            .and_then(|n| sequence_of(&mut w.anims, &g, n))
+        else {
+            break;
+        };
+        if seq.cycle != 2 {
+            break;
+        }
+        let mut keys: Vec<&(f32, String)> = seq.keys.iter().collect();
+        keys.sort_by(|a, b| a.0.total_cmp(&b.0));
+        let next = keys.iter().find_map(|(_, text)| {
+            let index = g
+                .machine
+                .events
+                .iter()
+                .position(|e| w.anims.same(e, text))?;
+            s.transitions
+                .iter()
+                .find(|t| t.event == index as i32)
+                .copied()
+        });
+        let Some(t) = next else {
+            break;
+        };
+        if t.condition.is_some() || g.machine.state(t.to_state).is_none() {
+            break;
+        }
+        state = t.to_state;
+        steps += 1;
+    }
+    if steps == 0 {
+        w.anims
+            .count("graph start settled\tno transition of the start sequence's keys");
+        return;
+    }
+    w.anims.using(rules::ANIM_GRAPH_START_SETTLED);
+    w.anims
+        .count(format!("graph start settled\t{steps} transition(s)"));
+    let label = w.objects[o].label.clone();
+    let name = g.machine.state(state).map_or("", |s| s.name.as_str());
+    w.anims.log.push((
+        now,
+        format!("{label}: start settled in state {name} after {steps} transition(s) of the start sequence's keys"),
+    ));
+    if let Some(r) = w.anims.runs.get_mut(&o) {
+        r.state = state;
+        r.generation += 1;
+    }
 }
 
 /// Sends a graph event to a reference's graph (`rules::ANIM_GRAPH`): the

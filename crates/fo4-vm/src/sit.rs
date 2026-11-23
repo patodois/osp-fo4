@@ -14,8 +14,9 @@
 //! events sits too), `rules::SIT_ACTIVATE_GET_UP` (a script's activation
 //! of the furniture the actor sits in gets it up) and
 //! `rules::FURNITURE_GRAPH_EVENTS` (those sits and get-ups send the
-//! furniture's behaviour graph an event the caller names), each behind its
-//! own switch. Nothing is measured in the running game; no idle or package
+//! furniture's behaviour graph an event the caller names) and
+//! `rules::SIT_STATE` (`GetSitState` answered from the run's sitters), each
+//! behind its own switch. Nothing is measured in the running game; no idle or package
 //! is modelled.
 use crate::{
     bind,
@@ -53,6 +54,11 @@ pub struct Sits {
     /// `--furniture-graph-events SIT GET_UP`, with the animation graph
     /// reading); `None`: no graph event is sent.
     pub graph_events: Option<(String, String)>,
+    /// `Actor.GetSitState` on the player's handle or a placed actor answered
+    /// from the run's sitters: [`SIT_STATE_SITTING`] while the run has it
+    /// sitting in a furniture, 0 otherwise (`rules::SIT_STATE`,
+    /// `quest_run --sit-state`); off: recorded, undetermined, as before.
+    pub sit_state: bool,
     /// Graph events to send (furniture, event name), taken by the host
     /// within the call that brought them (`crate::anim::furniture_event`).
     pub graph_sends: Vec<(ObjId, String)>,
@@ -101,10 +107,16 @@ impl Sits {
 }
 
 /// The natives the furniture model reads or answers.
-pub const NATIVES: [&str; 2] = [
+pub const NATIVES: [&str; 3] = [
     "objectreference.activate",
     "objectreference.isfurnitureinuse",
+    "actor.getsitstate",
 ];
+
+/// The value `GetSitState` answers under `rules::SIT_STATE` for an actor the
+/// run has sitting: the documented "sitting" value (prior knowledge; the
+/// scripts the forced runs reach only compare the answer with 0).
+pub const SIT_STATE_SITTING: i32 = 3;
 
 /// Whether the object is a placed reference whose base is a furniture
 /// (FURN).
@@ -141,6 +153,23 @@ pub fn native(store: &Store, max: u64, c: &NativeCall, w: &mut World) -> Option<
     let Some(Val::Object(f)) = c.receiver.clone() else {
         return None;
     };
+    if full == "actor.getsitstate" {
+        if !w.sits.sit_state || !is_sitter(store, w, f) {
+            return None;
+        }
+        w.sits.using(rules::SIT_STATE);
+        let sitting = w.sits.sitting.contains_key(&f);
+        w.sits.count(if sitting {
+            "GetSitState answered: sitting"
+        } else {
+            "GetSitState answered: not sitting"
+        });
+        return Some(Reply::Value(Val::Int(if sitting {
+            SIT_STATE_SITTING
+        } else {
+            0
+        })));
+    }
     if full == "objectreference.isfurnitureinuse" {
         if !w.sits.in_use || !is_furniture(store, max, w, f) {
             return None;

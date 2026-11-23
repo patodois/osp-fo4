@@ -16,6 +16,7 @@ mod scev;
 mod sit;
 mod stage;
 mod talk;
+mod vault;
 mod world;
 
 use fo4_pex::{

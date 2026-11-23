@@ -169,7 +169,7 @@ pub const XESP_BIT1: &str = "xesp_flag_bit1_not_presence_v1";
 pub const XESP_PROPAGATES: &str = "xesp_script_change_propagates_v1";
 
 /// Every rule above.
-pub const ALL: [&str; 160] = [
+pub const ALL: [&str; 164] = [
     ARITHMETIC,
     COMPARE,
     NOT_COPY_CAST,
@@ -330,6 +330,10 @@ pub const ALL: [&str; 160] = [
     SIT_ACTIVATE_EVENTS,
     SIT_ACTIVATE_GET_UP,
     FURNITURE_GRAPH_EVENTS,
+    SIT_STATE,
+    ANIM_GRAPH_START_SETTLED,
+    TEXT_EQUAL_IGNORE_CASE,
+    ANIM_SEQUENCE_CASE,
 ];
 
 /// The rule an opcode's meaning rests on; `None` for an opcode without a
@@ -650,3 +654,16 @@ pub const SIT_ACTIVATE_GET_UP: &str = "vm_furniture_activate_get_up_v1";
 /// A sit or get-up a script's activation brings sends the furniture
 /// reference's behaviour graph an event, the caller naming which.
 pub const FURNITURE_GRAPH_EVENTS: &str = "anim_furniture_sit_graph_events_v1";
+/// `GetSitState` on the player or a placed actor answers from the run's
+/// sitters: the sitting value while the run has it in a furniture, 0
+/// otherwise.
+pub const SIT_STATE: &str = "vm_sit_state_v1";
+/// A graph read when first needed has played its start state's sequence to
+/// its end since its reference loaded: the transitions that sequence's own
+/// keys take are followed at once, raising nothing to scripts.
+pub const ANIM_GRAPH_START_SETTLED: &str = "anim_graph_start_settled_v1";
+/// `==` on two texts that differ only in ASCII case is true.
+pub const TEXT_EQUAL_IGNORE_CASE: &str = "pex_text_equal_ignore_case_v1";
+/// A graph state's sequence name finds the model's sequence of that name
+/// ignoring ASCII case where none has the exact name.
+pub const ANIM_SEQUENCE_CASE: &str = "anim_graph_sequence_name_case_v1";

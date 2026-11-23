@@ -414,6 +414,10 @@ pub struct Vm<'a> {
     pub variant: Variant,
     /// Readings of array opcodes on a none array, each off by default.
     pub none_arrays: NoneArrays,
+    /// `==` on two texts that differ only in ASCII case is true
+    /// (`rules::TEXT_EQUAL_IGNORE_CASE`); off by default: undetermined, as
+    /// before.
+    pub texts_ignore_case: bool,
     steps: u64,
     depth: usize,
 }
@@ -435,6 +439,7 @@ impl<'a> Vm<'a> {
             limits: Limits::default(),
             variant: Variant::Candidate,
             none_arrays: NoneArrays::default(),
+            texts_ignore_case: false,
             steps: 0,
             depth: 0,
         }

@@ -35,6 +35,11 @@ pub struct Menus {
     /// choice in a message box, `quest_run --assume-message-button N`);
     /// `None` by default: recorded, undetermined, as before.
     pub assume_message_button: Option<i32>,
+    /// The value `Actor.IsInCombat` answers on the player's handle: a caller
+    /// assumption (the player fights no one, or does;
+    /// `quest_run --assume-player-in-combat true|false`); `None` by default:
+    /// recorded, undetermined, as before. No combat is modelled.
+    pub assume_player_combat: Option<bool>,
     pub counts: BTreeMap<String, u64>,
 }
 impl Menus {
@@ -58,9 +63,13 @@ pub const MENU_MODE: &str = "utility.isinmenumode";
 /// The native that shows a message box and answers the button pressed.
 pub const MESSAGE_SHOW: &str = "message.show";
 
-/// `Utility.IsInMenuMode` and `Message.Show` answered with the caller's
-/// assumptions, when made ([`Menus::assume_menu_mode`],
-/// [`Menus::assume_message_button`]); `None` otherwise (recorded as before).
+/// The native that asks whether an actor is in combat.
+pub const IN_COMBAT: &str = "actor.isincombat";
+
+/// `Utility.IsInMenuMode`, `Message.Show` and `Actor.IsInCombat` on the
+/// player answered with the caller's assumptions, when made
+/// ([`Menus::assume_menu_mode`], [`Menus::assume_message_button`],
+/// [`Menus::assume_player_combat`]); `None` otherwise (recorded as before).
 pub fn menu_mode(c: &NativeCall, w: &mut World) -> Option<Reply> {
     let full = c.full_name();
     if full == MENU_MODE {
@@ -76,6 +85,16 @@ pub fn menu_mode(c: &NativeCall, w: &mut World) -> Option<Reply> {
             "Message.Show answered by the caller's assumption: button {n}"
         ));
         return Some(Reply::Value(Val::Int(n)));
+    }
+    if full == IN_COMBAT {
+        let v = w.menus.assume_player_combat?;
+        if w.player.is_none() || c.receiver != w.player.map(Val::Object) {
+            return None;
+        }
+        w.menus.count(format!(
+            "IsInCombat on the player answered by the caller's assumption: {v}"
+        ));
+        return Some(Reply::Value(Val::Bool(v)));
     }
     None
 }
