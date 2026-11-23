@@ -58,6 +58,18 @@ impl Truth {
     fn open(function: u16, why: &'static str) -> Self {
         Truth::Undetermined(vec![Why { function, why }])
     }
+    /// Both: false when either is false, else undetermined when either
+    /// is, with the reasons of both.
+    pub fn and(self, other: Truth) -> Truth {
+        match (self, other) {
+            (Truth::False, _) | (_, Truth::False) => Truth::False,
+            (Truth::True, t) | (t, Truth::True) => t,
+            (Truth::Undetermined(mut a), Truth::Undetermined(b)) => {
+                a.extend(b);
+                Truth::Undetermined(a)
+            }
+        }
+    }
 }
 
 /// How the conditions of a list combine.
@@ -102,6 +114,11 @@ pub const ACTION_PERCENT: u16 = 131;
 /// `cond_fn_1_track_distance_v1`, behind its own switch and off by default
 /// (not one of [`ADDED`]).
 pub const DISTANCE: u16 = 1;
+
+/// The function index read on the player from the caller's assumed sex
+/// under `cond_fn_70_player_sex_v1`, behind its own switch and off by
+/// default (not one of [`ADDED`]).
+pub const PLAYER_SEX: u16 = 70;
 
 /// The function index of a quest script variable (CIS2 names it;
 /// `cond_fn_629_quest_variable_v1`), which waiting scenes are offered
@@ -307,6 +324,12 @@ pub trait Facts {
     /// before.
     fn player_word_on(&self) -> bool {
         false
+    }
+    /// The caller's assumed sex of the player (0 or 1), read by function 70
+    /// on the player (`cond_fn_70_player_sex_v1`); `None`: not evaluated,
+    /// as before.
+    fn player_sex(&self) -> Option<u32> {
+        None
     }
     /// The reference or the player an alias of a quest holds, for function
     /// 1 (`None`: empty).
@@ -612,6 +635,27 @@ fn eval_with_text(
             Ok(v) => compare(c, v, ctx, file, facts, used),
             Err(why) => Truth::open(f, why),
         };
+    }
+    if f == PLAYER_SEX {
+        if let Some(sex) = facts.player_sex() {
+            // Function 70 on the player from the caller's assumed sex, off
+            // by default (`cond_fn_70_player_sex_v1`): only a condition run
+            // on the reference word that stands for the player.
+            let on_player = c.run_on == 2
+                && c.flags() & (flag::SWAP | flag::ALIASES | flag::PACK_DATA) == 0
+                && !facts.switches().run_on_off
+                && matches!(
+                    party_word(c.reference, ctx, file, facts, used),
+                    Ok(Party::Player)
+                );
+            if on_player {
+                used.insert(rules::COND_FLAGS);
+                used.insert(rules::COND_RUN_ON);
+                used.insert(rules::COND_FN_70_PLAYER_SEX);
+                let v = if c.param1 == sex { 1.0 } else { 0.0 };
+                return compare(c, v, ctx, file, facts, used);
+            }
+        }
     }
     if f == DISTANCE && facts.distance_on() {
         // Function 1 read from the world model, off by default

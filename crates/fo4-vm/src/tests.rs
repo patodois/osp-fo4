@@ -7,6 +7,7 @@ mod cond2;
 mod data;
 mod events;
 mod graph;
+mod home;
 mod kw;
 mod load3d;
 mod open2;

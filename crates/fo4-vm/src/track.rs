@@ -143,6 +143,10 @@ pub struct Switches {
     /// `--moveto-target` (`world_moveto_target_v1`): `MoveTo(target)` with
     /// zero offsets puts the reference at the target's position at once.
     pub moveto_target: bool,
+    /// `--load-doors` (`world_load_door_xtel_v1`): where the track changes
+    /// space, the player passes through the load door of the old space
+    /// that leads to the new one and stands at its teleport position.
+    pub load_doors: bool,
 }
 impl Switches {
     /// Whether a shape of this kind is read (its switch on).
@@ -532,6 +536,232 @@ pub struct ActorMove {
     pub pos: [f64; 3],
 }
 
+/// One passage of the track through a load door
+/// (`world_load_door_xtel_v1`, read with `--load-doors`): at the second of
+/// the track's last point in the old space the player stands at the door's
+/// teleport position in the new space.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DoorPassage {
+    pub t: f64,
+    /// The placed door of the old space and the door its `XTEL` names.
+    pub door: FormKey,
+    pub to: FormKey,
+    pub from_space: FormKey,
+    pub space: FormKey,
+    /// The teleport position and facing (degrees) the `XTEL` stores.
+    pub pos: [f64; 3],
+    pub facing: f64,
+    /// Distance from the track's last point in the old space to the door's
+    /// stored position.
+    pub reach: f64,
+}
+
+/// An `XTEL` of 36 bytes read as the door it names (the first word, the
+/// established prefix), then three position words and three rotation words
+/// (`world_load_door_xtel_v1`; the census of the 1,204 stored values is in
+/// `spec/vm.md`, The walk home); the last two words are not read.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Teleport {
+    pub door: FormKey,
+    pub pos: [f64; 3],
+    pub rot: [f64; 3],
+}
+
+/// The size of every stored `XTEL`.
+pub const XTEL_BYTES: usize = 36;
+
+/// The `XTEL` of a placed reference read in its plugin's master context:
+/// `Ok(None)` without one.
+pub fn teleport_of(
+    store: &Store,
+    r: &Record,
+    plugin: usize,
+) -> Result<Option<Teleport>, &'static str> {
+    let mut it = r.subrecords.iter().filter(|s| s.signature == *b"XTEL");
+    let s = match (it.next(), it.next()) {
+        (None, _) => return Ok(None),
+        (Some(s), None) => s,
+        _ => return Err("two XTEL subrecords"),
+    };
+    let d = r.data(s);
+    if d.len() != XTEL_BYTES {
+        return Err("an XTEL that is not 36 bytes");
+    }
+    let word = |i: usize| f64::from(f32::from_le_bytes([d[i], d[i + 1], d[i + 2], d[i + 3]]));
+    let id = u32::from_le_bytes([d[0], d[1], d[2], d[3]]);
+    let door = store
+        .order()
+        .remap(plugin, id, &r.source.file, s.offset)
+        .ok()
+        .flatten()
+        .ok_or("an XTEL door that does not resolve")?;
+    let pos = [word(4), word(8), word(12)];
+    let rot = [word(16), word(20), word(24)];
+    if pos.iter().chain(&rot).any(|x| !x.is_finite()) {
+        return Err("an XTEL position or rotation that is not finite");
+    }
+    Ok(Some(Teleport { door, pos, rot }))
+}
+
+/// The cells of a space whose placed references are read near a point: an
+/// interior cell itself; for a worldspace, its cells within one grid square
+/// of the point and its cells holding persistent references.
+fn cells_near_point(
+    store: &Store,
+    space: &FormKey,
+    p: [f64; 3],
+    b: &Budget,
+) -> Result<Vec<FormKey>, String> {
+    if store.signature(space) == Some(*b"CELL") {
+        return Ok(vec![space.clone()]);
+    }
+    let g = [p[0], p[1]].map(|x| (x / CELL_SIZE).floor() as i64);
+    let mut out = Vec::new();
+    for c in store.cells() {
+        if store.world(&c).as_ref() != Some(space) {
+            continue;
+        }
+        let cb = b.child();
+        let grid = store
+            .get::<Cell>(&c, &cb)
+            .map_err(|e| e.to_string())?
+            .and_then(|x| x.data.grid.map(|g| (i64::from(g.i), i64::from(g.j))));
+        let near = grid.is_some_and(|(i, j)| (i - g[0]).abs() <= 1 && (j - g[1]).abs() <= 1);
+        let persistent = store
+            .children(&c, &cb)
+            .map_err(|e| e.to_string())?
+            .active
+            .iter()
+            .any(|k| k.group_kind == 8);
+        if near || persistent {
+            out.push(c);
+        }
+    }
+    Ok(out)
+}
+
+/// Where the track changes space, the passage through the load door of
+/// the old space whose `XTEL` names a door in the new space, the one
+/// nearest the track's last point in the old space (persistent doors of a
+/// worldspace within two grid squares of it); a point at the teleport
+/// position is put after that last point, at its second
+/// (`world_load_door_xtel_v1`). What was found is counted.
+fn pass_load_doors(
+    store: &Store,
+    track: &mut Track,
+    counts: &mut BTreeMap<String, u64>,
+    b: &Budget,
+) -> Result<Vec<DoorPassage>, String> {
+    let mut bump = |k: &str| *counts.entry(format!("load doors\t{k}")).or_default() += 1;
+    let mut out = Vec::new();
+    let mut i = 0;
+    while i + 1 < track.points.len() {
+        let (a, next) = (&track.points[i], &track.points[i + 1]);
+        if a.space == next.space {
+            i += 1;
+            continue;
+        }
+        bump("space changes of the track");
+        let (from, to, p, t) = (a.space.clone(), next.space.clone(), a.pos, a.t);
+        let mut best: Option<(f64, FormKey, Teleport)> = None;
+        for cell in cells_near_point(store, &from, p, b)? {
+            let cb = b.child();
+            let ch = store.children(&cell, &cb).map_err(|e| e.to_string())?;
+            for kid in ch.active.iter().chain(&ch.disabled) {
+                if kid.signature != *b"REFR" {
+                    continue;
+                }
+                let rb = b.child();
+                let Some((r, plugin)) = store
+                    .raw_with_plugin(&kid.key, &rb)
+                    .map_err(|e| e.to_string())?
+                else {
+                    continue;
+                };
+                let tp = match teleport_of(store, &r, plugin) {
+                    Ok(Some(tp)) => tp,
+                    Ok(None) => continue,
+                    Err(why) => {
+                        bump(&format!("doors left out\t{why}"));
+                        continue;
+                    }
+                };
+                let base = bind::base_of(store, &kid.key, &rb).ok().flatten();
+                if base.and_then(|k| store.signature(&k)) != Some(*b"DOOR") {
+                    bump("references with an XTEL left out\tthe base is not a door");
+                    continue;
+                }
+                let Some(at) = store
+                    .get::<Refr>(&kid.key, &rb)
+                    .map_err(|e| e.to_string())?
+                    .and_then(|x| x.data.transform)
+                else {
+                    continue;
+                };
+                let at = [at[0], at[1], at[2]].map(f64::from);
+                let far = (0..2).any(|k| (at[k] - p[k]).abs() > 2.0 * CELL_SIZE);
+                if kid.group_kind == 8 && store.signature(&from) == Some(*b"WRLD") && far {
+                    continue;
+                }
+                if space_of(store, &tp.door).as_ref() != Some(&to) {
+                    continue;
+                }
+                let d = (0..3).map(|k| (at[k] - p[k]).powi(2)).sum::<f64>().sqrt();
+                let better = match &best {
+                    None => true,
+                    Some((bd, bk, _)) => {
+                        d < *bd
+                            || (d == *bd
+                                && (kid.key.plugin.as_str(), kid.key.object_id)
+                                    < (bk.plugin.as_str(), bk.object_id))
+                    }
+                };
+                if better {
+                    best = Some((d, kid.key.clone(), tp));
+                }
+            }
+        }
+        match best {
+            None => {
+                bump("space changes with no load door of the old space leading to the new: the caller's next point kept");
+                i += 1;
+            }
+            Some((reach, door, tp)) => {
+                bump(&format!(
+                    "space changes through a load door: the player placed at its teleport position\tthe door {} the track's last point",
+                    if reach <= 256.0 {
+                        "within 256 units of"
+                    } else {
+                        "farther than 256 units from"
+                    }
+                ));
+                let facing = tp.rot[2].to_degrees();
+                out.push(DoorPassage {
+                    t,
+                    door,
+                    to: tp.door.clone(),
+                    from_space: from,
+                    space: to.clone(),
+                    pos: tp.pos,
+                    facing,
+                    reach,
+                });
+                track.points.insert(
+                    i + 1,
+                    Point {
+                        t,
+                        space: to,
+                        pos: tp.pos,
+                        facing: Some(facing),
+                    },
+                );
+                i += 2;
+            }
+        }
+    }
+    Ok(out)
+}
+
 /// A placed actor near the track, at its stored position
 /// (`world_actor_placed_position_v1`, read with `--actor-positions`).
 #[derive(Debug, Clone, PartialEq)]
@@ -583,6 +813,8 @@ pub struct Place {
     /// References a native of the run deleted (`Delete`): they hold no
     /// one (`world_trigger_enabled_v1`).
     pub deleted: BTreeSet<FormKey>,
+    /// The track's passages through load doors (`world_load_door_xtel_v1`).
+    pub doors: Vec<DoorPassage>,
     /// Counts by text.
     pub counts: BTreeMap<String, u64>,
     /// Rules a native's answer relied on, taken by the host after the
@@ -651,6 +883,9 @@ impl Place {
             sw,
             ..Place::default()
         };
+        if sw.load_doors {
+            place.doors = pass_load_doors(store, &mut track, &mut place.counts, b)?;
+        }
         // Bounding boxes of the points by space.
         let mut boxes: BTreeMap<FormKey, ([f64; 2], [f64; 2])> = BTreeMap::new();
         let points = track

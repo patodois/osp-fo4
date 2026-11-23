@@ -81,6 +81,10 @@ pub struct Switches {
     /// `--line-stage-fields` (`dialogue_line_stage_fields_v1` for lines
     /// outside scenes).
     pub stage_fields: bool,
+    /// `--info-groups` (`dialogue_info_group_conditions_v1`): a line that
+    /// names a group (`GNAM`) holds only when the group's conditions hold
+    /// too, and a group is not a line that plays.
+    pub info_groups: bool,
 }
 
 /// One line of a topic of a subtype the model reads.
@@ -97,12 +101,25 @@ pub struct Line {
     pub conditions: Vec<Condition>,
     /// Position in stored order (plugin order, then file order).
     pub order: usize,
+    /// The group the line's `GNAM` names, as a record key.
+    pub group: Option<String>,
+}
+
+/// An info group a line names (`dialogue_info_group_conditions_v1`): its
+/// conditions, read in its plugin's context.
+#[derive(Debug, Clone)]
+pub struct Group {
+    pub plugin: usize,
+    pub file: String,
+    pub conditions: Vec<Condition>,
 }
 
 /// The lines of the subtypes the model reads, by subtype code.
 #[derive(Debug, Default)]
 pub struct Lines {
     pub by_subtype: BTreeMap<[u8; 4], Vec<Line>>,
+    /// The groups the lines name, by record key.
+    pub groups: BTreeMap<String, Group>,
     /// Topics or lines that did not read.
     pub unread: usize,
 }
@@ -160,6 +177,19 @@ impl Lines {
                 out.unread += 1;
                 continue;
             };
+            let group = r
+                .subrecords
+                .iter()
+                .find(|x| x.signature == *b"GNAM")
+                .and_then(|x| <[u8; 4]>::try_from(r.data(x)).ok())
+                .and_then(|d| {
+                    store
+                        .order()
+                        .remap(plugin, u32::from_le_bytes(d), &r.source.file, 0)
+                        .ok()
+                        .flatten()
+                })
+                .map(|g| bind::record_key(&g));
             out.by_subtype.entry(sub).or_default().push(Line {
                 key: k,
                 topic,
@@ -169,7 +199,36 @@ impl Lines {
                 file: r.source.file.clone(),
                 conditions: info.conditions,
                 order,
+                group,
             });
+        }
+        // The groups the lines name, read in their own plugin's context.
+        let named: BTreeSet<String> = out
+            .by_subtype
+            .values()
+            .flatten()
+            .filter_map(|l| l.group.clone())
+            .collect();
+        for g in named {
+            let Some(k) = key_record(&g) else { continue };
+            let bb = b.child();
+            let Ok(Some((r, plugin))) = store.raw_with_plugin(&k, &bb) else {
+                continue;
+            };
+            let ctx = Context {
+                order: store.order(),
+                plugin,
+            };
+            if let Ok(info) = Info::read(&r, ctx, &bb) {
+                out.groups.insert(
+                    g,
+                    Group {
+                        plugin,
+                        file: r.source.file.clone(),
+                        conditions: info.conditions,
+                    },
+                );
+            }
         }
         out
     }
@@ -500,6 +559,12 @@ fn speak(h: &mut QuestHost<'_>, w: &mut World, sub: [u8; 4], what: &str, actor: 
     let mut tried: Vec<(usize, usize, Tried, u8)> = Vec::new();
     let mut used = BTreeSet::new();
     for (i, l) in cands.iter().enumerate() {
+        // A group is not a line that plays (`dialogue_info_group_conditions_v1`).
+        if w.talk.sw.info_groups && lines.groups.contains_key(&bind::record_key(&l.key)) {
+            h.using(rules::INFO_GROUPS);
+            tried.push((i, 0, Tried::Fails, 0));
+            continue;
+        }
         let Some(q) = &l.quest else {
             tried.push((i, 0, Tried::Fails, 0));
             continue;
@@ -549,6 +614,31 @@ fn speak(h: &mut QuestHost<'_>, w: &mut World, sub: [u8; 4], what: &str, actor: 
                 Combine::OrGroups,
                 &mut used,
             );
+            // The group's conditions too (`dialogue_info_group_conditions_v1`).
+            let t = match (
+                w.talk.sw.info_groups,
+                l.group.as_ref().and_then(|g| lines.groups.get(g)),
+            ) {
+                (true, Some(g)) => {
+                    h.using(rules::INFO_GROUPS);
+                    let gctx = Context {
+                        order: store.order(),
+                        plugin: g.plugin,
+                    };
+                    let mut facts = RunFacts::of(h, w, None, Some(q.clone()));
+                    facts.parties = Some(parties.clone());
+                    let gt = cond::eval_list_with(
+                        &g.conditions,
+                        gctx,
+                        &g.file,
+                        &mut facts,
+                        Combine::OrGroups,
+                        &mut used,
+                    );
+                    t.and(gt)
+                }
+                _ => t,
+            };
             let t = match t {
                 Truth::True => Tried::Holds,
                 Truth::False => Tried::Fails,
@@ -785,6 +875,17 @@ fn play(h: &mut QuestHost<'_>, w: &mut World, line: &Line, speaker: &Party, what
             None
         }
     };
+    // What the line does besides its stage fields (`crate::line`), its
+    // own handle owning what its end brings.
+    if w.scenes.lines.fragments || w.scenes.lines.start_scene {
+        if let Ok(owner) = record_object(w, store, &line.key, "topicinfo", &b) {
+            let sp = match speaker {
+                Party::Player => Some(w.player("actor")),
+                Party::Actor(k) => record_object(w, store, k, "actor", &b).ok(),
+            };
+            crate::line::play(h, w, owner, &line.key, sp, true, now, secs.map(|s| now + s));
+        }
+    }
     if !w.talk.sw.stage_fields {
         return;
     }

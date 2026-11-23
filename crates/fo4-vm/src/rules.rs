@@ -169,7 +169,7 @@ pub const XESP_BIT1: &str = "xesp_flag_bit1_not_presence_v1";
 pub const XESP_PROPAGATES: &str = "xesp_script_change_propagates_v1";
 
 /// Every rule above.
-pub const ALL: [&str; 164] = [
+pub const ALL: [&str; 169] = [
     ARITHMETIC,
     COMPARE,
     NOT_COPY_CAST,
@@ -334,6 +334,11 @@ pub const ALL: [&str; 164] = [
     ANIM_GRAPH_START_SETTLED,
     TEXT_EQUAL_IGNORE_CASE,
     ANIM_SEQUENCE_CASE,
+    WORLD_LOAD_DOOR,
+    LINE_FRAGMENTS,
+    LINE_START_SCENE,
+    COND_FN_70_PLAYER_SEX,
+    INFO_GROUPS,
 ];
 
 /// The rule an opcode's meaning rests on; `None` for an opcode without a
@@ -667,3 +672,24 @@ pub const TEXT_EQUAL_IGNORE_CASE: &str = "pex_text_equal_ignore_case_v1";
 /// A graph state's sequence name finds the model's sequence of that name
 /// ignoring ASCII case where none has the exact name.
 pub const ANIM_SEQUENCE_CASE: &str = "anim_graph_sequence_name_case_v1";
+/// Where the caller's track changes space, the player passes through the
+/// load door of the old space whose `XTEL` names a door in the new space
+/// (the one nearest the track's last point there) and stands at the
+/// position and facing the `XTEL` stores, at that point's second.
+pub const WORLD_LOAD_DOOR: &str = "world_load_door_xtel_v1";
+/// A line the run plays runs its fragment block's begin fragment as it
+/// begins and its end fragment as it ends, on the line's fragment script
+/// instance, with the speaker's reference as the argument.
+pub const LINE_FRAGMENTS: &str = "dialogue_line_fragments_v1";
+/// A line the run plays that stores a `TSCE` starts that scene as it ends,
+/// offering first the phase its `INTV` stores.
+pub const LINE_START_SCENE: &str = "dialogue_line_start_scene_v1";
+/// Condition function 70 run on the reference word that stands for the
+/// player compares its first parameter with the caller's assumed sex of the
+/// player: 1 when equal, 0 otherwise.
+pub const COND_FN_70_PLAYER_SEX: &str = "cond_fn_70_player_sex_v1";
+/// A dialogue line outside scenes whose `GNAM` names a group (an INFO of
+/// its topic with no responses) holds only when the group's conditions
+/// hold too; a line other lines name as their group is not a line that
+/// plays.
+pub const INFO_GROUPS: &str = "dialogue_info_group_conditions_v1";

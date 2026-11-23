@@ -830,6 +830,10 @@ pub struct CondInputs<'s> {
     /// Caller assumptions (`quest_run --assume-cond`): the value of every
     /// condition of a function index. Not a rule.
     pub assume: BTreeMap<u16, f32>,
+    /// Caller assumptions scoped to the condition lists of one quest's
+    /// records (`quest_run --assume-cond-for QUEST N=VALUE`), by the
+    /// quest's record key; over [`CondInputs::assume`]. Not a rule.
+    pub assume_for: BTreeMap<String, BTreeMap<u16, f32>>,
     /// Conditions an assumption decided.
     pub assumed: std::cell::Cell<u64>,
     /// Function 1 read from the world model's positions
@@ -840,6 +844,14 @@ pub struct CondInputs<'s> {
     /// (`cond_player_reference_word_v1`; `quest_run --cond-player-word`).
     /// Off by default.
     pub player_word: bool,
+    /// Function 70 on the player read from the caller's assumed sex
+    /// (`cond_fn_70_player_sex_v1`; `quest_run --cond-70-player-sex`, with
+    /// `--player-base-object` and `--assume-player-sex`). Off by default.
+    pub player_sex: bool,
+    /// The same reading limited to the condition lists of these quests'
+    /// records, by record key (`quest_run --cond-70-player-sex-for
+    /// QUEST`, the caller's choice of where it applies).
+    pub player_sex_for: std::collections::BTreeSet<String>,
 }
 
 impl<'a, 's> RunFacts<'a, 's> {
@@ -913,6 +925,17 @@ impl Facts for RunFacts<'_, '_> {
     fn player_word_on(&self) -> bool {
         self.cond.player_word
     }
+    fn player_sex(&self) -> Option<u32> {
+        let scoped = self.owner.as_ref().is_some_and(|q| {
+            self.cond
+                .player_sex_for
+                .contains(&crate::bind::record_key(q))
+        });
+        if !(self.cond.player_sex || scoped) {
+            return None;
+        }
+        self.w.player_sex.and_then(|n| u32::try_from(n).ok())
+    }
     /// The alias's holder as [`Facts::alias_reference`] reads it, the
     /// player included (a unique actor alias of the player's base, or a
     /// fill a run set to the player).
@@ -975,7 +998,12 @@ impl Facts for RunFacts<'_, '_> {
         self.data.max_memory
     }
     fn assumed(&self, function: u16) -> Option<f32> {
-        let v = self.cond.assume.get(&function).copied();
+        let scoped = self
+            .owner
+            .as_ref()
+            .and_then(|q| self.cond.assume_for.get(&crate::bind::record_key(q)))
+            .and_then(|m| m.get(&function).copied());
+        let v = scoped.or_else(|| self.cond.assume.get(&function).copied());
         if v.is_some() {
             self.cond.assumed.set(self.cond.assumed.get() + 1);
         }
@@ -2371,6 +2399,38 @@ pub fn run_one(vm: &mut Vm<'_>, store: &Store, job: Job, nested: bool, b: &Budge
                             Err(e) => outcomes.push((script, Outcome::Failed(e))),
                         }
                     }
+                }
+            }
+            crate::scene::Step::LineFragment {
+                line,
+                function,
+                speaker,
+                ..
+            } => {
+                vm.rules.insert(rules::LINE_FRAGMENTS);
+                let run = (|| -> Result<(String, Outcome), VmError> {
+                    let key = crate::data::key_record(line).ok_or(VmError::BadArgument {
+                        site: None,
+                        detail: "a line fragment of no record".into(),
+                    })?;
+                    let o = crate::data::record_object(&mut vm.world, store, &key, "topicinfo", b)
+                        .map_err(|_| VmError::BadArgument {
+                            site: None,
+                            detail: "the line's record could not be read".into(),
+                        })?;
+                    let inst = crate::scene::record_fragment_instance(vm, store, o, &mut notes, b)?;
+                    let script = vm.world.instances[inst].script.clone();
+                    let arg = speaker.map(Val::Object).unwrap_or(Val::None);
+                    let o = if nested {
+                        vm.deliver_nested(inst, function, vec![arg])
+                    } else {
+                        vm.deliver(inst, function, vec![arg])
+                    };
+                    Ok((script, o))
+                })();
+                match run {
+                    Ok(x) => outcomes.push(x),
+                    Err(e) => outcomes.push((String::new(), Outcome::Failed(e))),
                 }
             }
             crate::scene::Step::Enter
