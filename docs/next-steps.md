@@ -4,31 +4,37 @@ This page is the hand-over point. Everything on `main` builds and passes its tes
 agent) can continue from here. Read `AGENTS.md` first: it holds the rules of evidence and the clean-room rules.
 
 State on 2026-11-23 (timeline step). Nothing below has been checked against the running game: every behaviour is a pending
+State on 2026-11-23 (vault step). Nothing below has been checked against the running game: every behaviour is a pending
 rule in `spec/hypotheses.tsv`, off by default.
 
 ## Script VM and quests (`crates/fo4-vm`)
 
-The forced opening (`quest_run`, record in `spec/quest-run-opening.txt`) reaches 87 of 104 stages
-(exit step; before it 86): the prewar quest ends. The player's postwar pod now opens from the data: a
-scripted activation with events sits the player in it (`--activate-furniture-events`), the exit scene's
-activation by the sitter gets the player up (`--activate-furniture-get-up`), and the get-up sends the pod's
-behaviour graph a use event the caller names (`--furniture-graph-events`), whose two sequences raise the key
-the exit scene's fragment registered for. The last stage needs the player's own camera event (a character's
-animation, the caller's `--assume-anim-event player`) and `IsInMenuMode` answered (the caller's
-`--assume-menu-mode false`). The graph step's `--phase-conditions-end` stop was the caller's cap of scene clock
-advances, not a host bug. The 17 stages the run does not set are classed in
-`spec/quest-run-opening-unset.txt`: a debug start, four other choices or actions of the player, one that
-depends on an order the data does not settle, nine with no setter, one with no path, and the failure stage
-(the player leaving the area dies). What is left:
+The forced opening (`quest_run`, record in `spec/quest-run-opening.txt`) reaches 87 of 104 stages: the
+prewar quest ends. The vault step carries the forced run on through the postwar vault (record in
+`spec/quest-run-vault.txt`, every stage mapped in `spec/quest-run-vault-stages.txt`): the next main quest reaches
+12 of its 54 stages (before 3) and the vault dialogue quest 8 of 18 (before 3). The corridor trigger, the wrist
+computer's skeleton, the door console, the walk past the vault door, the exit trigger with its message box and the
+exterior triggers are the caller's (`--assume-trigger-enter`, `--assume-activate`, `--assume-message-button`), as are
+the player's three animation events (wrist computer, plug-in) and the player's combat state
+(`--assume-player-in-combat`). From the data under four new readings: `GetSitState` from the run's sitters
+(`--sit-state`), the console's graph taken to have played its start sequence since load
+(`--anim-graph-start-settled`), its sequences found ignoring case (`--anim-sequence-case`), and the handler's text
+comparison ignoring case (`--text-equal-ignore-case`); the console's fourth stage key then opens the vault door
+(its graph's keys 22.5 s and 43.3 s later). The order question of the opening's stage 120 is settled from the data:
+it is reached only on the refusal way (`spec/quest-run-opening-unset.txt`, now classed an alternative). What is
+left:
 
-1. The exit scene's looping successor waits on the vault dialogue quest's stage set by one trigger's
-   script when the player walks in and picks the last button of a message box (`--assume-message-button`);
-   in the game the trigger is past the vault door, which the next main quest's console sequence opens on the
-   player's animation events. A labelled variant assumes the walk and the button and ends the scene. Next:
-   the next main quest's stages (the wrist computer, the door console), which wait on the player's animation events.
-2. The one stage whose reaching depends on order (a scene stopped by the stage its line's end half sets
-   before the phase that would set it): a measurement or a reading of when a line's end-half stage is set
-   against its phase's end would settle it.
+1. The next main quest's next stages wait on a conversation with the household robot (the end halves of its
+   postwar lines, stage 22) and on triggers and dialogue on the way to the settlement and the town; the robot's
+   postwar dialogue quest is set by line halves, scene phases and the robot's animation event. The talk host
+   (`--assume-talk`, `--greeting-on-talk`, `--assume-line`) is where to start.
+2. The vault's exit elevator: its graph event is played, but the player's ride and move to the surface are not
+   modelled, so the exterior trigger's entry is the caller's. A track through the postwar vault and the exterior
+   (`track_plan`) would let the triggers come from the player's walk instead of `--assume-trigger-enter`.
+3. The player's own animation events (here the wrist computer and the console's plug-in) still come from the
+   caller: reading character graphs (below) would let them come from the data.
+4. The vault dialogue quest's optional stages (the spouse's pod and ring, three spoken remarks, a trigger) are the
+   player's other actions; the pests' death stage needs combat, which is not modelled.
 
 Character behaviour graphs (`char_graph_census`, `spec/character-graph-census.txt`): a race names its
 behaviour project, and the project, character and root graph resolve, but which clip an actor plays is held
@@ -36,7 +42,7 @@ in classes the readers do not read (clip generators, behaviour references, neste
 conditions and variables, how furniture keywords select a state). Reading those is what would let actor
 animation events come from the data instead of the caller.
 
-Not modelled yet: unload, cell-load, cell-attach and cell-detach events; the sit state native; actors sitting
+Not modelled yet: unload, cell-load, cell-attach and cell-detach events; the sit state's transitional values (only sitting or not, `--sit-state`); combat; actors sitting
 through packages; magic-effect receivers of furniture events; keyword data, `ResetKeyword`, keywords in
 conditions, template flags and object modifications for keywords; collection aliases filled other than from
 a location's rows; actors' animation (character graphs); a furniture's `OnActivate` on a script's activation;

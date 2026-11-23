@@ -1,0 +1,49 @@
+# quest_run new-game: the next main quest's stages and the vault dialogue quest's, by number and role (kinds only; spec/vm.md, The forced run through the vault)
+# A static reading of the stage records (log entries, editor notes read for their role only, fragments), the stage-setter table (stage_census, with other scripts' calls), every condition of every record testing the stage (functions 58 and 59), the compiled scripts the setters run, and the behaviour graphs of the door console, the vault door and the wrist computer's furniture; the run is the vault step's final run (spec/quest-run-vault.txt).
+# Columns: quest, stage, what sets it in the data, what it needs in the run, what its fragment does (role), the final run (set, or why not).
+# Needs: data (the data and the pending readings set it), caller (a player action or event the caller assumes), other quest (set by another quest's stage), none (no setter).
+
+## 1 the next main quest: the postwar vault
+next main	0	the opening's sequence quest's stage that moves the player to the postwar vault; a placed trigger's enter handler through the shared helper	data	starts the exit scene, enables the spouse's body by the player's sex, sets the vault dialogue quest's stage 50, sets the game hour and the time scale	set (exit step)
+next main	2	the player alias's handler of the pod's exit key (registered by both phase-end fragments of the exit scene)	data (pod graph readings of the exit step)	blocks the spouses' activation, registers the quest for the player's camera event	set (exit step)
+next main	1	the quest script's handler of the player's camera event	caller (the player's event, the caller's menu-mode answer)	sets the opening quest's last stage, then this one: shows the first objective	set (exit step)
+next main	3	a placed trigger's enter handler through the shared helper (the corridor out of the cryo room)	caller (trigger entry)	disables the blocked door's enable parent, unlocks and opens the first door	set
+next main	4	the wrist computer's skeleton alias: the default activation alias script (by the player, with its combat check; the skeleton's own script asks the same)	caller (activation) and the caller's combat answer	registers the quest for the player's wrist computer animation event, blocks the skeleton and the wrist computer furniture, sets the tutorial quest's stage	set
+next main	6	the quest script's handler of the player's wrist computer animation event	caller (the player's event)	sets the tutorial quest's stage when its later stage is not done	set
+next main	5	the door console alias's activation handler when the wrist computer stage is not done (plays a failure sound)	caller (activation before the wrist computer)	starts the console scene	not set: alternative (the run activates the console after the wrist computer; set in a labelled variant)
+next main	7	the door console alias's activation handler when the wrist computer stage is done and this one is not (the player not in combat, not sitting)	caller (activation), the caller's combat answer, the sit state from the run's sitters	gives and equips the wrist computer, activates the console furniture for the player (a sit under the exit step's reading), registers the quest for three of the player's events and the console's end key, the alias for a fourth player event	set
+next main	9	the console alias's button function, called by the quest script's handler of the player's plug-in event, or by the alias's activation once the player's unplug event moved it on	caller (the player's event; or the player's other event and an activation)	plays the console's third stage event, registers the quest for the console's fourth stage key, closes two exit doors	set (a labelled variant takes the other way)
+next main	8	the quest script's handler of the console's fourth stage key	data (the console graph's start settled, its sequences found ignoring case, the handler's text comparison ignoring case)	plays the vault door's opening event, enables the klaxons, registers for the door's two keys, sets the vault dialogue quest's stage 95	set
+next main	10	the exterior elevator trigger's enter handler (waits for the ride, then sets the stage); a placed trigger's enter handler through the shared helper; six stage fragments of add-on quests	caller (trigger entry outside; the ride up is not modelled)	sets the tutorial stage and the vault dialogue quest's stage 110, an achievement, the next objective, sets stage 15	set
+next main	15	this quest's stage 10 fragment; stage fragments of add-on and faction quests	data	starts three radio and faction quests	set
+next main	20	a placed trigger's enter handler outside the vault, through the shared helper; six add-on quest stage fragments	caller (trigger entry)	objectives	set
+next main	22	the end of two lines of the household robot's postwar dialogue	not reached	-	beyond the run's end: a conversation with the robot
+next main	25 to 200	dialogue lines (the robot, the settlement's people), triggers, alias deaths and combat events, a terminal item, timers, other quests' stage fragments	not reached	the walk to the settlement and the town, the fight, the power armor	beyond the run's end (counts in section 3)
+next main	75	nothing	none	-	no setter in the table
+next main	1000	nothing	none	-	no setter in the table (flag 0x04 stage)
+
+## 2 the vault dialogue quest (starts with the game)
+vault dialogue	40	the first half of a phase field of the exit scene (its second phase begins)	data	activates the player's pod for the player (the exit step's get-up), blocks two doors	set (exit step)
+vault dialogue	50	the next main quest's stage 0 fragment	data	nothing	set (exit step)
+vault dialogue	55	the second half of the exit scene's scene field (the scene ends)	data	starts the breathing timer	set (exit step)
+vault dialogue	56	the spouse's lever alias: the default activation alias script	caller (activation)	starts the scene of opening the spouse's pod, registers the quest for the spouse pod's transition key	not set: optional (the player's other action)
+vault dialogue	57	the spouse's pod alias: the default activation alias script	caller (activation)	starts a comments scene when 56 is not done	not set: optional
+vault dialogue	58	the quest script's handler of the spouse pod's transition key	data after 56	starts a scene when 60 is not done and the player sees the pod; names and enables the spouse's body activator	not set: optional (after 56)
+vault dialogue	60	the spouses' aliases and the body activator alias (default activation alias script), the two placed spouse bodies (default reference activation script)	caller (activation)	takes the ring from the spouse, starts a scene	not set: optional
+vault dialogue	65	a collection alias's death handler (the vault's pests)	not modelled (death)	starts a scene, empties the collection	not set: no combat is modelled
+vault dialogue	70, 72, 74	three placed triggers' enter handlers through the shared helper	caller (trigger entry)	each starts one of the player's spoken remarks	not set: optional (the run assumes no walk through them)
+vault dialogue	80	a placed trigger's enter handler through the shared helper	caller (trigger entry)	nothing	not set: optional
+vault dialogue	90	nothing	none	nothing	no setter in the table
+vault dialogue	95	the next main quest's stage 8 fragment	data	stops the player's loop scene, starts the door opening scene, unblocks two doors	set
+vault dialogue	97	a placed trigger's enter handler through the shared helper (past the vault door)	caller (trigger entry)	asks for a save	set
+vault dialogue	98	the exit trigger's enter handler (once, by the player)	caller (trigger entry)	starts the character changes scene; the handler then waits and shows a message box	set
+vault dialogue	100	the exit trigger's button function: the message box's third button, or the menus' close events showing the box again	caller (message box button)	stops the character changes scene, starts the exit scene; the handler plays the exit elevator's event, resets the lights	set
+vault dialogue	110	the next main quest's stage 10 fragment	data	starts the scene outside the vault	set
+
+## 3 counts
+54	stages of the next main quest; 18 of the vault dialogue quest
+12	next main quest stages the final run sets (0, 1, 2, 3, 4, 6, 7, 8, 9, 10, 15, 20); 3 of them before this step (0, 1, 2)
+8	vault dialogue quest stages the final run sets (40, 50, 55, 95, 97, 98, 100, 110); 3 of them before this step
+1	next main quest stage in the vault the run does not set: 5 (an alternative order of the player's actions)
+9	vault dialogue quest stages the run does not set: optional actions (56, 57, 58, 60, 70, 72, 74, 80), a death (65); plus 90 with no setter
+41	next main quest stages after 20, beyond the run's end; 2 of them with no setter (75, 1000)

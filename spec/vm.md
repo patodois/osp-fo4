@@ -2445,6 +2445,108 @@ cells and the vault's interior), 139 actor places (76 stored, 42 package destina
 caller, 19 from MoveTo), 60 visibility changes (45 plain, 15 NoWait), 246 stages, 13 objective changes,
 190 lines (143 with a resolved speaker, 107 with a text), 3,245 other scene changes.
 
+## The forced run through the vault
+
+([quest-run-vault.txt](quest-run-vault.txt) records the run;
+[quest-run-vault-stages.txt](quest-run-vault-stages.txt) maps every stage
+of the next main quest and of the vault dialogue quest to what sets it; the
+command lines and every record named are in the step's notes.) Four
+readings, each behind its own switch, off by default (with them off every
+earlier output reproduces byte for byte), and one caller answer:
+
+| Switch | Reading | Rule |
+| --- | --- | --- |
+| `--sit-state` (with `--sit-events`) | `Actor.GetSitState` on the player's handle or a placed actor answers 3 while the run has it sitting in a furniture, 0 otherwise | `vm_sit_state_v1` |
+| `--anim-graph-start-settled` (with `--anim-graphs`) | a graph read when first needed has played its start state's sequence since load: while the state's sequence has cycle type 2, the first of its keys that names an event the state takes moves the graph on (up to 16 times), nothing raised to scripts or scheduled (`anim::settle_start`) | `anim_graph_start_settled_v1` |
+| `--anim-sequence-case` (with `--anim-graphs`) | a state's sequence name finds the model's sequence ignoring ASCII case where none has the exact name | `anim_graph_sequence_name_case_v1` |
+| `--text-equal-ignore-case` (every mode) | the equality opcode on two texts that differ only in ASCII case gives true (`Vm::texts_ignore_case`); off, it stays undetermined under `pex_ops_compare_v1` | `pex_text_equal_ignore_case_v1` |
+| `--assume-player-in-combat true\|false` | the caller's answer of `Actor.IsInCombat` on the player (no combat is modelled); other actors are not answered | caller assumption |
+
+What the data gives for the two graph readings (a local probe with
+`fo4_scene::anim_graph` over the winning ACTI, FURN, DOOR and MSTT models,
+outputs outside the repository): 586 graphs read; 41 start states play a
+sequence of cycle type 2 one of whose own keys names an event the start
+state takes, and 39 of those have no other transition out of the start
+state, so no script event can ever move them unless the start sequence is
+taken to have played; of 3,120 states naming a sequence, 2,206 find it
+exactly, 162 only ignoring case (72 graphs) and 752 not at all.
+
+On the exit step's final command line, with the four readings, the
+caller's combat answer and the player's actions in the postwar vault (each
+held until the stage before it with `--action-after`):
+
+- **The corridor and the wrist computer.** A trigger entry sets stage 3
+  (the first door opens). The player's activation of the wrist computer's
+  skeleton reaches its alias activation script, which asks whether the
+  player is in combat (the caller's false), and sets stage 4; stage 4's
+  fragment registers the quest for the player's wrist computer animation
+  event, which is the caller's (a character's animation, as the camera
+  event of the exit step) and sets stage 6.
+- **The door console.** The player's activation of the console reaches its
+  alias script, which asks the player's combat state and sit state: the
+  run has the player sitting nowhere (the exit step's get-up), so
+  `--sit-state` answers 0 and stage 7 is set. Its fragment gives the wrist
+  computer, activates the console furniture for the player (a sit under the
+  exit step's reading) and registers for the player's plug-in events. The
+  first plays the console's second stage, the second calls the console's
+  button function (stage 9), whose fragment plays the console's third
+  stage and registers for its fourth stage key.
+- **What stopped the console before the readings.** The console's generic
+  stage graph starts in a state that only takes its own sequence's end
+  key; read at the first `PlayAnimation`, it waited there and did not take
+  the second stage event. Its states also name their sequences in lower
+  case while the model stores them capitalised, so no key was scheduled.
+  With `--anim-graph-start-settled` and `--anim-sequence-case` the console
+  passes its second and third stages and raises its fourth stage key
+  0.67 s after the button. The quest registered for the key in lower case
+  and its handler compares the name with the capitalised spelling: under
+  the animation case reading the handler receives the registration's
+  spelling, and the comparison was undetermined; `--text-equal-ignore-case`
+  makes it true. The handler plays the vault door's opening event and sets
+  stage 8, whose fragment sets the vault dialogue quest's stage 95. The
+  door's graph raises its klaxon key 22.5 s and its last stage key 43.3 s
+  later, from the data.
+- **Out of the vault.** The caller's walk past the door (timed after the
+  door's last key), the save trigger (vault dialogue 97), the exit trigger
+  with the message box's third button (98, 100: the looping scene ends and
+  the exit scene starts), then the exterior elevator trigger (stage 10:
+  the vault dialogue quest's 110, then stage 15) and a trigger outside
+  (stage 20). The elevator's ride up and the player's move to the surface
+  are not modelled: the exterior trigger's entry is the caller's.
+- Reached: the next main quest **12 of 54 stages** (exit step: 3), the
+  vault dialogue quest **8 of 18** (exit step: 3); the opening quest's 87
+  unchanged.
+- With one thing changed (record section 6): without the combat answer the
+  run stops at stage 3; without the player's wrist computer event at 4;
+  without `--sit-state` at 6 (the console's script blocks on the sit
+  state); without the second plug-in event at 7; without the first, the
+  button still sets 9 but the console never leaves its first loop, so 8 is
+  not set; without any one of `--anim-graph-start-settled`,
+  `--anim-sequence-case` or `--text-equal-ignore-case` the run sets 9 but
+  not 8 (the console's key is never raised, or its handler blocks on the
+  comparison). With the console activated once before the wrist computer
+  the fail branch sets stage 5 too (13 stages); with the player's unplug
+  event and a second console activation instead of the second plug-in
+  event the same 12 stages; without the exterior triggers 9 and 7.
+- What stops next: the next main quest's later stages wait on a
+  conversation with the household robot (the ends of its postwar lines,
+  stage 22) and on triggers and dialogue on the way to the settlement and
+  the town; the vault dialogue quest's optional stages wait on the player's
+  other actions (the spouse's pod and ring, spoken remarks).
+
+### The stage set by order in the opening
+
+The stage of the opening quest whose reaching was classed as depending on
+order (120) is settled from the data under the existing readings: on the
+agreeing way the salesman scene's ninth phase completes only when its line
+action (which spans the ninth to the eleventh phases; condition function
+550 on it and on a 2.5 s timer) is complete; the end half of that line sets
+the stage whose fragment stops the scene with no wait; and the tenth phase,
+whose end sets 120, holds a 4.5 s timer of its own. So the tenth phase
+cannot end before the stop, whichever of the line's end half and the ninth
+phase's end comes first. Only the refusal scene sets it: it is now classed
+as an alternative ([quest-run-opening-unset.txt](quest-run-opening-unset.txt)).
+
 ## Conditions
 
 `fo4_vm::cond` evaluates the condition lists read by
@@ -3029,3 +3131,23 @@ that a dialogue response's text is a localized string (looked up in the plugin's
 used only where exactly one holds the id). Everything else is read from the run itself and the
 installed data with the repository's own readers. No public page was requested; no tool, library or
 source of any other project was opened. The game was not run.
+
+## Provenance of the vault step
+
+Recognised from prior general knowledge, used only as pending rules that
+are off by default or as caller assumptions: the sit state native's
+documented values; that a NIF sequence of cycle type 2 plays once; that the
+engine's names and the scripting language's text comparisons ignore case;
+that the player's elevator ride takes the player from the vault's exit to
+the surface between the exit trigger and the exterior trigger. Every count
+was measured with the repository's own readers on the installed data: the
+compiled scripts with the repository's disassembler, records with its
+record dump, the console, door and wrist computer graphs and the graph
+census with `fo4_scene::anim_graph` (local probes whose outputs stay
+outside the repository), the stages with the stage-setter table and a
+probe of conditions and literal call sites. Editor notes were read only to
+understand stage roles; none is quoted. No public page was requested. No
+behaviour or animation tool, converter or library of any project, Havok
+SDK, editor, editor source or definition file, other interpreter, script
+extender, decompiler or the game executable was opened or searched for.
+The game was not run.

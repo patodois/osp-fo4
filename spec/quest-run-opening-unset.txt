@@ -1,14 +1,14 @@
 # quest_run new-game: the opening quest's stages the forced opening's best run does not set, by number and role (kinds only; spec/vm.md, The opening's stages off the run's path)
 # A static reading of the stage records (log entries, editor notes read for their role only, fragments), the stage-setter table (stage_census, with other scripts' calls), every condition of every record testing the stage (functions 58 and 59) and the compiled call sites passing the number as a literal; the run is the exit step's final run (87 of 104 stages set).
 # Columns: stage, class, what sets it in the data, what reads it, why the run does not set it.
-# Classes: debug or skip (a start the developers choose with a global); alternative (another choice or action of the player than the run's); optional (a side line the run's caller does not assume); ordering (on the run's way, but whether the game reaches it depends on an order the data does not settle); no setter (nothing in the data read sets it); no path (its only setter is never reached by anything in the data); failure (the player dies).
+# Classes: debug or skip (a start the developers choose with a global); alternative (another choice or action of the player than the run's); optional (a side line the run's caller does not assume); ordering (on the run's way, but whether the game reaches it depends on an order the data does not settle; none left since the vault step); no setter (nothing in the data read sets it); no path (its only setter is never reached by anything in the data); failure (the player dies).
 
 ## 1 the stages
 17	no setter	nothing (0 setters; no call passing the number names the opening quest)	nothing	its editor note marks it unused; no fragment
 18	debug or skip	the fragment of the start stage's fourth log entry, the one chosen when the opening's debug global holds the value of the skip-ahead start (the fragment moves the player to a skip marker)	nothing	the global's stored value chooses the second log entry, the run's start
 63	alternative	the TIQS begin half of a line the player says to the household robot before its introduction (conditions: the next stage not done, the robot's base and the player's)	two phase conditions of the scene that introduces the robot	the run reaches the next stage through that scene, the player starting no conversation first
 92	alternative	the TIQS begin half of the player's refusing choice in the salesman's scene (the line starts the refusal scene)	one package condition	the caller's dialogue choice is the agreeing one (--assume-player-choice 0)
-120	ordering	the end of the salesman scene's tenth phase and the end of the refusal scene's sixth phase	nothing	on the agreeing way the end half of the ninth phase's line sets the stage whose fragment stops the scene, so the tenth phase never runs; whether the game ends that line's phase before the stage's fragment stops the scene is not settled by the data
+120	alternative	the end of the salesman scene's tenth phase and the end of the refusal scene's sixth phase	nothing	settled from the data by the vault step: on the agreeing way the ninth phase's completion conditions wait for its line action (which spans the ninth to the eleventh phases) and a 2.5 s timer, the end half of that line sets the stage whose fragment stops the scene with no wait, and the tenth phase holds a 4.5 s timer of its own; so the tenth phase cannot end before the stop, whichever of the line's end half and the ninth phase's end comes first. Only the refusal scene (the player's other choice) sets it
 225	no setter	nothing	nothing	no fragment
 247	alternative	the opening quest script's lost-line-of-sight handler (the player looks away from the spouse during the mobile scene, after the scene's timer)	nothing	the run raises no line-of-sight event (the caller answers line of sight true)
 401	optional	the TIQS end half of two lines the player says to the household robot while leaving the house (conditions: the leaving stage done, this stage not done)	the once-only conditions of four lines of that topic	the caller assumes no conversation with the robot on the way out
@@ -25,9 +25,9 @@
 ## 2 counts
 17	stages of the opening quest the best run does not set (16 earlier stages and the failure stage)
 1	debug or skip
-4	alternative (3) or optional (1): the player's other choices and actions
-1	ordering not settled by the data
+5	alternative (4) or optional (1): the player's other choices and actions (120 moved from ordering by the vault step)
+0	ordering not settled by the data
 9	no setter in the stage-setter table (17, 225, 420, 480, 496, 497, 660, 670, 755); earlier records counted two (the sit step's full static reading of 660 and 670)
 1	no path in the data (a helper stage nothing sets)
 1	failure (the player dies)
-0	stages the run should reach that it does not: none is on the run's way except 120, which depends on an order the data does not settle
+0	stages the run should reach that it does not: none is on the run's way
