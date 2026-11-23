@@ -155,6 +155,9 @@ pub(super) fn job_text(vm: &Vm<'_>, r: &JobRun) -> String {
                     slot,
                     ..
                 } => format!("line fragment {function} ({slot}) of {line}"),
+                Step::LineScript { line, event, .. } => {
+                    format!("line event {event} to the line's own scripts of {line}")
+                }
             };
             writeln!(s, "  [{depth}] scene {what} on {}", label(*scene))
         }
@@ -217,6 +220,10 @@ pub(super) fn count_jobs(c: &mut Counts, runs: &[JobRun], prefix: &str) {
                 step: Step::LineFragment { slot, .. },
                 ..
             } => format!("line fragment ({slot})"),
+            Job::Scene {
+                step: Step::LineScript { event, .. },
+                ..
+            } => format!("line own scripts ({event})"),
             Job::Scene { .. } => {
                 bump(c, format!("{prefix}scene steps"));
                 continue;

@@ -76,6 +76,13 @@ pub struct Sits {
     pub counts: BTreeMap<String, u64>,
     /// Rules relied on inside a native call, taken by the host after it.
     pub used: Vec<&'static str>,
+    /// The player's sit ends, as a get-up the run raises, once the track
+    /// takes the player farther than this distance (world units, the
+    /// caller's) from the furniture's placed position, or into another
+    /// space (`rules::SIT_ENDED_BY_TRACK`, `quest_run --sit-end-walk
+    /// UNITS`); `None` by default: only the caller and the scripts end a
+    /// sit, as before.
+    pub end_walk: Option<f64>,
 }
 impl Sits {
     pub fn count(&mut self, k: impl Into<String>) {
@@ -347,6 +354,58 @@ pub fn get_up(
     )?;
     runs.extend(exit);
     Ok(vec![Raised { t, what, runs }])
+}
+
+/// Under [`Sits::end_walk`]: when the player sits and the track's point at
+/// the run's present second stands farther than the distance from the
+/// furniture's placed position (or in another space), a get-up of the
+/// player from it is noted for [`settle`] (`rules::SIT_ENDED_BY_TRACK`).
+/// Returns whether one was noted.
+pub fn end_by_track(store: &Store, max: u64, w: &mut World) -> bool {
+    let Some(limit) = w.sits.end_walk else {
+        return false;
+    };
+    let Some(p) = w.player else {
+        return false;
+    };
+    let Some(f) = w.sits.sitting.get(&p).copied() else {
+        return false;
+    };
+    if w.sits.pending_get_ups.contains(&(p, f)) {
+        return false;
+    }
+    let now = w.now[crate::world::Clock::Real as usize];
+    let Some(track) = w.place.track.clone() else {
+        return false;
+    };
+    let Some((space, pos, _)) = track.at(now) else {
+        return false;
+    };
+    let Some(fk) = w.objects[f].key.as_deref().and_then(key_record) else {
+        w.sits
+            .count("sits ended by the track	not: the furniture is no record");
+        return false;
+    };
+    let Ok((fspace, fpos)) = crate::track::stored_position(store, max, &fk) else {
+        w.sits
+            .count("sits ended by the track	not: the furniture has no stored position");
+        return false;
+    };
+    let away = bind::record_key(space) != bind::record_key(&fspace) || {
+        let d: f64 = (0..3)
+            .map(|i| (pos[i] - fpos[i]).powi(2))
+            .sum::<f64>()
+            .sqrt();
+        d > limit
+    };
+    if !away {
+        return false;
+    }
+    w.sits.using(rules::SIT_ENDED_BY_TRACK);
+    w.sits
+        .count("sits ended by the track	the player walked away");
+    w.sits.pending_get_ups.push((p, f));
+    true
 }
 
 /// Delivers the sits the natives brought ([`Sits::pending`]), in order, and

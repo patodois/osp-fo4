@@ -306,6 +306,15 @@ pub struct Then {
     /// `IsInFaction` from the actor's base `SNAM` and the run's faction
     /// changes (`actor_faction_base_list_v1`, `--factions-base`).
     pub factions_base: bool,
+    /// A created alias holds a reference the run makes for it
+    /// (`quest_alias_created_reference_v1`, `--alias-created-refs`), an
+    /// alias filled from another quest's alias what that alias holds when
+    /// read (`quest_alias_external_live_v1`, `--alias-external`).
+    pub alias_created: bool,
+    pub alias_external: bool,
+    /// A line's begin and end delivered to its own scripts
+    /// (`dialogue_line_script_events_v1`, `--line-script-events`).
+    pub line_script_events: bool,
     /// The caller's actor values (`--assume-actor-value HOLDER|player AVIF
     /// N`): what `GetValue` answers.
     pub actor_values: Vec<((String, String), f32)>,
@@ -313,6 +322,13 @@ pub struct Then {
     /// (`--timeline-deaths`, `--timeline-sits`; `spec/timeline.md`).
     pub timeline_deaths: bool,
     pub timeline_sits: bool,
+    /// The timeline also writes the sequences the run's graphs start
+    /// (`--timeline-sequences`; `spec/timeline.md`).
+    pub timeline_sequences: bool,
+    /// The player's sit ends when the track takes the player farther than
+    /// this distance from the furniture's placed position
+    /// (`vm_sit_ended_by_track_v1`, `--sit-end-walk UNITS`).
+    pub sit_end_walk: Option<f64>,
     /// The placed references of a location's cells carrying the ref type
     /// the list holds no row of (`quest_alias_location_ref_placed_v1`,
     /// `--alias-location-placed-refs`).

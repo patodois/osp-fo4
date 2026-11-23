@@ -100,7 +100,28 @@ pub struct QuestInfo {
     /// The conditions after NEXT, which a story manager start evaluates
     /// (`sm_quest_node_start_v1`).
     pub event_conditions: Vec<Condition>,
+    /// Reference aliases created at run time (`ALCO`, `ALCA`, `ALCL`), by
+    /// alias id (`quest_alias_created_reference_v1`; read only when a run
+    /// turns [`Quests::created_refs`] on).
+    pub created: BTreeMap<u32, CreatedAlias>,
+    /// Reference aliases filled from another quest's alias (`ALEQ`,
+    /// `ALEA`): the quest and the alias index, by alias id
+    /// (`quest_alias_external_live_v1`; read only when a run turns
+    /// [`Quests::external_fills`] on).
+    pub external: BTreeMap<u32, (FormKey, i32)>,
 }
+
+/// What a reference alias created at run time names: the base record to
+/// create (`ALCO`), the alias of the same quest it is created at (`ALCA`
+/// low half), the `ALCA` high half and the `ALCL` word, kept as stored.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CreatedAlias {
+    pub object: Option<FormKey>,
+    pub at: u16,
+    pub word: u16,
+    pub level: u32,
+}
+
 impl QuestInfo {
     /// The reference an alias holds while the quest runs and no run set
     /// its fill: its forced reference (`quest_alias_forced_reference_v1`),
@@ -200,6 +221,37 @@ impl QuestInfo {
                 })
             })
             .collect();
+        let mut created = BTreeMap::new();
+        let mut external = BTreeMap::new();
+        for a in q
+            .aliases
+            .iter()
+            .filter(|a| a.kind == fo4_plugin::quest::AliasKind::Reference)
+        {
+            for v in &a.values {
+                match v {
+                    fo4_plugin::quest::AliasValue::CreateObject {
+                        object,
+                        alias,
+                        word,
+                        level,
+                    } => {
+                        created.entry(a.id).or_insert(CreatedAlias {
+                            object: object.key.clone(),
+                            at: *alias,
+                            word: *word,
+                            level: *level,
+                        });
+                    }
+                    fo4_plugin::quest::AliasValue::External { quest, alias } => {
+                        if let Some(qk) = &quest.key {
+                            external.entry(a.id).or_insert((qk.clone(), *alias));
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
         Ok(Some(QuestInfo {
             key: k.clone(),
             plugin,
@@ -217,6 +269,8 @@ impl QuestInfo {
             unmapped_fragments: fragments.len() - mapped,
             event: q.event,
             event_conditions: q.event_conditions.iter().map(Condition::from).collect(),
+            created,
+            external,
         }))
     }
 }
@@ -643,6 +697,154 @@ pub struct Quests {
     pub collection_fills: bool,
     /// What the collection natives answered and why not, counted.
     pub collection_counts: BTreeMap<String, u64>,
+    /// The references the run made for created aliases: (real-time
+    /// second, quest record key, alias id), in order.
+    pub created_made: Vec<(f64, String, u32)>,
+    /// A reference alias created at run time (`ALCO`) holds, while its
+    /// quest runs, a reference the run makes for it: no record, no scripts
+    /// of its own, alive until the run kills it
+    /// (`quest_alias_created_reference_v1`; `quest_run
+    /// --alias-created-refs`). Off by default: such an alias has no
+    /// reference, as before.
+    pub created_refs: bool,
+    /// A reference alias filled from another quest's alias (`ALEQ`) holds,
+    /// whenever it is read, what that alias holds at that moment
+    /// (`quest_alias_external_live_v1`; `quest_run --alias-external`). Off
+    /// by default: such an alias has no reference, as before.
+    pub external_fills: bool,
+    /// The rules the two readings above relied on (the caller adds them to
+    /// the run's rules).
+    pub fill_used: std::cell::RefCell<BTreeSet<&'static str>>,
+}
+
+/// The key of the reference the run makes for a created alias
+/// (`quest_alias_created_reference_v1`): no record key resolves from it.
+pub fn created_key(quest: &FormKey, id: u32) -> String {
+    format!("{}#created:{id}", bind::record_key(quest))
+}
+
+/// Whether an object is a reference the run made for a created alias.
+pub fn is_created(w: &World, o: ObjId) -> bool {
+    w.objects
+        .get(o)
+        .and_then(|x| x.key.as_deref())
+        .is_some_and(|k| k.contains("#created:"))
+}
+
+/// The longest chain of aliases filled from other quests' aliases followed.
+pub const MAX_ALIAS_CHAIN: usize = 8;
+
+/// What a reference alias holds under the two fill readings past the
+/// forced fill ([`Quests::created_refs`], [`Quests::external_fills`]):
+/// `None` when neither applies to the alias (the caller keeps its earlier
+/// answer); `Ok(None)` when it holds nothing; `Err` when that is
+/// undetermined.
+pub fn held_more(
+    store: &Store,
+    max_memory: u64,
+    w: &mut World,
+    info: &QuestInfo,
+    id: u32,
+    depth: usize,
+) -> Option<Result<Option<Val>, &'static str>> {
+    if w.quests.created_refs {
+        if let Some(c) = info.created.get(&id) {
+            w.quests
+                .fill_used
+                .borrow_mut()
+                .insert(rules::ALIAS_CREATED_REFERENCE);
+            let key = created_key(&info.key, id);
+            if let Some(o) = w
+                .objects
+                .iter()
+                .position(|x| x.key.as_deref() == Some(key.as_str()))
+            {
+                return Some(Ok(Some(Val::Object(o))));
+            }
+            let actor = c
+                .object
+                .as_ref()
+                .and_then(|k| store.signature(k))
+                .is_some_and(|s| matches!(&s, b"NPC_" | b"LVLN"));
+            let label = format!(
+                "created reference of alias {id} of {}",
+                bind::label(store, &info.key, &Budget::new(max_memory))
+                    .unwrap_or_else(|_| bind::record_key(&info.key))
+            );
+            let types: &[&str] = if actor {
+                &["actor", "objectreference"]
+            } else {
+                &["objectreference"]
+            };
+            let o = w.object(label, Some(key), types);
+            w.quests.created_made.push((
+                w.now[crate::world::Clock::Real as usize],
+                bind::record_key(&info.key),
+                id,
+            ));
+            return Some(Ok(Some(Val::Object(o))));
+        }
+    }
+    if w.quests.external_fills {
+        if let Some((q, a)) = info.external.get(&id).cloned() {
+            w.quests
+                .fill_used
+                .borrow_mut()
+                .insert(rules::ALIAS_EXTERNAL_LIVE);
+            if depth >= MAX_ALIAS_CHAIN {
+                return Some(Err("a chain of aliases filled from other quests too long"));
+            }
+            return Some(alias_value(store, max_memory, w, &q, a, depth + 1));
+        }
+    }
+    None
+}
+
+/// What a reference alias of a quest holds as `GetReference` would answer
+/// it, with the fill readings past the forced fill the run turns on: the
+/// fill a run set, nothing while the quest is stopped, the forced (or
+/// location, or unique actor) fill, else [`held_more`]. `Ok(None)`: it
+/// holds nothing.
+pub fn alias_value(
+    store: &Store,
+    max_memory: u64,
+    w: &mut World,
+    quest: &FormKey,
+    alias: i32,
+    depth: usize,
+) -> Result<Option<Val>, &'static str> {
+    let info = info_by_key(store, max_memory, w, quest).ok_or("the quest named does not read")?;
+    let s = w.quests.state(&info);
+    if s.open.is_some() {
+        return Err("the quest's state is undetermined");
+    }
+    if let Some(v) = s.fills.get(&alias) {
+        return Ok(match v {
+            Val::None => None,
+            x => Some(x.clone()),
+        });
+    }
+    match s.running {
+        None => return Err("whether the quest runs is undetermined"),
+        Some(false) => return Ok(None),
+        Some(true) => {}
+    }
+    let id = u32::try_from(alias).map_err(|_| "no reference alias of that index")?;
+    match w.quests.fill(&info, id)? {
+        Some(Fill::Player) => Ok(Some(Val::Object(w.player("actor")))),
+        Some(Fill::Record(k)) => {
+            if store.signature(&k).is_none() {
+                return Err("the forced reference names no winning record");
+            }
+            let o = record_object(w, store, &k, "objectreference", &Budget::new(max_memory))
+                .map_err(|_| "the forced reference could not be read")?;
+            Ok(Some(Val::Object(o)))
+        }
+        None => match held_more(store, max_memory, w, &info, id, depth) {
+            Some(r) => r,
+            None => Ok(None),
+        },
+    }
 }
 
 /// The placed actors (ACHR) of every actor base in the loaded plugins,
@@ -1753,6 +1955,21 @@ impl<'s> QuestHost<'s> {
                         if forced.is_some() && i.unique_actors.contains_key(&id) {
                             self.using(rules::ALIAS_UNIQUE_ACTOR);
                         }
+                        if forced.is_none() {
+                            let more =
+                                held_more(self.data.store, self.data.max_memory, w, &i, id, 0);
+                            let used = std::mem::take(&mut *w.quests.fill_used.borrow_mut());
+                            for r in used.iter() {
+                                self.using(r);
+                            }
+                            w.quests.fill_used.borrow_mut().extend(used);
+                            if let Some(r) = more {
+                                return Ok(match r? {
+                                    Some(v) => (v, data::Answer::Record),
+                                    None => (Val::None, data::Answer::NoRecord),
+                                });
+                            }
+                        }
                         let k = forced.as_ref().ok_or("the alias has no forced reference")?;
                         if self.data.store.signature(k).is_none() {
                             return Err("the forced reference names no winning record");
@@ -2484,6 +2701,57 @@ pub fn run_one(vm: &mut Vm<'_>, store: &Store, job: Job, nested: bool, b: &Budge
                     Err(e) => outcomes.push((String::new(), Outcome::Failed(e))),
                 }
             }
+            crate::scene::Step::LineScript {
+                line,
+                event,
+                speaker,
+            } => {
+                vm.rules.insert(rules::LINE_SCRIPT_EVENTS);
+                match line_script_instances(vm, store, line, &mut notes, b) {
+                    Err(e) => outcomes.push((String::new(), Outcome::Failed(e))),
+                    Ok(insts) => {
+                        let said = vm.world.scenes.line_scripts_said.contains(line);
+                        for inst in insts {
+                            let script = vm.world.instances[inst].script.clone();
+                            let f = match vm.find_handler(inst, event) {
+                                Ok(Some(f)) => f,
+                                Ok(None) => continue,
+                                Err(e) => {
+                                    outcomes.push((script, Outcome::Failed(e)));
+                                    continue;
+                                }
+                            };
+                            let speaker = speaker.map(Val::Object).unwrap_or(Val::None);
+                            let args = match f.params.len() {
+                                2 => vec![speaker, Val::Bool(said)],
+                                1 => vec![speaker],
+                                0 => Vec::new(),
+                                _ => {
+                                    outcomes.push((
+                                        script,
+                                        Outcome::Failed(VmError::BadArgument {
+                                            site: None,
+                                            detail: format!(
+                                                "line event {event} takes parameters the event does not give"
+                                            ),
+                                        }),
+                                    ));
+                                    continue;
+                                }
+                            };
+                            let o = if nested {
+                                vm.deliver_nested(inst, event, args)
+                            } else {
+                                vm.deliver(inst, event, args)
+                            };
+                            outcomes.push((script, o));
+                        }
+                        if event == "onend" {
+                            vm.world.scenes.line_scripts_said.insert(line.clone());
+                        }
+                    }
+                }
+            }
             crate::scene::Step::Enter
             | crate::scene::Step::Complete
             | crate::scene::Step::LineFields => {
@@ -2508,6 +2776,62 @@ pub fn run_one(vm: &mut Vm<'_>, store: &Store, job: Job, nested: bool, b: &Budge
         effects: start..vm.effects.len(),
         notes,
     }
+}
+
+/// The instances of the scripts a line's record attaches of its own (its
+/// VMAD's script list, not the fragment block) on the line's handle, made
+/// with their property values the first time (`dialogue_line_script_events_v1`).
+fn line_script_instances(
+    vm: &mut Vm<'_>,
+    store: &Store,
+    line: &str,
+    notes: &mut Vec<String>,
+    b: &Budget,
+) -> Result<Vec<InstId>, VmError> {
+    let bad = |d: String| VmError::BadArgument {
+        site: None,
+        detail: d,
+    };
+    let key = data::key_record(line).ok_or_else(|| bad("a line event of no record".into()))?;
+    let o = record_object(&mut vm.world, store, &key, "topicinfo", b)
+        .map_err(|_| bad("the line's record could not be read".into()))?;
+    let (r, plugin) = bind::vmad_of(store, &key, b)
+        .map_err(|e| bad(format!("reading the line's VMAD: {e}")))?
+        .ok_or_else(|| bad("the line has no VMAD".into()))?;
+    let mut out = Vec::new();
+    for s in r.subrecords.iter().filter(|s| s.signature == *b"VMAD") {
+        let v = fo4_plugin::vmad::Vmad::read(r.data(s), r.signature, &r.source.file, s.offset, b)
+            .map_err(|e| bad(format!("reading the line's VMAD: {e}")))?;
+        for sc in &v.scripts {
+            let name = fo4_pex::index::lower(sc.name);
+            let existing = vm.world.objects[o]
+                .instances
+                .iter()
+                .copied()
+                .find(|i| vm.world.instances[*i].script == name);
+            let inst = match existing {
+                Some(i) => i,
+                None => {
+                    let i = vm.instantiate(Some(o), &name)?;
+                    bind::apply_script(
+                        vm,
+                        store,
+                        plugin,
+                        &r.source.file,
+                        i,
+                        &name,
+                        &sc.properties,
+                        notes,
+                        b,
+                    )
+                    .map_err(|e| bad(format!("{name}: {e}")))?;
+                    i
+                }
+            };
+            out.push(inst);
+        }
+    }
+    Ok(out)
 }
 
 /// Runs the queued jobs in order, those they queue after them, until the

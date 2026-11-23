@@ -89,6 +89,49 @@ pub enum EndKind {
     },
     /// Start the scene at a phase (`dialogue_line_start_scene_v1`).
     StartScene { scene: FormKey, phase: Option<u32> },
+    /// Deliver the event (`onbegin` or `onend`) to the line's own scripts
+    /// (`dialogue_line_script_events_v1`).
+    Script {
+        event: String,
+        speaker: Option<ObjId>,
+    },
+}
+
+/// Whether a line's record attaches scripts of its own (its VMAD's script
+/// list, not the fragment block).
+pub fn has_own_scripts(store: &Store, line: &FormKey, b: &Budget) -> bool {
+    let Ok(Some(r)) = store.raw(line, b) else {
+        return false;
+    };
+    r.subrecords
+        .iter()
+        .filter(|s| s.signature == *b"VMAD")
+        .any(|s| {
+            Vmad::read(r.data(s), r.signature, &r.source.file, s.offset, b)
+                .is_ok_and(|v| !v.scripts.is_empty())
+        })
+}
+
+/// Queues a line's event for its own scripts as a job
+/// (`dialogue_line_script_events_v1`).
+pub(crate) fn queue_script(
+    w: &mut World,
+    owner: ObjId,
+    line: &FormKey,
+    event: &str,
+    speaker: Option<ObjId>,
+) {
+    count(w, format!("line own scripts queued\t{event}"));
+    let depth = w.quests.depth + 1;
+    w.quests.queue.push_back(Job::Scene {
+        scene: owner,
+        step: scene::Step::LineScript {
+            line: bind::record_key(line),
+            event: event.to_string(),
+            speaker,
+        },
+        depth,
+    });
 }
 
 /// One thing due when a line ends.
@@ -148,6 +191,46 @@ pub(crate) fn play(
     end: Option<f64>,
 ) {
     let sw = w.scenes.lines;
+    if w.scenes.line_scripts {
+        let b = Budget::new(h.data.max_memory);
+        if has_own_scripts(h.data.store, line, &b) {
+            h.using(rules::LINE_SCRIPT_EVENTS);
+            if begin_now {
+                queue_script(w, owner, line, "onbegin", speaker);
+            } else {
+                count(w, "line own scripts scheduled\tonbegin");
+                w.scenes.line_ends.push(End {
+                    due: begin,
+                    line: line.clone(),
+                    owner,
+                    kind: EndKind::Script {
+                        event: "onbegin".into(),
+                        speaker,
+                    },
+                    queued: false,
+                });
+            }
+            match end {
+                Some(due) => {
+                    count(w, "line own scripts scheduled\tonend");
+                    w.scenes.line_ends.push(End {
+                        due,
+                        line: line.clone(),
+                        owner,
+                        kind: EndKind::Script {
+                            event: "onend".into(),
+                            speaker,
+                        },
+                        queued: false,
+                    });
+                }
+                None => count(
+                    w,
+                    "line own scripts not run\tonend: the line's time is not settled",
+                ),
+            }
+        }
+    }
     if !(sw.fragments || sw.start_scene) {
         return;
     }
@@ -255,6 +338,9 @@ pub(crate) fn apply_due(h: &mut QuestHost<'_>, w: &mut World) {
                 speaker,
             } => queue_fragment(w, e.owner, &e.line, function, &slot, speaker),
             EndKind::StartScene { scene: s, phase } => start_scene(h, w, &s, phase),
+            EndKind::Script { event, speaker } => {
+                queue_script(w, e.owner, &e.line, &event, speaker)
+            }
         }
     }
 }

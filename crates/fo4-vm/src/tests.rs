@@ -21,6 +21,7 @@ mod sit;
 mod stage;
 mod stepped;
 mod talk;
+mod third;
 mod vault;
 mod world;
 

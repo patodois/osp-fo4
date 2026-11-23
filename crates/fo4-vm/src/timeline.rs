@@ -77,6 +77,11 @@ pub struct Recorder {
     /// `event` lines `sit WHO FURNITURE` and `get-up WHO FURNITURE`
     /// (`quest_run --timeline-sits`); off by default.
     pub sits: bool,
+    /// Write the sequences the run's graphs start as `event` lines
+    /// `sequence REF NAME` (`quest_run --timeline-sequences`;
+    /// `spec/timeline.md`, The elevator second); off by default.
+    pub sequences: bool,
+    sequences_seen: usize,
     dead_seen: BTreeSet<ObjId>,
     sitting_seen: BTreeMap<ObjId, ObjId>,
 }
@@ -86,6 +91,8 @@ pub const DEATH: &str = "death";
 /// The event texts of a sit and a get-up (`--timeline-sits`).
 pub const SIT: &str = "sit";
 pub const GET_UP: &str = "get-up";
+/// The event text of a sequence a graph starts (`--timeline-sequences`).
+pub const SEQUENCE: &str = "sequence";
 
 fn object_key(w: &World, o: ObjId) -> Option<FormKey> {
     w.objects
@@ -184,6 +191,19 @@ impl Recorder {
                     what: What::Note(format!("{SIT} {} {}", name(*s), name(*f))),
                 });
             }
+        }
+        if self.sequences {
+            for (t, o, name) in w.anims.started.iter().skip(self.sequences_seen) {
+                let who = object_key(w, *o).map(|k| tl::key_text(&k));
+                self.events.push(Event {
+                    t: *t,
+                    what: What::Note(format!(
+                        "{SEQUENCE} {} {name}",
+                        who.as_deref().unwrap_or("-")
+                    )),
+                });
+            }
+            self.sequences_seen = w.anims.started.len();
         }
         for e in vm.effects.iter().skip(self.effects) {
             let shown = match e.native.as_str() {

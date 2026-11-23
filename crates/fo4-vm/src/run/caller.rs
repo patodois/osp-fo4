@@ -557,8 +557,13 @@ pub(super) fn fight_object(
     if key == "player" {
         return Ok(vm.world.player("actor"));
     }
+    if key.contains('#') {
+        return alias_target(vm, store, key, b)?.ok_or_else(|| {
+            format!("a fight assumption on {key}: the alias holds no reference").into()
+        });
+    }
     let k = crate::player::parse_key(key)
-        .ok_or("an actor is given as plugin.esm:0001ABCD or player")?;
+        .ok_or("an actor is given as plugin.esm:0001ABCD, EDITOR_ID#ALIAS or player")?;
     if store.signature(&k) != Some(*b"ACHR") {
         return Err("a fight assumption names no winning placed actor (ACHR)".into());
     }
@@ -569,6 +574,29 @@ pub(super) fn fight_object(
         "actor",
         b,
     )?)
+}
+
+/// The reference an alias holds at this second, the alias named as
+/// `EDITOR_ID#ALIAS` (a reference the run made has no record key to name
+/// it by): `None` when it holds none or no reference.
+pub(super) fn alias_target(
+    vm: &mut Vm<'_>,
+    store: &Store,
+    key: &str,
+    b: &Budget,
+) -> Result<Option<crate::ObjId>, E> {
+    let (edid, id) = key
+        .split_once('#')
+        .ok_or("an alias is given as EDITOR_ID#ALIAS")?;
+    let q = quest_by_editor_id(store, b, edid)?;
+    let id: i32 = id.parse()?;
+    let v = crate::quest::alias_value(store, store.limits.max_memory, &mut vm.world, &q, id, 0);
+    let used = vm.world.quests.fill_used.borrow().clone();
+    vm.rules.extend(used);
+    Ok(match v {
+        Ok(Some(crate::Val::Object(o))) => Some(o),
+        _ => None,
+    })
 }
 
 /// Does what a fight assumption assumes (`crate::fight`) and writes the
@@ -583,6 +611,19 @@ pub(super) fn fight_act(
     b: &Budget,
 ) -> Result<(), E> {
     let before = vm.effects.len();
+    if let What::Hit(k) | What::Combat(k, ..) | What::Death(k, ..) = what {
+        if k.contains('#') && alias_target(vm, store, k, b)?.is_none() {
+            bump(
+                c,
+                "assumption from the command line: a fight event on an alias that holds no reference at that second: not raised",
+            );
+            let _ = writeln!(
+                names,
+                "## {k}{when}: the alias holds no reference; the fight event is not raised"
+            );
+            return Ok(());
+        }
+    }
     let (raised, switch) = match what {
         What::Hit(key) => {
             bump(

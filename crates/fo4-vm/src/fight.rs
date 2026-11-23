@@ -225,6 +225,13 @@ pub fn native(c: &NativeCall, w: &mut World) -> Option<Reply> {
                 return None;
             };
             if !w.fights.dead.contains(&o) {
+                if w.quests.created_refs && crate::quest::is_created(w, o) {
+                    w.fights.using(rules::ALIAS_CREATED_REFERENCE);
+                    w.fights.count(
+                        "IsDead answered: false (a reference the run made for a created alias, not killed)",
+                    );
+                    return Some(Reply::Value(Val::Bool(false)));
+                }
                 w.fights
                     .count("IsDead not answered: the run raised no death of the actor");
                 return None;

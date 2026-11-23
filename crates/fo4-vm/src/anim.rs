@@ -107,6 +107,13 @@ pub struct Anims {
     /// Rules relied on by observations inside a native call, taken by the
     /// host after the call.
     pub used: Vec<&'static str>,
+    /// The sequences the graphs started: (real-time second, the reference's
+    /// handle, the sequence's name as the model stores it), in order; a
+    /// state whose sequence the model holds is entered (found ignoring case
+    /// only under [`Anims::sequence_case`]). Read by the timeline's writer
+    /// (`--timeline-sequences`) and the play mode's moving platforms; it
+    /// changes nothing in the run.
+    pub started: Vec<(f64, ObjId, String)>,
 }
 impl Anims {
     pub fn count(&mut self, k: impl Into<String>) {
@@ -239,6 +246,22 @@ fn enter(w: &mut World, o: ObjId, to: i32, now: f64) {
             state.sequence.as_deref().unwrap_or(&state.generator)
         ),
     ));
+    if let Some(name) = state.sequence.as_deref() {
+        let found = g.sequence(name).map(|s| s.name.clone()).or_else(|| {
+            w.anims
+                .sequence_case
+                .then(|| {
+                    g.sequences
+                        .iter()
+                        .find(|s| s.name.eq_ignore_ascii_case(name))
+                        .map(|s| s.name.clone())
+                })
+                .flatten()
+        });
+        if let Some(n) = found {
+            w.anims.started.push((now, o, n));
+        }
+    }
     if !w.anims.keys {
         return;
     }

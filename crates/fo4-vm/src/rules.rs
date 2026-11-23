@@ -169,7 +169,7 @@ pub const XESP_BIT1: &str = "xesp_flag_bit1_not_presence_v1";
 pub const XESP_PROPAGATES: &str = "xesp_script_change_propagates_v1";
 
 /// Every rule above.
-pub const ALL: [&str; 193] = [
+pub const ALL: [&str; 197] = [
     ARITHMETIC,
     COMPARE,
     NOT_COPY_CAST,
@@ -363,6 +363,10 @@ pub const ALL: [&str; 193] = [
     ITEM_ADDED_COUNT,
     PERK_BASE_LIST,
     FACTION_BASE_LIST,
+    ALIAS_CREATED_REFERENCE,
+    ALIAS_EXTERNAL_LIVE,
+    LINE_SCRIPT_EVENTS,
+    SIT_ENDED_BY_TRACK,
 ];
 
 /// The rule an opcode's meaning rests on; `None` for an opcode without a
@@ -803,3 +807,25 @@ pub const PERK_BASE_LIST: &str = "actor_perk_base_list_v1";
 /// `SetFactionRank`, `RemoveFromFaction` and `RemoveFromAllFactions` on it
 /// change that; a base naming a template is not answered.
 pub const FACTION_BASE_LIST: &str = "actor_faction_base_list_v1";
+/// A reference alias created at run time (`ALCO`) holds, while its quest
+/// runs, one reference the run makes for it when first read: no record, no
+/// scripts of its own (its base's are not attached), no place or level
+/// read (`ALCA`, `ALCL` kept as stored), alive until the run kills it
+/// (`IsDead` answers false before a death the run raised, with
+/// `--dead-state`).
+pub const ALIAS_CREATED_REFERENCE: &str = "quest_alias_created_reference_v1";
+/// A reference alias filled from another quest's alias (`ALEQ`, `ALEA`)
+/// holds, whenever it is read, what that alias holds at that moment (a
+/// live link, not a fill made once when its quest starts).
+pub const ALIAS_EXTERNAL_LIVE: &str = "quest_alias_external_live_v1";
+/// A spoken line the run plays delivers `OnBegin(speaker, said)` as it
+/// begins and `OnEnd(speaker, said)` as it ends to the scripts its record's
+/// VMAD attaches of its own (not the fragment block), on the line's handle,
+/// with their property values; `said` is false until the run has delivered
+/// the line's end once.
+pub const LINE_SCRIPT_EVENTS: &str = "dialogue_line_script_events_v1";
+/// The player's sit ends, as a get-up the run raises (`OnGetUp`, then
+/// `OnExitFurniture`), once the caller's track takes the player farther
+/// than the caller's distance from the furniture's placed position, or
+/// into another space.
+pub const SIT_ENDED_BY_TRACK: &str = "vm_sit_ended_by_track_v1";

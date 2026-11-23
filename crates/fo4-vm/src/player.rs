@@ -166,6 +166,66 @@ pub fn holders(
     (out, open)
 }
 
+/// The quest aliases holding an object under the fill readings past the
+/// forced fill (`quest::Quests::created_refs`,
+/// `quest::Quests::external_fills`): [`holders`] by the object's key, and
+/// besides, each alias with no fill a run set whose created or borrowed
+/// fill (`quest::held_more`) is the object. Works for a reference the run
+/// made for a created alias, which has no record key.
+pub fn holders_of(vm: &mut Vm<'_>, store: &Store, target: ObjId) -> (Vec<(FormKey, u32)>, usize) {
+    let key = vm.world.objects[target].key.clone();
+    let max = store.limits.max_memory;
+    let mut out = Vec::new();
+    let mut open = 0;
+    let states: Vec<String> = vm.world.quests.states.keys().cloned().collect();
+    for qk in states {
+        let Some(q) = key_record(&qk) else { continue };
+        let Some(info) = quest::info_by_key(store, max, &mut vm.world, &q) else {
+            continue;
+        };
+        let s = &vm.world.quests.states[&qk];
+        if s.open.is_some() || s.running.is_none() {
+            open += 1;
+            continue;
+        }
+        if s.running != Some(true) {
+            continue;
+        }
+        let fills = s.fills.clone();
+        for id in info.reference_aliases.keys() {
+            let same = |vm: &Vm<'_>, o: ObjId| {
+                o == target || (key.is_some() && vm.world.objects[o].key == key)
+            };
+            let held = match i32::try_from(*id).ok().and_then(|i| fills.get(&i)) {
+                Some(Val::Object(o)) => same(vm, *o),
+                Some(_) => false,
+                None => match vm.world.quests.fill(&info, *id) {
+                    Ok(Some(quest::Fill::Record(k))) => {
+                        key.as_deref() == Some(bind::record_key(&k).as_str())
+                    }
+                    Ok(Some(quest::Fill::Player)) => Some(target) == vm.world.player,
+                    // A created alias is compared by key, so that no
+                    // reference is made for it here.
+                    Ok(None) if vm.world.quests.created_refs && info.created.contains_key(id) => {
+                        key.as_deref() == Some(quest::created_key(&info.key, *id).as_str())
+                    }
+                    Ok(None) => matches!(
+                        quest::held_more(store, max, &mut vm.world, &info, *id, 0),
+                        Some(Ok(Some(Val::Object(o)))) if same(vm, o)
+                    ),
+                    Err(_) => false,
+                },
+            };
+            if held {
+                out.push((q.clone(), *id));
+            }
+        }
+    }
+    let used = vm.world.quests.fill_used.borrow().clone();
+    vm.rules.extend(used);
+    (out, open)
+}
+
 /// The arguments of an event handler: as [`bind::event_args`] gives them
 /// (the player for one object parameter), or the actor that caused the
 /// event in the player's place (`world_actor_trigger_v1`).
@@ -327,11 +387,18 @@ pub fn deliver_event(
 ) -> Result<(Vec<Delivery>, usize), Box<dyn std::error::Error>> {
     let mut out = Vec::new();
     let key = vm.world.objects[target].key.as_deref().and_then(key_record);
+    let more = vm.world.quests.created_refs || vm.world.quests.external_fills;
     let (aliases, open) = if Some(target) == vm.world.player {
         player_holders(vm, store)
     } else if let Some(k) = &key {
         run_on_with(vm, target, handler, Receiver::Reference, &args, &mut out);
-        holders(vm, store, k)
+        if more {
+            holders_of(vm, store, target)
+        } else {
+            holders(vm, store, k)
+        }
+    } else if more && quest::is_created(&vm.world, target) {
+        holders_of(vm, store, target)
     } else {
         return Err("the object is neither the player nor a record".into());
     };

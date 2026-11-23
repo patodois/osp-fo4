@@ -52,6 +52,10 @@ pub(super) fn world_step(
     top: &mut Vec<JobRun>,
     b: &Budget,
 ) {
+    // The player's sit the track walks away from (`--sit-end-walk`).
+    if crate::sit::end_by_track(store, store.limits.max_memory, &mut vm.world) {
+        vm.rules.insert(crate::rules::SIT_ENDED_BY_TRACK);
+    }
     // Sits a script's furniture activation brought (`crate::sit`).
     if vm.world.sits.has_pending() {
         let before = vm.effects.len();
@@ -218,6 +222,10 @@ pub(super) fn new_game(
         (then.item_added_counts, "the caller's item added raises the holder's known count of it (--item-added-counts)"),
         (then.perks_base, "HasPerk on the player answers from its base record's perk list and the run's perk changes (--perks-base)"),
         (then.factions_base, "IsInFaction answers from the actor's base record's faction list and the run's faction changes (--factions-base)"),
+        (then.alias_created, "a reference alias created at run time holds a reference the run makes for it, with no record, while its quest runs (--alias-created-refs)"),
+        (then.alias_external, "a reference alias filled from another quest's alias holds what that alias holds whenever it is read (--alias-external)"),
+        (then.line_script_events, "a line the run plays delivers its begin and end to the scripts its record attaches of its own (--line-script-events)"),
+        (then.sit_end_walk.is_some(), "the player's sit ends, as a get-up, when the track takes the player farther than the caller's distance from the furniture's placed position (--sit-end-walk)"),
         (!then.actor_values.is_empty(), "the caller assumes actor values (--assume-actor-value)"),
     ] {
         if on {
@@ -268,6 +276,7 @@ pub(super) fn new_game(
     if let Some((_, rec)) = recorder.as_mut() {
         rec.deaths = then.timeline_deaths;
         rec.sits = then.timeline_sits;
+        rec.sequences = then.timeline_sequences;
     }
     vm.world.runstate.globals = then.global_values;
     vm.world.runstate.undetermined_values = then.global_value_undetermined;
@@ -281,6 +290,10 @@ pub(super) fn new_game(
     vm.world.runstate.inventory.counts_added = then.item_added_counts;
     vm.world.runstate.perks = then.perks_base;
     vm.world.runstate.factions = then.factions_base;
+    vm.world.quests.created_refs = then.alias_created;
+    vm.world.quests.external_fills = then.alias_external;
+    vm.world.scenes.line_scripts = then.line_script_events;
+    vm.world.sits.end_walk = then.sit_end_walk;
     vm.world.runstate.actor_values = then.actor_values.iter().cloned().collect();
     vm.world.sits.activate = then.sit_activate;
     vm.world.sits.in_use = then.sit_in_use;
@@ -772,6 +785,13 @@ pub(super) fn new_game(
         .or_default() += running as u64;
     let location_used = vm.world.quests.location_used.borrow().clone();
     vm.rules.extend(location_used);
+    let fill_used = vm.world.quests.fill_used.borrow().clone();
+    vm.rules.extend(fill_used);
+    let made = vm.world.quests.created_made.len();
+    if made > 0 {
+        *c.entry("references the run made for created aliases".into())
+            .or_default() += made as u64;
+    }
     let unique = vm.world.quests.unique_used.borrow().clone();
     if !unique.is_empty() {
         vm.rules.insert(crate::rules::ALIAS_UNIQUE_ACTOR);

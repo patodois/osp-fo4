@@ -352,6 +352,15 @@ pub enum Step {
         slot: String,
         speaker: Option<ObjId>,
     },
+    /// A spoken line's event delivered to the scripts its record's VMAD
+    /// attaches of its own (not the fragment block;
+    /// `dialogue_line_script_events_v1`): the line (a record key), the
+    /// event (`onbegin` or `onend`), the speaker's handle.
+    LineScript {
+        line: String,
+        event: String,
+        speaker: Option<ObjId>,
+    },
 }
 
 /// One change of scene state, as logged.
@@ -545,6 +554,14 @@ pub struct Scenes {
     /// --scene-recheck-variables`). `None` by default: no write is kept,
     /// as before.
     pub variable_writes: Option<BTreeSet<(ObjId, String)>>,
+    /// A line's begin and end delivered to the scripts its record attaches
+    /// of its own (`dialogue_line_script_events_v1`; `quest_run
+    /// --line-script-events`). Off by default: they receive nothing, as
+    /// before.
+    pub line_scripts: bool,
+    /// The lines (record keys) whose end the run delivered to their own
+    /// scripts: a later begin of one is told it has been said.
+    pub line_scripts_said: BTreeSet<String>,
 }
 
 /// A line's TIQS half due at a second of the real-time clock
