@@ -10,8 +10,13 @@
 //! `rules::SIT_EVENTS` (who receives `OnSit`, `OnGetUp` and
 //! `OnExitFurniture`, and with what), `rules::SIT_ACTIVATE` and
 //! `rules::SIT_IN_USE` (`IsFurnitureInUse` answered from the run's
-//! sitters), each behind its own switch. Nothing is measured in the
-//! running game; no animation, idle or package is modelled.
+//! sitters), `rules::SIT_ACTIVATE_EVENTS` (a script's activation with
+//! events sits too), `rules::SIT_ACTIVATE_GET_UP` (a script's activation
+//! of the furniture the actor sits in gets it up) and
+//! `rules::FURNITURE_GRAPH_EVENTS` (those sits and get-ups send the
+//! furniture's behaviour graph an event the caller names), each behind its
+//! own switch. Nothing is measured in the running game; no idle or package
+//! is modelled.
 use crate::{
     bind,
     data::key_record,
@@ -34,12 +39,32 @@ pub struct Sits {
     /// `IsFurnitureInUse` answered from the run's sitters
     /// (`rules::SIT_IN_USE`, `quest_run --furniture-in-use`).
     pub in_use: bool,
+    /// A script's `Activate(actor, false)` of a furniture reference the
+    /// actor is not in makes that actor sit in it
+    /// (`rules::SIT_ACTIVATE_EVENTS`, `--activate-furniture-events`).
+    pub activate_events: bool,
+    /// A script's `Activate(actor, true|false)` of the furniture the run
+    /// has the actor sitting in makes it get up (`rules::SIT_ACTIVATE_GET_UP`,
+    /// `--activate-furniture-get-up`).
+    pub activate_get_up: bool,
+    /// The graph events a sit and a get-up that a script's activation brings
+    /// send to the furniture reference's behaviour graph: (sit, get-up), the
+    /// caller's names (`rules::FURNITURE_GRAPH_EVENTS`,
+    /// `--furniture-graph-events SIT GET_UP`, with the animation graph
+    /// reading); `None`: no graph event is sent.
+    pub graph_events: Option<(String, String)>,
+    /// Graph events to send (furniture, event name), taken by the host
+    /// within the call that brought them (`crate::anim::furniture_event`).
+    pub graph_sends: Vec<(ObjId, String)>,
     /// Who sits where: the sitter (the player's handle or a placed actor)
     /// and the furniture reference.
     pub sitting: BTreeMap<ObjId, ObjId>,
     /// Sits a native brought, delivered after the call ([`settle`]):
     /// (sitter, furniture).
     pub pending: Vec<(ObjId, ObjId)>,
+    /// Get-ups a native brought, delivered after the call before the sits
+    /// ([`settle`]): (sitter, furniture).
+    pub pending_get_ups: Vec<(ObjId, ObjId)>,
     /// (real-time second, what happened), in order.
     pub log: Vec<(f64, String)>,
     pub counts: BTreeMap<String, u64>,
@@ -54,6 +79,24 @@ impl Sits {
         if !self.used.contains(&r) {
             self.used.push(r);
         }
+    }
+    /// Whether a native brought sits or get-ups not yet delivered.
+    pub fn has_pending(&self) -> bool {
+        !self.pending.is_empty() || !self.pending_get_ups.is_empty()
+    }
+    /// Notes the graph event of a sit (`true`) or a get-up under
+    /// `rules::FURNITURE_GRAPH_EVENTS`, when the caller named the events.
+    fn graph_event(&mut self, furniture: ObjId, sitting: bool) {
+        let Some((sit, up)) = &self.graph_events else {
+            return;
+        };
+        let name = if sitting { sit.clone() } else { up.clone() };
+        self.graph_sends.push((furniture, name));
+        self.count(if sitting {
+            "furniture graph events	noted for a sit"
+        } else {
+            "furniture graph events	noted for a get-up"
+        });
     }
 }
 
@@ -107,7 +150,8 @@ pub fn native(store: &Store, max: u64, c: &NativeCall, w: &mut World) -> Option<
         let used = w.sits.sitting.values().any(|x| *x == f);
         return Some(Reply::Value(Val::Bool(used)));
     }
-    if !w.sits.activate || !is_furniture(store, max, w, f) {
+    let any = w.sits.activate || w.sits.activate_events || w.sits.activate_get_up;
+    if !any || !is_furniture(store, max, w, f) {
         return None;
     }
     let sitter = match c.args.first() {
@@ -118,19 +162,67 @@ pub fn native(store: &Store, max: u64, c: &NativeCall, w: &mut World) -> Option<
             return None;
         }
     };
-    match c.args.get(1) {
-        Some(Val::Bool(true)) => {
+    // The actor already sits in that furniture: under the get-up reading it
+    // gets up; off, the activation is read as before.
+    let inside = w.sits.sitting.get(&sitter) == Some(&f);
+    if inside && w.sits.activate_get_up {
+        match c.args.get(1) {
+            Some(Val::Bool(_)) => {
+                w.sits.using(rules::SIT_ACTIVATE_GET_UP);
+                w.sits.count(
+                    "furniture activations read as a get-up: the activator sits in that furniture",
+                );
+                w.sits.pending_get_ups.push((sitter, f));
+                if w.sits.graph_events.is_some() {
+                    w.sits.using(rules::FURNITURE_GRAPH_EVENTS);
+                    w.sits.graph_event(f, false);
+                }
+            }
+            _ => w.sits.count(
+                "furniture activations not read as a get-up: whether default processing only is undetermined",
+            ),
+        }
+        return None;
+    }
+    let sit = match c.args.get(1) {
+        Some(Val::Bool(true)) if w.sits.activate => {
             w.sits.using(rules::SIT_ACTIVATE);
             w.sits
                 .count("furniture activations read as a sit: default processing only");
-            w.sits.pending.push((sitter, f));
+            true
         }
-        Some(Val::Bool(false)) => w.sits.count(
-            "furniture activations not read as a sit: with events (the furniture's activation is not modelled)",
-        ),
-        _ => w
-            .sits
-            .count("furniture activations not read as a sit: whether default processing only is undetermined"),
+        Some(Val::Bool(false)) if w.sits.activate_events => {
+            w.sits.using(rules::SIT_ACTIVATE_EVENTS);
+            w.sits.count(
+                "furniture activations read as a sit: with events (the furniture's OnActivate is not delivered)",
+            );
+            true
+        }
+        Some(Val::Bool(true)) => {
+            w.sits.count(
+                "furniture activations not read as a sit: default processing only (that reading is off)",
+            );
+            false
+        }
+        Some(Val::Bool(false)) => {
+            w.sits.count(
+                "furniture activations not read as a sit: with events (the furniture's activation is not modelled)",
+            );
+            false
+        }
+        _ => {
+            w.sits.count(
+                "furniture activations not read as a sit: whether default processing only is undetermined",
+            );
+            false
+        }
+    };
+    if sit {
+        w.sits.pending.push((sitter, f));
+        if w.sits.graph_events.is_some() {
+            w.sits.using(rules::FURNITURE_GRAPH_EVENTS);
+            w.sits.graph_event(f, true);
+        }
     }
     None
 }
@@ -239,8 +331,16 @@ pub fn settle(
     let mut raised = Vec::new();
     let mut runs = Vec::new();
     for _ in 0..16 {
+        let get_ups = std::mem::take(&mut vm.world.sits.pending_get_ups);
+        for (sitter, f) in &get_ups {
+            match get_up(vm, store, *sitter, *f, b) {
+                Ok(r) => raised.extend(r),
+                Err(e) => vm.world.sits.count(format!("get-ups\tnot delivered: {e}")),
+            }
+            runs.extend(crate::quest::run_jobs(vm, store, max_jobs, b));
+        }
         let pending = std::mem::take(&mut vm.world.sits.pending);
-        if pending.is_empty() {
+        if pending.is_empty() && get_ups.is_empty() {
             break;
         }
         for (sitter, f) in pending {

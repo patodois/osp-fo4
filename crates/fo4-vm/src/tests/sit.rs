@@ -417,3 +417,106 @@ fn every_rule_of_the_step_is_registered_pending() {
         assert!(rules::ALL.contains(&r), "{r}");
     }
 }
+
+#[test]
+fn an_activation_with_events_sits_and_one_by_the_sitter_gets_it_up_each_with_its_switch() {
+    let s = store();
+    let b = Budget::new(1 << 24);
+    let mut l = furniture_lib();
+    let mut host = QuestHost::new(&s, 1 << 24);
+    let mut vm = Vm::new(&mut l, &mut host);
+    let chair =
+        crate::data::record_object(&mut vm.world, &s, &key(CHAIR), "objectreference", &b).unwrap();
+    let seat = vm.instantiate(Some(chair), "seat").unwrap();
+    let player = vm.world.player("actor");
+    let activate = |v: bool| {
+        call(
+            "activate",
+            chair,
+            None,
+            vec![Val::Object(player), Val::Bool(v)],
+        )
+    };
+    // The default-processing reading alone leaves an activation with events
+    // unread, as before.
+    vm.world.sits.activate = true;
+    sit::native(&s, 1 << 24, &activate(false), &mut vm.world);
+    assert!(!vm.world.sits.has_pending());
+    vm.world.sits.activate_events = true;
+    sit::native(&s, 1 << 24, &activate(false), &mut vm.world);
+    assert_eq!(vm.world.sits.pending, [(player, chair)]);
+    assert!(vm.world.sits.used.contains(&rules::SIT_ACTIVATE_EVENTS));
+    // No graph event is noted unless the caller names them.
+    assert!(vm.world.sits.graph_sends.is_empty());
+    sit::settle(&mut vm, &s, 16, &b);
+    assert_eq!(vm.world.sits.sitting.get(&player), Some(&chair));
+    // Activated again by its sitter: without the get-up reading it is read
+    // as a sit in the same furniture (nothing changes)...
+    sit::native(&s, 1 << 24, &activate(false), &mut vm.world);
+    sit::settle(&mut vm, &s, 16, &b);
+    assert_eq!(vm.world.sits.sitting.get(&player), Some(&chair));
+    assert_eq!(var(&vm, seat, "left"), Val::None);
+    // ...with it the sitter gets up, OnExitFurniture reaching the furniture,
+    // and the caller's get-up event is noted for the furniture's graph.
+    vm.world.sits.activate_get_up = true;
+    vm.world.sits.graph_events = Some(("Sit".into(), "Stand".into()));
+    sit::native(&s, 1 << 24, &activate(true), &mut vm.world);
+    assert!(vm.world.sits.pending.is_empty());
+    assert_eq!(vm.world.sits.pending_get_ups, [(player, chair)]);
+    assert_eq!(vm.world.sits.graph_sends, [(chair, "Stand".to_string())]);
+    assert!(vm.world.sits.used.contains(&rules::SIT_ACTIVATE_GET_UP));
+    assert!(vm.world.sits.used.contains(&rules::FURNITURE_GRAPH_EVENTS));
+    let (raised, _) = sit::settle(&mut vm, &s, 16, &b);
+    assert_eq!(raised.len(), 1);
+    assert!(!vm.world.sits.sitting.contains_key(&player));
+    assert_eq!(var(&vm, seat, "left"), Val::Object(player));
+    // Activated once more, it sits again and the sit event is noted.
+    vm.world.sits.graph_sends.clear();
+    sit::native(&s, 1 << 24, &activate(false), &mut vm.world);
+    assert_eq!(vm.world.sits.graph_sends, [(chair, "Sit".to_string())]);
+}
+
+#[test]
+fn every_rule_of_the_exit_step_is_registered_pending() {
+    for r in [
+        rules::SIT_ACTIVATE_EVENTS,
+        rules::SIT_ACTIVATE_GET_UP,
+        rules::FURNITURE_GRAPH_EVENTS,
+    ] {
+        assert_eq!(rules::status(r), Some("pending"), "{r}");
+        assert!(rules::ALL.contains(&r), "{r}");
+    }
+}
+
+#[test]
+fn menu_mode_and_message_buttons_answer_only_the_callers_assumptions() {
+    let s = store();
+    let mut l = furniture_lib();
+    let mut host = QuestHost::new(&s, 1 << 24);
+    let mut vm = Vm::new(&mut l, &mut host);
+    let native = |script: &str, name: &str| NativeCall {
+        script: script.into(),
+        name: name.into(),
+        receiver: None,
+        instance: None,
+        args: Vec::new(),
+        param_types: Vec::new(),
+        return_type: "bool".into(),
+    };
+    let mode = native("utility", "isinmenumode");
+    let show = native("message", "show");
+    assert!(menu::menu_mode(&mode, &mut vm.world).is_none());
+    assert!(menu::menu_mode(&show, &mut vm.world).is_none());
+    vm.world.menus.assume_menu_mode = Some(false);
+    vm.world.menus.assume_message_button = Some(2);
+    assert!(matches!(
+        menu::menu_mode(&mode, &mut vm.world),
+        Some(crate::Reply::Value(Val::Bool(false)))
+    ));
+    assert!(matches!(
+        menu::menu_mode(&show, &mut vm.world),
+        Some(crate::Reply::Value(Val::Int(2)))
+    ));
+    // Other natives are left to the host.
+    assert!(menu::menu_mode(&native("utility", "wait"), &mut vm.world).is_none());
+}

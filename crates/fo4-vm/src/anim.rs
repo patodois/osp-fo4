@@ -372,35 +372,95 @@ pub fn observe_play(
     };
     let (o, event) = (*o, event.clone());
     let now = w.now[crate::world::Clock::Real as usize];
-    if !w.anims.runs.contains_key(&o) {
-        if w.anims.refused.contains_key(&o) {
-            w.anims
-                .count("PlayAnimation not followed\tthe reference's graph was refused");
-            return;
-        }
-        let b = Budget::new(max);
-        let key = w.objects[o].key.clone();
-        let got = key
-            .as_deref()
-            .and_then(crate::data::key_record)
-            .ok_or_else(|| "the reference is no record".to_string())
-            .and_then(|k| base_model(store, &k, &b))
-            .and_then(|m| graphs.graph(&m));
-        match got {
-            Ok(g) => begin(w, o, g, now),
-            Err(why) => {
-                w.anims.count("graphs refused");
-                let label = w.objects[o].label.clone();
-                w.anims
-                    .log
-                    .push((now, format!("{label}: graph refused: {why}")));
-                w.anims.refused.insert(o, why);
-                return;
-            }
-        }
+    if !graph_of(store, max, graphs, o, w, now, "PlayAnimation not followed") {
+        return;
     }
     w.anims.count("PlayAnimation followed");
     graph_event(w, o, &event, now);
+}
+
+/// The reference's graph in the run, read when first needed and started in
+/// its start state (`rules::ANIM_GRAPH`); `false` where it is refused
+/// (counted under `what`, or as a newly refused graph).
+fn graph_of(
+    store: &Store,
+    max: u64,
+    graphs: &mut dyn GraphSource,
+    o: ObjId,
+    w: &mut World,
+    now: f64,
+    what: &str,
+) -> bool {
+    if w.anims.runs.contains_key(&o) {
+        return true;
+    }
+    if w.anims.refused.contains_key(&o) {
+        w.anims
+            .count(format!("{what}\tthe reference's graph was refused"));
+        return false;
+    }
+    let b = Budget::new(max);
+    let key = w.objects[o].key.clone();
+    let got = key
+        .as_deref()
+        .and_then(crate::data::key_record)
+        .ok_or_else(|| "the reference is no record".to_string())
+        .and_then(|k| base_model(store, &k, &b))
+        .and_then(|m| graphs.graph(&m));
+    match got {
+        Ok(g) => {
+            begin(w, o, g, now);
+            true
+        }
+        Err(why) => {
+            w.anims.count("graphs refused");
+            let label = w.objects[o].label.clone();
+            w.anims
+                .log
+                .push((now, format!("{label}: graph refused: {why}")));
+            w.anims.refused.insert(o, why);
+            false
+        }
+    }
+}
+
+/// A graph event a sit or get-up sends to the furniture reference's graph
+/// (`rules::FURNITURE_GRAPH_EVENTS`, with `rules::ANIM_GRAPH`): the graph
+/// is read when first needed, as for `PlayAnimation`, and takes the event
+/// as [`graph_event`] does. Without [`Anims::graphs`] nothing is sent
+/// (counted).
+pub fn furniture_event(
+    store: &Store,
+    max: u64,
+    graphs: &mut dyn GraphSource,
+    o: ObjId,
+    event: &str,
+    w: &mut World,
+) {
+    if !w.anims.graphs {
+        w.anims
+            .count("furniture graph events not sent\tgraphs are not followed");
+        return;
+    }
+    let now = w.now[crate::world::Clock::Real as usize];
+    if !graph_of(
+        store,
+        max,
+        graphs,
+        o,
+        w,
+        now,
+        "furniture graph events not sent",
+    ) {
+        return;
+    }
+    w.anims.using(rules::FURNITURE_GRAPH_EVENTS);
+    w.anims.count("furniture graph events sent");
+    let label = w.objects[o].label.clone();
+    w.anims
+        .log
+        .push((now, format!("{label}: furniture event {event} sent")));
+    graph_event(w, o, event, now);
 }
 
 /// The earliest second a text key is due, when one is.

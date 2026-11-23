@@ -714,3 +714,18 @@ to search the data. No behaviour or animation tool or library of any
 project, Havok SDK, editor, editor source or definition file, script
 source or game executable was opened or searched for.
 
+The exit step (`fo4_vm::sit`, `fo4_vm::anim::furniture_event`,
+`fo4_vm::menu::menu_mode`, [spec/vm.md](../spec/vm.md), Furniture
+activation and the furniture's graph, The forced opening to the end of the
+prewar quest; [spec/quest-run-opening-unset.txt](../spec/quest-run-opening-unset.txt))
+reads no new format: furniture models' behaviour graphs through the chain
+`fo4_scene::anim_graph` already reads, the scene and quest records and the
+compiled scripts as earlier steps read them. That activating a furniture
+makes an actor use it with or without the activation's events, that
+activating the furniture one sits in stands one up and that a furniture's
+animation follows its user's were recognised from prior general knowledge
+and are pending rules; the use events' names are the caller's. No
+behaviour or animation tool or library of any project, Havok SDK, editor,
+editor source or definition file, script source or game executable was
+opened or searched for.
+

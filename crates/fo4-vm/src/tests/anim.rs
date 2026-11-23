@@ -218,3 +218,46 @@ fn actor_moves_stay_in_time_order_after_the_applied_ones() {
     // A move at a second already passed waits right after the applied one.
     assert_eq!(ts, [1.0, 0.5, 5.0, 7.0, 9.0]);
 }
+
+/// A graph source that reads nothing (every graph refused).
+struct NoGraphs;
+impl anim::GraphSource for NoGraphs {
+    fn graph(&mut self, _: &str) -> Result<Rc<ModelGraph>, String> {
+        Err("no graph in the test".into())
+    }
+}
+
+#[test]
+fn a_furniture_event_takes_the_graphs_transition_only_with_graphs_followed() {
+    let store = store();
+    let mut lib = lib();
+    let mut host = QuestHost::new(&store, 1 << 20);
+    let mut vm = Vm::new(&mut lib, &mut host);
+    let w = &mut vm.world;
+    let o = w.object(
+        "ref",
+        Some("test.esm:00000801".into()),
+        &["objectreference"],
+    );
+    anim::begin(w, o, graph(), 0.0);
+    // Graphs not followed: nothing is sent.
+    anim::furniture_event(&store, 1 << 20, &mut NoGraphs, o, "Go", w);
+    assert_eq!(w.anims.runs[&o].state, 0);
+    w.anims.graphs = true;
+    anim::furniture_event(&store, 1 << 20, &mut NoGraphs, o, "Go", w);
+    assert_eq!(w.anims.runs[&o].state, 1);
+    assert!(w.anims.used.contains(&rules::FURNITURE_GRAPH_EVENTS));
+    // A reference whose graph cannot be read is refused once and counted.
+    let other = w.object(
+        "ref",
+        Some("test.esm:00000802".into()),
+        &["objectreference"],
+    );
+    anim::furniture_event(&store, 1 << 20, &mut NoGraphs, other, "Go", w);
+    anim::furniture_event(&store, 1 << 20, &mut NoGraphs, other, "Go", w);
+    assert_eq!(w.anims.counts["graphs refused"], 1);
+    assert_eq!(
+        w.anims.counts["furniture graph events not sent\tthe reference's graph was refused"],
+        1
+    );
+}

@@ -1937,6 +1937,11 @@ impl Host for QuestHost<'_> {
             self.using(rules::MENU_EVENTS);
             return r;
         }
+        // Whether a menu is open and which message box button is pressed,
+        // when the caller assumes them; off, recorded as before.
+        if let Some(r) = crate::menu::menu_mode(c, w) {
+            return r;
+        }
         // Keywords of references, when a caller turned a reading on
         // (`crate::keyword`); off, recorded as before.
         let kw_reply = crate::keyword::native(self.data.store, self.data.max_memory, c, w);
@@ -1949,6 +1954,19 @@ impl Host for QuestHost<'_> {
         let sit_reply = crate::sit::native(self.data.store, self.data.max_memory, c, w);
         for u in std::mem::take(&mut w.sits.used) {
             self.using(u);
+        }
+        // The furniture graph events those sits and get-ups send
+        // (`anim_furniture_sit_graph_events_v1`), when the caller named them.
+        for (f, event) in std::mem::take(&mut w.sits.graph_sends) {
+            match self.graphs.as_mut() {
+                Some(g) => {
+                    let (store, max) = (self.data.store, self.data.max_memory);
+                    crate::anim::furniture_event(store, max, g.as_mut(), f, &event, w);
+                }
+                None => w
+                    .anims
+                    .count("furniture graph events not sent\tno graph is read"),
+            }
         }
         if let Some(r) = sit_reply {
             return r;

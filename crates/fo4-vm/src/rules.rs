@@ -169,7 +169,7 @@ pub const XESP_BIT1: &str = "xesp_flag_bit1_not_presence_v1";
 pub const XESP_PROPAGATES: &str = "xesp_script_change_propagates_v1";
 
 /// Every rule above.
-pub const ALL: [&str; 157] = [
+pub const ALL: [&str; 160] = [
     ARITHMETIC,
     COMPARE,
     NOT_COPY_CAST,
@@ -327,6 +327,9 @@ pub const ALL: [&str; 157] = [
     SCENE_ACTION_SKIPPED_START,
     SCENE_RECHECK_VARIABLE,
     SETTER_OUTER_CALL,
+    SIT_ACTIVATE_EVENTS,
+    SIT_ACTIVATE_GET_UP,
+    FURNITURE_GRAPH_EVENTS,
 ];
 
 /// The rule an opcode's meaning rests on; `None` for an opcode without a
@@ -637,3 +640,13 @@ pub const SCENE_RECHECK_VARIABLE: &str = "scene_condition_recheck_variable_v1";
 /// into a quest script's function that no entry of its own script reaches,
 /// one call outward, where the caller's attachment names that quest.
 pub const SETTER_OUTER_CALL: &str = "setter_outer_call_entry_v1";
+/// A script's `Activate(actor, false)` (default processing and events) of
+/// a furniture reference the actor is not in makes that actor sit in it,
+/// as the default-processing-only activation does.
+pub const SIT_ACTIVATE_EVENTS: &str = "vm_furniture_activate_events_sits_v1";
+/// A script's `Activate(actor, ...)` of the furniture reference the run has
+/// that actor sitting in makes the actor get up from it.
+pub const SIT_ACTIVATE_GET_UP: &str = "vm_furniture_activate_get_up_v1";
+/// A sit or get-up a script's activation brings sends the furniture
+/// reference's behaviour graph an event, the caller naming which.
+pub const FURNITURE_GRAPH_EVENTS: &str = "anim_furniture_sit_graph_events_v1";

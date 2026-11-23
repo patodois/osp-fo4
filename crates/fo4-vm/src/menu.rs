@@ -27,6 +27,14 @@ pub struct Menus {
     pub open_close: Vec<(InstId, String)>,
     /// Instances registered for the appearance menu's event.
     pub looks: Vec<InstId>,
+    /// The value `Utility.IsInMenuMode` answers: a caller assumption
+    /// (`quest_run --assume-menu-mode true|false`); `None` by default:
+    /// recorded, undetermined, as before.
+    pub assume_menu_mode: Option<bool>,
+    /// The button `Message.Show` answers: a caller assumption (the player's
+    /// choice in a message box, `quest_run --assume-message-button N`);
+    /// `None` by default: recorded, undetermined, as before.
+    pub assume_message_button: Option<i32>,
     pub counts: BTreeMap<String, u64>,
 }
 impl Menus {
@@ -43,6 +51,34 @@ pub const NATIVES: [&str; 5] = [
     "scriptobject.registerforlooksmenuevent",
     "scriptobject.unregisterforlooksmenuevent",
 ];
+
+/// The native that asks whether a menu is open.
+pub const MENU_MODE: &str = "utility.isinmenumode";
+
+/// The native that shows a message box and answers the button pressed.
+pub const MESSAGE_SHOW: &str = "message.show";
+
+/// `Utility.IsInMenuMode` and `Message.Show` answered with the caller's
+/// assumptions, when made ([`Menus::assume_menu_mode`],
+/// [`Menus::assume_message_button`]); `None` otherwise (recorded as before).
+pub fn menu_mode(c: &NativeCall, w: &mut World) -> Option<Reply> {
+    let full = c.full_name();
+    if full == MENU_MODE {
+        let v = w.menus.assume_menu_mode?;
+        w.menus.count(format!(
+            "IsInMenuMode answered by the caller's assumption: {v}"
+        ));
+        return Some(Reply::Value(Val::Bool(v)));
+    }
+    if full == MESSAGE_SHOW {
+        let n = w.menus.assume_message_button?;
+        w.menus.count(format!(
+            "Message.Show answered by the caller's assumption: button {n}"
+        ));
+        return Some(Reply::Value(Val::Int(n)));
+    }
+    None
+}
 
 /// The registration natives when [`Menus::on`]: kept, answered none.
 pub fn native(c: &NativeCall, w: &mut World) -> Option<Reply> {
