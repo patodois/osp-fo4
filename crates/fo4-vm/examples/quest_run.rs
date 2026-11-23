@@ -621,16 +621,18 @@ fn count_clock(c: &mut Counts, steps: usize) {
                 "assumption from the command line: where several lines of a topic may hold, the first plays (--assume-first-line)",
             );
         }
-        for (q, n) in &k.choice_for {
+        // The scene or quest is named by its place among the caller's
+        // names in key order, never by its record key.
+        for (i, n) in k.choice_for.values().enumerate() {
             bump(
                 c,
-                format!("assumption from the command line: the player picks choice {n} in the scene or the scenes of the quest {q} (--assume-player-choice-for)"),
+                format!("assumption from the command line: the player picks choice {n} in the scene or the scenes of the quest the caller names {} of {} (--assume-player-choice-for, in key order)", i + 1, k.choice_for.len()),
             );
         }
-        for q in &k.first_line_for {
+        for i in 0..k.first_line_for.len() {
             bump(
                 c,
-                format!("assumption from the command line: where several lines of a topic may hold in the scene or the scenes of the quest {q}, the first plays (--assume-first-line-for)"),
+                format!("assumption from the command line: where several lines of a topic may hold in the scene or the scenes of the quest the caller names {} of {}, the first plays (--assume-first-line-for, in key order)", i + 1, k.first_line_for.len()),
             );
         }
     });
@@ -708,10 +710,14 @@ fn count_conditions(c: &mut Counts, h: &QuestHost<'_>) {
         ))
         .or_default() += v;
     }
-    for (q, m) in &h.cond.assume_for {
+    // The quest is named by its place among the caller's quests in key
+    // order, never by its record key.
+    let quests = h.cond.assume_for.len();
+    for (i, m) in h.cond.assume_for.values().enumerate() {
         for (f, x) in m {
             *c.entry(format!(
-                "assumption from the command line: every condition of function {f} in the records of quest {q} has the value {x} (--assume-cond-for)"
+                "assumption from the command line: every condition of function {f} in the records of the quest the caller names {} of {quests} has the value {x} (--assume-cond-for, in key order)",
+                i + 1
             ))
             .or_default() += 1;
         }
