@@ -1,9 +1,10 @@
-# quest_run new-game, the forced opening with keywords, collection aliases and caller actions held until a stage (keyword step): kinds and counts only (spec/vm.md, The forced opening with keywords)
+# quest_run new-game, the forced opening with the spouse's animation events, scenes offered again on script variables and setters through other scripts' calls (graph step): kinds and counts only (spec/vm.md, The forced opening with the spouse's animation events)
 # Section 1: stops in order: what stopped the run, what passed it, whether the data (under pending readings) or a caller assumption passed it, the kind of world the stop stands for.
 # Section 2: the two dialogue stops' candidate lines. Section 3: unique actor aliases, actor positions and what they raised. Section 4: animation events and graphs. Section 5: package destinations.
 # Section 6: where the run ends. Section 7: how far it gets. Section 8: the run's natives of the opening quest's family by the kind of world model they would need.
 # Section 9: the caller's assumptions. Section 10: the final run's --next-blockers counts. Section 11: stages reached with one thing changed on the final command line. Section 12: load events and scene action progress. Section 13: the sit step's readings and assumptions.
 # Section 14: the two stages with no setter in the data. Section 15: the keyword step's readings and assumptions. Section 16: who calls the functions that set the two stages after the keyword stop.
+# Section 17: the graph step's readings and assumptions; the character graph census for the spouse's events; the stage-setter table with and without other scripts' calls.
 
 ## 1 stops passed, in order
 1	the first scene's phase 0 on a condition function the evaluator does not answer	--assume-cond (one function)	a caller assumption	not read: a condition function
@@ -46,6 +47,8 @@
 38	the next six stages: a line's TIQS, phase fields of the scenes the sit stage's fragment starts (one of them started by a start-scene action) and two stage fragments	--line-stage-fields, --stage-fields, --assume-start-scene-actions	the data under pending readings, with a caller assumption	none (readings); a start-scene action assumed complete
 39	the next stage, set at the end of the last stage's fragment after a call into the next sequence quest's script: the script tests whether the spouse actor carries a keyword (false from the records: neither her base nor her race carries it) and adds it, blocks activation of the references of a collection alias filled from the location's rows, registers for the spouse's animation events and starts the sequence's main scene	--keywords-records (with --keywords-runtime), --collection-location-refs; the registrations' answer by --assume-anim-registration true	the data under pending readings, with a caller assumption	actor state (keywords); a collection alias's fill; animation (a registration's answer)
 40	the sequence's main scene skips its second phase while two package actions starting there span the next four; its 3rd to 7th phases run on the clock	--scene-actions-skipped-start starts those actions with the next phase, --assume-packages-complete completes them	the data under pending readings, with a caller assumption	none (a reading of the scene record); actor movement (AI packages)
+41	the sequence's main scene waits at its 8th to 20th phases on a quest script variable (function 629) that only the sequence script's handler of the spouse's 14 animation events sets	the caller's 14 events (--assume-anim-event) at the second the script snaps the spouse into the furniture plus each annotation's time in the one clip whose annotations name them, each held until the stage set at that second (--action-after); each phase finds the value when its timed lines end (with --scene-recheck-variables a waiting phase is also offered again on the write: not needed at these seconds)	a caller assumption (its seconds offset by the clip's annotation times)	animation (an actor's furniture animation; the readers do not tie the actor to the clip)
+42	the next two stages, set in two functions of the sequence script that a begin fragment of the scene's 22nd phase and the end fragment of its 27th call; the second's stage fragment sets the next, whose fragment starts the next main quest and its exit scene	the scene fragment readings of earlier steps, no new rule; the stage-setter table finds these setters under --setters-outer-calls	the data under pending readings	none (the chain after the stop above)
 
 ## 2 the two dialogue stops: the candidate lines of running quests' topics of the subtype, tried with either party speaking (final run)
 6132	greeting (the player talks to the actor): candidate line and speaker pairs
@@ -62,7 +65,7 @@
 76	placed actors near the track
 
 ## 3 unique actor aliases, actor positions and what they raised (final run)
-799	unique actor aliases the run read, resolved to one placed actor or the player
+800	unique actor aliases the run read, resolved to one placed actor or the player
 1	unique actor aliases the run read, not resolved (no placed actor of the base)
 0	actor moves assumed by the caller (--assume-actor-at)
 44	actor moves applied (the caller's and the package destinations')
@@ -72,24 +75,24 @@
 16	references a native moved, by native
 
 ## 4 animation events and graphs (final run)
-31	animation	PlayAnimation followed
+35	animation	PlayAnimation followed
 2	animation	PlayAnimation not followed	the reference or the event is undetermined
-9	animation	deliveries	a handler ran
-15	animation	graph events not taken	no transition of the state or wildcard
-42	animation	graph events taken
-8	animation	graph states entered	a sequence of cycle type 0
-24	animation	graph states entered	a sequence of cycle type 2
+23	animation	deliveries	a handler ran
+16	animation	graph events not taken	no transition of the state or wildcard
+47	animation	graph events taken
+10	animation	graph states entered	a sequence of cycle type 0
+27	animation	graph states entered	a sequence of cycle type 2
 9	animation	graph states entered	the generator is not a sequence generator
 1	animation	graph states entered	the sequence is not in the model
-14	animation	graphs read
-27	animation	registrations	answered by the caller's assumption: true
-27	animation	registrations	made
-9	animation	registrations	removed
-73	animation	text keys not scheduled	the text is no event name of the graph
-26	animation	text keys raised
-3	animation events	assumed by the caller	completed
+16	animation	graphs read
+29	animation	registrations	answered by the caller's assumption: true
+29	animation	registrations	made
+23	animation	registrations	removed
+85	animation	text keys not scheduled	the text is no event name of the graph
+28	animation	text keys raised
+17	animation events	assumed by the caller	completed
 6	animation events	raised from the data	completed
-20	animation events	raised from the data	no registered instance
+22	animation events	raised from the data	no registered instance
 
 ## 5 package destinations (final run)
 6	world model	package destinations	actor moves dropped: the scene stopped first
@@ -99,23 +102,24 @@
 2	world model	package destinations	no actor move	the action's alias holds no placed reference in the run
 
 ## 6 where the run ends (no caller assumption passes)
-the sequence's main scene waits at its eighth phase on a condition of a quest script variable (function 629) that only the sequence script's handler of the spouse's animation events sets; most of its phases up to the 23rd wait on further values of it; the events are annotation texts of a clip and event names of a behaviour graph, and a character's graph is not followed	the caller's --assume-anim-event on the spouse (seconds not in the data read); even then the run does not offer the waiting scene again, since it re-offers scenes when the quest state changes, not when a script variable does	animation (an actor's furniture animation); a scene offered again on a script variable
-the next two stages are set in two functions of the sequence quest's script that a phase begin fragment and a phase end fragment of that scene (and the end fragment of another scene of the sequence) call (section 16)	the scene's later phases, past the stop above	the chain after the stop above
-the stage after them is set by the second one's stage fragment	the stage before it	the chain after the stop above
+stage 1000 of the opening quest is set only by the next main quest's handler of an animation event of the player's cryopod (a NIF text key and a graph event name of its model), registered by a fragment of the exit scene that quest starts; the run raises no such event	none yet: what plays the pod's sequence carrying that key in the exit scene is not followed (the caller's --assume-anim-event could stand for it)	animation (an activator's sequence)
+the exit scene's looping successor waits on a stage of the vault's dialogue quest that a placed trigger's handlers set, on the player entering it or on a menu closing	the track crossing that trigger (the caller's) or the caller's menu event	player movement into a trigger; UI menus
+stage 5000 of the opening quest: set by fourteen placed triggers' enter handlers through a shared helper	the track crossing one of them (the caller's)	player movement into a trigger (the track is the caller's)
 two stages of the opening quest have no setter in the data (section 14)	only --then	unknown (no setter)
+sixteen earlier stages of the opening quest (the two with no setter among them) are set on no path the run takes, as in the keyword step's run	unchanged by this step	side paths of the opening, not traced in this step
 
 ## 7 reached
-83	stages of the opening quest set (of 104), one by the caller (sit step: 82)
+86	stages of the opening quest set (of 104), one by the caller (keyword step: 83)
 5	objectives of the opening quest displayed
 
 ## 8 natives of the opening quest's family with no world model, by kind
-102	player or actor position and movement
-37	UI menus and player controls (character creation among them)
-25	inventory and items
+104	player or actor position and movement
+45	UI menus and player controls (character creation among them)
+39	inventory and items
 0	combat and actor values
 3	cells, 3D and loading
-134	animation and idles
-43	sound, music, video and imagespace
+140	animation and idles
+46	sound, music, video and imagespace
 
 ## 9 caller assumptions of the final run
 1	assumption from the command line: ActorBase.GetSex on the player's base answers 0 (--assume-player-sex)
@@ -123,10 +127,10 @@ two stages of the opening quest have no setter in the data (section 14)	only --t
 1	assumption from the command line: a line whose audio does not settle its time lasts 3 s
 1	assumption from the command line: a made animation event registration answers true (--assume-anim-registration)
 2	assumption from the command line: a placed actor moved to a position at a second (--assume-actor-at)
-3	assumption from the command line: a placed reference raises a named animation event (--assume-anim-event)
+17	assumption from the command line: a placed reference raises a named animation event (--assume-anim-event)
 1	assumption from the command line: a stage set from outside any script after the start
 1	assumption from the command line: a stage set from outside any script at a second of the real-time clock
-11	assumption from the command line: a timed caller action waits for a stage before it happens (--action-after)
+25	assumption from the command line: a timed caller action waits for a stage before it happens (--action-after)
 2	assumption from the command line: conditions decided by an assumed value
 1	assumption from the command line: every HasDirectLOS answers true (--assume-los)
 1	assumption from the command line: every condition of function 555 has the value 1
@@ -145,7 +149,7 @@ two stages of the opening quest have no setter in the data (section 14)	only --t
 1	assumption from the command line: the scene clock advanced (--scene-clock)
 92	package actions assumed complete (actor movement)
 6	player dialogue actions on the assumed choice (the dialogue menu)
-73	scene lines timed by the assumed seconds
+82	scene lines timed by the assumed seconds
 
 ## 10 the final run's --next-blockers
 1	scenes stopped at the end	an action runs in the phase: kind 5
@@ -153,65 +157,75 @@ two stages of the opening quest have no setter in the data (section 14)	only --t
 1	scenes stopped at the end	completion conditions false
 16	scenes stopped at the end	completion conditions undetermined
 1	scenes stopped at the end	start conditions undetermined
-3	setters of a waited stage	1
-1	setters of a waited stage by kind and need	a call in a quest stage fragment	a stage of a quest set (its stage fragment)
-2	setters of a waited stage by kind and need	a call in a quest's own script	a function no engine event or fragment of its script reaches
-1	setters of a waited stage: the need in this run	a chain: the stage is not done in the run
-2	setters of a waited stage: the need in this run	an event the interpreter does not raise
-3	waits	next stage of a quest the caller set a stage on	the stage is not done in the run
+1	setters of a waited stage	1
+1	setters of a waited stage	10-19
+1	setters of a waited stage	2
+1	setters of a waited stage by kind and need	a call in a placed REFR's own script	engine event onmenuopencloseevent on a placed REFR
+1	setters of a waited stage by kind and need	a call in a placed REFR's own script	engine event ontriggerenter on a placed REFR
+14	setters of a waited stage by kind and need	a call in a placed REFR's own script, through a function passing a parameter on	engine event ontriggerenter on a placed REFR
+1	setters of a waited stage by kind and need	a call in a quest's own script	engine event onanimationevent on the quest
+15	setters of a waited stage: the need in this run	a player action a caller can assume (--assume-trigger-enter)
+2	setters of a waited stage: the need in this run	an engine event the interpreter does not raise
+1	waits	completion conditions	function 59	the stage is not done in the run
+2	waits	next stage of a quest the caller set a stage on	the stage is not done in the run
 3	waits: stages a stopped scene phase or the caller's quests wait on
 
 ## 11 stages of the opening quest set with one thing changed on the final command line
-83	the final run (the sit step's command line with --keywords-records, --keywords-runtime, --collection-location-refs, --scene-actions-skipped-start, the assumed answer of animation event registrations, and its eleven timed caller actions each held until the stage before it (--action-after))
+86	the final run (the keyword step's command line with --scene-recheck-variables, --setters-outer-calls and the spouse's 14 animation events assumed at the second she is snapped into the furniture plus each annotation time of the clip naming them, each held until the stage set at that second)
+86	without --scene-recheck-variables
+83	without the 14 assumed events of the spouse
+86	the 14 events at invented seconds (every 5 s from 765 s, after the scene has begun waiting at its 8th phase), not held
+83	the 14 events at those invented seconds, without --scene-recheck-variables
+86	without --setters-outer-calls
 82	without --keywords-records
-83	without --keywords-runtime
+86	without --keywords-runtime
 82	without --collection-location-refs
 82	without --assume-anim-registration
 83	without --scene-actions-skipped-start
-83	without --action-after (caller actions at fixed seconds, as in the sit step)
-36	without --action-after and without the assumed opening of a door (the sit step's way)
-40	without --action-after and without the second assumed activation (the sit step's way)
-82	without --action-after and without the first assumed activation (the sit step's way)
+86	without --action-after (caller actions at fixed seconds, as in the sit step; the 14 events' gates too)
+39	without --action-after and without the assumed opening of a door (the sit step's way)
+43	without --action-after and without the second assumed activation (the sit step's way)
+85	without --action-after and without the first assumed activation (the sit step's way)
 65	without --location-refs-distinct
-83	without --cond-1-distance
-83	without --cond-player-word
+86	without --cond-1-distance
+86	without --cond-player-word
 65	without --activate-actors and the two assumed activations of actors
 65	without the assumed activation of the suit giver
 71	without the assumed activation of the spouse
 73	without the assumed activation of the cryopod
 75	without --activate-furniture-sits
-83	the caller's --assume-sit on the cryopod at the activation's second instead of --activate-furniture-sits
+86	the caller's --assume-sit on the cryopod at the activation's second instead of --activate-furniture-sits
 75	without --sit-events (and --activate-furniture-sits)
 82	without --player-base-object and --assume-player-sex
 82	without --assume-player-sex
-83	with --alias-location-placed-refs
-83	with --furniture-in-use
-83	with --menu-events
+86	with --alias-location-placed-refs
+86	with --furniture-in-use
+86	with --menu-events
 68	the load step's track (ending at the vault corridor's last trigger)
 68	the track ending by the suit giver (no walk to the cryopods)
 60	without --moveto-target
 60	without --load-in-cell
-83	without --load-in-cell, the three loads assumed by the caller (--assume-load) at the second of the fragment that moves the actors
+86	without --load-in-cell, the three loads assumed by the caller (--assume-load) at the second of the fragment that moves the actors
 41	without --cond-131-clock and without a fixed value of function 131
 59	the fixed value 50 of function 131 (--assume-cond) instead of --cond-131-clock
 83	with --phase-conditions-end
-83	with --load-on-arrival
+86	with --load-on-arrival
 60	without the three assumed animation events
 7	without the caller's start stage (--then at once)
-82	without the caller's stage at a second of the clock (--then @18)
-83	without firing timers (--timers, --time-scale-global)
-79	without the fixed value of function 555 (--assume-cond)
+85	without the caller's stage at a second of the clock (--then @18)
+86	without firing timers (--timers, --time-scale-global)
+82	without the fixed value of function 555 (--assume-cond)
 4	without the assumed seconds of a line whose audio does not settle them (--assume-line-seconds)
 10	without package actions assumed complete (--assume-packages-complete)
 77	without start-scene actions assumed complete (--assume-start-scene-actions)
-82	without the first assumed activation
+85	without the first assumed activation
 17	without the assumed opening of a door
 19	without the assumed player dialogue choice (--assume-player-choice)
 22	without the second assumed activation
 57	the trigger point reading instead of the assumed body height (--trigger-point for --trigger-body 120)
 68	without the assumed line of sight (--assume-los)
 75	without the player's base named (--player-base, and so without --player-base-object and --assume-player-sex)
-83	without the assumed conversation (--assume-talk)
+86	without the assumed conversation (--assume-talk)
 44	without the two assumed lines (--assume-line)
 46	without the spouse's two assumed moves (--assume-actor-at)
 47	without package destinations (--package-destinations)
@@ -229,7 +243,7 @@ two stages of the opening quest have no setter in the data (section 14)	only --t
 1	switch: condition function 131 reads how far a scene action has run on the clock (--cond-131-clock)
 
 ## 13 the sit step's readings and assumptions (final run)
-1	furniture	furniture activations not read as a sit: with events (the furniture's activation is not modelled)
+3	furniture	furniture activations not read as a sit: with events (the furniture's activation is not modelled)
 3	furniture	furniture activations read as a sit: default processing only
 3	furniture	sits
 2	furniture	sits	the sitter's earlier furniture left without an event (when is not known)
@@ -272,8 +286,8 @@ none	what else could set them is not in the data read: the console or code outsi
 1	keyword	HasKeyword answered	from the records	false
 39	keyword	changes kept	AddKeyword
 4	keyword	changes kept	RemoveKeyword
-27	animation	registrations	answered by the caller's assumption: true
-11	caller actions held until a stage: happened at their second
+29	animation	registrations	answered by the caller's assumption: true
+25	caller actions held until a stage: happened at their second
 1	rules relied on	quest_collection_alias_location_refs_v1
 1	rules relied on	scene_action_skipped_start_v1
 1	rules relied on	vm_keyword_records_v1
@@ -282,12 +296,27 @@ none	what else could set them is not in the data read: the console or code outsi
 1	switch: a collection alias holds the distinct references of its location's rows of its ref type (--collection-location-refs)
 1	switch: an action whose start phase was skipped starts with the first later phase it spans that is entered (--scene-actions-skipped-start)
 1	assumption from the command line: a made animation event registration answers true (--assume-anim-registration)
-11	assumption from the command line: a timed caller action waits for a stage before it happens (--action-after)
+25	assumption from the command line: a timed caller action waits for a stage before it happens (--action-after)
 
 ## 16 the two stages after the keyword stop: who calls the functions that set them (a static scan of every compiled script, kinds and counts)
 1	call sites over every compiled script of the function that sets the first of the two stages: the begin fragment of the 22nd phase of the sequence's main scene, which the scene reaches only past its 8th to 20th phases, each waiting on the variable the spouse's animation events set
 2	call sites of the function that sets the second: the end fragment of the main scene's 27th phase and the end fragment of another scene of the sequence quest
 4	call sites of the function that starts the sequence (keyword test included): the opening's stage fragment and three in two other quests' scripts (later memories of the same sequence)
 8	call sites of the sequence script's eight other functions (one without code): 7 in fragments of its scenes and dialogue lines, 1 in another quest's script
-0	call sites of the two functions in the sequence script itself or in any event handler; the stage-setter table classes them as reached by no engine event or fragment of their own script, since it does not follow calls from other scripts' fragments into a quest script
-none	a new rule is not needed to reach them: the scene fragments run as phases begin and end (the scene fragment readings of earlier steps); what is missing is the scene getting past its 8th phase
+0	call sites of the two functions in the sequence script itself or in any event handler; the stage-setter table classed them as reached by no engine event or fragment of their own script until the graph step, which follows calls from other scripts one call outward (--setters-outer-calls, stage_census)
+none	a new rule is not needed to reach them: the scene fragments run as phases begin and end (the scene fragment readings of earlier steps); the graph step's run gets the scene past its 8th phase with the caller's 14 events and reaches both
+
+## 17 the graph step's readings and assumptions
+1579	scene recheck: scenes stopped on conditions offered again after a quest state change
+1	switch: scenes stopped on conditions offered again after a quest script variable they read was written (--scene-recheck-variables)
+17	assumption from the command line: a placed reference raises a named animation event (--assume-anim-event; 14 of them the spouse's, at clip annotation offsets)
+0	scenes offered again on a variable write in the final run (at the clip's seconds every event comes while the phase waiting for it still runs its lines; the rule is not relied on)
+12	scenes offered again on a variable write with the events at the invented later seconds (the run reaches 86 with the rule, 83 without)
+1	character graph census: the spouse's race names one behaviour project, whose character and root graph resolve; the root machine has 4 states (3 modifier generators, 1 nested state machine) and its event table holds all 14 events
+70	character graph census: behaviour graph files whose event table holds the 14 events
+1	character graph census: clips whose annotations name the 14 events (each once, in the script's order, between 7.53 s and 60.87 s of 61.4 s)
+0	character graph census: behaviour, character and project files, and winning records' subrecords, holding that clip's path (its last two parts or more)
+0	rules added for actors' animation: which clip plays, and when, is not determined by the readers; the 14 events stay the caller's
+2	stage-setter table at the keyword step's stop (the run without the 14 events, --next-blockers): the two waited stages' setters, before --setters-outer-calls: a call in a quest's own script, a function no engine event or fragment of its script reaches; an event the interpreter does not raise
+2	the same with --setters-outer-calls: a call in a quest's own script, reached by a call from a scene fragment (a phase begin and a phase end fragment); a scene point the run has not reached
+0	difference --setters-outer-calls makes to the final run's --next-blockers counts (its waited stages are set by triggers and an animation event handler)

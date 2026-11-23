@@ -3,35 +3,41 @@
 This page is the hand-over point. Everything on `main` builds and passes its tests; anyone (a person or an
 agent) can continue from here. Read `AGENTS.md` first: it holds the rules of evidence and the clean-room rules.
 
-State on 2026-11-22. Nothing below has been checked against the running game: every behaviour is a pending
+State on 2026-11-23. Nothing below has been checked against the running game: every behaviour is a pending
 rule in `spec/hypotheses.tsv`, off by default.
 
 ## Script VM and quests (`crates/fo4-vm`)
 
-The forced new-game opening (`quest_run`, record in `spec/quest-run-opening.txt`) reaches 83 of 104 stages
-(keyword step; before it 82). The keyword test that stopped the sit step's run now passes from the records
-(`--keywords-records`, `--keywords-runtime`), the next sequence quest's collection alias is filled from its
-location's rows (`--collection-location-refs`), and that quest's main scene starts and runs to its 8th phase.
-The run stops at, in order:
+The forced opening (`quest_run`, record in `spec/quest-run-opening.txt`) reaches 86 of 104 stages
+(graph step; before it 83). The next sequence quest's main scene now runs to its end: the spouse's 14
+animation events are the caller's (`--assume-anim-event`), at the second the script snaps her into the
+furniture plus each annotation time of the one clip that names them; the scene's phase fragments call the
+two sequence functions that set the next two stages, and the second's stage fragment sets the next, which
+starts the next main quest and its exit scene. A scene waiting on a quest script variable is now offered
+again when a script writes it (`--scene-recheck-variables`); at the clip's seconds the run does not need it
+(each phase finds the value when its lines end), at later seconds it does. The stage-setter table follows
+calls from other scripts into quest script functions (`stage_census`; `--setters-outer-calls` for
+`--next-blockers`). The run stops at, in order:
 
-1. The main scene's 8th phase waits on a quest script variable that only the handler of the spouse's
-   animation events sets (14 events, whose names occur in the data as clip annotations and behaviour graph events). Needed: either
-   a character's behaviour graph followed to the clip's annotation times, or the caller's assumed events;
-   and, in both cases, waiting scenes offered again when a quest script variable changes (today the
-   recheck follows quest state only: a run assuming the 14 events still stops there).
-2. Two stages set in two functions of the sequence script that the scene's later phase fragments call,
-   then the stage the second one's fragment sets. No new rule is needed for the calls; the stage-setter
-   table should follow calls from other scripts' fragments into quest script functions.
-3. Two stages with no setter and no reader anywhere in the data (documented in `spec/vm.md`).
+1. Stage 1000: set only by the next main quest's handler of an animation event of the player's cryopod
+   (a NIF text key and graph event of the pod), registered by the exit scene's fragment; the run raises no
+   such event. Next: find what plays the pod's sequence in the exit scene (a scene fragment, a package, the
+   activation) and whether the activator graph reading reaches the key, before assuming the event.
+2. The exit scene's looping successor waits on a vault dialogue quest stage set by a placed trigger (the
+   player entering it) or a menu closing; stage 5000 by fourteen placed triggers: both are track or caller
+   actions.
+3. Sixteen earlier stages are on no path the run takes (two of them have no setter in the data).
 
-Caller actions can now wait for the stage the story sets before them (`--action-after`); the final run gates
-all eleven timed ones, so the one-thing-changed table no longer counts stages those actions set out of order. The player's
-track and the actor moves (`--assume-actor-at`) still happen at fixed seconds.
+Character behaviour graphs (`char_graph_census`, `spec/character-graph-census.txt`): a race names its
+behaviour project, and the project, character and root graph resolve, but which clip an actor plays is held
+in classes the readers do not read (clip generators, behaviour references, nested machines, transition
+conditions and variables, how furniture keywords select a state). Reading those is what would let actor
+animation events come from the data instead of the caller.
 
 Not modelled yet: unload, cell-load, cell-attach and cell-detach events; the sit state native; actors sitting
 through packages; magic-effect receivers of furniture events; keyword data, `ResetKeyword`, keywords in
 conditions, template flags and object modifications for keywords; collection aliases filled other than from
-a location's rows.
+a location's rows; actors' animation (character graphs).
 
 ## Drawing (`crates/fo4-scene`, `apps/fo4-view`)
 

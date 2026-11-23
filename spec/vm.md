@@ -1039,7 +1039,12 @@ Measured over one installation (every count in the census):
   action on an object (activation, trigger enter or leave, a terminal
   item) 1,917, a scene's progress 1,638, a timer of the script 1,107, a
   custom event 799, a package 56, a perk entry 6; 3,074 sit in functions
-  no event or fragment of their own script reaches.
+  no event or fragment of their own script reaches. (Since the graph step the
+  table follows those functions one call outward to other scripts'
+  callers, and the committed census counts 28,922 setters, 2,368 of them
+  in functions nothing reachable calls: Calls from other scripts in the
+  stage-setter table, below; `stage_census --no-outer-calls` gives the
+  counts above.)
 - Resolution: the quest is a constant in 24,506 setters, the stage in
   24,646; 2,491 constant setters name a stage the quest record does not
   hold (1,051 pairs), mostly generic scripts whose int property has no
@@ -2080,11 +2085,187 @@ and the script's eight other functions are called from fragments of its
 scenes and dialogue lines (7) and from another quest's script (1). The
 stage-setter table classes the two as reached by no engine event or
 fragment of their own script because it does not follow calls from other
-scripts' fragments into a quest script's functions. No new rule is
+scripts' fragments into a quest script's functions. (Since the graph step it does: Calls from other scripts in the
+stage-setter table, below.) No new rule is
 needed to reach them: the scene fragment readings run phase fragments as
 the phases begin and end. What stops the run short of them is the scene's
 8th phase above. The stage after them is set by the second one's stage
 fragment.
+
+## Scenes offered again when a script variable is written
+
+Until this step a scene stopped on its phase's conditions was offered that
+phase again only when the run's quest state changed (`--scene-recheck`,
+`scene_condition_recheck_v1`). A condition that reads a quest script
+variable (function 629, `cond_fn_629_quest_variable_v1`) can change
+without any quest state change: a script writes the variable.
+
+What the census finds ([scene-variable-census.txt](scene-variable-census.txt),
+`scene_variable_census`, counts and kinds only; the names go to a file
+that is never versioned): of the 4,773 winning scenes' 21,285 phases, 104
+scenes hold a condition of function 629 in a phase list: 535 conditions
+(450 in start lists of 403 phases, 85 in completion lists of 73 phases),
+471 on the scene's owning quest and 64 on another quest, most compared
+with `==` (436) or `>=` (58). Every one names a variable that the quest's
+attached scripts declare (int 403, bool 132; 488 behind a property). They
+read 121 distinct (quest, variable) pairs. By the instructions that write
+those variables: 476 conditions read a variable only functions, stage
+fragments, accessors or other scripts' property writes change; 41 one that
+both event handlers and functions change; 12 one that only event handlers
+change; 6 one nothing writes. 32 conditions read a variable that an
+`OnAnimationEvent` handler writes (the opening's 14 among them), 8 one
+`OnQuestInit` writes, one each `OnTimer` and `OnTimerGameTime`. The other
+function carrying a CIS2 text (660, 15 conditions in the phase lists of 8
+scenes) is not evaluated.
+
+| Switch | Reading | Rule |
+| --- | --- | --- |
+| `--scene-recheck-variables` | every write of an instance variable is kept (the object its instance is attached to, the variable's name); after each caller action, timer firing, scene clock advance and world event that ran scripts, a scene stopped on its start or completion conditions is offered that phase again when one of those conditions reads (function 629) a variable written since the last offer, on the quest its first parameter names; with `--scene-recheck` also on, not in a pass where the quest state reading has just offered every stopped scene | `scene_condition_recheck_variable_v1` |
+
+Alternatives considered: offering every waiting scene again at each tick of
+the clock (polling; with the readings that exist it gives the same phases,
+since a condition's value changes only where a script, a quest state or a
+clock mark changes it, at the cost of an offer per scene per tick and a
+second of delay that depends on the tick); offering every waiting scene
+again after any script returns (the same phases as the reading chosen,
+with offers that cannot change anything); offering it after any variable
+write whatever the conditions read (the same phases, more offers). The
+reading chosen is the narrowest that gives those phases. Its basis is
+weak: when the engine tests a waiting phase's conditions is not in the
+data, and the only support is prior general knowledge that a playing
+scene keeps testing them; the trigger is the project's reading.
+
+`fo4_vm::scene::Scenes::variable_writes` (kept only while a caller sets
+it) and `fo4_vm::scene::recheck_variables`; the interpreter records a
+write from a variable store and from a property set backed by a variable.
+
+## Character behaviour graphs
+
+The 14 events the opening's sequence script registers on the spouse
+actor are raised in the game by her character's animation. What the data
+gives for an actor, as far as the repository's readers go
+([character-graph-census.txt](character-graph-census.txt),
+`char_graph_census` of `fo4-unpack`, with the actor and the 14 event
+names given on the command line; the names go to a file that is never
+versioned):
+
+- **The chain from the actor.** The placed actor's base (an NPC_ without a
+  template) names its race (RNAM); the race's MODL texts after its NAM3
+  marker name a behaviour project file (106 of the 110 winning races carry
+  two such texts, 74 the same file twice, 32 two files; 46 distinct
+  project files, 45 of which resolve to a character and a behaviour graph
+  with `fo4_havok`'s readers). The spouse's race names one project; its
+  character's root graph has 4 states (3 modifier generators and a nested
+  state machine) and an event table of 1,058 names that holds all 14.
+- **Where the events occur.** 70 behaviour graph files hold the 14 in
+  their event tables. Exactly one clip's annotations name them, each once,
+  in the order of the script's numbering, all within the clip's 61.4 s
+  (the first at 7.53 s, the last at 60.87 s).
+- **What would tie the actor to that clip.** No behaviour, character or
+  project file holds even the clip's last two path parts as a text (a byte
+  search of the stored bytes, not a reading of any field; the file name
+  alone occurs in 147 files and names nothing), and no subrecord of any
+  winning record does. The readers do not read what selects a clip: clip
+  generator fields, behaviour reference generators, nested machines below
+  the root, transition conditions and graph variables, the character's
+  animation list, nor how a furniture's or an actor's keywords select a
+  graph state. In the run the spouse is placed in a multi-actor furniture
+  by `SnapIntoInteraction` (recorded, not performed) after the script
+  changes her keywords; the furniture base carries two keywords and marker
+  entries; no scene action names an idle or an animation, no package of
+  the scene names the clip, and no `PlayIdle`-like native is called on her.
+
+**No rule is added**: which clip plays, and when it starts, cannot be
+determined with the readers that exist. The events stay the caller's
+(`--assume-anim-event`). The final run takes the caller's seconds from
+the clip itself: the second of the `SnapIntoInteraction` call plus each
+annotation's time (the start second and the choice of the clip are the
+caller's assumption; the offsets are measured). What would make a rule
+possible: reading the clip generators and behaviour references of the
+character's graphs, the state machines below the root with their
+transition conditions, and the furniture's keywords against them.
+
+## Calls from other scripts in the stage-setter table
+
+The table classed a set-stage call in a quest's own script as reached by
+nothing when no engine event or fragment slot of that script's own chain
+reaches its function. Under `setter_outer_call_entry_v1` it now follows
+such a function one call outward: every call of it by name from another
+script's function, on a receiver whose declared type is the function's
+script or extends it (the quest's attached script being that type or
+extending it), the receiver resolved to that quest by the caller's
+attachment (`GetOwningQuest()` on a fragment or alias script of that
+quest, a property whose stored value names it, or the owning quest of an
+alias property of it). The setter then needs what reaches the caller: its
+fragment slot (a scene phase, a stage, a dialogue line, a terminal item)
+or its engine event. Calls whose receiver the scan does not resolve
+(30,076: parameters, other calls' results, arrays), callers attached by no
+read VMAD (256) and callers nothing reaches either (13) are counted and
+left out.
+
+**The committed census changed without a switch**:
+[stage-setter-census.txt](stage-setter-census.txt) is regenerated with the
+reading on (`stage_census --no-outer-calls` reproduces the earlier file
+byte for byte), because it is a static scan whose earlier output named a
+gap rather than a behaviour. What changed: 841 outer call sites followed;
+setters 26,361 to 28,922 (one per caller reached); setters needing a
+function no event or fragment of its own script reaches 3,074 to 2,368 (in
+quest scripts 1,847 to 1,147), most of the rest now needing an alias
+script's death or dying event (2,864), a quest stage fragment (203), a
+scene's fragment (74) or a dialogue line (25); stages with a setter that
+needs nothing reachable 636 to 401; the 2,297 stages with no setter at all
+are unchanged. `quest_run --next-blockers` uses the reading only with
+`--setters-outer-calls`, so every earlier next-blockers file reproduces.
+
+In the opening, the two stages the keyword step found set only in the
+sequence script's functions are reached, in the table, by the main
+scene's phase fragments (a begin fragment of one phase, the end fragment
+of another) and by another scene's end fragment.
+
+## The forced opening with the spouse's animation events
+
+([quest-run-opening.txt](quest-run-opening.txt); the command lines and
+every record named are in the step's notes.) On the keyword step's command
+line with `--scene-recheck-variables`, `--setters-outer-calls` and the
+caller's 14 events of the spouse:
+
+- The events are the caller's (`--assume-anim-event`): at the second the
+  sequence script snaps the spouse into the furniture (730.036 s) plus each
+  annotation time of the one clip that names them (Character behaviour
+  graphs, above), each held until the stage set at that second
+  (`--action-after`). The handler runs 14 times; the main scene's 8th to
+  20th phases complete as their timed lines end, each finding the variable
+  at its value; the begin fragment of the 22nd phase and the end fragment of
+  the 27th call the two sequence functions, which set the next two stages;
+  the second's stage fragment sets the next, whose fragment starts the next
+  main quest and its exit scene. Reached: **86 of the 104 stages** (before
+  83).
+- The variable recheck is not relied on at these seconds: every event comes
+  while the phase waiting for it still runs its lines, so the phase's own
+  completion step finds the value (86 without `--scene-recheck-variables`
+  too). With the events at invented later seconds (every 5 s from 765 s,
+  after the scene has begun waiting at its 8th phase) the rule offers the
+  waiting scene again 12 times and the run reaches 86; without it, 83 (the
+  keyword step's stop). Without the 14 events, 83; without
+  `--setters-outer-calls`, the same stages (only the next-blocker file of a
+  run stopping at the keyword step's stop differs: the two waited stages'
+  setters then need the scene's phase fragments, a scene point not
+  reached, instead of an event the interpreter does not raise).
+- With one thing changed (the record's section 11), every variant that
+  reached the keyword step's stop now goes three stages further; with
+  `--phase-conditions-end` the run stops at 83: the main scene stays in
+  its 21st phase, held on the clock after its line ends (not investigated
+  further).
+- The run stops next on stage 1000, set only by the next main quest's
+  handler of an animation event of the player's cryopod (a NIF text key and
+  graph event of its model) that a fragment of the exit scene registers
+  (the run raises no such event); on a vault dialogue stage a placed
+  trigger or a menu closing sets, which the exit scene's looping successor
+  waits on; and on stage 5000, set by fourteen placed triggers. Sixteen
+  earlier stages are on no path the run takes, two of them with no setter.
+- With every switch of this step off, the keyword step's command line
+  gives the keyword step's run byte for byte (census, names and
+  next-blocker files).
 
 ## Conditions
 
@@ -2214,8 +2395,13 @@ binary with the switches on). With them on:
 - Caller actions happen at fixed seconds unless the caller holds them
   until a stage (`--action-after`); the track and the actor moves the
   caller assumes (`--assume-actor-at`) always do. Scenes waiting on conditions are
-  offered again when the quest state changes, not when a script variable
-  changes.
+  offered again when the quest state changes and, with
+  `--scene-recheck-variables`, when a quest script variable they read is
+  written; conditions on anything else are offered again only at the marks
+  of functions 131 and 1.
+- A character's behaviour graph is not followed: its root machine plays no
+  Gamebryo sequence and the clips its states play are not read; actors'
+  animation events stay the caller's.
 - Opcode 34's arity between `4` and `4+n` stays open ([pex.md](pex.md));
   the interpreter reads its fourth slot as the start index.
 
@@ -2606,5 +2792,27 @@ repository's own readers on the installed data (`keyword_census`; local
 probes whose outputs stay outside the repository); the compiled scripts
 were read only with the repository's disassembler. No public page was
 requested. No editor, editor source or definition file, other
+interpreter, script extender, decompiler or the game executable was
+opened or searched for. The game was not run.
+
+## Provenance of the graph step
+
+Recognised from prior general knowledge, used only as pending rules that
+are off by default or to search the data: that a playing scene keeps
+testing its phase conditions while it waits; that a race names the
+behaviour project of its characters (the MODL texts after NAM3 were found
+by measurement to name project files); that a fragment's owning quest is
+the quest whose group holds its record and that a call on it runs that
+quest's script. That the spouse's animation events come from the clip
+whose annotations name them, played while she uses the furniture the
+script snaps her into, is prior knowledge used only to choose the
+caller's seconds. Every count was measured with the repository's own
+readers on the installed data (`scene_variable_census`, `stage_census`,
+`char_graph_census`; local probes whose outputs stay outside the
+repository); the compiled scripts were read only with the repository's
+disassembler, the behaviour and animation files only with `fo4_havok`'s
+existing readers and a byte search of their stored bytes. No public page
+was requested. No behaviour or animation tool, converter or library of
+any project, Havok SDK, editor, editor source or definition file, other
 interpreter, script extender, decompiler or the game executable was
 opened or searched for. The game was not run.
