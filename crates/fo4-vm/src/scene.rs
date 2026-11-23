@@ -1988,8 +1988,8 @@ pub fn fragment_instance(
     Ok(inst)
 }
 
-/// An instance of the fragment block script of the INFO, PACK, SCEN or
-/// PERK record behind a handle, with the block's property values
+/// An instance of the fragment block script of the INFO, PACK, SCEN, PERK
+/// or TERM record behind a handle, with the block's property values
 /// (`vmad_fragment_instance_v1`).
 pub fn record_fragment_instance(
     vm: &mut crate::Vm<'_>,
@@ -2023,6 +2023,7 @@ pub fn record_fragment_instance(
         .or(v.scene.as_ref().map(|x| &x.block))
         .map(|x| &x.script)
         .or(v.perk.as_ref().map(|x| &x.script))
+        .or(v.terminal.as_ref().map(|x| &x.script))
         .ok_or_else(|| bad(&"no fragment block"))?;
     let name = fo4_pex::index::lower(script.name);
     vm.rules.insert(rules::FRAGMENT_INSTANCE);

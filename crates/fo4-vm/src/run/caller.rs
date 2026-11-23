@@ -248,6 +248,10 @@ pub(super) fn act(
             fight_act(vm, store, &x.what, &when, c, names, b)?;
             top.extend(quest::run_jobs(vm, store, MAX_GAME_JOBS, b));
         }
+        What::Terminal(..) | What::ItemAdded(..) => {
+            stop_act(vm, store, &x.what, &when, c, names, b)?;
+            top.extend(quest::run_jobs(vm, store, MAX_GAME_JOBS, b));
+        }
         What::Menu(name, opening) => {
             bump(
                 c,
@@ -380,7 +384,163 @@ pub(super) fn act(
         }
     }
     top.extend(quest::run_jobs(vm, store, MAX_GAME_JOBS, b));
+    lock_changes(vm, store, c, names, top, b)?;
     recheck(vm, store, then, c, top, b);
+    Ok(())
+}
+
+/// Under `vm_lock_state_event_script_v1`: raises the lock state change
+/// events the scripts' `Lock` calls left waiting, runs the jobs they bring,
+/// and again for the changes those make (at most 16 rounds).
+pub(super) fn lock_changes(
+    vm: &mut Vm<'_>,
+    store: &Store,
+    c: &mut Counts,
+    names: &mut String,
+    top: &mut Vec<JobRun>,
+    b: &Budget,
+) -> Result<(), E> {
+    for _ in 0..16 {
+        if vm.world.runstate.lock_changed.is_empty() {
+            break;
+        }
+        let before = vm.effects.len();
+        let raised = crate::runstate::deliver_lock_changes(vm, store, b)?;
+        log_raised(vm, &raised, "lock events", before, c, names);
+        top.extend(quest::run_jobs(vm, store, MAX_GAME_JOBS, b));
+    }
+    Ok(())
+}
+
+/// Writes events raised outside any script (`Raised`) and their handler
+/// runs under a counts prefix.
+fn log_raised(
+    vm: &Vm<'_>,
+    raised: &[crate::fight::Raised],
+    prefix: &str,
+    before: usize,
+    c: &mut Counts,
+    names: &mut String,
+) {
+    for r in raised {
+        let _ = writeln!(
+            names,
+            "## {prefix} at {} s: {}, {} handler run(s)",
+            r.t,
+            r.what,
+            r.runs.len()
+        );
+        if r.runs.is_empty() {
+            bump(c, format!("{prefix}\tno script has a handler"));
+        }
+        for d in &r.runs {
+            bump(
+                c,
+                format!(
+                    "{prefix}\t{}\t{}",
+                    d.receiver.kind(),
+                    outcome_kind(&d.outcome)
+                ),
+            );
+            let on = match d.receiver {
+                crate::player::Receiver::Alias(q, id) => {
+                    format!(" (alias {id} of {})", vm.world.objects[q].label)
+                }
+                _ => String::new(),
+            };
+            let _ = writeln!(
+                names,
+                "    {} {}{on}: {}",
+                d.receiver.kind(),
+                d.script,
+                outcome_text(&d.outcome)
+            );
+        }
+    }
+    for e in &vm.effects[before..] {
+        let _ = writeln!(
+            names,
+            "      {}{}({}{}) = {}",
+            "  ".repeat(e.depth),
+            e.native,
+            e.receiver
+                .as_ref()
+                .map(|x| format!("on {x}; "))
+                .unwrap_or_default(),
+            e.args.join(", "),
+            e.result
+        );
+    }
+}
+
+/// Does what a terminal pick or an item added assumes (`crate::terminal`,
+/// `crate::inventory`) and writes the handler runs it brings.
+pub(super) fn stop_act(
+    vm: &mut Vm<'_>,
+    store: &Store,
+    what: &What,
+    when: &str,
+    c: &mut Counts,
+    names: &mut String,
+    b: &Budget,
+) -> Result<(), E> {
+    let before = vm.effects.len();
+    let (raised, prefix) = match what {
+        What::Terminal(key, id) => {
+            bump(
+                c,
+                "assumption from the command line: the player picks a terminal's menu item (--assume-terminal-item)",
+            );
+            let k = crate::player::parse_key(key)
+                .ok_or("--assume-terminal-item takes PLUGIN:OBJECTID")?;
+            if store.signature(&k) != Some(*b"REFR") {
+                return Err("--assume-terminal-item names no winning placed reference".into());
+            }
+            let o = crate::data::record_object(&mut vm.world, store, &k, "objectreference", b)?;
+            let _ = writeln!(names, "## --assume-terminal-item {key} {id}{when}");
+            (
+                crate::terminal::pick(vm, store, o, *id, b)?,
+                "terminal items",
+            )
+        }
+        What::ItemAdded(holder, item, n, source) => {
+            bump(
+                c,
+                "assumption from the command line: the player puts an item into a holder (--assume-item-added)",
+            );
+            let h = if holder == "player" {
+                vm.world.player("actor")
+            } else {
+                let k = crate::player::parse_key(holder)
+                    .ok_or("--assume-item-added takes PLUGIN:OBJECTID or player")?;
+                if !matches!(
+                    store.signature(&k).as_ref().map(|s| &s[..]),
+                    Some(b"REFR" | b"ACHR")
+                ) {
+                    return Err("--assume-item-added names no winning placed holder".into());
+                }
+                crate::data::record_object(&mut vm.world, store, &k, "objectreference", b)?
+            };
+            let ik = crate::player::parse_key(item)
+                .ok_or("--assume-item-added takes the item as PLUGIN:OBJECTID")?;
+            let ty = store
+                .signature(&ik)
+                .and_then(crate::data::signature_type)
+                .ok_or("--assume-item-added names no winning item record")?;
+            let i = crate::data::record_object(&mut vm.world, store, &ik, ty, b)?;
+            let s = (source == "player").then(|| vm.world.player("actor"));
+            let _ = writeln!(
+                names,
+                "## --assume-item-added {holder} {item} {n} {source}{when}"
+            );
+            (
+                crate::inventory::item_added(vm, store, h, i, *n, s, b)?,
+                "items added",
+            )
+        }
+        _ => return Ok(()),
+    };
+    log_raised(vm, &[raised], prefix, before, c, names);
     Ok(())
 }
 

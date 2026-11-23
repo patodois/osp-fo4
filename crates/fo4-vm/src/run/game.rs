@@ -164,6 +164,9 @@ pub(super) fn world_step(
         }
     }
     top.extend(runs);
+    if let Err(e) = lock_changes(vm, store, c, names, top, b) {
+        let _ = writeln!(names, "## lock events: {e}");
+    }
     recheck(vm, store, then, c, top, b);
 }
 
@@ -208,6 +211,14 @@ pub(super) fn new_game(
         (!then.item_counts.is_empty(), "the caller assumes item counts (--assume-item-count)"),
         (then.lock_events, "the caller's unlock raises the lock state change event on the reference's receivers (--lock-events)"),
         (then.activate_actors, "the caller may assume the player activates a placed actor (--activate-actors)"),
+        (then.lock_events_script, "a script's Lock that changes the held lock raises the lock state change event on the reference's receivers (--lock-events-script)"),
+        (then.terminal_fragments, "the caller's pick of a terminal's menu item runs the fragment of the item's id (--terminal-fragments)"),
+        (then.item_added_events, "inventory event filters kept; the caller's item added delivered to the instances whose filter names it (--item-added-events)"),
+        (then.inventory_filter_init, "an init handler the run never delivers that adds an inventory filter on itself counts as having added it (--inventory-filter-init)"),
+        (then.item_added_counts, "the caller's item added raises the holder's known count of it (--item-added-counts)"),
+        (then.perks_base, "HasPerk on the player answers from its base record's perk list and the run's perk changes (--perks-base)"),
+        (then.factions_base, "IsInFaction answers from the actor's base record's faction list and the run's faction changes (--factions-base)"),
+        (!then.actor_values.is_empty(), "the caller assumes actor values (--assume-actor-value)"),
     ] {
         if on {
             bump(&mut c, format!("switch: {what}"));
@@ -263,6 +274,14 @@ pub(super) fn new_game(
     vm.world.runstate.locks = then.lock_state;
     vm.world.runstate.lock_events = then.lock_events;
     vm.world.runstate.item_counts = then.item_counts.iter().cloned().collect();
+    vm.world.runstate.lock_events_script = then.lock_events_script;
+    vm.world.runstate.terminals = then.terminal_fragments;
+    vm.world.runstate.inventory.events = then.item_added_events;
+    vm.world.runstate.inventory.filter_init = then.inventory_filter_init;
+    vm.world.runstate.inventory.counts_added = then.item_added_counts;
+    vm.world.runstate.perks = then.perks_base;
+    vm.world.runstate.factions = then.factions_base;
+    vm.world.runstate.actor_values = then.actor_values.iter().cloned().collect();
     vm.world.sits.activate = then.sit_activate;
     vm.world.sits.in_use = then.sit_in_use;
     vm.world.sits.activate_events = then.sit_activate_events;
@@ -872,7 +891,9 @@ pub(super) fn new_game(
                 | What::Hit(_)
                 | What::Combat(..)
                 | What::Death(..)
-                | What::Unlock(_) => None,
+                | What::Unlock(_)
+                | What::Terminal(..)
+                | What::ItemAdded(..) => None,
             })
             .collect();
         next_blockers(&mut vm, m, vfs, store, opts, &quests, then.outer_calls, out)?;

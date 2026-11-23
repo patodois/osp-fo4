@@ -169,7 +169,7 @@ pub const XESP_BIT1: &str = "xesp_flag_bit1_not_presence_v1";
 pub const XESP_PROPAGATES: &str = "xesp_script_change_propagates_v1";
 
 /// Every rule above.
-pub const ALL: [&str; 186] = [
+pub const ALL: [&str; 193] = [
     ARITHMETIC,
     COMPARE,
     NOT_COPY_CAST,
@@ -356,6 +356,13 @@ pub const ALL: [&str; 186] = [
     NPC_RESPONSE_CHOICE,
     LOCK_STATE_EVENT,
     GLOBAL_VALUE_UNDETERMINED,
+    TERMINAL_FRAGMENT,
+    LOCK_STATE_EVENT_SCRIPT,
+    ITEM_ADDED_EVENT,
+    INVENTORY_FILTER_INIT,
+    ITEM_ADDED_COUNT,
+    PERK_BASE_LIST,
+    FACTION_BASE_LIST,
 ];
 
 /// The rule an opcode's meaning rests on; `None` for an opcode without a
@@ -767,3 +774,32 @@ pub const LOCK_STATE_EVENT: &str = "vm_lock_state_event_v1";
 /// global undetermined for `GetValue` until a known value is set
 /// (`quest_run --global-value-undetermined`, with `--global-values`).
 pub const GLOBAL_VALUE_UNDETERMINED: &str = "vm_global_runtime_value_undetermined_v1";
+/// The player's pick of a terminal's menu item runs the function the
+/// terminal record's fragment block names for the item's id, on the
+/// block's script instance, with the placed terminal as its argument.
+pub const TERMINAL_FRAGMENT: &str = "terminal_menu_item_fragment_v1";
+/// A script's `Lock` that changes the lock the run holds raises
+/// `OnLockStateChanged()` on the reference's own scripts and the aliases
+/// holding it, after the call that changed it has run.
+pub const LOCK_STATE_EVENT_SCRIPT: &str = "vm_lock_state_event_script_v1";
+/// The caller's item added to a holder raises `OnItemAdded(item, count,
+/// none, source)` on the holder's scripts and the aliases holding it, for
+/// each instance whose inventory event filter the run kept names the item
+/// (or is none).
+pub const ITEM_ADDED_EVENT: &str = "inventory_item_added_event_v1";
+/// An init handler (`OnAliasInit`, `OnInit`) the run never delivers that
+/// calls `AddInventoryEventFilter` on itself counts as having kept that
+/// filter, with the value its argument holds when the event is raised.
+pub const INVENTORY_FILTER_INIT: &str = "inventory_filter_init_registration_v1";
+/// The caller's item added raises the holder's count of that item, which
+/// `GetItemCount` answers, from a known count.
+pub const ITEM_ADDED_COUNT: &str = "inventory_item_added_count_v1";
+/// `HasPerk` on the player answers whether the player's base record lists
+/// the perk (`PRKR`), as the run's `AddPerk` and `RemovePerk` on the
+/// player change it.
+pub const PERK_BASE_LIST: &str = "actor_perk_base_list_v1";
+/// `IsInFaction` on a placed actor or the player answers whether its base
+/// record lists the faction with a rank of 0 or more (`SNAM`), as the run's
+/// `SetFactionRank`, `RemoveFromFaction` and `RemoveFromAllFactions` on it
+/// change that; a base naming a template is not answered.
+pub const FACTION_BASE_LIST: &str = "actor_faction_base_list_v1";

@@ -12,6 +12,7 @@ mod home;
 mod kw;
 mod load3d;
 mod museum;
+mod onward;
 mod open2;
 mod quest;
 mod scene;

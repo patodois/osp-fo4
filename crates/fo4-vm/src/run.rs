@@ -282,6 +282,33 @@ pub struct Then {
     pub lock_state: bool,
     pub lock_events: bool,
     pub item_counts: Vec<((String, String), i32)>,
+    /// A script's `Lock` that changes the held lock raises its event
+    /// (`vm_lock_state_event_script_v1`, `--lock-events-script`, with
+    /// `--lock-state`).
+    pub lock_events_script: bool,
+    /// The caller's terminal pick runs the item's fragment
+    /// (`terminal_menu_item_fragment_v1`, `--terminal-fragments`;
+    /// `crate::terminal`).
+    pub terminal_fragments: bool,
+    /// The inventory readings (`crate::inventory`): the caller's item added
+    /// delivered to the filters kept (`inventory_item_added_event_v1`,
+    /// `--item-added-events`), init handlers' filters read as kept
+    /// (`inventory_filter_init_registration_v1`, `--inventory-filter-init`)
+    /// and the holder's count raised (`inventory_item_added_count_v1`,
+    /// `--item-added-counts`).
+    pub item_added_events: bool,
+    pub inventory_filter_init: bool,
+    pub item_added_counts: bool,
+    /// `HasPerk` on the player from its base's `PRKR`
+    /// (`actor_perk_base_list_v1`, `--perks-base`, with
+    /// `--player-base-object`).
+    pub perks_base: bool,
+    /// `IsInFaction` from the actor's base `SNAM` and the run's faction
+    /// changes (`actor_faction_base_list_v1`, `--factions-base`).
+    pub factions_base: bool,
+    /// The caller's actor values (`--assume-actor-value HOLDER|player AVIF
+    /// N`): what `GetValue` answers.
+    pub actor_values: Vec<((String, String), f32)>,
     /// The timeline also writes the run's deaths and who sits where
     /// (`--timeline-deaths`, `--timeline-sits`; `spec/timeline.md`).
     pub timeline_deaths: bool,
@@ -389,6 +416,13 @@ pub enum What {
     Death(String, String),
     /// The player unlocks a placed reference (`--assume-unlock REF`).
     Unlock(String),
+    /// The player picks the menu item of an id on a placed terminal
+    /// (`--assume-terminal-item REF ID`).
+    Terminal(String, u32),
+    /// The player puts a count of an item (a base form) into a holder, from
+    /// a source (`player` or `none`) (`--assume-item-added HOLDER ITEM N
+    /// SOURCE`).
+    ItemAdded(String, String, i32, String),
 }
 #[derive(Clone, Debug)]
 pub struct Caller {
@@ -413,7 +447,9 @@ impl Caller {
             | What::Hit(k)
             | What::Combat(k, _, _)
             | What::Death(k, _)
-            | What::Unlock(k) => k.clone(),
+            | What::Unlock(k)
+            | What::Terminal(k, _)
+            | What::ItemAdded(k, ..) => k.clone(),
             What::Menu(m, _) => m.clone(),
             What::Looks(n) => n.to_string(),
         }
