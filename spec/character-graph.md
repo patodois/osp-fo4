@@ -145,6 +145,14 @@ writer is `fo4-vm`'s), where on the furniture the actor sits (the furniture
 model's markers are not read) and which of an entry's target keywords a
 furniture needs at once. Nothing was drawn for it.
 
+The seen step reads the sit lines the run's timeline now carries and the furniture's markers (FURN SNAM,
+`spec/timeline.md`, Deaths and furniture) and adds `--actor-sit-clip`
+(`char_graph_furniture_entry_keywords_v1`, `char_graph::furniture_clip`): a seated actor is posed by the clip
+reached from the root of the race's flag word 2 entry without actor keywords whose target keywords all are the
+furniture's, the one with the most (a tie or none refused). On real data no actor sits in the run and no such
+entry fits the six furniture records of the player's sits (`spec/seen-census.txt`, section 2): synthetic
+tests only.
+
 ## What it does not do
 
 - No transition is ever taken: the pose is the start state's, whatever the run

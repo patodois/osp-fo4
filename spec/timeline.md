@@ -147,6 +147,18 @@ sequence's transform interpolators (`clock::transform_track` evaluates their key
 and the player standing on the moving node (the track following the platform's height). None of this is
 done; the frame is left as it was and no path is invented.
 
+What the seen step found (census section 3): the outside lift is not a static but the shaft model of the
+activator above (its 9 controller sequences move a platform node, two hatches and lights; 13 collision objects,
+the platform's under the moving node), placed 6,600 units below the platform's top; the static with a behaviour
+graph holds the walkway's collision. The run plays the shaft's graph (its names file records the sequences'
+text keys and states: the state that plays the 18.667 s descent is entered at 481.567 s in the museum step's
+furthest run), but the timeline does not record it, so a frame cannot know when the platform moves. The
+platform's collision rides in the walking world (`spec/walk.md`, Platforms) with the second given by its
+caller; the shaft model is still refused by the draw (skinning, animation runtime), so no frame draws the ride.
+For the timeline to carry it, `fo4-vm`'s writer would add an `event` line per sequence a placed reference's
+graph starts, with a fixed grammar: `sequence REF NAME` (REF a record key, NAME the sequence's name as the
+model stores it), read by this reader as the death and sit lines are.
+
 ## Deaths and furniture (`--timeline-deaths`, `--timeline-sits`)
 
 Two switches of `quest_run new-game --timeline FILE`, off by default (with them off the file is byte for byte
@@ -162,11 +174,38 @@ space-separated words:
 The writer looks at the run's dead and sitters after each step of the caller's clock loop, as it does for the
 other logs, and stamps what changed with the run's present second. A death is never undone.
 
-Reading them is the viewer side's (`fo4_scene::timeline`, the CPU render and `apps/fo4-view`), not this
-writer's: today's reader keeps these lines as notes, so a frame still draws a killed actor standing at its last
-place and a sitter standing. What a frame should do with them (leave a dead actor out, draw it lying, draw a
-sitter at the furniture's marker in a sitting clip) is a frame reading for that side to register as its own
-pending rule.
+### Reading them in a frame (the seen step)
+
+The reader keeps them as `event` lines (the format is unchanged) and a frame collects them
+(`fo4_scene::timeline::body_note`, `Frame::dead`, `Frame::sitting`: who is dead from when, who sits in which
+furniture from when, a `get-up` ending only its own `sit`), whatever the readings. What a frame does with them,
+each behind its own switch of the CPU render and the headless viewer, off by default (with every switch off
+every marker, character, overlay and frame is as before: `spec/seen-census.txt`'s step checked the earlier
+frame sets byte for byte):
+
+| Switch | Rule | Reading |
+| --- | --- | --- |
+| `--timeline-dead-left-out` | `timeline_dead_actor_left_out_v1` | a dead actor is not drawn (character or marker); the overlay lists it among the actors left out with its death's second |
+| `--timeline-dead-lying` | `timeline_dead_actor_lying_placeholder_v1` | a dead actor is drawn lying at its last place: its character (in whatever pose the other switches give) or its marker box turned a quarter turn about the world's X axis after its stored rotation about the vertical (`lying_rotation`); its root stays at the place's height, so half of a lying marker box is under the floor. A placeholder |
+| `--timeline-sit-marker` | `timeline_sit_marker_nearest_v1`, `furniture_marker_snam_v1` | an actor sitting in a placed furniture stands at the furniture's marker nearest its place (`fo4_scene::furniture::seat_near`: the base's SNAM entries as offset and heading, through the furniture placement's transform), facing the placement's rotation about the vertical plus the marker's heading. The player's sit adds one overlay line (`sitting`); the camera stays on the track |
+| `--actor-sit-clip` (with `--actor-start-clip`) | `char_graph_furniture_entry_keywords_v1` | a seated actor is posed by the clip its race's subgraph entry of flag word 2 for the furniture's keywords reaches from its root (`fo4_scene::char_graph::furniture_clip`); refused, it keeps its start clip or rest pose with the reason |
+
+What the data offers (census `seen_census`, [seen-census.txt](seen-census.txt), sections 1 and 2):
+
+- A dead body: the human race's root behaviour graph holds 58 clip generators, 47 of them with the word for
+  death in their clip or name, reached through events (35 of the graph's event names hold the word) and
+  selectors the run does not set; ragdoll modifiers in the graph and ragdoll data in the skeleton's Havok file
+  beside its model (one ragdoll object and 9 or 20 constraints). Which clip, or whether the ragdoll takes over,
+  is the engine's choice on an event: nothing chooses it from the data alone. The insects' race offers no death
+  clip. Hence a placeholder or leaving the body out, never a clip.
+- A seat: FURN SNAM holds one entry of 20 or 24 bytes per marker in all 782 furniture records; 17 of the 579
+  furniture and marker models hold a furniture marker block (not read). The run seats only the player (six
+  sits in the museum step's furthest run: a sink, a crib, three cryopods, a console); their markers sit at the
+  furniture's origin or 63 units in front of it with a heading of minus pi; the nearest marker lies 30 to 84
+  units from the track's point at the sit's second (2,677 for a cryopod the track has left). No subgraph entry of
+  flag word 2 fits these six furniture records for the player's race: the sit clip is exercised by synthetic
+  tests only. Two of the player's six sits span seconds when the track walks elsewhere (0 to 190 s and 190 to
+  700 s): the run's sit state is not ended by its walk, which is why the camera stays on the track.
 
 What the run does not know: who sits or lies through a package (the scenes' and aliases' sit and sandbox
 packages are not run; a package action completes under the caller's `--assume-packages-complete` without
@@ -180,7 +219,8 @@ place them, and the thirteen deaths (the first fight's six insects, the second f
 ## What it does not do
 
 - Characters in the skeleton's rest pose, or with the character graph switches in the start state's clip
-  ([character-graph.md](character-graph.md)): no transition is taken, nobody walks, sits or turns to look.
+  ([character-graph.md](character-graph.md)): no transition is taken, nobody walks or turns to look; a dead
+  actor lies only as a placeholder and a sitter sits only where the run says it sits (no package seats anyone).
 - The player's camera is not the game's: height and direction are the caller's.
 - No sound; the line's text is shown, its audio is not played.
 - The timeline is a file: the track is the caller's, not input-driven.

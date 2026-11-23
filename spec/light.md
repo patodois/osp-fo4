@@ -74,6 +74,28 @@ Where the data stops deciding:
 - which weather applies when a climate lists several (two climates of the
   load order), and whether a region overrides it.
 
+## Exposure, image space and vertex normals (the seen step)
+
+Lit frames washed out: 379 placed lights summed in the vault and nothing mapped the sum to the display. The
+image space records (IMGS) the frame names, the interior cell's XCIM or the weather slot's IMSP entry, hold
+nine f32 in HNAM, three in CNAM, four in TNAM, a DNAM and a texture path ([seen-census.txt](seen-census.txt),
+section 4: every word stored, ranges over the 334 records). The data gives no labels: the readings below take
+them from prior general knowledge, each behind its own switch of the CPU render and the headless viewer, off
+by default:
+
+| Switch | Rule | Reading |
+| --- | --- | --- |
+| `--exposure-eye` | `frame_exposure_seen_light_v1` | a lit colour times one over the light nine in ten of the lit triangles in view stay at or below (`fo4_render::seen_lit_points`: centroids in the reference frame, at most 20,000, each with its face normal toward the eye; `Light::expose_seen`), after the light and before the fog. No image space word is used: the measure is chosen |
+| `--exposure-white` | `image_space_hdr_white_v1` | after the fog, x maps to x (1 + x / W^2) / (1 + x), W the HNAM word 5 (1 in the opening's interiors, which makes the map the identity; 1.5 to 1.6 by day outside) |
+| `--exposure-cinematic` | `image_space_cinematic_tint_v1` | then CNAM's saturation, brightness and contrast, and TNAM's tint amount and colour (neutral in the opening's interiors and day slots) |
+| `--light-vertex-normals` | `light_vertex_normals_v1` | the build keeps every rigid mesh's vertex normals and a lit draw is lit with the interpolated normal turned toward the eye (skinned and posed meshes keep the face normal) |
+
+An exterior frame of a climate with several weathers needs `--assume-weather N` for the image space as for the
+weather's light. In the vault at 560 s the exposure measures 1.529 (median 0.804) and scales lit colours by
+0.654: the sign reads, the textures show; the CPU render and the viewer agree (coverage 1.000000, same tag on
+every pixel, mean colour difference under one step with the vertex normals on). Not read: bloom, eye
+adaptation over time, depth of field (DNAM), the colour lookup texture (TX00), the sun's and sky's scales.
+
 ## What the renderers do
 
 `fo4_scene::light::frame` reads the scene's cell (interior or exterior by

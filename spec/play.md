@@ -299,9 +299,31 @@ the run's line choices outside scenes (the conditions of every candidate line at
 the record reads behind them (each read checks its plugin file on disk: about two thirds of the replay's wall
 time is system time). The headless walk now runs at about the speed of its input; a window adds drawing.
 
+## The elevator ride (the seen step; request to `fo4-play`)
+
+The walking world can now carry the walker on the vault elevator's platform (`spec/walk.md`, Platforms;
+checked headless by `ride_check`, not by `play_run`). For `play_run` and the window to do it, `fo4-play` (not
+edited by that step) would, behind a switch of its own:
+
+1. build, beside the cell's walking world, the collision of the references a caller names (or every placed
+   reference whose model holds controller sequences moving a node with collision) with
+   `fo4_scene::collision::instance_as_stored`, split by the nodes a sequence moves (a source goes with the
+   first moving node of its `BodyCollision::chain`), each moving part a `WorldSet` piece;
+2. start a `fo4_walk::platform::Ride` for a piece when the run's animation graph enters the state that plays a
+   sequence moving it (the run's world model knows the state and the second: its names file records them; the
+   track is the node's translation keys from `fo4_scene::sequence::node_keys`), and call `Ride::advance` before
+   each walker tick;
+3. take the walker through the load door at the shaft's bottom when the ride ends (the caller's track changes
+   space at the descent's last second; the play mode's load door reading needs an activation).
+
+On `fo4-vm`'s side: the timeline should record the sequence a placed reference's graph starts
+(`spec/timeline.md`, The elevator second) so that frames and the play mode take the second from the run, not
+from its names file.
+
 ## What the play mode does not do yet
 
-- The elevators: the platforms have no placed collision and nothing rides them; the walk stops at the shaft.
+- The elevators: the platforms have no placed collision in the play mode's walking world and nothing rides
+  them; the walk stops at the shaft (the pieces exist in `fo4-walk`, above: not wired here).
 - Plain doors: no collision is placed for any door, so none blocks the walker; the open state is not read.
 - Moving collision with a node (an animated door, a platform) is not modelled; the live world moves only what
   the run moves.

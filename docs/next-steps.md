@@ -4,6 +4,7 @@ This page is the hand-over point. Everything on `main` builds and passes its tes
 agent) can continue from here. Read `AGENTS.md` first: it holds the rules of evidence and the clean-room rules.
 
 State on 2026-11-24 (vault, cast, light, home, character graph, fight, live window, museum, live world and run library steps). Nothing below has been checked against the running game: every behaviour is a pending
+State on 2026-11-24 (vault, cast, light, home, character graph, fight, live window, museum, live world and seen steps). Nothing below has been checked against the running game: every behaviour is a pending
 rule in `spec/hypotheses.tsv`, off by default.
 
 ## Script VM and quests (`crates/fo4-vm`)
@@ -46,7 +47,10 @@ What is left:
    which moves the opening's scenes past the caller's track and gates (the opening then stops at 31 stages): the
    opening's track and gates would need retiming before the reading can apply everywhere.
 8. The timeline's deaths and sits (`--timeline-deaths`, `--timeline-sits`, `spec/timeline.md`) are written as
-   `event` lines; the frame does not read them yet (a killed actor is still drawn standing).
+   `event` lines and frames read them (the seen step, below); the run seats nobody but the player, and its
+   player sits are not ended by the walk (0 to 190 s and 190 to 700 s span walks). The timeline does not
+   record the sequences a reference's graph starts (the elevator's descent): a `sequence REF NAME` event line
+   is proposed in `spec/timeline.md`, The elevator second.
 
 Character behaviour graphs (`char_graph_census`, `spec/character-graph-census.txt`; `char_start_clip_census`,
 `spec/character-graph.md`): a race names its behaviour project; the readers now follow a graph from its root
@@ -96,9 +100,12 @@ graph reaches from its root (a standing idle) instead of the rest pose; the CPU 
 agree (vault frame at 560 s: coverage 1.000000, same tag on every pixel). What is left:
 
 1. Actors whose base has a template (3 in the opening): read which template supplies keywords.
-2. Sitting: the timeline does not say who sits on what (its writer is `fo4-vm`'s); furniture keywords pick a
-   subgraph entry in 509 of 782 furniture records and the furniture graph starts in a sitting idle, but where on
-   the furniture the actor sits (the model's markers) is not read.
+2. Sitting and death (seen step, `spec/timeline.md`, Deaths and furniture): behind switches a dead actor is
+   left out or drawn lying (a placeholder: the race's death clips are chosen on events the run does not raise,
+   the ragdoll is physics), and an actor the run seats stands at its furniture's nearest marker (FURN SNAM)
+   posed by its race's furniture entry. The run seats only the player, so the sit pose is exercised by
+   synthetic tests only; next: a package-driven sit in the run, and a death clip if an event reading ever
+   picks one.
 3. Everything after the start state: transitions on events (dialogue, alarm, walking), blends of several
    children, bone-weighted and additive layers, the offset clip; the clip's start second is the run's second 0.
 4. A viewer window path (the poses are headless only, as the rest of `--timeline`).
@@ -161,6 +168,15 @@ What the frames show is missing, in order of what blocks a playable opening:
    placements' cells, globals and bases read once; `spec/play.md`, Costs), now mostly the walking world's
    rebuilds about the walker (`--play-follow-grid`, decompressing the cells' models) and the condition
    evaluator's line choices: about real time over this walk headless, not yet in a window.
+   elevator shaft at 416.5 s (the platform has no placed collision). Seen step: the shaft is an animated
+   activator whose collision is refused with the walkway's static; placed as stored and split by the nodes its
+   descent sequence moves (`spec/walk.md`, Platforms) they hold the walker on the platform at the top and carry
+   it down 4,140 units from the second the run enters the descent's state (`ride_check`, headless; the second
+   taken from the run's names file). Next: `fo4-play` building those pieces and starting the ride from the
+   run's state (request in `spec/play.md`, The elevator ride), the timeline recording sequence starts, the
+   enable state of collision-marker boxes, the load door at the shaft's bottom; the run's cost (`fo4-vm`'s distance dues search
+   every placement each turn: 407 s for 480 s of input); the lines' audio; then the library run in `fo4-vm`
+   (`spec/play.md`, Request) so `fo4-play` stops compiling the example.
 2. Characters stand in the rest pose (arms out) and do not move between the run's places. Next: the run's
    animation events and packages to clips (the character graph classes the readers do not read yet,
    `spec/character-graph-census.txt`), a walk between places. 13 actors are still markers: 9 whose outfit
@@ -177,11 +193,13 @@ What the frames show is missing, in order of what blocks a playable opening:
 5. Lighting and sky (light step, `spec/light.md`): behind nine switches, off by default, frames are lit from the
    data under pending rules (interior cell light and its template's inherited fields, placed lights as points,
    fog; outside, the climate's one weather at the caller's `--assume-hour`: sky gradient, ambient cube, fog).
-   What is still wrong: the vault is washed out (379 placed lights summed without tone mapping or exposure, the image
-   space record not read), surfaces are flat-shaded (face normals; no vertex normals, normal maps, specular or
-   shadows), no sun or moon light (the data stores no direction for it), no clouds, spots drawn as points. Next:
-   read the image space (exposure and tone curve) and the vertex normals; the light bench of
-   `spec/light-measurement.md` would settle the falloff.
+   Seen step: behind switches an exposure from the light on what the camera sees (`--exposure-eye`), the image
+   space's white, cinematic values and tint (`--exposure-white`, `--exposure-cinematic`; labels are prior
+   knowledge) and vertex normals (`--light-vertex-normals`): the vault at 560 s reads (scale 0.654), CPU and
+   viewer agree. What is still wrong: no normal maps, specular or shadows, no sun or moon light (the data stores
+   no direction for it), no clouds, spots drawn as points, no bloom or adaptation over time; the exposure's
+   measure is chosen. Next: the light bench of `spec/light-measurement.md` would settle the falloff, a
+   measurement of the game's response the exposure.
 6. The run itself stops at stage 1000 (Script VM and quests, above).
 
 ## Measurements wanted

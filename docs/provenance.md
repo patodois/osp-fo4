@@ -888,3 +888,28 @@ hot spots were found with the operating system's sampling profiler on the
 repository's own runs. No public page was requested; no editor, editor
 source or definition file, other implementation, game executable or game run
 was opened or searched for.
+The seen step (`fo4_scene::furniture`, `fo4_scene::sequence`, the timeline's
+death and sit readings, `collision::instance_as_stored`, the exposure and
+vertex normals of `fo4_scene::light` and the renderers, `fo4_walk::platform`,
+the `seen_census` and `ride_check` examples; [spec/seen-census.txt](../spec/seen-census.txt),
+[spec/timeline.md](../spec/timeline.md), Deaths and furniture and The elevator
+second, [spec/walk.md](../spec/walk.md), Platforms,
+[spec/light.md](../spec/light.md), Exposure) measured two record shapes with
+the repository's own readers: FURN `SNAM` (entries of 20 or 24 bytes, every
+one of the 782 records read; the count against `MNAM`'s bits) and IMGS
+`HNAM`, `CNAM`, `TNAM` (nine, three and four f32, ranges over the 334
+records). The NIF blocks (controller sequences, transform data, furniture
+marker blocks, collision objects) and the Havok objects (clip generators,
+node names, event names, ragdoll classes counted by their stored class names)
+are read by the existing readers. Recognised from prior general knowledge and
+kept as pending rules: that the SNAM floats are a marker's offset and heading
+and word 2 subgraph entries are furniture; that the image space's HNAM word 5
+is a white point, CNAM saturation, brightness and contrast and TNAM a tint's
+amount and colour, and the formulas applied with them (an extended
+photographic tone curve, a grey-preserving saturation); that the eye adapts
+to the light of what it sees; that a dead body lies on the ground and that
+death clips and ragdolls are chosen by the engine on events; that a collision
+marker's box is solid; that a platform carries what stands on it; that the
+game lights surfaces with their vertex normals. No source was consulted (no
+network), and no editor, editor source or definition file, other
+implementation, game executable or game run was opened or searched for.

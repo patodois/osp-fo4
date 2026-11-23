@@ -362,6 +362,40 @@ window: Shift changes the walker's speed from the walk to the run speed,
 and a drag with the left button turns the heading the walker then walks
 along.
 
+## Platforms
+
+`fo4_walk::platform` (the seen step; every reading a pending rule, used by `ride_check`, not by the play mode
+yet):
+
+- `walk_collision_marker_box_v1`: a placed reference whose base is a static with no model and which stores a
+  32-byte `XPRM` of kind word 1 is a solid box (half extents the bound words times the scale, centred, rotated),
+  added as one hull (`marker_boxes`, `add_boxes`). Its enable state is reported, not applied.
+- `walk_animated_model_collision_as_stored_v1`: `fo4_scene::collision::instance_as_stored` places one
+  reference's collision whatever its readiness says (an animated model), each node at its stored transform.
+- `walk_platform_sequence_ride_v1`: a piece of a `WorldSet` moves along a track of translations (`Ride`); a
+  walker grounded on the piece moves by the same amount before each tick. The track is what a controller
+  sequence's translation keys do to a node (`fo4_scene::sequence`), from the second the caller gives.
+
+Checked on the opening's vault elevator (`ride_check`, outputs outside git): the walking world of the vault's
+exterior cell and the cells about it as the play mode builds it, the walker started where the walked opening
+stood at 410.5 s and steered to the caller's three points, then standing; the shaft's collision split by the
+nodes the descent sequence moves (the platform's 25 collision sources, one per hatch, 10 still), the ride from
+the second the run enters the descent's graph state (481.567 s, from the run's names file):
+
+| Variant | Walking world | Where the walker is at 502 s |
+| --- | --- | --- |
+| as the play mode builds it | placed collision and terrain | falls into the shaft at 416.25 s, as the walked opening did |
+| with the collision-marker boxes | + 9 boxes | falls at 416.25 s: the gap between the walkway and the box is 270 units |
+| with the shaft as stored | + the shaft's still parts and the moving parts at the descent's start | falls at 416.25 s: the walkway is not there |
+| with the shaft and the walkway's static as stored | + the walkway | walks onto the platform at 417.5 s (8,970.9, the caller's point 8,971.9), stands, rides down 4,140 units from 481.567 s to 500.234 s, grounded on the platform at the shaft's bottom (4,826.6); in the last half second the walker slides about 130 units sideways at the bottom |
+| the same with the collision-marker boxes | + 9 boxes (still) | stopped at 8,967.4 by an initially disabled gate box (enable state not applied): never reaches the platform |
+
+The descent ends at the second the caller's recorded track changes space through the load door at the shaft's
+bottom (500.234 s): what takes the walker through that door is not modelled (the play mode's load door reading
+needs an activation; the caller's track passes it). Not done: applying the boxes' and the shaft's enable state,
+the play mode building these pieces (`fo4-play`, request in `spec/play.md`), the hatches' collision closing
+over the walker's head (it does not happen in this ride: the walker stands on the platform below them).
+
 ## Open
 
 | Question | Status |
