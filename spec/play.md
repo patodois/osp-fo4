@@ -299,31 +299,68 @@ the run's line choices outside scenes (the conditions of every candidate line at
 the record reads behind them (each read checks its plugin file on disk: about two thirds of the replay's wall
 time is system time). The headless walk now runs at about the speed of its input; a window adds drawing.
 
-## The elevator ride (the seen step; request to `fo4-play`)
+## The elevator ride (`--play-elevator`)
 
-The walking world can now carry the walker on the vault elevator's platform (`spec/walk.md`, Platforms;
-checked headless by `ride_check`, not by `play_run`). For `play_run` and the window to do it, `fo4-play` (not
-edited by that step) would, behind a switch of its own:
+The seen step showed the walking world can carry the walker on the vault
+elevator's platform (`spec/walk.md`, Platforms; `ride_check`). The play mode
+now does it from the run's state, headless (the window does not take the
+switches; `crate::elevator`):
 
-1. build, beside the cell's walking world, the collision of the references a caller names (or every placed
-   reference whose model holds controller sequences moving a node with collision) with
-   `fo4_scene::collision::instance_as_stored`, split by the nodes a sequence moves (a source goes with the
-   first moving node of its `BodyCollision::chain`), each moving part a `WorldSet` piece;
-2. start a `fo4_walk::platform::Ride` for a piece when the run's animation graph enters the state that plays a
-   sequence moving it (the run's world model knows the state and the second: its names file records them; the
-   track is the node's translation keys from `fo4_scene::sequence::node_keys`), and call `Ride::advance` before
-   each walker tick;
-3. take the walker through the load door at the shaft's bottom when the ride ends (the caller's track changes
-   space at the descent's last second; the play mode's load door reading needs an activation).
+1. `--play-elevator REF` (repeated) builds, beside the walking world of the
+   reference's space, its collision placed as stored
+   (`walk_animated_model_collision_as_stored_v1`), split by the nodes its
+   model's controller sequences move by translation keys: a source goes with
+   the moving nodes in its body's chain (their offsets added), the rest stay
+   still; `--play-elevator-also REF` places another reference's collision as
+   stored, still (the walkway's static). The pieces are put in again whenever
+   the walking world is built again in that space (the moving grid, a load
+   door back) and left out of another space's.
+2. The run records the sequences its graphs start (`fo4_vm`'s
+   `anims.started`, the same list `--timeline-sequences` writes): when it
+   starts one on a named reference, each moving node follows that sequence's
+   translation keys from that second (sampled 60 times a second; the stored
+   translation taken off; turned by the placement) and holds its last key
+   after; a node the sequence does not key keeps its place; before any, a
+   node stands at its stored transform (`play_elevator_run_sequence_v1`). A
+   grounded walker on a moving part is carried (`walk_platform_sequence_ride_v1`).
+   While a platform is named, standing slices last at most 0.1 s (the run's
+   graph may start a sequence inside one; the platforms read it between
+   slices), and the walker ticks while a part moves under it.
+3. `--play-elevator-door` (with `--play-load-doors` and `--play-reach`): when
+   a part that carried the walker reaches its track's end with the walker on
+   it, the load door nearest the walker's feet among the walking world's
+   load doors placed inside the named reference's collision box (grown by
+   the reach) takes the walker through as its activation would; the run gets
+   no activation (`play_elevator_end_load_door_v1`).
 
-On `fo4-vm`'s side: the timeline should record the sequence a placed reference's graph starts
-(`spec/timeline.md`, The elevator second) so that frames and the play mode take the second from the run, not
-from its names file.
+**The opening walked again** (`efin` in the step's notes; the live world step's
+`o4` command line plus `--play-elevator` on the outside shaft and the
+interior elevator, `--play-elevator-also` on the walkway, `--play-elevator-door`;
+its input carried on past 480 s, and from 510.7 s to 700 s by `toward`
+commands along the caller's recorded track inside the vault): the walker
+steps onto the platform at 417 s (it waited at the top: the run's graph
+started the shaft's sequences at 190, 377.7 and 381.6 s, which raise it
+from its stored place), stands, is carried down 4,140 units from 481.6 s
+(the descent the run's graph starts) to 500.2 s, where the shaft's door
+(1,626 units above: the caller's recorded track rode only to its height)
+takes it into the vault's elevator; the interior elevator, whose descent the
+run's graph starts as the walker arrives (500.2 s), carries it down to its
+bottom by 510.1 s. Against the recorded run (the live window step's furthest
+run): **204 of 204 stages to 500 s in the same order** (before: 197 of 202 to
+480 s, the walker falling into the shaft at 416.5 s), 158 at the same second,
+the others from 0.096 s earlier to 0.033 s later; to 520 s 209 of 210 (one
+opening stage the recorded run sets before 520 s is missing). At about 520 s the
+walker, walking off the interior platform toward the vault along the
+recorded track, falls (not investigated: a gap between the platform and the
+vault's floor in the walking world, perhaps the elevator's own gate or the
+vault's first door, which hold no collision here); past 520 s the walk is
+lost (220 of 232 stages to 700 s, the rest after the fall).
 
 ## What the play mode does not do yet
 
-- The elevators: the platforms have no placed collision in the play mode's walking world and nothing rides
-  them; the walk stops at the shaft (the pieces exist in `fo4-walk`, above: not wired here).
+- The elevators ride only headless, and only those the caller names (`--play-elevator`); only a sequence's
+  translations are read; the window does not take the switches; past the interior elevator the walker falls
+  (above).
 - Plain doors: no collision is placed for any door, so none blocks the walker; the open state is not read.
 - Moving collision with a node (an animated door, a platform) is not modelled; the live world moves only what
   the run moves.
@@ -348,3 +385,5 @@ from its names file.
 | `play_load_door_activation_v1` | `--play-load-doors` | `XTEL` read as `world_load_door_xtel_v1` reads it; that activation teleports at once is prior knowledge; facing not applied | weak |
 | `play_region_around_walker_v1` | `--play-region-walker` | the run's own bound about the caller's track, kept about the walker; the game's loaded area is not modelled | weak |
 | `play_activate_bounds_not_static_v1` | `--play-pick-bounds-activatable` | that statics are not activated is prior knowledge; needed because a static's box holds the activator whole | weak |
+| `play_elevator_run_sequence_v1` | `--play-elevator REF` (with `--play-elevator-also REF`) | the run's graph starts the named reference's sequences (`anims.started`); the parts follow their translation keys; that a platform moves with the sequence its graph plays and carries its rider is prior knowledge | weak |
+| `play_elevator_end_load_door_v1` | `--play-elevator-door` | the descent ends at the second the caller's recorded track changes space at the shaft's door; which door and when are this reading's | weak |

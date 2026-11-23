@@ -3027,6 +3027,122 @@ sets the museum quest's 79 and with it the next main quest's 123.
   quest of the town; 300 is the other way (the player skips the robot); 500
   its death; 1000 has no setter.
 
+## The third fight
+
+([quest-run-third-census.txt](quest-run-third-census.txt) is the census of
+what the data holds behind the stops (`third_census`, command line in
+`docs/provenance.md`); [quest-run-third.txt](quest-run-third.txt) records
+the run; [quest-run-vault-stages.txt](quest-run-vault-stages.txt) maps every
+stage; the command lines and the records named are in the step's notes.)
+The step past the museum stopped the next main quest at 40 of 54: the third
+fight's five raiders are held by the next main quest's aliases, which are
+filled from the museum quest's aliases, which create their actors.
+
+**Created and borrowed aliases (122).** 1,751 reference aliases (and 176
+collection aliases) are created at run time: `ALCO` names the base (an
+`NPC_` in 1,516), `ALCA`'s low half an alias of the same quest where it is
+created (a linked alias 1,039, a location's reference 433, a forced
+reference 243: placed markers, containers, furniture), its high half 0 or
+0x8000, `ALCL` a word of 0 to 4. 508 reference aliases (24 collection, 16
+location) are filled from another quest's alias (`ALEQ`, `ALEA`); in 436 of
+them flag bit 0x100000 is set (not read). The next main quest's six borrow
+the museum quest's five created raiders and its creature (a unique actor).
+The museum quest starts about 600 s after the next main quest, so a fill
+made once when the borrowing quest starts would leave them empty: the
+reading taken is a live link (`--alias-external`). A created alias holds
+one run-only reference, made when first read and kept while its quest runs:
+no record, no scripts of its own, alive until the run kills it
+(`--alias-created-refs`); where it is created and its level are not read.
+A run-only reference has no record key a caller's death could name, so the
+fight assumptions also take an alias, `EDITOR_ID#ALIAS`: the reference the
+alias holds at that second (nothing raised, counted, when it holds none).
+The caller kills the five raiders one second apart after the creature
+(1945 to 1949 s): each death reaches the borrowing alias's script (and the
+creating alias's own), whose handler counts the dead through a global and
+asks `IsDead` of the five; the fifth sets 122 at 1949 s, and the town
+quest's 70 and 75 set 130 at once.
+
+**The scene with no starter found (125, 127).** A scan of every winning
+record for a word naming the scene (2,189,079 records, `third_census`
+section 3) finds two: a scene collection's `SNAM` (named in turn only by a
+navigation mesh) and the next main quest's VMAD, a property of its fragment
+script that a fragment starts: stage 135's (the earlier scans followed
+`Start` calls on properties only through the setter table, which lists
+stages set, not scenes started). 135 is the lobby trigger after 130: with
+the caller's entry into it (1960 s, held until 130; the walk does not go back
+into the museum) the fragment starts the scene: 125 as it begins (1960 s),
+127 as it ends (1966.5 s).
+
+**A line's own script (128, 150).** The line whose own script sets 128 is
+the town leader's greeting in the town's dialogue quest (a topic info
+script setting a stage as the line begins). Its begin and end are now
+delivered to the scripts the line's record attaches of its own
+(`--line-script-events`): `OnBegin(speaker, said)` as it begins and
+`OnEnd(speaker, said)` as it ends, on the line's handle. With the caller's
+conversation with the leader after the lobby scene (1970 s, held until 127;
+the caller's line), 128 is set at 1970 s; the line's start scene field
+starts the reward scene, and two of its lines' own scripts set 150 at
+2077.5 s (the town's dialogue quest's 40, 50 and 100 with it).
+
+**What stops next.** 140 and 200: the town chain's next quests (their stage
+fragments set 140, 150 and 200), not started in the run; the town dialogue
+quest's 50 fragment sets a stage of one of them that its record does not
+hold, which leaves that quest's state undetermined (the run's treatment of a
+missing stage, unchanged); 200 also from the town dialogue quest's 200, set
+by those fragments or an alias's location change event (not modelled). 62
+the musket picked up (a container change, not delivered); 78 behind the
+locked inner door and off from 85; 75 and 1000 no setter.
+
+**The robot's quest.** 275 is a line's own script too (a companion line of
+another quest, not played in the run). 250 waits on the fourth conversation
+back at the robot's home, whose line group asks condition function 566:
+5,986 conditions of that function (5,893 in lines), every one compared with
+`==` against 1 (5,935) or 0 (51); the first parameter is zero (1,511), a
+number below 0x800 (8 to 84; 910) or a record of 17 types (statics 2,426,
+doors 227, actor bases 225, misc items 206, ...); run on the subject
+(5,267) or the target (646). Nothing in the data says what is compared, so
+the function stays unanswered.
+
+**The opening's failsafe timer.** The `--timers 50` budget of the earlier
+runs is spent by the opening quest's one-second timer that starts itself
+again (all 50 firings, within the run's first 51 seconds); the museum quest's 300 s
+failsafe, started at 76 (about 1920 s), would fall due after 2220 s, after
+the trigger that sets 77 at 1923.2 s: no change was made.
+
+**The drawing side's requests.** The run now records the sequences its
+graphs start (`fo4_vm::anim::Anims::started`: second, reference, the
+sequence's name as the model stores it) and the timeline writes them as
+`event` lines `sequence REF NAME` with `--timeline-sequences` (output only;
+REF `-` for an object that is no record): in the furthest run the outside
+shaft's at 190, 377.7, 381.6, 475 and 481.6 s (the descent) and the interior
+elevator's at 500.2 and 524.1 s. The player's sit ends when the track walks
+away (`--sit-end-walk UNITS`, with `--sit-events`): with 150 units the
+furthest run's player gets up at 18 s and 248.3 s and every stage is set as
+before. The play mode's elevator ride: `spec/play.md`, The elevator ride.
+
+| Switch | Reading | Rule |
+| --- | --- | --- |
+| `--alias-created-refs` | a created alias holds one run-only reference while its quest runs (no record, no scripts, alive until killed) | `quest_alias_created_reference_v1` |
+| `--alias-external` | an alias filled from another quest's alias holds what that alias holds whenever it is read | `quest_alias_external_live_v1` |
+| `--line-script-events` | a line the run plays delivers its begin and end to the scripts its record attaches of its own | `dialogue_line_script_events_v1` |
+| `--sit-end-walk UNITS` (with `--sit-events`) | the player's sit ends, as a get-up, when the track takes the player farther than UNITS from the furniture's stored position | `vm_sit_ended_by_track_v1` |
+| `--timeline-sequences` | the timeline writes the sequences the graphs start (output only) | - |
+| fight assumptions on `EDITOR_ID#ALIAS` | the reference an alias holds at that second | caller assumption |
+
+- Reached: the next main quest **47 of 54** (adds 122, 125, 127, 128, 130,
+  135, 150), the town quest 12 (adds 70, 80), the town's dialogue quest 7
+  (adds 40, 50, 100); the robot's quest 10 of 16, the vault dialogue quest
+  10 of 18 and the opening 87 of 104 unchanged; every stage the step past
+  the museum set is set again at the same second, in the same order but
+  for one pair: at 1940 s 123 now comes from the next main quest's own
+  borrowed alias of the creature (its death handler), just before the
+  museum quest's 79, whose fragment set it before.
+- Variants (one left out; next main quest stages): without
+  `--alias-created-refs` or `--alias-external` the deaths name aliases that
+  hold nothing (not raised) and the run stops where it did (40); without the
+  deaths 40; without the lobby trigger 42; without the conversation or
+  `--line-script-events` 45.
+
 ## Conditions
 
 `fo4_vm::cond` evaluates the condition lists read by
@@ -3726,3 +3842,25 @@ recognised from editor ids read in the notes only. No public page was
 requested. No editor, editor source or definition file, other interpreter,
 script extender, decompiler or the game executable was opened or searched
 for. The game was not run.
+
+## Provenance of the third fight step
+
+Every count was measured with the repository's own readers on the installed
+data: the created and borrowed aliases, the words naming the lobby scene in
+every winning record and condition function 566 with `third_census`, the
+compiled scripts with the repository's disassembler (the step past the
+museum's notes), the run with `quest_run` and the play mode with
+`play_run`; the records named in the notes with a local probe (never
+versioned). Recognised from prior general knowledge, used only as pending
+rules that are off by default or as caller assumptions: that a created alias
+holds a new reference of its base (its place and level not read), that a
+borrowed alias holds what the other quest's alias holds (read as a live
+link, against the knowledge that such fills are made at the quest's start),
+that a line's own script receives the line's begin and end with the speaker
+and whether the line was said before, that walking away ends a sit, that a
+platform moves with the sequence its graph plays and carries its rider, and
+that an elevator's end takes the player through its door. The raiders, the
+lobby, the leader, the reward and the elevators were recognised from editor
+ids read in the notes only. No public page was requested. No editor, editor
+source or definition file, other interpreter, script extender, decompiler
+or the game executable was opened or searched for. The game was not run.

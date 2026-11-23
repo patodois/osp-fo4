@@ -4,6 +4,7 @@ This page is the hand-over point. Everything on `main` builds and passes its tes
 agent) can continue from here. Read `AGENTS.md` first: it holds the rules of evidence and the clean-room rules.
 
 State on 2026-11-24 (vault, cast, light, home, character graph, fight, live window, museum, live world, run library, seen, past-the-museum and faces steps). Nothing below has been checked against the running game: every behaviour is a pending
+State on 2026-11-24 (vault, cast, light, home, character graph, fight, live window, museum, live world, run library, seen, past-the-museum and third-fight steps). Nothing below has been checked against the running game: every behaviour is a pending
 rule in `spec/hypotheses.tsv`, off by default.
 
 ## Script VM and quests (`crates/fo4-vm`)
@@ -34,34 +35,48 @@ same stages at the same seconds. The caller still gives the walk's waypoints, th
 conversations with the robot and their lines, the player's choices, the speech check's condition, the robot's
 food event, the player's own events, the fights' events, the inner door's activation, the terminal's item (or
 the gate's unlock), the core put into the power armour, the two activations, the player's strength and the walk
-off the meshes from the balcony to the roof and down to the street.
+off the meshes from the balcony to the roof and down to the street. The third fight's step (record in
+`spec/quest-run-third.txt`, census `spec/quest-run-third-census.txt`, `spec/vm.md`, The third fight): behind
+their own switches a created alias holds a run-only reference (`--alias-created-refs`) and a borrowed alias what
+the other quest's alias holds when read (`--alias-external`), the caller's deaths name an alias
+(`EDITOR_ID#ALIAS`), and a line's begin and end reach the line's own scripts (`--line-script-events`); with the
+five raiders' deaths, the caller's entry into the lobby trigger (whose stage 135 fragment starts the scene no
+scan had named a starter for) and the caller's conversation with the town's leader, the next main quest reaches
+**47 of 54** (adds 122, 125, 127, 128, 130, 135, 150).
 What is left:
 
-1. After 123: 122, the third fight's five raiders: the next main quest's aliases are filled from the museum
-   quest's aliases (`ALEQ`, not read), which create their actors (`ALCO`, not read; a created actor has no record
-   a caller's death can name); then 130 (needs 122 and 123), 135 (a trigger after 130), 140, 150 and 200 (other
-   quests' stages after it); 125 and 127 a scene no scan names a starter for; 128 and the robot's 275 a line's
-   own script (begin and end events not delivered); 62 a container change (the musket picked up).
+1. After 150: 140 and 200, the town chain's next quests (their stage fragments set 140, 150 and 200) are not
+   started in the run; the town's dialogue quest's 50 fragment sets a stage of one of them that its record does
+   not hold (the quest's state is left undetermined: the run's treatment of a missing stage); 200 also from the
+   town dialogue quest's 200 (an alias's location change event, not modelled); 62 a container change (the
+   musket picked up); 78 behind the locked inner door; the robot's 275 a line's own script of a companion line
+   the run does not play. The created reference's place (`ALCA`) and level (`ALCL`) are not read, and the
+   borrowed alias is a live link against the knowledge that such fills are made at the quest's start.
 2. The robot's 250: a fourth conversation after the next main quest's 55, back at its home (the run does not
-   walk back); the follower lines' group also asks condition function 566, which the run does not answer (a
-   labelled variant assuming both from the town sets 250: `spec/quest-run-museum.txt`, section 7).
+   walk back); the follower lines' group also asks condition function 566, which the run does not answer: its
+   5,986 conditions compare with 1 or 0 a first parameter that is zero, a small number or a record of 17 types,
+   and nothing in the data says what is compared (`spec/quest-run-third-census.txt`, section 4; a labelled
+   variant assuming both from the town sets 250: `spec/quest-run-museum.txt`, section 7).
 3. The fights themselves: nothing aims, loses health or decides to attack; no active magic effect receives an
    event; `GetDeadCount` and health natives are not answered.
 4. The walk is checked against the census by hand (a script in the step's notes): the run itself does not stop
    a track at a locked door, and `track_plan` does not avoid doors or triggers; a planner that avoids the
    volumes the census closes would let the walk come from the data.
-5. The elevator ride: the interior elevator's graph starts in a state that takes only the descent event, so the
-   ascent is not played; reading the platform's motion would let the ride come from the data.
+5. The elevator ride (`spec/play.md`, The elevator ride): the play mode moves the collision of the
+   references the caller names as the sequences the run's graph starts move their nodes (translations only);
+   the outside descent leaves the walker 1,626 units below the shaft's door, which the end-door reading takes
+   (the caller's recorded track rode only to the door's height); past the interior elevator the walker falls.
 6. The player's own animation events and the robot's food event still come from the caller: reading character
    graphs (below) would let them come from the data.
 7. `--cond-70-player-sex` over the whole run settles 31 line choices of the opening and times them by their audio,
    which moves the opening's scenes past the caller's track and gates (the opening then stops at 31 stages): the
    opening's track and gates would need retiming before the reading can apply everywhere.
 8. The timeline's deaths and sits (`--timeline-deaths`, `--timeline-sits`, `spec/timeline.md`) are written as
-   `event` lines and frames read them (the seen step, below); the run seats nobody but the player, and its
-   player sits are not ended by the walk (0 to 190 s and 190 to 700 s span walks). The timeline does not
-   record the sequences a reference's graph starts (the elevator's descent): a `sequence REF NAME` event line
-   is proposed in `spec/timeline.md`, The elevator second.
+   `event` lines and frames read them (the seen step, below); the run seats nobody but the player. With
+   `--sit-end-walk UNITS` the player's sits end when the track walks away (18 s and 248.3 s with 150 units),
+   and with `--timeline-sequences` the timeline writes `sequence REF NAME` event lines for the sequences the
+   graphs start (the proposal of `spec/timeline.md`, The elevator second; the reader there does not read them
+   yet).
 
 Character behaviour graphs (`char_graph_census`, `spec/character-graph-census.txt`; `char_start_clip_census`,
 `spec/character-graph.md`): a race names its behaviour project; the readers now follow a graph from its root
@@ -197,6 +212,12 @@ What the frames show is missing, in order of what blocks a playable opening:
    run's state (request in `spec/play.md`, The elevator ride), the timeline recording sequence starts, the
    load door at the shaft's bottom (faces step: the boxes' presence from the run's frame and the rider passing
    the terrain below the shaft are read behind `ride_check` switches, `spec/walk.md`, The ride's loose ends); the run's cost (`fo4-vm`'s distance dues search
+   taken from the run's names file). Third fight step: `fo4-play` builds those pieces and rides them from the
+   run's state (`--play-elevator`, `--play-elevator-also`, `--play-elevator-door`; `spec/play.md`, The elevator
+   ride): the opening walked headless now matches the recorded run's **204 of 204 stages to 500 s** in the same
+   order, rides down both elevators into the vault, then falls at about 520 s walking off the interior platform.
+   Next: what is missing between the interior platform and the vault's floor, the enable state of
+   collision-marker boxes, the elevator in the window; the run's cost (`fo4-vm`'s distance dues search
    every placement each turn: 407 s for 480 s of input); the lines' audio; then the library run in `fo4-vm`
    (`spec/play.md`, Request) so `fo4-play` stops compiling the example.
 2. Characters stand in the rest pose (arms out) and do not move between the run's places. Next: the run's

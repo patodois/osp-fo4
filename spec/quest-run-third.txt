@@ -1,0 +1,48 @@
+# quest_run new-game at the third fight: the furthest run of the third fight's step (spec/vm.md, The third fight), kinds, roles and counts only.
+# The command lines and every record named are in the step's notes; the census behind each stop is spec/quest-run-third-census.txt; spec/quest-run-vault-stages.txt maps every stage.
+# Quests by role: the next main quest, the museum's own quest, the town quest (the leader's), the town's dialogue quest, the robot's postwar dialogue quest, the vault dialogue quest, the opening.
+
+## 1 what the run is
+base	the step past the museum's furthest run (spec/quest-run-onward.txt): every reading and caller assumption of it, with the additions below
+readings	--alias-created-refs --alias-external --line-script-events (each its own pending rule, off by default); --timeline-sequences (output only)
+caller	the five raiders' deaths, killed by the player, named by the next main quest's five aliases that borrow them (EDITOR_ID#ALIAS), one second apart from 1945 s, each held until the next main quest's 123 (--assume-death)
+caller	the player's entry into the lobby trigger at 1960 s, held until 130 (--assume-trigger-enter; the walk does not go back into the museum)
+caller	the player's conversation with the town's leader at 1970 s, held until 127, and the caller's line (his greeting in the town's dialogue quest) (--assume-talk, --assume-line)
+
+## 2 the stops in order: census, reading, what the run does
+122	five deaths	1,751 reference aliases created at run time (1,516 of an actor base); 508 filled from another quest's alias; the next main quest's six borrow the museum quest's five created raiders and its creature	a created alias holds one run-only reference while its quest runs (quest_alias_created_reference_v1); a borrowed alias holds what the other quest's alias holds when read (quest_alias_external_live_v1)	each death reaches the borrowing alias's handler (and the creating alias's own); the handler counts the dead through a global and asks IsDead of the five (false until killed); the fifth sets 122 at 1949 s
+130	other quests	-	-	the town quest's 70 (on 122) sets 130 with 123 done, at 1949 s; its 80 follows
+135	a trigger	-	the caller's entry into the lobby trigger (held until 130)	the trigger's default stage setter: 135 at 1960 s; its fragment starts the lobby scene
+125, 127	a scene's begin and end	2,189,079 winning records scanned for a word naming the scene: a scene collection (named in turn only by a navigation mesh) and the next main quest's VMAD, a property of its fragment script that stage 135's fragment starts	-	125 at 1960 s as the scene begins, 127 at 1966.5 s as it ends
+128	a line's own script	3,292 lines attach scripts of their own; the leader's greeting's script sets 128 as it begins	a line's begin and end reach the line's own scripts (dialogue_line_script_events_v1)	the caller's conversation: the greeting plays at 1970 s, 128; its start scene field starts the reward scene
+150	two lines' own scripts	-	(the same reading)	the reward scene's lines: the town's dialogue quest's 40 and 50 by their fields, then a line's own script sets 150 at 2077.5 s (the town's dialogue quest's 100 with it)
+
+## 3 stages reached (the step past the museum's run -> this run)
+54	next main quest: 40 -> 47 (adds 122, 125, 127, 128, 130, 135, 150)
+16	robot's postwar dialogue quest: 10 -> 10
+18	vault dialogue quest: 10 -> 10
+104	opening: 87 -> 87
+-	museum quest: 13 -> 13; town quest: 10 -> 12 (adds 70, 80); town's dialogue quest: 2 -> 5 (adds 40, 50, 100); the main quest after the next main quest starts and sets its 10 at 2077.5 s, with 150
+343	stages the step past the museum's run sets: the same at the same seconds, in the same order but for one pair: at 1940 s 123 now comes from the next main quest's own borrowed alias of the creature (its death handler) just before the museum quest's 79, whose fragment set it before
+
+## 4 variants (one reading or caller action left out each; next main quest stages)
+47	the furthest run (fin; rerun byte for byte as fin2)
+40	without --alias-created-refs: the borrowed aliases hold nothing; the five deaths are not raised (counted): no 122 and what follows
+40	without --alias-external: the same
+40	without the five deaths
+42	without the lobby trigger: 122 and 130, no 135 and what follows
+45	without the conversation: no 128, no reward scene, no 150
+45	without --line-script-events: the conversation plays the greeting and the reward scene (its fields set the town's dialogue quest's 40 and 50), but no 128 and no 150
+
+## 5 what stops next
+next main 140	the town chain's next quests' stage fragments: those quests are not started in the run; the town's dialogue quest's 50 fragment sets a stage of one of them that its record does not hold (its state left undetermined)
+next main 200	the same fragments, the next main quest's successor's stage 0, or the town's dialogue quest's 200 (an alias's location change event, not modelled)
+next main 62	the musket picked up: a container change event (not delivered)
+next main 78	behind the locked inner door and off from 85 (the museum step)
+next main 75, 1000	no setter
+robot 250	a fourth conversation back at the robot's home after the next main quest's 55; the follower lines' group asks condition function 566: 5,986 conditions compare with 1 or 0 a first parameter that is zero, a small number or a record of 17 types; nothing in the data says what is compared (not answered)
+robot 275	a line's own script of a companion line of another quest, which the run does not play
+robot 5	its 300 fragment, or a later quest's stage
+robot 300	the other way (the player skips the robot)
+robot 500	the robot's death (not assumed)
+robot 1000	no setter

@@ -958,3 +958,28 @@ hash is FNV-1a, a public-domain hash chosen for being deterministic and
 simple, not taken from any implementation of the game. No source was
 consulted (no network), and no editor, editor source or definition file,
 other implementation, game executable or game run was opened or searched for.
+
+The third fight's step (`fo4_vm::quest::held_more` and `alias_value`,
+`fo4_vm::player::holders_of`, `fo4_vm::line`'s own-script events,
+`fo4_vm::sit::end_by_track`, `fo4_vm::anim::Anims::started` and the timeline's
+`sequence` lines, `fo4_play::elevator`, the `third_census` example;
+[spec/vm.md](../spec/vm.md), The third fight, [spec/play.md](../spec/play.md),
+The elevator ride, [spec/quest-run-third-census.txt](../spec/quest-run-third-census.txt))
+reads the alias values `ALCO`, `ALCA`, `ALCL`, `ALEQ` and `ALEA` as
+`fo4-plugin` already read them, a line record's VMAD script list as
+`fo4-plugin` already read it, every winning record's subrecords as stored
+(for words naming a record) and the CTDA fields as `spec/conditions.md`
+reads them; the moving platforms use `fo4-scene`'s sequence and collision
+readers and `fo4-walk`'s ride as the seen step left them. The census command
+line: `third_census MANIFEST OUT NAMES --quest <the next main quest> --scene
+<the lobby scene> --scene <its scene collection> --function 566` (keys in the
+step's notes). Recognised from prior general knowledge and kept as pending
+rules or caller assumptions: that a created alias holds a new reference of
+its base, that a borrowed alias holds the other quest's alias's reference
+(taken as a live link), that a line's own script receives the line's begin
+and end with the speaker and whether it was said, that walking away ends a
+sit, that a platform moves with the sequence its graph plays and carries its
+rider, and that an elevator's end takes the player through its door. No
+public page was requested; no editor, editor source or definition file,
+other implementation, game executable or game run was opened or searched
+for.

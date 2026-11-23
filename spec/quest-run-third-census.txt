@@ -1,0 +1,274 @@
+# third_census: kinds and counts only (spec/vm.md, The third fight). Sections: 1 aliases created at run time; 2 aliases filled from another
+# quest's alias; 3 the records named on the command line (numbered): the records holding a word that names them; 4 one condition function's conditions.
+1705	1 aliases created at run time	ALCA high half	0x0000
+222	1 aliases created at run time	ALCA high half	0x8000
+1074	1 aliases created at run time	ALCL word	0
+542	1 aliases created at run time	ALCL word	1
+151	1 aliases created at run time	ALCL word	2
+47	1 aliases created at run time	ALCL word	3
+113	1 aliases created at run time	ALCL word	4
+176	1 aliases created at run time	by kind	collection alias
+1751	1 aliases created at run time	by kind	reference alias
+31	1 aliases created at run time	by the alias ALCA names (where it is created)	a created object
+243	1 aliases created at run time	by the alias ALCA names (where it is created)	a forced reference
+1039	1 aliases created at run time	by the alias ALCA names (where it is created)	a linked alias
+433	1 aliases created at run time	by the alias ALCA names (where it is created)	a location's reference
+50	1 aliases created at run time	by the alias ALCA names (where it is created)	a story event's data
+78	1 aliases created at run time	by the alias ALCA names (where it is created)	a unique actor
+30	1 aliases created at run time	by the alias ALCA names (where it is created)	another fill (conditions or none)
+23	1 aliases created at run time	by the alias ALCA names (where it is created)	another quest's alias
+14	1 aliases created at run time	by the created object's record type	ACTI
+15	1 aliases created at run time	by the created object's record type	ALCH
+3	1 aliases created at run time	by the created object's record type	AMMO
+7	1 aliases created at run time	by the created object's record type	ARMO
+72	1 aliases created at run time	by the created object's record type	BOOK
+11	1 aliases created at run time	by the created object's record type	CONT
+49	1 aliases created at run time	by the created object's record type	FURN
+12	1 aliases created at run time	by the created object's record type	HAZD
+8	1 aliases created at run time	by the created object's record type	IDLM
+23	1 aliases created at run time	by the created object's record type	KEYM
+17	1 aliases created at run time	by the created object's record type	LVLI
+4	1 aliases created at run time	by the created object's record type	LVLN
+73	1 aliases created at run time	by the created object's record type	MISC
+32	1 aliases created at run time	by the created object's record type	MSTT
+41	1 aliases created at run time	by the created object's record type	NOTE
+1516	1 aliases created at run time	by the created object's record type	NPC_
+16	1 aliases created at run time	by the created object's record type	PROJ
+3	1 aliases created at run time	by the created object's record type	SCOL
+7	1 aliases created at run time	by the created object's record type	STAT
+1	1 aliases created at run time	by the created object's record type	TERM
+3	1 aliases created at run time	by the created object's record type	WEAP
+5	1 aliases created at run time	flag bits	bit 0x1
+44	1 aliases created at run time	flag bits	bit 0x10
+24	1 aliases created at run time	flag bits	bit 0x100
+10	1 aliases created at run time	flag bits	bit 0x1000
+343	1 aliases created at run time	flag bits	bit 0x2
+1	1 aliases created at run time	flag bits	bit 0x20
+14	1 aliases created at run time	flag bits	bit 0x200
+38	1 aliases created at run time	flag bits	bit 0x200000
+149	1 aliases created at run time	flag bits	bit 0x4
+2	1 aliases created at run time	flag bits	bit 0x40
+9	1 aliases created at run time	flag bits	bit 0x400
+58	1 aliases created at run time	flag bits	bit 0x4000
+1	1 aliases created at run time	flag bits	bit 0x40000
+29	1 aliases created at run time	flag bits	bit 0x8
+464	1 aliases created at run time	flag bits	bit 0x80
+1	1 aliases created at run time	flag bits	bit 0x800
+753	1 aliases created at run time	flag bits	bit 0x8000
+1620	1 aliases created at run time	flag bits	bit 0x80000
+1	1 aliases created at run time	flag bits	bit 0x800000
+163	1 aliases created at run time	flag bits	no bit
+31	1 aliases created at run time	other values they carry	ALDN
+630	1 aliases created at run time	other values they carry	ALFC
+422	1 aliases created at run time	other values they carry	ALFI
+108	1 aliases created at run time	other values they carry	ALFV
+629	1 aliases created at run time	other values they carry	ALLA
+1086	1 aliases created at run time	other values they carry	ALPC
+93	1 aliases created at run time	other values they carry	ALSP
+15	1 aliases created at run time	other values they carry	COCT
+35	1 aliases created at run time	other values they carry	CTDA
+453	1 aliases created at run time	other values they carry	ECOR
+143	1 aliases created at run time	other values they carry	KSIZ
+1927	1 aliases created at run time	other values they carry	VTCK
+2	1 aliases created at run time	the forced reference they are created at: its record type and its base's	ACHR NPC_
+57	1 aliases created at run time	the forced reference they are created at: its record type and its base's	REFR CONT
+8	1 aliases created at run time	the forced reference they are created at: its record type and its base's	REFR FURN
+6	1 aliases created at run time	the forced reference they are created at: its record type and its base's	REFR IDLM
+167	1 aliases created at run time	the forced reference they are created at: its record type and its base's	REFR STAT
+3	1 aliases created at run time	the forced reference they are created at: its record type and its base's	no winning record no base
+1841	1 aliases created at run time	their quest starts with the game	false
+86	1 aliases created at run time	their quest starts with the game	true
+1	2 aliases filled from another quest's alias	by how the alias they name is filled	a collection alias: a created object
+6	2 aliases filled from another quest's alias	by how the alias they name is filled	a collection alias: a linked alias
+14	2 aliases filled from another quest's alias	by how the alias they name is filled	a collection alias: a location's reference
+3	2 aliases filled from another quest's alias	by how the alias they name is filled	a collection alias: another fill (conditions or none)
+34	2 aliases filled from another quest's alias	by how the alias they name is filled	a created object
+36	2 aliases filled from another quest's alias	by how the alias they name is filled	a forced reference
+33	2 aliases filled from another quest's alias	by how the alias they name is filled	a linked alias
+16	2 aliases filled from another quest's alias	by how the alias they name is filled	a location alias
+66	2 aliases filled from another quest's alias	by how the alias they name is filled	a location's reference
+8	2 aliases filled from another quest's alias	by how the alias they name is filled	a story event's data
+39	2 aliases filled from another quest's alias	by how the alias they name is filled	a unique actor
+292	2 aliases filled from another quest's alias	by how the alias they name is filled	another fill (conditions or none)
+24	2 aliases filled from another quest's alias	by kind	collection alias
+16	2 aliases filled from another quest's alias	by kind	location alias
+508	2 aliases filled from another quest's alias	by kind	reference alias
+2	2 aliases filled from another quest's alias	flag bits	bit 0x1
+39	2 aliases filled from another quest's alias	flag bits	bit 0x10
+7	2 aliases filled from another quest's alias	flag bits	bit 0x100
+21	2 aliases filled from another quest's alias	flag bits	bit 0x1000
+7	2 aliases filled from another quest's alias	flag bits	bit 0x10000
+436	2 aliases filled from another quest's alias	flag bits	bit 0x100000
+112	2 aliases filled from another quest's alias	flag bits	bit 0x1000000
+392	2 aliases filled from another quest's alias	flag bits	bit 0x2
+80	2 aliases filled from another quest's alias	flag bits	bit 0x200
+1	2 aliases filled from another quest's alias	flag bits	bit 0x2000
+13	2 aliases filled from another quest's alias	flag bits	bit 0x200000
+24	2 aliases filled from another quest's alias	flag bits	bit 0x4
+3	2 aliases filled from another quest's alias	flag bits	bit 0x40
+16	2 aliases filled from another quest's alias	flag bits	bit 0x4000
+1	2 aliases filled from another quest's alias	flag bits	bit 0x40000
+26	2 aliases filled from another quest's alias	flag bits	bit 0x8
+97	2 aliases filled from another quest's alias	flag bits	bit 0x80
+8	2 aliases filled from another quest's alias	flag bits	bit 0x8000
+20	2 aliases filled from another quest's alias	flag bits	bit 0x80000
+19	2 aliases filled from another quest's alias	flag bits	bit 0x800000
+74	2 aliases filled from another quest's alias	flag bits	no bit
+9	2 aliases filled from another quest's alias	other values they carry	ALDN
+16	2 aliases filled from another quest's alias	other values they carry	ALFC
+1	2 aliases filled from another quest's alias	other values they carry	ALFV
+15	2 aliases filled from another quest's alias	other values they carry	ALLA
+49	2 aliases filled from another quest's alias	other values they carry	ALPC
+8	2 aliases filled from another quest's alias	other values they carry	COCT
+4	2 aliases filled from another quest's alias	other values they carry	CTDA
+20	2 aliases filled from another quest's alias	other values they carry	ECOR
+21	2 aliases filled from another quest's alias	other values they carry	KSIZ
+532	2 aliases filled from another quest's alias	other values they carry	VTCK
+211	2 aliases filled from another quest's alias	their quest starts with the game, the quest named does	false, false
+229	2 aliases filled from another quest's alias	their quest starts with the game, the quest named does	false, true
+7	2 aliases filled from another quest's alias	their quest starts with the game, the quest named does	true, false
+101	2 aliases filled from another quest's alias	their quest starts with the game, the quest named does	true, true
+5	2 the quest's own borrowed aliases	a created object
+1	2 the quest's own borrowed aliases	a unique actor
+1	3 record 1	a script property naming it	in the quest's fragment script; whose script calls Start or ForceStart on it: true
+1	3 record 1	its flag word (FNAM)	bit 0x4
+1	3 record 1	its flag word (FNAM)	bit 0x8000
+1	3 record 1	its flag word (FNAM)	bit 0x80000
+1	3 record 1	its own quest (PNAM): record type, starts with the game	PACK, -
+1	3 record 1	words naming it by record type and tag	QUST	VMAD
+1	3 record 1	words naming it by record type and tag	SCCO	SNAM
+1	3 record 2	words naming it by record type and tag	NAVM	NVNM
+51	4 conditions of function 566	by comparison	the number 0
+5935	4 conditions of function 566	by comparison	the number 1
+502	4 conditions of function 566	by flag bits	bit 0x1
+25	4 conditions of function 566	by flag bits	bit 0x2
+5462	4 conditions of function 566	by flag bits	no bit
+5893	4 conditions of function 566	by host record type	INFO
+22	4 conditions of function 566	by host record type	PACK
+51	4 conditions of function 566	by host record type	QUST
+20	4 conditions of function 566	by host record type	SCEN
+74	4 conditions of function 566	by host type and first parameter	INFO	ACTI
+23	4 conditions of function 566	by host type and first parameter	INFO	BPTD
+2	4 conditions of function 566	by host type and first parameter	INFO	CELL
+52	4 conditions of function 566	by host type and first parameter	INFO	CONT
+31	4 conditions of function 566	by host type and first parameter	INFO	CPTH
+222	4 conditions of function 566	by host type and first parameter	INFO	DOOR
+22	4 conditions of function 566	by host type and first parameter	INFO	ECZN
+32	4 conditions of function 566	by host type and first parameter	INFO	GLOB
+203	4 conditions of function 566	by host type and first parameter	INFO	MISC
+24	4 conditions of function 566	by host type and first parameter	INFO	NOCM
+225	4 conditions of function 566	by host type and first parameter	INFO	NPC_
+15	4 conditions of function 566	by host type and first parameter	INFO	OVIS
+36	4 conditions of function 566	by host type and first parameter	INFO	RACE
+2387	4 conditions of function 566	by host type and first parameter	INFO	STAT
+51	4 conditions of function 566	by host type and first parameter	INFO	TXST
+2	4 conditions of function 566	by host type and first parameter	INFO	VTYP
+85	4 conditions of function 566	by host type and first parameter	INFO	WATR
+24	4 conditions of function 566	by host type and first parameter	INFO	a word that names no winning record
+122	4 conditions of function 566	by host type and first parameter	INFO	the number 11
+95	4 conditions of function 566	by host type and first parameter	INFO	the number 12
+110	4 conditions of function 566	by host type and first parameter	INFO	the number 13
+45	4 conditions of function 566	by host type and first parameter	INFO	the number 17
+61	4 conditions of function 566	by host type and first parameter	INFO	the number 19
+21	4 conditions of function 566	by host type and first parameter	INFO	the number 20
+61	4 conditions of function 566	by host type and first parameter	INFO	the number 26
+21	4 conditions of function 566	by host type and first parameter	INFO	the number 28
+19	4 conditions of function 566	by host type and first parameter	INFO	the number 36
+43	4 conditions of function 566	by host type and first parameter	INFO	the number 41
+7	4 conditions of function 566	by host type and first parameter	INFO	the number 42
+1	4 conditions of function 566	by host type and first parameter	INFO	the number 43
+5	4 conditions of function 566	by host type and first parameter	INFO	the number 44
+7	4 conditions of function 566	by host type and first parameter	INFO	the number 49
+16	4 conditions of function 566	by host type and first parameter	INFO	the number 66
+6	4 conditions of function 566	by host type and first parameter	INFO	the number 67
+16	4 conditions of function 566	by host type and first parameter	INFO	the number 68
+8	4 conditions of function 566	by host type and first parameter	INFO	the number 69
+4	4 conditions of function 566	by host type and first parameter	INFO	the number 70
+1	4 conditions of function 566	by host type and first parameter	INFO	the number 73
+1	4 conditions of function 566	by host type and first parameter	INFO	the number 74
+9	4 conditions of function 566	by host type and first parameter	INFO	the number 77
+95	4 conditions of function 566	by host type and first parameter	INFO	the number 8
+3	4 conditions of function 566	by host type and first parameter	INFO	the number 81
+4	4 conditions of function 566	by host type and first parameter	INFO	the number 84
+120	4 conditions of function 566	by host type and first parameter	INFO	the number 9
+1482	4 conditions of function 566	by host type and first parameter	INFO	zero
+1	4 conditions of function 566	by host type and first parameter	PACK	ACTI
+9	4 conditions of function 566	by host type and first parameter	PACK	STAT
+7	4 conditions of function 566	by host type and first parameter	PACK	WATR
+1	4 conditions of function 566	by host type and first parameter	PACK	the number 12
+1	4 conditions of function 566	by host type and first parameter	PACK	the number 19
+1	4 conditions of function 566	by host type and first parameter	PACK	the number 8
+2	4 conditions of function 566	by host type and first parameter	PACK	zero
+5	4 conditions of function 566	by host type and first parameter	QUST	DOOR
+3	4 conditions of function 566	by host type and first parameter	QUST	MISC
+10	4 conditions of function 566	by host type and first parameter	QUST	STAT
+3	4 conditions of function 566	by host type and first parameter	QUST	the number 11
+3	4 conditions of function 566	by host type and first parameter	QUST	the number 9
+27	4 conditions of function 566	by host type and first parameter	QUST	zero
+20	4 conditions of function 566	by host type and first parameter	SCEN	STAT
+5985	4 conditions of function 566	by operator	0
+1	4 conditions of function 566	by operator	1
+5267	4 conditions of function 566	by run-on word	0
+646	4 conditions of function 566	by run-on word	1
+1	4 conditions of function 566	by run-on word	2
+8	4 conditions of function 566	by run-on word	3
+15	4 conditions of function 566	by run-on word	4
+44	4 conditions of function 566	by run-on word	5
+5	4 conditions of function 566	by run-on word	8
+75	4 conditions of function 566	by the first parameter's kind	ACTI
+23	4 conditions of function 566	by the first parameter's kind	BPTD
+2	4 conditions of function 566	by the first parameter's kind	CELL
+52	4 conditions of function 566	by the first parameter's kind	CONT
+31	4 conditions of function 566	by the first parameter's kind	CPTH
+227	4 conditions of function 566	by the first parameter's kind	DOOR
+22	4 conditions of function 566	by the first parameter's kind	ECZN
+32	4 conditions of function 566	by the first parameter's kind	GLOB
+206	4 conditions of function 566	by the first parameter's kind	MISC
+24	4 conditions of function 566	by the first parameter's kind	NOCM
+225	4 conditions of function 566	by the first parameter's kind	NPC_
+15	4 conditions of function 566	by the first parameter's kind	OVIS
+36	4 conditions of function 566	by the first parameter's kind	RACE
+2426	4 conditions of function 566	by the first parameter's kind	STAT
+51	4 conditions of function 566	by the first parameter's kind	TXST
+2	4 conditions of function 566	by the first parameter's kind	VTYP
+92	4 conditions of function 566	by the first parameter's kind	WATR
+24	4 conditions of function 566	by the first parameter's kind	a word that names no winning record
+125	4 conditions of function 566	by the first parameter's kind	the number 11
+96	4 conditions of function 566	by the first parameter's kind	the number 12
+110	4 conditions of function 566	by the first parameter's kind	the number 13
+45	4 conditions of function 566	by the first parameter's kind	the number 17
+62	4 conditions of function 566	by the first parameter's kind	the number 19
+21	4 conditions of function 566	by the first parameter's kind	the number 20
+61	4 conditions of function 566	by the first parameter's kind	the number 26
+21	4 conditions of function 566	by the first parameter's kind	the number 28
+19	4 conditions of function 566	by the first parameter's kind	the number 36
+43	4 conditions of function 566	by the first parameter's kind	the number 41
+7	4 conditions of function 566	by the first parameter's kind	the number 42
+1	4 conditions of function 566	by the first parameter's kind	the number 43
+5	4 conditions of function 566	by the first parameter's kind	the number 44
+7	4 conditions of function 566	by the first parameter's kind	the number 49
+16	4 conditions of function 566	by the first parameter's kind	the number 66
+6	4 conditions of function 566	by the first parameter's kind	the number 67
+16	4 conditions of function 566	by the first parameter's kind	the number 68
+8	4 conditions of function 566	by the first parameter's kind	the number 69
+4	4 conditions of function 566	by the first parameter's kind	the number 70
+1	4 conditions of function 566	by the first parameter's kind	the number 73
+1	4 conditions of function 566	by the first parameter's kind	the number 74
+9	4 conditions of function 566	by the first parameter's kind	the number 77
+96	4 conditions of function 566	by the first parameter's kind	the number 8
+3	4 conditions of function 566	by the first parameter's kind	the number 81
+4	4 conditions of function 566	by the first parameter's kind	the number 84
+123	4 conditions of function 566	by the first parameter's kind	the number 9
+1511	4 conditions of function 566	by the first parameter's kind	zero
+5927	4 conditions of function 566	by the last word	-1
+3	4 conditions of function 566	by the last word	0
+10	4 conditions of function 566	by the last word	1
+23	4 conditions of function 566	by the last word	12
+1	4 conditions of function 566	by the last word	2
+1	4 conditions of function 566	by the last word	25
+1	4 conditions of function 566	by the last word	28
+1	4 conditions of function 566	by the last word	33
+15	4 conditions of function 566	by the last word	347046
+1	4 conditions of function 566	by the last word	36
+3	4 conditions of function 566	by the last word	5
+5986	4 conditions of function 566	by the second parameter	0
