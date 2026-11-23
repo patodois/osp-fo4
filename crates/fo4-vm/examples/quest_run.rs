@@ -564,6 +564,12 @@ fn count_clock(c: &mut Counts, steps: usize) {
                 "assumption from the command line: start-scene actions complete as they start",
             );
         }
+        if k.start_skipped {
+            bump(
+                c,
+                "switch: an action whose start phase was skipped starts with the first later phase it spans that is entered (--scene-actions-skipped-start)",
+            );
+        }
         if k.assume_first_line {
             bump(
                 c,
@@ -1007,6 +1013,20 @@ struct Then {
     /// Menu event registrations kept and the caller's menu events
     /// delivered (`fo4_vm::menu`, `--menu-events`).
     menu_events: bool,
+    /// Keywords of references (`fo4_vm::keyword`): read from the records
+    /// (`vm_keyword_records_v1`, `--keywords-records`) and changed by the
+    /// scripts (`vm_keyword_runtime_v1`, `--keywords-runtime`).
+    keywords_records: bool,
+    keywords_runtime: bool,
+    /// Collection aliases filled from their location's rows
+    /// (`quest_collection_alias_location_refs_v1`,
+    /// `--collection-location-refs`).
+    collection_fills: bool,
+    /// The value every made animation event registration answers: a caller
+    /// assumption (`--assume-anim-registration true|false`).
+    anim_registration: Option<bool>,
+    /// `--action-after` gates that named no timed caller action (counted).
+    unmatched_gates: u64,
 }
 
 /// One thing the caller makes happen.
@@ -1038,6 +1058,38 @@ struct Caller {
     what: What,
     /// The real-time second it happens at; `None`: at once after the start.
     at: Option<f64>,
+    /// The caller's gate (`--action-after`): the action happens at its
+    /// second only when this stage of the quest of that editor ID is done
+    /// by then, else as soon as it is done, never when it never is.
+    after: Option<(String, i32)>,
+}
+impl Caller {
+    /// What `--action-after` names the action by: the reference key, the
+    /// menu name, the looks event number or `EDITOR_ID:STAGE`.
+    fn target(&self) -> String {
+        match &self.what {
+            What::Stage(q, n) => format!("{q}:{n}"),
+            What::Player(_, k) | What::Talk(k) | What::Anim(k, _) | What::Sit(k, _) => k.clone(),
+            What::Menu(m, _) => m.clone(),
+            What::Looks(n) => n.to_string(),
+        }
+    }
+}
+
+/// Whether a gated action's stage is done in the run (`--action-after`).
+fn gate_done(vm: &mut Vm<'_>, store: &Store, x: &Caller, b: &Budget) -> bool {
+    let Some((q, n)) = &x.after else {
+        return true;
+    };
+    let Ok(k) = quest_by_editor_id(store, b, q) else {
+        return false;
+    };
+    vm.world
+        .quests
+        .states
+        .get(&fo4_vm::bind::record_key(&k))
+        .and_then(|s| s.is_done(*n))
+        == Some(true)
 }
 
 /// With `--scene-recheck`: while the quest state changed since the last
@@ -1579,6 +1631,8 @@ fn clock_loop(
         .collect();
     pending.sort_by(|a, b| a.at.partial_cmp(&b.at).unwrap_or(std::cmp::Ordering::Equal));
     let mut pending = std::collections::VecDeque::from(pending);
+    // Gated actions whose second came before their stage (`--action-after`).
+    let mut held: Vec<Caller> = Vec::new();
     let mut seen = (0, 0);
     timeline(
         vm,
@@ -1587,6 +1641,15 @@ fn clock_loop(
         "the start and the stages set from the command line",
     );
     loop {
+        // A held action whose stage is now done happens at once.
+        if let Some(pos) = held.iter().position(|x| gate_done(vm, store, x, b)) {
+            let x = held.remove(pos);
+            bump(c, "caller actions held until a stage: happened when the stage was done, after their second");
+            act(vm, store, then, &x, c, names, top, b)?;
+            world_step(vm, store, then, c, names, top, b);
+            timeline(vm, &mut seen, names, "a caller's held action");
+            continue;
+        }
         let scale = scale_global
             .as_ref()
             .and_then(|g| time_scale(vm, store, g, b));
@@ -1642,6 +1705,21 @@ fn clock_loop(
                 vm.world.now[fo4_vm::world::Clock::Real as usize] = t;
                 if let Some(s) = scale {
                     vm.world.now[fo4_vm::world::Clock::GameTime as usize] += wa * s / 3600.0;
+                }
+                if x.after.is_some() {
+                    if !gate_done(vm, store, &x, b) {
+                        let _ = writeln!(
+                            names,
+                            "## caller's action on {} held at {t} s: its stage is not done",
+                            x.target()
+                        );
+                        held.push(x);
+                        continue;
+                    }
+                    bump(
+                        c,
+                        "caller actions held until a stage: happened at their second",
+                    );
                 }
                 act(vm, store, then, &x, c, names, top, b)?;
                 world_step(vm, store, then, c, names, top, b);
@@ -1700,14 +1778,50 @@ fn clock_loop(
             timeline(vm, &mut seen, names, "the scene clock advanced");
         }
     }
-    // Actions left after the clocks stopped: in order, each at its second.
-    while let Some(x) = pending.pop_front() {
+    // Actions left after the clocks stopped: in order, each at its second
+    // (a gated one only once its stage is done).
+    loop {
+        if let Some(pos) = held.iter().position(|x| gate_done(vm, store, x, b)) {
+            let x = held.remove(pos);
+            bump(c, "caller actions held until a stage: happened when the stage was done, after their second");
+            act(vm, store, then, &x, c, names, top, b)?;
+            world_step(vm, store, then, c, names, top, b);
+            timeline(vm, &mut seen, names, "a caller's held action");
+            continue;
+        }
+        let Some(x) = pending.pop_front() else { break };
         let now = vm.world.now[fo4_vm::world::Clock::Real as usize];
         let t = x.at.unwrap_or(now).max(now);
         vm.world.now[fo4_vm::world::Clock::Real as usize] = t;
+        if x.after.is_some() {
+            if !gate_done(vm, store, &x, b) {
+                let _ = writeln!(
+                    names,
+                    "## caller's action on {} held at {t} s: its stage is not done",
+                    x.target()
+                );
+                held.push(x);
+                continue;
+            }
+            bump(
+                c,
+                "caller actions held until a stage: happened at their second",
+            );
+        }
         act(vm, store, then, &x, c, names, top, b)?;
         world_step(vm, store, then, c, names, top, b);
         timeline(vm, &mut seen, names, "a caller's action");
+    }
+    for x in &held {
+        bump(
+            c,
+            "caller actions held until a stage: never happened (the stage was never done)",
+        );
+        let _ = writeln!(
+            names,
+            "## caller's action on {} never happened: its stage was never done",
+            x.target()
+        );
     }
     Ok(fired)
 }
@@ -1859,11 +1973,35 @@ fn new_game(
     vm.world.sits.activate = then.sit_activate;
     vm.world.sits.in_use = then.sit_in_use;
     vm.world.menus.on = then.menu_events;
+    vm.world.keywords.records = then.keywords_records;
+    vm.world.keywords.runtime = then.keywords_runtime;
+    vm.world.quests.collection_fills = then.collection_fills;
+    vm.world.anims.assume_registration = then.anim_registration;
+    let gated = then.actions.iter().filter(|x| x.after.is_some()).count() as u64;
+    if gated > 0 {
+        *c.entry("assumption from the command line: a timed caller action waits for a stage before it happens (--action-after)".into())
+            .or_default() += gated;
+    }
+    if then.unmatched_gates > 0 {
+        *c.entry(
+            "caller actions held until a stage: gates naming no timed caller action".into(),
+        )
+        .or_default() += then.unmatched_gates;
+    }
+    if let Some(v) = then.anim_registration {
+        bump(
+            &mut c,
+            format!("assumption from the command line: a made animation event registration answers {v} (--assume-anim-registration)"),
+        );
+    }
     for (on, what) in [
         (then.sit_events, "sit and get-up events delivered to the sitter's and the furniture's receivers (--sit-events)"),
         (then.sit_activate, "a script's default-processing activation of a furniture reference sits the activator in it (--activate-furniture-sits)"),
         (then.sit_in_use, "IsFurnitureInUse answered from the run's sitters (--furniture-in-use)"),
         (then.menu_events, "menu event registrations kept and the caller's menu events delivered (--menu-events)"),
+        (then.keywords_records, "HasKeyword on a placed reference answers its base's keywords, an actor's with its race's (--keywords-records)"),
+        (then.keywords_runtime, "AddKeyword and RemoveKeyword change a reference's keywords, HasKeyword answering the change (--keywords-runtime)"),
+        (then.collection_fills, "a collection alias holds the distinct references of its location's rows of its ref type (--collection-location-refs)"),
     ] {
         if on {
             bump(&mut c, format!("switch: {what}"));
@@ -2279,6 +2417,18 @@ fn new_game(
     }
     for (k, v) in &vm.world.menus.counts {
         *c.entry(format!("menu\t{k}")).or_default() += v;
+    }
+    for (k, v) in &vm.world.keywords.counts {
+        *c.entry(format!("keyword\t{k}")).or_default() += v;
+    }
+    for (k, v) in &vm.world.quests.collection_counts {
+        *c.entry(format!("collection alias\t{k}")).or_default() += v;
+    }
+    if !vm.world.keywords.log.is_empty() {
+        let _ = writeln!(names, "## keyword changes the run kept");
+        for (t, what) in &vm.world.keywords.log {
+            let _ = writeln!(names, "    {t} s: {what}");
+        }
     }
     count_events(&mut c, &vm);
     if opts.scenes {
@@ -3237,6 +3387,9 @@ fn run() -> Result<(), E> {
         sit_in_use: flag(&mut a, "--furniture-in-use"),
         player_base_object: flag(&mut a, "--player-base-object"),
         menu_events: flag(&mut a, "--menu-events"),
+        keywords_records: flag(&mut a, "--keywords-records"),
+        keywords_runtime: flag(&mut a, "--keywords-runtime"),
+        collection_fills: flag(&mut a, "--collection-location-refs"),
         anim: [
             flag(&mut a, "--anim-events"),
             flag(&mut a, "--anim-event-case"),
@@ -3251,6 +3404,16 @@ fn run() -> Result<(), E> {
         },
         ..Then::default()
     };
+    // The caller's answer of animation event registrations.
+    if let Some(i) = a.iter().position(|x| x == "--assume-anim-registration") {
+        let v = match a.get(i + 1).map(String::as_str) {
+            Some("true") => true,
+            Some("false") => false,
+            _ => return Err("--assume-anim-registration true|false".into()),
+        };
+        then.anim_registration = Some(v);
+        a.drain(i..i + 2);
+    }
     // The caller's assumed animation events: REF EVENT[@SECONDS].
     while let Some(i) = a.iter().position(|x| x == "--assume-anim-event") {
         let usage = "--assume-anim-event PLUGIN:OBJECTID EVENT[@SECONDS]";
@@ -3263,6 +3426,7 @@ fn run() -> Result<(), E> {
         then.actions.push(Caller {
             what: What::Anim(key, event),
             at,
+            after: None,
         });
         a.drain(i..i + 3);
     }
@@ -3303,7 +3467,11 @@ fn run() -> Result<(), E> {
             "--assume-get-up" => What::Sit(body, false),
             _ => What::Looks(body.parse()?),
         };
-        then.actions.push(Caller { what, at });
+        then.actions.push(Caller {
+            what,
+            at,
+            after: None,
+        });
         a.drain(i..i + 2);
     }
     if let Some(i) = a.iter().position(|x| x == "--assume-player-sex") {
@@ -3327,6 +3495,7 @@ fn run() -> Result<(), E> {
         then.actions.push(Caller {
             what: What::Menu(name, opening),
             at,
+            after: None,
         });
         a.drain(i..i + 3);
     }
@@ -3364,11 +3533,13 @@ fn run() -> Result<(), E> {
             then.actions.push(Caller {
                 what: What::Player(action, body),
                 at,
+                after: None,
             });
         } else if a[i] == "--assume-talk" {
             then.actions.push(Caller {
                 what: What::Talk(body),
                 at,
+                after: None,
             });
         } else if a[i] == "--then" {
             let (q, n) = body
@@ -3377,6 +3548,7 @@ fn run() -> Result<(), E> {
             then.actions.push(Caller {
                 what: What::Stage(q.to_string(), n.parse()?),
                 at,
+                after: None,
             });
         } else if a[i] == "--timers" {
             then.timers = v.parse()?;
@@ -3444,6 +3616,7 @@ fn run() -> Result<(), E> {
         assume_packages: flag(&mut a, "--assume-packages-complete"),
         assume_start_scenes: flag(&mut a, "--assume-start-scene-actions"),
         assume_first_line: flag(&mut a, "--assume-first-line"),
+        start_skipped: flag(&mut a, "--scene-actions-skipped-start"),
         ..scene::Clock::default()
     };
     let line_audio = !flag(&mut a, "--no-line-audio");
@@ -3475,6 +3648,7 @@ fn run() -> Result<(), E> {
         || clock.assume_line_seconds.is_some()
         || clock.assume_player_choice.is_some()
         || clock.assume_first_line
+        || clock.start_skipped
         || opts.line_fields;
     if then.scene_clock == 0 && (assumed || !clock.timers || !line_audio) {
         return Err("the scene action switches and assumptions need --scene-clock N".into());
@@ -3524,6 +3698,36 @@ fn run() -> Result<(), E> {
     if then.cond_distance && then.track.is_none() {
         return Err("--cond-1-distance needs --track FILE".into());
     }
+    // The caller's gates: --action-after TARGET@SECONDS EDITOR_ID:STAGE.
+    while let Some(i) = a.iter().position(|x| x == "--action-after") {
+        let usage = "--action-after TARGET@SECONDS EDITOR_ID:STAGE (TARGET: the action's reference key, menu name, looks event number or EDITOR_ID:STAGE)";
+        let target = a.get(i + 1).cloned().ok_or(usage)?;
+        let gate = a.get(i + 2).cloned().ok_or(usage)?;
+        let (target, at) = target.rsplit_once('@').ok_or(usage)?;
+        let at: f64 = at.parse()?;
+        let (q, n) = gate.rsplit_once(':').ok_or(usage)?;
+        let n: i32 = n.parse()?;
+        // Every timed caller action on that target at that second.
+        let mut found = false;
+        for x in then
+            .actions
+            .iter_mut()
+            .filter(|x| x.at == Some(at) && x.target().eq_ignore_ascii_case(target))
+        {
+            x.after = Some((q.to_string(), n));
+            found = true;
+        }
+        if !found {
+            then.unmatched_gates += 1;
+        }
+        a.drain(i..i + 3);
+    }
+    if then.actions.iter().any(|x| x.after.is_some()) && then.scene_clock == 0 {
+        return Err("--action-after needs --scene-clock N".into());
+    }
+    if then.anim_registration.is_some() && !then.anim[0] {
+        return Err("--assume-anim-registration needs --anim-events".into());
+    }
     let assumed_sit = then.actions.iter().any(|x| matches!(x.what, What::Sit(..)));
     if (assumed_sit || then.sit_activate || then.sit_in_use) && !then.sit_events {
         return Err("--assume-sit, --assume-get-up, --activate-furniture-sits and --furniture-in-use need --sit-events".into());
@@ -3552,7 +3756,7 @@ fn run() -> Result<(), E> {
     {
         return Err("--assume-player-choice takes 0 to 3".into());
     }
-    let usage = "quest_run MANIFEST (stages OUT_DIR | new-game OUT_DIR | fragments OUT_DIR | scenes OUT_DIR | QUEST STAGE) [--queued] [--no-conditions] [--no-stage-event] [--no-remote] [--no-custom | --custom-nested] [--no-story] [--no-enable-chain] [--no-scenes] [--no-scenes-with-quest] [--no-cond-fn-N]... [--no-cond-run-on] [--assume-cond N=VALUE]...; fragments OUT_DIR and scenes OUT_DIR run every INFO, PACK and PERK fragment and start every scene in a fresh interpreter; new-game also takes --then EDITOR_ID:STAGE[@SECONDS] (repeated), --assume-activate, --assume-trigger-enter, --assume-trigger-leave and --assume-open PLUGIN:OBJECTID[@SECONDS] (repeated), --timers N and --time-scale-global EDITOR_ID, assumptions of the caller, --scene-recheck, --stage-fields, --cond-550-clock, --alias-location-refs and --next-blockers; new-game and scenes take --scene-clock N (advance the scene clock up to N times) with --no-timer-actions, --no-line-audio, --assume-line-seconds X, --assume-player-choice N (0 to 3), --assume-packages-complete, --assume-start-scene-actions, --line-stage-fields and --assume-first-line; every mode takes --none-array-length, --none-array-read, --none-array-find, --none-array-change and --enable-child-flag-ignored; new-game with --scene-clock takes --track FILE (the player's track, lines SECONDS SPACE X Y Z [FACING]) with --trigger-box, --trigger-sphere, --trigger-point or --trigger-body HEIGHT, --trigger-instant, --trigger-enabled, --trigger-order, --distance-events, --distance-once, --placed-positions, --position-natives, --cell-natives, --location-native and --assume-los true|false, --actor-positions, --actor-triggers and --assume-actor-at REF SPACE X Y Z@SECONDS (repeated); new-game takes --alias-unique-actors, --player-base EDITOR_ID and --player-no-record, and with --scene-clock --assume-talk PLUGIN:OBJECTID[@SECONDS] (repeated), --greeting-on-talk, --hello-lines with --hello-distance-setting EDITOR_ID, --dialogue-priority and --assume-line PLUGIN:OBJECTID (repeated); new-game with --track and --actor-positions takes --package-destinations SECONDS; new-game takes --anim-events with --anim-event-case and --assume-anim-event PLUGIN:OBJECTID EVENT[@SECONDS] (repeated), and with --scene-clock --anim-graphs with --anim-graph-keys; new-game with --track takes --moveto-target, --load-in-cell, --load-on-arrival and --load-grid N, and --assume-load PLUGIN:OBJECTID[@SECONDS] (repeated); new-game and scenes with --scene-clock take --cond-131-clock and --phase-conditions-end; new-game takes --location-refs-distinct and --alias-location-placed-refs (with --alias-location-refs), --cond-1-distance (with --track) and --cond-player-word, --activate-actors, --sit-events with --assume-sit and --assume-get-up PLUGIN:OBJECTID[@SECONDS] (repeated), --activate-furniture-sits and --furniture-in-use, --menu-events with --assume-menu NAME open|close[@SECONDS] and --assume-looks-menu-event N[@SECONDS] (repeated), and --player-base-object (with --player-base) with --assume-player-sex N";
+    let usage = "quest_run MANIFEST (stages OUT_DIR | new-game OUT_DIR | fragments OUT_DIR | scenes OUT_DIR | QUEST STAGE) [--queued] [--no-conditions] [--no-stage-event] [--no-remote] [--no-custom | --custom-nested] [--no-story] [--no-enable-chain] [--no-scenes] [--no-scenes-with-quest] [--no-cond-fn-N]... [--no-cond-run-on] [--assume-cond N=VALUE]...; fragments OUT_DIR and scenes OUT_DIR run every INFO, PACK and PERK fragment and start every scene in a fresh interpreter; new-game also takes --then EDITOR_ID:STAGE[@SECONDS] (repeated), --assume-activate, --assume-trigger-enter, --assume-trigger-leave and --assume-open PLUGIN:OBJECTID[@SECONDS] (repeated), --timers N and --time-scale-global EDITOR_ID, assumptions of the caller, --scene-recheck, --stage-fields, --cond-550-clock, --alias-location-refs and --next-blockers; new-game and scenes take --scene-clock N (advance the scene clock up to N times) with --no-timer-actions, --no-line-audio, --assume-line-seconds X, --assume-player-choice N (0 to 3), --assume-packages-complete, --assume-start-scene-actions, --line-stage-fields and --assume-first-line; every mode takes --none-array-length, --none-array-read, --none-array-find, --none-array-change and --enable-child-flag-ignored; new-game with --scene-clock takes --track FILE (the player's track, lines SECONDS SPACE X Y Z [FACING]) with --trigger-box, --trigger-sphere, --trigger-point or --trigger-body HEIGHT, --trigger-instant, --trigger-enabled, --trigger-order, --distance-events, --distance-once, --placed-positions, --position-natives, --cell-natives, --location-native and --assume-los true|false, --actor-positions, --actor-triggers and --assume-actor-at REF SPACE X Y Z@SECONDS (repeated); new-game takes --alias-unique-actors, --player-base EDITOR_ID and --player-no-record, and with --scene-clock --assume-talk PLUGIN:OBJECTID[@SECONDS] (repeated), --greeting-on-talk, --hello-lines with --hello-distance-setting EDITOR_ID, --dialogue-priority and --assume-line PLUGIN:OBJECTID (repeated); new-game with --track and --actor-positions takes --package-destinations SECONDS; new-game takes --anim-events with --anim-event-case and --assume-anim-event PLUGIN:OBJECTID EVENT[@SECONDS] (repeated), and with --scene-clock --anim-graphs with --anim-graph-keys; new-game with --track takes --moveto-target, --load-in-cell, --load-on-arrival and --load-grid N, and --assume-load PLUGIN:OBJECTID[@SECONDS] (repeated); new-game and scenes with --scene-clock take --cond-131-clock and --phase-conditions-end; new-game takes --location-refs-distinct and --alias-location-placed-refs (with --alias-location-refs), --cond-1-distance (with --track) and --cond-player-word, --activate-actors, --sit-events with --assume-sit and --assume-get-up PLUGIN:OBJECTID[@SECONDS] (repeated), --activate-furniture-sits and --furniture-in-use, --menu-events with --assume-menu NAME open|close[@SECONDS] and --assume-looks-menu-event N[@SECONDS] (repeated), and --player-base-object (with --player-base) with --assume-player-sex N, --keywords-records and --keywords-runtime, and --collection-location-refs, and with --anim-events --assume-anim-registration true|false; new-game and scenes with --scene-clock take --scene-actions-skipped-start; new-game with --scene-clock takes --action-after TARGET@SECONDS EDITOR_ID:STAGE (repeated)";
     if a.len() != 3 {
         return Err(usage.into());
     }

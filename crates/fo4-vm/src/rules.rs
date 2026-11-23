@@ -169,7 +169,7 @@ pub const XESP_BIT1: &str = "xesp_flag_bit1_not_presence_v1";
 pub const XESP_PROPAGATES: &str = "xesp_script_change_propagates_v1";
 
 /// Every rule above.
-pub const ALL: [&str; 151] = [
+pub const ALL: [&str; 155] = [
     ARITHMETIC,
     COMPARE,
     NOT_COPY_CAST,
@@ -321,6 +321,10 @@ pub const ALL: [&str; 151] = [
     SIT_IN_USE,
     MENU_EVENTS,
     PLAYER_BASE_OBJECT,
+    KEYWORD_RECORDS,
+    KEYWORD_RUNTIME,
+    COLLECTION_LOCATION,
+    SCENE_ACTION_SKIPPED_START,
 ];
 
 /// The rule an opcode's meaning rests on; `None` for an opcode without a
@@ -605,3 +609,21 @@ pub const MENU_EVENTS: &str = "vm_menu_events_v1";
 /// The base-object natives on the player's handle answer the NPC_ the
 /// caller names as the player's base.
 pub const PLAYER_BASE_OBJECT: &str = "vm_player_base_object_v1";
+/// `HasKeyword` on a placed reference answers from the records: its base's
+/// `KWDA`, an actor base's with its race's; an absent keyword stays open
+/// where the reading does not cover every source (an actor base with a
+/// template, a weapon or armour base).
+pub const KEYWORD_RECORDS: &str = "vm_keyword_records_v1";
+/// `AddKeyword` and `RemoveKeyword` on a reference change its keywords, the
+/// last change of a keyword winning over the records; `HasKeyword` answers
+/// the change.
+pub const KEYWORD_RUNTIME: &str = "vm_keyword_runtime_v1";
+/// A collection alias filled from a forced location by a ref type holds,
+/// while its quest runs, the distinct references the location's special
+/// reference rows of that type name, in row order; `GetCount`, `GetAt` and
+/// `Find` answer from it and `AddRef`, `RemoveRef` and `RemoveAll` change
+/// it.
+pub const COLLECTION_LOCATION: &str = "quest_collection_alias_location_refs_v1";
+/// A scene action whose start phase the scene skipped starts with the first
+/// later phase it spans that the scene enters.
+pub const SCENE_ACTION_SKIPPED_START: &str = "scene_action_skipped_start_v1";

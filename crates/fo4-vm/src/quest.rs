@@ -82,6 +82,8 @@ pub struct QuestInfo {
     /// after the list's (`quest_alias_location_ref_distinct_v1`,
     /// `quest_alias_location_ref_placed_v1`) read.
     pub location_rows: BTreeMap<u32, LocationRows>,
+    /// The ids of the collection aliases (ALCS).
+    pub collections: BTreeSet<u32>,
     /// Reference aliases with a unique actor (ALUA): the NPC_ it names
     /// (`quest_alias_unique_actor_ref_v1`; read only when a run gives
     /// [`Quests::unique`]).
@@ -179,6 +181,12 @@ impl QuestInfo {
             .map(|a| (a.id, a.forced_reference().and_then(|f| f.key.clone())))
             .collect();
         let (location_refs, location_rows) = location_refs(store, &q, b)?;
+        let collections = q
+            .aliases
+            .iter()
+            .filter(|a| matches!(a.kind, fo4_plugin::quest::AliasKind::Collection { .. }))
+            .map(|a| a.id)
+            .collect();
         let unique_actors = q
             .aliases
             .iter()
@@ -202,6 +210,7 @@ impl QuestInfo {
             reference_aliases,
             location_refs,
             location_rows,
+            collections,
             unique_actors,
             priority: q.general.map(|g| g.priority),
             fragment_script,
@@ -460,6 +469,10 @@ pub struct QuestState {
     pub objectives_rest: Option<bool>,
     /// Alias fills a run set (ForceRefTo, Clear), by alias id.
     pub fills: BTreeMap<i32, Val>,
+    /// Collection alias contents a run read or changed, by alias id
+    /// (`quest_collection_alias_location_refs_v1`); `None` once a change
+    /// with an undetermined value left them open.
+    pub collections: BTreeMap<i32, Option<Vec<Val>>>,
     /// Why the whole state became undetermined.
     pub open: Option<String>,
 }
@@ -614,6 +627,15 @@ pub struct Quests {
     /// The rules the location readings after the list's relied on (the
     /// caller adds them to the run's rules).
     pub location_used: std::cell::RefCell<BTreeSet<&'static str>>,
+    /// Collection aliases hold the distinct references their forced
+    /// location's special reference rows of their ref type name, and
+    /// their natives answer from them
+    /// (`quest_collection_alias_location_refs_v1`; `quest_run
+    /// --collection-location-refs`). Off by default: the natives are
+    /// recorded as before.
+    pub collection_fills: bool,
+    /// What the collection natives answered and why not, counted.
+    pub collection_counts: BTreeMap<String, u64>,
 }
 
 /// The placed actors (ACHR) of every actor base in the loaded plugins,
@@ -733,6 +755,7 @@ impl Quests {
                 objectives: BTreeMap::new(),
                 objectives_rest: Some(false),
                 fills: BTreeMap::new(),
+                collections: BTreeMap::new(),
                 open: None,
             },
         }
@@ -1741,9 +1764,159 @@ impl QuestHost<'_> {
     }
 }
 
+/// The natives on a collection alias answered under
+/// `quest_collection_alias_location_refs_v1`.
+pub const COLLECTION_NATIVES: [&str; 6] = [
+    "refcollectionalias.getcount",
+    "refcollectionalias.getat",
+    "refcollectionalias.find",
+    "refcollectionalias.addref",
+    "refcollectionalias.removeref",
+    "refcollectionalias.removeall",
+];
+
+impl QuestHost<'_> {
+    fn collection_count(w: &mut World, k: impl Into<String>) {
+        *w.quests.collection_counts.entry(k.into()).or_default() += 1;
+    }
+    /// A collection alias's contents: what the run read or changed, else
+    /// (the quest running) the distinct references of its location rows.
+    fn collection_contents(
+        &mut self,
+        w: &mut World,
+        i: &QuestInfo,
+        id: i32,
+    ) -> Result<Vec<Val>, &'static str> {
+        let s = w.quests.state(i);
+        if s.open.is_some() {
+            return Err(OPEN);
+        }
+        if let Some(v) = s.collections.get(&id) {
+            return v.clone().ok_or("changed by an undetermined value");
+        }
+        let running = s.running;
+        let rows = u32::try_from(id)
+            .ok()
+            .and_then(|u| i.location_rows.get(&u))
+            .map(|r| r.distinct().into_iter().cloned().collect::<Vec<_>>());
+        let items = match running {
+            None => return Err("whether the quest runs is undetermined"),
+            Some(false) => Vec::new(),
+            Some(true) => {
+                let rows = rows.ok_or("the collection is not filled from a location's rows")?;
+                let b = Budget::new(self.data.max_memory);
+                let mut out = Vec::new();
+                for k in rows {
+                    if self.data.store.signature(&k).is_none() {
+                        return Err("a row names no winning record");
+                    }
+                    let o = record_object(w, self.data.store, &k, "objectreference", &b)
+                        .map_err(|_| "a row's reference could not be read")?;
+                    out.push(Val::Object(o));
+                }
+                out
+            }
+        };
+        w.quests
+            .state(i)
+            .collections
+            .insert(id, Some(items.clone()));
+        Ok(items)
+    }
+    /// The collection natives (`quest_collection_alias_location_refs_v1`),
+    /// when a caller turned the reading on; `None` leaves the call to be
+    /// recorded as before.
+    fn collection_native(&mut self, c: &NativeCall, w: &mut World) -> Option<Reply> {
+        if !w.quests.collection_fills {
+            return None;
+        }
+        let full = c.full_name();
+        if !COLLECTION_NATIVES.contains(&full.as_str()) {
+            return None;
+        }
+        let (_, i, id) = self.alias_of(w, c.receiver.as_ref()).ok()?;
+        if !u32::try_from(id).is_ok_and(|u| i.collections.contains(&u)) {
+            Self::collection_count(
+                w,
+                format!("{}\tnot answered: not a collection alias", c.name),
+            );
+            return None;
+        }
+        let name = c.name.clone();
+        let cur = self.collection_contents(w, &i, id);
+        let set = |w: &mut World, v: Option<Vec<Val>>| {
+            w.quests.state(&i).collections.insert(id, v);
+        };
+        let reply = match (name.as_str(), cur) {
+            ("removeall", _) => {
+                set(w, Some(Vec::new()));
+                Reply::Value(Val::None)
+            }
+            ("addref" | "removeref", Err(_)) => Reply::Value(Val::None),
+            ("addref" | "removeref", Ok(mut items)) => {
+                match c.args.first() {
+                    Some(v @ Val::Object(_)) => {
+                        let at = items.iter().position(|x| x == v);
+                        match (name.as_str(), at) {
+                            ("addref", None) => items.push(v.clone()),
+                            ("removeref", Some(n)) => {
+                                items.remove(n);
+                            }
+                            _ => {}
+                        }
+                        set(w, Some(items));
+                    }
+                    Some(Val::None) => {}
+                    _ => set(w, None),
+                }
+                Reply::Value(Val::None)
+            }
+            (_, Err(why)) => {
+                Self::collection_count(w, format!("{name}\tnot answered: {why}"));
+                return None;
+            }
+            ("getcount", Ok(items)) => Reply::Value(Val::Int(items.len() as i32)),
+            ("getat", Ok(items)) => match c.args.first() {
+                Some(Val::Int(n)) if *n >= 0 && (*n as usize) < items.len() => {
+                    Reply::Value(items[*n as usize].clone())
+                }
+                _ => {
+                    Self::collection_count(
+                        w,
+                        format!("{name}\tnot answered: the index is undetermined or out of range"),
+                    );
+                    return None;
+                }
+            },
+            ("find", Ok(items)) => match c.args.first() {
+                Some(v @ (Val::Object(_) | Val::None)) => Reply::Value(Val::Int(
+                    items.iter().position(|x| x == v).map_or(-1, |n| n as i32),
+                )),
+                _ => {
+                    Self::collection_count(
+                        w,
+                        format!("{name}\tnot answered: the reference is undetermined"),
+                    );
+                    return None;
+                }
+            },
+            _ => return None,
+        };
+        self.using(rules::COLLECTION_LOCATION);
+        Self::collection_count(w, format!("{name}\tanswered"));
+        Some(reply)
+    }
+}
+
 impl Host for QuestHost<'_> {
     fn call(&mut self, c: &NativeCall, w: &mut World) -> Reply {
         let full = c.full_name();
+        // Collection aliases, when a caller turned the reading on
+        // (`quest_collection_alias_location_refs_v1`); off, recorded as
+        // before.
+        if let Some(r) = self.collection_native(c, w) {
+            return r;
+        }
         // Animation events, when a caller turned them on (`crate::anim`);
         // off, the natives are recorded as before.
         if w.anims.graphs && full == crate::anim::PLAY {
@@ -1762,6 +1935,15 @@ impl Host for QuestHost<'_> {
         // on (`crate::menu`, `crate::sit`); off, recorded as before.
         if let Some(r) = crate::menu::native(c, w) {
             self.using(rules::MENU_EVENTS);
+            return r;
+        }
+        // Keywords of references, when a caller turned a reading on
+        // (`crate::keyword`); off, recorded as before.
+        let kw_reply = crate::keyword::native(self.data.store, self.data.max_memory, c, w);
+        for u in std::mem::take(&mut w.keywords.used) {
+            self.using(u);
+        }
+        if let Some(r) = kw_reply {
             return r;
         }
         let sit_reply = crate::sit::native(self.data.store, self.data.max_memory, c, w);

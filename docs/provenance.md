@@ -681,3 +681,19 @@ menu events are, and what the player's base is were recognised from prior
 general knowledge and are pending rules. No editor, editor source or
 definition file, reader of another project, script source or game
 executable was opened.
+
+The keyword step (`fo4_vm::keyword`, [spec/vm.md](../spec/vm.md), Keywords,
+Collection aliases from a location's rows, Scene actions whose start phase
+was skipped, Caller actions held until a stage;
+[spec/keyword-census.txt](../spec/keyword-census.txt)) reads no new format:
+it reads `KWDA`, `KSIZ`, `RNAM` and `TPLT` of records as FormID words and
+their presence (as earlier steps read FormID subrecords), the special
+reference lists as the earlier location fills read them, and the compiled
+scripts' keyword natives and their call sites, with the repository's
+readers. That a reference carries its base's keywords and an actor its
+race's, what the keyword natives and the collection natives do, and that
+an animation event registration answers whether it was made were
+recognised from prior general knowledge and are pending rules or caller
+assumptions. No editor, editor source or definition file, reader of
+another project, script source or game executable was opened.
+

@@ -176,6 +176,8 @@ pub struct World {
     pub sits: crate::sit::Sits,
     /// Menu event registrations (`crate::menu`): off by default.
     pub menus: crate::menu::Menus,
+    /// Keywords of references (`crate::keyword`): off by default.
+    pub keywords: crate::keyword::Keywords,
 }
 
 impl World {

@@ -80,6 +80,11 @@ pub struct Anims {
     /// (`rules::ANIM_GRAPH_KEYS`, `--anim-graph-keys`).
     pub keys: bool,
     pub registrations: Vec<Registration>,
+    /// The value `RegisterForAnimationEvent` answers where the
+    /// registration is made: a caller assumption
+    /// (`quest_run --assume-anim-registration true|false`); `None` by
+    /// default: undetermined, as before.
+    pub assume_registration: Option<bool>,
     pub runs: BTreeMap<ObjId, GraphRun>,
     /// References whose graph could not be read, with why.
     pub refused: BTreeMap<ObjId, String>,
@@ -131,8 +136,10 @@ pub fn native(c: &NativeCall, w: &mut World) -> Option<Reply> {
         _ => None,
     };
     let register = full.ends_with(".registerforanimationevent");
+    let mut made = false;
     match (c.instance, sender, name) {
         (Some(i), Some(s), Some(e)) => {
+            made = register;
             w.anims.using(rules::ANIM_EVENTS);
             if register {
                 w.anims.count("registrations\tmade");
@@ -164,7 +171,15 @@ pub fn native(c: &NativeCall, w: &mut World) -> Option<Reply> {
         )),
     }
     Some(if register {
-        Reply::Undetermined
+        match w.anims.assume_registration.filter(|_| made) {
+            Some(v) => {
+                w.anims.count(format!(
+                    "registrations\tanswered by the caller's assumption: {v}"
+                ));
+                Reply::Value(Val::Bool(v))
+            }
+            None => Reply::Undetermined,
+        }
     } else {
         Reply::Value(Val::None)
     })

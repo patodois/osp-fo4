@@ -1,0 +1,166 @@
+# keyword_census: kinds and counts only (spec/vm.md, Keywords). Sections: 0 keyword natives read from the scripts; 1 their call sites over every script;
+# 2 where base keywords come from in the records, and placed records by what the keyword reading settles; 3 the same call sites in the scripts the opening quest's family and its scenes attach.
+1	0 keyword natives declared	actor.hasmagiceffectwithkeyword
+1	0 keyword natives declared	actor.wornhaskeyword
+1	0 keyword natives declared	form.haskeyword
+1	0 keyword natives declared	form.haskeywordinformlist
+1	0 keyword natives declared	location.getkeyworddata
+1	0 keyword natives declared	location.setkeyworddata
+1	0 keyword natives declared	objectreference.addkeyword
+1	0 keyword natives declared	objectreference.findallreferenceswithkeyword
+1	0 keyword natives declared	objectreference.haseffectkeyword
+1	0 keyword natives declared	objectreference.haskeyword
+1	0 keyword natives declared	objectreference.haskeywordinformlist
+1	0 keyword natives declared	objectreference.removekeyword
+1	0 keyword natives declared	objectreference.resetkeyword
+10282	0 scripts read
+125	1 over every script: call sites by called name	addkeyword
+12	1 over every script: call sites by called name	findallreferenceswithkeyword
+7	1 over every script: call sites by called name	getkeyworddata
+2	1 over every script: call sites by called name	haseffectkeyword
+274	1 over every script: call sites by called name	haskeyword
+4	1 over every script: call sites by called name	haskeywordinformlist
+2	1 over every script: call sites by called name	hasmagiceffectwithkeyword
+82	1 over every script: call sites by called name	removekeyword
+4	1 over every script: call sites by called name	resetkeyword
+53	1 over every script: call sites by called name	setkeyworddata
+6	1 over every script: call sites by called name	wornhaskeyword
+125	1 over every script: call sites by the first argument	addkeyword	a variable or property
+12	1 over every script: call sites by the first argument	findallreferenceswithkeyword	a variable or property
+7	1 over every script: call sites by the first argument	getkeyworddata	a variable or property
+2	1 over every script: call sites by the first argument	haseffectkeyword	a variable or property
+274	1 over every script: call sites by the first argument	haskeyword	a variable or property
+4	1 over every script: call sites by the first argument	haskeywordinformlist	a variable or property
+2	1 over every script: call sites by the first argument	hasmagiceffectwithkeyword	a variable or property
+82	1 over every script: call sites by the first argument	removekeyword	a variable or property
+4	1 over every script: call sites by the first argument	resetkeyword	a variable or property
+53	1 over every script: call sites by the first argument	setkeyworddata	a variable or property
+6	1 over every script: call sites by the first argument	wornhaskeyword	a variable or property
+109	1 over every script: call sites by the receiver	addkeyword	a variable or property
+16	1 over every script: call sites by the receiver	addkeyword	self
+3	1 over every script: call sites by the receiver	findallreferenceswithkeyword	a variable or property
+9	1 over every script: call sites by the receiver	findallreferenceswithkeyword	self
+6	1 over every script: call sites by the receiver	getkeyworddata	a variable or property
+1	1 over every script: call sites by the receiver	getkeyworddata	self
+2	1 over every script: call sites by the receiver	haseffectkeyword	a variable or property
+265	1 over every script: call sites by the receiver	haskeyword	a variable or property
+9	1 over every script: call sites by the receiver	haskeyword	self
+4	1 over every script: call sites by the receiver	haskeywordinformlist	a variable or property
+2	1 over every script: call sites by the receiver	hasmagiceffectwithkeyword	a variable or property
+63	1 over every script: call sites by the receiver	removekeyword	a variable or property
+19	1 over every script: call sites by the receiver	removekeyword	self
+4	1 over every script: call sites by the receiver	resetkeyword	a variable or property
+52	1 over every script: call sites by the receiver	setkeyworddata	a variable or property
+1	1 over every script: call sites by the receiver	setkeyworddata	self
+6	1 over every script: call sites by the receiver	wornhaskeyword	a variable or property
+9	1 over every script: call sites by the type the calling script extends	addkeyword	activemagiceffect
+7	1 over every script: call sites by the type the calling script extends	addkeyword	actor
+4	1 over every script: call sites by the type the calling script extends	addkeyword	form
+29	1 over every script: call sites by the type the calling script extends	addkeyword	objectreference
+75	1 over every script: call sites by the type the calling script extends	addkeyword	quest
+1	1 over every script: call sites by the type the calling script extends	addkeyword	referencealias
+3	1 over every script: call sites by the type the calling script extends	findallreferenceswithkeyword	actor
+6	1 over every script: call sites by the type the calling script extends	findallreferenceswithkeyword	objectreference
+3	1 over every script: call sites by the type the calling script extends	findallreferenceswithkeyword	quest
+1	1 over every script: call sites by the type the calling script extends	getkeyworddata	location
+6	1 over every script: call sites by the type the calling script extends	getkeyworddata	quest
+2	1 over every script: call sites by the type the calling script extends	haseffectkeyword	form
+30	1 over every script: call sites by the type the calling script extends	haskeyword	activemagiceffect
+21	1 over every script: call sites by the type the calling script extends	haskeyword	actor
+47	1 over every script: call sites by the type the calling script extends	haskeyword	form
+2	1 over every script: call sites by the type the calling script extends	haskeyword	location
+74	1 over every script: call sites by the type the calling script extends	haskeyword	objectreference
+89	1 over every script: call sites by the type the calling script extends	haskeyword	quest
+3	1 over every script: call sites by the type the calling script extends	haskeyword	refcollectionalias
+5	1 over every script: call sites by the type the calling script extends	haskeyword	referencealias
+3	1 over every script: call sites by the type the calling script extends	haskeyword	scriptobject
+1	1 over every script: call sites by the type the calling script extends	haskeywordinformlist	objectreference
+3	1 over every script: call sites by the type the calling script extends	haskeywordinformlist	quest
+2	1 over every script: call sites by the type the calling script extends	hasmagiceffectwithkeyword	objectreference
+7	1 over every script: call sites by the type the calling script extends	removekeyword	activemagiceffect
+9	1 over every script: call sites by the type the calling script extends	removekeyword	actor
+2	1 over every script: call sites by the type the calling script extends	removekeyword	form
+23	1 over every script: call sites by the type the calling script extends	removekeyword	objectreference
+41	1 over every script: call sites by the type the calling script extends	removekeyword	quest
+2	1 over every script: call sites by the type the calling script extends	resetkeyword	actor
+2	1 over every script: call sites by the type the calling script extends	resetkeyword	form
+44	1 over every script: call sites by the type the calling script extends	setkeyworddata	form
+1	1 over every script: call sites by the type the calling script extends	setkeyworddata	location
+8	1 over every script: call sites by the type the calling script extends	setkeyworddata	quest
+1	1 over every script: call sites by the type the calling script extends	wornhaskeyword	activemagiceffect
+1	1 over every script: call sites by the type the calling script extends	wornhaskeyword	actor
+2	1 over every script: call sites by the type the calling script extends	wornhaskeyword	objectreference
+2	1 over every script: call sites by the type the calling script extends	wornhaskeyword	quest
+1323	2 KWDA entries by the carrying record's type	ACTI
+683	2 KWDA entries by the carrying record's type	ALCH
+87	2 KWDA entries by the carrying record's type	AMMO
+3284	2 KWDA entries by the carrying record's type	ARMO
+83	2 KWDA entries by the carrying record's type	ARTO
+275	2 KWDA entries by the carrying record's type	BOOK
+383	2 KWDA entries by the carrying record's type	CONT
+63	2 KWDA entries by the carrying record's type	DOOR
+48	2 KWDA entries by the carrying record's type	FLOR
+2827	2 KWDA entries by the carrying record's type	FURN
+3	2 KWDA entries by the carrying record's type	IDLM
+28	2 KWDA entries by the carrying record's type	INNR
+56	2 KWDA entries by the carrying record's type	KEYM
+1239	2 KWDA entries by the carrying record's type	LCTN
+33	2 KWDA entries by the carrying record's type	LIGH
+287	2 KWDA entries by the carrying record's type	MGEF
+2799	2 KWDA entries by the carrying record's type	MISC
+154	2 KWDA entries by the carrying record's type	MSTT
+6701	2 KWDA entries by the carrying record's type	NPC_
+140	2 KWDA entries by the carrying record's type	QUST
+261	2 KWDA entries by the carrying record's type	RACE
+4	2 KWDA entries by the carrying record's type	SCEN
+3647	2 KWDA entries by the carrying record's type	TERM
+2595	2 KWDA entries by the carrying record's type	WEAP
+27003	2 KWDA entries naming	a winning KYWD
+0	2 KWDA whose KSIZ is missing or disagrees, any type
+3402	2 actor bases (NPC_) with a template (TPLT)
+2398	2 actor bases (NPC_) with a template (TPLT) and their own KWDA
+9715	2 placed records by what the keyword reading settles	ACHR	open where the keyword is absent: the actor base has a template
+676	2 placed records by what the keyword reading settles	ACHR	settled: the actor base's and its race's KWDA
+522	2 placed records by what the keyword reading settles	PGRE	settled: the base's KWDA
+2401	2 placed records by what the keyword reading settles	PHZD	settled: the base's KWDA
+2	2 placed records by what the keyword reading settles	PMIS	settled: the base's KWDA
+1594	2 placed records by what the keyword reading settles	REFR	open where the keyword is absent: object modifications not read
+1777380	2 placed records by what the keyword reading settles	REFR	settled: the base's KWDA
+0	2 placed records carrying KWDA or KSIZ, any type
+678	2 winning records carrying KWDA by type	ACTI
+341	2 winning records carrying KWDA by type	ALCH
+87	2 winning records carrying KWDA by type	AMMO
+692	2 winning records carrying KWDA by type	ARMO
+73	2 winning records carrying KWDA by type	ARTO
+145	2 winning records carrying KWDA by type	BOOK
+205	2 winning records carrying KWDA by type	CONT
+62	2 winning records carrying KWDA by type	DOOR
+18	2 winning records carrying KWDA by type	FLOR
+773	2 winning records carrying KWDA by type	FURN
+3	2 winning records carrying KWDA by type	IDLM
+20	2 winning records carrying KWDA by type	INNR
+56	2 winning records carrying KWDA by type	KEYM
+419	2 winning records carrying KWDA by type	LCTN
+30	2 winning records carrying KWDA by type	LIGH
+208	2 winning records carrying KWDA by type	MGEF
+2643	2 winning records carrying KWDA by type	MISC
+95	2 winning records carrying KWDA by type	MSTT
+2936	2 winning records carrying KWDA by type	NPC_
+131	2 winning records carrying KWDA by type	QUST
+102	2 winning records carrying KWDA by type	RACE
+4	2 winning records carrying KWDA by type	SCEN
+1033	2 winning records carrying KWDA by type	TERM
+462	2 winning records carrying KWDA by type	WEAP
+2	3 the family: call sites by called name	addkeyword
+1	3 the family: call sites by called name	haskeyword
+5	3 the family: call sites by called name	removekeyword
+2	3 the family: call sites by the first argument	addkeyword	a variable or property
+1	3 the family: call sites by the first argument	haskeyword	a variable or property
+5	3 the family: call sites by the first argument	removekeyword	a variable or property
+2	3 the family: call sites by the receiver	addkeyword	a variable or property
+1	3 the family: call sites by the receiver	haskeyword	a variable or property
+5	3 the family: call sites by the receiver	removekeyword	a variable or property
+2	3 the family: call sites by the type the calling script extends	addkeyword	quest
+1	3 the family: call sites by the type the calling script extends	haskeyword	quest
+5	3 the family: call sites by the type the calling script extends	removekeyword	quest
+49	3 the family: scripts and ancestors read

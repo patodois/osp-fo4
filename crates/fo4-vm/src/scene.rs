@@ -394,6 +394,12 @@ pub struct Clock {
     /// (the caller's) after the action starts, as an assumed actor move of
     /// the world model (`crate::track`). `None`: no actor moves.
     pub package_arrival: Option<f64>,
+    /// `scene_action_skipped_start_v1` (`quest_run
+    /// --scene-actions-skipped-start`): an action whose start phase the
+    /// scene skipped starts with the first later phase it spans that the
+    /// scene enters. Off: such an action never starts and holds every
+    /// phase it spans, as before.
+    pub start_skipped: bool,
 }
 
 /// One started action of a playing scene.
@@ -1441,8 +1447,15 @@ fn package_move(
 fn start_actions(h: &mut QuestHost<'_>, w: &mut World, o: ObjId, i: &SceneInfo, p: usize) {
     h.using(rules::SCENE_CLOCK);
     for (j, a) in i.actions.iter().enumerate() {
-        if a.start != p {
+        let late = w.scenes.clock.start_skipped
+            && a.start < p
+            && p <= a.end
+            && !w.scenes.actions.contains_key(&(o, j));
+        if a.start != p && !late {
             continue;
+        }
+        if late {
+            h.using(rules::SCENE_ACTION_SKIPPED_START);
         }
         let (t, how) = action_time(h, w, i, a);
         let now = w.now[TimerClock::Real as usize];
