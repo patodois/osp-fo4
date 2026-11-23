@@ -29,6 +29,11 @@ pub struct Loaded {
     /// scene's references it holds no collision for.
     #[cfg(feature = "script-event")]
     pub pick: Option<(Vec<Option<fo4_plugin::FormKey>>, fo4_play::pick::Boxes)>,
+    /// With `--play-live-world`: what the window's live world needs (the
+    /// dormant collision, the references' knowledge, the space, the drawn
+    /// references by instance tag).
+    #[cfg(feature = "script-event")]
+    pub live: Option<crate::play::LiveLoad>,
 }
 
 /// The manifest with its data root, the plugins and the mounted archives.
@@ -197,7 +202,10 @@ pub fn cell(
     script_event: Option<&crate::vm_event::ScriptEvent>,
     timeline: Option<(&crate::timeline::Args, &crate::timeline::Prepared)>,
     light: (fo4_scene::light::Switches, fo4_scene::light::Assumptions),
+    play_live: bool,
 ) -> AnyResult<Loaded> {
+    #[cfg(not(feature = "script-event"))]
+    let _ = play_live;
     if walk {
         fo4_walk::accept(&walk_rules(), level, fo4_scene::hypotheses::status)?;
     }
@@ -337,6 +345,14 @@ pub fn cell(
         }
         _ => None,
     };
+    // --play-live-world: the references the run may enable drawn too (the
+    // window hides them until it does), taken out again after the build.
+    #[cfg(feature = "script-event")]
+    let dormant_drawn = if play_live && walk {
+        Some(crate::play::draw_dormant(&mut scene, &mut loader, &budget)?)
+    } else {
+        None
+    };
     let cast_actors = timeline_cast.as_ref().and_then(|c| c.cast.as_ref());
     let mut build = if let Some(c) = cast_actors {
         let build = match poses {
@@ -398,6 +414,10 @@ pub fn cell(
     } else {
         fo4_render::draw::build(&scene, &loader, limits, options, &budget)?
     };
+    #[cfg(feature = "script-event")]
+    if let Some(d) = dormant_drawn {
+        crate::play::undraw_dormant(&mut scene, d);
+    }
     // The terrain of the cell and, for walking, of its neighbours. Without
     // --terrain and --walk nothing is loaded and the draw list is unchanged.
     let ground = match (&grid, walk || terrain) {
@@ -526,6 +546,8 @@ pub fn cell(
     };
     #[cfg(feature = "script-event")]
     let mut pick = None;
+    #[cfg(feature = "script-event")]
+    let mut live = None;
     let walk = if walk {
         // The same collision and world the `walk` report uses.
         let options = fo4_scene::collision::Options {
@@ -541,6 +563,34 @@ pub fn cell(
         {
             let refs = fo4_play::pick::references(&world, &c);
             let (boxes, _) = fo4_play::pick::object_bounds(&scene, &refs);
+            if play_live {
+                let mut counts = std::collections::BTreeMap::new();
+                let (dormant, info) = fo4_play::world::dormant(
+                    &mut loader,
+                    &mut scene,
+                    limits,
+                    &refs,
+                    placement,
+                    &mut counts,
+                    &budget,
+                )?;
+                for (k, v) in &counts {
+                    println!("play: {k}\t{v}");
+                }
+                live = Some(crate::play::LiveLoad {
+                    dormant,
+                    info,
+                    space: fo4_scene::timeline::norm(&fo4_scene::timeline::scene_space(
+                        &store, &scene,
+                    )),
+                    tags: build
+                        .instances
+                        .iter()
+                        .map(|i| (i.index, fo4_scene::timeline::norm(&i.reference)))
+                        .collect(),
+                    world: None,
+                });
+            }
             pick = Some((refs, boxes));
         }
         if let Some(mut g) = ground {
@@ -590,6 +640,8 @@ pub fn cell(
         light,
         #[cfg(feature = "script-event")]
         pick,
+        #[cfg(feature = "script-event")]
+        live,
     })
 }
 

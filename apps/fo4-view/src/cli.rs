@@ -13,7 +13,8 @@ usage:
            [--clock-emissive-multiple] [--clock-emissive-colour] [--clock-falloff]
            [--clock-translation] [--clock-rotation] [--clock-rotation-xyz] [--clock-scale]
            [--frame-log build/FRAMES.tsv] [--script-path X,Y;... [--script-shots build/NAME]]
-           [--play-run SWITCHES_FILE --play-out DIR [--play-reach UNITS] [--play-pick-bounds]]
+           [--play-run SWITCHES_FILE --play-out DIR [--play-reach UNITS] [--play-pick-bounds]
+            [--play-live-world [--play-nowait]]]
       Window with a free-fly camera: W/A/S/D move, Shift moves faster, hold the
       left mouse button and move the mouse to look, R returns to the start pose.
       The title bar shows the mode, the speed and the position.
@@ -89,7 +90,11 @@ usage:
       --play-reach units (the caller's number), and the title bar shows the
       run's second, the last stage and the line being spoken. The run's
       outputs (--timeline among its switches) go to --play-out when the
-      window closes (spec/play.md).
+      window closes (spec/play.md). With --play-live-world the walking
+      world and the drawn references follow the run's state each frame
+      (disabled references hidden and passed through, initially disabled
+      ones the run enables shown, moved ones moved; --play-nowait reads the
+      NoWait forms as the plain natives).
   fo4-view MANIFEST DATA_DIRECTORY CELL_EDITOR_ID [level] --headless
            --eye X,Y,Z --look X,Y,Z --out build/FRAME.png [--tags build/TAGS.bin]
            [--size WxH] [--backface-cull] [--terrain] [--around N] [--walk]
@@ -316,6 +321,11 @@ pub struct Play {
     /// The activation also meets the object bounds of references with no
     /// collision (`--play-pick-bounds`, `play_activate_object_bounds_v1`).
     pub bounds: bool,
+    /// The walking world and the drawn references follow the run's state
+    /// (`--play-live-world`, `play_live_collision_follows_run_v1`), the
+    /// NoWait forms read as the plain natives with `--play-nowait`.
+    pub live: bool,
+    pub nowait: bool,
 }
 
 /// Measurement aids of the window (`--frame-log`, `--script-path`,
@@ -489,6 +499,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
     let mut light = fo4_scene::light::Switches::default();
     let mut light_assumptions = fo4_scene::light::Assumptions::default();
     let (mut play_run, mut play_out, mut play_reach, mut play_bounds) = (None, None, None, false);
+    let (mut play_live, mut play_nowait) = (false, false);
     let mut rest = args[3..].iter();
     while let Some(arg) = rest.next() {
         if clock.set_flag(arg) || light.set_flag(arg) || pose.set_flag(arg) {
@@ -537,6 +548,8 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
                 play_reach = Some(r);
             }
             "--play-pick-bounds" => play_bounds = true,
+            "--play-live-world" => play_live = true,
+            "--play-nowait" => play_nowait = true,
             "--timeline" => timeline_file = Some(value()?.clone()),
             "--at" => timeline_at = Some(not_negative(value()?)?),
             "--eye-height" => eye_height = Some(finite(value()?)?),
@@ -698,15 +711,22 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             out,
             reach: play_reach,
             bounds: play_bounds,
+            live: play_live,
+            nowait: play_nowait,
         }),
-        (None, None) if play_reach.is_none() && !play_bounds => None,
+        (None, None) if play_reach.is_none() && !play_bounds && !play_live && !play_nowait => {
+            None
+        }
         _ => {
             return Err(
-                "--play-run FILE needs --play-out DIR; --play-reach and --play-pick-bounds need --play-run"
+                "--play-run FILE needs --play-out DIR; --play-reach, --play-pick-bounds, --play-live-world and --play-nowait need --play-run"
                     .into(),
             )
         }
     };
+    if play_nowait && !play_live {
+        return Err("--play-nowait needs --play-live-world".into());
+    }
     if play.is_some()
         && (headless
             || !walk
@@ -990,9 +1010,26 @@ mod tests {
                 run: "s.txt".into(),
                 out: "o".into(),
                 reach: Some(150.0),
-                bounds: true
+                bounds: true,
+                live: false,
+                nowait: false,
             }
         );
+        let live = parse(&args(
+            "m d C --under-hypotheses --walk --eye 1,2,3 --look 4,5,6 --play-run s.txt --play-out o --play-live-world --play-nowait",
+        ))
+        .unwrap();
+        assert!(matches!(
+            live,
+            Command::Window {
+                play: Some(Play {
+                    live: true,
+                    nowait: true,
+                    ..
+                }),
+                ..
+            }
+        ));
         for bad in [
             "m d C --under-hypotheses --walk --eye 1,2,3 --look 4,5,6 --play-run s.txt",
             "m d C --under-hypotheses --eye 1,2,3 --look 4,5,6 --play-run s.txt --play-out o",
@@ -1001,6 +1038,8 @@ mod tests {
             "m d C --under-hypotheses --walk --terrain --around 1 --eye 1,2,3 --look 4,5,6 --play-run s.txt --play-out o",
             "m d C --under-hypotheses --walk --eye 1,2,3 --look 4,5,6 --play-reach 10",
             "m d C --under-hypotheses --walk --eye 1,2,3 --look 4,5,6 --play-run s.txt --play-out o --play-reach -1",
+            "m d C --under-hypotheses --walk --eye 1,2,3 --look 4,5,6 --play-live-world",
+            "m d C --under-hypotheses --walk --eye 1,2,3 --look 4,5,6 --play-run s.txt --play-out o --play-nowait",
         ] {
             assert!(parse(&args(bad)).is_err(), "{bad}");
         }

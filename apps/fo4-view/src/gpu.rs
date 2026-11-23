@@ -1314,7 +1314,7 @@ pub fn window(
     }
     #[cfg(feature = "script-event")]
     if let Some(p) = play {
-        app.insert_resource(Playing(p, String::new()))
+        app.insert_resource(Playing(p, String::new(), PlayDrawn::default()))
             .add_systems(Update, play_frame.after(fly_camera).before(show_readout));
     }
     #[cfg(not(feature = "script-event"))]
@@ -1326,10 +1326,67 @@ pub fn window(
     Ok(())
 }
 
-/// The play mode's link to the run, and its last title text.
+/// The play mode's link to the run, its last title text and what the
+/// live world last did to the drawn instances.
 #[cfg(feature = "script-event")]
 #[derive(Resource)]
-struct Playing(crate::play::PlayRun, String);
+struct Playing(crate::play::PlayRun, String, PlayDrawn);
+
+/// The live world's generation last applied to the window
+/// (`--play-live-world`), and each drawn reference instance's translation
+/// as spawned.
+#[cfg(feature = "script-event")]
+#[derive(Default)]
+struct PlayDrawn {
+    applied: Option<u64>,
+    spawned: std::collections::HashMap<Entity, Vec3>,
+}
+
+/// With `--play-live-world`, when the live world changed (and once the
+/// scene is spawned): the walking world mirrors it, and each drawn instance
+/// of a reference it knows is hidden where the reference is absent and
+/// moved by the reference's move where it was moved.
+#[cfg(feature = "script-event")]
+fn play_live(
+    p: &crate::play::PlayRun,
+    drawn: &mut PlayDrawn,
+    walk: Option<&mut Walk>,
+    instances: &mut Query<(Entity, &MeshTag, &mut Visibility, &mut Transform)>,
+) {
+    let Some((live, _)) = &p.live else { return };
+    if drawn.applied == Some(p.generation) || instances.is_empty() {
+        return;
+    }
+    if let Some(w) = walk {
+        if let Err(e) = live.mirror_into(&mut w.space) {
+            eprintln!("play: the live world's collision: {e}");
+        }
+    }
+    let (mut hidden, mut moved) = (0usize, 0usize);
+    for (e, tag, mut vis, mut t) in instances.iter_mut() {
+        let Some(d) = p.decision(tag.value) else {
+            continue;
+        };
+        let base = *drawn.spawned.entry(e).or_insert(t.translation);
+        match d {
+            fo4_play::live::Decision::Absent => {
+                *vis = Visibility::Hidden;
+                hidden += 1;
+            }
+            fo4_play::live::Decision::Present(v) => {
+                *vis = Visibility::Inherited;
+                let b = crate::coords::game_to_bevy(v);
+                t.translation = base + Vec3::new(b[0] as f32, b[1] as f32, b[2] as f32);
+                moved += usize::from(v != [0.0; 3]);
+            }
+        }
+    }
+    println!(
+        "play: live world generation {} drawn: {hidden} instances hidden, {moved} moved",
+        p.generation
+    );
+    drawn.applied = Some(p.generation);
+}
 
 /// The play mode, each frame after the walker moved: the frame's seconds,
 /// the walker's feet and, when E was pressed, what the eye's ray meets go
@@ -1339,12 +1396,13 @@ struct Playing(crate::play::PlayRun, String);
 fn play_frame(
     time: Res<Time>,
     keys: Res<ButtonInput<KeyCode>>,
-    walk: Option<Res<Walk>>,
+    mut walk: Option<ResMut<Walk>>,
     mut playing: ResMut<Playing>,
     mut readout: ResMut<Readout>,
+    mut instances: Query<(Entity, &MeshTag, &mut Visibility, &mut Transform)>,
 ) {
     let dt = time.delta_secs_f64();
-    let Playing(p, title) = &mut *playing;
+    let Playing(p, title, drawn) = &mut *playing;
     let walker = walk
         .as_deref()
         .and_then(|w| w.active.as_ref().map(|v| (w, v)));
@@ -1364,6 +1422,7 @@ fn play_frame(
     if let Some(t) = p.frame(dt, feet, activated) {
         *title = t;
     }
+    play_live(p, drawn, walk.as_deref_mut(), &mut instances);
     if !title.is_empty() {
         readout.text.push_str(" | ");
         readout.text.push_str(title);

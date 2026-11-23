@@ -34,6 +34,7 @@ fn main() {
 fn load_scene(
     s: &cli::Scene,
     walk: bool,
+    play_live: bool,
 ) -> AnyResult<(scene::GpuScene, RenderOptions, load::Loaded)> {
     let started = std::time::Instant::now();
     let prepared = s.timeline.as_ref().map(timeline::prepare).transpose()?;
@@ -56,6 +57,7 @@ fn load_scene(
         s.script_event.as_ref(),
         s.timeline.as_ref().zip(prepared.as_ref()),
         (s.light, s.light_assumptions),
+        play_live,
     )?;
     let options = RenderOptions {
         backface_cull: s.backface_cull,
@@ -256,7 +258,7 @@ fn run() -> AnyResult<()> {
             path: None,
             ..
         } => {
-            let (mut gpu, options, loaded) = load_scene(&s, walk)?;
+            let (mut gpu, options, loaded) = load_scene(&s, walk, false)?;
             let root = Some(loaded.data_root.as_path());
             // Open the outputs first: a refused path fails before rendering.
             let mut out_file = load::output_file(&out, root)?;
@@ -317,11 +319,20 @@ fn run() -> AnyResult<()> {
                     None => println!("stream: not an exterior cell with a grid; loading once"),
                 }
             }
-            let (gpu, options, loaded) = load_scene(&s, walk)?;
+            let play_live = play.as_ref().is_some_and(|p| p.wants_live());
+            #[allow(unused_mut)]
+            let (gpu, options, mut loaded) = load_scene(&s, walk, play_live)?;
             #[cfg(feature = "script-event")]
             if let (Some(p), Some((refs, boxes))) = (play.as_mut(), loaded.pick.clone()) {
                 p.refs = refs;
                 p.boxes = boxes;
+            }
+            #[cfg(feature = "script-event")]
+            if let (Some(p), Some(mut l), Some(w)) =
+                (play.as_mut(), loaded.live.take(), loaded.walk.as_ref())
+            {
+                l.world = Some(w.clone());
+                p.follow(l)?;
             }
             // Keep only the walking world; the draw list was converted.
             let load::Loaded {
