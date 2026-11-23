@@ -30,9 +30,31 @@ const FEATURES: [(u32, &str); 3] = [
     (1 << 15, "refraction"),
     (1 << 16, "fire-refraction"),
 ];
+/// The (colour controller, controlled variable) of each clock slot
+/// (`crate::Animation::tracks`) of an effect shader.
+const CLOCK_SLOT_FIELDS: [(bool, u32); crate::TRACKS] = [
+    (false, 6),
+    (false, 8),
+    (false, 7),
+    (false, 9),
+    (false, 5),
+    (false, 0),
+    (true, 0),
+    (false, 1),
+    (false, 2),
+    (false, 3),
+    (false, 4),
+];
 /// Environment_Mapping (Shader Flags 1 bit 7): drawn without its term
 /// under `effect_environment_left_out_v1`.
 const ENVIRONMENT: u32 = 1 << 7;
+/// The falloff slots of `crate::Animation::tracks`.
+const FALLOFF_SLOTS: [usize; 4] = [
+    crate::TRACK_FALLOFF_START_ANGLE,
+    crate::TRACK_FALLOFF_STOP_ANGLE,
+    crate::TRACK_FALLOFF_START_OPACITY,
+    crate::TRACK_FALLOFF_STOP_OPACITY,
+];
 /// Vertex_Alpha (Shader Flags 1 bit 3), Vertex_Colors (Shader Flags 2 bit 5).
 const VERTEX_ALPHA: u32 = 1 << 3;
 const VERTEX_COLORS: u32 = 1 << 5;
@@ -59,8 +81,9 @@ struct Terms {
     /// and the NIF disagree (`effect_material_over_controller_v1`).
     material_over_controller: bool,
     /// The same, by clock slot (`crate::Animation`): U offset, V offset,
-    /// U scale, V scale, alpha; the material's value is then held.
-    material_differs: [bool; 5],
+    /// U scale, V scale, alpha, emissive multiple, emissive colour, the
+    /// four falloff fields; the material's value is then held.
+    material_differs: [bool; crate::TRACKS],
     /// Every driven (colour, controlled variable) whose material value is
     /// not the NIF's (or has no pairing): the material's value is drawn.
     material_fields: Vec<(bool, u32)>,
@@ -230,14 +253,14 @@ impl Builder<'_, '_> {
                             )
                         })?;
                     // By clock slot: EffectShaderControlledVariable 6, 8,
-                    // 7, 9, 5.
-                    let material_differs = [6, 8, 7, 9, 5].map(|variable| {
+                    // 7, 9, 5, 0, the emissive colour, 1 to 4.
+                    let material_differs = CLOCK_SLOT_FIELDS.map(|(color, variable)| {
                         match (
-                            rest::effect_field(f, false, variable),
-                            material_field(&m, false, variable),
+                            rest::effect_field(f, color, variable),
+                            material_field(&m, color, variable),
                         ) {
                             (Some(a), Some(b)) => {
-                                driven_fields_differ([(false, variable, Some(a), Some(b))])
+                                driven_fields_differ([(color, variable, Some(a), Some(b))])
                                     .unwrap_or(true)
                             }
                             _ => true,
@@ -382,7 +405,7 @@ impl Builder<'_, '_> {
                         .collect(),
                     environment: flags1 & ENVIRONMENT != 0,
                     material_over_controller: false,
-                    material_differs: [false; 5],
+                    material_differs: [false; crate::TRACKS],
                     material_fields: Vec::new(),
                     left_out: flags1 & SOFT != 0
                         || flags2 & LIGHTING != 0
@@ -403,6 +426,21 @@ impl Builder<'_, '_> {
                 }
             }
         };
+        // The clock drives a field only where the material does not hold
+        // another value (`effect_material_over_controller_v1` keeps the
+        // material's there, at every time).
+        // A refusal of the clock's tracks is raised where it was before the
+        // effect fields joined them: after the surface's terms and textures.
+        let clock = self.shader_clock(n, shader, file);
+        let mut tracks = match &clock {
+            Ok(t) => t.clone(),
+            Err(_) => Default::default(),
+        };
+        for (t, differs) in tracks.iter_mut().zip(terms.material_differs) {
+            if differs {
+                *t = None;
+            }
+        }
         // Every term this frame does not settle, named together.
         let tint: [f32; 3] = std::array::from_fn(|i| terms.color[i] * terms.scale);
         let (mut channels, vertex_alpha) = vertex_channels(flags1, flags2);
@@ -434,6 +472,57 @@ impl Builder<'_, '_> {
             stop_opacity,
         };
         let falloff_drawn = terms.falloff && !terms.rgb_falloff;
+        // A falloff field the frame does not draw needs no track.
+        if !falloff_drawn {
+            for slot in FALLOFF_SLOTS {
+                tracks[slot] = None;
+            }
+        }
+        let falloff_clock = FALLOFF_SLOTS.iter().any(|s| tracks[*s].is_some());
+        // With falloff tracks: every opacity they can take within 0 to 1
+        // and finite angles (the fields at a time are checked again there).
+        let falloff_valid = if falloff_clock {
+            FALLOFF_SLOTS.iter().enumerate().all(|(k, slot)| {
+                let range = match &tracks[*slot] {
+                    Some(t) => t.keys.bounds(0),
+                    None => Some((terms.falloff_fields[k], terms.falloff_fields[k])),
+                };
+                range.is_some_and(|(lo, hi)| {
+                    lo.is_finite() && hi.is_finite() && (k < 2 || (lo >= 0. && hi <= 1.))
+                })
+            })
+        } else {
+            falloff.validate().is_ok()
+        };
+        // The range of the tint (base colour times scale) over every time
+        // when the clock drives the emissive colour or multiple.
+        let colour_clock = tracks[crate::TRACK_EMISSIVE_MULTIPLE].is_some()
+            || tracks[crate::TRACK_EMISSIVE_COLOUR].is_some();
+        let range = |slot: usize, c: usize, held: f32| match &tracks[slot] {
+            Some(t) => t.keys.bounds(c),
+            None => Some((held, held)),
+        };
+        let tint_range: Option<Vec<(f32, f32)>> = (0..3)
+            .map(|c| {
+                let (clo, chi) = range(crate::TRACK_EMISSIVE_COLOUR, c, terms.color[c])?;
+                let (slo, shi) = range(crate::TRACK_EMISSIVE_MULTIPLE, 0, terms.scale)?;
+                (clo >= 0. && slo >= 0.).then_some((clo * slo, chi * shi))
+            })
+            .collect();
+        let tint_negative = if colour_clock {
+            tint_range
+                .as_ref()
+                .is_none_or(|r| r.iter().any(|(lo, hi)| !lo.is_finite() || !hi.is_finite()))
+        } else {
+            tint.iter().any(|v| !v.is_finite() || *v < 0.)
+        };
+        let tint_above_one = if colour_clock {
+            tint_range
+                .as_ref()
+                .is_some_and(|r| r.iter().any(|(_, hi)| *hi > 1.))
+        } else {
+            tint.iter().any(|v| *v > 1.)
+        };
         let palette_drawn = terms.palette_colour || terms.palette_alpha;
         let gates: Vec<&str> = [
             (
@@ -441,18 +530,12 @@ impl Builder<'_, '_> {
                 "palette-texture",
             ),
             (terms.rgb_falloff, "rgb-falloff"),
-            (
-                falloff_drawn && falloff.validate().is_err(),
-                "falloff-fields",
-            ),
+            (falloff_drawn && !falloff_valid, "falloff-fields"),
             (
                 falloff_drawn && !normals_on_every_vertex(geometry),
                 "falloff-normals",
             ),
-            (
-                tint.iter().any(|v| !v.is_finite() || *v < 0.),
-                "colour-negative",
-            ),
+            (tint_negative, "colour-negative"),
             (
                 vertex_alpha == VertexAlpha::AlphaFlagAlone && vertex_alpha_below_one,
                 "vertex-alpha-flag-alone",
@@ -498,11 +581,7 @@ impl Builder<'_, '_> {
                     .into_iter()
                     .filter(|_| terms.palette_alpha),
             )
-            .chain(
-                tint.iter()
-                    .any(|v| *v > 1.)
-                    .then_some(h::EFFECT_COLOUR_CLAMPED),
-            )
+            .chain(tint_above_one.then_some(h::EFFECT_COLOUR_CLAMPED))
             .chain(
                 [h::EFFECT_ENVIRONMENT_ADDS, h::EFFECT_ENVIRONMENT_LEFT_OUT]
                     .into_iter()
@@ -531,6 +610,7 @@ impl Builder<'_, '_> {
             }),
             None => None,
         };
+        clock?;
         let mut surface = Surface {
             channels,
             requires_uv,
@@ -543,20 +623,15 @@ impl Builder<'_, '_> {
                 material_two_sided: terms.two_sided,
                 nif_shader_flags_2: Some(flags2),
             },
-            tint: Some(tint),
+            // A colour the clock drives is the draw's (`Draw::colour`):
+            // the vertex colours then hold no tint.
+            tint: Some(if colour_clock { [1.; 3] } else { tint }),
             falloff: falloff_drawn.then_some(falloff),
             palette,
             clock: Default::default(),
+            colour: colour_clock.then_some(tint),
+            colour_terms: (terms.color, terms.scale),
         };
-        // The clock drives a field only where the material does not hold
-        // another value (`effect_material_over_controller_v1` keeps the
-        // material's there, at every time).
-        let mut tracks = self.shader_clock(n, shader, file)?;
-        for (t, differs) in tracks.iter_mut().zip(terms.material_differs) {
-            if differs {
-                *t = None;
-            }
-        }
         self.clock_surface(&mut surface, tracks, file, at)?;
         self.clock_held(n, shader, f, &terms.material_fields, file, at)?;
         Ok(surface)
@@ -606,8 +681,11 @@ impl Builder<'_, '_> {
             let Some(variable) = variable else {
                 continue;
             };
+            // Alpha and UV fields, and the fields whose switch is on, are
+            // the animation's.
             if target != Some(shader as i32)
                 || (!color && (5..=9).contains(&variable))
+                || self.options.clock.effect_field(color, variable)
                 || material_fields.contains(&(color, variable))
             {
                 continue;

@@ -445,6 +445,13 @@ pub struct Draw {
     pub falloff: Option<Falloff>,
     /// An effect surface's greyscale-to-palette lookup.
     pub palette: Option<Palette>,
+    /// An effect surface's base colour times its scale, multiplied into the
+    /// RGB of the interpolated vertex colour (its mesh's vertex colours
+    /// then hold no tint): set only where the clock drives the emissive
+    /// colour or multiple (`fo4_scene::clock::Switches`); `None`, the mesh's
+    /// vertex colours hold the tint as before.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub colour: Option<[f32; 3]>,
 }
 /// Slots of [`Animation::tracks`].
 pub const TRACK_U_OFFSET: usize = 0;
@@ -452,62 +459,185 @@ pub const TRACK_V_OFFSET: usize = 1;
 pub const TRACK_U_SCALE: usize = 2;
 pub const TRACK_V_SCALE: usize = 3;
 pub const TRACK_OPACITY: usize = 4;
+/// The emissive multiple (the base colour scale), behind
+/// `effect_clock_emissive_multiple_v1`'s switch.
+pub const TRACK_EMISSIVE_MULTIPLE: usize = 5;
+/// The emissive colour (three components, the base colour's RGB), behind
+/// `effect_clock_emissive_colour_v1`'s switch.
+pub const TRACK_EMISSIVE_COLOUR: usize = 6;
+/// Falloff start and stop angle (keys in degrees, the field their cosine)
+/// and start and stop opacity, behind `effect_clock_falloff_v1`'s switch.
+pub const TRACK_FALLOFF_START_ANGLE: usize = 7;
+pub const TRACK_FALLOFF_STOP_ANGLE: usize = 8;
+pub const TRACK_FALLOFF_START_OPACITY: usize = 9;
+pub const TRACK_FALLOFF_STOP_OPACITY: usize = 10;
+/// Number of [`Animation::tracks`] slots.
+pub const TRACKS: usize = 11;
+/// The fields of a draw the game clock can drive ([`Animation::fields`]).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ClockFields {
+    pub uv_offset: [f64; 2],
+    pub uv_scale: [f64; 2],
+    pub opacity: f32,
+    /// [`Draw::colour`].
+    pub colour: Option<[f32; 3]>,
+    pub falloff: Option<Falloff>,
+}
+impl Draw {
+    /// The fields the game clock can drive, as the draw holds them.
+    pub fn clock_fields(&self) -> ClockFields {
+        ClockFields {
+            uv_offset: self.uv_offset,
+            uv_scale: self.uv_scale,
+            opacity: self.alpha.opacity,
+            colour: self.colour,
+            falloff: self.falloff,
+        }
+    }
+    pub fn set_clock_fields(&mut self, f: ClockFields) {
+        self.uv_offset = f.uv_offset;
+        self.uv_scale = f.uv_scale;
+        self.alpha.opacity = f.opacity;
+        self.colour = f.colour;
+        self.falloff = f.falloff;
+    }
+}
 /// A draw whose surface fields free-running controllers drive on the game
 /// clock (`draw::BuildOptions::time`, `fo4_scene::clock`, each value under
 /// the clock rules the build recorded for the instance): the draw's UV
-/// offset and scale components and its opacity at any time, from the same
-/// tracks for the CPU reference and the GPU viewer.
+/// offset and scale components and its opacity at any time, and behind
+/// their switches its colour (emissive colour times emissive multiple) and
+/// falloff fields, from the same tracks for the CPU reference and the GPU
+/// viewer.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Animation {
     /// Index into `DrawList::draws`.
     pub draw: usize,
-    /// U offset, V offset, U scale, V scale, opacity ([`TRACK_U_OFFSET`]
-    /// and the others); `None`: the field is held as the draw stores it.
-    pub tracks: [Option<fo4_scene::clock::Track>; 5],
+    /// U offset, V offset, U scale, V scale, opacity, emissive multiple,
+    /// emissive colour, falloff start angle, stop angle, start opacity,
+    /// stop opacity ([`TRACK_U_OFFSET`] and the others); `None`: the field
+    /// is held as the draw stores it.
+    pub tracks: [Option<fo4_scene::clock::Track>; TRACKS],
+    /// The base colour's RGB and its scale where no track drives them: the
+    /// terms of [`Draw::colour`] when a colour or multiple track exists.
+    pub colour: [f32; 3],
+    pub scale: f32,
 }
 impl Animation {
-    /// The UV offset, UV scale and opacity at `seconds` of the clock after
-    /// load: each tracked field replaced by its track's value, the others
-    /// as given. A value that is not finite, or an opacity below 0, is an
-    /// error.
-    pub fn fields(
-        &self,
-        seconds: f64,
-        uv_offset: [f64; 2],
-        uv_scale: [f64; 2],
-        opacity: f32,
-    ) -> Result<([f64; 2], [f64; 2], f32)> {
-        let mut v = [
-            uv_offset[0],
-            uv_offset[1],
-            uv_scale[0],
-            uv_scale[1],
-            f64::from(opacity),
-        ];
-        for (slot, track) in v.iter_mut().zip(&self.tracks) {
-            if let Some(t) = track {
-                let x = t.at(seconds).map(|x| x[0]).filter(|x| x.is_finite());
-                *slot = f64::from(x.ok_or_else(|| {
-                    Error::new(
-                        "ClockTrackValue",
-                        "draw list",
-                        self.draw as u64,
-                        "finite value at the time",
-                        seconds,
-                    )
-                })?);
+    /// An animation of UV, opacity or falloff tracks alone (the colour terms
+    /// unused).
+    pub fn new(draw: usize, tracks: [Option<fo4_scene::clock::Track>; TRACKS]) -> Self {
+        Self {
+            draw,
+            tracks,
+            colour: [1.; 3],
+            scale: 1.,
+        }
+    }
+    fn value(&self, slot: usize, seconds: f64) -> Result<Option<[f32; 3]>> {
+        let Some(t) = &self.tracks[slot] else {
+            return Ok(None);
+        };
+        let n = t.keys.components.min(3);
+        t.at(seconds)
+            .filter(|x| x[..n].iter().all(|v| v.is_finite()))
+            .map(Some)
+            .ok_or_else(|| {
+                Error::new(
+                    "ClockTrackValue",
+                    "draw list",
+                    self.draw as u64,
+                    "finite value at the time",
+                    seconds,
+                )
+            })
+    }
+    /// The draw's clock fields at `seconds` of the clock after load: each
+    /// tracked field replaced by its track's value (a falloff angle's key
+    /// read as degrees and turned into its cosine,
+    /// `nif_controller_falloff_angle_degrees_v1`; the colour the emissive
+    /// colour times the emissive multiple, each tracked or held), the
+    /// others as given in `held`. A value that is not finite, an opacity
+    /// below 0, a colour below 0 or a falloff that fails
+    /// `Falloff::validate` is an error.
+    pub fn fields(&self, seconds: f64, held: ClockFields) -> Result<ClockFields> {
+        let mut out = held;
+        let one = |slot: usize| -> Result<Option<f64>> {
+            Ok(self.value(slot, seconds)?.map(|v| f64::from(v[0])))
+        };
+        if let Some(v) = one(TRACK_U_OFFSET)? {
+            out.uv_offset[0] = v;
+        }
+        if let Some(v) = one(TRACK_V_OFFSET)? {
+            out.uv_offset[1] = v;
+        }
+        if let Some(v) = one(TRACK_U_SCALE)? {
+            out.uv_scale[0] = v;
+        }
+        if let Some(v) = one(TRACK_V_SCALE)? {
+            out.uv_scale[1] = v;
+        }
+        if let Some(v) = one(TRACK_OPACITY)? {
+            if v < 0. {
+                return Err(Error::new(
+                    "ClockTrackValue",
+                    "draw list",
+                    self.draw as u64,
+                    "opacity at least 0",
+                    v,
+                ));
             }
+            out.opacity = v as f32;
         }
-        if v[4] < 0. {
-            return Err(Error::new(
-                "ClockTrackValue",
-                "draw list",
-                self.draw as u64,
-                "opacity at least 0",
-                v[4],
-            ));
+        let scale = self.value(TRACK_EMISSIVE_MULTIPLE, seconds)?;
+        let colour = self.value(TRACK_EMISSIVE_COLOUR, seconds)?;
+        if scale.is_some() || colour.is_some() {
+            let s = scale.map_or(self.scale, |v| v[0]);
+            let c = colour.unwrap_or([self.colour[0], self.colour[1], self.colour[2]]);
+            let tint: [f32; 3] = std::array::from_fn(|i| c[i] * s);
+            if tint.iter().any(|v| !v.is_finite() || *v < 0.) {
+                return Err(Error::new(
+                    "ClockTrackValue",
+                    "draw list",
+                    self.draw as u64,
+                    "colour at least 0",
+                    format!("{tint:?}"),
+                ));
+            }
+            out.colour = Some(tint);
         }
-        Ok(([v[0], v[1]], [v[2], v[3]], v[4] as f32))
+        let falloff = [
+            TRACK_FALLOFF_START_ANGLE,
+            TRACK_FALLOFF_STOP_ANGLE,
+            TRACK_FALLOFF_START_OPACITY,
+            TRACK_FALLOFF_STOP_OPACITY,
+        ];
+        if falloff.iter().any(|s| self.tracks[*s].is_some()) {
+            let mut f = held.falloff.ok_or_else(|| {
+                Error::new(
+                    "ClockTrackValue",
+                    "draw list",
+                    self.draw as u64,
+                    "a falloff to drive",
+                    "none",
+                )
+            })?;
+            if let Some(v) = one(TRACK_FALLOFF_START_ANGLE)? {
+                f.start_angle = fo4_scene::rest::degrees_cosine(v as f32);
+            }
+            if let Some(v) = one(TRACK_FALLOFF_STOP_ANGLE)? {
+                f.stop_angle = fo4_scene::rest::degrees_cosine(v as f32);
+            }
+            if let Some(v) = one(TRACK_FALLOFF_START_OPACITY)? {
+                f.start_opacity = v as f32;
+            }
+            if let Some(v) = one(TRACK_FALLOFF_STOP_OPACITY)? {
+                f.stop_opacity = v as f32;
+            }
+            f.validate()?;
+            out.falloff = Some(f);
+        }
+        Ok(out)
     }
 }
 #[derive(Debug, Default)]
@@ -557,18 +687,15 @@ impl DrawList {
     pub fn is_overlay(&self, draw: usize) -> bool {
         self.overlays.binary_search(&draw).is_ok()
     }
-    /// Sets every animated draw's UV fields and opacity to their values at
+    /// Sets every animated draw's clock fields to their values at
     /// `seconds` of the game clock after load ([`Animation::fields`]).
     pub fn at_time(&mut self, seconds: f64) -> Result<()> {
         for a in &self.animations {
             let d = self.draws.get_mut(a.draw).ok_or_else(|| {
                 Error::new("RenderDrawIndex", "draw list", 0, "animated draw", a.draw)
             })?;
-            let (offset, scale, opacity) =
-                a.fields(seconds, d.uv_offset, d.uv_scale, d.alpha.opacity)?;
-            d.uv_offset = offset;
-            d.uv_scale = scale;
-            d.alpha.opacity = opacity;
+            let f = a.fields(seconds, d.clock_fields())?;
+            d.set_clock_fields(f);
         }
         Ok(())
     }

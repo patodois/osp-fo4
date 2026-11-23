@@ -53,6 +53,7 @@ fn list() -> DrawList {
         draws: vec![Draw {
             falloff: None,
             palette: None,
+            colour: None,
             sidedness: crate::Sidedness::default(),
             instance: 7,
             mesh: 0,
@@ -834,4 +835,98 @@ fn a_blended_alpha_above_one_is_tested_as_it_stands_and_blended_clamped() {
         let want = l.textures[0].rgba[k] * 0.5;
         assert!((c[k] - want).abs() < 1e-6, "{c:?} {want}");
     }
+}
+
+#[test]
+fn an_animation_drives_the_colour_and_falloff_and_the_frame_takes_the_colour() {
+    use fo4_scene::clock::{Key, Keys, Timing, Track, LINEAR};
+    let track = |components: usize, a: [f32; 3], z: [f32; 3]| {
+        let key = |time: f32, value: [f32; 3]| Key {
+            time,
+            value,
+            forward: [0.; 3],
+            backward: [0.; 3],
+            tbc: [0.; 3],
+        };
+        Track {
+            timing: Timing {
+                flags: 8,
+                frequency: 1.,
+                phase: 0.,
+                start: 0.,
+                stop: 1.,
+            },
+            keys: Keys {
+                components,
+                kind: LINEAR,
+                keys: vec![key(0., a), key(1., z)],
+            },
+        }
+    };
+    let mut tracks: [Option<Track>; TRACKS] = Default::default();
+    tracks[TRACK_EMISSIVE_MULTIPLE] = Some(track(1, [1., 0., 0.], [3., 0., 0.]));
+    tracks[TRACK_FALLOFF_STOP_ANGLE] = Some(track(1, [0., 0., 0.], [90., 0., 0.]));
+    tracks[TRACK_FALLOFF_STOP_OPACITY] = Some(track(1, [1., 0., 0.], [0., 0., 0.]));
+    let a = Animation {
+        draw: 0,
+        tracks,
+        colour: [0.5, 0.25, 0.1],
+        scale: 7.,
+    };
+    let held = ClockFields {
+        uv_offset: [0.; 2],
+        uv_scale: [1.; 2],
+        opacity: 1.,
+        colour: Some([0.5, 0.25, 0.1]),
+        falloff: Some(Falloff {
+            start_angle: 1.,
+            stop_angle: 1.,
+            start_opacity: 1.,
+            stop_opacity: 1.,
+        }),
+    };
+    let f = a.fields(0.5, held).unwrap();
+    // The held colour times the multiple's value (2); the stored scale 7
+    // is replaced.
+    let c = f.colour.unwrap();
+    for (x, y) in c.iter().zip([1., 0.5, 0.2]) {
+        assert!((x - y).abs() < 1e-6, "{c:?}");
+    }
+    let fo = f.falloff.unwrap();
+    // 45 degrees read as its cosine; untracked fields held.
+    assert!((fo.stop_angle - std::f32::consts::FRAC_1_SQRT_2).abs() < 1e-6);
+    assert_eq!((fo.start_angle, fo.start_opacity), (1., 1.));
+    assert!((fo.stop_opacity - 0.5).abs() < 1e-6);
+    assert_eq!((f.uv_offset, f.opacity), ([0.; 2], 1.));
+    // A colour below 0 and a falloff that fails its validation are errors.
+    let mut neg = a.clone();
+    neg.tracks[TRACK_EMISSIVE_MULTIPLE] = Some(track(1, [-1., 0., 0.], [-1., 0., 0.]));
+    assert_eq!(neg.fields(0.5, held).unwrap_err().code, "ClockTrackValue");
+    let mut bad = a.clone();
+    bad.tracks[TRACK_FALLOFF_STOP_OPACITY] = Some(track(1, [2., 0., 0.], [2., 0., 0.]));
+    assert_eq!(
+        bad.fields(0.5, held).unwrap_err().code,
+        "UnsupportedRenderFalloff"
+    );
+    // The frame multiplies the draw's colour into the sample.
+    let mut l = list();
+    let base = frame(&l, &camera(), 1).color[5];
+    l.draws[0].colour = Some([0.5, 0.5, 0.5]);
+    let half = frame(&l, &camera(), 1).color[5];
+    for k in 0..3 {
+        assert!((half[k] - base[k] * 0.5).abs() < 1e-6, "{half:?} {base:?}");
+    }
+    l.draws[0].colour = Some([-1., 0., 0.]);
+    assert_eq!(
+        render(
+            &l,
+            &camera(),
+            RenderOptions::REFERENCE,
+            &Limits::default(),
+            &Budget::new(1 << 24)
+        )
+        .unwrap_err()
+        .code,
+        "RenderDrawColour"
+    );
 }

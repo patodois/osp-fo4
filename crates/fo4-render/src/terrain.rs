@@ -107,6 +107,7 @@ pub fn append_terrain(
         Draw {
             falloff: None,
             palette: None,
+            colour: None,
             sidedness: Sidedness {
                 material_two_sided: Some(1),
                 nif_shader_flags_2: None,
@@ -820,6 +821,7 @@ fn pass(
         Draw {
             falloff: None,
             palette: None,
+            colour: None,
             sidedness: TWO_SIDED,
             instance,
             mesh,

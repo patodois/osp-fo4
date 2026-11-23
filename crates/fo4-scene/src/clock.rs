@@ -23,6 +23,65 @@ pub const CYCLE_LOOP: u32 = 0;
 pub const CYCLE_REVERSE: u32 = 1;
 pub const CYCLE_CLAMP: u32 = 2;
 
+/// Readings of the clock that are off by default, one switch per pending
+/// rule (`spec/controller-clock.md`, Effect fields on the clock). With every
+/// switch off the scene's rest tags and the draw build are those of the
+/// alpha and UV clock alone.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Switches {
+    /// A free-running controller of an effect shader's emissive multiple
+    /// (EffectShaderControlledVariable 0) runs on the clock and gives the
+    /// base colour scale the frame multiplies in
+    /// (`effect_clock_emissive_multiple_v1`).
+    pub emissive_multiple: bool,
+    /// The same for the emissive colour (EffectShaderControlledColor 0),
+    /// the base colour's RGB (`effect_clock_emissive_colour_v1`).
+    pub emissive_colour: bool,
+    /// The same for the four falloff fields (EffectShaderControlledVariable
+    /// 1 to 4), the angles read as degrees (`effect_clock_falloff_v1`).
+    pub falloff: bool,
+}
+impl Switches {
+    /// Whether the switch of an effect-shader field (colour controller,
+    /// controlled variable) is on.
+    pub fn effect_field(&self, color: bool, variable: u32) -> bool {
+        match (color, variable) {
+            (true, 0) => self.emissive_colour,
+            (false, 0) => self.emissive_multiple,
+            (false, 1..=4) => self.falloff,
+            _ => false,
+        }
+    }
+    pub fn any(&self) -> bool {
+        self.emissive_multiple || self.emissive_colour || self.falloff
+    }
+    /// The command-line flags of the switches (`render`, `fo4-view`,
+    /// `coverage_census`).
+    pub const FLAGS: [&'static str; 3] = [
+        "--clock-emissive-multiple",
+        "--clock-emissive-colour",
+        "--clock-falloff",
+    ];
+    /// Turns on the switch `flag` names; `false` for another argument.
+    pub fn set_flag(&mut self, flag: &str) -> bool {
+        match flag {
+            "--clock-emissive-multiple" => self.emissive_multiple = true,
+            "--clock-emissive-colour" => self.emissive_colour = true,
+            "--clock-falloff" => self.falloff = true,
+            _ => return false,
+        }
+        true
+    }
+    /// The flags of the switches that are on.
+    pub fn flags(&self) -> Vec<&'static str> {
+        [self.emissive_multiple, self.emissive_colour, self.falloff]
+            .iter()
+            .zip(Self::FLAGS)
+            .filter_map(|(on, f)| on.then_some(f))
+            .collect()
+    }
+}
+
 /// One key of a float or point key group, in the reader's field order.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Key {
@@ -583,6 +642,23 @@ mod tests {
             (lo - slo).abs() < 1e-4 && (hi - shi).abs() < 1e-4,
             "{lo} {hi} {slo} {shi}"
         );
+    }
+
+    #[test]
+    fn switches_are_off_by_default_and_each_flag_names_one() {
+        let mut s = Switches::default();
+        assert!(!s.any() && s.flags().is_empty());
+        assert!(!s.effect_field(false, 0) && !s.effect_field(true, 0));
+        assert!(!s.set_flag("--time"));
+        assert!(s.set_flag("--clock-falloff"));
+        assert!(s.effect_field(false, 3) && !s.effect_field(false, 0));
+        assert!(!s.effect_field(false, 5));
+        assert_eq!(s.flags(), ["--clock-falloff"]);
+        for f in Switches::FLAGS {
+            assert!(s.set_flag(f));
+        }
+        assert!(s.effect_field(true, 0) && s.effect_field(false, 0));
+        assert_eq!(s.flags(), Switches::FLAGS);
     }
 
     #[test]

@@ -145,6 +145,9 @@ pub struct Assets<'a> {
     allocation: Budget,
     unavailable: bool,
     active: Vec<Active>,
+    /// The clock's switches the rest tags of models are read with
+    /// (`crate::rest::tags_with`); all off by default.
+    pub clock: crate::clock::Switches,
 }
 impl<'a> Assets<'a> {
     pub fn new(vfs: &'a Vfs, b: &Budget) -> Self {
@@ -161,6 +164,7 @@ impl<'a> Assets<'a> {
             allocation: b.account(),
             unavailable: false,
             active: Vec::new(),
+            clock: crate::clock::Switches::default(),
         }
     }
     pub fn resolve_path(
@@ -407,7 +411,7 @@ impl<'a> Assets<'a> {
                     let policy = ModelPolicy::inspect_with(&n, self.vfs, self.path_policy, &work)?;
                     // What each animation block is at rest, by what uses it
                     // (`crate::rest`); each tag is its own blocker.
-                    let rest = crate::rest::tags(&n, &work)?;
+                    let rest = crate::rest::tags_with(&n, self.clock, &work)?;
                     self.nodes[i].texture_audit = policy.texture_citations(&n, &self.allocation)?;
                     for (index, block) in n.blocks.iter().enumerate() {
                         if policy.visual[index] && n.block_types[block.type_index as usize] == "BSEffectShaderProperty"

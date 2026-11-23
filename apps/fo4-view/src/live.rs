@@ -315,6 +315,7 @@ mod tests {
                 opaque_texture: false,
                 falloff: None,
                 palette: 0,
+                colour: None,
             },
             key: SurfaceKey {
                 blend: None,

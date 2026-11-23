@@ -10,6 +10,7 @@ usage:
            [--walk] [--texture-cap N] [--alpha-tested-cap N] [--reference-textures]
            [--scene-memory MIB] [--no-stream] [--no-actors]
            [--actor-clip ARCHIVE_PATH.hkx [--actor-clip-time SECONDS]] [--time SECONDS]
+           [--clock-emissive-multiple] [--clock-emissive-colour] [--clock-falloff]
            [--frame-log build/FRAMES.tsv] [--script-path X,Y;... [--script-shots build/NAME]]
       Window with a free-fly camera: W/A/S/D move, Shift moves faster, hold the
       left mouse button and move the mouse to look, R returns to the start pose.
@@ -61,6 +62,9 @@ usage:
       fields and alpha are drawn at its time under the pending clock rules
       (--under-hypotheses; the CPU render's --time); without it such models
       are left out, as before. Not with the moving grid (use --no-stream).
+      --clock-emissive-multiple, --clock-emissive-colour and --clock-falloff
+      (off by default) let the clock drive those effect fields too, each
+      under its own pending rule (the CPU render's flags of the same names).
       Measurement aids: --frame-log writes one line per frame (interval,
       time in the frame's update, cells drawn and uploading, entities).
       --script-path (with --walk) steers the walker through the waypoints
@@ -132,6 +136,9 @@ pub struct Scene {
     /// Seconds of the game clock after load (`--time`): the build's time
     /// (`fo4_render::draw::BuildOptions::time`), advanced in the window.
     pub time: Option<f64>,
+    /// The clock's switches (`--clock-emissive-multiple`,
+    /// `--clock-emissive-colour`, `--clock-falloff`; all off by default).
+    pub clock: fo4_scene::clock::Switches,
 }
 
 /// Default of `--scene-memory`: a viewer bound, not a claim about the game.
@@ -356,8 +363,12 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
     let mut debug = WindowDebug::default();
     let mut script_event = None;
     let mut time = None;
+    let mut clock = fo4_scene::clock::Switches::default();
     let mut rest = args[3..].iter();
     while let Some(arg) = rest.next() {
+        if clock.set_flag(arg) {
+            continue;
+        }
         let mut value = || rest.next().ok_or_else(usage);
         match arg.as_str() {
             "--strict" => level = RuleLevel::Facts,
@@ -434,6 +445,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
         },
         script_event,
         time,
+        clock,
     };
     if scene.script_event.is_some() && (!headless || walk) {
         return Err("--script-event applies to --headless without --walk".into());
@@ -562,6 +574,14 @@ mod tests {
             panic!()
         };
         assert_eq!(scene.clip.map(|c| c.time), Some(0.));
+        let c = parse(&args(
+            "m d C --headless --eye 1,2,3 --look 4,5,6 --out a.png --time 2 --clock-falloff",
+        ))
+        .unwrap();
+        let Command::Headless { scene, .. } = c else {
+            panic!("{c:?}")
+        };
+        assert_eq!(scene.clock.flags(), ["--clock-falloff"]);
         for (line, error) in [
             ("m d C --eye 1,2,3 --look 4,5,6 --actor-clip-time 1", "--actor-clip-time needs --actor-clip"),
             ("m d C --eye 1,2,3 --look 4,5,6 --actor-clip a.hkx --no-actors", "--actor-clip poses the drawn actors: not with --no-actors"),
@@ -648,6 +668,7 @@ mod tests {
                     clip: None,
                     script_event: None,
                     time: None,
+                    clock: fo4_scene::clock::Switches::default(),
                 },
                 fly: DEFAULT_FLY,
                 walk: false,

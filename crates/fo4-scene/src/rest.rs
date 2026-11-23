@@ -80,6 +80,15 @@ pub const CLOCK_CLAMP: &str = "clock-clamp";
 pub const CLOCK_LINEAR: &str = "clock-linear";
 pub const CLOCK_QUADRATIC: &str = "clock-quadratic";
 pub const CLOCK_STEP: &str = "clock-step";
+/// The effect-shader field of a [`CLOCK`] controller other than alpha and
+/// UV, given only with its switch on (`crate::clock::Switches`): the
+/// emissive multiple (`effect_clock_emissive_multiple_v1`), the emissive
+/// colour (`effect_clock_emissive_colour_v1`), a falloff field
+/// (`effect_clock_falloff_v1`; an angle's controller also carries
+/// [`FALLOFF_DEGREES`]).
+pub const CLOCK_EMISSIVE_MULTIPLE: &str = "clock-emissive-multiple";
+pub const CLOCK_EMISSIVE_COLOUR: &str = "clock-emissive-colour";
+pub const CLOCK_FALLOFF: &str = "clock-falloff";
 /// Tolerance of "equal" between a stored effect-shader field and a key.
 pub const EFFECT_TOLERANCE: f32 = 1e-4;
 
@@ -110,6 +119,9 @@ pub fn rule(tag: &str) -> Option<&'static str> {
         CLOCK_LINEAR => h::CLOCK_KEY_LINEAR,
         CLOCK_QUADRATIC => h::CLOCK_KEY_QUADRATIC,
         CLOCK_STEP => h::CLOCK_KEY_STEP,
+        CLOCK_EMISSIVE_MULTIPLE => h::CLOCK_EMISSIVE_MULTIPLE,
+        CLOCK_EMISSIVE_COLOUR => h::CLOCK_EMISSIVE_COLOUR,
+        CLOCK_FALLOFF => h::CLOCK_FALLOFF,
         _ => return None,
     })
 }
@@ -132,6 +144,33 @@ pub fn clock_field(n: &Nif<'_>, ctl: usize) -> Option<u32> {
         _ => false,
     };
     ok.then_some(variable)
+}
+/// The effect-shader field (colour controller, controlled variable) that
+/// controller `ctl` drives when it is one the clock's switches name
+/// (`crate::clock::Switches`): an effect float controller of the emissive
+/// multiple or a falloff field (EffectShaderControlledVariable 0 to 4) or
+/// an effect colour controller of the emissive colour
+/// (EffectShaderControlledColor 0), targeting an effect shader.
+pub fn effect_clock_field(n: &Nif<'_>, ctl: usize) -> Option<(bool, u32)> {
+    let f = block_fields(n, ctl)?;
+    let variable = word(f, "Controlled Variable")?;
+    let target = links(f, &["Target"]).first().copied()?;
+    if type_of(n, target) != "BSEffectShaderProperty" {
+        return None;
+    }
+    match type_of(n, ctl) {
+        "BSEffectShaderPropertyFloatController" if variable <= 4 => Some((false, variable)),
+        "BSEffectShaderPropertyColorController" if variable == 0 => Some((true, 0)),
+        _ => None,
+    }
+}
+/// The rest tag of an effect field of [`effect_clock_field`].
+fn effect_clock_tag(color: bool, variable: u32) -> &'static str {
+    match (color, variable) {
+        (true, _) => CLOCK_EMISSIVE_COLOUR,
+        (false, 0) => CLOCK_EMISSIVE_MULTIPLE,
+        _ => CLOCK_FALLOFF,
+    }
 }
 /// The cycle and key tags of a clock track.
 fn clock_tags(t: &crate::clock::Track) -> [&'static str; 2] {
@@ -736,6 +775,17 @@ pub fn effect_controlled(n: &Nif<'_>, shader: usize) -> Vec<(bool, u32)> {
 
 /// The rest tags of every block (empty for blocks outside the `state` class).
 pub fn tags(n: &Nif<'_>, b: &Budget) -> Result<Vec<Vec<&'static str>>> {
+    tags_with(n, crate::clock::Switches::default(), b)
+}
+/// [`tags`], with the clock's switches: a free-running effect-shader
+/// controller of a field whose switch is on, not settled by the first-key
+/// rule and that the clock runs, is tagged [`CLOCK`] (with its cycle, key
+/// and field tags) instead of `effect-emissive` or `falloff`.
+pub fn tags_with(
+    n: &Nif<'_>,
+    switches: crate::clock::Switches,
+    b: &Budget,
+) -> Result<Vec<Vec<&'static str>>> {
     let count = n.blocks.len();
     let mut out: Vec<Vec<&'static str>> = Vec::new();
     b.reserve(&mut out, count, "rest tags", 0)?;
@@ -927,19 +977,36 @@ pub fn tags(n: &Nif<'_>, b: &Budget) -> Result<Vec<Vec<&'static str>>> {
                 } else {
                     class
                 };
-                // A free-running alpha or UV controller the clock runs.
-                let clocked =
-                    if matches!(tag, ALPHA | TEXTURE_TRANSFORM) && clock_field(n, i).is_some() {
-                        crate::clock::track(n, i, b)?.ok()
-                    } else {
-                        None
-                    };
+                // A free-running alpha or UV controller the clock runs, or
+                // an effect field whose switch is on.
+                let effect_clock = if matches!(tag, EFFECT_EMISSIVE | FALLOFF) {
+                    effect_clock_field(n, i).filter(|(c, v)| switches.effect_field(*c, *v))
+                } else {
+                    None
+                };
+                let clocked = if (matches!(tag, ALPHA | TEXTURE_TRANSFORM)
+                    && clock_field(n, i).is_some())
+                    || effect_clock.is_some()
+                {
+                    crate::clock::track(n, i, b)?.ok()
+                } else {
+                    None
+                };
                 let tag = if clocked.is_some() { CLOCK } else { tag };
+                let field_tags: Vec<&'static str> = match (&clocked, effect_clock) {
+                    (Some(_), Some((color, variable))) => {
+                        std::iter::once(effect_clock_tag(color, variable))
+                            .chain((!color && matches!(variable, 1 | 2)).then_some(FALLOFF_DEGREES))
+                            .collect()
+                    }
+                    _ => Vec::new(),
+                };
                 let extra: Vec<&'static str> = clocked
                     .as_ref()
                     .map(clock_tags)
                     .into_iter()
                     .flatten()
+                    .chain(field_tags)
                     .chain((tag == EFFECT_FIRST_KEY && degrees(i)).then_some(FALLOFF_DEGREES))
                     .collect();
                 add(&mut out, i, tag);

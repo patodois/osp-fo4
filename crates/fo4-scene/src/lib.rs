@@ -206,7 +206,16 @@ impl<'a> Loader<'a> {
     }
     /// Drop decoded asset state while retaining the explicit path interpretation policy.
     pub fn reset_asset_cache(&mut self, cache: &Budget) {
+        let clock = self.assets.clock;
         self.assets = Assets::with_policy(self.vfs, cache, self.path_policy);
+        self.assets.clock = clock;
+    }
+    /// Sets the clock's switches the models are read with
+    /// (`clock::Switches`; all off by default) and renews the asset cache,
+    /// so that no model read before keeps the other reading.
+    pub fn set_clock_switches(&mut self, switches: clock::Switches, cache: &Budget) {
+        self.assets = Assets::with_policy(self.vfs, cache, self.path_policy);
+        self.assets.clock = switches;
     }
     fn resolve_path(
         &self,

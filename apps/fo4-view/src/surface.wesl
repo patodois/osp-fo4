@@ -26,6 +26,9 @@ struct SurfaceParams {
     // Palette lookups (`fo4_render::Palette`): bit 0 colour, bit 1 alpha.
     palette_lookups: u32,
     falloff: vec4<f32>,
+    // `fo4_render::Draw::colour`: an RGB multiplier after the vertex colour
+    // (an effect colour the game clock drives); 1 otherwise.
+    tint: vec4<f32>,
 }
 
 @group(constants::MATERIAL_BIND_GROUP) @binding(0) var<uniform> params: SurfaceParams;
@@ -105,6 +108,7 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     }
     @if(VERTEX_COLORS)
     color = color * vertex;
+    color = vec4<f32>(color.rgb * params.tint.rgb, color.a);
     color.a = color.a * params.opacity;
     if palette_alpha >= 0.0 {
         color.a = palette_alpha;

@@ -161,6 +161,16 @@ pub fn write(list: &DrawList, writer: &mut impl Write, l: &Limits) -> Result<u64
             d,
         ));
     }
+    if let Some(d) = list.draws.iter().position(|d| d.colour.is_some()) {
+        // Nor for a colour the clock drives.
+        return Err(Error::new(
+            "SnapshotColourDraws",
+            "snapshot",
+            w.bytes,
+            "no draws with a clock colour",
+            d,
+        ));
+    }
     if let Some(d) = list.draws.iter().position(|d| d.palette.is_some()) {
         // Nor for an effect surface's palette lookup.
         return Err(Error::new(
@@ -511,6 +521,7 @@ pub fn read(bytes: &[u8], l: &Limits, b: &Budget) -> Result<DrawList> {
         list.draws.push(Draw {
             falloff: None,
             palette: None,
+            colour: None,
             sidedness: crate::Sidedness::default(),
             instance,
             mesh,

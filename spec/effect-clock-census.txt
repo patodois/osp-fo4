@@ -1,0 +1,508 @@
+# effect_clock_census: effect-shader controllers by field and driver (spec/controller-clock.md)
+# Counts only. Lines ending in (placements) count enabled placed references of the models.
+winning NIF read 224366, unreadable 2; compiled scripts read 10282 (155 s)
+2160	1 controllers: UV offset or scale; free-running
+31	1 controllers: UV offset or scale; free-running (manager flag without a manager)
+16	1 controllers: UV offset or scale; free-running (manager flag without a manager) (placements)
+27130	1 controllers: UV offset or scale; free-running (placements)
+1848	1 controllers: UV offset or scale; named by a sequence
+63348	1 controllers: UV offset or scale; named by a sequence (placements)
+618	1 controllers: alpha; free-running
+4	1 controllers: alpha; free-running (manager flag without a manager)
+1	1 controllers: alpha; free-running (manager flag without a manager) (placements)
+7836	1 controllers: alpha; free-running (placements)
+1478	1 controllers: alpha; named by a sequence
+16163	1 controllers: alpha; named by a sequence (placements)
+247	1 controllers: emissive colour; free-running
+10	1 controllers: emissive colour; free-running (manager flag without a manager)
+5	1 controllers: emissive colour; free-running (manager flag without a manager) (placements)
+2422	1 controllers: emissive colour; free-running (placements)
+506	1 controllers: emissive colour; named by a sequence
+8135	1 controllers: emissive colour; named by a sequence (placements)
+304	1 controllers: emissive multiple; free-running
+10	1 controllers: emissive multiple; free-running (manager flag without a manager)
+6	1 controllers: emissive multiple; free-running (manager flag without a manager) (placements)
+9232	1 controllers: emissive multiple; free-running (placements)
+3	1 controllers: emissive multiple; manager flag, no sequence
+0	1 controllers: emissive multiple; manager flag, no sequence (placements)
+723	1 controllers: emissive multiple; named by a sequence
+10316	1 controllers: emissive multiple; named by a sequence (placements)
+146	1 controllers: falloff start opacity; free-running
+407	1 controllers: falloff start opacity; free-running (placements)
+2	1 controllers: falloff start opacity; named by a sequence
+0	1 controllers: falloff start opacity; named by a sequence (placements)
+146	1 controllers: falloff stop angle; free-running
+407	1 controllers: falloff stop angle; free-running (placements)
+29	1 free UV offset or scale: not a clock track: interpolator type
+16	1 free UV offset or scale: not a clock track: interpolator type (placements)
+30	1 free UV offset or scale: not a clock track: key type TBC
+31	1 free UV offset or scale: not a clock track: key type TBC (placements)
+47	1 free UV offset or scale: not a clock track: not active
+0	1 free UV offset or scale: not a clock track: not active (placements)
+318	1 free UV offset or scale: not a clock track: span not positive
+6730	1 free UV offset or scale: not a clock track: span not positive (placements)
+4	1 free UV offset or scale: track: clamp, constant, varies true; stored = clock at load; values within 0 to 1
+0	1 free UV offset or scale: track: clamp, constant, varies true; stored = clock at load; values within 0 to 1 (placements)
+1	1 free UV offset or scale: track: clamp, linear, varies false; stored = clock at load; values below 0, within 0 to 1
+1	1 free UV offset or scale: track: clamp, linear, varies false; stored = clock at load; values below 0, within 0 to 1 (placements)
+7	1 free UV offset or scale: track: clamp, linear, varies true; stored = clock at load; values above 1
+164	1 free UV offset or scale: track: clamp, linear, varies true; stored = clock at load; values above 1 (placements)
+3	1 free UV offset or scale: track: clamp, linear, varies true; stored = clock at load; values below 0, above 1
+3	1 free UV offset or scale: track: clamp, linear, varies true; stored = clock at load; values below 0, above 1 (placements)
+40	1 free UV offset or scale: track: clamp, linear, varies true; stored = clock at load; values below 0, within 0 to 1
+40	1 free UV offset or scale: track: clamp, linear, varies true; stored = clock at load; values below 0, within 0 to 1 (placements)
+39	1 free UV offset or scale: track: clamp, linear, varies true; stored = clock at load; values within 0 to 1
+39	1 free UV offset or scale: track: clamp, linear, varies true; stored = clock at load; values within 0 to 1 (placements)
+4	1 free UV offset or scale: track: clamp, quadratic, varies false; stored = clock at load; values within 0 to 1
+3	1 free UV offset or scale: track: clamp, quadratic, varies false; stored = clock at load; values within 0 to 1 (placements)
+10	1 free UV offset or scale: track: clamp, quadratic, varies true; stored = clock at load; values above 1
+28	1 free UV offset or scale: track: clamp, quadratic, varies true; stored = clock at load; values above 1 (placements)
+7	1 free UV offset or scale: track: clamp, quadratic, varies true; stored = clock at load; values below 0, above 1
+30	1 free UV offset or scale: track: clamp, quadratic, varies true; stored = clock at load; values below 0, above 1 (placements)
+4	1 free UV offset or scale: track: clamp, quadratic, varies true; stored = clock at load; values below 0, within 0 to 1
+0	1 free UV offset or scale: track: clamp, quadratic, varies true; stored = clock at load; values below 0, within 0 to 1 (placements)
+5	1 free UV offset or scale: track: clamp, quadratic, varies true; stored = clock at load; values within 0 to 1
+7	1 free UV offset or scale: track: clamp, quadratic, varies true; stored = clock at load; values within 0 to 1 (placements)
+6	1 free UV offset or scale: track: loop, constant, varies true; stored = clock at load; values within 0 to 1
+0	1 free UV offset or scale: track: loop, constant, varies true; stored = clock at load; values within 0 to 1 (placements)
+2	1 free UV offset or scale: track: loop, linear, varies false; stored = clock at load; values within 0 to 1
+0	1 free UV offset or scale: track: loop, linear, varies false; stored = clock at load; values within 0 to 1 (placements)
+59	1 free UV offset or scale: track: loop, linear, varies true; stored = clock at load; values above 1
+17	1 free UV offset or scale: track: loop, linear, varies true; stored = clock at load; values above 1 (placements)
+82	1 free UV offset or scale: track: loop, linear, varies true; stored = clock at load; values below 0, within 0 to 1
+296	1 free UV offset or scale: track: loop, linear, varies true; stored = clock at load; values below 0, within 0 to 1 (placements)
+243	1 free UV offset or scale: track: loop, linear, varies true; stored = clock at load; values within 0 to 1
+659	1 free UV offset or scale: track: loop, linear, varies true; stored = clock at load; values within 0 to 1 (placements)
+6	1 free UV offset or scale: track: loop, linear, varies true; stored differs from the clock at load; values above 1
+39	1 free UV offset or scale: track: loop, linear, varies true; stored differs from the clock at load; values above 1 (placements)
+14	1 free UV offset or scale: track: loop, linear, varies true; stored differs from the clock at load; values below 0, within 0 to 1
+0	1 free UV offset or scale: track: loop, linear, varies true; stored differs from the clock at load; values below 0, within 0 to 1 (placements)
+81	1 free UV offset or scale: track: loop, linear, varies true; stored differs from the clock at load; values within 0 to 1
+2468	1 free UV offset or scale: track: loop, linear, varies true; stored differs from the clock at load; values within 0 to 1 (placements)
+23	1 free UV offset or scale: track: loop, quadratic, varies false; stored = clock at load; values within 0 to 1
+129	1 free UV offset or scale: track: loop, quadratic, varies false; stored = clock at load; values within 0 to 1 (placements)
+182	1 free UV offset or scale: track: loop, quadratic, varies true; stored = clock at load; values above 1
+3924	1 free UV offset or scale: track: loop, quadratic, varies true; stored = clock at load; values above 1 (placements)
+2	1 free UV offset or scale: track: loop, quadratic, varies true; stored = clock at load; values below 0, above 1
+0	1 free UV offset or scale: track: loop, quadratic, varies true; stored = clock at load; values below 0, above 1 (placements)
+184	1 free UV offset or scale: track: loop, quadratic, varies true; stored = clock at load; values below 0, within 0 to 1
+3637	1 free UV offset or scale: track: loop, quadratic, varies true; stored = clock at load; values below 0, within 0 to 1 (placements)
+602	1 free UV offset or scale: track: loop, quadratic, varies true; stored = clock at load; values within 0 to 1
+4519	1 free UV offset or scale: track: loop, quadratic, varies true; stored = clock at load; values within 0 to 1 (placements)
+15	1 free UV offset or scale: track: loop, quadratic, varies true; stored differs from the clock at load; values above 1
+113	1 free UV offset or scale: track: loop, quadratic, varies true; stored differs from the clock at load; values above 1 (placements)
+2	1 free UV offset or scale: track: loop, quadratic, varies true; stored differs from the clock at load; values below 0, above 1
+0	1 free UV offset or scale: track: loop, quadratic, varies true; stored differs from the clock at load; values below 0, above 1 (placements)
+87	1 free UV offset or scale: track: loop, quadratic, varies true; stored differs from the clock at load; values below 0, within 0 to 1
+3380	1 free UV offset or scale: track: loop, quadratic, varies true; stored differs from the clock at load; values below 0, within 0 to 1 (placements)
+53	1 free UV offset or scale: track: loop, quadratic, varies true; stored differs from the clock at load; values within 0 to 1
+873	1 free UV offset or scale: track: loop, quadratic, varies true; stored differs from the clock at load; values within 0 to 1 (placements)
+4	1 free alpha: not a clock track: interpolator type
+1	1 free alpha: not a clock track: interpolator type (placements)
+12	1 free alpha: not a clock track: key type TBC
+0	1 free alpha: not a clock track: key type TBC (placements)
+64	1 free alpha: not a clock track: not active
+0	1 free alpha: not a clock track: not active (placements)
+161	1 free alpha: not a clock track: span not positive
+2061	1 free alpha: not a clock track: span not positive (placements)
+10	1 free alpha: track: clamp, quadratic, varies false; stored = clock at load; values above 1
+0	1 free alpha: track: clamp, quadratic, varies false; stored = clock at load; values above 1 (placements)
+8	1 free alpha: track: clamp, quadratic, varies false; stored = clock at load; values within 0 to 1
+469	1 free alpha: track: clamp, quadratic, varies false; stored = clock at load; values within 0 to 1 (placements)
+31	1 free alpha: track: clamp, quadratic, varies true; stored = clock at load; values above 1
+654	1 free alpha: track: clamp, quadratic, varies true; stored = clock at load; values above 1 (placements)
+9	1 free alpha: track: clamp, quadratic, varies true; stored = clock at load; values within 0 to 1
+0	1 free alpha: track: clamp, quadratic, varies true; stored = clock at load; values within 0 to 1 (placements)
+2	1 free alpha: track: loop, linear, varies false; stored = clock at load; values within 0 to 1
+27	1 free alpha: track: loop, linear, varies false; stored = clock at load; values within 0 to 1 (placements)
+20	1 free alpha: track: loop, linear, varies true; stored = clock at load; values within 0 to 1
+2494	1 free alpha: track: loop, linear, varies true; stored = clock at load; values within 0 to 1 (placements)
+31	1 free alpha: track: loop, linear, varies true; stored differs from the clock at load; values within 0 to 1
+776	1 free alpha: track: loop, linear, varies true; stored differs from the clock at load; values within 0 to 1 (placements)
+2	1 free alpha: track: loop, quadratic, varies false; stored = clock at load; values above 1
+0	1 free alpha: track: loop, quadratic, varies false; stored = clock at load; values above 1 (placements)
+4	1 free alpha: track: loop, quadratic, varies false; stored = clock at load; values within 0 to 1
+0	1 free alpha: track: loop, quadratic, varies false; stored = clock at load; values within 0 to 1 (placements)
+23	1 free alpha: track: loop, quadratic, varies true; stored = clock at load; values above 1
+92	1 free alpha: track: loop, quadratic, varies true; stored = clock at load; values above 1 (placements)
+4	1 free alpha: track: loop, quadratic, varies true; stored = clock at load; values below 0, above 1
+0	1 free alpha: track: loop, quadratic, varies true; stored = clock at load; values below 0, above 1 (placements)
+120	1 free alpha: track: loop, quadratic, varies true; stored = clock at load; values within 0 to 1
+688	1 free alpha: track: loop, quadratic, varies true; stored = clock at load; values within 0 to 1 (placements)
+3	1 free alpha: track: loop, quadratic, varies true; stored differs from the clock at load; values above 1
+1	1 free alpha: track: loop, quadratic, varies true; stored differs from the clock at load; values above 1 (placements)
+24	1 free alpha: track: loop, quadratic, varies true; stored differs from the clock at load; values below 0, above 1
+0	1 free alpha: track: loop, quadratic, varies true; stored differs from the clock at load; values below 0, above 1 (placements)
+90	1 free alpha: track: loop, quadratic, varies true; stored differs from the clock at load; values within 0 to 1
+574	1 free alpha: track: loop, quadratic, varies true; stored differs from the clock at load; values within 0 to 1 (placements)
+10	1 free emissive colour: not a clock track: interpolator type
+5	1 free emissive colour: not a clock track: interpolator type (placements)
+2	1 free emissive colour: not a clock track: key type TBC
+0	1 free emissive colour: not a clock track: key type TBC (placements)
+26	1 free emissive colour: not a clock track: not active
+0	1 free emissive colour: not a clock track: not active (placements)
+15	1 free emissive colour: not a clock track: span not positive
+144	1 free emissive colour: not a clock track: span not positive (placements)
+60	1 free emissive colour: track: clamp, quadratic, varies true; stored = clock at load; values within 0 to 1
+684	1 free emissive colour: track: clamp, quadratic, varies true; stored = clock at load; values within 0 to 1 (placements)
+4	1 free emissive colour: track: loop, quadratic, varies false; stored = clock at load; values within 0 to 1
+0	1 free emissive colour: track: loop, quadratic, varies false; stored = clock at load; values within 0 to 1 (placements)
+96	1 free emissive colour: track: loop, quadratic, varies true; stored = clock at load; values above 1
+521	1 free emissive colour: track: loop, quadratic, varies true; stored = clock at load; values above 1 (placements)
+22	1 free emissive colour: track: loop, quadratic, varies true; stored = clock at load; values within 0 to 1
+538	1 free emissive colour: track: loop, quadratic, varies true; stored = clock at load; values within 0 to 1 (placements)
+3	1 free emissive colour: track: loop, quadratic, varies true; stored differs from the clock at load; values above 1
+205	1 free emissive colour: track: loop, quadratic, varies true; stored differs from the clock at load; values above 1 (placements)
+19	1 free emissive colour: track: loop, quadratic, varies true; stored differs from the clock at load; values within 0 to 1
+330	1 free emissive colour: track: loop, quadratic, varies true; stored differs from the clock at load; values within 0 to 1 (placements)
+10	1 free emissive multiple: not a clock track: interpolator type
+6	1 free emissive multiple: not a clock track: interpolator type (placements)
+19	1 free emissive multiple: not a clock track: key type TBC
+0	1 free emissive multiple: not a clock track: key type TBC (placements)
+29	1 free emissive multiple: not a clock track: not active
+0	1 free emissive multiple: not a clock track: not active (placements)
+27	1 free emissive multiple: not a clock track: span not positive
+602	1 free emissive multiple: not a clock track: span not positive (placements)
+44	1 free emissive multiple: track: clamp, linear, varies true; stored = clock at load; values above 1
+44	1 free emissive multiple: track: clamp, linear, varies true; stored = clock at load; values above 1 (placements)
+25	1 free emissive multiple: track: clamp, quadratic, varies true; stored = clock at load; values above 1
+8	1 free emissive multiple: track: clamp, quadratic, varies true; stored = clock at load; values above 1 (placements)
+27	1 free emissive multiple: track: clamp, quadratic, varies true; stored = clock at load; values within 0 to 1
+647	1 free emissive multiple: track: clamp, quadratic, varies true; stored = clock at load; values within 0 to 1 (placements)
+13	1 free emissive multiple: track: loop, linear, varies false; stored = clock at load; values above 1
+713	1 free emissive multiple: track: loop, linear, varies false; stored = clock at load; values above 1 (placements)
+12	1 free emissive multiple: track: loop, linear, varies true; stored = clock at load; values above 1
+2496	1 free emissive multiple: track: loop, linear, varies true; stored = clock at load; values above 1 (placements)
+11	1 free emissive multiple: track: loop, linear, varies true; stored differs from the clock at load; values above 1
+1247	1 free emissive multiple: track: loop, linear, varies true; stored differs from the clock at load; values above 1 (placements)
+1	1 free emissive multiple: track: loop, quadratic, varies false; stored = clock at load; values above 1
+0	1 free emissive multiple: track: loop, quadratic, varies false; stored = clock at load; values above 1 (placements)
+58	1 free emissive multiple: track: loop, quadratic, varies true; stored = clock at load; values above 1
+2695	1 free emissive multiple: track: loop, quadratic, varies true; stored = clock at load; values above 1 (placements)
+1	1 free emissive multiple: track: loop, quadratic, varies true; stored = clock at load; values within 0 to 1
+0	1 free emissive multiple: track: loop, quadratic, varies true; stored = clock at load; values within 0 to 1 (placements)
+37	1 free emissive multiple: track: loop, quadratic, varies true; stored differs from the clock at load; values above 1
+780	1 free emissive multiple: track: loop, quadratic, varies true; stored differs from the clock at load; values above 1 (placements)
+146	1 free falloff start opacity: track: loop, quadratic, varies true; stored = clock at load; values within 0 to 1
+407	1 free falloff start opacity: track: loop, quadratic, varies true; stored = clock at load; values within 0 to 1 (placements)
+2	1 free falloff stop angle: track: loop, quadratic, varies true; stored = clock at load; values degrees 25 to 123
+0	1 free falloff stop angle: track: loop, quadratic, varies true; stored = clock at load; values degrees 25 to 123 (placements)
+144	1 free falloff stop angle: track: loop, quadratic, varies true; stored = clock at load; values degrees 63 to 73
+407	1 free falloff stop angle: track: loop, quadratic, varies true; stored = clock at load; values degrees 63 to 73 (placements)
+834	1 models: decided with the switches off false, on false; a free-running emissive, colour or falloff track that varies false
+11850	1 models: decided with the switches off false, on false; a free-running emissive, colour or falloff track that varies false (placements)
+69	1 models: decided with the switches off false, on false; a free-running emissive, colour or falloff track that varies true
+424	1 models: decided with the switches off false, on false; a free-running emissive, colour or falloff track that varies true (placements)
+13	1 models: decided with the switches off false, on true; a free-running emissive, colour or falloff track that varies true
+1497	1 models: decided with the switches off false, on true; a free-running emissive, colour or falloff track that varies true (placements)
+282	1 models: decided with the switches off true, on true; a free-running emissive, colour or falloff track that varies false
+16960	1 models: decided with the switches off true, on true; a free-running emissive, colour or falloff track that varies false (placements)
+260	1 models: decided with the switches off true, on true; a free-running emissive, colour or falloff track that varies true
+2465	1 models: decided with the switches off true, on true; a free-running emissive, colour or falloff track that varies true (placements)
+2	1 models: open tags off [behavior-graph + effect-emissive + effect-idle + other + particle + transform-varies] -> on [behavior-graph + effect-idle + other + particle + transform-varies]
+0	1 models: open tags off [behavior-graph + effect-emissive + effect-idle + other + particle + transform-varies] -> on [behavior-graph + effect-idle + other + particle + transform-varies] (placements)
+1	1 models: open tags off [behavior-graph + effect-emissive + other + particle + transform-varies] -> on [behavior-graph + other + particle + transform-varies]
+0	1 models: open tags off [behavior-graph + effect-emissive + other + particle + transform-varies] -> on [behavior-graph + other + particle + transform-varies] (placements)
+1	1 models: open tags off [effect-emissive + other + particle + transform-varies] -> on [other + particle + transform-varies]
+0	1 models: open tags off [effect-emissive + other + particle + transform-varies] -> on [other + particle + transform-varies] (placements)
+5	1 models: open tags off [effect-emissive + texture-transform] -> on [texture-transform]
+0	1 models: open tags off [effect-emissive + texture-transform] -> on [texture-transform] (placements)
+13	1 models: open tags off [effect-emissive] -> on []
+1497	1 models: open tags off [effect-emissive] -> on [] (placements)
+31	1 rest tag: UV offset or scale; free-running (manager flag without a manager); switches off texture-transform; on texture-transform
+16	1 rest tag: UV offset or scale; free-running (manager flag without a manager); switches off texture-transform; on texture-transform (placements)
+101	1 rest tag: UV offset or scale; free-running; switches off clock+clock-linear+clock-loop; on clock+clock-linear+clock-loop
+2507	1 rest tag: UV offset or scale; free-running; switches off clock+clock-linear+clock-loop; on clock+clock-linear+clock-loop (placements)
+157	1 rest tag: UV offset or scale; free-running; switches off clock+clock-loop+clock-quadratic; on clock+clock-loop+clock-quadratic
+4366	1 rest tag: UV offset or scale; free-running; switches off clock+clock-loop+clock-quadratic; on clock+clock-loop+clock-quadratic (placements)
+1791	1 rest tag: UV offset or scale; free-running; switches off effect-first-key; on effect-first-key
+17301	1 rest tag: UV offset or scale; free-running; switches off effect-first-key; on effect-first-key (placements)
+111	1 rest tag: UV offset or scale; free-running; switches off texture-transform; on texture-transform
+2956	1 rest tag: UV offset or scale; free-running; switches off texture-transform; on texture-transform (placements)
+887	1 rest tag: UV offset or scale; named by a sequence; switches off effect-first-key; on effect-first-key
+40025	1 rest tag: UV offset or scale; named by a sequence; switches off effect-first-key; on effect-first-key (placements)
+961	1 rest tag: UV offset or scale; named by a sequence; switches off effect-idle; on effect-idle
+23323	1 rest tag: UV offset or scale; named by a sequence; switches off effect-idle; on effect-idle (placements)
+4	1 rest tag: alpha; free-running (manager flag without a manager); switches off alpha; on alpha
+1	1 rest tag: alpha; free-running (manager flag without a manager); switches off alpha; on alpha (placements)
+45	1 rest tag: alpha; free-running; switches off alpha; on alpha
+962	1 rest tag: alpha; free-running; switches off alpha; on alpha (placements)
+31	1 rest tag: alpha; free-running; switches off clock+clock-linear+clock-loop; on clock+clock-linear+clock-loop
+776	1 rest tag: alpha; free-running; switches off clock+clock-linear+clock-loop; on clock+clock-linear+clock-loop (placements)
+117	1 rest tag: alpha; free-running; switches off clock+clock-loop+clock-quadratic; on clock+clock-loop+clock-quadratic
+575	1 rest tag: alpha; free-running; switches off clock+clock-loop+clock-quadratic; on clock+clock-loop+clock-quadratic (placements)
+425	1 rest tag: alpha; free-running; switches off effect-first-key; on effect-first-key
+5523	1 rest tag: alpha; free-running; switches off effect-first-key; on effect-first-key (placements)
+748	1 rest tag: alpha; named by a sequence; switches off effect-first-key; on effect-first-key
+5645	1 rest tag: alpha; named by a sequence; switches off effect-first-key; on effect-first-key (placements)
+730	1 rest tag: alpha; named by a sequence; switches off effect-idle; on effect-idle
+10518	1 rest tag: alpha; named by a sequence; switches off effect-idle; on effect-idle (placements)
+10	1 rest tag: emissive colour; free-running (manager flag without a manager); switches off effect-emissive; on effect-emissive
+5	1 rest tag: emissive colour; free-running (manager flag without a manager); switches off effect-emissive; on effect-emissive (placements)
+22	1 rest tag: emissive colour; free-running; switches off effect-emissive; on clock+clock-emissive-colour+clock-loop+clock-quadratic
+535	1 rest tag: emissive colour; free-running; switches off effect-emissive; on clock+clock-emissive-colour+clock-loop+clock-quadratic (placements)
+8	1 rest tag: emissive colour; free-running; switches off effect-emissive; on effect-emissive
+144	1 rest tag: emissive colour; free-running; switches off effect-emissive; on effect-emissive (placements)
+217	1 rest tag: emissive colour; free-running; switches off effect-first-key; on effect-first-key
+1743	1 rest tag: emissive colour; free-running; switches off effect-first-key; on effect-first-key (placements)
+312	1 rest tag: emissive colour; named by a sequence; switches off effect-first-key; on effect-first-key
+4131	1 rest tag: emissive colour; named by a sequence; switches off effect-first-key; on effect-first-key (placements)
+194	1 rest tag: emissive colour; named by a sequence; switches off effect-idle; on effect-idle
+4004	1 rest tag: emissive colour; named by a sequence; switches off effect-idle; on effect-idle (placements)
+10	1 rest tag: emissive multiple; free-running (manager flag without a manager); switches off effect-emissive; on effect-emissive
+6	1 rest tag: emissive multiple; free-running (manager flag without a manager); switches off effect-emissive; on effect-emissive (placements)
+11	1 rest tag: emissive multiple; free-running; switches off effect-emissive; on clock+clock-emissive-multiple+clock-linear+clock-loop
+1247	1 rest tag: emissive multiple; free-running; switches off effect-emissive; on clock+clock-emissive-multiple+clock-linear+clock-loop (placements)
+37	1 rest tag: emissive multiple; free-running; switches off effect-emissive; on clock+clock-emissive-multiple+clock-loop+clock-quadratic
+780	1 rest tag: emissive multiple; free-running; switches off effect-emissive; on clock+clock-emissive-multiple+clock-loop+clock-quadratic (placements)
+8	1 rest tag: emissive multiple; free-running; switches off effect-emissive; on effect-emissive
+385	1 rest tag: emissive multiple; free-running; switches off effect-emissive; on effect-emissive (placements)
+248	1 rest tag: emissive multiple; free-running; switches off effect-first-key; on effect-first-key
+6820	1 rest tag: emissive multiple; free-running; switches off effect-first-key; on effect-first-key (placements)
+3	1 rest tag: emissive multiple; manager flag, no sequence; switches off effect-idle; on effect-idle
+0	1 rest tag: emissive multiple; manager flag, no sequence; switches off effect-idle; on effect-idle (placements)
+443	1 rest tag: emissive multiple; named by a sequence; switches off effect-first-key; on effect-first-key
+5870	1 rest tag: emissive multiple; named by a sequence; switches off effect-first-key; on effect-first-key (placements)
+280	1 rest tag: emissive multiple; named by a sequence; switches off effect-idle; on effect-idle
+4446	1 rest tag: emissive multiple; named by a sequence; switches off effect-idle; on effect-idle (placements)
+146	1 rest tag: falloff start opacity; free-running; switches off effect-first-key; on effect-first-key
+407	1 rest tag: falloff start opacity; free-running; switches off effect-first-key; on effect-first-key (placements)
+2	1 rest tag: falloff start opacity; named by a sequence; switches off effect-idle; on effect-idle
+0	1 rest tag: falloff start opacity; named by a sequence; switches off effect-idle; on effect-idle (placements)
+146	1 rest tag: falloff stop angle; free-running; switches off effect-first-key+falloff-degrees; on effect-first-key+falloff-degrees
+407	1 rest tag: falloff stop angle; free-running; switches off effect-first-key+falloff-degrees; on effect-first-key+falloff-degrees (placements)
+2	2 manager-run controllers: UV offset or scale; sequences 1; stored = first key in none, = last key in all
+0	2 manager-run controllers: UV offset or scale; sequences 1; stored = first key in none, = last key in all (placements)
+36	2 manager-run controllers: UV offset or scale; sequences 1; stored = first key in none, = last key in none
+3196	2 manager-run controllers: UV offset or scale; sequences 1; stored = first key in none, = last key in none (placements)
+93	2 manager-run controllers: UV offset or scale; sequences 1; stored = first key in none, = last key in none; keys not read in some
+217	2 manager-run controllers: UV offset or scale; sequences 1; stored = first key in none, = last key in none; keys not read in some (placements)
+59	2 manager-run controllers: UV offset or scale; sequences 2 or more; stored = first key in none, = last key in none
+1806	2 manager-run controllers: UV offset or scale; sequences 2 or more; stored = first key in none, = last key in none (placements)
+145	2 manager-run controllers: UV offset or scale; sequences 2 or more; stored = first key in none, = last key in none; keys not read in some
+2215	2 manager-run controllers: UV offset or scale; sequences 2 or more; stored = first key in none, = last key in none; keys not read in some (placements)
+66	2 manager-run controllers: UV offset or scale; sequences 2 or more; stored = first key in none, = last key in some; keys not read in some
+0	2 manager-run controllers: UV offset or scale; sequences 2 or more; stored = first key in none, = last key in some; keys not read in some (placements)
+16	2 manager-run controllers: UV offset or scale; sequences 2 or more; stored = first key in some, = last key in all
+10	2 manager-run controllers: UV offset or scale; sequences 2 or more; stored = first key in some, = last key in all (placements)
+120	2 manager-run controllers: UV offset or scale; sequences 2 or more; stored = first key in some, = last key in none
+3138	2 manager-run controllers: UV offset or scale; sequences 2 or more; stored = first key in some, = last key in none (placements)
+152	2 manager-run controllers: UV offset or scale; sequences 2 or more; stored = first key in some, = last key in none; keys not read in some
+7301	2 manager-run controllers: UV offset or scale; sequences 2 or more; stored = first key in some, = last key in none; keys not read in some (placements)
+169	2 manager-run controllers: UV offset or scale; sequences 2 or more; stored = first key in some, = last key in some
+1016	2 manager-run controllers: UV offset or scale; sequences 2 or more; stored = first key in some, = last key in some (placements)
+103	2 manager-run controllers: UV offset or scale; sequences 2 or more; stored = first key in some, = last key in some; keys not read in some
+4424	2 manager-run controllers: UV offset or scale; sequences 2 or more; stored = first key in some, = last key in some; keys not read in some (placements)
+10	2 manager-run controllers: alpha; sequences 1; stored = first key in none, = last key in all
+0	2 manager-run controllers: alpha; sequences 1; stored = first key in none, = last key in all (placements)
+13	2 manager-run controllers: alpha; sequences 1; stored = first key in none, = last key in none
+1954	2 manager-run controllers: alpha; sequences 1; stored = first key in none, = last key in none (placements)
+9	2 manager-run controllers: alpha; sequences 2 or more; stored = first key in none, = last key in none
+0	2 manager-run controllers: alpha; sequences 2 or more; stored = first key in none, = last key in none (placements)
+37	2 manager-run controllers: alpha; sequences 2 or more; stored = first key in none, = last key in none; keys not read in some
+33	2 manager-run controllers: alpha; sequences 2 or more; stored = first key in none, = last key in none; keys not read in some (placements)
+10	2 manager-run controllers: alpha; sequences 2 or more; stored = first key in none, = last key in some
+0	2 manager-run controllers: alpha; sequences 2 or more; stored = first key in none, = last key in some (placements)
+7	2 manager-run controllers: alpha; sequences 2 or more; stored = first key in none, = last key in some; keys not read in some
+2	2 manager-run controllers: alpha; sequences 2 or more; stored = first key in none, = last key in some; keys not read in some (placements)
+20	2 manager-run controllers: alpha; sequences 2 or more; stored = first key in some, = last key in all
+20	2 manager-run controllers: alpha; sequences 2 or more; stored = first key in some, = last key in all (placements)
+65	2 manager-run controllers: alpha; sequences 2 or more; stored = first key in some, = last key in none
+28	2 manager-run controllers: alpha; sequences 2 or more; stored = first key in some, = last key in none (placements)
+61	2 manager-run controllers: alpha; sequences 2 or more; stored = first key in some, = last key in none; keys not read in some
+76	2 manager-run controllers: alpha; sequences 2 or more; stored = first key in some, = last key in none; keys not read in some (placements)
+422	2 manager-run controllers: alpha; sequences 2 or more; stored = first key in some, = last key in some
+7842	2 manager-run controllers: alpha; sequences 2 or more; stored = first key in some, = last key in some (placements)
+76	2 manager-run controllers: alpha; sequences 2 or more; stored = first key in some, = last key in some; keys not read in some
+563	2 manager-run controllers: alpha; sequences 2 or more; stored = first key in some, = last key in some; keys not read in some (placements)
+8	2 manager-run controllers: emissive colour; sequences 1; stored = first key in none, = last key in none
+0	2 manager-run controllers: emissive colour; sequences 1; stored = first key in none, = last key in none (placements)
+7	2 manager-run controllers: emissive colour; sequences 1; stored = first key in none, = last key in none; keys not read in some
+0	2 manager-run controllers: emissive colour; sequences 1; stored = first key in none, = last key in none; keys not read in some (placements)
+13	2 manager-run controllers: emissive colour; sequences 2 or more; stored = first key in none, = last key in none
+744	2 manager-run controllers: emissive colour; sequences 2 or more; stored = first key in none, = last key in none (placements)
+3	2 manager-run controllers: emissive colour; sequences 2 or more; stored = first key in none, = last key in some; keys not read in some
+0	2 manager-run controllers: emissive colour; sequences 2 or more; stored = first key in none, = last key in some; keys not read in some (placements)
+17	2 manager-run controllers: emissive colour; sequences 2 or more; stored = first key in some, = last key in none
+80	2 manager-run controllers: emissive colour; sequences 2 or more; stored = first key in some, = last key in none (placements)
+3	2 manager-run controllers: emissive colour; sequences 2 or more; stored = first key in some, = last key in none; keys not read in some
+0	2 manager-run controllers: emissive colour; sequences 2 or more; stored = first key in some, = last key in none; keys not read in some (placements)
+106	2 manager-run controllers: emissive colour; sequences 2 or more; stored = first key in some, = last key in some
+1116	2 manager-run controllers: emissive colour; sequences 2 or more; stored = first key in some, = last key in some (placements)
+37	2 manager-run controllers: emissive colour; sequences 2 or more; stored = first key in some, = last key in some; keys not read in some
+2064	2 manager-run controllers: emissive colour; sequences 2 or more; stored = first key in some, = last key in some; keys not read in some (placements)
+1	2 manager-run controllers: emissive multiple; sequences 1; stored = first key in none, = last key in none
+0	2 manager-run controllers: emissive multiple; sequences 1; stored = first key in none, = last key in none (placements)
+1	2 manager-run controllers: emissive multiple; sequences 1; stored = first key in none, = last key in none; keys not read in some
+0	2 manager-run controllers: emissive multiple; sequences 1; stored = first key in none, = last key in none; keys not read in some (placements)
+19	2 manager-run controllers: emissive multiple; sequences 2 or more; stored = first key in none, = last key in none
+1957	2 manager-run controllers: emissive multiple; sequences 2 or more; stored = first key in none, = last key in none (placements)
+12	2 manager-run controllers: emissive multiple; sequences 2 or more; stored = first key in none, = last key in none; keys not read in some
+13	2 manager-run controllers: emissive multiple; sequences 2 or more; stored = first key in none, = last key in none; keys not read in some (placements)
+14	2 manager-run controllers: emissive multiple; sequences 2 or more; stored = first key in some, = last key in all
+15	2 manager-run controllers: emissive multiple; sequences 2 or more; stored = first key in some, = last key in all (placements)
+17	2 manager-run controllers: emissive multiple; sequences 2 or more; stored = first key in some, = last key in none
+61	2 manager-run controllers: emissive multiple; sequences 2 or more; stored = first key in some, = last key in none (placements)
+17	2 manager-run controllers: emissive multiple; sequences 2 or more; stored = first key in some, = last key in none; keys not read in some
+4	2 manager-run controllers: emissive multiple; sequences 2 or more; stored = first key in some, = last key in none; keys not read in some (placements)
+190	2 manager-run controllers: emissive multiple; sequences 2 or more; stored = first key in some, = last key in some
+2394	2 manager-run controllers: emissive multiple; sequences 2 or more; stored = first key in some, = last key in some (placements)
+9	2 manager-run controllers: emissive multiple; sequences 2 or more; stored = first key in some, = last key in some; keys not read in some
+2	2 manager-run controllers: emissive multiple; sequences 2 or more; stored = first key in some, = last key in some; keys not read in some (placements)
+3	2 manager-run controllers: emissive multiple; sequences none; stored = first key in none, = last key in none
+0	2 manager-run controllers: emissive multiple; sequences none; stored = first key in none, = last key in none (placements)
+2	2 manager-run controllers: falloff start opacity; sequences 2 or more; stored = first key in some, = last key in some
+0	2 manager-run controllers: falloff start opacity; sequences 2 or more; stored = first key in some, = last key in some (placements)
+465	2 models: an effect controller run by a manager
+9634	2 models: an effect controller run by a manager (placements)
+1	2 models: behaviour graph not read
+0	2 models: behaviour graph not read (placements)
+253	2 models: graph start state plays an effect sequence; graph states play all of the effect sequences
+5118	2 models: graph start state plays an effect sequence; graph states play all of the effect sequences (placements)
+42	2 models: graph start state plays an effect sequence; graph states play some of the effect sequences
+1483	2 models: graph start state plays an effect sequence; graph states play some of the effect sequences (placements)
+1	2 models: graph start state plays another sequence; graph states play all of the effect sequences
+8	2 models: graph start state plays another sequence; graph states play all of the effect sequences (placements)
+1	2 models: graph start state plays another sequence; graph states play some of the effect sequences
+0	2 models: graph start state plays another sequence; graph states play some of the effect sequences (placements)
+79	2 models: graph start state plays no sequence; graph states play none of the effect sequences
+312	2 models: graph start state plays no sequence; graph states play none of the effect sequences (placements)
+41	2 models: names of those sequences held as a string by a compiled script: all
+2487	2 models: names of those sequences held as a string by a compiled script: all (placements)
+214	2 models: names of those sequences held as a string by a compiled script: none
+3269	2 models: names of those sequences held as a string by a compiled script: none (placements)
+210	2 models: names of those sequences held as a string by a compiled script: some
+3878	2 models: names of those sequences held as a string by a compiled script: some (placements)
+88	2 models: no behaviour graph
+2713	2 models: no behaviour graph (placements)
+5	2 models: no graph, one sequence (clamp), driving [BSLightingShaderPropertyFloatController + BSProceduralLightningController + NiMultiTargetTransformController + NiVisController + effect UV offset or scale + effect alpha + effect emissive colour + effect emissive multiple]
+0	2 models: no graph, one sequence (clamp), driving [BSLightingShaderPropertyFloatController + BSProceduralLightningController + NiMultiTargetTransformController + NiVisController + effect UV offset or scale + effect alpha + effect emissive colour + effect emissive multiple] (placements)
+1	2 models: no graph, one sequence (clamp), driving [BSLightingShaderPropertyFloatController + NiLightColorController + NiLightDimmerController + NiLightRadiusController + NiMultiTargetTransformController + NiPSysEmitterCtlr + NiPSysEmitterLifeSpanCtlr + NiPSysModifierActiveCtlr + NiVisController + effect alpha + effect emissive colour + effect emissive multiple]
+0	2 models: no graph, one sequence (clamp), driving [BSLightingShaderPropertyFloatController + NiLightColorController + NiLightDimmerController + NiLightRadiusController + NiMultiTargetTransformController + NiPSysEmitterCtlr + NiPSysEmitterLifeSpanCtlr + NiPSysModifierActiveCtlr + NiVisController + effect alpha + effect emissive colour + effect emissive multiple] (placements)
+1	2 models: no graph, one sequence (clamp), driving [BSLightingShaderPropertyFloatController + NiLightColorController + NiLightDimmerController + NiLightRadiusController + NiMultiTargetTransformController + NiPSysEmitterCtlr + NiPSysEmitterSpeedCtlr + NiPSysModifierActiveCtlr + NiVisController + effect alpha + effect emissive colour + effect emissive multiple]
+0	2 models: no graph, one sequence (clamp), driving [BSLightingShaderPropertyFloatController + NiLightColorController + NiLightDimmerController + NiLightRadiusController + NiMultiTargetTransformController + NiPSysEmitterCtlr + NiPSysEmitterSpeedCtlr + NiPSysModifierActiveCtlr + NiVisController + effect alpha + effect emissive colour + effect emissive multiple] (placements)
+1	2 models: no graph, one sequence (clamp), driving [BSLightingShaderPropertyFloatController + NiLightColorController + NiLightDimmerController + NiLightRadiusController + NiMultiTargetTransformController + NiPSysEmitterCtlr + NiPSysGravityStrengthCtlr + NiPSysModifierActiveCtlr + NiVisController + effect UV offset or scale + effect alpha + effect emissive colour + effect emissive multiple]
+0	2 models: no graph, one sequence (clamp), driving [BSLightingShaderPropertyFloatController + NiLightColorController + NiLightDimmerController + NiLightRadiusController + NiMultiTargetTransformController + NiPSysEmitterCtlr + NiPSysGravityStrengthCtlr + NiPSysModifierActiveCtlr + NiVisController + effect UV offset or scale + effect alpha + effect emissive colour + effect emissive multiple] (placements)
+1	2 models: no graph, one sequence (clamp), driving [BSLightingShaderPropertyFloatController + NiLightColorController + NiMultiTargetTransformController + NiPSysEmitterCtlr + NiPSysEmitterInitialRadiusCtlr + NiPSysEmitterLifeSpanCtlr + NiPSysEmitterSpeedCtlr + NiPSysGravityStrengthCtlr + NiPSysModifierActiveCtlr + NiVisController + effect UV offset or scale + effect alpha + effect emissive colour + effect emissive multiple]
+0	2 models: no graph, one sequence (clamp), driving [BSLightingShaderPropertyFloatController + NiLightColorController + NiMultiTargetTransformController + NiPSysEmitterCtlr + NiPSysEmitterInitialRadiusCtlr + NiPSysEmitterLifeSpanCtlr + NiPSysEmitterSpeedCtlr + NiPSysGravityStrengthCtlr + NiPSysModifierActiveCtlr + NiVisController + effect UV offset or scale + effect alpha + effect emissive colour + effect emissive multiple] (placements)
+2	2 models: no graph, one sequence (clamp), driving [BSLightingShaderPropertyFloatController + NiMultiTargetTransformController + NiPSysEmitterCtlr + NiPSysEmitterInitialRadiusCtlr + NiPSysEmitterSpeedCtlr + effect UV offset or scale + effect alpha]
+0	2 models: no graph, one sequence (clamp), driving [BSLightingShaderPropertyFloatController + NiMultiTargetTransformController + NiPSysEmitterCtlr + NiPSysEmitterInitialRadiusCtlr + NiPSysEmitterSpeedCtlr + effect UV offset or scale + effect alpha] (placements)
+1	2 models: no graph, one sequence (clamp), driving [BSLightingShaderPropertyFloatController + NiMultiTargetTransformController + NiPSysEmitterCtlr + NiPSysEmitterSpeedCtlr + NiPSysModifierActiveCtlr + NiVisController + effect alpha + effect emissive colour + effect emissive multiple]
+0	2 models: no graph, one sequence (clamp), driving [BSLightingShaderPropertyFloatController + NiMultiTargetTransformController + NiPSysEmitterCtlr + NiPSysEmitterSpeedCtlr + NiPSysModifierActiveCtlr + NiVisController + effect alpha + effect emissive colour + effect emissive multiple] (placements)
+1	2 models: no graph, one sequence (clamp), driving [BSLightingShaderPropertyFloatController + NiMultiTargetTransformController + NiPSysEmitterCtlr + NiPSysModifierActiveCtlr + effect UV offset or scale + effect alpha]
+0	2 models: no graph, one sequence (clamp), driving [BSLightingShaderPropertyFloatController + NiMultiTargetTransformController + NiPSysEmitterCtlr + NiPSysModifierActiveCtlr + effect UV offset or scale + effect alpha] (placements)
+1	2 models: no graph, one sequence (clamp), driving [BSLightingShaderPropertyFloatController + NiMultiTargetTransformController + effect UV offset or scale + effect alpha]
+0	2 models: no graph, one sequence (clamp), driving [BSLightingShaderPropertyFloatController + NiMultiTargetTransformController + effect UV offset or scale + effect alpha] (placements)
+1	2 models: no graph, one sequence (clamp), driving [BSProceduralLightningController + NiLightColorController + NiLightDimmerController + NiLightRadiusController + NiMultiTargetTransformController + NiPSysEmitterCtlr + NiPSysEmitterInitialRadiusCtlr + NiPSysModifierActiveCtlr + effect UV offset or scale + effect alpha + effect emissive colour + effect emissive multiple]
+0	2 models: no graph, one sequence (clamp), driving [BSProceduralLightningController + NiLightColorController + NiLightDimmerController + NiLightRadiusController + NiMultiTargetTransformController + NiPSysEmitterCtlr + NiPSysEmitterInitialRadiusCtlr + NiPSysModifierActiveCtlr + effect UV offset or scale + effect alpha + effect emissive colour + effect emissive multiple] (placements)
+2	2 models: no graph, one sequence (clamp), driving [BSProceduralLightningController + NiLightColorController + NiLightDimmerController + NiLightRadiusController + NiMultiTargetTransformController + NiPSysEmitterCtlr + NiPSysModifierActiveCtlr + effect UV offset or scale + effect alpha]
+0	2 models: no graph, one sequence (clamp), driving [BSProceduralLightningController + NiLightColorController + NiLightDimmerController + NiLightRadiusController + NiMultiTargetTransformController + NiPSysEmitterCtlr + NiPSysModifierActiveCtlr + effect UV offset or scale + effect alpha] (placements)
+1	2 models: no graph, one sequence (clamp), driving [BSProceduralLightningController + NiMultiTargetTransformController + NiPSysEmitterCtlr + NiPSysEmitterInitialRadiusCtlr + NiPSysModifierActiveCtlr + effect UV offset or scale + effect alpha + effect emissive colour + effect emissive multiple]
+0	2 models: no graph, one sequence (clamp), driving [BSProceduralLightningController + NiMultiTargetTransformController + NiPSysEmitterCtlr + NiPSysEmitterInitialRadiusCtlr + NiPSysModifierActiveCtlr + effect UV offset or scale + effect alpha + effect emissive colour + effect emissive multiple] (placements)
+1	2 models: no graph, one sequence (clamp), driving [BSProceduralLightningController + NiMultiTargetTransformController + NiPSysEmitterCtlr + NiPSysModifierActiveCtlr + effect UV offset or scale + effect alpha + effect emissive colour + effect emissive multiple]
+0	2 models: no graph, one sequence (clamp), driving [BSProceduralLightningController + NiMultiTargetTransformController + NiPSysEmitterCtlr + NiPSysModifierActiveCtlr + effect UV offset or scale + effect alpha + effect emissive colour + effect emissive multiple] (placements)
+3	2 models: no graph, one sequence (clamp), driving [BSProceduralLightningController + NiMultiTargetTransformController + NiVisController + effect UV offset or scale + effect alpha + effect emissive colour]
+0	2 models: no graph, one sequence (clamp), driving [BSProceduralLightningController + NiMultiTargetTransformController + NiVisController + effect UV offset or scale + effect alpha + effect emissive colour] (placements)
+4	2 models: no graph, one sequence (clamp), driving [BSProceduralLightningController + NiMultiTargetTransformController + effect UV offset or scale + effect alpha + effect emissive multiple]
+0	2 models: no graph, one sequence (clamp), driving [BSProceduralLightningController + NiMultiTargetTransformController + effect UV offset or scale + effect alpha + effect emissive multiple] (placements)
+2	2 models: no graph, one sequence (clamp), driving [BSProceduralLightningController + effect UV offset or scale + effect emissive colour + effect emissive multiple]
+0	2 models: no graph, one sequence (clamp), driving [BSProceduralLightningController + effect UV offset or scale + effect emissive colour + effect emissive multiple] (placements)
+1	2 models: no graph, one sequence (clamp), driving [NiLightColorController + NiLightDimmerController + NiLightRadiusController + NiMultiTargetTransformController + NiPSysEmitterCtlr + NiPSysEmitterDeclinationVarCtlr + NiPSysModifierActiveCtlr + effect UV offset or scale + effect emissive multiple]
+0	2 models: no graph, one sequence (clamp), driving [NiLightColorController + NiLightDimmerController + NiLightRadiusController + NiMultiTargetTransformController + NiPSysEmitterCtlr + NiPSysEmitterDeclinationVarCtlr + NiPSysModifierActiveCtlr + effect UV offset or scale + effect emissive multiple] (placements)
+6	2 models: no graph, one sequence (clamp), driving [NiMultiTargetTransformController + NiPSysEmitterCtlr + NiPSysEmitterInitialRadiusCtlr + NiPSysEmitterLifeSpanCtlr + NiPSysEmitterSpeedCtlr + NiPSysModifierActiveCtlr + effect alpha + effect emissive colour + effect emissive multiple]
+0	2 models: no graph, one sequence (clamp), driving [NiMultiTargetTransformController + NiPSysEmitterCtlr + NiPSysEmitterInitialRadiusCtlr + NiPSysEmitterLifeSpanCtlr + NiPSysEmitterSpeedCtlr + NiPSysModifierActiveCtlr + effect alpha + effect emissive colour + effect emissive multiple] (placements)
+1	2 models: no graph, one sequence (clamp), driving [NiMultiTargetTransformController + NiPSysEmitterCtlr + NiPSysEmitterLifeSpanCtlr + NiPSysModifierActiveCtlr + NiVisController + effect alpha + effect emissive colour + effect emissive multiple]
+0	2 models: no graph, one sequence (clamp), driving [NiMultiTargetTransformController + NiPSysEmitterCtlr + NiPSysEmitterLifeSpanCtlr + NiPSysModifierActiveCtlr + NiVisController + effect alpha + effect emissive colour + effect emissive multiple] (placements)
+1	2 models: no graph, one sequence (clamp), driving [NiMultiTargetTransformController + NiPSysEmitterCtlr + NiPSysEmitterSpeedCtlr + NiPSysModifierActiveCtlr + effect UV offset or scale + effect alpha + effect emissive colour]
+0	2 models: no graph, one sequence (clamp), driving [NiMultiTargetTransformController + NiPSysEmitterCtlr + NiPSysEmitterSpeedCtlr + NiPSysModifierActiveCtlr + effect UV offset or scale + effect alpha + effect emissive colour] (placements)
+1	2 models: no graph, one sequence (clamp), driving [NiMultiTargetTransformController + NiPSysEmitterCtlr + NiPSysModifierActiveCtlr + NiVisController + effect UV offset or scale + effect alpha + effect emissive colour]
+0	2 models: no graph, one sequence (clamp), driving [NiMultiTargetTransformController + NiPSysEmitterCtlr + NiPSysModifierActiveCtlr + NiVisController + effect UV offset or scale + effect alpha + effect emissive colour] (placements)
+1	2 models: no graph, one sequence (clamp), driving [NiMultiTargetTransformController + NiPSysEmitterCtlr + NiPSysModifierActiveCtlr + effect UV offset or scale + effect alpha]
+0	2 models: no graph, one sequence (clamp), driving [NiMultiTargetTransformController + NiPSysEmitterCtlr + NiPSysModifierActiveCtlr + effect UV offset or scale + effect alpha] (placements)
+1	2 models: no graph, one sequence (clamp), driving [NiMultiTargetTransformController + NiPSysEmitterCtlr + NiPSysModifierActiveCtlr + effect alpha]
+0	2 models: no graph, one sequence (clamp), driving [NiMultiTargetTransformController + NiPSysEmitterCtlr + NiPSysModifierActiveCtlr + effect alpha] (placements)
+2	2 models: no graph, one sequence (clamp), driving [NiMultiTargetTransformController + effect UV offset or scale + effect alpha]
+0	2 models: no graph, one sequence (clamp), driving [NiMultiTargetTransformController + effect UV offset or scale + effect alpha] (placements)
+1	2 models: no graph, one sequence (clamp), driving [NiPSysEmitterCtlr + NiPSysModifierActiveCtlr + effect alpha + effect emissive multiple]
+0	2 models: no graph, one sequence (clamp), driving [NiPSysEmitterCtlr + NiPSysModifierActiveCtlr + effect alpha + effect emissive multiple] (placements)
+1	2 models: no graph, one sequence (loop), driving [BSProceduralLightningController + NiMultiTargetTransformController + effect UV offset or scale + effect alpha + effect emissive multiple]
+0	2 models: no graph, one sequence (loop), driving [BSProceduralLightningController + NiMultiTargetTransformController + effect UV offset or scale + effect alpha + effect emissive multiple] (placements)
+3	2 models: no graph, one sequence (loop), driving [NiMultiTargetTransformController + NiVisController + effect UV offset or scale + effect alpha]
+803	2 models: no graph, one sequence (loop), driving [NiMultiTargetTransformController + NiVisController + effect UV offset or scale + effect alpha] (placements)
+3	2 models: no graph, one sequence (loop), driving [NiMultiTargetTransformController + effect UV offset or scale + effect alpha]
+709	2 models: no graph, one sequence (loop), driving [NiMultiTargetTransformController + effect UV offset or scale + effect alpha] (placements)
+1	2 models: no graph, one sequence (loop), driving [NiMultiTargetTransformController + effect UV offset or scale + effect emissive multiple]
+86	2 models: no graph, one sequence (loop), driving [NiMultiTargetTransformController + effect UV offset or scale + effect emissive multiple] (placements)
+2	2 models: no graph, one sequence (loop), driving [NiMultiTargetTransformController + effect UV offset or scale]
+213	2 models: no graph, one sequence (loop), driving [NiMultiTargetTransformController + effect UV offset or scale] (placements)
+2	2 models: no graph, one sequence (loop), driving [effect UV offset or scale + effect alpha + effect emissive multiple]
+1	2 models: no graph, one sequence (loop), driving [effect UV offset or scale + effect alpha + effect emissive multiple] (placements)
+2	2 models: no graph, one sequence (loop), driving [effect alpha]
+441	2 models: no graph, one sequence (loop), driving [effect alpha] (placements)
+2	2 models: other open tags [behavior-graph + effect-emissive + other + particle + transform-varies]
+0	2 models: other open tags [behavior-graph + effect-emissive + other + particle + transform-varies] (placements)
+1	2 models: other open tags [behavior-graph + other + particle + transform-varies + visibility]
+1	2 models: other open tags [behavior-graph + other + particle + transform-varies + visibility] (placements)
+30	2 models: other open tags [behavior-graph + other + particle + visibility]
+63	2 models: other open tags [behavior-graph + other + particle + visibility] (placements)
+87	2 models: other open tags [behavior-graph + other + particle]
+1671	2 models: other open tags [behavior-graph + other + particle] (placements)
+2	2 models: other open tags [behavior-graph + other + transform-varies + visibility]
+0	2 models: other open tags [behavior-graph + other + transform-varies + visibility] (placements)
+82	2 models: other open tags [behavior-graph + other + visibility]
+163	2 models: other open tags [behavior-graph + other + visibility] (placements)
+12	2 models: other open tags [behavior-graph + other]
+0	2 models: other open tags [behavior-graph + other] (placements)
+6	2 models: other open tags [behavior-graph + transform-varies]
+118	2 models: other open tags [behavior-graph + transform-varies] (placements)
+155	2 models: other open tags [behavior-graph]
+4905	2 models: other open tags [behavior-graph] (placements)
+35	2 models: other open tags [none]
+1910	2 models: other open tags [none] (placements)
+10	2 models: other open tags [other + particle + visibility]
+0	2 models: other open tags [other + particle + visibility] (placements)
+20	2 models: other open tags [other + particle]
+0	2 models: other open tags [other + particle] (placements)
+14	2 models: other open tags [other + visibility]
+803	2 models: other open tags [other + visibility] (placements)
+9	2 models: other open tags [other]
+0	2 models: other open tags [other] (placements)
+55	2 models: sequences naming effect controllers 1 of 1; their cycle types [clamp]
+0	2 models: sequences naming effect controllers 1 of 1; their cycle types [clamp] (placements)
+17	2 models: sequences naming effect controllers 1 of 1; their cycle types [loop]
+2255	2 models: sequences naming effect controllers 1 of 1; their cycle types [loop] (placements)
+28	2 models: sequences naming effect controllers 2 of 2; their cycle types [clamp, loop]
+993	2 models: sequences naming effect controllers 2 of 2; their cycle types [clamp, loop] (placements)
+16	2 models: sequences naming effect controllers 2 of 2; their cycle types [clamp]
+407	2 models: sequences naming effect controllers 2 of 2; their cycle types [clamp] (placements)
+28	2 models: sequences naming effect controllers 2 of 2; their cycle types [loop]
+251	2 models: sequences naming effect controllers 2 of 2; their cycle types [loop] (placements)
+2	2 models: sequences naming effect controllers 2 of 4 or more; their cycle types [loop]
+0	2 models: sequences naming effect controllers 2 of 4 or more; their cycle types [loop] (placements)
+52	2 models: sequences naming effect controllers 3 of 3; their cycle types [clamp, loop]
+460	2 models: sequences naming effect controllers 3 of 3; their cycle types [clamp, loop] (placements)
+12	2 models: sequences naming effect controllers 3 of 3; their cycle types [clamp]
+3	2 models: sequences naming effect controllers 3 of 3; their cycle types [clamp] (placements)
+7	2 models: sequences naming effect controllers 3 of 3; their cycle types [loop]
+0	2 models: sequences naming effect controllers 3 of 3; their cycle types [loop] (placements)
+1	2 models: sequences naming effect controllers 3 of 4 or more; their cycle types [clamp]
+157	2 models: sequences naming effect controllers 3 of 4 or more; their cycle types [clamp] (placements)
+4	2 models: sequences naming effect controllers 3 of 4 or more; their cycle types [loop]
+0	2 models: sequences naming effect controllers 3 of 4 or more; their cycle types [loop] (placements)
+142	2 models: sequences naming effect controllers 4 or more of 4 or more; their cycle types [clamp, loop]
+4672	2 models: sequences naming effect controllers 4 or more of 4 or more; their cycle types [clamp, loop] (placements)
+97	2 models: sequences naming effect controllers 4 or more of 4 or more; their cycle types [clamp]
+435	2 models: sequences naming effect controllers 4 or more of 4 or more; their cycle types [clamp] (placements)
+4	2 models: sequences naming effect controllers 4 or more of 4 or more; their cycle types [loop]
+1	2 models: sequences naming effect controllers 4 or more of 4 or more; their cycle types [loop] (placements)
+5379	2 placements: by base record type ACTI
+107	2 placements: by base record type FURN
+214	2 placements: by base record type LIGH
+3068	2 placements: by base record type MSTT
+853	2 placements: by base record type STAT
+4	2 placements: by base record type TACT
+8	2 placements: by base record type TERM
+1	2 placements: by base record type WEAP
+5332	2 placements: whose reference or base carries scripts
+1458	models: with an effect-shader controller
+33196	models: with an effect-shader controller (placements)

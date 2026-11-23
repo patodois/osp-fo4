@@ -44,6 +44,7 @@ fn load_scene(
         s.around,
         fo4_render::draw::BuildOptions {
             time: s.time,
+            clock: s.clock,
             ..load::build_options(s.textures, s.level)
         },
         s.scene_memory,

@@ -80,6 +80,12 @@ pub struct BuildOptions {
     /// that relies on `nif_controller_clock_free_running_v1` is omitted
     /// (`UnsettledControllerTime`) and every other field is drawn as before.
     pub time: Option<f64>,
+    /// The clock's readings that are off by default
+    /// (`fo4_scene::clock::Switches`): with a time, the effect fields whose
+    /// switch is on are carried by the draw's animation instead of being
+    /// held at their stored value. The scene must be loaded with the same
+    /// switches (`fo4_scene::Loader::set_clock_switches`).
+    pub clock: fo4_scene::clock::Switches,
 }
 /// Limits of the textures kept as stored blocks ([`BuildOptions::blocks`]).
 /// A texture whose format or chosen level cannot be kept as blocks is
@@ -103,6 +109,11 @@ impl BuildOptions {
             level,
             blocks: None,
             time: None,
+            clock: fo4_scene::clock::Switches {
+                emissive_multiple: false,
+                emissive_colour: false,
+                falloff: false,
+            },
         }
     }
     /// The reference limits, with block-compressed textures kept as blocks.
@@ -336,7 +347,11 @@ struct Surface {
     /// Effect surfaces drawn with a greyscale-to-palette lookup.
     palette: Option<crate::Palette>,
     /// The clock tracks of the surface's fields (`crate::Animation`).
-    clock: [Option<fo4_scene::clock::Track>; 5],
+    clock: [Option<fo4_scene::clock::Track>; crate::TRACKS],
+    /// `Draw::colour` (an effect colour the clock drives) and the held
+    /// base colour and scale of its animation.
+    colour: Option<[f32; 3]>,
+    colour_terms: ([f32; 3], f32),
 }
 struct Builder<'a, 's> {
     loader: &'a Loader<'s>,
@@ -1358,6 +1373,8 @@ impl Builder<'_, '_> {
                     falloff: None,
                     palette: None,
                     clock: Default::default(),
+                    colour: None,
+                    colour_terms: ([1.; 3], 1.),
                 })
             })?;
             // A controller drives the NIF shader's field; the draw takes the
@@ -1558,6 +1575,8 @@ impl Builder<'_, '_> {
             falloff: None,
             palette: None,
             clock: Default::default(),
+            colour: None,
+            colour_terms: ([1.; 3], 1.),
         };
         let tracks = self.shader_clock(n, shader, file)?;
         self.clock_surface(
@@ -1880,6 +1899,7 @@ impl Builder<'_, '_> {
                         raw_tile_flags: surface.tile,
                         falloff: surface.falloff,
                         palette: surface.palette,
+                        colour: surface.colour,
                     },
                     self.budget,
                 )?;
@@ -2052,6 +2072,8 @@ impl Builder<'_, '_> {
             crate::Animation {
                 draw,
                 tracks: surface.clock.clone(),
+                colour: surface.colour_terms.0,
+                scale: surface.colour_terms.1,
             },
             self.budget,
         )
@@ -2066,15 +2088,22 @@ impl Builder<'_, '_> {
         n: &Nif<'_>,
         shader: usize,
         file: &str,
-    ) -> Result<[Option<fo4_scene::clock::Track>; 5]> {
-        let mut out: [Option<fo4_scene::clock::Track>; 5] = Default::default();
+    ) -> Result<[Option<fo4_scene::clock::Track>; crate::TRACKS]> {
+        let mut out: [Option<fo4_scene::clock::Track>; crate::TRACKS] = Default::default();
         if self.options.time.is_none() {
             return Ok(out);
         }
         let effect =
             n.block_types[n.blocks[shader].type_index as usize] == "BSEffectShaderProperty";
+        let switches = self.options.clock;
         for i in 0..n.blocks.len() {
-            let Some(variable) = fo4_scene::rest::clock_field(n, i) else {
+            // The effect fields behind their switches, in slots 5 to 10.
+            let field = fo4_scene::rest::effect_clock_field(n, i)
+                .filter(|(c, v)| effect && switches.effect_field(*c, *v));
+            let Some(variable) = fo4_scene::rest::clock_field(n, i).or(field.map(|(c, v)| {
+                // Out of the range of `clock_field`'s variables.
+                100 + u32::from(c) * 10 + v
+            })) else {
                 continue;
             };
             let target = n
@@ -2094,6 +2123,12 @@ impl Builder<'_, '_> {
                 (true, 7) | (false, 21) => crate::TRACK_U_SCALE,
                 (true, 8) | (false, 22) => crate::TRACK_V_OFFSET,
                 (true, 9) | (false, 23) => crate::TRACK_V_SCALE,
+                (true, 100) => crate::TRACK_EMISSIVE_MULTIPLE,
+                (true, 101) => crate::TRACK_FALLOFF_START_ANGLE,
+                (true, 102) => crate::TRACK_FALLOFF_STOP_ANGLE,
+                (true, 103) => crate::TRACK_FALLOFF_START_OPACITY,
+                (true, 104) => crate::TRACK_FALLOFF_STOP_OPACITY,
+                (true, 110) => crate::TRACK_EMISSIVE_COLOUR,
                 _ => continue,
             };
             if out[slot].is_some() {
@@ -2116,7 +2151,7 @@ impl Builder<'_, '_> {
     fn clock_surface(
         &mut self,
         s: &mut Surface,
-        tracks: [Option<fo4_scene::clock::Track>; 5],
+        tracks: [Option<fo4_scene::clock::Track>; crate::TRACKS],
         file: &str,
         at: u64,
     ) -> Result<()> {
@@ -2126,8 +2161,29 @@ impl Builder<'_, '_> {
         if tracks.iter().all(Option::is_none) {
             return Ok(());
         }
-        for t in tracks.iter().flatten() {
-            for rule in t.rules() {
+        use fo4_scene::hypotheses as h;
+        // The effect fields behind their switches each rely on their rule,
+        // a falloff angle's keys also on the degrees reading.
+        let field_rules = |slot: usize| -> &'static [&'static str] {
+            match slot {
+                crate::TRACK_EMISSIVE_MULTIPLE => &[h::CLOCK_EMISSIVE_MULTIPLE],
+                crate::TRACK_EMISSIVE_COLOUR => &[h::CLOCK_EMISSIVE_COLOUR],
+                crate::TRACK_FALLOFF_START_ANGLE | crate::TRACK_FALLOFF_STOP_ANGLE => {
+                    &[h::CLOCK_FALLOFF, h::REST_FALLOFF_DEGREES]
+                }
+                crate::TRACK_FALLOFF_START_OPACITY | crate::TRACK_FALLOFF_STOP_OPACITY => {
+                    &[h::CLOCK_FALLOFF]
+                }
+                _ => &[],
+            }
+        };
+        for (slot, t) in tracks.iter().enumerate() {
+            let Some(t) = t else { continue };
+            for rule in t
+                .rules()
+                .into_iter()
+                .chain(field_rules(slot).iter().copied())
+            {
                 if !self.draw_rule(rule)? {
                     return Err(error("UnverifiedControllerClock", file, at, rule));
                 }
@@ -2162,11 +2218,27 @@ impl Builder<'_, '_> {
                 ..s.alpha
             })?;
         }
-        let a = crate::Animation { draw: 0, tracks };
-        let (offset, scale, opacity) = a.fields(time, s.offset, s.scale, s.alpha.opacity)?;
-        s.offset = offset;
-        s.scale = scale;
-        s.alpha.opacity = opacity;
+        let a = crate::Animation {
+            draw: 0,
+            tracks,
+            colour: s.colour_terms.0,
+            scale: s.colour_terms.1,
+        };
+        let f = a.fields(
+            time,
+            crate::ClockFields {
+                uv_offset: s.offset,
+                uv_scale: s.scale,
+                opacity: s.alpha.opacity,
+                colour: s.colour,
+                falloff: s.falloff,
+            },
+        )?;
+        s.offset = f.uv_offset;
+        s.scale = f.uv_scale;
+        s.alpha.opacity = f.opacity;
+        s.colour = f.colour;
+        s.falloff = f.falloff;
         s.alpha.validate()?;
         s.clock = a.tracks;
         Ok(())
@@ -2347,6 +2419,7 @@ impl Builder<'_, '_> {
                             raw_tile_flags: surface.tile,
                             falloff: surface.falloff,
                             palette: surface.palette,
+                            colour: surface.colour,
                         },
                         self.budget,
                     )?;

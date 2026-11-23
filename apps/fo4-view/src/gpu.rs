@@ -70,6 +70,8 @@ pub struct SurfaceUniform {
     /// Palette lookups: bit 0 colour, bit 1 alpha.
     pub palette_lookups: u32,
     pub falloff: Vec4,
+    /// `SurfaceParams::colour` (RGB; 1 without one).
+    pub tint: Vec4,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -382,6 +384,10 @@ fn uniform(p: &crate::scene::SurfaceParams) -> SurfaceUniform {
         falloff_on: u32::from(p.falloff.is_some()),
         palette_lookups: p.palette,
         falloff: Vec4::from_array(p.falloff.unwrap_or([0.; 4])),
+        tint: {
+            let c = p.colour.unwrap_or([1.; 3]);
+            Vec4::new(c[0], c[1], c[2], 1.)
+        },
     }
 }
 

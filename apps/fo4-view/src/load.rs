@@ -209,6 +209,10 @@ pub fn cell(
     let limits = &manifest.limits;
     let budget = scene_budget(scene_memory, limits);
     let mut loader = Loader::new(&store, &vfs, &manifest.language, level, &budget);
+    // The clock's switches (off by default) change how models are read.
+    if options.clock.any() {
+        loader.set_clock_switches(options.clock, &budget);
+    }
     let mut scene = scoped(&budget, |b| loader.by_editor_id(cell, b))?;
     // --around N: the placed references of the exterior cells within N grid
     // steps join the scene, as in the CPU render. Without it nothing changes.

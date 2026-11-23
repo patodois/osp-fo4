@@ -14,7 +14,7 @@ type AnyResult<T> = Result<T, Box<dyn std::error::Error>>;
 const TERRAIN_SHADING: &str = "ground textures weighted per vertex under the pending terrain texture rules, times VCLR; untextured weight as flat neutral grey per triangle by geometric normal; unlit, not game lighting";
 fn run() -> AnyResult<()> {
     let args: Vec<_> = std::env::args().skip(1).collect();
-    const USAGE: &str = "usage: render MANIFEST DATA_DIRECTORY CELL_EDITOR_ID build/OUTPUT [--strict|--measured|--under-hypotheses] [--eye X,Y,Z --look X,Y,Z] [--instance-ids] [--collision-overlay] [--terrain] [--around N] [--texture-mib N] [--time SECONDS]";
+    const USAGE: &str = "usage: render MANIFEST DATA_DIRECTORY CELL_EDITOR_ID build/OUTPUT [--strict|--measured|--under-hypotheses] [--eye X,Y,Z --look X,Y,Z] [--instance-ids] [--collision-overlay] [--terrain] [--around N] [--texture-mib N] [--time SECONDS] [--clock-emissive-multiple] [--clock-emissive-colour] [--clock-falloff]";
     if args.len() < 4 {
         return Err(USAGE.into());
     }
@@ -33,8 +33,13 @@ fn run() -> AnyResult<()> {
     // controllers are evaluated (`BuildOptions::time`); without the flag
     // the build has no clock and the summary has no `time` key.
     let mut time: Option<f64> = None;
+    // The clock's readings that are off by default (`clock::Switches`).
+    let mut switches = fo4_scene::clock::Switches::default();
     let mut rest = args[4..].iter();
     while let Some(arg) = rest.next() {
+        if switches.set_flag(arg) {
+            continue;
+        }
         match arg.as_str() {
             "--strict" | "--measured" | "--under-hypotheses" => level_name = arg,
             "--instance-ids" => instance_ids = true,
@@ -95,6 +100,7 @@ fn run() -> AnyResult<()> {
         build_options.max_texture_bytes = mib << 20;
     }
     build_options.time = time;
+    build_options.clock = switches;
     let mut manifest = Manifest::load(Path::new(&args[0]))?;
     manifest.root = Path::new(&args[1]).canonicalize()?;
     let limits = &manifest.limits;
@@ -107,6 +113,9 @@ fn run() -> AnyResult<()> {
     vfs.check_complete()?;
     let budget = Budget::metered(limits.max_memory);
     let mut loader = Loader::new(&store, &vfs, &manifest.language, policy, &budget);
+    if switches.any() {
+        loader.set_clock_switches(switches, &budget);
+    }
     let mut scene = loader.by_editor_id(&args[2], &budget)?;
     // --around N: the placed references of the exterior cells within N grid
     // steps join the scene (and, with --terrain, their terrain the draw
@@ -260,6 +269,9 @@ fn run() -> AnyResult<()> {
             "time".into(),
             serde_json::json!({"seconds":t,"animated_draws":built.list.animations.len()}),
         );
+    }
+    if let (true, Some(map)) = (switches.any(), summary.as_object_mut()) {
+        map.insert("clock_switches".into(), serde_json::json!(switches.flags()));
     }
     if let (Some(o), Some(map)) = (overlay, summary.as_object_mut()) {
         map.insert("collision_overlay".into(), o);

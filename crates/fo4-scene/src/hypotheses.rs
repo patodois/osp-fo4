@@ -144,6 +144,14 @@ pub const CLOCK_KEY_STEP: &str = "nif_key_constant_step_v1";
 /// A looping sequence of a controller manager that nothing starts leaves
 /// its controlled blocks as stored (`crate::rest`).
 pub const REST_LOOP_UNSTARTED: &str = "nif_controller_rest_loop_unstarted_v1";
+/// Effect-shader fields other than alpha and UV that a free-running
+/// controller drives, run on the game clock behind their switches
+/// (`crate::clock::Switches`, off by default): the emissive multiple (the
+/// base colour scale), the emissive colour (the base colour's RGB) and the
+/// four falloff fields.
+pub const CLOCK_EMISSIVE_MULTIPLE: &str = "effect_clock_emissive_multiple_v1";
+pub const CLOCK_EMISSIVE_COLOUR: &str = "effect_clock_emissive_colour_v1";
+pub const CLOCK_FALLOFF: &str = "effect_clock_falloff_v1";
 pub const UV_SCALE_THEN_OFFSET: &str = "uv_scale_then_offset_v1";
 pub const MISSING_PARENT: &str = "bgsm_missing_parent_own_fields_v1";
 /// A missing texture cited only in slots the unlit frame never samples
@@ -544,6 +552,9 @@ mod tests {
             CLOCK_KEY_QUADRATIC,
             CLOCK_KEY_STEP,
             REST_LOOP_UNSTARTED,
+            CLOCK_EMISSIVE_MULTIPLE,
+            CLOCK_EMISSIVE_COLOUR,
+            CLOCK_FALLOFF,
         ] {
             assert!(status(name).is_some(), "{name}");
         }

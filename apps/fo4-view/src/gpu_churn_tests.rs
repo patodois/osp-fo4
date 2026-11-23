@@ -58,6 +58,7 @@ fn surface(texture: usize, blend: Option<(BlendFactor, BlendFactor)>, overlay: b
             opaque_texture: false,
             falloff: None,
             palette: 0,
+            colour: None,
         },
         key: SurfaceKey {
             blend,
@@ -580,6 +581,7 @@ fn cpu_and_gpu_frames_agree_on_falloff_palette_colour_alpha_clamp_and_vertex_alp
         raw_tile_flags: None,
         falloff: None,
         palette: None,
+        colour: None,
     };
     let tri = vec![[0, 1, 2], [0, 2, 3]];
     let mut list = DrawList {
@@ -800,15 +802,17 @@ fn cpu_and_gpu_frames_agree_on_falloff_palette_colour_alpha_clamp_and_vertex_alp
 }
 
 /// The game clock's terms (`fo4_render::Animation`): a textured opaque card
-/// whose V offset a looping linear track drives and a blended card whose
-/// opacity a clamped quadratic track drives, over a grey floor. The CPU
+/// whose V offset a looping linear track drives, a blended card whose
+/// opacity a clamped quadratic track drives, an opaque card whose colour an
+/// emissive multiple track drives (`Draw::colour`) and a blended falloff
+/// card whose stop opacity and stop angle tracks drive, over a grey floor. The CPU
 /// reference at a fixed time (`DrawList::at_time`) and the GPU frame of the
 /// list converted at that time agree; the GPU scene set to a second time
 /// (`GpuScene::at_time`, the window's per-frame update) agrees with the CPU
 /// at that time; and the two times draw different frames.
 #[test]
 #[ignore = "needs a GPU: draws offscreen through Bevy"]
-fn cpu_and_gpu_frames_agree_on_clock_driven_uv_offset_and_opacity() {
+fn cpu_and_gpu_frames_agree_on_clock_driven_uv_opacity_colour_and_falloff() {
     use fo4_render::{Alpha, Animation, Draw, DrawList, Mesh, Sidedness, Texture, Vertex};
     use fo4_scene::clock::{Key, Keys, Timing, Track};
     let quad = |h: f64, x: f64, z: f64| -> Vec<Vertex> {
@@ -856,6 +860,7 @@ fn cpu_and_gpu_frames_agree_on_clock_driven_uv_offset_and_opacity() {
         raw_tile_flags: None,
         falloff: None,
         palette: None,
+        colour: None,
     };
     let key = |time: f32, value: f32, tangent: f32| Key {
         time,
@@ -885,11 +890,20 @@ fn cpu_and_gpu_frames_agree_on_clock_driven_uv_offset_and_opacity() {
         vertices,
         triangles: tri.clone(),
     };
+    let mut tilted = mesh(quad(80., 300., 100.));
+    tilted.normals = Some(vec![
+        [-0.4, 0., 1.],
+        [0.4, 0., 1.],
+        [0.4, 0.4, 1.],
+        [-0.4, 0.4, 1.],
+    ]);
     let mut list = DrawList {
         meshes: vec![
             mesh(quad(400., 0., 0.)),
             mesh(quad(120., -130., 40.)),
             mesh(quad(120., 130., 60.)),
+            mesh(quad(80., -300., 80.)),
+            tilted,
         ],
         textures: vec![
             texture(1, 1, &|_, _| [0.5, 0.5, 0.5, 1.]),
@@ -908,26 +922,59 @@ fn cpu_and_gpu_frames_agree_on_clock_driven_uv_offset_and_opacity() {
     list.draws.push(draw(1, 0, 0, alpha(0, 1.)));
     list.draws.push(draw(2, 1, 1, alpha(0, 1.)));
     list.draws.push(draw(3, 2, 2, alpha(1, 1.)));
-    let mut scroll: [Option<Track>; 5] = Default::default();
+    let mut scroll: [Option<Track>; fo4_render::TRACKS] = Default::default();
     scroll[fo4_render::TRACK_V_OFFSET] = Some(track(
         0,
         fo4_scene::clock::LINEAR,
         vec![key(0., 0., 0.), key(2., 1., 0.)],
     ));
-    let mut fade: [Option<Track>; 5] = Default::default();
+    let mut fade: [Option<Track>; fo4_render::TRACKS] = Default::default();
     fade[fo4_render::TRACK_OPACITY] = Some(track(
         2,
         fo4_scene::clock::QUADRATIC,
         vec![key(0., 1., 0.), key(2., 0.1, 0.)],
     ));
-    list.animations.push(Animation {
-        draw: 1,
-        tracks: scroll,
+    list.animations.push(Animation::new(1, scroll));
+    list.animations.push(Animation::new(2, fade));
+    // The colour: (1, 0.5, 0.25) times a multiple from 0.4 to 1.8.
+    list.draws.push(Draw {
+        colour: Some([0.4, 0.2, 0.1]),
+        ..draw(4, 3, 0, alpha(0, 1.))
     });
+    let mut glow: [Option<Track>; fo4_render::TRACKS] = Default::default();
+    glow[fo4_render::TRACK_EMISSIVE_MULTIPLE] = Some(track(
+        0,
+        fo4_scene::clock::LINEAR,
+        vec![key(0., 0.4, 0.), key(2., 1.8, 0.)],
+    ));
     list.animations.push(Animation {
-        draw: 2,
-        tracks: fade,
+        draw: 3,
+        tracks: glow,
+        colour: [1., 0.5, 0.25],
+        scale: 1.,
     });
+    // The falloff: stop opacity 1 to 0.1 and stop angle 60 to 20 degrees.
+    list.draws.push(Draw {
+        falloff: Some(fo4_render::Falloff {
+            start_angle: 1.,
+            stop_angle: 0.5,
+            start_opacity: 1.,
+            stop_opacity: 1.,
+        }),
+        ..draw(5, 4, 2, alpha(1, 1.))
+    });
+    let mut edge: [Option<Track>; fo4_render::TRACKS] = Default::default();
+    edge[fo4_render::TRACK_FALLOFF_STOP_OPACITY] = Some(track(
+        0,
+        fo4_scene::clock::LINEAR,
+        vec![key(0., 1., 0.), key(2., 0.1, 0.)],
+    ));
+    edge[fo4_render::TRACK_FALLOFF_STOP_ANGLE] = Some(track(
+        2,
+        fo4_scene::clock::LINEAR,
+        vec![key(0., 60., 0.), key(2., 20., 0.)],
+    ));
+    list.animations.push(Animation::new(4, edge));
     let camera = fo4_scene::camera::look_at(
         [0., -500., 450.],
         [0., 0., 0.],
@@ -990,14 +1037,151 @@ fn cpu_and_gpu_frames_agree_on_clock_driven_uv_offset_and_opacity() {
     // the scene it draws): one drawn there, one set to the second time.
     let mut gpu_scene = crate::scene::convert(&mut list, &options).unwrap();
     let mut later = crate::scene::convert(&mut list, &options).unwrap();
-    assert_eq!(gpu_scene.animated.len(), 2);
+    assert_eq!(gpu_scene.animated.len(), 4);
     let gpu1 = headless(&mut gpu_scene, &camera, options.clear, true).unwrap();
     agree(&cpu1, &gpu1);
     list.at_time(t2).unwrap();
     let cpu2 = cpu_frame(&list);
     assert_ne!(cpu1.0, cpu2.0);
+    // The new cards' fields at the second time.
+    let c = list.draws[3].colour.unwrap();
+    assert!(
+        (c[0] - 1.45).abs() < 1e-5 && (c[2] - 0.3625).abs() < 1e-5,
+        "{c:?}"
+    );
+    let f = list.draws[4].falloff.unwrap();
+    assert!((f.stop_opacity - 0.325).abs() < 1e-5, "{f:?}");
+    assert!(
+        (f.stop_angle - 30f32.to_radians().cos()).abs() < 1e-5,
+        "{f:?}"
+    );
     later.at_time(t2).unwrap();
     let gpu2 = headless(&mut later, &camera, options.clear, true).unwrap();
     agree(&cpu2, &gpu2);
     assert_ne!(gpu1.color, gpu2.color);
+}
+
+/// Two placements of one surface, coplanar and overlapping (two floating
+/// debris cards at one height, offset along the view, as in a real
+/// interior view where the frames' instance tags disagreed): where only one
+/// covers a pixel, the CPU and GPU tags agree; where both do, the depths are
+/// equal in exact arithmetic and each renderer keeps the one its own
+/// arithmetic puts nearer or first (the CPU's f64 depths, rounded to f32,
+/// tie and keep the first drawn: list order for opaque draws, the far-first
+/// triangle order for blended ones; the GPU's f32 transforms and depths
+/// split the tie by rounding). Both tags are one of the two placements;
+/// which one is not the same (`spec/render.md`, Instance tags of the CPU
+/// and the viewer). Needs a GPU.
+#[test]
+#[ignore = "needs a GPU: draws offscreen through Bevy"]
+fn coplanar_placements_disagree_on_tags_only_where_they_overlap() {
+    use fo4_render::{Alpha, Draw, DrawList, Mesh, Sidedness, Texture, Vertex};
+    let h = 400.;
+    let vertices: Vec<Vertex> = [[-h, -h], [h, -h], [h, h], [-h, h]]
+        .iter()
+        .zip([[0., 0.], [1., 0.], [1., 1.], [0., 1.]])
+        .map(|(p, uv)| Vertex {
+            position: [p[0], p[1], 0.],
+            uv,
+        })
+        .collect();
+    let draw = |instance: u32, y: f64, enabled: u8| Draw {
+        sidedness: Sidedness {
+            material_two_sided: Some(1),
+            nif_shader_flags_2: None,
+        },
+        instance,
+        mesh: 0,
+        texture: 0,
+        world: fo4_scene::transform::Transform {
+            translation: [655.99 + y * 0.0001, 2208.09 + y, 27.23],
+            rotation: {
+                let (s, c) = (4.712_389f64).sin_cos();
+                [[c, s, 0.], [-s, c, 0.], [0., 0., 1.]]
+            },
+            ..fo4_scene::transform::Transform::IDENTITY
+        },
+        alpha: Alpha {
+            enabled,
+            source: 6,
+            destination: 7,
+            test_enabled: 0,
+            test_ref: 0,
+            nif_test_function: Some(4),
+            opacity: 1.,
+            nif_flags: None,
+        },
+        uv_offset: [0.; 2],
+        uv_scale: [1.; 2],
+        raw_tile_flags: None,
+        falloff: None,
+        palette: None,
+        colour: None,
+    };
+    let mut differ = 0;
+    for (order, enabled) in [
+        ([0., 224.], 1),
+        ([224., 0.], 1),
+        ([0., 224.], 0),
+        ([224., 0.], 0),
+    ] {
+        let list = |draws: Vec<Draw>| DrawList {
+            meshes: vec![Mesh {
+                vertex_colors: None,
+                normals: None,
+                vertices: vertices.clone(),
+                triangles: vec![[0, 1, 2], [0, 2, 3]],
+            }],
+            textures: vec![Texture {
+                mips: Vec::new(),
+                width: 1,
+                height: 1,
+                rgba: vec![0.8, 0.4, 0.2, 0.5],
+                mip: 0,
+                srgb: false,
+            }],
+            draws,
+            overlays: Vec::new(),
+            blocks: Default::default(),
+            animations: Vec::new(),
+        };
+        let camera = fo4_scene::camera::look_at(
+            [1050., 2250., 900.],
+            [1100., 2600., 250.],
+            fo4_scene::camera::reference_frustum(SIZE),
+            SIZE,
+        )
+        .unwrap();
+        let options = fo4_render::RenderOptions::REFERENCE;
+        let cpu = |l: &DrawList| {
+            fo4_render::render(
+                l,
+                &camera,
+                options,
+                &fo4_core::Limits::default(),
+                &fo4_core::Budget::new(256 << 20),
+            )
+            .unwrap()
+            .instances
+        };
+        // Each placement alone gives its coverage.
+        let one = cpu(&list(vec![draw(1, order[0], enabled)]));
+        let two = cpu(&list(vec![draw(2, order[1], enabled)]));
+        let mut both = list(vec![draw(1, order[0], enabled), draw(2, order[1], enabled)]);
+        let tags_cpu = cpu(&both);
+        let mut scene = crate::scene::convert(&mut both, &options).unwrap();
+        let gpu = headless(&mut scene, &camera, options.clear, true).unwrap();
+        let tags_gpu = crate::compare::tags_from_bytes(gpu.tags.as_ref().unwrap()).unwrap();
+        for k in 0..tags_cpu.len() {
+            let (c, g) = (tags_cpu[k], tags_gpu[k]);
+            if one[k] != u32::MAX && two[k] != u32::MAX {
+                assert!([1, 2].contains(&c) && [1, 2].contains(&g), "{k}: {c} {g}");
+                differ += usize::from(c != g);
+            } else {
+                assert_eq!(c, g, "pixel {k} covered by one placement");
+            }
+        }
+    }
+    // The overlap does split differently.
+    assert!(differ > 0);
 }

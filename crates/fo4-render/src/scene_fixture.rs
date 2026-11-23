@@ -387,6 +387,7 @@ fn scol_hypothesis_draws_two_textured_parts_without_the_generated_alternative() 
             level: fo4_scene::RuleLevel::Hypotheses,
             blocks: None,
             time: None,
+            clock: Default::default(),
         },
         &Budget::new(32 << 20),
     )
@@ -403,6 +404,7 @@ fn scol_hypothesis_draws_two_textured_parts_without_the_generated_alternative() 
             level: fo4_scene::RuleLevel::Hypotheses,
             blocks: None,
             time: None,
+            clock: Default::default(),
         },
         &b,
     )
@@ -433,6 +435,7 @@ fn scol_hypothesis_draws_two_textured_parts_without_the_generated_alternative() 
             level: fo4_scene::RuleLevel::Hypotheses,
             blocks: None,
             time: None,
+            clock: Default::default(),
         },
         true,
         &Budget::new(32 << 20),
@@ -458,6 +461,7 @@ fn scol_hypothesis_draws_two_textured_parts_without_the_generated_alternative() 
             level: fo4_scene::RuleLevel::Hypotheses,
             blocks: None,
             time: None,
+            clock: Default::default(),
         },
         &b,
     )
@@ -486,6 +490,7 @@ fn scol_hypothesis_draws_two_textured_parts_without_the_generated_alternative() 
             level: fo4_scene::RuleLevel::Hypotheses,
             blocks: None,
             time: None,
+            clock: Default::default(),
         },
         &Budget::new(32 << 20),
     )
@@ -506,6 +511,7 @@ fn scol_hypothesis_draws_two_textured_parts_without_the_generated_alternative() 
             level: fo4_scene::RuleLevel::Hypotheses,
             blocks: None,
             time: None,
+            clock: Default::default(),
         },
         &b,
     )
@@ -592,6 +598,7 @@ fn untextured_effect_requires_hypothesis_and_refuses_unhandled_features() {
             level: fo4_scene::RuleLevel::Hypotheses,
             blocks: None,
             time: None,
+            clock: Default::default(),
         };
         let output = build(&scene, &loader, &m.limits, options, &b).unwrap();
         if let Some(code) = expected_error {
@@ -1308,6 +1315,7 @@ fn effect_surface_build_with(x: EffectFixture) -> crate::draw::Build {
         level: x.level,
         blocks: None,
         time: None,
+        clock: Default::default(),
     };
     build(&scene, &loader, &m.limits, options, &b).unwrap()
 }
@@ -1515,6 +1523,7 @@ fn a_missing_material_falls_back_to_the_shaders_own_texture_only_under_its_rule(
         level,
         blocks: None,
         time: None,
+        clock: Default::default(),
     };
     let part = nif_named(
         b"textures/a.dds",
@@ -1590,6 +1599,7 @@ fn a_surface_with_uv_fields_other_than_identity_needs_the_uv_order_rule() {
         level,
         blocks: None,
         time: None,
+        clock: Default::default(),
     };
     let measured = build(&scene, &loader, &m.limits, options(RuleLevel::Measured), &b).unwrap();
     assert!(measured.list.draws.is_empty());
@@ -1682,6 +1692,7 @@ fn a_swap_leaves_a_shape_without_material_to_its_own_texture_under_its_rule() {
         level,
         blocks: None,
         time: None,
+        clock: Default::default(),
     };
     let run = |swap: &[u8]| {
         let part = nif_with_helper(b"textures/a.dds", None, b"PlainLabel");
@@ -1752,6 +1763,7 @@ fn a_blended_lighting_surface_takes_its_vertex_alpha_only_under_its_rule() {
         level,
         blocks: None,
         time: None,
+        clock: Default::default(),
     };
     // Normal bytes, then RGBA: a vertex alpha of 0, 128 and 255.
     let colours = |a: [u8; 3]| a.map(|a| [128, 128, 255, 0, 200, 100, 50, a]);
@@ -1825,6 +1837,7 @@ fn swap_patterns_match_names_only_under_their_rules() {
         level,
         blocks: None,
         time: None,
+        clock: Default::default(),
     };
     let run = |swap: &[u8], policy: RuleLevel| {
         let part = nif_named(
@@ -1915,6 +1928,7 @@ fn triangles_on_a_non_finite_texture_coordinate_are_left_out_only_under_their_ru
         level,
         blocks: None,
         time: None,
+        clock: Default::default(),
     };
     let mut part = nif_with_helper(b"textures/a.dds", None, b"PlainLabel");
     // Vertex 0's position (1, 0, 0) then its first UV half: a NaN.
@@ -2089,6 +2103,7 @@ fn free_running_controllers_are_drawn_at_the_build_time_only_under_the_clock_rul
             level,
             blocks: None,
             time,
+            clock: Default::default(),
         };
         let state = scene.instances[0].state.hypotheses().to_vec();
         (
@@ -2139,6 +2154,209 @@ fn free_running_controllers_are_drawn_at_the_build_time_only_under_the_clock_rul
         assert!(out.list.draws.is_empty());
         assert!(out.list.animations.is_empty());
     }
+    drop(temp);
+}
+
+/// An NiPoint3Interpolator without a pose value and its NiPosData of
+/// linear keys.
+fn point_keys(data: i32, keys: &[(f32, [f32; 3])]) -> [Vec<u8>; 2] {
+    let mut ip = Vec::new();
+    for _ in 0..3 {
+        ip.extend((-3.402_823_4e38f32).to_le_bytes());
+    }
+    ip.extend(data.to_le_bytes());
+    let mut d = (keys.len() as u32).to_le_bytes().to_vec();
+    d.extend(1u32.to_le_bytes());
+    for (t, v) in keys {
+        d.extend(t.to_le_bytes());
+        for x in v {
+            d.extend(x.to_le_bytes());
+        }
+    }
+    [ip, d]
+}
+
+/// A textured effect model (base colour 0.2, 0.4, 0.6, scale 2) whose
+/// emissive multiple a free-running looping controller drives from 1 to 3
+/// (stored 2, not its first key) and whose emissive colour another drives
+/// from the stored RGB to 1, 0, 0 over one second: with the clock's
+/// switches off the scene leaves the model refused (`effect-emissive`);
+/// with them on it is tagged for the clock and drawn at the build time with
+/// its colour (`Draw::colour`, base colour times multiple) and the tracks
+/// for any other time, under the field rules; without a time it is omitted.
+#[test]
+fn effect_colour_and_multiple_follow_the_clock_behind_their_switches() {
+    use fo4_scene::{clock::Switches, hypotheses as h};
+    let temp = TestDir::new("effect-clock-colour");
+    let root = temp.join("Data");
+    std::fs::create_dir_all(root.join("meshes")).unwrap();
+    std::fs::create_dir_all(root.join("textures")).unwrap();
+    std::fs::write(
+        root.join("textures/src.dds"),
+        dds_rgba(&[[255, 255, 255, 255], [128, 128, 128, 255]]),
+    )
+    .unwrap();
+    let mut blocks = model_blocks(b"", Some(0), None, (b"textures/src.dds", b""), None);
+    blocks[1].1[8..12].copy_from_slice(&5i32.to_le_bytes());
+    let loop_active = 8u16;
+    blocks.push((
+        "BSEffectShaderPropertyFloatController",
+        effect_controller(8, loop_active, 6, 0),
+    ));
+    let [ip, data] = float_keys(7, &[(0., 1.), (1., 3.)]);
+    blocks.push(("NiFloatInterpolator", ip));
+    blocks.push(("NiFloatData", data));
+    blocks.push((
+        "BSEffectShaderPropertyColorController",
+        effect_controller(-1, loop_active, 9, 0),
+    ));
+    let [ip, data] = point_keys(10, &[(0., [0.2, 0.4, 0.6]), (1., [1., 0., 0.])]);
+    blocks.push(("NiPoint3Interpolator", ip));
+    blocks.push(("NiPosData", data));
+    let bytes = nif_file(blocks, b"EditorMarker:27", b"");
+    std::fs::write(root.join("meshes/effect.nif"), bytes).unwrap();
+    let mut reference = sub(b"NAME", &0x801u32.to_le_bytes());
+    reference.extend(sub(b"DATA", &[0; 24]));
+    reference.extend(sub(b"XSCL", &1f32.to_le_bytes()));
+    let mut cell = sub(b"EDID", b"ClockCell\0");
+    cell.extend(sub(b"DATA", &1u16.to_le_bytes()));
+    let mut hedr = 0.95f32.to_le_bytes().to_vec();
+    hedr.extend([0; 8]);
+    let plugin = [
+        rec(b"TES4", 0, 1, &sub(b"HEDR", &hedr)),
+        rec(b"STAT", 0x801, 0, &sub(b"MODL", b"effect.nif\0")),
+        group(
+            2,
+            0,
+            &[
+                rec(b"CELL", 0x800, 0, &cell),
+                group(
+                    6,
+                    0x800,
+                    &group(9, 0x800, &rec(b"REFR", 0x802, 0, &reference)),
+                ),
+            ]
+            .concat(),
+        ),
+    ]
+    .concat();
+    std::fs::write(root.join("base.esm"), plugin).unwrap();
+    let m = Manifest {
+        root,
+        game: Game::Fallout4,
+        archive_invalidation: None,
+        language: "english".into(),
+        plugins: vec![PluginSpec {
+            name: "base.esm".into(),
+            path: "base.esm".into(),
+        }],
+        mounts: vec![Mount::Loose {
+            plugin: None,
+            base: None,
+            files: vec!["meshes/effect.nif".into(), "textures/src.dds".into()],
+        }],
+        required_masters: vec![],
+        excluded: vec![],
+        limits: Limits::default(),
+        build: Some("synthetic".into()),
+    };
+    let b = Budget::new(32 << 20);
+    let store = fo4_plugin::typed::Store::open(&m, &b).unwrap();
+    let vfs = fo4_vfs::Vfs::mount(&m, &b).unwrap();
+    let on = Switches {
+        emissive_multiple: true,
+        emissive_colour: true,
+        falloff: false,
+    };
+    let run = |level: RuleLevel, time: Option<f64>, clock: Switches| {
+        let mut loader = Loader::new(&store, &vfs, "english", level, &b);
+        loader.set_clock_switches(clock, &b);
+        let scene = loader.by_editor_id("ClockCell", &b).unwrap();
+        let options = BuildOptions {
+            max_texture_dimension: 16,
+            max_texture_bytes: 1024,
+            level,
+            blocks: None,
+            time,
+            clock,
+        };
+        let state = (
+            matches!(scene.instances[0].state, fo4_scene::State::Blocked),
+            scene.instances[0].state.hypotheses().to_vec(),
+        );
+        (
+            state,
+            build(&scene, &loader, &m.limits, options, &b).unwrap(),
+        )
+    };
+    // Switches off: the multiple's controller is not settled at rest.
+    let (state, out) = run(RuleLevel::Hypotheses, Some(0.5), Switches::default());
+    assert!(state.0, "{state:?}");
+    assert!(out.list.draws.is_empty());
+    // On: tagged for the clock, omitted without a time.
+    let (state, out) = run(RuleLevel::Hypotheses, None, on);
+    for rule in [
+        h::CLOCK_FREE_RUNNING,
+        h::CLOCK_EMISSIVE_MULTIPLE,
+        h::CLOCK_KEY_LINEAR,
+    ] {
+        assert!(state.1.contains(&rule), "{rule} {state:?}");
+    }
+    assert_eq!(out.omitted[0].causes[0].code, "UnsettledControllerTime");
+    let (_, out) = run(RuleLevel::Hypotheses, Some(0.5), on);
+    assert_eq!(out.list.draws.len(), 1, "{:?}", out.omitted);
+    let close = |a: [f32; 3], b: [f32; 3]| a.iter().zip(b).all(|(x, y)| (x - y).abs() < 1e-5);
+    // Colour (0.6, 0.2, 0.3) times multiple 2.
+    let c = out.list.draws[0].colour.unwrap();
+    assert!(close(c, [1.2, 0.4, 0.6]), "{c:?}");
+    // The mesh's vertex colours hold no tint.
+    let mesh = &out.list.meshes[out.list.draws[0].mesh];
+    assert!(mesh
+        .vertex_colors
+        .as_ref()
+        .unwrap()
+        .iter()
+        .all(|v| *v == [1.; 4]));
+    let rules = &out.instances[0].hypotheses;
+    for rule in [
+        h::CLOCK_EMISSIVE_MULTIPLE,
+        h::CLOCK_EMISSIVE_COLOUR,
+        h::EFFECT_COLOUR_CLAMPED,
+        h::CLOCK_FREE_RUNNING,
+    ] {
+        assert!(rules.contains(&rule), "{rule} {rules:?}");
+    }
+    let mut list = out.list;
+    for (t, colour) in [(0., [0.2, 0.4, 0.6]), (0.25, [0.6, 0.45, 0.675])] {
+        list.at_time(t).unwrap();
+        let c = list.draws[0].colour.unwrap();
+        assert!(close(c, colour), "{t} {c:?}");
+    }
+    // The CPU frame takes the colour: a draw at another time differs.
+    // The shape lies in the plane x = 1, y and z from 0 to 0.5.
+    let mut frustum = fo4_scene::camera::reference_frustum([32, 32]);
+    frustum[4] = 0.1;
+    let camera =
+        fo4_scene::camera::look_at([-2., 0.15, 0.15], [1., 0.15, 0.15], frustum, [32, 32]).unwrap();
+    let frame = |l: &crate::DrawList| {
+        let f = crate::render(
+            l,
+            &camera,
+            crate::RenderOptions::REFERENCE,
+            &m.limits,
+            &Budget::new(32 << 20),
+        )
+        .unwrap();
+        assert!(f.instances.iter().any(|i| *i != u32::MAX));
+        f.color
+    };
+    list.at_time(0.).unwrap();
+    let a = frame(&list);
+    list.at_time(0.5).unwrap();
+    assert_ne!(a, frame(&list));
+    // Below the hypotheses level nothing with a controller is drawn.
+    let (_, out) = run(RuleLevel::Measured, Some(0.5), on);
+    assert!(out.list.draws.is_empty());
     drop(temp);
 }
 
@@ -2206,6 +2424,7 @@ fn a_swap_pattern_reaches_the_material_another_scope_put_in_place() {
             level: RuleLevel::Hypotheses,
             blocks: None,
             time: None,
+            clock: Default::default(),
         };
         let out = build(&scene, &loader, &m.limits, options, &b).unwrap();
         drop(temp);

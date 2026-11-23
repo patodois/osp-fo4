@@ -376,6 +376,13 @@ impl Raster<'_> {
                         *value *= component;
                     }
                 }
+                // An effect's colour the clock drives multiplies the RGB
+                // where its tint would have been in the vertex colours.
+                if let Some(t) = draw.colour {
+                    for (value, component) in color.iter_mut().zip(t) {
+                        *value *= component;
+                    }
+                }
                 color[3] *= draw.alpha.opacity;
                 if let Some(a) = palette_alpha {
                     color[3] = a;
@@ -550,6 +557,12 @@ pub fn render(
                 .any(|x| !x.is_finite())
         {
             return Err(err("RenderNonFiniteTransform", di));
+        }
+        if draw
+            .colour
+            .is_some_and(|c| c.iter().any(|v| !v.is_finite() || *v < 0.))
+        {
+            return Err(err("RenderDrawColour", di));
         }
         if let Some(colors) = &mesh.vertex_colors {
             if colors.len() != mesh.vertices.len()

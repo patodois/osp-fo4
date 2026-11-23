@@ -68,12 +68,16 @@ pub struct SurfaceParams {
     /// The palette lookups of `Surface::palette` (`fo4_render::Palette`):
     /// bit 0 colour, bit 1 alpha.
     pub palette: u32,
+    /// `fo4_render::Draw::colour`: an RGB multiplier after the vertex
+    /// colour (1 without one).
+    pub colour: Option<[f32; 3]>,
 }
 /// Words of [`SurfaceParams::bits`].
-pub const PARAM_WORDS: usize = 15;
+pub const PARAM_WORDS: usize = 18;
 impl SurfaceParams {
     pub fn bits(&self) -> [u32; PARAM_WORDS] {
         let falloff = self.falloff.unwrap_or([0.; 4]);
+        let colour = self.colour.unwrap_or([1.; 3]);
         [
             self.uv_scale[0].to_bits(),
             self.uv_scale[1].to_bits(),
@@ -90,6 +94,9 @@ impl SurfaceParams {
             falloff[2].to_bits(),
             falloff[3].to_bits(),
             self.palette,
+            colour[0].to_bits(),
+            colour[1].to_bits(),
+            colour[2].to_bits(),
         ]
     }
 }
@@ -136,21 +143,26 @@ pub struct Instance {
     pub scale: Vec3,
 }
 
-/// `base` with the UV offset, UV scale and opacity of animated surface `a`
-/// at `seconds` of the game clock.
+/// `base` with the clock fields of animated surface `a` at `seconds` of
+/// the game clock: UV offset, UV scale, opacity, and the colour and falloff
+/// where their tracks exist.
 pub fn animated_params(
     base: SurfaceParams,
     a: &Animated,
     seconds: f64,
 ) -> Result<SurfaceParams, String> {
-    let (offset, scale, opacity) = a
+    let f = a
         .animation
-        .fields(seconds, a.held.0, a.held.1, a.held.2)
+        .fields(seconds, a.held)
         .map_err(|e| e.to_string())?;
     Ok(SurfaceParams {
-        uv_offset: offset.map(|v| v as f32),
-        uv_scale: scale.map(|v| v as f32),
-        opacity,
+        uv_offset: f.uv_offset.map(|v| v as f32),
+        uv_scale: f.uv_scale.map(|v| v as f32),
+        opacity: f.opacity,
+        colour: f.colour,
+        falloff: f
+            .falloff
+            .map(|f| [f.start_angle, f.stop_angle, f.start_opacity, f.stop_opacity]),
         ..base
     })
 }
@@ -161,9 +173,9 @@ pub fn animated_params(
 pub struct Animated {
     pub surface: usize,
     pub animation: fo4_render::Animation,
-    /// The draw's UV offset, UV scale and opacity as converted: the values
-    /// of the fields without a track.
-    pub held: ([f64; 2], [f64; 2], f32),
+    /// The draw's clock fields as converted: the values of the fields
+    /// without a track.
+    pub held: fo4_render::ClockFields,
 }
 
 #[derive(Default)]
@@ -236,6 +248,7 @@ fn surface_params(alpha: Alpha, uv_offset: [f64; 2], uv_scale: [f64; 2]) -> Surf
         opaque_texture: false,
         falloff: None,
         palette: 0,
+        colour: None,
     }
 }
 
@@ -459,6 +472,7 @@ pub fn convert(list: &mut DrawList, options: &RenderOptions) -> Result<GpuScene,
             palette: draw
                 .palette
                 .map_or(0, |p| u32::from(p.colour) | u32::from(p.alpha) << 1),
+            colour: draw.colour,
             ..surface_params(draw.alpha, draw.uv_offset, draw.uv_scale)
         };
         let animated = animations.get(&di).copied();
@@ -493,7 +507,7 @@ pub fn convert(list: &mut DrawList, options: &RenderOptions) -> Result<GpuScene,
                     out.animated.push(Animated {
                         surface: out.surfaces.len() - 1,
                         animation: a.clone(),
-                        held: (draw.uv_offset, draw.uv_scale, draw.alpha.opacity),
+                        held: draw.clock_fields(),
                     });
                 }
                 out.surfaces.len() - 1
@@ -551,6 +565,7 @@ mod tests {
             raw_tile_flags: None,
             falloff: None,
             palette: None,
+            colour: None,
         }
     }
     fn list() -> DrawList {

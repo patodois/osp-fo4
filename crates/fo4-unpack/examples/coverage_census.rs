@@ -425,12 +425,23 @@ fn base_key_info(c: &Census, base: &str) -> (String, String, String) {
         .unwrap_or_default()
 }
 
+/// The clock of the census's draw builds: the seconds of the game clock
+/// (`BuildOptions::time`, one census per time) and the clock's switches
+/// (`fo4_scene::clock::Switches`, off by default).
+struct Clock {
+    times: Vec<f64>,
+    switches: fo4_scene::clock::Switches,
+}
+
 /// Loads one cell (and the cells around it) as the viewer does, builds the
-/// viewer's draw list with actors at the hypotheses level and counts every
-/// placement.
+/// viewer's draw list with actors at the hypotheses level at each time of
+/// `clock` and counts every placement into that time's census. A failure
+/// to load fails the cell for every time; a failure of one time's build is
+/// that time's alone (`Ok` holds it).
 #[allow(clippy::too_many_arguments)]
 fn cell(
-    c: &mut Census,
+    cs: &mut [Census],
+    clock: &Clock,
     loader: &mut Loader<'_>,
     store: &Store,
     m: &Manifest,
@@ -438,23 +449,70 @@ fn cell(
     spelling: &detail::Spelling,
     key: &FormKey,
     around: u32,
-    rows: Option<&mut String>,
+    mut rows: Option<&mut String>,
     b: &Budget,
-) -> fo4_core::Result<()> {
+) -> fo4_core::Result<Vec<Option<Error>>> {
     let mut scene = loader.cell(key, b)?;
     if around > 0 {
         let a = fo4_scene::grid::around(store, &scene.cell.key, around, b)?;
         fo4_scene::grid::absorb_around(loader, &mut scene, &a, b)?;
     }
     let actors = fo4_scene::actor::resolve(&scene, loader, b)?;
-    // At second 0 of the game clock: a model whose free-running controllers
-    // the clock runs is drawn as it is at load (`BuildOptions::time`).
+    let mut failures = Vec::new();
+    for (c, time) in cs.iter_mut().zip(&clock.times) {
+        // The rows of a view are those of its first time.
+        let rows = if failures.is_empty() {
+            rows.as_deref_mut()
+        } else {
+            None
+        };
+        failures.push(
+            count(
+                c,
+                *time,
+                clock.switches,
+                &scene,
+                &actors,
+                loader,
+                store,
+                m,
+                vfs,
+                spelling,
+                rows,
+                b,
+            )
+            .err(),
+        );
+    }
+    Ok(failures)
+}
+
+/// Builds the draw list of a loaded cell at `time` and counts every
+/// placement into `c`.
+#[allow(clippy::too_many_arguments)]
+fn count(
+    c: &mut Census,
+    time: f64,
+    switches: fo4_scene::clock::Switches,
+    scene: &fo4_scene::Scene,
+    actors: &fo4_scene::actor::Actors,
+    loader: &mut Loader<'_>,
+    store: &Store,
+    m: &Manifest,
+    vfs: &Vfs,
+    spelling: &detail::Spelling,
+    rows: Option<&mut String>,
+    b: &Budget,
+) -> fo4_core::Result<()> {
+    // At a second of the game clock (0 unless asked): a model whose
+    // free-running controllers the clock runs is drawn as it is then
+    // (`BuildOptions::time`).
     let options = BuildOptions {
-        time: Some(0.),
+        time: Some(time),
+        clock: switches,
         ..BuildOptions::with_blocks(RuleLevel::Hypotheses, VIEWER_BLOCKS)
     };
-    let build =
-        fo4_render::draw::build_with_actors(&scene, &actors, loader, &m.limits, options, b)?;
+    let build = fo4_render::draw::build_with_actors(scene, actors, loader, &m.limits, options, b)?;
     let omitted: BTreeMap<u32, &fo4_render::draw::Omission> =
         build.omitted.iter().map(|o| (o.instance, o)).collect();
     // Whether any draw of an instance has a UV offset other than 0 or a UV
@@ -1090,7 +1148,7 @@ fn load(c: &mut Census, text: &str) -> AnyResult<()> {
 
 fn run() -> AnyResult<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
-    const USAGE: &str = "coverage_census MANIFEST OUT_DIR (--all [--every N] [--limit N] [--shard K/N] | --view CELL_EDITOR_ID [--around N] | --merge DIR...)";
+    const USAGE: &str = "coverage_census MANIFEST OUT_DIR (--all [--every N] [--limit N] [--shard K/N] | --view CELL_EDITOR_ID [--around N] | --merge DIR...) [--times S[,S...]] [--clock-emissive-multiple] [--clock-emissive-colour] [--clock-falloff]";
     if args.len() < 3 {
         return Err(USAGE.into());
     }
@@ -1103,26 +1161,60 @@ fn run() -> AnyResult<()> {
     let mut every = 32u64;
     let mut limit = u64::MAX;
     let mut shard = (0u64, 1u64);
+    // Second 0 of the game clock unless `--times` names others; with more
+    // than one time each time's outputs go to `OUT_DIR/t=S`.
+    let mut clock = Clock {
+        times: vec![0.],
+        switches: fo4_scene::clock::Switches::default(),
+    };
     if args[2] == "--merge" {
         let mut c = Census::default();
-        for d in &args[3..] {
+        // `--note TEXT` (a time of the clock, switches) joins the scope.
+        let mut note = None;
+        let mut dirs = Vec::new();
+        let mut it = args[3..].iter();
+        while let Some(d) = it.next() {
+            if d == "--note" {
+                note = Some(it.next().ok_or(USAGE)?.clone());
+                continue;
+            }
+            dirs.push(d);
+        }
+        for d in &dirs {
             load(
                 &mut c,
                 &std::fs::read_to_string(Path::new(d).join("counts.tsv"))?,
             )?;
         }
-        let scope = format!(
+        let mut scope = format!(
             "every cell of the load order, each alone; {} shards",
-            args.len() - 3
+            dirs.len()
         );
+        if let Some(n) = note {
+            scope = format!("{scope}; {n}");
+        }
         std::fs::write(out.join("summary.txt"), summary(&c, &scope, c.elapsed))?;
         std::fs::write(out.join("bases.tsv"), bases_table(&c))?;
         return Ok(());
     }
     let mut rest = args[2..].iter();
     while let Some(a) = rest.next() {
+        if clock.switches.set_flag(a) {
+            continue;
+        }
         let mut num = || -> AnyResult<u64> { Ok(rest.next().ok_or(USAGE)?.parse::<u64>()?) };
         match a.as_str() {
+            "--times" => {
+                clock.times = rest
+                    .next()
+                    .ok_or(USAGE)?
+                    .split(',')
+                    .map(|t| t.parse::<f64>())
+                    .collect::<Result<_, _>>()?;
+                if clock.times.is_empty() || clock.times.iter().any(|t| !t.is_finite() || *t < 0.) {
+                    return Err(USAGE.into());
+                }
+            }
             "--all" => all = true,
             "--view" => view = Some(rest.next().ok_or(USAGE)?.clone()),
             "--around" => around = u32::try_from(num()?)?,
@@ -1150,21 +1242,26 @@ fn run() -> AnyResult<()> {
     let vfs = Vfs::mount(&m, &Budget::new(m.limits.max_vfs_memory))?;
     vfs.check_complete()?;
     let spelling = detail::Spelling::build(&m, &vfs)?;
-    let mut c = Census::default();
+    let mut cs: Vec<Census> = clock.times.iter().map(|_| Census::default()).collect();
     let n = |v: u64| Tally { n: v, area: 0. };
-    c.detail.insert(
-        (
-            "data folder".into(),
-            "archives the manifest does not mount".into(),
-        ),
-        n(spelling.unmounted_archives),
-    );
-    c.detail.insert(
-        ("data folder".into(), "loose files".into()),
-        n(spelling.loose_files),
-    );
+    for c in &mut cs {
+        c.detail.insert(
+            (
+                "data folder".into(),
+                "archives the manifest does not mount".into(),
+            ),
+            n(spelling.unmounted_archives),
+        );
+        c.detail.insert(
+            ("data folder".into(), "loose files".into()),
+            n(spelling.loose_files),
+        );
+    }
     let cache = Budget::new(m.limits.max_memory);
     let mut loader = Loader::new(&store, &vfs, &m.language, RuleLevel::Hypotheses, &cache);
+    if clock.switches.any() {
+        loader.set_clock_switches(clock.switches, &cache);
+    }
     let scope;
     if let Some(edid) = &view {
         let key = store
@@ -1176,8 +1273,9 @@ fn run() -> AnyResult<()> {
         // A view with the cells around it holds more than one cell's read;
         // the viewer's own scene ceiling (`--scene-memory`) is larger too.
         let b = Budget::new(m.limits.max_memory.saturating_mul(8));
-        cell(
-            &mut c,
+        let failures = cell(
+            &mut cs,
+            &clock,
             &mut loader,
             &store,
             &m,
@@ -1188,6 +1286,9 @@ fn run() -> AnyResult<()> {
             Some(&mut rows),
             &b,
         )?;
+        if let Some(e) = failures.into_iter().flatten().next() {
+            return Err(e.into());
+        }
         std::fs::write(out.join("placements.tsv"), rows)?;
         scope = format!("one view, around {around}");
     } else {
@@ -1209,8 +1310,9 @@ fn run() -> AnyResult<()> {
             // The viewer's scene ceiling, not one read's: the draw list of a
             // large cell holds more than the manifest's per-read limit.
             let b = Budget::new(m.limits.max_memory.saturating_mul(8));
-            if let Err(e) = cell(
-                &mut c,
+            let failures = match cell(
+                &mut cs,
+                &clock,
                 &mut loader,
                 &store,
                 &m,
@@ -1221,7 +1323,17 @@ fn run() -> AnyResult<()> {
                 None,
                 &b,
             ) {
-                *c.cell_failures.entry(e.code.clone()).or_default() += 1;
+                Ok(f) => f,
+                Err(e) => vec![Some(e); cs.len()],
+            };
+            let mut failed = false;
+            for (c, e) in cs.iter_mut().zip(failures) {
+                if let Some(e) = e {
+                    *c.cell_failures.entry(e.code.clone()).or_default() += 1;
+                    failed = true;
+                }
+            }
+            if failed {
                 loader.reset_asset_cache(&cache);
                 batch = 0;
             }
@@ -1231,16 +1343,36 @@ fn run() -> AnyResult<()> {
                     "{n}/{} cells, {:.0} s, {} placements",
                     keys.len(),
                     started.elapsed().as_secs_f64(),
-                    c.placements.n
+                    cs[0].placements.n
                 );
             }
         }
         scope = "every cell of the load order, each alone".into();
     }
-    c.elapsed = started.elapsed().as_secs_f64();
-    std::fs::write(out.join("summary.txt"), summary(&c, &scope, c.elapsed))?;
-    std::fs::write(out.join("counts.tsv"), dump(&c))?;
-    std::fs::write(out.join("bases.tsv"), bases_table(&c))?;
+    let several = cs.len() > 1;
+    for (c, time) in cs.iter_mut().zip(&clock.times) {
+        c.elapsed = started.elapsed().as_secs_f64();
+        let dir = if several {
+            out.join(format!("t={time}"))
+        } else {
+            out.to_path_buf()
+        };
+        std::fs::create_dir_all(&dir)?;
+        // The default clock (second 0, every switch off) keeps the scope
+        // as it was.
+        let scope = if *time != 0. || clock.switches.any() {
+            let mut s = format!("{scope}; second {time} of the game clock");
+            for f in clock.switches.flags() {
+                s = format!("{s}, {f}");
+            }
+            s
+        } else {
+            scope.clone()
+        };
+        std::fs::write(dir.join("summary.txt"), summary(c, &scope, c.elapsed))?;
+        std::fs::write(dir.join("counts.tsv"), dump(c))?;
+        std::fs::write(dir.join("bases.tsv"), bases_table(c))?;
+    }
     Ok(())
 }
 
