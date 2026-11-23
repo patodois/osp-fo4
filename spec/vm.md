@@ -2682,6 +2682,116 @@ cannot end before the stop, whichever of the line's end half and the ninth
 phase's end comes first. Only the refusal scene sets it: it is now classed
 as an alternative ([quest-run-opening-unset.txt](quest-run-opening-unset.txt)).
 
+## The first fight
+
+([quest-run-fight.txt](quest-run-fight.txt) records the run;
+[fight-census.txt](fight-census.txt) the census of the fight's scripts;
+[quest-run-vault-stages.txt](quest-run-vault-stages.txt) maps every stage;
+the track, its plans, the command lines and every record named are in the
+step's notes.) The interpreter has no fight: nothing aims, loses health or
+decides to attack. What the fight step models is the events a fight raises
+and who receives them, behind the caller's assumptions of who is hit, whose
+combat state changes toward whom, and who dies killed by whom, and what the
+natives the receivers call answer afterwards. Eight readings, each behind
+its own switch, off by default (with them off every earlier output
+reproduces byte for byte), and three caller assumptions:
+
+| Switch | Reading | Rule |
+| --- | --- | --- |
+| `--hit-events` | `RegisterForHitEvent` kept as a registration of the calling instance for its target (a reference, or an alias object whose holder is hit), `UnregisterForHitEvent` and `UnregisterForAllHitEvents` remove them; a caller's hit delivers `OnHit(target, the player, none, none, false, false, false, false, "")` to each instance registered for the target or for an alias holding it whose filters are none and -1, in registration order, each registration ended by its delivery (`fight::hit`) | `fight_hit_registrations_v1` |
+| `--hit-init-registrations` (with `--hit-events`) | an instance of the hit reference's scripts or of an alias holding it, whose `OnAliasInit` or `OnInit` (which the interpreter never delivers) calls `RegisterForHitEvent` on itself with its own object (`self`, or a local cast from it), counts as registered, once, before the first hit the run raises there | `fight_hit_init_registration_v1` |
+| `--combat-state-events` | a caller's combat state change delivers `OnCombatStateChanged(target, state)` to the actor's own scripts, the aliases holding it and its remote-event registrations (`fight::combat_state`) | `fight_combat_state_events_v1` |
+| `--death-events` | a caller's death delivers `OnDying(killer)` then `OnDeath(killer)` to the same receivers; the run has the actor dead from then on (`fight::death`) | `fight_death_events_v1` |
+| `--dead-state` | `Actor.IsDead` on an actor the run killed answers true | `fight_dead_state_v1` |
+| `--combat-state-natives` | `Actor.IsInCombat` on the player answers whether a living actor's last assumed state toward the player is not 0 (false before any fight), on an actor the run gave a state whether that state is not 0 and it lives; `GetCombatState` on such an actor its state (0 once dead); others as before. Replaces the caller's `--assume-player-in-combat` (refused together) | `fight_combat_state_natives_v1` |
+| `--location-refs-shared` (with `--alias-location-refs`) | several aliases of a quest naming the same location and ref type, the rows naming as many distinct references: the aliases hold them one each, by alias id and first-row order (`Quests::fill_location`) | `quest_alias_location_ref_shared_v1` |
+| `--auto-state-inherited` (every mode) | an instance of a script that declares no auto state starts in the auto state of its nearest ancestor that declares one (`Vm::auto_state_inherited`) | `pex_auto_state_inherited_v1` |
+| `--assume-hit REF[@S]`, `--assume-combat-state REF TARGET STATE[@S]`, `--assume-death REF KILLER[@S]` (TARGET and KILLER a placed actor or `player`; each may be held with `--action-after`) | the player hits a placed actor; a placed actor's combat state becomes STATE toward the target; a placed actor dies killed by the killer | caller assumptions |
+
+**Census first** (`fight_census`, [fight-census.txt](fight-census.txt); names
+read from the scripts that declare natives, never from a list of the game's).
+Nine fight event names and thirty fight native names (`skill` names left
+out). Handlers with code: 121 `OnHit` (all with the nine parameters; 39 on
+plain references, 25 on reference aliases, 25 on actors, 17 on active magic
+effects, 8 on quests), 48 `OnCombatStateChanged` (47 taking an actor and an
+integer; 14 on active magic effects), 114 `OnDeath` and 89 `OnDying` (most
+taking the killer; 5 and 38 on active magic effects). Over every script:
+225 `RegisterForHitEvent` call sites, 81 inside an `OnHit` handler (the
+handler registering again) and 25 in init handlers; 550 `IsDead`, 64
+`IsInCombat`, 30 `GetCombatState`, 18 `GetDeadCount`, 16 `GetHealthAV`.
+The next main quest: six aliases with all four handlers (`OnHit`,
+`OnCombatStateChanged`, `OnDeath`, `OnDying`), filled from a location's
+references of a ref type; their handlers reach, by their calls, the
+quest's stage natives, `GetOwningQuest`, `GetPlayer`, `GetReference`,
+`RegisterForHitEvent` and, behind a property the aliases leave unset,
+`IsDead`, `GetLocation`, `IsChild` and `IsInFaction`; no handler reaches
+`GetDeadCount` or a health native, so what a dead actor answers matters to
+these scripts only through `IsDead`, and the data stores nothing a death
+count could be read from (a base's dead count is runtime state). Section 6:
+73 scripts declare no auto state under an ancestor that declares one; in 19
+the death handlers and in 2 the hit handler stand only in that ancestor's
+auto state, the six aliases' death counter among them.
+
+**The fight in the run.** The six aliases of the insect hunt name one
+location alias and two ref types, three aliases each; the location's rows
+name three distinct placed insects of each type (an alias fill census row
+"several distinct references of the type", so every earlier reading left
+them empty). Under `--location-refs-shared` the aliases hold them one each;
+the three aliases of a group carry the same scripts and property values, so
+which insect an alias holds changes nothing the run sets. Each alias carries
+an aggro script (`OnHit` and `OnCombatStateChanged`, both setting the
+group's stage through the default stage setter when the other party is the
+player; the hit registration made in `OnAliasInit` and again after each
+hit) and a death counter (`OnDeath` increments the quest's counter script of
+its group, which sets its stage at three). The counter's handlers stand in
+its parent's auto state, which the alias's own script does not declare:
+without `--auto-state-inherited` the deaths reach no handler. The caller's
+events (each held until the next main quest's 30): at the first house a
+combat state 1 toward the player, a hit and a death for each of the three
+insects one second apart; the first combat state sets 32, the hits reach
+the aliases through the init reading and register again, the third death
+sets 34 (objectives); at the second house the same sets 36 and 38, whose
+fragment sets 40 (34 done), whose fragment sets the robot quest's 100 (the
+first search scene stopped). Before the fight the vault's console and the
+wrist computer ask `IsInCombat` on the player three times: under
+`--combat-state-natives` the run's states answer false, as the caller did.
+
+**After the fight.** Stage 40's fragment sets the robot quest's 100, whose
+fragment stops the first search scene. The robot's after-search greeting is
+a line of a greeting topic whose info group requires the robot quest's 100
+and 50 done and 200 not done; a third conversation (the caller's
+`--assume-talk`, held until the robot quest's 100, and the caller's line)
+plays it: its first half sets 105 and its `TSCE` starts the second search
+scene (under `--line-start-scene`), two player dialogue phases whose answer
+(the robot quest's choice 3) ends with a fragment that sets the robot
+quest's 200 (`--line-fragments`), whose fragment sets the next main quest's
+50.
+
+**The road to the town.** The track goes on, planned on the worldspace's
+meshes, from the second house (held there until the conversation ends) to
+the town and its museum's front door, then on the museum's mesh to its upper
+floor (`track_plan`; plans in the step's notes). On the way it crosses one
+of the four stage 55 triggers around the town (55: disables the four,
+starts the town's quest), the town's stage 60 trigger (60) and, under
+`--load-doors`, passes the museum's front door: the door's teleport
+position lies on the stage 70 trigger's box (at the height of its
+bottom face; the body reading meets it), so 70 is set as the player arrives, and
+its fragment sets 65 and another quest's stage that sets 61. Upstairs the
+walk crosses the large stage 77 trigger, the stage 87 trigger (it needs 85:
+not set) and the player-only stage 88 trigger, which lies on the stairs'
+path before the upper rooms: 88 (starts the town's dialogue quest, whose
+stage sets 89) is set before the walk reaches the upper rooms' 78 trigger,
+and that trigger's turn-off stage is 85, so 78 is not set. The caller's
+activation of the inner door (stage 80) is held until 78 and never
+happens; 85 is a second fight (seven raider aliases, which 78 enables).
+
+- Reached: the next main quest **29 of 54 stages** (home step: 15), the
+  robot's postwar dialogue quest **10 of 16** (7), the vault dialogue
+  quest's 10 of 18 and the opening quest's 87 of 104 unchanged.
+- What stops next: 78 is turned off by the walk's order (88 first); with it
+  the raiders, their deaths (85, then 87), the town's dialogue (90 and the
+  stages after it), a terminal, a lock and inventory events.
+
 ## Conditions
 
 `fo4_vm::cond` evaluates the condition lists read by
@@ -3306,3 +3416,22 @@ navigation meshes with `track_plan`, the timeline with
 animation tool, converter or library of any project, editor, editor source
 or definition file, other interpreter, script extender, decompiler or the
 game executable was opened or searched for. The game was not run.
+
+## Provenance of the fight step
+
+Recognised from prior general knowledge, used only as pending rules that
+are off by default or as caller assumptions: that hit events reach only
+the scripts registered for them, one event per registration; that an
+alias's init event registers it when its quest fills it; what the combat
+state values mean (0 not in combat, 1 in combat); that dying precedes
+death and a killed actor answers dead; that an actor fighting the player
+puts the player in combat; that a script without an auto state of its own
+starts in its parent's. Every count was measured with the repository's own
+readers on the installed data: the compiled scripts with `fight_census` and
+the repository's disassembler, the quest's aliases and fills and the placed
+insects, triggers and doors with local probes (outputs outside the
+repository), the navigation meshes with `track_plan`, the timeline with
+`fo4_scene::timeline`. No public page was requested. No combat, behaviour
+or animation tool, converter or library of any project, editor, editor
+source or definition file, other interpreter, script extender, decompiler
+or the game executable was opened or searched for. The game was not run.

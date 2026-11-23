@@ -4,33 +4,44 @@ This page is the hand-over point. Everything on `main` builds and passes its tes
 agent) can continue from here. Read `AGENTS.md` first: it holds the rules of evidence and the clean-room rules.
 
 State on 2026-11-23 (vault, cast, light, home and character graph steps). Nothing below has been checked against the running game: every behaviour is a pending
+State on 2026-11-23 (vault, cast, light, home and fight steps). Nothing below has been checked against the running game: every behaviour is a pending
 rule in `spec/hypotheses.tsv`, off by default.
 
 ## Script VM and quests (`crates/fo4-vm`)
 
 The forced opening (`quest_run`, record in `spec/quest-run-opening.txt`) reaches 87 of 104 stages: the
 prewar quest ends. The vault step carried the forced run through the postwar vault (`spec/quest-run-vault.txt`);
-the home step walks it (record in `spec/quest-run-home.txt`, every stage of the three quests mapped in
-`spec/quest-run-vault-stages.txt`): the vault step's five caller trigger entries now come from a walked track
-crossing the triggers' volumes, the move to the surface from the vault elevator's automatic load door and its
-stored teleport position (`--load-doors`), and the household robot's conversation from its lines' start-scene
-fields and fragments (`--line-start-scene`, `--line-fragments`), condition function 70 on the player in the robot's
-quest (`--cond-70-player-sex-for`) and the info groups of lines outside scenes (`--info-groups`). The next main
-quest reaches 15 of its 54 stages (before 12), the vault dialogue quest 10 of 18 (before 8), the robot's postwar
-dialogue quest 7 of 16 (before none). The caller still gives the walk's waypoints, the ride up the elevator (its
-graph does not take the ascent event from its start state), the two conversations and their lines, the player's
-choices in the robot's scenes (by quest and by scene), the speech check's condition, the robot's food animation event and the player's
-own events (wrist computer, plug-in). What is left:
+the home step walks it (`spec/quest-run-home.txt`); the fight step carries it through the first fight and on to
+the town (record in `spec/quest-run-fight.txt`, every stage of the three quests mapped in
+`spec/quest-run-vault-stages.txt`, the census of the fight's scripts in `spec/fight-census.txt`). The fight is
+not modelled; its events are: the caller assumes who is hit, whose combat state changes toward whom and who
+dies (`--assume-hit`, `--assume-combat-state`, `--assume-death`), and the data decides who receives them under
+eight pending readings, each behind its own switch (`fo4_vm::fight`: hit registrations and an alias init
+handler's registration read as made, combat state and death receivers, `IsDead`, `IsInCombat` from the run's
+states in place of the caller's answer; the six insect aliases filled from their location's rows,
+`--location-refs-shared`; an ancestor's auto state, `--auto-state-inherited`, without which the aliases' death
+counters never run). A walked track goes on from the settlement to the two houses, the town and its museum
+(`track_plan`), and the town's triggers come from the walk. The next main quest reaches 29 of its 54 stages
+(before 15), the robot's postwar dialogue quest 10 of 16 (before 7); the vault dialogue quest (10 of 18) and the
+opening (87) are unchanged. The caller still gives the walk's waypoints, the ride up the elevator, the three
+conversations with the robot and their lines, the player's choices, the speech check's condition, the robot's
+food event, the player's own events and now the fight's events (who, when). What is left:
 
-1. The next main quest's stages 32 to 38 are hit, combat state and death events of six insect aliases, and 40
-   waits on them: combat is not modelled. The robot quest's 100 waits on that 40; its 200 and the companion stages on more of its lines.
-2. The walk to the town (stages 55 and later: triggers, a location change event, deaths, dialogue, a terminal) lies beyond the
-   run's end; the track can be extended there (`track_plan` on the worldspace's meshes).
-3. The elevator ride: the interior elevator's graph starts in a state that takes only the descent event, so the
+1. The museum's upper rooms (78): the walk reaches the player-only stage 88 trigger on the stairs first, and 78's
+   trigger turns itself off once the quest is past 85; in the game the order may differ (a trigger enabled later,
+   or another way up). 78 enables seven raiders whose deaths (85) are a second fight: the same readings apply,
+   their aliases fill from the museum location's ref types (one type shared by two aliases) and their deaths
+   would be the caller's. 87 waits on 85; the inner door's activation (80) is held on 78.
+2. The town's dialogue (90 and later): lines in the museum, other quests' fragments, a terminal's menu item, a
+   lock state change; inventory events (62, 105) are not modelled.
+3. The fight itself: nothing aims, loses health or decides to attack; no active magic effect receives an event
+   (`spec/fight-census.txt`: 14 to 38 handlers per event stand on effects); `GetDeadCount` and health natives are
+   not answered (the next main quest's handlers do not reach them).
+4. The elevator ride: the interior elevator's graph starts in a state that takes only the descent event, so the
    ascent is not played; reading the platform's motion would let the ride come from the data.
-4. The player's own animation events and the robot's food event still come from the caller: reading character
+5. The player's own animation events and the robot's food event still come from the caller: reading character
    graphs (below) would let them come from the data.
-5. `--cond-70-player-sex` over the whole run settles 31 line choices of the opening and times them by their audio,
+6. `--cond-70-player-sex` over the whole run settles 31 line choices of the opening and times them by their audio,
    which moves the opening's scenes past the caller's track and gates (the opening then stops at 31 stages): the
    opening's track and gates would need retiming before the reading can apply everywhere.
 
@@ -43,6 +54,8 @@ instead of the caller.
 
 Not modelled yet: unload, cell-load, cell-attach and cell-detach events; the sit state's transitional values (only sitting or not, `--sit-state`); combat; actors sitting
 through packages (and sitting poses: `spec/character-graph.md`, Sitting); magic-effect receivers of furniture events; keyword data, `ResetKeyword`, keywords in
+Not modelled yet: unload, cell-load, cell-attach and cell-detach events; the sit state's transitional values (only sitting or not, `--sit-state`); combat itself (only its events, from the caller); actors sitting
+through packages; magic-effect receivers of furniture events; keyword data, `ResetKeyword`, keywords in
 conditions, template flags and object modifications for keywords; collection aliases filled other than from
 a location's rows; actors' animation after their start state (character graphs: transitions on events); a furniture's `OnActivate` on a script's activation;
 use events sent to a furniture's graph by the caller's own sits and get-ups.

@@ -809,3 +809,21 @@ searched for a clip and its SAKD and STKD actor and target keywords. No
 Havok SDK or header, behaviour editor, converter, editor, editor source or
 definition file, reader of another project, animation tool or library, or
 game executable was opened or searched for.
+The fight step (`fo4_vm::fight`, the shared location rows in
+`fo4_vm::quest::Quests::fill_location`, the inherited auto state in
+`Vm::instantiate`, the `fight_census` example; [spec/vm.md](../spec/vm.md),
+The first fight; [spec/fight-census.txt](../spec/fight-census.txt),
+[spec/quest-run-fight.txt](../spec/quest-run-fight.txt),
+[spec/quest-run-vault-stages.txt](../spec/quest-run-vault-stages.txt)) reads
+no new record layout: it reads the compiled scripts' event handlers,
+registrations and auto states with the repository's own readers, and the
+quest record's alias fills and location rows as the earlier steps do. That
+hit events reach only registered scripts, once per registration, that an
+alias's init event registers it when its quest fills it, which combat state
+values mean what, that dying precedes death, that a killed actor answers
+dead, that an actor fighting the player puts the player in combat, and that
+a script without an auto state of its own starts in its parent's were
+recognised from prior general knowledge and are pending rules. No combat,
+behaviour or animation tool or library of any project, editor, editor source
+or definition file, script source or game executable was opened or searched
+for.
