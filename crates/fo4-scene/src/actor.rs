@@ -90,6 +90,12 @@ pub struct Actor {
     /// For an actor with an XESP: its chain and whether the rules say it
     /// starts enabled (`crate::enable`).
     pub enable: Option<crate::enable::Presence>,
+    /// Skin a bone the skeleton lacks at its bind transform
+    /// (`actor_missing_bone_bind_pose_v1`; set by a caller's switch, as
+    /// `crate::timeline::cast::Options::missing_bones_at_bind`). Off: such
+    /// a bone fails the shape (`ActorSkinBoneMissing`).
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub missing_bones_at_bind: bool,
 }
 impl Actor {
     /// Whether the enable parent rules say this actor starts disabled.
@@ -449,6 +455,7 @@ pub fn resolve_reference(
         blockers: Vec::new(),
         state: State::Blocked,
         enable: None,
+        missing_bones_at_bind: false,
     };
     let work = b.child();
     let Some((r, plugin)) = read(loader, key, &work)? else {

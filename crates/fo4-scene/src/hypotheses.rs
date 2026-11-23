@@ -178,6 +178,20 @@ pub const TIMELINE_MOVE: &str = "timeline_move_stored_rotation_v1";
 /// The NoWait forms of Enable and Disable read as the plain natives
 /// (`crate::timeline::Readings::nowait`).
 pub const TIMELINE_NOWAIT: &str = "timeline_nowait_visibility_v1";
+/// A flag 0x800 below the root of an enable chain that agrees with the
+/// chain's start state, the chain then read as any other
+/// (`crate::enable::Presence::with_agreeing_child_flags`; a timeline
+/// frame's `Readings::child_flag_agrees`).
+pub const ENABLE_CHILD_FLAG_AGREES: &str = "xesp_child_flag_agrees_chain_v1";
+/// An actor a run moved drawn as its character at the run's place with its
+/// placement's stored rotation (`crate::timeline::cast`).
+pub const TIMELINE_ACTOR_ROTATION: &str = "timeline_actor_stored_rotation_v1";
+/// An actor a run moved facing as the one placed reference at its new
+/// place (`crate::timeline::cast::Options::target_rotation`).
+pub const TIMELINE_ACTOR_TARGET_ROTATION: &str = "timeline_actor_target_rotation_v1";
+/// A bone a skinned shape names that the actor's skeleton lacks, skinned at
+/// its bind transform (`crate::actor::Actor::missing_bones_at_bind`).
+pub const ACTOR_MISSING_BONE_BIND: &str = "actor_missing_bone_bind_pose_v1";
 /// Base types whose PRPS `BASE_PROPERTIES` covers: those measured.
 const PROPERTY_BASES: [&str; 8] = [
     "STAT", "ACTI", "FURN", "CONT", "FLOR", "LIGH", "MSTT", "TERM",
@@ -533,6 +547,10 @@ mod tests {
             WORLD_CELL,
             TIMELINE_MOVE,
             TIMELINE_NOWAIT,
+            ENABLE_CHILD_FLAG_AGREES,
+            TIMELINE_ACTOR_ROTATION,
+            TIMELINE_ACTOR_TARGET_ROTATION,
+            ACTOR_MISSING_BONE_BIND,
             ENABLE_SCRIPT,
             REST_MANAGER_IDLE,
             REST_IDLE_TRANSFORM,

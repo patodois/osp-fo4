@@ -41,6 +41,10 @@ bevy = { version = "0.20", default-features = false, features = [
   "mouse",
 ] }
 
+[dev-dependencies]
+# Synthetic game files (a skinned actor's room) for the timeline cast test.
+fo4-render = { path = "../../crates/fo4-render", features = ["fixture"] }
+
 # One profile for build, run, test and clippy, to keep the target directory
 # small: optimised (the loaders are slow unoptimised), no debug info.
 [profile.dev]

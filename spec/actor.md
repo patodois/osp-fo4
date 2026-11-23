@@ -166,6 +166,15 @@ Skinned shapes, their skin blocks and per-vertex weights are in
 Drawing the rest pose is this step's choice, not a claim that the game
 shows it.
 
+A bone a skinned shape names that the skeleton does not hold fails the
+shape (`ActorSkinBoneMissing`). Behind its switch, off by default
+(`Actor::missing_bones_at_bind`, set only by a run timeline's cast with
+`--actor-missing-bone-bind`, `spec/timeline.md`), such a bone is skinned at
+its bind transform instead (`pose::bone_matrices_bound`: the identity, its
+vertices kept where the model stores them) under the pending
+`actor_missing_bone_bind_pose_v1`; the draw records the rule on the
+instance. In the forced opening's cast these are cloth and hair bones.
+
 ## Results
 
 **Test cell and its radius-1 neighbours** (the exterior test cell of the README's measurements, `--around 1`): 11

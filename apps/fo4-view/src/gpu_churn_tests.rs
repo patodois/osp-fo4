@@ -1657,3 +1657,182 @@ fn cpu_and_gpu_frames_agree_on_a_timeline_frame() {
         report.p95_abs
     );
 }
+
+/// A synthetic run timeline's frame with its cast (`--timeline-cast`,
+/// `fo4_scene::timeline::cast`): a skinned actor of the synthetic room
+/// (`fo4_render::fixture::actor_room`) drawn as its character where the
+/// run moved it, and an actor whose base is missing drawn as its marker,
+/// through the viewer's own timeline path (`crate::timeline::cast` and
+/// `finish`), the camera aimed at the caller's point. The CPU reference and
+/// the GPU frame of the same list agree; the character and the marker show
+/// in both under their own tags.
+#[test]
+#[ignore = "needs a GPU: draws offscreen through Bevy"]
+fn cpu_and_gpu_frames_agree_on_a_timeline_cast_frame() {
+    use fo4_render::fixture::{actor_room, Placed, ACTOR_BASE, ACTOR_ROOM};
+    use fo4_scene::timeline::{self as tl, Aim, Event, Spot, Timeline, What};
+    use fo4_scene::{Loader, RuleLevel};
+    let temp = fo4_core::TestDir::new("view-timeline-cast");
+    let root = temp.join("Data");
+    let m = actor_room(
+        &root,
+        &[
+            Placed {
+                id: 0x900,
+                base: ACTOR_BASE,
+                data: [0., 0., 0., 0., 0., std::f32::consts::FRAC_PI_2],
+                scale: Some(30.),
+            },
+            Placed {
+                id: 0x901,
+                base: 0x8ff,
+                data: [150., 100., 0., 0., 0., 0.],
+                scale: None,
+            },
+        ],
+        &[],
+    );
+    let level = RuleLevel::Hypotheses;
+    let b = fo4_core::Budget::new(256 << 20);
+    let store = fo4_plugin::typed::Store::open(&m, &b).unwrap();
+    let vfs = fo4_vfs::Vfs::mount(&m, &b).unwrap();
+    let mut loader = Loader::new(&store, &vfs, "english", level, &b);
+    let mut scene = loader.by_editor_id(ACTOR_ROOM, &b).unwrap();
+    let key = |id: u32| fo4_plugin::FormKey {
+        plugin: "base.esm".into(),
+        object_id: id,
+    };
+    let room = key(0x800);
+    let event = |t: f64, what: What| Event { t, what };
+    let player = |t: f64, pos: [f64; 3]| {
+        event(
+            t,
+            What::Player {
+                space: room.clone(),
+                cell: Some(room.clone()),
+                pos,
+                facing: None,
+            },
+        )
+    };
+    let actor = |t: f64, id: u32, pos: [f64; 3]| {
+        event(
+            t,
+            What::Actor {
+                reference: key(id),
+                at: Spot::At {
+                    space: room.clone(),
+                    pos,
+                },
+                source: "test".into(),
+            },
+        )
+    };
+    let timeline = Timeline {
+        events: vec![
+            player(0., [60., -250., 0.]),
+            actor(0., 0x900, [0., 0., 0.]),
+            actor(0., 0x901, [150., 100., 0.]),
+            actor(1., 0x900, [0., 100., 0.]),
+            player(10., [60., -200., 0.]),
+        ],
+        ..Timeline::default()
+    };
+    let frame = timeline.at(5.);
+    let p = crate::timeline::Prepared { timeline, frame };
+    let args = crate::timeline::Args {
+        file: String::new(),
+        at: 5.,
+        eye_height: 250.,
+        heading: None,
+        nowait: false,
+        overlay: None,
+        child_flag_agrees: false,
+        cast: true,
+        target_rotation: false,
+        missing_bones_at_bind: false,
+        aim: Aim::Point([60., 100., 250.]),
+    };
+    let applied = tl::apply(&mut scene, &mut loader, &p.frame, level, &b).unwrap();
+    let c = crate::timeline::cast(&p, &args, &scene, &mut loader, level, &b).unwrap();
+    let cast = c.cast.as_ref().unwrap();
+    let mut build = fo4_render::draw::build_with_actors(
+        &scene,
+        &cast.actors,
+        &loader,
+        &m.limits,
+        fo4_render::draw::BuildOptions::reference(level),
+        &b,
+    )
+    .unwrap();
+    let drawn = crate::timeline::finish(&p, &args, c, level, &applied, &mut build, &b).unwrap();
+    assert!(
+        drawn.overlay.contains("1 drawn as characters"),
+        "{}",
+        drawn.overlay
+    );
+    assert!(
+        drawn.overlay.contains("marker instead\ttag 2"),
+        "{}",
+        drawn.overlay
+    );
+    assert!(drawn.overlay.contains("timeline_actor_stored_rotation_v1"));
+    assert_eq!(drawn.eye, [60., -225., 250.]);
+    let camera = fo4_scene::camera::look_at(
+        drawn.eye,
+        drawn.look,
+        fo4_scene::camera::reference_frustum(SIZE),
+        SIZE,
+    )
+    .unwrap();
+    let options = fo4_render::RenderOptions::REFERENCE;
+    let f = fo4_render::render(
+        &build.list,
+        &camera,
+        options,
+        &fo4_core::Limits::default(),
+        &fo4_core::Budget::new(256 << 20),
+    )
+    .unwrap();
+    let cpu: Vec<u8> = f
+        .color
+        .iter()
+        .flat_map(|c| c.map(|v| (v.clamp(0., 1.) * 255.).round() as u8))
+        .collect();
+    let mut gpu_scene = crate::scene::convert(&mut build.list, &options).unwrap();
+    let gpu = headless(&mut gpu_scene, &camera, options.clear, true).unwrap();
+    let gpu_tags = crate::compare::tags_from_bytes(gpu.tags.as_ref().unwrap()).unwrap();
+    // The character (instance 0) and the marker (tag 2).
+    for tag in [0u32, 2] {
+        assert!(f.instances.contains(&tag), "CPU tag {tag}");
+        assert!(gpu_tags.contains(&tag), "GPU tag {tag}");
+    }
+    let report = crate::compare::compare(&crate::compare::Inputs {
+        size: SIZE,
+        cpu: &cpu,
+        gpu: &gpu.color,
+        tags: Some((&f.instances, &gpu_tags)),
+        clear: crate::compare::clear_rgb(options.clear),
+    })
+    .unwrap();
+    println!(
+        "timeline cast frame: agreement {:.6}, same tag {:?} of {}, mean {:?}, p95 {:?}, max {:?}",
+        report.agreement(),
+        report.same_tag,
+        report.both,
+        report.mean_abs,
+        report.p95_abs,
+        report.max_abs
+    );
+    assert!(report.agreement() > 0.999, "{}", report.agreement());
+    assert!(
+        report.same_tag.unwrap() as f64 > 0.999 * report.both as f64,
+        "{:?}",
+        report.same_tag
+    );
+    assert!(
+        report.p95_abs.iter().all(|m| *m <= 4),
+        "{:?}",
+        report.p95_abs
+    );
+}

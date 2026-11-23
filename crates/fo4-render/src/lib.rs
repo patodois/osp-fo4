@@ -777,3 +777,6 @@ mod tests;
 
 #[cfg(test)]
 mod scene_fixture;
+
+#[cfg(any(test, feature = "fixture"))]
+pub mod fixture;

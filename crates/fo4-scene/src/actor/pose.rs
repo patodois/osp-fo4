@@ -175,6 +175,22 @@ pub fn bone_matrices(
     file: &str,
     b: &Budget,
 ) -> Result<Vec<Affine>> {
+    Ok(bone_matrices_bound(n, skin, pose, file, false, b)?.0)
+}
+
+/// [`bone_matrices`]; with `missing_at_bind` a bone the skeleton lacks is
+/// skinned at its bind transform (the identity: its vertices keep their
+/// stored positions, `actor_missing_bone_bind_pose_v1`) instead of failing
+/// the shape. Returns the matrices and how many bones were missing.
+pub fn bone_matrices_bound(
+    n: &Nif<'_>,
+    skin: &Skin,
+    pose: &Skeleton,
+    file: &str,
+    missing_at_bind: bool,
+    b: &Budget,
+) -> Result<(Vec<Affine>, usize)> {
+    let mut missing = 0;
     let mut out = Vec::new();
     b.reserve(&mut out, skin.bones.len(), file, 0)?;
     for bone in &skin.bones {
@@ -187,15 +203,20 @@ pub fn bone_matrices(
                 bone.node,
             )
         })?;
-        let world = pose.bones.get(bone_name).ok_or_else(|| {
-            Error::new(
+        let Some(world) = pose.bones.get(bone_name) else {
+            if missing_at_bind {
+                missing += 1;
+                out.push(Affine::IDENTITY);
+                continue;
+            }
+            return Err(Error::new(
                 "ActorSkinBoneMissing",
                 file,
                 n.blocks[bone.node].data.start as u64,
                 "bone named in the skeleton",
                 String::from_utf8_lossy(bone_name),
-            )
-        })?;
+            ));
+        };
         let to_bone = Affine {
             rows: bone.rotation.map(|r| r.map(f64::from)),
             translation: bone.translation.map(f64::from),
@@ -219,7 +240,7 @@ pub fn bone_matrices(
         }
         out.push(world.compose(&to_bone));
     }
-    Ok(out)
+    Ok((out, missing))
 }
 
 /// Linearly blended positions of shape `shape` under `matrices`, in the

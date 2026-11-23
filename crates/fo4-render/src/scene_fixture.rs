@@ -1,5 +1,6 @@
 //! Fully synthetic SCOL: an untextured generated alternative and two textured parts.
 use crate::draw::{build, BuildOptions};
+use crate::fixture::{dds, skinned_files};
 use fo4_core::{Budget, Game, Limits, Manifest, Mount, PluginSpec, TestDir};
 use fo4_scene::{Loader, RuleLevel};
 #[path = "../../fo4-material/src/test_builder.rs"]
@@ -222,27 +223,6 @@ fn nif_file(blocks: Vec<(&'static str, Vec<u8>)>, label: &[u8], material: &[u8])
     v.extend(0u32.to_le_bytes());
     v.extend(3u32.to_le_bytes());
     v.extend(4u32.to_le_bytes());
-    v
-}
-fn dds() -> Vec<u8> {
-    let mut h = [0u32; 31];
-    h[0] = 124;
-    h[1] = 0x21007;
-    h[2] = 1;
-    h[3] = 1024;
-    h[6] = 1;
-    h[18] = 32;
-    h[19] = 4;
-    h[20] = u32::from_le_bytes(*b"DXT1");
-    h[26] = 0x401008;
-    let mut v = b"DDS ".to_vec();
-    for n in h {
-        v.extend(n.to_le_bytes());
-    }
-    for _ in 0..256 {
-        v.extend(0xf800u16.to_le_bytes());
-        v.extend([0; 6]);
-    }
     v
 }
 /// The SCOL cell with its loose files, `texture` as the parts' diffuse.
@@ -802,139 +782,6 @@ fn block_textures_validate_their_level_sizes() {
     );
 }
 
-/// A textured skinned model: one bone "Bone" bound at z 10, and a
-/// skeleton whose rest pose puts the bone at `rest_z`.
-fn skinned_files(rest_z: f32) -> (Vec<u8>, Vec<u8>) {
-    fn av(name: u32, t: [f32; 3]) -> Vec<u8> {
-        let mut v = Vec::new();
-        for x in [name, 0, u32::MAX, 0] {
-            v.extend(x.to_le_bytes());
-        }
-        for f in [t[0], t[1], t[2], 1., 0., 0., 0., 1., 0., 0., 0., 1., 1.] {
-            v.extend(f.to_le_bytes());
-        }
-        v.extend(u32::MAX.to_le_bytes());
-        v
-    }
-    fn file(blocks: &[(&str, Vec<u8>)], strings: &[&[u8]], root: u32) -> Vec<u8> {
-        let mut v = b"Gamebryo File Format, Version 20.2.0.7\n".to_vec();
-        v.extend(0x14020007u32.to_le_bytes());
-        v.push(1);
-        for n in [12u32, blocks.len() as u32, 130] {
-            v.extend(n.to_le_bytes());
-        }
-        v.extend([0; 4]);
-        v.extend((blocks.len() as u16).to_le_bytes());
-        for (name, _) in blocks {
-            v.extend((name.len() as u32).to_le_bytes());
-            v.extend(name.as_bytes());
-        }
-        for i in 0..blocks.len() as u16 {
-            v.extend(i.to_le_bytes());
-        }
-        for (_, b) in blocks {
-            v.extend((b.len() as u32).to_le_bytes());
-        }
-        v.extend((strings.len() as u32).to_le_bytes());
-        v.extend(8u32.to_le_bytes());
-        for s in strings {
-            v.extend((s.len() as u32).to_le_bytes());
-            v.extend(*s);
-        }
-        v.extend(0u32.to_le_bytes());
-        for (_, b) in blocks {
-            v.extend(b);
-        }
-        v.extend(1u32.to_le_bytes());
-        v.extend(root.to_le_bytes());
-        v
-    }
-    let mut mesh = av(u32::MAX, [0.; 3]);
-    for f in [0f32, 0., 0., 1.] {
-        mesh.extend(f.to_le_bytes());
-    }
-    for n in [4u32, 1, u32::MAX] {
-        mesh.extend(n.to_le_bytes());
-    }
-    // Position, UV and skin: stride 24 bytes, UV at 8, skin at 12.
-    mesh.extend(((0x43u64 << 44) | (3 << 28) | (2 << 8) | 6).to_le_bytes());
-    mesh.extend(1u32.to_le_bytes());
-    mesh.extend(3u16.to_le_bytes());
-    mesh.extend((3u32 * 24 + 6).to_le_bytes());
-    // Positions (1,0,10), (1,1,10), (1,0,11) as binary16, UV zero, one bone.
-    for xyz in [
-        [0x3c00u16, 0, 0x4900],
-        [0x3c00, 0x3c00, 0x4900],
-        [0x3c00, 0, 0x4980],
-    ] {
-        for n in xyz {
-            mesh.extend(n.to_le_bytes());
-        }
-        mesh.extend([0; 2]);
-        mesh.extend([0; 4]);
-        for w in [0x3c00u16, 0, 0, 0] {
-            mesh.extend(w.to_le_bytes());
-        }
-        mesh.extend([0; 4]);
-    }
-    for i in [0u16, 1, 2] {
-        mesh.extend(i.to_le_bytes());
-    }
-    let mut shader = Vec::new();
-    for n in [0u32, u32::MAX, 0, u32::MAX, 0, 0] {
-        shader.extend(n.to_le_bytes());
-    }
-    shader.extend([0; 16]);
-    shader.extend(2i32.to_le_bytes());
-    shader.extend([0; 16]);
-    shader.extend(u32::MAX.to_le_bytes());
-    shader.extend(0u32.to_le_bytes());
-    shader.extend([0; 68]);
-    let diffuse = b"textures/a.dds";
-    let mut texture = 1u32.to_le_bytes().to_vec();
-    texture.extend((diffuse.len() as u32).to_le_bytes());
-    texture.extend(diffuse);
-    let mut root = av(1, [0.; 3]);
-    root.extend(2u32.to_le_bytes());
-    root.extend(0u32.to_le_bytes());
-    root.extend(5u32.to_le_bytes());
-    let mut instance = Vec::new();
-    for n in [3u32, 6, 1, 5, 0] {
-        instance.extend(n.to_le_bytes());
-    }
-    let mut data = 1u32.to_le_bytes().to_vec();
-    for f in [
-        0f32, 0., 0., 9., 1., 0., 0., 0., 1., 0., 0., 0., 1., 0., 0., -10., 1.,
-    ] {
-        data.extend(f.to_le_bytes());
-    }
-    let mut bone = av(0, [0., 0., 10.]);
-    bone.extend(0u32.to_le_bytes());
-    let model = file(
-        &[
-            ("BSTriShape", mesh),
-            ("BSLightingShaderProperty", shader),
-            ("BSShaderTextureSet", texture),
-            ("NiNode", root),
-            ("BSSkin::Instance", instance),
-            ("NiNode", bone),
-            ("BSSkin::BoneData", data),
-        ],
-        &[b"Bone", b"Root"],
-        3,
-    );
-    let mut skeleton_root = av(1, [0.; 3]);
-    skeleton_root.extend(1u32.to_le_bytes());
-    skeleton_root.extend(1u32.to_le_bytes());
-    let mut skeleton_bone = av(0, [0., 0., rest_z]);
-    skeleton_bone.extend(0u32.to_le_bytes());
-    let skeleton = file(
-        &[("NiNode", skeleton_root), ("NiNode", skeleton_bone)],
-        &[b"Bone", b"Root"],
-        0,
-    );
-    (model, skeleton)
-}
 #[test]
 fn a_placed_actor_is_drawn_skinned_in_its_skeleton_rest_pose_after_the_references() {
     let temp = TestDir::new("render-actor");

@@ -14,7 +14,7 @@ type AnyResult<T> = Result<T, Box<dyn std::error::Error>>;
 const TERRAIN_SHADING: &str = "ground textures weighted per vertex under the pending terrain texture rules, times VCLR; untextured weight as flat neutral grey per triangle by geometric normal; unlit, not game lighting";
 fn run() -> AnyResult<()> {
     let args: Vec<_> = std::env::args().skip(1).collect();
-    const USAGE: &str = "usage: render MANIFEST DATA_DIRECTORY CELL_EDITOR_ID build/OUTPUT [--strict|--measured|--under-hypotheses] [--eye X,Y,Z --look X,Y,Z] [--instance-ids] [--collision-overlay] [--terrain] [--around N] [--texture-mib N] [--time SECONDS] [--clock-emissive-multiple] [--clock-emissive-colour] [--clock-falloff] [--clock-translation] [--clock-rotation] [--clock-rotation-xyz] [--clock-scale] [--timeline FILE --at SECONDS --eye-height UNITS [--look-heading DEGREES] [--timeline-nowait]] (with --timeline, CELL_EDITOR_ID - draws the player's cell)";
+    const USAGE: &str = "usage: render MANIFEST DATA_DIRECTORY CELL_EDITOR_ID build/OUTPUT [--strict|--measured|--under-hypotheses] [--eye X,Y,Z --look X,Y,Z] [--instance-ids] [--collision-overlay] [--terrain] [--around N] [--texture-mib N] [--time SECONDS] [--clock-emissive-multiple] [--clock-emissive-colour] [--clock-falloff] [--clock-translation] [--clock-rotation] [--clock-rotation-xyz] [--clock-scale] [--timeline FILE --at SECONDS --eye-height UNITS [--look-heading DEGREES] [--timeline-nowait] [--timeline-child-flag-agrees] [--timeline-cast [--timeline-target-rotation] [--actor-missing-bone-bind]] [--look-at X,Y,Z | --look-at-actor nearest|speaker]] (with --timeline, CELL_EDITOR_ID - draws the player's cell)";
     if args.len() < 4 {
         return Err(USAGE.into());
     }
@@ -43,6 +43,12 @@ fn run() -> AnyResult<()> {
     let mut eye_height: Option<f64> = None;
     let mut look_heading: Option<f64> = None;
     let mut timeline_readings = fo4_scene::timeline::Readings::default();
+    // --timeline-cast: the frame's actors as their characters
+    // (`fo4_scene::timeline::cast`); the aim of the camera (presentation).
+    // Without them the frame is drawn as before.
+    let mut timeline_cast = false;
+    let mut cast_options = fo4_scene::timeline::cast::Options::default();
+    let mut aim = fo4_scene::timeline::Aim::Track;
     let mut rest = args[4..].iter();
     while let Some(arg) = rest.next() {
         if switches.set_flag(arg) {
@@ -78,6 +84,18 @@ fn run() -> AnyResult<()> {
             }
             "--timeline" => timeline_file = Some(rest.next().ok_or(USAGE)?.clone()),
             "--timeline-nowait" => timeline_readings.nowait = true,
+            "--timeline-child-flag-agrees" => timeline_readings.child_flag_agrees = true,
+            "--timeline-cast" => timeline_cast = true,
+            "--timeline-target-rotation" => cast_options.target_rotation = true,
+            "--actor-missing-bone-bind" => cast_options.missing_bones_at_bind = true,
+            "--look-at" => aim = fo4_scene::timeline::Aim::Point(point(rest.next().ok_or(USAGE)?)?),
+            "--look-at-actor" => {
+                aim = match rest.next().map(String::as_str) {
+                    Some("nearest") => fo4_scene::timeline::Aim::Nearest,
+                    Some("speaker") => fo4_scene::timeline::Aim::Speaker,
+                    _ => return Err(USAGE.into()),
+                }
+            }
             "--at" | "--eye-height" | "--look-heading" => {
                 let v = rest
                     .next()
@@ -106,16 +124,30 @@ fn run() -> AnyResult<()> {
             let frame = t.at_with(at, timeline_readings);
             Some((t, frame))
         }
-        (None, None, None) if look_heading.is_none() && !timeline_readings.nowait => None,
+        (None, None, None)
+            if look_heading.is_none()
+                && timeline_readings == fo4_scene::timeline::Readings::default()
+                && !timeline_cast
+                && cast_options == fo4_scene::timeline::cast::Options::default()
+                && aim == fo4_scene::timeline::Aim::Track =>
+        {
+            None
+        }
         _ => {
             return Err(format!(
-                "--timeline needs --at and --eye-height and takes no --eye or --look\n{USAGE}"
+                "--timeline needs --at and --eye-height and takes no --eye or --look; the other timeline flags need --timeline\n{USAGE}"
             )
             .into())
         }
     };
     if timeline.is_none() && args[2] == "-" {
         return Err(USAGE.into());
+    }
+    if cast_options != fo4_scene::timeline::cast::Options::default() && !timeline_cast {
+        return Err(format!(
+            "--timeline-target-rotation and --actor-missing-bone-bind need --timeline-cast\n{USAGE}"
+        )
+        .into());
     }
     let policy = match level_name {
         "--under-hypotheses" => RuleLevel::Hypotheses,
@@ -182,7 +214,39 @@ fn run() -> AnyResult<()> {
         }
         None => None,
     };
-    let mut built = fo4_render::draw::build(&scene, &loader, limits, build_options, &budget)?;
+    // The frame's actors (markers), before the build so that the cast can
+    // be drawn with it; without --timeline-cast the build is the plain one.
+    let marked = match &timeline {
+        Some((_, frame)) => {
+            let space = fo4_scene::timeline::scene_space(&store, &scene);
+            Some(fo4_scene::timeline::markers(
+                &store, frame, &space, &budget,
+            )?)
+        }
+        None => None,
+    };
+    let cast = match (&marked, timeline_cast) {
+        (Some((markers, _, _)), true) => Some(fo4_scene::timeline::cast::resolve(
+            &mut loader,
+            &scene,
+            markers,
+            cast_options,
+            policy,
+            &budget,
+        )?),
+        _ => None,
+    };
+    let mut built = match &cast {
+        Some(c) => fo4_render::draw::build_with_actors(
+            &scene,
+            &c.actors,
+            &loader,
+            limits,
+            build_options,
+            &budget,
+        )?,
+        None => fo4_render::draw::build(&scene, &loader, limits, build_options, &budget)?,
+    };
     // Without --terrain nothing below changes the draw list or the summary.
     let mut terrain_summary = None;
     if let (true, Some((a, _))) = (terrain, &grid) {
@@ -241,30 +305,82 @@ fn run() -> AnyResult<()> {
         );
     }
     // The actors of the timeline's frame as placeholder markers, after
-    // every other draw.
+    // every other draw; with --timeline-cast only for the actors the build
+    // could not draw as characters.
     let mut timeline_summary = None;
-    if let (Some((t, frame)), Some(applied)) = (&timeline, &applied) {
-        let space = fo4_scene::timeline::scene_space(&store, &scene);
-        let (markers, left, mut rules) =
-            fo4_scene::timeline::markers(&store, frame, &space, &budget)?;
-        let at: Vec<[f64; 3]> = markers.iter().map(|m| m.pos).collect();
-        let first = fo4_render::timeline::next_tag(&built.list);
-        let tags = fo4_render::timeline::append_markers(&mut built.list, &at, first, &budget)?;
+    if let (Some((t, frame)), Some(applied), Some((markers, left, mut rules))) =
+        (&timeline, &applied, marked)
+    {
+        let (shown, first, tags, cast_text, drawn) = match &cast {
+            Some(c) => {
+                let d = fo4_render::timeline::cast_markers(&mut built, c, policy, &budget)?;
+                let tags: Vec<u32> = d.fallback.iter().map(|f| f.1).collect();
+                let text = fo4_scene::timeline::cast::report(
+                    c,
+                    &d.characters,
+                    &d.fallback,
+                    &d.heads,
+                    &d.bind_bones,
+                );
+                rules.extend(c.rules.iter().copied());
+                if !d.bind_bones.is_empty() {
+                    rules.insert(fo4_scene::hypotheses::ACTOR_MISSING_BONE_BIND);
+                }
+                (
+                    d.markers,
+                    d.first,
+                    tags,
+                    Some((text, d.characters.len(), d.fallback.len())),
+                    d.drawn,
+                )
+            }
+            None => {
+                let at: Vec<[f64; 3]> = markers.iter().map(|m| m.pos).collect();
+                let first = fo4_render::timeline::next_tag(&built.list);
+                let tags =
+                    fo4_render::timeline::append_markers(&mut built.list, &at, first, &budget)?;
+                let drawn = markers
+                    .iter()
+                    .map(|m| (m.reference.clone(), m.pos))
+                    .collect();
+                (markers, first, tags, None, drawn)
+            }
+        };
         rules.extend(applied.rules.iter().copied());
         rules.extend(frame.rules.iter().copied());
-        let (e, l, from) =
-            fo4_scene::timeline::eye_look(frame, eye_height.unwrap_or_default(), look_heading)?;
-        let camera = fo4_scene::timeline::camera_text(e, l, eye_height.unwrap_or_default(), &from);
+        let (e, l, camera) = fo4_scene::timeline::camera(
+            frame,
+            eye_height.unwrap_or_default(),
+            look_heading,
+            &aim,
+            &drawn,
+        )?;
         let mut overlay = fo4_scene::timeline::overlay(t, frame, &camera);
         overlay.push_str(&fo4_scene::timeline::report(
-            frame, applied, &markers, &left, &rules, first, &tags,
+            frame, applied, &shown, &left, &rules, first, &tags,
         ));
+        if let Some((text, ..)) = &cast_text {
+            overlay.push_str(text);
+        }
         eye = Some(e);
         look = Some(l);
-        timeline_summary = Some((
-            overlay,
-            serde_json::json!({"second":frame.second,"cell":scene.cell.key,"hidden":applied.hidden.len(),"shown":applied.shown.len(),"elsewhere":applied.elsewhere,"chain_changed":applied.chain_changed,"moved":applied.moved.len(),"moved_out":applied.moved_out.len(),"nowait_left":frame.nowait_left,"markers":tags,"actors_left_out":left,"rules":rules,"camera":"presentation: the caller's eye height above the player's track position, looking level along the track's movement or the caller's heading","overlay":"overlay.txt"}),
-        ));
+        let mut json = serde_json::json!({"second":frame.second,"cell":scene.cell.key,"hidden":applied.hidden.len(),"shown":applied.shown.len(),"elsewhere":applied.elsewhere,"chain_changed":applied.chain_changed,"moved":applied.moved.len(),"moved_out":applied.moved_out.len(),"nowait_left":frame.nowait_left,"markers":tags,"actors_left_out":left,"rules":rules,"camera":"presentation: the caller's eye height above the player's track position, looking level along the track's movement or the caller's heading","overlay":"overlay.txt"});
+        // The keys are absent without their flags, so the summary stays as before.
+        if let (Some((_, characters, fallback)), Some(map)) = (&cast_text, json.as_object_mut()) {
+            map.insert(
+                "cast".into(),
+                serde_json::json!({"characters":characters,"markers_instead":fallback,"pose":"the skeleton's rest pose (presentation)"}),
+            );
+        }
+        if let (true, Some(map)) = (aim != fo4_scene::timeline::Aim::Track, json.as_object_mut()) {
+            map.insert(
+                "aim".into(),
+                serde_json::json!(
+                    "presentation: the caller's point, or a drawn actor eye height above its place"
+                ),
+            );
+        }
+        timeline_summary = Some((overlay, json));
     }
     let mut min = [f64::INFINITY; 3];
     let mut max = [f64::NEG_INFINITY; 3];

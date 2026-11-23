@@ -50,6 +50,25 @@ impl Presence {
     pub fn with(&self, set: &dyn Fn(&FormKey) -> Option<bool>) -> Option<bool> {
         state(&self.chain, set)
     }
+    /// [`Presence::with`] for a chain the rules leave open only because a
+    /// record below its root carries its own flag 0x800
+    /// (`xesp_child_flag_agrees_chain_v1`): decided when every such flag
+    /// agrees with the start state the chain gives that record (the flag
+    /// set where the chain starts it disabled), the chain then read as any
+    /// other. `None` when another part is open or a flag disagrees.
+    pub fn with_agreeing_child_flags(
+        &self,
+        set: &dyn Fn(&FormKey) -> Option<bool>,
+    ) -> Option<bool> {
+        let open = findings(&self.chain)
+            .into_iter()
+            .filter(|f| rule(f).is_none())
+            .any(|f| f != FOUND_OWN_FLAG);
+        if open || !child_flags_agree(&self.chain) {
+            return None;
+        }
+        walk(&self.chain, set)
+    }
     /// Whether the chain names `key` above the record itself.
     pub fn depends_on(&self, key: &FormKey) -> bool {
         self.chain.nodes.iter().skip(1).any(|n| n.key == *key)
@@ -132,6 +151,31 @@ fn state(chain: &Chain, set: &dyn Fn(&FormKey) -> Option<bool>) -> Option<bool> 
     if f.iter().any(|x| rule(x).is_none()) {
         return None;
     }
+    walk(chain, set)
+}
+
+/// Whether every record below the root that carries its own flag 0x800
+/// starts disabled through its chain (the root as its flag says, each link
+/// as its parent, inverted by flag bit 0).
+pub fn child_flags_agree(chain: &Chain) -> bool {
+    let n = chain.nodes.len();
+    let Some(root) = chain.nodes.last() else {
+        return false;
+    };
+    let mut on = !root.initially_disabled;
+    for (k, x) in chain.nodes.iter().enumerate().rev().skip(1) {
+        let opposite = x.link.as_ref().is_some_and(|l| l.flags & 1 != 0);
+        on = on != opposite;
+        if k + 1 < n && x.initially_disabled && on {
+            return false;
+        }
+    }
+    true
+}
+
+/// The state of `chain.nodes[0]` down from its root, with no check of the
+/// findings (the caller's).
+fn walk(chain: &Chain, set: &dyn Fn(&FormKey) -> Option<bool>) -> Option<bool> {
     let mut nodes = chain.nodes.iter().rev();
     let root = nodes.next()?;
     let mut on = set(&root.key).unwrap_or(!root.initially_disabled);
@@ -251,5 +295,60 @@ mod tests {
             assert!(rule(text).is_none());
             assert_eq!(Presence::of(c).enabled, None, "{text}");
         }
+    }
+
+    #[test]
+    fn a_child_flag_that_agrees_with_its_chain_is_read_as_any_other_link() {
+        // The opening's class: the child carries the flag, its link is
+        // opposite, the root lacks the flag: both start it disabled.
+        let c = Chain {
+            nodes: vec![node(1, true, Some((2, 1))), node(2, false, None)],
+            end: ChainEnd::Root,
+        };
+        assert!(findings(&c).contains(&FOUND_OWN_FLAG));
+        assert!(child_flags_agree(&c));
+        let p = Presence::of(c);
+        assert_eq!(p.enabled, None);
+        assert_eq!(p.with_agreeing_child_flags(&|_| None), Some(false));
+        // The run disables the root: through the opposite link the child
+        // is present; its own change still wins.
+        let off = |k: &FormKey| (*k == key(2)).then_some(false);
+        assert_eq!(p.with_agreeing_child_flags(&off), Some(true));
+        assert_eq!(p.with(&off), None);
+        let own = |k: &FormKey| match k.object_id {
+            1 => Some(false),
+            2 => Some(false),
+            _ => None,
+        };
+        assert_eq!(p.with_agreeing_child_flags(&own), Some(false));
+        // A flag the chain contradicts (the chain starts it enabled) stays
+        // open.
+        let c = Chain {
+            nodes: vec![node(1, true, Some((2, 0))), node(2, false, None)],
+            end: ChainEnd::Root,
+        };
+        assert!(!child_flags_agree(&c));
+        assert_eq!(Presence::of(c).with_agreeing_child_flags(&|_| None), None);
+        // An intermediate record's agreeing flag: disabled root, plain
+        // links.
+        let c = Chain {
+            nodes: vec![
+                node(1, false, Some((2, 0))),
+                node(2, true, Some((3, 0))),
+                node(3, true, None),
+            ],
+            end: ChainEnd::Root,
+        };
+        assert!(child_flags_agree(&c));
+        assert_eq!(
+            Presence::of(c).with_agreeing_child_flags(&|_| None),
+            Some(false)
+        );
+        // Another open part keeps it open.
+        let c = Chain {
+            nodes: vec![node(1, true, Some((2, 5))), node(2, false, None)],
+            end: ChainEnd::Root,
+        };
+        assert_eq!(Presence::of(c).with_agreeing_child_flags(&|_| None), None);
     }
 }

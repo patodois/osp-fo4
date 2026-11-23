@@ -293,7 +293,30 @@ pub fn cell(
     if clip.is_some() && !actors {
         return Err("ActorClipWithoutActors: --actor-clip poses the drawn actors".into());
     }
-    let mut build = if actors {
+    // --timeline: the frame's actors (markers, and with --timeline-cast the
+    // characters, drawn with the build).
+    let timeline_cast = match (timeline, &applied) {
+        (Some((args, p)), Some(_)) => Some(crate::timeline::cast(
+            p,
+            args,
+            &scene,
+            &mut loader,
+            level,
+            &budget,
+        )?),
+        _ => None,
+    };
+    let cast_actors = timeline_cast.as_ref().and_then(|c| c.cast.as_ref());
+    let mut build = if let Some(c) = cast_actors {
+        let build = fo4_render::draw::build_with_actors(
+            &scene, &c.actors, &loader, limits, options, &budget,
+        )?;
+        println!("timeline cast: {}", actor_summary(&c.actors, &build));
+        for line in actor_lines(&c.actors, &build) {
+            println!("  {line}");
+        }
+        build
+    } else if actors {
         // Placed actors, drawn after the placed references (`--no-actors`
         // leaves them out and the draw list is the one before).
         let started = std::time::Instant::now();
@@ -434,15 +457,9 @@ pub fn cell(
     }
     // --timeline: the actors' markers after every other draw, the camera
     // and the overlay.
-    let drawn = match (timeline, &applied) {
-        (Some((args, p)), Some(a)) => Some(crate::timeline::finish(
-            p,
-            args,
-            &store,
-            &scene,
-            a,
-            &mut build.list,
-            &budget,
+    let drawn = match (timeline, &applied, timeline_cast) {
+        (Some((args, p)), Some(a), Some(c)) => Some(crate::timeline::finish(
+            p, args, c, level, a, &mut build, &budget,
         )?),
         _ => None,
     };

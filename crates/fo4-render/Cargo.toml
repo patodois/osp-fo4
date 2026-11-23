@@ -9,6 +9,10 @@ edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
 
+[features]
+# Synthetic files for tests (`fixture`), for the viewer's tests.
+fixture = []
+
 [dependencies]
 fo4-core.workspace = true
 fo4-scene.workspace = true

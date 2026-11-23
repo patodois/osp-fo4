@@ -1,0 +1,173 @@
+# Actors a run timeline places, by how a frame decides their presence (timeline_cast_census; counts only)
+actors placed by the timeline	93
+
+## 1. How each actor's presence is decided (once per actor)
+enable chain decided by the enable parent rules	9
+enable chain undecided: XESP.own_flag	44
+no enable parent, flag 0x800 clear	38
+no enable parent, flag 0x800 set	2
+
+## 2. By class: where placed, sources, chain shape
+enable chain decided by the enable parent rules	depth 1	9
+enable chain decided by the enable parent rules	ends at a record without XESP	9
+enable chain decided by the enable parent rules	every own flag 0x800 below the root agrees with the chain's start state: no flag below the root	9
+enable chain decided by the enable parent rules	flag 0x800 below the root: none	9
+enable chain decided by the enable parent rules	link flag bits along the chain: 0x00	4
+enable chain decided by the enable parent rules	link flag bits along the chain: 0x01	5
+enable chain decided by the enable parent rules	root REFR (base STAT), flag 0x800 clear	9
+enable chain decided by the enable parent rules	sources: pack_location_destination_v1	4
+enable chain decided by the enable parent rules	sources: world_actor_placed_position_v1	5
+enable chain decided by the enable parent rules	the actor's own Enable/Disable in the run: no	9
+enable chain decided by the enable parent rules	the run enables or disables a record above the actor: no	4
+enable chain decided by the enable parent rules	the run enables or disables a record above the actor: yes	5
+enable chain decided by the enable parent rules	where placed: interior cell	4
+enable chain decided by the enable parent rules	where placed: worldspace	5
+enable chain undecided: XESP.own_flag	depth 1	44
+enable chain undecided: XESP.own_flag	ends at a record without XESP	44
+enable chain undecided: XESP.own_flag	every own flag 0x800 below the root agrees with the chain's start state: yes	44
+enable chain undecided: XESP.own_flag	flag 0x800 below the root: on the actor itself	44
+enable chain undecided: XESP.own_flag	link flag bits along the chain: 0x01	44
+enable chain undecided: XESP.own_flag	root REFR (base STAT), flag 0x800 clear	44
+enable chain undecided: XESP.own_flag	sources: pack_location_destination_v1, world_actor_placed_position_v1	8
+enable chain undecided: XESP.own_flag	sources: pack_location_destination_v1, world_actor_placed_position_v1, world_moveto_target_v1	5
+enable chain undecided: XESP.own_flag	sources: world_actor_placed_position_v1	31
+enable chain undecided: XESP.own_flag	the actor's own Enable/Disable in the run: no	44
+enable chain undecided: XESP.own_flag	the run enables or disables a record above the actor: yes	44
+enable chain undecided: XESP.own_flag	where placed: interior cell, worldspace	5
+enable chain undecided: XESP.own_flag	where placed: worldspace	39
+no enable parent, flag 0x800 clear	sources: caller assumption --assume-actor-at (or a package destination applied before the writer looked), pack_location_destination_v1, world_actor_placed_position_v1, world_moveto_target_v1	1
+no enable parent, flag 0x800 clear	sources: pack_location_destination_v1	3
+no enable parent, flag 0x800 clear	sources: pack_location_destination_v1, world_actor_placed_position_v1	1
+no enable parent, flag 0x800 clear	sources: pack_location_destination_v1, world_actor_placed_position_v1, world_moveto_target_v1	1
+no enable parent, flag 0x800 clear	sources: world_actor_placed_position_v1	23
+no enable parent, flag 0x800 clear	sources: world_actor_placed_position_v1, world_moveto_target_v1	1
+no enable parent, flag 0x800 clear	sources: world_moveto_target_v1	8
+no enable parent, flag 0x800 clear	the actor's own Enable/Disable in the run: no	36
+no enable parent, flag 0x800 clear	the actor's own Enable/Disable in the run: yes	2
+no enable parent, flag 0x800 clear	where placed: interior cell	28
+no enable parent, flag 0x800 clear	where placed: interior cell, worldspace	1
+no enable parent, flag 0x800 clear	where placed: worldspace	9
+no enable parent, flag 0x800 set	sources: pack_location_destination_v1	2
+no enable parent, flag 0x800 set	the actor's own Enable/Disable in the run: yes	2
+no enable parent, flag 0x800 set	where placed: interior cell	2
+
+## 3. Distinct first parents	7
+parents naming 1 of these actors	1
+parents naming 14 of these actors	1
+parents naming 22 of these actors	1
+parents naming 3 of these actors	2
+parents naming 4 of these actors	1
+parents naming 6 of these actors	1
+
+## 4. Presence at a second (every actor the timeline places by then)
+second 26	readings off	another space	present: its enable chain	4
+second 26	readings off	another space	present: no enable parent, flag 0x800 clear	34
+second 26	readings off	the player's space	absent: its enable chain	5
+second 26	readings off	the player's space	present: no enable parent, flag 0x800 clear	4
+second 26	readings off	the player's space	undecided: XESP.own_flag	44
+second 26	NoWait read	another space	present: its enable chain	4
+second 26	NoWait read	another space	present: no enable parent, flag 0x800 clear	34
+second 26	NoWait read	the player's space	absent: its enable chain	5
+second 26	NoWait read	the player's space	present: no enable parent, flag 0x800 clear	4
+second 26	NoWait read	the player's space	undecided: XESP.own_flag	44
+second 26	child flag agreeing read	another space	present: its enable chain	4
+second 26	child flag agreeing read	another space	present: no enable parent, flag 0x800 clear	34
+second 26	child flag agreeing read	the player's space	absent: its enable chain	49
+second 26	child flag agreeing read	the player's space	present: no enable parent, flag 0x800 clear	4
+second 26	NoWait and child flag agreeing read	another space	present: its enable chain	4
+second 26	NoWait and child flag agreeing read	another space	present: no enable parent, flag 0x800 clear	34
+second 26	NoWait and child flag agreeing read	the player's space	absent: its enable chain	49
+second 26	NoWait and child flag agreeing read	the player's space	present: no enable parent, flag 0x800 clear	4
+second 191	readings off	another space	present: its enable chain	4
+second 191	readings off	another space	present: no enable parent, flag 0x800 clear	34
+second 191	readings off	the player's space	absent: its enable chain	5
+second 191	readings off	the player's space	present: no enable parent, flag 0x800 clear	4
+second 191	readings off	the player's space	undecided: XESP.own_flag	44
+second 191	NoWait read	another space	present: its enable chain	4
+second 191	NoWait read	another space	present: no enable parent, flag 0x800 clear	34
+second 191	NoWait read	the player's space	absent: its own Disable in the run	1
+second 191	NoWait read	the player's space	present: its enable chain	5
+second 191	NoWait read	the player's space	present: no enable parent, flag 0x800 clear	3
+second 191	NoWait read	the player's space	undecided: XESP.own_flag	44
+second 191	child flag agreeing read	another space	present: its enable chain	4
+second 191	child flag agreeing read	another space	present: no enable parent, flag 0x800 clear	34
+second 191	child flag agreeing read	the player's space	absent: its enable chain	49
+second 191	child flag agreeing read	the player's space	present: no enable parent, flag 0x800 clear	4
+second 191	NoWait and child flag agreeing read	another space	present: its enable chain	4
+second 191	NoWait and child flag agreeing read	another space	present: no enable parent, flag 0x800 clear	34
+second 191	NoWait and child flag agreeing read	the player's space	absent: its enable chain	14
+second 191	NoWait and child flag agreeing read	the player's space	absent: its own Disable in the run	1
+second 191	NoWait and child flag agreeing read	the player's space	present: its enable chain	35
+second 191	NoWait and child flag agreeing read	the player's space	present: no enable parent, flag 0x800 clear	3
+second 420	readings off	another space	present: its enable chain	4
+second 420	readings off	another space	present: no enable parent, flag 0x800 clear	34
+second 420	readings off	the player's space	absent: its enable chain	5
+second 420	readings off	the player's space	present: no enable parent, flag 0x800 clear	4
+second 420	readings off	the player's space	undecided: XESP.own_flag	44
+second 420	NoWait read	another space	present: its enable chain	4
+second 420	NoWait read	another space	present: no enable parent, flag 0x800 clear	34
+second 420	NoWait read	the player's space	absent: its enable chain	4
+second 420	NoWait read	the player's space	present: its enable chain	1
+second 420	NoWait read	the player's space	present: its own Enable in the run	1
+second 420	NoWait read	the player's space	present: no enable parent, flag 0x800 clear	3
+second 420	NoWait read	the player's space	undecided: XESP.own_flag	44
+second 420	child flag agreeing read	another space	present: its enable chain	4
+second 420	child flag agreeing read	another space	present: no enable parent, flag 0x800 clear	34
+second 420	child flag agreeing read	the player's space	absent: its enable chain	49
+second 420	child flag agreeing read	the player's space	present: no enable parent, flag 0x800 clear	4
+second 420	NoWait and child flag agreeing read	another space	present: its enable chain	4
+second 420	NoWait and child flag agreeing read	another space	present: no enable parent, flag 0x800 clear	34
+second 420	NoWait and child flag agreeing read	the player's space	absent: its enable chain	10
+second 420	NoWait and child flag agreeing read	the player's space	present: its enable chain	39
+second 420	NoWait and child flag agreeing read	the player's space	present: its own Enable in the run	1
+second 420	NoWait and child flag agreeing read	the player's space	present: no enable parent, flag 0x800 clear	3
+second 560	readings off	another space	absent: its enable chain	5
+second 560	readings off	another space	present: its enable chain	4
+second 560	readings off	another space	present: no enable parent, flag 0x800 clear	14
+second 560	readings off	another space	undecided: XESP.own_flag	39
+second 560	readings off	the player's space	present: no enable parent, flag 0x800 clear	24
+second 560	readings off	the player's space	undecided: XESP.own_flag	5
+second 560	NoWait read	another space	absent: its enable chain	4
+second 560	NoWait read	another space	present: its enable chain	5
+second 560	NoWait read	another space	present: its own Enable in the run	1
+second 560	NoWait read	another space	present: no enable parent, flag 0x800 clear	13
+second 560	NoWait read	another space	undecided: XESP.own_flag	39
+second 560	NoWait read	the player's space	present: no enable parent, flag 0x800 clear	24
+second 560	NoWait read	the player's space	undecided: XESP.own_flag	5
+second 560	child flag agreeing read	another space	absent: its enable chain	44
+second 560	child flag agreeing read	another space	present: its enable chain	4
+second 560	child flag agreeing read	another space	present: no enable parent, flag 0x800 clear	14
+second 560	child flag agreeing read	the player's space	absent: its enable chain	5
+second 560	child flag agreeing read	the player's space	present: no enable parent, flag 0x800 clear	24
+second 560	NoWait and child flag agreeing read	another space	absent: its enable chain	10
+second 560	NoWait and child flag agreeing read	another space	present: its enable chain	38
+second 560	NoWait and child flag agreeing read	another space	present: its own Enable in the run	1
+second 560	NoWait and child flag agreeing read	another space	present: no enable parent, flag 0x800 clear	13
+second 560	NoWait and child flag agreeing read	the player's space	present: its enable chain	5
+second 560	NoWait and child flag agreeing read	the player's space	present: no enable parent, flag 0x800 clear	24
+second 740	readings off	another space	absent: its enable chain	5
+second 740	readings off	another space	present: its enable chain	4
+second 740	readings off	another space	present: its own Enable in the run	1
+second 740	readings off	another space	present: no enable parent, flag 0x800 clear	14
+second 740	readings off	another space	undecided: XESP.own_flag	39
+second 740	readings off	the player's space	present: no enable parent, flag 0x800 clear	23
+second 740	readings off	the player's space	undecided: XESP.own_flag	5
+second 740	NoWait read	another space	absent: its enable chain	4
+second 740	NoWait read	another space	present: its enable chain	5
+second 740	NoWait read	another space	present: its own Enable in the run	2
+second 740	NoWait read	another space	present: no enable parent, flag 0x800 clear	13
+second 740	NoWait read	another space	undecided: XESP.own_flag	39
+second 740	NoWait read	the player's space	present: no enable parent, flag 0x800 clear	23
+second 740	NoWait read	the player's space	undecided: XESP.own_flag	5
+second 740	child flag agreeing read	another space	absent: its enable chain	44
+second 740	child flag agreeing read	another space	present: its enable chain	4
+second 740	child flag agreeing read	another space	present: its own Enable in the run	1
+second 740	child flag agreeing read	another space	present: no enable parent, flag 0x800 clear	14
+second 740	child flag agreeing read	the player's space	absent: its enable chain	5
+second 740	child flag agreeing read	the player's space	present: no enable parent, flag 0x800 clear	23
+second 740	NoWait and child flag agreeing read	another space	absent: its enable chain	19
+second 740	NoWait and child flag agreeing read	another space	present: its enable chain	29
+second 740	NoWait and child flag agreeing read	another space	present: its own Enable in the run	2
+second 740	NoWait and child flag agreeing read	another space	present: no enable parent, flag 0x800 clear	13
+second 740	NoWait and child flag agreeing read	the player's space	absent: its enable chain	5
+second 740	NoWait and child flag agreeing read	the player's space	present: no enable parent, flag 0x800 clear	23

@@ -363,6 +363,17 @@ fn bind_pose_skinning_returns_the_stored_vertices_and_the_rest_pose_moves_them()
             .code,
         "ActorSkinBoneMissing"
     );
+    // Under actor_missing_bone_bind_pose_v1 the missing bone stays at its
+    // bind transform: its vertices keep their stored places.
+    let (m, missing) = pose::bone_matrices_bound(&n, &skin, &partial, "body", true, &b).unwrap();
+    assert_eq!(missing, 1);
+    assert_eq!(m.len(), skin.bones.len());
+    // Every vertex has a place under the blend.
+    assert_eq!(
+        pose::skin_positions(&n, 3, &m, "body", &b).unwrap().len(),
+        3
+    );
+    assert!(m.contains(&pose::Affine::IDENTITY));
 }
 
 #[test]

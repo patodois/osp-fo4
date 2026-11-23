@@ -27,6 +27,8 @@ use fo4_plugin::{typed::Store, FormKey};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
 
+pub mod cast;
+
 /// First word of a timeline file.
 pub const MAGIC: &str = "osp-run-timeline";
 /// The format version this module writes and reads.
@@ -551,6 +553,7 @@ impl Timeline {
     pub fn at_with(&self, s: f64, r: Readings) -> Frame {
         let mut f = Frame {
             second: s,
+            readings: r,
             ..Frame::default()
         };
         let points: Vec<(f64, &FormKey, &Option<FormKey>, [f64; 3])> = self
@@ -655,6 +658,12 @@ pub struct Readings {
     /// do. Off: they are counted ([`Frame::nowait_left`]) and change
     /// nothing.
     pub nowait: bool,
+    /// `xesp_child_flag_agrees_chain_v1` (`--timeline-child-flag-agrees`):
+    /// an actor's enable chain that the rules leave open only because a
+    /// record below its root carries its own flag 0x800 is read as any
+    /// other chain when every such flag agrees with the start state the
+    /// chain gives. Off: such an actor's presence stays undecided.
+    pub child_flag_agrees: bool,
 }
 
 /// The state at one second ([`Timeline::at`]). Every map is keyed by the
@@ -686,6 +695,8 @@ pub struct Frame {
     pub nowait_left: usize,
     /// Rules the frame's own readings relied on.
     pub rules: BTreeSet<&'static str>,
+    /// The readings the frame was taken with.
+    pub readings: Readings,
 }
 
 fn xy_dir(a: [f64; 3], b: [f64; 3]) -> Option<[f64; 2]> {
@@ -788,6 +799,131 @@ pub fn eye_look(
     let eye = [p.pos[0], p.pos[1], p.pos[2] + eye_height];
     let look = [eye[0] + d[0] * 100.0, eye[1] + d[1] * 100.0, eye[2]];
     Ok((eye, look, from))
+}
+
+/// Where a frame's camera looks (presentation, the caller's choice;
+/// `--look-at`, `--look-at-actor`). The eye stays where [`eye_look`] puts
+/// it.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub enum Aim {
+    /// Along the track's movement or the caller's heading ([`eye_look`]).
+    #[default]
+    Track,
+    /// At the caller's point.
+    Point([f64; 3]),
+    /// At the drawn actor nearest the eye, `eye_height` above its place.
+    Nearest,
+    /// At the speaker of the line being spoken (else of the last line
+    /// started) where it is drawn, else as [`Aim::Nearest`].
+    Speaker,
+}
+
+/// A drawn actor closer to the eye than this (horizontally, world units)
+/// is not aimed at (presentation).
+const MIN_AIM: f64 = 1.0;
+
+/// The camera of a frame aimed as `aim` says, among the actors drawn in the
+/// frame (`drawn`: key and place, characters and markers): (eye, look
+/// point, the overlay's camera line). [`Aim::Track`] gives [`eye_look`]
+/// and [`camera_text`] unchanged; the others look from the same eye at a
+/// point, `eye_height` above an aimed actor's place, and say what they
+/// looked at, or fall back with the reason. Presentation only.
+pub fn camera(
+    frame: &Frame,
+    eye_height: f64,
+    heading_degrees: Option<f64>,
+    aim: &Aim,
+    drawn: &[(FormKey, [f64; 3])],
+) -> Result<([f64; 3], [f64; 3], String), String> {
+    let track = |prefix: &str| -> Result<([f64; 3], [f64; 3], String), String> {
+        let (e, l, from) = eye_look(frame, eye_height, heading_degrees)?;
+        Ok((
+            e,
+            l,
+            format!("{prefix}{}", camera_text(e, l, eye_height, &from)),
+        ))
+    };
+    if *aim == Aim::Track {
+        return track("");
+    }
+    let p = frame
+        .player
+        .as_ref()
+        .ok_or("TimelineNoPlayer: the second is before the track's first point")?;
+    if !eye_height.is_finite() {
+        return Err("TimelineEyeHeight: not finite".into());
+    }
+    let eye = [p.pos[0], p.pos[1], p.pos[2] + eye_height];
+    let aimed = |at: [f64; 3], what: String| {
+        let look = [at[0], at[1], at[2] + eye_height];
+        let text = format!(
+            "eye {:.1},{:.1},{:.1} look {:.1},{:.1},{:.1}: {eye_height} units above the track (the caller's), looking at {what} (presentation)",
+            eye[0], eye[1], eye[2], look[0], look[1], look[2]
+        );
+        (eye, look, text)
+    };
+    let far = |q: &[f64; 3]| (q[0] - eye[0]).hypot(q[1] - eye[1]) >= MIN_AIM;
+    let nearest = |prefix: &str| -> Result<([f64; 3], [f64; 3], String), String> {
+        let d2 = |q: &[f64; 3]| (0..3).map(|i| (q[i] - eye[i]).powi(2)).sum::<f64>();
+        let best = drawn
+            .iter()
+            .filter(|(_, q)| far(q))
+            .min_by(|a, b| d2(&a.1).total_cmp(&d2(&b.1)));
+        match best {
+            Some((k, q)) => Ok(aimed(
+                *q,
+                format!(
+                    "{prefix}the nearest drawn actor {}, {eye_height} units above its place",
+                    key_text(k)
+                ),
+            )),
+            None => track(&format!("{prefix}no drawn actor to look at; ")),
+        }
+    };
+    match aim {
+        Aim::Track => unreachable!(),
+        Aim::Point(q) => {
+            if !q.iter().all(|v| v.is_finite()) || (0..3).all(|i| q[i] == eye[i]) {
+                return Err("TimelineLookAt: the point is not finite or is the eye".into());
+            }
+            let text = format!(
+                "eye {:.1},{:.1},{:.1} look {:.1},{:.1},{:.1}: {eye_height} units above the track (the caller's), looking at the caller's point (presentation)",
+                eye[0], eye[1], eye[2], q[0], q[1], q[2]
+            );
+            Ok((eye, *q, text))
+        }
+        Aim::Nearest => nearest(""),
+        Aim::Speaker => {
+            let (line, what) = match (frame.spoken.last(), &frame.last_line) {
+                (Some((_, l)), _) => (Some(l), "the line being spoken"),
+                (None, Some((_, l))) => (Some(l), "the last line started"),
+                (None, None) => (None, "no line"),
+            };
+            let Some(line) = line else {
+                return nearest("no line started; ");
+            };
+            let Some(k) = &line.speaker else {
+                return nearest(&format!("the speaker of {what} not resolved; "));
+            };
+            match drawn.iter().find(|(d, _)| norm(d) == norm(k)) {
+                Some((_, q)) if far(q) => Ok(aimed(
+                    *q,
+                    format!(
+                        "the speaker of {what} {}, {eye_height} units above its place",
+                        key_text(k)
+                    ),
+                )),
+                Some(_) => nearest(&format!(
+                    "the speaker of {what} {} stands at the eye; ",
+                    key_text(k)
+                )),
+                None => nearest(&format!(
+                    "the speaker of {what} {} is not drawn in this frame; ",
+                    key_text(k)
+                )),
+            }
+        }
+    }
 }
 
 /// The overlay's camera line (presentation).
@@ -997,13 +1133,108 @@ pub struct Marker {
     pub source: String,
 }
 
+/// How a frame decides whether an actor is present ([`presence`]).
+#[derive(Debug, Clone, PartialEq)]
+pub enum Presence {
+    /// The actor's own last Enable (`true`) or Disable in the run
+    /// (`vm_disable_hides_reference_v1`).
+    Run(bool),
+    /// Its enable parent chain under the enable parent rules, with the
+    /// run's changes of the chain's records.
+    Chain { present: bool },
+    /// No enable parent: its own initially-disabled flag (clear: present).
+    Flag(bool),
+    /// The chain carries what no rule in use decides: the `found` texts
+    /// of `crate::enable` left open.
+    Undecided(Vec<&'static str>),
+    /// No winning record.
+    NoRecord,
+}
+impl Presence {
+    /// Present, absent, or `None` when not decided.
+    pub fn present(&self) -> Option<bool> {
+        match self {
+            Self::Run(v) | Self::Flag(v) => Some(*v),
+            Self::Chain { present } => Some(*present),
+            Self::Undecided(_) | Self::NoRecord => None,
+        }
+    }
+}
+
+/// [`presence_with_rules`] without the rules.
+pub fn presence(store: &Store, frame: &Frame, k: &FormKey, b: &Budget) -> Result<Presence, Error> {
+    Ok(presence_with_rules(store, frame, k, b)?.0)
+}
+
+/// Whether actor `k` is present at the frame: its own last change in the
+/// run (an enable present, a disable absent: `vm_disable_hides_reference_v1`),
+/// else its enable parent chain under the enable parent rules with the
+/// run's changes (`xesp_script_change_propagates_v1`), and with
+/// [`Readings::child_flag_agrees`] a chain left open only by records below
+/// its root carrying their own flag 0x800, each agreeing with the chain's
+/// start state, read as any other (`xesp_child_flag_agrees_chain_v1`),
+/// else without a chain its
+/// initially-disabled flag. Returns the rules relied on (for a chain,
+/// every covered part, decided or not).
+pub fn presence_with_rules(
+    store: &Store,
+    frame: &Frame,
+    k: &FormKey,
+    b: &Budget,
+) -> Result<(Presence, BTreeSet<&'static str>), Error> {
+    let mut rules = BTreeSet::new();
+    let set = |k: &FormKey| frame.visibility.get(&norm(k)).copied();
+    if let Some(v) = set(k) {
+        rules.insert(hypotheses::DISABLE_HIDES);
+        return Ok((Presence::Run(v), rules));
+    }
+    let p = match fo4_plugin::enable::chain(store, k, b)? {
+        // A chain with a parent: the enable parent rules decide.
+        Some(chain) if chain.nodes.len() > 1 => {
+            let found = enable::findings(&chain);
+            for f in &found {
+                if let Some(r) = enable::rule(f) {
+                    rules.insert(r);
+                }
+            }
+            let open: Vec<&'static str> = found
+                .iter()
+                .copied()
+                .filter(|f| enable::rule(f).is_none())
+                .collect();
+            let p = enable::Presence::of(chain);
+            let agreeing = open == [enable::FOUND_OWN_FLAG]
+                && frame.readings.child_flag_agrees
+                && enable::child_flags_agree(&p.chain);
+            let after = if agreeing {
+                rules.insert(hypotheses::ENABLE_CHILD_FLAG_AGREES);
+                p.with_agreeing_child_flags(&set)
+            } else {
+                p.with(&set)
+            };
+            match after {
+                Some(present) => {
+                    if after != p.enabled {
+                        rules.insert(hypotheses::ENABLE_SCRIPT);
+                    }
+                    Presence::Chain { present }
+                }
+                None => Presence::Undecided(open),
+            }
+        }
+        // No parent: the record's initially-disabled flag.
+        _ => match store.overrides().winner(k) {
+            Some(w) => Presence::Flag(!w.disabled),
+            None => Presence::NoRecord,
+        },
+    };
+    Ok((p, rules))
+}
+
 /// The actors of a frame standing in `space`, and why each other one is
-/// not marked. An actor is present when its own last change in the run is
-/// an enable, absent when it is a disable (`vm_disable_hides_reference_v1`);
-/// otherwise its enable parent chain decides under the enable parent rules
-/// with the run's changes (`xesp_script_change_propagates_v1`), and without
-/// a chain its initially-disabled flag. Returns the markers, one line per
-/// actor left out, and the rules relied on.
+/// not marked. An actor is present as [`presence_with_rules`] decides.
+/// Returns the markers, one line per actor left out, and the rules relied
+/// on.
 pub fn markers(
     store: &Store,
     frame: &Frame,
@@ -1013,7 +1244,6 @@ pub fn markers(
     let mut out = Vec::new();
     let mut left = Vec::new();
     let mut rules = BTreeSet::new();
-    let set = |k: &FormKey| frame.visibility.get(&norm(k)).copied();
     for (k, (_, at, source)) in &frame.actors {
         let (s, pos) = match at {
             Spot::At { space, pos } => (norm(space), *pos),
@@ -1025,31 +1255,9 @@ pub fn markers(
         if s != *space {
             continue;
         }
-        let present = match set(k) {
-            Some(v) => {
-                rules.insert(hypotheses::DISABLE_HIDES);
-                Some(v)
-            }
-            None => match fo4_plugin::enable::chain(store, k, b)? {
-                // A chain with a parent: the enable parent rules decide.
-                Some(chain) if chain.nodes.len() > 1 => {
-                    for f in enable::findings(&chain) {
-                        if let Some(r) = enable::rule(f) {
-                            rules.insert(r);
-                        }
-                    }
-                    let p = enable::Presence::of(chain);
-                    let after = p.with(&set);
-                    if after != p.enabled {
-                        rules.insert(hypotheses::ENABLE_SCRIPT);
-                    }
-                    after
-                }
-                // No parent: the record's initially-disabled flag.
-                _ => store.overrides().winner(k).map(|w| !w.disabled),
-            },
-        };
-        match present {
+        let (p, r) = presence_with_rules(store, frame, k, b)?;
+        rules.extend(r);
+        match p.present() {
             Some(true) => out.push(Marker {
                 reference: k.clone(),
                 pos,
@@ -1401,7 +1609,13 @@ mod tests {
         // A NoWait change counts only under its reading.
         assert_eq!(f.nowait_left, 1);
         assert!(!f.visibility.contains_key(&k(0x42)));
-        let n = t.at_with(2.25, Readings { nowait: true });
+        let n = t.at_with(
+            2.25,
+            Readings {
+                nowait: true,
+                ..Readings::default()
+            },
+        );
         assert_eq!(n.visibility.get(&k(0x42)), Some(&false));
         assert_eq!(n.nowait_left, 0);
         assert!(n.rules.contains(hypotheses::TIMELINE_NOWAIT));
@@ -1454,5 +1668,47 @@ mod tests {
         // Until the point of the other space, the player stays in the first.
         let f = t.at(9.99);
         assert_eq!(f.player.unwrap().pos, [200., 0., 10.]);
+    }
+
+    #[test]
+    fn the_camera_aims_at_a_point_the_nearest_actor_or_the_speaker() {
+        let t = sample();
+        let f = t.at(4.5);
+        // The track's aim is eye_look and camera_text unchanged.
+        let (e, l, from) = eye_look(&f, 120., None).unwrap();
+        let (e2, l2, text) = camera(&f, 120., None, &Aim::Track, &[]).unwrap();
+        assert_eq!((e, l), (e2, l2));
+        assert_eq!(text, camera_text(e, l, 120., &from));
+        // A point.
+        let (_, l, text) = camera(&f, 120., None, &Aim::Point([1., 2., 3.]), &[]).unwrap();
+        assert_eq!(l, [1., 2., 3.]);
+        assert!(text.contains("the caller's point"), "{text}");
+        assert!(camera(&f, 120., None, &Aim::Point(e), &[]).is_err());
+        // The nearest drawn actor, eye height above its place; one at the
+        // eye is passed over.
+        let drawn = vec![
+            (k(0x30), [100., 0., 0.]),
+            (k(0x31), [200.5, 0., 0.]),
+            (k(0x32), [600., 0., 0.]),
+        ];
+        let (eye, l, text) = camera(&f, 120., None, &Aim::Nearest, &drawn).unwrap();
+        assert_eq!(eye, [200., 0., 130.]);
+        assert_eq!(l, [100., 0., 120.]);
+        assert!(text.contains("base.esm:00000030"), "{text}");
+        // No actor: back to the track, saying so.
+        let (_, _, text) = camera(&f, 120., None, &Aim::Nearest, &[]).unwrap();
+        assert!(text.starts_with("no drawn actor to look at; eye"), "{text}");
+        // The speaker of the line being spoken (0x30 at 4.5 s).
+        let far = vec![(k(0x30), [600., 0., 0.]), (k(0x31), [100., 0., 0.])];
+        let (_, l, text) = camera(&f, 120., None, &Aim::Speaker, &far).unwrap();
+        assert_eq!(l, [600., 0., 120.]);
+        assert!(text.contains("the line being spoken"), "{text}");
+        // Not drawn: the nearest, saying why.
+        let (_, l, text) = camera(&f, 120., None, &Aim::Speaker, &far[1..]).unwrap();
+        assert_eq!(l, [100., 0., 120.]);
+        assert!(text.contains("is not drawn in this frame"), "{text}");
+        // At 6.5 s the last line has no resolved speaker.
+        let (_, _, text) = camera(&t.at(6.5), 120., None, &Aim::Speaker, &far).unwrap();
+        assert!(text.contains("not resolved"), "{text}");
     }
 }

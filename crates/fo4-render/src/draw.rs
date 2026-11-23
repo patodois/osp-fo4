@@ -427,6 +427,9 @@ struct Builder<'a, 's> {
     /// Registered rules the current instance's draws relied on beyond its
     /// state's (`Identity::hypotheses` gains them).
     draw_rules: Vec<&'static str>,
+    /// The actor being drawn skins a bone its skeleton lacks at its bind
+    /// transform (`fo4_scene::actor::Actor::missing_bones_at_bind`).
+    missing_bones_at_bind: bool,
 }
 /// A diffuse texture decoded under the reference limits, with the DDS
 /// declarations the summary reports.
@@ -2452,8 +2455,25 @@ impl Builder<'_, '_> {
                         ));
                     }
                     let pose = &self.skeletons[&skeleton];
-                    let matrices =
-                        fo4_scene::actor::pose::bone_matrices(n, &skin, pose, &file, self.budget)?;
+                    let (matrices, missing) = fo4_scene::actor::pose::bone_matrices_bound(
+                        n,
+                        &skin,
+                        pose,
+                        &file,
+                        self.missing_bones_at_bind,
+                        self.budget,
+                    )?;
+                    if missing > 0
+                        && !self
+                            .draw_rules
+                            .contains(&fo4_scene::hypotheses::ACTOR_MISSING_BONE_BIND)
+                    {
+                        append(
+                            &mut self.draw_rules,
+                            fo4_scene::hypotheses::ACTOR_MISSING_BONE_BIND,
+                            self.budget,
+                        )?;
+                    }
                     let positions = fo4_scene::actor::pose::skin_positions(
                         n,
                         i,
@@ -2548,6 +2568,7 @@ impl Builder<'_, '_> {
         // Absent XSCL is 1 under achr_placement_as_refr_v1, which the state holds.
         let world = Transform::euler(p, a.scale.unwrap_or(1.))?;
         self.allow(a.state.hypotheses());
+        self.missing_bones_at_bind = a.missing_bones_at_bind;
         self.skeleton(plan.skeleton_asset)?;
         let first = self.output.list.draws.len();
         for part in &plan.parts {
@@ -2797,6 +2818,7 @@ fn build_inner(
         pattern_used: std::cell::Cell::new(0),
         uv_left_out: std::collections::BTreeSet::new(),
         draw_rules: Vec::new(),
+        missing_bones_at_bind: false,
     };
     let scratch = b.child();
     let mut instances = Vec::new();

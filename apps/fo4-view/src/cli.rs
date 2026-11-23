@@ -113,7 +113,10 @@ usage:
       without --path), with the cells kept when the walk ends.
   fo4-view MANIFEST DATA_DIRECTORY CELL_EDITOR_ID|- --under-hypotheses --headless
            --timeline FILE --at SECONDS --eye-height UNITS [--look-heading DEGREES]
-           [--timeline-nowait] [--overlay build/OVERLAY.txt] --out build/FRAME.png
+           [--timeline-nowait] [--timeline-child-flag-agrees]
+           [--timeline-cast [--timeline-target-rotation] [--actor-missing-bone-bind]]
+           [--look-at X,Y,Z | --look-at-actor nearest|speaker]
+           [--overlay build/OVERLAY.txt] --out build/FRAME.png
            [--tags build/TAGS.bin] [--size WxH] [--terrain] [--around N] [...]
       One frame of a quest run's timeline (quest_run new-game --timeline,
       spec/timeline.md) at second SECONDS of the run, as the CPU render's
@@ -125,7 +128,18 @@ usage:
       its movement or along --look-heading (degrees counter-clockwise from
       +X); the overlay (stages, objectives, the line being spoken, what was
       applied) is printed and written to --overlay. --timeline-nowait also
-      applies the NoWait forms of Enable and Disable (a pending rule).
+      applies the NoWait forms of Enable and Disable (a pending rule);
+      --timeline-child-flag-agrees decides actors whose enable chain is
+      open only for their own initially-disabled flag where it agrees with
+      the chain (a pending rule). --timeline-cast draws the actors as their
+      skinned characters in the skeleton's rest pose at the run's place
+      (stored rotation; --timeline-target-rotation: the rotation of the one
+      reference at a moved actor's place; pending rules), a marker only
+      where an actor cannot be drawn, with the reason in the overlay;
+      --actor-missing-bone-bind skins a bone the skeleton lacks at its bind
+      transform instead of leaving the actor out (a pending rule).
+      --look-at and --look-at-actor aim the camera from the same eye at a
+      point, the nearest drawn actor or the line's speaker (presentation).
       Not with --eye, --look, --walk, --path, --actor-clip or --script-event.
   fo4-view compare --cpu CPU.png --gpu GPU.png --diff build/DIFF.png
            [--cpu-tags CPU.bin --gpu-tags GPU.bin]
@@ -402,6 +416,11 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
     let mut look_heading = None;
     let mut timeline_nowait = false;
     let mut overlay = None;
+    let mut timeline_cast = false;
+    let mut target_rotation = false;
+    let mut missing_bones_at_bind = false;
+    let mut child_flag_agrees = false;
+    let mut aim = fo4_scene::timeline::Aim::Track;
     let mut rest = args[3..].iter();
     while let Some(arg) = rest.next() {
         if clock.set_flag(arg) {
@@ -446,6 +465,18 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             "--look-heading" => look_heading = Some(finite(value()?)?),
             "--timeline-nowait" => timeline_nowait = true,
             "--overlay" => overlay = Some(value()?.clone()),
+            "--timeline-cast" => timeline_cast = true,
+            "--timeline-target-rotation" => target_rotation = true,
+            "--actor-missing-bone-bind" => missing_bones_at_bind = true,
+            "--timeline-child-flag-agrees" => child_flag_agrees = true,
+            "--look-at" => aim = fo4_scene::timeline::Aim::Point(point(value()?)?),
+            "--look-at-actor" => {
+                aim = match value()?.as_str() {
+                    "nearest" => fo4_scene::timeline::Aim::Nearest,
+                    "speaker" => fo4_scene::timeline::Aim::Speaker,
+                    _ => return Err(usage()),
+                }
+            }
             _ => return Err(usage()),
         }
     }
@@ -474,13 +505,27 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             heading: look_heading,
             nowait: timeline_nowait,
             overlay,
+            child_flag_agrees,
+            cast: timeline_cast,
+            target_rotation,
+            missing_bones_at_bind,
+            aim,
         }),
-        (None, None, None) if look_heading.is_none() && !timeline_nowait && overlay.is_none() => {
+        (None, None, None)
+            if look_heading.is_none()
+                && !timeline_nowait
+                && overlay.is_none()
+                && !timeline_cast
+                && !target_rotation
+                && !missing_bones_at_bind
+                && !child_flag_agrees
+                && aim == fo4_scene::timeline::Aim::Track =>
+        {
             None
         }
         _ => {
             return Err(
-                "--timeline needs --at and --eye-height; --look-heading, --timeline-nowait and --overlay need --timeline"
+                "--timeline needs --at and --eye-height; --look-heading, --timeline-nowait, --timeline-child-flag-agrees, --timeline-cast, --timeline-target-rotation, --actor-missing-bone-bind, --look-at, --look-at-actor and --overlay need --timeline"
                     .into(),
             )
         }
@@ -495,8 +540,15 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
                     .into(),
             );
         }
-        // Actors are drawn as the timeline's markers, not skinned.
+        // Actors are drawn as the timeline's markers, or with
+        // --timeline-cast as its characters: never the cell's own.
         actors = false;
+        if (target_rotation || missing_bones_at_bind) && !timeline_cast {
+            return Err(
+                "--timeline-target-rotation and --actor-missing-bone-bind need --timeline-cast"
+                    .into(),
+            );
+        }
     } else if args[2] == "-" {
         return Err("CELL - (the player's cell) needs --timeline".into());
     }
@@ -730,7 +782,22 @@ mod tests {
         assert_eq!((t.at, t.eye_height, t.heading), (12.5, 120., None));
         assert_eq!(t.overlay.as_deref(), Some("build/a.txt"));
         assert!(!t.nowait);
+        assert!(!t.cast && !t.target_rotation && !t.child_flag_agrees);
+        assert_eq!(t.aim, fo4_scene::timeline::Aim::Track);
         assert!(!scene.actors, "actors are the timeline's markers");
+        let c = parse(&args(
+            "m d - --under-hypotheses --headless --timeline build/t.tsv --at 1 --eye-height 120 \
+             --out build/a.png --timeline-cast --timeline-target-rotation \
+             --timeline-child-flag-agrees --look-at-actor speaker --actor-missing-bone-bind",
+        ))
+        .unwrap();
+        let Command::Headless { scene, .. } = c else {
+            panic!("{c:?}")
+        };
+        let t = scene.timeline.unwrap();
+        assert!(t.cast && t.target_rotation && t.child_flag_agrees && t.missing_bones_at_bind);
+        assert_eq!(t.aim, fo4_scene::timeline::Aim::Speaker);
+        assert!(!scene.actors, "the cast is the timeline's, not the cell's");
         for line in [
             "m d - --under-hypotheses --headless --out a.png",
             "m d C --under-hypotheses --headless --timeline t --at 1 --out a.png",
@@ -738,6 +805,11 @@ mod tests {
             "m d C --under-hypotheses --timeline t --at 1 --eye-height 1",
             "m d C --under-hypotheses --headless --timeline t --at 1 --eye-height 1 --walk --out a.png",
             "m d C --under-hypotheses --headless --eye 1,2,3 --look 4,5,6 --out a.png --look-heading 3",
+            "m d C --under-hypotheses --headless --eye 1,2,3 --look 4,5,6 --out a.png --timeline-cast",
+            "m d C --under-hypotheses --headless --eye 1,2,3 --look 4,5,6 --out a.png --look-at-actor nearest",
+            "m d - --under-hypotheses --headless --timeline t --at 1 --eye-height 1 --out a.png --timeline-target-rotation",
+            "m d - --under-hypotheses --headless --timeline t --at 1 --eye-height 1 --out a.png --actor-missing-bone-bind",
+            "m d - --under-hypotheses --headless --timeline t --at 1 --eye-height 1 --out a.png --look-at-actor far",
         ] {
             assert!(parse(&args(line)).is_err(), "{line}");
         }
