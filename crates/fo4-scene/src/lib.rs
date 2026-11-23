@@ -10,6 +10,7 @@ pub mod collision;
 pub mod enable;
 pub mod grid;
 pub mod hypotheses;
+pub mod light;
 pub mod lighting;
 pub mod missing;
 pub mod model_policy;

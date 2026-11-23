@@ -192,6 +192,39 @@ pub const TIMELINE_ACTOR_TARGET_ROTATION: &str = "timeline_actor_target_rotation
 /// A bone a skinned shape names that the actor's skeleton lacks, skinned at
 /// its bind transform (`crate::actor::Actor::missing_bones_at_bind`).
 pub const ACTOR_MISSING_BONE_BIND: &str = "actor_missing_bone_bind_pose_v1";
+/// An interior cell's ambient and directional colour lighting its surfaces
+/// (`crate::light`, `--light-cell`).
+pub const LIGHT_CELL: &str = "cell_light_ambient_directional_v1";
+/// The fields a cell's `Inherits` word names taken from its lighting
+/// template (`crate::light`, `--light-inherits`).
+pub const LIGHT_INHERITS: &str = "cell_light_template_inherits_v1";
+/// Placed lights as points with a linear falloff to their radius
+/// (`crate::light`, `--light-points`).
+pub const LIGHT_POINTS: &str = "light_point_linear_cutoff_v1";
+/// A placed light's radius: its base's plus its reference's XRDS
+/// (`crate::light`, `--light-reference-radius`).
+pub const LIGHT_REFERENCE_RADIUS: &str = "light_reference_radius_added_v1";
+/// A placed light's colour times its base's fade value (`crate::light`,
+/// `--light-fade`).
+pub const LIGHT_FADE: &str = "light_fade_scales_colour_v1";
+/// An interior cell's fog by distance (`crate::light`, `--light-fog`).
+pub const LIGHT_CELL_FOG: &str = "cell_fog_linear_v1";
+/// The lit colour: the surface colour times the summed light, clamped,
+/// no tone mapping (`crate::light`, whenever a light switch lights).
+pub const LIGHT_SUM: &str = "light_sum_clamped_v1";
+/// A climate listing one weather: that weather applies (`crate::light`).
+pub const CLIMATE_SINGLE_WEATHER: &str = "climate_single_weather_v1";
+/// The weather slot a caller's hour reads from the climate's times
+/// (`crate::light::hour_slot`).
+pub const CLIMATE_HOUR_SLOT: &str = "climate_hour_slot_v1";
+/// The weather's colour rows 0, 7, 8 as the sky's zenith, lower sky and
+/// horizon (`crate::light`, `--sky-weather`).
+pub const WEATHER_SKY: &str = "weather_sky_rows_v1";
+/// The weather's directional ambient of the slot as an ambient cube
+/// (`crate::light`, `--light-weather`).
+pub const WEATHER_AMBIENT: &str = "weather_ambient_cube_v1";
+/// The weather's fog row and fog distances (`crate::light`, `--fog-weather`).
+pub const WEATHER_FOG: &str = "weather_fog_rows_v1";
 /// Base types whose PRPS `BASE_PROPERTIES` covers: those measured.
 const PROPERTY_BASES: [&str; 8] = [
     "STAT", "ACTI", "FURN", "CONT", "FLOR", "LIGH", "MSTT", "TERM",
@@ -551,6 +584,18 @@ mod tests {
             TIMELINE_ACTOR_ROTATION,
             TIMELINE_ACTOR_TARGET_ROTATION,
             ACTOR_MISSING_BONE_BIND,
+            LIGHT_CELL,
+            LIGHT_INHERITS,
+            LIGHT_POINTS,
+            LIGHT_REFERENCE_RADIUS,
+            LIGHT_FADE,
+            LIGHT_CELL_FOG,
+            LIGHT_SUM,
+            CLIMATE_SINGLE_WEATHER,
+            CLIMATE_HOUR_SLOT,
+            WEATHER_SKY,
+            WEATHER_AMBIENT,
+            WEATHER_FOG,
             ENABLE_SCRIPT,
             REST_MANAGER_IDLE,
             REST_IDLE_TRANSFORM,

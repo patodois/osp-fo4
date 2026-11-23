@@ -1,0 +1,111 @@
+# What the data stores that bears on light along a run timeline's player cells (light_census; stored numbers and counts only)
+player cells: 7 distinct, 1 interior, 6 exterior
+
+## Interior cells (first-visit order)
+interior 1 (from second 500.235):
+  XCLL 136 bytes; lighting template named; image space named
+  cell: ambient 52,61,65 directional 11,17,21 rotation 0 270 fade 0 fog near colour 91,116,121 far colour 91,114,121 near 300 far 3500 power 1.2 max 0.7 clip 4000
+  cell directional ambient X+ X- Y+ Y- Z+ Z-: 14,17,18 14,17,18 14,17,18 14,17,18 9,10,11 18,21,24 scale 1
+  inherits word 0x000006f8: Fog Near, Fog Far, Directional Rotation, Directional Fade, Clip Distance, Fog Max, Light Fade Distances
+  template: ambient 41,49,54 directional 21,33,43 rotation 0 270 fade 0.1 fog near colour 56,63,71 far colour 72,79,87 near 500 far 4600 power 1.2 max 0.7 clip 10000
+  template directional ambient X+ X- Y+ Y- Z+ Z-: 9,10,11 14,16,18 9,10,11 14,16,18 7,9,10 14,17,20 scale 1
+  image space subrecords (tag bytes): EDID 23, HNAM 36, CNAM 12, TNAM 16, DNAM 24, TX00 47
+  placed lights: 379 active, 3 initially disabled; 0 without a placement, 0 with a scale other than 1
+  radius: min 128 median 128 max 1024 (n 382)
+  fade value (FNAM): min 0.20000000298023224 median 1.2000000476837158 max 1.2999999523162842 (n 382)
+  reference radius (XRDS) against the base radius: 338 below, 0 equal, 39 above; ratio min -0.8881987929344177 median -0.3016560673713684 max 4.384693145751953 (n 377)
+  XLIG sizes: 24 bytes 377
+  colours: 16 distinct, 22 lights white (255,255,255)
+  flags label Ambient Only: 1
+  flags label Flicker: 46
+  flags label Ignore Roughness: 1
+  flags label No Rim Lighting: 24
+  flags label Non Specular: 40
+  flags label NonShadow Spotlight: 3
+  flags label Shadow OmniDirectional: 1
+  flags label Shadow Spotlight: 5
+  flags label Unknown 0: 382
+  flags word 0x00000001: 287
+  flags word 0x00000009: 46
+  flags word 0x00000401: 5
+  flags word 0x00001001: 1
+  flags word 0x00004001: 3
+  flags word 0x00008001: 16
+  flags word 0x00088001: 23
+  flags word 0x001c8001: 1
+  reference subrecords: DATA 382, EDID 1, NAME 382, VMAD 2, XLIG 377, XLKR 13, XLYR 37, XRDS 377, XRFG 67
+
+## Exterior cells
+player exterior cells 6 and their neighbours within one grid step: 22 cells; with XCLL 0, with a lighting template 0, with XCCM 0
+  placed lights: 82 active, 1 initially disabled; 0 without a placement, 0 with a scale other than 1
+  radius: min 128 median 256 max 256 (n 83)
+  fade value (FNAM): min 0.5 median 1 max 1 (n 83)
+  reference radius (XRDS) against the base radius: 77 below, 0 equal, 3 above; ratio min -0.9081745147705078 median -0.3703184127807617 max 3.9338741302490234 (n 80)
+  XLIG sizes: 24 bytes 83
+  colours: 14 distinct, 20 lights white (255,255,255)
+  flags label Ambient Only: 4
+  flags label Ignore Roughness: 4
+  flags label No Rim Lighting: 10
+  flags label Non Specular: 11
+  flags label NonShadow Spotlight: 1
+  flags label Shadow OmniDirectional: 1
+  flags label Shadow Spotlight: 2
+  flags label Unknown 0: 83
+  flags label Unknown 13: 26
+  flags word 0x00000001: 44
+  flags word 0x00000401: 1
+  flags word 0x00002001: 24
+  flags word 0x00002401: 1
+  flags word 0x00003001: 1
+  flags word 0x00004001: 1
+  flags word 0x00008001: 1
+  flags word 0x00088001: 6
+  flags word 0x001c8001: 4
+  reference subrecords: DATA 83, NAME 83, XESP 69, XLIG 83, XLKR 18, XLYR 77, XRDS 80
+regions named by those cells (XCLR): 2
+  region 1 (named by 18 cells): subrecords (tag bytes) RCLR 4, WNAM 4, RPLI 4, RPLD 112, RDAT 8, RDMP 4; RDAT first words 4
+  region 2 (named by 14 cells): subrecords (tag bytes) RCLR 4, WNAM 4, RPLI 4, RPLD 64, RDAT 8, RDSA 156; RDAT first words 7
+
+## Worldspaces, climates and weathers
+world 1: climate named; lighting template none; parent none
+  climate: 1 weather list entries; times (TNAM bytes) [30, 54, 102, 126, 0, 68]; the first four as tens of minutes: 5:00 9:00 17:00 21:00
+  entry 1: first word resolves to WTHR, second word 100, third word zero
+  weather 1: subrecords (tag count sizes): 00TX x1 28, 10TX x1 28, 20TX x1 28, 30TX x1 30, 40TX x1 25, ;0TX x1 25, <0TX x1 25, DALC x8 32, DATA x1 20, FNAM x1 72, GNAM x1 4, IMSP x1 32, JNAM x1 1024, LNAM x1 4, MNAM x1 4, NAM0 x1 608, NAM1 x1 4, NAM4 x1 128, NNAM x1 4, PNAM x1 1024, QNAM x1 32, RNAM x1 32, SNAM x1 8, TNAM x36 4, UNAM x1 24, VNAM x1 4, WGDR x1 32, WNAM x1 4
+  weather 1: colour table 19 rows by 8 slots (row: R,G,B per slot)
+    row  0: 80,98,105 22,52,75 55,56,60 0,0,0 40,49,52 44,61,75 38,46,52 27,28,30 (fourth bytes {0})
+    row  1: 25,64,80 4,84,182 52,61,68 1,18,22 13,41,51 152,113,89 49,79,109 26,39,45 (fourth bytes {0})
+    row  2: 0,0,0 0,0,0 0,0,0 0,0,0 0,0,0 0,0,0 0,0,0 0,0,0 (fourth bytes {0})
+    row  3: 85,85,85 83,83,83 80,80,80 45,45,45 65,65,65 89,89,89 86,86,86 62,62,62 (fourth bytes {0})
+    row  4: 205,166,149 242,218,196 205,129,105 43,62,80 124,114,114 255,212,199 229,186,178 124,95,92 (fourth bytes {0})
+    row  5: 255,252,205 251,255,255 255,136,83 255,49,15 255,151,110 230,227,202 230,168,141 255,93,49 (fourth bytes {0})
+    row  6: 60,77,85 0,0,0 60,77,85 71,91,100 65,84,92 30,38,42 30,38,42 65,84,92 (fourth bytes {0})
+    row  7: 197,204,205 119,163,188 180,125,108 1,15,18 99,109,111 138,153,170 130,116,124 90,70,63 (fourth bytes {0})
+    row  8: 235,207,189 217,183,146 205,109,84 15,23,28 125,115,108 203,199,199 188,150,147 110,66,56 (fourth bytes {0})
+    row  9: 129,108,97 209,219,220 185,131,117 35,46,58 82,77,77 169,163,158 197,175,168 110,88,87 (fourth bytes {0})
+    row 10: 0,0,0 0,0,0 0,0,0 0,0,0 0,0,0 0,0,0 0,0,0 0,0,0 (fourth bytes {0})
+    row 11: 0,0,0 0,0,0 0,0,0 0,0,0 0,0,0 0,0,0 0,0,0 0,0,0 (fourth bytes {0})
+    row 12: 169,182,190 206,243,255 125,98,92 11,17,22 90,99,106 143,164,190 145,153,173 68,57,57 (fourth bytes {0})
+    row 13: 158,159,162 195,198,200 125,94,87 23,28,34 90,93,98 176,178,181 160,146,143 74,61,60 (fourth bytes {0})
+    row 14: 130,93,79 255,255,255 100,55,41 12,19,20 71,56,49 255,255,255 177,155,148 56,37,30 (fourth bytes {0})
+    row 15: 255,162,80 234,228,191 255,96,10 0,0,0 127,81,40 222,171,126 222,141,91 127,48,5 (fourth bytes {0})
+    row 16: 86,75,70 0,0,0 90,77,69 73,80,90 79,77,80 43,37,35 45,38,34 81,78,79 (fourth bytes {0})
+    row 17: 25,64,80 69,89,112 52,61,68 1,18,22 13,41,51 152,113,89 49,79,109 26,39,45 (fourth bytes {0})
+    row 18: 169,182,190 141,187,216 125,98,92 11,17,22 90,99,106 143,164,190 145,153,173 68,57,57 (fourth bytes {0})
+    directional ambient slot 0: X+ X- Y+ Y- Z+ Z- 71,76,80 120,107,107 75,74,72 65,72,75 57,56,53 125,140,150 specular 0,0,0 scale 1
+    directional ambient slot 1: X+ X- Y+ Y- Z+ Z- 81,86,95 101,107,115 101,110,122 93,100,110 57,76,100 147,172,215 specular 188,205,210 scale 1
+    directional ambient slot 2: X+ X- Y+ Y- Z+ Z- 128,112,112 80,73,71 72,75,80 88,91,95 51,54,57 102,110,130 specular 0,0,0 scale 1
+    directional ambient slot 3: X+ X- Y+ Y- Z+ Z- 19,31,40 18,29,37 19,31,40 18,29,37 16,25,32 33,56,70 specular 0,0,0 scale 1
+    directional ambient slot 4: X+ X- Y+ Y- Z+ Z- 45,53,60 69,68,72 47,52,56 41,50,56 36,40,42 79,98,110 specular 0,0,0 scale 1
+    directional ambient slot 5: X+ X- Y+ Y- Z+ Z- 87,93,101 121,123,125 94,99,105 78,84,93 70,76,83 153,172,194 specular 94,102,105 scale 1
+    directional ambient slot 6: X+ X- Y+ Y- Z+ Z- 140,138,146 108,110,113 101,109,119 99,105,113 62,72,79 121,139,168 specular 94,102,105 scale 1
+    directional ambient slot 7: X+ X- Y+ Y- Z+ Z- 73,71,76 49,51,54 45,53,60 53,60,66 33,39,44 67,83,100 specular 0,0,0 scale 1
+    FNAM values: 800 200000 200 50000 0.35 0.25 0.8 0.95 0 10000 0 10000 0.9 1 0 10000 0 10000
+    image spaces: 8 entries, 4 distinct
+
+## Every climate and weather of the load order
+climates: 11; by weather list entries: 1 entries 9, 5 entries 1, 8 entries 1
+weathers by slots and rows: 4 slots 17 rows 4, 8 slots 17 rows 2, 8 slots 19 rows 101
+refused by the readers: none
+
+## The caller's global
+the caller's global (named in the notes, not here): stored value 11

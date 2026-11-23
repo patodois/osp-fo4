@@ -17,6 +17,7 @@ pub mod story;
 mod strings;
 pub mod typed;
 pub mod vmad;
+pub mod weather;
 pub mod writer;
 use fo4_core::{
     add, limit, range, read_bytes_inside_operation, zlib, Budget, Cursor, Error, Limits, ReadAt,
