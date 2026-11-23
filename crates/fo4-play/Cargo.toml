@@ -15,8 +15,10 @@ fo4-plugin.workspace = true
 fo4-vfs.workspace = true
 fo4-scene.workspace = true
 fo4-walk.workspace = true
+# Not used since the run is fo4-vm's library; kept so that apps/fo4-view's
+# lock file (another step's) does not change.
 fo4-pex = { path = "../fo4-pex" }
 fo4-vm = { path = "../fo4-vm" }
-# The run's code (`quest_run new-game`, compiled from fo4-vm's example by
-# build.rs) reads voice file headers.
+# The run (`fo4_vm::run`, `quest_run new-game`) takes the voice files'
+# seconds from its caller: read from their headers here.
 fo4-audio = { path = "../fo4-audio" }

@@ -6,16 +6,14 @@
 //! player's activations, and the run advances to each slice's second
 //! before the next is asked for.
 //!
-//! The new-game code is `quest_run`'s own, compiled from `fo4-vm`'s example
-//! (`build.rs`); only its clock loop is replaced by a stepped one that is
-//! the same loop with a horizon (`run::play`). Without a driver
-//! [`new_game`] is `quest_run` itself. Every behaviour reading the play
+//! The new-game code is `quest_run`'s own, `fo4_vm::run`'s library run;
+//! a driver steps its clock loop with a horizon
+//! (`fo4_vm::run::NewGame::advance_to`). Without a driver [`new_game`] is
+//! `quest_run` itself. Every behaviour reading the play
 //! mode adds is a pending rule of `spec/hypotheses.tsv` ([`rules`]); the
 //! reach of an activation and the walker's speed are the caller's.
-use fo4_core::Manifest;
 use fo4_plugin::{typed::Store, FormKey};
 use fo4_scene::timeline::Timeline;
-use fo4_vfs::Vfs;
 use fo4_vm::Vm;
 
 pub mod input;
@@ -115,10 +113,9 @@ pub enum Next {
 pub struct View<'a, 'v> {
     pub vm: &'a Vm<'v>,
     pub store: &'a Store,
-    pub(crate) sources: (&'a Manifest, &'a Vfs),
+    pub(crate) sources: (&'a fo4_core::Manifest, &'a fo4_vfs::Vfs),
     pub(crate) loaded: Option<&'a fo4_vm::track::Track>,
-    #[allow(clippy::type_complexity)]
-    pub(crate) timeline: &'a dyn Fn(&Vm<'v>, &Store, (&Manifest, &Vfs)) -> Option<Timeline>,
+    pub(crate) timeline: &'a dyn Fn() -> Option<Timeline>,
 }
 impl View<'_, '_> {
     /// The run's present second.
@@ -145,7 +142,7 @@ impl View<'_, '_> {
     /// `--timeline`. It reads labels and strings: call it when something
     /// changed, not every slice.
     pub fn timeline(&self) -> Option<Timeline> {
-        (self.timeline)(self.vm, self.store, self.sources)
+        (self.timeline)()
     }
 }
 
@@ -170,6 +167,13 @@ pub struct Options {
     /// it reaches them (`--play-region-walker`,
     /// `play_region_around_walker_v1`).
     pub region: bool,
+    /// When the track grows, compute again the function 1 marks of the
+    /// scenes waiting on a distance condition
+    /// (`fo4_vm::scene::recheck_distance_marks`) instead of offering them
+    /// their completion again (`--play-recheck-marks`; a policy of the
+    /// play mode, no game claim: it makes the stepped run log what
+    /// `quest_run` logs).
+    pub recheck_marks: bool,
 }
 
 /// [`new_game`] with the play mode's own switches.
@@ -178,10 +182,7 @@ pub fn new_game_with(
     driver: Option<Box<dyn Driver>>,
     options: Options,
 ) -> Result<Played, Box<dyn std::error::Error>> {
-    run::play::install_options(options);
-    let out = new_game(args, driver);
-    run::play::install_options(Options::default());
-    out
+    run::new_game(args, driver, options)
 }
 
 /// Runs `quest_run` with these arguments (`MANIFEST new-game OUT_DIR
@@ -190,17 +191,12 @@ pub fn new_game_with(
 /// `--track FILE` gives the start (its first point) and the area the world
 /// model reads (the cells about its points, as without play); its points
 /// after the start are replaced by the driver's. Returns the driver and
-/// the play counts. One run per thread at a time (the run keeps
-/// thread-local state, as `quest_run` does).
+/// the play counts.
 pub fn new_game(
     args: Vec<String>,
     driver: Option<Box<dyn Driver>>,
 ) -> Result<Played, Box<dyn std::error::Error>> {
-    run::play::install(driver);
-    let out = run::run_args(args);
-    let driver = run::play::take();
-    let counts = run::play::take_counts();
-    out.map(|()| (driver, counts))
+    run::new_game(args, driver, Options::default())
 }
 
 /// A driver that gives the run its own track back slice by slice (the

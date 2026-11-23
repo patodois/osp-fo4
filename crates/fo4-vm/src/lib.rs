@@ -43,6 +43,7 @@ pub mod player;
 pub mod program;
 pub mod quest;
 pub mod rules;
+pub mod run;
 pub mod runstate;
 pub mod scene;
 pub mod setters;

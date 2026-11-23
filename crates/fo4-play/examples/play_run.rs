@@ -31,7 +31,11 @@
 //! walking world again about the walker's grid square when it leaves it (a
 //! policy of the play mode, as the viewer's moving grid).
 //! `--play-pick-bounds-activatable` leaves out the object bounds of
-//! statics (`play_activate_bounds_not_static_v1`).
+//! statics (`play_activate_bounds_not_static_v1`). `--play-recheck-marks`
+//! computes again the distance marks of scenes waiting on a function 1
+//! condition when the track grows, instead of offering them their
+//! completion again (a policy of the play mode: the stepped run then logs
+//! no wait `quest_run` does not log).
 //! `--probe-ray X Y Z HEADING PITCH REACH --probe-ref KEY` prints what a ray
 //! from that eye meets and where the reference's collision is, then stops
 //! (an aid for choosing where an input aims).
@@ -98,6 +102,7 @@ fn run() -> Result<(), E> {
     let nowait = flag(&mut a, "--play-nowait");
     let load_doors = flag(&mut a, "--play-load-doors");
     let region = flag(&mut a, "--play-region-walker");
+    let recheck_marks = flag(&mut a, "--play-recheck-marks");
     let follow_grid = flag(&mut a, "--play-follow-grid");
     let activatable = flag(&mut a, "--play-pick-bounds-activatable");
     if activatable && !pick_bounds {
@@ -312,7 +317,17 @@ fn run() -> Result<(), E> {
         _ => return Err(usage.into()),
     };
     let prepared = started.elapsed().as_secs_f64();
-    let (_, counts) = fo4_play::new_game_with(args, Some(driver), fo4_play::Options { region })?;
+    if recheck_marks {
+        let _ = writeln!(report, "policy: the distance marks of scenes waiting on a function 1 condition are computed again as the track grows, no completion offered (--play-recheck-marks)");
+    }
+    let (_, counts) = fo4_play::new_game_with(
+        args,
+        Some(driver),
+        fo4_play::Options {
+            region,
+            recheck_marks,
+        },
+    )?;
     let _ = writeln!(
         report,
         "seconds: walk world {prepared:.2}, run {:.2}",
