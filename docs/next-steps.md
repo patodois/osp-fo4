@@ -4,6 +4,7 @@ This page is the hand-over point. Everything on `main` builds and passes its tes
 agent) can continue from here. Read `AGENTS.md` first: it holds the rules of evidence and the clean-room rules.
 
 State on 2026-11-23 (vault, cast, light, home, character graph, fight and live window steps). Nothing below has been checked against the running game: every behaviour is a pending
+State on 2026-11-24 (vault, cast, light, home, character graph, fight and museum steps). Nothing below has been checked against the running game: every behaviour is a pending
 rule in `spec/hypotheses.tsv`, off by default.
 
 ## Script VM and quests (`crates/fo4-vm`)
@@ -11,38 +12,41 @@ rule in `spec/hypotheses.tsv`, off by default.
 The forced opening (`quest_run`, record in `spec/quest-run-opening.txt`) reaches 87 of 104 stages: the
 prewar quest ends. The vault step carried the forced run through the postwar vault (`spec/quest-run-vault.txt`);
 the home step walks it (`spec/quest-run-home.txt`); the fight step carries it through the first fight and on to
-the town (record in `spec/quest-run-fight.txt`, every stage of the three quests mapped in
-`spec/quest-run-vault-stages.txt`, the census of the fight's scripts in `spec/fight-census.txt`). The fight is
-not modelled; its events are: the caller assumes who is hit, whose combat state changes toward whom and who
-dies (`--assume-hit`, `--assume-combat-state`, `--assume-death`), and the data decides who receives them under
-eight pending readings, each behind its own switch (`fo4_vm::fight`: hit registrations and an alias init
-handler's registration read as made, combat state and death receivers, `IsDead`, `IsInCombat` from the run's
-states in place of the caller's answer; the six insect aliases filled from their location's rows,
-`--location-refs-shared`; an ancestor's auto state, `--auto-state-inherited`, without which the aliases' death
-counters never run). A walked track goes on from the settlement to the two houses, the town and its museum
-(`track_plan`), and the town's triggers come from the walk. The next main quest reaches 29 of its 54 stages
-(before 15), the robot's postwar dialogue quest 10 of 16 (before 7); the vault dialogue quest (10 of 18) and the
-opening (87) are unchanged. The caller still gives the walk's waypoints, the ride up the elevator, the three
+the town (`spec/quest-run-fight.txt`); the museum step walks the museum in the order its data forces and on
+through the second fight and the leader's conversation (record in `spec/quest-run-museum.txt`, every stage of the
+three quests mapped in `spec/quest-run-vault-stages.txt`). The order comes from `walk_order_census`
+(`spec/walk-order-census.txt`, `fo4_vm::walk_order`): over the museum's navigation mesh, with the doors that
+store a lock record closed, the leader's inner door alone shuts the stage 78, 86 and 88 triggers from the front
+door; only the scene that stage 85 starts unlocks it, and 78's trigger is off from 85, so 78 can be set only by
+arriving through the back door, whose outer side no navigation mesh reaches (a labelled variant). The fight
+itself is still not modelled: the caller assumes the seven raiders' deaths, and five new readings behind their
+own switches carry the run on (a property on an object without an instance of its script, globals the run
+sets, locks the run holds and the caller's unlock with its event, a scene's response actions). The next main
+quest reaches 34 of its 54 stages (before 29), the robot's postwar dialogue quest 10 of 16, the vault dialogue
+quest 10 of 18 and the opening 87, unchanged. The earlier recorded runs with `--auto-state-inherited` set the
+same stages at the same seconds. The caller still gives the walk's waypoints, the ride up the elevator, the
 conversations with the robot and their lines, the player's choices, the speech check's condition, the robot's
-food event, the player's own events and now the fight's events (who, when). What is left:
+food event, the player's own events, the fights' events, the inner door's activation and the gate's unlock.
+What is left:
 
-1. The museum's upper rooms (78): the walk reaches the player-only stage 88 trigger on the stairs first, and 78's
-   trigger turns itself off once the quest is past 85; in the game the order may differ (a trigger enabled later,
-   or another way up). 78 enables seven raiders whose deaths (85) are a second fight: the same readings apply,
-   their aliases fill from the museum location's ref types (one type shared by two aliases) and their deaths
-   would be the caller's. 87 waits on 85; the inner door's activation (80) is held on 78.
-2. The town's dialogue (90 and later): lines in the museum, other quests' fragments, a terminal's menu item, a
-   lock state change; inventory events (62, 105) are not modelled.
-3. The fight itself: nothing aims, loses health or decides to attack; no active magic effect receives an event
-   (`spec/fight-census.txt`: 14 to 38 handlers per event stand on effects); `GetDeadCount` and health natives are
-   not answered (the next main quest's handlers do not reach them).
-4. The elevator ride: the interior elevator's graph starts in a state that takes only the descent event, so the
+1. After 100: a terminal's menu item (95), an item added (105: inventory is not modelled), two activations the
+   caller does not assume yet (110, 115), then other quests' stages, a scene and a third fight (120 to 150).
+2. The robot's 250: a fourth conversation after the next main quest's 55, back at its home (the run does not
+   walk back); the follower lines' group also asks condition function 566, which the run does not answer.
+3. The fights themselves: nothing aims, loses health or decides to attack; no active magic effect receives an
+   event; `GetDeadCount` and health natives are not answered.
+4. The walk is checked against the census by hand (a script in the step's notes): the run itself does not stop
+   a track at a locked door, and `track_plan` does not avoid doors or triggers; a planner that avoids the
+   volumes the census closes would let the walk come from the data.
+5. The elevator ride: the interior elevator's graph starts in a state that takes only the descent event, so the
    ascent is not played; reading the platform's motion would let the ride come from the data.
-5. The player's own animation events and the robot's food event still come from the caller: reading character
+6. The player's own animation events and the robot's food event still come from the caller: reading character
    graphs (below) would let them come from the data.
-6. `--cond-70-player-sex` over the whole run settles 31 line choices of the opening and times them by their audio,
+7. `--cond-70-player-sex` over the whole run settles 31 line choices of the opening and times them by their audio,
    which moves the opening's scenes past the caller's track and gates (the opening then stops at 31 stages): the
    opening's track and gates would need retiming before the reading can apply everywhere.
+8. The timeline's deaths and sits (`--timeline-deaths`, `--timeline-sits`, `spec/timeline.md`) are written as
+   `event` lines; the frame does not read them yet (a killed actor is still drawn standing).
 
 Character behaviour graphs (`char_graph_census`, `spec/character-graph-census.txt`; `char_start_clip_census`,
 `spec/character-graph.md`): a race names its behaviour project; the readers now follow a graph from its root

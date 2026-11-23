@@ -842,3 +842,22 @@ that activation picks the first object it meets within a reach, that script
 time and frame time run together. No source was consulted (no network in
 this step); no game executable, editor, other implementation or game run was
 opened.
+The museum step (`fo4_vm::walk_order`, `fo4_vm::runstate`, the response
+actions in `fo4_vm::scene`, the timeline's deaths and sits, the
+`walk_order_census` example; [spec/vm.md](../spec/vm.md), The museum's
+order; [spec/walk-order-census.txt](../spec/walk-order-census.txt),
+[spec/quest-run-museum.txt](../spec/quest-run-museum.txt),
+[spec/timeline.md](../spec/timeline.md), Deaths and furniture) reads no new
+record layout: the navigation mesh, the placed triggers' primitives and the
+doors' object bounds are read as the earlier steps read them; of a door's
+lock record (`XLOC`, 16 bytes in every placement) only its presence and its
+first byte, printed as stored, are used. That a locked door refuses the
+player until a script unlocks it, that a stored lock record means locked,
+that a global's value changes at run time, that unlocking raises the lock
+state change event, that a scene's response action answers the player's
+last choice, that a form's engine script runs its property functions
+without an attached instance and that the player walks on the navigation
+meshes were recognised from prior general knowledge and are pending rules.
+No navigation, combat or dialogue tool or library of any project, editor,
+editor source or definition file, script source or game executable was
+opened or searched for.

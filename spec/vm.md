@@ -2792,6 +2792,110 @@ happens; 85 is a second fight (seven raider aliases, which 78 enables).
   the raiders, their deaths (85, then 87), the town's dialogue (90 and the
   stages after it), a terminal, a lock and inventory events.
 
+## The museum's order
+
+([walk-order-census.txt](walk-order-census.txt) is the census of the order
+a walk through the museum forces; [quest-run-museum.txt](quest-run-museum.txt)
+records the run; [quest-run-vault-stages.txt](quest-run-vault-stages.txt)
+maps every stage; the track, its plan, the command lines and every record
+named are in the step's notes.) The fight step's walk went from the front
+door up the stairs, through the leader's inner door to the player-only
+stage 88 trigger and on to the upper rooms' stage 78 trigger, which is off
+from 85: 78 was never set. This step settles from the data which order a
+walk can take.
+
+**The census** (`walk_order_census`, library `fo4_vm::walk_order`). The
+cell's navigation meshes are the walkable surface (one mesh of 2,002
+triangles in the museum; its 20 links of kinds 1 and 2 change no reach), the
+player a vertical segment of 120 units standing on it; every stage trigger
+of the quests the caller names (the next main quest, the museum's own
+quest, the town's dialogue quest) and every placed door are blocking
+volumes: a trigger's primitive as the run reads it, a door's base object
+bounds placed by the reference and grown by the caller's margin (16 units,
+the walking controller's provisional radius). A triangle minus one convex
+volume falls into as many pieces as the free arcs of its boundary; pieces
+join across the free parts of shared edges. From each entry (the arrival of
+a load door leading into the cell) the census says which triggers a walk
+reaches with every door open and with the doors that store a lock record
+closed, which single door opens each shut trigger, and which triggers every
+walk to a trigger enters first.
+
+| Reading | Switch | Rule |
+| --- | --- | --- |
+| the cell's navigation meshes, joined across shared edges and links of kind 0, are where the player walks | (the census) | `walk_navmesh_surface_v1` |
+| a closed door blocks within the caller's margin of its base's bounds | `walk_order_census --door-margin` | `walk_door_bounds_block_v1` |
+| a door storing a lock record is closed until a script unlocks it | (the census's second reading) | `walk_door_lock_record_closed_v1` |
+
+What it finds. Five doors store a lock record: the inner door to the
+leader's room, its exit door and the balcony's load door (level byte 255,
+held by the next main quest's aliases), the basement gate (25) and an
+inner door on the way to the west stairs (50). The inner door alone splits the surface (from a margin
+of 1 unit: its bounds are 98 units wide where the doorway's mesh is 100):
+behind it lie the 78 and 88 triggers (88 just inside the doorway), the 86
+trigger, the town quest's 15 trigger, the exit door, the balcony door and
+the arrival of the museum's back door. From the front door, with the locked
+doors closed, 78, 86 and 88 are shut, each opened by the inner door alone;
+with every door open every walk to 78 enters 77, 87 and 88 first (the
+previous walk). Only the leader's beckon scene unlocks the inner door (its
+first phase's end calls the quest script's door function), and 85 starts
+that scene: 78 can never be set on a walk from the front door. Its trigger
+lies at the arrival of the back door, whose exterior side is an island of
+111 triangles joined to no street mesh even with every link kind followed
+(the balcony's is another of 12): the data leaves 78 first only to a player
+who reaches that island off the meshes. Four of the seven raiders 85 waits
+on are placed initially disabled; the museum's own quest enables them at its
+stages 25 and 50, which the walk to the upper floor sets (its triggers are
+entered before 77), and 78 enables any still disabled. The census also shows
+the level-50 door on the way to the west stairs: a walk that avoids it goes
+through the north rooms (the museum quest's stage 13 trigger) and the west
+wing; the fight step's walk and this step's first plans passed through it.
+
+**The run.** The data's order from the front door: 70; the museum quest's
+10, then 13 (the north rooms, around the level-50 door), 14, 25 and 50; 77 and the museum quest's 51; the stage 87 trigger entered
+before 85 (nothing set); the player's activation of the locked inner door
+(80, the leader's line through the door); the seven raiders' deaths (the
+caller's; 85 at the seventh: the alias death handler increments a global
+through the quest script's objective helper, which reads the global's value
+property and sets the stage at the total); the beckon scene unlocks and
+opens the inner door; 87 as the walk enters the corridor again; 88 inside
+the doorway, which starts the leader's conversation; the conversation's
+first line sets the town quest's 5, whose fragment sets 89; its player
+dialogue and response actions alternate (24 phases and a nested scene), and
+a response line's end sets 90; after it, the caller's unlock of the
+basement gate (the player picking its lock) raises the gate alias's lock
+state change handler: 100. New readings, each behind its own switch, off by
+default (with them off every earlier output reproduces byte for byte):
+
+| Switch | Reading | Rule |
+| --- | --- | --- |
+| `--property-implicit-instance` (every mode) | a property read or written on an object with no instance of the declared script runs on an instance made for it when no script of the declared type's chain declares a variable, as a scripted method call already does | `pex_property_implicit_instance_v1` |
+| `--global-values` | a global the run sets answers its new value from then on (before, its stored `FLTV`) | `vm_global_runtime_value_v1` |
+| `--lock-state` | `IsLocked` answers the run's `Lock` calls; before any, whether the placed reference stores a lock record | `vm_lock_state_v1` |
+| `--lock-events` | the caller's unlock (`--assume-unlock REF`) raises `OnLockStateChanged` on the reference's scripts and the aliases holding it | `vm_lock_state_event_v1` |
+| `--npc-response-lines` | a response action (kind 5) plays the topic at the index of the player's assumed choice in its scene, spoken by its alias and timed as a line | `scene_npc_response_choice_v1` |
+| `--assume-unlock REF[@S]`, `--assume-item-count HOLDER\|player ITEM N` | the player unlocks a reference; `GetItemCount` of an item on a holder | caller assumptions |
+
+The timeline gains, behind `--timeline-deaths` and `--timeline-sits`, the
+run's deaths and sits as `event` lines (`spec/timeline.md`, Deaths and
+furniture); reading them is the viewer's side.
+
+- Reached: the next main quest **34 of 54 stages** (fight step: 29; adds
+  80, 85, 87, 89, 90, 100, and 88 now after 85), the robot's quest 10 of 16,
+  the vault dialogue quest 10 of 18 and the opening 87 of 104 unchanged.
+- The order the data leaves open, recorded as a labelled variant: the
+  player on the back door's island (off the meshes) arrives inside the 78
+  trigger: 78, then the fight (held until 78) and 85; the front door's
+  stages are not set.
+- The earlier runs with `--auto-state-inherited`: the opening, the vault
+  and the home runs set the same stages at the same seconds (names and
+  next-blockers files byte for byte; the census adds the switch line and
+  the rule relied on).
+- What stops next: 95 (a terminal's menu item: terminals are not used),
+  105 (an item added: inventory), 110 and 115 (activations the caller does
+  not assume), 120 to 150 (other quests, a scene, a third fight); the
+  robot's 250 waits on a fourth conversation after 55 back at its home,
+  whose follower lines' group also asks condition function 566.
+
 ## Conditions
 
 `fo4_vm::cond` evaluates the condition lists read by
@@ -3435,3 +3539,25 @@ repository), the navigation meshes with `track_plan`, the timeline with
 or animation tool, converter or library of any project, editor, editor
 source or definition file, other interpreter, script extender, decompiler
 or the game executable was opened or searched for. The game was not run.
+
+## Provenance of the museum step
+
+Every count was measured with the repository's own readers on the
+installed data: the museum's navigation mesh, placed triggers, doors and
+their bounds and lock records with `walk_order_census` and local probes,
+the exterior meshes around the museum with a local probe over `NavGraph`,
+the compiled scripts with the repository's disassembler, the run with
+`quest_run`. Recognised from prior general knowledge, used only as pending
+rules that are off by default or as caller assumptions: that a locked door
+refuses the player until a script unlocks it, that a stored lock record
+means locked (the record's level byte is not read), that a form's engine
+script needs no attached instance to run its property functions, that a
+global's value is mutable game state, that unlocking raises the lock state
+change event, that a scene's response action answers the player's last
+choice, and that the player walks on the navigation meshes. The museum's
+rooms, the leader, the raiders and the power armour were recognised from
+editor ids read in the notes only. No public page was requested. No
+navigation, combat or dialogue tool or library of any project, editor,
+editor source or definition file, other interpreter, script extender,
+decompiler or the game executable was opened or searched for. The game was
+not run.

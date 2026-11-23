@@ -147,6 +147,36 @@ sequence's transform interpolators (`clock::transform_track` evaluates their key
 and the player standing on the moving node (the track following the platform's height). None of this is
 done; the frame is left as it was and no path is invented.
 
+## Deaths and furniture (`--timeline-deaths`, `--timeline-sits`)
+
+Two switches of `quest_run new-game --timeline FILE`, off by default (with them off the file is byte for byte
+what it was), add `event` lines (format version 1, the `event` kind's TEXT field) with a fixed grammar of
+space-separated words:
+
+| TEXT | Switch | Meaning |
+| --- | --- | --- |
+| `death REF` | `--timeline-deaths` | From T the run has REF dead: the run raised its death (`fight_death_events_v1`, the caller's `--assume-death`). REF is a record key, `-` when the dead object is no record. |
+| `sit WHO FURNITURE` | `--timeline-sits` | From T the run has WHO sitting in the furniture reference FURNITURE (WHO a record key or `player`): the run's sitters (`crate::sit`: the caller's `--assume-sit`, a script's activation of a furniture read as a sit under the sit step's rules). |
+| `get-up WHO FURNITURE` | `--timeline-sits` | From T WHO no longer sits in FURNITURE. |
+
+The writer looks at the run's dead and sitters after each step of the caller's clock loop, as it does for the
+other logs, and stamps what changed with the run's present second. A death is never undone.
+
+Reading them is the viewer side's (`fo4_scene::timeline`, the CPU render and `apps/fo4-view`), not this
+writer's: today's reader keeps these lines as notes, so a frame still draws a killed actor standing at its last
+place and a sitter standing. What a frame should do with them (leave a dead actor out, draw it lying, draw a
+sitter at the furniture's marker in a sitting clip) is a frame reading for that side to register as its own
+pending rule.
+
+What the run does not know: who sits or lies through a package (the scenes' and aliases' sit and sandbox
+packages are not run; a package action completes under the caller's `--assume-packages-complete` without
+moving or seating anyone), which of a furniture's markers an actor takes, and when an actor an alias's package
+moves gets up. In the museum step's furthest run the run's sitters are the player's alone: six sits and five
+get-ups in the prewar house and the postwar vault (the exit step's readings of furniture activation), the last
+sit (the vault's console, 870 s) never ended by the run; the people in the museum are drawn where their records
+place them, and the thirteen deaths (the first fight's six insects, the second fight's seven raiders) appear as
+`death` lines.
+
 ## What it does not do
 
 - Characters in the skeleton's rest pose, or with the character graph switches in the start state's clip
