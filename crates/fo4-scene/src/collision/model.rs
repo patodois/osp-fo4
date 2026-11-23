@@ -89,6 +89,126 @@ pub struct ModelCollision {
     pub render_points: Vec<[f64; 3]>,
     pub render: Vec<RenderRange>,
     pub render_error: Option<fo4_core::Error>,
+    /// The blocks the placed bodies read and what moves them
+    /// ([`Reads`]); empty for a model with no placed body.
+    #[serde(skip)]
+    pub reads: Reads,
+}
+
+/// Which blocks of a model its placed bodies read, for the collision
+/// readiness that sets aside model blockers raised elsewhere
+/// (`collision_model_blockers_off_chain_v1`, [`crate::readiness`]).
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct Reads {
+    /// Byte span of each block in the file, in block order.
+    pub spans: Vec<Range<u64>>,
+    /// The block is read by a placed body: a node of its chain (root to
+    /// Target), its collision object or its physics system.
+    pub read: Vec<bool>,
+    /// Blocks that can move a node of a chain, with the link that names
+    /// it: an animation-state block whose `Target` or `Extra Target` link
+    /// names a chain block (the own `Target` of a controller manager or a
+    /// multi-target transform controller left out: [`HOLDER_TARGETS`]),
+    /// and controller sequences with a controlled block whose node name is
+    /// the name of a chain block.
+    pub movers: Vec<(usize, Link)>,
+}
+
+/// How a mover names a block of a collision chain.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Link {
+    Target,
+    ExtraTarget,
+    SequenceNode,
+}
+
+/// Animation-state blocks whose own `Target` is the object they hang on,
+/// not a node they move (`collision_model_blockers_off_chain_v1`): a
+/// controller manager moves nodes through its sequences, a multi-target
+/// transform controller through its `Extra Target` links.
+pub const HOLDER_TARGETS: [&str; 2] = ["NiControllerManager", "NiMultiTargetTransformController"];
+
+impl Reads {
+    /// The block whose byte span holds `offset`.
+    pub fn block_at(&self, offset: u64) -> Option<usize> {
+        let k = self.spans.partition_point(|s| s.start <= offset);
+        let k = k.checked_sub(1)?;
+        self.spans[k].contains(&offset).then_some(k)
+    }
+    /// Whether something in the model can move a node a body reads.
+    pub fn moved(&self) -> bool {
+        !self.movers.is_empty()
+    }
+}
+
+/// [`Reads`] of the placed bodies of `out`.
+fn reads(n: &Nif<'_>, bodies: &[BodyCollision], file: &str, keep: &Budget) -> Result<Reads> {
+    let mut r = Reads::default();
+    keep.reserve(&mut r.spans, n.blocks.len(), file, 0)?;
+    keep.reserve(&mut r.read, n.blocks.len(), file, 0)?;
+    for b in &n.blocks {
+        r.spans.push(b.data.start as u64..b.data.end as u64);
+    }
+    r.read.resize(n.blocks.len(), false);
+    let mut names: Vec<Vec<u8>> = Vec::new();
+    for body in bodies {
+        for k in body
+            .chain
+            .iter()
+            .copied()
+            .chain([body.collision_object, body.system])
+        {
+            if let Some(slot) = r.read.get_mut(k) {
+                *slot = true;
+            }
+        }
+        for k in &body.chain {
+            if let Some(name) = name_bytes(n, *k) {
+                if !name.is_empty() && !names.iter().any(|x| x.as_slice() == name) {
+                    push(&mut names, name.to_vec(), keep, file)?;
+                }
+            }
+        }
+    }
+    for (k, block) in n.blocks.iter().enumerate() {
+        let ty = n
+            .block_types
+            .get(block.type_index as usize)
+            .map_or("", String::as_str);
+        if block_class(ty) != Class::State {
+            continue;
+        }
+        let Some(data) = &block.decoded else { continue };
+        let on_chain = |v: i32| v >= 0 && r.read.get(v as usize) == Some(&true);
+        let mut moves = None;
+        for f in fields(data) {
+            let link = match (f.name, &f.value) {
+                ("Target", Value::Ref(v)) if !HOLDER_TARGETS.contains(&ty) && on_chain(*v) => {
+                    Some(Link::Target)
+                }
+                ("Extra Target", Value::Ref(v)) if on_chain(*v) => Some(Link::ExtraTarget),
+                ("Node Name", Value::StringIndex(s)) if ty == "NiControllerSequence" => {
+                    let node = n.strings.get(*s as usize).map(Vec::as_slice);
+                    node.is_some_and(|x| names.iter().any(|y| y.as_slice() == x))
+                        .then_some(Link::SequenceNode)
+                }
+                _ => None,
+            };
+            moves = moves.or(link);
+        }
+        if let Some(link) = moves {
+            push(&mut r.movers, (k, link), keep, file)?;
+        }
+    }
+    Ok(r)
+}
+
+fn name_bytes<'n>(n: &'n Nif<'_>, index: usize) -> Option<&'n [u8]> {
+    let data = n.blocks.get(index)?.decoded.as_ref()?;
+    fields(data).iter().find_map(|f| match (f.name, &f.value) {
+        ("Name", Value::StringIndex(i)) => n.strings.get(*i as usize).map(Vec::as_slice),
+        _ => None,
+    })
 }
 
 impl ModelCollision {
@@ -219,6 +339,7 @@ pub fn decode(
         render_points: Vec::new(),
         render: Vec::new(),
         render_error: None,
+        reads: Reads::default(),
     };
     keep.charge(file.len() as u64 + 256, file, 0)?;
     let scratch = keep.child();
@@ -455,6 +576,9 @@ pub fn decode(
                 )?;
             }
         }
+    }
+    if !out.bodies.is_empty() {
+        out.reads = reads(n, &out.bodies, file, keep)?;
     }
     Ok(out)
 }

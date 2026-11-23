@@ -18,7 +18,7 @@ pub mod model;
 use crate::bounds::Bounds;
 use crate::hypotheses::{self, Status};
 use crate::transform::Transform;
-use crate::{AssetKind, Base, DecodedAsset, Instance, Loader, RuleLevel, Scene, State};
+use crate::{readiness, AssetKind, Base, DecodedAsset, Instance, Loader, RuleLevel, Scene, State};
 use fo4_core::{Budget, Error, Limits, Result};
 use fo4_plugin::FormKey;
 pub use model::{BodyCollision, ModelCollision, ModelRefusal, RenderRange};
@@ -684,6 +684,9 @@ struct Builder<'l, 'a> {
     /// [`instance_as_stored`]: the instance's collision readiness is not
     /// asked (`walk_animated_model_collision_as_stored_v1`).
     force: bool,
+    /// The collision readiness the switches give the instance being
+    /// placed, in place of its own (`readiness::Switches`).
+    state: Option<State>,
 }
 
 fn append<T>(v: &mut Vec<T>, item: T, b: &Budget) -> Result<()> {
@@ -751,6 +754,7 @@ impl Builder<'_, '_> {
                 render_points: Vec::new(),
                 render: Vec::new(),
                 render_error: None,
+                reads: model::Reads::default(),
             },
         };
         let index = self.out.models.len();
@@ -762,7 +766,7 @@ impl Builder<'_, '_> {
     fn base(&mut self, i: &Instance, base: &Base, frame: Transform, depth: u64) -> Result<()> {
         fo4_core::limit(depth, self.limits.max_depth, "cell collision", 0)?;
         let parts = base.record.signature == *b"SCOL" && !base.parts.is_empty();
-        if parts && !i.collision.hypotheses().contains(&hypotheses::SCOL) {
+        if parts && !self.hypotheses_of(i).contains(&hypotheses::SCOL) {
             return self.skip(
                 i,
                 Some(base),
@@ -886,7 +890,7 @@ impl Builder<'_, '_> {
                     }
                     Ok(())
                 };
-                for r in i.collision.hypotheses() {
+                for r in self.hypotheses_of(i) {
                     add(r, self.budget)?;
                 }
                 if self.force {
@@ -965,6 +969,7 @@ impl Builder<'_, '_> {
         if model.bodies.is_empty() {
             return Ok(());
         }
+        let scene_rules = self.hypotheses_of(i).to_vec();
         append(
             &mut self.out.placements,
             ModelPlacement {
@@ -972,7 +977,7 @@ impl Builder<'_, '_> {
                 base: base.key.clone(),
                 model: m,
                 frame,
-                scene_rules: i.collision.hypotheses().to_vec(),
+                scene_rules,
             },
             self.budget,
         )?;
@@ -986,6 +991,82 @@ impl Builder<'_, '_> {
         Ok(())
     }
 
+    /// The rules the instance's collision relies on: those of the state the
+    /// switches gave it, else its own.
+    fn hypotheses_of<'s>(&'s self, i: &'s Instance) -> &'s [&'static str] {
+        self.state.as_ref().unwrap_or(&i.collision).hypotheses()
+    }
+
+    /// Where each blocker of `i` lies against the collision of the model it
+    /// was raised in (`None` for a blocker not raised in a model file).
+    fn bearings(&mut self, i: &Instance) -> Result<Vec<Option<readiness::Bearing>>> {
+        let mut out = Vec::new();
+        self.budget
+            .reserve(&mut out, i.blockers.len(), "collision readiness", 0)?;
+        for (k, e) in i.blockers.iter().enumerate() {
+            let origin = i.blocker_origins.get(k).copied();
+            let asset = i.blocker_assets.get(k).copied().flatten();
+            let bearing = match (origin, asset) {
+                (Some(readiness::Origin::Model), Some(a))
+                    if self.loader.assets.nodes.get(a).map(|n| n.kind)
+                        == Some(AssetKind::Model) =>
+                {
+                    let m = self.model(a)?;
+                    Some(readiness::bearing(e, &self.out.models[m].reads))
+                }
+                _ => None,
+            };
+            out.push(bearing);
+        }
+        Ok(out)
+    }
+
+    /// The instance's collision readiness with the blockers the switches
+    /// set aside: model blockers that lie off the blocks the placed bodies
+    /// read (`collision_model_blockers_off_chain_v1`), the reference's
+    /// unread alpha (`refr_xalp_collision_unchanged_v1`).
+    fn switched_state(&mut self, i: &Instance) -> Result<State> {
+        let switches = self.loader.collision_switches();
+        let bearings = if switches.off_chain {
+            self.bearings(i)?
+        } else {
+            Vec::new()
+        };
+        let outside = i
+            .base
+            .as_ref()
+            .is_some_and(|v| v.frame_role == fo4_plugin::static_frame::Class::Outside);
+        let cites_swap = i
+            .reference
+            .data
+            .material_swap
+            .as_ref()
+            .is_some_and(|r| r.key.is_some())
+            || i.base.as_ref().is_some_and(crate::base_cites_swap);
+        let aside = |k: usize| {
+            let origin = i.blocker_origins.get(k).copied();
+            if bearings.get(k).copied().flatten() == Some(readiness::Bearing::OffChain) {
+                Some(hypotheses::COLLISION_OFF_CHAIN)
+            } else if switches.reference_alpha
+                && origin.unwrap_or(readiness::Origin::Record) == readiness::Origin::Record
+                && i.blockers.get(k).is_some_and(readiness::reference_alpha)
+            {
+                Some(hypotheses::REFERENCE_ALPHA_COLLISION)
+            } else {
+                None
+            }
+        };
+        readiness::collision_state_set_aside(
+            &i.blockers,
+            &i.blocker_origins,
+            outside,
+            cites_swap,
+            aside,
+            self.status,
+            self.budget,
+        )
+    }
+
     fn instance(&mut self, i: &Instance) -> Result<()> {
         let base = i.base.as_ref();
         if i.editor_marker {
@@ -996,13 +1077,22 @@ impl Builder<'_, '_> {
                 "collision of editor markers is not placed".into(),
             );
         }
+        self.state = None;
         if !self.force && !i.collision.ready_at(self.level) {
-            return self.skip(
-                i,
-                base,
-                "CollisionNotReady",
-                format!("{:?} at {:?}", i.collision, self.level),
-            );
+            if self.loader.collision_switches().any() {
+                let state = self.switched_state(i)?;
+                if state.ready_at(self.level) {
+                    self.state = Some(state);
+                }
+            }
+            if self.state.is_none() {
+                return self.skip(
+                    i,
+                    base,
+                    "CollisionNotReady",
+                    format!("{:?} at {:?}", i.collision, self.level),
+                );
+            }
         }
         if i.disabled_by_enable_parent() {
             return self.skip(
@@ -1025,7 +1115,7 @@ impl Builder<'_, '_> {
         };
         let scale = match i.reference.data.scale {
             Some(s) => s,
-            None if self.force || i.collision.hypotheses().contains(&hypotheses::SCALE) => 1.0,
+            None if self.force || self.hypotheses_of(i).contains(&hypotheses::SCALE) => 1.0,
             None => {
                 return self.skip(
                     i,
@@ -1086,6 +1176,7 @@ pub fn cell_with(
             without_collision: Vec::new(),
         },
         force: false,
+        state: None,
     };
     let mut order: Vec<&Instance> = Vec::new();
     b.reserve(&mut order, scene.instances.len(), "cell collision", 0)?;
@@ -1138,9 +1229,56 @@ pub fn instance_as_stored(
             without_collision: Vec::new(),
         },
         force: true,
+        state: None,
     };
     builder.instance(instance)?;
     Ok(builder.out)
+}
+
+/// Where each blocker of an instance lies against the collision of the
+/// model it was raised in ([`readiness::Bearing`]), and the collision of
+/// those models. A measurement for censuses; the cell build asks it under
+/// `readiness::Switches::off_chain`.
+pub struct Bearings {
+    /// For each of the instance's blockers: `None` when it was not raised
+    /// in a model file.
+    pub of: Vec<Option<readiness::Bearing>>,
+    pub models: Vec<ModelCollision>,
+}
+
+/// [`Bearings`] of `instance`.
+pub fn bearings(
+    instance: &Instance,
+    loader: &Loader<'_>,
+    limits: &Limits,
+    options: Options,
+    b: &Budget,
+) -> Result<Bearings> {
+    let mut builder = Builder {
+        loader,
+        limits,
+        budget: b,
+        level: options.level,
+        placement: options.body_placement,
+        status: &hypotheses::status,
+        cache: HashMap::new(),
+        out: CellCollision {
+            level: options.level,
+            body_placement: options.body_placement,
+            models: Vec::new(),
+            placements: Vec::new(),
+            instances: Vec::new(),
+            unplaced: Vec::new(),
+            without_collision: Vec::new(),
+        },
+        force: true,
+        state: None,
+    };
+    let of = builder.bearings(instance)?;
+    Ok(Bearings {
+        of,
+        models: builder.out.models,
+    })
 }
 
 #[cfg(test)]

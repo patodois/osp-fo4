@@ -519,6 +519,7 @@ fn the_world_is_built_from_a_placed_cell() {
             render_points: Vec::new(),
             render: Vec::new(),
             render_error: None,
+            reads: Default::default(),
         }],
         placements: vec![ModelPlacement {
             reference: key.clone(),

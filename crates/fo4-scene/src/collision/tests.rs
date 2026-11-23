@@ -366,6 +366,7 @@ fn synthetic_cell(leaf: Leaf, frame: Transform, target_local: Transform) -> Cell
         render_points: vec![],
         render: vec![],
         render_error: None,
+        reads: Default::default(),
     };
     let key = FormKey {
         plugin: "synthetic.esm".into(),
@@ -782,4 +783,130 @@ fn the_root_transform_rule_places_collision_below_the_root() {
     let i = c.instances[0].clone();
     let w = c.world(&i, BodyPlacement::Ignored).apply(origin);
     assert!((w[0] - b[0]).abs() < 1e-9 && (w[1] - b[1]).abs() < 1e-9);
+}
+
+/// A controller's timing fields with `target`, then `tail`.
+fn controller(target: i32, tail: &[u8]) -> Vec<u8> {
+    let mut v = (-1i32).to_le_bytes().to_vec();
+    v.extend(0u16.to_le_bytes());
+    for f in [1.0f32, 0.0, 0.0, 1.0] {
+        v.extend(f.to_bits().to_le_bytes());
+    }
+    v.extend(target.to_le_bytes());
+    v.extend(tail);
+    v
+}
+
+/// [`model_nif`] with a fifth block of type `ty`, a child of the root: off
+/// the body's chain (root 0, node 1; object 2, system 3).
+fn model_nif_with(ty: &str, data: Vec<u8>) -> Vec<u8> {
+    let mut object = 1i32.to_le_bytes().to_vec();
+    object.extend(0x80u16.to_le_bytes());
+    object.extend(3i32.to_le_bytes());
+    object.extend(1u32.to_le_bytes());
+    let p = payload([[0.0; 3], [0.1, 0.2, 0.3]]);
+    let mut system = (p.len() as u32).to_le_bytes().to_vec();
+    system.extend(p);
+    nif_blocks(
+        &[
+            ("NiNode", node([0.0; 3], IDENTITY_ROWS, 1.0, -1, &[1, 4])),
+            ("NiNode", node([10.0, 0.0, 5.0], QUARTER_Z, 2.0, 2, &[])),
+            ("bhkNPCollisionObject", object),
+            ("bhkPhysicsSystem", system),
+            (ty, data),
+        ],
+        &[],
+    )
+}
+
+#[test]
+fn reads_name_the_blocks_a_body_reads_and_what_moves_them() {
+    let m = decode_bytes(&model_nif_with("NiPSysData", vec![0; 8]));
+    assert_eq!(m.reads.read, vec![true, true, true, true, false]);
+    assert!(m.reads.movers.is_empty());
+    assert_eq!(m.reads.block_at(m.reads.spans[4].start), Some(4));
+    assert_eq!(m.reads.block_at(m.reads.spans[4].end - 1), Some(4));
+    // A transform controller on the body's node moves the chain.
+    let tc = controller(1, &(-1i32).to_le_bytes());
+    let m = decode_bytes(&model_nif_with("NiTransformController", tc));
+    assert_eq!(m.reads.movers, vec![(4, model::Link::Target)]);
+    assert!(m.reads.moved());
+    // A multi-target controller hanging on the root moves nothing by its
+    // own Target; its extra target on the body's node does.
+    let none = controller(0, &0u16.to_le_bytes());
+    let m = decode_bytes(&model_nif_with("NiMultiTargetTransformController", none));
+    assert!(m.reads.movers.is_empty());
+    let mut tail = 1u16.to_le_bytes().to_vec();
+    tail.extend(1i32.to_le_bytes());
+    let extra = controller(0, &tail);
+    let m = decode_bytes(&model_nif_with("NiMultiTargetTransformController", extra));
+    assert_eq!(m.reads.movers, vec![(4, model::Link::ExtraTarget)]);
+    // A model without a placed body reads nothing.
+    let m = decode_bytes(&model_nif(7));
+    assert!(m.bodies.is_empty());
+    assert_eq!(m.reads, model::Reads::default());
+}
+
+#[test]
+fn a_model_blocker_off_the_collision_chain_is_set_aside_only_behind_its_switch() {
+    let f = fixture(false, false);
+    let nif = model_nif_with("NiPSysData", vec![0; 8]);
+    std::fs::write(f.manifest.root.join("meshes/a.nif"), nif).unwrap();
+    let store = Store::open(&f.manifest, &Budget::new(8 << 20)).unwrap();
+    let v = Vfs::mount(&f.manifest, &Budget::new(8 << 20)).unwrap();
+    let b = Budget::new(64 << 20);
+    let mut loader = Loader::new(&store, &v, "english", RuleLevel::Hypotheses, &b);
+    let scene = loader.by_editor_id("SyntheticRoom", &b).unwrap();
+    let i = &scene.instances[0];
+    assert!(
+        !i.collision.ready_at(RuleLevel::Hypotheses),
+        "{:?}",
+        i.blockers
+    );
+    let k = i
+        .blockers
+        .iter()
+        .position(|e| e.code == "UnsupportedNifBlock")
+        .unwrap();
+    assert_eq!(i.blocker_origins[k], readiness::Origin::Model);
+    assert!(i.blocker_assets[k].is_some());
+    assert_eq!(i.blocker_assets.len(), i.blockers.len());
+    let limits = Limits::default();
+    let options = Options {
+        level: RuleLevel::Hypotheses,
+        body_placement: None,
+    };
+    let bearings = super::bearings(i, &loader, &limits, options, &b).unwrap();
+    assert_eq!(bearings.of[k], Some(readiness::Bearing::OffChain));
+    // Off by default: refused, as before.
+    let off = cell(&scene, &loader, &limits, options, &b).unwrap();
+    assert!(off.instances.is_empty());
+    assert_eq!(off.unplaced[0].code, "CollisionNotReady");
+    // The alpha switch does not touch a model blocker.
+    loader.set_collision_switches(readiness::Switches {
+        off_chain: false,
+        reference_alpha: true,
+    });
+    let c = cell(&scene, &loader, &limits, options, &b).unwrap();
+    assert!(c.instances.is_empty());
+    // With the off-chain switch: placed under its rule, as stored.
+    loader.set_collision_switches(readiness::Switches {
+        off_chain: true,
+        reference_alpha: false,
+    });
+    let on = cell(&scene, &loader, &limits, options, &b).unwrap();
+    assert_eq!(on.instances.len(), 1, "{:?}", on.unplaced);
+    assert!(on.instances[0]
+        .rules
+        .contains(&hypotheses::COLLISION_OFF_CHAIN));
+    assert!(on.placements[0]
+        .scene_rules
+        .contains(&hypotheses::COLLISION_OFF_CHAIN));
+    // Not at Measured while the rule is pending.
+    let measured = Options {
+        level: RuleLevel::Measured,
+        body_placement: Some(BodyPlacement::Ignored),
+    };
+    let c = cell(&scene, &loader, &limits, measured, &b).unwrap();
+    assert!(c.instances.is_empty());
 }

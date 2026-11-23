@@ -230,6 +230,16 @@ const PROPERTY_BASES: [&str; 8] = [
     "STAT", "ACTI", "FURN", "CONT", "FLOR", "LIGH", "MSTT", "TERM",
 ];
 pub const RENDER_INPUTS_COLLISION: &str = "render_inputs_collision_unchanged_v1";
+/// A model blocker raised off the blocks the model's placed bodies read
+/// leaves its collision as stored (`crate::readiness`, behind
+/// `readiness::Switches::off_chain`).
+pub const COLLISION_OFF_CHAIN: &str = "collision_model_blockers_off_chain_v1";
+/// A sequence's transform interpolator that links no keys holds its node at
+/// the interpolator's own transform (`crate::sequence::held_pose`).
+pub const SEQUENCE_HELD_POSE: &str = "nif_sequence_interpolator_held_pose_v1";
+/// A reference's unread `XALP` leaves its collision as stored
+/// (`crate::readiness`, behind `readiness::Switches::reference_alpha`).
+pub const REFERENCE_ALPHA_COLLISION: &str = "refr_xalp_collision_unchanged_v1";
 /// Terrain of an exterior cell (`crate::terrain`, `spec/land.md`).
 pub const LAND_OF_CELL: &str = "land_single_cell_child_v1";
 pub const LAND_ACCUMULATION: &str = "land_vhgt_row_accumulation_v1";
@@ -640,6 +650,9 @@ mod tests {
             CONVEX_RADIUS,
             SWAP_COLLISION,
             RENDER_INPUTS_COLLISION,
+            COLLISION_OFF_CHAIN,
+            SEQUENCE_HELD_POSE,
+            REFERENCE_ALPHA_COLLISION,
             LAND_OF_CELL,
             LAND_ACCUMULATION,
             LAND_UNITS,

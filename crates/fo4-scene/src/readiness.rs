@@ -16,6 +16,15 @@
 //! from ([`Origin`]) and, for the record and the model file, by its code
 //! ([`Code::collision_use`], an exhaustive match). A code this crate does
 //! not name ([`Code::Other`], for example a reader error) counts as needed.
+//!
+//! Behind switches ([`Switches`], off by default) some blockers that
+//! collision needs by their code are set aside: a model blocker that lies
+//! off the blocks the model's placed bodies read ([`Bearing`],
+//! [`hypotheses::COLLISION_OFF_CHAIN`]) and a reference's unread alpha
+//! field ([`hypotheses::REFERENCE_ALPHA_COLLISION`]); the collision cell
+//! build asks them only of an instance whose collision is otherwise
+//! refused.
+use crate::collision::model::Reads;
 use crate::hypotheses::{self, covering, Status};
 use crate::State;
 use fo4_core::{Budget, Error, Result};
@@ -225,6 +234,82 @@ pub fn use_of(origin: Origin, e: &Error) -> Use {
     }
 }
 
+/// Readings of collision readiness, each behind its own switch, off by
+/// default (`Loader::set_collision_switches`).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize)]
+pub struct Switches {
+    /// A model blocker that lies off every block the model's placed bodies
+    /// read is set aside under [`hypotheses::COLLISION_OFF_CHAIN`]
+    /// ([`bearing`]).
+    pub off_chain: bool,
+    /// A reference's unread `XALP` (two bytes; xEdit's published name:
+    /// alpha) is set aside under [`hypotheses::REFERENCE_ALPHA_COLLISION`]
+    /// ([`reference_alpha`]).
+    pub reference_alpha: bool,
+}
+
+impl Switches {
+    pub fn any(self) -> bool {
+        self.off_chain || self.reference_alpha
+    }
+}
+
+/// Whether `e` is the record blocker of a reference's unread `XALP`.
+pub fn reference_alpha(e: &Error) -> bool {
+    e.code == Code::UninterpretedVisualSubrecord.name() && e.found.starts_with("REFR.XALP.")
+}
+
+/// Where a blocker raised in a model file lies against the blocks that
+/// model's placed bodies read ([`Reads`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+pub enum Bearing {
+    /// On a block no placed body reads; for an animation blocker, in a
+    /// model where nothing moves a block a body reads.
+    OffChain,
+    /// On a block a placed body reads (its chain from the root to the
+    /// Target, its collision object, its physics system).
+    OnChain,
+    /// An animation blocker in a model where a controller or a controller
+    /// sequence can move a block a body reads.
+    Moved,
+    /// The model places no body.
+    NoBody,
+    /// The code is not one raised on a block, or its offset lies in no
+    /// block of the file.
+    Unlocated,
+}
+
+/// Codes the asset graph raises on one block of a model, at an offset
+/// inside that block.
+pub const BLOCK_CODES: [Code; 5] = [
+    Code::UnsupportedNifBlockSemantics,
+    Code::UnsupportedAnimationRuntime,
+    Code::UnsupportedNifBlock,
+    Code::UnsupportedNifBlockTail,
+    Code::UnsupportedNifField,
+];
+
+/// Where `e`, raised in the model whose placed bodies read `reads`, lies.
+pub fn bearing(e: &Error, reads: &Reads) -> Bearing {
+    let code = Code::of(&e.code);
+    if !BLOCK_CODES.contains(&code) {
+        return Bearing::Unlocated;
+    }
+    if reads.read.is_empty() {
+        return Bearing::NoBody;
+    }
+    let Some(k) = reads.block_at(e.source.offset) else {
+        return Bearing::Unlocated;
+    };
+    if reads.read[k] {
+        Bearing::OnChain
+    } else if code == Code::UnsupportedAnimationRuntime && reads.moved() {
+        Bearing::Moved
+    } else {
+        Bearing::OffChain
+    }
+}
+
 /// Collision readiness with the embedded registry; see [`collision_state_with`].
 pub fn collision_state(
     blockers: &[Error],
@@ -261,6 +346,23 @@ pub fn collision_state_with(
     status: impl Fn(&str) -> Option<Status>,
     b: &Budget,
 ) -> Result<State> {
+    collision_state_set_aside(blockers, origins, outside, cites_swap, |_| None, status, b)
+}
+
+/// [`collision_state_with`] where `aside(k)` names the rule under which the
+/// switches set aside `blockers[k]`, a blocker collision needs by its code
+/// ([`Switches`]): it is set aside under the better standing of its own
+/// covering rule and that rule (the latter on a tie), as a render-only
+/// blocker is.
+pub fn collision_state_set_aside(
+    blockers: &[Error],
+    origins: &[Origin],
+    outside: bool,
+    cites_swap: bool,
+    aside: impl Fn(usize) -> Option<&'static str>,
+    status: impl Fn(&str) -> Option<Status>,
+    b: &Budget,
+) -> Result<State> {
     let rank = |rule: &str| match status(rule) {
         Some(Status::Supported) => 2,
         Some(Status::Pending) => 1,
@@ -270,7 +372,18 @@ pub fn collision_state_with(
     let mut needed = 0usize;
     for (k, e) in blockers.iter().enumerate() {
         let origin = origins.get(k).copied().unwrap_or(Origin::Record);
+        let set_aside = match use_of(origin, e) {
+            Use::Collision => aside(k),
+            Use::RenderOnly => None,
+        };
         let rule = match use_of(origin, e) {
+            Use::Collision if set_aside.is_some() => {
+                let general = set_aside.unwrap_or(hypotheses::COLLISION_OFF_CHAIN);
+                match covering(e) {
+                    Some(own) if rank(own) > rank(general) => own,
+                    _ => general,
+                }
+            }
             Use::Collision => {
                 needed += 1;
                 let Some(h) = covering(e) else {
