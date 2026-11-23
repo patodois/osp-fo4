@@ -983,3 +983,13 @@ rider, and that an elevator's end takes the player through its door. No
 public page was requested; no editor, editor source or definition file,
 other implementation, game executable or game run was opened or searched
 for.
+The poses step's facts were measured with `poses_census` on the installed game's data and the earlier steps'
+frame overlays: the races' subgraph entries by flag word (SRAF as stored), the behaviour graph extra data of the
+actors' part models with the start states of the graphs they name (read as the earlier steps read model graphs),
+what the skinned models of placed records hold (skin bones, sequences naming them, behaviour graph and physics
+blocks) and the shaft model's blocks; the viewer's texture and mesh bytes with `fo4-view --memory-report`.
+Recognised from prior general knowledge and kept as pending rules: that a creature race's flag word 1 entries are
+its movement graph; that a part model's own graph whose start state plays no sequence leaves the model as stored;
+that a skinned placed model's bones rest at their stored nodes. The memory hash is FNV-1a, chosen for being simple.
+No source was consulted (no network), and no editor, editor source or definition file, other implementation,
+game executable or game run was opened or searched for.

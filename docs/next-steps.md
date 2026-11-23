@@ -4,6 +4,7 @@ This page is the hand-over point. Everything on `main` builds and passes its tes
 agent) can continue from here. Read `AGENTS.md` first: it holds the rules of evidence and the clean-room rules.
 
 State on 2026-11-24 (vault, cast, light, home, character graph, fight, live window, museum, live world, run library, seen, past-the-museum, faces and third-fight steps). Nothing below has been checked against the running game: every behaviour is a pending
+State on 2026-11-24 (vault, cast, light, home, character graph, fight, live window, museum, live world, run library, seen, past-the-museum, faces and poses steps). Nothing below has been checked against the running game: every behaviour is a pending
 rule in `spec/hypotheses.tsv`, off by default.
 
 ## Script VM and quests (`crates/fo4-vm`)
@@ -133,6 +134,13 @@ agree (vault frame at 560 s: coverage 1.000000, same tag on every pixel). What i
    reading settles (effect shaders run by a manager, behaviour graphs, lag bones, moving transforms). Next:
    those controller families (the `effect-idle` family of `spec/coverage.md`), a level filter for the pick (the
    LVLO levels are read, not used), and which seed or entry the run's world model chose, if it ever chooses.
+   Poses step (`spec/poses-census.txt`): the 17 characters of the town frames in the rest pose are creatures of six
+   races without subgraph entries of flag word 0; `--actor-subgraph-flag-one` takes their flag word 1 entries and
+   poses 11 (the 6 dogs stop at an unread `hkbLayerGenerator`). Of the markers, the part models naming an effects
+   graph whose start state plays no sequence are drawn as stored behind `--actor-model-graph-idle` (town frames 40
+   to 35 markers; 4 more are refused by the build for effect falloff on a skinned shape). Next: the layer
+   generator's layout (the dogs), posed normals for skinned effect surfaces, a sequence player for effect fields
+   (the 15 flying insects' start sequence), the lag-bone controller's field (9 mole rats).
 2. Sitting and death (seen step, `spec/timeline.md`, Deaths and furniture): behind switches a dead actor is
    left out or drawn lying (a placeholder: the race's death clips are chosen on events the run does not raise,
    the ragdoll is physics), and an actor the run seats stands at its furniture's nearest marker (FURN SNAM)
@@ -235,6 +243,12 @@ What the frames show is missing, in order of what blocks a playable opening:
    (`--timeline-ride-model`) and its platform at the descent's place from the caller's start second
    (`--timeline-ride SEQUENCE,START`; `spec/timeline.md`, Drawing the shaft and the ride); its lights and
    effects are left out; 322 models of the placed kinds are skinned the same way and still refused elsewhere.
+   Poses step: `--skinned-models-own-nodes` draws every placement a frame refuses for its skin that way (on the six
+   sheet seconds 182 of 197 such placements drawn; census of the 322 models by what moves their bones in
+   `spec/poses-census.txt`, section 3); the shaft's two rigid effect shapes, visibility controller and material swap
+   stay out (no pure format reading draws them). The viewer's block bound is 640 MiB and a path kept under both
+   texture caps at one level is kept once (`spec/render.md`, Viewer block memory of a crowded frame): the town
+   frames draw at the default caps.
 4. Sound: the run times lines by their voice files but nothing plays them.
 5. Lighting and sky (light step, `spec/light.md`): behind nine switches, off by default, frames are lit from the
    data under pending rules (interior cell light and its template's inherited fields, placed lights as points,

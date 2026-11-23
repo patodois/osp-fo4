@@ -508,6 +508,31 @@ controllers no rest reading settles (effect shaders run by a manager, moving tra
 bone controller), 9 for a texture path the archives refuse. Which entry and piece the game shows is
 not claimed: another seed gives other people.
 
+## Part models with a graph of their own (the poses step)
+
+At the faces step's six sheet seconds the two town frames kept 40 markers each and the vault frames 6. Census
+`poses_census` ([poses-census.txt](poses-census.txt), section 2; keys outside git), every look reading on: of the 54
+distinct marker actors, 7 have no plan (an outfit list with LVLM 4, an addon without the section's model, no skin
+and no outfit), 9 are blocked by a texture path the archives refuse, and 34 by a behaviour graph named in one of
+their models: 20 creatures whose body model also has effect-shader controllers its manager runs (`effect-idle`), 9
+whose outfit piece also has a lag-bone controller (with a field the reader does not decode) and a moving transform,
+5 by the graph alone; 4 more by a moving transform on an outfit piece. None of those graphs is the race's character
+graph: each model names a small effects graph of its own. Its root state machine's start state (read as
+`crate::anim_graph::model_graph` reads a model's graph) plays no NIF sequence in 20 (actor, model) pairs and a
+sequence driving an effect controller in 15 (the flying insects' bodies).
+
+| Switch | Rule | Reading |
+| --- | --- | --- |
+| `--actor-model-graph-idle` (with `--timeline-cast`) | `actor_model_graph_start_no_sequence_v1` | an actor's skin or outfit piece model naming a graph whose root start state plays no sequence is drawn as stored: its graph extra data and the effect-shader controllers its manager runs are settled (their blockers retagged `graph-start-idle`, `fo4_scene::rest::GRAPH_START_IDLE`), the effect fields at their stored values, drawn by the effect surface rules |
+
+At 1345 s and 1470 s this settles the controllers of 9 actors: 5 (mole rats whose outfit piece names an idle graph)
+are drawn as characters; the build refuses the other 4 (`UnsupportedSkinnedFalloff`: an effect surface with falloff
+on a skinned shape needs posed normals, which the skinning does not produce). Markers there: 40 to 35. What stays:
+15 flying insects (their graph starts a sequence driving effect fields: a sequence player for those fields is missing), 9
+mole rats (a lag-bone controller, a field not decoded), 2 moving transforms on an outfit piece, the 4 refused by the
+build, 5 without a plan. The vault frames' 6 markers each are unchanged (at 418 s 4 texture paths refused, an effect-shader controller, no
+skin and no outfit; at 560 s 5 texture paths refused and a transform controller).
+
 ## Height against the ground
 
 Two drawn actors looked as if they floated: the creature of the test cell

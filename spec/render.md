@@ -604,3 +604,26 @@ flagged and no sky, the frame is the unlit one byte for byte. The viewer does th
 Normals: the CPU takes the cross product of the clipped triangle's camera-space edges, the viewer the
 cross product of the screen derivatives of the world position; both describe the same plane, so the
 difference is rounding.
+
+## Viewer block memory of a crowded frame (the poses step)
+
+The viewer keeps block-compressed textures as their stored blocks under a bound of its own
+(`apps/fo4-view/src/load.rs`, `BLOCK_BYTES`), counted by `fo4_render::draw::block_texture`; past it an instance or
+actor is left out (`LimitExceeded`). At the default caps (1,024 texels, 2,048 alpha-tested) the town frame of the
+museum step's furthest run at 1470 s left 9 of its 84 actors out under 512 MiB. `fo4-view ... --memory-report FILE`
+(`fo4_render::memory::report`, measurement only) says where the frame's bytes go: by who draws each texture and
+mesh (placed references, one actor, several actors, nobody), content repeated under another entry, and per actor
+what only it draws against its share of what several draw. With the faces step's switches and the bound raised for
+the measurement, that frame keeps 536.6 MiB of blocks: 401.5 MiB drawn by placed references only, 45.7 MiB by one
+actor only, 88.1 MiB by several actors, 1.3 MiB by both; meshes 90.6 MiB (not under the bound). Textures are already
+one entry per path and cap. What repeats: 18 paths kept twice, once under each cap (a texture drawn with and
+without an alpha test); in 10 the two caps keep the same first level, so the same blocks twice (11.3 MiB); in 8 the
+smaller entry is the larger's coarser levels (10.7 MiB), a different texture to the GPU. No content repeats across
+paths; 1.7 MiB of meshes repeat (not shared: not under the bound).
+
+Engineering, no reading: a path asked for under the other cap whose first kept level is the same as the entry
+already kept (`fo4_render::draw::block_level`) now takes that entry. That frame then needs 525.3 MiB, and 539.0 MiB
+with this step's switches on (more actors drawn); the bound is a viewer bound, not a claim about the game, and is
+now 640 MiB. Every frame drawn before is drawn as before (a bound only refuses; a shared entry holds the same blocks);
+the earlier frame sets compare byte for byte (the step's report). The two town frames of the owner's sheet now use
+the default caps with every actor the readings allow drawn.

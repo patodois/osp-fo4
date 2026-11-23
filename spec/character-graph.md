@@ -153,6 +153,29 @@ furniture's, the one with the most (a tie or none refused). On real data no acto
 entry fits the six furniture records of the player's sits (`spec/seen-census.txt`, section 2): synthetic
 tests only.
 
+## Races without entries of flag word 0 (the poses step)
+
+On the museum step's furthest run, at the faces step's two town seconds (1345 s and 1470 s), 17 of the 44 characters
+kept the rest pose, all refused at the swap generator (`GraphSubgraphEntry`). Census `poses_census`
+([poses-census.txt](poses-census.txt), section 1; keys outside git): all 17 are creatures of six races (dogs,
+insects, a quadruped and a crustacean among them), every one with its keywords settled by the template bits; none
+of the six races holds an entry of flag word 0 without target keywords. Their movement entries are flag word 1
+without target keywords (one of them without actor keywords in each race), their furniture entries flag word 2
+and 3. Over the load order's 83 races holding entries: 9 hold entries of flag word 0 without target keywords, 43
+hold none of those but entries of flag word 1 without target keywords, 5 only flag word 1 entries with target
+keywords, 26 neither (furniture entries only). In the human subgraph race flag word 1 entries carry target
+keywords (weapon behaviour files). That flag word 1 plays the role flag word 0 plays for the human race in these
+races is read from that pattern and the behaviour files' names, not from a source: a pending rule.
+
+| Switch | Rule | Reading |
+| --- | --- | --- |
+| `--actor-subgraph-flag-one` (with `--actor-subgraph-keywords`) | `char_graph_swap_subgraph_flag_one_v1` | a race whose entries hold none of flag word 0 without target keywords picks among its entries of flag word 1 without target keywords, by the actor's keywords as `char_graph_swap_subgraph_keywords_v1` does (`pick_entry_with`) |
+
+With it, 11 of the 17 reach a clip (each race's idle) and are posed in the CPU render and the viewer; the other 6
+(the dogs) stop at a `hkbLayerGenerator` (`GraphUnreadClass`): its layout is not read, and which layer a pose
+would take is a further reading. No race with an entry of flag word 0 changes (the switch reads flag word 1 only
+where flag word 0 has nothing).
+
 ## What it does not do
 
 - No transition is ever taken: the pose is the start state's, whatever the run

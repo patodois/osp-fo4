@@ -189,6 +189,48 @@ track and the sequence's keys differ by 77 units there (the keys do not move at 
 stored there): before the ride the sequence's start is used. A placeholder of how the model looks: its lights'
 glow, its swap of materials and its moving lights are not drawn.
 
+### Every skinned placement and the shaft's parts (the poses step)
+
+What the skinned models of placed records other than actors are (census `poses_census --models`,
+[poses-census.txt](poses-census.txt), section 3; read from each model alone): 322 models of the placed kinds hold
+skinned shapes, used by 21,341 placed references (REFR) over the load order. By what moves their bones: a controller
+manager every sequence of which moves a skin bone, without a behaviour graph, 124 models (14,232 placements, the
+largest role; by a single base kind over all 322: activators 87, containers 73, movable statics 52, furniture 31, the rest fewer or of several kinds)
+and with one 104 (1,106); a manager whose sequences move no bone 16 (157); some of its sequences 1 (157); a graph
+without a manager 29 (411); nothing in the model 48 (5,278). No model holds a physics constraint or ragdoll block. Most have one to five skinned shapes on two to five
+bones (section 3 by size).
+
+`--skinned-models-own-nodes` (`model_skinned_own_nodes_every_placement_v1`, with `--timeline-cast`; render and
+headless viewer; `fo4_scene::timeline::ride::add_skinned`) generalises `model_skinned_own_nodes_v1` to every placed
+reference of a frame's loaded cells that the draw refuses with a skinned shape among its reasons: each is added to
+the cast, after the ride, as one more actor drawn by its skinned shapes on its own nodes at their stored transforms
+(rigid shapes, controllers, material swap left out; its other refusals not read), with an overlay line
+`skinned models` (refused, added, drawn, the build's reasons for the rest). On the six sheet seconds, viewer,
+default texture caps, with the seen and faces steps' switches:
+
+| Second | Placements refused with a skinned shape (before: none drawn) | Drawn with the switch | Left out by the build |
+| --- | ---: | ---: | --- |
+| 17 | 12 | 12 | |
+| 418 | 6 | 1 | 5 editor-marker subtrees (`UnverifiedActorModelMarker`) |
+| 560 | 8 | 8 | |
+| 1345 | 54 | 51 | 3 editor-marker subtrees |
+| 1470 | 53 | 48 | 4 editor-marker subtrees, 1 shape with a vertex of zero weights |
+| 1650 | 64 | 62 | 2 editor-marker subtrees |
+
+A partial reading by design: the same references' rigid shapes stay undrawn, and the about 16,000 placements whose
+manager or graph can move the bones are drawn where the stored nodes put them.
+
+The shaft model's parts the ride reading leaves out (section 4, by block): of its seven shapes, the five skinned
+ones (lighting shader, one with a lighting-shader float controller) are what `--timeline-ride-model` draws; the two
+rigid ones are alpha-blended effect-shader shapes whose effect fields (one colour and three float controllers) its
+manager's sequences run (`effect-idle`): rigid shapes are outside the ride reading and their effect fields are not
+settled. The model holds no light block (what shines is the skinned shapes' geometry; placed lights are LIGH
+references, drawn under the light rules); one visibility controller, whose target's visibility over time is not
+read; nine sequences (one looping, eight clamped) driving bool, float, point and transform interpolators; the graph
+extra data that starts them; a material swap on the reference (XMSP) and the base (MODS), which the ride reading does
+not apply. None of these is a pure format reading (each needs a controller, sequence or swap reading), so none was
+drawn.
+
 ## Deaths and furniture (`--timeline-deaths`, `--timeline-sits`)
 
 Two switches of `quest_run new-game --timeline FILE`, off by default (with them off the file is byte for byte
