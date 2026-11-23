@@ -429,5 +429,14 @@ impl Machine {
     }
 }
 
+mod nodes;
+pub use nodes::{
+    bindings, graph_data, machine_state, node_name, BlendChild, ClipGenerator, Node,
+    VariableBinding, Variables, BEHAVIOR_REFERENCE, BINDING_ELEMENT, BINDING_SET, BLENDER,
+    BLENDERS, BLENDER_CHILD, CLIP_GENERATOR, DYNAMIC_TAGGING, MANUAL_SELECTOR, MODIFIER_GENERATOR,
+    OFFSET_GENERATOR, POSE_MATCHING, STATE_TAGGING, SWAP_GENERATOR, VALUE_SET, VARIABLE_INFO,
+    WRAPPERS,
+};
+
 #[cfg(test)]
 mod tests;

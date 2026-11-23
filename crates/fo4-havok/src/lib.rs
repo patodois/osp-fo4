@@ -30,6 +30,8 @@ use serde::Serialize;
 mod anim;
 mod behavior;
 mod bodies;
+#[cfg(any(test, feature = "fixture"))]
+pub mod fixture;
 mod mesh;
 mod objects;
 mod shapes;
@@ -43,10 +45,14 @@ pub use anim::{
     SKELETON_POSE, SPLINE, SPLINE_KIND, VECTOR_16,
 };
 pub use behavior::{
-    character_behavior, graph_events, graph_strings_link, only_object, project_characters,
-    sequence_name, transitions, BehaviorGraph, Machine, MachineState, StateInfo, StateMachine,
-    Transition, BEHAVIOR_GRAPH, CHARACTER_STRINGS, GRAPH_DATA, GRAPH_STRINGS, MAX_ENTRIES,
-    PROJECT_STRINGS, SEQUENCE_GENERATOR, STATE_INFO, STATE_MACHINE, TRANSITION, TRANSITIONS,
+    bindings, character_behavior, graph_data, graph_events, graph_strings_link, machine_state,
+    node_name, only_object, project_characters, sequence_name, transitions, BehaviorGraph,
+    BlendChild, ClipGenerator, Machine, MachineState, Node, StateInfo, StateMachine, Transition,
+    VariableBinding, Variables, BEHAVIOR_GRAPH, BEHAVIOR_REFERENCE, BINDING_ELEMENT, BINDING_SET,
+    BLENDER, BLENDERS, BLENDER_CHILD, CHARACTER_STRINGS, CLIP_GENERATOR, DYNAMIC_TAGGING,
+    GRAPH_DATA, GRAPH_STRINGS, MANUAL_SELECTOR, MAX_ENTRIES, MODIFIER_GENERATOR, OFFSET_GENERATOR,
+    POSE_MATCHING, PROJECT_STRINGS, SEQUENCE_GENERATOR, STATE_INFO, STATE_MACHINE, STATE_TAGGING,
+    SWAP_GENERATOR, TRANSITION, TRANSITIONS, VALUE_SET, VARIABLE_INFO, WRAPPERS,
 };
 pub use bodies::{
     Body, PhysicsSystem, BODY, PHYSICS_SYSTEM, RAGDOLL, RAGDOLL_ARRAY, SYSTEM_ARRAYS,

@@ -9,6 +9,10 @@ edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
 
+[features]
+# Synthetic `.hkx` files for tests (`fixture`), for other crates' tests.
+fixture = []
+
 [dependencies]
 fo4-core.workspace = true
 serde.workspace = true

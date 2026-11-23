@@ -1,25 +1,6 @@
 use super::*;
 
-/// Synthetic container description; every byte is generated here.
-pub(crate) struct Spec {
-    pub names: Vec<(&'static str, u32)>,
-    pub object_bytes: usize,
-    /// Bytes written into the object area at the given offsets.
-    pub content: Vec<(usize, Vec<u8>)>,
-    pub pointers: Vec<[u32; 2]>,
-    pub links: Vec<[u32; 3]>,
-    pub objects: Vec<[u32; 3]>,
-    /// Header words 24, 28, 32, 36.
-    pub root: [u32; 4],
-}
-
-pub(crate) fn name_offset(names: &[(&str, u32)], index: usize) -> u32 {
-    let mut at = 0;
-    for (name, _) in &names[..index] {
-        at += 5 + name.len() as u32 + 1;
-    }
-    at + 5
-}
+pub(crate) use crate::fixture::{build, name_offset, Spec};
 
 fn spec() -> Spec {
     let names = vec![
@@ -38,78 +19,6 @@ fn spec() -> Spec {
         root: [2, 0, 0, root_name],
         names,
     }
-}
-
-fn pad16(v: &mut Vec<u8>) {
-    while !v.len().is_multiple_of(16) {
-        v.push(0xff);
-    }
-}
-
-pub(crate) fn build(s: &Spec) -> Vec<u8> {
-    let mut names = Vec::new();
-    for (name, sig) in &s.names {
-        names.extend(sig.to_le_bytes());
-        names.push(CLASS_NAME_MARKER);
-        names.extend(name.as_bytes());
-        names.push(0);
-    }
-    pad16(&mut names);
-    let mut data = vec![0u8; s.object_bytes];
-    for (at, bytes) in &s.content {
-        data[*at..*at + bytes.len()].copy_from_slice(bytes);
-    }
-    let mut offs = [0u32; 6];
-    offs[0] = data.len() as u32;
-    for p in &s.pointers {
-        p.iter().for_each(|w| data.extend(w.to_le_bytes()));
-    }
-    pad16(&mut data);
-    offs[1] = data.len() as u32;
-    for p in &s.links {
-        p.iter().for_each(|w| data.extend(w.to_le_bytes()));
-    }
-    pad16(&mut data);
-    offs[2] = data.len() as u32;
-    for p in &s.objects {
-        p.iter().for_each(|w| data.extend(w.to_le_bytes()));
-    }
-    pad16(&mut data);
-    offs[3] = data.len() as u32;
-    offs[4] = offs[3];
-    offs[5] = offs[3];
-    let mut out = Vec::new();
-    out.extend(MAGIC);
-    out.extend(0u32.to_le_bytes());
-    out.extend(11u32.to_le_bytes());
-    out.extend(LAYOUT);
-    out.extend(3u32.to_le_bytes());
-    s.root.iter().for_each(|w| out.extend(w.to_le_bytes()));
-    out.extend(VERSION.as_bytes());
-    out.push(0);
-    out.push(0xff);
-    out.extend(0u32.to_le_bytes());
-    out.extend(21u32.to_le_bytes());
-    assert_eq!(out.len(), HEADER_LEN);
-    let names_start = 256u32;
-    let types_start = names_start + names.len() as u32;
-    let n = names.len() as u32;
-    for (name, start, words) in [
-        (SECTION_NAMES[0], names_start, [n; 6]),
-        (SECTION_NAMES[1], types_start, [0; 6]),
-        (SECTION_NAMES[2], types_start, offs),
-    ] {
-        let mut record = name.as_bytes().to_vec();
-        record.resize(19, 0);
-        record.push(0xff);
-        record.extend(start.to_le_bytes());
-        words.iter().for_each(|w| record.extend(w.to_le_bytes()));
-        record.extend([0xff; 16]);
-        out.extend(record);
-    }
-    out.extend(names);
-    out.extend(data);
-    out
 }
 
 pub(crate) fn read(bytes: &[u8]) -> Result<Container<'_>> {
