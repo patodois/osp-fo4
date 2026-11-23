@@ -2424,6 +2424,26 @@ nine with no setter in the stage-setter table (earlier records counted two,
 the sit step's full static reading of two of them), one whose only setter is
 a helper stage nothing sets, and the failure stage. None is a stage the run
 should reach and does not, except possibly the ordering one.
+## The run timeline
+
+`quest_run new-game ... --timeline FILE` writes the run's timeline (`fo4_vm::timeline`, format and
+frames in `spec/timeline.md`). The recorder is a reader: the example keeps it in a thread-local slot,
+shows it the interpreter where the clock loop writes its `## timeline at` lines (after each caller
+action, track step, timer and scene clock advance) and once more after the loop, and writes the file
+before the jobs are counted. It keeps what the effect log, the quest log, the scene log and the world
+model's `native_at` and `moved_at` grew by since the last look, stamped with the run's present second;
+at the end it adds the caller's track points with their cells, the placed actors' stored positions
+(second 0) and the actor moves applied (each at its own second: a package destination's when the
+recorder saw it scheduled, else the caller's). A line's speaker is read without calling the quest
+host (whose alias fill records which unique-actor aliases a run read): a fill the run set, the alias's
+forced or location reference, the unique actor's one placed actor. Line texts and labels come from the
+store at the end. Nothing else changes: on the forced opening the census, names, next-blockers and
+next-blockers names files are the same byte for byte with and without `--timeline`.
+
+The forced opening's timeline (local file, never committed): 102 track points in 2 spaces (6 exterior
+cells and the vault's interior), 139 actor places (76 stored, 42 package destinations, 2 assumed by the
+caller, 19 from MoveTo), 60 visibility changes (45 plain, 15 NoWait), 246 stages, 13 objective changes,
+190 lines (143 with a resolved speaker, 107 with a text), 3,245 other scene changes.
 
 ## Conditions
 
@@ -2999,3 +3019,13 @@ public page was requested. No behaviour or animation tool, converter or
 library of any project, Havok SDK, editor, editor source or definition
 file, other interpreter, script extender, decompiler or the game executable
 was opened or searched for. The game was not run.
+## Provenance of the timeline step
+
+Recognised from prior general knowledge and used only as pending rules that are off by default or as
+presentation: that the NoWait forms of Enable and Disable differ from the plain natives in when the
+script goes on, not in the end state (`timeline_nowait_visibility_v1`); that MoveTo's further argument
+concerns the receiver's rotation (named only to say it is not read, `timeline_move_stored_rotation_v1`);
+that a dialogue response's text is a localized string (looked up in the plugin's three string tables,
+used only where exactly one holds the id). Everything else is read from the run itself and the
+installed data with the repository's own readers. No public page was requested; no tool, library or
+source of any other project was opened. The game was not run.

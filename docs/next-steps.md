@@ -3,7 +3,7 @@
 This page is the hand-over point. Everything on `main` builds and passes its tests; anyone (a person or an
 agent) can continue from here. Read `AGENTS.md` first: it holds the rules of evidence and the clean-room rules.
 
-State on 2026-11-23. Nothing below has been checked against the running game: every behaviour is a pending
+State on 2026-11-23 (timeline step). Nothing below has been checked against the running game: every behaviour is a pending
 rule in `spec/hypotheses.tsv`, off by default.
 
 ## Script VM and quests (`crates/fo4-vm`)
@@ -72,12 +72,35 @@ lead what is still refused:
 Open checks: the viewer window has still not been exercised by hand with `--time` (nor with any clock switch;
 the per-frame path is tested headless through `GpuScene::at_time`); the CPU-against-viewer tag differences are
 explained (coplanar overlapping placements and edges, `spec/render.md`, Instance tags of the CPU and the viewer)
-but not removed. The viewer's GPU tests now pass in parallel (`spec/render.md`, Viewer GPU tests in parallel).
+but not removed. The viewer's GPU tests now pass in parallel (`spec/render.md`, Viewer GPU tests in parallel). Seen while checking timeline frames: in the opening's exterior house cell with `--terrain --around 1`, the CPU draws what lies beyond a window where the viewer draws the clear colour (coverage agreement 0.983 with or without a timeline; an interior vault frame agrees at 1.000000); not investigated.
 
 ## Toward a playable game
 
-Not started: the viewer driven by the quest host (actors, track and scenes on screen), actors walking on the
-navmesh, AI packages beyond destinations, sound, saving moved references.
+The opening run is now visible (`spec/timeline.md`). `quest_run new-game --timeline FILE` writes what the run
+did, second by second, in a neutral versioned text file (track points with their cells, actor places with the
+rule or assumption behind each, references enabled, disabled and moved, scene lines with speaker, seconds and
+text, stages, objectives); the writer only reads the run, so every other output stays byte for byte. The CPU
+render and the headless viewer draw "the run at second S" from it (`--timeline FILE --at S --eye-height H`,
+CELL `-`): the player's cell, the run's visibility changes and moves under pending rules, actors as
+placeholder markers, the camera on the track (caller's eye height, looking along the track's movement) and an
+overlay text beside the frame. A contact sheet of 13 frames along the 86-stage run (local only) shows the
+house, the walk outside, the vault entrance with its crowd and the cryopods.
+
+What the frames show is missing, in order of what blocks a playable opening:
+
+1. Input instead of a file: the track is the caller's. Next: a window mode that runs `fo4_vm` live, the
+   walker (`fo4-walk`) giving the player's position each tick in place of the track, the run's clock driven
+   by the frame clock; triggers and distance events then come from where the player walks.
+2. Characters: actors are boxes. Of the 53 actors placed near the track outside, 4 are marked, 5 are
+   disabled and 44 are not marked because their enable parent chains carry what the enable rules leave
+   undecided (inside the vault 23 or 24 are marked, 5 undecided). Skinned actors exist in the viewer
+   (rest pose, a named clip); joining them to the run's positions, and the run's animation events to clips,
+   is the next drawing step.
+3. The camera is the caller's: it looks along the last move, so it often faces a wall or a pod; the player
+   has no facing in the run.
+4. Sound: the run times lines by their voice files but nothing plays them.
+5. Lighting and sky: frames are unlit and the exterior sky is the clear colour.
+6. The run itself stops at stage 1000 (Script VM and quests, above).
 
 ## Measurements wanted
 
