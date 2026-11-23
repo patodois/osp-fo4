@@ -220,9 +220,11 @@ coplanar depth ties differently, so it differs in a few pixels on its own.
 
 `fo4_scene::actor::clip` poses an actor's skeleton by a Havok animation
 clip decoded as in [havok-animation.md](havok-animation.md); the viewer's
-`--actor-clip ARCHIVE_PATH` uses it. Which clip an actor plays in the game
-is behaviour-graph logic that is not read, so the clip is always the one
-named by the caller, never chosen.
+`--actor-clip ARCHIVE_PATH` uses it. With `--actor-clip` the clip is the
+one named by the caller, never chosen; a run timeline's cast can instead
+take the clip the actor's behaviour graph reaches from its root, under the
+character graph rules ([character-graph.md](character-graph.md)), sampled
+the same way.
 
 - **Havok skeleton.** The first `hkaSkeleton` of the `.hkx` file at the
   skeleton NIF's path with `.hkx` for `.nif`

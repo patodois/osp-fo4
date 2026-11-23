@@ -114,7 +114,9 @@ usage:
   fo4-view MANIFEST DATA_DIRECTORY CELL_EDITOR_ID|- --under-hypotheses --headless
            --timeline FILE --at SECONDS --eye-height UNITS [--look-heading DEGREES]
            [--timeline-nowait] [--timeline-child-flag-agrees]
-           [--timeline-cast [--timeline-target-rotation] [--actor-missing-bone-bind]]
+           [--timeline-cast [--timeline-target-rotation] [--actor-missing-bone-bind]
+           [--actor-start-clip] [--actor-subgraph-keywords] [--actor-clip-folder]
+           [--actor-start-clip-loop]]
            [--look-at X,Y,Z | --look-at-actor nearest|speaker]
            [--overlay build/OVERLAY.txt] --out build/FRAME.png
            [--tags build/TAGS.bin] [--size WxH] [--terrain] [--around N] [...]
@@ -138,6 +140,15 @@ usage:
       where an actor cannot be drawn, with the reason in the overlay;
       --actor-missing-bone-bind skins a bone the skeleton lacks at its bind
       transform instead of leaving the actor out (a pending rule).
+      --actor-start-clip poses each character by the clip its race's
+      behaviour graph reaches from its root (start states, stored initial
+      values, highest weights), at the clip generator's start time; it
+      needs --actor-subgraph-keywords (the race's subgraph entry the actor's
+      keywords fit) and --actor-clip-folder (the clip file in the entry's
+      folders) to reach a file; --actor-start-clip-loop poses at the
+      frame's second, looping where the generator's mode says so (pending
+      rules, spec/character-graph.md); an actor refused keeps the rest pose,
+      with the reason in the overlay.
       --look-at and --look-at-actor aim the camera from the same eye at a
       point, the nearest drawn actor or the line's speaker (presentation).
       Not with --eye, --look, --walk, --path, --actor-clip or --script-event.
@@ -441,13 +452,14 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
     let mut timeline_cast = false;
     let mut target_rotation = false;
     let mut missing_bones_at_bind = false;
+    let mut pose = fo4_scene::char_graph::Switches::default();
     let mut child_flag_agrees = false;
     let mut aim = fo4_scene::timeline::Aim::Track;
     let mut light = fo4_scene::light::Switches::default();
     let mut light_assumptions = fo4_scene::light::Assumptions::default();
     let mut rest = args[3..].iter();
     while let Some(arg) = rest.next() {
-        if clock.set_flag(arg) || light.set_flag(arg) {
+        if clock.set_flag(arg) || light.set_flag(arg) || pose.set_flag(arg) {
             continue;
         }
         let mut value = || rest.next().ok_or_else(usage);
@@ -544,6 +556,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             cast: timeline_cast,
             target_rotation,
             missing_bones_at_bind,
+            pose,
             aim,
         }),
         (None, None, None)
@@ -553,6 +566,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
                 && !timeline_cast
                 && !target_rotation
                 && !missing_bones_at_bind
+                && !pose.any()
                 && !child_flag_agrees
                 && aim == fo4_scene::timeline::Aim::Track =>
         {
@@ -560,7 +574,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
         }
         _ => {
             return Err(
-                "--timeline needs --at and --eye-height; --look-heading, --timeline-nowait, --timeline-child-flag-agrees, --timeline-cast, --timeline-target-rotation, --actor-missing-bone-bind, --look-at, --look-at-actor and --overlay need --timeline"
+                "--timeline needs --at and --eye-height; --look-heading, --timeline-nowait, --timeline-child-flag-agrees, --timeline-cast, --timeline-target-rotation, --actor-missing-bone-bind, the start clip flags, --look-at, --look-at-actor and --overlay need --timeline"
                     .into(),
             )
         }
@@ -578,9 +592,9 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
         // Actors are drawn as the timeline's markers, or with
         // --timeline-cast as its characters: never the cell's own.
         actors = false;
-        if (target_rotation || missing_bones_at_bind) && !timeline_cast {
+        if (target_rotation || missing_bones_at_bind || pose.any()) && !timeline_cast {
             return Err(
-                "--timeline-target-rotation and --actor-missing-bone-bind need --timeline-cast"
+                "--timeline-target-rotation, --actor-missing-bone-bind and the start clip flags need --timeline-cast"
                     .into(),
             );
         }
@@ -846,7 +860,19 @@ mod tests {
         };
         let t = scene.timeline.unwrap();
         assert!(t.cast && t.target_rotation && t.child_flag_agrees && t.missing_bones_at_bind);
+        assert_eq!(t.pose, fo4_scene::char_graph::Switches::default());
         assert_eq!(t.aim, fo4_scene::timeline::Aim::Speaker);
+        let c = parse(&args(
+            "m d - --under-hypotheses --headless --timeline build/t.tsv --at 1 --eye-height 120 \
+             --out build/a.png --timeline-cast --actor-start-clip --actor-subgraph-keywords \
+             --actor-clip-folder --actor-start-clip-loop",
+        ))
+        .unwrap();
+        let Command::Headless { scene, .. } = c else {
+            panic!("{c:?}")
+        };
+        let p = scene.timeline.unwrap().pose;
+        assert!(p.start && p.subgraph && p.folder && p.cycle);
         assert!(!scene.actors, "the cast is the timeline's, not the cell's");
         for line in [
             "m d - --under-hypotheses --headless --out a.png",
@@ -859,6 +885,8 @@ mod tests {
             "m d C --under-hypotheses --headless --eye 1,2,3 --look 4,5,6 --out a.png --look-at-actor nearest",
             "m d - --under-hypotheses --headless --timeline t --at 1 --eye-height 1 --out a.png --timeline-target-rotation",
             "m d - --under-hypotheses --headless --timeline t --at 1 --eye-height 1 --out a.png --actor-missing-bone-bind",
+            "m d - --under-hypotheses --headless --timeline t --at 1 --eye-height 1 --out a.png --actor-start-clip",
+            "m d C --under-hypotheses --headless --eye 1,2,3 --look 4,5,6 --out a.png --actor-clip-folder",
             "m d - --under-hypotheses --headless --timeline t --at 1 --eye-height 1 --out a.png --look-at-actor far",
         ] {
             assert!(parse(&args(line)).is_err(), "{line}");

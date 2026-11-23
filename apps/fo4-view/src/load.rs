@@ -310,11 +310,41 @@ pub fn cell(
         )?),
         _ => None,
     };
+    let mut timeline_cast = timeline_cast;
+    // With a start clip flag, the actors their graph's clip poses
+    // (`fo4_scene::timeline::cast::start_poses`); without one the build is
+    // the rest-pose one.
+    let poses = match (
+        timeline,
+        timeline_cast.as_mut().and_then(|c| c.cast.as_mut()),
+    ) {
+        (Some((args, p)), Some(c)) if args.pose.any() => {
+            Some(fo4_scene::timeline::cast::start_poses(
+                c,
+                &loader,
+                &vfs,
+                &args.pose,
+                p.frame.second,
+                level,
+                limits,
+                &budget,
+            )?)
+        }
+        _ => None,
+    };
     let cast_actors = timeline_cast.as_ref().and_then(|c| c.cast.as_ref());
     let mut build = if let Some(c) = cast_actors {
-        let build = fo4_render::draw::build_with_actors(
-            &scene, &c.actors, &loader, limits, options, &budget,
-        )?;
+        let build = match poses {
+            Some(poses) => {
+                fo4_render::draw::build_with_posed_actors(
+                    &scene, &c.actors, poses, &loader, limits, options, &budget,
+                )?
+                .0
+            }
+            None => fo4_render::draw::build_with_actors(
+                &scene, &c.actors, &loader, limits, options, &budget,
+            )?,
+        };
         println!("timeline cast: {}", actor_summary(&c.actors, &build));
         for line in actor_lines(&c.actors, &build) {
             println!("  {line}");

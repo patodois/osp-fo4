@@ -1753,6 +1753,7 @@ fn cpu_and_gpu_frames_agree_on_a_timeline_cast_frame() {
         cast: true,
         target_rotation: false,
         missing_bones_at_bind: false,
+        pose: fo4_scene::char_graph::Switches::default(),
         aim: Aim::Point([60., 100., 250.]),
     };
     let applied = tl::apply(&mut scene, &mut loader, &p.frame, level, &b).unwrap();

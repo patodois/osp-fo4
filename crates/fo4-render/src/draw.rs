@@ -2585,10 +2585,26 @@ impl Builder<'_, '_> {
         let world = Transform::euler(p, a.scale.unwrap_or(1.))?;
         self.allow(a.state.hypotheses());
         self.missing_bones_at_bind = a.missing_bones_at_bind;
-        self.skeleton(plan.skeleton_asset)?;
+        // A pose key the caller gave (`Actor::pose`) must be one of the
+        // given poses; without one the skeleton asset is the key.
+        let skeleton = match a.pose {
+            Some(k) if !self.skeletons.contains_key(&k) => {
+                return Err(error(
+                    "ActorPoseMissing",
+                    &src.file,
+                    src.offset,
+                    format!("pose key {k} among the given poses"),
+                ));
+            }
+            Some(k) => k,
+            None => {
+                self.skeleton(plan.skeleton_asset)?;
+                plan.skeleton_asset
+            }
+        };
         let first = self.output.list.draws.len();
         for part in &plan.parts {
-            self.actor_model(part.asset, world, index, plan.skeleton_asset)?;
+            self.actor_model(part.asset, world, index, skeleton)?;
         }
         if self.output.list.draws.len() == first {
             return Err(error(
@@ -2599,7 +2615,7 @@ impl Builder<'_, '_> {
             ));
         }
         if let Some(head) = &plan.head {
-            self.actor_head(a, head, world, index, plan.skeleton_asset)?;
+            self.actor_head(a, head, world, index, skeleton)?;
         }
         Ok(())
     }

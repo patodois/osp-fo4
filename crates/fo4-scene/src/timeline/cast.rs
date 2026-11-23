@@ -17,15 +17,18 @@
 //!   standing exactly at the run's place (the move's target) under
 //!   `timeline_actor_target_rotation_v1`;
 //! - pose: the skeleton's rest pose (presentation: no animation is read
-//!   from the run).
+//!   from the run), or behind the character graph switches
+//!   ([`Options::pose`], [`start_poses`]) the clip the actor's behaviour
+//!   graph reaches from its root (`crate::char_graph`), at its start time
+//!   or at the frame's second.
 //!
 //! An actor that cannot be resolved is drawn as its marker by the caller,
 //! with the reason ([`Cast::why_not`]).
 use super::{key_text, norm, Marker};
-use crate::{actor, hypotheses, Loader, RuleLevel, Scene};
-use fo4_core::{Budget, Error, SourceSpan};
+use crate::{actor, char_graph, hypotheses, Loader, RuleLevel, Scene};
+use fo4_core::{Budget, Error, Limits, SourceSpan};
 use fo4_plugin::FormKey;
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 /// The cast's switches beyond `--timeline-cast` itself, each off by default.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -38,6 +41,9 @@ pub struct Options {
     /// bone a skinned shape names that the actor's skeleton lacks is skinned
     /// at its bind transform instead of failing the actor.
     pub missing_bones_at_bind: bool,
+    /// The character graph's readings (`crate::char_graph::Switches`):
+    /// with any on, [`start_poses`] poses the actors by their start clip.
+    pub pose: char_graph::Switches,
 }
 
 /// The frame's actors resolved as characters, in the order of the markers.
@@ -52,6 +58,11 @@ pub struct Cast {
     pub facing: Vec<String>,
     /// Rules the cast relied on (beyond each actor's own state).
     pub rules: BTreeSet<&'static str>,
+    /// With [`Options::pose`]: how each actor is posed, one text per actor
+    /// ([`start_poses`]); empty without it.
+    pub poses: Vec<String>,
+    /// Actors [`start_poses`] posed by their start clip.
+    pub posed: usize,
 }
 
 impl Cast {
@@ -245,6 +256,167 @@ pub fn resolve(
     Ok(out)
 }
 
+/// The poses of the cast's actors under the character graph switches
+/// (`crate::char_graph`, [`Options::pose`]): for each actor drawable at
+/// `level`, the clip its race's graph reaches from its root, read and
+/// sampled as `crate::actor::clip` does (`actor_clip_skeleton_beside_nif_v1`,
+/// `actor_clip_pose_by_bone_name_v1`) at the clip generator's start time,
+/// or under `char_graph_clip_mode_loop_v1` at `second`. Each posed actor
+/// gets the key of its pose ([`actor::Actor::pose`]; one pose per skeleton,
+/// clip and time, keys counted down from `usize::MAX`); the returned map is
+/// for `fo4_render::draw::build_with_posed_actors`. An actor whose walk or
+/// clip is refused keeps the rest pose, with the reason in
+/// [`Cast::poses`]. With every switch off nothing changes and the map is
+/// empty.
+#[allow(clippy::too_many_arguments)]
+pub fn start_poses(
+    cast: &mut Cast,
+    loader: &Loader<'_>,
+    vfs: &fo4_vfs::Vfs,
+    switches: &char_graph::Switches,
+    second: f64,
+    level: RuleLevel,
+    limits: &Limits,
+    b: &Budget,
+) -> Result<BTreeMap<usize, actor::pose::Skeleton>, Error> {
+    use actor::clip::{self, Clip, HkSkeleton, Rig};
+    let mut out = BTreeMap::new();
+    if !switches.any() {
+        return Ok(out);
+    }
+    let n = cast.actors.actors.len();
+    cast.poses = vec![String::new(); n];
+    // Per skeleton asset: the Havok skeleton beside it and the rig, or why not.
+    let mut rigs: BTreeMap<usize, Result<(String, HkSkeleton, Rig), String>> = BTreeMap::new();
+    let mut clips: BTreeMap<String, Result<Clip, String>> = BTreeMap::new();
+    let mut groups: Vec<(usize, String, u64)> = Vec::new();
+    for k in 0..n {
+        let a = &cast.actors.actors[k];
+        let Some(plan) = &a.plan else { continue };
+        if !a.state.ready_at(level) {
+            continue;
+        }
+        let keywords = match &a.base {
+            Some(base) => char_graph::actor_keywords(loader.plugins, base, &plan.race, b)?,
+            None => Err("no base".to_string()),
+        };
+        let input = char_graph::Actor {
+            race: &plan.race,
+            section: plan.section,
+            keywords: keywords.as_ref().map_err(|s| s.as_str()),
+        };
+        let reached = match char_graph::start_clip(vfs, loader.plugins, &input, switches, b)? {
+            Ok(x) => x,
+            Err(r) => {
+                cast.poses[k] = format!(
+                    "rest pose: its start clip refused, {}: {}",
+                    r.code, r.detail
+                );
+                continue;
+            }
+        };
+        let asset = plan.skeleton_asset;
+        let rig = rigs.entry(asset).or_insert_with(|| {
+            let nif = &loader.assets.nodes[asset].path;
+            let nif_name = String::from_utf8_lossy(nif).into_owned();
+            let hkx = clip::skeleton_hkx_path(nif)
+                .map(|p| String::from_utf8_lossy(&p).into_owned())
+                .ok_or_else(|| format!("{nif_name} is not a .nif path"))?;
+            let hk = vfs
+                .read(&hkx, &b.child())
+                .and_then(|bytes| HkSkeleton::read(&bytes, &hkx, &b.child()))
+                .map_err(|e| format!("{hkx}: {}", e.code))?;
+            let rig = loader
+                .assets
+                .with_decoded(asset, &b.child(), |d| match d {
+                    crate::DecodedAsset::Model(m) => Rig::new(&m, &nif_name, &hk, limits, b),
+                    _ => Err(Error::new(
+                        "ActorClipSkeletonKind",
+                        &nif_name,
+                        0,
+                        "model",
+                        "other asset",
+                    )),
+                })
+                .map_err(|e| format!("{nif_name}: {}", e.code))?;
+            Ok((hkx, hk, rig))
+        });
+        let (hkx, hk, rig) = match rig {
+            Ok(x) => (&x.0, &x.1, &x.2),
+            Err(why) => {
+                cast.poses[k] = format!("rest pose: its skeleton's Havok file, {why}");
+                continue;
+            }
+        };
+        let read = clips.entry(reached.clip.clone()).or_insert_with(|| {
+            vfs.read(&reached.clip, &b.child())
+                .and_then(|bytes| Clip::read(&bytes, &reached.clip, &b.child()))
+                .map_err(|e| e.code.to_string())
+        });
+        let c = match read {
+            Ok(c) if c.fits(hk) => c,
+            Ok(_) => {
+                cast.poses[k] = format!(
+                    "rest pose: its start clip {} does not fit {hkx}",
+                    reached.clip
+                );
+                continue;
+            }
+            Err(code) => {
+                cast.poses[k] =
+                    format!("rest pose: its start clip {} refused, {code}", reached.clip);
+                continue;
+            }
+        };
+        let t =
+            match char_graph::clip_time(&reached.generator, c.duration(), second, switches.cycle) {
+                Ok(t) => t,
+                Err(why) => {
+                    cast.poses[k] = format!("rest pose: the second's clip time refused, {why}");
+                    continue;
+                }
+            };
+        let group = (asset, reached.clip.clone(), t.to_bits());
+        let at = match groups.iter().position(|g| *g == group) {
+            Some(i) => i,
+            None => {
+                let locals = c.locals(hk, t);
+                let worlds = clip::worlds(hk, &locals, hkx)?;
+                b.reserve(&mut groups, 1, "start poses", 0)?;
+                groups.push(group);
+                out.insert(usize::MAX - (groups.len() - 1), rig.pose(&worlds));
+                groups.len() - 1
+            }
+        };
+        cast.actors.actors[k].pose = Some(usize::MAX - at);
+        cast.posed += 1;
+        cast.rules.extend(reached.rules.iter().copied());
+        cast.rules.insert(hypotheses::ACTOR_CLIP_SKELETON);
+        cast.rules.insert(hypotheses::ACTOR_CLIP_POSE);
+        if switches.cycle {
+            cast.rules.insert(hypotheses::CHAR_GRAPH_CLIP_LOOP);
+        }
+        cast.poses[k] = format!(
+            "posed by its start clip {} at {t:.3} s of {:.3} s (mode {}{}; {} generators from the root{}{})",
+            reached.clip,
+            c.duration(),
+            reached.generator.mode,
+            if switches.cycle { ", the frame's second" } else { ", its start time" },
+            reached.steps.len(),
+            match &reached.subgraph {
+                Some(e) => format!(", subgraph entry {}", e.index),
+                None => String::new(),
+            },
+            if reached.ties > 0 {
+                format!(", {} blenders at a tie took their first child", reached.ties)
+            } else {
+                String::new()
+            }
+        );
+    }
+    Ok(out)
+}
+
 /// The overlay's lines on the cast (presentation): each actor drawn as its
 /// character with its tag and facing (and whether a bone its skeleton
 /// lacks was skinned at its bind transform, `bind_bones`), each drawn as
@@ -269,13 +441,24 @@ pub fn report(
             m.source
         )
     };
-    let _ = writeln!(
-        s,
-        "cast\t{} actors: {} drawn as characters in the skeleton's rest pose (presentation: no animation), {} as markers",
-        cast.markers.len(),
-        characters.len(),
-        fallback.len()
-    );
+    if cast.poses.is_empty() {
+        let _ = writeln!(
+            s,
+            "cast\t{} actors: {} drawn as characters in the skeleton's rest pose (presentation: no animation), {} as markers",
+            cast.markers.len(),
+            characters.len(),
+            fallback.len()
+        );
+    } else {
+        let _ = writeln!(
+            s,
+            "cast\t{} actors: {} drawn as characters, {} of the actors posed by the clip their behaviour graph reaches from its root, the others in the skeleton's rest pose, {} as markers",
+            cast.markers.len(),
+            characters.len(),
+            cast.posed,
+            fallback.len()
+        );
+    }
     for (k, tag) in characters {
         let bind = if bind_bones.contains(k) {
             format!(
@@ -285,9 +468,13 @@ pub fn report(
         } else {
             String::new()
         };
+        let pose = match cast.poses.get(*k) {
+            Some(p) if !p.is_empty() => format!("; {p}"),
+            _ => String::new(),
+        };
         let _ = writeln!(
             s,
-            "character\ttag {tag}\t{}\tfacing {}{bind}",
+            "character\ttag {tag}\t{}\tfacing {}{bind}{pose}",
             place(*k),
             cast.facing[*k]
         );

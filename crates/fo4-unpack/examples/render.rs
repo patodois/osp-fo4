@@ -14,7 +14,7 @@ type AnyResult<T> = Result<T, Box<dyn std::error::Error>>;
 const TERRAIN_SHADING: &str = "ground textures weighted per vertex under the pending terrain texture rules, times VCLR; untextured weight as flat neutral grey per triangle by geometric normal; unlit, not game lighting";
 fn run() -> AnyResult<()> {
     let args: Vec<_> = std::env::args().skip(1).collect();
-    const USAGE: &str = "usage: render MANIFEST DATA_DIRECTORY CELL_EDITOR_ID build/OUTPUT [--strict|--measured|--under-hypotheses] [--eye X,Y,Z --look X,Y,Z] [--instance-ids] [--collision-overlay] [--terrain] [--around N] [--texture-mib N] [--time SECONDS] [--clock-emissive-multiple] [--clock-emissive-colour] [--clock-falloff] [--clock-translation] [--clock-rotation] [--clock-rotation-xyz] [--clock-scale] [--timeline FILE --at SECONDS --eye-height UNITS [--look-heading DEGREES] [--timeline-nowait] [--timeline-child-flag-agrees] [--timeline-cast [--timeline-target-rotation] [--actor-missing-bone-bind]] [--look-at X,Y,Z | --look-at-actor nearest|speaker]] [--light-cell] [--light-inherits] [--light-points [--light-reference-radius] [--light-fade]] [--light-fog] [--sky-weather] [--light-weather] [--fog-weather] [--assume-hour H] [--assume-weather N] (with --timeline, CELL_EDITOR_ID - draws the player's cell)";
+    const USAGE: &str = "usage: render MANIFEST DATA_DIRECTORY CELL_EDITOR_ID build/OUTPUT [--strict|--measured|--under-hypotheses] [--eye X,Y,Z --look X,Y,Z] [--instance-ids] [--collision-overlay] [--terrain] [--around N] [--texture-mib N] [--time SECONDS] [--clock-emissive-multiple] [--clock-emissive-colour] [--clock-falloff] [--clock-translation] [--clock-rotation] [--clock-rotation-xyz] [--clock-scale] [--timeline FILE --at SECONDS --eye-height UNITS [--look-heading DEGREES] [--timeline-nowait] [--timeline-child-flag-agrees] [--timeline-cast [--timeline-target-rotation] [--actor-missing-bone-bind] [--actor-start-clip] [--actor-subgraph-keywords] [--actor-clip-folder] [--actor-start-clip-loop]] [--look-at X,Y,Z | --look-at-actor nearest|speaker]] [--light-cell] [--light-inherits] [--light-points [--light-reference-radius] [--light-fade]] [--light-fog] [--sky-weather] [--light-weather] [--fog-weather] [--assume-hour H] [--assume-weather N] (with --timeline, CELL_EDITOR_ID - draws the player's cell)";
     if args.len() < 4 {
         return Err(USAGE.into());
     }
@@ -55,7 +55,8 @@ fn run() -> AnyResult<()> {
     let mut light_assumptions = fo4_scene::light::Assumptions::default();
     let mut rest = args[4..].iter();
     while let Some(arg) = rest.next() {
-        if switches.set_flag(arg) || light_switches.set_flag(arg) {
+        if switches.set_flag(arg) || light_switches.set_flag(arg) || cast_options.pose.set_flag(arg)
+        {
             continue;
         }
         match arg.as_str() {
@@ -174,7 +175,7 @@ fn run() -> AnyResult<()> {
     }
     if cast_options != fo4_scene::timeline::cast::Options::default() && !timeline_cast {
         return Err(format!(
-            "--timeline-target-rotation and --actor-missing-bone-bind need --timeline-cast\n{USAGE}"
+            "--timeline-target-rotation, --actor-missing-bone-bind and the start clip flags need --timeline-cast\n{USAGE}"
         )
         .into());
     }
@@ -254,7 +255,7 @@ fn run() -> AnyResult<()> {
         }
         None => None,
     };
-    let cast = match (&marked, timeline_cast) {
+    let mut cast = match (&marked, timeline_cast) {
         (Some((markers, _, _)), true) => Some(fo4_scene::timeline::cast::resolve(
             &mut loader,
             &scene,
@@ -265,7 +266,33 @@ fn run() -> AnyResult<()> {
         )?),
         _ => None,
     };
-    let mut built = match &cast {
+    // With a start clip switch, the actors their graph's clip poses
+    // (`fo4_scene::timeline::cast::start_poses`); without one the build is
+    // the rest-pose one.
+    let mut built = match &mut cast {
+        Some(c) if cast_options.pose.any() => {
+            let second = timeline.as_ref().map_or(0., |(_, f)| f.second);
+            let poses = fo4_scene::timeline::cast::start_poses(
+                c,
+                &loader,
+                &vfs,
+                &cast_options.pose,
+                second,
+                policy,
+                limits,
+                &budget,
+            )?;
+            fo4_render::draw::build_with_posed_actors(
+                &scene,
+                &c.actors,
+                poses,
+                &loader,
+                limits,
+                build_options,
+                &budget,
+            )?
+            .0
+        }
         Some(c) => fo4_render::draw::build_with_actors(
             &scene,
             &c.actors,
@@ -363,7 +390,13 @@ fn run() -> AnyResult<()> {
                     d.markers,
                     d.first,
                     tags,
-                    Some((text, d.characters.len(), d.fallback.len())),
+                    Some((
+                        text,
+                        d.characters.len(),
+                        d.fallback.len(),
+                        c.posed,
+                        !c.poses.is_empty(),
+                    )),
                     d.drawn,
                 )
             }
@@ -399,10 +432,17 @@ fn run() -> AnyResult<()> {
         look = Some(l);
         let mut json = serde_json::json!({"second":frame.second,"cell":scene.cell.key,"hidden":applied.hidden.len(),"shown":applied.shown.len(),"elsewhere":applied.elsewhere,"chain_changed":applied.chain_changed,"moved":applied.moved.len(),"moved_out":applied.moved_out.len(),"nowait_left":frame.nowait_left,"markers":tags,"actors_left_out":left,"rules":rules,"camera":"presentation: the caller's eye height above the player's track position, looking level along the track's movement or the caller's heading","overlay":"overlay.txt"});
         // The keys are absent without their flags, so the summary stays as before.
-        if let (Some((_, characters, fallback)), Some(map)) = (&cast_text, json.as_object_mut()) {
+        if let (Some((_, characters, fallback, posed, poses)), Some(map)) =
+            (&cast_text, json.as_object_mut())
+        {
+            let pose = if *poses {
+                serde_json::json!({"start_clip":posed,"rest":"the skeleton's rest pose for the others (presentation)"})
+            } else {
+                serde_json::json!("the skeleton's rest pose (presentation)")
+            };
             map.insert(
                 "cast".into(),
-                serde_json::json!({"characters":characters,"markers_instead":fallback,"pose":"the skeleton's rest pose (presentation)"}),
+                serde_json::json!({"characters":characters,"markers_instead":fallback,"pose":pose}),
             );
         }
         if let (true, Some(map)) = (aim != fo4_scene::timeline::Aim::Track, json.as_object_mut()) {

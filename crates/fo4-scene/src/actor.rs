@@ -96,6 +96,12 @@ pub struct Actor {
     /// a bone fails the shape (`ActorSkinBoneMissing`).
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     pub missing_bones_at_bind: bool,
+    /// The key of the pose a posed build draws this actor in, among the
+    /// poses given to `fo4_render::draw::build_with_posed_actors`, instead
+    /// of its skeleton asset (`crate::timeline::cast::start_poses`); `None`:
+    /// the skeleton asset is the key, as before.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pose: Option<usize>,
 }
 impl Actor {
     /// Whether the enable parent rules say this actor starts disabled.
@@ -456,6 +462,7 @@ pub fn resolve_reference(
         state: State::Blocked,
         enable: None,
         missing_bones_at_bind: false,
+        pose: None,
     };
     let work = b.child();
     let Some((r, plugin)) = read(loader, key, &work)? else {

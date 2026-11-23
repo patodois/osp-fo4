@@ -392,6 +392,99 @@ mod tests {
         }
     }
 
+    /// A posed build draws an actor whose `Actor::pose` names one of the
+    /// given poses in that pose (here the rest pose lifted 10 units) and
+    /// the others in their rest pose; a key among none of the poses
+    /// leaves the actor out with a named reason.
+    #[test]
+    fn a_pose_key_poses_its_actor_and_a_missing_key_is_named() {
+        use crate::fixture::{actor_room, Placed, ACTOR_BASE, ACTOR_ROOM};
+        use fo4_scene::{actor, DecodedAsset, Loader, RuleLevel};
+        let temp = fo4_core::TestDir::new("pose-key");
+        let root = temp.join("Data");
+        let placed = |id: u32, x: f32| Placed {
+            id,
+            base: ACTOR_BASE,
+            data: [x, 0., 0., 0., 0., 0.],
+            scale: None,
+        };
+        let m = actor_room(&root, &[placed(0x900, 0.), placed(0x901, 300.)], &[]);
+        let b = Budget::new(64 << 20);
+        let store = fo4_plugin::typed::Store::open(&m, &b).unwrap();
+        let vfs = fo4_vfs::Vfs::mount(&m, &b).unwrap();
+        let mut loader = Loader::new(&store, &vfs, "english", RuleLevel::Hypotheses, &b);
+        let scene = loader.by_editor_id(ACTOR_ROOM, &b).unwrap();
+        let mut actors = actor::resolve(&scene, &mut loader, &b).unwrap();
+        let skeleton = actors.actors[0].plan.as_ref().unwrap().skeleton_asset;
+        let rest = loader
+            .assets
+            .with_decoded(skeleton, &b, |d| {
+                let DecodedAsset::Model(n) = d else {
+                    panic!("model")
+                };
+                actor::pose::Skeleton::read(&n, "skeleton", &m.limits, &b)
+            })
+            .unwrap();
+        let mut lifted = rest.clone();
+        for a in lifted.bones.values_mut() {
+            a.translation[2] += 10.;
+        }
+        let options = crate::draw::BuildOptions::reference(RuleLevel::Hypotheses);
+        let plain =
+            crate::draw::build_with_actors(&scene, &actors, &loader, &m.limits, options, &b)
+                .unwrap();
+        let key = usize::MAX;
+        actors.actors[1].pose = Some(key);
+        let poses = std::collections::BTreeMap::from([(key, lifted)]);
+        let (posed, _) = crate::draw::build_with_posed_actors(
+            &scene, &actors, poses, &loader, &m.limits, options, &b,
+        )
+        .unwrap();
+        let z = |build: &crate::draw::Build, x: f64| -> Vec<f64> {
+            build
+                .list
+                .draws
+                .iter()
+                .filter(|d| d.world.translation[0] == x)
+                .flat_map(|d| {
+                    build.list.meshes[d.mesh]
+                        .vertices
+                        .iter()
+                        .map(|v| v.position[2])
+                })
+                .collect()
+        };
+        assert!(!z(&plain, 0.).is_empty());
+        assert_eq!(
+            z(&posed, 0.),
+            z(&plain, 0.),
+            "the first actor keeps its rest pose"
+        );
+        let (a, bz) = (z(&plain, 300.), z(&posed, 300.));
+        assert_eq!(a.len(), bz.len());
+        assert!(
+            a.iter().zip(&bz).all(|(p, q)| (q - p - 10.).abs() < 1e-3),
+            "{a:?} {bz:?}"
+        );
+        // A key that is none of the given poses.
+        actors.actors[1].pose = Some(key - 1);
+        let (missing, _) = crate::draw::build_with_posed_actors(
+            &scene,
+            &actors,
+            std::collections::BTreeMap::new(),
+            &loader,
+            &m.limits,
+            options,
+            &b,
+        )
+        .unwrap();
+        assert!(missing
+            .omitted
+            .iter()
+            .flat_map(|o| &o.causes)
+            .any(|e| e.code == "ActorPoseMissing"));
+    }
+
     #[test]
     fn markers_are_drawn_where_the_frame_puts_them_with_their_own_tags() {
         let mut list = DrawList::default();

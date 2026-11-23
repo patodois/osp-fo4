@@ -102,6 +102,16 @@ source, facing and whether a bone was skinned at its bind transform), `marker in
 the reason: the actor's notes, its blocked state's open codes or the build's refusal) and `head left out`
 lines; `summary.json` a `cast` key. Without the flag nothing of this runs and every output is as before.
 
+Behind the character graph switches (`--actor-start-clip`, `--actor-subgraph-keywords`, `--actor-clip-folder`,
+`--actor-start-clip-loop`; [character-graph.md](character-graph.md)) each character the build can draw is
+posed by the clip its race's behaviour graph reaches from its root, at the clip generator's start time or,
+with `--actor-start-clip-loop`, at the frame's second; an actor whose walk or clip is refused keeps the rest
+pose. The `character` lines then end with how the actor is posed or why not, the `cast` line counts the posed
+actors and `summary.json`'s `cast.pose` becomes an object; without the switches both are as before. The
+opening, all four on with the cast and light switches: 79 of the 84 resolved actors reach a clip (7
+distinct idles); on the contact sheet's 13 seconds every character drawn (3 to 37 a frame) is posed; the 5 refused
+actors (a base with a template, the vertibird's graph) are not among those drawn there.
+
 The opening (the playview step's timeline, the contact sheet's 13 seconds, every new switch and
 `--timeline-nowait` on): 63 distinct actors drawn as characters at one second or another, 13 as markers
 (9 with a texture path the archives refuse and a missing texture, 2 with effect-shader controllers run by a
@@ -139,7 +149,8 @@ done; the frame is left as it was and no path is invented.
 
 ## What it does not do
 
-- Characters only in the skeleton's rest pose (`--timeline-cast`); no animation, no look direction of actors.
+- Characters in the skeleton's rest pose, or with the character graph switches in the start state's clip
+  ([character-graph.md](character-graph.md)): no transition is taken, nobody walks, sits or turns to look.
 - The player's camera is not the game's: height and direction are the caller's.
 - No sound; the line's text is shown, its audio is not played.
 - The timeline is a file: the track is the caller's, not input-driven.
