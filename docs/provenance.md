@@ -861,3 +861,17 @@ meshes were recognised from prior general knowledge and are pending rules.
 No navigation, combat or dialogue tool or library of any project, editor,
 editor source or definition file, script source or game executable was
 opened or searched for.
+
+The live world step (`fo4_play::live`, `fo4_play::world`, the `door_census`
+example, `WorldSet::set_hidden`, `World::copy_sources`; [spec/play.md](../spec/play.md),
+[spec/door-census.txt](../spec/door-census.txt)) reads no new record layout:
+the run's visibility changes and moves are read as the timeline's writer reads
+them, decided as `fo4_scene::timeline::apply` decides a frame, and `XTEL` as
+`fo4_vm::track::teleport_of` reads it; the door census counts subrecords, flag
+bits and sizes with the repository's own readers. Recognised from prior general
+knowledge and kept as pending rules: that collision goes with what is drawn,
+that activating a load door moves the player at once, that statics are not
+activated. That an empty `ONAM` on a placed door may mean "open by default"
+was recalled from a field's published name and is not used. No editor, editor
+source or definition file, other implementation, game executable or game run
+was opened or searched for.

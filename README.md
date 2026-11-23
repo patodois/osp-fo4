@@ -291,7 +291,7 @@ consulted, with one attributed exception described in
 | `fo4-vm` | Interpreter over `fo4-pex` under pending rules, recording host, VMAD binding, `script_run` and `vm_checks`. |
 | `fo4-scene` | Scene assembly, rule levels and the collision of a cell. |
 | `fo4-walk` | Walking controller over the collision of a cell. |
-| `fo4-play` | A quest run driven by input: the walker's positions and activations feed `quest_run`'s run slice by slice (`play_run`, `fo4-view --play-run`; [spec/play.md](spec/play.md)). |
+| `fo4-play` | A quest run driven by input: the walker's positions and activations feed `quest_run`'s run slice by slice, and behind switches the walking world follows the run's state, load doors are crossed and triggers are read about the walker (`play_run`, `fo4-view --play-run`; [spec/play.md](spec/play.md)). |
 | `fo4-render` | CPU renderer and image comparison. |
 | `fo4-unpack` | Command-line tool and the `render` example. |
 
