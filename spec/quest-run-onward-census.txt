@@ -1,5 +1,6 @@
 # stops_census: kinds and counts only (spec/vm.md, Past the museum). Sections: 1 terminals: menu items, fragments, placed terminals; 2 Lock calls and lock
-# state handlers; 3 inventory events and their filters; 4 perks; 5 actor values; 6 aliases filled from another quest's alias; 7 factions.
+# state handlers; 3 inventory events and their filters; 4 perks; 5 actor values; 6 aliases filled from another quest's alias; 7 factions; 8 dialogue lines'
+# own scripts.
 1256	1 conditions of menu items
 882	1 fragment functions by parameter types	(objectreference)
 3	1 fragment functions calling	additem
@@ -101,3 +102,7 @@
 21	7 faction call sites	removefromallfactions
 391	7 faction call sites	removefromfaction
 15	7 faction call sites	setfactionrank
+3292	8 dialogue lines whose VMAD attaches scripts of their own
+4015	8 those scripts by engine type	topicinfo
+703	8 those scripts handling a line event with code	onbegin
+1733	8 those scripts handling a line event with code	onend

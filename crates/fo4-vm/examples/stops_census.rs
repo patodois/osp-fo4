@@ -28,7 +28,10 @@
 //!    `--quest`, the quest's own);
 //! 7. factions: call sites of the faction natives and of `AddToFaction`,
 //!    the `SNAM` subrecords of actor bases by size and rank byte, and the
-//!    bases naming a template (`TPLT`).
+//!    bases naming a template (`TPLT`);
+//! 8. dialogue lines (INFO) whose VMAD attaches scripts of their own (not
+//!    the fragment block), by the engine type those scripts extend and the
+//!    line events they handle with code (`OnBegin`, `OnEnd`).
 use fo4_core::{Budget, Manifest};
 use fo4_plugin::{
     actor::Context,
@@ -202,7 +205,7 @@ fn run() -> Result<(), E> {
     // The winning records by type.
     let mut by_sig: BTreeMap<[u8; 4], Vec<FormKey>> = BTreeMap::new();
     for o in store.winners() {
-        if matches!(&o.signature, b"TERM" | b"QUST" | b"NPC_") {
+        if matches!(&o.signature, b"TERM" | b"QUST" | b"NPC_" | b"INFO") {
             by_sig
                 .entry(o.signature)
                 .or_default()
@@ -729,8 +732,55 @@ fn run() -> Result<(), E> {
         }
     }
 
+    // 8 dialogue lines' own scripts.
+    for k in by_sig.get(b"INFO").cloned().unwrap_or_default() {
+        let b = Budget::new(max);
+        let Some(r) = store.raw(&k, &b)? else {
+            continue;
+        };
+        let Some(s) = r.subrecords.iter().find(|s| s.signature == *b"VMAD") else {
+            continue;
+        };
+        let v = Vmad::read(r.data(s), r.signature, &r.source.file, s.offset, &b)?;
+        if v.scripts.is_empty() {
+            continue;
+        }
+        bump(
+            &mut c,
+            "8 dialogue lines whose VMAD attaches scripts of their own",
+        );
+        for sc in &v.scripts {
+            let name = fo4_pex::index::lower(sc.name);
+            bump(
+                &mut c,
+                format!("8 those scripts by engine type\t{}", engine(&lib, &name)),
+            );
+            for ev in ["onbegin", "onend"] {
+                let mut t = name.clone();
+                let mut found = false;
+                for _ in 0..fo4_vm::MAX_PARENTS {
+                    let Some(x) = lib.scripts.get(&t) else { break };
+                    if x.functions
+                        .iter()
+                        .any(|((_, n), f)| n == ev && !f.native() && !f.code.is_empty())
+                    {
+                        found = true;
+                        break;
+                    }
+                    t = x.parent.clone();
+                }
+                if found {
+                    bump(
+                        &mut c,
+                        format!("8 those scripts handling a line event with code\t{ev}"),
+                    );
+                }
+            }
+        }
+    }
+
     let mut out = String::from(
-        "# stops_census: kinds and counts only (spec/vm.md, Past the museum). Sections: 1 terminals: menu items, fragments, placed terminals; 2 Lock calls and lock\n# state handlers; 3 inventory events and their filters; 4 perks; 5 actor values; 6 aliases filled from another quest's alias; 7 factions.\n",
+        "# stops_census: kinds and counts only (spec/vm.md, Past the museum). Sections: 1 terminals: menu items, fragments, placed terminals; 2 Lock calls and lock\n# state handlers; 3 inventory events and their filters; 4 perks; 5 actor values; 6 aliases filled from another quest's alias; 7 factions; 8 dialogue lines'\n# own scripts.\n",
     );
     for (k, v) in &c {
         let _ = writeln!(out, "{v}\t{k}");
