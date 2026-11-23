@@ -1,0 +1,59 @@
+# quest_run new-game past the museum: the furthest run of the step past the museum (spec/vm.md, Past the museum), kinds, roles and counts only.
+# The track, its plans, the command lines and every record named are in the step's notes; the census behind each stop is spec/quest-run-onward-census.txt; spec/quest-run-vault-stages.txt maps every stage.
+# Quests by role: the next main quest, the museum's own quest, the town quest (the leader's), the town's dialogue quest, the robot's postwar dialogue quest, the vault dialogue quest, the opening.
+
+## 1 what the run is
+base	the museum step's furthest run (spec/quest-run-museum.txt): every reading and caller assumption of it, with the changes below
+left out	the caller's lockpick of the basement gate (--assume-unlock; kept as the labelled variant v-lockpick)
+caller	the terminal by the leader's room: its first item picked at 1740 s, held until the next main quest's 90 (--assume-terminal-item)
+caller	the walk past the museum step's end (track_plan over the meshes where they join, straight moves where they do not): held beside the basement gate to 1816.9 s; back up the west stairs to the leader's room (1840 s); north round the stage 86 trigger (a stage the quest record does not hold, which would leave the quest's state undetermined) to the balcony door (1846 s); out of the door (its teleport position) at 1846.5 s; a straight move off the meshes to the roof beside the power armour frame (1856 s: the balcony and the roof are mesh islands no street mesh joins); on the roof's mesh to the mounted gun (1888 s); a straight move down to the street (1905 s); along the street westward (1925 s); held to 2400 s
+caller	the frame holds no core at first (--assume-item-count); the core put into the frame by the player at 1858 s, held until 100 (--assume-item-added)
+caller	the frame activated at 1862 s, held until 105; the player's strength 10 (--assume-actor-value); the mounted gun activated at 1890 s, held until 110
+caller	the creature's death, killed by the player, at 1940 s, held until the museum quest's 77 (--assume-death)
+readings	--terminal-fragments --lock-events-script --item-added-events --inventory-filter-init --item-added-counts --perks-base --factions-base (each its own pending rule, off by default)
+
+## 2 the stops in order: census, reading, what the run does
+95	terminal	1,069 terminal records, 294 with a fragment block; every fragment index is an item's ITID; every fragment function takes one object reference	the pick runs the item's fragment on the block's instance (terminal_menu_item_fragment_v1)	the fragment unlocks the basement gate and sets 95 at 1740 s
+100	the gate's lock change	110 Lock call sites (48 unlock, 62 lock); 7 lock state handlers with code	a script's Lock that changes the held lock raises the event after the call (vm_lock_state_event_script_v1)	the gate alias's default stage setter (needs 90): 100 at 1740 s (the lockpick's 1795 s in the museum step); its fragment sets the town quest's 50
+105	an item added	31 item added handlers with code (19 on reference aliases); the 33 scripts with an item added or removed handler all add a filter in their chain; 79 filter calls on self (36 in an init handler, 30 in OnLoad, 13 elsewhere; 69 a form, 10 none)	filters kept and the event delivered to the instances whose filter names the item (inventory_item_added_event_v1); an init handler's filter counted as kept (inventory_filter_init_registration_v1)	the frame alias's handler (90 done, 110 not) sets 105 at 1858 s; the frame's own base script adds its filter in OnLoad and is not delivered to
+110	an activation	48 HasPerk call sites; one engine script function asks HasPerk (the power armour check); 2,278 actor bases list perks (4,398 PRKR, all 5 bytes), the player's base 3	HasPerk on the player from its base's list (actor_perk_base_list_v1); the frame's count raised from the caller's 0 (inventory_item_added_count_v1)	the alias's activation handler: not in power armour, no insertion keyword on the player (the keyword step's reading), 1 core on the frame: 110 at 1862 s (the town quest's 60)
+115	an activation	actor value reads: 346 GetValue call sites on actors, 192 on object references	the player's strength is the caller's (--assume-actor-value)	the gun's handler (strength 10 against 8): 115 at 1890 s (the town quest's 65)
+120	other quests	9,068 SNAM over 3,756 actor bases (934 with a negative rank), 3,402 bases name a template; 248 IsInFaction call sites, 480 AddToFaction	IsInFaction from the base's list and the run's faction changes (actor_faction_base_list_v1)	stage 90's fragment (it stopped at the leader's AddToFaction in the museum step) finishes: the museum quest's 60 at 1732.42 s; the walk arriving on the balcony enters the roof's stage 75 trigger at 1846 s (75: its fragment enables the raiders' wave, created actors the run does not hold, and starts the boss's taunt scene); leaving the roof's safe zone at 1901.62 s (76: the quest script's 300 s failsafe timer asked, never fired: the caller's timer budget is spent long before); the street walk enters the far trigger the walk to the town crossed at 1458 s (before 75: nothing): 77 at 1923.24 s, its fragment enables the creature and sets 120
+123	the creature's death	548 aliases filled from another quest's alias; the next main quest's 6 name 5 created objects and 1 unique actor	(none: the museum quest's alias of the creature holds the one placed actor of its base under the unique actor reading)	the caller's death: the museum quest's 79 at 1940 s, whose fragment sets 123 (and the town quest's 75)
+
+## 3 stages reached (the museum step's run -> this run)
+54	next main quest: 34 -> 40 (adds 95, 105, 110, 115, 120, 123; 100 now at 1740 s)
+16	robot's postwar dialogue quest: 10 -> 10
+18	vault dialogue quest: 10 -> 10
+104	opening: 87 -> 87
+-	museum quest: 8 -> 13 (adds 60, 75, 76, 77, 79); town quest: 7 -> 10 (adds 60, 65, 75; 50 at 1740 s); town's dialogue quest: adds 15 (its trigger by the leader's room, on the walk to the balcony door)
+328	stages the museum step's run sets: the same, in the same order, at the same seconds except the next main quest's 100 and the town quest's 50 (1795 -> 1740 s: the terminal in place of the lockpick)
+15	stages this run sets beyond them
+
+## 4 variants (one reading left out each; next main quest stages)
+40	the furthest run (fin; rerun byte for byte as fin2)
+35	without --terminal-fragments: the pick runs nothing; no 95, no 100, and the core and activations (held until 100, 105, 110) never come; 120 and 123 still set (the walk and the creature)
+36	without --lock-events-script: 95, but the gate's handler never runs: no 100 and what waits on it
+37	without --item-added-events (and the init filter reading that needs it): 95, 100; the core reaches no handler: no 105, the activations held
+37	without --inventory-filter-init: the alias keeps no filter (its init handler never runs): no 105
+38	without --item-added-counts: 105, but the frame's count stays the caller's 0: the activation handler sees no core, no 110, the gun held
+38	without --perks-base: 105, but the activation handler blocks on HasPerk (the power armour check): no 110
+38	without --factions-base: 95 to 115, but stage 90's fragment stops at the leader's AddToFaction: the museum quest's 60 is never set, its roof triggers do nothing, no 75 to 79, no 120, no 123 (the creature's death held until 77)
+39	v-lockpick: the museum step's lockpick in place of the terminal: no 95, 100 at 1795 s, then the same stops
+
+## 5 what stops next
+next main 122	the third fight's five raiders: the next main quest's aliases are filled from the museum quest's aliases (another quest's alias: not read), which create their actors (a created object: not read); a created actor has no record a caller's death can name
+next main 130	the town quest's 70 and 75 set it only once 122 and 123 are both done
+next main 125, 127	a scene's begin and end: no static scan names a starter for the scene
+next main 128	a line's own script (begin and end events not delivered; 3,292 lines carry scripts of their own, 703 of them handle the begin event and 1,733 the end event)
+next main 135	a trigger that needs 130
+next main 140, 150, 200	other quests' stages after 130 (150 also two lines' own scripts)
+next main 62	the musket picked up: a container change event (not delivered)
+next main 78	behind the locked inner door and off from 85 (the museum step)
+next main 75, 1000	no setter
+robot 250	a fourth conversation back at the robot's home after the next main quest's 55 (the walk does not go back); the follower lines' group also asks condition function 566, which the run does not answer (a labelled variant of the museum step sets it from the town)
+robot 275	a line's own script (begin and end events not delivered)
+robot 5	its 300 fragment, or a later quest's stage
+robot 300	the other way (the player skips the robot)
+robot 500	the robot's death (not assumed)
+robot 1000	no setter
