@@ -4,6 +4,7 @@ This page is the hand-over point. Everything on `main` builds and passes its tes
 agent) can continue from here. Read `AGENTS.md` first: it holds the rules of evidence and the clean-room rules.
 
 State on 2026-11-23 (vault step). Nothing below has been checked against the running game: every behaviour is a pending
+State on 2026-11-23 (cast step). Nothing below has been checked against the running game: every behaviour is a pending
 rule in `spec/hypotheses.tsv`, off by default.
 
 ## Script VM and quests (`crates/fo4-vm`)
@@ -81,7 +82,7 @@ but not removed. The viewer's GPU tests now pass in parallel (`spec/render.md`, 
 
 ## Toward a playable game
 
-The opening run is now visible (`spec/timeline.md`). `quest_run new-game --timeline FILE` writes what the run
+The opening run is now visible (`spec/timeline.md`), and since the cast step its people appear as people. `quest_run new-game --timeline FILE` writes what the run
 did, second by second, in a neutral versioned text file (track points with their cells, actor places with the
 rule or assumption behind each, references enabled, disabled and moved, scene lines with speaker, seconds and
 text, stages, objectives); the writer only reads the run, so every other output stays byte for byte. The CPU
@@ -91,18 +92,36 @@ placeholder markers, the camera on the track (caller's eye height, looking along
 overlay text beside the frame. A contact sheet of 13 frames along the 86-stage run (local only) shows the
 house, the walk outside, the vault entrance with its crowd and the cryopods.
 
+Cast step: with `--timeline-cast` (render and fo4-view) the actors a frame places are drawn as their skinned
+characters in the skeleton's rest pose at the run's place, a marker only where an actor cannot be drawn, with
+the reason in the overlay; facing from the data only (the stored rotation, `timeline_actor_stored_rotation_v1`,
+or with `--timeline-target-rotation` the rotation of the one reference at a moved actor's place); a bone the
+skeleton lacks skinned at its bind transform with `--actor-missing-bone-bind`. The 44 actors outside whose
+presence was undecided are one class (own flag 0x800 agreeing with an opposite link under an enabled static
+root; `spec/timeline-cast-census.txt`), decided by `--timeline-child-flag-agrees`
+(`xesp_child_flag_agrees_chain_v1`) together with `--timeline-nowait`. The camera can look at a point, the
+nearest drawn actor or the line's speaker (`--look-at`, `--look-at-actor`; presentation). On the contact
+sheet with every switch on: 63 distinct actors as characters, 13 as markers; in the vault 23 characters and 6
+markers where there were 24 markers; outside after the alarm 35 to 37 characters where there were 4 markers.
+CPU and viewer agree (coverage 1.000000, same tag on every pixel at 560 s; a synthetic GPU test).
+
 What the frames show is missing, in order of what blocks a playable opening:
 
 1. Input instead of a file: the track is the caller's. Next: a window mode that runs `fo4_vm` live, the
    walker (`fo4-walk`) giving the player's position each tick in place of the track, the run's clock driven
    by the frame clock; triggers and distance events then come from where the player walks.
-2. Characters: actors are boxes. Of the 53 actors placed near the track outside, 4 are marked, 5 are
-   disabled and 44 are not marked because their enable parent chains carry what the enable rules leave
-   undecided (inside the vault 23 or 24 are marked, 5 undecided). Skinned actors exist in the viewer
-   (rest pose, a named clip); joining them to the run's positions, and the run's animation events to clips,
-   is the next drawing step.
-3. The camera is the caller's: it looks along the last move, so it often faces a wall or a pod; the player
-   has no facing in the run.
+2. Characters stand in the rest pose (arms out) and do not move between the run's places. Next: the run's
+   animation events and packages to clips (the character graph classes the readers do not read yet,
+   `spec/character-graph-census.txt`), a walk between places. 13 actors are still markers: 9 whose outfit
+   cites a texture path the archives refuse with a missing texture (the whole actor is blocked; a rule that
+   leaves only that surface out would draw them), 2 with effect-shader controllers run by a manager, 1 with
+   a transform controller in its model, 1 with no skin and no outfit (not a character model).
+3. The camera is the caller's: by default it looks along the last move and often faces a wall; with
+   `--look-at-actor speaker` it looks at the speaker or the nearest drawn actor, which can still be behind a
+   wall (no visibility test). The player has no facing in the run. The elevator second (505 s) still rides a
+   straight line outside the geometry: the data holds the platform (an activator with NIF controller
+   sequences and a behaviour graph), but the run records no event that starts it, and a sequence player,
+   skinned non-actor models and riding a moving node are missing (`spec/timeline.md`, The elevator second).
 4. Sound: the run times lines by their voice files but nothing plays them.
 5. Lighting and sky: frames are unlit and the exterior sky is the clear colour.
 6. The run itself stops at stage 1000 (Script VM and quests, above).
