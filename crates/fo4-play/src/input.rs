@@ -47,6 +47,42 @@ pub struct Event {
     pub command: Command,
 }
 
+impl fmt::Display for Command {
+    /// The command as a line of the input holds it after its second.
+    /// Numbers are written as Rust writes an `f64` (the shortest text that
+    /// reads back to the same value), so a command written and read again
+    /// is the same command bit for bit.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let on = |b: bool| if b { "on" } else { "off" };
+        match self {
+            Command::Key(k, b) => {
+                let k = match k {
+                    Key::Forward => "forward",
+                    Key::Back => "back",
+                    Key::Left => "left",
+                    Key::Right => "right",
+                    Key::Run => "run",
+                };
+                write!(f, "{k} {}", on(*b))
+            }
+            Command::Face(d) => write!(f, "face {d}"),
+            Command::Turn(d) => write!(f, "turn {d}"),
+            Command::Pitch(p) => write!(f, "pitch {p}"),
+            Command::Toward(x, y) => write!(f, "toward {x} {y}"),
+            Command::Activate => write!(f, "activate"),
+            Command::End => write!(f, "end"),
+        }
+    }
+}
+
+impl fmt::Display for Event {
+    /// The event as one line of the input (`SECONDS COMMAND [VALUE]`), the
+    /// second written as the numbers of [`Command`]'s text are.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{} {}", self.t, self.command)
+    }
+}
+
 /// The input, in time order (the file's order on a tie).
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Script {
@@ -286,6 +322,59 @@ mod tests {
         }
         .look();
         assert!((l[2] - 1.0).abs() < 1e-12);
+    }
+}
+
+#[cfg(test)]
+mod text_tests {
+    use super::*;
+
+    #[test]
+    fn a_command_written_reads_back_bit_for_bit() {
+        // In time order, as an input holds them.
+        let seconds = [
+            0.0,
+            f64::MIN_POSITIVE,
+            1e-7,
+            0.1 + 0.2,
+            1.0 / 3.0,
+            17.614,
+            123_456.789_012_345_67,
+        ];
+        let commands = [
+            Command::Key(Key::Forward, true),
+            Command::Key(Key::Back, false),
+            Command::Key(Key::Left, true),
+            Command::Key(Key::Right, false),
+            Command::Key(Key::Run, true),
+            Command::Face(-0.0),
+            Command::Face(359.999_999_999_999_9),
+            Command::Turn(-1.0 / 7.0),
+            Command::Pitch(-89.0 + 1e-12),
+            Command::Toward(-80_443.83, 90_985.980_000_000_01),
+            Command::Activate,
+            Command::End,
+        ];
+        let mut events = Vec::new();
+        for (i, c) in commands.iter().enumerate() {
+            events.push(Event {
+                t: seconds[i * seconds.len() / commands.len()],
+                command: *c,
+            });
+        }
+        let text: String = events.iter().map(|e| format!("{e}\n")).collect();
+        let back = Script::parse(&text).unwrap();
+        assert_eq!(back.events.len(), events.len());
+        for (a, b) in events.iter().zip(&back.events) {
+            assert_eq!(a.t.to_bits(), b.t.to_bits(), "{text}");
+            let bits = |c: &Command| match *c {
+                Command::Face(d) | Command::Turn(d) | Command::Pitch(d) => vec![d.to_bits()],
+                Command::Toward(x, y) => vec![x.to_bits(), y.to_bits()],
+                _ => Vec::new(),
+            };
+            assert_eq!(a.command, b.command);
+            assert_eq!(bits(&a.command), bits(&b.command));
+        }
     }
 }
 

@@ -29,6 +29,11 @@ pub struct Play {
     pub tick: Option<f64>,
     /// `--play-slice SECONDS`: ticks joined into slices that long.
     pub slice: Option<f64>,
+    /// `--play-stand SECONDS`: the longest standing slice, and how far the
+    /// walker looks ahead for a moving platform before it stands (a policy
+    /// of the play mode; needed by commands that arrive while the walker
+    /// runs, `fo4-view --play-keys`).
+    pub stand: Option<f64>,
     /// `--play-pick-bounds` (`play_activate_object_bounds_v1`),
     /// `--play-pick-bounds-activatable` (`play_activate_bounds_not_static_v1`).
     pub pick_bounds: bool,
@@ -158,6 +163,14 @@ impl Play {
                     .filter(|v| *v >= 0.0)
                     .ok_or("--play-slice takes seconds, 0 or more")?;
                 once(&mut self.slice, flag, v)?;
+                return Ok(2);
+            }
+            "--play-stand" => {
+                let v = number(flag, value(1)?)
+                    .ok()
+                    .filter(|v| *v > 0.0)
+                    .ok_or("--play-stand takes seconds, more than 0")?;
+                once(&mut self.stand, flag, v)?;
                 return Ok(2);
             }
             "--play-elevator" | "--play-elevator-also" => {
@@ -326,6 +339,7 @@ impl Play {
         if let Some(v) = self.slice {
             opts.slice = v;
         }
+        opts.stand = self.stand;
         opts
     }
 
@@ -396,6 +410,12 @@ impl Play {
             let _ = writeln!(
                 report,
                 "walker slices joined to {v} s at least (--play-slice)"
+            );
+        }
+        if let Some(v) = self.stand {
+            let _ = writeln!(
+                report,
+                "policy: a standing slice lasts {v} s at most, and the walker looks that far ahead for a moving platform before it stands (--play-stand)"
             );
         }
         for (name, rule, v, origin) in opts.params.provenance() {
@@ -506,12 +526,13 @@ mod tests {
 
     #[test]
     fn reads_every_play_option() {
-        let s = read("--walk-speed 300 --play-reach 150 --play-pick-bounds --play-pick-bounds-activatable --play-load-doors --play-follow-grid --play-slice 0.25 --play-live-world --play-elevator a.esm:0000000A --play-elevator a.esm:B --play-elevator-also-with a.esm:C A.ESM:0000000A --play-elevator-door --play-elevator-held-pose --play-elevator-rigid --play-elevator-door-onward --play-collision-off-chain --play-collision-reference-alpha --play-collision-child-flag-agrees --play-player-moveto --play-player-sits --play-around 2 --play-tick 0.02 --run-speed 400 --play-region-walker --play-recheck-marks --play-nowait --play-elevator-also a.esm:D").unwrap();
+        let s = read("--play-stand 0.1 --walk-speed 300 --play-reach 150 --play-pick-bounds --play-pick-bounds-activatable --play-load-doors --play-follow-grid --play-slice 0.25 --play-live-world --play-elevator a.esm:0000000A --play-elevator a.esm:B --play-elevator-also-with a.esm:C A.ESM:0000000A --play-elevator-door --play-elevator-held-pose --play-elevator-rigid --play-elevator-door-onward --play-collision-off-chain --play-collision-reference-alpha --play-collision-child-flag-agrees --play-player-moveto --play-player-sits --play-around 2 --play-tick 0.02 --run-speed 400 --play-region-walker --play-recheck-marks --play-nowait --play-elevator-also a.esm:D").unwrap();
         assert_eq!(s.walk_speed, Some(300.0));
         assert_eq!(s.run_speed, Some(400.0));
         assert_eq!(s.tick, Some(0.02));
         assert_eq!(s.reach, Some(150.0));
         assert_eq!(s.slice, Some(0.25));
+        assert_eq!(s.stand, Some(0.1));
         assert_eq!(s.around(), 2);
         assert_eq!(s.elevators, [k(0xA), k(0xB)]);
         assert_eq!(s.also, [k(0xD)]);
@@ -529,6 +550,8 @@ mod tests {
         assert_eq!(o.params.run_speed, 400.0);
         assert_eq!(o.settings.tick, 0.02);
         assert_eq!(o.slice, 0.25);
+        assert_eq!(o.stand, Some(0.1));
+        assert_eq!(Play::default().walker_options().stand, None);
         assert!(o.child_flag_agrees);
         let e = s.elevators();
         assert!(e.door && e.held_pose && e.rigid && e.door_onward);
@@ -567,6 +590,8 @@ mod tests {
             "--play-reach 0",
             "--play-reach 1 --play-reach 2",
             "--play-slice -1",
+            "--play-stand 0",
+            "--play-stand 0.1 --play-stand 0.2",
             "--walk-speed nan",
             "--play-elevator nokey",
             "--play-elevator-also-with a.esm:1",

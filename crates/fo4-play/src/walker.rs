@@ -10,7 +10,7 @@
 //! seconds are kept exactly. While no key is held and the walker stands
 //! still on the ground, the slice runs to the next command with no point:
 //! the player stands at the last one.
-use crate::input::{Command, Controls, Script};
+use crate::input::{Command, Controls, Event, Script};
 use crate::live::{Decision, Live, RunState};
 use crate::world::LoadDoor;
 use crate::{pick, Act, Driver, Next, PlayerAction, Point, Slice, View};
@@ -55,6 +55,13 @@ pub struct Options {
     /// [`Live::with_child_flag_agrees`];
     /// `--play-collision-child-flag-agrees`).
     pub child_flag_agrees: bool,
+    /// The longest standing slice (seconds; `--play-stand`), and how far
+    /// ahead the walker looks for a moving platform before it stands: a
+    /// policy of the play mode, no game claim. `None` (the default): a
+    /// standing slice runs to the next command and the walker looks that
+    /// far. Commands that arrive while the walker runs ([`Arrivals`]) need
+    /// it: the next command is not known beyond the present.
+    pub stand: Option<f64>,
 }
 impl Default for Options {
     fn default() -> Self {
@@ -66,9 +73,31 @@ impl Default for Options {
             slice: 0.0,
             collision: fo4_scene::readiness::Switches::default(),
             child_flag_agrees: false,
+            stand: None,
         }
     }
 }
+
+/// Commands that arrive while the walker runs, from a person at a window
+/// (`fo4-view --play-keys`): the same commands as a scripted input's
+/// ([`crate::input::Command`]), at seconds of the play clock, known for
+/// good up to a second the source names (its horizon). The walker asks for
+/// them only as far as its next step needs to know them, so it takes the
+/// same ticks and gives the run the same slices as it does when the same
+/// commands come from a file ([`Script`]): a source and a file holding its
+/// commands drive one walker the same way.
+pub trait Arrivals {
+    /// Waits until every command up to `until` is known; gives the
+    /// commands that arrived since the last call, in time order and each
+    /// after the horizon the last call gave, and the horizon now (at least
+    /// `until`). `None`: the source closed (the window closed) and the
+    /// walker stops. `at` and `feet`: the walker's second and feet as it
+    /// waits, for a source that shows them.
+    fn wait(&mut self, until: f64, at: f64, feet: Option<[f64; 3]>) -> Option<(Vec<Event>, f64)>;
+}
+
+/// Why the walker stopped when its commands' source closed.
+pub const SOURCE_CLOSED: &str = "the commands' source closed";
 
 /// One activation: (second, eye, direction, what the ray met: the
 /// reference and the distance, or why nothing was activated).
@@ -335,6 +364,11 @@ pub struct Walker {
     /// also in the walking worlds built later.
     statics_out: bool,
     script: Script,
+    /// Commands arriving while the walker runs (`None`: the script holds
+    /// every command) and the second up to which they are known (infinite
+    /// with a script).
+    arrivals: Option<Box<dyn Arrivals>>,
+    known: f64,
     opts: Options,
     next_event: usize,
     controls: Controls,
@@ -363,6 +397,11 @@ impl Walker {
     ) -> Result<Walker, String> {
         opts.params.validate().map_err(|e| e.to_string())?;
         opts.settings.validate().map_err(|e| e.to_string())?;
+        if opts.stand.is_some_and(|s| !(s.is_finite() && s > 0.0)) {
+            return Err(
+                "PlayStand: the longest standing slice is a positive number of seconds".into(),
+            );
+        }
         let activates = script.events.iter().any(|e| e.command == Command::Activate);
         if activates && !opts.reach.is_some_and(|r| r.is_finite() && r > 0.0) {
             return Err("PlayReach: the input activates; give the reach (--play-reach UNITS, the caller's assumption)".into());
@@ -387,6 +426,8 @@ impl Walker {
             boxes: None,
             statics_out: false,
             script,
+            arrivals: None,
+            known: f64::INFINITY,
             opts,
             next_event: 0,
             controls: Controls::default(),
@@ -463,6 +504,74 @@ impl Walker {
     pub fn with_player_sits(mut self) -> Walker {
         self.player_sits = Some(0);
         self
+    }
+
+    /// Takes its commands from a source as they arrive (a person at a
+    /// window) instead of the script, which must hold none. Needs the
+    /// longest standing slice ([`Options::stand`]); the input is over at
+    /// the first `end` that arrives.
+    pub fn with_arrivals(mut self, source: Box<dyn Arrivals>) -> Result<Walker, String> {
+        if self.opts.stand.is_none() {
+            return Err("PlayStand: commands that arrive while the walker runs need the longest standing slice (--play-stand SECONDS)".into());
+        }
+        if !self.script.events.is_empty() {
+            return Err("PlayInput: a scripted input and arriving commands together".into());
+        }
+        self.arrivals = Some(source);
+        self.known = f64::NEG_INFINITY;
+        self.end = f64::INFINITY;
+        Ok(self)
+    }
+
+    /// Knows every command up to `until`: with arriving commands, waits for
+    /// them (a script knows all of its own).
+    fn know(&mut self, until: f64) -> Result<(), String> {
+        while self.known < until {
+            let feet = self.character.as_ref().map(|c| c.feet);
+            let source = self.arrivals.as_mut().ok_or("PlayNoSource")?;
+            let (events, horizon) = source
+                .wait(until, self.t, feet)
+                .ok_or_else(|| SOURCE_CLOSED.to_string())?;
+            for e in events {
+                let last = self.script.events.last().map_or(f64::NEG_INFINITY, |l| l.t);
+                if !(e.t.is_finite() && e.t > self.known && e.t >= last) {
+                    return Err(format!(
+                        "PlayArrival: a command at {} s after the commands known up to {} s",
+                        e.t, self.known
+                    ));
+                }
+                if e.command == Command::End && self.end.is_infinite() {
+                    self.end = e.t;
+                }
+                self.script.events.push(e);
+            }
+            if horizon <= self.known {
+                return Err("PlayArrival: the source's horizon did not move".into());
+            }
+            self.known = horizon;
+        }
+        Ok(())
+    }
+
+    /// The second of the next command not applied (or the input's end),
+    /// knowing the commands up to `bound` at least: past `bound` the value
+    /// says only that no command comes before it, and callers read it no
+    /// further.
+    fn next_due(&mut self, bound: f64) -> Result<f64, String> {
+        self.know(bound)?;
+        Ok(self
+            .script
+            .events
+            .get(self.next_event)
+            .map_or(self.end, |e| e.t)
+            .min(self.end))
+    }
+
+    /// The reference the activation key would meet now and how far, read
+    /// as an activation reads it (nothing logged): what is under the
+    /// crosshair. `None` before the walker stands somewhere.
+    pub fn aim(&self) -> Option<pick::Hit> {
+        self.ray().and_then(|(_, _, hit)| hit)
     }
 
     /// Reads the `MoveTo` calls the run made on the player
@@ -755,7 +864,8 @@ impl Walker {
         Ok(out)
     }
 
-    fn activate(&mut self) -> Option<Act> {
+    /// The eye, the look and what the activation's ray meets from there.
+    fn ray(&self) -> Option<([f64; 3], [f64; 3], Option<pick::Hit>)> {
         let c = self.character.as_ref()?;
         let eye = c.eye();
         let dir = self.controls.look();
@@ -777,6 +887,11 @@ impl Walker {
                 &|k| vis.disabled(k),
             )
         };
+        Some((eye, dir, hit))
+    }
+
+    fn activate(&mut self) -> Option<Act> {
+        let (eye, dir, hit) = self.ray()?;
         if let Some(pick::Hit {
             via: pick::Via::Bounds { .. },
             ..
@@ -821,7 +936,8 @@ impl Walker {
 
     /// The commands due by the walker's present second: the controls they
     /// change and the actions they make.
-    fn commands(&mut self) -> Vec<Act> {
+    fn commands(&mut self) -> Result<Vec<Act>, String> {
+        self.know(self.t)?;
         let mut actions = Vec::new();
         while let Some(e) = self.script.events.get(self.next_event).copied() {
             if e.t > self.t {
@@ -842,7 +958,7 @@ impl Walker {
                 }
             }
         }
-        actions
+        Ok(actions)
     }
 
     /// One slice: the walker from its present second to the next tick or
@@ -884,25 +1000,21 @@ impl Walker {
         let mut actions = Vec::new();
         if self.character.is_none() {
             points = self.start(now, first)?;
-            actions = self.commands();
+            actions = self.commands()?;
         }
         if self.t >= self.end && points.is_empty() && actions.is_empty() {
             return Ok(Next::Finish);
         }
-        let next_command = self
-            .script
-            .events
-            .get(self.next_event)
-            .map_or(self.end, |e| e.t)
-            .min(self.end);
+        let tick = self.opts.settings.tick;
         if self.controls.target.is_some() {
+            let next_command = self.next_due(self.t + tick)?;
             if let Some(c) = &self.character {
                 let speed = if self.controls.run {
                     self.opts.params.run_speed
                 } else {
                     self.opts.params.walk_speed
                 };
-                let step = (next_command.max(self.t) - self.t).min(self.opts.settings.tick);
+                let step = (next_command.max(self.t) - self.t).min(tick);
                 if self.controls.steer(c.feet, 0.5 * speed * step.max(1e-9)) {
                     self.log.borrow_mut().arrivals.push((self.t, c.feet));
                 }
@@ -915,14 +1027,29 @@ impl Walker {
         let grounded = self.character.as_ref().is_some_and(|c| c.grounded);
         self.log.borrow_mut().slices += 1;
         // Standing: no key, on the ground and not moved by the last tick
-        // (nor by a moving platform).
-        if !keys && self.still && grounded && !self.elevators_moving(self.t, next_command) {
+        // (nor by a moving platform before the next command, or within the
+        // longest standing slice).
+        let may_stand = !keys && self.still && grounded;
+        let bound = match (may_stand, self.opts.stand) {
+            (false, _) => self.t + tick,
+            (true, Some(s)) => self.t + s.max(tick),
+            (true, None) => f64::INFINITY,
+        };
+        let next_command = self.next_due(bound)?;
+        let ahead = match self.opts.stand {
+            Some(s) => next_command.min(self.t + s),
+            None => next_command,
+        };
+        if may_stand && !self.elevators_moving(self.t, ahead) {
             let mut until = next_command.max(self.t);
             if !self.elevators.is_empty() {
                 until = until.min(self.t + ELEVATOR_STAND);
             }
+            if let Some(s) = self.opts.stand {
+                until = until.min(self.t + s);
+            }
             self.t = until;
-            actions.extend(self.commands());
+            actions.extend(self.commands()?);
             let mut log = self.log.borrow_mut();
             log.standing_slices += 1;
             log.points += points.len() as u64;
@@ -933,7 +1060,6 @@ impl Walker {
                 actions,
             }));
         }
-        let tick = self.opts.settings.tick;
         let to = (self.t + tick).min(next_command.max(self.t + 1e-9));
         let dt = to - self.t;
         let c = self.character.as_mut().ok_or("PlayNoWalker")?;
@@ -977,7 +1103,7 @@ impl Walker {
             self.still = false;
         }
         self.t = to;
-        actions.extend(self.commands());
+        actions.extend(self.commands()?);
         let mut log = self.log.borrow_mut();
         log.points += points.len() as u64;
         log.track.extend(points.iter().cloned());
@@ -1489,6 +1615,191 @@ mod tests {
         assert_eq!(p1, p2);
         assert_eq!(a1, a2);
         assert!(n2 * 3 < n1, "{n1} {n2}");
+    }
+
+    /// A person at a window, without the window: frames of uneven length
+    /// (some as long as a busy run lets the window's clock run ahead),
+    /// commands stamped at the second the frame ends as the window stamps
+    /// them, the horizon moved as the window's clock moves; the events the
+    /// walker received kept as the text a recording writes.
+    struct Window {
+        plan: Vec<(f64, Vec<Command>)>,
+        frame: usize,
+        clock: f64,
+        written: Rc<RefCell<String>>,
+        waits: Rc<RefCell<u64>>,
+    }
+
+    impl Arrivals for Window {
+        fn wait(&mut self, until: f64, _: f64, _: Option<[f64; 3]>) -> Option<(Vec<Event>, f64)> {
+            *self.waits.borrow_mut() += 1;
+            let mut out = Vec::new();
+            while self.clock < until {
+                let (dt, commands) = self
+                    .plan
+                    .get(self.frame)
+                    .cloned()
+                    .unwrap_or((1.0 / 60.0, Vec::new()));
+                self.frame += 1;
+                self.clock += dt;
+                for command in commands {
+                    out.push(Event {
+                        t: self.clock,
+                        command,
+                    });
+                }
+            }
+            let mut w = self.written.borrow_mut();
+            for e in &out {
+                w.push_str(&format!("{e}\n"));
+            }
+            Some((out, self.clock))
+        }
+    }
+
+    /// Frames of uneven length from a fixed pseudo-random sequence, and the
+    /// commands a person gives: looks with the mouse while walking, keys
+    /// held and let go, running, strafing, the activation, the end.
+    fn person_plan() -> Vec<(f64, Vec<Command>)> {
+        use crate::input::Key;
+        let mut seed: u64 = 0x2545_F491_4F6C_DD1D;
+        let mut plan = Vec::new();
+        for n in 0..260_u32 {
+            seed = seed
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            let r = (seed >> 33) as f64 / f64::from(1u32 << 31);
+            // Mostly 60 to 200 frames a second, now and then a long frame.
+            let dt = if n % 37 == 36 {
+                0.25
+            } else {
+                0.005 + 0.012 * r
+            };
+            let mut c = Vec::new();
+            match n {
+                3 => c.extend([Command::Face(10.0 + r), Command::Pitch(-5.0 - r)]),
+                12 => c.push(Command::Key(Key::Forward, true)),
+                20..=60 => c.push(Command::Face(10.0 + 0.37 * f64::from(n - 19) + r)),
+                70 => c.push(Command::Key(Key::Run, true)),
+                90 => c.push(Command::Key(Key::Left, true)),
+                110 => c.extend([
+                    Command::Key(Key::Left, false),
+                    Command::Key(Key::Run, false),
+                ]),
+                130 => c.extend([Command::Key(Key::Forward, false), Command::Face(0.0)]),
+                131 => c.push(Command::Activate),
+                170 => c.push(Command::Key(Key::Back, true)),
+                185 => c.extend([Command::Key(Key::Right, true), Command::Pitch(3.0)]),
+                200 => c.extend([
+                    Command::Key(Key::Back, false),
+                    Command::Key(Key::Right, false),
+                ]),
+                201 => c.push(Command::Activate),
+                250 => c.push(Command::End),
+                _ => {}
+            }
+            plan.push((dt, c));
+        }
+        plan
+    }
+
+    #[test]
+    fn commands_that_arrive_drive_the_walker_as_their_recording_does() {
+        let start = Point {
+            t: 0.0,
+            space: key(1),
+            pos: [0.0, 0.0, 5.0],
+            facing: None,
+        };
+        let opts = Options {
+            reach: Some(400.0),
+            slice: 0.25,
+            stand: Some(0.1),
+            ..Options::default()
+        };
+        let refs = vec![None, Some(key(7))];
+        let written = Rc::new(RefCell::new(String::new()));
+        let waits = Rc::new(RefCell::new(0));
+        let window = Window {
+            plan: person_plan(),
+            frame: 0,
+            clock: 0.0,
+            written: written.clone(),
+            waits: waits.clone(),
+        };
+        let mut live = Walker::new(floor(), refs.clone(), Script::default(), opts)
+            .unwrap()
+            .with_arrivals(Box::new(window))
+            .unwrap();
+        let a = slices(&mut live, &start);
+        // The recording, read back as a scripted input.
+        let text = written.borrow().clone();
+        let script = Script::parse(&text).unwrap();
+        assert!(script.events.len() > 50, "{text}");
+        assert_eq!(script.end(), script.events.last().map(|e| e.t));
+        let mut replay = Walker::new(floor(), refs, script, opts).unwrap();
+        let b = slices(&mut replay, &start);
+        // The same slices: points, seconds and activations, bit for bit.
+        assert_eq!(a, b);
+        let (la, lb) = (live.log.borrow(), replay.log.borrow());
+        assert_eq!(la.track, lb.track);
+        assert_eq!(la.looks, lb.looks);
+        assert_eq!(
+            (la.ticks, la.slices, la.standing_slices, la.points),
+            (lb.ticks, lb.slices, lb.standing_slices, lb.points)
+        );
+        assert_eq!(la.activations.len(), 2);
+        // It walked, stood, and the walker waited for the window often.
+        assert!(la.points > 20 && la.standing_slices > 5, "{la:?}");
+        assert!(*waits.borrow() > 50);
+        // Standing slices last 0.1 s at most.
+        let mut now = 0.0;
+        for s in &a {
+            if s.points.is_empty() && s.actions.is_empty() {
+                assert!(s.until - now <= 0.1 + 1e-12, "{} {}", now, s.until);
+            }
+            now = s.until;
+        }
+    }
+
+    #[test]
+    fn arriving_commands_need_the_standing_slice_and_no_script() {
+        struct Never;
+        impl Arrivals for Never {
+            fn wait(&mut self, _: f64, _: f64, _: Option<[f64; 3]>) -> Option<(Vec<Event>, f64)> {
+                None
+            }
+        }
+        let w = Walker::new(floor(), vec![], Script::default(), Options::default()).unwrap();
+        assert!(w.with_arrivals(Box::new(Never)).is_err());
+        let opts = Options {
+            stand: Some(0.1),
+            ..Options::default()
+        };
+        let w = Walker::new(floor(), vec![], Script::parse("1 end").unwrap(), opts).unwrap();
+        assert!(w.with_arrivals(Box::new(Never)).is_err());
+        assert!(Walker::new(
+            floor(),
+            vec![],
+            Script::default(),
+            Options {
+                stand: Some(0.0),
+                ..Options::default()
+            }
+        )
+        .is_err());
+        // A source that closes stops the walker.
+        let mut w = Walker::new(floor(), vec![], Script::default(), opts)
+            .unwrap()
+            .with_arrivals(Box::new(Never))
+            .unwrap();
+        let start = Point {
+            t: 0.0,
+            space: key(1),
+            pos: [0.0, 0.0, 5.0],
+            facing: None,
+        };
+        assert_eq!(w.step(0.0, Some(&start)).unwrap_err(), SOURCE_CLOSED);
     }
 
     #[test]
