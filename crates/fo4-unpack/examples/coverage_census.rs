@@ -18,7 +18,18 @@
 //! ```text
 //! coverage_census MANIFEST OUT_DIR --all [--every N] [--limit N]
 //! coverage_census MANIFEST OUT_DIR --view CELL_EDITOR_ID [--around N]
+//! coverage_census MANIFEST OUT_DIR --views FILE [--mark FILE]
 //! ```
+//!
+//! `--views FILE`: the views a run loads, one per line (`KEY AROUND
+//! DESCRIPTION...`, the cell as a record key `plugin:XXXXXXXX`), each
+//! counted alone into `OUT_DIR/view-K/` and all of them into `OUT_DIR`, with
+//! `views.txt` (counts and reason labels only, fit for `spec/`): for each
+//! view and the sum, the outcomes and the omitted placements' families and
+//! exact reasons with the share each holds of the view's omitted
+//! placements. `--mark FILE` (one record key per line): those placements'
+//! outcomes and reasons are counted apart as well (the play run's named
+//! platforms).
 #[path = "coverage/detail.rs"]
 mod detail;
 use fo4_core::{Budget, Error, Manifest};
@@ -30,7 +41,12 @@ use fo4_scene::{
     Instance, Loader, RuleLevel, State,
 };
 use fo4_vfs::Vfs;
-use std::{collections::BTreeMap, fmt::Write as _, io::Write as _, path::Path};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    fmt::Write as _,
+    io::Write as _,
+    path::Path,
+};
 
 type AnyResult<T> = Result<T, Box<dyn std::error::Error>>;
 
@@ -103,6 +119,11 @@ struct Census {
     detail: BTreeMap<(String, String), Tally>,
     /// Texture-transform analysis by model path (not counted).
     texture_cache: BTreeMap<Vec<u8>, detail::TextureModel>,
+    /// The caller's marked placements (`--mark`; keys with the plugin
+    /// lower case), not counted themselves.
+    marks: BTreeSet<FormKey>,
+    /// The marked placements by kind, outcome and reasons.
+    marked: BTreeMap<String, Tally>,
 }
 
 /// A label for `e` that carries no path, FormID or object name: the code,
@@ -417,6 +438,18 @@ fn enable_key(kind: &str, p: &fo4_scene::enable::Presence, outcome: &Outcome) ->
     format!("{kind}, {start}, {o}")
 }
 
+/// One placement's outcome as one line: its name and, omitted, its
+/// reasons; drawn under hypotheses, its pending rules.
+fn outcome_text(outcome: &Outcome) -> String {
+    match outcome {
+        Outcome::Drawn => "drawn".into(),
+        Outcome::UnderHypotheses(rules) => format!("drawn under hypotheses: {}", rules.join(" + ")),
+        Outcome::Hidden(rule) => format!("hidden by {rule}"),
+        Outcome::Outside(t) => format!("outside ({t})"),
+        Outcome::Omitted(reasons) => format!("omitted: {}", reasons.join(" + ")),
+    }
+}
+
 fn base_key_info(c: &Census, base: &str) -> (String, String, String) {
     c.base_info
         .iter()
@@ -573,6 +606,12 @@ fn count(
         if let Some(p) = &i.enable {
             c.enable
                 .entry(enable_key("reference", p, &outcome))
+                .or_default()
+                .add(a.unwrap_or(0.));
+        }
+        if c.marks.contains(&fo4_scene::timeline::norm(&id.reference)) {
+            c.marked
+                .entry(format!("reference, {}", outcome_text(&outcome)))
                 .or_default()
                 .add(a.unwrap_or(0.));
         }
@@ -963,7 +1002,98 @@ fn summary(c: &Census, scope: &str, elapsed: f64) -> String {
     for (k, n) in &c.exclusions {
         let _ = writeln!(out, "  {n:>8}  {k}");
     }
+    if !c.marked.is_empty() {
+        marked(&mut out, c);
+    }
     out
+}
+
+/// The marked placements' section (`--mark`).
+fn marked(out: &mut String, c: &Census) {
+    let n: u64 = c.marked.values().map(|t| t.n).sum();
+    let _ = writeln!(
+        out,
+        "\n## Marked placements ({n} of {} marked loaded), by kind, outcome and reasons\n",
+        c.marks.len()
+    );
+    for (k, t) in &c.marked {
+        let _ = writeln!(out, "  {:>6}  {k}", t.n);
+    }
+}
+
+/// One view's (or the sum's) outcomes and the omitted placements' reasons,
+/// each with its share of the omitted placements, by count and by area
+/// proxy (`--views`; counts and labels only).
+fn view_text(out: &mut String, title: &str, c: &Census, top: usize) {
+    let p = c.placements;
+    let o = c.omitted;
+    let _ = writeln!(out, "## {title}\n");
+    let _ = writeln!(
+        out,
+        "placements {} (area proxy {:.4e}); deleted {}, initially disabled {}",
+        p.n, p.area, c.deleted, c.disabled
+    );
+    let line = |out: &mut String, name: &str, t: Tally| {
+        let _ = writeln!(
+            out,
+            "  {name:<34} {:>6} {:>6.2}%  area {:>6.2}%",
+            t.n,
+            pct(t.n as f64, p.n as f64),
+            pct(t.area, p.area)
+        );
+    };
+    line(out, "drawn without hypotheses", c.drawn);
+    line(out, "drawn only under hypotheses", c.hypotheses);
+    for (k, t) in &c.hidden {
+        line(out, &format!("hidden by rule {k}"), *t);
+    }
+    let outside = c.outside.values().fold(Tally::default(), |mut a, t| {
+        a.n += t.n;
+        a.area += t.area;
+        a
+    });
+    line(out, "outside the visual slice", outside);
+    line(out, "omitted", o);
+    let ranked_share = |out: &mut String, name: &str, map: &BTreeMap<String, Tally>| {
+        let _ = writeln!(
+            out,
+            "\n{name} (placements, share of the omitted; area share of the omitted):"
+        );
+        let mut v: Vec<_> = map.iter().collect();
+        v.sort_by(|a, b| b.1.n.cmp(&a.1.n).then(a.0.cmp(b.0)));
+        for (k, t) in v.iter().take(top) {
+            let _ = writeln!(
+                out,
+                "  {:>6} {:>6.2}%  area {:>6.2}%  {k}",
+                t.n,
+                pct(t.n as f64, o.n as f64),
+                pct(t.area, o.area)
+            );
+        }
+        if v.len() > top {
+            let rest = v[top..].iter().fold(Tally::default(), |mut a, (_, t)| {
+                a.n += t.n;
+                a.area += t.area;
+                a
+            });
+            let _ = writeln!(out, "  ... {} more ({} placements)", v.len() - top, rest.n);
+        }
+    };
+    ranked_share(
+        out,
+        "every family of reasons, once per placement",
+        &c.family_any,
+    );
+    ranked_share(
+        out,
+        "sole family (resolving it alone would draw the placement)",
+        &c.family_sole,
+    );
+    ranked_share(out, "every exact reason, once per placement", &c.any);
+    if !c.marked.is_empty() {
+        marked(out, c);
+    }
+    let _ = writeln!(out);
 }
 
 fn bases_table(c: &Census) -> String {
@@ -1035,6 +1165,7 @@ fn dump(c: &Census) -> String {
         ("family_sets", &c.family_sets),
         ("pending_rules", &c.pending_rules),
         ("pending_sets", &c.pending_sets),
+        ("marked", &c.marked),
     ] {
         for (k, v) in map {
             line(sec, k, *v);
@@ -1111,6 +1242,7 @@ fn load(c: &mut Census, text: &str) -> AnyResult<()> {
             "family_sets" => add(c.family_sets.entry(key.into()).or_default()),
             "pending_rules" => add(c.pending_rules.entry(key.into()).or_default()),
             "pending_sets" => add(c.pending_sets.entry(key.into()).or_default()),
+            "marked" => add(c.marked.entry(key.into()).or_default()),
             "by_type" if parts.len() == 2 => add(c
                 .by_type
                 .entry((parts[0].into(), parts[1].into()))
@@ -1148,7 +1280,7 @@ fn load(c: &mut Census, text: &str) -> AnyResult<()> {
 
 fn run() -> AnyResult<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
-    const USAGE: &str = "coverage_census MANIFEST OUT_DIR (--all [--every N] [--limit N] [--shard K/N] | --view CELL_EDITOR_ID [--around N] | --merge DIR...) [--times S[,S...]] [--clock-emissive-multiple] [--clock-emissive-colour] [--clock-falloff] [--clock-translation] [--clock-rotation] [--clock-rotation-xyz] [--clock-scale]";
+    const USAGE: &str = "coverage_census MANIFEST OUT_DIR (--all [--every N] [--limit N] [--shard K/N] | --view CELL_EDITOR_ID [--around N] | --views FILE [--mark FILE] | --merge DIR...) [--times S[,S...]] [--clock-emissive-multiple] [--clock-emissive-colour] [--clock-falloff] [--clock-translation] [--clock-rotation] [--clock-rotation-xyz] [--clock-scale]";
     if args.len() < 3 {
         return Err(USAGE.into());
     }
@@ -1157,6 +1289,8 @@ fn run() -> AnyResult<()> {
     std::fs::create_dir_all(out)?;
     let mut all = false;
     let mut view = None;
+    let mut views = None;
+    let mut marks = BTreeSet::new();
     let mut around = 0u32;
     let mut every = 32u64;
     let mut limit = u64::MAX;
@@ -1217,6 +1351,29 @@ fn run() -> AnyResult<()> {
             }
             "--all" => all = true,
             "--view" => view = Some(rest.next().ok_or(USAGE)?.clone()),
+            "--views" => {
+                let text = std::fs::read_to_string(rest.next().ok_or(USAGE)?)?;
+                let mut v = Vec::new();
+                for row in text.lines().filter(|r| !r.trim().is_empty()) {
+                    let mut f = row.split_whitespace();
+                    let key = f
+                        .next()
+                        .and_then(fo4_scene::timeline::parse_key)
+                        .ok_or("ViewsRow: a record key first")?;
+                    let around: u32 = f.next().ok_or("ViewsRow: an around second")?.parse()?;
+                    v.push((key, around, f.collect::<Vec<_>>().join(" ")));
+                }
+                views = Some(v);
+            }
+            "--mark" => {
+                let text = std::fs::read_to_string(rest.next().ok_or(USAGE)?)?;
+                for row in text.lines().filter(|r| !r.trim().is_empty()) {
+                    marks.insert(
+                        fo4_scene::timeline::parse_key(row.trim())
+                            .ok_or("MarkRow: a record key")?,
+                    );
+                }
+            }
             "--around" => around = u32::try_from(num()?)?,
             "--every" => every = num()?.max(1),
             "--limit" => limit = num()?,
@@ -1231,7 +1388,14 @@ fn run() -> AnyResult<()> {
             _ => return Err(USAGE.into()),
         }
     }
-    if all == view.is_some() {
+    if [all, view.is_some(), views.is_some()]
+        .iter()
+        .filter(|x| **x)
+        .count()
+        != 1
+        || (views.is_some() && clock.times.len() != 1)
+        || (views.is_none() && !marks.is_empty())
+    {
         return Err(USAGE.into());
     }
     let started = std::time::Instant::now();
@@ -1261,6 +1425,78 @@ fn run() -> AnyResult<()> {
     let mut loader = Loader::new(&store, &vfs, &m.language, RuleLevel::Hypotheses, &cache);
     if clock.switches.any() {
         loader.set_clock_switches(clock.switches, &cache);
+    }
+    if let Some(views) = &views {
+        let mut total = Census {
+            marks: marks.clone(),
+            ..Census::default()
+        };
+        let mut text = String::from(
+            "# Render readiness of the views a run loads (coverage_census --views)\n\nEach view loaded as the viewer loads it (the cell, and with around N the exterior cells about it), the viewer's draw list built with the placed actors at the hypotheses level; outcomes as in coverage-census.txt. Shares of the omitted placements by count and by the area proxy (the largest face of the base's OBND box times the scale squared).\n\n",
+        );
+        for (k, (key, around, what)) in views.iter().enumerate() {
+            let mut cs = vec![Census {
+                marks: marks.clone(),
+                ..Census::default()
+            }];
+            let mut rows = String::from(
+                "reference\tkind\tbase\teditor_id\tmodel\tarea\toutcome\tdetail\tplacement\n",
+            );
+            let b = Budget::new(m.limits.max_memory.saturating_mul(8));
+            let failures = cell(
+                &mut cs,
+                &clock,
+                &mut loader,
+                &store,
+                &m,
+                &vfs,
+                &spelling,
+                key,
+                *around,
+                Some(&mut rows),
+                &b,
+            )?;
+            if let Some(e) = failures.into_iter().flatten().next() {
+                return Err(e.into());
+            }
+            let c = &mut cs[0];
+            c.elapsed = started.elapsed().as_secs_f64();
+            let dir = out.join(format!("view-{}", k + 1));
+            std::fs::create_dir_all(&dir)?;
+            let scope = format!("view {}: {what}, around {around}", k + 1);
+            std::fs::write(dir.join("summary.txt"), summary(c, &scope, c.elapsed))?;
+            std::fs::write(dir.join("counts.tsv"), dump(c))?;
+            std::fs::write(dir.join("bases.tsv"), bases_table(c))?;
+            std::fs::write(dir.join("placements.tsv"), rows)?;
+            view_text(&mut text, &scope, c, 15);
+            load(&mut total, &dump(c))?;
+            let _ = writeln!(
+                std::io::stderr(),
+                "view {}: {} placements, {} omitted, {:.0} s",
+                k + 1,
+                c.placements.n,
+                c.omitted.n,
+                c.elapsed
+            );
+        }
+        total.elapsed = started.elapsed().as_secs_f64();
+        view_text(
+            &mut text,
+            &format!(
+                "the {} views together (a placement counted once per view that loads it)",
+                views.len()
+            ),
+            &total,
+            25,
+        );
+        std::fs::write(out.join("views.txt"), text)?;
+        std::fs::write(
+            out.join("summary.txt"),
+            summary(&total, &format!("{} views", views.len()), total.elapsed),
+        )?;
+        std::fs::write(out.join("counts.tsv"), dump(&total))?;
+        std::fs::write(out.join("bases.tsv"), bases_table(&total))?;
+        return Ok(());
     }
     let scope;
     if let Some(edid) = &view {

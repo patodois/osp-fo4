@@ -1,0 +1,740 @@
+# Render readiness of the views a run loads (coverage_census --views)
+
+Each view loaded as the viewer loads it (the cell, and with around N the exterior cells about it), the viewer's draw list built with the placed actors at the hypotheses level; outcomes as in coverage-census.txt. Shares of the omitted placements by count and by the area proxy (the largest face of the base's OBND box times the scale squared).
+
+## view 1: exterior where the run starts (0 s), around 1
+
+placements 1864 (area proxy 3.9999e8); deleted 0, initially disabled 41
+  drawn without hypotheses             1340  71.89%  area  64.52%
+  drawn only under hypotheses           153   8.21%  area  34.23%
+  hidden by rule editor_marker_hidden_v1     12   0.64%  area   0.01%
+  hidden by rule xesp_child_follows_parent_v1     10   0.54%  area   0.05%
+  outside the visual slice                2   0.11%  area   0.00%
+  omitted                               347  18.62%  area   1.20%
+
+every family of reasons, once per placement (placements, share of the omitted; area share of the omitted):
+     203  58.50%  area   2.63%  record: ACTI.FNAM
+     203  58.50%  area   2.63%  record: ACTI.PNAM
+     186  53.60%  area   2.82%  record: VMAD
+      81  23.34%  area   1.02%  record: LIGH.DATA
+      81  23.34%  area   1.02%  record: REFR.XLIG
+      78  22.48%  area   0.98%  record: REFR.XRDS
+      56  16.14%  area   2.10%  record: REFR.XLRT
+      26   7.49%  area   0.00%  record: MissingModelPath
+      14   4.03%  area   2.25%  record: FURN.FNAM
+      14   4.03%  area   2.25%  record: FURN.MNAM
+      14   4.03%  area   2.25%  record: FURN.PNAM
+      14   4.03%  area   2.25%  record: FURN.SNAM
+      14   4.03%  area   2.25%  record: FURN.WBDT
+      12   3.46%  area   6.02%  model: UnsupportedNifBlock BSSkin::Instance
+      12   3.46%  area   6.02%  model: UnsupportedSkinning BSTriShape
+  ... 27 more (111 placements)
+
+sole family (resolving it alone would draw the placement) (placements, share of the omitted; area share of the omitted):
+       4   1.15%  area   1.65%  draw: UnsupportedColorOnlyEffectFeatures 2684354624
+       4   1.15%  area   0.09%  record: VMAD
+       3   0.86%  area   0.00%  draw: MissingDocumentedReferenceScale
+       3   0.86%  area  81.92%  model: animation-controller blocks (transform-varies)
+       2   0.58%  area   0.25%  model: animation-controller blocks (effect-idle)
+       2   0.58%  area   0.51%  record: DOOR.FNAM
+       2   0.58%  area   0.00%  record: REFR.XOWN
+       1   0.29%  area   0.12%  actor draw: ActorSkinBoneMissing
+       1   0.29%  area   0.14%  actor: not resolved (skin)
+
+every exact reason, once per placement (placements, share of the omitted; area share of the omitted):
+     203  58.50%  area   2.63%  record: UninterpretedVisualSubrecord ACTI.FNAM.layout_not_established
+     203  58.50%  area   2.63%  record: UninterpretedVisualSubrecord ACTI.PNAM.layout_not_established
+     186  53.60%  area   2.82%  record: RuntimeCondition VMAD
+      81  23.34%  area   1.02%  record: UninterpretedVisualSubrecord REFR.XLIG.FOV_EndDistance_NearClip_Volumetric_and_Fade24_offsets_not_independently_established
+      81  23.34%  area   1.02%  record: UnsupportedUsedFieldLayout LIGH.DATA.Flags.Unknown_0_13_21_and_unmapped_bits
+      78  22.48%  area   0.98%  record: UninterpretedVisualSubrecord REFR.XRDS.layout_not_established
+      56  16.14%  area   2.10%  record: RuntimeRecordState REFR.XLRT
+      26   7.49%  area   0.00%  record: MissingModelPath
+      14   4.03%  area   2.25%  record: UninterpretedVisualSubrecord FURN.FNAM.layout_not_established
+      14   4.03%  area   2.25%  record: UninterpretedVisualSubrecord FURN.MNAM.layout_not_established
+      14   4.03%  area   2.25%  record: UninterpretedVisualSubrecord FURN.PNAM.layout_not_established
+      14   4.03%  area   2.25%  record: UninterpretedVisualSubrecord FURN.SNAM.layout_not_established
+      14   4.03%  area   2.25%  record: UninterpretedVisualSubrecord FURN.WBDT.layout_not_established
+      12   3.46%  area   6.02%  model: UnsupportedNifBlock BSSkin::Instance
+      12   3.46%  area   6.02%  model: UnsupportedSkinning BSTriShape
+  ... 60 more (169 placements)
+
+## view 2: exterior (from 313 s), around 1
+
+placements 1964 (area proxy 3.5000e8); deleted 0, initially disabled 45
+  drawn without hypotheses             1427  72.66%  area  63.73%
+  drawn only under hypotheses           166   8.45%  area  34.84%
+  hidden by rule editor_marker_hidden_v1     12   0.61%  area   0.01%
+  hidden by rule xesp_child_follows_parent_v1     10   0.51%  area   0.06%
+  outside the visual slice                2   0.10%  area   0.00%
+  omitted                               347  17.67%  area   1.37%
+
+every family of reasons, once per placement (placements, share of the omitted; area share of the omitted):
+     203  58.50%  area   2.63%  record: ACTI.FNAM
+     203  58.50%  area   2.63%  record: ACTI.PNAM
+     186  53.60%  area   2.82%  record: VMAD
+      81  23.34%  area   1.02%  record: LIGH.DATA
+      81  23.34%  area   1.02%  record: REFR.XLIG
+      78  22.48%  area   0.98%  record: REFR.XRDS
+      56  16.14%  area   2.10%  record: REFR.XLRT
+      26   7.49%  area   0.00%  record: MissingModelPath
+      14   4.03%  area   2.25%  record: FURN.FNAM
+      14   4.03%  area   2.25%  record: FURN.MNAM
+      14   4.03%  area   2.25%  record: FURN.PNAM
+      14   4.03%  area   2.25%  record: FURN.SNAM
+      14   4.03%  area   2.25%  record: FURN.WBDT
+      12   3.46%  area   6.02%  model: UnsupportedNifBlock BSSkin::Instance
+      12   3.46%  area   6.02%  model: UnsupportedSkinning BSTriShape
+  ... 27 more (111 placements)
+
+sole family (resolving it alone would draw the placement) (placements, share of the omitted; area share of the omitted):
+       4   1.15%  area   1.65%  draw: UnsupportedColorOnlyEffectFeatures 2684354624
+       4   1.15%  area   0.09%  record: VMAD
+       3   0.86%  area   0.00%  draw: MissingDocumentedReferenceScale
+       3   0.86%  area  81.92%  model: animation-controller blocks (transform-varies)
+       2   0.58%  area   0.25%  model: animation-controller blocks (effect-idle)
+       2   0.58%  area   0.51%  record: DOOR.FNAM
+       2   0.58%  area   0.00%  record: REFR.XOWN
+       1   0.29%  area   0.12%  actor draw: ActorSkinBoneMissing
+       1   0.29%  area   0.14%  actor: not resolved (skin)
+
+every exact reason, once per placement (placements, share of the omitted; area share of the omitted):
+     203  58.50%  area   2.63%  record: UninterpretedVisualSubrecord ACTI.FNAM.layout_not_established
+     203  58.50%  area   2.63%  record: UninterpretedVisualSubrecord ACTI.PNAM.layout_not_established
+     186  53.60%  area   2.82%  record: RuntimeCondition VMAD
+      81  23.34%  area   1.02%  record: UninterpretedVisualSubrecord REFR.XLIG.FOV_EndDistance_NearClip_Volumetric_and_Fade24_offsets_not_independently_established
+      81  23.34%  area   1.02%  record: UnsupportedUsedFieldLayout LIGH.DATA.Flags.Unknown_0_13_21_and_unmapped_bits
+      78  22.48%  area   0.98%  record: UninterpretedVisualSubrecord REFR.XRDS.layout_not_established
+      56  16.14%  area   2.10%  record: RuntimeRecordState REFR.XLRT
+      26   7.49%  area   0.00%  record: MissingModelPath
+      14   4.03%  area   2.25%  record: UninterpretedVisualSubrecord FURN.FNAM.layout_not_established
+      14   4.03%  area   2.25%  record: UninterpretedVisualSubrecord FURN.MNAM.layout_not_established
+      14   4.03%  area   2.25%  record: UninterpretedVisualSubrecord FURN.PNAM.layout_not_established
+      14   4.03%  area   2.25%  record: UninterpretedVisualSubrecord FURN.SNAM.layout_not_established
+      14   4.03%  area   2.25%  record: UninterpretedVisualSubrecord FURN.WBDT.layout_not_established
+      12   3.46%  area   6.02%  model: UnsupportedNifBlock BSSkin::Instance
+      12   3.46%  area   6.02%  model: UnsupportedSkinning BSTriShape
+  ... 60 more (169 placements)
+
+## view 3: exterior (from 323 s), around 1
+
+placements 1919 (area proxy 3.2845e8); deleted 0, initially disabled 66
+  drawn without hypotheses             1333  69.46%  area  65.54%
+  drawn only under hypotheses           185   9.64%  area  28.12%
+  hidden by rule editor_marker_hidden_v1     21   1.09%  area   0.01%
+  hidden by rule xesp_child_follows_parent_v1     10   0.52%  area   0.06%
+  outside the visual slice                2   0.10%  area   0.00%
+  omitted                               368  19.18%  area   6.28%
+
+every family of reasons, once per placement (placements, share of the omitted; area share of the omitted):
+     214  58.15%  area   0.63%  record: ACTI.FNAM
+     214  58.15%  area   0.63%  record: ACTI.PNAM
+     204  55.43%  area  31.12%  record: VMAD
+      82  22.28%  area   0.24%  record: LIGH.DATA
+      82  22.28%  area   0.24%  record: REFR.XLIG
+      79  21.47%  area   0.23%  record: REFR.XRDS
+      59  16.03%  area  47.83%  record: REFR.XLRT
+      36   9.78%  area   0.00%  record: MissingModelPath
+      15   4.08%  area  30.76%  model: UnsupportedNifBlock BSSkin::Instance
+      15   4.08%  area  30.76%  model: UnsupportedSkinning BSTriShape
+      14   3.80%  area  77.86%  model: animation-controller blocks (behavior-graph)
+      14   3.80%  area   0.52%  record: FURN.FNAM
+      14   3.80%  area   0.52%  record: FURN.MNAM
+      14   3.80%  area   0.52%  record: FURN.PNAM
+      14   3.80%  area   0.52%  record: FURN.SNAM
+  ... 27 more (149 placements)
+
+sole family (resolving it alone would draw the placement) (placements, share of the omitted; area share of the omitted):
+       4   1.09%  area   0.38%  draw: UnsupportedColorOnlyEffectFeatures 2684354624
+       4   1.09%  area   0.02%  record: VMAD
+       3   0.82%  area   0.00%  draw: MissingDocumentedReferenceScale
+       3   0.82%  area  19.03%  model: animation-controller blocks (transform-varies)
+       2   0.54%  area   0.06%  model: animation-controller blocks (effect-idle)
+       2   0.54%  area   0.12%  record: DOOR.FNAM
+       2   0.54%  area   0.00%  record: REFR.XOWN
+       1   0.27%  area   0.03%  actor draw: ActorSkinBoneMissing
+       1   0.27%  area   0.03%  actor: not resolved (skin)
+
+every exact reason, once per placement (placements, share of the omitted; area share of the omitted):
+     214  58.15%  area   0.63%  record: UninterpretedVisualSubrecord ACTI.FNAM.layout_not_established
+     214  58.15%  area   0.63%  record: UninterpretedVisualSubrecord ACTI.PNAM.layout_not_established
+     204  55.43%  area  31.12%  record: RuntimeCondition VMAD
+      82  22.28%  area   0.24%  record: UninterpretedVisualSubrecord REFR.XLIG.FOV_EndDistance_NearClip_Volumetric_and_Fade24_offsets_not_independently_established
+      82  22.28%  area   0.24%  record: UnsupportedUsedFieldLayout LIGH.DATA.Flags.Unknown_0_13_21_and_unmapped_bits
+      79  21.47%  area   0.23%  record: UninterpretedVisualSubrecord REFR.XRDS.layout_not_established
+      59  16.03%  area  47.83%  record: RuntimeRecordState REFR.XLRT
+      36   9.78%  area   0.00%  record: MissingModelPath
+      15   4.08%  area  30.76%  model: UnsupportedNifBlock BSSkin::Instance
+      15   4.08%  area  30.76%  model: UnsupportedSkinning BSTriShape
+      14   3.80%  area  77.86%  model: UnsupportedAnimationRuntime BSBehaviorGraphExtraData;target_in_visual=None;rest=behavior-graph
+      14   3.80%  area   0.52%  record: UninterpretedVisualSubrecord FURN.FNAM.layout_not_established
+      14   3.80%  area   0.52%  record: UninterpretedVisualSubrecord FURN.MNAM.layout_not_established
+      14   3.80%  area   0.52%  record: UninterpretedVisualSubrecord FURN.PNAM.layout_not_established
+      14   3.80%  area   0.52%  record: UninterpretedVisualSubrecord FURN.SNAM.layout_not_established
+  ... 61 more (309 placements)
+
+## view 4: exterior (from 332 s), around 1
+
+placements 1887 (area proxy 3.7909e8); deleted 0, initially disabled 66
+  drawn without hypotheses             1296  68.68%  area  69.74%
+  drawn only under hypotheses           180   9.54%  area  24.76%
+  hidden by rule editor_marker_hidden_v1     23   1.22%  area   0.01%
+  hidden by rule xesp_child_follows_parent_v1     10   0.53%  area   0.05%
+  outside the visual slice                2   0.11%  area   0.00%
+  omitted                               376  19.93%  area   5.45%
+
+every family of reasons, once per placement (placements, share of the omitted; area share of the omitted):
+     219  58.24%  area   0.64%  record: ACTI.FNAM
+     219  58.24%  area   0.64%  record: ACTI.PNAM
+     203  53.99%  area  31.07%  record: VMAD
+      82  21.81%  area   0.24%  record: LIGH.DATA
+      82  21.81%  area   0.24%  record: REFR.XLIG
+      79  21.01%  area   0.23%  record: REFR.XRDS
+      59  15.69%  area  47.76%  record: REFR.XLRT
+      35   9.31%  area   0.00%  record: MissingModelPath
+      15   3.99%  area  30.71%  model: UnsupportedNifBlock BSSkin::Instance
+      15   3.99%  area  30.71%  model: UnsupportedSkinning BSTriShape
+      15   3.99%  area   0.53%  record: FURN.FNAM
+      15   3.99%  area   0.53%  record: FURN.MNAM
+      15   3.99%  area   0.53%  record: FURN.PNAM
+      15   3.99%  area   0.53%  record: FURN.SNAM
+      15   3.99%  area   0.53%  record: FURN.WBDT
+  ... 27 more (151 placements)
+
+sole family (resolving it alone would draw the placement) (placements, share of the omitted; area share of the omitted):
+       5   1.33%  area  19.13%  model: animation-controller blocks (transform-varies)
+       4   1.06%  area   0.38%  draw: UnsupportedColorOnlyEffectFeatures 2684354624
+       4   1.06%  area   0.02%  record: VMAD
+       3   0.80%  area   0.00%  draw: MissingDocumentedReferenceScale
+       2   0.53%  area   0.06%  model: animation-controller blocks (effect-idle)
+       2   0.53%  area   0.12%  record: DOOR.FNAM
+       2   0.53%  area   0.00%  record: REFR.XOWN
+       1   0.27%  area   0.03%  actor draw: ActorSkinBoneMissing
+       1   0.27%  area   0.03%  actor: not resolved (skin)
+
+every exact reason, once per placement (placements, share of the omitted; area share of the omitted):
+     219  58.24%  area   0.64%  record: UninterpretedVisualSubrecord ACTI.FNAM.layout_not_established
+     219  58.24%  area   0.64%  record: UninterpretedVisualSubrecord ACTI.PNAM.layout_not_established
+     203  53.99%  area  31.07%  record: RuntimeCondition VMAD
+      82  21.81%  area   0.24%  record: UninterpretedVisualSubrecord REFR.XLIG.FOV_EndDistance_NearClip_Volumetric_and_Fade24_offsets_not_independently_established
+      82  21.81%  area   0.24%  record: UnsupportedUsedFieldLayout LIGH.DATA.Flags.Unknown_0_13_21_and_unmapped_bits
+      79  21.01%  area   0.23%  record: UninterpretedVisualSubrecord REFR.XRDS.layout_not_established
+      59  15.69%  area  47.76%  record: RuntimeRecordState REFR.XLRT
+      35   9.31%  area   0.00%  record: MissingModelPath
+      15   3.99%  area  30.71%  model: UnsupportedNifBlock BSSkin::Instance
+      15   3.99%  area  30.71%  model: UnsupportedSkinning BSTriShape
+      15   3.99%  area   0.53%  record: UninterpretedVisualSubrecord FURN.FNAM.layout_not_established
+      15   3.99%  area   0.53%  record: UninterpretedVisualSubrecord FURN.MNAM.layout_not_established
+      15   3.99%  area   0.53%  record: UninterpretedVisualSubrecord FURN.PNAM.layout_not_established
+      15   3.99%  area   0.53%  record: UninterpretedVisualSubrecord FURN.SNAM.layout_not_established
+      15   3.99%  area   0.53%  record: UninterpretedVisualSubrecord FURN.WBDT.layout_not_established
+  ... 61 more (315 placements)
+
+## view 5: exterior (from 346 s and from 413 s), around 1
+
+placements 1170 (area proxy 4.2561e8); deleted 0, initially disabled 47
+  drawn without hypotheses              951  81.28%  area  72.75%
+  drawn only under hypotheses           148  12.65%  area  23.03%
+  hidden by rule editor_marker_hidden_v1     21   1.79%  area   0.00%
+  outside the visual slice                0   0.00%  area   0.00%
+  omitted                                50   4.27%  area   4.22%
+
+every family of reasons, once per placement (placements, share of the omitted; area share of the omitted):
+      33  66.00%  area  35.02%  record: VMAD
+      31  62.00%  area   0.03%  record: ACTI.FNAM
+      31  62.00%  area   0.03%  record: ACTI.PNAM
+      24  48.00%  area   0.00%  record: MissingModelPath
+       9  18.00%  area  88.96%  model: animation-controller blocks (behavior-graph)
+       6  12.00%  area  44.80%  model: UnsupportedNifBlock BSSkin::Instance
+       6  12.00%  area  44.80%  model: UnsupportedSkinning BSTriShape
+       4   8.00%  area   0.07%  model: UnsupportedNifBlock BSWindModifier
+       4   8.00%  area   0.07%  model: UnsupportedNifBlock NiBlendBoolInterpolator
+       4   8.00%  area   0.07%  model: animation-controller blocks (effect-idle)
+       4   8.00%  area   0.07%  model: animation-controller blocks (other)
+       4   8.00%  area   0.07%  model: animation-controller blocks (particle)
+       4   8.00%  area   0.07%  model: particle-system blocks
+       3   6.00%  area   0.44%  model: animation-controller blocks (transform-varies)
+       3   6.00%  area  54.32%  record: REFR.XLRT
+  ... 13 more (19 placements)
+
+sole family (resolving it alone would draw the placement) (placements, share of the omitted; area share of the omitted):
+       2   4.00%  area   0.15%  model: animation-controller blocks (transform-varies)
+       2   4.00%  area   0.56%  record: REFR.XRGD
+
+every exact reason, once per placement (placements, share of the omitted; area share of the omitted):
+      33  66.00%  area  35.02%  record: RuntimeCondition VMAD
+      31  62.00%  area   0.03%  record: UninterpretedVisualSubrecord ACTI.FNAM.layout_not_established
+      31  62.00%  area   0.03%  record: UninterpretedVisualSubrecord ACTI.PNAM.layout_not_established
+      24  48.00%  area   0.00%  record: MissingModelPath
+       9  18.00%  area  88.96%  model: UnsupportedAnimationRuntime BSBehaviorGraphExtraData;target_in_visual=None;rest=behavior-graph
+       6  12.00%  area  44.80%  model: UnsupportedNifBlock BSSkin::Instance
+       6  12.00%  area  44.80%  model: UnsupportedSkinning BSTriShape
+       4   8.00%  area   0.07%  model: UnsupportedAnimationRuntime BSEffectShaderPropertyFloatController;target_in_visual=Some(true);rest=effect-idle
+       4   8.00%  area   0.07%  model: UnsupportedAnimationRuntime NiBlendBoolInterpolator;target_in_visual=None;rest=other
+       4   8.00%  area   0.07%  model: UnsupportedAnimationRuntime NiBlendFloatInterpolator;target_in_visual=None;rest=effect-idle
+       4   8.00%  area   0.07%  model: UnsupportedAnimationRuntime NiBlendFloatInterpolator;target_in_visual=None;rest=other
+       4   8.00%  area   0.07%  model: UnsupportedAnimationRuntime NiBoolData;target_in_visual=None;rest=particle
+       4   8.00%  area   0.07%  model: UnsupportedAnimationRuntime NiBoolInterpolator;target_in_visual=None;rest=particle
+       4   8.00%  area   0.07%  model: UnsupportedAnimationRuntime NiBoolTimelineInterpolator;target_in_visual=None;rest=particle
+       4   8.00%  area   0.07%  model: UnsupportedAnimationRuntime NiFloatData;target_in_visual=None;rest=effect-idle
+  ... 40 more (123 placements)
+
+## view 6: exterior (from 389 s), around 1
+
+placements 779 (area proxy 3.8448e8); deleted 0, initially disabled 35
+  drawn without hypotheses              645  82.80%  area  76.64%
+  drawn only under hypotheses            75   9.63%  area  18.69%
+  hidden by rule editor_marker_hidden_v1     21   2.70%  area   0.00%
+  outside the visual slice                0   0.00%  area   0.00%
+  omitted                                38   4.88%  area   4.67%
+
+every family of reasons, once per placement (placements, share of the omitted; area share of the omitted):
+      21  55.26%  area  34.98%  record: VMAD
+      20  52.63%  area   0.03%  record: ACTI.FNAM
+      20  52.63%  area   0.03%  record: ACTI.PNAM
+      13  34.21%  area   0.00%  record: MissingModelPath
+       9  23.68%  area  89.02%  model: animation-controller blocks (behavior-graph)
+       6  15.79%  area  44.83%  model: UnsupportedNifBlock BSSkin::Instance
+       6  15.79%  area  44.83%  model: UnsupportedSkinning BSTriShape
+       4  10.53%  area   0.07%  model: UnsupportedNifBlock BSWindModifier
+       4  10.53%  area   0.07%  model: UnsupportedNifBlock NiBlendBoolInterpolator
+       4  10.53%  area   0.07%  model: animation-controller blocks (effect-idle)
+       4  10.53%  area   0.07%  model: animation-controller blocks (other)
+       4  10.53%  area   0.07%  model: animation-controller blocks (particle)
+       4  10.53%  area   0.07%  model: particle-system blocks
+       3   7.89%  area   0.44%  model: animation-controller blocks (transform-varies)
+       3   7.89%  area  54.35%  record: REFR.XLRT
+  ... 13 more (14 placements)
+
+sole family (resolving it alone would draw the placement) (placements, share of the omitted; area share of the omitted):
+       2   5.26%  area   0.15%  model: animation-controller blocks (transform-varies)
+       2   5.26%  area   0.56%  record: REFR.XRGD
+
+every exact reason, once per placement (placements, share of the omitted; area share of the omitted):
+      21  55.26%  area  34.98%  record: RuntimeCondition VMAD
+      20  52.63%  area   0.03%  record: UninterpretedVisualSubrecord ACTI.FNAM.layout_not_established
+      20  52.63%  area   0.03%  record: UninterpretedVisualSubrecord ACTI.PNAM.layout_not_established
+      13  34.21%  area   0.00%  record: MissingModelPath
+       9  23.68%  area  89.02%  model: UnsupportedAnimationRuntime BSBehaviorGraphExtraData;target_in_visual=None;rest=behavior-graph
+       6  15.79%  area  44.83%  model: UnsupportedNifBlock BSSkin::Instance
+       6  15.79%  area  44.83%  model: UnsupportedSkinning BSTriShape
+       4  10.53%  area   0.07%  model: UnsupportedAnimationRuntime BSEffectShaderPropertyFloatController;target_in_visual=Some(true);rest=effect-idle
+       4  10.53%  area   0.07%  model: UnsupportedAnimationRuntime NiBlendBoolInterpolator;target_in_visual=None;rest=other
+       4  10.53%  area   0.07%  model: UnsupportedAnimationRuntime NiBlendFloatInterpolator;target_in_visual=None;rest=effect-idle
+       4  10.53%  area   0.07%  model: UnsupportedAnimationRuntime NiBlendFloatInterpolator;target_in_visual=None;rest=other
+       4  10.53%  area   0.07%  model: UnsupportedAnimationRuntime NiBoolData;target_in_visual=None;rest=particle
+       4  10.53%  area   0.07%  model: UnsupportedAnimationRuntime NiBoolInterpolator;target_in_visual=None;rest=particle
+       4  10.53%  area   0.07%  model: UnsupportedAnimationRuntime NiBoolTimelineInterpolator;target_in_visual=None;rest=particle
+       4  10.53%  area   0.07%  model: UnsupportedAnimationRuntime NiFloatData;target_in_visual=None;rest=effect-idle
+  ... 40 more (118 placements)
+
+## view 7: prewar vault interior (from 500 s), around 0
+
+placements 988 (area proxy 5.8708e7); deleted 0, initially disabled 5
+  drawn without hypotheses              111  11.23%  area   4.01%
+  drawn only under hypotheses           231  23.38%  area  52.24%
+  hidden by rule editor_marker_hidden_v1     89   9.01%  area   0.51%
+  outside the visual slice               19   1.92%  area   0.00%
+  omitted                               538  54.45%  area  43.24%
+
+every family of reasons, once per placement (placements, share of the omitted; area share of the omitted):
+     379  70.45%  area   0.89%  record: LIGH.DATA
+     377  70.07%  area   0.89%  record: REFR.XLIG
+     377  70.07%  area   0.89%  record: REFR.XRDS
+      48   8.92%  area  93.26%  model: animation-controller blocks (other)
+      48   8.92%  area  93.26%  model: particle-system blocks
+      32   5.95%  area  93.37%  model: animation-controller blocks (behavior-graph)
+      25   4.65%  area   2.93%  record: VMAD
+      23   4.28%  area   2.29%  record: FURN.FNAM
+      23   4.28%  area   2.29%  record: FURN.MNAM
+      23   4.28%  area   2.29%  record: FURN.PNAM
+      23   4.28%  area   2.29%  record: FURN.SNAM
+      23   4.28%  area   2.29%  record: FURN.WBDT
+      23   4.28%  area   2.75%  render asset: MissingTexture
+      22   4.09%  area  54.39%  record: ACTI.FNAM
+      22   4.09%  area  54.39%  record: ACTI.PNAM
+  ... 41 more (228 placements)
+
+sole family (resolving it alone would draw the placement) (placements, share of the omitted; area share of the omitted):
+      23   4.28%  area   2.75%  render asset: MissingTexture
+      14   2.60%  area   0.06%  record: DOOR.FNAM
+       7   1.30%  area   0.16%  actor draw: ActorSkinBoneMissing
+       5   0.93%  area   0.00%  record: BaseTypeOutsideSlice TXST
+       4   0.74%  area   0.18%  model: animation-controller blocks (behavior-graph)
+       3   0.56%  area   1.32%  record: REFR.XALP
+       1   0.19%  area   0.02%  actor: animation-controller blocks (transform-varies)
+       1   0.19%  area   0.00%  draw: MissingDocumentedReferenceScale
+       1   0.19%  area   0.00%  record: MISC.CDIX
+       1   0.19%  area   0.04%  record: REFR.XRGD
+       1   0.19%  area   0.05%  record: VMAD
+
+every exact reason, once per placement (placements, share of the omitted; area share of the omitted):
+     379  70.45%  area   0.89%  record: UnsupportedUsedFieldLayout LIGH.DATA.Flags.Unknown_0_13_21_and_unmapped_bits
+     377  70.07%  area   0.89%  record: UninterpretedVisualSubrecord REFR.XLIG.FOV_EndDistance_NearClip_Volumetric_and_Fade24_offsets_not_independently_established
+     377  70.07%  area   0.89%  record: UninterpretedVisualSubrecord REFR.XRDS.layout_not_established
+      48   8.92%  area  93.26%  model: UnsupportedAnimationRuntime NiPSysEmitterCtlr;target_in_visual=Some(false);rest=particle
+      48   8.92%  area  93.26%  model: UnsupportedAnimationRuntime NiPSysUpdateCtlr;target_in_visual=Some(false);rest=particle
+      48   8.92%  area  93.26%  model: UnsupportedAnimationRuntime NiParticleSystem;target_in_visual=None;rest=particle
+      48   8.92%  area  93.26%  model: UnsupportedNifBlock BSPSysLODModifier
+      48   8.92%  area  93.26%  model: UnsupportedNifBlock BSPSysScaleModifier
+      48   8.92%  area  93.26%  model: UnsupportedNifBlock BSPSysSimpleColorModifier
+      48   8.92%  area  93.26%  model: UnsupportedNifBlock NiPSysAgeDeathModifier
+      48   8.92%  area  93.26%  model: UnsupportedNifBlock NiPSysBoundUpdateModifier
+      48   8.92%  area  93.26%  model: UnsupportedNifBlock NiPSysData
+      48   8.92%  area  93.26%  model: UnsupportedNifBlock NiPSysGravityModifier
+      48   8.92%  area  93.26%  model: UnsupportedNifBlock NiPSysPositionModifier
+      48   8.92%  area  93.26%  model: UnsupportedNifBlock NiPSysSpawnModifier
+  ... 86 more (910 placements)
+
+## Marked placements (2 of 7 marked loaded), by kind, outcome and reasons
+
+       1  reference, omitted: model: UnsupportedAnimationRuntime BSBehaviorGraphExtraData;target_in_visual=None;rest=behavior-graph + model: UnsupportedAnimationRuntime BSEffectShaderPropertyColorController;target_in_visual=Some(true);rest=effect-idle + model: UnsupportedAnimationRuntime BSEffectShaderPropertyFloatController;target_in_visual=Some(true);rest=effect-idle + model: UnsupportedAnimationRuntime NiBlendBoolInterpolator;target_in_visual=None;rest=other + model: UnsupportedAnimationRuntime NiBlendBoolInterpolator;target_in_visual=None;rest=visibility + model: UnsupportedAnimationRuntime NiBlendFloatInterpolator;target_in_visual=None;rest=effect-idle + model: UnsupportedAnimationRuntime NiBlendFloatInterpolator;target_in_visual=None;rest=other + model: UnsupportedAnimationRuntime NiBlendPoint3Interpolator;target_in_visual=None;rest=effect-idle + model: UnsupportedAnimationRuntime NiBoolData;target_in_visual=None;rest=particle + model: UnsupportedAnimationRuntime NiBoolData;target_in_visual=None;rest=visibility + model: UnsupportedAnimationRuntime NiBoolInterpolator;target_in_visual=None;rest=particle + model: UnsupportedAnimationRuntime NiBoolInterpolator;target_in_visual=None;rest=visibility + model: UnsupportedAnimationRuntime NiFloatData;target_in_visual=None;rest=effect-idle + model: UnsupportedAnimationRuntime NiFloatData;target_in_visual=None;rest=particle + model: UnsupportedAnimationRuntime NiFloatInterpolator;target_in_visual=None;rest=effect-idle + model: UnsupportedAnimationRuntime NiFloatInterpolator;target_in_visual=None;rest=particle + model: UnsupportedAnimationRuntime NiPSysEmitterCtlr;target_in_visual=Some(false);rest=particle + model: UnsupportedAnimationRuntime NiPSysEmitterSpeedCtlr;target_in_visual=Some(false);rest=particle + model: UnsupportedAnimationRuntime NiPSysUpdateCtlr;target_in_visual=Some(false);rest=particle + model: UnsupportedAnimationRuntime NiParticleSystem;target_in_visual=None;rest=particle + model: UnsupportedAnimationRuntime NiPoint3Interpolator;target_in_visual=None;rest=effect-idle + model: UnsupportedAnimationRuntime NiPosData;target_in_visual=None;rest=effect-idle + model: UnsupportedAnimationRuntime NiVisController;target_in_visual=Some(true);rest=visibility + model: UnsupportedNifBlock BSPSysLODModifier + model: UnsupportedNifBlock BSPSysScaleModifier + model: UnsupportedNifBlock BSPSysSimpleColorModifier + model: UnsupportedNifBlock BSPositionData + model: UnsupportedNifBlock BSSkin::Instance + model: UnsupportedNifBlock NiBlendBoolInterpolator + model: UnsupportedNifBlock NiPSysAgeDeathModifier + model: UnsupportedNifBlock NiPSysBoundUpdateModifier + model: UnsupportedNifBlock NiPSysBoxEmitter + model: UnsupportedNifBlock NiPSysData + model: UnsupportedNifBlock NiPSysGravityModifier + model: UnsupportedNifBlock NiPSysMeshEmitter + model: UnsupportedNifBlock NiPSysPositionModifier + model: UnsupportedNifBlock NiPSysSpawnModifier + model: UnsupportedNifField NiPSysEmitterSpeedCtlr.Controller Body + model: UnsupportedSkinning BSTriShape + record: RuntimeRecordState REFR.XLRT + record: UninterpretedVisualSubrecord ACTI.FNAM.layout_not_established + record: UninterpretedVisualSubrecord ACTI.PNAM.layout_not_established
+       1  reference, omitted: model: UnsupportedAnimationRuntime BSBehaviorGraphExtraData;target_in_visual=None;rest=behavior-graph + model: UnsupportedAnimationRuntime BSEffectShaderPropertyFloatController;target_in_visual=Some(false);rest=effect-idle + model: UnsupportedAnimationRuntime BSEffectShaderPropertyFloatController;target_in_visual=Some(true);rest=effect-idle + model: UnsupportedAnimationRuntime NiBlendBoolInterpolator;target_in_visual=None;rest=other + model: UnsupportedAnimationRuntime NiBlendBoolInterpolator;target_in_visual=None;rest=visibility + model: UnsupportedAnimationRuntime NiBlendFloatInterpolator;target_in_visual=None;rest=effect-idle + model: UnsupportedAnimationRuntime NiBlendFloatInterpolator;target_in_visual=None;rest=other + model: UnsupportedAnimationRuntime NiBoolData;target_in_visual=None;rest=particle + model: UnsupportedAnimationRuntime NiBoolData;target_in_visual=None;rest=visibility + model: UnsupportedAnimationRuntime NiBoolInterpolator;target_in_visual=None;rest=particle + model: UnsupportedAnimationRuntime NiBoolInterpolator;target_in_visual=None;rest=visibility + model: UnsupportedAnimationRuntime NiBoolTimelineInterpolator;target_in_visual=None;rest=particle + model: UnsupportedAnimationRuntime NiFloatData;target_in_visual=None;rest=effect-idle + model: UnsupportedAnimationRuntime NiFloatData;target_in_visual=None;rest=particle + model: UnsupportedAnimationRuntime NiFloatInterpolator;target_in_visual=None;rest=effect-idle + model: UnsupportedAnimationRuntime NiFloatInterpolator;target_in_visual=None;rest=particle + model: UnsupportedAnimationRuntime NiPSysEmitterCtlr;target_in_visual=Some(false);rest=particle + model: UnsupportedAnimationRuntime NiPSysEmitterLifeSpanCtlr;target_in_visual=Some(false);rest=particle + model: UnsupportedAnimationRuntime NiPSysEmitterSpeedCtlr;target_in_visual=Some(false);rest=particle + model: UnsupportedAnimationRuntime NiPSysModifierActiveCtlr;target_in_visual=Some(false);rest=particle + model: UnsupportedAnimationRuntime NiPSysUpdateCtlr;target_in_visual=Some(false);rest=particle + model: UnsupportedAnimationRuntime NiParticleSystem;target_in_visual=None;rest=particle + model: UnsupportedAnimationRuntime NiPathInterpolator;target_in_visual=None;rest=other + model: UnsupportedAnimationRuntime NiVisController;target_in_visual=Some(true);rest=visibility + model: UnsupportedNifBlock BSPSysLODModifier + model: UnsupportedNifBlock BSPSysScaleModifier + model: UnsupportedNifBlock BSPSysSimpleColorModifier + model: UnsupportedNifBlock BSPSysSubTexModifier + model: UnsupportedNifBlock BSPositionData + model: UnsupportedNifBlock BSSkin::Instance + model: UnsupportedNifBlock NiBlendBoolInterpolator + model: UnsupportedNifBlock NiPSysAgeDeathModifier + model: UnsupportedNifBlock NiPSysBombModifier + model: UnsupportedNifBlock NiPSysBoundUpdateModifier + model: UnsupportedNifBlock NiPSysBoxEmitter + model: UnsupportedNifBlock NiPSysColliderManager + model: UnsupportedNifBlock NiPSysCylinderEmitter + model: UnsupportedNifBlock NiPSysData + model: UnsupportedNifBlock NiPSysDragModifier + model: UnsupportedNifBlock NiPSysGravityModifier + model: UnsupportedNifBlock NiPSysMeshEmitter + model: UnsupportedNifBlock NiPSysPositionModifier + model: UnsupportedNifBlock NiPSysRotationModifier + model: UnsupportedNifBlock NiPSysSpawnModifier + model: UnsupportedNifBlock NiPathInterpolator + model: UnsupportedNifField NiPSysEmitterLifeSpanCtlr.Controller Body + model: UnsupportedNifField NiPSysEmitterSpeedCtlr.Controller Body + model: UnsupportedSkinning BSTriShape + record: RuntimeCondition VMAD + record: UninterpretedVisualSubrecord ACTI.FNAM.layout_not_established + record: UninterpretedVisualSubrecord ACTI.PNAM.layout_not_established
+
+## view 8: interior the run seats the player in (from 730 s), around 0
+
+placements 1697 (area proxy 1.2084e9); deleted 0, initially disabled 255
+  drawn without hypotheses              462  27.22%  area   0.36%
+  drawn only under hypotheses           213  12.55%  area   0.90%
+  hidden by rule editor_marker_hidden_v1    117   6.89%  area   0.05%
+  hidden by rule xesp_child_follows_parent_v1     59   3.48%  area  94.93%
+  outside the visual slice               20   1.18%  area   0.00%
+  omitted                               826  48.67%  area   3.77%
+
+every family of reasons, once per placement (placements, share of the omitted; area share of the omitted):
+     370  44.79%  area  88.86%  model: animation-controller blocks (behavior-graph)
+     288  34.87%  area  15.58%  record: RuntimeEnableParent XESP.own_flag
+     211  25.54%  area   0.34%  record: LIGH.DATA
+     202  24.46%  area   0.28%  record: REFR.XLIG
+     200  24.21%  area   0.28%  record: REFR.XRDS
+     104  12.59%  area  31.65%  record: VMAD
+      85  10.29%  area  30.97%  record: ACTI.FNAM
+      85  10.29%  area  30.97%  record: ACTI.PNAM
+      71   8.60%  area  31.72%  model: animation-controller blocks (effect-idle)
+      59   7.14%  area   1.03%  record: REFR.XLRT
+      57   6.90%  area  29.73%  model: UnsupportedNifBlock BSSkin::Instance
+      57   6.90%  area  29.73%  model: UnsupportedSkinning BSTriShape
+      37   4.48%  area   0.80%  model: animation-controller blocks (other)
+      37   4.48%  area   0.80%  model: particle-system blocks
+      32   3.87%  area   0.97%  record: FURN.FNAM
+  ... 59 more (433 placements)
+
+sole family (resolving it alone would draw the placement) (placements, share of the omitted; area share of the omitted):
+     289  34.99%  area  51.94%  model: animation-controller blocks (behavior-graph)
+      93  11.26%  area   9.88%  record: RuntimeEnableParent XESP.own_flag
+      14   1.69%  area   0.00%  draw: MissingDocumentedReferenceScale
+       5   0.61%  area   0.06%  actor: not resolved (template)
+       4   0.48%  area   0.00%  record: REFR.XLRT
+       3   0.36%  area   0.00%  record: LIGH.DATA
+       2   0.24%  area   0.00%  draw: NoDrawableGeometry
+       2   0.24%  area   0.03%  model: animation-controller blocks (effect-idle)
+
+every exact reason, once per placement (placements, share of the omitted; area share of the omitted):
+     370  44.79%  area  88.86%  model: UnsupportedAnimationRuntime BSBehaviorGraphExtraData;target_in_visual=None;rest=behavior-graph
+     288  34.87%  area  15.58%  record: RuntimeEnableParent XESP.own_flag
+     211  25.54%  area   0.34%  record: UnsupportedUsedFieldLayout LIGH.DATA.Flags.Unknown_0_13_21_and_unmapped_bits
+     202  24.46%  area   0.28%  record: UninterpretedVisualSubrecord REFR.XLIG.FOV_EndDistance_NearClip_Volumetric_and_Fade24_offsets_not_independently_established
+     200  24.21%  area   0.28%  record: UninterpretedVisualSubrecord REFR.XRDS.layout_not_established
+     104  12.59%  area  31.65%  record: RuntimeCondition VMAD
+      85  10.29%  area  30.97%  record: UninterpretedVisualSubrecord ACTI.FNAM.layout_not_established
+      85  10.29%  area  30.97%  record: UninterpretedVisualSubrecord ACTI.PNAM.layout_not_established
+      71   8.60%  area  31.72%  model: UnsupportedAnimationRuntime NiBlendFloatInterpolator;target_in_visual=None;rest=effect-idle
+      69   8.35%  area  31.69%  model: UnsupportedAnimationRuntime NiFloatData;target_in_visual=None;rest=effect-idle
+      69   8.35%  area  31.69%  model: UnsupportedAnimationRuntime NiFloatInterpolator;target_in_visual=None;rest=effect-idle
+      64   7.75%  area  31.09%  model: UnsupportedAnimationRuntime BSEffectShaderPropertyFloatController;target_in_visual=Some(true);rest=effect-idle
+      59   7.14%  area   1.03%  record: RuntimeRecordState REFR.XLRT
+      57   6.90%  area  29.73%  model: UnsupportedNifBlock BSSkin::Instance
+      57   6.90%  area  29.73%  model: UnsupportedSkinning BSTriShape
+  ... 99 more (1153 placements)
+
+## view 9: postwar vault interior (from 795 s), around 0
+
+placements 3098 (area proxy 1.1997e8); deleted 0, initially disabled 16
+  drawn without hypotheses              513  16.56%  area  10.15%
+  drawn only under hypotheses           527  17.01%  area  51.70%
+  hidden by rule editor_marker_hidden_v1    175   5.65%  area   4.81%
+  hidden by rule xesp_child_follows_parent_v1      7   0.23%  area   0.01%
+  outside the visual slice               24   0.77%  area   0.00%
+  omitted                              1852  59.78%  area  33.34%
+
+every family of reasons, once per placement (placements, share of the omitted; area share of the omitted):
+     845  45.63%  area   1.26%  record: LIGH.DATA
+     834  45.03%  area   1.24%  record: REFR.XRDS
+     815  44.01%  area   1.22%  record: REFR.XLIG
+     540  29.16%  area   0.00%  record: BaseTypeOutsideSlice TXST
+     252  13.61%  area   0.00%  record: REFR.XPDD
+     120   6.48%  area  76.05%  model: animation-controller blocks (other)
+     119   6.43%  area  76.05%  model: particle-system blocks
+      98   5.29%  area   2.08%  record: VMAD
+      84   4.54%  area   9.75%  render asset: MissingTexture
+      63   3.40%  area   2.09%  record: FURN.FNAM
+      63   3.40%  area   2.09%  record: FURN.MNAM
+      63   3.40%  area   2.09%  record: FURN.PNAM
+      63   3.40%  area   2.09%  record: FURN.SNAM
+      63   3.40%  area   2.09%  record: FURN.WBDT
+      51   2.75%  area  75.47%  model: animation-controller blocks (behavior-graph)
+  ... 94 more (879 placements)
+
+sole family (resolving it alone would draw the placement) (placements, share of the omitted; area share of the omitted):
+     288  15.55%  area   0.00%  record: BaseTypeOutsideSlice TXST
+      84   4.54%  area   9.75%  render asset: MissingTexture
+      13   0.70%  area   0.00%  record: MISC.CDIX
+      12   0.65%  area   0.03%  actor: not resolved (leveled list)
+       8   0.43%  area   0.01%  record: LIGH.DATA
+       7   0.38%  area   0.08%  actor: not resolved (template)
+       6   0.32%  area   1.68%  record: REFR.XALP
+       4   0.22%  area   0.11%  model: animation-controller blocks (behavior-graph)
+       4   0.22%  area   0.09%  record: VMAD
+       3   0.16%  area   0.03%  record: REFR.XRGD
+       2   0.11%  area   0.00%  draw: MissingDocumentedReferenceScale
+       2   0.11%  area   0.21%  record: DOOR.FNAM
+       1   0.05%  area   0.00%  draw: NoDrawableGeometry
+       1   0.05%  area   0.00%  record: BaseTypeOutsideSlice ARMO
+
+every exact reason, once per placement (placements, share of the omitted; area share of the omitted):
+     845  45.63%  area   1.26%  record: UnsupportedUsedFieldLayout LIGH.DATA.Flags.Unknown_0_13_21_and_unmapped_bits
+     834  45.03%  area   1.24%  record: UninterpretedVisualSubrecord REFR.XRDS.layout_not_established
+     815  44.01%  area   1.22%  record: UninterpretedVisualSubrecord REFR.XLIG.FOV_EndDistance_NearClip_Volumetric_and_Fade24_offsets_not_independently_established
+     540  29.16%  area   0.00%  record: BaseTypeOutsideSlice TXST
+     252  13.61%  area   0.00%  record: UninterpretedVisualSubrecord REFR.XPDD.layout_not_established
+     119   6.43%  area  76.05%  model: UnsupportedAnimationRuntime NiPSysEmitterCtlr;target_in_visual=Some(false);rest=particle
+     119   6.43%  area  76.05%  model: UnsupportedAnimationRuntime NiPSysUpdateCtlr;target_in_visual=Some(false);rest=particle
+     119   6.43%  area  76.05%  model: UnsupportedAnimationRuntime NiParticleSystem;target_in_visual=None;rest=particle
+     119   6.43%  area  76.05%  model: UnsupportedNifBlock BSPSysLODModifier
+     119   6.43%  area  76.05%  model: UnsupportedNifBlock BSPSysScaleModifier
+     119   6.43%  area  76.05%  model: UnsupportedNifBlock BSPSysSimpleColorModifier
+     119   6.43%  area  76.05%  model: UnsupportedNifBlock NiPSysAgeDeathModifier
+     119   6.43%  area  76.05%  model: UnsupportedNifBlock NiPSysBoundUpdateModifier
+     119   6.43%  area  76.05%  model: UnsupportedNifBlock NiPSysData
+     119   6.43%  area  76.05%  model: UnsupportedNifBlock NiPSysPositionModifier
+  ... 145 more (2572 placements)
+
+## Marked placements (2 of 7 marked loaded), by kind, outcome and reasons
+
+       1  reference, omitted: model: UnsupportedAnimationRuntime BSBehaviorGraphExtraData;target_in_visual=None;rest=behavior-graph + model: UnsupportedAnimationRuntime BSEffectShaderPropertyColorController;target_in_visual=Some(true);rest=effect-idle + model: UnsupportedAnimationRuntime BSEffectShaderPropertyFloatController;target_in_visual=Some(true);rest=effect-idle + model: UnsupportedAnimationRuntime NiBlendBoolInterpolator;target_in_visual=None;rest=other + model: UnsupportedAnimationRuntime NiBlendBoolInterpolator;target_in_visual=None;rest=visibility + model: UnsupportedAnimationRuntime NiBlendFloatInterpolator;target_in_visual=None;rest=effect-idle + model: UnsupportedAnimationRuntime NiBlendFloatInterpolator;target_in_visual=None;rest=other + model: UnsupportedAnimationRuntime NiBlendPoint3Interpolator;target_in_visual=None;rest=effect-idle + model: UnsupportedAnimationRuntime NiBoolData;target_in_visual=None;rest=particle + model: UnsupportedAnimationRuntime NiBoolData;target_in_visual=None;rest=visibility + model: UnsupportedAnimationRuntime NiBoolInterpolator;target_in_visual=None;rest=particle + model: UnsupportedAnimationRuntime NiBoolInterpolator;target_in_visual=None;rest=visibility + model: UnsupportedAnimationRuntime NiFloatData;target_in_visual=None;rest=effect-idle + model: UnsupportedAnimationRuntime NiFloatData;target_in_visual=None;rest=particle + model: UnsupportedAnimationRuntime NiFloatInterpolator;target_in_visual=None;rest=effect-idle + model: UnsupportedAnimationRuntime NiFloatInterpolator;target_in_visual=None;rest=particle + model: UnsupportedAnimationRuntime NiPSysEmitterCtlr;target_in_visual=Some(false);rest=particle + model: UnsupportedAnimationRuntime NiPSysEmitterSpeedCtlr;target_in_visual=Some(false);rest=particle + model: UnsupportedAnimationRuntime NiPSysUpdateCtlr;target_in_visual=Some(false);rest=particle + model: UnsupportedAnimationRuntime NiParticleSystem;target_in_visual=None;rest=particle + model: UnsupportedAnimationRuntime NiPoint3Interpolator;target_in_visual=None;rest=effect-idle + model: UnsupportedAnimationRuntime NiPosData;target_in_visual=None;rest=effect-idle + model: UnsupportedAnimationRuntime NiVisController;target_in_visual=Some(true);rest=visibility + model: UnsupportedNifBlock BSPSysLODModifier + model: UnsupportedNifBlock BSPSysScaleModifier + model: UnsupportedNifBlock BSPSysSimpleColorModifier + model: UnsupportedNifBlock BSPositionData + model: UnsupportedNifBlock BSSkin::Instance + model: UnsupportedNifBlock NiBlendBoolInterpolator + model: UnsupportedNifBlock NiPSysAgeDeathModifier + model: UnsupportedNifBlock NiPSysBoundUpdateModifier + model: UnsupportedNifBlock NiPSysBoxEmitter + model: UnsupportedNifBlock NiPSysData + model: UnsupportedNifBlock NiPSysGravityModifier + model: UnsupportedNifBlock NiPSysMeshEmitter + model: UnsupportedNifBlock NiPSysPositionModifier + model: UnsupportedNifBlock NiPSysSpawnModifier + model: UnsupportedNifField NiPSysEmitterSpeedCtlr.Controller Body + model: UnsupportedSkinning BSTriShape + record: UninterpretedVisualSubrecord ACTI.FNAM.layout_not_established + record: UninterpretedVisualSubrecord ACTI.PNAM.layout_not_established
+       1  reference, omitted: model: UnsupportedAnimationRuntime BSBehaviorGraphExtraData;target_in_visual=None;rest=behavior-graph + model: UnsupportedAnimationRuntime BSEffectShaderPropertyFloatController;target_in_visual=Some(false);rest=effect-idle + model: UnsupportedAnimationRuntime BSEffectShaderPropertyFloatController;target_in_visual=Some(true);rest=effect-idle + model: UnsupportedAnimationRuntime NiBlendBoolInterpolator;target_in_visual=None;rest=other + model: UnsupportedAnimationRuntime NiBlendBoolInterpolator;target_in_visual=None;rest=visibility + model: UnsupportedAnimationRuntime NiBlendFloatInterpolator;target_in_visual=None;rest=effect-idle + model: UnsupportedAnimationRuntime NiBlendFloatInterpolator;target_in_visual=None;rest=other + model: UnsupportedAnimationRuntime NiBoolData;target_in_visual=None;rest=particle + model: UnsupportedAnimationRuntime NiBoolData;target_in_visual=None;rest=visibility + model: UnsupportedAnimationRuntime NiBoolInterpolator;target_in_visual=None;rest=particle + model: UnsupportedAnimationRuntime NiBoolInterpolator;target_in_visual=None;rest=visibility + model: UnsupportedAnimationRuntime NiBoolTimelineInterpolator;target_in_visual=None;rest=particle + model: UnsupportedAnimationRuntime NiFloatData;target_in_visual=None;rest=effect-idle + model: UnsupportedAnimationRuntime NiFloatData;target_in_visual=None;rest=particle + model: UnsupportedAnimationRuntime NiFloatInterpolator;target_in_visual=None;rest=effect-idle + model: UnsupportedAnimationRuntime NiFloatInterpolator;target_in_visual=None;rest=particle + model: UnsupportedAnimationRuntime NiPSysEmitterCtlr;target_in_visual=Some(false);rest=particle + model: UnsupportedAnimationRuntime NiPSysEmitterLifeSpanCtlr;target_in_visual=Some(false);rest=particle + model: UnsupportedAnimationRuntime NiPSysEmitterSpeedCtlr;target_in_visual=Some(false);rest=particle + model: UnsupportedAnimationRuntime NiPSysModifierActiveCtlr;target_in_visual=Some(false);rest=particle + model: UnsupportedAnimationRuntime NiPSysUpdateCtlr;target_in_visual=Some(false);rest=particle + model: UnsupportedAnimationRuntime NiParticleSystem;target_in_visual=None;rest=particle + model: UnsupportedAnimationRuntime NiPathInterpolator;target_in_visual=None;rest=other + model: UnsupportedAnimationRuntime NiVisController;target_in_visual=Some(true);rest=visibility + model: UnsupportedNifBlock BSPSysLODModifier + model: UnsupportedNifBlock BSPSysScaleModifier + model: UnsupportedNifBlock BSPSysSimpleColorModifier + model: UnsupportedNifBlock BSPSysSubTexModifier + model: UnsupportedNifBlock BSPositionData + model: UnsupportedNifBlock BSSkin::Instance + model: UnsupportedNifBlock NiBlendBoolInterpolator + model: UnsupportedNifBlock NiPSysAgeDeathModifier + model: UnsupportedNifBlock NiPSysBombModifier + model: UnsupportedNifBlock NiPSysBoundUpdateModifier + model: UnsupportedNifBlock NiPSysBoxEmitter + model: UnsupportedNifBlock NiPSysColliderManager + model: UnsupportedNifBlock NiPSysCylinderEmitter + model: UnsupportedNifBlock NiPSysData + model: UnsupportedNifBlock NiPSysDragModifier + model: UnsupportedNifBlock NiPSysGravityModifier + model: UnsupportedNifBlock NiPSysMeshEmitter + model: UnsupportedNifBlock NiPSysPositionModifier + model: UnsupportedNifBlock NiPSysRotationModifier + model: UnsupportedNifBlock NiPSysSpawnModifier + model: UnsupportedNifBlock NiPathInterpolator + model: UnsupportedNifField NiPSysEmitterLifeSpanCtlr.Controller Body + model: UnsupportedNifField NiPSysEmitterSpeedCtlr.Controller Body + model: UnsupportedSkinning BSTriShape + record: RuntimeRecordState REFR.XLRT + record: UninterpretedVisualSubrecord ACTI.FNAM.layout_not_established + record: UninterpretedVisualSubrecord ACTI.PNAM.layout_not_established
+
+## view 10: exterior after the exit (from 955 s), around 1
+
+placements 2098 (area proxy 4.4500e8); deleted 0, initially disabled 1
+  drawn without hypotheses             1251  59.63%  area  47.46%
+  drawn only under hypotheses           607  28.93%  area  40.00%
+  hidden by rule editor_marker_hidden_v1      4   0.19%  area   0.01%
+  hidden by rule xesp_child_follows_parent_v1      1   0.05%  area   9.94%
+  outside the visual slice                2   0.10%  area   0.00%
+  omitted                               233  11.11%  area   2.60%
+
+every family of reasons, once per placement (placements, share of the omitted; area share of the omitted):
+      62  26.61%  area   0.00%  draw: NoDrawableGeometry
+      36  15.45%  area   4.23%  record: REFR.XRGD
+      31  13.30%  area   0.16%  model: animation-controller blocks (transform-varies)
+      29  12.45%  area   4.99%  model: UnsupportedNifBlock BSSkin::Instance
+      29  12.45%  area   4.99%  model: UnsupportedSkinning BSTriShape
+      27  11.59%  area   8.16%  record: FLOR.ATTX
+      27  11.59%  area   8.16%  record: FLOR.FNAM
+      27  11.59%  area   8.16%  record: FLOR.PFIG
+      27  11.59%  area   8.16%  record: FLOR.PFPC
+      27  11.59%  area   8.16%  record: FLOR.PNAM
+      27  11.59%  area   8.16%  record: FLOR.SNAM
+      23   9.87%  area   0.76%  record: VMAD
+      16   6.87%  area   0.33%  model: animation-controller blocks (other)
+      15   6.44%  area   0.27%  model: UnsupportedNifBlock BSWindModifier
+      15   6.44%  area   0.27%  model: particle-system blocks
+  ... 56 more (312 placements)
+
+sole family (resolving it alone would draw the placement) (placements, share of the omitted; area share of the omitted):
+      62  26.61%  area   0.00%  draw: NoDrawableGeometry
+      22   9.44%  area   0.16%  model: animation-controller blocks (transform-varies)
+      18   7.73%  area   1.04%  record: REFR.XRGD
+       5   2.15%  area   0.01%  record: MISC.CDIX
+       4   1.72%  area   0.52%  record: REFR.XALP
+       2   0.86%  area   0.00%  actor: not resolved (leveled list)
+       2   0.86%  area   0.14%  record: DOOR.FNAM
+       1   0.43%  area   0.00%  draw: MissingDocumentedReferenceScale
+       1   0.43%  area  84.01%  model: animation-controller blocks (behavior-graph)
+
+every exact reason, once per placement (placements, share of the omitted; area share of the omitted):
+      62  26.61%  area   0.00%  draw: NoDrawableGeometry
+      36  15.45%  area   4.23%  record: UninterpretedVisualSubrecord REFR.XRGD.layout_not_established
+      31  13.30%  area   0.16%  model: UnsupportedAnimationRuntime NiTransformController;target_in_visual=Some(true);rest=transform-varies
+      31  13.30%  area   0.16%  model: UnsupportedAnimationRuntime NiTransformData;target_in_visual=None;rest=transform-varies
+      31  13.30%  area   0.16%  model: UnsupportedAnimationRuntime NiTransformInterpolator;target_in_visual=None;rest=transform-varies
+      29  12.45%  area   4.99%  model: UnsupportedNifBlock BSSkin::Instance
+      29  12.45%  area   4.99%  model: UnsupportedSkinning BSTriShape
+      27  11.59%  area   8.16%  record: UninterpretedVisualSubrecord FLOR.ATTX
+      27  11.59%  area   8.16%  record: UninterpretedVisualSubrecord FLOR.FNAM
+      27  11.59%  area   8.16%  record: UninterpretedVisualSubrecord FLOR.PFIG
+      27  11.59%  area   8.16%  record: UninterpretedVisualSubrecord FLOR.PFPC
+      27  11.59%  area   8.16%  record: UninterpretedVisualSubrecord FLOR.PNAM
+      27  11.59%  area   8.16%  record: UninterpretedVisualSubrecord FLOR.SNAM
+      23   9.87%  area   0.76%  record: RuntimeCondition VMAD
+      15   6.44%  area   0.27%  model: UnsupportedAnimationRuntime NiPSysEmitterCtlr;target_in_visual=Some(false);rest=particle
+  ... 94 more (667 placements)
+
+## Marked placements (1 of 7 marked loaded), by kind, outcome and reasons
+
+       1  reference, omitted: model: UnsupportedAnimationRuntime BSBehaviorGraphExtraData;target_in_visual=None;rest=behavior-graph
+
+## view 11: exterior (from 987 s), around 1
+
+placements 3179 (area proxy 5.6827e8); deleted 0, initially disabled 3
+  drawn without hypotheses             1860  58.51%  area  46.80%
+  drawn only under hypotheses           859  27.02%  area  27.47%
+  hidden by rule editor_marker_hidden_v1      6   0.19%  area   0.01%
+  hidden by rule xesp_child_follows_parent_v1      3   0.09%  area  23.35%
+  outside the visual slice               13   0.41%  area   0.00%
+  omitted                               438  13.78%  area   2.38%
+
+every family of reasons, once per placement (placements, share of the omitted; area share of the omitted):
+      78  17.81%  area   0.00%  draw: NoDrawableGeometry
+      64  14.61%  area   2.08%  record: FURN.FNAM
+      64  14.61%  area   2.08%  record: FURN.MNAM
+      64  14.61%  area   2.08%  record: FURN.PNAM
+      64  14.61%  area   2.08%  record: FURN.SNAM
+      64  14.61%  area   2.08%  record: FURN.WBDT
+      63  14.38%  area  13.44%  record: REFR.XALP
+      56  12.79%  area   4.04%  model: UnsupportedNifBlock BSSkin::Instance
+      56  12.79%  area   4.04%  model: UnsupportedSkinning BSTriShape
+      41   9.36%  area   2.90%  record: VMAD
+      40   9.13%  area   0.47%  model: animation-controller blocks (transform-varies)
+      34   7.76%  area   1.24%  record: CONT.DATA
+      32   7.31%  area   1.14%  record: CONT.CNTO
+      32   7.31%  area   1.14%  record: CONT.COCT
+      32   7.31%  area   7.84%  record: FLOR.ATTX
+  ... 73 more (692 placements)
+
+sole family (resolving it alone would draw the placement) (placements, share of the omitted; area share of the omitted):
+      78  17.81%  area   0.00%  draw: NoDrawableGeometry
+      60  13.70%  area  13.19%  record: REFR.XALP
+      24   5.48%  area   0.14%  model: animation-controller blocks (transform-varies)
+       9   2.05%  area   0.02%  record: MISC.CDIX
+       8   1.83%  area   0.00%  actor: not resolved (leveled list)
+       5   1.14%  area   0.31%  record: DOOR.FNAM
+       5   1.14%  area   0.06%  record: REFR.XRGD
+       4   0.91%  area   0.00%  record: REFR.XOWN
+       1   0.23%  area   0.00%  draw: MissingDocumentedReferenceScale
+       1   0.23%  area  71.84%  model: animation-controller blocks (behavior-graph)
+       1   0.23%  area   0.00%  record: VMAD
+       1   0.23%  area   0.01%  render asset: MissingTexture
+
+every exact reason, once per placement (placements, share of the omitted; area share of the omitted):
+      78  17.81%  area   0.00%  draw: NoDrawableGeometry
+      64  14.61%  area   2.08%  record: UninterpretedVisualSubrecord FURN.FNAM.layout_not_established
+      64  14.61%  area   2.08%  record: UninterpretedVisualSubrecord FURN.MNAM.layout_not_established
+      64  14.61%  area   2.08%  record: UninterpretedVisualSubrecord FURN.PNAM.layout_not_established
+      64  14.61%  area   2.08%  record: UninterpretedVisualSubrecord FURN.SNAM.layout_not_established
+      64  14.61%  area   2.08%  record: UninterpretedVisualSubrecord FURN.WBDT.layout_not_established
+      63  14.38%  area  13.44%  record: UninterpretedVisualSubrecord REFR.XALP.layout_not_established
+      56  12.79%  area   4.04%  model: UnsupportedNifBlock BSSkin::Instance
+      56  12.79%  area   4.04%  model: UnsupportedSkinning BSTriShape
+      41   9.36%  area   2.90%  record: RuntimeCondition VMAD
+      40   9.13%  area   0.47%  model: UnsupportedAnimationRuntime NiTransformController;target_in_visual=Some(true);rest=transform-varies
+      40   9.13%  area   0.47%  model: UnsupportedAnimationRuntime NiTransformData;target_in_visual=None;rest=transform-varies
+      40   9.13%  area   0.47%  model: UnsupportedAnimationRuntime NiTransformInterpolator;target_in_visual=None;rest=transform-varies
+      34   7.76%  area   1.24%  record: UninterpretedVisualSubrecord CONT.DATA
+      32   7.31%  area   1.14%  record: UninterpretedVisualSubrecord CONT.CNTO
+  ... 119 more (1236 placements)
+
+## Marked placements (1 of 7 marked loaded), by kind, outcome and reasons
+
+       1  reference, omitted: model: UnsupportedAnimationRuntime BSBehaviorGraphExtraData;target_in_visual=None;rest=behavior-graph
+
+## the 11 views together (a placement counted once per view that loads it)
+
+placements 20643 (area proxy 4.6680e9); deleted 0, initially disabled 580
+  drawn without hypotheses            11189  54.20%  area  44.15%
+  drawn only under hypotheses          3344  16.20%  area  22.55%
+  hidden by rule editor_marker_hidden_v1    501   2.43%  area   0.15%
+  hidden by rule xesp_child_follows_parent_v1    110   0.53%  area  28.38%
+  outside the visual slice               86   0.42%  area   0.00%
+  omitted                              5413  26.22%  area   4.77%
+
+every family of reasons, once per placement (placements, share of the omitted; area share of the omitted):
+    1783  32.94%  area   0.49%  record: LIGH.DATA
+    1747  32.27%  area   0.47%  record: REFR.XRDS
+    1740  32.14%  area   0.47%  record: REFR.XLIG
+    1124  20.76%  area  18.92%  record: VMAD
+    1068  19.73%  area  19.51%  record: ACTI.FNAM
+    1068  19.73%  area  19.51%  record: ACTI.PNAM
+     545  10.07%  area   0.00%  record: BaseTypeOutsideSlice TXST
+     530   9.79%  area  79.96%  model: animation-controller blocks (behavior-graph)
+     332   6.13%  area  24.51%  record: REFR.XLRT
+     288   5.32%  area   3.19%  record: RuntimeEnableParent XESP.own_flag
+     273   5.04%  area  24.63%  model: animation-controller blocks (other)
+     264   4.88%  area  24.57%  model: particle-system blocks
+     256   4.73%  area  32.34%  model: UnsupportedNifBlock BSSkin::Instance
+     256   4.73%  area  32.34%  model: UnsupportedSkinning BSTriShape
+     256   4.73%  area   1.19%  record: FURN.FNAM
+     256   4.73%  area   1.19%  record: FURN.MNAM
+     256   4.73%  area   1.19%  record: FURN.PNAM
+     256   4.73%  area   1.19%  record: FURN.SNAM
+     256   4.73%  area   1.19%  record: FURN.WBDT
+     252   4.66%  area   0.00%  record: REFR.XPDD
+     245   4.53%  area   0.00%  record: MissingModelPath
+     176   3.25%  area  22.42%  model: animation-controller blocks (effect-idle)
+     143   2.64%  area   0.00%  draw: NoDrawableGeometry
+     143   2.64%  area   1.06%  record: DOOR.FNAM
+     120   2.22%  area   2.11%  render asset: MissingTexture
+  ... 117 more (2568 placements)
+
+sole family (resolving it alone would draw the placement) (placements, share of the omitted; area share of the omitted):
+     299   5.52%  area  19.37%  model: animation-controller blocks (behavior-graph)
+     293   5.41%  area   0.00%  record: BaseTypeOutsideSlice TXST
+     143   2.64%  area   0.00%  draw: NoDrawableGeometry
+     108   2.00%  area   2.07%  render asset: MissingTexture
+      93   1.72%  area   2.02%  record: RuntimeEnableParent XESP.own_flag
+      73   1.35%  area   1.28%  record: REFR.XALP
+      64   1.18%  area   7.10%  model: animation-controller blocks (transform-varies)
+      31   0.57%  area   0.00%  draw: MissingDocumentedReferenceScale
+      31   0.57%  area   0.11%  record: DOOR.FNAM
+      31   0.57%  area   0.16%  record: REFR.XRGD
+      28   0.52%  area   0.00%  record: MISC.CDIX
+      22   0.41%  area   0.01%  actor: not resolved (leveled list)
+      22   0.41%  area   0.03%  record: VMAD
+      16   0.30%  area   0.14%  draw: UnsupportedColorOnlyEffectFeatures 2684354624
+      12   0.22%  area   0.03%  actor: not resolved (template)
+      12   0.22%  area   0.00%  record: REFR.XOWN
+      11   0.20%  area   0.03%  actor draw: ActorSkinBoneMissing
+      11   0.20%  area   0.00%  record: LIGH.DATA
+      10   0.18%  area   0.03%  model: animation-controller blocks (effect-idle)
+       4   0.07%  area   0.01%  actor: not resolved (skin)
+       4   0.07%  area   0.00%  record: REFR.XLRT
+       1   0.02%  area   0.00%  actor: animation-controller blocks (transform-varies)
+       1   0.02%  area   0.00%  record: BaseTypeOutsideSlice ARMO
+
+every exact reason, once per placement (placements, share of the omitted; area share of the omitted):
+    1783  32.94%  area   0.49%  record: UnsupportedUsedFieldLayout LIGH.DATA.Flags.Unknown_0_13_21_and_unmapped_bits
+    1747  32.27%  area   0.47%  record: UninterpretedVisualSubrecord REFR.XRDS.layout_not_established
+    1740  32.14%  area   0.47%  record: UninterpretedVisualSubrecord REFR.XLIG.FOV_EndDistance_NearClip_Volumetric_and_Fade24_offsets_not_independently_established
+    1124  20.76%  area  18.92%  record: RuntimeCondition VMAD
+    1068  19.73%  area  19.51%  record: UninterpretedVisualSubrecord ACTI.FNAM.layout_not_established
+    1068  19.73%  area  19.51%  record: UninterpretedVisualSubrecord ACTI.PNAM.layout_not_established
+     545  10.07%  area   0.00%  record: BaseTypeOutsideSlice TXST
+     530   9.79%  area  79.96%  model: UnsupportedAnimationRuntime BSBehaviorGraphExtraData;target_in_visual=None;rest=behavior-graph
+     332   6.13%  area  24.51%  record: RuntimeRecordState REFR.XLRT
+     288   5.32%  area   3.19%  record: RuntimeEnableParent XESP.own_flag
+     264   4.88%  area  24.57%  model: UnsupportedAnimationRuntime NiPSysEmitterCtlr;target_in_visual=Some(false);rest=particle
+     264   4.88%  area  24.57%  model: UnsupportedAnimationRuntime NiPSysUpdateCtlr;target_in_visual=Some(false);rest=particle
+     264   4.88%  area  24.57%  model: UnsupportedAnimationRuntime NiParticleSystem;target_in_visual=None;rest=particle
+     264   4.88%  area  24.57%  model: UnsupportedNifBlock BSPSysLODModifier
+     264   4.88%  area  24.57%  model: UnsupportedNifBlock BSPSysSimpleColorModifier
+     264   4.88%  area  24.57%  model: UnsupportedNifBlock NiPSysAgeDeathModifier
+     264   4.88%  area  24.57%  model: UnsupportedNifBlock NiPSysBoundUpdateModifier
+     264   4.88%  area  24.57%  model: UnsupportedNifBlock NiPSysData
+     264   4.88%  area  24.57%  model: UnsupportedNifBlock NiPSysPositionModifier
+     264   4.88%  area  24.57%  model: UnsupportedNifBlock NiPSysSpawnModifier
+     260   4.80%  area  24.57%  model: UnsupportedNifBlock BSPSysScaleModifier
+     256   4.73%  area  32.34%  model: UnsupportedNifBlock BSSkin::Instance
+     256   4.73%  area  32.34%  model: UnsupportedSkinning BSTriShape
+     256   4.73%  area   1.19%  record: UninterpretedVisualSubrecord FURN.FNAM.layout_not_established
+     256   4.73%  area   1.19%  record: UninterpretedVisualSubrecord FURN.MNAM.layout_not_established
+  ... 176 more (7485 placements)
+
+## Marked placements (6 of 7 marked loaded), by kind, outcome and reasons
+
+       2  reference, omitted: model: UnsupportedAnimationRuntime BSBehaviorGraphExtraData;target_in_visual=None;rest=behavior-graph
+       1  reference, omitted: model: UnsupportedAnimationRuntime BSBehaviorGraphExtraData;target_in_visual=None;rest=behavior-graph + model: UnsupportedAnimationRuntime BSEffectShaderPropertyColorController;target_in_visual=Some(true);rest=effect-idle + model: UnsupportedAnimationRuntime BSEffectShaderPropertyFloatController;target_in_visual=Some(true);rest=effect-idle + model: UnsupportedAnimationRuntime NiBlendBoolInterpolator;target_in_visual=None;rest=other + model: UnsupportedAnimationRuntime NiBlendBoolInterpolator;target_in_visual=None;rest=visibility + model: UnsupportedAnimationRuntime NiBlendFloatInterpolator;target_in_visual=None;rest=effect-idle + model: UnsupportedAnimationRuntime NiBlendFloatInterpolator;target_in_visual=None;rest=other + model: UnsupportedAnimationRuntime NiBlendPoint3Interpolator;target_in_visual=None;rest=effect-idle + model: UnsupportedAnimationRuntime NiBoolData;target_in_visual=None;rest=particle + model: UnsupportedAnimationRuntime NiBoolData;target_in_visual=None;rest=visibility + model: UnsupportedAnimationRuntime NiBoolInterpolator;target_in_visual=None;rest=particle + model: UnsupportedAnimationRuntime NiBoolInterpolator;target_in_visual=None;rest=visibility + model: UnsupportedAnimationRuntime NiFloatData;target_in_visual=None;rest=effect-idle + model: UnsupportedAnimationRuntime NiFloatData;target_in_visual=None;rest=particle + model: UnsupportedAnimationRuntime NiFloatInterpolator;target_in_visual=None;rest=effect-idle + model: UnsupportedAnimationRuntime NiFloatInterpolator;target_in_visual=None;rest=particle + model: UnsupportedAnimationRuntime NiPSysEmitterCtlr;target_in_visual=Some(false);rest=particle + model: UnsupportedAnimationRuntime NiPSysEmitterSpeedCtlr;target_in_visual=Some(false);rest=particle + model: UnsupportedAnimationRuntime NiPSysUpdateCtlr;target_in_visual=Some(false);rest=particle + model: UnsupportedAnimationRuntime NiParticleSystem;target_in_visual=None;rest=particle + model: UnsupportedAnimationRuntime NiPoint3Interpolator;target_in_visual=None;rest=effect-idle + model: UnsupportedAnimationRuntime NiPosData;target_in_visual=None;rest=effect-idle + model: UnsupportedAnimationRuntime NiVisController;target_in_visual=Some(true);rest=visibility + model: UnsupportedNifBlock BSPSysLODModifier + model: UnsupportedNifBlock BSPSysScaleModifier + model: UnsupportedNifBlock BSPSysSimpleColorModifier + model: UnsupportedNifBlock BSPositionData + model: UnsupportedNifBlock BSSkin::Instance + model: UnsupportedNifBlock NiBlendBoolInterpolator + model: UnsupportedNifBlock NiPSysAgeDeathModifier + model: UnsupportedNifBlock NiPSysBoundUpdateModifier + model: UnsupportedNifBlock NiPSysBoxEmitter + model: UnsupportedNifBlock NiPSysData + model: UnsupportedNifBlock NiPSysGravityModifier + model: UnsupportedNifBlock NiPSysMeshEmitter + model: UnsupportedNifBlock NiPSysPositionModifier + model: UnsupportedNifBlock NiPSysSpawnModifier + model: UnsupportedNifField NiPSysEmitterSpeedCtlr.Controller Body + model: UnsupportedSkinning BSTriShape + record: RuntimeRecordState REFR.XLRT + record: UninterpretedVisualSubrecord ACTI.FNAM.layout_not_established + record: UninterpretedVisualSubrecord ACTI.PNAM.layout_not_established
+       1  reference, omitted: model: UnsupportedAnimationRuntime BSBehaviorGraphExtraData;target_in_visual=None;rest=behavior-graph + model: UnsupportedAnimationRuntime BSEffectShaderPropertyColorController;target_in_visual=Some(true);rest=effect-idle + model: UnsupportedAnimationRuntime BSEffectShaderPropertyFloatController;target_in_visual=Some(true);rest=effect-idle + model: UnsupportedAnimationRuntime NiBlendBoolInterpolator;target_in_visual=None;rest=other + model: UnsupportedAnimationRuntime NiBlendBoolInterpolator;target_in_visual=None;rest=visibility + model: UnsupportedAnimationRuntime NiBlendFloatInterpolator;target_in_visual=None;rest=effect-idle + model: UnsupportedAnimationRuntime NiBlendFloatInterpolator;target_in_visual=None;rest=other + model: UnsupportedAnimationRuntime NiBlendPoint3Interpolator;target_in_visual=None;rest=effect-idle + model: UnsupportedAnimationRuntime NiBoolData;target_in_visual=None;rest=particle + model: UnsupportedAnimationRuntime NiBoolData;target_in_visual=None;rest=visibility + model: UnsupportedAnimationRuntime NiBoolInterpolator;target_in_visual=None;rest=particle + model: UnsupportedAnimationRuntime NiBoolInterpolator;target_in_visual=None;rest=visibility + model: UnsupportedAnimationRuntime NiFloatData;target_in_visual=None;rest=effect-idle + model: UnsupportedAnimationRuntime NiFloatData;target_in_visual=None;rest=particle + model: UnsupportedAnimationRuntime NiFloatInterpolator;target_in_visual=None;rest=effect-idle + model: UnsupportedAnimationRuntime NiFloatInterpolator;target_in_visual=None;rest=particle + model: UnsupportedAnimationRuntime NiPSysEmitterCtlr;target_in_visual=Some(false);rest=particle + model: UnsupportedAnimationRuntime NiPSysEmitterSpeedCtlr;target_in_visual=Some(false);rest=particle + model: UnsupportedAnimationRuntime NiPSysUpdateCtlr;target_in_visual=Some(false);rest=particle + model: UnsupportedAnimationRuntime NiParticleSystem;target_in_visual=None;rest=particle + model: UnsupportedAnimationRuntime NiPoint3Interpolator;target_in_visual=None;rest=effect-idle + model: UnsupportedAnimationRuntime NiPosData;target_in_visual=None;rest=effect-idle + model: UnsupportedAnimationRuntime NiVisController;target_in_visual=Some(true);rest=visibility + model: UnsupportedNifBlock BSPSysLODModifier + model: UnsupportedNifBlock BSPSysScaleModifier + model: UnsupportedNifBlock BSPSysSimpleColorModifier + model: UnsupportedNifBlock BSPositionData + model: UnsupportedNifBlock BSSkin::Instance + model: UnsupportedNifBlock NiBlendBoolInterpolator + model: UnsupportedNifBlock NiPSysAgeDeathModifier + model: UnsupportedNifBlock NiPSysBoundUpdateModifier + model: UnsupportedNifBlock NiPSysBoxEmitter + model: UnsupportedNifBlock NiPSysData + model: UnsupportedNifBlock NiPSysGravityModifier + model: UnsupportedNifBlock NiPSysMeshEmitter + model: UnsupportedNifBlock NiPSysPositionModifier + model: UnsupportedNifBlock NiPSysSpawnModifier + model: UnsupportedNifField NiPSysEmitterSpeedCtlr.Controller Body + model: UnsupportedSkinning BSTriShape + record: UninterpretedVisualSubrecord ACTI.FNAM.layout_not_established + record: UninterpretedVisualSubrecord ACTI.PNAM.layout_not_established
+       1  reference, omitted: model: UnsupportedAnimationRuntime BSBehaviorGraphExtraData;target_in_visual=None;rest=behavior-graph + model: UnsupportedAnimationRuntime BSEffectShaderPropertyFloatController;target_in_visual=Some(false);rest=effect-idle + model: UnsupportedAnimationRuntime BSEffectShaderPropertyFloatController;target_in_visual=Some(true);rest=effect-idle + model: UnsupportedAnimationRuntime NiBlendBoolInterpolator;target_in_visual=None;rest=other + model: UnsupportedAnimationRuntime NiBlendBoolInterpolator;target_in_visual=None;rest=visibility + model: UnsupportedAnimationRuntime NiBlendFloatInterpolator;target_in_visual=None;rest=effect-idle + model: UnsupportedAnimationRuntime NiBlendFloatInterpolator;target_in_visual=None;rest=other + model: UnsupportedAnimationRuntime NiBoolData;target_in_visual=None;rest=particle + model: UnsupportedAnimationRuntime NiBoolData;target_in_visual=None;rest=visibility + model: UnsupportedAnimationRuntime NiBoolInterpolator;target_in_visual=None;rest=particle + model: UnsupportedAnimationRuntime NiBoolInterpolator;target_in_visual=None;rest=visibility + model: UnsupportedAnimationRuntime NiBoolTimelineInterpolator;target_in_visual=None;rest=particle + model: UnsupportedAnimationRuntime NiFloatData;target_in_visual=None;rest=effect-idle + model: UnsupportedAnimationRuntime NiFloatData;target_in_visual=None;rest=particle + model: UnsupportedAnimationRuntime NiFloatInterpolator;target_in_visual=None;rest=effect-idle + model: UnsupportedAnimationRuntime NiFloatInterpolator;target_in_visual=None;rest=particle + model: UnsupportedAnimationRuntime NiPSysEmitterCtlr;target_in_visual=Some(false);rest=particle + model: UnsupportedAnimationRuntime NiPSysEmitterLifeSpanCtlr;target_in_visual=Some(false);rest=particle + model: UnsupportedAnimationRuntime NiPSysEmitterSpeedCtlr;target_in_visual=Some(false);rest=particle + model: UnsupportedAnimationRuntime NiPSysModifierActiveCtlr;target_in_visual=Some(false);rest=particle + model: UnsupportedAnimationRuntime NiPSysUpdateCtlr;target_in_visual=Some(false);rest=particle + model: UnsupportedAnimationRuntime NiParticleSystem;target_in_visual=None;rest=particle + model: UnsupportedAnimationRuntime NiPathInterpolator;target_in_visual=None;rest=other + model: UnsupportedAnimationRuntime NiVisController;target_in_visual=Some(true);rest=visibility + model: UnsupportedNifBlock BSPSysLODModifier + model: UnsupportedNifBlock BSPSysScaleModifier + model: UnsupportedNifBlock BSPSysSimpleColorModifier + model: UnsupportedNifBlock BSPSysSubTexModifier + model: UnsupportedNifBlock BSPositionData + model: UnsupportedNifBlock BSSkin::Instance + model: UnsupportedNifBlock NiBlendBoolInterpolator + model: UnsupportedNifBlock NiPSysAgeDeathModifier + model: UnsupportedNifBlock NiPSysBombModifier + model: UnsupportedNifBlock NiPSysBoundUpdateModifier + model: UnsupportedNifBlock NiPSysBoxEmitter + model: UnsupportedNifBlock NiPSysColliderManager + model: UnsupportedNifBlock NiPSysCylinderEmitter + model: UnsupportedNifBlock NiPSysData + model: UnsupportedNifBlock NiPSysDragModifier + model: UnsupportedNifBlock NiPSysGravityModifier + model: UnsupportedNifBlock NiPSysMeshEmitter + model: UnsupportedNifBlock NiPSysPositionModifier + model: UnsupportedNifBlock NiPSysRotationModifier + model: UnsupportedNifBlock NiPSysSpawnModifier + model: UnsupportedNifBlock NiPathInterpolator + model: UnsupportedNifField NiPSysEmitterLifeSpanCtlr.Controller Body + model: UnsupportedNifField NiPSysEmitterSpeedCtlr.Controller Body + model: UnsupportedSkinning BSTriShape + record: RuntimeCondition VMAD + record: UninterpretedVisualSubrecord ACTI.FNAM.layout_not_established + record: UninterpretedVisualSubrecord ACTI.PNAM.layout_not_established
+       1  reference, omitted: model: UnsupportedAnimationRuntime BSBehaviorGraphExtraData;target_in_visual=None;rest=behavior-graph + model: UnsupportedAnimationRuntime BSEffectShaderPropertyFloatController;target_in_visual=Some(false);rest=effect-idle + model: UnsupportedAnimationRuntime BSEffectShaderPropertyFloatController;target_in_visual=Some(true);rest=effect-idle + model: UnsupportedAnimationRuntime NiBlendBoolInterpolator;target_in_visual=None;rest=other + model: UnsupportedAnimationRuntime NiBlendBoolInterpolator;target_in_visual=None;rest=visibility + model: UnsupportedAnimationRuntime NiBlendFloatInterpolator;target_in_visual=None;rest=effect-idle + model: UnsupportedAnimationRuntime NiBlendFloatInterpolator;target_in_visual=None;rest=other + model: UnsupportedAnimationRuntime NiBoolData;target_in_visual=None;rest=particle + model: UnsupportedAnimationRuntime NiBoolData;target_in_visual=None;rest=visibility + model: UnsupportedAnimationRuntime NiBoolInterpolator;target_in_visual=None;rest=particle + model: UnsupportedAnimationRuntime NiBoolInterpolator;target_in_visual=None;rest=visibility + model: UnsupportedAnimationRuntime NiBoolTimelineInterpolator;target_in_visual=None;rest=particle + model: UnsupportedAnimationRuntime NiFloatData;target_in_visual=None;rest=effect-idle + model: UnsupportedAnimationRuntime NiFloatData;target_in_visual=None;rest=particle + model: UnsupportedAnimationRuntime NiFloatInterpolator;target_in_visual=None;rest=effect-idle + model: UnsupportedAnimationRuntime NiFloatInterpolator;target_in_visual=None;rest=particle + model: UnsupportedAnimationRuntime NiPSysEmitterCtlr;target_in_visual=Some(false);rest=particle + model: UnsupportedAnimationRuntime NiPSysEmitterLifeSpanCtlr;target_in_visual=Some(false);rest=particle + model: UnsupportedAnimationRuntime NiPSysEmitterSpeedCtlr;target_in_visual=Some(false);rest=particle + model: UnsupportedAnimationRuntime NiPSysModifierActiveCtlr;target_in_visual=Some(false);rest=particle + model: UnsupportedAnimationRuntime NiPSysUpdateCtlr;target_in_visual=Some(false);rest=particle + model: UnsupportedAnimationRuntime NiParticleSystem;target_in_visual=None;rest=particle + model: UnsupportedAnimationRuntime NiPathInterpolator;target_in_visual=None;rest=other + model: UnsupportedAnimationRuntime NiVisController;target_in_visual=Some(true);rest=visibility + model: UnsupportedNifBlock BSPSysLODModifier + model: UnsupportedNifBlock BSPSysScaleModifier + model: UnsupportedNifBlock BSPSysSimpleColorModifier + model: UnsupportedNifBlock BSPSysSubTexModifier + model: UnsupportedNifBlock BSPositionData + model: UnsupportedNifBlock BSSkin::Instance + model: UnsupportedNifBlock NiBlendBoolInterpolator + model: UnsupportedNifBlock NiPSysAgeDeathModifier + model: UnsupportedNifBlock NiPSysBombModifier + model: UnsupportedNifBlock NiPSysBoundUpdateModifier + model: UnsupportedNifBlock NiPSysBoxEmitter + model: UnsupportedNifBlock NiPSysColliderManager + model: UnsupportedNifBlock NiPSysCylinderEmitter + model: UnsupportedNifBlock NiPSysData + model: UnsupportedNifBlock NiPSysDragModifier + model: UnsupportedNifBlock NiPSysGravityModifier + model: UnsupportedNifBlock NiPSysMeshEmitter + model: UnsupportedNifBlock NiPSysPositionModifier + model: UnsupportedNifBlock NiPSysRotationModifier + model: UnsupportedNifBlock NiPSysSpawnModifier + model: UnsupportedNifBlock NiPathInterpolator + model: UnsupportedNifField NiPSysEmitterLifeSpanCtlr.Controller Body + model: UnsupportedNifField NiPSysEmitterSpeedCtlr.Controller Body + model: UnsupportedSkinning BSTriShape + record: RuntimeRecordState REFR.XLRT + record: UninterpretedVisualSubrecord ACTI.FNAM.layout_not_established + record: UninterpretedVisualSubrecord ACTI.PNAM.layout_not_established
+

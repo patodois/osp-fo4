@@ -900,3 +900,37 @@ With every switch off the run reproduces the committed outputs: second 0,
 merged without a note, is [coverage-census.txt](coverage-census.txt) but
 for its elapsed seconds; seconds 1.7, 7.3 and 45 are the switches-off
 sections of the clock census but for the elapsed seconds.
+
+## The opening's views (the drawn step)
+
+`coverage_census --views FILE [--mark FILE]` counts the views a run loads one by one, each as the viewer
+loads it (the cell, and the exterior cells about it with `around N`), and their sum, into
+[opening-views-census.txt](opening-views-census.txt): per view the outcomes and the omitted placements'
+families and exact reasons, each with its share of that view's omitted placements by count and by the area
+proxy. The file of views (record keys, outside the repository) lists the eleven cells the play window loads
+in the opening (`spec/play.md`, The window): six exterior views about the start, the walk and the vault's
+entrance (around 1), the prewar vault, the interior the run seats the player in at 730 s, the postwar vault
+and two exterior views after the exit (around 1). `--mark` counts the play run's named platforms apart. The
+census reads the loader's render readiness and the viewer's draw build (hypotheses level, second 0, every
+switch off); the window draws more than it counts (the run's cast, the live world's dormant references),
+which is why its own placement counts differ.
+
+What it shows (every switch off):
+
+- The interior of 730 s: 826 of 1,697 placements omitted. Every family: the behaviour graph's
+  extra data 370 (44.8 %, 88.9 % of the omitted area), the enable chain's agreeing own flag
+  (`record: RuntimeEnableParent XESP.own_flag`) 288 (34.9 %, 15.6 %), the light records' fields about 210.
+  Sole family: the behaviour graph 289 (35.0 %, 51.9 % of the area), the own flag 93 (11.3 %, 9.9 %); 153
+  more are lights with the own flag and their light fields. The behaviour graph's sole placements are
+  nearly all two effect models (281 of 289: animated light effects with large bounds); the own flag's are
+  the room's walls, raised floors, vents, crates, consoles and fixtures (56 bases, read locally). The room's
+  black is therefore the own flag, not the behaviour graph: task 2 of the step reads it.
+- The prewar vault: 538 of 988 omitted, 379 of them lights (their record fields); the area is taken by
+  particle and controller models and behaviour graphs (93 % of the omitted area, 48 placements).
+- The postwar vault: 1,852 of 3,098 omitted: lights 845, texture-set placements outside the slice 540,
+  decals' `REFR.XPDD` 252; again particle and controller models hold the area (76 %).
+- The named platforms: 5 of the 7 are loaded as placements of these views (the interior elevator and both
+  gear doors in their vaults, the exterior housing in the two views after the exit); each is omitted for
+  its behaviour graph and, but for the housing, for skinned shapes, particle systems, effect and visibility
+  controllers and record fields. The exterior elevator platform and one more are not placements of any
+  view (not loaded about the walker's cell).
