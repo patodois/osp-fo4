@@ -177,6 +177,12 @@ pub struct Exposure {
     /// (`--exposure-eye-floor`).
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     pub floor: bool,
+    /// [`hypotheses::EXPOSURE_VISIBLE`]: the points given are what the
+    /// eye sees, the nearest face at each cell of a grid over the frame
+    /// (`fo4_render::seen_visible`; the viewer's `--exposure-eye-visible`),
+    /// not the centroids of the lit triangles in view.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub visible: bool,
     /// The factor a lit colour is multiplied by after the light (before the
     /// fog): one over the mean light falling on what the eye sees.
     pub scale: Option<f32>,
@@ -506,12 +512,19 @@ impl Light {
         if !self.exposure.eye || !self.lit {
             return None;
         }
+        // What the points are (`frame_exposure_seen_visible_v1`: what the
+        // eye sees at the cells of a grid; else lit triangles in view).
+        let (none, what) = if self.exposure.visible {
+            self.rules.insert(hypotheses::EXPOSURE_VISIBLE);
+            ("no lit face seen", "points of lit faces the eye sees")
+        } else {
+            ("no lit triangle in view", "lit triangles in view")
+        };
         if points.is_empty() {
             if self.exposure.floor {
-                return Some(self.floored("no lit triangle in view"));
+                return Some(self.floored(none));
             }
-            self.report
-                .push("exposure: no lit triangle in view, no scale".into());
+            self.report.push(format!("exposure: {none}, no scale"));
             return None;
         }
         let mut each: Vec<f32> = points
@@ -538,7 +551,7 @@ impl Light {
         );
         if self.exposure.floor && under {
             return Some(self.floored(&format!(
-                "the light nine in ten of {} lit triangles in view stay at or below {l:.4}",
+                "the light nine in ten of {} {what} stay at or below {l:.4}",
                 points.len()
             )));
         }
@@ -550,7 +563,7 @@ impl Light {
         self.exposure.scale = Some(1. / l);
         self.rules.insert(hypotheses::EXPOSURE_EYE);
         self.report.push(format!(
-            "exposure: the light nine in ten of {} lit triangles in view stay at or below {l:.4} (median {median:.4}, mean {mean:.4}; face normals toward the eye, three channels); lit colours times {:.4}",
+            "exposure: the light nine in ten of {} {what} stay at or below {l:.4} (median {median:.4}, mean {mean:.4}; face normals toward the eye, three channels); lit colours times {:.4}",
             points.len(),
             1. / l
         ));

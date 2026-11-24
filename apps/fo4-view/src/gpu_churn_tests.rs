@@ -2005,6 +2005,7 @@ fn lit_frame_agrees(exposed: bool) {
             cinematic: Some([0.8, 1.1, 1.05]),
             tint: Some([0.2, 1., 0.6, 0.3]),
             floor: false,
+            visible: false,
         };
         list.meshes[1].normals = Some(vec![
             [0.3, -0.9, 0.2],

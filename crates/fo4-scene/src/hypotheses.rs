@@ -356,6 +356,10 @@ pub const EXPOSURE_EYE: &str = "frame_exposure_seen_light_v1";
 /// Under [`EXPOSURE_EYE`], a view whose seen light is below a floor takes
 /// the floor's scale (`crate::light::EXPOSURE_FLOOR`).
 pub const EXPOSURE_FLOOR: &str = "frame_exposure_seen_light_floor_v1";
+/// Under [`EXPOSURE_EYE`], the light measured on what the eye sees: the
+/// nearest lit face at each cell of a grid over the frame
+/// (`crate::light::Exposure::visible`, the viewer's `--exposure-eye-visible`).
+pub const EXPOSURE_VISIBLE: &str = "frame_exposure_seen_visible_v1";
 /// A lit colour tone mapped with the white of the frame's image space
 /// (`crate::light::Exposure::white`, `--exposure-white`).
 pub const IMAGE_SPACE_WHITE: &str = "image_space_hdr_white_v1";
@@ -727,6 +731,7 @@ mod tests {
             ANIMATED_COLLISION_AS_STORED,
             EXPOSURE_EYE,
             EXPOSURE_FLOOR,
+            EXPOSURE_VISIBLE,
             IMAGE_SPACE_WHITE,
             IMAGE_SPACE_CINEMATIC,
             LIGHT_VERTEX_NORMALS,

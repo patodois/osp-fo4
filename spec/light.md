@@ -155,3 +155,17 @@ in the same order), the light at each summed over the points' grid (`Light::expo
 light); the light buffer is replaced with the new row 14. With `--exposure-eye-floor`
 (`frame_exposure_seen_light_floor_v1`, off by default, with `--exposure-eye`, render and viewer alike) a view
 whose seen light is below 0.25 (`light::EXPOSURE_FLOOR`), or that sees nothing lit, takes the scale 4.
+
+**What the eye sees (the person step).** The opening's first view (the start pose in a bathroom corner of the
+start cell, tiled walls one or two units from the eye) is white with `--exposure-eye`: the centroids in view
+are 19,648 lit triangles, most of them the town behind the walls (no triangle is tested for being hidden, and a
+wall filling the view counts as its two triangles), nine in ten of them under 0.66, so the scale is 1.51;
+the walls under the room's placed light take a light of 2.6 to 3.0 (measured below), drawn white even at the
+scale 1. With `--exposure-eye-visible` (`frame_exposure_seen_visible_v1`, the viewer only, headless and in the
+scripted window, off by default, with `--exposure-eye`) the light is measured on what the eye sees: a 96 by 54
+grid over the reference frame, the nearest lit face at each cell's centre between the near and far distances
+(faces cut at the near distance; `fo4_render::seen_visible` over `fo4_render::lit_faces`, every lit triangle's
+corners kept at a load in the scripted window), the light at that face's point with its normal turned toward
+the eye; the quantile, the floor and the scale as before. The first view: 5,184 points, nine in ten under
+3.02, scale 0.33, the tiles, vents and window readable; a step to the side (looking north) 2.93 and 0.34; the
+living room 0.84 and 1.18.

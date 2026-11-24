@@ -199,6 +199,161 @@ pub fn seen_of(triangles: &[([f64; 3], [f64; 3])], camera: &Camera) -> Vec<([f64
     all.into_iter().step_by(k).collect()
 }
 
+/// The triangles of the draws `lit` marks as their three corners (world
+/// axes, single precision), in draw and triangle order: what
+/// [`seen_visible`] depth-tests.
+pub fn lit_faces(list: &DrawList, lit: &[bool]) -> Vec<[[f32; 3]; 3]> {
+    let mut all = Vec::new();
+    for (di, draw) in list.draws.iter().enumerate() {
+        if !lit.get(di).copied().unwrap_or(false) {
+            continue;
+        }
+        let Some(mesh) = list.meshes.get(draw.mesh) else {
+            continue;
+        };
+        for tri in &mesh.triangles {
+            let mut f = [[0f32; 3]; 3];
+            let mut ok = true;
+            for (k, i) in tri.iter().enumerate() {
+                match mesh.vertices.get(*i as usize) {
+                    Some(v) => f[k] = draw.world.apply(v.position).map(|x| x as f32),
+                    None => ok = false,
+                }
+            }
+            if ok {
+                all.push(f);
+            }
+        }
+    }
+    all
+}
+
+/// The cells of the grid [`seen_visible`] lays over the frame, across and
+/// down (one per 13.3 pixels of the reference frame).
+pub const VISIBLE_GRID: [u32; 2] = [96, 54];
+
+/// What the eye sees of `faces` ([`lit_faces`]): at the centre of each
+/// cell of a `grid` over `camera`'s frame, the nearest face there between
+/// the near and far distances (a depth test at the cells' centres, faces
+/// cut at the near distance), as the point of the face on that line of
+/// sight and the face's unit normal turned toward the eye, in row order;
+/// cells where no face is are left out. What
+/// `frame_exposure_seen_visible_v1` measures the light on, in place of
+/// [`seen_of`]'s centroids in view (which count the faces hidden behind
+/// others and a near wall's two triangles as two).
+pub fn seen_visible(
+    faces: &[[[f32; 3]; 3]],
+    camera: &Camera,
+    grid: [u32; 2],
+) -> Vec<([f64; 3], [f64; 3])> {
+    let [gw, gh] = grid.map(|v| v.max(1) as usize);
+    let [l, r, t, b, near, far] = camera.frustum;
+    // Inverse forward distance of the nearest face at each cell (0: none).
+    let mut depth = vec![0f64; gw * gh];
+    let mut who = vec![u32::MAX; gw * gh];
+    let to_grid = |a: [f64; 3]| -> [f64; 3] {
+        let w = 1. / a[0];
+        [
+            (a[2] * w - l) / (r - l) * gw as f64,
+            (1. - (a[1] * w - b) / (t - b)) * gh as f64,
+            w,
+        ]
+    };
+    for (fi, f) in faces.iter().enumerate() {
+        let c: [[f64; 3]; 3] = f.map(|p| camera.coordinates(p.map(f64::from)));
+        if c.iter().all(|a| a[0] < near) || c.iter().all(|a| a[0] > far) {
+            continue;
+        }
+        // Cut at the near distance (at most four corners).
+        let mut poly: Vec<[f64; 3]> = Vec::with_capacity(4);
+        for k in 0..3 {
+            let (p, q) = (c[k], c[(k + 1) % 3]);
+            let (pin, qin) = (p[0] >= near, q[0] >= near);
+            if pin {
+                poly.push(p);
+            }
+            if pin != qin {
+                let s = (near - p[0]) / (q[0] - p[0]);
+                poly.push(std::array::from_fn(|i| p[i] + s * (q[i] - p[i])));
+            }
+        }
+        if poly.len() < 3 || poly.iter().any(|a| !a.iter().all(|v| v.is_finite())) {
+            continue;
+        }
+        let g: Vec<[f64; 3]> = poly.iter().map(|a| to_grid(*a)).collect();
+        for k in 1..g.len() - 1 {
+            let (p0, p1, p2) = (g[0], g[k], g[k + 1]);
+            let area = (p1[0] - p0[0]) * (p2[1] - p0[1]) - (p1[1] - p0[1]) * (p2[0] - p0[0]);
+            if area.abs() <= 1e-12 || !area.is_finite() {
+                continue;
+            }
+            let lo_x = p0[0].min(p1[0]).min(p2[0]).floor().max(0.) as usize;
+            let hi_x = (p0[0].max(p1[0]).max(p2[0]).ceil().min(gw as f64)).max(0.) as usize;
+            let lo_y = p0[1].min(p1[1]).min(p2[1]).floor().max(0.) as usize;
+            let hi_y = (p0[1].max(p1[1]).max(p2[1]).ceil().min(gh as f64)).max(0.) as usize;
+            for y in lo_y..hi_y {
+                for x in lo_x..hi_x {
+                    let (px, py) = (x as f64 + 0.5, y as f64 + 0.5);
+                    let e = |a: [f64; 3], b: [f64; 3]| {
+                        ((b[0] - a[0]) * (py - a[1]) - (b[1] - a[1]) * (px - a[0])) / area
+                    };
+                    let (w0, w1, w2) = (e(p1, p2), e(p2, p0), e(p0, p1));
+                    if w0 < 0. || w1 < 0. || w2 < 0. {
+                        continue;
+                    }
+                    let inv = w0 * p0[2] + w1 * p1[2] + w2 * p2[2];
+                    if inv <= 1. / far || !inv.is_finite() {
+                        continue;
+                    }
+                    let at = y * gw + x;
+                    if inv > depth[at] {
+                        depth[at] = inv;
+                        who[at] = fi as u32;
+                    }
+                }
+            }
+        }
+    }
+    let mut out = Vec::new();
+    for y in 0..gh {
+        for x in 0..gw {
+            let at = y * gw + x;
+            let Some(f) = faces.get(who[at] as usize) else {
+                continue;
+            };
+            let u = l + (x as f64 + 0.5) / gw as f64 * (r - l);
+            let v = b + (1. - (y as f64 + 0.5) / gh as f64) * (t - b);
+            let fwd = 1. / depth[at];
+            let a = [fwd, v * fwd, u * fwd];
+            let p: [f64; 3] = std::array::from_fn(|i| {
+                camera.translation[i]
+                    + camera.scale * (0..3).map(|k| camera.rotation[k][i] * a[k]).sum::<f64>()
+            });
+            let v: [[f64; 3]; 3] = f.map(|q| q.map(f64::from));
+            let e1: [f64; 3] = std::array::from_fn(|i| v[1][i] - v[0][i]);
+            let e2: [f64; 3] = std::array::from_fn(|i| v[2][i] - v[0][i]);
+            let n = [
+                e1[1] * e2[2] - e1[2] * e2[1],
+                e1[2] * e2[0] - e1[0] * e2[2],
+                e1[0] * e2[1] - e1[1] * e2[0],
+            ];
+            let len = n.iter().map(|x| x * x).sum::<f64>().sqrt();
+            if !(len > 0. && len.is_finite()) {
+                continue;
+            }
+            let n = n.map(|x| x / len);
+            let to_eye: [f64; 3] = std::array::from_fn(|i| camera.translation[i] - p[i]);
+            let n = if (0..3).map(|i| n[i] * to_eye[i]).sum::<f64>() < 0. {
+                n.map(|x| -x)
+            } else {
+                n
+            };
+            out.push((p, n));
+        }
+    }
+    out
+}
+
 /// The sine of the elevation of the view direction through the centre of
 /// pixel `(x, y)` of `camera` (game axes, Z up).
 pub fn pixel_elevation(camera: &Camera, x: u32, y: u32) -> f64 {

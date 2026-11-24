@@ -1108,3 +1108,64 @@ fn the_sky_fills_the_background_by_elevation() {
     assert!(pixel_elevation(&c, 0, 0) > pixel_elevation(&c, 0, 7));
     assert!(f.instances.iter().all(|t| *t == u32::MAX));
 }
+
+#[test]
+fn the_visible_points_are_the_nearest_faces_at_the_grid_cells() {
+    let size = [1280, 720];
+    let cam = fo4_scene::camera::look_at(
+        [0., 0., 0.],
+        [1., 0., 0.],
+        fo4_scene::camera::reference_frustum(size),
+        size,
+    )
+    .unwrap();
+    // A wall 40 units ahead filling the view (two big triangles) and many
+    // small faces 2,000 units behind it.
+    let (y, z) = (5000.0f32, 5000.0f32);
+    let mut faces = vec![
+        [[40., -y, -z], [40., y, -z], [40., y, z]],
+        [[40., -y, -z], [40., y, z], [40., -y, z]],
+    ];
+    for k in 0..500 {
+        let o = k as f32 - 250.;
+        faces.push([[2000., o, -1.], [2000., o + 1., -1.], [2000., o, 1.]]);
+    }
+    let seen = crate::seen_visible(&faces, &cam, [32, 18]);
+    // Every cell sees the wall, none the faces behind it.
+    assert_eq!(seen.len(), 32 * 18);
+    for (p, n) in &seen {
+        assert!((p[0] - 40.).abs() < 1e-6, "{p:?}");
+        assert!((n[0] + 1.).abs() < 1e-9, "{n:?}");
+    }
+    // A floor under the eye reaching behind it is cut at the near distance
+    // and seen in the lower cells only, on its plane.
+    let floor = vec![[
+        [-100f32, -500., -10.],
+        [100., -500., -10.],
+        [0., 500., -10.],
+    ]];
+    let low = crate::seen_visible(&floor, &cam, [32, 18]);
+    assert!(!low.is_empty() && low.len() < 32 * 18 / 2 + 32);
+    for (p, n) in &low {
+        assert!((p[2] + 10.).abs() < 1e-6 && p[0] >= 15. - 1e-9, "{p:?}");
+        assert!((n[2] - 1.).abs() < 1e-9, "{n:?}");
+    }
+    // The centroids in view count the hidden faces (the old reading).
+    let tris: Vec<([f64; 3], [f64; 3])> = faces
+        .iter()
+        .map(|f| {
+            let c: [f64; 3] = std::array::from_fn(|i| f64::from(f[0][i] + f[1][i] + f[2][i]) / 3.);
+            (c, [-1., 0., 0.])
+        })
+        .collect();
+    let old = crate::seen_of(&tris, &cam);
+    assert!(old.iter().filter(|(c, _)| c[0] > 1000.).count() >= 400);
+    // Nothing in front: no cell.
+    let behind = vec![[[-10f32, -1., -1.], [-10., 1., -1.], [-10., 0., 1.]]];
+    assert!(crate::seen_visible(&behind, &cam, [8, 8]).is_empty());
+    // The faces of a lit draw list come out as their corners.
+    let l = list();
+    let f = crate::lit_faces(&l, &vec![true; l.draws.len()]);
+    assert!(!f.is_empty());
+    assert!(crate::lit_faces(&l, &[]).is_empty());
+}
