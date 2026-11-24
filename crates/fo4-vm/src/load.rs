@@ -429,7 +429,10 @@ fn position(store: &Store, w: &mut World, k: &FormKey) -> Result<(FormKey, [f64;
     if let Some(x) = w.loads.stored.get(k) {
         return x.clone();
     }
-    let x = track::stored_position(store, max, k)
+    // The run's index of the placements' cells: a reference's cell is
+    // looked up, not searched for among every placement.
+    let cells = w.place.cells(store);
+    let x = track::stored_position_with(store, max, k, Some(&cells))
         .map_err(|e| e.to_string())
         .and_then(|(space, pos)| {
             // An exterior cell's space is its worldspace.

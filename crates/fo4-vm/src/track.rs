@@ -1019,7 +1019,7 @@ impl Place {
         *self.counts.entry(k.into()).or_default() += 1;
     }
     /// The placements' cells ([`Cells`]), read once.
-    fn cells(&mut self, store: &Store) -> Rc<Cells> {
+    pub(crate) fn cells(&mut self, store: &Store) -> Rc<Cells> {
         self.cells
             .get_or_insert_with(|| Rc::new(Cells::read(store)))
             .clone()
@@ -1624,10 +1624,23 @@ pub fn stored_position(
     max: u64,
     k: &FormKey,
 ) -> Result<(FormKey, [f64; 3]), &'static str> {
+    stored_position_with(store, max, k, None)
+}
+
+/// [`stored_position`] with the placements' cells looked up in an index
+/// read once ([`Cells`]) instead of searched for each reference: the same
+/// answers ([`Cells::read`] keeps a record's first membership, as
+/// [`space_of`] finds it).
+pub(crate) fn stored_position_with(
+    store: &Store,
+    max: u64,
+    k: &FormKey,
+    cells: Option<&Cells>,
+) -> Result<(FormKey, [f64; 3]), &'static str> {
     let got = if store.signature(k) == Some(*b"ACHR") {
-        stored_actor(store, max, k, None)
+        stored_actor(store, max, k, cells)
     } else {
-        stored(store, max, k, None)
+        stored(store, max, k, cells)
     };
     got.map(|(space, pos, _)| (space, pos))
 }

@@ -892,6 +892,16 @@ for their second move as much (never before it).
   1,355.36 s. Without the switch, 200 s late, the run reaches 260 stages: 7 and 9 at the console's second, no 8,
   the walker stays in the vault.
 
+**The settle at a change of area.** The interpreter's load settle (`fo4_vm::load::settle`, at each change of the
+player's area) found each loaded reference's cell by searching every placement of the load order
+(`track::stored_position` without an index); it now looks the cell up in the run's index of placement cells,
+read once (`track::Cells`, `track::stored_position_with`), with the same answers (`Cells::read` keeps a record's
+first membership, as the search finds it). Seconds of the settle at each change of area, headless (the exit
+step's on-time run and session B's replay, timing builds that only print them): the vault's arrival 61.7 and
+61.8 s before, 0.10 s after; the dream's cell 3.1 and 3.2 s, 0.10 s; the postwar vault 8.7 s, 0.15 s. The whole
+run's turn 122.0 s before, 48.4 s after (session B's replay: 137.4 s, 64.2 s; the opening's whole `quest_run`, no
+play, 117.0 s and 25.8 s of wall clock). Every output byte for byte.
+
 ## What the play mode does not do yet
 
 - The elevators ride only those the caller names (`--play-elevator`), headless and in the scripted window;
