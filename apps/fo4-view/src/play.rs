@@ -555,6 +555,11 @@ mod enabled {
             };
             let mut scene = s.scene.clone();
             scene.cell = fo4_scene::timeline::key_text(&cell);
+            // `--exposure-eye` is measured from the walker's eye at the
+            // load (once per cell, not per frame).
+            if let Some(view) = s.seen.lock().ok().and_then(|x| eye_look(&x)) {
+                (scene.eye, scene.look) = view;
+            }
             let (tx, rx) = channel();
             let started = std::time::Instant::now();
             println!(
@@ -984,6 +989,20 @@ mod enabled {
         next
     }
 
+    /// The walker's eye and a point 100 units along its heading and pitch
+    /// (the camera's pose), when it stands somewhere.
+    pub fn eye_look(s: &Seen) -> Option<([f64; 3], [f64; 3])> {
+        let feet = s.feet?;
+        let eye = [
+            feet[0],
+            feet[1],
+            feet[2] + fo4_walk::Params::PROVISIONAL.eye_height,
+        ];
+        let (h, p) = (s.heading?.to_radians(), s.pitch.to_radians());
+        let d = [h.cos() * p.cos(), h.sin() * p.cos(), p.sin()];
+        Some((eye, std::array::from_fn(|i| eye[i] + 100.0 * d[i])))
+    }
+
     /// A horizontal move shorter than this (units) leaves the heading.
     const HEADING_MOVE: f64 = 0.5;
 
@@ -1154,6 +1173,17 @@ mod enabled {
             // The window closed: a run waiting is let go, refused.
             gate.stop();
             assert!(!gate.wait(h + 1.0));
+        }
+
+        #[test]
+        fn the_exposure_is_measured_from_the_walkers_eye() {
+            let mut s = Seen::default();
+            assert!(eye_look(&s).is_none());
+            s.feet = Some([1.0, 2.0, 3.0]);
+            s.heading = Some(90.0);
+            let (eye, look) = eye_look(&s).unwrap();
+            assert_eq!(eye[2], 3.0 + fo4_walk::Params::PROVISIONAL.eye_height);
+            assert!((look[1] - eye[1] - 100.0).abs() < 1e-9 && (look[0] - eye[0]).abs() < 1e-9);
         }
 
         #[test]

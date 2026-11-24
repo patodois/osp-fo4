@@ -19,7 +19,7 @@ usage:
              [--play-shots DIR --play-shot-every SECONDS
               [--play-shots-between FROM TO EVERY]...]
              [--timeline-cast [the cast readings of a --timeline frame]]
-             [the light switches of --headless, but --exposure-eye]]]
+             [the light switches of --headless]]]
       Window with a free-fly camera: W/A/S/D move, Shift moves faster, hold the
       left mouse button and move the mouse to look, R returns to the start pose.
       The title bar shows the mode, the speed and the position.
@@ -123,8 +123,9 @@ usage:
       each time the run changes an actor's place or presence (or a death,
       a sit) the cast of the drawn cell is built again on its own thread,
       at the run's second then, and replaces the one drawn. The light
-      switches of --headless (all but --exposure-eye) light the cells the
-      window loads and draw the sky, as the headless frame does.
+      switches of --headless light the cells the window loads and draw the
+      sky, as the headless frame does; --exposure-eye is measured once per
+      cell the window loads, from the walker's eye then.
   fo4-view MANIFEST DATA_DIRECTORY CELL_EDITOR_ID [level] --headless
            --eye X,Y,Z --look X,Y,Z --out build/FRAME.png [--tags build/TAGS.bin]
            [--size WxH] [--backface-cull] [--terrain] [--around N] [--walk]
@@ -900,17 +901,15 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
         play_cast,
         play_platforms: Vec::new(),
     };
-    // The window's scripted play mode takes the light switches too (no
-    // `--exposure-eye`: the window's camera moves).
+    // The window's scripted play mode takes the light switches too;
+    // `--exposure-eye` there is measured once per cell the window loads,
+    // from the walker's eye at the load (the camera moves).
     let play_window = !headless && play_run.is_some() && play_input.is_some();
     if (light.any() || light_assumptions != fo4_scene::light::Assumptions::default())
-        && (!(headless || play_window)
-            || headless && walk
-            || scene.script_event.is_some()
-            || play_window && light.exposure_eye)
+        && (!(headless || play_window) || headless && walk || scene.script_event.is_some())
     {
         return Err(
-            "the light switches apply to --headless without --walk or --script-event, or to the window's --play-run with --play-input (not --exposure-eye)".into(),
+            "the light switches apply to --headless without --walk or --script-event, or to the window's --play-run with --play-input".into(),
         );
     }
     if (light.reference_radius || light.fade) && !light.points
@@ -1362,14 +1361,19 @@ mod tests {
             panic!()
         };
         assert!(scene.play_cast.is_none() && scene.actors && !scene.light.any());
+        // The exposure by the eye: measured once per cell the window loads.
+        let Command::Window { scene, .. } =
+            parse(&args(&format!("{base} --light-cell --exposure-eye"))).unwrap()
+        else {
+            panic!()
+        };
+        assert!(scene.light.exposure_eye && scene.light.cell);
         for bad in [
             // The cast readings need --timeline-cast (and the scripted run).
             format!("{base} --actor-start-clip"),
             "m d C --under-hypotheses --walk --eye 1,2,3 --look 4,5,6 --play-run s.txt --play-out o --timeline-cast".to_string(),
             // Frame-only options stay with --timeline.
             format!("{base} --timeline-cast --look-at-actor nearest"),
-            // The window's camera moves: no exposure by the eye.
-            format!("{base} --light-cell --exposure-eye"),
             // Without --play-run the light switches stay headless.
             "m d C --eye 1,2,3 --look 4,5,6 --light-cell".to_string(),
         ] {
