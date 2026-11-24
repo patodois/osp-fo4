@@ -2050,6 +2050,16 @@ impl Builder<'_, '_> {
             }
             if let Some(mesh) = geometry {
                 let surface = self.surface(n, f, swap, file, Some(mesh))?;
+                // A named platform's effect surfaces (glows, light shafts:
+                // fields its controllers drive) are left out.
+                if self.platform && surface.effect {
+                    append(
+                        &mut self.output.left_out,
+                        (instance, "PlatformEffectSurface".into()),
+                        self.budget,
+                    )?;
+                    return Ok(());
+                }
                 let mesh = self.mesh(path, mesh_index, mesh, &surface, None)?;
                 self.animate(&surface, here.as_ref())?;
                 if surface.effect {
@@ -2649,6 +2659,14 @@ impl Builder<'_, '_> {
                         self.budget,
                     )?;
                     let surface = self.surface(n, f, &[], &file, Some(m))?;
+                    if self.platform && surface.effect {
+                        append(
+                            &mut self.output.left_out,
+                            (instance, "PlatformEffectSurface".into()),
+                            self.budget,
+                        )?;
+                        return Ok(());
+                    }
                     let mesh = self.mesh(path, i, m, &surface, Some((skeleton, &positions)))?;
                     if self.posed.contains(&skeleton)
                         && !self.recorded.iter().any(|r| r.mesh == mesh)

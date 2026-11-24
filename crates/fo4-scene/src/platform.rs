@@ -14,7 +14,9 @@
 //! - `play_platform_shapes_left_out_v1`
 //!   ([`hypotheses::PLAY_PLATFORM_LEFT_OUT`]): a shape the draw refuses
 //!   (particle systems, a material a controller drives that no rest rule
-//!   settles, any other refusal) is left out, counted by its code
+//!   settles, any other refusal) is left out, counted by its code, and so
+//!   is every effect-shader surface of the model (its glows and light
+//!   shafts, whose fields its controllers drive)
 //!   (`fo4_render::draw::Build::left_out`), the rest of the model drawn.
 use crate::{actor, hypotheses, readiness, Instance, Loader, Scene};
 use fo4_core::{Budget, Error};
