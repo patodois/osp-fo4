@@ -1015,88 +1015,6 @@ mod enabled {
         }
     }
 
-    /// The run's track as `play_run` writes it (`play-track.txt`).
-    fn track_text(points: &[fo4_play::Point]) -> String {
-        let mut s = String::from("# the run's track in the play mode: SECONDS SPACE X Y Z\n");
-        for p in points {
-            let _ = writeln!(
-                s,
-                "{} {} {} {} {}",
-                p.t,
-                fo4_vm::bind::record_key(&p.space),
-                p.pos[0],
-                p.pos[1],
-                p.pos[2]
-            );
-        }
-        s
-    }
-
-    /// What the walker did, in `play_run`'s words (the lines the window's
-    /// run is compared by).
-    fn walker_report(l: &fo4_play::walker::Log, report: &mut String) {
-        if let Some((p, feet, ticks)) = &l.start {
-            let _ = writeln!(
-                report,
-                "start: track point {:?} at {} s; walker settled in {ticks} ticks at {:?}",
-                p.pos, p.t, feet
-            );
-        }
-        let _ = writeln!(
-            report,
-            "walker: {} ticks, {} slices ({} standing), {} points, {} blocked, {} stepped, {} airborne",
-            l.ticks, l.slices, l.standing_slices, l.points, l.blocked, l.stepped, l.airborne
-        );
-        if let Some(s) = &l.live {
-            let _ = writeln!(
-                report,
-                "live world: {} applies of the run's state, {} references entered (or came back), {} left, {} moved",
-                s.applies, s.entered, s.left, s.moved
-            );
-        }
-        for (t, cell, feet, secs) in &l.grid {
-            let _ = writeln!(
-                report,
-                "grid: at {t} s the walking world built again about cell {} (feet {feet:?}) in {secs:.2} s",
-                fo4_vm::bind::record_key(cell)
-            );
-        }
-        for d in &l.doors {
-            let _ = writeln!(
-                report,
-                "{} at {} s: {} to {} in {}: cell {}, position {:?}, feet settled at {:?}; walking world built in {:.2} s",
-                d.rule,
-                d.t,
-                fo4_vm::bind::record_key(&d.door),
-                fo4_vm::bind::record_key(&d.to.to),
-                fo4_vm::bind::record_key(&d.to.space),
-                fo4_vm::bind::record_key(&d.cell),
-                d.to.pos,
-                d.feet,
-                d.seconds,
-            );
-        }
-        for (t, why) in &l.player_moves {
-            let _ = writeln!(report, "player place at {t} s: {why}");
-        }
-        for (t, x) in &l.elevators {
-            let _ = writeln!(report, "elevator at {t} s: {x}");
-        }
-        for r in &l.rules {
-            let _ = writeln!(report, "rule relied on\t{r}");
-        }
-        for (t, eye, dir, what) in &l.activations {
-            let what = match what {
-                Ok((k, d)) => format!("{} at {d:.1} units", fo4_vm::bind::record_key(k)),
-                Err(why) => why.clone(),
-            };
-            let _ = writeln!(
-                report,
-                "activate at {t} s from {eye:?} along {dir:?}: {what}"
-            );
-        }
-    }
-
     type E = Box<dyn std::error::Error>;
 
     /// The scripted run on its own thread: the walking world built about
@@ -1122,16 +1040,7 @@ mod enabled {
         let m = Manifest::load(std::path::Path::new(manifest))?;
         let store = fo4_plugin::typed::Store::open(&m, &Budget::new(m.limits.max_override_memory))?;
         let vfs = fo4_vfs::Vfs::mount(&m, &Budget::new(m.limits.max_vfs_memory))?;
-        let first = track.points.first().ok_or("an empty track")?;
-        let b = Budget::new(m.limits.max_memory);
-        let mut resolved = track.clone();
-        resolved.resolve(&store)?;
-        let space = resolved.points[0].space.clone();
-        let cell = match store.signature(&first.space) {
-            Some(s) if s == *b"CELL" => first.space.clone(),
-            _ => fo4_play::world::start_cell(&store, &space, first.pos, &b)?,
-        };
-        let built = fo4_play::world::build(&m, &store, &vfs, &cell, switches.world_options())?;
+        let built = switches.build_world(&m, &store, &vfs, track)?;
         if let Ok(mut s) = seen.lock() {
             s.cell = Some(built.cell.clone());
         }
@@ -1162,16 +1071,13 @@ mod enabled {
             let _ = writeln!(report, "{k}\t{v}");
         }
         let l = log.borrow();
-        walker_report(&l, &mut report);
-        let mut points: Vec<fo4_play::Point> = track
-            .points
-            .iter()
-            .filter(|p| p.t <= 0.0)
-            .cloned()
-            .collect();
-        points.extend(l.track.iter().cloned());
+        fo4_play::report::walker(&l, &mut report);
+        let points = fo4_play::report::track_points(track, &l);
         let dir = std::path::Path::new(out);
-        std::fs::write(dir.join("play-track.txt"), track_text(&points))?;
+        std::fs::write(
+            dir.join("play-track.txt"),
+            fo4_play::report::track_text(&points),
+        )?;
         std::fs::write(dir.join("play.txt"), report)?;
         Ok(counts)
     }
@@ -1224,23 +1130,6 @@ mod enabled {
             // A move wins over the command's heading.
             assert_eq!(heading(Some(5.0), Some([0.0, 2.0]), Some(10.0)), Some(90.0));
             assert_eq!(heading(None, Some([-3.0, 0.0]), None), Some(180.0));
-        }
-
-        #[test]
-        fn the_play_track_is_play_runs() {
-            let p = fo4_play::Point {
-                t: 1.5,
-                space: FormKey {
-                    plugin: "a.esm".into(),
-                    object_id: 0x3c,
-                },
-                pos: [1.0, -2.0, 3.25],
-                facing: None,
-            };
-            assert_eq!(
-                track_text(&[p]),
-                "# the run's track in the play mode: SECONDS SPACE X Y Z\n1.5 a.esm:0000003C 1 -2 3.25\n"
-            );
         }
     }
 }

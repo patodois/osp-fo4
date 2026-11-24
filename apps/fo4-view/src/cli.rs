@@ -1200,6 +1200,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "script-event")]
     #[test]
     fn play_needs_the_walker_and_its_outputs() {
         let ok = parse(&args(
@@ -1242,7 +1243,13 @@ mod tests {
         assert_eq!(p.input.as_deref(), Some("i.txt"));
         assert_eq!(p.shots, Some(("d".to_string(), 30.0)));
         assert_eq!(p.switches.slice, Some(0.25));
-        assert_eq!(p.switches.elevators, ["a.esm:00000001"]);
+        assert_eq!(
+            p.switches.elevators,
+            [fo4_plugin::FormKey {
+                plugin: "a.esm".into(),
+                object_id: 1
+            }]
+        );
         assert!(p.switches.load_doors && p.switches.follow_grid && p.switches.rigid);
         for bad in [
             "m d C --under-hypotheses --walk --eye 1,2,3 --look 4,5,6 --play-run s.txt",
