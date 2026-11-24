@@ -258,6 +258,9 @@ pub struct Live {
     /// `xesp_child_flag_agrees_chain_v1` in the decisions ([`decide`]).
     child_flag_agrees: bool,
     decided: BTreeMap<FormKey, Decision>,
+    /// Sources of the world as loaded that the activation's ray passes
+    /// through ([`crate::world::Built::unpicked`]).
+    unpicked: std::collections::BTreeSet<u32>,
     pub stats: Stats,
 }
 
@@ -278,8 +281,16 @@ impl Live {
             nowait: false,
             child_flag_agrees: false,
             decided: BTreeMap::new(),
+            unpicked: Default::default(),
             stats: Stats::default(),
         })
+    }
+
+    /// The sources of the world as loaded that the activation's ray passes
+    /// through (the collision markers' boxes).
+    pub fn with_unpicked(mut self, sources: &[u32]) -> Live {
+        self.unpicked = sources.iter().copied().collect();
+        self
     }
 
     /// Decides the chains left open only by agreeing own flags as any
@@ -494,7 +505,8 @@ impl Live {
         let mut best: Option<(pick::Hit, bool)> = None;
         for (k, w, _) in self.set.pieces() {
             let refs = self.refs.get(k).map(Vec::as_slice).unwrap_or_default();
-            let keep = |s: u32| !self.set.is_hidden(k, s);
+            let keep =
+                |s: u32| !self.set.is_hidden(k, s) && !(*k == BASE && self.unpicked.contains(&s));
             let hit = pick::met(w, refs, None, eye, dir, reach, &keep, skip, first_met);
             // The earlier piece keeps a tie.
             best = pick::nearer(first_met, best, hit);

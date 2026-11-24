@@ -20,6 +20,12 @@ type E = Box<dyn std::error::Error>;
 /// The grid square of an exterior cell, world units.
 pub const CELL_SIZE: f64 = 4096.0;
 
+/// The record flag of a box's base that makes the box solid in the walking
+/// world under `play_collision_marker_boxes_v1`: set on the collision
+/// marker's base, absent from the base of the light volumes that store the
+/// same box primitive.
+pub const BOX_OBSTACLE_FLAG: u32 = 0x0200_0000;
+
 /// What [`build`] reads besides the walking world itself.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct Options {
@@ -41,6 +47,12 @@ pub struct Options {
     /// `Loader::set_collision_child_flag_agrees`;
     /// `--play-collision-child-flag-agrees`). Off: the loader's default.
     pub child_flag_agrees: bool,
+    /// The boxes of the collision markers among the loaded references and
+    /// the worldspace's persistent references nearby stand in the walking
+    /// world as those references' collision (`play_collision_marker_boxes_v1`
+    /// over `walk_collision_marker_box_v1`; `--play-marker-boxes`). Off: no
+    /// box, as before.
+    pub marker_boxes: bool,
 }
 
 /// A placed door whose `XTEL` names a door: where it takes the player
@@ -81,6 +93,10 @@ pub struct Built {
     pub doors: BTreeMap<FormKey, LoadDoor>,
     /// Counts of what was read, by text.
     pub counts: BTreeMap<String, u64>,
+    /// Sources of `world` the activation's ray passes through: the
+    /// collision markers' boxes (`play_collision_marker_boxes_v1`), which
+    /// stop the walker, not the eye.
+    pub unpicked: Vec<u32>,
 }
 
 /// The cell under a point: the interior cell itself, or the exterior cell
@@ -151,6 +167,41 @@ pub fn load_door(store: &Store, key: &FormKey, b: &Budget) -> Result<Option<Load
         pos: tp.pos,
         rot: tp.rot,
     }))
+}
+
+/// The worldspace's persistent references (those of its cells' persistent
+/// groups) standing within `radius` grid squares of the square `centre`.
+pub fn persistent_refs(
+    store: &Store,
+    space: &FormKey,
+    centre: [i32; 2],
+    radius: i32,
+    b: &Budget,
+) -> Result<Vec<FormKey>, E> {
+    let mut out = Vec::new();
+    for c in store.cells() {
+        if store.world(&c).map(|w| norm(&w)) != Some(norm(space)) {
+            continue;
+        }
+        let cb = b.child();
+        let ch = store.children(&c, &cb)?;
+        for kid in ch.active.iter().chain(&ch.disabled) {
+            if kid.group_kind != 8 || kid.signature != *b"REFR" {
+                continue;
+            }
+            let rb = b.child();
+            let Some(r) = store.get::<fo4_plugin::typed::Refr>(&kid.key, &rb)? else {
+                continue;
+            };
+            let Some(t) = r.data.transform else { continue };
+            let sq = square([t[0], t[1], t[2]].map(f64::from));
+            if (sq[0] - centre[0]).abs() > radius || (sq[1] - centre[1]).abs() > radius {
+                continue;
+            }
+            out.push(norm(&kid.key));
+        }
+    }
+    Ok(out)
 }
 
 /// The load doors among a worldspace's persistent references (those of its
@@ -239,6 +290,72 @@ pub fn build(
     // Terrain sources come after the cell's: no reference.
     let mut refs = refs_before;
     refs.resize(world.sources.len(), None);
+    let mut counts = BTreeMap::new();
+    // The collision markers' boxes come after the terrain, each with its
+    // reference (`play_collision_marker_boxes_v1`).
+    let space_key = norm(&fo4_scene::timeline::scene_space(store, &scene));
+    let mut marked: Vec<(FormKey, [f64; 3], u32)> = Vec::new();
+    if o.marker_boxes {
+        let mut keys: Vec<FormKey> = scene
+            .instances
+            .iter()
+            .map(|i| norm(&i.reference.key))
+            .collect();
+        if let (Some(s), Some(g)) = (
+            store.signature(&space_key),
+            fo4_scene::grid::grid_of(store, cell, &budget)?,
+        ) {
+            if s == *b"WRLD" {
+                let r = o.around as i32 + 1;
+                keys.extend(persistent_refs(store, &space_key, g, r, &budget)?);
+            }
+        }
+        keys.sort();
+        keys.dedup();
+        for k in keys {
+            let mb = match fo4_walk::platform::marker_box(store, &k, &budget.child()) {
+                Ok(Some(mb)) => mb,
+                Ok(None) => continue,
+                Err(_) => {
+                    bump(
+                        &mut counts,
+                        "marker boxes left out\tthe reference does not read",
+                    );
+                    continue;
+                }
+            };
+            // Only a box whose base carries the obstacle flag: the record
+            // flag a collision marker's base sets and a light volume's
+            // base does not (both are statics with no model).
+            let base_flags = store
+                .get::<fo4_plugin::typed::Refr>(&k, &budget.child())?
+                .and_then(|r| r.data.base.and_then(|f| f.key))
+                .and_then(|base| store.raw(&base, &budget.child()).ok().flatten())
+                .map(|r| r.flags);
+            if base_flags.is_none_or(|f| f & BOX_OBSTACLE_FLAG == 0) {
+                bump(
+                    &mut counts,
+                    "marker boxes left out\ttheir base does not carry the obstacle flag",
+                );
+                continue;
+            }
+            if mb.initially_disabled || mb.enable_parent {
+                bump(
+                    &mut counts,
+                    "marker boxes left out\tinitially disabled or under an enable parent",
+                );
+                continue;
+            }
+            let at = [mb.placement[0], mb.placement[1], mb.placement[2]].map(f64::from);
+            let added = fo4_walk::platform::add_boxes(&mut world, &[mb], &budget)?;
+            refs.resize(world.sources.len(), None);
+            for s in added {
+                refs[s as usize] = Some(k.clone());
+                marked.push((k.clone(), at, s));
+            }
+            bump(&mut counts, "marker boxes in the walking world");
+        }
+    }
     // The object bounds of the placed references with no collision in the
     // world (used under --play-pick-bounds).
     let (mut boxes, no_bounds) = pick::object_bounds(&scene, &refs);
@@ -262,8 +379,7 @@ pub fn build(
         no_bounds,
         c.without_collision.len()
     );
-    let space = norm(&fo4_scene::timeline::scene_space(store, &scene));
-    let mut counts = BTreeMap::new();
+    let space = space_key;
     let mut doors = BTreeMap::new();
     if o.doors {
         let keys: Vec<FormKey> = scene
@@ -322,7 +438,7 @@ pub fn build(
             }
         }
     }
-    let live = if o.live {
+    let mut live = if o.live {
         Some(dormant(
             &mut loader,
             &mut scene,
@@ -335,6 +451,22 @@ pub fn build(
     } else {
         None
     };
+    // A box whose reference is not one of the scene's instances (a
+    // persistent reference) is known to the live world by its own record.
+    if let Some((_, info)) = live.as_mut() {
+        for (k, at, s) in &marked {
+            let i = info.entry(k.clone()).or_insert_with(|| RefInfo {
+                piece: 0,
+                listed_disabled: false,
+                enable: None,
+                stored: Some(*at),
+                sources: Vec::new(),
+            });
+            if !i.sources.contains(s) {
+                i.sources.push(*s);
+            }
+        }
+    }
     Ok(Built {
         cell: cell.clone(),
         space,
@@ -345,6 +477,7 @@ pub fn build(
         live,
         doors,
         counts,
+        unpicked: marked.iter().map(|(_, _, s)| *s).collect(),
     })
 }
 

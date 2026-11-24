@@ -19,6 +19,9 @@
 //! - Hellos (`dialogue_hello_proximity_v1`): a hello topic's line (`HELO`)
 //!   when the player's track comes within the hello distance of an enabled
 //!   placed actor at its stored position (`crate::track`).
+//! - A hello still owed (`dialogue_hello_owed_v1`): an entry into the
+//!   hello distance that played no line is offered again, while the player
+//!   stays inside, at the first settle after the run's quest state changed.
 //! - A line's stage fields (`dialogue_line_stage_fields_v1`): its TIQS
 //!   halves set on its owning quest as it begins and as it ends, its
 //!   seconds from its audio (`crate::voice`) or the caller's assumed line
@@ -85,6 +88,11 @@ pub struct Switches {
     /// names a group (`GNAM`) holds only when the group's conditions hold
     /// too, and a group is not a line that plays.
     pub info_groups: bool,
+    /// `--hello-owed` (`dialogue_hello_owed_v1`): an entry into an actor's
+    /// hello distance that played no line stays owed while the player
+    /// stays inside, and is offered again after each change of the run's
+    /// quest state until a line plays.
+    pub hello_owed: bool,
 }
 
 /// One line of a topic of a subtype the model reads.
@@ -289,6 +297,12 @@ pub struct Talk {
     /// Times the hello crossings already applied changed when the track
     /// was cut or grown (they should not: counted to check it).
     pub prefix_changed: u64,
+    /// Lines played outside scenes so far.
+    pub played: u64,
+    /// The hello entries still owed (`dialogue_hello_owed_v1`): the
+    /// actor's index in `crate::track::Place::actors` and the length of the
+    /// quest log when its hello was last offered.
+    pub owed: Vec<(usize, usize)>,
 }
 impl Talk {
     pub fn count(&mut self, k: impl Into<String>) {
@@ -528,35 +542,94 @@ pub fn settle(vm: &mut Vm<'_>, store: &Store, max_jobs: usize, b: &Budget) -> Ve
         host_call(vm, &call_of("halves", None));
         runs.extend(quest::run_jobs(vm, store, max_jobs, b));
     }
+    let owed = vm.world.talk.sw.hello_owed;
     while let Some(c) = vm.world.talk.crossings.get(vm.world.talk.cursor).copied() {
         if c.t > now {
             break;
         }
         vm.world.talk.cursor += 1;
         if !c.enter {
+            // Leaving ends what the entry still owed.
+            vm.world.talk.owed.retain(|(a, _)| *a != c.actor);
             continue;
         }
-        let a = vm.world.place.actors[c.actor].clone();
-        let Ok(o) = record_object(&mut vm.world, store, &a.key, "actor", b) else {
+        let Some(o) = hello_actor(vm, store, c.actor, b) else {
             continue;
         };
-        // The actor must still stand where it was placed.
-        let here = track::spot(
-            store,
-            store.limits.max_memory,
-            &mut vm.world,
-            Some(&Val::Object(o)),
-        );
-        let at_place = matches!(&here, track::Spot::At { space, pos, .. } if *space == a.space && *pos == a.pos);
-        if !at_place {
-            vm.world
-                .talk
-                .count("hello distance entered: the actor is not at its stored position (no line)");
-            continue;
-        }
         vm.world.talk.count("hello distance entered");
+        let played = vm.world.talk.played;
         host_call(vm, &call_of("hello", Some(Val::Object(o))));
         runs.extend(quest::run_jobs(vm, store, max_jobs, b));
+        if owed && vm.world.talk.played == played {
+            let seen = vm.world.quests.log.len();
+            vm.world.talk.owed.retain(|(a, _)| *a != c.actor);
+            vm.world.talk.owed.push((c.actor, seen));
+            vm.world.talk.count(
+                "hello: the entry played no line; owed while the player stays inside (--hello-owed)",
+            );
+        }
+    }
+    if owed {
+        runs.extend(settle_owed(vm, store, max_jobs, b));
+    }
+    runs
+}
+
+/// The placed actor `i` of the place as a run object when it still stands
+/// where it was placed (else counted, `None`).
+fn hello_actor(vm: &mut Vm<'_>, store: &Store, i: usize, b: &Budget) -> Option<ObjId> {
+    let a = vm.world.place.actors[i].clone();
+    let o = record_object(&mut vm.world, store, &a.key, "actor", b).ok()?;
+    // The actor must still stand where it was placed.
+    let here = track::spot(
+        store,
+        store.limits.max_memory,
+        &mut vm.world,
+        Some(&Val::Object(o)),
+    );
+    let at_place =
+        matches!(&here, track::Spot::At { space, pos, .. } if *space == a.space && *pos == a.pos);
+    if !at_place {
+        vm.world
+            .talk
+            .count("hello distance entered: the actor is not at its stored position (no line)");
+        return None;
+    }
+    Some(o)
+}
+
+/// Under `dialogue_hello_owed_v1`: each hello entry still owed whose
+/// actor's hello was last offered before the quest log grew is offered
+/// again (the actor still at its stored position), and stays owed until a
+/// line plays.
+fn settle_owed(vm: &mut Vm<'_>, store: &Store, max_jobs: usize, b: &Budget) -> Vec<quest::JobRun> {
+    let mut runs = Vec::new();
+    let mut k = 0;
+    while k < vm.world.talk.owed.len() {
+        let (i, seen) = vm.world.talk.owed[k];
+        if vm.world.quests.log.len() == seen {
+            k += 1;
+            continue;
+        }
+        vm.world.talk.owed[k].1 = vm.world.quests.log.len();
+        let Some(o) = hello_actor(vm, store, i, b) else {
+            vm.world.talk.owed.remove(k);
+            continue;
+        };
+        vm.rules.insert(rules::DIALOGUE_HELLO_OWED);
+        vm.world
+            .talk
+            .count("hello: offered again after a change of the quest state, the player still inside (--hello-owed)");
+        let played = vm.world.talk.played;
+        host_call(vm, &call_of("hello", Some(Val::Object(o))));
+        runs.extend(quest::run_jobs(vm, store, max_jobs, b));
+        if vm.world.talk.played != played {
+            if let Some(p) = vm.world.talk.owed.iter().position(|(a, _)| *a == i) {
+                vm.world.talk.owed.remove(p);
+            }
+            continue;
+        }
+        k += 1;
     }
     runs
 }
@@ -943,6 +1016,7 @@ fn play(h: &mut QuestHost<'_>, w: &mut World, line: &Line, speaker: &Party, what
             bind::record_key(&line.topic)
         ),
     ));
+    w.talk.played += 1;
     w.talk.count(format!(
         "{what}: lines played, spoken by {}",
         match speaker {

@@ -81,6 +81,23 @@ fn stage(n: u16) -> Vec<u8> {
 /// (1000, 1100, 0), a trigger box (half extents 50, script `Trig`) at
 /// (3000, 1000, 0) and a marker at (3000, 1100, 0).
 fn store() -> Store {
+    store_with(None)
+}
+
+/// A CTDA: function 59 (`GetStageDone`) of QS's stage `n`, `==` 1.
+fn stage_done(n: u32) -> Vec<u8> {
+    let mut c = vec![0u8; 32];
+    c[4..8].copy_from_slice(&1.0f32.to_le_bytes());
+    c[8..10].copy_from_slice(&59u16.to_le_bytes());
+    c[12..16].copy_from_slice(&QS.to_le_bytes());
+    c[16..20].copy_from_slice(&n.to_le_bytes());
+    c[28..32].copy_from_slice(&(-1i32).to_le_bytes());
+    sub(b"CTDA", &c)
+}
+
+/// [`store`], with the hello line L2 also asking that QS's stage
+/// `hello_after` is done.
+fn store_with(hello_after: Option<u32>) -> Store {
     let mut d = 0x0001u16.to_le_bytes().to_vec();
     d.extend([30, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
     let alias = |id: u32, name: &[u8], npc: u32| {
@@ -118,7 +135,11 @@ fn store() -> Store {
         tiqs(10, -1),
     ]
     .concat();
-    let l2 = [sub(b"ENAM", &w(0)), is_id(GUARD, 0), tiqs(-1, 20)].concat();
+    let mut l2 = [sub(b"ENAM", &w(0)), is_id(GUARD, 0)].concat();
+    if let Some(n) = hello_after {
+        l2.extend(stage_done(n));
+    }
+    l2.extend(tiqs(-1, 20));
     let children = [
         record(b"DIAL", D1, &dial(b"D1\0", b"GREE")),
         group(7, D1.to_le_bytes(), &record(b"INFO", L1, &l1)),
@@ -441,6 +462,86 @@ fn the_track_comes_within_the_hello_distance_and_the_lines_end_sets_its_stage() 
         1
     );
     assert!(vm.host.rules().contains(&rules::DIALOGUE_HELLO));
+}
+
+/// `dialogue_hello_owed_v1`: the player enters the hello distance before
+/// the stage the hello line asks for; the stage comes while the player is
+/// still inside (10 s) or after leaving (15 s). Off: no line either way.
+/// On: the hello is offered again after the stage and plays (its end half
+/// sets 20 two seconds later), only while the player is inside.
+#[test]
+fn a_hello_entry_that_played_no_line_is_offered_again_after_a_stage_only_under_the_switch() {
+    let s = store_with(Some(10));
+    let b = Budget::new(1 << 24);
+    for (owed, stage_at, expect) in [
+        (false, 10.0, None),
+        (true, 10.0, Some(12.0)),
+        (true, 15.0, None),
+    ] {
+        let mut l = lib();
+        let mut host = QuestHost::new(&s, 1 << 24);
+        let sw = talk::Switches {
+            hello: true,
+            stage_fields: true,
+            hello_owed: owed,
+            ..talk::Switches::default()
+        };
+        let mut vm = talk_vm(&s, &mut l, &mut host, sw);
+        let track =
+            Track::parse("0 test.esm:00000801 0 1000 0\n20 test.esm:00000801 2000 1000 0\n")
+                .unwrap();
+        vm.world.place = Place::load(&s, track, world_switches(), &b).unwrap();
+        vm.world.talk.hello_distance = Some(200.0);
+        talk::load_hello(&mut vm.world);
+        let qo = quest::quest_object(&mut vm, &s, &key(QS), &b).unwrap();
+        let mut set = false;
+        let mut at = Vec::new();
+        for _ in 0..32 {
+            let now = vm.world.now[crate::world::Clock::Real as usize];
+            if !set && now >= stage_at {
+                quest::set_stage(&mut vm, &s, qo, 10);
+                quest::run_jobs(&mut vm, &s, 64, &b);
+                set = true;
+            }
+            track::settle(&mut vm, &s, 64, &b);
+            let before = vm.world.quests.log.len();
+            talk::settle(&mut vm, &s, 64, &b);
+            if vm.world.quests.log[before..]
+                .iter()
+                .any(|(_, c)| *c == Change::StageSet(20))
+            {
+                at.push(now);
+            }
+            let Some(t) = [
+                track::next_due(&s, 1 << 24, &mut vm.world),
+                talk::next_due(&vm.world),
+                (!set).then_some(stage_at),
+            ]
+            .into_iter()
+            .flatten()
+            .filter(|t| *t > now)
+            .min_by(f64::total_cmp) else {
+                break;
+            };
+            vm.world.now[crate::world::Clock::Real as usize] = t;
+        }
+        assert!(set);
+        match expect {
+            None => assert!(at.is_empty(), "{owed} {stage_at}: {at:?}"),
+            Some(e) => {
+                assert_eq!(at.len(), 1, "{:?}", vm.world.talk.counts);
+                assert!((at[0] - e).abs() < 1e-6, "{at:?}");
+                assert!(vm.rules.contains(&rules::DIALOGUE_HELLO_OWED));
+            }
+        }
+        assert_eq!(
+            vm.world
+                .talk
+                .counts
+                .contains_key("hello: offered again after a change of the quest state, the player still inside (--hello-owed)"),
+            owed && stage_at < 12.0
+        );
+    }
 }
 
 #[test]

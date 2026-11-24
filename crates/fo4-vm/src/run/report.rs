@@ -394,6 +394,12 @@ pub(super) fn count_clock(c: &mut Counts, steps: usize, k: &scene::Clock) {
                 format!("switch: a package action's actor is at its package's one placed Location reference {n} s (the caller's) after the action starts (--package-destinations)"),
             );
         }
+        if k.package_after_stop {
+            bump(
+                c,
+                "switch: a package action's scheduled actor move stands when a script stops its scene first (--package-moves-outlive-scene)",
+            );
+        }
         if k.assume_packages {
             bump(
                 c,

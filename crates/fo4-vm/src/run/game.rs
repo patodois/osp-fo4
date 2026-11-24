@@ -573,6 +573,7 @@ pub(super) fn new_game(
             (t.hello, "a hello line plays when the player comes within the hello distance of a placed actor (--hello-lines)"),
             (t.priority, "a line outside a scene is chosen by priority (--dialogue-priority)"),
             (t.info_groups, "a line outside a scene holds only when the group it names holds too; a group does not play (--info-groups)"),
+            (t.hello_owed, "an entry into the hello distance that played no line is offered again after each change of the quest state while the player stays inside (--hello-owed)"),
         ] {
             if on {
                 bump(&mut c, format!("switch: {what}"));

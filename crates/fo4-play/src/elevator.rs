@@ -137,6 +137,13 @@ pub struct Elevator {
     /// A ride that carried the walker ended at this second (taken by the
     /// walker for the end door).
     pub ended: Option<f64>,
+    /// `play_elevator_end_landing_v1` (`--play-elevator-door-landing`): a
+    /// ride that carried the walker and ended while the walker was in the
+    /// air ends for the walker when it next stands on the ride's piece.
+    pub landing: bool,
+    /// Under [`Elevator::landing`]: the rides that ended while the walker
+    /// was in the air (their end second, their piece's key).
+    pending: Vec<(f64, Key)>,
     /// The (node, sequence) tracks read from a held translation
     /// (`play_elevator_held_pose_v1`); 0 without it.
     pub held: usize,
@@ -633,6 +640,8 @@ impl Elevator {
             last: 0.0,
             log: Vec::new(),
             ended: None,
+            landing: false,
+            pending: Vec::new(),
             held,
             parts,
             rigid_rides: Vec::new(),
@@ -828,24 +837,54 @@ impl Elevator {
                     .is_some_and(|(k, _)| *k == key)
         };
         let mut ended: Vec<f64> = Vec::new();
+        let mut aloft: Vec<(f64, Key)> = Vec::new();
         for r in &mut self.rides {
             carried += r.advance(set, walker, second, &b)?;
             let end = r.track.last().map_or(0.0, |p| p.0);
-            if self.last < end && second >= end && on(set, walker, r.key) && r.carried != 0.0 {
-                ended.push(end);
+            if self.last < end && second >= end && r.carried != 0.0 {
+                if on(set, walker, r.key) {
+                    ended.push(end);
+                } else if !walker.grounded {
+                    aloft.push((end, r.key));
+                }
             }
         }
         for r in &mut self.rigid_rides {
             carried += r.advance(set, walker, second, &b)?;
             let end = r.track.last().map_or(0.0, |p| p.0);
-            if self.last < end && second >= end && on(set, walker, r.key) && r.carried != 0.0 {
-                ended.push(end);
+            if self.last < end && second >= end && r.carried != 0.0 {
+                if on(set, walker, r.key) {
+                    ended.push(end);
+                } else if !walker.grounded {
+                    aloft.push((end, r.key));
+                }
             }
         }
         for end in ended {
             self.ended = Some(end);
             self.log
                 .push((end, "a ride that carried the walker ended".into()));
+        }
+        // `play_elevator_end_landing_v1`: a ride that ended with the walker
+        // in the air ends for it when it next stands on the ride's piece;
+        // standing on anything else first drops it.
+        if self.landing {
+            if walker.grounded && !self.pending.is_empty() {
+                let landed = self
+                    .pending
+                    .iter()
+                    .find(|(_, k)| on(set, walker, *k))
+                    .map(|(t, _)| *t);
+                self.pending.clear();
+                if let Some(end) = landed {
+                    self.ended = Some(second);
+                    self.log.push((
+                        second,
+                        format!("a ride that carried the walker ended at {end} s with the walker in the air; it landed on the ride"),
+                    ));
+                }
+            }
+            self.pending.extend(aloft);
         }
         self.last = second;
         Ok(carried)
@@ -1087,6 +1126,8 @@ mod tests {
             last: 0.0,
             log: Vec::new(),
             ended: None,
+            landing: false,
+            pending: Vec::new(),
             held: 0,
             parts: Vec::new(),
             rigid_rides: Vec::new(),
@@ -1156,6 +1197,64 @@ mod tests {
         e.insert(&mut again, t).unwrap();
         let bounds = again.get(&e.key(1)).unwrap().bounds.unwrap();
         assert!((bounds.max[2] + 100.0).abs() < 1.0, "{bounds:?}");
+    }
+
+    /// `play_elevator_end_landing_v1`: a ride whose last key passes while
+    /// the walker it carried is in the air is not an end for the walker;
+    /// with the switch the end comes when the walker lands on the piece.
+    #[test]
+    fn a_ride_that_ends_with_the_walker_in_the_air_ends_when_it_lands_only_under_the_switch() {
+        for landing in [false, true] {
+            let mut lib = fo4_vm::MapLibrary::default();
+            let mut host = fo4_vm::NoHost;
+            let mut vm = fo4_vm::Vm::new(&mut lib, &mut host);
+            let o = vm.world.object(
+                "the platform",
+                Some(fo4_vm::bind::record_key(&key(5))),
+                &["objectreference"],
+            );
+            let mut e = elevator();
+            e.landing = landing;
+            let mut set: WorldSet<Key> = WorldSet::new();
+            e.insert(&mut set, 0.0).unwrap();
+            let mut c =
+                Character::new(Params::PROVISIONAL, Settings::DEFAULT, [0.0, 0.0, 5.0]).unwrap();
+            c.settle(&set, 600);
+            vm.world.anims.started.push((2.0, o, "Down".into()));
+            assert!(e.follow(&vm));
+            let tick = Settings::DEFAULT.tick;
+            let mut t = 1.0;
+            while t < 2.9 {
+                t += tick;
+                e.advance(&mut set, &mut c, t).unwrap();
+                c.tick(&set, fo4_walk::Input::default());
+            }
+            assert!(c.grounded);
+            // The walker loses the piece just before its last key.
+            c.feet[2] += 10.0;
+            c.grounded = false;
+            c.ground = None;
+            let mut landed = None;
+            while t < 4.0 {
+                t += tick;
+                e.advance(&mut set, &mut c, t).unwrap();
+                c.tick(&set, fo4_walk::Input::default());
+                if landed.is_none() && c.grounded {
+                    landed = Some(t);
+                }
+            }
+            let landed = landed.expect("the walker lands on the piece");
+            assert!(landed > 3.0, "{landed}");
+            if landing {
+                let ended = e.ended.expect("an end on landing");
+                assert!(
+                    ended > 3.0 && ended <= landed + tick + 1e-9,
+                    "{ended} {landed}"
+                );
+            } else {
+                assert_eq!(e.ended, None);
+            }
+        }
     }
 
     #[test]

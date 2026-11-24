@@ -437,6 +437,11 @@ pub struct Clock {
     /// (the caller's) after the action starts, as an assumed actor move of
     /// the world model (`crate::track`). `None`: no actor moves.
     pub package_arrival: Option<f64>,
+    /// `pack_destination_outlives_scene_v1` (`quest_run
+    /// --package-moves-outlive-scene`): the actor moves of a scene's
+    /// package actions already scheduled stand when a script stops the
+    /// scene before they are applied. Off: they are dropped, as before.
+    pub package_after_stop: bool,
     /// `scene_action_skipped_start_v1` (`quest_run
     /// --scene-actions-skipped-start`): an action whose start phase the
     /// scene skipped starts with the first later phase it spans that the
@@ -700,7 +705,7 @@ pub(crate) fn start(
     let s = state(w, i);
     s.playing = Some(true);
     s.next = 0;
-    clear_actions(w, o);
+    clear_actions(w, o, false);
     w.scenes.log.push((
         o,
         if with_quest {
@@ -807,7 +812,7 @@ fn step(h: &mut QuestHost<'_>, w: &mut World, o: ObjId, i: &Rc<SceneInfo>, compl
             queue(w, o, Step::Fragment(f.clone(), "end".into()));
         }
         state(w, i).playing = Some(false);
-        clear_actions(w, o);
+        clear_actions(w, o, false);
         w.scenes.log.push((o, Change::Ended));
         field_stage(h, w, i, i.stage_fields[1]);
         return;
@@ -1037,7 +1042,11 @@ fn distance_marks(
     }
 }
 
-fn clear_actions(w: &mut World, o: ObjId) {
+/// Ends a scene's running actions; the actor moves of its package actions
+/// not yet applied end with it, or stand with `keep_moves`
+/// (`pack_destination_outlives_scene_v1`). Returns how many such moves
+/// were pending.
+fn clear_actions(w: &mut World, o: ObjId, keep_moves: bool) -> usize {
     w.scenes.actions.retain(|(s, _), _| *s != o);
     w.scenes.percent_marks.retain(|(s, _)| *s != o);
     w.scenes.line_events.retain(|e| e.scene != o);
@@ -1052,6 +1061,21 @@ fn clear_actions(w: &mut World, o: ObjId) {
         .map(|(_, m)| m.clone())
         .collect();
     w.place.package_moves.retain(|(s, _)| *s != o);
+    if keep_moves {
+        // They stand: still in the world model's moves, no longer the
+        // scene's.
+        let cursor = w.place.actor_cursor;
+        let kept = w.place.actor_moves[cursor.min(w.place.actor_moves.len())..]
+            .iter()
+            .filter(|m| pending.contains(m))
+            .count();
+        for _ in 0..kept {
+            w.place.count(
+                "package destinations\tactor moves kept: the scene stopped first (--package-moves-outlive-scene)",
+            );
+        }
+        return kept;
+    }
     let cursor = w.place.actor_cursor;
     let before = w.place.actor_moves.len();
     let mut i = cursor;
@@ -1067,6 +1091,7 @@ fn clear_actions(w: &mut World, o: ObjId) {
         w.place
             .count("package destinations\tactor moves dropped: the scene stopped first");
     }
+    dropped
 }
 
 /// The seconds of one line of a topic, or why they are not settled, with
@@ -1936,7 +1961,10 @@ pub(crate) fn call(h: &mut QuestHost<'_>, c: &NativeCall, w: &mut World) -> Repl
             h.using(rules::SCENE_START);
             let s = state(w, &i);
             s.playing = Some(false);
-            clear_actions(w, o);
+            let keep = w.scenes.clock.package_after_stop;
+            if clear_actions(w, o, keep) > 0 && keep {
+                h.using(rules::PACKAGE_MOVE_AFTER_STOP);
+            }
             w.scenes.log.push((o, Change::Stopped));
             none(c)
         }
@@ -2143,5 +2171,59 @@ pub fn step_call(scene: ObjId, complete: bool) -> NativeCall {
         args: vec![Val::Bool(complete)],
         param_types: vec!["bool".into()],
         return_type: "none".into(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn mv(t: f64, actor: u32) -> crate::track::ActorMove {
+        let key = |id: u32| FormKey {
+            plugin: "test.esm".into(),
+            object_id: id,
+        };
+        crate::track::ActorMove {
+            t,
+            actor: key(actor),
+            space: key(0x800),
+            pos: [t, 0.0, 0.0],
+        }
+    }
+
+    /// `pack_destination_outlives_scene_v1`: a scene that stops with its
+    /// package actions' actor moves still ahead drops them; with the
+    /// reading they stand. Another scene's move and a move already applied
+    /// are left alone either way.
+    #[test]
+    fn a_stopped_scenes_pending_package_moves_stand_only_under_the_reading() {
+        for keep in [false, true] {
+            let mut w = World::default();
+            let (o, other) = (7, 8);
+            let (applied, ours, theirs) = (mv(1.0, 0x901), mv(12.0, 0x902), mv(13.0, 0x903));
+            w.place.actor_moves = vec![applied.clone(), ours.clone(), theirs.clone()];
+            w.place.actor_cursor = 1;
+            w.place.package_moves = vec![
+                (o, applied.clone()),
+                (o, ours.clone()),
+                (other, theirs.clone()),
+            ];
+            let n = clear_actions(&mut w, o, keep);
+            assert_eq!(n, 1, "one move of the scene was still ahead");
+            let expect = if keep {
+                vec![applied.clone(), ours.clone(), theirs.clone()]
+            } else {
+                vec![applied.clone(), theirs.clone()]
+            };
+            assert_eq!(w.place.actor_moves, expect);
+            // No longer the scene's either way; the other scene keeps its own.
+            assert_eq!(w.place.package_moves, vec![(other, theirs.clone())]);
+            let k = if keep {
+                "package destinations\tactor moves kept: the scene stopped first (--package-moves-outlive-scene)"
+            } else {
+                "package destinations\tactor moves dropped: the scene stopped first"
+            };
+            assert_eq!(w.place.counts.get(k), Some(&1));
+        }
     }
 }

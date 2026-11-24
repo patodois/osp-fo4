@@ -55,6 +55,10 @@ pub struct Options {
     /// [`Live::with_child_flag_agrees`];
     /// `--play-collision-child-flag-agrees`).
     pub child_flag_agrees: bool,
+    /// The collision markers' boxes in every walking world the walker
+    /// builds ([`crate::world::Options::marker_boxes`];
+    /// `play_collision_marker_boxes_v1`, `--play-marker-boxes`).
+    pub marker_boxes: bool,
     /// The longest standing slice (seconds; `--play-stand`), and how far
     /// ahead the walker looks for a moving platform before it stands: a
     /// policy of the play mode, no game claim. `None` (the default): a
@@ -78,6 +82,7 @@ impl Default for Options {
             slice: 0.0,
             collision: fo4_scene::readiness::Switches::default(),
             child_flag_agrees: false,
+            marker_boxes: false,
             stand: None,
             first_met: false,
         }
@@ -225,6 +230,10 @@ pub struct Elevators {
     /// walker left by its last change of space (`--play-elevator-door-onward`,
     /// `play_elevator_end_door_onward_v1`).
     pub door_onward: bool,
+    /// A ride that ended with the walker in the air ends for the walker
+    /// when it next stands on the ride's piece (`--play-elevator-door-landing`,
+    /// `play_elevator_end_landing_v1`).
+    pub door_landing: bool,
     /// The parts move by the rigid motion their chain makes under each
     /// sequence, in place of the translations (`--play-elevator-rigid`,
     /// `play_elevator_rigid_v1`).
@@ -242,6 +251,10 @@ fn collision_rules(o: &Options) -> std::collections::BTreeSet<&'static str> {
     let mut out = std::collections::BTreeSet::new();
     if o.child_flag_agrees {
         out.insert(fo4_scene::hypotheses::ENABLE_CHILD_FLAG_AGREES);
+    }
+    if o.marker_boxes {
+        out.insert(crate::rules::MARKER_BOXES);
+        out.insert(fo4_walk::platform::rules::COLLISION_MARKER_BOX);
     }
     if c.off_chain {
         out.insert(fo4_scene::hypotheses::COLLISION_OFF_CHAIN);
@@ -798,6 +811,7 @@ impl Walker {
             let mut e =
                 crate::elevator::Elevator::build(m, run.store, vfs, k, also, i as u32, readings)
                     .map_err(|e| format!("PlayElevator {}: {e}", fo4_vm::bind::record_key(k)))?;
+            e.landing = o.door_landing;
             if here.as_ref() == Some(&e.space) {
                 e.insert(self.live.space_mut(), self.t)
                     .map_err(|e| e.to_string())?;
@@ -848,6 +862,9 @@ impl Walker {
             let ended = e.ended.take();
             let mut log = self.log.borrow_mut();
             for (t, x) in &e.log[before..] {
+                if x.ends_with("it landed on the ride") {
+                    log.rules.insert(crate::rules::ELEVATOR_END_LANDING);
+                }
                 log.elevators.push((
                     *t,
                     format!("{}: {x}", fo4_vm::bind::record_key(&e.reference)),
@@ -1382,6 +1399,7 @@ impl Walker {
             doors: self.doors.is_some(),
             collision: self.opts.collision,
             child_flag_agrees: self.opts.child_flag_agrees,
+            marker_boxes: self.opts.marker_boxes,
         };
         if let Some(f) = self.on_load.as_mut() {
             f(Some(cell));
@@ -1416,7 +1434,10 @@ impl Walker {
                 built.space.clone(),
                 self.nowait,
             )
-            .map(|l| l.with_child_flag_agrees(self.opts.child_flag_agrees)),
+            .map(|l| {
+                l.with_child_flag_agrees(self.opts.child_flag_agrees)
+                    .with_unpicked(&built.unpicked)
+            }),
             None => Live::fixed(built.world, built.refs),
         }
         .map_err(|e| e.to_string())?;

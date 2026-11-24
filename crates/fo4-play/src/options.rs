@@ -53,11 +53,13 @@ pub struct Play {
     /// `--play-elevator-door` (`play_elevator_end_load_door_v1`),
     /// `--play-elevator-held-pose` (`play_elevator_held_pose_v1`),
     /// `--play-elevator-rigid` (`play_elevator_rigid_v1`),
-    /// `--play-elevator-door-onward` (`play_elevator_end_door_onward_v1`).
+    /// `--play-elevator-door-onward` (`play_elevator_end_door_onward_v1`),
+    /// `--play-elevator-door-landing` (`play_elevator_end_landing_v1`).
     pub elevator_door: bool,
     pub held_pose: bool,
     pub rigid: bool,
     pub door_onward: bool,
+    pub door_landing: bool,
     /// `--play-player-moveto` (`play_player_moveto_v1`),
     /// `--play-player-sits` (`play_player_sit_furniture_v1`).
     pub player_moveto: bool,
@@ -68,6 +70,8 @@ pub struct Play {
     pub off_chain: bool,
     pub reference_alpha: bool,
     pub child_flag_agrees: bool,
+    /// `--play-marker-boxes` (`play_collision_marker_boxes_v1`).
+    pub marker_boxes: bool,
     /// `--play-elevator REF` (repeated; `play_elevator_run_sequence_v1`),
     /// `--play-elevator-also REF`, `--play-elevator-also-with REF OWNER`.
     pub elevators: Vec<FormKey>,
@@ -142,11 +146,13 @@ impl Play {
             "--play-elevator-held-pose" => &mut self.held_pose,
             "--play-elevator-rigid" => &mut self.rigid,
             "--play-elevator-door-onward" => &mut self.door_onward,
+            "--play-elevator-door-landing" => &mut self.door_landing,
             "--play-player-moveto" => &mut self.player_moveto,
             "--play-player-sits" => &mut self.player_sits,
             "--play-collision-off-chain" => &mut self.off_chain,
             "--play-collision-reference-alpha" => &mut self.reference_alpha,
             "--play-collision-child-flag-agrees" => &mut self.child_flag_agrees,
+            "--play-marker-boxes" => &mut self.marker_boxes,
             "--play-pick-first-met" => &mut self.first_met,
             "--play-action-after-offset" => &mut self.action_offset,
             "--play-around" => {
@@ -289,6 +295,12 @@ impl Play {
         if self.door_onward && !self.elevator_door {
             return Err("--play-elevator-door-onward needs --play-elevator-door".into());
         }
+        if self.marker_boxes && !self.live_world {
+            return Err("--play-marker-boxes needs --play-live-world".into());
+        }
+        if self.door_landing && !self.elevator_door {
+            return Err("--play-elevator-door-landing needs --play-elevator-door".into());
+        }
         if self.elevator_door && !(self.load_doors && self.reach.is_some()) {
             return Err("--play-elevator-door needs --play-load-doors and --play-reach".into());
         }
@@ -402,6 +414,7 @@ impl Play {
             doors: self.load_doors,
             collision: self.collision(),
             child_flag_agrees: self.child_flag_agrees,
+            marker_boxes: self.marker_boxes,
         }
     }
 
@@ -415,6 +428,7 @@ impl Play {
             held_pose: self.held_pose,
             rigid: self.rigid,
             door_onward: self.door_onward,
+            door_landing: self.door_landing,
         }
     }
 
@@ -426,6 +440,7 @@ impl Play {
             reach: self.reach,
             collision: self.collision(),
             child_flag_agrees: self.child_flag_agrees,
+            marker_boxes: self.marker_boxes,
             ..walker::Options::default()
         };
         if let Some(v) = self.walk_speed {
@@ -490,7 +505,7 @@ impl Play {
             counts,
             space,
             cell,
-            ..
+            unpicked,
         } = built;
         let _ = writeln!(
             report,
@@ -506,6 +521,9 @@ impl Play {
         }
         if self.child_flag_agrees {
             let _ = writeln!(report, "switch: an enable chain left open only by records' own flags that agree with it decides their collision, at load and after the run's changes (--play-collision-child-flag-agrees, {})", fo4_scene::hypotheses::ENABLE_CHILD_FLAG_AGREES);
+        }
+        if self.marker_boxes {
+            let _ = writeln!(report, "switch: the collision markers' boxes among the loaded references and the worldspace's persistent references nearby stand in the walking world, taken out when the run disables them (--play-marker-boxes, {})", crate::rules::MARKER_BOXES);
         }
         let opts = self.walker_options();
         if let Some(v) = self.slice {
@@ -537,7 +555,8 @@ impl Play {
                 );
                 let live = crate::live::Live::new(world, refs, dormant, info, space, nowait)
                     .map_err(|e| e.to_string())?
-                    .with_child_flag_agrees(self.child_flag_agrees);
+                    .with_child_flag_agrees(self.child_flag_agrees)
+                    .with_unpicked(&unpicked);
                 walker::Walker::new(fo4_walk::World::new(), Vec::new(), script, opts)?
                     .with_live(live, nowait)
             }
@@ -570,6 +589,9 @@ impl Play {
             }
             if elevators.door_onward {
                 let _ = writeln!(report, "switch: a ride's end leaves out the load doors back into the space the walker came from (--play-elevator-door-onward)");
+            }
+            if elevators.door_landing {
+                let _ = writeln!(report, "switch: a ride that ended with the walker in the air ends for it when it next stands on the ride (--play-elevator-door-landing)");
             }
             if elevators.rigid {
                 let _ = writeln!(report, "switch: each part moves by the rigid motion the sequence gives the chain above it, every channel read, in place of the translations (--play-elevator-rigid)");

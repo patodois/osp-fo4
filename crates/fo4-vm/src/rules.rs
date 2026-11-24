@@ -169,7 +169,7 @@ pub const XESP_BIT1: &str = "xesp_flag_bit1_not_presence_v1";
 pub const XESP_PROPAGATES: &str = "xesp_script_change_propagates_v1";
 
 /// Every rule above.
-pub const ALL: [&str; 206] = [
+pub const ALL: [&str; 208] = [
     ARITHMETIC,
     COMPARE,
     NOT_COPY_CAST,
@@ -376,6 +376,8 @@ pub const ALL: [&str; 206] = [
     TIMER_BUDGET_PER_TIMER,
     ACTION_AFTER_OFFSET,
     ACTOR_MOVE_AFTER,
+    DIALOGUE_HELLO_OWED,
+    PACKAGE_MOVE_AFTER_STOP,
 ];
 
 /// The rule an opcode's meaning rests on; `None` for an opcode without a
@@ -886,3 +888,12 @@ pub const ACTION_AFTER_OFFSET: &str = "caller_action_after_keeps_offset_v1";
 /// timed caller action is, and keeps its offset under
 /// `--action-after-offset` (`--action-after-actor-moves`).
 pub const ACTOR_MOVE_AFTER: &str = "caller_actor_move_after_v1";
+/// An entry into an actor's hello distance that played no line stays
+/// owed while the player stays inside, and the hello is offered again at
+/// the first settle after the run's quest state changed, until a line
+/// plays (`--hello-owed`).
+pub const DIALOGUE_HELLO_OWED: &str = "dialogue_hello_owed_v1";
+/// The actor move of a scene's package action already scheduled
+/// (`pack_location_destination_v1`) stands when its scene stops before
+/// it is applied (`--package-moves-outlive-scene`).
+pub const PACKAGE_MOVE_AFTER_STOP: &str = "pack_destination_outlives_scene_v1";

@@ -99,6 +99,19 @@ pub mod rules {
     /// a `MoveTo` or a sit) are left out: a ride's end does not take the
     /// walker back where it came from (`--play-elevator-door-onward`).
     pub const ELEVATOR_END_DOOR_ONWARD: &str = "play_elevator_end_door_onward_v1";
+    /// Under `ELEVATOR_END_DOOR`, a ride that carried the walker and whose
+    /// last key passed while the walker was in the air (it lost the piece
+    /// under its feet for a moment, pushing against the shaft) ends for
+    /// the walker when it next stands on the ride's piece; standing on
+    /// anything else first drops it (`--play-elevator-door-landing`).
+    pub const ELEVATOR_END_LANDING: &str = "play_elevator_end_landing_v1";
+    /// The box of a collision marker (`walk_collision_marker_box_v1`)
+    /// placed enabled with no enable parent, among a walking world's loaded
+    /// references or the worldspace's persistent references within one
+    /// grid square more than the cells read, stands in the walking world as
+    /// that reference's collision; the live world takes it out when the run
+    /// disables the reference (`--play-marker-boxes`).
+    pub const MARKER_BOXES: &str = "play_collision_marker_boxes_v1";
     /// A `MoveTo` the run calls on the player with zero offsets and a
     /// target whose place the world model settles puts the walker at the
     /// target's position in the target's space (the walking world of its
@@ -138,7 +151,7 @@ pub mod rules {
     /// `caller_action_after_keeps_offset_v1`; `--play-action-after-offset`).
     pub const ACTIVATE_WRITTEN_SECOND: &str = "play_activate_written_second_v1";
     /// Every rule above.
-    pub const ALL: [&str; 19] = [
+    pub const ALL: [&str; 21] = [
         PLAYER_FEET,
         RUN_CLOCK,
         ACTIVATE_RAY,
@@ -152,6 +165,8 @@ pub mod rules {
         ELEVATOR_HELD_POSE,
         ELEVATOR_RIGID,
         ELEVATOR_END_DOOR_ONWARD,
+        ELEVATOR_END_LANDING,
+        MARKER_BOXES,
         PLAYER_MOVETO,
         PLAYER_SIT,
         ACTIVATE_OPENS,

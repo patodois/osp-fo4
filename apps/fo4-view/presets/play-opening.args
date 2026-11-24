@@ -35,6 +35,9 @@
 --play-elevator-held-pose
 --play-elevator-rigid
 --play-elevator-door-onward
+# A ride that ends with the walker in the air ends for it when it lands on
+# the ride (play_elevator_end_landing_v1).
+--play-elevator-door-landing
 --play-collision-off-chain
 --play-collision-reference-alpha
 --play-collision-child-flag-agrees

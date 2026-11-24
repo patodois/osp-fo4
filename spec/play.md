@@ -1005,6 +1005,55 @@ replays to show for it); the join and the draw list of the overlapping cells, re
 per load); the store's types are not shared between threads, so the cast cannot get a thread of its own without a
 second set of open files.
 
+### A person ahead of the story (the early step)
+
+The deck step's sweep left six early-arrival stalls and one missed ride end. Each was traced in the run's names file
+and the walker's track; three are covered by new readings, each behind its own switch (off by default, on in the
+play preset's run arguments or play options), and three are the game's own waits as far as the data tells.
+
+- **At the checkpoint before the guard's talk ends** (arriving 19.4 s early). The escort scene's first phase completes
+  on the stage the guard's hello line sets at its end; that line holds only from a stage the checkpoint's scene sets
+  while the person waits (357.7 s). The early person entered the guard's hello distance at 351.3 s, before that stage
+  (no line held), and stayed inside; a hello is offered only on an entry, so the line never played. `quest_run
+  --hello-owed` (`dialogue_hello_owed_v1`): an entry that played no line stays owed while the player stays inside and
+  is offered again at the first settle after the quest log grows. The line now plays at 357.7 s and its end sets the
+  escort's stage at 364.7 s (the reference run: 377.7 s); the person goes through (the reference run's 276 stages).
+- **Boarding the platform 19.5 s before the others.** The boarding trigger stops the escort scene; its second wave of
+  package moves (two actors, due 1.3 s later under the caller's 10 s) was dropped with the scene, so six of the seven
+  registered arrivals came. `quest_run --package-moves-outlive-scene` (`pack_destination_outlives_scene_v1`): moves
+  already scheduled stand when a script stops the scene. The person now goes through (276 stages, the descent 19.5 s
+  earlier).
+- **The ride's end missed** (60 s late from the checkpoint's last stop). A temporary trace of the ride end showed the
+  walker, pushing into the shaft wall, off the deck 0.25 s before the ride's last key and falling 2 units above it
+  when the key passed: the end is noted only when the walker stands on the piece at that tick. `play_run
+  --play-elevator-door-landing` (`play_elevator_end_landing_v1`): such a ride ends for the walker when it next stands
+  on the piece. The person now goes through (276 stages).
+- **Walking through the checkpoint gate 7.5 s early.** The person crossed the two stage triggers past the gate before
+  the guard's talk set their prerequisite, and the default trigger script sets its stage only on an entry made after
+  the prerequisite: the escort's later phases wait for them forever. The data says the game would not let the person
+  there: the gate stores a collision marker's box (a modelless static's box primitive), and the stage the guard's
+  line sets disables it. The play mode's walking world places no such box. `--play-marker-boxes`
+  (`play_collision_marker_boxes_v1`) places the boxes whose base carries the obstacle flag (the light volumes' base,
+  which stores the same primitive, does not) and lets the live world take them out when the run disables them; the
+  activation's ray passes through them. It is not in the preset: the house's front door has such a box too, removed
+  when the door's opening stage comes, and every recorded input (the synthetic persons' and the three human
+  sessions') walks up to the door through where the box stands, so the walker stops 70 units short and the E at the
+  door meets nothing. With the switch off this stall stays.
+- **Leaving the nursery or the evacuation's start 47 to 57 s early** (the "ahead of the story" pair). The person
+  entered the hallway's trigger before its prerequisite stage and stood inside; the stage came with a later entry,
+  and on the scripted time the person then crossed the street's stage triggers before the broadcast set theirs. Each
+  is the default trigger script's rule (an entry before the prerequisite does nothing): the game also waits for a
+  later entry. The fall out of the world that follows: with the story stalled the run never seats the player in the
+  pod, the walker stays in the prewar vault and walks commands written for the postwar vault; at the end of the room
+  east of the cryo hall it walks through a door into the part of the cell nobody built. The postwar cell places a
+  hall end piece there; the prewar cell places only the door, whose collision is refused (the door record's `FNAM`
+  layout is not read: every placed door, `spec/play.md`, Doors). Not a reading defect of this step; nothing changed.
+- **After waking, 60 s early.** The sweep moved the walk 60 s back from the stop, to before the wake (812 s): the
+  walker walked in the dream room while the run held the player in the pod, never reached the follow-on quest's
+  trigger, and nothing was crossed before its stage. The same walk moved back only to the wake (21.65 s) goes through.
+  The game holds the player in the pod; the play mode's walker is not held while the run seats the player (a gap,
+  not covered here).
+
 ## What the play mode does not do yet
 
 - The elevators ride only those the caller names (`--play-elevator`), headless and in the scripted window;
@@ -1065,3 +1114,7 @@ second set of open files.
 | `caller_action_after_keeps_offset_v1` | `quest_run --action-after-offset` (`--play-action-after-offset`) | how the opening's gates are written (each names the stage the caller's previous action sets); a reading of the caller's own timed assumptions | weak |
 | `play_activate_written_second_v1` | `--play-action-after-offset` | the person's activation and the caller's timed one are the same event of the story; that the caller's later events follow it by the written gaps is prior knowledge of how they were timed | weak |
 | `caller_actor_move_after_v1` | `quest_run --action-after-actor-moves` (in the run's arguments) | how the opening's two moves of the spouse are written: 54 and 100 s after the stage whose fragment moves her to the escort marker in the reference run; that her walk follows that stage by the same time whatever the player's pace is prior knowledge of the caller's timing | weak |
+| `dialogue_hello_owed_v1` | `quest_run --hello-owed` (in the run's arguments) | the hello line's own condition on the checkpoint talk's stage; that an actor greets a player already near it once its line holds is prior knowledge | weak |
+| `pack_destination_outlives_scene_v1` | `quest_run --package-moves-outlive-scene` (in the run's arguments) | the escort's package actions and the boarding trigger's Stop; that an actor on its way goes on when its scene stops is prior knowledge, the arrival second the caller's | weak |
+| `play_elevator_end_landing_v1` | `--play-elevator-door-landing` (in the preset) | the play mode's own trace of the missed ride end; a policy of the ride's end | weak |
+| `play_collision_marker_boxes_v1` | `--play-marker-boxes` (not in the preset) | the gate's and the front door's boxes and the stages that disable them; that the obstacle flag makes a box solid for the player is prior knowledge | weak |
