@@ -788,6 +788,76 @@ input; 59.96 fps median, first percentile 55.6, lowest 1.27 (a load); peak resid
 image changed after its material was prepared kept the first image): the subtitle and `E` with the door's label
 under the crosshair are drawn.
 
+### What the third session met (the way-out step)
+
+A tester drove the window again (session B of the third play session: the whole opening, its last stage at
+878 s, then the follow-on quest held at its stage 9 and the person could not leave the vault). What each was and
+what changed (viewer policy unless a rule is named):
+
+- **The way out.** Three causes, read from the session's record replayed by `play_run` with the ray's hits
+  logged. (1) The pick: the postwar gear door's object bounds (959 by 660 by 735 units) hold the whole walkway
+  before the exit console, so from every place on it the eye stood inside that box and the ray met it at
+  distance 0; every activation went to the door, never to the console, whose own small box the ray meets from
+  outside at about 50 units only when looking down at it. The door is a named platform, its collision placed by
+  the elevator reading, so its box stood in the activation's list too. With `--play-pick-first-met`
+  (`play_activate_ray_first_met_v1`) what the eye stands inside (a box holding the eye, a body met at distance 0)
+  comes after everything the ray meets from outside, the named platforms' boxes are left out (their collision
+  stands for them) and so is the box of a base that names no model (a light with no fixture hung over the device
+  on the skeleton took the ray aimed at it). (2) The run: the console's activation and the device's on the
+  skeleton were the caller's timed `--assume-activate` held until their stages; with `--play-activate-person
+  REF` (`play_activate_person_v1`) they leave the run's switches as the front door's open did, and the person's
+  E is the activation (an E before the reference's stage does what its handler then does: in the opening, the
+  console before the device sets the quest's 5 and nothing opens). (3) The walkway: it ends at the gear door,
+  which stood closed because the follow-on quest's 8 never came. The caller's two player animation events that
+  follow the console's use (`--assume-anim-event player ...@880` and `@885`, both held until the quest's 7) were
+  held for 30 s and then given at one second; the first plays the console's graph event and the second, at the
+  same second, finds the graph between states and takes no transition, so the text key that sets 8 and opens the
+  door never comes. That is the interpreter's gate (`--action-after` releases every held action of a gate at
+  once; `crates/fo4-vm`, not edited here): what is missing is either a gate that keeps an action's offset from
+  its stage (the two events 10 and 15 s after the console's use, as the caller's own seconds space them), or
+  caller actions of every kind (animation events) given by the stepper with `NewGame::advance_to`, so the play
+  mode could time them from the person's activation. The proof below gives the two events the person's late
+  seconds by hand (a caller assumption of that run).
+- **The 76 s after the ride down.** Not the window: sampled during the stand, the run's thread was inside the
+  interpreter's load settling (`fo4_vm::load::settle` at the change of the player's area: every loaded
+  reference's position, each placed actor's and moved object's through `track::stored_actor` and
+  `track::stored_position`, whose `space_of` searches every placement of the load order for each reference;
+  `track::Cells`, the run's index of placement cells, is not used on that path). Headless, the session's record
+  replayed spends 61.3 s of the run's turn there (612.9 to 621.4 s of the run), 8.6 s at the postwar vault's
+  arrival and 3.2 s at the dream's; the window's frames went on at 60 fps meanwhile, the play clock stood (the
+  busy run is owed at most 0.25 s) and the title showed the run's last event's second. Not cut here (it is
+  `crates/fo4-vm`'s: the index passed to those reads would cut it). The viewport now says `loading` whenever
+  the play clock stands for more than 0.5 s while nothing is paused, and the title shows the play clock's
+  second (the clock the walker goes by), not the run's last event's.
+- **The seats at the pods.** The first is the furniture the run seats the player in (a pod placed in a cell of
+  its own, the dream's; the reference headless run seats it there too, at 730.1 s); the second, the player's
+  pod in the postwar vault. The window loads and draws that cell where the player is taken (6.3 s). It is dark
+  by its own data under the drawing's readings: its ambient is near zero (0.004) and of its 211 placed lights
+  162 are off at load under `xesp_child_flag_agrees_chain_v1` (`--draw-child-flag-agrees`), 107 of them
+  children of one initially disabled light marker of a later quest's memory set that the run never enables; 49
+  light the room (156 without that reading). No change: which reading holds is the pending rules'.
+- **The viewport** (`--play-hud`): the prompt is a short action and a plain name from the record's type and
+  its display name (`E  open <name>` for a door or a container, `E  use <name>` otherwise, the type when a
+  door has no name: `fo4_view::play::prompt_of`), the record keys and distance in the title bar; subtitles
+  show only the lines whose text the data settles, wrapped to three lines (what the timeline says about the
+  others goes to the title); the objective the run displayed last and has not completed (the quest's own
+  objective text, read through its string table) in the top left corner; after E, `opened`, `used` or
+  `nothing happened` in the prompt's place for 1.5 s (the run's effects and logs before and after the slice the
+  activation came in).
+- **Markers and heads.** The bright shapes at the checkpoint and in the pod room are the cast's placeholder
+  markers for actors the drawing refuses (the cast lines count them: 6 at the checkpoint, 19 to 20 in the pod
+  room), not placed editor markers; the window's log now lists each marker's reference and reason and each
+  character drawn without its head (`play: cast: ...`).
+
+**The way out played late by the synthetic person** (`L8w` in the step's notes; release build; the person
+step's late route with the person's E at the device on the skeleton at 1,061.6 s and at the console at
+1,071.6 s, aimed at their boxes; the window switches of the preset plus `--play-pick-first-met`,
+`--play-activate-person` for the two references, the two animation events at 1,081 and 1,086 s): the follow-on
+quest's 3, 4, 6, 7, 9, 8 and, riding the exit elevator up, 10 and 15 at 1,155.4 s; the walker leaves the vault
+and stops at the cliff face past it, as the scripted walk does; 276 stages, the headless run's (`L8c`) in the
+same order, 139 at the same second, the rest within 0.18 s; 59.97 fps median, first percentile 54.7, 81 frames
+over 250 ms (loads); peak resident memory 2.22 GB. The run stood 61 to 65 s at the vault's arrival (above).
+
 ## What the play mode does not do yet
 
 - The elevators ride only those the caller names (`--play-elevator`), headless and in the scripted window;
@@ -801,10 +871,11 @@ under the crosshair are drawn.
 - Moving collision with a node (an animated door, a platform) is modelled only for the references the caller
   names (above); the live world moves only what the run moves.
 - A person's keys drive `play_run`'s walker in the window (`--play-keys`), checked by the synthetic person, the
-  unit tests and a tester through a desktop-automation tool (the person step), not yet by a person at a physical
-  keyboard and mouse. Of the run's caller assumptions only the front door's open is the person's
-  (`--play-activate-opens`); the vaults' timed activations could be taken the same way (the person's E) but the
-  synthetic person would need their places; the talks and actor moves stay timed (held until their stages).
+  unit tests and a tester through a desktop-automation tool (the person and way-out steps), not yet by a person
+  at a physical keyboard and mouse. Of the run's caller assumptions the front door's open and the exit's two
+  activations are the person's (`--play-activate-opens`, `--play-activate-person`); the earlier vault
+  activations, the talks, the actor moves and the player's animation events stay timed (held until their
+  stages, all at once when the person is late: the interpreter's gate keeps no offset).
 - A grid square's drawing is loaded whole by the window (5.6 to 7.5 s, the store opened again, the cells
   scanned, the models and textures read), overlapped with the walker's build since the person step.
 - The reach of an activation, the walker's speed and its tick are the caller's; the activation key and the
@@ -839,3 +910,5 @@ under the crosshair are drawn.
 | `anim_graph_caller_event_v1` | `quest_run --assume-graph-event REF EVENT[@SECONDS]` | a caller assumption: no script of the run sends the exit elevator its descent; that it waits at the bottom open is prior knowledge | weak |
 | `play_activate_opens_v1` | `--play-activate-opens REF` | the run's own open event and the person's activation; that activating a door opens it is prior knowledge | weak |
 | `frame_exposure_seen_visible_v1` | `fo4-view --exposure-eye-visible` | chosen: the data stores no exposure; that an eye adapts to what it sees is prior knowledge | weak |
+| `play_activate_person_v1` | `--play-activate-person REF` | the run's own activation and the person's E; that activating a console uses it is prior knowledge | weak |
+| `play_activate_ray_first_met_v1` | `--play-pick-first-met` | measured on the session's record: the gear door's bounds hold the walkway; that a crosshair names the surface in front of the eye is prior knowledge | weak |

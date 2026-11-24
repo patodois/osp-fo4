@@ -610,9 +610,20 @@ mod enabled {
             self.statuses().then(|| link::title(&self.last))
         }
 
-        /// The lines being spoken at the run's last status.
-        pub fn subtitles(&self) -> &[String] {
-            &self.last.subtitles
+        /// Of those, the texts the data settles (the viewport's subtitle).
+        pub fn spoken_texts(&self) -> &[String] {
+            &self.last.texts
+        }
+
+        /// The objective the run shows (its text), at the last status.
+        pub fn objective(&self) -> Option<&str> {
+            self.last.objective.as_deref()
+        }
+
+        /// The title with the play clock's second (the walker's clock, what
+        /// the window draws), not the run's last event's.
+        pub fn title_at(&self, clock: f64) -> String {
+            link::title_at(&self.last, clock)
         }
 
         /// Whether a cell is being loaded.
@@ -1059,6 +1070,12 @@ mod enabled {
         /// Whether that is a thing E uses (not a static's collision or
         /// box, not a collision of no reference): the HUD's prompt.
         pub aim_usable: bool,
+        /// The viewport's prompt for it: a short action and a plain name,
+        /// from the record's type and display name only (`prompt_of`).
+        pub prompt: Option<String>,
+        /// What the person's last activation did, as the viewport confirms
+        /// it (opened, used, nothing), numbered so a window shows each once.
+        pub confirm: Option<(u64, String)>,
         /// The walker's walking world is being built again (the run is
         /// busy with it): the HUD says loading.
         pub building: bool,
@@ -1085,8 +1102,18 @@ mod enabled {
         /// `--play-keys`: the camera's heading from the person's looks (not
         /// the walk's direction), what E would meet given to the window,
         /// and the labels of the references met so far.
-        keys: Option<BTreeMap<FormKey, (String, bool)>>,
+        keys: Option<BTreeMap<FormKey, (String, bool, String)>>,
+        /// `--play-keys`: the activations the log held when last read, and
+        /// an activation waiting for the run to take it: its line so far
+        /// and the run's counts before it ([`Paced::publish_confirm`]).
+        confirm: Confirming,
+        /// The references whose activation also opens them.
+        opens: Vec<FormKey>,
     }
+
+    /// The activations read, the one waiting for the run (its line so far,
+    /// the run's counts before it) and the confirmations shown.
+    type Confirming = (usize, Option<(String, (usize, usize, usize))>, u64);
 
     /// What the run had when its timeline was last read: effects, quest
     /// and scene log entries, native moves; the snapshots taken and their
@@ -1270,30 +1297,110 @@ mod enabled {
             };
             let aim = self.walker.aim().map(|h| match h.reference {
                 Some(k) => {
-                    let (label, usable) = labels.entry(k.clone()).or_insert_with(|| {
+                    let (label, usable, prompt) = labels.entry(k.clone()).or_insert_with(|| {
                         let b = fo4_core::Budget::new(run.store.limits.max_memory);
                         let base = fo4_vm::bind::base_of(run.store, &k, &b).ok().flatten();
+                        let kind = base.as_ref().and_then(|base| run.store.signature(base));
                         // A static's base (the kinds the activatable
                         // object bounds leave out) is not something E uses.
-                        let usable = base
-                            .as_ref()
-                            .and_then(|base| run.store.signature(base))
-                            .is_some_and(|s| !fo4_play::rules::STATIC_KINDS.contains(&s));
+                        let usable =
+                            kind.is_some_and(|s| !fo4_play::rules::STATIC_KINDS.contains(&s));
+                        let (m, vfs) = run.sources();
+                        let name = base.as_ref().and_then(|base| {
+                            fo4_play::state::Texts::new(vfs, &m.language, &b)
+                                .display_name(run.store, base)
+                        });
                         let what = base
                             .and_then(|base| fo4_vm::bind::label(run.store, &base, &b).ok())
                             .unwrap_or_else(|| "a reference".into());
-                        (format!("{what} ({})", fo4_vm::bind::record_key(&k)), usable)
+                        (
+                            format!("{what} ({})", fo4_vm::bind::record_key(&k)),
+                            usable,
+                            prompt_of(kind, name.as_deref()),
+                        )
                     });
-                    (format!("{label} at {:.0} units", h.distance), *usable)
+                    (
+                        format!("{label} at {:.0} units", h.distance),
+                        *usable,
+                        Some(prompt.clone()),
+                    )
                 }
                 None => (
                     format!("collision of no reference at {:.0} units", h.distance),
                     false,
+                    None,
                 ),
             });
             if let Ok(mut s) = self.seen.lock() {
                 s.aim_usable = aim.as_ref().is_some_and(|a| a.1);
+                s.prompt = aim.as_ref().and_then(|a| a.2.clone());
                 s.aim = aim.map(|a| a.0);
+            }
+        }
+    }
+
+    /// The viewport's prompt for a reference whose base is of `kind` and
+    /// named `name` (its display name, when it has one): a short action
+    /// by the record's type and the plain name (viewer policy: a door or a
+    /// container is opened, anything else used; a door with no name is
+    /// named by its type).
+    pub fn prompt_of(kind: Option<[u8; 4]>, name: Option<&str>) -> String {
+        let opens = matches!(kind.as_ref(), Some(b"DOOR") | Some(b"CONT"));
+        let verb = if opens { "open" } else { "use" };
+        match (name.map(str::trim).filter(|n| !n.is_empty()), kind) {
+            (Some(n), _) => format!("{verb} {n}"),
+            (None, Some(k)) if opens => format!("{verb} {}", String::from_utf8_lossy(&k)),
+            (None, _) => verb.to_string(),
+        }
+    }
+
+    /// The run's counts an activation can change: effects, quest log,
+    /// scene log.
+    fn run_counts(run: &View<'_, '_>) -> (usize, usize, usize) {
+        let w = &run.vm.world;
+        (run.vm.effects.len(), w.quests.log.len(), w.scenes.log.len())
+    }
+
+    impl Paced {
+        /// `--play-keys`: what the person's last activation did, once the
+        /// run took the slice it came in: opened (a reference the caller's
+        /// opens name), used (the run did something), or nothing (nothing
+        /// to use, or the run's effects and logs did not grow). Viewer
+        /// policy, read from the run without changing it; nothing to use when
+        /// the ray met nothing of a placed reference.
+        fn publish_confirm(&mut self, run: &View<'_, '_>) {
+            if self.keys.is_none() {
+                return;
+            }
+            let now = run_counts(run);
+            let mut line = None;
+            if let Some((text, before)) = self.confirm.1.take() {
+                line = Some(if text == "opened" {
+                    text
+                } else if now != before {
+                    "used".to_string()
+                } else {
+                    "nothing happened".to_string()
+                });
+            }
+            let log = self.log.borrow();
+            if log.activations.len() > self.confirm.0 {
+                let a = &log.activations[log.activations.len() - 1];
+                self.confirm.0 = log.activations.len();
+                match &a.3 {
+                    Ok((k, _)) if self.opens.contains(&fo4_scene::timeline::norm(k)) => {
+                        self.confirm.1 = Some(("opened".into(), now));
+                    }
+                    Ok(_) => self.confirm.1 = Some((String::new(), now)),
+                    Err(_) => line = Some("nothing to use".into()),
+                }
+            }
+            drop(log);
+            if let Some(l) = line {
+                self.confirm.2 += 1;
+                if let Ok(mut s) = self.seen.lock() {
+                    s.confirm = Some((self.confirm.2, l));
+                }
             }
         }
     }
@@ -1302,6 +1409,7 @@ mod enabled {
         fn next(&mut self, run: &View<'_, '_>) -> Next {
             self.publish_timeline(run);
             self.publish_aim(run);
+            self.publish_confirm(run);
             let mut n = self.walker.next(run);
             self.publish_start();
             if let Next::Slice(s) = &n {
@@ -1467,6 +1575,12 @@ mod enabled {
             read: (0, 0, 0),
             timeline: with_timeline.then(TimelineRead::default),
             keys: keys.then(BTreeMap::new),
+            confirm: (0, None, 0),
+            opens: switches
+                .opens
+                .iter()
+                .map(fo4_scene::timeline::norm)
+                .collect(),
         };
         let prepared = started.elapsed().as_secs_f64();
         let (_, counts) =
@@ -1609,6 +1723,19 @@ mod enabled {
             assert_eq!(next_shot(512.0, 30.0, &b), 540.0);
             assert_eq!(next_shot(720.0, 30.0, &b), 725.0);
             assert_eq!(next_shot(800.0, 30.0, &b), 810.0);
+        }
+
+        #[test]
+        fn the_prompt_is_a_short_action_and_a_plain_name() {
+            assert_eq!(
+                prompt_of(Some(*b"DOOR"), Some("Front Door")),
+                "open Front Door"
+            );
+            assert_eq!(prompt_of(Some(*b"DOOR"), None), "open DOOR");
+            assert_eq!(prompt_of(Some(*b"CONT"), Some(" ")), "open CONT");
+            assert_eq!(prompt_of(Some(*b"ACTI"), Some("Console")), "use Console");
+            assert_eq!(prompt_of(Some(*b"FURN"), None), "use");
+            assert_eq!(prompt_of(None, None), "use");
         }
 
         #[test]

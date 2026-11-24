@@ -1,8 +1,11 @@
 //! What the play window shows in its viewport (`--play-hud`, on with
 //! `--play-keys`; `spec/play.md`, On screen): a small crosshair at the
 //! centre, under it one line naming what E would activate when a target is
-//! in reach, the subtitle being spoken, and "paused" or "loading". Viewer
-//! policy, no rule: presentation only, nothing here reaches the run.
+//! in reach (a short action and a plain name) or, for a moment, what an
+//! activation did, the subtitle being spoken (wrapped to three lines), the
+//! objective the run shows in the top left corner, and "paused" or
+//! "loading". Viewer policy, no rule: presentation only, nothing here
+//! reaches the run.
 //!
 //! The text is drawn with the viewer's own 5 by 7 ASCII font
 //! ([`crate::hud_font`]; the pinned Bevy compiles no text renderer and no
@@ -31,10 +34,65 @@ pub enum Slot {
     Subtitle,
     /// Near the top: paused, loading.
     Status,
+    /// The top left corner: the objective the run shows.
+    Objective,
 }
 
 impl Slot {
-    pub const ALL: [Slot; 4] = [Slot::Crosshair, Slot::Prompt, Slot::Subtitle, Slot::Status];
+    pub const ALL: [Slot; 5] = [
+        Slot::Crosshair,
+        Slot::Prompt,
+        Slot::Subtitle,
+        Slot::Status,
+        Slot::Objective,
+    ];
+}
+
+/// The lines a subtitle may take at most.
+pub const SUBTITLE_LINES: usize = 3;
+
+/// `text` broken at spaces into lines of `columns` characters at most
+/// (a word longer than a line cut), `most` lines at most, the last marked
+/// by three dots when text is left over.
+pub fn wrap(text: &str, columns: usize, most: usize) -> Vec<String> {
+    let columns = columns.max(4);
+    let mut lines: Vec<String> = Vec::new();
+    let mut line = String::new();
+    for word in text.split_whitespace() {
+        let mut word = word.to_string();
+        loop {
+            let n = line.chars().count();
+            let w = word.chars().count();
+            if n == 0 && w > columns {
+                let head: String = word.chars().take(columns).collect();
+                word = word.chars().skip(columns).collect();
+                lines.push(head);
+                continue;
+            }
+            if n > 0 && n + 1 + w > columns {
+                lines.push(std::mem::take(&mut line));
+                continue;
+            }
+            if n > 0 {
+                line.push(' ');
+            }
+            line.push_str(&word);
+            break;
+        }
+    }
+    if !line.is_empty() {
+        lines.push(line);
+    }
+    if lines.len() > most {
+        lines.truncate(most);
+        if let Some(last) = lines.last_mut() {
+            *last = fit(&format!("{last}..."), columns);
+            if !last.ends_with("...") {
+                *last = format!("{}...", last.chars().take(columns - 3).collect::<String>());
+            }
+        }
+    }
+    lines
 }
 
 /// The text as the font can draw it: printable ASCII, the common
@@ -70,26 +128,43 @@ pub fn fit(text: &str, most: usize) -> String {
 
 /// One line of text in white on a box of translucent black, one texel per
 /// font pixel; `None` for an empty line.
+#[cfg(test)]
 pub fn text(line: &str) -> Option<Raster> {
-    let line = ascii(line);
-    let n = line.chars().count();
-    if n == 0 {
+    lines(&[line.to_string()], false)
+}
+
+/// Lines of text in white on one box of translucent black, each centred
+/// (or from the left with `left`), one texel per font pixel; `None` when
+/// every line is empty.
+pub fn lines(lines: &[String], left: bool) -> Option<Raster> {
+    let lines: Vec<String> = lines.iter().map(|l| ascii(l)).collect();
+    let most = lines.iter().map(|l| l.chars().count()).max().unwrap_or(0);
+    if most == 0 {
         return None;
     }
-    let w = MARGIN * 2 + n * (WIDTH + GAP) - GAP;
-    let h = MARGIN * 2 + HEIGHT;
+    let w = MARGIN * 2 + most * (WIDTH + GAP) - GAP;
+    let row_h = HEIGHT + 2 * GAP;
+    let h = MARGIN * 2 + lines.len() * row_h - 2 * GAP;
     let mut rgba = Vec::with_capacity(w * h * 4);
     for _ in 0..w * h {
         rgba.extend_from_slice(&[0, 0, 0, 150]);
     }
-    for (i, c) in line.chars().enumerate() {
-        let g = &GLYPHS[(c as usize) - 32];
-        let x0 = MARGIN + i * (WIDTH + GAP);
-        for (row, bits) in g.iter().enumerate() {
-            for col in 0..WIDTH {
-                if bits & (1 << (WIDTH - 1 - col)) != 0 {
-                    let at = ((MARGIN + row) * w + x0 + col) * 4;
-                    rgba[at..at + 4].copy_from_slice(&[255, 255, 255, 255]);
+    for (r, line) in lines.iter().enumerate() {
+        let n = line.chars().count();
+        let x_start = if left {
+            0
+        } else {
+            (most - n) * (WIDTH + GAP) / 2
+        };
+        for (i, c) in line.chars().enumerate() {
+            let g = &GLYPHS[(c as usize) - 32];
+            let x0 = MARGIN + x_start + i * (WIDTH + GAP);
+            for (row, bits) in g.iter().enumerate() {
+                for col in 0..WIDTH {
+                    if bits & (1 << (WIDTH - 1 - col)) != 0 {
+                        let at = ((MARGIN + r * row_h + row) * w + x0 + col) * 4;
+                        rgba[at..at + 4].copy_from_slice(&[255, 255, 255, 255]);
+                    }
                 }
             }
         }
@@ -142,21 +217,42 @@ pub fn crosshair(arm: usize) -> Raster {
 /// What the HUD shows this frame.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Shown {
-    /// What E would activate, `None` when nothing usable is in reach.
+    /// What E would activate (a short action and a plain name), `None`
+    /// when nothing usable is in reach.
     pub prompt: Option<String>,
+    /// What the last activation did, shown in the prompt's place for a
+    /// moment after it.
+    pub confirm: Option<String>,
     pub subtitle: Option<String>,
+    /// The objective the run shows.
+    pub objective: Option<String>,
     pub paused: bool,
     pub loading: bool,
 }
 
 impl Shown {
-    /// The text of a slot (`None`: the slot is hidden). `columns`: the
-    /// characters a line may hold.
+    /// The text of a one-line slot (`None`: the slot is hidden; a subtitle
+    /// as its lines joined). `columns`: the characters a line may hold.
+    #[cfg(test)]
     pub fn text(&self, slot: Slot, columns: usize) -> Option<String> {
+        self.lines(slot, columns).map(|l| l.join(" "))
+    }
+
+    /// The lines of a slot (`None`: the slot is hidden): one line, cut to
+    /// `columns` characters, but the subtitle, wrapped to
+    /// [`SUBTITLE_LINES`] lines.
+    pub fn lines(&self, slot: Slot, columns: usize) -> Option<Vec<String>> {
         let t = match slot {
-            Slot::Crosshair => return Some(String::new()),
-            Slot::Prompt => format!("E  {}", self.prompt.as_ref()?),
-            Slot::Subtitle => self.subtitle.clone()?,
+            Slot::Crosshair => return Some(vec![String::new()]),
+            Slot::Prompt => match &self.confirm {
+                Some(c) => format!("E  {c}"),
+                None => format!("E  {}", self.prompt.as_ref()?),
+            },
+            Slot::Subtitle => {
+                let l = wrap(&ascii(self.subtitle.as_ref()?), columns, SUBTITLE_LINES);
+                return (!l.is_empty()).then_some(l);
+            }
+            Slot::Objective => self.objective.clone()?,
             Slot::Status => match (self.paused, self.loading) {
                 (true, true) => "paused - loading".into(),
                 (true, false) => "paused".into(),
@@ -165,7 +261,7 @@ impl Shown {
             },
         };
         let t = fit(&ascii(&t), columns);
-        (!t.trim().is_empty()).then_some(t)
+        (!t.trim().is_empty()).then(|| vec![t])
     }
 }
 
@@ -176,14 +272,27 @@ pub fn scale(height: f32) -> f32 {
 }
 
 /// Where a slot's quad is centred (window pixels from the centre, y up) in
-/// a window `size` with font pixels of `k`.
+/// a window `size` with font pixels of `k`, for a one-line raster.
+#[cfg(test)]
 pub fn place(slot: Slot, size: [f32; 2], k: f32) -> [f32; 2] {
+    place_sized(slot, size, k, [0, (HEIGHT + 2 * MARGIN) as u32])
+}
+
+/// Where a slot's quad of `raster` texels is centred: the subtitle's
+/// bottom edge where a one-line subtitle's is (more lines grow upward),
+/// the objective in the top left corner, the others as [`place`] says.
+pub fn place_sized(slot: Slot, size: [f32; 2], k: f32, raster: [u32; 2]) -> [f32; 2] {
     let line = (HEIGHT + 2 * MARGIN) as f32 * k;
+    let [rw, rh] = [raster[0] as f32 * k, raster[1] as f32 * k];
     match slot {
         Slot::Crosshair => [0.0, 0.0],
         Slot::Prompt => [0.0, -(2.0 * line)],
-        Slot::Subtitle => [0.0, -size[1] / 2.0 + 2.0 * line],
+        Slot::Subtitle => [0.0, -size[1] / 2.0 + 1.5 * line + rh / 2.0],
         Slot::Status => [0.0, size[1] / 2.0 - 2.0 * line],
+        Slot::Objective => [
+            -size[0] / 2.0 + line + rw / 2.0,
+            size[1] / 2.0 - line - rh / 2.0,
+        ],
     }
 }
 
@@ -229,7 +338,7 @@ mod tests {
             prompt: Some("DOOR front door".into()),
             subtitle: Some("You think?".into()),
             paused: true,
-            loading: false,
+            ..Shown::default()
         };
         assert_eq!(s.text(Slot::Prompt, 80).unwrap(), "E  DOOR front door");
         assert_eq!(s.text(Slot::Prompt, 10).unwrap(), "E  DOOR...");
@@ -264,5 +373,37 @@ mod tests {
         assert!(columns(1280.0, 2.0) >= 90);
         let p = place(Slot::Subtitle, [1280.0, 720.0], 2.0);
         assert!(p[1] < -300.0);
+        // The objective in the top left corner.
+        let o = place_sized(Slot::Objective, [1280.0, 720.0], 2.0, [100, 11]);
+        assert!(o[0] < -500.0 && o[1] > 300.0, "{o:?}");
+    }
+
+    #[test]
+    fn long_subtitles_wrap_to_three_lines_and_confirmations_take_the_prompt() {
+        let w = wrap("one two three four five six seven", 10, 3);
+        assert_eq!(w, ["one two", "three four", "five si..."]);
+        assert_eq!(
+            wrap("one two three four five six", 12, 2),
+            ["one two", "three fou..."]
+        );
+        assert_eq!(wrap("short", 10, 3), ["short"]);
+        assert_eq!(wrap("abcdefghijklmn", 6, 3), ["abcdef", "ghijkl", "mn"]);
+        assert!(wrap("", 10, 3).is_empty());
+        let s = Shown {
+            prompt: Some("open DOOR".into()),
+            confirm: Some("opened".into()),
+            subtitle: Some("a b c d e f g h i j k l m n o p q r s t".into()),
+            objective: Some("Leave the place".into()),
+            ..Shown::default()
+        };
+        assert_eq!(s.text(Slot::Prompt, 80).unwrap(), "E  opened");
+        let l = s.lines(Slot::Subtitle, 12).unwrap();
+        assert_eq!(l.len(), 3);
+        assert!(l[2].ends_with("..."));
+        assert_eq!(s.text(Slot::Objective, 80).unwrap(), "Leave the place");
+        let r = lines(&l, false).unwrap();
+        assert_eq!(r.size[1] as usize, 2 * 2 + 3 * (7 + 2) - 2);
+        let without = Shown { confirm: None, ..s };
+        assert_eq!(without.text(Slot::Prompt, 80).unwrap(), "E  open DOOR");
     }
 }

@@ -185,6 +185,9 @@ pub fn finish(
 pub struct CastScene {
     pub gpu: crate::scene::GpuScene,
     pub line: String,
+    /// One line per actor drawn as a marker and per character drawn
+    /// without its head: the reference and why (for the log).
+    pub details: Vec<String>,
 }
 
 /// The run's actors of `cell` at `second` of the run's own `timeline`, for
@@ -318,7 +321,23 @@ pub fn cast_scene(
         gpu.instances.len(),
         started.elapsed().as_secs_f64()
     );
-    Ok(CastScene { gpu, line })
+    let key = |k: usize| {
+        cast.markers
+            .get(k)
+            .map(|m| tl::key_text(&m.reference))
+            .unwrap_or_default()
+    };
+    let mut details: Vec<String> = d
+        .fallback
+        .iter()
+        .map(|(k, _, why)| format!("marker {}: {why}", key(*k)))
+        .collect();
+    details.extend(
+        d.heads
+            .iter()
+            .map(|(k, why)| format!("head left out {}: {why}", key(*k))),
+    );
+    Ok(CastScene { gpu, line, details })
 }
 
 #[cfg(all(test, feature = "script-event"))]

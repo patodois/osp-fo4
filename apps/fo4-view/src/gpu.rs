@@ -1613,6 +1613,7 @@ fn hud_spawn(
 fn hud_update(
     playing: Res<Playing>,
     person: Option<Res<PersonInput>>,
+    mut confirmed: Local<(u64, Option<std::time::Instant>)>,
     pending: Option<Res<PendingScene>>,
     windows: Query<&Window, With<PrimaryWindow>>,
     mut quads: Query<(&mut HudQuad, &mut Transform, &mut Visibility)>,
@@ -1626,32 +1627,56 @@ fn hud_update(
     let size = [window.width(), window.height()];
     let Playing(p, _, drawn) = &*playing;
     let seen = p.seen().unwrap_or_default();
+    // An activation's confirmation shows for a moment once.
+    if let Some((n, _)) = &seen.confirm {
+        if *n != confirmed.0 {
+            *confirmed = (*n, Some(std::time::Instant::now()));
+        }
+    }
+    let confirm = confirmed
+        .1
+        .filter(|at| at.elapsed().as_secs_f64() < HUD_CONFIRM_SECONDS)
+        .and_then(|_| seen.confirm.as_ref().map(|c| c.1.clone()));
+    // The play clock standing while nothing is paused: the run is busy
+    // (a walking world built, a load) and the viewport says so.
+    let stood = drawn
+        .clock
+        .1
+        .is_some_and(|at| at.elapsed().as_secs_f64() > HUD_STOOD_SECONDS);
+    let texts = p.spoken_texts();
     let shown = crate::hud::Shown {
-        prompt: seen.aim.clone().filter(|_| seen.aim_usable),
-        subtitle: (!p.subtitles().is_empty()).then(|| p.subtitles().join(" / ")),
+        prompt: seen.prompt.clone().filter(|_| seen.aim_usable),
+        confirm,
+        subtitle: (!texts.is_empty()).then(|| texts.join(" / ")),
+        objective: p.objective().map(str::to_string),
         paused: person.as_ref().is_some_and(|x| x.person.paused),
-        loading: p.loading() || drawn.uploading.is_some() || pending.is_some() || seen.building,
+        loading: p.loading()
+            || drawn.uploading.is_some()
+            || pending.is_some()
+            || seen.building
+            || stood,
     };
     let k = crate::hud::scale(size[1]);
     let columns = crate::hud::columns(size[0], k);
     let key = [size[0] as u32, size[1] as u32];
     for (mut q, mut t, mut v) in &mut quads {
-        let text = shown.text(q.slot, columns);
-        let now = Some((text.clone(), key));
+        let lines = shown.lines(q.slot, columns);
+        let now = Some((lines.as_ref().map(|l| l.join("\n")), key));
         if q.shown == now {
             continue;
         }
         q.shown = now;
-        let raster = match (&text, q.slot) {
+        let raster = match (&lines, q.slot) {
             (None, _) => None,
             (Some(_), crate::hud::Slot::Crosshair) => Some(crate::hud::crosshair(5)),
-            (Some(line), _) => crate::hud::text(line),
+            (Some(l), crate::hud::Slot::Objective) => crate::hud::lines(l, true),
+            (Some(l), _) => crate::hud::lines(l, false),
         };
         let Some(r) = raster else {
             *v = Visibility::Hidden;
             continue;
         };
-        let at = crate::hud::place(q.slot, size, k);
+        let at = crate::hud::place_sized(q.slot, size, k, r.size);
         let _ = images.insert(&q.image, hud_image(&r));
         // The material is prepared again with the new image (its bind
         // group holds the image it was prepared with).
@@ -1681,7 +1706,18 @@ struct PlayDrawn {
     uploading: Option<(u32, crate::play::Loaded)>,
     /// The scripted run's frame captures (`--play-shots`).
     shots: PlayShots,
+    /// The play clock at the last frame and, while it stands with nothing
+    /// paused, since when (the HUD's loading line).
+    clock: (f64, Option<std::time::Instant>),
 }
+
+/// Seconds an activation's confirmation stays in the prompt's place, and
+/// the wall seconds the play clock may stand before the viewport says
+/// loading (viewer policy).
+#[cfg(feature = "script-event")]
+const HUD_CONFIRM_SECONDS: f64 = 1.5;
+#[cfg(feature = "script-event")]
+const HUD_STOOD_SECONDS: f64 = 0.5;
 
 /// `--play-shots`: the next multiple of the shot period, and the frame
 /// asked for (at which second, where the walker stood) until it arrives.
@@ -2246,6 +2282,7 @@ fn play_scripted(
     let paused = person.as_ref().is_some_and(|x| x.person.paused);
     let go = ready && seen.feet.is_some() && !paused;
     let given = if go { dt } else { 0.0 };
+    let mut play_clock = seen.t;
     let changed = match person.as_deref_mut() {
         // --play-keys: the person's commands of the frame go with its
         // seconds.
@@ -2259,6 +2296,7 @@ fn play_scripted(
                 Vec::new()
             };
             let (title, clock) = p.person_frame(given, time.elapsed_secs_f64(), commands);
+            play_clock = clock;
             // The play clock the walker goes by (it stands while a busy
             // run is owed its most), for the synthetic person's events.
             x.last_dt = (clock - x.person.clock).max(0.0);
@@ -2267,8 +2305,14 @@ fn play_scripted(
         }
         None => p.scripted_frame(given),
     };
-    if let Some(t) = changed {
-        *title = t;
+    // The title's second is the play clock's (what the window draws), not
+    // the run's last event's.
+    let _ = changed;
+    *title = p.title_at(play_clock);
+    if play_clock != drawn.clock.0 || paused || seen.feet.is_none() {
+        drawn.clock = (play_clock, None);
+    } else if drawn.clock.1.is_none() {
+        drawn.clock.1 = Some(std::time::Instant::now());
     }
     if let Some(feet) = seen.feet {
         // --play-keys: the camera looks where the person looks (the walker
@@ -2314,6 +2358,9 @@ fn play_scripted(
     }
     if let Some(c) = p.cast_done() {
         println!("play: cast at {:.3} s of the run: {}", seen.t, c.line);
+        for d in &c.details {
+            println!("play: cast: {d}");
+        }
         commands.insert_resource(PendingCast(c.gpu, None, std::time::Instant::now()));
     }
     // --play-shots: the frame each time the run passes a multiple of the

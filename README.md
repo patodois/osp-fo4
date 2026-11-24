@@ -259,10 +259,12 @@ W/A/S/D move, Shift runs (also when it comes only as the movement key's
 modifier), hold the left button and move the mouse to turn and look (a drag
 the window sees only as cursor positions turns too), the arrow keys turn and
 look up or down, E activates what the crosshair at the window's centre meets
-(the line under the crosshair says what that is), P pauses, Escape ends the
-input (the run finishes and writes its outputs). The viewport shows the
-crosshair, what E would activate, the line being spoken and paused or
-loading. The switches the opening needs are kept in
+(the line under the crosshair says what that is: a short action and the
+thing's name, then for a moment what the press did), P pauses, Escape ends
+the input (the run finishes and writes its outputs). The viewport shows the
+crosshair, what E would activate, the line being spoken (up to three lines),
+the objective the run shows (top left) and paused or loading (also while
+the run is busy and the play clock stands). The switches the opening needs are kept in
 `apps/fo4-view/presets/play-opening.args`; what names the game's records
 (the start cell and pose, the opening's new-game switches file, the named
 platforms) the repository does not keep, so it goes in a local argument
@@ -278,7 +280,11 @@ target/fo4-view/release/fo4-view --args opening.local.args \
 `--eye` and `--look`, `--play-run FILE` and `--play-out DIR`, the
 `--play-elevator` and `--play-elevator-also-with` references, and
 `--play-activate-opens` for the front door (the person opens it by
-activating it; the run's timed open of it is left out).
+activating it; the run's timed open of it is left out) and
+`--play-activate-person` for the exit console and the device on the
+skeleton before it (the person's E uses them; the run's timed activations
+of them are left out). The preset's `--play-pick-first-met` lets E reach the
+console from inside the gear door's bounds.
 `--play-record` writes your commands in `play_run`'s input format:
 `play_run` with that file, the preset's play options and the same new-game
 switches replays the same run.
