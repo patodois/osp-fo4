@@ -160,6 +160,8 @@ mod enabled {
         /// A cell being loaded: when, for which second of the run.
         loading: Option<Loading>,
         shots: Option<(String, f64)>,
+        /// `--play-shots-between FROM TO EVERY`.
+        shots_between: Vec<[f64; 3]>,
         /// `--timeline-cast`: the cast's worker and what it built.
         cast: Option<CastWork>,
     }
@@ -381,6 +383,7 @@ mod enabled {
                     drawn,
                     loading: None,
                     shots: p.shots.clone(),
+                    shots_between: p.shots_between.clone(),
                     cast,
                 };
                 (to_run, status, thread, Some(scripted))
@@ -498,6 +501,15 @@ mod enabled {
         /// The shots asked for (`--play-shots DIR --play-shot-every S`).
         pub fn shots(&self) -> Option<&(String, f64)> {
             self.scripted.as_ref()?.shots.as_ref()
+        }
+
+        /// The second of the frame after one written at `after`: the next
+        /// multiple of the shot period, or sooner the next second of a
+        /// denser stretch (`--play-shots-between`).
+        pub fn next_shot(&self, after: f64) -> Option<f64> {
+            let s = self.scripted.as_ref()?;
+            let (_, every) = s.shots.as_ref()?;
+            Some(next_shot(after, *every, &s.shots_between))
         }
 
         /// The game data's folder (outputs are refused inside it).
@@ -841,6 +853,9 @@ mod enabled {
         pub timeline: Option<Arc<fo4_scene::timeline::Timeline>>,
         pub timeline_gen: u64,
         pub timeline_cost: (u64, f64),
+        /// The named platforms' moving parts where the walker's collision
+        /// stands (`fo4_play::walker::Walker::platforms`).
+        pub platforms: Vec<fo4_play::elevator::Platform>,
     }
 
     /// The scripted walker as the run's driver, held back by the window's
@@ -896,10 +911,12 @@ mod enabled {
         }
 
         fn publish(&mut self, n: &Next) {
+            let platforms = self.walker.platforms();
             let log = self.log.borrow();
             let Ok(mut s) = self.seen.lock() else {
                 return;
             };
+            s.platforms = platforms;
             // The heading: the slice's horizontal move, else a look command
             // given at or after its last point (`face`, `turn`: commands
             // due at a slice's end come after its move), else as it was.
@@ -947,6 +964,24 @@ mod enabled {
             }
             self.read = (log.grid.len(), log.doors.len(), log.looks.len());
         }
+    }
+
+    /// The second of the next frame after `after`: the next multiple of
+    /// `every`, or sooner the next `FROM + k EVERY` (not past `TO`) of a
+    /// stretch `[FROM, TO, EVERY]` of `between`.
+    pub fn next_shot(after: f64, every: f64, between: &[[f64; 3]]) -> f64 {
+        let mut next = ((after / every).floor() + 1.0) * every;
+        for [from, to, step] in between {
+            let t = if after < *from {
+                *from
+            } else {
+                from + (((after - from) / step).floor() + 1.0) * step
+            };
+            if t <= *to && t > after {
+                next = next.min(t);
+            }
+        }
+        next
     }
 
     /// A horizontal move shorter than this (units) leaves the heading.
@@ -1119,6 +1154,19 @@ mod enabled {
             // The window closed: a run waiting is let go, refused.
             gate.stop();
             assert!(!gate.wait(h + 1.0));
+        }
+
+        #[test]
+        fn denser_frames_come_between_the_periods() {
+            assert_eq!(next_shot(0.0, 30.0, &[]), 30.0);
+            let b = [[478.0, 512.0, 2.0], [725.0, 800.0, 2.0]];
+            assert_eq!(next_shot(450.0, 30.0, &b), 478.0);
+            assert_eq!(next_shot(478.0, 30.0, &b), 480.0);
+            assert_eq!(next_shot(480.3, 30.0, &b), 482.0);
+            assert_eq!(next_shot(511.0, 30.0, &b), 512.0);
+            assert_eq!(next_shot(512.0, 30.0, &b), 540.0);
+            assert_eq!(next_shot(720.0, 30.0, &b), 725.0);
+            assert_eq!(next_shot(800.0, 30.0, &b), 810.0);
         }
 
         #[test]

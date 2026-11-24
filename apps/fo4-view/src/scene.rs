@@ -204,6 +204,63 @@ pub fn moving_transform(
         .ok_or_else(|| format!("UnsupportedInstanceShear: moving instance {world:?}"))
 }
 
+/// A drawn instance of a named platform's model shape
+/// (`fo4_play::elevator::Platform`): the scripted play window draws it
+/// where the part its node chain goes with stands.
+#[derive(Debug, Clone, PartialEq)]
+pub struct PlatformInstance {
+    /// Index into `GpuScene::instances`.
+    pub instance: usize,
+    /// The placed reference (normalised key).
+    pub reference: fo4_plugin::FormKey,
+    /// The model's asset path, lower case with `/`.
+    pub model: String,
+    /// The model's blocks from the root to the shape.
+    pub chain: Vec<usize>,
+    /// The draw's world transform as built (the parts as stored).
+    pub world: fo4_scene::transform::Transform,
+}
+
+/// The instances of `gpu` drawn from a model shape of a reference `named`
+/// names, with the node chains the build kept (`BuildOptions::chains`).
+pub fn platform_instances(
+    build: &fo4_render::draw::Build,
+    gpu: &GpuScene,
+    named: &[fo4_plugin::FormKey],
+) -> Vec<PlatformInstance> {
+    use fo4_scene::timeline::norm;
+    let named: Vec<fo4_plugin::FormKey> = named.iter().map(norm).collect();
+    let refs: BTreeMap<u32, fo4_plugin::FormKey> = build
+        .instances
+        .iter()
+        .map(|i| (i.index, norm(&i.reference)))
+        .collect();
+    let chains: BTreeMap<usize, &fo4_render::draw::DrawChain> =
+        build.chains.iter().map(|c| (c.draw, c)).collect();
+    let mut out = Vec::new();
+    for (k, di) in gpu.draws.iter().enumerate() {
+        let (Some(c), Some(i)) = (chains.get(di), gpu.instances.get(k)) else {
+            continue;
+        };
+        let Some(r) = refs.get(&i.tag).filter(|r| named.contains(r)) else {
+            continue;
+        };
+        let Some(d) = build.list.draws.get(*di) else {
+            continue;
+        };
+        out.push(PlatformInstance {
+            instance: k,
+            reference: r.clone(),
+            model: String::from_utf8_lossy(&c.model)
+                .replace('\\', "/")
+                .to_ascii_lowercase(),
+            chain: c.blocks.clone(),
+            world: d.world,
+        });
+    }
+    out
+}
+
 #[derive(Default)]
 pub struct GpuScene {
     pub meshes: Vec<GpuMesh>,
@@ -217,6 +274,13 @@ pub struct GpuScene {
     /// Instances the game clock moves (empty without a build time and the
     /// clock's transform switches).
     pub moving: Vec<Moving>,
+    /// For each instance, the draw-list draw it was converted from.
+    pub draws: Vec<usize>,
+    /// The scripted play window's named platforms (`--play-input` with
+    /// `--play-elevator`): the instances of their models' shapes, each to
+    /// be drawn where its part's collision stands ([`platform_instances`];
+    /// empty otherwise).
+    pub platforms: Vec<PlatformInstance>,
     /// The frame's light (`fo4_scene::light`) as the surface shader reads
     /// it ([`light_words`]); `None` without the light switches.
     pub light: Option<GpuLight>,
@@ -679,6 +743,7 @@ pub fn convert_lit(
             rotation,
             scale,
         });
+        out.draws.push(di);
         if let Some(motion) = moved {
             out.moving.push(Moving {
                 instance: out.instances.len() - 1,
@@ -798,6 +863,49 @@ mod tests {
         assert_eq!(t.bytes.len(), (16 + 4) * 2);
         assert_eq!(&t.bytes[..2], &half::f16::from_f32(0.25).to_le_bytes());
         assert_eq!(&t.bytes[32..34], &half::f16::from_f32(0.5).to_le_bytes());
+    }
+
+    #[test]
+    fn a_named_platforms_draws_keep_their_chains_and_instances() {
+        let mut l = list();
+        let scene = convert(&mut l, &RenderOptions::REFERENCE).unwrap();
+        assert_eq!(scene.draws, [0, 1, 2]);
+        let key = |id: u32| fo4_plugin::FormKey {
+            plugin: "a.esm".into(),
+            object_id: id,
+        };
+        let identity = |index: u32, id: u32| fo4_render::draw::Identity {
+            index,
+            reference: key(id),
+            base: None,
+            hypotheses: Vec::new(),
+            editor_marker: false,
+        };
+        let chain = |draw: usize, blocks: Vec<usize>| fo4_render::draw::DrawChain {
+            draw,
+            model: b"Meshes\\A\\Lift.nif".to_vec(),
+            blocks,
+        };
+        let build = fo4_render::draw::Build {
+            skipped_editor_marker_subtrees: 0,
+            actors: Vec::new(),
+            actor_rigid_shapes: 0,
+            actor_head_omissions: Vec::new(),
+            list: l,
+            instances: vec![identity(7, 0x70), identity(8, 0x80), identity(9, 0x70)],
+            omitted: Vec::new(),
+            texture_choices: Vec::new(),
+            effect_draws: Vec::new(),
+            chains: vec![chain(0, vec![0, 3, 5]), chain(2, vec![0, 4])],
+        };
+        // Reference 0x70 (instances 7 and 9) is named; draw 1 is of 0x80.
+        let p = platform_instances(&build, &scene, &[key(0x70)]);
+        assert_eq!(p.len(), 2);
+        assert_eq!((p[0].instance, p[1].instance), (0, 2));
+        assert_eq!(p[0].chain, [0, 3, 5]);
+        assert_eq!(p[0].model, "meshes/a/lift.nif");
+        assert_eq!(p[1].world.translation, [9., 0., 0.]);
+        assert!(platform_instances(&build, &scene, &[key(0x90)]).is_empty());
     }
 
     #[test]

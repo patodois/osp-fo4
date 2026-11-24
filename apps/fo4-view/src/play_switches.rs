@@ -13,6 +13,19 @@
 #[cfg(feature = "script-event")]
 pub use fo4_play::options::Play as Switches;
 
+/// The named platforms (`--play-elevator`), whose drawn parts the scripted
+/// window moves as the walker's collision moves.
+#[cfg(feature = "script-event")]
+pub fn platforms(s: &Switches) -> Vec<fo4_plugin::FormKey> {
+    s.elevators.clone()
+}
+
+/// Without the interpreter: none.
+#[cfg(not(feature = "script-event"))]
+pub fn platforms(_: &Switches) -> Vec<fo4_plugin::FormKey> {
+    Vec::new()
+}
+
 /// Without the interpreter: no play option is read.
 #[cfg(not(feature = "script-event"))]
 #[derive(Debug, Clone, Default, PartialEq)]

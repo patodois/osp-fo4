@@ -1083,6 +1083,23 @@ fn spawn_window_scene(world: &mut World) {
         world.entity_mut(e).insert(WindowSky);
     }
     let entities = spawn(world, &scene, &up, false, 0, false);
+    // The scripted play window's named platforms: their instances, to
+    // follow the walker's parts ([`follow_platforms`]).
+    #[cfg(feature = "script-event")]
+    {
+        world.remove_resource::<PlayPlatforms>();
+        let drawn: Vec<(Entity, crate::scene::PlatformInstance)> =
+            std::mem::take(&mut scene.platforms)
+                .into_iter()
+                .filter_map(|p| entities.get(p.instance).map(|e| (*e, p)))
+                .collect();
+        if !drawn.is_empty() {
+            world.insert_resource(PlayPlatforms {
+                drawn,
+                reported: false,
+            });
+        }
+    }
     if let Some(PendingClock(start)) = world.remove_resource::<PendingClock>() {
         // Each animated surface's material, through its first instance.
         let mut entries = Vec::new();
@@ -1514,6 +1531,68 @@ fn play_live<F: bevy::ecs::query::QueryFilter>(
     drawn.applied = Some(p.generation);
 }
 
+/// The drawn instances of the named platforms' models in the scripted play
+/// window (`--play-input` with `--play-elevator`), and whether what they
+/// follow was reported.
+#[cfg(feature = "script-event")]
+#[derive(Resource)]
+struct PlayPlatforms {
+    drawn: Vec<(Entity, crate::scene::PlatformInstance)>,
+    reported: bool,
+}
+
+/// Each frame of the scripted play window: each drawn shape of a named
+/// platform whose node chain goes with a moving part
+/// (`fo4_play::elevator::Platform::part_of`) is drawn where the part's
+/// collision stands: its world transform as built, moved by the part's
+/// rigid motion (the walker's, `play_elevator_rigid_v1` or the translation
+/// reading; nothing of the drawing's own). Shapes under no moving part
+/// stay as built.
+#[cfg(feature = "script-event")]
+fn follow_platforms<F: bevy::ecs::query::QueryFilter>(
+    seen: &crate::play::Seen,
+    platforms: &mut PlayPlatforms,
+    instances: &mut Query<CellInstance, F>,
+) {
+    if seen.platforms.is_empty() {
+        return;
+    }
+    let (mut moved, mut still, mut unknown) = (0usize, 0usize, 0usize);
+    for (e, d) in &platforms.drawn {
+        let Some(p) = seen
+            .platforms
+            .iter()
+            .find(|p| fo4_scene::timeline::norm(&p.reference) == d.reference && p.model == d.model)
+        else {
+            unknown += 1;
+            continue;
+        };
+        let Some(k) = p.part_of(&d.chain) else {
+            still += 1;
+            continue;
+        };
+        let world = fo4_play::elevator::transform(&p.parts[k].motion).compose(d.world);
+        let Some((translation, rotation, scale)) = crate::coords::instance_transform(&world) else {
+            continue;
+        };
+        if let Ok((_, _, _, mut t)) = instances.get_mut(*e) {
+            *t = Transform {
+                translation,
+                rotation,
+                scale,
+            };
+            moved += 1;
+        }
+    }
+    if !platforms.reported {
+        platforms.reported = true;
+        println!(
+            "play: platforms at {:.3} s of the run: {moved} drawn instances follow their parts, {still} under no moving part, {unknown} of no named platform's model",
+            seen.t
+        );
+    }
+}
+
 /// The play mode, each frame after the walker moved: the frame's seconds,
 /// the walker's feet and, when E was pressed, what the eye's ray meets go
 /// to the run; the run's second, last stage and spoken lines join the
@@ -1590,6 +1669,7 @@ fn play_scripted(
     mut cameras: Query<&mut Transform, With<FlyCamera>>,
     mut instances: Query<CellInstance, (Without<FlyCamera>, Without<CastEntity>)>,
     casts: Query<Entity, With<CastEntity>>,
+    mut platforms: Option<ResMut<PlayPlatforms>>,
     mut exit: MessageWriter<AppExit>,
 ) {
     let Playing(p, title, drawn) = &mut *playing;
@@ -1686,6 +1766,9 @@ fn play_scripted(
     // Not while the old scene leaves and the new one uploads.
     if drawn.uploading.is_none() {
         play_live(p, drawn, None, &mut instances);
+        if let Some(pp) = platforms.as_deref_mut() {
+            follow_platforms(&seen, pp, &mut instances);
+        }
     }
     // --timeline-cast: the run's actors of the drawn cell, built again on
     // the cast's thread when what decides them changed.
@@ -1747,7 +1830,9 @@ fn play_scripted(
                 shots.next
             };
             shots.asked = Some((at, seen.clone()));
-            shots.next = ((seen.t / every).floor() + 1.0) * every;
+            shots.next = p
+                .next_shot(seen.t)
+                .unwrap_or(((seen.t / every).floor() + 1.0) * every);
         }
     }
     if let Some(done) = &seen.done {

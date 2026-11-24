@@ -57,6 +57,21 @@ pub struct Build {
     /// Indices into `list.draws` of the draws of effect shader surfaces,
     /// increasing: a frame's light leaves them unlit (`fo4_scene::light`).
     pub effect_draws: Vec<usize>,
+    /// With [`BuildOptions::chains`]: the node chain of each draw of a
+    /// placed model's shape, in draw order; empty otherwise.
+    pub chains: Vec<DrawChain>,
+}
+/// The node chain a draw of a model's shape hangs under
+/// ([`BuildOptions::chains`]): for a caller that moves the draws of some
+/// nodes itself (the play window's named platforms).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DrawChain {
+    /// Index into `list.draws`.
+    pub draw: usize,
+    /// The model's asset path, as the loader holds it.
+    pub model: Vec<u8>,
+    /// The model's blocks from the root to the shape.
+    pub blocks: Vec<usize>,
 }
 /// One skinned actor mesh of a posed build ([`build_with_posed_actors`]),
 /// kept so that a caller can pose it again: the draw-list mesh, the skeleton
@@ -94,6 +109,9 @@ pub struct BuildOptions {
     /// that a lit draw is lit with them; skinned or posed meshes do not
     /// (their posed normals are not computed). Off: as before.
     pub vertex_normals: bool,
+    /// Keep each model shape draw's node chain ([`Build::chains`]). Off:
+    /// none kept, the list as before.
+    pub chains: bool,
 }
 /// Limits of the textures kept as stored blocks ([`BuildOptions::blocks`]).
 /// A texture whose format or chosen level cannot be kept as blocks is
@@ -119,6 +137,7 @@ impl BuildOptions {
             time: None,
             clock: fo4_scene::clock::Switches::OFF,
             vertex_normals: false,
+            chains: false,
         }
     }
     /// The reference limits, with block-compressed textures kept as blocks.
@@ -2008,6 +2027,22 @@ impl Builder<'_, '_> {
                     let at = self.output.list.draws.len();
                     append(&mut self.output.effect_draws, at, self.budget)?;
                 }
+                if self.options.chains {
+                    let mut blocks = Vec::new();
+                    self.budget
+                        .reserve(&mut blocks, active.len(), "draw chain", 0)?;
+                    blocks.extend_from_slice(active);
+                    let mut model = Vec::new();
+                    self.budget
+                        .reserve(&mut model, path.len(), "draw chain", 0)?;
+                    model.extend_from_slice(path);
+                    let chain = DrawChain {
+                        draw: self.output.list.draws.len(),
+                        model,
+                        blocks,
+                    };
+                    append(&mut self.output.chains, chain, self.budget)?;
+                }
                 append(
                     &mut self.output.list.draws,
                     Draw {
@@ -2880,6 +2915,7 @@ fn build_inner(
             omitted: Vec::new(),
             texture_choices: Vec::new(),
             effect_draws: Vec::new(),
+            chains: Vec::new(),
         },
         meshes: BTreeMap::new(),
         posed: poses

@@ -267,6 +267,7 @@ pub fn cast_scene(
         time: s.time,
         clock: s.clock,
         vertex_normals: s.light.vertex_normals,
+        chains: false,
         ..crate::load::build_options(s.textures, s.level)
     };
     let placed = std::mem::take(&mut scene.instances);

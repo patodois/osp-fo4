@@ -16,7 +16,8 @@ usage:
            [--play-run SWITCHES_FILE --play-out DIR [--play-reach UNITS] [--play-pick-bounds]
             [--play-live-world [--play-nowait]]
             [--play-input INPUT_FILE [play_run's play options...]
-             [--play-shots DIR --play-shot-every SECONDS]
+             [--play-shots DIR --play-shot-every SECONDS
+              [--play-shots-between FROM TO EVERY]...]
              [--timeline-cast [the cast readings of a --timeline frame]]
              [the light switches of --headless, but --exposure-eye]]]
       Window with a free-fly camera: W/A/S/D move, Shift moves faster, hold the
@@ -110,7 +111,11 @@ usage:
       that cell, the run waiting meanwhile. --play-shots DIR
       --play-shot-every SECONDS writes the window's frame as a PNG into DIR
       (under ./build, as every output) each time the run passes a multiple
-      of SECONDS; the window closes when the run ends. With --timeline-cast
+      of SECONDS, and with --play-shots-between FROM TO EVERY (repeated)
+      every EVERY seconds from FROM to TO too; the window closes when the
+      run ends. With --play-elevator the named references' drawn parts
+      follow the motion of their collision's parts (the walker's
+      platforms) each frame. With --timeline-cast
       (and the readings a --timeline frame takes with it: the start clip
       flags, --timeline-child-flag-agrees, --timeline-dead-*, the look
       readings...) the run's actors are drawn as their characters from the
@@ -292,6 +297,10 @@ pub struct Scene {
     /// camera fields are not read). The cell's own placed actors are then
     /// not drawn.
     pub play_cast: Option<crate::timeline::Args>,
+    /// The window's scripted play mode with `--play-elevator`: the named
+    /// references whose drawn shapes follow their parts' motion (each
+    /// draw's node chain kept, `BuildOptions::chains`); empty otherwise.
+    pub play_platforms: Vec<fo4_plugin::FormKey>,
 }
 
 /// Default of `--scene-memory`: a viewer bound, not a claim about the game.
@@ -390,6 +399,9 @@ pub struct Play {
     /// `--play-input FILE`: the run driven by `play_run`'s walker and this
     /// scripted input instead of the keyboard and mouse.
     pub input: Option<String>,
+    /// `--play-shots-between FROM TO EVERY` (repeated): more frames, every
+    /// EVERY seconds of the run from FROM to TO, besides the period's.
+    pub shots_between: Vec<[f64; 3]>,
     /// `--play-shots DIR --play-shot-every SECONDS`: the window's frame
     /// written each time the scripted run passes a multiple of SECONDS.
     pub shots: Option<(String, f64)>,
@@ -576,6 +588,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
     let (mut play_run, mut play_out) = (None, None);
     let mut play_switches = crate::play_switches::Switches::default();
     let (mut play_input, mut play_shots, mut play_shot_every) = (None, None, None);
+    let mut shots_between: Vec<[f64; 3]> = Vec::new();
     let mut rest = args[3..].iter();
     while let Some(arg) = rest.next() {
         if clock.set_flag(arg) || light.set_flag(arg) || pose.set_flag(arg) {
@@ -628,6 +641,17 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             "--play-input" => play_input = Some(value()?.clone()),
             "--play-shots" => play_shots = Some(value()?.clone()),
             "--play-shot-every" => play_shot_every = Some(positive(value()?)?),
+            "--play-shots-between" => {
+                let from = not_negative(value()?)?;
+                let to = not_negative(value()?)?;
+                let every = positive(value()?)?;
+                if to < from {
+                    return Err(
+                        "--play-shots-between takes FROM TO EVERY, TO not before FROM".into(),
+                    );
+                }
+                shots_between.push([from, to, every]);
+            }
             "--timeline" => timeline_file = Some(value()?.clone()),
             "--at" => timeline_at = Some(not_negative(value()?)?),
             "--eye-height" => eye_height = Some(finite(value()?)?),
@@ -846,7 +870,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
         }
     }
     let unused = timeline.as_ref().map(|_| [0.; 3]);
-    let scene = Scene {
+    let mut scene = Scene {
         manifest: args[0].clone(),
         data: args[1].clone(),
         cell: args[2].clone(),
@@ -874,6 +898,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
         light,
         light_assumptions,
         play_cast,
+        play_platforms: Vec::new(),
     };
     // The window's scripted play mode takes the light switches too (no
     // `--exposure-eye`: the window's camera moves).
@@ -907,6 +932,9 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
         (None, None) => None,
         _ => return Err("--play-shots DIR and --play-shot-every SECONDS go together".into()),
     };
+    if shots.is_none() && !shots_between.is_empty() {
+        return Err("--play-shots-between needs --play-shots DIR --play-shot-every SECONDS".into());
+    }
     let play = match (play_run, play_out) {
         (Some(run), Some(out)) => Some(Play {
             run,
@@ -914,6 +942,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             switches: Box::new(play_switches),
             input: play_input,
             shots,
+            shots_between,
         }),
         (None, None) if !play_switches.any() && play_input.is_none() && shots.is_none() => None,
         _ => {
@@ -930,6 +959,9 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
         }
         if p.input.is_none() && p.shots.is_some() {
             return Err("--play-shots needs --play-input".into());
+        }
+        if p.input.is_some() {
+            scene.play_platforms = crate::play_switches::platforms(&p.switches);
         }
     }
     if play.is_some()
@@ -1222,6 +1254,7 @@ mod tests {
                 }),
                 input: None,
                 shots: None,
+                shots_between: Vec::new(),
             }
         );
         let live = parse(&args(
@@ -1237,11 +1270,19 @@ mod tests {
             "m d C --under-hypotheses --walk --eye 1,2,3 --look 4,5,6 --play-run s.txt --play-out o --play-input i.txt --walk-speed 300 --play-reach 150 --play-load-doors --play-follow-grid --play-slice 0.25 --play-elevator a.esm:00000001 --play-elevator-rigid --play-shots d --play-shot-every 30",
         ))
         .unwrap();
-        let Command::Window { play: Some(p), .. } = scripted else {
+        let Command::Window {
+            play: Some(p),
+            scene,
+            ..
+        } = scripted
+        else {
             panic!("{scripted:?}")
         };
+        // The named platform's drawn parts follow the walker's.
+        assert_eq!(scene.play_platforms, p.switches.elevators);
         assert_eq!(p.input.as_deref(), Some("i.txt"));
         assert_eq!(p.shots, Some(("d".to_string(), 30.0)));
+        assert!(p.shots_between.is_empty());
         assert_eq!(p.switches.slice, Some(0.25));
         assert_eq!(
             p.switches.elevators,
@@ -1267,9 +1308,25 @@ mod tests {
             "m d C --under-hypotheses --walk --eye 1,2,3 --look 4,5,6 --play-run s.txt --play-out o --play-input i --play-shots d",
             "m d C --under-hypotheses --walk --eye 1,2,3 --look 4,5,6 --play-input i",
             "m d C --under-hypotheses --walk --eye 1,2,3 --look 4,5,6 --play-run s.txt --play-out o --play-input i --play-elevator-rigid",
+            "m d C --under-hypotheses --walk --eye 1,2,3 --look 4,5,6 --play-run s.txt --play-out o --play-input i --play-shots-between 1 2 3",
+            "m d C --under-hypotheses --walk --eye 1,2,3 --look 4,5,6 --play-run s.txt --play-out o --play-input i --play-shots d --play-shot-every 30 --play-shots-between 5 2 1",
         ] {
             assert!(parse(&args(bad)).is_err(), "{bad}");
         }
+        let dense = parse(&args(
+            "m d C --under-hypotheses --walk --eye 1,2,3 --look 4,5,6 --play-run s.txt --play-out o --play-input i.txt --play-shots d --play-shot-every 30 --play-shots-between 478 512 2 --play-shots-between 725 800 2",
+        ))
+        .unwrap();
+        let Command::Window {
+            play: Some(p),
+            scene,
+            ..
+        } = dense
+        else {
+            panic!("{dense:?}")
+        };
+        assert_eq!(p.shots_between, [[478., 512., 2.], [725., 800., 2.]]);
+        assert!(scene.play_platforms.is_empty());
         let c = parse(&args(
             "m d C --under-hypotheses --walk --terrain --around 1 --no-stream --eye 1,2,3 --look 4,5,6 --play-run s.txt --play-out o",
         ))
@@ -1347,6 +1404,7 @@ mod tests {
                     light: fo4_scene::light::Switches::default(),
                     light_assumptions: fo4_scene::light::Assumptions::default(),
                     play_cast: None,
+                    play_platforms: Vec::new(),
                 },
                 fly: DEFAULT_FLY,
                 walk: false,

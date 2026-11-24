@@ -520,6 +520,8 @@ fn exact_depth_ties_resolve_by_list_order_in_every_run() {
             instances: vec![instance(0), instance(1)],
             animated: Vec::new(),
             moving: Vec::new(),
+            draws: Vec::new(),
+            platforms: Vec::new(),
             light: None,
         }
     };

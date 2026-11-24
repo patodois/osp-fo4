@@ -51,6 +51,7 @@ fn load_scene(
             time: s.time,
             clock: s.clock,
             vertex_normals: s.light.vertex_normals,
+            chains: !s.play_platforms.is_empty(),
             ..load::build_options(s.textures, s.level)
         },
         s.scene_memory,
@@ -82,11 +83,20 @@ fn load_scene(
         backface_cull: s.backface_cull,
         ..RenderOptions::REFERENCE
     };
-    let gpu = scene::convert_lit(
+    let mut gpu = scene::convert_lit(
         &mut loaded.build.list,
         &options,
         loaded.light.as_ref().map(|(l, lit)| (l, lit.as_slice())),
     )?;
+    // The scripted play window's named platforms: their drawn shapes, to
+    // follow their parts (only with --play-input and --play-elevator).
+    if !s.play_platforms.is_empty() {
+        gpu.platforms = scene::platform_instances(&loaded.build, &gpu, &s.play_platforms);
+        println!(
+            "play: {} drawn instances of the named platforms' models, kept with their node chains",
+            gpu.platforms.len()
+        );
+    }
     // Only with --light-vertex-normals: how many lit surfaces take them.
     if s.light.vertex_normals {
         let n = gpu.surfaces.iter().filter(|x| x.params.smooth).count();
