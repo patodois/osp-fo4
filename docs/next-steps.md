@@ -3,7 +3,7 @@
 This page is the hand-over point. Everything on `main` builds and passes its tests; anyone (a person or an
 agent) can continue from here. Read `AGENTS.md` first: it holds the rules of evidence and the clean-room rules.
 
-State on 2026-11-24 (vault, cast, light, home, character graph, fight, live window, museum, live world, run library, seen, past-the-museum, faces, third-fight, poses, town-chain, layers, wire, rotate and exit steps). Nothing below has been checked against the running game: every behaviour is a pending
+State on 2026-11-24 (vault, cast, light, home, character graph, fight, live window, museum, live world, run library, seen, past-the-museum, faces, third-fight, poses, town-chain, layers, wire, rotate, exit and window steps). Nothing below has been checked against the running game: every behaviour is a pending
 rule in `spec/hypotheses.tsv`, off by default.
 
 ## Script VM and quests (`crates/fo4-vm`)
@@ -238,7 +238,7 @@ under pending rules, never "matches the game": that needs the measurements liste
 | M0 | Read the game's data: archives, plugins, models, textures, collision, scripts | done |
 | M1 | Draw a cell and walk it with collision (CPU render and viewer) | done |
 | M2 | Run the quests of the opening, the vault, the town and the museum headless | mostly: assumed fights, a few stages open |
-| M3 | Play the opening in the window from input, start to the vault exit | headless from the start to the exterior (274 of 274 stages to 960 s; outside at 955.35 s, on the surface at 967 s; the walk goes on to 998 s, where a 45.6-degree slope stops it) with the exit step's switches and one caller assumption (the exit elevator's descent); what M3 still lacks: the window has never been opened or watched, and the headless walk needs the caller's input, its waypoints and that assumption |
+| M3 | Play the opening in the window from input, start to the vault exit | in the window from a scripted input, no person needed (window step: `fo4-view --play-run ... --play-input FILE` with every `play_run` play option drives the run with `play_run`'s walker, held to the window's clock; the window loads the walker's cell at each change of space and writes frames with `--play-shots`): with the exit step's switches and input the window run gives the headless run's outputs byte for byte (274 of 274 stages to 960 s, 276 to 1,000 s, out of the vault at 955.35 s, stopped at 998 s at the foot of a cliff face of about 80 units, off the navigation mesh since a 58-unit drop at a rock's edge about 2 s before); what M3 still lacks: a person's input instead of the caller's waypoints and its one assumption (the exit elevator's descent), the drawn elevators and doors moving with their collision, a sky, actors other than in the rest pose |
 | M4 | People: animated poses, movement between places, faces | start poses and faces drawn; no clip playback over time, no movement |
 | M5 | Fights: weapons, damage, death, enemy behaviour | not started (deaths are the caller's assumptions) |
 | M6 | Screens: dialogue choices, inventory, the wrist device, containers, map | not started (subtitles in the title bar only) |
@@ -317,6 +317,23 @@ What the frames show is missing, in order of what blocks a playable opening:
    collision-marker boxes, the elevator in the window; the run's cost (`fo4-vm`'s distance dues search
    every placement each turn: 407 s for 480 s of input); the lines' audio; then the library run in `fo4-vm`
    (`spec/play.md`, Request) so `fo4-play` stops compiling the example.
+   Window step: the window runs the opening without a person. `fo4-view --play-run FILE --play-input INPUT`
+   takes every `play_run` play option through one structure (`apps/fo4-view/src/play_switches.rs`, until
+   `fo4-play` offers the parser in its library: requested), drives the run with `play_run`'s walker on the run's
+   thread held to the window's clock, stands the camera at the walker's eye, loads the cell the walker's walking
+   world was last built about at each change of space (11 loads on the opening, 4 to 7 s each, the run waiting)
+   and writes the window's frames (`--play-shots DIR --play-shot-every S`). With the exit step's switches and
+   input its outputs equal the headless run's byte for byte (track, censuses, names, next blockers, timeline: 276
+   stages to 1,000 s); about 20 minutes of wall clock for the 1,015 s of input, 60 frames a second (median) on
+   this machine. What the frames show (black sky, the elevators and doors not moving or not drawn, people in the
+   rest pose, a fall into the void while the run seats the player in the cryo pod's cell) is in the window
+   step's notes. The stop at 998 s, measured against the navigation meshes: the walker stands where no navmesh
+   triangle lies, under a face of about 80 units whose top agrees with the navmesh within 3 units; it left the
+   navmesh's heights about 2 s before, where a placed rock's collision ends in a 58-unit drop and the navmesh
+   comes down at 38.8 degrees. The 45-degree limit was not changed: a higher one would not climb that face.
+   Next: waypoints that keep to the navmesh's heights (or the rock's edge read against the navmesh), the drawn
+   platforms moving with their collision (request to `fo4-play` for the platforms' motions), the walker's state
+   read from `fo4-play` instead of its log, a sky.
 2. Characters stand in the rest pose (arms out) and do not move between the run's places. Next: the run's
    animation events and packages to clips (the character graph classes the readers do not read yet,
    `spec/character-graph-census.txt`), a walk between places. 13 actors are still markers: 9 whose outfit

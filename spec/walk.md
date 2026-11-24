@@ -458,16 +458,14 @@ parts move as before (their keys equal the stored rotations, so their turns are 
 | prewar vault, entrance room floor at 520.67 s to 700 s | reaches every target, flat at 50.1 on the ramp, then a drop to the floor | the same targets and end, down the ramp from 48 to 0 over about 1.2 s |
 | postwar vault, console side at 928.2 s along the walk's commands to 944 s | stops at x -3,512.6 against the ramp's end face from 929.2 s | up the ramp (z 37.6 at 929.9 s), across the walkway at 55.6 to 56.9, past the door at 935 s, down to the exit elevator's room (z -122 at 944 s) |
 
-The play mode does not read these yet (`fo4-play` is the run side's). What a local probe of it did, outside the
-repository, and what the run side would add behind its own switch, off by default: in `elevator::Elevator::build`,
-group a named reference's collision sources by the deepest chain block any of the model's sequences sets
-(`sequence::chain_pose` at the sequence's start; sources whose chain no sequence sets stay still); for each group
-and sequence, sample `chain_pose` over the group's chain up to that block at `SAMPLES_PER_SECOND` along the
-sequence's span and turn each sample into `Motion::between(frame.compose(stored), frame.compose(posed))`; put
-each group in as a `platform::RigidRide` instead of a `Ride`, its track the started sequence's motions from the
-second the run's graph starts it (a group the sequence does not set holds its motion), and look at those rides
-in `moving`, `advance` (the ended ride and its load door as for `Ride`), `leave` and `bounds`. With the
-opening's arguments and that probe the walk matches 265 of 265 stages to 946 s (`docs/next-steps.md`).
+The play mode reads them since the exit step, behind its own switch, off by default: `play_run
+--play-elevator-rigid` (`play_elevator_rigid_v1`, `spec/play.md`, "Up the ramp, up the exit elevator and out")
+groups a named reference's collision sources by the deepest chain node any of its model's sequences sets and lets
+each group ride (`platform::RigidRide`) the rigid motions the started sequence gives its chain, sampled 60 times a
+second; a group the sequence does not set holds its motion. With the opening's arguments the walk matches 265 of
+265 stages to 946 s and, with the exit step's other switches, 274 of 274 to 960 s (`docs/next-steps.md`). The
+window's scripted play mode (`fo4-view --play-run ... --play-input FILE`) takes the same switch with the rest of
+`play_run`'s play options (`docs/next-steps.md`, M3).
 
 ## Open
 
