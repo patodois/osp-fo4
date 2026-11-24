@@ -59,6 +59,9 @@ pub struct Switches {
     /// `--play-collision-off-chain`, `--play-collision-reference-alpha`.
     pub off_chain: bool,
     pub reference_alpha: bool,
+    /// `--play-collision-child-flag-agrees`
+    /// (`xesp_child_flag_agrees_chain_v1`).
+    pub child_flag_agrees: bool,
     /// `--play-elevator REF`, `--play-elevator-also REF`,
     /// `--play-elevator-also-with REF OWNER`, as given (`PLUGIN:OBJECTID`).
     pub elevators: Vec<String>,
@@ -104,6 +107,7 @@ impl Switches {
             "--play-player-sits" => &mut self.player_sits,
             "--play-collision-off-chain" => &mut self.off_chain,
             "--play-collision-reference-alpha" => &mut self.reference_alpha,
+            "--play-collision-child-flag-agrees" => &mut self.child_flag_agrees,
             "--play-around" => {
                 let v = value(1)?;
                 self.around = Some(
@@ -261,6 +265,7 @@ mod walker {
                 live: self.live_world,
                 doors: self.load_doors,
                 collision: self.collision(),
+                child_flag_agrees: self.child_flag_agrees,
             }
         }
 
@@ -319,9 +324,13 @@ mod walker {
             if self.reference_alpha {
                 let _ = writeln!(report, "switch: a reference's unread alpha does not refuse its collision (--play-collision-reference-alpha, {})", fo4_scene::hypotheses::REFERENCE_ALPHA_COLLISION);
             }
+            if self.child_flag_agrees {
+                let _ = writeln!(report, "switch: an enable chain left open only by records' own flags that agree with it decides their collision, at load and after the run's changes (--play-collision-child-flag-agrees, {})", fo4_scene::hypotheses::ENABLE_CHILD_FLAG_AGREES);
+            }
             let mut opts = walker::Options {
                 reach: self.reach,
                 collision: self.collision(),
+                child_flag_agrees: self.child_flag_agrees,
                 ..walker::Options::default()
             };
             if let Some(v) = self.walk_speed {
@@ -356,7 +365,8 @@ mod walker {
                         if nowait { ", --play-nowait" } else { "" }
                     );
                     let live = fo4_play::live::Live::new(world, refs, dormant, info, space, nowait)
-                        .map_err(|e| e.to_string())?;
+                        .map_err(|e| e.to_string())?
+                        .with_child_flag_agrees(self.child_flag_agrees);
                     walker::Walker::new(fo4_walk::World::new(), Vec::new(), script, opts)?
                         .with_live(live, nowait)
                 }
@@ -439,7 +449,7 @@ mod tests {
 
     #[test]
     fn reads_play_runs_options() {
-        let s = read("--walk-speed 300 --play-reach 150 --play-pick-bounds --play-pick-bounds-activatable --play-load-doors --play-follow-grid --play-slice 0.25 --play-live-world --play-elevator a.esm:0000000A --play-elevator a.esm:B --play-elevator-also-with a.esm:C A.ESM:0000000A --play-elevator-door --play-elevator-held-pose --play-elevator-rigid --play-elevator-door-onward --play-collision-off-chain --play-collision-reference-alpha --play-player-moveto --play-player-sits --play-around 2 --play-tick 0.02 --run-speed 400 --play-region-walker --play-recheck-marks --play-nowait --play-elevator-also a.esm:D").unwrap();
+        let s = read("--walk-speed 300 --play-reach 150 --play-pick-bounds --play-pick-bounds-activatable --play-load-doors --play-follow-grid --play-slice 0.25 --play-live-world --play-elevator a.esm:0000000A --play-elevator a.esm:B --play-elevator-also-with a.esm:C A.ESM:0000000A --play-elevator-door --play-elevator-held-pose --play-elevator-rigid --play-elevator-door-onward --play-collision-off-chain --play-collision-reference-alpha --play-collision-child-flag-agrees --play-player-moveto --play-player-sits --play-around 2 --play-tick 0.02 --run-speed 400 --play-region-walker --play-recheck-marks --play-nowait --play-elevator-also a.esm:D").unwrap();
         assert_eq!(s.walk_speed, Some(300.0));
         assert_eq!(s.reach, Some(150.0));
         assert_eq!(s.slice, Some(0.25));
@@ -449,7 +459,7 @@ mod tests {
         assert_eq!(s.also_with.len(), 1);
         assert!(s.pick_bounds && s.activatable && s.load_doors && s.follow_grid);
         assert!(s.live_world && s.nowait && s.elevator_door && s.held_pose && s.rigid);
-        assert!(s.door_onward && s.off_chain && s.reference_alpha);
+        assert!(s.door_onward && s.off_chain && s.reference_alpha && s.child_flag_agrees);
         assert!(s.player_moveto && s.player_sits && s.region && s.recheck_marks);
         assert!(s.walker_only());
         // Only what the keyboard's driver reads too.

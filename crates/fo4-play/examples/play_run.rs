@@ -60,6 +60,9 @@
 //! the drawing side's collision readiness readings
 //! (`collision_model_blockers_off_chain_v1`,
 //! `refr_xalp_collision_unchanged_v1`; `fo4_scene::readiness::Switches`).
+//! `--play-collision-child-flag-agrees` gives them, and the live world's
+//! decisions, the reading of enable chains left open only by own flags
+//! that agree with the chain (`xesp_child_flag_agrees_chain_v1`).
 //! `--probe-ray X Y Z HEADING PITCH REACH --probe-ref KEY` prints what a ray
 //! from that eye meets and where the reference's collision is, then stops
 //! (an aid for choosing where an input aims).
@@ -139,6 +142,7 @@ fn run() -> Result<(), E> {
         off_chain: flag(&mut a, "--play-collision-off-chain"),
         reference_alpha: flag(&mut a, "--play-collision-reference-alpha"),
     };
+    let child_flag_agrees = flag(&mut a, "--play-collision-child-flag-agrees");
     let mut elevators = walker::Elevators {
         door: elevator_door,
         held_pose,
@@ -247,6 +251,7 @@ fn run() -> Result<(), E> {
                     live: live_world,
                     doors: load_doors,
                     collision,
+                    child_flag_agrees,
                 },
             )?;
             let world::Built {
@@ -330,10 +335,14 @@ fn run() -> Result<(), E> {
             if collision.reference_alpha {
                 let _ = writeln!(report, "switch: a reference's unread alpha does not refuse its collision (--play-collision-reference-alpha, {})", fo4_scene::hypotheses::REFERENCE_ALPHA_COLLISION);
             }
+            if child_flag_agrees {
+                let _ = writeln!(report, "switch: an enable chain left open only by records' own flags that agree with it decides their collision, at load and after the run's changes (--play-collision-child-flag-agrees, {})", fo4_scene::hypotheses::ENABLE_CHILD_FLAG_AGREES);
+            }
             drop((store, vfs));
             let mut opts = walker::Options {
                 reach,
                 collision,
+                child_flag_agrees,
                 ..walker::Options::default()
             };
             if let Some(v) = walk_speed {
@@ -370,7 +379,8 @@ fn run() -> Result<(), E> {
                         if nowait { ", --play-nowait" } else { "" }
                     );
                     let live =
-                        fo4_play::live::Live::new(world, refs, dormant, info, built_space, nowait)?;
+                        fo4_play::live::Live::new(world, refs, dormant, info, built_space, nowait)?
+                            .with_child_flag_agrees(child_flag_agrees);
                     walker::Walker::new(fo4_walk::World::new(), Vec::new(), script, opts)?
                         .with_live(live, nowait)
                 }

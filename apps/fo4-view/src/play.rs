@@ -134,6 +134,9 @@ mod enabled {
         /// `--play-live-world` asked for.
         live_asked: bool,
         nowait: bool,
+        /// `--play-collision-child-flag-agrees`: the window's live world
+        /// decides as the run's walker does.
+        child_flag_agrees: bool,
         /// The live world and the drawn references by instance tag.
         pub live: Option<(Live, BTreeMap<u32, FormKey>)>,
         /// The run's last state, and how many times it was applied.
@@ -397,6 +400,7 @@ mod enabled {
             activations: Vec::new(),
             live_asked: sw.live_world,
             nowait: sw.nowait,
+            child_flag_agrees: sw.child_flag_agrees,
             live: None,
             state: None,
             generation: 0,
@@ -423,7 +427,8 @@ mod enabled {
                 l.space,
                 self.nowait,
             )
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| e.to_string())?
+            .with_child_flag_agrees(self.child_flag_agrees);
             println!(
                 "play: the walking world and the drawn references follow the run (--play-live-world{})",
                 if self.nowait { ", --play-nowait" } else { "" }

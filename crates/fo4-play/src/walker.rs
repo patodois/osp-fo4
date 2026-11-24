@@ -49,6 +49,12 @@ pub struct Options {
     /// builds again takes (a load door, the moving grid), as the first one
     /// took them ([`crate::world::Options::collision`]).
     pub collision: fo4_scene::readiness::Switches,
+    /// `xesp_child_flag_agrees_chain_v1` in every walking world the walker
+    /// builds again and in its live world's decisions, as the first one
+    /// took it ([`crate::world::Options::child_flag_agrees`],
+    /// [`Live::with_child_flag_agrees`];
+    /// `--play-collision-child-flag-agrees`).
+    pub child_flag_agrees: bool,
 }
 impl Default for Options {
     fn default() -> Self {
@@ -59,6 +65,7 @@ impl Default for Options {
             settle_ticks: 600,
             slice: 0.0,
             collision: fo4_scene::readiness::Switches::default(),
+            child_flag_agrees: false,
         }
     }
 }
@@ -195,8 +202,12 @@ pub struct Elevators {
 pub const ELEVATOR_STAND: f64 = 0.1;
 
 /// The drawing side's rules the collision switches rely on.
-fn collision_rules(c: fo4_scene::readiness::Switches) -> std::collections::BTreeSet<&'static str> {
+fn collision_rules(o: &Options) -> std::collections::BTreeSet<&'static str> {
+    let c = o.collision;
     let mut out = std::collections::BTreeSet::new();
+    if o.child_flag_agrees {
+        out.insert(fo4_scene::hypotheses::ENABLE_CHILD_FLAG_AGREES);
+    }
     if c.off_chain {
         out.insert(fo4_scene::hypotheses::COLLISION_OFF_CHAIN);
     }
@@ -388,7 +399,7 @@ impl Walker {
             visibility: Default::default(),
             end,
             log: Rc::new(RefCell::new(Log {
-                rules: collision_rules(opts.collision),
+                rules: collision_rules(&opts),
                 ..Log::default()
             })),
         })
@@ -1106,6 +1117,7 @@ impl Walker {
                 live: follows,
                 doors: self.doors.is_some(),
                 collision: self.opts.collision,
+                child_flag_agrees: self.opts.child_flag_agrees,
             },
         )
         .map_err(|e| e.to_string())?;
@@ -1118,7 +1130,8 @@ impl Walker {
                 info,
                 built.space.clone(),
                 self.nowait,
-            ),
+            )
+            .map(|l| l.with_child_flag_agrees(self.opts.child_flag_agrees)),
             None => Live::fixed(built.world, built.refs),
         }
         .map_err(|e| e.to_string())?;
@@ -1311,7 +1324,8 @@ mod tests {
         let o = Options::default();
         assert!(!o.collision.any());
         assert_eq!(crate::world::Options::default().collision, o.collision);
-        assert!(collision_rules(o.collision).is_empty());
+        assert!(!o.child_flag_agrees && !crate::world::Options::default().child_flag_agrees);
+        assert!(collision_rules(&o).is_empty());
         let w = Walker::new(
             floor(),
             Vec::new(),
@@ -1325,6 +1339,7 @@ mod tests {
                 off_chain: true,
                 reference_alpha: true,
             },
+            child_flag_agrees: true,
             ..Options::default()
         };
         let w = Walker::new(
@@ -1338,6 +1353,7 @@ mod tests {
         let mut want = vec![
             fo4_scene::hypotheses::COLLISION_OFF_CHAIN,
             fo4_scene::hypotheses::REFERENCE_ALPHA_COLLISION,
+            fo4_scene::hypotheses::ENABLE_CHILD_FLAG_AGREES,
         ];
         want.sort();
         assert_eq!(rules, want);

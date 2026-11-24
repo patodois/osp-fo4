@@ -183,13 +183,20 @@ pub enum Decision {
 /// The decision for one reference, as `fo4_scene::timeline::apply` decides
 /// what a frame draws: `shown` gives each reference's last change (by
 /// normalised key), `mv` this reference's last move, `space` the space of
-/// the walking world.
+/// the walking world. With `child_flag_agrees`
+/// (`xesp_child_flag_agrees_chain_v1`, `--play-collision-child-flag-agrees`)
+/// an enable chain left open only by records below its root carrying their
+/// own flag 0x800, each agreeing with the chain, is read as any other chain
+/// (`Presence::with_agreeing_child_flags`), with or without the run's
+/// changes: the state the loader gave it at the start under the same
+/// switch, then the state its records' changes give.
 pub fn decide(
     info: &RefInfo,
     key: &FormKey,
     shown: &dyn Fn(&FormKey) -> Option<bool>,
     mv: Option<&Move>,
     space: &FormKey,
+    child_flag_agrees: bool,
 ) -> Decision {
     let own = shown(key);
     let in_scene = if info.listed_disabled {
@@ -201,6 +208,9 @@ pub fn decide(
         return Decision::Absent;
     }
     let enabled = match &info.enable {
+        Some(p) if child_flag_agrees && fo4_scene::readiness::child_flag_agrees(p) => {
+            p.with_agreeing_child_flags(&|k| shown(&norm(k)))
+        }
         Some(p) if p.chain.nodes.iter().any(|n| shown(&norm(&n.key)).is_some()) => {
             p.with(&|k| shown(&norm(k)))
         }
@@ -245,6 +255,8 @@ pub struct Live {
     info: BTreeMap<FormKey, RefInfo>,
     space: FormKey,
     nowait: bool,
+    /// `xesp_child_flag_agrees_chain_v1` in the decisions ([`decide`]).
+    child_flag_agrees: bool,
     decided: BTreeMap<FormKey, Decision>,
     pub stats: Stats,
 }
@@ -264,9 +276,26 @@ impl Live {
                 object_id: 0,
             },
             nowait: false,
+            child_flag_agrees: false,
             decided: BTreeMap::new(),
             stats: Stats::default(),
         })
+    }
+
+    /// Decides the chains left open only by agreeing own flags as any
+    /// other (`xesp_child_flag_agrees_chain_v1`,
+    /// `--play-collision-child-flag-agrees`; off by default): the walking
+    /// world built under the same switch ([`crate::world::Options`]) took
+    /// their start state from the loader, and the run's changes reach them
+    /// through their chain.
+    pub fn with_child_flag_agrees(mut self, on: bool) -> Live {
+        self.child_flag_agrees = on;
+        self
+    }
+
+    /// Whether [`Live::with_child_flag_agrees`] is on.
+    pub fn child_flag_agrees(&self) -> bool {
+        self.child_flag_agrees
     }
 
     /// The live world: the world as loaded, the dormant piece (hidden), the
@@ -339,10 +368,12 @@ impl Live {
     pub fn apply(&mut self, s: &RunState, b: &Budget) -> Result<usize> {
         let started = std::time::Instant::now();
         let nowait = self.nowait;
+        let agrees = self.child_flag_agrees;
         let shown = |k: &FormKey| s.shown(k, nowait);
         let mut changed = Vec::new();
         for (k, i) in &self.info {
-            let d = decide(i, k, &shown, s.moves.get(k).map(|(_, m)| m), &self.space);
+            let mv = s.moves.get(k).map(|(_, m)| m);
+            let d = decide(i, k, &shown, mv, &self.space, agrees);
             if self.decided.get(k) != Some(&d) {
                 changed.push((k.clone(), d));
             }
@@ -690,9 +721,72 @@ mod tests {
         i.enable = Some(Presence::of(chain));
         let shown_off = |k: &FormKey| (*k == key(9)).then_some(false);
         let shown_on = |k: &FormKey| (*k == key(9)).then_some(true);
-        let off = decide(&i, &key(1), &shown_off, None, &key(100));
-        let on = decide(&i, &key(1), &shown_on, None, &key(100));
+        let off = decide(&i, &key(1), &shown_off, None, &key(100), false);
+        let on = decide(&i, &key(1), &shown_on, None, &key(100), false);
         assert_eq!(on, Decision::Present([0.0; 3]));
         assert_eq!(off, Decision::Absent, "{:?}", i.enable);
+    }
+
+    #[test]
+    fn a_chain_open_only_for_agreeing_own_flags_decides_behind_its_switch() {
+        // The opening's class: reference 1 carries its own flag 0x800, its
+        // link to root 9 is opposite (bit 0), the root lacks the flag:
+        // the chain and the flag both start it disabled.
+        let chain = Chain {
+            nodes: vec![
+                Node {
+                    key: key(1),
+                    signature: *b"REFR",
+                    initially_disabled: true,
+                    deleted: false,
+                    link: Some(EnableLink {
+                        raw: 9,
+                        parent: Some(key(9)),
+                        flags: 1,
+                        reserved: [0; 3],
+                        subrecord: 1,
+                    }),
+                },
+                Node {
+                    key: key(9),
+                    signature: *b"REFR",
+                    initially_disabled: false,
+                    deleted: false,
+                    link: None,
+                },
+            ],
+            end: ChainEnd::Root,
+        };
+        let mut i = info(0, false, vec![1]);
+        i.enable = Some(Presence::of(chain));
+        let none = |_: &FormKey| None;
+        let root_off = |k: &FormKey| (*k == key(9)).then_some(false);
+        let root_on = |k: &FormKey| (*k == key(9)).then_some(true);
+        let d = |shown: &dyn Fn(&FormKey) -> Option<bool>, on: bool| {
+            decide(&i, &key(1), shown, None, &key(100), on)
+        };
+        // Off: undecided, as before (present where it was loaded).
+        assert_eq!(d(&none, false), Decision::Present([0.0; 3]));
+        assert_eq!(d(&root_off, false), Decision::Present([0.0; 3]));
+        // On: absent at the start, present once the run disables the
+        // root (the opposite link), absent when it enables it again.
+        assert_eq!(d(&none, true), Decision::Absent);
+        assert_eq!(d(&root_off, true), Decision::Present([0.0; 3]));
+        assert_eq!(d(&root_on, true), Decision::Absent);
+        // The live world reads it so only with the switch: the wall of
+        // reference 1 stays met without it; with it, the run's enable of
+        // the root takes it out and its disable puts it back.
+        let b = Budget::new(1 << 24);
+        for on in [false, true] {
+            let mut l = live().with_child_flag_agrees(on);
+            assert_eq!(l.child_flag_agrees(), on);
+            l.info.insert(key(1), i.clone());
+            l.apply(&state(&[(9, Some(true), true)], &[]), &b).unwrap();
+            let met = ray(&l).is_some();
+            assert_eq!(met, !on, "{on}");
+            l.apply(&state(&[(9, Some(false), false)], &[]), &b)
+                .unwrap();
+            assert_eq!(ray(&l), Some((100.0, Some(key(1)))), "{on}");
+        }
     }
 }

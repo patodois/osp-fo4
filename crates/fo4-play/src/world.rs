@@ -34,6 +34,13 @@ pub struct Options {
     /// `Loader::set_collision_switches`; `--play-collision-off-chain`,
     /// `--play-collision-reference-alpha`). All off: the loader's default.
     pub collision: fo4_scene::readiness::Switches,
+    /// An enable parent chain left open only by records below its root
+    /// carrying their own flag 0x800, each agreeing with the chain, decides
+    /// the reference's collision as for any other chain
+    /// (`xesp_child_flag_agrees_chain_v1`, given to the loader with
+    /// `Loader::set_collision_child_flag_agrees`;
+    /// `--play-collision-child-flag-agrees`). Off: the loader's default.
+    pub child_flag_agrees: bool,
 }
 
 /// A placed door whose `XTEL` names a door: where it takes the player
@@ -202,6 +209,9 @@ pub fn build(
     let mut loader = Loader::new(store, vfs, &m.language, level, &budget);
     if o.collision.any() {
         loader.set_collision_switches(o.collision);
+    }
+    if o.child_flag_agrees {
+        loader.set_collision_child_flag_agrees(true);
     }
     let mut scene = loader.cell(cell, &budget)?;
     let mut grid = None;
