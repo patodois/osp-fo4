@@ -405,6 +405,11 @@ pub struct Walker {
     /// References whose caller's timed activation the walker's activation
     /// stands for (`play_activate_person_v1`, `--play-activate-person`).
     persons: Vec<FormKey>,
+    /// Whether those activations and opens stand for the caller's actions
+    /// as written (`play_activate_written_second_v1`,
+    /// `--play-action-after-offset`): only the rule is noted here, the run
+    /// reads the seconds from its switches.
+    written: bool,
 }
 
 /// What [`Walker::with_on_load`] calls: the cell a walking world is about
@@ -473,6 +478,7 @@ impl Walker {
             on_load: None,
             opens: Vec::new(),
             persons: Vec::new(),
+            written: false,
         })
     }
 
@@ -506,6 +512,15 @@ impl Walker {
     /// switches (`play_activate_person_v1`: `crate::options::Play::run_args`).
     pub fn with_persons(mut self, persons: Vec<FormKey>) -> Walker {
         self.persons = persons.iter().map(norm).collect();
+        self
+    }
+
+    /// The activations and opens of `persons` and `opens` stand for the
+    /// caller's actions they replace as written
+    /// (`play_activate_written_second_v1`: the run's `--input-action-at`,
+    /// `crate::options::Play::run_args`).
+    pub fn with_written_seconds(mut self) -> Walker {
+        self.written = true;
         self
     }
 
@@ -999,6 +1014,9 @@ impl Walker {
         if let Some(k) = hit.as_ref().and_then(|h| h.reference.as_ref()) {
             if self.persons.contains(&norm(k)) {
                 log.rules.insert(crate::rules::ACTIVATE_PERSON);
+                if self.written {
+                    log.rules.insert(crate::rules::ACTIVATE_WRITTEN_SECOND);
+                }
             }
         }
         let (record, act) = match hit {
@@ -1053,10 +1071,12 @@ impl Walker {
                         });
                     actions.extend(act);
                     if let Some(o) = opens {
-                        self.log
-                            .borrow_mut()
-                            .rules
-                            .insert(crate::rules::ACTIVATE_OPENS);
+                        let mut log = self.log.borrow_mut();
+                        log.rules.insert(crate::rules::ACTIVATE_OPENS);
+                        if self.written {
+                            log.rules.insert(crate::rules::ACTIVATE_WRITTEN_SECOND);
+                        }
+                        drop(log);
                         actions.push(o);
                     }
                 }

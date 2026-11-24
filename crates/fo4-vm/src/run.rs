@@ -72,6 +72,8 @@ use setup::*;
 use sweep::*;
 
 pub use cli::{main_with, parse, Command, Settings};
+#[cfg(test)]
+pub(crate) use game::{gate_reference, held_due, waiting_due};
 pub use game::{InputCounts, NewGame, Stepper, Stepping};
 
 /// The error of a run: a typed error of a library or a named message.
@@ -416,6 +418,19 @@ pub struct Then {
     pub player_combat: Option<bool>,
     /// `--action-after` gates that named no timed caller action (counted).
     pub unmatched_gates: u64,
+    /// A held action keeps its offset from its gate's stage
+    /// (`--action-after-offset`, `caller_action_after_keeps_offset_v1`):
+    /// when the stage is done, the gate's held actions happen that many
+    /// seconds after it, their own second minus the gate's reference
+    /// second (never negative), and its actions still waiting for their
+    /// second move with them.
+    pub action_offset: bool,
+    /// Under `--action-after-offset`: the stepped input's player actions
+    /// that stand for a command-line action written at a second
+    /// (`--input-action-at activate|open REF@SECONDS`, repeated): a stage
+    /// such an action sets takes that second as its reference. The play
+    /// mode gives them for the timed actions it leaves to the person.
+    pub input_written: Vec<(crate::player::Action, String, f64)>,
 }
 
 /// One thing the caller makes happen.

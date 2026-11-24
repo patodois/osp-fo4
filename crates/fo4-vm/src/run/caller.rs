@@ -7,6 +7,11 @@ pub(super) fn gate_done(vm: &mut Vm<'_>, store: &Store, x: &Caller, b: &Budget) 
     let Some((q, n)) = &x.after else {
         return true;
     };
+    stage_done(vm, store, q, *n, b)
+}
+
+/// Whether that stage of the quest of that editor ID is done in the run.
+pub(super) fn stage_done(vm: &mut Vm<'_>, store: &Store, q: &str, n: i32, b: &Budget) -> bool {
     let Ok(k) = quest_by_editor_id(store, b, q) else {
         return false;
     };
@@ -14,7 +19,7 @@ pub(super) fn gate_done(vm: &mut Vm<'_>, store: &Store, x: &Caller, b: &Budget) 
         .quests
         .states
         .get(&crate::bind::record_key(&k))
-        .and_then(|s| s.is_done(*n))
+        .and_then(|s| s.is_done(n))
         == Some(true)
 }
 

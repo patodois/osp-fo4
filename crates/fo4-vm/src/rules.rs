@@ -169,7 +169,7 @@ pub const XESP_BIT1: &str = "xesp_flag_bit1_not_presence_v1";
 pub const XESP_PROPAGATES: &str = "xesp_script_change_propagates_v1";
 
 /// Every rule above.
-pub const ALL: [&str; 204] = [
+pub const ALL: [&str; 205] = [
     ARITHMETIC,
     COMPARE,
     NOT_COPY_CAST,
@@ -374,6 +374,7 @@ pub const ALL: [&str; 204] = [
     LOCATION_CHANGE_EVENT,
     LOCATION_IS_CHILD_PARENT,
     TIMER_BUDGET_PER_TIMER,
+    ACTION_AFTER_OFFSET,
 ];
 
 /// The rule an opcode's meaning rests on; `None` for an opcode without a
@@ -871,3 +872,11 @@ pub const TIMER_BUDGET_PER_TIMER: &str = "vm_timer_budget_per_timer_v1";
 /// parent locations (`PNAM` of the location records) reaches the
 /// receiver; a location with no `PNAM` ends the chain.
 pub const LOCATION_IS_CHILD_PARENT: &str = "world_location_is_child_parent_chain_v1";
+/// A caller's action held until a stage (`--action-after`) keeps its
+/// offset from that stage: when the stage is done, it happens its own
+/// second minus the gate's reference second later (never negative); the
+/// reference is the written second of the caller's action in whose turn
+/// the stage was done (an input action's from `--input-action-at`), else
+/// the earliest held action's second on that gate. The gate's actions
+/// still waiting for their second move as much, never before it.
+pub const ACTION_AFTER_OFFSET: &str = "caller_action_after_keeps_offset_v1";

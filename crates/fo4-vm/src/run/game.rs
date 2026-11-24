@@ -326,6 +326,16 @@ pub(super) fn new_game(
         *c.entry("assumption from the command line: a timed caller action waits for a stage before it happens (--action-after)".into())
             .or_default() += gated;
     }
+    if then.action_offset {
+        bump(
+            &mut c,
+            "switch: a caller action held until a stage keeps its offset from the stage (--action-after-offset)",
+        );
+    }
+    if !then.input_written.is_empty() {
+        *c.entry("assumption from the command line: an input action stands for a caller action written at a second (--input-action-at)".into())
+            .or_default() += then.input_written.len() as u64;
+    }
     if then.unmatched_gates > 0 {
         *c.entry(
             "caller actions held until a stage: gates naming no timed caller action".into(),
@@ -986,6 +996,33 @@ pub struct Stepping {
     pub recheck_marks: bool,
 }
 
+/// Under `--action-after-offset` (`caller_action_after_keeps_offset_v1`):
+/// a gate's reference second, the written second of the caller's action in
+/// whose turn its stage was done, else the earliest held action's second.
+pub(crate) fn gate_reference(written: Option<f64>, earliest_held: f64) -> f64 {
+    written.unwrap_or(earliest_held)
+}
+
+/// A held action's second: the stage's second plus the action's own second
+/// minus the gate's reference, never before the stage.
+pub(crate) fn held_due(done: f64, at: f64, reference: f64) -> f64 {
+    done + (at - reference).max(0.0)
+}
+
+/// A gate's action still waiting for its own second when the gate's held
+/// actions are given theirs: moved as much as they are, never before its
+/// own second.
+pub(crate) fn waiting_due(done: f64, at: f64, reference: f64) -> f64 {
+    at.max(held_due(done, at, reference))
+}
+
+/// A gated action held until its stage (`--action-after`), and under
+/// `--action-after-offset` the second its gate gave it.
+struct Held {
+    x: Caller,
+    due: Option<f64>,
+}
+
 /// The input's state of a stepped run.
 struct Input {
     /// The second the input reached.
@@ -1041,11 +1078,16 @@ pub struct NewGame<'r, 'v> {
     timers: usize,
     steps: usize,
     /// The caller's timed actions, earliest first (command-line order on a
-    /// tie).
-    pending: VecDeque<Caller>,
+    /// tie), each with whether the stepped input gave it.
+    pending: VecDeque<(Caller, bool)>,
     /// Gated actions whose second came before their stage
     /// (`--action-after`).
-    held: Vec<Caller>,
+    held: Vec<Held>,
+    /// Under `--action-after-offset`: every gate the caller's actions name
+    /// (`caller_action_after_keeps_offset_v1`), and the written second of
+    /// the caller's action in whose turn each was done.
+    gates: Vec<(String, i32)>,
+    gate_written: BTreeMap<(String, i32), f64>,
     seen: (usize, usize),
     input: Option<Input>,
     ended: bool,
@@ -1073,6 +1115,14 @@ impl<'r, 'v> NewGame<'r, 'v> {
             .cloned()
             .collect();
         pending.sort_by(|a, b| a.at.partial_cmp(&b.at).unwrap_or(std::cmp::Ordering::Equal));
+        let mut gates: Vec<(String, i32)> = Vec::new();
+        if then.action_offset {
+            for g in then.actions.iter().filter_map(|x| x.after.clone()) {
+                if !gates.contains(&g) {
+                    gates.push(g);
+                }
+            }
+        }
         let mut run = NewGame {
             vm,
             m,
@@ -1088,8 +1138,10 @@ impl<'r, 'v> NewGame<'r, 'v> {
             fired: Vec::new(),
             timers: then.timers,
             steps: then.scene_clock,
-            pending: VecDeque::from(pending),
+            pending: pending.into_iter().map(|x| (x, false)).collect(),
             held: Vec::new(),
+            gates,
+            gate_written: BTreeMap::new(),
             seen: (0, 0),
             input: None,
             ended: false,
@@ -1312,9 +1364,9 @@ impl<'r, 'v> NewGame<'r, 'v> {
             let pos = self
                 .pending
                 .iter()
-                .position(|p| p.at.is_some_and(|t| t >= *at))
+                .position(|p| p.0.at.is_some_and(|t| t >= *at))
                 .unwrap_or(self.pending.len());
-            self.pending.insert(pos, x);
+            self.pending.insert(pos, (x, true));
         }
         self.run_until_input()
     }
@@ -1379,13 +1431,22 @@ impl<'r, 'v> NewGame<'r, 'v> {
     /// One turn of the clock loop.
     fn turn(&mut self) -> Result<Turn, E> {
         let (store, then, b) = (self.store, self.then, self.b);
-        // A held action whose stage is now done happens at once.
-        if let Some(pos) = self
+        if then.action_offset {
+            // Gates whose stage is now done give their held actions their
+            // seconds; one whose second has come happens now.
+            self.release_gates();
+            let now = self.now();
+            if let Some((pos, _)) = self.next_held().filter(|&(_, t)| t <= now) {
+                self.act_held(pos)?;
+                return Ok(Turn::Ran);
+            }
+        } else if let Some(pos) = self
             .held
             .iter()
-            .position(|x| gate_done(self.vm, store, x, b))
+            .position(|h| gate_done(self.vm, store, &h.x, b))
         {
-            let x = self.held.remove(pos);
+            // A held action whose stage is now done happens at once.
+            let x = self.held.remove(pos).x;
             bump(self.c, "caller actions held until a stage: happened when the stage was done, after their second");
             self.act(&x)?;
             self.world_step();
@@ -1423,11 +1484,22 @@ impl<'r, 'v> NewGame<'r, 'v> {
             None
         };
         let now = self.now();
-        let wait = self
+        let pending_wait = self
             .pending
             .front()
-            .and_then(|x| x.at)
+            .and_then(|x| x.0.at)
             .map(|t| (t - now).max(0.0));
+        // Under `--action-after-offset`: a held action given its second
+        // comes before a waiting one of the same second.
+        let held_next = if then.action_offset {
+            self.next_held().map(|(p, t)| (p, (t - now).max(0.0)))
+        } else {
+            None
+        };
+        let wait = match (pending_wait, held_next) {
+            (Some(p), Some((_, h))) => Some(p.min(h)),
+            (p, h) => p.or(h.map(|x| x.1)),
+        };
         // A caller's action comes after timers and the scene clock on a tie,
         // and when neither has anything due.
         let next_known = match (timer, due) {
@@ -1478,12 +1550,18 @@ impl<'r, 'v> NewGame<'r, 'v> {
         }
         if let Some(wa) = wait {
             if !stuck && next_known.is_none_or(|n| wa < n) {
-                let x = self.pending.pop_front().expect("a pending action");
                 let t = now + wa;
                 self.vm.world.now[crate::world::Clock::Real as usize] = t;
                 if let Some(s) = scale {
                     self.vm.world.now[crate::world::Clock::GameTime as usize] += wa * s / 3600.0;
                 }
+                if let Some((pos, _)) =
+                    held_next.filter(|&(_, h)| pending_wait.is_none_or(|p| h <= p))
+                {
+                    self.act_held(pos)?;
+                    return Ok(Turn::Ran);
+                }
+                let (x, input) = self.pending.pop_front().expect("a pending action");
                 if x.after.is_some() {
                     if !gate_done(self.vm, store, &x, b) {
                         let _ = writeln!(
@@ -1491,7 +1569,7 @@ impl<'r, 'v> NewGame<'r, 'v> {
                             "## caller's action on {} held at {t} s: its stage is not done",
                             x.target()
                         );
-                        self.held.push(x);
+                        self.held.push(Held { x, due: None });
                         return Ok(Turn::Ran);
                     }
                     bump(
@@ -1499,8 +1577,11 @@ impl<'r, 'v> NewGame<'r, 'v> {
                         "caller actions held until a stage: happened at their second",
                     );
                 }
+                let open = self.gates_open();
                 self.act(&x)?;
                 self.world_step();
+                let written = self.written_of(&x, input);
+                self.gates_done(&open, written);
                 self.note("a caller's action");
                 return Ok(Turn::Ran);
             }
@@ -1571,20 +1652,23 @@ impl<'r, 'v> NewGame<'r, 'v> {
         self.ended = true;
         self.count_prefix();
         let (store, b) = (self.store, self.b);
+        if self.then.action_offset {
+            return self.close_offset();
+        }
         loop {
             if let Some(pos) = self
                 .held
                 .iter()
-                .position(|x| gate_done(self.vm, store, x, b))
+                .position(|h| gate_done(self.vm, store, &h.x, b))
             {
-                let x = self.held.remove(pos);
+                let x = self.held.remove(pos).x;
                 bump(self.c, "caller actions held until a stage: happened when the stage was done, after their second");
                 self.act(&x)?;
                 self.world_step();
                 self.note("a caller's held action");
                 continue;
             }
-            let Some(x) = self.pending.pop_front() else {
+            let Some((x, _)) = self.pending.pop_front() else {
                 break;
             };
             let now = self.now();
@@ -1597,7 +1681,7 @@ impl<'r, 'v> NewGame<'r, 'v> {
                         "## caller's action on {} held at {t} s: its stage is not done",
                         x.target()
                     );
-                    self.held.push(x);
+                    self.held.push(Held { x, due: None });
                     continue;
                 }
                 bump(
@@ -1609,7 +1693,13 @@ impl<'r, 'v> NewGame<'r, 'v> {
             self.world_step();
             self.note("a caller's action");
         }
-        for x in &self.held {
+        self.never_happened();
+        Ok(())
+    }
+
+    /// The held actions whose stage was never done, counted and named.
+    fn never_happened(&mut self) {
+        for h in &self.held {
             bump(
                 self.c,
                 "caller actions held until a stage: never happened (the stage was never done)",
@@ -1617,10 +1707,205 @@ impl<'r, 'v> NewGame<'r, 'v> {
             let _ = writeln!(
                 self.names,
                 "## caller's action on {} never happened: its stage was never done",
-                x.target()
+                h.x.target()
             );
         }
+    }
+
+    /// [`NewGame::close`] under `--action-after-offset`: the caller's
+    /// actions left in the order of their seconds, a held one at the
+    /// second its gate gave it.
+    fn close_offset(&mut self) -> Result<(), E> {
+        let (store, b) = (self.store, self.b);
+        loop {
+            self.release_gates();
+            let now = self.now();
+            let held = self.next_held();
+            let first = self.pending.front().map(|x| x.0.at.unwrap_or(now).max(now));
+            if let Some((pos, t)) = held.filter(|&(_, t)| first.is_none_or(|p| t <= p)) {
+                self.vm.world.now[crate::world::Clock::Real as usize] = t.max(now);
+                self.act_held(pos)?;
+                continue;
+            }
+            let Some((x, input)) = self.pending.pop_front() else {
+                break;
+            };
+            let t = x.at.unwrap_or(now).max(now);
+            self.vm.world.now[crate::world::Clock::Real as usize] = t;
+            if x.after.is_some() {
+                if !gate_done(self.vm, store, &x, b) {
+                    let _ = writeln!(
+                        self.names,
+                        "## caller's action on {} held at {t} s: its stage is not done",
+                        x.target()
+                    );
+                    self.held.push(Held { x, due: None });
+                    continue;
+                }
+                bump(
+                    self.c,
+                    "caller actions held until a stage: happened at their second",
+                );
+            }
+            let open = self.gates_open();
+            self.act(&x)?;
+            self.world_step();
+            let written = self.written_of(&x, input);
+            self.gates_done(&open, written);
+            self.note("a caller's action");
+        }
+        self.never_happened();
         Ok(())
+    }
+
+    /// Under `--action-after-offset`: the held action due first that its
+    /// gate gave a second (the earlier held on a tie), and that second.
+    fn next_held(&self) -> Option<(usize, f64)> {
+        let mut best: Option<(usize, f64)> = None;
+        for (i, h) in self.held.iter().enumerate() {
+            if let Some(t) = h.due {
+                if best.is_none_or(|(_, b)| t < b) {
+                    best = Some((i, t));
+                }
+            }
+        }
+        best
+    }
+
+    /// Under `--action-after-offset`: a held action at the second its gate
+    /// gave it.
+    fn act_held(&mut self, pos: usize) -> Result<(), E> {
+        let h = self.held.remove(pos);
+        bump(
+            self.c,
+            "caller actions held until a stage: happened at their offset from the stage (--action-after-offset)",
+        );
+        let open = self.gates_open();
+        self.act(&h.x)?;
+        self.world_step();
+        self.gates_done(&open, h.x.at);
+        self.note("a caller's held action");
+        Ok(())
+    }
+
+    /// Under `--action-after-offset` (`caller_action_after_keeps_offset_v1`):
+    /// for each gate whose stage is now done and that holds actions not
+    /// given a second yet, the reference second (the written second of the
+    /// caller's action in whose turn the stage was done, else the earliest
+    /// held action's second); each held action then happens at the present
+    /// second plus its own second minus the reference (never negative), and
+    /// the gate's actions still waiting for their second move with them
+    /// (at their second plus as much, never before it).
+    fn release_gates(&mut self) {
+        let (store, b) = (self.store, self.b);
+        let now = self.now();
+        let mut gates: Vec<(String, i32)> = Vec::new();
+        for h in self.held.iter().filter(|h| h.due.is_none()) {
+            if let Some(g) = &h.x.after {
+                if !gates.contains(g) {
+                    gates.push(g.clone());
+                }
+            }
+        }
+        for g in gates {
+            if !stage_done(self.vm, store, &g.0, g.1, b) {
+                continue;
+            }
+            let on_gate = |h: &Held| h.due.is_none() && h.x.after.as_ref() == Some(&g);
+            let earliest = self
+                .held
+                .iter()
+                .filter(|h| on_gate(h))
+                .filter_map(|h| h.x.at)
+                .fold(f64::INFINITY, f64::min);
+            let written = self.gate_written.get(&g).copied();
+            let r = gate_reference(written, earliest);
+            let from = if written.is_some() {
+                "the written second of the caller's action that did it"
+            } else {
+                "the earliest held action's second"
+            };
+            self.vm.rules.insert(crate::rules::ACTION_AFTER_OFFSET);
+            let _ = writeln!(
+                self.names,
+                "## caller's gate {}:{} done at {now} s: its held actions keep their offset from {r} s ({from})",
+                g.0, g.1
+            );
+            for h in self.held.iter_mut().filter(|h| on_gate(h)) {
+                h.due = Some(held_due(now, h.x.at.unwrap_or(now), r));
+            }
+            let mut k = 0;
+            while k < self.pending.len() {
+                if self.pending[k].0.after.as_ref() == Some(&g) {
+                    let (x, _) = self.pending.remove(k).expect("an index in range");
+                    let at = x.at.unwrap_or(now);
+                    bump(
+                        self.c,
+                        "caller actions held until a stage: waiting for their second, moved with their gate's held actions (--action-after-offset)",
+                    );
+                    self.held.push(Held {
+                        x,
+                        due: Some(waiting_due(now, at, r)),
+                    });
+                } else {
+                    k += 1;
+                }
+            }
+        }
+    }
+
+    /// Under `--action-after-offset`: the gates not done (and not given a
+    /// written second) before a caller's action.
+    fn gates_open(&mut self) -> Vec<usize> {
+        let mut open = Vec::new();
+        if !self.then.action_offset {
+            return open;
+        }
+        let (store, b) = (self.store, self.b);
+        for (i, (q, n)) in self.gates.iter().enumerate() {
+            if !self.gate_written.contains_key(&(q.clone(), *n))
+                && !stage_done(self.vm, store, q, *n, b)
+            {
+                open.push(i);
+            }
+        }
+        open
+    }
+
+    /// After a caller's action and its world step: the gates its turn did
+    /// take the second it was written for, when it has one.
+    fn gates_done(&mut self, open: &[usize], written: Option<f64>) {
+        let Some(w) = written else {
+            return;
+        };
+        let (store, b) = (self.store, self.b);
+        for &i in open {
+            let (q, n) = self.gates[i].clone();
+            if stage_done(self.vm, store, &q, n, b) {
+                self.gate_written.insert((q, n), w);
+            }
+        }
+    }
+
+    /// The second a caller's action was written for: a command-line
+    /// action's own; an input action's, the second `--input-action-at`
+    /// names for its action and reference, else none.
+    fn written_of(&self, x: &Caller, input: bool) -> Option<f64> {
+        if let What::Player(action, key) = &x.what {
+            if let Some((_, _, w)) = self
+                .then
+                .input_written
+                .iter()
+                .find(|(a, k, _)| a == action && k.eq_ignore_ascii_case(key))
+            {
+                return Some(*w);
+            }
+        }
+        if input {
+            None
+        } else {
+            x.at
+        }
     }
 
     /// With [`Stepping::region`]: reads the trigger volumes and placed

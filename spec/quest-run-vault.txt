@@ -1,6 +1,6 @@
 # quest_run new-game, the forced run through the vault (vault step): the exit step's final command line and the player's actions in the postwar vault; kinds and counts only (spec/vm.md, The forced run through the vault)
 # Section 1: stops passed in order. Section 2: how far the run gets, by quest. Section 3: the caller's assumptions of the final run. Section 4: the vault step's readings and assumptions.
-# Section 5: the final run's --next-blockers. Section 6: stages set with one thing changed on the final command line. Section 7: where the run ends and what stops next.
+# Section 5: the final run's --next-blockers. Section 6: stages set with one thing changed on the final command line. Section 7: where the run ends and what stops next. Section 8: a person late against the caller's seconds (gate step).
 # Stage numbers only; spec/quest-run-vault-stages.txt says what sets each stage. The command lines and every record named are in the step's notes, outside the repository.
 
 ## 1 stops passed, in order (stop | what passed it | data or caller | the kind of world it stands for)
@@ -106,3 +106,10 @@ stage 20: a trigger outside the vault	the player walks into it (held until stage
 1	the player's own animation events (the wrist computer, the console's plug-in) and the player's combat state remain the caller's
 8	vault dialogue quest stages left optional: the spouse's pod, the ring, three spoken remarks and one trigger (spec/quest-run-vault-stages.txt)
 1	the failure stage of the opening quest stays a waited stage (spec/quest-run-opening-unset.txt)
+
+## 8 a person late against the caller's seconds (gate step): held actions keep their offset from their stage (--action-after-offset, off by default; caller_action_after_keeps_offset_v1)
+1	the switch	a held action happens at its stage's second plus its own second minus the gate's reference second, never before the stage; the gate's actions still waiting for their second move as much
+1	the reference second	the written second of the caller's action in whose turn the stage was done (a stepped run's input action: the second --input-action-at names), else the earliest held action's second on that gate
+2	the exit's gates	the wrist computer's event 5 s after the device on the skeleton (its stage set by the device), the console's two plug-in events 10 and 15 s after the console (their stage set by the console)
+11	the play mode's runs 200 s and 400 s late, the person's activations of the device and the console, with the switch (play_run --play-action-after-offset)	next main 0 1 2 3 4 6 7 9 8 10 15, as at the scripted pace; 276 stages in all, the scripted run's set
+8	the same 200 s late without the switch	next main 0 1 2 3 4 6 7 9: the two plug-in events at the console's second, no 8, the gear door shut; 260 stages in all

@@ -83,6 +83,14 @@ pub struct Play {
     pub persons: Vec<FormKey>,
     /// `--play-pick-first-met` (`play_activate_ray_first_met_v1`).
     pub first_met: bool,
+    /// `--play-action-after-offset` (`fo4_vm`'s
+    /// `caller_action_after_keeps_offset_v1`, `play_activate_written_second_v1`):
+    /// the run's `--action-after-offset`, and each timed open or
+    /// activation left to the walker ([`Play::run_args`]) given to the run
+    /// as the second it was written for (`--input-action-at`), so the
+    /// actions held until the stage it sets keep their offset from the
+    /// person's activation.
+    pub action_offset: bool,
 }
 
 /// A record key as the play options take it: `PLUGIN:OBJECTID`, the id in
@@ -140,6 +148,7 @@ impl Play {
             "--play-collision-reference-alpha" => &mut self.reference_alpha,
             "--play-collision-child-flag-agrees" => &mut self.child_flag_agrees,
             "--play-pick-first-met" => &mut self.first_met,
+            "--play-action-after-offset" => &mut self.action_offset,
             "--play-around" => {
                 let v = value(1)?;
                 let n = v
@@ -314,8 +323,14 @@ impl Play {
     /// REF@SECONDS` and its gate (the walker's activation of REF is the
     /// run's); every other switch kept in its order. Without them, the
     /// switches unchanged.
+    ///
+    /// With `--play-action-after-offset`, the run's `--action-after-offset`
+    /// is added after the switches, and for each open or activation left
+    /// out, `--input-action-at open|activate REF@SECONDS`: the walker's
+    /// action on REF stands for the caller's action written at that second
+    /// (`play_activate_written_second_v1`).
     pub fn run_args(&self, args: Vec<String>) -> Vec<String> {
-        if self.opens.is_empty() && self.persons.is_empty() {
+        if self.opens.is_empty() && self.persons.is_empty() && !self.action_offset {
             return args;
         }
         // A caller action's target, `PLUGIN:OBJECTID@SECONDS`.
@@ -324,18 +339,20 @@ impl Play {
             Some((fo4_vm::player::parse_key(k)?, at.parse::<f64>().ok()?))
         };
         let mut dropped: Vec<(FormKey, f64)> = Vec::new();
+        let mut written: Vec<(&str, String)> = Vec::new();
         let mut out = Vec::with_capacity(args.len());
         let mut i = 0;
         while i < args.len() {
             let named = match args[i].as_str() {
-                "--assume-open" => Some(&self.opens),
-                "--assume-activate" => Some(&self.persons),
+                "--assume-open" => Some((&self.opens, "open")),
+                "--assume-activate" => Some((&self.persons, "activate")),
                 _ => None,
             };
-            if let Some(named) = named {
+            if let Some((named, action)) = named {
                 if let Some(t) = args.get(i + 1).and_then(|t| target(t)) {
                     if named.contains(&t.0) {
                         dropped.push(t);
+                        written.push((action, args[i + 1].clone()));
                         i += 2;
                         continue;
                     }
@@ -359,6 +376,12 @@ impl Play {
             }
             kept.push(out[i].clone());
             i += 1;
+        }
+        if self.action_offset {
+            kept.push("--action-after-offset".to_string());
+            for (action, t) in written {
+                kept.extend(["--input-action-at".to_string(), action.to_string(), t]);
+            }
         }
         kept
     }
@@ -564,6 +587,10 @@ impl Play {
             let _ = writeln!(report, "switch: the caller's timed activations of {} named reference(s) are the walker's activations of them (--play-activate-person, {})", self.persons.len(), crate::rules::ACTIVATE_PERSON);
             w = w.with_persons(self.persons.clone());
         }
+        if self.action_offset {
+            let _ = writeln!(report, "switch: a caller action held until a stage keeps its offset from the stage, and the person's opens and activations stand for the caller's timed ones they replace (--play-action-after-offset, {})", crate::rules::ACTIVATE_WRITTEN_SECOND);
+            w = w.with_written_seconds();
+        }
         if self.first_met {
             let _ = writeln!(report, "switch: the activation's ray meets what it enters first, what the eye stands inside only when nothing else, the named platforms by their collision (--play-pick-first-met, {})", crate::rules::ACTIVATE_FIRST_MET);
         }
@@ -689,6 +716,27 @@ mod tests {
             "m new-game o --assume-open a.esm:2@5 --assume-activate a.esm:3@9 --action-after a.esm:3@9 Q:1 --action-after a.esm:2@99 Q:2"
         );
         assert!(read("--play-activate-person").is_err());
+    }
+
+    #[test]
+    fn the_left_out_actions_stand_for_their_written_seconds_under_the_offset_switch() {
+        let args: Vec<String> = "m new-game o --assume-activate a.esm:2@870 --action-after a.esm:2@870 Q:6 --assume-open a.esm:1@90 --assume-activate a.esm:3@9"
+            .split(' ')
+            .map(String::from)
+            .collect();
+        let p = read("--play-activate-person a.esm:00000002 --play-activate-opens a.esm:00000001 --play-action-after-offset").unwrap();
+        assert!(p.action_offset);
+        assert_eq!(
+            p.run_args(args.clone()).join(" "),
+            "m new-game o --assume-activate a.esm:3@9 --action-after-offset --input-action-at activate a.esm:2@870 --input-action-at open a.esm:1@90"
+        );
+        // The switch alone gives the run its offset switch only.
+        let p = read("--play-action-after-offset").unwrap();
+        assert_eq!(
+            p.run_args(args.clone()).last().map(String::as_str),
+            Some("--action-after-offset")
+        );
+        assert_eq!(p.run_args(args.clone()).len(), args.len() + 1);
     }
 
     #[test]

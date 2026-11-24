@@ -130,8 +130,15 @@ pub mod rules {
     /// their object bounds left out, and no box of a base that names no
     /// model (`--play-pick-first-met`).
     pub const ACTIVATE_FIRST_MET: &str = "play_activate_ray_first_met_v1";
+    /// The walker's open or activation of a reference whose caller's timed
+    /// open or activation it replaces (`ACTIVATE_OPENS`, `ACTIVATE_PERSON`)
+    /// stands for that action as written: a stage it sets takes the
+    /// written second as the reference from which the actions held until
+    /// that stage keep their offset (`fo4_vm`'s
+    /// `caller_action_after_keeps_offset_v1`; `--play-action-after-offset`).
+    pub const ACTIVATE_WRITTEN_SECOND: &str = "play_activate_written_second_v1";
     /// Every rule above.
-    pub const ALL: [&str; 18] = [
+    pub const ALL: [&str; 19] = [
         PLAYER_FEET,
         RUN_CLOCK,
         ACTIVATE_RAY,
@@ -150,6 +157,7 @@ pub mod rules {
         ACTIVATE_OPENS,
         ACTIVATE_PERSON,
         ACTIVATE_FIRST_MET,
+        ACTIVATE_WRITTEN_SECOND,
     ];
 }
 

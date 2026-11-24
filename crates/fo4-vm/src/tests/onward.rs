@@ -478,6 +478,11 @@ fn every_rule_past_the_museum_is_registered_pending() {
 
 /// QS starts with the game and holds stages 10 and 20.
 fn game_plugin() -> Vec<u8> {
+    game_plugin_with(&[10, 20])
+}
+
+/// QS starts with the game and holds these stages.
+fn game_plugin_with(stages: &[u16]) -> Vec<u8> {
     let mut hedr = 0.95f32.to_le_bytes().to_vec();
     hedr.extend(2u32.to_le_bytes());
     hedr.extend(0x990u32.to_le_bytes());
@@ -493,14 +498,15 @@ fn game_plugin() -> Vec<u8> {
         indx.extend([0, 0]);
         [sub(b"INDX", &indx), sub(b"QSDT", &[0])].concat()
     };
-    let qs = [
+    let mut qs = [
         sub(b"EDID", b"QS\0"),
         sub(b"DNAM", &dnam),
         sub(b"NEXT", &[]),
-        stage(10),
-        stage(20),
     ]
     .concat();
+    for n in stages {
+        qs.extend(stage(*n));
+    }
     plugin.extend(group(0, *b"QUST", &record(b"QUST", 0x900, &qs)));
     let cell = record(b"CELL", CELL, &sub(b"EDID", b"Room\0"));
     plugin.extend(group(
@@ -604,4 +610,161 @@ fn the_new_game_object_advances_slice_by_slice_over_a_synthetic_manifest() {
     // The library wrote the run's outputs after the stepper returned.
     let census = std::fs::read_to_string(dir.join("out/quest-run-census.txt")).unwrap();
     assert!(census.contains("a stage set from outside any script at a second"));
+}
+
+/// Runs `quest_run new-game` over the synthetic manifest with QS's stages
+/// 5, 10, 20 and 30 and these switches; the second each stage was set at,
+/// read from the names file's timeline.
+fn gate_run(name: &str, more: &[&str]) -> std::collections::BTreeMap<i32, f64> {
+    let dir = TestDir::new(name);
+    std::fs::write(dir.join("test.esm"), game_plugin_with(&[5, 10, 20, 30])).unwrap();
+    let manifest = format!(
+        "{{\"game\":\"fallout4\",\"root\":{:?},\"language\":\"english\",\"build\":\"synthetic\",\"plugins\":[{{\"name\":\"test.esm\",\"path\":\"test.esm\"}}],\"required_masters\":[],\"mounts\":[],\"excluded\":[]}}",
+        dir.to_str().unwrap()
+    );
+    std::fs::write(dir.join("m.json"), manifest).unwrap();
+    std::fs::create_dir_all(dir.join("out")).unwrap();
+    let arg = |p: &str| dir.join(p).to_str().unwrap().to_string();
+    let mut args: Vec<String> = vec![
+        arg("m.json"),
+        "new-game".into(),
+        arg("out"),
+        "--scene-clock".into(),
+        "10".into(),
+        "--no-line-audio".into(),
+    ];
+    args.extend(more.iter().map(|x| x.to_string()));
+    let none = |_: &[u8], _: &str, _: &Budget| None;
+    crate::run::main_with(args, &none, None).unwrap();
+    let names = std::fs::read_to_string(dir.join("out/quest-run-names.txt")).unwrap();
+    let mut at = std::collections::BTreeMap::new();
+    let mut now = None;
+    for l in names.lines() {
+        if let Some(t) = l
+            .strip_prefix("## timeline at ")
+            .and_then(|r| r.split(' ').next())
+        {
+            now = t.parse::<f64>().ok();
+        } else if let (Some(t), Some(n)) = (
+            now,
+            l.split("StageSet(")
+                .nth(1)
+                .and_then(|r| r.split(')').next()),
+        ) {
+            at.entry(n.parse::<i32>().unwrap()).or_insert(t);
+        }
+    }
+    at
+}
+
+/// A late chain: 5 comes at 30 s (the caller's late action), 10 was written
+/// at 10 s and is held until 5, 20 and 30 were written 5 and 8 s after 10
+/// and are held until 10.
+const GATES: [&str; 18] = [
+    "--then",
+    "QS:5@30",
+    "--then",
+    "QS:10@10",
+    "--action-after",
+    "QS:10@10",
+    "QS:5",
+    "--then",
+    "QS:20@15",
+    "--action-after",
+    "QS:20@15",
+    "QS:10",
+    "--then",
+    "QS:30@18",
+    "--action-after",
+    "QS:30@18",
+    "QS:10",
+    "--timers",
+];
+
+#[test]
+fn held_actions_keep_their_offset_from_their_gate_only_under_the_switch() {
+    let base: Vec<&str> = GATES.iter().copied().chain(["0"]).collect();
+    // Off: every held action happens at the second its gate is done.
+    let off = gate_run("vm-gate-off", &base);
+    assert_eq!(off.get(&5), Some(&30.0));
+    assert_eq!(off.get(&10), Some(&30.0));
+    assert_eq!(off.get(&20), Some(&30.0));
+    assert_eq!(off.get(&30), Some(&30.0));
+    // On: 10's gate (5) was done by an action written at 30 s, so 10 keeps
+    // no offset (written before it) and comes at 30; 10 was done by the
+    // action written at 10 s, so 20 and 30 come 5 and 8 s after it.
+    let mut on = base.clone();
+    on.push("--action-after-offset");
+    let on = gate_run("vm-gate-on", &on);
+    assert_eq!(on.get(&5), Some(&30.0));
+    assert_eq!(on.get(&10), Some(&30.0));
+    assert_eq!(on.get(&20), Some(&35.0));
+    assert_eq!(on.get(&30), Some(&38.0));
+}
+
+#[test]
+fn a_gate_without_a_written_second_keeps_the_spacing_from_its_earliest_held_action() {
+    use crate::run::{gate_reference, held_due, waiting_due};
+    // The opening's exit: the console's use written at 870 s sets 7 at
+    // 1071.6 s; the two events held on 7 were written at 880 and 885 s.
+    let r = gate_reference(Some(870.0), 880.0);
+    assert_eq!(held_due(1071.6, 880.0, r), 1081.6);
+    assert_eq!(held_due(1071.6, 885.0, r), 1086.6);
+    // A stage the run sets itself: the earliest held action comes at the
+    // stage's second, the others keep their spacing from it.
+    let r = gate_reference(None, 737.5);
+    assert_eq!(held_due(930.0, 737.5, r), 930.0);
+    assert_eq!(held_due(930.0, 741.5, r), 934.0);
+    // Never before the stage; a waiting action never before its second.
+    assert_eq!(held_due(100.0, 50.0, 60.0), 100.0);
+    assert_eq!(waiting_due(100.0, 120.0, 110.0), 120.0);
+    assert_eq!(waiting_due(100.0, 120.0, 90.0), 130.0);
+}
+
+#[test]
+fn the_offset_switch_and_its_input_seconds_are_checked() {
+    let parse = |extra: &[&str]| {
+        let mut a: Vec<String> = ["m", "new-game", "o", "--scene-clock", "5"]
+            .iter()
+            .map(|x| x.to_string())
+            .collect();
+        a.extend(extra.iter().map(|x| x.to_string()));
+        crate::run::parse(a).map(|c| (c.then.action_offset, c.then.input_written))
+    };
+    assert!(parse(&["--input-action-at", "activate", "a.esm:1@3"]).is_err());
+    assert!(parse(&[
+        "--action-after-offset",
+        "--input-action-at",
+        "use",
+        "a.esm:1@3"
+    ])
+    .is_err());
+    let (on, w) = parse(&[
+        "--action-after-offset",
+        "--input-action-at",
+        "activate",
+        "A.ESM:0001@870",
+        "--input-action-at",
+        "open",
+        "a.esm:2@90",
+    ])
+    .unwrap();
+    assert!(on);
+    assert_eq!(
+        w,
+        vec![
+            (
+                crate::player::Action::Activate,
+                "a.esm:00000001".to_string(),
+                870.0
+            ),
+            (
+                crate::player::Action::Open,
+                "a.esm:00000002".to_string(),
+                90.0
+            ),
+        ]
+    );
+    assert!(rules::ALL.contains(&rules::ACTION_AFTER_OFFSET));
+    assert_eq!(rules::status(rules::ACTION_AFTER_OFFSET), Some("pending"));
 }

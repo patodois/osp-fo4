@@ -858,6 +858,40 @@ and stops at the cliff face past it, as the scripted walk does; 276 stages, the 
 same order, 139 at the same second, the rest within 0.18 s; 59.97 fps median, first percentile 54.7, 81 frames
 over 250 ms (loads); peak resident memory 2.22 GB. The run stood 61 to 65 s at the vault's arrival (above).
 
+### A late person keeps the caller's spacing (the gate step)
+
+The interpreter's gate (`quest_run --action-after`) released every action it held at the second its stage came,
+so a person late against the scripted pace got the caller's spaced events at one second. With
+`quest_run --action-after-offset` (`caller_action_after_keeps_offset_v1`, off by default; `fo4_vm::run::NewGame`)
+a held action keeps its offset from its gate: when the stage is done, it happens at the stage's second plus its
+own second minus the gate's reference second (never before the stage), and the gate's actions still waiting
+for their second move as much (never before it).
+
+- **The reference second** is the written second of the caller's action in whose turn the stage was done, else,
+  for a stage the run sets by itself, the earliest held action's second on that gate. Why: the opening's gates
+  are written as a chain, each naming the stage the caller's previous action sets (the device on the skeleton
+  sets the follow-on quest's 4 and the wrist computer's event 5 s later waits for 4; the console sets 7 and the
+  two player events 10 and 15 s later wait for 7), so the caller's own seconds space each action from the one
+  that set its stage; the earliest held action alone would put the first event at the console's second, not 10 s
+  after it. A stage the run sets itself (the opening's 780, by the scene clock, before the spouse's 14 events)
+  has no written second; the earliest held action stands for it, which keeps the spacing among the gate's actions
+  and gives up the 7.5 s the reference run had between the stage and the first event.
+- **The person's activation as written.** With `--play-action-after-offset` (`play_activate_written_second_v1`,
+  off by default; `play_run` and the window, in the opening preset) the play mode gives the run
+  `--action-after-offset` and, for each timed open or activation it leaves to the person
+  (`--play-activate-opens`, `--play-activate-person`), `--input-action-at open|activate REF@SECONDS` with the
+  second the caller wrote for it (`fo4_play::options::Play::run_args`): a stage the person's activation sets takes
+  that second as its reference. The exit needs no hand timing: the two events come 10 and 15 s after the person
+  uses the console, as the caller's seconds space them after the scripted use.
+- **Late runs, the original arguments** (the exit step's switches, the agreeing flags, `--play-pick-first-met`,
+  the device's and the console's activations the person's; no hand-moved second; headless, notes `b1L200`,
+  `b1L400`): 200 s late, the follow-on quest's 4 at 1,061.6 s (the person's E), 6 at 1,066.6, 7 at 1,071.6 (E at
+  the console), 9 at 1,086.6, 8 at 1,087.27 (the gear door opens), 10 and 15 at 1,155.36 riding the exit
+  elevator up; 276 stages, the reference run's set; the walker leaves the vault and stops at the cliff face past
+  it. 400 s late: the same 276 stages, the exit's 4, 6, 7, 9, 8 at 1,261.6 to 1,287.27 s, the ride up at
+  1,355.36 s. Without the switch, 200 s late, the run reaches 260 stages: 7 and 9 at the console's second, no 8,
+  the walker stays in the vault.
+
 ## What the play mode does not do yet
 
 - The elevators ride only those the caller names (`--play-elevator`), headless and in the scripted window;
@@ -875,7 +909,8 @@ over 250 ms (loads); peak resident memory 2.22 GB. The run stood 61 to 65 s at t
   at a physical keyboard and mouse. Of the run's caller assumptions the front door's open and the exit's two
   activations are the person's (`--play-activate-opens`, `--play-activate-person`); the earlier vault
   activations, the talks, the actor moves and the player's animation events stay timed (held until their
-  stages, all at once when the person is late: the interpreter's gate keeps no offset).
+  stages; with `--play-action-after-offset` each keeps its offset from its stage, so a late person gets them
+  spaced as the caller wrote them; the actor moves and ungated actions stay at their seconds).
 - A grid square's drawing is loaded whole by the window (5.6 to 7.5 s, the store opened again, the cells
   scanned, the models and textures read), overlapped with the walker's build since the person step.
 - The reach of an activation, the walker's speed and its tick are the caller's; the activation key and the
@@ -912,3 +947,5 @@ over 250 ms (loads); peak resident memory 2.22 GB. The run stood 61 to 65 s at t
 | `frame_exposure_seen_visible_v1` | `fo4-view --exposure-eye-visible` | chosen: the data stores no exposure; that an eye adapts to what it sees is prior knowledge | weak |
 | `play_activate_person_v1` | `--play-activate-person REF` | the run's own activation and the person's E; that activating a console uses it is prior knowledge | weak |
 | `play_activate_ray_first_met_v1` | `--play-pick-first-met` | measured on the session's record: the gear door's bounds hold the walkway; that a crosshair names the surface in front of the eye is prior knowledge | weak |
+| `caller_action_after_keeps_offset_v1` | `quest_run --action-after-offset` (`--play-action-after-offset`) | how the opening's gates are written (each names the stage the caller's previous action sets); a reading of the caller's own timed assumptions | weak |
+| `play_activate_written_second_v1` | `--play-action-after-offset` | the person's activation and the caller's timed one are the same event of the story; that the caller's later events follow it by the written gaps is prior knowledge of how they were timed | weak |

@@ -601,9 +601,11 @@ the registry.
 | `play_activate_opens_v1` | pending | Activate the house's front door early and late and log its open event: the event at the activation in each case supports this; an open at a fixed time, or none, refutes it. |
 | `play_activate_person_v1` | pending | Activate the exit console early (before its stage) and late and log its activation events: the event at each activation supports this; a use at a fixed time refutes it. |
 | `play_activate_ray_first_met_v1` | pending | Aim at the exit console and at the gear door from the console's walkway: a prompt naming each when aimed at it supports this; the door named wherever one aims refutes it. |
+| `play_activate_written_second_v1` | pending | Use the exit console late and log the player's animation events after it: the same gaps after the use as at the scripted pace support it; gaps tied to the clock refute it. |
 | `quest_record_partial_previous_v1` | pending | Set the town dialogue quest's 50 with the add-on installed and read the town chain's first quest's GetStageDone(20) and IsRunning: true at both supports it |
 | `quest_set_stage_absent_open_v1` | pending | Call SetStage with a stage a quest does not hold and read its state before and after: unchanged answers support a refusal |
 | `inventory_container_changed_event_v1` | pending | Take the museum's musket with a test listener on the next main quest's 62: set as the item reaches the player supports it |
 | `world_location_change_event_v1` | pending | Leave the museum after the reward conversation with a test listener on the town dialogue quest's 200: set as the player steps out supports it |
 | `world_location_is_child_parent_chain_v1` | pending | Call the museum's location's IsChild on the town's location and the reverse: false then true supports it |
 | `vm_timer_budget_per_timer_v1` | pending | A budget of the run: the furthest run's stages with a larger budget equal to these support it |
+| `caller_action_after_keeps_offset_v1` | pending | A reading of the caller's own timed assumptions: late runs reaching the reference run's stages, the exit's 8 after the console's use, support it; a stage the reference sets and a late run does not refutes it for that gate. |
