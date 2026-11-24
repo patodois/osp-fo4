@@ -98,6 +98,16 @@ pub fn current_objective(f: &Frame) -> Option<(FormKey, i32)> {
         .map(|(_, k)| k)
 }
 
+/// [`Texts::objective_line`]'s choice: the objective's text when it is
+/// not empty (or only spaces), else the quest's name when that is not.
+pub fn objective_or_quest(
+    text: Option<String>,
+    quest_name: impl FnOnce() -> Option<String>,
+) -> Option<String> {
+    let usable = |t: &String| !t.trim().is_empty();
+    text.filter(usable).or_else(|| quest_name().filter(usable))
+}
+
 /// Texts the records hold, read through the plugins' string tables when
 /// they are localized (the run's manifest language), each table read once.
 pub struct Texts<'a> {
@@ -160,6 +170,21 @@ impl<'a> Texts<'a> {
         self.field(store, plugin, &data)
     }
 
+    /// The line a viewport shows for a displayed objective (viewer policy,
+    /// no rule): the objective's own text, when the record holds a text
+    /// that is not empty; else the quest's display name (its FULL), so that
+    /// an objective the run displays is not left unshown because its text
+    /// is empty in the string tables.
+    pub fn objective_line(
+        &mut self,
+        store: &Store,
+        quest: &FormKey,
+        objective: i32,
+    ) -> Option<String> {
+        let text = self.objective(store, quest, objective);
+        objective_or_quest(text, || self.display_name(store, quest))
+    }
+
     /// The text of a quest's objective (its NNAM), when the record holds one.
     pub fn objective(&mut self, store: &Store, quest: &FormKey, objective: i32) -> Option<String> {
         let b = fo4_core::Budget::new(store.limits.max_memory);
@@ -192,6 +217,22 @@ mod tests {
             plugin: "a.esm".into(),
             object_id: n,
         }
+    }
+
+    #[test]
+    fn an_objective_with_no_usable_text_shows_the_quest_name() {
+        let name = || Some("The quest".to_string());
+        assert_eq!(
+            objective_or_quest(Some("Go there".into()), name).as_deref(),
+            Some("Go there")
+        );
+        assert_eq!(objective_or_quest(None, name).as_deref(), Some("The quest"));
+        assert_eq!(
+            objective_or_quest(Some("  ".into()), name).as_deref(),
+            Some("The quest")
+        );
+        assert_eq!(objective_or_quest(None, || Some(String::new())), None);
+        assert_eq!(objective_or_quest(None, || None), None);
     }
 
     #[test]

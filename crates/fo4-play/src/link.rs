@@ -36,7 +36,8 @@ pub struct Status {
     pub notes: Vec<String>,
     /// The objective the run displayed last and has not completed or
     /// failed since: the quest's own objective text, when the record holds
-    /// one.
+    /// one that is not empty, else the quest's name
+    /// ([`crate::state::Texts::objective_line`]).
     pub objective: Option<String>,
     /// The last stage set: (quest label or key, stage, second).
     pub stage: Option<(String, i32, f64)>,
@@ -101,7 +102,8 @@ impl Link {
                 if !self.objectives.contains_key(&k) {
                     let (m, vfs) = run.sources;
                     let b = fo4_core::Budget::new(m.limits.max_memory);
-                    let text = Texts::new(vfs, &m.language, &b).objective(run.store, &k.0, k.1);
+                    let text =
+                        Texts::new(vfs, &m.language, &b).objective_line(run.store, &k.0, k.1);
                     self.objectives.insert(k.clone(), text);
                 }
                 status.objective = self.objectives.get(&k).cloned().flatten();

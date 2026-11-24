@@ -841,7 +841,11 @@ what changed (viewer policy unless a rule is named):
   door has no name: `fo4_view::play::prompt_of`), the record keys and distance in the title bar; subtitles
   show only the lines whose text the data settles, wrapped to three lines (what the timeline says about the
   others goes to the title); the objective the run displayed last and has not completed (the quest's own
-  objective text, read through its string table) in the top left corner; after E, `opened`, `used` or
+  objective text, read through its string table; when that text is empty, the quest's display name: the
+  opening's four objectives with a text name string table entries that hold an empty string, 4 of the 15 empty
+  entries among the main table's 43,730, so before the deck step the line stayed hidden from the evacuation to
+  the platform; `fo4_play::state::Texts::objective_line`, viewer policy) in the top left corner; after E,
+  `opened`, `used` or
   `nothing happened` in the prompt's place for 1.5 s (the run's effects and logs before and after the slice the
   activation came in).
 - **Markers and heads.** The bright shapes at the checkpoint and in the pod room are the cast's placeholder
