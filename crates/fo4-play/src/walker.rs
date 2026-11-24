@@ -62,6 +62,11 @@ pub struct Options {
     /// far. Commands that arrive while the walker runs ([`Arrivals`]) need
     /// it: the next command is not known beyond the present.
     pub stand: Option<f64>,
+    /// The activation's ray meets what it enters first: a box or a body the
+    /// eye stands inside only when it meets nothing else, and the named
+    /// platforms through their collision, not their object bounds
+    /// (`play_activate_ray_first_met_v1`, `--play-pick-first-met`).
+    pub first_met: bool,
 }
 impl Default for Options {
     fn default() -> Self {
@@ -74,6 +79,7 @@ impl Default for Options {
             collision: fo4_scene::readiness::Switches::default(),
             child_flag_agrees: false,
             stand: None,
+            first_met: false,
         }
     }
 }
@@ -396,6 +402,9 @@ pub struct Walker {
     /// References whose activation also opens them
     /// (`play_activate_opens_v1`, `--play-activate-opens`).
     opens: Vec<FormKey>,
+    /// References whose caller's timed activation the walker's activation
+    /// stands for (`play_activate_person_v1`, `--play-activate-person`).
+    persons: Vec<FormKey>,
 }
 
 /// What [`Walker::with_on_load`] calls: the cell a walking world is about
@@ -463,6 +472,7 @@ impl Walker {
             kept: [None, None],
             on_load: None,
             opens: Vec::new(),
+            persons: Vec::new(),
         })
     }
 
@@ -487,8 +497,39 @@ impl Walker {
     /// Lets the activation meet the object bounds of references with no
     /// collision (`play_activate_object_bounds_v1`, `--play-pick-bounds`).
     pub fn with_boxes(mut self, boxes: pick::Boxes) -> Walker {
-        self.boxes = Some(boxes);
+        self.boxes = Some(self.platform_boxes_out(boxes));
         self
+    }
+
+    /// The walker's activation of one of `persons` is the run's activation
+    /// of it in place of the caller's timed one, left out of the run's
+    /// switches (`play_activate_person_v1`: `crate::options::Play::run_args`).
+    pub fn with_persons(mut self, persons: Vec<FormKey>) -> Walker {
+        self.persons = persons.iter().map(norm).collect();
+        self
+    }
+
+    /// With `first_met`, the object bounds of the named platforms (moving
+    /// and still) left out: the walking world holds their collision
+    /// (`play_activate_ray_first_met_v1`).
+    fn platform_boxes_out(&self, boxes: pick::Boxes) -> pick::Boxes {
+        match (&self.elevator_options, self.opts.first_met) {
+            (Some(e), true) => {
+                let mut keys: Vec<FormKey> = e.references.clone();
+                keys.extend(e.also.iter().cloned());
+                keys.extend(e.also_with.iter().map(|(k, _)| k.clone()));
+                let keys: Vec<FormKey> = keys.iter().map(norm).collect();
+                let kept = boxes.without_references(&keys);
+                if kept.items.len() < boxes.items.len() {
+                    self.log
+                        .borrow_mut()
+                        .rules
+                        .insert(crate::rules::ACTIVATE_FIRST_MET);
+                }
+                kept
+            }
+            _ => boxes,
+        }
     }
 
     /// Leaves out the object bounds of statics in the walking worlds built
@@ -910,20 +951,29 @@ impl Walker {
         let reach = self.opts.reach.unwrap_or(0.0);
         let vis = &self.visibility;
         let live = &self.live;
+        let first_met = self.opts.first_met;
         let hit = if live.follows() {
-            live.pick(self.boxes.as_ref(), eye, dir, reach, &|k| {
-                live.decision(k) == Some(Decision::Absent)
-            })
+            live.pick_ranked(
+                self.boxes.as_ref(),
+                eye,
+                dir,
+                reach,
+                &|k| live.decision(k) == Some(Decision::Absent),
+                first_met,
+            )
         } else {
-            pick::first_of(
+            pick::met(
                 live.base()?,
                 live.base_refs(),
                 self.boxes.as_ref(),
                 eye,
                 dir,
                 reach,
+                &|_| true,
                 &|k| vis.disabled(k),
+                first_met,
             )
+            .map(|(h, _)| h)
         };
         Some((eye, dir, hit))
     }
@@ -943,6 +993,14 @@ impl Walker {
         }
         let mut log = self.log.borrow_mut();
         log.rules.insert(crate::rules::ACTIVATE_RAY);
+        if self.opts.first_met {
+            log.rules.insert(crate::rules::ACTIVATE_FIRST_MET);
+        }
+        if let Some(k) = hit.as_ref().and_then(|h| h.reference.as_ref()) {
+            if self.persons.contains(&norm(k)) {
+                log.rules.insert(crate::rules::ACTIVATE_PERSON);
+            }
+        }
         let (record, act) = match hit {
             None => (Err("nothing within reach".to_string()), None),
             Some(h) => match h.reference {
@@ -1347,11 +1405,12 @@ impl Walker {
             self.apply_state()?;
         }
         if self.boxes.is_some() {
-            self.boxes = Some(if self.statics_out {
+            let boxes = if self.statics_out {
                 built.boxes.without_kinds(&crate::rules::STATIC_KINDS)
             } else {
                 built.boxes
-            });
+            };
+            self.boxes = Some(self.platform_boxes_out(boxes));
         }
         if let Some(d) = &mut self.doors {
             d.doors = built.doors;

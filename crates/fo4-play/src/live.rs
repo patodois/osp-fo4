@@ -476,23 +476,41 @@ impl Live {
         reach: f64,
         skip: &dyn Fn(&FormKey) -> bool,
     ) -> Option<pick::Hit> {
-        let mut best: Option<pick::Hit> = None;
+        self.pick_ranked(boxes, eye, dir, reach, skip, false)
+    }
+
+    /// [`Live::pick`] in the order `pick::rank` gives: with `first_met`
+    /// (`play_activate_ray_first_met_v1`) what the eye stands inside comes
+    /// after everything the ray meets from outside.
+    pub fn pick_ranked(
+        &self,
+        boxes: Option<&pick::Boxes>,
+        eye: [f64; 3],
+        dir: [f64; 3],
+        reach: f64,
+        skip: &dyn Fn(&FormKey) -> bool,
+        first_met: bool,
+    ) -> Option<pick::Hit> {
+        let mut best: Option<(pick::Hit, bool)> = None;
         for (k, w, _) in self.set.pieces() {
             let refs = self.refs.get(k).map(Vec::as_slice).unwrap_or_default();
             let keep = |s: u32| !self.set.is_hidden(k, s);
-            let hit = pick::first_where(w, refs, None, eye, dir, reach, &keep, skip);
-            if let Some(h) = hit {
-                if best.as_ref().is_none_or(|x| h.distance < x.distance) {
-                    best = Some(h);
-                }
-            }
+            let hit = pick::met(w, refs, None, eye, dir, reach, &keep, skip, first_met);
+            // The earlier piece keeps a tie.
+            best = pick::nearer(first_met, best, hit);
         }
-        let boxed = pick::first_where(&World::new(), &[], boxes, eye, dir, reach, &|_| true, skip);
-        match (best, boxed) {
-            (Some(h), Some(x)) if h.distance <= x.distance => Some(h),
-            (_, Some(x)) => Some(x),
-            (h, None) => h,
-        }
+        let boxed = pick::met(
+            &World::new(),
+            &[],
+            boxes,
+            eye,
+            dir,
+            reach,
+            &|_| true,
+            skip,
+            first_met,
+        );
+        pick::nearer(first_met, best, boxed).map(|(h, _)| h)
     }
 }
 

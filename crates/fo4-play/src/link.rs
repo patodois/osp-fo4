@@ -5,7 +5,7 @@
 //! spoken (from the run's timeline, `--timeline`), the last stage set and
 //! the references the run disabled (which the window's activation passes
 //! through).
-use crate::state::{subtitles, Visibility};
+use crate::state::{current_objective, spoken_notes, spoken_texts, subtitles, Texts, Visibility};
 use crate::{Driver, Next, Slice, View};
 use fo4_plugin::FormKey;
 use fo4_scene::timeline::Timeline;
@@ -30,6 +30,14 @@ pub struct Status {
     pub now: f64,
     /// The subtitles of the lines being spoken at that second.
     pub subtitles: Vec<String>,
+    /// Of those, the texts the data settles (what a viewport shows), and
+    /// what the timeline says about the others (a title bar's notes).
+    pub texts: Vec<String>,
+    pub notes: Vec<String>,
+    /// The objective the run displayed last and has not completed or
+    /// failed since: the quest's own objective text, when the record holds
+    /// one.
+    pub objective: Option<String>,
     /// The last stage set: (quest label or key, stage, second).
     pub stage: Option<(String, i32, f64)>,
     /// The run's last enable (`true`) or disable of each reference, when it
@@ -50,6 +58,8 @@ pub struct Link {
     /// Statuses that carried the visibility.
     sent_visibility: usize,
     run: crate::live::RunState,
+    /// Objective texts read so far.
+    objectives: BTreeMap<(FormKey, i32), Option<String>>,
 }
 
 impl Link {
@@ -62,6 +72,7 @@ impl Link {
             visibility: Visibility::default(),
             sent_visibility: 0,
             run: crate::live::RunState::default(),
+            objectives: BTreeMap::new(),
         }
     }
 
@@ -84,6 +95,17 @@ impl Link {
         if let Some(t) = &self.timeline {
             let f = t.at(now);
             status.subtitles = subtitles(&f);
+            status.texts = spoken_texts(&f);
+            status.notes = spoken_notes(&f);
+            if let Some(k) = current_objective(&f) {
+                if !self.objectives.contains_key(&k) {
+                    let (m, vfs) = run.sources;
+                    let b = fo4_core::Budget::new(m.limits.max_memory);
+                    let text = Texts::new(vfs, &m.language, &b).objective(run.store, &k.0, k.1);
+                    self.objectives.insert(k.clone(), text);
+                }
+                status.objective = self.objectives.get(&k).cloned().flatten();
+            }
             status.stage = f.last_stage.map(|(q, n, s)| {
                 let label = t
                     .labels
@@ -206,7 +228,13 @@ impl Frames {
 
 /// The window's title line from the last status.
 pub fn title(s: &Status) -> String {
-    let mut t = format!("fo4-view play | run {:.1} s", s.now);
+    title_at(s, s.now)
+}
+
+/// [`title`] with the play clock's second in place of the run's last
+/// event's (a window's title follows the clock the walker goes by).
+pub fn title_at(s: &Status, clock: f64) -> String {
+    let mut t = format!("fo4-view play | run {clock:.1} s");
     if let Some((q, n, at)) = &s.stage {
         t.push_str(&format!(" | {q} stage {n} at {at:.1} s"));
     }
@@ -264,10 +292,16 @@ mod tests {
             stage: Some(("Q".into(), 20, 10.0)),
             visibility: None,
             run: None,
+            ..Status::default()
         };
         assert_eq!(
             title(&s),
             "fo4-view play | run 12.3 s | Q stage 20 at 10.0 s | Hello."
+        );
+        // The play clock in place of the run's last event's second.
+        assert_eq!(
+            title_at(&s, 15.06),
+            "fo4-view play | run 15.1 s | Q stage 20 at 10.0 s | Hello."
         );
     }
 }

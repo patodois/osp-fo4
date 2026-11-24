@@ -67,6 +67,10 @@ pub fn object_bounds(scene: &fo4_scene::Scene, refs: &[Option<FormKey>]) -> (Box
                             boxes
                                 .kinds
                                 .push(i.base.as_ref().map(|b| b.record.signature));
+                            boxes.modelled.resize(boxes.items.len() - 1, None);
+                            boxes
+                                .modelled
+                                .push(i.base.as_ref().map(|b| b.common.model.path.is_some()));
                         }
                         pushed
                     })
@@ -101,6 +105,10 @@ pub struct Boxes {
     /// The record type of each item's base, where [`object_bounds`] read
     /// it (items pushed otherwise have none).
     pub kinds: Vec<Option<[u8; 4]>>,
+    /// Whether each item's base names a model, where [`object_bounds`]
+    /// read it: under `play_activate_ray_first_met_v1` the box of a base
+    /// with no model (a light with no fixture) is not met.
+    pub modelled: Vec<Option<bool>>,
 }
 impl Boxes {
     /// The box of a reference's base bounds placed by its transform; `None`
@@ -131,10 +139,28 @@ impl Boxes {
             }
             out.items.push(item.clone());
             out.kinds.push(kind);
+            out.modelled.push(self.modelled.get(n).copied().flatten());
         }
         out
     }
+    /// The boxes of these references (keys as `fo4_scene::timeline::norm`
+    /// gives them) left out (`play_activate_ray_first_met_v1`: the named
+    /// platforms, whose collision the walking world holds).
+    pub fn without_references(&self, keys: &[FormKey]) -> Boxes {
+        let mut out = Boxes::default();
+        for (n, item) in self.items.iter().enumerate() {
+            if keys.contains(&fo4_scene::timeline::norm(&item.0)) {
+                continue;
+            }
+            out.items.push(item.clone());
+            out.kinds.push(self.kinds.get(n).copied().flatten());
+            out.modelled.push(self.modelled.get(n).copied().flatten());
+        }
+        out
+    }
+
     /// The first box the ray meets within `reach`: (distance, index).
+    #[cfg(test)]
     fn first(
         &self,
         eye: V3,
@@ -142,9 +168,24 @@ impl Boxes {
         reach: f64,
         skip: &dyn Fn(&FormKey) -> bool,
     ) -> Option<(f64, usize)> {
-        let mut best: Option<(f64, usize)> = None;
+        self.first_ranked(eye, d, reach, skip, false)
+            .map(|(t, i, _)| (t, i))
+    }
+
+    /// [`Boxes::first`] with whether the eye stands inside the box met;
+    /// with `first_met` a box the eye stands inside is met only when the
+    /// ray enters no other (`play_activate_ray_first_met_v1`).
+    fn first_ranked(
+        &self,
+        eye: V3,
+        d: V3,
+        reach: f64,
+        skip: &dyn Fn(&FormKey) -> bool,
+        first_met: bool,
+    ) -> Option<(f64, usize, bool)> {
+        let mut best: Option<(f64, usize, bool)> = None;
         for (i, (k, f, lo, hi)) in self.items.iter().enumerate() {
-            if skip(k) {
+            if skip(k) || (first_met && self.modelled.get(i).copied().flatten() == Some(false)) {
                 continue;
             }
             // Into the box's frame: local = R (world - t) / s (the inverse
@@ -177,8 +218,12 @@ impl Boxes {
                     break;
                 }
             }
-            if hit && best.is_none_or(|(b, _)| t0 < b) {
-                best = Some((t0, i));
+            if !hit {
+                continue;
+            }
+            let inside = (0..3).all(|a| o[a] >= lo[a] && o[a] <= hi[a]);
+            if best.is_none_or(|b| rank(first_met, (t0, inside)) < rank(first_met, (b.0, b.2))) {
+                best = Some((t0, i, inside));
             }
         }
         best
@@ -232,20 +277,69 @@ pub fn first_where(
     keep: &dyn Fn(u32) -> bool,
     skip: &dyn Fn(&FormKey) -> bool,
 ) -> Option<Hit> {
-    let hit = collision(world, refs, eye, dir, reach, keep, skip);
+    met(world, refs, boxes, eye, dir, reach, keep, skip, false).map(|(h, _)| h)
+}
+
+/// The order of what the ray meets: by distance; with `first_met`
+/// (`play_activate_ray_first_met_v1`) what the eye stands inside (a box
+/// holding the eye, a body the eye is in, met at distance 0) after
+/// everything the ray meets from outside.
+pub fn rank(first_met: bool, (distance, inside): (f64, bool)) -> (bool, f64) {
+    (first_met && inside, distance)
+}
+
+/// [`first_where`] with the order [`rank`] gives, and whether the eye
+/// stands inside what was met.
+#[allow(clippy::too_many_arguments)]
+pub fn met(
+    world: &World,
+    refs: &[Option<FormKey>],
+    boxes: Option<&Boxes>,
+    eye: V3,
+    dir: V3,
+    reach: f64,
+    keep: &dyn Fn(u32) -> bool,
+    skip: &dyn Fn(&FormKey) -> bool,
+    first_met: bool,
+) -> Option<(Hit, bool)> {
+    let hit = collision(world, refs, eye, dir, reach, keep, skip, first_met);
     let d = g::unit(dir)?;
-    let boxed = boxes.and_then(|b| b.first(eye, d, reach, skip).map(|(t, i)| (t, i, b)));
-    match (hit, boxed) {
-        (Some(h), Some((t, _, _))) if h.distance <= t => Some(h),
-        (_, Some((t, i, b))) => Some(Hit {
-            distance: t,
-            via: Via::Bounds { index: i },
-            reference: Some(b.items[i].0.clone()),
-        }),
-        (h, None) => h,
+    let boxed = boxes.and_then(|b| {
+        b.first_ranked(eye, d, reach, skip, first_met)
+            .map(|(t, i, inside)| {
+                (
+                    Hit {
+                        distance: t,
+                        via: Via::Bounds { index: i },
+                        reference: Some(b.items[i].0.clone()),
+                    },
+                    inside,
+                )
+            })
+    });
+    nearer(first_met, hit, boxed)
+}
+
+/// The nearer of two hits in the order [`rank`] gives; a tie goes to the
+/// first.
+pub fn nearer(
+    first_met: bool,
+    a: Option<(Hit, bool)>,
+    b: Option<(Hit, bool)>,
+) -> Option<(Hit, bool)> {
+    match (a, b) {
+        (Some(a), Some(b)) => {
+            if rank(first_met, (a.0.distance, a.1)) <= rank(first_met, (b.0.distance, b.1)) {
+                Some(a)
+            } else {
+                Some(b)
+            }
+        }
+        (a, b) => a.or(b),
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn collision(
     world: &World,
     refs: &[Option<FormKey>],
@@ -254,7 +348,8 @@ fn collision(
     reach: f64,
     keep: &dyn Fn(u32) -> bool,
     skip: &dyn Fn(&FormKey) -> bool,
-) -> Option<Hit> {
+    first_met: bool,
+) -> Option<(Hit, bool)> {
     let d = g::unit(dir)?;
     if !(reach.is_finite() && reach > 0.0 && g::finite(eye)) {
         return None;
@@ -263,7 +358,7 @@ fn collision(
     let query = Aabb::of(&[eye, end], 0.0)?;
     let mut candidates = Vec::new();
     world.candidates(&query, &mut candidates);
-    let mut best: Option<(f64, u32)> = None;
+    let mut best: Option<(f64, u32, bool)> = None;
     for i in candidates {
         let e = &world.entries[i as usize];
         if !keep(e.source) {
@@ -287,18 +382,25 @@ fn collision(
             } => convex(eye, d, reach, world.hull_points(*start, *count), *radius),
         };
         if let Some(t) = t.filter(|t| *t <= reach) {
-            if best.is_none_or(|(b, _)| t < b) {
-                best = Some((t, i));
+            // A body met at once holds the eye (a triangle through the eye
+            // too: rare, and as good as inside for the order).
+            let inside = t <= 0.0;
+            if best.is_none_or(|(b, _, bi)| rank(first_met, (t, inside)) < rank(first_met, (b, bi)))
+            {
+                best = Some((t, i, inside));
             }
         }
     }
-    let (distance, entry) = best?;
+    let (distance, entry, inside) = best?;
     let source = world.entries[entry as usize].source;
-    Some(Hit {
-        distance,
-        via: Via::Collision { entry, source },
-        reference: refs.get(source as usize).cloned().flatten(),
-    })
+    Some((
+        Hit {
+            distance,
+            via: Via::Collision { entry, source },
+            reference: refs.get(source as usize).cloned().flatten(),
+        },
+        inside,
+    ))
 }
 
 /// Two-sided ray and triangle (Möller and Trumbore's test).
@@ -463,6 +565,94 @@ mod tests {
         assert!(boxes
             .first([0.0, 15.0, 0.0], [1.0, 0.0, 0.0], 500.0, &|_| false)
             .is_none());
+    }
+
+    #[test]
+    fn first_met_passes_what_the_eye_stands_inside() {
+        let w = world();
+        let big = FormKey {
+            plugin: "a.esm".into(),
+            object_id: 0x30,
+        };
+        let small = FormKey {
+            plugin: "a.esm".into(),
+            object_id: 0x31,
+        };
+        let mut boxes = Boxes::default();
+        let at = |x: f32| {
+            fo4_scene::transform::Transform::euler([x, 0.0, 0.0, 0.0, 0.0, 0.0], 1.0).unwrap()
+        };
+        // A box holding the eye and a small one ahead of it.
+        assert!(boxes.push(big.clone(), at(0.0), [-200, -200, -200, 200, 200, 200]));
+        assert!(boxes.push(small.clone(), at(40.0), [-5, -5, -5, 5, 5, 5]));
+        let none = &|_: &FormKey| false;
+        let all = &|_: u32| true;
+        let ray = |first_met| {
+            met(
+                &w,
+                &[],
+                Some(&boxes),
+                [0.0; 3],
+                [1.0, 0.0, 0.0],
+                500.0,
+                all,
+                none,
+                first_met,
+            )
+        };
+        // As before: the box holding the eye at distance 0.
+        let (h, inside) = ray(false).unwrap();
+        assert_eq!(
+            (h.reference.clone(), h.distance, inside),
+            (Some(big.clone()), 0.0, true)
+        );
+        // First met: the small box the ray enters.
+        let (h, inside) = ray(true).unwrap();
+        assert_eq!(h.reference, Some(small.clone()));
+        assert!((h.distance - 35.0).abs() < 1e-4 && !inside, "{h:?}");
+        // Nothing else ahead: the box holding the eye after all.
+        let (h, _) = met(
+            &w,
+            &[],
+            Some(&boxes),
+            [0.0; 3],
+            [0.0, 0.0, 1.0],
+            500.0,
+            all,
+            none,
+            true,
+        )
+        .unwrap();
+        assert_eq!(h.reference, Some(big.clone()));
+        // A body holding the eye (the sphere) passed for the wall behind it.
+        let (h, inside) = met(
+            &w,
+            &[],
+            None,
+            [50.0, 22.0, 0.0],
+            [1.0, 0.0, 0.0],
+            500.0,
+            all,
+            none,
+            true,
+        )
+        .unwrap();
+        assert!(!inside && (h.distance - 50.0).abs() < 1e-9, "{h:?}");
+        let (h, inside) = met(
+            &w,
+            &[],
+            None,
+            [50.0, 22.0, 0.0],
+            [1.0, 0.0, 0.0],
+            500.0,
+            all,
+            none,
+            false,
+        )
+        .unwrap();
+        assert!(inside && h.distance == 0.0);
+        // The named platforms' boxes leave.
+        assert_eq!(boxes.without_references(&[big]).items.len(), 1);
     }
 
     #[test]

@@ -77,6 +77,12 @@ pub struct Play {
     /// the caller's timed opens of these references are the walker's
     /// activations of them ([`Play::run_args`], [`walker::Walker::with_opens`]).
     pub opens: Vec<FormKey>,
+    /// `--play-activate-person REF` (repeated; `play_activate_person_v1`):
+    /// the caller's timed activations of these references are the walker's
+    /// activations of them ([`Play::run_args`]).
+    pub persons: Vec<FormKey>,
+    /// `--play-pick-first-met` (`play_activate_ray_first_met_v1`).
+    pub first_met: bool,
 }
 
 /// A record key as the play options take it: `PLUGIN:OBJECTID`, the id in
@@ -133,6 +139,7 @@ impl Play {
             "--play-collision-off-chain" => &mut self.off_chain,
             "--play-collision-reference-alpha" => &mut self.reference_alpha,
             "--play-collision-child-flag-agrees" => &mut self.child_flag_agrees,
+            "--play-pick-first-met" => &mut self.first_met,
             "--play-around" => {
                 let v = value(1)?;
                 let n = v
@@ -190,6 +197,11 @@ impl Play {
             "--play-activate-opens" => {
                 let usage = "--play-activate-opens takes PLUGIN:OBJECTID";
                 self.opens.push(key(value(1).map_err(|_| usage)?, usage)?);
+                return Ok(2);
+            }
+            "--play-activate-person" => {
+                let usage = "--play-activate-person takes PLUGIN:OBJECTID";
+                self.persons.push(key(value(1).map_err(|_| usage)?, usage)?);
                 return Ok(2);
             }
             "--play-elevator-also-with" => {
@@ -297,10 +309,13 @@ impl Play {
     /// The run's new-game switches as the play options take them: with
     /// `--play-activate-opens REF`, the caller's `--assume-open REF@SECONDS`
     /// and the `--action-after REF@SECONDS GATE` holding it are left out
-    /// (the walker's activation of REF gives the run the open); every other
-    /// switch kept in its order. Without it, the switches unchanged.
+    /// (the walker's activation of REF gives the run the open); with
+    /// `--play-activate-person REF`, the caller's `--assume-activate
+    /// REF@SECONDS` and its gate (the walker's activation of REF is the
+    /// run's); every other switch kept in its order. Without them, the
+    /// switches unchanged.
     pub fn run_args(&self, args: Vec<String>) -> Vec<String> {
-        if self.opens.is_empty() {
+        if self.opens.is_empty() && self.persons.is_empty() {
             return args;
         }
         // A caller action's target, `PLUGIN:OBJECTID@SECONDS`.
@@ -312,9 +327,14 @@ impl Play {
         let mut out = Vec::with_capacity(args.len());
         let mut i = 0;
         while i < args.len() {
-            if args[i] == "--assume-open" {
+            let named = match args[i].as_str() {
+                "--assume-open" => Some(&self.opens),
+                "--assume-activate" => Some(&self.persons),
+                _ => None,
+            };
+            if let Some(named) = named {
                 if let Some(t) = args.get(i + 1).and_then(|t| target(t)) {
-                    if self.opens.contains(&t.0) {
+                    if named.contains(&t.0) {
                         dropped.push(t);
                         i += 2;
                         continue;
@@ -398,6 +418,7 @@ impl Play {
             opts.slice = v;
         }
         opts.stand = self.stand;
+        opts.first_met = self.first_met;
         opts
     }
 
@@ -539,6 +560,13 @@ impl Play {
             let _ = writeln!(report, "switch: the caller's timed opens of {} named reference(s) are the walker's activations of them, the open given with the activation (--play-activate-opens, {})", self.opens.len(), crate::rules::ACTIVATE_OPENS);
             w = w.with_opens(self.opens.clone());
         }
+        if !self.persons.is_empty() {
+            let _ = writeln!(report, "switch: the caller's timed activations of {} named reference(s) are the walker's activations of them (--play-activate-person, {})", self.persons.len(), crate::rules::ACTIVATE_PERSON);
+            w = w.with_persons(self.persons.clone());
+        }
+        if self.first_met {
+            let _ = writeln!(report, "switch: the activation's ray meets what it enters first, what the eye stands inside only when nothing else, the named platforms by their collision (--play-pick-first-met, {})", crate::rules::ACTIVATE_FIRST_MET);
+        }
         if self.pick_bounds {
             let _ = writeln!(report, "switch: the activation's ray meets the object bounds of references with no collision (--play-pick-bounds)");
             let boxes = if self.activatable {
@@ -641,6 +669,26 @@ mod tests {
         // Without the option the switches are unchanged.
         assert_eq!(Play::default().run_args(args.clone()), args);
         assert!(read("--play-activate-opens nokey").is_err());
+    }
+
+    #[test]
+    fn the_callers_timed_activations_of_named_references_leave_the_run() {
+        let p = read("--play-activate-person a.esm:00000002 --play-pick-first-met").unwrap();
+        assert_eq!(p.persons, [k(2)]);
+        assert!(p.first_met && p.walker_options().first_met);
+        assert!(!Play::default().walker_options().first_met);
+        let args: Vec<String> = "m new-game o --assume-activate a.esm:2@870 --action-after a.esm:2@870 Q:6 --assume-open a.esm:2@5 --assume-activate a.esm:3@9 --action-after a.esm:3@9 Q:1 --action-after a.esm:2@99 Q:2"
+            .split(' ')
+            .map(String::from)
+            .collect();
+        // The timed activation and its gate leave; an open of the same
+        // reference, another reference's activation and a gate naming no
+        // dropped action stay.
+        assert_eq!(
+            p.run_args(args).join(" "),
+            "m new-game o --assume-open a.esm:2@5 --assume-activate a.esm:3@9 --action-after a.esm:3@9 Q:1 --action-after a.esm:2@99 Q:2"
+        );
+        assert!(read("--play-activate-person").is_err());
     }
 
     #[test]

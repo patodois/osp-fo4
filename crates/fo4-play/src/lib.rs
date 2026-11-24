@@ -118,8 +118,20 @@ pub mod rules {
     /// activation, at its second, and no timed open
     /// (`--play-activate-opens REF`).
     pub const ACTIVATE_OPENS: &str = "play_activate_opens_v1";
+    /// The caller's timed activation of a reference it names
+    /// (`--assume-activate REF@SECONDS`, with its `--action-after` gate) is
+    /// the walker's activation of that reference: the run gets the
+    /// activation when the person makes it, and no timed one
+    /// (`--play-activate-person REF`).
+    pub const ACTIVATE_PERSON: &str = "play_activate_person_v1";
+    /// The activation's ray meets what it enters first: a box or a body
+    /// the eye stands inside (met at distance 0) only when the ray meets
+    /// nothing from outside, the named platforms through their collision,
+    /// their object bounds left out, and no box of a base that names no
+    /// model (`--play-pick-first-met`).
+    pub const ACTIVATE_FIRST_MET: &str = "play_activate_ray_first_met_v1";
     /// Every rule above.
-    pub const ALL: [&str; 16] = [
+    pub const ALL: [&str; 18] = [
         PLAYER_FEET,
         RUN_CLOCK,
         ACTIVATE_RAY,
@@ -136,6 +148,8 @@ pub mod rules {
         PLAYER_MOVETO,
         PLAYER_SIT,
         ACTIVATE_OPENS,
+        ACTIVATE_PERSON,
+        ACTIVATE_FIRST_MET,
     ];
 }
 
@@ -184,6 +198,10 @@ impl View<'_, '_> {
     /// The run's present second.
     pub fn now(&self) -> f64 {
         self.vm.world.now[fo4_vm::world::Clock::Real as usize]
+    }
+    /// The manifest and the mounted files the run reads.
+    pub fn sources(&self) -> (&fo4_core::Manifest, &fo4_vfs::Vfs) {
+        self.sources
     }
     /// The caller's track as the run loaded it (`--track`, with the points
     /// `--load-doors` adds), before the play mode cut it at the start.
