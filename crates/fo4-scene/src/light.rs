@@ -226,6 +226,166 @@ pub struct Point {
     pub colour: [f32; 3],
 }
 
+/// The placed lights bounded by a uniform grid of cubes: each cube lists,
+/// increasing, the points whose sphere reaches it ([`Grid::of`]). A point
+/// adds nothing at or beyond its radius (`light_point_linear_cutoff_v1`), so
+/// the points listed at a position's cube give the light every point gives
+/// there, summed in the same order ([`Light::at_some`]): an exact bound of
+/// the work, not a reading.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Grid {
+    /// The lowest corner of the grid (game units).
+    pub origin: [f64; 3],
+    /// The side of a cube.
+    pub cell: f64,
+    /// Cubes along X, Y and Z.
+    pub dims: [u32; 3],
+    /// Per cube (X fastest, then Y, then Z): the first index into
+    /// `indices` and how many.
+    pub cells: Vec<(u32, u32)>,
+    /// Point indices, increasing within each cube.
+    pub indices: Vec<u32>,
+}
+
+impl Grid {
+    /// What a cube's box is widened by on every side before a sphere is
+    /// tested against it, so that a position a renderer computes in single
+    /// precision near a cube's face still finds every point that reaches it.
+    pub const MARGIN: f64 = 1.0;
+    /// The first side tried; doubled until the grid fits the bounds below.
+    pub const FIRST_CELL: f64 = 128.0;
+    /// At most this many cubes, and this many listed indices.
+    pub const MAX_CELLS: u64 = 1 << 18;
+    pub const MAX_INDICES: u64 = 1 << 22;
+
+    /// The grid of `points`; `None` when no point has a positive, finite
+    /// radius and position.
+    pub fn of(points: &[Point]) -> Option<Grid> {
+        let usable = |p: &Point| {
+            p.radius > 0. && p.radius.is_finite() && p.position.iter().all(|x| x.is_finite())
+        };
+        let (mut lo, mut hi) = ([f64::INFINITY; 3], [f64::NEG_INFINITY; 3]);
+        for p in points.iter().filter(|p| usable(p)) {
+            for k in 0..3 {
+                lo[k] = lo[k].min(p.position[k] - p.radius - Self::MARGIN);
+                hi[k] = hi[k].max(p.position[k] + p.radius + Self::MARGIN);
+            }
+        }
+        if lo[0] > hi[0] {
+            return None;
+        }
+        let mut cell = Self::FIRST_CELL;
+        loop {
+            let dims: [u32; 3] = std::array::from_fn(|k| {
+                (((hi[k] - lo[k]) / cell).floor() as u32).saturating_add(1)
+            });
+            let cells = dims.iter().map(|d| u64::from(*d)).product::<u64>();
+            let span = |p: &Point, k: usize| {
+                let a = ((p.position[k] - p.radius - Self::MARGIN - lo[k]) / cell)
+                    .floor()
+                    .max(0.) as u32;
+                let b = (((p.position[k] + p.radius + Self::MARGIN - lo[k]) / cell).floor() as u32)
+                    .min(dims[k] - 1);
+                (a, b)
+            };
+            let listed: u64 = points
+                .iter()
+                .filter(|p| usable(p))
+                .map(|p| {
+                    (0..3)
+                        .map(|k| {
+                            let (a, b) = span(p, k);
+                            u64::from(b - a + 1)
+                        })
+                        .product::<u64>()
+                })
+                .sum();
+            if cells > Self::MAX_CELLS || listed > Self::MAX_INDICES {
+                cell *= 2.;
+                continue;
+            }
+            // The cubes each point's sphere reaches, the point's box widened
+            // by the margin against each cube's.
+            let reaches = |p: &Point, c: [u32; 3]| {
+                let mut d2 = 0.;
+                for k in 0..3 {
+                    let a = lo[k] + f64::from(c[k]) * cell - Self::MARGIN;
+                    let b = a + cell + 2. * Self::MARGIN;
+                    let x = p.position[k];
+                    let e = if x < a {
+                        a - x
+                    } else if x > b {
+                        x - b
+                    } else {
+                        0.
+                    };
+                    d2 += e * e;
+                }
+                d2 < p.radius * p.radius
+            };
+            let n = cells as usize;
+            let mut count = vec![0u32; n];
+            let index = |c: [u32; 3]| {
+                c[0] as usize
+                    + dims[0] as usize * (c[1] as usize + dims[1] as usize * c[2] as usize)
+            };
+            let each = |p: &Point, f: &mut dyn FnMut(usize)| {
+                let (x0, x1) = span(p, 0);
+                let (y0, y1) = span(p, 1);
+                let (z0, z1) = span(p, 2);
+                for z in z0..=z1 {
+                    for y in y0..=y1 {
+                        for x in x0..=x1 {
+                            if reaches(p, [x, y, z]) {
+                                f(index([x, y, z]));
+                            }
+                        }
+                    }
+                }
+            };
+            for p in points.iter().filter(|p| usable(p)) {
+                each(p, &mut |c| count[c] += 1);
+            }
+            let mut cells_out = Vec::with_capacity(n);
+            let mut first = 0u32;
+            for c in &count {
+                cells_out.push((first, 0u32));
+                first += c;
+            }
+            let mut indices = vec![0u32; first as usize];
+            for (k, p) in points.iter().enumerate().filter(|(_, p)| usable(p)) {
+                each(p, &mut |c| {
+                    let (f, m) = &mut cells_out[c];
+                    indices[(*f + *m) as usize] = k as u32;
+                    *m += 1;
+                });
+            }
+            return Some(Grid {
+                origin: lo,
+                cell,
+                dims,
+                cells: cells_out,
+                indices,
+            });
+        }
+    }
+
+    /// The points listed at `p`'s cube (none outside the grid).
+    pub fn at(&self, p: [f64; 3]) -> &[u32] {
+        let mut c = [0usize; 3];
+        for k in 0..3 {
+            let x = (p[k] - self.origin[k]) / self.cell;
+            if !(x >= 0. && x < f64::from(self.dims[k])) {
+                return &[];
+            }
+            c[k] = (x.floor() as usize).min(self.dims[k] as usize - 1);
+        }
+        let i = c[0] + self.dims[0] as usize * (c[1] + self.dims[1] as usize * c[2]);
+        let (f, n) = self.cells[i];
+        &self.indices[f as usize..(f + n) as usize]
+    }
+}
+
 /// Fog by distance from the eye: the fraction of `colour` is
 /// `min(clamp((d - near) / (far - near), 0, 1), max)`.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize)]
@@ -1169,6 +1329,80 @@ mod tests {
         ] {
             assert_eq!(hour_slot(t, h), s, "{h}");
         }
+    }
+
+    #[test]
+    fn the_points_grid_lists_every_point_that_reaches_a_position_and_sums_the_same() {
+        // A deterministic scatter of points (a linear congruential walk).
+        let mut seed = 12345u64;
+        let mut next = || {
+            seed = seed
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            ((seed >> 33) as f64) / f64::from(1u32 << 31)
+        };
+        let mut points = Vec::new();
+        for _ in 0..300 {
+            points.push(Point {
+                position: [
+                    next() * 4000. - 2000.,
+                    next() * 3000. - 1500.,
+                    next() * 800.,
+                ],
+                radius: 50. + next() * 600.,
+                colour: [next() as f32, next() as f32, next() as f32],
+            });
+        }
+        // Points that reach nothing are never listed.
+        points.push(Point {
+            position: [0.; 3],
+            radius: 0.,
+            colour: [1.; 3],
+        });
+        let g = Grid::of(&points).unwrap();
+        assert!(g.cell >= Grid::FIRST_CELL);
+        let light = Light {
+            ambient: [0.01; 3],
+            cube: None,
+            directional: None,
+            points: points.clone(),
+            fog: None,
+            sky: None,
+            lit: true,
+            rules: BTreeSet::new(),
+            report: Vec::new(),
+            exposure: Exposure::default(),
+        };
+        for _ in 0..5000 {
+            let p = [
+                next() * 5000. - 2500.,
+                next() * 4000. - 2000.,
+                next() * 1200. - 200.,
+            ];
+            let n = [next() - 0.5, next() - 0.5, next() - 0.5];
+            let l = n.iter().map(|x| x * x).sum::<f64>().sqrt();
+            let n = n.map(|x| x / l);
+            let listed = g.at(p);
+            assert!(listed.windows(2).all(|w| w[0] < w[1]));
+            for (k, q) in points.iter().enumerate() {
+                let d = (0..3)
+                    .map(|i| (q.position[i] - p[i]).powi(2))
+                    .sum::<f64>()
+                    .sqrt();
+                if d < q.radius {
+                    assert!(
+                        listed.contains(&(k as u32)),
+                        "point {k} at {d} of {}",
+                        q.radius
+                    );
+                }
+            }
+            let some = light.at_some(p, n, listed.iter().map(|k| *k as usize));
+            assert_eq!(some, light.at(p, n));
+        }
+        // Outside the grid nothing is listed.
+        assert!(g.at([1e9, 0., 0.]).is_empty());
+        assert!(Grid::of(&[]).is_none());
     }
 
     #[test]

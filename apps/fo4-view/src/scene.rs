@@ -333,7 +333,14 @@ pub const LIGHT_HEADER_ROWS: usize = 17;
 /// and horizon; 14 the exposure (`fo4_scene::light::Exposure`): scale,
 /// white, and flags (bit 0 scale, bit 1 white, bit 2 cinematic and tint) as
 /// a float; 15 saturation, brightness, contrast, tint amount; 16 the tint's
-/// colour; then two rows per point: position and radius, colour.
+/// colour and the row of the points' grid (0 without one); then two rows
+/// per point: position and radius, colour; then the points' grid
+/// (`fo4_scene::light::Grid`, when the light lights and has points): its
+/// origin and cube side, its cube counts along X, Y, Z and the rows of its
+/// cube table; the cube table, two cubes per row (first index, count); the
+/// point indices, four per row. The grid is an exact bound: the surface
+/// shader sums only the points listed at a position's cube, in the same
+/// order, and every point it leaves out adds nothing there.
 pub fn light_words(light: &fo4_scene::light::Light) -> Vec<f32> {
     let mut w = vec![0f32; 4 * (LIGHT_HEADER_ROWS + 2 * light.points.len())];
     let row = |r: usize, v: [f32; 4], w: &mut Vec<f32>| w[4 * r..4 * r + 4].copy_from_slice(&v);
@@ -380,6 +387,47 @@ pub fn light_words(light: &fo4_scene::light::Light) -> Vec<f32> {
     let [amount, tr, tg, tb] = x.tint.unwrap_or([0., 1., 1., 1.]);
     row(15, [sat, bright, contrast, amount], &mut w);
     row(16, [tr, tg, tb, 0.], &mut w);
+    // The points' grid after the points (only when they light anything).
+    let grid = if count > 0 {
+        fo4_scene::light::Grid::of(&light.points)
+    } else {
+        None
+    };
+    if let Some(g) = &grid {
+        let at = LIGHT_HEADER_ROWS + 2 * light.points.len();
+        let table = g.cells.len().div_ceil(2);
+        let rows = 2 + table + g.indices.len().div_ceil(4);
+        w.resize(4 * (at + rows), 0.);
+        w[4 * 16 + 3] = at as f32;
+        row(
+            at,
+            [
+                g.origin[0] as f32,
+                g.origin[1] as f32,
+                g.origin[2] as f32,
+                g.cell as f32,
+            ],
+            &mut w,
+        );
+        row(
+            at + 1,
+            [
+                g.dims[0] as f32,
+                g.dims[1] as f32,
+                g.dims[2] as f32,
+                table as f32,
+            ],
+            &mut w,
+        );
+        for (c, (first, n)) in g.cells.iter().enumerate() {
+            let i = 4 * (at + 2 + c / 2) + 2 * (c % 2);
+            w[i] = *first as f32;
+            w[i + 1] = *n as f32;
+        }
+        for (j, k) in g.indices.iter().enumerate() {
+            w[4 * (at + 2 + table) + j] = *k as f32;
+        }
+    }
     for (k, p) in light.points.iter().enumerate() {
         let r = LIGHT_HEADER_ROWS + 2 * k;
         row(
@@ -933,6 +981,88 @@ mod tests {
         assert_eq!(p[0].model, "meshes/a/lift.nif");
         assert_eq!(p[1].world.translation, [9., 0., 0.]);
         assert!(platform_instances(&build, &scene, &[key(0x90)]).is_empty());
+    }
+
+    #[test]
+    fn the_light_buffer_s_grid_lists_every_point_the_shader_would_sum() {
+        use fo4_scene::light::{Exposure, Light, Point};
+        let mut seed = 99u64;
+        let mut next = || {
+            seed = seed
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            ((seed >> 33) as f64) / f64::from(1u32 << 31)
+        };
+        let points: Vec<Point> = (0..200)
+            .map(|_| Point {
+                position: [
+                    -80000. + next() * 3000.,
+                    90000. + next() * 3000.,
+                    next() * 600.,
+                ],
+                radius: 40. + next() * 700.,
+                colour: [1.; 3],
+            })
+            .collect();
+        let light = Light {
+            ambient: [0.; 3],
+            cube: None,
+            directional: None,
+            points: points.clone(),
+            fog: None,
+            sky: None,
+            lit: true,
+            rules: Default::default(),
+            report: Vec::new(),
+            exposure: Exposure::default(),
+        };
+        let w = light_words(&light);
+        let at = |r: usize| [w[4 * r], w[4 * r + 1], w[4 * r + 2], w[4 * r + 3]];
+        // The header names the grid's row, after the points.
+        let g = at(16)[3] as usize;
+        assert_eq!(g, LIGHT_HEADER_ROWS + 2 * points.len());
+        let (head, dims) = (at(g), at(g + 1));
+        // What `surface.wesl`'s `light_at` reads, in single precision.
+        for _ in 0..4000 {
+            let p = [
+                (-80300. + next() * 3600.) as f32,
+                (89700. + next() * 3600.) as f32,
+                (-200. + next() * 1000.) as f32,
+            ];
+            let rel: [f32; 3] = std::array::from_fn(|i| (p[i] - head[i]) / head[3]);
+            let inside = (0..3).all(|i| rel[i] >= 0. && rel[i] < dims[i]);
+            let mut listed = Vec::new();
+            if inside {
+                let n: [u32; 3] = std::array::from_fn(|i| dims[i] as u32);
+                let c: [u32; 3] = std::array::from_fn(|i| (rel[i] as u32).min(n[i] - 1));
+                let cube = (c[0] + n[0] * (c[1] + n[1] * c[2])) as usize;
+                let row = at(g + 2 + cube / 2);
+                let span = if cube % 2 == 1 {
+                    [row[2], row[3]]
+                } else {
+                    [row[0], row[1]]
+                };
+                let indices = g + 2 + dims[3] as usize;
+                for i in 0..span[1] as usize {
+                    let j = span[0] as usize + i;
+                    listed.push(at(indices + j / 4)[j % 4] as usize);
+                }
+            }
+            assert!(listed.windows(2).all(|x| x[0] < x[1]));
+            for k in 0..points.len() {
+                let a = at(LIGHT_HEADER_ROWS + 2 * k);
+                let d = (0..3).map(|i| (a[i] - p[i]).powi(2)).sum::<f32>().sqrt();
+                if d < a[3] && d > 0. {
+                    assert!(listed.contains(&k), "point {k} at {d} of {}", a[3]);
+                }
+            }
+        }
+        // Without points (or unlit) no grid: row 16's fourth value stays 0.
+        let unlit = Light {
+            lit: false,
+            ..light.clone()
+        };
+        assert_eq!(light_words(&unlit)[4 * 16 + 3], 0.);
     }
 
     #[cfg(feature = "script-event")]

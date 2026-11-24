@@ -78,13 +78,49 @@ fn light_at(p: vec3<f32>, n: vec3<f32>) -> vec3<f32> {
         c = c + lights[1u].xyz * max(dot(n, lights[2u].xyz), 0.0);
     }
     let count = u32(lights[0u].w);
-    for (var k = 0u; k < count; k = k + 1u) {
-        let a = lights[LIGHT_HEADER_ROWS + 2u * k];
-        let v = a.xyz - p;
-        let d = length(v);
-        if d < a.w && d > 0.0 {
-            let facing = max(dot(n, v) / d, 0.0);
-            c = c + lights[LIGHT_HEADER_ROWS + 2u * k + 1u].xyz * ((1.0 - d / a.w) * facing);
+    // Row 16's fourth value: the row of the points' grid
+    // (`fo4_scene::light::Grid`, `scene::light_words`), 0 without one. With
+    // it only the points listed at the cube holding `p` are summed, in the
+    // same order: every other point adds nothing at `p`.
+    let g = u32(lights[16u].w);
+    if g == 0u {
+        for (var k = 0u; k < count; k = k + 1u) {
+            let a = lights[LIGHT_HEADER_ROWS + 2u * k];
+            let v = a.xyz - p;
+            let d = length(v);
+            if d < a.w && d > 0.0 {
+                let facing = max(dot(n, v) / d, 0.0);
+                c = c + lights[LIGHT_HEADER_ROWS + 2u * k + 1u].xyz * ((1.0 - d / a.w) * facing);
+            }
+        }
+        return c;
+    }
+    let head = lights[g];
+    let dims = lights[g + 1u];
+    let rel = (p - head.xyz) / head.w;
+    if all(rel >= vec3<f32>(0.0)) && all(rel < dims.xyz) {
+        let nx = u32(dims.x);
+        let ny = u32(dims.y);
+        let nz = u32(dims.z);
+        let cube = min(u32(rel.x), nx - 1u) + nx * (min(u32(rel.y), ny - 1u) + ny * min(u32(rel.z), nz - 1u));
+        let row = lights[g + 2u + cube / 2u];
+        var span = row.xy;
+        if (cube & 1u) == 1u {
+            span = row.zw;
+        }
+        let first = u32(span.x);
+        let listed = u32(span.y);
+        let indices = g + 2u + u32(dims.w);
+        for (var i = 0u; i < listed; i = i + 1u) {
+            let j = first + i;
+            let k = u32(lights[indices + j / 4u][j % 4u]);
+            let a = lights[LIGHT_HEADER_ROWS + 2u * k];
+            let v = a.xyz - p;
+            let d = length(v);
+            if d < a.w && d > 0.0 {
+                let facing = max(dot(n, v) / d, 0.0);
+                c = c + lights[LIGHT_HEADER_ROWS + 2u * k + 1u].xyz * ((1.0 - d / a.w) * facing);
+            }
         }
     }
     return c;

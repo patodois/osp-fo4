@@ -131,3 +131,16 @@ the one every material binds, and the sky is drawn by the same `sky` entry point
 In the opening at hour 11 and weather 0 (the light step's frames' assumptions) the exteriors show the sky's
 gradient; the prewar and postwar vaults (379 and 817 placed lights as points) wash out toward white without an
 exposure, and the window drops to about 16 and 10 fps there at 2560x1440: every light is summed for every pixel.
+
+**The points' grid (the drawn step).** The window's cost in the vaults was the surface shader summing every
+placed light for every pixel, although under `light_point_linear_cutoff_v1` a point adds nothing at or beyond
+its radius. `fo4_scene::light::Grid` lays a uniform grid of cubes over the points' spheres (the first side
+128 units, doubled until the grid holds at most 2^18 cubes and 2^22 listed indices) and lists in each cube,
+increasing, the points whose sphere reaches it (each cube's box widened by one unit, so that a position the
+shader computes in single precision near a face still finds every point that reaches it). The light buffer
+carries the grid after the points (`scene::light_words`; row 16's fourth value names its row) and `light_at`
+sums only the points listed at the cube holding the sample, in the same order, the loop body unchanged: an
+exact bound, no rule. The CPU's `Light::at_some` with the grid's list gives `Light::at` exactly (a test over
+300 scattered points and 5,000 positions). Headless lit frames of the prewar vault (379 points, two views),
+the room of 730 s (156) and the postwar vault (817, three views) with the window's light switches are byte
+for byte those of the viewer before the grid (frame and tag buffers, 12 of 12 files).
