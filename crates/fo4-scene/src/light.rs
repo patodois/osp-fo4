@@ -1577,7 +1577,7 @@ mod tests {
         assert!(s.weather() && s.any());
     }
 
-    /// The exposure's parts (`frame_exposure_eye_light_v1`,
+    /// The exposure's parts (`frame_exposure_seen_light_v1`,
     /// `image_space_hdr_white_v1`, `image_space_cinematic_tint_v1`): the
     /// scale is one over the light at the eye; a white of 1 leaves a colour
     /// as it is, another compresses it; neutral cinematic values and a tint

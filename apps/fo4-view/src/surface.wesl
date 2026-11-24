@@ -237,7 +237,7 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
         }
         if lights[2u].w > 0.5 {
             color = vec4<f32>(color.rgb * light_at(p, n), color.a);
-            // `frame_exposure_eye_light_v1`.
+            // `frame_exposure_seen_light_v1`.
             if (u32(lights[14u].z) & 1u) != 0u {
                 color = vec4<f32>(color.rgb * lights[14u].x, color.a);
             }

@@ -585,7 +585,7 @@ impl Raster<'_> {
                         for (value, component) in color.iter_mut().zip(l) {
                             *value *= component;
                         }
-                        // `frame_exposure_eye_light_v1`.
+                        // `frame_exposure_seen_light_v1`.
                         if let Some(k) = d.light.exposure.scale {
                             for value in &mut color[..3] {
                                 *value *= k;
