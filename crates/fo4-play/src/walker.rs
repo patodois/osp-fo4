@@ -383,7 +383,24 @@ pub struct Walker {
     visibility: crate::state::Visibility,
     end: f64,
     pub log: Rc<RefCell<Log>>,
+    /// The walking worlds last built, as built (before the live world
+    /// and the platforms take them), by cell and build options: the
+    /// present one and the one before it. A world built again about a cell
+    /// the walker just left is the kept one ([`Walker::load`]): the same
+    /// build of the same records, so the same world.
+    kept: [Option<(FormKey, crate::world::Options, crate::world::Built)>; 2],
+    /// Told when a walking world is about to be built about a cell
+    /// (`Some`) and when it is built (`None`): a window that draws what the
+    /// walker walks in can start loading that cell at once.
+    on_load: Option<OnLoad>,
+    /// References whose activation also opens them
+    /// (`play_activate_opens_v1`, `--play-activate-opens`).
+    opens: Vec<FormKey>,
 }
+
+/// What [`Walker::with_on_load`] calls: the cell a walking world is about
+/// to be built about, then `None` when it is built.
+pub type OnLoad = Box<dyn FnMut(Option<&FormKey>) + Send>;
 
 impl Walker {
     /// `refs`: the placed reference of each source of `world`
@@ -443,7 +460,28 @@ impl Walker {
                 rules: collision_rules(&opts),
                 ..Log::default()
             })),
+            kept: [None, None],
+            on_load: None,
+            opens: Vec::new(),
         })
+    }
+
+    /// The walker's activation of one of `opens` gives the run the open
+    /// too, at the same second, after the activation
+    /// (`play_activate_opens_v1`: the caller's timed open of it left out
+    /// of the run's switches, `crate::options::Play::run_args`).
+    pub fn with_opens(mut self, opens: Vec<FormKey>) -> Walker {
+        self.opens = opens;
+        self
+    }
+
+    /// Tells `f` when a walking world is about to be built again about a
+    /// cell and when it is built (a grid square left, a load door, a
+    /// `MoveTo`, a sit): what a window uses to load the cell's drawing
+    /// while the walker builds. Changes nothing the walker does.
+    pub fn with_on_load(mut self, f: OnLoad) -> Walker {
+        self.on_load = Some(f);
+        self
     }
 
     /// Lets the activation meet the object bounds of references with no
@@ -945,7 +983,25 @@ impl Walker {
             }
             self.next_event += 1;
             match e.command {
-                Command::Activate => actions.extend(self.activate()),
+                Command::Activate => {
+                    let act = self.activate();
+                    let opens = act
+                        .as_ref()
+                        .filter(|a| self.opens.contains(&norm(&a.reference)))
+                        .map(|a| Act {
+                            at: a.at,
+                            action: PlayerAction::Open,
+                            reference: a.reference.clone(),
+                        });
+                    actions.extend(act);
+                    if let Some(o) = opens {
+                        self.log
+                            .borrow_mut()
+                            .rules
+                            .insert(crate::rules::ACTIVATE_OPENS);
+                        actions.push(o);
+                    }
+                }
                 Command::End => {}
                 c => {
                     self.controls.apply(c);
@@ -1242,20 +1298,36 @@ impl Walker {
             .unwrap_or(0);
         let (m, vfs) = run.sources;
         let follows = self.live.follows();
-        let mut built = crate::world::build(
-            m,
-            run.store,
-            vfs,
-            cell,
-            crate::world::Options {
-                around,
-                live: follows,
-                doors: self.doors.is_some(),
-                collision: self.opts.collision,
-                child_flag_agrees: self.opts.child_flag_agrees,
-            },
-        )
-        .map_err(|e| e.to_string())?;
+        let options = crate::world::Options {
+            around,
+            live: follows,
+            doors: self.doors.is_some(),
+            collision: self.opts.collision,
+            child_flag_agrees: self.opts.child_flag_agrees,
+        };
+        if let Some(f) = self.on_load.as_mut() {
+            f(Some(cell));
+        }
+        let same = |k: &Option<(FormKey, crate::world::Options, crate::world::Built)>| {
+            k.as_ref()
+                .is_some_and(|(c, o, _)| c == cell && *o == options)
+        };
+        let mut built = match self.kept.iter().position(same) {
+            Some(i) => self.kept[i].clone().map(|k| k.2),
+            None => None,
+        };
+        if built.is_none() {
+            let b = crate::world::build(m, run.store, vfs, cell, options);
+            built = Some(b.map_err(|e| e.to_string())?);
+        }
+        let mut built = built.ok_or("PlayWalkWorld: no world")?;
+        if !same(&self.kept[0]) {
+            self.kept[1] = self.kept[0].take();
+            self.kept[0] = Some((cell.clone(), options, built.clone()));
+        }
+        if let Some(f) = self.on_load.as_mut() {
+            f(None);
+        }
         let stats = self.live.stats.clone();
         self.live = match built.live.take() {
             Some((dormant, info)) => Live::new(

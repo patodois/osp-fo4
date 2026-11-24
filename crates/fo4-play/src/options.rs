@@ -73,6 +73,10 @@ pub struct Play {
     pub elevators: Vec<FormKey>,
     pub also: Vec<FormKey>,
     pub also_with: Vec<(FormKey, FormKey)>,
+    /// `--play-activate-opens REF` (repeated; `play_activate_opens_v1`):
+    /// the caller's timed opens of these references are the walker's
+    /// activations of them ([`Play::run_args`], [`walker::Walker::with_opens`]).
+    pub opens: Vec<FormKey>,
 }
 
 /// A record key as the play options take it: `PLUGIN:OBJECTID`, the id in
@@ -183,6 +187,11 @@ impl Play {
                 }
                 return Ok(2);
             }
+            "--play-activate-opens" => {
+                let usage = "--play-activate-opens takes PLUGIN:OBJECTID";
+                self.opens.push(key(value(1).map_err(|_| usage)?, usage)?);
+                return Ok(2);
+            }
             "--play-elevator-also-with" => {
                 let usage = "--play-elevator-also-with takes PLUGIN:OBJECTID PLUGIN:OBJECTID";
                 let k = key(value(1).map_err(|_| usage)?, usage)?;
@@ -283,6 +292,55 @@ impl Play {
             off_chain: self.off_chain,
             reference_alpha: self.reference_alpha,
         }
+    }
+
+    /// The run's new-game switches as the play options take them: with
+    /// `--play-activate-opens REF`, the caller's `--assume-open REF@SECONDS`
+    /// and the `--action-after REF@SECONDS GATE` holding it are left out
+    /// (the walker's activation of REF gives the run the open); every other
+    /// switch kept in its order. Without it, the switches unchanged.
+    pub fn run_args(&self, args: Vec<String>) -> Vec<String> {
+        if self.opens.is_empty() {
+            return args;
+        }
+        // A caller action's target, `PLUGIN:OBJECTID@SECONDS`.
+        let target = |t: &str| -> Option<(FormKey, f64)> {
+            let (k, at) = t.rsplit_once('@')?;
+            Some((fo4_vm::player::parse_key(k)?, at.parse::<f64>().ok()?))
+        };
+        let mut dropped: Vec<(FormKey, f64)> = Vec::new();
+        let mut out = Vec::with_capacity(args.len());
+        let mut i = 0;
+        while i < args.len() {
+            if args[i] == "--assume-open" {
+                if let Some(t) = args.get(i + 1).and_then(|t| target(t)) {
+                    if self.opens.contains(&t.0) {
+                        dropped.push(t);
+                        i += 2;
+                        continue;
+                    }
+                }
+            }
+            out.push(args[i].clone());
+            i += 1;
+        }
+        let mut kept = Vec::with_capacity(out.len());
+        let mut i = 0;
+        while i < out.len() {
+            if out[i] == "--action-after"
+                && i + 2 < out.len()
+                && out
+                    .get(i + 1)
+                    .and_then(|t| target(t))
+                    .is_some_and(|t| dropped.contains(&t))
+            {
+                i += 3;
+                continue;
+            }
+            kept.push(out[i].clone());
+            i += 1;
+        }
+        kept
     }
 
     /// The play mode's own switches for the run.
@@ -477,6 +535,10 @@ impl Play {
         for (k, v) in &counts {
             let _ = writeln!(report, "{k}\t{v}");
         }
+        if !self.opens.is_empty() {
+            let _ = writeln!(report, "switch: the caller's timed opens of {} named reference(s) are the walker's activations of them, the open given with the activation (--play-activate-opens, {})", self.opens.len(), crate::rules::ACTIVATE_OPENS);
+            w = w.with_opens(self.opens.clone());
+        }
         if self.pick_bounds {
             let _ = writeln!(report, "switch: the activation's ray meets the object bounds of references with no collision (--play-pick-bounds)");
             let boxes = if self.activatable {
@@ -562,6 +624,23 @@ mod tests {
         assert!(k.any() && !k.walker_only());
         assert!(!Play::default().any());
         assert_eq!(Play::default().around(), 1);
+    }
+
+    #[test]
+    fn the_callers_timed_opens_of_named_references_leave_the_run() {
+        let p = read("--play-activate-opens a.esm:00000001").unwrap();
+        assert_eq!(p.opens, [k(1)]);
+        let args: Vec<String> = "m new-game o --assume-open A.ESM:1@90 --x --action-after a.esm:00000001@90 Q:95 --assume-open a.esm:2@5 --action-after a.esm:2@5 Q:1 --assume-activate a.esm:1@3"
+            .split(' ')
+            .map(String::from)
+            .collect();
+        assert_eq!(
+            p.run_args(args.clone()).join(" "),
+            "m new-game o --x --assume-open a.esm:2@5 --action-after a.esm:2@5 Q:1 --assume-activate a.esm:1@3"
+        );
+        // Without the option the switches are unchanged.
+        assert_eq!(Play::default().run_args(args.clone()), args);
+        assert!(read("--play-activate-opens nokey").is_err());
     }
 
     #[test]

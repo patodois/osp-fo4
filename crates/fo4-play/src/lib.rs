@@ -112,8 +112,14 @@ pub mod rules {
     /// it at a target; in the walker's own space it is not followed (the
     /// walk stands for the way there) (`--play-player-sits`).
     pub const PLAYER_SIT: &str = "play_player_sit_furniture_v1";
+    /// The caller's timed open of a reference it names (`--assume-open
+    /// REF@SECONDS`, with its `--action-after` gate) is the walker's
+    /// activation of that reference: the run gets the open with the
+    /// activation, at its second, and no timed open
+    /// (`--play-activate-opens REF`).
+    pub const ACTIVATE_OPENS: &str = "play_activate_opens_v1";
     /// Every rule above.
-    pub const ALL: [&str; 15] = [
+    pub const ALL: [&str; 16] = [
         PLAYER_FEET,
         RUN_CLOCK,
         ACTIVATE_RAY,
@@ -129,6 +135,7 @@ pub mod rules {
         ELEVATOR_END_DOOR_ONWARD,
         PLAYER_MOVETO,
         PLAYER_SIT,
+        ACTIVATE_OPENS,
     ];
 }
 

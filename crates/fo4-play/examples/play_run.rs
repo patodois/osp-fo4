@@ -183,6 +183,7 @@ fn run() -> Result<(), E> {
     std::fs::create_dir_all(&out)?;
     let mut args = vec![manifest.clone(), "new-game".to_string(), out.clone()];
     args.extend(switches);
+    let args = play.run_args(args);
     let mut report = String::new();
     let started = std::time::Instant::now();
     let (driver, log): (Box<dyn Driver>, Option<_>) = match (replay, input) {

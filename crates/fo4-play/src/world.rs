@@ -58,6 +58,7 @@ pub struct LoadDoor {
 }
 
 /// The walking world of a cell and what goes with it.
+#[derive(Clone)]
 pub struct Built {
     /// The cell the world was built about and its space (the worldspace of
     /// an exterior cell, else the cell).
