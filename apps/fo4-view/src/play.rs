@@ -861,9 +861,17 @@ mod enabled {
     #[derive(Default)]
     struct TimelineRead {
         seen: Option<(usize, usize, usize, usize, usize)>,
+        /// The run's second of the last read.
+        at: Option<f64>,
         taken: u64,
         seconds: f64,
     }
+
+    /// Run seconds between two reads of the run's timeline for the cast at
+    /// least (a viewer policy: each read costs about a quarter of a second
+    /// on the run's thread in the opening); a change is read at the first
+    /// slice after.
+    pub const CAST_TIMELINE_EVERY: f64 = 5.0;
 
     impl Paced {
         /// Where the walker was settled at the start, before the first
@@ -965,10 +973,11 @@ mod enabled {
                 w.place.native_at.len(),
                 w.place.moved_at.len(),
             );
-            if r.seen == Some(now) {
+            if r.seen == Some(now) || r.at.is_some_and(|a| run.now() < a + CAST_TIMELINE_EVERY) {
                 return;
             }
             r.seen = Some(now);
+            r.at = Some(run.now());
             let started = std::time::Instant::now();
             let t = run.timeline();
             r.taken += 1;
