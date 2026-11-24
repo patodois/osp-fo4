@@ -497,6 +497,29 @@ pub fn classify_with(
     status: impl Fn(&str) -> Option<Status>,
     b: &Budget,
 ) -> Result<State> {
+    classify_aside_with(errors, outside, |_| None, status, b)
+}
+/// [`classify`] where `aside(k)` names the rule under which a switch sets
+/// `errors[k]` aside: that rule then covers it in place of its own (a
+/// switch's reading of a blocker no rule covered, such as
+/// `Loader::set_render_child_flag_agrees`). With `aside` always `None` it
+/// is [`classify`].
+pub fn classify_aside(
+    errors: &[Error],
+    outside: bool,
+    aside: impl Fn(usize) -> Option<&'static str>,
+    b: &Budget,
+) -> Result<State> {
+    classify_aside_with(errors, outside, aside, status, b)
+}
+/// [`classify_aside`] against an explicit status table.
+pub fn classify_aside_with(
+    errors: &[Error],
+    outside: bool,
+    aside: impl Fn(usize) -> Option<&'static str>,
+    status: impl Fn(&str) -> Option<Status>,
+    b: &Budget,
+) -> Result<State> {
     if errors.is_empty() {
         return Ok(if outside {
             State::Outside
@@ -506,8 +529,8 @@ pub fn classify_with(
     }
     let mut hypotheses = Vec::new();
     let mut pending = false;
-    for e in errors {
-        let Some(h) = covering(e) else {
+    for (k, e) in errors.iter().enumerate() {
+        let Some(h) = aside(k).or_else(|| covering(e)) else {
             return Ok(State::Blocked);
         };
         match status(h) {

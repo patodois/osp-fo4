@@ -194,6 +194,7 @@ pub struct Loader<'a> {
     language: &'a str,
     collision: readiness::Switches,
     child_flag_agrees: bool,
+    render_child_flag_agrees: bool,
 }
 impl<'a> Loader<'a> {
     /// The collision readiness switches the collision cell build reads
@@ -219,6 +220,21 @@ impl<'a> Loader<'a> {
     pub fn collision_child_flag_agrees(&self) -> bool {
         self.child_flag_agrees
     }
+    /// Render readiness of a reference whose enable parent chain the rules
+    /// leave open only for agreeing own flags below its root
+    /// (`xesp_child_flag_agrees_chain_v1`, [`readiness::child_flag_agrees`]):
+    /// the instances loaded after this call take the presence the chain
+    /// gives, as with [`Loader::set_collision_child_flag_agrees`], and their
+    /// render state takes that rule for the chain's `XESP.own_flag`
+    /// blocker ([`readiness::own_flag`]) in place of no rule
+    /// ([`hypotheses::classify_aside`]). Off by default: the render state
+    /// as before.
+    pub fn set_render_child_flag_agrees(&mut self, on: bool) {
+        self.render_child_flag_agrees = on;
+    }
+    pub fn render_child_flag_agrees(&self) -> bool {
+        self.render_child_flag_agrees
+    }
     /// The mounted files the loader reads.
     pub fn vfs(&self) -> &'a Vfs {
         self.vfs
@@ -238,6 +254,7 @@ impl<'a> Loader<'a> {
             language,
             collision: readiness::Switches::default(),
             child_flag_agrees: false,
+            render_child_flag_agrees: false,
         }
     }
     /// Drop decoded asset state while retaining the explicit path interpretation policy.
@@ -478,7 +495,9 @@ impl<'a> Loader<'a> {
                     let mut p = enable::Presence::of(chain);
                     // Behind its switch (off by default): a chain open only
                     // for agreeing own flags takes the state it gives.
-                    if self.child_flag_agrees && readiness::child_flag_agrees(&p) {
+                    if (self.child_flag_agrees || self.render_child_flag_agrees)
+                        && readiness::child_flag_agrees(&p)
+                    {
                         p.enabled = p.with_agreeing_child_flags(&|_| None);
                     }
                     Some(p)
@@ -624,7 +643,23 @@ impl<'a> Loader<'a> {
         let outside = base
             .as_ref()
             .is_some_and(|v| v.frame_role == fo4_plugin::static_frame::Class::Outside);
-        let state = hypotheses::classify(&blockers, outside, b)?;
+        // Behind its switch (off by default): the agreeing chain's own
+        // flag blocker is read under its rule.
+        let agrees = self.render_child_flag_agrees
+            && enable.as_ref().is_some_and(readiness::child_flag_agrees);
+        let state = if agrees {
+            hypotheses::classify_aside(
+                &blockers,
+                outside,
+                |k| {
+                    readiness::own_flag(&blockers[k])
+                        .then_some(hypotheses::ENABLE_CHILD_FLAG_AGREES)
+                },
+                b,
+            )?
+        } else {
+            hypotheses::classify(&blockers, outside, b)?
+        };
         let more = blockers.len().saturating_sub(origins.len());
         b.reserve(&mut origins, more, &src.file, src.offset)?;
         origins.resize(blockers.len(), readiness::Origin::Record);

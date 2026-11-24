@@ -206,6 +206,7 @@ pub fn cell(
     timeline: Option<(&crate::timeline::Args, &crate::timeline::Prepared)>,
     light: (fo4_scene::light::Switches, fo4_scene::light::Assumptions),
     play_live: bool,
+    drawing: crate::cli::Drawing,
 ) -> AnyResult<Loaded> {
     #[cfg(not(feature = "script-event"))]
     let _ = play_live;
@@ -235,6 +236,11 @@ pub fn cell(
     // The clock's switches (off by default) change how models are read.
     if options.clock.any() {
         loader.set_clock_switches(options.clock, &budget);
+    }
+    // `--draw-child-flag-agrees` (off by default): render readiness reads
+    // the agreeing own flags' chains (`xesp_child_flag_agrees_chain_v1`).
+    if drawing.child_flag_agrees {
+        loader.set_render_child_flag_agrees(true);
     }
     let mut cell_rule = None;
     // CELL as a record key (`plugin:XXXXXXXX`, as the timeline writes

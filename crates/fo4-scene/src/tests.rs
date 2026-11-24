@@ -1652,4 +1652,42 @@ fn agreeing_own_flags_decide_collision_presence_only_behind_their_switch() {
         // Render readiness is unchanged: the blocker still stops the draw.
         assert!(!get(0x823).state.ready_at(RuleLevel::Hypotheses));
     }
+    // The render switch: the same presence, and the render state takes the
+    // rule for the agreeing chain's own flag; the disagreeing chain stays
+    // refused, and the switch off leaves every state as it was.
+    let states = |on: bool| {
+        let mut loader = Loader::new(&store, &v, "english", RuleLevel::Hypotheses, &b);
+        assert!(!loader.render_child_flag_agrees());
+        loader.set_render_child_flag_agrees(on);
+        let s = loader.by_editor_id("SyntheticRoom", &b).unwrap();
+        [0x822, 0x823, 0x825].map(|id| {
+            let i = s
+                .instances
+                .iter()
+                .find(|i| i.reference.key.object_id == id)
+                .unwrap();
+            (
+                (
+                    i.state.ready_at(RuleLevel::Hypotheses),
+                    i.state.hypotheses().to_vec(),
+                    format!("{:?}", i.state),
+                ),
+                i.enable.as_ref().unwrap().enabled,
+                format!("{:?}", i.collision),
+            )
+        })
+    };
+    let (off, on) = (states(false), states(true));
+    for (id, (state, start, _)) in [0x822, 0x823, 0x825].iter().zip(&off) {
+        assert!(!state.0, "{id:x}");
+        assert_eq!(*start, None);
+    }
+    assert_eq!((on[0].1, on[1].1, on[2].1), (Some(false), Some(true), None));
+    for k in 0..2 {
+        assert!(on[k].0 .0);
+        assert!(on[k].0 .1.contains(&ENABLE_CHILD_FLAG_AGREES));
+        // Collision readiness is not the render switch's.
+        assert_eq!(on[k].2, off[k].2);
+    }
+    assert_eq!(on[2], off[2]);
 }

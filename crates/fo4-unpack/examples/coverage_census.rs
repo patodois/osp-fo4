@@ -1280,7 +1280,7 @@ fn load(c: &mut Census, text: &str) -> AnyResult<()> {
 
 fn run() -> AnyResult<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
-    const USAGE: &str = "coverage_census MANIFEST OUT_DIR (--all [--every N] [--limit N] [--shard K/N] | --view CELL_EDITOR_ID [--around N] | --views FILE [--mark FILE] | --merge DIR...) [--times S[,S...]] [--clock-emissive-multiple] [--clock-emissive-colour] [--clock-falloff] [--clock-translation] [--clock-rotation] [--clock-rotation-xyz] [--clock-scale]";
+    const USAGE: &str = "coverage_census MANIFEST OUT_DIR (--all [--every N] [--limit N] [--shard K/N] | --view CELL_EDITOR_ID [--around N] | --views FILE [--mark FILE] [--render-child-flag-agrees] | --merge DIR...) [--times S[,S...]] [--clock-emissive-multiple] [--clock-emissive-colour] [--clock-falloff] [--clock-translation] [--clock-rotation] [--clock-rotation-xyz] [--clock-scale]";
     if args.len() < 3 {
         return Err(USAGE.into());
     }
@@ -1291,6 +1291,7 @@ fn run() -> AnyResult<()> {
     let mut view = None;
     let mut views = None;
     let mut marks = BTreeSet::new();
+    let mut render_agrees = false;
     let mut around = 0u32;
     let mut every = 32u64;
     let mut limit = u64::MAX;
@@ -1350,6 +1351,7 @@ fn run() -> AnyResult<()> {
                 }
             }
             "--all" => all = true,
+            "--render-child-flag-agrees" => render_agrees = true,
             "--view" => view = Some(rest.next().ok_or(USAGE)?.clone()),
             "--views" => {
                 let text = std::fs::read_to_string(rest.next().ok_or(USAGE)?)?;
@@ -1394,7 +1396,7 @@ fn run() -> AnyResult<()> {
         .count()
         != 1
         || (views.is_some() && clock.times.len() != 1)
-        || (views.is_none() && !marks.is_empty())
+        || (views.is_none() && (!marks.is_empty() || render_agrees))
     {
         return Err(USAGE.into());
     }
@@ -1426,13 +1428,23 @@ fn run() -> AnyResult<()> {
     if clock.switches.any() {
         loader.set_clock_switches(clock.switches, &cache);
     }
+    // `xesp_child_flag_agrees_chain_v1` for render readiness (off by
+    // default; with --views only).
+    if render_agrees {
+        loader.set_render_child_flag_agrees(true);
+    }
     if let Some(views) = &views {
         let mut total = Census {
             marks: marks.clone(),
             ..Census::default()
         };
-        let mut text = String::from(
-            "# Render readiness of the views a run loads (coverage_census --views)\n\nEach view loaded as the viewer loads it (the cell, and with around N the exterior cells about it), the viewer's draw list built with the placed actors at the hypotheses level; outcomes as in coverage-census.txt. Shares of the omitted placements by count and by the area proxy (the largest face of the base's OBND box times the scale squared).\n\n",
+        let mut text = format!(
+            "# Render readiness of the views a run loads (coverage_census --views)\n\n{}Each view loaded as the viewer loads it (the cell, and with around N the exterior cells about it), the viewer's draw list built with the placed actors at the hypotheses level; outcomes as in coverage-census.txt. Shares of the omitted placements by count and by the area proxy (the largest face of the base's OBND box times the scale squared).\n\n",
+            if render_agrees {
+                "With --render-child-flag-agrees (xesp_child_flag_agrees_chain_v1 in render readiness). "
+            } else {
+                ""
+            }
         );
         for (k, (key, around, what)) in views.iter().enumerate() {
             let mut cs = vec![Census {

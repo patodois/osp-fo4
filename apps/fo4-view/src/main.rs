@@ -61,6 +61,7 @@ fn load_scene(
         s.timeline.as_ref().zip(prepared.as_ref()),
         (s.light, s.light_assumptions),
         play_live,
+        s.drawing,
     )?;
     // `--exposure-eye` with the caller's eye and look (a timeline frame's
     // camera is measured in `load::cell`), the reference frame's camera as

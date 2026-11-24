@@ -934,3 +934,11 @@ What it shows (every switch off):
   its behaviour graph and, but for the housing, for skinned shapes, particle systems, effect and visibility
   controllers and record fields. The exterior elevator platform and one more are not placements of any
   view (not loaded about the walker's cell).
+
+With `--render-child-flag-agrees` (the loader's render readiness reads an enable chain left open only by
+agreeing own flags, `xesp_child_flag_agrees_chain_v1`; `Loader::set_render_child_flag_agrees`, off by
+default) only the interior of 730 s changes: 826 → 733 omitted, 59 more drawn under hypotheses (the room's
+walls, raised floors, stairs, vents, crates, consoles, fixtures and light beams) and 34 more hidden through
+the chain (their chains start them disabled: pieces of the same kinds under other bases, which the window
+shows only if the run enables them). The other ten views are unchanged. The viewer's switch of the same reading is
+`--draw-child-flag-agrees`; the window run is in `spec/play.md` (The window).

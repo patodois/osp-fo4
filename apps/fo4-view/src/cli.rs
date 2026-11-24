@@ -20,6 +20,7 @@ usage:
               [--play-shots-between FROM TO EVERY]...]
              [--timeline-cast [the cast readings of a --timeline frame]]
              [the light switches of --headless]]]
+           [--draw-child-flag-agrees]
       Window with a free-fly camera: W/A/S/D move, Shift moves faster, hold the
       left mouse button and move the mouse to look, R returns to the start pose.
       The title bar shows the mode, the speed and the position.
@@ -126,6 +127,13 @@ usage:
       switches of --headless light the cells the window loads and draw the
       sky, as the headless frame does; --exposure-eye is measured once per
       cell the window loads, from the walker's eye then.
+      --draw-child-flag-agrees (off by default; the window and --headless)
+      draws a placed reference whose enable chain is left open only by
+      records below its root carrying their own initially disabled flag,
+      each agreeing with the chain's start state, as its chain decides
+      (pending rule xesp_child_flag_agrees_chain_v1, as the play options'
+      --play-collision-child-flag-agrees reads it for collision): drawn when
+      the chain starts it enabled, hidden through the chain otherwise.
   fo4-view MANIFEST DATA_DIRECTORY CELL_EDITOR_ID [level] --headless
            --eye X,Y,Z --look X,Y,Z --out build/FRAME.png [--tags build/TAGS.bin]
            [--size WxH] [--backface-cull] [--terrain] [--around N] [--walk]
@@ -302,6 +310,19 @@ pub struct Scene {
     /// references whose drawn shapes follow their parts' motion (each
     /// draw's node chain kept, `BuildOptions::chains`); empty otherwise.
     pub play_platforms: Vec<fo4_plugin::FormKey>,
+    /// The drawn step's readings of what the cell's draw holds, each behind
+    /// its own switch (off by default).
+    pub drawing: Drawing,
+}
+
+/// The drawn step's readings of what a loaded cell's draw holds (all off
+/// by default: the draw as before).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Drawing {
+    /// `--draw-child-flag-agrees` (`xesp_child_flag_agrees_chain_v1`): the
+    /// loader's render readiness reads an enable chain left open only by
+    /// agreeing own flags (`Loader::set_render_child_flag_agrees`).
+    pub child_flag_agrees: bool,
 }
 
 /// Default of `--scene-memory`: a viewer bound, not a claim about the game.
@@ -590,6 +611,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
     let mut play_switches = crate::play_switches::Switches::default();
     let (mut play_input, mut play_shots, mut play_shot_every) = (None, None, None);
     let mut shots_between: Vec<[f64; 3]> = Vec::new();
+    let mut drawing = Drawing::default();
     let mut rest = args[3..].iter();
     while let Some(arg) = rest.next() {
         if clock.set_flag(arg) || light.set_flag(arg) || pose.set_flag(arg) {
@@ -663,6 +685,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             "--timeline-target-rotation" => target_rotation = true,
             "--actor-missing-bone-bind" => missing_bones_at_bind = true,
             "--timeline-child-flag-agrees" => child_flag_agrees = true,
+            "--draw-child-flag-agrees" => drawing.child_flag_agrees = true,
             "--timeline-dead-lying" | "--timeline-dead-left-out" => {
                 if dead != fo4_scene::timeline::Dead::Standing {
                     return Err("one of --timeline-dead-lying and --timeline-dead-left-out".into());
@@ -900,6 +923,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
         light_assumptions,
         play_cast,
         play_platforms: Vec::new(),
+        drawing,
     };
     // The window's scripted play mode takes the light switches too;
     // `--exposure-eye` there is measured once per cell the window loads,
@@ -1368,6 +1392,14 @@ mod tests {
             panic!()
         };
         assert!(scene.light.exposure_eye && scene.light.cell);
+        // The drawn step's switch: off by default, on when given.
+        assert!(!scene.drawing.child_flag_agrees);
+        let Command::Window { scene, .. } =
+            parse(&args(&format!("{base} --draw-child-flag-agrees"))).unwrap()
+        else {
+            panic!()
+        };
+        assert!(scene.drawing.child_flag_agrees);
         for bad in [
             // The cast readings need --timeline-cast (and the scripted run).
             format!("{base} --actor-start-clip"),
@@ -1409,6 +1441,7 @@ mod tests {
                     light_assumptions: fo4_scene::light::Assumptions::default(),
                     play_cast: None,
                     play_platforms: Vec::new(),
+                    drawing: Drawing::default(),
                 },
                 fly: DEFAULT_FLY,
                 walk: false,
