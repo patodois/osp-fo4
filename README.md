@@ -251,6 +251,32 @@ Without it the models that need the clock are left out and every frame is
 as before ([the game clock](spec/controller-clock.md)); it is refused with
 the moving grid and with `--path`.
 
+#### Play the opening
+
+With `--features script-event` the window plays the opening's quests from
+the keyboard and mouse (`--play-keys`, [play](spec/play.md#the-persons-input---play-keys)):
+W/A/S/D move, Shift runs, hold the left button and move the mouse to turn
+and look, E activates what the window's centre meets (the title bar says
+what that is), P pauses, Escape ends the input (the run finishes and writes
+its outputs). The switches the opening needs are kept in
+`apps/fo4-view/presets/play-opening.args`; what names the game's records
+(the start cell and pose, the opening's new-game switches file, the named
+platforms) the repository does not keep, so it goes in a local argument
+file of your own, given first, one argument a line:
+
+```sh
+cd apps/fo4-view && cargo build --release --features script-event && cd ../..
+target/fo4-view/release/fo4-view --args opening.local.args \
+  --args apps/fo4-view/presets/play-opening.args --play-record build/play/me.input
+```
+
+`opening.local.args` holds the manifest, the data folder and the start cell,
+`--eye` and `--look`, `--play-run FILE` and `--play-out DIR`, and the
+`--play-elevator` and `--play-elevator-also-with` references.
+`--play-record` writes your commands in `play_run`'s input format:
+`play_run` with that file, the preset's play options and the same new-game
+switches replays the same run.
+
 The comparison prints coverage agreement and colour differences; it defines
 no pass threshold.
 

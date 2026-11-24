@@ -608,6 +608,99 @@ recorded run's next stage (the next main quest's 20, at 1,005 s, from the
 settlement's trigger) is not reached. This is the whole of M3's headless
 walk: from the start to the exterior.
 
+## The person's input (`--play-keys`)
+
+`fo4-view --play-run ... --play-keys` drives the same walker (`fo4_play::walker::Walker`), built by the same
+play options (`fo4_play::options::Play::walker`), on the same run thread as `--play-input FILE`; only where the
+walker's commands come from differs. A scripted input is a list the walker reads ahead in; a person's commands
+arrive while the walker runs (`walker::Arrivals`, `Walker::with_arrivals`). The window turns the keyboard and
+the mouse into the scripted input's own commands (`fo4_play::input::Command`) at the play clock's second of the
+frame they happen in, and the walker waits for them only as far as its next step needs to know them:
+
+- before a tick ending at `t + tick` it waits until every command up to then is known, so the tick is cut at a
+  command's second exactly as with a file and never at a frame's end;
+- before standing it waits until every command up to `t + S` is known, where `S` is the longest standing slice,
+  `--play-stand SECONDS` (a play option, a policy of the play mode, no game claim, off by default): a standing
+  slice then lasts `S` at most and the walker looks no further than `S` ahead for a moving platform before it
+  stands. A person's next command is not known beyond the present, so `--play-keys` needs `--play-stand`; give
+  `play_run` the same value to replay. Without `--play-stand` the walker is as before (a standing slice runs to
+  the next command), so every earlier output is unchanged;
+- the window stamps a frame's commands at the second the walker's clock reaches with that frame (`play::Gate`:
+  the horizon, or the horizon and what a busy run is owed), under the lock that moves the clock, so every
+  command lies after every second the walker was told it knows; in a frame that adds no time (paused, a cell
+  loading) no command is sent and the person's state waits for the next frame that does.
+
+The key map (viewer policy, no rule; `crate::person` in the viewer): W, S, A, D hold forward, back, left, right
+(left and right strafe); Shift holds run; the mouse turns and looks up or down while the left button is held, as
+in the viewer's walk mode (`--radians-per-pixel`, a viewer setting), each frame's look sent as `face` and `pitch`
+(absolute degrees, pitch within 89); E sends `activate`, after the frame's look; Escape sends `end`; P pauses
+(no command: the window's clock stops, so the run and the walker wait). The walker has no jump, so no key jumps;
+`turn` and `toward` have no key (the person's mouse gives absolute headings; `toward` is a scripted steering
+aid). The camera looks where the person looks at once and stands at the walker's eye, which the walker shows the
+window at each wait (each tick while it walks).
+
+On screen (the title bar, viewer policy): the run's second, the last stage and the lines being spoken (the
+subtitles, as before), then `E:` and what the activation key would meet from the walker's eye now
+(`Walker::aim`, the activation's own ray read without acting: the base record's type and editor ID and the
+reference's key, or "nothing within reach"; read at each slice), `paused` while paused, and after Escape that
+the run goes on to its end. No crosshair is drawn: the activation's ray is the window's centre. No menus (M6).
+
+Quitting: Escape is the input's end. The walker stands to that second, the run goes on to its end as `play_run`'s
+does after an input's end, writes its outputs, and the window closes. Closing the window instead stops the run
+where it is (outputs as they stand); the recording then has no `end` and its replay is not the same past the
+last command.
+
+### The recording (`--play-record FILE`) and what "the same" means
+
+`--play-record FILE` writes each command the walker takes, as it takes it, in the scripted input's format
+(`Event`'s text: numbers written as Rust writes an `f64`, the shortest text that reads back to the same value,
+so every second and degree reads back bit for bit), after three comment lines naming the window's command line.
+`play_run` with that file and the same play options (`--play-stand` among them) and new-game switches gives the
+same run: the walker's ticks are on its own grid from the start second, cut at the commands' seconds, and those
+seconds are the recorded ones, so the replay takes the same ticks, joins the same slices and gives the run the
+same points, seconds and activations; the run is a function of its slices (what the window reads from it,
+`View`, changes nothing). What is the same: every output file byte for byte (track, census, names, the two
+next-blocker files, the timeline) and `play.txt` but its timing lines. What is not: the frames' timing itself
+(the play clock's second of a command is a frame's end, not a tick's: the walker cuts its tick there, in the
+session and in the replay alike), the wall clock, and what the window drew. Checked by a test
+(`walker::tests::commands_that_arrive_drive_the_walker_as_their_recording_does`: frames of uneven length and
+busy stretches, looks while walking, keys, run, strafe, activations, the end; the walker fed as they arrive and
+the walker fed the recording give the same slices bit for bit) and by the window runs below.
+
+### The synthetic person (`--play-keys-from FILE`, test and measurement only)
+
+A file of timed events at seconds of the window's play clock (`key W|A|S|D|E|P|Escape|Shift down|up|tap`,
+`button down|up|tap`, `mouse DX DY`, and four that read the window as a person does: `turn-to DEGREES` and
+`pitch-to DEGREES` move the mouse with the left button held until the view has that heading or pitch,
+`steer X Y` holds W and moves the mouse each frame toward the point from the walker's feet as drawn, letting W go
+near it, and `aim-at X Y Z` lets W go and keeps the view on a point from the walker's eye). Its events are timed
+by the play clock the window stamps commands with, which stands while a busy run is owed its most (timed by the
+window's frames instead, its events came early while the walker's world was built again, and it lost the walk
+at 313 s). The window writes them as the key, button and motion messages a keyboard and a mouse send, before the
+input systems read them (`gpu::person_inject`, before `bevy::input::InputSystems`), so they go through the key
+map as a person's presses do; held keys are pressed again each frame. It is an aid for checks and measurements,
+not a way to play. A scripted input becomes one by `toward` → `steer`, `face` → `turn-to`, `pitch` →
+`pitch-to`, `activate` → a tap of E, `end` → a tap of Escape; a tap ends a frame's events, so what follows it at
+the same second comes a frame later. For the opening an activation became what a person does: look at the point
+the scripted activation's ray met (`aim-at`), E 0.1 s later, the look back 0.15 s later.
+
+**The opening played by the synthetic person** (the hands step, `k7` in its notes; release build, audio off,
+the drawn step's window switches with `--play-keys --play-stand 0.1`, the scripted input of the exit step made
+synthetic as above): 7,070 commands reached the walker (looks each frame while steering, keys, two activations,
+the end at 1,015 s); **276 of 276 stages**, the scripted window run's, 188 at the same second, the others from
+0.39 s earlier to 0.19 s later, three in another order where their seconds shifted; the walker's track within 65
+units of the scripted walker's at every tenth second, and it stops where the scripted walk stops (the cliff face
+past the vault's exterior, x about -83,777). 1,228 s of wall clock; 59.97 fps median (60.0 in every stretch
+between loads, first percentile 54.6 to 56.1), lowest 1.27 fps at a load; peak resident memory 2.50 GB. The
+recording replayed by `play_run` with the same options: every output file byte for byte (track, census, names,
+both next-blocker files, timeline) and `play.txt` but its timing lines. An earlier whole session (`k6`) whose
+synthetic person turned and pitched to the scripted degrees at 190 s instead of looking at the activator, about
+25 units behind the scripted walker, met nothing within reach: the platform outside the vault was never raised,
+the walker stood at its edge, 151 of 276 stages; its replay was byte for byte the same too. Where the synthetic
+person differs from the scripted input it is a person's: it acts at a frame's end, a frame or two late, and
+aims by eye.
+
+
 ## What the play mode does not do yet
 
 - The elevators ride only those the caller names (`--play-elevator`), headless and in the scripted window;
@@ -620,11 +713,13 @@ walk: from the start to the exterior.
 - Plain doors: no collision is placed for any door, so none blocks the walker; the open state is not read.
 - Moving collision with a node (an animated door, a platform) is modelled only for the references the caller
   names (above); the live world moves only what the run moves.
-- No person has driven the window from the keyboard; the scripted window has played the opening (the window,
-  looks and moving steps). The room the run seats the player in at 730 s holds the walker but is not drawn
-  (render readiness of its agreeing chains, not read).
+- A person's keys drive `play_run`'s walker in the window (`--play-keys`, the hands step), checked so far by
+  the synthetic person and the unit test, not yet by a person at the keyboard. The run's caller assumptions
+  (`--assume-*` with their seconds, the opening's new-game switches) are timed for the scripted input's pace: a
+  person who walks the opening at another pace meets them at other places.
 - The reach of an activation, the walker's speed and its tick are the caller's; the activation key and the
-  crosshair are the eye's ray (no prompt, no activation distance from the data).
+  crosshair are the eye's ray (no prompt, no activation distance from the data); no crosshair is drawn (the
+  title bar names what E would activate).
 - Sound, menus, combat, the player's animation events: still the caller's.
 - Terminal menus, putting items into a container and actor values: the run's readings past the museum
   (`spec/vm.md`, Past the museum) take them from the command line (`--assume-terminal-item`,
