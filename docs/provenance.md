@@ -1039,3 +1039,27 @@ reference's alpha is a fade of its drawing only, and that a transform
 interpolator without keys holds its node at its own transform. No public
 page was requested; no editor, editor source or definition file, other
 implementation, game executable or game run was opened or searched for.
+
+The menus step's interface reader (`fo4-ui`, [spec/ui.md](../spec/ui.md))
+takes its format facts from Adobe's public SWF File Format Specification
+(version 19: the file header, the tag header, `DefineSprite`, shape records
+and the two fill styles of an edge, placement matrices and colour
+transforms) and from Adobe's public AVM2 overview (multiname kinds and the
+stack effect of the property, call and push instructions), cited with their
+scope in the spec; neither was fetched during the step (no network), both
+are cited from the published documents. Parsing is done by the `swf` crate
+0.4.0 of the Ruffle project (MIT OR Apache-2.0, recorded in
+[THIRD_PARTY.md](../THIRD_PARTY.md)) used as a dependency; the crate's
+public types and its documentation were read to call it, and no Ruffle code
+was copied. The tag walk, the bounds, the static reading of the host
+interface (the host-filled member rule, the look-back), the census and the
+scanline fill are this project's own. The census and host reading command
+lines: `ui_census MANIFEST OUT_DIR` and `ui_host MANIFEST OUT_DIR 'dialogue
+screen=<the dialogue movie>' 'heads-up screen (subtitles)=<the heads-up
+movie>@subtitle'` (paths in the step's notes). Recognised from prior
+general knowledge and kept as pending rules or stated as such: that the
+game's interface player lets the host call a movie's methods and set its
+members by name, that the subtitles are shown by the heads-up screen, and
+that a dialogue line stores a short prompt shown on a choice. No interface
+source repository, decompiled interface, other player or engine, game
+executable or game run was opened or searched for.

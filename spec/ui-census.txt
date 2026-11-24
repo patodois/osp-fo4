@@ -1,0 +1,173 @@
+# Interface movie census (ui_census; counts only, no names)
+movies	344
+
+## action blocks
+Abc blocks	672
+Abc blocks lazy true	672
+Abc blocks on the root timeline true	672
+Abc bytes	4259463
+movie kinds {Abc}	98
+movie kinds {}	246
+
+## header
+background stored: false	6
+background stored: true	338
+body size 1-16 KiB	52
+body size 1-8 MiB	3
+body size 128 KiB-1 MiB	66
+body size 16-128 KiB	223
+compression Zlib	344
+declared length equals the body: true	344
+file attributes 0x08	102
+file attributes 0x18	236
+file attributes 0x19	6
+frame rate 24 (8.8 raw 6144)	52
+frame rate 28 (8.8 raw 7168)	1
+frame rate 30 (8.8 raw 7680)	194
+frame rate 32 (8.8 raw 8192)	97
+root frames 1	185
+root frames 10-99	102
+root frames 100-999	57
+signature CWS	344
+stage 10000 x 10000 twips, origin 0, 0	1
+stage 11000 x 8000 twips, origin 0, 0	244
+stage 16520 x 14000 twips, origin 0, 0	23
+stage 17520 x 14000 twips, origin 0, 0	7
+stage 2000 x 2000 twips, origin 0, 0	1
+stage 25600 x 14400 twips, origin 0, 0	43
+stage 25600 x 16000 twips, origin 0, 0	1
+stage 3000 x 5000 twips, origin 0, 0	17
+stage 32680 x 14000 twips, origin 0, 0	6
+stage 6000 x 9500 twips, origin 0, 0	1
+stored size 1-16 KiB	74
+stored size 1-8 MiB	2
+stored size 128 KiB-1 MiB	38
+stored size 16-128 KiB	228
+stored size <1 KiB	2
+version 10	6
+version 15	50
+version 17	284
+version 25	1
+version 32	3
+
+## movies
+add-on archive, winner	40
+interface archive, winner	304
+
+## outcome
+bytes after the end tag: 0	344
+end tag found: true	344
+read, every tag parsed	344
+
+## shapes
+curved edges	3622389
+fill styles bitmap	56
+fill styles focal	2
+fill styles linear	152
+fill styles radial	180
+fill styles solid	28382
+line styles	1922
+morph shapes (total)	50
+shape version 1	9258
+shape version 2	890
+shape version 3	995
+shape version 4	578
+shapes (total)	11721
+straight edges	4672161
+style changes	507754
+
+## sprites
+frame labels (total)	1429
+named placements (total)	2804
+placements (total)	33555
+sprite frames 1	2205
+sprite frames 10-99	421
+sprite frames 100-999	148
+sprite frames 2	308
+sprite frames 3	27
+sprite frames 4	21
+sprite frames 5-9	92
+sprite tags 1	100
+sprite tags 10-99	464
+sprite tags 100-999	238
+sprite tags 1000-9999	1
+sprite tags 2	1428
+sprite tags 3	280
+sprite tags 4	177
+sprite tags 5-9	534
+sprites (total)	3222
+sprites per movie 0	122
+sprites per movie 1	78
+sprites per movie 10-99	33
+sprites per movie 100-999	8
+sprites per movie 2	37
+sprites per movie 3	26
+sprites per movie 4	16
+sprites per movie 5-9	24
+
+## symbols
+class links (total)	1250
+class links per movie 0	246
+class links per movie 1	35
+class links per movie 10-99	23
+class links per movie 100-999	1
+class links per movie 2	9
+class links per movie 3	6
+class links per movie 4	7
+class links per movie 5-9	17
+exports (total)	0
+exports per movie 0	344
+import sources per movie 0	281
+import sources per movie 1	63
+import tags (total)	63
+imports (total)	0
+imports per movie 0	344
+root class linked: false	305
+root class linked: true	39
+
+## texts and fonts
+font version 3	28
+glyphs in fonts of version 3	12050
+static texts	2
+text fields	752
+text fields marked HTML (flag 0x0200)	487
+text fields with initial text	724
+text fields without a font id	683
+
+## tags (code, name, count, body bytes, movies)
+1	ShowFrame	57140	0	344
+2	DefineShape	9258	22435740	313
+9	SetBackgroundColor	344	1032	344
+11	DefineText	2	1076	2
+14	DefineSound	3	2676	3
+15	StartSound	9	27	3
+20	DefineBitsLossless	46	689821	5
+22	DefineShape2	890	2639354	98
+26	PlaceObject2	32810	322960	337
+28	RemoveObject2	2244	4488	177
+32	DefineShape3	995	2970726	87
+36	DefineBitsLossless2	11	1507750	8
+37	DefineEditText	752	103872	70
+39	DefineSprite	3222	520354	222
+41	ProductInfo	6	156	6
+43	FrameLabel	1429	14254	58
+45	SoundStreamHead2	536	2144	3
+46	DefineMorphShape	50	13953	9
+63	DebugId	5	80	5
+64	EnableDebugger2	9	194	9
+65	ScriptLimits	6	24	6
+69	FileAttributes	344	1376	344
+70	PlaceObject3	745	15646	32
+71	ImportAssets2	63	1177	63
+73	DefineFontAlignZones	28	120584	9
+74	CsmTextSettings	598	7176	63
+75	DefineFont3	28	1828431	9
+76	SymbolClass	98	28082	98
+77	Metadata	242	308215	242
+78	DefineScalingGrid	14	129	12
+82	DoAbc2	672	4280089	98
+83	DefineShape4	578	449103	49
+86	DefineSceneAndFrameLabelData	338	3741	338
+88	DefineFontName	28	2300	9
+
+## refused tags

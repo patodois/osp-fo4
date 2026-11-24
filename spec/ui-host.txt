@@ -1,0 +1,49 @@
+# Host interface, static reading (ui_host; counts and kinds only)
+
+## dialogue screen
+ABC blocks	1
+class links	8
+classes	18
+classes the host talks to (declaring a host-filled member)	1
+distinct host functions called through a host-filled member	3
+entry points by parameter count: 0	7
+entry points by parameter count: 2	4
+host call sites through a host-filled member	3
+host-filled members, type Object	1
+method bodies	272
+method bodies refused part-way	0
+other classes: public methods	32
+placements with an instance name	17
+property call sites	300
+property call sites whose receiver the look-back cannot name	4
+root class: public methods	0
+root class: public properties (slots, getters, setters)	1
+text fields	2
+their public instance methods (own and inherited in the block)	11
+
+## heads-up screen (subtitles)
+ABC blocks	1
+class links	177
+classes	198
+classes the host talks to (declaring a host-filled member)	2
+distinct host functions called through a host-filled member	1
+entry points by parameter count: 0	2
+entry points by parameter count: 2	3
+focus: components	1
+focus: placement chains from the root, 2 names deep	1
+focus: public Setter members	1
+focus: public text field members	2
+focus: their text written by the block's code	0
+focus: their uses in other classes' code	0
+host call sites through a host-filled member	1
+host-filled members, type Object	1
+method bodies	1265
+method bodies refused part-way	0
+other classes: public methods	70
+placements with an instance name	268
+property call sites	887
+property call sites whose receiver the look-back cannot name	8
+root class: public methods	2
+root class: public properties (slots, getters, setters)	10
+text fields	38
+their public instance methods (own and inherited in the block)	5

@@ -340,6 +340,7 @@ consulted, with one attributed exception described in
 | `fo4-save` | Read-only save file (`.fos`) reader: container to the last byte, change-form table, form references; census and dump examples. |
 | `fo4-audio` | Read-only sound file reader: RIFF `WAVE` and `XWMA` and the voice container to the last byte, PCM decoding, WMA-family packets counted but not decoded; census and dump examples. |
 | `fo4-nav` | Navigation meshes (`NAVM` and its `NVNM` geometry, `NAVI`) read to the last byte, consistency census, and this project's own path search over triangles; census and path examples. |
+| `fo4-ui` | Read-only interface movie (SWF) reader over the `swf` crate: census, a static reading of a screen's host interface, a headless first frame. |
 | `fo4-vm` | Interpreter over `fo4-pex` under pending rules, recording host, VMAD binding, `script_run` and `vm_checks`. |
 | `fo4-scene` | Scene assembly, rule levels and the collision of a cell. |
 | `fo4-walk` | Walking controller over the collision of a cell. |
