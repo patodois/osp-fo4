@@ -12,6 +12,7 @@ mod live;
 mod load;
 mod path;
 mod play;
+mod play_switches;
 mod scene;
 mod script;
 mod stream;
@@ -365,6 +366,9 @@ fn run() -> AnyResult<()> {
                 ..
             } = loaded;
             drop(build);
+            // A scripted run (`--play-input`) walks with play_run's walker
+            // on the run's thread: the window only looks from its eye.
+            let world = world.filter(|_| !play.as_ref().is_some_and(|p| p.scripted()));
             let start = fly::FlyState::from_eye_look(s.eye, s.look)?;
             gpu::window(
                 gpu,

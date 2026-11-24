@@ -237,13 +237,17 @@ pub fn cell(
         loader.set_clock_switches(options.clock, &budget);
     }
     let mut cell_rule = None;
-    let mut scene = match timeline {
+    // CELL as a record key (`plugin:XXXXXXXX`, as the timeline writes
+    // keys): that cell (the play mode's change of space loads cells so).
+    let by_key = fo4_scene::timeline::parse_key(cell);
+    let mut scene = match (timeline, by_key) {
         // CELL -: the cell the player's track is in at the second.
-        Some((_, p)) if cell == "-" => {
+        (Some((_, p)), _) if cell == "-" => {
             let (key, rule) = fo4_scene::timeline::player_cell(&store, &p.frame, &budget)?;
             cell_rule = rule;
             scoped(&budget, |b| loader.cell(&key, b))?
         }
+        (_, Some(key)) => scoped(&budget, |b| loader.cell(&key, b))?,
         _ => scoped(&budget, |b| loader.by_editor_id(cell, b))?,
     };
     // --around N: the placed references of the exterior cells within N grid

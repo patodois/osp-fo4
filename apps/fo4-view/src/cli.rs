@@ -14,7 +14,9 @@ usage:
            [--clock-translation] [--clock-rotation] [--clock-rotation-xyz] [--clock-scale]
            [--frame-log build/FRAMES.tsv] [--script-path X,Y;... [--script-shots build/NAME]]
            [--play-run SWITCHES_FILE --play-out DIR [--play-reach UNITS] [--play-pick-bounds]
-            [--play-live-world [--play-nowait]]]
+            [--play-live-world [--play-nowait]]
+            [--play-input INPUT_FILE [play_run's play options...]
+             [--play-shots DIR --play-shot-every SECONDS]]]
       Window with a free-fly camera: W/A/S/D move, Shift moves faster, hold the
       left mouse button and move the mouse to look, R returns to the start pose.
       The title bar shows the mode, the speed and the position.
@@ -95,6 +97,18 @@ usage:
       (disabled references hidden and passed through, initially disabled
       ones the run enables shown, moved ones moved; --play-nowait reads the
       NoWait forms as the plain natives).
+      --play-input FILE drives the run with play_run's walker and that
+      scripted input instead of the keyboard and mouse, with every play_run
+      play option (--walk-speed, --play-slice, --play-load-doors,
+      --play-follow-grid, --play-elevator..., --play-player-moveto, ...;
+      without --play-input only the four above are taken). The run waits
+      for the window's clock; the camera stands at the walker's eye, and
+      when the walker's walking world is built about another cell (a load
+      door, a MoveTo, a sit, a grid square left) the window loads and draws
+      that cell, the run waiting meanwhile. --play-shots DIR
+      --play-shot-every SECONDS writes the window's frame as a PNG into DIR
+      (under ./build, as every output) each time the run passes a multiple
+      of SECONDS; the window closes when the run ends.
   fo4-view MANIFEST DATA_DIRECTORY CELL_EDITOR_ID [level] --headless
            --eye X,Y,Z --look X,Y,Z --out build/FRAME.png [--tags build/TAGS.bin]
            [--size WxH] [--backface-cull] [--terrain] [--around N] [--walk]
@@ -348,17 +362,19 @@ pub struct Play {
     pub run: String,
     /// Where the run writes its outputs when the window closes.
     pub out: String,
-    /// How far the activation reaches from the eye (`--play-reach`, the
-    /// caller's number; without it the key does nothing).
-    pub reach: Option<f64>,
-    /// The activation also meets the object bounds of references with no
-    /// collision (`--play-pick-bounds`, `play_activate_object_bounds_v1`).
-    pub bounds: bool,
-    /// The walking world and the drawn references follow the run's state
-    /// (`--play-live-world`, `play_live_collision_follows_run_v1`), the
-    /// NoWait forms read as the plain natives with `--play-nowait`.
-    pub live: bool,
-    pub nowait: bool,
+    /// `play_run`'s play options (`crate::play_switches`). With the
+    /// keyboard only the activation's reach (`--play-reach`, the caller's
+    /// number; without it the key does nothing) and object bounds
+    /// (`--play-pick-bounds`, `play_activate_object_bounds_v1`) and the
+    /// live world (`--play-live-world`,
+    /// `play_live_collision_follows_run_v1`; `--play-nowait`) apply.
+    pub switches: Box<crate::play_switches::Switches>,
+    /// `--play-input FILE`: the run driven by `play_run`'s walker and this
+    /// scripted input instead of the keyboard and mouse.
+    pub input: Option<String>,
+    /// `--play-shots DIR --play-shot-every SECONDS`: the window's frame
+    /// written each time the scripted run passes a multiple of SECONDS.
+    pub shots: Option<(String, f64)>,
 }
 
 /// Measurement aids of the window (`--frame-log`, `--script-path`,
@@ -442,7 +458,7 @@ fn not_negative(text: &str) -> Result<f64, String> {
         .ok_or_else(|| format!("ExpectedSecondsNotNegative: {text}"))
 }
 
-fn finite(text: &str) -> Result<f64, String> {
+pub(crate) fn finite(text: &str) -> Result<f64, String> {
     text.parse::<f64>()
         .ok()
         .filter(|v| v.is_finite())
@@ -539,11 +555,21 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
     let mut aim = fo4_scene::timeline::Aim::Track;
     let mut light = fo4_scene::light::Switches::default();
     let mut light_assumptions = fo4_scene::light::Assumptions::default();
-    let (mut play_run, mut play_out, mut play_reach, mut play_bounds) = (None, None, None, false);
-    let (mut play_live, mut play_nowait) = (false, false);
+    let (mut play_run, mut play_out) = (None, None);
+    let mut play_switches = crate::play_switches::Switches::default();
+    let (mut play_input, mut play_shots, mut play_shot_every) = (None, None, None);
     let mut rest = args[3..].iter();
     while let Some(arg) = rest.next() {
         if clock.set_flag(arg) || light.set_flag(arg) || pose.set_flag(arg) {
+            continue;
+        }
+        // `play_run`'s play options, read by the one shared structure.
+        let here = &args[args.len() - rest.len() - 1..];
+        let taken = play_switches.take(here)?;
+        if taken > 0 {
+            if taken > 1 {
+                rest.nth(taken - 2);
+            }
             continue;
         }
         let mut value = || rest.next().ok_or_else(usage);
@@ -581,16 +607,9 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             "--script-event" => script_event = Some(crate::vm_event::parse(value()?)?),
             "--play-run" => play_run = Some(value()?.clone()),
             "--play-out" => play_out = Some(value()?.clone()),
-            "--play-reach" => {
-                let r = finite(value()?)?;
-                if r <= 0.0 {
-                    return Err("--play-reach takes a positive distance".into());
-                }
-                play_reach = Some(r);
-            }
-            "--play-pick-bounds" => play_bounds = true,
-            "--play-live-world" => play_live = true,
-            "--play-nowait" => play_nowait = true,
+            "--play-input" => play_input = Some(value()?.clone()),
+            "--play-shots" => play_shots = Some(value()?.clone()),
+            "--play-shot-every" => play_shot_every = Some(positive(value()?)?),
             "--timeline" => timeline_file = Some(value()?.clone()),
             "--at" => timeline_at = Some(not_negative(value()?)?),
             "--eye-height" => eye_height = Some(finite(value()?)?),
@@ -809,27 +828,35 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
         return Err("--actor-clip poses the drawn actors: not with --no-actors".into());
     }
     let grid_moves = walk && scene.terrain && scene.around > 0;
+    let shots = match (play_shots, play_shot_every) {
+        (Some(dir), Some(every)) => Some((dir, every)),
+        (None, None) => None,
+        _ => return Err("--play-shots DIR and --play-shot-every SECONDS go together".into()),
+    };
     let play = match (play_run, play_out) {
         (Some(run), Some(out)) => Some(Play {
             run,
             out,
-            reach: play_reach,
-            bounds: play_bounds,
-            live: play_live,
-            nowait: play_nowait,
+            switches: Box::new(play_switches),
+            input: play_input,
+            shots,
         }),
-        (None, None) if play_reach.is_none() && !play_bounds && !play_live && !play_nowait => {
-            None
-        }
+        (None, None) if !play_switches.any() && play_input.is_none() && shots.is_none() => None,
         _ => {
             return Err(
-                "--play-run FILE needs --play-out DIR; --play-reach, --play-pick-bounds, --play-live-world and --play-nowait need --play-run"
+                "--play-run FILE needs --play-out DIR; --play-reach, --play-pick-bounds, --play-live-world, --play-nowait, --play-input, --play-shots and play_run's other play options need --play-run"
                     .into(),
             )
         }
     };
-    if play_nowait && !play_live {
-        return Err("--play-nowait needs --play-live-world".into());
+    if let Some(p) = &play {
+        p.switches.check()?;
+        if p.input.is_none() && p.switches.walker_only() {
+            return Err("PlayNeedsInput: play_run's walker options (all but --play-reach, --play-pick-bounds, --play-live-world and --play-nowait) drive the scripted walker: give --play-input FILE".into());
+        }
+        if p.input.is_none() && p.shots.is_some() {
+            return Err("--play-shots needs --play-input".into());
+        }
     }
     if play.is_some()
         && (headless
@@ -1113,27 +1140,36 @@ mod tests {
             Play {
                 run: "s.txt".into(),
                 out: "o".into(),
-                reach: Some(150.0),
-                bounds: true,
-                live: false,
-                nowait: false,
+                switches: Box::new(crate::play_switches::Switches {
+                    reach: Some(150.0),
+                    pick_bounds: true,
+                    ..Default::default()
+                }),
+                input: None,
+                shots: None,
             }
         );
         let live = parse(&args(
             "m d C --under-hypotheses --walk --eye 1,2,3 --look 4,5,6 --play-run s.txt --play-out o --play-live-world --play-nowait",
         ))
         .unwrap();
-        assert!(matches!(
-            live,
-            Command::Window {
-                play: Some(Play {
-                    live: true,
-                    nowait: true,
-                    ..
-                }),
-                ..
-            }
-        ));
+        let Command::Window { play: Some(p), .. } = live else {
+            panic!("{live:?}")
+        };
+        assert!(p.switches.live_world && p.switches.nowait);
+        // The scripted input takes every play option of play_run.
+        let scripted = parse(&args(
+            "m d C --under-hypotheses --walk --eye 1,2,3 --look 4,5,6 --play-run s.txt --play-out o --play-input i.txt --walk-speed 300 --play-reach 150 --play-load-doors --play-follow-grid --play-slice 0.25 --play-elevator a.esm:00000001 --play-elevator-rigid --play-shots d --play-shot-every 30",
+        ))
+        .unwrap();
+        let Command::Window { play: Some(p), .. } = scripted else {
+            panic!("{scripted:?}")
+        };
+        assert_eq!(p.input.as_deref(), Some("i.txt"));
+        assert_eq!(p.shots, Some(("d".to_string(), 30.0)));
+        assert_eq!(p.switches.slice, Some(0.25));
+        assert_eq!(p.switches.elevators, ["a.esm:00000001"]);
+        assert!(p.switches.load_doors && p.switches.follow_grid && p.switches.rigid);
         for bad in [
             "m d C --under-hypotheses --walk --eye 1,2,3 --look 4,5,6 --play-run s.txt",
             "m d C --under-hypotheses --eye 1,2,3 --look 4,5,6 --play-run s.txt --play-out o",
@@ -1144,6 +1180,12 @@ mod tests {
             "m d C --under-hypotheses --walk --eye 1,2,3 --look 4,5,6 --play-run s.txt --play-out o --play-reach -1",
             "m d C --under-hypotheses --walk --eye 1,2,3 --look 4,5,6 --play-live-world",
             "m d C --under-hypotheses --walk --eye 1,2,3 --look 4,5,6 --play-run s.txt --play-out o --play-nowait",
+            // Walker options without the scripted input, shots without it.
+            "m d C --under-hypotheses --walk --eye 1,2,3 --look 4,5,6 --play-run s.txt --play-out o --play-load-doors",
+            "m d C --under-hypotheses --walk --eye 1,2,3 --look 4,5,6 --play-run s.txt --play-out o --play-shots d --play-shot-every 1",
+            "m d C --under-hypotheses --walk --eye 1,2,3 --look 4,5,6 --play-run s.txt --play-out o --play-input i --play-shots d",
+            "m d C --under-hypotheses --walk --eye 1,2,3 --look 4,5,6 --play-input i",
+            "m d C --under-hypotheses --walk --eye 1,2,3 --look 4,5,6 --play-run s.txt --play-out o --play-input i --play-elevator-rigid",
         ] {
             assert!(parse(&args(bad)).is_err(), "{bad}");
         }

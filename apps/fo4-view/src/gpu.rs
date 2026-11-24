@@ -1029,6 +1029,16 @@ fn spawn_window_scene(world: &mut World) {
     // real format; the clear colour cannot): an sRGB colour with the CPU's
     // clear values is stored as those values.
     let clear = Color::Srgba(Srgba::new(clear[0], clear[1], clear[2], clear[3]));
+    // A scene loaded later (the scripted play mode's change of cell) keeps
+    // the camera there is.
+    if world
+        .query_filtered::<(), With<FlyCamera>>()
+        .iter(world)
+        .next()
+        .is_some()
+    {
+        return;
+    }
     let fly = world.resource::<Fly>();
     let Ok(pose) = fly_pose(&fly.state) else {
         return;
@@ -1315,8 +1325,13 @@ pub fn window(
     }
     #[cfg(feature = "script-event")]
     if let Some(p) = play {
-        app.insert_resource(Playing(p, String::new(), PlayDrawn::default()))
-            .add_systems(Update, play_frame.after(fly_camera).before(show_readout));
+        let scripted = p.scripted();
+        app.insert_resource(Playing(p, String::new(), PlayDrawn::default()));
+        if scripted {
+            app.add_systems(Update, play_scripted.after(fly_camera).before(show_readout));
+        } else {
+            app.add_systems(Update, play_frame.after(fly_camera).before(show_readout));
+        }
     }
     #[cfg(not(feature = "script-event"))]
     if let Some(p) = play {
@@ -1341,6 +1356,25 @@ struct Playing(crate::play::PlayRun, String, PlayDrawn);
 struct PlayDrawn {
     applied: Option<u64>,
     spawned: std::collections::HashMap<Entity, Vec3>,
+    /// The scripted run: frames to wait before a loaded cell's upload is
+    /// read (its scene resource arrives through the commands), with the
+    /// cell's load.
+    uploading: Option<(u32, crate::play::Loaded)>,
+    /// The scripted run's frame captures (`--play-shots`).
+    shots: PlayShots,
+}
+
+/// `--play-shots`: the next multiple of the shot period, and the frame
+/// asked for (at which second, where the walker stood) until it arrives.
+#[cfg(feature = "script-event")]
+#[derive(Default)]
+struct PlayShots {
+    next: f64,
+    asked: Option<(f64, crate::play::Seen)>,
+    captured: Arc<Mutex<Option<Image>>>,
+    written: u32,
+    /// The frame at the run's end was asked for.
+    last: bool,
 }
 
 /// With `--play-live-world`, when the live world changed (and once the
@@ -1348,11 +1382,11 @@ struct PlayDrawn {
 /// of a reference it knows is hidden where the reference is absent and
 /// moved by the reference's move where it was moved.
 #[cfg(feature = "script-event")]
-fn play_live(
+fn play_live<F: bevy::ecs::query::QueryFilter>(
     p: &crate::play::PlayRun,
     drawn: &mut PlayDrawn,
     walk: Option<&mut Walk>,
-    instances: &mut Query<(Entity, &MeshTag, &mut Visibility, &mut Transform)>,
+    instances: &mut Query<(Entity, &MeshTag, &mut Visibility, &mut Transform), F>,
 ) {
     let Some((live, _)) = &p.live else { return };
     if drawn.applied == Some(p.generation) || instances.is_empty() {
@@ -1424,6 +1458,196 @@ fn play_frame(
         *title = t;
     }
     play_live(p, drawn, walk.as_deref_mut(), &mut instances);
+    if !title.is_empty() {
+        readout.text.push_str(" | ");
+        readout.text.push_str(title);
+    }
+}
+
+/// Run seconds one frame may add to the scripted run's clock at most: a
+/// long frame (an upload) does not let the run pass far beyond what was
+/// drawn.
+#[cfg(feature = "script-event")]
+const PLAY_FRAME_MAX: f64 = 0.25;
+
+/// The scripted play mode (`--play-input`), each frame: a cell the
+/// loading thread finished replaces the scene (its upload then follows as
+/// at the start); while the scene is drawn and no cell loads, the window's
+/// clock lets the run go on by the frame's seconds; the camera stands at
+/// the walker's eye looking along its heading; a cell the walker's walking
+/// world is about that the window does not draw is loaded (the run waits);
+/// the frame is captured each time the run passes a multiple of the shot
+/// period; the window closes when the run is done.
+#[cfg(feature = "script-event")]
+#[allow(clippy::too_many_arguments)]
+fn play_scripted(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut playing: ResMut<Playing>,
+    mut fly: ResMut<Fly>,
+    mut readout: ResMut<Readout>,
+    pending: Option<Res<PendingScene>>,
+    mut cameras: Query<&mut Transform, With<FlyCamera>>,
+    mut instances: Query<(Entity, &MeshTag, &mut Visibility, &mut Transform), Without<FlyCamera>>,
+    mut exit: MessageWriter<AppExit>,
+) {
+    let Playing(p, title, drawn) = &mut *playing;
+    match p.loaded() {
+        Some(Ok(r)) => {
+            let n = instances.iter().count();
+            for (e, ..) in instances.iter() {
+                commands.entity(e).despawn();
+            }
+            println!(
+                "play: cell {} loaded in {:.2} s (asked at {:.3} s of the run); {n} drawn instances of the cell before removed",
+                fo4_scene::timeline::key_text(&r.cell),
+                r.load_seconds,
+                r.asked_at,
+            );
+            let (gpu, clear) = (r.gpu, r.clear);
+            commands.insert_resource(PendingScene(gpu, clear, None));
+            drawn.spawned.clear();
+            drawn.applied = None;
+            drawn.uploading = Some((
+                1,
+                crate::play::Loaded {
+                    cell: r.cell,
+                    load_seconds: r.load_seconds,
+                    started: std::time::Instant::now(),
+                },
+            ));
+        }
+        Some(Err(e)) => {
+            eprintln!("play: loading the walker's cell: {e}");
+            std::process::exit(2);
+        }
+        None => {}
+    }
+    let mut ready = pending.is_none() && !p.loading();
+    if let Some((frames, l)) = drawn.uploading.as_mut() {
+        ready = false;
+        if *frames > 0 {
+            *frames -= 1;
+        } else if pending.is_none() {
+            println!(
+                "play: cell {} drawn: load {:.2} s, upload {:.2} s",
+                fo4_scene::timeline::key_text(&l.cell),
+                l.load_seconds,
+                l.started.elapsed().as_secs_f64()
+            );
+            drawn.uploading = None;
+            // The new scene's instances take the live world's decisions.
+            drawn.applied = None;
+            ready = true;
+        }
+    }
+    let Some(seen) = p.seen() else {
+        return;
+    };
+    if ready {
+        if let Some(cell) = p.cell_wanted(&seen) {
+            p.load(cell, seen.t);
+            ready = false;
+        }
+    }
+    // The window's clock starts once the walker stands somewhere.
+    let dt = time.delta_secs_f64().min(PLAY_FRAME_MAX);
+    let go = ready && seen.feet.is_some();
+    if let Some(t) = p.scripted_frame(if go { dt } else { 0.0 }) {
+        *title = t;
+    }
+    if let Some(feet) = seen.feet {
+        let state = FlyState {
+            eye: [
+                feet[0],
+                feet[1],
+                feet[2] + fo4_walk::Params::PROVISIONAL.eye_height,
+            ],
+            yaw: seen.heading.map_or(fly.state.yaw, f64::to_radians),
+            pitch: seen
+                .pitch
+                .to_radians()
+                .clamp(-crate::fly::MAX_PITCH, crate::fly::MAX_PITCH),
+        };
+        if let Ok(pose) = fly_pose(&state) {
+            fly.state = state;
+            for mut t in &mut cameras {
+                t.translation = pose.0;
+                t.rotation = pose.1;
+            }
+        }
+    }
+    // Not while the old scene leaves and the new one uploads.
+    if drawn.uploading.is_none() {
+        play_live(p, drawn, None, &mut instances);
+    }
+    // --play-shots: the frame each time the run passes a multiple of the
+    // period, once the scene is drawn.
+    let shots = &mut drawn.shots;
+    if let Some((dir, every)) = p.shots() {
+        if let Some((at, s)) = &shots.asked {
+            let image = shots.captured.lock().ok().and_then(|mut c| c.take());
+            if let Some(image) = image {
+                let file = format!("{dir}/t{at:07.1}.png");
+                let root = p.data_root().map(std::path::Path::new);
+                match capture_png(image).and_then(|(png, size)| {
+                    use std::io::Write;
+                    crate::load::output_file(&file, root)
+                        .map_err(|e| e.to_string())?
+                        .write_all(&png)
+                        .map(|()| size)
+                        .map_err(|e| format!("{file}: {e}"))
+                }) {
+                    Ok(size) => println!(
+                        "play: frame {file} ({}x{}) at {:.3} s of the run (asked {at} s): cell {}, feet {:?}, heading {:?}, pitch {}",
+                        size[0],
+                        size[1],
+                        s.t,
+                        s.cell.as_ref().map(fo4_scene::timeline::key_text).unwrap_or_default(),
+                        s.feet,
+                        s.heading,
+                        s.pitch
+                    ),
+                    Err(e) => eprintln!("play: frame capture: {e}"),
+                }
+                shots.asked = None;
+                shots.written += 1;
+            }
+        } else if ready
+            && seen.feet.is_some()
+            && (seen.t >= shots.next || seen.done.is_some() && !shots.last)
+        {
+            let slot = shots.captured.clone();
+            commands.spawn(Screenshot::primary_window()).observe(
+                move |shot: On<ScreenshotCaptured>| {
+                    if let Ok(mut slot) = slot.lock() {
+                        *slot = Some(shot.event().image.clone());
+                    }
+                },
+            );
+            let at = if seen.done.is_some() {
+                shots.last = true;
+                seen.t
+            } else {
+                shots.next
+            };
+            shots.asked = Some((at, seen.clone()));
+            shots.next = ((seen.t / every).floor() + 1.0) * every;
+        }
+    }
+    if let Some(done) = &seen.done {
+        let shot_due = p.shots().is_some() && (shots.asked.is_some() || !shots.last);
+        if !shot_due && drawn.uploading.is_none() {
+            match done {
+                Ok(()) => println!(
+                    "play: the scripted run is done at {:.3} s; the window closes",
+                    seen.t
+                ),
+                Err(e) => eprintln!("play: the scripted run failed: {e}"),
+            }
+            exit.write(AppExit::Success);
+        }
+    }
     if !title.is_empty() {
         readout.text.push_str(" | ");
         readout.text.push_str(title);
@@ -1905,6 +2129,24 @@ fn script_frame(world: &mut World) {
     }
 }
 
+/// A window capture as PNG bytes, and its size.
+fn capture_png(image: Image) -> Result<(Vec<u8>, [u32; 2]), String> {
+    let size = [image.width(), image.height()];
+    let bgra = match image.texture_descriptor.format {
+        TextureFormat::Bgra8Unorm | TextureFormat::Bgra8UnormSrgb => true,
+        TextureFormat::Rgba8Unorm | TextureFormat::Rgba8UnormSrgb => false,
+        f => return Err(format!("UnexpectedCaptureFormat: {f:?}")),
+    };
+    let mut rgba = image.data.ok_or("EmptyCapture")?;
+    if bgra {
+        for p in rgba.as_chunks_mut::<4>().0 {
+            p.swap(0, 2);
+        }
+    }
+    let png = crate::load::png_rgba8(size, &rgba).map_err(|e| e.to_string())?;
+    Ok((png, size))
+}
+
 fn script_step(world: &mut World, s: &mut Script) -> Result<(), String> {
     match s.phase {
         Phase::Loading => {
@@ -1970,19 +2212,7 @@ fn script_step(world: &mut World, s: &mut Script) -> Result<(), String> {
                 return Ok(());
             };
             s.requested = false;
-            let size = [image.width(), image.height()];
-            let bgra = match image.texture_descriptor.format {
-                TextureFormat::Bgra8Unorm | TextureFormat::Bgra8UnormSrgb => true,
-                TextureFormat::Rgba8Unorm | TextureFormat::Rgba8UnormSrgb => false,
-                f => return Err(format!("UnexpectedCaptureFormat: {f:?}")),
-            };
-            let mut rgba = image.data.ok_or("EmptyCapture")?;
-            if bgra {
-                for p in rgba.as_chunks_mut::<4>().0 {
-                    p.swap(0, 2);
-                }
-            }
-            let png = crate::load::png_rgba8(size, &rgba).map_err(|e| e.to_string())?;
+            let (png, size) = capture_png(image)?;
             use std::io::Write;
             files[usize::from(!start)]
                 .write_all(&png)
