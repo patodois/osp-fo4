@@ -566,7 +566,7 @@ fn spawn_sky(
     layer: usize,
     lights: Handle<ShaderBuffer>,
     up: &Uploaded,
-) {
+) -> Entity {
     let half = 100.0f32;
     let mut mesh = Mesh::new(
         PrimitiveTopology::TriangleList,
@@ -622,13 +622,15 @@ fn spawn_sky(
     let material = world
         .resource_mut::<Assets<SurfaceMaterial>>()
         .add(material);
-    world.spawn((
-        Mesh3d(mesh),
-        MeshMaterial3d(material),
-        Transform::from_translation(eye),
-        NoFrustumCulling,
-        RenderLayers::layer(layer),
-    ));
+    world
+        .spawn((
+            Mesh3d(mesh),
+            MeshMaterial3d(material),
+            Transform::from_translation(eye),
+            NoFrustumCulling,
+            RenderLayers::layer(layer),
+        ))
+        .id()
 }
 
 fn camera_bundle(
@@ -963,6 +965,77 @@ fn advance_clock(
 #[derive(Component)]
 struct FlyCamera;
 
+/// The window's sky (the light switches' `--sky-weather`), kept about the
+/// camera.
+#[derive(Component)]
+struct WindowSky;
+
+/// Keeps the sky's cube about the camera.
+fn follow_sky(
+    cameras: Query<&Transform, With<FlyCamera>>,
+    mut skies: Query<&mut Transform, (With<WindowSky>, Without<FlyCamera>)>,
+) {
+    let Some(c) = cameras.iter().next() else {
+        return;
+    };
+    for mut t in &mut skies {
+        t.translation = c.translation;
+    }
+}
+
+/// The run's actors drawn by the scripted play mode's cast
+/// (`--timeline-cast`): spawned apart from the cell's instances, which the
+/// live world's decisions do not reach.
+#[cfg(feature = "script-event")]
+#[derive(Component)]
+struct CastEntity;
+
+/// A cast built for the drawn cell, until it is uploaded and replaces the
+/// one drawn.
+#[cfg(feature = "script-event")]
+#[derive(Resource)]
+struct PendingCast(GpuScene, Option<Uploaded>, std::time::Instant);
+
+/// Uploads a pending cast a batch of textures per frame, then replaces the
+/// drawn cast by it.
+#[cfg(feature = "script-event")]
+fn spawn_cast(world: &mut World) {
+    let Some(PendingCast(mut scene, up, asked)) = world.remove_resource::<PendingCast>() else {
+        return;
+    };
+    let mut up = match up {
+        Some(up) => up,
+        None => match upload_meshes(world, &scene) {
+            Ok(up) => up,
+            Err(e) => {
+                eprintln!("play: the cast's upload: {e}");
+                return;
+            }
+        },
+    };
+    if !upload_textures(world, &mut scene, &mut up) {
+        world.insert_resource(PendingCast(scene, Some(up), asked));
+        return;
+    }
+    let old: Vec<Entity> = world
+        .query_filtered::<Entity, With<CastEntity>>()
+        .iter(world)
+        .collect();
+    let removed = old.len();
+    for e in old {
+        world.despawn(e);
+    }
+    let entities = spawn(world, &scene, &up, false, 0, false);
+    for e in &entities {
+        world.entity_mut(*e).insert(CastEntity);
+    }
+    println!(
+        "play: cast drawn: {} instances in place of {removed}, uploaded in {:.2} s",
+        entities.len(),
+        asked.elapsed().as_secs_f64()
+    );
+}
+
 /// Bevy pose of a free-fly state, through the same `look_at` as the CPU.
 fn fly_pose(state: &FlyState) -> Result<(Vec3, Quat), String> {
     // Only the pose is used; the frame size and frustum do not affect it.
@@ -992,6 +1065,22 @@ fn spawn_window_scene(world: &mut World) {
     if !upload_textures(world, &mut scene, &mut up) {
         world.insert_resource(PendingScene(scene, clear, Some(up)));
         return;
+    }
+    // The scene's light (the light switches of the scripted play mode; a
+    // buffer without light otherwise, as before) and its sky, which
+    // follows the camera ([`follow_sky`]).
+    let lights = insert_light_buffer(world, scene.light.as_ref());
+    let old: Vec<Entity> = world
+        .query_filtered::<Entity, With<WindowSky>>()
+        .iter(world)
+        .collect();
+    for e in old {
+        world.despawn(e);
+    }
+    if scene.light.as_ref().is_some_and(|l| l.sky) {
+        let eye = fly_pose(&world.resource::<Fly>().state).map_or(Vec3::ZERO, |p| p.0);
+        let e = spawn_sky(world, eye, 0, lights, &up);
+        world.entity_mut(e).insert(WindowSky);
     }
     let entities = spawn(world, &scene, &up, false, 0, false);
     if let Some(PendingClock(start)) = world.remove_resource::<PendingClock>() {
@@ -1314,7 +1403,8 @@ pub fn window(
     .add_systems(
         Update,
         (spawn_window_scene, fly_camera, show_readout).chain(),
-    );
+    )
+    .add_systems(Update, follow_sky.after(fly_camera));
     if let Some(animation) = clip {
         app.insert_resource(PendingClip(animation))
             .add_systems(Update, crate::clip::animate.after(spawn_window_scene));
@@ -1328,7 +1418,8 @@ pub fn window(
         let scripted = p.scripted();
         app.insert_resource(Playing(p, String::new(), PlayDrawn::default()));
         if scripted {
-            app.add_systems(Update, play_scripted.after(fly_camera).before(show_readout));
+            app.add_systems(Update, play_scripted.after(fly_camera).before(show_readout))
+                .add_systems(Update, spawn_cast.after(play_scripted));
         } else {
             app.add_systems(Update, play_frame.after(fly_camera).before(show_readout));
         }
@@ -1464,6 +1555,15 @@ fn play_frame(
     }
 }
 
+/// A drawn instance of the cell, as the live world's decisions reach it.
+#[cfg(feature = "script-event")]
+type CellInstance = (
+    Entity,
+    &'static MeshTag,
+    &'static mut Visibility,
+    &'static mut Transform,
+);
+
 /// Run seconds one frame may add to the scripted run's clock at most: a
 /// long frame (an upload) does not let the run pass far beyond what was
 /// drawn.
@@ -1488,7 +1588,8 @@ fn play_scripted(
     mut readout: ResMut<Readout>,
     pending: Option<Res<PendingScene>>,
     mut cameras: Query<&mut Transform, With<FlyCamera>>,
-    mut instances: Query<(Entity, &MeshTag, &mut Visibility, &mut Transform), Without<FlyCamera>>,
+    mut instances: Query<CellInstance, (Without<FlyCamera>, Without<CastEntity>)>,
+    casts: Query<Entity, With<CastEntity>>,
     mut exit: MessageWriter<AppExit>,
 ) {
     let Playing(p, title, drawn) = &mut *playing;
@@ -1498,6 +1599,11 @@ fn play_scripted(
             for (e, ..) in instances.iter() {
                 commands.entity(e).despawn();
             }
+            // The cast of the cell before goes with it.
+            for e in casts.iter() {
+                commands.entity(e).despawn();
+            }
+            commands.remove_resource::<PendingCast>();
             println!(
                 "play: cell {} loaded in {:.2} s (asked at {:.3} s of the run); {n} drawn instances of the cell before removed",
                 fo4_scene::timeline::key_text(&r.cell),
@@ -1580,6 +1686,15 @@ fn play_scripted(
     // Not while the old scene leaves and the new one uploads.
     if drawn.uploading.is_none() {
         play_live(p, drawn, None, &mut instances);
+    }
+    // --timeline-cast: the run's actors of the drawn cell, built again on
+    // the cast's thread when what decides them changed.
+    if ready {
+        p.cast_ask(&seen);
+    }
+    if let Some(c) = p.cast_done() {
+        println!("play: cast at {:.3} s of the run: {}", seen.t, c.line);
+        commands.insert_resource(PendingCast(c.gpu, None, std::time::Instant::now()));
     }
     // --play-shots: the frame each time the run passes a multiple of the
     // period, once the scene is drawn.

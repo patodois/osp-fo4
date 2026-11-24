@@ -157,6 +157,82 @@ mod enabled {
         /// A cell being loaded: when, for which second of the run.
         loading: Option<Loading>,
         shots: Option<(String, f64)>,
+        /// `--timeline-cast`: the cast's worker and what it built.
+        cast: Option<CastWork>,
+    }
+
+    /// The window's cast (`--play-run ... --timeline-cast`): a thread that
+    /// keeps the game data open and builds the run's actors of a cell at a
+    /// second of the run's timeline ([`crate::timeline::cast_scene`]).
+    struct CastWork {
+        to: Sender<CastAsk>,
+        from: Mutex<Receiver<CastDone>>,
+        /// The request on its way: its cell and signature.
+        asked: Option<(FormKey, CastSig)>,
+        /// The signature of the cast drawn (or being uploaded) and its cell.
+        built: Option<(FormKey, CastSig)>,
+        /// The timeline's relevant event seconds, of the snapshot `gen`.
+        times: (u64, Vec<f64>),
+        /// Builds drawn, for the report.
+        builds: u64,
+    }
+
+    /// What decides the cast of a cell at a second: the timeline's
+    /// actor, visibility, death and sit events up to that second (their
+    /// count).
+    type CastSig = usize;
+
+    struct CastAsk {
+        cell: FormKey,
+        timeline: Arc<fo4_scene::timeline::Timeline>,
+        second: f64,
+        sig: CastSig,
+    }
+
+    type CastDone = (FormKey, CastSig, Result<crate::timeline::CastScene, String>);
+
+    /// The timeline's events a cast depends on: an actor's place, a
+    /// visibility change, a death, a sit or a get-up.
+    fn cast_event(w: &fo4_scene::timeline::What) -> bool {
+        use fo4_scene::timeline::What;
+        match w {
+            What::Actor { .. } | What::Visibility { .. } => true,
+            What::Note(t) => fo4_scene::timeline::body_note(t).is_some(),
+            _ => false,
+        }
+    }
+
+    fn cast_worker(
+        scene: crate::cli::Scene,
+        args: crate::timeline::Args,
+        asks: Receiver<CastAsk>,
+        done: Sender<CastDone>,
+    ) {
+        let sources = match crate::load::open(&scene.manifest, &scene.data) {
+            Ok(s) => s,
+            Err(e) => {
+                eprintln!("play: the cast's sources: {e}");
+                return;
+            }
+        };
+        while let Ok(mut ask) = asks.recv() {
+            // Only the newest request counts.
+            while let Ok(newer) = asks.try_recv() {
+                ask = newer;
+            }
+            let r = crate::timeline::cast_scene(
+                &sources,
+                &scene,
+                &args,
+                &ask.cell,
+                &ask.timeline,
+                ask.second,
+            )
+            .map_err(|e| e.to_string());
+            if done.send((ask.cell, ask.sig, r)).is_err() {
+                return;
+            }
+        }
     }
 
     /// A cell being loaded: its thread's channel, when it started and the
@@ -241,6 +317,7 @@ mod enabled {
                 let (to_run, _) = channel();
                 let (manifest, input, out) = (s.manifest.clone(), input.clone(), p.out.clone());
                 let (sw, g, sn, track) = (sw.clone(), gate.clone(), seen.clone(), t.clone());
+                let with_timeline = s.play_cast.is_some();
                 let thread = std::thread::Builder::new()
                     .name("fo4-play scripted run".into())
                     .spawn(move || {
@@ -254,6 +331,7 @@ mod enabled {
                             g,
                             sn.clone(),
                             status_tx,
+                            with_timeline,
                         )
                         .map_err(|e| e.to_string());
                         if let Ok(mut s) = sn.lock() {
@@ -269,6 +347,30 @@ mod enabled {
                     p.input.as_deref().unwrap_or_default()
                 );
                 let drawn = fo4_scene::timeline::parse_key(&s.cell);
+                let cast = match &s.play_cast {
+                    Some(a) => {
+                        let (to, asks) = channel();
+                        let (done, from) = channel();
+                        let (scene, args) = (s.clone(), a.clone());
+                        std::thread::Builder::new()
+                            .name("fo4-view play cast".into())
+                            .spawn(move || cast_worker(scene, args, asks, done))
+                            .map_err(|e| e.to_string())?;
+                        println!(
+                            "play: the run's actors drawn as their characters from the run's timeline (--timeline-cast{}), built again on their own thread when the run changes an actor's place or presence",
+                            if a.pose.any() { ", start clip" } else { "" }
+                        );
+                        Some(CastWork {
+                            to,
+                            from: Mutex::new(from),
+                            asked: None,
+                            built: None,
+                            times: (u64::MAX, Vec::new()),
+                            builds: 0,
+                        })
+                    }
+                    None => None,
+                };
                 let scripted = Scripted {
                     gate,
                     seen,
@@ -276,6 +378,7 @@ mod enabled {
                     drawn,
                     loading: None,
                     shots: p.shots.clone(),
+                    cast,
                 };
                 (to_run, status, thread, Some(scripted))
             }
@@ -488,6 +591,10 @@ mod enabled {
             };
             r.waited = waited;
             s.drawn = Some(r.cell.clone());
+            // The new cell's cast is built anew.
+            if let Some(c) = s.cast.as_mut() {
+                c.built = None;
+            }
             if let Some((refs, boxes)) = r.pick.take() {
                 self.refs = refs;
                 self.boxes = boxes;
@@ -509,6 +616,71 @@ mod enabled {
                 }
             }
             Some(Ok(r))
+        }
+
+        /// `--timeline-cast`: asks the cast's thread for the run's actors of
+        /// the drawn cell at the run's second when what decides them
+        /// changed since the cast drawn (or asked for), none being built.
+        pub fn cast_ask(&mut self, seen: &Seen) {
+            let Some(s) = self.scripted.as_mut() else {
+                return;
+            };
+            let (Some(c), Some(cell), Some(t)) = (s.cast.as_mut(), s.drawn.clone(), &seen.timeline)
+            else {
+                return;
+            };
+            if c.asked.is_some() {
+                return;
+            }
+            if c.times.0 != seen.timeline_gen {
+                let mut times: Vec<f64> = t
+                    .events
+                    .iter()
+                    .filter(|e| cast_event(&e.what))
+                    .map(|e| e.t)
+                    .collect();
+                times.sort_by(f64::total_cmp);
+                c.times = (seen.timeline_gen, times);
+            }
+            let sig = c.times.1.partition_point(|x| *x <= seen.t);
+            if c.built.as_ref() == Some(&(cell.clone(), sig)) {
+                return;
+            }
+            let ask = CastAsk {
+                cell: cell.clone(),
+                timeline: t.clone(),
+                second: seen.t,
+                sig,
+            };
+            if c.to.send(ask).is_ok() {
+                c.asked = Some((cell, sig));
+            }
+        }
+
+        /// The cast the thread built, when it is for the cell drawn: the
+        /// window draws it in place of the one before.
+        pub fn cast_done(&mut self) -> Option<crate::timeline::CastScene> {
+            let s = self.scripted.as_mut()?;
+            let drawn = s.drawn.clone();
+            let c = s.cast.as_mut()?;
+            let (cell, sig, r) = c.from.lock().ok()?.try_recv().ok()?;
+            c.asked = None;
+            if drawn.as_ref() != Some(&cell) {
+                return None;
+            }
+            match r {
+                Ok(x) => {
+                    c.built = Some((cell, sig));
+                    c.builds += 1;
+                    Some(x)
+                }
+                Err(e) => {
+                    eprintln!("play: the cast: {e}");
+                    // Not asked again until something changes.
+                    c.built = Some((cell, sig));
+                    None
+                }
+            }
         }
 
         /// What the activation key meets from the eye along `dir`.
@@ -547,6 +719,13 @@ mod enabled {
             let _ = self.to_run.send(ToRun::Stop);
             if let Some(s) = &self.scripted {
                 s.gate.stop();
+                if let Some(c) = &s.cast {
+                    let cost = s.seen.lock().map(|x| x.timeline_cost).unwrap_or_default();
+                    println!(
+                        "play: cast: {} casts drawn; the run's timeline read {} times in {:.2} s on the run's thread",
+                        c.builds, cost.0, cost.1
+                    );
+                }
             }
             if let Some(t) = self.thread.take() {
                 match t.join() {
@@ -652,6 +831,11 @@ mod enabled {
         pub finished: bool,
         /// The run's thread is done: its error, if any.
         pub done: Option<Result<(), String>>,
+        /// `--timeline-cast`: the run's timeline as last read, how many
+        /// times it was read, and (reads, seconds) spent reading it.
+        pub timeline: Option<Arc<fo4_scene::timeline::Timeline>>,
+        pub timeline_gen: u64,
+        pub timeline_cost: (u64, f64),
     }
 
     /// The scripted walker as the run's driver, held back by the window's
@@ -666,6 +850,19 @@ mod enabled {
         feed: Sender<ToRun>,
         /// The log's grid rebuilds, crossings and looks already read.
         read: (usize, usize, usize),
+        /// `--timeline-cast`: the run's timeline given to the window when
+        /// the run's effects, logs or moves grew.
+        timeline: Option<TimelineRead>,
+    }
+
+    /// What the run had when its timeline was last read: effects, quest
+    /// and scene log entries, native moves; the snapshots taken and their
+    /// seconds (wall time).
+    #[derive(Default)]
+    struct TimelineRead {
+        seen: Option<(usize, usize, usize, usize, usize)>,
+        taken: u64,
+        seconds: f64,
     }
 
     impl Paced {
@@ -752,8 +949,41 @@ mod enabled {
         }
     }
 
+    impl Paced {
+        /// `--timeline-cast`: the run's timeline as it stands, to the
+        /// window, when the run did something since the last read. Reading
+        /// it changes nothing in the run (`View::timeline`).
+        fn publish_timeline(&mut self, run: &View<'_, '_>) {
+            let Some(r) = self.timeline.as_mut() else {
+                return;
+            };
+            let w = &run.vm.world;
+            let now = (
+                run.vm.effects.len(),
+                w.quests.log.len(),
+                w.scenes.log.len(),
+                w.place.native_at.len(),
+                w.place.moved_at.len(),
+            );
+            if r.seen == Some(now) {
+                return;
+            }
+            r.seen = Some(now);
+            let started = std::time::Instant::now();
+            let t = run.timeline();
+            r.taken += 1;
+            r.seconds += started.elapsed().as_secs_f64();
+            if let (Some(t), Ok(mut s)) = (t, self.seen.lock()) {
+                s.timeline = Some(Arc::new(t));
+                s.timeline_gen += 1;
+                s.timeline_cost = (r.taken, r.seconds);
+            }
+        }
+    }
+
     impl Driver for Paced {
         fn next(&mut self, run: &View<'_, '_>) -> Next {
+            self.publish_timeline(run);
             let mut n = self.walker.next(run);
             self.publish_start();
             if let Next::Slice(s) = &n {
@@ -870,6 +1100,7 @@ mod enabled {
         gate: Arc<Gate>,
         seen: Arc<Mutex<Seen>>,
         status: Sender<Status>,
+        with_timeline: bool,
     ) -> Result<BTreeMap<String, u64>, E> {
         use fo4_core::{Budget, Manifest};
         let started = std::time::Instant::now();
@@ -903,6 +1134,7 @@ mod enabled {
             link: link::Link::new(from_walker, status),
             feed,
             read: (0, 0, 0),
+            timeline: with_timeline.then(TimelineRead::default),
         };
         let prepared = started.elapsed().as_secs_f64();
         let (_, counts) =

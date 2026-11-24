@@ -16,7 +16,9 @@ usage:
            [--play-run SWITCHES_FILE --play-out DIR [--play-reach UNITS] [--play-pick-bounds]
             [--play-live-world [--play-nowait]]
             [--play-input INPUT_FILE [play_run's play options...]
-             [--play-shots DIR --play-shot-every SECONDS]]]
+             [--play-shots DIR --play-shot-every SECONDS]
+             [--timeline-cast [the cast readings of a --timeline frame]]
+             [the light switches of --headless, but --exposure-eye]]]
       Window with a free-fly camera: W/A/S/D move, Shift moves faster, hold the
       left mouse button and move the mouse to look, R returns to the start pose.
       The title bar shows the mode, the speed and the position.
@@ -108,7 +110,16 @@ usage:
       that cell, the run waiting meanwhile. --play-shots DIR
       --play-shot-every SECONDS writes the window's frame as a PNG into DIR
       (under ./build, as every output) each time the run passes a multiple
-      of SECONDS; the window closes when the run ends.
+      of SECONDS; the window closes when the run ends. With --timeline-cast
+      (and the readings a --timeline frame takes with it: the start clip
+      flags, --timeline-child-flag-agrees, --timeline-dead-*, the look
+      readings...) the run's actors are drawn as their characters from the
+      run's own timeline as it grows (the cell's placed actors are not):
+      each time the run changes an actor's place or presence (or a death,
+      a sit) the cast of the drawn cell is built again on its own thread,
+      at the run's second then, and replaces the one drawn. The light
+      switches of --headless (all but --exposure-eye) light the cells the
+      window loads and draw the sky, as the headless frame does.
   fo4-view MANIFEST DATA_DIRECTORY CELL_EDITOR_ID [level] --headless
            --eye X,Y,Z --look X,Y,Z --out build/FRAME.png [--tags build/TAGS.bin]
            [--size WxH] [--backface-cull] [--terrain] [--around N] [--walk]
@@ -274,6 +285,13 @@ pub struct Scene {
     /// (`--assume-hour`, `--assume-weather`).
     pub light: fo4_scene::light::Switches,
     pub light_assumptions: fo4_scene::light::Assumptions,
+    /// The window's scripted play mode with `--timeline-cast` (no
+    /// `--timeline`): the run's actors drawn as their characters from the
+    /// run's own timeline as it grows, with the headless frame's cast
+    /// readings (the same structure; its file, second, eye height and
+    /// camera fields are not read). The cell's own placed actors are then
+    /// not drawn.
+    pub play_cast: Option<crate::timeline::Args>,
 }
 
 /// Default of `--scene-memory`: a viewer bound, not a claim about the game.
@@ -686,7 +704,44 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
         },
         (false, Textures::Reference) => Textures::Reference,
     };
+    // The window's scripted play mode: the cast readings with the run's own
+    // timeline (`--play-run ... --play-input`, `--timeline-cast`, no
+    // `--timeline`, `--at` or `--eye-height`, no frame-only option).
+    let play_cast_asked = play_run.is_some()
+        && play_input.is_some()
+        && timeline_cast
+        && timeline_file.is_none()
+        && timeline_at.is_none()
+        && eye_height.is_none()
+        && look_heading.is_none()
+        && overlay.is_none()
+        && memory_report.is_none()
+        && ride_model.is_none()
+        && ride_sequence.is_none()
+        && aim == fo4_scene::timeline::Aim::Track;
+    let play_cast = play_cast_asked.then(|| crate::timeline::Args {
+        file: String::new(),
+        at: 0.,
+        eye_height: 0.,
+        heading: None,
+        nowait: timeline_nowait,
+        overlay: None,
+        child_flag_agrees,
+        cast: true,
+        target_rotation,
+        missing_bones_at_bind,
+        pose,
+        aim: fo4_scene::timeline::Aim::Track,
+        dead,
+        sit_marker,
+        look: look_readings,
+        model_graph_idle,
+        skinned_models,
+        memory_report: None,
+        ride: None,
+    });
     let timeline = match (timeline_file, timeline_at, eye_height) {
+        _ if play_cast.is_some() => None,
         (Some(file), Some(at), Some(eye_height)) => Some(crate::timeline::Args {
             file,
             at,
@@ -778,6 +833,18 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
     } else if args[2] == "-" {
         return Err("CELL - (the player's cell) needs --timeline".into());
     }
+    if play_cast.is_some() {
+        // The run's actors are the cast: never the cell's own.
+        actors = false;
+        if (look_readings.chance_none || look_readings.use_all)
+            && look_readings.leveled_seed.is_none()
+        {
+            return Err(
+                "--actor-leveled-chance-none and --actor-leveled-use-all need --actor-leveled-seed"
+                    .into(),
+            );
+        }
+    }
     let unused = timeline.as_ref().map(|_| [0.; 3]);
     let scene = Scene {
         manifest: args[0].clone(),
@@ -806,12 +873,19 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
         timeline,
         light,
         light_assumptions,
+        play_cast,
     };
+    // The window's scripted play mode takes the light switches too (no
+    // `--exposure-eye`: the window's camera moves).
+    let play_window = !headless && play_run.is_some() && play_input.is_some();
     if (light.any() || light_assumptions != fo4_scene::light::Assumptions::default())
-        && (!headless || walk || scene.script_event.is_some())
+        && (!(headless || play_window)
+            || headless && walk
+            || scene.script_event.is_some()
+            || play_window && light.exposure_eye)
     {
         return Err(
-            "the light switches apply to --headless without --walk or --script-event".into(),
+            "the light switches apply to --headless without --walk or --script-event, or to the window's --play-run with --play-input (not --exposure-eye)".into(),
         );
     }
     if (light.reference_radius || light.fade) && !light.points
@@ -1204,6 +1278,42 @@ mod tests {
     }
 
     #[test]
+    fn the_scripted_play_window_takes_the_cast_and_light_readings() {
+        let base = "m d C --under-hypotheses --walk --eye 1,2,3 --look 4,5,6 --play-run s.txt --play-out o --play-input i.txt";
+        let c = parse(&args(&format!(
+            "{base} --timeline-cast --actor-start-clip --actor-subgraph-keywords --actor-clip-folder --timeline-child-flag-agrees --light-cell --sky-weather --assume-hour 12"
+        )))
+        .unwrap();
+        let Command::Window { scene, .. } = c else {
+            panic!("{c:?}")
+        };
+        let cast = scene.play_cast.unwrap();
+        assert!(cast.cast && cast.child_flag_agrees && cast.pose.start && cast.pose.folder);
+        assert!(scene.timeline.is_none());
+        assert!(!scene.actors, "the run's actors, not the cell's");
+        assert!(scene.light.cell && scene.light.sky);
+        assert_eq!(scene.light_assumptions.hour, Some(12.));
+        // Default: none of it.
+        let Command::Window { scene, .. } = parse(&args(base)).unwrap() else {
+            panic!()
+        };
+        assert!(scene.play_cast.is_none() && scene.actors && !scene.light.any());
+        for bad in [
+            // The cast readings need --timeline-cast (and the scripted run).
+            format!("{base} --actor-start-clip"),
+            "m d C --under-hypotheses --walk --eye 1,2,3 --look 4,5,6 --play-run s.txt --play-out o --timeline-cast".to_string(),
+            // Frame-only options stay with --timeline.
+            format!("{base} --timeline-cast --look-at-actor nearest"),
+            // The window's camera moves: no exposure by the eye.
+            format!("{base} --light-cell --exposure-eye"),
+            // Without --play-run the light switches stay headless.
+            "m d C --eye 1,2,3 --look 4,5,6 --light-cell".to_string(),
+        ] {
+            assert!(parse(&args(&bad)).is_err(), "{bad}");
+        }
+    }
+
+    #[test]
     fn window_defaults_and_options() {
         let c = parse(&args("m d C --eye 1,2,3 --look 4,5,6")).unwrap();
         assert_eq!(
@@ -1229,6 +1339,7 @@ mod tests {
                     timeline: None,
                     light: fo4_scene::light::Switches::default(),
                     light_assumptions: fo4_scene::light::Assumptions::default(),
+                    play_cast: None,
                 },
                 fly: DEFAULT_FLY,
                 walk: false,
