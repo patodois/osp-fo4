@@ -203,6 +203,10 @@ pub enum Act {
     /// `stop`, `turn-to` and W let go end it.
     Steer(f64, f64),
     Stop,
+    /// Let W go and look at a point (x, y, z) from the walker's eye as
+    /// drawn, again each frame (a person keeping the thing in the middle
+    /// of the view) until another look, `steer` or `stop`.
+    AimAt(f64, f64, f64),
 }
 
 /// One timed event of the synthetic person's file.
@@ -216,7 +220,7 @@ pub struct Timed {
 /// seconds of the play clock in time order; `#` starts a comment. Events:
 /// `key W|A|S|D|E|P|Escape|Shift down|up|tap`, `button down|up|tap`,
 /// `mouse DX DY`, `turn-to DEGREES`, `pitch-to DEGREES`, `steer X Y`,
-/// `stop`.
+/// `aim-at X Y Z`, `stop`.
 pub fn parse_synthetic(text: &str) -> Result<Vec<Timed>, String> {
     let mut out: Vec<Timed> = Vec::new();
     for (n, raw) in text.lines().enumerate() {
@@ -265,10 +269,11 @@ pub fn parse_synthetic(text: &str) -> Result<Vec<Timed>, String> {
                 (Act::PitchTo(p), 3)
             }
             Some("steer") => (Act::Steer(num(2)?, num(3)?), 4),
+            Some("aim-at") => (Act::AimAt(num(2)?, num(3)?, num(4)?), 5),
             Some("stop") => (Act::Stop, 2),
             _ => {
                 return Err(bad(
-                    "expected key, button, mouse, turn-to, pitch-to, steer or stop",
+                    "expected key, button, mouse, turn-to, pitch-to, steer, aim-at or stop",
                 ))
             }
         };
@@ -302,6 +307,7 @@ pub struct Synthetic {
     button_tap: bool,
     button_was: bool,
     steer: Option<[f64; 2]>,
+    aim: Option<[f64; 3]>,
     /// Points steered to and reached: (clock, feet).
     pub arrived: Vec<(f64, [f64; 2])>,
 }
@@ -333,16 +339,17 @@ impl Synthetic {
     /// tap ends the frame's events, so what follows it at the same second
     /// comes a frame later), then the steering. `view`: the window's
     /// heading and pitch; `degrees_per_pixel`: the mouse's turn;
-    /// `walker`: the walker's feet as drawn; `arrive`: how near the point
-    /// the person lets W go (units).
+    /// `walker`: the walker's feet as drawn and its eye's height above
+    /// them; `arrive`: how near the point the person lets W go (units).
     pub fn frame(
         &mut self,
         clock: f64,
         view: (f64, f64),
         degrees_per_pixel: f64,
-        walker: Option<[f64; 3]>,
+        walker: Option<([f64; 3], f64)>,
         arrive: f64,
     ) -> Inject {
+        let feet = walker.map(|w| w.0);
         let mut out = Inject {
             up: std::mem::take(&mut self.tapped),
             ..Inject::default()
@@ -389,6 +396,7 @@ impl Synthetic {
                     out.motion[1] += dy;
                 }
                 Act::TurnTo(h) => {
+                    self.aim = None;
                     if self.steer.take().is_some() {
                         self.held.remove(&KeyName::W);
                         out.up.push(KeyName::W);
@@ -397,25 +405,52 @@ impl Synthetic {
                     look = true;
                 }
                 Act::PitchTo(p) => {
+                    self.aim = None;
                     out.motion[1] += (pitch(out.motion) - p) / dpp;
                     look = true;
                 }
                 Act::Steer(x, y) => {
+                    self.aim = None;
                     self.steer = Some([x, y]);
                     self.held.insert(KeyName::W);
                 }
                 Act::Stop => {
+                    self.aim = None;
                     if self.steer.take().is_some() {
                         self.held.remove(&KeyName::W);
                         out.up.push(KeyName::W);
                     }
+                }
+                Act::AimAt(x, y, z) => {
+                    if self.steer.take().is_some() {
+                        self.held.remove(&KeyName::W);
+                        out.up.push(KeyName::W);
+                    }
+                    self.aim = Some([x, y, z]);
                 }
             }
             if tap {
                 break;
             }
         }
-        if let (Some([x, y]), Some(f)) = (self.steer, walker) {
+        if let (Some([x, y, z]), Some((f, eye))) = (self.aim, walker) {
+            let d = [x - f[0], y - f[1], z - f[2] - eye];
+            if d[0].hypot(d[1]) > 1e-6 {
+                let h = d[1].atan2(d[0]).to_degrees();
+                let p = d[2]
+                    .atan2(d[0].hypot(d[1]))
+                    .to_degrees()
+                    .clamp(-MAX_PITCH_DEGREES, MAX_PITCH_DEGREES);
+                let turn = wrap(heading(out.motion) - h);
+                let tilt = pitch(out.motion) - p;
+                if turn != 0.0 || tilt != 0.0 {
+                    out.motion[0] += turn / dpp;
+                    out.motion[1] += tilt / dpp;
+                    look = true;
+                }
+            }
+        }
+        if let (Some([x, y]), Some(f)) = (self.steer, feet) {
             let (dx, dy) = (x - f[0], y - f[1]);
             if dx.hypot(dy) <= arrive {
                 self.steer = None;
@@ -511,6 +546,7 @@ mod tests {
             "1 steer 1\n",
             "1 jump\n",
             "1 stop now\n",
+            "1 aim-at 1 2\n",
         ] {
             assert!(parse_synthetic(bad).is_err(), "{bad}");
         }
@@ -542,17 +578,37 @@ mod tests {
         let f = s.frame(1.06, (90.0, 0.0), dpp, None, 1.0);
         assert_eq!(f.button, None);
         // Steering: W held, the view turned to the point (east of the feet).
-        let f = s.frame(2.0, (90.0, 0.0), dpp, Some([0.0, 0.0, 0.0]), 1.0);
+        let at = |x: f64| Some(([x, 0.0, 0.0], 100.0));
+        let f = s.frame(2.0, (90.0, 0.0), dpp, at(0.0), 1.0);
         assert_eq!(f.down, [KeyName::W]);
         assert!((f.motion[0] - 900.0).abs() < 1e-9, "{f:?}");
-        let f = s.frame(2.1, (0.0, 0.0), dpp, Some([50.0, 0.0, 0.0]), 1.0);
+        let f = s.frame(2.1, (0.0, 0.0), dpp, at(50.0), 1.0);
         assert_eq!(f.down, [KeyName::W]);
         assert_eq!(f.motion, [0.0, 0.0]);
         // Near the point W is let go.
-        let f = s.frame(2.2, (0.0, 0.0), dpp, Some([99.5, 0.0, 0.0]), 1.0);
+        let f = s.frame(2.2, (0.0, 0.0), dpp, at(99.5), 1.0);
         assert_eq!(f.up, [KeyName::W]);
         assert!(f.down.is_empty() && s.done());
         assert_eq!(s.arrived.len(), 1);
+        // Aiming at a point: W let go, the view on the point from the eye,
+        // again each frame until another look.
+        let mut s = Synthetic::new(
+            parse_synthetic("0 steer 500 0\n1 aim-at 100 100 100\n2 pitch-to 0\n").unwrap(),
+        );
+        assert_eq!(
+            s.frame(0.0, (0.0, 0.0), 1.0, at(0.0), 1.0).down,
+            [KeyName::W]
+        );
+        let f = s.frame(1.0, (0.0, 0.0), 1.0, at(0.0), 1.0);
+        assert_eq!(f.up, [KeyName::W]);
+        assert!(
+            (f.motion[0] - (-45.0)).abs() < 1e-9 && f.motion[1].abs() < 1e-9,
+            "{f:?}"
+        );
+        let f = s.frame(1.5, (40.0, 0.0), 1.0, at(0.0), 1.0);
+        assert!((f.motion[0] - (-5.0)).abs() < 1e-9, "{f:?}");
+        let f = s.frame(2.0, (45.0, 0.0), 1.0, at(0.0), 1.0);
+        assert_eq!(f.motion, [0.0, 0.0]);
         assert_eq!(wrap(-190.0), 170.0);
         assert_eq!(wrap(180.0), 180.0);
         assert_eq!(wrap(-180.0), 180.0);

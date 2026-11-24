@@ -541,15 +541,21 @@ mod enabled {
         /// One frame of the person's mode: the window's clock lets the run
         /// go `dt` seconds further (0 while paused or a cell is loading),
         /// the person's commands of the frame stamped at the play clock's
-        /// second they reach the walker at (`Gate::submit`); the title,
-        /// when it changed.
+        /// second they reach the walker at (`Gate::submit`). Returns the
+        /// title, when it changed, and the play clock (that second: the
+        /// walker's clock with what a busy run is owed, which stops
+        /// [`GATE_BUSY_MAX`] ahead of a busy run while the window's frames
+        /// go on).
         pub fn person_frame(
             &mut self,
             dt: f64,
             commands: Vec<fo4_play::input::Command>,
-        ) -> Option<String> {
+        ) -> (Option<String>, f64) {
+            let mut clock = 0.0;
             if let Some(s) = &self.scripted {
-                for e in s.gate.submit(dt, commands) {
+                let (events, at) = s.gate.submit(dt, commands);
+                clock = at;
+                for e in events {
                     if !matches!(
                         e.command,
                         fo4_play::input::Command::Face(_) | fo4_play::input::Command::Pitch(_)
@@ -558,7 +564,7 @@ mod enabled {
                     }
                 }
             }
-            self.statuses().then(|| link::title(&self.last))
+            (self.statuses().then(|| link::title(&self.last)), clock)
         }
 
         /// The shots asked for (`--play-shots DIR --play-shot-every S`).
@@ -914,13 +920,14 @@ mod enabled {
         /// clock reaches with this frame (the horizon, or what the busy
         /// run is owed added to it), which is after every second the walker
         /// was told it knows; in a frame that adds no time they are not
-        /// sent. Returns them stamped.
+        /// sent. Returns them stamped, and that second (the play clock).
         fn submit(
             &self,
             dt: f64,
             commands: Vec<fo4_play::input::Command>,
-        ) -> Vec<fo4_play::input::Event> {
+        ) -> (Vec<fo4_play::input::Event>, f64) {
             let mut events = Vec::new();
+            let mut clock = 0.0;
             if let Ok(mut g) = self.state.lock() {
                 // Stamped under the same lock as the clock moves, before
                 // the walker can take the new horizon.
@@ -933,9 +940,10 @@ mod enabled {
                         .collect();
                     g.queued.extend(events.iter().copied());
                 }
+                clock = g.horizon + g.owed;
             }
             self.moved.notify_all();
-            events
+            (events, clock)
         }
 
         /// The window drew `dt` seconds more: the run may go that much

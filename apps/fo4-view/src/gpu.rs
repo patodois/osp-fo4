@@ -1756,7 +1756,10 @@ fn person_inject(
         return;
     };
     let seen = playing.0.seen();
-    let feet = seen.as_ref().and_then(|x| x.feet);
+    let feet = seen
+        .as_ref()
+        .and_then(|x| x.feet)
+        .map(|f| (f, fo4_walk::Params::PROVISIONAL.eye_height));
     let walker_t = seen.as_ref().map_or(person.clock, |x| x.t);
     // Let W go early enough that the walker, a frame or two behind the
     // window, stops near the point.
@@ -1976,9 +1979,12 @@ fn play_scripted(
         // seconds (none while the clock stands).
         Some(x) => {
             let commands = if go { x.person.commands() } else { Vec::new() };
-            x.person.clock += given;
-            x.last_dt = given;
-            p.person_frame(given, commands)
+            let (title, clock) = p.person_frame(given, commands);
+            // The play clock the walker goes by (it stands while a busy
+            // run is owed its most), for the synthetic person's events.
+            x.last_dt = (clock - x.person.clock).max(0.0);
+            x.person.clock = clock;
+            title
         }
         None => p.scripted_frame(given),
     };
