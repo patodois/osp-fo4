@@ -211,6 +211,8 @@ pub fn cell(
 ) -> AnyResult<Loaded> {
     #[cfg(not(feature = "script-event"))]
     let _ = play_live;
+    #[cfg(feature = "script-event")]
+    let load_started = std::time::Instant::now();
     if walk {
         fo4_walk::accept(&walk_rules(), level, fo4_scene::hypotheses::status)?;
     }
@@ -701,7 +703,17 @@ pub fn cell(
                     fo4_scene::camera::reference_frustum(size),
                     size,
                 )?;
-                l.expose_seen(&fo4_render::seen_lit_points(&build.list, &lit, &cam));
+                l.exposure.visible = drawing.exposure_visible;
+                let points = if l.exposure.visible {
+                    fo4_render::seen_visible(
+                        &fo4_render::lit_faces(&build.list, &lit),
+                        &cam,
+                        fo4_render::VISIBLE_GRID,
+                    )
+                } else {
+                    fo4_render::seen_lit_points(&build.list, &lit, &cam)
+                };
+                l.expose_seen(&points);
             }
             for line in &l.report {
                 println!("light: {line}");
@@ -717,6 +729,8 @@ pub fn cell(
     let mut pick = None;
     #[cfg(feature = "script-event")]
     let mut live = None;
+    #[cfg(feature = "script-event")]
+    let walk_started = std::time::Instant::now();
     let walk = if walk {
         // The same collision and world the `walk` report uses.
         let options = fo4_scene::collision::Options {
@@ -781,6 +795,16 @@ pub fn cell(
             world.stats.instances,
             c.unplaced.len(),
         );
+        // The play window's cell loads: where the load's time goes
+        // (measurement only).
+        #[cfg(feature = "script-event")]
+        if play_live {
+            println!(
+                "play: load phases: {:.2} s to the walking world, {:.2} s for it",
+                walk_started.duration_since(load_started).as_secs_f64(),
+                walk_started.elapsed().as_secs_f64()
+            );
+        }
         Some(world)
     } else {
         None

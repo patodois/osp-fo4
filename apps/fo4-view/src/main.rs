@@ -8,6 +8,10 @@ mod compare;
 mod coords;
 mod fly;
 mod gpu;
+#[cfg(feature = "script-event")]
+mod hud;
+#[cfg(feature = "script-event")]
+mod hud_font;
 mod live;
 mod load;
 mod path;
@@ -78,7 +82,16 @@ fn load_scene(
             if l.exposure.eye {
                 let size = camera::REFERENCE_SIZE;
                 let cam = camera::look_at(s.eye, s.look, camera::reference_frustum(size), size)?;
-                let points = fo4_render::seen_lit_points(&loaded.build.list, lit, &cam);
+                l.exposure.visible = s.drawing.exposure_visible;
+                let points = if l.exposure.visible {
+                    fo4_render::seen_visible(
+                        &fo4_render::lit_faces(&loaded.build.list, lit),
+                        &cam,
+                        fo4_render::VISIBLE_GRID,
+                    )
+                } else {
+                    fo4_render::seen_lit_points(&loaded.build.list, lit, &cam)
+                };
                 if l.expose_seen(&points).is_some() {
                     if let Some(line) = l.report.last() {
                         println!("light: {line}");
@@ -94,11 +107,18 @@ fn load_scene(
     // The scripted play window with --exposure-eye: the lit triangles the
     // exposure is measured on per view, kept before the list is converted.
     let view_triangles = match (&loaded.light, s.drawing.exposure_per_view) {
-        (Some((l, lit)), true) if l.exposure.eye => Some(fo4_render::lit_triangles(
-            &loaded.build.list,
-            lit,
-            scene::ViewExposure::TRIANGLES,
-        )),
+        (Some((l, lit)), true) if l.exposure.eye => Some(if s.drawing.exposure_visible {
+            scene::Seen::Faces(std::sync::Arc::new(fo4_render::lit_faces(
+                &loaded.build.list,
+                lit,
+            )))
+        } else {
+            scene::Seen::Centroids(fo4_render::lit_triangles(
+                &loaded.build.list,
+                lit,
+                scene::ViewExposure::TRIANGLES,
+            ))
+        }),
         _ => None,
     };
     let mut gpu = scene::convert_lit(
@@ -110,8 +130,13 @@ fn load_scene(
         (view_triangles, loaded.light.as_ref(), gpu.light.as_ref())
     {
         println!(
-            "play: exposure per view: {} lit triangles kept, {} placed lights in a grid",
+            "play: exposure per view: {} lit triangles kept{}, {} placed lights in a grid",
             triangles.len(),
+            if matches!(triangles, scene::Seen::Faces(_)) {
+                " (their corners: what the eye sees, --exposure-eye-visible)"
+            } else {
+                ""
+            },
             l.points.len()
         );
         gpu.view_exposure = Some(scene::ViewExposure::new(l, triangles, g.words.clone()));

@@ -255,10 +255,14 @@ the moving grid and with `--path`.
 
 With `--features script-event` the window plays the opening's quests from
 the keyboard and mouse (`--play-keys`, [play](spec/play.md#the-persons-input---play-keys)):
-W/A/S/D move, Shift runs, hold the left button and move the mouse to turn
-and look, E activates what the window's centre meets (the title bar says
-what that is), P pauses, Escape ends the input (the run finishes and writes
-its outputs). The switches the opening needs are kept in
+W/A/S/D move, Shift runs (also when it comes only as the movement key's
+modifier), hold the left button and move the mouse to turn and look (a drag
+the window sees only as cursor positions turns too), the arrow keys turn and
+look up or down, E activates what the crosshair at the window's centre meets
+(the line under the crosshair says what that is), P pauses, Escape ends the
+input (the run finishes and writes its outputs). The viewport shows the
+crosshair, what E would activate, the line being spoken and paused or
+loading. The switches the opening needs are kept in
 `apps/fo4-view/presets/play-opening.args`; what names the game's records
 (the start cell and pose, the opening's new-game switches file, the named
 platforms) the repository does not keep, so it goes in a local argument
@@ -271,8 +275,10 @@ target/fo4-view/release/fo4-view --args opening.local.args \
 ```
 
 `opening.local.args` holds the manifest, the data folder and the start cell,
-`--eye` and `--look`, `--play-run FILE` and `--play-out DIR`, and the
-`--play-elevator` and `--play-elevator-also-with` references.
+`--eye` and `--look`, `--play-run FILE` and `--play-out DIR`, the
+`--play-elevator` and `--play-elevator-also-with` references, and
+`--play-activate-opens` for the front door (the person opens it by
+activating it; the run's timed open of it is left out).
 `--play-record` writes your commands in `play_run`'s input format:
 `play_run` with that file, the preset's play options and the same new-game
 switches replays the same run.

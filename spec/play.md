@@ -631,19 +631,38 @@ frame they happen in, and the walker waits for them only as far as its next step
   loading) no command is sent and the person's state waits for the next frame that does.
 
 The key map (viewer policy, no rule; `crate::person` in the viewer): W, S, A, D hold forward, back, left, right
-(left and right strafe); Shift holds run; the mouse turns and looks up or down while the left button is held, as
-in the viewer's walk mode (`--radians-per-pixel`, a viewer setting), each frame's look sent as `face` and `pitch`
-(absolute degrees, pitch within 89); E sends `activate`, after the frame's look; Escape sends `end`; P pauses
-(no command: the window's clock stops, so the run and the walker wait). The walker has no jump, so no key jumps;
-`turn` and `toward` have no key (the person's mouse gives absolute headings; `toward` is a scripted steering
-aid). The camera looks where the person looks at once and stands at the walker's eye, which the walker shows the
-window at each wait (each tick while it walks).
+(left and right strafe); Shift holds run, whether it comes as a key of its own or only as a modifier of the
+movement key's press (a tool that sends Shift+W as a flag on W, with no Shift key event of its own: the window
+system's modifier change says Shift, `person::shift_of_modifiers`; the run lasts while a movement key is held);
+the mouse turns and looks up or down while the left button is held (`--radians-per-pixel`, a viewer setting),
+from the raw device motion when there is any, else from the window's cursor between its positions while the
+button is down, read in the order the window's events came (`person::Drag`: a drag a tool sends as a warped
+cursor, a press and a release that carries the cursor's end position, or all three in one frame, turns the view
+too; both are never added); the arrow keys turn left and right at 90 degrees a second and look up and down at
+60 (`person::ARROW_TURN_DEGREES_PER_SECOND`); each frame's look is sent as `face` and `pitch` (absolute degrees,
+pitch within 89); E sends `activate`, after the frame's look; Escape sends `end`; P pauses (no command: the
+window's clock stops, so the run and the walker wait). The walker has no jump, so no key jumps; `turn` and
+`toward` have no key (the person's look gives absolute headings; `toward` is a scripted steering aid). The camera
+looks where the person looks at once and stands at the walker's eye, which the walker shows the window at each
+wait (each tick while it walks).
 
-On screen (the title bar, viewer policy): the run's second, the last stage and the lines being spoken (the
-subtitles, as before), then `E:` and what the activation key would meet from the walker's eye now
-(`Walker::aim`, the activation's own ray read without acting: the base record's type and editor ID and the
-reference's key, or "nothing within reach"; read at each slice), `paused` while paused, and after Escape that
-the run goes on to its end. No crosshair is drawn: the activation's ray is the window's centre. No menus (M6).
+Commands made while the play clock stands (the run busy building a walking world past the 0.25 s it may be
+owed, a cell loading; not while paused) are kept in order with the window's wall clock and given when the clock
+runs again (`play::Gate::submit`): from that second, each gap between two of them kept up to 0.5 s
+(`play::DEFERRED_GAP_MAX`), a look replaced by a later look, later commands after them. A key held across the
+stand stays held; a press made during it moves the walker for as long as it was held (up to the gap) instead
+of arriving at one second with its release. The recording holds them at the seconds given, so the replay is
+the same.
+
+On screen (viewer policy): the title bar as before (the run's second, the last stage, the lines being spoken,
+`E:` and what the activation would meet, `paused`); and in the viewport (`--play-hud`, on with `--play-keys`,
+asked for in the `--play-input` window, never in headless frames; `crate::hud`), a small crosshair at the
+centre (the activation's ray), under it `E` and what the activation would meet when that is a thing E uses (not
+a static's collision or box, not a collision of no reference) and nothing otherwise, near the bottom the line
+being spoken, near the top `paused` and `loading` (a cell loading or uploading, the walker's walking world being
+built). The text is drawn with the viewer's own 5 by 7 ASCII font (`hud_font`; the pinned Bevy compiles neither
+a text renderer nor a font), characters outside it shown as their ASCII look-alike or a question mark, by
+quads of a camera of their own drawn after the scene. No menus (M6).
 
 Quitting: Escape is the input's end. The walker stands to that second, the run goes on to its end as `play_run`'s
 does after an input's end, writes its outputs, and the window closes. Closing the window instead stops the run
@@ -701,6 +720,74 @@ person differs from the scripted input it is a person's: it acts at a frame's en
 aims by eye.
 
 
+### What the first session met (the person step)
+
+A tester drove the window (`--play-keys`, the preset) through a desktop-automation tool in two sessions: its key
+presses arrived, its mouse drags never turned the view, Shift with W never ran, the first view was white, the
+outdoor rebuilds froze the picture and swallowed presses, and the run stopped at the opening's stage 475 with the
+person on the shaft's platform. What each was and what changed (viewer policy unless a rule is named):
+
+- **Looking.** The window read the left button's state at the frame's end and the cursor's motion as a sum over
+  the frame. The window system sends a drag's motion with the release itself (a release brings the cursor's
+  position before the button's change), and a tool that warps the cursor sends no motion between the press and
+  the release, or all of it in one frame: the button was up when the motion was read, and both records hold no
+  `face` or `pitch`. Now the button's press and release and the cursor's positions are read in the order the
+  window's events came (`person::Drag`): the cursor's movement while the button is down turns the view when raw
+  motion gives none (never both). The arrow keys turn at 90 and look at 60 degrees a second. Checked by a test
+  that sends a tool's drag (no raw motion, press and release in one frame) to the person's system, and by the
+  synthetic person's new `drag DX DY` and arrow keys in the window run below.
+- **Shift.** The tool refuses a standalone Shift and sends Shift+W as a flag on W's press with no Shift key of its
+  own: the window library then attests no left or right Shift, so no Shift key is pressed and `run` was never
+  sent. Shift now also counts when the window system's modifier change says Shift while a movement key is held
+  (`person::shift_of_modifiers`, `run_held`).
+- **The first view.** Not the near plane and not the wall's texture: the light at the start's walls (2.6 to 3.0,
+  the room's placed light at one or two units) is above 1, and the exposure is measured on the centroids of the
+  lit triangles in view, mostly the town behind the walls (19,648 points, nine in ten under 0.66, scale 1.51).
+  `--exposure-eye-visible` (`frame_exposure_seen_visible_v1`, in the preset) measures what the eye sees
+  (`spec/light.md`, What the eye sees): the first frame shows the room.
+- **On screen**: the crosshair, the prompt, the subtitle and paused or loading in the viewport (above).
+- **Rebuilds.** A grid square left cost the walker's walking world (2 to 3 s on a quiet machine, 2.4 to 6.5 s
+  during the session) and then the window's load of the cells' drawing (5.6 to 7.5 s on a quiet machine, 6.4 to
+  15.8 s during the session: 7.2 s of it reading the drawing, 0.1 s the window's own walking world), one after
+  the other, with the play clock standing; presses made meanwhile were stamped at the one standing second, so a
+  press and its release arrived together and moved nothing. Now commands made while the clock stands are kept
+  and given when it runs (above); the walker keeps the walking worlds it built last and takes the kept one for a
+  cell it just left (`Walker::load`; 0.02 s instead of 2 to 3 s, 4 of the session's 10 rebuilds, outputs byte for
+  byte); and the window starts loading the cell's drawing as the walker starts building (`Walker::with_on_load`,
+  `Seen::next_cell`), so the two overlap. On the synthetic person's route (`k7` before, `L1` after, the window's
+  frame log's stretches where the drawn place stood still): the five first crossings stood 10.5, 10.6, 10.7, 8.7
+  and 7.7 s before, 7.6, 7.6, 7.7, 6.5 and 5.7 s after, the square crossed back 8.7 s before and 6.6 s after (the
+  walker's 0.03 s, the rest the window's load); what is left is the window's load of the drawing, 5.6 to 7.5 s.
+- **Arriving late.** The run in session B did not wait on a timed assumption: the person's E in the nursery met
+  nothing (73 to 84 s: the view could not pitch toward the activator, and the run's stage that the activation
+  follows came at 183 s), so the activation the scripted pace gives at 190 s never came and the stages that
+  follow it (from 230) never did; 425 came from a trigger crossed on the street and 475 at 420 s from the
+  caller's timed move of an actor. The ride itself is not timed to the scripted pace: walked 200 s late from the
+  vault's site (headless, the exit step's arguments), the run sets the platform's stages when the person arrives
+  (617.6 s), its graph starts the descent 15.6 s later and the walker rides it into the vault (stage 600 at
+  652.0 s; scripted: 500.4 s). Of the opening's timed caller assumptions, the front door's open stands for the
+  person opening the door, which the data names: with `--play-activate-opens REF` (`play_activate_opens_v1`)
+  it leaves the run's switches and the person's activation of the door gives the open. The talks, the actor
+  moves, the animation events and the activations in the vaults stay the caller's: the talks and the actor
+  moves stand for what no player action of the run's carries (no talk action, actor moves not gateable by
+  `--action-after`), and every one that follows a stage is already held until it (`--action-after`: at its
+  second when the stage is done by then, else as soon as it is).
+
+**The opening played late by the synthetic person** (`L1` in the step's notes; release build, audio off, the
+drawn step's window switches with `--play-keys --play-stand 0.1 --exposure-eye-visible --play-activate-opens`
+for the front door; the hands step's synthetic person made 200 s late before the walk from the vault's site to
+the platform, its walk back and forth on the platform left out, a cursor drag and the arrow keys at the start):
+the first frame shows the bathroom; the door's open came with the person's activation (stages 97, 100 and 110
+at 90.16 s); at the site 200 s late the platform's stages came at the person's arrival (490 at 616.9 s, 495 and
+500 at 617.6 s), the descent started at 633.2 s and the walker rode it into the vault (the window loaded the
+vault's cell at 652.0 s), 260 stages in all (the input's later commands, timed for the scripted pace plus 200 s,
+lose the rest of the walk as the headless late walk does); 6,928 commands; 1,413 s of wall clock for 1,215 s of
+input; 59.96 fps median, first percentile 55.6, lowest 1.27 (a load); peak resident memory 2.20 GB (footprint
+4.41 GB). The recording replayed by `play_run` with the same options: every output file byte for byte and
+`play.txt` but its timing lines. The viewport's text was checked in a shorter run (`s2`) after a fix (a quad's
+image changed after its material was prepared kept the first image): the subtitle and `E` with the door's label
+under the crosshair are drawn.
+
 ## What the play mode does not do yet
 
 - The elevators ride only those the caller names (`--play-elevator`), headless and in the scripted window;
@@ -713,13 +800,15 @@ aims by eye.
 - Plain doors: no collision is placed for any door, so none blocks the walker; the open state is not read.
 - Moving collision with a node (an animated door, a platform) is modelled only for the references the caller
   names (above); the live world moves only what the run moves.
-- A person's keys drive `play_run`'s walker in the window (`--play-keys`, the hands step), checked so far by
-  the synthetic person and the unit test, not yet by a person at the keyboard. The run's caller assumptions
-  (`--assume-*` with their seconds, the opening's new-game switches) are timed for the scripted input's pace: a
-  person who walks the opening at another pace meets them at other places.
+- A person's keys drive `play_run`'s walker in the window (`--play-keys`), checked by the synthetic person, the
+  unit tests and a tester through a desktop-automation tool (the person step), not yet by a person at a physical
+  keyboard and mouse. Of the run's caller assumptions only the front door's open is the person's
+  (`--play-activate-opens`); the vaults' timed activations could be taken the same way (the person's E) but the
+  synthetic person would need their places; the talks and actor moves stay timed (held until their stages).
+- A grid square's drawing is loaded whole by the window (5.6 to 7.5 s, the store opened again, the cells
+  scanned, the models and textures read), overlapped with the walker's build since the person step.
 - The reach of an activation, the walker's speed and its tick are the caller's; the activation key and the
-  crosshair are the eye's ray (no prompt, no activation distance from the data); no crosshair is drawn (the
-  title bar names what E would activate).
+  crosshair are the eye's ray (the prompt names what the ray meets; no activation distance from the data).
 - Sound, menus, combat, the player's animation events: still the caller's.
 - Terminal menus, putting items into a container and actor values: the run's readings past the museum
   (`spec/vm.md`, Past the museum) take them from the command line (`--assume-terminal-item`,
@@ -748,3 +837,5 @@ aims by eye.
 | `play_elevator_rigid_v1` | `--play-elevator-rigid` | the drawing side's `nif_sequence_chain_pose_v1` (weak to medium) and `walk_platform_rigid_motion_v1` (weak) given to the named references; the grouping by the deepest set node and the part holding its motion are this reading's | weak |
 | `play_elevator_end_door_onward_v1` | `--play-elevator-door-onward` | the recorded track stays outside after the exterior rise; that a ride's end never takes the walker back is this reading's | weak |
 | `anim_graph_caller_event_v1` | `quest_run --assume-graph-event REF EVENT[@SECONDS]` | a caller assumption: no script of the run sends the exit elevator its descent; that it waits at the bottom open is prior knowledge | weak |
+| `play_activate_opens_v1` | `--play-activate-opens REF` | the run's own open event and the person's activation; that activating a door opens it is prior knowledge | weak |
+| `frame_exposure_seen_visible_v1` | `fo4-view --exposure-eye-visible` | chosen: the data stores no exposure; that an eye adapts to what it sees is prior knowledge | weak |

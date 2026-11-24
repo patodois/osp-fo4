@@ -346,15 +346,38 @@ pub fn exposure_row(x: &fo4_scene::light::Exposure) -> [f32; 4] {
 pub struct ViewExposure {
     pub light: fo4_scene::light::Light,
     pub grid: Option<fo4_scene::light::Grid>,
-    /// Centroids and unit face normals of the lit draws' triangles, every
-    /// k-th in draw order, at most [`ViewExposure::TRIANGLES`]
-    /// (`fo4_render::lit_triangles`).
-    pub triangles: Vec<([f64; 3], [f64; 3])>,
+    /// The lit draws' triangles the exposure is measured on.
+    pub triangles: Seen,
     pub words: Vec<f32>,
     /// The eye, the unit view direction and the wall clock of the last
     /// measure.
     pub last: Option<([f64; 3], [f64; 3], std::time::Instant)>,
     pub measures: u64,
+    /// With [`Seen::Faces`] in the window: the depth test of the last view
+    /// asked for, on a thread of its own ([`ViewExposure::step`]).
+    pub pending: Option<Pending>,
+}
+
+/// The lit triangles kept for the exposure per view: centroids and unit
+/// face normals, every k-th in draw order, at most
+/// [`ViewExposure::TRIANGLES`] (`fo4_render::lit_triangles`); or with
+/// `--exposure-eye-visible` every one's corners, which the measure depth-tests
+/// (`fo4_render::lit_faces`, `fo4_render::seen_visible`).
+#[derive(Debug, Clone)]
+#[cfg_attr(not(feature = "script-event"), allow(dead_code))]
+pub enum Seen {
+    Centroids(Vec<([f64; 3], [f64; 3])>),
+    Faces(std::sync::Arc<Vec<[[f32; 3]; 3]>>),
+}
+
+#[cfg_attr(not(feature = "script-event"), allow(dead_code))]
+impl Seen {
+    pub fn len(&self) -> usize {
+        match self {
+            Seen::Centroids(v) => v.len(),
+            Seen::Faces(v) => v.len(),
+        }
+    }
 }
 
 #[cfg_attr(not(feature = "script-event"), allow(dead_code))]
@@ -369,11 +392,7 @@ impl ViewExposure {
     /// ...and at least this many seconds of the window's clock passed.
     pub const PERIOD: f64 = 0.25;
 
-    pub fn new(
-        light: &fo4_scene::light::Light,
-        triangles: Vec<([f64; 3], [f64; 3])>,
-        words: Vec<f32>,
-    ) -> Self {
+    pub fn new(light: &fo4_scene::light::Light, triangles: Seen, words: Vec<f32>) -> Self {
         ViewExposure {
             light: light.clone(),
             grid: fo4_scene::light::Grid::of(&light.points),
@@ -381,6 +400,7 @@ impl ViewExposure {
             words,
             last: None,
             measures: 0,
+            pending: None,
         }
     }
 
@@ -406,25 +426,94 @@ impl ViewExposure {
     /// line, or why there is none.
     pub fn measure(&mut self, eye: [f64; 3], look: [f64; 3], now: std::time::Instant) -> String {
         self.last = Some((eye, unit(eye, look), now));
-        self.measures += 1;
-        let size = fo4_scene::camera::REFERENCE_SIZE;
-        let cam = match fo4_scene::camera::look_at(
-            eye,
-            look,
-            fo4_scene::camera::reference_frustum(size),
-            size,
-        ) {
+        let cam = match view_camera(eye, look) {
             Ok(c) => c,
-            Err(e) => return format!("no camera: {}", e.code),
+            Err(e) => {
+                self.measures += 1;
+                return e;
+            }
         };
-        let points = fo4_render::seen_of(&self.triangles, &cam);
+        let points = match &self.triangles {
+            Seen::Centroids(t) => fo4_render::seen_of(t, &cam),
+            Seen::Faces(f) => fo4_render::seen_visible(f, &cam, fo4_render::VISIBLE_GRID),
+        };
+        self.apply(&points)
+    }
+
+    /// The window's frame: with centroids, [`ViewExposure::measure`] when
+    /// [`ViewExposure::due`]; with faces (`--exposure-eye-visible`) the
+    /// depth test runs on a thread of its own (it reads every lit
+    /// triangle), asked for when due and none is running, its points
+    /// applied in a later frame. The measure's line when one was applied.
+    pub fn step(
+        &mut self,
+        eye: [f64; 3],
+        look: [f64; 3],
+        now: std::time::Instant,
+    ) -> Option<String> {
+        let Seen::Faces(faces) = &self.triangles else {
+            return self
+                .due(eye, look, now)
+                .then(|| self.measure(eye, look, now));
+        };
+        if let Some(rx) = &self.pending {
+            let got = rx.lock().ok().map(|r| r.try_recv());
+            return match got {
+                Some(Ok(points)) => {
+                    self.pending = None;
+                    Some(self.apply(&points))
+                }
+                Some(Err(std::sync::mpsc::TryRecvError::Empty)) => None,
+                _ => {
+                    self.pending = None;
+                    None
+                }
+            };
+        }
+        if !self.due(eye, look, now) {
+            return None;
+        }
+        self.last = Some((eye, unit(eye, look), now));
+        let cam = view_camera(eye, look).ok()?;
+        let (faces, (tx, rx)) = (faces.clone(), std::sync::mpsc::channel());
+        let spawned = std::thread::Builder::new()
+            .name("fo4-view exposure".into())
+            .spawn(move || {
+                let _ = tx.send(fo4_render::seen_visible(
+                    &faces,
+                    &cam,
+                    fo4_render::VISIBLE_GRID,
+                ));
+            });
+        if spawned.is_ok() {
+            self.pending = Some(std::sync::Arc::new(std::sync::Mutex::new(rx)));
+        }
+        None
+    }
+
+    /// The exposure of `points` written to row 14; its line.
+    fn apply(&mut self, points: &[([f64; 3], [f64; 3])]) -> String {
+        self.measures += 1;
         self.light.exposure.scale = None;
         self.light.report.clear();
-        self.light.expose_seen_with(&points, self.grid.as_ref());
+        self.light.expose_seen_with(points, self.grid.as_ref());
         let row = exposure_row(&self.light.exposure);
         self.words[4 * 14..4 * 15].copy_from_slice(&row);
         self.light.report.last().cloned().unwrap_or_default()
     }
+}
+
+/// A depth test running on its own thread: its points when done.
+pub type Pending =
+    std::sync::Arc<std::sync::Mutex<std::sync::mpsc::Receiver<Vec<([f64; 3], [f64; 3])>>>>;
+
+/// The reference frame's camera at `(eye, look)`, as the headless frame
+/// measures the exposure.
+#[cfg_attr(not(feature = "script-event"), allow(dead_code))]
+fn view_camera(eye: [f64; 3], look: [f64; 3]) -> Result<fo4_scene::camera::Camera, String> {
+    let size = fo4_scene::camera::REFERENCE_SIZE;
+    fo4_scene::camera::look_at(eye, look, fo4_scene::camera::reference_frustum(size), size)
+        .map_err(|e| format!("no camera: {}", e.code))
 }
 
 #[cfg_attr(not(feature = "script-event"), allow(dead_code))]
@@ -1194,7 +1283,7 @@ mod tests {
         assert_eq!(words[4 * 14], 1.);
         // Triangles 100 units ahead along +X, facing the eye.
         let triangles = vec![([100., 0., 0.], [-1., 0., 0.]); 10];
-        let mut v = ViewExposure::new(&light, triangles, words);
+        let mut v = ViewExposure::new(&light, Seen::Centroids(triangles), words.clone());
         let t0 = std::time::Instant::now();
         let (eye, look) = ([0.; 3], [10., 0., 0.]);
         assert!(v.due(eye, look, t0));
@@ -1211,6 +1300,41 @@ mod tests {
         // Looking away: nothing lit in view, no scale (the flag cleared).
         v.measure(eye, [-10., 0., 0.], later);
         assert_eq!(v.words[4 * 14 + 2], 0.);
+        assert_eq!(v.measures, 2);
+        // --exposure-eye-visible: a wall 100 units ahead filling the view
+        // is what is measured; its light names the rule and the points.
+        let mut light = light;
+        light.exposure.visible = true;
+        let (y, z) = (1000f32, 1000f32);
+        let faces = vec![
+            [[100., -y, -z], [100., y, -z], [100., y, z]],
+            [[100., -y, -z], [100., y, z], [100., -y, z]],
+        ];
+        let mut v = ViewExposure::new(&light, Seen::Faces(std::sync::Arc::new(faces)), words);
+        let line = v.measure(eye, look, t0);
+        assert!(line.contains("times 2.0000"), "{line}");
+        assert!(
+            line.contains("5184 points of lit faces the eye sees"),
+            "{line}"
+        );
+        assert!(v
+            .light
+            .rules
+            .contains(fo4_scene::hypotheses::EXPOSURE_VISIBLE));
+        // In the window the depth test runs on a thread: asked for when
+        // due, its line in a later frame.
+        let at = t0 + std::time::Duration::from_secs(5);
+        let (e2, l2) = ([70., 0., 0.], [80., 0., 0.]);
+        assert!(v.step(e2, l2, at).is_none());
+        let mut line = None;
+        for _ in 0..5000 {
+            if let Some(l) = v.step(e2, l2, at) {
+                line = Some(l);
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(1));
+        }
+        assert!(line.unwrap().contains("times 2.0000"));
         assert_eq!(v.measures, 2);
     }
 

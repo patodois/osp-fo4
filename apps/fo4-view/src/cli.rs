@@ -132,7 +132,11 @@ usage:
       on a sample of the loaded cell's lit triangles; --exposure-eye-floor
       (with it, here and headless) gives a view whose seen light is below
       0.25, or has none, the scale 4 (pending rule
-      frame_exposure_seen_light_floor_v1).
+      frame_exposure_seen_light_floor_v1). --exposure-eye-visible (with
+      it, here and headless; off by default) measures the light on what
+      the eye sees, the nearest lit face at each cell of a 96 by 54 grid
+      over the frame, instead of on every lit triangle whose centroid is in
+      view (pending rule frame_exposure_seen_visible_v1).
       --play-keys drives play_run's walker (the same walker, run thread and
       play options as --play-input) from the keyboard and the mouse instead:
       W/S/A/D forward, back, left, right; Shift runs; hold the left mouse
@@ -150,7 +154,12 @@ usage:
       command the walker received, as it arrives, in the scripted input's
       format (play_run with that file and the same options gives the same
       run). The title bar adds what E would activate and whether the run is
-      paused. --play-keys-from FILE (test and measurement only) is a
+      paused; the viewport shows a crosshair, under it what E would
+      activate, the line being spoken, and paused or loading (--play-hud
+      asks for it in the --play-input window too). The arrow keys turn and
+      look up or down; a drag the window only sees as cursor positions
+      turns the view too; Shift counts also when it comes only as the
+      movement key's modifier. --play-keys-from FILE (test and measurement only) is a
       synthetic person: timed key, button and mouse events injected where
       a real key press arrives (spec/play.md, The person's input).
       --args FILE reads more arguments from FILE, one per line (# starts a
@@ -368,6 +377,12 @@ pub struct Drawing {
     /// measured per view instead of once per load (`scene::ViewExposure`;
     /// plumbing of the existing switch, set by the parser).
     pub exposure_per_view: bool,
+    /// `--exposure-eye-visible` (with `--exposure-eye`;
+    /// `frame_exposure_seen_visible_v1`): the exposure's light measured on
+    /// what the eye sees, the nearest lit face at each cell of a grid over
+    /// the frame (`fo4_render::seen_visible`), in place of the centroids of
+    /// the lit triangles in view.
+    pub exposure_visible: bool,
 }
 
 /// Default of `--scene-memory`: a viewer bound, not a claim about the game.
@@ -473,6 +488,9 @@ pub struct Play {
     /// `--play-shots DIR --play-shot-every SECONDS`: the window's frame
     /// written each time the scripted run passes a multiple of SECONDS.
     pub shots: Option<(String, f64)>,
+    /// What the viewport shows besides the scene (`crate::hud`): on with
+    /// `--play-keys`, asked for in the scripted window with `--play-hud`.
+    pub hud: bool,
 }
 
 /// What drives `play_run`'s walker in the window.
@@ -737,6 +755,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
     let mut play_switches = crate::play_switches::Switches::default();
     let (mut play_input, mut play_shots, mut play_shot_every) = (None, None, None);
     let (mut play_keys, mut play_record, mut play_keys_from) = (false, None, None);
+    let mut play_hud = false;
     let mut shots_between: Vec<[f64; 3]> = Vec::new();
     let mut drawing = Drawing::default();
     let mut rest = args[3..].iter();
@@ -790,6 +809,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             "--play-out" => play_out = Some(value()?.clone()),
             "--play-input" => play_input = Some(value()?.clone()),
             "--play-keys" => play_keys = true,
+            "--play-hud" => play_hud = true,
             "--play-record" => play_record = Some(value()?.clone()),
             "--play-keys-from" => play_keys_from = Some(value()?.clone()),
             "--play-shots" => play_shots = Some(value()?.clone()),
@@ -817,6 +837,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             "--timeline-child-flag-agrees" => child_flag_agrees = true,
             "--draw-child-flag-agrees" => drawing.child_flag_agrees = true,
             "--draw-platforms" => drawing.platforms = true,
+            "--exposure-eye-visible" => drawing.exposure_visible = true,
             "--timeline-dead-lying" | "--timeline-dead-left-out" => {
                 if dead != fo4_scene::timeline::Dead::Standing {
                     return Err("one of --timeline-dead-lying and --timeline-dead-left-out".into());
@@ -1080,6 +1101,9 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
     if light.exposure_floor && !light.exposure_eye {
         return Err("--exposure-eye-floor is the floor of --exposure-eye: give both".into());
     }
+    if scene.drawing.exposure_visible && !light.exposure_eye {
+        return Err("--exposure-eye-visible is how --exposure-eye measures: give both".into());
+    }
     if (light.any() || light_assumptions != fo4_scene::light::Assumptions::default())
         && (!(headless || play_window) || headless && walk || scene.script_event.is_some())
     {
@@ -1114,6 +1138,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             run,
             out,
             switches: Box::new(play_switches),
+            hud: play_hud || matches!(walker_input, Some(Input::Keys(_))),
             input: walker_input,
             shots,
             shots_between,
@@ -1133,6 +1158,9 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
         }
         if p.input.is_none() && p.shots.is_some() {
             return Err("--play-shots needs --play-input".into());
+        }
+        if p.input.is_none() && p.hud {
+            return Err("--play-hud needs --play-input or --play-keys".into());
         }
         if p.input.is_some() {
             scene.play_platforms = crate::play_switches::platforms(&p.switches);
@@ -1530,6 +1558,7 @@ mod tests {
                 input: None,
                 shots: None,
                 shots_between: Vec::new(),
+                hud: false,
             }
         );
         let live = parse(&args(

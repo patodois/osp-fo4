@@ -4,8 +4,9 @@
 # The repository keeps no game record ids, so a second, local argument file
 # gives what names the game's records: the manifest, the data folder, the
 # start cell, --eye and --look, --play-run (the opening's new-game switches)
-# and --play-out, and the named platforms (--play-elevator,
-# --play-elevator-also-with). Give it first:
+# and --play-out, the named platforms (--play-elevator,
+# --play-elevator-also-with) and the doors the person opens by activating
+# them (--play-activate-opens). Give it first:
 #   fo4-view --args opening.local.args --args apps/fo4-view/presets/play-opening.args
 --under-hypotheses
 --walk
@@ -65,6 +66,8 @@
 0
 --exposure-eye
 --exposure-eye-floor
+# Measured on what the eye sees (the first view is a near wall).
+--exposure-eye-visible
 # What the drawing reads.
 --draw-child-flag-agrees
 --draw-platforms

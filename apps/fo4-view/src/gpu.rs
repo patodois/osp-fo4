@@ -1457,11 +1457,19 @@ pub fn window(
                     .map(|(events, speed)| (crate::person::Synthetic::new(events), speed)),
                 last_dt: 0.0,
                 synthetic_done: false,
+                drag: crate::person::Drag::default(),
+                shift_modifier: false,
             })
             .add_systems(Update, person_keys.after(fly_camera).before(play_scripted));
             if with_synthetic {
                 app.add_systems(PreUpdate, person_inject.before(bevy::input::InputSystems));
             }
+        }
+        // --play-hud (on with --play-keys): the viewport's crosshair and
+        // lines, drawn by a camera of their own after the scene.
+        if p.hud && scripted {
+            app.add_systems(Startup, hud_spawn)
+                .add_systems(Update, hud_update.after(play_scripted));
         }
         app.insert_resource(Playing(p, String::new(), PlayDrawn::default()));
         if scripted {
@@ -1485,6 +1493,179 @@ pub fn window(
 #[cfg(feature = "script-event")]
 #[derive(Resource)]
 struct Playing(crate::play::PlayRun, String, PlayDrawn);
+
+/// The render layer of the HUD's camera and quads (`--play-hud`): the
+/// scene's cameras draw layer 0 or their own.
+#[cfg(feature = "script-event")]
+const HUD_LAYER: usize = 31;
+
+/// One quad of the HUD (`crate::hud`): its slot, what it shows and the
+/// assets it draws with.
+#[cfg(feature = "script-event")]
+#[derive(Component)]
+struct HudQuad {
+    slot: crate::hud::Slot,
+    shown: Option<(Option<String>, [u32; 2])>,
+    image: Handle<Image>,
+    mesh: Handle<Mesh>,
+    material: Handle<StandardMaterial>,
+}
+
+/// A quad `size` window pixels wide and high, centred, facing +Z.
+#[cfg(feature = "script-event")]
+fn hud_mesh(size: [f32; 2]) -> Mesh {
+    let [w, h] = [size[0] / 2.0, size[1] / 2.0];
+    Mesh::new(
+        PrimitiveTopology::TriangleList,
+        RenderAssetUsages::RENDER_WORLD,
+    )
+    .with_inserted_attribute(
+        Mesh::ATTRIBUTE_POSITION,
+        vec![[-w, -h, 0.0], [w, -h, 0.0], [w, h, 0.0], [-w, h, 0.0]],
+    )
+    .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, vec![[0.0, 0.0, 1.0]; 4])
+    .with_inserted_attribute(
+        Mesh::ATTRIBUTE_UV_0,
+        vec![[0.0, 1.0], [1.0, 1.0], [1.0, 0.0], [0.0, 0.0]],
+    )
+    .with_inserted_indices(Indices::U16(vec![0, 1, 2, 0, 2, 3]))
+}
+
+/// An sRGB image of a HUD raster, sampled by its nearest texel.
+#[cfg(feature = "script-event")]
+fn hud_image(r: &crate::hud::Raster) -> Image {
+    let mut image = Image::new_uninit(
+        Extent3d {
+            width: r.size[0],
+            height: r.size[1],
+            depth_or_array_layers: 1,
+        },
+        TextureDimension::D2,
+        TextureFormat::Rgba8UnormSrgb,
+        RenderAssetUsages::RENDER_WORLD,
+    );
+    image.data = Some(r.rgba.clone());
+    image.sampler = ImageSampler::nearest();
+    image
+}
+
+/// `--play-hud`, at start: the HUD's camera (an orthographic one whose
+/// units are window pixels, drawing after the scene with no clear) and one
+/// hidden quad per slot.
+#[cfg(feature = "script-event")]
+fn hud_spawn(
+    mut commands: Commands,
+    mut images: ResMut<Assets<Image>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    commands.spawn((
+        Camera3d::default(),
+        Camera {
+            order: 100,
+            clear_color: ClearColorConfig::None,
+            ..default()
+        },
+        Projection::Orthographic(OrthographicProjection::default_3d()),
+        Transform::IDENTITY,
+        Msaa::Off,
+        Tonemapping::None,
+        DebandDither::Disabled,
+        RenderLayers::layer(HUD_LAYER),
+    ));
+    for slot in crate::hud::Slot::ALL {
+        let image = images.add(hud_image(&crate::hud::Raster {
+            size: [1, 1],
+            rgba: vec![0; 4],
+        }));
+        let mesh = meshes.add(hud_mesh([1.0, 1.0]));
+        let material = materials.add(StandardMaterial {
+            base_color: Color::WHITE,
+            base_color_texture: Some(image.clone()),
+            unlit: true,
+            alpha_mode: AlphaMode::Blend,
+            cull_mode: None,
+            ..default()
+        });
+        commands.spawn((
+            Mesh3d(mesh.clone()),
+            MeshMaterial3d(material.clone()),
+            Transform::from_xyz(0.0, 0.0, -10.0),
+            Visibility::Hidden,
+            RenderLayers::layer(HUD_LAYER),
+            HudQuad {
+                slot,
+                shown: None,
+                image,
+                mesh,
+                material,
+            },
+        ));
+    }
+}
+
+/// `--play-hud`, each frame: what the HUD shows (what E would activate
+/// when it is a thing E uses, the line being spoken, paused, loading),
+/// each slot's image made again only when its text or the window's size
+/// changed.
+#[cfg(feature = "script-event")]
+#[allow(clippy::too_many_arguments)]
+fn hud_update(
+    playing: Res<Playing>,
+    person: Option<Res<PersonInput>>,
+    pending: Option<Res<PendingScene>>,
+    windows: Query<&Window, With<PrimaryWindow>>,
+    mut quads: Query<(&mut HudQuad, &mut Transform, &mut Visibility)>,
+    mut images: ResMut<Assets<Image>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    let Some(window) = windows.iter().next() else {
+        return;
+    };
+    let size = [window.width(), window.height()];
+    let Playing(p, _, drawn) = &*playing;
+    let seen = p.seen().unwrap_or_default();
+    let shown = crate::hud::Shown {
+        prompt: seen.aim.clone().filter(|_| seen.aim_usable),
+        subtitle: (!p.subtitles().is_empty()).then(|| p.subtitles().join(" / ")),
+        paused: person.as_ref().is_some_and(|x| x.person.paused),
+        loading: p.loading() || drawn.uploading.is_some() || pending.is_some() || seen.building,
+    };
+    let k = crate::hud::scale(size[1]);
+    let columns = crate::hud::columns(size[0], k);
+    let key = [size[0] as u32, size[1] as u32];
+    for (mut q, mut t, mut v) in &mut quads {
+        let text = shown.text(q.slot, columns);
+        let now = Some((text.clone(), key));
+        if q.shown == now {
+            continue;
+        }
+        q.shown = now;
+        let raster = match (&text, q.slot) {
+            (None, _) => None,
+            (Some(_), crate::hud::Slot::Crosshair) => Some(crate::hud::crosshair(5)),
+            (Some(line), _) => crate::hud::text(line),
+        };
+        let Some(r) = raster else {
+            *v = Visibility::Hidden;
+            continue;
+        };
+        let at = crate::hud::place(q.slot, size, k);
+        let _ = images.insert(&q.image, hud_image(&r));
+        // The material is prepared again with the new image (its bind
+        // group holds the image it was prepared with).
+        if let Some(mut m) = materials.get_mut(&q.material) {
+            m.base_color_texture = Some(q.image.clone());
+        }
+        let _ = meshes.insert(
+            &q.mesh,
+            hud_mesh([r.size[0] as f32 * k, r.size[1] as f32 * k]),
+        );
+        t.translation = Vec3::new(at[0], at[1], -10.0);
+        *v = Visibility::Visible;
+    }
+}
 
 /// The live world's generation last applied to the window
 /// (`--play-live-world`), and each drawn reference instance's translation
@@ -1660,10 +1841,9 @@ fn expose_view(
         return;
     };
     let now = std::time::Instant::now();
-    if !exposure.0.due(eye, look, now) {
+    let Some(line) = exposure.0.step(eye, look, now) else {
         return;
-    }
-    let line = exposure.0.measure(eye, look, now);
+    };
     println!("play: exposure at {:.3} s of the run: {line}", seen.t);
     let words = exposure.0.words.clone();
     if let Err(e) = buffers.insert(
@@ -1685,21 +1865,66 @@ struct PersonInput {
     last_dt: f64,
     /// The synthetic person's end was logged.
     synthetic_done: bool,
+    /// The left button's drags by the window's cursor.
+    drag: crate::person::Drag,
+    /// Shift is on as the movement key's modifier.
+    shift_modifier: bool,
 }
 
-/// `--play-keys`, each frame: the keys held, E, Escape and P, and the
-/// mouse's motion while the left button is held, as the person's state
-/// (`crate::person`: the key map). The scripted window's system sends the
-/// commands when the run's clock moves.
+/// `--play-keys`, each frame: the keys held, E, Escape and P, the arrow
+/// keys, and the mouse's motion while the left button is held, as the
+/// person's state (`crate::person`: the key map). The look reads the raw
+/// device motion, or when there is none the window's cursor between its
+/// positions while the button is down, in the order the window's events
+/// came (`person::Drag`: a tool's drag carries its motion on the release,
+/// or presses and lets go within one frame); Shift counts as a key of its
+/// own or as the movement key's modifier (`person::shift_of_modifiers`).
+/// The scripted window's system sends the commands when the run's clock
+/// moves.
 #[cfg(feature = "script-event")]
+#[allow(clippy::too_many_arguments)]
 fn person_keys(
     keys: Res<ButtonInput<KeyCode>>,
     buttons: Res<ButtonInput<MouseButton>>,
     motion: Res<AccumulatedMouseMotion>,
-    mut cursor: MessageReader<CursorMoved>,
+    mut window_events: MessageReader<bevy::window::WindowEvent>,
+    mut modifiers: MessageReader<bevy::winit::RawWinitWindowEvent>,
+    time: Res<Time>,
     mut input: ResMut<PersonInput>,
 ) {
-    let cursor_delta: Vec2 = cursor.read().filter_map(|m| m.delta).sum();
+    use crate::person::Pointer;
+    use bevy::window::WindowEvent;
+    for e in window_events.read() {
+        let p = match e {
+            WindowEvent::CursorMoved(m) => {
+                Pointer::Moved([f64::from(m.position.x), f64::from(m.position.y)])
+            }
+            WindowEvent::CursorLeft(_) => Pointer::Left,
+            WindowEvent::MouseButtonInput(b) if b.button == MouseButton::Left => {
+                Pointer::Button(b.state.is_pressed())
+            }
+            _ => continue,
+        };
+        input.drag.feed(p);
+    }
+    for e in modifiers.read() {
+        if let Some(on) = crate::person::shift_of_modifiers(&format!("{:?}", e.event)) {
+            input.shift_modifier = on;
+        }
+    }
+    let (cursor, dragged) = input.drag.take();
+    let held = crate::person::Held {
+        forward: keys.pressed(KeyCode::KeyW),
+        back: keys.pressed(KeyCode::KeyS),
+        left: keys.pressed(KeyCode::KeyA),
+        right: keys.pressed(KeyCode::KeyD),
+        run: false,
+    };
+    if !(held.forward || held.back || held.left || held.right) {
+        input.shift_modifier = false;
+    }
+    let shift_key = keys.any_pressed([KeyCode::ShiftLeft, KeyCode::ShiftRight]);
+    let run = crate::person::run_held(shift_key, input.shift_modifier, held);
     let p = &mut input.person;
     if keys.just_pressed(KeyCode::KeyP) {
         p.toggle_pause();
@@ -1715,16 +1940,51 @@ fn person_keys(
     if keys.just_pressed(KeyCode::KeyE) {
         p.press_activate();
     }
-    p.held = crate::person::Held {
-        forward: keys.pressed(KeyCode::KeyW),
-        back: keys.pressed(KeyCode::KeyS),
-        left: keys.pressed(KeyCode::KeyA),
-        right: keys.pressed(KeyCode::KeyD),
-        run: keys.any_pressed([KeyCode::ShiftLeft, KeyCode::ShiftRight]),
-    };
-    if buttons.pressed(MouseButton::Left) {
-        p.look(look_delta(motion.delta, cursor_delta));
+    p.held = crate::person::Held { run, ..held };
+    p.arrows(
+        keys.pressed(KeyCode::ArrowLeft),
+        keys.pressed(KeyCode::ArrowRight),
+        keys.pressed(KeyCode::ArrowUp),
+        keys.pressed(KeyCode::ArrowDown),
+        time.delta_secs_f64(),
+    );
+    if dragged || buttons.pressed(MouseButton::Left) || buttons.just_released(MouseButton::Left) {
+        let raw = [f64::from(motion.delta.x), f64::from(motion.delta.y)];
+        p.look(crate::person::look_motion(raw, cursor));
     }
+}
+
+/// The window's ordered events of a drag by the cursor alone by `d`
+/// pixels: the cursor at a point, the left button pressed, the cursor moved
+/// and the button let go (`person::Act::Drag`).
+#[cfg(feature = "script-event")]
+fn synthetic_drag(window: Entity, d: [f64; 2]) -> Vec<bevy::window::WindowEvent> {
+    use bevy::input::mouse::MouseButtonInput;
+    use bevy::input::ButtonState;
+    use bevy::window::{CursorMoved, WindowEvent};
+    let at = Vec2::new(400.0, 300.0);
+    let to = at + Vec2::new(d[0] as f32, d[1] as f32);
+    let button = |state| {
+        WindowEvent::MouseButtonInput(MouseButtonInput {
+            button: MouseButton::Left,
+            state,
+            window,
+        })
+    };
+    vec![
+        WindowEvent::CursorMoved(CursorMoved {
+            window,
+            position: at,
+            delta: None,
+        }),
+        button(ButtonState::Pressed),
+        WindowEvent::CursorMoved(CursorMoved {
+            window,
+            position: to,
+            delta: Some(to - at),
+        }),
+        button(ButtonState::Released),
+    ]
 }
 
 /// `--play-keys-from` (test and measurement only), each frame before the
@@ -1739,6 +1999,7 @@ fn person_inject(
     mut keyboard: MessageWriter<bevy::input::keyboard::KeyboardInput>,
     mut mouse_buttons: MessageWriter<bevy::input::mouse::MouseButtonInput>,
     mut mouse_motion: MessageWriter<bevy::input::mouse::MouseMotion>,
+    mut window_events: MessageWriter<bevy::window::WindowEvent>,
 ) {
     use crate::person::KeyName;
     use bevy::input::keyboard::{Key, KeyboardInput, NativeKey};
@@ -1751,6 +2012,7 @@ fn person_inject(
         synthetic,
         last_dt,
         synthetic_done,
+        ..
     } = &mut *input;
     let Some((s, speed)) = synthetic.as_mut() else {
         return;
@@ -1781,6 +2043,10 @@ fn person_inject(
         KeyName::P => KeyCode::KeyP,
         KeyName::Escape => KeyCode::Escape,
         KeyName::Shift => KeyCode::ShiftLeft,
+        KeyName::Left => KeyCode::ArrowLeft,
+        KeyName::Right => KeyCode::ArrowRight,
+        KeyName::Up => KeyCode::ArrowUp,
+        KeyName::Down => KeyCode::ArrowDown,
     };
     for (keys, state) in [
         (&f.down, ButtonState::Pressed),
@@ -1812,6 +2078,12 @@ fn person_inject(
         mouse_motion.write(bevy::input::mouse::MouseMotion {
             delta: Vec2::new(f.motion[0] as f32, f.motion[1] as f32),
         });
+    }
+    // A drag by the cursor alone: the window's ordered events as the
+    // window system sends a tool's drag (the cursor at a point, the press,
+    // the release carrying the cursor's end), no raw motion.
+    if let Some(d) = f.drag {
+        window_events.write_batch(synthetic_drag(window, d));
     }
     if s.done() && !*synthetic_done {
         *synthetic_done = true;
@@ -1976,10 +2248,17 @@ fn play_scripted(
     let given = if go { dt } else { 0.0 };
     let changed = match person.as_deref_mut() {
         // --play-keys: the person's commands of the frame go with its
-        // seconds (none while the clock stands).
+        // seconds.
         Some(x) => {
-            let commands = if go { x.person.commands() } else { Vec::new() };
-            let (title, clock) = p.person_frame(given, commands);
+            // The person's commands of every frame but a paused one: made
+            // while the play clock stands (a cell loading, the run busy),
+            // the gate keeps them for when it runs again.
+            let commands = if !paused && seen.feet.is_some() {
+                x.person.commands()
+            } else {
+                Vec::new()
+            };
+            let (title, clock) = p.person_frame(given, time.elapsed_secs_f64(), commands);
             // The play clock the walker goes by (it stands while a busy
             // run is owed its most), for the synthetic person's events.
             x.last_dt = (clock - x.person.clock).max(0.0);
@@ -2820,6 +3099,85 @@ mod tests {
         fn walker(&self) -> &WalkView {
             self.0.world().resource::<Walk>().active.as_ref().unwrap()
         }
+    }
+
+    /// The person's key map in an app without a window: a drag by the
+    /// cursor alone (no raw motion, press and release in one frame) turns
+    /// the view; the arrow keys turn and pitch; raw motion and the cursor
+    /// are never both counted.
+    #[cfg(feature = "script-event")]
+    #[test]
+    fn the_cursor_and_the_arrow_keys_look_in_the_person_mode() {
+        let mut app = App::new();
+        let window = app.world_mut().spawn_empty().id();
+        app.init_resource::<ButtonInput<KeyCode>>()
+            .init_resource::<ButtonInput<MouseButton>>()
+            .init_resource::<AccumulatedMouseMotion>()
+            .add_message::<bevy::window::WindowEvent>()
+            .add_message::<bevy::winit::RawWinitWindowEvent>()
+            .insert_resource(Time::<()>::default())
+            .insert_resource(PersonInput {
+                person: crate::person::Person::new(90.0, 0.0, 0.1),
+                synthetic: None,
+                last_dt: 0.0,
+                synthetic_done: false,
+                drag: crate::person::Drag::default(),
+                shift_modifier: false,
+            })
+            .add_systems(Update, person_keys);
+        let frame = |app: &mut App| {
+            app.world_mut()
+                .resource_mut::<Time>()
+                .advance_by(std::time::Duration::from_secs_f64(1. / 60.));
+            app.update();
+            let w = app.world_mut();
+            w.resource_mut::<ButtonInput<KeyCode>>().clear();
+            w.resource_mut::<ButtonInput<MouseButton>>().clear();
+            w.resource_mut::<AccumulatedMouseMotion>().delta = Vec2::ZERO;
+        };
+        let look = |app: &App| {
+            let p = &app.world().resource::<PersonInput>().person;
+            (p.heading, p.pitch)
+        };
+        frame(&mut app);
+        // A tool's drag: 100 pixels right, 50 up, by the cursor alone.
+        app.world_mut()
+            .write_message_batch(synthetic_drag(window, [100.0, -50.0]));
+        frame(&mut app);
+        let (h, p) = look(&app);
+        assert!((h - 80.0).abs() < 1e-4 && (p - 5.0).abs() < 1e-4, "{h} {p}");
+        // Raw motion with the button held: the raw motion alone.
+        app.world_mut()
+            .resource_mut::<ButtonInput<MouseButton>>()
+            .press(MouseButton::Left);
+        app.world_mut()
+            .resource_mut::<AccumulatedMouseMotion>()
+            .delta = Vec2::new(-20.0, 0.0);
+        app.world_mut()
+            .write_message_batch(synthetic_drag(window, [500.0, 0.0]));
+        frame(&mut app);
+        let (h, _) = look(&app);
+        assert!((h - 82.0).abs() < 1e-4, "{h}");
+        app.world_mut()
+            .resource_mut::<ButtonInput<MouseButton>>()
+            .release(MouseButton::Left);
+        frame(&mut app);
+        // The left arrow for half a second (30 frames): 45 degrees left;
+        // the up arrow for 15 frames: 15 degrees up.
+        let (h0, p0) = look(&app);
+        for k in 0..30 {
+            let mut keys = app.world_mut().resource_mut::<ButtonInput<KeyCode>>();
+            keys.press(KeyCode::ArrowLeft);
+            if k < 15 {
+                keys.press(KeyCode::ArrowUp);
+            } else {
+                keys.release(KeyCode::ArrowUp);
+            }
+            frame(&mut app);
+        }
+        let (h, p) = look(&app);
+        assert!((h - h0 - 45.0).abs() < 1e-6, "{h} {h0}");
+        assert!((p - p0 - 15.0).abs() < 1e-6, "{p} {p0}");
     }
 
     #[test]

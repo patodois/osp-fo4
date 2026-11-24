@@ -6,11 +6,14 @@
 //! claims about the game: no rule.
 //!
 //! The key map: W, S, A, D hold forward, back, left, right (left and right
-//! strafe); Shift holds run; the mouse turns (heading) and looks up or
-//! down (pitch) while the left button is held, as the viewer's own walk
-//! mode does; E activates; Escape ends the input; P pauses (no command:
-//! the window's clock stops). The walker has no jump and `toward` (a
-//! scripted steering aid) has no key.
+//! strafe); Shift holds run, whether it arrives as a key of its own or only
+//! as a modifier of the movement key ([`shift_of_modifiers`]); the mouse
+//! turns (heading) and looks up or down (pitch) while the left button is
+//! held, from raw device motion or, when there is none, from the window's
+//! cursor ([`Drag`]); the arrow keys turn and look up or down at a fixed
+//! rate ([`ARROW_TURN_DEGREES_PER_SECOND`]); E activates; Escape ends the
+//! input; P pauses (no command: the window's clock stops). The walker has
+//! no jump and `toward` (a scripted steering aid) has no key.
 //!
 //! [`Synthetic`] is a person for checks and measurements only: timed key,
 //! button and mouse events from a file, injected by the window where a real
@@ -20,6 +23,12 @@ use fo4_play::input::{Command, Key};
 /// The pitch the person can look up or down to (degrees): the viewer's
 /// free-fly limit.
 pub const MAX_PITCH_DEGREES: f64 = 89.0;
+
+/// How fast the left and right arrow keys turn the view (degrees a second
+/// of the window's frames): viewer policy.
+pub const ARROW_TURN_DEGREES_PER_SECOND: f64 = 90.0;
+/// How fast the up and down arrow keys look up or down (degrees a second).
+pub const ARROW_PITCH_DEGREES_PER_SECOND: f64 = 60.0;
 
 /// The keys a person holds: forward, back, left, right, run.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -72,6 +81,24 @@ impl Person {
             clock: 0.0,
             degrees_per_pixel,
             given: (0, 0),
+        }
+    }
+
+    /// The arrow keys held for a frame of `dt` seconds: left and right
+    /// turn, up and down look up and down, at a fixed rate (none while
+    /// paused).
+    pub fn arrows(&mut self, left: bool, right: bool, up: bool, down: bool, dt: f64) {
+        if self.paused || !(dt.is_finite() && dt > 0.0) {
+            return;
+        }
+        let way = |a: bool, b: bool| f64::from(i8::from(a) - i8::from(b));
+        let turn = way(left, right) * ARROW_TURN_DEGREES_PER_SECOND * dt;
+        let tilt = way(up, down) * ARROW_PITCH_DEGREES_PER_SECOND * dt;
+        if turn != 0.0 {
+            self.heading = (self.heading + turn).rem_euclid(360.0);
+        }
+        if tilt != 0.0 {
+            self.pitch = (self.pitch + tilt).clamp(-MAX_PITCH_DEGREES, MAX_PITCH_DEGREES);
         }
     }
 
@@ -147,6 +174,93 @@ impl Person {
     }
 }
 
+/// What the window's pointer did, in the order the window system sent it
+/// (the window's ordered events, not the per-kind messages): the cursor at
+/// a position (window pixels), the left button pressed or let go, the
+/// cursor out of the window.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Pointer {
+    Moved([f64; 2]),
+    Button(bool),
+    Left,
+}
+
+/// The left button's drags as the window's cursor makes them: the
+/// cursor's movement between its positions while the button is down, in
+/// the order the events came. A tool that moves the cursor without raw
+/// device motion, or sends the press, the motion and the release within
+/// one frame, or carries the motion on the release itself (as the window
+/// system does: a release brings the cursor's position before the
+/// button's change), still turns the view. Viewer policy, no rule.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct Drag {
+    held: bool,
+    at: Option<[f64; 2]>,
+    sum: [f64; 2],
+    during: bool,
+}
+
+impl Drag {
+    /// One pointer event, in order.
+    pub fn feed(&mut self, p: Pointer) {
+        match p {
+            Pointer::Moved(q) => {
+                if self.held {
+                    if let Some(a) = self.at {
+                        self.sum[0] += q[0] - a[0];
+                        self.sum[1] += q[1] - a[1];
+                    }
+                }
+                self.at = Some(q);
+            }
+            Pointer::Button(down) => {
+                self.during |= down || self.held;
+                self.held = down;
+            }
+            Pointer::Left => self.at = None,
+        }
+    }
+
+    /// The frame's cursor motion while the button was down, and whether
+    /// the button was down at any time in the frame; then a new frame.
+    pub fn take(&mut self) -> ([f64; 2], bool) {
+        let out = (self.sum, self.during || self.held);
+        self.sum = [0.0; 2];
+        self.during = false;
+        out
+    }
+}
+
+/// The motion a frame looks by: the raw device motion when there is any,
+/// else the cursor's movement while the button was held; both are never
+/// added.
+pub fn look_motion(raw: [f64; 2], cursor: [f64; 2]) -> [f64; 2] {
+    if raw != [0.0; 2] {
+        raw
+    } else {
+        cursor
+    }
+}
+
+/// Whether Shift is on in a window system's modifier change, read from
+/// its text as the pinned window library prints it
+/// (`ModifiersChanged(Modifiers { state: ModifiersState(SHIFT | ...), ..
+/// })`): `None` for any other event. A tool that sends Shift only as a
+/// flag on the movement key's press (no Shift key event of its own, so no
+/// left or right Shift is attested) is seen here. Viewer policy.
+pub fn shift_of_modifiers(text: &str) -> Option<bool> {
+    let rest = text.strip_prefix("ModifiersChanged(")?;
+    let state = rest.split_once("state: ModifiersState(")?.1;
+    let flags = state.split_once(')')?.0;
+    Some(flags.split('|').any(|f| f.trim() == "SHIFT"))
+}
+
+/// Run is held: Shift as a key of its own, or Shift as the modifier of a
+/// movement key while one is held.
+pub fn run_held(shift_key: bool, shift_modifier: bool, held: Held) -> bool {
+    shift_key || (shift_modifier && (held.forward || held.back || held.left || held.right))
+}
+
 /// A key the synthetic person presses.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum KeyName {
@@ -158,6 +272,11 @@ pub enum KeyName {
     P,
     Escape,
     Shift,
+    /// The arrow keys.
+    Left,
+    Right,
+    Up,
+    Down,
 }
 
 impl KeyName {
@@ -171,6 +290,10 @@ impl KeyName {
             "P" => KeyName::P,
             "Escape" => KeyName::Escape,
             "Shift" => KeyName::Shift,
+            "Left" => KeyName::Left,
+            "Right" => KeyName::Right,
+            "Up" => KeyName::Up,
+            "Down" => KeyName::Down,
             _ => return None,
         })
     }
@@ -192,6 +315,11 @@ pub enum Act {
     Button(Press),
     /// Mouse motion in pixels (x right, y down).
     Mouse(f64, f64),
+    /// A drag by the window's cursor alone, as a desktop tool sends one:
+    /// the cursor at a point, the left button pressed, the cursor moved by
+    /// (DX, DY) and the button let go, all within one frame, with no raw
+    /// device motion.
+    Drag(f64, f64),
     /// Turn (with the left button held for that frame) until the view's
     /// heading is this many degrees, as a person turns to a heading.
     TurnTo(f64),
@@ -218,9 +346,9 @@ pub struct Timed {
 
 /// Reads the synthetic person's file: one event a line, `SECONDS EVENT`,
 /// seconds of the play clock in time order; `#` starts a comment. Events:
-/// `key W|A|S|D|E|P|Escape|Shift down|up|tap`, `button down|up|tap`,
-/// `mouse DX DY`, `turn-to DEGREES`, `pitch-to DEGREES`, `steer X Y`,
-/// `aim-at X Y Z`, `stop`.
+/// `key W|A|S|D|E|P|Escape|Shift|Left|Right|Up|Down down|up|tap`,
+/// `button down|up|tap`, `mouse DX DY`, `drag DX DY`, `turn-to DEGREES`,
+/// `pitch-to DEGREES`, `steer X Y`, `aim-at X Y Z`, `stop`.
 pub fn parse_synthetic(text: &str) -> Result<Vec<Timed>, String> {
     let mut out: Vec<Timed> = Vec::new();
     for (n, raw) in text.lines().enumerate() {
@@ -248,35 +376,35 @@ pub fn parse_synthetic(text: &str) -> Result<Vec<Timed>, String> {
         if t < 0.0 || out.last().is_some_and(|e| e.t > t) {
             return Err(bad("seconds are 0 or more and never go back"));
         }
-        let (act, words) = match w.get(1).copied() {
-            Some("key") => (
-                Act::Key(
-                    w.get(2)
-                        .and_then(|k| KeyName::parse(k))
-                        .ok_or_else(|| bad("a key: W A S D E P Escape Shift"))?,
-                    press(3)?,
+        let (act, words) =
+            match w.get(1).copied() {
+                Some("key") => (
+                    Act::Key(
+                        w.get(2).and_then(|k| KeyName::parse(k)).ok_or_else(|| {
+                            bad("a key: W A S D E P Escape Shift Left Right Up Down")
+                        })?,
+                        press(3)?,
+                    ),
+                    4,
                 ),
-                4,
-            ),
-            Some("button") => (Act::Button(press(2)?), 3),
-            Some("mouse") => (Act::Mouse(num(2)?, num(3)?), 4),
-            Some("turn-to") => (Act::TurnTo(num(2)?), 3),
-            Some("pitch-to") => {
-                let p = num(2)?;
-                if p.abs() > MAX_PITCH_DEGREES {
-                    return Err(bad("pitch-to is within 89 degrees"));
+                Some("button") => (Act::Button(press(2)?), 3),
+                Some("mouse") => (Act::Mouse(num(2)?, num(3)?), 4),
+                Some("drag") => (Act::Drag(num(2)?, num(3)?), 4),
+                Some("turn-to") => (Act::TurnTo(num(2)?), 3),
+                Some("pitch-to") => {
+                    let p = num(2)?;
+                    if p.abs() > MAX_PITCH_DEGREES {
+                        return Err(bad("pitch-to is within 89 degrees"));
+                    }
+                    (Act::PitchTo(p), 3)
                 }
-                (Act::PitchTo(p), 3)
-            }
-            Some("steer") => (Act::Steer(num(2)?, num(3)?), 4),
-            Some("aim-at") => (Act::AimAt(num(2)?, num(3)?, num(4)?), 5),
-            Some("stop") => (Act::Stop, 2),
-            _ => {
-                return Err(bad(
-                    "expected key, button, mouse, turn-to, pitch-to, steer, aim-at or stop",
-                ))
-            }
-        };
+                Some("steer") => (Act::Steer(num(2)?, num(3)?), 4),
+                Some("aim-at") => (Act::AimAt(num(2)?, num(3)?, num(4)?), 5),
+                Some("stop") => (Act::Stop, 2),
+                _ => return Err(bad(
+                    "expected key, button, mouse, drag, turn-to, pitch-to, steer, aim-at or stop",
+                )),
+            };
         if w.len() != words {
             return Err(bad("extra words"));
         }
@@ -294,6 +422,8 @@ pub struct Inject {
     pub up: Vec<KeyName>,
     pub button: Option<bool>,
     pub motion: [f64; 2],
+    /// A drag by the cursor alone ([`Act::Drag`]), its motion summed.
+    pub drag: Option<[f64; 2]>,
 }
 
 /// The synthetic person's state.
@@ -394,6 +524,11 @@ impl Synthetic {
                 Act::Mouse(dx, dy) => {
                     out.motion[0] += dx;
                     out.motion[1] += dy;
+                }
+                Act::Drag(dx, dy) => {
+                    let d = out.drag.get_or_insert([0.0; 2]);
+                    d[0] += dx;
+                    d[1] += dy;
                 }
                 Act::TurnTo(h) => {
                     self.aim = None;
@@ -612,5 +747,127 @@ mod tests {
         assert_eq!(wrap(-190.0), 170.0);
         assert_eq!(wrap(180.0), 180.0);
         assert_eq!(wrap(-180.0), 180.0);
+    }
+
+    #[test]
+    fn the_arrow_keys_turn_and_look_at_a_fixed_rate() {
+        let mut p = Person::new(10.0, 0.0, 0.1);
+        // Left for half a second turns left (the heading grows).
+        p.arrows(true, false, false, false, 0.5);
+        assert!((p.heading - (10.0 + ARROW_TURN_DEGREES_PER_SECOND * 0.5)).abs() < 1e-9);
+        // Right for a second turns right past 0.
+        p.arrows(false, true, false, false, 1.0);
+        assert!(
+            (p.heading - (10.0 + 45.0 - 90.0 + 360.0)).abs() < 1e-9,
+            "{}",
+            p.heading
+        );
+        // Up looks up, down looks down, within the limit; both cancel.
+        p.arrows(false, false, true, false, 0.25);
+        assert!((p.pitch - 15.0).abs() < 1e-9);
+        p.arrows(false, false, true, true, 0.25);
+        assert!((p.pitch - 15.0).abs() < 1e-9);
+        p.arrows(false, false, false, true, 10.0);
+        assert_eq!(p.pitch, -MAX_PITCH_DEGREES);
+        // The look goes to the walker as face and pitch.
+        let c = p.commands();
+        assert!(
+            matches!(c[..], [Command::Face(_), Command::Pitch(_)]),
+            "{c:?}"
+        );
+        // Not while paused, not for a frame without time.
+        p.toggle_pause();
+        let before = (p.heading, p.pitch);
+        p.arrows(true, false, true, false, 1.0);
+        p.toggle_pause();
+        p.arrows(true, false, true, false, 0.0);
+        assert_eq!((p.heading, p.pitch), before);
+    }
+
+    #[test]
+    fn a_drag_by_the_cursor_alone_turns_the_view() {
+        // A tool's drag: the cursor warped to the start, the press, then
+        // the release carrying the cursor's end position (the window system
+        // sends the position before the button's change), in one frame.
+        let mut d = Drag::default();
+        d.feed(Pointer::Moved([100.0, 100.0]));
+        d.feed(Pointer::Button(true));
+        d.feed(Pointer::Moved([160.0, 80.0]));
+        d.feed(Pointer::Button(false));
+        assert_eq!(d.take(), ([60.0, -20.0], true));
+        // Nothing held: nothing in the next frame, motion without the
+        // button does not count.
+        d.feed(Pointer::Moved([300.0, 300.0]));
+        assert_eq!(d.take(), ([0.0, 0.0], false));
+        // A drag over several frames: the press in one, moves in the next,
+        // the release with its motion in the last.
+        d.feed(Pointer::Button(true));
+        assert_eq!(d.take(), ([0.0, 0.0], true));
+        d.feed(Pointer::Moved([310.0, 300.0]));
+        assert_eq!(d.take(), ([10.0, 0.0], true));
+        d.feed(Pointer::Moved([315.0, 290.0]));
+        d.feed(Pointer::Button(false));
+        assert_eq!(d.take(), ([5.0, -10.0], true));
+        // The cursor leaving the window forgets its place: no jump.
+        d.feed(Pointer::Button(true));
+        d.feed(Pointer::Left);
+        d.feed(Pointer::Moved([0.0, 0.0]));
+        d.feed(Pointer::Moved([2.0, 0.0]));
+        assert_eq!(d.take(), ([2.0, 0.0], true));
+        // Raw motion wins when there is any; never both.
+        assert_eq!(look_motion([3.0, 4.0], [60.0, 0.0]), [3.0, 4.0]);
+        assert_eq!(look_motion([0.0, 0.0], [60.0, 0.0]), [60.0, 0.0]);
+        let mut p = Person::new(0.0, 0.0, 0.5);
+        p.look(look_motion([0.0; 2], [60.0, -20.0]));
+        assert_eq!((p.heading, p.pitch), (330.0, 10.0));
+    }
+
+    #[test]
+    fn shift_as_the_movement_keys_modifier_runs() {
+        let on = "ModifiersChanged(Modifiers { state: ModifiersState(SHIFT), pressed_mods: ModifiersKeys(0x0) })";
+        let both = "ModifiersChanged(Modifiers { state: ModifiersState(SHIFT | CONTROL), pressed_mods: ModifiersKeys(LSHIFT) })";
+        let off = "ModifiersChanged(Modifiers { state: ModifiersState(0x0), pressed_mods: ModifiersKeys(LSHIFT) })";
+        assert_eq!(shift_of_modifiers(on), Some(true));
+        assert_eq!(shift_of_modifiers(both), Some(true));
+        // A left Shift attested in the pressed keys is not the state.
+        assert_eq!(shift_of_modifiers(off), Some(false));
+        assert_eq!(shift_of_modifiers("CursorMoved { position: (1, 2) }"), None);
+        let w = Held {
+            forward: true,
+            ..Held::default()
+        };
+        assert!(run_held(false, true, w));
+        assert!(run_held(true, false, Held::default()));
+        // The modifier alone, no movement key: no run.
+        assert!(!run_held(false, true, Held::default()));
+        let mut p = Person::new(0.0, 0.0, 0.1);
+        p.held = Held {
+            run: run_held(false, true, w),
+            ..w
+        };
+        assert_eq!(
+            p.commands(),
+            [
+                Command::Key(Key::Forward, true),
+                Command::Key(Key::Run, true)
+            ]
+        );
+    }
+
+    #[test]
+    fn the_synthetic_person_drags_and_holds_the_arrow_keys() {
+        let e =
+            parse_synthetic("1 drag 30 -10\n1 drag 5 0\n2 key Left down\n3 key Left up\n").unwrap();
+        let mut s = Synthetic::new(e);
+        let f = s.frame(1.0, (0.0, 0.0), 0.1, None, 1.0);
+        assert_eq!(f.drag, Some([35.0, -10.0]));
+        assert_eq!(f.motion, [0.0, 0.0]);
+        assert_eq!(f.button, None);
+        let f = s.frame(2.0, (0.0, 0.0), 0.1, None, 1.0);
+        assert_eq!((f.drag, f.down.as_slice()), (None, &[KeyName::Left][..]));
+        let f = s.frame(3.0, (0.0, 0.0), 0.1, None, 1.0);
+        assert_eq!(f.up, [KeyName::Left]);
+        assert!(parse_synthetic("1 drag 3\n").is_err());
+        assert!(parse_synthetic("1 key Home down\n").is_err());
     }
 }

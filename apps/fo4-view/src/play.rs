@@ -150,6 +150,9 @@ mod enabled {
         /// `--play-keys-from`: the synthetic person's events and the
         /// walking speed it steers at (taken by the window).
         pub synthetic: Option<(Vec<crate::person::Timed>, f64)>,
+        /// The viewport's crosshair and lines (`--play-hud`, on with
+        /// `--play-keys`; `crate::hud`).
+        pub hud: bool,
     }
 
     /// The window's side of the scripted run (`--play-input`).
@@ -304,6 +307,9 @@ mod enabled {
         s.look = std::array::from_fn(|i| s.eye[i] + d[i]);
         let mut args = vec![s.manifest.clone(), "new-game".to_string(), p.out.clone()];
         args.extend(switches);
+        // --play-activate-opens: the caller's timed opens of those
+        // references are left to the walker's activations.
+        let args = p.switches.run_args(args);
         let sw = &p.switches;
         let synthetic = match &p.input {
             Some(crate::cli::Input::Keys(crate::cli::Keys {
@@ -443,6 +449,7 @@ mod enabled {
             applied: None,
             scripted,
             synthetic,
+            hud: p.hud,
         })
     }
 
@@ -549,11 +556,12 @@ mod enabled {
         pub fn person_frame(
             &mut self,
             dt: f64,
+            wall: f64,
             commands: Vec<fo4_play::input::Command>,
         ) -> (Option<String>, f64) {
             let mut clock = 0.0;
             if let Some(s) = &self.scripted {
-                let (events, at) = s.gate.submit(dt, commands);
+                let (events, at) = s.gate.submit(dt, wall, commands);
                 clock = at;
                 for e in events {
                     if !matches!(
@@ -602,16 +610,22 @@ mod enabled {
             self.statuses().then(|| link::title(&self.last))
         }
 
+        /// The lines being spoken at the run's last status.
+        pub fn subtitles(&self) -> &[String] {
+            &self.last.subtitles
+        }
+
         /// Whether a cell is being loaded.
         pub fn loading(&self) -> bool {
             self.scripted.as_ref().is_some_and(|s| s.loading.is_some())
         }
 
-        /// The cell the walker's walking world is about when the window
-        /// draws another and loads none.
+        /// The cell the walker's walking world is about (or is being built
+        /// about: the window loads it while the walker builds) when the
+        /// window draws another and loads none.
         pub fn cell_wanted(&self, seen: &Seen) -> Option<FormKey> {
             let s = self.scripted.as_ref()?;
-            let cell = seen.cell.as_ref()?;
+            let cell = seen.next_cell.as_ref().or(seen.cell.as_ref())?;
             (s.loading.is_none() && s.drawn.as_ref() != Some(cell)).then(|| cell.clone())
         }
 
@@ -856,8 +870,17 @@ mod enabled {
         waiting: bool,
         stopped: bool,
         /// The person's commands at their seconds, not yet taken by the
-        /// walker (`--play-keys`).
+        /// walker (`--play-keys`), in the order of their seconds.
         queued: Vec<fo4_play::input::Event>,
+        /// The play clock at the last frame that gave the person's
+        /// commands a second, and the second no later command goes before
+        /// (after commands made while the clock stood).
+        stamped: f64,
+        floor: f64,
+        /// Commands made while the play clock stood (a walking world built
+        /// again, a cell loading), with the window's wall clock when each
+        /// was made: given when the clock runs again ([`Gate::submit`]).
+        deferred: Vec<(f64, fo4_play::input::Command)>,
     }
 
     impl GateState {
@@ -876,6 +899,13 @@ mod enabled {
 
     /// The window's seconds a busy run may be owed at most.
     pub const GATE_BUSY_MAX: f64 = 0.25;
+
+    /// Commands made while the play clock stood are given as it runs
+    /// again, spread as they were made, each gap between two of them kept
+    /// up to this many seconds of the play clock (a viewer policy: a key
+    /// tapped during a load still moves the walker for as long as it was
+    /// held, up to this).
+    pub const DEFERRED_GAP_MAX: f64 = 0.5;
 
     impl Gate {
         /// Waits until the window's clock reaches `until`; `false` when the
@@ -916,31 +946,65 @@ mod enabled {
 
         /// The window's side of the person's mode: the window drew `dt`
         /// seconds more ([`Gate::advance`]) and the person gave `commands`
-        /// in that frame. They are stamped at the second the walker's
-        /// clock reaches with this frame (the horizon, or what the busy
-        /// run is owed added to it), which is after every second the walker
-        /// was told it knows; in a frame that adds no time they are not
-        /// sent. Returns them stamped, and that second (the play clock).
+        /// in that frame, at `wall` seconds of the window's wall clock.
+        /// They are stamped at the second the walker's clock reaches with
+        /// this frame (the horizon, or what the busy run is owed added to
+        /// it), which is after every second the walker was told it knows.
+        /// In a frame where that clock does not move (the run busy past
+        /// what it may be owed, a cell loading) they are kept, in order,
+        /// and given when it moves again: spread from that second as they
+        /// were made (each gap at most [`DEFERRED_GAP_MAX`]), looks kept to
+        /// the last, later commands after them; so a key held across the stand
+        /// stays held and a press made during it is neither lost nor
+        /// collapsed with its release. Returns the commands stamped, and
+        /// that second (the play clock).
         fn submit(
             &self,
             dt: f64,
+            wall: f64,
             commands: Vec<fo4_play::input::Command>,
         ) -> (Vec<fo4_play::input::Event>, f64) {
+            use fo4_play::input::{Command, Event};
             let mut events = Vec::new();
             let mut clock = 0.0;
             if let Ok(mut g) = self.state.lock() {
                 // Stamped under the same lock as the clock moves, before
                 // the walker can take the new horizon.
                 g.add(dt);
-                if dt.is_finite() && dt > 0.0 {
-                    let t = g.horizon + g.owed;
-                    events = commands
-                        .into_iter()
-                        .map(|command| fo4_play::input::Event { t, command })
-                        .collect();
-                    g.queued.extend(events.iter().copied());
+                let t = g.horizon + g.owed;
+                if t > g.stamped {
+                    let base = t.max(g.floor);
+                    let mut before = g.deferred.first().map_or(0.0, |d| d.0);
+                    let mut off = 0.0;
+                    for (w, command) in std::mem::take(&mut g.deferred) {
+                        off += (w - before).clamp(0.0, DEFERRED_GAP_MAX);
+                        before = w;
+                        events.push(Event {
+                            t: base + off,
+                            command,
+                        });
+                    }
+                    let at = base + off;
+                    events.extend(commands.into_iter().map(|command| Event { t: at, command }));
+                    g.floor = at;
+                    g.stamped = t;
+                    for e in &events {
+                        let k = g.queued.partition_point(|q| q.t <= e.t);
+                        g.queued.insert(k, *e);
+                    }
+                } else {
+                    for command in commands {
+                        // A look made while the clock stands replaces the
+                        // one before it.
+                        let look = |c: &Command| {
+                            std::mem::discriminant(c) == std::mem::discriminant(&command)
+                                && matches!(c, Command::Face(_) | Command::Pitch(_))
+                        };
+                        g.deferred.retain(|(_, c)| !look(c));
+                        g.deferred.push((wall, command));
+                    }
                 }
-                clock = g.horizon + g.owed;
+                clock = t;
             }
             self.moved.notify_all();
             (events, clock)
@@ -992,6 +1056,15 @@ mod enabled {
         /// `--play-keys`: what the activation key would meet from the
         /// walker's eye (`fo4_play::walker::Walker::aim`), as a label.
         pub aim: Option<String>,
+        /// Whether that is a thing E uses (not a static's collision or
+        /// box, not a collision of no reference): the HUD's prompt.
+        pub aim_usable: bool,
+        /// The walker's walking world is being built again (the run is
+        /// busy with it): the HUD says loading.
+        pub building: bool,
+        /// The cell that walking world is being built about: the window
+        /// loads its drawing meanwhile.
+        pub next_cell: Option<FormKey>,
     }
 
     /// The scripted walker as the run's driver, held back by the window's
@@ -1012,7 +1085,7 @@ mod enabled {
         /// `--play-keys`: the camera's heading from the person's looks (not
         /// the walk's direction), what E would meet given to the window,
         /// and the labels of the references met so far.
-        keys: Option<BTreeMap<FormKey, String>>,
+        keys: Option<BTreeMap<FormKey, (String, bool)>>,
     }
 
     /// What the run had when its timeline was last read: effects, quest
@@ -1197,20 +1270,30 @@ mod enabled {
             };
             let aim = self.walker.aim().map(|h| match h.reference {
                 Some(k) => {
-                    let label = labels.entry(k.clone()).or_insert_with(|| {
+                    let (label, usable) = labels.entry(k.clone()).or_insert_with(|| {
                         let b = fo4_core::Budget::new(run.store.limits.max_memory);
                         let base = fo4_vm::bind::base_of(run.store, &k, &b).ok().flatten();
+                        // A static's base (the kinds the activatable
+                        // object bounds leave out) is not something E uses.
+                        let usable = base
+                            .as_ref()
+                            .and_then(|base| run.store.signature(base))
+                            .is_some_and(|s| !fo4_play::rules::STATIC_KINDS.contains(&s));
                         let what = base
                             .and_then(|base| fo4_vm::bind::label(run.store, &base, &b).ok())
                             .unwrap_or_else(|| "a reference".into());
-                        format!("{what} ({})", fo4_vm::bind::record_key(&k))
+                        (format!("{what} ({})", fo4_vm::bind::record_key(&k)), usable)
                     });
-                    format!("{label} at {:.0} units", h.distance)
+                    (format!("{label} at {:.0} units", h.distance), *usable)
                 }
-                None => format!("collision of no reference at {:.0} units", h.distance),
+                None => (
+                    format!("collision of no reference at {:.0} units", h.distance),
+                    false,
+                ),
             });
             if let Ok(mut s) = self.seen.lock() {
-                s.aim = aim;
+                s.aim_usable = aim.as_ref().is_some_and(|a| a.1);
+                s.aim = aim.map(|a| a.0);
             }
         }
     }
@@ -1343,6 +1426,25 @@ mod enabled {
         let mut report = String::new();
         let mut walker = switches.walker(built, script, &mut report)?;
         drop((store, vfs));
+        // The cell a walking world is being built about goes to the window
+        // as the build starts, so it loads the cell's drawing meanwhile.
+        let told = seen.clone();
+        walker = walker.with_on_load(Box::new(move |cell| {
+            if let Ok(mut s) = told.lock() {
+                match cell {
+                    Some(c) => {
+                        s.building = true;
+                        s.next_cell = Some(c.clone());
+                    }
+                    None => {
+                        s.building = false;
+                        if let Some(c) = s.next_cell.take() {
+                            s.cell = Some(c);
+                        }
+                    }
+                }
+            }
+        }));
         let log = walker.log.clone();
         let keys = matches!(input, crate::cli::Input::Keys(_));
         if keys {
@@ -1426,6 +1528,63 @@ mod enabled {
             // The window closed: a run waiting is let go, refused.
             gate.stop();
             assert!(!gate.wait(h + 1.0));
+        }
+
+        #[test]
+        fn commands_made_while_the_clock_stands_are_given_when_it_runs() {
+            use fo4_play::input::{Command, Key};
+            let gate = Gate::default();
+            // The walker waits: the clock runs with the frames.
+            gate.state.lock().unwrap().waiting = true;
+            let (e, t) = gate.submit(0.5, 0.0, vec![Command::Key(Key::Forward, true)]);
+            assert_eq!((e.len(), t), (1, 0.5));
+            // The walker is busy (a walking world built again): owed at
+            // most GATE_BUSY_MAX, then the clock stands; the person lets W
+            // go, taps S (0.4 s) and looks twice while it stands.
+            gate.state.lock().unwrap().waiting = false;
+            let (e, t) = gate.submit(0.25, 1.0, vec![]);
+            assert_eq!((e.len(), t), (0, 0.75));
+            for (wall, c) in [
+                (
+                    2.0,
+                    vec![Command::Key(Key::Forward, false), Command::Face(10.0)],
+                ),
+                (
+                    3.0,
+                    vec![Command::Key(Key::Back, true), Command::Face(20.0)],
+                ),
+                (3.4, vec![Command::Key(Key::Back, false)]),
+            ] {
+                let (e, t) = gate.submit(1.0 / 60.0, wall, c);
+                assert!(e.is_empty());
+                assert_eq!(t, 0.75);
+            }
+            // A cell loads (no time), D pressed.
+            let (e, _) = gate.submit(0.0, 9.0, vec![Command::Key(Key::Right, true)]);
+            assert!(e.is_empty());
+            // The run waits again: the clock runs; the commands come in
+            // their order, spread as made (each gap at most
+            // DEFERRED_GAP_MAX: the tap of S keeps its 0.4 s), the looks
+            // kept to the last, this frame's after them.
+            gate.state.lock().unwrap().waiting = true;
+            let (e, t) = gate.submit(0.1, 9.5, vec![Command::Pitch(-5.0)]);
+            assert!((t - 0.85).abs() < 1e-12);
+            let got: Vec<(f64, Command)> = e.iter().map(|x| (x.t, x.command)).collect();
+            let at = |x: f64, after: f64| (x - 0.85f64 - after).abs() < 1e-9;
+            assert_eq!(got.len(), 6, "{got:?}");
+            assert!(at(got[0].0, 0.0) && got[0].1 == Command::Key(Key::Forward, false));
+            assert!(at(got[1].0, 0.5) && got[1].1 == Command::Key(Key::Back, true));
+            assert!(at(got[2].0, 0.5) && got[2].1 == Command::Face(20.0));
+            assert!(at(got[3].0, 0.9) && got[3].1 == Command::Key(Key::Back, false));
+            assert!(at(got[4].0, 1.4) && got[4].1 == Command::Key(Key::Right, true));
+            assert!(at(got[5].0, 1.4) && got[5].1 == Command::Pitch(-5.0));
+            // The next frame's commands go after them; the queue is in
+            // the order of the seconds.
+            let (e, _) = gate.submit(0.1, 9.6, vec![Command::Key(Key::Right, false)]);
+            assert!(at(e[0].t, 1.4));
+            let q = gate.state.lock().unwrap().queued.clone();
+            assert!(q.windows(2).all(|w| w[0].t <= w[1].t));
+            assert_eq!(q.len(), 8);
         }
 
         #[test]
