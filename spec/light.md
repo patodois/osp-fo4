@@ -121,3 +121,13 @@ screen derivatives of the world position; the sky is drawn by a camera
 ordered before the colour pass on the same target (a cube around the eye
 whose material colours each pixel by its view direction), the colour pass
 keeping it instead of clearing. The tag pass is unchanged.
+
+## The play window (the looks step)
+
+The window's scripted play mode (`fo4-view --play-run ... --play-input FILE`) takes the light switches and the
+caller's `--assume-hour` and `--assume-weather` (not `--exposure-eye`: the window's camera moves): each cell the
+window loads gets its light as the headless frame does (`load::cell`, `scene::convert_lit`), its light buffer is
+the one every material binds, and the sky is drawn by the same `sky` entry point on a cube kept about the camera.
+In the opening at hour 11 and weather 0 (the light step's frames' assumptions) the exteriors show the sky's
+gradient; the prewar and postwar vaults (379 and 817 placed lights as points) wash out toward white without an
+exposure, and the window drops to about 16 and 10 fps there at 2560x1440: every light is summed for every pixel.

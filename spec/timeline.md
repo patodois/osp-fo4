@@ -120,6 +120,21 @@ skeleton lacks (cloth and hair) skinned at its bind transform. Per frame: 3 char
 house (before: 4 markers), 35 to 37 characters and 3 to 6 markers outside after the alarm (before: 4 markers),
 23 characters and 6 markers in the vault (before: 24 markers).
 
+### The cast in the play window (the looks step)
+
+The window's scripted play mode (`fo4-view --play-run ... --play-input FILE --timeline-cast`, with the cast
+readings above: the start clip flags, `--timeline-child-flag-agrees`, the look, death and sit readings) draws the
+same cast from the run's own timeline as it grows instead of a file: the run's driver reads it
+(`fo4_play::View::timeline`, which changes nothing in the run) when the run's effects, quest or scene logs or
+native moves grew, at most every 5 run seconds; a thread that keeps the game data open builds the drawn cell's
+cast at the run's second (`timeline::cast_scene` in the viewer: `markers`, `cast::resolve`, `cast::start_poses`,
+the build without the cell's placed references, `fo4_render::timeline::cast_markers`) each time the count of the
+timeline's actor, visibility, death and sit events up to that second changes, and the window replaces the cast
+it draws. `fo4_scene::timeline::apply` is not called: the live world shows, hides and moves the cell's
+references. The cell's own placed actors are not drawn then. Presentation and plumbing only: no new rule. In the
+opening: 51 builds, 3.4 s on average (8.2 s at most) on their thread; 35 characters on the hill and 23 in the
+prewar vault drawn posed by their start clip; a moving actor stands where the last build put it.
+
 ## Presence census
 
 [timeline-cast-census.txt](timeline-cast-census.txt) (`timeline_cast_census MANIFEST TIMELINE OUT NAMES

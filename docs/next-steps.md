@@ -3,7 +3,7 @@
 This page is the hand-over point. Everything on `main` builds and passes its tests; anyone (a person or an
 agent) can continue from here. Read `AGENTS.md` first: it holds the rules of evidence and the clean-room rules.
 
-State on 2026-11-24 (vault, cast, light, home, character graph, fight, live window, museum, live world, run library, seen, past-the-museum, faces, third-fight, poses, town-chain, layers, wire, rotate, exit and window steps). Nothing below has been checked against the running game: every behaviour is a pending
+State on 2026-11-24 (vault, cast, light, home, character graph, fight, live window, museum, live world, run library, seen, past-the-museum, faces, third-fight, poses, town-chain, layers, wire, rotate, exit, window and looks steps). Nothing below has been checked against the running game: every behaviour is a pending
 rule in `spec/hypotheses.tsv`, off by default.
 
 ## Script VM and quests (`crates/fo4-vm`)
@@ -128,11 +128,12 @@ What is left:
    Also open (run-side enable state, not done): under the pod the run seats the player in at 730.1 s, the
    dream sequence's cell has two floor pieces whose collision is refused only for `XESP.own_flag` (a record
    below the root of their enable chain carries its own initially-disabled flag). The readiness that refuses
-   them is the drawing side's (`fo4_scene` readiness, `RuntimeEnableParent`); the existing reading
-   `xesp_child_flag_agrees_chain_v1` (`enable::Presence::with_agreeing_child_flags`) decides such chains for
-   the timeline's actors only. A collision readiness switch applying it (drawing side), then the play mode's
-   dormant piece for a chain it decides disabled, would put them in; the walker is seated in the pod then, so
-   no stage depends on it.
+   them is the drawing side's (`fo4_scene` readiness, `RuntimeEnableParent`). Looks step: the drawing side's
+   switch exists (`Loader::set_collision_child_flag_agrees`, `xesp_child_flag_agrees_chain_v1`, off by
+   default); with it a probe copy of the play mode (`--play-collision-child-flag-agrees`, three plumbing
+   lines and the live world's reading of such a chain) seats the walker on the floor at z -41.4 from 730.1 s
+   to the next sit (airborne ticks 4,016 to 144), every stage at the same second as without it. Next (run
+   side): those lines in `fo4-play`; the viewer's play options then take the switch.
 6. The player's own animation events and the robot's food event still come from the caller: reading character
    graphs (below) would let them come from the data.
 7. `--cond-70-player-sex` over the whole run settles 31 line choices of the opening and times them by their audio,
@@ -218,7 +219,11 @@ agree (vault frame at 560 s: coverage 1.000000, same tag on every pixel). What i
    controllers).
 3. Everything after the start state: transitions on events (dialogue, alarm, walking), blends of several
    children, bone-weighted and additive layers, the offset clip; the clip's start second is the run's second 0.
-4. A viewer window path (the poses are headless only, as the rest of `--timeline`).
+4. A viewer window path: done for the scripted play window (looks step: `--play-run ... --play-input --timeline-cast`
+   with the start clip flags; the cast of the drawn cell built again at the run's second when the timeline's actor,
+   visibility, death or sit events change, the run's timeline read at most every 5 run seconds). The pose is the one
+   of the build's second (`--actor-start-clip-loop` does not animate in the window); a moving actor jumps from build
+   to build; the keyboard play mode and the free window take no cast.
 
 Open checks: the viewer window has still not been exercised by hand with `--time` (nor with any clock switch;
 the per-frame path is tested headless through `GpuScene::at_time`); the CPU-against-viewer tag differences are
@@ -238,8 +243,8 @@ under pending rules, never "matches the game": that needs the measurements liste
 | M0 | Read the game's data: archives, plugins, models, textures, collision, scripts | done |
 | M1 | Draw a cell and walk it with collision (CPU render and viewer) | done |
 | M2 | Run the quests of the opening, the vault, the town and the museum headless | mostly: assumed fights, a few stages open |
-| M3 | Play the opening in the window from input, start to the vault exit | in the window from a scripted input, no person needed (window step: `fo4-view --play-run ... --play-input FILE` with every `play_run` play option drives the run with `play_run`'s walker, held to the window's clock; the window loads the walker's cell at each change of space and writes frames with `--play-shots`): with the exit step's switches and input the window run gives the headless run's outputs byte for byte (274 of 274 stages to 960 s, 276 to 1,000 s, out of the vault at 955.35 s, stopped at 998 s at the foot of a cliff face of about 80 units, off the navigation mesh since a 58-unit drop at a rock's edge about 2 s before); what M3 still lacks: a person's input instead of the caller's waypoints and its one assumption (the exit elevator's descent), the drawn elevators and doors moving with their collision, a sky, actors other than in the rest pose |
-| M4 | People: animated poses, movement between places, faces | start poses and faces drawn; no clip playback over time, no movement |
+| M3 | Play the opening in the window from input, start to the vault exit | in the window from a scripted input, no person needed (window step: `fo4-view --play-run ... --play-input FILE` with every `play_run` play option drives the run with `play_run`'s walker, held to the window's clock; the window loads the walker's cell at each change of space and writes frames with `--play-shots`): with the exit step's switches and input the window run gives the headless run's outputs byte for byte (274 of 274 stages to 960 s, 276 to 1,000 s, out of the vault at 955.35 s, stopped at 998 s at the foot of a cliff face of about 80 units, off the navigation mesh since a 58-unit drop at a rock's edge about 2 s before); looks step: behind switches, off by default, the window draws the run's actors as their characters posed by their start clip from the run's own timeline as it grows (`--timeline-cast` and the headless frame's cast readings; rebuilt on a thread when an actor's place or presence changes, 51 builds of 3.4 s on average in the opening), lights the loaded cells and draws the sky (the light switches with `--assume-hour 11 --assume-weather 0`); the window run's outputs stay the headless run's byte for byte (6 of 6); 60 fps median but about 16 fps in the prewar vault and 10 in the postwar vault (379 and 817 placed lights as points, every light for every pixel); what M3 still lacks: a person's input instead of the caller's waypoints and its one assumption (the exit elevator's descent), the drawn elevators and gear doors moving with their collision (the draw keeps no node chain per draw; the walker's elevator motions are private to `fo4-play`), doors (every placed door refused for its door record's FNAM layout, no reading), the floor under the pod (drawing-side switch done, run-side lines requested), an exposure for the window (the vaults' lit frames wash out) |
+| M4 | People: animated poses, movement between places, faces | start poses and faces drawn, in the headless frames and (looks step) in the scripted play window at the run's places; no clip playback over time, no movement between the cast's rebuilds |
 | M5 | Fights: weapons, damage, death, enemy behaviour | not started (deaths are the caller's assumptions) |
 | M6 | Screens: dialogue choices, inventory, the wrist device, containers, map | not started (subtitles in the title bar only) |
 | M7 | Sound: voice, effects, music | not started (lines are timed by their files, nothing plays) |
