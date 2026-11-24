@@ -1690,4 +1690,34 @@ fn agreeing_own_flags_decide_collision_presence_only_behind_their_switch() {
         assert_eq!(on[k].2, off[k].2);
     }
     assert_eq!(on[2], off[2]);
+    // A named platform (`crate::platform`): its uncovered record blocker is
+    // set aside under the platform rules; a name not placed is reported.
+    let mut loader = Loader::new(&store, &v, "english", RuleLevel::Hypotheses, &b);
+    let mut s = loader.by_editor_id("SyntheticRoom", &b).unwrap();
+    let plugin = s.instances[0].reference.key.plugin.clone();
+    let key = |id: u32| fo4_plugin::FormKey {
+        plugin: plugin.clone(),
+        object_id: id,
+    };
+    let (named, absent) = (key(0x825), key(0x999));
+    let n = s.instances.len();
+    let (added, actors) =
+        crate::platform::add(&mut s, &mut loader, &[named.clone(), absent.clone()], &b).unwrap();
+    assert_eq!(s.instances.len(), n, "already loaded: nothing put in");
+    assert_eq!(added.drawn, [crate::timeline::norm(&named)]);
+    assert!(added.loaded.is_empty() && added.skinned.is_empty() && actors.is_empty());
+    assert_eq!(added.not.len(), 1);
+    assert_eq!(added.not[0].0, crate::timeline::norm(&absent));
+    let i = s
+        .instances
+        .iter()
+        .find(|i| i.reference.key.object_id == 0x825)
+        .unwrap();
+    assert!(i.state.ready_at(RuleLevel::Hypotheses));
+    for r in [
+        crate::hypotheses::PLAY_PLATFORM_DRAWN,
+        crate::hypotheses::PLAY_PLATFORM_LEFT_OUT,
+    ] {
+        assert!(i.state.hypotheses().contains(&r), "{r}");
+    }
 }

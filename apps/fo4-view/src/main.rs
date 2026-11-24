@@ -62,6 +62,11 @@ fn load_scene(
         (s.light, s.light_assumptions),
         play_live,
         s.drawing,
+        if s.drawing.platforms {
+            &s.play_platforms
+        } else {
+            &[]
+        },
     )?;
     // `--exposure-eye` with the caller's eye and look (a timeline frame's
     // camera is measured in `load::cell`), the reference frame's camera as

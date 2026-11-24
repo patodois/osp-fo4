@@ -20,7 +20,7 @@ usage:
               [--play-shots-between FROM TO EVERY]...]
              [--timeline-cast [the cast readings of a --timeline frame]]
              [the light switches of --headless]]]
-           [--draw-child-flag-agrees]
+           [--draw-child-flag-agrees] [--draw-platforms]
       Window with a free-fly camera: W/A/S/D move, Shift moves faster, hold the
       left mouse button and move the mouse to look, R returns to the start pose.
       The title bar shows the mode, the speed and the position.
@@ -134,6 +134,14 @@ usage:
       (pending rule xesp_child_flag_agrees_chain_v1, as the play options'
       --play-collision-child-flag-agrees reads it for collision): drawn when
       the chain starts it enabled, hidden through the chain otherwise.
+      --draw-platforms (off by default; the scripted play window with
+      --play-elevator) draws each named platform that stands in the loaded
+      cell's space by its model as stored, whatever its render readiness:
+      its rigid shapes, and its skinned shapes on the model's own nodes,
+      each following the motion of its part (the walker's); a shape the
+      draw refuses (particle systems, a material a controller drives) is
+      left out and counted (pending rules play_platform_drawn_v1 and
+      play_platform_shapes_left_out_v1).
   fo4-view MANIFEST DATA_DIRECTORY CELL_EDITOR_ID [level] --headless
            --eye X,Y,Z --look X,Y,Z --out build/FRAME.png [--tags build/TAGS.bin]
            [--size WxH] [--backface-cull] [--terrain] [--around N] [--walk]
@@ -323,6 +331,11 @@ pub struct Drawing {
     /// loader's render readiness reads an enable chain left open only by
     /// agreeing own flags (`Loader::set_render_child_flag_agrees`).
     pub child_flag_agrees: bool,
+    /// `--draw-platforms` (`play_platform_drawn_v1`,
+    /// `play_platform_shapes_left_out_v1`; the scripted play window with
+    /// `--play-elevator`): the named platforms drawn by their models as
+    /// stored (`fo4_scene::platform`).
+    pub platforms: bool,
 }
 
 /// Default of `--scene-memory`: a viewer bound, not a claim about the game.
@@ -686,6 +699,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             "--actor-missing-bone-bind" => missing_bones_at_bind = true,
             "--timeline-child-flag-agrees" => child_flag_agrees = true,
             "--draw-child-flag-agrees" => drawing.child_flag_agrees = true,
+            "--draw-platforms" => drawing.platforms = true,
             "--timeline-dead-lying" | "--timeline-dead-left-out" => {
                 if dead != fo4_scene::timeline::Dead::Standing {
                     return Err("one of --timeline-dead-lying and --timeline-dead-left-out".into());
@@ -986,6 +1000,9 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
         if p.input.is_some() {
             scene.play_platforms = crate::play_switches::platforms(&p.switches);
         }
+    }
+    if scene.drawing.platforms && scene.play_platforms.is_empty() {
+        return Err("--draw-platforms draws the named platforms of the scripted play window: it needs --play-input and --play-elevator".into());
     }
     if play.is_some()
         && (headless
@@ -1400,7 +1417,18 @@ mod tests {
             panic!()
         };
         assert!(scene.drawing.child_flag_agrees);
+        assert!(!scene.drawing.platforms);
+        let Command::Window { scene, .. } = parse(&args(&format!(
+            "{base} --play-elevator a.esm:00000001 --draw-platforms"
+        )))
+        .unwrap() else {
+            panic!()
+        };
+        assert!(scene.drawing.platforms && !scene.play_platforms.is_empty());
         for bad in [
+            // --draw-platforms draws the scripted window's named platforms.
+            format!("{base} --draw-platforms"),
+            "m d C --under-hypotheses --walk --eye 1,2,3 --look 4,5,6 --draw-platforms".to_string(),
             // The cast readings need --timeline-cast (and the scripted run).
             format!("{base} --actor-start-clip"),
             "m d C --under-hypotheses --walk --eye 1,2,3 --look 4,5,6 --play-run s.txt --play-out o --timeline-cast".to_string(),

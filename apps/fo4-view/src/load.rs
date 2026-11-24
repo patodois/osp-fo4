@@ -207,6 +207,7 @@ pub fn cell(
     light: (fo4_scene::light::Switches, fo4_scene::light::Assumptions),
     play_live: bool,
     drawing: crate::cli::Drawing,
+    platforms: &[fo4_plugin::FormKey],
 ) -> AnyResult<Loaded> {
     #[cfg(not(feature = "script-event"))]
     let _ = play_live;
@@ -366,6 +367,37 @@ pub fn cell(
     } else {
         None
     };
+    // --draw-platforms: the named platforms drawn by their models as stored
+    // (`fo4_scene::platform`), their skinned shapes as actors on their
+    // models' own nodes. Without it nothing changes.
+    let platform_actors = if drawing.platforms && !platforms.is_empty() {
+        let (added, actors) =
+            fo4_scene::platform::add(&mut scene, &mut loader, platforms, &budget)?;
+        let keys = |v: &[fo4_plugin::FormKey]| {
+            v.iter()
+                .map(fo4_scene::timeline::key_text)
+                .collect::<Vec<_>>()
+                .join(" ")
+        };
+        println!(
+            "platforms: drawn as stored {} [{}], of them loaded for the drawing {} [{}], with skinned shapes on their own nodes {} [{}]",
+            added.drawn.len(),
+            keys(&added.drawn),
+            added.loaded.len(),
+            keys(&added.loaded),
+            added.skinned.len(),
+            keys(&added.skinned)
+        );
+        for (k, why) in &added.not {
+            println!(
+                "platforms: {} not drawn: {why}",
+                fo4_scene::timeline::key_text(k)
+            );
+        }
+        actors
+    } else {
+        Vec::new()
+    };
     // --timeline-ride-model: the ride's model as one more actor of the
     // cast, posed with --timeline-ride.
     let mut poses = poses;
@@ -426,6 +458,7 @@ pub fn cell(
         if let Some(c) = &script_changes {
             crate::vm_event::propagate_actors(&mut actors, c, level);
         }
+        actors.actors.extend(platform_actors);
         let resolved = started.elapsed().as_secs_f64();
         let build = match clip {
             // Without --actor-clip the draw list is the rest-pose one.
@@ -454,9 +487,89 @@ pub fn cell(
         }
         println!("actors resolved and their models read in {resolved:.2} s");
         build
+    } else if !platform_actors.is_empty() {
+        let actors = fo4_scene::actor::Actors {
+            actors: platform_actors,
+            disabled: 0,
+            distant: 0,
+        };
+        fo4_render::draw::build_with_actors(&scene, &actors, &loader, limits, options, &budget)?
     } else {
         fo4_render::draw::build(&scene, &loader, limits, options, &budget)?
     };
+    // --draw-platforms: what the build left out of the named platforms.
+    if drawing.platforms && !platforms.is_empty() {
+        let mut codes: std::collections::BTreeMap<&str, usize> = std::collections::BTreeMap::new();
+        for (_, c) in &build.left_out {
+            *codes.entry(c.as_str()).or_default() += 1;
+        }
+        let named: Vec<_> = platforms.iter().map(fo4_scene::timeline::norm).collect();
+        let omitted: Vec<String> = build
+            .omitted
+            .iter()
+            .filter(|o| named.contains(&fo4_scene::timeline::norm(&o.reference)))
+            .map(|o| {
+                format!(
+                    "{} {}",
+                    fo4_scene::timeline::key_text(&o.reference),
+                    o.causes.first().map_or("", |e| e.code.as_str())
+                )
+            })
+            .collect();
+        println!(
+            "platforms: shapes left out by the build {} ({}); platforms the build refused: {}",
+            build.left_out.len(),
+            codes
+                .iter()
+                .map(|(c, n)| format!("{n} {c}"))
+                .collect::<Vec<_>>()
+                .join(", "),
+            if omitted.is_empty() {
+                "none".into()
+            } else {
+                omitted.join(", ")
+            }
+        );
+        // Each platform draw: what it is and where it stands as built.
+        let tags: std::collections::BTreeMap<u32, String> = build
+            .instances
+            .iter()
+            .filter(|i| named.contains(&fo4_scene::timeline::norm(&i.reference)))
+            .map(|i| (i.index, fo4_scene::timeline::key_text(&i.reference)))
+            .collect();
+        let skinned: std::collections::BTreeSet<usize> = build
+            .chains
+            .iter()
+            .filter(|c| !c.bones.is_empty())
+            .map(|c| c.draw)
+            .collect();
+        let effects: std::collections::BTreeSet<usize> =
+            build.effect_draws.iter().copied().collect();
+        for (k, d) in build.list.draws.iter().enumerate() {
+            let Some(r) = tags.get(&d.instance) else {
+                continue;
+            };
+            let Some(m) = build.list.meshes.get(d.mesh) else {
+                continue;
+            };
+            let (mut lo, mut hi) = ([f64::INFINITY; 3], [f64::NEG_INFINITY; 3]);
+            for v in &m.vertices {
+                let p = d.world.apply(v.position);
+                for i in 0..3 {
+                    lo[i] = lo[i].min(p[i]);
+                    hi[i] = hi[i].max(p[i]);
+                }
+            }
+            println!(
+                "platforms: draw {k} of {r}: {} triangles, {}{}alpha {:?}, from ({:.0}, {:.0}, {:.0}) to ({:.0}, {:.0}, {:.0})",
+                m.triangles.len(),
+                if skinned.contains(&k) { "skinned on its own nodes, " } else { "rigid, " },
+                if effects.contains(&k) { "effect surface, " } else { "" },
+                d.alpha,
+                lo[0], lo[1], lo[2], hi[0], hi[1], hi[2]
+            );
+        }
+    }
     #[cfg(feature = "script-event")]
     if let Some(d) = dormant_drawn {
         crate::play::undraw_dormant(&mut scene, d);

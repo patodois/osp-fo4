@@ -217,8 +217,32 @@ pub struct PlatformInstance {
     pub model: String,
     /// The model's blocks from the root to the shape.
     pub chain: Vec<usize>,
+    /// For a skinned shape drawn on the model's own nodes: each bone's
+    /// chain from the root (`DrawChain::bones`); empty for a rigid shape.
+    pub bones: Vec<Vec<usize>>,
     /// The draw's world transform as built (the parts as stored).
     pub world: fo4_scene::transform::Transform,
+}
+
+/// The part of `p` a drawn platform shape goes with: a rigid shape by its
+/// node chain (`Platform::part_of`); a skinned shape (on its model's own
+/// nodes) by the part every one of its bones goes with. The second value:
+/// the skinned shape's bones go with different parts, or some with none, so
+/// it stays where it was built.
+#[cfg(feature = "script-event")]
+pub fn platform_part(
+    p: &fo4_play::elevator::Platform,
+    d: &PlatformInstance,
+) -> (Option<usize>, bool) {
+    if d.bones.is_empty() {
+        return (p.part_of(&d.chain), false);
+    }
+    let parts: Vec<Option<usize>> = d.bones.iter().map(|b| p.part_of(b)).collect();
+    if parts.windows(2).all(|w| w[0] == w[1]) {
+        (parts.first().copied().flatten(), false)
+    } else {
+        (None, true)
+    }
 }
 
 /// The instances of `gpu` drawn from a model shape of a reference `named`
@@ -255,6 +279,7 @@ pub fn platform_instances(
                 .replace('\\', "/")
                 .to_ascii_lowercase(),
             chain: c.blocks.clone(),
+            bones: c.bones.clone(),
             world: d.world,
         });
     }
@@ -885,6 +910,7 @@ mod tests {
             draw,
             model: b"Meshes\\A\\Lift.nif".to_vec(),
             blocks,
+            bones: Vec::new(),
         };
         let build = fo4_render::draw::Build {
             skipped_editor_marker_subtrees: 0,
@@ -897,6 +923,7 @@ mod tests {
             texture_choices: Vec::new(),
             effect_draws: Vec::new(),
             chains: vec![chain(0, vec![0, 3, 5]), chain(2, vec![0, 4])],
+            left_out: Vec::new(),
         };
         // Reference 0x70 (instances 7 and 9) is named; draw 1 is of 0x80.
         let p = platform_instances(&build, &scene, &[key(0x70)]);
@@ -906,6 +933,58 @@ mod tests {
         assert_eq!(p[0].model, "meshes/a/lift.nif");
         assert_eq!(p[1].world.translation, [9., 0., 0.]);
         assert!(platform_instances(&build, &scene, &[key(0x90)]).is_empty());
+    }
+
+    #[cfg(feature = "script-event")]
+    #[test]
+    fn a_skinned_platform_shape_goes_with_the_part_of_all_its_bones() {
+        use fo4_play::elevator::{Members, PartMotion, Platform};
+        let p = Platform {
+            reference: fo4_plugin::FormKey {
+                plugin: "a.esm".into(),
+                object_id: 1,
+            },
+            space: fo4_plugin::FormKey {
+                plugin: "a.esm".into(),
+                object_id: 2,
+            },
+            model: "meshes/a/lift.nif".into(),
+            set: vec![3, 4],
+            second: 0.,
+            parts: vec![
+                PartMotion {
+                    members: Members::Deepest(3),
+                    motion: fo4_walk::Motion::IDENTITY,
+                },
+                PartMotion {
+                    members: Members::Deepest(4),
+                    motion: fo4_walk::Motion::IDENTITY,
+                },
+            ],
+        };
+        let d = |chain: Vec<usize>, bones: Vec<Vec<usize>>| PlatformInstance {
+            instance: 0,
+            reference: p.reference.clone(),
+            model: p.model.clone(),
+            chain,
+            bones,
+            world: fo4_scene::transform::Transform::IDENTITY,
+        };
+        // Rigid: by its own chain.
+        assert_eq!(
+            platform_part(&p, &d(vec![0, 4, 9], vec![])),
+            (Some(1), false)
+        );
+        assert_eq!(platform_part(&p, &d(vec![0, 9], vec![])), (None, false));
+        // Skinned: its own chain is not read, its bones' are.
+        let one = d(vec![0, 9], vec![vec![0, 3], vec![0, 3, 7]]);
+        assert_eq!(platform_part(&p, &one), (Some(0), false));
+        let split = d(vec![0, 3], vec![vec![0, 3], vec![0, 4]]);
+        assert_eq!(platform_part(&p, &split), (None, true));
+        let some_still = d(vec![0, 3], vec![vec![0, 3], vec![0, 8]]);
+        assert_eq!(platform_part(&p, &some_still), (None, true));
+        let all_still = d(vec![0, 3], vec![vec![0, 8], vec![0]]);
+        assert_eq!(platform_part(&p, &all_still), (None, false));
     }
 
     #[test]

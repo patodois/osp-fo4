@@ -290,6 +290,13 @@ pub const ACTOR_LEVELED_USE_ALL: &str = "npc_leveled_item_flag_use_all_v1";
 /// A model's skinned shapes skinned to its own nodes (`crate::timeline::ride`,
 /// `--timeline-ride-model`).
 pub const MODEL_OWN_NODES: &str = "model_skinned_own_nodes_v1";
+/// The play run's named platforms drawn by their models as stored in the
+/// play window, their unread record fields, behaviour graph and
+/// controllers left unread (`crate::platform`).
+pub const PLAY_PLATFORM_DRAWN: &str = "play_platform_drawn_v1";
+/// The shapes of a named platform's model the draw refuses left out, the
+/// rest drawn (`crate::platform`).
+pub const PLAY_PLATFORM_LEFT_OUT: &str = "play_platform_shapes_left_out_v1";
 /// The nodes a caller's sequence translates, at the frame's second
 /// (`crate::timeline::ride`, `--timeline-ride`).
 pub const TIMELINE_RIDE: &str = "timeline_ride_sequence_nodes_v1";
@@ -480,6 +487,8 @@ fn actor_rule(code: &str) -> Option<&'static str> {
         "UnverifiedActorLeveledChanceNone" => Some(ACTOR_LEVELED_CHANCE_NONE),
         "UnverifiedActorLeveledUseAll" => Some(ACTOR_LEVELED_USE_ALL),
         "UnverifiedModelOwnNodes" => Some(MODEL_OWN_NODES),
+        "UnverifiedPlayPlatform" => Some(PLAY_PLATFORM_DRAWN),
+        "UnverifiedPlayPlatformLeftOut" => Some(PLAY_PLATFORM_LEFT_OUT),
         "UnverifiedModelOwnNodesEvery" => Some(MODEL_OWN_NODES_EVERY),
         "UnverifiedTimelineRide" => Some(TIMELINE_RIDE),
         "UnverifiedActorClipSkeleton" => Some(ACTOR_CLIP_SKELETON),
@@ -695,6 +704,8 @@ mod tests {
             ACTOR_LEVELED_CHANCE_NONE,
             ACTOR_LEVELED_USE_ALL,
             MODEL_OWN_NODES,
+            PLAY_PLATFORM_DRAWN,
+            PLAY_PLATFORM_LEFT_OUT,
             TIMELINE_RIDE,
             ACTOR_CLIP_SKELETON,
             ACTOR_CLIP_POSE,

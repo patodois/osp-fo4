@@ -17,6 +17,7 @@ pub mod lighting;
 pub mod missing;
 pub mod model_policy;
 pub mod paths;
+pub mod platform;
 pub mod readiness;
 pub mod rest;
 pub mod sequence;

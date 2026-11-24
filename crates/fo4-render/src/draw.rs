@@ -60,6 +60,10 @@ pub struct Build {
     /// With [`BuildOptions::chains`]: the node chain of each draw of a
     /// placed model's shape, in draw order; empty otherwise.
     pub chains: Vec<DrawChain>,
+    /// The shapes of the play run's named platforms the draw refused and
+    /// left out (`play_platform_shapes_left_out_v1`): the instance and the
+    /// refusal's code. Empty for every other instance.
+    pub left_out: Vec<(u32, String)>,
 }
 /// The node chain a draw of a model's shape hangs under
 /// ([`BuildOptions::chains`]): for a caller that moves the draws of some
@@ -72,6 +76,10 @@ pub struct DrawChain {
     pub model: Vec<u8>,
     /// The model's blocks from the root to the shape.
     pub blocks: Vec<usize>,
+    /// For a skinned shape drawn on its model's own nodes (a named
+    /// platform's): each bone's chain of blocks from the root; empty for a
+    /// rigid shape.
+    pub bones: Vec<Vec<usize>>,
 }
 /// One skinned actor mesh of a posed build ([`build_with_posed_actors`]),
 /// kept so that a caller can pose it again: the draw-list mesh, the skeleton
@@ -461,6 +469,15 @@ struct Builder<'a, 's> {
     /// The actor being drawn skins a bone its skeleton lacks at its bind
     /// transform (`fo4_scene::actor::Actor::missing_bones_at_bind`).
     missing_bones_at_bind: bool,
+    /// The instance or actor drawn is a named platform's
+    /// (`play_platform_shapes_left_out_v1` among its rules): a shape the
+    /// draw refuses is left out ([`Build::left_out`]) instead of refusing
+    /// the instance, and its rigid traversal leaves skinned shapes to the
+    /// actor drawn on the model's own nodes.
+    /// Under [`Builder::platform`] with [`BuildOptions::chains`]: each
+    /// block's chain from the root in the actor model being drawn.
+    node_chains: BTreeMap<usize, Vec<usize>>,
+    platform: bool,
 }
 /// A diffuse texture decoded under the reference limits, with the DDS
 /// declarations the summary reports.
@@ -1932,7 +1949,11 @@ impl Builder<'_, '_> {
         ) {
             return Ok(());
         }
-        let data = decoded(n, i, file)?;
+        let data = match decoded(n, i, file) {
+            Ok(d) => d,
+            Err(e) if self.leave_out(instance, &e)? => return Ok(()),
+            Err(e) => return Err(e),
+        };
         let f = fields(data);
         // A node a free-running transform controller moves (behind the
         // clock's transform switches) takes its track's local transform at
@@ -2019,6 +2040,14 @@ impl Builder<'_, '_> {
                     }
                 }
             };
+            // A named platform's skinned shape is drawn on the model's own
+            // nodes by its actor, not here.
+            if self.platform
+                && geometry.is_some()
+                && fo4_nif::skin::shape_skin(n, i, file, self.limits, self.budget)?.is_some()
+            {
+                return Ok(());
+            }
             if let Some(mesh) = geometry {
                 let surface = self.surface(n, f, swap, file, Some(mesh))?;
                 let mesh = self.mesh(path, mesh_index, mesh, &surface, None)?;
@@ -2040,6 +2069,7 @@ impl Builder<'_, '_> {
                         draw: self.output.list.draws.len(),
                         model,
                         blocks,
+                        bones: Vec::new(),
                     };
                     append(&mut self.output.chains, chain, self.budget)?;
                 }
@@ -2065,7 +2095,11 @@ impl Builder<'_, '_> {
             Ok(())
         })();
         active.pop();
-        result
+        // A named platform's shape the draw refuses is left out.
+        match result {
+            Err(e) if !matches!(data, Data::Node { .. }) && self.leave_out(instance, &e)? => Ok(()),
+            r => r,
+        }
     }
     fn base(
         &mut self,
@@ -2458,6 +2492,26 @@ impl Builder<'_, '_> {
         self.pattern_used.set(0);
         self.allow_editor_marker_subtrees = rules.contains(&h::NAMED_MARKER);
         self.allow_scol_parts = rules.contains(&h::SCOL);
+        self.platform = rules.contains(&h::PLAY_PLATFORM_LEFT_OUT);
+    }
+    /// Under [`Builder::platform`]: whether `e`, raised drawing one shape
+    /// or block, is left out (an allocation, limit or arithmetic failure
+    /// still fails the build).
+    fn leave_out(&mut self, instance: u32, e: &Error) -> Result<bool> {
+        if !self.platform
+            || matches!(
+                e.code.as_str(),
+                "AllocationFailed" | "LimitExceeded" | "Overflow" | "RenderNodeCycle"
+            )
+        {
+            return Ok(false);
+        }
+        append(
+            &mut self.output.left_out,
+            (instance, e.code.clone()),
+            self.budget,
+        )?;
+        Ok(true)
     }
     /// The rest pose of skeleton asset `id`, read once.
     fn skeleton(&mut self, id: usize) -> Result<()> {
@@ -2621,6 +2675,28 @@ impl Builder<'_, '_> {
                         let at = self.output.list.draws.len();
                         append(&mut self.output.effect_draws, at, self.budget)?;
                     }
+                    // A named platform's skinned shape keeps its chain and
+                    // its bones' chains, for the window to move it.
+                    if self.platform && self.options.chains {
+                        let mut bones = Vec::new();
+                        self.budget
+                            .reserve(&mut bones, skin.bones.len(), "draw chain", 0)?;
+                        for bone in &skin.bones {
+                            bones.push(
+                                self.node_chains
+                                    .get(&bone.node)
+                                    .cloned()
+                                    .unwrap_or_default(),
+                            );
+                        }
+                        let chain = DrawChain {
+                            draw: self.output.list.draws.len(),
+                            model: path.to_vec(),
+                            blocks: active.clone(),
+                            bones,
+                        };
+                        append(&mut self.output.chains, chain, self.budget)?;
+                    }
                     append(
                         &mut self.output.list.draws,
                         Draw {
@@ -2645,7 +2721,11 @@ impl Builder<'_, '_> {
             Ok(())
         })();
         active.pop();
-        result
+        // A named platform's shape the draw refuses is left out.
+        match result {
+            Err(e) if !matches!(data, Data::Node { .. }) && self.leave_out(instance, &e)? => Ok(()),
+            r => r,
+        }
     }
     /// Draws one resolved actor as instance `index`.
     fn actor(&mut self, a: &fo4_scene::actor::Actor, index: u32) -> Result<()> {
@@ -2735,6 +2815,11 @@ impl Builder<'_, '_> {
             let DecodedAsset::Model(n) = d else {
                 return Err(error("RenderAssetKind", "actor model", 0, asset));
             };
+            self.node_chains = if self.platform && self.options.chains {
+                node_chains(&n, &String::from_utf8_lossy(path), self.budget)?
+            } else {
+                BTreeMap::new()
+            };
             let mut active = Vec::new();
             for root in n.roots.iter().filter(|r| **r >= 0) {
                 self.actor_node(
@@ -2805,6 +2890,29 @@ impl Builder<'_, '_> {
         }
         Ok(())
     }
+}
+/// Each block's chain of node blocks from a root of `n` down to it (the
+/// block itself last), by the nodes' children.
+fn node_chains(n: &Nif<'_>, file: &str, b: &Budget) -> Result<BTreeMap<usize, Vec<usize>>> {
+    let mut out: BTreeMap<usize, Vec<usize>> = BTreeMap::new();
+    let mut stack: Vec<(usize, Vec<usize>)> = Vec::new();
+    for r in n.roots.iter().filter(|r| **r >= 0) {
+        stack.push((*r as usize, Vec::new()));
+    }
+    while let Some((i, mut chain)) = stack.pop() {
+        if out.contains_key(&i) || chain.contains(&i) || i >= n.blocks.len() {
+            continue;
+        }
+        b.charge(8 * (chain.len() as u64 + 1), file, 0)?;
+        chain.push(i);
+        if let Some(Data::Node { children, .. }) = n.blocks[i].decoded.as_ref() {
+            for c in children.iter().filter(|c| **c >= 0) {
+                stack.push((*c as usize, chain.clone()));
+            }
+        }
+        out.insert(i, chain);
+    }
+    Ok(out)
 }
 pub fn build(
     scene: &Scene,
@@ -2916,6 +3024,7 @@ fn build_inner(
             texture_choices: Vec::new(),
             effect_draws: Vec::new(),
             chains: Vec::new(),
+            left_out: Vec::new(),
         },
         meshes: BTreeMap::new(),
         posed: poses
@@ -2954,6 +3063,8 @@ fn build_inner(
         uv_left_out: std::collections::BTreeSet::new(),
         draw_rules: Vec::new(),
         missing_bones_at_bind: false,
+        platform: false,
+        node_chains: BTreeMap::new(),
     };
     let scratch = b.child();
     let mut instances = Vec::new();
@@ -3027,6 +3138,10 @@ fn build_inner(
             .state
             .hypotheses()
             .contains(&fo4_scene::hypotheses::REST_TEXTURE_FIRST_KEY);
+        builder.platform = i
+            .state
+            .hypotheses()
+            .contains(&fo4_scene::hypotheses::PLAY_PLATFORM_LEFT_OUT);
         let first = builder.output.list.draws.len();
         builder.draw_rules.clear();
         let src = &i.reference.record.source;

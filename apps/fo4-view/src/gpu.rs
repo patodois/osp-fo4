@@ -1557,7 +1557,7 @@ fn follow_platforms<F: bevy::ecs::query::QueryFilter>(
     if seen.platforms.is_empty() {
         return;
     }
-    let (mut moved, mut still, mut unknown) = (0usize, 0usize, 0usize);
+    let (mut moved, mut still, mut unknown, mut split) = (0usize, 0usize, 0usize, 0usize);
     for (e, d) in &platforms.drawn {
         let Some(p) = seen
             .platforms
@@ -1567,7 +1567,9 @@ fn follow_platforms<F: bevy::ecs::query::QueryFilter>(
             unknown += 1;
             continue;
         };
-        let Some(k) = p.part_of(&d.chain) else {
+        let (part, mixed) = crate::scene::platform_part(p, d);
+        split += usize::from(mixed);
+        let Some(k) = part else {
             still += 1;
             continue;
         };
@@ -1587,8 +1589,13 @@ fn follow_platforms<F: bevy::ecs::query::QueryFilter>(
     if !platforms.reported {
         platforms.reported = true;
         println!(
-            "play: platforms at {:.3} s of the run: {moved} drawn instances follow their parts, {still} under no moving part, {unknown} of no named platform's model",
-            seen.t
+            "play: platforms at {:.3} s of the run: {moved} drawn instances follow their parts, {still} under no moving part, {unknown} of no named platform's model{}",
+            seen.t,
+            if split > 0 {
+                format!(", {split} skinned with bones under more than one part (still)")
+            } else {
+                String::new()
+            }
         );
     }
 }
