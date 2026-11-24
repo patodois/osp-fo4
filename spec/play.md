@@ -207,6 +207,42 @@ refused at render readiness (1,097 of the cell's 1,923 placements omitted), so t
 the people and the markings. On both rides the camera rides down and up the shafts with the collision; the
 platforms are not drawn. With `--exposure-eye` too (`w2`): the outputs again byte for byte and the frame rate unchanged (59.8 median; 57.4 and 12.1 fps in the two vaults), the exposure measured at the start and at each of the 11 loads; but where the walker arrives the prewar vault scales its lit colours by 1.01 (its entrance room stays washed out), the postwar vault by 1.24, and the room the run seats the player in, almost nothing lit in view, by 765, its people drawn white: measured once per load from the arrival's view, the exposure does not tame the vaults.
 
+The drawn step, each behind its own switch (off by default; default outputs byte for byte):
+
+- `--draw-child-flag-agrees` (`xesp_child_flag_agrees_chain_v1` for render readiness,
+  `Loader::set_render_child_flag_agrees`): the room the run seats the player in at 730 s is drawn (its walls,
+  raised floors, stairs, vents, crates and fixtures: 59 placements more; 34 more are hidden through their
+  chains). The census of the eleven views the window loads is `spec/opening-views-census.txt`.
+- `--draw-platforms` (`play_platform_drawn_v1`, `play_platform_shapes_left_out_v1`; with `--play-elevator`):
+  each named platform standing in the loaded cell's space is drawn by its model as stored (loaded for the
+  drawing when the cell load lacks it, as the exterior platform is), its record fields, behaviour graph and
+  controllers left unread; its rigid shapes follow their parts' motions as before, its skinned shapes are
+  drawn on the model's own nodes (`model_skinned_own_nodes_v1`) and follow the part every one of their bones
+  goes with (a shape whose bones go with several parts stays where it was built); shapes the draw refuses
+  and every effect surface of the model are left out, counted in the log, which also lists each platform
+  draw. The skinned shapes are not posed by the sequence itself (`timeline_ride_sequence_nodes_v1` poses
+  translation keys at one second, the collision's parts follow every channel): they follow the same rigid
+  motions as the collision.
+- The surface shader sums only the placed lights a grid lists at the sample (an exact bound, no rule;
+  `spec/light.md`, The points' grid).
+- `--exposure-eye` is measured per view (at each load, then when the view moved 64 units or turned 10
+  degrees, at most four times a second; a viewer policy), and `--exposure-eye-floor`
+  (`frame_exposure_seen_light_floor_v1`) gives a view whose seen light is under 0.25 the scale 4.
+
+The opening in the window with every switch of this and the earlier steps (`w8` in the step's notes: the
+moving step's `w1` arguments, `--play-collision-child-flag-agrees`, `--draw-child-flag-agrees`,
+`--draw-platforms`, `--exposure-eye`, `--exposure-eye-floor`; audio off, release build): the outputs are the
+headless run's byte for byte (6 of 6 files, `play.txt` but for its timing lines), 276 of 276 stages at the same
+second; 1,264 s of wall clock; 60.0 fps median in every one of the twelve stretches between cell loads (before:
+57.5 in the prewar vault, 12.1 in the postwar vault), first percentile 52.8 to 56.9 per stretch (before 5.5 and
+10.0 in the vaults); lowest single frame 1.25 fps (a load), 7.3 without the 101 frames over 250 ms; peak
+resident memory 2.44 GB (before 2.40). The frames: the room of 730 s is drawn (the tanks, their frames, pipes,
+the lit floor, the run's people standing), the prewar vault's gear door, its bridge and the interior elevator's
+cage are drawn, the postwar vault's gear door and machinery read clearly; the exterior elevator is drawn but
+its deck (skinned shapes whose bones go with several parts) stays at the top while the walker rides down, and
+the exit elevator's car stays dark; the exposure measured 741 times, the floor six times (the room's first
+view, two views with nothing lit, the exit); the prewar vault's hall is still bright toward white in places.
+
 ## The live world (`--play-live-world`)
 
 With `play_live_collision_follows_run_v1` (`play_run --play-live-world`, `fo4-view --play-live-world`; off by
