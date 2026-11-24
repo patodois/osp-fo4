@@ -965,7 +965,45 @@ notes) hold both moves of the spouse until 465. Under `--action-after-offset` ea
 Session B's record now gives 465 at 517.2 s, her moves at 571.2 and 617.2 s, 495 and 500 at 633.28 s, the descent
 (510 at 642.3 s) and the vault, 680 and 690 at 743 s, to the end of the input; session A's 465 at 692.2 s, 495 and 500
 at 860.29 s, 510 at 869.3 s and the vault to 970.7 s, to the end of its input. The on-time person is unchanged (the
-same 276 stages at the same seconds).
+same 276 stages at the same seconds), and so are the gate step's 200 s and 400 s late runs. Session B's record
+replayed in the window gives the headless outputs byte for byte, down the platform at 633.28 s.
+
+**The sweep.** From an on-time synthetic person (the front door, the device and the console the person's E), at each
+of the 25 stops of the opening three persons: late (every command from the stop on 60 s later), early (every command
+from the stop on earlier by the time the walker stood there, at most 60 s) and arriving early (only the walk to the
+next stop earlier, the presses and the rest on the script's time); 66 headless runs. Late: 24 of 25 reach the reference
+run's 276 stages and ride the exit elevator up; the one left (60 s late from the checkpoint's last stop) rides the
+platform down but its ride ends without the load door taking the walker, a ride-end edge of the play mode (the same
+person 8 s earlier at that stop goes through; their positions differ by a ten-thousandth of a unit). Arriving early:
+12 of 20 go through, and two of the eight left are the sweep's own fault (it moved a walk away onto the second of the
+device's or the console's E). Early: 3 of 20; most of the rest are the synthetic person's (below). Still stalling, not covered by the caller's moves: the escort scene at the checkpoint, whose
+first phase waits on the player's distance, never completes for a person standing at the meeting point before the
+checkpoint talk starts it (arriving 19 s early), and its later phases' package moves of two or five actors are
+dropped when the person boards the platform before them (7.5 and 19.5 s early): fewer than seven arrivals, no
+descent; a person ahead of the story after waking crosses the trigger of the follow-on quest's 3 before its stage
+(60 s early) and never crosses it again; a person ahead of the story in the prewar vault falls through its floor (the
+walk from the nursery or the evacuation's start 47 to 57 s early); a press of E before its stage (the crib, the device,
+the console) is pressed once by the synthetic person. Early persons also leave the house before the broadcast and
+never come back (the broadcast waits for the hallway, as session A's person found), and walk off the platform or into
+the vault's closed inner gate with commands written for a later moment; neither is a stall of the run.
+
+**The objective.** The run displays the opening quest's objective from the evacuation (296.97 s in session B) to the
+platform; its text names a string table entry that holds an empty string, so the viewport drew nothing. It now shows
+the quest's name in the top left corner (the frame at 315 s of session B's window replay). Before the evacuation the
+run displays no objective: the nursery shows none.
+
+**The first three crossings.** Their 3 by 3 squares hold 1,956, 1,911 and 1,879 placed instances (the house's square
+alone 711) against 1,170, 779 and 1,170 for the next three. In session B's window replay the loads took 5.86, 5.64 and
+5.72 s, then 4.55, 3.86 and 4.52 s; the step that grows with the instances is joining the cells around (the
+`around 1` line: 1.89, 1.99 and 2.34 s against 1.06 to 1.08 s), then the draw list. The grid search itself takes 0.07
+to 0.09 s (timed alone: the gate step's reading that it cost 1.0 to 2.4 s timed the search and the join together).
+Session A's first crossing (11.0 s) also waited about 2.8 s for a cast build the window had asked for at the
+crossing's second on the one play data thread (a race between the run's change and the walker's crossing; session B's
+replay has none). Not cut: a window that asks for no cast build while a crossing is under way was tried and left out
+(it moved cast builds by a frame and changed 3 of the 15 frames of the scripted window run, with no wait in the
+replays to show for it); the join and the draw list of the overlapping cells, read again at each load (the loader is
+per load); the store's types are not shared between threads, so the cast cannot get a thread of its own without a
+second set of open files.
 
 ## What the play mode does not do yet
 
@@ -989,7 +1027,7 @@ same 276 stages at the same seconds).
   spouse's two moves are held until the stage that sends her, the deck step; the exit elevator's descent event
   stays at its second).
 - A grid square's drawing is loaded whole by the window (2.0 to 5.9 s since the gate step, the game data kept open; before, 5.6 to 8.1 s, the store opened again; the cells
-  scanned, the models and textures read), overlapped with the walker's build since the person step.
+  around joined, the models and textures read: the deck step's session B replay 3.9 to 5.9 s), overlapped with the walker's build since the person step.
 - The reach of an activation, the walker's speed and its tick are the caller's; the activation key and the
   crosshair are the eye's ray (the prompt names what the ray meets; no activation distance from the data).
 - Sound, menus, combat, the player's animation events: still the caller's.

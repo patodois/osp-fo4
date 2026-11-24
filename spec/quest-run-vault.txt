@@ -113,3 +113,11 @@ stage 20: a trigger outside the vault	the player walks into it (held until stage
 2	the exit's gates	the wrist computer's event 5 s after the device on the skeleton (its stage set by the device), the console's two plug-in events 10 and 15 s after the console (their stage set by the console)
 11	the play mode's runs 200 s and 400 s late, the person's activations of the device and the console, with the switch (play_run --play-action-after-offset)	next main 0 1 2 3 4 6 7 9 8 10 15, as at the scripted pace; 276 stages in all, the scripted run's set
 8	the same 200 s late without the switch	next main 0 1 2 3 4 6 7 9: the two plug-in events at the console's second, no 8, the gear door shut; 260 stages in all
+
+## 9 the platform waits for every arrival (deck step): the caller's moves of an actor held until the stage that sends her (--action-after-actor-moves, off by default; caller_actor_move_after_v1)
+1	the switch	an --action-after gate also names the assumed moves (--assume-actor-at) of its actor at its second; each becomes a timed caller action held until the stage, with --action-after-offset keeping its offset from it
+7	the platform's arrivals	registered by stage 470's fragment about the platform's centre: the player, the spouse and five other actors; the boarding handler sets 500 at the seventh
+2	the spouse's moves	written at 420 and 466 s; held until 465 (its fragment moves her to the escort marker; done at 366 s in the reference run, in the turn of the talk written at 366 s): 54 and 100 s after it
+2	the play sessions of 24 November without the switch	465 at 692.2 and 517.2 s, after both moves: the fragment's move wins, six arrivals of seven, no 500 (the same without --play-action-after-offset and with the way-out step's play_run)
+2	the same records with the switch	465 at 692.2 and 517.2 s, the spouse's moves 54 and 100 s later, 495 and 500 at 860.29 and 633.28 s, the descent and the vault to the end of each input (218 and 220 stages, every one in the reference run's set)
+1	the on-time person with the switch	the same 276 stages at the same seconds as without it
