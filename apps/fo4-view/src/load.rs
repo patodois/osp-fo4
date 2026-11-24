@@ -189,9 +189,21 @@ pub fn actor_lines(
     out
 }
 
+/// The scene assets (models, materials and textures as read from the
+/// archives) one cell load leaves for the next (viewer policy: the play
+/// window's cell loads, `crate::play`): a load whose path policy and clock
+/// switches are the same starts from them instead of an empty cache, so the
+/// cells shared by neighbouring grid squares are not read again. What the
+/// load builds is what an empty cache gives.
+pub type KeptAssets<'s> = Option<fo4_scene::Assets<'s>>;
+
+/// The most memory the kept assets may hold for the next load to start from
+/// them (else the next load starts empty).
+pub const KEPT_ASSETS_MAX: u64 = 768 << 20;
+
 #[allow(clippy::too_many_arguments)]
-pub fn cell(
-    sources: Option<&Sources>,
+pub fn cell<'s>(
+    sources: Option<&'s Sources>,
     manifest: &str,
     data: &str,
     cell: &str,
@@ -209,7 +221,34 @@ pub fn cell(
     play_live: bool,
     drawing: crate::cli::Drawing,
     platforms: &[fo4_plugin::FormKey],
+    kept: Option<&mut KeptAssets<'s>>,
 ) -> AnyResult<Loaded> {
+    // The game data a caller keeps open, else opened for this load (and no
+    // assets kept: they would outlive the data they were read from).
+    let Some(src) = sources else {
+        let opened = open(manifest, data)?;
+        return crate::load::cell(
+            Some(&opened),
+            manifest,
+            data,
+            cell,
+            level,
+            walk,
+            terrain,
+            around,
+            options,
+            scene_memory,
+            actors,
+            clip,
+            script_event,
+            timeline,
+            light,
+            play_live,
+            drawing,
+            platforms,
+            None,
+        );
+    };
     #[cfg(not(feature = "script-event"))]
     let _ = play_live;
     #[cfg(feature = "script-event")]
@@ -230,18 +269,11 @@ pub fn cell(
         return Err("--script-event needs a viewer built with --features script-event".into());
     }
     // The game data a caller keeps open, else opened for this load.
-    let opened;
     let Sources {
         manifest,
         store,
         vfs,
-    } = match sources {
-        Some(s) => s,
-        None => {
-            opened = open(manifest, data)?;
-            &opened
-        }
-    };
+    } = src;
     let limits = &manifest.limits;
     let budget = scene_budget(scene_memory, limits);
     let mut loader = Loader::new(store, vfs, &manifest.language, level, &budget);
@@ -253,6 +285,19 @@ pub fn cell(
     // the agreeing own flags' chains (`xesp_child_flag_agrees_chain_v1`).
     if drawing.child_flag_agrees {
         loader.set_render_child_flag_agrees(true);
+    }
+    // The assets the previous load left, when they were read the same way.
+    let mut kept = kept;
+    if let Some(slot) = kept.as_deref_mut() {
+        if let Some(a) = slot.take() {
+            if a.clock == loader.assets.clock
+                && a.path_policy == loader.assets.path_policy
+                && !a.unavailable()
+                && a.memory_used() <= KEPT_ASSETS_MAX
+            {
+                loader.assets = a;
+            }
+        }
     }
     let mut cell_rule = None;
     // CELL as a record key (`plugin:XXXXXXXX`, as the timeline writes
@@ -832,6 +877,12 @@ pub fn cell(
     #[cfg(feature = "script-event")]
     if let (Some((refs, _)), Some(w)) = (pick.as_mut(), walk.as_ref()) {
         refs.resize(w.sources.len(), None);
+    }
+    if let Some(slot) = kept {
+        *slot = Some(std::mem::replace(
+            &mut loader.assets,
+            fo4_scene::Assets::with_policy(vfs, &budget, level),
+        ));
     }
     Ok(Loaded {
         build,

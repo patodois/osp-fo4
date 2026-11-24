@@ -259,6 +259,8 @@ mod enabled {
             ),
             Err(e) => eprintln!("play: the play data thread's sources: {e}"),
         }
+        // The assets one cell load leaves for the next (`load::KeptAssets`).
+        let mut kept: crate::load::KeptAssets<'_> = None;
         let mut queue: std::collections::VecDeque<DataAsk> = std::collections::VecDeque::new();
         loop {
             if queue.is_empty() {
@@ -282,24 +284,30 @@ mod enabled {
             match next {
                 Some(DataAsk::Cell(a)) => {
                     let r = match &sources {
-                        Ok(src) => crate::load_scene_with(&a.scene, true, a.live, Some(src))
-                            .map(|(gpu, options, mut loaded)| {
-                                let mut live = loaded.live.take();
-                                if let Some(l) = live.as_mut() {
-                                    l.world = loaded.walk.take();
-                                }
-                                Reloaded {
-                                    gpu,
-                                    clear: options.clear,
-                                    cell: a.cell,
-                                    pick: loaded.pick.take(),
-                                    live,
-                                    load_seconds: a.started.elapsed().as_secs_f64(),
-                                    waited: 0.0,
-                                    asked_at: a.at,
-                                }
-                            })
-                            .map_err(|e| e.to_string()),
+                        Ok(src) => crate::load_scene_with(
+                            &a.scene,
+                            true,
+                            a.live,
+                            Some(src),
+                            Some(&mut kept),
+                        )
+                        .map(|(gpu, options, mut loaded)| {
+                            let mut live = loaded.live.take();
+                            if let Some(l) = live.as_mut() {
+                                l.world = loaded.walk.take();
+                            }
+                            Reloaded {
+                                gpu,
+                                clear: options.clear,
+                                cell: a.cell,
+                                pick: loaded.pick.take(),
+                                live,
+                                load_seconds: a.started.elapsed().as_secs_f64(),
+                                waited: 0.0,
+                                asked_at: a.at,
+                            }
+                        })
+                        .map_err(|e| e.to_string()),
                         Err(e) => Err(format!("PlayCellSources: {e}")),
                     };
                     let _ = a.reply.send(r);

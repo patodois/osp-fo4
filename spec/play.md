@@ -1054,6 +1054,21 @@ play preset's run arguments or play options), and three are the game's own waits
   The game holds the player in the pod; the play mode's walker is not held while the run seats the player (a gap,
   not covered here).
 
+**The crossings.** The fifth session measured 4.7 to 9.6 s at the six outdoor crossings, the deck step's replay 4.6
+to 7.1 s, with the same viewer code. The window logs show every phase slower in the session by about the same factor
+(the cells-around join 3.6 to 4.1 s against 1.9 to 2.3 s, the rest of each load likewise) and the cast builds on the
+same thread too (3.4 to 6.7 s against 2.0 to 2.8 s for the same work): the machine was busier during the session (the
+tester's own tools, 41 % of memory free), not the build. Replayed on a quiet machine to 700 s and measured as the
+session's report measures (from the first still frame before the scene's change to the first frame of the new one):
+6.49, 6.10, 6.28, 4.84, 4.00 and 4.55 s. Each load read its 3 by 3 squares' models, materials and textures from the
+archives again, six of the nine squares the same as the load before. The window's cell loads on the play data thread
+now keep the scene assets one load read for the next (`load::KeptAssets`, viewer policy; a load whose path policy
+and clock switches differ, or assets above 768 MiB, start empty): 6.11, 3.35, 3.17, 2.76, 2.22 and 2.30 s (the
+cells-around join 0.08 to 0.41 s after the first); the run's outputs are the same byte for byte and the window's
+resident peak 2.23 GB against 2.38 GB. Frames of a person's record replayed in the window are not a reference: their
+exposure is measured at seconds that follow the window's frames (283.051 against 283.069 s in two runs), so five of
+48 differ in brightness between any two runs.
+
 ## What the play mode does not do yet
 
 - The elevators ride only those the caller names (`--play-elevator`), headless and in the scripted window;
@@ -1075,8 +1090,8 @@ play preset's run arguments or play options), and three are the game's own waits
   spaced as the caller wrote them; with `quest_run --action-after-actor-moves` in the run's arguments the
   spouse's two moves are held until the stage that sends her, the deck step; the exit elevator's descent event
   stays at its second).
-- A grid square's drawing is loaded whole by the window (2.0 to 5.9 s since the gate step, the game data kept open; before, 5.6 to 8.1 s, the store opened again; the cells
-  around joined, the models and textures read: the deck step's session B replay 3.9 to 5.9 s), overlapped with the walker's build since the person step.
+- A grid square's drawing is loaded whole by the window (the early step keeps the scene assets of one load for the next:
+  2.1 to 3.2 s after the first crossing, 5.9 s for the first), overlapped with the walker's build since the person step.
 - The reach of an activation, the walker's speed and its tick are the caller's; the activation key and the
   crosshair are the eye's ray (the prompt names what the ray meets; no activation distance from the data).
 - Sound, menus, combat, the player's animation events: still the caller's.

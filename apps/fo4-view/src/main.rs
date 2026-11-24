@@ -43,16 +43,17 @@ fn load_scene(
     walk: bool,
     play_live: bool,
 ) -> AnyResult<(scene::GpuScene, RenderOptions, load::Loaded)> {
-    load_scene_with(s, walk, play_live, None)
+    load_scene_with(s, walk, play_live, None, None)
 }
 
 /// [`load_scene`] with the game data a caller keeps open (the play mode's
 /// cell worker), else opened for this load.
-fn load_scene_with(
+fn load_scene_with<'s>(
     s: &cli::Scene,
     walk: bool,
     play_live: bool,
-    sources: Option<&load::Sources>,
+    sources: Option<&'s load::Sources>,
+    kept: Option<&mut load::KeptAssets<'s>>,
 ) -> AnyResult<(scene::GpuScene, RenderOptions, load::Loaded)> {
     let started = std::time::Instant::now();
     let prepared = s.timeline.as_ref().map(timeline::prepare).transpose()?;
@@ -85,6 +86,7 @@ fn load_scene_with(
         } else {
             &[]
         },
+        kept,
     )?;
     // `--exposure-eye` with the caller's eye and look (a timeline frame's
     // camera is measured in `load::cell`), the reference frame's camera as
