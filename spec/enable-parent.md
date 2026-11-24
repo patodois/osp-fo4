@@ -159,7 +159,14 @@ from a chain; a script that reads a child's state is answered as before.
   frame may read the class whose flags agree with the chain's start state
   as any other chain (`--timeline-child-flag-agrees`,
   `xesp_child_flag_agrees_chain_v1`, `enable::Presence::with_agreeing_child_flags`,
-  `spec/timeline.md`); nothing else changes.
+  `spec/timeline.md`). Behind `Loader::set_collision_child_flag_agrees`
+  (off by default; `ride_check --collision-child-flag-agrees`) the same
+  class takes its chain's state at load and its `XESP.own_flag` blocker is
+  set aside for collision readiness only (`readiness::child_flag_agrees`):
+  in the cryo pod's cell of the opening (the looks step) the collision
+  instances placed rise from 509 to 544 and a walker put at the pod's
+  place stands on the floor at z -41.4 instead of falling. Its render
+  readiness is unchanged; nothing else changes.
 - The viewer's moving grid and walk mode use the same draw build and
   collision, so they leave out what a chain disables; only
   `--script-event` changes a state after load.

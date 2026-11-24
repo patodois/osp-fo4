@@ -254,6 +254,27 @@ impl Switches {
     }
 }
 
+/// Whether an enable parent chain is left open by the rules only because a
+/// record below its root carries its own flag 0x800, every such flag
+/// agreeing with the chain's start state: the chains
+/// `xesp_child_flag_agrees_chain_v1` decides
+/// ([`crate::enable::Presence::with_agreeing_child_flags`]). The collision
+/// cell build sets such a chain's `XESP.own_flag` blocker aside behind
+/// `Loader::set_collision_child_flag_agrees` (off by default).
+pub fn child_flag_agrees(p: &crate::enable::Presence) -> bool {
+    let open: Vec<&'static str> = crate::enable::findings(&p.chain)
+        .into_iter()
+        .filter(|f| crate::enable::rule(f).is_none())
+        .collect();
+    open == [crate::enable::FOUND_OWN_FLAG] && crate::enable::child_flags_agree(&p.chain)
+}
+
+/// Whether `e` is a reference's `RuntimeEnableParent` blocker for a record
+/// of its chain carrying its own flag 0x800 (`XESP.own_flag`).
+pub fn own_flag(e: &Error) -> bool {
+    e.code == Code::RuntimeEnableParent.name() && e.found == crate::enable::FOUND_OWN_FLAG
+}
+
 /// Whether `e` is the record blocker of a reference's unread `XALP`.
 pub fn reference_alpha(e: &Error) -> bool {
     e.code == Code::UninterpretedVisualSubrecord.name() && e.found.starts_with("REFR.XALP.")

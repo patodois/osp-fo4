@@ -15,13 +15,17 @@
 //! `ride_check MANIFEST OUT_DIR --cell PLUGIN:HEX --start X,Y,Z [--toward S,X,Y ...]
 //!  --end S [--walk-speed U] [--boxes] [--also PLUGIN:HEX ...] [--elevator PLUGIN:HEX --sequence N --node NAME
 //!  --ride-from S [--ride-boxes]] [--trace] [--box-presence [--timeline FILE]] [--ride-through-terrain]
-//!  [--collision-off-chain] [--collision-reference-alpha] [--pose PLUGIN:HEX N ...] [--pose-rigid]`
+//!  [--collision-off-chain] [--collision-reference-alpha] [--collision-child-flag-agrees]
+//!  [--pose PLUGIN:HEX N ...] [--pose-rigid]`
 //!
 //! `--collision-off-chain` builds the walking world with the collision
 //! readiness switch `readiness::Switches::off_chain`
 //! (`collision_model_blockers_off_chain_v1`), `--collision-reference-alpha`
 //! with `readiness::Switches::reference_alpha`
-//! (`refr_xalp_collision_unchanged_v1`). `--pose REF N` places the
+//! (`refr_xalp_collision_unchanged_v1`), `--collision-child-flag-agrees`
+//! with `Loader::set_collision_child_flag_agrees`
+//! (`xesp_child_flag_agrees_chain_v1`: an enable chain left open only by
+//! own flags 0x800 that agree with it takes its state). `--pose REF N` places the
 //! reference's collision as stored with each node of its collision chains
 //! moved by the translation the model's sequence N (from 0) holds it at
 //! (`nif_sequence_interpolator_held_pose_v1`; the offsets of a chain's
@@ -112,7 +116,7 @@ fn describe(
 
 fn run() -> Result<(), E> {
     let a: Vec<String> = std::env::args().skip(1).collect();
-    const USAGE: &str = "ride_check MANIFEST OUT_DIR --cell PLUGIN:HEX --start X,Y,Z [--toward S,X,Y ...] --end S [--walk-speed U] [--boxes] [--also PLUGIN:HEX ...] [--elevator PLUGIN:HEX --sequence N --node NAME [--node NAME ...] --ride-from S [--ride-boxes]] [--trace] [--box-presence [--timeline FILE]] [--ride-through-terrain] [--collision-off-chain] [--collision-reference-alpha] [--pose PLUGIN:HEX N ...] [--pose-rigid]";
+    const USAGE: &str = "ride_check MANIFEST OUT_DIR --cell PLUGIN:HEX --start X,Y,Z [--toward S,X,Y ...] --end S [--walk-speed U] [--boxes] [--also PLUGIN:HEX ...] [--elevator PLUGIN:HEX --sequence N --node NAME [--node NAME ...] --ride-from S [--ride-boxes]] [--trace] [--box-presence [--timeline FILE]] [--ride-through-terrain] [--collision-off-chain] [--collision-reference-alpha] [--collision-child-flag-agrees] [--pose PLUGIN:HEX N ...] [--pose-rigid]";
     if a.len() < 2 {
         return Err(USAGE.into());
     }
@@ -126,6 +130,7 @@ fn run() -> Result<(), E> {
     let mut trace = false;
     let (mut box_presence, mut through_terrain) = (false, false);
     let (mut off_chain, mut reference_alpha) = (false, false);
+    let mut child_flag_agrees = false;
     let mut poses: Vec<(fo4_plugin::FormKey, usize)> = Vec::new();
     let mut pose_rigid = false;
     let mut timeline_file: Option<String> = None;
@@ -154,6 +159,7 @@ fn run() -> Result<(), E> {
             "--ride-through-terrain" => through_terrain = true,
             "--collision-off-chain" => off_chain = true,
             "--collision-reference-alpha" => reference_alpha = true,
+            "--collision-child-flag-agrees" => child_flag_agrees = true,
             "--pose-rigid" => pose_rigid = true,
             "--pose" => {
                 let k = tl::parse_key(val()?).ok_or(USAGE)?;
@@ -205,6 +211,14 @@ fn run() -> Result<(), E> {
             report,
             "switch: collision readiness sets aside a reference's unread alpha ({})",
             fo4_scene::hypotheses::REFERENCE_ALPHA_COLLISION
+        );
+    }
+    if child_flag_agrees {
+        loader.set_collision_child_flag_agrees(true);
+        let _ = writeln!(
+            report,
+            "switch: an enable chain left open only by own flags that agree with it takes its state ({})",
+            fo4_scene::hypotheses::ENABLE_CHILD_FLAG_AGREES
         );
     }
     let mut scene = loader.cell(&cell, &budget)?;

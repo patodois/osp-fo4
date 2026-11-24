@@ -193,6 +193,7 @@ pub struct Loader<'a> {
     pub path_policy: RuleLevel,
     language: &'a str,
     collision: readiness::Switches,
+    child_flag_agrees: bool,
 }
 impl<'a> Loader<'a> {
     /// The collision readiness switches the collision cell build reads
@@ -202,6 +203,21 @@ impl<'a> Loader<'a> {
     }
     pub fn collision_switches(&self) -> readiness::Switches {
         self.collision
+    }
+    /// Collision readiness of a reference whose enable parent chain the
+    /// rules leave open only for a record below its root carrying its own
+    /// flag 0x800, every such flag agreeing with the chain's start state
+    /// (`xesp_child_flag_agrees_chain_v1`, [`readiness::child_flag_agrees`]):
+    /// the instances loaded after this call take the presence the chain
+    /// gives ([`enable::Presence::with_agreeing_child_flags`]) and the
+    /// collision cell build sets that blocker aside. Off by default. Kept
+    /// apart from [`readiness::Switches`] so that the callers building that
+    /// structure field by field are unchanged.
+    pub fn set_collision_child_flag_agrees(&mut self, on: bool) {
+        self.child_flag_agrees = on;
+    }
+    pub fn collision_child_flag_agrees(&self) -> bool {
+        self.child_flag_agrees
     }
     /// The mounted files the loader reads.
     pub fn vfs(&self) -> &'a Vfs {
@@ -221,6 +237,7 @@ impl<'a> Loader<'a> {
             path_policy,
             language,
             collision: readiness::Switches::default(),
+            child_flag_agrees: false,
         }
     }
     /// Drop decoded asset state while retaining the explicit path interpretation policy.
@@ -458,7 +475,13 @@ impl<'a> Loader<'a> {
             Some(_) => match fo4_plugin::enable::chain(self.plugins, key, b)? {
                 Some(chain) => {
                     enable::blockers(&chain, src, &mut blockers, b)?;
-                    Some(enable::Presence::of(chain))
+                    let mut p = enable::Presence::of(chain);
+                    // Behind its switch (off by default): a chain open only
+                    // for agreeing own flags takes the state it gives.
+                    if self.child_flag_agrees && readiness::child_flag_agrees(&p) {
+                        p.enabled = p.with_agreeing_child_flags(&|_| None);
+                    }
+                    Some(p)
                 }
                 None => None,
             },

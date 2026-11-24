@@ -1068,9 +1068,13 @@ impl Builder<'_, '_> {
     /// The instance's collision readiness with the blockers the switches
     /// set aside: model blockers that lie off the blocks the placed bodies
     /// read (`collision_model_blockers_off_chain_v1`), the reference's
-    /// unread alpha (`refr_xalp_collision_unchanged_v1`).
+    /// unread alpha (`refr_xalp_collision_unchanged_v1`), the own flag of an
+    /// enable chain whose own flags agree with it
+    /// (`xesp_child_flag_agrees_chain_v1`).
     fn switched_state(&mut self, i: &Instance) -> Result<State> {
         let switches = self.loader.collision_switches();
+        let agrees = self.loader.collision_child_flag_agrees()
+            && i.enable.as_ref().is_some_and(readiness::child_flag_agrees);
         let bearings = if switches.off_chain {
             self.bearings(i)?
         } else {
@@ -1096,6 +1100,11 @@ impl Builder<'_, '_> {
                 && i.blockers.get(k).is_some_and(readiness::reference_alpha)
             {
                 Some(hypotheses::REFERENCE_ALPHA_COLLISION)
+            } else if agrees
+                && origin.unwrap_or(readiness::Origin::Record) == readiness::Origin::Record
+                && i.blockers.get(k).is_some_and(readiness::own_flag)
+            {
+                Some(hypotheses::ENABLE_CHILD_FLAG_AGREES)
             } else {
                 None
             }
@@ -1123,7 +1132,7 @@ impl Builder<'_, '_> {
         }
         self.state = None;
         if !self.force && !i.collision.ready_at(self.level) {
-            if self.loader.collision_switches().any() {
+            if self.loader.collision_switches().any() || self.loader.collision_child_flag_agrees() {
                 let state = self.switched_state(i)?;
                 if state.ready_at(self.level) {
                     self.state = Some(state);

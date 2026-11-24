@@ -1562,3 +1562,94 @@ fn enable_parent_chains_decide_presence_only_under_their_rules() {
     assert!(p.depends_on(&root));
     assert_eq!(p.with(&|k| (*k == root).then_some(true)), Some(true));
 }
+
+#[test]
+fn agreeing_own_flags_decide_collision_presence_only_behind_their_switch() {
+    use crate::hypotheses::ENABLE_CHILD_FLAG_AGREES;
+    let xesp = |rf: &[u8], parent: u32, flags: u8| {
+        let mut v = rf.to_vec();
+        let mut d = parent.to_le_bytes().to_vec();
+        d.extend([flags, 0, 0, 0]);
+        v.extend(sub(b"XESP", &d));
+        v
+    };
+    // Root 0x820 enabled. 0x821 carries its own flag 0x800 under the root
+    // with the opposite bit: the chain starts it disabled too (agrees).
+    // 0x824 carries the flag under the root without the bit (disagrees).
+    // Children: 0x822 of 0x821 (disabled), 0x823 of 0x821 opposite
+    // (enabled), 0x825 of 0x824 (undecided either way).
+    let f = fixture_with(false, &[], |rf| {
+        let persistent = [
+            record(b"REFR", 0x820, 0, rf),
+            record(b"REFR", 0x821, fo4_plugin::DISABLED, &xesp(rf, 0x820, 1)),
+            record(b"REFR", 0x824, fo4_plugin::DISABLED, &xesp(rf, 0x820, 0)),
+        ]
+        .concat();
+        let temporary = [
+            record(b"REFR", 0x822, 0, &xesp(rf, 0x821, 0)),
+            record(b"REFR", 0x823, 0, &xesp(rf, 0x821, 1)),
+            record(b"REFR", 0x825, 0, &xesp(rf, 0x824, 0)),
+        ]
+        .concat();
+        [group(8, 0x800, &persistent), group(9, 0x800, &temporary)].concat()
+    });
+    let store = Store::open(&f.manifest, &Budget::new(8 << 20)).unwrap();
+    let v = Vfs::mount(&f.manifest, &Budget::new(8 << 20)).unwrap();
+    let b = Budget::new(64 << 20);
+    let limits = Limits::default();
+    let options = collision::Options {
+        level: RuleLevel::Hypotheses,
+        body_placement: None,
+    };
+    let unplaced = |c: &collision::CellCollision, id: u32| {
+        c.unplaced
+            .iter()
+            .find(|u| u.reference.object_id == id)
+            .map(|u| u.code.clone())
+    };
+    for on in [false, true] {
+        let mut loader = Loader::new(&store, &v, "english", RuleLevel::Hypotheses, &b);
+        assert!(!loader.collision_child_flag_agrees());
+        loader.set_collision_child_flag_agrees(on);
+        let s = loader.by_editor_id("SyntheticRoom", &b).unwrap();
+        let get = |id: u32| {
+            s.instances
+                .iter()
+                .find(|i| i.reference.key.object_id == id)
+                .unwrap()
+        };
+        let start = |id: u32| get(id).enable.as_ref().unwrap().enabled;
+        let agrees = |id: u32| readiness::child_flag_agrees(get(id).enable.as_ref().unwrap());
+        assert!(agrees(0x822) && agrees(0x823) && !agrees(0x825));
+        for id in [0x822, 0x823, 0x825] {
+            assert!(get(id).blockers.iter().any(readiness::own_flag), "{id:x}");
+            assert!(!get(id).collision.ready_at(RuleLevel::Hypotheses));
+        }
+        let c = collision::cell(&s, &loader, &limits, options, &b).unwrap();
+        // The disagreeing chain stays open and refused either way.
+        assert_eq!(start(0x825), None);
+        assert_eq!(unplaced(&c, 0x825).as_deref(), Some("CollisionNotReady"));
+        if !on {
+            // Off by default: undecided and refused, as before.
+            assert_eq!((start(0x822), start(0x823)), (None, None));
+            assert_eq!(unplaced(&c, 0x822).as_deref(), Some("CollisionNotReady"));
+            assert_eq!(unplaced(&c, 0x823).as_deref(), Some("CollisionNotReady"));
+            continue;
+        }
+        // On: each takes its chain's state; the disabled one is left out
+        // as any chain-disabled reference, the enabled one passes
+        // readiness under the rule.
+        assert_eq!((start(0x822), start(0x823)), (Some(false), Some(true)));
+        assert!(get(0x822).disabled_by_enable_parent());
+        assert_eq!(
+            unplaced(&c, 0x822).as_deref(),
+            Some("DisabledThroughEnableParent")
+        );
+        assert_ne!(unplaced(&c, 0x823).as_deref(), Some("CollisionNotReady"));
+        if let Some(p) = c.placements.iter().find(|p| p.reference.object_id == 0x823) {
+            assert!(p.scene_rules.contains(&ENABLE_CHILD_FLAG_AGREES));
+        }
+        // Render readiness is unchanged: the blocker still stops the draw.
+        assert!(!get(0x823).state.ready_at(RuleLevel::Hypotheses));
+    }
+}
