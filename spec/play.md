@@ -891,6 +891,15 @@ for their second move as much (never before it).
   it. 400 s late: the same 276 stages, the exit's 4, 6, 7, 9, 8 at 1,261.6 to 1,287.27 s, the ride up at
   1,355.36 s. Without the switch, 200 s late, the run reaches 260 stages: 7 and 9 at the console's second, no 8,
   the walker stays in the vault.
+- **In the window** (notes `WL200`; release build; the way-out step's late synthetic person with its untouched
+  seconds, the preset's window switches with `--play-action-after-offset`): the same 276 stages in the same order as
+  the headless run, 136 at the same second, the rest within 0.22 s; the exit's 8 at 1,087.30 s, the ride up at
+  1,155.39 s, the walker at the cliff face; 1,314 s of wall clock for 1,215 s of input (1,424 s in the way-out step's
+  window proof), 59.97 fps median, first percentile 54.9, 42 frames over 250 ms (31.6 s, loads; 81 and 59.5 s
+  before); peak resident memory 2.62 GB (footprint 4.74 GB). 400 s late (`WL400`, the same person with every command from 600 s on 200 s later): the same 276 stages in the
+  headless run's order, 136 at the same second, the rest within 0.18 s; the exit's 8 at 1,287.29 s, the ride up at
+  1,355.37 s, the walker at the cliff face; 1,519 s of wall clock for 1,415 s of input, 59.97 fps median, first
+  percentile 55.0, 48 frames over 250 ms (36.5 s); peak resident memory 2.52 GB (footprint 4.77 GB).
 
 **The settle at a change of area.** The interpreter's load settle (`fo4_vm::load::settle`, at each change of the
 player's area) found each loaded reference's cell by searching every placement of the load order
@@ -900,7 +909,32 @@ first membership, as the search finds it). Seconds of the settle at each change 
 step's on-time run and session B's replay, timing builds that only print them): the vault's arrival 61.7 and
 61.8 s before, 0.10 s after; the dream's cell 3.1 and 3.2 s, 0.10 s; the postwar vault 8.7 s, 0.15 s. The whole
 run's turn 122.0 s before, 48.4 s after (session B's replay: 137.4 s, 64.2 s; the opening's whole `quest_run`, no
-play, 117.0 s and 25.8 s of wall clock). Every output byte for byte.
+play, 117.0 s and 25.8 s of wall clock). Every output byte for byte. In the window (the exit step's scripted input
+to 805 s, the window switches, timing builds): 69.4, 4.0 and 10.5 s before, 0.10, 0.12 and 0.17 s after; the run's
+outputs and the 15 frames written byte for byte the same.
+
+**The window's load at a crossing** (viewer policy). Timed by phase in the same window runs: of each 5.6 to 8.1 s
+load of a grid square's drawing, 1.6 to 2.1 s went to opening the plugins and archives again, 1.0 to 2.4 s to
+finding the cells about the square (every exterior cell of the world read for its grid), 0.7 to 2.3 s to the cell's
+references and models, 0.4 to 1.2 s to the cast's, the dormant references' and the platforms' reads, 0.3 to 1.6 s to
+the draw list, 0.2 s to the terrain and 0.3 s to the upload's conversion. The scripted window's cell loads now run on
+one thread that opens the game data once as the run starts and keeps it (`fo4_view::play::cell_worker`,
+`load_scene_with`); a load gives what a load that opens them gives. The nine loads of the same run: 7.64, 7.44,
+7.70, 6.35, 5.71, 6.17, 3.60, 5.91 and 4.63 s before, 5.87, 5.77, 5.79, 4.72, 3.90, 4.57, 1.96, 4.42 and 2.99 s
+after; the run's outputs and the 15 frames byte for byte the same; resident memory 2.28 GB before, 2.77 GB after
+(the data kept open; footprint 4.30 and 4.54 GB). Not cut: the grid search (a world's grid index read once,
+`fo4_scene::grid::WorldGrid`, answers for one centre's own grid only, so it does not stand for `grid::around` at
+every centre as it is), and the models both sets of cells share (the loader is made anew per load).
+
+**The cast's placeholder shapes, by reason** (the window log's `play: cast:` lines of the 200 s late window run, the
+whole opening; distinct actors per reason): a leveled list leaving two or more candidates (races, skins, outfits or
+sections) 27, a template leaving two outfits 8 (the faces step's readings `--actor-leveled-seed` and
+`--actor-template-bits` choose them; they are off in the preset), a model citing a material path without its root
+folder together with a texture no archive holds 9 (`fo4_nif_material_data_relative_v1` rejects such a path by design,
+`spec/citation-roots.md`: no repair), a skinned shape with an effect falloff 2 (posed normals: skinning work, not
+started), no skin, no race skin and no outfit 2 (no model to draw), a transform controller the build does not run 1.
+None is a defect against an existing rule; nothing changed. Whether the preset takes the faces step's two readings
+is the owner's choice.
 
 ## What the play mode does not do yet
 
@@ -921,7 +955,7 @@ play, 117.0 s and 25.8 s of wall clock). Every output byte for byte.
   activations, the talks, the actor moves and the player's animation events stay timed (held until their
   stages; with `--play-action-after-offset` each keeps its offset from its stage, so a late person gets them
   spaced as the caller wrote them; the actor moves and ungated actions stay at their seconds).
-- A grid square's drawing is loaded whole by the window (5.6 to 7.5 s, the store opened again, the cells
+- A grid square's drawing is loaded whole by the window (2.0 to 5.9 s since the gate step, the game data kept open; before, 5.6 to 8.1 s, the store opened again; the cells
   scanned, the models and textures read), overlapped with the walker's build since the person step.
 - The reach of an activation, the walker's speed and its tick are the caller's; the activation key and the
   crosshair are the eye's ray (the prompt names what the ray meets; no activation distance from the data).

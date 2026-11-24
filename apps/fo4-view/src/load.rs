@@ -191,6 +191,7 @@ pub fn actor_lines(
 
 #[allow(clippy::too_many_arguments)]
 pub fn cell(
+    sources: Option<&Sources>,
     manifest: &str,
     data: &str,
     cell: &str,
@@ -228,14 +229,22 @@ pub fn cell(
     if script_event.is_some() {
         return Err("--script-event needs a viewer built with --features script-event".into());
     }
+    // The game data a caller keeps open, else opened for this load.
+    let opened;
     let Sources {
         manifest,
         store,
         vfs,
-    } = open(manifest, data)?;
+    } = match sources {
+        Some(s) => s,
+        None => {
+            opened = open(manifest, data)?;
+            &opened
+        }
+    };
     let limits = &manifest.limits;
     let budget = scene_budget(scene_memory, limits);
-    let mut loader = Loader::new(&store, &vfs, &manifest.language, level, &budget);
+    let mut loader = Loader::new(store, vfs, &manifest.language, level, &budget);
     // The clock's switches (off by default) change how models are read.
     if options.clock.any() {
         loader.set_clock_switches(options.clock, &budget);
@@ -252,7 +261,7 @@ pub fn cell(
     let mut scene = match (timeline, by_key) {
         // CELL -: the cell the player's track is in at the second.
         (Some((_, p)), _) if cell == "-" => {
-            let (key, rule) = fo4_scene::timeline::player_cell(&store, &p.frame, &budget)?;
+            let (key, rule) = fo4_scene::timeline::player_cell(store, &p.frame, &budget)?;
             cell_rule = rule;
             scoped(&budget, |b| loader.cell(&key, b))?
         }
@@ -264,7 +273,7 @@ pub fn cell(
     let grid = if around > 0 {
         let started = std::time::Instant::now();
         let a = scoped(&budget, |b| {
-            fo4_scene::grid::around(&store, &scene.cell.key, around, b)
+            fo4_scene::grid::around(store, &scene.cell.key, around, b)
         })?;
         let loads = fo4_scene::grid::absorb_around(&mut loader, &mut scene, &a, &budget)?;
         let cells: Vec<String> = loads
@@ -313,8 +322,8 @@ pub fn cell(
     if let Some(ev) = script_event {
         script_changes = Some(crate::vm_event::apply(
             ev,
-            &store,
-            &vfs,
+            store,
+            vfs,
             limits.max_memory,
             &mut scene,
             &mut loader,
@@ -351,7 +360,7 @@ pub fn cell(
             Some(fo4_scene::timeline::cast::start_poses(
                 c,
                 &loader,
-                &vfs,
+                vfs,
                 &args.pose,
                 p.frame.second,
                 level,
@@ -470,7 +479,7 @@ pub fn cell(
             Some(o) => {
                 let started = std::time::Instant::now();
                 let (poses, mut a) =
-                    crate::clip::prepare(o, &actors, &loader, &vfs, level, limits, &budget)?;
+                    crate::clip::prepare(o, &actors, &loader, vfs, level, limits, &budget)?;
                 let (build, recorded) = fo4_render::draw::build_with_posed_actors(
                     &scene, &actors, poses, &loader, limits, options, &budget,
                 )?;
@@ -579,9 +588,9 @@ pub fn cell(
     // The terrain of the cell and, for walking, of its neighbours. Without
     // --terrain and --walk nothing is loaded and the draw list is unchanged.
     let ground = match (&grid, walk || terrain) {
-        (Some(a), true) => Some(fo4_walk::terrain::load_with(&store, a, level, &budget)?),
+        (Some(a), true) => Some(fo4_walk::terrain::load_with(store, a, level, &budget)?),
         (None, true) => Some(fo4_walk::terrain::load_around(
-            &store,
+            store,
             &scene.cell.key,
             level,
             walk,
@@ -608,7 +617,7 @@ pub fn cell(
                 fo4_render::terrain::append_textured_terrain(
                     &mut build.list,
                     t,
-                    &store,
+                    store,
                     &mut loader,
                     &mut cache,
                     last,
@@ -649,7 +658,7 @@ pub fn cell(
                     fo4_render::terrain::append_textured_terrain(
                         &mut build.list,
                         t,
-                        &store,
+                        store,
                         &mut loader,
                         &mut cache,
                         tag,
@@ -685,7 +694,7 @@ pub fn cell(
         _ => None,
     };
     // The light switches: the frame's light (`fo4_scene::light`).
-    let light = match fo4_scene::light::frame(&store, &scene, light.0, light.1, &budget)? {
+    let light = match fo4_scene::light::frame(store, &scene, light.0, light.1, &budget)? {
         Some(mut l) => {
             let effects: std::collections::BTreeSet<usize> =
                 build.effect_draws.iter().copied().collect();
@@ -764,7 +773,7 @@ pub fn cell(
                     dormant,
                     info,
                     space: fo4_scene::timeline::norm(&fo4_scene::timeline::scene_space(
-                        &store, &scene,
+                        store, &scene,
                     )),
                     tags: build
                         .instances

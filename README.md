@@ -284,7 +284,11 @@ activating it; the run's timed open of it is left out) and
 `--play-activate-person` for the exit console and the device on the
 skeleton before it (the person's E uses them; the run's timed activations
 of them are left out). The preset's `--play-pick-first-met` lets E reach the
-console from inside the gear door's bounds.
+console from inside the gear door's bounds, and its `--play-action-after-offset`
+lets a person late against the run's timed actions keep their spacing: an
+action held until a stage happens as long after the stage as the run's
+switches wrote it after the action that sets the stage (the exit's two
+events 10 and 15 s after your use of the console), not all at once.
 `--play-record` writes your commands in `play_run`'s input format:
 `play_run` with that file, the preset's play options and the same new-game
 switches replays the same run.

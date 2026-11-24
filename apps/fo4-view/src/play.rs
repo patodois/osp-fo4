@@ -172,6 +172,61 @@ mod enabled {
         cast: Option<CastWork>,
         /// `--play-keys`: a person's keys drive the walker.
         keys: bool,
+        /// The cell loads' worker ([`cell_worker`]), started with the run.
+        cells: Option<Sender<CellAsk>>,
+    }
+
+    /// A cell load asked of the cell worker: the scene's switches for the
+    /// cell, the live world, where the result goes and when it was asked.
+    struct CellAsk {
+        scene: Box<crate::cli::Scene>,
+        cell: FormKey,
+        live: bool,
+        at: f64,
+        started: std::time::Instant,
+        reply: Sender<Result<Reloaded, String>>,
+    }
+
+    /// The window's cell loads (viewer policy): one thread keeps the game
+    /// data open (the plugins and the archives, `crate::load::Sources`,
+    /// opened once as the run starts) and loads each cell asked, so a
+    /// change of cell does not open them again; what it loads is what a
+    /// load that opens them gives.
+    fn cell_worker(manifest: String, data: String, asks: Receiver<CellAsk>) {
+        let opened = std::time::Instant::now();
+        let sources = crate::load::open(&manifest, &data).map_err(|e| e.to_string());
+        if sources.is_ok() {
+            println!(
+                "play: the cell loads' game data opened in {:.2} s, kept for every load",
+                opened.elapsed().as_secs_f64()
+            );
+        }
+        while let Ok(a) = asks.recv() {
+            let r = match &sources {
+                Ok(src) => crate::load_scene_with(&a.scene, true, a.live, Some(src))
+                    .map(|(gpu, options, mut loaded)| {
+                        let mut live = loaded.live.take();
+                        if let Some(l) = live.as_mut() {
+                            l.world = loaded.walk.take();
+                        }
+                        Reloaded {
+                            gpu,
+                            clear: options.clear,
+                            cell: a.cell,
+                            pick: loaded.pick.take(),
+                            live,
+                            load_seconds: a.started.elapsed().as_secs_f64(),
+                            waited: 0.0,
+                            asked_at: a.at,
+                        }
+                    })
+                    .map_err(|e| e.to_string()),
+                Err(e) => Err(format!("PlayCellSources: {e}")),
+            };
+            if a.reply.send(r).is_err() {
+                continue;
+            }
+        }
     }
 
     /// The window's cast (`--play-run ... --timeline-cast`): a thread that
@@ -414,6 +469,13 @@ mod enabled {
                     }
                     None => None,
                 };
+                let (cells_to, cells_from) = channel();
+                let (manifest, data) = (s.manifest.clone(), s.data.clone());
+                std::thread::Builder::new()
+                    .name("fo4-view play cells".into())
+                    .spawn(move || cell_worker(manifest, data, cells_from))
+                    .map(|_| ())
+                    .map_err(|e| format!("play: the cell loads' thread: {e}"))?;
                 let scripted = Scripted {
                     gate,
                     seen,
@@ -424,6 +486,7 @@ mod enabled {
                     shots_between: p.shots_between.clone(),
                     cast,
                     keys,
+                    cells: Some(cells_to),
                 };
                 (to_run, status, thread, Some(scripted))
             }
@@ -660,32 +723,17 @@ mod enabled {
                 "play: at {at:.3} s the walker's walking world is about cell {}; the window loads it (the run waits)",
                 scene.cell
             );
-            let spawned = std::thread::Builder::new()
-                .name("fo4-view play cell".into())
-                .spawn(move || {
-                    let r = crate::load_scene(&scene, true, live)
-                        .map(|(gpu, options, mut loaded)| {
-                            let mut live = loaded.live.take();
-                            if let Some(l) = live.as_mut() {
-                                l.world = loaded.walk.take();
-                            }
-                            Reloaded {
-                                gpu,
-                                clear: options.clear,
-                                cell,
-                                pick: loaded.pick.take(),
-                                live,
-                                load_seconds: started.elapsed().as_secs_f64(),
-                                waited: 0.0,
-                                asked_at: at,
-                            }
-                        })
-                        .map_err(|e| e.to_string());
-                    let _ = tx.send(r);
-                });
-            match spawned {
-                Ok(_) => s.loading = Some((Mutex::new(rx), started, at)),
-                Err(e) => eprintln!("play: the cell's loading thread: {e}"),
+            let ask = CellAsk {
+                scene: Box::new(scene),
+                cell,
+                live,
+                at,
+                started,
+                reply: tx,
+            };
+            match s.cells.as_ref().map(|w| w.send(ask)) {
+                Some(Ok(())) => s.loading = Some((Mutex::new(rx), started, at)),
+                _ => eprintln!("play: the cell loads' thread is gone"),
             }
         }
 
