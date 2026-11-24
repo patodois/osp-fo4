@@ -321,7 +321,26 @@ pub(super) fn new_game(
     if then.recheck_variables {
         vm.world.scenes.variable_writes = Some(Default::default());
     }
-    let gated = then.actions.iter().filter(|x| x.after.is_some()).count() as u64;
+    let gated = then
+        .actions
+        .iter()
+        .filter(|x| x.after.is_some() && !matches!(x.what, What::Move(_)))
+        .count() as u64;
+    let moves_gated = then
+        .actions
+        .iter()
+        .filter(|x| matches!(x.what, What::Move(_)))
+        .count() as u64;
+    if then.actor_move_gates {
+        bump(
+            &mut c,
+            "switch: an --action-after gate also holds the assumed actor moves of its actor at its second (--action-after-actor-moves)",
+        );
+    }
+    if moves_gated > 0 {
+        *c.entry("assumption from the command line: an assumed actor move waits for a stage before it happens (--action-after, --action-after-actor-moves)".into())
+            .or_default() += moves_gated;
+    }
     if gated > 0 {
         *c.entry("assumption from the command line: a timed caller action waits for a stage before it happens (--action-after)".into())
             .or_default() += gated;
@@ -396,6 +415,19 @@ pub(super) fn new_game(
             then.actor_moves.clone(),
             &b,
         )?;
+        // The assumed moves a gate holds (`--action-after-actor-moves`)
+        // wait as caller actions: they leave the world model's list (each
+        // comes back when it happens, `crate::track::schedule_move`); their
+        // actors stay among the moved ones.
+        for x in &then.actions {
+            if let What::Move(m) = &x.what {
+                let p = &mut vm.world.place;
+                if let Some(i) = p.actor_moves.iter().position(|y| y == m) {
+                    p.actor_moves.remove(i);
+                }
+                p.actors_held_moves.insert(m.actor.clone());
+            }
+        }
         if !vm.world.place.doors.is_empty() {
             vm.rules.insert(crate::rules::WORLD_LOAD_DOOR);
         }
@@ -935,7 +967,8 @@ pub(super) fn new_game(
                 | What::Terminal(..)
                 | What::ItemAdded(..)
                 | What::ContainerChange(..)
-                | What::LocationChange(..) => None,
+                | What::LocationChange(..)
+                | What::Move(_) => None,
             })
             .collect();
         next_blockers(&mut vm, m, vfs, store, opts, &quests, then.outer_calls, out)?;

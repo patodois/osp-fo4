@@ -169,7 +169,7 @@ pub const XESP_BIT1: &str = "xesp_flag_bit1_not_presence_v1";
 pub const XESP_PROPAGATES: &str = "xesp_script_change_propagates_v1";
 
 /// Every rule above.
-pub const ALL: [&str; 205] = [
+pub const ALL: [&str; 206] = [
     ARITHMETIC,
     COMPARE,
     NOT_COPY_CAST,
@@ -375,6 +375,7 @@ pub const ALL: [&str; 205] = [
     LOCATION_IS_CHILD_PARENT,
     TIMER_BUDGET_PER_TIMER,
     ACTION_AFTER_OFFSET,
+    ACTOR_MOVE_AFTER,
 ];
 
 /// The rule an opcode's meaning rests on; `None` for an opcode without a
@@ -880,3 +881,8 @@ pub const LOCATION_IS_CHILD_PARENT: &str = "world_location_is_child_parent_chain
 /// the earliest held action's second on that gate. The gate's actions
 /// still waiting for their second move as much, never before it.
 pub const ACTION_AFTER_OFFSET: &str = "caller_action_after_keeps_offset_v1";
+/// An assumed actor move (`--assume-actor-at`) that an `--action-after`
+/// gate names by its actor and second is held until the gate's stage as a
+/// timed caller action is, and keeps its offset under
+/// `--action-after-offset` (`--action-after-actor-moves`).
+pub const ACTOR_MOVE_AFTER: &str = "caller_actor_move_after_v1";

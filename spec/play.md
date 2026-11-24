@@ -941,6 +941,28 @@ started), no skin, no race skin and no outfit 2 (no model to draw), a transform 
 None is a defect against an existing rule; nothing changed. Whether the preset takes the faces step's two readings
 is the owner's choice.
 
+### The platform waits for every arrival (the deck step)
+
+Both play sessions after the gate step stopped on the raised descent platform: the person boarded it (the opening
+quest's 495 at 860.3 and 633.3 s) and 500 never followed. The boarding handler counts the arrivals of the seven
+references stage 470's fragment registers for distance events about the platform's centre (the player, the spouse
+and five other actors) and sets 500 at the seventh. The spouse never arrived: the caller's two moves of her (`--assume-actor-at`, written at
+420 and 466 s, where the reference run's spouse walks to the platform) came before the checkpoint's stage whose
+fragment moves her to the escort marker (465, at 692.2 s in session A, 517.2 s in session B; 366 s in the reference
+run), and a native move after an assumed one puts the actor where the native put her (`world_actor_placed_position_v1`),
+so she stood at the escort marker for the rest of the run. Not a regression of the way-out or gate steps: the same
+records replayed without `--play-action-after-offset`, and with the way-out step's `play_run`, skip 500 as well; the
+person step's session B reached 500 only because its 465 came at 465.70 s, 0.3 s before the second move.
+
+With `quest_run --action-after-actor-moves` (`caller_actor_move_after_v1`, off by default) an `--action-after` gate
+also names the assumed moves of its actor at its second; the deck step's run arguments (`track/open3-graph.args` in its
+notes) hold both moves of the spouse until 465. Under `--action-after-offset` each keeps its offset from the stage:
+465 is done in the turn of the checkpoint talk written at 366 s, so the moves come 54 and 100 s after the person's 465.
+Session B's record now gives 465 at 517.2 s, her moves at 571.2 and 617.2 s, 495 and 500 at 633.28 s, the descent
+(510 at 642.3 s) and the vault, 680 and 690 at 743 s, to the end of the input; session A's 465 at 692.2 s, 495 and 500
+at 860.29 s, 510 at 869.3 s and the vault to 970.7 s, to the end of its input. The on-time person is unchanged (the
+same 276 stages at the same seconds).
+
 ## What the play mode does not do yet
 
 - The elevators ride only those the caller names (`--play-elevator`), headless and in the scripted window;
@@ -959,7 +981,9 @@ is the owner's choice.
   activations are the person's (`--play-activate-opens`, `--play-activate-person`); the earlier vault
   activations, the talks, the actor moves and the player's animation events stay timed (held until their
   stages; with `--play-action-after-offset` each keeps its offset from its stage, so a late person gets them
-  spaced as the caller wrote them; the actor moves and ungated actions stay at their seconds).
+  spaced as the caller wrote them; with `quest_run --action-after-actor-moves` in the run's arguments the
+  spouse's two moves are held until the stage that sends her, the deck step; the exit elevator's descent event
+  stays at its second).
 - A grid square's drawing is loaded whole by the window (2.0 to 5.9 s since the gate step, the game data kept open; before, 5.6 to 8.1 s, the store opened again; the cells
   scanned, the models and textures read), overlapped with the walker's build since the person step.
 - The reach of an activation, the walker's speed and its tick are the caller's; the activation key and the
@@ -998,3 +1022,4 @@ is the owner's choice.
 | `play_activate_ray_first_met_v1` | `--play-pick-first-met` | measured on the session's record: the gear door's bounds hold the walkway; that a crosshair names the surface in front of the eye is prior knowledge | weak |
 | `caller_action_after_keeps_offset_v1` | `quest_run --action-after-offset` (`--play-action-after-offset`) | how the opening's gates are written (each names the stage the caller's previous action sets); a reading of the caller's own timed assumptions | weak |
 | `play_activate_written_second_v1` | `--play-action-after-offset` | the person's activation and the caller's timed one are the same event of the story; that the caller's later events follow it by the written gaps is prior knowledge of how they were timed | weak |
+| `caller_actor_move_after_v1` | `quest_run --action-after-actor-moves` (in the run's arguments) | how the opening's two moves of the spouse are written: 54 and 100 s after the stage whose fragment moves her to the escort marker in the reference run; that her walk follows that stage by the same time whatever the player's pace is prior knowledge of the caller's timing | weak |

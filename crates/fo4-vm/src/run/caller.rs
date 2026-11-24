@@ -286,6 +286,29 @@ pub(super) fn act(
             stop_act(vm, store, &x.what, &when, c, names, b)?;
             top.extend(quest::run_jobs(vm, store, MAX_GAME_JOBS, b));
         }
+        What::Move(m) => {
+            // A held assumed move (`caller_actor_move_after_v1`): the actor
+            // stands there from the present second; the world step that
+            // follows applies it (triggers, distance registrations).
+            bump(
+                c,
+                "caller actions held until a stage: assumed actor moves that happened (--action-after-actor-moves)",
+            );
+            vm.rules.insert(crate::rules::ACTOR_MOVE_AFTER);
+            let now = vm.world.now[crate::world::Clock::Real as usize];
+            crate::track::schedule_move(
+                &mut vm.world,
+                crate::track::ActorMove {
+                    t: now,
+                    ..m.clone()
+                },
+            );
+            let _ = writeln!(
+                names,
+                "## --assume-actor-at {}{when}: the actor stands there from {now} s (held until a stage)",
+                crate::bind::record_key(&m.actor)
+            );
+        }
         What::Menu(name, opening) => {
             bump(
                 c,

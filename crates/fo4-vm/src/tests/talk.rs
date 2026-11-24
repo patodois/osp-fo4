@@ -527,6 +527,82 @@ fn an_assumed_actor_move_raises_the_trigger_and_the_distance_event() {
     );
 }
 
+/// The deck step's finding at the level of the world model: an assumed
+/// move written before a native move of the same actor loses to it, so a
+/// distance registration made after both never sees the actor arrive; the
+/// same move applied after the native move (as a gate holding it until the
+/// stage that made the native move does) stands, and the event comes.
+#[test]
+fn a_native_move_after_an_assumed_one_puts_the_actor_back_and_a_later_move_stands() {
+    let s = store();
+    let b = Budget::new(1 << 24);
+    let mut l = lib();
+    let mut host = QuestHost::new(&s, 1 << 24);
+    let mut attach = RecordScripts::new(&s, 1 << 24);
+    let mut vm = Vm::new(&mut l, &mut host);
+    vm.attach = Some(&mut attach);
+    let run = |vm: &mut Vm<'_>, move_at: f64| -> Vec<(&'static str, f64)> {
+        let track = Track::parse("0 test.esm:00000801 0 1000 0\n30 test.esm:00000801 100 1000 0\n")
+            .unwrap();
+        let mv = ActorMove {
+            t: move_at,
+            actor: key(ACTOR),
+            space: key(WRLD),
+            pos: [3000.0, 1050.0, 0.0],
+        };
+        vm.world = crate::World::default();
+        vm.world.place = Place::load_with(&s, track, world_switches(), vec![mv], &b).unwrap();
+        let actor =
+            crate::data::record_object(&mut vm.world, &s, &key(ACTOR), "actor", &b).unwrap();
+        let mark = crate::data::record_object(&mut vm.world, &s, &key(MARK), "objectreference", &b)
+            .unwrap();
+        let mut got = Vec::new();
+        for t in [5.0, 8.0, 10.0, 12.0, 20.0] {
+            vm.world.now[crate::world::Clock::Real as usize] = t;
+            if t == 8.0 {
+                // The stage's fragment moves the actor (a SetPosition: from
+                // here its place is the native's, not the stored one).
+                let call = crate::NativeCall {
+                    script: "objectreference".into(),
+                    name: "setposition".into(),
+                    receiver: Some(Val::Object(actor)),
+                    instance: None,
+                    args: vec![Val::Float(0.0), Val::Float(0.0), Val::Float(0.0)],
+                    param_types: vec!["float".into(), "float".into(), "float".into()],
+                    return_type: "none".into(),
+                };
+                track::observe(&s, 1 << 24, &call, &mut vm.world);
+            }
+            if t == 10.0 {
+                let inst = vm.instantiate(None, "dist").unwrap();
+                let call = crate::NativeCall {
+                    script: "scriptobject".into(),
+                    name: "registerfordistancelessthanevent".into(),
+                    receiver: None,
+                    instance: Some(inst),
+                    args: vec![Val::Object(actor), Val::Object(mark), Val::Float(200.0)],
+                    param_types: vec!["scriptobject".into(), "scriptobject".into(), "float".into()],
+                    return_type: "none".into(),
+                };
+                track::call(&s, 1 << 24, &call, &mut vm.world).unwrap();
+            }
+            let (raised, _) = track::settle(vm, &s, 64, &b);
+            got.extend(
+                raised
+                    .iter()
+                    .filter(|r| r.event == "ondistancelessthan")
+                    .map(|r| (r.event, r.t)),
+            );
+        }
+        got
+    };
+    // Written at 5 s, before the native move at 8 s: the actor never
+    // arrives for the registration made at 10 s.
+    assert!(run(&mut vm, 5.0).is_empty());
+    // Applied at 12 s, after the native move: the event comes at 12 s.
+    assert_eq!(run(&mut vm, 12.0), vec![("ondistancelessthan", 12.0)]);
+}
+
 #[test]
 fn the_player_is_no_records_handle_only_under_its_rule() {
     let s = store();

@@ -979,6 +979,10 @@ pub struct Place {
     pub actor_moves: Vec<ActorMove>,
     /// Actor moves applied so far (`world_actor_trigger_v1`).
     pub actor_cursor: usize,
+    /// Actors with an assumed move a gate holds as a caller action
+    /// (`--action-after-actor-moves`, `caller_actor_move_after_v1`): moved
+    /// actors, as those with a move in [`Place::actor_moves`].
+    pub actors_held_moves: BTreeSet<FormKey>,
     /// The moves scene package actions scheduled, by scene handle
     /// (`pack_location_destination_v1`): those not yet applied end with
     /// their scene.

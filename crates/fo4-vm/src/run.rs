@@ -431,6 +431,11 @@ pub struct Then {
     /// such an action sets takes that second as its reference. The play
     /// mode gives them for the timed actions it leaves to the person.
     pub input_written: Vec<(crate::player::Action, String, f64)>,
+    /// An `--action-after` gate also names an assumed actor move of its
+    /// actor at its second (`--action-after-actor-moves`,
+    /// `caller_actor_move_after_v1`): the move becomes a timed caller
+    /// action ([`What::Move`]) held until the stage like the others.
+    pub actor_move_gates: bool,
 }
 
 /// One thing the caller makes happen.
@@ -485,6 +490,10 @@ pub enum What {
     /// each a location or `none` (`--assume-location-change ACTOR OLD
     /// NEW`).
     LocationChange(String, String, String),
+    /// An assumed actor move (`--assume-actor-at`) an `--action-after` gate
+    /// holds (`--action-after-actor-moves`): when it happens the actor
+    /// stands there from that second.
+    Move(crate::track::ActorMove),
 }
 #[derive(Clone, Debug)]
 pub struct Caller {
@@ -517,6 +526,7 @@ impl Caller {
             | What::LocationChange(k, ..) => k.clone(),
             What::Menu(m, _) => m.clone(),
             What::Looks(n) => n.to_string(),
+            What::Move(m) => crate::bind::record_key(&m.actor),
         }
     }
 }

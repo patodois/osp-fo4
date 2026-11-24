@@ -483,6 +483,12 @@ fn game_plugin() -> Vec<u8> {
 
 /// QS starts with the game and holds these stages.
 fn game_plugin_with(stages: &[u16]) -> Vec<u8> {
+    game_plugin_full(stages, &[])
+}
+
+/// [`game_plugin_with`] with these records among the room's temporary
+/// references.
+fn game_plugin_full(stages: &[u16], refs: &[u8]) -> Vec<u8> {
     let mut hedr = 0.95f32.to_le_bytes().to_vec();
     hedr.extend(2u32.to_le_bytes());
     hedr.extend(0x990u32.to_le_bytes());
@@ -517,7 +523,7 @@ fn game_plugin_with(stages: &[u16]) -> Vec<u8> {
             [0; 4],
             &[
                 cell,
-                group(6, CELL.to_le_bytes(), &group(9, CELL.to_le_bytes(), &[])),
+                group(6, CELL.to_le_bytes(), &group(9, CELL.to_le_bytes(), refs)),
             ]
             .concat(),
         ),
@@ -767,4 +773,138 @@ fn the_offset_switch_and_its_input_seconds_are_checked() {
     );
     assert!(rules::ALL.contains(&rules::ACTION_AFTER_OFFSET));
     assert_eq!(rules::status(rules::ACTION_AFTER_OFFSET), Some("pending"));
+}
+
+/// Runs `quest_run new-game` over a room holding one placed actor (at
+/// 0, 0, 0) on the player's track, with these switches; the seconds of the
+/// actor's moves in the timeline, and each stage's second.
+fn actor_gate_run(name: &str, more: &[&str]) -> (Vec<f64>, std::collections::BTreeMap<i32, f64>) {
+    let dir = TestDir::new(name);
+    let mut d = Vec::new();
+    for f in [0.0f32; 6] {
+        d.extend(f.to_le_bytes());
+    }
+    let achr = record(
+        b"ACHR",
+        ACTOR,
+        &[sub(b"NAME", &NPC.to_le_bytes()), sub(b"DATA", &d)].concat(),
+    );
+    std::fs::write(dir.join("test.esm"), game_plugin_full(&[5, 10], &achr)).unwrap();
+    let manifest = format!(
+        "{{\"game\":\"fallout4\",\"root\":{:?},\"language\":\"english\",\"build\":\"synthetic\",\"plugins\":[{{\"name\":\"test.esm\",\"path\":\"test.esm\"}}],\"required_masters\":[],\"mounts\":[],\"excluded\":[]}}",
+        dir.to_str().unwrap()
+    );
+    std::fs::write(dir.join("m.json"), manifest).unwrap();
+    std::fs::write(
+        dir.join("t.track"),
+        "0 test.esm:00000930 0 0 0\n60 test.esm:00000930 90 0 0\n",
+    )
+    .unwrap();
+    std::fs::create_dir_all(dir.join("out")).unwrap();
+    let arg = |p: &str| dir.join(p).to_str().unwrap().to_string();
+    let mut args: Vec<String> = vec![
+        arg("m.json"),
+        "new-game".into(),
+        arg("out"),
+        "--scene-clock".into(),
+        "10".into(),
+        "--no-line-audio".into(),
+        "--timers".into(),
+        "0".into(),
+        "--track".into(),
+        arg("t.track"),
+        "--placed-positions".into(),
+        "--actor-positions".into(),
+        "--timeline".into(),
+        arg("t.timeline"),
+    ];
+    args.extend(more.iter().map(|x| x.to_string()));
+    let none = |_: &[u8], _: &str, _: &Budget| None;
+    crate::run::main_with(args, &none, None).unwrap();
+    let timeline = std::fs::read_to_string(dir.join("t.timeline")).unwrap();
+    let actor = "test.esm:00000965";
+    let moves = timeline
+        .lines()
+        .filter_map(|l| {
+            let f: Vec<&str> = l.split('\t').collect();
+            (f.first() == Some(&"actor") && f.get(2) == Some(&actor) && f.get(1) != Some(&"0"))
+                .then(|| f[1].parse::<f64>().unwrap())
+        })
+        .collect();
+    let names = std::fs::read_to_string(dir.join("out/quest-run-names.txt")).unwrap();
+    let mut at = std::collections::BTreeMap::new();
+    let mut now = None;
+    for l in names.lines() {
+        if let Some(t) = l
+            .strip_prefix("## timeline at ")
+            .and_then(|r| r.split(' ').next())
+        {
+            now = t.parse::<f64>().ok();
+        } else if let (Some(t), Some(n)) = (
+            now,
+            l.split("StageSet(")
+                .nth(1)
+                .and_then(|r| r.split(')').next()),
+        ) {
+            at.entry(n.parse::<i32>().unwrap()).or_insert(t);
+        }
+    }
+    (moves, at)
+}
+
+/// A person late at the stage that sends an actor, as in both play
+/// sessions of the deck step: 5 (the stage whose fragment would move the
+/// actor) was written at 8 s and is held until 10, which the person sets
+/// at 30 s; the caller wrote the actor's arrival at 12 s, 4 s after 5.
+const LATE_SENDER: [&str; 14] = [
+    "--then",
+    "QS:5@8",
+    "--action-after",
+    "QS:5@8",
+    "QS:10",
+    "--then",
+    "QS:10@30",
+    "--assume-actor-at",
+    "test.esm:00000965",
+    "test.esm:00000930",
+    "500",
+    "0",
+    "0@12",
+    "--action-after",
+];
+
+#[test]
+fn an_assumed_actor_move_waits_for_the_stage_that_sends_the_actor_only_under_the_switch() {
+    let base: Vec<&str> = LATE_SENDER
+        .iter()
+        .copied()
+        .chain(["test.esm:00000965@12", "QS:5"])
+        .collect();
+    // Off: the move happens at its written second, 18 s before the stage
+    // that sends the actor (a later native move of that stage would put
+    // the actor back where it sends it, and the actor never arrives).
+    let (moves, at) = actor_gate_run("vm-move-gate-off", &base);
+    assert_eq!(at.get(&5), Some(&30.0));
+    assert_eq!(moves, vec![12.0]);
+    // On: the move waits for 5 and happens when it is done.
+    let mut on = base.clone();
+    on.push("--action-after-actor-moves");
+    let (moves, at) = actor_gate_run("vm-move-gate-on", &on);
+    assert_eq!(at.get(&5), Some(&30.0));
+    assert_eq!(moves, vec![30.0]);
+    // With the offset: 5 was done in the turn of its action written at
+    // 8 s, so the move keeps its 4 s after it.
+    on.push("--action-after-offset");
+    let (moves, at) = actor_gate_run("vm-move-gate-offset", &on);
+    assert_eq!(at.get(&5), Some(&30.0));
+    assert_eq!(moves, vec![34.0]);
+    // On time: 10 at 4 s, 5 at its 8 s, the move at its 12 s as written.
+    let mut early: Vec<&str> = on.clone();
+    let i = early.iter().position(|x| *x == "QS:10@30").unwrap();
+    early[i] = "QS:10@4";
+    let (moves, at) = actor_gate_run("vm-move-gate-early", &early);
+    assert_eq!(at.get(&5), Some(&8.0));
+    assert_eq!(moves, vec![12.0]);
+    assert!(rules::ALL.contains(&rules::ACTOR_MOVE_AFTER));
+    assert_eq!(rules::status(rules::ACTOR_MOVE_AFTER), Some("pending"));
 }

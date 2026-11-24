@@ -770,6 +770,9 @@ pub fn parse(mut a: Vec<String>) -> Result<Command, E> {
     if then.cond_distance && then.track.is_none() {
         return Err("--cond-1-distance needs --track FILE".into());
     }
+    // A gate also names the assumed actor moves of its actor at its
+    // second (`--action-after-actor-moves`, `caller_actor_move_after_v1`).
+    then.actor_move_gates = flag(&mut a, "--action-after-actor-moves");
     // The caller's gates: --action-after TARGET@SECONDS EDITOR_ID:STAGE.
     while let Some(i) = a.iter().position(|x| x == "--action-after") {
         let usage = "--action-after TARGET@SECONDS EDITOR_ID:STAGE (TARGET: the action's reference key, menu name, looks event number or EDITOR_ID:STAGE)";
@@ -788,6 +791,34 @@ pub fn parse(mut a: Vec<String>) -> Result<Command, E> {
         {
             x.after = Some((q.to_string(), n));
             found = true;
+        }
+        // Under `--action-after-actor-moves`: the assumed moves of that
+        // actor at that second, each now a timed caller action held until
+        // the stage (a move a gate already holds is matched above, as an
+        // action is, and takes the later gate).
+        if then.actor_move_gates {
+            let moves: Vec<crate::track::ActorMove> = then
+                .actor_moves
+                .iter()
+                .filter(|m| {
+                    m.t == at && crate::bind::record_key(&m.actor).eq_ignore_ascii_case(target)
+                })
+                .filter(|m| {
+                    !then
+                        .actions
+                        .iter()
+                        .any(|x| matches!(&x.what, What::Move(h) if h == *m))
+                })
+                .cloned()
+                .collect();
+            for m in moves {
+                then.actions.push(Caller {
+                    what: What::Move(m),
+                    at: Some(at),
+                    after: Some((q.to_string(), n)),
+                });
+                found = true;
+            }
         }
         if !found {
             then.unmatched_gates += 1;

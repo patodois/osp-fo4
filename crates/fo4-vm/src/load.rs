@@ -413,7 +413,9 @@ fn position(store: &Store, w: &mut World, k: &FormKey) -> Result<(FormKey, [f64;
         // leave open, goes through the world model.
         let actor = store.signature(k) == Some(*b"ACHR");
         let moved = w.place.moved_at.contains_key(&o)
-            || (actor && w.place.actor_moves.iter().any(|m| &m.actor == k));
+            || (actor
+                && (w.place.actor_moves.iter().any(|m| &m.actor == k)
+                    || w.place.actors_held_moves.contains(k)));
         let off = if actor {
             !w.place.sw.actors
         } else {
