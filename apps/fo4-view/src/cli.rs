@@ -1431,13 +1431,17 @@ mod tests {
         };
         assert!(scene.drawing.child_flag_agrees);
         assert!(!scene.drawing.platforms);
-        let Command::Window { scene, .. } = parse(&args(&format!(
-            "{base} --play-elevator a.esm:00000001 --draw-platforms"
-        )))
-        .unwrap() else {
-            panic!()
-        };
-        assert!(scene.drawing.platforms && !scene.play_platforms.is_empty());
+        // The play options are read only with the feature.
+        #[cfg(feature = "script-event")]
+        {
+            let Command::Window { scene, .. } = parse(&args(&format!(
+                "{base} --play-elevator a.esm:00000001 --draw-platforms"
+            )))
+            .unwrap() else {
+                panic!()
+            };
+            assert!(scene.drawing.platforms && !scene.play_platforms.is_empty());
+        }
         for bad in [
             // --draw-platforms draws the scripted window's named platforms.
             format!("{base} --draw-platforms"),
