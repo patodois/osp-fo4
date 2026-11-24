@@ -80,9 +80,14 @@ pub struct Switches {
     /// ([`hypotheses::LIGHT_VERTEX_NORMALS`]; the draw build keeps the
     /// normals, `fo4_render::draw::BuildOptions::vertex_normals`).
     pub vertex_normals: bool,
+    /// `--exposure-eye-floor` (with `--exposure-eye`): a view whose seen
+    /// light is below [`EXPOSURE_FLOOR`] (or has none) takes one over the
+    /// floor as its scale ([`hypotheses::EXPOSURE_FLOOR`]).
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub exposure_floor: bool,
 }
 impl Switches {
-    const FLAGS: [&'static str; 13] = [
+    const FLAGS: [&'static str; 14] = [
         "--light-cell",
         "--light-inherits",
         "--light-points",
@@ -96,8 +101,9 @@ impl Switches {
         "--exposure-white",
         "--exposure-cinematic",
         "--light-vertex-normals",
+        "--exposure-eye-floor",
     ];
-    fn slots(&mut self) -> [&mut bool; 13] {
+    fn slots(&mut self) -> [&mut bool; 14] {
         [
             &mut self.cell,
             &mut self.inherits,
@@ -112,6 +118,7 @@ impl Switches {
             &mut self.exposure_white,
             &mut self.exposure_cinematic,
             &mut self.vertex_normals,
+            &mut self.exposure_floor,
         ]
     }
     /// Sets the switch a command-line flag names; false for any other text.
@@ -151,6 +158,13 @@ impl Switches {
 /// or below (`frame_exposure_seen_light_v1`): chosen.
 pub const EXPOSURE_QUANTILE: f64 = 0.9;
 
+/// The seen light below which a view takes this floor's scale
+/// (`frame_exposure_seen_light_floor_v1`, `--exposure-eye-floor`): at most
+/// four times the lit colour. Chosen below every lit view the opening's
+/// window measured (0.52 to 0.68 outside, 0.65 to 1.53 in the vaults) and
+/// far above the room of 730 s (0.0013).
+pub const EXPOSURE_FLOOR: f32 = 0.25;
+
 /// What maps a lit colour to the frame ([`Light::exposure`]), each part
 /// under its own switch; with every part `None` a lit colour is as before
 /// (`light_sum_clamped_v1`).
@@ -159,6 +173,10 @@ pub struct Exposure {
     /// [`hypotheses::EXPOSURE_EYE`]: the eye's reading is asked
     /// (`--exposure-eye`); [`Light::expose_seen`] sets `scale`.
     pub eye: bool,
+    /// [`hypotheses::EXPOSURE_FLOOR`]: the floor is asked
+    /// (`--exposure-eye-floor`).
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub floor: bool,
     /// The factor a lit colour is multiplied by after the light (before the
     /// fog): one over the mean light falling on what the eye sees.
     pub scale: Option<f32>,
@@ -474,17 +492,37 @@ impl Light {
     /// nothing when that light is not positive, no point is given or the
     /// reading is not asked. Returns that light when it applied.
     pub fn expose_seen(&mut self, points: &[([f64; 3], [f64; 3])]) -> Option<f32> {
+        self.expose_seen_with(points, None)
+    }
+    /// [`Light::expose_seen`], the light at each point summed over the
+    /// points `grid` lists there ([`Grid::at`]; the same light); with the
+    /// floor asked ([`Exposure::floor`]) a view whose light is below
+    /// [`EXPOSURE_FLOOR`], or that has none, takes one over the floor.
+    pub fn expose_seen_with(
+        &mut self,
+        points: &[([f64; 3], [f64; 3])],
+        grid: Option<&Grid>,
+    ) -> Option<f32> {
         if !self.exposure.eye || !self.lit {
             return None;
         }
         if points.is_empty() {
+            if self.exposure.floor {
+                return Some(self.floored("no lit triangle in view"));
+            }
             self.report
                 .push("exposure: no lit triangle in view, no scale".into());
             return None;
         }
         let mut each: Vec<f32> = points
             .iter()
-            .map(|(p, n)| self.at(*p, *n).iter().sum::<f32>() / 3.)
+            .map(|(p, n)| {
+                let l = match grid {
+                    Some(g) => self.at_some(*p, *n, g.at(*p).iter().map(|k| *k as usize)),
+                    None => self.at(*p, *n),
+                };
+                l.iter().sum::<f32>() / 3.
+            })
             .collect();
         each.sort_by(f32::total_cmp);
         let at = |q: f64| each[((each.len() - 1) as f64 * q).floor() as usize];
@@ -494,6 +532,16 @@ impl Light {
         );
         // The light nine in ten of the seen triangles stay at or below.
         let l = at(EXPOSURE_QUANTILE);
+        let under = matches!(
+            l.partial_cmp(&EXPOSURE_FLOOR),
+            None | Some(std::cmp::Ordering::Less)
+        );
+        if self.exposure.floor && under {
+            return Some(self.floored(&format!(
+                "the light nine in ten of {} lit triangles in view stay at or below {l:.4}",
+                points.len()
+            )));
+        }
         if !(l > 0. && l.is_finite()) {
             self.report
                 .push("exposure: no light falls on what is seen, no scale".into());
@@ -507,6 +555,18 @@ impl Light {
             1. / l
         ));
         Some(l)
+    }
+    /// The floor's scale ([`hypotheses::EXPOSURE_FLOOR`]), with its line.
+    fn floored(&mut self, why: &str) -> f32 {
+        self.exposure.scale = Some(1. / EXPOSURE_FLOOR);
+        self.rules.insert(hypotheses::EXPOSURE_EYE);
+        self.rules.insert(hypotheses::EXPOSURE_FLOOR);
+        self.report.push(format!(
+            "exposure: {why}, under the floor {EXPOSURE_FLOOR} ({}): lit colours times {:.4}",
+            hypotheses::EXPOSURE_FLOOR,
+            1. / EXPOSURE_FLOOR
+        ));
+        EXPOSURE_FLOOR
     }
     /// The light falling on a surface at `p` with unit normal `n` (game
     /// axes), before it multiplies the surface colour: ambient, the cube,
@@ -965,6 +1025,7 @@ pub fn frame(
         report: Vec::new(),
         exposure: Exposure {
             eye: switches.exposure_eye,
+            floor: switches.exposure_eye && switches.exposure_floor,
             ..Exposure::default()
         },
     };
@@ -1551,6 +1612,31 @@ mod tests {
         assert_eq!(l.expose_seen(&pts), Some(2.));
         assert_eq!(l.exposure.scale, Some(0.5));
         assert!(l.rules.contains(hypotheses::EXPOSURE_EYE));
+        // The grid's list gives the same reading.
+        let grid = Grid::of(&l.points).unwrap();
+        let mut g = l.clone();
+        assert_eq!(g.expose_seen_with(&pts, Some(&grid)), Some(2.));
+        assert_eq!(g.exposure.scale, Some(0.5));
+        // The floor (`frame_exposure_seen_light_floor_v1`): a view seen
+        // under it, or with nothing in view, takes one over the floor; a
+        // view above it is as before.
+        let mut d = l.clone();
+        d.ambient = [0.01; 3];
+        d.rules.clear();
+        assert_eq!(d.expose_seen(&pts[..9]), Some(0.01));
+        assert!(!d.rules.contains(hypotheses::EXPOSURE_FLOOR));
+        d.exposure.floor = true;
+        assert_eq!(d.expose_seen(&pts[..9]), Some(EXPOSURE_FLOOR));
+        assert_eq!(d.exposure.scale, Some(1. / EXPOSURE_FLOOR));
+        assert!(d.rules.contains(hypotheses::EXPOSURE_FLOOR));
+        assert_eq!(d.expose_seen(&[]), Some(EXPOSURE_FLOOR));
+        d.ambient = [2.; 3];
+        assert_eq!(d.expose_seen(&pts[..9]), Some(2.));
+        assert_eq!(d.exposure.scale, Some(0.5));
+        // The switch: only with --exposure-eye.
+        let mut s = Switches::default();
+        assert!(s.set_flag("--exposure-eye-floor"));
+        assert_eq!(s.flags(), vec!["--exposure-eye-floor"]);
         let c = [0.2, 1.5, 4.];
         let x = Exposure {
             white: Some(1.),

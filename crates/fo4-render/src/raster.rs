@@ -111,7 +111,14 @@ pub fn seen_lit_points(
     lit: &[bool],
     camera: &Camera,
 ) -> Vec<([f64; 3], [f64; 3])> {
-    let [w, h] = camera.size;
+    seen_of(&lit_triangles(list, lit, usize::MAX), camera)
+}
+
+/// The triangles of the draws `lit` marks as their centroid and unit face
+/// normal (world axes; a triangle without a normal left out), in draw and
+/// triangle order; with more than `most`, every k-th of them (k the
+/// smallest that keeps at most that many). What [`seen_of`] chooses from.
+pub fn lit_triangles(list: &DrawList, lit: &[bool], most: usize) -> Vec<([f64; 3], [f64; 3])> {
     let mut all = Vec::new();
     for (di, draw) in list.draws.iter().enumerate() {
         if !lit.get(di).copied().unwrap_or(false) {
@@ -133,23 +140,9 @@ pub fn seen_lit_points(
                 continue;
             };
             let c: [f64; 3] = std::array::from_fn(|i| (v[0][i] + v[1][i] + v[2][i]) / 3.);
-            let a = camera.coordinates(c);
-            if !(a[0] >= camera.frustum[4] && a[0] <= camera.frustum[5]) {
-                continue;
-            }
-            let Some(q) = camera.project_coordinates(a) else {
-                continue;
-            };
-            if !(q.pixel[0] >= 0.
-                && q.pixel[0] < f64::from(w)
-                && q.pixel[1] >= 0.
-                && q.pixel[1] < f64::from(h))
-            {
-                continue;
-            }
             let e1: [f64; 3] = std::array::from_fn(|i| v[1][i] - v[0][i]);
             let e2: [f64; 3] = std::array::from_fn(|i| v[2][i] - v[0][i]);
-            let mut n = [
+            let n = [
                 e1[1] * e2[2] - e1[2] * e2[1],
                 e1[2] * e2[0] - e1[0] * e2[2],
                 e1[0] * e2[1] - e1[1] * e2[0],
@@ -158,13 +151,46 @@ pub fn seen_lit_points(
             if !(l > 0. && l.is_finite()) {
                 continue;
             }
-            n = n.map(|x| x / l);
-            let to_eye: [f64; 3] = std::array::from_fn(|i| camera.translation[i] - c[i]);
-            if (0..3).map(|i| n[i] * to_eye[i]).sum::<f64>() < 0. {
-                n = n.map(|x| -x);
-            }
-            all.push((c, n));
+            all.push((c, n.map(|x| x / l)));
         }
+    }
+    if all.len() <= most || most == 0 {
+        return all;
+    }
+    let k = all.len().div_ceil(most);
+    all.into_iter().step_by(k).collect()
+}
+
+/// Of `triangles` ([`lit_triangles`]), those whose centroid lies in front
+/// of `camera`, between its near and far distances and inside its frame,
+/// each normal turned toward the eye, in their order; with more than
+/// [`SEEN_POINTS`], every k-th of them. [`seen_lit_points`] is this over
+/// every lit triangle.
+pub fn seen_of(triangles: &[([f64; 3], [f64; 3])], camera: &Camera) -> Vec<([f64; 3], [f64; 3])> {
+    let [w, h] = camera.size;
+    let mut all = Vec::new();
+    for (c, n) in triangles {
+        let a = camera.coordinates(*c);
+        if !(a[0] >= camera.frustum[4] && a[0] <= camera.frustum[5]) {
+            continue;
+        }
+        let Some(q) = camera.project_coordinates(a) else {
+            continue;
+        };
+        if !(q.pixel[0] >= 0.
+            && q.pixel[0] < f64::from(w)
+            && q.pixel[1] >= 0.
+            && q.pixel[1] < f64::from(h))
+        {
+            continue;
+        }
+        let to_eye: [f64; 3] = std::array::from_fn(|i| camera.translation[i] - c[i]);
+        let n = if (0..3).map(|i| n[i] * to_eye[i]).sum::<f64>() < 0. {
+            n.map(|x| -x)
+        } else {
+            *n
+        };
+        all.push((*c, n));
     }
     if all.len() <= SEEN_POINTS {
         return all;

@@ -309,6 +309,9 @@ pub struct GpuScene {
     /// The frame's light (`fo4_scene::light`) as the surface shader reads
     /// it ([`light_words`]); `None` without the light switches.
     pub light: Option<GpuLight>,
+    /// The scripted play window with `--exposure-eye`: the exposure
+    /// measured per view ([`ViewExposure`]); `None` otherwise.
+    pub view_exposure: Option<ViewExposure>,
 }
 
 /// A frame's light for the surface shader: the storage buffer's values and
@@ -317,6 +320,122 @@ pub struct GpuScene {
 pub struct GpuLight {
     pub words: Vec<f32>,
     pub sky: bool,
+}
+
+/// Row 14 of [`light_words`]: the exposure's scale, white, and flags (bit 0
+/// scale, bit 1 white, bit 2 cinematic and tint) as a float.
+pub fn exposure_row(x: &fo4_scene::light::Exposure) -> [f32; 4] {
+    let flags = u8::from(x.scale.is_some())
+        | u8::from(x.white.is_some()) << 1
+        | u8::from(x.cinematic.is_some() || x.tint.is_some()) << 2;
+    [
+        x.scale.unwrap_or(1.),
+        x.white.unwrap_or(1.),
+        f32::from(flags),
+        0.,
+    ]
+}
+
+/// The scripted play window's exposure measured per view
+/// (`frame_exposure_seen_light_v1` under `--exposure-eye`, a viewer
+/// policy): the loaded cell's light, its points' grid, a sample of its lit
+/// triangles kept at the load, and the light buffer's values, whose row 14
+/// each measure rewrites.
+#[derive(Debug, Clone)]
+#[cfg_attr(not(feature = "script-event"), allow(dead_code))]
+pub struct ViewExposure {
+    pub light: fo4_scene::light::Light,
+    pub grid: Option<fo4_scene::light::Grid>,
+    /// Centroids and unit face normals of the lit draws' triangles, every
+    /// k-th in draw order, at most [`ViewExposure::TRIANGLES`]
+    /// (`fo4_render::lit_triangles`).
+    pub triangles: Vec<([f64; 3], [f64; 3])>,
+    pub words: Vec<f32>,
+    /// The eye, the unit view direction and the wall clock of the last
+    /// measure.
+    pub last: Option<([f64; 3], [f64; 3], std::time::Instant)>,
+    pub measures: u64,
+}
+
+#[cfg_attr(not(feature = "script-event"), allow(dead_code))]
+impl ViewExposure {
+    /// Lit triangles kept at a load at most (a viewer bound).
+    pub const TRIANGLES: usize = 400_000;
+    /// The view changed enough to measure again: the eye moved this many
+    /// units, or the view direction turned this many degrees, since the
+    /// last measure...
+    pub const MOVE: f64 = 64.0;
+    pub const TURN_DEGREES: f64 = 10.0;
+    /// ...and at least this many seconds of the window's clock passed.
+    pub const PERIOD: f64 = 0.25;
+
+    pub fn new(
+        light: &fo4_scene::light::Light,
+        triangles: Vec<([f64; 3], [f64; 3])>,
+        words: Vec<f32>,
+    ) -> Self {
+        ViewExposure {
+            light: light.clone(),
+            grid: fo4_scene::light::Grid::of(&light.points),
+            triangles,
+            words,
+            last: None,
+            measures: 0,
+        }
+    }
+
+    /// Whether the view `(eye, look)` is to be measured at `now`: never
+    /// measured, or moved or turned enough at least [`Self::PERIOD`] after
+    /// the last measure.
+    pub fn due(&self, eye: [f64; 3], look: [f64; 3], now: std::time::Instant) -> bool {
+        let Some((e, d, at)) = &self.last else {
+            return true;
+        };
+        if now.duration_since(*at).as_secs_f64() < Self::PERIOD {
+            return false;
+        }
+        let moved = (0..3).map(|i| (eye[i] - e[i]).powi(2)).sum::<f64>().sqrt();
+        let dir = unit(eye, look);
+        let cos = (0..3).map(|i| dir[i] * d[i]).sum::<f64>().clamp(-1., 1.);
+        moved >= Self::MOVE || cos.acos().to_degrees() >= Self::TURN_DEGREES
+    }
+
+    /// Measures the exposure from `(eye, look)` with the reference frame's
+    /// camera (as the headless frame measures it) over the kept triangles
+    /// in view, and writes row 14 of the buffer's values. The measure's
+    /// line, or why there is none.
+    pub fn measure(&mut self, eye: [f64; 3], look: [f64; 3], now: std::time::Instant) -> String {
+        self.last = Some((eye, unit(eye, look), now));
+        self.measures += 1;
+        let size = fo4_scene::camera::REFERENCE_SIZE;
+        let cam = match fo4_scene::camera::look_at(
+            eye,
+            look,
+            fo4_scene::camera::reference_frustum(size),
+            size,
+        ) {
+            Ok(c) => c,
+            Err(e) => return format!("no camera: {}", e.code),
+        };
+        let points = fo4_render::seen_of(&self.triangles, &cam);
+        self.light.exposure.scale = None;
+        self.light.report.clear();
+        self.light.expose_seen_with(&points, self.grid.as_ref());
+        let row = exposure_row(&self.light.exposure);
+        self.words[4 * 14..4 * 15].copy_from_slice(&row);
+        self.light.report.last().cloned().unwrap_or_default()
+    }
+}
+
+#[cfg_attr(not(feature = "script-event"), allow(dead_code))]
+fn unit(eye: [f64; 3], look: [f64; 3]) -> [f64; 3] {
+    let d: [f64; 3] = std::array::from_fn(|i| look[i] - eye[i]);
+    let l = d.iter().map(|x| x * x).sum::<f64>().sqrt();
+    if l > 0. {
+        d.map(|x| x / l)
+    } else {
+        [1., 0., 0.]
+    }
 }
 
 /// Rows of four values before the first point in [`light_words`].
@@ -370,19 +489,7 @@ pub fn light_words(light: &fo4_scene::light::Light) -> Vec<f32> {
         row(13, rgb(s.horizon, 0.), &mut w);
     }
     let x = &light.exposure;
-    let flags = u8::from(x.scale.is_some())
-        | u8::from(x.white.is_some()) << 1
-        | u8::from(x.cinematic.is_some() || x.tint.is_some()) << 2;
-    row(
-        14,
-        [
-            x.scale.unwrap_or(1.),
-            x.white.unwrap_or(1.),
-            f32::from(flags),
-            0.,
-        ],
-        &mut w,
-    );
+    row(14, exposure_row(x), &mut w);
     let [sat, bright, contrast] = x.cinematic.unwrap_or([1.; 3]);
     let [amount, tr, tg, tb] = x.tint.unwrap_or([0., 1., 1., 1.]);
     row(15, [sat, bright, contrast, amount], &mut w);
@@ -1063,6 +1170,48 @@ mod tests {
             ..light.clone()
         };
         assert_eq!(light_words(&unlit)[4 * 16 + 3], 0.);
+    }
+
+    #[test]
+    fn the_window_measures_the_exposure_when_the_view_changed_enough() {
+        use fo4_scene::light::{Exposure, Light};
+        let light = Light {
+            ambient: [0.5; 3],
+            cube: None,
+            directional: None,
+            points: Vec::new(),
+            fog: None,
+            sky: None,
+            lit: true,
+            rules: Default::default(),
+            report: Vec::new(),
+            exposure: Exposure {
+                eye: true,
+                ..Exposure::default()
+            },
+        };
+        let words = light_words(&light);
+        assert_eq!(words[4 * 14], 1.);
+        // Triangles 100 units ahead along +X, facing the eye.
+        let triangles = vec![([100., 0., 0.], [-1., 0., 0.]); 10];
+        let mut v = ViewExposure::new(&light, triangles, words);
+        let t0 = std::time::Instant::now();
+        let (eye, look) = ([0.; 3], [10., 0., 0.]);
+        assert!(v.due(eye, look, t0));
+        let line = v.measure(eye, look, t0);
+        assert!(line.contains("times 2.0000"), "{line}");
+        assert_eq!(v.words[4 * 14], 2.);
+        assert_eq!(v.words[4 * 14 + 2], 1., "the scale's flag");
+        // Not again before the period, nor for a small move or turn after.
+        let later = t0 + std::time::Duration::from_secs(1);
+        assert!(!v.due([1., 0., 0.], [11., 0., 0.], t0));
+        assert!(!v.due([10., 0., 0.], [20., 1., 0.], later));
+        assert!(v.due([70., 0., 0.], [80., 0., 0.], later));
+        assert!(v.due(eye, [10., 3., 0.], later));
+        // Looking away: nothing lit in view, no scale (the flag cleared).
+        v.measure(eye, [-10., 0., 0.], later);
+        assert_eq!(v.words[4 * 14 + 2], 0.);
+        assert_eq!(v.measures, 2);
     }
 
     #[cfg(feature = "script-event")]

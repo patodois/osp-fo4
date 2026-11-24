@@ -89,11 +89,31 @@ fn load_scene(
         backface_cull: s.backface_cull,
         ..RenderOptions::REFERENCE
     };
+    // The scripted play window with --exposure-eye: the lit triangles the
+    // exposure is measured on per view, kept before the list is converted.
+    let view_triangles = match (&loaded.light, s.drawing.exposure_per_view) {
+        (Some((l, lit)), true) if l.exposure.eye => Some(fo4_render::lit_triangles(
+            &loaded.build.list,
+            lit,
+            scene::ViewExposure::TRIANGLES,
+        )),
+        _ => None,
+    };
     let mut gpu = scene::convert_lit(
         &mut loaded.build.list,
         &options,
         loaded.light.as_ref().map(|(l, lit)| (l, lit.as_slice())),
     )?;
+    if let (Some(triangles), Some((l, _)), Some(g)) =
+        (view_triangles, loaded.light.as_ref(), gpu.light.as_ref())
+    {
+        println!(
+            "play: exposure per view: {} lit triangles kept, {} placed lights in a grid",
+            triangles.len(),
+            l.points.len()
+        );
+        gpu.view_exposure = Some(scene::ViewExposure::new(l, triangles, g.words.clone()));
+    }
     // The scripted play window's named platforms: their drawn shapes, to
     // follow their parts (only with --play-input and --play-elevator).
     if !s.play_platforms.is_empty() {

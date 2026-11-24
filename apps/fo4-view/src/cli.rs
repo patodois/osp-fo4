@@ -125,8 +125,13 @@ usage:
       a sit) the cast of the drawn cell is built again on its own thread,
       at the run's second then, and replaces the one drawn. The light
       switches of --headless light the cells the window loads and draw the
-      sky, as the headless frame does; --exposure-eye is measured once per
-      cell the window loads, from the walker's eye then.
+      sky, as the headless frame does; --exposure-eye is measured from the
+      walker's eye at each load and then whenever the view moved 64 units
+      or turned 10 degrees, at most four times a second (a viewer policy),
+      on a sample of the loaded cell's lit triangles; --exposure-eye-floor
+      (with it, here and headless) gives a view whose seen light is below
+      0.25, or has none, the scale 4 (pending rule
+      frame_exposure_seen_light_floor_v1).
       --draw-child-flag-agrees (off by default; the window and --headless)
       draws a placed reference whose enable chain is left open only by
       records below its root carrying their own initially disabled flag,
@@ -336,6 +341,10 @@ pub struct Drawing {
     /// `--play-elevator`): the named platforms drawn by their models as
     /// stored (`fo4_scene::platform`).
     pub platforms: bool,
+    /// The scripted play window with `--exposure-eye`: the exposure
+    /// measured per view instead of once per load (`scene::ViewExposure`;
+    /// plumbing of the existing switch, set by the parser).
+    pub exposure_per_view: bool,
 }
 
 /// Default of `--scene-memory`: a viewer bound, not a claim about the game.
@@ -940,9 +949,13 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
         drawing,
     };
     // The window's scripted play mode takes the light switches too;
-    // `--exposure-eye` there is measured once per cell the window loads,
-    // from the walker's eye at the load (the camera moves).
+    // `--exposure-eye` there is measured from the walker's eye at each load
+    // and then per view (`scene::ViewExposure`; the camera moves).
     let play_window = !headless && play_run.is_some() && play_input.is_some();
+    scene.drawing.exposure_per_view = play_window && light.exposure_eye;
+    if light.exposure_floor && !light.exposure_eye {
+        return Err("--exposure-eye-floor is the floor of --exposure-eye: give both".into());
+    }
     if (light.any() || light_assumptions != fo4_scene::light::Assumptions::default())
         && (!(headless || play_window) || headless && walk || scene.script_event.is_some())
     {

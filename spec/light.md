@@ -144,3 +144,14 @@ exact bound, no rule. The CPU's `Light::at_some` with the grid's list gives `Lig
 300 scattered points and 5,000 positions). Headless lit frames of the prewar vault (379 points, two views),
 the room of 730 s (156) and the postwar vault (817, three views) with the window's light switches are byte
 for byte those of the viewer before the grid (frame and tag buffers, 12 of 12 files).
+
+**The exposure per view and its floor (the drawn step).** In the scripted play window `--exposure-eye` is
+measured from the walker's eye at each load (as before) and then again whenever the view moved 64 units or
+turned 10 degrees since the last measure, at most four times a second of the window's clock (a viewer
+policy, `scene::ViewExposure`): on a sample of the loaded cell's lit triangles kept at the load (at most
+400,000, every k-th in draw order, `fo4_render::lit_triangles`), those in view chosen as the headless frame
+chooses them (`fo4_render::seen_of`; `seen_lit_points` is `seen_of` over every lit triangle, the same points
+in the same order), the light at each summed over the points' grid (`Light::expose_seen_with`, the same
+light); the light buffer is replaced with the new row 14. With `--exposure-eye-floor`
+(`frame_exposure_seen_light_floor_v1`, off by default, with `--exposure-eye`, render and viewer alike) a view
+whose seen light is below 0.25 (`light::EXPOSURE_FLOOR`), or that sees nothing lit, takes the scale 4.

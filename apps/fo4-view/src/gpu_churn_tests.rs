@@ -523,6 +523,7 @@ fn exact_depth_ties_resolve_by_list_order_in_every_run() {
             draws: Vec::new(),
             platforms: Vec::new(),
             light: None,
+            view_exposure: None,
         }
     };
     let camera = fo4_scene::camera::look_at(
@@ -2003,6 +2004,7 @@ fn lit_frame_agrees(exposed: bool) {
             white: Some(1.5),
             cinematic: Some([0.8, 1.1, 1.05]),
             tint: Some([0.2, 1., 0.6, 0.3]),
+            floor: false,
         };
         list.meshes[1].normals = Some(vec![
             [0.3, -0.9, 0.2],

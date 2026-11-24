@@ -1070,6 +1070,14 @@ fn spawn_window_scene(world: &mut World) {
     // buffer without light otherwise, as before) and its sky, which
     // follows the camera ([`follow_sky`]).
     let lights = insert_light_buffer(world, scene.light.as_ref());
+    // The scripted play window's exposure per view ([`expose_view`]).
+    #[cfg(feature = "script-event")]
+    {
+        world.remove_resource::<PlayExposure>();
+        if let Some(v) = scene.view_exposure.take() {
+            world.insert_resource(PlayExposure(v));
+        }
+    }
     let old: Vec<Entity> = world
         .query_filtered::<Entity, With<WindowSky>>()
         .iter(world)
@@ -1600,6 +1608,50 @@ fn follow_platforms<F: bevy::ecs::query::QueryFilter>(
     }
 }
 
+/// The scripted play window's exposure measured per view
+/// (`crate::scene::ViewExposure`, with `--exposure-eye`).
+#[cfg(feature = "script-event")]
+#[derive(Resource)]
+struct PlayExposure(crate::scene::ViewExposure);
+
+/// What [`expose_view`] reads and writes, for [`play_scripted`].
+#[cfg(feature = "script-event")]
+type ExposureParams<'w> = (
+    Option<ResMut<'w, PlayExposure>>,
+    Option<Res<'w, LightBuffer>>,
+    ResMut<'w, Assets<ShaderBuffer>>,
+);
+
+/// With `--exposure-eye` in the scripted play window: when the walker's
+/// view changed enough ([`crate::scene::ViewExposure::due`]) the exposure is
+/// measured from it and the light buffer every material binds is replaced
+/// by one with the new row 14 (a viewer policy; the rule is
+/// `frame_exposure_seen_light_v1`, with `--exposure-eye-floor` its floor).
+#[cfg(feature = "script-event")]
+fn expose_view(
+    seen: &crate::play::Seen,
+    exposure: &mut PlayExposure,
+    lights: &LightBuffer,
+    buffers: &mut Assets<ShaderBuffer>,
+) {
+    let Some((eye, look)) = crate::play::eye_look(seen) else {
+        return;
+    };
+    let now = std::time::Instant::now();
+    if !exposure.0.due(eye, look, now) {
+        return;
+    }
+    let line = exposure.0.measure(eye, look, now);
+    println!("play: exposure at {:.3} s of the run: {line}", seen.t);
+    let words = exposure.0.words.clone();
+    if let Err(e) = buffers.insert(
+        lights.0.id(),
+        ShaderBuffer::new(words, RenderAssetUsages::RENDER_WORLD),
+    ) {
+        eprintln!("play: the light buffer: {e:?}");
+    }
+}
+
 /// The play mode, each frame after the walker moved: the frame's seconds,
 /// the walker's feet and, when E was pressed, what the eye's ray meets go
 /// to the run; the run's second, last stage and spoken lines join the
@@ -1677,6 +1729,7 @@ fn play_scripted(
     mut instances: Query<CellInstance, (Without<FlyCamera>, Without<CastEntity>)>,
     casts: Query<Entity, With<CastEntity>>,
     mut platforms: Option<ResMut<PlayPlatforms>>,
+    (mut exposure, lights, mut buffers): ExposureParams,
     mut exit: MessageWriter<AppExit>,
 ) {
     let Playing(p, title, drawn) = &mut *playing;
@@ -1775,6 +1828,9 @@ fn play_scripted(
         play_live(p, drawn, None, &mut instances);
         if let Some(pp) = platforms.as_deref_mut() {
             follow_platforms(&seen, pp, &mut instances);
+        }
+        if let (Some(x), Some(l)) = (exposure.as_deref_mut(), lights.as_deref()) {
+            expose_view(&seen, x, l, &mut buffers);
         }
     }
     // --timeline-cast: the run's actors of the drawn cell, built again on

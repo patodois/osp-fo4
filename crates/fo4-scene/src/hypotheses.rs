@@ -353,6 +353,9 @@ pub const ANIMATED_COLLISION_AS_STORED: &str = "walk_animated_model_collision_as
 /// A lit colour divided by the mean light falling on what the eye sees
 /// (`crate::light::Light::expose_seen`, `--exposure-eye`).
 pub const EXPOSURE_EYE: &str = "frame_exposure_seen_light_v1";
+/// Under [`EXPOSURE_EYE`], a view whose seen light is below a floor takes
+/// the floor's scale (`crate::light::EXPOSURE_FLOOR`).
+pub const EXPOSURE_FLOOR: &str = "frame_exposure_seen_light_floor_v1";
 /// A lit colour tone mapped with the white of the frame's image space
 /// (`crate::light::Exposure::white`, `--exposure-white`).
 pub const IMAGE_SPACE_WHITE: &str = "image_space_hdr_white_v1";
@@ -723,6 +726,7 @@ mod tests {
             FURNITURE_MARKER_SNAM,
             ANIMATED_COLLISION_AS_STORED,
             EXPOSURE_EYE,
+            EXPOSURE_FLOOR,
             IMAGE_SPACE_WHITE,
             IMAGE_SPACE_CINEMATIC,
             LIGHT_VERTEX_NORMALS,
