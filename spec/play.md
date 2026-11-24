@@ -918,11 +918,16 @@ load of a grid square's drawing, 1.6 to 2.1 s went to opening the plugins and ar
 finding the cells about the square (every exterior cell of the world read for its grid), 0.7 to 2.3 s to the cell's
 references and models, 0.4 to 1.2 s to the cast's, the dormant references' and the platforms' reads, 0.3 to 1.6 s to
 the draw list, 0.2 s to the terrain and 0.3 s to the upload's conversion. The scripted window's cell loads now run on
-one thread that opens the game data once as the run starts and keeps it (`fo4_view::play::cell_worker`,
-`load_scene_with`); a load gives what a load that opens them gives. The nine loads of the same run: 7.64, 7.44,
-7.70, 6.35, 5.71, 6.17, 3.60, 5.91 and 4.63 s before, 5.87, 5.77, 5.79, 4.72, 3.90, 4.57, 1.96, 4.42 and 2.99 s
-after; the run's outputs and the 15 frames byte for byte the same; resident memory 2.28 GB before, 2.77 GB after
-(the data kept open; footprint 4.30 and 4.54 GB). Not cut: the grid search (a world's grid index read once,
+the play data thread, which opens the game data once as the run starts and keeps it for the cast's builds and the
+cell loads alike (`fo4_view::play::data_worker`, `load_scene_with`); a load gives what a load that opens the data
+gives; a cell load waits for a cast build in progress. The nine loads of the same run: 7.64, 7.44, 7.70, 6.35, 5.71,
+6.17, 3.60, 5.91 and 4.63 s before, 5.80, 5.64, 5.68, 4.58, 3.83, 5.30, 1.87, 5.76 and 2.91 s after; the run's
+outputs and the 15 frames byte for byte the same; resident memory 2.28 GB before, 2.71 GB after, footprint 4.30 and
+4.00 GB. One set of open archives for both: a first try with a thread of its own for the cell loads kept three
+sets open (186 archive handles, 248 files, 285 at the start) and the window started from its app bundle, under
+launchd's limit of 256 open files, lost its run at the start (its error was not kept: stdout and stderr went to one
+file; the limit is the likely cause, not confirmed); with the shared thread the window holds two (124 handles, 178 files, 215 at
+the start), and no load opens a third as each did before. Not cut: the grid search (a world's grid index read once,
 `fo4_scene::grid::WorldGrid`, answers for one centre's own grid only, so it does not stand for `grid::around` at
 every centre as it is), and the models both sets of cells share (the loader is made anew per load).
 
