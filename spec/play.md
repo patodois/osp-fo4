@@ -151,9 +151,61 @@ thread (`fo4_play::link`) and each frame sends it the frame's seconds and the wa
 (`fo4_play::link::Frames`, the same slices as `play_run`'s walker), and with E what the eye's ray meets within
 `--play-reach` (with `--play-pick-bounds` the object bounds too); the title bar shows the run's second, the last
 stage and the subtitles of the lines being spoken (from the run's timeline, so `--timeline` must be among the
-switches for subtitles). The run's outputs are written when the window closes. Not exercised: no one could
-sit at the machine and no window was opened; the pieces are tested without a window (`Frames`, the title, the
-pick, the walker) and the run's path is `play_run`'s.
+switches for subtitles). The run's outputs are written when the window closes. The keyboard's driver has not
+been driven by a person; its pieces are tested without a window (`Frames`, the title, the pick, the walker).
+
+**The scripted window** (the window step). `--play-input FILE` drives the run with `play_run`'s walker and
+that input: every play option is read, checked and applied by the play library's one structure
+(`fo4_play::options::Play`, since the moving step; `Play::build_world` and `Play::walker` build the walking
+world and the walker and write `play.txt`'s switch lines for `play_run` and the window alike, and
+`fo4_play::report` the walker's lines and `play-track.txt`). The run is held to the window's clock
+(`play::Gate`), the camera stands at the walker's eye, the window loads the cell the walker's walking world was
+last built about at each change of space, and `--play-shots DIR --play-shot-every S` (with
+`--play-shots-between FROM TO EVERY` for denser stretches) writes frames. With the exit step's switches and
+input the window run gives the headless run's outputs byte for byte (274 of 274 stages to 960 s, 276 to
+1,000 s, all at the same second).
+
+The looks step, behind the timeline's and the light's switches (off by default): the window draws the run's
+actors as their characters from the run's own timeline as it grows (`--timeline-cast` and a headless frame's
+cast readings; rebuilt on a thread when an actor's place or presence changes) and lights the loaded cells and
+draws the sky (the light switches with `--assume-hour 11 --assume-weather 0`); 60 fps median, but 10 to 16 fps
+in the vaults (every placed light summed for every pixel) and their rooms washed out without an exposure.
+
+The moving step:
+
+- `--play-collision-child-flag-agrees` (`xesp_child_flag_agrees_chain_v1`, the drawing side's collision
+  reading of an enable chain left open only by records' own flags that agree with it): every walking world's
+  cell build takes it (`world::Options::child_flag_agrees`, the walker's rebuilds too), and the live world
+  reads such a chain through its agreeing flags at the start and after the run's changes
+  (`live::decide`, `Live::with_child_flag_agrees`). Headless with the exit step's switches: 276 of 276 stages
+  to 1,010 s at the same second, and where the run seats the player at 730.11 s the walker stands on the
+  floor (z -41.4) until 794.63 s instead of falling (airborne ticks 4,016 to 144).
+- The named platforms drawn where their collision stands: `Walker::platforms()` gives, per named reference
+  (`--play-elevator`), its model, the nodes its parts go by and each part's rigid motion at the second the
+  rides were last advanced to (`elevator::Platform`); the window keeps each model shape draw's node chain for
+  those references (`fo4_render::draw::BuildOptions::chains`, off by default) and each frame draws a shape
+  whose chain goes with a moving part at its built transform moved by the part's motion
+  (`Platform::part_of`, `elevator::transform`; shapes under no moving part stay as built). The drawing
+  repeats the collision's motion under `play_elevator_rigid_v1` (or the translation reading) and reads
+  nothing of its own: no rule. **In the opening it moves nothing**: none of the named references is drawn
+  (their models are refused at render readiness: animation runtime of the behaviour graph, effect and
+  visibility controllers, particle systems, skinned shapes, the reference's runtime record state), so the
+  camera rides the collision past undrawn platforms; checked on synthetic draws and chains only.
+- `--exposure-eye` in the scripted window: the light switches' exposure measured once per cell the window
+  loads, from the walker's eye at the load (a viewer policy; the rule is the light step's
+  `frame_exposure_seen_light_v1`), not per frame.
+
+The opening in the window with the looks step's arguments and `--play-collision-child-flag-agrees` (`w1` in
+the step's notes; audio off, release build): the outputs are the headless run's byte for byte (6 of 6 files,
+and `play.txt` but for its timing lines, now that both write it through the library), 276 of 276 stages at
+the same second; 1,344 s of wall clock for 1,015 s of input, 11 cell loads after the first; 59.8 fps median (60.0 in the
+house and outside, 57.5 in the prewar vault, 12.1 in the postwar vault), first percentile 9.7, lowest 0.74
+(a frame capture); peak resident memory 2.40 GB. What the frames show: from 730.1 s the camera stands at
+floor height in the room the run seats the player in (the floor's markings at its feet, the run's people
+standing about) but the room itself is not drawn: its collision is the agreeing chain's, its drawing is
+refused at render readiness (1,097 of the cell's 1,923 placements omitted), so the frame stays black but for
+the people and the markings. On both rides the camera rides down and up the shafts with the collision; the
+platforms are not drawn. With `--exposure-eye` too (`w2`): the outputs again byte for byte and the frame rate unchanged (59.8 median; 57.4 and 12.1 fps in the two vaults), the exposure measured at the start and at each of the 11 loads; but where the walker arrives the prewar vault scales its lit colours by 1.01 (its entrance room stays washed out), the postwar vault by 1.24, and the room the run seats the player in, almost nothing lit in view, by 765, its people drawn white: measured once per load from the arrival's view, the exposure does not tame the vaults.
 
 ## The live world (`--play-live-world`)
 
@@ -522,8 +574,9 @@ walk: from the start to the exterior.
 
 ## What the play mode does not do yet
 
-- The elevators ride only headless, and only those the caller names (`--play-elevator`); the window does not
-  take the switches. The exit elevator's descent before the player reaches it is the caller's assumption
+- The elevators ride only those the caller names (`--play-elevator`), headless and in the scripted window;
+  the window draws a named reference's parts where its collision stands, but in the opening none of them is
+  drawn (refused at render readiness). The exit elevator's descent before the player reaches it is the caller's assumption
   (`--assume-graph-event`): nothing in the run's data sends it.
 - The exterior's collision platform that an enable marker holds while the elevator rises (the exterior
   trigger's script disables the marker after waiting 12 s; the interpreter does not time the wait) is not
@@ -531,7 +584,9 @@ walk: from the start to the exterior.
 - Plain doors: no collision is placed for any door, so none blocks the walker; the open state is not read.
 - Moving collision with a node (an animated door, a platform) is modelled only for the references the caller
   names (above); the live world moves only what the run moves.
-- The window has not been opened by anyone; its live drawing is untested beyond its pieces.
+- No person has driven the window from the keyboard; the scripted window has played the opening (the window,
+  looks and moving steps). The room the run seats the player in at 730 s holds the walker but is not drawn
+  (render readiness of its agreeing chains, not read).
 - The reach of an activation, the walker's speed and its tick are the caller's; the activation key and the
   crosshair are the eye's ray (no prompt, no activation distance from the data).
 - Sound, menus, combat, the player's animation events: still the caller's.
@@ -558,6 +613,7 @@ walk: from the start to the exterior.
 | `play_player_moveto_v1` | `--play-player-moveto` | the run's own `MoveTo` calls on the player; that `MoveTo` places at once is the API's meaning (prior knowledge); the slice-end delay and settling are this reading's | weak |
 | `play_player_sit_furniture_v1` | `--play-player-sits` | the run's own sits (a fragment's activation of the player's pod); that an activated sitter goes to the furniture at once is prior knowledge; the reference's place standing for the marker is this reading's | weak |
 | `collision_model_blockers_off_chain_v1`, `refr_xalp_collision_unchanged_v1` | `--play-collision-off-chain`, `--play-collision-reference-alpha` | the drawing side's rules (`spec/collision-placement.md`), given to the play mode's cell builds | weak |
+| `xesp_child_flag_agrees_chain_v1` | `--play-collision-child-flag-agrees` | the drawing side's rule (`spec/enable-parent.md`), given to the play mode's cell builds and to the live world's decisions after the run's changes | weak to medium |
 | `play_elevator_rigid_v1` | `--play-elevator-rigid` | the drawing side's `nif_sequence_chain_pose_v1` (weak to medium) and `walk_platform_rigid_motion_v1` (weak) given to the named references; the grouping by the deepest set node and the part holding its motion are this reading's | weak |
 | `play_elevator_end_door_onward_v1` | `--play-elevator-door-onward` | the recorded track stays outside after the exterior rise; that a ride's end never takes the walker back is this reading's | weak |
 | `anim_graph_caller_event_v1` | `quest_run --assume-graph-event REF EVENT[@SECONDS]` | a caller assumption: no script of the run sends the exit elevator its descent; that it waits at the bottom open is prior knowledge | weak |
