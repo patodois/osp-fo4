@@ -717,6 +717,15 @@ impl Walker {
         &self.live
     }
 
+    /// The named platforms' moving parts where their collision stands
+    /// (`--play-elevator`; empty before the first slice builds them), for a
+    /// window to draw them there: per named reference, its model, the
+    /// nodes the parts are read by and each part's rigid motion
+    /// ([`crate::elevator::Platform`]). Reading them changes nothing.
+    pub fn platforms(&self) -> Vec<crate::elevator::Platform> {
+        self.elevators.iter().map(|e| e.platform()).collect()
+    }
+
     /// Places the walker at the run's first point, settled on the ground.
     fn start(&mut self, now: f64, first: Option<&Point>) -> Result<Vec<Point>, String> {
         let first = first.ok_or("PlayNoTrack")?.clone();

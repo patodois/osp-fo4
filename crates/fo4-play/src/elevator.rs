@@ -67,6 +67,8 @@ pub fn still_owner(spaces: &[Option<FormKey>], space: &Option<FormKey>) -> usize
 #[derive(Debug, Clone)]
 pub struct Node {
     pub name: String,
+    /// Its block in the reference's model.
+    pub block: usize,
     /// The translation each sequence gives it, in world axes, from its
     /// stored translation: (seconds from the sequence's start, offset).
     pub tracks: BTreeMap<String, Track>,
@@ -142,6 +144,11 @@ pub struct Elevator {
     /// without it.
     pub parts: Vec<Part>,
     rigid_rides: Vec<RigidRide<Key>>,
+    /// The reference's model, as its asset path reads (`meshes/...`, lower
+    /// case, `/`), and the blocks the drawing reads parts by
+    /// ([`Platform::set`]).
+    pub model: String,
+    set: Vec<usize>,
 }
 
 /// Where a moving node's translation comes from while a sequence plays.
@@ -247,8 +254,12 @@ pub fn motion_at(track: &[(f64, Motion)], t: f64) -> Motion {
 /// chain as stored and as the sequence poses it at that key time, both
 /// under the placement `frame` (none for a sequence that sets no node of
 /// the chain or poses a sample as no rigid motion). Returns (deepest node,
-/// sources, tracks) per part, in the order of their first source, and the
-/// still sources (no collision instance, or a chain no sequence sets).
+/// sources, tracks) per part, in the order of their first source, the
+/// still sources (no collision instance, or a chain no sequence sets), and
+/// every node block of the model that some sequence sets through a
+/// transform interpolator (a root whose own transform a collision chain
+/// leaves out, `nif_root_transform_replaced_v1`, not among them), for the
+/// drawing ([`Platform::set`]).
 #[allow(clippy::type_complexity)]
 fn rigid_parts(
     d: DecodedAsset<'_>,
@@ -259,9 +270,14 @@ fn rigid_parts(
 ) -> fo4_core::Result<(
     Vec<(usize, Vec<u32>, BTreeMap<String, MotionTrack>)>,
     Vec<u32>,
+    Vec<usize>,
 )> {
     let DecodedAsset::Model(n) = d else {
-        return Ok((Vec::new(), (0..ew.sources.len() as u32).collect()));
+        return Ok((
+            Vec::new(),
+            (0..ew.sources.len() as u32).collect(),
+            Vec::new(),
+        ));
     };
     let seqs = fo4_scene::sequence::sequences(&n);
     let track_of = |s: &fo4_scene::sequence::Sequence,
@@ -327,7 +343,29 @@ fn rigid_parts(
         }
         parts.push((block, vec![si as u32], tracks));
     }
-    Ok((parts, stills))
+    // The blocks some sequence sets: a chain of one block is posed when
+    // the sequence sets that block (`chain_pose`'s own test).
+    let mut set = Vec::new();
+    for block in 0..n.blocks.len() {
+        for s in &seqs {
+            let start = f64::from(s.start);
+            if fo4_scene::sequence::chain_pose(&n, s, &[block], false, start, &b.child())?.is_some()
+            {
+                set.push(block);
+                break;
+            }
+        }
+    }
+    // A root the collision chains leave out of the pose is not a part's
+    // node for the drawing either.
+    for inst in &ec.instances {
+        if inst.rules.contains(&fo4_scene::hypotheses::ROOT_TRANSFORM) {
+            if let Some(root) = ec.model(inst).bodies[inst.body].chain.first() {
+                set.retain(|x| x != root);
+            }
+        }
+    }
+    Ok((parts, stills, set))
 }
 
 fn sample(track: &Track, t: f64) -> [f64; 3] {
@@ -413,7 +451,7 @@ impl Elevator {
             })
             .ok_or("PlayElevator: the reference's model is not among its assets")?;
         if readings.rigid {
-            let (read, still) = loader.assets.with_decoded(id, &budget.child(), |d| {
+            let (read, still, set) = loader.assets.with_decoded(id, &budget.child(), |d| {
                 rigid_parts(d, &ec, &ew, frame, &budget)
             })?;
             let mut parts = Vec::new();
@@ -436,7 +474,7 @@ impl Elevator {
                 index,
                 stills,
                 (Vec::new(), Vec::new(), 0),
-                parts,
+                (parts, want, set),
                 &budget,
             );
         }
@@ -524,14 +562,21 @@ impl Elevator {
                 base: ew.copy_sources(srcs, [0.0; 3], &budget)?,
             });
         }
-        let nodes = read
+        let nodes: Vec<Node> = read
             .into_iter()
-            .map(|(name, _, tracks)| Node {
+            .map(|(name, block, tracks)| Node {
                 name,
+                block,
                 tracks,
                 track: vec![(0.0, [0.0; 3])],
             })
             .collect();
+        let set = {
+            let mut v: Vec<usize> = nodes.iter().map(|n| n.block).collect();
+            v.sort_unstable();
+            v.dedup();
+            v
+        };
         Self::finish(
             m,
             store,
@@ -542,7 +587,7 @@ impl Elevator {
             index,
             stills,
             (nodes, groups, held_tracks),
-            Vec::new(),
+            (Vec::new(), want, set),
             &budget,
         )
     }
@@ -560,7 +605,7 @@ impl Elevator {
         index: u32,
         stills: World,
         (nodes, groups, held): (Vec<Node>, Vec<Group>, usize),
-        parts: Vec<Part>,
+        (parts, model, set): (Vec<Part>, String, Vec<usize>),
         budget: &Budget,
     ) -> Result<Elevator, E> {
         let mut also_worlds = Vec::new();
@@ -591,6 +636,8 @@ impl Elevator {
             held,
             parts,
             rigid_rides: Vec::new(),
+            model,
+            set,
         })
     }
 
@@ -805,6 +852,116 @@ impl Elevator {
     }
 }
 
+/// Which drawn shapes of a named reference's model go with a moving part
+/// (the same grouping its collision sources go by).
+#[derive(Debug, Clone, PartialEq)]
+pub enum Members {
+    /// Under `play_elevator_rigid_v1`: the shapes whose node chain's
+    /// deepest block among [`Platform::set`] is this block.
+    Deepest(usize),
+    /// Under the translation reading (`play_elevator_run_sequence_v1`):
+    /// the shapes whose node chain holds exactly these blocks of
+    /// [`Platform::set`] (increasing).
+    Nodes(Vec<usize>),
+}
+
+/// A moving part as the drawing reads it: which shapes go with it and the
+/// rigid motion its collision stands at, in world axes (a point of the part
+/// as stored goes to `motion.apply(point)`).
+#[derive(Debug, Clone, PartialEq)]
+pub struct PartMotion {
+    pub members: Members,
+    pub motion: Motion,
+}
+
+/// A named reference's moving parts where its collision stands, for a
+/// window to draw them there (read-only: nothing of the run changes).
+#[derive(Debug, Clone, PartialEq)]
+pub struct Platform {
+    pub reference: FormKey,
+    /// The space it is placed in.
+    pub space: FormKey,
+    /// Its model's asset path (`meshes/...`, lower case, `/`).
+    pub model: String,
+    /// The model's blocks the parts are read by, increasing: under the
+    /// rigid reading every node some sequence sets through a transform
+    /// interpolator; under the translation reading the nodes some sequence
+    /// moves.
+    pub set: Vec<usize>,
+    /// The second the collision stands at (the rides' last advance).
+    pub second: f64,
+    pub parts: Vec<PartMotion>,
+}
+
+impl Platform {
+    /// The part a drawn shape under the node chain `chain` (blocks, root
+    /// first) goes with: `None` when its chain holds no node of
+    /// [`Platform::set`] that a part is read by (it stays as stored).
+    pub fn part_of(&self, chain: &[usize]) -> Option<usize> {
+        let deepest = chain
+            .iter()
+            .rev()
+            .find(|b| self.set.binary_search(b).is_ok());
+        let mut held: Vec<usize> = chain
+            .iter()
+            .copied()
+            .filter(|b| self.set.binary_search(b).is_ok())
+            .collect();
+        held.sort_unstable();
+        held.dedup();
+        self.parts.iter().position(|p| match &p.members {
+            Members::Deepest(b) => deepest == Some(b),
+            Members::Nodes(n) => !n.is_empty() && *n == held,
+        })
+    }
+}
+
+/// The rigid motion `m` as a placement transform: `m.apply(p)` equals
+/// `transform(m).apply(p)` (rotation words the transpose of the turn, as
+/// `Transform::apply` reads them; scale 1).
+pub fn transform(m: &Motion) -> fo4_scene::transform::Transform {
+    let r = m.matrix();
+    let moved = m.apply([0.0; 3]);
+    fo4_scene::transform::Transform {
+        rotation: std::array::from_fn(|j| std::array::from_fn(|i| r[i][j])),
+        translation: moved,
+        scale: 1.0,
+    }
+}
+
+impl Elevator {
+    /// The moving parts where the collision stands now: the motion of each
+    /// part (rigid) or group (translation) at the second the rides were
+    /// last advanced to.
+    pub fn platform(&self) -> Platform {
+        let t = self.last;
+        let mut parts = Vec::new();
+        for p in &self.parts {
+            parts.push(PartMotion {
+                members: Members::Deepest(p.block),
+                motion: motion_at(&p.track, t),
+            });
+        }
+        for g in &self.groups {
+            let mut blocks: Vec<usize> = g.nodes.iter().map(|n| self.nodes[*n].block).collect();
+            blocks.sort_unstable();
+            blocks.dedup();
+            parts.push(PartMotion {
+                members: Members::Nodes(blocks),
+                motion: Motion::translation(sample(&self.group_track(g), t)),
+            });
+        }
+        Platform {
+            reference: self.reference.clone(),
+            space: self.space.clone(),
+            model: self.model.clone(),
+            set: self.set.clone(),
+            second: t,
+            parts,
+        }
+    }
+}
+
 impl Elevator {
     /// The box of the reference's collision as stored, the moving parts
     /// at their stored transforms and the still references with it.
@@ -917,6 +1074,7 @@ mod tests {
             also: Vec::new(),
             nodes: vec![Node {
                 name: "platform".into(),
+                block: 3,
                 tracks: BTreeMap::from([("Down".to_string(), down)]),
                 track: vec![(0.0, [0.0; 3])],
             }],
@@ -932,6 +1090,8 @@ mod tests {
             held: 0,
             parts: Vec::new(),
             rigid_rides: Vec::new(),
+            model: "meshes/a/platform.nif".into(),
+            set: vec![3],
         }
     }
 
@@ -981,6 +1141,15 @@ mod tests {
         }
         assert!((c.feet[2] + 100.0).abs() < 1e-3, "{:?}", c.feet);
         assert_eq!(e.ended, Some(3.0));
+        // For the drawing: the part where its collision stands, and the
+        // shapes under its node go with it.
+        let p = e.platform();
+        assert_eq!(p.parts.len(), 1);
+        assert_eq!(p.parts[0].members, Members::Nodes(vec![3]));
+        assert!((p.parts[0].motion.translation[2] + 100.0).abs() < 1e-9);
+        assert_eq!(p.part_of(&[0, 3, 4]), Some(0));
+        assert_eq!(p.part_of(&[0, 4]), None);
+        assert_eq!((p.model.as_str(), p.second), ("meshes/a/platform.nif", t));
         // Built again (another walking world of the same space): the part
         // stands where the ride left it.
         let mut again: WorldSet<Key> = WorldSet::new();
@@ -1166,6 +1335,7 @@ mod tests {
         let mut e = elevator();
         e.nodes.clear();
         e.groups.clear();
+        e.set = vec![7, 9];
         e.parts = vec![
             Part {
                 block: 7,
@@ -1246,6 +1416,42 @@ mod tests {
         assert!((c.feet[2] - 100.0).abs() < 1e-3, "{:?}", c.feet);
         assert_eq!(e.ended, Some(3.0));
         assert!((e.rigid_rides[1].motion.angle_degrees() - 90.0).abs() < 1e-6);
+        // For the drawing: each part's motion where its collision stands;
+        // a shape goes with the deepest set node of its chain.
+        let p = e.platform();
+        assert_eq!(
+            p.parts
+                .iter()
+                .map(|x| x.members.clone())
+                .collect::<Vec<_>>(),
+            [Members::Deepest(7), Members::Deepest(9)]
+        );
+        assert_eq!(p.part_of(&[0, 7, 8]), Some(0));
+        assert_eq!(p.part_of(&[0, 7, 9, 10]), Some(1));
+        assert_eq!(p.part_of(&[0, 2]), None);
+        assert!((p.parts[0].motion.translation[2] - 100.0).abs() < 1e-9);
+        let corner = p.parts[1].motion.apply([540.0, 0.0, -500.0]);
+        assert!(
+            (corner[0] - 500.0).abs() < 1e-6 && (corner[1] - 40.0).abs() < 1e-6,
+            "{corner:?}"
+        );
+        // As a placement transform: the same points, and composed after a
+        // draw's own transform, the motion after it.
+        let w = fo4_scene::transform::Transform {
+            rotation: [[0.0, 1.0, 0.0], [-1.0, 0.0, 0.0], [0.0, 0.0, 1.0]],
+            translation: [510.0, 5.0, -500.0],
+            scale: 2.0,
+        };
+        for m in p.parts.iter().map(|x| x.motion) {
+            for q in [[0.0; 3], [540.0, 0.0, -500.0], [1.0, -2.0, 3.0]] {
+                let a = transform(&m).apply(q);
+                let b = m.apply(q);
+                assert!((0..3).all(|i| (a[i] - b[i]).abs() < 1e-9), "{a:?} {b:?}");
+                let a = transform(&m).compose(w).apply(q);
+                let b = m.apply(w.apply(q));
+                assert!((0..3).all(|i| (a[i] - b[i]).abs() < 1e-9), "{a:?} {b:?}");
+            }
+        }
         // The far piece turned a quarter about (500, 0): from x 500..540
         // to y 0..40.
         let far = set.get(&e.key(2)).unwrap().bounds.unwrap();
