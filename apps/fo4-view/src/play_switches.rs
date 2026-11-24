@@ -49,3 +49,16 @@ impl Switches {
         Ok(())
     }
 }
+
+/// Whether the person's mode (`--play-keys`) has what it needs: the
+/// longest standing slice and E's reach.
+#[cfg(feature = "script-event")]
+pub fn keys_ready(s: &Switches) -> bool {
+    s.stand.is_some() && s.reach.is_some()
+}
+
+/// Without the interpreter the play mode does not start (its own error).
+#[cfg(not(feature = "script-event"))]
+pub fn keys_ready(_: &Switches) -> bool {
+    true
+}

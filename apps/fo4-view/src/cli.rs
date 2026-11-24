@@ -15,7 +15,8 @@ usage:
            [--frame-log build/FRAMES.tsv] [--script-path X,Y;... [--script-shots build/NAME]]
            [--play-run SWITCHES_FILE --play-out DIR [--play-reach UNITS] [--play-pick-bounds]
             [--play-live-world [--play-nowait]]
-            [--play-input INPUT_FILE [play_run's play options...]
+            [(--play-input INPUT_FILE | --play-keys --play-stand SECONDS
+              [--play-record FILE] [--play-keys-from FILE]) [play_run's play options...]
              [--play-shots DIR --play-shot-every SECONDS
               [--play-shots-between FROM TO EVERY]...]
              [--timeline-cast [the cast readings of a --timeline frame]]
@@ -132,6 +133,28 @@ usage:
       (with it, here and headless) gives a view whose seen light is below
       0.25, or has none, the scale 4 (pending rule
       frame_exposure_seen_light_floor_v1).
+      --play-keys drives play_run's walker (the same walker, run thread and
+      play options as --play-input) from the keyboard and the mouse instead:
+      W/S/A/D forward, back, left, right; Shift runs; hold the left mouse
+      button and move the mouse to turn and look up or down; E activates
+      what the crosshair (the window's centre) meets; P pauses the run and
+      the walker; Escape ends the input (the run goes on to its end as
+      play_run's does after an input's end, writes its outputs, and the
+      window closes). The walker has no jump, and toward has no key. Each
+      key change and look is a command of the scripted input at the play
+      clock's second of its frame; the walker takes the commands as they
+      arrive, as far as its next tick needs them, so it ticks and slices as
+      play_run does with a file of the same commands. It needs
+      --play-stand SECONDS (the longest standing slice; give play_run the
+      same to replay) and --play-reach. --play-record FILE writes every
+      command the walker received, as it arrives, in the scripted input's
+      format (play_run with that file and the same options gives the same
+      run). The title bar adds what E would activate and whether the run is
+      paused. --play-keys-from FILE (test and measurement only) is a
+      synthetic person: timed key, button and mouse events injected where
+      a real key press arrives (spec/play.md, The person's input).
+      --args FILE reads more arguments from FILE, one per line (# starts a
+      comment line), in its place on the command line.
       --draw-child-flag-agrees (off by default; the window and --headless)
       draws a placed reference whose enable chain is left open only by
       records below its root carrying their own initially disabled flag,
@@ -440,15 +463,49 @@ pub struct Play {
     /// live world (`--play-live-world`,
     /// `play_live_collision_follows_run_v1`; `--play-nowait`) apply.
     pub switches: Box<crate::play_switches::Switches>,
-    /// `--play-input FILE`: the run driven by `play_run`'s walker and this
-    /// scripted input instead of the keyboard and mouse.
-    pub input: Option<String>,
+    /// What drives `play_run`'s walker instead of the keyboard's driver:
+    /// a scripted input (`--play-input FILE`) or the keyboard and the
+    /// mouse fed to that walker (`--play-keys`).
+    pub input: Option<Input>,
     /// `--play-shots-between FROM TO EVERY` (repeated): more frames, every
     /// EVERY seconds of the run from FROM to TO, besides the period's.
     pub shots_between: Vec<[f64; 3]>,
     /// `--play-shots DIR --play-shot-every SECONDS`: the window's frame
     /// written each time the scripted run passes a multiple of SECONDS.
     pub shots: Option<(String, f64)>,
+}
+
+/// What drives `play_run`'s walker in the window.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Input {
+    /// `--play-input FILE`: a scripted input.
+    Script(String),
+    /// `--play-keys`: a person's keyboard and mouse, turned into the
+    /// scripted input's commands as they happen (`crate::person`).
+    Keys(Keys),
+}
+
+impl Input {
+    /// The scripted input's file, if that is what drives the walker.
+    #[cfg_attr(not(feature = "script-event"), allow(dead_code))]
+    pub fn file(&self) -> Option<&str> {
+        match self {
+            Input::Script(f) => Some(f),
+            Input::Keys(_) => None,
+        }
+    }
+}
+
+/// The person's mode (`--play-keys`).
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct Keys {
+    /// `--play-record FILE`: the commands the walker received, written as
+    /// they arrive, in the scripted input's format.
+    pub record: Option<String>,
+    /// `--play-keys-from FILE`: a synthetic person's timed key and mouse
+    /// events, injected where a real key press arrives (test and
+    /// measurement only).
+    pub synthetic: Option<String>,
 }
 
 /// Measurement aids of the window (`--frame-log`, `--script-path`,
@@ -546,6 +603,53 @@ fn positive(text: &str) -> Result<f64, String> {
         .ok_or_else(|| format!("ExpectedPositiveNumber: {text}"))
 }
 
+/// Files within argument files, at most.
+const ARGS_DEPTH: usize = 4;
+
+/// The command line with each `--args FILE` replaced by the arguments FILE
+/// holds, one per line (blank lines and lines starting with `#` skipped,
+/// each line trimmed), read with `read`; an argument file may name another,
+/// four deep at most.
+pub fn expand_args(
+    args: &[String],
+    read: &dyn Fn(&str) -> Result<String, String>,
+) -> Result<Vec<String>, String> {
+    fn go(
+        args: &[String],
+        read: &dyn Fn(&str) -> Result<String, String>,
+        depth: usize,
+        out: &mut Vec<String>,
+    ) -> Result<(), String> {
+        let mut i = 0;
+        while i < args.len() {
+            if args[i] != "--args" {
+                out.push(args[i].clone());
+                i += 1;
+                continue;
+            }
+            let file = args.get(i + 1).ok_or("--args takes a FILE")?;
+            if depth >= ARGS_DEPTH {
+                return Err(format!(
+                    "--args {file}: argument files nest {ARGS_DEPTH} deep at most"
+                ));
+            }
+            let text = read(file)?;
+            let lines: Vec<String> = text
+                .lines()
+                .map(str::trim)
+                .filter(|l| !l.is_empty() && !l.starts_with('#'))
+                .map(String::from)
+                .collect();
+            go(&lines, read, depth + 1, out)?;
+            i += 2;
+        }
+        Ok(())
+    }
+    let mut out = Vec::new();
+    go(args, read, 0, &mut out)?;
+    Ok(out)
+}
+
 pub fn parse(args: &[String]) -> Result<Command, String> {
     let usage = || USAGE.to_string();
     if args.first().map(String::as_str) == Some("compare") {
@@ -632,6 +736,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
     let (mut play_run, mut play_out) = (None, None);
     let mut play_switches = crate::play_switches::Switches::default();
     let (mut play_input, mut play_shots, mut play_shot_every) = (None, None, None);
+    let (mut play_keys, mut play_record, mut play_keys_from) = (false, None, None);
     let mut shots_between: Vec<[f64; 3]> = Vec::new();
     let mut drawing = Drawing::default();
     let mut rest = args[3..].iter();
@@ -684,6 +789,9 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             "--play-run" => play_run = Some(value()?.clone()),
             "--play-out" => play_out = Some(value()?.clone()),
             "--play-input" => play_input = Some(value()?.clone()),
+            "--play-keys" => play_keys = true,
+            "--play-record" => play_record = Some(value()?.clone()),
+            "--play-keys-from" => play_keys_from = Some(value()?.clone()),
             "--play-shots" => play_shots = Some(value()?.clone()),
             "--play-shot-every" => play_shot_every = Some(positive(value()?)?),
             "--play-shots-between" => {
@@ -775,11 +883,27 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
         },
         (false, Textures::Reference) => Textures::Reference,
     };
+    // What drives play_run's walker in the window: a scripted input or a
+    // person's keys.
+    if play_keys && play_input.is_some() {
+        return Err("--play-keys and --play-input: one of them drives the walker".into());
+    }
+    if !play_keys && (play_record.is_some() || play_keys_from.is_some()) {
+        return Err("--play-record and --play-keys-from need --play-keys".into());
+    }
+    let walker_input = match (play_input, play_keys) {
+        (Some(file), _) => Some(Input::Script(file)),
+        (None, true) => Some(Input::Keys(Keys {
+            record: play_record,
+            synthetic: play_keys_from,
+        })),
+        (None, false) => None,
+    };
     // The window's scripted play mode: the cast readings with the run's own
     // timeline (`--play-run ... --play-input`, `--timeline-cast`, no
     // `--timeline`, `--at` or `--eye-height`, no frame-only option).
     let play_cast_asked = play_run.is_some()
-        && play_input.is_some()
+        && walker_input.is_some()
         && timeline_cast
         && timeline_file.is_none()
         && timeline_at.is_none()
@@ -951,7 +1075,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
     // The window's scripted play mode takes the light switches too;
     // `--exposure-eye` there is measured from the walker's eye at each load
     // and then per view (`scene::ViewExposure`; the camera moves).
-    let play_window = !headless && play_run.is_some() && play_input.is_some();
+    let play_window = !headless && play_run.is_some() && walker_input.is_some();
     scene.drawing.exposure_per_view = play_window && light.exposure_eye;
     if light.exposure_floor && !light.exposure_eye {
         return Err("--exposure-eye-floor is the floor of --exposure-eye: give both".into());
@@ -990,11 +1114,11 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             run,
             out,
             switches: Box::new(play_switches),
-            input: play_input,
+            input: walker_input,
             shots,
             shots_between,
         }),
-        (None, None) if !play_switches.any() && play_input.is_none() && shots.is_none() => None,
+        (None, None) if !play_switches.any() && walker_input.is_none() && shots.is_none() => None,
         _ => {
             return Err(
                 "--play-run FILE needs --play-out DIR; --play-reach, --play-pick-bounds, --play-live-world, --play-nowait, --play-input, --play-shots and play_run's other play options need --play-run"
@@ -1012,6 +1136,10 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
         }
         if p.input.is_some() {
             scene.play_platforms = crate::play_switches::platforms(&p.switches);
+        }
+        if matches!(p.input, Some(Input::Keys(_))) && !crate::play_switches::keys_ready(&p.switches)
+        {
+            return Err("PlayKeys: --play-keys needs --play-stand SECONDS (the longest standing slice, so the run goes on while the person stands) and --play-reach UNITS (E's reach)".into());
         }
     }
     if scene.drawing.platforms && scene.play_platforms.is_empty() {
@@ -1285,6 +1413,100 @@ mod tests {
         }
     }
 
+    #[test]
+    fn argument_files_are_read_in_place() {
+        let read = |f: &str| -> Result<String, String> {
+            match f {
+                "a.args" => Ok("# the walk\n--walk\n\n  --eye  \n1,2,3\n--args\nb.args\n".into()),
+                "b.args" => Ok("--look\n4,5,6\n".into()),
+                "loop.args" => Ok("--args\nloop.args\n".into()),
+                _ => Err(format!("{f}: not found")),
+            }
+        };
+        let got = expand_args(&args("m d C --args a.args --headless"), &read).unwrap();
+        assert_eq!(
+            got,
+            args("m d C --walk --eye 1,2,3 --look 4,5,6 --headless")
+        );
+        assert!(expand_args(&args("m --args"), &read).is_err());
+        assert!(expand_args(&args("m --args x.args"), &read).is_err());
+        assert!(expand_args(&args("m --args loop.args"), &read).is_err());
+        assert_eq!(expand_args(&args("m d C"), &read).unwrap(), args("m d C"));
+    }
+
+    #[cfg(feature = "script-event")]
+    #[test]
+    fn the_person_drives_play_runs_walker() {
+        let base = "m d C --under-hypotheses --walk --eye 1,2,3 --look 4,5,6 --play-run s.txt --play-out o";
+        let c = parse(&args(&format!(
+            "{base} --play-keys --play-stand 0.1 --play-reach 150 --play-record r.input --play-keys-from k.txt --walk-speed 300 --play-elevator a.esm:00000001 --timeline-cast --light-cell --exposure-eye --play-shots d --play-shot-every 30"
+        )))
+        .unwrap();
+        let Command::Window {
+            play: Some(p),
+            scene,
+            ..
+        } = c
+        else {
+            panic!("{c:?}")
+        };
+        assert_eq!(
+            p.input,
+            Some(Input::Keys(Keys {
+                record: Some("r.input".into()),
+                synthetic: Some("k.txt".into()),
+            }))
+        );
+        assert_eq!(p.switches.stand, Some(0.1));
+        // The scripted window's drawing readings apply as with an input file.
+        assert!(scene.play_cast.is_some() && scene.drawing.exposure_per_view);
+        assert_eq!(scene.play_platforms, p.switches.elevators);
+        for bad in [
+            "--play-keys --play-reach 150",
+            "--play-keys --play-stand 0.1",
+            "--play-keys --play-stand 0.1 --play-reach 150 --play-input i.txt",
+            "--play-record r.input --play-input i.txt",
+            "--play-keys-from k.txt",
+            "--play-stand 0.1 --play-reach 150",
+        ] {
+            assert!(parse(&args(&format!("{base} {bad}"))).is_err(), "{bad}");
+        }
+    }
+
+    #[cfg(feature = "script-event")]
+    #[test]
+    fn the_opening_preset_reads_with_a_local_file() {
+        let preset = include_str!("../presets/play-opening.args");
+        let local = "m\nd\nC\n--eye\n1,2,3\n--look\n4,5,6\n--play-run\ns.txt\n--play-out\no\n--play-elevator\na.esm:00000001\n--play-elevator\na.esm:00000002\n--play-elevator-also-with\na.esm:00000003\na.esm:00000001\n";
+        let read = |f: &str| -> Result<String, String> {
+            match f {
+                "local.args" => Ok(local.into()),
+                "preset.args" => Ok(preset.into()),
+                _ => Err(f.into()),
+            }
+        };
+        let a = expand_args(&args("--args local.args --args preset.args"), &read).unwrap();
+        let c = parse(&a).unwrap();
+        let Command::Window {
+            play: Some(p),
+            scene,
+            walk: true,
+            stream: false,
+            ..
+        } = c
+        else {
+            panic!("{c:?}")
+        };
+        assert!(matches!(p.input, Some(Input::Keys(_))));
+        assert_eq!(p.switches.stand, Some(0.1));
+        assert!(p.switches.live_world && p.switches.rigid && p.switches.child_flag_agrees);
+        assert!(scene.play_cast.is_some() && scene.drawing.platforms && scene.light.any());
+        // Without the local file's platforms the preset is refused.
+        let mut alone = args("m d C --eye 1,2,3 --look 4,5,6 --play-run s.txt --play-out o");
+        alone.extend(expand_args(&args("--args preset.args"), &read).unwrap());
+        assert!(parse(&alone).is_err());
+    }
+
     #[cfg(feature = "script-event")]
     #[test]
     fn play_needs_the_walker_and_its_outputs() {
@@ -1333,7 +1555,7 @@ mod tests {
         };
         // The named platform's drawn parts follow the walker's.
         assert_eq!(scene.play_platforms, p.switches.elevators);
-        assert_eq!(p.input.as_deref(), Some("i.txt"));
+        assert_eq!(p.input, Some(Input::Script("i.txt".into())));
         assert_eq!(p.shots, Some(("d".to_string(), 30.0)));
         assert!(p.shots_between.is_empty());
         assert_eq!(p.switches.slice, Some(0.25));

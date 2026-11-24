@@ -1439,8 +1439,30 @@ pub fn window(
             .add_systems(Update, advance_clock.after(spawn_window_scene));
     }
     #[cfg(feature = "script-event")]
-    if let Some(p) = play {
+    if let Some(mut p) = play {
         let scripted = p.scripted();
+        // --play-keys: the person's keys and mouse, read after the free-fly
+        // system and turned into commands by the scripted window's system.
+        if p.keys() {
+            let person = crate::person::Person::new(
+                start.yaw.to_degrees(),
+                start.pitch.to_degrees(),
+                settings.radians_per_pixel.to_degrees(),
+            );
+            let synthetic = p.synthetic.take();
+            let with_synthetic = synthetic.is_some();
+            app.insert_resource(PersonInput {
+                person,
+                synthetic: synthetic
+                    .map(|(events, speed)| (crate::person::Synthetic::new(events), speed)),
+                last_dt: 0.0,
+                synthetic_done: false,
+            })
+            .add_systems(Update, person_keys.after(fly_camera).before(play_scripted));
+            if with_synthetic {
+                app.add_systems(PreUpdate, person_inject.before(bevy::input::InputSystems));
+            }
+        }
         app.insert_resource(Playing(p, String::new(), PlayDrawn::default()));
         if scripted {
             app.add_systems(Update, play_scripted.after(fly_camera).before(show_readout))
@@ -1652,6 +1674,152 @@ fn expose_view(
     }
 }
 
+/// The person's mode (`--play-keys`): what the person does at the window,
+/// and the synthetic person (`--play-keys-from`, test and measurement only)
+/// with the walking speed it steers at and the last frame's run seconds.
+#[cfg(feature = "script-event")]
+#[derive(Resource)]
+struct PersonInput {
+    person: crate::person::Person,
+    synthetic: Option<(crate::person::Synthetic, f64)>,
+    last_dt: f64,
+    /// The synthetic person's end was logged.
+    synthetic_done: bool,
+}
+
+/// `--play-keys`, each frame: the keys held, E, Escape and P, and the
+/// mouse's motion while the left button is held, as the person's state
+/// (`crate::person`: the key map). The scripted window's system sends the
+/// commands when the run's clock moves.
+#[cfg(feature = "script-event")]
+fn person_keys(
+    keys: Res<ButtonInput<KeyCode>>,
+    buttons: Res<ButtonInput<MouseButton>>,
+    motion: Res<AccumulatedMouseMotion>,
+    mut cursor: MessageReader<CursorMoved>,
+    mut input: ResMut<PersonInput>,
+) {
+    let cursor_delta: Vec2 = cursor.read().filter_map(|m| m.delta).sum();
+    let p = &mut input.person;
+    if keys.just_pressed(KeyCode::KeyP) {
+        p.toggle_pause();
+        println!(
+            "play: person: {} at {:.3} s of the play clock",
+            if p.paused { "paused" } else { "resumed" },
+            p.clock
+        );
+    }
+    if keys.just_pressed(KeyCode::Escape) {
+        p.press_quit();
+    }
+    if keys.just_pressed(KeyCode::KeyE) {
+        p.press_activate();
+    }
+    p.held = crate::person::Held {
+        forward: keys.pressed(KeyCode::KeyW),
+        back: keys.pressed(KeyCode::KeyS),
+        left: keys.pressed(KeyCode::KeyA),
+        right: keys.pressed(KeyCode::KeyD),
+        run: keys.any_pressed([KeyCode::ShiftLeft, KeyCode::ShiftRight]),
+    };
+    if buttons.pressed(MouseButton::Left) {
+        p.look(look_delta(motion.delta, cursor_delta));
+    }
+}
+
+/// `--play-keys-from` (test and measurement only), each frame before the
+/// input systems: the synthetic person's events due at the play clock,
+/// written as the key, button and motion messages a real keyboard and
+/// mouse send, so the key map reads them as it reads a person's.
+#[cfg(feature = "script-event")]
+fn person_inject(
+    mut input: ResMut<PersonInput>,
+    playing: Res<Playing>,
+    windows: Query<Entity, With<PrimaryWindow>>,
+    mut keyboard: MessageWriter<bevy::input::keyboard::KeyboardInput>,
+    mut mouse_buttons: MessageWriter<bevy::input::mouse::MouseButtonInput>,
+    mut mouse_motion: MessageWriter<bevy::input::mouse::MouseMotion>,
+) {
+    use crate::person::KeyName;
+    use bevy::input::keyboard::{Key, KeyboardInput, NativeKey};
+    use bevy::input::ButtonState;
+    let Some(window) = windows.iter().next() else {
+        return;
+    };
+    let PersonInput {
+        person,
+        synthetic,
+        last_dt,
+        synthetic_done,
+    } = &mut *input;
+    let Some((s, speed)) = synthetic.as_mut() else {
+        return;
+    };
+    let seen = playing.0.seen();
+    let feet = seen.as_ref().and_then(|x| x.feet);
+    let walker_t = seen.as_ref().map_or(person.clock, |x| x.t);
+    // Let W go early enough that the walker, a frame or two behind the
+    // window, stops near the point.
+    let lead = (person.clock - walker_t).max(0.0) + *last_dt;
+    let arrive = *speed * lead + 1.0;
+    let f = s.frame(
+        person.clock,
+        (person.heading, person.pitch),
+        person.degrees_per_pixel,
+        feet,
+        arrive,
+    );
+    let code = |k: KeyName| match k {
+        KeyName::W => KeyCode::KeyW,
+        KeyName::A => KeyCode::KeyA,
+        KeyName::S => KeyCode::KeyS,
+        KeyName::D => KeyCode::KeyD,
+        KeyName::E => KeyCode::KeyE,
+        KeyName::P => KeyCode::KeyP,
+        KeyName::Escape => KeyCode::Escape,
+        KeyName::Shift => KeyCode::ShiftLeft,
+    };
+    for (keys, state) in [
+        (&f.down, ButtonState::Pressed),
+        (&f.up, ButtonState::Released),
+    ] {
+        for k in keys {
+            keyboard.write(KeyboardInput {
+                key_code: code(*k),
+                logical_key: Key::Unidentified(NativeKey::Unidentified),
+                state,
+                text: None,
+                repeat: false,
+                window,
+            });
+        }
+    }
+    if let Some(b) = f.button {
+        mouse_buttons.write(bevy::input::mouse::MouseButtonInput {
+            button: MouseButton::Left,
+            state: if b {
+                ButtonState::Pressed
+            } else {
+                ButtonState::Released
+            },
+            window,
+        });
+    }
+    if f.motion != [0.0; 2] {
+        mouse_motion.write(bevy::input::mouse::MouseMotion {
+            delta: Vec2::new(f.motion[0] as f32, f.motion[1] as f32),
+        });
+    }
+    if s.done() && !*synthetic_done {
+        *synthetic_done = true;
+        println!(
+            "play: synthetic person: every event given at {:.3} s of the play clock; {} steered points reached",
+            person.clock,
+            s.arrived.len()
+        );
+    }
+}
+
 /// The play mode, each frame after the walker moved: the frame's seconds,
 /// the walker's feet and, when E was pressed, what the eye's ray meets go
 /// to the run; the run's second, last stage and spoken lines join the
@@ -1731,6 +1899,7 @@ fn play_scripted(
     mut platforms: Option<ResMut<PlayPlatforms>>,
     (mut exposure, lights, mut buffers): ExposureParams,
     mut exit: MessageWriter<AppExit>,
+    mut person: Option<ResMut<PersonInput>>,
 ) {
     let Playing(p, title, drawn) = &mut *playing;
     match p.loaded() {
@@ -1796,22 +1965,42 @@ fn play_scripted(
             ready = false;
         }
     }
-    // The window's clock starts once the walker stands somewhere.
+    // The window's clock starts once the walker stands somewhere (and
+    // stops while the person pauses).
     let dt = time.delta_secs_f64().min(PLAY_FRAME_MAX);
-    let go = ready && seen.feet.is_some();
-    if let Some(t) = p.scripted_frame(if go { dt } else { 0.0 }) {
+    let paused = person.as_ref().is_some_and(|x| x.person.paused);
+    let go = ready && seen.feet.is_some() && !paused;
+    let given = if go { dt } else { 0.0 };
+    let changed = match person.as_deref_mut() {
+        // --play-keys: the person's commands of the frame go with its
+        // seconds (none while the clock stands).
+        Some(x) => {
+            let commands = if go { x.person.commands() } else { Vec::new() };
+            x.person.clock += given;
+            x.last_dt = given;
+            p.person_frame(given, commands)
+        }
+        None => p.scripted_frame(given),
+    };
+    if let Some(t) = changed {
         *title = t;
     }
     if let Some(feet) = seen.feet {
+        // --play-keys: the camera looks where the person looks (the walker
+        // takes the look a frame or so later).
+        let look = person.as_ref().map(|x| (x.person.heading, x.person.pitch));
         let state = FlyState {
             eye: [
                 feet[0],
                 feet[1],
                 feet[2] + fo4_walk::Params::PROVISIONAL.eye_height,
             ],
-            yaw: seen.heading.map_or(fly.state.yaw, f64::to_radians),
-            pitch: seen
-                .pitch
+            yaw: match look {
+                Some((h, _)) => h.to_radians(),
+                None => seen.heading.map_or(fly.state.yaw, f64::to_radians),
+            },
+            pitch: look
+                .map_or(seen.pitch, |l| l.1)
                 .to_radians()
                 .clamp(-crate::fly::MAX_PITCH, crate::fly::MAX_PITCH),
         };
@@ -1914,6 +2103,21 @@ fn play_scripted(
     if !title.is_empty() {
         readout.text.push_str(" | ");
         readout.text.push_str(title);
+    }
+    // --play-keys: what E would activate, and the clock's state.
+    if let Some(x) = person.as_ref() {
+        readout.text.push_str(" | E: ");
+        readout
+            .text
+            .push_str(seen.aim.as_deref().unwrap_or("nothing within reach"));
+        if x.person.paused {
+            readout.text.push_str(" | paused (P resumes)");
+        }
+        if x.person.ended {
+            readout
+                .text
+                .push_str(" | input ended: the run goes on to its end");
+        }
     }
 }
 

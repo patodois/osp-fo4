@@ -1,0 +1,70 @@
+# The window's switches for playing the opening from the keyboard and mouse
+# (spec/play.md, One command to play): every switch the earlier steps' window
+# runs used, with the person's mode. Read with --args, one argument a line.
+# The repository keeps no game record ids, so a second, local argument file
+# gives what names the game's records: the manifest, the data folder, the
+# start cell, --eye and --look, --play-run (the opening's new-game switches)
+# and --play-out, and the named platforms (--play-elevator,
+# --play-elevator-also-with). Give it first:
+#   fo4-view --args opening.local.args --args apps/fo4-view/presets/play-opening.args
+--under-hypotheses
+--walk
+--terrain
+--around
+1
+--no-stream
+# The person's mode: the keys drive play_run's walker.
+--play-keys
+--play-stand
+0.1
+# The walker and its world (play_run's play options).
+--walk-speed
+300
+--play-reach
+150
+--play-pick-bounds
+--play-pick-bounds-activatable
+--play-load-doors
+--play-follow-grid
+--play-slice
+0.25
+--play-live-world
+--play-elevator-door
+--play-elevator-held-pose
+--play-elevator-rigid
+--play-elevator-door-onward
+--play-collision-off-chain
+--play-collision-reference-alpha
+--play-collision-child-flag-agrees
+--play-player-moveto
+--play-player-sits
+# The run's actors as their characters.
+--timeline-cast
+--timeline-target-rotation
+--timeline-child-flag-agrees
+--timeline-nowait
+--actor-missing-bone-bind
+--actor-start-clip
+--actor-subgraph-keywords
+--actor-clip-folder
+--actor-subgraph-flag-one
+--actor-model-graph-idle
+# Light, sky and exposure.
+--light-cell
+--light-inherits
+--light-points
+--light-reference-radius
+--light-fade
+--light-fog
+--sky-weather
+--light-weather
+--fog-weather
+--assume-hour
+11
+--assume-weather
+0
+--exposure-eye
+--exposure-eye-floor
+# What the drawing reads.
+--draw-child-flag-agrees
+--draw-platforms

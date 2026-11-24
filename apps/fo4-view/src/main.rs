@@ -11,6 +11,8 @@ mod gpu;
 mod live;
 mod load;
 mod path;
+#[cfg(feature = "script-event")]
+mod person;
 mod play;
 mod play_switches;
 mod scene;
@@ -299,7 +301,11 @@ fn window_aids(s: &cli::Scene, debug: cli::WindowDebug) -> AnyResult<gpu::Aids> 
 }
 
 fn run() -> AnyResult<()> {
-    let args: Vec<String> = std::env::args().skip(1).collect();
+    let given: Vec<String> = std::env::args().skip(1).collect();
+    // `--args FILE`: the arguments a file holds, in its place.
+    let args = cli::expand_args(&given, &|f| {
+        std::fs::read_to_string(f).map_err(|e| format!("--args {f}: {e}"))
+    })?;
     match cli::parse(&args)? {
         Command::Headless {
             scene: s,

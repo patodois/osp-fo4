@@ -145,8 +145,11 @@ mod enabled {
         /// The run's last state the live world applied (applied again to
         /// the live world of a cell loaded later).
         applied: Option<RunState>,
-        /// `--play-input`: the scripted run.
+        /// `--play-input` or `--play-keys`: the scripted run.
         scripted: Option<Scripted>,
+        /// `--play-keys-from`: the synthetic person's events and the
+        /// walking speed it steers at (taken by the window).
+        pub synthetic: Option<(Vec<crate::person::Timed>, f64)>,
     }
 
     /// The window's side of the scripted run (`--play-input`).
@@ -164,6 +167,8 @@ mod enabled {
         shots_between: Vec<[f64; 3]>,
         /// `--timeline-cast`: the cast's worker and what it built.
         cast: Option<CastWork>,
+        /// `--play-keys`: a person's keys drive the walker.
+        keys: bool,
     }
 
     /// The window's cast (`--play-run ... --timeline-cast`): a thread that
@@ -300,6 +305,24 @@ mod enabled {
         let mut args = vec![s.manifest.clone(), "new-game".to_string(), p.out.clone()];
         args.extend(switches);
         let sw = &p.switches;
+        let synthetic = match &p.input {
+            Some(crate::cli::Input::Keys(crate::cli::Keys {
+                synthetic: Some(file),
+                ..
+            })) => {
+                let text = std::fs::read_to_string(file).map_err(|e| format!("{file}: {e}"))?;
+                let events = crate::person::parse_synthetic(&text)?;
+                let speed = sw
+                    .walk_speed
+                    .unwrap_or(fo4_walk::Params::PROVISIONAL.walk_speed);
+                println!(
+                    "play: a synthetic person (--play-keys-from {file}, test and measurement only): {} events injected as key, button and mouse input",
+                    events.len()
+                );
+                Some((events, speed))
+            }
+            _ => None,
+        };
         let (to_run, status, thread, scripted) = match &p.input {
             None => {
                 let (to_run, status, thread) = link::spawn(args).map_err(|e| e.to_string())?;
@@ -312,6 +335,7 @@ mod enabled {
                 (to_run, status, thread, None)
             }
             Some(input) => {
+                let keys = matches!(input, crate::cli::Input::Keys(_));
                 if let Some((dir, _)) = &p.shots {
                     std::fs::create_dir_all(dir).map_err(|e| format!("{dir}: {e}"))?;
                 }
@@ -320,7 +344,8 @@ mod enabled {
                 let (status_tx, status) = channel();
                 // Nothing reads the window's slices: the walker gives them.
                 let (to_run, _) = channel();
-                let (manifest, input, out) = (s.manifest.clone(), input.clone(), p.out.clone());
+                let (manifest, run_input, out) = (s.manifest.clone(), input.clone(), p.out.clone());
+                let data = s.data.clone();
                 let (sw, g, sn, track) = (sw.clone(), gate.clone(), seen.clone(), t.clone());
                 let with_timeline = s.play_cast.is_some();
                 let thread = std::thread::Builder::new()
@@ -328,7 +353,8 @@ mod enabled {
                     .spawn(move || {
                         let r = scripted_run(
                             &manifest,
-                            &input,
+                            &run_input,
+                            &data,
                             &out,
                             &sw,
                             args,
@@ -345,12 +371,18 @@ mod enabled {
                         r
                     })
                     .map_err(|e| e.to_string())?;
-                println!(
-                    "play: the scripted run starts at {:?} in {}, driven by play_run's walker and {} (--play-input); the run waits for the window's clock",
-                    first.pos,
-                    fo4_vm::bind::record_key(&first.space),
-                    p.input.as_deref().unwrap_or_default()
-                );
+                match input.file() {
+                    Some(file) => println!(
+                        "play: the scripted run starts at {:?} in {}, driven by play_run's walker and {file} (--play-input); the run waits for the window's clock",
+                        first.pos,
+                        fo4_vm::bind::record_key(&first.space),
+                    ),
+                    None => println!(
+                        "play: the run starts at {:?} in {}, driven by play_run's walker and the keyboard and mouse (--play-keys): W/S/A/D move, Shift runs, the left mouse button held turns and looks, E activates, P pauses, Escape ends the input; the run waits for the window's clock",
+                        first.pos,
+                        fo4_vm::bind::record_key(&first.space),
+                    ),
+                }
                 let drawn = fo4_scene::timeline::parse_key(&s.cell);
                 let cast = match &s.play_cast {
                     Some(a) => {
@@ -385,6 +417,7 @@ mod enabled {
                     shots: p.shots.clone(),
                     shots_between: p.shots_between.clone(),
                     cast,
+                    keys,
                 };
                 (to_run, status, thread, Some(scripted))
             }
@@ -409,6 +442,7 @@ mod enabled {
             generation: 0,
             applied: None,
             scripted,
+            synthetic,
         })
     }
 
@@ -493,9 +527,38 @@ mod enabled {
             changed
         }
 
-        /// Whether the run is driven by a scripted input (`--play-input`).
+        /// Whether the run is driven by `play_run`'s walker (`--play-input`
+        /// or `--play-keys`).
         pub fn scripted(&self) -> bool {
             self.scripted.is_some()
+        }
+
+        /// Whether a person's keys drive the walker (`--play-keys`).
+        pub fn keys(&self) -> bool {
+            self.scripted.as_ref().is_some_and(|s| s.keys)
+        }
+
+        /// One frame of the person's mode: the window's clock lets the run
+        /// go `dt` seconds further (0 while paused or a cell is loading),
+        /// the person's commands of the frame stamped at the play clock's
+        /// second they reach the walker at (`Gate::submit`); the title,
+        /// when it changed.
+        pub fn person_frame(
+            &mut self,
+            dt: f64,
+            commands: Vec<fo4_play::input::Command>,
+        ) -> Option<String> {
+            if let Some(s) = &self.scripted {
+                for e in s.gate.submit(dt, commands) {
+                    if !matches!(
+                        e.command,
+                        fo4_play::input::Command::Face(_) | fo4_play::input::Command::Pitch(_)
+                    ) {
+                        println!("play: person: {e}");
+                    }
+                }
+            }
+            self.statuses().then(|| link::title(&self.last))
         }
 
         /// The shots asked for (`--play-shots DIR --play-shot-every S`).
@@ -786,6 +849,23 @@ mod enabled {
         owed: f64,
         waiting: bool,
         stopped: bool,
+        /// The person's commands at their seconds, not yet taken by the
+        /// walker (`--play-keys`).
+        queued: Vec<fo4_play::input::Event>,
+    }
+
+    impl GateState {
+        /// The window drew `dt` seconds more: the horizon moves while the
+        /// run waits, else the run is owed them, up to [`GATE_BUSY_MAX`].
+        fn add(&mut self, dt: f64) {
+            if dt.is_finite() && dt > 0.0 {
+                if self.waiting {
+                    self.horizon += dt;
+                } else {
+                    self.owed = (self.owed + dt).min(GATE_BUSY_MAX);
+                }
+            }
+        }
     }
 
     /// The window's seconds a busy run may be owed at most.
@@ -795,21 +875,67 @@ mod enabled {
         /// Waits until the window's clock reaches `until`; `false` when the
         /// window closed.
         fn wait(&self, until: f64) -> bool {
-            let Ok(mut g) = self.state.lock() else {
-                return false;
-            };
+            self.wait_then(until, |_| ()).is_some()
+        }
+
+        /// Waits as [`Gate::wait`] does, then reads the state; `None` when
+        /// the window closed.
+        fn wait_then<T>(&self, until: f64, read: impl FnOnce(&mut GateState) -> T) -> Option<T> {
+            let mut g = self.state.lock().ok()?;
             if g.owed > 0.0 {
                 g.horizon += std::mem::take(&mut g.owed);
             }
             while g.horizon < until && !g.stopped {
                 g.waiting = true;
-                g = match self.moved.wait(g) {
-                    Ok(g) => g,
-                    Err(_) => return false,
-                };
+                g = self.moved.wait(g).ok()?;
             }
             g.waiting = false;
-            !g.stopped
+            if g.stopped {
+                return None;
+            }
+            Some(read(&mut g))
+        }
+
+        /// The walker's side of the person's mode: waits until the
+        /// window's clock reaches `until`, then takes the commands queued
+        /// up to the clock, with the clock (every command up to it is
+        /// known: later ones are stamped after it). `None`: the window
+        /// closed.
+        fn take_until(&self, until: f64) -> Option<(Vec<fo4_play::input::Event>, f64)> {
+            self.wait_then(until, |g| {
+                let n = g.queued.partition_point(|e| e.t <= g.horizon);
+                (g.queued.drain(..n).collect(), g.horizon)
+            })
+        }
+
+        /// The window's side of the person's mode: the window drew `dt`
+        /// seconds more ([`Gate::advance`]) and the person gave `commands`
+        /// in that frame. They are stamped at the second the walker's
+        /// clock reaches with this frame (the horizon, or what the busy
+        /// run is owed added to it), which is after every second the walker
+        /// was told it knows; in a frame that adds no time they are not
+        /// sent. Returns them stamped.
+        fn submit(
+            &self,
+            dt: f64,
+            commands: Vec<fo4_play::input::Command>,
+        ) -> Vec<fo4_play::input::Event> {
+            let mut events = Vec::new();
+            if let Ok(mut g) = self.state.lock() {
+                // Stamped under the same lock as the clock moves, before
+                // the walker can take the new horizon.
+                g.add(dt);
+                if dt.is_finite() && dt > 0.0 {
+                    let t = g.horizon + g.owed;
+                    events = commands
+                        .into_iter()
+                        .map(|command| fo4_play::input::Event { t, command })
+                        .collect();
+                    g.queued.extend(events.iter().copied());
+                }
+            }
+            self.moved.notify_all();
+            events
         }
 
         /// The window drew `dt` seconds more: the run may go that much
@@ -817,13 +943,7 @@ mod enabled {
         /// [`GATE_BUSY_MAX`].
         fn advance(&self, dt: f64) {
             if let Ok(mut g) = self.state.lock() {
-                if dt.is_finite() && dt > 0.0 {
-                    if g.waiting {
-                        g.horizon += dt;
-                    } else {
-                        g.owed = (g.owed + dt).min(GATE_BUSY_MAX);
-                    }
-                }
+                g.add(dt);
             }
             self.moved.notify_all();
         }
@@ -861,6 +981,9 @@ mod enabled {
         /// The named platforms' moving parts where the walker's collision
         /// stands (`fo4_play::walker::Walker::platforms`).
         pub platforms: Vec<fo4_play::elevator::Platform>,
+        /// `--play-keys`: what the activation key would meet from the
+        /// walker's eye (`fo4_play::walker::Walker::aim`), as a label.
+        pub aim: Option<String>,
     }
 
     /// The scripted walker as the run's driver, held back by the window's
@@ -878,6 +1001,10 @@ mod enabled {
         /// `--timeline-cast`: the run's timeline given to the window when
         /// the run's effects, logs or moves grew.
         timeline: Option<TimelineRead>,
+        /// `--play-keys`: the camera's heading from the person's looks (not
+        /// the walk's direction), what E would meet given to the window,
+        /// and the labels of the references met so far.
+        keys: Option<BTreeMap<FormKey, String>>,
     }
 
     /// What the run had when its timeline was last read: effects, quest
@@ -949,7 +1076,11 @@ mod enabled {
                 }
                 Next::Finish | Next::Stop => s.finished = true,
             }
-            s.heading = heading(s.heading, moved, look.map(|l| l.1));
+            s.heading = if self.keys.is_some() {
+                look.map(|l| l.1).or(s.heading)
+            } else {
+                heading(s.heading, moved, look.map(|l| l.1))
+            };
             let grid = log
                 .grid
                 .last()
@@ -1049,9 +1180,37 @@ mod enabled {
         }
     }
 
+    impl Paced {
+        /// `--play-keys`: what the activation key would meet now, labelled
+        /// by its base record (type and editor ID) and its key.
+        fn publish_aim(&mut self, run: &View<'_, '_>) {
+            let Some(labels) = self.keys.as_mut() else {
+                return;
+            };
+            let aim = self.walker.aim().map(|h| match h.reference {
+                Some(k) => {
+                    let label = labels.entry(k.clone()).or_insert_with(|| {
+                        let b = fo4_core::Budget::new(run.store.limits.max_memory);
+                        let base = fo4_vm::bind::base_of(run.store, &k, &b).ok().flatten();
+                        let what = base
+                            .and_then(|base| fo4_vm::bind::label(run.store, &base, &b).ok())
+                            .unwrap_or_else(|| "a reference".into());
+                        format!("{what} ({})", fo4_vm::bind::record_key(&k))
+                    });
+                    format!("{label} at {:.0} units", h.distance)
+                }
+                None => format!("collision of no reference at {:.0} units", h.distance),
+            });
+            if let Ok(mut s) = self.seen.lock() {
+                s.aim = aim;
+            }
+        }
+    }
+
     impl Driver for Paced {
         fn next(&mut self, run: &View<'_, '_>) -> Next {
             self.publish_timeline(run);
+            self.publish_aim(run);
             let mut n = self.walker.next(run);
             self.publish_start();
             if let Next::Slice(s) = &n {
@@ -1069,6 +1228,58 @@ mod enabled {
         }
     }
 
+    /// The person's commands as the walker takes them (`--play-keys`): it
+    /// waits on the window's clock ([`Gate::take_until`]), shows the
+    /// window where the walker stands at each wait (each tick, so the
+    /// camera follows the walk smoothly) and writes each command it takes
+    /// to the record (`--play-record`) as it arrives.
+    struct Person {
+        gate: Arc<Gate>,
+        seen: Arc<Mutex<Seen>>,
+        log: Rc<RefCell<fo4_play::walker::Log>>,
+        record: Option<std::fs::File>,
+        received: u64,
+    }
+
+    impl fo4_play::walker::Arrivals for Person {
+        fn wait(
+            &mut self,
+            until: f64,
+            at: f64,
+            feet: Option<[f64; 3]>,
+        ) -> Option<(Vec<fo4_play::input::Event>, f64)> {
+            if let (Ok(mut s), Some(f)) = (self.seen.lock(), feet) {
+                if s.space.is_none() {
+                    s.space = self.log.borrow().start.as_ref().map(|x| x.0.space.clone());
+                }
+                s.feet = Some(f);
+                s.t = s.t.max(at);
+            }
+            let (events, horizon) = self.gate.take_until(until)?;
+            if let Some(f) = self.record.as_mut() {
+                use std::io::Write as _;
+                for e in &events {
+                    if let Err(x) = writeln!(f, "{e}").and_then(|()| f.flush()) {
+                        eprintln!("play: --play-record: {x}");
+                        self.record = None;
+                        break;
+                    }
+                }
+            }
+            self.received += events.len() as u64;
+            Some((events, horizon))
+        }
+    }
+
+    impl Drop for Person {
+        fn drop(&mut self) {
+            println!(
+                "play: person: {} commands taken by the walker",
+                self.received
+            );
+        }
+    }
+
     type E = Box<dyn std::error::Error>;
 
     /// The scripted run on its own thread: the walking world built about
@@ -1078,7 +1289,8 @@ mod enabled {
     #[allow(clippy::too_many_arguments)]
     fn scripted_run(
         manifest: &str,
-        input: &str,
+        input: &crate::cli::Input,
+        data: &str,
         out: &str,
         switches: &crate::play_switches::Switches,
         args: Vec<String>,
@@ -1090,7 +1302,29 @@ mod enabled {
     ) -> Result<BTreeMap<String, u64>, E> {
         use fo4_core::{Budget, Manifest};
         let started = std::time::Instant::now();
-        let script = fo4_play::input::Script::parse(&std::fs::read_to_string(input)?)?;
+        let script = match input {
+            crate::cli::Input::Script(file) => {
+                fo4_play::input::Script::parse(&std::fs::read_to_string(file)?)?
+            }
+            crate::cli::Input::Keys(_) => fo4_play::input::Script::default(),
+        };
+        // `--play-record FILE`: opened before the run starts (an output
+        // under ./build, never inside the game's folder).
+        let record = match input {
+            crate::cli::Input::Keys(crate::cli::Keys {
+                record: Some(file), ..
+            }) => {
+                let mut f = crate::load::output_file(file, Some(std::path::Path::new(data)))?;
+                let command: Vec<String> = std::env::args().collect();
+                let header = format!(
+                    "# the commands the walker received from fo4-view --play-keys, as they arrived (spec/play.md, The person's input)\n# play_run with this file, the same play options (--play-stand among them) and the same new-game switches gives the same run\n# window: {}\n",
+                    command.join(" ")
+                );
+                std::io::Write::write_all(&mut f, header.as_bytes())?;
+                Some(f)
+            }
+            _ => None,
+        };
         let m = Manifest::load(std::path::Path::new(manifest))?;
         let store = fo4_plugin::typed::Store::open(&m, &Budget::new(m.limits.max_override_memory))?;
         let vfs = fo4_vfs::Vfs::mount(&m, &Budget::new(m.limits.max_vfs_memory))?;
@@ -1099,9 +1333,19 @@ mod enabled {
             s.cell = Some(built.cell.clone());
         }
         let mut report = String::new();
-        let walker = switches.walker(built, script, &mut report)?;
+        let mut walker = switches.walker(built, script, &mut report)?;
         drop((store, vfs));
         let log = walker.log.clone();
+        let keys = matches!(input, crate::cli::Input::Keys(_));
+        if keys {
+            walker = walker.with_arrivals(Box::new(Person {
+                gate: gate.clone(),
+                seen: seen.clone(),
+                log: log.clone(),
+                record,
+                received: 0,
+            }))?;
+        }
         let (feed, from_walker) = channel();
         let paced = Paced {
             walker,
@@ -1112,6 +1356,7 @@ mod enabled {
             feed,
             read: (0, 0, 0),
             timeline: with_timeline.then(TimelineRead::default),
+            keys: keys.then(BTreeMap::new),
         };
         let prepared = started.elapsed().as_secs_f64();
         let (_, counts) =
