@@ -313,6 +313,11 @@ pub const ACTOR_TEMPLATE_BITS: &str = "npc_template_bits_traits_inventory_v1";
 /// What of an actor's head a worn armour hides, from its BOD2 slots
 /// (`crate::actor::Readings::head_slots`, `--actor-head-slots`).
 pub const ACTOR_HEAD_SLOTS: &str = "npc_head_hidden_by_head_slot_v1";
+/// A run or placed actor's models read under texture_missing_unread_slot_v1
+/// as a placed reference's are, rootless citations whose rooted file is
+/// missing too (`crate::actor::Readings::unread_slots`,
+/// `--actor-unread-texture-slots`).
+pub const ACTOR_UNREAD_SLOTS: &str = "actor_texture_missing_unread_slot_v1";
 /// One entry of each leveled list an actor reaches, picked by the caller's
 /// seed (`crate::actor::Readings::leveled_seed`, `--actor-leveled-seed`).
 pub const ACTOR_LEVELED_PICK: &str = "npc_leveled_entry_seeded_pick_v1";
@@ -540,6 +545,7 @@ fn actor_rule(code: &str) -> Option<&'static str> {
         "UnverifiedActorTemplateAllBits" => Some(ACTOR_TEMPLATE_ALL_BITS),
         "UnverifiedActorTemplateBits" => Some(ACTOR_TEMPLATE_BITS),
         "UnverifiedActorHeadSlots" => Some(ACTOR_HEAD_SLOTS),
+        "UnverifiedActorUnreadSlots" => Some(ACTOR_UNREAD_SLOTS),
         "UnverifiedActorLeveledPick" => Some(ACTOR_LEVELED_PICK),
         "UnverifiedActorLeveledChanceNone" => Some(ACTOR_LEVELED_CHANCE_NONE),
         "UnverifiedActorLeveledUseAll" => Some(ACTOR_LEVELED_USE_ALL),
@@ -765,6 +771,7 @@ mod tests {
             ACTOR_SKINNING,
             ACTOR_TEMPLATE_BITS,
             ACTOR_HEAD_SLOTS,
+            ACTOR_UNREAD_SLOTS,
             ACTOR_LEVELED_PICK,
             ACTOR_LEVELED_CHANCE_NONE,
             ACTOR_LEVELED_USE_ALL,

@@ -261,6 +261,36 @@ pub fn unread_textures(assets: &Assets, nodes: &[usize], b: &Budget) -> Result<V
     Ok(out)
 }
 
+/// The refused texture citations among `nodes` (an instance's asset
+/// closure) that cite a file missing whichever reading from a slot the
+/// frame never samples: a rootless path no archive or loose folder holds
+/// with its citation's root added (`Rejection::rooted_missing`), cited from
+/// a slot `TextureSlot::sampled_by_frame` says the frame does not read.
+/// Each as the citing node and the citation's offset, the offset its
+/// `RejectedVfsPath` blocker carries.
+pub fn unread_rejections(
+    assets: &Assets,
+    nodes: &[usize],
+    b: &Budget,
+) -> Result<Vec<(usize, u64)>> {
+    let mut out = Vec::new();
+    for i in nodes {
+        let Some(node) = assets.nodes.get(*i) else {
+            continue;
+        };
+        for r in &node.rejections {
+            if r.class.asset_kind() == AssetKind::Texture
+                && r.rooted_missing
+                && r.slot.is_some_and(|s| !s.sampled_by_frame())
+            {
+                b.reserve(&mut out, 1, "missing textures", 0)?;
+                out.push((*i, r.offset));
+            }
+        }
+    }
+    Ok(out)
+}
+
 /// The swaps that apply to an instance: the reference's, the base's and,
 /// recursively, those of its SCOL parts' bases.
 pub fn instance_swaps(i: &crate::Instance) -> Vec<&Loaded<Mswp>> {

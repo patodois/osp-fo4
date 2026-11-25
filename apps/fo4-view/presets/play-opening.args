@@ -141,3 +141,8 @@
 # The worn armours' slots decide what of a head is hidden
 # (npc_head_hidden_by_head_slot_v1): the checkpoint's helmets keep faces.
 --actor-head-slots
+# An actor's models read as a placed reference's: a texture missing only in
+# slots the frame never samples does not keep the actor out
+# (actor_texture_missing_unread_slot_v1): the vault's security staff, whose
+# helmet visor's mask texture is in no archive, are drawn.
+--actor-unread-texture-slots

@@ -964,6 +964,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             "--timeline-sit-marker" => sit_marker = true,
             "--actor-template-bits" => look_readings.template_bits = true,
             "--actor-head-slots" => look_readings.head_slots = true,
+            "--actor-unread-texture-slots" => look_readings.unread_slots = true,
             "--actor-model-graph-idle" => model_graph_idle = true,
             "--skinned-models-own-nodes" => skinned_models = true,
             "--memory-report" => memory_report = Some(value()?.to_string()),

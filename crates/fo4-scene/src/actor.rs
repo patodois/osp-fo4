@@ -65,6 +65,14 @@ pub struct Readings {
     /// xEdit names 32, FaceGen Head), else the hair parts (HDPT PNAM 3) when
     /// one has bit 0 or 1 (30 Hair Top, 31 Hair Long), else nothing.
     pub head_slots: bool,
+    /// `actor_texture_missing_unread_slot_v1` (`--actor-unread-texture-slots`):
+    /// the actor's models' closure reads `texture_missing_unread_slot_v1` as
+    /// a placed reference's does (a missing texture cited only in slots the
+    /// frame never samples does not block), and a rootless texture citation
+    /// in such a slot whose rooted path no archive or loose folder holds is
+    /// read as that missing texture
+    /// (`crate::missing::unread_rejections`).
+    pub unread_slots: bool,
 }
 impl Readings {
     /// Whether any reading is on.
@@ -1177,13 +1185,37 @@ pub fn resolve_reference_with(
     }
     // Blockers of the models' closures, apart from what skinning reads.
     let roots: Vec<usize> = parts.iter().map(|p| p.asset).collect();
-    for i in loader.assets.closure(&roots, &work)? {
-        for e in &loader.assets.nodes[i].blockers {
+    let closure = loader.assets.closure(&roots, &work)?;
+    let (unread, refused) = if readings.unread_slots {
+        (
+            crate::missing::unread_textures(&loader.assets, &closure, &work)?,
+            crate::missing::unread_rejections(&loader.assets, &closure, &work)?,
+        )
+    } else {
+        (Vec::new(), Vec::new())
+    };
+    let mut read_unread = false;
+    for i in &closure {
+        for e in &loader.assets.nodes[*i].blockers {
             if !handled_by_skinning(e) {
+                let mut e = e.clone();
+                if (e.code == "MissingTexture" && unread.contains(i))
+                    || (e.code == "RejectedVfsPath" && refused.contains(&(*i, e.source.offset)))
+                {
+                    e.code = "MissingTextureUnreadSlot".into();
+                    read_unread = true;
+                }
                 b.reserve(&mut blockers, 1, &src.file, src.offset)?;
-                blockers.push(e.clone());
+                blockers.push(e);
             }
         }
+    }
+    if read_unread {
+        rules(
+            &mut blockers,
+            "UnverifiedActorUnreadSlots",
+            "missing textures in slots the frame never samples",
+        )?;
     }
     for h in path_rules {
         let code = match h {

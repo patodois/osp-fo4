@@ -113,6 +113,14 @@ pub struct Rejection {
     pub offset: u64,
     #[serde(serialize_with = "fo4_core::serialize_hex")]
     pub raw: Vec<u8>,
+    /// For a texture citation, the slot that cites it (not serialized).
+    #[serde(skip)]
+    pub slot: Option<TextureSlot>,
+    /// The path is rootless, and no archive or loose folder holds it with
+    /// its citation's root added (`asset_path_missing_root_v1` found no
+    /// file): the file is missing whichever reading (not serialized).
+    #[serde(skip)]
+    pub rooted_missing: bool,
 }
 #[derive(Debug, Serialize)]
 pub struct Cycle {
@@ -935,10 +943,17 @@ impl<'a> Assets<'a> {
                             &c.original,
                             dep.offset,
                         )?;
+                        let rooted_missing = crate::paths::candidate(dep.class, &dep.path, &work)
+                            .is_ok_and(|c| {
+                                c.hypotheses == [crate::hypotheses::PATH_ROOT]
+                                    && self.vfs.winner_bytes(&c.key).is_err()
+                            });
                         self.nodes[i].rejections.push(Rejection {
                             class: dep.class,
                             offset: dep.offset,
                             raw,
+                            slot: dep.slot,
+                            rooted_missing,
                         });
                         e.source.file = c.original.clone();
                         e.source.offset = dep.offset;

@@ -138,6 +138,7 @@ fn run() -> Result<(), E> {
         chance_none: items,
         use_all: items,
         head_slots: false,
+        unread_slots: false,
     };
     let variants = [
         ("every reading off", r(false, false, false)),
