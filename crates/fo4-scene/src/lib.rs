@@ -12,6 +12,7 @@ pub mod enable;
 pub mod furniture;
 pub mod grid;
 pub mod hypotheses;
+pub mod leaf;
 pub mod light;
 pub mod lighting;
 pub mod missing;
@@ -196,6 +197,8 @@ pub struct Loader<'a> {
     collision: readiness::Switches,
     child_flag_agrees: bool,
     render_child_flag_agrees: bool,
+    render_static_fields: bool,
+    render_static_leaves: bool,
 }
 impl<'a> Loader<'a> {
     /// The collision readiness switches the collision cell build reads
@@ -236,6 +239,32 @@ impl<'a> Loader<'a> {
     pub fn render_child_flag_agrees(&self) -> bool {
         self.render_child_flag_agrees
     }
+    /// Render readiness of a reference whose base is a static (`STAT`):
+    /// the record blockers of its `XACT`, `XLRT`, `XOWN` and `ONAM`
+    /// ([`readiness::static_reference_field`]) are set aside under
+    /// `refr_static_fields_render_unchanged_v1`
+    /// ([`hypotheses::STATIC_REFERENCE_FIELDS_RENDER`]), as
+    /// `readiness::Switches::static_fields` sets them aside for collision.
+    /// Off by default: the render state as before.
+    pub fn set_render_static_fields(&mut self, on: bool) {
+        self.render_static_fields = on;
+    }
+    pub fn render_static_fields(&self) -> bool {
+        self.render_static_fields
+    }
+    /// Render readiness of a reference whose base is a static and whose
+    /// model is a leaf ([`leaf::read`]): the animation blockers of its one
+    /// transform controller ([`leaf::aside`]) are set aside under
+    /// `play_static_leaf_two_pose_v1` ([`hypotheses::STATIC_LEAF_TWO_POSE`]):
+    /// the static is drawn as its model stores it, the leaf at its stored
+    /// pose; a caller may pose the leaf at its other pose
+    /// ([`leaf::key_motion`]). Off by default: the render state as before.
+    pub fn set_render_static_leaves(&mut self, on: bool) {
+        self.render_static_leaves = on;
+    }
+    pub fn render_static_leaves(&self) -> bool {
+        self.render_static_leaves
+    }
     /// The mounted files the loader reads.
     pub fn vfs(&self) -> &'a Vfs {
         self.vfs
@@ -256,6 +285,8 @@ impl<'a> Loader<'a> {
             collision: readiness::Switches::default(),
             child_flag_agrees: false,
             render_child_flag_agrees: false,
+            render_static_fields: false,
+            render_static_leaves: false,
         }
     }
     /// Drop decoded asset state while retaining the explicit path interpretation policy.
@@ -648,13 +679,38 @@ impl<'a> Loader<'a> {
         // flag blocker is read under its rule.
         let agrees = self.render_child_flag_agrees
             && enable.as_ref().is_some_and(readiness::child_flag_agrees);
-        let state = if agrees {
+        // Behind their switches (off by default): a static's four
+        // reference fields, and a leaf model's animation blockers.
+        let on_static = base
+            .as_ref()
+            .is_some_and(|v| readiness::static_base(v.record.signature));
+        let fields = self.render_static_fields && on_static;
+        let origin = |k: usize| origins.get(k).copied().unwrap_or(readiness::Origin::Record);
+        let leaf = self.render_static_leaves
+            && on_static
+            && blockers
+                .iter()
+                .enumerate()
+                .any(|(k, e)| leaf::aside(e, origin(k)))
+            && self.leaf_model(base.as_ref(), b)?;
+        let state = if agrees || fields || leaf {
             hypotheses::classify_aside(
                 &blockers,
                 outside,
                 |k| {
-                    readiness::own_flag(&blockers[k])
-                        .then_some(hypotheses::ENABLE_CHILD_FLAG_AGREES)
+                    let e = &blockers[k];
+                    if agrees && readiness::own_flag(e) {
+                        Some(hypotheses::ENABLE_CHILD_FLAG_AGREES)
+                    } else if fields
+                        && origin(k) == readiness::Origin::Record
+                        && readiness::static_reference_field(e)
+                    {
+                        Some(hypotheses::STATIC_REFERENCE_FIELDS_RENDER)
+                    } else if leaf && leaf::aside(e, origin(k)) {
+                        Some(hypotheses::STATIC_LEAF_TWO_POSE)
+                    } else {
+                        None
+                    }
                 },
                 b,
             )?
@@ -695,6 +751,20 @@ impl<'a> Loader<'a> {
             blocker_origins: origins,
             collision,
             assets,
+        })
+    }
+    /// Whether a base's model (its first asset) is a leaf ([`leaf::read`]).
+    fn leaf_model(&self, base: Option<&Base>, b: &Budget) -> Result<bool> {
+        let Some(&asset) = base.and_then(|v| v.assets.first()) else {
+            return Ok(false);
+        };
+        if self.assets.nodes.get(asset).map(|n| n.kind) != Some(AssetKind::Model) {
+            return Ok(false);
+        }
+        let scope = b.child();
+        self.assets.with_decoded(asset, &scope, |d| match d {
+            DecodedAsset::Model(n) => Ok(leaf::read(&n, &scope)?.is_ok()),
+            _ => Ok(false),
         })
     }
     fn swap(

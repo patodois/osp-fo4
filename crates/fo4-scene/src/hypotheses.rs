@@ -247,6 +247,20 @@ pub const REFERENCE_ALPHA_COLLISION: &str = "refr_xalp_collision_unchanged_v1";
 /// collision as stored (`crate::readiness`, behind
 /// `readiness::Switches::static_fields`).
 pub const STATIC_REFERENCE_FIELDS_COLLISION: &str = "refr_static_fields_collision_unchanged_v1";
+/// A static's reference fields `XACT`, `XLRT`, `XOWN` and `ONAM` leave its
+/// drawing as stored (`Loader::set_render_static_fields`, off by default).
+pub const STATIC_REFERENCE_FIELDS_RENDER: &str = "refr_static_fields_render_unchanged_v1";
+/// A static whose model's one controller turns a node off the collision
+/// chain from its stored pose and back is drawn with that node in one of
+/// two poses, stored or at the key farthest from it (`crate::leaf`,
+/// `Loader::set_render_static_leaves`, off by default; the play window
+/// picks the pose by the collision marker boxes that meet the static).
+pub const STATIC_LEAF_TWO_POSE: &str = "play_static_leaf_two_pose_v1";
+/// A named platform's skinned shape whose bones go with more than one of
+/// its parts drawn skinned again with each bone moved by its part's motion
+/// (`crate::platform::skin_at_rest`, the play window's
+/// `--draw-platform-skins`, off by default).
+pub const PLATFORM_SKIN_FOLLOWS_PARTS: &str = "play_platform_skin_follows_parts_v1";
 /// Terrain of an exterior cell (`crate::terrain`, `spec/land.md`).
 pub const LAND_OF_CELL: &str = "land_single_cell_child_v1";
 pub const LAND_ACCUMULATION: &str = "land_vhgt_row_accumulation_v1";
@@ -701,6 +715,9 @@ mod tests {
             SEQUENCE_CHAIN_POSE,
             REFERENCE_ALPHA_COLLISION,
             STATIC_REFERENCE_FIELDS_COLLISION,
+            STATIC_REFERENCE_FIELDS_RENDER,
+            STATIC_LEAF_TWO_POSE,
+            PLATFORM_SKIN_FOLLOWS_PARTS,
             LAND_OF_CELL,
             LAND_ACCUMULATION,
             LAND_UNITS,

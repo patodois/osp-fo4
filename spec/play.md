@@ -1370,18 +1370,110 @@ stood at to press E (the frame at 91 s looks into it): the sequence's sign, not 
   (`play_elevator_rigid_v1`); whether the game's walkway also stops a player while it moves is not known. Not
   changed: `play_platform_part_holds_walker_v1` (pending) records the reading.
 
+### The checkpoint gate drawn and the walkway's grating moved (the draw-gate step)
+
+The door-shut step left two things a person cannot see: the checkpoint gate's frame, refused at render readiness,
+and the exit mechanism's walkway grating, drawn as built while its collision moves. Read from the records, the
+model and this project's own code only (outputs outside git):
+
+- **The four reference fields, for the drawing.** `--draw-static-fields` (`refr_static_fields_render_unchanged_v1`,
+  off by default; `Loader::set_render_static_fields`) sets `XACT`, `XLRT`, `XOWN` and `ONAM` aside for render
+  readiness on a reference whose base is a static, as `--play-collision-static-fields` does for collision. The
+  views census of the opening (the drawn step's eleven views, `coverage_census --views --render-child-flag-agrees`
+  with and without `--render-static-fields`): the rule alone newly draws no placement in any view, and none is no
+  longer drawn; the outcome counts are byte for byte the same. Of the 195 placed references of those views that
+  store one of the fields, the ones the fields alone refuse are items (`XLRT`, the item base types) and idle
+  markers with no model (`XOWN`), not statics; the frame is refused by its leaf's controller as well. So no other
+  static is drawn by it in the opening, and there was nothing else to look at for floating, doubled or blocking
+  shapes.
+- **The leaf.** The frame's model holds one controller, a free-running, clamped transform controller (0.2 to
+  4.33 s) on its leaf node, with XYZ keys that turn the node about its vertical axis only, the first key the stored
+  rotation; no collision object hangs at or below the node. `fo4_scene::leaf` reads such a model as a leaf with two
+  poses, the stored one and the pose of the rotation key farthest from it (here the key at 1.667 s, 94.3 degrees
+  away), without running the clock. Placed, the turned shapes' vertices average 54 units west of the hinge
+  stored (the leaf standing out from the fence line at the north end of the gap) and 54 units north of it keyed
+  (folded back along the north panel). Neither pose lies across the gap: under this project's reading of the
+  node's rotation words and keys (the first key reproduces the stored words), the model's leaf never closes the
+  way. What holds the gap's middle is the collision marker box alone, which has nothing to draw.
+- `--draw-static-leaves` (`play_static_leaf_two_pose_v1`, off by default; `Loader::set_render_static_leaves`,
+  `leaf::read`, `leaf::aside`, `leaf::key_motion`; the window's `load::leaf_draws`, `scene::LeafInstance::pose`,
+  `gpu::follow_leaves`, `Walker::marker_box_states`): the leaf's controller blockers are set aside for render
+  readiness and the static is drawn as stored; in the scripted play window, the collision marker boxes of the
+  walker's world that meet the static's object bounds pick the pose: while one stands, the pose whose turned
+  vertices lie nearer the boxes' centre (here the stored one, 82 units from it against 113), and once the run has
+  taken them all out, the other. Together with `--draw-static-fields` the frame is drawn in the four views that
+  load it, the only placement the two rules newly draw in the opening. That the stored pose stands for the way
+  held and the folded one for the way let through is a guess from the placement, not from any record; the game
+  may well leave the leaf still, the guards and the invisible box holding the way.
+- **The walkway's grating.** A named platform's skinned shape is drawn on the model's own nodes; a shape whose
+  bones go with more than one of the platform's parts stayed as built. `--draw-platform-skins`
+  (`play_platform_skin_follows_parts_v1`, off by default, needs `--draw-platforms`;
+  `fo4_scene::platform::skin_at_rest`, the window's `load::skin_draws`, `scene::skin_matrices`,
+  `scene::SkinInstance`, `gpu::follow_skins`) reads each skinned draw's skin (`BSSkin::Instance` and
+  `BSSkin::BoneData` through `fo4_nif::skin`, the vertex weights as stored) and its bones' matrices at rest, keeps
+  it only if skinning it again at rest gives the draw's mesh vertex for vertex within 0.001 units, and each time
+  the parts move skins it again with each bone's matrix moved by the rigid motion of the part its node chain goes
+  with (a bone under no part keeps its rest matrix), replacing the mesh. No public format page was needed: the
+  skin binding is read by the readers the cast already uses.
+
+What the records give (outputs outside git):
+
+- The scripted window with the three switches, the on-time synthetic person: the frame is drawn from the first load
+  of the gate's cells (322.31 s), as stored while the box stands, folded from 378.07 s (the box disabled at
+  377.67 s; the walker's next slice); 276 stages to the surface, the track and the timeline byte for byte the
+  headless run's, every other output too but `play.txt` (the wording below); 60.0 fps median, every minute of the
+  run at 60.
+- Session A's record (the seventh session's first, natural pace) in the same window with the three switches:
+  272 stages, out of the vault (the follow-on quest's 10 at
+  1170.51 s), the track and the timeline byte for byte the headless run's under the preset's play options (the
+  door-shut step's run of the record), every other output too but `play.txt` (the wording below); the frame drawn
+  from the first load of the gate's cells (448.75 s), folded from 555.60 s (the box disabled at 555.51 s); the
+  walkway's rails and grating joined under the walker as it crosses during the mechanism's sequence (1113 s); 60.0
+  fps median, every minute of the run at 60.
+- The same window run of the on-time person with every new switch off: every output as with them, and its frames
+  byte for byte those of the run with them wherever neither the frame nor a skinned platform shape is in view (60
+  of 121 frames; one-pixel differences in three more).
+- Headless frames of the gate's cells from three fixed points: with the switches off this step's viewer gives the
+  door-shut step's frames byte for byte; with them the frame stands on the fence line between the fence's posts,
+  its side panels and leaf where the collision census put them, nothing floating, doubled or across the path; a
+  probe outside the repository drawing the keyed pose shows the leaf folded against the north panel. In both poses
+  the gap stays open.
+- The skins: at rest the 5 skinned draws of the exterior elevator's model, and the 17 of the vault's gear door
+  mechanism and inner elevator (in the prewar and the postwar vault alike), are skinned again vertex for vertex
+  within 0.001 units (none refused); 3 and 12 of them have bones under more than one part. Against the run with the switch off: during the exterior
+  descent the deck no longer stays overhead as a flat roof over the walker; in the prewar vault the walkway's
+  grating lies between its rails instead of beside them, and a clamp no longer hangs in the air; at the exit the
+  walkway's rails and grating appear where the walker stands on them (924 to 952 s), where before the view showed
+  the gear room's wall. The cast's actors on the descending deck still stand where the timeline last put them (a
+  standing actor fills the view at 486 s with the switch on or off).
+- With every new switch off: the on-time person and both seventh-session records give every output byte for byte
+  headless (`play.txt` apart from its timings).
+- The regression sweep (the deck step's 20 early and 20 arriving-early synthetic persons, headless, the preset's play
+  options, this commit's `play_run`), against the door-shut step's runs: all 40 set the same stages in the same
+  order at the same seconds; out of the vault arriving early 14 of 20 and early 3 of 20, the descent's stage reached
+  by 17 and 15, as before. Nobody is lost.
+- `play.txt`'s held door line for a box held with no script's `SetOpen` (the front door at 3.0 s under
+  `--play-held-doors-at-load`) now says closed at load in place of closed by the run; with that switch off no line
+  changes.
+
+So `--draw-static-fields`, `--draw-static-leaves` and `--draw-platform-skins` are in the play preset
+(`apps/fo4-view/presets/play-opening.args`). They are read by the window's drawing only; `play_run` takes none of them.
+
 ## What the play mode does not do yet
 
 - The elevators ride only those the caller names (`--play-elevator`), headless and in the scripted window;
-  the window draws a named reference's parts where its collision stands, but in the opening none of them is
-  drawn (refused at render readiness). The exit elevator's descent before the player reaches it is the caller's assumption
+  the window draws a named reference's parts where its collision stands (`--draw-platforms` draws them as
+  stored whatever their render readiness; with `--draw-platform-skins` their skinned shapes whose bones go with
+  several parts are skinned again as the parts move, the draw-gate step). The exit elevator's descent before the player reaches it is the caller's assumption
   (`--assume-graph-event`): nothing in the run's data sends it.
 - The exterior's collision platform that an enable marker holds while the elevator rises (the exterior
   trigger's script disables the marker after waiting 12 s; the interpreter does not time the wait) is not
   read: the walker stands on the exterior elevator's own hatch and platform instead.
-- The checkpoint's gate frame stands only with `--play-collision-static-fields` (the gate-frame step); a static
-  whose collision chain a controller moves is still refused, and the collision of any model whose animation
-  moves a node a body reads is not posed by the clock.
+- The checkpoint's gate frame stands only with `--play-collision-static-fields` (the gate-frame step) and is drawn
+  only with `--draw-static-fields` and `--draw-static-leaves` (the draw-gate step), its leaf in one of two poses,
+  never swinging; the checkpoint's box has nothing to draw. A static whose collision chain a controller moves is
+  still refused, and the collision of any model whose animation moves a node a body reads is not posed by the
+  clock.
 - Plain doors: no collision is placed for any door, so none blocks the walker; the open state is not read, but with
   `--play-held-doors` a door the run's scripts close with its activation blocked holds the walker (the board step),
   and with `--play-held-doors-at-load` a door the person opens that stores no `ONAM` counts as closed from load
@@ -1449,3 +1541,6 @@ stood at to press E (the frame at 91 s looks into it): the sequence's sign, not 
 | `play_door_closed_at_load_v1` | `--play-held-doors-at-load` (with `--play-held-doors`; in the preset since the door-shut step) | the front door stores no `ONAM`; the field's published name; prior knowledge that a closed door is solid | weak |
 | `play_door_drawn_as_held_v1` | `fo4-view --draw-held-doors` (in the preset since the door-shut step) | the door model's stored leaf and its sequences named Open and Close | weak |
 | `play_platform_part_holds_walker_v1` | `--play-elevator` (the behaviour as it is) | the walls report on the second session's record | weak |
+| `refr_static_fields_render_unchanged_v1` | `fo4-view --draw-static-fields` (in the preset since the draw-gate step) | the render side of `refr_static_fields_collision_unchanged_v1`; the views census of the opening (no other placement newly drawn) | weak |
+| `play_static_leaf_two_pose_v1` | `fo4-view --draw-static-leaves` (in the preset since the draw-gate step) | the frame model's one clamped transform controller and its keys; the collision marker box inside the frame's bounds; which pose holds the way is a guess | weak |
+| `play_platform_skin_follows_parts_v1` | `fo4-view --draw-platform-skins` (with `--draw-platforms`) (in the preset since the draw-gate step) | the skins as stored, read by the cast's readers and checked against the built mesh at rest; each bone moved by its part as the collision is | weak |

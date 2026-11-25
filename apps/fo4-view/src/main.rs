@@ -70,7 +70,7 @@ fn load_scene_with<'s>(
             time: s.time,
             clock: s.clock,
             vertex_normals: s.light.vertex_normals,
-            chains: !s.play_platforms.is_empty() || s.drawing.held_doors,
+            chains: !s.play_platforms.is_empty() || s.drawing.held_doors || s.drawing.static_leaves,
             ..load::build_options(s.textures, s.level)
         },
         s.scene_memory,
@@ -170,6 +170,23 @@ fn load_scene_with<'s>(
         println!(
             "play: {} drawn instances of the held doors' models",
             gpu.doors.len()
+        );
+    }
+    // --draw-platform-skins: the named platforms' skinned draws and their
+    // meshes, skinned again as the parts move.
+    if !loaded.skins.is_empty() {
+        gpu.skins = scene::skin_instances(&loaded.build, &gpu, &loaded.skins);
+        println!(
+            "play: {} drawn skinned instances of the named platforms kept with their skins",
+            gpu.skins.len()
+        );
+    }
+    // --draw-static-leaves: the leaves' drawn shapes, stored and keyed.
+    if !loaded.leaves.is_empty() {
+        gpu.leaves = scene::leaf_instances(&loaded.build, &gpu, &loaded.leaves);
+        println!(
+            "play: {} drawn instances of the static leaves' models",
+            gpu.leaves.len()
         );
     }
     // Only with --light-vertex-normals: how many lit surfaces take them.

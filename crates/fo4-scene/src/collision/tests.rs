@@ -1010,3 +1010,57 @@ fn a_statics_reference_fields_are_set_aside_only_behind_their_switch() {
         .instances
         .is_empty());
 }
+
+#[test]
+fn a_statics_reference_fields_are_set_aside_for_its_drawing_only_behind_their_switch() {
+    // The fixture of the collision test above: a static's reference storing
+    // the four fields.
+    let f = fixture_with(false, &[], |rf| {
+        let mut rf = rf.to_vec();
+        rf.extend(sub(b"XACT", &13u32.to_le_bytes()));
+        rf.extend(sub(b"XLRT", &0x801u32.to_le_bytes()));
+        rf.extend(sub(b"XOWN", &[1, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]));
+        rf.extend(sub(b"ONAM", &[]));
+        group(9, 0x800, &record(b"REFR", 0x802, 0, &rf))
+    });
+    std::fs::write(f.manifest.root.join("meshes/a.nif"), model_nif(1)).unwrap();
+    let store = Store::open(&f.manifest, &Budget::new(8 << 20)).unwrap();
+    let v = Vfs::mount(&f.manifest, &Budget::new(8 << 20)).unwrap();
+    let b = Budget::new(64 << 20);
+    let state = |fields: bool, leaves: bool| {
+        let mut loader = Loader::new(&store, &v, "english", RuleLevel::Hypotheses, &b);
+        assert!(!loader.render_static_fields() && !loader.render_static_leaves());
+        loader.set_render_static_fields(fields);
+        loader.set_render_static_leaves(leaves);
+        let scene = loader.by_editor_id("SyntheticRoom", &b).unwrap();
+        assert_eq!(
+            scene.instances.len(),
+            1,
+            "{:?}",
+            scene
+                .exclusions
+                .iter()
+                .map(|e| (&e.code, &e.diagnostics))
+                .collect::<Vec<_>>()
+        );
+        let i = &scene.instances[0];
+        (
+            i.state.ready_at(RuleLevel::Hypotheses),
+            i.state.ready_at(RuleLevel::Measured),
+            i.state.hypotheses().to_vec(),
+            format!("{:?}", i.collision),
+        )
+    };
+    let off = state(false, false);
+    assert!(!off.0, "refused by the fields, as before");
+    // The leaves' switch alone: this model has no controller, no change.
+    assert_eq!(state(false, true), off);
+    for leaves in [false, true] {
+        let on = state(true, leaves);
+        assert!(on.0 && !on.1, "drawn under the pending rule only");
+        assert!(on.2.contains(&hypotheses::STATIC_REFERENCE_FIELDS_RENDER));
+        assert!(!on.2.contains(&hypotheses::STATIC_LEAF_TWO_POSE));
+        // Collision readiness is not the render switch's.
+        assert_eq!(on.3, off.3);
+    }
+}

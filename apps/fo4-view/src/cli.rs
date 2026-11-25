@@ -21,7 +21,8 @@ usage:
               [--play-shots-between FROM TO EVERY]...]
              [--timeline-cast [the cast readings of a --timeline frame]]
              [the light switches of --headless]]]
-           [--draw-child-flag-agrees] [--draw-platforms]
+           [--draw-child-flag-agrees] [--draw-platforms] [--draw-static-fields]
+           [--draw-static-leaves] [--draw-platform-skins]
       Window with a free-fly camera: W/A/S/D move, Shift moves faster, hold the
       left mouse button and move the mouse to look, R returns to the start pose.
       The title bar shows the mode, the speed and the position.
@@ -186,6 +187,27 @@ usage:
       with the door's nodes posed at the last key of its model's sequence
       named Open (none: not drawn); a door never held is not drawn, as
       before (pending rule play_door_drawn_as_held_v1).
+      --draw-static-fields (off by default; any window or frame) draws a
+      static whose reference's XACT, XLRT, XOWN or ONAM alone kept it out,
+      as its model stores it (pending rule
+      refr_static_fields_render_unchanged_v1, the drawing's side of
+      --play-collision-static-fields).
+      --draw-static-leaves (off by default; any window or frame) draws a
+      static whose model's one controller, free-running and clamped, turns
+      a node with no collision under it from its stored pose and back (a
+      leaf), as its model stores it; in the scripted play window with
+      --play-marker-boxes, while a collision marker box that meets the
+      static's object bounds stands, the leaf takes whichever of its two
+      poses (stored, or at its rotation key farthest from it) lies nearer
+      those boxes, and the other once the run has taken them all out
+      (pending rule play_static_leaf_two_pose_v1). The checkpoint gate's
+      frame needs both switches.
+      --draw-platform-skins (off by default; with --draw-platforms) draws
+      each skinned shape of a named platform whose bones go with more than
+      one of its parts skinned again, each frame its parts moved, with each
+      bone moved by its part's motion (a bone under no part stays), where
+      before such a shape stayed as built (pending rule
+      play_platform_skin_follows_parts_v1).
   fo4-view MANIFEST DATA_DIRECTORY CELL_EDITOR_ID [level] --headless
            --eye X,Y,Z --look X,Y,Z --out build/FRAME.png [--tags build/TAGS.bin]
            [--size WxH] [--backface-cull] [--terrain] [--around N] [--walk]
@@ -386,6 +408,21 @@ pub struct Drawing {
     /// them, posed by their model's sequence named Open once it has let
     /// them go, hidden before it first holds them (`crate::scene::DoorInstance`).
     pub held_doors: bool,
+    /// `--draw-static-fields` (`refr_static_fields_render_unchanged_v1`):
+    /// the loader's render readiness sets a static's `XACT`, `XLRT`,
+    /// `XOWN` and `ONAM` aside (`Loader::set_render_static_fields`).
+    pub static_fields: bool,
+    /// `--draw-static-leaves` (`play_static_leaf_two_pose_v1`): the
+    /// loader's render readiness sets a leaf model's animation blockers
+    /// aside on a static (`Loader::set_render_static_leaves`); the scripted
+    /// play window poses each leaf by the walker's collision marker boxes
+    /// (`crate::scene::LeafInstance::pose`).
+    pub static_leaves: bool,
+    /// `--draw-platform-skins` (`play_platform_skin_follows_parts_v1`;
+    /// with `--draw-platforms`): a named platform's skinned shape whose
+    /// bones go with several parts skinned again with each bone moved by
+    /// its part (`crate::scene::SkinInstance`).
+    pub platform_skins: bool,
     /// The scripted play window with `--exposure-eye`: the exposure
     /// measured per view instead of once per load (`scene::ViewExposure`;
     /// plumbing of the existing switch, set by the parser).
@@ -851,6 +888,9 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             "--draw-child-flag-agrees" => drawing.child_flag_agrees = true,
             "--draw-platforms" => drawing.platforms = true,
             "--draw-held-doors" => drawing.held_doors = true,
+            "--draw-static-fields" => drawing.static_fields = true,
+            "--draw-static-leaves" => drawing.static_leaves = true,
+            "--draw-platform-skins" => drawing.platform_skins = true,
             "--exposure-eye-visible" => drawing.exposure_visible = true,
             "--timeline-dead-lying" | "--timeline-dead-left-out" => {
                 if dead != fo4_scene::timeline::Dead::Standing {
@@ -1190,6 +1230,9 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
         {
             return Err("PlayKeys: --play-keys needs --play-stand SECONDS (the longest standing slice, so the run goes on while the person stands) and --play-reach UNITS (E's reach)".into());
         }
+    }
+    if scene.drawing.platform_skins && !scene.drawing.platforms {
+        return Err("--draw-platform-skins moves the skinned shapes --draw-platforms draws: it needs --draw-platforms".into());
     }
     if scene.drawing.platforms && scene.play_platforms.is_empty() {
         return Err("--draw-platforms draws the named platforms of the scripted play window: it needs --play-input and --play-elevator".into());
@@ -1553,6 +1596,11 @@ mod tests {
         assert!(p.switches.held_doors && p.switches.marker_boxes && p.switches.marker_box_layers);
         assert!(p.switches.static_fields && !p.switches.marker_box_layer_records);
         assert!(p.switches.held_at_load && scene.drawing.held_doors);
+        assert!(
+            scene.drawing.static_fields
+                && scene.drawing.static_leaves
+                && scene.drawing.platform_skins
+        );
         assert!(scene.play_cast.is_some() && scene.drawing.platforms && scene.light.any());
         // Without the local file's platforms the preset is refused.
         let mut alone = args("m d C --eye 1,2,3 --look 4,5,6 --play-run s.txt --play-out o");
@@ -1733,6 +1781,21 @@ mod tests {
         };
         assert!(scene.drawing.child_flag_agrees);
         assert!(!scene.drawing.platforms);
+        // The draw-gate step's switches: off by default, each on alone.
+        assert!(!scene.drawing.static_fields && !scene.drawing.static_leaves);
+        for (flag, fields, leaves) in [
+            ("--draw-static-fields", true, false),
+            ("--draw-static-leaves", false, true),
+        ] {
+            let Command::Window { scene, .. } = parse(&args(&format!("{base} {flag}"))).unwrap()
+            else {
+                panic!()
+            };
+            assert_eq!(
+                (scene.drawing.static_fields, scene.drawing.static_leaves),
+                (fields, leaves)
+            );
+        }
         // The play options are read only with the feature.
         #[cfg(feature = "script-event")]
         {

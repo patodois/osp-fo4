@@ -266,6 +266,17 @@ impl RunState {
     }
 }
 
+/// A collision marker's box of the walking world as it stands
+/// ([`Live::marker_boxes`]).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct MarkerBoxState {
+    /// World-axis bounds of the box's sources.
+    pub min: [f64; 3],
+    pub max: [f64; 3],
+    /// Whether a source of the box stands (the run has not taken it out).
+    pub standing: bool,
+}
+
 /// What the run's state makes of a loaded reference's collision.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Decision {
@@ -359,6 +370,8 @@ pub struct Live {
     /// Sources of the world as loaded that the activation's ray passes
     /// through ([`crate::world::Built::unpicked`]).
     unpicked: std::collections::BTreeSet<u32>,
+    /// Of `unpicked`, each source's world-axis bounds (min, max).
+    unpicked_bounds: BTreeMap<u32, ([f64; 3], [f64; 3])>,
     /// The doors' boxes in the dormant piece, by door
     /// ([`crate::rules::HELD_DOORS`], [`Live::with_held_doors`]): shown
     /// while the run's state holds the door; the activation's ray passes
@@ -390,6 +403,7 @@ impl Live {
             child_flag_agrees: false,
             decided: BTreeMap::new(),
             unpicked: Default::default(),
+            unpicked_bounds: BTreeMap::new(),
             held: BTreeMap::new(),
             holding: Default::default(),
             closed_at_load: Default::default(),
@@ -401,6 +415,24 @@ impl Live {
     /// through (the collision markers' boxes).
     pub fn with_unpicked(mut self, sources: &[u32]) -> Live {
         self.unpicked = sources.iter().copied().collect();
+        // Each such source's world-axis bounds, read once
+        // ([`Live::marker_boxes`]).
+        self.unpicked_bounds.clear();
+        if let Some(world) = self.set.get(&BASE) {
+            for e in &world.entries {
+                if !self.unpicked.contains(&e.source) {
+                    continue;
+                }
+                let m = self
+                    .unpicked_bounds
+                    .entry(e.source)
+                    .or_insert((e.bounds.min, e.bounds.max));
+                for i in 0..3 {
+                    m.0[i] = m.0[i].min(e.bounds.min[i]);
+                    m.1[i] = m.1[i].max(e.bounds.max[i]);
+                }
+            }
+        }
         self
     }
 
@@ -540,6 +572,35 @@ impl Live {
     /// Whether the live world follows the run.
     pub fn follows(&self) -> bool {
         !self.info.is_empty()
+    }
+
+    /// The collision markers' boxes of the world as loaded
+    /// ([`crate::world::Built::unpicked`], `--play-marker-boxes`), by
+    /// reference: the world-axis bounds of its sources and whether it
+    /// stands now (a source not hidden by the run's state). Reading them
+    /// changes nothing.
+    pub fn marker_boxes(&self) -> BTreeMap<FormKey, MarkerBoxState> {
+        let mut out: BTreeMap<FormKey, MarkerBoxState> = BTreeMap::new();
+        let Some(refs) = self.refs.get(&BASE) else {
+            return out;
+        };
+        for (s, (min, max)) in &self.unpicked_bounds {
+            let Some(Some(k)) = refs.get(*s as usize) else {
+                continue;
+            };
+            let standing = !self.set.is_hidden(&BASE, *s);
+            let m = out.entry(norm(k)).or_insert(MarkerBoxState {
+                min: *min,
+                max: *max,
+                standing: false,
+            });
+            for i in 0..3 {
+                m.min[i] = m.min[i].min(min[i]);
+                m.max[i] = m.max[i].max(max[i]);
+            }
+            m.standing |= standing;
+        }
+        out
     }
 
     /// The decision now standing for a reference (`None`: not one the
@@ -872,6 +933,28 @@ mod tests {
         .unwrap();
         assert_eq!(ray(&l), None);
         assert_eq!(l.stats.applies, 4);
+    }
+
+    #[test]
+    fn a_marker_box_reads_its_bounds_and_stands_until_the_run_takes_it_out() {
+        // `play_static_leaf_two_pose_v1`: the wall (source 1, reference 1)
+        // read as a box the ray passes.
+        let b = Budget::new(1 << 24);
+        let mut l = live().with_unpicked(&[1]);
+        let boxes = l.marker_boxes();
+        assert_eq!(boxes.len(), 1);
+        let m = boxes[&key(1)];
+        assert!(m.standing);
+        assert_eq!((m.min[0], m.max[0]), (100.0, 100.0));
+        assert_eq!(
+            (m.min[1], m.max[1], m.min[2], m.max[2]),
+            (-200.0, 200.0, 0.0, 300.0)
+        );
+        l.apply(&state(&[(1, Some(false), false)], &[]), &b)
+            .unwrap();
+        assert!(!l.marker_boxes()[&key(1)].standing);
+        // Without boxes: none.
+        assert!(live().marker_boxes().is_empty());
     }
 
     #[test]

@@ -328,6 +328,188 @@ pub fn door_instances(
         .collect()
 }
 
+/// A named platform's skinned draw that the scripted play window skins
+/// again with each bone moved by its part (`--draw-platform-skins`,
+/// `play_platform_skin_follows_parts_v1`).
+#[derive(Debug, Clone)]
+#[cfg_attr(not(feature = "script-event"), allow(dead_code))]
+pub struct SkinInstance {
+    /// Index into `GpuScene::instances`.
+    pub instance: usize,
+    /// Index into `GpuScene::meshes` (the mesh the instance draws).
+    pub mesh: usize,
+    pub shape: fo4_scene::actor::pose::SkinnedShape,
+    /// Each bone's matrix at rest, as the build skinned the mesh.
+    pub rest: Vec<fo4_scene::actor::pose::Affine>,
+}
+
+/// The instances of `gpu` converted from the draws `skins` lists
+/// (`crate::load::Loaded::skins`), with the mesh each draws.
+pub fn skin_instances(
+    build: &fo4_render::draw::Build,
+    gpu: &GpuScene,
+    skins: &[crate::load::SkinDraw],
+) -> Vec<SkinInstance> {
+    let by_draw: BTreeMap<usize, usize> =
+        gpu.draws.iter().enumerate().map(|(k, d)| (*d, k)).collect();
+    skins
+        .iter()
+        .filter_map(|s| {
+            let instance = *by_draw.get(&s.draw)?;
+            let d = build.list.draws.get(s.draw)?;
+            let mesh = *gpu.draw_meshes.get(&d.mesh)?;
+            Some(SkinInstance {
+                instance,
+                mesh,
+                shape: s.shape.clone(),
+                rest: s.rest.clone(),
+            })
+        })
+        .collect()
+}
+
+/// The bones' matrices that skin a named platform's draw where its parts
+/// stand (`play_platform_skin_follows_parts_v1`): each bone's matrix at
+/// rest after the motion of the part its chain goes with
+/// (`fo4_play::elevator::Platform::part_of`), carried into the draw's model
+/// space by its world transform `world` (a bone under no part keeps its
+/// rest matrix). `None` when no bone goes with a part.
+#[cfg(feature = "script-event")]
+pub fn skin_matrices(
+    p: &fo4_play::elevator::Platform,
+    d: &PlatformInstance,
+    rest: &[fo4_scene::actor::pose::Affine],
+) -> Option<Vec<fo4_scene::actor::pose::Affine>> {
+    use fo4_scene::actor::pose::Affine;
+    let affine = |t: fo4_scene::transform::Transform| Affine {
+        rows: std::array::from_fn(|i| std::array::from_fn(|j| t.rotation[j][i])),
+        translation: t.translation,
+        scale: t.scale,
+    };
+    let inverse = fo4_scene::leaf::inverse(d.world);
+    let mut any = false;
+    let out = d
+        .bones
+        .iter()
+        .zip(rest)
+        .map(|(chain, m)| match p.part_of(chain) {
+            Some(k) => {
+                any = true;
+                let moved = inverse
+                    .compose(fo4_play::elevator::transform(&p.parts[k].motion))
+                    .compose(d.world);
+                affine(moved).compose(m)
+            }
+            None => *m,
+        })
+        .collect();
+    any.then_some(out)
+}
+
+/// One drawn instance of a static's model that its leaf turns
+/// (`--draw-static-leaves`, `play_static_leaf_two_pose_v1`): its world
+/// transform as built (the leaf stored) and with the leaf at its keyed pose,
+/// the world-axis box of the static's object bounds, and the mean of the
+/// static's turned vertices under each pose.
+#[derive(Debug, Clone, PartialEq)]
+pub struct LeafInstance {
+    /// Index into `GpuScene::instances`.
+    pub instance: usize,
+    /// The placed static (normalised key).
+    pub reference: fo4_plugin::FormKey,
+    pub stored: fo4_scene::transform::Transform,
+    pub keyed: fo4_scene::transform::Transform,
+    pub min: [f64; 3],
+    pub max: [f64; 3],
+    pub stored_at: [f64; 3],
+    pub keyed_at: [f64; 3],
+}
+
+/// The pose a leaf is drawn in ([`LeafInstance::pose`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LeafPose {
+    /// As stored: no box meets the static.
+    Stored,
+    /// The pose nearer the boxes that meet the static, while one stands.
+    Holding { keyed: bool },
+    /// The other pose, once none of them stands.
+    Let { keyed: bool },
+}
+
+impl LeafPose {
+    /// Whether the leaf is drawn at its keyed pose.
+    #[cfg_attr(not(feature = "script-event"), allow(dead_code))]
+    pub fn keyed(self) -> bool {
+        matches!(
+            self,
+            LeafPose::Holding { keyed: true } | LeafPose::Let { keyed: true }
+        )
+    }
+}
+
+impl LeafInstance {
+    /// Whether a box of world-axis bounds `min`..`max` meets the static's.
+    #[cfg_attr(not(feature = "script-event"), allow(dead_code))]
+    pub fn meets(&self, min: [f64; 3], max: [f64; 3]) -> bool {
+        (0..3).all(|a| min[a] <= self.max[a] && max[a] >= self.min[a])
+    }
+
+    /// The pose under the boxes (world-axis bounds, standing) that meet
+    /// the static (`play_static_leaf_two_pose_v1`): none, as stored; else
+    /// the pose whose turned vertices' mean lies nearer the boxes' centres'
+    /// mean while one stands, the other once none stands.
+    #[cfg_attr(not(feature = "script-event"), allow(dead_code))]
+    pub fn pose(&self, boxes: &[([f64; 3], [f64; 3], bool)]) -> LeafPose {
+        let met: Vec<&([f64; 3], [f64; 3], bool)> =
+            boxes.iter().filter(|b| self.meets(b.0, b.1)).collect();
+        if met.is_empty() {
+            return LeafPose::Stored;
+        }
+        let centre: [f64; 3] = std::array::from_fn(|i| {
+            met.iter().map(|b| (b.0[i] + b.1[i]) / 2.0).sum::<f64>() / met.len() as f64
+        });
+        let d = |p: [f64; 3]| (0..3).map(|i| (p[i] - centre[i]).powi(2)).sum::<f64>();
+        let holding_keyed = d(self.keyed_at) < d(self.stored_at);
+        if met.iter().any(|b| b.2) {
+            LeafPose::Holding {
+                keyed: holding_keyed,
+            }
+        } else {
+            LeafPose::Let {
+                keyed: !holding_keyed,
+            }
+        }
+    }
+}
+
+/// The instances of `gpu` converted from the draws `leaves` lists
+/// (`crate::load::Loaded::leaves`).
+pub fn leaf_instances(
+    build: &fo4_render::draw::Build,
+    gpu: &GpuScene,
+    leaves: &[crate::load::LeafDraw],
+) -> Vec<LeafInstance> {
+    let by_draw: BTreeMap<usize, usize> =
+        gpu.draws.iter().enumerate().map(|(k, d)| (*d, k)).collect();
+    leaves
+        .iter()
+        .filter_map(|l| {
+            let instance = *by_draw.get(&l.draw)?;
+            let d = build.list.draws.get(l.draw)?;
+            Some(LeafInstance {
+                instance,
+                reference: fo4_scene::timeline::norm(&l.reference),
+                stored: d.world,
+                keyed: l.keyed,
+                min: l.min,
+                max: l.max,
+                stored_at: l.stored_at,
+                keyed_at: l.keyed_at,
+            })
+        })
+        .collect()
+}
+
 #[derive(Default)]
 pub struct GpuScene {
     pub meshes: Vec<GpuMesh>,
@@ -352,6 +534,14 @@ pub struct GpuScene {
     /// instances of their models' shapes ([`door_instances`]; empty
     /// otherwise).
     pub doors: Vec<DoorInstance>,
+    /// The scripted play window's static leaves (`--draw-static-leaves`):
+    /// the instances their leaves turn ([`leaf_instances`]; empty
+    /// otherwise).
+    pub leaves: Vec<LeafInstance>,
+    /// The scripted play window's named platforms' skinned draws whose
+    /// bones go with several parts (`--draw-platform-skins`;
+    /// [`skin_instances`]; empty otherwise).
+    pub skins: Vec<SkinInstance>,
     /// The frame's light (`fo4_scene::light`) as the surface shader reads
     /// it ([`light_words`]); `None` without the light switches.
     pub light: Option<GpuLight>,
@@ -1079,6 +1269,117 @@ mod tests {
     use super::*;
     use fo4_render::{Draw, Mesh, Mip, Sidedness, Texture, Vertex};
     use fo4_scene::transform::Transform;
+
+    #[test]
+    fn a_leafs_pose_is_the_one_nearer_its_boxes_while_one_stands() {
+        // `play_static_leaf_two_pose_v1`: the leaf keyed lies at x = 5, in
+        // the gap the box holds; stored it lies at x = -50.
+        let l = LeafInstance {
+            instance: 0,
+            reference: fo4_plugin::FormKey {
+                plugin: "a.esm".into(),
+                object_id: 1,
+            },
+            stored: Transform::IDENTITY,
+            keyed: Transform::IDENTITY,
+            min: [-100.0, 0.0, 0.0],
+            max: [10.0, 10.0, 10.0],
+            stored_at: [-50.0, 5.0, 5.0],
+            keyed_at: [5.0, 5.0, 5.0],
+        };
+        assert!(l.meets([5.0, 5.0, 5.0], [6.0, 6.0, 6.0]));
+        assert!(l.meets([10.0, -5.0, 0.0], [20.0, 0.0, 1.0]), "touching");
+        assert!(!l.meets([11.0, 0.0, 0.0], [20.0, 5.0, 5.0]));
+        let gap = ([4.0, 0.0, 0.0], [6.0, 10.0, 10.0]);
+        let far = ([50.0, 0.0, 0.0], [60.0, 10.0, 10.0]);
+        assert_eq!(l.pose(&[]), LeafPose::Stored);
+        assert_eq!(l.pose(&[(far.0, far.1, true)]), LeafPose::Stored);
+        let held = l.pose(&[(gap.0, gap.1, true), (far.0, far.1, false)]);
+        assert_eq!(held, LeafPose::Holding { keyed: true });
+        assert!(held.keyed());
+        let let_go = l.pose(&[(gap.0, gap.1, false)]);
+        assert_eq!(let_go, LeafPose::Let { keyed: false });
+        assert!(!let_go.keyed());
+    }
+
+    #[cfg(feature = "script-event")]
+    #[test]
+    fn a_skinned_platform_draw_moves_each_bone_by_its_part() {
+        // `play_platform_skin_follows_parts_v1`: parts read by blocks 5
+        // and 7, moved 10 along x and along y; a third bone under neither.
+        use fo4_play::elevator::{Members, PartMotion, Platform};
+        use fo4_scene::actor::pose::{Affine, SkinnedShape, SkinnedVertex};
+        let key = fo4_plugin::FormKey {
+            plugin: "a.esm".into(),
+            object_id: 2,
+        };
+        let p = Platform {
+            reference: key.clone(),
+            space: key.clone(),
+            model: "meshes/m.nif".into(),
+            set: vec![5, 7],
+            second: 1.0,
+            parts: vec![
+                PartMotion {
+                    members: Members::Deepest(5),
+                    motion: fo4_walk::motion::Motion::translation([10.0, 0.0, 0.0]),
+                },
+                PartMotion {
+                    members: Members::Deepest(7),
+                    motion: fo4_walk::motion::Motion::translation([0.0, 10.0, 0.0]),
+                },
+            ],
+        };
+        let d = PlatformInstance {
+            instance: 0,
+            reference: key,
+            model: "meshes/m.nif".into(),
+            chain: vec![0, 9],
+            bones: vec![vec![0, 5], vec![0, 7], vec![0, 3]],
+            // Placed 100 along x, turned a quarter about z.
+            world: Transform::euler(
+                [100.0, 0.0, 0.0, 0.0, 0.0, std::f32::consts::FRAC_PI_2],
+                1.0,
+            )
+            .unwrap(),
+        };
+        let rest = vec![Affine::IDENTITY; 3];
+        let m = skin_matrices(&p, &d, &rest).unwrap();
+        // A vertex at the model's origin weighted half on each moving bone
+        // goes half of each part's world motion, carried into the model's
+        // axes; one on the still bone stays.
+        let shape = SkinnedShape {
+            bones: Vec::new(),
+            vertices: vec![
+                SkinnedVertex {
+                    position: [0.0; 3],
+                    weights: [0.5, 0.5, 0.0, 0.0],
+                    bones: [0, 1, 0, 0],
+                },
+                SkinnedVertex {
+                    position: [1.0, 2.0, 3.0],
+                    weights: [1.0, 0.0, 0.0, 0.0],
+                    bones: [2, 0, 0, 0],
+                },
+            ],
+        };
+        let mut out = Vec::new();
+        shape.positions(&m, &mut out);
+        let world = d.world.apply(out[0]);
+        assert!(
+            (world[0] - 105.0).abs() < 1e-4
+                && (world[1] - 5.0).abs() < 1e-4
+                && world[2].abs() < 1e-4,
+            "{world:?}"
+        );
+        assert!((0..3).all(|i| (out[1][i] - [1.0, 2.0, 3.0][i]).abs() < 1e-9));
+        // No bone under a part: nothing to skin again.
+        let still = PlatformInstance {
+            bones: vec![vec![0, 3]],
+            ..d
+        };
+        assert_eq!(skin_matrices(&p, &still, &rest[..1]), None);
+    }
 
     fn alpha(enabled: u8, source: u32, destination: u32, test: Option<(u8, Option<u8>)>) -> Alpha {
         Alpha {

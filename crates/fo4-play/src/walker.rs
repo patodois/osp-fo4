@@ -191,8 +191,10 @@ pub struct Log {
     /// follow (`--play-player-moveto`, `--play-player-sits`): (second, why).
     pub player_moves: Vec<(f64, String)>,
     /// The held doors' boxes (`--play-held-doors`): (second, door, whether
-    /// its box entered the walking world or left it).
-    pub held_doors: Vec<(f64, FormKey, bool)>,
+    /// its box entered the walking world or left it, and for a box that
+    /// entered whether the door's closed state is the one at load: no
+    /// script has set it, `--play-held-doors-at-load`).
+    pub held_doors: Vec<(f64, FormKey, bool, bool)>,
     /// With [`Options::report_walls`]: each stretch of blocked ticks
     /// against the same source, (first second, last second, ticks, what
     /// blocked: [`Live::describe_source`]).
@@ -1013,10 +1015,21 @@ impl Walker {
     /// window to draw them so. Reading them changes nothing.
     pub fn held_door_states(&self) -> std::collections::BTreeMap<FormKey, bool> {
         let mut out = std::collections::BTreeMap::new();
-        for (_, k, held) in &self.log.borrow().held_doors {
+        for (_, k, held, _) in &self.log.borrow().held_doors {
             out.insert(k.clone(), *held);
         }
         out
+    }
+
+    /// The collision markers' boxes of the walking world as loaded, with
+    /// their bounds and whether each stands now
+    /// ([`crate::live::Live::marker_boxes`]), for a window to draw what
+    /// they hold (`play_static_leaf_two_pose_v1`). Reading them changes
+    /// nothing.
+    pub fn marker_box_states(
+        &self,
+    ) -> std::collections::BTreeMap<FormKey, crate::live::MarkerBoxState> {
+        self.live.marker_boxes()
     }
 
     /// The named platforms' moving parts where their collision stands
@@ -1405,7 +1418,10 @@ impl Walker {
                 let was = self.held_logged.contains(k);
                 let is = now.contains(k);
                 if was != is {
-                    log.held_doors.push((self.t, k.clone(), is));
+                    // Held with no script's `SetOpen`: closed at load
+                    // (`play_door_closed_at_load_v1`).
+                    let at_load = is && self.state.doors.get(k).is_none_or(|d| d.open.is_none());
+                    log.held_doors.push((self.t, k.clone(), is, at_load));
                     if is {
                         self.held_logged.insert(k.clone());
                     } else {

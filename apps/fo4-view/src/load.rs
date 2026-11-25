@@ -41,6 +41,279 @@ pub struct Loaded {
         fo4_plugin::FormKey,
         Option<fo4_scene::transform::Transform>,
     )>,
+    /// `--draw-static-leaves`: each draw a static's leaf turns
+    /// ([`leaf_draws`]).
+    pub leaves: Vec<LeafDraw>,
+    /// `--draw-platform-skins`: each skinned draw of a named platform with
+    /// its skin read at rest ([`skin_draws`]).
+    pub skins: Vec<SkinDraw>,
+}
+
+/// One skinned draw of a named platform's model, with its skin and each
+/// bone's matrix at rest (`play_platform_skin_follows_parts_v1`,
+/// `--draw-platform-skins`).
+#[derive(Debug, Clone)]
+pub struct SkinDraw {
+    /// Index into the build's draw list.
+    pub draw: usize,
+    pub shape: fo4_scene::actor::pose::SkinnedShape,
+    pub rest: Vec<fo4_scene::actor::pose::Affine>,
+}
+
+/// The largest distance, in model units, between a skinned draw's mesh
+/// vertex and the same vertex skinned again at rest by [`skin_draws`]'s
+/// reading for the reading to be used (else the draw stays as built).
+pub const SKIN_REST_TOLERANCE: f64 = 1e-3;
+
+/// `--draw-platform-skins` (`play_platform_skin_follows_parts_v1`): each
+/// skinned draw of a named platform (a chain with bones,
+/// `fo4_render::draw::DrawChain::bones`) with its skin and its bones'
+/// matrices at rest (`fo4_scene::platform::skin_at_rest`), kept only when
+/// skinning it again at rest gives the draw's mesh vertex for vertex within
+/// [`SKIN_REST_TOLERANCE`]; one log line.
+fn skin_draws(
+    build: &Build,
+    loader: &Loader<'_>,
+    limits: &fo4_core::Limits,
+    b: &Budget,
+) -> fo4_core::Result<Vec<SkinDraw>> {
+    let mut out = Vec::new();
+    let mut refused = Vec::new();
+    for c in build.chains.iter().filter(|c| !c.bones.is_empty()) {
+        let (Some(d), Some(&shape)) = (build.list.draws.get(c.draw), c.blocks.last()) else {
+            continue;
+        };
+        let Some(asset) = loader.assets.nodes.iter().position(|n| n.path == c.model) else {
+            refused.push(format!("draw {}: model not among the assets", c.draw));
+            continue;
+        };
+        let Some((skin, rest)) =
+            fo4_scene::platform::skin_at_rest(loader, asset, shape, limits, b)?
+        else {
+            refused.push(format!("draw {}: no skin", c.draw));
+            continue;
+        };
+        let Some(mesh) = build.list.meshes.get(d.mesh) else {
+            continue;
+        };
+        let mut again = Vec::new();
+        skin.positions(&rest, &mut again);
+        let far = if again.len() == mesh.vertices.len() {
+            again
+                .iter()
+                .zip(&mesh.vertices)
+                .map(|(a, v)| {
+                    (0..3)
+                        .map(|i| (a[i] - v.position[i]).abs())
+                        .fold(0.0, f64::max)
+                })
+                .fold(0.0, f64::max)
+        } else {
+            f64::INFINITY
+        };
+        if far > SKIN_REST_TOLERANCE {
+            refused.push(format!(
+                "draw {}: skinned again at rest {} of {} vertices, {far:.2e} units off",
+                c.draw,
+                again.len(),
+                mesh.vertices.len()
+            ));
+            continue;
+        }
+        out.push(SkinDraw {
+            draw: c.draw,
+            shape: skin,
+            rest,
+        });
+    }
+    println!(
+        "platforms: {} skinned draws read for their bones to follow the parts (play_platform_skin_follows_parts_v1), {} not{}",
+        out.len(),
+        refused.len(),
+        if refused.is_empty() {
+            String::new()
+        } else {
+            format!(": {}", refused.join("; "))
+        }
+    );
+    Ok(out)
+}
+
+/// One draw of a static's model that its leaf turns
+/// (`play_static_leaf_two_pose_v1`, `--draw-static-leaves`).
+#[derive(Debug, Clone, PartialEq)]
+pub struct LeafDraw {
+    /// Index into the build's draw list.
+    pub draw: usize,
+    /// The placed static.
+    pub reference: fo4_plugin::FormKey,
+    /// The draw's world transform with the leaf at its keyed pose (the
+    /// rotation key farthest from the stored one).
+    pub keyed: fo4_scene::transform::Transform,
+    /// The world-axis box of the static's object bounds (OBND) placed by
+    /// its reference: the collision marker boxes that meet it decide the
+    /// pose.
+    pub min: [f64; 3],
+    pub max: [f64; 3],
+    /// The mean of the static's turned draws' vertices in the world, with
+    /// the leaf stored and keyed: the pose nearer the boxes that meet the
+    /// static is the one that holds the way.
+    pub stored_at: [f64; 3],
+    pub keyed_at: [f64; 3],
+}
+
+/// `--draw-static-leaves` (`play_static_leaf_two_pose_v1`): for each
+/// instance of `scene` drawn under the rule, its model's leaf
+/// (`fo4_scene::leaf::read`), and each of its draws whose node chain passes
+/// through the leaf's node with its world transform at the leaf's keyed
+/// pose (`fo4_scene::leaf::key_motion`, turned into the world by the
+/// static's placement); one log line per static.
+fn leaf_draws(
+    build: &Build,
+    scene: &fo4_scene::Scene,
+    loader: &Loader<'_>,
+    b: &Budget,
+) -> fo4_core::Result<Vec<LeafDraw>> {
+    use fo4_scene::timeline::norm;
+    use fo4_scene::transform::Transform;
+    let mut placed = std::collections::BTreeMap::new();
+    for i in &scene.instances {
+        if !i
+            .state
+            .hypotheses()
+            .contains(&fo4_scene::hypotheses::STATIC_LEAF_TWO_POSE)
+        {
+            continue;
+        }
+        let (Some(base), Some(t)) = (&i.base, i.reference.data.transform) else {
+            continue;
+        };
+        let Some(&asset) = base.assets.first() else {
+            continue;
+        };
+        let Ok(r) = Transform::euler(t, i.reference.data.scale.unwrap_or(1.0)) else {
+            continue;
+        };
+        // The object bounds placed: the box of their eight corners.
+        let (mut min, mut max) = ([f64::INFINITY; 3], [f64::NEG_INFINITY; 3]);
+        if let Some(o) = base.common.bounds {
+            for k in 0..8 {
+                let c = [0, 1, 2].map(|a| f64::from(o[a + if k & (1 << a) != 0 { 3 } else { 0 }]));
+                let w = r.apply(c);
+                for a in 0..3 {
+                    min[a] = min[a].min(w[a]);
+                    max[a] = max[a].max(w[a]);
+                }
+            }
+        }
+        placed.insert(norm(&i.reference.key), (asset, r, min, max));
+    }
+    if placed.is_empty() {
+        return Ok(Vec::new());
+    }
+    let refs: std::collections::BTreeMap<u32, fo4_plugin::FormKey> = build
+        .instances
+        .iter()
+        .map(|i| (i.index, norm(&i.reference)))
+        .collect();
+    let mut out = Vec::new();
+    for (k, (asset, r, min, max)) in &placed {
+        let chains: Vec<&fo4_render::draw::DrawChain> = build
+            .chains
+            .iter()
+            .filter(|c| {
+                build
+                    .list
+                    .draws
+                    .get(c.draw)
+                    .and_then(|d| refs.get(&d.instance))
+                    == Some(k)
+            })
+            .collect();
+        let read = loader.assets.with_decoded(*asset, &b.child(), |d| {
+            let fo4_scene::DecodedAsset::Model(n) = d else {
+                return Ok(None);
+            };
+            let Ok(leaf) = fo4_scene::leaf::read(&n, b)? else {
+                return Ok(None);
+            };
+            let mut turned = Vec::new();
+            for c in &chains {
+                if !c.bones.is_empty() {
+                    continue;
+                }
+                if let Some(m) = fo4_scene::leaf::key_motion(&n, &leaf, &c.blocks) {
+                    turned.push((c.draw, m));
+                }
+            }
+            Ok(Some((leaf.key_time, leaf.key_angle, turned)))
+        })?;
+        let Some((time, angle, turned)) = read else {
+            println!(
+                "leaves: {} drawn under play_static_leaf_two_pose_v1 but its leaf does not read: drawn as stored",
+                fo4_scene::timeline::key_text(k)
+            );
+            continue;
+        };
+        // Each turned draw's world transform keyed, and the mean of the
+        // turned draws' vertices stored and keyed.
+        let mut posed = Vec::new();
+        let (mut stored_sum, mut keyed_sum, mut n) = ([0.0; 3], [0.0; 3], 0usize);
+        for (draw, m) in &turned {
+            let Some(d) = build.list.draws.get(*draw) else {
+                continue;
+            };
+            let keyed = r
+                .compose(*m)
+                .compose(fo4_scene::leaf::inverse(*r))
+                .compose(d.world);
+            if let Some(mesh) = build.list.meshes.get(d.mesh) {
+                for v in &mesh.vertices {
+                    let (a, b) = (d.world.apply(v.position), keyed.apply(v.position));
+                    for i in 0..3 {
+                        stored_sum[i] += a[i];
+                        keyed_sum[i] += b[i];
+                    }
+                    n += 1;
+                }
+            }
+            posed.push((*draw, keyed));
+        }
+        let mean = |v: [f64; 3]| v.map(|x| x / n.max(1) as f64);
+        let (stored_at, keyed_at) = (mean(stored_sum), mean(keyed_sum));
+        for (draw, keyed) in posed {
+            out.push(LeafDraw {
+                draw,
+                reference: k.clone(),
+                keyed,
+                min: *min,
+                max: *max,
+                stored_at,
+                keyed_at,
+            });
+        }
+        println!(
+            "leaves: {} drawn as stored, {} of its {} draws turned by {:.1} degrees (its farthest key, at {:.3} s) for its other pose; the turned draws' mean at ({:.0}, {:.0}, {:.0}) stored, ({:.0}, {:.0}, {:.0}) keyed; the collision marker boxes meeting its bounds ({:.0}, {:.0}, {:.0}) to ({:.0}, {:.0}, {:.0}) pick the pose (play_static_leaf_two_pose_v1)",
+            fo4_scene::timeline::key_text(k),
+            turned.len(),
+            chains.len(),
+            angle.to_degrees(),
+            time,
+            stored_at[0],
+            stored_at[1],
+            stored_at[2],
+            keyed_at[0],
+            keyed_at[1],
+            keyed_at[2],
+            min[0],
+            min[1],
+            min[2],
+            max[0],
+            max[1],
+            max[2]
+        );
+    }
+    Ok(out)
 }
 
 /// The inverse of a transform with an orthonormal rotation and a scale
@@ -393,6 +666,16 @@ pub fn cell<'s>(
     // the agreeing own flags' chains (`xesp_child_flag_agrees_chain_v1`).
     if drawing.child_flag_agrees {
         loader.set_render_child_flag_agrees(true);
+    }
+    // `--draw-static-fields` and `--draw-static-leaves` (off by default):
+    // render readiness sets a static's four reference fields and a leaf
+    // model's animation blockers aside (`refr_static_fields_render_unchanged_v1`,
+    // `play_static_leaf_two_pose_v1`).
+    if drawing.static_fields {
+        loader.set_render_static_fields(true);
+    }
+    if drawing.static_leaves {
+        loader.set_render_static_leaves(true);
     }
     // The assets the previous load left, when they were read the same way.
     let mut kept = kept;
@@ -773,6 +1056,16 @@ pub fn cell<'s>(
         );
         d
     };
+    let skins = if drawing.platform_skins && drawing.platforms && !platforms.is_empty() {
+        skin_draws(&build, &loader, limits, &budget)?
+    } else {
+        Vec::new()
+    };
+    let leaves = if drawing.static_leaves {
+        leaf_draws(&build, &scene, &loader, &budget)?
+    } else {
+        Vec::new()
+    };
     #[cfg(feature = "script-event")]
     if let Some(d) = dormant_drawn {
         crate::play::undraw_dormant(&mut scene, d);
@@ -1043,6 +1336,8 @@ pub fn cell<'s>(
         #[cfg(feature = "script-event")]
         live,
         doors,
+        leaves,
+        skins,
     })
 }
 

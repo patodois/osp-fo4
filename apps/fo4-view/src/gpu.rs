@@ -1096,6 +1096,7 @@ fn spawn_window_scene(world: &mut World) {
     #[cfg(feature = "script-event")]
     {
         world.remove_resource::<PlayPlatforms>();
+        let drawn_platforms = scene.platforms.clone();
         let drawn: Vec<(Entity, crate::scene::PlatformInstance)> =
             std::mem::take(&mut scene.platforms)
                 .into_iter()
@@ -1105,6 +1106,49 @@ fn spawn_window_scene(world: &mut World) {
             world.insert_resource(PlayPlatforms {
                 drawn,
                 reported: false,
+            });
+        }
+        world.remove_resource::<PlaySkins>();
+        let skins: Vec<SkinTarget> = std::mem::take(&mut scene.skins)
+            .into_iter()
+            .filter_map(|k| {
+                let platform = drawn_platforms
+                    .iter()
+                    .find(|p| p.instance == k.instance)?
+                    .clone();
+                let g = scene.meshes.get(k.mesh)?;
+                Some(SkinTarget {
+                    platform,
+                    handle: up.meshes.get(k.mesh)?.clone(),
+                    uvs: g.uvs.clone(),
+                    colors: g.colors.clone(),
+                    normals: g.normals.clone(),
+                    indices: g.indices.clone(),
+                    skin: k,
+                    last: None,
+                })
+            })
+            .collect();
+        if !skins.is_empty() {
+            println!(
+                "play: {} skinned platform draws kept to follow their bones' parts",
+                skins.len()
+            );
+            world.insert_resource(PlaySkins {
+                drawn: skins,
+                reported: false,
+                positions: Vec::new(),
+            });
+        }
+        world.remove_resource::<PlayLeaves>();
+        let leaves: Vec<(Entity, crate::scene::LeafInstance)> = std::mem::take(&mut scene.leaves)
+            .into_iter()
+            .filter_map(|l| entities.get(l.instance).map(|e| (*e, l)))
+            .collect();
+        if !leaves.is_empty() {
+            world.insert_resource(PlayLeaves {
+                drawn: leaves,
+                shown: std::collections::BTreeMap::new(),
             });
         }
         world.remove_resource::<PlayDoors>();
@@ -1808,6 +1852,193 @@ struct PlayDoors {
     shown: std::collections::BTreeMap<fo4_plugin::FormKey, Option<bool>>,
 }
 
+/// What the scripted play window's drawn doors, leaves and skins read and
+/// write, for [`play_scripted`].
+#[cfg(feature = "script-event")]
+type FollowParams<'w> = (
+    Option<ResMut<'w, PlayDoors>>,
+    Option<ResMut<'w, PlayLeaves>>,
+    Option<ResMut<'w, PlaySkins>>,
+    ResMut<'w, Assets<Mesh>>,
+);
+
+/// A named platform's skinned draw the scripted play window skins again
+/// (`--draw-platform-skins`): its platform instance, its skin and the mesh
+/// it draws with that mesh's other attributes, and the matrices it was
+/// last skinned with.
+#[cfg(feature = "script-event")]
+struct SkinTarget {
+    platform: crate::scene::PlatformInstance,
+    skin: crate::scene::SkinInstance,
+    handle: Handle<Mesh>,
+    uvs: Vec<[f32; 2]>,
+    colors: Option<Vec<[f32; 4]>>,
+    normals: Option<Vec<[f32; 3]>>,
+    indices: Vec<u16>,
+    last: Option<Vec<fo4_scene::actor::pose::Affine>>,
+}
+
+/// The scripted play window's skinned platform draws
+/// (`play_platform_skin_follows_parts_v1`), whether the first frame that
+/// skinned them was reported, and the positions' buffer.
+#[cfg(feature = "script-event")]
+#[derive(Resource)]
+struct PlaySkins {
+    drawn: Vec<SkinTarget>,
+    reported: bool,
+    positions: Vec<[f64; 3]>,
+}
+
+/// Each frame of the scripted play window with `--draw-platform-skins`
+/// (`play_platform_skin_follows_parts_v1`): a named platform's skinned draw
+/// whose bones go with more than one part, or some with none
+/// ([`crate::scene::platform_part`]), is skinned again with each bone's
+/// matrix moved by its part's motion ([`crate::scene::skin_matrices`]) and
+/// its mesh replaced, when the matrices changed. A draw whose bones all go
+/// with one part follows it as an instance ([`follow_platforms`]).
+#[cfg(feature = "script-event")]
+fn follow_skins(seen: &crate::play::Seen, skins: &mut PlaySkins, meshes: &mut Assets<Mesh>) {
+    if seen.platforms.is_empty() {
+        return;
+    }
+    let PlaySkins {
+        drawn,
+        reported,
+        positions,
+    } = skins;
+    let mut moving = 0usize;
+    for t in drawn.iter_mut() {
+        let d = &t.platform;
+        let Some(p) = seen
+            .platforms
+            .iter()
+            .find(|p| fo4_scene::timeline::norm(&p.reference) == d.reference && p.model == d.model)
+        else {
+            continue;
+        };
+        if !crate::scene::platform_part(p, d).1 {
+            continue;
+        }
+        let Some(m) = crate::scene::skin_matrices(p, d, &t.skin.rest) else {
+            continue;
+        };
+        moving += 1;
+        if t.last.as_ref() == Some(&m) {
+            continue;
+        }
+        t.skin.shape.positions(&m, positions);
+        let mut mesh = Mesh::new(
+            bevy::mesh::PrimitiveTopology::TriangleList,
+            bevy::asset::RenderAssetUsages::RENDER_WORLD,
+        )
+        .with_inserted_attribute(
+            Mesh::ATTRIBUTE_POSITION,
+            positions
+                .iter()
+                .map(|v| v.map(|x| x as f32))
+                .collect::<Vec<[f32; 3]>>(),
+        )
+        .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, t.uvs.clone())
+        .with_inserted_indices(bevy::mesh::Indices::U16(t.indices.clone()));
+        if let Some(c) = &t.colors {
+            mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, c.clone());
+        }
+        if let Some(n) = &t.normals {
+            mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, n.clone());
+        }
+        if let Err(e) = meshes.insert(t.handle.id(), mesh) {
+            eprintln!("PlatformSkinMesh: {e}");
+            continue;
+        }
+        t.last = Some(m);
+    }
+    if !*reported && moving > 0 {
+        *reported = true;
+        println!(
+            "play: platform skins at {:.3} s of the run: {moving} skinned draws with bones under more than one part skinned again by their parts (play_platform_skin_follows_parts_v1)",
+            seen.t
+        );
+    }
+}
+
+/// The drawn instances the static leaves turn in the scripted play window
+/// (`--draw-static-leaves`), and the pose each static was last drawn in.
+#[cfg(feature = "script-event")]
+#[derive(Resource)]
+struct PlayLeaves {
+    drawn: Vec<(Entity, crate::scene::LeafInstance)>,
+    shown: std::collections::BTreeMap<fo4_plugin::FormKey, crate::scene::LeafPose>,
+}
+
+/// Each frame of the scripted play window with `--draw-static-leaves`
+/// (`play_static_leaf_two_pose_v1`): each static's leaf is drawn in the pose
+/// the walker's collision marker boxes give it
+/// ([`crate::scene::LeafInstance::pose`]); a static the run disabled is
+/// hidden.
+#[cfg(feature = "script-event")]
+fn follow_leaves<F: bevy::ecs::query::QueryFilter>(
+    p: &crate::play::PlayRun,
+    seen: &crate::play::Seen,
+    leaves: &mut PlayLeaves,
+    instances: &mut Query<CellInstance, F>,
+) {
+    let boxes: Vec<([f64; 3], [f64; 3], bool)> = seen
+        .boxes
+        .values()
+        .map(|m| (m.min, m.max, m.standing))
+        .collect();
+    let mut poses = std::collections::BTreeMap::new();
+    for (e, l) in &leaves.drawn {
+        let pose = *poses
+            .entry(l.reference.clone())
+            .or_insert_with(|| l.pose(&boxes));
+        let Ok((_, tag, mut vis, mut t)) = instances.get_mut(*e) else {
+            continue;
+        };
+        if p.decision(tag.value) == Some(fo4_play::live::Decision::Absent) {
+            *vis = Visibility::Hidden;
+            continue;
+        }
+        let w = if pose.keyed() { l.keyed } else { l.stored };
+        match crate::coords::instance_transform(&w) {
+            Some((translation, rotation, scale)) => {
+                *vis = Visibility::Inherited;
+                *t = Transform {
+                    translation,
+                    rotation,
+                    scale,
+                };
+            }
+            None => *vis = Visibility::Hidden,
+        }
+    }
+    for (k, pose) in poses {
+        if leaves.shown.get(&k) != Some(&pose) {
+            leaves.shown.insert(k.clone(), pose);
+            let what = match pose {
+                crate::scene::LeafPose::Stored => "as stored (no box meets it)",
+                crate::scene::LeafPose::Holding { keyed: false } => {
+                    "as stored, holding the way (a box meeting it stands)"
+                }
+                crate::scene::LeafPose::Holding { keyed: true } => {
+                    "at its keyed pose, holding the way (a box meeting it stands)"
+                }
+                crate::scene::LeafPose::Let { keyed: false } => {
+                    "as stored, letting the way (no box meeting it stands)"
+                }
+                crate::scene::LeafPose::Let { keyed: true } => {
+                    "at its keyed pose, letting the way (no box meeting it stands)"
+                }
+            };
+            println!(
+                "play: static leaf {} drawn {what} at {:.3} s of the run",
+                fo4_scene::timeline::key_text(&k),
+                seen.t
+            );
+        }
+    }
+}
+
 /// Each frame of the scripted play window with `--draw-held-doors`
 /// (`play_door_drawn_as_held_v1`): a door whose box the walker's held
 /// doors' reading holds is drawn as stored (closed); one it held and let go
@@ -1873,6 +2104,7 @@ fn follow_platforms<F: bevy::ecs::query::QueryFilter>(
     seen: &crate::play::Seen,
     platforms: &mut PlayPlatforms,
     instances: &mut Query<CellInstance, F>,
+    skinned_again: bool,
 ) {
     if seen.platforms.is_empty() {
         return;
@@ -1912,7 +2144,14 @@ fn follow_platforms<F: bevy::ecs::query::QueryFilter>(
             "play: platforms at {:.3} s of the run: {moved} drawn instances follow their parts, {still} under no moving part, {unknown} of no named platform's model{}",
             seen.t,
             if split > 0 {
-                format!(", {split} skinned with bones under more than one part (still)")
+                format!(
+                    ", {split} skinned with bones under more than one part ({})",
+                    if skinned_again {
+                        "skinned again by their parts, --draw-platform-skins"
+                    } else {
+                        "still"
+                    }
+                )
             } else {
                 String::new()
             }
@@ -2281,7 +2520,7 @@ fn play_scripted(
     mut instances: Query<CellInstance, (Without<FlyCamera>, Without<CastEntity>)>,
     casts: Query<Entity, With<CastEntity>>,
     mut platforms: Option<ResMut<PlayPlatforms>>,
-    mut doors: Option<ResMut<PlayDoors>>,
+    (mut doors, mut leaves, mut skins, mut meshes): FollowParams,
     (mut exposure, lights, mut buffers): ExposureParams,
     mut exit: MessageWriter<AppExit>,
     mut person: Option<ResMut<PersonInput>>,
@@ -2419,10 +2658,16 @@ fn play_scripted(
     if drawn.uploading.is_none() {
         play_live(p, drawn, None, &mut instances);
         if let Some(pp) = platforms.as_deref_mut() {
-            follow_platforms(&seen, pp, &mut instances);
+            follow_platforms(&seen, pp, &mut instances, skins.is_some());
         }
         if let Some(pd) = doors.as_deref_mut() {
             follow_doors(p, &seen, pd, &mut instances);
+        }
+        if let Some(pl) = leaves.as_deref_mut() {
+            follow_leaves(p, &seen, pl, &mut instances);
+        }
+        if let Some(ps) = skins.as_deref_mut() {
+            follow_skins(&seen, ps, &mut meshes);
         }
         if let (Some(x), Some(l)) = (exposure.as_deref_mut(), lights.as_deref()) {
             expose_view(&seen, x, l, &mut buffers);

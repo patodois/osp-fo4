@@ -1140,6 +1140,10 @@ mod enabled {
         /// each with whether its box stands now
         /// (`fo4_play::walker::Walker::held_door_states`).
         pub doors: std::collections::BTreeMap<FormKey, bool>,
+        /// The collision markers' boxes of the walker's walking world, with
+        /// their bounds and whether each stands now
+        /// (`fo4_play::walker::Walker::marker_box_states`).
+        pub boxes: std::collections::BTreeMap<FormKey, fo4_play::live::MarkerBoxState>,
         /// `--play-keys`: what the activation key would meet from the
         /// walker's eye (`fo4_play::walker::Walker::aim`), as a label.
         pub aim: Option<String>,
@@ -1229,12 +1233,14 @@ mod enabled {
         fn publish(&mut self, n: &Next) {
             let platforms = self.walker.platforms();
             let doors = self.walker.held_door_states();
+            let boxes = self.walker.marker_box_states();
             let log = self.log.borrow();
             let Ok(mut s) = self.seen.lock() else {
                 return;
             };
             s.platforms = platforms;
             s.doors = doors;
+            s.boxes = boxes;
             // The heading: the slice's horizontal move, else a look command
             // given at or after its last point (`face`, `turn`: commands
             // due at a slice's end come after its move), else as it was.

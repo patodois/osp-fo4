@@ -248,3 +248,39 @@ pub fn add(
     }
     Ok((out, actors))
 }
+
+/// A named platform's skinned shape, read for a window that moves its
+/// bones with the platform's parts (`play_platform_skin_follows_parts_v1`,
+/// [`hypotheses::PLATFORM_SKIN_FOLLOWS_PARTS`]): shape block `shape` of
+/// model asset `asset` with its skin ([`actor::pose::SkinnedShape`]) and
+/// each bone's matrix as the draw skins the shape at rest on the model's
+/// own nodes ([`actor::pose::bone_matrices`] over
+/// [`actor::pose::Skeleton::read`]). `None` when the asset is not a model
+/// or the shape has no skin.
+pub fn skin_at_rest(
+    loader: &Loader<'_>,
+    asset: usize,
+    shape: usize,
+    limits: &fo4_core::Limits,
+    b: &Budget,
+) -> Result<Option<(actor::pose::SkinnedShape, Vec<actor::pose::Affine>)>, Error> {
+    let Some(node) = loader.assets.nodes.get(asset) else {
+        return Ok(None);
+    };
+    if node.kind != crate::AssetKind::Model {
+        return Ok(None);
+    }
+    let file = String::from_utf8_lossy(&node.path).into_owned();
+    loader.assets.with_decoded(asset, &b.child(), |d| {
+        let crate::DecodedAsset::Model(n) = d else {
+            return Ok(None);
+        };
+        let Some(skin) = fo4_nif::skin::shape_skin(&n, shape, &file, limits, b)? else {
+            return Ok(None);
+        };
+        let pose = actor::pose::Skeleton::read(&n, &file, limits, b)?;
+        let matrices = actor::pose::bone_matrices(&n, &skin, &pose, &file, b)?;
+        let s = actor::pose::SkinnedShape::read(&n, shape, &skin, &file, b)?;
+        Ok(Some((s, matrices)))
+    })
+}

@@ -100,3 +100,14 @@
 # The doors the held doors' reading holds, shut while held and posed open
 # after (play_door_drawn_as_held_v1).
 --draw-held-doors
+# A static whose reference's XACT, XLRT, XOWN or ONAM alone kept it out is
+# drawn (refr_static_fields_render_unchanged_v1), and a static whose model
+# turns a leaf off its collision is drawn with the leaf in the pose the
+# collision marker boxes meeting it give (play_static_leaf_two_pose_v1): the
+# checkpoint gate's frame.
+--draw-static-fields
+--draw-static-leaves
+# A named platform's skinned shape whose bones go with several parts is
+# skinned again as they move (play_platform_skin_follows_parts_v1): the
+# elevators' decks and the walkways.
+--draw-platform-skins
