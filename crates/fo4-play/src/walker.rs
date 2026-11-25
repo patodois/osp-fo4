@@ -327,18 +327,18 @@ pub fn persons_doors(
 /// What the person's activation of door `k` does under
 /// `play_door_activation_toggles_v1` (`--play-door-toggle`): `Some(false)`
 /// closes it, a door the held doors' reading shows open (`states`, as
-/// [`Walker::held_door_states`] gives them: `false`, no box) that stands in
-/// its open pose (`open_pose`); `Some(true)` opens it again, a door whose
-/// box stands because the person closed it (`state`); `None` for anything
-/// else (the activation as before).
+/// [`Walker::held_door_states`] gives them: `false`, no box: a door
+/// standing in its open pose, or a held door whose box left, the house's
+/// front door among them); `Some(true)` opens it again, a door whose box
+/// stands because the person closed it (`state`); `None` for anything else
+/// (the activation as before).
 pub fn door_toggle(
     states: &std::collections::BTreeMap<FormKey, bool>,
-    open_pose: &std::collections::BTreeSet<FormKey>,
     state: Option<&crate::live::DoorState>,
     k: &FormKey,
 ) -> Option<bool> {
     match states.get(k) {
-        Some(false) if open_pose.contains(k) => Some(false),
+        Some(false) => Some(false),
         Some(true) if state.is_some_and(|d| d.person_closed) => Some(true),
         _ => None,
     }
@@ -1250,12 +1250,8 @@ impl Walker {
                     let toggled = match act.as_ref() {
                         Some(a) if self.toggles() => {
                             let k = norm(&a.reference);
-                            let t = door_toggle(
-                                &self.held_door_states(),
-                                self.live.open_pose(),
-                                self.state.doors.get(&k),
-                                &k,
-                            );
+                            let t =
+                                door_toggle(&self.held_door_states(), self.state.doors.get(&k), &k);
                             match t {
                                 Some(false) => self.state.close_by_player(k),
                                 Some(true) => {
@@ -2301,26 +2297,82 @@ mod tests {
         assert!(walker(false).held_door_states().is_empty());
         // Shown open and standing open: E closes it.
         let states = on.held_door_states();
-        assert_eq!(door_toggle(&states, &pose, None, &key(3)), Some(false));
+        assert_eq!(door_toggle(&states, None, &key(3)), Some(false));
         // Its box standing because the person closed it: E opens it.
         let closed = std::collections::BTreeMap::from([(key(3), true)]);
         let d = crate::live::DoorState {
             person_closed: true,
             ..Default::default()
         };
-        assert_eq!(door_toggle(&closed, &pose, Some(&d), &key(3)), Some(true));
+        assert_eq!(door_toggle(&closed, Some(&d), &key(3)), Some(true));
         // Held by the run's scripts, not the person: E as before.
         let d = crate::live::DoorState {
             open: Some(false),
             blocked: Some(true),
             person_closed: false,
         };
-        assert_eq!(door_toggle(&closed, &pose, Some(&d), &key(3)), None);
+        assert_eq!(door_toggle(&closed, Some(&d), &key(3)), None);
         // A door the reading never showed, or no door: E as before.
-        assert_eq!(door_toggle(&states, &pose, None, &key(4)), None);
-        // Shown open but not standing in its open pose: E as before here.
-        let other = std::collections::BTreeMap::from([(key(5), false)]);
-        assert_eq!(door_toggle(&other, &pose, None, &key(5)), None);
+        assert_eq!(door_toggle(&states, None, &key(4)), None);
+        // A held door whose box left (the house's front door opened by the
+        // person or a script), shown open: E closes it too.
+        let released = std::collections::BTreeMap::from([(key(5), false)]);
+        let opened = crate::live::DoorState {
+            open: Some(true),
+            blocked: Some(true),
+            person_closed: false,
+        };
+        assert_eq!(door_toggle(&released, Some(&opened), &key(5)), Some(false));
+    }
+
+    #[test]
+    fn closing_a_door_the_person_opens_gives_the_run_the_activation_alone() {
+        // `play_door_activation_toggles_v1` with `play_activate_opens_v1`:
+        // the post (reference 7) stands for a door the person opens, shown
+        // open; E closes it and the run gets no open.
+        let script =
+            Script::parse("0 face 0\n1 forward on\n2.005 forward off\n2.5 activate\n3 end\n")
+                .unwrap();
+        let run = |toggle: bool| {
+            let opts = Options {
+                reach: Some(250.0),
+                held_doors: true,
+                door_open: true,
+                door_toggle: toggle,
+                ..Options::default()
+            };
+            let live = Live::fixed(floor(), vec![None, Some(key(7))])
+                .unwrap()
+                .with_open_pose([norm(&key(7))].into());
+            let mut w = Walker::new(World::new(), vec![], script.clone(), opts)
+                .unwrap()
+                .with_live(live, false)
+                .with_opens(vec![key(7)]);
+            w.state = RunState::reading_doors(true);
+            let start = Point {
+                t: 0.0,
+                space: key(1),
+                pos: [0.0, 0.0, 5.0],
+                facing: None,
+            };
+            let acts: Vec<PlayerAction> = slices(&mut w, &start)
+                .into_iter()
+                .flat_map(|x| x.actions)
+                .map(|a| a.action)
+                .collect();
+            let closed = w
+                .state
+                .doors
+                .get(&norm(&key(7)))
+                .is_some_and(|d| d.person_closed);
+            (acts, closed)
+        };
+        assert_eq!(run(true), (vec![PlayerAction::Activate], true));
+        // Without the switch: the activation and the open, as before.
+        assert_eq!(
+            run(false),
+            (vec![PlayerAction::Activate, PlayerAction::Open], false)
+        );
     }
 
     #[test]

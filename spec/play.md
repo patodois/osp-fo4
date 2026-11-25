@@ -1550,6 +1550,16 @@ end's floor and walls around it undrawn. The same piece stands at the prewar sli
   drawn (the two hall ends among them); a headless frame at the cone doorway (outside git) shows the hall end's floor,
   walls and jambs around the plate where there was the clear colour.
 
+**The front door's E.** After the visit the window drew the front door open and its prompt read close, but E gave
+the run the activation and the open again and left the door open (first record, 137.68 s and 331.85 s). With
+`--play-door-toggle` E on a held door whose box has left closes it as it closes a door standing open
+(`walker::door_toggle`), and for a door the person opens (`--play-activate-opens`) the run is given the activation
+without the open. Before the doorbell: the front door's reference stores no lock (`XLOC`), neither it nor its base a script (`VMAD`),
+and the base's door flags word is 0; the run's stage
+at 3 s blocks its activation, and whether the game refuses the player's key on a door whose activation a script
+blocked is not in the data, so the reading stays `play_door_activation_opens_held_before_visit_v1` (pending) and the
+early open is left as it is.
+
 ## What the play mode does not do yet
 
 - The elevators ride only those the caller names (`--play-elevator`), headless and in the scripted window;
