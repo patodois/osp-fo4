@@ -150,8 +150,15 @@ pub mod rules {
     /// that stage keep their offset (`fo4_vm`'s
     /// `caller_action_after_keeps_offset_v1`; `--play-action-after-offset`).
     pub const ACTIVATE_WRITTEN_SECOND: &str = "play_activate_written_second_v1";
+    /// A placed door that the run's scripts last closed
+    /// (`ObjectReference.SetOpen(false)`) and whose activation they last
+    /// blocked (`ObjectReference.BlockActivation` with its first argument
+    /// true) stands in the walking world as the box of its base's object
+    /// bounds placed by the reference, until a script opens it, unblocks
+    /// its activation or disables it (`--play-held-doors`).
+    pub const HELD_DOORS: &str = "play_door_closed_blocked_holds_v1";
     /// Every rule above.
-    pub const ALL: [&str; 21] = [
+    pub const ALL: [&str; 22] = [
         PLAYER_FEET,
         RUN_CLOCK,
         ACTIVATE_RAY,
@@ -173,6 +180,7 @@ pub mod rules {
         ACTIVATE_PERSON,
         ACTIVATE_FIRST_MET,
         ACTIVATE_WRITTEN_SECOND,
+        HELD_DOORS,
     ];
 }
 

@@ -38,6 +38,9 @@
 # A ride that ends with the walker in the air ends for it when it lands on
 # the ride (play_elevator_end_landing_v1).
 --play-elevator-door-landing
+# A door the run's scripts close with its activation blocked holds the
+# walker until a script opens it (play_door_closed_blocked_holds_v1).
+--play-held-doors
 --play-collision-off-chain
 --play-collision-reference-alpha
 --play-collision-child-flag-agrees

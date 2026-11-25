@@ -53,6 +53,12 @@ pub struct Options {
     /// over `walk_collision_marker_box_v1`; `--play-marker-boxes`). Off: no
     /// box, as before.
     pub marker_boxes: bool,
+    /// The boxes of the loaded doors' object bounds, kept in the live
+    /// world's dormant piece and shown while the run's scripts hold the
+    /// door closed with its activation blocked
+    /// (`play_door_closed_blocked_holds_v1`, `--play-held-doors`; with
+    /// [`Options::live`]). Off: none, as before.
+    pub held_doors: bool,
 }
 
 /// A placed door whose `XTEL` names a door: where it takes the player
@@ -97,6 +103,23 @@ pub struct Built {
     /// collision markers' boxes (`play_collision_marker_boxes_v1`), which
     /// stop the walker, not the eye.
     pub unpicked: Vec<u32>,
+    /// With [`Options::held_doors`]: each loaded door's box sources in the
+    /// dormant piece ([`held_door_corners`]), by door.
+    pub held: BTreeMap<FormKey, Vec<u32>>,
+}
+
+/// The eight corners of a door's box under `play_door_closed_blocked_holds_v1`:
+/// its base's object bounds (`lo`, `hi`, the model's units) placed by the
+/// reference's transform.
+pub fn held_door_corners(
+    frame: fo4_scene::transform::Transform,
+    lo: [f64; 3],
+    hi: [f64; 3],
+) -> [[f64; 3]; 8] {
+    std::array::from_fn(|k| {
+        let pick = |i: usize| if k & (1 << i) != 0 { hi[i] } else { lo[i] };
+        frame.apply([pick(0), pick(1), pick(2)])
+    })
 }
 
 /// The cell under a point: the interior cell itself, or the exterior cell
@@ -451,6 +474,35 @@ pub fn build(
     } else {
         None
     };
+    // The loaded doors' boxes, hidden in the dormant piece until the run
+    // holds the door (`play_door_closed_blocked_holds_v1`).
+    let mut held: BTreeMap<FormKey, Vec<u32>> = BTreeMap::new();
+    if o.held_doors {
+        if let Some((piece, _)) = live.as_mut() {
+            for (i, (k, frame, lo, hi)) in boxes.items.iter().enumerate() {
+                if boxes.kinds.get(i).copied().flatten() != Some(*b"DOOR") {
+                    continue;
+                }
+                let label = format!(
+                    "held door box {}:{:08x} (play_door_closed_blocked_holds_v1)",
+                    k.plugin, k.object_id
+                );
+                let corners = held_door_corners(*frame, *lo, *hi);
+                match piece.world.add_hull(&corners, 0., &label, &budget) {
+                    Ok(src) => {
+                        piece.refs.resize(piece.world.sources.len(), None);
+                        piece.refs[src as usize] = Some(norm(k));
+                        held.entry(norm(k)).or_default().push(src);
+                        bump(&mut counts, "held door boxes in the dormant piece");
+                    }
+                    Err(_) => bump(
+                        &mut counts,
+                        "held door boxes left out\tthe box does not build",
+                    ),
+                }
+            }
+        }
+    }
     // A box whose reference is not one of the scene's instances (a
     // persistent reference) is known to the live world by its own record.
     if let Some((_, info)) = live.as_mut() {
@@ -478,6 +530,7 @@ pub fn build(
         doors,
         counts,
         unpicked: marked.iter().map(|(_, _, s)| *s).collect(),
+        held,
     })
 }
 

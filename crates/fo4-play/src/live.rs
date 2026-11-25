@@ -85,6 +85,50 @@ pub struct RunState {
     pub visibility: BTreeMap<FormKey, (Option<bool>, bool)>,
     /// Per reference: the second and place of its last move.
     pub moves: BTreeMap<FormKey, (f64, Move)>,
+    /// Read the doors' open and activation states
+    /// ([`crate::rules::HELD_DOORS`], `--play-held-doors`): off, the
+    /// `SetOpen` and `BlockActivation` natives are not read.
+    pub doors_read: bool,
+    /// Per reference, with `doors_read`: the last `SetOpen` argument (open)
+    /// and the last `BlockActivation` first argument (activation blocked).
+    pub doors: BTreeMap<FormKey, DoorState>,
+}
+
+/// What the run's scripts last did to a reference's open state and its
+/// activation ([`crate::rules::HELD_DOORS`]).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct DoorState {
+    /// The last `SetOpen`: `Some(false)` closed by a script.
+    pub open: Option<bool>,
+    /// The last `BlockActivation`: `Some(true)` the activation blocked.
+    pub blocked: Option<bool>,
+}
+
+impl DoorState {
+    /// Whether the door holds the walker: closed by a script and its
+    /// activation blocked (a person's activation would not open it).
+    pub fn holds(&self) -> bool {
+        self.open == Some(false) && self.blocked == Some(true)
+    }
+}
+
+/// The door state change a native call makes ([`crate::rules::HELD_DOORS`]):
+/// `SetOpen(abOpen = true)` sets the open state, `BlockActivation(abBlocked
+/// = true, ...)` the activation's (the defaults the Creation Kit's
+/// documentation of the two functions gives); `None` for any other call or
+/// an argument that is not a boolean.
+pub fn door_change(native: &str, args: &[String]) -> Option<(bool, bool)> {
+    let first = match args.first().map(String::as_str) {
+        None => true,
+        Some("true") => true,
+        Some("false") => false,
+        Some(_) => return None,
+    };
+    match native {
+        "objectreference.setopen" => Some((true, first)),
+        "objectreference.blockactivation" => Some((false, first)),
+        _ => None,
+    }
 }
 
 fn object_key(vm: &Vm<'_>, o: ObjId) -> Option<FormKey> {
@@ -98,11 +142,34 @@ fn object_key(vm: &Vm<'_>, o: ObjId) -> Option<FormKey> {
 }
 
 impl RunState {
+    /// An empty state that reads the doors' open and activation states
+    /// when `doors` ([`RunState::doors_read`]).
+    pub fn reading_doors(doors: bool) -> RunState {
+        RunState {
+            doors_read: doors,
+            ..RunState::default()
+        }
+    }
+
     /// Reads what the run did since the last call; whether anything
     /// changed.
     pub fn update(&mut self, vm: &Vm<'_>) -> bool {
         let mut changed = false;
         for e in vm.effects.iter().skip(self.effects) {
+            if self.doors_read {
+                if let Some((is_open, v)) = door_change(&e.native, &e.args) {
+                    if let Some(k) = e.receiver_object.and_then(|o| object_key(vm, o)) {
+                        let d = self.doors.entry(k).or_default();
+                        if is_open {
+                            d.open = Some(v);
+                        } else {
+                            d.blocked = Some(v);
+                        }
+                        changed = true;
+                    }
+                    continue;
+                }
+            }
             let shown = match e.native.as_str() {
                 "objectreference.enable" | "objectreference.enablenowait" => true,
                 "objectreference.disable" | "objectreference.disablenowait" => false,
@@ -245,6 +312,10 @@ pub struct Stats {
     pub seconds: f64,
     /// The most seconds one apply took.
     pub longest: f64,
+    /// Held doors' boxes that entered and left the walking world
+    /// ([`crate::rules::HELD_DOORS`]).
+    pub held: u64,
+    pub released: u64,
 }
 
 /// The walking world with the run's state applied.
@@ -261,6 +332,13 @@ pub struct Live {
     /// Sources of the world as loaded that the activation's ray passes
     /// through ([`crate::world::Built::unpicked`]).
     unpicked: std::collections::BTreeSet<u32>,
+    /// The doors' boxes in the dormant piece, by door
+    /// ([`crate::rules::HELD_DOORS`], [`Live::with_held_doors`]): shown
+    /// while the run's state holds the door; the activation's ray passes
+    /// through them.
+    held: BTreeMap<FormKey, Vec<u32>>,
+    /// The doors whose boxes are shown.
+    holding: std::collections::BTreeSet<FormKey>,
     pub stats: Stats,
 }
 
@@ -282,6 +360,8 @@ impl Live {
             child_flag_agrees: false,
             decided: BTreeMap::new(),
             unpicked: Default::default(),
+            held: BTreeMap::new(),
+            holding: Default::default(),
             stats: Stats::default(),
         })
     }
@@ -291,6 +371,30 @@ impl Live {
     pub fn with_unpicked(mut self, sources: &[u32]) -> Live {
         self.unpicked = sources.iter().copied().collect();
         self
+    }
+
+    /// The doors' boxes ([`crate::rules::HELD_DOORS`], `--play-held-doors`):
+    /// per door (normalised key), its sources in the dormant piece, hidden
+    /// until [`Live::apply`] finds the run's state holding the door.
+    pub fn with_held_doors(mut self, held: BTreeMap<FormKey, Vec<u32>>) -> Live {
+        for srcs in held.values() {
+            for s in srcs {
+                self.set.set_hidden(&DORMANT, *s, true);
+            }
+        }
+        self.held = held;
+        self.holding.clear();
+        self
+    }
+
+    /// The doors whose boxes this live world holds (shown or not).
+    pub fn held_doors(&self) -> impl Iterator<Item = &FormKey> {
+        self.held.keys()
+    }
+
+    /// The doors whose boxes stand in the walking world now.
+    pub fn holding(&self) -> &std::collections::BTreeSet<FormKey> {
+        &self.holding
     }
 
     /// Decides the chains left open only by agreeing own flags as any
@@ -410,11 +514,33 @@ impl Live {
         if moves_changed {
             self.rebuild_moved(b)?;
         }
+        // A held door's box: while the run's scripts hold it closed with
+        // its activation blocked and the reference itself is not disabled.
+        let mut held_changed = 0usize;
+        for (k, srcs) in &self.held {
+            let want = s.doors.get(k).is_some_and(DoorState::holds)
+                && s.shown(k, nowait) != Some(false)
+                && self.decided.get(k) != Some(&Decision::Absent);
+            if want == self.holding.contains(k) {
+                continue;
+            }
+            for src in srcs {
+                self.set.set_hidden(&DORMANT, *src, !want);
+            }
+            if want {
+                self.holding.insert(k.clone());
+                self.stats.held += 1;
+            } else {
+                self.holding.remove(k);
+                self.stats.released += 1;
+            }
+            held_changed += 1;
+        }
         let took = started.elapsed().as_secs_f64();
         self.stats.applies += 1;
         self.stats.seconds += took;
         self.stats.longest = self.stats.longest.max(took);
-        Ok(changed.len())
+        Ok(changed.len() + held_changed)
     }
 
     fn rebuild_moved(&mut self, b: &Budget) -> Result<()> {
@@ -505,8 +631,11 @@ impl Live {
         let mut best: Option<(pick::Hit, bool)> = None;
         for (k, w, _) in self.set.pieces() {
             let refs = self.refs.get(k).map(Vec::as_slice).unwrap_or_default();
-            let keep =
-                |s: u32| !self.set.is_hidden(k, s) && !(*k == BASE && self.unpicked.contains(&s));
+            let keep = |s: u32| {
+                !self.set.is_hidden(k, s)
+                    && !(*k == BASE && self.unpicked.contains(&s))
+                    && !(*k == DORMANT && self.held.values().any(|v| v.contains(&s)))
+            };
             let hit = pick::met(w, refs, None, eye, dir, reach, &keep, skip, first_met);
             // The earlier piece keeps a tie.
             best = pick::nearer(first_met, best, hit);
@@ -711,6 +840,118 @@ mod tests {
         l.mirror_into(&mut set).unwrap();
         assert_eq!(contacts(l.space()), contacts(&set));
         assert!(set.keys().all(|k| *k != [i32::MAX, 1]));
+    }
+
+    /// `play_door_closed_blocked_holds_v1`: [`live`] with, in the dormant
+    /// piece, door 3's box across x = 30 to 40 (source 1).
+    fn live_with_door() -> Live {
+        let b = Budget::new(1 << 24);
+        let mut l = live();
+        let frame = fo4_scene::transform::Transform {
+            translation: [35.0, 0.0, 0.0],
+            ..fo4_scene::transform::Transform::IDENTITY
+        };
+        let corners =
+            crate::world::held_door_corners(frame, [-5.0, -50.0, 0.0], [5.0, 50.0, 200.0]);
+        let d = l.set.get(&DORMANT).unwrap().clone();
+        let mut d = d;
+        let src = d.add_hull(&corners, 0.0, "door", &b).unwrap();
+        assert_eq!(src, 1);
+        l.set.insert(DORMANT, d).unwrap();
+        // The dormant wall (reference 2) stays hidden, as `Live::new` left it.
+        l.set.set_hidden(&DORMANT, 0, true);
+        l.refs.get_mut(&DORMANT).unwrap().push(Some(key(3)));
+        l.with_held_doors(BTreeMap::from([(key(3), vec![src])]))
+    }
+
+    fn touches_at(s: &dyn fo4_walk::Space, x: f64) -> usize {
+        let (mut scratch, mut out) = (Vec::new(), Vec::new());
+        s.contacts(
+            [[x, 0.0, 20.0], [x, 0.0, 100.0]],
+            16.0,
+            0.0,
+            &mut scratch,
+            &mut out,
+        );
+        out.len()
+    }
+
+    fn door(open: Option<bool>, blocked: Option<bool>) -> RunState {
+        let mut s = RunState::reading_doors(true);
+        s.doors.insert(key(3), DoorState { open, blocked });
+        s
+    }
+
+    #[test]
+    fn a_door_the_run_closes_and_blocks_holds_the_walker_until_it_opens() {
+        let b = Budget::new(1 << 24);
+        let mut l = live_with_door();
+        // Not touched by the run: no box (doors place no collision).
+        assert_eq!(l.apply(&RunState::reading_doors(true), &b).unwrap(), 0);
+        assert_eq!(touches_at(l.space(), 35.0), 0);
+        // Closed only (a person's activation would open it): no box.
+        l.apply(&door(Some(false), None), &b).unwrap();
+        assert_eq!(touches_at(l.space(), 35.0), 0);
+        // Closed with its activation blocked: the box stops the walker,
+        // and the eye's ray passes through it to the wall at x = 100.
+        assert_eq!(l.apply(&door(Some(false), Some(true)), &b).unwrap(), 1);
+        assert_eq!(touches_at(l.space(), 35.0), 1);
+        assert!(l.holding().contains(&key(3)));
+        assert_eq!(ray(&l), Some((100.0, Some(key(1)))));
+        let mut set = WorldSet::new();
+        set.insert([0, 0], l.base().unwrap().clone()).unwrap();
+        l.mirror_into(&mut set).unwrap();
+        assert_eq!(touches_at(&set, 35.0), 1);
+        // Opened by a script: the way is free again.
+        l.apply(&door(Some(true), Some(true)), &b).unwrap();
+        assert_eq!(touches_at(l.space(), 35.0), 0);
+        // Closed and blocked again, then its activation unblocked.
+        l.apply(&door(Some(false), Some(true)), &b).unwrap();
+        assert_eq!(touches_at(l.space(), 35.0), 1);
+        l.apply(&door(Some(false), Some(false)), &b).unwrap();
+        assert_eq!(touches_at(l.space(), 35.0), 0);
+        // Held but disabled by the run: no box.
+        let mut s = door(Some(false), Some(true));
+        s.visibility.insert(key(3), (Some(false), false));
+        l.apply(&s, &b).unwrap();
+        assert_eq!(touches_at(l.space(), 35.0), 0);
+        assert_eq!((l.stats.held, l.stats.released), (2, 2));
+    }
+
+    #[test]
+    fn the_door_natives_read_as_their_documented_defaults() {
+        let a = |v: &[&str]| v.iter().map(|s| s.to_string()).collect::<Vec<_>>();
+        assert_eq!(
+            door_change("objectreference.setopen", &a(&["false"])),
+            Some((true, false))
+        );
+        assert_eq!(
+            door_change("objectreference.setopen", &a(&[])),
+            Some((true, true))
+        );
+        assert_eq!(
+            door_change("objectreference.blockactivation", &a(&["true", "true"])),
+            Some((false, true))
+        );
+        assert_eq!(
+            door_change("objectreference.blockactivation", &a(&["false", "false"])),
+            Some((false, false))
+        );
+        assert_eq!(
+            door_change("objectreference.setopen", &a(&["?3(native x)"])),
+            None
+        );
+        assert_eq!(door_change("objectreference.enable", &a(&[])), None);
+        assert!(DoorState {
+            open: Some(false),
+            blocked: Some(true)
+        }
+        .holds());
+        assert!(!DoorState {
+            open: None,
+            blocked: Some(true)
+        }
+        .holds());
     }
 
     #[test]

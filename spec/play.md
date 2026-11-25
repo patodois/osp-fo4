@@ -1069,6 +1069,59 @@ resident peak 2.23 GB against 2.38 GB. Frames of a person's record replayed in t
 exposure is measured at seconds that follow the window's frames (283.051 against 283.069 s in two runs), so five of
 48 differ in brightness between any two runs.
 
+### A person out of a closed door (the board step)
+
+The third session of the day stopped on the raised descent platform with 495 and neither 490 nor 500; the same stall
+as in the fourth attempt's report, which had a different cause (the spouse, the deck step). Replayed headless from its
+record, byte for byte, the stall is upstream of the platform:
+
+- **The platform needs the street's chain.** The platform's own trigger sets the second quest's 91, and with it the
+  opening's 490, only when that quest's first stage is done; the boarding handler sets 495 on the player's arrival and
+  500 when its count of arrivals reaches the seven that stage 470's fragment registers. The record gives two arrivals
+  (the player at 446.3 s, the spouse at 466 s): the five others are the crowd, which the second quest's chain of
+  scenes walks to the platform. That chain starts with its first stage, set only by the fragment of the opening's 410,
+  which only the trigger in front of the house sets, on an entry after 400 (the default trigger script).
+- **The person left the house 33 s before 400.** The house's front door is closed by the fragment of the stage that
+  ends the salesman's visit (117.9 s in the session) and its activation blocked from the stages before; the
+  fragment of 400 (248.07 s), the evacuation, opens it and unblocks it. The person walked through it at 214.9 s
+  (the play mode places no collision for doors), stood in the trigger of 410 from 215.3 to 231.1 s, before its
+  prerequisite, crossed the next two triggers of the street (the chain's 20 and 120) before the chain's first stage,
+  and never came back: 410 and the whole chain were never set. A caller's assumed entry into that trigger at 249 s
+  confirms it: 410, the chain from 10 and, at the platform, 490 at 445.7 s and 495 at 446.3 s; still no 500.
+- **And walked through the checkpoint's gate 6.3 s before 470.** The two stage triggers past the gate (the chain's
+  350 and 80, whose stages move the escort scene's actors to the platform) were crossed at 382.0 and 382.8 s,
+  before 470 (388.3 s) set their prerequisite: the collision marker's box across the gate, which 470 disables, is
+  not placed by the preset (`play_collision_marker_boxes_v1`, the early step).
+
+`--play-held-doors` (`play_door_closed_blocked_holds_v1`, off by default, in the play preset): the play mode reads the
+run's `SetOpen` and `BlockActivation` calls (`fo4_play::live::RunState::doors`), and a loaded door that the scripts last
+closed with its activation blocked stands in the walking world as the box of its base's object bounds placed by the
+reference (`world::Built::held`, kept in the live world's dormant piece and shown by `Live::apply`), until a script
+opens it, unblocks it or disables it; the activation's ray passes through it. In the opening two doors are held: the
+house's front door from the end of the salesman's visit to the evacuation (117.95 to 248.14 s in the session's
+replay) and the nursery's door between the two stages that close and open it.
+
+What the records give with the switch:
+
+- The third session's record: the walker is held at the front door from 214.94 s (the first point where its track
+  leaves the recorded one) until the door opens; the rest of the record, written for a person already down the
+  street, then walks it back into the house: the run stops at 402, short of the stall it had. A record made through
+  the door cannot replay past it.
+- The same person waiting at the door (the record's commands from 214.93 s moved 34.1 s later, the keys released in
+  between): 410 at 249.4 s, the street's chain, 490 at 479.8 s and 495 at 480.4 s; no 500, the gate crossed 6.4 s
+  before 470. Waiting also at the gate (from 415.96 s, 8 s): 350 and 80 at 424.1 and 424.9 s, 490 at 487.8 s, 495 and
+  500 at 488.4 s, the descent (510 at 497.4 s) and the vault below (600 at 522.9 s).
+- The second session's record (normal pace) gives the same outputs byte for byte; only the play report gains the
+  switch's lines. The first session's record leaves the recorded track at 329.98 s: its person stepped out of the
+  closed door during the broadcast and came back (the session's report: a premature trip to the doorstep), and the
+  record's later commands walk the held walker elsewhere. Without the switch every record replays as before.
+
+Not covered: the gate (the marker boxes stay out of the preset: under them the on-time synthetic person is stopped
+144 units from the front door at the salesman's visit, beyond the activation's reach, so the door cannot be opened;
+the front door's box is stored tilted by about 13 and 11 degrees about its horizontal axes, and where the game stops
+the player at it is not measured). Doors the scripts close without blocking their activation, and doors closed as
+placed, still place nothing (the door's open state and a person's opening of it are not read).
+
 ## What the play mode does not do yet
 
 - The elevators ride only those the caller names (`--play-elevator`), headless and in the scripted window;
@@ -1078,7 +1131,8 @@ exposure is measured at seconds that follow the window's frames (283.051 against
 - The exterior's collision platform that an enable marker holds while the elevator rises (the exterior
   trigger's script disables the marker after waiting 12 s; the interpreter does not time the wait) is not
   read: the walker stands on the exterior elevator's own hatch and platform instead.
-- Plain doors: no collision is placed for any door, so none blocks the walker; the open state is not read.
+- Plain doors: no collision is placed for any door, so none blocks the walker; the open state is not read, but with
+  `--play-held-doors` a door the run's scripts close with its activation blocked holds the walker (the board step).
 - Moving collision with a node (an animated door, a platform) is modelled only for the references the caller
   names (above); the live world moves only what the run moves.
 - A person's keys drive `play_run`'s walker in the window (`--play-keys`), checked by the synthetic person, the
@@ -1133,3 +1187,4 @@ exposure is measured at seconds that follow the window's frames (283.051 against
 | `pack_destination_outlives_scene_v1` | `quest_run --package-moves-outlive-scene` (in the run's arguments) | the escort's package actions and the boarding trigger's Stop; that an actor on its way goes on when its scene stops is prior knowledge, the arrival second the caller's | weak |
 | `play_elevator_end_landing_v1` | `--play-elevator-door-landing` (in the preset) | the play mode's own trace of the missed ride end; a policy of the ride's end | weak |
 | `play_collision_marker_boxes_v1` | `--play-marker-boxes` (not in the preset) | the gate's and the front door's boxes and the stages that disable them; that the obstacle flag makes a box solid for the player is prior knowledge | weak |
+| `play_door_closed_blocked_holds_v1` | `--play-held-doors` (in the preset) | the house door's closing, its blocked activation and the evacuation stage that opens it, as the run's scripts call them; the two natives' meaning from the Creation Kit's documentation; that a closed door is solid and its object bounds stand for its solid part is prior knowledge | weak |

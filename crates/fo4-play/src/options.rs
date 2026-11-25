@@ -72,6 +72,8 @@ pub struct Play {
     pub child_flag_agrees: bool,
     /// `--play-marker-boxes` (`play_collision_marker_boxes_v1`).
     pub marker_boxes: bool,
+    /// `--play-held-doors` (`play_door_closed_blocked_holds_v1`).
+    pub held_doors: bool,
     /// `--play-elevator REF` (repeated; `play_elevator_run_sequence_v1`),
     /// `--play-elevator-also REF`, `--play-elevator-also-with REF OWNER`.
     pub elevators: Vec<FormKey>,
@@ -153,6 +155,7 @@ impl Play {
             "--play-collision-reference-alpha" => &mut self.reference_alpha,
             "--play-collision-child-flag-agrees" => &mut self.child_flag_agrees,
             "--play-marker-boxes" => &mut self.marker_boxes,
+            "--play-held-doors" => &mut self.held_doors,
             "--play-pick-first-met" => &mut self.first_met,
             "--play-action-after-offset" => &mut self.action_offset,
             "--play-around" => {
@@ -298,6 +301,9 @@ impl Play {
         if self.marker_boxes && !self.live_world {
             return Err("--play-marker-boxes needs --play-live-world".into());
         }
+        if self.held_doors && !self.live_world {
+            return Err("--play-held-doors needs --play-live-world".into());
+        }
         if self.door_landing && !self.elevator_door {
             return Err("--play-elevator-door-landing needs --play-elevator-door".into());
         }
@@ -415,6 +421,7 @@ impl Play {
             collision: self.collision(),
             child_flag_agrees: self.child_flag_agrees,
             marker_boxes: self.marker_boxes,
+            held_doors: self.held_doors,
         }
     }
 
@@ -441,6 +448,7 @@ impl Play {
             collision: self.collision(),
             child_flag_agrees: self.child_flag_agrees,
             marker_boxes: self.marker_boxes,
+            held_doors: self.held_doors,
             ..walker::Options::default()
         };
         if let Some(v) = self.walk_speed {
@@ -506,6 +514,7 @@ impl Play {
             space,
             cell,
             unpicked,
+            held,
         } = built;
         let _ = writeln!(
             report,
@@ -521,6 +530,9 @@ impl Play {
         }
         if self.child_flag_agrees {
             let _ = writeln!(report, "switch: an enable chain left open only by records' own flags that agree with it decides their collision, at load and after the run's changes (--play-collision-child-flag-agrees, {})", fo4_scene::hypotheses::ENABLE_CHILD_FLAG_AGREES);
+        }
+        if self.held_doors {
+            let _ = writeln!(report, "switch: a loaded door's object bounds stand in the walking world while the run's scripts hold it closed with its activation blocked, until they open it, unblock it or disable it (--play-held-doors, {}): {} door(s)", crate::rules::HELD_DOORS, held.len());
         }
         if self.marker_boxes {
             let _ = writeln!(report, "switch: the collision markers' boxes among the loaded references and the worldspace's persistent references nearby stand in the walking world, taken out when the run disables them (--play-marker-boxes, {})", crate::rules::MARKER_BOXES);
@@ -556,7 +568,8 @@ impl Play {
                 let live = crate::live::Live::new(world, refs, dormant, info, space, nowait)
                     .map_err(|e| e.to_string())?
                     .with_child_flag_agrees(self.child_flag_agrees)
-                    .with_unpicked(&unpicked);
+                    .with_unpicked(&unpicked)
+                    .with_held_doors(held);
                 walker::Walker::new(fo4_walk::World::new(), Vec::new(), script, opts)?
                     .with_live(live, nowait)
             }

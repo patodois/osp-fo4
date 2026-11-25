@@ -59,6 +59,11 @@ pub struct Options {
     /// builds ([`crate::world::Options::marker_boxes`];
     /// `play_collision_marker_boxes_v1`, `--play-marker-boxes`).
     pub marker_boxes: bool,
+    /// The loaded doors' boxes in every walking world the walker builds,
+    /// standing while the run holds a door closed with its activation
+    /// blocked ([`crate::world::Options::held_doors`];
+    /// `play_door_closed_blocked_holds_v1`, `--play-held-doors`).
+    pub held_doors: bool,
     /// The longest standing slice (seconds; `--play-stand`), and how far
     /// ahead the walker looks for a moving platform before it stands: a
     /// policy of the play mode, no game claim. `None` (the default): a
@@ -83,6 +88,7 @@ impl Default for Options {
             collision: fo4_scene::readiness::Switches::default(),
             child_flag_agrees: false,
             marker_boxes: false,
+            held_doors: false,
             stand: None,
             first_met: false,
         }
@@ -160,6 +166,9 @@ pub struct Log {
     /// The run's `MoveTo` calls and sits of the player the walker did not
     /// follow (`--play-player-moveto`, `--play-player-sits`): (second, why).
     pub player_moves: Vec<(f64, String)>,
+    /// The held doors' boxes (`--play-held-doors`): (second, door, whether
+    /// its box entered the walking world or left it).
+    pub held_doors: Vec<(f64, FormKey, bool)>,
 }
 
 /// One load door crossed, or one `MoveTo` of the player the walker
@@ -255,6 +264,9 @@ fn collision_rules(o: &Options) -> std::collections::BTreeSet<&'static str> {
     if o.marker_boxes {
         out.insert(crate::rules::MARKER_BOXES);
         out.insert(fo4_walk::platform::rules::COLLISION_MARKER_BOX);
+    }
+    if o.held_doors {
+        out.insert(crate::rules::HELD_DOORS);
     }
     if c.off_chain {
         out.insert(fo4_scene::hypotheses::COLLISION_OFF_CHAIN);
@@ -366,6 +378,8 @@ pub struct Walker {
     live: Live,
     /// The run's state as the live world reads it (`--play-live-world`).
     state: RunState,
+    /// The held doors whose boxes the log last gave as standing.
+    held_logged: std::collections::BTreeSet<FormKey>,
     nowait: bool,
     doors: Option<Doors>,
     door: Option<(FormKey, LoadDoor)>,
@@ -460,7 +474,8 @@ impl Walker {
             elevators: Vec::new(),
             grid: None,
             live,
-            state: RunState::default(),
+            state: RunState::reading_doors(opts.held_doors),
+            held_logged: Default::default(),
             nowait: false,
             doors: None,
             door: None,
@@ -1282,6 +1297,23 @@ impl Walker {
             .map_err(|e| e.to_string())?;
         let mut log = self.log.borrow_mut();
         log.rules.insert(crate::rules::LIVE_COLLISION);
+        if self.opts.held_doors {
+            // Changes of the held doors this walking world loaded, against
+            // what the walker last logged (a load keeps a door's state).
+            let now = self.live.holding();
+            for k in self.live.held_doors() {
+                let was = self.held_logged.contains(k);
+                let is = now.contains(k);
+                if was != is {
+                    log.held_doors.push((self.t, k.clone(), is));
+                    if is {
+                        self.held_logged.insert(k.clone());
+                    } else {
+                        self.held_logged.remove(k);
+                    }
+                }
+            }
+        }
         Ok(())
     }
 
@@ -1400,6 +1432,7 @@ impl Walker {
             collision: self.opts.collision,
             child_flag_agrees: self.opts.child_flag_agrees,
             marker_boxes: self.opts.marker_boxes,
+            held_doors: self.opts.held_doors,
         };
         if let Some(f) = self.on_load.as_mut() {
             f(Some(cell));
@@ -1437,6 +1470,7 @@ impl Walker {
             .map(|l| {
                 l.with_child_flag_agrees(self.opts.child_flag_agrees)
                     .with_unpicked(&built.unpicked)
+                    .with_held_doors(std::mem::take(&mut built.held))
             }),
             None => Live::fixed(built.world, built.refs),
         }

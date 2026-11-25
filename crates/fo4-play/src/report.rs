@@ -65,6 +65,19 @@ pub fn walker(l: &Log, report: &mut String) {
             s.applies, s.entered, s.left, s.moved, s.seconds, s.longest
         );
     }
+    for (t, door, held) in &l.held_doors {
+        let _ = writeln!(
+            report,
+            "held door: at {t} s the box of {} {} the walking world ({})",
+            fo4_vm::bind::record_key(door),
+            if *held {
+                "entered (closed by the run, its activation blocked)"
+            } else {
+                "left"
+            },
+            crate::rules::HELD_DOORS
+        );
+    }
     for (t, cell, feet, secs) in &l.grid {
         let _ = writeln!(
             report,
