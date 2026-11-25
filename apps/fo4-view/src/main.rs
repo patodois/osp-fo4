@@ -12,6 +12,8 @@ mod gpu;
 mod hud;
 #[cfg(feature = "script-event")]
 mod hud_font;
+#[cfg(feature = "script-event")]
+mod jpeg;
 mod live;
 mod load;
 mod path;

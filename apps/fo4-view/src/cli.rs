@@ -113,7 +113,8 @@ usage:
       when the walker's walking world is built about another cell (a load
       door, a MoveTo, a sit, a grid square left) the window loads and draws
       that cell, the run waiting meanwhile. --play-shots DIR
-      --play-shot-every SECONDS writes the window's frame as a PNG into DIR
+      --play-shot-every SECONDS writes the window's frame as a JPEG
+      (quality 80, tSECONDS.jpg) into DIR
       (under ./build, as every output) each time the run passes a multiple
       of SECONDS, and with --play-shots-between FROM TO EVERY (repeated)
       every EVERY seconds from FROM to TO too; the window closes when the
@@ -169,7 +170,10 @@ usage:
       change, where each actor of the drawn cast is drawn (or that it left
       the cast) and the state of each door the held doors' reading holds
       within 2048 units of the walker, with the play clock and the walker's
-      feet (spec/play.md, Watching the actors at a shut door).
+      feet, and every second of the play clock (and at each door change) a
+      sample: the walker's feet and where the eight actors of the drawn
+      cast nearest it are drawn, moved or not (spec/play.md, Watching the
+      actors at a shut door).
       --args FILE reads more arguments from FILE, one per line (# starts a
       comment line), in its place on the command line.
       --draw-child-flag-agrees (off by default; the window and --headless)

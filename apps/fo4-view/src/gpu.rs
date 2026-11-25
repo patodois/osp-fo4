@@ -1995,6 +1995,8 @@ struct PlayWatch {
     actors: std::collections::BTreeMap<fo4_plugin::FormKey, [f64; 3]>,
     doors: std::collections::BTreeMap<fo4_plugin::FormKey, Option<bool>>,
     feet: Option<[f64; 3]>,
+    /// The play clock's second of the next sample.
+    sample: f64,
 }
 
 /// Units from the walker within which [`PlayWatch`] writes the held doors.
@@ -2004,6 +2006,12 @@ const WATCH_DOOR_REACH: f64 = 2048.0;
 /// written again; the walker, when a line is written or it moved this far.
 #[cfg(feature = "script-event")]
 const WATCH_MOVE: f64 = 8.0;
+/// Seconds of the play clock between two samples of [`PlayWatch`].
+#[cfg(feature = "script-event")]
+const WATCH_SAMPLE_SECONDS: f64 = 1.0;
+/// How many of the drawn cast's actors nearest the walker a sample writes.
+#[cfg(feature = "script-event")]
+const WATCH_NEAR: usize = 8;
 
 #[cfg(feature = "script-event")]
 impl PlayWatch {
@@ -2017,13 +2025,14 @@ impl PlayWatch {
                 use std::io::Write as _;
                 let _ = writeln!(
                     out,
-                    "# fo4-view play watch (measurement only): KIND\tRUN_SECONDS\tWHAT\t...\n# walker\tT\tX\tY\tZ\n# actor\tT\tREF\tdrawn|gone\tX\tY\tZ\tDISTANCE_TO_WALKER\n# door\tT\tREF\tclosed|open|not-held\tX\tY\tZ\tDISTANCE_TO_WALKER (X Y Z: its first drawn shape's place, - when not drawn)"
+                    "# fo4-view play watch (measurement only): KIND\tRUN_SECONDS\tWHAT\t...\n# walker\tT\tX\tY\tZ\n# actor\tT\tREF\tdrawn|gone\tX\tY\tZ\tDISTANCE_TO_WALKER\n# door\tT\tREF\tclosed|open|not-held\tX\tY\tZ\tDISTANCE_TO_WALKER (X Y Z: its first drawn shape's place, - when not drawn)\n# sample\tT\tX\tY\tZ (the walker's feet; every {WATCH_SAMPLE_SECONDS} s of the play clock and at each door line, moved or not)\n# near\tT\tREF\tX\tY\tZ\tDISTANCE_TO_WALKER (after a sample: the {WATCH_NEAR} actors of the drawn cast nearest the walker, moved or not)"
                 );
                 Some(PlayWatch {
                     out,
                     actors: std::collections::BTreeMap::new(),
                     doors: std::collections::BTreeMap::new(),
                     feet: None,
+                    sample: 0.0,
                 })
             }
             Err(e) => {
@@ -2051,6 +2060,7 @@ fn watch_play<F: bevy::ecs::query::QueryFilter>(
     };
     let far = |p: [f64; 3]| -> String { dist(p).map_or("-".to_string(), |d| format!("{d:.1}")) };
     let mut lines: Vec<String> = Vec::new();
+    let mut door_lines = false;
     // Where each actor of the cast is drawn: its place, raised by what
     // its draws were moved by (`ride_cast`).
     let mut now: std::collections::BTreeMap<fo4_plugin::FormKey, [f64; 3]> =
@@ -2123,6 +2133,7 @@ fn watch_play<F: bevy::ecs::query::QueryFilter>(
             Some(p) => (format!("{:.1}\t{:.1}\t{:.1}", p[0], p[1], p[2]), far(p)),
             None => ("-\t-\t-".to_string(), "-".to_string()),
         };
+        door_lines = true;
         lines.push(format!(
             "door\t{t:.3}\t{}\t{}\t{x}\t{d}",
             fo4_scene::timeline::key_text(k),
@@ -2137,6 +2148,7 @@ fn watch_play<F: bevy::ecs::query::QueryFilter>(
         .collect();
     for k in left {
         watch.doors.remove(&k);
+        door_lines = true;
         lines.push(format!(
             "door\t{t:.3}\t{}\tnot-held\t-\t-\t-\t-",
             fo4_scene::timeline::key_text(&k)
@@ -2157,9 +2169,37 @@ fn watch_play<F: bevy::ecs::query::QueryFilter>(
         );
         watch.feet = Some(f);
     }
-    let wrote = !lines.is_empty() || walked;
+    let mut wrote = !lines.is_empty() || walked;
     for l in lines {
         let _ = writeln!(watch.out, "{l}");
+    }
+    // A sample: the walker and the actors nearest it, moved or not, so a
+    // reader tells one that stood from one not written.
+    if let (Some(f), true) = (feet, t >= watch.sample || door_lines) {
+        if t >= watch.sample {
+            watch.sample = ((t / WATCH_SAMPLE_SECONDS).floor() + 1.0) * WATCH_SAMPLE_SECONDS;
+        }
+        let _ = writeln!(
+            watch.out,
+            "sample\t{t:.3}\t{:.1}\t{:.1}\t{:.1}",
+            f[0], f[1], f[2]
+        );
+        let mut near: Vec<(f64, &fo4_plugin::FormKey, [f64; 3])> = now
+            .iter()
+            .filter_map(|(k, p)| dist(*p).map(|d| (d, k, *p)))
+            .collect();
+        near.sort_by(|a, b| a.0.total_cmp(&b.0).then_with(|| a.1.cmp(b.1)));
+        for (d, k, p) in near.into_iter().take(WATCH_NEAR) {
+            let _ = writeln!(
+                watch.out,
+                "near\t{t:.3}\t{}\t{:.1}\t{:.1}\t{:.1}\t{d:.1}",
+                fo4_scene::timeline::key_text(k),
+                p[0],
+                p[1],
+                p[2]
+            );
+        }
+        wrote = true;
     }
     // The window may end by the process's exit: nothing waits in memory.
     if wrote {
@@ -3182,18 +3222,19 @@ fn play_scripted(
         if let Some((at, s)) = &shots.asked {
             let image = shots.captured.lock().ok().and_then(|mut c| c.take());
             if let Some(image) = image {
-                let file = format!("{dir}/t{at:07.1}.png");
+                let file = format!("{dir}/t{at:07.1}.jpg");
                 let root = p.data_root().map(std::path::PathBuf::from);
                 let (at, s) = (*at, s.clone());
                 // Encoded and written on a thread of its own (viewer
                 // policy): a frame's PNG took 0.7 to 1.0 s on the window's
-                // frame loop.
+                // frame loop. JPEG at quality 80 (viewer policy: a person
+                // looks at these frames; nothing compares them).
                 let write = move || {
-                    match capture_png(image).and_then(|(png, size)| {
+                    match capture_jpeg(image).and_then(|(bytes, size)| {
                         use std::io::Write;
                         crate::load::output_file(&file, root.as_deref())
                             .map_err(|e| e.to_string())?
-                            .write_all(&png)
+                            .write_all(&bytes)
                             .map(|()| size)
                             .map_err(|e| format!("{file}: {e}"))
                     }) {
@@ -3760,6 +3801,21 @@ fn script_frame(world: &mut World) {
 
 /// A window capture as PNG bytes, and its size.
 fn capture_png(image: Image) -> Result<(Vec<u8>, [u32; 2]), String> {
+    let (rgba, size) = capture_rgba(image)?;
+    let png = crate::load::png_rgba8(size, &rgba).map_err(|e| e.to_string())?;
+    Ok((png, size))
+}
+
+/// A captured frame as a JPEG file at [`crate::jpeg::SHOT_QUALITY`].
+#[cfg(feature = "script-event")]
+fn capture_jpeg(image: Image) -> Result<(Vec<u8>, [u32; 2]), String> {
+    let (rgba, size) = capture_rgba(image)?;
+    let jpeg = crate::jpeg::encode_rgba8(size, &rgba, crate::jpeg::SHOT_QUALITY)?;
+    Ok((jpeg, size))
+}
+
+/// A captured frame's RGBA8 pixels and size.
+fn capture_rgba(image: Image) -> Result<(Vec<u8>, [u32; 2]), String> {
     let size = [image.width(), image.height()];
     let bgra = match image.texture_descriptor.format {
         TextureFormat::Bgra8Unorm | TextureFormat::Bgra8UnormSrgb => true,
@@ -3772,8 +3828,7 @@ fn capture_png(image: Image) -> Result<(Vec<u8>, [u32; 2]), String> {
             p.swap(0, 2);
         }
     }
-    let png = crate::load::png_rgba8(size, &rgba).map_err(|e| e.to_string())?;
-    Ok((png, size))
+    Ok((rgba, size))
 }
 
 fn script_step(world: &mut World, s: &mut Script) -> Result<(), String> {
