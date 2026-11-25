@@ -621,9 +621,14 @@ pub struct KeptAssets<'s> {
 /// them (else the next load starts empty).
 pub const KEPT_ASSETS_MAX: u64 = 768 << 20;
 
+/// The most bytes of files the kept assets keep for the next read of the
+/// same asset (`fo4_scene::Assets::keep_files`; viewer policy).
+pub const KEPT_FILES_MAX: u64 = 512 << 20;
+
 /// `loader` starts from the assets `slot` keeps when they were read the
 /// same way (path policy, clock switches) and hold at most
-/// [`KEPT_ASSETS_MAX`]; else from empty ones.
+/// [`KEPT_ASSETS_MAX`]; else from empty ones. Either way they keep the
+/// files they read, up to [`KEPT_FILES_MAX`].
 pub fn take_kept<'s>(slot: &mut KeptAssets<'s>, loader: &mut Loader<'s>) {
     if let Some(a) = slot.assets.take() {
         if a.clock == loader.assets.clock
@@ -634,6 +639,7 @@ pub fn take_kept<'s>(slot: &mut KeptAssets<'s>, loader: &mut Loader<'s>) {
             loader.assets = a;
         }
     }
+    loader.assets.keep_files(KEPT_FILES_MAX);
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -1412,6 +1418,15 @@ pub fn cell<'s>(
         refs.resize(w.sources.len(), None);
     }
     if let Some(slot) = kept {
+        let f = loader.assets.kept_files();
+        println!(
+            "files kept for the next load: {} files, {:.1} MiB (at most {} MiB); reads from them {} of {}",
+            f.files,
+            f.bytes as f64 / f64::from(1u32 << 20),
+            KEPT_FILES_MAX >> 20,
+            f.hits,
+            f.hits + f.reads
+        );
         slot.assets = Some(std::mem::replace(
             &mut loader.assets,
             fo4_scene::Assets::with_policy(vfs, &budget, level),

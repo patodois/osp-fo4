@@ -148,8 +148,80 @@ pub struct Assets<'a> {
     /// The clock's switches the rest tags of models are read with
     /// (`crate::rest::tags_with`); all off by default.
     pub clock: crate::clock::Switches,
+    /// Files read for [`Assets::with_decoded`] kept for the next read of
+    /// the same asset, within a cap ([`Assets::keep_files`]; none by
+    /// default).
+    files: std::cell::RefCell<FileCache>,
+}
+
+/// The files [`Assets::keep_files`] keeps: by asset, oldest first out.
+#[derive(Default)]
+struct FileCache {
+    cap: u64,
+    used: u64,
+    map: HashMap<usize, std::sync::Arc<Vec<u8>>>,
+    order: std::collections::VecDeque<usize>,
+    hits: u64,
+    reads: u64,
+}
+
+/// What [`Assets::keep_files`] holds: files, their bytes, the reads it
+/// answered and the reads that went to the archives.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct KeptFiles {
+    pub files: usize,
+    pub bytes: u64,
+    pub hits: u64,
+    pub reads: u64,
+}
+
+impl FileCache {
+    fn insert(&mut self, id: usize, bytes: std::sync::Arc<Vec<u8>>) {
+        let n = bytes.len() as u64;
+        if n > self.cap / 4 || self.map.contains_key(&id) {
+            return;
+        }
+        while self.used + n > self.cap {
+            let Some(old) = self.order.pop_front() else {
+                break;
+            };
+            if let Some(b) = self.map.remove(&old) {
+                self.used -= b.len() as u64;
+            }
+        }
+        self.used += n;
+        self.map.insert(id, bytes);
+        self.order.push_back(id);
+    }
 }
 impl<'a> Assets<'a> {
+    /// Keeps the files [`Assets::with_decoded`] reads, up to `cap` bytes in
+    /// all (a file above a quarter of it is not kept; the oldest go first),
+    /// so a later read of the same asset does not extract it from its
+    /// archive again (a caller's policy: the play window's cell loads).
+    /// `0`, the default, keeps none. What a read gives is unchanged.
+    pub fn keep_files(&mut self, cap: u64) {
+        let f = self.files.get_mut();
+        f.cap = cap;
+        while f.used > cap {
+            let Some(old) = f.order.pop_front() else {
+                break;
+            };
+            if let Some(b) = f.map.remove(&old) {
+                f.used -= b.len() as u64;
+            }
+        }
+    }
+    /// What [`Assets::keep_files`] holds now.
+    pub fn kept_files(&self) -> KeptFiles {
+        let f = self.files.borrow();
+        KeptFiles {
+            files: f.map.len(),
+            bytes: f.used,
+            hits: f.hits,
+            reads: f.reads,
+        }
+    }
     pub fn new(vfs: &'a Vfs, b: &Budget) -> Self {
         Self::with_policy(vfs, b, crate::RuleLevel::Facts)
     }
@@ -165,6 +237,7 @@ impl<'a> Assets<'a> {
             unavailable: false,
             active: Vec::new(),
             clock: crate::clock::Switches::default(),
+            files: Default::default(),
         }
     }
     pub fn resolve_path(
@@ -976,7 +1049,27 @@ impl<'a> Assets<'a> {
             Error::new("InvalidAssetIndex", "asset graph", 0, self.nodes.len(), id)
         })?;
         let c = self.vfs.winner_bytes(&node.path)?;
-        let bytes = self.vfs.read_candidate(c, b)?;
+        let kept = {
+            let mut f = self.files.borrow_mut();
+            let k = f.map.get(&id).cloned();
+            if k.is_some() {
+                f.hits += 1;
+            } else {
+                f.reads += 1;
+            }
+            k
+        };
+        let bytes = match kept {
+            Some(k) => k,
+            None => {
+                let read = std::sync::Arc::new(self.vfs.read_candidate(c, b)?);
+                let mut f = self.files.borrow_mut();
+                if f.cap > 0 {
+                    f.insert(id, read.clone());
+                }
+                read
+            }
+        };
         let l = self.vfs.limits();
         let parsed = match node.kind {
             AssetKind::Model => DecodedAsset::Model(fo4_nif::Nif::read(
@@ -1293,5 +1386,30 @@ mod tests {
         assert!(error.found.starts_with("length=2;"));
         assert!(assets.nodes[1].pending_live_proof.is_empty());
         assert!(!assets.unavailable());
+    }
+
+    /// `Assets::keep_files`' store: the oldest files leave first to make
+    /// room, a file above a quarter of the cap is not kept, a file kept
+    /// once is not kept twice.
+    #[test]
+    fn kept_files_leave_oldest_first_within_the_cap() {
+        let bytes = |n: usize| std::sync::Arc::new(vec![0u8; n]);
+        let mut f = FileCache {
+            cap: 100,
+            ..FileCache::default()
+        };
+        f.insert(1, bytes(20));
+        f.insert(2, bytes(25));
+        f.insert(3, bytes(26));
+        assert_eq!((f.map.len(), f.used), (2, 45));
+        f.insert(2, bytes(25));
+        assert_eq!(f.order.len(), 2);
+        for id in 4..7 {
+            f.insert(id, bytes(20));
+        }
+        // 20 + 25 + 3 x 20 = 105 > 100: file 1 left first.
+        assert!(!f.map.contains_key(&1) && f.map.contains_key(&2));
+        assert_eq!(f.used, 85);
+        assert!(f.used <= f.cap);
     }
 }

@@ -1754,6 +1754,39 @@ Outdoors the cast before now stays drawn through those 0.4 to 1.3 s; at the thre
 0.45 s after the geometry, inside the reveal wait, so cell and people appear together. In the window the run's
 walker build shares the machine, so the window's seconds are longer than these; the window itself was not run.
 
+### Pauses, the bare sky and the startup hitch (the eleventh-session step)
+
+- Every read of a model, material or texture went to its archive again (`Assets::with_decoded` extracts the file each
+  call: the first cell's read again asks for a file 4,480 times, 3,879 of them one it had already read; each outdoor
+  load after it about 5,000 times). The play data
+  thread's kept assets now keep the files they read, up to `KEPT_FILES_MAX` (512 MiB of file bytes; the oldest
+  leave first, a file above a quarter of the cap is not kept; `Assets::keep_files`, off unless a caller asks; a log
+  line per load gives files, bytes and reads answered). With the cap at 256 MiB an outdoor square's draw list hardly
+  shrank (1.1 to 1.2 s): its files fill 420 to 510 MiB. The draw list step, headless with the eleventh sessions'
+  arguments, before / after (A): street 1.48 / 0.42 s, trail 1.41 / 0.56, bridge 1.35 / 0.85, hill 1.13 / 0.24, rock
+  bend 0.86 / 0.12, back to the hill square 1.13 / 0.23, prewar vault 0.29 / 0.24, dream 0.73 / 0.58, postwar vault
+  0.50 / 0.29, surface 1.46 / 1.09 (B alike). The process's peak resident memory, headless, 2.02 / 2.38 GB (A) and
+  1.74 / 2.27 GB (B). What the draw holds is the same (a synthetic test builds twice from kept files and compares).
+- The bridge got slower in the window only. Headless its load is what it was (2.05 s at the step's parent with the
+  eleventh sessions' arguments). In the eleventh windows the run's own walking world build for that square, code
+  unchanged since the tenth sessions and 3.2 s headless, took 7.99 and 8.59 s (3.62 and 3.69 s in the tenth
+  sessions) while the window's draw list took 3.66 and 3.67 s (1.35 headless): the whole process ran 2.2 to 2.7
+  times slower during that crossing, the same at A's rock bend (walker 5.36 s, 2.04 headless) and B's hill (5.26 s).
+  The logs hold no wall clock or memory reading to say what took the machine then; the tester's readings show free
+  memory at 33 to 36 % during the sessions against 55 % at the start. The kept files take most of the draw list's
+  work out of every load, which is what the window can change.
+- The bare sky (B at 528.6 s): the frame log shows the window held only the sky and the HUD for 4 frames (0.07 s)
+  as the square crossed back was uploaded, the old cell's instances and cast removed when the load arrived and the
+  new ones spawned after the texture upload's batches; every load of both sessions did so for 1 to 5 frames (0.02
+  to 0.21 s). The record shows the person standing from 528.6 to 542.1 s, so the 11 s are the time to the tester's
+  next look, not 11 s of sky in the window. Since the step above the old view stays until the new is spawned.
+- The startup hitch (A frame 433 at 8.4 s, B frame 724 at 13.6 s of wall time, 834 ms): the frame whose update
+  encoded and wrote the first `--play-shots` frame (2560 by 1440) as PNG on the frame loop; every shot after it did
+  the same (0.7 to 1.5 s, one every 30 s of the run). The first cell's read again runs on the play data thread and no
+  frame waits on it. Shots are now encoded and written on a thread of their own (joined before the window closes).
+  The read again took 7.74 and 12.43 s in the windows (4.7 headless) and saved the street's square most of its
+  stall (6.46 and 15.24 s in the tenth sessions, 4.16 and 5.42 s in the eleventh): kept.
+
 ## What the play mode does not do yet
 
 - The elevators ride only those the caller names (`--play-elevator`), headless and in the scripted window;
@@ -1788,9 +1821,9 @@ walker build shares the machine, so the window's seconds are longer than these; 
   spouse's two moves are held until the stage that sends her, the deck step; the exit elevator's descent event
   stays at its second).
 - A grid square's drawing is loaded whole by the window (the early step keeps the scene assets of one load for the next,
-  the tenth-session step reads the first cell again for them and lets a cast build give way: 1.2 to 2.1 s headless for
-  the opening's outdoor squares), overlapped with the walker's build since the person step; its models are decoded
-  again for each load.
+  the tenth-session step reads the first cell again for them and lets a cast build give way, the eleventh-session step
+  keeps the files read: 0.3 to 1.4 s headless for the opening's outdoor squares), overlapped with the walker's build
+  since the person step; its models are still parsed and its meshes built again for each load.
 - The reach of an activation, the walker's speed and its tick are the caller's; the activation key and the
   crosshair are the eye's ray (the prompt names what the ray meets; no activation distance from the data).
 - Sound, menus, combat, the player's animation events: still the caller's.

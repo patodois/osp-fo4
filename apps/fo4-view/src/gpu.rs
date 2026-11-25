@@ -1821,6 +1821,8 @@ struct PlayShots {
     written: u32,
     /// The frame at the run's end was asked for.
     last: bool,
+    /// The frames being encoded and written on their own threads.
+    writing: Vec<std::thread::JoinHandle<()>>,
 }
 
 /// With `--play-live-world`, when the live world changed (and once the
@@ -2764,27 +2766,41 @@ fn play_scripted(
             let image = shots.captured.lock().ok().and_then(|mut c| c.take());
             if let Some(image) = image {
                 let file = format!("{dir}/t{at:07.1}.png");
-                let root = p.data_root().map(std::path::Path::new);
-                match capture_png(image).and_then(|(png, size)| {
-                    use std::io::Write;
-                    crate::load::output_file(&file, root)
-                        .map_err(|e| e.to_string())?
-                        .write_all(&png)
-                        .map(|()| size)
-                        .map_err(|e| format!("{file}: {e}"))
-                }) {
-                    Ok(size) => println!(
-                        "play: frame {file} ({}x{}) at {:.3} s of the run (asked {at} s): cell {}, feet {:?}, heading {:?}, pitch {}",
-                        size[0],
-                        size[1],
-                        s.t,
-                        s.cell.as_ref().map(fo4_scene::timeline::key_text).unwrap_or_default(),
-                        s.feet,
-                        s.heading,
-                        s.pitch
-                    ),
+                let root = p.data_root().map(std::path::PathBuf::from);
+                let (at, s) = (*at, s.clone());
+                // Encoded and written on a thread of its own (viewer
+                // policy): a frame's PNG took 0.7 to 1.0 s on the window's
+                // frame loop.
+                let write = move || {
+                    match capture_png(image).and_then(|(png, size)| {
+                        use std::io::Write;
+                        crate::load::output_file(&file, root.as_deref())
+                            .map_err(|e| e.to_string())?
+                            .write_all(&png)
+                            .map(|()| size)
+                            .map_err(|e| format!("{file}: {e}"))
+                    }) {
+                        Ok(size) => println!(
+                            "play: frame {file} ({}x{}) at {:.3} s of the run (asked {at} s): cell {}, feet {:?}, heading {:?}, pitch {}",
+                            size[0],
+                            size[1],
+                            s.t,
+                            s.cell.as_ref().map(fo4_scene::timeline::key_text).unwrap_or_default(),
+                            s.feet,
+                            s.heading,
+                            s.pitch
+                        ),
+                        Err(e) => eprintln!("play: frame capture: {e}"),
+                    }
+                };
+                match std::thread::Builder::new()
+                    .name("fo4-view play shot".into())
+                    .spawn(write)
+                {
+                    Ok(h) => shots.writing.push(h),
                     Err(e) => eprintln!("play: frame capture: {e}"),
                 }
+                shots.writing.retain(|h| !h.is_finished());
                 shots.asked = None;
                 shots.written += 1;
             }
@@ -2815,6 +2831,10 @@ fn play_scripted(
     if let Some(done) = &seen.done {
         let shot_due = p.shots().is_some() && (shots.asked.is_some() || !shots.last);
         if !shot_due && drawn.uploading.is_none() {
+            // The frames being written are written before the window closes.
+            for h in std::mem::take(&mut shots.writing) {
+                let _ = h.join();
+            }
             match done {
                 Ok(()) => println!(
                     "play: the scripted run is done at {:.3} s; the window closes",

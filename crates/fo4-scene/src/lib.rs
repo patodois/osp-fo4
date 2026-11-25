@@ -28,7 +28,8 @@ pub mod terrain;
 pub mod timeline;
 pub mod transform;
 pub use assets::{
-    Asset, AssetKind, Assets, Cited, CitingShader, Cycle, CycleEdge, DecodedAsset, TextureSlot,
+    Asset, AssetKind, Assets, Cited, CitingShader, Cycle, CycleEdge, DecodedAsset, KeptFiles,
+    TextureSlot,
 };
 use fo4_core::{limit, AllocationKind, Budget, Error, Result, SourceSpan};
 use fo4_plugin::{typed::*, FormKey, Record};

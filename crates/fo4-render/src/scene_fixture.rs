@@ -2773,3 +2773,45 @@ fn a_static_refused_for_an_unread_block_is_drawn_by_its_other_parts_behind_the_s
     .unwrap();
     assert!(measured.list.draws.is_empty());
 }
+
+/// `Assets::keep_files` (a caller's policy, the play window's loads): a
+/// second build from the same loader reads the model and texture from the
+/// kept files, not the archive, and draws the same; with no cap nothing is
+/// kept.
+#[test]
+fn kept_files_answer_a_second_build_alike() {
+    let (_temp, m) = fixture_placing("render-kept-files", &dds(), nif(b"textures/a.dds"), 0x801);
+    let b = Budget::new(32 << 20);
+    let store = fo4_plugin::typed::Store::open(&m, &b).unwrap();
+    let vfs = fo4_vfs::Vfs::mount(&m, &b).unwrap();
+    let options = || BuildOptions {
+        max_texture_dimension: 16,
+        max_texture_bytes: 1 << 20,
+        level: RuleLevel::Hypotheses,
+        blocks: None,
+        time: None,
+        clock: Default::default(),
+        vertex_normals: false,
+        chains: false,
+    };
+    let mut loader = Loader::new(&store, &vfs, "english", RuleLevel::Facts, &b);
+    let scene = loader.by_editor_id("SyntheticScolCell", &b).unwrap();
+    let plain = build(&scene, &loader, &m.limits, options(), &b).unwrap();
+    assert_eq!(loader.assets.kept_files().files, 0);
+    loader.assets.keep_files(1 << 20);
+    let first = build(&scene, &loader, &m.limits, options(), &b).unwrap();
+    let k1 = loader.assets.kept_files();
+    assert!(k1.files > 0 && k1.bytes > 0, "{k1:?}");
+    let second = build(&scene, &loader, &m.limits, options(), &b).unwrap();
+    let k2 = loader.assets.kept_files();
+    assert!(k2.hits > k1.hits && k2.reads == k1.reads, "{k1:?} {k2:?}");
+    for x in [&first, &second] {
+        assert_eq!(x.list.draws.len(), plain.list.draws.len());
+        assert_eq!(
+            format!("{:?}", x.list.meshes),
+            format!("{:?}", plain.list.meshes)
+        );
+    }
+    loader.assets.keep_files(0);
+    assert_eq!(loader.assets.kept_files().bytes, 0);
+}
