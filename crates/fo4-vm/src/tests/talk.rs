@@ -29,6 +29,8 @@ const LONE: u32 = 0x932;
 const ACTOR: u32 = 0x940;
 const TRIG: u32 = 0x950;
 const MARK: u32 = 0x951;
+const DOOR: u32 = 0x804;
+const LEAF: u32 = 0x952;
 
 fn key(id: u32) -> FormKey {
     FormKey {
@@ -98,6 +100,12 @@ fn stage_done(n: u32) -> Vec<u8> {
 /// [`store`], with the hello line L2 also asking that QS's stage
 /// `hello_after` is done.
 fn store_with(hello_after: Option<u32>) -> Store {
+    store_full(hello_after, false)
+}
+
+/// [`store_with`], with `door` a door base and a placed door between the
+/// actor's stored place and the trigger.
+fn store_full(hello_after: Option<u32>, door: bool) -> Store {
     let mut d = 0x0001u16.to_le_bytes().to_vec();
     d.extend([30, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
     let alias = |id: u32, name: &[u8], npc: u32| {
@@ -189,6 +197,18 @@ fn store_with(hello_after: Option<u32>) -> Store {
         ),
     ]
     .concat();
+    let mut refs = refs;
+    if door {
+        refs.extend(record(
+            b"REFR",
+            LEAF,
+            &[
+                sub(b"NAME", &w(DOOR)),
+                sub(b"DATA", &data([2000.0, 1050.0, 0.0])),
+            ]
+            .concat(),
+        ));
+    }
     let mut xclc = 0i32.to_le_bytes().to_vec();
     xclc.extend(0i32.to_le_bytes());
     xclc.extend(0u32.to_le_bytes());
@@ -226,6 +246,13 @@ fn store_with(hello_after: Option<u32>) -> Store {
         *b"STAT",
         &record(b"STAT", STAT, &sub(b"EDID", b"M\0")),
     ));
+    if door {
+        plugin.extend(group(
+            0,
+            *b"DOOR",
+            &record(b"DOOR", DOOR, &sub(b"EDID", b"D\0")),
+        ));
+    }
     plugin.extend(group(
         0,
         *b"NPC_",
@@ -779,4 +806,76 @@ fn every_rule_of_the_step_is_registered_pending() {
         assert_eq!(rules::status(r), Some("pending"), "{r}");
         assert!(rules::ALL.contains(&r), "{r}");
     }
+}
+
+/// `--play-door-toggle` as it is (`spec/play.md`, Actors and a door the
+/// person shut; `play_door_person_closed_actors_unchanged_v1`): the play
+/// mode gives the run the person's E that shuts a door as an activation of
+/// it and nothing else (`fo4_play::walker`'s
+/// `closing_a_door_the_person_opens_gives_the_run_the_activation_alone`),
+/// and the run's actors move by the moves scheduled for them, which read
+/// no door: a move whose way crosses the shut door's place lands where and
+/// when it does without the activation, the trigger it enters raises the
+/// same event, and nothing of the run's own says the door is shut.
+#[test]
+fn an_actor_move_lands_past_a_door_the_player_activated() {
+    let s = store_full(None, true);
+    let run = |activate: bool| {
+        let b = Budget::new(1 << 24);
+        let mut l = lib();
+        let mut host = QuestHost::new(&s, 1 << 24);
+        let mut attach = RecordScripts::new(&s, 1 << 24);
+        let mut vm = Vm::new(&mut l, &mut host);
+        vm.attach = Some(&mut attach);
+        let track =
+            Track::parse("0 test.esm:00000801 0 1000 0\n20 test.esm:00000801 1500 1000 0\n")
+                .unwrap();
+        // From its stored place (1000, 1100) to the trigger at (3000,
+        // 1000): the straight way passes the door at (2000, 1050).
+        let mv = ActorMove {
+            t: 5.0,
+            actor: key(ACTOR),
+            space: key(WRLD),
+            pos: [3000.0, 1000.0, 0.0],
+        };
+        vm.world.place = Place::load_with(&s, track, world_switches(), vec![mv], &b).unwrap();
+        if activate {
+            vm.world.now[crate::world::Clock::Real as usize] = 3.0;
+            let (runs, _) = crate::player::deliver(
+                &mut vm,
+                &s,
+                &key(LEAF),
+                crate::player::Action::Activate,
+                &b,
+            )
+            .unwrap();
+            // The door has no script: the activation runs nothing.
+            assert!(runs.is_empty());
+        }
+        let due = track::next_due(&s, 1 << 24, &mut vm.world).unwrap();
+        vm.world.now[crate::world::Clock::Real as usize] = due;
+        let (raised, _) = track::settle(&mut vm, &s, 64, &b);
+        let events: Vec<String> = raised.iter().map(|r| r.event.to_string()).collect();
+        // Where the run has the actor now: its last move applied.
+        let place = &vm.world.place;
+        let at = place.actor_moves[..place.actor_cursor]
+            .iter()
+            .rev()
+            .find(|m| m.actor == key(ACTOR))
+            .map(|m| (m.space.clone(), m.pos));
+        // No door state in the run: no open or close is made for the door.
+        let door_effects = vm
+            .effects
+            .iter()
+            .filter(|e| e.native.contains("setopen") || e.native.contains("lock"))
+            .count();
+        (due, events, at, door_effects)
+    };
+    let shut = run(true);
+    assert_eq!(shut, run(false));
+    let (due, events, at, door_effects) = shut;
+    assert!((due - 5.0).abs() < 1e-9, "{due}");
+    assert_eq!(events, vec!["ontriggerenter".to_string()]);
+    assert_eq!(at, Some((key(WRLD), [3000.0, 1000.0, 0.0])));
+    assert_eq!(door_effects, 0);
 }

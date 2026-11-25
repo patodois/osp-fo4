@@ -1652,6 +1652,22 @@ machinery around are other references and are drawn. Nothing is changed: the led
 needs its material swap's filter and its blend factors read, a render-readiness step of its own; whether the player in
 the game steps up 22.6 units is for the step height rule's measurement.
 
+### Actors and a door the person shut (the tenth-session step, the reading as it is)
+
+With `--play-door-toggle` the person's E closes a door standing open. What the run's walking actors do there: the
+person's close is held by the walker alone (`live::RunState::close_by_player`, its box stands, the window draws the
+door shut), and the run is given the activation of the door and nothing else; the run moves its actors only by
+scheduled moves (the caller's assumed moves and the scene packages' destinations), each putting the actor at its
+destination at its second, and none reads a door. So an actor whose way crosses the shut door is drawn past it, as if
+it passed through the leaf, and whatever waits on that actor comes as with the door open: the story stays
+completable, and no actor opens the door, waits at it or is held by it. A synthetic test shows it at the run's level
+(`fo4_vm` tests: an assumed move whose way crosses a door the player activated lands at the same second and place and
+raises the same trigger event as without the activation; the play side's test that a close gives the run the
+activation alone). The second tenth session closed route doors during the evacuation and after waking and reached the
+surface; the evacuees were already past the first door when it was closed, so no session shows an actor meeting a
+shut door. Nothing is changed; the reading is named `play_door_person_closed_actors_unchanged_v1` (pending): what the
+game's actors do at a door the player closed is for a measurement of the running game.
+
 ## What the play mode does not do yet
 
 - The elevators ride only those the caller names (`--play-elevator`), headless and in the scripted window;
@@ -1742,3 +1758,4 @@ the game steps up 22.6 units is for the step height rule's measurement.
 | `play_platform_skin_follows_parts_v1` | `fo4-view --draw-platform-skins` (with `--draw-platforms`) (in the preset since the draw-gate step) | the skins as stored, read by the cast's readers and checked against the built mesh at rest; each bone moved by its part as the collision is | weak |
 | `play_door_collision_open_pose_v1` | `--play-door-open-collision` (in the preset since the corridor-fall step) | the vault door model's frame under no sequence and its parts at the last key of its sequence named Open; that this is the doorway's collision while the door stands open is prior knowledge | weak |
 | `play_door_activation_opens_held_before_visit_v1` | the play mode's open of a held door (the behaviour as it is) | the eighth session's early E at the front door; whether the game refuses an activation a script blocked is not known | weak |
+| `play_door_person_closed_actors_unchanged_v1` | `--play-door-toggle` (the behaviour as it is) | the play mode holds the person's close for the walker only; the run's actor moves read no door (synthetic tests); no session shows an actor meeting a shut door | weak |
