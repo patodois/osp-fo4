@@ -1853,11 +1853,66 @@ tab-separated log, one line per change, each with the play clock's second:
 | `walker` | X Y Z of the feet | with every other line, and when the feet moved 8 units |
 | `actor` | reference, `drawn` or `gone`, X Y Z where its draws stand (its place, raised by `--draw-cast-on-platforms`), distance to the walker | when it enters the drawn cast, moves 8 units, or leaves the cast |
 | `door` | reference, `closed` (its box stands), `open` or `not-held`, X Y Z of its first drawn shape (`-` when not drawn), distance to the walker | when its state changes, for doors held by the reading within 2,048 units of the walker (any distance when not drawn) |
+| `sample` | X Y Z of the feet | every second of the play clock, and with each `door` line, moved or not (the thirteenth-session step) |
+| `near` | reference, X Y Z where its draws stand, distance to the walker | after each `sample`, for the eight actors of the drawn cast nearest the walker, moved or not |
 
 A shut door and an actor on either side of it at two seconds, with no `open` between, answer the question from
 the log: the actor's drawn place is the run's (`spec/play.md`, Actors and a door the person shut), so a crossing
 there is the run's scheduled move, not a walk. A short check on the opening's first minute wrote the four actors
 of the house at load and the front door closed at 3.1 s, 245 units from the walker, at 60 fps median.
+
+### The crowd's ride, the security staff, the hair and the late start (the thirteenth-session step)
+
+**The crowd left on the covers.** The thirteenth session's watch log shows the six riders going down with the deck
+32.9 units (745.4 to 746.5 s) and then holding 8,926 while the walker went on down. Under
+`play_cast_stands_on_platform_v1` each actor takes the highest part top under it within a character's height
+above its feet: the shaft's two covers, closed as stored at a top of 8,925, came within that height as soon as the
+deck passed them, so the crowd stepped onto them. With `--draw-cast-keeps-its-part`
+(`play_cast_keeps_its_part_v1`, pending, in the preset) an actor rides the part it stood on the frame before,
+wherever it goes, while that part's box still spans its place; only when it does not is a part looked for again.
+
+**Five at one point.** The five actors' scene actions name one package; its one Location input names one placed
+marker with a radius word of 150. No alias, linked reference, furniture or idle marker gives any of them a place of
+its own, so the run keeps them at the marker; the sixth stands 100 units off by the caller's assumed move. Where
+the game stands five actors sent to one marker within its radius is a measurement to make
+(`pack_location_radius_one_point_open_v1`, recorded open; nothing changed).
+
+**The security staff drawn as markers.** Their helmet's visor is an effect shader whose material file's
+environment-mask slot cites a texture no archive holds, and whose own environment-mask field cites the same file
+without its `textures` root (refused, and the root completion finds no file). Both are slots the frame never
+samples; a placed reference's closure already reads such a missing texture under
+`texture_missing_unread_slot_v1`, the actor path did not. With `--actor-unread-texture-slots`
+(`actor_texture_missing_unread_slot_v1`, pending, in the preset; render and fo4-view) it does, and counts the
+rootless citation whose rooted file is missing as that missing texture (`fo4_scene::missing::unread_rejections`).
+The four security actors of the session's cast resolve with only their enable chain's blocker, which the cast
+decides by the run.
+
+**Hair and skirts to the floor.** The stored vertex positions of head parts and outfits are not in the actor's
+space (a long hair's from -9 to 12, an outfit's from -121 to -4); the skin's bones the skeleton holds map them up
+by about 120 at rest. `actor_missing_bone_bind_pose_v1` gave a bone the skeleton lacks (hair and cloth bones) the
+identity, so every vertex on one stayed near the feet and the blend drew strips down to them. With
+`--actor-missing-bone-nearest` (`actor_missing_bone_follows_nearest_v1`, pending, in the preset) such a bone takes
+the composite matrix of the skin's held bone whose bind origin lies nearest it: kept at its bind place relative to
+that bone. Measured at rest on the deck crowd: the long hair from 111.7 to 132.9 (before -9.1 to 132.9), a dress's
+cloth vertices from 24 to 79 (before -97 to 75).
+
+**Showing second N of a record.** `--play-from SECONDS` (with `--play-input`, test and measurement only) opens the
+run's gate to that second at once, so the run goes as fast as it computes; the window loads the walker's cell when
+it looks and writes no frame before it; there (the clock at the second, or the run waiting at it) it loads the
+walker's cell and cast, holds the clock 4 wall seconds and goes on at its own pace. The run and its outputs are
+those of the same input (the gate only orders the run against the window).
+
+**Frames as JPEG, the watch's samples.** `--play-shots` frames are JPEG at quality 80 (the project's baseline
+encoder, `apps/fo4-view/src/jpeg.rs`, ITU-T T.81 with its example tables; `tSECONDS.jpg`); the CPU frame and
+`--headless` stay PNG. The watch log adds a `sample` line every second of the play clock and at each door line,
+with the eight nearest actors of the drawn cast as `near` lines, moved or not.
+
+**Session A's stalls.** A's six outdoor holds took about twice B's while about 11 GB were deleted on the same disk.
+The load lines split a load into steps (cell, neighbours, references, draw list, terrain, walking world) and give
+the upload apart, but no step separates reading archive bytes from decoding and building: A's draw list ran 1.4 to
+2.8 times B's, the walking world 3.5 times (0.28 against 0.08 s on the street) and the upload to the GPU, which
+reads no file, 1.7 times (0.24 against 0.14 s). Every step was slower then, not one; the logs cannot say how much
+of it was the disk. Nothing in the code was changed for it.
 
 ## What the play mode does not do yet
 
