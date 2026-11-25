@@ -273,6 +273,9 @@ pub const PLATFORM_SKIN_FOLLOWS_PARTS: &str = "play_platform_skin_follows_parts_
 /// platforms' parts under them (the window's `--draw-cast-on-platforms`,
 /// off by default).
 pub const CAST_ON_PLATFORMS: &str = "play_cast_stands_on_platform_v1";
+/// With it, each actor riding the part it stands on while that part is
+/// under it (the window's `--draw-cast-keeps-its-part`, off by default).
+pub const CAST_KEEPS_PART: &str = "play_cast_keeps_its_part_v1";
 /// Terrain of an exterior cell (`crate::terrain`, `spec/land.md`).
 pub const LAND_OF_CELL: &str = "land_single_cell_child_v1";
 pub const LAND_ACCUMULATION: &str = "land_vhgt_row_accumulation_v1";
@@ -749,6 +752,7 @@ mod tests {
             STATIC_LEAF_TWO_POSE,
             PLATFORM_SKIN_FOLLOWS_PARTS,
             CAST_ON_PLATFORMS,
+            CAST_KEEPS_PART,
             LAND_OF_CELL,
             LAND_ACCUMULATION,
             LAND_UNITS,

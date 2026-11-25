@@ -996,6 +996,8 @@ struct CastEntity {
     base: Vec3,
     /// `--draw-cast-on-platforms`.
     ride: bool,
+    /// `--draw-cast-keeps-its-part`.
+    keep: bool,
 }
 
 /// A cast built for the drawn cell, until it is uploaded and replaces the
@@ -1049,6 +1051,7 @@ fn spawn_cast(world: &mut World) {
             place: places.get(&i.tag).map(|c| (c.reference.clone(), c.place)),
             base: i.translation,
             ride: scene.cast_ride,
+            keep: scene.cast_keep,
         });
     }
     println!(
@@ -1815,9 +1818,13 @@ fn hud_update(
 #[cfg(feature = "script-event")]
 #[derive(Default)]
 struct PlayDrawn {
-    /// `--draw-cast-on-platforms`: each actor's place and the height its
-    /// feet were last drawn at ([`ride_cast`]).
-    feet: std::collections::BTreeMap<fo4_plugin::FormKey, ([f64; 3], f64)>,
+    /// `--draw-cast-on-platforms`: each actor's place, the height its
+    /// feet were last drawn at and, with `--draw-cast-keeps-its-part`, the
+    /// part it stood on ([`ride_cast`]).
+    feet: std::collections::BTreeMap<
+        fo4_plugin::FormKey,
+        ([f64; 3], f64, Option<crate::scene::PartKey>),
+    >,
     applied: Option<u64>,
     spawned: std::collections::HashMap<Entity, Vec3>,
     /// The scripted run: frames to wait before a loaded cell's upload is
@@ -1917,12 +1924,18 @@ fn play_live<F: bevy::ecs::query::QueryFilter>(
 /// Each frame of the scripted play window with `--draw-cast-on-platforms`
 /// (`play_cast_stands_on_platform_v1`): each actor of the cast is drawn
 /// with its feet on the named platforms' part under its place, from where
-/// they were drawn the frame before ([`crate::scene::stand_on_platforms`]),
-/// else at its place; a change of place starts from the place again.
+/// they were drawn the frame before ([`crate::scene::stand_on_platform_part`]),
+/// else at its place; a change of place starts from the place again. With
+/// `--draw-cast-keeps-its-part` (`play_cast_keeps_its_part_v1`) an actor
+/// rides the part it stood on the frame before while that part is under it
+/// ([`crate::scene::stand_on_platform_part`]).
 #[cfg(feature = "script-event")]
 fn ride_cast<F: bevy::ecs::query::QueryFilter>(
     seen: &crate::play::Seen,
-    feet: &mut std::collections::BTreeMap<fo4_plugin::FormKey, ([f64; 3], f64)>,
+    feet: &mut std::collections::BTreeMap<
+        fo4_plugin::FormKey,
+        ([f64; 3], f64, Option<crate::scene::PartKey>),
+    >,
     casts: &mut Query<(Entity, &CastEntity, &mut Transform), F>,
 ) {
     let reach = fo4_walk::Params::PROVISIONAL.height;
@@ -1933,12 +1946,18 @@ fn ride_cast<F: bevy::ecs::query::QueryFilter>(
             continue;
         };
         let z = *now.entry(k.clone()).or_insert_with(|| {
-            let was = match feet.get(k) {
-                Some((p, z)) if p == place => *z,
-                _ => place[2],
+            let (was, kept) = match feet.get(k) {
+                Some((p, z, part)) if p == place => (*z, part.clone()),
+                _ => (place[2], None),
             };
-            let z = crate::scene::stand_on_platforms(&seen.platforms, *place, was, reach)
-                .unwrap_or(place[2]);
+            let stood = crate::scene::stand_on_platform_part(
+                &seen.platforms,
+                *place,
+                was,
+                reach,
+                kept.as_ref().filter(|_| c.keep),
+            );
+            let z = stood.as_ref().map_or(place[2], |s| s.0);
             let boarded = (z - place[2]).abs() > 1e-6 && (was - place[2]).abs() <= 1e-6;
             if boarded {
                 println!(
@@ -1948,7 +1967,7 @@ fn ride_cast<F: bevy::ecs::query::QueryFilter>(
                     seen.t
                 );
             }
-            feet.insert(k.clone(), (*place, z));
+            feet.insert(k.clone(), (*place, z, stood.map(|s| s.1)));
             z
         });
         let dz = (z - place[2]) as f32;
@@ -1965,7 +1984,10 @@ fn ride_cast<F: bevy::ecs::query::QueryFilter>(
 /// drawn cast is drawn and whether it is in the cast, and the state of each
 /// door the walker's held doors' reading holds within
 /// [`WATCH_DOOR_REACH`] of the walker, each line with the play clock and
-/// the walker's feet (spec/play.md, Watching the actors at a shut door).
+/// the walker's feet (spec/play.md, Watching the actors at a shut door);
+/// and every [`WATCH_SAMPLE_SECONDS`] of the play clock, and with each door
+/// change, a sample: the walker's feet and where the [`WATCH_NEAR`] actors
+/// of the drawn cast nearest it are drawn, moved or not.
 #[cfg(feature = "script-event")]
 #[derive(Resource)]
 struct PlayWatch {

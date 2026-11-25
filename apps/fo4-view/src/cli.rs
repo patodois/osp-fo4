@@ -23,7 +23,7 @@ usage:
              [the light switches of --headless]]]
            [--draw-child-flag-agrees] [--draw-platforms] [--draw-static-fields]
            [--draw-static-leaves] [--draw-platform-skins] [--draw-reference-alpha]
-           [--draw-static-parts] [--draw-cast-on-platforms]
+           [--draw-static-parts] [--draw-cast-on-platforms [--draw-cast-keeps-its-part]]
       Window with a free-fly camera: W/A/S/D move, Shift moves faster, hold the
       left mouse button and move the mouse to look, R returns to the start pose.
       The title bar shows the mode, the speed and the position.
@@ -236,6 +236,12 @@ usage:
       where it stood the frame before, else at its place (pending rule
       play_cast_stands_on_platform_v1): the deck's crowd stands on the
       deck and rides down with it.
+      --draw-cast-keeps-its-part (off by default; with
+      --draw-cast-on-platforms) lets each actor ride the part it stands
+      on wherever that part goes while it is under its place, another part
+      that comes within a character's height above it (a cover closing
+      over the shaft) not taken instead (pending rule
+      play_cast_keeps_its_part_v1).
   fo4-view MANIFEST DATA_DIRECTORY CELL_EDITOR_ID [level] --headless
            --eye X,Y,Z --look X,Y,Z --out build/FRAME.png [--tags build/TAGS.bin]
            [--size WxH] [--backface-cull] [--terrain] [--around N] [--walk]
@@ -469,6 +475,9 @@ pub struct Drawing {
     /// scripted play window's cast with `--draw-platforms`): each actor
     /// drawn with its feet on the named platform's part under it.
     pub cast_on_platforms: bool,
+    /// `--draw-cast-keeps-its-part` (`play_cast_keeps_its_part_v1`; with
+    /// `--draw-cast-on-platforms`): each actor rides the part it stands on.
+    pub cast_keeps_part: bool,
     /// The scripted play window with `--exposure-eye`: the exposure
     /// measured per view instead of once per load (`scene::ViewExposure`;
     /// plumbing of the existing switch, set by the parser).
@@ -940,6 +949,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             "--draw-static-parts" => drawing.static_parts = true,
             "--draw-platform-skins" => drawing.platform_skins = true,
             "--draw-cast-on-platforms" => drawing.cast_on_platforms = true,
+            "--draw-cast-keeps-its-part" => drawing.cast_keeps_part = true,
             "--exposure-eye-visible" => drawing.exposure_visible = true,
             "--timeline-dead-lying" | "--timeline-dead-left-out" => {
                 if dead != fo4_scene::timeline::Dead::Standing {
@@ -1283,6 +1293,9 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
     }
     if scene.drawing.cast_on_platforms && !(scene.drawing.platforms && scene.play_cast.is_some()) {
         return Err("--draw-cast-on-platforms stands the play cast on the platforms --draw-platforms draws: it needs --draw-platforms and --timeline-cast".into());
+    }
+    if scene.drawing.cast_keeps_part && !scene.drawing.cast_on_platforms {
+        return Err("--draw-cast-keeps-its-part keeps the part --draw-cast-on-platforms stands an actor on: it needs --draw-cast-on-platforms".into());
     }
     if scene.drawing.platform_skins && !scene.drawing.platforms {
         return Err("--draw-platform-skins moves the skinned shapes --draw-platforms draws: it needs --draw-platforms".into());

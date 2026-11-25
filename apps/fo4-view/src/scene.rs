@@ -555,6 +555,10 @@ pub struct GpuScene {
     /// A play cast drawn with `--draw-cast-on-platforms`.
     #[cfg_attr(not(feature = "script-event"), allow(dead_code))]
     pub cast_ride: bool,
+    /// With it, `--draw-cast-keeps-its-part`: each actor rides the part it
+    /// stands on ([`stand_on_platform_part`]).
+    #[cfg_attr(not(feature = "script-event"), allow(dead_code))]
+    pub cast_keep: bool,
 }
 
 /// One actor of a play cast: the instance tag its draws carry, its
@@ -572,39 +576,77 @@ pub struct CastPlace {
 /// under its x and y of the named platforms' parts' boxes where they stand
 /// now that lies no higher than `reach` above `was`; `None` (its place)
 /// when no such part is under it.
-#[cfg(feature = "script-event")]
+#[cfg(all(test, feature = "script-event"))]
 pub fn stand_on_platforms(
     platforms: &[fo4_play::elevator::Platform],
     place: [f64; 3],
     was: f64,
     reach: f64,
 ) -> Option<f64> {
-    let mut best: Option<f64> = None;
+    stand_on_platform_part(platforms, place, was, reach, None).map(|(z, _)| z)
+}
+
+/// A named platform's part: its platform's reference and the part's index
+/// among [`fo4_play::elevator::Platform::parts`].
+#[cfg(feature = "script-event")]
+pub type PartKey = (fo4_plugin::FormKey, usize);
+
+/// The top of `part`'s box where it stands now, when its x and y span
+/// holds `place`'s.
+#[cfg(feature = "script-event")]
+fn part_top_under(part: &fo4_play::elevator::PartMotion, place: [f64; 3]) -> Option<f64> {
+    let (lo, hi) = part.stored?;
+    let (mut a, mut b) = ([f64::MAX; 3], [f64::MIN; 3]);
+    for k in 0..8 {
+        let c = [
+            if k & 1 == 0 { lo[0] } else { hi[0] },
+            if k & 2 == 0 { lo[1] } else { hi[1] },
+            if k & 4 == 0 { lo[2] } else { hi[2] },
+        ];
+        let m = part.motion.apply(c);
+        for i in 0..3 {
+            a[i] = a[i].min(m[i]);
+            b[i] = b[i].max(m[i]);
+        }
+    }
+    let over = place[0] >= a[0] && place[0] <= b[0] && place[1] >= a[1] && place[1] <= b[1];
+    over.then_some(b[2])
+}
+
+/// Where an actor stands (`play_cast_stands_on_platform_v1`, as
+/// `stand_on_platforms` says) with the part it stands on; with `kept` (the part
+/// it stood on the frame before, `play_cast_keeps_its_part_v1`) that part's
+/// top wherever it went while it is still under the actor's x and y, the
+/// others not looked at; once it is not under it, as without.
+#[cfg(feature = "script-event")]
+pub fn stand_on_platform_part(
+    platforms: &[fo4_play::elevator::Platform],
+    place: [f64; 3],
+    was: f64,
+    reach: f64,
+    kept: Option<&PartKey>,
+) -> Option<(f64, PartKey)> {
+    if let Some((reference, k)) = kept {
+        let top = platforms
+            .iter()
+            .filter(|p| &p.reference == reference)
+            .find_map(|p| p.parts.get(*k).and_then(|part| part_top_under(part, place)));
+        if let Some(top) = top {
+            return Some((top, (reference.clone(), *k)));
+        }
+    }
+    let mut best: Option<(f64, &fo4_plugin::FormKey, usize)> = None;
     for p in platforms {
-        for part in &p.parts {
-            let Some((lo, hi)) = part.stored else {
+        for (k, part) in p.parts.iter().enumerate() {
+            let Some(top) = part_top_under(part, place) else {
                 continue;
             };
-            let (mut a, mut b) = ([f64::MAX; 3], [f64::MIN; 3]);
-            for k in 0..8 {
-                let c = [
-                    if k & 1 == 0 { lo[0] } else { hi[0] },
-                    if k & 2 == 0 { lo[1] } else { hi[1] },
-                    if k & 4 == 0 { lo[2] } else { hi[2] },
-                ];
-                let m = part.motion.apply(c);
-                for i in 0..3 {
-                    a[i] = a[i].min(m[i]);
-                    b[i] = b[i].max(m[i]);
-                }
-            }
-            let over = place[0] >= a[0] && place[0] <= b[0] && place[1] >= a[1] && place[1] <= b[1];
-            if over && b[2] <= was + reach && best.is_none_or(|t| b[2] > t) {
-                best = Some(b[2]);
+            if top <= was + reach && best.is_none_or(|t| top > t.0) {
+                best = Some((top, &p.reference, k));
             }
         }
     }
-    best
+    best.map(|(z, r, k)| (z, (r.clone(), k)))
 }
 
 /// A frame's light for the surface shader: the storage buffer's values and
@@ -1889,6 +1931,69 @@ mod tests {
         );
         assert_eq!(
             stand_on_platforms(&at(5000.0), [0.0, 0.0, 6000.0], 6000.0, 128.0),
+            None
+        );
+    }
+
+    #[cfg(feature = "script-event")]
+    #[test]
+    fn an_actor_rides_the_part_it_stands_on_down_past_a_closed_cover() {
+        use fo4_play::elevator::{Members, PartMotion, Platform};
+        use fo4_walk::motion::Motion;
+        let key = fo4_plugin::FormKey {
+            plugin: "a.esm".into(),
+            object_id: 1,
+        };
+        // The deck raised to a top of 8,971 and going down; the covers
+        // closed over the shaft as stored, their top 8,925 (the thirteenth
+        // session: the crowd stopped there 33 units into the ride).
+        let deck = |z: f64| PartMotion {
+            members: Members::Deepest(1),
+            motion: Motion::translation([0.0, 0.0, z]),
+            stored: Some(([-100.0, -100.0, 3890.0], [100.0, 100.0, 3971.0])),
+        };
+        let cover = PartMotion {
+            members: Members::Deepest(2),
+            motion: Motion::translation([0.0, 0.0, 0.0]),
+            stored: Some(([-100.0, -100.0, 8909.0], [100.0, 100.0, 8925.0])),
+        };
+        let at = |z: f64| {
+            vec![Platform {
+                reference: key.clone(),
+                space: key.clone(),
+                model: "meshes/m.nif".into(),
+                set: vec![1, 2],
+                second: 0.0,
+                parts: vec![deck(z), cover.clone()],
+            }]
+        };
+        let place = [10.0, 20.0, 8925.06];
+        // Raised: on the deck (part 0), its top above the covers'.
+        let (top, part) =
+            stand_on_platform_part(&at(5000.0), place, place[2], 128.0, None).unwrap();
+        assert!((top - 8971.0).abs() < 1e-9);
+        assert_eq!(part, (key.clone(), 0));
+        // Without keeping its part, the deck below the covers' top hands
+        // the actor to the covers, which stand still: left at the top.
+        let mut was = top;
+        for z in (4900..5000).rev().step_by(2) {
+            was = stand_on_platforms(&at(f64::from(z)), place, was, 128.0).unwrap();
+        }
+        assert!((was - 8925.0).abs() < 1e-9, "{was}");
+        // Keeping it, the actor rides the deck the whole way down.
+        let (mut was, mut kept) = (top, Some(part));
+        for z in (1000..=4998).rev().step_by(2) {
+            let (t, k) =
+                stand_on_platform_part(&at(f64::from(z)), place, was, 128.0, kept.as_ref())
+                    .unwrap();
+            assert_eq!(k, (key.clone(), 0));
+            (was, kept) = (t, Some(k));
+        }
+        assert!((was - 4971.0).abs() < 1e-9, "{was}");
+        // A kept part no longer under the actor: found again as without.
+        let away = [500.0, 0.0, 8925.06];
+        assert_eq!(
+            stand_on_platform_part(&at(5000.0), away, 8971.0, 128.0, kept.as_ref()),
             None
         );
     }

@@ -372,6 +372,7 @@ fn cast_with(
     // Each drawn actor's tag and place (`--draw-cast-on-platforms` stands
     // them on the platforms, `FO4_VIEW_PLAY_WATCH` writes them).
     gpu.cast_ride = s.drawing.cast_on_platforms;
+    gpu.cast_keep = s.drawing.cast_keeps_part;
     {
         let tagged = d
             .characters
