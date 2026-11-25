@@ -677,6 +677,11 @@ pub fn cell<'s>(
     if drawing.static_leaves {
         loader.set_render_static_leaves(true);
     }
+    // `--draw-reference-alpha` (off by default): render readiness sets a
+    // reference's unread `XALP` aside (`refr_xalp_render_unchanged_v1`).
+    if drawing.reference_alpha {
+        loader.set_render_reference_alpha(true);
+    }
     // The assets the previous load left, when they were read the same way.
     let mut kept = kept;
     if let Some(slot) = kept.as_deref_mut() {

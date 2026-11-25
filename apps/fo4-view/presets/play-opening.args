@@ -117,6 +117,10 @@
 # checkpoint gate's frame.
 --draw-static-fields
 --draw-static-leaves
+# A reference whose unread XALP alone kept it out is drawn
+# (refr_xalp_render_unchanged_v1): the vault hall ends whose floor and jambs
+# --play-collision-reference-alpha already stands in the walking world.
+--draw-reference-alpha
 # A named platform's skinned shape whose bones go with several parts is
 # skinned again as they move (play_platform_skin_follows_parts_v1): the
 # elevators' decks and the walkways.

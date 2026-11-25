@@ -1535,6 +1535,21 @@ the held reading has held), so the door's own frame and floor were missing from 
   stored and the prompt reads open; E again opens it (`walker::door_toggle`). The run is given the activation as
   before. `play.txt` says when the person's activation moved a box.
 
+**The doorways' stops and the floating floor.** The walls report on the two records: at the intake arch the stops
+are a desk's collision (a table static placed in front of the arch, its top at 55.7 units from 16 units ahead of the
+walker's axis, which is below the window's lower edge at that distance: drawn where it stops, out of view), and the
+return and right-side stops are the same desk and a second one. At the post-wake corridor's end and the cone doorway
+the wide lines stop against a hall-end static whose only refused field is `XALP`: its collision stands under
+`refr_xalp_collision_unchanged_v1` (in the play preset), but render readiness refused it, so its floor and jambs were
+never drawn; the floor panel the person saw floating against the clear colour is the doorway's plate with the hall
+end's floor and walls around it undrawn. The same piece stands at the prewar sliding doorway beyond the intake room.
+
+- `fo4-view --draw-reference-alpha` (`refr_xalp_render_unchanged_v1`, off by default, in the play preset;
+  `Loader::set_render_reference_alpha`): render readiness sets a reference's unread `XALP` aside as the collision
+  switch does, and the reference is drawn as its model stores it. In the post-wake vault 6 more placements are
+  drawn (the two hall ends among them); a headless frame at the cone doorway (outside git) shows the hall end's floor,
+  walls and jambs around the plate where there was the clear colour.
+
 ## What the play mode does not do yet
 
 - The elevators ride only those the caller names (`--play-elevator`), headless and in the scripted window;

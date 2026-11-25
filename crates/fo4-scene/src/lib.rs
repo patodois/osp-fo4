@@ -199,6 +199,7 @@ pub struct Loader<'a> {
     render_child_flag_agrees: bool,
     render_static_fields: bool,
     render_static_leaves: bool,
+    render_reference_alpha: bool,
 }
 impl<'a> Loader<'a> {
     /// The collision readiness switches the collision cell build reads
@@ -252,6 +253,18 @@ impl<'a> Loader<'a> {
     pub fn render_static_fields(&self) -> bool {
         self.render_static_fields
     }
+    /// Render readiness of any reference: the record blocker of its
+    /// unread `XALP` ([`readiness::reference_alpha`]) is set aside under
+    /// `refr_xalp_render_unchanged_v1` ([`hypotheses::REFERENCE_ALPHA_RENDER`]),
+    /// as `readiness::Switches::reference_alpha` sets it aside for
+    /// collision: the reference is drawn as its model stores it. Off by
+    /// default: the render state as before.
+    pub fn set_render_reference_alpha(&mut self, on: bool) {
+        self.render_reference_alpha = on;
+    }
+    pub fn render_reference_alpha(&self) -> bool {
+        self.render_reference_alpha
+    }
     /// Render readiness of a reference whose base is a static and whose
     /// model is a leaf ([`leaf::read`]): the animation blockers of its one
     /// transform controller ([`leaf::aside`]) are set aside under
@@ -287,6 +300,7 @@ impl<'a> Loader<'a> {
             render_child_flag_agrees: false,
             render_static_fields: false,
             render_static_leaves: false,
+            render_reference_alpha: false,
         }
     }
     /// Drop decoded asset state while retaining the explicit path interpretation policy.
@@ -693,7 +707,8 @@ impl<'a> Loader<'a> {
                 .enumerate()
                 .any(|(k, e)| leaf::aside(e, origin(k)))
             && self.leaf_model(base.as_ref(), b)?;
-        let state = if agrees || fields || leaf {
+        let alpha = self.render_reference_alpha;
+        let state = if agrees || fields || leaf || alpha {
             hypotheses::classify_aside(
                 &blockers,
                 outside,
@@ -708,6 +723,11 @@ impl<'a> Loader<'a> {
                         Some(hypotheses::STATIC_REFERENCE_FIELDS_RENDER)
                     } else if leaf && leaf::aside(e, origin(k)) {
                         Some(hypotheses::STATIC_LEAF_TWO_POSE)
+                    } else if alpha
+                        && origin(k) == readiness::Origin::Record
+                        && readiness::reference_alpha(e)
+                    {
+                        Some(hypotheses::REFERENCE_ALPHA_RENDER)
                     } else {
                         None
                     }

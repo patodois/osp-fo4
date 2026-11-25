@@ -22,7 +22,7 @@ usage:
              [--timeline-cast [the cast readings of a --timeline frame]]
              [the light switches of --headless]]]
            [--draw-child-flag-agrees] [--draw-platforms] [--draw-static-fields]
-           [--draw-static-leaves] [--draw-platform-skins]
+           [--draw-static-leaves] [--draw-platform-skins] [--draw-reference-alpha]
       Window with a free-fly camera: W/A/S/D move, Shift moves faster, hold the
       left mouse button and move the mouse to look, R returns to the start pose.
       The title bar shows the mode, the speed and the position.
@@ -195,6 +195,10 @@ usage:
       as its model stores it (pending rule
       refr_static_fields_render_unchanged_v1, the drawing's side of
       --play-collision-static-fields).
+      --draw-reference-alpha (off by default; any window or frame) draws a
+      reference whose unread XALP alone kept it out, as its model stores it
+      (pending rule refr_xalp_render_unchanged_v1, the drawing's side of
+      --play-collision-reference-alpha).
       --draw-static-leaves (off by default; any window or frame) draws a
       static whose model's one controller, free-running and clamped, turns
       a node with no collision under it from its stored pose and back (a
@@ -415,6 +419,10 @@ pub struct Drawing {
     /// the loader's render readiness sets a static's `XACT`, `XLRT`,
     /// `XOWN` and `ONAM` aside (`Loader::set_render_static_fields`).
     pub static_fields: bool,
+    /// `--draw-reference-alpha` (`refr_xalp_render_unchanged_v1`): the
+    /// loader's render readiness sets a reference's unread `XALP` aside
+    /// (`Loader::set_render_reference_alpha`).
+    pub reference_alpha: bool,
     /// `--draw-static-leaves` (`play_static_leaf_two_pose_v1`): the
     /// loader's render readiness sets a leaf model's animation blockers
     /// aside on a static (`Loader::set_render_static_leaves`); the scripted
@@ -892,6 +900,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             "--draw-platforms" => drawing.platforms = true,
             "--draw-held-doors" => drawing.held_doors = true,
             "--draw-static-fields" => drawing.static_fields = true,
+            "--draw-reference-alpha" => drawing.reference_alpha = true,
             "--draw-static-leaves" => drawing.static_leaves = true,
             "--draw-platform-skins" => drawing.platform_skins = true,
             "--exposure-eye-visible" => drawing.exposure_visible = true,
@@ -1600,6 +1609,7 @@ mod tests {
         assert!(p.switches.static_fields && !p.switches.marker_box_layer_records);
         assert!(p.switches.held_at_load && scene.drawing.held_doors);
         assert!(p.switches.door_open && p.switches.door_toggle);
+        assert!(p.switches.reference_alpha && scene.drawing.reference_alpha);
         assert!(p.switches.door_open);
         assert!(
             scene.drawing.static_fields
@@ -1788,6 +1798,13 @@ mod tests {
         assert!(!scene.drawing.platforms);
         // The draw-gate step's switches: off by default, each on alone.
         assert!(!scene.drawing.static_fields && !scene.drawing.static_leaves);
+        assert!(!scene.drawing.reference_alpha);
+        let Command::Window { scene: alpha, .. } =
+            parse(&args(&format!("{base} --draw-reference-alpha"))).unwrap()
+        else {
+            panic!()
+        };
+        assert!(alpha.drawing.reference_alpha && !alpha.drawing.static_fields);
         for (flag, fields, leaves) in [
             ("--draw-static-fields", true, false),
             ("--draw-static-leaves", false, true),

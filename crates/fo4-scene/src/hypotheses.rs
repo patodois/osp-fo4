@@ -243,6 +243,9 @@ pub const SEQUENCE_CHAIN_POSE: &str = "nif_sequence_chain_pose_v1";
 /// A reference's unread `XALP` leaves its collision as stored
 /// (`crate::readiness`, behind `readiness::Switches::reference_alpha`).
 pub const REFERENCE_ALPHA_COLLISION: &str = "refr_xalp_collision_unchanged_v1";
+/// A reference's unread `XALP` leaves its drawing as stored
+/// (`Loader::set_render_reference_alpha`, off by default).
+pub const REFERENCE_ALPHA_RENDER: &str = "refr_xalp_render_unchanged_v1";
 /// A static's reference fields `XACT`, `XLRT`, `XOWN` and `ONAM` leave its
 /// collision as stored (`crate::readiness`, behind
 /// `readiness::Switches::static_fields`).
@@ -714,6 +717,7 @@ mod tests {
             SEQUENCE_HELD_POSE,
             SEQUENCE_CHAIN_POSE,
             REFERENCE_ALPHA_COLLISION,
+            REFERENCE_ALPHA_RENDER,
             STATIC_REFERENCE_FIELDS_COLLISION,
             STATIC_REFERENCE_FIELDS_RENDER,
             STATIC_LEAF_TWO_POSE,
