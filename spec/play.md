@@ -1038,7 +1038,9 @@ play preset's run arguments or play options), and three are the game's own waits
   activation's ray passes through them. It is not in the preset: the house's front door has such a box too, removed
   when the door's opening stage comes, and every recorded input (the synthetic persons' and the three human
   sessions') walks up to the door through where the box stands, so the walker stops 70 units short and the E at the
-  door meets nothing. With the switch off this stall stays.
+  door meets nothing. With the switch off this stall stays. (The gate-box step: the front door's box stores another
+  collision layer word than the gate's and is left out under `--play-marker-box-layers`, both now in the preset;
+  below, The front door's box and its layer.)
 - **Leaving the nursery or the evacuation's start 47 to 57 s early** (the "ahead of the story" pair). The person
   entered the hallway's trigger before its prerequisite stage and stood inside; the stage came with a later entry,
   and on the scripted time the person then crossed the street's stage triggers before the broadcast set theirs. Each
@@ -1116,11 +1118,84 @@ What the records give with the switch:
   closed door during the broadcast and came back (the session's report: a premature trip to the doorstep), and the
   record's later commands walk the held walker elsewhere. Without the switch every record replays as before.
 
-Not covered: the gate (the marker boxes stay out of the preset: under them the on-time synthetic person is stopped
-144 units from the front door at the salesman's visit, beyond the activation's reach, so the door cannot be opened;
-the front door's box is stored tilted by about 13 and 11 degrees about its horizontal axes, and where the game stops
-the player at it is not measured). Doors the scripts close without blocking their activation, and doors closed as
+Not covered here: the gate (the marker boxes stayed out of the preset: under them the on-time synthetic person is
+stopped 144 units from the front door at the salesman's visit, beyond the activation's reach, so the door cannot be
+opened; the gate-box step below reads why). Doors the scripts close without blocking their activation, and doors closed as
 placed, still place nothing (the door's open state and a person's opening of it are not read).
+
+### The front door's box and its layer (the gate-box step)
+
+The board step left the checkpoint's box out of the preset because, under `--play-marker-boxes`, the house's front
+door's own collision marker box held the on-time synthetic person 144 units from the door at the salesman's visit,
+beyond the 150-unit reach the caller gives. Read from the records and this project's code only:
+
+- **The box is built as the data places it.** Its position is its `DATA` position, 52 units from the door's centre
+  and 49 units into the room along the door's normal: no rotation reading moves a box's centre, so the box stands in
+  the room in front of the door whatever the order of its angles. Its three stored angles (about -13.5, -10.8 and
+  322.1 degrees) turned under the measured placement convention (`refr_rotation_zyx_v2`) give one tilt of 17.2
+  degrees about a horizontal axis along the door's width (the box's own x axis stays level), the plainest shape an
+  author's turn makes; the other order gives a box tilted about two axes. `XPRM` holds the three bound words, a
+  colour, one more float and the kind word: no offset of the primitive. Read as half extents (98 by 35 by 145, the
+  reading the vault shaft's platform box and the trigger census support) it spans 4 to 111 units into the room at
+  standing heights; the walker's capsule (radius 16) is held 107 units from the door's face. Read as full extents,
+  or with the other rotation order, the box still covers the point every recorded person stood at to open the door
+  (42 units from it).
+- **It stands at the visit.** The reference is persistent, stores no enable parent and is not initially disabled;
+  the run disables it at 243.5 s, after the visit (90 s).
+- **The capsule and the reach are not the cause.** With radius 0 the walker would still stand 95 units from the
+  door's face; from where it is held a person aiming at the door meets it within 150 units (110 to its near edge,
+  136 to its centre: the activation's ray passes through marker boxes). The synthetic person's activation is
+  written as a fixed look for its own standing point, inside the box, and from the held point that look leaves the
+  door 220 units away.
+- **It stores another collision layer than the gate's box.** The reference's `XTRI` word (xEdit's published name for
+  the subrecord: the collision layer; `spec/record-layouts.tsv`) is 40 on the front door's box and 35 on the
+  checkpoint gate's. Over the load order (`gate_probe` census, a temporary probe kept outside the repository), of
+  the 2,234 boxes whose base carries the obstacle flag 942 store no `XTRI`; 35 is stored by 2, 40 by 2 (the door's
+  and an initially disabled box beside it), 44 by 1, 49 by 860 (620 of them initially disabled or under an enable
+  parent), 31 by 208 (131 of them tilted, against 270 of the 942 without a word), the rest 0, 1, 3, 15, 17, 22, 26,
+  27, 28 and 53. In the engine's layer list as prior knowledge has it, 35 is the collision box, 40 the item pick (a
+  layer only the activation's ray tests), 31 the stair helper, 49 the navigation cutter; the census's tilted stair
+  helpers and enable-parented cutters (navigation cutters of buildable places) fit that numbering. With the door's
+  box left out, the on-time person then stopped at the vault exit: a box 133 units tall across the way to the exit's
+  elevator, word 49, whose editor id names a navigation cutter.
+
+`--play-marker-box-layers` (`play_collision_marker_box_layer_passed_v1`, off by default, needs
+`--play-marker-boxes`; `world::PASSED_LAYERS`, `world::marker_box_left_out`, `MarkerBox::layer`): a box whose
+reference stores the word of a layer a walking character passes (the ray picks' 39 to 44 and the navigation cutter's
+49) stays out of the walking world, counted in `play.txt`; a box storing no word or another word stands as before.
+In the opening it leaves out the front door's box and the vault exit's; the gate's box (35) stands, and so do the
+eleven boxes about the start that store no word. Both switches are now in the play preset.
+
+What the records give (outputs outside git):
+
+- The three person records with the new switch off: every output byte for byte as recorded (play.txt apart from
+  its timings), as in the board step.
+- The on-time synthetic person under the board step's preset and under this one: the same 276 stages in the same
+  order to the vault exit. Six seconds at the checkpoint move by at most 4.4 ms: that person's own standing point
+  there lies 4.5 units inside the gate's box, so the walker is held against the box from 370.97 s until the run
+  disables it at 377.67 s (the stage that opens the way) and then takes the 4.5 units. Under `--play-marker-boxes`
+  without the layer reading the same person stalls at the door (144 stages), and with the door's box alone left out
+  (pick layers only) it stalled at the vault exit's box (263 stages).
+- The board step's waiting person (the stalled session's record held 34.1 s at the door and 8 s at the gate) gives
+  the board step's 220 stages byte for byte in their seconds, 500 at 488.42 s.
+- The same person held at the door only (the gate case): the gate's box holds the walker from 416.07 s, but the
+  walker slides along it, round its end, and enters the stage triggers past the gate from 417.51 s (the last at
+  418.60 s), 3.8 s before the stage that disables the box (422.41 s): no 500. The box spans 148 of the gate frame's 262 units;
+  the rest of the frame is a static whose model carries a transform controller (rest `transform-varies`), its
+  collision refused at every level (`UnsupportedAnimationRuntime`), so nothing stands where the walker goes round.
+  Placed as stored as a diagnostic (`--play-elevator` naming that static, a caller's option, not in the preset), it
+  closes the gap: the walker is held until 422.41 s and crosses neither trigger early; the record's later commands,
+  written for a person already through the gate, then walk elsewhere (192 stages, no 500), as the board step's
+  record made through the door did. The deck step's synthetic person arriving early at the gate does the same under
+  that diagnostic (held until 377.67 s, the two stages at 377.84 and 378.88 s, after the one that opens the way);
+  its later timed steering, cutting toward a point it is now late for, sticks on the way to the platform.
+- The deck step's sweep of 20 early and 20 arriving-early synthetic persons against the board step's runs:
+  nobody who went through before is lost. Out of the vault: arriving
+  early 14 of 20 and early 3 of 20, as before; the descent's stage reached by 17 and 15, as before. 37 of the 40
+  set the same stages in the same order, their seconds at most 4.4 ms apart (the checkpoint hold above); the three
+  that reach the gate before the stage that opens it (arriving early there, early from it and from the stop before)
+  are held at the box, go round its end and, late for their timed steering, no longer reach the raised platform
+  (196 stages instead of 197; none went through before).
 
 ## What the play mode does not do yet
 
@@ -1131,6 +1206,9 @@ placed, still place nothing (the door's open state and a person's opening of it 
 - The exterior's collision platform that an enable marker holds while the elevator rises (the exterior
   trigger's script disables the marker after waiting 12 s; the interpreter does not time the wait) is not
   read: the walker stands on the exterior elevator's own hatch and platform instead.
+- The checkpoint's gate frame: a static whose model carries a transform controller, its collision refused, so a
+  walker sliding along the gate's marker box goes round its end before the stage that opens the way (the gate-box
+  step); only a caller's `--play-elevator` naming it places its collision.
 - Plain doors: no collision is placed for any door, so none blocks the walker; the open state is not read, but with
   `--play-held-doors` a door the run's scripts close with its activation blocked holds the walker (the board step).
 - Moving collision with a node (an animated door, a platform) is modelled only for the references the caller
@@ -1186,5 +1264,6 @@ placed, still place nothing (the door's open state and a person's opening of it 
 | `dialogue_hello_owed_v1` | `quest_run --hello-owed` (in the run's arguments) | the hello line's own condition on the checkpoint talk's stage; that an actor greets a player already near it once its line holds is prior knowledge | weak |
 | `pack_destination_outlives_scene_v1` | `quest_run --package-moves-outlive-scene` (in the run's arguments) | the escort's package actions and the boarding trigger's Stop; that an actor on its way goes on when its scene stops is prior knowledge, the arrival second the caller's | weak |
 | `play_elevator_end_landing_v1` | `--play-elevator-door-landing` (in the preset) | the play mode's own trace of the missed ride end; a policy of the ride's end | weak |
-| `play_collision_marker_boxes_v1` | `--play-marker-boxes` (not in the preset) | the gate's and the front door's boxes and the stages that disable them; that the obstacle flag makes a box solid for the player is prior knowledge | weak |
+| `play_collision_marker_boxes_v1` | `--play-marker-boxes` (in the preset since the gate-box step) | the gate's and the front door's boxes and the stages that disable them; that the obstacle flag makes a box solid for the player is prior knowledge | weak |
+| `play_collision_marker_box_layer_passed_v1` | `--play-marker-box-layers` (with `--play-marker-boxes`; in the preset) | the boxes' `XTRI` words over the load order: the gate's 35, the front door's 40, the vault exit's 49 with an editor id naming a navigation cutter; 620 of 860 boxes of 49 under enable parents, 131 of 208 boxes of 31 tilted; what each word means and that a character passes the pick and cutter layers is prior knowledge of the engine's layer list | weak |
 | `play_door_closed_blocked_holds_v1` | `--play-held-doors` (in the preset) | the house door's closing, its blocked activation and the evacuation stage that opens it, as the run's scripts call them; the two natives' meaning from the Creation Kit's documentation; that a closed door is solid and its object bounds stand for its solid part is prior knowledge | weak |

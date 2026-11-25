@@ -41,6 +41,12 @@
 # A door the run's scripts close with its activation blocked holds the
 # walker until a script opens it (play_door_closed_blocked_holds_v1).
 --play-held-doors
+# The collision markers' boxes stand where the data places them, taken out
+# when the run disables them (play_collision_marker_boxes_v1), but a box
+# whose collision layer word is one a walking character passes stays out
+# (play_collision_marker_box_layer_passed_v1).
+--play-marker-boxes
+--play-marker-box-layers
 --play-collision-off-chain
 --play-collision-reference-alpha
 --play-collision-child-flag-agrees

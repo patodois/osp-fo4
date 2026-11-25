@@ -112,6 +112,12 @@ pub mod rules {
     /// that reference's collision; the live world takes it out when the run
     /// disables the reference (`--play-marker-boxes`).
     pub const MARKER_BOXES: &str = "play_collision_marker_boxes_v1";
+    /// Under `MARKER_BOXES`, a box whose reference stores a collision layer
+    /// word (`XTRI`) of a layer a walking character passes (the ray picks'
+    /// 39 to 44 and the navigation cutter's 49, `world::PASSED_LAYERS`)
+    /// stays out of the walking world; a box with no word, or another,
+    /// stands as before (`--play-marker-box-layers`).
+    pub const MARKER_BOX_LAYER_PASSED: &str = "play_collision_marker_box_layer_passed_v1";
     /// A `MoveTo` the run calls on the player with zero offsets and a
     /// target whose place the world model settles puts the walker at the
     /// target's position in the target's space (the walking world of its
@@ -158,7 +164,7 @@ pub mod rules {
     /// its activation or disables it (`--play-held-doors`).
     pub const HELD_DOORS: &str = "play_door_closed_blocked_holds_v1";
     /// Every rule above.
-    pub const ALL: [&str; 22] = [
+    pub const ALL: [&str; 23] = [
         PLAYER_FEET,
         RUN_CLOCK,
         ACTIVATE_RAY,
@@ -174,6 +180,7 @@ pub mod rules {
         ELEVATOR_END_DOOR_ONWARD,
         ELEVATOR_END_LANDING,
         MARKER_BOXES,
+        MARKER_BOX_LAYER_PASSED,
         PLAYER_MOVETO,
         PLAYER_SIT,
         ACTIVATE_OPENS,

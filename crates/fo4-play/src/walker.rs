@@ -59,6 +59,11 @@ pub struct Options {
     /// builds ([`crate::world::Options::marker_boxes`];
     /// `play_collision_marker_boxes_v1`, `--play-marker-boxes`).
     pub marker_boxes: bool,
+    /// With `marker_boxes`, the boxes whose collision layer word is one a
+    /// walking character passes left out in every walking world the walker builds
+    /// ([`crate::world::Options::marker_box_layers`];
+    /// `play_collision_marker_box_layer_passed_v1`, `--play-marker-box-layers`).
+    pub marker_box_layers: bool,
     /// The loaded doors' boxes in every walking world the walker builds,
     /// standing while the run holds a door closed with its activation
     /// blocked ([`crate::world::Options::held_doors`];
@@ -88,6 +93,7 @@ impl Default for Options {
             collision: fo4_scene::readiness::Switches::default(),
             child_flag_agrees: false,
             marker_boxes: false,
+            marker_box_layers: false,
             held_doors: false,
             stand: None,
             first_met: false,
@@ -264,6 +270,9 @@ fn collision_rules(o: &Options) -> std::collections::BTreeSet<&'static str> {
     if o.marker_boxes {
         out.insert(crate::rules::MARKER_BOXES);
         out.insert(fo4_walk::platform::rules::COLLISION_MARKER_BOX);
+    }
+    if o.marker_boxes && o.marker_box_layers {
+        out.insert(crate::rules::MARKER_BOX_LAYER_PASSED);
     }
     if o.held_doors {
         out.insert(crate::rules::HELD_DOORS);
@@ -1432,6 +1441,7 @@ impl Walker {
             collision: self.opts.collision,
             child_flag_agrees: self.opts.child_flag_agrees,
             marker_boxes: self.opts.marker_boxes,
+            marker_box_layers: self.opts.marker_box_layers,
             held_doors: self.opts.held_doors,
         };
         if let Some(f) = self.on_load.as_mut() {

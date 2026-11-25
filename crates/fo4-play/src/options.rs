@@ -70,8 +70,10 @@ pub struct Play {
     pub off_chain: bool,
     pub reference_alpha: bool,
     pub child_flag_agrees: bool,
-    /// `--play-marker-boxes` (`play_collision_marker_boxes_v1`).
+    /// `--play-marker-boxes` (`play_collision_marker_boxes_v1`),
+    /// `--play-marker-box-layers` (`play_collision_marker_box_layer_passed_v1`).
     pub marker_boxes: bool,
+    pub marker_box_layers: bool,
     /// `--play-held-doors` (`play_door_closed_blocked_holds_v1`).
     pub held_doors: bool,
     /// `--play-elevator REF` (repeated; `play_elevator_run_sequence_v1`),
@@ -155,6 +157,7 @@ impl Play {
             "--play-collision-reference-alpha" => &mut self.reference_alpha,
             "--play-collision-child-flag-agrees" => &mut self.child_flag_agrees,
             "--play-marker-boxes" => &mut self.marker_boxes,
+            "--play-marker-box-layers" => &mut self.marker_box_layers,
             "--play-held-doors" => &mut self.held_doors,
             "--play-pick-first-met" => &mut self.first_met,
             "--play-action-after-offset" => &mut self.action_offset,
@@ -301,6 +304,9 @@ impl Play {
         if self.marker_boxes && !self.live_world {
             return Err("--play-marker-boxes needs --play-live-world".into());
         }
+        if self.marker_box_layers && !self.marker_boxes {
+            return Err("--play-marker-box-layers needs --play-marker-boxes".into());
+        }
         if self.held_doors && !self.live_world {
             return Err("--play-held-doors needs --play-live-world".into());
         }
@@ -421,6 +427,7 @@ impl Play {
             collision: self.collision(),
             child_flag_agrees: self.child_flag_agrees,
             marker_boxes: self.marker_boxes,
+            marker_box_layers: self.marker_box_layers,
             held_doors: self.held_doors,
         }
     }
@@ -448,6 +455,7 @@ impl Play {
             collision: self.collision(),
             child_flag_agrees: self.child_flag_agrees,
             marker_boxes: self.marker_boxes,
+            marker_box_layers: self.marker_box_layers,
             held_doors: self.held_doors,
             ..walker::Options::default()
         };
@@ -536,6 +544,9 @@ impl Play {
         }
         if self.marker_boxes {
             let _ = writeln!(report, "switch: the collision markers' boxes among the loaded references and the worldspace's persistent references nearby stand in the walking world, taken out when the run disables them (--play-marker-boxes, {})", crate::rules::MARKER_BOXES);
+        }
+        if self.marker_box_layers {
+            let _ = writeln!(report, "switch: a collision marker's box whose reference stores the collision layer word of a layer a walking character passes (39 to 44, 49) stays out of the walking world (--play-marker-box-layers, {})", crate::rules::MARKER_BOX_LAYER_PASSED);
         }
         let opts = self.walker_options();
         if let Some(v) = self.slice {
@@ -807,10 +818,13 @@ mod tests {
             "--play-elevator-also-with a.esm:1",
             "--play-around x",
             "--play-tick",
+            "--play-live-world --play-marker-box-layers",
         ] {
             assert!(read(bad).is_err(), "{bad}");
         }
         assert!(read("--play-elevator a.esm:1 --play-elevator-door --play-load-doors --play-reach 1 --play-elevator-door-onward").is_ok());
+        let p = read("--play-live-world --play-marker-boxes --play-marker-box-layers").unwrap();
+        assert!(p.world_options().marker_box_layers && p.walker_options().marker_box_layers);
     }
 
     #[test]

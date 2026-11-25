@@ -57,6 +57,10 @@ fn cell(id: u32, x: i32, y: i32, lands: &[Vec<u8>]) -> Vec<u8> {
 /// A collision marker's box (a modelless static's reference with an XPRM
 /// box of kind 1) near the cell's origin, with record flags `flags`.
 fn marker(id: u32, flags: u32) -> Vec<u8> {
+    marker_with(id, flags, None)
+}
+/// The same with an `XTRI` subrecord of `xtri` when given.
+fn marker_with(id: u32, flags: u32, xtri: Option<&[u8]>) -> Vec<u8> {
     let mut d = sub(b"NAME", &0x8b0u32.to_le_bytes());
     let mut place = Vec::new();
     for x in [300f32, 300., 30., 0., 0., 0.] {
@@ -69,6 +73,9 @@ fn marker(id: u32, flags: u32) -> Vec<u8> {
     }
     x.extend(1u32.to_le_bytes());
     d.extend(sub(b"XPRM", &x));
+    if let Some(w) = xtri {
+        d.extend(sub(b"XTRI", w));
+    }
     record(b"REFR", id, flags, &d)
 }
 struct Fixture {
@@ -84,7 +91,13 @@ fn fixture() -> Fixture {
             0x810,
             0,
             0,
-            &[land(0x811, true), marker(0x812, 0), marker(0x813, 0x800)],
+            &[
+                land(0x811, true),
+                marker(0x812, 0),
+                marker(0x813, 0x800),
+                marker_with(0x814, 0, Some(&40u32.to_le_bytes())),
+                marker_with(0x815, 0, Some(&[40, 0])),
+            ],
         ),
         cell(0x820, 1, 0, &[land(0x821, true)]),
         cell(0x830, 0, 1, &[]),
@@ -328,6 +341,19 @@ fn a_collision_marker_box_is_present_as_the_runs_frame_says() {
         presence(&f.store, &t.at(3.), &flagged, &b).unwrap(),
         Some(true)
     );
+}
+
+/// A collision marker's box carries its reference's `XTRI` word as stored
+/// (four bytes), and none for a reference without it or with another size.
+#[test]
+fn a_collision_marker_box_keeps_its_references_xtri_word() {
+    use crate::platform::marker_box;
+    let f = fixture();
+    let b = budget();
+    let layer = |id| marker_box(&f.store, &key(id), &b).unwrap().unwrap().layer;
+    assert_eq!(layer(0x814), Some(40));
+    assert_eq!(layer(0x812), None);
+    assert_eq!(layer(0x815), None);
 }
 
 /// `walk_ride_rider_passes_terrain_v1`: a deck sinking below the terrain

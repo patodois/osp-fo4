@@ -370,7 +370,10 @@ yet):
 - `walk_collision_marker_box_v1`: a placed reference whose base is a static with no model and which stores a
   32-byte `XPRM` of kind word 1 is a solid box (half extents the bound words times the scale, centred, rotated),
   added as one hull (`marker_boxes`, `add_boxes`). Its enable state is reported, and applied only under
-  `walk_collision_marker_box_presence_v1` (below).
+  `walk_collision_marker_box_presence_v1` (below). The reference's `XTRI` word is kept as stored
+  (`MarkerBox::layer`; xEdit's published name for it is the collision layer), read by no walking rule here; the
+  play mode's `play_collision_marker_box_layer_passed_v1` reads it (`spec/play.md`, The front door's box and its
+  layer).
 - `walk_animated_model_collision_as_stored_v1`: `fo4_scene::collision::instance_as_stored` places one
   reference's collision whatever its readiness says (an animated model), each node at its stored transform.
 - `walk_platform_sequence_ride_v1`: a piece of a `WorldSet` moves along a track of translations (`Ride`); a

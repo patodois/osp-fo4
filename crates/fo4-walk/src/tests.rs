@@ -928,6 +928,7 @@ fn a_collision_marker_box_is_a_solid_box_a_walker_stands_on() {
         half: [10., 20., 5.],
         enable_parent: false,
         initially_disabled: false,
+        layer: None,
     };
     let c = corners(&m).unwrap();
     let (mut lo, mut hi) = ([f64::INFINITY; 3], [f64::NEG_INFINITY; 3]);

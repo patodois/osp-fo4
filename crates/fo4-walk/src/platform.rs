@@ -65,6 +65,11 @@ pub struct MarkerBox {
     pub enable_parent: bool,
     /// Whether its record flag 0x800 is set.
     pub initially_disabled: bool,
+    /// The reference's `XTRI` word as stored (xEdit's published name for
+    /// the subrecord: the collision layer), `None` when it stores none or
+    /// not four bytes. Read only; what a word means is a caller's rule
+    /// (`play_collision_marker_box_layer_passed_v1`).
+    pub layer: Option<u32>,
 }
 
 fn sub<'r>(r: &'r Record, sig: &[u8; 4]) -> Option<&'r [u8]> {
@@ -139,6 +144,9 @@ pub fn marker_box(store: &Store, key: &FormKey, b: &Budget) -> Result<Option<Mar
         half,
         enable_parent: sub(&r, b"XESP").is_some(),
         initially_disabled: r.flags & 0x800 != 0,
+        layer: sub(&r, b"XTRI")
+            .filter(|d| d.len() == 4)
+            .map(|d| u32::from_le_bytes([d[0], d[1], d[2], d[3]])),
     }))
 }
 

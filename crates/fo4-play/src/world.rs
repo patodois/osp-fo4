@@ -26,6 +26,37 @@ pub const CELL_SIZE: f64 = 4096.0;
 /// same box primitive.
 pub const BOX_OBSTACLE_FLAG: u32 = 0x0200_0000;
 
+/// The collision layer words (a placed reference's `XTRI`) read under
+/// `play_collision_marker_box_layer_passed_v1` as layers a walking
+/// character passes through: 39 to 44 and 49 in the engine's layer list as
+/// prior knowledge has it (camera pick, item pick, line of sight, path
+/// pick, two custom picks; the navigation cutter).
+pub const PASSED_LAYERS: [u32; 7] = [39, 40, 41, 42, 43, 44, 49];
+
+/// Why a collision marker's box `mb`, whose base's record flags are
+/// `base_flags`, stays out of the walking world under
+/// `play_collision_marker_boxes_v1` (its base lacks the obstacle flag, or
+/// it is placed initially disabled or under an enable parent) and, with
+/// `layers` (`play_collision_marker_box_layer_passed_v1`,
+/// `--play-marker-box-layers`), when its reference's `XTRI` word is one of
+/// [`PASSED_LAYERS`]; `None`: it stands. A box storing no `XTRI` stands.
+pub fn marker_box_left_out(
+    base_flags: Option<u32>,
+    mb: &fo4_walk::platform::MarkerBox,
+    layers: bool,
+) -> Option<&'static str> {
+    if base_flags.is_none_or(|f| f & BOX_OBSTACLE_FLAG == 0) {
+        return Some("their base does not carry the obstacle flag");
+    }
+    if layers && mb.layer.is_some_and(|w| PASSED_LAYERS.contains(&w)) {
+        return Some("their collision layer word is one a walking character passes (39 to 44, 49)");
+    }
+    if mb.initially_disabled || mb.enable_parent {
+        return Some("initially disabled or under an enable parent");
+    }
+    None
+}
+
 /// What [`build`] reads besides the walking world itself.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct Options {
@@ -53,6 +84,12 @@ pub struct Options {
     /// over `walk_collision_marker_box_v1`; `--play-marker-boxes`). Off: no
     /// box, as before.
     pub marker_boxes: bool,
+    /// With [`Options::marker_boxes`], a box whose reference's collision
+    /// layer word (`XTRI`) is one of [`PASSED_LAYERS`] is left out
+    /// (`play_collision_marker_box_layer_passed_v1`,
+    /// `--play-marker-box-layers`). Off: every box of the obstacle base
+    /// stands, as before.
+    pub marker_box_layers: bool,
     /// The boxes of the loaded doors' object bounds, kept in the live
     /// world's dormant piece and shown while the run's scripts hold the
     /// door closed with its activation blocked
@@ -355,18 +392,8 @@ pub fn build(
                 .and_then(|r| r.data.base.and_then(|f| f.key))
                 .and_then(|base| store.raw(&base, &budget.child()).ok().flatten())
                 .map(|r| r.flags);
-            if base_flags.is_none_or(|f| f & BOX_OBSTACLE_FLAG == 0) {
-                bump(
-                    &mut counts,
-                    "marker boxes left out\ttheir base does not carry the obstacle flag",
-                );
-                continue;
-            }
-            if mb.initially_disabled || mb.enable_parent {
-                bump(
-                    &mut counts,
-                    "marker boxes left out\tinitially disabled or under an enable parent",
-                );
+            if let Some(why) = marker_box_left_out(base_flags, &mb, o.marker_box_layers) {
+                bump(&mut counts, &format!("marker boxes left out\t{why}"));
                 continue;
             }
             let at = [mb.placement[0], mb.placement[1], mb.placement[2]].map(f64::from);
@@ -664,4 +691,97 @@ pub fn dormant(
         .entry("live world: instances an enable parent disables at load, built as enabled".into())
         .or_default() += moved.len() as u64;
     Ok((Piece { world, refs: drefs }, info))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fo4_walk::platform::{add_boxes, MarkerBox};
+
+    fn marker(layer: Option<u32>) -> MarkerBox {
+        MarkerBox {
+            reference: FormKey {
+                plugin: "base.esm".into(),
+                object_id: 0x900,
+            },
+            placement: [0., 0., 0., 0., 0., 0.],
+            scale: 1.,
+            half: [50., 10., 100.],
+            enable_parent: false,
+            initially_disabled: false,
+            layer,
+        }
+    }
+
+    /// The boxes the walking world places, as `build` keeps them.
+    fn placed(boxes: &[MarkerBox], layers: bool) -> usize {
+        let b = Budget::new(1 << 24);
+        let kept: Vec<MarkerBox> = boxes
+            .iter()
+            .filter(|m| marker_box_left_out(Some(BOX_OBSTACLE_FLAG), m, layers).is_none())
+            .cloned()
+            .collect();
+        let mut w = World::new();
+        add_boxes(&mut w, &kept, &b).unwrap().len()
+    }
+
+    /// `play_collision_marker_box_layer_passed_v1`: with the reading, a box
+    /// whose reference stores the word of a layer a walking character
+    /// passes stays out; a box with
+    /// no word, or another word, stands; without it every box stands.
+    #[test]
+    fn a_box_on_a_passed_layer_stays_out_only_with_the_reading() {
+        let item_pick = marker(Some(40));
+        let collision_box = marker(Some(35));
+        let none = marker(None);
+        let why = marker_box_left_out(Some(BOX_OBSTACLE_FLAG), &item_pick, true);
+        assert_eq!(
+            why,
+            Some("their collision layer word is one a walking character passes (39 to 44, 49)")
+        );
+        assert_eq!(
+            marker_box_left_out(Some(BOX_OBSTACLE_FLAG), &item_pick, false),
+            None
+        );
+        for w in [39, 44, 49] {
+            assert!(marker_box_left_out(Some(BOX_OBSTACLE_FLAG), &marker(Some(w)), true).is_some());
+        }
+        for w in [0, 1, 31, 35, 38, 45, 48, 50] {
+            assert!(marker_box_left_out(Some(BOX_OBSTACLE_FLAG), &marker(Some(w)), true).is_none());
+        }
+        let all = [item_pick, collision_box, none];
+        assert_eq!(placed(&all, false), 3);
+        assert_eq!(placed(&all, true), 2);
+    }
+
+    /// The readings the layer one leaves as they were: the obstacle flag of
+    /// the base and the box's own state.
+    #[test]
+    fn a_box_without_the_obstacle_base_or_enabled_placement_stays_out_as_before() {
+        let m = marker(None);
+        assert_eq!(
+            marker_box_left_out(None, &m, false),
+            Some("their base does not carry the obstacle flag")
+        );
+        assert_eq!(
+            marker_box_left_out(Some(0x0080_0000), &marker(Some(40)), true),
+            Some("their base does not carry the obstacle flag")
+        );
+        let off = MarkerBox {
+            initially_disabled: true,
+            ..m.clone()
+        };
+        assert_eq!(
+            marker_box_left_out(Some(BOX_OBSTACLE_FLAG), &off, true),
+            Some("initially disabled or under an enable parent")
+        );
+        let parent = MarkerBox {
+            enable_parent: true,
+            ..m
+        };
+        assert_eq!(
+            marker_box_left_out(Some(BOX_OBSTACLE_FLAG), &parent, false),
+            Some("initially disabled or under an enable parent")
+        );
+    }
 }
