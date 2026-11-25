@@ -1516,6 +1516,25 @@ front door before the doorbell, while the run blocks its activation, is not know
 33.69 s, 15.9 s before the bell, and the play mode lets it; `play_door_activation_opens_held_before_visit_v1` names
 that reading so a measurement can settle it.
 
+### The vault doorways' drawing, collision and prompt (the ninth-session step)
+
+The ninth sessions' person met vault sliding doorways that looked open, said "open" and, they reported, held them
+until E. Replayed headless with `--play-report-walls` (outputs outside git): no stop is recorded at those doorways
+before E; the person's W presses there were short (0.4 to 0.7 s) and ended before the doorway, and after E the next
+press was on the doorway's middle line. What did disagree: the door's collision stood in its open pose
+(`play_door_collision_open_pose_v1`) while the window drew no door at all (`--draw-held-doors` draws only the doors
+the held reading has held), so the door's own frame and floor were missing from the drawing, and the prompt read
+"open".
+
+- `--play-door-toggle` (`play_door_activation_toggles_v1`, off by default, in the play preset; needs
+  `--play-held-doors` and `--play-door-open-collision`): a door standing in its open pose is open for the held doors'
+  reading from its walking world's load (`world::Built::open_pose`, `live::Live::with_open_pose`,
+  `walker::Walker::held_door_states`), so the window draws it at Open's last key and the prompt reads close. E on a
+  door that reading shows open and that stands in its open pose closes it (`live::RunState::close_by_player`,
+  `live::DoorState::person_closed`): its held box stands whatever the run's blocked activation, the window draws it as
+  stored and the prompt reads open; E again opens it (`walker::door_toggle`). The run is given the activation as
+  before. `play.txt` says when the person's activation moved a box.
+
 ## What the play mode does not do yet
 
 - The elevators ride only those the caller names (`--play-elevator`), headless and in the scripted window;

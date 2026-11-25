@@ -186,7 +186,10 @@ usage:
       as stored (closed) while its box stands, and once the box has left
       with the door's nodes posed at the last key of its model's sequence
       named Open (none: not drawn); a door never held is not drawn, as
-      before (pending rule play_door_drawn_as_held_v1).
+      before (pending rule play_door_drawn_as_held_v1), except, with
+      --play-door-toggle, a door whose collision stands in its open pose:
+      drawn open until the person's E closes it (pending rule
+      play_door_activation_toggles_v1).
       --draw-static-fields (off by default; any window or frame) draws a
       static whose reference's XACT, XLRT, XOWN or ONAM alone kept it out,
       as its model stores it (pending rule
@@ -1596,6 +1599,7 @@ mod tests {
         assert!(p.switches.held_doors && p.switches.marker_boxes && p.switches.marker_box_layers);
         assert!(p.switches.static_fields && !p.switches.marker_box_layer_records);
         assert!(p.switches.held_at_load && scene.drawing.held_doors);
+        assert!(p.switches.door_open && p.switches.door_toggle);
         assert!(p.switches.door_open);
         assert!(
             scene.drawing.static_fields

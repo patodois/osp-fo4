@@ -189,8 +189,14 @@ pub mod rules {
     /// or whose Open moves no part of its collision, stays out
     /// (`--play-door-open-collision`).
     pub const DOOR_OPEN_COLLISION: &str = "play_door_collision_open_pose_v1";
+    /// A door whose collision stands in its open pose is open for the held
+    /// doors' reading (drawn open, its prompt close); the person's
+    /// activation of a door that reading shows open closes it (its box
+    /// stands, the run given the activation alone), and of one the person
+    /// closed opens it again (`--play-door-toggle`).
+    pub const DOOR_TOGGLE: &str = "play_door_activation_toggles_v1";
     /// Every rule above.
-    pub const ALL: [&str; 26] = [
+    pub const ALL: [&str; 27] = [
         PLAYER_FEET,
         RUN_CLOCK,
         ACTIVATE_RAY,
@@ -217,6 +223,7 @@ pub mod rules {
         HELD_DOORS_AT_LOAD,
         DOOR_DRAWN,
         DOOR_OPEN_COLLISION,
+        DOOR_TOGGLE,
     ];
 }
 

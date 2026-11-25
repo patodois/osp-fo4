@@ -86,6 +86,8 @@ pub struct Play {
     pub held_at_load: bool,
     /// `--play-door-open-collision` (`play_door_collision_open_pose_v1`).
     pub door_open: bool,
+    /// `--play-door-toggle` (`play_door_activation_toggles_v1`).
+    pub door_toggle: bool,
     /// `--play-elevator REF` (repeated; `play_elevator_run_sequence_v1`),
     /// `--play-elevator-also REF`, `--play-elevator-also-with REF OWNER`.
     pub elevators: Vec<FormKey>,
@@ -177,6 +179,7 @@ impl Play {
             "--play-held-doors" => &mut self.held_doors,
             "--play-held-doors-at-load" => &mut self.held_at_load,
             "--play-door-open-collision" => &mut self.door_open,
+            "--play-door-toggle" => &mut self.door_toggle,
             "--play-pick-first-met" => &mut self.first_met,
             "--play-report-walls" => &mut self.report_walls,
             "--play-action-after-offset" => &mut self.action_offset,
@@ -335,6 +338,11 @@ impl Play {
         if self.held_at_load && !self.held_doors {
             return Err("--play-held-doors-at-load needs --play-held-doors".into());
         }
+        if self.door_toggle && !(self.held_doors && self.door_open) {
+            return Err(
+                "--play-door-toggle needs --play-held-doors and --play-door-open-collision".into(),
+            );
+        }
         if self.door_landing && !self.elevator_door {
             return Err("--play-elevator-door-landing needs --play-elevator-door".into());
         }
@@ -489,6 +497,7 @@ impl Play {
             held_doors: self.held_doors,
             held_at_load: self.held_at_load,
             door_open: self.door_open,
+            door_toggle: self.door_toggle,
             ..walker::Options::default()
         };
         if let Some(v) = self.walk_speed {
@@ -557,6 +566,7 @@ impl Play {
             unpicked,
             held,
             closed_at_load,
+            open_pose,
         } = built;
         let _ = writeln!(
             report,
@@ -582,6 +592,9 @@ impl Play {
         let closed_at_load = walker::persons_doors(closed_at_load, &self.opens);
         if self.held_at_load {
             let _ = writeln!(report, "switch: a held door the person opens (--play-activate-opens) whose reference stores no ONAM is closed at load, until a script or the person's open of it opens it (--play-held-doors-at-load, {}): {} door(s)", crate::rules::HELD_DOORS_AT_LOAD, closed_at_load.len());
+        }
+        if self.door_toggle {
+            let _ = writeln!(report, "switch: a door whose collision stands in its open pose is open for the held doors' reading, and the person's activation closes a door that reading shows open and opens again one the person closed (--play-door-toggle, {}): {} door(s) in their open pose", crate::rules::DOOR_TOGGLE, open_pose.len());
         }
         if self.marker_boxes {
             let _ = writeln!(report, "switch: the collision markers' boxes among the loaded references and the worldspace's persistent references nearby stand in the walking world, taken out when the run disables them (--play-marker-boxes, {})", crate::rules::MARKER_BOXES);
@@ -625,7 +638,8 @@ impl Play {
                     .with_child_flag_agrees(self.child_flag_agrees)
                     .with_unpicked(&unpicked)
                     .with_held_doors(held)
-                    .with_closed_at_load(closed_at_load);
+                    .with_closed_at_load(closed_at_load)
+                    .with_open_pose(open_pose);
                 walker::Walker::new(fo4_walk::World::new(), Vec::new(), script, opts)?
                     .with_live(live, nowait)
             }
@@ -744,6 +758,14 @@ mod tests {
         assert!(!p.world_options().door_open && !p.walker_options().door_open);
         let d = read("--play-door-open-collision").unwrap();
         assert!(d.door_open && d.world_options().door_open && d.walker_options().door_open);
+        assert!(!d.door_toggle && !d.walker_options().door_toggle);
+        let t = read(
+            "--play-live-world --play-held-doors --play-door-open-collision --play-door-toggle",
+        )
+        .unwrap();
+        assert!(t.door_toggle && t.walker_options().door_toggle);
+        assert!(read("--play-live-world --play-held-doors --play-door-toggle").is_err());
+        assert!(read("--play-door-open-collision --play-door-toggle").is_err());
         assert!(read("--play-live-world --play-held-doors-at-load").is_err());
         assert!(
             !read("--play-live-world --play-held-doors")

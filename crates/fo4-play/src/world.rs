@@ -245,6 +245,9 @@ pub struct Built {
     /// With [`Options::held_at_load`]: of `held`, the doors whose
     /// reference stores no `ONAM` (closed at load).
     pub closed_at_load: std::collections::BTreeSet<FormKey>,
+    /// With [`Options::door_open`]: the doors whose collision stands in
+    /// `world` in its open pose (normalised keys).
+    pub open_pose: std::collections::BTreeSet<FormKey>,
 }
 
 /// Whether the placed reference `key` stores an `ONAM` subrecord (the
@@ -561,6 +564,7 @@ pub fn build(
     // The loaded doors whose collision is not placed, in their open pose
     // (`play_door_collision_open_pose_v1`), after the boxes: a door keeps
     // its object bounds for the activation and the held doors.
+    let mut open_pose = std::collections::BTreeSet::new();
     if o.door_open {
         let placed: std::collections::BTreeSet<FormKey> = refs.iter().flatten().map(norm).collect();
         for i in &scene.instances {
@@ -583,6 +587,7 @@ pub fn build(
                     for s in added {
                         refs[s as usize] = Some(k.clone());
                     }
+                    open_pose.insert(k.clone());
                     bump(&mut counts, "doors in their open pose in the walking world");
                 }
                 Ok(None) => bump(
@@ -762,6 +767,7 @@ pub fn build(
         unpicked: marked.iter().map(|(_, _, s)| *s).collect(),
         held,
         closed_at_load,
+        open_pose,
     })
 }
 

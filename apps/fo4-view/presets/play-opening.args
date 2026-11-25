@@ -49,6 +49,11 @@
 # where its last key leaves them (play_door_collision_open_pose_v1): the
 # vault doorways' floor is whole and their jambs stop a sideways walk.
 --play-door-open-collision
+# Such a door is open for the held doors' reading (drawn open, its prompt
+# close), and E closes a door that reading shows open and opens again one
+# the person closed (play_door_activation_toggles_v1): what is drawn, what
+# stops the walker and what the prompt offers are one state.
+--play-door-toggle
 # The collision markers' boxes stand where the data places them, taken out
 # when the run disables them (play_collision_marker_boxes_v1), but a box
 # whose collision layer word is one a walking character passes stays out

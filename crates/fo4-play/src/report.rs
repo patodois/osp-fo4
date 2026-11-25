@@ -65,14 +65,21 @@ pub fn walker(l: &Log, report: &mut String) {
             s.applies, s.entered, s.left, s.moved, s.seconds, s.longest
         );
     }
-    for (t, door, held, at_load) in &l.held_doors {
+    for (t, door, held, why) in &l.held_doors {
+        use crate::walker::HeldWhy;
         let _ = writeln!(
             report,
             "held door: at {t} s the box of {} {} the walking world ({})",
             fo4_vm::bind::record_key(door),
-            match (*held, *at_load) {
-                (true, false) => "entered (closed by the run, its activation blocked)",
-                (true, true) => "entered (closed at load, its activation blocked)",
+            match (*held, why) {
+                (true, HeldWhy::Run) => "entered (closed by the run, its activation blocked)",
+                (true, HeldWhy::AtLoad) => "entered (closed at load, its activation blocked)",
+                (true, HeldWhy::Person) => {
+                    "entered (closed by the person's activation, play_door_activation_toggles_v1)"
+                }
+                (false, HeldWhy::Person) => {
+                    "left (opened by the person's activation, play_door_activation_toggles_v1)"
+                }
                 (false, _) => "left",
             },
             crate::rules::HELD_DOORS

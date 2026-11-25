@@ -107,13 +107,18 @@ pub struct DoorState {
     pub open: Option<bool>,
     /// The last `BlockActivation`: `Some(true)` the activation blocked.
     pub blocked: Option<bool>,
+    /// Closed by the person's activation ([`RunState::close_by_player`],
+    /// [`crate::rules::DOOR_TOGGLE`]), until the person's open of it or a
+    /// script's `SetOpen`.
+    pub person_closed: bool,
 }
 
 impl DoorState {
     /// Whether the door holds the walker: closed by a script and its
-    /// activation blocked (a person's activation would not open it).
+    /// activation blocked (a person's activation would not open it), or
+    /// closed by the person ([`DoorState::person_closed`]).
     pub fn holds(&self) -> bool {
-        self.open == Some(false) && self.blocked == Some(true)
+        self.holds_from_load(false)
     }
 
     /// Whether the door holds the walker when its open state before any
@@ -122,6 +127,9 @@ impl DoorState {
     /// reference stores no `ONAM`, stands for a `SetOpen(false)` at load.
     /// `false` is [`DoorState::holds`].
     pub fn holds_from_load(&self, closed_at_load: bool) -> bool {
+        if self.person_closed {
+            return true;
+        }
         let open = self.open.or((closed_at_load).then_some(false));
         open == Some(false) && self.blocked == Some(true)
     }
@@ -173,7 +181,23 @@ impl RunState {
     /// [`RunState::update`].
     pub fn open_by_player(&mut self, k: FormKey) {
         if self.doors_read {
-            self.doors.entry(k).or_default().open = Some(true);
+            let d = self.doors.entry(k).or_default();
+            d.open = Some(true);
+            d.person_closed = false;
+            self.unread = true;
+        }
+    }
+
+    /// The walker closed door `k` (the person's activation of a door the
+    /// held doors' reading shows open, [`crate::rules::DOOR_TOGGLE`]):
+    /// with `doors_read`, it is closed and holds the walker whatever its
+    /// activation's state, until the person's open of it or a script's
+    /// `SetOpen`. Reported by the next [`RunState::update`].
+    pub fn close_by_player(&mut self, k: FormKey) {
+        if self.doors_read {
+            let d = self.doors.entry(k).or_default();
+            d.open = Some(false);
+            d.person_closed = true;
             self.unread = true;
         }
     }
@@ -189,6 +213,7 @@ impl RunState {
                         let d = self.doors.entry(k).or_default();
                         if is_open {
                             d.open = Some(v);
+                            d.person_closed = false;
                         } else {
                             d.blocked = Some(v);
                         }
@@ -382,6 +407,9 @@ pub struct Live {
     /// Of `held`, the doors whose reference stores no `ONAM`: closed at
     /// load ([`crate::rules::HELD_DOORS_AT_LOAD`], [`Live::with_closed_at_load`]).
     closed_at_load: std::collections::BTreeSet<FormKey>,
+    /// The doors whose collision stands in their open pose
+    /// ([`crate::rules::DOOR_OPEN_COLLISION`], [`Live::with_open_pose`]).
+    open_pose: std::collections::BTreeSet<FormKey>,
     pub stats: Stats,
 }
 
@@ -407,6 +435,7 @@ impl Live {
             held: BTreeMap::new(),
             holding: Default::default(),
             closed_at_load: Default::default(),
+            open_pose: Default::default(),
             stats: Stats::default(),
         })
     }
@@ -456,6 +485,19 @@ impl Live {
     pub fn with_closed_at_load(mut self, doors: std::collections::BTreeSet<FormKey>) -> Live {
         self.closed_at_load = doors;
         self
+    }
+
+    /// The doors whose collision this live world's walking world stands
+    /// in their open pose (normalised keys;
+    /// [`crate::world::Built::open_pose`], `--play-door-open-collision`).
+    pub fn with_open_pose(mut self, doors: std::collections::BTreeSet<FormKey>) -> Live {
+        self.open_pose = doors;
+        self
+    }
+
+    /// The doors standing in their open pose ([`Live::with_open_pose`]).
+    pub fn open_pose(&self) -> &std::collections::BTreeSet<FormKey> {
+        &self.open_pose
     }
 
     /// The doors whose boxes this live world holds (shown or not).
@@ -1038,7 +1080,14 @@ mod tests {
 
     fn door(open: Option<bool>, blocked: Option<bool>) -> RunState {
         let mut s = RunState::reading_doors(true);
-        s.doors.insert(key(3), DoorState { open, blocked });
+        s.doors.insert(
+            key(3),
+            DoorState {
+                open,
+                blocked,
+                ..DoorState::default()
+            },
+        );
         s
     }
 
@@ -1109,6 +1158,44 @@ mod tests {
     }
 
     #[test]
+    fn a_door_the_person_closes_holds_until_the_person_or_a_script_opens_it() {
+        // `play_door_activation_toggles_v1`.
+        let b = Budget::new(1 << 24);
+        let mut l = live_with_door();
+        // Open in the reading (no script closed it): no box.
+        assert_eq!(l.apply(&RunState::reading_doors(true), &b).unwrap(), 0);
+        assert_eq!(touches_at(l.space(), 35.0), 0);
+        // The person closes it, its activation never blocked: the box
+        // stands all the same.
+        let mut s = RunState::reading_doors(true);
+        s.close_by_player(key(3));
+        assert!(s.unread && s.doors[&key(3)].person_closed);
+        assert!(s.doors[&key(3)].holds());
+        assert_eq!(l.apply(&s, &b).unwrap(), 1);
+        assert_eq!(touches_at(l.space(), 35.0), 1);
+        // The person's open lets it go.
+        s.open_by_player(key(3));
+        assert!(!s.doors[&key(3)].person_closed && !s.doors[&key(3)].holds());
+        l.apply(&s, &b).unwrap();
+        assert_eq!(touches_at(l.space(), 35.0), 0);
+        // Closed again, then a script's SetOpen(true) clears the person's
+        // close; a script's SetOpen(false) alone, unblocked, holds nothing.
+        s.close_by_player(key(3));
+        l.apply(&s, &b).unwrap();
+        assert_eq!(touches_at(l.space(), 35.0), 1);
+        let mut d = s.doors[&key(3)];
+        d.person_closed = false;
+        d.open = Some(true);
+        assert!(!d.holds());
+        d.open = Some(false);
+        assert!(!d.holds(), "a script's close alone is not held, as before");
+        // A run that does not read doors takes no close from the person.
+        let mut off = RunState::reading_doors(false);
+        off.close_by_player(key(3));
+        assert!(off.doors.is_empty() && !off.unread);
+    }
+
+    #[test]
     fn the_door_natives_read_as_their_documented_defaults() {
         let a = |v: &[&str]| v.iter().map(|s| s.to_string()).collect::<Vec<_>>();
         assert_eq!(
@@ -1134,12 +1221,14 @@ mod tests {
         assert_eq!(door_change("objectreference.enable", &a(&[])), None);
         assert!(DoorState {
             open: Some(false),
-            blocked: Some(true)
+            blocked: Some(true),
+            person_closed: false,
         }
         .holds());
         assert!(!DoorState {
             open: None,
-            blocked: Some(true)
+            blocked: Some(true),
+            person_closed: false,
         }
         .holds());
     }
