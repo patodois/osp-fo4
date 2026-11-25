@@ -206,6 +206,11 @@ pub struct Actor {
     /// a bone fails the shape (`ActorSkinBoneMissing`).
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     pub missing_bones_at_bind: bool,
+    /// With it, such a bone skinned as the nearest bone of the same skin the
+    /// skeleton holds (`actor_missing_bone_follows_nearest_v1`,
+    /// `crate::actor::pose::MissingBones::Nearest`).
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub missing_bones_nearest: bool,
     /// The key of the pose a posed build draws this actor in, among the
     /// poses given to `fo4_render::draw::build_with_posed_actors`, instead
     /// of its skeleton asset (`crate::timeline::cast::start_poses`); `None`:
@@ -783,6 +788,7 @@ pub fn resolve_reference_with(
         state: State::Blocked,
         enable: None,
         missing_bones_at_bind: false,
+        missing_bones_nearest: false,
         pose: None,
         look: None,
         keyword_base: None,

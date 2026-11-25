@@ -421,6 +421,38 @@ fn bind_pose_skinning_returns_the_stored_vertices_and_the_rest_pose_moves_them()
         3
     );
     assert!(m.contains(&pose::Affine::IDENTITY));
+    // Under actor_missing_bone_follows_nearest_v1 the missing bone takes
+    // the composite of the skin's bone the skeleton holds nearest it at
+    // bind (here the only one): skinned as BoneA, not as the identity.
+    let shifted = pose::Affine {
+        translation: [0., 0., 120.],
+        ..pose::Affine::IDENTITY
+    };
+    partial.bones.insert(b"BoneA".to_vec(), shifted);
+    let (near, missing) =
+        pose::bone_matrices_missing(&n, &skin, &partial, "body", pose::MissingBones::Nearest, &b)
+            .unwrap();
+    assert_eq!(missing, 1);
+    assert!(near.iter().all(|x| *x == near[0]), "{near:?}");
+    assert!(!near.contains(&pose::Affine::IDENTITY));
+    let (ident, _) = pose::bone_matrices_missing(
+        &n,
+        &skin,
+        &partial,
+        "body",
+        pose::MissingBones::Identity,
+        &b,
+    )
+    .unwrap();
+    // The identity leaves the missing bone's vertices at their stored
+    // places, 120 below the rest of the shape here.
+    assert!(ident.contains(&pose::Affine::IDENTITY));
+    assert_eq!(
+        pose::bone_matrices_missing(&n, &skin, &partial, "body", pose::MissingBones::Fail, &b)
+            .unwrap_err()
+            .code,
+        "ActorSkinBoneMissing"
+    );
 }
 
 #[test]

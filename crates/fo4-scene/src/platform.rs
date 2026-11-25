@@ -306,6 +306,7 @@ pub fn add_with(
             state,
             enable: inst.enable.clone(),
             missing_bones_at_bind: false,
+            missing_bones_nearest: false,
             pose: None,
             look: None,
             keyword_base: None,

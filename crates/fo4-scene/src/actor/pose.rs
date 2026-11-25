@@ -217,7 +217,96 @@ pub fn bone_matrices_bound(
     missing_at_bind: bool,
     b: &Budget,
 ) -> Result<(Vec<Affine>, usize)> {
+    let mode = if missing_at_bind {
+        MissingBones::Identity
+    } else {
+        MissingBones::Fail
+    };
+    bone_matrices_missing(n, skin, pose, file, mode, b)
+}
+
+/// What a skinned shape's bone the skeleton lacks is skinned with.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum MissingBones {
+    /// The shape fails (`ActorSkinBoneMissing`).
+    #[default]
+    Fail,
+    /// The identity (`actor_missing_bone_bind_pose_v1`).
+    Identity,
+    /// The composite matrix of the bone of the same skin the skeleton holds
+    /// whose bind origin (the skin-to-bone transform's inverse applied to
+    /// the bone's origin) lies nearest the missing bone's: the missing bone
+    /// kept at its bind place relative to that bone
+    /// (`actor_missing_bone_follows_nearest_v1`); the identity when the
+    /// skeleton holds none of the skin's bones.
+    Nearest,
+}
+
+/// Where a bone's origin lies in skin space at bind: the stored
+/// skin-to-bone transform (`bone = scale * rows * skin + translation`)
+/// solved for the bone's origin, the rows read as a rotation (transposed).
+fn bind_origin(to_bone: &Affine) -> [f64; 3] {
+    let t = to_bone.translation;
+    std::array::from_fn(|j| -(0..3).map(|i| to_bone.rows[i][j] * t[i]).sum::<f64>() / to_bone.scale)
+}
+
+/// [`bone_matrices_bound`] with the reading of a missing bone `mode` names.
+pub fn bone_matrices_missing(
+    n: &Nif<'_>,
+    skin: &Skin,
+    pose: &Skeleton,
+    file: &str,
+    mode: MissingBones,
+    b: &Budget,
+) -> Result<(Vec<Affine>, usize)> {
+    let (out, missing, gaps) =
+        bone_matrices_gaps(n, skin, pose, file, mode != MissingBones::Fail, b)?;
+    if mode != MissingBones::Nearest || gaps.is_empty() {
+        return Ok((out, missing));
+    }
+    let origins: Vec<[f64; 3]> = skin
+        .bones
+        .iter()
+        .map(|bone| {
+            bind_origin(&Affine {
+                rows: bone.rotation.map(|r| r.map(f64::from)),
+                translation: bone.translation.map(f64::from),
+                scale: f64::from(bone.scale),
+            })
+        })
+        .collect();
+    let mut out = out;
+    for k in &gaps {
+        let near = (0..skin.bones.len())
+            .filter(|j| !gaps.contains(j))
+            .min_by(|x, y| {
+                let d = |j: usize| -> f64 {
+                    (0..3)
+                        .map(|i| (origins[j][i] - origins[*k][i]).powi(2))
+                        .sum::<f64>()
+                };
+                d(*x).total_cmp(&d(*y)).then(x.cmp(y))
+            });
+        if let Some(j) = near {
+            out[*k] = out[j];
+        }
+    }
+    Ok((out, missing))
+}
+
+/// The composite matrices, how many bones were missing and their indexes
+/// (each given the identity), or `ActorSkinBoneMissing` without
+/// `missing_at_bind`.
+fn bone_matrices_gaps(
+    n: &Nif<'_>,
+    skin: &Skin,
+    pose: &Skeleton,
+    file: &str,
+    missing_at_bind: bool,
+    b: &Budget,
+) -> Result<(Vec<Affine>, usize, Vec<usize>)> {
     let mut missing = 0;
+    let mut gaps = Vec::new();
     let mut out = Vec::new();
     b.reserve(&mut out, skin.bones.len(), file, 0)?;
     for bone in &skin.bones {
@@ -233,6 +322,8 @@ pub fn bone_matrices_bound(
         let Some(world) = pose.bones.get(bone_name) else {
             if missing_at_bind {
                 missing += 1;
+                b.reserve(&mut gaps, 1, file, 0)?;
+                gaps.push(out.len());
                 out.push(Affine::IDENTITY);
                 continue;
             }
@@ -267,7 +358,7 @@ pub fn bone_matrices_bound(
         }
         out.push(world.compose(&to_bone));
     }
-    Ok((out, missing))
+    Ok((out, missing, gaps))
 }
 
 /// Linearly blended positions of shape `shape` under `matrices`, in the

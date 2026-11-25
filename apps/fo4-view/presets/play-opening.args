@@ -81,6 +81,10 @@
 --timeline-child-flag-agrees
 --timeline-nowait
 --actor-missing-bone-bind
+# A bone the skeleton lacks follows the nearest bone of its skin the skeleton
+# holds (actor_missing_bone_follows_nearest_v1): hair and skirts stay on the
+# head and the body instead of reaching to the feet.
+--actor-missing-bone-nearest
 --actor-start-clip
 --actor-subgraph-keywords
 --actor-clip-folder

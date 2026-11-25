@@ -41,6 +41,10 @@ pub struct Options {
     /// bone a skinned shape names that the actor's skeleton lacks is skinned
     /// at its bind transform instead of failing the actor.
     pub missing_bones_at_bind: bool,
+    /// `actor_missing_bone_follows_nearest_v1` (`--actor-missing-bone-nearest`,
+    /// with `missing_bones_at_bind`): such a bone skinned as the nearest
+    /// bone of its skin the skeleton holds, in place of the identity.
+    pub missing_bones_nearest: bool,
     /// The character graph's readings (`crate::char_graph::Switches`):
     /// with any on, [`start_poses`] poses the actors by their start clip.
     pub pose: char_graph::Switches,
@@ -299,6 +303,7 @@ pub fn resolve(
             }
         }
         a.missing_bones_at_bind = options.missing_bones_at_bind;
+        a.missing_bones_nearest = options.missing_bones_at_bind && options.missing_bones_nearest;
         if options.model_graph_idle {
             graph_start_idle(loader, &mut a, b)?;
         }

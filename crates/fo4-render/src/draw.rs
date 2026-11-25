@@ -473,6 +473,9 @@ struct Builder<'a, 's> {
     /// The actor being drawn skins a bone its skeleton lacks at its bind
     /// transform (`fo4_scene::actor::Actor::missing_bones_at_bind`).
     missing_bones_at_bind: bool,
+    /// With it, such a bone skinned as the nearest bone of its skin the
+    /// skeleton holds (`fo4_scene::actor::Actor::missing_bones_nearest`).
+    missing_bones_nearest: bool,
     /// The instance or actor drawn is a named platform's
     /// (`play_platform_shapes_left_out_v1` among its rules): a shape the
     /// draw refuses is left out ([`Build::left_out`]) instead of refusing
@@ -2672,24 +2675,30 @@ impl Builder<'_, '_> {
                         ));
                     }
                     let pose = &self.skeletons[&skeleton];
-                    let (matrices, missing) = fo4_scene::actor::pose::bone_matrices_bound(
+                    use fo4_scene::actor::pose::MissingBones;
+                    let mode = match (self.missing_bones_at_bind, self.missing_bones_nearest) {
+                        (false, _) => MissingBones::Fail,
+                        (true, false) => MissingBones::Identity,
+                        (true, true) => MissingBones::Nearest,
+                    };
+                    let (matrices, missing) = fo4_scene::actor::pose::bone_matrices_missing(
                         n,
                         &skin,
                         pose,
                         &file,
-                        self.missing_bones_at_bind,
+                        mode,
                         self.budget,
                     )?;
-                    if missing > 0
-                        && !self
-                            .draw_rules
-                            .contains(&fo4_scene::hypotheses::ACTOR_MISSING_BONE_BIND)
-                    {
-                        append(
-                            &mut self.draw_rules,
-                            fo4_scene::hypotheses::ACTOR_MISSING_BONE_BIND,
-                            self.budget,
-                        )?;
+                    if missing > 0 {
+                        let mut rules = vec![fo4_scene::hypotheses::ACTOR_MISSING_BONE_BIND];
+                        if mode == MissingBones::Nearest {
+                            rules.push(fo4_scene::hypotheses::ACTOR_MISSING_BONE_NEAREST);
+                        }
+                        for rule in rules {
+                            if !self.draw_rules.contains(&rule) {
+                                append(&mut self.draw_rules, rule, self.budget)?;
+                            }
+                        }
                     }
                     let positions = fo4_scene::actor::pose::skin_positions(
                         n,
@@ -2824,6 +2833,7 @@ impl Builder<'_, '_> {
         let world = Transform::euler(p, a.scale.unwrap_or(1.))?;
         self.allow(a.state.hypotheses());
         self.missing_bones_at_bind = a.missing_bones_at_bind;
+        self.missing_bones_nearest = a.missing_bones_nearest;
         // A pose key the caller gave (`Actor::pose`) must be one of the
         // given poses; without one the skeleton asset is the key.
         let skeleton = match a.pose {
@@ -3121,6 +3131,7 @@ fn build_inner(
         uv_left_out: std::collections::BTreeSet::new(),
         draw_rules: Vec::new(),
         missing_bones_at_bind: false,
+        missing_bones_nearest: false,
         platform: false,
         node_chains: BTreeMap::new(),
         static_parts: false,

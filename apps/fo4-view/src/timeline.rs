@@ -34,6 +34,8 @@ pub struct Args {
     pub target_rotation: bool,
     /// `--actor-missing-bone-bind` (`actor_missing_bone_bind_pose_v1`).
     pub missing_bones_at_bind: bool,
+    /// `--actor-missing-bone-nearest` (`actor_missing_bone_follows_nearest_v1`).
+    pub missing_bones_nearest: bool,
     /// The start clip flags (`fo4_scene::char_graph::Switches`).
     pub pose: fo4_scene::char_graph::Switches,
     /// `--look-at`, `--look-at-actor` (presentation).
@@ -110,6 +112,7 @@ pub fn cast(
         let options = tl::cast::Options {
             target_rotation: a.target_rotation,
             missing_bones_at_bind: a.missing_bones_at_bind,
+            missing_bones_nearest: a.missing_bones_nearest,
             pose: a.pose,
             look: a.look,
             model_graph_idle: a.model_graph_idle,

@@ -282,6 +282,7 @@ usage:
            [--actor-start-clip] [--actor-subgraph-keywords] [--actor-clip-folder]
            [--actor-start-clip-loop] [--actor-sit-clip] [--actor-subgraph-flag-one]
            [--actor-model-graph-idle] [--actor-template-bits] [--actor-head-slots]
+           [--actor-unread-texture-slots] [--actor-missing-bone-nearest]
            [--actor-leveled-seed SEED
            [--actor-leveled-chance-none] [--actor-leveled-use-all]]
            [--timeline-ride-model PLUGIN:HEX [--timeline-ride SEQUENCE,START]]
@@ -336,6 +337,16 @@ usage:
       a head is hidden (the head by slot 32, its hair by 30 or 31) instead
       of the head bone's weights (pending rule
       npc_head_hidden_by_head_slot_v1).
+      --actor-missing-bone-nearest (with --actor-missing-bone-bind) skins a
+      bone the skeleton lacks as the bone of the same skin the skeleton
+      holds whose bind origin lies nearest it, in place of the identity
+      (pending rule actor_missing_bone_follows_nearest_v1): hair and cloth
+      bones stay with the head and the body.
+      --actor-unread-texture-slots reads an actor's models as a placed
+      reference's: a missing texture cited only in slots the frame never
+      samples does not keep the actor out, nor does a rootless texture
+      citation in such a slot whose rooted file is missing too (pending
+      rule actor_texture_missing_unread_slot_v1).
       --actor-subgraph-flag-one lets a race without subgraph entries of flag
       word 0 take its entries of flag word 1 (no target keywords);
       --actor-model-graph-idle draws an actor's part model whose own graph's
@@ -843,6 +854,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
     let mut timeline_cast = false;
     let mut target_rotation = false;
     let mut missing_bones_at_bind = false;
+    let mut missing_bones_nearest = false;
     let mut pose = fo4_scene::char_graph::Switches::default();
     let mut child_flag_agrees = false;
     let mut dead = fo4_scene::timeline::Dead::Standing;
@@ -939,6 +951,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             "--timeline-cast" => timeline_cast = true,
             "--timeline-target-rotation" => target_rotation = true,
             "--actor-missing-bone-bind" => missing_bones_at_bind = true,
+            "--actor-missing-bone-nearest" => missing_bones_nearest = true,
             "--timeline-child-flag-agrees" => child_flag_agrees = true,
             "--draw-child-flag-agrees" => drawing.child_flag_agrees = true,
             "--draw-platforms" => drawing.platforms = true,
@@ -1061,6 +1074,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
         cast: true,
         target_rotation,
         missing_bones_at_bind,
+        missing_bones_nearest,
         pose,
         aim: fo4_scene::timeline::Aim::Track,
         dead,
@@ -1071,6 +1085,9 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
         memory_report: None,
         ride: None,
     });
+    if missing_bones_nearest && !missing_bones_at_bind {
+        return Err("--actor-missing-bone-nearest reads the bones --actor-missing-bone-bind skins at bind: it needs --actor-missing-bone-bind".into());
+    }
     let timeline = match (timeline_file, timeline_at, eye_height) {
         _ if play_cast.is_some() => None,
         (Some(file), Some(at), Some(eye_height)) => Some(crate::timeline::Args {
@@ -1084,6 +1101,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             cast: timeline_cast,
             target_rotation,
             missing_bones_at_bind,
+            missing_bones_nearest,
             pose,
             aim,
             dead,
@@ -1525,6 +1543,7 @@ mod tests {
         };
         let t = scene.timeline.unwrap();
         assert!(t.cast && t.target_rotation && t.child_flag_agrees && t.missing_bones_at_bind);
+        assert!(!t.missing_bones_nearest);
         assert_eq!(t.pose, fo4_scene::char_graph::Switches::default());
         assert_eq!(t.aim, fo4_scene::timeline::Aim::Speaker);
         let c = parse(&args(
@@ -1673,8 +1692,11 @@ mod tests {
                 && scene.drawing.platform_skins
         );
         assert!(scene.play_cast.is_some() && scene.drawing.platforms && scene.light.any());
-        assert!(scene.drawing.cast_on_platforms);
-        assert!(scene.play_cast.as_ref().is_some_and(|a| a.look.head_slots));
+        assert!(scene.drawing.cast_on_platforms && scene.drawing.cast_keeps_part);
+        assert!(scene.play_cast.as_ref().is_some_and(|a| a.look.head_slots
+            && a.look.unread_slots
+            && a.missing_bones_at_bind
+            && a.missing_bones_nearest));
         // Without the local file's platforms the preset is refused.
         let mut alone = args("m d C --eye 1,2,3 --look 4,5,6 --play-run s.txt --play-out o");
         alone.extend(expand_args(&args("--args preset.args"), &read).unwrap());

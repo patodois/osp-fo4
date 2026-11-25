@@ -192,6 +192,9 @@ pub const TIMELINE_ACTOR_TARGET_ROTATION: &str = "timeline_actor_target_rotation
 /// A bone a skinned shape names that the actor's skeleton lacks, skinned at
 /// its bind transform (`crate::actor::Actor::missing_bones_at_bind`).
 pub const ACTOR_MISSING_BONE_BIND: &str = "actor_missing_bone_bind_pose_v1";
+/// With it, such a bone skinned as the nearest bone of its skin the
+/// skeleton holds (`crate::actor::Actor::missing_bones_nearest`).
+pub const ACTOR_MISSING_BONE_NEAREST: &str = "actor_missing_bone_follows_nearest_v1";
 /// An interior cell's ambient and directional colour lighting its surfaces
 /// (`crate::light`, `--light-cell`).
 pub const LIGHT_CELL: &str = "cell_light_ambient_directional_v1";
@@ -818,6 +821,7 @@ mod tests {
             TIMELINE_ACTOR_ROTATION,
             TIMELINE_ACTOR_TARGET_ROTATION,
             ACTOR_MISSING_BONE_BIND,
+            ACTOR_MISSING_BONE_NEAREST,
             LIGHT_CELL,
             LIGHT_INHERITS,
             LIGHT_POINTS,
