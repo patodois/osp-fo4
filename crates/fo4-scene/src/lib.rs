@@ -17,6 +17,7 @@ pub mod light;
 pub mod lighting;
 pub mod missing;
 pub mod model_policy;
+pub mod parts;
 pub mod paths;
 pub mod platform;
 pub mod readiness;
@@ -200,6 +201,7 @@ pub struct Loader<'a> {
     render_static_fields: bool,
     render_static_leaves: bool,
     render_reference_alpha: bool,
+    render_static_parts: bool,
 }
 impl<'a> Loader<'a> {
     /// The collision readiness switches the collision cell build reads
@@ -278,6 +280,21 @@ impl<'a> Loader<'a> {
     pub fn render_static_leaves(&self) -> bool {
         self.render_static_leaves
     }
+    /// Render readiness of a reference whose base is a static (`STAT`)
+    /// with one model: the model blockers no usable rule covers
+    /// ([`parts::aside`]) are set aside under `static_unmoved_parts_drawn_v1`
+    /// ([`hypotheses::STATIC_PARTS`]) when at least one shape of the model
+    /// reads none of them and nothing drives it ([`parts::read`]); the draw
+    /// then leaves out the shapes they reach, the particle systems and the
+    /// shapes whose blend comes from a material file, each counted
+    /// (`fo4_render::draw::Build::left_out`). Off by default: the render
+    /// state as before.
+    pub fn set_render_static_parts(&mut self, on: bool) {
+        self.render_static_parts = on;
+    }
+    pub fn render_static_parts(&self) -> bool {
+        self.render_static_parts
+    }
     /// The mounted files the loader reads.
     pub fn vfs(&self) -> &'a Vfs {
         self.vfs
@@ -301,6 +318,7 @@ impl<'a> Loader<'a> {
             render_static_fields: false,
             render_static_leaves: false,
             render_reference_alpha: false,
+            render_static_parts: false,
         }
     }
     /// Drop decoded asset state while retaining the explicit path interpretation policy.
@@ -708,7 +726,14 @@ impl<'a> Loader<'a> {
                 .any(|(k, e)| leaf::aside(e, origin(k)))
             && self.leaf_model(base.as_ref(), b)?;
         let alpha = self.render_reference_alpha;
-        let state = if agrees || fields || leaf || alpha {
+        let parts = self.render_static_parts
+            && on_static
+            && blockers
+                .iter()
+                .enumerate()
+                .any(|(k, e)| parts::aside(e, origin(k)))
+            && self.static_parts_kept(base.as_ref(), b)?;
+        let state = if agrees || fields || leaf || alpha || parts {
             hypotheses::classify_aside(
                 &blockers,
                 outside,
@@ -728,6 +753,8 @@ impl<'a> Loader<'a> {
                         && readiness::reference_alpha(e)
                     {
                         Some(hypotheses::REFERENCE_ALPHA_RENDER)
+                    } else if parts && parts::aside(e, origin(k)) {
+                        Some(hypotheses::STATIC_PARTS)
                     } else {
                         None
                     }
@@ -771,6 +798,24 @@ impl<'a> Loader<'a> {
             blocker_origins: origins,
             collision,
             assets,
+        })
+    }
+    /// Whether a base with one asset, a model, keeps at least one shape
+    /// under [`parts::read`] given that model's own blockers.
+    fn static_parts_kept(&self, base: Option<&Base>, b: &Budget) -> Result<bool> {
+        let Some(&[asset]) = base.map(|v| v.assets.as_slice()) else {
+            return Ok(false);
+        };
+        let Some(node) = self.assets.nodes.get(asset) else {
+            return Ok(false);
+        };
+        if node.kind != AssetKind::Model {
+            return Ok(false);
+        }
+        let scope = b.child();
+        self.assets.with_decoded(asset, &scope, |d| match d {
+            DecodedAsset::Model(n) => Ok(parts::read(&n, &node.blockers, &scope)?.kept > 0),
+            _ => Ok(false),
         })
     }
     /// Whether a base's model (its first asset) is a leaf ([`leaf::read`]).

@@ -259,6 +259,11 @@ pub const STATIC_REFERENCE_FIELDS_RENDER: &str = "refr_static_fields_render_unch
 /// `Loader::set_render_static_leaves`, off by default; the play window
 /// picks the pose by the collision marker boxes that meet the static).
 pub const STATIC_LEAF_TWO_POSE: &str = "play_static_leaf_two_pose_v1";
+/// A static refused for model blocks no rule settles is drawn by the
+/// shapes those blocks and the model's controllers do not reach, the rest
+/// left out and counted (`crate::parts`, `Loader::set_render_static_parts`,
+/// off by default).
+pub const STATIC_PARTS: &str = "static_unmoved_parts_drawn_v1";
 /// A named platform's skinned shape whose bones go with more than one of
 /// its parts drawn skinned again with each bone moved by its part's motion
 /// (`crate::platform::skin_at_rest`, the play window's

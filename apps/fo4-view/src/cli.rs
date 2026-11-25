@@ -23,6 +23,7 @@ usage:
              [the light switches of --headless]]]
            [--draw-child-flag-agrees] [--draw-platforms] [--draw-static-fields]
            [--draw-static-leaves] [--draw-platform-skins] [--draw-reference-alpha]
+           [--draw-static-parts]
       Window with a free-fly camera: W/A/S/D move, Shift moves faster, hold the
       left mouse button and move the mouse to look, R returns to the start pose.
       The title bar shows the mode, the speed and the position.
@@ -209,6 +210,13 @@ usage:
       those boxes, and the other once the run has taken them all out
       (pending rule play_static_leaf_two_pose_v1). The checkpoint gate's
       frame needs both switches.
+      --draw-static-parts (off by default; any window or frame) draws a
+      static refused only for model blocks no rule settles (a behaviour
+      graph, particle systems, blocks the reader does not decode) by the
+      shapes those blocks and the model's controllers do not reach; the
+      reached shapes, the particle systems and the shapes whose blend comes
+      from a material file are left out and counted in the log (pending
+      rule static_unmoved_parts_drawn_v1).
       --draw-platform-skins (off by default; with --draw-platforms) draws
       each skinned shape of a named platform whose bones go with more than
       one of its parts skinned again, each frame its parts moved, with each
@@ -429,6 +437,11 @@ pub struct Drawing {
     /// play window poses each leaf by the walker's collision marker boxes
     /// (`crate::scene::LeafInstance::pose`).
     pub static_leaves: bool,
+    /// `--draw-static-parts` (`static_unmoved_parts_drawn_v1`): the
+    /// loader's render readiness sets aside a static's model blockers no
+    /// rule covers when a shape of the model stays (`fo4_scene::parts`,
+    /// `Loader::set_render_static_parts`); the draw leaves out the rest.
+    pub static_parts: bool,
     /// `--draw-platform-skins` (`play_platform_skin_follows_parts_v1`;
     /// with `--draw-platforms`): a named platform's skinned shape whose
     /// bones go with several parts skinned again with each bone moved by
@@ -902,6 +915,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             "--draw-static-fields" => drawing.static_fields = true,
             "--draw-reference-alpha" => drawing.reference_alpha = true,
             "--draw-static-leaves" => drawing.static_leaves = true,
+            "--draw-static-parts" => drawing.static_parts = true,
             "--draw-platform-skins" => drawing.platform_skins = true,
             "--exposure-eye-visible" => drawing.exposure_visible = true,
             "--timeline-dead-lying" | "--timeline-dead-left-out" => {
@@ -1610,6 +1624,7 @@ mod tests {
         assert!(p.switches.held_at_load && scene.drawing.held_doors);
         assert!(p.switches.door_open && p.switches.door_toggle);
         assert!(p.switches.reference_alpha && scene.drawing.reference_alpha);
+        assert!(scene.drawing.static_parts);
         assert!(p.switches.door_open);
         assert!(
             scene.drawing.static_fields
@@ -1805,6 +1820,14 @@ mod tests {
             panic!()
         };
         assert!(alpha.drawing.reference_alpha && !alpha.drawing.static_fields);
+        // The eleventh-session step's switch: off by default, on alone.
+        assert!(!scene.drawing.static_parts && !alpha.drawing.static_parts);
+        let Command::Window { scene: parts, .. } =
+            parse(&args(&format!("{base} --draw-static-parts"))).unwrap()
+        else {
+            panic!()
+        };
+        assert!(parts.drawing.static_parts && !parts.drawing.reference_alpha);
         for (flag, fields, leaves) in [
             ("--draw-static-fields", true, false),
             ("--draw-static-leaves", false, true),

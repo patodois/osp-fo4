@@ -29,12 +29,15 @@
 //! exact reasons with the share each holds of the view's omitted
 //! placements. `--mark FILE` (one record key per line): those placements'
 //! outcomes and reasons are counted apart as well (the play run's named
-//! platforms). `--render-child-flag-agrees`, `--render-static-fields` and
-//! `--render-static-leaves` (with `--views` only; off by default) read
+//! platforms). `--render-child-flag-agrees`, `--render-static-fields`,
+//! `--render-static-leaves`, `--render-reference-alpha` and
+//! `--render-static-parts` (with `--views` only; off by default) read
 //! render readiness under `xesp_child_flag_agrees_chain_v1`,
-//! `refr_static_fields_render_unchanged_v1` and
-//! `play_static_leaf_two_pose_v1` (the viewer's `--draw-child-flag-agrees`,
-//! `--draw-static-fields` and `--draw-static-leaves`).
+//! `refr_static_fields_render_unchanged_v1`,
+//! `play_static_leaf_two_pose_v1`, `refr_xalp_render_unchanged_v1` and
+//! `static_unmoved_parts_drawn_v1` (the viewer's `--draw-child-flag-agrees`,
+//! `--draw-static-fields`, `--draw-static-leaves`, `--draw-reference-alpha`
+//! and `--draw-static-parts`).
 #[path = "coverage/detail.rs"]
 mod detail;
 use fo4_core::{Budget, Error, Manifest};
@@ -1285,7 +1288,7 @@ fn load(c: &mut Census, text: &str) -> AnyResult<()> {
 
 fn run() -> AnyResult<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
-    const USAGE: &str = "coverage_census MANIFEST OUT_DIR (--all [--every N] [--limit N] [--shard K/N] | --view CELL_EDITOR_ID [--around N] | --views FILE [--mark FILE] [--render-child-flag-agrees] [--render-static-fields] [--render-static-leaves] | --merge DIR...) [--times S[,S...]] [--clock-emissive-multiple] [--clock-emissive-colour] [--clock-falloff] [--clock-translation] [--clock-rotation] [--clock-rotation-xyz] [--clock-scale]";
+    const USAGE: &str = "coverage_census MANIFEST OUT_DIR (--all [--every N] [--limit N] [--shard K/N] | --view CELL_EDITOR_ID [--around N] | --views FILE [--mark FILE] [--render-child-flag-agrees] [--render-static-fields] [--render-static-leaves] [--render-reference-alpha] [--render-static-parts] | --merge DIR...) [--times S[,S...]] [--clock-emissive-multiple] [--clock-emissive-colour] [--clock-falloff] [--clock-translation] [--clock-rotation] [--clock-rotation-xyz] [--clock-scale]";
     if args.len() < 3 {
         return Err(USAGE.into());
     }
@@ -1299,6 +1302,8 @@ fn run() -> AnyResult<()> {
     let mut render_agrees = false;
     let mut render_fields = false;
     let mut render_leaves = false;
+    let mut render_alpha = false;
+    let mut render_parts = false;
     let mut around = 0u32;
     let mut every = 32u64;
     let mut limit = u64::MAX;
@@ -1361,6 +1366,8 @@ fn run() -> AnyResult<()> {
             "--render-child-flag-agrees" => render_agrees = true,
             "--render-static-fields" => render_fields = true,
             "--render-static-leaves" => render_leaves = true,
+            "--render-reference-alpha" => render_alpha = true,
+            "--render-static-parts" => render_parts = true,
             "--view" => view = Some(rest.next().ok_or(USAGE)?.clone()),
             "--views" => {
                 let text = std::fs::read_to_string(rest.next().ok_or(USAGE)?)?;
@@ -1406,7 +1413,12 @@ fn run() -> AnyResult<()> {
         != 1
         || (views.is_some() && clock.times.len() != 1)
         || (views.is_none()
-            && (!marks.is_empty() || render_agrees || render_fields || render_leaves))
+            && (!marks.is_empty()
+                || render_agrees
+                || render_fields
+                || render_leaves
+                || render_alpha
+                || render_parts))
     {
         return Err(USAGE.into());
     }
@@ -1448,6 +1460,8 @@ fn run() -> AnyResult<()> {
     // with --views only).
     loader.set_render_static_fields(render_fields);
     loader.set_render_static_leaves(render_leaves);
+    loader.set_render_reference_alpha(render_alpha);
+    loader.set_render_static_parts(render_parts);
     if let Some(views) = &views {
         let mut total = Census {
             marks: marks.clone(),
@@ -1467,6 +1481,14 @@ fn run() -> AnyResult<()> {
                 (
                     render_leaves,
                     "With --render-static-leaves (play_static_leaf_two_pose_v1 in render readiness). "
+                ),
+                (
+                    render_alpha,
+                    "With --render-reference-alpha (refr_xalp_render_unchanged_v1 in render readiness). "
+                ),
+                (
+                    render_parts,
+                    "With --render-static-parts (static_unmoved_parts_drawn_v1 in render readiness). "
                 ),
             ]
             .iter()

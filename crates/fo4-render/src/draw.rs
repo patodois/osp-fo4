@@ -387,6 +387,10 @@ struct Surface {
     /// An effect shader's surface (not a lighting shader's): drawn unlit
     /// under a frame's light (`Build::effect_draws`).
     effect: bool,
+    /// Its blending is enabled by a material file's fields (their factor
+    /// numbering under `bgsm_blend_factors_alpha_function_v1`), not by the
+    /// model's own alpha property.
+    material_blend: bool,
 }
 struct Builder<'a, 's> {
     loader: &'a Loader<'s>,
@@ -478,6 +482,13 @@ struct Builder<'a, 's> {
     /// block's chain from the root in the actor model being drawn.
     node_chains: BTreeMap<usize, Vec<usize>>,
     platform: bool,
+    /// The instance drawn is a static under `static_unmoved_parts_drawn_v1`
+    /// (`fo4_scene::parts`): its model's reached shapes, particle systems
+    /// and material-blended shapes are left out ([`Build::left_out`]), and
+    /// so is a shape the draw refuses.
+    static_parts: bool,
+    /// Under [`Builder::static_parts`], the parts of the model being drawn.
+    parts: Option<fo4_scene::parts::Parts>,
 }
 /// A diffuse texture decoded under the reference limits, with the DDS
 /// declarations the summary reports.
@@ -1473,6 +1484,7 @@ impl Builder<'_, '_> {
                     palette: None,
                     clock: Default::default(),
                     colour: None,
+                    material_blend: c.alpha_blend.enabled != 0,
                     colour_terms: ([1.; 3], 1.),
                     effect: !lighting,
                 })
@@ -1678,6 +1690,7 @@ impl Builder<'_, '_> {
             colour: None,
             colour_terms: ([1.; 3], 1.),
             effect: !lighting,
+            material_blend: false,
         };
         let tracks = self.shader_clock(n, shader, file)?;
         self.clock_surface(
@@ -1942,6 +1955,13 @@ impl Builder<'_, '_> {
             )?;
             return Ok(());
         }
+        // `static_unmoved_parts_drawn_v1`: a part the reading leaves out
+        // (`fo4_scene::parts`) is counted and not drawn.
+        if let Some(code) = self.parts.as_ref().and_then(|p| p.left_out(i)) {
+            let code = code.to_string();
+            append(&mut self.output.left_out, (instance, code), self.budget)?;
+            return Ok(());
+        }
         let ty = &n.block_types[block.type_index as usize];
         if matches!(
             block_class(ty),
@@ -2060,6 +2080,16 @@ impl Builder<'_, '_> {
                     )?;
                     return Ok(());
                 }
+                // A part whose blend factors come from a material file is
+                // left out under `static_unmoved_parts_drawn_v1`.
+                if self.parts.is_some() && surface.material_blend {
+                    append(
+                        &mut self.output.left_out,
+                        (instance, fo4_scene::parts::MATERIAL_BLEND.into()),
+                        self.budget,
+                    )?;
+                    return Ok(());
+                }
                 let mesh = self.mesh(path, mesh_index, mesh, &surface, None)?;
                 self.animate(&surface, here.as_ref())?;
                 if surface.effect {
@@ -2159,6 +2189,14 @@ impl Builder<'_, '_> {
                     };
                     let mut active = Vec::new();
                     self.node_tracks = self.moving_nodes(&n, path)?;
+                    // `static_unmoved_parts_drawn_v1`: the model's parts by
+                    // its own blockers.
+                    self.parts = if self.static_parts {
+                        let blockers = &loader.assets.nodes[*id].blockers;
+                        Some(fo4_scene::parts::read(&n, blockers, self.budget)?)
+                    } else {
+                        None
+                    };
                     for root in n.roots.iter().filter(|r| **r >= 0) {
                         self.node(
                             &n,
@@ -2173,6 +2211,7 @@ impl Builder<'_, '_> {
                         )?;
                     }
                     self.node_tracks.clear();
+                    self.parts = None;
                     Ok(())
                 })?;
             }
@@ -2503,12 +2542,13 @@ impl Builder<'_, '_> {
         self.allow_editor_marker_subtrees = rules.contains(&h::NAMED_MARKER);
         self.allow_scol_parts = rules.contains(&h::SCOL);
         self.platform = rules.contains(&h::PLAY_PLATFORM_LEFT_OUT);
+        self.static_parts = rules.contains(&h::STATIC_PARTS);
     }
     /// Under [`Builder::platform`]: whether `e`, raised drawing one shape
     /// or block, is left out (an allocation, limit or arithmetic failure
     /// still fails the build).
     fn leave_out(&mut self, instance: u32, e: &Error) -> Result<bool> {
-        if !self.platform
+        if !(self.platform || self.parts.is_some())
             || matches!(
                 e.code.as_str(),
                 "AllocationFailed" | "LimitExceeded" | "Overflow" | "RenderNodeCycle"
@@ -3083,6 +3123,8 @@ fn build_inner(
         missing_bones_at_bind: false,
         platform: false,
         node_chains: BTreeMap::new(),
+        static_parts: false,
+        parts: None,
     };
     let scratch = b.child();
     let mut instances = Vec::new();
@@ -3160,6 +3202,10 @@ fn build_inner(
             .state
             .hypotheses()
             .contains(&fo4_scene::hypotheses::PLAY_PLATFORM_LEFT_OUT);
+        builder.static_parts = i
+            .state
+            .hypotheses()
+            .contains(&fo4_scene::hypotheses::STATIC_PARTS);
         let first = builder.output.list.draws.len();
         builder.draw_rules.clear();
         let src = &i.reference.record.source;

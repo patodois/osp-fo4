@@ -92,6 +92,8 @@ struct Terms {
     scale: f32,
     alpha: Alpha,
     texture: Option<Vec<u8>>,
+    /// The terms are a material file's (not the NIF shader's own).
+    from_material: bool,
     alpha_tested: bool,
     offset: [f64; 2],
     uv_scale: [f64; 2],
@@ -341,6 +343,7 @@ impl Builder<'_, '_> {
                         uv_scale: [c.u_scale as f64, c.v_scale as f64],
                         tile: Some(c.tile_flags),
                         two_sided: Some(c.two_sided.0),
+                        from_material: true,
                     })
                 })?
             }
@@ -423,6 +426,7 @@ impl Builder<'_, '_> {
                     uv_scale: floats::<2>(f, "UV Scale", file)?,
                     tile: None,
                     two_sided: None,
+                    from_material: false,
                 }
             }
         };
@@ -632,6 +636,7 @@ impl Builder<'_, '_> {
             colour: colour_clock.then_some(tint),
             colour_terms: (terms.color, terms.scale),
             effect: true,
+            material_blend: terms.from_material && terms.alpha.enabled != 0,
         };
         self.clock_surface(&mut surface, tracks, file, at)?;
         self.clock_held(n, shader, f, &terms.material_fields, file, at)?;

@@ -1668,6 +1668,49 @@ surface; the evacuees were already past the first door when it was closed, so no
 shut door. Nothing is changed; the reading is named `play_door_person_closed_actors_unchanged_v1` (pending): what the
 game's actors do at a door the player closed is for a measurement of the running game.
 
+### The first lift's room drawn by its unmoved parts (the eleventh-session step)
+
+Both eleventh sessions met the room the first lift comes down into undrawn again (A walked off the landing's edge
+at 990 s seeing nothing below the worker's boots; B spent four minutes on the way back finding the lift). Read
+blocker by blocker at the hypotheses level the window draws at, the room static's 40 blockers split in two. Eighteen
+are covered by pending rules every other placement uses: the material swap's `FNAM` (an editor folder label,
+`mswp_fnam_folder_label_v1`), the eight materials whose blend factors are enabled
+(`bgsm_blend_factors_alpha_function_v1`), a texture cited only in an unread slot (`texture_missing_unread_slot_v1`),
+the controller manager, its object palette, text keys and multi-target transform controller at rest
+(`nif_controller_rest_manager_idle_v1`), its one looping sequence (`nif_controller_rest_loop_unstarted_v1`), the
+`MODT`, the rotation and the absent scale; so the swap, the blend state and the texture slot do not refuse it. The
+other 22 have no rule: the behaviour graph's extra data (a generic stage graph), the particle system, its emitter and
+update controllers with their five interpolator and data blocks (one interpolator also undecoded), ten particle modifier, emitter and data blocks the
+reader does not decode, and two undecoded extra data blocks (`BSPositionData`) on two small shapes. What each needs:
+the graph, which sequence it starts at load (a measurement); the particle system, a particle simulation; the two
+extra data blocks, a layout. What the data says about their reach: the model's one sequence names two controlled
+blocks, both the particle system's emitter (birth rate and active), and its multi-target transform controller names
+no extra target (32 empty links), so nothing the graph can start moves a drawn node.
+
+- `--draw-static-parts` (`static_unmoved_parts_drawn_v1`, pending; `fo4_scene::parts`, `Loader::set_render_static_parts`;
+  off by default, in the play preset): a static with one model whose model blockers no usable rule covers is drawn
+  by the shapes they do not reach. A shape reads the nodes from the root down to it, itself and every block its
+  links reach other than nodes and collision; it is left out when an open blocker lies on one of those blocks (the
+  blocker's code), when an animation-state block is among them or names one of them as its `Target` (other than a
+  holder's own) or `Extra Target`, or a controller sequence names a node of its chain or the shape, or when a
+  controller block is not decoded (`ControllerDriven`). Particle systems are left out (`ParticleSystem`), and so is a
+  shape whose blend comes from a material file (`UnsourcedMaterialBlend`): its factor numbering has no source. Render
+  readiness sets the open model blockers aside only when a shape stays; the draw counts what it leaves out
+  (`Build::left_out`) and the window's log gives one `static parts:` line a load. `coverage_census` takes
+  `--render-static-parts` (and `--render-reference-alpha`) with `--views`.
+- The room: 21 of its 26 shapes drawn (the landing, the drop's face, the lower floor, the stairs, walls and
+  fittings); left out the two shapes carrying the undecoded extra data, three material-blended shapes (two decals
+  and an effect glass) and the particle system.
+- On the opening's route (the ten views the eleventh sessions loaded, with the preset's other render switches)
+  the switch draws 16 other placements: the same room's model placed again in the postwar vault (the way back to
+  the lift), three houses of the street (a transform controller on an empty node; one blended shape each left
+  out), the exterior vault entrance's frame twice (a behaviour graph), a capsule wall twice (two fans a controller
+  turns left out) and eight scanners (the scanning part left out). Omitted placements per view: 347 to 344, 347 to
+  344, 367 to 363, 375 to 370, 49 to 47, 37 to 35, 535 to 530, 733 (unchanged), 1,846 to 1,841, 229 to 227.
+- Headless frames from A's pose at 990 s (on the landing, looking 35 degrees down): black below the worker's boots
+  before, the landing's floor, its yellow-edged drop and the lift's base after; toward the stairs from the landing,
+  the lower floor, the stairs and the platform above them. The window itself was not run with the switch.
+
 ## What the play mode does not do yet
 
 - The elevators ride only those the caller names (`--play-elevator`), headless and in the scripted window;
@@ -1759,3 +1802,4 @@ game's actors do at a door the player closed is for a measurement of the running
 | `play_door_collision_open_pose_v1` | `--play-door-open-collision` (in the preset since the corridor-fall step) | the vault door model's frame under no sequence and its parts at the last key of its sequence named Open; that this is the doorway's collision while the door stands open is prior knowledge | weak |
 | `play_door_activation_opens_held_before_visit_v1` | the play mode's open of a held door (the behaviour as it is) | the eighth session's early E at the front door; whether the game refuses an activation a script blocked is not known | weak |
 | `play_door_person_closed_actors_unchanged_v1` | `--play-door-toggle` (the behaviour as it is) | the play mode holds the person's close for the walker only; the run's actor moves read no door (synthetic tests); no session shows an actor meeting a shut door | weak |
+| `static_unmoved_parts_drawn_v1` | `fo4-view --draw-static-parts` (in the preset since the eleventh-session step) | nifxml's structure (children, a shape's links, controller targets, sequences' controlled blocks by node name); the room's one sequence names only its particle emitter and its transform controller no extra target; that a graph acts only through the model's sequences is prior knowledge | weak |

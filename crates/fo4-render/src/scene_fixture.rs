@@ -2697,3 +2697,79 @@ fn a_timeline_frame_leaves_out_what_the_run_disabled_and_moves_what_it_moved() {
         assert_eq!(applied.moved_out.len(), 1);
     }
 }
+
+/// `static_unmoved_parts_drawn_v1`: a static whose model's second shape
+/// carries an extra data block the reader does not decode is refused
+/// whole; behind `Loader::set_render_static_parts` it is drawn by its other
+/// shape and the reached one is left out, counted by the blocker's code.
+#[test]
+fn a_static_refused_for_an_unread_block_is_drawn_by_its_other_parts_behind_the_switch() {
+    use fo4_scene::hypotheses::STATIC_PARTS;
+    let mut blocks = model_blocks(b"textures/a.dds", None, None, (b"", b""), None);
+    // The second shape (block 4): one extra data link, to block 5.
+    let helper = blocks[4].1.clone();
+    let mut linked = helper[..4].to_vec();
+    linked.extend(1u32.to_le_bytes());
+    linked.extend(5u32.to_le_bytes());
+    linked.extend(&helper[8..]);
+    blocks[4].1 = linked;
+    blocks.push(("BSPositionData", vec![0; 8]));
+    let part = nif_file(blocks, b"PlainLabel", b"");
+    let (_temp, m) = fixture_placing("render-static-parts", &dds(), part, 0x801);
+    let b = Budget::new(32 << 20);
+    let store = fo4_plugin::typed::Store::open(&m, &b).unwrap();
+    let vfs = fo4_vfs::Vfs::mount(&m, &b).unwrap();
+    let options = || BuildOptions {
+        max_texture_dimension: 16,
+        max_texture_bytes: 1 << 20,
+        level: RuleLevel::Hypotheses,
+        blocks: None,
+        time: None,
+        clock: Default::default(),
+        vertex_normals: false,
+        chains: false,
+    };
+    // Off by default: refused whole.
+    let mut loader = Loader::new(&store, &vfs, "english", RuleLevel::Facts, &b);
+    assert!(!loader.render_static_parts());
+    let scene = loader.by_editor_id("SyntheticScolCell", &b).unwrap();
+    assert!(scene.instances[0]
+        .blockers
+        .iter()
+        .any(|e| e.code == "UnsupportedNifBlock" && e.found == "BSPositionData"));
+    let off = build(&scene, &loader, &m.limits, options(), &b).unwrap();
+    assert_eq!(off.omitted.len(), 1, "{:?}", off.omitted);
+    assert!(off.list.draws.is_empty() && off.left_out.is_empty());
+    // On: drawn under the rule, the shape reading the block left out.
+    let mut loader = Loader::new(&store, &vfs, "english", RuleLevel::Facts, &b);
+    loader.set_render_static_parts(true);
+    let scene = loader.by_editor_id("SyntheticScolCell", &b).unwrap();
+    assert!(scene.instances[0]
+        .state
+        .hypotheses()
+        .contains(&STATIC_PARTS));
+    let on = build(&scene, &loader, &m.limits, options(), &b).unwrap();
+    assert!(on.omitted.is_empty(), "{:?}", on.omitted);
+    assert!(on.instances[0].hypotheses.contains(&STATIC_PARTS));
+    assert!(!on.list.draws.is_empty());
+    assert_eq!(
+        on.left_out,
+        vec![(on.instances[0].index, "UnsupportedNifBlock".to_string())]
+    );
+    // Every draw is the first shape's: the left-out shape has none.
+    let meshes: std::collections::BTreeSet<usize> = on.list.draws.iter().map(|d| d.mesh).collect();
+    assert_eq!(meshes.len(), 1);
+    // At the measured level the pending rule is not used.
+    let measured = build(
+        &scene,
+        &loader,
+        &m.limits,
+        BuildOptions {
+            level: RuleLevel::Measured,
+            ..options()
+        },
+        &b,
+    )
+    .unwrap();
+    assert!(measured.list.draws.is_empty());
+}

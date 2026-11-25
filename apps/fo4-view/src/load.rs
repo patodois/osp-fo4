@@ -721,6 +721,12 @@ pub fn cell<'s>(
     if drawing.reference_alpha {
         loader.set_render_reference_alpha(true);
     }
+    // `--draw-static-parts` (off by default): render readiness sets aside
+    // a static's model blockers no rule covers when a shape of its model
+    // stays, the draw leaving out the rest (`static_unmoved_parts_drawn_v1`).
+    if drawing.static_parts {
+        loader.set_render_static_parts(true);
+    }
     // The assets the previous load left, when they were read the same way.
     let mut kept = kept;
     if let Some(slot) = kept.as_deref_mut() {
@@ -1029,13 +1035,30 @@ pub fn cell<'s>(
     } else {
         fo4_render::draw::build(&scene, &loader, limits, options, &budget)?
     };
+    // --draw-static-parts: the statics drawn by their unmoved parts and
+    // what the build left out of them.
+    if drawing.static_parts {
+        static_parts_line(&build);
+    }
     // --draw-platforms: what the build left out of the named platforms.
     if drawing.platforms && !platforms.is_empty() {
-        let mut codes: std::collections::BTreeMap<&str, usize> = std::collections::BTreeMap::new();
-        for (_, c) in &build.left_out {
-            *codes.entry(c.as_str()).or_default() += 1;
-        }
         let named: Vec<_> = platforms.iter().map(fo4_scene::timeline::norm).collect();
+        let platform_tags: std::collections::BTreeSet<u32> = build
+            .instances
+            .iter()
+            .filter(|i| named.contains(&fo4_scene::timeline::norm(&i.reference)))
+            .map(|i| i.index)
+            .collect();
+        let mut codes: std::collections::BTreeMap<&str, usize> = std::collections::BTreeMap::new();
+        let mut platform_left = 0;
+        for (_, c) in build
+            .left_out
+            .iter()
+            .filter(|(t, _)| platform_tags.contains(t))
+        {
+            *codes.entry(c.as_str()).or_default() += 1;
+            platform_left += 1;
+        }
         let omitted: Vec<String> = build
             .omitted
             .iter()
@@ -1050,7 +1073,7 @@ pub fn cell<'s>(
             .collect();
         println!(
             "platforms: shapes left out by the build {} ({}); platforms the build refused: {}",
-            build.left_out.len(),
+            platform_left,
             codes
                 .iter()
                 .map(|(c, n)| format!("{n} {c}"))
@@ -1405,6 +1428,43 @@ pub fn cell<'s>(
 }
 
 /// One line of what a terrain piece's texture passes drew.
+/// `--draw-static-parts`: one log line for the statics a build draws by
+/// their unmoved parts (`static_unmoved_parts_drawn_v1`): how many, their
+/// draws, and the parts left out by code.
+fn static_parts_line(build: &fo4_render::draw::Build) {
+    println!("{}", static_parts_text(build));
+}
+
+/// The text of [`static_parts_line`].
+pub fn static_parts_text(build: &fo4_render::draw::Build) -> String {
+    let tags: std::collections::BTreeSet<u32> = build
+        .instances
+        .iter()
+        .filter(|i| i.hypotheses.contains(&fo4_scene::hypotheses::STATIC_PARTS))
+        .map(|i| i.index)
+        .collect();
+    let draws = build
+        .list
+        .draws
+        .iter()
+        .filter(|d| tags.contains(&d.instance))
+        .count();
+    let mut codes: std::collections::BTreeMap<&str, usize> = std::collections::BTreeMap::new();
+    for (_, c) in build.left_out.iter().filter(|(t, _)| tags.contains(t)) {
+        *codes.entry(c.as_str()).or_default() += 1;
+    }
+    format!(
+        "static parts: {} placements drawn by their unmoved parts (static_unmoved_parts_drawn_v1), {draws} draws; parts left out {} ({})",
+        tags.len(),
+        codes.values().sum::<usize>(),
+        codes
+            .iter()
+            .map(|(c, n)| format!("{n} {c}"))
+            .collect::<Vec<_>>()
+            .join(", ")
+    )
+}
+
 fn texture_line(r: &fo4_render::terrain::TexturedReport) -> String {
     match &r.refusal {
         Some(refusal) => format!("{:?} untextured ({})", r.grid, refusal.code),
