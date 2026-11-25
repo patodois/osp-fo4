@@ -58,6 +58,13 @@ pub struct Readings {
     /// the seed): a leveled item list under the outfit whose LVLF has bit
     /// 2 set gives every entry (each followed as the pick follows one).
     pub use_all: bool,
+    /// `npc_head_hidden_by_head_slot_v1` (`--actor-head-slots`): the worn
+    /// outfit armours' BOD2 words decide what of the head is hidden in
+    /// place of the bone weights of `npc_head_parts_unmorphed_v1`'s
+    /// covering clause: every head part when a word has bit 2 (the slot
+    /// xEdit names 32, FaceGen Head), else the hair parts (HDPT PNAM 3) when
+    /// one has bit 0 or 1 (30 Hair Top, 31 Hair Long), else nothing.
+    pub head_slots: bool,
 }
 impl Readings {
     /// Whether any reading is on.
@@ -65,6 +72,14 @@ impl Readings {
         self.template_bits || self.leveled_seed.is_some() || self.chance_none || self.use_all
     }
 }
+
+/// BOD2 bit of the slot xEdit's published names call 32, FaceGen Head
+/// ([`Readings::head_slots`]).
+pub const HEAD_SLOT: u32 = 1 << 2;
+/// BOD2 bits of the slots named 30, Hair Top, and 31, Hair Long.
+pub const HAIR_SLOTS: u32 = 0b11;
+/// HDPT PNAM of a hair part (xEdit's published names: Hair).
+pub const HAIR_PART: u32 = 3;
 
 /// What [`Readings::leveled_seed`] and its companions did with the
 /// leveled lists of one actor.
@@ -1184,7 +1199,17 @@ pub fn resolve_reference_with(
         0 => None,
         1 => {
             let (list, from_race) = look.heads.pop_first().expect("one head list");
-            head(loader, &list, from_race, &parts, src, &mut actor.notes, b)?
+            let slots = readings.head_slots.then_some(outfit_slots);
+            head(
+                loader,
+                &list,
+                from_race,
+                &parts,
+                slots,
+                src,
+                &mut actor.notes,
+                b,
+            )?
         }
         n => {
             note(
@@ -1271,12 +1296,16 @@ fn skin_profile(loader: &Loader<'_>, asset: usize, b: &Budget) -> Result<Profile
 /// (`npc_head_parts_unmorphed_v1`): every listed part's model, unless a
 /// part has conditions or a worn outfit addon covers the head (has vertices
 /// whose largest weight is on the bone carrying most of the head parts'
-/// weight).
+/// weight). With `slots` (the worn outfit armours' BOD2 words joined,
+/// [`Readings::head_slots`]) the slots decide instead: bit 2 hides the
+/// head, bit 0 or 1 its hair parts.
+#[allow(clippy::too_many_arguments)]
 fn head(
     loader: &mut Loader<'_>,
     list: &[FormKey],
     from_race: bool,
     parts: &[Part],
+    slots: Option<u32>,
     src: &SourceSpan,
     notes: &mut Vec<String>,
     b: &Budget,
@@ -1292,6 +1321,18 @@ fn head(
         state: State::Blocked,
     };
     let mut path_rules: Vec<&'static str> = Vec::new();
+    if let Some(w) = slots {
+        if w & HEAD_SLOT != 0 {
+            note(
+                notes,
+                format!("head: worn armour slots {w:#x} hold the head's slot; not drawn"),
+                b,
+            )?;
+            return Ok(None);
+        }
+    }
+    let hair_hidden = slots.is_some_and(|w| w & HAIR_SLOTS != 0);
+    let mut hair_left = 0usize;
     for k in list {
         let Some((r, plugin)) = read(loader, k, &work)? else {
             note(
@@ -1310,6 +1351,10 @@ fn head(
             return Ok(None);
         }
         let h = Hdpt::decode(&r, ctx(loader, plugin), &work)?;
+        if hair_hidden && h.kind == Some(HAIR_PART) {
+            hair_left += 1;
+            continue;
+        }
         if h.conditions > 0 {
             note(
                 notes,
@@ -1365,7 +1410,17 @@ fn head(
     let main = head_bones
         .iter()
         .max_by(|a, b| a.1 .0.total_cmp(&b.1 .0))
-        .map(|(k, _)| k.clone());
+        .map(|(k, _)| k.clone())
+        .filter(|_| slots.is_none());
+    if let Some(w) = slots {
+        if hair_left > 0 {
+            note(
+                notes,
+                format!("head: {hair_left} hair parts hidden by worn armour slots {w:#x}"),
+                b,
+            )?;
+        }
+    }
     if let Some(main) = main {
         for p in parts.iter().filter(|p| !p.skin) {
             let (bones, total) = skin_profile(loader, p.asset, &work)?;
@@ -1388,6 +1443,12 @@ fn head(
         "UnverifiedActorHeadParts",
         "listed head parts drawn unmorphed",
     ));
+    if slots.is_some() {
+        head.blockers.push(rule(
+            "UnverifiedActorHeadSlots",
+            "worn armour slots decide what of the head is hidden",
+        ));
+    }
     for h in path_rules {
         let code = match h {
             hypotheses::PATH_STRIP => "HypothesisAssetDataPrefixStrip",

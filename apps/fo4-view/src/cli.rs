@@ -23,7 +23,7 @@ usage:
              [the light switches of --headless]]]
            [--draw-child-flag-agrees] [--draw-platforms] [--draw-static-fields]
            [--draw-static-leaves] [--draw-platform-skins] [--draw-reference-alpha]
-           [--draw-static-parts]
+           [--draw-static-parts] [--draw-cast-on-platforms]
       Window with a free-fly camera: W/A/S/D move, Shift moves faster, hold the
       left mouse button and move the mouse to look, R returns to the start pose.
       The title bar shows the mode, the speed and the position.
@@ -223,6 +223,13 @@ usage:
       bone moved by its part's motion (a bone under no part stays), where
       before such a shape stayed as built (pending rule
       play_platform_skin_follows_parts_v1).
+      --draw-cast-on-platforms (off by default; with --draw-platforms and
+      --timeline-cast) draws each actor of the run's cast with its feet on
+      the highest top of a named platform's part under its place, as the
+      part stands each frame, no higher than a character's height above
+      where it stood the frame before, else at its place (pending rule
+      play_cast_stands_on_platform_v1): the deck's crowd stands on the
+      deck and rides down with it.
   fo4-view MANIFEST DATA_DIRECTORY CELL_EDITOR_ID [level] --headless
            --eye X,Y,Z --look X,Y,Z --out build/FRAME.png [--tags build/TAGS.bin]
            [--size WxH] [--backface-cull] [--terrain] [--around N] [--walk]
@@ -262,7 +269,8 @@ usage:
            [--timeline-cast [--timeline-target-rotation] [--actor-missing-bone-bind]
            [--actor-start-clip] [--actor-subgraph-keywords] [--actor-clip-folder]
            [--actor-start-clip-loop] [--actor-sit-clip] [--actor-subgraph-flag-one]
-           [--actor-model-graph-idle] [--actor-template-bits] [--actor-leveled-seed SEED
+           [--actor-model-graph-idle] [--actor-template-bits] [--actor-head-slots]
+           [--actor-leveled-seed SEED
            [--actor-leveled-chance-none] [--actor-leveled-use-all]]
            [--timeline-ride-model PLUGIN:HEX [--timeline-ride SEQUENCE,START]]
            [--skinned-models-own-nodes]] [--memory-report FILE]
@@ -312,6 +320,10 @@ usage:
       --actor-leveled-chance-none reads a leveled item list's LVLD as a
       chance of nothing rolled from the seed, --actor-leveled-use-all gives
       every entry of a list whose LVLF has bit 2 (pending rules).
+      --actor-head-slots lets the worn armours' BOD2 slots decide what of
+      a head is hidden (the head by slot 32, its hair by 30 or 31) instead
+      of the head bone's weights (pending rule
+      npc_head_hidden_by_head_slot_v1).
       --actor-subgraph-flag-one lets a race without subgraph entries of flag
       word 0 take its entries of flag word 1 (no target keywords);
       --actor-model-graph-idle draws an actor's part model whose own graph's
@@ -447,6 +459,10 @@ pub struct Drawing {
     /// bones go with several parts skinned again with each bone moved by
     /// its part (`crate::scene::SkinInstance`).
     pub platform_skins: bool,
+    /// `--draw-cast-on-platforms` (`play_cast_stands_on_platform_v1`; the
+    /// scripted play window's cast with `--draw-platforms`): each actor
+    /// drawn with its feet on the named platform's part under it.
+    pub cast_on_platforms: bool,
     /// The scripted play window with `--exposure-eye`: the exposure
     /// measured per view instead of once per load (`scene::ViewExposure`;
     /// plumbing of the existing switch, set by the parser).
@@ -917,6 +933,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             "--draw-static-leaves" => drawing.static_leaves = true,
             "--draw-static-parts" => drawing.static_parts = true,
             "--draw-platform-skins" => drawing.platform_skins = true,
+            "--draw-cast-on-platforms" => drawing.cast_on_platforms = true,
             "--exposure-eye-visible" => drawing.exposure_visible = true,
             "--timeline-dead-lying" | "--timeline-dead-left-out" => {
                 if dead != fo4_scene::timeline::Dead::Standing {
@@ -930,6 +947,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             }
             "--timeline-sit-marker" => sit_marker = true,
             "--actor-template-bits" => look_readings.template_bits = true,
+            "--actor-head-slots" => look_readings.head_slots = true,
             "--actor-model-graph-idle" => model_graph_idle = true,
             "--skinned-models-own-nodes" => skinned_models = true,
             "--memory-report" => memory_report = Some(value()?.to_string()),
@@ -1256,6 +1274,9 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
         {
             return Err("PlayKeys: --play-keys needs --play-stand SECONDS (the longest standing slice, so the run goes on while the person stands) and --play-reach UNITS (E's reach)".into());
         }
+    }
+    if scene.drawing.cast_on_platforms && !(scene.drawing.platforms && scene.play_cast.is_some()) {
+        return Err("--draw-cast-on-platforms stands the play cast on the platforms --draw-platforms draws: it needs --draw-platforms and --timeline-cast".into());
     }
     if scene.drawing.platform_skins && !scene.drawing.platforms {
         return Err("--draw-platform-skins moves the skinned shapes --draw-platforms draws: it needs --draw-platforms".into());
@@ -1632,6 +1653,8 @@ mod tests {
                 && scene.drawing.platform_skins
         );
         assert!(scene.play_cast.is_some() && scene.drawing.platforms && scene.light.any());
+        assert!(scene.drawing.cast_on_platforms);
+        assert!(scene.play_cast.as_ref().is_some_and(|a| a.look.head_slots));
         // Without the local file's platforms the preset is refused.
         let mut alone = args("m d C --eye 1,2,3 --look 4,5,6 --play-run s.txt --play-out o");
         alone.extend(expand_args(&args("--args preset.args"), &read).unwrap());

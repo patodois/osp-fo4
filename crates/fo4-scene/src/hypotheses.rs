@@ -269,6 +269,10 @@ pub const STATIC_PARTS: &str = "static_unmoved_parts_drawn_v1";
 /// (`crate::platform::skin_at_rest`, the play window's
 /// `--draw-platform-skins`, off by default).
 pub const PLATFORM_SKIN_FOLLOWS_PARTS: &str = "play_platform_skin_follows_parts_v1";
+/// The run's actors drawn in the play window standing on the named
+/// platforms' parts under them (the window's `--draw-cast-on-platforms`,
+/// off by default).
+pub const CAST_ON_PLATFORMS: &str = "play_cast_stands_on_platform_v1";
 /// Terrain of an exterior cell (`crate::terrain`, `spec/land.md`).
 pub const LAND_OF_CELL: &str = "land_single_cell_child_v1";
 pub const LAND_ACCUMULATION: &str = "land_vhgt_row_accumulation_v1";
@@ -303,6 +307,9 @@ pub const ACTOR_TEMPLATE_ALL_BITS: &str = "npc_template_all_bits_v1";
 /// bit 0, skin, head parts), bit 8 its outfit, bit 12 its keywords
 /// (`crate::actor::Readings::template_bits`, `--actor-template-bits`).
 pub const ACTOR_TEMPLATE_BITS: &str = "npc_template_bits_traits_inventory_v1";
+/// What of an actor's head a worn armour hides, from its BOD2 slots
+/// (`crate::actor::Readings::head_slots`, `--actor-head-slots`).
+pub const ACTOR_HEAD_SLOTS: &str = "npc_head_hidden_by_head_slot_v1";
 /// One entry of each leveled list an actor reaches, picked by the caller's
 /// seed (`crate::actor::Readings::leveled_seed`, `--actor-leveled-seed`).
 pub const ACTOR_LEVELED_PICK: &str = "npc_leveled_entry_seeded_pick_v1";
@@ -516,6 +523,7 @@ fn actor_rule(code: &str) -> Option<&'static str> {
         "UnverifiedActorLeveledFlags" => Some(ACTOR_LEVELED_FLAGS),
         "UnverifiedActorTemplateAllBits" => Some(ACTOR_TEMPLATE_ALL_BITS),
         "UnverifiedActorTemplateBits" => Some(ACTOR_TEMPLATE_BITS),
+        "UnverifiedActorHeadSlots" => Some(ACTOR_HEAD_SLOTS),
         "UnverifiedActorLeveledPick" => Some(ACTOR_LEVELED_PICK),
         "UnverifiedActorLeveledChanceNone" => Some(ACTOR_LEVELED_CHANCE_NONE),
         "UnverifiedActorLeveledUseAll" => Some(ACTOR_LEVELED_USE_ALL),
@@ -727,6 +735,7 @@ mod tests {
             STATIC_REFERENCE_FIELDS_RENDER,
             STATIC_LEAF_TWO_POSE,
             PLATFORM_SKIN_FOLLOWS_PARTS,
+            CAST_ON_PLATFORMS,
             LAND_OF_CELL,
             LAND_ACCUMULATION,
             LAND_UNITS,
@@ -738,6 +747,7 @@ mod tests {
             LAND_DEFAULT_NAMED,
             ACTOR_SKINNING,
             ACTOR_TEMPLATE_BITS,
+            ACTOR_HEAD_SLOTS,
             ACTOR_LEVELED_PICK,
             ACTOR_LEVELED_CHANCE_NONE,
             ACTOR_LEVELED_USE_ALL,

@@ -1787,6 +1787,44 @@ walker build shares the machine, so the window's seconds are longer than these; 
   The read again took 7.74 and 12.43 s in the windows (4.7 headless) and saved the street's square most of its
   stall (6.46 and 15.24 s in the tenth sessions, 4.16 and 5.42 s in the eleventh): kept.
 
+### The deck's crowd, the helmets and the actor at the crane (the twelfth-session step)
+
+Both persons of the twelfth session saw the people on the first lift's deck stand inside each other with their
+feet below the deck, and the checkpoint's uniforms with no head under the helmet; in A one actor near the crane
+was gone between 619.2 and 625.9 s.
+
+**One marker for five, at the covers' height.** The run's timeline (both sessions) moves five actors of the
+crowd at 603.8 and 605.7 s (A; 589.6 and 591.6 s in B) by `pack_location_destination_v1` to one point: their
+scene action's package names one placed location reference, the same for all, so the run puts all five there.
+Where the game spreads several actors sent to one marker is not in the data; they stay at one point (open).
+That point's height, 8,925.06, is the top of the shaft's two covers as stored (closed); the deck's collision
+stands 45.9 units higher once raised (the walker's feet 8,970.9 on it; the deck part's box as stored lies at
+the shaft's bottom and its sequences raise it to a top of 8,971), and the run moves nobody during the descent,
+so the drawn crowd stood in the deck and then stayed at the top as the deck went down. With
+`--draw-cast-on-platforms` (`play_cast_stands_on_platform_v1`, pending, in the preset) the window draws each
+actor of the cast at its place's x and y with its feet on the highest top of a named platform's part box under
+it (the part's collision box as stored, now carried by `fo4_play::elevator::PartMotion::stored`, moved by its
+motion), no higher than a character's height (128) above where its feet were drawn the frame before, else at
+its place: raised, the five stand on the deck (45.9 up); going down, each follows the deck from where it stood;
+a cover sliding from under an actor lets it back to its place. The run, its timeline and its outputs are not
+touched. Boxes stand for surfaces: a part whose collision is not flat on top stands an actor on its highest
+point.
+
+**Helmets.** The head of a placed actor was left out whenever a worn outfit addon had vertices mostly on the
+head parts' main bone (the covering clause of `npc_head_parts_unmorphed_v1`): the checkpoint's helmet does, so
+its wearers lost face, eyes and hair. The helmet's armour stores BOD2 `0x00010001` (bits 0 and 16): not bit 2,
+the slot xEdit's published names call 32, FaceGen Head. With `--actor-head-slots`
+(`npc_head_hidden_by_head_slot_v1`, pending, in the preset; render and fo4-view) the worn outfit's BOD2 words
+decide instead: the whole head hidden by bit 2, the hair parts (HDPT PNAM 3) by bit 0 or 1, else nothing. At
+the gate (B, 569.1 s) the four helmeted actors keep 1 to 11 head parts each, one hair part hidden each, where
+all four had none.
+
+**The actor at the crane.** In A the run moved that actor: the caller's assumed move of the run's arguments
+(`--assume-actor-at`, held to stage 475 by `--action-after-actor-moves`) comes at 621.06 s with the stage and
+puts it about 3,100 units away by the deck; its presence does not change and the cast drew it at the new place.
+The draw dropped nothing. In B the same move comes at 615.82 s; the crane group itself had gone to the deck
+marker at 589.6 to 591.6 s.
+
 ## What the play mode does not do yet
 
 - The elevators ride only those the caller names (`--play-elevator`), headless and in the scripted window;

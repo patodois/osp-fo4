@@ -563,6 +563,7 @@ fn template_bits_and_the_seeded_pick_settle_looks_the_candidates_leave_open() {
         leveled_seed: seed,
         chance_none: items,
         use_all: items,
+        head_slots: false,
     };
     let mut go =
         |id: u32, r: Readings| resolve_reference_with(&mut loader, &key(id), &src, r, &b).unwrap();

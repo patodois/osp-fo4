@@ -131,3 +131,9 @@
 # skinned again as they move (play_platform_skin_follows_parts_v1): the
 # elevators' decks and the walkways.
 --draw-platform-skins
+# The run's actors stand on the named platform's part under them and ride it
+# (play_cast_stands_on_platform_v1): the deck's crowd on the deck.
+--draw-cast-on-platforms
+# The worn armours' slots decide what of a head is hidden
+# (npc_head_hidden_by_head_slot_v1): the checkpoint's helmets keep faces.
+--actor-head-slots

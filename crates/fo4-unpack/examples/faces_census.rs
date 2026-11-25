@@ -137,6 +137,7 @@ fn run() -> Result<(), E> {
         leveled_seed: picked.then_some(seed),
         chance_none: items,
         use_all: items,
+        head_slots: false,
     };
     let variants = [
         ("every reading off", r(false, false, false)),

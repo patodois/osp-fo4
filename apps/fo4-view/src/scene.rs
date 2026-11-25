@@ -548,6 +548,58 @@ pub struct GpuScene {
     /// The scripted play window with `--exposure-eye`: the exposure
     /// measured per view ([`ViewExposure`]); `None` otherwise.
     pub view_exposure: Option<ViewExposure>,
+    /// A play cast with `--draw-cast-on-platforms`: each drawn actor's tag,
+    /// reference and place (empty otherwise).
+    pub cast_places: Vec<CastPlace>,
+}
+
+/// One actor of a play cast: the instance tag its draws carry, its
+/// reference and its place in the run (`play_cast_stands_on_platform_v1`).
+#[derive(Debug, Clone, PartialEq)]
+pub struct CastPlace {
+    pub tag: u32,
+    pub reference: fo4_plugin::FormKey,
+    pub place: [f64; 3],
+}
+
+/// Where an actor at `place` whose feet were drawn at height `was` the
+/// frame before stands (`play_cast_stands_on_platform_v1`): the highest top
+/// under its x and y of the named platforms' parts' boxes where they stand
+/// now that lies no higher than `reach` above `was`; `None` (its place)
+/// when no such part is under it.
+#[cfg_attr(not(feature = "script-event"), allow(dead_code))]
+pub fn stand_on_platforms(
+    platforms: &[fo4_play::elevator::Platform],
+    place: [f64; 3],
+    was: f64,
+    reach: f64,
+) -> Option<f64> {
+    let mut best: Option<f64> = None;
+    for p in platforms {
+        for part in &p.parts {
+            let Some((lo, hi)) = part.stored else {
+                continue;
+            };
+            let (mut a, mut b) = ([f64::MAX; 3], [f64::MIN; 3]);
+            for k in 0..8 {
+                let c = [
+                    if k & 1 == 0 { lo[0] } else { hi[0] },
+                    if k & 2 == 0 { lo[1] } else { hi[1] },
+                    if k & 4 == 0 { lo[2] } else { hi[2] },
+                ];
+                let m = part.motion.apply(c);
+                for i in 0..3 {
+                    a[i] = a[i].min(m[i]);
+                    b[i] = b[i].max(m[i]);
+                }
+            }
+            let over = place[0] >= a[0] && place[0] <= b[0] && place[1] >= a[1] && place[1] <= b[1];
+            if over && b[2] <= was + reach && best.is_none_or(|t| b[2] > t) {
+                best = Some(b[2]);
+            }
+        }
+    }
+    best
 }
 
 /// A frame's light for the surface shader: the storage buffer's values and
@@ -1423,10 +1475,12 @@ mod tests {
                 PartMotion {
                     members: Members::Deepest(5),
                     motion: fo4_walk::motion::Motion::translation([10.0, 0.0, 0.0]),
+                    stored: None,
                 },
                 PartMotion {
                     members: Members::Deepest(7),
                     motion: fo4_walk::motion::Motion::translation([0.0, 10.0, 0.0]),
+                    stored: None,
                 },
             ],
         };
@@ -1786,6 +1840,54 @@ mod tests {
     }
 
     #[test]
+    fn an_actor_stands_on_the_platform_part_under_it() {
+        use fo4_play::elevator::{Members, PartMotion, Platform};
+        use fo4_walk::motion::Motion;
+        let key = fo4_plugin::FormKey {
+            plugin: "a.esm".into(),
+            object_id: 1,
+        };
+        // A deck stored 5,000 units down, raised to a top of 8,971; a cover
+        // slid aside.
+        let deck = |z: f64| PartMotion {
+            members: Members::Deepest(1),
+            motion: Motion::translation([0.0, 0.0, z]),
+            stored: Some(([-100.0, -100.0, 3890.0], [100.0, 100.0, 3971.0])),
+        };
+        let cover = PartMotion {
+            members: Members::Deepest(2),
+            motion: Motion::translation([300.0, 0.0, 0.0]),
+            stored: Some(([-100.0, -100.0, 8909.0], [100.0, 100.0, 8925.0])),
+        };
+        let at = |z: f64| {
+            vec![Platform {
+                reference: key.clone(),
+                space: key.clone(),
+                model: "meshes/m.nif".into(),
+                set: vec![1, 2],
+                second: 0.0,
+                parts: vec![deck(z), cover.clone()],
+            }]
+        };
+        let place = [10.0, 20.0, 8925.06];
+        // Raised: the actor stands on the deck's top, 46 above its place.
+        let top = stand_on_platforms(&at(5000.0), place, place[2], 128.0).unwrap();
+        assert!((top - 8971.0).abs() < 1e-9);
+        // Going down, it follows the deck from where it stood.
+        let lower = stand_on_platforms(&at(3000.0), place, top, 128.0).unwrap();
+        assert!((lower - 6971.0).abs() < 1e-9);
+        // Out of the deck's footprint, or a part far above it: its place.
+        assert_eq!(
+            stand_on_platforms(&at(5000.0), [500.0, 0.0, 8925.0], 8925.0, 128.0),
+            None
+        );
+        assert_eq!(
+            stand_on_platforms(&at(5000.0), [0.0, 0.0, 6000.0], 6000.0, 128.0),
+            None
+        );
+    }
+
+    #[test]
     fn the_window_measures_the_exposure_on_what_it_draws() {
         use fo4_scene::light::{Exposure, Light, Point};
         // A light at the far wall: the far wall is lit, a near panel in
@@ -1913,10 +2015,12 @@ mod tests {
                 PartMotion {
                     members: Members::Deepest(3),
                     motion: fo4_walk::Motion::IDENTITY,
+                    stored: None,
                 },
                 PartMotion {
                     members: Members::Deepest(4),
                     motion: fo4_walk::Motion::IDENTITY,
+                    stored: None,
                 },
             ],
         };

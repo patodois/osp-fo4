@@ -986,9 +986,15 @@ fn follow_sky(
 /// The run's actors drawn by the scripted play mode's cast
 /// (`--timeline-cast`): spawned apart from the cell's instances, which the
 /// live world's decisions do not reach.
+///
+/// With `--draw-cast-on-platforms` it carries its actor's reference and
+/// place and its spawned translation ([`ride_cast`]).
 #[cfg(feature = "script-event")]
 #[derive(Component)]
-struct CastEntity;
+struct CastEntity {
+    place: Option<(fo4_plugin::FormKey, [f64; 3])>,
+    base: Vec3,
+}
 
 /// A cast built for the drawn cell, until it is uploaded and replaces the
 /// one drawn.
@@ -1034,8 +1040,13 @@ fn spawn_cast(world: &mut World) {
         world.despawn(e);
     }
     let entities = spawn(world, &scene, &up, false, 0, false);
-    for e in &entities {
-        world.entity_mut(*e).insert(CastEntity);
+    let places: std::collections::BTreeMap<u32, &crate::scene::CastPlace> =
+        scene.cast_places.iter().map(|c| (c.tag, c)).collect();
+    for (e, i) in entities.iter().zip(&scene.instances) {
+        world.entity_mut(*e).insert(CastEntity {
+            place: places.get(&i.tag).map(|c| (c.reference.clone(), c.place)),
+            base: i.translation,
+        });
     }
     println!(
         "play: cast drawn: {} instances in place of {removed}, uploaded in {:.2} s",
@@ -1797,6 +1808,9 @@ fn hud_update(
 #[cfg(feature = "script-event")]
 #[derive(Default)]
 struct PlayDrawn {
+    /// `--draw-cast-on-platforms`: each actor's place and the height its
+    /// feet were last drawn at ([`ride_cast`]).
+    feet: std::collections::BTreeMap<fo4_plugin::FormKey, ([f64; 3], f64)>,
     applied: Option<u64>,
     spawned: std::collections::HashMap<Entity, Vec3>,
     /// The scripted run: frames to wait before a loaded cell's upload is
@@ -1891,6 +1905,52 @@ fn play_live<F: bevy::ecs::query::QueryFilter>(
         p.generation
     );
     drawn.applied = Some(p.generation);
+}
+
+/// Each frame of the scripted play window with `--draw-cast-on-platforms`
+/// (`play_cast_stands_on_platform_v1`): each actor of the cast is drawn
+/// with its feet on the named platforms' part under its place, from where
+/// they were drawn the frame before ([`crate::scene::stand_on_platforms`]),
+/// else at its place; a change of place starts from the place again.
+#[cfg(feature = "script-event")]
+fn ride_cast<F: bevy::ecs::query::QueryFilter>(
+    seen: &crate::play::Seen,
+    feet: &mut std::collections::BTreeMap<fo4_plugin::FormKey, ([f64; 3], f64)>,
+    casts: &mut Query<(Entity, &CastEntity, &mut Transform), F>,
+) {
+    let reach = fo4_walk::Params::PROVISIONAL.height;
+    let mut now: std::collections::BTreeMap<fo4_plugin::FormKey, f64> =
+        std::collections::BTreeMap::new();
+    for (_, c, mut t) in casts.iter_mut() {
+        let Some((k, place)) = &c.place else {
+            continue;
+        };
+        let z = *now.entry(k.clone()).or_insert_with(|| {
+            let was = match feet.get(k) {
+                Some((p, z)) if p == place => *z,
+                _ => place[2],
+            };
+            let z = crate::scene::stand_on_platforms(&seen.platforms, *place, was, reach)
+                .unwrap_or(place[2]);
+            let boarded = (z - place[2]).abs() > 1e-6 && (was - place[2]).abs() <= 1e-6;
+            if boarded {
+                println!(
+                    "play: cast {} stands on a named platform's part {:.1} units from its place at {:.3} s of the run (play_cast_stands_on_platform_v1)",
+                    fo4_scene::timeline::key_text(k),
+                    z - place[2],
+                    seen.t
+                );
+            }
+            feet.insert(k.clone(), (*place, z));
+            z
+        });
+        let dz = (z - place[2]) as f32;
+        // Game +Z is Bevy +Y (`coords`).
+        let want = c.base + Vec3::new(0.0, dz, 0.0);
+        if t.translation != want {
+            t.translation = want;
+        }
+    }
 }
 
 /// The drawn instances of the named platforms' models in the scripted play
@@ -2690,7 +2750,7 @@ fn play_scripted(
     pending: Option<Res<PendingScene>>,
     mut cameras: Query<&mut Transform, With<FlyCamera>>,
     mut instances: Query<CellInstance, (Without<FlyCamera>, Without<CastEntity>)>,
-    casts: Query<Entity, With<CastEntity>>,
+    mut casts: Query<(Entity, &CastEntity, &mut Transform), Without<FlyCamera>>,
     mut platforms: Option<ResMut<PlayPlatforms>>,
     (mut doors, mut leaves, mut skins, mut meshes): FollowParams,
     (mut exposure, lights, mut buffers): ExposureParams,
@@ -2706,7 +2766,7 @@ fn play_scripted(
             let n = instances.iter().count();
             drawn.old.extend(instances.iter().map(|x| x.0));
             if !r.keep_cast {
-                drawn.old.extend(casts.iter());
+                drawn.old.extend(casts.iter().map(|x| x.0));
                 commands.remove_resource::<PendingCast>();
             }
             println!(
@@ -2861,6 +2921,9 @@ fn play_scripted(
         play_live(p, drawn, None, &mut instances);
         if let Some(pp) = platforms.as_deref_mut() {
             follow_platforms(&seen, pp, &mut instances, skins.is_some());
+        }
+        if !seen.platforms.is_empty() {
+            ride_cast(&seen, &mut drawn.feet, &mut casts);
         }
         if let Some(pd) = doors.as_deref_mut() {
             follow_doors(p, &seen, pd, &mut instances);

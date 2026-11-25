@@ -367,8 +367,26 @@ fn cast_with(
         backface_cull: s.backface_cull,
         ..fo4_render::RenderOptions::REFERENCE
     };
-    let gpu =
+    let mut gpu =
         crate::scene::convert_lit(&mut build.list, &render, light.as_ref().zip(lit.as_deref()))?;
+    // `--draw-cast-on-platforms`: each drawn actor's tag and place.
+    if s.drawing.cast_on_platforms {
+        let tagged = d
+            .characters
+            .iter()
+            .map(|(k, t)| (*k, *t))
+            .chain(d.fallback.iter().map(|(k, t, _)| (*k, *t)));
+        gpu.cast_places = tagged
+            .filter_map(|(k, tag)| {
+                let m = cast.markers.get(k)?;
+                Some(crate::scene::CastPlace {
+                    tag,
+                    reference: m.reference.clone(),
+                    place: m.pos,
+                })
+            })
+            .collect();
+    }
     steps.mark("markers and convert");
     let line = format!(
         "{} actors of the run in the cell's space at {second:.3} s ({} left out), {} drawn as characters ({} posed by their start clip), {} as markers; {} GPU instances; built in {:.2} s ({})",

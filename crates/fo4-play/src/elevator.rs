@@ -1063,6 +1063,9 @@ pub enum Members {
 pub struct PartMotion {
     pub members: Members,
     pub motion: Motion,
+    /// The box of the part's collision as stored (world axes), `None` when
+    /// it holds none: where it stands now is this box moved by `motion`.
+    pub stored: Option<([f64; 3], [f64; 3])>,
 }
 
 /// A named reference's moving parts where its collision stands, for a
@@ -1131,6 +1134,7 @@ impl Elevator {
             parts.push(PartMotion {
                 members: Members::Deepest(p.block),
                 motion: motion_at(&p.track, t),
+                stored: p.base.bounds.map(|b| (b.min, b.max)),
             });
         }
         for g in &self.groups {
@@ -1140,6 +1144,7 @@ impl Elevator {
             parts.push(PartMotion {
                 members: Members::Nodes(blocks),
                 motion: Motion::translation(sample(&self.group_track(g), t)),
+                stored: g.base.bounds.map(|b| (b.min, b.max)),
             });
         }
         Platform {

@@ -755,6 +755,7 @@ fn run() -> Result<(), E> {
         leveled_seed: Some(seed),
         chance_none: true,
         use_all: true,
+        head_slots: false,
     };
     let mut loader = Loader::new(&store, &vfs, &m.language, RuleLevel::Hypotheses, &b);
 
