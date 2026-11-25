@@ -1136,6 +1136,10 @@ mod enabled {
         /// The named platforms' moving parts where the walker's collision
         /// stands (`fo4_play::walker::Walker::platforms`).
         pub platforms: Vec<fo4_play::elevator::Platform>,
+        /// The held doors the walker's walking worlds have held so far,
+        /// each with whether its box stands now
+        /// (`fo4_play::walker::Walker::held_door_states`).
+        pub doors: std::collections::BTreeMap<FormKey, bool>,
         /// `--play-keys`: what the activation key would meet from the
         /// walker's eye (`fo4_play::walker::Walker::aim`), as a label.
         pub aim: Option<String>,
@@ -1224,11 +1228,13 @@ mod enabled {
 
         fn publish(&mut self, n: &Next) {
             let platforms = self.walker.platforms();
+            let doors = self.walker.held_door_states();
             let log = self.log.borrow();
             let Ok(mut s) = self.seen.lock() else {
                 return;
             };
             s.platforms = platforms;
+            s.doors = doors;
             // The heading: the slice's horizontal move, else a look command
             // given at or after its last point (`face`, `turn`: commands
             // due at a slice's end come after its move), else as it was.

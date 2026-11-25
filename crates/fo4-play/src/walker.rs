@@ -75,6 +75,12 @@ pub struct Options {
     /// blocked ([`crate::world::Options::held_doors`];
     /// `play_door_closed_blocked_holds_v1`, `--play-held-doors`).
     pub held_doors: bool,
+    /// With `held_doors`, a held door whose reference stores no `ONAM` is
+    /// closed at load, and the walker's open of a door
+    /// ([`Walker::with_opens`]) opens it
+    /// ([`crate::world::Options::held_at_load`];
+    /// `play_door_closed_at_load_v1`, `--play-held-doors-at-load`).
+    pub held_at_load: bool,
     /// The longest standing slice (seconds; `--play-stand`), and how far
     /// ahead the walker looks for a moving platform before it stands: a
     /// policy of the play mode, no game claim. `None` (the default): a
@@ -87,6 +93,9 @@ pub struct Options {
     /// platforms through their collision, not their object bounds
     /// (`play_activate_ray_first_met_v1`, `--play-pick-first-met`).
     pub first_met: bool,
+    /// Record each stretch of blocked ticks with what blocked it
+    /// ([`Log::walls`]; `--play-report-walls`, a report only).
+    pub report_walls: bool,
 }
 impl Default for Options {
     fn default() -> Self {
@@ -102,8 +111,10 @@ impl Default for Options {
             marker_box_layers: false,
             marker_box_layer_records: false,
             held_doors: false,
+            held_at_load: false,
             stand: None,
             first_met: false,
+            report_walls: false,
         }
     }
 }
@@ -182,6 +193,10 @@ pub struct Log {
     /// The held doors' boxes (`--play-held-doors`): (second, door, whether
     /// its box entered the walking world or left it).
     pub held_doors: Vec<(f64, FormKey, bool)>,
+    /// With [`Options::report_walls`]: each stretch of blocked ticks
+    /// against the same source, (first second, last second, ticks, what
+    /// blocked: [`Live::describe_source`]).
+    pub walls: Vec<(f64, f64, u64, String)>,
 }
 
 /// One load door crossed, or one `MoveTo` of the player the walker
@@ -267,6 +282,22 @@ pub struct Elevators {
 /// between slices (a setting of the play mode).
 pub const ELEVATOR_STAND: f64 = 0.1;
 
+/// Of the held doors closed at load, those the person opens
+/// (`--play-activate-opens`; `play_door_closed_at_load_v1`): the reading
+/// applies to them only. The run's scripts open other doors by natives the
+/// held doors' reading does not read (a pod's door by its animation), so a
+/// door closed at load that the person does not open keeps no state until
+/// a script sets one.
+pub fn persons_doors(
+    closed: std::collections::BTreeSet<FormKey>,
+    opens: &[FormKey],
+) -> std::collections::BTreeSet<FormKey> {
+    closed
+        .into_iter()
+        .filter(|k| opens.iter().any(|o| norm(o) == norm(k)))
+        .collect()
+}
+
 /// The drawing side's rules the collision switches rely on.
 fn collision_rules(o: &Options) -> std::collections::BTreeSet<&'static str> {
     let c = o.collision;
@@ -286,6 +317,9 @@ fn collision_rules(o: &Options) -> std::collections::BTreeSet<&'static str> {
     }
     if o.held_doors {
         out.insert(crate::rules::HELD_DOORS);
+    }
+    if o.held_doors && o.held_at_load {
+        out.insert(crate::rules::HELD_DOORS_AT_LOAD);
     }
     if c.off_chain {
         out.insert(fo4_scene::hypotheses::COLLISION_OFF_CHAIN);
@@ -974,6 +1008,17 @@ impl Walker {
         &self.live
     }
 
+    /// The held doors the walker's walking worlds have held so far
+    /// (`--play-held-doors`), each with whether its box stands now, for a
+    /// window to draw them so. Reading them changes nothing.
+    pub fn held_door_states(&self) -> std::collections::BTreeMap<FormKey, bool> {
+        let mut out = std::collections::BTreeMap::new();
+        for (_, k, held) in &self.log.borrow().held_doors {
+            out.insert(k.clone(), *held);
+        }
+        out
+    }
+
     /// The named platforms' moving parts where their collision stands
     /// (`--play-elevator`; empty before the first slice builds them), for a
     /// window to draw them there: per named reference, its model, the
@@ -1125,6 +1170,11 @@ impl Walker {
                         });
                     actions.extend(act);
                     if let Some(o) = opens {
+                        if self.opts.held_doors && self.opts.held_at_load {
+                            // The open the run is given opens the door
+                            // for the held doors' reading too.
+                            self.state.open_by_player(norm(&o.reference));
+                        }
                         let mut log = self.log.borrow_mut();
                         log.rules.insert(crate::rules::ACTIVATE_OPENS);
                         if self.written {
@@ -1267,6 +1317,34 @@ impl Walker {
             log.blocked += u64::from(s.blocked);
             log.stepped += u64::from(s.stepped);
             log.airborne += u64::from(!s.grounded);
+            if self.opts.report_walls && s.blocked {
+                let what = s.wall.map_or_else(
+                    || "no wall contact recorded".to_string(),
+                    |w| {
+                        let own = self.live.describe_source(w.source);
+                        let platform = self.live.space().source(w.source).and_then(|(k, _)| {
+                            self.elevators.iter().find_map(|e| e.describe_piece(*k))
+                        });
+                        // Rounded, and -0 read as 0, so that one
+                        // stretch is not split by the normal's noise.
+                        let n = w.normal.map(|x| (x * 10.0).round() / 10.0 + 0.0);
+                        format!(
+                            "{own}{}; normal ({:.1}, {:.1}, {:.1})",
+                            platform.map(|p| format!(", {p}")).unwrap_or_default(),
+                            n[0],
+                            n[1],
+                            n[2]
+                        )
+                    },
+                );
+                match log.walls.last_mut() {
+                    Some(l) if l.3 == what && to - l.1 <= 3.0 * tick + 1e-9 => {
+                        l.1 = to;
+                        l.2 += 1;
+                    }
+                    _ => log.walls.push((to, to, 1, what)),
+                }
+            }
         }
         let space = self.space.clone().ok_or("PlayNoWalker")?;
         let last = self.last.clone().ok_or("PlayNoWalker")?;
@@ -1457,6 +1535,7 @@ impl Walker {
             marker_box_layers: self.opts.marker_box_layers,
             marker_box_layer_records: self.opts.marker_box_layer_records,
             held_doors: self.opts.held_doors,
+            held_at_load: self.opts.held_at_load,
         };
         if let Some(f) = self.on_load.as_mut() {
             f(Some(cell));
@@ -1495,6 +1574,10 @@ impl Walker {
                 l.with_child_flag_agrees(self.opts.child_flag_agrees)
                     .with_unpicked(&built.unpicked)
                     .with_held_doors(std::mem::take(&mut built.held))
+                    .with_closed_at_load(persons_doors(
+                        std::mem::take(&mut built.closed_at_load),
+                        &self.opens,
+                    ))
             }),
             None => Live::fixed(built.world, built.refs),
         }
@@ -1590,6 +1673,21 @@ impl Driver for Walker {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_closed_at_load_reading_keeps_the_doors_the_person_opens() {
+        let k = |n: u32| FormKey {
+            plugin: "a.esm".into(),
+            object_id: n,
+        };
+        let closed: std::collections::BTreeSet<FormKey> = [k(1), k(2)].into();
+        let opens = [FormKey {
+            plugin: "A.ESM".into(),
+            object_id: 2,
+        }];
+        assert_eq!(persons_doors(closed.clone(), &opens), [k(2)].into());
+        assert!(persons_doors(closed, &[]).is_empty());
+    }
     use fo4_core::Budget;
 
     fn k(n: u32) -> FormKey {

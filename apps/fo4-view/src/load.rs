@@ -34,6 +34,114 @@ pub struct Loaded {
     /// references by instance tag).
     #[cfg(feature = "script-event")]
     pub live: Option<crate::play::LiveLoad>,
+    /// `--draw-held-doors`: each draw of a loaded door's model, its door
+    /// and its world transform posed open ([`held_door_draws`]).
+    pub doors: Vec<(
+        usize,
+        fo4_plugin::FormKey,
+        Option<fo4_scene::transform::Transform>,
+    )>,
+}
+
+/// The inverse of a transform with an orthonormal rotation and a scale
+/// that is not 0 (`Transform::apply` is `t + s R^T p`).
+fn inverse(t: fo4_scene::transform::Transform) -> fo4_scene::transform::Transform {
+    let r = t.rotation;
+    let s = 1.0 / t.scale;
+    fo4_scene::transform::Transform {
+        rotation: std::array::from_fn(|i| std::array::from_fn(|j| r[j][i])),
+        translation: std::array::from_fn(|i| {
+            -s * (0..3).map(|j| r[i][j] * t.translation[j]).sum::<f64>()
+        }),
+        scale: s,
+    }
+}
+
+/// The motion in the model's space that its sequence named `Open` gives a
+/// draw's node chain at the sequence's last key (`play_door_drawn_as_held_v1`
+/// over `nif_sequence_chain_pose_v1`): the chain posed, after the chain as
+/// stored undone. `None` when the model has no such sequence or it sets no
+/// block of the chain.
+fn open_motion(
+    loader: &Loader<'_>,
+    asset: usize,
+    chain: &[usize],
+    b: &Budget,
+) -> fo4_core::Result<Option<fo4_scene::transform::Transform>> {
+    loader.assets.with_decoded(asset, &b.child(), |d| {
+        let fo4_scene::DecodedAsset::Model(n) = d else {
+            return Ok(None);
+        };
+        let seqs = fo4_scene::sequence::sequences(&n);
+        let Some(s) = seqs.iter().find(|s| s.name == "Open") else {
+            return Ok(None);
+        };
+        Ok(
+            fo4_scene::sequence::chain_pose(&n, s, chain, false, f64::from(s.stop), b)?
+                .map(|p| p.posed.compose(inverse(p.stored))),
+        )
+    })
+}
+
+/// `--draw-held-doors` (`play_door_drawn_as_held_v1`): each draw of a
+/// door of `keys` with its node chain, the door, and the draw's world
+/// transform with the chain posed open ([`open_motion`], turned into the
+/// world by the door's placement); `None` when no open pose is read.
+fn held_door_draws(
+    build: &Build,
+    scene: &fo4_scene::Scene,
+    loader: &Loader<'_>,
+    keys: &[fo4_plugin::FormKey],
+    b: &Budget,
+) -> fo4_core::Result<
+    Vec<(
+        usize,
+        fo4_plugin::FormKey,
+        Option<fo4_scene::transform::Transform>,
+    )>,
+> {
+    use fo4_scene::timeline::norm;
+    let wanted: std::collections::BTreeSet<fo4_plugin::FormKey> = keys.iter().map(norm).collect();
+    let mut placed = std::collections::BTreeMap::new();
+    for i in &scene.instances {
+        let k = norm(&i.reference.key);
+        if !wanted.contains(&k) {
+            continue;
+        }
+        let (Some(base), Some(t)) = (&i.base, i.reference.data.transform) else {
+            continue;
+        };
+        let Some(&asset) = base.assets.first() else {
+            continue;
+        };
+        let Ok(r) =
+            fo4_scene::transform::Transform::euler(t, i.reference.data.scale.unwrap_or(1.0))
+        else {
+            continue;
+        };
+        placed.insert(k, (asset, r));
+    }
+    let refs: std::collections::BTreeMap<u32, fo4_plugin::FormKey> = build
+        .instances
+        .iter()
+        .map(|i| (i.index, norm(&i.reference)))
+        .collect();
+    let mut out = Vec::new();
+    for c in &build.chains {
+        let Some(d) = build.list.draws.get(c.draw) else {
+            continue;
+        };
+        let Some(k) = refs.get(&d.instance).filter(|k| wanted.contains(*k)) else {
+            continue;
+        };
+        let open = match placed.get(k) {
+            Some((asset, r)) if c.bones.is_empty() => open_motion(loader, *asset, &c.blocks, b)?
+                .map(|m| r.compose(m).compose(inverse(*r)).compose(d.world)),
+            _ => None,
+        };
+        out.push((c.draw, k.clone(), open));
+    }
+    Ok(out)
 }
 
 /// The manifest with its data root, the plugins and the mounted archives.
@@ -454,6 +562,34 @@ pub fn cell<'s>(
     } else {
         Vec::new()
     };
+    // --draw-held-doors: the loaded doors drawn by their models as stored
+    // (`fo4_scene::platform`'s state, as a named platform), shown by the
+    // window only while the walker's held doors' reading says so.
+    let door_keys: Vec<fo4_plugin::FormKey> = if drawing.held_doors {
+        scene
+            .instances
+            .iter()
+            .filter(|i| {
+                i.base
+                    .as_ref()
+                    .is_some_and(|b| b.record.signature == *b"DOOR")
+            })
+            .map(|i| i.reference.key.clone())
+            .collect()
+    } else {
+        Vec::new()
+    };
+    if !door_keys.is_empty() {
+        let (added, skinned) =
+            fo4_scene::platform::add(&mut scene, &mut loader, &door_keys, &budget)?;
+        println!(
+            "doors: {} of {} loaded doors drawn as stored for the held doors' reading (play_door_drawn_as_held_v1), {} not ({} with skinned shapes left out)",
+            added.drawn.len(),
+            door_keys.len(),
+            added.not.len(),
+            skinned.len()
+        );
+    }
     // --timeline-ride-model: the ride's model as one more actor of the
     // cast, posed with --timeline-ride.
     let mut poses = poses;
@@ -626,6 +762,17 @@ pub fn cell<'s>(
             );
         }
     }
+    let doors = if door_keys.is_empty() {
+        Vec::new()
+    } else {
+        let d = held_door_draws(&build, &scene, &loader, &door_keys, &budget)?;
+        println!(
+            "doors: {} draws of the held doors' models, {} with an open pose",
+            d.len(),
+            d.iter().filter(|x| x.2.is_some()).count()
+        );
+        d
+    };
     #[cfg(feature = "script-event")]
     if let Some(d) = dormant_drawn {
         crate::play::undraw_dormant(&mut scene, d);
@@ -895,6 +1042,7 @@ pub fn cell<'s>(
         pick,
         #[cfg(feature = "script-event")]
         live,
+        doors,
     })
 }
 
@@ -984,6 +1132,24 @@ pub fn read_png(path: &str) -> AnyResult<fo4_render::png::Png> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_placement_and_its_inverse_compose_to_the_identity() {
+        // `play_door_drawn_as_held_v1`: the open pose is turned into the
+        // world by the door's placement and its inverse.
+        let t =
+            fo4_scene::transform::Transform::euler([10., -20., 30., 0.3, -0.2, 1.1], 1.5).unwrap();
+        // The placement's rotation is computed with binary32 sine and
+        // cosine, so it is orthonormal to about 1e-7 only.
+        for m in [inverse(t).compose(t), t.compose(inverse(t))] {
+            let id = fo4_scene::transform::Transform::IDENTITY;
+            let near = (0..3).all(|i| {
+                (0..3).all(|j| (m.rotation[i][j] - id.rotation[i][j]).abs() < 1e-5)
+                    && m.translation[i].abs() < 1e-4
+            }) && (m.scale - 1.0).abs() < 1e-9;
+            assert!(near, "{m:?}");
+        }
+    }
     #[test]
     fn rgba8_round_trips_through_the_reference_png_codec() {
         let rgba: Vec<u8> = (0..=255u8).flat_map(|v| [v, 255 - v, v / 2, 255]).collect();

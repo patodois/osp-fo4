@@ -286,6 +286,48 @@ pub fn platform_instances(
     out
 }
 
+/// One drawn instance of a held door's model (`--draw-held-doors`,
+/// `play_door_drawn_as_held_v1`): its world transform as built (the model
+/// as stored: closed) and, when the model has a sequence named Open whose
+/// last key poses the draw's chain, its world transform so posed (open).
+#[derive(Debug, Clone, PartialEq)]
+pub struct DoorInstance {
+    /// Index into `GpuScene::instances`.
+    pub instance: usize,
+    /// The placed door (normalised key).
+    pub reference: fo4_plugin::FormKey,
+    pub closed: fo4_scene::transform::Transform,
+    pub open: Option<fo4_scene::transform::Transform>,
+}
+
+/// The instances of `gpu` converted from the draws `doors` lists (draw
+/// index, door, open world transform; `crate::load::Loaded::doors`).
+pub fn door_instances(
+    build: &fo4_render::draw::Build,
+    gpu: &GpuScene,
+    doors: &[(
+        usize,
+        fo4_plugin::FormKey,
+        Option<fo4_scene::transform::Transform>,
+    )],
+) -> Vec<DoorInstance> {
+    let by_draw: BTreeMap<usize, usize> =
+        gpu.draws.iter().enumerate().map(|(k, d)| (*d, k)).collect();
+    doors
+        .iter()
+        .filter_map(|(draw, reference, open)| {
+            let instance = *by_draw.get(draw)?;
+            let d = build.list.draws.get(*draw)?;
+            Some(DoorInstance {
+                instance,
+                reference: fo4_scene::timeline::norm(reference),
+                closed: d.world,
+                open: *open,
+            })
+        })
+        .collect()
+}
+
 #[derive(Default)]
 pub struct GpuScene {
     pub meshes: Vec<GpuMesh>,
@@ -306,6 +348,10 @@ pub struct GpuScene {
     /// be drawn where its part's collision stands ([`platform_instances`];
     /// empty otherwise).
     pub platforms: Vec<PlatformInstance>,
+    /// The scripted play window's held doors (`--draw-held-doors`): the
+    /// instances of their models' shapes ([`door_instances`]; empty
+    /// otherwise).
+    pub doors: Vec<DoorInstance>,
     /// The frame's light (`fo4_scene::light`) as the surface shader reads
     /// it ([`light_words`]); `None` without the light switches.
     pub light: Option<GpuLight>,

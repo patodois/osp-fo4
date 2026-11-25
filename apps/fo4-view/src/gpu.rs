@@ -1107,6 +1107,17 @@ fn spawn_window_scene(world: &mut World) {
                 reported: false,
             });
         }
+        world.remove_resource::<PlayDoors>();
+        let doors: Vec<(Entity, crate::scene::DoorInstance)> = std::mem::take(&mut scene.doors)
+            .into_iter()
+            .filter_map(|d| entities.get(d.instance).map(|e| (*e, d)))
+            .collect();
+        if !doors.is_empty() {
+            world.insert_resource(PlayDoors {
+                drawn: doors,
+                shown: std::collections::BTreeMap::new(),
+            });
+        }
     }
     if let Some(PendingClock(start)) = world.remove_resource::<PendingClock>() {
         // Each animated surface's material, through its first instance.
@@ -1788,6 +1799,68 @@ struct PlayPlatforms {
     reported: bool,
 }
 
+/// The drawn instances of the held doors' models in the scripted play
+/// window (`--draw-held-doors`), and the state each door was last drawn in.
+#[cfg(feature = "script-event")]
+#[derive(Resource)]
+struct PlayDoors {
+    drawn: Vec<(Entity, crate::scene::DoorInstance)>,
+    shown: std::collections::BTreeMap<fo4_plugin::FormKey, Option<bool>>,
+}
+
+/// Each frame of the scripted play window with `--draw-held-doors`
+/// (`play_door_drawn_as_held_v1`): a door whose box the walker's held
+/// doors' reading holds is drawn as stored (closed); one it held and let go
+/// is drawn posed open, or hidden when no open pose was read; one it never
+/// held, or the run disabled, is hidden.
+#[cfg(feature = "script-event")]
+fn follow_doors<F: bevy::ecs::query::QueryFilter>(
+    p: &crate::play::PlayRun,
+    seen: &crate::play::Seen,
+    doors: &mut PlayDoors,
+    instances: &mut Query<CellInstance, F>,
+) {
+    for (e, d) in &doors.drawn {
+        let Ok((_, tag, mut vis, mut t)) = instances.get_mut(*e) else {
+            continue;
+        };
+        let state = seen.doors.get(&d.reference).copied();
+        let gone = p.decision(tag.value) == Some(fo4_play::live::Decision::Absent);
+        let world = match (gone, state) {
+            (false, Some(true)) => Some(d.closed),
+            (false, Some(false)) => d.open,
+            _ => None,
+        };
+        match world.and_then(|w| crate::coords::instance_transform(&w)) {
+            Some((translation, rotation, scale)) => {
+                *vis = Visibility::Inherited;
+                *t = Transform {
+                    translation,
+                    rotation,
+                    scale,
+                };
+            }
+            None => *vis = Visibility::Hidden,
+        }
+    }
+    for (k, held) in &seen.doors {
+        let now = Some(*held);
+        if doors.shown.get(k) != Some(&now) {
+            doors.shown.insert(k.clone(), now);
+            println!(
+                "play: door {} drawn {} at {:.3} s of the run",
+                fo4_scene::timeline::key_text(k),
+                if *held {
+                    "closed (its box stands)"
+                } else {
+                    "open (its box left)"
+                },
+                seen.t
+            );
+        }
+    }
+}
+
 /// Each frame of the scripted play window: each drawn shape of a named
 /// platform whose node chain goes with a moving part
 /// (`fo4_play::elevator::Platform::part_of`) is drawn where the part's
@@ -2208,6 +2281,7 @@ fn play_scripted(
     mut instances: Query<CellInstance, (Without<FlyCamera>, Without<CastEntity>)>,
     casts: Query<Entity, With<CastEntity>>,
     mut platforms: Option<ResMut<PlayPlatforms>>,
+    mut doors: Option<ResMut<PlayDoors>>,
     (mut exposure, lights, mut buffers): ExposureParams,
     mut exit: MessageWriter<AppExit>,
     mut person: Option<ResMut<PersonInput>>,
@@ -2346,6 +2420,9 @@ fn play_scripted(
         play_live(p, drawn, None, &mut instances);
         if let Some(pp) = platforms.as_deref_mut() {
             follow_platforms(&seen, pp, &mut instances);
+        }
+        if let Some(pd) = doors.as_deref_mut() {
+            follow_doors(p, &seen, pd, &mut instances);
         }
         if let (Some(x), Some(l)) = (exposure.as_deref_mut(), lights.as_deref()) {
             expose_view(&seen, x, l, &mut buffers);

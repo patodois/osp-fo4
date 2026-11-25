@@ -26,6 +26,19 @@ pub fn platforms(_: &Switches) -> Vec<fo4_plugin::FormKey> {
     Vec::new()
 }
 
+/// Whether the held doors' boxes stand in the scripted walker's world
+/// (`--play-held-doors`), whose doors `--draw-held-doors` draws.
+#[cfg(feature = "script-event")]
+pub fn held_doors(s: &Switches) -> bool {
+    s.held_doors
+}
+
+/// Without the interpreter: no.
+#[cfg(not(feature = "script-event"))]
+pub fn held_doors(_: &Switches) -> bool {
+    false
+}
+
 /// Without the interpreter: no play option is read.
 #[cfg(not(feature = "script-event"))]
 #[derive(Debug, Clone, Default, PartialEq)]

@@ -179,6 +179,13 @@ usage:
       draw refuses (particle systems, a material a controller drives) is
       left out and counted (pending rules play_platform_drawn_v1 and
       play_platform_shapes_left_out_v1).
+      --draw-held-doors (off by default; the scripted play window with
+      --play-held-doors) draws each loaded door the walker's held doors'
+      reading has held, by its model as --draw-platforms draws a platform:
+      as stored (closed) while its box stands, and once the box has left
+      with the door's nodes posed at the last key of its model's sequence
+      named Open (none: not drawn); a door never held is not drawn, as
+      before (pending rule play_door_drawn_as_held_v1).
   fo4-view MANIFEST DATA_DIRECTORY CELL_EDITOR_ID [level] --headless
            --eye X,Y,Z --look X,Y,Z --out build/FRAME.png [--tags build/TAGS.bin]
            [--size WxH] [--backface-cull] [--terrain] [--around N] [--walk]
@@ -373,6 +380,12 @@ pub struct Drawing {
     /// `--play-elevator`): the named platforms drawn by their models as
     /// stored (`fo4_scene::platform`).
     pub platforms: bool,
+    /// `--draw-held-doors` (`play_door_drawn_as_held_v1`; the scripted
+    /// play window with `--play-held-doors`): the loaded doors drawn by
+    /// their models as stored while the walker's held doors' reading holds
+    /// them, posed by their model's sequence named Open once it has let
+    /// them go, hidden before it first holds them (`crate::scene::DoorInstance`).
+    pub held_doors: bool,
     /// The scripted play window with `--exposure-eye`: the exposure
     /// measured per view instead of once per load (`scene::ViewExposure`;
     /// plumbing of the existing switch, set by the parser).
@@ -837,6 +850,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             "--timeline-child-flag-agrees" => child_flag_agrees = true,
             "--draw-child-flag-agrees" => drawing.child_flag_agrees = true,
             "--draw-platforms" => drawing.platforms = true,
+            "--draw-held-doors" => drawing.held_doors = true,
             "--exposure-eye-visible" => drawing.exposure_visible = true,
             "--timeline-dead-lying" | "--timeline-dead-left-out" => {
                 if dead != fo4_scene::timeline::Dead::Standing {
@@ -1151,6 +1165,13 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             )
         }
     };
+    if scene.drawing.held_doors
+        && !play
+            .as_ref()
+            .is_some_and(|p| p.input.is_some() && crate::play_switches::held_doors(&p.switches))
+    {
+        return Err("--draw-held-doors draws the held doors of the scripted play window: it needs --play-input or --play-keys and --play-held-doors".into());
+    }
     if let Some(p) = &play {
         p.switches.check()?;
         if p.input.is_none() && p.switches.walker_only() {
@@ -1531,11 +1552,38 @@ mod tests {
         assert!(p.switches.first_met && p.switches.action_offset);
         assert!(p.switches.held_doors && p.switches.marker_boxes && p.switches.marker_box_layers);
         assert!(p.switches.static_fields && !p.switches.marker_box_layer_records);
+        assert!(p.switches.held_at_load && scene.drawing.held_doors);
         assert!(scene.play_cast.is_some() && scene.drawing.platforms && scene.light.any());
         // Without the local file's platforms the preset is refused.
         let mut alone = args("m d C --eye 1,2,3 --look 4,5,6 --play-run s.txt --play-out o");
         alone.extend(expand_args(&args("--args preset.args"), &read).unwrap());
         assert!(parse(&alone).is_err());
+    }
+
+    #[cfg(feature = "script-event")]
+    #[test]
+    fn the_held_doors_are_drawn_only_for_the_scripted_walkers_held_doors() {
+        let base = "m d C --under-hypotheses --walk --eye 1,2,3 --look 4,5,6 --play-run s.txt --play-out o --play-input i.txt --play-reach 150 --play-live-world --play-held-doors --play-held-doors-at-load";
+        let ok = parse(&args(&format!("{base} --draw-held-doors"))).unwrap();
+        let Command::Window {
+            scene,
+            play: Some(p),
+            ..
+        } = ok
+        else {
+            panic!("{ok:?}")
+        };
+        assert!(scene.drawing.held_doors && p.switches.held_at_load);
+        assert!(!parse(&args(base)).is_err());
+        // Without the held doors' reading, or without the scripted walker.
+        assert!(parse(&args(
+            "m d C --under-hypotheses --walk --eye 1,2,3 --look 4,5,6 --play-run s.txt --play-out o --play-input i.txt --play-reach 150 --play-live-world --draw-held-doors"
+        ))
+        .is_err());
+        assert!(parse(&args(
+            "m d C --under-hypotheses --walk --eye 1,2,3 --look 4,5,6 --play-run s.txt --play-out o --play-live-world --play-held-doors --draw-held-doors"
+        ))
+        .is_err());
     }
 
     #[cfg(feature = "script-event")]

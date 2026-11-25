@@ -522,6 +522,7 @@ fn exact_depth_ties_resolve_by_list_order_in_every_run() {
             moving: Vec::new(),
             draws: Vec::new(),
             platforms: Vec::new(),
+            doors: Vec::new(),
             light: None,
             view_exposure: None,
         }

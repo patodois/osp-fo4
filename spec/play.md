@@ -1294,6 +1294,82 @@ Whether a listed pair makes a box solid to a walking character, or only to rays 
 settled by the records. The front door measurement of `play_collision_marker_box_layer_passed_v1` decides
 between the two readings.
 
+### The front door shut from load, the checkpoint barrier and the catwalk holds (the door-shut step)
+
+The seventh session (two people, the session's records replayed byte for byte) met three things. Read from the
+records, the data and this project's code only (outputs outside git):
+
+- **The front door was open until the visit ended.** Under `--play-held-doors` a door holds the walker only once
+  the run's scripts have closed it (`SetOpen(false)`) and blocked its activation. The opening blocks the house
+  front door's activation at its stage of 3.0 s, but no script closes the door before the stage that ends the
+  salesman's visit (165.8 s in the first session), so the door had no open state and placed nothing until then:
+  the early person walked out at 10.5 s, 43.6 s before the doorbell. The door's reference stores no `ONAM`
+  (the field xEdit publishes as "Open by Default"; 6 of the 12 placed doors about the start store one). Nothing
+  draws the door either: every placed door is refused at render readiness, so the doorway looks open all run.
+- **Read as closed at load for every door, the reading goes too far.** With every held door storing no `ONAM`
+  read as closed, the postwar vault's eight pod doors (from 730 s) and two vault doors (from 795 s) are held
+  too: the run opens the pods by their animation, which the held doors' reading does not see, and the on-time
+  synthetic person stops after waking (252 of 276 stages). The reading is therefore limited to the doors the
+  person opens (`--play-activate-opens`): in the opening, the front door alone.
+
+`--play-held-doors-at-load` (`play_door_closed_at_load_v1`, off by default, needs `--play-held-doors`;
+`world::stores_onam`, `world::Built::closed_at_load`, `walker::persons_doors`, `Live::with_closed_at_load`,
+`DoorState::holds_from_load`, `RunState::open_by_player`): a held door that the person opens and whose reference
+stores no `ONAM` is closed until a script's `SetOpen` or the person's open of it (the activation that gives the run
+the open) opens it. What the records give:
+
+- The front door's box stands from 3.0 s, the stage that blocks its activation (from the run's first second the
+  door is closed but its activation not yet blocked; the walker starts in another room).
+- The on-time synthetic person: held 3.0 to 90 s (its activation at the bell opens it), again from 159.12 s (the
+  visit's end) to 284.92 s (the evacuation); its track and timeline byte for byte those of the gate-frame step's run
+  (276 stages to the surface).
+- The first session's record (natural pace): track and timeline byte for byte the session's own, 272 stages, out
+  of the vault (the follow-on quest's 10 at 1170.51 s); the door held 3.0 to 96.69 s, 165.83 to 378.04 s.
+- The second session's record (early on purpose): the walker is held at the door at 10.43 s, the first point
+  where its track leaves the recorded one; the record, made by a person already outside, then walks a held walker
+  elsewhere and the run stops at stage 95 (143 stages), as the board step's record made through the door did.
+- With the new switch off, the three records (both sessions and the on-time person) give every output byte for
+  byte as before (`play.txt` apart from its timings).
+- The deck step's sweep of 20 early and 20 arriving-early synthetic persons under the preset with the new switch,
+  against the gate-frame step's runs: all 40 set the same stages in the same order at the same seconds; out of the
+  vault arriving early 14 of 20 and early 3 of 20, the descent's stage reached by 17 and 15, as before. Nobody is
+  lost, so `--play-held-doors-at-load` is in the play preset, with `--draw-held-doors`.
+
+`--draw-held-doors` (`play_door_drawn_as_held_v1`, the window, off by default, needs the scripted play window with
+`--play-held-doors`; `load::held_door_draws`, `scene::DoorInstance`, `gpu::follow_doors`,
+`Walker::held_door_states`): each loaded door is drawn by its model as stored, through the named platforms'
+drawing state (`fo4_scene::platform`), once the walker's held doors' reading has held it: as stored while its box
+stands; after the box left, each shape posed at the last key of its model's sequence named Open, turned into the
+world by the door's placement; a door the reading never held, or one the run disabled, stays undrawn. The front
+door's model stores its leaf unturned; its sequence Open turns the leaf about its vertical axis to 1.560 rad (about
+89 degrees) and Close back to 0.001 rad, so the stored pose is read as shut. In the window (the on-time synthetic person's input in the scripted window
+with the preset and both new switches, frames every second about the door's changes): the front door is drawn shut
+from 3.1 s, open from 90.1 s, shut from 159.2 s and open from 285.0 s, each the frame after its box changed; the
+nursery door shut from 227.9 s and open from 243.6 s; all 12 loaded doors about the start are drawn for the reading
+(34 draws, each with an open pose); 60 fps median. The open leaf stands in the room, across the point the person
+stood at to press E (the frame at 91 s looks into it): the sequence's sign, not measured.
+
+- **The checkpoint barrier is two things, neither drawn.** The centre is held by the collision marker's box (its
+  reference stores layer word 35; the stage that opens the way disables it), the ends by the gate frame static's
+  two side panels. The box is a collision marker: it has no drawn model at all. The frame is refused at render
+  readiness by the same four reference fields as its collision was before the gate-frame step (`XACT`, `XLRT`,
+  `XOWN`, `ONAM`: `--play-collision-static-fields` sets them aside for collision only) and by its transform
+  controller, which turns the gate's leaf, a drawn node (`target_in_visual`). Not done here: drawing the frame needs
+  a render reading of those fields and of the leaf's controller (which plays from load: its keys go from the
+  stored pose about 94 degrees and back), and the box has nothing to draw.
+- **The catwalk holds are the exit mechanism's walkway, moved by its sequence and drawn still.** With
+  `--play-report-walls` (a report of the play mode, no behaviour: each stretch of blocked ticks with what blocked
+  it, `Live::describe_source`, `Elevator::describe_piece`) the second session's record gives, against the named
+  exit mechanism's rigid parts while the run's graph plays the sequence it starts on it at 1051.70 s: 1052.87 to
+  1054.57 s its part 6, the third walkway segment's base node (a face toward the walker; the walker's feet at x
+  -3383.08, its capsule's radius short of it); 1087.30 to 1088.37 s part 3,
+  the first segment's base node; 1088.63 to 1093.93 s part 5, the ramp's node (the walker at x -3512.63), released
+  1.1 s before the run starts its next sequence. The window draws that walkway's grating as skinned shapes whose bones go with
+  more than one part, so they stay as built (spanning x -3900 to -3399 at the catwalk's height plus about 50): the
+  person saw grating ahead and nothing moving. The collision follows this project's reading of the sequence
+  (`play_elevator_rigid_v1`); whether the game's walkway also stops a player while it moves is not known. Not
+  changed: `play_platform_part_holds_walker_v1` (pending) records the reading.
+
 ## What the play mode does not do yet
 
 - The elevators ride only those the caller names (`--play-elevator`), headless and in the scripted window;
@@ -1307,7 +1383,11 @@ between the two readings.
   whose collision chain a controller moves is still refused, and the collision of any model whose animation
   moves a node a body reads is not posed by the clock.
 - Plain doors: no collision is placed for any door, so none blocks the walker; the open state is not read, but with
-  `--play-held-doors` a door the run's scripts close with its activation blocked holds the walker (the board step).
+  `--play-held-doors` a door the run's scripts close with its activation blocked holds the walker (the board step),
+  and with `--play-held-doors-at-load` a door the person opens that stores no `ONAM` counts as closed from load
+  (the door-shut step). A door's opening by a person's activation is read only for the doors the caller names.
+- Doors are drawn only with `--draw-held-doors`, and only those the held doors' reading has held; the swing is not
+  played (shut, then at the sequence's last key).
 - Moving collision with a node (an animated door, a platform) is modelled only for the references the caller
   names (above); the live world moves only what the run moves.
 - A person's keys drive `play_run`'s walker in the window (`--play-keys`), checked by the synthetic person, the
@@ -1366,3 +1446,6 @@ between the two readings.
 | `play_door_closed_blocked_holds_v1` | `--play-held-doors` (in the preset) | the house door's closing, its blocked activation and the evacuation stage that opens it, as the run's scripts call them; the two natives' meaning from the Creation Kit's documentation; that a closed door is solid and its object bounds stand for its solid part is prior knowledge | weak |
 | `refr_static_fields_collision_unchanged_v1` | `--play-collision-static-fields` (in the preset since the gate-frame step) | the published field names of `XACT`, `XLRT`, `XOWN` and `ONAM`; a load-order census of the statics storing them (36 admitted, among them the checkpoint gate's frame); that a static has no door, activation, ownership or location behaviour that moves its collision is prior knowledge | weak |
 | `play_collision_marker_box_layer_records_v1` | `--play-marker-box-layer-records` (with `--play-marker-box-layers`; not in the preset) | the load order's collision layer records read under their published layout, their lists symmetric; that index 30 is a walking character's layer and what a listed pair does to a box are prior knowledge; the records list 39, 40, 41 and 43 with it, against the constant | weak |
+| `play_door_closed_at_load_v1` | `--play-held-doors-at-load` (with `--play-held-doors`; in the preset since the door-shut step) | the front door stores no `ONAM`; the field's published name; prior knowledge that a closed door is solid | weak |
+| `play_door_drawn_as_held_v1` | `fo4-view --draw-held-doors` (in the preset since the door-shut step) | the door model's stored leaf and its sequences named Open and Close | weak |
+| `play_platform_part_holds_walker_v1` | `--play-elevator` (the behaviour as it is) | the walls report on the second session's record | weak |

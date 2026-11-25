@@ -90,8 +90,13 @@ pub struct RunState {
     /// `SetOpen` and `BlockActivation` natives are not read.
     pub doors_read: bool,
     /// Per reference, with `doors_read`: the last `SetOpen` argument (open)
-    /// and the last `BlockActivation` first argument (activation blocked).
+    /// and the last `BlockActivation` first argument (activation blocked);
+    /// with [`RunState::open_by_player`], the walker's open too
+    /// ([`crate::rules::HELD_DOORS_AT_LOAD`]).
     pub doors: BTreeMap<FormKey, DoorState>,
+    /// A change not read from the run's effects (the walker's open of a
+    /// door) that the next [`RunState::update`] reports.
+    unread: bool,
 }
 
 /// What the run's scripts last did to a reference's open state and its
@@ -109,6 +114,16 @@ impl DoorState {
     /// activation blocked (a person's activation would not open it).
     pub fn holds(&self) -> bool {
         self.open == Some(false) && self.blocked == Some(true)
+    }
+
+    /// Whether the door holds the walker when its open state before any
+    /// script's or the walker's open is the data's
+    /// ([`crate::rules::HELD_DOORS_AT_LOAD`]): `closed_at_load`, the door's
+    /// reference stores no `ONAM`, stands for a `SetOpen(false)` at load.
+    /// `false` is [`DoorState::holds`].
+    pub fn holds_from_load(&self, closed_at_load: bool) -> bool {
+        let open = self.open.or((closed_at_load).then_some(false));
+        open == Some(false) && self.blocked == Some(true)
     }
 }
 
@@ -151,10 +166,22 @@ impl RunState {
         }
     }
 
+    /// The walker opened door `k` (the person's activation of a reference
+    /// named by `--play-activate-opens`, which gives the run the open):
+    /// with `doors_read`, its open state is open until a script closes it
+    /// again ([`crate::rules::HELD_DOORS_AT_LOAD`]). Reported by the next
+    /// [`RunState::update`].
+    pub fn open_by_player(&mut self, k: FormKey) {
+        if self.doors_read {
+            self.doors.entry(k).or_default().open = Some(true);
+            self.unread = true;
+        }
+    }
+
     /// Reads what the run did since the last call; whether anything
     /// changed.
     pub fn update(&mut self, vm: &Vm<'_>) -> bool {
-        let mut changed = false;
+        let mut changed = std::mem::take(&mut self.unread);
         for e in vm.effects.iter().skip(self.effects) {
             if self.doors_read {
                 if let Some((is_open, v)) = door_change(&e.native, &e.args) {
@@ -339,6 +366,9 @@ pub struct Live {
     held: BTreeMap<FormKey, Vec<u32>>,
     /// The doors whose boxes are shown.
     holding: std::collections::BTreeSet<FormKey>,
+    /// Of `held`, the doors whose reference stores no `ONAM`: closed at
+    /// load ([`crate::rules::HELD_DOORS_AT_LOAD`], [`Live::with_closed_at_load`]).
+    closed_at_load: std::collections::BTreeSet<FormKey>,
     pub stats: Stats,
 }
 
@@ -362,6 +392,7 @@ impl Live {
             unpicked: Default::default(),
             held: BTreeMap::new(),
             holding: Default::default(),
+            closed_at_load: Default::default(),
             stats: Stats::default(),
         })
     }
@@ -387,9 +418,49 @@ impl Live {
         self
     }
 
+    /// The held doors closed at load (their references store no `ONAM`;
+    /// [`crate::rules::HELD_DOORS_AT_LOAD`], `--play-held-doors-at-load`):
+    /// with no script's or walker's open yet, each is read as closed.
+    pub fn with_closed_at_load(mut self, doors: std::collections::BTreeSet<FormKey>) -> Live {
+        self.closed_at_load = doors;
+        self
+    }
+
     /// The doors whose boxes this live world holds (shown or not).
     pub fn held_doors(&self) -> impl Iterator<Item = &FormKey> {
         self.held.keys()
+    }
+
+    /// What source `source` of [`Live::space`] is, for a report: its piece,
+    /// its index there, its placed reference when the piece knows it, and
+    /// its label or instance.
+    pub fn describe_source(&self, source: u32) -> String {
+        let Some((k, s)) = self.set.source(source) else {
+            return format!("source {source} (none)");
+        };
+        let base = self
+            .set
+            .pieces()
+            .find(|(pk, _, _)| *pk == k)
+            .map_or(0, |(_, _, (_, first))| first);
+        let local = source.saturating_sub(base);
+        let reference = self
+            .refs
+            .get(k)
+            .and_then(|r| r.get(local as usize))
+            .cloned()
+            .flatten()
+            .map_or_else(
+                || "no placed reference".to_string(),
+                |r| fo4_vm::bind::record_key(&r),
+            );
+        let what = match (&s.label, s.instance, s.terrain) {
+            (Some(l), _, _) => l.clone(),
+            (None, Some(i), _) => format!("instance {i}"),
+            (None, None, Some(g)) => format!("terrain {g:?}"),
+            _ => "unlabelled".to_string(),
+        };
+        format!("piece {k:?} source {local}: {reference}, {what}")
     }
 
     /// The doors whose boxes stand in the walking world now.
@@ -518,7 +589,13 @@ impl Live {
         // its activation blocked and the reference itself is not disabled.
         let mut held_changed = 0usize;
         for (k, srcs) in &self.held {
-            let want = s.doors.get(k).is_some_and(DoorState::holds)
+            let at_load = self.closed_at_load.contains(k);
+            let want = s
+                .doors
+                .get(k)
+                .copied()
+                .unwrap_or_default()
+                .holds_from_load(at_load)
                 && s.shown(k, nowait) != Some(false)
                 && self.decided.get(k) != Some(&Decision::Absent);
             if want == self.holding.contains(k) {
@@ -916,6 +993,36 @@ mod tests {
         l.apply(&s, &b).unwrap();
         assert_eq!(touches_at(l.space(), 35.0), 0);
         assert_eq!((l.stats.held, l.stats.released), (2, 2));
+    }
+
+    #[test]
+    fn a_door_closed_at_load_holds_once_blocked_until_the_person_opens_it() {
+        // `play_door_closed_at_load_v1`.
+        let b = Budget::new(1 << 24);
+        let mut l = live_with_door().with_closed_at_load([key(3)].into());
+        // Closed at load, its activation not yet blocked: no box.
+        assert_eq!(l.apply(&RunState::reading_doors(true), &b).unwrap(), 0);
+        assert_eq!(touches_at(l.space(), 35.0), 0);
+        // Blocked by the run with no SetOpen: the box stands.
+        assert_eq!(l.apply(&door(None, Some(true)), &b).unwrap(), 1);
+        assert_eq!(touches_at(l.space(), 35.0), 1);
+        // The person's open opens it; a script's close shuts it again.
+        let mut s = door(None, Some(true));
+        s.open_by_player(key(3));
+        assert!(s.doors[&key(3)].open == Some(true) && s.unread);
+        l.apply(&s, &b).unwrap();
+        assert_eq!(touches_at(l.space(), 35.0), 0);
+        l.apply(&door(Some(false), Some(true)), &b).unwrap();
+        assert_eq!(touches_at(l.space(), 35.0), 1);
+        // Without the reading the same state places nothing, as before.
+        let mut plain = live_with_door();
+        plain.apply(&door(None, Some(true)), &b).unwrap();
+        assert_eq!(touches_at(plain.space(), 35.0), 0);
+        // A run that does not read doors takes no open from the person.
+        let mut off = RunState::reading_doors(false);
+        off.open_by_player(key(3));
+        assert!(off.doors.is_empty() && !off.unread);
+        assert!(DoorState::default().holds_from_load(false) == DoorState::default().holds());
     }
 
     #[test]

@@ -169,8 +169,20 @@ pub mod rules {
     /// bounds placed by the reference, until a script opens it, unblocks
     /// its activation or disables it (`--play-held-doors`).
     pub const HELD_DOORS: &str = "play_door_closed_blocked_holds_v1";
+    /// Under `HELD_DOORS`, a door the person opens (a reference
+    /// `--play-activate-opens` names) whose reference stores no `ONAM` (the
+    /// field xEdit publishes as "Open by Default") is closed at load: its
+    /// open state, until a script's `SetOpen` or the person's open of it,
+    /// is closed. Any other door keeps no state until a script sets one,
+    /// as before (`--play-held-doors-at-load`).
+    pub const HELD_DOORS_AT_LOAD: &str = "play_door_closed_at_load_v1";
+    /// The window draws a loaded door the walker's held doors' reading has
+    /// held by its model as stored while its box stands, posed at the last
+    /// key of its model's sequence named Open once the box left, and not
+    /// before the reading first holds it (`fo4-view --draw-held-doors`).
+    pub const DOOR_DRAWN: &str = "play_door_drawn_as_held_v1";
     /// Every rule above.
-    pub const ALL: [&str; 23] = [
+    pub const ALL: [&str; 25] = [
         PLAYER_FEET,
         RUN_CLOCK,
         ACTIVATE_RAY,
@@ -194,6 +206,8 @@ pub mod rules {
         ACTIVATE_FIRST_MET,
         ACTIVATE_WRITTEN_SECOND,
         HELD_DOORS,
+        HELD_DOORS_AT_LOAD,
+        DOOR_DRAWN,
     ];
 }
 

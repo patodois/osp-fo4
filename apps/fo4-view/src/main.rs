@@ -70,7 +70,7 @@ fn load_scene_with<'s>(
             time: s.time,
             clock: s.clock,
             vertex_normals: s.light.vertex_normals,
-            chains: !s.play_platforms.is_empty(),
+            chains: !s.play_platforms.is_empty() || s.drawing.held_doors,
             ..load::build_options(s.textures, s.level)
         },
         s.scene_memory,
@@ -162,6 +162,14 @@ fn load_scene_with<'s>(
         println!(
             "play: {} drawn instances of the named platforms' models, kept with their node chains",
             gpu.platforms.len()
+        );
+    }
+    // --draw-held-doors: the held doors' drawn shapes, closed and open.
+    if !loaded.doors.is_empty() {
+        gpu.doors = scene::door_instances(&loaded.build, &gpu, &loaded.doors);
+        println!(
+            "play: {} drawn instances of the held doors' models",
+            gpu.doors.len()
         );
     }
     // Only with --light-vertex-normals: how many lit surfaces take them.

@@ -80,8 +80,10 @@ pub struct Play {
     pub marker_boxes: bool,
     pub marker_box_layers: bool,
     pub marker_box_layer_records: bool,
-    /// `--play-held-doors` (`play_door_closed_blocked_holds_v1`).
+    /// `--play-held-doors` (`play_door_closed_blocked_holds_v1`),
+    /// `--play-held-doors-at-load` (`play_door_closed_at_load_v1`).
     pub held_doors: bool,
+    pub held_at_load: bool,
     /// `--play-elevator REF` (repeated; `play_elevator_run_sequence_v1`),
     /// `--play-elevator-also REF`, `--play-elevator-also-with REF OWNER`.
     pub elevators: Vec<FormKey>,
@@ -97,6 +99,10 @@ pub struct Play {
     pub persons: Vec<FormKey>,
     /// `--play-pick-first-met` (`play_activate_ray_first_met_v1`).
     pub first_met: bool,
+    /// `--play-report-walls` (a report of the play mode, no rule): each
+    /// stretch of ticks the walker was blocked, with what blocked it, in
+    /// `play.txt`.
+    pub report_walls: bool,
     /// `--play-action-after-offset` (`fo4_vm`'s
     /// `caller_action_after_keeps_offset_v1`, `play_activate_written_second_v1`):
     /// the run's `--action-after-offset`, and each timed open or
@@ -167,7 +173,9 @@ impl Play {
             "--play-marker-box-layers" => &mut self.marker_box_layers,
             "--play-marker-box-layer-records" => &mut self.marker_box_layer_records,
             "--play-held-doors" => &mut self.held_doors,
+            "--play-held-doors-at-load" => &mut self.held_at_load,
             "--play-pick-first-met" => &mut self.first_met,
+            "--play-report-walls" => &mut self.report_walls,
             "--play-action-after-offset" => &mut self.action_offset,
             "--play-around" => {
                 let v = value(1)?;
@@ -321,6 +329,9 @@ impl Play {
         if self.held_doors && !self.live_world {
             return Err("--play-held-doors needs --play-live-world".into());
         }
+        if self.held_at_load && !self.held_doors {
+            return Err("--play-held-doors-at-load needs --play-held-doors".into());
+        }
         if self.door_landing && !self.elevator_door {
             return Err("--play-elevator-door-landing needs --play-elevator-door".into());
         }
@@ -442,6 +453,7 @@ impl Play {
             marker_box_layers: self.marker_box_layers,
             marker_box_layer_records: self.marker_box_layer_records,
             held_doors: self.held_doors,
+            held_at_load: self.held_at_load,
         }
     }
 
@@ -471,6 +483,7 @@ impl Play {
             marker_box_layers: self.marker_box_layers,
             marker_box_layer_records: self.marker_box_layer_records,
             held_doors: self.held_doors,
+            held_at_load: self.held_at_load,
             ..walker::Options::default()
         };
         if let Some(v) = self.walk_speed {
@@ -487,6 +500,7 @@ impl Play {
         }
         opts.stand = self.stand;
         opts.first_met = self.first_met;
+        opts.report_walls = self.report_walls;
         opts
     }
 
@@ -537,6 +551,7 @@ impl Play {
             cell,
             unpicked,
             held,
+            closed_at_load,
         } = built;
         let _ = writeln!(
             report,
@@ -558,6 +573,10 @@ impl Play {
         }
         if self.held_doors {
             let _ = writeln!(report, "switch: a loaded door's object bounds stand in the walking world while the run's scripts hold it closed with its activation blocked, until they open it, unblock it or disable it (--play-held-doors, {}): {} door(s)", crate::rules::HELD_DOORS, held.len());
+        }
+        let closed_at_load = walker::persons_doors(closed_at_load, &self.opens);
+        if self.held_at_load {
+            let _ = writeln!(report, "switch: a held door the person opens (--play-activate-opens) whose reference stores no ONAM is closed at load, until a script or the person's open of it opens it (--play-held-doors-at-load, {}): {} door(s)", crate::rules::HELD_DOORS_AT_LOAD, closed_at_load.len());
         }
         if self.marker_boxes {
             let _ = writeln!(report, "switch: the collision markers' boxes among the loaded references and the worldspace's persistent references nearby stand in the walking world, taken out when the run disables them (--play-marker-boxes, {})", crate::rules::MARKER_BOXES);
@@ -600,7 +619,8 @@ impl Play {
                     .map_err(|e| e.to_string())?
                     .with_child_flag_agrees(self.child_flag_agrees)
                     .with_unpicked(&unpicked)
-                    .with_held_doors(held);
+                    .with_held_doors(held)
+                    .with_closed_at_load(closed_at_load);
                 walker::Walker::new(fo4_walk::World::new(), Vec::new(), script, opts)?
                     .with_live(live, nowait)
             }
@@ -705,6 +725,24 @@ mod tests {
             plugin: "a.esm".into(),
             object_id: id,
         }
+    }
+
+    #[test]
+    fn the_door_and_wall_options_read_and_go_together() {
+        let p = read(
+            "--play-live-world --play-held-doors --play-held-doors-at-load --play-report-walls",
+        )
+        .unwrap();
+        assert!(p.held_doors && p.held_at_load && p.report_walls);
+        assert!(p.world_options().held_at_load && p.walker_options().held_at_load);
+        assert!(p.walker_options().report_walls);
+        assert!(read("--play-live-world --play-held-doors-at-load").is_err());
+        assert!(
+            !read("--play-live-world --play-held-doors")
+                .unwrap()
+                .world_options()
+                .held_at_load
+        );
     }
 
     #[test]

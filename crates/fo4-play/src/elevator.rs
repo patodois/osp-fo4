@@ -654,6 +654,35 @@ impl Elevator {
         (KIND, self.index * STRIDE + n)
     }
 
+    /// What the piece under key `key` of this reference is, for a report
+    /// (`--play-report-walls`): its still sources, a moving group, or a
+    /// rigid part with the model block of its deepest set node; `None`
+    /// when the key is not this reference's.
+    pub fn describe_piece(&self, key: Key) -> Option<String> {
+        if key.0 != KIND || key.1 / STRIDE != self.index {
+            return None;
+        }
+        let n = key.1 % STRIDE;
+        let first = 1 + self.groups.len() as u32;
+        let what = if n == 0 {
+            "still sources".to_string()
+        } else if n < first {
+            format!("moving group {}", n - 1)
+        } else if let Some(p) = self.parts.get((n - first) as usize) {
+            format!(
+                "rigid part {} (deepest set node: model block {})",
+                n - first,
+                p.block
+            )
+        } else {
+            format!("piece {n}")
+        };
+        Some(format!(
+            "named platform {}: {what}",
+            fo4_vm::bind::record_key(&self.reference)
+        ))
+    }
+
     /// The moving parts and the sources under them, for the report.
     pub fn summary(&self) -> String {
         if !self.parts.is_empty() {

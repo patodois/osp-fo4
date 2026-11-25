@@ -78,6 +78,12 @@ pub fn walker(l: &Log, report: &mut String) {
             crate::rules::HELD_DOORS
         );
     }
+    for (from, to, n, what) in &l.walls {
+        let _ = writeln!(
+            report,
+            "wall: blocked from {from} to {to} s ({n} ticks) against {what} (--play-report-walls)"
+        );
+    }
     for (t, cell, feet, secs) in &l.grid {
         let _ = writeln!(
             report,

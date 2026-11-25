@@ -181,6 +181,11 @@ pub struct Options {
     /// (`play_door_closed_blocked_holds_v1`, `--play-held-doors`; with
     /// [`Options::live`]). Off: none, as before.
     pub held_doors: bool,
+    /// With [`Options::held_doors`], the held doors whose reference stores
+    /// no `ONAM` are read as closed at load ([`Built::closed_at_load`];
+    /// `play_door_closed_at_load_v1`, `--play-held-doors-at-load`). Off:
+    /// none, as before.
+    pub held_at_load: bool,
 }
 
 /// A placed door whose `XTEL` names a door: where it takes the player
@@ -228,6 +233,17 @@ pub struct Built {
     /// With [`Options::held_doors`]: each loaded door's box sources in the
     /// dormant piece ([`held_door_corners`]), by door.
     pub held: BTreeMap<FormKey, Vec<u32>>,
+    /// With [`Options::held_at_load`]: of `held`, the doors whose
+    /// reference stores no `ONAM` (closed at load).
+    pub closed_at_load: std::collections::BTreeSet<FormKey>,
+}
+
+/// Whether the placed reference `key` stores an `ONAM` subrecord (the
+/// field xEdit publishes as "Open by Default"; `spec/record-layouts.tsv`,
+/// `REFR.ONAM`, no bytes): `None` when the record does not read.
+pub fn stores_onam(store: &Store, key: &FormKey, b: &Budget) -> Option<bool> {
+    let (r, _) = store.raw_with_plugin(key, b).ok()??;
+    Some(r.subrecords.iter().any(|s| &s.signature == b"ONAM"))
 }
 
 /// The eight corners of a door's box under `play_door_closed_blocked_holds_v1`:
@@ -628,6 +644,7 @@ pub fn build(
     // The loaded doors' boxes, hidden in the dormant piece until the run
     // holds the door (`play_door_closed_blocked_holds_v1`).
     let mut held: BTreeMap<FormKey, Vec<u32>> = BTreeMap::new();
+    let mut closed_at_load = std::collections::BTreeSet::new();
     if o.held_doors {
         if let Some((piece, _)) = live.as_mut() {
             for (i, (k, frame, lo, hi)) in boxes.items.iter().enumerate() {
@@ -645,6 +662,21 @@ pub fn build(
                         piece.refs[src as usize] = Some(norm(k));
                         held.entry(norm(k)).or_default().push(src);
                         bump(&mut counts, "held door boxes in the dormant piece");
+                        if o.held_at_load {
+                            match stores_onam(store, k, &budget.child()) {
+                                Some(false) => {
+                                    closed_at_load.insert(norm(k));
+                                    bump(&mut counts, "held doors closed at load (no ONAM; play_door_closed_at_load_v1)");
+                                }
+                                Some(true) => {
+                                    bump(&mut counts, "held doors storing ONAM (no state at load)")
+                                }
+                                None => bump(
+                                    &mut counts,
+                                    "held doors whose record does not read (no state at load)",
+                                ),
+                            }
+                        }
                     }
                     Err(_) => bump(
                         &mut counts,
@@ -682,6 +714,7 @@ pub fn build(
         counts,
         unpicked: marked.iter().map(|(_, _, s)| *s).collect(),
         held,
+        closed_at_load,
     })
 }
 
