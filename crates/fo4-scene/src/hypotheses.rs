@@ -411,17 +411,30 @@ pub enum Status {
     Refuted,
 }
 pub fn status(name: &str) -> Option<Status> {
-    REGISTRY.lines().find_map(|row| {
-        let mut columns = row.split('\t');
-        if columns.next() != Some(name) {
-            return None;
+    statuses().get(name).copied()
+}
+/// The status of each rule of [`REGISTRY`], read once: the first row of a
+/// name whose status column reads, as a scan of the rows in order finds it
+/// (a load asks thousands of times; the registry is half a megabyte).
+fn statuses() -> &'static std::collections::HashMap<&'static str, Status> {
+    static READ: std::sync::OnceLock<std::collections::HashMap<&'static str, Status>> =
+        std::sync::OnceLock::new();
+    READ.get_or_init(|| {
+        let mut out = std::collections::HashMap::new();
+        for row in REGISTRY.lines() {
+            let mut columns = row.split('\t');
+            let Some(name) = columns.next() else {
+                continue;
+            };
+            let status = match columns.nth(4) {
+                Some("pending") => Status::Pending,
+                Some("supported") => Status::Supported,
+                Some("refuted") => Status::Refuted,
+                _ => continue,
+            };
+            out.entry(name).or_insert(status);
         }
-        match columns.nth(4) {
-            Some("pending") => Some(Status::Pending),
-            Some("supported") => Some(Status::Supported),
-            Some("refuted") => Some(Status::Refuted),
-            _ => None,
-        }
+        out
     })
 }
 /// Whether a rule may be relied on at `level`: a supported rule above
@@ -925,6 +938,32 @@ mod tests {
         }
         assert_eq!(measured.hypotheses(), [MODT]);
         assert_eq!(pending.hypotheses(), [BLEND, MODT]);
+    }
+    #[test]
+    fn the_status_read_once_is_the_scan_of_the_rows() {
+        let scan = |name: &str| {
+            REGISTRY.lines().find_map(|row| {
+                let mut columns = row.split('\t');
+                if columns.next() != Some(name) {
+                    return None;
+                }
+                match columns.nth(4) {
+                    Some("pending") => Some(Status::Pending),
+                    Some("supported") => Some(Status::Supported),
+                    Some("refuted") => Some(Status::Refuted),
+                    _ => None,
+                }
+            })
+        };
+        let mut n = 0;
+        for row in REGISTRY.lines() {
+            let name = row.split('\t').next().unwrap_or("");
+            assert_eq!(status(name), scan(name), "{name}");
+            n += 1;
+        }
+        assert!(n > 400);
+        assert_eq!(status("no_such_rule_v1"), None);
+        assert_eq!(status(MODT), Some(Status::Supported));
     }
     #[test]
     fn the_spec_index_lists_every_registered_rule_with_its_status() {

@@ -1825,6 +1825,22 @@ puts it about 3,100 units away by the deck; its presence does not change and the
 The draw dropped nothing. In B the same move comes at 615.82 s; the crane group itself had gone to the deck
 marker at 589.6 to 591.6 s.
 
+### The dirt turn and the dream load (the twelfth-session step)
+
+The twelfth session's longest outdoor stall was the dirt turn (2.27 and 2.33 wall s: load 2.12 s, its draw list
+1.35 s, upload 0.13 s) and the dream took about 3 s (load 3.04 s, its cell step 2.04 s) before its cast's
+0.42 s hold. Replayed headless on the play data thread as the window asks them (`measure_the_windows_cell_loads`
+with session A's argument files and timeline), the dirt turn loads in 1.34 s (draw list 0.71 s: in the window
+the frame loop and the cast build share the machine) and the dream in 2.77 s (cell step 1.97 s). Sampled
+(`sample`, macOS), the dream's load spends most of its busy samples inflating archive entries it reads for the
+first time (zlib) and about a quarter in the rule registry's lookup: `fo4_scene::hypotheses::status` scanned the
+half-megabyte registry text for every question, thousands per load. The statuses are now read once
+(`hypotheses::statuses`, the first row of a name with a status, as the scan found it; a test compares every row);
+what is loaded is unchanged. After: dream 2.29 s (cell step 1.56 s), dirt turn 1.26 s, the vault's arrival 0.94
+s against 1.08, the wake 1.03 against 1.20, the street 1.18 against 1.35 (one run each). What remains is reading
+files no earlier load kept: a load that fetched a cell's files ahead of time, or several at once, would cut it
+(not done).
+
 ## What the play mode does not do yet
 
 - The elevators ride only those the caller names (`--play-elevator`), headless and in the scripted window;
