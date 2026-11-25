@@ -621,6 +621,21 @@ pub struct KeptAssets<'s> {
 /// them (else the next load starts empty).
 pub const KEPT_ASSETS_MAX: u64 = 768 << 20;
 
+/// `loader` starts from the assets `slot` keeps when they were read the
+/// same way (path policy, clock switches) and hold at most
+/// [`KEPT_ASSETS_MAX`]; else from empty ones.
+pub fn take_kept<'s>(slot: &mut KeptAssets<'s>, loader: &mut Loader<'s>) {
+    if let Some(a) = slot.assets.take() {
+        if a.clock == loader.assets.clock
+            && a.path_policy == loader.assets.path_policy
+            && !a.unavailable()
+            && a.memory_used() <= KEPT_ASSETS_MAX
+        {
+            loader.assets = a;
+        }
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 pub fn cell<'s>(
     sources: Option<&'s Sources>,
@@ -730,15 +745,7 @@ pub fn cell<'s>(
     // The assets the previous load left, when they were read the same way.
     let mut kept = kept;
     if let Some(slot) = kept.as_deref_mut() {
-        if let Some(a) = slot.assets.take() {
-            if a.clock == loader.assets.clock
-                && a.path_policy == loader.assets.path_policy
-                && !a.unavailable()
-                && a.memory_used() <= KEPT_ASSETS_MAX
-            {
-                loader.assets = a;
-            }
-        }
+        take_kept(slot, &mut loader);
     }
     let mut steps = Steps::new();
     let mut cell_rule = None;

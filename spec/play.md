@@ -1711,6 +1711,49 @@ no extra target (32 empty links), so nothing the graph can start moves a drawn n
   before, the landing's floor, its yellow-edged drop and the lift's base after; toward the stairs from the landing,
   the lower floor, the stairs and the platform above them. The window itself was not run with the switch.
 
+### The cast through a change of place (the eleventh-session step)
+
+Since the tenth-session step no cast is asked while a cell loads and the old cell's cast left with the old cell, so
+at every change of place the people vanished until the new cell's cast was asked (once the cell was drawn), built
+(the cast build reads the cell again with a loader of its own) and uploaded: the windows' logs give the cast 2.1 to
+6.3 s after each new cell's geometry (A: street 3.1, trail 3.0, bridge 4.6, hill 4.6, rock bend 5.5, last approach
+6.3, vault 3.5, dream 3.1, wake 3.2, surface 1.3; B 2.1 to 5.9). Viewer policy, the run's outputs unchanged:
+
+- The new cell's cast is asked with the cell: the play data thread builds it right after the cell's load, at the
+  second the cell was asked, before anything else asked of it but a newer cell (`CellAsk::cast`). A cast asked
+  before it that comes back after it leaves it asked (`CastWork::signature`, one reading of the timeline for both).
+- The cast build starts from the play data thread's kept assets (`load::take_kept`, `timeline::cast_scene`'s
+  `kept`) and gives them back, so its read of the cell no longer reads every placement's models again.
+- The cell drawn stays drawn until the new cell's drawing is spawned (`PlayDrawn::old`, despawned in
+  `spawn_window_scene`), and so does its cast when the two cells lie in one worldspace (`Reloaded::keep_cast`: both
+  exterior cells of it, so the actors stand where they stood); the new cast replaces it once uploaded, never before
+  the cell it stands in (`spawn_cast` waits for the scene).
+- A cell of another space (an interior, a change of worldspace) is held back until its cast comes, at most
+  `CAST_REVEAL_WAIT` (1.5 s of the wall clock; the run waits meanwhile), so its drawing and its people appear
+  together; past that the drawing comes alone and the cast after it.
+
+Measured headless on the play data thread with the eleventh sessions' arguments and timelines
+(`play::tests::measure_the_windows_cell_loads`, ignored, outputs outside git; `FO4_VIEW_PLAY_PROTOCOL=after` asks
+each cast once its cell is back, as the window did): seconds from the ask to the geometry and from the geometry to
+its cast, before (the step's parent) and after (with the next section's kept files):
+
+| Change of place | A geometry before / after | A cast after geometry before / after | B cast after geometry before / after |
+| --- | ---: | ---: | ---: |
+| street | 2.18 / 0.97 | 2.13 / 1.27 | 2.12 / 1.29 |
+| trail | 2.12 / 1.10 | 2.17 / 0.36 | 2.18 / 0.37 |
+| bridge | 2.05 / 1.40 | 1.94 / 0.36 | 1.94 / 0.36 |
+| hill | 1.63 / 0.56 | 2.52 / 0.74 | 2.53 / 0.74 |
+| rock bend | 1.19 / 0.29 | 2.18 / 0.38 | 2.16 / 0.39 |
+| back to the hill square | 1.51 / 0.44 | 2.50 / 0.37 | 2.51 / 0.38 (and 2.17 / 0.39, 2.50 / 0.38 for B's second crossing) |
+| prewar vault | 1.12 / 1.03 | 1.77 / 0.40 | 1.92 / 0.45 |
+| dream | 2.92 / 2.72 | 2.27 / 0.36 | 2.26 / 0.36 |
+| postwar vault | 1.46 / 1.15 | 1.73 / 0.24 | 1.72 / 0.24 |
+| surface | 3.44 / 2.85 | 0.98 / 0.08 | 0.99 / 0.08 |
+
+Outdoors the cast before now stays drawn through those 0.4 to 1.3 s; at the three interiors the cast comes 0.24 to
+0.45 s after the geometry, inside the reveal wait, so cell and people appear together. In the window the run's
+walker build shares the machine, so the window's seconds are longer than these; the window itself was not run.
+
 ## What the play mode does not do yet
 
 - The elevators ride only those the caller names (`--play-elevator`), headless and in the scripted window;

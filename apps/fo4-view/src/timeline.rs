@@ -205,20 +205,21 @@ pub struct CastScene {
 /// makes them in the window). `stop` is asked between the build's steps
 /// (the cell, the actors, their poses, the draw list): `true` gives
 /// `None`, nothing built (the play data thread's cast giving way to a cell
-/// load, a viewer policy).
+/// load, a viewer policy). `kept`: the play data thread's assets
+/// (`crate::load::KeptAssets`), started from when they were read the same
+/// way and given back after (viewer policy); what is built is the same.
 #[cfg(feature = "script-event")]
 #[allow(clippy::too_many_arguments)]
-pub fn cast_scene(
-    sources: &crate::load::Sources,
+pub fn cast_scene<'s>(
+    sources: &'s crate::load::Sources,
     s: &crate::cli::Scene,
     a: &Args,
     cell: &fo4_plugin::FormKey,
     timeline: &Timeline,
     second: f64,
     stop: &dyn Fn() -> bool,
+    kept: Option<&mut crate::load::KeptAssets<'s>>,
 ) -> AnyResult<Option<CastScene>> {
-    let started = std::time::Instant::now();
-    let mut steps = crate::load::Steps::new();
     let limits = &sources.manifest.limits;
     let budget = crate::load::scene_budget(s.scene_memory, limits);
     let mut loader = fo4_scene::Loader::new(
@@ -231,9 +232,50 @@ pub fn cast_scene(
     if s.clock.any() {
         loader.set_clock_switches(s.clock, &budget);
     }
+    let mut kept = kept;
+    if let Some(slot) = kept.as_deref_mut() {
+        crate::load::take_kept(slot, &mut loader);
+    }
+    let built = cast_with(
+        sources,
+        s,
+        a,
+        cell,
+        timeline,
+        second,
+        stop,
+        &mut loader,
+        &budget,
+    );
+    if let Some(slot) = kept {
+        slot.assets = Some(std::mem::replace(
+            &mut loader.assets,
+            fo4_scene::Assets::with_policy(&sources.vfs, &budget, s.level),
+        ));
+    }
+    built
+}
+
+/// [`cast_scene`] with its loader.
+#[cfg(feature = "script-event")]
+#[allow(clippy::too_many_arguments)]
+fn cast_with(
+    sources: &crate::load::Sources,
+    s: &crate::cli::Scene,
+    a: &Args,
+    cell: &fo4_plugin::FormKey,
+    timeline: &Timeline,
+    second: f64,
+    stop: &dyn Fn() -> bool,
+    loader: &mut fo4_scene::Loader<'_>,
+    budget: &fo4_core::Budget,
+) -> AnyResult<Option<CastScene>> {
+    let started = std::time::Instant::now();
+    let mut steps = crate::load::Steps::new();
+    let limits = &sources.manifest.limits;
     let scope = budget.child();
     let mut scene = loader.cell(cell, &scope)?;
-    scope.commit(&budget)?;
+    scope.commit(budget)?;
     steps.mark("cell");
     if stop() {
         return Ok(None);
@@ -251,7 +293,7 @@ pub fn cast_scene(
         timeline: Timeline::default(),
         frame,
     };
-    let Cast { markers, cast } = self::cast(&prepared, a, &scene, &mut loader, s.level, &budget)?;
+    let Cast { markers, cast } = self::cast(&prepared, a, &scene, loader, s.level, budget)?;
     let mut cast = cast.ok_or("PlayCast: no cast")?;
     steps.mark("actors");
     if stop() {
@@ -260,13 +302,13 @@ pub fn cast_scene(
     let poses = if a.pose.any() {
         Some(tl::cast::start_poses(
             &mut cast,
-            &loader,
+            loader,
             &sources.vfs,
             &a.pose,
             prepared.frame.second,
             s.level,
             limits,
-            &budget,
+            budget,
         )?)
     } else {
         None
@@ -276,13 +318,8 @@ pub fn cast_scene(
         return Ok(None);
     }
     // The cell's light, before its references leave the build.
-    let light = fo4_scene::light::frame(
-        &sources.store,
-        &scene,
-        s.light,
-        s.light_assumptions,
-        &budget,
-    )?;
+    let light =
+        fo4_scene::light::frame(&sources.store, &scene, s.light, s.light_assumptions, budget)?;
     let options = fo4_render::draw::BuildOptions {
         time: s.time,
         clock: s.clock,
@@ -296,19 +333,19 @@ pub fn cast_scene(
             &scene,
             &cast.actors,
             p,
-            &loader,
+            loader,
             limits,
             options,
-            &budget,
+            budget,
         )
         .map(|x| x.0),
         None => fo4_render::draw::build_with_actors(
             &scene,
             &cast.actors,
-            &loader,
+            loader,
             limits,
             options,
-            &budget,
+            budget,
         ),
     };
     scene.instances = placed;
@@ -318,7 +355,7 @@ pub fn cast_scene(
         return Ok(None);
     }
     let lit_until = build.list.draws.len();
-    let d = fo4_render::timeline::cast_markers(&mut build, &cast, s.level, &budget)?;
+    let d = fo4_render::timeline::cast_markers(&mut build, &cast, s.level, budget)?;
     let lit = light.as_ref().map(|_| {
         let effects: std::collections::BTreeSet<usize> =
             build.effect_draws.iter().copied().collect();
@@ -432,7 +469,7 @@ mod tests {
             ],
             ..Timeline::default()
         };
-        let c = super::cast_scene(&sources, &scene, &a, &room, &timeline, 5., &|| false)
+        let c = super::cast_scene(&sources, &scene, &a, &room, &timeline, 5., &|| false, None)
             .unwrap()
             .unwrap();
         assert!(
@@ -450,6 +487,7 @@ mod tests {
             &Timeline::default(),
             5.,
             &|| false,
+            None,
         )
         .unwrap()
         .unwrap();
@@ -461,7 +499,7 @@ mod tests {
             asks.set(asks.get() + 1);
             true
         };
-        let gave_way = super::cast_scene(&sources, &scene, &a, &room, &timeline, 5., &stop);
+        let gave_way = super::cast_scene(&sources, &scene, &a, &room, &timeline, 5., &stop, None);
         assert!(gave_way.unwrap().is_none());
         assert_eq!(asks.get(), 1);
     }

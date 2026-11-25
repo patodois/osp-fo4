@@ -1000,6 +1000,14 @@ struct PendingCast(GpuScene, Option<Uploaded>, std::time::Instant);
 /// drawn cast by it.
 #[cfg(feature = "script-event")]
 fn spawn_cast(world: &mut World) {
+    // Not before the cell it stands in is spawned.
+    if world.contains_resource::<PendingScene>()
+        || world
+            .get_resource::<Playing>()
+            .is_some_and(|p| p.2.held.is_some())
+    {
+        return;
+    }
     let Some(PendingCast(mut scene, up, asked)) = world.remove_resource::<PendingCast>() else {
         return;
     };
@@ -1089,6 +1097,19 @@ fn spawn_window_scene(world: &mut World) {
         let eye = fly_pose(&world.resource::<Fly>().state).map_or(Vec3::ZERO, |p| p.0);
         let e = spawn_sky(world, eye, 0, lights, &up);
         world.entity_mut(e).insert(WindowSky);
+    }
+    // The scripted play window's cell before, drawn until now.
+    #[cfg(feature = "script-event")]
+    {
+        let old = world
+            .get_resource_mut::<Playing>()
+            .map(|mut p| std::mem::take(&mut p.2.old))
+            .unwrap_or_default();
+        for e in old {
+            if let Ok(e) = world.get_entity_mut(e) {
+                e.despawn();
+            }
+        }
     }
     let entities = spawn(world, &scene, &up, false, 0, false);
     // The scripted play window's named platforms: their instances, to
@@ -1707,6 +1728,7 @@ fn hud_update(
         paused: person.as_ref().is_some_and(|x| x.person.paused),
         loading: p.loading()
             || drawn.uploading.is_some()
+            || drawn.held.is_some()
             || pending.is_some()
             || seen.building
             || stood,
@@ -1764,7 +1786,21 @@ struct PlayDrawn {
     /// The play clock at the last frame and, while it stands with nothing
     /// paused, since when (the HUD's loading line).
     clock: (f64, Option<std::time::Instant>),
+    /// The drawn cell's entities (and its cast's, when it leaves with
+    /// it) a loaded cell replaces: drawn until the new cell's are spawned
+    /// ([`spawn_window_scene`]), so the old view stays meanwhile.
+    old: Vec<Entity>,
+    /// A loaded cell of another space held back until its cast is built
+    /// or [`CAST_REVEAL_WAIT`] passes (viewer policy): its scene, its
+    /// load, since when, and whether the cast came.
+    held: Option<(PendingScene, crate::play::Loaded, std::time::Instant, bool)>,
 }
+
+/// Wall seconds a loaded cell of another space waits for its cast before
+/// it is drawn without it (viewer policy: geometry and cast revealed
+/// together when the cast is that close).
+#[cfg(feature = "script-event")]
+const CAST_REVEAL_WAIT: f64 = 1.5;
 
 /// Seconds an activation's confirmation stays in the prompt's place, and
 /// the wall seconds the play clock may stand before the viewport says
@@ -2528,33 +2564,40 @@ fn play_scripted(
     let Playing(p, title, drawn) = &mut *playing;
     match p.loaded() {
         Some(Ok(r)) => {
+            // The cell before stays drawn until the new one is spawned
+            // (`spawn_window_scene`); its cast too while the new cell lies
+            // in the same worldspace, else it goes with its cell.
             let n = instances.iter().count();
-            for (e, ..) in instances.iter() {
-                commands.entity(e).despawn();
+            drawn.old.extend(instances.iter().map(|x| x.0));
+            if !r.keep_cast {
+                drawn.old.extend(casts.iter());
+                commands.remove_resource::<PendingCast>();
             }
-            // The cast of the cell before goes with it.
-            for e in casts.iter() {
-                commands.entity(e).despawn();
-            }
-            commands.remove_resource::<PendingCast>();
             println!(
-                "play: cell {} loaded in {:.2} s (asked at {:.3} s of the run); {n} drawn instances of the cell before removed",
+                "play: cell {} loaded in {:.2} s (asked at {:.3} s of the run); {n} drawn instances of the cell before removed as it is drawn{}",
                 fo4_scene::timeline::key_text(&r.cell),
                 r.load_seconds,
                 r.asked_at,
+                if r.keep_cast {
+                    ", the cast drawn kept until the new cell's (one worldspace)"
+                } else {
+                    ", the cast with them"
+                }
             );
-            let (gpu, clear) = (r.gpu, r.clear);
-            commands.insert_resource(PendingScene(gpu, clear, None));
+            let scene = PendingScene(r.gpu, r.clear, None);
+            let loaded = crate::play::Loaded {
+                cell: r.cell,
+                load_seconds: r.load_seconds,
+                started: std::time::Instant::now(),
+            };
             drawn.spawned.clear();
             drawn.applied = None;
-            drawn.uploading = Some((
-                1,
-                crate::play::Loaded {
-                    cell: r.cell,
-                    load_seconds: r.load_seconds,
-                    started: std::time::Instant::now(),
-                },
-            ));
+            if r.keep_cast || !p.casts() {
+                commands.insert_resource(scene);
+                drawn.uploading = Some((1, loaded));
+            } else {
+                drawn.held = Some((scene, loaded, std::time::Instant::now(), false));
+            }
         }
         Some(Err(e)) => {
             eprintln!("play: loading the walker's cell: {e}");
@@ -2562,7 +2605,30 @@ fn play_scripted(
         }
         None => {}
     }
-    let mut ready = pending.is_none() && !p.loading();
+    // A cell of another space held for its cast: drawn once the cast came
+    // or the wait is over.
+    let release = drawn
+        .held
+        .as_ref()
+        .is_some_and(|h| h.3 || h.2.elapsed().as_secs_f64() >= CAST_REVEAL_WAIT);
+    if release {
+        if let Some((scene, mut loaded, since, cast)) = drawn.held.take() {
+            println!(
+                "play: cell {} drawn {} after {:.2} s held for its cast",
+                fo4_scene::timeline::key_text(&loaded.cell),
+                if cast {
+                    "with its cast"
+                } else {
+                    "without its cast"
+                },
+                since.elapsed().as_secs_f64()
+            );
+            loaded.started = std::time::Instant::now();
+            commands.insert_resource(scene);
+            drawn.uploading = Some((1, loaded));
+        }
+    }
+    let mut ready = pending.is_none() && !p.loading() && drawn.held.is_none();
     if let Some((frames, l)) = drawn.uploading.as_mut() {
         ready = false;
         if *frames > 0 {
@@ -2585,7 +2651,7 @@ fn play_scripted(
     };
     if ready {
         if let Some(cell) = p.cell_wanted(&seen) {
-            p.load(cell, seen.t);
+            p.load(cell, seen.t, &seen);
             ready = false;
         }
     }
@@ -2655,7 +2721,7 @@ fn play_scripted(
         }
     }
     // Not while the old scene leaves and the new one uploads.
-    if drawn.uploading.is_none() {
+    if drawn.uploading.is_none() && drawn.held.is_none() {
         play_live(p, drawn, None, &mut instances);
         if let Some(pp) = platforms.as_deref_mut() {
             follow_platforms(&seen, pp, &mut instances, skins.is_some());
@@ -2686,6 +2752,9 @@ fn play_scripted(
             println!("play: cast: {d}");
         }
         commands.insert_resource(PendingCast(c.gpu, None, std::time::Instant::now()));
+        if let Some(h) = drawn.held.as_mut() {
+            h.3 = true;
+        }
     }
     // --play-shots: the frame each time the run passes a multiple of the
     // period, once the scene is drawn.

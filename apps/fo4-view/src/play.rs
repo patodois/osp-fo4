@@ -194,6 +194,11 @@ mod enabled {
         at: f64,
         started: std::time::Instant,
         reply: Sender<Result<Reloaded, String>>,
+        /// The cell drawn when it was asked (`None`: not as a key).
+        from: Option<FormKey>,
+        /// `--timeline-cast`: the new cell's cast, built right after the
+        /// cell on the play data thread (viewer policy).
+        cast: Option<CastAsk>,
     }
 
     /// The window's cast (`--play-run ... --timeline-cast`): the play data
@@ -210,6 +215,29 @@ mod enabled {
         times: (u64, Vec<f64>),
         /// Builds drawn, for the report.
         builds: u64,
+    }
+
+    impl CastWork {
+        /// The signature of the cast at `second` of timeline `t` (snapshot
+        /// `gen`): its cast events up to that second.
+        fn signature(
+            &mut self,
+            t: &fo4_scene::timeline::Timeline,
+            gen: u64,
+            second: f64,
+        ) -> CastSig {
+            if self.times.0 != gen {
+                let mut times: Vec<f64> = t
+                    .events
+                    .iter()
+                    .filter(|e| cast_event(&e.what))
+                    .map(|e| e.t)
+                    .collect();
+                times.sort_by(f64::total_cmp);
+                self.times = (gen, times);
+            }
+            self.times.1.partition_point(|x| *x <= second)
+        }
     }
 
     /// What decides the cast of a cell at a second: the timeline's
@@ -251,6 +279,16 @@ mod enabled {
         Cast(CastAsk),
         Cell(CellAsk),
         Prepare(Box<crate::cli::Scene>, bool),
+    }
+
+    /// Whether two cells lie in one worldspace (both exterior cells of it),
+    /// so that what is placed in one stands where it stands in the other.
+    fn same_world(store: &fo4_plugin::typed::Store, a: &FormKey, b: &FormKey) -> bool {
+        let norm = fo4_scene::timeline::norm;
+        match (store.world(a), store.world(b)) {
+            (Some(x), Some(y)) => norm(&x) == norm(&y),
+            _ => false,
+        }
     }
 
     /// What the play data thread does next of what it was asked (`queue`,
@@ -322,8 +360,13 @@ mod enabled {
                 queue.push_back(a);
             }
             match next_ask(&mut queue, &mut prepare) {
-                Some(DataAsk::Cell(a)) => {
+                Some(DataAsk::Cell(mut a)) => {
                     cell_asked.store(false, Ordering::SeqCst);
+                    let keep_cast = match (&sources, &a.from) {
+                        (Ok(src), Some(from)) => same_world(&src.store, from, &a.cell),
+                        _ => false,
+                    };
+                    let cast_after = a.cast.take();
                     let r = match &sources {
                         Ok(src) => crate::load_scene_with(
                             &a.scene,
@@ -346,12 +389,19 @@ mod enabled {
                                 load_seconds: a.started.elapsed().as_secs_f64(),
                                 waited: 0.0,
                                 asked_at: a.at,
+                                keep_cast,
                             }
                         })
                         .map_err(|e| e.to_string()),
                         Err(e) => Err(format!("PlayCellSources: {e}")),
                     };
+                    let loaded = r.is_ok();
                     let _ = a.reply.send(r);
+                    // The new cell's cast next, unless a cell is asked
+                    // before it starts.
+                    if let (true, Some(c)) = (loaded, cast_after) {
+                        queue.push_front(DataAsk::Cast(c));
+                    }
                 }
                 Some(DataAsk::Prepare(first, live)) => {
                     let Ok(src) = &sources else {
@@ -383,6 +433,7 @@ mod enabled {
                             &ask.timeline,
                             ask.second,
                             &stop,
+                            Some(&mut kept),
                         )
                         .map_err(|e| e.to_string())
                     };
@@ -430,6 +481,9 @@ mod enabled {
         pub load_seconds: f64,
         pub waited: f64,
         pub asked_at: f64,
+        /// The cell drawn before lies in the same worldspace: the cast
+        /// drawn stays until the new cell's is uploaded (viewer policy).
+        pub keep_cast: bool,
     }
 
     /// Reads the switches file, puts the walker at the run's first point
@@ -789,6 +843,11 @@ mod enabled {
             link::title_at(&self.last, clock)
         }
 
+        /// Whether the run's actors are drawn (`--timeline-cast`).
+        pub fn casts(&self) -> bool {
+            self.scripted.as_ref().is_some_and(|s| s.cast.is_some())
+        }
+
         /// Whether a cell is being loaded.
         pub fn loading(&self) -> bool {
             self.scripted.as_ref().is_some_and(|s| s.loading.is_some())
@@ -804,11 +863,26 @@ mod enabled {
         }
 
         /// Loads `cell` on its own thread, with the window's scene switches
-        /// (its walking world too when the live world was asked for).
-        pub fn load(&mut self, cell: FormKey, at: f64) {
+        /// (its walking world too when the live world was asked for); with
+        /// `--timeline-cast` the play data thread builds the new cell's
+        /// cast at the run's second `at` right after (viewer policy).
+        pub fn load(&mut self, cell: FormKey, at: f64, seen: &Seen) {
             let live = self.live_asked;
             let Some(s) = self.scripted.as_mut() else {
                 return;
+            };
+            let cast = match (s.cast.as_mut(), &seen.timeline) {
+                (Some(c), Some(t)) => {
+                    let sig = c.signature(t, seen.timeline_gen, at);
+                    c.asked = Some((cell.clone(), sig));
+                    Some(CastAsk {
+                        cell: cell.clone(),
+                        timeline: t.clone(),
+                        second: at,
+                        sig,
+                    })
+                }
+                _ => None,
             };
             let mut scene = s.scene.clone();
             scene.cell = fo4_scene::timeline::key_text(&cell);
@@ -830,6 +904,8 @@ mod enabled {
                 at,
                 started,
                 reply: tx,
+                from: s.drawn.clone(),
+                cast,
             };
             s.cell_asked.store(true, Ordering::SeqCst);
             match s.data.send(DataAsk::Cell(ask)) {
@@ -915,17 +991,7 @@ mod enabled {
             if c.asked.is_some() || s.loading.is_some() {
                 return;
             }
-            if c.times.0 != seen.timeline_gen {
-                let mut times: Vec<f64> = t
-                    .events
-                    .iter()
-                    .filter(|e| cast_event(&e.what))
-                    .map(|e| e.t)
-                    .collect();
-                times.sort_by(f64::total_cmp);
-                c.times = (seen.timeline_gen, times);
-            }
-            let sig = c.times.1.partition_point(|x| *x <= seen.t);
+            let sig = c.signature(t, seen.timeline_gen, seen.t);
             if c.built.as_ref() == Some(&(cell.clone(), sig)) {
                 return;
             }
@@ -947,7 +1013,11 @@ mod enabled {
             let drawn = s.drawn.clone();
             let c = s.cast.as_mut()?;
             let (cell, sig, r) = c.from.lock().ok()?.try_recv().ok()?;
-            c.asked = None;
+            // A cast asked before the one asked with a cell load (set
+            // aside, or built for the cell before) leaves that one asked.
+            if c.asked.as_ref() == Some(&(cell.clone(), sig)) {
+                c.asked = None;
+            }
             if drawn.as_ref() != Some(&cell) {
                 return None;
             }
@@ -1879,19 +1949,34 @@ mod enabled {
                     .and_then(|x| x.parse().ok())
                     .unwrap_or(12.0),
             ));
+            // `gap`: the cast of the new cell asked as the window asked it
+            // before the eleventh-session step, once the cell is back
+            // (`FO4_VIEW_PLAY_PROTOCOL=after`), and the seconds from the
+            // cell's arrival to its cast's.
+            let after = std::env::var("FO4_VIEW_PLAY_PROTOCOL").as_deref() == Ok("after");
             for (second, cell, drawn) in loads {
-                let ask = CastAsk {
-                    cell: key(&drawn),
-                    timeline: tl.clone(),
-                    second,
-                    sig: 0,
-                };
-                data.send(DataAsk::Cast(ask)).unwrap();
-                std::thread::sleep(std::time::Duration::from_secs_f64(lead));
+                if lead > 0.0 {
+                    let ask = CastAsk {
+                        cell: key(&drawn),
+                        timeline: tl.clone(),
+                        second,
+                        sig: 0,
+                    };
+                    data.send(DataAsk::Cast(ask)).unwrap();
+                    std::thread::sleep(std::time::Duration::from_secs_f64(lead));
+                }
                 let asked = std::time::Instant::now();
                 let mut scene = s.clone();
                 scene.cell = cell.clone();
                 let (reply, loaded) = channel();
+                // The new cell's cast with the cell (the window since the
+                // eleventh-session step), unless `after`.
+                let with = (!after).then(|| CastAsk {
+                    cell: key(&cell),
+                    timeline: tl.clone(),
+                    second,
+                    sig: 1,
+                });
                 let ask = CellAsk {
                     scene: Box::new(scene),
                     cell: key(&cell),
@@ -1899,10 +1984,14 @@ mod enabled {
                     at: second,
                     started: asked,
                     reply,
+                    from: Some(key(&drawn)),
+                    cast: with,
                 };
                 cell_asked.store(true, Ordering::SeqCst);
                 data.send(DataAsk::Cell(ask)).unwrap();
-                let (mut cast_at, mut cell_at) = (None, None);
+                let mut cast_at = (lead <= 0.0).then(|| (0.0, "none asked".to_string()));
+                let mut cell_at = None;
+                let mut keep = false;
                 while cast_at.is_none() || cell_at.is_none() {
                     if let Ok((_, _, r)) = from.try_recv() {
                         let how = match &r {
@@ -1913,8 +2002,9 @@ mod enabled {
                         cast_at = Some((asked.elapsed().as_secs_f64(), how));
                     }
                     if let Ok(r) = loaded.try_recv() {
-                        assert!(r.is_ok(), "{:?}", r.err());
+                        let r = r.unwrap();
                         cell_at = Some(asked.elapsed().as_secs_f64());
+                        keep = r.keep_cast;
                     }
                     std::thread::sleep(std::time::Duration::from_millis(5));
                 }
@@ -1925,7 +2015,83 @@ mod enabled {
                     "measure: load {cell} at {second:.3} s: cast of {drawn} back {c:.2} s after the cell's ask ({how}), cell back {l:.2} s after it; waited {waited:.2} s, loaded in {:.2} s",
                     l - waited
                 );
+                if !after {
+                    let r = from.recv().unwrap();
+                    println!(
+                        "measure: gap {cell} at {second:.3} s: geometry {l:.2} s after the ask, its cast {:.2} s after the geometry ({}); the cast before {}",
+                        asked.elapsed().as_secs_f64() - l,
+                        if matches!(r.2, Ok(Some(_))) { "built" } else { "not built" },
+                        if keep { "stays (one worldspace)" } else { "leaves with its cell" }
+                    );
+                } else {
+                    let back = std::time::Instant::now();
+                    let ask = CastAsk {
+                        cell: key(&cell),
+                        timeline: tl.clone(),
+                        second,
+                        sig: 0,
+                    };
+                    data.send(DataAsk::Cast(ask)).unwrap();
+                    let r = from.recv().unwrap();
+                    println!(
+                        "measure: gap {cell} at {second:.3} s: geometry {l:.2} s after the ask, its cast {:.2} s after the geometry ({})",
+                        back.elapsed().as_secs_f64(),
+                        if matches!(r.2, Ok(Some(_))) { "built" } else { "not built" }
+                    );
+                }
             }
+        }
+
+        /// The cast asked with a cell load and the ones the window asks
+        /// after it read one signature: the timeline's cast events up to
+        /// the second (a visibility change counts, a stage does not), read
+        /// again for a newer snapshot of the timeline.
+        #[test]
+        fn a_casts_signature_counts_the_cast_events_up_to_its_second() {
+            use fo4_scene::timeline::{Event, Timeline, What};
+            let key = |id: u32| FormKey {
+                plugin: "a.esm".into(),
+                object_id: id,
+            };
+            let shown = |t: f64| Event {
+                t,
+                what: What::Visibility {
+                    reference: key(7),
+                    shown: true,
+                    nowait: false,
+                },
+            };
+            let stage = |t: f64| Event {
+                t,
+                what: What::Stage {
+                    quest: key(9),
+                    stage: 10,
+                },
+            };
+            let (tx, _) = channel();
+            let (_, rx) = channel();
+            let mut c = CastWork {
+                to: tx,
+                from: Mutex::new(rx),
+                asked: None,
+                built: None,
+                times: (u64::MAX, Vec::new()),
+                builds: 0,
+            };
+            let t = Timeline {
+                events: vec![shown(5.0), stage(6.0), shown(10.0)],
+                ..Timeline::default()
+            };
+            assert_eq!(c.signature(&t, 1, 4.0), 0);
+            assert_eq!(c.signature(&t, 1, 5.0), 1);
+            assert_eq!(c.signature(&t, 1, 9.0), 1);
+            // The same snapshot is not read again; a newer one is.
+            let more = Timeline {
+                events: vec![shown(5.0), shown(7.0), shown(10.0)],
+                ..Timeline::default()
+            };
+            assert_eq!(c.signature(&more, 1, 9.0), 1);
+            assert_eq!(c.signature(&more, 2, 9.0), 2);
         }
 
         #[test]
@@ -1956,6 +2122,8 @@ mod enabled {
                 at: 0.0,
                 started: std::time::Instant::now(),
                 reply,
+                from: Some(key(1)),
+                cast: None,
             });
             let mut queue: std::collections::VecDeque<DataAsk> = [
                 cast(1),
