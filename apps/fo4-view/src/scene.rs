@@ -548,9 +548,11 @@ pub struct GpuScene {
     /// The scripted play window with `--exposure-eye`: the exposure
     /// measured per view ([`ViewExposure`]); `None` otherwise.
     pub view_exposure: Option<ViewExposure>,
-    /// A play cast with `--draw-cast-on-platforms`: each drawn actor's tag,
-    /// reference and place (empty otherwise).
+    /// A play cast: each drawn actor's tag, reference and place (empty
+    /// otherwise).
     pub cast_places: Vec<CastPlace>,
+    /// A play cast drawn with `--draw-cast-on-platforms`.
+    pub cast_ride: bool,
 }
 
 /// One actor of a play cast: the instance tag its draws carry, its

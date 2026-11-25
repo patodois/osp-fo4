@@ -1841,6 +1841,24 @@ s against 1.08, the wake 1.03 against 1.20, the street 1.18 against 1.35 (one ru
 files no earlier load kept: a load that fetched a cell's files ahead of time, or several at once, would cut it
 (not done).
 
+### Watching the actors at a shut door (the twelfth-session step, measurement only)
+
+The tester could not tell twice whether an actor walks through a door the person shut: the views are periodic
+and a person cannot follow one actor and a door at once. With `FO4_VIEW_PLAY_WATCH=FILE` in the environment
+(measurement only, off by default; nothing of the run or the drawing changes) the scripted play window writes a
+tab-separated log, one line per change, each with the play clock's second:
+
+| Line | Fields | Written |
+| --- | --- | --- |
+| `walker` | X Y Z of the feet | with every other line, and when the feet moved 8 units |
+| `actor` | reference, `drawn` or `gone`, X Y Z where its draws stand (its place, raised by `--draw-cast-on-platforms`), distance to the walker | when it enters the drawn cast, moves 8 units, or leaves the cast |
+| `door` | reference, `closed` (its box stands), `open` or `not-held`, X Y Z of its first drawn shape (`-` when not drawn), distance to the walker | when its state changes, for doors held by the reading within 2,048 units of the walker (any distance when not drawn) |
+
+A shut door and an actor on either side of it at two seconds, with no `open` between, answer the question from
+the log: the actor's drawn place is the run's (`spec/play.md`, Actors and a door the person shut), so a crossing
+there is the run's scheduled move, not a walk. A short check on the opening's first minute wrote the four actors
+of the house at load and the front door closed at 3.1 s, 245 units from the walker, at 60 fps median.
+
 ## What the play mode does not do yet
 
 - The elevators ride only those the caller names (`--play-elevator`), headless and in the scripted window;

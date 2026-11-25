@@ -164,6 +164,12 @@ usage:
       movement key's modifier. --play-keys-from FILE (test and measurement only) is a
       synthetic person: timed key, button and mouse events injected where
       a real key press arrives (spec/play.md, The person's input).
+      With FO4_VIEW_PLAY_WATCH=FILE in the environment (measurement only,
+      off by default) the scripted play window writes to FILE, at each
+      change, where each actor of the drawn cast is drawn (or that it left
+      the cast) and the state of each door the held doors' reading holds
+      within 2048 units of the walker, with the play clock and the walker's
+      feet (spec/play.md, Watching the actors at a shut door).
       --args FILE reads more arguments from FILE, one per line (# starts a
       comment line), in its place on the command line.
       --draw-child-flag-agrees (off by default; the window and --headless)

@@ -528,6 +528,7 @@ fn exact_depth_ties_resolve_by_list_order_in_every_run() {
             light: None,
             view_exposure: None,
             cast_places: Vec::new(),
+            cast_ride: false,
         }
     };
     let camera = fo4_scene::camera::look_at(

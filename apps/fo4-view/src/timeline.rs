@@ -369,8 +369,10 @@ fn cast_with(
     };
     let mut gpu =
         crate::scene::convert_lit(&mut build.list, &render, light.as_ref().zip(lit.as_deref()))?;
-    // `--draw-cast-on-platforms`: each drawn actor's tag and place.
-    if s.drawing.cast_on_platforms {
+    // Each drawn actor's tag and place (`--draw-cast-on-platforms` stands
+    // them on the platforms, `FO4_VIEW_PLAY_WATCH` writes them).
+    gpu.cast_ride = s.drawing.cast_on_platforms;
+    {
         let tagged = d
             .characters
             .iter()

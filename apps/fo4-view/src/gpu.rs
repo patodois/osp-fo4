@@ -987,13 +987,15 @@ fn follow_sky(
 /// (`--timeline-cast`): spawned apart from the cell's instances, which the
 /// live world's decisions do not reach.
 ///
-/// With `--draw-cast-on-platforms` it carries its actor's reference and
-/// place and its spawned translation ([`ride_cast`]).
+/// It carries its actor's reference and place and its spawned translation
+/// ([`ride_cast`] with `--draw-cast-on-platforms`, [`watch_play`]).
 #[cfg(feature = "script-event")]
 #[derive(Component)]
 struct CastEntity {
     place: Option<(fo4_plugin::FormKey, [f64; 3])>,
     base: Vec3,
+    /// `--draw-cast-on-platforms`.
+    ride: bool,
 }
 
 /// A cast built for the drawn cell, until it is uploaded and replaces the
@@ -1046,6 +1048,7 @@ fn spawn_cast(world: &mut World) {
         world.entity_mut(*e).insert(CastEntity {
             place: places.get(&i.tag).map(|c| (c.reference.clone(), c.place)),
             base: i.translation,
+            ride: scene.cast_ride,
         });
     }
     println!(
@@ -1581,6 +1584,10 @@ pub fn window(
                 .add_systems(Update, hud_update.after(play_scripted));
         }
         app.insert_resource(Playing(p, String::new(), PlayDrawn::default()));
+        if let Some(w) = PlayWatch::from_env() {
+            println!("play: watching the cast and the held doors (FO4_VIEW_PLAY_WATCH)");
+            app.insert_resource(w);
+        }
         if scripted {
             app.add_systems(Update, play_scripted.after(fly_camera).before(show_readout))
                 .add_systems(Update, spawn_cast.after(play_scripted));
@@ -1922,7 +1929,7 @@ fn ride_cast<F: bevy::ecs::query::QueryFilter>(
     let mut now: std::collections::BTreeMap<fo4_plugin::FormKey, f64> =
         std::collections::BTreeMap::new();
     for (_, c, mut t) in casts.iter_mut() {
-        let Some((k, place)) = &c.place else {
+        let (Some((k, place)), true) = (&c.place, c.ride) else {
             continue;
         };
         let z = *now.entry(k.clone()).or_insert_with(|| {
@@ -1950,6 +1957,191 @@ fn ride_cast<F: bevy::ecs::query::QueryFilter>(
         if t.translation != want {
             t.translation = want;
         }
+    }
+}
+
+/// `FO4_VIEW_PLAY_WATCH=FILE` (measurement only, off by default): the
+/// scripted play window writes, at each change, where each actor of the
+/// drawn cast is drawn and whether it is in the cast, and the state of each
+/// door the walker's held doors' reading holds within
+/// [`WATCH_DOOR_REACH`] of the walker, each line with the play clock and
+/// the walker's feet (spec/play.md, Watching the actors at a shut door).
+#[cfg(feature = "script-event")]
+#[derive(Resource)]
+struct PlayWatch {
+    out: std::io::BufWriter<std::fs::File>,
+    actors: std::collections::BTreeMap<fo4_plugin::FormKey, [f64; 3]>,
+    doors: std::collections::BTreeMap<fo4_plugin::FormKey, Option<bool>>,
+    feet: Option<[f64; 3]>,
+}
+
+/// Units from the walker within which [`PlayWatch`] writes the held doors.
+#[cfg(feature = "script-event")]
+const WATCH_DOOR_REACH: f64 = 2048.0;
+/// An actor drawn this many units from where it was last written is
+/// written again; the walker, when a line is written or it moved this far.
+#[cfg(feature = "script-event")]
+const WATCH_MOVE: f64 = 8.0;
+
+#[cfg(feature = "script-event")]
+impl PlayWatch {
+    /// The log the environment names, its header written; `None` without
+    /// `FO4_VIEW_PLAY_WATCH`.
+    fn from_env() -> Option<Self> {
+        let path = std::env::var_os("FO4_VIEW_PLAY_WATCH")?;
+        match std::fs::File::create(&path) {
+            Ok(f) => {
+                let mut out = std::io::BufWriter::new(f);
+                use std::io::Write as _;
+                let _ = writeln!(
+                    out,
+                    "# fo4-view play watch (measurement only): KIND\tRUN_SECONDS\tWHAT\t...\n# walker\tT\tX\tY\tZ\n# actor\tT\tREF\tdrawn|gone\tX\tY\tZ\tDISTANCE_TO_WALKER\n# door\tT\tREF\tclosed|open|not-held\tX\tY\tZ\tDISTANCE_TO_WALKER (X Y Z: its first drawn shape's place, - when not drawn)"
+                );
+                Some(PlayWatch {
+                    out,
+                    actors: std::collections::BTreeMap::new(),
+                    doors: std::collections::BTreeMap::new(),
+                    feet: None,
+                })
+            }
+            Err(e) => {
+                eprintln!("play: FO4_VIEW_PLAY_WATCH: {e}");
+                None
+            }
+        }
+    }
+}
+
+/// Each frame of the scripted play window with [`PlayWatch`]: the changes
+/// since the last frame written.
+#[cfg(feature = "script-event")]
+fn watch_play<F: bevy::ecs::query::QueryFilter>(
+    seen: &crate::play::Seen,
+    watch: &mut PlayWatch,
+    casts: &Query<(Entity, &CastEntity, &mut Transform), F>,
+    doors: Option<&PlayDoors>,
+) {
+    use std::io::Write as _;
+    let t = seen.t;
+    let feet = seen.feet;
+    let dist = |p: [f64; 3]| -> Option<f64> {
+        feet.map(|f| (0..3).map(|i| (p[i] - f[i]).powi(2)).sum::<f64>().sqrt())
+    };
+    let far = |p: [f64; 3]| -> String { dist(p).map_or("-".to_string(), |d| format!("{d:.1}")) };
+    let mut lines: Vec<String> = Vec::new();
+    // Where each actor of the cast is drawn: its place, raised by what
+    // its draws were moved by (`ride_cast`).
+    let mut now: std::collections::BTreeMap<fo4_plugin::FormKey, [f64; 3]> =
+        std::collections::BTreeMap::new();
+    for (_, c, tr) in casts.iter() {
+        let Some((k, place)) = &c.place else {
+            continue;
+        };
+        now.entry(k.clone()).or_insert_with(|| {
+            let d = tr.translation - c.base;
+            // Bevy (x, y, z) is game (x, -z, y) (`coords`).
+            [
+                place[0] + f64::from(d.x),
+                place[1] - f64::from(d.z),
+                place[2] + f64::from(d.y),
+            ]
+        });
+    }
+    for (k, p) in &now {
+        let moved = watch.actors.get(k).is_none_or(|q| {
+            (0..3).map(|i| (p[i] - q[i]).powi(2)).sum::<f64>().sqrt() >= WATCH_MOVE
+        });
+        if moved {
+            lines.push(format!(
+                "actor\t{t:.3}\t{}\tdrawn\t{:.1}\t{:.1}\t{:.1}\t{}",
+                fo4_scene::timeline::key_text(k),
+                p[0],
+                p[1],
+                p[2],
+                far(*p)
+            ));
+            watch.actors.insert(k.clone(), *p);
+        }
+    }
+    let gone: Vec<fo4_plugin::FormKey> = watch
+        .actors
+        .keys()
+        .filter(|k| !now.contains_key(*k))
+        .cloned()
+        .collect();
+    for k in gone {
+        if let Some(p) = watch.actors.remove(&k) {
+            lines.push(format!(
+                "actor\t{t:.3}\t{}\tgone\t{:.1}\t{:.1}\t{:.1}\t{}",
+                fo4_scene::timeline::key_text(&k),
+                p[0],
+                p[1],
+                p[2],
+                far(p)
+            ));
+        }
+    }
+    // The held doors near the walker: closed while their box stands.
+    let mut at: std::collections::BTreeMap<&fo4_plugin::FormKey, [f64; 3]> =
+        std::collections::BTreeMap::new();
+    for (_, d) in doors.map_or(&[][..], |d| &d.drawn[..]) {
+        at.entry(&d.reference).or_insert(d.closed.translation);
+    }
+    for (k, held) in &seen.doors {
+        let p = at.get(k).copied();
+        if p.and_then(dist).is_some_and(|d| d > WATCH_DOOR_REACH) {
+            continue;
+        }
+        let state = Some(*held);
+        if watch.doors.get(k) == Some(&state) {
+            continue;
+        }
+        watch.doors.insert(k.clone(), state);
+        let (x, d) = match p {
+            Some(p) => (format!("{:.1}\t{:.1}\t{:.1}", p[0], p[1], p[2]), far(p)),
+            None => ("-\t-\t-".to_string(), "-".to_string()),
+        };
+        lines.push(format!(
+            "door\t{t:.3}\t{}\t{}\t{x}\t{d}",
+            fo4_scene::timeline::key_text(k),
+            if *held { "closed" } else { "open" }
+        ));
+    }
+    let left: Vec<fo4_plugin::FormKey> = watch
+        .doors
+        .keys()
+        .filter(|k| !seen.doors.contains_key(*k))
+        .cloned()
+        .collect();
+    for k in left {
+        watch.doors.remove(&k);
+        lines.push(format!(
+            "door\t{t:.3}\t{}\tnot-held\t-\t-\t-\t-",
+            fo4_scene::timeline::key_text(&k)
+        ));
+    }
+    let walked = match (feet, watch.feet) {
+        (Some(f), Some(w)) => {
+            (0..3).map(|i| (f[i] - w[i]).powi(2)).sum::<f64>().sqrt() >= WATCH_MOVE
+        }
+        (Some(_), None) => true,
+        _ => false,
+    };
+    if let (Some(f), true) = (feet, walked || !lines.is_empty()) {
+        let _ = writeln!(
+            watch.out,
+            "walker\t{t:.3}\t{:.1}\t{:.1}\t{:.1}",
+            f[0], f[1], f[2]
+        );
+        watch.feet = Some(f);
+    }
+    let wrote = !lines.is_empty() || walked;
+    for l in lines {
+        let _ = writeln!(watch.out, "{l}");
+    }
+    // The window may end by the process's exit: nothing waits in memory.
+    if wrote {
+        let _ = watch.out.flush();
     }
 }
 
@@ -2756,6 +2948,7 @@ fn play_scripted(
     (mut exposure, lights, mut buffers): ExposureParams,
     mut exit: MessageWriter<AppExit>,
     mut person: Option<ResMut<PersonInput>>,
+    mut watch: Option<ResMut<PlayWatch>>,
 ) {
     let Playing(p, title, drawn) = &mut *playing;
     match p.loaded() {
@@ -2924,6 +3117,9 @@ fn play_scripted(
         }
         if !seen.platforms.is_empty() {
             ride_cast(&seen, &mut drawn.feet, &mut casts);
+        }
+        if let Some(w) = watch.as_deref_mut() {
+            watch_play(&seen, w, &casts, doors.as_deref());
         }
         if let Some(pd) = doors.as_deref_mut() {
             follow_doors(p, &seen, pd, &mut instances);
