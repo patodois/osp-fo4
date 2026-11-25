@@ -347,8 +347,9 @@ COLL (camadas de colisão): fonte diferente das demais linhas desta tabela. Os n
 campos (EDID, DESC texto localizado, BNAM índice da camada, FNAM cor de depuração, GNAM palavra de
 flags, MNAM nome, INTV contagem, CNAM lista dos COLL com que a camada colide) são os da página
 pública de formato da UESP para o tipo de registro COLL (`https://en.uesp.net/wiki/Skyrim_Mod:Mod_File_Format/COLL`),
-lembrada de conhecimento prévio: a página não foi aberta nesta etapa (sem rede), e quem tiver rede
-deve conferi-la. Nenhum editor, fonte ou definição de editor foi aberto. O que o dado sustenta,
+escrita de conhecimento prévio na etapa (sem rede) e conferida com a página aberta na revisão de
+25/11/2026: os oito campos, seus tipos e a regra de CNAM ausente quando INTV é zero constam nela; os
+rótulos da tabela são os da página (BNAM aparece lá como "unique id", aqui lido como índice da camada). Nenhum editor, fonte ou definição de editor foi aberto. O que o dado sustenta,
 conferido nos 57 registros do Fallout4.esm com uma sonda temporária (`fo4_plugin::coll` lê cada um
 até o último byte): a mesma ordem de subregistros em todos (CNAM ausente em 1); EDID e MNAM textos
 fechados por um zero, iguais nos 57; DESC, BNAM, FNAM, GNAM e INTV de 4 bytes; BNAM de 0 a 56, uma

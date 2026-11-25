@@ -1069,8 +1069,9 @@ The gate-frame step's layer record reader (`fo4_plugin::coll`,
 the names and roles of the collision layer record's fields (an index, a
 debug colour, a flag word, a name, a count and the list of layer records a
 layer collides with) from UESP's public file format page for the record
-type (`https://en.uesp.net/wiki/Skyrim_Mod:Mod_File_Format/COLL`), cited
-from the published page and not fetched during the step (no network); every
+type (`https://en.uesp.net/wiki/Skyrim_Mod:Mod_File_Format/COLL`), written
+from prior knowledge during the step (no network) and checked against the
+page, opened in a browser, at review on 25 November 2026; every
 size, the count's relation to the list and the list's targets were checked
 on the 57 records of the installation, and the relation the lists give was
 found symmetric. That index 30 is the layer of a walking character's body,
