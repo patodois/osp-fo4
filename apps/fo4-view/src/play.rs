@@ -1990,7 +1990,7 @@ mod enabled {
                     e.1 |= hidden.hidden.contains(&(d as u32));
                 }
                 let mut top: Vec<_> = by_ref.into_iter().collect();
-                top.sort_by(|a, b| b.1 .0.cmp(&a.1 .0));
+                top.sort_by_key(|x| std::cmp::Reverse(x.1 .0));
                 for (k, (n, h)) in top.iter().take(12) {
                     println!(
                         "measure:   {n} cells {k}{}",
@@ -1998,7 +1998,7 @@ mod enabled {
                     );
                 }
                 let mut draws_top: Vec<_> = by_draw.into_iter().collect();
-                draws_top.sort_by(|a, b| b.1.cmp(&a.1));
+                draws_top.sort_by_key(|x| std::cmp::Reverse(x.1));
                 for (d, n) in draws_top.iter().take(8) {
                     let at = gpu.draws.iter().position(|x| x == d);
                     let platform = at.and_then(|k| gpu.platforms.iter().find(|p| p.instance == k));
@@ -2068,7 +2068,7 @@ mod enabled {
                     }
                 }
                 let mut dim: Vec<_> = dim.into_iter().collect();
-                dim.sort_by(|a, b| b.1.cmp(&a.1));
+                dim.sort_by_key(|x| std::cmp::Reverse(x.1));
                 println!(
                     "measure: {} of {} points seen take a light under 0.15; most on {:?}",
                     dim.iter().map(|x| x.1).sum::<usize>(),
@@ -2076,7 +2076,7 @@ mod enabled {
                     &dim[..dim.len().min(4)]
                 );
                 let mut dark: Vec<_> = dark.into_iter().collect();
-                dark.sort_by(|a, b| b.1.cmp(&a.1));
+                dark.sort_by_key(|x| std::cmp::Reverse(x.1));
                 println!(
                     "measure: {} of {} points seen lit by the ambient alone (no placed light reaches); most on {:?}",
                     dark.iter().map(|x| x.1).sum::<usize>(),

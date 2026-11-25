@@ -2268,7 +2268,9 @@ fn follow_skins(seen: &crate::play::Seen, skins: &mut PlaySkins, meshes: &mut As
         let world = d.world;
         let faces: Vec<[[f32; 3]; 3]> = t
             .indices
-            .chunks_exact(3)
+            .as_chunks::<3>()
+            .0
+            .iter()
             .filter_map(|tri| {
                 let mut f = [[0f32; 3]; 3];
                 for (k, i) in tri.iter().enumerate() {
@@ -2535,7 +2537,7 @@ fn drawn_now<F: bevy::ecs::query::QueryFilter>(
         if *vis == Visibility::Hidden {
             now.hidden.insert(d);
         } else if *t != *spawned && !now.replaced.contains_key(&d) {
-            now.moved.insert(d, game_motion(spawned, &t));
+            now.moved.insert(d, game_motion(spawned, t));
         }
     }
     now

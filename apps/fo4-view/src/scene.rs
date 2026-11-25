@@ -550,14 +550,17 @@ pub struct GpuScene {
     pub view_exposure: Option<ViewExposure>,
     /// A play cast: each drawn actor's tag, reference and place (empty
     /// otherwise).
+    #[cfg_attr(not(feature = "script-event"), allow(dead_code))]
     pub cast_places: Vec<CastPlace>,
     /// A play cast drawn with `--draw-cast-on-platforms`.
+    #[cfg_attr(not(feature = "script-event"), allow(dead_code))]
     pub cast_ride: bool,
 }
 
 /// One actor of a play cast: the instance tag its draws carry, its
 /// reference and its place in the run (`play_cast_stands_on_platform_v1`).
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(not(feature = "script-event"), allow(dead_code))]
 pub struct CastPlace {
     pub tag: u32,
     pub reference: fo4_plugin::FormKey,
@@ -569,7 +572,7 @@ pub struct CastPlace {
 /// under its x and y of the named platforms' parts' boxes where they stand
 /// now that lies no higher than `reach` above `was`; `None` (its place)
 /// when no such part is under it.
-#[cfg_attr(not(feature = "script-event"), allow(dead_code))]
+#[cfg(feature = "script-event")]
 pub fn stand_on_platforms(
     platforms: &[fo4_play::elevator::Platform],
     place: [f64; 3],
@@ -1841,6 +1844,7 @@ mod tests {
         assert_eq!(v.measures, 2);
     }
 
+    #[cfg(feature = "script-event")]
     #[test]
     fn an_actor_stands_on_the_platform_part_under_it() {
         use fo4_play::elevator::{Members, PartMotion, Platform};
