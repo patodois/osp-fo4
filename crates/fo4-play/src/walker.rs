@@ -81,6 +81,10 @@ pub struct Options {
     /// ([`crate::world::Options::held_at_load`];
     /// `play_door_closed_at_load_v1`, `--play-held-doors-at-load`).
     pub held_at_load: bool,
+    /// The loaded doors' collision in their open pose in every walking
+    /// world the walker builds ([`crate::world::Options::door_open`];
+    /// `play_door_collision_open_pose_v1`, `--play-door-open-collision`).
+    pub door_open: bool,
     /// The longest standing slice (seconds; `--play-stand`), and how far
     /// ahead the walker looks for a moving platform before it stands: a
     /// policy of the play mode, no game claim. `None` (the default): a
@@ -112,6 +116,7 @@ impl Default for Options {
             marker_box_layer_records: false,
             held_doors: false,
             held_at_load: false,
+            door_open: false,
             stand: None,
             first_met: false,
             report_walls: false,
@@ -322,6 +327,11 @@ fn collision_rules(o: &Options) -> std::collections::BTreeSet<&'static str> {
     }
     if o.held_doors && o.held_at_load {
         out.insert(crate::rules::HELD_DOORS_AT_LOAD);
+    }
+    if o.door_open {
+        out.insert(crate::rules::DOOR_OPEN_COLLISION);
+        out.insert(fo4_scene::hypotheses::ANIMATED_COLLISION_AS_STORED);
+        out.insert(crate::rules::ELEVATOR_RIGID);
     }
     if c.off_chain {
         out.insert(fo4_scene::hypotheses::COLLISION_OFF_CHAIN);
@@ -1552,6 +1562,7 @@ impl Walker {
             marker_box_layer_records: self.opts.marker_box_layer_records,
             held_doors: self.opts.held_doors,
             held_at_load: self.opts.held_at_load,
+            door_open: self.opts.door_open,
         };
         if let Some(f) = self.on_load.as_mut() {
             f(Some(cell));
@@ -1805,6 +1816,14 @@ mod tests {
         assert_eq!(crate::world::Options::default().collision, o.collision);
         assert!(!o.child_flag_agrees && !crate::world::Options::default().child_flag_agrees);
         assert!(collision_rules(&o).is_empty());
+        assert!(!o.door_open && !crate::world::Options::default().door_open);
+        let doors = collision_rules(&Options {
+            door_open: true,
+            ..Options::default()
+        });
+        assert!(doors.contains(crate::rules::DOOR_OPEN_COLLISION));
+        assert!(doors.contains(fo4_scene::hypotheses::ANIMATED_COLLISION_AS_STORED));
+        assert!(doors.contains(crate::rules::ELEVATOR_RIGID));
         let w = Walker::new(
             floor(),
             Vec::new(),

@@ -186,6 +186,15 @@ pub struct Options {
     /// `play_door_closed_at_load_v1`, `--play-held-doors-at-load`). Off:
     /// none, as before.
     pub held_at_load: bool,
+    /// A loaded door whose collision the readiness refuses stands in the
+    /// walking world by its model's collision in its open pose: the parts
+    /// no controller sequence moves (its frame) as stored, the parts a
+    /// sequence moves where the model's sequence named Open leaves them;
+    /// a door with no frame stays out (`play_door_collision_open_pose_v1`,
+    /// `--play-door-open-collision`,
+    /// [`crate::elevator::open_door_collision`]). Off: no door collision,
+    /// as before.
+    pub door_open: bool,
 }
 
 /// A placed door whose `XTEL` names a door: where it takes the player
@@ -549,6 +558,44 @@ pub fn build(
     // The object bounds of the placed references with no collision in the
     // world (used under --play-pick-bounds).
     let (mut boxes, no_bounds) = pick::object_bounds(&scene, &refs);
+    // The loaded doors whose collision is not placed, in their open pose
+    // (`play_door_collision_open_pose_v1`), after the boxes: a door keeps
+    // its object bounds for the activation and the held doors.
+    if o.door_open {
+        let placed: std::collections::BTreeSet<FormKey> = refs.iter().flatten().map(norm).collect();
+        for i in &scene.instances {
+            let door = i.base.as_ref().map(|b| b.record.signature) == Some(*b"DOOR");
+            let k = norm(&i.reference.key);
+            if !door || i.editor_marker || i.disabled_by_enable_parent() || placed.contains(&k) {
+                continue;
+            }
+            match crate::elevator::open_door_collision(&loader, i, limits, placement, &budget.child())
+            {
+                Ok(Some(open)) => {
+                    let label = format!(
+                        "door open {}:{:08x} ({})",
+                        k.plugin,
+                        k.object_id,
+                        crate::rules::DOOR_OPEN_COLLISION
+                    );
+                    let added = world.append(&open.world, &label, &budget)?;
+                    refs.resize(world.sources.len(), None);
+                    for s in added {
+                        refs[s as usize] = Some(k.clone());
+                    }
+                    bump(&mut counts, "doors in their open pose in the walking world");
+                }
+                Ok(None) => bump(
+                    &mut counts,
+                    "doors left out of the walking world\tno frame, or no collision part the sequence named Open moves",
+                ),
+                Err(_) => bump(
+                    &mut counts,
+                    "doors left out of the walking world\tthe collision does not read",
+                ),
+            }
+        }
+    }
     let why: BTreeMap<String, usize> = c.unplaced.iter().fold(Default::default(), |mut m, u| {
         *m.entry(u.code.clone()).or_default() += 1;
         m

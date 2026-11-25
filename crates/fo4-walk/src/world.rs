@@ -505,16 +505,59 @@ impl World {
             let n = w.add_source(src.clone(), b)?;
             map.insert(*s, n);
         }
-        for e in &self.entries {
+        w.push_from(self, &map, at, b)?;
+        w.rebuild(self.cell_or_default(), b)?;
+        Ok(w)
+    }
+
+    /// Adds every source of `other` with its primitives as stored, each as
+    /// a new source of this world labelled `label` (its shape class kept,
+    /// no instance of this world's cell), takes `other`'s rules and
+    /// rebuilds the broad phase. Returns the new sources in `other`'s
+    /// order.
+    pub fn append(&mut self, other: &World, label: &str, b: &Budget) -> Result<Vec<u32>> {
+        for r in &other.rules {
+            self.add_rule(r, b)?;
+        }
+        let mut map: std::collections::BTreeMap<u32, u32> = std::collections::BTreeMap::new();
+        let mut out = Vec::new();
+        for (k, src) in other.sources.iter().enumerate() {
+            let n = self.add_source(
+                Source {
+                    instance: None,
+                    class: src.class,
+                    label: Some(label.to_owned()),
+                    terrain: None,
+                },
+                b,
+            )?;
+            map.insert(k as u32, n);
+            out.push(n);
+        }
+        self.push_from(other, &map, &|p| p, b)?;
+        self.rebuild(self.cell_or_default(), b)?;
+        Ok(out)
+    }
+
+    /// The primitives of `other`'s sources that `map` names, each point
+    /// taken through `at`, under the mapped sources (no rebuild).
+    fn push_from(
+        &mut self,
+        other: &World,
+        map: &std::collections::BTreeMap<u32, u32>,
+        at: &dyn Fn(V3) -> V3,
+        b: &Budget,
+    ) -> Result<()> {
+        for e in &other.entries {
             let Some(&source) = map.get(&e.source) else {
                 continue;
             };
             match e.prim {
                 Prim::Triangle(t) => {
-                    grow(&mut w.entries, 1, b)?;
-                    w.push_triangle(t.map(at), source);
+                    grow(&mut self.entries, 1, b)?;
+                    self.push_triangle(t.map(at), source);
                 }
-                Prim::Sphere { center, radius } => w.push(
+                Prim::Sphere { center, radius } => self.push(
                     Prim::Sphere {
                         center: at(center),
                         radius,
@@ -522,7 +565,7 @@ impl World {
                     source,
                     b,
                 )?,
-                Prim::Capsule { points, radius } => w.push(
+                Prim::Capsule { points, radius } => self.push(
                     Prim::Capsule {
                         points: points.map(at),
                         radius,
@@ -535,17 +578,16 @@ impl World {
                     count,
                     radius,
                 } => {
-                    let pts: Vec<V3> = self
+                    let pts: Vec<V3> = other
                         .hull_points(start, count)
                         .iter()
                         .map(|p| at(*p))
                         .collect();
-                    w.push_hull(&pts, radius, source, b)?;
+                    self.push_hull(&pts, radius, source, b)?;
                 }
             }
         }
-        w.rebuild(self.cell_or_default(), b)?;
-        Ok(w)
+        Ok(())
     }
 
     /// Points of a hull primitive.

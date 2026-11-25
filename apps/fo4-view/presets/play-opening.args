@@ -44,6 +44,11 @@
 # A door the person opens whose reference stores no ONAM is closed from load
 # (play_door_closed_at_load_v1): the front door stands before the doorbell.
 --play-held-doors-at-load
+# A door whose model carries its own frame stands by its collision in its
+# open pose: the frame as stored, the parts its sequence named Open moves
+# where its last key leaves them (play_door_collision_open_pose_v1): the
+# vault doorways' floor is whole and their jambs stop a sideways walk.
+--play-door-open-collision
 # The collision markers' boxes stand where the data places them, taken out
 # when the run disables them (play_collision_marker_boxes_v1), but a box
 # whose collision layer word is one a walking character passes stays out

@@ -911,6 +911,36 @@ fn copied_sources_move_with_their_primitives() {
     assert!(w.copy_sources(&[n], [0.0; 3], &b).is_err());
 }
 
+#[test]
+fn an_appended_world_stands_as_stored_under_new_labelled_sources() {
+    let b = budget();
+    let w = mixed_world(&b);
+    let mut into = World::new();
+    into.add_triangles(
+        &[[[2000.0, 0.0, 0.0], [2100.0, 0.0, 0.0], [2000.0, 100.0, 0.0]]],
+        "floor",
+        &b,
+    )
+    .unwrap();
+    let added = into.append(&w, "frame", &b).unwrap();
+    let n = w.sources.len();
+    assert_eq!(added, (1..=n as u32).collect::<Vec<_>>());
+    assert_eq!(into.sources.len(), n + 1);
+    assert_eq!(into.entries.len(), w.entries.len() + 1);
+    for (k, s) in w.sources.iter().enumerate() {
+        let a = &into.sources[added[k] as usize];
+        assert_eq!(a.label.as_deref(), Some("frame"));
+        assert_eq!((a.class, a.instance), (s.class, None));
+    }
+    // Every primitive as stored: the same surface under the same column.
+    let at = w.ray_down(0.0, 0.0, 500.0).unwrap();
+    let got = into.ray_down(0.0, 0.0, 500.0).unwrap();
+    assert!(near(got.z, at.z, 1e-9));
+    assert!(added.contains(&got.source));
+    assert!(into.ray_down(2010.0, 10.0, 50.0).is_some());
+    assert_eq!(into.stats.hulls, w.stats.hulls);
+}
+
 /// A collision marker's box is a hull of its eight corners, rotated and
 /// scaled by its placement (`walk_collision_marker_box_v1`); a walker
 /// stands on its top.

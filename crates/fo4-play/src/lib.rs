@@ -181,8 +181,16 @@ pub mod rules {
     /// key of its model's sequence named Open once the box left, and not
     /// before the reading first holds it (`fo4-view --draw-held-doors`).
     pub const DOOR_DRAWN: &str = "play_door_drawn_as_held_v1";
+    /// A loaded door whose collision the readiness refuses stands in every
+    /// walking world by its model's collision in its open pose: the parts
+    /// whose body chain no controller sequence of the model sets (its
+    /// frame) as stored, each part a sequence sets where the model's
+    /// sequence named Open leaves it at its last key; a door with no frame,
+    /// or whose Open moves no part of its collision, stays out
+    /// (`--play-door-open-collision`).
+    pub const DOOR_OPEN_COLLISION: &str = "play_door_collision_open_pose_v1";
     /// Every rule above.
-    pub const ALL: [&str; 25] = [
+    pub const ALL: [&str; 26] = [
         PLAYER_FEET,
         RUN_CLOCK,
         ACTIVATE_RAY,
@@ -208,6 +216,7 @@ pub mod rules {
         HELD_DOORS,
         HELD_DOORS_AT_LOAD,
         DOOR_DRAWN,
+        DOOR_OPEN_COLLISION,
     ];
 }
 

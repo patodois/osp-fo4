@@ -115,6 +115,13 @@ pub struct Part {
     base: World,
 }
 
+impl Part {
+    /// The part's collision as stored (read-only, for reports).
+    pub fn base(&self) -> &World {
+        &self.base
+    }
+}
+
 /// One named reference's collision and rides.
 #[derive(Debug)]
 pub struct Elevator {
@@ -375,6 +382,133 @@ fn rigid_parts(
     Ok((parts, stills, set))
 }
 
+/// A model path as the asset graph reads it (`meshes/...`, lower case,
+/// `/`).
+fn model_path(model: &str) -> String {
+    format!("meshes/{}", model.replace('\\', "/")).to_ascii_lowercase()
+}
+
+/// The asset of the instance's model `want` ([`model_path`]).
+fn model_asset(loader: &Loader<'_>, inst: &fo4_scene::Instance, want: &str) -> Option<usize> {
+    inst.assets.iter().copied().find(|&i| {
+        let a = &loader.assets.nodes[i];
+        a.kind == AssetKind::Model
+            && String::from_utf8_lossy(&a.path)
+                .replace('\\', "/")
+                .to_ascii_lowercase()
+                == want
+    })
+}
+
+/// A placed door's collision in its open pose
+/// (`play_door_collision_open_pose_v1`): its model's collision placed as
+/// stored (`fo4_scene::collision::instance_as_stored`), the sources whose
+/// body chain no controller sequence of the model sets (the frame) where
+/// they stand, and each part some sequence sets (the rigid reading's parts
+/// of the named platforms, `play_elevator_rigid_v1`, grouped by the deepest
+/// set node) moved by the rigid motion the sequence named `Open` gives its
+/// chain at the sequence's last key (`nif_sequence_chain_pose_v1`), as
+/// stored when that sequence sets no node of its chain.
+#[derive(Debug, Clone)]
+pub struct OpenDoor {
+    /// The door's collision in the open pose: the still sources first,
+    /// then each part's.
+    pub world: World,
+    /// How many parts some sequence moves, and how many of them `Open`
+    /// moves.
+    pub moving: usize,
+    pub opened: usize,
+    /// Each moving part as stored, with the rigid motions each sequence
+    /// gives it by name (for reports).
+    pub parts: Vec<(World, BTreeMap<String, MotionTrack>)>,
+}
+
+/// The name of the door sequence whose last key is the open pose (as
+/// `fo4-view`'s held doors' drawing reads it, `play_door_drawn_as_held_v1`).
+pub const OPEN_SEQUENCE: &str = "Open";
+
+/// The collision of the door `inst` in its open pose ([`OpenDoor`]), when
+/// its model's collision has a frame (a source no sequence sets) and its
+/// sequence named [`OPEN_SEQUENCE`] moves at least one part of it: `None`
+/// otherwise (the door is left out whole, as before; a door of one leaf
+/// with no frame among them).
+pub fn open_door_collision(
+    loader: &Loader<'_>,
+    inst: &fo4_scene::Instance,
+    limits: &fo4_core::Limits,
+    placement: fo4_scene::collision::BodyPlacement,
+    b: &Budget,
+) -> Result<Option<OpenDoor>, E> {
+    let options = fo4_scene::collision::Options {
+        level: RuleLevel::Hypotheses,
+        body_placement: Some(placement),
+    };
+    let ec = fo4_scene::collision::instance_as_stored(inst, loader, limits, options, b)?;
+    if ec.instances.is_empty() {
+        return Ok(None);
+    }
+    let ew = World::build(&ec, placement, b)?;
+    let Some(model) = inst.base.as_ref().and_then(|x| x.common.model.path.clone()) else {
+        return Ok(None);
+    };
+    let Some(place) = inst.reference.data.transform else {
+        return Ok(None);
+    };
+    let frame =
+        fo4_scene::transform::Transform::euler(place, inst.reference.data.scale.unwrap_or(1.))?;
+    let Some(id) = model_asset(loader, inst, &model_path(&model)) else {
+        return Ok(None);
+    };
+    let (parts, still, _) = loader
+        .assets
+        .with_decoded(id, &b.child(), |d| rigid_parts(d, &ec, &ew, frame, b))?;
+    let Some((world, opened)) = open_pose(&ew, &still, &parts, b)? else {
+        return Ok(None);
+    };
+    let mut moving = Vec::new();
+    for (_, srcs, tracks) in &parts {
+        moving.push((ew.copy_sources(srcs, [0.0; 3], b)?, tracks.clone()));
+    }
+    Ok(Some(OpenDoor {
+        world,
+        moving: parts.len(),
+        opened,
+        parts: moving,
+    }))
+}
+
+/// The open pose of a door's collision `ew` split into its `still`
+/// sources and its moving `parts` (deepest set node, sources, rigid tracks
+/// by sequence name): the still sources as stored, then each part moved by
+/// the last motion of its [`OPEN_SEQUENCE`] track (as stored without one),
+/// and how many parts that sequence moves. `None` without a still source
+/// or a part the sequence moves.
+#[allow(clippy::type_complexity)]
+fn open_pose(
+    ew: &World,
+    still: &[u32],
+    parts: &[(usize, Vec<u32>, BTreeMap<String, MotionTrack>)],
+    b: &Budget,
+) -> fo4_core::Result<Option<(World, usize)>> {
+    let opened = parts
+        .iter()
+        .filter(|p| p.2.get(OPEN_SEQUENCE).is_some_and(|t| !t.is_empty()))
+        .count();
+    if opened == 0 || still.is_empty() {
+        return Ok(None);
+    }
+    let mut world = ew.copy_sources(still, [0.0; 3], b)?;
+    for (_, srcs, tracks) in parts {
+        let last = tracks
+            .get(OPEN_SEQUENCE)
+            .and_then(|t| t.last())
+            .map_or(Motion::IDENTITY, |x| x.1);
+        let posed = ew.copy_sources_moved(srcs, &last, b)?;
+        world.append(&posed, "open part", b)?;
+    }
+    Ok(Some((world, opened)))
+}
+
 fn sample(track: &Track, t: f64) -> [f64; 3] {
     let (Some(first), Some(last)) = (track.first(), track.last()) else {
         return [0.0; 3];
@@ -443,19 +577,8 @@ impl Elevator {
             .ok_or("PlayElevator: the reference has no placement")?;
         let frame =
             fo4_scene::transform::Transform::euler(place, inst.reference.data.scale.unwrap_or(1.))?;
-        let want = format!("meshes/{}", model.replace('\\', "/")).to_ascii_lowercase();
-        let id = inst
-            .assets
-            .iter()
-            .copied()
-            .find(|&i| {
-                let a = &loader.assets.nodes[i];
-                a.kind == AssetKind::Model
-                    && String::from_utf8_lossy(&a.path)
-                        .replace('\\', "/")
-                        .to_ascii_lowercase()
-                        == want
-            })
+        let want = model_path(&model);
+        let id = model_asset(&loader, &inst, &want)
             .ok_or("PlayElevator: the reference's model is not among its assets")?;
         if readings.rigid {
             let (read, still, set) = loader.assets.with_decoded(id, &budget.child(), |d| {
@@ -1479,6 +1602,79 @@ mod tests {
             },
         ];
         e
+    }
+
+    #[test]
+    fn a_door_stands_open_by_its_frame_and_the_parts_open_moves() {
+        let b = Budget::new(1 << 24);
+        // A frame (a floor with a gap) and two parts: a flap standing up
+        // beside the gap that Open lays across it, a leaf Open lifts.
+        let mut ew = World::new();
+        ew.add_hull(
+            &[
+                [-50., -10., -5.],
+                [-15., -10., -5.],
+                [-50., 10., -5.],
+                [-15., 10., -5.],
+                [-50., -10., 0.],
+                [-15., -10., 0.],
+                [-50., 10., 0.],
+                [-15., 10., 0.],
+            ],
+            0.,
+            "frame",
+            &b,
+        )
+        .unwrap();
+        let cuboid = |lo: [f64; 3], hi: [f64; 3]| -> Vec<[f64; 3]> {
+            (0..8)
+                .map(|k| {
+                    let p = |i: usize| if k & (1 << i) != 0 { hi[i] } else { lo[i] };
+                    [p(0), p(1), p(2)]
+                })
+                .collect()
+        };
+        ew.add_hull(&cuboid([-15., -10., 0.], [-10., 10., 30.]), 0., "flap", &b)
+            .unwrap();
+        ew.add_hull(&cuboid([-15., -10., 40.], [15., 10., 150.]), 0., "leaf", &b)
+            .unwrap();
+        let tracks = |name: &str, m: Motion| {
+            BTreeMap::from([(name.to_string(), vec![(0.0, Motion::IDENTITY), (1.3, m)])])
+        };
+        // The flap turned a quarter about its foot's line, laid across the
+        // gap; the leaf lifted 200 units; a third part only Close moves.
+        let h = std::f64::consts::FRAC_1_SQRT_2;
+        let lay = Motion {
+            rotation: [h, 0., h, 0.],
+            pivot: [-15., 0., 0.],
+            translation: [0.; 3],
+        };
+        let lift = Motion::translation([0., 0., 200.]);
+        let parts = vec![
+            (1, vec![1], tracks(OPEN_SEQUENCE, lay)),
+            (2, vec![2], tracks(OPEN_SEQUENCE, lift)),
+        ];
+        let (open, opened) = open_pose(&ew, &[0], &parts, &b).unwrap().unwrap();
+        assert_eq!((opened, open.sources.len()), (2, 3));
+        // Where the gap was, the laid flap is the floor; the leaf is gone
+        // from the doorway.
+        let floor = open.ray_down(5., 0., 100.).unwrap();
+        assert!(floor.z.abs() < 1e-6 && floor.source == 1, "{floor:?}");
+        assert!(open.ray_down(5., 0., 180.).unwrap().z.abs() < 1e-6);
+        assert!(open
+            .surfaces(5., 0.)
+            .iter()
+            .any(|h| (h.z - 350.).abs() < 1e-6));
+        assert!(ew.ray_down(5., 0., 30.).is_none());
+        // No frame, or no part Open moves: the door stays out.
+        assert!(open_pose(&ew, &[], &parts, &b).unwrap().is_none());
+        let closing = vec![(1, vec![1], tracks("Close", lay))];
+        assert!(open_pose(&ew, &[0], &closing, &b).unwrap().is_none());
+        // A part Open does not set stands as stored.
+        let mixed = vec![parts[1].clone(), (1, vec![1], tracks("Close", lay))];
+        let (o2, n2) = open_pose(&ew, &[0], &mixed, &b).unwrap().unwrap();
+        assert_eq!(n2, 1);
+        assert!((o2.ray_down(-12., 0., 100.).unwrap().z - 30.).abs() < 1e-6);
     }
 
     #[test]

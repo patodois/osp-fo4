@@ -1459,6 +1459,63 @@ What the records give (outputs outside git):
 So `--draw-static-fields`, `--draw-static-leaves` and `--draw-platform-skins` are in the play preset
 (`apps/fo4-view/presets/play-opening.args`). They are read by the window's drawing only; `play_run` takes none of them.
 
+### The post-wake corridor's fall and the front door's prompt (the corridor-fall step)
+
+The eighth session's second record ended in a fall: after waking, a sideways step along the post-wake corridor's
+end took the walker out of the world (eye height down to -78,079). Replayed headless from the record (the
+track and the timeline byte for byte the session's), with `--play-report-walls` and a probe of the walking world
+(`column_probe`, outputs outside git):
+
+- **Why.** The walker stood in a vault doorway between the room's floor (its collision ends at one side of the
+  doorway) and the hall end's floor (it starts 26 units further). Nothing was placed between them: the doorway's
+  door is refused for collision like every door (its controllers, record fields, materials). The capsule (radius
+  16) rested on the two edges; moving along the doorway, the edges' contacts turned steeper than the slope limit,
+  pushed only sideways and cancelled, and the capsule sank between them and fell.
+- **What the door holds.** The door's model has five collision bodies. One compressed mesh hangs under no node a
+  sequence sets: the doorway's floor with a slot 26 units wide and 19 deep along the leaves' line, the two jambs and
+  a head at 190 units. Four convex bodies hang under nodes its sequences named Open and Close set; at Open's last
+  key (1.30 s) the main leaf rises into the head, a lower leaf sinks under the floor, and two flaps beside the slot
+  fold flat across it, their top at the floor's height. With the frame alone the capsule sank into the slot and
+  stayed there; with the frame and the parts at Open's last key the doorway's floor is whole and the jamb stops a
+  sideways walk.
+- `--play-door-open-collision` (`play_door_collision_open_pose_v1`, off by default; `world::Options::door_open`,
+  `elevator::open_door_collision`, `elevator::OpenDoor`, `elevator::OPEN_SEQUENCE`, `fo4_walk::World::append`): a
+  loaded door whose collision is not placed and whose model's collision has a frame (a part no sequence sets) and a
+  part its sequence named Open moves stands in every walking world in that open pose, under the door's reference
+  (the live world hides it with the door, the activation's ray meets it as the door). The parts are those the
+  named platforms' rigid reading groups (`play_elevator_rigid_v1`), read here only to tell what moves. A door of
+  leaves alone stays out: read for every door with an Open part, the house's inner doors stood open, undrawn,
+  across the second record's walk at 59.7 s. 21 of the post-wake vault's 37 loaded doors, 6 of the prewar vault's
+  21 and 1 of the start's 12 are read; the held doors' boxes and the doors' object bounds are unchanged, and the
+  window does not draw a door it does not hold.
+
+What the records give with the switch (this commit's `play_run`, the preset's play options, outputs outside git):
+
+- The second record: 254 stages, every one at the same second as the session's; at 1275.17 s the sideways step is
+  stopped at the jamb and the walker stays on the floor (its feet no lower than -0.01 units from 1244 s to the
+  record's end, against -101,828 before) and walks on; the track first differs at 1085.28 s, when the walker crosses the
+  descent's doorway level instead of dipping 2.8 units.
+- The first record: 273 stages to the surface (the follow-on quest's 10 at 1177.25 s), every stage at the same second,
+  the same last point; 287 track points differ, each a doorway crossed level.
+- The third record: its recorded keys do not reach the surface. At 915.05 s it crossed a doorway where, before, the
+  capsule dropped 1.7 units into the gap and the step-up carried it 11 units further than its keys; level, it stays
+  11 units behind, and from there the open-loop keys run it 26 units south of the doorway it took at 933 s, into
+  that room's wall, and the exit console's activation at 963.43 s meets a wall. The same keys with the walk from
+  915.9 s on steered back to the session's own track points (`toward` each point, the activations aimed along the
+  session's own rays; a test aid outside git, not the person's input) give the session's 274 stages in the same
+  order, each within 0.024 s, to the surface.
+- With the switch off: the third record gives every output byte for byte (`play.txt` apart from its timings).
+
+So `--play-door-open-collision` is in the play preset. The rule's measurement is in the game: stand in that
+doorway with the door open, cross it and walk sideways along it.
+
+**The front door's prompt.** The viewport's prompt now follows the door's drawn pose: a held door whose box left,
+drawn open (`play_door_drawn_as_held_v1`), reads "close" and its name; any other door, held shut or not held,
+"open" as before (`fo4-view` `play::prompt_posed`, a viewer policy; what E does is unchanged). Whether E opens the
+front door before the doorbell, while the run blocks its activation, is not known: the session's person did so at
+33.69 s, 15.9 s before the bell, and the play mode lets it; `play_door_activation_opens_held_before_visit_v1` names
+that reading so a measurement can settle it.
+
 ## What the play mode does not do yet
 
 - The elevators ride only those the caller names (`--play-elevator`), headless and in the scripted window;
@@ -1474,7 +1531,8 @@ So `--draw-static-fields`, `--draw-static-leaves` and `--draw-platform-skins` ar
   never swinging; the checkpoint's box has nothing to draw. A static whose collision chain a controller moves is
   still refused, and the collision of any model whose animation moves a node a body reads is not posed by the
   clock.
-- Plain doors: no collision is placed for any door, so none blocks the walker; the open state is not read, but with
+- Plain doors: no collision is placed for any door except, with `--play-door-open-collision`, the open pose of a
+  door with its own frame (the corridor-fall step), so no leaf blocks the walker; the open state is not read, but with
   `--play-held-doors` a door the run's scripts close with its activation blocked holds the walker (the board step),
   and with `--play-held-doors-at-load` a door the person opens that stores no `ONAM` counts as closed from load
   (the door-shut step). A door's opening by a person's activation is read only for the doors the caller names.
@@ -1544,3 +1602,5 @@ So `--draw-static-fields`, `--draw-static-leaves` and `--draw-platform-skins` ar
 | `refr_static_fields_render_unchanged_v1` | `fo4-view --draw-static-fields` (in the preset since the draw-gate step) | the render side of `refr_static_fields_collision_unchanged_v1`; the views census of the opening (no other placement newly drawn) | weak |
 | `play_static_leaf_two_pose_v1` | `fo4-view --draw-static-leaves` (in the preset since the draw-gate step) | the frame model's one clamped transform controller and its keys; the collision marker box inside the frame's bounds; which pose holds the way is a guess | weak |
 | `play_platform_skin_follows_parts_v1` | `fo4-view --draw-platform-skins` (with `--draw-platforms`) (in the preset since the draw-gate step) | the skins as stored, read by the cast's readers and checked against the built mesh at rest; each bone moved by its part as the collision is | weak |
+| `play_door_collision_open_pose_v1` | `--play-door-open-collision` (in the preset since the corridor-fall step) | the vault door model's frame under no sequence and its parts at the last key of its sequence named Open; that this is the doorway's collision while the door stands open is prior knowledge | weak |
+| `play_door_activation_opens_held_before_visit_v1` | the play mode's open of a held door (the behaviour as it is) | the eighth session's early E at the front door; whether the game refuses an activation a script blocked is not known | weak |

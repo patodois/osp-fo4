@@ -84,6 +84,8 @@ pub struct Play {
     /// `--play-held-doors-at-load` (`play_door_closed_at_load_v1`).
     pub held_doors: bool,
     pub held_at_load: bool,
+    /// `--play-door-open-collision` (`play_door_collision_open_pose_v1`).
+    pub door_open: bool,
     /// `--play-elevator REF` (repeated; `play_elevator_run_sequence_v1`),
     /// `--play-elevator-also REF`, `--play-elevator-also-with REF OWNER`.
     pub elevators: Vec<FormKey>,
@@ -174,6 +176,7 @@ impl Play {
             "--play-marker-box-layer-records" => &mut self.marker_box_layer_records,
             "--play-held-doors" => &mut self.held_doors,
             "--play-held-doors-at-load" => &mut self.held_at_load,
+            "--play-door-open-collision" => &mut self.door_open,
             "--play-pick-first-met" => &mut self.first_met,
             "--play-report-walls" => &mut self.report_walls,
             "--play-action-after-offset" => &mut self.action_offset,
@@ -454,6 +457,7 @@ impl Play {
             marker_box_layer_records: self.marker_box_layer_records,
             held_doors: self.held_doors,
             held_at_load: self.held_at_load,
+            door_open: self.door_open,
         }
     }
 
@@ -484,6 +488,7 @@ impl Play {
             marker_box_layer_records: self.marker_box_layer_records,
             held_doors: self.held_doors,
             held_at_load: self.held_at_load,
+            door_open: self.door_open,
             ..walker::Options::default()
         };
         if let Some(v) = self.walk_speed {
@@ -736,6 +741,9 @@ mod tests {
         assert!(p.held_doors && p.held_at_load && p.report_walls);
         assert!(p.world_options().held_at_load && p.walker_options().held_at_load);
         assert!(p.walker_options().report_walls);
+        assert!(!p.world_options().door_open && !p.walker_options().door_open);
+        let d = read("--play-door-open-collision").unwrap();
+        assert!(d.door_open && d.world_options().door_open && d.walker_options().door_open);
         assert!(read("--play-live-world --play-held-doors-at-load").is_err());
         assert!(
             !read("--play-live-world --play-held-doors")

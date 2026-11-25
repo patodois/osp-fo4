@@ -1151,7 +1151,7 @@ mod enabled {
         /// box, not a collision of no reference): the HUD's prompt.
         pub aim_usable: bool,
         /// The viewport's prompt for it: a short action and a plain name,
-        /// from the record's type and display name only (`prompt_of`).
+        /// from the record's type and display name only (`prompt_posed`).
         pub prompt: Option<String>,
         /// What the person's last activation did, as the viewport confirms
         /// it (opened, used, nothing), numbered so a window shows each once.
@@ -1181,8 +1181,9 @@ mod enabled {
         timeline: Option<TimelineRead>,
         /// `--play-keys`: the camera's heading from the person's looks (not
         /// the walk's direction), what E would meet given to the window,
-        /// and the labels of the references met so far.
-        keys: Option<BTreeMap<FormKey, (String, bool, String)>>,
+        /// and the labels of the references met so far (label, usable,
+        /// base record type, display name).
+        keys: Option<BTreeMap<FormKey, Label>>,
         /// `--play-keys`: the activations the log held when last read, and
         /// an activation waiting for the run to take it: its line so far
         /// and the run's counts before it ([`Paced::publish_confirm`]).
@@ -1190,6 +1191,10 @@ mod enabled {
         /// The references whose activation also opens them.
         opens: Vec<FormKey>,
     }
+
+    /// A reference met by the activation: its label, whether E uses it,
+    /// its base's record type and display name (the prompt's words).
+    type Label = (String, bool, Option<[u8; 4]>, Option<String>);
 
     /// The activations read, the one waiting for the run (its line so far,
     /// the run's counts before it) and the confirmations shown.
@@ -1379,34 +1384,40 @@ mod enabled {
             let Some(labels) = self.keys.as_mut() else {
                 return;
             };
+            // The held doors' poses as the window draws them: a door
+            // whose box left is drawn open (`play_door_drawn_as_held_v1`).
+            let doors = self.walker.held_door_states();
             let aim = self.walker.aim().map(|h| match h.reference {
                 Some(k) => {
-                    let (label, usable, prompt) = labels.entry(k.clone()).or_insert_with(|| {
-                        let b = fo4_core::Budget::new(run.store.limits.max_memory);
-                        let base = fo4_vm::bind::base_of(run.store, &k, &b).ok().flatten();
-                        let kind = base.as_ref().and_then(|base| run.store.signature(base));
-                        // A static's base (the kinds the activatable
-                        // object bounds leave out) is not something E uses.
-                        let usable =
-                            kind.is_some_and(|s| !fo4_play::rules::STATIC_KINDS.contains(&s));
-                        let (m, vfs) = run.sources();
-                        let name = base.as_ref().and_then(|base| {
-                            fo4_play::state::Texts::new(vfs, &m.language, &b)
-                                .display_name(run.store, base)
+                    let (label, usable, kind, name) =
+                        labels.entry(k.clone()).or_insert_with(|| {
+                            let b = fo4_core::Budget::new(run.store.limits.max_memory);
+                            let base = fo4_vm::bind::base_of(run.store, &k, &b).ok().flatten();
+                            let kind = base.as_ref().and_then(|base| run.store.signature(base));
+                            // A static's base (the kinds the activatable
+                            // object bounds leave out) is not something E uses.
+                            let usable =
+                                kind.is_some_and(|s| !fo4_play::rules::STATIC_KINDS.contains(&s));
+                            let (m, vfs) = run.sources();
+                            let name = base.as_ref().and_then(|base| {
+                                fo4_play::state::Texts::new(vfs, &m.language, &b)
+                                    .display_name(run.store, base)
+                            });
+                            let what = base
+                                .and_then(|base| fo4_vm::bind::label(run.store, &base, &b).ok())
+                                .unwrap_or_else(|| "a reference".into());
+                            (
+                                format!("{what} ({})", fo4_vm::bind::record_key(&k)),
+                                usable,
+                                kind,
+                                name,
+                            )
                         });
-                        let what = base
-                            .and_then(|base| fo4_vm::bind::label(run.store, &base, &b).ok())
-                            .unwrap_or_else(|| "a reference".into());
-                        (
-                            format!("{what} ({})", fo4_vm::bind::record_key(&k)),
-                            usable,
-                            prompt_of(kind, name.as_deref()),
-                        )
-                    });
+                    let open = doors.get(&fo4_scene::timeline::norm(&k)) == Some(&false);
                     (
                         format!("{label} at {:.0} units", h.distance),
                         *usable,
-                        Some(prompt.clone()),
+                        Some(prompt_posed(*kind, name.as_deref(), open)),
                     )
                 }
                 None => (
@@ -1427,10 +1438,18 @@ mod enabled {
     /// named `name` (its display name, when it has one): a short action
     /// by the record's type and the plain name (viewer policy: a door or a
     /// container is opened, anything else used; a door with no name is
-    /// named by its type).
-    pub fn prompt_of(kind: Option<[u8; 4]>, name: Option<&str>) -> String {
+    /// named by its type). A door the window draws in its open pose
+    /// (`open`: a held door whose box left, `play_door_drawn_as_held_v1`)
+    /// is closed: the words follow the drawn pose; what E does to an open
+    /// door is the walker's activation as for any door, unchanged. `open`
+    /// changes nothing for any other type.
+    pub fn prompt_posed(kind: Option<[u8; 4]>, name: Option<&str>, open: bool) -> String {
         let opens = matches!(kind.as_ref(), Some(b"DOOR") | Some(b"CONT"));
-        let verb = if opens { "open" } else { "use" };
+        let verb = match (opens, open && kind == Some(*b"DOOR")) {
+            (_, true) => "close",
+            (true, false) => "open",
+            (false, false) => "use",
+        };
         match (name.map(str::trim).filter(|n| !n.is_empty()), kind) {
             (Some(n), _) => format!("{verb} {n}"),
             (None, Some(k)) if opens => format!("{verb} {}", String::from_utf8_lossy(&k)),
@@ -1812,14 +1831,32 @@ mod enabled {
         #[test]
         fn the_prompt_is_a_short_action_and_a_plain_name() {
             assert_eq!(
-                prompt_of(Some(*b"DOOR"), Some("Front Door")),
+                prompt_posed(Some(*b"DOOR"), Some("Front Door"), false),
                 "open Front Door"
             );
-            assert_eq!(prompt_of(Some(*b"DOOR"), None), "open DOOR");
-            assert_eq!(prompt_of(Some(*b"CONT"), Some(" ")), "open CONT");
-            assert_eq!(prompt_of(Some(*b"ACTI"), Some("Console")), "use Console");
-            assert_eq!(prompt_of(Some(*b"FURN"), None), "use");
-            assert_eq!(prompt_of(None, None), "use");
+            assert_eq!(prompt_posed(Some(*b"DOOR"), None, false), "open DOOR");
+            assert_eq!(prompt_posed(Some(*b"CONT"), Some(" "), false), "open CONT");
+            assert_eq!(
+                prompt_posed(Some(*b"ACTI"), Some("Console"), false),
+                "use Console"
+            );
+            assert_eq!(prompt_posed(Some(*b"FURN"), None, false), "use");
+            assert_eq!(prompt_posed(None, None, false), "use");
+            // A door drawn open reads close; the pose changes no other type.
+            assert_eq!(
+                prompt_posed(Some(*b"DOOR"), Some("Front Door"), true),
+                "close Front Door"
+            );
+            assert_eq!(prompt_posed(Some(*b"DOOR"), None, true), "close DOOR");
+            assert_eq!(
+                prompt_posed(Some(*b"DOOR"), Some("Front Door"), false),
+                "open Front Door"
+            );
+            assert_eq!(prompt_posed(Some(*b"CONT"), None, true), "open CONT");
+            assert_eq!(
+                prompt_posed(Some(*b"ACTI"), Some("Console"), true),
+                "use Console"
+            );
         }
 
         #[test]

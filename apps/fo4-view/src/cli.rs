@@ -1596,6 +1596,7 @@ mod tests {
         assert!(p.switches.held_doors && p.switches.marker_boxes && p.switches.marker_box_layers);
         assert!(p.switches.static_fields && !p.switches.marker_box_layer_records);
         assert!(p.switches.held_at_load && scene.drawing.held_doors);
+        assert!(p.switches.door_open);
         assert!(
             scene.drawing.static_fields
                 && scene.drawing.static_leaves
