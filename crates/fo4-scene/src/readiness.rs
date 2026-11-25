@@ -20,8 +20,10 @@
 //! Behind switches ([`Switches`], off by default) some blockers that
 //! collision needs by their code are set aside: a model blocker that lies
 //! off the blocks the model's placed bodies read ([`Bearing`],
-//! [`hypotheses::COLLISION_OFF_CHAIN`]) and a reference's unread alpha
-//! field ([`hypotheses::REFERENCE_ALPHA_COLLISION`]); the collision cell
+//! [`hypotheses::COLLISION_OFF_CHAIN`]), a reference's unread alpha
+//! field ([`hypotheses::REFERENCE_ALPHA_COLLISION`]) and four unread
+//! fields of a static's reference ([`STATIC_REFERENCE_FIELDS`],
+//! [`hypotheses::STATIC_REFERENCE_FIELDS_COLLISION`]); the collision cell
 //! build asks them only of an instance whose collision is otherwise
 //! refused.
 use crate::collision::model::Reads;
@@ -246,12 +248,47 @@ pub struct Switches {
     /// alpha) is set aside under [`hypotheses::REFERENCE_ALPHA_COLLISION`]
     /// ([`reference_alpha`]).
     pub reference_alpha: bool,
+    /// On a reference whose base is a static (`STAT`), the record blockers
+    /// of its `XACT`, `XLRT`, `XOWN` and `ONAM` subrecords
+    /// ([`STATIC_REFERENCE_FIELDS`]; xEdit's published names: action flag,
+    /// location ref type, owner, open by default) are set aside under
+    /// [`hypotheses::STATIC_REFERENCE_FIELDS_COLLISION`]
+    /// ([`static_reference_field`]).
+    pub static_fields: bool,
 }
 
 impl Switches {
     pub fn any(self) -> bool {
-        self.off_chain || self.reference_alpha
+        self.off_chain || self.reference_alpha || self.static_fields
     }
+}
+
+/// The reference subrecords [`Switches::static_fields`] sets aside on a
+/// static's reference.
+pub const STATIC_REFERENCE_FIELDS: [&str; 4] = ["XACT", "XLRT", "XOWN", "ONAM"];
+
+/// Whether `e` is the record blocker of one of a reference's
+/// [`STATIC_REFERENCE_FIELDS`]: an unread subrecord
+/// (`UninterpretedVisualSubrecord`) or a field read as run-time state
+/// (`RuntimeRecordState`) whose found value names `REFR.` and the field.
+/// Whether the reference's base is a static is the caller's
+/// ([`static_base`]).
+pub fn static_reference_field(e: &Error) -> bool {
+    let mut parts = e.found.split('.');
+    matches!(
+        e.code.as_str(),
+        "UninterpretedVisualSubrecord" | "RuntimeRecordState"
+    ) && parts.next() == Some("REFR")
+        && parts
+            .next()
+            .is_some_and(|f| STATIC_REFERENCE_FIELDS.contains(&f))
+}
+
+/// Whether a base record of signature `signature` is one whose reference's
+/// [`STATIC_REFERENCE_FIELDS`] [`Switches::static_fields`] sets aside: a
+/// static (`STAT`).
+pub fn static_base(signature: [u8; 4]) -> bool {
+    signature == *b"STAT"
 }
 
 /// Whether an enable parent chain is left open by the rules only because a

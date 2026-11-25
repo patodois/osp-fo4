@@ -2713,3 +2713,70 @@ fn topic_children_keep_their_topic_and_stored_order() {
         .collect();
     assert_eq!(owners, [(0x900, 10); 5]);
 }
+
+#[test]
+fn layer_records_are_read_to_the_last_byte_with_their_list_resolved() {
+    let layer = |id: u32, index: u32, list: &[u32], count: usize, extra: &[u8]| {
+        let mut d = sub(b"EDID", b"LayerA\0");
+        d.extend(sub(b"DESC", &7u32.to_le_bytes()));
+        d.extend(sub(b"BNAM", &index.to_le_bytes()));
+        d.extend(sub(b"FNAM", &[1, 2, 3, 0]));
+        d.extend(sub(b"GNAM", &4u32.to_le_bytes()));
+        d.extend(sub(b"MNAM", b"LayerA\0"));
+        d.extend(sub(b"INTV", &(count as u32).to_le_bytes()));
+        if !list.is_empty() {
+            let words: Vec<u8> = list.iter().flat_map(|w| w.to_le_bytes()).collect();
+            d.extend(sub(b"CNAM", &words));
+        }
+        d.extend(extra);
+        record(b"COLL", id, 0, &d)
+    };
+    let mut records = layer(0x800, 0, &[0x800, 0x801], 2, &[]);
+    records.extend(layer(0x801, 3, &[0x800], 1, &[]));
+    records.extend(layer(0x802, 4, &[], 0, &[]));
+    // A list one word short of its count, and a field the layout does not name.
+    records.extend(layer(0x803, 5, &[0x800], 2, &[]));
+    records.extend(layer(0x804, 6, &[], 0, &sub(b"ZZZZ", &[1])));
+    let body = group(0, *b"COLL", &records);
+    let source = plugin(MASTER, &[], 0, &body);
+    let store = crate::typed::Store::from_sources(
+        fo4_core::Game::Fallout4,
+        vec![("base.esm".into(), Box::new(OwnedSource(source)))],
+        Limits::default(),
+        &Budget::new(8 << 20),
+    )
+    .unwrap();
+    let b = Budget::new(8 << 20);
+    let key = |id: u32| FormKey {
+        plugin: "base.esm".into(),
+        object_id: id,
+    };
+    let one = |id: u32| {
+        let (r, p) = store.raw_with_plugin(&key(id), &b).unwrap().unwrap();
+        crate::coll::read(&r, key(id), p, &store, &b)
+    };
+    let a = one(0x800).unwrap();
+    assert_eq!(a.index, 0);
+    assert_eq!(a.editor_id, b"LayerA");
+    assert_eq!(a.name, b"LayerA");
+    assert_eq!(a.description, Some(7));
+    assert_eq!(a.color, [1, 2, 3, 0]);
+    assert_eq!(a.flags, 4);
+    assert_eq!(a.count, 2);
+    assert_eq!(a.raw_collides, [0x800, 0x801]);
+    assert_eq!(a.collides, [key(0x800), key(0x801)]);
+    assert!(one(0x802).unwrap().collides.is_empty());
+    assert_eq!(one(0x803).unwrap_err().code, "LayerListCount");
+    assert_eq!(one(0x804).unwrap_err().code, "UnknownLayerField");
+    // The load order's layers: the first refusal stops the read.
+    assert_eq!(
+        crate::coll::read_all(&store, &b).unwrap_err().code,
+        "LayerListCount"
+    );
+    let three: Vec<_> = [0x800, 0x801, 0x802].map(|id| one(id).unwrap()).to_vec();
+    let r = crate::coll::relation(&three).unwrap();
+    assert_eq!(r[&0], std::collections::BTreeSet::from([0, 3]));
+    assert_eq!(r[&3], std::collections::BTreeSet::from([0]));
+    assert!(r[&4].is_empty());
+    assert!(crate::coll::one_way(&r).is_empty());
+}

@@ -340,3 +340,19 @@ Nos casos completamente nomeados a parte restante são bytes rotulados Unused,
 preservados nos campos RGB e no record cru. Não recebem papel visual.
 
 O gerador recebe a pasta autorizada como argumento: `python3 scripts/field_specs.py "$XDUMP_LAYOUTS"`. Nenhum caminho de usuário fica embutido.
+
+## coll
+
+COLL (camadas de colisão): fonte diferente das demais linhas desta tabela. Os nomes e o papel dos
+campos (EDID, DESC texto localizado, BNAM índice da camada, FNAM cor de depuração, GNAM palavra de
+flags, MNAM nome, INTV contagem, CNAM lista dos COLL com que a camada colide) são os da página
+pública de formato da UESP para o tipo de registro COLL (`https://en.uesp.net/wiki/Skyrim_Mod:Mod_File_Format/COLL`),
+lembrada de conhecimento prévio: a página não foi aberta nesta etapa (sem rede), e quem tiver rede
+deve conferi-la. Nenhum editor, fonte ou definição de editor foi aberto. O que o dado sustenta,
+conferido nos 57 registros do Fallout4.esm com uma sonda temporária (`fo4_plugin::coll` lê cada um
+até o último byte): a mesma ordem de subregistros em todos (CNAM ausente em 1); EDID e MNAM textos
+fechados por um zero, iguais nos 57; DESC, BNAM, FNAM, GNAM e INTV de 4 bytes; BNAM de 0 a 56, uma
+vez cada; CNAM com exatamente INTV FormIDs, cada um um COLL; a relação que os CNAM dão é simétrica
+(nenhum par listado num sentido só). Os bits de GNAM não são lidos. O que cada camada faz no jogo
+não é fato de formato: as regras que usam a relação estão em `spec/hypotheses.tsv`
+(`play_collision_marker_box_layer_records_v1`).

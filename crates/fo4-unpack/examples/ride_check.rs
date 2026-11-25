@@ -198,6 +198,7 @@ fn run() -> Result<(), E> {
     loader.set_collision_switches(fo4_scene::readiness::Switches {
         off_chain,
         reference_alpha,
+        static_fields: false,
     });
     if off_chain {
         let _ = writeln!(

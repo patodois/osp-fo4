@@ -60,6 +60,9 @@
 //! the drawing side's collision readiness readings
 //! (`collision_model_blockers_off_chain_v1`,
 //! `refr_xalp_collision_unchanged_v1`; `fo4_scene::readiness::Switches`).
+//! `--play-collision-static-fields` gives them the reading of a static's
+//! reference fields `XACT`, `XLRT`, `XOWN` and `ONAM`
+//! (`refr_static_fields_collision_unchanged_v1`).
 //! `--play-collision-child-flag-agrees` gives them, and the live world's
 //! decisions, the reading of enable chains left open only by own flags
 //! that agree with the chain (`xesp_child_flag_agrees_chain_v1`).

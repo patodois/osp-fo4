@@ -1063,3 +1063,21 @@ members by name, that the subtitles are shown by the heads-up screen, and
 that a dialogue line stores a short prompt shown on a choice. No interface
 source repository, decompiled interface, other player or engine, game
 executable or game run was opened or searched for.
+
+The gate-frame step's layer record reader (`fo4_plugin::coll`,
+[spec/record-layouts.md](../spec/record-layouts.md), section `coll`) takes
+the names and roles of the collision layer record's fields (an index, a
+debug colour, a flag word, a name, a count and the list of layer records a
+layer collides with) from UESP's public file format page for the record
+type (`https://en.uesp.net/wiki/Skyrim_Mod:Mod_File_Format/COLL`), cited
+from the published page and not fetched during the step (no network); every
+size, the count's relation to the list and the list's targets were checked
+on the 57 records of the installation, and the relation the lists give was
+found symmetric. That index 30 is the layer of a walking character's body,
+and what a listed pair does to a box and a character, are prior general
+knowledge, kept as pending rules (`play_collision_marker_box_layer_records_v1`).
+The static reference fields reading (`refr_static_fields_collision_unchanged_v1`)
+rests on the field names already cited in the layout table and on a
+load-order census made with a temporary probe kept outside the repository.
+No editor, editor source or definition file, other implementation, physics
+library, game executable or game run was opened or searched for.

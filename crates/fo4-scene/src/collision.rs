@@ -1070,11 +1070,16 @@ impl Builder<'_, '_> {
     /// read (`collision_model_blockers_off_chain_v1`), the reference's
     /// unread alpha (`refr_xalp_collision_unchanged_v1`), the own flag of an
     /// enable chain whose own flags agree with it
-    /// (`xesp_child_flag_agrees_chain_v1`).
+    /// (`xesp_child_flag_agrees_chain_v1`), four unread fields of a
+    /// static's reference (`refr_static_fields_collision_unchanged_v1`).
     fn switched_state(&mut self, i: &Instance) -> Result<State> {
         let switches = self.loader.collision_switches();
         let agrees = self.loader.collision_child_flag_agrees()
             && i.enable.as_ref().is_some_and(readiness::child_flag_agrees);
+        let static_fields = switches.static_fields
+            && i.base
+                .as_ref()
+                .is_some_and(|v| readiness::static_base(v.record.signature));
         let bearings = if switches.off_chain {
             self.bearings(i)?
         } else {
@@ -1105,6 +1110,13 @@ impl Builder<'_, '_> {
                 && i.blockers.get(k).is_some_and(readiness::own_flag)
             {
                 Some(hypotheses::ENABLE_CHILD_FLAG_AGREES)
+            } else if static_fields
+                && origin.unwrap_or(readiness::Origin::Record) == readiness::Origin::Record
+                && i.blockers
+                    .get(k)
+                    .is_some_and(readiness::static_reference_field)
+            {
+                Some(hypotheses::STATIC_REFERENCE_FIELDS_COLLISION)
             } else {
                 None
             }

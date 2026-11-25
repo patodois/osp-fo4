@@ -13,7 +13,7 @@ use fo4_scene::timeline::norm;
 use fo4_scene::{Loader, RuleLevel};
 use fo4_vfs::Vfs;
 use fo4_walk::World;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 type E = Box<dyn std::error::Error>;
 
@@ -33,6 +33,65 @@ pub const BOX_OBSTACLE_FLAG: u32 = 0x0200_0000;
 /// pick, two custom picks; the navigation cutter).
 pub const PASSED_LAYERS: [u32; 7] = [39, 40, 41, 42, 43, 44, 49];
 
+/// The collision layer index of a walking character's body under
+/// `play_collision_marker_box_layer_records_v1`: the character
+/// controller's layer in the engine's layer list as prior knowledge has it.
+pub const CHARACTER_LAYER: u32 = 30;
+
+/// The layers a box's collision layer word is passed on: the constant
+/// [`PASSED_LAYERS`], or the set the load order's layer records give
+/// ([`passed_layers_from_records`]).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Passed {
+    Constant,
+    Records(BTreeSet<u32>),
+}
+
+impl Passed {
+    /// Whether a box storing layer word `w` stays out.
+    pub fn contains(&self, w: u32) -> bool {
+        match self {
+            Passed::Constant => PASSED_LAYERS.contains(&w),
+            Passed::Records(set) => set.contains(&w),
+        }
+    }
+}
+
+/// The passed layers the load order's collision layer records give under
+/// `play_collision_marker_box_layer_records_v1`: the index of every layer
+/// record that the record of index [`CHARACTER_LAYER`] does not list as one
+/// it collides with (`CNAM`; `fo4_plugin::coll`). `None` when the load
+/// order holds no layer record or none of that index; a record that does
+/// not read is an error.
+pub fn passed_layers_from_records(store: &Store, b: &Budget) -> Result<Option<BTreeSet<u32>>, E> {
+    let layers = fo4_plugin::coll::read_all(store, b)?;
+    Ok(passed_from_relation(&fo4_plugin::coll::relation(&layers)?))
+}
+
+/// [`passed_layers_from_records`] from the layers' relation by index
+/// (`fo4_plugin::coll::relation`).
+pub fn passed_from_relation(relation: &BTreeMap<u32, BTreeSet<u32>>) -> Option<BTreeSet<u32>> {
+    let listed = relation.get(&CHARACTER_LAYER)?;
+    Some(
+        relation
+            .keys()
+            .copied()
+            .filter(|i| !listed.contains(i))
+            .collect(),
+    )
+}
+
+/// How a records' passed set differs from [`PASSED_LAYERS`]: the constant's
+/// words the records do not pass (boxes that would stand), and the words
+/// the records pass that the constant does not (boxes that would stay out).
+pub fn passed_difference(records: &BTreeSet<u32>) -> (Vec<u32>, Vec<u32>) {
+    let constant: BTreeSet<u32> = PASSED_LAYERS.into_iter().collect();
+    (
+        constant.difference(records).copied().collect(),
+        records.difference(&constant).copied().collect(),
+    )
+}
+
 /// Why a collision marker's box `mb`, whose base's record flags are
 /// `base_flags`, stays out of the walking world under
 /// `play_collision_marker_boxes_v1` (its base lacks the obstacle flag, or
@@ -45,11 +104,29 @@ pub fn marker_box_left_out(
     mb: &fo4_walk::platform::MarkerBox,
     layers: bool,
 ) -> Option<&'static str> {
+    marker_box_left_out_with(base_flags, mb, layers.then_some(&Passed::Constant))
+}
+
+/// [`marker_box_left_out`] with the passed layers given: `None` reads no
+/// layer word, [`Passed::Records`] the set the layer records give
+/// (`play_collision_marker_box_layer_records_v1`).
+pub fn marker_box_left_out_with(
+    base_flags: Option<u32>,
+    mb: &fo4_walk::platform::MarkerBox,
+    passed: Option<&Passed>,
+) -> Option<&'static str> {
     if base_flags.is_none_or(|f| f & BOX_OBSTACLE_FLAG == 0) {
         return Some("their base does not carry the obstacle flag");
     }
-    if layers && mb.layer.is_some_and(|w| PASSED_LAYERS.contains(&w)) {
-        return Some("their collision layer word is one a walking character passes (39 to 44, 49)");
+    if let Some(p) = passed {
+        if mb.layer.is_some_and(|w| p.contains(w)) {
+            return Some(match p {
+                Passed::Constant => {
+                    "their collision layer word is one a walking character passes (39 to 44, 49)"
+                }
+                Passed::Records(_) => "their collision layer word is one the layer records do not list with the character's layer",
+            });
+        }
     }
     if mb.initially_disabled || mb.enable_parent {
         return Some("initially disabled or under an enable parent");
@@ -69,7 +146,8 @@ pub struct Options {
     /// The drawing side's collision readiness readings the cell build
     /// takes (`fo4_scene::readiness::Switches`, given to the loader with
     /// `Loader::set_collision_switches`; `--play-collision-off-chain`,
-    /// `--play-collision-reference-alpha`). All off: the loader's default.
+    /// `--play-collision-reference-alpha`, `--play-collision-static-fields`).
+    /// All off: the loader's default.
     pub collision: fo4_scene::readiness::Switches,
     /// An enable parent chain left open only by records below its root
     /// carrying their own flag 0x800, each agreeing with the chain, decides
@@ -90,6 +168,13 @@ pub struct Options {
     /// `--play-marker-box-layers`). Off: every box of the obstacle base
     /// stands, as before.
     pub marker_box_layers: bool,
+    /// With [`Options::marker_box_layers`], the passed layers are those the
+    /// load order's collision layer records give
+    /// ([`passed_layers_from_records`],
+    /// `play_collision_marker_box_layer_records_v1`,
+    /// `--play-marker-box-layer-records`), [`PASSED_LAYERS`] when they give
+    /// none. Off: [`PASSED_LAYERS`], as before.
+    pub marker_box_layer_records: bool,
     /// The boxes of the loaded doors' object bounds, kept in the live
     /// world's dormant piece and shown while the run's scripts hold the
     /// door closed with its activation blocked
@@ -356,6 +441,45 @@ pub fn build(
     let space_key = norm(&fo4_scene::timeline::scene_space(store, &scene));
     let mut marked: Vec<(FormKey, [f64; 3], u32)> = Vec::new();
     if o.marker_boxes {
+        let passed = match (o.marker_box_layers, o.marker_box_layer_records) {
+            (false, _) => None,
+            (true, false) => Some(Passed::Constant),
+            (true, true) => Some(match passed_layers_from_records(store, &budget) {
+                Ok(Some(set)) => {
+                    let (stand, out) = passed_difference(&set);
+                    let words =
+                        |v: &[u32]| v.iter().map(u32::to_string).collect::<Vec<_>>().join(" ");
+                    let line = if stand.is_empty() && out.is_empty() {
+                        "the same as the constant".to_string()
+                    } else {
+                        format!(
+                            "not the constant: passed by the constant, not by the records: {}; passed by the records, not by the constant: {}",
+                            words(&stand),
+                            words(&out)
+                        )
+                    };
+                    bump(
+                        &mut counts,
+                        &format!("marker box layers from the layer records\t{line}"),
+                    );
+                    Passed::Records(set)
+                }
+                Ok(None) => {
+                    bump(
+                        &mut counts,
+                        "marker box layers from the constant\tno layer record of the character's layer",
+                    );
+                    Passed::Constant
+                }
+                Err(e) => {
+                    bump(
+                        &mut counts,
+                        &format!("marker box layers from the constant\tthe layer records do not read: {e}"),
+                    );
+                    Passed::Constant
+                }
+            }),
+        };
         let mut keys: Vec<FormKey> = scene
             .instances
             .iter()
@@ -392,7 +516,7 @@ pub fn build(
                 .and_then(|r| r.data.base.and_then(|f| f.key))
                 .and_then(|base| store.raw(&base, &budget.child()).ok().flatten())
                 .map(|r| r.flags);
-            if let Some(why) = marker_box_left_out(base_flags, &mb, o.marker_box_layers) {
+            if let Some(why) = marker_box_left_out_with(base_flags, &mb, passed.as_ref()) {
                 bump(&mut counts, &format!("marker boxes left out\t{why}"));
                 continue;
             }
@@ -752,6 +876,75 @@ mod tests {
         let all = [item_pick, collision_box, none];
         assert_eq!(placed(&all, false), 3);
         assert_eq!(placed(&all, true), 2);
+    }
+
+    /// `play_collision_marker_box_layer_records_v1`: the passed set the
+    /// layer records give is every record's index the character's layer
+    /// does not list, read through `fo4_plugin::coll`'s relation; a box's
+    /// word is left out by that set, not by the constant.
+    #[test]
+    fn the_layer_records_give_the_layers_the_characters_layer_does_not_list() {
+        let records: BTreeSet<u32> = [6, 40, 49].into_iter().collect();
+        let passed = Passed::Records(records.clone());
+        for (w, out) in [(40, true), (49, true), (6, true), (39, false), (35, false)] {
+            assert_eq!(
+                marker_box_left_out_with(Some(BOX_OBSTACLE_FLAG), &marker(Some(w)), Some(&passed))
+                    .is_some(),
+                out,
+                "{w}"
+            );
+        }
+        assert_eq!(
+            marker_box_left_out_with(Some(BOX_OBSTACLE_FLAG), &marker(Some(40)), Some(&passed)),
+            Some("their collision layer word is one the layer records do not list with the character's layer")
+        );
+        // Without a reading of the word, every box of the obstacle base stands.
+        assert!(
+            marker_box_left_out_with(Some(BOX_OBSTACLE_FLAG), &marker(Some(40)), None).is_none()
+        );
+        // The constant reading is the old one.
+        assert_eq!(
+            marker_box_left_out_with(
+                Some(BOX_OBSTACLE_FLAG),
+                &marker(Some(41)),
+                Some(&Passed::Constant)
+            ),
+            marker_box_left_out(Some(BOX_OBSTACLE_FLAG), &marker(Some(41)), true)
+        );
+        // The difference from the constant, both ways.
+        assert_eq!(
+            passed_difference(&records),
+            (vec![39, 41, 42, 43, 44], vec![6])
+        );
+        let same: BTreeSet<u32> = PASSED_LAYERS.into_iter().collect();
+        assert_eq!(passed_difference(&same), (vec![], vec![]));
+        // The set from the relation of three layer records.
+        let k = |id: u32| FormKey {
+            plugin: "a.esm".into(),
+            object_id: id,
+        };
+        let layer = |index: u32, id: u32, list: &[u32]| fo4_plugin::coll::Layer {
+            key: k(id),
+            editor_id: Vec::new(),
+            name: Vec::new(),
+            description: None,
+            index,
+            color: [0; 4],
+            flags: 0,
+            count: list.len() as u32,
+            raw_collides: list.to_vec(),
+            collides: list.iter().map(|i| k(*i)).collect(),
+        };
+        let layers = [
+            layer(CHARACTER_LAYER, 1, &[1, 2]),
+            layer(35, 2, &[1]),
+            layer(40, 3, &[]),
+        ];
+        let r = fo4_plugin::coll::relation(&layers).unwrap();
+        assert_eq!(passed_from_relation(&r), Some(BTreeSet::from([40])));
+        // No record of the character's layer: none (the constant stands).
+        let r = fo4_plugin::coll::relation(&[layer(35, 2, &[]), layer(40, 3, &[])]).unwrap();
+        assert_eq!(passed_from_relation(&r), None);
     }
 
     /// The readings the layer one leaves as they were: the obstacle flag of

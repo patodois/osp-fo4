@@ -66,14 +66,20 @@ pub struct Play {
     pub player_sits: bool,
     /// `--play-collision-off-chain` (`collision_model_blockers_off_chain_v1`),
     /// `--play-collision-reference-alpha` (`refr_xalp_collision_unchanged_v1`),
-    /// `--play-collision-child-flag-agrees` (`xesp_child_flag_agrees_chain_v1`).
+    /// `--play-collision-child-flag-agrees` (`xesp_child_flag_agrees_chain_v1`),
+    /// `--play-collision-static-fields`
+    /// (`refr_static_fields_collision_unchanged_v1`).
     pub off_chain: bool,
     pub reference_alpha: bool,
     pub child_flag_agrees: bool,
+    pub static_fields: bool,
     /// `--play-marker-boxes` (`play_collision_marker_boxes_v1`),
-    /// `--play-marker-box-layers` (`play_collision_marker_box_layer_passed_v1`).
+    /// `--play-marker-box-layers` (`play_collision_marker_box_layer_passed_v1`),
+    /// `--play-marker-box-layer-records`
+    /// (`play_collision_marker_box_layer_records_v1`).
     pub marker_boxes: bool,
     pub marker_box_layers: bool,
+    pub marker_box_layer_records: bool,
     /// `--play-held-doors` (`play_door_closed_blocked_holds_v1`).
     pub held_doors: bool,
     /// `--play-elevator REF` (repeated; `play_elevator_run_sequence_v1`),
@@ -156,8 +162,10 @@ impl Play {
             "--play-collision-off-chain" => &mut self.off_chain,
             "--play-collision-reference-alpha" => &mut self.reference_alpha,
             "--play-collision-child-flag-agrees" => &mut self.child_flag_agrees,
+            "--play-collision-static-fields" => &mut self.static_fields,
             "--play-marker-boxes" => &mut self.marker_boxes,
             "--play-marker-box-layers" => &mut self.marker_box_layers,
+            "--play-marker-box-layer-records" => &mut self.marker_box_layer_records,
             "--play-held-doors" => &mut self.held_doors,
             "--play-pick-first-met" => &mut self.first_met,
             "--play-action-after-offset" => &mut self.action_offset,
@@ -307,6 +315,9 @@ impl Play {
         if self.marker_box_layers && !self.marker_boxes {
             return Err("--play-marker-box-layers needs --play-marker-boxes".into());
         }
+        if self.marker_box_layer_records && !self.marker_box_layers {
+            return Err("--play-marker-box-layer-records needs --play-marker-box-layers".into());
+        }
         if self.held_doors && !self.live_world {
             return Err("--play-held-doors needs --play-live-world".into());
         }
@@ -336,6 +347,7 @@ impl Play {
         fo4_scene::readiness::Switches {
             off_chain: self.off_chain,
             reference_alpha: self.reference_alpha,
+            static_fields: self.static_fields,
         }
     }
 
@@ -428,6 +440,7 @@ impl Play {
             child_flag_agrees: self.child_flag_agrees,
             marker_boxes: self.marker_boxes,
             marker_box_layers: self.marker_box_layers,
+            marker_box_layer_records: self.marker_box_layer_records,
             held_doors: self.held_doors,
         }
     }
@@ -456,6 +469,7 @@ impl Play {
             child_flag_agrees: self.child_flag_agrees,
             marker_boxes: self.marker_boxes,
             marker_box_layers: self.marker_box_layers,
+            marker_box_layer_records: self.marker_box_layer_records,
             held_doors: self.held_doors,
             ..walker::Options::default()
         };
@@ -536,6 +550,9 @@ impl Play {
         if self.reference_alpha {
             let _ = writeln!(report, "switch: a reference's unread alpha does not refuse its collision (--play-collision-reference-alpha, {})", fo4_scene::hypotheses::REFERENCE_ALPHA_COLLISION);
         }
+        if self.static_fields {
+            let _ = writeln!(report, "switch: a static's reference fields XACT, XLRT, XOWN and ONAM do not refuse its collision (--play-collision-static-fields, {})", fo4_scene::hypotheses::STATIC_REFERENCE_FIELDS_COLLISION);
+        }
         if self.child_flag_agrees {
             let _ = writeln!(report, "switch: an enable chain left open only by records' own flags that agree with it decides their collision, at load and after the run's changes (--play-collision-child-flag-agrees, {})", fo4_scene::hypotheses::ENABLE_CHILD_FLAG_AGREES);
         }
@@ -547,6 +564,9 @@ impl Play {
         }
         if self.marker_box_layers {
             let _ = writeln!(report, "switch: a collision marker's box whose reference stores the collision layer word of a layer a walking character passes (39 to 44, 49) stays out of the walking world (--play-marker-box-layers, {})", crate::rules::MARKER_BOX_LAYER_PASSED);
+        }
+        if self.marker_box_layer_records {
+            let _ = writeln!(report, "switch: the passed layers are the layer records' indexes that the character's layer ({}) does not list as ones it collides with, the constant when the records give none (--play-marker-box-layer-records, {})", world::CHARACTER_LAYER, crate::rules::MARKER_BOX_LAYER_RECORDS);
         }
         let opts = self.walker_options();
         if let Some(v) = self.slice {
@@ -689,7 +709,7 @@ mod tests {
 
     #[test]
     fn reads_every_play_option() {
-        let s = read("--play-stand 0.1 --walk-speed 300 --play-reach 150 --play-pick-bounds --play-pick-bounds-activatable --play-load-doors --play-follow-grid --play-slice 0.25 --play-live-world --play-elevator a.esm:0000000A --play-elevator a.esm:B --play-elevator-also-with a.esm:C A.ESM:0000000A --play-elevator-door --play-elevator-held-pose --play-elevator-rigid --play-elevator-door-onward --play-collision-off-chain --play-collision-reference-alpha --play-collision-child-flag-agrees --play-player-moveto --play-player-sits --play-around 2 --play-tick 0.02 --run-speed 400 --play-region-walker --play-recheck-marks --play-nowait --play-elevator-also a.esm:D").unwrap();
+        let s = read("--play-stand 0.1 --walk-speed 300 --play-reach 150 --play-pick-bounds --play-pick-bounds-activatable --play-load-doors --play-follow-grid --play-slice 0.25 --play-live-world --play-elevator a.esm:0000000A --play-elevator a.esm:B --play-elevator-also-with a.esm:C A.ESM:0000000A --play-elevator-door --play-elevator-held-pose --play-elevator-rigid --play-elevator-door-onward --play-collision-off-chain --play-collision-reference-alpha --play-collision-child-flag-agrees --play-collision-static-fields --play-player-moveto --play-player-sits --play-around 2 --play-tick 0.02 --run-speed 400 --play-region-walker --play-recheck-marks --play-nowait --play-elevator-also a.esm:D").unwrap();
         assert_eq!(s.walk_speed, Some(300.0));
         assert_eq!(s.run_speed, Some(400.0));
         assert_eq!(s.tick, Some(0.02));
@@ -703,6 +723,8 @@ mod tests {
         assert!(s.pick_bounds && s.activatable && s.load_doors && s.follow_grid);
         assert!(s.live_world && s.nowait && s.elevator_door && s.held_pose && s.rigid);
         assert!(s.door_onward && s.off_chain && s.reference_alpha && s.child_flag_agrees);
+        assert!(s.static_fields && s.collision().static_fields);
+        assert!(!Play::default().collision().any());
         assert!(s.player_moveto && s.player_sits && s.region && s.recheck_marks);
         assert!(s.walker_only());
         let w = s.world_options();
@@ -819,12 +841,19 @@ mod tests {
             "--play-around x",
             "--play-tick",
             "--play-live-world --play-marker-box-layers",
+            "--play-live-world --play-marker-boxes --play-marker-box-layer-records",
         ] {
             assert!(read(bad).is_err(), "{bad}");
         }
         assert!(read("--play-elevator a.esm:1 --play-elevator-door --play-load-doors --play-reach 1 --play-elevator-door-onward").is_ok());
         let p = read("--play-live-world --play-marker-boxes --play-marker-box-layers").unwrap();
         assert!(p.world_options().marker_box_layers && p.walker_options().marker_box_layers);
+        assert!(!p.world_options().marker_box_layer_records);
+        let p = read("--play-live-world --play-marker-boxes --play-marker-box-layers --play-marker-box-layer-records").unwrap();
+        assert!(
+            p.world_options().marker_box_layer_records
+                && p.walker_options().marker_box_layer_records
+        );
     }
 
     #[test]

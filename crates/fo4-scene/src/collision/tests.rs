@@ -2,7 +2,7 @@
 //! the container layout of `spec/havok-container.md` and the physics root and
 //! sphere layouts of `spec/havok-bodies.md`.
 use super::*;
-use crate::tests::{fixture, nif_blocks, record, sub};
+use crate::tests::{fixture, fixture_with, group, nif_blocks, record, sub};
 use fo4_havok::{
     ARRAY_FLAG, CLASS_NAME_MARKER, HEADER_LEN, LAYOUT, MAGIC, PHYSICS_SYSTEM, SECTION_NAMES,
     SPHERE, VERSION, VERTEX_TAG,
@@ -904,6 +904,7 @@ fn a_model_blocker_off_the_collision_chain_is_set_aside_only_behind_its_switch()
     loader.set_collision_switches(readiness::Switches {
         off_chain: false,
         reference_alpha: true,
+        static_fields: false,
     });
     let c = cell(&scene, &loader, &limits, options, &b).unwrap();
     assert!(c.instances.is_empty());
@@ -911,6 +912,7 @@ fn a_model_blocker_off_the_collision_chain_is_set_aside_only_behind_its_switch()
     loader.set_collision_switches(readiness::Switches {
         off_chain: true,
         reference_alpha: false,
+        static_fields: false,
     });
     let on = cell(&scene, &loader, &limits, options, &b).unwrap();
     assert_eq!(on.instances.len(), 1, "{:?}", on.unplaced);
@@ -927,4 +929,84 @@ fn a_model_blocker_off_the_collision_chain_is_set_aside_only_behind_its_switch()
     };
     let c = cell(&scene, &loader, &limits, measured, &b).unwrap();
     assert!(c.instances.is_empty());
+}
+
+#[test]
+fn a_statics_reference_fields_are_set_aside_only_behind_their_switch() {
+    // The fixture's base is a static; its one reference stores the four
+    // fields, each with bytes of its stored size.
+    let f = fixture_with(false, &[], |rf| {
+        let mut rf = rf.to_vec();
+        rf.extend(sub(b"XACT", &13u32.to_le_bytes()));
+        rf.extend(sub(b"XLRT", &0x801u32.to_le_bytes()));
+        rf.extend(sub(b"XOWN", &[1, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]));
+        rf.extend(sub(b"ONAM", &[]));
+        group(9, 0x800, &record(b"REFR", 0x802, 0, &rf))
+    });
+    std::fs::write(f.manifest.root.join("meshes/a.nif"), model_nif(1)).unwrap();
+    let store = Store::open(&f.manifest, &Budget::new(8 << 20)).unwrap();
+    let v = Vfs::mount(&f.manifest, &Budget::new(8 << 20)).unwrap();
+    let b = Budget::new(64 << 20);
+    let mut loader = Loader::new(&store, &v, "english", RuleLevel::Hypotheses, &b);
+    let scene = loader.by_editor_id("SyntheticRoom", &b).unwrap();
+    let i = &scene.instances[0];
+    assert!(!i.collision.ready_at(RuleLevel::Hypotheses));
+    let fields: Vec<&fo4_core::Error> = i
+        .blockers
+        .iter()
+        .filter(|e| readiness::static_reference_field(e))
+        .collect();
+    assert_eq!(fields.len(), 4, "{:?}", i.blockers);
+    let limits = Limits::default();
+    let options = Options {
+        level: RuleLevel::Hypotheses,
+        body_placement: None,
+    };
+    // Off by default, and the other switches leave the fields refusing.
+    let off = cell(&scene, &loader, &limits, options, &b).unwrap();
+    assert!(off.instances.is_empty());
+    assert_eq!(off.unplaced[0].code, "CollisionNotReady");
+    loader.set_collision_switches(readiness::Switches {
+        off_chain: true,
+        reference_alpha: true,
+        static_fields: false,
+    });
+    assert!(cell(&scene, &loader, &limits, options, &b)
+        .unwrap()
+        .instances
+        .is_empty());
+    // With the switch: placed as stored, under its rule.
+    loader.set_collision_switches(readiness::Switches {
+        static_fields: true,
+        ..readiness::Switches::default()
+    });
+    let on = cell(&scene, &loader, &limits, options, &b).unwrap();
+    assert_eq!(on.instances.len(), 1, "{:?}", i.blockers);
+    assert!(on.instances[0]
+        .rules
+        .contains(&hypotheses::STATIC_REFERENCE_FIELDS_COLLISION));
+    let placed = on.world_shape(&on.instances[0], BodyPlacement::Ignored, &b);
+    let plain = {
+        let f = fixture(false, false);
+        std::fs::write(f.manifest.root.join("meshes/a.nif"), model_nif(1)).unwrap();
+        let store = Store::open(&f.manifest, &Budget::new(8 << 20)).unwrap();
+        let v = Vfs::mount(&f.manifest, &Budget::new(8 << 20)).unwrap();
+        let mut loader = Loader::new(&store, &v, "english", RuleLevel::Hypotheses, &b);
+        let scene = loader.by_editor_id("SyntheticRoom", &b).unwrap();
+        let c = cell(&scene, &loader, &limits, options, &b).unwrap();
+        format!(
+            "{:?}",
+            c.world_shape(&c.instances[0], BodyPlacement::Ignored, &b)
+        )
+    };
+    assert_eq!(format!("{placed:?}"), plain);
+    // Not at Measured while the rule is pending.
+    let measured = Options {
+        level: RuleLevel::Measured,
+        body_placement: Some(BodyPlacement::Ignored),
+    };
+    assert!(cell(&scene, &loader, &limits, measured, &b)
+        .unwrap()
+        .instances
+        .is_empty());
 }

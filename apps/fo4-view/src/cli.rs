@@ -1530,6 +1530,7 @@ mod tests {
         assert!(p.switches.live_world && p.switches.rigid && p.switches.child_flag_agrees);
         assert!(p.switches.first_met && p.switches.action_offset);
         assert!(p.switches.held_doors && p.switches.marker_boxes && p.switches.marker_box_layers);
+        assert!(p.switches.static_fields && !p.switches.marker_box_layer_records);
         assert!(scene.play_cast.is_some() && scene.drawing.platforms && scene.light.any());
         // Without the local file's platforms the preset is refused.
         let mut alone = args("m d C --eye 1,2,3 --look 4,5,6 --play-run s.txt --play-out o");

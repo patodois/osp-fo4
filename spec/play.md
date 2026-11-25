@@ -1182,7 +1182,8 @@ What the records give (outputs outside git):
   walker slides along it, round its end, and enters the stage triggers past the gate from 417.51 s (the last at
   418.60 s), 3.8 s before the stage that disables the box (422.41 s): no 500. The box spans 148 of the gate frame's 262 units;
   the rest of the frame is a static whose model carries a transform controller (rest `transform-varies`), its
-  collision refused at every level (`UnsupportedAnimationRuntime`), so nothing stands where the walker goes round.
+  collision refused, so nothing stands where the walker goes round (the refusal was read here as
+  `UnsupportedAnimationRuntime`; the gate-frame step found it to be the reference's four unread fields, below).
   Placed as stored as a diagnostic (`--play-elevator` naming that static, a caller's option, not in the preset), it
   closes the gap: the walker is held until 422.41 s and crosses neither trigger early; the record's later commands,
   written for a person already through the gate, then walk elsewhere (192 stages, no 500), as the board step's
@@ -1197,6 +1198,102 @@ What the records give (outputs outside git):
   are held at the box, go round its end and, late for their timed steering, no longer reach the raised platform
   (196 stages instead of 197; none went through before).
 
+### The checkpoint gate's frame and the layer records (the gate-frame step)
+
+The gate-box step left the gate case open: a walker sliding along the checkpoint's box goes round its end, where
+the gate's frame stands drawn but placed no collision. Read from the records, the model and this project's own
+code only:
+
+- **The frame's collision is not moved by its animation.** The frame is a static whose model holds one transform
+  controller (free-running, active, clamped, from 0.2 to 4.33 s). Its keys turn one node, the gate's leaf, about
+  its hinge: from the stored pose (the key at load equals the stored rotation) about 94 degrees and back to the
+  stored pose at the last key. The model's one collision object hangs on the model's root, and its body reads the
+  root alone: nothing moves a block of its chain. The controller's three blockers therefore lie off the collision
+  chain (`readiness::Bearing::OffChain`), and `--play-collision-off-chain`, already in the preset, sets them aside.
+  The collision holds the two side panels and one hull 110 units long standing across the fence line from the
+  north panel's end, beyond the fence (the leaf's hinge is there). The 123-unit gap between the panels lies
+  inside the box's span.
+- **What kept the frame out is the reference.** Its reference stores four subrecords this project does not read
+  as placement: `XACT` and `XOWN` (bytes unread; `UninterpretedVisualSubrecord`) and `XLRT` and `ONAM` (read as
+  run-time state; `RuntimeRecordState`). No rule covers them, so the collision was refused. The gate-box step's
+  attribution of the refusal to `UnsupportedAnimationRuntime` was wrong: that blocker was set aside already.
+- **Census of animated models over the load order** (a temporary probe; placements are enabled placed references,
+  counted through their bases). There are 161 models with a free transform controller whose keys leave the stored
+  transform and a placement:
+  - 49 place no collision.
+  - 49 move only nodes with no collision under them: 2,489 placements, 1,450 of them statics. The gate's frame
+    is one of these. The off-chain reading already admits them.
+  - 4 have a controller off the chain while another block moves the chain.
+  - 59 have a controller that moves a collision chain node: 1,541 placements, 108 of them statics in 7 models.
+    Weighted by placements per moving controller: 1,679 start and settle at the stored transform (clamped),
+    661 start there and settle elsewhere, 53 neither start nor settle there, 69 loop, and 9 have a track the
+    clock does not read. Among the statics, 56 placements start and settle at the stored pose and 53 do
+    neither.
+  - A rule placing chain-moved collision at its stored transform would put solid shapes where such a model's
+    animation stands elsewhere, so none was added. The frame does not need one.
+- **Census of the four fields over the load order.** 4,772 placed references of statics store one of them: 4,663
+  `XLRT` alone, 94 `XOWN` alone, 14 `XACT` with `ONAM`, and 1 all four (the frame). For 4,735 of them the model
+  places no collision (markers). With the preset's other collision readings, 36 are refused by these fields
+  alone: 25 `XLRT` alone, 6 `XOWN` alone, 4 `XACT` with `ONAM` (static door models) and the frame; 35 are enabled
+  and 1 is under an enable parent. One more stays refused by an unread `XRGD`. Among the 36 are the vault
+  entrance's exterior shell and the frame, both on the opening's path. For other base types the fields are far
+  more common (doors: 1,200 references; containers, furniture and activators carry ownership and location
+  types). The reading is limited to statics.
+
+`--play-collision-static-fields` (`refr_static_fields_collision_unchanged_v1`, off by default;
+`readiness::Switches::static_fields`, `readiness::static_reference_field`, `readiness::static_base`): on a
+reference whose base is a static, the record blockers of those four fields are set aside in every walking
+world's cell build. The collision is then placed as the model stores it, under the rule. A reference whose
+collision is refused by anything else stays out. The switch is in the play preset since this step.
+
+What the records give (outputs outside git):
+
+- The three person records with the new switches off: every output byte for byte as recorded (play.txt apart
+  from its timings).
+- The on-time synthetic person under the preset with the new switch: 276 stages, the same quests and stages in the
+  same order to the vault exit. Six seconds at the checkpoint move by at most 48.7 ms: after the stage that
+  disables the box, the walker meets the end of the frame's south panel on its way through.
+- The gate case (the stalled session's record held at the door only): the walker is held at the box from
+  416.07 s, slides along it and stops against the frame's north panel; it stays east of the gate until the stage
+  that disables the box (422.41 s) and enters no trigger past the gate early. The track and the timeline are byte
+  for byte those of the gate-box step's diagnostic, which named the frame with `--play-elevator`. It does not
+  reach the descent's stage (500): 192 stages. The record's later commands were made by a person who had walked
+  through the gate before that stage, so the walker, late against them, walks elsewhere, as the board step's
+  record made through the door did. The waiting variant (held at the door and the gate) keeps its 220 stages in the same order,
+  500 at 488.36 s (488.42 s before; seconds at most 0.23 s apart).
+- The deck step's sweep of 20 early and 20 arriving-early synthetic persons, against the gate-box step's runs:
+  nobody who went through before is lost. Out of the vault: arriving early 14 of 20 and early 3 of 20, as
+  before; the descent's stage reached by 17 and 15, as before. 37 of the 40 set the same stages in the same order,
+  their seconds at most 48.7 ms apart. The three that reach the gate before the stage that opens it (arriving
+  early there, early from it and from the stop before) are now held at the box and the frame until that stage.
+  They set the two stages past the gate 0.17 and 1.2 s after it, where before they set them after walking round
+  the box. They still set 196 stages and do not reach the raised platform: their later timed steering, written
+  for an earlier pass, sticks on the way. None of them went through before.
+
+**The passed layers from the layer records.** The load order holds 57 collision layer records (`COLL`, layout
+in `spec/record-layouts.tsv`, read by `fo4_plugin::coll`). They have indexes 0 to 56 once each. Each record
+lists the layer records it collides with, and the lists are symmetric. The record of index 30 is the layer of a
+walking character's body by prior knowledge. Its list holds 37 layers, among them the collision box's 35 and
+the stair helper's 31. Its list also holds 39, 40, 41 and 43, which the constant `world::PASSED_LAYERS` reads as
+passed. It does not hold 42, 44 or 49 (passed by the constant) or 6, 8, 15, 18, 19, 21, 23, 25, 32, 34, 36,
+37, 47, 48, 50, 51 and 53.
+
+So the derived set is not the constant. For the marker boxes the data stores:
+- Word 40 (the house front door's box) would stand.
+- Words 15 and 53 would be passed.
+
+`--play-marker-box-layer-records` (`play_collision_marker_box_layer_records_v1`, off by default, needs
+`--play-marker-box-layers`; `world::passed_layers_from_records`, `world::Passed`, `world::CHARACTER_LAYER`)
+derives the passed set from the records at each walking world's build, with the constant as the fallback when
+the load order has no record of index 30 or the records do not read. `play.txt` says which was used and how the
+set differs from the constant. Under it the on-time synthetic person stops at the house's front door: 144 stages,
+the same list in the same seconds as with every box standing. The switch is not in the preset, and the
+preset's behaviour is unchanged.
+
+Whether a listed pair makes a box solid to a walking character, or only to rays and other bodies, is not
+settled by the records. The front door measurement of `play_collision_marker_box_layer_passed_v1` decides
+between the two readings.
+
 ## What the play mode does not do yet
 
 - The elevators ride only those the caller names (`--play-elevator`), headless and in the scripted window;
@@ -1206,9 +1303,9 @@ What the records give (outputs outside git):
 - The exterior's collision platform that an enable marker holds while the elevator rises (the exterior
   trigger's script disables the marker after waiting 12 s; the interpreter does not time the wait) is not
   read: the walker stands on the exterior elevator's own hatch and platform instead.
-- The checkpoint's gate frame: a static whose model carries a transform controller, its collision refused, so a
-  walker sliding along the gate's marker box goes round its end before the stage that opens the way (the gate-box
-  step); only a caller's `--play-elevator` naming it places its collision.
+- The checkpoint's gate frame stands only with `--play-collision-static-fields` (the gate-frame step); a static
+  whose collision chain a controller moves is still refused, and the collision of any model whose animation
+  moves a node a body reads is not posed by the clock.
 - Plain doors: no collision is placed for any door, so none blocks the walker; the open state is not read, but with
   `--play-held-doors` a door the run's scripts close with its activation blocked holds the walker (the board step).
 - Moving collision with a node (an animated door, a platform) is modelled only for the references the caller
@@ -1267,3 +1364,5 @@ What the records give (outputs outside git):
 | `play_collision_marker_boxes_v1` | `--play-marker-boxes` (in the preset since the gate-box step) | the gate's and the front door's boxes and the stages that disable them; that the obstacle flag makes a box solid for the player is prior knowledge | weak |
 | `play_collision_marker_box_layer_passed_v1` | `--play-marker-box-layers` (with `--play-marker-boxes`; in the preset) | the boxes' `XTRI` words over the load order: the gate's 35, the front door's 40, the vault exit's 49 with an editor id naming a navigation cutter; 620 of 860 boxes of 49 under enable parents, 131 of 208 boxes of 31 tilted; what each word means and that a character passes the pick and cutter layers is prior knowledge of the engine's layer list | weak |
 | `play_door_closed_blocked_holds_v1` | `--play-held-doors` (in the preset) | the house door's closing, its blocked activation and the evacuation stage that opens it, as the run's scripts call them; the two natives' meaning from the Creation Kit's documentation; that a closed door is solid and its object bounds stand for its solid part is prior knowledge | weak |
+| `refr_static_fields_collision_unchanged_v1` | `--play-collision-static-fields` (in the preset since the gate-frame step) | the published field names of `XACT`, `XLRT`, `XOWN` and `ONAM`; a load-order census of the statics storing them (36 admitted, among them the checkpoint gate's frame); that a static has no door, activation, ownership or location behaviour that moves its collision is prior knowledge | weak |
+| `play_collision_marker_box_layer_records_v1` | `--play-marker-box-layer-records` (with `--play-marker-box-layers`; not in the preset) | the load order's collision layer records read under their published layout, their lists symmetric; that index 30 is a walking character's layer and what a listed pair does to a box are prior knowledge; the records list 39, 40, 41 and 43 with it, against the constant | weak |

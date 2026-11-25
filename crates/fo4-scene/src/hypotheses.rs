@@ -243,6 +243,10 @@ pub const SEQUENCE_CHAIN_POSE: &str = "nif_sequence_chain_pose_v1";
 /// A reference's unread `XALP` leaves its collision as stored
 /// (`crate::readiness`, behind `readiness::Switches::reference_alpha`).
 pub const REFERENCE_ALPHA_COLLISION: &str = "refr_xalp_collision_unchanged_v1";
+/// A static's reference fields `XACT`, `XLRT`, `XOWN` and `ONAM` leave its
+/// collision as stored (`crate::readiness`, behind
+/// `readiness::Switches::static_fields`).
+pub const STATIC_REFERENCE_FIELDS_COLLISION: &str = "refr_static_fields_collision_unchanged_v1";
 /// Terrain of an exterior cell (`crate::terrain`, `spec/land.md`).
 pub const LAND_OF_CELL: &str = "land_single_cell_child_v1";
 pub const LAND_ACCUMULATION: &str = "land_vhgt_row_accumulation_v1";
@@ -696,6 +700,7 @@ mod tests {
             SEQUENCE_HELD_POSE,
             SEQUENCE_CHAIN_POSE,
             REFERENCE_ALPHA_COLLISION,
+            STATIC_REFERENCE_FIELDS_COLLISION,
             LAND_OF_CELL,
             LAND_ACCUMULATION,
             LAND_UNITS,

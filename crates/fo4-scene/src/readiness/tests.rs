@@ -397,3 +397,42 @@ fn switched_blockers_are_set_aside_only_under_their_rule() {
     // Off by default.
     assert!(!Switches::default().any());
 }
+
+#[test]
+fn a_statics_reference_fields_are_named_by_field_code_and_base() {
+    for (code, found) in [
+        (
+            "UninterpretedVisualSubrecord",
+            "REFR.XACT.layout_not_established",
+        ),
+        ("RuntimeRecordState", "REFR.XLRT"),
+        (
+            "UninterpretedVisualSubrecord",
+            "REFR.XOWN.layout_not_established",
+        ),
+        ("RuntimeRecordState", "REFR.ONAM"),
+    ] {
+        assert!(static_reference_field(&e(code, found)), "{found}");
+    }
+    for (code, found) in [
+        ("RuntimeRecordState", "REFR.XRGD"),
+        (
+            "UninterpretedVisualSubrecord",
+            "REFR.XALP.layout_not_established",
+        ),
+        ("RuntimeRecordState", "DOOR.ONAM"),
+        ("UnsupportedNifField", "REFR.XOWN.x"),
+        ("RuntimeRecordState", "XLRT"),
+    ] {
+        assert!(!static_reference_field(&e(code, found)), "{found}");
+    }
+    assert!(static_base(*b"STAT"));
+    for s in [b"DOOR", b"ACTI", b"MSTT", b"FURN", b"CONT"] {
+        assert!(!static_base(*s));
+    }
+    assert!(Switches {
+        static_fields: true,
+        ..Switches::default()
+    }
+    .any());
+}

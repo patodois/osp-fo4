@@ -281,3 +281,11 @@ SCOL.FLTR	"FLTR - Filter"	0	43	texto em campo de 43 bytes; até NUL	43	2244	fech
 SCOL.FLTR	"FLTR - Filter"	0	12	texto em campo de 12 bytes; até NUL	12	2244	fechado
 SCOL.FLTR	"FLTR - Filter"	0	13	texto em campo de 13 bytes; até NUL	13	2244	fechado
 STAT.FTYP	"FTYP - Forced Loc Ref Type"	0	4	FormID, u32 LE; somente hex	4	2	fechado
+COLL.EDID	"EDID - Editor ID"	0	*	texto até NUL (fonte: UESP, ver record-layouts.md#coll)	6..25	57	fechado
+COLL.DESC	"DESC - Description"	0	4	u32 LE; id de texto localizado, não resolvido	4	57	fechado
+COLL.BNAM	"BNAM - Layer Index"	0	4	u32 LE	4	57	fechado
+COLL.FNAM	"FNAM - Debug Color"	0	4	bytes, na ordem impressa	4	57	fechado
+COLL.GNAM	"GNAM - Flags"	0	4	u32 LE; palavra guardada, bits não lidos	4	57	fechado
+COLL.MNAM	"MNAM - Name"	0	*	texto até NUL	6..25	57	fechado
+COLL.INTV	"INTV - Interactables Count"	0	4	u32 LE; número de FormIDs em CNAM	4	57	fechado
+COLL.CNAM	"CNAM - Collides With"	0	4 x INTV	FormID, u32 LE; somente hex; cada um um COLL	4..164	56	fechado

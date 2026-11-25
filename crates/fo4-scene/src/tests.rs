@@ -17,7 +17,7 @@ pub(crate) fn record(sig: &[u8; 4], id: u32, flags: u32, data: &[u8]) -> Vec<u8>
     v.extend(data);
     v
 }
-fn group(kind: u32, id: u32, data: &[u8]) -> Vec<u8> {
+pub(crate) fn group(kind: u32, id: u32, data: &[u8]) -> Vec<u8> {
     let mut v = b"GRUP".to_vec();
     v.extend((data.len() as u32 + 24).to_le_bytes());
     v.extend(id.to_le_bytes());
@@ -72,7 +72,11 @@ fn fixture_with_cell(runtime: bool, unknown: bool, extra: &[u8]) -> Fixture {
 }
 /// A fixture whose cell children groups are `children(rf)`, `rf` being a
 /// placed reference's NAME, DATA and XSCL.
-fn fixture_with(unknown: bool, extra: &[u8], children: impl FnOnce(&[u8]) -> Vec<u8>) -> Fixture {
+pub(crate) fn fixture_with(
+    unknown: bool,
+    extra: &[u8],
+    children: impl FnOnce(&[u8]) -> Vec<u8>,
+) -> Fixture {
     let temp = TestDir::new("scene-case11");
     let root = temp.join("Data");
     fs::create_dir_all(root.join("meshes")).unwrap();

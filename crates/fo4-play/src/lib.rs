@@ -118,6 +118,12 @@ pub mod rules {
     /// stays out of the walking world; a box with no word, or another,
     /// stands as before (`--play-marker-box-layers`).
     pub const MARKER_BOX_LAYER_PASSED: &str = "play_collision_marker_box_layer_passed_v1";
+    /// Under `MARKER_BOX_LAYER_PASSED`, the passed layers are the indexes of
+    /// the load order's collision layer records that the record of the
+    /// character's layer (`world::CHARACTER_LAYER`) does not list as ones
+    /// it collides with; `world::PASSED_LAYERS` when the records give none
+    /// (`--play-marker-box-layer-records`).
+    pub const MARKER_BOX_LAYER_RECORDS: &str = "play_collision_marker_box_layer_records_v1";
     /// A `MoveTo` the run calls on the player with zero offsets and a
     /// target whose place the world model settles puts the walker at the
     /// target's position in the target's space (the walking world of its

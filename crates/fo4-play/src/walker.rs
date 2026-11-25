@@ -64,6 +64,12 @@ pub struct Options {
     /// ([`crate::world::Options::marker_box_layers`];
     /// `play_collision_marker_box_layer_passed_v1`, `--play-marker-box-layers`).
     pub marker_box_layers: bool,
+    /// With `marker_box_layers`, the passed layers from the load order's
+    /// collision layer records
+    /// ([`crate::world::Options::marker_box_layer_records`];
+    /// `play_collision_marker_box_layer_records_v1`,
+    /// `--play-marker-box-layer-records`).
+    pub marker_box_layer_records: bool,
     /// The loaded doors' boxes in every walking world the walker builds,
     /// standing while the run holds a door closed with its activation
     /// blocked ([`crate::world::Options::held_doors`];
@@ -94,6 +100,7 @@ impl Default for Options {
             child_flag_agrees: false,
             marker_boxes: false,
             marker_box_layers: false,
+            marker_box_layer_records: false,
             held_doors: false,
             stand: None,
             first_met: false,
@@ -274,6 +281,9 @@ fn collision_rules(o: &Options) -> std::collections::BTreeSet<&'static str> {
     if o.marker_boxes && o.marker_box_layers {
         out.insert(crate::rules::MARKER_BOX_LAYER_PASSED);
     }
+    if o.marker_boxes && o.marker_box_layers && o.marker_box_layer_records {
+        out.insert(crate::rules::MARKER_BOX_LAYER_RECORDS);
+    }
     if o.held_doors {
         out.insert(crate::rules::HELD_DOORS);
     }
@@ -282,6 +292,9 @@ fn collision_rules(o: &Options) -> std::collections::BTreeSet<&'static str> {
     }
     if c.reference_alpha {
         out.insert(fo4_scene::hypotheses::REFERENCE_ALPHA_COLLISION);
+    }
+    if c.static_fields {
+        out.insert(fo4_scene::hypotheses::STATIC_REFERENCE_FIELDS_COLLISION);
     }
     out
 }
@@ -1442,6 +1455,7 @@ impl Walker {
             child_flag_agrees: self.opts.child_flag_agrees,
             marker_boxes: self.opts.marker_boxes,
             marker_box_layers: self.opts.marker_box_layers,
+            marker_box_layer_records: self.opts.marker_box_layer_records,
             held_doors: self.opts.held_doors,
         };
         if let Some(f) = self.on_load.as_mut() {
@@ -1689,6 +1703,7 @@ mod tests {
             collision: fo4_scene::readiness::Switches {
                 off_chain: true,
                 reference_alpha: true,
+                static_fields: false,
             },
             child_flag_agrees: true,
             ..Options::default()

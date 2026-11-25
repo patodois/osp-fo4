@@ -188,6 +188,16 @@ rules byte for byte):
   build with every switch off keeps its memory accounting byte for byte.
 - `reference_alpha` (`refr_xalp_collision_unchanged_v1`): a reference's
   unread `XALP` (two bytes; xEdit's published name: alpha) is set aside.
+- `static_fields` (`refr_static_fields_collision_unchanged_v1`): on a
+  reference whose base is a static (`STAT`), the record blockers of its
+  `XACT` and `XOWN` (bytes not read) and `XLRT` and `ONAM` (read as run-time
+  state; xEdit's published names: action flag, owner, location ref type,
+  open by default) are set aside (`readiness::static_reference_field`,
+  `readiness::static_base`). Over the load order 4,772 references of statics
+  store one of the four; with the other switches on, 36 of them are refused
+  by these fields alone, among them the opening's checkpoint gate frame,
+  whose transform controller turns a node with no collision under it (the
+  off-chain switch already sets its blockers aside).
 
 A set-aside blocker relies on the better standing of its own covering rule
 and the switch's rule, as a render-only blocker does

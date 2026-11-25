@@ -2,6 +2,7 @@
 //! TES4-family FO4 envelopes, selected fields and explicit FormKey resolution.
 //! See spec/plugin.md and spec/strings.md; unhandled bytes remain available.
 pub mod actor;
+pub mod coll;
 pub mod condition;
 pub mod dial;
 pub mod enable;
