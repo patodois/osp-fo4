@@ -1560,6 +1560,26 @@ at 3 s blocks its activation, and whether the game refuses the player's key on a
 blocked is not in the data, so the reading stays `play_door_activation_opens_held_before_visit_v1` (pending) and the
 early open is left as it is.
 
+**What the records give (this branch's `play_run`, outputs outside git).** With the play options the sessions
+recorded (no `--play-door-toggle`): both records 275 stages, every output byte for byte but `play.txt`'s timings. With
+`--play-door-toggle` added the person's E now closes what the old prompt offered to open: the first record keeps its
+275 stages (the first 223 at their seconds; the front door closed at 137.68 s and 331.85 s, the second reopened by the
+evacuation stage's script at 383.94 s; the prewar slider closed at 1506.06 s holds the 1531 s crossing until the second
+E at 1562.97 s, so the next stage comes 20.3 s later and the rest about 0.28 s later); the second record stops at 222
+stages: its E at 664.61 s on the prewar slider, then shown open, closes it and the recorded keys never press E there
+again. Records made under the new prompt are what tests the rule.
+
+**The checkpoint strip and the catwalk's second stop (report only).** The walls report: the strip beside the guard
+is held by the collision marker box the data places across the gap (`walk_collision_marker_box_v1`'s half extents,
+148 units across, its stage disables it) and the gate frame's static; neither pose of the drawn leaf lies across that
+gap (`play_static_leaf_two_pose_v1`), so the strip looks open while the box holds it: the data's box, not changed. The catwalk's second stop (both records) is the exit walkway's ramp part (`play_platform_part_holds_walker_v1`):
+its near end stands 48 units above the walker's floor, more than the step, from its stored pose until about 42.2 s into
+the sequence the console starts, and lies on the floor from 43 s; the skinned grating over it is drawn from the same
+part motion each frame and spans 49 to 57 units at rest, so the drawing does not lag the collision. The edge is 16
+units ahead of the walker's axis and 63 below the eye, under the window's lower edge, so the raised grating reads as
+flat. Both persons released W before the ramp came down (first record 2070.07 s, ramp down at about 2072 s; second
+2301.22 s, about 2302 s).
+
 ## What the play mode does not do yet
 
 - The elevators ride only those the caller names (`--play-elevator`), headless and in the scripted window;
