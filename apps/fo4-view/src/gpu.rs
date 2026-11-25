@@ -3112,7 +3112,10 @@ fn play_scripted(
     // stops while the person pauses).
     let dt = time.delta_secs_f64().min(PLAY_FRAME_MAX);
     let paused = person.as_ref().is_some_and(|x| x.person.paused);
-    let go = ready && seen.feet.is_some() && !paused;
+    // --play-from: the run goes there unpaced; the clock is held until
+    // the window stands ready there.
+    let held_from = p.play_from_holds(seen.t, ready && seen.feet.is_some());
+    let go = ready && seen.feet.is_some() && !paused && !held_from;
     let given = if go { dt } else { 0.0 };
     let mut play_clock = seen.t;
     let changed = match person.as_deref_mut() {
@@ -3262,6 +3265,11 @@ fn play_scripted(
                 shots.asked = None;
                 shots.written += 1;
             }
+        } else if let Some(from) = p.play_from_pending().filter(|_| seen.done.is_none()) {
+            // --play-from: no frame before the window's pace takes over.
+            shots.next = p
+                .next_shot(from - 1e-6)
+                .unwrap_or(((from / every).floor() + 1.0) * every);
         } else if ready
             && seen.feet.is_some()
             && (seen.t >= shots.next || seen.done.is_some() && !shots.last)

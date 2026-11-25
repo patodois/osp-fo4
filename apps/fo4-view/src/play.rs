@@ -156,6 +156,21 @@ mod enabled {
         pub hud: bool,
     }
 
+    /// `--play-from`: the second the run goes to unpaced, whether the gate
+    /// was opened to it, since when the window stood ready there, and
+    /// whether the window's pace took over.
+    struct PlayFrom {
+        at: f64,
+        opened: bool,
+        ready_since: Option<std::time::Instant>,
+        done: bool,
+    }
+
+    /// Wall seconds the window holds the play clock at `--play-from`'s
+    /// second once its cell is drawn, for the cast and the exposure to come
+    /// (viewer policy).
+    pub const FROM_SETTLE_SECONDS: f64 = 4.0;
+
     /// The window's side of the scripted run (`--play-input`).
     struct Scripted {
         gate: Arc<Gate>,
@@ -169,6 +184,9 @@ mod enabled {
         shots: Option<(String, f64)>,
         /// `--play-shots-between FROM TO EVERY`.
         shots_between: Vec<[f64; 3]>,
+        /// `--play-from SECONDS`: the second, whether the gate was opened
+        /// to it, and since when the window stood ready there.
+        from: Option<PlayFrom>,
         /// `--timeline-cast`: the cast's worker and what it built.
         cast: Option<CastWork>,
         /// `--play-keys`: a person's keys drive the walker.
@@ -636,6 +654,12 @@ mod enabled {
                     loading: None,
                     shots: p.shots.clone(),
                     shots_between: p.shots_between.clone(),
+                    from: p.from.map(|at| PlayFrom {
+                        at,
+                        opened: false,
+                        ready_since: None,
+                        done: false,
+                    }),
                     cast,
                     keys,
                     data,
@@ -790,6 +814,55 @@ mod enabled {
                 }
             }
             (self.statuses().then(|| link::title(&self.last)), clock)
+        }
+
+        /// `--play-from`: whether the window holds the play clock this
+        /// frame. The first call opens the gate to the second (the run goes
+        /// there as fast as it computes); the clock is held until the run
+        /// is there, the window is `ready` (its cell drawn) and
+        /// [`FROM_SETTLE_SECONDS`] have passed, then never again.
+        pub fn play_from_holds(&mut self, t: f64, ready: bool) -> bool {
+            let Some(s) = self.scripted.as_mut() else {
+                return false;
+            };
+            let Some(f) = s.from.as_mut() else {
+                return false;
+            };
+            if f.done {
+                return false;
+            }
+            if !f.opened {
+                s.gate.open_to(f.at);
+                f.opened = true;
+                println!(
+                    "play: --play-from {:.3}: the run goes unpaced to that second",
+                    f.at
+                );
+            }
+            // There: the run's clock reached the second, or the run waits at
+            // the opened horizon (its last slice may end just short of it).
+            let there = t >= f.at || s.gate.waits_at(f.at);
+            if !there || !ready {
+                f.ready_since = None;
+                return true;
+            }
+            let since = *f.ready_since.get_or_insert_with(std::time::Instant::now);
+            if since.elapsed().as_secs_f64() < FROM_SETTLE_SECONDS {
+                return true;
+            }
+            f.done = true;
+            println!(
+                "play: --play-from {:.3}: the window's pace takes over at {t:.3} s of the run",
+                f.at
+            );
+            false
+        }
+
+        /// `--play-from`'s second while the window has not taken over: no
+        /// frame is written before it.
+        pub fn play_from_pending(&self) -> Option<f64> {
+            let f = self.scripted.as_ref()?.from.as_ref()?;
+            (!f.done).then_some(f.at)
         }
 
         /// The shots asked for (`--play-shots DIR --play-shot-every S`).
@@ -1273,6 +1346,25 @@ mod enabled {
         fn stop(&self) {
             if let Ok(mut g) = self.state.lock() {
                 g.stopped = true;
+            }
+            self.moved.notify_all();
+        }
+
+        /// Whether the run waits for the window with the horizon at
+        /// `until` or past it.
+        fn waits_at(&self, until: f64) -> bool {
+            self.state
+                .lock()
+                .is_ok_and(|g| g.waiting && g.horizon >= until)
+        }
+
+        /// `--play-from`: the run may go up to `until` whatever the
+        /// window's clock (the horizon is raised to it, never lowered).
+        fn open_to(&self, until: f64) {
+            if let Ok(mut g) = self.state.lock() {
+                if until.is_finite() && until > g.horizon {
+                    g.horizon = until;
+                }
             }
             self.moved.notify_all();
         }
@@ -2357,6 +2449,21 @@ mod enabled {
             assert!(queue.is_empty());
             assert_eq!(what(next_ask(&mut queue, &mut prepare)), "prepare true");
             assert_eq!(what(next_ask(&mut queue, &mut prepare)), "none");
+        }
+
+        #[test]
+        fn play_from_opens_the_gate_to_its_second_and_never_lowers_it() {
+            let gate = Gate::default();
+            // Busy frames are owed at most GATE_BUSY_MAX; the open is not.
+            gate.open_to(745.0);
+            assert!(gate.wait(745.0));
+            assert!(!gate.waits_at(745.0));
+            gate.state.lock().unwrap().waiting = true;
+            assert!(gate.waits_at(745.0) && !gate.waits_at(746.0));
+            gate.state.lock().unwrap().waiting = false;
+            gate.open_to(10.0);
+            gate.open_to(f64::NAN);
+            assert_eq!(gate.state.lock().unwrap().horizon, 745.0);
         }
 
         #[test]

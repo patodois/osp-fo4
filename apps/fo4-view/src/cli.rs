@@ -18,7 +18,7 @@ usage:
             [(--play-input INPUT_FILE | --play-keys --play-stand SECONDS
               [--play-record FILE] [--play-keys-from FILE]) [play_run's play options...]
              [--play-shots DIR --play-shot-every SECONDS
-              [--play-shots-between FROM TO EVERY]...]
+              [--play-shots-between FROM TO EVERY]...] [--play-from SECONDS]
              [--timeline-cast [the cast readings of a --timeline frame]]
              [the light switches of --headless]]]
            [--draw-child-flag-agrees] [--draw-platforms] [--draw-static-fields]
@@ -118,7 +118,14 @@ usage:
       (under ./build, as every output) each time the run passes a multiple
       of SECONDS, and with --play-shots-between FROM TO EVERY (repeated)
       every EVERY seconds from FROM to TO too; the window closes when the
-      run ends. With --play-elevator the named references' drawn parts
+      run ends. --play-from SECONDS (with --play-input; test and
+      measurement only) lets the run go as fast as it computes up to that
+      second of its clock, the window loading only the cells the walker is
+      in when it looks, no frame written before it; there the window loads
+      the walker's cell and its cast, holds the clock 4 wall seconds, and
+      goes on at the window's pace: showing second N of a record takes
+      about a minute plus the loads. The run and its outputs are the same.
+      With --play-elevator the named references' drawn parts
       follow the motion of their collision's parts (the walker's
       platforms) each frame. With --timeline-cast
       (and the readings a --timeline frame takes with it: the start clip
@@ -611,6 +618,9 @@ pub struct Play {
     /// What the viewport shows besides the scene (`crate::hud`): on with
     /// `--play-keys`, asked for in the scripted window with `--play-hud`.
     pub hud: bool,
+    /// `--play-from SECONDS` (with `--play-input`): the run goes unpaced
+    /// to that second of its clock before the window's pace takes over.
+    pub from: Option<f64>,
 }
 
 /// What drives `play_run`'s walker in the window.
@@ -877,6 +887,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
     let (mut play_input, mut play_shots, mut play_shot_every) = (None, None, None);
     let (mut play_keys, mut play_record, mut play_keys_from) = (false, None, None);
     let mut play_hud = false;
+    let mut play_from: Option<f64> = None;
     let mut shots_between: Vec<[f64; 3]> = Vec::new();
     let mut drawing = Drawing::default();
     let mut rest = args[3..].iter();
@@ -931,6 +942,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             "--play-input" => play_input = Some(value()?.clone()),
             "--play-keys" => play_keys = true,
             "--play-hud" => play_hud = true,
+            "--play-from" => play_from = Some(not_negative(value()?)?),
             "--play-record" => play_record = Some(value()?.clone()),
             "--play-keys-from" => play_keys_from = Some(value()?.clone()),
             "--play-shots" => play_shots = Some(value()?.clone()),
@@ -1043,6 +1055,11 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
     }
     if !play_keys && (play_record.is_some() || play_keys_from.is_some()) {
         return Err("--play-record and --play-keys-from need --play-keys".into());
+    }
+    if play_from.is_some() && play_input.is_none() {
+        return Err(
+            "--play-from SECONDS runs a scripted input ahead: it needs --play-input".into(),
+        );
     }
     let walker_input = match (play_input, play_keys) {
         (Some(file), _) => Some(Input::Script(file)),
@@ -1279,6 +1296,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             input: walker_input,
             shots,
             shots_between,
+            from: play_from,
         }),
         (None, None) if !play_switches.any() && walker_input.is_none() && shots.is_none() => None,
         _ => {
@@ -1757,6 +1775,7 @@ mod tests {
                 shots: None,
                 shots_between: Vec::new(),
                 hud: false,
+                from: None,
             }
         );
         let live = parse(&args(
@@ -1828,6 +1847,19 @@ mod tests {
             panic!("{dense:?}")
         };
         assert_eq!(p.shots_between, [[478., 512., 2.], [725., 800., 2.]]);
+        assert_eq!(p.from, None);
+        let late = parse(&args(
+            "m d C --under-hypotheses --walk --eye 1,2,3 --look 4,5,6 --play-run s.txt --play-out o --play-input i.txt --play-from 700 --play-shots d --play-shot-every 30",
+        ))
+        .unwrap();
+        let Command::Window { play: Some(p), .. } = late else {
+            panic!("{late:?}")
+        };
+        assert_eq!(p.from, Some(700.0));
+        assert!(parse(&args(
+            "m d C --under-hypotheses --walk --eye 1,2,3 --look 4,5,6 --play-run s.txt --play-out o --play-keys --play-stand 0.1 --play-reach 150 --play-from 700"
+        ))
+        .is_err());
         assert!(scene.play_platforms.is_empty());
         let c = parse(&args(
             "m d C --under-hypotheses --walk --terrain --around 1 --no-stream --eye 1,2,3 --look 4,5,6 --play-run s.txt --play-out o",
