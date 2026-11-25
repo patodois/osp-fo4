@@ -1626,6 +1626,32 @@ the grid rebuilds' seconds), as a window session's always does from its replay. 
 run's walker build at each change of square (2 to 4 s in the logs) shares the machine with the load. The largest step
 left is the square's draw list (0.9 to 1.5 s: each model is decoded again for each load).
 
+### The lift's landing and its lower floor (the tenth-session step, nothing changed)
+
+Both sessions, walking from the first lift's deck at the foot of its shaft toward the stairs, came off onto a lower
+floor and went back to the lift before taking the stairs (A from 753 to 823 s of the run, B from 722 to 742 s). The
+walls report on both records and column probes of the walking world (`column_probe`, outputs outside git): the room
+the lift comes down into is one static, and its collision mesh, as read, holds a landing strip beside the shaft at
+z -122.4, about 60 units wide, a vertical face 22.6 units high, and past it a lower floor at z -145.1 that runs to the
+foot of the stairs, which rise from it (the stairs are the same model's collision). The face is higher than the
+walker's 20-unit step (`walk_step_height_v1`, provisional): the walker comes down off the strip, and walking at the
+face holds it. A came down onto the lower floor at 753.0 s and got back up at the floor's south edge at 753.2 s, came
+down again at 778.9 s, was held 1.06 s against the face (779.47 to 780.53 s, the room's own collision, normal toward
+the floor), stood 26 s, got back up at the face's north end at 806.6 s, went to the deck and from there across the
+strip, down the face and up the stairs (820 to 822 s). B
+was held 2.0 s on the strip by a rigid part of the lift's own collision (722.94 to 724.91 s), stood, went back to the
+deck, crossed the strip, came down the face at 741.7 s and went up the stairs.
+
+The collision agrees with the data: the strip, the face and the lower floor are the room model's collision mesh,
+placed under `collision_model_blockers_off_chain_v1` (its animation and particle blocks are off its collision chain).
+What disagrees with what the person saw is that the room is not drawn at all: render readiness refuses the static
+whole (a behaviour graph, transform and particle controllers, a material swap with a filter, eight materials whose
+alpha-blend factors the draw does not source, an unread texture slot), so the strip, the face, the lower floor and
+the stairs are drawn nowhere and the window shows the clear colour under the walker there; the lift and the
+machinery around are other references and are drawn. Nothing is changed: the ledge is the data's; drawing the room
+needs its material swap's filter and its blend factors read, a render-readiness step of its own; whether the player in
+the game steps up 22.6 units is for the step height rule's measurement.
+
 ## What the play mode does not do yet
 
 - The elevators ride only those the caller names (`--play-elevator`), headless and in the scripted window;
