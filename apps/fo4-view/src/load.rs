@@ -570,13 +570,52 @@ pub fn actor_lines(
     out
 }
 
-/// The scene assets (models, materials and textures as read from the
-/// archives) one cell load leaves for the next (viewer policy: the play
-/// window's cell loads, `crate::play`): a load whose path policy and clock
-/// switches are the same starts from them instead of an empty cache, so the
-/// cells shared by neighbouring grid squares are not read again. What the
-/// load builds is what an empty cache gives.
-pub type KeptAssets<'s> = Option<fo4_scene::Assets<'s>>;
+/// Where a cell load's time goes, step by step (the play window's
+/// measurement line; it changes nothing loaded).
+pub(crate) struct Steps {
+    last: std::time::Instant,
+    out: Vec<(&'static str, f64)>,
+}
+
+impl Steps {
+    pub(crate) fn new() -> Steps {
+        Steps {
+            last: std::time::Instant::now(),
+            out: Vec::new(),
+        }
+    }
+
+    /// The seconds since the last mark, under `name`.
+    pub(crate) fn mark(&mut self, name: &'static str) {
+        let now = std::time::Instant::now();
+        self.out
+            .push((name, now.duration_since(self.last).as_secs_f64()));
+        self.last = now;
+    }
+
+    #[cfg_attr(not(feature = "script-event"), allow(dead_code))]
+    pub(crate) fn line(&self) -> String {
+        self.out
+            .iter()
+            .map(|(n, s)| format!("{n} {s:.2} s"))
+            .collect::<Vec<_>>()
+            .join(", ")
+    }
+}
+
+/// What one cell load leaves for the next (viewer policy: the play window's
+/// cell loads, `crate::play`): the scene assets (models, materials and
+/// textures as read from the archives), from which a load whose path
+/// policy and clock switches are the same starts instead of an empty
+/// cache, so the cells shared by neighbouring grid squares are not read
+/// again; and the cells the named platforms are placed in
+/// (`fo4_scene::platform::PlacedCells`), so the store's placements are
+/// read once per name. What the load builds is what an empty slot gives.
+#[derive(Default)]
+pub struct KeptAssets<'s> {
+    pub assets: Option<fo4_scene::Assets<'s>>,
+    pub placed: fo4_scene::platform::PlacedCells,
+}
 
 /// The most memory the kept assets may hold for the next load to start from
 /// them (else the next load starts empty).
@@ -685,7 +724,7 @@ pub fn cell<'s>(
     // The assets the previous load left, when they were read the same way.
     let mut kept = kept;
     if let Some(slot) = kept.as_deref_mut() {
-        if let Some(a) = slot.take() {
+        if let Some(a) = slot.assets.take() {
             if a.clock == loader.assets.clock
                 && a.path_policy == loader.assets.path_policy
                 && !a.unavailable()
@@ -695,6 +734,7 @@ pub fn cell<'s>(
             }
         }
     }
+    let mut steps = Steps::new();
     let mut cell_rule = None;
     // CELL as a record key (`plugin:XXXXXXXX`, as the timeline writes
     // keys): that cell (the play mode's change of space loads cells so).
@@ -709,6 +749,7 @@ pub fn cell<'s>(
         (_, Some(key)) => scoped(&budget, |b| loader.cell(&key, b))?,
         _ => scoped(&budget, |b| loader.by_editor_id(cell, b))?,
     };
+    steps.mark("cell");
     // --around N: the placed references of the exterior cells within N grid
     // steps join the scene, as in the CPU render. Without it nothing changes.
     let grid = if around > 0 {
@@ -716,6 +757,7 @@ pub fn cell<'s>(
         let a = scoped(&budget, |b| {
             fo4_scene::grid::around(store, &scene.cell.key, around, b)
         })?;
+        steps.mark("neighbours");
         let loads = fo4_scene::grid::absorb_around(&mut loader, &mut scene, &a, &budget)?;
         let cells: Vec<String> = loads
             .iter()
@@ -730,6 +772,7 @@ pub fn cell<'s>(
             started.elapsed().as_secs_f64(),
             cells.join(", ")
         );
+        steps.mark("references");
         Some(a)
     } else {
         None
@@ -811,6 +854,7 @@ pub fn cell<'s>(
         }
         _ => None,
     };
+    steps.mark("records");
     // --play-live-world: the references the run may enable drawn too (the
     // window hides them until it does), taken out again after the build.
     #[cfg(feature = "script-event")]
@@ -822,9 +866,15 @@ pub fn cell<'s>(
     // --draw-platforms: the named platforms drawn by their models as stored
     // (`fo4_scene::platform`), their skinned shapes as actors on their
     // models' own nodes. Without it nothing changes.
+    steps.mark("dormant");
+    let mut placed = fo4_scene::platform::PlacedCells::default();
+    let placed = match kept.as_deref_mut() {
+        Some(slot) => &mut slot.placed,
+        None => &mut placed,
+    };
     let platform_actors = if drawing.platforms && !platforms.is_empty() {
         let (added, actors) =
-            fo4_scene::platform::add(&mut scene, &mut loader, platforms, &budget)?;
+            fo4_scene::platform::add_with(&mut scene, &mut loader, platforms, placed, &budget)?;
         let keys = |v: &[fo4_plugin::FormKey]| {
             v.iter()
                 .map(fo4_scene::timeline::key_text)
@@ -853,6 +903,7 @@ pub fn cell<'s>(
     // --draw-held-doors: the loaded doors drawn by their models as stored
     // (`fo4_scene::platform`'s state, as a named platform), shown by the
     // window only while the walker's held doors' reading says so.
+    steps.mark("platforms");
     let door_keys: Vec<fo4_plugin::FormKey> = if drawing.held_doors {
         scene
             .instances
@@ -869,7 +920,7 @@ pub fn cell<'s>(
     };
     if !door_keys.is_empty() {
         let (added, skinned) =
-            fo4_scene::platform::add(&mut scene, &mut loader, &door_keys, &budget)?;
+            fo4_scene::platform::add_with(&mut scene, &mut loader, &door_keys, placed, &budget)?;
         println!(
             "doors: {} of {} loaded doors drawn as stored for the held doors' reading (play_door_drawn_as_held_v1), {} not ({} with skinned shapes left out)",
             added.drawn.len(),
@@ -905,6 +956,7 @@ pub fn cell<'s>(
             fo4_scene::timeline::ride::add_skinned(c, &loader, &scene, level, &budget)?;
         }
     }
+    steps.mark("doors");
     let cast_actors = timeline_cast.as_ref().and_then(|c| c.cast.as_ref());
     let mut build = if let Some(c) = cast_actors {
         let build = match poses {
@@ -1050,6 +1102,7 @@ pub fn cell<'s>(
             );
         }
     }
+    steps.mark("draw list");
     let doors = if door_keys.is_empty() {
         Vec::new()
     } else {
@@ -1075,6 +1128,7 @@ pub fn cell<'s>(
     if let Some(d) = dormant_drawn {
         crate::play::undraw_dormant(&mut scene, d);
     }
+    steps.mark("doors and leaves");
     // The terrain of the cell and, for walking, of its neighbours. Without
     // --terrain and --walk nothing is loaded and the draw list is unchanged.
     let ground = match (&grid, walk || terrain) {
@@ -1175,6 +1229,7 @@ pub fn cell<'s>(
     // the light switches, but for effect shader surfaces; the markers after
     // it are not (as the CPU render).
     let lit_until = build.list.draws.len();
+    steps.mark("terrain");
     // --timeline: the actors' markers after every other draw, the camera
     // and the overlay.
     let mut drawn = match (timeline, &applied, timeline_cast) {
@@ -1224,6 +1279,7 @@ pub fn cell<'s>(
         }
         None => None,
     };
+    steps.mark("light");
     #[cfg(feature = "script-event")]
     let mut pick = None;
     #[cfg(feature = "script-event")]
@@ -1303,6 +1359,8 @@ pub fn cell<'s>(
                 walk_started.duration_since(load_started).as_secs_f64(),
                 walk_started.elapsed().as_secs_f64()
             );
+            steps.mark("walking world");
+            println!("play: load steps: {}", steps.line());
         }
         Some(world)
     } else {
@@ -1324,7 +1382,7 @@ pub fn cell<'s>(
         refs.resize(w.sources.len(), None);
     }
     if let Some(slot) = kept {
-        *slot = Some(std::mem::replace(
+        slot.assets = Some(std::mem::replace(
             &mut loader.assets,
             fo4_scene::Assets::with_policy(vfs, &budget, level),
         ));

@@ -1580,6 +1580,52 @@ units ahead of the walker's axis and 63 below the eye, under the window's lower 
 flat. Both persons released W before the ramp came down (first record 2070.07 s, ramp down at about 2072 s; second
 2301.22 s, about 2302 s).
 
+### The outdoor stalls (the tenth-session step)
+
+Two person sessions reached the surface on the ninth-session build. The first step into each outdoor grid square
+stood the walker while the window loaded the square's drawing (the run waits for it): A 6.5, 3.5, 3.4, 2.8, 2.3 and
+2.5 s, B 15.2, 5.0, 3.2, 3.9, 2.9 and 4.5 s (the tester's frame ranges). The windows' logs give each as the load, from
+the ask to the cell's arrival, plus its upload (0.07 to 0.22 s); B's first and last loads include 5.1 and 1.7 s of
+waiting for a cast build the play data thread had started before the cell was asked; A waited for none. Measured
+headless on the play data thread with the sessions' arguments and timelines (`play::tests::measure_the_windows_cell_loads`,
+ignored, outputs outside git; a cast asked 0.5 s before each cell; the run's own walker build, which shares the
+machine in the window, not run) and timed by step (`play: load steps` in the log): finding the cells about the
+square takes 0.03 s; the street's square read every model and texture again (5.3 s against 1.8 to 2.7 s for the
+squares after it), because the window loads its first cell itself, with data it opens for that load, so the play
+data thread's kept assets start empty; and each load looked the named platforms up in the store's placements once
+per name (0.6 s).
+
+- A cast build gives way to a cell load (viewer policy): `PlayRun::load` sets a flag the play data thread reads
+  between the cast build's steps (the cell, the actors, their poses, the draw list; `timeline::cast_scene` then gives
+  nothing), the cell is loaded, and the new cell's cast is asked once it is drawn (none is asked while a cell loads;
+  the old cell's cast left with it already).
+- The first cell read again (viewer policy): once the window draws, the play data thread loads the window's first
+  cell again when nothing else is asked (`DataAsk::Prepare`, 4.7 s headless, what it drew dropped), so the first
+  change of cell starts from its assets. A cell asked during that read waits for it; the opening's first change of
+  cell comes minutes later.
+- The named platforms' cells are found in one pass over the placements and kept with the assets
+  (`fo4_scene::platform::PlacedCells`, `add_with`; `add` as before).
+
+Seconds from the cell's ask to its arrival, the cast's waiting first (the tester's stall includes the upload):
+
+| Square | A stall | A window load (cast) | A headless before | A headless after | B stall | B window load (cast) | B headless before | B headless after |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| street | 6.46 | 6.33 (0) | 2.25 + 5.27 | 0.98 + 2.09 | 15.24 | 14.79 (5.08) | 2.16 + 5.27 | 0.91 + 2.09 |
+| trail | 3.46 | 3.33 (0) | 1.55 + 2.72 | 0.22 + 2.07 | 5.03 | 4.88 (0) | 1.52 + 2.71 | 0.22 + 2.11 |
+| bridge | 3.36 | 3.21 (0) | 1.67 + 2.64 | 0.34 + 2.03 | 3.20 | 3.07 (0) | 1.66 + 2.62 | 0.34 + 2.01 |
+| hill | 2.75 | 2.65 (0) | 1.60 + 2.23 | 0.10 + 1.61 | 3.93 | 3.68 (0) | 1.58 + 2.22 | 0.10 + 1.61 |
+| rock bend | 2.28 | 2.18 (0) | 1.98 + 1.80 | 0.53 + 1.18 | 2.85 | 2.70 (0) | 1.97 + 1.79 | 0.53 + 1.18 |
+| deck approach | 2.47 | 2.40 (0) | 1.66 + 2.11 | 0.20 + 1.52 | 4.51 | 4.42 (1.74) | 1.67 + 2.10 | 0.21 + 1.52 |
+
+A cast now gives way within 0.1 to 1.0 s (the step it is in ends first). What is drawn is unchanged: the headless
+loads print the same placements, omissions, meshes, textures, surfaces, instances, platforms, doors, terrain, lights
+and walking world for every load, and the first cell read again prints what the window's first load prints. With
+`play_run` built from this step both records replay as on the ninth-session build: 6 of 7 outputs byte for byte, the
+timeline among them, and `play.txt` differing only in its timing lines (`seconds:`, `cost:`, the live world's and
+the grid rebuilds' seconds), as a window session's always does from its replay. Not measured in a window: there the
+run's walker build at each change of square (2 to 4 s in the logs) shares the machine with the load. The largest step
+left is the square's draw list (0.9 to 1.5 s: each model is decoded again for each load).
+
 ## What the play mode does not do yet
 
 - The elevators ride only those the caller names (`--play-elevator`), headless and in the scripted window;
@@ -1613,8 +1659,10 @@ flat. Both persons released W before the ramp came down (first record 2070.07 s,
   spaced as the caller wrote them; with `quest_run --action-after-actor-moves` in the run's arguments the
   spouse's two moves are held until the stage that sends her, the deck step; the exit elevator's descent event
   stays at its second).
-- A grid square's drawing is loaded whole by the window (the early step keeps the scene assets of one load for the next:
-  2.1 to 3.2 s after the first crossing, 5.9 s for the first), overlapped with the walker's build since the person step.
+- A grid square's drawing is loaded whole by the window (the early step keeps the scene assets of one load for the next,
+  the tenth-session step reads the first cell again for them and lets a cast build give way: 1.2 to 2.1 s headless for
+  the opening's outdoor squares), overlapped with the walker's build since the person step; its models are decoded
+  again for each load.
 - The reach of an activation, the walker's speed and its tick are the caller's; the activation key and the
   crosshair are the eye's ray (the prompt names what the ray meets; no activation distance from the data).
 - Sound, menus, combat, the player's animation events: still the caller's.

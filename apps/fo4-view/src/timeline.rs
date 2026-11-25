@@ -202,7 +202,10 @@ pub struct CastScene {
 /// The same code path as a headless `--timeline --timeline-cast` frame,
 /// with the run's timeline as it stands instead of a file and without the
 /// changes `fo4_scene::timeline::apply` makes to the cell (the live world
-/// makes them in the window).
+/// makes them in the window). `stop` is asked between the build's steps
+/// (the cell, the actors, their poses, the draw list): `true` gives
+/// `None`, nothing built (the play data thread's cast giving way to a cell
+/// load, a viewer policy).
 #[cfg(feature = "script-event")]
 #[allow(clippy::too_many_arguments)]
 pub fn cast_scene(
@@ -212,8 +215,10 @@ pub fn cast_scene(
     cell: &fo4_plugin::FormKey,
     timeline: &Timeline,
     second: f64,
-) -> AnyResult<CastScene> {
+    stop: &dyn Fn() -> bool,
+) -> AnyResult<Option<CastScene>> {
     let started = std::time::Instant::now();
+    let mut steps = crate::load::Steps::new();
     let limits = &sources.manifest.limits;
     let budget = crate::load::scene_budget(s.scene_memory, limits);
     let mut loader = fo4_scene::Loader::new(
@@ -229,6 +234,10 @@ pub fn cast_scene(
     let scope = budget.child();
     let mut scene = loader.cell(cell, &scope)?;
     scope.commit(&budget)?;
+    steps.mark("cell");
+    if stop() {
+        return Ok(None);
+    }
     let frame = timeline.at_with(
         second,
         tl::Readings {
@@ -244,6 +253,10 @@ pub fn cast_scene(
     };
     let Cast { markers, cast } = self::cast(&prepared, a, &scene, &mut loader, s.level, &budget)?;
     let mut cast = cast.ok_or("PlayCast: no cast")?;
+    steps.mark("actors");
+    if stop() {
+        return Ok(None);
+    }
     let poses = if a.pose.any() {
         Some(tl::cast::start_poses(
             &mut cast,
@@ -258,6 +271,10 @@ pub fn cast_scene(
     } else {
         None
     };
+    steps.mark("poses");
+    if stop() {
+        return Ok(None);
+    }
     // The cell's light, before its references leave the build.
     let light = fo4_scene::light::frame(
         &sources.store,
@@ -296,6 +313,10 @@ pub fn cast_scene(
     };
     scene.instances = placed;
     let mut build = built?;
+    steps.mark("draw list");
+    if stop() {
+        return Ok(None);
+    }
     let lit_until = build.list.draws.len();
     let d = fo4_render::timeline::cast_markers(&mut build, &cast, s.level, &budget)?;
     let lit = light.as_ref().map(|_| {
@@ -311,15 +332,17 @@ pub fn cast_scene(
     };
     let gpu =
         crate::scene::convert_lit(&mut build.list, &render, light.as_ref().zip(lit.as_deref()))?;
+    steps.mark("markers and convert");
     let line = format!(
-        "{} actors of the run in the cell's space at {second:.3} s ({} left out), {} drawn as characters ({} posed by their start clip), {} as markers; {} GPU instances; built in {:.2} s",
+        "{} actors of the run in the cell's space at {second:.3} s ({} left out), {} drawn as characters ({} posed by their start clip), {} as markers; {} GPU instances; built in {:.2} s ({})",
         cast.actors.actors.len(),
         markers.1.len(),
         d.characters.len(),
         cast.posed,
         d.fallback.len(),
         gpu.instances.len(),
-        started.elapsed().as_secs_f64()
+        started.elapsed().as_secs_f64(),
+        steps.line()
     );
     let key = |k: usize| {
         cast.markers
@@ -337,7 +360,7 @@ pub fn cast_scene(
             .iter()
             .map(|(k, why)| format!("head left out {}: {why}", key(*k))),
     );
-    Ok(CastScene { gpu, line, details })
+    Ok(Some(CastScene { gpu, line, details }))
 }
 
 #[cfg(all(test, feature = "script-event"))]
@@ -409,7 +432,9 @@ mod tests {
             ],
             ..Timeline::default()
         };
-        let c = super::cast_scene(&sources, &scene, &a, &room, &timeline, 5.).unwrap();
+        let c = super::cast_scene(&sources, &scene, &a, &room, &timeline, 5., &|| false)
+            .unwrap()
+            .unwrap();
         assert!(
             c.line.starts_with("2 actors of the run in the cell's space at 5.000 s (0 left out), 1 drawn as characters (0 posed by their start clip), 1 as markers"),
             "{}",
@@ -417,8 +442,27 @@ mod tests {
         );
         assert!(!c.gpu.instances.is_empty());
         // No actor placed by the timeline: nothing drawn.
-        let none =
-            super::cast_scene(&sources, &scene, &a, &room, &Timeline::default(), 5.).unwrap();
+        let none = super::cast_scene(
+            &sources,
+            &scene,
+            &a,
+            &room,
+            &Timeline::default(),
+            5.,
+            &|| false,
+        )
+        .unwrap()
+        .unwrap();
         assert!(none.gpu.instances.is_empty(), "{}", none.line);
+        // A cell load asked while the cast is built: it gives way after
+        // its first step, nothing built.
+        let asks = std::cell::Cell::new(0);
+        let stop = || {
+            asks.set(asks.get() + 1);
+            true
+        };
+        let gave_way = super::cast_scene(&sources, &scene, &a, &room, &timeline, 5., &stop);
+        assert!(gave_way.unwrap().is_none());
+        assert_eq!(asks.get(), 1);
     }
 }

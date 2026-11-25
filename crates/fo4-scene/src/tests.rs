@@ -1724,4 +1724,28 @@ fn agreeing_own_flags_decide_collision_presence_only_behind_their_switch() {
     ] {
         assert!(i.state.hypotheses().contains(&r), "{r}");
     }
+    // The same with the cells kept across loads (`PlacedCells`): only the
+    // name the scene does not hold is looked up, once, and found nowhere;
+    // a name looked up for itself is found in the room's cell.
+    let mut placed = crate::platform::PlacedCells::default();
+    for _ in 0..2 {
+        let mut again = loader.by_editor_id("SyntheticRoom", &b).unwrap();
+        let (kept, kept_actors) = crate::platform::add_with(
+            &mut again,
+            &mut loader,
+            &[named.clone(), absent.clone()],
+            &mut placed,
+            &b,
+        )
+        .unwrap();
+        assert_eq!(kept, added);
+        assert!(kept_actors.is_empty());
+    }
+    assert!(placed.asked(&absent) && placed.cell(&absent).is_none());
+    assert!(!placed.asked(&named));
+    placed.find(&store, std::slice::from_ref(&named));
+    assert_eq!(
+        placed.cell(&named).map(crate::timeline::norm),
+        Some(crate::timeline::norm(&s.cell.key))
+    );
 }

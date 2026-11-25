@@ -20,7 +20,8 @@
 //!   (`fo4_render::draw::Build::left_out`), the rest of the model drawn.
 use crate::{actor, hypotheses, readiness, Instance, Loader, Scene};
 use fo4_core::{Budget, Error};
-use fo4_plugin::FormKey;
+use fo4_plugin::{typed::Store, FormKey};
+use std::collections::{BTreeMap, BTreeSet};
 
 fn rule(code: &str, src: &fo4_core::SourceSpan, found: &str) -> Error {
     Error::new(
@@ -82,6 +83,54 @@ pub struct Added {
     pub not: Vec<(FormKey, String)>,
 }
 
+/// The cell each named reference is placed in, by the first of the store's
+/// winning placements that places it (`None`: none does), for the named
+/// references a scene does not hold ([`add_with`]). One pass over the
+/// placements finds every key not asked before, so a caller that keeps it
+/// across loads (the play window's cell loads) reads the placements once
+/// per key; what [`add_with`] does with it is what [`add`] does.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct PlacedCells(BTreeMap<FormKey, Option<FormKey>>);
+
+impl PlacedCells {
+    /// Finds, in one pass over `store`'s placements, the cell of each of
+    /// `keys` not asked before.
+    pub fn find(&mut self, store: &Store, keys: &[FormKey]) {
+        let wanted: BTreeSet<FormKey> = keys
+            .iter()
+            .map(crate::timeline::norm)
+            .filter(|k| !self.0.contains_key(k))
+            .collect();
+        if wanted.is_empty() {
+            return;
+        }
+        let mut found: BTreeMap<FormKey, FormKey> = BTreeMap::new();
+        for (w, c) in store.placement_cells() {
+            if found.len() == wanted.len() {
+                break;
+            }
+            let k = crate::timeline::norm(&store.overrides().form_key(w.key, store.order()));
+            if wanted.contains(&k) && !found.contains_key(&k) {
+                found.insert(k, c);
+            }
+        }
+        for k in wanted {
+            let c = found.remove(&k);
+            self.0.insert(k, c);
+        }
+    }
+
+    /// The cell found for `key` (normalised), if it was asked and placed.
+    pub fn cell(&self, key: &FormKey) -> Option<&FormKey> {
+        self.0.get(&crate::timeline::norm(key))?.as_ref()
+    }
+
+    /// Whether `key` was asked (found placed or not).
+    pub fn asked(&self, key: &FormKey) -> bool {
+        self.0.contains_key(&crate::timeline::norm(key))
+    }
+}
+
 /// Gives each of `named` that stands in `scene`'s space the platform state
 /// ([`state`]), loading its instance when the scene does not hold it (in a
 /// worldspace, when it stands inside the horizontal box of the loaded
@@ -94,7 +143,30 @@ pub fn add(
     named: &[FormKey],
     b: &Budget,
 ) -> Result<(Added, Vec<actor::Actor>), Error> {
+    add_with(scene, loader, named, &mut PlacedCells::default(), b)
+}
+
+/// [`add`], the cells of the named references the scene does not hold
+/// found through `placed` (kept by the caller across loads).
+pub fn add_with(
+    scene: &mut Scene,
+    loader: &mut Loader<'_>,
+    named: &[FormKey],
+    placed: &mut PlacedCells,
+    b: &Budget,
+) -> Result<(Added, Vec<actor::Actor>), Error> {
     let store = loader.plugins;
+    let held: BTreeSet<FormKey> = scene
+        .instances
+        .iter()
+        .map(|i| crate::timeline::norm(&i.reference.key))
+        .collect();
+    let missing: Vec<FormKey> = named
+        .iter()
+        .filter(|k| !held.contains(&crate::timeline::norm(k)))
+        .cloned()
+        .collect();
+    placed.find(store, &missing);
     let space = crate::timeline::scene_space(store, scene);
     let world = store.world(&scene.cell.key).is_some();
     let (mut lo, mut hi) = ([f32::INFINITY; 2], [f32::NEG_INFINITY; 2]);
@@ -119,13 +191,7 @@ pub fn add(
         let k = match at {
             Some(k) => k,
             None => {
-                let cell = store
-                    .placement_cells()
-                    .find(|(w, _)| {
-                        crate::timeline::norm(&store.overrides().form_key(w.key, store.order()))
-                            == wanted
-                    })
-                    .map(|(_, c)| c);
+                let cell = placed.cell(&wanted).cloned();
                 let s = cell.map(|c| crate::timeline::norm(&store.world(&c).unwrap_or(c)));
                 if s.as_ref() != Some(&space) {
                     out.not

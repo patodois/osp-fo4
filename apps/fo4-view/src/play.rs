@@ -45,6 +45,7 @@ mod enabled {
     use std::collections::BTreeMap;
     use std::fmt::Write as _;
     use std::rc::Rc;
+    use std::sync::atomic::{AtomicBool, Ordering};
     use std::sync::mpsc::{channel, Receiver, Sender};
     use std::sync::{Arc, Condvar, Mutex};
 
@@ -175,6 +176,12 @@ mod enabled {
         /// The play data thread ([`data_worker`]), started with the run:
         /// the cell loads and the cast's builds.
         data: Sender<DataAsk>,
+        /// Set when a cell load is asked of the play data thread, cleared
+        /// when it starts it: a cast being built gives way.
+        cell_asked: Arc<AtomicBool>,
+        /// The window's first cell, until [`PlayRun::prepare`] asks the
+        /// play data thread to read it again.
+        prepare: Option<(Box<crate::cli::Scene>, bool)>,
     }
 
     /// A cell load asked of the play data thread: the scene's switches for
@@ -217,7 +224,13 @@ mod enabled {
         sig: CastSig,
     }
 
-    type CastDone = (FormKey, CastSig, Result<crate::timeline::CastScene, String>);
+    /// The cast built for a cell and signature; `Ok(None)`: set aside
+    /// unbuilt because a cell load was asked.
+    type CastDone = (
+        FormKey,
+        CastSig,
+        Result<Option<crate::timeline::CastScene>, String>,
+    );
 
     /// The timeline's events a cast depends on: an actor's place, a
     /// visibility change, a death, a sit or a get-up.
@@ -230,10 +243,40 @@ mod enabled {
         }
     }
 
-    /// What the play data thread is asked: a cast or a cell load.
+    /// What the play data thread is asked: a cast, a cell load, or the
+    /// window's first cell read again for the assets it leaves the first
+    /// change of cell (`Prepare`: the scene's switches and the live world;
+    /// what it draws is dropped).
     enum DataAsk {
         Cast(CastAsk),
         Cell(CellAsk),
+        Prepare(Box<crate::cli::Scene>, bool),
+    }
+
+    /// What the play data thread does next of what it was asked (`queue`,
+    /// in the order asked) and the first cell's read kept aside
+    /// (`prepare`): a cell load first; else the newest cast, the older ones
+    /// dropped; else the first cell read again ([`DataAsk::Prepare`] is
+    /// taken out of the queue into `prepare` as it comes).
+    fn next_ask(
+        queue: &mut std::collections::VecDeque<DataAsk>,
+        prepare: &mut Option<(Box<crate::cli::Scene>, bool)>,
+    ) -> Option<DataAsk> {
+        if let Some(i) = queue.iter().position(|a| matches!(a, DataAsk::Prepare(..))) {
+            if let Some(DataAsk::Prepare(s, live)) = queue.remove(i) {
+                *prepare = Some((s, live));
+            }
+        }
+        match queue.iter().position(|a| matches!(a, DataAsk::Cell(_))) {
+            Some(i) => queue.remove(i),
+            None => match queue.pop_back() {
+                Some(last) => {
+                    queue.clear();
+                    Some(last)
+                }
+                None => prepare.take().map(|(s, live)| DataAsk::Prepare(s, live)),
+            },
+        }
     }
 
     /// The window's play data thread (viewer policy): it opens the game
@@ -242,13 +285,16 @@ mod enabled {
     /// ([`crate::timeline::cast_scene`]) and the cell loads
     /// ([`crate::load_scene_with`]), so a change of cell does not open them
     /// again and the window keeps one set of them open for both. A cell
-    /// load asked is done first (the window waits for it); of the cast's
-    /// requests only the newest counts. What it loads is what a load that
-    /// opens the data gives.
+    /// load asked is done first (the window waits for it): a cast being
+    /// built when one is asked (`cell_asked`) is set aside between two of
+    /// its steps and the cell loaded (the window asks the new cell's cast
+    /// once it is drawn); of the cast's requests only the newest counts.
+    /// What it loads is what a load that opens the data gives.
     fn data_worker(
         scene: crate::cli::Scene,
         cast: Option<(crate::timeline::Args, Sender<CastDone>)>,
         asks: Receiver<DataAsk>,
+        cell_asked: Arc<AtomicBool>,
     ) {
         let opened = std::time::Instant::now();
         let sources = crate::load::open(&scene.manifest, &scene.data).map_err(|e| e.to_string());
@@ -259,11 +305,14 @@ mod enabled {
             ),
             Err(e) => eprintln!("play: the play data thread's sources: {e}"),
         }
-        // The assets one cell load leaves for the next (`load::KeptAssets`).
-        let mut kept: crate::load::KeptAssets<'_> = None;
+        // What one cell load leaves for the next (`load::KeptAssets`).
+        let mut kept = crate::load::KeptAssets::default();
+        // The window's first cell, read again here for its assets
+        // ([`DataAsk::Prepare`]), once nothing else is asked.
+        let mut prepare: Option<(Box<crate::cli::Scene>, bool)> = None;
         let mut queue: std::collections::VecDeque<DataAsk> = std::collections::VecDeque::new();
         loop {
-            if queue.is_empty() {
+            if queue.is_empty() && prepare.is_none() {
                 match asks.recv() {
                     Ok(a) => queue.push_back(a),
                     Err(_) => return,
@@ -272,17 +321,9 @@ mod enabled {
             while let Ok(a) = asks.try_recv() {
                 queue.push_back(a);
             }
-            let next = match queue.iter().position(|a| matches!(a, DataAsk::Cell(_))) {
-                Some(i) => queue.remove(i),
-                None => {
-                    // Only the newest cast request counts.
-                    let last = queue.pop_back();
-                    queue.clear();
-                    last
-                }
-            };
-            match next {
+            match next_ask(&mut queue, &mut prepare) {
                 Some(DataAsk::Cell(a)) => {
+                    cell_asked.store(false, Ordering::SeqCst);
                     let r = match &sources {
                         Ok(src) => crate::load_scene_with(
                             &a.scene,
@@ -312,19 +353,47 @@ mod enabled {
                     };
                     let _ = a.reply.send(r);
                 }
+                Some(DataAsk::Prepare(first, live)) => {
+                    let Ok(src) = &sources else {
+                        continue;
+                    };
+                    let started = std::time::Instant::now();
+                    match crate::load_scene_with(&first, true, live, Some(src), Some(&mut kept)) {
+                        Ok(_) => println!(
+                            "play: the window's first cell read again on the play data thread in {:.2} s, its assets kept for the first change of cell (what it drew dropped)",
+                            started.elapsed().as_secs_f64()
+                        ),
+                        Err(e) => eprintln!("play: the first cell read again: {e}"),
+                    }
+                }
                 Some(DataAsk::Cast(ask)) => {
                     let (Some((args, done)), Ok(src)) = (&cast, &sources) else {
                         continue;
                     };
-                    let r = crate::timeline::cast_scene(
-                        src,
-                        &scene,
-                        args,
-                        &ask.cell,
-                        &ask.timeline,
-                        ask.second,
-                    )
-                    .map_err(|e| e.to_string());
+                    let started = std::time::Instant::now();
+                    let stop = || cell_asked.load(Ordering::SeqCst);
+                    let r = if stop() {
+                        Ok(None)
+                    } else {
+                        crate::timeline::cast_scene(
+                            src,
+                            &scene,
+                            args,
+                            &ask.cell,
+                            &ask.timeline,
+                            ask.second,
+                            &stop,
+                        )
+                        .map_err(|e| e.to_string())
+                    };
+                    if matches!(r, Ok(None)) {
+                        println!(
+                            "play: cast of {} at {:.3} s of the run set aside after {:.2} s: a cell load was asked",
+                            fo4_scene::timeline::key_text(&ask.cell),
+                            ask.second,
+                            started.elapsed().as_secs_f64()
+                        );
+                    }
                     if done.send((ask.cell, ask.sig, r)).is_err() {
                         return;
                     }
@@ -479,10 +548,15 @@ mod enabled {
                 let (data, asks) = channel();
                 let (done, from) = channel();
                 let (scene, cast_args) = (s.clone(), s.play_cast.clone());
+                let cell_asked = Arc::new(AtomicBool::new(false));
+                let asked = cell_asked.clone();
                 std::thread::Builder::new()
                     .name("fo4-view play data".into())
-                    .spawn(move || data_worker(scene, cast_args.map(|a| (a, done)), asks))
+                    .spawn(move || data_worker(scene, cast_args.map(|a| (a, done)), asks, asked))
                     .map_err(|e| format!("play: the play data thread: {e}"))?;
+                // The window loads its first cell itself; once it draws, the
+                // play data thread reads it again ([`PlayRun::prepare`]).
+                let prepare = Some((Box::new(s.clone()), p.switches.live_world));
                 let cast = match &s.play_cast {
                     Some(a) => {
                         println!(
@@ -511,6 +585,8 @@ mod enabled {
                     cast,
                     keys,
                     data,
+                    cell_asked,
+                    prepare,
                 };
                 (to_run, status, thread, Some(scripted))
             }
@@ -755,6 +831,7 @@ mod enabled {
                 started,
                 reply: tx,
             };
+            s.cell_asked.store(true, Ordering::SeqCst);
             match s.data.send(DataAsk::Cell(ask)) {
                 Ok(()) => s.loading = Some((Mutex::new(rx), started, at)),
                 Err(_) => eprintln!("play: the play data thread is gone"),
@@ -806,6 +883,22 @@ mod enabled {
             Some(Ok(r))
         }
 
+        /// Asks the play data thread, once, to read the window's first cell
+        /// again when it has nothing else to do ([`DataAsk::Prepare`]): the
+        /// first change of cell then starts from its assets instead of an
+        /// empty cache. Called each frame after the cast is asked, so the
+        /// first cast is built before it.
+        pub fn prepare(&mut self) {
+            let Some(s) = self.scripted.as_mut() else {
+                return;
+            };
+            if let Some((scene, live)) = s.prepare.take() {
+                if s.data.send(DataAsk::Prepare(scene, live)).is_err() {
+                    eprintln!("play: the play data thread is gone");
+                }
+            }
+        }
+
         /// `--timeline-cast`: asks the cast's thread for the run's actors of
         /// the drawn cell at the run's second when what decides them
         /// changed since the cast drawn (or asked for), none being built.
@@ -817,7 +910,9 @@ mod enabled {
             else {
                 return;
             };
-            if c.asked.is_some() {
+            // One at a time, and none while a cell loads: the new cell's
+            // cast is asked once it is drawn.
+            if c.asked.is_some() || s.loading.is_some() {
                 return;
             }
             if c.times.0 != seen.timeline_gen {
@@ -857,11 +952,13 @@ mod enabled {
                 return None;
             }
             match r {
-                Ok(x) => {
+                Ok(Some(x)) => {
                     c.built = Some((cell, sig));
                     c.builds += 1;
                     Some(x)
                 }
+                // Set aside for a cell load: asked again when due.
+                Ok(None) => None,
                 Err(e) => {
                     eprintln!("play: the cast: {e}");
                     // Not asked again until something changes.
@@ -1711,6 +1808,176 @@ mod enabled {
     #[cfg(test)]
     mod tests {
         use super::*;
+
+        /// Measurement only, with the game data (outputs outside git): a
+        /// session's window cell loads replayed headless on the play data
+        /// thread as the window asks them. `FO4_VIEW_PLAY_LOADS` names a
+        /// local list: `args FILE` (the window's argument files, in order),
+        /// `timeline FILE` (the session's run timeline, for the casts),
+        /// `lead SECONDS` (how long a cast is built before the cell is
+        /// asked, default 0.5) and per cell load `load SECOND CELL DRAWN`
+        /// (the run's second, the cell asked and the cell drawn before it,
+        /// whose cast is in progress when the cell is asked). Prints per
+        /// load when the cast came back and when the cell did.
+        #[test]
+        #[ignore = "needs the game data and a session's files named by FO4_VIEW_PLAY_LOADS (measurement only)"]
+        fn measure_the_windows_cell_loads() {
+            let list = std::env::var("FO4_VIEW_PLAY_LOADS").expect("FO4_VIEW_PLAY_LOADS");
+            let text = std::fs::read_to_string(&list).unwrap();
+            let (mut args, mut timeline, mut lead, mut loads) = (Vec::new(), None, 0.5, Vec::new());
+            for line in text.lines() {
+                let w: Vec<&str> = line.split_whitespace().collect();
+                match w.as_slice() {
+                    ["args", f] => args.extend(["--args".to_string(), f.to_string()]),
+                    ["timeline", f] => timeline = Some(f.to_string()),
+                    ["lead", x] => lead = x.parse::<f64>().unwrap(),
+                    ["load", t, cell, drawn] => loads.push((
+                        t.parse::<f64>().unwrap(),
+                        cell.to_string(),
+                        drawn.to_string(),
+                    )),
+                    _ => {}
+                }
+            }
+            let args = crate::cli::expand_args(&args, &|f| {
+                std::fs::read_to_string(f).map_err(|e| format!("{f}: {e}"))
+            })
+            .unwrap();
+            let crate::cli::Command::Window { scene: s, .. } = crate::cli::parse(&args).unwrap()
+            else {
+                panic!("not the window's arguments")
+            };
+            let t = timeline.expect("timeline FILE");
+            let tl = Arc::new(
+                fo4_scene::timeline::Timeline::parse(&std::fs::read_to_string(t).unwrap()).unwrap(),
+            );
+            let key = |k: &str| fo4_scene::timeline::parse_key(k).expect("a record key");
+            let (data, asks) = channel();
+            let (done, from) = channel();
+            let (scene, cast) = (s.clone(), s.play_cast.clone());
+            let cell_asked = Arc::new(AtomicBool::new(false));
+            let asked = cell_asked.clone();
+            std::thread::spawn(move || data_worker(scene, cast.map(|a| (a, done)), asks, asked));
+            // As the window does: its own load of the first cell, then
+            // (`PlayRun::prepare`) the first cell asked again of the play
+            // data thread.
+            let started = std::time::Instant::now();
+            // The window keeps the converted scene, not the draw list.
+            let (_drawn, _, first) = crate::load_scene(&s, true, true).unwrap();
+            drop(first);
+            println!(
+                "measure: first load {} in {:.2} s",
+                s.cell,
+                started.elapsed().as_secs_f64()
+            );
+            data.send(DataAsk::Prepare(Box::new(s.clone()), true))
+                .unwrap();
+            // The window's first change of cell comes minutes later.
+            std::thread::sleep(std::time::Duration::from_secs_f64(
+                std::env::var("FO4_VIEW_PLAY_LOADS_WAIT")
+                    .ok()
+                    .and_then(|x| x.parse().ok())
+                    .unwrap_or(12.0),
+            ));
+            for (second, cell, drawn) in loads {
+                let ask = CastAsk {
+                    cell: key(&drawn),
+                    timeline: tl.clone(),
+                    second,
+                    sig: 0,
+                };
+                data.send(DataAsk::Cast(ask)).unwrap();
+                std::thread::sleep(std::time::Duration::from_secs_f64(lead));
+                let asked = std::time::Instant::now();
+                let mut scene = s.clone();
+                scene.cell = cell.clone();
+                let (reply, loaded) = channel();
+                let ask = CellAsk {
+                    scene: Box::new(scene),
+                    cell: key(&cell),
+                    live: true,
+                    at: second,
+                    started: asked,
+                    reply,
+                };
+                cell_asked.store(true, Ordering::SeqCst);
+                data.send(DataAsk::Cell(ask)).unwrap();
+                let (mut cast_at, mut cell_at) = (None, None);
+                while cast_at.is_none() || cell_at.is_none() {
+                    if let Ok((_, _, r)) = from.try_recv() {
+                        let how = match &r {
+                            Ok(Some(_)) => "built".to_string(),
+                            Ok(None) => "set aside".to_string(),
+                            Err(e) => e.clone(),
+                        };
+                        cast_at = Some((asked.elapsed().as_secs_f64(), how));
+                    }
+                    if let Ok(r) = loaded.try_recv() {
+                        assert!(r.is_ok(), "{:?}", r.err());
+                        cell_at = Some(asked.elapsed().as_secs_f64());
+                    }
+                    std::thread::sleep(std::time::Duration::from_millis(5));
+                }
+                let (c, how) = cast_at.unwrap();
+                let l = cell_at.unwrap();
+                let waited = if c < l { c } else { 0.0 };
+                println!(
+                    "measure: load {cell} at {second:.3} s: cast of {drawn} back {c:.2} s after the cell's ask ({how}), cell back {l:.2} s after it; waited {waited:.2} s, loaded in {:.2} s",
+                    l - waited
+                );
+            }
+        }
+
+        #[test]
+        fn the_data_thread_loads_a_cell_first_then_the_newest_cast_then_the_first_cell_again() {
+            let line = "m d C --under-hypotheses --walk --eye 0,0,0 --look 1,0,0 --play-run s --play-out o --play-input i --timeline-cast";
+            let args: Vec<String> = line.split_whitespace().map(String::from).collect();
+            let crate::cli::Command::Window { scene, .. } = crate::cli::parse(&args).unwrap()
+            else {
+                panic!()
+            };
+            let key = |id: u32| FormKey {
+                plugin: "a.esm".into(),
+                object_id: id,
+            };
+            let cast = |sig: usize| {
+                DataAsk::Cast(CastAsk {
+                    cell: key(1),
+                    timeline: Arc::new(fo4_scene::timeline::Timeline::default()),
+                    second: 0.0,
+                    sig,
+                })
+            };
+            let (reply, _) = channel();
+            let cell = DataAsk::Cell(CellAsk {
+                scene: Box::new(scene.clone()),
+                cell: key(2),
+                live: false,
+                at: 0.0,
+                started: std::time::Instant::now(),
+                reply,
+            });
+            let mut queue: std::collections::VecDeque<DataAsk> = [
+                cast(1),
+                DataAsk::Prepare(Box::new(scene), true),
+                cell,
+                cast(2),
+            ]
+            .into();
+            let mut prepare = None;
+            let what = |a: Option<DataAsk>| match a {
+                Some(DataAsk::Cell(c)) => format!("cell {:x}", c.cell.object_id),
+                Some(DataAsk::Cast(c)) => format!("cast {}", c.sig),
+                Some(DataAsk::Prepare(_, live)) => format!("prepare {live}"),
+                None => "none".into(),
+            };
+            assert_eq!(what(next_ask(&mut queue, &mut prepare)), "cell 2");
+            assert!(prepare.is_some());
+            assert_eq!(what(next_ask(&mut queue, &mut prepare)), "cast 2");
+            assert!(queue.is_empty());
+            assert_eq!(what(next_ask(&mut queue, &mut prepare)), "prepare true");
+            assert_eq!(what(next_ask(&mut queue, &mut prepare)), "none");
+        }
 
         #[test]
         fn the_gate_holds_the_run_until_the_window_draws_that_far() {

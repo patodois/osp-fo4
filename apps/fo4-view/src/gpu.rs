@@ -2678,6 +2678,8 @@ fn play_scripted(
     if ready {
         p.cast_ask(&seen);
     }
+    // The first cell read again on the play data thread, once.
+    p.prepare();
     if let Some(c) = p.cast_done() {
         println!("play: cast at {:.3} s of the run: {}", seen.t, c.line);
         for d in &c.details {
