@@ -1168,4 +1168,32 @@ fn the_visible_points_are_the_nearest_faces_at_the_grid_cells() {
     let f = crate::lit_faces(&l, &vec![true; l.draws.len()]);
     assert!(!f.is_empty());
     assert!(crate::lit_faces(&l, &[]).is_empty());
+    // Each face's draw, in the same order.
+    let d = crate::lit_face_draws(&l, &vec![true; l.draws.len()]);
+    assert_eq!(d.len(), f.len());
+    assert!(d.windows(2).all(|w| w[0] <= w[1]));
+    // Hiding the wall (faces 0 and 1) shows the small faces behind it, by
+    // their indices; a moved copy of the wall given as extra faces is seen
+    // again, under the indices after the faces'.
+    let all = crate::seen_visible_of(&faces, &|_| true, &[], &cam, [32, 18]);
+    assert_eq!(
+        all.iter().map(|x| (x.1, x.2)).collect::<Vec<_>>(),
+        crate::seen_visible(&faces, &cam, [32, 18])
+    );
+    let mut walls = faces[..2].to_vec();
+    walls.extend(faces[..2].iter().map(|f| f.map(|p| [2000., p[1], p[2]])));
+    let open = crate::seen_visible_of(&walls, &|k| k > 1, &[], &cam, [32, 18]);
+    assert_eq!(open.len(), 32 * 18);
+    assert!(open
+        .iter()
+        .all(|(k, p, _)| *k > 1 && (p[0] - 2000.).abs() < 1e-3));
+    let moved: Vec<[[f32; 3]; 3]> = faces[..2]
+        .iter()
+        .map(|f| f.map(|p| [p[0] + 60., p[1], p[2]]))
+        .collect();
+    let back = crate::seen_visible_of(&walls, &|k| k > 1, &moved, &cam, [32, 18]);
+    assert_eq!(back.len(), 32 * 18);
+    assert!(back
+        .iter()
+        .all(|(k, p, _)| *k >= walls.len() && (p[0] - 100.).abs() < 1e-6));
 }

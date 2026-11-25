@@ -14,8 +14,9 @@ pub mod timeline;
 use fo4_core::{Budget, Error, Result};
 use fo4_scene::transform::Transform;
 pub use raster::{
-    lit_faces, lit_triangles, pixel_elevation, render, render_lit, seen_lit_points, seen_of,
-    seen_visible, Frame, Lighting, RenderOptions, Statistics, SEEN_POINTS, VISIBLE_GRID,
+    lit_face_draws, lit_faces, lit_triangles, pixel_elevation, render, render_lit, seen_lit_points,
+    seen_of, seen_visible, seen_visible_of, Frame, Lighting, RenderOptions, Statistics,
+    SEEN_POINTS, VISIBLE_GRID,
 };
 use serde::Serialize;
 #[derive(Debug, Clone, Copy)]

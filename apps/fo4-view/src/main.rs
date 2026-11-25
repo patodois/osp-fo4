@@ -122,16 +122,23 @@ fn load_scene_with<'s>(
     // exposure is measured on per view, kept before the list is converted.
     let view_triangles = match (&loaded.light, s.drawing.exposure_per_view) {
         (Some((l, lit)), true) if l.exposure.eye => Some(if s.drawing.exposure_visible {
-            scene::Seen::Faces(std::sync::Arc::new(fo4_render::lit_faces(
-                &loaded.build.list,
-                lit,
-            )))
+            (
+                scene::Seen::Faces(std::sync::Arc::new(fo4_render::lit_faces(
+                    &loaded.build.list,
+                    lit,
+                ))),
+                // Each face's draw: the window measures on what it draws.
+                fo4_render::lit_face_draws(&loaded.build.list, lit),
+            )
         } else {
-            scene::Seen::Centroids(fo4_render::lit_triangles(
-                &loaded.build.list,
-                lit,
-                scene::ViewExposure::TRIANGLES,
-            ))
+            (
+                scene::Seen::Centroids(fo4_render::lit_triangles(
+                    &loaded.build.list,
+                    lit,
+                    scene::ViewExposure::TRIANGLES,
+                )),
+                Vec::new(),
+            )
         }),
         _ => None,
     };
@@ -140,7 +147,7 @@ fn load_scene_with<'s>(
         &options,
         loaded.light.as_ref().map(|(l, lit)| (l, lit.as_slice())),
     )?;
-    if let (Some(triangles), Some((l, _)), Some(g)) =
+    if let (Some((triangles, face_draws)), Some((l, _)), Some(g)) =
         (view_triangles, loaded.light.as_ref(), gpu.light.as_ref())
     {
         println!(
@@ -153,7 +160,9 @@ fn load_scene_with<'s>(
             },
             l.points.len()
         );
-        gpu.view_exposure = Some(scene::ViewExposure::new(l, triangles, g.words.clone()));
+        gpu.view_exposure = Some(
+            scene::ViewExposure::new(l, triangles, g.words.clone()).with_face_draws(face_draws),
+        );
     }
     // The scripted play window's named platforms: their drawn shapes, to
     // follow their parts (only with --play-input and --play-elevator).

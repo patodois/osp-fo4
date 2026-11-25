@@ -204,6 +204,24 @@ pub fn seen_of(triangles: &[([f64; 3], [f64; 3])], camera: &Camera) -> Vec<([f64
 /// [`seen_visible`] depth-tests.
 pub fn lit_faces(list: &DrawList, lit: &[bool]) -> Vec<[[f32; 3]; 3]> {
     let mut all = Vec::new();
+    each_lit_face(list, lit, |_, f| all.push(f));
+    all
+}
+
+/// The draw (its index in `list.draws`) of each face [`lit_faces`] gives,
+/// in the same order: what lets a caller leave out or move the faces of a
+/// draw it hides or moves ([`seen_visible_of`]).
+pub fn lit_face_draws(list: &DrawList, lit: &[bool]) -> Vec<u32> {
+    let mut all = Vec::new();
+    each_lit_face(list, lit, |di, _| {
+        all.push(u32::try_from(di).unwrap_or(u32::MAX))
+    });
+    all
+}
+
+/// Each face of the draws `lit` marks, with its draw's index, in draw and
+/// triangle order; a triangle naming a vertex its mesh lacks is skipped.
+fn each_lit_face(list: &DrawList, lit: &[bool], mut each: impl FnMut(usize, [[f32; 3]; 3])) {
     for (di, draw) in list.draws.iter().enumerate() {
         if !lit.get(di).copied().unwrap_or(false) {
             continue;
@@ -221,11 +239,10 @@ pub fn lit_faces(list: &DrawList, lit: &[bool]) -> Vec<[[f32; 3]; 3]> {
                 }
             }
             if ok {
-                all.push(f);
+                each(di, f);
             }
         }
     }
-    all
 }
 
 /// The cells of the grid [`seen_visible`] lays over the frame, across and
@@ -246,6 +263,26 @@ pub fn seen_visible(
     camera: &Camera,
     grid: [u32; 2],
 ) -> Vec<([f64; 3], [f64; 3])> {
+    seen_visible_of(faces, &|_| true, &[], camera, grid)
+        .into_iter()
+        .map(|(_, p, n)| (p, n))
+        .collect()
+}
+
+/// [`seen_visible`] over the faces of `faces` that `keep` keeps (by index)
+/// and then every face of `extra`, each point with the index of its face
+/// (an index of `extra` after `faces.len()`): a window that hides some
+/// draws and moves others measures on what it draws (the moved draws'
+/// faces given again, moved, in `extra`, their stored ones not kept).
+/// With every face kept and no extra face the points are
+/// [`seen_visible`]'s.
+pub fn seen_visible_of(
+    faces: &[[[f32; 3]; 3]],
+    keep: &dyn Fn(usize) -> bool,
+    extra: &[[[f32; 3]; 3]],
+    camera: &Camera,
+    grid: [u32; 2],
+) -> Vec<(usize, [f64; 3], [f64; 3])> {
     let [gw, gh] = grid.map(|v| v.max(1) as usize);
     let [l, r, t, b, near, far] = camera.frustum;
     // Inverse forward distance of the nearest face at each cell (0: none).
@@ -259,7 +296,13 @@ pub fn seen_visible(
             w,
         ]
     };
-    for (fi, f) in faces.iter().enumerate() {
+    let n_faces = faces.len();
+    let all = faces
+        .iter()
+        .enumerate()
+        .filter(|(fi, _)| keep(*fi))
+        .chain(extra.iter().enumerate().map(|(k, f)| (n_faces + k, f)));
+    for (fi, f) in all {
         let c: [[f64; 3]; 3] = f.map(|p| camera.coordinates(p.map(f64::from)));
         if c.iter().all(|a| a[0] < near) || c.iter().all(|a| a[0] > far) {
             continue;
@@ -318,7 +361,13 @@ pub fn seen_visible(
     for y in 0..gh {
         for x in 0..gw {
             let at = y * gw + x;
-            let Some(f) = faces.get(who[at] as usize) else {
+            let fi = who[at] as usize;
+            let f = if fi < n_faces {
+                faces.get(fi)
+            } else {
+                extra.get(fi - n_faces)
+            };
+            let Some(f) = f else {
                 continue;
             };
             let u = l + (x as f64 + 0.5) / gw as f64 * (r - l);
@@ -348,7 +397,7 @@ pub fn seen_visible(
             } else {
                 n
             };
-            out.push((p, n));
+            out.push((fi, p, n));
         }
     }
     out

@@ -1879,6 +1879,218 @@ mod enabled {
     mod tests {
         use super::*;
 
+        /// Measurement only, with the game data (outputs outside git): the
+        /// scripted play window's exposure per view at given views of one
+        /// cell loaded as the window loads it. `FO4_VIEW_EXPOSURE` names a
+        /// local list: `args FILE` (the window's argument files, in order),
+        /// `cell KEY` and per view `view EX,EY,EZ LX,LY,LZ`. Prints the
+        /// exposure measured on every face as loaded, then with the draws
+        /// the window hides at load left out (the references the live world
+        /// starts absent, the held doors' draws), then also without the
+        /// named platforms' skinned draws (which the window skins again by
+        /// the parts' places in the run), and the references and draws
+        /// whose faces the eye meets most in the first, and how many of the
+        /// points seen no placed light reaches.
+        #[test]
+        #[ignore = "needs the game data and a local list named by FO4_VIEW_EXPOSURE (measurement only)"]
+        fn measure_the_view_exposure() {
+            let list = std::env::var("FO4_VIEW_EXPOSURE").expect("FO4_VIEW_EXPOSURE");
+            let text = std::fs::read_to_string(&list).unwrap();
+            let point = |x: &str| -> [f64; 3] {
+                let v: Vec<f64> = x.split(',').map(|v| v.parse().unwrap()).collect();
+                [v[0], v[1], v[2]]
+            };
+            let (mut args, mut cell, mut views) = (Vec::new(), None, Vec::new());
+            for line in text.lines() {
+                let w: Vec<&str> = line.split_whitespace().collect();
+                match w.as_slice() {
+                    ["args", f] => args.extend(["--args".to_string(), f.to_string()]),
+                    ["cell", c] => cell = Some(c.to_string()),
+                    ["view", e, l] => views.push((point(e), point(l))),
+                    _ => {}
+                }
+            }
+            let args = crate::cli::expand_args(&args, &|f| {
+                std::fs::read_to_string(f).map_err(|e| format!("{f}: {e}"))
+            })
+            .unwrap();
+            let crate::cli::Command::Window { scene: mut s, .. } =
+                crate::cli::parse(&args).unwrap()
+            else {
+                panic!("not the window's arguments")
+            };
+            s.cell = cell.expect("cell KEY");
+            let (gpu, _, loaded) = crate::load_scene(&s, true, true).unwrap();
+            let mut v = gpu.view_exposure.clone().expect("--exposure-eye per view");
+            let crate::scene::Seen::Faces(faces) = v.triangles.clone() else {
+                panic!("--exposure-eye-visible")
+            };
+            let draws = v.face_draws.clone();
+            let tag_of: BTreeMap<usize, u32> = gpu
+                .draws
+                .iter()
+                .zip(&gpu.instances)
+                .map(|(d, i)| (*d, i.tag))
+                .collect();
+            let live = loaded.live.as_ref().expect("--play-live-world");
+            let absent: std::collections::BTreeSet<&FormKey> = live
+                .info
+                .iter()
+                .filter(|(_, i)| i.piece != 0)
+                .map(|(k, _)| k)
+                .collect();
+            let door_draws: std::collections::BTreeSet<usize> =
+                loaded.doors.iter().map(|d| d.0).collect();
+            let mut hidden = crate::scene::DrawnNow::default();
+            for (d, tag) in &tag_of {
+                let gone = live
+                    .tags
+                    .get(tag)
+                    .is_some_and(|k| absent.contains(&fo4_scene::timeline::norm(k)));
+                if gone || door_draws.contains(d) {
+                    hidden.hidden.insert(*d as u32);
+                }
+            }
+            println!(
+                "measure: {} faces, {} draws hidden at load ({} of held doors)",
+                faces.len(),
+                hidden.hidden.len(),
+                door_draws.len()
+            );
+            let t0 = std::time::Instant::now();
+            for (eye, look) in views {
+                v.set_drawn(crate::scene::DrawnNow::default());
+                println!("measure: view {eye:?} {look:?}");
+                println!("measure: as loaded: {}", v.measure(eye, look, t0));
+                let size = fo4_scene::camera::REFERENCE_SIZE;
+                let cam = fo4_scene::camera::look_at(
+                    eye,
+                    look,
+                    fo4_scene::camera::reference_frustum(size),
+                    size,
+                )
+                .unwrap();
+                let mut by_ref: BTreeMap<String, (usize, bool)> = BTreeMap::new();
+                let mut by_draw: BTreeMap<usize, usize> = BTreeMap::new();
+                for (fi, _, _) in fo4_render::seen_visible_of(
+                    &faces,
+                    &|_| true,
+                    &[],
+                    &cam,
+                    fo4_render::VISIBLE_GRID,
+                ) {
+                    let d = draws[fi] as usize;
+                    *by_draw.entry(d).or_default() += 1;
+                    let key = tag_of
+                        .get(&d)
+                        .and_then(|t| live.tags.get(t))
+                        .map_or("-".to_string(), fo4_scene::timeline::key_text);
+                    let e = by_ref.entry(key).or_insert((0, false));
+                    e.0 += 1;
+                    e.1 |= hidden.hidden.contains(&(d as u32));
+                }
+                let mut top: Vec<_> = by_ref.into_iter().collect();
+                top.sort_by(|a, b| b.1 .0.cmp(&a.1 .0));
+                for (k, (n, h)) in top.iter().take(12) {
+                    println!(
+                        "measure:   {n} cells {k}{}",
+                        if *h { " (hidden at load)" } else { "" }
+                    );
+                }
+                let mut draws_top: Vec<_> = by_draw.into_iter().collect();
+                draws_top.sort_by(|a, b| b.1.cmp(&a.1));
+                for (d, n) in draws_top.iter().take(8) {
+                    let at = gpu.draws.iter().position(|x| x == d);
+                    let platform = at.and_then(|k| gpu.platforms.iter().find(|p| p.instance == k));
+                    let skin = at.is_some_and(|k| gpu.skins.iter().any(|x| x.instance == k));
+                    let (mut lo, mut hi) = ([f32::MAX; 3], [f32::MIN; 3]);
+                    let mut count = 0usize;
+                    for (f, fd) in faces.iter().zip(draws.iter()) {
+                        if *fd as usize == *d {
+                            count += 1;
+                            for p in f {
+                                for k in 0..3 {
+                                    lo[k] = lo[k].min(p[k]);
+                                    hi[k] = hi[k].max(p[k]);
+                                }
+                            }
+                        }
+                    }
+                    println!("measure:   draw {d}: {count} faces within {lo:?} to {hi:?}");
+                    println!(
+                        "measure:   draw {d}: {n} cells; {}{}",
+                        platform.map_or("not a platform's".to_string(), |p| format!(
+                            "a platform's shape ({}, chain {:?}, {} bones)",
+                            p.model,
+                            p.chain,
+                            p.bones.len()
+                        )),
+                        if skin { ", skinned again" } else { "" }
+                    );
+                }
+                v.set_drawn(hidden.clone());
+                println!("measure: as drawn at load: {}", v.measure(eye, look, t0));
+                // The skinned platform draws the window skins again by
+                // their parts: here left out (the parts' places are the
+                // run's).
+                let mut no_skins = hidden.clone();
+                for k in &gpu.skins {
+                    if let Some(d) = gpu.draws.get(k.instance) {
+                        no_skins.hidden.insert(*d as u32);
+                    }
+                }
+                // What no placed light reaches among the points the eye
+                // sees (the light there is the ambient alone), by reference.
+                let mut dark: BTreeMap<String, usize> = BTreeMap::new();
+                let mut dim: BTreeMap<String, usize> = BTreeMap::new();
+                let seen = no_skins.seen(&faces, &draws, &cam, fo4_render::VISIBLE_GRID);
+                let keep = |fi: usize| !no_skins.hidden.contains(&draws[fi]);
+                let met =
+                    fo4_render::seen_visible_of(&faces, &keep, &[], &cam, fo4_render::VISIBLE_GRID);
+                for ((fi, _, _), (p, n)) in met.iter().zip(&seen) {
+                    let some = v
+                        .grid
+                        .as_ref()
+                        .map_or(&[][..], |g| g.at(*p))
+                        .iter()
+                        .map(|k| *k as usize);
+                    let lit = v.light.at_some(*p, *n, some);
+                    let alone = v.light.at_some(*p, *n, std::iter::empty());
+                    let key = tag_of
+                        .get(&(draws[*fi] as usize))
+                        .and_then(|t| live.tags.get(t))
+                        .map_or("-".to_string(), fo4_scene::timeline::key_text);
+                    if lit.iter().sum::<f32>() / 3. < 0.15 {
+                        *dim.entry(key.clone()).or_default() += 1;
+                    }
+                    if lit == alone {
+                        *dark.entry(key).or_default() += 1;
+                    }
+                }
+                let mut dim: Vec<_> = dim.into_iter().collect();
+                dim.sort_by(|a, b| b.1.cmp(&a.1));
+                println!(
+                    "measure: {} of {} points seen take a light under 0.15; most on {:?}",
+                    dim.iter().map(|x| x.1).sum::<usize>(),
+                    seen.len(),
+                    &dim[..dim.len().min(4)]
+                );
+                let mut dark: Vec<_> = dark.into_iter().collect();
+                dark.sort_by(|a, b| b.1.cmp(&a.1));
+                println!(
+                    "measure: {} of {} points seen lit by the ambient alone (no placed light reaches); most on {:?}",
+                    dark.iter().map(|x| x.1).sum::<usize>(),
+                    seen.len(),
+                    &dark[..dark.len().min(4)]
+                );
+                v.set_drawn(no_skins);
+                println!(
+                    "measure: without the skinned platform draws: {}",
+                    v.measure(eye, look, t0)
+                );
+            }
+        }
+
         /// Measurement only, with the game data (outputs outside git): a
         /// session's window cell loads replayed headless on the play data
         /// thread as the window asks them. `FO4_VIEW_PLAY_LOADS` names a

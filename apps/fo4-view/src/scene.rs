@@ -592,6 +592,86 @@ pub struct ViewExposure {
     /// With [`Seen::Faces`] in the window: the depth test of the last view
     /// asked for, on a thread of its own ([`ViewExposure::step`]).
     pub pending: Option<Pending>,
+    /// With [`Seen::Faces`]: the draw of each face (`fo4_render::lit_face_draws`),
+    /// empty when not known (every face then measured as loaded).
+    pub face_draws: std::sync::Arc<Vec<u32>>,
+    /// What the window draws apart from the load ([`DrawnNow`]): the faces
+    /// of hidden draws left out, those of moved draws measured where they
+    /// are drawn (viewer policy: the light is measured on what is drawn).
+    pub drawn: std::sync::Arc<DrawnNow>,
+    /// The drawn state changed since the last measure was asked for.
+    pub drawn_changed: bool,
+}
+
+/// The draws the scripted play window draws apart from its load, by their
+/// index in the load's draw list: hidden (the live world's absent
+/// references, a door not held, a draw with no instance), or moved (the
+/// live world's moves, the named platforms' parts, the doors and leaves
+/// posed), each by the motion from where it was loaded to where it is
+/// drawn, three rows of a game-axes affine map, or given anew (a skinned
+/// shape skinned again).
+#[derive(Debug, Clone, Default, PartialEq)]
+#[cfg_attr(not(feature = "script-event"), allow(dead_code))]
+pub struct DrawnNow {
+    pub hidden: std::collections::BTreeSet<u32>,
+    pub moved: std::collections::BTreeMap<u32, [[f64; 4]; 3]>,
+    /// Draws whose mesh the window replaced (a named platform's skinned
+    /// shape skinned again): their faces as drawn, world axes.
+    pub replaced: std::collections::BTreeMap<u32, std::sync::Arc<Vec<[[f32; 3]; 3]>>>,
+}
+
+#[cfg_attr(not(feature = "script-event"), allow(dead_code))]
+impl DrawnNow {
+    /// Whether every draw is drawn as loaded.
+    pub fn as_loaded(&self) -> bool {
+        self.hidden.is_empty() && self.moved.is_empty() && self.replaced.is_empty()
+    }
+
+    /// What the eye sees of `faces` (`fo4_render::seen_visible_of`) as the
+    /// window draws them: the faces of hidden draws left out, those of
+    /// moved draws given again where they are drawn. `draws` is each
+    /// face's draw; with none known every face is measured as loaded.
+    pub fn seen(
+        &self,
+        faces: &[[[f32; 3]; 3]],
+        draws: &[u32],
+        camera: &fo4_scene::camera::Camera,
+        grid: [u32; 2],
+    ) -> Vec<([f64; 3], [f64; 3])> {
+        if self.as_loaded() || draws.len() != faces.len() {
+            return fo4_render::seen_visible(faces, camera, grid);
+        }
+        let keep = |fi: usize| {
+            let d = draws[fi];
+            !self.hidden.contains(&d)
+                && !self.moved.contains_key(&d)
+                && !self.replaced.contains_key(&d)
+        };
+        let mut extra = Vec::new();
+        for (d, f) in &self.replaced {
+            if !self.hidden.contains(d) {
+                extra.extend_from_slice(f);
+            }
+        }
+        if !self.moved.is_empty() {
+            for (f, d) in faces.iter().zip(draws) {
+                if let Some(m) = self.moved.get(d) {
+                    extra.push(f.map(|p| {
+                        std::array::from_fn(|r| {
+                            (m[r][0] * f64::from(p[0])
+                                + m[r][1] * f64::from(p[1])
+                                + m[r][2] * f64::from(p[2])
+                                + m[r][3]) as f32
+                        })
+                    }));
+                }
+            }
+        }
+        fo4_render::seen_visible_of(faces, &keep, &extra, camera, grid)
+            .into_iter()
+            .map(|(_, p, n)| (p, n))
+            .collect()
+    }
 }
 
 /// The lit triangles kept for the exposure per view: centroids and unit
@@ -637,6 +717,25 @@ impl ViewExposure {
             last: None,
             measures: 0,
             pending: None,
+            face_draws: std::sync::Arc::new(Vec::new()),
+            drawn: std::sync::Arc::new(DrawnNow::default()),
+            drawn_changed: false,
+        }
+    }
+
+    /// The draw of each kept face (`fo4_render::lit_face_draws`), so that
+    /// the measure follows what the window hides and moves.
+    pub fn with_face_draws(mut self, draws: Vec<u32>) -> Self {
+        self.face_draws = std::sync::Arc::new(draws);
+        self
+    }
+
+    /// What the window draws apart from its load now; a change makes the
+    /// view due again ([`ViewExposure::due`]).
+    pub fn set_drawn(&mut self, d: DrawnNow) {
+        if *self.drawn != d {
+            self.drawn = std::sync::Arc::new(d);
+            self.drawn_changed = true;
         }
     }
 
@@ -653,7 +752,7 @@ impl ViewExposure {
         let moved = (0..3).map(|i| (eye[i] - e[i]).powi(2)).sum::<f64>().sqrt();
         let dir = unit(eye, look);
         let cos = (0..3).map(|i| dir[i] * d[i]).sum::<f64>().clamp(-1., 1.);
-        moved >= Self::MOVE || cos.acos().to_degrees() >= Self::TURN_DEGREES
+        moved >= Self::MOVE || cos.acos().to_degrees() >= Self::TURN_DEGREES || self.drawn_changed
     }
 
     /// Measures the exposure from `(eye, look)` with the reference frame's
@@ -662,6 +761,7 @@ impl ViewExposure {
     /// line, or why there is none.
     pub fn measure(&mut self, eye: [f64; 3], look: [f64; 3], now: std::time::Instant) -> String {
         self.last = Some((eye, unit(eye, look), now));
+        self.drawn_changed = false;
         let cam = match view_camera(eye, look) {
             Ok(c) => c,
             Err(e) => {
@@ -671,7 +771,9 @@ impl ViewExposure {
         };
         let points = match &self.triangles {
             Seen::Centroids(t) => fo4_render::seen_of(t, &cam),
-            Seen::Faces(f) => fo4_render::seen_visible(f, &cam, fo4_render::VISIBLE_GRID),
+            Seen::Faces(f) => self
+                .drawn
+                .seen(f, &self.face_draws, &cam, fo4_render::VISIBLE_GRID),
         };
         self.apply(&points)
     }
@@ -710,16 +812,14 @@ impl ViewExposure {
             return None;
         }
         self.last = Some((eye, unit(eye, look), now));
+        self.drawn_changed = false;
         let cam = view_camera(eye, look).ok()?;
         let (faces, (tx, rx)) = (faces.clone(), std::sync::mpsc::channel());
+        let (draws, drawn) = (self.face_draws.clone(), self.drawn.clone());
         let spawned = std::thread::Builder::new()
             .name("fo4-view exposure".into())
             .spawn(move || {
-                let _ = tx.send(fo4_render::seen_visible(
-                    &faces,
-                    &cam,
-                    fo4_render::VISIBLE_GRID,
-                ));
+                let _ = tx.send(drawn.seen(&faces, &draws, &cam, fo4_render::VISIBLE_GRID));
             });
         if spawned.is_ok() {
             self.pending = Some(std::sync::Arc::new(std::sync::Mutex::new(rx)));
@@ -1683,6 +1783,114 @@ mod tests {
         }
         assert!(line.unwrap().contains("times 2.0000"));
         assert_eq!(v.measures, 2);
+    }
+
+    #[test]
+    fn the_window_measures_the_exposure_on_what_it_draws() {
+        use fo4_scene::light::{Exposure, Light, Point};
+        // A light at the far wall: the far wall is lit, a near panel in
+        // front of the eye is not (the light is behind it).
+        let light = Light {
+            ambient: [0.1; 3],
+            cube: None,
+            directional: None,
+            points: vec![Point {
+                position: [150., 0., 0.],
+                radius: 100.,
+                colour: [1.; 3],
+            }],
+            fog: None,
+            sky: None,
+            lit: true,
+            rules: Default::default(),
+            report: Vec::new(),
+            exposure: Exposure {
+                eye: true,
+                visible: true,
+                ..Exposure::default()
+            },
+        };
+        let words = light_words(&light);
+        let wall = |x: f32| {
+            let (y, z) = (1000f32, 1000f32);
+            [
+                [[x, -y, -z], [x, y, -z], [x, y, z]],
+                [[x, -y, -z], [x, y, z], [x, -y, z]],
+            ]
+        };
+        // Draw 0: the far wall; draw 1: a panel 20 units ahead; draw 2: a
+        // second panel the window moves.
+        let mut faces = wall(200.).to_vec();
+        faces.extend(wall(20.));
+        faces.extend(wall(30.));
+        let draws = vec![0, 0, 1, 1, 2, 2];
+        let mut v = ViewExposure::new(
+            &light,
+            Seen::Faces(std::sync::Arc::new(faces.clone())),
+            words,
+        )
+        .with_face_draws(draws.clone());
+        let t0 = std::time::Instant::now();
+        let (eye, look) = ([0.; 3], [10., 0., 0.]);
+        // As loaded the panel is what the eye meets: only the ambient.
+        let line = v.measure(eye, look, t0);
+        assert!(line.contains("times 10.0000"), "{line}");
+        // Both panels hidden: the far wall, lit; the change makes the view
+        // due again after the period, without a move.
+        let later = t0 + std::time::Duration::from_secs(1);
+        assert!(!v.due(eye, look, later));
+        v.set_drawn(DrawnNow {
+            hidden: [1, 2].into(),
+            ..DrawnNow::default()
+        });
+        assert!(v.due(eye, look, later));
+        let line = v.measure(eye, look, later);
+        assert!(!line.contains("times 10.0000"), "{line}");
+        let lit = v.words[4 * 14];
+        assert!(lit < 5., "{line}");
+        assert!(!v.due(eye, look, later + std::time::Duration::from_secs(1)));
+        // The second panel moved 300 units away (behind the far wall): the
+        // same as hidden.
+        let mut moved = DrawnNow {
+            hidden: [1].into(),
+            ..DrawnNow::default()
+        };
+        moved
+            .moved
+            .insert(2, [[1., 0., 0., 300.], [0., 1., 0., 0.], [0., 0., 1., 0.]]);
+        let size = fo4_scene::camera::REFERENCE_SIZE;
+        let cam =
+            fo4_scene::camera::look_at(eye, look, fo4_scene::camera::reference_frustum(size), size)
+                .unwrap();
+        let grid = [16, 9];
+        let seen = moved.seen(&faces, &draws, &cam, grid);
+        assert!(seen.iter().all(|(p, _)| (p[0] - 200.).abs() < 1e-3));
+        // Moved 10 units nearer it is met again, where it is drawn.
+        moved
+            .moved
+            .insert(2, [[1., 0., 0., -10.], [0., 1., 0., 0.], [0., 0., 1., 0.]]);
+        let seen = moved.seen(&faces, &draws, &cam, grid);
+        assert!(seen.iter().all(|(p, _)| (p[0] - 20.).abs() < 1e-3));
+        // A draw given anew (a skinned shape skinned again) is met by its
+        // new faces only.
+        let mut replaced = DrawnNow {
+            hidden: [2].into(),
+            ..DrawnNow::default()
+        };
+        replaced
+            .replaced
+            .insert(1, std::sync::Arc::new(wall(100.).to_vec()));
+        let seen = replaced.seen(&faces, &draws, &cam, grid);
+        assert!(seen.iter().all(|(p, _)| (p[0] - 100.).abs() < 1e-3));
+        // As loaded, or without each face's draw, every face as before.
+        assert_eq!(
+            DrawnNow::default().seen(&faces, &draws, &cam, grid),
+            fo4_render::seen_visible(&faces, &cam, grid)
+        );
+        assert_eq!(
+            replaced.seen(&faces, &[], &cam, grid),
+            fo4_render::seen_visible(&faces, &cam, grid)
+        );
     }
 
     #[cfg(feature = "script-event")]

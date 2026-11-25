@@ -169,3 +169,33 @@ corners kept at a load in the scripted window), the light at that face's point w
 the eye; the quantile, the floor and the scale as before. The first view: 5,184 points, nine in ten under
 3.02, scale 0.33, the tiles, vents and window readable; a step to the side (looking north) 2.93 and 0.34; the
 living room 0.84 and 1.18.
+
+**The exposure on what the window draws (the twelfth-session step).** Both persons of the twelfth session saw
+a large white, texture-less patch on the lower floor of the postwar lift room at some angles (1,430.8 s and
+1,650 s), where the prewar room read right. The window measured the light there at 0.468 (scale 2.14) where a
+headless frame from the same eye and look measures 1.287 (scale 0.78): the floor's brighter part, about 1.3 to
+1.6 times the quantile, went over 1 in every channel. The window's measure depth-tests the lit faces the load
+kept (`--exposure-eye-visible`), and those faces were the load's: a skinned shape of a named platform (the exit
+lift's walkway, its bones under several parts) stood at its built pose, a slab 37 units thick and 250 high just
+ahead of that eye, and met 4,168 of the 5,184 cells; the window draws it skinned again where its parts are
+(`--draw-platform-skins`), elsewhere. The same stale faces made the prewar room's measure 1.81 instead of 1.41
+from its lower floor (scale 0.55 instead of 0.71, darker). A viewer defect, no rule: the window now measures on
+what it draws (`scene::DrawnNow`, `fo4_render::lit_face_draws`, `fo4_render::seen_visible_of`): each kept face
+knows its draw; the faces of a draw whose instance is hidden (the live world's absent references, a door not
+held, a draw with no instance) are left out, those of a draw whose instance moved (the live world's moves, the
+named platforms' parts, the doors and leaves posed) are measured moved, and a platform's skinned shape skinned
+again is measured by its faces as last skinned. What is drawn is read again at most four times a second, and a
+change makes the view due for a measure without a move or a turn. Headless frames are unchanged (nothing is
+hidden or moved there). Measured with the ignored test `play::tests::measure_the_view_exposure`
+(`FO4_VIEW_EXPOSURE`, a local list of the window's argument files, a cell and views): it loads the cell as the
+window does and gives 0.4680 on the load's faces (the window logged 0.4677) and 1.2857 with the platform's
+skinned shapes left out (the headless frame 1.2873). The patch's jagged edge follows the floor's triangles:
+under face normals a floor of slightly tilted triangles takes each its own facing toward a light near it.
+
+The dark recesses behind the grilles and in the machinery are drawn surfaces that little light reaches, not
+refused draws: in the measured views every one of the 5,184 cells meets a lit face, and the points the eye sees
+under a light of 0.15 are 0 of 5,184 from the prewar lower floor and 138 to 331 from the postwar one, mostly on
+the room's own model and one named platform, 40 to 76 of them reached by no placed light at all (the ambient
+alone). The light readings have no bounce, no shadows and a linear cutoff at each light's radius
+(`light_point_linear_cutoff_v1`): a surface beyond every radius or facing away from every light is lit by the
+cell's ambient alone. Nothing is changed for them.

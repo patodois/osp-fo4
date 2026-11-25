@@ -1080,12 +1080,10 @@ fn spawn_window_scene(world: &mut World) {
     let lights = insert_light_buffer(world, scene.light.as_ref());
     // The scripted play window's exposure per view ([`expose_view`]).
     #[cfg(feature = "script-event")]
-    {
+    let view_exposure = {
         world.remove_resource::<PlayExposure>();
-        if let Some(v) = scene.view_exposure.take() {
-            world.insert_resource(PlayExposure(v));
-        }
-    }
+        scene.view_exposure.take()
+    };
     let old: Vec<Entity> = world
         .query_filtered::<Entity, With<WindowSky>>()
         .iter(world)
@@ -1112,6 +1110,29 @@ fn spawn_window_scene(world: &mut World) {
         }
     }
     let entities = spawn(world, &scene, &up, false, 0, false);
+    // The exposure per view measures on what is drawn: each draw's
+    // instance and the transform it was spawned with.
+    #[cfg(feature = "script-event")]
+    if let Some(v) = view_exposure {
+        let n = scene.draws.iter().max().map_or(0, |d| d + 1);
+        let mut by_draw = vec![None; n];
+        for ((e, i), d) in entities.iter().zip(&scene.instances).zip(&scene.draws) {
+            by_draw[*d] = Some((
+                *e,
+                Transform {
+                    translation: i.translation,
+                    rotation: i.rotation,
+                    scale: i.scale,
+                },
+            ));
+        }
+        world.insert_resource(PlayExposure {
+            view: v,
+            by_draw,
+            draw_of: scene.draws.clone(),
+            checked: None,
+        });
+    }
     // The scripted play window's named platforms: their instances, to
     // follow the walker's parts ([`follow_platforms`]).
     #[cfg(feature = "script-event")]
@@ -1147,6 +1168,7 @@ fn spawn_window_scene(world: &mut World) {
                     indices: g.indices.clone(),
                     skin: k,
                     last: None,
+                    faces: None,
                 })
             })
             .collect();
@@ -1914,6 +1936,9 @@ struct SkinTarget {
     normals: Option<Vec<[f32; 3]>>,
     indices: Vec<u16>,
     last: Option<Vec<fo4_scene::actor::pose::Affine>>,
+    /// The faces as last skinned again, world (game) axes: what the
+    /// exposure per view measures in place of the load's.
+    faces: Option<std::sync::Arc<Vec<[[f32; 3]; 3]>>>,
 }
 
 /// The scripted play window's skinned platform draws
@@ -1988,6 +2013,21 @@ fn follow_skins(seen: &crate::play::Seen, skins: &mut PlaySkins, meshes: &mut As
             eprintln!("PlatformSkinMesh: {e}");
             continue;
         }
+        let world = d.world;
+        let faces: Vec<[[f32; 3]; 3]> = t
+            .indices
+            .chunks_exact(3)
+            .filter_map(|tri| {
+                let mut f = [[0f32; 3]; 3];
+                for (k, i) in tri.iter().enumerate() {
+                    f[k] = world
+                        .apply(*positions.get(usize::from(*i))?)
+                        .map(|x| x as f32);
+                }
+                Some(f)
+            })
+            .collect();
+        t.faces = Some(std::sync::Arc::new(faces));
         t.last = Some(m);
     }
     if !*reported && moving > 0 {
@@ -2198,10 +2238,82 @@ fn follow_platforms<F: bevy::ecs::query::QueryFilter>(
 }
 
 /// The scripted play window's exposure measured per view
-/// (`crate::scene::ViewExposure`, with `--exposure-eye`).
+/// (`crate::scene::ViewExposure`, with `--exposure-eye`), with each draw's
+/// instance and spawned transform (`None`: the draw has no instance) and
+/// when what is drawn was last read.
 #[cfg(feature = "script-event")]
 #[derive(Resource)]
-struct PlayExposure(crate::scene::ViewExposure);
+struct PlayExposure {
+    view: crate::scene::ViewExposure,
+    by_draw: Vec<Option<(Entity, Transform)>>,
+    /// The draw of each spawned instance (`GpuScene::draws`).
+    draw_of: Vec<usize>,
+    checked: Option<std::time::Instant>,
+}
+
+/// What the window draws apart from its load ([`crate::scene::DrawnNow`]):
+/// a draw whose instance is hidden or missing, or whose transform is not
+/// the one it was spawned with (by the motion between them, game axes).
+/// A named platform's skinned draw skinned again
+/// ([`follow_skins`]) is measured by its faces as last skinned.
+#[cfg(feature = "script-event")]
+fn drawn_now<F: bevy::ecs::query::QueryFilter>(
+    exposure: &PlayExposure,
+    skins: Option<&PlaySkins>,
+    instances: &Query<CellInstance, F>,
+) -> crate::scene::DrawnNow {
+    let by_draw = &exposure.by_draw;
+    let mut now = crate::scene::DrawnNow::default();
+    for t in skins.map_or(&[][..], |s| &s.drawn[..]) {
+        if let (Some(f), Some(d)) = (&t.faces, exposure.draw_of.get(t.platform.instance)) {
+            now.replaced
+                .insert(u32::try_from(*d).unwrap_or(u32::MAX), f.clone());
+        }
+    }
+    for (d, slot) in by_draw.iter().enumerate() {
+        let d = u32::try_from(d).unwrap_or(u32::MAX);
+        let Some((e, spawned)) = slot else {
+            now.hidden.insert(d);
+            continue;
+        };
+        let Ok((_, _, vis, t)) = instances.get(*e) else {
+            now.hidden.insert(d);
+            continue;
+        };
+        if *vis == Visibility::Hidden {
+            now.hidden.insert(d);
+        } else if *t != *spawned && !now.replaced.contains_key(&d) {
+            now.moved.insert(d, game_motion(spawned, &t));
+        }
+    }
+    now
+}
+
+/// The motion taking what was drawn at `from` to `to` (Bevy transforms),
+/// as three rows of a game-axes affine map.
+#[cfg(feature = "script-event")]
+fn game_motion(from: &Transform, to: &Transform) -> [[f64; 4]; 3] {
+    let a = to.compute_affine() * from.compute_affine().inverse();
+    let b = crate::coords::GAME_TO_BEVY;
+    let l: [[f64; 3]; 3] =
+        std::array::from_fn(|r| std::array::from_fn(|c| f64::from(a.matrix3.col(c)[r])));
+    let t = [
+        f64::from(a.translation.x),
+        f64::from(a.translation.y),
+        f64::from(a.translation.z),
+    ];
+    // game = B^T bevy: rows B^T L B, translation B^T t.
+    std::array::from_fn(|r| {
+        let mut row = [0.0; 4];
+        for (c, x) in row.iter_mut().take(3).enumerate() {
+            *x = (0..3)
+                .map(|i| (0..3).map(|j| b[i][r] * l[i][j] * b[j][c]).sum::<f64>())
+                .sum();
+        }
+        row[3] = (0..3).map(|i| b[i][r] * t[i]).sum();
+        row
+    })
+}
 
 /// What [`expose_view`] reads and writes, for [`play_scripted`].
 #[cfg(feature = "script-event")]
@@ -2216,10 +2328,16 @@ type ExposureParams<'w> = (
 /// measured from it and the light buffer every material binds is replaced
 /// by one with the new row 14 (a viewer policy; the rule is
 /// `frame_exposure_seen_light_v1`, with `--exposure-eye-floor` its floor).
+/// What the window draws is read again at most once a measure's period
+/// ([`crate::scene::ViewExposure::PERIOD`]): a draw hidden, shown or moved
+/// since the last measure makes the view due again, and the measure leaves
+/// out what is hidden and takes what moved where it is drawn.
 #[cfg(feature = "script-event")]
-fn expose_view(
+fn expose_view<F: bevy::ecs::query::QueryFilter>(
     seen: &crate::play::Seen,
     exposure: &mut PlayExposure,
+    skins: Option<&PlaySkins>,
+    instances: &Query<CellInstance, F>,
     lights: &LightBuffer,
     buffers: &mut Assets<ShaderBuffer>,
 ) {
@@ -2227,11 +2345,27 @@ fn expose_view(
         return;
     };
     let now = std::time::Instant::now();
-    let Some(line) = exposure.0.step(eye, look, now) else {
+    let period = std::time::Duration::from_secs_f64(crate::scene::ViewExposure::PERIOD);
+    if exposure
+        .checked
+        .is_none_or(|at| now.duration_since(at) >= period)
+    {
+        exposure.checked = Some(now);
+        let d = drawn_now(exposure, skins, instances);
+        exposure.view.set_drawn(d);
+    }
+    let Some(line) = exposure.view.step(eye, look, now) else {
         return;
     };
-    println!("play: exposure at {:.3} s of the run: {line}", seen.t);
-    let words = exposure.0.words.clone();
+    let d = &exposure.view.drawn;
+    println!(
+        "play: exposure at {:.3} s of the run: {line} (as drawn: {} draws hidden, {} moved, {} skinned again)",
+        seen.t,
+        d.hidden.len(),
+        d.moved.len(),
+        d.replaced.len()
+    );
+    let words = exposure.view.words.clone();
     if let Err(e) = buffers.insert(
         lights.0.id(),
         ShaderBuffer::new(words, RenderAssetUsages::RENDER_WORLD),
@@ -2738,7 +2872,7 @@ fn play_scripted(
             follow_skins(&seen, ps, &mut meshes);
         }
         if let (Some(x), Some(l)) = (exposure.as_deref_mut(), lights.as_deref()) {
-            expose_view(&seen, x, l, &mut buffers);
+            expose_view(&seen, x, skins.as_deref(), &instances, l, &mut buffers);
         }
     }
     // --timeline-cast: the run's actors of the drawn cell, built again on
