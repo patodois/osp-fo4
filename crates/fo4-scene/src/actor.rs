@@ -65,6 +65,12 @@ pub struct Readings {
     /// xEdit names 32, FaceGen Head), else the hair parts (HDPT PNAM 3) when
     /// one has bit 0 or 1 (30 Hair Top, 31 Hair Long), else nothing.
     pub head_slots: bool,
+    /// `npc_head_parts_race_fill_kinds_v1` (`--actor-head-race-fill`): an
+    /// NPC_ that lists its own head parts (PNAM) takes, besides them, each
+    /// part of its race's HEAD list of its section whose part type (HDPT
+    /// PNAM) none of its own parts has; its own parts stand in for the
+    /// race's of their types. Off: an NPC_ with its own list draws only it.
+    pub head_race_fill: bool,
     /// `actor_texture_missing_unread_slot_v1` (`--actor-unread-texture-slots`):
     /// the actor's models' closure reads `texture_missing_unread_slot_v1` as
     /// a placed reference's does (a missing texture cited only in slots the
@@ -310,6 +316,9 @@ struct Look {
     /// Per NPC_ visited: its PNAM head parts, sorted, or its race's HEAD of
     /// its section when it lists none (marked true).
     heads: BTreeSet<(Vec<FormKey>, bool)>,
+    /// The parts of those lists taken from the race's HEAD list for types
+    /// the NPC_'s own list lacks ([`Readings::head_race_fill`]).
+    race_filled: BTreeSet<FormKey>,
     visits: u64,
     /// The leveled lists [`Readings::leveled_seed`] picked from: list,
     /// entry, entries.
@@ -350,13 +359,21 @@ struct Walk<'a> {
 }
 
 /// An NPC_'s own traits: race, ACBS bit 0, skin (its WNAM, else its
-/// race's) and head part list (its PNAM, else its race's HEAD of its
-/// section, marked true).
-type Traits = (FormKey, usize, Option<FormKey>, (Vec<FormKey>, bool));
+/// race's), head part list (its PNAM, else its race's HEAD of its section,
+/// marked true) and the race's parts that list took for the part types its
+/// own parts lack (`fill`, [`Readings::head_race_fill`]).
+type Traits = (
+    FormKey,
+    usize,
+    Option<FormKey>,
+    (Vec<FormKey>, bool),
+    Vec<FormKey>,
+);
 fn own_traits(
     loader: &Loader<'_>,
     key: &FormKey,
     n: &Npc,
+    fill: bool,
     work: &Budget,
 ) -> std::result::Result<Traits, String> {
     let race = n
@@ -376,12 +393,27 @@ fn own_traits(
         .map_err(|e| format!("race {}: {}", short(&race), e.code))?;
     let mut heads: Vec<FormKey> = n.head_parts.iter().filter_map(|f| f.key.clone()).collect();
     let from_race = heads.is_empty();
+    let race_parts = race_record.section_head_parts[(flags & 1) as usize]
+        .iter()
+        .filter_map(|f| f.key.clone());
+    let mut filled = Vec::new();
     if from_race {
-        heads.extend(
-            race_record.section_head_parts[(flags & 1) as usize]
-                .iter()
-                .filter_map(|f| f.key.clone()),
-        );
+        heads.extend(race_parts);
+    } else if fill {
+        // `npc_head_parts_race_fill_kinds_v1`: the race's parts of the
+        // types the NPC_'s own parts lack. A part that cannot be read
+        // leaves the list as the NPC_ stores it (the head reports it).
+        if let Some(own) = part_kinds(loader, &heads, work) {
+            let race_parts: Vec<FormKey> = race_parts.collect();
+            if let Some(kinds) = part_kinds(loader, &race_parts, work) {
+                for (k, kind) in race_parts.into_iter().zip(kinds) {
+                    if kind.is_some_and(|t| !own.contains(&Some(t))) && !heads.contains(&k) {
+                        filled.push(k.clone());
+                        heads.push(k);
+                    }
+                }
+            }
+        }
     }
     heads.sort();
     heads.dedup();
@@ -389,7 +421,21 @@ fn own_traits(
         Some(k) => Some(k),
         None => race_record.skin.and_then(|f| f.key),
     };
-    Ok((race, (flags & 1) as usize, skin, (heads, from_race)))
+    Ok((race, (flags & 1) as usize, skin, (heads, from_race), filled))
+}
+
+/// The part type (HDPT PNAM) of each listed head part, in order; `None`
+/// when one has no winning HDPT or does not decode.
+fn part_kinds(loader: &Loader<'_>, parts: &[FormKey], work: &Budget) -> Option<Vec<Option<u32>>> {
+    let mut out = Vec::new();
+    for k in parts {
+        let (r, plugin) = read(loader, k, work).ok()??;
+        if r.signature != *b"HDPT" {
+            return None;
+        }
+        out.push(Hdpt::decode(&r, ctx(loader, plugin), work).ok()?.kind);
+    }
+    Some(out)
 }
 fn gather(
     loader: &Loader<'_>,
@@ -474,8 +520,10 @@ fn gather(
             look.own.insert(key.clone());
             match walk.group {
                 Group::Traits => {
-                    let (race, section, skin, heads) = own_traits(loader, key, &n, &work)?;
+                    let (race, section, skin, heads, filled) =
+                        own_traits(loader, key, &n, walk.readings.head_race_fill, &work)?;
                     look.heads.insert(heads);
+                    look.race_filled.extend(filled);
                     look.race.insert(race);
                     look.section.insert(section);
                     look.skin.insert(skin);
@@ -490,7 +538,8 @@ fn gather(
         b"NPC_" => {
             let n = Npc::decode(&r, ctx(loader, plugin), &work)
                 .map_err(|e| format!("base {}: {}", short(key), e.code))?;
-            let (race, section, skin, heads) = own_traits(loader, key, &n, &work)?;
+            let (race, section, skin, heads, filled) =
+                own_traits(loader, key, &n, walk.readings.head_race_fill, &work)?;
             let tf = n.template_flags.unwrap_or(0);
             // With every template bit set, every property comes from the
             // templates: the own values are no candidates.
@@ -499,6 +548,7 @@ fn gather(
             } else {
                 look.own.insert(key.clone());
                 look.heads.insert(heads);
+                look.race_filled.extend(filled);
                 look.race.insert(race);
                 look.section.insert(section);
                 look.skin.insert(skin);
@@ -1268,10 +1318,12 @@ pub fn resolve_reference_heads(
         1 => {
             let (list, from_race) = look.heads.pop_first().expect("one head list");
             let slots = readings.head_slots.then_some(outfit_slots);
+            let filled = list.iter().filter(|k| look.race_filled.contains(k)).count();
             head(
                 loader,
                 &list,
                 from_race,
+                filled,
                 &parts,
                 slots,
                 reborrow(&mut heads),
@@ -1394,6 +1446,7 @@ fn head(
     loader: &mut Loader<'_>,
     list: &[FormKey],
     from_race: bool,
+    filled: usize,
     parts: &[Part],
     slots: Option<u32>,
     mut conditions: Option<HeadConditions<'_>>,
@@ -1586,6 +1639,12 @@ fn head(
             "worn armour slots decide what of the head is hidden",
         ));
     }
+    if filled > 0 {
+        head.blockers.push(rule(
+            "UnverifiedActorHeadRaceFill",
+            "the race's head parts of the types the actor's own list lacks",
+        ));
+    }
     if conditioned > 0 {
         head.blockers.push(rule(
             "UnverifiedActorHeadConditions",
@@ -1613,9 +1672,14 @@ fn head(
     note(
         notes,
         format!(
-            "head: {} parts{}",
+            "head: {} parts{}{}",
             head.parts.len(),
-            if from_race { " (race default)" } else { "" }
+            if from_race { " (race default)" } else { "" },
+            if filled > 0 {
+                format!(" ({filled} of the race's for types the actor's own list lacks)")
+            } else {
+                String::new()
+            }
         ),
         b,
     )?;

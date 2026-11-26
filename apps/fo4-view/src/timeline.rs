@@ -403,6 +403,65 @@ fn head_notes_text(cell: &fo4_plugin::FormKey, second: f64, cast: &tl::cast::Cas
     text
 }
 
+/// The cast log's census of faces: of the actors with a plan, those whose
+/// head draws no face part (HDPT type 1: no head at all, or a head without
+/// that part) and, of those, the ones wearing headgear (a worn armour's
+/// slots hid their hair or head, `--actor-head-slots`), named.
+#[cfg(feature = "script-event")]
+fn face_census(actors: &[fo4_scene::actor::Actor]) -> String {
+    const FACE: u32 = 1;
+    let rows: Vec<FaceRow> = actors
+        .iter()
+        .filter_map(|a| {
+            let plan = a.plan.as_ref()?;
+            Some(FaceRow {
+                key: tl::key_text(&a.reference),
+                // Actors whose race lists no head (creatures) have no head
+                // notes.
+                headed: plan.head.is_some() || a.notes.iter().any(|n| n.starts_with("head:")),
+                face: plan
+                    .head
+                    .as_ref()
+                    .is_some_and(|h| h.parts.iter().any(|p| p.kind == Some(FACE))),
+                headgear: a.notes.iter().any(|n| n.contains("worn armour slots")),
+            })
+        })
+        .collect();
+    face_census_line(&rows)
+}
+
+/// One actor of [`face_census`].
+#[cfg(feature = "script-event")]
+struct FaceRow {
+    key: String,
+    headed: bool,
+    face: bool,
+    headgear: bool,
+}
+
+/// The line [`face_census`] writes.
+#[cfg(feature = "script-event")]
+fn face_census_line(rows: &[FaceRow]) -> String {
+    let headed: Vec<&FaceRow> = rows.iter().filter(|r| r.headed).collect();
+    let faceless: Vec<&&FaceRow> = headed.iter().filter(|r| !r.face).collect();
+    let capped: Vec<&str> = faceless
+        .iter()
+        .filter(|r| r.headgear)
+        .map(|r| r.key.as_str())
+        .collect();
+    format!(
+        "faces: {} actors with a head; {} draw no face part; {} of them wear headgear{}",
+        headed.len(),
+        faceless.len(),
+        capped.len(),
+        if capped.is_empty() {
+            String::new()
+        } else {
+            format!(" ({})", capped.join(", "))
+        }
+    )
+}
+
 /// [`cast_scene`] with its loader.
 #[cfg(feature = "script-event")]
 #[allow(clippy::too_many_arguments)]
@@ -594,6 +653,7 @@ fn cast_with(
             .iter()
             .map(|(k, why)| format!("head left out {}: {why}", key(*k))),
     );
+    details.push(face_census(&cast.actors.actors));
     let skinned = tl::ride::report_skinned(&cast, &d.extras);
     if !skinned.is_empty() {
         details.push(skinned.trim_end().replace('\n', "; "));
@@ -612,6 +672,29 @@ fn cast_with(
 
 #[cfg(all(test, feature = "script-event"))]
 mod tests {
+    /// The face census counts headed actors without a face part and names
+    /// those of them wearing headgear; creatures (no head) are not counted.
+    #[test]
+    fn the_face_census_names_the_capped_actors_without_a_face() {
+        let row = |key: &str, headed, face, headgear| super::FaceRow {
+            key: key.into(),
+            headed,
+            face,
+            headgear,
+        };
+        let line = super::face_census_line(&[
+            row("a", true, true, true),
+            row("b", true, false, true),
+            row("c", true, false, false),
+            row("d", false, false, false),
+        ]);
+        assert_eq!(
+            line,
+            "faces: 3 actors with a head; 2 draw no face part; 1 of them wear headgear (b)"
+        );
+        assert!(super::face_census_line(&[]).ends_with("0 of them wear headgear"));
+    }
+
     use fo4_render::fixture::{actor_room, Placed, ACTOR_BASE};
     use fo4_scene::timeline::{Event, Spot, Timeline, What};
 

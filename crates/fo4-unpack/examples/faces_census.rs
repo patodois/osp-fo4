@@ -138,6 +138,7 @@ fn run() -> Result<(), E> {
         chance_none: items,
         use_all: items,
         head_slots: false,
+        head_race_fill: false,
         unread_slots: false,
     };
     let variants = [

@@ -1840,6 +1840,15 @@ decide instead: the whole head hidden by bit 2, the hair parts (HDPT PNAM 3) by 
 the gate (B, 569.1 s) the four helmeted actors keep 1 to 11 head parts each, one hair part hidden each, where
 all four had none.
 
+**A capped child without a face** (twentieth session). A child of the checkpoint crowd lists only two head parts
+of its own: a mouth (HDPT PNAM 8) and a hair (3), hidden under its cap by the slots above. Its race's HEAD list
+for its section holds a face (1), a head rear (9), eyes (2), a mouth and a hair. Drawn with its own list alone it
+showed a cap and a mouth with scenery through the rest of the head. With `--actor-head-race-fill`
+(`npc_head_parts_race_fill_kinds_v1`, pending, in the preset; render and fo4-view) an actor that lists its own
+parts also takes its race's part of each type its list lacks; its own parts stand in for the race's of their
+types. The cast log's `faces:` line counts, at each cast build, the actors with a head, those that draw no face
+part and those of them wearing headgear (named).
+
 **The actor at the crane.** In A the run moved that actor: the caller's assumed move of the run's arguments
 (`--assume-actor-at`, held to stage 475 by `--action-after-actor-moves`) comes at 621.06 s with the stage and
 puts it about 3,100 units away by the deck; its presence does not change and the cast drew it at the new place.

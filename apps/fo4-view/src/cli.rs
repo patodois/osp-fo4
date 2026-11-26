@@ -321,6 +321,7 @@ usage:
            [--actor-start-clip] [--actor-subgraph-keywords] [--actor-clip-folder]
            [--actor-start-clip-loop] [--actor-sit-clip] [--actor-subgraph-flag-one]
            [--actor-model-graph-idle] [--actor-effect-stored] [--actor-template-bits] [--actor-head-slots]
+           [--actor-head-race-fill]
            [--actor-unread-texture-slots] [--actor-missing-bone-nearest]
            [--actor-leveled-seed SEED
            [--actor-leveled-chance-none] [--actor-leveled-use-all]]
@@ -375,7 +376,10 @@ usage:
       --actor-head-slots lets the worn armours' BOD2 slots decide what of
       a head is hidden (the head by slot 32, its hair by 30 or 31) instead
       of the head bone's weights (pending rule
-      npc_head_hidden_by_head_slot_v1).
+      npc_head_hidden_by_head_slot_v1). --actor-head-race-fill gives an
+      actor that lists its own head parts its race's parts of the types its
+      list lacks (a face for a child listing only hair and a mouth; pending
+      rule npc_head_parts_race_fill_kinds_v1).
       --actor-head-conditions (play window's cast only) draws a listed head
       part with conditions when its list holds against the stages the run
       has set by the frame's second and leaves that part alone out when it
@@ -1082,6 +1086,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             "--timeline-sit-marker" => sit_marker = true,
             "--actor-template-bits" => look_readings.template_bits = true,
             "--actor-head-slots" => look_readings.head_slots = true,
+            "--actor-head-race-fill" => look_readings.head_race_fill = true,
             "--actor-unread-texture-slots" => look_readings.unread_slots = true,
             "--actor-model-graph-idle" => model_graph_idle = true,
             "--actor-effect-stored" => effect_stored = true,
@@ -1938,6 +1943,7 @@ mod tests {
         assert!(scene.play_cast.is_some() && scene.drawing.platforms && scene.light.any());
         assert!(scene.drawing.cast_on_platforms && scene.drawing.cast_keeps_part);
         assert!(scene.play_cast.as_ref().is_some_and(|a| a.look.head_slots
+            && a.look.head_race_fill
             && a.look.unread_slots
             && a.missing_bones_at_bind
             && a.missing_bones_nearest));

@@ -349,6 +349,10 @@ pub const ACTOR_HEAD_SLOTS: &str = "npc_head_hidden_by_head_slot_v1";
 /// the caller evaluates it against the run's stages done
 /// (`crate::actor::HeadConditions`, `--actor-head-conditions`).
 pub const ACTOR_HEAD_CONDITIONS: &str = "npc_head_part_conditions_run_stages_v1";
+/// An actor whose own head part list lacks a part type takes its race's
+/// part of that type (`crate::actor::Readings::head_race_fill`,
+/// `--actor-head-race-fill`).
+pub const ACTOR_HEAD_RACE_FILL: &str = "npc_head_parts_race_fill_kinds_v1";
 /// A run or placed actor's models read under texture_missing_unread_slot_v1
 /// as a placed reference's are, rootless citations whose rooted file is
 /// missing too (`crate::actor::Readings::unread_slots`,
@@ -586,6 +590,7 @@ fn actor_rule(code: &str) -> Option<&'static str> {
         "UnverifiedActorTemplateBits" => Some(ACTOR_TEMPLATE_BITS),
         "UnverifiedActorHeadSlots" => Some(ACTOR_HEAD_SLOTS),
         "UnverifiedActorHeadConditions" => Some(ACTOR_HEAD_CONDITIONS),
+        "UnverifiedActorHeadRaceFill" => Some(ACTOR_HEAD_RACE_FILL),
         "UnverifiedActorUnreadSlots" => Some(ACTOR_UNREAD_SLOTS),
         "UnverifiedActorLeveledPick" => Some(ACTOR_LEVELED_PICK),
         "UnverifiedActorLeveledChanceNone" => Some(ACTOR_LEVELED_CHANCE_NONE),
@@ -820,6 +825,7 @@ mod tests {
             ACTOR_TEMPLATE_BITS,
             ACTOR_HEAD_SLOTS,
             ACTOR_HEAD_CONDITIONS,
+            ACTOR_HEAD_RACE_FILL,
             ACTOR_UNREAD_SLOTS,
             ACTOR_LEVELED_PICK,
             ACTOR_LEVELED_CHANCE_NONE,

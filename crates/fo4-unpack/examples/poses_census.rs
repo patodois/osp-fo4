@@ -756,6 +756,7 @@ fn run() -> Result<(), E> {
         chance_none: true,
         use_all: true,
         head_slots: false,
+        head_race_fill: false,
         unread_slots: false,
     };
     let mut loader = Loader::new(&store, &vfs, &m.language, RuleLevel::Hypotheses, &b);

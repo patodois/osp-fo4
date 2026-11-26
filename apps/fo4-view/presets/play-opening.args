@@ -197,6 +197,10 @@
 # The worn armours' slots decide what of a head is hidden
 # (npc_head_hidden_by_head_slot_v1): the checkpoint's helmets keep faces.
 --actor-head-slots
+# An actor listing its own head parts takes its race's parts of the types
+# its list lacks (npc_head_parts_race_fill_kinds_v1): the checkpoint's
+# capped boy has a face, not a mouth alone.
+--actor-head-race-fill
 # A head part with conditions is drawn when its list holds against the
 # stages the run has set, left out alone when it does not
 # (npc_head_part_conditions_run_stages_v1): the lab coats' heads.

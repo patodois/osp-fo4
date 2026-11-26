@@ -246,17 +246,63 @@ fn fixture() -> Fixture {
         }
         d
     };
+    let kind_part = |kind: u32| {
+        let mut d = sub(b"MODL", b"actors\\head.nif\0");
+        d.extend(sub(b"DATA", &[3]));
+        d.extend(sub(b"PNAM", &id(kind)));
+        d
+    };
     let mut cell = sub(b"EDID", b"ActorRoom\0");
     cell.extend(sub(b"DATA", &1u16.to_le_bytes()));
+    // A second cell holds the actor of a race with head parts
+    // (`npc_head_parts_race_fill_kinds_v1`), out of the first cell's cast.
+    let mut other = sub(b"EDID", b"OtherRoom\0");
+    other.extend(sub(b"DATA", &1u16.to_le_bytes()));
     let mut body = group(
         2,
         0,
         &[
             record(b"CELL", 0x800, 0, &cell),
             group(6, 0x800, &group(9, 0x800, &references)),
+            record(b"CELL", 0x801, 0, &other),
+            group(6, 0x801, &group(9, 0x801, &achr(0x90a, 0x80e))),
         ]
         .concat(),
     );
+    // Its race lists a face (type 1), a mouth (8) and a head rear (9) in
+    // the male section; the actor lists its own mouth only.
+    let mut headed = sub(b"WNAM", &id(0x820));
+    headed.extend(sub(b"MNAM", &[]));
+    headed.extend(sub(b"ANAM", b"actors\\skel.nif\0"));
+    headed.extend(sub(b"FNAM", &[]));
+    headed.extend(sub(b"ANAM", b"actors\\skel.nif\0"));
+    headed.extend(sub(b"NAM0", &[]));
+    headed.extend(sub(b"MNAM", &[]));
+    for (i, part) in [0x853u32, 0x852, 0x854].into_iter().enumerate() {
+        headed.extend(sub(b"INDX", &id(i as u32)));
+        headed.extend(sub(b"HEAD", &id(part)));
+    }
+    body.extend(record(b"RACE", 0x811, 0, &headed));
+    body.extend(record(b"HDPT", 0x852, 0, &kind_part(8)));
+    body.extend(record(b"HDPT", 0x853, 0, &kind_part(1)));
+    body.extend(record(b"HDPT", 0x854, 0, &kind_part(9)));
+    body.extend(record(b"HDPT", 0x855, 0, &kind_part(8)));
+    {
+        let mut d = sub(b"ACBS", &acbs(0, 0));
+        d.extend(sub(b"RNAM", &id(0x811)));
+        d.extend(sub(b"WNAM", &id(0x825)));
+        d.extend(sub(b"PNAM", &id(0x855)));
+        body.extend(record(b"NPC_", 0x80e, 0, &d));
+        let mut skin = sub(b"BOD2", &id(4));
+        skin.extend(sub(b"RNAM", &id(0x811)));
+        skin.extend(sub(b"INDX", &[0, 0]));
+        skin.extend(sub(b"MODL", &id(0x826)));
+        body.extend(record(b"ARMO", 0x825, 0, &skin));
+        let mut addon = sub(b"BOD2", &id(4));
+        addon.extend(sub(b"RNAM", &id(0x811)));
+        addon.extend(sub(b"MOD2", b"actors\\body.nif\0"));
+        body.extend(record(b"ARMA", 0x826, 0, &addon));
+    }
     body.extend(npc(0x803, 0x820, &sub(b"PNAM", &id(0x850)), 0));
     body.extend(npc(0x807, 0x820, &sub(b"PNAM", &id(0x851)), 0));
     body.extend(npc(0x808, 0x820, &on_list(0x831), 1));
@@ -634,6 +680,65 @@ fn key(id: u32) -> FormKey {
 }
 
 #[test]
+fn an_actors_own_head_list_takes_the_races_parts_of_the_types_it_lacks() {
+    // `npc_head_parts_race_fill_kinds_v1`: the actor lists a mouth; its race
+    // a face, a mouth and a head rear.
+    let f = fixture();
+    let store = Store::open(&f.manifest, &Budget::new(8 << 20)).unwrap();
+    let v = Vfs::mount(&f.manifest, &Budget::new(8 << 20)).unwrap();
+    let b = Budget::new(64 << 20);
+    let mut loader = Loader::new(&store, &v, "english", crate::RuleLevel::Hypotheses, &b);
+    let src = SourceSpan::new("test", 0, 0);
+    let mut parts = |fill: bool| {
+        let readings = Readings {
+            head_race_fill: fill,
+            ..Readings::default()
+        };
+        let a =
+            resolve_reference_heads(&mut loader, &key(0x90a), &src, readings, None, &b).unwrap();
+        let head = a
+            .plan
+            .as_ref()
+            .and_then(|p| p.head.as_ref())
+            .unwrap_or_else(|| panic!("{:?}", a.notes));
+        let ids: Vec<u32> = head.parts.iter().map(|p| p.part.object_id).collect();
+        let ruled = head
+            .blockers
+            .iter()
+            .any(|e| e.code == "UnverifiedActorHeadRaceFill");
+        (ids, ruled, a.notes)
+    };
+    // Off: the actor's own list alone, no rule.
+    let (ids, ruled, _) = parts(false);
+    assert_eq!(ids, [0x855]);
+    assert!(!ruled);
+    // On: its mouth stands in for the race's; the face and head rear join.
+    let (ids, ruled, notes) = parts(true);
+    assert_eq!(ids, [0x853, 0x854, 0x855]);
+    assert!(ruled);
+    assert!(
+        notes.iter().any(|n| n.contains("2 of the race's")),
+        "{notes:?}"
+    );
+    drop(parts);
+    let readings = Readings {
+        head_race_fill: true,
+        ..Readings::default()
+    };
+    let state = resolve_reference_heads(&mut loader, &key(0x90a), &src, readings, None, &b)
+        .unwrap()
+        .plan
+        .unwrap()
+        .head
+        .unwrap()
+        .state;
+    let crate::State::ReadyUnderHypotheses { hypotheses } = &state else {
+        panic!("head not ready")
+    };
+    assert!(hypotheses.contains(&hypotheses::ACTOR_HEAD_RACE_FILL));
+}
+
+#[test]
 fn the_pick_and_the_roll_are_the_seeds_and_stay_in_range() {
     for seed in 0..50u64 {
         let i = pick_index(seed, &key(0x900), &key(0x830), 3);
@@ -663,6 +768,7 @@ fn template_bits_and_the_seeded_pick_settle_looks_the_candidates_leave_open() {
         chance_none: items,
         use_all: items,
         head_slots: false,
+        head_race_fill: false,
         unread_slots: false,
     };
     let mut go =
