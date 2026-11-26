@@ -1997,6 +1997,8 @@ struct PlayWatch {
     feet: Option<[f64; 3]>,
     /// The play clock's second of the next sample.
     sample: f64,
+    /// The prompt and the aim's label last written.
+    prompt: Option<(Option<String>, Option<String>)>,
 }
 
 /// Units from the walker within which [`PlayWatch`] writes the held doors.
@@ -2025,7 +2027,7 @@ impl PlayWatch {
                 use std::io::Write as _;
                 let _ = writeln!(
                     out,
-                    "# fo4-view play watch (measurement only): KIND\tRUN_SECONDS\tWHAT\t...\n# walker\tT\tX\tY\tZ\n# actor\tT\tREF\tdrawn|gone\tX\tY\tZ\tDISTANCE_TO_WALKER\n# door\tT\tREF\tclosed|open|not-held\tX\tY\tZ\tDISTANCE_TO_WALKER (X Y Z: its first drawn shape's place, - when not drawn)\n# sample\tT\tX\tY\tZ (the walker's feet; every {WATCH_SAMPLE_SECONDS} s of the play clock and at each door line, moved or not)\n# near\tT\tREF\tX\tY\tZ\tDISTANCE_TO_WALKER (after a sample: the {WATCH_NEAR} actors of the drawn cast nearest the walker, moved or not)"
+                    "# fo4-view play watch (measurement only): KIND\tRUN_SECONDS\tWHAT\t...\n# walker\tT\tX\tY\tZ\n# actor\tT\tREF\tdrawn|gone\tX\tY\tZ\tDISTANCE_TO_WALKER\n# door\tT\tREF\tclosed|open|not-held\tX\tY\tZ\tDISTANCE_TO_WALKER (X Y Z: its first drawn shape's place, - when not drawn)\n# sample\tT\tX\tY\tZ (the walker's feet; every {WATCH_SAMPLE_SECONDS} s of the play clock and at each door line, moved or not)\n# near\tT\tREF\tX\tY\tZ\tDISTANCE_TO_WALKER (after a sample: the {WATCH_NEAR} actors of the drawn cast nearest the walker, moved or not)\n# prompt\tT\tPROMPT|-\tAIM|- (at each change: the E prompt as the viewport shows it, and what the activation key meets)"
                 );
                 Some(PlayWatch {
                     out,
@@ -2033,6 +2035,7 @@ impl PlayWatch {
                     doors: std::collections::BTreeMap::new(),
                     feet: None,
                     sample: 0.0,
+                    prompt: None,
                 })
             }
             Err(e) => {
@@ -2168,6 +2171,19 @@ fn watch_play<F: bevy::ecs::query::QueryFilter>(
             f[0], f[1], f[2]
         );
         watch.feet = Some(f);
+    }
+    // The E prompt and what the key meets, at each change.
+    let prompt = (
+        seen.prompt.clone().filter(|_| seen.aim_usable),
+        seen.aim.clone(),
+    );
+    if watch.prompt.as_ref() != Some(&prompt) {
+        lines.push(format!(
+            "prompt\t{t:.3}\t{}\t{}",
+            prompt.0.as_deref().unwrap_or("-"),
+            prompt.1.as_deref().unwrap_or("-")
+        ));
+        watch.prompt = Some(prompt);
     }
     let mut wrote = !lines.is_empty() || walked;
     for l in lines {

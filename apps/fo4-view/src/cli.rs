@@ -179,7 +179,8 @@ usage:
       within 2048 units of the walker, with the play clock and the walker's
       feet, and every second of the play clock (and at each door change) a
       sample: the walker's feet and where the eight actors of the drawn
-      cast nearest it are drawn, moved or not (spec/play.md, Watching the
+      cast nearest it are drawn, moved or not, and at each change the E
+      prompt with what the activation key meets (spec/play.md, Watching the
       actors at a shut door). With FO4_VIEW_OMITTED=FILE (measurement
       only) each cell load appends every placement its draw list left out:
       the cell, the reference, its base, its stored place and the causes.
