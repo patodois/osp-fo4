@@ -2618,11 +2618,8 @@ mod enabled {
                 "use Console"
             );
             assert_eq!(prompt_posed(Some(*b"FURN"), None, false), "use");
-            assert_eq!(
-                prompt_cued("use Skeleton".into(), true),
-                "use Skeleton (not drawn)"
-            );
-            assert_eq!(prompt_cued("use Skeleton".into(), false), "use Skeleton");
+            assert_eq!(prompt_cued("use Lamp".into(), true), "use Lamp (not drawn)");
+            assert_eq!(prompt_cued("use Lamp".into(), false), "use Lamp");
             // The confirmation compares the counts before and after the
             // slice the activation came in (the run took it between looks).
             assert_eq!(confirm_line(false, (1, 2, 3), (1, 3, 3)), "used");
