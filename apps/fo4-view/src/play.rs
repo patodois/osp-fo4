@@ -1504,7 +1504,7 @@ mod enabled {
     }
 
     /// The prompt with the display name of the furniture a scripted
-    /// reference links to (viewer policy: `use Skeleton: NAME`), the name
+    /// reference links to (viewer policy: `use NAME: LINKED`), the name
     /// read as `linked_furniture_name` reads it.
     pub fn prompt_linked(prompt: String, linked: Option<&str>) -> String {
         match linked.map(str::trim).filter(|n| !n.is_empty()) {
@@ -2780,8 +2780,8 @@ mod enabled {
             assert_eq!(confirm_door(None, Some(true)), None);
             // A scripted activator's linked furniture is named after it.
             assert_eq!(
-                prompt_linked("use Skeleton".into(), Some("Device")),
-                "use Skeleton: Device"
+                prompt_linked("use Crate".into(), Some("Seat")),
+                "use Crate: Seat"
             );
             assert_eq!(prompt_linked("use Lamp".into(), Some(" ")), "use Lamp");
             assert_eq!(prompt_linked("use Lamp".into(), None), "use Lamp");
