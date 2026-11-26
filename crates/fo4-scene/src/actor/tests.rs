@@ -278,7 +278,7 @@ fn fixture() -> Fixture {
     headed.extend(sub(b"ANAM", b"actors\\skel.nif\0"));
     headed.extend(sub(b"NAM0", &[]));
     headed.extend(sub(b"MNAM", &[]));
-    for (i, part) in [0x853u32, 0x852, 0x854].into_iter().enumerate() {
+    for (i, part) in [0x853u32, 0x852, 0x854, 0x856].into_iter().enumerate() {
         headed.extend(sub(b"INDX", &id(i as u32)));
         headed.extend(sub(b"HEAD", &id(part)));
     }
@@ -287,6 +287,8 @@ fn fixture() -> Fixture {
     body.extend(record(b"HDPT", 0x853, 0, &kind_part(1)));
     body.extend(record(b"HDPT", 0x854, 0, &kind_part(9)));
     body.extend(record(b"HDPT", 0x855, 0, &kind_part(8)));
+    // A severed head's cut surface (type 7): never taken from the race.
+    body.extend(record(b"HDPT", 0x856, 0, &kind_part(7)));
     {
         let mut d = sub(b"ACBS", &acbs(0, 0));
         d.extend(sub(b"RNAM", &id(0x811)));
@@ -712,7 +714,8 @@ fn an_actors_own_head_list_takes_the_races_parts_of_the_types_it_lacks() {
     let (ids, ruled, _) = parts(false);
     assert_eq!(ids, [0x855]);
     assert!(!ruled);
-    // On: its mouth stands in for the race's; the face and head rear join.
+    // On: its mouth stands in for the race's; the face and head rear join,
+    // the race's type 7 does not.
     let (ids, ruled, notes) = parts(true);
     assert_eq!(ids, [0x853, 0x854, 0x855]);
     assert!(ruled);

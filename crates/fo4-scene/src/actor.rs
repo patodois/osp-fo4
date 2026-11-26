@@ -68,8 +68,9 @@ pub struct Readings {
     /// `npc_head_parts_race_fill_kinds_v1` (`--actor-head-race-fill`): an
     /// NPC_ that lists its own head parts (PNAM) takes, besides them, each
     /// part of its race's HEAD list of its section whose part type (HDPT
-    /// PNAM) none of its own parts has; its own parts stand in for the
-    /// race's of their types. Off: an NPC_ with its own list draws only it.
+    /// PNAM) none of its own parts has, except type 7 ([`SEVERED_PART`]);
+    /// its own parts stand in for the race's of their types. Off: an NPC_
+    /// with its own list draws only it.
     pub head_race_fill: bool,
     /// `actor_texture_missing_unread_slot_v1` (`--actor-unread-texture-slots`):
     /// the actor's models' closure reads `texture_missing_unread_slot_v1` as
@@ -111,6 +112,10 @@ pub const HEAD_SLOT: u32 = 1 << 2;
 pub const HAIR_SLOTS: u32 = 0b11;
 /// HDPT PNAM of a hair part (xEdit's published names: Hair).
 pub const HAIR_PART: u32 = 3;
+/// HDPT PNAM of the part xEdit's published names call Meatcaps: the cut
+/// surface of a severed head, which [`Readings::head_race_fill`] never
+/// takes from the race (shown only on a severed limb: prior knowledge).
+pub const SEVERED_PART: u32 = 7;
 
 /// What [`Readings::leveled_seed`] and its companions did with the
 /// leveled lists of one actor.
@@ -407,7 +412,9 @@ fn own_traits(
             let race_parts: Vec<FormKey> = race_parts.collect();
             if let Some(kinds) = part_kinds(loader, &race_parts, work) {
                 for (k, kind) in race_parts.into_iter().zip(kinds) {
-                    if kind.is_some_and(|t| !own.contains(&Some(t))) && !heads.contains(&k) {
+                    if kind.is_some_and(|t| t != SEVERED_PART && !own.contains(&Some(t)))
+                        && !heads.contains(&k)
+                    {
                         filled.push(k.clone());
                         heads.push(k);
                     }

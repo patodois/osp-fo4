@@ -1845,8 +1845,9 @@ of its own: a mouth (HDPT PNAM 8) and a hair (3), hidden under its cap by the sl
 for its section holds a face (1), a head rear (9), eyes (2), a mouth and a hair. Drawn with its own list alone it
 showed a cap and a mouth with scenery through the rest of the head. With `--actor-head-race-fill`
 (`npc_head_parts_race_fill_kinds_v1`, pending, in the preset; render and fo4-view) an actor that lists its own
-parts also takes its race's part of each type its list lacks; its own parts stand in for the race's of their
-types. The cast log's `faces:` line counts, at each cast build, the actors with a head, those that draw no face
+parts also takes its race's part of each type its list lacks, except type 7 (xEdit's published name: Meatcaps,
+the cut surface of a severed head: taken, it drew a red ring at every adult's neck); its own parts stand in for the
+race's of their types. The cast log's `faces:` line counts, at each cast build, the actors with a head, those that draw no face
 part and those of them wearing headgear (named).
 
 **The actor at the crane.** In A the run moved that actor: the caller's assumed move of the run's arguments
