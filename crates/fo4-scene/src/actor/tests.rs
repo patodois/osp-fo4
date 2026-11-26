@@ -681,6 +681,29 @@ fn template_bits_and_the_seeded_pick_settle_looks_the_candidates_leave_open() {
 }
 
 #[test]
+fn a_placements_marker_refusals_go_with_it_to_its_own_nodes() {
+    use crate::timeline::ride::carried_to_own_nodes;
+    let e = |code: &str| Error::new(code, "m.nif", 0, "x", "y");
+    for code in [
+        "UnverifiedNifEditorMarkerVisibility",
+        "UnverifiedNifEditorMarkerSuffixVisibility",
+        "UnverifiedVisibilityEditorMarker",
+        "HypothesisAssetMissingRoot",
+    ] {
+        assert!(carried_to_own_nodes(&e(code)), "{code}");
+        // Each is covered by a rule the actor walk reads.
+        assert!(hypotheses::covering(&e(code)).is_some(), "{code}");
+    }
+    for code in [
+        "UnsupportedSkinning",
+        "UnsupportedNifBlock",
+        "UninterpretedVisualSubrecord",
+    ] {
+        assert!(!carried_to_own_nodes(&e(code)), "{code}");
+    }
+}
+
+#[test]
 fn a_ride_model_is_drawn_on_its_own_nodes_and_a_moved_node_carries_its_children() {
     let f = fixture();
     let store = Store::open(&f.manifest, &Budget::new(8 << 20)).unwrap();

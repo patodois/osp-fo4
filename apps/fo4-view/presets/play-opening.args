@@ -90,6 +90,11 @@
 --actor-clip-folder
 --actor-subgraph-flag-one
 --actor-model-graph-idle
+# A placement the draw refuses for its skinned shapes is drawn as one more
+# actor by those shapes on its model's own nodes, its editor marker
+# subtrees set aside (model_skinned_own_nodes_every_placement_v1): the
+# crib's occupant and the seated remains.
+--skinned-models-own-nodes
 # Light, sky and exposure.
 --light-cell
 --light-inherits

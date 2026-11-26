@@ -259,6 +259,66 @@ pub fn cast_scene<'s>(
     built
 }
 
+/// `FO4_VIEW_HEAD_NOTES=FILE` (measurement only): per cast actor, its
+/// head as the build reads it (how many parts, from the race or the actor,
+/// their kinds, the head's state) or that it has none, and every note the
+/// actor's reading left (a head refused by name: a part with no winning
+/// record, conditions, no model, an unresolved path, the worn slots),
+/// appended to FILE: cell, second, actor, base, head, notes.
+#[cfg(feature = "script-event")]
+fn head_notes(cell: &fo4_plugin::FormKey, second: f64, cast: &tl::cast::Cast) {
+    let Some(path) = std::env::var_os("FO4_VIEW_HEAD_NOTES") else {
+        return;
+    };
+    let text = head_notes_text(cell, second, cast);
+    use std::io::Write;
+    let file = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&path);
+    if let Err(e) = file.and_then(|mut f| f.write_all(text.as_bytes())) {
+        eprintln!("play: FO4_VIEW_HEAD_NOTES: {e}");
+    }
+}
+
+/// The lines [`head_notes`] writes.
+#[cfg(feature = "script-event")]
+fn head_notes_text(cell: &fo4_plugin::FormKey, second: f64, cast: &tl::cast::Cast) -> String {
+    let mut text = String::new();
+    for a in &cast.actors.actors {
+        let head = match a.plan.as_ref().map(|p| p.head.as_ref()) {
+            None => "no plan".to_string(),
+            Some(None) => "no head".to_string(),
+            Some(Some(h)) => {
+                let kinds: Vec<String> = h
+                    .parts
+                    .iter()
+                    .map(|p| p.kind.map_or("-".into(), |k| k.to_string()))
+                    .collect();
+                format!(
+                    "{} parts from the {} (kinds {}), {}",
+                    h.parts.len(),
+                    if h.from_race { "race" } else { "actor" },
+                    kinds.join(","),
+                    if h.state.ready_at(fo4_scene::RuleLevel::Hypotheses) {
+                        "ready"
+                    } else {
+                        "not ready"
+                    }
+                )
+            }
+        };
+        text.push_str(&format!(
+            "{}\t{second:.3}\t{}\t{}\t{head}\t{}\n",
+            tl::key_text(cell),
+            tl::key_text(&a.reference),
+            a.base.as_ref().map_or("-".into(), tl::key_text),
+            a.notes.join(" | ")
+        ));
+    }
+    text
+}
+
 /// [`cast_scene`] with its loader.
 #[cfg(feature = "script-event")]
 #[allow(clippy::too_many_arguments)]
@@ -298,6 +358,7 @@ fn cast_with(
     };
     let Cast { markers, cast } = self::cast(&prepared, a, &scene, loader, s.level, budget)?;
     let mut cast = cast.ok_or("PlayCast: no cast")?;
+    head_notes(cell, second, &cast);
     steps.mark("actors");
     if stop() {
         return Ok(None);
@@ -323,6 +384,14 @@ fn cast_with(
     // The cell's light, before its references leave the build.
     let light =
         fo4_scene::light::frame(&sources.store, &scene, s.light, s.light_assumptions, budget)?;
+    // --skinned-models-own-nodes: every placement of the cell refused for
+    // its skinned shapes, one more actor on its model's own nodes, after
+    // the run's hides and shows at the second (as the load's timeline
+    // path applies them first).
+    if a.skinned_models {
+        tl::apply(&mut scene, loader, &prepared.frame, s.level, budget)?;
+        tl::ride::add_skinned(&mut cast, loader, &scene, s.level, budget)?;
+    }
     let options = fo4_render::draw::BuildOptions {
         time: s.time,
         clock: s.clock,
@@ -423,6 +492,10 @@ fn cast_with(
             .iter()
             .map(|(k, why)| format!("head left out {}: {why}", key(*k))),
     );
+    let skinned = tl::ride::report_skinned(&cast, &d.extras);
+    if !skinned.is_empty() {
+        details.push(skinned.trim_end().replace('\n', "; "));
+    }
     Ok(Some(CastScene { gpu, line, details }))
 }
 

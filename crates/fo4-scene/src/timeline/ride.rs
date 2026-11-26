@@ -257,6 +257,21 @@ fn skin_refusal(e: &Error) -> bool {
         || (e.code == "UnsupportedNifBlock" && e.found.starts_with("BSSkin::"))
 }
 
+/// Whether a placement's refusal goes with it to its drawing on its own
+/// nodes ([`add_skinned`]): an asset path's reading, and an editor marker
+/// subtree's (a named marker, a marker suffix, a visibility marker), so the
+/// actor walk sets that subtree aside under the rule that covers it as the
+/// placement's own draw would, instead of refusing the whole model.
+pub fn carried_to_own_nodes(e: &Error) -> bool {
+    e.code.starts_with("HypothesisAsset")
+        || matches!(
+            e.code.as_str(),
+            "UnverifiedNifEditorMarkerVisibility"
+                | "UnverifiedNifEditorMarkerSuffixVisibility"
+                | "UnverifiedVisibilityEditorMarker"
+        )
+}
+
 /// `model_skinned_own_nodes_every_placement_v1` (`--skinned-models-own-nodes`):
 /// every placed reference of the loaded `scene` that the draw refuses at
 /// `level` with one of its skinned shapes among the reasons (not an editor
@@ -264,8 +279,9 @@ fn skin_refusal(e: &Error) -> bool {
 /// added to `cast` as one more actor drawn by its model's skinned shapes on
 /// the model's own nodes at their stored transforms, as [`add`] draws the
 /// ride's model without a sequence: its rigid shapes, its controllers and
-/// its material swap are left out, its other refusals not read. Writes
-/// [`Cast::skinned`].
+/// its material swap are left out, its editor marker subtrees set aside
+/// under the rules that cover them ([`carried_to_own_nodes`]), its other
+/// refusals not read. Writes [`Cast::skinned`].
 pub fn add_skinned(
     cast: &mut Cast,
     loader: &Loader<'_>,
@@ -316,7 +332,7 @@ pub fn add_skinned(
             "skinned shapes on the model's own nodes",
         )];
         for e in &inst.blockers {
-            if e.code.starts_with("HypothesisAsset") {
+            if carried_to_own_nodes(e) {
                 b.reserve(&mut blockers, 1, &src.file, src.offset)?;
                 blockers.push(e.clone());
             }
