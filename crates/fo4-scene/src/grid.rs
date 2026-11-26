@@ -334,6 +334,138 @@ pub fn absorb_around(
     Ok(out)
 }
 
+/// Side of an exterior grid square in game units.
+pub const SQUARE_SIZE: f64 = 4096.0;
+
+/// The grid square holding a point.
+pub fn square_of(p: [f64; 3]) -> [i32; 2] {
+    [
+        (p[0] / SQUARE_SIZE).floor() as i32,
+        (p[1] / SQUARE_SIZE).floor() as i32,
+    ]
+}
+
+/// The placed references (`REFR`, not actors) of `world`'s cells'
+/// persistent groups whose stored position lies in one of `squares`
+/// (`world_persistent_refs_drawn_in_square_v1`): those placed active, and
+/// those initially disabled, each in stored order.
+pub fn persistent_in(
+    store: &Store,
+    world: &FormKey,
+    squares: &[[i32; 2]],
+    b: &Budget,
+) -> Result<(Vec<fo4_plugin::typed::Child>, Vec<fo4_plugin::typed::Child>)> {
+    let (mut active, mut disabled) = (Vec::new(), Vec::new());
+    let world = crate::timeline::norm(world);
+    for c in store.cells() {
+        if store.world(&c).map(|w| crate::timeline::norm(&w)) != Some(world.clone()) {
+            continue;
+        }
+        let cb = b.child();
+        let ch = store.children(&c, &cb)?;
+        for (kid, on) in ch
+            .active
+            .into_iter()
+            .map(|k| (k, true))
+            .chain(ch.disabled.into_iter().map(|k| (k, false)))
+        {
+            if kid.group_kind != 8 || kid.signature != *b"REFR" {
+                continue;
+            }
+            let rb = b.child();
+            let Some(r) = store.get::<fo4_plugin::typed::Refr>(&kid.key, &rb)? else {
+                continue;
+            };
+            let Some(t) = r.data.transform else { continue };
+            if !squares.contains(&square_of([t[0], t[1], t[2]].map(f64::from))) {
+                continue;
+            }
+            let to = if on { &mut active } else { &mut disabled };
+            b.reserve(to, 1, FILE, 0)?;
+            to.push(kid);
+        }
+    }
+    Ok((active, disabled))
+}
+
+/// What [`absorb_persistent`] joined.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct PersistentJoin {
+    /// Instances added to the scene.
+    pub added: usize,
+    /// Initially disabled references added to the scene's disabled list.
+    pub disabled: usize,
+    /// References already among the scene's instances or disabled list.
+    pub already: usize,
+    /// References whose instance did not build (left out).
+    pub failed: usize,
+}
+
+/// Joins to `scene` the persistent references of `around`'s world standing
+/// in its loaded grid squares (the cell's and each loaded neighbour's;
+/// [`persistent_in`], `world_persistent_refs_drawn_in_square_v1`): each
+/// active one as the instance a cell load makes for it, each initially
+/// disabled one to the disabled list (where a run's enable finds it).
+pub fn absorb_persistent(
+    loader: &mut Loader<'_>,
+    scene: &mut Scene,
+    around: &Around,
+    b: &Budget,
+) -> Result<PersistentJoin> {
+    let mut out = PersistentJoin::default();
+    let Some(world) = &around.world else {
+        return Ok(out);
+    };
+    let squares: Vec<[i32; 2]> = around
+        .grid
+        .into_iter()
+        .chain(
+            around
+                .neighbours
+                .iter()
+                .filter(|n| n.cell.is_some())
+                .filter_map(|n| n.grid),
+        )
+        .collect();
+    let (active, disabled) = persistent_in(loader.plugins, world, &squares, b)?;
+    let have: std::collections::BTreeSet<FormKey> = scene
+        .instances
+        .iter()
+        .map(|i| crate::timeline::norm(&i.reference.key))
+        .chain(scene.disabled.iter().map(|c| crate::timeline::norm(&c.key)))
+        .collect();
+    for kid in active {
+        if have.contains(&crate::timeline::norm(&kid.key)) {
+            out.already += 1;
+            continue;
+        }
+        let scope = b.child();
+        match loader.instance(&kid.key, &scope) {
+            Ok(instance) => {
+                scope.commit(b)?;
+                b.reserve(&mut scene.assets, instance.assets.len(), FILE, 0)?;
+                scene.assets.extend_from_slice(&instance.assets);
+                b.reserve(&mut scene.instances, 1, FILE, 0)?;
+                scene.instances.push(instance);
+                out.added += 1;
+            }
+            Err(_) => out.failed += 1,
+        }
+    }
+    for kid in disabled {
+        if have.contains(&crate::timeline::norm(&kid.key)) {
+            out.already += 1;
+            continue;
+        }
+        b.reserve(&mut scene.disabled, 1, FILE, 0)?;
+        scene.disabled.push(kid);
+        out.disabled += 1;
+    }
+    scene.assets.sort_unstable();
+    scene.assets.dedup();
+    Ok(out)
+}
+
 fn append<T>(to: &mut Vec<T>, from: Vec<T>, b: &Budget) -> Result<()> {
     b.reserve(to, from.len(), FILE, 0)?;
     to.extend(from);

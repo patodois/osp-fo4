@@ -204,7 +204,9 @@ pub struct Loader<'a> {
     render_reference_alpha: bool,
     render_scripted: bool,
     render_activator_fields: bool,
+    render_furniture_fields: bool,
     render_static_parts: bool,
+    render_activator_parts: bool,
 }
 impl<'a> Loader<'a> {
     /// The collision readiness switches the collision cell build reads
@@ -293,6 +295,27 @@ impl<'a> Loader<'a> {
     pub fn render_activator_fields(&self) -> bool {
         self.render_activator_fields
     }
+    /// `furn_fields_render_unchanged_v1`
+    /// ([`hypotheses::FURNITURE_FIELDS_RENDER`]): render readiness sets a
+    /// furniture's (`FURN`) unread [`readiness::FURNITURE_FIELDS`] aside,
+    /// for drawing only (off by default; collision readiness unchanged).
+    pub fn set_render_furniture_fields(&mut self, on: bool) {
+        self.render_furniture_fields = on;
+    }
+    pub fn render_furniture_fields(&self) -> bool {
+        self.render_furniture_fields
+    }
+    /// `acti_unmoved_parts_drawn_v1` ([`hypotheses::ACTIVATOR_PARTS`]; with
+    /// [`Loader::set_render_static_parts`]): render readiness reads an
+    /// activator (`ACTI`) refused for model blocks no rule settles as the
+    /// static parts reading reads a static, and sets its reference's
+    /// `XLRT` aside (off by default).
+    pub fn set_render_activator_parts(&mut self, on: bool) {
+        self.render_activator_parts = on;
+    }
+    pub fn render_activator_parts(&self) -> bool {
+        self.render_activator_parts
+    }
     /// Render readiness of a reference whose base is a static and whose
     /// model is a leaf ([`leaf::read`]): the animation blockers of its one
     /// transform controller ([`leaf::aside`]) are set aside under
@@ -346,6 +369,8 @@ impl<'a> Loader<'a> {
             render_reference_alpha: false,
             render_scripted: false,
             render_activator_fields: false,
+            render_furniture_fields: false,
+            render_activator_parts: false,
             render_static_parts: false,
         }
     }
@@ -759,54 +784,76 @@ impl<'a> Loader<'a> {
             && base
                 .as_ref()
                 .is_some_and(|v| v.record.signature == *b"ACTI");
+        let furniture = self.render_furniture_fields
+            && base
+                .as_ref()
+                .is_some_and(|v| v.record.signature == *b"FURN");
+        let on_activator = self.render_activator_parts
+            && base
+                .as_ref()
+                .is_some_and(|v| v.record.signature == *b"ACTI");
         let parts = self.render_static_parts
-            && on_static
+            && (on_static || on_activator)
             && blockers
                 .iter()
                 .enumerate()
                 .any(|(k, e)| parts::aside(e, origin(k)))
             && self.static_parts_kept(base.as_ref(), b)?;
-        let state = if agrees || fields || leaf || alpha || parts || scripted || activator {
-            hypotheses::classify_aside(
-                &blockers,
-                outside,
-                |k| {
-                    let e = &blockers[k];
-                    if agrees && readiness::own_flag(e) {
-                        Some(hypotheses::ENABLE_CHILD_FLAG_AGREES)
-                    } else if fields
-                        && origin(k) == readiness::Origin::Record
-                        && readiness::static_reference_field(e)
-                    {
-                        Some(hypotheses::STATIC_REFERENCE_FIELDS_RENDER)
-                    } else if leaf && leaf::aside(e, origin(k)) {
-                        Some(hypotheses::STATIC_LEAF_TWO_POSE)
-                    } else if alpha
-                        && origin(k) == readiness::Origin::Record
-                        && readiness::reference_alpha(e)
-                    {
-                        Some(hypotheses::REFERENCE_ALPHA_RENDER)
-                    } else if scripted
-                        && origin(k) == readiness::Origin::Record
-                        && readiness::script_condition(e)
-                    {
-                        Some(hypotheses::REFERENCE_SCRIPT_RENDER)
-                    } else if activator
-                        && origin(k) == readiness::Origin::Record
-                        && readiness::activator_field(e)
-                    {
-                        Some(hypotheses::ACTIVATOR_FIELDS_RENDER)
-                    } else if parts && parts::aside(e, origin(k)) {
-                        Some(hypotheses::STATIC_PARTS)
-                    } else {
-                        None
-                    }
-                },
-                b,
-            )?
-        } else {
-            hypotheses::classify(&blockers, outside, b)?
-        };
+        let state =
+            if agrees || fields || leaf || alpha || parts || scripted || activator || furniture {
+                hypotheses::classify_aside(
+                    &blockers,
+                    outside,
+                    |k| {
+                        let e = &blockers[k];
+                        if agrees && readiness::own_flag(e) {
+                            Some(hypotheses::ENABLE_CHILD_FLAG_AGREES)
+                        } else if fields
+                            && origin(k) == readiness::Origin::Record
+                            && readiness::static_reference_field(e)
+                        {
+                            Some(hypotheses::STATIC_REFERENCE_FIELDS_RENDER)
+                        } else if leaf && leaf::aside(e, origin(k)) {
+                            Some(hypotheses::STATIC_LEAF_TWO_POSE)
+                        } else if alpha
+                            && origin(k) == readiness::Origin::Record
+                            && readiness::reference_alpha(e)
+                        {
+                            Some(hypotheses::REFERENCE_ALPHA_RENDER)
+                        } else if scripted
+                            && origin(k) == readiness::Origin::Record
+                            && readiness::script_condition(e)
+                        {
+                            Some(hypotheses::REFERENCE_SCRIPT_RENDER)
+                        } else if activator
+                            && origin(k) == readiness::Origin::Record
+                            && readiness::activator_field(e)
+                        {
+                            Some(hypotheses::ACTIVATOR_FIELDS_RENDER)
+                        } else if furniture
+                            && origin(k) == readiness::Origin::Record
+                            && readiness::furniture_field(e)
+                        {
+                            Some(hypotheses::FURNITURE_FIELDS_RENDER)
+                        } else if parts && on_activator && parts::aside(e, origin(k)) {
+                            Some(hypotheses::ACTIVATOR_PARTS)
+                        } else if parts
+                            && on_activator
+                            && origin(k) == readiness::Origin::Record
+                            && readiness::reference_location_type(e)
+                        {
+                            Some(hypotheses::ACTIVATOR_PARTS)
+                        } else if parts && parts::aside(e, origin(k)) {
+                            Some(hypotheses::STATIC_PARTS)
+                        } else {
+                            None
+                        }
+                    },
+                    b,
+                )?
+            } else {
+                hypotheses::classify(&blockers, outside, b)?
+            };
         let more = blockers.len().saturating_sub(origins.len());
         b.reserve(&mut origins, more, &src.file, src.offset)?;
         origins.resize(blockers.len(), readiness::Origin::Record);

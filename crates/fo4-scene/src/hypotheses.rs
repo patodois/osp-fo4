@@ -257,6 +257,14 @@ pub const REFERENCE_SCRIPT_RENDER: &str = "refr_script_render_as_stored_v1";
 /// drawing as its model stores it (`Loader::set_render_activator_fields`,
 /// off by default).
 pub const ACTIVATOR_FIELDS_RENDER: &str = "acti_fields_render_unchanged_v1";
+/// A furniture's (`FURN`) unread `PNAM`, `FNAM`, `MNAM`, `SNAM` and `WBDT`
+/// leave its drawing as its model stores it
+/// (`Loader::set_render_furniture_fields`, off by default).
+pub const FURNITURE_FIELDS_RENDER: &str = "furn_fields_render_unchanged_v1";
+/// A worldspace's persistent references whose stored position lies in a
+/// loaded grid square join that square's scene (`grid::persistent_in`,
+/// the viewer's `--draw-world-persistent`, off by default).
+pub const WORLD_PERSISTENT_IN_SQUARE: &str = "world_persistent_refs_drawn_in_square_v1";
 /// A static's reference fields `XACT`, `XLRT`, `XOWN` and `ONAM` leave its
 /// collision as stored (`crate::readiness`, behind
 /// `readiness::Switches::static_fields`).
@@ -275,6 +283,11 @@ pub const STATIC_LEAF_TWO_POSE: &str = "play_static_leaf_two_pose_v1";
 /// left out and counted (`crate::parts`, `Loader::set_render_static_parts`,
 /// off by default).
 pub const STATIC_PARTS: &str = "static_unmoved_parts_drawn_v1";
+/// An activator refused for model blocks no rule settles (its animation:
+/// controllers, a behaviour graph) is drawn as `STATIC_PARTS` draws a
+/// static, its reference's `XLRT` set aside (`Loader::set_render_activator_parts`,
+/// with `Loader::set_render_static_parts`; off by default).
+pub const ACTIVATOR_PARTS: &str = "acti_unmoved_parts_drawn_v1";
 /// A named platform's skinned shape whose bones go with more than one of
 /// its parts drawn skinned again with each bone moved by its part's motion
 /// (`crate::platform::skin_at_rest`, the play window's
@@ -328,6 +341,10 @@ pub const ACTOR_TEMPLATE_BITS: &str = "npc_template_bits_traits_inventory_v1";
 /// What of an actor's head a worn armour hides, from its BOD2 slots
 /// (`crate::actor::Readings::head_slots`, `--actor-head-slots`).
 pub const ACTOR_HEAD_SLOTS: &str = "npc_head_hidden_by_head_slot_v1";
+/// A head part with conditions drawn or left out by its condition list as
+/// the caller evaluates it against the run's stages done
+/// (`crate::actor::HeadConditions`, `--actor-head-conditions`).
+pub const ACTOR_HEAD_CONDITIONS: &str = "npc_head_part_conditions_run_stages_v1";
 /// A run or placed actor's models read under texture_missing_unread_slot_v1
 /// as a placed reference's are, rootless citations whose rooted file is
 /// missing too (`crate::actor::Readings::unread_slots`,
@@ -560,6 +577,7 @@ fn actor_rule(code: &str) -> Option<&'static str> {
         "UnverifiedActorTemplateAllBits" => Some(ACTOR_TEMPLATE_ALL_BITS),
         "UnverifiedActorTemplateBits" => Some(ACTOR_TEMPLATE_BITS),
         "UnverifiedActorHeadSlots" => Some(ACTOR_HEAD_SLOTS),
+        "UnverifiedActorHeadConditions" => Some(ACTOR_HEAD_CONDITIONS),
         "UnverifiedActorUnreadSlots" => Some(ACTOR_UNREAD_SLOTS),
         "UnverifiedActorLeveledPick" => Some(ACTOR_LEVELED_PICK),
         "UnverifiedActorLeveledChanceNone" => Some(ACTOR_LEVELED_CHANCE_NONE),
@@ -770,6 +788,9 @@ mod tests {
             REFERENCE_ALPHA_RENDER,
             REFERENCE_SCRIPT_RENDER,
             ACTIVATOR_FIELDS_RENDER,
+            FURNITURE_FIELDS_RENDER,
+            ACTIVATOR_PARTS,
+            WORLD_PERSISTENT_IN_SQUARE,
             STATIC_REFERENCE_FIELDS_COLLISION,
             STATIC_REFERENCE_FIELDS_RENDER,
             STATIC_LEAF_TWO_POSE,
@@ -789,6 +810,7 @@ mod tests {
             ACTOR_SKINNING,
             ACTOR_TEMPLATE_BITS,
             ACTOR_HEAD_SLOTS,
+            ACTOR_HEAD_CONDITIONS,
             ACTOR_UNREAD_SLOTS,
             ACTOR_LEVELED_PICK,
             ACTOR_LEVELED_CHANCE_NONE,

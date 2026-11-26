@@ -456,6 +456,73 @@ fn bind_pose_skinning_returns_the_stored_vertices_and_the_rest_pose_moves_them()
 }
 
 #[test]
+fn a_head_part_with_conditions_follows_the_callers_answer() {
+    // `npc_head_part_conditions_run_stages_v1`: the fixture's fourth actor
+    // lists a head part with one condition.
+    let f = fixture();
+    let store = Store::open(&f.manifest, &Budget::new(8 << 20)).unwrap();
+    let v = Vfs::mount(&f.manifest, &Budget::new(8 << 20)).unwrap();
+    let b = Budget::new(64 << 20);
+    let mut loader = Loader::new(&store, &v, "english", crate::RuleLevel::Hypotheses, &b);
+    let scene = loader.by_editor_id("ActorRoom", &b).unwrap();
+    let plain = resolve(&scene, &mut loader, &b).unwrap();
+    let key = plain.actors[3].reference.clone();
+    let src = SourceSpan::new("test", 0, 0);
+    let mut seen = 0usize;
+    let mut with = |answer: Option<bool>| {
+        let mut f = |list: &[fo4_plugin::condition::Condition],
+                     _: fo4_plugin::actor::Context<'_>,
+                     _: &str| {
+            assert!(!list.is_empty());
+            seen += 1;
+            answer
+        };
+        resolve_reference_heads(
+            &mut loader,
+            &key,
+            &src,
+            Readings::default(),
+            Some(&mut f),
+            &b,
+        )
+        .unwrap()
+    };
+    // Holds: the head is drawn with the part, under the rule.
+    let shown = with(Some(true));
+    let head = shown
+        .plan
+        .as_ref()
+        .and_then(|p| p.head.as_ref())
+        .expect("head");
+    assert_eq!(head.parts.len(), 1);
+    assert!(head
+        .blockers
+        .iter()
+        .any(|e| e.code == "UnverifiedActorHeadConditions"));
+    assert!(shown.notes.iter().any(|n| n.contains("conditions hold")));
+    // Does not hold: that part alone is left out (here the only one).
+    let left = with(Some(false));
+    assert!(left
+        .notes
+        .iter()
+        .any(|n| n.contains("conditions do not hold") && n.ends_with("left out")));
+    assert!(left
+        .plan
+        .as_ref()
+        .and_then(|p| p.head.as_ref())
+        .is_none_or(|h| h.parts.is_empty()));
+    // Undetermined: the whole head is refused, as with no answer.
+    let open = with(None);
+    assert!(open.plan.as_ref().is_some_and(|p| p.head.is_none()));
+    assert!(open
+        .notes
+        .iter()
+        .any(|n| n.ends_with("has conditions; not drawn")));
+    drop(with);
+    assert_eq!(seen, 3);
+}
+
+#[test]
 fn placed_actors_resolve_to_a_skeleton_and_addon_models_or_say_why_not() {
     let f = fixture();
     let store = Store::open(&f.manifest, &Budget::new(8 << 20)).unwrap();

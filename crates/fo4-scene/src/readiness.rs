@@ -284,6 +284,12 @@ pub fn static_reference_field(e: &Error) -> bool {
             .is_some_and(|f| STATIC_REFERENCE_FIELDS.contains(&f))
 }
 
+/// Whether `e` is the record blocker of a reference's `XLRT` (xEdit's
+/// published name: location ref type), read as run-time state.
+pub fn reference_location_type(e: &Error) -> bool {
+    e.code == "RuntimeRecordState" && e.found == "REFR.XLRT"
+}
+
 /// Whether a base record of signature `signature` is one whose reference's
 /// [`STATIC_REFERENCE_FIELDS`] [`Switches::static_fields`] sets aside: a
 /// static (`STAT`).
@@ -329,6 +335,21 @@ pub fn activator_field(e: &Error) -> bool {
     e.code == Code::UninterpretedVisualSubrecord.name()
         && parts.next() == Some("ACTI")
         && parts.next().is_some_and(|f| ACTIVATOR_FIELDS.contains(&f))
+}
+
+/// A furniture base's (`FURN`) subrecords whose layout this project has
+/// not established, set aside for drawing under
+/// `furn_fields_render_unchanged_v1` (xEdit's published names: marker
+/// colour, flags, active markers, sit sound, workbench data).
+pub const FURNITURE_FIELDS: [&str; 5] = ["PNAM", "FNAM", "MNAM", "SNAM", "WBDT"];
+
+/// Whether `e` is the record blocker of a furniture's (`FURN`) unread
+/// [`FURNITURE_FIELDS`].
+pub fn furniture_field(e: &Error) -> bool {
+    let mut parts = e.found.split('.');
+    e.code == Code::UninterpretedVisualSubrecord.name()
+        && parts.next() == Some("FURN")
+        && parts.next().is_some_and(|f| FURNITURE_FIELDS.contains(&f))
 }
 
 /// Whether `e` is the record blocker of a reference's unread `XALP`.

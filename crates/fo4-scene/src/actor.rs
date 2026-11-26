@@ -81,6 +81,23 @@ impl Readings {
     }
 }
 
+/// The caller's answer for a listed head part's condition list
+/// (`npc_head_part_conditions_run_stages_v1`, `--actor-head-conditions`):
+/// `Some(true)` the list holds (the part is drawn), `Some(false)` it does
+/// not (that part alone is left out), `None` undetermined (the head is not
+/// drawn, as with no answer). Given the list, the record's plugin context
+/// and its file. The scene crate evaluates no condition itself.
+pub type HeadConditions<'a> =
+    &'a mut dyn FnMut(&[fo4_plugin::condition::Condition], Context<'_>, &str) -> Option<bool>;
+
+/// A shorter borrow of the caller's answer, for one head.
+fn reborrow<'s>(h: &'s mut Option<HeadConditions<'_>>) -> Option<HeadConditions<'s>> {
+    match h {
+        Some(f) => Some(&mut **f),
+        None => None,
+    }
+}
+
 /// BOD2 bit of the slot xEdit's published names call 32, FaceGen Head
 /// ([`Readings::head_slots`]).
 pub const HEAD_SLOT: u32 = 1 << 2;
@@ -776,6 +793,19 @@ pub fn resolve_reference_with(
     readings: Readings,
     b: &Budget,
 ) -> Result<Actor> {
+    resolve_reference_heads(loader, key, source, readings, None, b)
+}
+
+/// [`resolve_reference_with`] with the caller's answer for head parts with
+/// conditions ([`HeadConditions`]); `None` is [`resolve_reference_with`].
+pub fn resolve_reference_heads(
+    loader: &mut Loader<'_>,
+    key: &FormKey,
+    source: &SourceSpan,
+    readings: Readings,
+    mut heads: Option<HeadConditions<'_>>,
+    b: &Budget,
+) -> Result<Actor> {
     let mut actor = Actor {
         reference: key.clone(),
         source: source.clone(),
@@ -1244,6 +1274,7 @@ pub fn resolve_reference_with(
                 from_race,
                 &parts,
                 slots,
+                reborrow(&mut heads),
                 src,
                 &mut actor.notes,
                 b,
@@ -1330,6 +1361,27 @@ fn skin_profile(loader: &Loader<'_>, asset: usize, b: &Budget) -> Result<Profile
     Ok(out)
 }
 
+/// A head part's condition lists as words for a note: each condition's
+/// function, its two parameters (hexadecimal), its operator code and its
+/// comparison value.
+fn condition_words(lists: &[fo4_plugin::condition::List]) -> String {
+    let mut out = Vec::new();
+    for l in lists {
+        for c in &l.conditions {
+            let d = &c.ctda;
+            out.push(format!(
+                "function {} params {:08x} {:08x} op {} value {:?}",
+                d.function,
+                d.param1,
+                d.param2,
+                d.operator(),
+                d.comparison()
+            ));
+        }
+    }
+    out.join("; ")
+}
+
 /// The head of an actor whose head part list is settled
 /// (`npc_head_parts_unmorphed_v1`): every listed part's model, unless a
 /// part has conditions or a worn outfit addon covers the head (has vertices
@@ -1344,6 +1396,7 @@ fn head(
     from_race: bool,
     parts: &[Part],
     slots: Option<u32>,
+    mut conditions: Option<HeadConditions<'_>>,
     src: &SourceSpan,
     notes: &mut Vec<String>,
     b: &Budget,
@@ -1371,6 +1424,7 @@ fn head(
     }
     let hair_hidden = slots.is_some_and(|w| w & HAIR_SLOTS != 0);
     let mut hair_left = 0usize;
+    let mut conditioned = 0usize;
     for k in list {
         let Some((r, plugin)) = read(loader, k, &work)? else {
             note(
@@ -1394,12 +1448,49 @@ fn head(
             continue;
         }
         if h.conditions > 0 {
-            note(
-                notes,
-                format!("head: part {} has conditions; not drawn", short(k)),
-                b,
-            )?;
-            return Ok(None);
+            // `npc_head_part_conditions_run_stages_v1`: the caller's answer
+            // for the part's one condition list; none, or undetermined,
+            // keeps the whole head undrawn.
+            let lists = fo4_plugin::condition::lists(&r, &work)?;
+            let answer = match (reborrow(&mut conditions), lists.as_slice()) {
+                (Some(f), [one]) => f(&one.conditions, ctx(loader, plugin), &r.source.file),
+                _ => None,
+            };
+            let shown = condition_words(&lists);
+            match answer {
+                Some(true) => {
+                    conditioned += 1;
+                    note(
+                        notes,
+                        format!("head: part {} conditions hold ({shown}); drawn", short(k)),
+                        b,
+                    )?;
+                }
+                Some(false) => {
+                    conditioned += 1;
+                    note(
+                        notes,
+                        format!(
+                            "head: part {} conditions do not hold ({shown}); left out",
+                            short(k)
+                        ),
+                        b,
+                    )?;
+                    continue;
+                }
+                None => {
+                    note(
+                        notes,
+                        format!(
+                            "head: part {} kind {} ({shown}) has conditions; not drawn",
+                            short(k),
+                            h.kind.map_or("-".to_string(), |v| v.to_string())
+                        ),
+                        b,
+                    )?;
+                    return Ok(None);
+                }
+            }
         }
         let Some(raw) = h.model else {
             note(
@@ -1433,6 +1524,14 @@ fn head(
             path: resolved.key,
             asset,
         });
+    }
+    if conditioned > 0 && head.parts.is_empty() {
+        note(
+            notes,
+            "head: every part left out by its conditions".into(),
+            b,
+        )?;
+        return Ok(None);
     }
     // The head's main bone: the one carrying the largest share of the head
     // parts' vertex weight. A worn outfit addon with vertices whose largest
@@ -1485,6 +1584,12 @@ fn head(
         head.blockers.push(rule(
             "UnverifiedActorHeadSlots",
             "worn armour slots decide what of the head is hidden",
+        ));
+    }
+    if conditioned > 0 {
+        head.blockers.push(rule(
+            "UnverifiedActorHeadConditions",
+            "head part conditions evaluated against the run's stages done",
         ));
     }
     for h in path_rules {

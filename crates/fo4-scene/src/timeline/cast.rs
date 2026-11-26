@@ -279,6 +279,21 @@ pub fn resolve(
     level: RuleLevel,
     b: &Budget,
 ) -> Result<Cast, Error> {
+    resolve_heads(loader, scene, markers, options, level, None, b)
+}
+
+/// [`resolve`] with the caller's answer for head parts with conditions
+/// (`actor::HeadConditions`, `npc_head_part_conditions_run_stages_v1`);
+/// `None` is [`resolve`].
+pub fn resolve_heads(
+    loader: &mut Loader<'_>,
+    scene: &Scene,
+    markers: &[Marker],
+    options: Options,
+    level: RuleLevel,
+    mut heads: Option<actor::HeadConditions<'_>>,
+    b: &Budget,
+) -> Result<Cast, Error> {
     if level != RuleLevel::Hypotheses {
         return Err(Error::new(
             "TimelineRuleLevel",
@@ -295,7 +310,17 @@ pub fn resolve(
     for m in markers {
         let k = norm(&m.reference);
         let src = span(loader.plugins, &k);
-        let mut a = actor::resolve_reference_with(loader, &k, &src, options.look, b)?;
+        let answer: Option<actor::HeadConditions<'_>> = match heads.as_mut() {
+            Some(f) => Some(&mut **f),
+            None => None,
+        };
+        let mut a = actor::resolve_reference_heads(loader, &k, &src, options.look, answer, b)?;
+        if a.notes
+            .iter()
+            .any(|n| n.contains("conditions hold") || n.contains("conditions do not hold"))
+        {
+            out.rules.insert(hypotheses::ACTOR_HEAD_CONDITIONS);
+        }
         if a.look.is_some() && a.plan.is_some() {
             if a.look
                 .as_deref()

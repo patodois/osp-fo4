@@ -458,6 +458,36 @@ fn an_activators_fields_and_a_references_scripts_are_named_exactly() {
         "UnsupportedUsedFieldLayout",
         "ACTI.FNAM.x"
     )));
+    for f in ["PNAM", "FNAM", "MNAM", "SNAM", "WBDT"] {
+        assert!(furniture_field(&e(
+            "UninterpretedVisualSubrecord",
+            &format!("FURN.{f}.layout_not_established")
+        )));
+        assert!(!furniture_field(&e(
+            "UninterpretedVisualSubrecord",
+            &format!("ACTI.{f}.layout_not_established")
+        )));
+    }
+    assert!(!furniture_field(&e(
+        "UninterpretedVisualSubrecord",
+        "FURN.MODT.layout_not_established"
+    )));
+    assert!(!furniture_field(&e(
+        "UnsupportedUsedFieldLayout",
+        "FURN.FNAM.x"
+    )));
+    assert!(reference_location_type(&e(
+        "RuntimeRecordState",
+        "REFR.XLRT"
+    )));
+    assert!(!reference_location_type(&e(
+        "RuntimeRecordState",
+        "REFR.XACT"
+    )));
+    assert!(!reference_location_type(&e(
+        "UninterpretedVisualSubrecord",
+        "REFR.XLRT"
+    )));
     assert!(script_condition(&e("RuntimeCondition", "VMAD")));
     assert!(!script_condition(&e("RuntimeCondition", "CTDA")));
 }

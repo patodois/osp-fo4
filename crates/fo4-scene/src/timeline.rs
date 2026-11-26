@@ -602,6 +602,7 @@ impl Timeline {
                 }
                 What::Stage { quest, stage } => {
                     f.stages.insert(norm(quest), (*stage, e.t));
+                    f.done.insert((norm(quest), *stage));
                     f.last_stage = Some((norm(quest), *stage, e.t));
                 }
                 What::Objective {
@@ -764,6 +765,9 @@ pub struct Frame {
     pub stages: BTreeMap<FormKey, (i32, f64)>,
     /// The last stage set of any quest.
     pub last_stage: Option<(FormKey, i32, f64)>,
+    /// Every (quest, stage) the run set at or before this second (a stage
+    /// set is done), for conditions that ask whether a stage is done.
+    pub done: BTreeSet<(FormKey, i32)>,
     /// Objective changes by quest and objective: the last value of each
     /// kind with its second.
     pub objectives: BTreeMap<(FormKey, i32), ObjectiveValues>,
