@@ -385,6 +385,12 @@ mod enabled {
                         _ => false,
                     };
                     let cast_after = a.cast.take();
+                    // Measurement only: the load's wall time against the
+                    // CPU time this thread ran meanwhile.
+                    let (wall0, cpu0) = (
+                        std::time::Instant::now(),
+                        crate::thread_clock::thread_cpu_seconds(),
+                    );
                     let r = match &sources {
                         Ok(src) => crate::load_scene_with(
                             &a.scene,
@@ -414,6 +420,13 @@ mod enabled {
                         Err(e) => Err(format!("PlayCellSources: {e}")),
                     };
                     let loaded = r.is_ok();
+                    let cpu = crate::thread_clock::thread_cpu_seconds()
+                        .zip(cpu0)
+                        .map(|(c1, c0)| c1 - c0);
+                    println!(
+                        "play: load clocks: {}",
+                        crate::thread_clock::clocks_line(wall0.elapsed().as_secs_f64(), cpu)
+                    );
                     let _ = a.reply.send(r);
                     // The new cell's cast next, unless a cell is asked
                     // before it starts.
@@ -1415,6 +1428,9 @@ mod enabled {
         /// What the person's last activation did, as the viewport confirms
         /// it (opened, used, nothing), numbered so a window shows each once.
         pub confirm: Option<(u64, String)>,
+        /// Where to go when the run has set no stage for a while
+        /// ([`cue_line`]).
+        pub cue: Option<String>,
         /// The walker's walking world is being built again (the run is
         /// busy with it): the HUD says loading.
         pub building: bool,
@@ -1454,7 +1470,57 @@ mod enabled {
         opens: Vec<FormKey>,
         /// The held doors' states at the last look (`confirm_door`).
         confirm_doors: BTreeMap<FormKey, bool>,
+        /// An activation read but not yet confirmed ([`confirm_ready`]).
+        pending: Option<PendingConfirm>,
+        /// The quest log's length and the run's second when it last grew
+        /// ([`Paced::publish_cue`]).
+        progress: (usize, f64),
     }
+
+    /// Run seconds with no change of the run's quest log before the
+    /// viewport shows where to go (viewer policy).
+    pub const CUE_AFTER: f64 = 30.0;
+
+    /// The viewport's cue toward the nearest place the run asks about again
+    /// (viewer policy, `fo4_vm::track::Place::asking_again`): its distance
+    /// on the ground and where it lies from the walker's heading (degrees
+    /// from +X towards +Y), from the walker's feet to the place's centre.
+    pub fn cue_line(feet: [f64; 3], heading: Option<f64>, to: [f64; 3]) -> String {
+        let (dx, dy) = (to[0] - feet[0], to[1] - feet[1]);
+        let d = (dx * dx + dy * dy).sqrt();
+        let side = match heading {
+            Some(h) if d >= 1.0 => {
+                let rel = (dy.atan2(dx).to_degrees() - h).rem_euclid(360.0);
+                match rel {
+                    r if !(45.0..315.0).contains(&r) => "ahead",
+                    r if r < 135.0 => "to the left",
+                    r if r < 225.0 => "behind you",
+                    _ => "to the right",
+                }
+            }
+            _ => "here",
+        };
+        format!("Go back: {d:.0} units {side}")
+    }
+
+    /// An activation whose confirmation waits for what its press does to
+    /// show: the target (`None` when the ray met nothing of a placed
+    /// reference), the run's second when it was read, the run's counts and
+    /// the held doors' states before the slice it was logged in, and the
+    /// subtitle texts the viewport showed then.
+    struct PendingConfirm {
+        target: Option<FormKey>,
+        at: f64,
+        before: (usize, usize, usize),
+        doors: BTreeMap<FormKey, bool>,
+        texts: Vec<String>,
+    }
+
+    /// Run seconds a confirmation waits at most for a door's pose to turn
+    /// or a line's text to show (viewer policy): the held doors' reading
+    /// takes the person's toggle at the next walking-world update, about a
+    /// tenth of a second after the press.
+    pub const CONFIRM_WAIT: f64 = 0.5;
 
     /// A reference met by the activation: its label, whether E uses it,
     /// its base's record type and display name (the prompt's words).
@@ -1491,6 +1557,49 @@ mod enabled {
         } else {
             "nothing happened"
         }
+    }
+
+    /// Whether an activation's confirmation is ready to show (viewer
+    /// policy): at once when a held door's pose turned; else, until
+    /// [`CONFIRM_WAIT`] passed, it waits while a held door the press met
+    /// has not turned yet and nothing else happened, and while a press
+    /// that changed a stage or scene has no new subtitle yet.
+    pub fn confirm_ready(
+        door: Option<&str>,
+        used: &str,
+        door_known: bool,
+        new_text: bool,
+        waited: f64,
+    ) -> bool {
+        if door.is_some() || waited >= CONFIRM_WAIT {
+            return true;
+        }
+        match used {
+            "nothing happened" => !door_known,
+            "used" => new_text,
+            _ => true,
+        }
+    }
+
+    /// The confirmation's words (viewer policy): the door's turn, else
+    /// what the run did ([`confirm_line`]), with the reference the
+    /// target's scripts activated, and, when the press was no door's turn,
+    /// the first subtitle that appeared since the press, in the run's own
+    /// words: a refusal says why as its line does.
+    pub fn confirm_text(
+        door: Option<&str>,
+        used: &str,
+        activated: Option<&str>,
+        new_text: Option<&str>,
+    ) -> String {
+        let mut l = door.unwrap_or(used).to_string();
+        if let Some(t) = activated {
+            let _ = write!(l, " ({t} activated)");
+        }
+        if let (None, Some(t)) = (door, new_text) {
+            let _ = write!(l, ": \"{t}\"");
+        }
+        l
     }
 
     /// The confirmation of a held door the person's E turned
@@ -1868,34 +1977,115 @@ mod enabled {
             let before = std::mem::replace(&mut self.confirm.1, now);
             let doors = self.walker.held_door_states();
             let doors_before = std::mem::replace(&mut self.confirm_doors, doors.clone());
-            let mut line = None;
+            let mut lines = Vec::new();
             let log = self.log.borrow();
             if log.activations.len() > self.confirm.0 {
                 let a = &log.activations[log.activations.len() - 1];
                 self.confirm.0 = log.activations.len();
-                line = Some(match &a.3 {
-                    Ok((k, _)) => {
-                        let n = fo4_scene::timeline::norm(k);
-                        // A held door's pose is false while open.
-                        let pose = |m: &BTreeMap<FormKey, bool>| m.get(&n).map(|c| !c);
-                        let door = confirm_door(pose(&doors_before), pose(&doors));
-                        let used = confirm_line(self.opens.contains(&n), before, now);
-                        let mut l = door.unwrap_or(used).to_string();
-                        if let Some(t) = activated_by_scripts(run, k, before.0, now.0) {
-                            let _ = write!(l, " ({t} activated)");
-                        }
-                        l
-                    }
-                    Err(_) => "nothing to use".to_string(),
+                // An earlier one still waiting is shown as it stands.
+                if let Some(p) = self.pending.take() {
+                    lines.push(self.confirm_words(run, &p, now, &doors));
+                }
+                self.pending = Some(PendingConfirm {
+                    target: a.3.as_ref().ok().map(|(k, _)| k.clone()),
+                    at: run.now(),
+                    before,
+                    doors: doors_before,
+                    texts: self.link.texts().to_vec(),
                 });
             }
             drop(log);
-            if let Some(l) = line {
+            if let Some(p) = self.pending.take() {
+                match &p.target {
+                    None => lines.push("nothing to use".to_string()),
+                    Some(k) => {
+                        let n = fo4_scene::timeline::norm(k);
+                        let pose = |m: &BTreeMap<FormKey, bool>| m.get(&n).map(|c| !c);
+                        let door = confirm_door(pose(&p.doors), pose(&doors));
+                        let used = confirm_line(self.opens.contains(&n), p.before, now);
+                        let known = p.doors.contains_key(&n) || doors.contains_key(&n);
+                        let new_text = self.new_text(&p).is_some();
+                        if confirm_ready(door, used, known, new_text, run.now() - p.at) {
+                            lines.push(self.confirm_words(run, &p, now, &doors));
+                        } else {
+                            self.pending = Some(p);
+                        }
+                    }
+                }
+            }
+            for l in lines {
                 self.confirm.2 += 1;
                 if let Ok(mut s) = self.seen.lock() {
                     s.confirm = Some((self.confirm.2, l));
                 }
             }
+        }
+
+        /// Where to go ([`cue_line`]) when the run's quest log has not grown
+        /// for [`CUE_AFTER`] run seconds and a place the walker passed is
+        /// asked about again in the walker's space: the nearest. Read from
+        /// the run without changing it.
+        fn publish_cue(&mut self, run: &View<'_, '_>) {
+            let w = &run.vm.world;
+            let now = run.now();
+            if w.quests.log.len() != self.progress.0 {
+                self.progress = (w.quests.log.len(), now);
+            }
+            let Ok(mut s) = self.seen.lock() else {
+                return;
+            };
+            let cue = if now - self.progress.1 < CUE_AFTER {
+                None
+            } else {
+                match (s.feet, s.space.as_ref()) {
+                    (Some(f), Some(space)) => {
+                        let space = fo4_scene::timeline::norm(space);
+                        w.place
+                            .asking_again(&w.quests.log)
+                            .into_iter()
+                            .filter_map(|v| w.place.volumes.get(v))
+                            .filter(|v| fo4_scene::timeline::norm(&v.space) == space)
+                            .map(|v| v.frame.translation)
+                            .min_by(|a, b| {
+                                let d = |p: &[f64; 3]| (p[0] - f[0]).hypot(p[1] - f[1]);
+                                d(a).total_cmp(&d(b))
+                            })
+                            .map(|to| cue_line(f, s.heading, to))
+                    }
+                    _ => None,
+                }
+            };
+            s.cue = cue;
+        }
+
+        /// The first subtitle the viewport shows that it did not show when
+        /// the pending activation was read.
+        fn new_text(&self, p: &PendingConfirm) -> Option<String> {
+            self.link
+                .texts()
+                .iter()
+                .find(|t| !p.texts.contains(t))
+                .cloned()
+        }
+
+        /// A pending activation's confirmation as it stands now.
+        fn confirm_words(
+            &self,
+            run: &View<'_, '_>,
+            p: &PendingConfirm,
+            now: (usize, usize, usize),
+            doors: &BTreeMap<FormKey, bool>,
+        ) -> String {
+            let Some(k) = &p.target else {
+                return "nothing to use".to_string();
+            };
+            let n = fo4_scene::timeline::norm(k);
+            let pose = |m: &BTreeMap<FormKey, bool>| m.get(&n).map(|c| !c);
+            let door = confirm_door(pose(&p.doors), pose(doors));
+            let used = confirm_line(self.opens.contains(&n), p.before, now);
+            let activated = activated_by_scripts(run, k, p.before.0, now.0);
+            let text = self.new_text(p);
+            confirm_text(door, used, activated.as_deref(), text.as_deref())
         }
     }
 
@@ -1904,6 +2094,7 @@ mod enabled {
             self.publish_timeline(run);
             self.publish_aim(run);
             self.publish_confirm(run);
+            self.publish_cue(run);
             let mut n = self.walker.next(run);
             self.publish_start();
             if let Next::Slice(s) = &n {
@@ -2072,6 +2263,8 @@ mod enabled {
             labels: BTreeMap::new(),
             confirm: (0, (0, 0, 0), 0),
             confirm_doors: BTreeMap::new(),
+            pending: None,
+            progress: (0, 0.0),
             opens: switches
                 .opens
                 .iter()
@@ -2778,6 +2971,71 @@ mod enabled {
             assert_eq!(confirm_door(Some(false), Some(true)), Some("opened"));
             assert_eq!(confirm_door(Some(true), Some(true)), None);
             assert_eq!(confirm_door(None, Some(true)), None);
+            // A held door the press met waits for its pose to turn (the
+            // held doors' reading takes the toggle after the slice), then
+            // says opened or closed; a door that is no held door, or one
+            // that never turns, says nothing happened.
+            assert!(!confirm_ready(None, "nothing happened", true, false, 0.1));
+            assert!(confirm_ready(
+                Some("closed"),
+                "nothing happened",
+                true,
+                false,
+                0.1
+            ));
+            assert!(confirm_ready(None, "nothing happened", false, false, 0.0));
+            assert!(confirm_ready(
+                None,
+                "nothing happened",
+                true,
+                false,
+                CONFIRM_WAIT
+            ));
+            assert_eq!(
+                confirm_text(Some("closed"), "nothing happened", None, None),
+                "closed"
+            );
+            // A stage the press set waits for the line it starts, whose
+            // text the confirmation carries in the run's own words.
+            assert!(!confirm_ready(None, "used", false, false, 0.2));
+            assert!(confirm_ready(None, "used", false, true, 0.2));
+            assert!(confirm_ready(None, "used", false, false, CONFIRM_WAIT));
+            assert_eq!(
+                confirm_text(None, "used", None, Some("Needs the key. Have a nice day.")),
+                "used: \"Needs the key. Have a nice day.\""
+            );
+            assert_eq!(
+                confirm_text(None, "used", Some("Lever"), None),
+                "used (Lever activated)"
+            );
+            // The cue toward a place: its distance on the ground and its
+            // side from the heading (+X is heading 0, +Y is 90).
+            assert_eq!(
+                cue_line([0.0, 0.0, 0.0], Some(0.0), [400.0, 300.0, 50.0]),
+                "Go back: 500 units ahead"
+            );
+            assert_eq!(
+                cue_line([0.0; 3], Some(0.0), [0.0, 200.0, 0.0]),
+                "Go back: 200 units to the left"
+            );
+            assert_eq!(
+                cue_line([0.0; 3], Some(90.0), [0.0, -200.0, 0.0]),
+                "Go back: 200 units behind you"
+            );
+            assert_eq!(
+                cue_line([0.0; 3], Some(90.0), [200.0, 0.0, 0.0]),
+                "Go back: 200 units to the right"
+            );
+            assert_eq!(
+                cue_line([0.0; 3], None, [200.0, 0.0, 0.0]),
+                "Go back: 200 units here"
+            );
+            // A door's turn carries no line.
+            assert_eq!(
+                confirm_text(Some("opened"), "used", None, Some("Hi.")),
+                "opened"
+            );
+            assert!(confirm_ready(None, "opened", false, false, 0.0));
             // A scripted activator's linked furniture is named after it.
             assert_eq!(
                 prompt_linked("use Crate".into(), Some("Seat")),

@@ -61,6 +61,8 @@ pub struct Link {
     run: crate::live::RunState,
     /// Objective texts read so far.
     objectives: BTreeMap<(FormKey, i32), Option<String>>,
+    /// The subtitle texts of the last status sent ([`Link::texts`]).
+    last_texts: Vec<String>,
 }
 
 impl Link {
@@ -74,7 +76,15 @@ impl Link {
             sent_visibility: 0,
             run: crate::live::RunState::default(),
             objectives: BTreeMap::new(),
+            last_texts: Vec::new(),
         }
+    }
+
+    /// The subtitle texts (the lines whose text the data settles) of the
+    /// last status sent: what the viewport showed at the run's second of
+    /// the last time the run asked for input.
+    pub fn texts(&self) -> &[String] {
+        &self.last_texts
     }
 
     /// The status at the run's present second; the timeline is read again
@@ -131,6 +141,7 @@ impl Link {
 impl Driver for Link {
     fn next(&mut self, run: &View<'_, '_>) -> Next {
         let s = self.status(run);
+        self.last_texts.clone_from(&s.texts);
         let _ = self.tx.send(s);
         match self.rx.recv() {
             Ok(ToRun::Slice(s)) => Next::Slice(s),

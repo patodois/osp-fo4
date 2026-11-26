@@ -44,6 +44,11 @@ bevy = { version = "0.20", default-features = false, features = [
   "mouse",
 ] }
 
+# The play data thread's CPU clock (`thread_clock`): already in the lock
+# through Bevy's platform crates; MIT OR Apache-2.0 (THIRD_PARTY.md).
+[target.'cfg(unix)'.dependencies]
+rustix = { version = "1", default-features = false, features = ["std", "time"] }
+
 [dev-dependencies]
 # Synthetic game files (a skinned actor's room) for the timeline cast test.
 fo4-render = { path = "../../crates/fo4-render", features = ["fixture"] }

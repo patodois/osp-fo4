@@ -1767,7 +1767,12 @@ fn hud_update(
         prompt: seen.prompt.clone().filter(|_| seen.aim_usable),
         confirm,
         subtitle: (!texts.is_empty()).then(|| texts.join(" / ")),
-        objective: p.objective().map(str::to_string),
+        // The objective, and where to go when the run has waited a while
+        // on a place the walker passed (`crate::play::cue_line`).
+        objective: match (p.objective(), seen.cue.as_deref()) {
+            (Some(o), Some(c)) => Some(format!("{o} - {c}")),
+            (o, c) => o.or(c).map(str::to_string),
+        },
         paused: person.as_ref().is_some_and(|x| x.person.paused),
         loading: p.loading()
             || drawn.uploading.is_some()
@@ -1999,6 +2004,8 @@ struct PlayWatch {
     sample: f64,
     /// The prompt, the aim's label and the confirmation last written.
     prompt: Option<WatchedPrompt>,
+    /// The viewport's where-to-go cue at the last change.
+    cue: Option<Option<String>>,
 }
 
 /// What [`PlayWatch`] compares for its prompt lines: the prompt, the aim's
@@ -2041,6 +2048,7 @@ impl PlayWatch {
                     feet: None,
                     sample: 0.0,
                     prompt: None,
+                    cue: None,
                 })
             }
             Err(e) => {
@@ -2191,6 +2199,13 @@ fn watch_play<F: bevy::ecs::query::QueryFilter>(
             prompt.2.as_ref().map_or("-", |c| c.1.as_str())
         ));
         watch.prompt = Some(prompt);
+    }
+    if watch.cue.as_ref() != Some(&seen.cue) {
+        lines.push(format!(
+            "cue\t{t:.3}\t{}",
+            seen.cue.as_deref().unwrap_or("-")
+        ));
+        watch.cue = Some(seen.cue.clone());
     }
     let mut wrote = !lines.is_empty() || walked;
     for l in lines {

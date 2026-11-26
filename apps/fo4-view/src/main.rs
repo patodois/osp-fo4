@@ -24,6 +24,8 @@ mod play_switches;
 mod scene;
 mod script;
 mod stream;
+#[cfg(feature = "script-event")]
+mod thread_clock;
 mod timeline;
 mod vm_event;
 mod walk;

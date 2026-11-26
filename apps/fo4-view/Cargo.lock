@@ -2085,6 +2085,7 @@ dependencies = [
  "fo4-vm",
  "fo4-walk",
  "half",
+ "rustix 1.1.6",
 ]
 
 [[package]]

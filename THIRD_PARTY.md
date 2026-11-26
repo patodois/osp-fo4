@@ -45,6 +45,17 @@ under the reader's caps). No Ruffle source is copied into this repository;
 Ruffle's public documentation is the only other Ruffle material consulted.
 Its transitive packages are listed in the table below with the others.
 
+## The viewer's thread clock
+
+The GPU viewer (`apps/fo4-view`, its own workspace) depends directly, on
+Unix targets, on the `rustix` crate, version 1.1.6 as locked, published on
+crates.io by the Bytecode Alliance project, licensed Apache-2.0 WITH
+LLVM-exception OR Apache-2.0 OR MIT. It reads the play data thread's CPU
+clock (`clock_gettime` with the thread CPU-time clock) through its safe
+interface, with its default features off and `std` and `time` on. It was
+already in the viewer's lock through the window crates; no source of it is
+copied into this repository.
+
 ## Cargo dependencies
 
 Versions and declared licenses from offline locked Cargo metadata. The first-party
