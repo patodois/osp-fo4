@@ -2165,6 +2165,13 @@ points at that point and its length is the straight line; else it points at the 
 sight (at most 24 tried, `CUE_SIGHT_TRIES`), its length the straight line to it and the way on from it; else the
 way back as before. So the way back does not grow while the walker walks an open line toward the place (the
 twentieth session's house cue said 285 ahead, then 323 and 412 behind, walking into the hall).
+The same stall (no change of the quest log for 30 run seconds) also names where to use (`play::use_target`,
+`play::cue_use_line`, viewer policy): of the references the person's E stands for (`--play-activate-person`), the
+nearest one in the walker's space within 2,048 units on the ground that no E has met yet, its display name, `(not
+drawn)` when the window's loads left it out, its distance and side, and how far below or above the eye its object
+bounds' centre lies (`Use NAME (not drawn): 40 units ahead, 110 below the eye`). It comes before the `Go back` cue.
+The twentieth session's person searched nine minutes for the device beside the vault console, which is not drawn
+and lies on the floor about 110 units below the eye.
 `--draw-cast-keeps-clear` (`play_cast_kept_clear_of_walker_v1`, pending, in the preset) keeps an actor's drawn
 body clear of the eye: the cast build keeps, for each actor, the horizontal box of its draws' vertices by 8-unit
 slices of height above its place (`scene::cast_body`); each frame the slices within 24 units of the eye's height

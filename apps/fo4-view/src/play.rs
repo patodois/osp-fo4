@@ -1493,6 +1493,10 @@ mod enabled {
         /// The quest log's length and the run's second when it last grew
         /// ([`Paced::publish_cue`]).
         progress: (usize, f64),
+        /// The person's activation targets (`--play-activate-person`): the
+        /// space each stands in, its bounds' centre and its display name,
+        /// read once ([`Paced::publish_cue`]).
+        persons_at: Option<BTreeMap<FormKey, (FormKey, [f64; 3], Option<String>)>>,
     }
 
     /// Run seconds with no change of the run's quest log before the
@@ -1565,6 +1569,7 @@ mod enabled {
     /// [`CUE_TRAIL_MAX`] points (the caller keeps the straight line). The
     /// track is ground the walker walked, so the aim follows a door or a
     /// corridor where the place's nearest point lies behind a wall.
+    #[cfg(test)]
     pub fn cue_trail(
         track: &[fo4_play::Point],
         space: &FormKey,
@@ -1710,6 +1715,56 @@ mod enabled {
         let line = cue_line(feet, heading, aim);
         let side = line.split_once(" units ").map_or("here", |(_, s)| s);
         format!("Go back: {length:.0} units {side}")
+    }
+
+    /// The person's activation target the use cue names (viewer policy):
+    /// of `at` (each target's space, bounds' centre and name), those in
+    /// `space` within [`CUE_REACH`] of the feet on the ground that E has not
+    /// met yet (`met`), the nearest.
+    pub fn use_target(
+        feet: [f64; 3],
+        space: &FormKey,
+        at: &BTreeMap<FormKey, (FormKey, [f64; 3], Option<String>)>,
+        met: &[FormKey],
+    ) -> Option<(FormKey, [f64; 3], Option<String>)> {
+        let d = |p: &[f64; 3]| (p[0] - feet[0]).hypot(p[1] - feet[1]);
+        at.iter()
+            .filter(|(k, (sp, c, _))| sp == space && !met.contains(k) && d(c) <= CUE_REACH)
+            .min_by(|a, b| d(&a.1 .1).total_cmp(&d(&b.1 .1)))
+            .map(|(k, (_, c, n))| (k.clone(), *c, n.clone()))
+    }
+
+    /// Height (game units) above or below the eye past which the use cue
+    /// says so (viewer policy).
+    pub const CUE_USE_RISE: f64 = 40.0;
+
+    /// The use cue's words (viewer policy): what to use (its display name,
+    /// `(not drawn)` when the window's loads left it out), its distance on
+    /// the ground and side from the heading as [`cue_line`] gives them, and
+    /// how far below or above the eye (`feet` plus `eye`) it lies.
+    pub fn cue_use_line(
+        feet: [f64; 3],
+        eye: f64,
+        heading: Option<f64>,
+        centre: [f64; 3],
+        name: Option<&str>,
+        not_drawn: bool,
+    ) -> String {
+        let line = cue_line(feet, heading, centre);
+        let rest = line.strip_prefix("Go back: ").unwrap_or(&line);
+        let rise = centre[2] - (feet[2] + eye);
+        let height = if rise < -CUE_USE_RISE {
+            format!(", {:.0} below the eye", -rise)
+        } else if rise > CUE_USE_RISE {
+            format!(", {rise:.0} above the eye")
+        } else {
+            String::new()
+        };
+        format!(
+            "Use {}{}: {rest}{height}",
+            name.unwrap_or("it"),
+            if not_drawn { " (not drawn)" } else { "" }
+        )
     }
 
     /// An activation whose confirmation waits for what its press does to
@@ -2288,11 +2343,60 @@ mod enabled {
             if w.quests.log.len() != self.progress.0 {
                 self.progress = (w.quests.log.len(), now);
             }
+            if self.persons_at.is_none() && now - self.progress.1 >= CUE_AFTER {
+                let b = fo4_core::Budget::new(run.store.limits.max_memory);
+                let (m, vfs) = run.sources();
+                let mut texts = fo4_play::state::Texts::new(vfs, &m.language, &b);
+                let mut at = BTreeMap::new();
+                for k in self.walker.persons() {
+                    let space = fo4_play::world::space_of(run.store, k);
+                    let centre = fo4_play::world::bounds_centre(run.store, k, &b);
+                    let name = fo4_vm::bind::base_of(run.store, k, &b)
+                        .ok()
+                        .flatten()
+                        .and_then(|base| texts.display_name(run.store, &base));
+                    if let (Some(space), Some(centre)) = (space, centre) {
+                        at.insert(k.clone(), (fo4_scene::timeline::norm(&space), centre, name));
+                    }
+                }
+                self.persons_at = Some(at);
+            }
             let Ok(mut s) = self.seen.lock() else {
                 return;
             };
+            // The person's activation targets not yet met by E in the
+            // walker's space and reach, nearest first: where to use.
+            let use_cue = match (s.feet, s.space.as_ref(), self.persons_at.as_ref()) {
+                (Some(f), Some(space), Some(at))
+                    if !s.building && now - self.progress.1 >= CUE_AFTER =>
+                {
+                    let space = fo4_scene::timeline::norm(space);
+                    let log = self.log.borrow();
+                    let met: Vec<FormKey> = log
+                        .activations
+                        .iter()
+                        .filter_map(|a| {
+                            a.3.as_ref().ok().map(|(k, _)| fo4_scene::timeline::norm(k))
+                        })
+                        .collect();
+                    let eye = self.walker.eye_height().unwrap_or(0.0);
+                    use_target(f, &space, at, &met).map(|(k, centre, name)| {
+                        cue_use_line(
+                            f,
+                            eye,
+                            s.heading,
+                            centre,
+                            name.as_deref(),
+                            crate::load::not_drawn(&k),
+                        ) + &cue_tag(&fo4_scene::timeline::key_text(&k))
+                    })
+                }
+                _ => None,
+            };
             let cue = if now - self.progress.1 < CUE_AFTER {
                 None
+            } else if use_cue.is_some() {
+                use_cue
             } else {
                 match (s.feet, s.space.as_ref()) {
                     // Not while the window loads.
@@ -2552,6 +2656,7 @@ mod enabled {
             confirm_doors: BTreeMap::new(),
             pending: None,
             progress: (0, 0.0),
+            persons_at: None,
             opens: switches
                 .opens
                 .iter()
@@ -3443,6 +3548,29 @@ mod enabled {
             assert!(len2 < len - 90.0, "{len2} after {len}");
             // Aimed back along the corridor, not up the detour.
             assert!(aim[1] < 150.0 && aim[0] < 200.0, "{aim:?}");
+            // The use cue: the nearest target not yet met, in the space and
+            // reach; its words give the side and the height from the eye.
+            let k = |id: u32| FormKey {
+                plugin: "base.esm".into(),
+                object_id: id,
+            };
+            let mut at = BTreeMap::new();
+            at.insert(
+                k(1),
+                (space.clone(), [40.0, 0.0, 10.0], Some("Device".to_string())),
+            );
+            at.insert(k(2), (space.clone(), [10.0, 0.0, 10.0], None));
+            at.insert(k(3), (k(9), [5.0, 0.0, 10.0], None));
+            at.insert(k(4), (space.clone(), [5000.0, 0.0, 10.0], None));
+            let feet = [0.0, 0.0, 0.0];
+            assert_eq!(use_target(feet, &space, &at, &[]).map(|t| t.0), Some(k(2)));
+            let (t, c, n) = use_target(feet, &space, &at, &[k(2)]).unwrap();
+            assert_eq!(t, k(1));
+            assert_eq!(
+                cue_use_line(feet, 120.0, Some(0.0), c, n.as_deref(), true),
+                "Use Device (not drawn): 40 units ahead, 110 below the eye"
+            );
+            assert_eq!(use_target(feet, &space, &at, &[k(1), k(2)]), None);
             // In sight: the walker walked from the room's door (0, 100)
             // east to (300, 100) and turns back west toward the room. The
             // way back is the corridor; with the room's point in sight the

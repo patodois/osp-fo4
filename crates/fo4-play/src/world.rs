@@ -326,6 +326,36 @@ pub fn space_of(store: &Store, k: &FormKey) -> Option<FormKey> {
     }
 }
 
+/// The centre of a placed reference's object bounds (its base's OBND, six
+/// i16: the low and high corner in model units) placed by its stored
+/// transform and scale; its stored position when the base has no bounds.
+/// `None` when the reference has no placement.
+pub fn bounds_centre(store: &Store, k: &FormKey, b: &Budget) -> Option<[f64; 3]> {
+    let r = store.get::<fo4_plugin::typed::Refr>(k, b).ok()??;
+    let t = r.data.transform?;
+    let scale = r.data.scale.unwrap_or(1.0);
+    let at = [t[0], t[1], t[2]].map(f64::from);
+    let base = r.data.base.as_ref().and_then(|f| f.key.clone());
+    let local = base
+        .and_then(|base| store.raw(&base, b).ok().flatten())
+        .and_then(|rec| {
+            let s = rec.subrecords.iter().find(|s| s.signature == *b"OBND")?;
+            let d = rec.data(s);
+            (d.len() == 12).then(|| {
+                let v: Vec<f64> = (0..6)
+                    .map(|i| f64::from(i16::from_le_bytes([d[2 * i], d[2 * i + 1]])))
+                    .collect();
+                [(v[0] + v[3]) / 2.0, (v[1] + v[4]) / 2.0, (v[2] + v[5]) / 2.0]
+            })
+        });
+    match local {
+        Some(c) => fo4_scene::transform::Transform::euler(t, scale)
+            .ok()
+            .map(|f| f.apply(c)),
+        None => Some(at),
+    }
+}
+
 fn bump(counts: &mut BTreeMap<String, u64>, k: &str) {
     *counts.entry(k.to_string()).or_default() += 1;
 }

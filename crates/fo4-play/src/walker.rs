@@ -1185,6 +1185,12 @@ impl Walker {
         Ok(out)
     }
 
+    /// The references whose caller's timed activation the walker's
+    /// activation stands for (`--play-activate-person`), normalised.
+    pub fn persons(&self) -> &[FormKey] {
+        &self.persons
+    }
+
     /// Whether the straight segment from `from` to `to` meets no collision
     /// primitive of the walking world as the walker stands in it now (the
     /// sources shown, the references the run made absent passed through;
