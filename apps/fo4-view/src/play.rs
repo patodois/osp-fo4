@@ -1439,11 +1439,14 @@ mod enabled {
         /// the run's effects, logs or moves grew.
         timeline: Option<TimelineRead>,
         /// `--play-keys`: the camera's heading from the person's looks (not
-        /// the walk's direction), what E would meet given to the window,
-        /// and the labels of the references met so far (label, usable,
-        /// base record type, display name).
+        /// the walk's direction).
         keys: Option<BTreeMap<FormKey, Label>>,
-        /// `--play-keys`: the activations the log held when last read, and
+        /// What E would meet given to the window, with a person's keys or a
+        /// recorded input alike, and the labels of the references met so
+        /// far (label, usable, base record type, display name).
+        labels: BTreeMap<FormKey, Label>,
+        /// The activations the log held when last read (a person's or a
+        /// recorded input's), and
         /// an activation waiting for the run to take it: its line so far
         /// and the run's counts before it ([`Paced::publish_confirm`]).
         confirm: Confirming,
@@ -1640,9 +1643,7 @@ mod enabled {
         /// `--play-keys`: what the activation key would meet now, labelled
         /// by its base record (type and editor ID) and its key.
         fn publish_aim(&mut self, run: &View<'_, '_>) {
-            let Some(labels) = self.keys.as_mut() else {
-                return;
-            };
+            let labels = &mut self.labels;
             // The held doors' poses as the window draws them: a door
             // whose box left is drawn open (`play_door_drawn_as_held_v1`).
             let doors = self.walker.held_door_states();
@@ -1743,9 +1744,6 @@ mod enabled {
         /// policy, read from the run without changing it; nothing to use when
         /// the ray met nothing of a placed reference.
         fn publish_confirm(&mut self, run: &View<'_, '_>) {
-            if self.keys.is_none() {
-                return;
-            }
             let now = run_counts(run);
             let mut line = None;
             if let Some((text, before)) = self.confirm.1.take() {
@@ -1949,6 +1947,7 @@ mod enabled {
             read: (0, 0, 0),
             timeline: with_timeline.then(TimelineRead::default),
             keys: keys.then(BTreeMap::new),
+            labels: BTreeMap::new(),
             confirm: (0, None, 0),
             opens: switches
                 .opens
