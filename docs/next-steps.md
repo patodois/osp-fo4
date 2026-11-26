@@ -255,6 +255,13 @@ under pending rules, never "matches the game": that needs the measurements liste
 Order of work from here: M3 (a person at a physical keyboard and mouse plays the window, `--play-keys`, after the person step's fixes; fix what they meet), then M4 movement, M6 dialogue choices
 and M5, because those four are what stands between the headless run and a person playing the first hour.
 
+Pad step: a GIP pad plays with the keys (`fo4-view --play-keys --play-pad`, a viewer built with `--features pad`;
+spec/play.md, The pad): the same commands the keys give, so records and replays are unchanged. Its key map is viewer
+policy, listed with the preset's pending rules in `docs/unmeasured.md`. Checked with a scripted pad (the synthetic
+person's `pad` lines): a short window session's record replays by `play_run` with every output the same but
+`play.txt`'s timing lines. Not yet run with the device: the owner's session, then `--frame-log` holds with the pad
+on and off; the analog speed (a `move` command) is a later, optional step with its own pending rule.
+
 The opening run is now visible (`spec/timeline.md`), and since the cast step its people appear as people. `quest_run new-game --timeline FILE` writes what the run
 did, second by second, in a neutral versioned text file (track points with their cells, actor places with the
 rule or assumption behind each, references enabled, disabled and moved, scene lines with speaker, seconds and
