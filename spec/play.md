@@ -2074,6 +2074,69 @@ blocker of a cast marker now prints its rest tag (presentation), which names the
 (`actor_skinned_normals_linear_blend_v1`) were not done. The lab coat's missing head (no cause found) and the
 undrawn crib occupant, remains and device (skinned or graph-animated models) are unchanged.
 
+### The orientation stall, the lost announcement, E's words and the data thread's clock (the sixteenth-session step)
+
+Both sixteenth sessions (built at the fifteenth-session step) reached the surface; their records replay on this
+step's `play_run` with the sessions' own run arguments to the same outputs (6 of 7 byte for byte each, the timeline
+among them; `play.txt` differs only in its timing lines).
+
+**The second session's stall in the vault.** After the vault's intake stage the run set nothing for 364 s, until the
+person used the pod themselves; the party was missing from the lift. Read from the run's own lines: the greeting
+scene's phase waits on a stage that three crowd actors' animation-event handlers set; their handlers registered for
+the event only when the actors load into the vault, and they never loaded there: they were disabled, children of the
+street crowd's enable marker, which only the hill quest's stage enables; that stage's trigger needs the hill quest's
+first stage, set by the main quest's evacuation stage, set by a trigger on the front steps that asks for the stage
+the broadcast's end sets. The person stepped into that trigger 0.019 s before that stage was set and stood in it for
+15 s; the trigger's script acts on entry only, so nothing of the evacuation chain was set for the rest of the run.
+The first session crossed the same trigger again later and went through. The stage came 3 s late because the
+broadcast scene's last action is a dialogue action whose topic holds lines none of whose conditions hold, and the
+run gave it the caller's assumed line seconds. A delay of the trigger's event (tried, not kept) moves the scene too,
+since the scene was started by an earlier trigger: the race stays.
+`scene_dialogue_no_line_holds_ends_v1` (pending, `quest_run --no-line-holds-ends`, in the bundle's run arguments,
+off by default): such an action ends as it starts. With it the first record reaches the same 273 stages (six 3 s
+earlier) and the surface at the same second; the second record's person pressed E on the front door after the
+script had now opened it, which closes it under the door toggle, so a copy of that record without that one press
+(kept beside the bundle, the original untouched) replays through the evacuation chain, loads the crowd below, and
+reaches the pod's stages 14 s after the intake stage instead of 364 s (the replay then leaves the person's later
+input behind).
+
+**The first session's lost announcement.** The broadcast starts when the player enters a trigger at the nursery's
+door after the stage the spouse's scene sets on its end; the person had left the nursery before that scene ended
+and crossed the trigger then (its handler asked and found the stage not done), and came back to it 325 s later. That
+is what the data does. The window now says where to go (viewer policy): the run keeps, for each trigger the player
+entered, the stages its handlers asked about and found not done; after 30 run seconds with no change of the quest
+log, the objective corner names the nearest such place whose stage the run has set since, as `Go back: N units`
+and its side from the walker's heading (`fo4_vm::track::Place::asking_again`, `play::cue_line`); the watch writes
+a `cue` line at each change.
+
+**E's words.** A press on a held door waits up to half a run second for the held doors' reading to take the toggle
+(it does at the next walking-world update), so a pocket door says opened or closed. A press that set a stage or
+scene waits as long for the line it starts and carries its text in the run's words (`used: "..."`): the console's
+refusal reads as its subtitle does.
+
+**The data thread's clock.** Each cell load on the play data thread prints `play: load clocks: wall W s, the data
+thread's CPU C s (P% of the wall)`: a load whose wall time is far above its CPU time waited for a core; both up
+together ran slower. The thread's scheduling class is not raised: the platform call needs unsafe code, which this
+repository forbids, and the system thread object's safe setter does not reach a thread it did not start. Keeping
+built meshes across loads was not done.
+
+**Skinned placements in the play cast.** `--skinned-models-own-nodes` (existing pending rule) is now read by the play
+window's cast build and is in the preset: after the run's hides and shows at the cast's second, every placement of
+the cell refused for its skinned shapes is one more actor drawn by them on its model's own nodes; a placement's
+editor-marker refusals go with it, so those subtrees are set aside under the rules that cover them instead of
+refusing the model. `FO4_VIEW_HEAD_NOTES=FILE` (measurement only) writes each cast actor's head as read, or that it
+has none, with its notes.
+
+**The suspended timber on the road home.** From the placements near the person's eye (`near_probe`), it is a fallen
+branch static placed with a roll of 0.765 and a pitch of -0.502 rad: under the measured rotation reading its long
+axis rises about 29 degrees, its lower end about 60 units under the ground in a hedge row beside a maple, its upper
+end about 215 units above the paved bend, with nothing placed under it. It is drawn as stored; whether the game shows
+it so is a photograph at that eye. The distant geometry at outdoor boundaries was not looked into.
+
+**The dream room's light.** The light report adds what an interior's lighting stores and the frame does not read
+(the directional ambient cube and its scale, the directional fade, the far fog colour, power and clip, the image
+space). Nothing lights differently.
+
 ## What the play mode does not do yet
 
 - The elevators ride only those the caller names (`--play-elevator`), headless and in the scripted window;
