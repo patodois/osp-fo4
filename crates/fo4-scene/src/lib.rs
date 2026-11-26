@@ -207,6 +207,7 @@ pub struct Loader<'a> {
     render_furniture_fields: bool,
     render_static_parts: bool,
     render_activator_parts: bool,
+    render_furniture_parts: bool,
 }
 impl<'a> Loader<'a> {
     /// The collision readiness switches the collision cell build reads
@@ -316,6 +317,16 @@ impl<'a> Loader<'a> {
     pub fn render_activator_parts(&self) -> bool {
         self.render_activator_parts
     }
+    /// `furn_unmoved_parts_drawn_v1` ([`hypotheses::FURNITURE_PARTS`];
+    /// with [`Loader::set_render_static_parts`]): render readiness reads a
+    /// furniture (`FURN`) refused for model blocks no rule settles as the
+    /// static parts reading reads a static (off by default).
+    pub fn set_render_furniture_parts(&mut self, on: bool) {
+        self.render_furniture_parts = on;
+    }
+    pub fn render_furniture_parts(&self) -> bool {
+        self.render_furniture_parts
+    }
     /// Render readiness of a reference whose base is a static and whose
     /// model is a leaf ([`leaf::read`]): the animation blockers of its one
     /// transform controller ([`leaf::aside`]) are set aside under
@@ -371,6 +382,7 @@ impl<'a> Loader<'a> {
             render_activator_fields: false,
             render_furniture_fields: false,
             render_activator_parts: false,
+            render_furniture_parts: false,
             render_static_parts: false,
         }
     }
@@ -792,8 +804,12 @@ impl<'a> Loader<'a> {
             && base
                 .as_ref()
                 .is_some_and(|v| v.record.signature == *b"ACTI");
+        let on_furniture = self.render_furniture_parts
+            && base
+                .as_ref()
+                .is_some_and(|v| v.record.signature == *b"FURN");
         let parts = self.render_static_parts
-            && (on_static || on_activator)
+            && (on_static || on_activator || on_furniture)
             && blockers
                 .iter()
                 .enumerate()
@@ -843,6 +859,8 @@ impl<'a> Loader<'a> {
                                     && readiness::reference_location_type(e)))
                         {
                             Some(hypotheses::ACTIVATOR_PARTS)
+                        } else if parts && on_furniture && parts::aside(e, origin(k)) {
+                            Some(hypotheses::FURNITURE_PARTS)
                         } else if parts && parts::aside(e, origin(k)) {
                             Some(hypotheses::STATIC_PARTS)
                         } else {

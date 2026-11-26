@@ -537,6 +537,11 @@ pub struct Drawing {
     /// `--draw-static-parts`): an animated activator is drawn by its unmoved
     /// parts (`Loader::set_render_activator_parts`).
     pub activator_parts: bool,
+    /// `--draw-furniture-parts` (`furn_unmoved_parts_drawn_v1`; with
+    /// `--draw-static-parts`): a furniture refused for model blocks no
+    /// rule settles is drawn by its unmoved parts
+    /// (`Loader::set_render_furniture_parts`).
+    pub furniture_parts: bool,
     /// `--draw-static-leaves` (`play_static_leaf_two_pose_v1`): the
     /// loader's render readiness sets a leaf model's animation blockers
     /// aside on a static (`Loader::set_render_static_leaves`); the scripted
@@ -1071,6 +1076,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             "--draw-furniture-fields" => drawing.furniture_fields = true,
             "--draw-world-persistent" => drawing.world_persistent = true,
             "--draw-activator-parts" => drawing.activator_parts = true,
+            "--draw-furniture-parts" => drawing.furniture_parts = true,
             "--draw-static-leaves" => drawing.static_leaves = true,
             "--draw-static-parts" => drawing.static_parts = true,
             "--draw-platform-skins" => drawing.platform_skins = true,
@@ -1462,6 +1468,9 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
     }
     if scene.drawing.cast_on_platforms && !(scene.drawing.platforms && scene.play_cast.is_some()) {
         return Err("--draw-cast-on-platforms stands the play cast on the platforms --draw-platforms draws: it needs --draw-platforms and --timeline-cast".into());
+    }
+    if scene.drawing.furniture_parts && !scene.drawing.static_parts {
+        return Err("--draw-furniture-parts reads a furniture as --draw-static-parts reads a static: it needs --draw-static-parts".into());
     }
     if scene.drawing.activator_parts && !scene.drawing.static_parts {
         return Err("--draw-activator-parts reads an activator as --draw-static-parts reads a static: it needs --draw-static-parts".into());

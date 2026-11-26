@@ -2774,6 +2774,70 @@ fn a_static_refused_for_an_unread_block_is_drawn_by_its_other_parts_behind_the_s
     assert!(measured.list.draws.is_empty());
 }
 
+/// `furn_unmoved_parts_drawn_v1`: a furniture whose model's second shape
+/// carries an extra data block the reader does not decode is refused whole
+/// with the static parts reading alone; behind
+/// `Loader::set_render_furniture_parts` too it is drawn by its other shape.
+#[test]
+fn a_furniture_refused_for_an_unread_block_is_drawn_by_its_other_parts_behind_its_switch() {
+    use fo4_scene::hypotheses::FURNITURE_PARTS;
+    let mut blocks = model_blocks(b"textures/a.dds", None, None, (b"", b""), None);
+    let helper = blocks[4].1.clone();
+    let mut linked = helper[..4].to_vec();
+    linked.extend(1u32.to_le_bytes());
+    linked.extend(5u32.to_le_bytes());
+    linked.extend(&helper[8..]);
+    blocks[4].1 = linked;
+    blocks.push(("BSPositionData", vec![0; 8]));
+    let part = nif_file(blocks, b"PlainLabel", b"");
+    let furniture = rec(b"FURN", 0x804, 0, &sub(b"MODL", b"part.nif\0"));
+    let (_temp, m) = fixture_records(
+        "render-furniture-parts",
+        &dds(),
+        part,
+        0x804,
+        &[],
+        &furniture,
+    );
+    let b = Budget::new(32 << 20);
+    let store = fo4_plugin::typed::Store::open(&m, &b).unwrap();
+    let vfs = fo4_vfs::Vfs::mount(&m, &b).unwrap();
+    let options = || BuildOptions {
+        max_texture_dimension: 16,
+        max_texture_bytes: 1 << 20,
+        level: RuleLevel::Hypotheses,
+        blocks: None,
+        time: None,
+        clock: Default::default(),
+        vertex_normals: false,
+        chains: false,
+    };
+    // The static parts reading alone: a furniture is refused whole.
+    let mut loader = Loader::new(&store, &vfs, "english", RuleLevel::Facts, &b);
+    loader.set_render_static_parts(true);
+    assert!(!loader.render_furniture_parts());
+    let scene = loader.by_editor_id("SyntheticScolCell", &b).unwrap();
+    let off = build(&scene, &loader, &m.limits, options(), &b).unwrap();
+    assert_eq!(off.omitted.len(), 1, "{:?}", off.omitted);
+    assert!(off.list.draws.is_empty());
+    // With its switch: drawn under the rule by the unread block's other shape.
+    let mut loader = Loader::new(&store, &vfs, "english", RuleLevel::Facts, &b);
+    loader.set_render_static_parts(true);
+    loader.set_render_furniture_parts(true);
+    let scene = loader.by_editor_id("SyntheticScolCell", &b).unwrap();
+    assert!(scene.instances[0]
+        .state
+        .hypotheses()
+        .contains(&FURNITURE_PARTS));
+    let on = build(&scene, &loader, &m.limits, options(), &b).unwrap();
+    assert!(on.omitted.is_empty(), "{:?}", on.omitted);
+    assert!(!on.list.draws.is_empty());
+    assert_eq!(
+        on.left_out,
+        vec![(on.instances[0].index, "UnsupportedNifBlock".to_string())]
+    );
+}
+
 /// `Assets::keep_files` (a caller's policy, the play window's loads): a
 /// second build from the same loader reads the model and texture from the
 /// kept files, not the archive, and draws the same; with no cap nothing is

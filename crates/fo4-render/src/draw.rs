@@ -2545,7 +2545,9 @@ impl Builder<'_, '_> {
         self.allow_editor_marker_subtrees = rules.contains(&h::NAMED_MARKER);
         self.allow_scol_parts = rules.contains(&h::SCOL);
         self.platform = rules.contains(&h::PLAY_PLATFORM_LEFT_OUT);
-        self.static_parts = rules.contains(&h::STATIC_PARTS) || rules.contains(&h::ACTIVATOR_PARTS);
+        self.static_parts = rules.contains(&h::STATIC_PARTS)
+            || rules.contains(&h::ACTIVATOR_PARTS)
+            || rules.contains(&h::FURNITURE_PARTS);
     }
     /// Under [`Builder::platform`]: whether `e`, raised drawing one shape
     /// or block, is left out (an allocation, limit or arithmetic failure
@@ -3217,6 +3219,7 @@ fn build_inner(
             let h = i.state.hypotheses();
             h.contains(&fo4_scene::hypotheses::STATIC_PARTS)
                 || h.contains(&fo4_scene::hypotheses::ACTIVATOR_PARTS)
+                || h.contains(&fo4_scene::hypotheses::FURNITURE_PARTS)
         };
         let first = builder.output.list.draws.len();
         builder.draw_rules.clear();

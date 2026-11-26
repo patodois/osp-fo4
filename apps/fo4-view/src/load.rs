@@ -863,6 +863,12 @@ pub fn cell<'s>(
     if drawing.activator_parts {
         loader.set_render_activator_parts(true);
     }
+    // `--draw-furniture-parts` (off by default; with --draw-static-parts):
+    // a furniture refused for its animation is drawn by its unmoved parts
+    // (`furn_unmoved_parts_drawn_v1`).
+    if drawing.furniture_parts {
+        loader.set_render_furniture_parts(true);
+    }
     // The assets the previous load left, when they were read the same way.
     let mut kept = kept;
     if let Some(slot) = kept.as_deref_mut() {
