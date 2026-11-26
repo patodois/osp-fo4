@@ -1,6 +1,7 @@
 #![forbid(unsafe_code)]
 //! Prints the blocks of NIF files read through the manifest's archives:
-//! type, size, decoded fields and a hex prefix of undecoded bytes.
+//! type, size, decoded fields (with `vN` as the second argument, their values)
+//! and a hex prefix of undecoded bytes.
 //! Measurement support only; output goes to standard output.
 use fo4_core::{Budget, Game, Manifest};
 use fo4_vfs::Vfs;
@@ -10,7 +11,11 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<_> = std::env::args().skip(1).collect();
     let m = Manifest::load(Path::new(&args[0]))?;
     let vfs = Vfs::mount(&m, &Budget::new(m.limits.max_vfs_memory))?;
-    let hex_max: usize = args[1].parse()?;
+    // A second argument `vN` prints each decoded field's value too (N hex bytes otherwise).
+    let (values, hex_max) = match args[1].strip_prefix('v') {
+        Some(n) => (true, n.parse::<usize>()?),
+        None => (false, args[1].parse::<usize>()?),
+    };
     for path in &args[2..] {
         let b = Budget::new(m.limits.max_memory);
         let bytes = vfs.read(path, &b)?;
@@ -41,6 +46,9 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                         mesh.vertex_desc, mesh.declared_vertices, mesh.declared_triangles
                     ));
                     for f in &mesh.fields {
+                        if values && !matches!(f.value, fo4_nif::Value::Ref(_)) && f.name != "Name" {
+                            line.push_str(&format!(" {}={:?}", f.name, f.value));
+                        }
                         match f.value {
                             fo4_nif::Value::Ref(r) => line.push_str(&format!(" {}={r}", f.name)),
                             fo4_nif::Value::StringIndex(s) if f.name == "Name" => {
@@ -55,7 +63,14 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                         }
                     }
                 }
-                Some(fo4_nif::Data::Fields(_)) => line.push_str(" fields"),
+                Some(fo4_nif::Data::Fields(fields)) => {
+                    line.push_str(" fields");
+                    if values {
+                        for f in fields {
+                            line.push_str(&format!("\n    {} = {:?}", f.name, f.value));
+                        }
+                    }
+                }
                 None => {
                     let raw = &bytes[block.data.clone()];
                     let mut h = String::new();

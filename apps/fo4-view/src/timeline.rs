@@ -574,6 +574,7 @@ fn cast_with(
     let mut build = built?;
     // FO4_VIEW_OMITTED=FILE (measurement only): the cast's omissions too.
     crate::load::omitted_lines(&scene, &build);
+    crate::load::blended_lines(&scene, &build);
     // What the cast draws is drawn: the prompt's "(not drawn)" follows it.
     crate::load::note_drawn(&build);
     steps.mark("draw list");

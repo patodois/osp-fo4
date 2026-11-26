@@ -1196,6 +1196,7 @@ pub fn cell<'s>(
     // with its causes, appended per load.
     note_not_drawn(&build);
     omitted_lines(&scene, &build);
+    blended_lines(&scene, &build);
     // --draw-static-parts: the statics drawn by their unmoved parts and
     // what the build left out of them.
     if drawing.static_parts {
@@ -1678,6 +1679,133 @@ pub(crate) fn not_drawn(reference: &fo4_plugin::FormKey) -> bool {
 /// base and the base's record type, its stored place (`-` for a cast's
 /// actor, which the cell's placements do not hold), and each cause's code,
 /// expected and found, tab separated.
+/// The smallest extent (game units) of a draw's world box that
+/// [`blended_lines`] writes.
+const BLENDED_MIN: f64 = 150.0;
+
+/// With FO4_VIEW_BLENDED=FILE (measurement only): every draw of a load that
+/// blends (alpha blending on) or is an effect surface and whose world box is
+/// at least [`BLENDED_MIN`] across, appended per load: the load's cell, the
+/// placed reference and its base, effect or not, the alpha fields, the
+/// falloff, vertex colours (their least alpha), sidedness, the texture's
+/// path and the world box.
+pub(crate) fn blended_lines(scene: &fo4_scene::Scene, build: &fo4_render::draw::Build) {
+    let Some(path) = std::env::var_os("FO4_VIEW_BLENDED") else {
+        return;
+    };
+    let text = blended_text(scene, build);
+    use std::io::Write;
+    let file = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&path);
+    if let Err(e) = file.and_then(|mut f| f.write_all(text.as_bytes())) {
+        eprintln!("play: FO4_VIEW_BLENDED: {e}");
+    }
+}
+
+/// How near (game units) a triangle's corner is to FO4_VIEW_BLENDED_AT for
+/// [`blended_lines`] to write it.
+const BLENDED_NEAR: f64 = 1500.0;
+
+/// FO4_VIEW_BLENDED_AT=X,Y,Z (measurement only).
+fn blended_at() -> Option<[f64; 3]> {
+    let v = std::env::var("FO4_VIEW_BLENDED_AT").ok()?;
+    let p: Vec<f64> = v.split(',').filter_map(|x| x.trim().parse().ok()).collect();
+    (p.len() == 3).then(|| [p[0], p[1], p[2]])
+}
+
+/// The lines [`blended_lines`] writes.
+fn blended_text(scene: &fo4_scene::Scene, build: &fo4_render::draw::Build) -> String {
+    let cell = fo4_scene::timeline::key_text(&scene.cell.key);
+    let effects: std::collections::BTreeSet<usize> = build.effect_draws.iter().copied().collect();
+    let mut text = String::new();
+    for (i, d) in build.list.draws.iter().enumerate() {
+        let effect = effects.contains(&i);
+        if d.alpha.enabled == 0 && !effect {
+            continue;
+        }
+        let Some(mesh) = build.list.meshes.get(d.mesh) else {
+            continue;
+        };
+        let mut lo = [f64::INFINITY; 3];
+        let mut hi = [f64::NEG_INFINITY; 3];
+        for v in &mesh.vertices {
+            let p = d.world.apply(v.position);
+            for k in 0..3 {
+                lo[k] = lo[k].min(p[k]);
+                hi[k] = hi[k].max(p[k]);
+            }
+        }
+        let span = (0..3).map(|k| hi[k] - lo[k]).fold(0.0, f64::max);
+        if !(span >= BLENDED_MIN) {
+            continue;
+        }
+        let who = build.instances.get(d.instance as usize).map_or_else(
+            || "-\t-".to_string(),
+            |id| {
+                format!(
+                    "{}\t{}",
+                    fo4_scene::timeline::key_text(&id.reference),
+                    id.base
+                        .as_ref()
+                        .map_or("-".into(), fo4_scene::timeline::key_text)
+                )
+            },
+        );
+        let least = mesh
+            .vertex_colors
+            .as_ref()
+            .map(|c| c.iter().map(|v| v[3]).fold(f32::INFINITY, f32::min));
+        let texture = build
+            .texture_choices
+            .get(d.texture)
+            .map_or("-", |t| t.path.as_str());
+        // FO4_VIEW_BLENDED_AT=X,Y,Z: the draw's triangles with a corner
+        // within BLENDED_NEAR of that point, in world units, for a draw whose
+        // box holds it.
+        if let Some(at) = blended_at() {
+            if (0..3).all(|k| lo[k] - BLENDED_NEAR <= at[k] && at[k] <= hi[k] + BLENDED_NEAR) {
+                let near = |p: [f64; 3]| {
+                    (0..3).map(|k| (p[k] - at[k]).powi(2)).sum::<f64>().sqrt() <= BLENDED_NEAR
+                };
+                for t in &mesh.triangles {
+                    let c = t.map(|v| {
+                        mesh.vertices
+                            .get(v as usize)
+                            .map_or([f64::NAN; 3], |v| d.world.apply(v.position))
+                    });
+                    if c.iter().any(|p| near(*p)) {
+                        text.push_str(&format!(
+                            "tri\tdraw {i}\t{:.1},{:.1},{:.1}\t{:.1},{:.1},{:.1}\t{:.1},{:.1},{:.1}\n",
+                            c[0][0], c[0][1], c[0][2], c[1][0], c[1][1], c[1][2], c[2][0], c[2][1], c[2][2]
+                        ));
+                    }
+                }
+            }
+        }
+        text.push_str(&format!(
+            "{cell}\t{who}\tdraw {i}\t{}\talpha {} {} {} test {} opacity {}\tfalloff {:?}\tvertex alpha {:?}\t{:?}\t{texture}\tbox {:.0},{:.0},{:.0} {:.0},{:.0},{:.0}\n",
+            if effect { "effect" } else { "lit" },
+            d.alpha.enabled,
+            d.alpha.source,
+            d.alpha.destination,
+            d.alpha.test_enabled,
+            d.alpha.opacity,
+            d.falloff.map(|f| (f.start_angle, f.stop_angle, f.start_opacity, f.stop_opacity)),
+            least,
+            d.sidedness,
+            lo[0],
+            lo[1],
+            lo[2],
+            hi[0],
+            hi[1],
+            hi[2]
+        ));
+    }
+    text
+}
+
 pub(crate) fn omitted_lines(scene: &fo4_scene::Scene, build: &fo4_render::draw::Build) {
     let Some(path) = std::env::var_os("FO4_VIEW_OMITTED") else {
         return;
