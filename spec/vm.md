@@ -3163,6 +3163,7 @@ before. The play mode's elevator ride: `spec/play.md`, The elevator ride.
 | `--line-script-events` | a line the run plays delivers its begin and end to the scripts its record attaches of its own | `dialogue_line_script_events_v1` |
 | `--sit-end-walk UNITS` (with `--sit-events`) | the player's sit ends, as a get-up, when the track takes the player farther than UNITS from the furniture's stored position | `vm_sit_ended_by_track_v1` |
 | `--sit-end-walk-events UNITS` (with `--activate-furniture-events`) | only the player's sit a script's activation with events brought ends, as a get-up, when the track takes the player farther than UNITS from the furniture's stored position; looked at also before each caller or input action | `vm_sit_events_activation_ended_by_track_v1` |
+| `--sit-end-other-activation` (with `--activate-furniture-events`) | the player's sit a script's activation with events brought ends, as a get-up, before the caller's or the input's activation of another reference | `vm_sit_events_activation_ended_by_other_activation_v1` |
 | `--timeline-sequences` | the timeline writes the sequences the graphs start (output only) | - |
 | fight assumptions on `EDITOR_ID#ALIAS` | the reference an alias holds at that second | caller assumption |
 

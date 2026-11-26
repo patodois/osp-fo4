@@ -419,6 +419,47 @@ fn only_a_sit_an_activation_with_events_brought_ends_under_the_events_reading() 
     assert!(!vm.world.sits.sitting.contains_key(&p));
 }
 
+/// `--sit-end-other-activation`: a sit an activation with events brought
+/// ends before an activation of another reference, not of the furniture
+/// itself; other sits are left; off, nothing ends.
+#[test]
+fn a_sit_from_events_ends_before_another_reference_is_activated() {
+    let s = store();
+    let mut l = lib();
+    let mut host = QuestHost::new(&s, 1 << 24);
+    let mut vm = Vm::new(&mut l, &mut host);
+    let b = Budget::new(1 << 24);
+    let p = vm.world.player("actor");
+    let seat =
+        crate::data::record_object(&mut vm.world, &s, &key(SEAT), "objectreference", &b).unwrap();
+    vm.world.sits.sitting.insert(p, seat);
+    let other = "test.esm:00ABCDEF";
+    let seat_key = format!("test.esm:{SEAT:08x}");
+    // Off: nothing ends.
+    assert!(!crate::sit::end_for_activation(&mut vm.world, other));
+    vm.world.sits.end_other_activation = true;
+    // A sit no activation with events brought is left as before.
+    assert!(!crate::sit::end_for_activation(&mut vm.world, other));
+    vm.world.sits.from_events.push((p, seat));
+    // The furniture's own activation does not end it.
+    assert!(!crate::sit::end_for_activation(&mut vm.world, &seat_key));
+    assert!(crate::sit::end_for_activation(&mut vm.world, other));
+    assert_eq!(vm.world.sits.pending_get_ups, vec![(p, seat)]);
+    assert!(vm
+        .world
+        .sits
+        .used
+        .contains(&rules::SIT_EVENTS_ENDED_BY_OTHER_ACTIVATION));
+    // Noted once.
+    assert!(!crate::sit::end_for_activation(&mut vm.world, other));
+    crate::sit::settle(&mut vm, &s, 16, &b);
+    assert!(!vm.world.sits.sitting.contains_key(&p));
+    assert_eq!(
+        rules::status(rules::SIT_EVENTS_ENDED_BY_OTHER_ACTIVATION),
+        Some("pending")
+    );
+}
+
 #[test]
 fn every_rule_of_the_third_fight_step_is_registered_pending() {
     for r in [

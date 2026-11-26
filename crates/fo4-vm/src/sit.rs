@@ -101,6 +101,11 @@ pub struct Sits {
     /// `quest_run --sit-end-walk-events UNITS`); the run also looks before
     /// each caller or input action. `None` by default.
     pub end_walk_events: Option<f64>,
+    /// A sit a script's activation with events brought ends before the
+    /// caller's or the input's activation of another reference
+    /// (`rules::SIT_EVENTS_ENDED_BY_OTHER_ACTIVATION`, `quest_run
+    /// --sit-end-other-activation`). Off by default.
+    pub end_other_activation: bool,
     /// The (sitter, furniture) sits a script's activation with events
     /// brought, while they last.
     pub from_events: Vec<(ObjId, ObjId)>,
@@ -433,6 +438,39 @@ pub fn activated(
 /// furniture's placed position (or in another space), a get-up of the
 /// player from it is noted for [`settle`] (`rules::SIT_ENDED_BY_TRACK`).
 /// Returns whether one was noted.
+/// Under [`Sits::end_other_activation`]: the player's sit an activation
+/// with events brought is noted to end (a pending get-up) when the
+/// reference the caller or the input activates (`key`, as the caller gives
+/// it) is not the furniture. Whether one was noted.
+pub fn end_for_activation(w: &mut World, key: &str) -> bool {
+    if !w.sits.end_other_activation {
+        return false;
+    }
+    let Some(p) = w.player else {
+        return false;
+    };
+    let Some(f) = w.sits.sitting.get(&p).copied() else {
+        return false;
+    };
+    if !w.sits.from_events.contains(&(p, f)) || w.sits.pending_get_ups.contains(&(p, f)) {
+        return false;
+    }
+    let same = w.objects[f]
+        .key
+        .as_deref()
+        .and_then(key_record)
+        .zip(crate::player::parse_key(key))
+        .is_some_and(|(a, b)| bind::record_key(&a) == bind::record_key(&b));
+    if same {
+        return false;
+    }
+    w.sits.using(rules::SIT_EVENTS_ENDED_BY_OTHER_ACTIVATION);
+    w.sits
+        .count("sits ended by another activation	the player activated another reference");
+    w.sits.pending_get_ups.push((p, f));
+    true
+}
+
 pub fn end_by_track(store: &Store, max: u64, w: &mut World) -> bool {
     let Some(p) = w.player else {
         return false;

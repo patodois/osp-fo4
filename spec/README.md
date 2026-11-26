@@ -601,6 +601,7 @@ the registry.
 | `dialogue_line_script_events_v1` | pending | Play the town leader's greeting with a test listener on the next main quest's 128: set as the line begins supports it |
 | `vm_sit_ended_by_track_v1` | pending | Sit the player at the opening's first furniture and walk away: GetSitState 0 once away supports it |
 | `vm_sit_events_activation_ended_by_track_v1` | pending | Take the exit's device through its activator and use the console at once: the door sequence starting supports it; OnGetUp's second on a player alias gives the game's own end |
+| `vm_sit_events_activation_ended_by_other_activation_v1` | pending | Take the exit's device and use the console as soon as the player can move: the door sequence starting at that first use supports it; an OnGetUp before the console's OnActivate supports the order |
 | `play_elevator_run_sequence_v1` | pending | Ride the vault elevator and record the player's height over time: the descent the graph starts (4,140 units over 18.667 s) supports it |
 | `play_elevator_end_load_door_v1` | pending | Ride the elevator and note the second the interior loads: at the descent's end supports it |
 | `play_elevator_held_pose_v1` | pending | Walk onto the gear door's walkway after its load event: a floor where the held translation puts it supports it; a door that travels first refutes the at-once part. Behind `--play-elevator-held-pose`, off by default |

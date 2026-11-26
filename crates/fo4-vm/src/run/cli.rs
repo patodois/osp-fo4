@@ -188,6 +188,7 @@ pub fn parse(mut a: Vec<String>) -> Result<Command, E> {
         sit_in_use: flag(&mut a, "--furniture-in-use"),
         sit_activate_events: flag(&mut a, "--activate-furniture-events"),
         sit_activate_events_deliver: flag(&mut a, "--activate-furniture-events-deliver"),
+        sit_end_other_activation: flag(&mut a, "--sit-end-other-activation"),
         sit_activate_get_up: flag(&mut a, "--activate-furniture-get-up"),
         sit_state: flag(&mut a, "--sit-state"),
         anim_start_settled: flag(&mut a, "--anim-graph-start-settled"),
@@ -915,6 +916,9 @@ pub fn parse(mut a: Vec<String>) -> Result<Command, E> {
     }
     if then.sit_activate_events_deliver && !then.sit_activate_events {
         return Err("--activate-furniture-events-deliver needs --activate-furniture-events".into());
+    }
+    if then.sit_end_other_activation && !then.sit_activate_events {
+        return Err("--sit-end-other-activation needs --activate-furniture-events".into());
     }
     if then.sit_end_walk_events.is_some() && !then.sit_activate_events {
         return Err("--sit-end-walk-events needs --activate-furniture-events".into());

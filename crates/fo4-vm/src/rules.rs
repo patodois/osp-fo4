@@ -169,7 +169,7 @@ pub const XESP_BIT1: &str = "xesp_flag_bit1_not_presence_v1";
 pub const XESP_PROPAGATES: &str = "xesp_script_change_propagates_v1";
 
 /// Every rule above.
-pub const ALL: [&str; 210] = [
+pub const ALL: [&str; 211] = [
     ARITHMETIC,
     COMPARE,
     NOT_COPY_CAST,
@@ -380,6 +380,7 @@ pub const ALL: [&str; 210] = [
     PACKAGE_MOVE_AFTER_STOP,
     SIT_ACTIVATE_EVENTS_DELIVERED,
     SIT_EVENTS_ENDED_BY_TRACK,
+    SIT_EVENTS_ENDED_BY_OTHER_ACTIVATION,
 ];
 
 /// The rule an opcode's meaning rests on; `None` for an opcode without a
@@ -912,3 +913,10 @@ pub const SIT_ACTIVATE_EVENTS_DELIVERED: &str = "vm_furniture_activate_events_de
 /// each of its steps and before each caller or input action
 /// (`--sit-end-walk-events UNITS`). Other sits are left as before.
 pub const SIT_EVENTS_ENDED_BY_TRACK: &str = "vm_sit_events_activation_ended_by_track_v1";
+/// The player's sit that a script's activation with events brought
+/// (`SIT_ACTIVATE_EVENTS`) ends, as a get-up the run raises, before a
+/// caller's or input activation of another reference than the furniture
+/// (`--sit-end-other-activation`): a player in a furniture activates
+/// nothing else. Other sits are left as before.
+pub const SIT_EVENTS_ENDED_BY_OTHER_ACTIVATION: &str =
+    "vm_sit_events_activation_ended_by_other_activation_v1";

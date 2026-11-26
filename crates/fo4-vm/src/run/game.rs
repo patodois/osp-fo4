@@ -257,6 +257,7 @@ pub(super) fn new_game(
         (then.alias_external, "a reference alias filled from another quest's alias holds what that alias holds whenever it is read (--alias-external)"),
         (then.line_script_events, "a line the run plays delivers its begin and end to the scripts its record attaches of its own (--line-script-events)"),
         (then.sit_end_walk.is_some(), "the player's sit ends, as a get-up, when the track takes the player farther than the caller's distance from the furniture's placed position (--sit-end-walk)"),
+        (then.sit_end_other_activation, "the player's sit an activation with events brought ends, as a get-up, before the caller's or the input's activation of another reference (--sit-end-other-activation)"),
         (then.sit_end_walk_events.is_some(), "the player's sit an activation with events brought ends, as a get-up, when the track takes the player farther than the caller's distance from the furniture's placed position, looked at before each action too (--sit-end-walk-events)"),
         (then.quest_partial_previous, "a winning quest record with flag bit 0x4000 that carries only EDID and VMAD is read from the occurrence before it, its own VMAD kept (--quest-partial-previous)"),
         (then.container_events, "the caller's container change raises OnContainerChanged on the reference's receivers (--container-change-events)"),
@@ -332,6 +333,7 @@ pub(super) fn new_game(
     vm.world.scenes.line_scripts = then.line_script_events;
     vm.world.sits.end_walk = then.sit_end_walk;
     vm.world.sits.end_walk_events = then.sit_end_walk_events;
+    vm.world.sits.end_other_activation = then.sit_end_other_activation;
     vm.world.quests.partial_previous = then.quest_partial_previous;
     vm.world.runstate.chain.container = then.container_events;
     vm.world.runstate.chain.location = then.location_events;
@@ -1654,6 +1656,7 @@ impl<'r, 'v> NewGame<'r, 'v> {
                         self.vm, self.store, self.then, self.c, self.names, self.top, self.b,
                     );
                 }
+                self.end_sit_for(&x);
                 self.act(&x)?;
                 self.world_step();
                 let written = self.written_of(&x, input);
@@ -1850,6 +1853,23 @@ impl<'r, 'v> NewGame<'r, 'v> {
 
     /// Under `--action-after-offset`: a held action at the second its gate
     /// gave it.
+    /// Under `--sit-end-other-activation`: a sit an activation with events
+    /// brought ends, as a get-up delivered now, before the caller's or the
+    /// input's activation of another reference than the furniture.
+    fn end_sit_for(&mut self, x: &Caller) {
+        let What::Player(crate::player::Action::Activate, k) = &x.what else {
+            return;
+        };
+        if crate::sit::end_for_activation(&mut self.vm.world, k) {
+            self.vm
+                .rules
+                .insert(crate::rules::SIT_EVENTS_ENDED_BY_OTHER_ACTIVATION);
+            sit_step(
+                self.vm, self.store, self.then, self.c, self.names, self.top, self.b,
+            );
+        }
+    }
+
     fn act_held(&mut self, pos: usize) -> Result<(), E> {
         let h = self.held.remove(pos);
         bump(
@@ -1857,6 +1877,7 @@ impl<'r, 'v> NewGame<'r, 'v> {
             "caller actions held until a stage: happened at their offset from the stage (--action-after-offset)",
         );
         let open = self.gates_open();
+        self.end_sit_for(&h.x);
         self.act(&h.x)?;
         self.world_step();
         self.gates_done(&open, h.x.at);

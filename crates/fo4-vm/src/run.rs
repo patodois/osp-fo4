@@ -355,6 +355,11 @@ pub struct Then {
     /// (`vm_sit_events_activation_ended_by_track_v1`, `--sit-end-walk-events
     /// UNITS`).
     pub sit_end_walk_events: Option<f64>,
+    /// The sits a script's activation with events brought end before the
+    /// caller's or the input's activation of another reference
+    /// (`vm_sit_events_activation_ended_by_other_activation_v1`,
+    /// `--sit-end-other-activation`).
+    pub sit_end_other_activation: bool,
     /// The placed references of a location's cells carrying the ref type
     /// the list holds no row of (`quest_alias_location_ref_placed_v1`,
     /// `--alias-location-placed-refs`).
