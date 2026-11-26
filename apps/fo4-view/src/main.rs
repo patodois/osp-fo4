@@ -16,6 +16,8 @@ mod hud_font;
 mod jpeg;
 mod live;
 mod load;
+#[cfg(feature = "script-event")]
+mod pad;
 mod path;
 #[cfg(feature = "script-event")]
 mod person;

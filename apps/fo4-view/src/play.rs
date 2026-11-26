@@ -151,6 +151,9 @@ mod enabled {
         /// `--play-keys-from`: the synthetic person's events and the
         /// walking speed it steers at (taken by the window).
         pub synthetic: Option<(Vec<crate::person::Timed>, f64)>,
+        /// The pad read with the keys: the synthetic person's `pad` lines
+        /// or `--play-pad` (taken by the window, `crate::pad`).
+        pub pad: Option<crate::pad::Wanted>,
         /// The viewport's crosshair and lines (`--play-hud`, on with
         /// `--play-keys`; `crate::hud`).
         pub hud: bool,
@@ -551,13 +554,27 @@ mod enabled {
         // references are left to the walker's activations.
         let args = p.switches.run_args(args);
         let sw = &p.switches;
+        let mut pad = p.pad.map(|reset| crate::pad::Wanted::Device { reset });
         let synthetic = match &p.input {
             Some(crate::cli::Input::Keys(crate::cli::Keys {
                 synthetic: Some(file),
                 ..
             })) => {
                 let text = std::fs::read_to_string(file).map_err(|e| format!("{file}: {e}"))?;
-                let events = crate::person::parse_synthetic(&text)?;
+                let (events, states) =
+                    crate::person::split_pad(crate::person::parse_synthetic(&text)?);
+                if !states.is_empty() {
+                    if pad.is_some() {
+                        return Err(format!(
+                            "{file}: a scripted pad (pad lines) and --play-pad: one of them"
+                        ));
+                    }
+                    println!(
+                        "play: a scripted pad (--play-keys-from {file}, test and measurement only): {} pad states read as the pad's",
+                        states.len()
+                    );
+                    pad = Some(crate::pad::Wanted::Fake(crate::pad::FakePad::new(states)));
+                }
                 let speed = sw
                     .walk_speed
                     .unwrap_or(fo4_walk::Params::PROVISIONAL.walk_speed);
@@ -703,6 +720,7 @@ mod enabled {
             applied: None,
             scripted,
             synthetic,
+            pad,
             hud: p.hud,
         })
     }

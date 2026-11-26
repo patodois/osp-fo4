@@ -16,7 +16,8 @@ usage:
            [--play-run SWITCHES_FILE --play-out DIR [--play-reach UNITS] [--play-pick-bounds]
             [--play-live-world [--play-nowait]]
             [(--play-input INPUT_FILE | --play-keys --play-stand SECONDS
-              [--play-record FILE] [--play-keys-from FILE]) [play_run's play options...]
+              [--play-record FILE] [--play-keys-from FILE] [--play-pad | --play-pad-no-reset])
+             [play_run's play options...]
              [--play-shots DIR --play-shot-every SECONDS
               [--play-shots-between FROM TO EVERY]...] [--play-from SECONDS]
              [--timeline-cast [the cast readings of a --timeline frame]]
@@ -173,7 +174,15 @@ usage:
       turns the view too; Shift counts also when it comes only as the
       movement key's modifier. --play-keys-from FILE (test and measurement only) is a
       synthetic person: timed key, button and mouse events injected where
-      a real key press arrives (spec/play.md, The person's input).
+      a real key press arrives (spec/play.md, The person's input); its
+      lines pad LX LY RX RY [a] [b] [menu] [view] and pad off are a
+      scripted pad. --play-pad (a viewer built with --features pad) also
+      reads a GIP pad over USB: the left stick walks (runs near full tilt),
+      the right stick looks, A activates, Menu pauses, View or B held a
+      second ends; keyboard and pad play together. It resets the pad over
+      USB and claims it, so close any other program that holds it first;
+      --play-pad-no-reset opens it without the reset. Viewer policy, not
+      measured game behaviour (spec/play.md, The pad).
       With FO4_VIEW_PLAY_WATCH=FILE in the environment (measurement only,
       off by default) the scripted play window writes to FILE, at each
       change, where each actor of the drawn cast is drawn (or that it left
@@ -668,6 +677,10 @@ pub struct Play {
     /// What the viewport shows besides the scene (`crate::hud`): on with
     /// `--play-keys`, asked for in the scripted window with `--play-hud`.
     pub hud: bool,
+    /// With `--play-keys`: `--play-pad` (`Some(true)`: the pad reset over
+    /// USB as it is opened) or `--play-pad-no-reset` (`Some(false)`), a GIP
+    /// pad read with the keyboard (`crate::pad`; needs `--features pad`).
+    pub pad: Option<bool>,
     /// `--play-from SECONDS` (with `--play-input`): the run goes unpaced
     /// to that second of its clock before the window's pace takes over.
     pub from: Option<f64>,
@@ -938,6 +951,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
     let mut play_switches = crate::play_switches::Switches::default();
     let (mut play_input, mut play_shots, mut play_shot_every) = (None, None, None);
     let (mut play_keys, mut play_record, mut play_keys_from) = (false, None, None);
+    let mut play_pad: Option<bool> = None;
     let mut play_hud = false;
     let mut play_from: Option<f64> = None;
     let mut shots_between: Vec<[f64; 3]> = Vec::new();
@@ -997,6 +1011,13 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             "--play-from" => play_from = Some(not_negative(value()?)?),
             "--play-record" => play_record = Some(value()?.clone()),
             "--play-keys-from" => play_keys_from = Some(value()?.clone()),
+            "--play-pad" | "--play-pad-no-reset" => {
+                let reset = arg.as_str() == "--play-pad";
+                if play_pad.is_some_and(|r| r != reset) {
+                    return Err("--play-pad and --play-pad-no-reset: one of them".into());
+                }
+                play_pad = Some(reset);
+            }
             "--play-shots" => play_shots = Some(value()?.clone()),
             "--play-shot-every" => play_shot_every = Some(positive(value()?)?),
             "--play-shots-between" => {
@@ -1115,6 +1136,12 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
     }
     if !play_keys && (play_record.is_some() || play_keys_from.is_some()) {
         return Err("--play-record and --play-keys-from need --play-keys".into());
+    }
+    if play_pad.is_some() && !play_keys {
+        return Err("--play-pad needs --play-keys (the pad plays with the keyboard)".into());
+    }
+    if play_pad.is_some() && !cfg!(feature = "pad") {
+        return Err("--play-pad needs a viewer built with --features pad".into());
     }
     if play_from.is_some() && play_input.is_none() {
         return Err(
@@ -1366,6 +1393,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             out,
             switches: Box::new(play_switches),
             hud: play_hud || matches!(walker_input, Some(Input::Keys(_))),
+            pad: play_pad,
             input: walker_input,
             shots,
             shots_between,
@@ -1757,6 +1785,43 @@ mod tests {
 
     #[cfg(feature = "script-event")]
     #[test]
+    fn the_pad_plays_with_the_keys() {
+        let base = "m d C --under-hypotheses --walk --eye 1,2,3 --look 4,5,6 --play-run s.txt --play-out o --play-stand 0.1 --play-reach 150";
+        let pad = |extra: &str| -> Result<Option<bool>, String> {
+            match parse(&args(&format!("{base} {extra}"))) {
+                Ok(Command::Window {
+                    play:
+                        Some(Play {
+                            input: Some(Input::Keys(_)),
+                            pad,
+                            ..
+                        }),
+                    ..
+                }) => Ok(pad),
+                Ok(c) => panic!("{c:?}"),
+                Err(e) => Err(e.to_string()),
+            }
+        };
+        assert_eq!(pad("--play-keys"), Ok(None));
+        if cfg!(feature = "pad") {
+            assert_eq!(pad("--play-keys --play-pad"), Ok(Some(true)));
+            assert_eq!(pad("--play-keys --play-pad-no-reset"), Ok(Some(false)));
+            assert_eq!(pad("--play-keys --play-pad --play-pad"), Ok(Some(true)));
+        } else {
+            let e = pad("--play-keys --play-pad").unwrap_err();
+            assert!(e.contains("--features pad"), "{e}");
+        }
+        for bad in [
+            "--play-pad",
+            "--play-keys --play-pad --play-pad-no-reset",
+            "--play-input i.txt --play-pad",
+        ] {
+            assert!(pad(bad).is_err(), "{bad}");
+        }
+    }
+
+    #[cfg(feature = "script-event")]
+    #[test]
     fn the_opening_preset_reads_with_a_local_file() {
         let preset = include_str!("../presets/play-opening.args");
         let local = "m\nd\nC\n--eye\n1,2,3\n--look\n4,5,6\n--play-run\ns.txt\n--play-out\no\n--play-elevator\na.esm:00000001\n--play-elevator\na.esm:00000002\n--play-elevator-also-with\na.esm:00000003\na.esm:00000001\n";
@@ -1859,6 +1924,7 @@ mod tests {
                 shots: None,
                 shots_between: Vec::new(),
                 hud: false,
+                pad: None,
                 from: None,
             }
         );

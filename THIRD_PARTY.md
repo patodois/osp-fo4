@@ -56,6 +56,39 @@ interface, with its default features off and `std` and `time` on. It was
 already in the viewer's lock through the window crates; no source of it is
 copied into this repository.
 
+## The viewer's pad
+
+The GPU viewer (`apps/fo4-view`, its own workspace) depends, only with its
+optional feature `pad` (off by default; `--play-pad`), on the `gip-pad`
+crate, version 0.4.0, published on crates.io by the repository's owner
+(repository <https://github.com/patodois/gip-pad>), licensed MIT OR
+Apache-2.0. It reads a GIP pad over USB on its own thread through its
+public interface (`PadReader::spawn`, `PadReader::spawn_without_reset`,
+`latest`, `last_error`, `stick`, `Pad`'s fields and the `BUTTONS` table, by
+name); only its published documentation was read, and no source of it is
+copied into this repository. With it, these packages are new in the
+viewer's lock (versions and declared licenses from offline locked Cargo
+metadata):
+
+| Package | Version | Declared license |
+| --- | --- | --- |
+| anyhow | 1.0.105 | MIT OR Apache-2.0 |
+| core-foundation | 0.10.1 | MIT OR Apache-2.0 |
+| gip-pad | 0.4.0 | MIT OR Apache-2.0 |
+| io-kit-sys | 0.5.0 | MIT OR Apache-2.0 |
+| mach2 | 0.5.0 | BSD-2-Clause OR MIT OR Apache-2.0 |
+| nusb | 0.2.9 | Apache-2.0 OR MIT |
+
+The rest of its dependency tree was already in the viewer's lock through
+the window crates, every one under a permissive license (MIT, Apache-2.0,
+Zlib or BSD terms, as their metadata declares): bitflags, bumpalo,
+bytemuck, cfg-if, core-foundation-sys, errno, futures-core, futures-macro,
+futures-task, futures-util, libc, log, once_cell, pin-project-lite,
+proc-macro2, quote, rustix, serde_core, serde_derive, slab, syn, tokio,
+unicode-ident and, for other
+targets, js-sys, linux-raw-sys, wasm-bindgen and its macro crates, web-sys,
+windows-link and windows-sys.
+
 ## Cargo dependencies
 
 Versions and declared licenses from offline locked Cargo metadata. The first-party

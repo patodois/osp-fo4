@@ -1579,6 +1579,19 @@ pub fn window(
                 shift_modifier: false,
             })
             .add_systems(Update, person_keys.after(fly_camera).before(play_scripted));
+            // The pad read with the keys: a scripted pad, or the device
+            // (`--play-pad`), whose reader starts its own thread here.
+            if let Some(w) = p.pad.take() {
+                app.insert_resource(PadInput {
+                    source: crate::pad::open(w)?,
+                    state: crate::person::PadState::default(),
+                    status: crate::pad::Status::default(),
+                });
+                println!(
+                    "play: pad: left stick walks (runs near full tilt), right stick looks, A activates, Menu pauses, View or B held {} s ends (viewer policy, not measured game behaviour)",
+                    crate::person::PAD_END_HOLD_SECONDS
+                );
+            }
             if with_synthetic {
                 app.add_systems(PreUpdate, person_inject.before(bevy::input::InputSystems));
             }
@@ -2800,6 +2813,18 @@ struct PersonInput {
     shift_modifier: bool,
 }
 
+/// The pad read with the keys (`--play-pad`, or a synthetic person's
+/// `pad` lines): its source, its state between frames, and its presence as
+/// last told. Dropped with the app, after the run is closed (the device's
+/// reader may take seconds to let go).
+#[cfg(feature = "script-event")]
+#[derive(Resource)]
+struct PadInput {
+    source: Box<dyn crate::pad::PadSource>,
+    state: crate::person::PadState,
+    status: crate::pad::Status,
+}
+
 /// `--play-keys`, each frame: the keys held, E, Escape and P, the arrow
 /// keys, and the mouse's motion while the left button is held, as the
 /// person's state (`crate::person`: the key map). The look reads the raw
@@ -2808,8 +2833,11 @@ struct PersonInput {
 /// came (`person::Drag`: a tool's drag carries its motion on the release,
 /// or presses and lets go within one frame); Shift counts as a key of its
 /// own or as the movement key's modifier (`person::shift_of_modifiers`).
-/// The scripted window's system sends the commands when the run's clock
-/// moves.
+/// With a pad (`PadInput`), its held keys are added to the keyboard's,
+/// its right stick looks after the arrow keys, and A, Menu and View or B
+/// press as E, P and Escape do; a window without the focus reads the pad
+/// as let go (`person::PadState`). The scripted window's system sends the
+/// commands when the run's clock moves.
 #[cfg(feature = "script-event")]
 #[allow(clippy::too_many_arguments)]
 fn person_keys(
@@ -2820,6 +2848,8 @@ fn person_keys(
     mut modifiers: MessageReader<bevy::winit::RawWinitWindowEvent>,
     time: Res<Time>,
     mut input: ResMut<PersonInput>,
+    pad: Option<ResMut<PadInput>>,
+    windows: Query<&Window, With<PrimaryWindow>>,
 ) {
     use crate::person::Pointer;
     use bevy::window::WindowEvent;
@@ -2854,8 +2884,32 @@ fn person_keys(
     }
     let shift_key = keys.any_pressed([KeyCode::ShiftLeft, KeyCode::ShiftRight]);
     let run = crate::person::run_held(shift_key, input.shift_modifier, held);
+    let dt = time.delta_secs_f64();
+    let (pad_held, presses, stick) = match pad {
+        Some(mut pad) => {
+            let pad = &mut *pad;
+            let poll = pad.source.poll(input.person.clock);
+            let why = if poll.connected {
+                None
+            } else {
+                pad.source.absent()
+            };
+            if let Some(line) = pad.status.update(poll.connected, why) {
+                println!("{line} at {:.3} s of the play clock", input.person.clock);
+            }
+            let focused = windows.iter().next().is_none_or(|w| w.focused);
+            let presses = pad.state.frame(&poll, focused, dt);
+            let stick = if focused && poll.connected {
+                poll.right
+            } else {
+                [0.0; 2]
+            };
+            (pad.state.held, presses, stick)
+        }
+        None => Default::default(),
+    };
     let p = &mut input.person;
-    if keys.just_pressed(KeyCode::KeyP) {
+    if keys.just_pressed(KeyCode::KeyP) || presses.pause {
         p.toggle_pause();
         println!(
             "play: person: {} at {:.3} s of the play clock",
@@ -2863,20 +2917,21 @@ fn person_keys(
             p.clock
         );
     }
-    if keys.just_pressed(KeyCode::Escape) {
+    if keys.just_pressed(KeyCode::Escape) || presses.end {
         p.press_quit();
     }
-    if keys.just_pressed(KeyCode::KeyE) {
+    if keys.just_pressed(KeyCode::KeyE) || presses.activate {
         p.press_activate();
     }
-    p.held = crate::person::Held { run, ..held };
+    p.held = crate::person::held_either(crate::person::Held { run, ..held }, pad_held);
     p.arrows(
         keys.pressed(KeyCode::ArrowLeft),
         keys.pressed(KeyCode::ArrowRight),
         keys.pressed(KeyCode::ArrowUp),
         keys.pressed(KeyCode::ArrowDown),
-        time.delta_secs_f64(),
+        dt,
     );
+    p.stick_look(stick, dt);
     if dragged || buttons.pressed(MouseButton::Left) || buttons.just_released(MouseButton::Left) {
         let raw = [f64::from(motion.delta.x), f64::from(motion.delta.y)];
         p.look(crate::person::look_motion(raw, cursor));
@@ -4211,6 +4266,121 @@ mod tests {
         let (h, p) = look(&app);
         assert!((h - h0 - 45.0).abs() < 1e-6, "{h} {h0}");
         assert!((p - p0 - 15.0).abs() < 1e-6, "{p} {p0}");
+    }
+
+    /// The pad in the person's mode, in an app without a device: a
+    /// scripted pad's left stick holds the keys with the keyboard's, its
+    /// right stick looks, A activates, View held a second ends; a window
+    /// without the focus reads it as let go.
+    #[cfg(feature = "script-event")]
+    #[test]
+    fn the_pad_walks_looks_and_ends_in_the_person_mode() {
+        use crate::person::{Held, PadPoll};
+        let up = PadPoll {
+            connected: true,
+            ..PadPoll::default()
+        };
+        let states = vec![
+            (0.0, up),
+            (
+                1.0,
+                PadPoll {
+                    left: [0.0, 0.6],
+                    right: [1.0, 0.0],
+                    ..up
+                },
+            ),
+            (
+                2.0,
+                PadPoll {
+                    left: [0.0, 0.6],
+                    activate: true,
+                    ..up
+                },
+            ),
+            (3.0, PadPoll { end: true, ..up }),
+        ];
+        let mut app = App::new();
+        let window = app
+            .world_mut()
+            .spawn((Window::default(), PrimaryWindow))
+            .id();
+        app.init_resource::<ButtonInput<KeyCode>>()
+            .init_resource::<ButtonInput<MouseButton>>()
+            .init_resource::<AccumulatedMouseMotion>()
+            .add_message::<bevy::window::WindowEvent>()
+            .add_message::<bevy::winit::RawWinitWindowEvent>()
+            .insert_resource(Time::<()>::default())
+            .insert_resource(PersonInput {
+                person: crate::person::Person::new(90.0, 0.0, 0.1),
+                synthetic: None,
+                last_dt: 0.0,
+                synthetic_done: false,
+                drag: crate::person::Drag::default(),
+                shift_modifier: false,
+            })
+            .insert_resource(PadInput {
+                source: crate::pad::open(crate::pad::Wanted::Fake(crate::pad::FakePad::new(
+                    states,
+                )))
+                .unwrap(),
+                state: crate::person::PadState::default(),
+                status: crate::pad::Status::default(),
+            })
+            .add_systems(Update, person_keys);
+        // One frame at a second of the play clock (the scripted window's
+        // system moves it; here the test does).
+        let frame = |app: &mut App, clock: f64| {
+            app.world_mut().resource_mut::<PersonInput>().person.clock = clock;
+            app.world_mut()
+                .resource_mut::<Time>()
+                .advance_by(std::time::Duration::from_secs_f64(0.25));
+            app.update();
+            let w = app.world_mut();
+            w.resource_mut::<ButtonInput<KeyCode>>().clear();
+            let mut input = w.resource_mut::<PersonInput>();
+            input.person.commands()
+        };
+        use fo4_play::input::{Command, Key};
+        // The first frame tells the start's heading.
+        assert_eq!(frame(&mut app, 0.0), [Command::Face(90.0)]);
+        // Half tilt forward with the keyboard's D: forward and right held;
+        // the right stick turns right at 120 degrees a second for 0.25 s.
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(KeyCode::KeyD);
+        assert_eq!(
+            frame(&mut app, 1.0),
+            [
+                Command::Face(60.0),
+                Command::Key(Key::Forward, true),
+                Command::Key(Key::Right, true),
+            ]
+        );
+        // A: the activation, once; the look stopped with the stick.
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .release(KeyCode::KeyD);
+        assert_eq!(
+            frame(&mut app, 2.0),
+            [Command::Key(Key::Right, false), Command::Activate]
+        );
+        assert!(frame(&mut app, 2.25).is_empty());
+        // The focus lost: the pad's keys let go.
+        app.world_mut().get_mut::<Window>(window).unwrap().focused = false;
+        assert_eq!(frame(&mut app, 2.5), [Command::Key(Key::Forward, false)]);
+        app.world_mut().get_mut::<Window>(window).unwrap().focused = true;
+        // Focused again with A still held: the stick walks, A waits for
+        // its release.
+        assert_eq!(frame(&mut app, 2.75), [Command::Key(Key::Forward, true)]);
+        // View held: the end after a second (four frames of 0.25 s).
+        assert_eq!(frame(&mut app, 3.0), [Command::Key(Key::Forward, false)]);
+        for t in [3.25, 3.5] {
+            assert!(frame(&mut app, t).is_empty(), "{t}");
+        }
+        assert_eq!(frame(&mut app, 3.75), [Command::End]);
+        let p = &app.world().resource::<PersonInput>().person;
+        assert!(p.ended && p.held == Held::default());
     }
 
     #[test]
