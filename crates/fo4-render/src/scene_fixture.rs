@@ -2815,3 +2815,41 @@ fn kept_files_answer_a_second_build_alike() {
     loader.assets.keep_files(0);
     assert_eq!(loader.assets.kept_files().bytes, 0);
 }
+
+/// Files kept from the start (`Assets::keep_files` before the scene is
+/// resolved): the visit of each new asset keeps the file it read for its
+/// parse, so the build's draws read none from the archive, and the draw
+/// list is the one an uncached loader builds.
+#[test]
+fn kept_files_hold_what_the_visit_read() {
+    let (_temp, m) = fixture_placing("render-kept-visit", &dds(), nif(b"textures/a.dds"), 0x801);
+    let b = Budget::new(32 << 20);
+    let store = fo4_plugin::typed::Store::open(&m, &b).unwrap();
+    let vfs = fo4_vfs::Vfs::mount(&m, &b).unwrap();
+    let options = || BuildOptions {
+        max_texture_dimension: 16,
+        max_texture_bytes: 1 << 20,
+        level: RuleLevel::Hypotheses,
+        blocks: None,
+        time: None,
+        clock: Default::default(),
+        vertex_normals: false,
+        chains: false,
+    };
+    let mut plain_loader = Loader::new(&store, &vfs, "english", RuleLevel::Facts, &b);
+    let scene = plain_loader.by_editor_id("SyntheticScolCell", &b).unwrap();
+    let plain = build(&scene, &plain_loader, &m.limits, options(), &b).unwrap();
+    let mut loader = Loader::new(&store, &vfs, "english", RuleLevel::Facts, &b);
+    loader.assets.keep_files(1 << 20);
+    let scene = loader.by_editor_id("SyntheticScolCell", &b).unwrap();
+    let k0 = loader.assets.kept_files();
+    assert!(k0.from_visits > 0 && k0.files > 0, "{k0:?}");
+    let kept = build(&scene, &loader, &m.limits, options(), &b).unwrap();
+    let k1 = loader.assets.kept_files();
+    assert!(k1.hits > 0 && k1.reads == 0, "{k1:?}");
+    assert_eq!(kept.list.draws.len(), plain.list.draws.len());
+    assert_eq!(
+        format!("{:?}", kept.list.meshes),
+        format!("{:?}", plain.list.meshes)
+    );
+}

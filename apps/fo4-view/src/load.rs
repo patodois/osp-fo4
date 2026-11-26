@@ -1481,12 +1481,13 @@ pub fn cell<'s>(
     if let Some(slot) = kept {
         let f = loader.assets.kept_files();
         println!(
-            "files kept for the next load: {} files, {:.1} MiB (at most {} MiB); reads from them {} of {}",
+            "files kept for the next load: {} files, {:.1} MiB (at most {} MiB); reads from them {} of {}; kept by new assets' visits {}",
             f.files,
             f.bytes as f64 / f64::from(1u32 << 20),
             kept_files_max() >> 20,
             f.hits,
-            f.hits + f.reads
+            f.hits + f.reads,
+            f.from_visits
         );
         slot.assets = Some(std::mem::replace(
             &mut loader.assets,

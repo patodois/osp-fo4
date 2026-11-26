@@ -162,15 +162,23 @@ pub struct Assets<'a> {
     files: std::cell::RefCell<FileCache>,
 }
 
-/// The files [`Assets::keep_files`] keeps: by asset, oldest first out.
+/// The files [`Assets::keep_files`] keeps: by asset, the least recently
+/// used first out (a read refreshes a file's place).
 #[derive(Default)]
 struct FileCache {
     cap: u64,
     used: u64,
-    map: HashMap<usize, std::sync::Arc<Vec<u8>>>,
-    order: std::collections::VecDeque<usize>,
+    /// The bytes by asset and the stamp of their last use.
+    map: HashMap<usize, (std::sync::Arc<Vec<u8>>, u64)>,
+    /// (asset, stamp) by use, oldest first; an entry whose stamp is no
+    /// longer its asset's is stale and skipped.
+    order: std::collections::VecDeque<(usize, u64)>,
+    stamp: u64,
     hits: u64,
     reads: u64,
+    /// Files the visit of a new asset put in (read once for its parse and
+    /// its later draws).
+    from_visits: u64,
 }
 
 /// What [`Assets::keep_files`] holds: files, their bytes, the reads it
@@ -181,43 +189,77 @@ pub struct KeptFiles {
     pub bytes: u64,
     pub hits: u64,
     pub reads: u64,
+    /// Files a new asset's visit read and kept (not counted in `reads`).
+    pub from_visits: u64,
 }
 
 impl FileCache {
-    fn insert(&mut self, id: usize, bytes: std::sync::Arc<Vec<u8>>) {
+    /// Keeps `bytes` for asset `id` when they fit a quarter of the cap,
+    /// making room by the least recently used; a kept file stays as it is.
+    /// Whether the file is kept.
+    fn insert(&mut self, id: usize, bytes: std::sync::Arc<Vec<u8>>) -> bool {
         let n = bytes.len() as u64;
         if n > self.cap / 4 || self.map.contains_key(&id) {
-            return;
+            return false;
         }
         while self.used + n > self.cap {
-            let Some(old) = self.order.pop_front() else {
+            if !self.evict_one() {
                 break;
-            };
-            if let Some(b) = self.map.remove(&old) {
-                self.used -= b.len() as u64;
             }
         }
         self.used += n;
-        self.map.insert(id, bytes);
-        self.order.push_back(id);
+        self.stamp += 1;
+        self.map.insert(id, (bytes, self.stamp));
+        self.order.push_back((id, self.stamp));
+        true
+    }
+    /// The kept bytes of `id`, its place refreshed (most recently used).
+    fn get(&mut self, id: usize) -> Option<std::sync::Arc<Vec<u8>>> {
+        self.stamp += 1;
+        let stamp = self.stamp;
+        let (bytes, s) = self.map.get_mut(&id)?;
+        *s = stamp;
+        let bytes = bytes.clone();
+        self.order.push_back((id, stamp));
+        // Stale entries are dropped once they outnumber the live ones.
+        if self.order.len() > 2 * self.map.len() + 64 {
+            let map = &self.map;
+            self.order
+                .retain(|(i, s)| map.get(i).is_some_and(|(_, t)| t == s));
+        }
+        Some(bytes)
+    }
+    /// Removes the least recently used file; `false` when none is kept.
+    fn evict_one(&mut self) -> bool {
+        while let Some((old, s)) = self.order.pop_front() {
+            if self.map.get(&old).is_some_and(|(_, t)| *t == s) {
+                if let Some((b, _)) = self.map.remove(&old) {
+                    self.used -= b.len() as u64;
+                }
+                return true;
+            }
+        }
+        false
     }
 }
 impl<'a> Assets<'a> {
-    /// Keeps the files [`Assets::with_decoded`] reads, up to `cap` bytes in
-    /// all (a file above a quarter of it is not kept; the oldest go first),
-    /// so a later read of the same asset does not extract it from its
-    /// archive again (a caller's policy: the play window's cell loads).
-    /// `0`, the default, keeps none. What a read gives is unchanged.
+    /// Keeps the files [`Assets::with_decoded`] reads and the files the
+    /// visit of a new asset reads for its parse, up to `cap` bytes in all
+    /// (a file above a quarter of it is not kept; the least recently used
+    /// go first), so a later read of the same asset does not extract it
+    /// from its archive again (a caller's policy: the play window's cell
+    /// loads). `0`, the default, keeps none. What a read gives is
+    /// unchanged.
     pub fn keep_files(&mut self, cap: u64) {
         let f = self.files.get_mut();
         f.cap = cap;
         while f.used > cap {
-            let Some(old) = f.order.pop_front() else {
+            if !f.evict_one() {
                 break;
-            };
-            if let Some(b) = f.map.remove(&old) {
-                f.used -= b.len() as u64;
             }
+        }
+        if f.map.is_empty() {
+            f.order.clear();
         }
     }
     /// What [`Assets::keep_files`] holds now.
@@ -228,6 +270,7 @@ impl<'a> Assets<'a> {
             bytes: f.used,
             hits: f.hits,
             reads: f.reads,
+            from_visits: f.from_visits,
         }
     }
     pub fn new(vfs: &'a Vfs, b: &Budget) -> Self {
@@ -478,7 +521,15 @@ impl<'a> Assets<'a> {
                 origin.offset,
             )?;
             self.nodes[i].origin = Some(origin);
-            let bytes = self.vfs.read_candidate(c, &work)?;
+            let bytes = std::sync::Arc::new(self.vfs.read_candidate(c, &work)?);
+            // Kept for the draws that read this asset next (the files'
+            // cap, `Assets::keep_files`), so it is not read twice.
+            {
+                let mut f = self.files.borrow_mut();
+                if f.cap > 0 && f.insert(i, bytes.clone()) {
+                    f.from_visits += 1;
+                }
+            }
             let mut deps: Vec<Dependency> = Vec::new();
             match kind {
                 AssetKind::Model => {
@@ -1066,7 +1117,7 @@ impl<'a> Assets<'a> {
         let c = self.vfs.winner_bytes(&node.path)?;
         let kept = {
             let mut f = self.files.borrow_mut();
-            let k = f.map.get(&id).cloned();
+            let k = f.get(id);
             if k.is_some() {
                 f.hits += 1;
             } else {
@@ -1403,28 +1454,39 @@ mod tests {
         assert!(!assets.unavailable());
     }
 
-    /// `Assets::keep_files`' store: the oldest files leave first to make
-    /// room, a file above a quarter of the cap is not kept, a file kept
-    /// once is not kept twice.
+    /// `Assets::keep_files`' store: the least recently used files leave
+    /// first to make room, a read refreshes a file, a file above a quarter
+    /// of the cap is not kept, a file kept once is not kept twice.
     #[test]
-    fn kept_files_leave_oldest_first_within_the_cap() {
+    fn kept_files_leave_least_recently_used_first_within_the_cap() {
         let bytes = |n: usize| std::sync::Arc::new(vec![0u8; n]);
         let mut f = FileCache {
             cap: 100,
             ..FileCache::default()
         };
-        f.insert(1, bytes(20));
-        f.insert(2, bytes(25));
-        f.insert(3, bytes(26));
+        assert!(f.insert(1, bytes(20)));
+        assert!(f.insert(2, bytes(25)));
+        assert!(!f.insert(3, bytes(26)));
         assert_eq!((f.map.len(), f.used), (2, 45));
-        f.insert(2, bytes(25));
+        assert!(!f.insert(2, bytes(25)));
         assert_eq!(f.order.len(), 2);
+        // File 1 is read again: file 2 is now the least recently used.
+        assert!(f.get(1).is_some());
         for id in 4..7 {
             f.insert(id, bytes(20));
         }
-        // 20 + 25 + 3 x 20 = 105 > 100: file 1 left first.
-        assert!(!f.map.contains_key(&1) && f.map.contains_key(&2));
-        assert_eq!(f.used, 85);
+        // 20 + 25 + 3 x 20 = 105 > 100: file 2 left, file 1 stayed.
+        assert!(f.map.contains_key(&1) && !f.map.contains_key(&2));
+        assert_eq!(f.used, 80);
+        assert!(f.used <= f.cap);
+        // Many reads of one file leave the stale entries bounded.
+        for _ in 0..1000 {
+            f.get(1);
+        }
+        assert!(f.order.len() <= 2 * f.map.len() + 65, "{}", f.order.len());
+        // The next file in goes in place of the least recently used (4).
+        f.insert(7, bytes(21));
+        assert!(!f.map.contains_key(&4) && f.map.contains_key(&1));
         assert!(f.used <= f.cap);
     }
 }
