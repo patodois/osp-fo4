@@ -125,6 +125,10 @@
 # (refr_xalp_render_unchanged_v1): the vault hall ends whose floor and jambs
 # --play-collision-reference-alpha already stands in the walking world.
 --draw-reference-alpha
+# A reference whose scripts kept it out is drawn as its model stores it, the
+# run deciding its presence (refr_script_render_as_stored_v1): the nursery's
+# lamp, toys, linens and changing table.
+--draw-scripted-as-stored
 # A static refused only for model blocks no rule settles (a behaviour
 # graph, particle systems, blocks the reader does not decode) is drawn by
 # the shapes those blocks and its controllers do not reach, the rest left

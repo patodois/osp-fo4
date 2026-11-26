@@ -312,6 +312,12 @@ pub fn own_flag(e: &Error) -> bool {
     e.code == Code::RuntimeEnableParent.name() && e.found == crate::enable::FOUND_OWN_FLAG
 }
 
+/// Whether `e` is the record blocker a reference's scripts (`VMAD`) raise:
+/// its state may change at run time.
+pub fn script_condition(e: &Error) -> bool {
+    e.code == Code::RuntimeCondition.name() && e.found == "VMAD"
+}
+
 /// Whether `e` is the record blocker of a reference's unread `XALP`.
 pub fn reference_alpha(e: &Error) -> bool {
     e.code == Code::UninterpretedVisualSubrecord.name() && e.found.starts_with("REFR.XALP.")

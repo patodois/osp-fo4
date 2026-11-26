@@ -777,6 +777,11 @@ pub fn cell<'s>(
     if drawing.reference_alpha {
         loader.set_render_reference_alpha(true);
     }
+    // `--draw-scripted-as-stored` (off by default): render readiness sets
+    // a reference's scripts' blocker aside (`refr_script_render_as_stored_v1`).
+    if drawing.scripted {
+        loader.set_render_scripted(true);
+    }
     // `--draw-static-parts` (off by default): render readiness sets aside
     // a static's model blockers no rule covers when a shape of its model
     // stays, the draw leaving out the rest (`static_unmoved_parts_drawn_v1`).

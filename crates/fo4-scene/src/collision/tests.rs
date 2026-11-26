@@ -1056,6 +1056,50 @@ fn a_references_alpha_is_set_aside_for_its_drawing_only_behind_its_switch() {
 }
 
 #[test]
+fn a_references_scripts_are_set_aside_for_its_drawing_only_behind_their_switch() {
+    // `refr_script_render_as_stored_v1`: the fixture's one reference
+    // carrying a VMAD (its scripts; the bytes are not read for this).
+    let f = fixture_with(false, &[], |rf| {
+        let mut rf = rf.to_vec();
+        rf.extend(sub(b"VMAD", &[6, 0, 2, 0, 0, 0]));
+        group(9, 0x800, &record(b"REFR", 0x802, 0, &rf))
+    });
+    std::fs::write(f.manifest.root.join("meshes/a.nif"), model_nif(1)).unwrap();
+    let store = Store::open(&f.manifest, &Budget::new(8 << 20)).unwrap();
+    let v = Vfs::mount(&f.manifest, &Budget::new(8 << 20)).unwrap();
+    let b = Budget::new(64 << 20);
+    let state = |scripted: bool, alpha: bool| {
+        let mut loader = Loader::new(&store, &v, "english", RuleLevel::Hypotheses, &b);
+        assert!(!loader.render_scripted());
+        loader.set_render_scripted(scripted);
+        loader.set_render_reference_alpha(alpha);
+        let scene = loader.by_editor_id("SyntheticRoom", &b).unwrap();
+        assert_eq!(scene.instances.len(), 1);
+        let i = &scene.instances[0];
+        assert!(
+            i.blockers.iter().any(readiness::script_condition),
+            "{:?}",
+            i.blockers
+        );
+        (
+            i.state.ready_at(RuleLevel::Hypotheses),
+            i.state.ready_at(RuleLevel::Measured),
+            i.state.hypotheses().to_vec(),
+            format!("{:?}", i.collision),
+        )
+    };
+    let off = state(false, false);
+    assert!(!off.0, "refused by its scripts, as before");
+    // Another reading's switch does not read the scripts.
+    assert_eq!(state(false, true), off);
+    let on = state(true, false);
+    assert!(on.0 && !on.1, "drawn under the pending rule only");
+    assert!(on.2.contains(&hypotheses::REFERENCE_SCRIPT_RENDER));
+    // Collision readiness is not the render switch's.
+    assert_eq!(on.3, off.3);
+}
+
+#[test]
 fn a_statics_reference_fields_are_set_aside_for_its_drawing_only_behind_their_switch() {
     // The fixture of the collision test above: a static's reference storing
     // the four fields.

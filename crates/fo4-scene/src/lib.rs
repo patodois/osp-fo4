@@ -202,6 +202,7 @@ pub struct Loader<'a> {
     render_static_fields: bool,
     render_static_leaves: bool,
     render_reference_alpha: bool,
+    render_scripted: bool,
     render_static_parts: bool,
 }
 impl<'a> Loader<'a> {
@@ -268,6 +269,18 @@ impl<'a> Loader<'a> {
     pub fn render_reference_alpha(&self) -> bool {
         self.render_reference_alpha
     }
+    /// Render readiness of any reference: the record blocker its scripts
+    /// raise (`VMAD`, [`readiness::script_condition`]) is set aside under
+    /// `refr_script_render_as_stored_v1` ([`hypotheses::REFERENCE_SCRIPT_RENDER`]):
+    /// the reference is drawn as its model stores it, what its scripts
+    /// change left to the caller's run (presence, through the live world).
+    /// Off by default: the render state as before.
+    pub fn set_render_scripted(&mut self, on: bool) {
+        self.render_scripted = on;
+    }
+    pub fn render_scripted(&self) -> bool {
+        self.render_scripted
+    }
     /// Render readiness of a reference whose base is a static and whose
     /// model is a leaf ([`leaf::read`]): the animation blockers of its one
     /// transform controller ([`leaf::aside`]) are set aside under
@@ -319,6 +332,7 @@ impl<'a> Loader<'a> {
             render_static_fields: false,
             render_static_leaves: false,
             render_reference_alpha: false,
+            render_scripted: false,
             render_static_parts: false,
         }
     }
@@ -727,6 +741,7 @@ impl<'a> Loader<'a> {
                 .any(|(k, e)| leaf::aside(e, origin(k)))
             && self.leaf_model(base.as_ref(), b)?;
         let alpha = self.render_reference_alpha;
+        let scripted = self.render_scripted;
         let parts = self.render_static_parts
             && on_static
             && blockers
@@ -734,7 +749,7 @@ impl<'a> Loader<'a> {
                 .enumerate()
                 .any(|(k, e)| parts::aside(e, origin(k)))
             && self.static_parts_kept(base.as_ref(), b)?;
-        let state = if agrees || fields || leaf || alpha || parts {
+        let state = if agrees || fields || leaf || alpha || parts || scripted {
             hypotheses::classify_aside(
                 &blockers,
                 outside,
@@ -754,6 +769,11 @@ impl<'a> Loader<'a> {
                         && readiness::reference_alpha(e)
                     {
                         Some(hypotheses::REFERENCE_ALPHA_RENDER)
+                    } else if scripted
+                        && origin(k) == readiness::Origin::Record
+                        && readiness::script_condition(e)
+                    {
+                        Some(hypotheses::REFERENCE_SCRIPT_RENDER)
                     } else if parts && parts::aside(e, origin(k)) {
                         Some(hypotheses::STATIC_PARTS)
                     } else {

@@ -249,6 +249,10 @@ pub const REFERENCE_ALPHA_COLLISION: &str = "refr_xalp_collision_unchanged_v1";
 /// A reference's unread `XALP` leaves its drawing as stored
 /// (`Loader::set_render_reference_alpha`, off by default).
 pub const REFERENCE_ALPHA_RENDER: &str = "refr_xalp_render_unchanged_v1";
+/// A reference whose record carries scripts (`VMAD`) is drawn as its model
+/// stores it; what its scripts change is left to the caller's run
+/// (`Loader::set_render_scripted`, off by default).
+pub const REFERENCE_SCRIPT_RENDER: &str = "refr_script_render_as_stored_v1";
 /// A static's reference fields `XACT`, `XLRT`, `XOWN` and `ONAM` leave its
 /// collision as stored (`crate::readiness`, behind
 /// `readiness::Switches::static_fields`).
@@ -756,6 +760,7 @@ mod tests {
             SEQUENCE_CHAIN_POSE,
             REFERENCE_ALPHA_COLLISION,
             REFERENCE_ALPHA_RENDER,
+            REFERENCE_SCRIPT_RENDER,
             STATIC_REFERENCE_FIELDS_COLLISION,
             STATIC_REFERENCE_FIELDS_RENDER,
             STATIC_LEAF_TWO_POSE,

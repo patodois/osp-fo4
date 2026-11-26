@@ -23,6 +23,7 @@ usage:
              [the light switches of --headless]]]
            [--draw-child-flag-agrees] [--draw-platforms] [--draw-static-fields]
            [--draw-static-leaves] [--draw-platform-skins] [--draw-reference-alpha]
+           [--draw-scripted-as-stored]
            [--draw-static-parts] [--draw-cast-on-platforms [--draw-cast-keeps-its-part]]
       Window with a free-fly camera: W/A/S/D move, Shift moves faster, hold the
       left mouse button and move the mouse to look, R returns to the start pose.
@@ -222,6 +223,10 @@ usage:
       reference whose unread XALP alone kept it out, as its model stores it
       (pending rule refr_xalp_render_unchanged_v1, the drawing's side of
       --play-collision-reference-alpha).
+      --draw-scripted-as-stored (off by default; any window or frame) draws
+      a reference whose scripts (VMAD) kept it out as its model stores it,
+      what the scripts change left to the run (pending rule
+      refr_script_render_as_stored_v1).
       --draw-static-leaves (off by default; any window or frame) draws a
       static whose model's one controller, free-running and clamped, turns
       a node with no collision under it from its stored pose and back (a
@@ -482,6 +487,10 @@ pub struct Drawing {
     /// loader's render readiness sets a reference's unread `XALP` aside
     /// (`Loader::set_render_reference_alpha`).
     pub reference_alpha: bool,
+    /// `--draw-scripted-as-stored` (`refr_script_render_as_stored_v1`): the
+    /// loader's render readiness sets a reference's scripts' blocker aside
+    /// (`Loader::set_render_scripted`).
+    pub scripted: bool,
     /// `--draw-static-leaves` (`play_static_leaf_two_pose_v1`): the
     /// loader's render readiness sets a leaf model's animation blockers
     /// aside on a static (`Loader::set_render_static_leaves`); the scripted
@@ -979,6 +988,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             "--draw-held-doors" => drawing.held_doors = true,
             "--draw-static-fields" => drawing.static_fields = true,
             "--draw-reference-alpha" => drawing.reference_alpha = true,
+            "--draw-scripted-as-stored" => drawing.scripted = true,
             "--draw-static-leaves" => drawing.static_leaves = true,
             "--draw-static-parts" => drawing.static_parts = true,
             "--draw-platform-skins" => drawing.platform_skins = true,
@@ -1712,6 +1722,7 @@ mod tests {
         assert!(p.switches.door_open && p.switches.door_toggle);
         assert!(p.switches.reference_alpha && scene.drawing.reference_alpha);
         assert!(scene.drawing.static_parts);
+        assert!(scene.drawing.scripted);
         assert!(p.switches.door_open);
         assert!(
             scene.drawing.static_fields
@@ -1934,6 +1945,15 @@ mod tests {
             panic!()
         };
         assert!(parts.drawing.static_parts && !parts.drawing.reference_alpha);
+        // The fourteenth-session step's switch: off by default, on alone.
+        assert!(!scene.drawing.scripted && !alpha.drawing.scripted);
+        let Command::Window {
+            scene: scripted, ..
+        } = parse(&args(&format!("{base} --draw-scripted-as-stored"))).unwrap()
+        else {
+            panic!()
+        };
+        assert!(scripted.drawing.scripted && !scripted.drawing.reference_alpha);
         for (flag, fields, leaves) in [
             ("--draw-static-fields", true, false),
             ("--draw-static-leaves", false, true),
