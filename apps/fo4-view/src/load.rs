@@ -657,8 +657,13 @@ pub struct KeptAssets<'s> {
 pub const KEPT_ASSETS_MAX: u64 = 768 << 20;
 
 /// The most bytes of files the kept assets keep for the next read of the
-/// same asset (`fo4_scene::Assets::keep_files`; viewer policy).
-pub const KEPT_FILES_MAX: u64 = 512 << 20;
+/// same asset (`fo4_scene::Assets::keep_files`; viewer policy). At 512 MiB
+/// the opening's first outdoor square and the casts between the loads
+/// already filled it, and each next square read most of its files again
+/// (the fifteenth sessions: 960 of them at the first crossing); at 1 GiB
+/// the headless replay of those loads reads about 140 files a load from
+/// the archives, the process's peak 2.5 GB against 2.4.
+pub const KEPT_FILES_MAX: u64 = 1024 << 20;
 
 /// [`KEPT_FILES_MAX`], or `FO4_VIEW_KEPT_FILES_MIB` mebibytes when set
 /// (measurement only).
