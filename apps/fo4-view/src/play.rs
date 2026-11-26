@@ -1452,11 +1452,19 @@ mod enabled {
         confirm: Confirming,
         /// The references whose activation also opens them.
         opens: Vec<FormKey>,
+        /// The held doors' states at the last look (`confirm_door`).
+        confirm_doors: BTreeMap<FormKey, bool>,
     }
 
     /// A reference met by the activation: its label, whether E uses it,
     /// its base's record type and display name (the prompt's words).
-    type Label = (String, bool, Option<[u8; 4]>, Option<String>);
+    type Label = (
+        String,
+        bool,
+        Option<[u8; 4]>,
+        Option<String>,
+        Option<String>,
+    );
 
     /// The activations read, the run's counts at the last look (before the
     /// slice the run took since) and the confirmations shown.
@@ -1464,8 +1472,11 @@ mod enabled {
 
     /// The confirmation of an activation the walker logged in the slice the
     /// run took between two looks at its counts (viewer policy): opened (a
-    /// reference the caller's opens name), used (the run's effects or logs
-    /// grew over that slice) or nothing happened.
+    /// reference the caller's opens name), used (the run's quest or scene
+    /// log grew over that slice: a stage or a scene changed), used with no
+    /// stage or scene changed (only the scripts' calls grew: the press
+    /// reached the target's scripts, which changed no stage or scene) or
+    /// nothing happened.
     pub fn confirm_line(
         opened: bool,
         before: (usize, usize, usize),
@@ -1473,11 +1484,61 @@ mod enabled {
     ) -> &'static str {
         if opened {
             "opened"
-        } else if after != before {
+        } else if (after.1, after.2) != (before.1, before.2) {
             "used"
+        } else if after != before {
+            "used, no stage or scene changed"
         } else {
             "nothing happened"
         }
+    }
+
+    /// The confirmation of a held door the person's E turned
+    /// (`--play-door-toggle`): its drawn pose after the slice, open when
+    /// its box left (`play_door_drawn_as_held_v1`).
+    pub fn confirm_door(was_open: Option<bool>, open: Option<bool>) -> Option<&'static str> {
+        match (was_open, open) {
+            (Some(a), Some(b)) if a != b => Some(if b { "opened" } else { "closed" }),
+            _ => None,
+        }
+    }
+
+    /// The prompt with the display name of the furniture a scripted
+    /// reference links to (viewer policy: `use Skeleton: NAME`), the name
+    /// read as `linked_furniture_name` reads it.
+    pub fn prompt_linked(prompt: String, linked: Option<&str>) -> String {
+        match linked.map(str::trim).filter(|n| !n.is_empty()) {
+            Some(n) => format!("{prompt}: {n}"),
+            None => prompt,
+        }
+    }
+
+    /// The display name of the placed furniture a reference with scripts
+    /// (a VMAD) links to without a keyword (its XLKR, read as
+    /// `vm_host_linked_ref_xlkr_v1` reads it), when there is exactly one
+    /// such link and the furniture's base has a name: the thing a scripted
+    /// activator hands the activation on to, as the exit's device
+    /// activator's script does (the run's own effect log). Viewer policy.
+    fn linked_furniture_name(
+        store: &fo4_plugin::typed::Store,
+        texts: &mut fo4_play::state::Texts<'_>,
+        k: &FormKey,
+        b: &fo4_core::Budget,
+    ) -> Option<String> {
+        let (r, plugin) = store.raw_with_plugin(k, b).ok().flatten()?;
+        if !r.subrecords.iter().any(|s| s.signature == *b"VMAD") {
+            return None;
+        }
+        let links = fo4_vm::data::linked_refs(store, &r, plugin)?;
+        let mut plain = links.into_iter().filter(|(kw, _)| kw.is_none());
+        let (Some((_, Some(to))), None) = (plain.next(), plain.next()) else {
+            return None;
+        };
+        let base = fo4_vm::bind::base_of(store, &to, b).ok().flatten()?;
+        if store.signature(&base) != Some(*b"FURN") {
+            return None;
+        }
+        texts.display_name(store, &base)
     }
 
     /// What the run had when its timeline was last read: effects, quest
@@ -1667,7 +1728,7 @@ mod enabled {
             let doors = self.walker.held_door_states();
             let aim = self.walker.aim().map(|h| match h.reference {
                 Some(k) => {
-                    let (label, usable, kind, name) =
+                    let (label, usable, kind, name, linked) =
                         labels.entry(k.clone()).or_insert_with(|| {
                             let b = fo4_core::Budget::new(run.store.limits.max_memory);
                             let base = fo4_vm::bind::base_of(run.store, &k, &b).ok().flatten();
@@ -1677,10 +1738,11 @@ mod enabled {
                             let usable =
                                 kind.is_some_and(|s| !fo4_play::rules::STATIC_KINDS.contains(&s));
                             let (m, vfs) = run.sources();
-                            let name = base.as_ref().and_then(|base| {
-                                fo4_play::state::Texts::new(vfs, &m.language, &b)
-                                    .display_name(run.store, base)
-                            });
+                            let mut texts = fo4_play::state::Texts::new(vfs, &m.language, &b);
+                            let name = base
+                                .as_ref()
+                                .and_then(|base| texts.display_name(run.store, base));
+                            let linked = linked_furniture_name(run.store, &mut texts, &k, &b);
                             let what = base
                                 .and_then(|base| fo4_vm::bind::label(run.store, &base, &b).ok())
                                 .unwrap_or_else(|| "a reference".into());
@@ -1689,10 +1751,14 @@ mod enabled {
                                 usable,
                                 kind,
                                 name,
+                                linked,
                             )
                         });
                     let open = doors.get(&fo4_scene::timeline::norm(&k)) == Some(&false);
-                    let prompt = prompt_posed(*kind, name.as_deref(), open);
+                    let prompt = prompt_linked(
+                        prompt_posed(*kind, name.as_deref(), open),
+                        linked.as_deref(),
+                    );
                     (
                         format!("{label} at {:.0} units", h.distance),
                         *usable,
@@ -1747,6 +1813,42 @@ mod enabled {
         }
     }
 
+    /// The display name of the first other placed reference the run's
+    /// scripts activated (`ObjectReference.Activate`) among the effects
+    /// `from..to`, `target` itself left out: what an activation handed on
+    /// (viewer policy, read from the run's effect log).
+    fn activated_by_scripts(
+        run: &View<'_, '_>,
+        target: &FormKey,
+        from: usize,
+        to: usize,
+    ) -> Option<String> {
+        let w = &run.vm.world;
+        let t = fo4_vm::bind::record_key(target);
+        let b = fo4_core::Budget::new(run.store.limits.max_memory);
+        let (m, vfs) = run.sources();
+        for e in run.vm.effects.get(from..to)? {
+            if e.native != "objectreference.activate" {
+                continue;
+            }
+            let Some(k) = e
+                .receiver_object
+                .and_then(|o| w.objects.get(o))
+                .and_then(|o| o.key.as_deref())
+                .and_then(fo4_vm::data::key_record)
+            else {
+                continue;
+            };
+            if fo4_vm::bind::record_key(&k) == t {
+                continue;
+            }
+            let base = fo4_vm::bind::base_of(run.store, &k, &b).ok().flatten()?;
+            return fo4_play::state::Texts::new(vfs, &m.language, &b)
+                .display_name(run.store, &base);
+        }
+        None
+    }
+
     /// The run's counts an activation can change: effects, quest log,
     /// scene log.
     fn run_counts(run: &View<'_, '_>) -> (usize, usize, usize) {
@@ -1764,18 +1866,26 @@ mod enabled {
         fn publish_confirm(&mut self, run: &View<'_, '_>) {
             let now = run_counts(run);
             let before = std::mem::replace(&mut self.confirm.1, now);
+            let doors = self.walker.held_door_states();
+            let doors_before = std::mem::replace(&mut self.confirm_doors, doors.clone());
             let mut line = None;
             let log = self.log.borrow();
             if log.activations.len() > self.confirm.0 {
                 let a = &log.activations[log.activations.len() - 1];
                 self.confirm.0 = log.activations.len();
                 line = Some(match &a.3 {
-                    Ok((k, _)) => confirm_line(
-                        self.opens.contains(&fo4_scene::timeline::norm(k)),
-                        before,
-                        now,
-                    )
-                    .to_string(),
+                    Ok((k, _)) => {
+                        let n = fo4_scene::timeline::norm(k);
+                        // A held door's pose is false while open.
+                        let pose = |m: &BTreeMap<FormKey, bool>| m.get(&n).map(|c| !c);
+                        let door = confirm_door(pose(&doors_before), pose(&doors));
+                        let used = confirm_line(self.opens.contains(&n), before, now);
+                        let mut l = door.unwrap_or(used).to_string();
+                        if let Some(t) = activated_by_scripts(run, k, before.0, now.0) {
+                            let _ = write!(l, " ({t} activated)");
+                        }
+                        l
+                    }
                     Err(_) => "nothing to use".to_string(),
                 });
             }
@@ -1961,6 +2071,7 @@ mod enabled {
             keys: keys.then(BTreeMap::new),
             labels: BTreeMap::new(),
             confirm: (0, (0, 0, 0), 0),
+            confirm_doors: BTreeMap::new(),
             opens: switches
                 .opens
                 .iter()
@@ -2655,6 +2766,25 @@ mod enabled {
                 "nothing happened"
             );
             assert_eq!(confirm_line(true, (1, 2, 3), (1, 2, 3)), "opened");
+            // Only the scripts' calls grew: the press reached the target,
+            // which changed no stage or scene (a script that refused it).
+            assert_eq!(
+                confirm_line(false, (1, 2, 3), (7, 2, 3)),
+                "used, no stage or scene changed"
+            );
+            assert_eq!(confirm_line(false, (1, 2, 3), (7, 2, 4)), "used");
+            // A held door the person's E turned says which way.
+            assert_eq!(confirm_door(Some(true), Some(false)), Some("closed"));
+            assert_eq!(confirm_door(Some(false), Some(true)), Some("opened"));
+            assert_eq!(confirm_door(Some(true), Some(true)), None);
+            assert_eq!(confirm_door(None, Some(true)), None);
+            // A scripted activator's linked furniture is named after it.
+            assert_eq!(
+                prompt_linked("use Skeleton".into(), Some("Device")),
+                "use Skeleton: Device"
+            );
+            assert_eq!(prompt_linked("use Lamp".into(), Some(" ")), "use Lamp");
+            assert_eq!(prompt_linked("use Lamp".into(), None), "use Lamp");
             assert_eq!(prompt_posed(None, None, false), "use");
             // A door drawn open reads close; the pose changes no other type.
             assert_eq!(
