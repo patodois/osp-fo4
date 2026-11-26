@@ -671,6 +671,37 @@ pub struct CellValues {
 
 const AXES: [&str; 6] = ["X+", "X-", "Y+", "Y-", "Z+", "Z-"];
 
+/// The report's line on an interior's stored lighting values the frame
+/// does not read (presentation only, nothing reads it to light anything).
+pub fn unread_line(v: &CellValues, scene: &Scene) -> String {
+    let opt = |x: Option<f32>| x.map_or("-".to_string(), |f| format!("{f}"));
+    let col =
+        |c: Option<[u8; 4]>| c.map_or("-".to_string(), |c| format!("{},{},{}", c[0], c[1], c[2]));
+    let cube: Vec<String> = AXES
+        .iter()
+        .zip(v.cube)
+        .map(|(a, c)| format!("{a} {}", col(c)))
+        .collect();
+    let ims = scene
+        .cell
+        .data
+        .image_space
+        .as_ref()
+        .and_then(|r| r.key.as_ref())
+        .map_or("none".to_string(), |k| {
+            format!("{}:{:08X}", k.plugin, k.object_id)
+        });
+    format!(
+        "stored, not read by the frame: directional ambient {} scale {}; directional fade {}; fog far colour {} power {} clip {}; image space {ims}",
+        cube.join(" "),
+        opt(v.cube_scale),
+        opt(v.fade),
+        col(v.fog_far_colour),
+        opt(v.fog_power),
+        opt(v.clip)
+    )
+}
+
 /// The values of `record`'s lighting subrecord `data` (XCLL, or DATA of an
 /// LGTM) and its directional ambient (in XCLL itself, or the LGTM's DALC),
 /// read from the record's layout fields; `None` when the record has no
@@ -1105,6 +1136,11 @@ pub fn frame(
             }
         };
         if let Some(v) = values {
+            // Presentation only: what the interior's lighting stores and
+            // the frame does not read (the directional ambient cube and
+            // its scale, the directional fade, the far fog colour, power
+            // and clip, the image space), so a dark room's report says it.
+            say(&mut light.report, unread_line(&v, scene));
             if switches.cell {
                 light.rules.insert(hypotheses::LIGHT_CELL);
                 light.ambient = v.ambient.map(rgb).unwrap_or([0.; 3]);
