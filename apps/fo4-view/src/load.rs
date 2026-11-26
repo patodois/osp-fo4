@@ -1738,7 +1738,7 @@ fn blended_text(scene: &fo4_scene::Scene, build: &fo4_render::draw::Build) -> St
             }
         }
         let span = (0..3).map(|k| hi[k] - lo[k]).fold(0.0, f64::max);
-        if !(span >= BLENDED_MIN) {
+        if span.is_nan() || span < BLENDED_MIN {
             continue;
         }
         let who = build.instances.get(d.instance as usize).map_or_else(

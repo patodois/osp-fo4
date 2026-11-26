@@ -345,7 +345,11 @@ pub fn bounds_centre(store: &Store, k: &FormKey, b: &Budget) -> Option<[f64; 3]>
                 let v: Vec<f64> = (0..6)
                     .map(|i| f64::from(i16::from_le_bytes([d[2 * i], d[2 * i + 1]])))
                     .collect();
-                [(v[0] + v[3]) / 2.0, (v[1] + v[4]) / 2.0, (v[2] + v[5]) / 2.0]
+                [
+                    (v[0] + v[3]) / 2.0,
+                    (v[1] + v[4]) / 2.0,
+                    (v[2] + v[5]) / 2.0,
+                ]
             })
         });
     match local {

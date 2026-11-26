@@ -1496,7 +1496,7 @@ mod enabled {
         /// The person's activation targets (`--play-activate-person`): the
         /// space each stands in, its bounds' centre and its display name,
         /// read once ([`Paced::publish_cue`]).
-        persons_at: Option<BTreeMap<FormKey, (FormKey, [f64; 3], Option<String>)>>,
+        persons_at: Option<PersonsAt>,
     }
 
     /// Run seconds with no change of the run's quest log before the
@@ -1717,6 +1717,10 @@ mod enabled {
         format!("Go back: {length:.0} units {side}")
     }
 
+    /// The person's activation targets by reference: the space each stands
+    /// in, its bounds' centre and its display name ([`use_target`]).
+    pub type PersonsAt = BTreeMap<FormKey, (FormKey, [f64; 3], Option<String>)>;
+
     /// The person's activation target the use cue names (viewer policy):
     /// of `at` (each target's space, bounds' centre and name), those in
     /// `space` within [`CUE_REACH`] of the feet on the ground that E has not
@@ -1724,7 +1728,7 @@ mod enabled {
     pub fn use_target(
         feet: [f64; 3],
         space: &FormKey,
-        at: &BTreeMap<FormKey, (FormKey, [f64; 3], Option<String>)>,
+        at: &PersonsAt,
         met: &[FormKey],
     ) -> Option<(FormKey, [f64; 3], Option<String>)> {
         let d = |p: &[f64; 3]| (p[0] - feet[0]).hypot(p[1] - feet[1]);

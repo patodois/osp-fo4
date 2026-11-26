@@ -46,7 +46,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                         mesh.vertex_desc, mesh.declared_vertices, mesh.declared_triangles
                     ));
                     for f in &mesh.fields {
-                        if values && !matches!(f.value, fo4_nif::Value::Ref(_)) && f.name != "Name" {
+                        if values && !matches!(f.value, fo4_nif::Value::Ref(_)) && f.name != "Name"
+                        {
                             line.push_str(&format!(" {}={:?}", f.name, f.value));
                         }
                         match f.value {
