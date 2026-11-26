@@ -170,6 +170,9 @@ fn load_scene_with<'s>(
     // follow their parts (only with --play-input and --play-elevator).
     if !s.play_platforms.is_empty() {
         gpu.platforms = scene::platform_instances(&loaded.build, &gpu, &s.play_platforms);
+        for p in &mut gpu.platforms {
+            p.nearest_part = s.drawing.platform_nearest_part;
+        }
         println!(
             "play: {} drawn instances of the named platforms' models, kept with their node chains",
             gpu.platforms.len()

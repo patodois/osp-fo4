@@ -22,7 +22,8 @@ usage:
              [--timeline-cast [the cast readings of a --timeline frame]]
              [the light switches of --headless]]]
            [--draw-child-flag-agrees] [--draw-platforms] [--draw-static-fields]
-           [--draw-static-leaves] [--draw-platform-skins] [--draw-reference-alpha]
+           [--draw-static-leaves] [--draw-platform-skins] [--draw-platform-nearest-part]
+           [--draw-reference-alpha]
            [--draw-scripted-as-stored] [--draw-activator-fields]
            [--draw-static-parts] [--draw-cast-on-platforms [--draw-cast-keeps-its-part]]
       Window with a free-fly camera: W/A/S/D move, Shift moves faster, hold the
@@ -253,6 +254,11 @@ usage:
       bone moved by its part's motion (a bone under no part stays), where
       before such a shape stayed as built (pending rule
       play_platform_skin_follows_parts_v1).
+      --draw-platform-nearest-part (off by default; with --draw-platforms)
+      draws a named platform's shape whose node chain's deepest node a
+      sequence sets holds no moving part (no collision under it) with the
+      part of the nearest such node above it, where before it stayed as
+      built (pending rule play_platform_shape_nearest_part_v1).
       --draw-cast-on-platforms (off by default; with --draw-platforms and
       --timeline-cast) draws each actor of the run's cast with its feet on
       the highest top of a named platform's part under its place, as the
@@ -514,6 +520,11 @@ pub struct Drawing {
     /// bones go with several parts skinned again with each bone moved by
     /// its part (`crate::scene::SkinInstance`).
     pub platform_skins: bool,
+    /// `--draw-platform-nearest-part` (`play_platform_shape_nearest_part_v1`;
+    /// with `--draw-platforms`): a named platform's shape whose deepest set
+    /// node holds no part goes with the part of the nearest set node above
+    /// it (`crate::scene::part_of`).
+    pub platform_nearest_part: bool,
     /// `--draw-cast-on-platforms` (`play_cast_stands_on_platform_v1`; the
     /// scripted play window's cast with `--draw-platforms`): each actor
     /// drawn with its feet on the named platform's part under it.
@@ -1000,6 +1011,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             "--draw-static-leaves" => drawing.static_leaves = true,
             "--draw-static-parts" => drawing.static_parts = true,
             "--draw-platform-skins" => drawing.platform_skins = true,
+            "--draw-platform-nearest-part" => drawing.platform_nearest_part = true,
             "--draw-cast-on-platforms" => drawing.cast_on_platforms = true,
             "--draw-cast-keeps-its-part" => drawing.cast_keeps_part = true,
             "--exposure-eye-visible" => drawing.exposure_visible = true,
@@ -1360,6 +1372,9 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
     }
     if scene.drawing.cast_keeps_part && !scene.drawing.cast_on_platforms {
         return Err("--draw-cast-keeps-its-part keeps the part --draw-cast-on-platforms stands an actor on: it needs --draw-cast-on-platforms".into());
+    }
+    if scene.drawing.platform_nearest_part && !scene.drawing.platforms {
+        return Err("--draw-platform-nearest-part moves the shapes --draw-platforms draws: it needs --draw-platforms".into());
     }
     if scene.drawing.platform_skins && !scene.drawing.platforms {
         return Err("--draw-platform-skins moves the skinned shapes --draw-platforms draws: it needs --draw-platforms".into());
@@ -1736,6 +1751,7 @@ mod tests {
             scene.drawing.static_fields
                 && scene.drawing.static_leaves
                 && scene.drawing.platform_skins
+                && scene.drawing.platform_nearest_part
         );
         assert!(scene.play_cast.is_some() && scene.drawing.platforms && scene.light.any());
         assert!(scene.drawing.cast_on_platforms && scene.drawing.cast_keeps_part);

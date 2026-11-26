@@ -142,6 +142,11 @@
 # skinned again as they move (play_platform_skin_follows_parts_v1): the
 # elevators' decks and the walkways.
 --draw-platform-skins
+# A named platform's shape on a node a sequence sets with no part of its own
+# goes with the part of the nearest such node above it
+# (play_platform_shape_nearest_part_v1): the gear door's hub pieces leave the
+# doorway with the gear.
+--draw-platform-nearest-part
 # The run's actors stand on the named platform's part under them and ride it
 # (play_cast_stands_on_platform_v1): the deck's crowd on the deck.
 --draw-cast-on-platforms

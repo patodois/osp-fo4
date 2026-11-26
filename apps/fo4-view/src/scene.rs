@@ -222,6 +222,35 @@ pub struct PlatformInstance {
     pub bones: Vec<Vec<usize>>,
     /// The draw's world transform as built (the parts as stored).
     pub world: fo4_scene::transform::Transform,
+    /// `--draw-platform-nearest-part` (`play_platform_shape_nearest_part_v1`):
+    /// a chain whose deepest set node holds no part goes with the part of
+    /// the nearest set node above it that holds one ([`part_of`]).
+    pub nearest_part: bool,
+}
+
+/// The part of `p` a node chain goes with (`Platform::part_of`); with
+/// `nearest` (`play_platform_shape_nearest_part_v1`, the rigid reading's
+/// parts only), a chain whose deepest set node holds no part goes with the
+/// part of the nearest set node above it that holds one: a shape a
+/// sequence sets on its own node (no collision under it) is carried by the
+/// part its parent node moves, its own node's motion not drawn.
+#[cfg(feature = "script-event")]
+pub fn part_of(p: &fo4_play::elevator::Platform, chain: &[usize], nearest: bool) -> Option<usize> {
+    if let Some(k) = p.part_of(chain) {
+        return Some(k);
+    }
+    if !nearest {
+        return None;
+    }
+    chain
+        .iter()
+        .rev()
+        .filter(|b| p.set.binary_search(b).is_ok())
+        .find_map(|b| {
+            p.parts.iter().position(
+                |q| matches!(&q.members, fo4_play::elevator::Members::Deepest(d) if d == b),
+            )
+        })
 }
 
 /// The part of `p` a drawn platform shape goes with: a rigid shape by its
@@ -235,9 +264,13 @@ pub fn platform_part(
     d: &PlatformInstance,
 ) -> (Option<usize>, bool) {
     if d.bones.is_empty() {
-        return (p.part_of(&d.chain), false);
+        return (part_of(p, &d.chain, d.nearest_part), false);
     }
-    let parts: Vec<Option<usize>> = d.bones.iter().map(|b| p.part_of(b)).collect();
+    let parts: Vec<Option<usize>> = d
+        .bones
+        .iter()
+        .map(|b| part_of(p, b, d.nearest_part))
+        .collect();
     if parts.windows(2).all(|w| w[0] == w[1]) {
         (parts.first().copied().flatten(), false)
     } else {
@@ -281,6 +314,7 @@ pub fn platform_instances(
             chain: c.blocks.clone(),
             bones: c.bones.clone(),
             world: d.world,
+            nearest_part: false,
         });
     }
     out
@@ -392,7 +426,7 @@ pub fn skin_matrices(
         .bones
         .iter()
         .zip(rest)
-        .map(|(chain, m)| match p.part_of(chain) {
+        .map(|(chain, m)| match part_of(p, chain, d.nearest_part) {
             Some(k) => {
                 any = true;
                 let moved = inverse
@@ -1543,6 +1577,7 @@ mod tests {
                 1.0,
             )
             .unwrap(),
+            nearest_part: false,
         };
         let rest = vec![Affine::IDENTITY; 3];
         let m = skin_matrices(&p, &d, &rest).unwrap();
@@ -2142,6 +2177,7 @@ mod tests {
             chain,
             bones,
             world: fo4_scene::transform::Transform::IDENTITY,
+            nearest_part: false,
         };
         // Rigid: by its own chain.
         assert_eq!(
@@ -2158,6 +2194,32 @@ mod tests {
         assert_eq!(platform_part(&p, &some_still), (None, true));
         let all_still = d(vec![0, 3], vec![vec![0, 8], vec![0]]);
         assert_eq!(platform_part(&p, &all_still), (None, false));
+        // A shape on a node a sequence sets (9) with no part of its own,
+        // under the part of 4: still, or with the nearest part (the
+        // rigid reading's), carried by 4's; a chain with no part above
+        // its set node stays still either way.
+        let p9 = Platform {
+            set: vec![3, 4, 9],
+            ..p.clone()
+        };
+        let own = d(vec![0, 4, 9], vec![]);
+        assert_eq!(platform_part(&p9, &own), (None, false));
+        let near = PlatformInstance {
+            nearest_part: true,
+            ..own
+        };
+        assert_eq!(platform_part(&p9, &near), (Some(1), false));
+        let orphan = PlatformInstance {
+            chain: vec![0, 9],
+            ..near.clone()
+        };
+        assert_eq!(platform_part(&p9, &orphan), (None, false));
+        // A skinned shape's bones read the same way.
+        let bones = PlatformInstance {
+            bones: vec![vec![0, 4, 9], vec![0, 4]],
+            ..near
+        };
+        assert_eq!(platform_part(&p9, &bones), (Some(1), false));
     }
 
     #[test]

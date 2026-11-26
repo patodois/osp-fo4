@@ -2540,6 +2540,30 @@ fn follow_platforms<F: bevy::ecs::query::QueryFilter>(
         split += usize::from(mixed);
         let Some(k) = part else {
             still += 1;
+            if !platforms.reported && d.bones.is_empty() {
+                // Measurement: why a rigid shape stays (its chain's nodes
+                // a sequence sets, the parts' nodes).
+                let set: Vec<usize> = d
+                    .chain
+                    .iter()
+                    .copied()
+                    .filter(|b| p.set.binary_search(b).is_ok())
+                    .collect();
+                let parts: Vec<String> = p
+                    .parts
+                    .iter()
+                    .map(|q| match &q.members {
+                        fo4_play::elevator::Members::Deepest(b) => b.to_string(),
+                        fo4_play::elevator::Members::Nodes(n) => format!("{n:?}"),
+                    })
+                    .collect();
+                println!(
+                    "play: platforms: instance {} of {} stays: its chain's set nodes {set:?}, the parts' nodes [{}]",
+                    d.instance,
+                    fo4_scene::timeline::key_text(&d.reference),
+                    parts.join(", ")
+                );
+            }
             continue;
         };
         let world = fo4_play::elevator::transform(&p.parts[k].motion).compose(d.world);

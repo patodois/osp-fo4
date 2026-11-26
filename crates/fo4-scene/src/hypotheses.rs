@@ -280,6 +280,10 @@ pub const STATIC_PARTS: &str = "static_unmoved_parts_drawn_v1";
 /// (`crate::platform::skin_at_rest`, the play window's
 /// `--draw-platform-skins`, off by default).
 pub const PLATFORM_SKIN_FOLLOWS_PARTS: &str = "play_platform_skin_follows_parts_v1";
+/// A named platform's shape whose node chain's deepest set node holds no
+/// moving part drawn with the part of the nearest set node above it (the
+/// play window's `--draw-platform-nearest-part`, off by default).
+pub const PLATFORM_SHAPE_NEAREST_PART: &str = "play_platform_shape_nearest_part_v1";
 /// The run's actors drawn in the play window standing on the named
 /// platforms' parts under them (the window's `--draw-cast-on-platforms`,
 /// off by default).
@@ -770,6 +774,7 @@ mod tests {
             STATIC_REFERENCE_FIELDS_RENDER,
             STATIC_LEAF_TWO_POSE,
             PLATFORM_SKIN_FOLLOWS_PARTS,
+            PLATFORM_SHAPE_NEAREST_PART,
             CAST_ON_PLATFORMS,
             CAST_KEEPS_PART,
             LAND_OF_CELL,
