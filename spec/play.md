@@ -2107,7 +2107,9 @@ is what the data does. The window now says where to go (viewer policy): the run 
 entered, the stages its handlers asked about and found not done; after 30 run seconds with no change of the quest
 log, the objective corner names the nearest such place whose stage the run has set since, as `Go back: N units`
 and its side from the walker's heading (`fo4_vm::track::Place::asking_again`, `play::cue_line`); the watch writes
-a `cue` line at each change.
+a `cue` line at each change. The first record in the window with the session's own run arguments: from 590 s (30 s
+after the quest log last grew) the corner reads `Go back: 473 units behind you` and onward as the walker leaves the
+house; the frames written with `--play-shots` do not carry the HUD.
 
 **E's words.** A press on a held door waits up to half a run second for the held doors' reading to take the toggle
 (it does at the next walking-world update), so a pocket door says opened or closed. A press that set a stage or
@@ -2116,7 +2118,10 @@ refusal reads as its subtitle does.
 
 **The data thread's clock.** Each cell load on the play data thread prints `play: load clocks: wall W s, the data
 thread's CPU C s (P% of the wall)`: a load whose wall time is far above its CPU time waited for a core; both up
-together ran slower. The thread's scheduling class is not raised: the platform call needs unsafe code, which this
+together ran slower. In the window replays of both records (this step's viewer) the loads ran at 80 to 100% of
+the wall on the thread's CPU, and the holds were those of the person's build replayed (the second record's five
+crossings 1.05 to 0.53 s before and 1.12 to 0.43 s after; the first record's 1.2 to 0.4 s both): a replay has no
+contention to show, so the live session's 2 to 2.6 s holds wait on these lines. The thread's scheduling class is not raised: the platform call needs unsafe code, which this
 repository forbids, and the system thread object's safe setter does not reach a thread it did not start. Keeping
 built meshes across loads was not done.
 
@@ -2125,7 +2130,13 @@ window's cast build and is in the preset: after the run's hides and shows at the
 the cell refused for its skinned shapes is one more actor drawn by them on its model's own nodes; a placement's
 editor-marker refusals go with it, so those subtrees are set aside under the rules that cover them instead of
 refusing the model. `FO4_VIEW_HEAD_NOTES=FILE` (measurement only) writes each cast actor's head as read, or that it
-has none, with its notes.
+has none, with its notes. In the first record's window at the nursery the cast adds ten such placements in the
+house, among them the crib's occupant and the changing table; the occupant stands at its stored place 49 units over
+the floor, and no placement around it reads as a crib (its model holds only the occupant's skeleton and skin), so it
+shows in the air. By the device on the grating a dark shape is added where the remains are. At the vault's intake,
+three cast actors have no head, each because a listed head part has conditions (`head()` drops the whole head when one
+part's conditions are unread); the lab coat is one of them. Drawing the other parts, or reading the conditions, is
+behaviour not done.
 
 **The suspended timber on the road home.** From the placements near the person's eye (`near_probe`), it is a fallen
 branch static placed with a roll of 0.765 and a pitch of -0.502 rad: under the measured rotation reading its long
