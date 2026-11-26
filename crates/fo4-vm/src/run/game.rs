@@ -52,9 +52,32 @@ pub(super) fn world_step(
     top: &mut Vec<JobRun>,
     b: &Budget,
 ) {
-    // The player's sit the track walks away from (`--sit-end-walk`).
+    sit_step(vm, store, then, c, names, top, b);
+    if !vm.world.place.on && !vm.world.talk.on && !vm.world.anims.on && !vm.world.anims.graphs {
+        return;
+    }
+    world_step_rest(vm, store, then, c, names, top, b);
+}
+
+/// The sit part of [`world_step`]: the player's sit the track walks away
+/// from (`--sit-end-walk`, `--sit-end-walk-events`), then the sits and
+/// get-ups natives brought.
+pub(super) fn sit_step(
+    vm: &mut Vm<'_>,
+    store: &Store,
+    then: &Then,
+    c: &mut Counts,
+    names: &mut String,
+    top: &mut Vec<JobRun>,
+    b: &Budget,
+) {
     if crate::sit::end_by_track(store, store.limits.max_memory, &mut vm.world) {
-        vm.rules.insert(crate::rules::SIT_ENDED_BY_TRACK);
+        let rule = if vm.world.sits.end_walk.is_some() {
+            crate::rules::SIT_ENDED_BY_TRACK
+        } else {
+            crate::rules::SIT_EVENTS_ENDED_BY_TRACK
+        };
+        vm.rules.insert(rule);
     }
     // Sits a script's furniture activation brought (`crate::sit`).
     if vm.world.sits.has_pending() {
@@ -78,9 +101,17 @@ pub(super) fn world_step(
         top.extend(runs);
         recheck(vm, store, then, c, top, b);
     }
-    if !vm.world.place.on && !vm.world.talk.on && !vm.world.anims.on && !vm.world.anims.graphs {
-        return;
-    }
+}
+
+fn world_step_rest(
+    vm: &mut Vm<'_>,
+    store: &Store,
+    then: &Then,
+    c: &mut Counts,
+    names: &mut String,
+    top: &mut Vec<JobRun>,
+    b: &Budget,
+) {
     let before = vm.effects.len();
     let loaded = vm.world.loads.log.len();
     let (mut raised, mut runs) = crate::load::settle(vm, store, MAX_GAME_JOBS, b);
@@ -226,6 +257,7 @@ pub(super) fn new_game(
         (then.alias_external, "a reference alias filled from another quest's alias holds what that alias holds whenever it is read (--alias-external)"),
         (then.line_script_events, "a line the run plays delivers its begin and end to the scripts its record attaches of its own (--line-script-events)"),
         (then.sit_end_walk.is_some(), "the player's sit ends, as a get-up, when the track takes the player farther than the caller's distance from the furniture's placed position (--sit-end-walk)"),
+        (then.sit_end_walk_events.is_some(), "the player's sit an activation with events brought ends, as a get-up, when the track takes the player farther than the caller's distance from the furniture's placed position, looked at before each action too (--sit-end-walk-events)"),
         (then.quest_partial_previous, "a winning quest record with flag bit 0x4000 that carries only EDID and VMAD is read from the occurrence before it, its own VMAD kept (--quest-partial-previous)"),
         (then.container_events, "the caller's container change raises OnContainerChanged on the reference's receivers (--container-change-events)"),
         (then.location_events, "the caller's location change raises OnLocationChange on the actor's receivers (--location-change-events)"),
@@ -299,6 +331,7 @@ pub(super) fn new_game(
     vm.world.quests.external_fills = then.alias_external;
     vm.world.scenes.line_scripts = then.line_script_events;
     vm.world.sits.end_walk = then.sit_end_walk;
+    vm.world.sits.end_walk_events = then.sit_end_walk_events;
     vm.world.quests.partial_previous = then.quest_partial_previous;
     vm.world.runstate.chain.container = then.container_events;
     vm.world.runstate.chain.location = then.location_events;
@@ -307,6 +340,7 @@ pub(super) fn new_game(
     vm.world.sits.activate = then.sit_activate;
     vm.world.sits.in_use = then.sit_in_use;
     vm.world.sits.activate_events = then.sit_activate_events;
+    vm.world.sits.activate_events_deliver = then.sit_activate_events_deliver;
     vm.world.sits.activate_get_up = then.sit_activate_get_up;
     vm.world.sits.graph_events = then.furniture_graph_events.clone();
     vm.world.sits.sit_state = then.sit_state;
@@ -392,6 +426,7 @@ pub(super) fn new_game(
         (then.sit_activate, "a script's default-processing activation of a furniture reference sits the activator in it (--activate-furniture-sits)"),
         (then.sit_in_use, "IsFurnitureInUse answered from the run's sitters (--furniture-in-use)"),
         (then.sit_activate_events, "a script's activation with events of a furniture reference sits the activator in it (--activate-furniture-events)"),
+        (then.sit_activate_events_deliver, "such an activation also delivers the furniture's OnActivate first (--activate-furniture-events-deliver)"),
         (then.sit_activate_get_up, "a script's activation of the furniture reference the activator sits in gets it up (--activate-furniture-get-up)"),
         (then.furniture_graph_events.is_some(), "those sits and get-ups send the furniture's graph the caller's events (--furniture-graph-events)"),
         (then.sit_state, "GetSitState on the player or a placed actor answered from the run's sitters (--sit-state)"),
@@ -1612,6 +1647,13 @@ impl<'r, 'v> NewGame<'r, 'v> {
                     );
                 }
                 let open = self.gates_open();
+                // A sit an activation with events brought that the track
+                // already left ends before the action (`--sit-end-walk-events`).
+                if self.vm.world.sits.end_walk_events.is_some() {
+                    sit_step(
+                        self.vm, self.store, self.then, self.c, self.names, self.top, self.b,
+                    );
+                }
                 self.act(&x)?;
                 self.world_step();
                 let written = self.written_of(&x, input);

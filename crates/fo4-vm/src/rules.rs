@@ -169,7 +169,7 @@ pub const XESP_BIT1: &str = "xesp_flag_bit1_not_presence_v1";
 pub const XESP_PROPAGATES: &str = "xesp_script_change_propagates_v1";
 
 /// Every rule above.
-pub const ALL: [&str; 208] = [
+pub const ALL: [&str; 210] = [
     ARITHMETIC,
     COMPARE,
     NOT_COPY_CAST,
@@ -378,6 +378,8 @@ pub const ALL: [&str; 208] = [
     ACTOR_MOVE_AFTER,
     DIALOGUE_HELLO_OWED,
     PACKAGE_MOVE_AFTER_STOP,
+    SIT_ACTIVATE_EVENTS_DELIVERED,
+    SIT_EVENTS_ENDED_BY_TRACK,
 ];
 
 /// The rule an opcode's meaning rests on; `None` for an opcode without a
@@ -897,3 +899,16 @@ pub const DIALOGUE_HELLO_OWED: &str = "dialogue_hello_owed_v1";
 /// (`pack_location_destination_v1`) stands when its scene stops before
 /// it is applied (`--package-moves-outlive-scene`).
 pub const PACKAGE_MOVE_AFTER_STOP: &str = "pack_destination_outlives_scene_v1";
+/// A script's `Activate(actor, false)` of a furniture reference read as a
+/// sit under `SIT_ACTIVATE_EVENTS` also delivers `OnActivate(actor)` to the
+/// furniture's own scripts, the aliases holding it and its registered
+/// instances, after the calling job and before the sit
+/// (`--activate-furniture-events-deliver`).
+pub const SIT_ACTIVATE_EVENTS_DELIVERED: &str = "vm_furniture_activate_events_delivered_v1";
+/// The player's sit that a script's activation with events brought
+/// (`SIT_ACTIVATE_EVENTS`) ends, as a get-up the run raises, once the
+/// caller's track takes the player farther than the caller's distance from
+/// the furniture's placed position, or into another space; the run looks at
+/// each of its steps and before each caller or input action
+/// (`--sit-end-walk-events UNITS`). Other sits are left as before.
+pub const SIT_EVENTS_ENDED_BY_TRACK: &str = "vm_sit_events_activation_ended_by_track_v1";

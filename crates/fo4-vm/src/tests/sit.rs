@@ -260,8 +260,11 @@ fn furniture_lib() -> crate::MapLibrary {
     l.add(assemble(
         "script Seat extends ObjectReference
          var ObjectReference left
+         var ObjectReference used
          func OnExitFurniture none ObjectReference akActionRef
-         13 left akActionRef",
+         13 left akActionRef
+         func OnActivate none ObjectReference akActionRef
+         13 used akActionRef",
     ));
     l.add(assemble(
         "script MenuUser extends ObjectReference
@@ -477,11 +480,69 @@ fn an_activation_with_events_sits_and_one_by_the_sitter_gets_it_up_each_with_its
 }
 
 #[test]
+fn an_activation_with_events_delivers_the_furnitures_activation_before_the_sit_only_with_its_switch(
+) {
+    let s = store();
+    let b = Budget::new(1 << 24);
+    let mut l = furniture_lib();
+    let mut host = QuestHost::new(&s, 1 << 24);
+    let mut vm = Vm::new(&mut l, &mut host);
+    let chair =
+        crate::data::record_object(&mut vm.world, &s, &key(CHAIR), "objectreference", &b).unwrap();
+    let seat = vm.instantiate(Some(chair), "seat").unwrap();
+    let player = vm.world.player("actor");
+    let activate = call(
+        "activate",
+        chair,
+        None,
+        vec![Val::Object(player), Val::Bool(false)],
+    );
+    // As before: the sit alone, the furniture's OnActivate not delivered.
+    vm.world.sits.activate_events = true;
+    sit::native(&s, 1 << 24, &activate, &mut vm.world);
+    assert!(vm.world.sits.pending_activations.is_empty());
+    sit::settle(&mut vm, &s, 16, &b);
+    assert_eq!(vm.world.sits.sitting.get(&player), Some(&chair));
+    assert_eq!(var(&vm, seat, "used"), Val::None);
+    assert!(!vm.rules.contains(rules::SIT_ACTIVATE_EVENTS_DELIVERED));
+    // With the delivery: OnActivate(player) reaches the furniture's script,
+    // then the sit (logged in that order).
+    vm.world.sits.sitting.clear();
+    vm.world.sits.log.clear();
+    vm.world.sits.activate_events_deliver = true;
+    sit::native(&s, 1 << 24, &activate, &mut vm.world);
+    assert_eq!(vm.world.sits.pending_activations, [(player, chair)]);
+    assert_eq!(vm.world.sits.from_events, [(player, chair)]);
+    assert!(vm.world.sits.has_pending());
+    let (raised, _) = sit::settle(&mut vm, &s, 16, &b);
+    assert_eq!(raised.len(), 2);
+    assert!(raised[0].what.contains("activates"), "{}", raised[0].what);
+    assert!(raised[1].what.contains("sits in"), "{}", raised[1].what);
+    assert_eq!(var(&vm, seat, "used"), Val::Object(player));
+    assert_eq!(vm.world.sits.sitting.get(&player), Some(&chair));
+    assert!(vm.rules.contains(rules::SIT_ACTIVATE_EVENTS_DELIVERED));
+    // A default-processing-only activation delivers nothing more.
+    vm.world.sits.sitting.clear();
+    vm.world.sits.activate = true;
+    let quiet = call(
+        "activate",
+        chair,
+        None,
+        vec![Val::Object(player), Val::Bool(true)],
+    );
+    vm.world.sits.from_events.clear();
+    sit::native(&s, 1 << 24, &quiet, &mut vm.world);
+    assert!(vm.world.sits.pending_activations.is_empty());
+    assert!(vm.world.sits.from_events.is_empty());
+}
+
+#[test]
 fn every_rule_of_the_exit_step_is_registered_pending() {
     for r in [
         rules::SIT_ACTIVATE_EVENTS,
         rules::SIT_ACTIVATE_GET_UP,
         rules::FURNITURE_GRAPH_EVENTS,
+        rules::SIT_ACTIVATE_EVENTS_DELIVERED,
     ] {
         assert_eq!(rules::status(r), Some("pending"), "{r}");
         assert!(rules::ALL.contains(&r), "{r}");

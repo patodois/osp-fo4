@@ -383,12 +383,50 @@ fn the_players_sit_ends_when_the_track_walks_away_only_under_its_rule() {
 }
 
 #[test]
+fn only_a_sit_an_activation_with_events_brought_ends_under_the_events_reading() {
+    let s = store();
+    let mut l = lib();
+    let mut host = QuestHost::new(&s, 1 << 24);
+    let mut vm = Vm::new(&mut l, &mut host);
+    let b = Budget::new(1 << 24);
+    let p = vm.world.player("actor");
+    let seat =
+        crate::data::record_object(&mut vm.world, &s, &key(SEAT), "objectreference", &b).unwrap();
+    vm.world.sits.sitting.insert(p, seat);
+    let track = crate::track::Track::parse(&format!(
+        "0 test.esm:{CELL:08x} 10 0 0\n6 test.esm:{CELL:08x} 400 0 0\n"
+    ))
+    .unwrap();
+    vm.world.place.track = Some(std::rc::Rc::new(track));
+    vm.world.now[0] = 6.0;
+    vm.world.sits.end_walk_events = Some(100.0);
+    // A sit no activation with events brought (the caller's, a default
+    // activation's) is left as before.
+    assert!(!crate::sit::end_by_track(&s, 1 << 24, &mut vm.world));
+    // One an activation with events brought ends once the track is away.
+    vm.world.sits.from_events.push((p, seat));
+    assert!(crate::sit::end_by_track(&s, 1 << 24, &mut vm.world));
+    assert_eq!(vm.world.sits.pending_get_ups, vec![(p, seat)]);
+    assert!(vm
+        .world
+        .sits
+        .used
+        .contains(&rules::SIT_EVENTS_ENDED_BY_TRACK));
+    assert!(!vm.world.sits.used.contains(&rules::SIT_ENDED_BY_TRACK));
+    // The get-up forgets where the sit came from.
+    crate::sit::settle(&mut vm, &s, 16, &b);
+    assert!(vm.world.sits.from_events.is_empty());
+    assert!(!vm.world.sits.sitting.contains_key(&p));
+}
+
+#[test]
 fn every_rule_of_the_third_fight_step_is_registered_pending() {
     for r in [
         rules::ALIAS_CREATED_REFERENCE,
         rules::ALIAS_EXTERNAL_LIVE,
         rules::LINE_SCRIPT_EVENTS,
         rules::SIT_ENDED_BY_TRACK,
+        rules::SIT_EVENTS_ENDED_BY_TRACK,
     ] {
         assert_eq!(rules::status(r), Some("pending"), "{r}");
         assert!(rules::ALL.contains(&r), "{r}");

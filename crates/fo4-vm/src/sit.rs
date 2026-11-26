@@ -44,6 +44,11 @@ pub struct Sits {
     /// actor is not in makes that actor sit in it
     /// (`rules::SIT_ACTIVATE_EVENTS`, `--activate-furniture-events`).
     pub activate_events: bool,
+    /// Such an activation with events also delivers the furniture's
+    /// `OnActivate(actor)` before the sit
+    /// (`rules::SIT_ACTIVATE_EVENTS_DELIVERED`,
+    /// `--activate-furniture-events-deliver`, with `activate_events`).
+    pub activate_events_deliver: bool,
     /// A script's `Activate(actor, true|false)` of the furniture the run
     /// has the actor sitting in makes it get up (`rules::SIT_ACTIVATE_GET_UP`,
     /// `--activate-furniture-get-up`).
@@ -71,6 +76,9 @@ pub struct Sits {
     /// Get-ups a native brought, delivered after the call before the sits
     /// ([`settle`]): (sitter, furniture).
     pub pending_get_ups: Vec<(ObjId, ObjId)>,
+    /// Activations a native brought whose `OnActivate` is delivered after
+    /// the call, before the sits ([`settle`]): (activator, furniture).
+    pub pending_activations: Vec<(ObjId, ObjId)>,
     /// (real-time second, what happened), in order.
     pub log: Vec<(f64, String)>,
     /// The sits and get-ups the run raised, in order: (real-time second,
@@ -88,6 +96,14 @@ pub struct Sits {
     /// UNITS`); `None` by default: only the caller and the scripts end a
     /// sit, as before.
     pub end_walk: Option<f64>,
+    /// As [`Sits::end_walk`], but only for a sit that a script's activation
+    /// with events brought (`rules::SIT_EVENTS_ENDED_BY_TRACK`,
+    /// `quest_run --sit-end-walk-events UNITS`); the run also looks before
+    /// each caller or input action. `None` by default.
+    pub end_walk_events: Option<f64>,
+    /// The (sitter, furniture) sits a script's activation with events
+    /// brought, while they last.
+    pub from_events: Vec<(ObjId, ObjId)>,
 }
 impl Sits {
     pub fn count(&mut self, k: impl Into<String>) {
@@ -100,7 +116,9 @@ impl Sits {
     }
     /// Whether a native brought sits or get-ups not yet delivered.
     pub fn has_pending(&self) -> bool {
-        !self.pending.is_empty() || !self.pending_get_ups.is_empty()
+        !self.pending.is_empty()
+            || !self.pending_get_ups.is_empty()
+            || !self.pending_activations.is_empty()
     }
     /// Notes the graph event of a sit (`true`) or a get-up under
     /// `rules::FURNITURE_GRAPH_EVENTS`, when the caller named the events.
@@ -234,9 +252,17 @@ pub fn native(store: &Store, max: u64, c: &NativeCall, w: &mut World) -> Option<
         }
         Some(Val::Bool(false)) if w.sits.activate_events => {
             w.sits.using(rules::SIT_ACTIVATE_EVENTS);
-            w.sits.count(
-                "furniture activations read as a sit: with events (the furniture's OnActivate is not delivered)",
-            );
+            if w.sits.activate_events_deliver {
+                w.sits.using(rules::SIT_ACTIVATE_EVENTS_DELIVERED);
+                w.sits.count(
+                    "furniture activations read as a sit: with events (the furniture's OnActivate delivered first)",
+                );
+                w.sits.pending_activations.push((sitter, f));
+            } else {
+                w.sits.count(
+                    "furniture activations read as a sit: with events (the furniture's OnActivate is not delivered)",
+                );
+            }
             true
         }
         Some(Val::Bool(true)) => {
@@ -259,6 +285,11 @@ pub fn native(store: &Store, max: u64, c: &NativeCall, w: &mut World) -> Option<
         }
     };
     if sit {
+        if matches!(c.args.get(1), Some(Val::Bool(false)))
+            && !w.sits.from_events.contains(&(sitter, f))
+        {
+            w.sits.from_events.push((sitter, f));
+        }
         w.sits.pending.push((sitter, f));
         if w.sits.graph_events.is_some() {
             w.sits.using(rules::FURNITURE_GRAPH_EVENTS);
@@ -328,6 +359,10 @@ pub fn get_up(
     b: &Budget,
 ) -> Result<Vec<Raised>, Box<dyn std::error::Error>> {
     vm.rules.insert(rules::SIT_EVENTS);
+    vm.world
+        .sits
+        .from_events
+        .retain(|x| *x != (sitter, furniture));
     if vm.world.sits.sitting.get(&sitter) == Some(&furniture) {
         vm.world.sits.sitting.remove(&sitter);
     } else {
@@ -363,20 +398,54 @@ pub fn get_up(
     Ok(vec![Raised { t, what, runs }])
 }
 
+/// A script's activation with events of a furniture reference
+/// (`rules::SIT_ACTIVATE_EVENTS_DELIVERED`): `OnActivate(activator)` on the
+/// furniture's own scripts, the aliases holding it and its registered
+/// instances.
+pub fn activated(
+    vm: &mut crate::Vm<'_>,
+    store: &Store,
+    activator: ObjId,
+    furniture: ObjId,
+    b: &Budget,
+) -> Result<Vec<Raised>, Box<dyn std::error::Error>> {
+    vm.rules.insert(rules::SIT_ACTIVATE_EVENTS_DELIVERED);
+    vm.world.sits.count("activations with events delivered");
+    let t = vm.world.now[crate::world::Clock::Real as usize];
+    let what = format!(
+        "{} activates {} (a script's activation with events)",
+        vm.world.objects[activator].label, vm.world.objects[furniture].label
+    );
+    vm.world.sits.log.push((t, what.clone()));
+    let (runs, _) = player::deliver_event(
+        vm,
+        store,
+        furniture,
+        "onactivate",
+        vec![Val::Object(activator)],
+        b,
+    )?;
+    Ok(vec![Raised { t, what, runs }])
+}
+
 /// Under [`Sits::end_walk`]: when the player sits and the track's point at
 /// the run's present second stands farther than the distance from the
 /// furniture's placed position (or in another space), a get-up of the
 /// player from it is noted for [`settle`] (`rules::SIT_ENDED_BY_TRACK`).
 /// Returns whether one was noted.
 pub fn end_by_track(store: &Store, max: u64, w: &mut World) -> bool {
-    let Some(limit) = w.sits.end_walk else {
-        return false;
-    };
     let Some(p) = w.player else {
         return false;
     };
     let Some(f) = w.sits.sitting.get(&p).copied() else {
         return false;
+    };
+    let (limit, rule) = match (w.sits.end_walk, w.sits.end_walk_events) {
+        (Some(l), _) => (l, rules::SIT_ENDED_BY_TRACK),
+        (None, Some(l)) if w.sits.from_events.contains(&(p, f)) => {
+            (l, rules::SIT_EVENTS_ENDED_BY_TRACK)
+        }
+        _ => return false,
     };
     if w.sits.pending_get_ups.contains(&(p, f)) {
         return false;
@@ -408,9 +477,12 @@ pub fn end_by_track(store: &Store, max: u64, w: &mut World) -> bool {
     if !away {
         return false;
     }
-    w.sits.using(rules::SIT_ENDED_BY_TRACK);
-    w.sits
-        .count("sits ended by the track	the player walked away");
+    w.sits.using(rule);
+    w.sits.count(if rule == rules::SIT_ENDED_BY_TRACK {
+        "sits ended by the track	the player walked away"
+    } else {
+        "sits ended by the track	the player walked away from a sit an activation with events brought"
+    });
     w.sits.pending_get_ups.push((p, f));
     true
 }
@@ -434,8 +506,19 @@ pub fn settle(
             }
             runs.extend(crate::quest::run_jobs(vm, store, max_jobs, b));
         }
+        let activations = std::mem::take(&mut vm.world.sits.pending_activations);
+        for (activator, f) in &activations {
+            match activated(vm, store, *activator, *f, b) {
+                Ok(r) => raised.extend(r),
+                Err(e) => vm
+                    .world
+                    .sits
+                    .count(format!("activations with events\tnot delivered: {e}")),
+            }
+            runs.extend(crate::quest::run_jobs(vm, store, max_jobs, b));
+        }
         let pending = std::mem::take(&mut vm.world.sits.pending);
-        if pending.is_empty() && get_ups.is_empty() {
+        if pending.is_empty() && get_ups.is_empty() && activations.is_empty() {
             break;
         }
         for (sitter, f) in pending {

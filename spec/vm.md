@@ -2274,13 +2274,14 @@ caller's 14 events of the spouse:
 
 ## Furniture activation and the furniture's graph
 
-`fo4_vm::sit` and `fo4_vm::anim`, three readings, each behind its own
+`fo4_vm::sit` and `fo4_vm::anim`, four readings, each behind its own
 switch, off by default (with them off every earlier output reproduces byte
 for byte):
 
 | Switch | Reading | Rule |
 | --- | --- | --- |
 | `--activate-furniture-events` (with `--sit-events`) | a script's `Activate(actor, false)` (default processing with events) on a furniture reference the run does not have the actor sitting in sits the actor there, as `--activate-furniture-sits` reads the default-processing-only call; the furniture's `OnActivate` is not delivered (counted) | `vm_furniture_activate_events_sits_v1` |
+| `--activate-furniture-events-deliver` (with `--activate-furniture-events`) | such an activation with events also delivers `OnActivate(actor)` to the furniture's own scripts, the aliases holding it and its registered instances, after the calling job and before the sit | `vm_furniture_activate_events_delivered_v1` |
 | `--activate-furniture-get-up` (with `--sit-events`) | a script's `Activate(actor, true or false)` on the furniture the run has the actor sitting in gets it up (`OnGetUp`, `OnExitFurniture` as under `vm_event_sit_v1`), delivered after the calling job before that job's sits | `vm_furniture_activate_get_up_v1` |
 | `--furniture-graph-events SIT GET_UP` (with `--anim-graphs` and a scripted activation reading) | the sits and get-ups a script's activation brings send the furniture reference's behaviour graph, within the call, the caller's first or second event name; the graph is read when first needed and takes the event as it takes `PlayAnimation`'s, its keys raised under `--anim-graph-keys`; caller-assumed sits send nothing | `anim_furniture_sit_graph_events_v1` |
 
@@ -3161,6 +3162,7 @@ before. The play mode's elevator ride: `spec/play.md`, The elevator ride.
 | `--alias-external` | an alias filled from another quest's alias holds what that alias holds whenever it is read | `quest_alias_external_live_v1` |
 | `--line-script-events` | a line the run plays delivers its begin and end to the scripts its record attaches of its own | `dialogue_line_script_events_v1` |
 | `--sit-end-walk UNITS` (with `--sit-events`) | the player's sit ends, as a get-up, when the track takes the player farther than UNITS from the furniture's stored position | `vm_sit_ended_by_track_v1` |
+| `--sit-end-walk-events UNITS` (with `--activate-furniture-events`) | only the player's sit a script's activation with events brought ends, as a get-up, when the track takes the player farther than UNITS from the furniture's stored position; looked at also before each caller or input action | `vm_sit_events_activation_ended_by_track_v1` |
 | `--timeline-sequences` | the timeline writes the sequences the graphs start (output only) | - |
 | fight assumptions on `EDITOR_ID#ALIAS` | the reference an alias holds at that second | caller assumption |
 

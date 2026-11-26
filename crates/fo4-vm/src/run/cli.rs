@@ -187,6 +187,7 @@ pub fn parse(mut a: Vec<String>) -> Result<Command, E> {
         sit_activate: flag(&mut a, "--activate-furniture-sits"),
         sit_in_use: flag(&mut a, "--furniture-in-use"),
         sit_activate_events: flag(&mut a, "--activate-furniture-events"),
+        sit_activate_events_deliver: flag(&mut a, "--activate-furniture-events-deliver"),
         sit_activate_get_up: flag(&mut a, "--activate-furniture-get-up"),
         sit_state: flag(&mut a, "--sit-state"),
         anim_start_settled: flag(&mut a, "--anim-graph-start-settled"),
@@ -339,6 +340,16 @@ pub fn parse(mut a: Vec<String>) -> Result<Command, E> {
             after: None,
         });
         a.drain(i..i + 1 + n);
+    }
+    // The distance past which the track ends the player's sit an
+    // activation with events brought.
+    if let Some(i) = a.iter().position(|x| x == "--sit-end-walk-events") {
+        let v: f64 = a.get(i + 1).ok_or("--sit-end-walk-events UNITS")?.parse()?;
+        if !(v.is_finite() && v > 0.0) {
+            return Err("--sit-end-walk-events takes a positive distance".into());
+        }
+        then.sit_end_walk_events = Some(v);
+        a.drain(i..i + 2);
     }
     // The distance past which the track ends the player's sit.
     if let Some(i) = a.iter().position(|x| x == "--sit-end-walk") {
@@ -901,6 +912,12 @@ pub fn parse(mut a: Vec<String>) -> Result<Command, E> {
     }
     if then.timers_per_timer && then.timers == 0 {
         return Err("--timers-per-timer needs --timers N".into());
+    }
+    if then.sit_activate_events_deliver && !then.sit_activate_events {
+        return Err("--activate-furniture-events-deliver needs --activate-furniture-events".into());
+    }
+    if then.sit_end_walk_events.is_some() && !then.sit_activate_events {
+        return Err("--sit-end-walk-events needs --activate-furniture-events".into());
     }
     if then.sit_end_walk.is_some() && !then.sit_events {
         return Err("--sit-end-walk needs --sit-events".into());

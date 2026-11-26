@@ -350,6 +350,11 @@ pub struct Then {
     /// this distance from the furniture's placed position
     /// (`vm_sit_ended_by_track_v1`, `--sit-end-walk UNITS`).
     pub sit_end_walk: Option<f64>,
+    /// As `sit_end_walk` for the sits a script's activation with events
+    /// brought only, also looked at before each action
+    /// (`vm_sit_events_activation_ended_by_track_v1`, `--sit-end-walk-events
+    /// UNITS`).
+    pub sit_end_walk_events: Option<f64>,
     /// The placed references of a location's cells carrying the ref type
     /// the list holds no row of (`quest_alias_location_ref_placed_v1`,
     /// `--alias-location-placed-refs`).
@@ -382,6 +387,10 @@ pub struct Then {
     /// those send the furniture's graph the caller's events
     /// (`anim_furniture_sit_graph_events_v1`, `--furniture-graph-events SIT GET_UP`).
     pub sit_activate_events: bool,
+    /// Such an activation also delivers the furniture's `OnActivate`
+    /// (`vm_furniture_activate_events_delivered_v1`,
+    /// `--activate-furniture-events-deliver`).
+    pub sit_activate_events_deliver: bool,
     pub sit_activate_get_up: bool,
     pub furniture_graph_events: Option<(String, String)>,
     /// `GetSitState` answered from the run's sitters (`vm_sit_state_v1`,
