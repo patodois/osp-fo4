@@ -1998,8 +1998,13 @@ struct PlayWatch {
     /// The play clock's second of the next sample.
     sample: f64,
     /// The prompt, the aim's label and the confirmation last written.
-    prompt: Option<(Option<String>, Option<String>, Option<(u64, String)>)>,
+    prompt: Option<WatchedPrompt>,
 }
+
+/// What [`PlayWatch`] compares for its prompt lines: the prompt, the aim's
+/// label and the last confirmation.
+#[cfg(feature = "script-event")]
+type WatchedPrompt = (Option<String>, Option<String>, Option<(u64, String)>);
 
 /// Units from the walker within which [`PlayWatch`] writes the held doors.
 #[cfg(feature = "script-event")]
