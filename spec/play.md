@@ -2144,6 +2144,11 @@ back` cue follows the walker's own track in the walker's space back to the lates
 (`play::cue_trail`): it gives the trail's length and aims at the trail's point 96 units back (`CUE_AIM_TRAIL`), so
 it names a doorway the walker came through instead of the place's nearest point behind a wall (the house cue said
 `150 units ahead` at a bookcase beside the open hall); with no such point in the track it keeps the straight line.
+After the nineteenth session the way back cuts loops: from each point it goes on to the earliest-walked point of the
+track within 32 units on the ground and 24 in height (`CUE_CUT`, `CUE_CUT_RISE`: nearer than a wall's two sides can be
+for the walk's capsule), so a detour the walker came back from is left out and the length falls as the walker follows
+the cue. The nineteenth session's house cue had grown from 245 to 908 units while the person walked to the hall after
+a detour; replayed, the same record's cue says 240 to 371 units and falls to 153 and 72 on the way into the hall.
 `--draw-cast-keeps-clear` (`play_cast_kept_clear_of_walker_v1`, pending, in the preset) keeps an actor's drawn
 body clear of the eye: the cast build keeps, for each actor, the horizontal box of its draws' vertices by 8-unit
 slices of height above its place (`scene::cast_body`); each frame the slices within 24 units of the eye's height

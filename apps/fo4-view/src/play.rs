@@ -1543,39 +1543,93 @@ mod enabled {
     /// bound on the work of one look; about half an hour of walking).
     pub const CUE_TRAIL_MAX: usize = 20_000;
 
+    /// Two points of the walker's own trail this near each other on the
+    /// ground (game units; two capsule radii of the walk's placeholder) are
+    /// joined by the way back [`cue_trail`] gives, what the walker walked
+    /// between them left out (viewer policy): nearer than a wall's two
+    /// sides can be for a capsule of that radius.
+    pub const CUE_CUT: f64 = 32.0;
+    /// ... and this near in height (game units; viewer policy): not a
+    /// floor above or below.
+    pub const CUE_CUT_RISE: f64 = 24.0;
+
     /// The cue along the way the walker came (viewer policy): back along
     /// the walker's own track (`track`, in time order) in the space
     /// `space` from the feet to the latest point inside the place
-    /// (`inside`), the trail's length and the point [`CUE_AIM_TRAIL`]
-    /// along it to aim at. `None` when the track in that space holds no
-    /// point inside the place within [`CUE_TRAIL_MAX`] points (the caller
-    /// keeps the straight line). The track is ground the walker walked, so
-    /// the aim follows a door or a corridor where the place's nearest
-    /// point lies behind a wall.
+    /// (`inside`), the length of that way and the point [`CUE_AIM_TRAIL`]
+    /// along it to aim at. Loops are cut: from each point the way goes on
+    /// to the earliest-walked point of the trail within [`CUE_CUT`] (and
+    /// [`CUE_CUT_RISE`]) of it, so a detour the walker came back from is
+    /// left out and the length falls as the walker follows the cue. `None`
+    /// when the track in that space holds no point inside the place within
+    /// [`CUE_TRAIL_MAX`] points (the caller keeps the straight line). The
+    /// track is ground the walker walked, so the aim follows a door or a
+    /// corridor where the place's nearest point lies behind a wall.
     pub fn cue_trail(
         track: &[fo4_play::Point],
         space: &FormKey,
         feet: [f64; 3],
         inside: impl Fn([f64; 3]) -> bool,
     ) -> Option<([f64; 3], f64)> {
-        let flat = |a: [f64; 3], b: [f64; 3]| (b[0] - a[0]).hypot(b[1] - a[1]);
-        let mut len = 0.0;
-        let mut last = feet;
-        let mut aim = None;
+        // The trail back: the feet, then the track newest first, to the
+        // first point inside the place.
+        let mut pts = vec![feet];
+        let mut found = false;
         for p in track.iter().rev().take(CUE_TRAIL_MAX) {
             if fo4_scene::timeline::norm(&p.space) != *space {
                 return None;
             }
-            len += flat(last, p.pos);
-            last = p.pos;
-            if aim.is_none() && len >= CUE_AIM_TRAIL {
-                aim = Some(p.pos);
-            }
+            pts.push(p.pos);
             if inside(p.pos) {
-                return Some((aim.unwrap_or(p.pos), len));
+                found = true;
+                break;
             }
         }
-        None
+        if !found {
+            return None;
+        }
+        let cell = |p: [f64; 3]| {
+            (
+                (p[0] / CUE_CUT).floor() as i64,
+                (p[1] / CUE_CUT).floor() as i64,
+            )
+        };
+        let mut grid: BTreeMap<(i64, i64), Vec<usize>> = BTreeMap::new();
+        for (k, p) in pts.iter().enumerate() {
+            grid.entry(cell(*p)).or_default().push(k);
+        }
+        let flat = |a: [f64; 3], b: [f64; 3]| (b[0] - a[0]).hypot(b[1] - a[1]);
+        let near =
+            |a: [f64; 3], b: [f64; 3]| flat(a, b) <= CUE_CUT && (b[2] - a[2]).abs() <= CUE_CUT_RISE;
+        let last = pts.len() - 1;
+        let (mut i, mut len, mut aim) = (0, 0.0, None);
+        while i < last {
+            let (cx, cy) = cell(pts[i]);
+            let mut j = i + 1;
+            for gx in cx - 1..=cx + 1 {
+                for gy in cy - 1..=cy + 1 {
+                    let Some(ks) = grid.get(&(gx, gy)) else {
+                        continue;
+                    };
+                    // The latest index in this cell near enough.
+                    let best = ks
+                        .iter()
+                        .rev()
+                        .take_while(|k| **k > j)
+                        .find(|k| near(pts[i], pts[**k]))
+                        .copied();
+                    if let Some(k) = best {
+                        j = k;
+                    }
+                }
+            }
+            len += flat(pts[i], pts[j]);
+            i = j;
+            if aim.is_none() && len >= CUE_AIM_TRAIL {
+                aim = Some(pts[i]);
+            }
+        }
+        Some((aim.unwrap_or(pts[last]), len))
     }
 
     /// [`cue_line`] with the distance along the trail [`cue_trail`] gave
@@ -3281,6 +3335,32 @@ mod enabled {
                 Some(([-50.0, 100.0, 0.0], 40.0))
             );
             assert_eq!(cue_trail(&[], &space, [0.0; 3], room), None);
+            // A detour the walker came back from is cut: out of the door at
+            // (0, 100), east to (200, 100), north to (200, 300) and back
+            // to (200, 110), east to (300, 100). The way back is 300 units,
+            // not 680, and it falls as the walker follows it.
+            let mut walk = vec![pt(-20.0, 100.0, &space)];
+            let mut leg = |from: [f64; 2], to: [f64; 2]| {
+                for k in 1..=10 {
+                    let f = f64::from(k) / 10.0;
+                    let (x, y) = (
+                        from[0] + (to[0] - from[0]) * f,
+                        from[1] + (to[1] - from[1]) * f,
+                    );
+                    walk.push(pt(x, y, &space));
+                }
+            };
+            leg([-20.0, 100.0], [200.0, 100.0]);
+            leg([200.0, 100.0], [200.0, 300.0]);
+            leg([200.0, 300.0], [200.0, 110.0]);
+            leg([200.0, 110.0], [300.0, 100.0]);
+            let (_, len) = cue_trail(&walk, &space, [300.0, 100.0, 0.0], room).unwrap();
+            assert!(len < 330.0, "{len}");
+            walk.extend([pt(250.0, 100.0, &space), pt(200.0, 100.0, &space)]);
+            let (aim, len2) = cue_trail(&walk, &space, [200.0, 100.0, 0.0], room).unwrap();
+            assert!(len2 < len - 90.0, "{len2} after {len}");
+            // Aimed back along the corridor, not up the detour.
+            assert!(aim[1] < 150.0 && aim[0] < 200.0, "{aim:?}");
             // A door's turn carries no line.
             assert_eq!(
                 confirm_text(Some("opened"), "used", None, Some("Hi.")),
