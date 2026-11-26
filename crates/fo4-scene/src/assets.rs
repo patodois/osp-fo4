@@ -160,6 +160,9 @@ pub struct Assets<'a> {
     /// the same asset, within a cap ([`Assets::keep_files`]; none by
     /// default).
     files: std::cell::RefCell<FileCache>,
+    /// The parses [`Assets::with_decoded`] made, by kind (models,
+    /// materials, textures): count and seconds ([`Assets::parses`]).
+    parses: std::cell::Cell<[(u64, f64); 3]>,
 }
 
 /// The files [`Assets::keep_files`] keeps: by asset, the least recently
@@ -263,6 +266,14 @@ impl<'a> Assets<'a> {
         }
     }
     /// What [`Assets::keep_files`] holds now.
+    /// The parses [`Assets::with_decoded`] made since these assets were
+    /// built, by kind: models, materials, textures, each a count and the
+    /// seconds spent parsing (the file's read is not counted). A
+    /// measurement: reading it changes nothing.
+    pub fn parses(&self) -> [(u64, f64); 3] {
+        self.parses.get()
+    }
+
     pub fn kept_files(&self) -> KeptFiles {
         let f = self.files.borrow();
         KeptFiles {
@@ -289,6 +300,7 @@ impl<'a> Assets<'a> {
             active: Vec::new(),
             clock: crate::clock::Switches::default(),
             files: Default::default(),
+            parses: Default::default(),
         }
     }
     pub fn resolve_path(
@@ -1137,6 +1149,7 @@ impl<'a> Assets<'a> {
             }
         };
         let l = self.vfs.limits();
+        let started = std::time::Instant::now();
         let parsed = match node.kind {
             AssetKind::Model => DecodedAsset::Model(fo4_nif::Nif::read(
                 &bytes,
@@ -1152,6 +1165,15 @@ impl<'a> Assets<'a> {
                 DecodedAsset::Texture(fo4_texture::Texture::read(&bytes, &c.original, l, b)?)
             }
         };
+        let kind = match node.kind {
+            AssetKind::Model => 0,
+            AssetKind::Material => 1,
+            AssetKind::Texture => 2,
+        };
+        let mut p = self.parses.get();
+        p[kind].0 += 1;
+        p[kind].1 += started.elapsed().as_secs_f64();
+        self.parses.set(p);
         f(parsed)
     }
     pub fn closure(&self, roots: &[usize], b: &Budget) -> Result<Vec<usize>> {

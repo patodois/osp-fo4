@@ -674,6 +674,48 @@ pub fn kept_files_max() -> u64 {
         .map_or(KEPT_FILES_MAX, |m| m << 20)
 }
 
+/// Each loaded grid square of `--around`: its offset, its grid and the
+/// cell that claims it (`-` when none), the centre first.
+pub fn squares_line(a: &fo4_scene::grid::Around) -> String {
+    let grid = |g: Option<[i32; 2]>| g.map_or("-".to_string(), |g| format!("[{}, {}]", g[0], g[1]));
+    std::iter::once(format!(
+        "[0, 0] grid {} cell {}",
+        grid(a.grid),
+        fo4_scene::timeline::key_text(&a.cell)
+    ))
+    .chain(a.neighbours.iter().map(|n| {
+        format!(
+            "{:?} grid {} cell {}",
+            n.offset,
+            grid(n.grid),
+            n.cell
+                .as_ref()
+                .map_or("-".to_string(), fo4_scene::timeline::key_text)
+        )
+    }))
+    .collect::<Vec<_>>()
+    .join("; ")
+}
+
+/// The models, materials and textures a load parsed (`after` less
+/// `before`, [`fo4_scene::assets::Assets::parses`]): one line, a
+/// measurement of where the draw list's time goes.
+pub fn parses_line(before: [(u64, f64); 3], after: [(u64, f64); 3]) -> String {
+    let names = ["models", "materials", "textures"];
+    names
+        .iter()
+        .zip(before.iter().zip(after.iter()))
+        .map(|(n, (b, a))| {
+            format!(
+                "{n} {} in {:.2} s",
+                a.0.saturating_sub(b.0),
+                (a.1 - b.1).max(0.0)
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
 /// `loader` starts from the assets `slot` keeps when they were read the
 /// same way (path policy, clock switches) and hold at most
 /// [`KEPT_ASSETS_MAX`]; else from empty ones. Either way they keep the
@@ -825,6 +867,9 @@ pub fn cell<'s>(
     if let Some(slot) = kept.as_deref_mut() {
         take_kept(slot, &mut loader);
     }
+    // The parses the load makes (`play: load parses`, measurement only).
+    #[cfg(feature = "script-event")]
+    let parses_before = loader.assets.parses();
     let mut steps = Steps::new();
     let mut cell_rule = None;
     // CELL as a record key (`plugin:XXXXXXXX`, as the timeline writes
@@ -878,6 +923,9 @@ pub fn cell<'s>(
             started.elapsed().as_secs_f64(),
             cells.join(", ")
         );
+        // Which square is which: each offset's grid and cell (measurement
+        // only; the floating tuft's squares are read, not inferred).
+        println!("around squares: {}", squares_line(&a));
         steps.mark("references");
         Some(a)
     } else {
@@ -1512,6 +1560,10 @@ pub fn cell<'s>(
             steps.mark("walking world");
             println!("play: load steps: {}", steps.line());
             println!("play: load steps' archive files: {}", steps.files_line());
+            println!(
+                "play: load parses: {}",
+                parses_line(parses_before, loader.assets.parses())
+            );
         }
         Some(world)
     } else {
@@ -1792,6 +1844,45 @@ pub fn read_png(path: &str) -> AnyResult<fo4_render::png::Png> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_load_names_its_parses_and_its_squares() {
+        assert_eq!(
+            parses_line([(1, 0.5), (2, 0.0), (0, 0.0)], [(4, 1.25), (2, 0.0), (7, 0.5)]),
+            "models 3 in 0.75 s, materials 0 in 0.00 s, textures 7 in 0.50 s"
+        );
+        let key = |id: u32| fo4_plugin::FormKey {
+            plugin: "a.esm".into(),
+            object_id: id,
+        };
+        let a = fo4_scene::grid::Around {
+            cell: key(0x10),
+            grid: Some([-20, 22]),
+            world: Some(key(1)),
+            radius: 1,
+            searched: true,
+            neighbours: vec![
+                fo4_scene::grid::Neighbour {
+                    offset: [1, 0],
+                    grid: Some([-19, 22]),
+                    cell: Some(key(0x11)),
+                    outcome: "cell",
+                },
+                fo4_scene::grid::Neighbour {
+                    offset: [-1, 0],
+                    grid: Some([-21, 22]),
+                    cell: None,
+                    outcome: "no_cell",
+                },
+            ],
+            cells_scanned: 3,
+            same_grid_cells: 0,
+        };
+        let l = squares_line(&a);
+        assert!(l.starts_with("[0, 0] grid [-20, 22] cell "), "{l}");
+        assert!(l.contains("; [1, 0] grid [-19, 22] cell "), "{l}");
+        assert!(l.ends_with("; [-1, 0] grid [-21, 22] cell -"), "{l}");
+    }
 
     #[test]
     fn a_placement_and_its_inverse_compose_to_the_identity() {
