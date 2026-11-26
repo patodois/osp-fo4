@@ -1533,6 +1533,64 @@ mod enabled {
         format!("Go back: {d:.0} units {side}")
     }
 
+    /// How far along the walker's own trail the cue aims (game units of
+    /// trail; viewer policy): near enough that the straight line to it
+    /// stays on the way the walker came, past a door rather than through a
+    /// wall beside it.
+    pub const CUE_AIM_TRAIL: f64 = 96.0;
+
+    /// The most trail points the cue looks back over (viewer policy: a
+    /// bound on the work of one look; about half an hour of walking).
+    pub const CUE_TRAIL_MAX: usize = 20_000;
+
+    /// The cue along the way the walker came (viewer policy): back along
+    /// the walker's own track (`track`, in time order) in the space
+    /// `space` from the feet to the latest point inside the place
+    /// (`inside`), the trail's length and the point [`CUE_AIM_TRAIL`]
+    /// along it to aim at. `None` when the track in that space holds no
+    /// point inside the place within [`CUE_TRAIL_MAX`] points (the caller
+    /// keeps the straight line). The track is ground the walker walked, so
+    /// the aim follows a door or a corridor where the place's nearest
+    /// point lies behind a wall.
+    pub fn cue_trail(
+        track: &[fo4_play::Point],
+        space: &FormKey,
+        feet: [f64; 3],
+        inside: impl Fn([f64; 3]) -> bool,
+    ) -> Option<([f64; 3], f64)> {
+        let flat = |a: [f64; 3], b: [f64; 3]| (b[0] - a[0]).hypot(b[1] - a[1]);
+        let mut len = 0.0;
+        let mut last = feet;
+        let mut aim = None;
+        for p in track.iter().rev().take(CUE_TRAIL_MAX) {
+            if fo4_scene::timeline::norm(&p.space) != *space {
+                return None;
+            }
+            len += flat(last, p.pos);
+            last = p.pos;
+            if aim.is_none() && len >= CUE_AIM_TRAIL {
+                aim = Some(p.pos);
+            }
+            if inside(p.pos) {
+                return Some((aim.unwrap_or(p.pos), len));
+            }
+        }
+        None
+    }
+
+    /// [`cue_line`] with the distance along the trail [`cue_trail`] gave
+    /// and its side from the aim.
+    pub fn cue_line_trail(
+        feet: [f64; 3],
+        heading: Option<f64>,
+        aim: [f64; 3],
+        length: f64,
+    ) -> String {
+        let line = cue_line(feet, heading, aim);
+        let side = line.split_once(" units ").map_or("here", |(_, s)| s);
+        format!("Go back: {length:.0} units {side}")
+    }
+
     /// An activation whose confirmation waits for what its press does to
     /// show: the target (`None` when the ray met nothing of a placed
     /// reference), the run's second when it was read, the run's counts and
@@ -1544,6 +1602,9 @@ mod enabled {
         before: (usize, usize, usize),
         doors: BTreeMap<FormKey, bool>,
         texts: Vec<String>,
+        /// The walker left the door the press met as it stands
+        /// ([`confirm_used`]).
+        kept: bool,
     }
 
     /// Run seconds a confirmation waits at most for a door's pose to turn
@@ -1566,6 +1627,11 @@ mod enabled {
     /// slice the run took since) and the confirmations shown.
     type Confirming = (usize, (usize, usize, usize), u64);
 
+    /// The words of a press on a door the person's E left as it stands
+    /// (`play_door_toggle_blocked_unchanged_v1`): the door is held, so the
+    /// confirmation does not say it opened (viewer policy).
+    pub const CONFIRM_HELD: &str = "held: left as it stands";
+
     /// The confirmation of an activation the walker logged in the slice the
     /// run took between two looks at its counts (viewer policy): opened (a
     /// reference the caller's opens name), used (the run's quest or scene
@@ -1573,12 +1639,20 @@ mod enabled {
     /// stage or scene changed (only the scripts' calls grew: the press
     /// reached the target's scripts, which changed no stage or scene) or
     /// nothing happened.
-    pub fn confirm_line(
+    ///
+    /// With `kept` the press met a door the walker left as it stands
+    /// ([`fo4_play::walker::Walker::door_kept`]), which says so
+    /// ([`CONFIRM_HELD`]) in place of opened, whether or not the caller's
+    /// opens name it.
+    pub fn confirm_used(
         opened: bool,
+        kept: bool,
         before: (usize, usize, usize),
         after: (usize, usize, usize),
     ) -> &'static str {
-        if opened {
+        if kept {
+            CONFIRM_HELD
+        } else if opened {
             "opened"
         } else if (after.1, after.2) != (before.1, before.2) {
             "used"
@@ -1616,7 +1690,7 @@ mod enabled {
     }
 
     /// The confirmation's words (viewer policy): the door's turn, else
-    /// what the run did ([`confirm_line`]), with the reference the
+    /// what the run did ([`confirm_used`]), with the reference the
     /// target's scripts activated, and, when the press was no door's turn,
     /// the first subtitle that appeared since the press, in the run's own
     /// words: a refusal says why as its line does.
@@ -2024,7 +2098,7 @@ mod enabled {
     }
 
     impl Paced {
-        /// What the last activation did ([`confirm_line`]), read once the run
+        /// What the last activation did ([`confirm_used`]), read once the run
         /// took the slice the walker logged it in: the walker logs it as it
         /// builds the slice, so the counts are those of the last look
         /// against now. Viewer policy, read from the run without changing
@@ -2044,8 +2118,11 @@ mod enabled {
                 if let Some(p) = self.pending.take() {
                     lines.push(self.confirm_words(run, &p, now, &doors));
                 }
+                let target = a.3.as_ref().ok().map(|(k, _)| k.clone());
+                let kept = target.as_ref().is_some_and(|k| self.walker.door_kept(k));
                 self.pending = Some(PendingConfirm {
-                    target: a.3.as_ref().ok().map(|(k, _)| k.clone()),
+                    kept,
+                    target,
                     at: run.now(),
                     before,
                     doors: doors_before,
@@ -2060,7 +2137,7 @@ mod enabled {
                         let n = fo4_scene::timeline::norm(k);
                         let pose = |m: &BTreeMap<FormKey, bool>| m.get(&n).map(|c| !c);
                         let door = confirm_door(pose(&p.doors), pose(&doors));
-                        let used = confirm_line(self.opens.contains(&n), p.before, now);
+                        let used = confirm_used(self.opens.contains(&n), p.kept, p.before, now);
                         let known = p.doors.contains_key(&n) || doors.contains_key(&n);
                         let new_text = self.new_text(&p).is_some();
                         let activated = activated_by_scripts(run, k, p.before.0, now.0).is_some();
@@ -2111,10 +2188,20 @@ mod enabled {
                             .filter(|v| fo4_scene::timeline::norm(&v.space) == space)
                             // Not one the feet stand in.
                             .filter(|v| !v.contains(f))
-                            .map(|v| (v.nearest(f), fo4_scene::timeline::key_text(&v.key)))
-                            .filter(|(to, _)| d(to) <= CUE_REACH)
+                            .map(|v| (v.nearest(f), fo4_scene::timeline::key_text(&v.key), v))
+                            .filter(|(to, _, _)| d(to) <= CUE_REACH)
                             .min_by(|a, b| d(&a.0).total_cmp(&d(&b.0)))
-                            .map(|(to, key)| cue_line(f, s.heading, to) + &cue_tag(&key))
+                            .map(|(to, key, v)| {
+                                // Along the walker's own trail when it
+                                // passed the place in this space.
+                                let log = self.log.borrow();
+                                let line = match cue_trail(&log.track, &space, f, |p| v.contains(p))
+                                {
+                                    Some((aim, len)) => cue_line_trail(f, s.heading, aim, len),
+                                    None => cue_line(f, s.heading, to),
+                                };
+                                line + &cue_tag(&key)
+                            })
                     }
                     _ => None,
                 }
@@ -2146,7 +2233,7 @@ mod enabled {
             let n = fo4_scene::timeline::norm(k);
             let pose = |m: &BTreeMap<FormKey, bool>| m.get(&n).map(|c| !c);
             let door = confirm_door(pose(&p.doors), pose(doors));
-            let used = confirm_line(self.opens.contains(&n), p.before, now);
+            let used = confirm_used(self.opens.contains(&n), p.kept, p.before, now);
             let activated = activated_by_scripts(run, k, p.before.0, now.0);
             let text = self.new_text(p);
             confirm_text(door, used, activated.as_deref(), text.as_deref())
@@ -3031,19 +3118,32 @@ mod enabled {
             assert_eq!(prompt_cued("use Lamp".into(), false), "use Lamp");
             // The confirmation compares the counts before and after the
             // slice the activation came in (the run took it between looks).
-            assert_eq!(confirm_line(false, (1, 2, 3), (1, 3, 3)), "used");
+            assert_eq!(confirm_used(false, false, (1, 2, 3), (1, 3, 3)), "used");
             assert_eq!(
-                confirm_line(false, (1, 2, 3), (1, 2, 3)),
+                confirm_used(false, false, (1, 2, 3), (1, 2, 3)),
                 "nothing happened"
             );
-            assert_eq!(confirm_line(true, (1, 2, 3), (1, 2, 3)), "opened");
+            assert_eq!(confirm_used(true, false, (1, 2, 3), (1, 2, 3)), "opened");
             // Only the scripts' calls grew: the press reached the target,
             // which changed no stage or scene (a script that refused it).
             assert_eq!(
-                confirm_line(false, (1, 2, 3), (7, 2, 3)),
+                confirm_used(false, false, (1, 2, 3), (7, 2, 3)),
                 "used, no stage or scene changed"
             );
-            assert_eq!(confirm_line(false, (1, 2, 3), (7, 2, 4)), "used");
+            assert_eq!(confirm_used(false, false, (1, 2, 3), (7, 2, 4)), "used");
+            // A door the walker left as it stands (held, its activation
+            // blocked) says so, even when the caller's opens name it and
+            // the run's logs grew.
+            for after in [(1, 2, 3), (7, 2, 4)] {
+                assert_eq!(confirm_used(true, true, (1, 2, 3), after), CONFIRM_HELD);
+                assert_eq!(confirm_used(false, true, (1, 2, 3), after), CONFIRM_HELD);
+            }
+            assert_eq!(confirm_used(true, false, (1, 2, 3), (1, 2, 3)), "opened");
+            assert!(confirm_ready(None, CONFIRM_HELD, true, false, false, 0.0));
+            assert_eq!(
+                confirm_text(None, CONFIRM_HELD, None, None),
+                "held: left as it stands"
+            );
             // A held door the person's E turned says which way.
             assert_eq!(confirm_door(Some(true), Some(false)), Some("closed"));
             assert_eq!(confirm_door(Some(false), Some(true)), Some("opened"));
@@ -3134,6 +3234,53 @@ mod enabled {
                 cue_line([0.0; 3], None, [200.0, 0.0, 0.0]),
                 "Go back: 200 units here"
             );
+            // Along the trail: the walker came from a room at x < 0
+            // through a door at (0, 100) and stands at (100, 0); the
+            // place's nearest point lies straight ahead behind a wall, the
+            // trail leads to the door first.
+            let space = FormKey {
+                plugin: "a.esm".into(),
+                object_id: 7,
+            };
+            let other = FormKey {
+                plugin: "a.esm".into(),
+                object_id: 8,
+            };
+            let pt = |x: f64, y: f64, space: &FormKey| fo4_play::Point {
+                t: 0.0,
+                space: space.clone(),
+                pos: [x, y, 0.0],
+                facing: None,
+            };
+            let room = |p: [f64; 3]| p[0] < 0.0;
+            let track = vec![
+                pt(-50.0, 100.0, &space),
+                pt(0.0, 100.0, &space),
+                pt(50.0, 50.0, &space),
+                pt(100.0, 0.0, &space),
+            ];
+            let (aim, len) = cue_trail(&track, &space, [100.0, 0.0, 0.0], room).unwrap();
+            assert_eq!(aim, [0.0, 100.0, 0.0]);
+            assert!(
+                (len - (2.0 * 50f64.hypot(50.0) + 50.0)).abs() < 1e-9,
+                "{len}"
+            );
+            // Facing +Y the door is ahead (the place's straight line, -X,
+            // would be to the left).
+            assert_eq!(
+                cue_line_trail([100.0, 0.0, 0.0], Some(135.0), aim, len),
+                "Go back: 191 units ahead"
+            );
+            // Another space between: no trail, the straight line stays.
+            let mut cut = track.clone();
+            cut.insert(2, pt(0.0, 0.0, &other));
+            assert_eq!(cue_trail(&cut, &space, [100.0, 0.0, 0.0], room), None);
+            // A short trail aims at the first point inside.
+            assert_eq!(
+                cue_trail(&track[..1], &space, [-10.0, 100.0, 0.0], room),
+                Some(([-50.0, 100.0, 0.0], 40.0))
+            );
+            assert_eq!(cue_trail(&[], &space, [0.0; 3], room), None);
             // A door's turn carries no line.
             assert_eq!(
                 confirm_text(Some("opened"), "used", None, Some("Hi.")),

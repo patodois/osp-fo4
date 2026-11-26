@@ -2137,6 +2137,18 @@ house; the frames written with `--play-shots` do not carry the HUD.
 scene waits as long for the line it starts and carries its text in the run's words (`used: "..."`): the console's
 refusal reads as its subtitle does.
 
+**After the eighteenth session (viewer policy unless a rule is named).** A press the walker leaves as it stands
+(`play_door_toggle_blocked_unchanged_v1`) confirms `held: left as it stands` (`play::confirm_used`), not `opened`,
+even when the caller's opens name the door: the eighteenth session's front door kept its earlier `opened`. The `Go
+back` cue follows the walker's own track in the walker's space back to the latest point inside the place
+(`play::cue_trail`): it gives the trail's length and aims at the trail's point 96 units back (`CUE_AIM_TRAIL`), so
+it names a doorway the walker came through instead of the place's nearest point behind a wall (the house cue said
+`150 units ahead` at a bookcase beside the open hall); with no such point in the track it keeps the straight line.
+`--draw-cast-keeps-clear` (`play_cast_kept_clear_of_walker_v1`, pending, in the preset) draws an actor of the run
+whose place is nearer the walker's feet than two capsule radii moved straight away out to that distance; the run
+is unchanged and the walker still passes through it (actors' capsules stand in no walking world). The eighteenth
+session's eye entered a standing evacuee's head at 5.6 units.
+
 **The data thread's clock.** Each cell load on the play data thread prints `play: load clocks: wall W s, the data
 thread's CPU C s (P% of the wall)`: a load whose wall time is far above its CPU time waited for a core; both up
 together ran slower. In the window replays of both records (this step's viewer) the loads ran at 80 to 100% of
