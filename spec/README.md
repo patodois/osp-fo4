@@ -586,6 +586,7 @@ the registry.
 | `vm_lock_state_v1` | pending | Try a door storing a lock record and one storing none; unlock the first from a test script and try again: refused, then open, supports it. |
 | `vm_lock_state_event_v1` | pending | Pick the museum's basement gate lock after the leader's conversation with a test script logging OnLockStateChanged on the gate: one call and the next main quest's 100 support it. |
 | `scene_npc_response_choice_v1` | pending | Answer the leader's first question with each of the four choices in four plays: the response line from the topic at the chosen index each time supports it. |
+| `scene_dialogue_no_line_holds_ends_v1` | pending | In a purpose-built scene, a dialogue action whose topic's only line has a failing condition between two timer actions: the second timer's fragment logging at the first timer's end (no line's length between) supports it. |
 | `walk_navmesh_surface_v1` | pending | Walk from the museum's front door to its upper rooms recording player.getpos: a position off every navigation triangle, or a route avoiding a volume the census says is unavoidable, refutes it. |
 | `walk_door_bounds_block_v1` | pending | Stand against a closed door and record player.getpos: a stop distance from the bounds' face other than the radius, or passing beside the bounds where the census says the doorway is shut, refutes it. |
 | `walk_door_lock_record_closed_v1` | pending | Try to walk through the museum's inner door before the raiders die: it does not open; after the leader's scene it opens without a key. |

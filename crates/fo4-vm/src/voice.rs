@@ -311,6 +311,10 @@ pub fn line_truths(
     Ok(out)
 }
 
+/// Why [`line_seconds`] leaves a topic's time open when it holds lines
+/// and none of them has conditions that hold.
+pub const NO_LINE_HOLDS: &str = "no line of the topic has conditions that hold";
+
 /// The line a topic plays and its seconds (`scene_dialogue_line_choice_v1`,
 /// `scene_dialogue_line_audio_v1`, `info_shared_response_v1`): the first
 /// line in stored order whose conditions hold (`eval` gives their truth;
@@ -363,7 +367,7 @@ pub fn line_seconds(
         }
     }
     let Some((line, info)) = chosen else {
-        return un("no line of the topic has conditions that hold".into());
+        return un(NO_LINE_HOLDS.into());
     };
     line_audio(store, voice, line, info, speaker, used, b)
 }

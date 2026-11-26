@@ -61,6 +61,12 @@ fn trda(n: u8) -> Vec<u8> {
 /// `tnam`) in phase 0, a line of topic DL spoken by alias `speaker` in
 /// phase 1, a package in phase 2. DL holds one line LN of two responses.
 fn store(tnam: bool, speaker: i32) -> Store {
+    store_with(tnam, speaker, false)
+}
+
+/// [`store`], LN carrying a condition that fails when `failing` (stage 99
+/// of QS done, which nothing sets).
+fn store_with(tnam: bool, speaker: i32, failing: bool) -> Store {
     let mut timer = vec![sub(b"SNAM", &2.0f32.to_le_bytes())];
     if tnam {
         timer.push(sub(b"TNAM", &1.0f32.to_le_bytes()));
@@ -81,7 +87,7 @@ fn store(tnam: bool, speaker: i32) -> Store {
         sub(b"INAM", &w(4)),
     ]
     .concat();
-    let ln = [
+    let mut ln = [
         sub(b"ENAM", &w(0)),
         sub(b"TRDA", &trda(1)),
         sub(b"NAM1", &w(1)),
@@ -89,6 +95,15 @@ fn store(tnam: bool, speaker: i32) -> Store {
         sub(b"NAM1", &w(2)),
     ]
     .concat();
+    if failing {
+        let mut c = vec![0u8; 32];
+        c[4..8].copy_from_slice(&1.0f32.to_le_bytes());
+        c[8..10].copy_from_slice(&59u16.to_le_bytes());
+        c[12..16].copy_from_slice(&w(QS));
+        c[16..20].copy_from_slice(&w(99));
+        c[28..32].copy_from_slice(&(-1i32).to_le_bytes());
+        ln.extend(sub(b"CTDA", &c));
+    }
     let dl = [sub(b"EDID", b"DL\0"), sub(b"TIFC", &w(1))].concat();
     let mut d = 0x0001u16.to_le_bytes().to_vec();
     d.extend([30, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
@@ -318,6 +333,55 @@ fn unsettled_times_wait_unless_the_caller_assumes_them() {
     assert!(log.iter().any(
         |c| matches!(c, Change::ActionStarted(1, 1, 0, how) if how.contains("line audio off"))
     ));
+}
+
+#[test]
+fn a_dialogue_action_with_no_line_that_holds_ends_as_it_starts_under_its_rule() {
+    // LN's only line fails its condition: the topic holds a line and none
+    // holds. The timer ends at 2 s and the line's action starts then.
+    let s = store_with(false, 0, true);
+    let clock = scene::Clock {
+        on: true,
+        timers: true,
+        voice: Some(Rc::new(voice(&s))),
+        assume_line_seconds: Some(7.0),
+        ..scene::Clock::default()
+    };
+    // Off: the caller's seven seconds, as before.
+    let (log, used) = run(&s, clock.clone(), 10);
+    assert!(
+        log.iter().any(|c| matches!(
+            c,
+            Change::ActionStarted(1, 1, 0, how) if how.contains(voice::NO_LINE_HOLDS)
+        )),
+        "{log:?}"
+    );
+    assert!(log.contains(&Change::ActionCompleted(1, 0, 9.0)), "{log:?}");
+    assert!(!used.contains(rules::NO_LINE_HOLDS_ENDS));
+    // On (scene_dialogue_no_line_holds_ends_v1): it ends at 2 s.
+    let (log, used) = run(
+        &s,
+        scene::Clock {
+            no_line_ends: true,
+            ..clock.clone()
+        },
+        10,
+    );
+    assert!(log.contains(&Change::ActionCompleted(1, 0, 2.0)), "{log:?}");
+    assert!(used.contains(rules::NO_LINE_HOLDS_ENDS));
+    assert_eq!(rules::status(rules::NO_LINE_HOLDS_ENDS), Some("pending"));
+    // A line that holds keeps its audio's two seconds with the rule on.
+    let s = store_with(false, 0, false);
+    let (log, _) = run(
+        &s,
+        scene::Clock {
+            no_line_ends: true,
+            voice: Some(Rc::new(voice(&s))),
+            ..clock
+        },
+        10,
+    );
+    assert!(log.contains(&Change::ActionCompleted(1, 0, 4.0)), "{log:?}");
 }
 
 #[test]

@@ -453,6 +453,12 @@ pub struct Clock {
     /// the caller assumes the player picks in the scene, spoken by the
     /// action's alias and timed as a line. Off: not timed, as before.
     pub npc_responses: bool,
+    /// `scene_dialogue_no_line_holds_ends_v1` (`quest_run
+    /// --no-line-holds-ends`): a dialogue action whose topic holds lines
+    /// none of which has conditions that hold ends as it starts, before
+    /// the caller's assumed line seconds. Off: it lasts those seconds, as
+    /// before.
+    pub no_line_ends: bool,
 }
 impl Clock {
     /// The choice the caller assumes the player picks in a scene's player
@@ -1137,6 +1143,13 @@ fn line_time(
     };
     match (audio, clock.assume_line_seconds) {
         (LineTime::Seconds(x), _) => (Some(x), "seconds from its audio".into()),
+        (LineTime::Undetermined(why), _) if clock.no_line_ends && why == voice::NO_LINE_HOLDS => {
+            h.using(rules::NO_LINE_HOLDS_ENDS);
+            (
+                Some(0.0),
+                format!("ends as it starts ({why}; --no-line-holds-ends)"),
+            )
+        }
         (LineTime::Undetermined(why), Some(x)) => (
             Some(x),
             format!("assumed seconds from the command line ({why})"),

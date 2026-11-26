@@ -2909,6 +2909,7 @@ default (with them off every earlier output reproduces byte for byte):
 | `--lock-state` | `IsLocked` answers the run's `Lock` calls; before any, whether the placed reference stores a lock record | `vm_lock_state_v1` |
 | `--lock-events` | the caller's unlock (`--assume-unlock REF`) raises `OnLockStateChanged` on the reference's scripts and the aliases holding it | `vm_lock_state_event_v1` |
 | `--npc-response-lines` | a response action (kind 5) plays the topic at the index of the player's assumed choice in its scene, spoken by its alias and timed as a line | `scene_npc_response_choice_v1` |
+| `--no-line-holds-ends` | a dialogue action whose topic holds lines, none of whose conditions hold, ends as it starts instead of lasting the caller's assumed line seconds | `scene_dialogue_no_line_holds_ends_v1` |
 | `--assume-unlock REF[@S]`, `--assume-item-count HOLDER\|player ITEM N` | the player unlocks a reference; `GetItemCount` of an item on a holder | caller assumptions |
 
 The timeline gains, behind `--timeline-deaths` and `--timeline-sits`, the

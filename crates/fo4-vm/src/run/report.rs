@@ -418,6 +418,12 @@ pub(super) fn count_clock(c: &mut Counts, steps: usize, k: &scene::Clock) {
                 "switch: an action whose start phase was skipped starts with the first later phase it spans that is entered (--scene-actions-skipped-start)",
             );
         }
+        if k.no_line_ends {
+            bump(
+                c,
+                "switch: a dialogue action whose topic holds lines none of whose conditions hold ends as it starts (--no-line-holds-ends)",
+            );
+        }
         if k.npc_responses {
             bump(
                 c,

@@ -169,7 +169,7 @@ pub const XESP_BIT1: &str = "xesp_flag_bit1_not_presence_v1";
 pub const XESP_PROPAGATES: &str = "xesp_script_change_propagates_v1";
 
 /// Every rule above.
-pub const ALL: [&str; 211] = [
+pub const ALL: [&str; 212] = [
     ARITHMETIC,
     COMPARE,
     NOT_COPY_CAST,
@@ -355,6 +355,7 @@ pub const ALL: [&str; 211] = [
     WALK_DOOR_BOUNDS_BLOCK,
     WALK_DOOR_LOCK_RECORD_CLOSED,
     NPC_RESPONSE_CHOICE,
+    NO_LINE_HOLDS_ENDS,
     LOCK_STATE_EVENT,
     GLOBAL_VALUE_UNDETERMINED,
     TERMINAL_FRAGMENT,
@@ -792,6 +793,9 @@ pub const WALK_DOOR_LOCK_RECORD_CLOSED: &str = "walk_door_lock_record_closed_v1"
 /// A scene's response action (kind 5) plays the topic of its four at the
 /// index of the choice the player picks in the scene.
 pub const NPC_RESPONSE_CHOICE: &str = "scene_npc_response_choice_v1";
+/// A scene's dialogue action whose topic holds lines, none of whose
+/// conditions hold, ends as it starts.
+pub const NO_LINE_HOLDS_ENDS: &str = "scene_dialogue_no_line_holds_ends_v1";
 /// A placed reference's lock changing raises `OnLockStateChanged()` on its
 /// own scripts and the aliases holding it.
 pub const LOCK_STATE_EVENT: &str = "vm_lock_state_event_v1";
