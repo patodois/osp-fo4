@@ -262,6 +262,16 @@ person's `pad` lines): a short window session's record replays by `play_run` wit
 `play.txt`'s timing lines. Not yet run with the device: the owner's session, then `--frame-log` holds with the pad
 on and off; the analog speed (a `move` command) is a later, optional step with its own pending rule.
 
+Eighteenth-session fixes: the play preset draws the cast with `--actor-template-bits` and `--actor-leveled-seed 1`
+(owner's order; pending, on `docs/unmeasured.md`), and keeps an actor drawn at the walker clear of it
+(`play_cast_kept_clear_of_walker_v1`); a held door's E confirms `held`; the `Go back` cue follows the walker's
+own trail; each play load prints its parses by kind and its grid squares. Open: the robot at the ruined house
+(its look is an object template, `OBTE`/`OBTS` with object modifications, which nothing reads yet: a layout from a
+public source first), the device pickup over the grate (no cue drawn for a reference left out), the draw-recipe
+memo (plan 26c item 1, after the parse counts), the refusals census and the container rules, the push-out report
+and the dream room's words. The bridge wash is the data's: the walker steps off a rock's edge beside the bridge
+(70 to 80 units) into a wash whose banks are near-vertical steps; nothing is missing from the walking world there.
+
 The opening run is now visible (`spec/timeline.md`), and since the cast step its people appear as people. `quest_run new-game --timeline FILE` writes what the run
 did, second by second, in a neutral versioned text file (track points with their cells, actor places with the
 rule or assumption behind each, references enabled, disabled and moved, scene lines with speaker, seconds and
