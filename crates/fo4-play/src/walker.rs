@@ -1185,6 +1185,47 @@ impl Walker {
         Ok(out)
     }
 
+    /// Whether the straight segment from `from` to `to` meets no collision
+    /// primitive of the walking world as the walker stands in it now (the
+    /// sources shown, the references the run made absent passed through;
+    /// terrain stops it). `None` before the walker has a world. Reads only;
+    /// the window's cue asks it (viewer policy).
+    pub fn clear_line(&self, from: [f64; 3], to: [f64; 3]) -> Option<bool> {
+        let d = [to[0] - from[0], to[1] - from[1], to[2] - from[2]];
+        let len = (d[0] * d[0] + d[1] * d[1] + d[2] * d[2]).sqrt();
+        if len < 1e-6 {
+            return Some(true);
+        }
+        let live = &self.live;
+        let vis = &self.visibility;
+        let hit = if live.follows() {
+            live.pick(None, from, d, len, &|k| {
+                live.decision(k) == Some(Decision::Absent)
+            })
+        } else {
+            pick::met(
+                live.base()?,
+                live.base_refs(),
+                None,
+                from,
+                d,
+                len,
+                &|_| true,
+                &|k| vis.disabled(k),
+                false,
+            )
+            .map(|(h, _)| h)
+        };
+        Some(hit.is_none())
+    }
+
+    /// The eye's height above the feet of the walker's character, when it
+    /// stands in a world.
+    pub fn eye_height(&self) -> Option<f64> {
+        let c = self.character.as_ref()?;
+        Some(c.eye()[2] - c.feet[2])
+    }
+
     /// The eye, the look and what the activation's ray meets from there.
     fn ray(&self) -> Option<([f64; 3], [f64; 3], Option<pick::Hit>)> {
         let c = self.character.as_ref()?;

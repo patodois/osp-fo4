@@ -2158,6 +2158,12 @@ track within 32 units on the ground and 24 in height (`CUE_CUT`, `CUE_CUT_RISE`:
 for the walk's capsule), so a detour the walker came back from is left out and the length falls as the walker follows
 the cue. The nineteenth session's house cue had grown from 245 to 908 units while the person walked to the hall after
 a detour; replayed, the same record's cue says 240 to 371 units and falls to 153 and 72 on the way into the hall.
+After the twentieth session the cue also looks ahead (`play::cue_sighted`): when the straight line at eye height
+from the walker to the place's nearest point meets no collision of the walking world (`Walker::clear_line`), the cue
+points at that point and its length is the straight line; else it points at the latest point of the way back in
+sight (at most 24 tried, `CUE_SIGHT_TRIES`), its length the straight line to it and the way on from it; else the
+way back as before. So the way back does not grow while the walker walks an open line toward the place (the
+twentieth session's house cue said 285 ahead, then 323 and 412 behind, walking into the hall).
 `--draw-cast-keeps-clear` (`play_cast_kept_clear_of_walker_v1`, pending, in the preset) keeps an actor's drawn
 body clear of the eye: the cast build keeps, for each actor, the horizontal box of its draws' vertices by 8-unit
 slices of height above its place (`scene::cast_body`); each frame the slices within 24 units of the eye's height

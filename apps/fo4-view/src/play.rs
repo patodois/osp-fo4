@@ -1571,6 +1571,75 @@ mod enabled {
         feet: [f64; 3],
         inside: impl Fn([f64; 3]) -> bool,
     ) -> Option<([f64; 3], f64)> {
+        let way = cue_way(track, space, feet, inside)?;
+        Some(way_aim(&way, 0))
+    }
+
+    /// The aim [`CUE_AIM_TRAIL`] along `way` from its point `from` and the
+    /// length from there to its end.
+    fn way_aim(way: &[[f64; 3]], from: usize) -> ([f64; 3], f64) {
+        let flat = |a: [f64; 3], b: [f64; 3]| (b[0] - a[0]).hypot(b[1] - a[1]);
+        let (mut len, mut aim) = (0.0, None);
+        for w in way[from..].windows(2) {
+            len += flat(w[0], w[1]);
+            if aim.is_none() && len >= CUE_AIM_TRAIL {
+                aim = Some(w[1]);
+            }
+        }
+        (aim.unwrap_or(way[way.len() - 1]), len)
+    }
+
+    /// The most sight lines one cue tries along the way (viewer policy: a
+    /// bound on the work of one look).
+    pub const CUE_SIGHT_TRIES: usize = 24;
+
+    /// The cue when the walker can see ahead (viewer policy): `to` is the
+    /// place's nearest point, `way` the way back [`cue_way`] gives (from
+    /// the feet to the place), `seen` whether the straight line from the
+    /// feet to a point is open (the caller asks the walking world at eye
+    /// height). The place's point in sight: straight at it, its distance
+    /// on the ground. Else the way's point nearest the place's end in sight
+    /// (of at most [`CUE_SIGHT_TRIES`] spread along it): aimed at directly,
+    /// the length the straight line to it and the way on from it. Else the
+    /// way as [`cue_trail`] gives it. So the way back does not grow while
+    /// the walker walks an open line toward the place.
+    pub fn cue_sighted(
+        feet: [f64; 3],
+        to: [f64; 3],
+        way: &[[f64; 3]],
+        seen: impl Fn([f64; 3]) -> bool,
+    ) -> ([f64; 3], f64, bool) {
+        let flat = |a: [f64; 3], b: [f64; 3]| (b[0] - a[0]).hypot(b[1] - a[1]);
+        if seen(to) {
+            return (to, flat(feet, to), true);
+        }
+        let last = way.len().saturating_sub(1);
+        if last >= 1 {
+            let step = last.div_ceil(CUE_SIGHT_TRIES).max(1);
+            let mut k = last;
+            loop {
+                if seen(way[k]) {
+                    let (_, rest) = way_aim(way, k);
+                    return (way[k], flat(feet, way[k]) + rest, true);
+                }
+                if k <= step {
+                    break;
+                }
+                k -= step;
+            }
+        }
+        let (aim, len) = way_aim(way, 0);
+        (aim, len, false)
+    }
+
+    /// The way back of [`cue_trail`]: the feet, then the trail's points it
+    /// keeps, to the first point inside the place.
+    pub fn cue_way(
+        track: &[fo4_play::Point],
+        space: &FormKey,
+        feet: [f64; 3],
+        inside: impl Fn([f64; 3]) -> bool,
+    ) -> Option<Vec<[f64; 3]>> {
         // The trail back: the feet, then the track newest first, to the
         // first point inside the place.
         let mut pts = vec![feet];
@@ -1602,7 +1671,8 @@ mod enabled {
         let near =
             |a: [f64; 3], b: [f64; 3]| flat(a, b) <= CUE_CUT && (b[2] - a[2]).abs() <= CUE_CUT_RISE;
         let last = pts.len() - 1;
-        let (mut i, mut len, mut aim) = (0, 0.0, None);
+        let mut i = 0;
+        let mut way = vec![pts[0]];
         while i < last {
             let (cx, cy) = cell(pts[i]);
             let mut j = i + 1;
@@ -1623,13 +1693,10 @@ mod enabled {
                     }
                 }
             }
-            len += flat(pts[i], pts[j]);
             i = j;
-            if aim.is_none() && len >= CUE_AIM_TRAIL {
-                aim = Some(pts[i]);
-            }
+            way.push(pts[i]);
         }
-        Some((aim.unwrap_or(pts[last]), len))
+        Some(way)
     }
 
     /// [`cue_line`] with the distance along the trail [`cue_trail`] gave
@@ -2249,9 +2316,24 @@ mod enabled {
                                 // Along the walker's own trail when it
                                 // passed the place in this space.
                                 let log = self.log.borrow();
-                                let line = match cue_trail(&log.track, &space, f, |p| v.contains(p))
-                                {
-                                    Some((aim, len)) => cue_line_trail(f, s.heading, aim, len),
+                                let line = match cue_way(&log.track, &space, f, |p| v.contains(p)) {
+                                    Some(way) => {
+                                        // Straight at the place, or at the
+                                        // way's latest point, in sight at
+                                        // eye height.
+                                        let h = self.walker.eye_height();
+                                        let walker = &self.walker;
+                                        let seen = |p: [f64; 3]| {
+                                            h.is_some_and(|h| {
+                                                walker.clear_line(
+                                                    [f[0], f[1], f[2] + h],
+                                                    [p[0], p[1], p[2] + h],
+                                                ) == Some(true)
+                                            })
+                                        };
+                                        let (aim, len, _) = cue_sighted(f, to, &way, seen);
+                                        cue_line_trail(f, s.heading, aim, len)
+                                    }
                                     None => cue_line(f, s.heading, to),
                                 };
                                 line + &cue_tag(&key)
@@ -3361,6 +3443,36 @@ mod enabled {
             assert!(len2 < len - 90.0, "{len2} after {len}");
             // Aimed back along the corridor, not up the detour.
             assert!(aim[1] < 150.0 && aim[0] < 200.0, "{aim:?}");
+            // In sight: the walker walked from the room's door (0, 100)
+            // east to (300, 100) and turns back west toward the room. The
+            // way back is the corridor; with the room's point in sight the
+            // cue points at it directly and its length is the straight
+            // line, which falls step by step as the walker walks toward it.
+            let way = cue_way(&walk, &space, [300.0, 100.0, 0.0], room).unwrap();
+            let to = [0.0, 100.0, 0.0];
+            let open = |_: [f64; 3]| true;
+            let (aim, len, sighted) = cue_sighted([300.0, 100.0, 0.0], to, &way, open);
+            assert!(sighted && aim == to && (len - 300.0).abs() < 1e-9);
+            let mut last = len;
+            for x in [260.0, 220.0, 180.0, 140.0] {
+                let (_, l, _) = cue_sighted([x, 100.0, 0.0], to, &way, open);
+                assert!(l < last, "{l} after {last}");
+                last = l;
+            }
+            // The place hidden (a wall at x < 100), a way point east of the
+            // wall in sight: aimed at the latest such point, the length the
+            // straight line to it and the way on from it.
+            let east = |p: [f64; 3]| p[0] >= 100.0;
+            let (aim, len, sighted) = cue_sighted([300.0, 100.0, 0.0], to, &way, east);
+            assert!(sighted && aim[0] >= 100.0 && aim[0] < 130.0, "{aim:?}");
+            assert!(len < 330.0, "{len}");
+            // Nothing in sight: the way as cue_trail gives it.
+            let (aim, len, sighted) = cue_sighted([300.0, 100.0, 0.0], to, &way, |_| false);
+            assert_eq!(
+                (aim, len),
+                cue_trail(&walk, &space, [300.0, 100.0, 0.0], room).unwrap()
+            );
+            assert!(!sighted);
             // A door's turn carries no line.
             assert_eq!(
                 confirm_text(Some("opened"), "used", None, Some("Hi.")),
