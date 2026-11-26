@@ -537,6 +537,7 @@ fn cast_with(
     // them on the platforms, `FO4_VIEW_PLAY_WATCH` writes them).
     gpu.cast_ride = s.drawing.cast_on_platforms;
     gpu.cast_keep = s.drawing.cast_keeps_part;
+    gpu.cast_clear = s.drawing.cast_keeps_clear;
     gpu.cast_space = Some(tl::scene_space(loader.plugins, &scene));
     {
         let tagged = d

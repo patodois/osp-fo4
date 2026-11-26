@@ -559,6 +559,11 @@ pub struct Drawing {
     /// `--draw-cast-keeps-its-part` (`play_cast_keeps_its_part_v1`; with
     /// `--draw-cast-on-platforms`): each actor rides the part it stands on.
     pub cast_keeps_part: bool,
+    /// `--draw-cast-keeps-clear` (`play_cast_kept_clear_of_walker_v1`; the
+    /// scripted play window's cast): an actor drawn within two characters'
+    /// capsule radii of the walker's feet is drawn moved straight away
+    /// from them out to that distance (`crate::scene::cast_clear_offset`).
+    pub cast_keeps_clear: bool,
     /// The scripted play window with `--exposure-eye`: the exposure
     /// measured per view instead of once per load (`scene::ViewExposure`;
     /// plumbing of the existing switch, set by the parser).
@@ -1058,6 +1063,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             "--draw-platform-nearest-part" => drawing.platform_nearest_part = true,
             "--draw-cast-on-platforms" => drawing.cast_on_platforms = true,
             "--draw-cast-keeps-its-part" => drawing.cast_keeps_part = true,
+            "--draw-cast-keeps-clear" => drawing.cast_keeps_clear = true,
             "--exposure-eye-visible" => drawing.exposure_visible = true,
             "--timeline-dead-lying" | "--timeline-dead-left-out" => {
                 if dead != fo4_scene::timeline::Dead::Standing {
@@ -1441,6 +1447,9 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
     }
     if scene.drawing.world_persistent && around == 0 {
         return Err("--draw-world-persistent joins the persistent references of the loaded grid squares: it needs --around".into());
+    }
+    if scene.drawing.cast_keeps_clear && scene.play_cast.is_none() {
+        return Err("--draw-cast-keeps-clear moves the play cast's actors clear of the walker: it needs --timeline-cast and --play-run".into());
     }
     if scene.drawing.cast_keeps_part && !scene.drawing.cast_on_platforms {
         return Err("--draw-cast-keeps-its-part keeps the part --draw-cast-on-platforms stands an actor on: it needs --draw-cast-on-platforms".into());

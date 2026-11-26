@@ -998,6 +998,8 @@ struct CastEntity {
     ride: bool,
     /// `--draw-cast-keeps-its-part`.
     keep: bool,
+    /// `--draw-cast-keeps-clear`.
+    clear: bool,
     /// The space of the cell the cast was built for.
     space: Option<fo4_plugin::FormKey>,
 }
@@ -1054,6 +1056,7 @@ fn spawn_cast(world: &mut World) {
             base: i.translation,
             ride: scene.cast_ride,
             keep: scene.cast_keep,
+            clear: scene.cast_clear,
             space: scene.cast_space.clone(),
         });
     }
@@ -1854,6 +1857,9 @@ struct PlayDrawn {
         ([f64; 3], f64, Option<crate::scene::PartKey>),
     >,
     applied: Option<u64>,
+    /// `--draw-cast-keeps-clear`: the actors drawn moved clear of the
+    /// walker the frame before ([`clear_cast`]).
+    cleared: std::collections::BTreeSet<fo4_plugin::FormKey>,
     spawned: std::collections::HashMap<Entity, Vec3>,
     /// The scripted run: frames to wait before a loaded cell's upload is
     /// read (its scene resource arrives through the commands), with the
@@ -2027,6 +2033,45 @@ fn ride_cast<F: bevy::ecs::query::QueryFilter>(
             t.translation = want;
         }
     }
+}
+
+/// Each frame of the scripted play window with `--draw-cast-keeps-clear`
+/// (`play_cast_kept_clear_of_walker_v1`): each actor of the cast is drawn
+/// moved horizontally by [`crate::scene::cast_clear_offset`] of its place
+/// and the walker's feet (none when it stands clear), over whatever height
+/// `ride_cast` gave it. `cleared` holds the actors moved the frame before,
+/// for one log line each time an actor starts being moved.
+#[cfg(feature = "script-event")]
+fn clear_cast<F: bevy::ecs::query::QueryFilter>(
+    seen: &crate::play::Seen,
+    cleared: &mut std::collections::BTreeSet<fo4_plugin::FormKey>,
+    casts: &mut Query<(Entity, &CastEntity, &mut Transform), F>,
+) {
+    let mut now = std::collections::BTreeSet::new();
+    for (_, c, mut t) in casts.iter_mut() {
+        let (Some((k, place)), true) = (&c.place, c.clear) else {
+            continue;
+        };
+        let o = seen
+            .feet
+            .and_then(|f| crate::scene::cast_clear_offset(*place, f))
+            .unwrap_or([0.0; 2]);
+        if o != [0.0; 2] && now.insert(k.clone()) && !cleared.contains(k) {
+            println!(
+                "play: cast {} kept clear of the walker: drawn {:.1} units from its place at {:.3} s of the run (play_cast_kept_clear_of_walker_v1)",
+                fo4_scene::timeline::key_text(k),
+                o[0].hypot(o[1]),
+                seen.t
+            );
+        }
+        // Game +X is Bevy +X, game +Y is Bevy -Z (`coords`).
+        let (x, z) = (c.base.x + o[0] as f32, c.base.z - o[1] as f32);
+        if t.translation.x != x || t.translation.z != z {
+            t.translation.x = x;
+            t.translation.z = z;
+        }
+    }
+    *cleared = now;
 }
 
 /// `FO4_VIEW_PLAY_WATCH=FILE` (measurement only, off by default): the
@@ -3349,6 +3394,7 @@ fn play_scripted(
         if !seen.platforms.is_empty() {
             ride_cast(&seen, &mut drawn.feet, &mut casts);
         }
+        clear_cast(&seen, &mut drawn.cleared, &mut casts);
         if let Some(w) = watch.as_deref_mut() {
             watch_play(&seen, w, &casts, doors.as_deref());
         }

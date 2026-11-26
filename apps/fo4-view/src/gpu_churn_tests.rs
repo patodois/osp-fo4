@@ -531,6 +531,7 @@ fn exact_depth_ties_resolve_by_list_order_in_every_run() {
             cast_space: None,
             cast_ride: false,
             cast_keep: false,
+            cast_clear: false,
         }
     };
     let camera = fo4_scene::camera::look_at(

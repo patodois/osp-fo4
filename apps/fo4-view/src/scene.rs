@@ -593,6 +593,12 @@ pub struct GpuScene {
     /// stands on ([`stand_on_platform_part`]).
     #[cfg_attr(not(feature = "script-event"), allow(dead_code))]
     pub cast_keep: bool,
+    /// A play cast drawn with `--draw-cast-keeps-clear`
+    /// (`play_cast_kept_clear_of_walker_v1`): an actor whose place is
+    /// within [`cast_clear_offset`]'s reach of the walker is drawn moved
+    /// out to it.
+    #[cfg_attr(not(feature = "script-event"), allow(dead_code))]
+    pub cast_clear: bool,
     /// A play cast: the space of the cell it was built for (the cell's
     /// worldspace, or the interior cell itself); only the named platforms
     /// placed in it are stood on ([`stand_on_platform_part`]).
@@ -685,6 +691,34 @@ pub fn parts_under(
 #[cfg(feature = "script-event")]
 fn in_space(p: &fo4_play::elevator::Platform, space: Option<&fo4_plugin::FormKey>) -> bool {
     space.is_none_or(|s| fo4_scene::timeline::norm(s) == fo4_scene::timeline::norm(&p.space))
+}
+
+/// `play_cast_kept_clear_of_walker_v1` (`--draw-cast-keeps-clear`): how
+/// far the play window moves an actor drawn at `place` horizontally, in
+/// game X and Y, so that it stands clear of the walker whose feet are at
+/// `feet`: straight away from the feet out to two characters' capsule
+/// radii (the walk's radius for both, `walk_capsule_radius_v1`'s
+/// placeholder), when the place is nearer than that and within a
+/// capsule's height above or below the feet; `None` otherwise. A place on
+/// the feet moves along +X. The run's place is unchanged.
+#[cfg_attr(not(feature = "script-event"), allow(dead_code))]
+pub fn cast_clear_offset(place: [f64; 3], feet: [f64; 3]) -> Option<[f64; 2]> {
+    let p = fo4_walk::Params::PROVISIONAL;
+    let reach = 2.0 * p.radius;
+    if (place[2] - feet[2]).abs() >= p.height {
+        return None;
+    }
+    let (dx, dy) = (place[0] - feet[0], place[1] - feet[1]);
+    let d = dx.hypot(dy);
+    if d >= reach {
+        return None;
+    }
+    let (ux, uy) = if d > 1e-6 {
+        (dx / d, dy / d)
+    } else {
+        (1.0, 0.0)
+    };
+    Some([ux * (reach - d), uy * (reach - d)])
 }
 
 /// Where an actor stands (`play_cast_stands_on_platform_v1`, as
@@ -1544,6 +1578,22 @@ mod tests {
     use super::*;
     use fo4_render::{Draw, Mesh, Mip, Sidedness, Texture, Vertex};
     use fo4_scene::transform::Transform;
+
+    #[test]
+    fn an_actor_near_the_walker_is_drawn_clear_of_it() {
+        // `play_cast_kept_clear_of_walker_v1`: two capsule radii (32 units
+        // with the walk's placeholder radius 16), straight away from the
+        // feet, only within a capsule's height.
+        let feet = [100.0, 200.0, 50.0];
+        let o = cast_clear_offset([105.6, 200.0, 50.0], feet).unwrap();
+        assert!((o[0] - 26.4).abs() < 1e-9 && o[1] == 0.0, "{o:?}");
+        let o = cast_clear_offset([100.0, 190.0, 80.0], feet).unwrap();
+        assert!(o[0] == 0.0 && (o[1] + 22.0).abs() < 1e-9, "{o:?}");
+        assert_eq!(cast_clear_offset(feet, feet), Some([32.0, 0.0]));
+        assert_eq!(cast_clear_offset([132.0, 200.0, 50.0], feet), None);
+        assert_eq!(cast_clear_offset([110.0, 200.0, 178.0], feet), None);
+        assert!(cast_clear_offset([110.0, 200.0, 177.0], feet).is_some());
+    }
 
     #[test]
     fn a_leafs_pose_is_the_one_nearer_its_boxes_while_one_stands() {

@@ -185,6 +185,10 @@
 # closing over the shaft above it not taken instead
 # (play_cast_keeps_its_part_v1): the crowd rides the deck down.
 --draw-cast-keeps-its-part
+# An actor of the run drawn nearer the walker than two capsule radii is
+# drawn moved clear of it (play_cast_kept_clear_of_walker_v1): the eye
+# does not enter the checkpoint crowd's heads. The run is unchanged.
+--draw-cast-keeps-clear
 # The worn armours' slots decide what of a head is hidden
 # (npc_head_hidden_by_head_slot_v1): the checkpoint's helmets keep faces.
 --actor-head-slots
@@ -197,3 +201,12 @@
 # (actor_texture_missing_unread_slot_v1): the vault's security staff, whose
 # helmet visor's mask texture is in no archive, are drawn.
 --actor-unread-texture-slots
+# The cast's appearance (owner's order; our assumptions, not read from the
+# running game): a templated character takes its traits, outfit and
+# keywords through the template slots of bits 0, 8 and 12
+# (npc_template_bits_traits_inventory_v1), and each leveled list its chain
+# reaches yields the entry seed 1 picks (npc_leveled_entry_seeded_pick_v1):
+# looks the seed chose, not the game's.
+--actor-template-bits
+--actor-leveled-seed
+1
