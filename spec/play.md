@@ -2148,6 +2148,67 @@ it so is a photograph at that eye. The distant geometry at outdoor boundaries wa
 (the directional ambient cube and its scale, the directional fade, the far fog colour, power and clip, the image
 space). Nothing lights differently.
 
+### The lift's crowd, the open-looking doorways, the crib, the furniture and the remains (the seventeenth-session step)
+
+Two more person sessions reached the surface; session B went on to the house's yard. What they met, from data:
+
+**The crowd left at the top of the first lift (session B).** At the cut into the vault's interior the run moves the
+spouse and the evacuees to a marker above the interior deck (z 1,507.9) and the play cast stands each on the highest
+named platform part under it within a character's height. The window's platforms are every named one, of every
+space: the vault exit's lift is placed in another interior cell whose coordinates overlap, and before its sequence
+starts (800 s) its deck stands at its top, 1,453.8. Session B reached the cut at 644.9 s, before that, so the crowd
+stood on the other cell's deck and kept it; session A reached it at 1,281 s, after it, and rode. A play cast now
+stands only on platforms placed in the space of the cell it was built for (a viewer fix, no rule): replayed in the
+window, B's crowd rides the deck down, 121.8 units from the walker at the bottom. Each change of the part an actor
+stands on is logged with the parts under it.
+
+**Doorways that look open while the prompt says open.** The house's pocket doors and the ruined front doorway on the
+surface store ONAM (published as open by default) and their models have no frame, so
+`play_door_collision_open_pose_v1` left them out of the walking world, the held doors' reading never held them, and
+the window, which shows a door only by that reading, drew no leaf: the doorway looked open, the prompt read open and E
+changed nothing. `--play-door-stored-open` (`play_door_stored_open_v1`) makes such a door open from load (drawn at its
+Open sequence's last key, prompt close, E closes it and opens it again), and a door the reading never held carries
+"(not drawn)". The seventeenth sessions' persons pressed E at such doors when it did nothing; with the switch those
+presses close them, so their records replay their own tracks only without it.
+
+**E on the front door during the evacuation.** `--play-door-toggle-blocked` (`play_door_toggle_blocked_unchanged_v1`)
+leaves a door the reading shows open as it stands when the run's scripts last blocked its activation, and its prompt
+is the name alone. The case that asked for it is not such a door: at the evacuation's stages the scripts open the
+front door and unblock it (`BlockActivation(false, false)` after `SetOpen(true)`), so a person's E closes it under the
+toggle and a second E opens it again; the sixteenth session's record replays as before.
+
+**The floating infant.** The occupant stands 48 units above the nursery's floor at its own stored place. The crib is a
+persistent activator 5.7 units away at floor height, in the worldspace's persistent cell, which no load read (the play
+crib furniture the run seats the player in is a persistent furniture whose model is an invisible marker). With
+`--draw-world-persistent` (`world_persistent_refs_drawn_in_square_v1`, 107 persistent references joined at the house)
+it joins the scene, refused for its animation (a controller manager, its sequences, a behaviour graph) and its
+reference's XLRT; `--draw-activator-parts` (`acti_unmoved_parts_drawn_v1`) draws it by the shapes no controller
+reaches. The infant lies in it. The prompt's "(not drawn)" now also follows what a play cast's build draws.
+
+**The house's furniture.** Its 14 furniture placements were refused for FURN's PNAM, FNAM, MNAM, SNAM and WBDT alone
+besides blockers already under rules: `--draw-furniture-fields` (`furn_fields_render_unchanged_v1`) draws them.
+
+**Heads.** A head part with conditions is evaluated by the run's evaluator against the stages the run's timeline has
+set by the frame's second (`--actor-head-conditions`, `npc_head_part_conditions_run_stages_v1`): a list that holds
+draws the part, one that does not leaves that part out, an undetermined one keeps the head refused.
+
+**Remains and the standing skeleton.** The checkpoint's skeletons and the remains beside the exit's device are
+skinned ragdoll models (a node per bone with a collision object and a physics system) whose stored pose is upright
+(object bounds 131 units tall); the window drew them so under their references' rotations, which for the exit's
+remains turns the figure about 177 degrees about x, so it hangs under the grating. Every such reference stores XRGD
+(ragdoll data, not read): `--skinned-models-ragdoll-left-out` (`refr_ragdoll_pose_unread_left_out_v1`) leaves them out
+instead of drawing a pose the game does not show. The tuft over the house frontage was not identified: no placement
+within 2,500 units of the eye, among the cells' and the worldspace's persistent references, has a hanging plant's
+editor id above the yard.
+
+**The go-back cue.** It names only places within 2,048 units of the feet (measured to the volume's nearest point),
+not a volume the feet stand in nor one whose hold changed without an event, and nothing while the window loads; the
+watch log's cue line carries the volume's key. Session A's 186-unit cue in the house stays; the 4,601-unit cue on the
+hill is gone.
+
+**The console's confirmation.** A press that changed a stage or scene waited up to ten seconds for a subtitle while
+the previous confirmation stayed up; it is now shown at once when the target's scripts name what they activated.
+
 ## What the play mode does not do yet
 
 - The elevators ride only those the caller names (`--play-elevator`), headless and in the scripted window;
