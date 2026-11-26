@@ -700,6 +700,7 @@ pub fn squares_line(a: &fo4_scene::grid::Around) -> String {
 /// The models, materials and textures a load parsed (`after` less
 /// `before`, [`fo4_scene::assets::Assets::parses`]): one line, a
 /// measurement of where the draw list's time goes.
+#[cfg_attr(not(feature = "script-event"), allow(dead_code))]
 pub fn parses_line(before: [(u64, f64); 3], after: [(u64, f64); 3]) -> String {
     let names = ["models", "materials", "textures"];
     names
@@ -1848,7 +1849,10 @@ mod tests {
     #[test]
     fn a_load_names_its_parses_and_its_squares() {
         assert_eq!(
-            parses_line([(1, 0.5), (2, 0.0), (0, 0.0)], [(4, 1.25), (2, 0.0), (7, 0.5)]),
+            parses_line(
+                [(1, 0.5), (2, 0.0), (0, 0.0)],
+                [(4, 1.25), (2, 0.0), (7, 0.5)]
+            ),
             "models 3 in 0.75 s, materials 0 in 0.00 s, textures 7 in 0.50 s"
         );
         let key = |id: u32| fo4_plugin::FormKey {
