@@ -530,7 +530,7 @@ impl Character {
             run: true,
         };
         let per_tick = c.params.run_speed.max(c.params.walk_speed) * WALK_PROBE_TICK;
-        if !(per_tick > 0.0) {
+        if per_tick.is_nan() || per_tick <= 0.0 {
             return false;
         }
         let floor = from[2].min(to[2]) - c.params.height;

@@ -1414,6 +1414,11 @@ mod enabled {
         }
     }
 
+    /// The play thread's answer for one actor's place (`Seen::ground`):
+    /// the place asked, and the height and the upward part of the normal
+    /// of the highest surface under it (`None`: nothing there).
+    pub type GroundAnswer = ([f64; 3], Option<(f64, f64)>);
+
     /// Where the scripted walker stands as the window draws it.
     #[derive(Debug, Clone, Default)]
     pub struct Seen {
@@ -1475,7 +1480,7 @@ mod enabled {
         /// or below it raised by `crate::scene::SETTLE_UP` (its height and
         /// the upward part of its normal; `None`: nothing there).
         pub ground_asked: BTreeMap<FormKey, [f64; 3]>,
-        pub ground: BTreeMap<FormKey, ([f64; 3], Option<(f64, f64)>)>,
+        pub ground: BTreeMap<FormKey, GroundAnswer>,
     }
 
     /// The scripted walker as the run's driver, held back by the window's

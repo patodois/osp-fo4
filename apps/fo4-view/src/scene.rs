@@ -655,7 +655,7 @@ pub fn settles_from(source: &str, standing: bool) -> bool {
 pub fn settle_z(place: [f64; 3], hit: Option<(f64, f64)>) -> Option<f64> {
     let (z, up) = hit?;
     let d = z - place[2];
-    (d <= SETTLE_UP + 1e-9 && d >= -SETTLE_DOWN && up >= SETTLE_MIN_UP && z.is_finite())
+    ((-SETTLE_DOWN..=SETTLE_UP + 1e-9).contains(&d) && up >= SETTLE_MIN_UP && z.is_finite())
         .then_some(z)
 }
 
