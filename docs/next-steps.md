@@ -283,6 +283,24 @@ boundary at one standing place, reproduced in a replay; no fog or volume placeme
 house, actors give no E prompt (they stand in no pick world), the draw-recipe memo (plan 26c item 1), the robot's
 object template, the device pickup cue, the refusals census, the push-out report, the dream room's words.
 
+Twentieth-session fixes: `--actor-head-race-fill` (`npc_head_parts_race_fill_kinds_v1`, pending, in the preset)
+gives an actor that lists its own head parts its race's parts of the types its list lacks, never the severed-head
+type 7 (a capped child of the checkpoint listed only a mouth and a hair and drew a mouth under its cap); the cast log's
+`faces:` line counts actors with a head, those with no face part and those of them wearing headgear (0 of 41 at the
+checkpoint after the fix). The house cue points straight at the place, or at the way back's latest point in sight
+at eye height in the walking world (`Walker::clear_line`), so it no longer says `behind` while the hall is open. A
+`Use NAME (not drawn): N units SIDE, H below the eye` cue names the nearest unmet target of the person's E after 30
+run seconds without a quest change. Found, not fixed: the white edge on the new road is a distant-cloud card (an
+effect surface with Soft_Effect and Soft Falloff Depth 2048, falloff and vertex alpha) whose plane passes 15 units
+from the eye; the soft depth fade is left out (`effect_soft_lighting_left_out_v1`) because the window's blended pass
+has no scene depth (a depth prepass would need our own alpha-tested prepass fragment, since alpha-tested surfaces
+must not write their whole quads). The floating woman at the checkpoint stands at her stored placement, 19 units
+above the terrain on a 27-degree slope (the game's settling of a character onto the ground is not modelled). The
+overlapping passengers on the descent deck are five actors the run gives one and the same place. The west house's
+rear threshold is a 35-unit rise from the terrain to the foundation with no step collision, above the walk's
+20-unit placeholder (`walk_step_height_v1`). Open: the soft depth fade, the draw-recipe memo (plan 26c item 1),
+actors as pick targets, the robot's object template, the refusals census, the push-out report, the dream room.
+
 The opening run is now visible (`spec/timeline.md`), and since the cast step its people appear as people. `quest_run new-game --timeline FILE` writes what the run
 did, second by second, in a neutral versioned text file (track points with their cells, actor places with the
 rule or assumption behind each, references enabled, disabled and moved, scene lines with speaker, seconds and
