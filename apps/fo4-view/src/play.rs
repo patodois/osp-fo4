@@ -1673,10 +1673,11 @@ mod enabled {
                             )
                         });
                     let open = doors.get(&fo4_scene::timeline::norm(&k)) == Some(&false);
+                    let prompt = prompt_posed(*kind, name.as_deref(), open);
                     (
                         format!("{label} at {:.0} units", h.distance),
                         *usable,
-                        Some(prompt_posed(*kind, name.as_deref(), open)),
+                        Some(prompt_cued(prompt, crate::load::not_drawn(&k))),
                     )
                 }
                 None => (
@@ -1713,6 +1714,17 @@ mod enabled {
             (Some(n), _) => format!("{verb} {n}"),
             (None, Some(k)) if opens => format!("{verb} {}", String::from_utf8_lossy(&k)),
             (None, _) => verb.to_string(),
+        }
+    }
+
+    /// The prompt with the cue for a target the window does not draw
+    /// (viewer policy: the person aims at nothing visible, so the prompt
+    /// says so; what E does is unchanged).
+    pub fn prompt_cued(prompt: String, not_drawn: bool) -> String {
+        if not_drawn {
+            format!("{prompt} (not drawn)")
+        } else {
+            prompt
         }
     }
 
@@ -2595,6 +2607,11 @@ mod enabled {
                 "use Console"
             );
             assert_eq!(prompt_posed(Some(*b"FURN"), None, false), "use");
+            assert_eq!(
+                prompt_cued("use Skeleton".into(), true),
+                "use Skeleton (not drawn)"
+            );
+            assert_eq!(prompt_cued("use Skeleton".into(), false), "use Skeleton");
             assert_eq!(prompt_posed(None, None, false), "use");
             // A door drawn open reads close; the pose changes no other type.
             assert_eq!(

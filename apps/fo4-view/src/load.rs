@@ -1048,6 +1048,11 @@ pub fn cell<'s>(
     } else {
         fo4_render::draw::build(&scene, &loader, limits, options, &budget)?
     };
+    // The placements the build left out, for the prompt's cue
+    // (`not_drawn`); with FO4_VIEW_OMITTED=FILE (measurement only) each
+    // with its causes, appended per load.
+    note_not_drawn(&build);
+    omitted_lines(&scene, &build);
     // --draw-static-parts: the statics drawn by their unmoved parts and
     // what the build left out of them.
     if drawing.static_parts {
@@ -1453,6 +1458,92 @@ pub fn cell<'s>(
 /// `--draw-static-parts`: one log line for the statics a build draws by
 /// their unmoved parts (`static_unmoved_parts_drawn_v1`): how many, their
 /// draws, and the parts left out by code.
+/// The references a load's draw list left out, as `norm` keys, over every
+/// load of the window (viewer policy: the E prompt says when what it names
+/// is not drawn, `crate::play::prompt_cued`).
+static NOT_DRAWN: std::sync::Mutex<std::collections::BTreeSet<String>> =
+    std::sync::Mutex::new(std::collections::BTreeSet::new());
+
+fn note_not_drawn(build: &fo4_render::draw::Build) {
+    if let Ok(mut set) = NOT_DRAWN.lock() {
+        for o in &build.omitted {
+            set.insert(fo4_scene::timeline::key_text(&fo4_scene::timeline::norm(
+                &o.reference,
+            )));
+        }
+        // A reference some load drew is drawn (an instance the same load
+        // also omitted under another index is not).
+        for i in &build.instances {
+            let k = fo4_scene::timeline::key_text(&fo4_scene::timeline::norm(&i.reference));
+            if !build.omitted.iter().any(|o| o.instance == i.index) {
+                set.remove(&k);
+            }
+        }
+    }
+}
+
+/// Whether the window's loads left this reference out of their draw lists.
+#[cfg_attr(not(feature = "script-event"), allow(dead_code))]
+pub(crate) fn not_drawn(reference: &fo4_plugin::FormKey) -> bool {
+    NOT_DRAWN.lock().is_ok_and(|set| {
+        set.contains(&fo4_scene::timeline::key_text(&fo4_scene::timeline::norm(
+            reference,
+        )))
+    })
+}
+
+/// `FO4_VIEW_OMITTED=FILE` (measurement only, off by default): appends
+/// one line per placement the build left out: the cell, the reference, its
+/// base and the base's record type, its stored place, and each cause's
+/// code, expected and found, tab separated.
+fn omitted_lines(scene: &fo4_scene::Scene, build: &fo4_render::draw::Build) {
+    let Some(path) = std::env::var_os("FO4_VIEW_OMITTED") else {
+        return;
+    };
+    let cell = &scene.cell.key;
+    let mut text = String::new();
+    for o in &build.omitted {
+        let placed = scene.instances.iter().find(|i| {
+            fo4_scene::timeline::norm(&i.reference.key) == fo4_scene::timeline::norm(&o.reference)
+        });
+        let base = placed
+            .and_then(|i| i.base.as_ref())
+            .map_or("-".to_string(), |b| {
+                format!(
+                    "{} {}",
+                    fo4_scene::timeline::key_text(&b.key),
+                    String::from_utf8_lossy(&b.record.signature)
+                )
+            });
+        let at = placed
+            .and_then(|i| i.reference.data.transform)
+            .map_or("-".to_string(), |t| {
+                format!("{:.1},{:.1},{:.1}", t[0], t[1], t[2])
+            });
+        let causes: Vec<String> = o
+            .causes
+            .iter()
+            .map(|e| format!("{}: {} / {}", e.code, e.expected, e.found))
+            .collect();
+        text.push_str(&format!(
+            "{}\t{}\t{}\t{}\t{}\n",
+            fo4_scene::timeline::key_text(cell),
+            fo4_scene::timeline::key_text(&o.reference),
+            base,
+            at,
+            causes.join(" | ")
+        ));
+    }
+    use std::io::Write;
+    let file = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&path);
+    if let Err(e) = file.and_then(|mut f| f.write_all(text.as_bytes())) {
+        eprintln!("play: FO4_VIEW_OMITTED: {e}");
+    }
+}
+
 fn static_parts_line(build: &fo4_render::draw::Build) {
     println!("{}", static_parts_text(build));
 }
