@@ -318,6 +318,19 @@ pub fn script_condition(e: &Error) -> bool {
     e.code == Code::RuntimeCondition.name() && e.found == "VMAD"
 }
 
+/// The activator fields [`activator_field`] names.
+pub const ACTIVATOR_FIELDS: [&str; 3] = ["PNAM", "FNAM", "ATTX"];
+
+/// Whether `e` is the record blocker of an activator's (`ACTI`) unread
+/// [`ACTIVATOR_FIELDS`] (xEdit's published names: marker colour, flags,
+/// activate text override).
+pub fn activator_field(e: &Error) -> bool {
+    let mut parts = e.found.split('.');
+    e.code == Code::UninterpretedVisualSubrecord.name()
+        && parts.next() == Some("ACTI")
+        && parts.next().is_some_and(|f| ACTIVATOR_FIELDS.contains(&f))
+}
+
 /// Whether `e` is the record blocker of a reference's unread `XALP`.
 pub fn reference_alpha(e: &Error) -> bool {
     e.code == Code::UninterpretedVisualSubrecord.name() && e.found.starts_with("REFR.XALP.")

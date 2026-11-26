@@ -23,7 +23,7 @@ usage:
              [the light switches of --headless]]]
            [--draw-child-flag-agrees] [--draw-platforms] [--draw-static-fields]
            [--draw-static-leaves] [--draw-platform-skins] [--draw-reference-alpha]
-           [--draw-scripted-as-stored]
+           [--draw-scripted-as-stored] [--draw-activator-fields]
            [--draw-static-parts] [--draw-cast-on-platforms [--draw-cast-keeps-its-part]]
       Window with a free-fly camera: W/A/S/D move, Shift moves faster, hold the
       left mouse button and move the mouse to look, R returns to the start pose.
@@ -226,7 +226,10 @@ usage:
       --draw-scripted-as-stored (off by default; any window or frame) draws
       a reference whose scripts (VMAD) kept it out as its model stores it,
       what the scripts change left to the run (pending rule
-      refr_script_render_as_stored_v1).
+      refr_script_render_as_stored_v1). --draw-activator-fields (off by
+      default) draws an activator whose unread PNAM, FNAM or ATTX kept it
+      out as its model stores it (pending rule
+      acti_fields_render_unchanged_v1).
       --draw-static-leaves (off by default; any window or frame) draws a
       static whose model's one controller, free-running and clamped, turns
       a node with no collision under it from its stored pose and back (a
@@ -491,6 +494,10 @@ pub struct Drawing {
     /// loader's render readiness sets a reference's scripts' blocker aside
     /// (`Loader::set_render_scripted`).
     pub scripted: bool,
+    /// `--draw-activator-fields` (`acti_fields_render_unchanged_v1`): the
+    /// loader's render readiness sets an activator's unread `PNAM`, `FNAM`
+    /// and `ATTX` aside (`Loader::set_render_activator_fields`).
+    pub activator_fields: bool,
     /// `--draw-static-leaves` (`play_static_leaf_two_pose_v1`): the
     /// loader's render readiness sets a leaf model's animation blockers
     /// aside on a static (`Loader::set_render_static_leaves`); the scripted
@@ -989,6 +996,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             "--draw-static-fields" => drawing.static_fields = true,
             "--draw-reference-alpha" => drawing.reference_alpha = true,
             "--draw-scripted-as-stored" => drawing.scripted = true,
+            "--draw-activator-fields" => drawing.activator_fields = true,
             "--draw-static-leaves" => drawing.static_leaves = true,
             "--draw-static-parts" => drawing.static_parts = true,
             "--draw-platform-skins" => drawing.platform_skins = true,
@@ -1722,7 +1730,7 @@ mod tests {
         assert!(p.switches.door_open && p.switches.door_toggle);
         assert!(p.switches.reference_alpha && scene.drawing.reference_alpha);
         assert!(scene.drawing.static_parts);
-        assert!(scene.drawing.scripted);
+        assert!(scene.drawing.scripted && scene.drawing.activator_fields);
         assert!(p.switches.door_open);
         assert!(
             scene.drawing.static_fields
@@ -1954,6 +1962,13 @@ mod tests {
             panic!()
         };
         assert!(scripted.drawing.scripted && !scripted.drawing.reference_alpha);
+        assert!(!scene.drawing.activator_fields && !scripted.drawing.activator_fields);
+        let Command::Window { scene: acti, .. } =
+            parse(&args(&format!("{base} --draw-activator-fields"))).unwrap()
+        else {
+            panic!()
+        };
+        assert!(acti.drawing.activator_fields && !acti.drawing.scripted);
         for (flag, fields, leaves) in [
             ("--draw-static-fields", true, false),
             ("--draw-static-leaves", false, true),

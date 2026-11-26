@@ -436,3 +436,28 @@ fn a_statics_reference_fields_are_named_by_field_code_and_base() {
     }
     .any());
 }
+
+#[test]
+fn an_activators_fields_and_a_references_scripts_are_named_exactly() {
+    for f in ["PNAM", "FNAM", "ATTX"] {
+        assert!(activator_field(&e(
+            "UninterpretedVisualSubrecord",
+            &format!("ACTI.{f}.layout_not_established")
+        )));
+    }
+    // Another field, another record type, another code: not these.
+    assert!(!activator_field(&e(
+        "UninterpretedVisualSubrecord",
+        "ACTI.RADR.layout_not_established"
+    )));
+    assert!(!activator_field(&e(
+        "UninterpretedVisualSubrecord",
+        "FURN.FNAM.layout_not_established"
+    )));
+    assert!(!activator_field(&e(
+        "UnsupportedUsedFieldLayout",
+        "ACTI.FNAM.x"
+    )));
+    assert!(script_condition(&e("RuntimeCondition", "VMAD")));
+    assert!(!script_condition(&e("RuntimeCondition", "CTDA")));
+}

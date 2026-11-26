@@ -203,6 +203,7 @@ pub struct Loader<'a> {
     render_static_leaves: bool,
     render_reference_alpha: bool,
     render_scripted: bool,
+    render_activator_fields: bool,
     render_static_parts: bool,
 }
 impl<'a> Loader<'a> {
@@ -281,6 +282,17 @@ impl<'a> Loader<'a> {
     pub fn render_scripted(&self) -> bool {
         self.render_scripted
     }
+    /// Render readiness of a reference whose base is an activator (`ACTI`):
+    /// the record blockers of its unread `PNAM`, `FNAM` and `ATTX`
+    /// ([`readiness::activator_field`]) are set aside under
+    /// `acti_fields_render_unchanged_v1` ([`hypotheses::ACTIVATOR_FIELDS_RENDER`]):
+    /// drawn as its model stores it. Off by default.
+    pub fn set_render_activator_fields(&mut self, on: bool) {
+        self.render_activator_fields = on;
+    }
+    pub fn render_activator_fields(&self) -> bool {
+        self.render_activator_fields
+    }
     /// Render readiness of a reference whose base is a static and whose
     /// model is a leaf ([`leaf::read`]): the animation blockers of its one
     /// transform controller ([`leaf::aside`]) are set aside under
@@ -333,6 +345,7 @@ impl<'a> Loader<'a> {
             render_static_leaves: false,
             render_reference_alpha: false,
             render_scripted: false,
+            render_activator_fields: false,
             render_static_parts: false,
         }
     }
@@ -742,6 +755,10 @@ impl<'a> Loader<'a> {
             && self.leaf_model(base.as_ref(), b)?;
         let alpha = self.render_reference_alpha;
         let scripted = self.render_scripted;
+        let activator = self.render_activator_fields
+            && base
+                .as_ref()
+                .is_some_and(|v| v.record.signature == *b"ACTI");
         let parts = self.render_static_parts
             && on_static
             && blockers
@@ -749,7 +766,7 @@ impl<'a> Loader<'a> {
                 .enumerate()
                 .any(|(k, e)| parts::aside(e, origin(k)))
             && self.static_parts_kept(base.as_ref(), b)?;
-        let state = if agrees || fields || leaf || alpha || parts || scripted {
+        let state = if agrees || fields || leaf || alpha || parts || scripted || activator {
             hypotheses::classify_aside(
                 &blockers,
                 outside,
@@ -774,6 +791,11 @@ impl<'a> Loader<'a> {
                         && readiness::script_condition(e)
                     {
                         Some(hypotheses::REFERENCE_SCRIPT_RENDER)
+                    } else if activator
+                        && origin(k) == readiness::Origin::Record
+                        && readiness::activator_field(e)
+                    {
+                        Some(hypotheses::ACTIVATOR_FIELDS_RENDER)
                     } else if parts && parts::aside(e, origin(k)) {
                         Some(hypotheses::STATIC_PARTS)
                     } else {

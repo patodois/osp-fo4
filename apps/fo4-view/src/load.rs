@@ -782,6 +782,12 @@ pub fn cell<'s>(
     if drawing.scripted {
         loader.set_render_scripted(true);
     }
+    // `--draw-activator-fields` (off by default): render readiness sets an
+    // activator's unread PNAM, FNAM and ATTX aside
+    // (`acti_fields_render_unchanged_v1`).
+    if drawing.activator_fields {
+        loader.set_render_activator_fields(true);
+    }
     // `--draw-static-parts` (off by default): render readiness sets aside
     // a static's model blockers no rule covers when a shape of its model
     // stays, the draw leaving out the rest (`static_unmoved_parts_drawn_v1`).

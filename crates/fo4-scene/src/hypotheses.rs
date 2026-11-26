@@ -253,6 +253,10 @@ pub const REFERENCE_ALPHA_RENDER: &str = "refr_xalp_render_unchanged_v1";
 /// stores it; what its scripts change is left to the caller's run
 /// (`Loader::set_render_scripted`, off by default).
 pub const REFERENCE_SCRIPT_RENDER: &str = "refr_script_render_as_stored_v1";
+/// An activator's (`ACTI`) unread `PNAM`, `FNAM` and `ATTX` leave its
+/// drawing as its model stores it (`Loader::set_render_activator_fields`,
+/// off by default).
+pub const ACTIVATOR_FIELDS_RENDER: &str = "acti_fields_render_unchanged_v1";
 /// A static's reference fields `XACT`, `XLRT`, `XOWN` and `ONAM` leave its
 /// collision as stored (`crate::readiness`, behind
 /// `readiness::Switches::static_fields`).
@@ -761,6 +765,7 @@ mod tests {
             REFERENCE_ALPHA_COLLISION,
             REFERENCE_ALPHA_RENDER,
             REFERENCE_SCRIPT_RENDER,
+            ACTIVATOR_FIELDS_RENDER,
             STATIC_REFERENCE_FIELDS_COLLISION,
             STATIC_REFERENCE_FIELDS_RENDER,
             STATIC_LEAF_TWO_POSE,
