@@ -195,8 +195,20 @@ pub mod rules {
     /// stands, the run given the activation alone), and of one the person
     /// closed opens it again (`--play-door-toggle`).
     pub const DOOR_TOGGLE: &str = "play_door_activation_toggles_v1";
+    /// A door whose activation the run's scripts last blocked
+    /// (`BlockActivation(true)`) is left as it stands by the person's
+    /// activation while the held doors' reading shows it open: no close,
+    /// no open given to the run, the activation itself still given; its
+    /// prompt shows its name alone (`--play-door-toggle-blocked`).
+    pub const DOOR_TOGGLE_BLOCKED: &str = "play_door_toggle_blocked_unchanged_v1";
+    /// A held door whose reference stores `ONAM` (published as open by
+    /// default) and whose collision is not in the walking world is open
+    /// for the held doors' reading from load: no box, drawn at its Open
+    /// sequence's last key, its prompt close; the person's activation
+    /// closes it under the toggle (`--play-door-stored-open`).
+    pub const DOOR_STORED_OPEN: &str = "play_door_stored_open_v1";
     /// Every rule above.
-    pub const ALL: [&str; 27] = [
+    pub const ALL: [&str; 29] = [
         PLAYER_FEET,
         RUN_CLOCK,
         ACTIVATE_RAY,
@@ -224,6 +236,8 @@ pub mod rules {
         DOOR_DRAWN,
         DOOR_OPEN_COLLISION,
         DOOR_TOGGLE,
+        DOOR_TOGGLE_BLOCKED,
+        DOOR_STORED_OPEN,
     ];
 }
 

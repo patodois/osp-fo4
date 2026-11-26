@@ -410,6 +410,10 @@ pub struct Live {
     /// The doors whose collision stands in their open pose
     /// ([`crate::rules::DOOR_OPEN_COLLISION`], [`Live::with_open_pose`]).
     open_pose: std::collections::BTreeSet<FormKey>,
+    /// The held doors whose reference stores `ONAM`, open for the held
+    /// doors' reading from load ([`crate::rules::DOOR_STORED_OPEN`],
+    /// [`Live::with_stored_open`]).
+    stored_open: std::collections::BTreeSet<FormKey>,
     pub stats: Stats,
 }
 
@@ -436,6 +440,7 @@ impl Live {
             holding: Default::default(),
             closed_at_load: Default::default(),
             open_pose: Default::default(),
+            stored_open: Default::default(),
             stats: Stats::default(),
         })
     }
@@ -498,6 +503,19 @@ impl Live {
     /// The doors standing in their open pose ([`Live::with_open_pose`]).
     pub fn open_pose(&self) -> &std::collections::BTreeSet<FormKey> {
         &self.open_pose
+    }
+
+    /// The held doors open from load because their reference stores `ONAM`
+    /// ([`crate::world::Built::stored_open`], `--play-door-stored-open`).
+    pub fn with_stored_open(mut self, doors: std::collections::BTreeSet<FormKey>) -> Live {
+        self.stored_open = doors;
+        self
+    }
+
+    /// The doors open from load by their stored `ONAM`
+    /// ([`Live::with_stored_open`]).
+    pub fn stored_open(&self) -> &std::collections::BTreeSet<FormKey> {
+        &self.stored_open
     }
 
     /// The doors whose boxes this live world holds (shown or not).

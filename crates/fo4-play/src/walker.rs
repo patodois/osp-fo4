@@ -91,6 +91,15 @@ pub struct Options {
     /// person closed ([`Walker::held_door_states`], [`door_toggle`];
     /// `play_door_activation_toggles_v1`, `--play-door-toggle`).
     pub door_toggle: bool,
+    /// With `door_toggle`: a door whose activation the run last blocked is
+    /// left as it stands by the person's activation while the held doors'
+    /// reading shows it open ([`door_toggle`];
+    /// `play_door_toggle_blocked_unchanged_v1`, `--play-door-toggle-blocked`).
+    pub door_toggle_blocked: bool,
+    /// With `door_toggle`: a held door whose reference stores `ONAM` is open
+    /// for the held doors' reading from load ([`Walker::held_door_states`];
+    /// `play_door_stored_open_v1`, `--play-door-stored-open`).
+    pub door_stored_open: bool,
     /// The longest standing slice (seconds; `--play-stand`), and how far
     /// ahead the walker looks for a moving platform before it stands: a
     /// policy of the play mode, no game claim. `None` (the default): a
@@ -124,6 +133,8 @@ impl Default for Options {
             held_at_load: false,
             door_open: false,
             door_toggle: false,
+            door_toggle_blocked: false,
+            door_stored_open: false,
             stand: None,
             first_met: false,
             report_walls: false,
@@ -331,17 +342,29 @@ pub fn persons_doors(
 /// standing in its open pose, or a held door whose box left, the house's
 /// front door among them); `Some(true)` opens it again, a door whose box
 /// stands because the person closed it (`state`); `None` for anything else
-/// (the activation as before).
+/// (the activation as before). With `blocked_unchanged`
+/// (`play_door_toggle_blocked_unchanged_v1`), `None` for a door whose
+/// activation the run's scripts last blocked ([`door_blocked`]).
 pub fn door_toggle(
     states: &std::collections::BTreeMap<FormKey, bool>,
     state: Option<&crate::live::DoorState>,
     k: &FormKey,
+    blocked_unchanged: bool,
 ) -> Option<bool> {
+    if blocked_unchanged && door_blocked(state) {
+        return None;
+    }
     match states.get(k) {
         Some(false) => Some(false),
         Some(true) if state.is_some_and(|d| d.person_closed) => Some(true),
         _ => None,
     }
+}
+
+/// Whether the run's scripts last blocked the door's activation
+/// (`BlockActivation(true)`, [`crate::live::DoorState::blocked`]).
+pub fn door_blocked(state: Option<&crate::live::DoorState>) -> bool {
+    state.is_some_and(|d| d.blocked == Some(true))
 }
 
 /// The drawing side's rules the collision switches rely on.
@@ -369,6 +392,9 @@ fn collision_rules(o: &Options) -> std::collections::BTreeSet<&'static str> {
     }
     if o.held_doors && o.door_open && o.door_toggle {
         out.insert(crate::rules::DOOR_TOGGLE);
+        if o.door_stored_open {
+            out.insert(crate::rules::DOOR_STORED_OPEN);
+        }
     }
     if o.door_open {
         out.insert(crate::rules::DOOR_OPEN_COLLISION);
@@ -1067,6 +1093,19 @@ impl Walker {
         self.opts.door_toggle && self.opts.held_doors && self.opts.door_open
     }
 
+    /// With [`Options::door_toggle_blocked`] (and the toggle): whether the
+    /// person's activation of door `k` leaves it as it stands, the held
+    /// doors' reading showing it open while the run's scripts last blocked
+    /// its activation (`play_door_toggle_blocked_unchanged_v1`), for a
+    /// window's prompt. Reading it changes nothing.
+    pub fn door_kept(&self, k: &FormKey) -> bool {
+        let k = norm(k);
+        self.toggles()
+            && self.opts.door_toggle_blocked
+            && door_blocked(self.state.doors.get(&k))
+            && self.held_door_states().get(&k) == Some(&false)
+    }
+
     /// The walking world as it stands.
     pub fn live(&self) -> &Live {
         &self.live
@@ -1084,6 +1123,11 @@ impl Walker {
         if self.toggles() {
             for k in self.live.open_pose() {
                 out.insert(k.clone(), false);
+            }
+            if self.opts.door_stored_open {
+                for k in self.live.stored_open() {
+                    out.insert(k.clone(), false);
+                }
             }
         }
         for (_, k, held, _) in &self.log.borrow().held_doors {
@@ -1247,11 +1291,33 @@ impl Walker {
                     // `play_door_activation_toggles_v1`: a door the held
                     // doors' reading shows open is closed, one the person
                     // closed is opened again.
+                    // `play_door_toggle_blocked_unchanged_v1`: a door the
+                    // reading shows open whose activation the run last
+                    // blocked is left as it stands, no open given either.
+                    let kept = match act.as_ref() {
+                        Some(a) if self.toggles() && self.opts.door_toggle_blocked => {
+                            let k = norm(&a.reference);
+                            let kept = door_blocked(self.state.doors.get(&k))
+                                && self.held_door_states().get(&k) == Some(&false);
+                            if kept {
+                                self.log
+                                    .borrow_mut()
+                                    .rules
+                                    .insert(crate::rules::DOOR_TOGGLE_BLOCKED);
+                            }
+                            kept
+                        }
+                        _ => false,
+                    };
                     let toggled = match act.as_ref() {
                         Some(a) if self.toggles() => {
                             let k = norm(&a.reference);
-                            let t =
-                                door_toggle(&self.held_door_states(), self.state.doors.get(&k), &k);
+                            let t = door_toggle(
+                                &self.held_door_states(),
+                                self.state.doors.get(&k),
+                                &k,
+                                self.opts.door_toggle_blocked,
+                            );
                             match t {
                                 Some(false) => self.state.close_by_player(k),
                                 Some(true) => {
@@ -1272,7 +1338,7 @@ impl Walker {
                     };
                     let opens = act
                         .as_ref()
-                        .filter(|_| toggled != Some(false))
+                        .filter(|_| toggled != Some(false) && !kept)
                         .filter(|a| self.opens.contains(&norm(&a.reference)))
                         .map(|a| Act {
                             at: a.at,
@@ -1662,6 +1728,7 @@ impl Walker {
             held_doors: self.opts.held_doors,
             held_at_load: self.opts.held_at_load,
             door_open: self.opts.door_open,
+            stored_open: self.opts.door_stored_open,
         };
         if let Some(f) = self.on_load.as_mut() {
             f(Some(cell));
@@ -1705,6 +1772,7 @@ impl Walker {
                         &self.opens,
                     ))
                     .with_open_pose(std::mem::take(&mut built.open_pose))
+                    .with_stored_open(std::mem::take(&mut built.stored_open))
             }),
             None => Live::fixed(built.world, built.refs),
         }
@@ -2297,23 +2365,23 @@ mod tests {
         assert!(walker(false).held_door_states().is_empty());
         // Shown open and standing open: E closes it.
         let states = on.held_door_states();
-        assert_eq!(door_toggle(&states, None, &key(3)), Some(false));
+        assert_eq!(door_toggle(&states, None, &key(3), false), Some(false));
         // Its box standing because the person closed it: E opens it.
         let closed = std::collections::BTreeMap::from([(key(3), true)]);
         let d = crate::live::DoorState {
             person_closed: true,
             ..Default::default()
         };
-        assert_eq!(door_toggle(&closed, Some(&d), &key(3)), Some(true));
+        assert_eq!(door_toggle(&closed, Some(&d), &key(3), false), Some(true));
         // Held by the run's scripts, not the person: E as before.
         let d = crate::live::DoorState {
             open: Some(false),
             blocked: Some(true),
             person_closed: false,
         };
-        assert_eq!(door_toggle(&closed, Some(&d), &key(3)), None);
+        assert_eq!(door_toggle(&closed, Some(&d), &key(3), false), None);
         // A door the reading never showed, or no door: E as before.
-        assert_eq!(door_toggle(&states, None, &key(4)), None);
+        assert_eq!(door_toggle(&states, None, &key(4), false), None);
         // A held door whose box left (the house's front door opened by the
         // person or a script), shown open: E closes it too.
         let released = std::collections::BTreeMap::from([(key(5), false)]);
@@ -2322,7 +2390,71 @@ mod tests {
             blocked: Some(true),
             person_closed: false,
         };
-        assert_eq!(door_toggle(&released, Some(&opened), &key(5)), Some(false));
+        assert_eq!(
+            door_toggle(&released, Some(&opened), &key(5), false),
+            Some(false)
+        );
+        // `play_door_toggle_blocked_unchanged_v1`: the same door, its
+        // activation blocked by the run, is left as it stands.
+        assert_eq!(door_toggle(&released, Some(&opened), &key(5), true), None);
+        assert!(door_blocked(Some(&opened)));
+        // Unblocked again: E closes it under the switch too.
+        let unblocked = crate::live::DoorState {
+            blocked: Some(false),
+            ..opened
+        };
+        assert_eq!(
+            door_toggle(&released, Some(&unblocked), &key(5), true),
+            Some(false)
+        );
+        assert!(!door_blocked(None) && !door_blocked(Some(&unblocked)));
+    }
+
+    #[test]
+    fn a_door_storing_open_by_default_is_shown_open_with_its_switch() {
+        // `play_door_stored_open_v1`.
+        let walker = |stored: bool| {
+            let opts = Options {
+                reach: Some(250.0),
+                held_doors: true,
+                door_open: true,
+                door_toggle: true,
+                door_stored_open: stored,
+                ..Options::default()
+            };
+            let live = Live::fixed(floor(), vec![])
+                .unwrap()
+                .with_stored_open([key(8)].into());
+            Walker::new(
+                World::new(),
+                vec![],
+                Script::parse("1 end\n").unwrap(),
+                opts,
+            )
+            .unwrap()
+            .with_live(live, false)
+        };
+        let on = walker(true);
+        assert_eq!(
+            on.held_door_states(),
+            std::collections::BTreeMap::from([(key(8), false)])
+        );
+        assert!(on
+            .log
+            .borrow()
+            .rules
+            .contains(crate::rules::DOOR_STORED_OPEN));
+        assert!(walker(false).held_door_states().is_empty());
+        assert!(!walker(false)
+            .log
+            .borrow()
+            .rules
+            .contains(crate::rules::DOOR_STORED_OPEN));
+        // Shown open: E closes it.
+        assert_eq!(
+            door_toggle(&on.held_door_states(), None, &key(8), true),
+            Some(false)
+        );
     }
 
     #[test]
@@ -2373,6 +2505,68 @@ mod tests {
             run(false),
             (vec![PlayerAction::Activate, PlayerAction::Open], false)
         );
+    }
+
+    #[test]
+    fn a_blocked_open_door_is_left_as_it_stands_and_given_no_open() {
+        // `play_door_toggle_blocked_unchanged_v1`: the post (reference 7)
+        // stands for the house's front door after the evacuation's script
+        // blocked its activation and opened it.
+        let script =
+            Script::parse("0 face 0\n1 forward on\n2.005 forward off\n2.5 activate\n3 end\n")
+                .unwrap();
+        let run = |blocked_unchanged: bool| {
+            let opts = Options {
+                reach: Some(250.0),
+                held_doors: true,
+                door_open: true,
+                door_toggle: true,
+                door_toggle_blocked: blocked_unchanged,
+                ..Options::default()
+            };
+            let live = Live::fixed(floor(), vec![None, Some(key(7))])
+                .unwrap()
+                .with_open_pose([norm(&key(7))].into());
+            let mut w = Walker::new(World::new(), vec![], script.clone(), opts)
+                .unwrap()
+                .with_live(live, false)
+                .with_opens(vec![key(7)]);
+            w.state = RunState::reading_doors(true);
+            w.state.doors.insert(
+                norm(&key(7)),
+                crate::live::DoorState {
+                    open: Some(true),
+                    blocked: Some(true),
+                    person_closed: false,
+                },
+            );
+            let start = Point {
+                t: 0.0,
+                space: key(1),
+                pos: [0.0, 0.0, 5.0],
+                facing: None,
+            };
+            let acts: Vec<PlayerAction> = slices(&mut w, &start)
+                .into_iter()
+                .flat_map(|x| x.actions)
+                .map(|a| a.action)
+                .collect();
+            let closed = w
+                .state
+                .doors
+                .get(&norm(&key(7)))
+                .is_some_and(|d| d.person_closed);
+            let rule = w
+                .log
+                .borrow()
+                .rules
+                .contains(crate::rules::DOOR_TOGGLE_BLOCKED);
+            (acts, closed, rule)
+        };
+        // With the switch: the activation alone, the door left open.
+        assert_eq!(run(true), (vec![PlayerAction::Activate], false, true));
+        // Without it: closed by the person, as before.
+        assert_eq!(run(false), (vec![PlayerAction::Activate], true, false));
     }
 
     #[test]

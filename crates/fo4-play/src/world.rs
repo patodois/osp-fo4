@@ -195,6 +195,13 @@ pub struct Options {
     /// [`crate::elevator::open_door_collision`]). Off: no door collision,
     /// as before.
     pub door_open: bool,
+    /// With [`Options::held_doors`], a held door whose reference stores
+    /// `ONAM` (published as open by default) and whose collision is not in
+    /// the walking world is open for the held doors' reading from load
+    /// ([`Built::stored_open`]; `play_door_stored_open_v1`,
+    /// `--play-door-stored-open`). Off: such a door has no state at load,
+    /// as before.
+    pub stored_open: bool,
 }
 
 /// A placed door whose `XTEL` names a door: where it takes the player
@@ -248,6 +255,10 @@ pub struct Built {
     /// With [`Options::door_open`]: the doors whose collision stands in
     /// `world` in its open pose (normalised keys).
     pub open_pose: std::collections::BTreeSet<FormKey>,
+    /// With [`Options::stored_open`]: of `held`, the doors whose reference
+    /// stores `ONAM` (normalised keys), open for the held doors' reading
+    /// from load (`play_door_stored_open_v1`).
+    pub stored_open: std::collections::BTreeSet<FormKey>,
 }
 
 /// Whether the placed reference `key` stores an `ONAM` subrecord (the
@@ -697,6 +708,7 @@ pub fn build(
     // holds the door (`play_door_closed_blocked_holds_v1`).
     let mut held: BTreeMap<FormKey, Vec<u32>> = BTreeMap::new();
     let mut closed_at_load = std::collections::BTreeSet::new();
+    let mut stored_open = std::collections::BTreeSet::new();
     if o.held_doors {
         if let Some((piece, _)) = live.as_mut() {
             for (i, (k, frame, lo, hi)) in boxes.items.iter().enumerate() {
@@ -714,6 +726,13 @@ pub fn build(
                         piece.refs[src as usize] = Some(norm(k));
                         held.entry(norm(k)).or_default().push(src);
                         bump(&mut counts, "held door boxes in the dormant piece");
+                        if o.stored_open && stores_onam(store, k, &budget.child()) == Some(true) {
+                            stored_open.insert(norm(k));
+                            bump(
+                                &mut counts,
+                                "held doors storing ONAM open from load (play_door_stored_open_v1)",
+                            );
+                        }
                         if o.held_at_load {
                             match stores_onam(store, k, &budget.child()) {
                                 Some(false) => {
@@ -768,6 +787,7 @@ pub fn build(
         held,
         closed_at_load,
         open_pose,
+        stored_open,
     })
 }
 

@@ -88,6 +88,10 @@ pub struct Play {
     pub door_open: bool,
     /// `--play-door-toggle` (`play_door_activation_toggles_v1`).
     pub door_toggle: bool,
+    /// `--play-door-toggle-blocked` (`play_door_toggle_blocked_unchanged_v1`),
+    /// `--play-door-stored-open` (`play_door_stored_open_v1`).
+    pub door_toggle_blocked: bool,
+    pub door_stored_open: bool,
     /// `--play-elevator REF` (repeated; `play_elevator_run_sequence_v1`),
     /// `--play-elevator-also REF`, `--play-elevator-also-with REF OWNER`.
     pub elevators: Vec<FormKey>,
@@ -180,6 +184,8 @@ impl Play {
             "--play-held-doors-at-load" => &mut self.held_at_load,
             "--play-door-open-collision" => &mut self.door_open,
             "--play-door-toggle" => &mut self.door_toggle,
+            "--play-door-toggle-blocked" => &mut self.door_toggle_blocked,
+            "--play-door-stored-open" => &mut self.door_stored_open,
             "--play-pick-first-met" => &mut self.first_met,
             "--play-report-walls" => &mut self.report_walls,
             "--play-action-after-offset" => &mut self.action_offset,
@@ -343,6 +349,12 @@ impl Play {
                 "--play-door-toggle needs --play-held-doors and --play-door-open-collision".into(),
             );
         }
+        if self.door_toggle_blocked && !self.door_toggle {
+            return Err("--play-door-toggle-blocked needs --play-door-toggle".into());
+        }
+        if self.door_stored_open && !self.door_toggle {
+            return Err("--play-door-stored-open needs --play-door-toggle".into());
+        }
         if self.door_landing && !self.elevator_door {
             return Err("--play-elevator-door-landing needs --play-elevator-door".into());
         }
@@ -466,6 +478,7 @@ impl Play {
             held_doors: self.held_doors,
             held_at_load: self.held_at_load,
             door_open: self.door_open,
+            stored_open: self.door_stored_open,
         }
     }
 
@@ -498,6 +511,8 @@ impl Play {
             held_at_load: self.held_at_load,
             door_open: self.door_open,
             door_toggle: self.door_toggle,
+            door_toggle_blocked: self.door_toggle_blocked,
+            door_stored_open: self.door_stored_open,
             ..walker::Options::default()
         };
         if let Some(v) = self.walk_speed {
@@ -567,6 +582,7 @@ impl Play {
             held,
             closed_at_load,
             open_pose,
+            stored_open,
         } = built;
         let _ = writeln!(
             report,
@@ -595,6 +611,12 @@ impl Play {
         }
         if self.door_toggle {
             let _ = writeln!(report, "switch: a door whose collision stands in its open pose is open for the held doors' reading, and the person's activation closes a door that reading shows open and opens again one the person closed (--play-door-toggle, {}): {} door(s) in their open pose", crate::rules::DOOR_TOGGLE, open_pose.len());
+        }
+        if self.door_toggle_blocked {
+            let _ = writeln!(report, "switch: the person's activation leaves a door the held doors' reading shows open as it stands while the run's scripts last blocked its activation: no close, no open given to the run (--play-door-toggle-blocked, {})", crate::rules::DOOR_TOGGLE_BLOCKED);
+        }
+        if self.door_stored_open {
+            let _ = writeln!(report, "switch: a held door whose reference stores ONAM and whose collision is not in the walking world is open for the held doors' reading from load (--play-door-stored-open, {}): {} door(s)", crate::rules::DOOR_STORED_OPEN, stored_open.len());
         }
         if self.marker_boxes {
             let _ = writeln!(report, "switch: the collision markers' boxes among the loaded references and the worldspace's persistent references nearby stand in the walking world, taken out when the run disables them (--play-marker-boxes, {})", crate::rules::MARKER_BOXES);
@@ -639,7 +661,8 @@ impl Play {
                     .with_unpicked(&unpicked)
                     .with_held_doors(held)
                     .with_closed_at_load(closed_at_load)
-                    .with_open_pose(open_pose);
+                    .with_open_pose(open_pose)
+                    .with_stored_open(stored_open);
                 walker::Walker::new(fo4_walk::World::new(), Vec::new(), script, opts)?
                     .with_live(live, nowait)
             }
@@ -764,6 +787,12 @@ mod tests {
         )
         .unwrap();
         assert!(t.door_toggle && t.walker_options().door_toggle);
+        let b = read("--play-live-world --play-held-doors --play-door-open-collision --play-door-toggle --play-door-toggle-blocked --play-door-stored-open").unwrap();
+        assert!(b.door_toggle_blocked && b.walker_options().door_toggle_blocked);
+        assert!(b.door_stored_open && b.walker_options().door_stored_open);
+        assert!(b.world_options().stored_open && !t.world_options().stored_open);
+        assert!(read("--play-live-world --play-held-doors --play-door-open-collision --play-door-toggle-blocked").is_err());
+        assert!(read("--play-live-world --play-held-doors --play-door-open-collision --play-door-stored-open").is_err());
         assert!(read("--play-live-world --play-held-doors --play-door-toggle").is_err());
         assert!(read("--play-door-open-collision --play-door-toggle").is_err());
         assert!(read("--play-live-world --play-held-doors-at-load").is_err());
