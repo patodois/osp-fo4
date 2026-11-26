@@ -1458,9 +1458,27 @@ mod enabled {
     /// its base's record type and display name (the prompt's words).
     type Label = (String, bool, Option<[u8; 4]>, Option<String>);
 
-    /// The activations read, the one waiting for the run (its line so far,
-    /// the run's counts before it) and the confirmations shown.
-    type Confirming = (usize, Option<(String, (usize, usize, usize))>, u64);
+    /// The activations read, the run's counts at the last look (before the
+    /// slice the run took since) and the confirmations shown.
+    type Confirming = (usize, (usize, usize, usize), u64);
+
+    /// The confirmation of an activation the walker logged in the slice the
+    /// run took between two looks at its counts (viewer policy): opened (a
+    /// reference the caller's opens name), used (the run's effects or logs
+    /// grew over that slice) or nothing happened.
+    pub fn confirm_line(
+        opened: bool,
+        before: (usize, usize, usize),
+        after: (usize, usize, usize),
+    ) -> &'static str {
+        if opened {
+            "opened"
+        } else if after != before {
+            "used"
+        } else {
+            "nothing happened"
+        }
+    }
 
     /// What the run had when its timeline was last read: effects, quest
     /// and scene log entries, native moves; the snapshots taken and their
@@ -1737,35 +1755,29 @@ mod enabled {
     }
 
     impl Paced {
-        /// `--play-keys`: what the person's last activation did, once the
-        /// run took the slice it came in: opened (a reference the caller's
-        /// opens name), used (the run did something), or nothing (nothing
-        /// to use, or the run's effects and logs did not grow). Viewer
-        /// policy, read from the run without changing it; nothing to use when
-        /// the ray met nothing of a placed reference.
+        /// What the last activation did ([`confirm_line`]), read once the run
+        /// took the slice the walker logged it in: the walker logs it as it
+        /// builds the slice, so the counts are those of the last look
+        /// against now. Viewer policy, read from the run without changing
+        /// it; nothing to use when the ray met nothing of a placed
+        /// reference.
         fn publish_confirm(&mut self, run: &View<'_, '_>) {
             let now = run_counts(run);
+            let before = std::mem::replace(&mut self.confirm.1, now);
             let mut line = None;
-            if let Some((text, before)) = self.confirm.1.take() {
-                line = Some(if text == "opened" {
-                    text
-                } else if now != before {
-                    "used".to_string()
-                } else {
-                    "nothing happened".to_string()
-                });
-            }
             let log = self.log.borrow();
             if log.activations.len() > self.confirm.0 {
                 let a = &log.activations[log.activations.len() - 1];
                 self.confirm.0 = log.activations.len();
-                match &a.3 {
-                    Ok((k, _)) if self.opens.contains(&fo4_scene::timeline::norm(k)) => {
-                        self.confirm.1 = Some(("opened".into(), now));
-                    }
-                    Ok(_) => self.confirm.1 = Some((String::new(), now)),
-                    Err(_) => line = Some("nothing to use".into()),
-                }
+                line = Some(match &a.3 {
+                    Ok((k, _)) => confirm_line(
+                        self.opens.contains(&fo4_scene::timeline::norm(k)),
+                        before,
+                        now,
+                    )
+                    .to_string(),
+                    Err(_) => "nothing to use".to_string(),
+                });
             }
             drop(log);
             if let Some(l) = line {
@@ -1948,7 +1960,7 @@ mod enabled {
             timeline: with_timeline.then(TimelineRead::default),
             keys: keys.then(BTreeMap::new),
             labels: BTreeMap::new(),
-            confirm: (0, None, 0),
+            confirm: (0, (0, 0, 0), 0),
             opens: switches
                 .opens
                 .iter()
@@ -2611,6 +2623,14 @@ mod enabled {
                 "use Skeleton (not drawn)"
             );
             assert_eq!(prompt_cued("use Skeleton".into(), false), "use Skeleton");
+            // The confirmation compares the counts before and after the
+            // slice the activation came in (the run took it between looks).
+            assert_eq!(confirm_line(false, (1, 2, 3), (1, 3, 3)), "used");
+            assert_eq!(
+                confirm_line(false, (1, 2, 3), (1, 2, 3)),
+                "nothing happened"
+            );
+            assert_eq!(confirm_line(true, (1, 2, 3), (1, 2, 3)), "opened");
             assert_eq!(prompt_posed(None, None, false), "use");
             // A door drawn open reads close; the pose changes no other type.
             assert_eq!(
