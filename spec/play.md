@@ -2172,6 +2172,17 @@ drawn)` when the window's loads left it out, its distance and side, and how far 
 bounds' centre lies (`Use NAME (not drawn): 40 units ahead, 110 below the eye`). It comes before the `Go back` cue.
 The twentieth session's person searched nine minutes for the device beside the vault console, which is not drawn
 and lies on the floor about 110 units below the eye.
+After the twenty-first session the open line is the one the walker's body walks, not a sight line: a copy of the
+walker's character walks from the feet straight toward the point at the run speed in ticks of 0.1 s
+(`fo4_walk::Character::walks_to`, `Walker::walks_to`, reads only) and the line counts as open when it gets as far
+along it as the point (less half a radius) without a blocked tick, without sliding more than a radius off the line
+and without dropping more than its height (the session's cue said 59 ahead into a bookcase the sight line passed
+over). The way back passes over a stretch of the trail in another space when the walker left and came back within
+128 units (`CUE_DOOR_JOIN`: one door; the session stepped out of the house and back, and the cue, with no way back,
+pointed through a wall). A use target is retired once E met it, a script activated it (taking the device's holder
+activates the device: the session's cue named the taken device for 300 seconds) or the run made it absent
+(`play::used_targets`, `Walker::made_absent`). The watch's cue line carries after a second tab how the cue was found
+(`walked to the place`, `walked to the way's point`, `along the way`, `straight, no way back`).
 `--draw-cast-keeps-clear` (`play_cast_kept_clear_of_walker_v1`, pending, in the preset) keeps an actor's drawn
 body clear of the eye: the cast build keeps, for each actor, the horizontal box of its draws' vertices by 8-unit
 slices of height above its place (`scene::cast_body`); each frame the slices within 24 units of the eye's height
@@ -2183,6 +2194,21 @@ from the feet). The run is unchanged and the walker still passes through it (act
 world). The eighteenth session's eye entered a standing evacuee's head at 5.6 units; the nineteenth's, after a
 180-degree turn, with the place 32 units away (the body at the eye's height reaches about 36 units from the place,
 toward the walker) and the actor jumping 57 units to the walker's other side in 17 ms.
+`--draw-cast-settles` (`play_cast_settles_on_ground_v1`, pending, in the preset) stands an actor drawn standing at
+a place the run took from its stored placement or a package's location on the walking world's highest surface under
+that place, from 32 units above it, when that surface lies within 32 units above or 64 below and is no steeper than 60
+degrees (`scene::settle_z`; both reaches and the slope are assumptions). The window asks the play thread the ground
+under each such actor's place (`Play::ask_ground`, `Seen::ground_asked`), the play thread answers at each publish
+from the walker's world as it stands (`Walker::ground_below`, hidden sources passed through), and the frame's height
+step (`ride_cast`) draws the actor there unless a named platform's part holds it. Seated or lying actors, MoveTo
+places and the caller's places are not moved. The window log's `settled:` line counts at each change the actors drawn
+on the ground, the most dropped and raised, and those kept at their place by reason. The twentieth session's woman
+at the checkpoint stood 19 units above the terrain on a slope; with the switch she is drawn on it.
+`--draw-furniture-parts` (`furn_unmoved_parts_drawn_v1`, pending, off by default and not in the preset, with
+`--draw-static-parts`) reads a furniture refused for its model's animation as `--draw-static-parts` reads a static:
+drawn by the shapes no controller reaches (`Loader::set_render_furniture_parts`). On the vault exit's device it draws
+nothing: the placement stays refused with the switch (the twenty-first round's window replay), so the switch is left
+out of the preset.
 
 **The data thread's clock.** Each cell load on the play data thread prints `play: load clocks: wall W s, the data
 thread's CPU C s (P% of the wall)`: a load whose wall time is far above its CPU time waited for a core; both up

@@ -301,6 +301,24 @@ rear threshold is a 35-unit rise from the terrain to the foundation with no step
 20-unit placeholder (`walk_step_height_v1`). Open: the soft depth fade, the draw-recipe memo (plan 26c item 1),
 actors as pick targets, the robot's object template, the refusals census, the push-out report, the dream room.
 
+Twenty-first-session fixes: the use cue retires a target E met, one a script activated (taking the device's holder
+activates the device) and one the run made absent, so it no longer points back at the taken device. The house cue's
+open line is the one the walker's body walks (`fo4_walk::Character::walks_to`, a copy of the character walked
+straight at the point), not a sight line at eye height; the way back passes over a stretch in another space left and
+entered at one door (`CUE_DOOR_JOIN`); with no way back a straight line the body does not walk says `(not straight: go
+round)`. The session's two cues through shelving stay: our walking world has no collision for that shelving (the
+record's walker stands inside it), so the body walks the line too. `--draw-cast-settles`
+(`play_cast_settles_on_ground_v1`, pending, in the preset) stands an actor at a stored or package place on the walking
+world's ground within 32 units above or 64 below (the checkpoint's woman 19 units above the slope now stands on it;
+the window log's `settled:` census). `--draw-furniture-parts` (`furn_unmoved_parts_drawn_v1`, pending, off and not in the
+preset) reads a furniture refused for its animation as a static by its unmoved parts; the exit's device stays refused
+with it (to find: which of its shapes the controllers reach). No game setting of the data names a step
+or climb height (`walk_step_height_v1` stays 20, pending). The pale band at the throat of the checkpoint's woman in the
+green dress is drawn alike without `--actor-head-race-fill` (not from the fill; cause open). The platform passengers'
+one place is the package location's one point (`pack_location_radius_one_point_open_v1`, left as is). Open: the soft
+depth fade of effect surfaces, actors as pick targets, the draw-recipe memo, the shelving's collision, the robot's
+object template, the refusals census, the dream room.
+
 The opening run is now visible (`spec/timeline.md`), and since the cast step its people appear as people. `quest_run new-game --timeline FILE` writes what the run
 did, second by second, in a neutral versioned text file (track points with their cells, actor places with the
 rule or assumption behind each, references enabled, disabled and moved, scene lines with speaker, seconds and
