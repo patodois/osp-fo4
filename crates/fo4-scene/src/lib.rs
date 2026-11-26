@@ -832,7 +832,8 @@ impl<'a> Loader<'a> {
                             Some(hypotheses::ACTIVATOR_FIELDS_RENDER)
                         } else if furniture
                             && origin(k) == readiness::Origin::Record
-                            && readiness::furniture_field(e)
+                            && (readiness::furniture_field(e)
+                                || readiness::furniture_reference_field(e))
                         {
                             Some(hypotheses::FURNITURE_FIELDS_RENDER)
                         } else if parts

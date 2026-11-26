@@ -352,6 +352,13 @@ pub fn furniture_field(e: &Error) -> bool {
         && parts.next().is_some_and(|f| FURNITURE_FIELDS.contains(&f))
 }
 
+/// Whether `e` is a furniture reference's run-time field set aside with
+/// [`furniture_field`]: its `XLRT` or `XIS2` (xEdit's published names:
+/// location ref type, ignored by sandbox), read as run-time state.
+pub fn furniture_reference_field(e: &Error) -> bool {
+    e.code == "RuntimeRecordState" && matches!(e.found.as_str(), "REFR.XLRT" | "REFR.XIS2")
+}
+
 /// Whether `e` is the record blocker of a reference's unread `XALP`.
 pub fn reference_alpha(e: &Error) -> bool {
     e.code == Code::UninterpretedVisualSubrecord.name() && e.found.starts_with("REFR.XALP.")

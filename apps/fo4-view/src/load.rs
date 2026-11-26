@@ -1237,6 +1237,21 @@ pub fn cell<'s>(
             );
         }
     }
+    if drawing.furniture_fields {
+        let n = scene
+            .instances
+            .iter()
+            .filter(|i| {
+                i.state
+                    .hypotheses()
+                    .contains(&fo4_scene::hypotheses::FURNITURE_FIELDS_RENDER)
+            })
+            .count();
+        println!(
+            "furniture: {n} placements ready with their unread fields set aside ({})",
+            fo4_scene::hypotheses::FURNITURE_FIELDS_RENDER
+        );
+    }
     steps.mark("draw list");
     let doors = if door_keys.is_empty() {
         Vec::new()
