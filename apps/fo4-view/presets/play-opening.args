@@ -54,6 +54,16 @@
 # the person closed (play_door_activation_toggles_v1): what is drawn, what
 # stops the walker and what the prompt offers are one state.
 --play-door-toggle
+# A door the reading shows open whose activation the run's scripts last
+# blocked is left as it stands by E, no open given to the run, its prompt
+# its name alone (play_door_toggle_blocked_unchanged_v1): the house's front
+# door during the evacuation.
+--play-door-toggle-blocked
+# A held door whose reference stores ONAM (open by default) and whose
+# collision is not in the walking world is open from load: drawn open, its
+# prompt close, E closes it (play_door_stored_open_v1): the house's pocket
+# doors and the ruined front doorway.
+--play-door-stored-open
 # The collision markers' boxes stand where the data places them, taken out
 # when the run disables them (play_collision_marker_boxes_v1), but a box
 # whose collision layer word is one a walking character passes stays out
@@ -137,6 +147,17 @@
 # An activator whose unread marker colour, flags or activate text kept it
 # out is drawn as its model stores it (acti_fields_render_unchanged_v1).
 --draw-activator-fields
+# A furniture whose unread PNAM, FNAM, MNAM, SNAM or WBDT kept it out is
+# drawn as its model stores it (furn_fields_render_unchanged_v1): the
+# house's beds, chairs and sofa.
+--draw-furniture-fields
+# The worldspace's persistent references standing in a loaded grid square
+# join it (world_persistent_refs_drawn_in_square_v1): the nursery's crib.
+--draw-world-persistent
+# An activator refused for its animation is drawn by the shapes its
+# controllers do not reach, its reference's XLRT set aside
+# (acti_unmoved_parts_drawn_v1): the nursery's crib.
+--draw-activator-parts
 # A static refused only for model blocks no rule settles (a behaviour
 # graph, particle systems, blocks the reader does not decode) is drawn by
 # the shapes those blocks and its controllers do not reach, the rest left
@@ -162,6 +183,10 @@
 # The worn armours' slots decide what of a head is hidden
 # (npc_head_hidden_by_head_slot_v1): the checkpoint's helmets keep faces.
 --actor-head-slots
+# A head part with conditions is drawn when its list holds against the
+# stages the run has set, left out alone when it does not
+# (npc_head_part_conditions_run_stages_v1): the lab coats' heads.
+--actor-head-conditions
 # An actor's models read as a placed reference's: a texture missing only in
 # slots the frame never samples does not keep the actor out
 # (actor_texture_missing_unread_slot_v1): the vault's security staff, whose

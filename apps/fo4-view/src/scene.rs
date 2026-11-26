@@ -593,6 +593,11 @@ pub struct GpuScene {
     /// stands on ([`stand_on_platform_part`]).
     #[cfg_attr(not(feature = "script-event"), allow(dead_code))]
     pub cast_keep: bool,
+    /// A play cast: the space of the cell it was built for (the cell's
+    /// worldspace, or the interior cell itself); only the named platforms
+    /// placed in it are stood on ([`stand_on_platform_part`]).
+    #[cfg_attr(not(feature = "script-event"), allow(dead_code))]
+    pub cast_space: Option<fo4_plugin::FormKey>,
 }
 
 /// One actor of a play cast: the instance tag its draws carry, its
@@ -617,7 +622,7 @@ pub fn stand_on_platforms(
     was: f64,
     reach: f64,
 ) -> Option<f64> {
-    stand_on_platform_part(platforms, place, was, reach, None).map(|(z, _)| z)
+    stand_on_platform_part(platforms, None, place, was, reach, None).map(|(z, _)| z)
 }
 
 /// A named platform's part: its platform's reference and the part's index
@@ -647,14 +652,51 @@ fn part_top_under(part: &fo4_play::elevator::PartMotion, place: [f64; 3]) -> Opt
     over.then_some(b[2])
 }
 
+/// The named platforms' parts whose box spans `place`'s x and y, each as
+/// `REFERENCE#INDEX top Z`, for the window's log (a report).
+#[cfg(feature = "script-event")]
+pub fn parts_under(
+    platforms: &[fo4_play::elevator::Platform],
+    space: Option<&fo4_plugin::FormKey>,
+    place: [f64; 3],
+) -> String {
+    let mut out = Vec::new();
+    for p in platforms.iter().filter(|p| in_space(p, space)) {
+        for (k, part) in p.parts.iter().enumerate() {
+            if let Some(top) = part_top_under(part, place) {
+                out.push(format!(
+                    "{}#{k} top {top:.1}",
+                    fo4_scene::timeline::key_text(&p.reference)
+                ));
+            }
+        }
+    }
+    if out.is_empty() {
+        "none".into()
+    } else {
+        out.join(", ")
+    }
+}
+
+/// Whether a named platform is placed in `space` (`None`: any space).
+/// Interior cells' coordinates overlap, so a platform of another space
+/// may lie under an actor's x and y (the vault's exit lift under the
+/// first lift's deck crowd).
+#[cfg(feature = "script-event")]
+fn in_space(p: &fo4_play::elevator::Platform, space: Option<&fo4_plugin::FormKey>) -> bool {
+    space.is_none_or(|s| fo4_scene::timeline::norm(s) == fo4_scene::timeline::norm(&p.space))
+}
+
 /// Where an actor stands (`play_cast_stands_on_platform_v1`, as
 /// `stand_on_platforms` says) with the part it stands on; with `kept` (the part
 /// it stood on the frame before, `play_cast_keeps_its_part_v1`) that part's
 /// top wherever it went while it is still under the actor's x and y, the
-/// others not looked at; once it is not under it, as without.
+/// others not looked at; once it is not under it, as without. With
+/// `space`, only the platforms placed in it are looked at.
 #[cfg(feature = "script-event")]
 pub fn stand_on_platform_part(
     platforms: &[fo4_play::elevator::Platform],
+    space: Option<&fo4_plugin::FormKey>,
     place: [f64; 3],
     was: f64,
     reach: f64,
@@ -663,14 +705,14 @@ pub fn stand_on_platform_part(
     if let Some((reference, k)) = kept {
         let top = platforms
             .iter()
-            .filter(|p| &p.reference == reference)
+            .filter(|p| &p.reference == reference && in_space(p, space))
             .find_map(|p| p.parts.get(*k).and_then(|part| part_top_under(part, place)));
         if let Some(top) = top {
             return Some((top, (reference.clone(), *k)));
         }
     }
     let mut best: Option<(f64, &fo4_plugin::FormKey, usize)> = None;
-    for p in platforms {
+    for p in platforms.iter().filter(|p| in_space(p, space)) {
         for (k, part) in p.parts.iter().enumerate() {
             let Some(top) = part_top_under(part, place) else {
                 continue;
@@ -2005,7 +2047,7 @@ mod tests {
         let place = [10.0, 20.0, 8925.06];
         // Raised: on the deck (part 0), its top above the covers'.
         let (top, part) =
-            stand_on_platform_part(&at(5000.0), place, place[2], 128.0, None).unwrap();
+            stand_on_platform_part(&at(5000.0), None, place, place[2], 128.0, None).unwrap();
         assert!((top - 8971.0).abs() < 1e-9);
         assert_eq!(part, (key.clone(), 0));
         // Without keeping its part, the deck below the covers' top hands
@@ -2019,7 +2061,7 @@ mod tests {
         let (mut was, mut kept) = (top, Some(part));
         for z in (1000..=4998).rev().step_by(2) {
             let (t, k) =
-                stand_on_platform_part(&at(f64::from(z)), place, was, 128.0, kept.as_ref())
+                stand_on_platform_part(&at(f64::from(z)), None, place, was, 128.0, kept.as_ref())
                     .unwrap();
             assert_eq!(k, (key.clone(), 0));
             (was, kept) = (t, Some(k));
@@ -2028,9 +2070,30 @@ mod tests {
         // A kept part no longer under the actor: found again as without.
         let away = [500.0, 0.0, 8925.06];
         assert_eq!(
-            stand_on_platform_part(&at(5000.0), away, 8971.0, 128.0, kept.as_ref()),
+            stand_on_platform_part(&at(5000.0), None, away, 8971.0, 128.0, kept.as_ref()),
             None
         );
+        // A platform placed in another space (interior cells' coordinates
+        // overlap) is not stood on: the seventeenth session's deck crowd
+        // taken by the vault exit lift's deck at the first lift's handoff.
+        let other = fo4_plugin::FormKey {
+            plugin: "a.esm".into(),
+            object_id: 9,
+        };
+        let mut both = at(3000.0);
+        both.push(Platform {
+            reference: other.clone(),
+            space: other.clone(),
+            ..at(5000.0).remove(0)
+        });
+        let (_, part) = stand_on_platform_part(&both, None, place, place[2], 128.0, None).unwrap();
+        assert_eq!(part, (other.clone(), 0));
+        let (top, part) =
+            stand_on_platform_part(&both, Some(&key), place, place[2], 128.0, None).unwrap();
+        assert_eq!(part, (key.clone(), 1));
+        assert!((top - 8925.0).abs() < 1e-9);
+        assert!(parts_under(&both, Some(&key), place).starts_with("a.esm:00000001#0"));
+        assert!(!parts_under(&both, Some(&key), place).contains("00000009"));
     }
 
     #[test]

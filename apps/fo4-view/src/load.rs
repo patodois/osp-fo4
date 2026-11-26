@@ -802,11 +802,23 @@ pub fn cell<'s>(
     if drawing.activator_fields {
         loader.set_render_activator_fields(true);
     }
+    // `--draw-furniture-fields` (off by default): render readiness sets a
+    // furniture's unread PNAM, FNAM, MNAM, SNAM and WBDT aside
+    // (`furn_fields_render_unchanged_v1`).
+    if drawing.furniture_fields {
+        loader.set_render_furniture_fields(true);
+    }
     // `--draw-static-parts` (off by default): render readiness sets aside
     // a static's model blockers no rule covers when a shape of its model
     // stays, the draw leaving out the rest (`static_unmoved_parts_drawn_v1`).
     if drawing.static_parts {
         loader.set_render_static_parts(true);
+    }
+    // `--draw-activator-parts` (off by default; with --draw-static-parts):
+    // an activator refused for its animation is drawn by its unmoved parts
+    // (`acti_unmoved_parts_drawn_v1`).
+    if drawing.activator_parts {
+        loader.set_render_activator_parts(true);
     }
     // The assets the previous load left, when they were read the same way.
     let mut kept = kept;
@@ -838,6 +850,21 @@ pub fn cell<'s>(
         })?;
         steps.mark("neighbours");
         let loads = fo4_scene::grid::absorb_around(&mut loader, &mut scene, &a, &budget)?;
+        // --draw-world-persistent: the worldspace's persistent references
+        // standing in the loaded squares join them
+        // (`world_persistent_refs_drawn_in_square_v1`).
+        if drawing.world_persistent && a.searched {
+            let started = std::time::Instant::now();
+            let j = fo4_scene::grid::absorb_persistent(&mut loader, &mut scene, &a, &budget)?;
+            println!(
+                "persistent: {} of the worldspace's persistent references in the loaded squares joined the scene, {} initially disabled, {} already there, {} left out (no instance) in {:.2} s (world_persistent_refs_drawn_in_square_v1)",
+                j.added,
+                j.disabled,
+                j.already,
+                j.failed,
+                started.elapsed().as_secs_f64()
+            );
+        }
         let cells: Vec<String> = loads
             .iter()
             .map(|l| format!("{:?} {} {}", l.offset, l.outcome, l.instances))
@@ -1539,6 +1566,23 @@ fn note_not_drawn(build: &fo4_render::draw::Build) {
             let k = fo4_scene::timeline::key_text(&fo4_scene::timeline::norm(&i.reference));
             if !build.omitted.iter().any(|o| o.instance == i.index) {
                 set.remove(&k);
+            }
+        }
+    }
+}
+
+/// A play cast's build drew these references (the cast's actors and the
+/// placements its skinned reading draws as actors, the crib's occupant
+/// among them): the prompt no longer says they are not drawn (viewer
+/// policy; [`not_drawn`]).
+#[cfg_attr(not(feature = "script-event"), allow(dead_code))]
+pub(crate) fn note_drawn(build: &fo4_render::draw::Build) {
+    if let Ok(mut set) = NOT_DRAWN.lock() {
+        for i in &build.instances {
+            if !build.omitted.iter().any(|o| o.instance == i.index) {
+                set.remove(&fo4_scene::timeline::key_text(&fo4_scene::timeline::norm(
+                    &i.reference,
+                )));
             }
         }
     }

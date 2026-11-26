@@ -52,6 +52,9 @@ pub struct Args {
     pub model_graph_idle: bool,
     /// `--skinned-models-own-nodes` (`model_skinned_own_nodes_every_placement_v1`).
     pub skinned_models: bool,
+    /// `--actor-head-conditions` (`npc_head_part_conditions_run_stages_v1`;
+    /// the play window's cast only).
+    pub head_conditions: bool,
     /// `--memory-report FILE`: where the frame build's memory goes
     /// (`fo4_render::memory::report`; measurement only).
     pub memory_report: Option<String>,
@@ -117,6 +120,28 @@ pub fn cast(
             look: a.look,
             model_graph_idle: a.model_graph_idle,
         };
+        #[cfg(feature = "script-event")]
+        if a.head_conditions {
+            let store = loader.plugins;
+            let done = &p.frame.done;
+            let mut answer =
+                |list: &[fo4_plugin::condition::Condition],
+                 ctx: fo4_plugin::actor::Context<'_>,
+                 file: &str| { head_conditions_hold(store, done, list, ctx, file) };
+            let cast = tl::cast::resolve_heads(
+                loader,
+                scene,
+                &markers.0,
+                options,
+                level,
+                Some(&mut answer),
+                budget,
+            )?;
+            return Ok(Cast {
+                markers,
+                cast: Some(cast),
+            });
+        }
         Some(tl::cast::resolve(
             loader, scene, &markers.0, options, level, budget,
         )?)
@@ -124,6 +149,59 @@ pub fn cast(
         None
     };
     Ok(Cast { markers, cast })
+}
+
+/// `--actor-head-conditions` (`npc_head_part_conditions_run_stages_v1`): a
+/// head part's condition list evaluated by the run's evaluator
+/// (`fo4_vm::cond::eval_list`, OR groups) against the stages the run's
+/// timeline has set by the frame's second (a stage set is done); every
+/// other fact is undetermined. `Some(true)` holds, `Some(false)` does not,
+/// `None` undetermined.
+#[cfg(feature = "script-event")]
+fn head_conditions_hold(
+    store: &fo4_plugin::typed::Store,
+    done: &std::collections::BTreeSet<(fo4_plugin::FormKey, i32)>,
+    list: &[fo4_plugin::condition::Condition],
+    ctx: fo4_plugin::actor::Context<'_>,
+    file: &str,
+) -> Option<bool> {
+    let mut facts = RunStages { store, done };
+    match fo4_vm::cond::eval_list(list, ctx, file, &mut facts, fo4_vm::cond::Combine::OrGroups) {
+        fo4_vm::cond::Truth::True => Some(true),
+        fo4_vm::cond::Truth::False => Some(false),
+        fo4_vm::cond::Truth::Undetermined(_) => None,
+    }
+}
+
+/// The run's stages done at a frame, as the evaluator's facts: nothing
+/// else is known.
+#[cfg(feature = "script-event")]
+struct RunStages<'a> {
+    store: &'a fo4_plugin::typed::Store,
+    done: &'a std::collections::BTreeSet<(fo4_plugin::FormKey, i32)>,
+}
+
+#[cfg(feature = "script-event")]
+impl fo4_vm::cond::Facts for RunStages<'_> {
+    fn store(&self) -> &fo4_plugin::typed::Store {
+        self.store
+    }
+    fn quest_running(&mut self, _: &fo4_plugin::FormKey) -> Result<bool, &'static str> {
+        Err("the play window's head conditions read stages done only")
+    }
+    fn quest_stage(&mut self, _: &fo4_plugin::FormKey) -> Result<i32, &'static str> {
+        Err("the play window's head conditions read stages done only")
+    }
+    fn stage_done(
+        &mut self,
+        quest: &fo4_plugin::FormKey,
+        stage: i32,
+    ) -> Result<bool, &'static str> {
+        Ok(self.done.contains(&(tl::norm(quest), stage)))
+    }
+    fn global(&mut self, _: &fo4_plugin::FormKey) -> Result<f32, &'static str> {
+        Err("the play window's head conditions read stages done only")
+    }
 }
 
 /// Appends the frame's actor markers (with `--timeline-cast` only those of
@@ -424,6 +502,8 @@ fn cast_with(
     let mut build = built?;
     // FO4_VIEW_OMITTED=FILE (measurement only): the cast's omissions too.
     crate::load::omitted_lines(&scene, &build);
+    // What the cast draws is drawn: the prompt's "(not drawn)" follows it.
+    crate::load::note_drawn(&build);
     steps.mark("draw list");
     if stop() {
         return Ok(None);
@@ -447,6 +527,7 @@ fn cast_with(
     // them on the platforms, `FO4_VIEW_PLAY_WATCH` writes them).
     gpu.cast_ride = s.drawing.cast_on_platforms;
     gpu.cast_keep = s.drawing.cast_keeps_part;
+    gpu.cast_space = Some(tl::scene_space(loader.plugins, &scene));
     {
         let tagged = d
             .characters

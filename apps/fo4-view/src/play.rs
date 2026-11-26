@@ -1863,15 +1863,27 @@ mod enabled {
                                 linked,
                             )
                         });
-                    let open = doors.get(&fo4_scene::timeline::norm(&k)) == Some(&false);
-                    let prompt = prompt_linked(
-                        prompt_posed(*kind, name.as_deref(), open),
-                        linked.as_deref(),
-                    );
+                    let n = fo4_scene::timeline::norm(&k);
+                    let open = doors.get(&n) == Some(&false);
+                    let prompt = if self.walker.door_kept(&k) {
+                        // `play_door_toggle_blocked_unchanged_v1`: E leaves
+                        // it as it stands, so the prompt offers no action.
+                        prompt_blocked(*kind, name.as_deref())
+                    } else {
+                        prompt_posed(*kind, name.as_deref(), open)
+                    };
+                    let prompt = prompt_linked(prompt, linked.as_deref());
+                    // A door the held doors' reading has not held is drawn
+                    // nowhere (the window shows a door only by that
+                    // reading; refused at render readiness otherwise).
+                    let unheld_door = *kind == Some(*b"DOOR") && !doors.contains_key(&n);
                     (
                         format!("{label} at {:.0} units", h.distance),
                         *usable,
-                        Some(prompt_cued(prompt, crate::load::not_drawn(&k))),
+                        Some(prompt_cued(
+                            prompt,
+                            unheld_door || crate::load::not_drawn(&k),
+                        )),
                     )
                 }
                 None => (
@@ -1908,6 +1920,18 @@ mod enabled {
             (Some(n), _) => format!("{verb} {n}"),
             (None, Some(k)) if opens => format!("{verb} {}", String::from_utf8_lossy(&k)),
             (None, _) => verb.to_string(),
+        }
+    }
+
+    /// The viewport's prompt for a door the person's activation leaves as
+    /// it stands (`play_door_toggle_blocked_unchanged_v1`): its plain name
+    /// alone, no action (viewer policy; a door with no name is named by its
+    /// type, as [`prompt_posed`] names it).
+    pub fn prompt_blocked(kind: Option<[u8; 4]>, name: Option<&str>) -> String {
+        match (name.map(str::trim).filter(|n| !n.is_empty()), kind) {
+            (Some(n), _) => n.to_string(),
+            (None, Some(k)) => String::from_utf8_lossy(&k).into_owned(),
+            (None, None) => "door".to_string(),
         }
     }
 
@@ -2950,6 +2974,12 @@ mod enabled {
             );
             assert_eq!(prompt_posed(Some(*b"FURN"), None, false), "use");
             assert_eq!(prompt_cued("use Lamp".into(), true), "use Lamp (not drawn)");
+            assert_eq!(
+                prompt_blocked(Some(*b"DOOR"), Some("Front Door")),
+                "Front Door"
+            );
+            assert_eq!(prompt_blocked(Some(*b"DOOR"), Some(" ")), "DOOR");
+            assert_eq!(prompt_blocked(None, None), "door");
             assert_eq!(prompt_cued("use Lamp".into(), false), "use Lamp");
             // The confirmation compares the counts before and after the
             // slice the activation came in (the run took it between looks).

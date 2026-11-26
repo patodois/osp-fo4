@@ -998,6 +998,8 @@ struct CastEntity {
     ride: bool,
     /// `--draw-cast-keeps-its-part`.
     keep: bool,
+    /// The space of the cell the cast was built for.
+    space: Option<fo4_plugin::FormKey>,
 }
 
 /// A cast built for the drawn cell, until it is uploaded and replaces the
@@ -1052,6 +1054,7 @@ fn spawn_cast(world: &mut World) {
             base: i.translation,
             ride: scene.cast_ride,
             keep: scene.cast_keep,
+            space: scene.cast_space.clone(),
         });
     }
     println!(
@@ -1957,12 +1960,34 @@ fn ride_cast<F: bevy::ecs::query::QueryFilter>(
             };
             let stood = crate::scene::stand_on_platform_part(
                 &seen.platforms,
+                c.space.as_ref(),
                 *place,
                 was,
                 reach,
                 kept.as_ref().filter(|_| c.keep),
             );
             let z = stood.as_ref().map_or(place[2], |s| s.0);
+            let part_now = stood.as_ref().map(|s| &s.1);
+            let part_was = feet.get(k).and_then(|f| f.2.as_ref());
+            if part_now != part_was {
+                // Which part an actor stands on, and the parts under its
+                // place then, each with its top (a report of the play
+                // window's reading; nothing changes).
+                let under = crate::scene::parts_under(&seen.platforms, c.space.as_ref(), *place);
+                println!(
+                    "play: cast {} part {} at {:.3} s of the run (feet {:.1}, from {:.1}, place {:.1}); under its place: {}",
+                    fo4_scene::timeline::key_text(k),
+                    part_now.map_or("none".to_string(), |(r, i)| format!(
+                        "{}#{i}",
+                        fo4_scene::timeline::key_text(r)
+                    )),
+                    seen.t,
+                    z,
+                    was,
+                    place[2],
+                    under
+                );
+            }
             let boarded = (z - place[2]).abs() > 1e-6 && (was - place[2]).abs() <= 1e-6;
             if boarded {
                 println!(

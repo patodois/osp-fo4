@@ -528,6 +528,7 @@ fn exact_depth_ties_resolve_by_list_order_in_every_run() {
             light: None,
             view_exposure: None,
             cast_places: Vec::new(),
+            cast_space: None,
             cast_ride: false,
             cast_keep: false,
         }

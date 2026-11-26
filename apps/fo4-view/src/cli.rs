@@ -367,6 +367,11 @@ usage:
       a head is hidden (the head by slot 32, its hair by 30 or 31) instead
       of the head bone's weights (pending rule
       npc_head_hidden_by_head_slot_v1).
+      --actor-head-conditions (play window's cast only) draws a listed head
+      part with conditions when its list holds against the stages the run
+      has set by the frame's second and leaves that part alone out when it
+      does not; undetermined keeps the head undrawn (pending rule
+      npc_head_part_conditions_run_stages_v1).
       --actor-missing-bone-nearest (with --actor-missing-bone-bind) skins a
       bone the skeleton lacks as the bone of the same skin the skeleton
       holds whose bind origin lies nearest it, in place of the identity
@@ -504,6 +509,19 @@ pub struct Drawing {
     /// loader's render readiness sets an activator's unread `PNAM`, `FNAM`
     /// and `ATTX` aside (`Loader::set_render_activator_fields`).
     pub activator_fields: bool,
+    /// `--draw-furniture-fields` (`furn_fields_render_unchanged_v1`): the
+    /// loader's render readiness sets a furniture's unread `PNAM`, `FNAM`,
+    /// `MNAM`, `SNAM` and `WBDT` aside (`Loader::set_render_furniture_fields`).
+    pub furniture_fields: bool,
+    /// `--draw-world-persistent` (`world_persistent_refs_drawn_in_square_v1`;
+    /// with `--around`): the worldspace's persistent references standing in
+    /// a loaded grid square join that square's scene
+    /// (`fo4_scene::grid::absorb_persistent`).
+    pub world_persistent: bool,
+    /// `--draw-activator-parts` (`acti_unmoved_parts_drawn_v1`; with
+    /// `--draw-static-parts`): an animated activator is drawn by its unmoved
+    /// parts (`Loader::set_render_activator_parts`).
+    pub activator_parts: bool,
     /// `--draw-static-leaves` (`play_static_leaf_two_pose_v1`): the
     /// loader's render readiness sets a leaf model's animation blockers
     /// aside on a static (`Loader::set_render_static_leaves`); the scripted
@@ -908,6 +926,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
     let mut look_readings = fo4_scene::actor::Readings::default();
     let mut model_graph_idle = false;
     let mut skinned_models = false;
+    let mut head_conditions = false;
     let mut memory_report: Option<String> = None;
     let mut ride_model = None;
     let mut ride_sequence = None;
@@ -1008,6 +1027,9 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             "--draw-reference-alpha" => drawing.reference_alpha = true,
             "--draw-scripted-as-stored" => drawing.scripted = true,
             "--draw-activator-fields" => drawing.activator_fields = true,
+            "--draw-furniture-fields" => drawing.furniture_fields = true,
+            "--draw-world-persistent" => drawing.world_persistent = true,
+            "--draw-activator-parts" => drawing.activator_parts = true,
             "--draw-static-leaves" => drawing.static_leaves = true,
             "--draw-static-parts" => drawing.static_parts = true,
             "--draw-platform-skins" => drawing.platform_skins = true,
@@ -1031,6 +1053,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             "--actor-unread-texture-slots" => look_readings.unread_slots = true,
             "--actor-model-graph-idle" => model_graph_idle = true,
             "--skinned-models-own-nodes" => skinned_models = true,
+            "--actor-head-conditions" => head_conditions = true,
             "--memory-report" => memory_report = Some(value()?.to_string()),
             "--actor-leveled-chance-none" => look_readings.chance_none = true,
             "--actor-leveled-use-all" => look_readings.use_all = true,
@@ -1138,9 +1161,13 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
         look: look_readings,
         model_graph_idle,
         skinned_models,
+        head_conditions,
         memory_report: None,
         ride: None,
     });
+    if head_conditions && play_cast.is_none() {
+        return Err("--actor-head-conditions evaluates head part conditions against the play run's stages: it needs the play window's cast (--play-run with --timeline-cast)".into());
+    }
     if missing_bones_nearest && !missing_bones_at_bind {
         return Err("--actor-missing-bone-nearest reads the bones --actor-missing-bone-bind skins at bind: it needs --actor-missing-bone-bind".into());
     }
@@ -1165,6 +1192,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             look: look_readings,
             model_graph_idle,
             skinned_models,
+            head_conditions: false,
             memory_report: memory_report.clone(),
             ride: ride_model.clone().map(|reference| fo4_scene::timeline::ride::Options {
                 reference,
@@ -1369,6 +1397,12 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
     }
     if scene.drawing.cast_on_platforms && !(scene.drawing.platforms && scene.play_cast.is_some()) {
         return Err("--draw-cast-on-platforms stands the play cast on the platforms --draw-platforms draws: it needs --draw-platforms and --timeline-cast".into());
+    }
+    if scene.drawing.activator_parts && !scene.drawing.static_parts {
+        return Err("--draw-activator-parts reads an activator as --draw-static-parts reads a static: it needs --draw-static-parts".into());
+    }
+    if scene.drawing.world_persistent && around == 0 {
+        return Err("--draw-world-persistent joins the persistent references of the loaded grid squares: it needs --around".into());
     }
     if scene.drawing.cast_keeps_part && !scene.drawing.cast_on_platforms {
         return Err("--draw-cast-keeps-its-part keeps the part --draw-cast-on-platforms stands an actor on: it needs --draw-cast-on-platforms".into());
