@@ -351,9 +351,11 @@ impl BsaArchive {
         if let Some(err) = e.diagnostics.first() {
             return Err(err.clone());
         }
-        let raw = read_bytes(s, e.payload_offset, e.payload_size, l, b)?;
+        let raw = super::clock::reading(|| read_bytes(s, e.payload_offset, e.payload_size, l, b))?;
         let result = if e.compressed {
-            super::lz4_frame::decode(&raw, e.unpacked, l, b, s.name(), e.payload_offset)
+            super::clock::inflating(|| {
+                super::lz4_frame::decode(&raw, e.unpacked, l, b, s.name(), e.payload_offset)
+            })
         } else {
             Ok(raw)
         };

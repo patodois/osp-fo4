@@ -3,6 +3,7 @@
 mod bsa;
 mod prefix;
 pub use prefix::Prefix;
+pub mod clock;
 mod game;
 mod lz4_frame;
 pub use bsa::{BsaArchive, BsaEntry, BsaFolder};
@@ -503,11 +504,11 @@ impl Archive {
                 chunk,
             )
         })?;
-        let raw = read_bytes(source, ch.offset, ch.stored_size(), l, b)?;
+        let raw = clock::reading(|| read_bytes(source, ch.offset, ch.stored_size(), l, b))?;
         let result = if ch.packed == 0 {
             Ok(raw)
         } else {
-            zlib(&raw, ch.unpacked as u64, l, b, source.name(), ch.offset)
+            clock::inflating(|| zlib(&raw, ch.unpacked as u64, l, b, source.name(), ch.offset))
         };
         result.map_err(|mut err| {
             err.source.archive_entry = Some(e.name.clone());

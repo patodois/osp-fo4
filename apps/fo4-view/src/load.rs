@@ -574,32 +574,67 @@ pub fn actor_lines(
 /// measurement line; it changes nothing loaded).
 pub(crate) struct Steps {
     last: std::time::Instant,
-    out: Vec<(&'static str, f64)>,
+    /// This thread's archive clock at the last mark (`fo4_vfs::archive_clock`).
+    files: (f64, f64),
+    /// (step, seconds, of them reading stored archive bytes, of them
+    /// inflating them).
+    out: Vec<(&'static str, f64, f64, f64)>,
 }
 
 impl Steps {
     pub(crate) fn new() -> Steps {
         Steps {
             last: std::time::Instant::now(),
+            files: fo4_vfs::archive_clock::now(),
             out: Vec::new(),
         }
     }
 
-    /// The seconds since the last mark, under `name`.
+    /// The seconds since the last mark, under `name`, with the part of them
+    /// this thread spent reading and inflating archive bytes.
     pub(crate) fn mark(&mut self, name: &'static str) {
         let now = std::time::Instant::now();
-        self.out
-            .push((name, now.duration_since(self.last).as_secs_f64()));
+        let files = fo4_vfs::archive_clock::now();
+        self.out.push((
+            name,
+            now.duration_since(self.last).as_secs_f64(),
+            files.0 - self.files.0,
+            files.1 - self.files.1,
+        ));
         self.last = now;
+        self.files = files;
     }
 
     #[cfg_attr(not(feature = "script-event"), allow(dead_code))]
     pub(crate) fn line(&self) -> String {
         self.out
             .iter()
-            .map(|(n, s)| format!("{n} {s:.2} s"))
+            .map(|(n, s, _, _)| format!("{n} {s:.2} s"))
             .collect::<Vec<_>>()
             .join(", ")
+    }
+
+    /// The steps whose archive reads took a hundredth of a second or more:
+    /// `step read R s, inflate I s, rest X s` (the rest: parsing, building
+    /// and everything else of the step on this thread).
+    #[cfg_attr(not(feature = "script-event"), allow(dead_code))]
+    pub(crate) fn files_line(&self) -> String {
+        let parts: Vec<String> = self
+            .out
+            .iter()
+            .filter(|(_, _, r, i)| r + i >= 0.01)
+            .map(|(n, s, r, i)| {
+                format!(
+                    "{n} read {r:.2} s, inflate {i:.2} s, rest {:.2} s",
+                    (s - r - i).max(0.0)
+                )
+            })
+            .collect();
+        if parts.is_empty() {
+            "no step read archive bytes for 0.01 s".to_string()
+        } else {
+            parts.join("; ")
+        }
     }
 }
 
@@ -1402,6 +1437,7 @@ pub fn cell<'s>(
             );
             steps.mark("walking world");
             println!("play: load steps: {}", steps.line());
+            println!("play: load steps' archive files: {}", steps.files_line());
         }
         Some(world)
     } else {

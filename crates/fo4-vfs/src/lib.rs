@@ -1,5 +1,7 @@
 #![forbid(unsafe_code)]
 //! Explicit mount order, normalized lookup, winner/loser provenance.
+/// This thread's archive read and inflate time (measurement only).
+pub use fo4_archive::clock as archive_clock;
 use fo4_archive::GameArchive;
 use fo4_core::{
     digest, digest_bytes, limit, path_key_bytes, read_bytes, within, Budget, Error, FileSource,
