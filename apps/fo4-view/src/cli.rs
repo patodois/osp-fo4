@@ -560,9 +560,10 @@ pub struct Drawing {
     /// `--draw-cast-on-platforms`): each actor rides the part it stands on.
     pub cast_keeps_part: bool,
     /// `--draw-cast-keeps-clear` (`play_cast_kept_clear_of_walker_v1`; the
-    /// scripted play window's cast): an actor drawn within two characters'
-    /// capsule radii of the walker's feet is drawn moved straight away
-    /// from them out to that distance (`crate::scene::cast_clear_offset`).
+    /// scripted play window's cast): an actor whose drawn body at the
+    /// eye's height comes within the capsule radius of the eye is drawn
+    /// moved clear of it, eased round the eye
+    /// (`crate::scene::cast_clear_circle`, `crate::scene::ease_cast_clear`).
     pub cast_keeps_clear: bool,
     /// The scripted play window with `--exposure-eye`: the exposure
     /// measured per view instead of once per load (`scene::ViewExposure`;

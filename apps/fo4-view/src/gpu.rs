@@ -1000,6 +1000,8 @@ struct CastEntity {
     keep: bool,
     /// `--draw-cast-keeps-clear`.
     clear: bool,
+    /// With it, its actor's drawn body (`crate::scene::cast_body`).
+    body: std::sync::Arc<crate::scene::CastBody>,
     /// The space of the cell the cast was built for.
     space: Option<fo4_plugin::FormKey>,
 }
@@ -1048,11 +1050,22 @@ fn spawn_cast(world: &mut World) {
         world.despawn(e);
     }
     let entities = spawn(world, &scene, &up, false, 0, false);
-    let places: std::collections::BTreeMap<u32, &crate::scene::CastPlace> =
-        scene.cast_places.iter().map(|c| (c.tag, c)).collect();
+    let places: std::collections::BTreeMap<
+        u32,
+        (
+            &crate::scene::CastPlace,
+            std::sync::Arc<crate::scene::CastBody>,
+        ),
+    > = scene
+        .cast_places
+        .iter()
+        .map(|c| (c.tag, (c, std::sync::Arc::new(c.body.clone()))))
+        .collect();
     for (e, i) in entities.iter().zip(&scene.instances) {
+        let place = places.get(&i.tag);
         world.entity_mut(*e).insert(CastEntity {
-            place: places.get(&i.tag).map(|c| (c.reference.clone(), c.place)),
+            place: place.map(|(c, _)| (c.reference.clone(), c.place)),
+            body: place.map(|(_, b)| b.clone()).unwrap_or_default(),
             base: i.translation,
             ride: scene.cast_ride,
             keep: scene.cast_keep,
@@ -1858,8 +1871,12 @@ struct PlayDrawn {
     >,
     applied: Option<u64>,
     /// `--draw-cast-keeps-clear`: the actors drawn moved clear of the
-    /// walker the frame before ([`clear_cast`]).
-    cleared: std::collections::BTreeSet<fo4_plugin::FormKey>,
+    /// walker the frame before, each with its offset, and the run's second
+    /// of that frame ([`clear_cast`]).
+    cleared: (
+        std::collections::BTreeMap<fo4_plugin::FormKey, [f64; 2]>,
+        Option<f64>,
+    ),
     spawned: std::collections::HashMap<Entity, Vec3>,
     /// The scripted run: frames to wait before a loaded cell's upload is
     /// read (its scene resource arrives through the commands), with the
@@ -2037,33 +2054,65 @@ fn ride_cast<F: bevy::ecs::query::QueryFilter>(
 
 /// Each frame of the scripted play window with `--draw-cast-keeps-clear`
 /// (`play_cast_kept_clear_of_walker_v1`): each actor of the cast is drawn
-/// moved horizontally by [`crate::scene::cast_clear_offset`] of its place
-/// and the walker's feet (none when it stands clear), over whatever height
-/// `ride_cast` gave it. `cleared` holds the actors moved the frame before,
-/// for one log line each time an actor starts being moved.
+/// moved horizontally so that its drawn body at the eye's height
+/// ([`crate::scene::cast_clear_circle`]) stays out of the eye's reach, eased
+/// from the frame before ([`crate::scene::ease_cast_clear`]: carried round
+/// the eye, never through it), over whatever height `ride_cast` gave it.
+/// `cleared` holds the actors moved the frame before with their offsets and
+/// that frame's second, for one log line each time an actor starts being
+/// moved.
 #[cfg(feature = "script-event")]
 fn clear_cast<F: bevy::ecs::query::QueryFilter>(
     seen: &crate::play::Seen,
-    cleared: &mut std::collections::BTreeSet<fo4_plugin::FormKey>,
+    cleared: &mut (
+        std::collections::BTreeMap<fo4_plugin::FormKey, [f64; 2]>,
+        Option<f64>,
+    ),
     casts: &mut Query<(Entity, &CastEntity, &mut Transform), F>,
 ) {
-    let mut now = std::collections::BTreeSet::new();
+    let dt = cleared.1.map_or(0.0, |t| (seen.t - t).clamp(0.0, 0.25));
+    let eye = seen
+        .feet
+        .map(|f| [f[0], f[1], f[2] + fo4_walk::Params::PROVISIONAL.eye_height]);
+    let mut now: std::collections::BTreeMap<fo4_plugin::FormKey, [f64; 2]> =
+        std::collections::BTreeMap::new();
     for (_, c, mut t) in casts.iter_mut() {
         let (Some((k, place)), true) = (&c.place, c.clear) else {
             continue;
         };
-        let o = seen
-            .feet
-            .and_then(|f| crate::scene::cast_clear_offset(*place, f))
-            .unwrap_or([0.0; 2]);
-        if o != [0.0; 2] && now.insert(k.clone()) && !cleared.contains(k) {
-            println!(
-                "play: cast {} kept clear of the walker: drawn {:.1} units from its place at {:.3} s of the run (play_cast_kept_clear_of_walker_v1)",
-                fo4_scene::timeline::key_text(k),
-                o[0].hypot(o[1]),
-                seen.t
-            );
-        }
+        let o = match now.get(k) {
+            Some(o) => *o,
+            None => {
+                let shown = cleared.0.get(k).copied().unwrap_or([0.0; 2]);
+                // Its feet's height as `ride_cast` drew them (game +Z is
+                // Bevy +Y).
+                let dz = f64::from(t.translation.y - c.base.y);
+                let circle =
+                    eye.and_then(|e| crate::scene::cast_clear_circle(*place, dz, &c.body, e));
+                let o = match eye {
+                    Some(e) => crate::scene::ease_cast_clear(shown, circle, [e[0], e[1]], dt),
+                    None => [0.0; 2],
+                };
+                let moved = o[0].hypot(o[1]);
+                if moved >= 0.05 && !cleared.0.contains_key(k) {
+                    // Its body at the eye's height: the circle's radius and
+                    // how far its centre lies from the place.
+                    let (r, off) = circle.map_or((0.0, 0.0), |(c, r)| {
+                        (r, (c[0] - place[0]).hypot(c[1] - place[1]))
+                    });
+                    println!(
+                        "play: cast {} kept clear of the walker: drawn {:.1} units from its place at {:.3} s of the run (its body at the eye's height {:.1} units round, {:.1} from its place; play_cast_kept_clear_of_walker_v1)",
+                        fo4_scene::timeline::key_text(k),
+                        moved,
+                        seen.t,
+                        r,
+                        off
+                    );
+                }
+                now.insert(k.clone(), o);
+                o
+            }
+        };
         // Game +X is Bevy +X, game +Y is Bevy -Z (`coords`).
         let (x, z) = (c.base.x + o[0] as f32, c.base.z - o[1] as f32);
         if t.translation.x != x || t.translation.z != z {
@@ -2071,7 +2120,8 @@ fn clear_cast<F: bevy::ecs::query::QueryFilter>(
             t.translation.z = z;
         }
     }
-    *cleared = now;
+    now.retain(|_, o| o[0].hypot(o[1]) >= 0.05);
+    *cleared = (now, Some(seen.t));
 }
 
 /// `FO4_VIEW_PLAY_WATCH=FILE` (measurement only, off by default): the

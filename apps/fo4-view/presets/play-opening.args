@@ -185,9 +185,10 @@
 # closing over the shaft above it not taken instead
 # (play_cast_keeps_its_part_v1): the crowd rides the deck down.
 --draw-cast-keeps-its-part
-# An actor of the run drawn nearer the walker than two capsule radii is
-# drawn moved clear of it (play_cast_kept_clear_of_walker_v1): the eye
-# does not enter the checkpoint crowd's heads. The run is unchanged.
+# An actor of the run whose drawn body at the eye's height comes within
+# reach of the eye is drawn moved clear of it, eased round the eye
+# (play_cast_kept_clear_of_walker_v1): the eye does not enter the
+# checkpoint crowd's heads. The run is unchanged.
 --draw-cast-keeps-clear
 # The worn armours' slots decide what of a head is hidden
 # (npc_head_hidden_by_head_slot_v1): the checkpoint's helmets keep faces.

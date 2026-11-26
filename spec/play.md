@@ -2144,10 +2144,17 @@ back` cue follows the walker's own track in the walker's space back to the lates
 (`play::cue_trail`): it gives the trail's length and aims at the trail's point 96 units back (`CUE_AIM_TRAIL`), so
 it names a doorway the walker came through instead of the place's nearest point behind a wall (the house cue said
 `150 units ahead` at a bookcase beside the open hall); with no such point in the track it keeps the straight line.
-`--draw-cast-keeps-clear` (`play_cast_kept_clear_of_walker_v1`, pending, in the preset) draws an actor of the run
-whose place is nearer the walker's feet than two capsule radii moved straight away out to that distance; the run
-is unchanged and the walker still passes through it (actors' capsules stand in no walking world). The eighteenth
-session's eye entered a standing evacuee's head at 5.6 units.
+`--draw-cast-keeps-clear` (`play_cast_kept_clear_of_walker_v1`, pending, in the preset) keeps an actor's drawn
+body clear of the eye: the cast build keeps, for each actor, the horizontal box of its draws' vertices by 8-unit
+slices of height above its place (`scene::cast_body`); each frame the slices within 24 units of the eye's height
+give a circle (the box's centre, its half diagonal plus a capsule radius) the eye must stay out of, and the actor is
+drawn moved so that it does, eased from the frame before: carried round the eye at most 180 degrees a second and
+nearer or farther at most 120 units a second, never inside the circle (`scene::ease_cast_clear`), back to its place
+once nothing of it is at the eye's height. An actor that draws nothing keeps the earlier reading (two capsule radii
+from the feet). The run is unchanged and the walker still passes through it (actors' capsules stand in no walking
+world). The eighteenth session's eye entered a standing evacuee's head at 5.6 units; the nineteenth's, after a
+180-degree turn, with the place 32 units away (the body at the eye's height reaches about 36 units from the place,
+toward the walker) and the actor jumping 57 units to the walker's other side in 17 ms.
 
 **The data thread's clock.** Each cell load on the play data thread prints `play: load clocks: wall W s, the data
 thread's CPU C s (P% of the wall)`: a load whose wall time is far above its CPU time waited for a core; both up

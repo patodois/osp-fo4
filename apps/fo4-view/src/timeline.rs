@@ -545,16 +545,23 @@ fn cast_with(
             .iter()
             .map(|(k, t)| (*k, *t))
             .chain(d.fallback.iter().map(|(k, t, _)| (*k, *t)));
-        gpu.cast_places = tagged
+        let places: Vec<crate::scene::CastPlace> = tagged
             .filter_map(|(k, tag)| {
                 let m = cast.markers.get(k)?;
                 Some(crate::scene::CastPlace {
                     tag,
                     reference: m.reference.clone(),
                     place: m.pos,
+                    // Only read with `--draw-cast-keeps-clear`.
+                    body: if gpu.cast_clear {
+                        crate::scene::cast_body(&gpu, tag, m.pos)
+                    } else {
+                        crate::scene::CastBody::default()
+                    },
                 })
             })
             .collect();
+        gpu.cast_places = places;
     }
     steps.mark("markers and convert");
     let line = format!(

@@ -594,9 +594,9 @@ pub struct GpuScene {
     #[cfg_attr(not(feature = "script-event"), allow(dead_code))]
     pub cast_keep: bool,
     /// A play cast drawn with `--draw-cast-keeps-clear`
-    /// (`play_cast_kept_clear_of_walker_v1`): an actor whose place is
-    /// within [`cast_clear_offset`]'s reach of the walker is drawn moved
-    /// out to it.
+    /// (`play_cast_kept_clear_of_walker_v1`): an actor whose drawn body
+    /// at the eye's height comes within [`cast_clear_circle`]'s reach of
+    /// the eye is drawn moved out of it ([`ease_cast_clear`]).
     #[cfg_attr(not(feature = "script-event"), allow(dead_code))]
     pub cast_clear: bool,
     /// A play cast: the space of the cell it was built for (the cell's
@@ -614,6 +614,197 @@ pub struct CastPlace {
     pub tag: u32,
     pub reference: fo4_plugin::FormKey,
     pub place: [f64; 3],
+    /// Its drawn body's horizontal extent by height ([`cast_body`]).
+    pub body: CastBody,
+}
+
+/// Height of one slice of a [`CastBody`], in game units.
+#[cfg_attr(not(feature = "script-event"), allow(dead_code))]
+pub const BODY_SLICE: f64 = 8.0;
+
+/// An actor's drawn body as the play window keeps it clear of the eye
+/// (`play_cast_kept_clear_of_walker_v1`): for each [`BODY_SLICE`] of
+/// height above its place (the slice's index, `floor(dz / BODY_SLICE)`),
+/// the horizontal box, in game X and Y relative to its place, of the
+/// vertices of its draws that lie in it. Empty when it draws nothing.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct CastBody {
+    pub slices: BTreeMap<i32, [f64; 4]>,
+}
+
+impl CastBody {
+    /// Adds a vertex at `p` (game X, Y, Z relative to the place).
+    pub fn add(&mut self, p: [f64; 3]) {
+        if !p.iter().all(|v| v.is_finite()) {
+            return;
+        }
+        let k = (p[2] / BODY_SLICE).floor().clamp(-4096.0, 4096.0) as i32;
+        let b = self.slices.entry(k).or_insert([p[0], p[1], p[0], p[1]]);
+        b[0] = b[0].min(p[0]);
+        b[1] = b[1].min(p[1]);
+        b[2] = b[2].max(p[0]);
+        b[3] = b[3].max(p[1]);
+    }
+
+    /// The horizontal box (min X, min Y, max X, max Y relative to the
+    /// place) of the slices that overlap `low..high` of height above the
+    /// place; `None` when none does.
+    pub fn band(&self, low: f64, high: f64) -> Option<[f64; 4]> {
+        let from = (low / BODY_SLICE).floor().clamp(-4096.0, 4096.0) as i32;
+        let to = (high / BODY_SLICE).floor().clamp(-4096.0, 4096.0) as i32;
+        self.slices
+            .range(from..=to)
+            .map(|(_, b)| *b)
+            .reduce(|a, b| {
+                [
+                    a[0].min(b[0]),
+                    a[1].min(b[1]),
+                    a[2].max(b[2]),
+                    a[3].max(b[3]),
+                ]
+            })
+    }
+}
+
+/// The drawn body of the actor whose draws carry `tag` in `scene`, its
+/// vertices taken to game coordinates by each instance's transform and
+/// made relative to `place` ([`CastBody`]).
+#[cfg_attr(not(feature = "script-event"), allow(dead_code))]
+pub fn cast_body(scene: &GpuScene, tag: u32, place: [f64; 3]) -> CastBody {
+    let mut body = CastBody::default();
+    for i in scene.instances.iter().filter(|i| i.tag == tag) {
+        let Some(mesh) = scene.meshes.get(i.mesh) else {
+            continue;
+        };
+        for v in &mesh.positions {
+            let w = i.translation + i.rotation * (i.scale * Vec3::from_array(*v));
+            // Bevy (x, y, z) is game (x, -z, y) (`coords`).
+            body.add([
+                f64::from(w.x) - place[0],
+                -f64::from(w.z) - place[1],
+                f64::from(w.y) - place[2],
+            ]);
+        }
+    }
+    body
+}
+
+/// Half the height of the band of an actor's body kept clear of the eye
+/// ([`cast_clear_target`]), in game units.
+#[cfg_attr(not(feature = "script-event"), allow(dead_code))]
+pub const EYE_BAND: f64 = 24.0;
+
+/// `play_cast_kept_clear_of_walker_v1` (`--draw-cast-keeps-clear`): the
+/// circle, in game X and Y, the eye must stay out of for an actor drawn at
+/// `place` (with its feet drawn `dz` above it) and `body`: the centre and
+/// radius of the box of its body's slices within [`EYE_BAND`] of the eye's
+/// height, widened by the walk's capsule radius (`walk_capsule_radius_v1`'s
+/// placeholder). `None` when no slice lies at the eye's height. An actor
+/// that draws nothing (an empty body) has the circle of its place: two
+/// capsule radii, within a capsule's height of the eye's feet.
+#[cfg_attr(not(feature = "script-event"), allow(dead_code))]
+pub fn cast_clear_circle(
+    place: [f64; 3],
+    dz: f64,
+    body: &CastBody,
+    eye: [f64; 3],
+) -> Option<([f64; 2], f64)> {
+    let p = fo4_walk::Params::PROVISIONAL;
+    if body.slices.is_empty() {
+        let feet = eye[2] - p.eye_height;
+        return ((place[2] + dz - feet).abs() < p.height)
+            .then_some(([place[0], place[1]], 2.0 * p.radius));
+    }
+    let h = eye[2] - (place[2] + dz);
+    let b = body.band(h - EYE_BAND, h + EYE_BAND)?;
+    let c = [
+        place[0] + (b[0] + b[2]) / 2.0,
+        place[1] + (b[1] + b[3]) / 2.0,
+    ];
+    let r = (b[2] - b[0]).hypot(b[3] - b[1]) / 2.0;
+    Some((c, r + p.radius))
+}
+
+/// Most degrees a second an actor drawn clear of the eye is carried round
+/// it ([`ease_cast_clear`]); viewer policy.
+#[cfg_attr(not(feature = "script-event"), allow(dead_code))]
+pub const CLEAR_TURN_DEGREES: f64 = 180.0;
+/// Most units a second an actor drawn clear of the eye comes nearer it or
+/// moves away beyond its circle ([`ease_cast_clear`]); viewer policy.
+#[cfg_attr(not(feature = "script-event"), allow(dead_code))]
+pub const CLEAR_SPEED: f64 = 120.0;
+
+/// One frame of an actor drawn clear of the eye
+/// (`play_cast_kept_clear_of_walker_v1`): from `shown`, the offset of the
+/// frame before (game X and Y, added to the place), towards the offset
+/// that puts the circle's centre `centre` (from [`cast_clear_circle`], the
+/// unmoved centre) just out of `radius` of the eye, straight away from it,
+/// or no offset when the eye is out of it already (`circle` `None`: no
+/// offset). The centre moves round the eye at most [`CLEAR_TURN_DEGREES`]
+/// a second and nearer or farther at most [`CLEAR_SPEED`] a second over
+/// `dt` seconds, never inside the radius: so it never passes through the
+/// eye nor jumps to its other side.
+#[cfg_attr(not(feature = "script-event"), allow(dead_code))]
+pub fn ease_cast_clear(
+    shown: [f64; 2],
+    circle: Option<([f64; 2], f64)>,
+    eye: [f64; 2],
+    dt: f64,
+) -> [f64; 2] {
+    let Some((centre, radius)) = circle else {
+        // Nothing at the eye's height: back towards the place.
+        let d = shown[0].hypot(shown[1]);
+        let step = CLEAR_SPEED * dt.max(0.0);
+        if d <= step || d < 1e-9 {
+            return [0.0; 2];
+        }
+        return [shown[0] * (1.0 - step / d), shown[1] * (1.0 - step / d)];
+    };
+    let rel = |o: [f64; 2]| [centre[0] + o[0] - eye[0], centre[1] + o[1] - eye[1]];
+    // The target: unmoved when clear, else straight away out to the radius.
+    let unmoved = rel([0.0; 2]);
+    let du = unmoved[0].hypot(unmoved[1]);
+    let target = if du >= radius {
+        [0.0; 2]
+    } else if du > 1e-6 {
+        [
+            unmoved[0] / du * (radius - du),
+            unmoved[1] / du * (radius - du),
+        ]
+    } else {
+        [radius, 0.0]
+    };
+    let (a, b) = (rel(shown), rel(target));
+    let (ra, rb) = (a[0].hypot(a[1]), b[0].hypot(b[1]));
+    if ra < 1e-6 {
+        // Shown on the eye (the frame the actor first comes in): out to
+        // the radius at once, along the target's side.
+        let (ux, uy) = if rb > 1e-6 {
+            (b[0] / rb, b[1] / rb)
+        } else {
+            (1.0, 0.0)
+        };
+        let r = radius;
+        return [eye[0] + ux * r - centre[0], eye[1] + uy * r - centre[1]];
+    }
+    let dt = dt.max(0.0);
+    let (ta, tb) = (a[1].atan2(a[0]), b[1].atan2(b[0]));
+    let mut turn = tb - ta;
+    while turn > std::f64::consts::PI {
+        turn -= std::f64::consts::TAU;
+    }
+    while turn < -std::f64::consts::PI {
+        turn += std::f64::consts::TAU;
+    }
+    let most = CLEAR_TURN_DEGREES.to_radians() * dt;
+    let th = ta + turn.clamp(-most, most);
+    let step = CLEAR_SPEED * dt;
+    // The target is never inside the radius: neither is the step.
+    let r = (ra + (rb - ra).clamp(-step, step)).max(radius);
+    [
+        eye[0] + th.cos() * r - centre[0],
+        eye[1] + th.sin() * r - centre[1],
+    ]
 }
 
 /// Where an actor at `place` whose feet were drawn at height `was` the
@@ -691,34 +882,6 @@ pub fn parts_under(
 #[cfg(feature = "script-event")]
 fn in_space(p: &fo4_play::elevator::Platform, space: Option<&fo4_plugin::FormKey>) -> bool {
     space.is_none_or(|s| fo4_scene::timeline::norm(s) == fo4_scene::timeline::norm(&p.space))
-}
-
-/// `play_cast_kept_clear_of_walker_v1` (`--draw-cast-keeps-clear`): how
-/// far the play window moves an actor drawn at `place` horizontally, in
-/// game X and Y, so that it stands clear of the walker whose feet are at
-/// `feet`: straight away from the feet out to two characters' capsule
-/// radii (the walk's radius for both, `walk_capsule_radius_v1`'s
-/// placeholder), when the place is nearer than that and within a
-/// capsule's height above or below the feet; `None` otherwise. A place on
-/// the feet moves along +X. The run's place is unchanged.
-#[cfg_attr(not(feature = "script-event"), allow(dead_code))]
-pub fn cast_clear_offset(place: [f64; 3], feet: [f64; 3]) -> Option<[f64; 2]> {
-    let p = fo4_walk::Params::PROVISIONAL;
-    let reach = 2.0 * p.radius;
-    if (place[2] - feet[2]).abs() >= p.height {
-        return None;
-    }
-    let (dx, dy) = (place[0] - feet[0], place[1] - feet[1]);
-    let d = dx.hypot(dy);
-    if d >= reach {
-        return None;
-    }
-    let (ux, uy) = if d > 1e-6 {
-        (dx / d, dy / d)
-    } else {
-        (1.0, 0.0)
-    };
-    Some([ux * (reach - d), uy * (reach - d)])
 }
 
 /// Where an actor stands (`play_cast_stands_on_platform_v1`, as
@@ -1580,19 +1743,74 @@ mod tests {
     use fo4_scene::transform::Transform;
 
     #[test]
-    fn an_actor_near_the_walker_is_drawn_clear_of_it() {
-        // `play_cast_kept_clear_of_walker_v1`: two capsule radii (32 units
-        // with the walk's placeholder radius 16), straight away from the
-        // feet, only within a capsule's height.
-        let feet = [100.0, 200.0, 50.0];
-        let o = cast_clear_offset([105.6, 200.0, 50.0], feet).unwrap();
-        assert!((o[0] - 26.4).abs() < 1e-9 && o[1] == 0.0, "{o:?}");
-        let o = cast_clear_offset([100.0, 190.0, 80.0], feet).unwrap();
-        assert!(o[0] == 0.0 && (o[1] + 22.0).abs() < 1e-9, "{o:?}");
-        assert_eq!(cast_clear_offset(feet, feet), Some([32.0, 0.0]));
-        assert_eq!(cast_clear_offset([132.0, 200.0, 50.0], feet), None);
-        assert_eq!(cast_clear_offset([110.0, 200.0, 178.0], feet), None);
-        assert!(cast_clear_offset([110.0, 200.0, 177.0], feet).is_some());
+    fn an_actors_body_at_the_eyes_height_is_kept_clear_of_the_eye() {
+        // `play_cast_kept_clear_of_walker_v1`: the body's box within the
+        // eye band, widened by the capsule radius (16).
+        let place = [100.0, 200.0, 50.0];
+        let mut body = CastBody::default();
+        // Legs at the place, a head leaning 20 units towards -X at 120.
+        body.add([-4.0, -4.0, 10.0]);
+        body.add([4.0, 4.0, 10.0]);
+        body.add([-26.0, -6.0, 116.0]);
+        body.add([-14.0, 6.0, 128.0]);
+        assert_eq!(body.band(100.0, 140.0), Some([-26.0, -6.0, -14.0, 6.0]));
+        assert_eq!(body.band(40.0, 60.0), None);
+        // The eye 120 above the feet, at the place's height.
+        let eye = [60.0, 200.0, 170.0];
+        let (c, r) = cast_clear_circle(place, 0.0, &body, eye).unwrap();
+        assert_eq!(c, [80.0, 200.0]);
+        assert!((r - (6.0f64.hypot(6.0) + 16.0)).abs() < 1e-9, "{r}");
+        // Ridden 200 up: no slice at the eye's height.
+        assert_eq!(cast_clear_circle(place, 200.0, &body, eye), None);
+        // An actor that draws nothing: its place, two capsule radii.
+        let none = CastBody::default();
+        assert_eq!(
+            cast_clear_circle(place, 0.0, &none, eye),
+            Some(([100.0, 200.0], 32.0))
+        );
+        assert_eq!(
+            cast_clear_circle(place, 0.0, &none, [0.0, 0.0, 420.0]),
+            None
+        );
+    }
+
+    #[test]
+    fn an_actor_kept_clear_is_carried_round_the_eye_not_through_it() {
+        // The eye at the origin, a circle of radius 30.
+        let eye = [0.0, 0.0];
+        let dist = |c: [f64; 2], o: [f64; 2]| (c[0] + o[0]).hypot(c[1] + o[1]);
+        // Clear already: no offset.
+        assert_eq!(
+            ease_cast_clear([0.0; 2], Some(([50.0, 0.0], 30.0)), eye, 0.1),
+            [0.0; 2]
+        );
+        // Within reach: out to the radius at once, straight away.
+        let o = ease_cast_clear([0.0; 2], Some(([10.0, 0.0], 30.0)), eye, 0.0);
+        assert!((o[0] - 20.0).abs() < 1e-9 && o[1].abs() < 1e-9, "{o:?}");
+        // The eye walked past the centre: the target is on the other side,
+        // the shown body goes round, 180 degrees a second, never nearer
+        // than the radius, and never jumps.
+        let centre: [f64; 2] = [-1.0, 0.0];
+        let mut shown: [f64; 2] = [31.0, 0.0];
+        let mut last = [centre[0] + shown[0], centre[1] + shown[1]];
+        let mut frames = 0;
+        while (centre[0] + shown[0] + 30.0).abs() > 1e-6 && frames < 200 {
+            shown = ease_cast_clear(shown, Some((centre, 30.0)), eye, 1.0 / 60.0);
+            let at = [centre[0] + shown[0], centre[1] + shown[1]];
+            assert!(dist(centre, shown) >= 30.0 - 1e-9, "{frames}: {at:?}");
+            // At most pi * 30 / 60 (about 1.6) units a frame round the eye.
+            assert!((at[0] - last[0]).hypot(at[1] - last[1]) < 1.6, "{frames}");
+            last = at;
+            frames += 1;
+        }
+        assert!((55..=65).contains(&frames), "{frames}");
+        // Nothing at the eye's height: back to the place, 120 a second.
+        let o = ease_cast_clear([30.0, 40.0], None, eye, 0.25);
+        assert!(
+            (o[0] - 12.0).abs() < 1e-9 && (o[1] - 16.0).abs() < 1e-9,
+            "{o:?}"
+        );
+        assert_eq!(ease_cast_clear([3.0, 4.0], None, eye, 0.25), [0.0; 2]);
     }
 
     #[test]
