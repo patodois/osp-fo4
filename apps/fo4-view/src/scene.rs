@@ -616,6 +616,47 @@ pub struct CastPlace {
     pub place: [f64; 3],
     /// Its drawn body's horizontal extent by height ([`cast_body`]).
     pub body: CastBody,
+    /// With `--draw-cast-settles`: whether it may be stood on the ground
+    /// under its place ([`settle_z`]): standing (not seated or lying) at a
+    /// place the run took from its stored placement or a package's
+    /// location, not one a MoveTo or the caller put it at exactly.
+    pub settle: bool,
+}
+
+/// Units above an actor's place from which [`settle_z`] looks down for
+/// ground (`play_cast_settles_on_ground_v1`, an assumption).
+#[cfg_attr(not(feature = "script-event"), allow(dead_code))]
+pub const SETTLE_UP: f64 = 32.0;
+/// Units below an actor's place within which [`settle_z`] takes ground
+/// (`play_cast_settles_on_ground_v1`, an assumption).
+#[cfg_attr(not(feature = "script-event"), allow(dead_code))]
+pub const SETTLE_DOWN: f64 = 64.0;
+/// Least upward part of the ground's normal [`settle_z`] stands an actor
+/// on (60 degrees of slope; an assumption).
+#[cfg_attr(not(feature = "script-event"), allow(dead_code))]
+pub const SETTLE_MIN_UP: f64 = 0.5;
+
+/// Whether a run's place source is one [`CastPlace::settle`] allows: the
+/// stored placement or a package's location (`--draw-cast-settles`).
+#[cfg_attr(not(feature = "script-event"), allow(dead_code))]
+pub fn settles_from(source: &str, standing: bool) -> bool {
+    standing
+        && (source == "world_actor_placed_position_v1" || source == "pack_location_destination_v1")
+}
+
+/// The height an actor at `place` is drawn standing at with
+/// `--draw-cast-settles` (`play_cast_settles_on_ground_v1`): `hit` is the
+/// highest surface of the walking world at or below `place` raised by
+/// [`SETTLE_UP`] on the vertical line through it (its height and the
+/// upward part of its normal). Ground within [`SETTLE_UP`] above or
+/// [`SETTLE_DOWN`] below the place and no steeper than [`SETTLE_MIN_UP`]
+/// gives its height; anything else keeps the place's (`None`).
+#[cfg_attr(not(feature = "script-event"), allow(dead_code))]
+pub fn settle_z(place: [f64; 3], hit: Option<(f64, f64)>) -> Option<f64> {
+    let (z, up) = hit?;
+    let d = z - place[2];
+    (d <= SETTLE_UP + 1e-9 && d >= -SETTLE_DOWN && up >= SETTLE_MIN_UP && z.is_finite())
+        .then_some(z)
 }
 
 /// Height of one slice of a [`CastBody`], in game units.
@@ -1739,6 +1780,29 @@ pub fn convert_lit(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_standing_actor_settles_onto_ground_within_reach_only() {
+        let place = [0.0, 0.0, 100.0];
+        // 19 units above a slope of about 27 degrees: drawn on it.
+        let up = 27f64.to_radians().cos();
+        assert_eq!(settle_z(place, Some((81.0, up))), Some(81.0));
+        // Ground just above the feet (sunk into a floor): raised onto it.
+        assert_eq!(settle_z(place, Some((120.0, 1.0))), Some(120.0));
+        // Too far below, too steep, or nothing: the place's height.
+        assert_eq!(
+            settle_z(place, Some((100.0 - SETTLE_DOWN - 1.0, 1.0))),
+            None
+        );
+        assert_eq!(settle_z(place, Some((90.0, 0.3))), None);
+        assert_eq!(settle_z(place, None), None);
+        // Only standing actors at stored or package places.
+        assert!(settles_from("world_actor_placed_position_v1", true));
+        assert!(settles_from("pack_location_destination_v1", true));
+        assert!(!settles_from("pack_location_destination_v1", false));
+        assert!(!settles_from("world_moveto_target_v1", true));
+        assert!(!settles_from("caller assumption --assume-actor-at", true));
+    }
     use fo4_render::{Draw, Mesh, Mip, Sidedness, Texture, Vertex};
     use fo4_scene::transform::Transform;
 

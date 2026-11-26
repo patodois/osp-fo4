@@ -1225,6 +1225,39 @@ impl Walker {
         Some(hit.is_none())
     }
 
+    /// Whether the walker's character, from where it stands now, walks the
+    /// straight line on the ground to `to` in the walking world as it is
+    /// (`fo4_walk::Character::walks_to`). `None` before the walker has a
+    /// character. Reads only; the window's cue asks it (viewer policy).
+    pub fn walks_to(&self, to: [f64; 3]) -> Option<bool> {
+        let c = self.character.as_ref()?;
+        Some(c.walks_to(self.live.space(), to))
+    }
+
+    /// The highest surface of the walking world as the walker stands in it
+    /// now (hidden sources passed through) at or below `at` on the
+    /// vertical line through it: its height and the upward part of its
+    /// normal. `None` when nothing is there. Reads only; the window's cast
+    /// asks it (`--draw-cast-settles`, viewer).
+    pub fn ground_below(&self, at: [f64; 3]) -> Option<(f64, f64)> {
+        self.live
+            .space()
+            .ray_down(at[0], at[1], at[2])
+            .map(|h| (h.z, h.normal[2]))
+    }
+
+    /// Whether the run made the reference absent as the walker reads the
+    /// run (the live world's decision when it follows, else the run's last
+    /// enable or disable of it). Reads only; the window's use cue asks it
+    /// (viewer policy).
+    pub fn made_absent(&self, k: &FormKey) -> bool {
+        if self.live.follows() {
+            self.live.decision(k) == Some(Decision::Absent)
+        } else {
+            self.visibility.disabled(k) || self.visibility.disabled(&norm(k))
+        }
+    }
+
     /// The eye's height above the feet of the walker's character, when it
     /// stands in a world.
     pub fn eye_height(&self) -> Option<f64> {

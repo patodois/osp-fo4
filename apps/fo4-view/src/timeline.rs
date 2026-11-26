@@ -621,6 +621,11 @@ fn cast_with(
                     } else {
                         crate::scene::CastBody::default()
                     },
+                    settle: s.drawing.cast_settles
+                        && crate::scene::settles_from(
+                            &m.source,
+                            m.pose == fo4_scene::timeline::Pose::Standing,
+                        ),
                 })
             })
             .collect();

@@ -1210,3 +1210,51 @@ fn the_rigid_motion_rule_is_registered_and_pending() {
         Some(Status::Pending)
     );
 }
+
+#[test]
+fn a_walk_probe_is_stopped_by_low_furniture_a_sight_line_passes_over() {
+    let b = budget();
+    let mut w = World::new();
+    floor(&mut w, &b);
+    // A cabinet 60 units high across the line from (0,0) to (300,0): the
+    // eye (above 60) sees over it, the walker cannot cross it.
+    w.add_hull(
+        &cuboid([140.0, -60.0, 0.0], [170.0, 60.0, 60.0]),
+        0.0,
+        "cabinet",
+        &b,
+    )
+    .unwrap();
+    let mut c = character([0.0, 0.0, 0.0]);
+    c.settle(&w, 600);
+    let before = c.feet;
+    assert!(!c.walks_to(&w, [300.0, 0.0, 0.0]));
+    // Beside the cabinet the line is open, and the probe left the
+    // character where it stood.
+    assert!(c.walks_to(&w, [300.0, 200.0, 0.0]));
+    assert!(c.walks_to(&w, [100.0, 0.0, 0.0]));
+    assert_eq!(c.feet, before);
+    // A wall the line meets at a shallow angle: sliding along it is
+    // not walking the line.
+    let mut w2 = World::new();
+    floor(&mut w2, &b);
+    w2.add_hull(
+        &cuboid([0.0, 40.0, 0.0], [600.0, 60.0, 300.0]),
+        0.0,
+        "wall",
+        &b,
+    )
+    .unwrap();
+    assert!(!c.walks_to(&w2, [600.0, 120.0, 0.0]));
+    // A step below the step height is walked.
+    let mut w3 = World::new();
+    floor(&mut w3, &b);
+    w3.add_hull(
+        &cuboid([150.0, -300.0, 0.0], [600.0, 300.0, P.step_height - 2.0]),
+        0.0,
+        "ledge",
+        &b,
+    )
+    .unwrap();
+    assert!(c.walks_to(&w3, [300.0, 0.0, P.step_height - 2.0]));
+}

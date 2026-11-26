@@ -571,6 +571,12 @@ pub struct Drawing {
     /// moved clear of it, eased round the eye
     /// (`crate::scene::cast_clear_circle`, `crate::scene::ease_cast_clear`).
     pub cast_keeps_clear: bool,
+    /// `--draw-cast-settles` (`play_cast_settles_on_ground_v1`; the
+    /// scripted play window's cast): a standing actor whose stored or
+    /// package place has walkable ground within a small reach below or
+    /// above its feet is drawn standing on that ground
+    /// (`crate::scene::settle_z`).
+    pub cast_settles: bool,
     /// The scripted play window with `--exposure-eye`: the exposure
     /// measured per view instead of once per load (`scene::ViewExposure`;
     /// plumbing of the existing switch, set by the parser).
@@ -1072,6 +1078,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             "--draw-cast-on-platforms" => drawing.cast_on_platforms = true,
             "--draw-cast-keeps-its-part" => drawing.cast_keeps_part = true,
             "--draw-cast-keeps-clear" => drawing.cast_keeps_clear = true,
+            "--draw-cast-settles" => drawing.cast_settles = true,
             "--exposure-eye-visible" => drawing.exposure_visible = true,
             "--timeline-dead-lying" | "--timeline-dead-left-out" => {
                 if dead != fo4_scene::timeline::Dead::Standing {
@@ -1464,6 +1471,9 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
     }
     if scene.drawing.cast_keeps_clear && scene.play_cast.is_none() {
         return Err("--draw-cast-keeps-clear moves the play cast's actors clear of the walker: it needs --timeline-cast and --play-run".into());
+    }
+    if scene.drawing.cast_settles && scene.play_cast.is_none() {
+        return Err("--draw-cast-settles stands the play cast's actors on the walking world's ground: it needs --timeline-cast and --play-run".into());
     }
     if scene.drawing.cast_keeps_part && !scene.drawing.cast_on_platforms {
         return Err("--draw-cast-keeps-its-part keeps the part --draw-cast-on-platforms stands an actor on: it needs --draw-cast-on-platforms".into());

@@ -122,6 +122,11 @@ struct Flags {
 
 /// Overlap below this depth is accepted (world units).
 const PENETRATION_TOLERANCE: f64 = 1e-6;
+/// Seconds of one tick of [`Character::walks_to`] (the largest tick the
+/// settings allow).
+pub const WALK_PROBE_TICK: f64 = 0.1;
+/// Most ticks one [`Character::walks_to`] runs.
+pub const WALK_PROBE_MAX_TICKS: u64 = 400;
 /// Most ticks one [`Character::step`] runs; a longer frame drops the rest.
 pub const MAX_TICKS_PER_STEP: u32 = 30;
 /// Most substeps of one move.
@@ -493,6 +498,57 @@ impl Character {
             n += 1;
         }
         last
+    }
+
+    /// Whether a copy of the character, walked (at the run speed, in ticks
+    /// of [`WALK_PROBE_TICK`] seconds) from its feet straight toward `to`
+    /// on the ground, gets as far along the line as `to` (less half a radius) on the ground plane
+    /// without being blocked, without sliding more than a radius off the
+    /// straight line and without dropping more than its height below the
+    /// lower of the two ends. Reads only: the character is not moved. A
+    /// probe for a cue, not a rule of the game: the copy walks as the
+    /// walker would (steps, slopes, walls), so furniture lower than the
+    /// eye stops it where a sight line passes over.
+    pub fn walks_to<W: Space + ?Sized>(&self, world: &W, to: V3) -> bool {
+        let mut c = self.clone();
+        c.settings.tick = WALK_PROBE_TICK;
+        c.accumulator = 0.0;
+        c.velocity = [0.0; 3];
+        let from = c.feet;
+        let d = [to[0] - from[0], to[1] - from[1]];
+        let len = d[0].hypot(d[1]);
+        let reach = 0.5 * c.params.radius;
+        if len <= reach {
+            return true;
+        }
+        let dir = [d[0] / len, d[1] / len];
+        let heading = dir[1].atan2(dir[0]);
+        let input = Input {
+            forward: 1.0,
+            right: 0.0,
+            heading,
+            run: true,
+        };
+        let per_tick = c.params.run_speed.max(c.params.walk_speed) * WALK_PROBE_TICK;
+        if !(per_tick > 0.0) {
+            return false;
+        }
+        let floor = from[2].min(to[2]) - c.params.height;
+        let ticks = (len / per_tick).ceil() as u64 + 8;
+        for _ in 0..ticks.min(WALK_PROBE_MAX_TICKS) {
+            let s = c.tick(world, input);
+            let rel = [s.feet[0] - from[0], s.feet[1] - from[1]];
+            let off = (rel[0] * dir[1] - rel[1] * dir[0]).abs();
+            if s.blocked || off > c.params.radius || s.feet[2] < floor {
+                return false;
+            }
+            // Reached: as far along the line as the target, less the
+            // reach (a tick may step past it).
+            if rel[0] * dir[0] + rel[1] * dir[1] >= len - reach {
+                return true;
+            }
+        }
+        false
     }
 
     /// Ticks without input until the character is on the ground and has not

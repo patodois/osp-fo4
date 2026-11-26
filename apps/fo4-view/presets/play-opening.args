@@ -194,6 +194,11 @@
 # (play_cast_kept_clear_of_walker_v1): the eye does not enter the
 # checkpoint crowd's heads. The run is unchanged.
 --draw-cast-keeps-clear
+# A standing actor drawn at its stored or package place stands on the
+# walking world's ground within 32 units above or 64 below its feet
+# (play_cast_settles_on_ground_v1): the checkpoint's woman on the slope
+# stands on the grass. The run is unchanged.
+--draw-cast-settles
 # The worn armours' slots decide what of a head is hidden
 # (npc_head_hidden_by_head_slot_v1): the checkpoint's helmets keep faces.
 --actor-head-slots

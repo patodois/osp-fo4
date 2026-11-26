@@ -42,7 +42,7 @@ mod enabled {
     use fo4_play::{Driver, Next, View};
     use fo4_plugin::FormKey;
     use std::cell::RefCell;
-    use std::collections::BTreeMap;
+    use std::collections::{BTreeMap, BTreeSet};
     use std::fmt::Write as _;
     use std::rc::Rc;
     use std::sync::atomic::{AtomicBool, Ordering};
@@ -915,6 +915,19 @@ mod enabled {
             Some(self.scripted.as_ref()?.scene.data.as_str())
         }
 
+        /// `--draw-cast-settles`: the drawn actors' places whose ground the
+        /// window wants (`Seen::ground_asked`); the play thread answers at
+        /// its next publish.
+        pub fn ask_ground(&self, asks: BTreeMap<FormKey, [f64; 3]>) {
+            if let Some(s) = self.scripted.as_ref() {
+                if let Ok(mut seen) = s.seen.lock() {
+                    if seen.ground_asked != asks {
+                        seen.ground_asked = asks;
+                    }
+                }
+            }
+        }
+
         /// Where the scripted walker stands now.
         pub fn seen(&self) -> Option<Seen> {
             let s = self.scripted.as_ref()?;
@@ -1455,6 +1468,14 @@ mod enabled {
         /// The cell that walking world is being built about: the window
         /// loads its drawing meanwhile.
         pub next_cell: Option<FormKey>,
+        /// `--draw-cast-settles`: the places of the drawn actors the window
+        /// asks the ground under (written by the window,
+        /// [`Play::ask_ground`]), and the play thread's answers: for each
+        /// actor the place asked and the walking world's highest surface at
+        /// or below it raised by `crate::scene::SETTLE_UP` (its height and
+        /// the upward part of its normal; `None`: nothing there).
+        pub ground_asked: BTreeMap<FormKey, [f64; 3]>,
+        pub ground: BTreeMap<FormKey, ([f64; 3], Option<(f64, f64)>)>,
     }
 
     /// The scripted walker as the run's driver, held back by the window's
@@ -1497,6 +1518,10 @@ mod enabled {
         /// space each stands in, its bounds' centre and its display name,
         /// read once ([`Paced::publish_cue`]).
         persons_at: Option<PersonsAt>,
+        /// The run's effects read so far and the references a script
+        /// activated in them ([`Paced::publish_cue`]: a target a script
+        /// activated is used).
+        scripted: (usize, BTreeSet<FormKey>),
     }
 
     /// Run seconds with no change of the run's quest log before the
@@ -1546,6 +1571,17 @@ mod enabled {
     /// The most trail points the cue looks back over (viewer policy: a
     /// bound on the work of one look; about half an hour of walking).
     pub const CUE_TRAIL_MAX: usize = 20_000;
+
+    /// The farthest apart (game units) the walker's last point before it
+    /// left the space and its first on coming back may be for the way back
+    /// to pass over the stretch in another space (viewer policy: one door,
+    /// left and entered again; the 21st session stepped out of the house
+    /// and back and the cue pointed through a wall).
+    pub const CUE_DOOR_JOIN: f64 = 128.0;
+
+    /// What the cue adds when it has no way back and the straight line to
+    /// the place is not walked (viewer policy).
+    pub const CUE_NOT_STRAIGHT: &str = " (not straight: go round)";
 
     /// Two points of the walker's own trail this near each other on the
     /// ground (game units; two capsule radii of the walk's placeholder) are
@@ -1601,8 +1637,8 @@ mod enabled {
     /// The cue when the walker can see ahead (viewer policy): `to` is the
     /// place's nearest point, `way` the way back [`cue_way`] gives (from
     /// the feet to the place), `seen` whether the straight line from the
-    /// feet to a point is open (the caller asks the walking world at eye
-    /// height). The place's point in sight: straight at it, its distance
+    /// feet to a point is open (the caller asks whether the walker's body
+    /// walks it, `fo4_play::Walker::walks_to`). The place's point in sight: straight at it, its distance
     /// on the ground. Else the way's point nearest the place's end in sight
     /// (of at most [`CUE_SIGHT_TRIES`] spread along it): aimed at directly,
     /// the length the straight line to it and the way on from it. Else the
@@ -1649,9 +1685,23 @@ mod enabled {
         // first point inside the place.
         let mut pts = vec![feet];
         let mut found = false;
+        // A stretch in another space is passed over when the walker left
+        // and came back at one door (the trail's two ends within
+        // [`CUE_DOOR_JOIN`]); else there is no way back in this space.
+        let mut away = false;
         for p in track.iter().rev().take(CUE_TRAIL_MAX) {
             if fo4_scene::timeline::norm(&p.space) != *space {
-                return None;
+                away = true;
+                continue;
+            }
+            if away {
+                let last = pts[pts.len() - 1];
+                if (p.pos[0] - last[0]).hypot(p.pos[1] - last[1]) > CUE_DOOR_JOIN
+                    || (p.pos[2] - last[2]).abs() > CUE_DOOR_JOIN
+                {
+                    return None;
+                }
+                away = false;
             }
             pts.push(p.pos);
             if inside(p.pos) {
@@ -1736,6 +1786,26 @@ mod enabled {
             .filter(|(k, (sp, c, _))| sp == space && !met.contains(k) && d(c) <= CUE_REACH)
             .min_by(|a, b| d(&a.1 .1).total_cmp(&d(&b.1 .1)))
             .map(|(k, (_, c, n))| (k.clone(), *c, n.clone()))
+    }
+
+    /// The person's activation targets the use cue no longer names (viewer
+    /// policy): those E met (`e_met`), those a script activated
+    /// (`scripted`: picking up the device's holder activates the device),
+    /// and those the run made absent (`absent`: taken or disabled). Once
+    /// used, a target stays retired.
+    pub fn used_targets(
+        e_met: impl Iterator<Item = FormKey>,
+        scripted: &BTreeSet<FormKey>,
+        absent: impl Fn(&FormKey) -> bool,
+        at: &PersonsAt,
+    ) -> Vec<FormKey> {
+        let mut out: Vec<FormKey> = e_met.collect();
+        for k in at.keys() {
+            if scripted.contains(&fo4_scene::timeline::norm(k)) || absent(k) {
+                out.push(k.clone());
+            }
+        }
+        out
     }
 
     /// Height (game units) above or below the eye past which the use cue
@@ -1984,6 +2054,24 @@ mod enabled {
             s.platforms = platforms;
             s.doors = doors;
             s.boxes = boxes;
+            // The ground under the actors the window asks about
+            // (`--draw-cast-settles`), asked again at each publish: the
+            // walker's world grows and changes as it walks (an answer of
+            // nothing given before the squares under an actor loaded
+            // would otherwise stand).
+            let asked: Vec<(FormKey, [f64; 3])> = s
+                .ground_asked
+                .iter()
+                .map(|(k, p)| (k.clone(), *p))
+                .collect();
+            for (k, p) in asked {
+                let hit = self
+                    .walker
+                    .ground_below([p[0], p[1], p[2] + crate::scene::SETTLE_UP]);
+                s.ground.insert(k, (p, hit));
+            }
+            let keep: Vec<FormKey> = s.ground_asked.keys().cloned().collect();
+            s.ground.retain(|k, _| keep.contains(k));
             // The heading: the slice's horizontal move, else a look command
             // given at or after its last point (`face`, `turn`: commands
             // due at a slice's end come after its move), else as it was.
@@ -2347,6 +2435,23 @@ mod enabled {
             if w.quests.log.len() != self.progress.0 {
                 self.progress = (w.quests.log.len(), now);
             }
+            // The references a script activated since the last look.
+            if let Some(new) = run.vm.effects.get(self.scripted.0..) {
+                for e in new {
+                    if e.native != "objectreference.activate" {
+                        continue;
+                    }
+                    if let Some(k) = e
+                        .receiver_object
+                        .and_then(|o| w.objects.get(o))
+                        .and_then(|o| o.key.as_deref())
+                        .and_then(fo4_vm::data::key_record)
+                    {
+                        self.scripted.1.insert(fo4_scene::timeline::norm(&k));
+                    }
+                }
+                self.scripted.0 = run.vm.effects.len();
+            }
             if self.persons_at.is_none() && now - self.progress.1 >= CUE_AFTER {
                 let b = fo4_core::Budget::new(run.store.limits.max_memory);
                 let (m, vfs) = run.sources();
@@ -2376,13 +2481,11 @@ mod enabled {
                 {
                     let space = fo4_scene::timeline::norm(space);
                     let log = self.log.borrow();
-                    let met: Vec<FormKey> = log
-                        .activations
-                        .iter()
-                        .filter_map(|a| {
-                            a.3.as_ref().ok().map(|(k, _)| fo4_scene::timeline::norm(k))
-                        })
-                        .collect();
+                    let e_met = log.activations.iter().filter_map(|a| {
+                        a.3.as_ref().ok().map(|(k, _)| fo4_scene::timeline::norm(k))
+                    });
+                    let walker = &self.walker;
+                    let met = used_targets(e_met, &self.scripted.1, |k| walker.made_absent(k), at);
                     let eye = self.walker.eye_height().unwrap_or(0.0);
                     use_target(f, &space, at, &met).map(|(k, centre, name)| {
                         cue_use_line(
@@ -2427,24 +2530,36 @@ mod enabled {
                                 let line = match cue_way(&log.track, &space, f, |p| v.contains(p)) {
                                     Some(way) => {
                                         // Straight at the place, or at the
-                                        // way's latest point, in sight at
-                                        // eye height.
-                                        let h = self.walker.eye_height();
+                                        // way's latest point, when the
+                                        // walker's body walks the straight
+                                        // line there (a sight line at eye
+                                        // height passed over a bookcase in
+                                        // the 21st session).
                                         let walker = &self.walker;
-                                        let seen = |p: [f64; 3]| {
-                                            h.is_some_and(|h| {
-                                                walker.clear_line(
-                                                    [f[0], f[1], f[2] + h],
-                                                    [p[0], p[1], p[2] + h],
-                                                ) == Some(true)
-                                            })
+                                        let seen = |p: [f64; 3]| walker.walks_to(p) == Some(true);
+                                        let (aim, len, open) = cue_sighted(f, to, &way, seen);
+                                        // How the cue was found, for the
+                                        // watch only (after a second tab).
+                                        let how = match (open, aim == to) {
+                                            (true, true) => "walked to the place",
+                                            (true, false) => "walked to the way's point",
+                                            _ => "along the way",
                                         };
-                                        let (aim, len, _) = cue_sighted(f, to, &way, seen);
-                                        cue_line_trail(f, s.heading, aim, len)
+                                        (cue_line_trail(f, s.heading, aim, len), how)
                                     }
-                                    None => cue_line(f, s.heading, to),
+                                    // No way back in this space: the
+                                    // straight line, said to be no way
+                                    // when the walker's body does not
+                                    // walk it.
+                                    None => match self.walker.walks_to(to) {
+                                        Some(false) => (
+                                            cue_line(f, s.heading, to) + CUE_NOT_STRAIGHT,
+                                            "straight, no way back, not walked",
+                                        ),
+                                        _ => (cue_line(f, s.heading, to), "straight, no way back"),
+                                    },
                                 };
-                                line + &cue_tag(&key)
+                                line.0 + &cue_tag(&key) + "\t" + line.1
                             })
                     }
                     _ => None,
@@ -2661,6 +2776,7 @@ mod enabled {
             pending: None,
             progress: (0, 0.0),
             persons_at: None,
+            scripted: (0, BTreeSet::new()),
             opens: switches
                 .opens
                 .iter()
@@ -2748,14 +2864,13 @@ mod enabled {
                 .map(|(d, i)| (*d, i.tag))
                 .collect();
             let live = loaded.live.as_ref().expect("--play-live-world");
-            let absent: std::collections::BTreeSet<&FormKey> = live
+            let absent: BTreeSet<&FormKey> = live
                 .info
                 .iter()
                 .filter(|(_, i)| i.piece != 0)
                 .map(|(k, _)| k)
                 .collect();
-            let door_draws: std::collections::BTreeSet<usize> =
-                loaded.doors.iter().map(|d| d.0).collect();
+            let door_draws: BTreeSet<usize> = loaded.doors.iter().map(|d| d.0).collect();
             let mut hidden = crate::scene::DrawnNow::default();
             for (d, tag) in &tag_of {
                 let gone = live
@@ -3516,10 +3631,23 @@ mod enabled {
                 cue_line_trail([100.0, 0.0, 0.0], Some(135.0), aim, len),
                 "Go back: 191 units ahead"
             );
-            // Another space between: no trail, the straight line stays.
+            // Another space between, left and entered again at one door:
+            // passed over, the trail as before.
             let mut cut = track.clone();
             cut.insert(2, pt(0.0, 0.0, &other));
-            assert_eq!(cue_trail(&cut, &space, [100.0, 0.0, 0.0], room), None);
+            assert_eq!(
+                cue_trail(&cut, &space, [100.0, 0.0, 0.0], room),
+                Some((aim, len))
+            );
+            // Left at one door and back at another far from it: no trail,
+            // the straight line stays.
+            let far = vec![
+                pt(-50.0, 100.0, &space),
+                pt(0.0, 0.0, &other),
+                pt(300.0, -300.0, &space),
+                pt(100.0, 0.0, &space),
+            ];
+            assert_eq!(cue_trail(&far, &space, [100.0, 0.0, 0.0], room), None);
             // A short trail aims at the first point inside.
             assert_eq!(
                 cue_trail(&track[..1], &space, [-10.0, 100.0, 0.0], room),
@@ -3575,6 +3703,28 @@ mod enabled {
                 "Use Device (not drawn): 40 units ahead, 110 below the eye"
             );
             assert_eq!(use_target(feet, &space, &at, &[k(1), k(2)]), None);
+            // Retired once used: a script activated the device (its holder
+            // was picked up), so with E only on the holder (k(7), not a
+            // target) nothing is named; a target the run made absent is
+            // retired too, and E's own targets stay retired.
+            let scripted: BTreeSet<FormKey> = [k(1)].into_iter().collect();
+            let used = used_targets([k(7)].into_iter(), &scripted, |_| false, &at);
+            assert_eq!(
+                use_target(feet, &space, &at, &used).map(|t| t.0),
+                Some(k(2))
+            );
+            let used = used_targets([k(2)].into_iter(), &scripted, |_| false, &at);
+            assert_eq!(use_target(feet, &space, &at, &used), None);
+            let used = used_targets(std::iter::empty(), &BTreeSet::new(), |x| *x == k(2), &at);
+            assert_eq!(
+                use_target(feet, &space, &at, &used).map(|t| t.0),
+                Some(k(1))
+            );
+            let used = used_targets(std::iter::empty(), &BTreeSet::new(), |_| false, &at);
+            assert_eq!(
+                use_target(feet, &space, &at, &used).map(|t| t.0),
+                Some(k(2))
+            );
             // In sight: the walker walked from the room's door (0, 100)
             // east to (300, 100) and turns back west toward the room. The
             // way back is the corridor; with the room's point in sight the

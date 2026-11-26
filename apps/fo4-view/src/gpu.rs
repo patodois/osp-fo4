@@ -1000,6 +1000,9 @@ struct CastEntity {
     keep: bool,
     /// `--draw-cast-keeps-clear`.
     clear: bool,
+    /// `--draw-cast-settles`, for an actor it may stand on the ground
+    /// (`crate::scene::CastPlace::settle`).
+    settle: bool,
     /// With it, its actor's drawn body (`crate::scene::cast_body`).
     body: std::sync::Arc<crate::scene::CastBody>,
     /// The space of the cell the cast was built for.
@@ -1070,6 +1073,7 @@ fn spawn_cast(world: &mut World) {
             ride: scene.cast_ride,
             keep: scene.cast_keep,
             clear: scene.cast_clear,
+            settle: place.is_some_and(|(c, _)| c.settle),
             space: scene.cast_space.clone(),
         });
     }
@@ -1870,6 +1874,9 @@ struct PlayDrawn {
         ([f64; 3], f64, Option<crate::scene::PartKey>),
     >,
     applied: Option<u64>,
+    /// `--draw-cast-settles`: the census last printed (actors drawn on the
+    /// ground, most units dropped, most raised; [`ride_cast`]).
+    settled: (usize, i64, i64, [usize; 4]),
     /// `--draw-cast-keeps-clear`: the actors drawn moved clear of the
     /// walker the frame before, each with its offset, and the run's second
     /// of that frame ([`clear_cast`]).
@@ -1987,16 +1994,53 @@ fn ride_cast<F: bevy::ecs::query::QueryFilter>(
         fo4_plugin::FormKey,
         ([f64; 3], f64, Option<crate::scene::PartKey>),
     >,
+    census: &mut (usize, i64, i64, [usize; 4]),
     casts: &mut Query<(Entity, &CastEntity, &mut Transform), F>,
 ) {
     let reach = fo4_walk::Params::PROVISIONAL.height;
     let mut now: std::collections::BTreeMap<fo4_plugin::FormKey, f64> =
         std::collections::BTreeMap::new();
+    // `--draw-cast-settles` (`play_cast_settles_on_ground_v1`): an actor
+    // no platform's part holds stands on the ground the play thread found
+    // under its place (`crate::scene::settle_z`).
+    let mut settled: std::collections::BTreeMap<fo4_plugin::FormKey, f64> =
+        std::collections::BTreeMap::new();
+    // The others asked about, each by why it stays (see `why`; 4 on a
+    // platform's part).
+    let mut stays: Vec<u8> = Vec::new();
     for (_, c, mut t) in casts.iter_mut() {
-        let (Some((k, place)), true) = (&c.place, c.ride) else {
+        let Some((k, place)) = &c.place else {
             continue;
         };
+        if !c.ride && !c.settle {
+            continue;
+        }
         let z = *now.entry(k.clone()).or_insert_with(|| {
+            let ground = || {
+                c.settle
+                    .then(|| seen.ground.get(k))
+                    .flatten()
+                    .filter(|(q, _)| q == place)
+                    .and_then(|(_, hit)| crate::scene::settle_z(*place, *hit))
+            };
+            // Why an actor asked about stays at its place: 1 not answered
+            // yet, 2 nothing under it, 3 ground out of reach or too steep.
+            let why = || match seen.ground.get(k).filter(|(q, _)| q == place) {
+                None => 1,
+                Some((_, None)) => 2,
+                Some(_) => 3,
+            };
+            if !c.ride {
+                let g = ground();
+                if g.is_none() && c.settle {
+                    stays.push(why());
+                }
+                let z = g.unwrap_or(place[2]);
+                if c.settle {
+                    settled.insert(k.clone(), z - place[2]);
+                }
+                return z;
+            }
             let (was, kept) = match feet.get(k) {
                 Some((p, z, part)) if p == place => (*z, part.clone()),
                 _ => (place[2], None),
@@ -2040,15 +2084,47 @@ fn ride_cast<F: bevy::ecs::query::QueryFilter>(
                     seen.t
                 );
             }
+            let on_part = stood.is_some();
             feet.insert(k.clone(), (*place, z, stood.map(|s| s.1)));
+            // Not one a platform's part holds (the ride down).
+            if !on_part && c.settle {
+                if let Some(g) = ground() {
+                    settled.insert(k.clone(), g - place[2]);
+                    return g;
+                }
+                stays.push(why());
+            } else if c.settle {
+                stays.push(4);
+            }
             z
         });
         let dz = (z - place[2]) as f32;
         // Game +Z is Bevy +Y (`coords`).
         let want = c.base + Vec3::new(0.0, dz, 0.0);
-        if t.translation != want {
-            t.translation = want;
+        if t.translation.y != want.y {
+            t.translation.y = want.y;
         }
+    }
+    // The census, at each change: actors drawn off their place's height,
+    // the most dropped and the most raised (whole units).
+    let moved: Vec<f64> = settled
+        .values()
+        .copied()
+        .filter(|d| d.abs() >= 0.5)
+        .collect();
+    let count = |w: u8| stays.iter().filter(|x| **x == w).count();
+    let line = (
+        moved.len(),
+        moved.iter().fold(0.0f64, |m, d| m.max(-d)).round() as i64,
+        moved.iter().fold(0.0f64, |m, d| m.max(*d)).round() as i64,
+        [count(1), count(2), count(3), count(4)],
+    );
+    if !(settled.is_empty() && stays.is_empty()) && line != *census {
+        println!(
+            "play: settled: {} actors, max drop {}, max rise {}; kept at their place: {} not answered yet, {} with nothing under them, {} with ground out of reach or too steep, {} on a platform's part; at {:.3} s of the run (play_cast_settles_on_ground_v1)",
+            line.0, line.1, line.2, line.3[0], line.3[1], line.3[2], line.3[3], seen.t
+        );
+        *census = line;
     }
 }
 
@@ -3441,8 +3517,19 @@ fn play_scripted(
         if let Some(pp) = platforms.as_deref_mut() {
             follow_platforms(&seen, pp, &mut instances, skins.is_some());
         }
-        if !seen.platforms.is_empty() {
-            ride_cast(&seen, &mut drawn.feet, &mut casts);
+        // `--draw-cast-settles`: the places whose ground the play thread
+        // is asked for.
+        let asks: std::collections::BTreeMap<fo4_plugin::FormKey, [f64; 3]> = casts
+            .iter()
+            .filter(|(_, c, _)| c.settle)
+            .filter_map(|(_, c, _)| c.place.clone())
+            .collect();
+        let settles = !asks.is_empty();
+        if settles || !seen.ground_asked.is_empty() {
+            p.ask_ground(asks);
+        }
+        if !seen.platforms.is_empty() || settles {
+            ride_cast(&seen, &mut drawn.feet, &mut drawn.settled, &mut casts);
         }
         clear_cast(&seen, &mut drawn.cleared, &mut casts);
         if let Some(w) = watch.as_deref_mut() {
