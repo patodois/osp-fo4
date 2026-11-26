@@ -1975,6 +1975,105 @@ inflating them and the rest (`fo4_archive::clock`, per thread, measurement only)
 load steps. Why session A's load worker took 1.97 s against B's 0.77 s is not established; no replay of a
 person session reaches that load with the split lines yet.
 
+### The outdoor holds, the console's refusal, the gear's hub and the nursery's props (the fifteenth-session step)
+
+Both fifteenth sessions (built at the fourteenth-session step) reached the surface. Their records replay on this
+step's `play_run` with the sessions' own run arguments to the same outputs (6 of 7 byte for byte each, the timeline
+among them; `play.txt` differs only in its timing lines, as a window session's always does from its replay).
+
+**The outdoor holds.** The six first crossings held the walker 11.9 s (A) and 8.5 s (B) in the sessions against
+9.0 and 7.0 s in the fourteenth. The kept files (the early step's `Assets::keep_files`, 512 MiB) explain it: the
+play data thread's casts between the loads read through the same kept assets, and with the two drawing switches of
+the fourteenth-session step the first outdoor square keeps 751 files (434.7 MiB) where the fourteenth kept 601
+(423.8 MiB); the street's square (126 more placements drawn, 78 more meshes, 48 more textures) then read 960 files
+from the archives again against the fourteenth's 258, the draw list inflating for 2.04 s. Three causes, measured
+headless with the load measurement replaying each session's casts between its loads
+(`play::tests::measure_the_windows_cell_loads` with `cast SECOND CELL` lines; it gives the session's kept-file
+counts exactly):
+
+- a new asset's visit read and inflated each file for its parse and the draw list read and inflated it again;
+  the visit now keeps what it read (`Assets::visit`, with kept files on);
+- a hit did not refresh a kept file, so the oldest went first even when in use; the least recently used now goes;
+- the cap: at 512 MiB the first square and the casts fill it. At 1 GiB (`load::KEPT_FILES_MAX`) the headless
+  replay reads about 140 files a load from the archives; 1.5 and 2 GiB read none and are no faster. The process's
+  peak resident memory went from 2.40 to 2.52 GB for A (1.5 GiB: 2.93) and from 2.63 to 3.07 GB for B (against
+  the 512 MiB cap with the first two changes). Session B's eight loads headless: 1.73, 1.66, 1.51, 1.44, 1.63, 0.91,
+  0.31 and 0.41 s at 512 MiB with the first two changes, 0.86, 0.80, 0.58, 0.56, 0.74, 0.51, 0.30 and 0.40 s at 1 GiB.
+
+Session A's record in the window (no person; run from 530 s at the window's pace, the session's preset and run
+arguments before, this step's after), the hold as the fifteenth report measured it (from the first frame at the
+held place to the first frame with the new square; seconds), and the load and upload from the window's log:
+
+| Crossing | person session | replay before | replay after | load + upload before | load + upload after |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| street | 4.083 | 2.319 | 1.097 | 2.17 + 0.13 | 0.91 + 0.16 |
+| trail | 1.856 | 1.609 | 1.286 | 1.45 + 0.14 | 1.10 + 0.15 |
+| bridge | 3.124 | 1.846 | 1.291 | 1.53 + 0.16 | 1.00 + 0.14 |
+| hill | 1.742 | 0.885 | 0.668 | 0.76 + 0.09 | 0.55 + 0.08 |
+| rock bend | 0.491 | 0.571 | 0.561 | 0.46 + 0.09 | 0.44 + 0.09 |
+| last approach | 0.611 | 0.604 | 0.582 | 0.50 + 0.08 | 0.47 + 0.08 |
+| all six | 11.907 | 7.834 | 5.485 | | |
+
+The longest frame interval inside each hold stays 26 to 52 ms before and after. The draw list's inflate at the
+street went from 1.05 s to none (its archive reads under 0.01 s). Why the person's session held longer than its
+record replayed in the same window build (11.9 against 7.8 s) is not established (the machine's other load at the
+time, inferred).
+
+What is left of a crossing is the draw list's parse and build of every model (the rest), the references' visit of
+the new assets and the walking world; a prefetch of the next square on the play data thread was not done (the
+kept files now hold what it would read; parsing ahead would need the whole square's scene built ahead).
+
+**The console's refusal.** In session A the console's E at 119.5 units showed the prompt and "E used" but nothing
+opened; at 49.7 units it did. Not the reach: the run's effect log shows the console's script asking `GetSitState`
+and getting 3. The person had taken the device 68 s before through its activator, whose script activates its
+linked furniture with events, a sit the play mode does not follow (the walker never sits); the sit ends under
+`vm_sit_events_activation_ended_by_track_v1` once the track is 64 units from the furniture's stored place, and the
+walker stood 63.8 units from it (horizontally); before the later press it had gone 72 units away. Two changes:
+
+- `quest_run --sit-end-other-activation` (`vm_sit_events_activation_ended_by_other_activation_v1`, pending, off by
+  default, in the run's arguments): such a sit ends, as a get-up delivered first, before the caller's or the
+  input's activation of any other reference. Session A's record with it: the console's press at 1830.18 s sets the
+  follow-on quest's 7, then 9 and 8 at 1845.18 and 1845.85 s and the vault dialogue's 95 (before: 1924.18, 1939.18,
+  1939.85 s); every other stage keeps its second, 276 stages to the surface. Session B's record: the timeline byte
+  for byte as before (its presses came after the walk had ended the sit).
+- The confirmation after E (viewer policy): "used" only when a stage or a scene changed; "used, no stage or scene
+  changed" when only the scripts' calls grew (the press reached the target's scripts, which refused it); "opened"
+  or "closed" for a held door the press turned (the fifteenth's pocket door said "nothing happened"); and the name
+  of the first other reference the scripts activated, in parentheses, from the run's effect log.
+
+**The pickup cue.** The device lies on an activator named in the data for what the ray meets (a skeleton); its
+script hands the press on to the one keywordless linked reference (XLKR), a furniture whose base has its own name.
+The prompt on a reference with scripts whose one keywordless link is a named placed furniture now adds that name
+(`use NAME: LINKED`, viewer policy; the link read as `vm_host_linked_ref_xlkr_v1` reads it). The activator's
+activate text override (`ATTX`) is not read: its layout is not established in this project's sources.
+
+**The gear's hub in the opened doorway.** The gear door's model sets, under the node whose collision is the gear's
+moving part, nine nodes of its own through the same sequences (twelve drawn shapes: the hub's ring pieces and an
+upright post); none holds a collision body, so the rigid reading gave them no part and they stayed where built, in
+the doorway (the platform report now lists each rigid shape that stays with its chain's set nodes).
+`--draw-platform-nearest-part` (`play_platform_shape_nearest_part_v1`, pending, off by default, in the preset):
+such a shape goes with the part of the nearest set node above it that holds one; its own node's motion is not
+drawn. Session A's record in the window at 2039 s (the frame the person saw the ring in): the doorway clear, the hub's pieces on the gear rolled aside; of the gear door's rigid shapes 5 stay as built (none of them under a node a sequence sets) against 21, and the exit cell's named platforms draw 38 shapes on their parts and 18 still against 20 and 36. Nothing of the collision changed.
+
+**The nursery's props.** The small piece at the sill (a baby's rattle) and the folded linen beside it are scripted
+activators the fourteenth-session step's two switches draw; their stored places stand 3 units into the top of the
+changing table they lie on (the activators' bounds from 7922, the table's to 7925), and the changing table is not
+drawn: a container whose record's visual fields (`MODT`, `DATA`, `SNAM`, `QNAM`) are not interpreted and whose model
+is skinned and animated (a controller manager). So they show resting on nothing in front of the window sill. The
+red ball in the closet is a static whose bounds start at the floor's height (7853 against the floor's collision at
+7852.7 to 7853.5): it stands on the floor; it reads as floating for want of a contact shadow (none is drawn).
+Nothing changed: drawing the containers would need their fields set aside (a rule like
+`acti_fields_render_unchanged_v1` for containers, not registered) and, for the changing table, a skinned and
+animated model drawn as stored.
+
+**Markers and undrawn actors.** The actor with no skin and no outfit is the kitchen's robot (its base stores an
+object template, `OBTE`/`OBTS`): left out unseen (the analysis's `npc_no_skin_no_outfit_unseen_v1`) would hide what
+the game shows, so no such rule was added; it waits for the object template's reading. The transform-controller
+blocker of a cast marker now prints its rest tag (presentation), which names the rule family that could cover it;
+`actor_part_transform_rigid_only_v1` and the skinned falloff's posed normals
+(`actor_skinned_normals_linear_blend_v1`) were not done. The lab coat's missing head (no cause found) and the
+undrawn crib occupant, remains and device (skinned or graph-animated models) are unchanged.
+
 ## What the play mode does not do yet
 
 - The elevators ride only those the caller names (`--play-elevator`), headless and in the scripted window;
@@ -2010,8 +2109,10 @@ person session reaches that load with the split lines yet.
   stays at its second).
 - A grid square's drawing is loaded whole by the window (the early step keeps the scene assets of one load for the next,
   the tenth-session step reads the first cell again for them and lets a cast build give way, the eleventh-session step
-  keeps the files read: 0.3 to 1.4 s headless for the opening's outdoor squares), overlapped with the walker's build
-  since the person step; its models are still parsed and its meshes built again for each load.
+  keeps the files read: 0.3 to 1.4 s headless for the opening's outdoor squares; the fifteenth-session step keeps
+  what a new asset's visit read, refreshes a kept file on use and keeps up to 1 GiB), overlapped with the walker's
+  build since the person step; its models are still parsed and its meshes built again for each load, and nothing
+  of the next square is read ahead.
 - The reach of an activation, the walker's speed and its tick are the caller's; the activation key and the
   crosshair are the eye's ray (the prompt names what the ray meets; no activation distance from the data).
 - Sound, menus, combat, the player's animation events: still the caller's.
@@ -2071,3 +2172,5 @@ person session reaches that load with the split lines yet.
 | `vm_sit_events_activation_ended_by_track_v1` | `quest_run --sit-end-walk-events 64` (in the run's arguments) | the walker never sits in a furniture in its own space; the distance is the caller's; the game's own end of the take is not read | weak |
 | `refr_script_render_as_stored_v1` | `fo4-view --draw-scripted-as-stored` (in the preset since the fourteenth-session step) | VMAD attaches scripts (a format fact); the run applies their enable changes; a script's change of look is not drawn | weak |
 | `acti_fields_render_unchanged_v1` | `fo4-view --draw-activator-fields` (in the preset since the fourteenth-session step) | that a marker colour, activator flags and an activate text leave the model drawn is prior knowledge | weak |
+| `vm_sit_events_activation_ended_by_other_activation_v1` | `quest_run --sit-end-other-activation` (in the run's arguments since the fifteenth-session step) | a player seated in a furniture activates nothing else (prior knowledge); the walker never sits; the game's own end of the take is not read | weak |
+| `play_platform_shape_nearest_part_v1` | `fo4-view --draw-platform-nearest-part` (in the preset since the fifteenth-session step) | the gear door's hub pieces on nodes the sequences set with no collision under them; that a child node moves with its parent is prior knowledge; the node's own motion is not drawn | weak |
