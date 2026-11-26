@@ -471,7 +471,14 @@ fn cast_with(
     // path applies them first).
     if a.skinned_models {
         tl::apply(&mut scene, loader, &prepared.frame, s.level, budget)?;
-        tl::ride::add_skinned_with(&mut cast, loader, &scene, s.level, a.ragdoll_left_out, budget)?;
+        tl::ride::add_skinned_with(
+            &mut cast,
+            loader,
+            &scene,
+            s.level,
+            a.ragdoll_left_out,
+            budget,
+        )?;
     }
     let options = fo4_render::draw::BuildOptions {
         time: s.time,

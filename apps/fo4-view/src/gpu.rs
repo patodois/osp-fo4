@@ -1775,7 +1775,9 @@ fn hud_update(
         // The cue's volume key (after a tab) is for the watch log only.
         objective: match (
             p.objective(),
-            seen.cue.as_deref().map(|c| c.split('\t').next().unwrap_or(c)),
+            seen.cue
+                .as_deref()
+                .map(|c| c.split('\t').next().unwrap_or(c)),
         ) {
             (Some(o), Some(c)) => Some(format!("{o} - {c}")),
             (o, c) => o.or(c).map(str::to_string),

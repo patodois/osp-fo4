@@ -1169,7 +1169,10 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
         ride: None,
     });
     if ragdoll_left_out && !skinned_models {
-        return Err("--skinned-models-ragdoll-left-out narrows --skinned-models-own-nodes: it needs it".into());
+        return Err(
+            "--skinned-models-ragdoll-left-out narrows --skinned-models-own-nodes: it needs it"
+                .into(),
+        );
     }
     if head_conditions && play_cast.is_none() {
         return Err("--actor-head-conditions evaluates head part conditions against the play run's stages: it needs the play window's cast (--play-run with --timeline-cast)".into());

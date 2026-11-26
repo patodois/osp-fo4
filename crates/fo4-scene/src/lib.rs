@@ -835,12 +835,11 @@ impl<'a> Loader<'a> {
                             && readiness::furniture_field(e)
                         {
                             Some(hypotheses::FURNITURE_FIELDS_RENDER)
-                        } else if parts && on_activator && parts::aside(e, origin(k)) {
-                            Some(hypotheses::ACTIVATOR_PARTS)
                         } else if parts
                             && on_activator
-                            && origin(k) == readiness::Origin::Record
-                            && readiness::reference_location_type(e)
+                            && (parts::aside(e, origin(k))
+                                || (origin(k) == readiness::Origin::Record
+                                    && readiness::reference_location_type(e)))
                         {
                             Some(hypotheses::ACTIVATOR_PARTS)
                         } else if parts && parts::aside(e, origin(k)) {

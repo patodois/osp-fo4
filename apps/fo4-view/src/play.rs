@@ -2974,7 +2974,7 @@ mod enabled {
             let line = cue_line([0.0, 0.0, 0.0], Some(0.0), [186.0, 0.0, 0.0]) + &cue_tag("a:1");
             assert_eq!(line, "Go back: 186 units ahead\ta:1");
             assert_eq!(line.split('\t').next(), Some("Go back: 186 units ahead"));
-            assert!(CUE_REACH < 4400.0 && CUE_REACH > 186.0);
+            const { assert!(CUE_REACH < 4400.0 && CUE_REACH > 186.0) };
         }
 
         #[test]
@@ -3035,20 +3035,36 @@ mod enabled {
             // held doors' reading takes the toggle after the slice), then
             // says opened or closed; a door that is no held door, or one
             // that never turns, says nothing happened.
-            assert!(!confirm_ready(None, "nothing happened", true, false, false, 0.1));
+            assert!(!confirm_ready(
+                None,
+                "nothing happened",
+                true,
+                false,
+                false,
+                0.1
+            ));
             assert!(confirm_ready(
                 Some("closed"),
                 "nothing happened",
                 true,
-                false, false,
+                false,
+                false,
                 0.1
             ));
-            assert!(confirm_ready(None, "nothing happened", false, false, false, 0.0));
+            assert!(confirm_ready(
+                None,
+                "nothing happened",
+                false,
+                false,
+                false,
+                0.0
+            ));
             assert!(confirm_ready(
                 None,
                 "nothing happened",
                 true,
-                false, false,
+                false,
+                false,
                 CONFIRM_WAIT
             ));
             assert_eq!(
@@ -3062,7 +3078,14 @@ mod enabled {
             // The scripts named what the press activated: at once (the
             // exit console after the device, seventeenth session).
             assert!(confirm_ready(None, "used", false, false, true, 0.2));
-            assert!(confirm_ready(None, "used", false, false, false, CONFIRM_WAIT));
+            assert!(confirm_ready(
+                None,
+                "used",
+                false,
+                false,
+                false,
+                CONFIRM_WAIT
+            ));
             assert_eq!(
                 confirm_text(None, "used", None, Some("Needs the key. Have a nice day.")),
                 "used: \"Needs the key. Have a nice day.\""

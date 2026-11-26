@@ -1772,6 +1772,8 @@ fn cpu_and_gpu_frames_agree_on_a_timeline_cast_frame() {
         look: fo4_scene::actor::Readings::default(),
         model_graph_idle: false,
         skinned_models: false,
+        head_conditions: false,
+        ragdoll_left_out: false,
         memory_report: None,
         ride: None,
     };
