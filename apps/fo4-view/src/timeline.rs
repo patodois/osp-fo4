@@ -50,6 +50,8 @@ pub struct Args {
     pub look: fo4_scene::actor::Readings,
     /// `--actor-model-graph-idle` (`actor_model_graph_start_no_sequence_v1`).
     pub model_graph_idle: bool,
+    /// `--actor-effect-stored` (`actor_effect_controller_stored_v1`).
+    pub effect_stored: bool,
     /// `--skinned-models-own-nodes` (`model_skinned_own_nodes_every_placement_v1`).
     pub skinned_models: bool,
     /// `--actor-head-conditions` (`npc_head_part_conditions_run_stages_v1`;
@@ -122,6 +124,7 @@ pub fn cast(
             pose: a.pose,
             look: a.look,
             model_graph_idle: a.model_graph_idle,
+            effect_stored: a.effect_stored,
         };
         #[cfg(feature = "script-event")]
         if a.head_conditions {
@@ -594,6 +597,15 @@ fn cast_with(
     let skinned = tl::ride::report_skinned(&cast, &d.extras);
     if !skinned.is_empty() {
         details.push(skinned.trim_end().replace('\n', "; "));
+    }
+    // `--actor-effect-stored`: what it settled (drawn or not).
+    if cast.effect_stored.0 > 0 {
+        details.push(format!(
+            "{} actors with {} effect-shader float controllers not run, drawn as stored ({})",
+            cast.effect_stored.0,
+            cast.effect_stored.1,
+            fo4_scene::hypotheses::ACTOR_EFFECT_STORED
+        ));
     }
     Ok(Some(CastScene { gpu, line, details }))
 }

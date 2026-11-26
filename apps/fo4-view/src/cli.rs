@@ -320,7 +320,7 @@ usage:
            [--timeline-cast [--timeline-target-rotation] [--actor-missing-bone-bind]
            [--actor-start-clip] [--actor-subgraph-keywords] [--actor-clip-folder]
            [--actor-start-clip-loop] [--actor-sit-clip] [--actor-subgraph-flag-one]
-           [--actor-model-graph-idle] [--actor-template-bits] [--actor-head-slots]
+           [--actor-model-graph-idle] [--actor-effect-stored] [--actor-template-bits] [--actor-head-slots]
            [--actor-unread-texture-slots] [--actor-missing-bone-nearest]
            [--actor-leveled-seed SEED
            [--actor-leveled-chance-none] [--actor-leveled-use-all]]
@@ -395,7 +395,9 @@ usage:
       word 0 take its entries of flag word 1 (no target keywords);
       --actor-model-graph-idle draws an actor's part model whose own graph's
       start state plays no sequence as stored (pending rules,
-      spec/character-graph.md and spec/actor.md).
+      spec/character-graph.md and spec/actor.md); --actor-effect-stored
+      draws an actor's part model's manager-run effect-shader float
+      controller as stored instead of refusing the actor (pending rule).
       --timeline-ride-model draws the named reference by its skinned shapes
       on its own nodes; --timeline-ride SEQUENCE,START puts the nodes that
       sequence moves where it has them at the frame's second, the sequence
@@ -944,6 +946,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
     let mut sit_marker = false;
     let mut look_readings = fo4_scene::actor::Readings::default();
     let mut model_graph_idle = false;
+    let mut effect_stored = false;
     let mut skinned_models = false;
     let mut head_conditions = false;
     let mut ragdoll_left_out = false;
@@ -1081,6 +1084,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             "--actor-head-slots" => look_readings.head_slots = true,
             "--actor-unread-texture-slots" => look_readings.unread_slots = true,
             "--actor-model-graph-idle" => model_graph_idle = true,
+            "--actor-effect-stored" => effect_stored = true,
             "--skinned-models-own-nodes" => skinned_models = true,
             "--actor-head-conditions" => head_conditions = true,
             "--skinned-models-ragdoll-left-out" => ragdoll_left_out = true,
@@ -1196,6 +1200,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
         sit_marker,
         look: look_readings,
         model_graph_idle,
+        effect_stored,
         skinned_models,
         head_conditions,
         ragdoll_left_out,
@@ -1234,6 +1239,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             sit_marker,
             look: look_readings,
             model_graph_idle,
+            effect_stored,
             skinned_models,
             head_conditions: false,
             ragdoll_left_out,
@@ -1256,6 +1262,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
                 && !sit_marker
                 && !look_readings.any()
                 && !model_graph_idle
+                && !effect_stored
                 && !skinned_models
                 && memory_report.is_none()
                 && ride_model.is_none()
@@ -1298,6 +1305,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             || pose.any()
             || look_readings.any()
             || model_graph_idle
+            || effect_stored
             || skinned_models
             || ride_model.is_some())
             && !timeline_cast

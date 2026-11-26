@@ -58,6 +58,12 @@ pub struct Options {
     /// its graph extra data and its manager-run effect-shader controllers
     /// settled: the model is drawn as stored.
     pub model_graph_idle: bool,
+    /// `actor_effect_controller_stored_v1` (`--actor-effect-stored`): an
+    /// effect-shader float controller a manager runs in a part model of the
+    /// actor (the `effect-idle` blocker left after
+    /// [`Options::model_graph_idle`]) is not run: its target field is
+    /// drawn as stored ([`effect_stored`]).
+    pub effect_stored: bool,
 }
 
 /// The frame's actors resolved as characters, in the order of the markers.
@@ -72,6 +78,9 @@ pub struct Cast {
     pub facing: Vec<String>,
     /// Rules the cast relied on (beyond each actor's own state).
     pub rules: BTreeSet<&'static str>,
+    /// With [`Options::effect_stored`]: the actors whose effect-shader float
+    /// controllers it settled ([`effect_stored`]), and how many controllers.
+    pub effect_stored: (usize, usize),
     /// With [`Options::pose`]: how each actor is posed, one text per actor
     /// ([`start_poses`]); empty without it.
     pub poses: Vec<String>,
@@ -247,6 +256,58 @@ fn graph_start_idle(loader: &Loader<'_>, a: &mut actor::Actor, b: &Budget) -> Re
     Ok(())
 }
 
+/// Under [`Options::effect_stored`]: the `effect-idle` blockers of an
+/// effect-shader float controller (`BSEffectShaderPropertyFloatController`),
+/// and in the same model file those of the float interpolators and data
+/// that feed such a controller (`NiBlendFloatInterpolator`,
+/// `NiFloatInterpolator`, `NiFloatData`) and of its behaviour graph extra
+/// data (`behavior-graph`: the graph is not run), retagged `actor-effect-stored`
+/// (`actor_effect_controller_stored_v1`: the controller is not run, its
+/// target field drawn as stored); how many controllers.
+fn effect_stored(blockers: &mut [Error]) -> usize {
+    use crate::rest;
+    const CONTROLLER: &str = "BSEffectShaderPropertyFloatController;";
+    const FEEDS: [&str; 3] = [
+        "NiBlendFloatInterpolator;",
+        "NiFloatInterpolator;",
+        "NiFloatData;",
+    ];
+    let idle = |e: &Error| {
+        e.found
+            .rsplit_once(";rest=")
+            .filter(|(_, t)| *t == rest::EFFECT_IDLE)
+            .map(|(h, _)| h.to_string())
+    };
+    let files: BTreeSet<String> = blockers
+        .iter()
+        .filter(|e| idle(e).is_some_and(|h| h.starts_with(CONTROLLER)))
+        .map(|e| path_text(e.source.file.as_bytes()))
+        .collect();
+    let mut n = 0;
+    for e in blockers {
+        // The model's own behaviour graph, which would run the sequences
+        // driving the controller: not run either.
+        if let Some((head, rest::BEHAVIOR_GRAPH)) = e.found.rsplit_once(";rest=") {
+            if files.contains(&path_text(e.source.file.as_bytes())) {
+                e.found = format!("{head};rest={}", rest::ACTOR_EFFECT_STORED);
+            }
+            continue;
+        }
+        let Some(head) = idle(e) else {
+            continue;
+        };
+        let controller = head.starts_with(CONTROLLER);
+        if controller
+            || (FEEDS.iter().any(|f| head.starts_with(f))
+                && files.contains(&path_text(e.source.file.as_bytes())))
+        {
+            e.found = format!("{head};rest={}", rest::ACTOR_EFFECT_STORED);
+            n += usize::from(controller);
+        }
+    }
+    n
+}
+
 /// The `behavior-graph` and `effect-idle` blockers of the files `idle`
 /// (lower case, forward slashes) retagged `graph-start-idle`; whether any was.
 fn retag_graph_start_idle(blockers: &mut [Error], idle: &[String]) -> bool {
@@ -339,6 +400,14 @@ pub fn resolve_heads(
         a.missing_bones_nearest = options.missing_bones_at_bind && options.missing_bones_nearest;
         if options.model_graph_idle {
             graph_start_idle(loader, &mut a, b)?;
+        }
+        if options.effect_stored {
+            let n = effect_stored(&mut a.blockers);
+            if n > 0 {
+                a.state = hypotheses::classify(&a.blockers, false, b)?;
+                out.effect_stored.0 += 1;
+                out.effect_stored.1 += n;
+            }
         }
         let mut facing = "not placed (no stored placement)".to_string();
         if let Some(stored) = a.transform {
@@ -680,6 +749,57 @@ pub fn report(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn an_effect_float_controller_is_drawn_as_stored_with_its_switch() {
+        // `actor_effect_controller_stored_v1`: only the manager-run
+        // effect-shader float controller's `effect-idle` blocker.
+        let e = |found: &str| {
+            Error::new(
+                "UnsupportedAnimationRuntime",
+                "Meshes\\A.nif",
+                0,
+                "x",
+                found,
+            )
+        };
+        let mut blockers = vec![
+            e("BSEffectShaderPropertyFloatController;target_in_visual=Some(true);rest=effect-idle"),
+            e("BSEffectShaderPropertyColorController;target_in_visual=Some(true);rest=effect-idle"),
+            e("BSEffectShaderPropertyFloatController;target_in_visual=Some(true);rest=behavior-graph"),
+            e("NiTransformController;target_in_visual=Some(true);rest=transform-varies"),
+            e("NiBlendFloatInterpolator;target_in_visual=None;rest=effect-idle"),
+        ];
+        assert_eq!(effect_stored(&mut blockers), 1);
+        assert_eq!(
+            hypotheses::covering(&blockers[4]),
+            Some(hypotheses::ACTOR_EFFECT_STORED),
+            "its interpolator in the same file"
+        );
+        let mut graph = vec![
+            e("BSEffectShaderPropertyFloatController;target_in_visual=Some(true);rest=effect-idle"),
+            e("BSBehaviorGraphExtraData;target_in_visual=None;rest=behavior-graph"),
+        ];
+        assert_eq!(effect_stored(&mut graph), 1);
+        assert_eq!(
+            hypotheses::covering(&graph[1]),
+            Some(hypotheses::ACTOR_EFFECT_STORED)
+        );
+        let mut alone = vec![e(
+            "NiBlendFloatInterpolator;target_in_visual=None;rest=effect-idle",
+        )];
+        assert_eq!(effect_stored(&mut alone), 0);
+        assert_ne!(
+            hypotheses::covering(&alone[0]),
+            Some(hypotheses::ACTOR_EFFECT_STORED)
+        );
+        let covered: Vec<Option<&str>> = blockers.iter().map(hypotheses::covering).collect();
+        assert_eq!(covered[0], Some(hypotheses::ACTOR_EFFECT_STORED));
+        assert_ne!(covered[1], Some(hypotheses::ACTOR_EFFECT_STORED));
+        // A behaviour graph blocker of the same file: the graph is not run.
+        assert_eq!(covered[2], Some(hypotheses::ACTOR_EFFECT_STORED));
+        assert_eq!(effect_stored(&mut blockers), 0, "once");
+    }
 
     #[test]
     fn a_model_whose_graph_starts_idle_has_its_graph_and_effect_blockers_settled() {

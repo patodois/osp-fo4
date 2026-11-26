@@ -524,6 +524,7 @@ sequence driving an effect controller in 15 (the flying insects' bodies).
 | Switch | Rule | Reading |
 | --- | --- | --- |
 | `--actor-model-graph-idle` (with `--timeline-cast`) | `actor_model_graph_start_no_sequence_v1` | an actor's skin or outfit piece model naming a graph whose root start state plays no sequence is drawn as stored: its graph extra data and the effect-shader controllers its manager runs are settled (their blockers retagged `graph-start-idle`, `fo4_scene::rest::GRAPH_START_IDLE`), the effect fields at their stored values, drawn by the effect surface rules |
+| `--actor-effect-stored` (with `--timeline-cast`) | `actor_effect_controller_stored_v1` | an effect-shader float controller a manager runs in an actor's skin or outfit piece model, left refused by the other readings (`effect-idle`), is not run: its blocker, and those of the float interpolators and data feeding it and of the model's behaviour graph extra data in the same model file (the graph is not run), are retagged `actor-effect-stored` (`fo4_scene::rest::ACTOR_EFFECT_STORED`), the field drawn at its stored value; the play window's cast log counts the actors and controllers |
 
 At 1345 s and 1470 s this settles the controllers of 9 actors: 5 (mole rats whose outfit piece names an idle graph)
 are drawn as characters; the build refuses the other 4 (`UnsupportedSkinnedFalloff`: an effect surface with falloff

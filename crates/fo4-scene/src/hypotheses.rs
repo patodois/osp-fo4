@@ -382,6 +382,10 @@ pub const TIMELINE_RIDE: &str = "timeline_ride_sequence_nodes_v1";
 /// effect-shader controllers settled (`crate::timeline::cast`,
 /// `--actor-model-graph-idle`).
 pub const ACTOR_MODEL_GRAPH_START_IDLE: &str = "actor_model_graph_start_no_sequence_v1";
+/// An actor's part model's manager-run effect-shader float controller not
+/// run, its target field drawn as stored (`crate::timeline::cast`,
+/// `--actor-effect-stored`).
+pub const ACTOR_EFFECT_STORED: &str = "actor_effect_controller_stored_v1";
 /// Every placed reference of a frame refused for its skinned shapes drawn
 /// by those shapes on its model's own nodes (`crate::timeline::ride::add_skinned`,
 /// `--skinned-models-own-nodes`).
@@ -830,6 +834,7 @@ mod tests {
             CHAR_GRAPH_SUBGRAPH,
             CHAR_GRAPH_SUBGRAPH_FLAG_ONE,
             ACTOR_MODEL_GRAPH_START_IDLE,
+            ACTOR_EFFECT_STORED,
             MODEL_OWN_NODES_EVERY,
             CHAR_GRAPH_CLIP_FOLDER,
             CHAR_GRAPH_CLIP_LOOP,

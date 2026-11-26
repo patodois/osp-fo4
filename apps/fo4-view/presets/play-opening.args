@@ -100,6 +100,10 @@
 --actor-clip-folder
 --actor-subgraph-flag-one
 --actor-model-graph-idle
+# An actor's part model's effect-shader float controller (a glow) is drawn
+# as stored instead of refusing the actor (actor_effect_controller_stored_v1):
+# the creatures at the neighbourhood objective stand drawn, not as markers.
+--actor-effect-stored
 # A placement the draw refuses for its skinned shapes is drawn as one more
 # actor by those shapes on its model's own nodes, its editor marker
 # subtrees set aside (model_skinned_own_nodes_every_placement_v1): the

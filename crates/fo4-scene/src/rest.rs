@@ -105,6 +105,11 @@ pub const CLOCK_SCALE: &str = "clock-scale";
 /// given only by `crate::timeline::cast` with its switch on, in place of
 /// [`BEHAVIOR_GRAPH`] and [`EFFECT_IDLE`].
 pub const GRAPH_START_IDLE: &str = "graph-start-idle";
+/// An effect-shader float controller a manager runs in an actor's part
+/// model, not run: its target field drawn as stored
+/// (`actor_effect_controller_stored_v1`); given only by
+/// `crate::timeline::cast` with its switch on, in place of [`EFFECT_IDLE`].
+pub const ACTOR_EFFECT_STORED: &str = "actor-effect-stored";
 /// Tolerance of "equal" between a stored effect-shader field and a key.
 pub const EFFECT_TOLERANCE: f32 = 1e-4;
 
@@ -143,6 +148,7 @@ pub fn rule(tag: &str) -> Option<&'static str> {
         CLOCK_ROTATION_XYZ => h::CLOCK_ROTATION_XYZ,
         CLOCK_SCALE => h::CLOCK_SCALE,
         GRAPH_START_IDLE => h::ACTOR_MODEL_GRAPH_START_IDLE,
+        ACTOR_EFFECT_STORED => h::ACTOR_EFFECT_STORED,
         _ => return None,
     })
 }
