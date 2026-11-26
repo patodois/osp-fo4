@@ -1481,6 +1481,18 @@ mod enabled {
     /// viewport shows where to go (viewer policy).
     pub const CUE_AFTER: f64 = 30.0;
 
+    /// The farthest place the cue names (game units on the ground, to the
+    /// volume's nearest point): a viewer policy. The seventeenth session's
+    /// hill cue named a place 4,400 to 5,800 units back while going on was
+    /// right; the house cue that helped was 186 units away.
+    pub const CUE_REACH: f64 = 2048.0;
+
+    /// The cue's volume key, after a tab the viewport does not show (the
+    /// HUD cuts at it; the watch log keeps it).
+    pub fn cue_tag(key: &str) -> String {
+        format!("\t{key}")
+    }
+
     /// The viewport's cue toward the nearest place the run asks about again
     /// (viewer policy, `fo4_vm::track::Place::asking_again`): its distance
     /// on the ground and where it lies from the walker's heading (degrees
@@ -1563,12 +1575,16 @@ mod enabled {
     /// policy): at once when a held door's pose turned; else, until
     /// [`CONFIRM_WAIT`] passed, it waits while a held door the press met
     /// has not turned yet and nothing else happened, and while a press
-    /// that changed a stage or scene has no new subtitle yet.
+    /// that changed a stage or scene has no new subtitle yet and its
+    /// target's scripts named nothing they activated (`activated`: the
+    /// confirmation can name what the press did at once, so the previous
+    /// one does not stay up).
     pub fn confirm_ready(
         door: Option<&str>,
         used: &str,
         door_known: bool,
         new_text: bool,
+        activated: bool,
         waited: f64,
     ) -> bool {
         if door.is_some() || waited >= CONFIRM_WAIT {
@@ -1576,7 +1592,7 @@ mod enabled {
         }
         match used {
             "nothing happened" => !door_known,
-            "used" => new_text,
+            "used" => new_text || activated,
             _ => true,
         }
     }
@@ -2029,7 +2045,8 @@ mod enabled {
                         let used = confirm_line(self.opens.contains(&n), p.before, now);
                         let known = p.doors.contains_key(&n) || doors.contains_key(&n);
                         let new_text = self.new_text(&p).is_some();
-                        if confirm_ready(door, used, known, new_text, run.now() - p.at) {
+                        let activated = activated_by_scripts(run, k, p.before.0, now.0).is_some();
+                        if confirm_ready(door, used, known, new_text, activated, run.now() - p.at) {
                             lines.push(self.confirm_words(run, &p, now, &doors));
                         } else {
                             self.pending = Some(p);
@@ -2062,19 +2079,24 @@ mod enabled {
                 None
             } else {
                 match (s.feet, s.space.as_ref()) {
-                    (Some(f), Some(space)) => {
+                    // Not while the window loads.
+                    (Some(f), Some(space)) if !s.building => {
                         let space = fo4_scene::timeline::norm(space);
+                        let d = |p: &[f64; 3]| (p[0] - f[0]).hypot(p[1] - f[1]);
                         w.place
                             .asking_again(&w.quests.log)
                             .into_iter()
+                            // A volume whose hold changed without an event
+                            // (an undetermined enable) is not named.
+                            .filter(|v| !w.place.blocked.contains(v))
                             .filter_map(|v| w.place.volumes.get(v))
                             .filter(|v| fo4_scene::timeline::norm(&v.space) == space)
-                            .map(|v| v.frame.translation)
-                            .min_by(|a, b| {
-                                let d = |p: &[f64; 3]| (p[0] - f[0]).hypot(p[1] - f[1]);
-                                d(a).total_cmp(&d(b))
-                            })
-                            .map(|to| cue_line(f, s.heading, to))
+                            // Not one the feet stand in.
+                            .filter(|v| !v.contains(f))
+                            .map(|v| (v.nearest(f), fo4_scene::timeline::key_text(&v.key)))
+                            .filter(|(to, _)| d(to) <= CUE_REACH)
+                            .min_by(|a, b| d(&a.0).total_cmp(&d(&b.0)))
+                            .map(|(to, key)| cue_line(f, s.heading, to) + &cue_tag(&key))
                     }
                     _ => None,
                 }
@@ -2948,6 +2970,14 @@ mod enabled {
         }
 
         #[test]
+        fn the_cue_names_a_near_place_with_its_key_for_the_watch() {
+            let line = cue_line([0.0, 0.0, 0.0], Some(0.0), [186.0, 0.0, 0.0]) + &cue_tag("a:1");
+            assert_eq!(line, "Go back: 186 units ahead\ta:1");
+            assert_eq!(line.split('\t').next(), Some("Go back: 186 units ahead"));
+            assert!(CUE_REACH < 4400.0 && CUE_REACH > 186.0);
+        }
+
+        #[test]
         fn denser_frames_come_between_the_periods() {
             assert_eq!(next_shot(0.0, 30.0, &[]), 30.0);
             let b = [[478.0, 512.0, 2.0], [725.0, 800.0, 2.0]];
@@ -3005,20 +3035,20 @@ mod enabled {
             // held doors' reading takes the toggle after the slice), then
             // says opened or closed; a door that is no held door, or one
             // that never turns, says nothing happened.
-            assert!(!confirm_ready(None, "nothing happened", true, false, 0.1));
+            assert!(!confirm_ready(None, "nothing happened", true, false, false, 0.1));
             assert!(confirm_ready(
                 Some("closed"),
                 "nothing happened",
                 true,
-                false,
+                false, false,
                 0.1
             ));
-            assert!(confirm_ready(None, "nothing happened", false, false, 0.0));
+            assert!(confirm_ready(None, "nothing happened", false, false, false, 0.0));
             assert!(confirm_ready(
                 None,
                 "nothing happened",
                 true,
-                false,
+                false, false,
                 CONFIRM_WAIT
             ));
             assert_eq!(
@@ -3027,9 +3057,12 @@ mod enabled {
             );
             // A stage the press set waits for the line it starts, whose
             // text the confirmation carries in the run's own words.
-            assert!(!confirm_ready(None, "used", false, false, 0.2));
-            assert!(confirm_ready(None, "used", false, true, 0.2));
-            assert!(confirm_ready(None, "used", false, false, CONFIRM_WAIT));
+            assert!(!confirm_ready(None, "used", false, false, false, 0.2));
+            assert!(confirm_ready(None, "used", false, true, false, 0.2));
+            // The scripts named what the press activated: at once (the
+            // exit console after the device, seventeenth session).
+            assert!(confirm_ready(None, "used", false, false, true, 0.2));
+            assert!(confirm_ready(None, "used", false, false, false, CONFIRM_WAIT));
             assert_eq!(
                 confirm_text(None, "used", None, Some("Needs the key. Have a nice day.")),
                 "used: \"Needs the key. Have a nice day.\""
@@ -3065,7 +3098,7 @@ mod enabled {
                 confirm_text(Some("opened"), "used", None, Some("Hi.")),
                 "opened"
             );
-            assert!(confirm_ready(None, "opened", false, false, 0.0));
+            assert!(confirm_ready(None, "opened", false, false, false, 0.0));
             // A scripted activator's linked furniture is named after it.
             assert_eq!(
                 prompt_linked("use Crate".into(), Some("Seat")),

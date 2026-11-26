@@ -74,6 +74,18 @@ fn boxed(centre: [f64; 3], half: [f64; 3]) -> Volume {
 }
 
 #[test]
+fn a_volumes_nearest_point_is_on_its_box_and_inside_is_the_point_itself() {
+    let v = boxed([100.0, 0.0, 0.0], [10.0, 20.0, 30.0]);
+    assert_eq!(v.nearest([0.0, 0.0, 0.0]), [90.0, 0.0, 0.0]);
+    assert_eq!(v.nearest([100.0, 50.0, 40.0]), [100.0, 20.0, 30.0]);
+    assert_eq!(v.nearest([95.0, 5.0, 5.0]), [95.0, 5.0, 5.0]);
+    let mut turned = v.clone();
+    turned.frame.rotation = [[0.0, 1.0, 0.0], [-1.0, 0.0, 0.0], [0.0, 0.0, 1.0]];
+    let n = turned.nearest([0.0, 0.0, 0.0]);
+    assert!(turned.contains(n) && (n[0] - 80.0).abs() < 1e-9, "{n:?}");
+}
+
+#[test]
 fn a_volume_across_the_strip_is_entered_first_and_one_beside_a_gap_is_not() {
     let s = strip();
     let h = 120.0;

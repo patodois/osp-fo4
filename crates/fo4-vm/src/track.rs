@@ -312,6 +312,26 @@ impl Volume {
         let d: [f64; 3] = std::array::from_fn(|i| p[i] - f.translation[i]);
         std::array::from_fn(|j| (0..3).map(|i| f.rotation[j][i] * d[i]).sum::<f64>())
     }
+    /// The point of the closed volume nearest a world point (the point
+    /// itself when the volume holds it).
+    pub fn nearest(&self, p: [f64; 3]) -> [f64; 3] {
+        let l = self.local(p);
+        let c: [f64; 3] = match self.shape {
+            Shape::Box(h) => std::array::from_fn(|i| l[i].clamp(-h[i], h[i])),
+            Shape::Sphere(r) => {
+                let n = l.iter().map(|x| x * x).sum::<f64>().sqrt();
+                if n <= r {
+                    l
+                } else {
+                    std::array::from_fn(|i| l[i] * r / n)
+                }
+            }
+        };
+        let f = &self.frame;
+        std::array::from_fn(|i| {
+            f.translation[i] + (0..3).map(|j| f.rotation[j][i] * c[j]).sum::<f64>()
+        })
+    }
     /// Whether the closed volume holds a world point.
     pub fn contains(&self, p: [f64; 3]) -> bool {
         let l = self.local(p);

@@ -1772,7 +1772,11 @@ fn hud_update(
         subtitle: (!texts.is_empty()).then(|| texts.join(" / ")),
         // The objective, and where to go when the run has waited a while
         // on a place the walker passed (`crate::play::cue_line`).
-        objective: match (p.objective(), seen.cue.as_deref()) {
+        // The cue's volume key (after a tab) is for the watch log only.
+        objective: match (
+            p.objective(),
+            seen.cue.as_deref().map(|c| c.split('\t').next().unwrap_or(c)),
+        ) {
             (Some(o), Some(c)) => Some(format!("{o} - {c}")),
             (o, c) => o.or(c).map(str::to_string),
         },
