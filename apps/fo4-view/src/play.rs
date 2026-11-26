@@ -2214,8 +2214,11 @@ mod enabled {
         /// `lead SECONDS` (how long a cast is built before the cell is
         /// asked, default 0.5) and per cell load `load SECOND CELL DRAWN`
         /// (the run's second, the cell asked and the cell drawn before it,
-        /// whose cast is in progress when the cell is asked). Prints per
-        /// load when the cast came back and when the cell did.
+        /// whose cast is in progress when the cell is asked) and, between
+        /// them, `cast SECOND CELL` (a cast the window built there, built
+        /// and waited for in its place in the list, so the kept files see
+        /// the casts' reads as the window's did). Prints per load when the
+        /// cast came back and when the cell did.
         #[test]
         #[ignore = "needs the game data and a session's files named by FO4_VIEW_PLAY_LOADS (measurement only)"]
         fn measure_the_windows_cell_loads() {
@@ -2231,8 +2234,11 @@ mod enabled {
                     ["load", t, cell, drawn] => loads.push((
                         t.parse::<f64>().unwrap(),
                         cell.to_string(),
-                        drawn.to_string(),
+                        Some(drawn.to_string()),
                     )),
+                    ["cast", t, cell] => {
+                        loads.push((t.parse::<f64>().unwrap(), cell.to_string(), None))
+                    }
                     _ => {}
                 }
             }
@@ -2282,6 +2288,27 @@ mod enabled {
             // cell's arrival to its cast's.
             let after = std::env::var("FO4_VIEW_PLAY_PROTOCOL").as_deref() == Ok("after");
             for (second, cell, drawn) in loads {
+                let Some(drawn) = drawn else {
+                    let t0 = std::time::Instant::now();
+                    data.send(DataAsk::Cast(CastAsk {
+                        cell: key(&cell),
+                        timeline: tl.clone(),
+                        second,
+                        sig: 0,
+                    }))
+                    .unwrap();
+                    let r = from.recv().unwrap();
+                    println!(
+                        "measure: cast {cell} at {second:.3} s: {} in {:.2} s",
+                        if matches!(r.2, Ok(Some(_))) {
+                            "built"
+                        } else {
+                            "not built"
+                        },
+                        t0.elapsed().as_secs_f64()
+                    );
+                    continue;
+                };
                 if lead > 0.0 {
                     let ask = CastAsk {
                         cell: key(&drawn),

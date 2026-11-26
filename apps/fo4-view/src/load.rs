@@ -660,6 +660,15 @@ pub const KEPT_ASSETS_MAX: u64 = 768 << 20;
 /// same asset (`fo4_scene::Assets::keep_files`; viewer policy).
 pub const KEPT_FILES_MAX: u64 = 512 << 20;
 
+/// [`KEPT_FILES_MAX`], or `FO4_VIEW_KEPT_FILES_MIB` mebibytes when set
+/// (measurement only).
+pub fn kept_files_max() -> u64 {
+    std::env::var("FO4_VIEW_KEPT_FILES_MIB")
+        .ok()
+        .and_then(|x| x.parse::<u64>().ok())
+        .map_or(KEPT_FILES_MAX, |m| m << 20)
+}
+
 /// `loader` starts from the assets `slot` keeps when they were read the
 /// same way (path policy, clock switches) and hold at most
 /// [`KEPT_ASSETS_MAX`]; else from empty ones. Either way they keep the
@@ -674,7 +683,7 @@ pub fn take_kept<'s>(slot: &mut KeptAssets<'s>, loader: &mut Loader<'s>) {
             loader.assets = a;
         }
     }
-    loader.assets.keep_files(KEPT_FILES_MAX);
+    loader.assets.keep_files(kept_files_max());
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -1475,7 +1484,7 @@ pub fn cell<'s>(
             "files kept for the next load: {} files, {:.1} MiB (at most {} MiB); reads from them {} of {}",
             f.files,
             f.bytes as f64 / f64::from(1u32 << 20),
-            KEPT_FILES_MAX >> 20,
+            kept_files_max() >> 20,
             f.hits,
             f.hits + f.reads
         );
