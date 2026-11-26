@@ -1914,6 +1914,67 @@ the upload apart, but no step separates reading archive bytes from decoding and 
 reads no file, 1.7 times (0.24 against 0.14 s). Every step was slower then, not one; the logs cannot say how much
 of it was the disk. Nothing in the code was changed for it.
 
+### The exit's device, the hidden targets and the lab coat (the fourteenth-session step)
+
+**Neither session left the vault.** The seven commits after the thirteenth build changed no answer of the run:
+the window's three new switches are the drawing's alone (the play options `play_run` reads are the same), and the
+thirteenth build's `play_run` replays session B's record to the same timeline byte for byte. What differed was
+where the persons aimed. The exit's device lies on a placed activator (a skeleton) whose script, on the player's
+activation, activates its linked furniture for the player with events; the furniture's own script and a quest
+alias holding it act in `OnActivate`, and the alias sets the stage the console's script needs. Both thirteenth
+persons' rays met the furniture's box; session A never aimed there and used the console first, so the console's
+script set the stage of its refusal (the data's answer, the gear door shut as it should be); session B's ray met
+the activator's box. The run read the activator's scripted activation as a sit only
+(`vm_furniture_activate_events_sits_v1`): no `OnActivate` reached the furniture, so its stage was never set, and
+the player stayed seated in the run, so the console's script, which acts only while `GetSitState` answers 0,
+ignored every later use. Two readings, each pending, off by default and in the run's arguments:
+`quest_run --activate-furniture-events-deliver` (`vm_furniture_activate_events_delivered_v1`) delivers the
+furniture's `OnActivate` before the sit, and `--sit-end-walk-events 64`
+(`vm_sit_events_activation_ended_by_track_v1`) ends only such a sit once the track is 64 units from the
+furniture's stored place, also looked at before each caller or input action. With both, session B's record
+takes the device at its first press on the activator (1744.2 s), the console's first use opens the gear (1815.2
+s, stages 7, 9, 8), and the record's walk later passes where it stood against the gear; every stage before
+1744 s keeps its second. The other sits an activation with events brings in the opening (the crib, the waking
+pod) now end on the walk too, with no stage changed.
+
+**The hidden targets.** The nursery's target (a skinned model with a behaviour graph), the exit's activator
+(skinned, with stored ragdoll data no reading takes) and the device's furniture (an animated model) are refused
+at render readiness, in the thirteenth build as now: they were never drawn. The window keeps the references its
+loads leave out and the E prompt ends with "(not drawn)" when it names one (viewer policy); the watch log writes
+the prompt, the aim and the confirmation at each change, for a recorded input as for a person's keys. The
+confirmation after E said "nothing happened" where the run acted (the nursery, the activator): the walker logs an
+activation while it builds the slice the run then takes, and the "before" counts were taken after that; they are
+now the previous look's (`confirm_line`). Around the nursery target, a lamp, toys, linens, a book and a changing
+table were refused only because their records carry scripts: `--draw-scripted-as-stored`
+(`refr_script_render_as_stored_v1`, pending, in the preset) draws such a reference as its model stores it, the
+run deciding its presence. `FO4_VIEW_OMITTED=FILE` (measurement only) lists each load's and each cast build's
+omissions with their causes. Those activators were also refused for their base's unread marker colour, flags and
+activate text: `--draw-activator-fields` (`acti_fields_render_unchanged_v1`, pending, in the preset) sets those
+aside for the drawing. With both, the window replay of session B's record draws the nursery's lamp, linens and
+toys at 176 s; the crib's place stays bare and the prompt there names the target and ends with "(not drawn)".
+
+**The lab coat.** The coat beside the intake guard is a scientist with a plain base (no template bits, ten head
+parts listed, an outfit of one armour whose slot word holds no head or hair bit). The window replay of session A
+draws it without a head at 1693 s with the preset and with `--actor-missing-bone-nearest` left out alike, and the
+cast build reports no head left out for it. Its cause is not found; nothing changed.
+
+**Markers.** The four of each session are three readings no rule covers: the kitchen's robot (its race stores no
+skin; its look is assembled from an object template), the escort down the freezing room's approach (it wears the
+device, whose model carries a transform controller), and two leveled actors behind the postwar console (two and
+three candidates; `--actor-leveled-seed` would pick one, not in the preset). Nothing changed.
+
+**The descent's last second.** Session B's record replayed with the walls report: no input in the last 16 s of
+the ride and no blocked tick, yet from 942.67 s the walker's feet slide 3.1 units a tick along x while the deck
+drops 4.6 (y held to the hundredth), then from 943.25 s along y, about 100 and 130 units before the interior's
+load door takes it at 943.99 s. That is the capsule pushed out of a surface it descends into near the shaft's
+bottom (inferred: constant ratio to the descent, no wall reported); which surface, and whether the game's player
+is pushed so, is not established. Nothing changed.
+
+**The checkpoint hill's stall.** Each load step's time is now split into reading stored archive bytes,
+inflating them and the rest (`fo4_archive::clock`, per thread, measurement only), on a second line after the
+load steps. Why session A's load worker took 1.97 s against B's 0.77 s is not established; no replay of a
+person session reaches that load with the split lines yet.
+
 ## What the play mode does not do yet
 
 - The elevators ride only those the caller names (`--play-elevator`), headless and in the scripted window;
@@ -2006,3 +2067,7 @@ of it was the disk. Nothing in the code was changed for it.
 | `play_door_activation_opens_held_before_visit_v1` | the play mode's open of a held door (the behaviour as it is) | the eighth session's early E at the front door; whether the game refuses an activation a script blocked is not known | weak |
 | `play_door_person_closed_actors_unchanged_v1` | `--play-door-toggle` (the behaviour as it is) | the play mode holds the person's close for the walker only; the run's actor moves read no door (synthetic tests); no session shows an actor meeting a shut door | weak |
 | `static_unmoved_parts_drawn_v1` | `fo4-view --draw-static-parts` (in the preset since the eleventh-session step) | nifxml's structure (children, a shape's links, controller targets, sequences' controlled blocks by node name); the room's one sequence names only its particle emitter and its transform controller no extra target; that a graph acts only through the model's sequences is prior knowledge | weak |
+| `vm_furniture_activate_events_delivered_v1` | `quest_run --activate-furniture-events-deliver` (in the run's arguments) | that the second argument false raises the activation's events is prior knowledge; the exit's furniture's script and alias act only in `OnActivate` | weak |
+| `vm_sit_events_activation_ended_by_track_v1` | `quest_run --sit-end-walk-events 64` (in the run's arguments) | the walker never sits in a furniture in its own space; the distance is the caller's; the game's own end of the take is not read | weak |
+| `refr_script_render_as_stored_v1` | `fo4-view --draw-scripted-as-stored` (in the preset since the fourteenth-session step) | VMAD attaches scripts (a format fact); the run applies their enable changes; a script's change of look is not drawn | weak |
+| `acti_fields_render_unchanged_v1` | `fo4-view --draw-activator-fields` (in the preset since the fourteenth-session step) | that a marker colour, activator flags and an activate text leave the model drawn is prior knowledge | weak |
