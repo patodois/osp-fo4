@@ -182,7 +182,7 @@ usage:
       cast nearest it are drawn, moved or not, and at each change the E
       prompt with what the activation key meets (spec/play.md, Watching the
       actors at a shut door). With FO4_VIEW_OMITTED=FILE (measurement
-      only) each cell load appends every placement its draw list left out:
+      only) each cell load and cast build appends every placement its draw list left out:
       the cell, the reference, its base, its stored place and the causes.
       The E prompt ends with (not drawn) when what it names is a placement
       a load left out.

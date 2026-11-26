@@ -353,6 +353,8 @@ fn cast_with(
     };
     scene.instances = placed;
     let mut build = built?;
+    // FO4_VIEW_OMITTED=FILE (measurement only): the cast's omissions too.
+    crate::load::omitted_lines(&scene, &build);
     steps.mark("draw list");
     if stop() {
         return Ok(None);

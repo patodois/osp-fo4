@@ -1530,9 +1530,10 @@ pub(crate) fn not_drawn(reference: &fo4_plugin::FormKey) -> bool {
 
 /// `FO4_VIEW_OMITTED=FILE` (measurement only, off by default): appends
 /// one line per placement the build left out: the cell, the reference, its
-/// base and the base's record type, its stored place, and each cause's
-/// code, expected and found, tab separated.
-fn omitted_lines(scene: &fo4_scene::Scene, build: &fo4_render::draw::Build) {
+/// base and the base's record type, its stored place (`-` for a cast's
+/// actor, which the cell's placements do not hold), and each cause's code,
+/// expected and found, tab separated.
+pub(crate) fn omitted_lines(scene: &fo4_scene::Scene, build: &fo4_render::draw::Build) {
     let Some(path) = std::env::var_os("FO4_VIEW_OMITTED") else {
         return;
     };
