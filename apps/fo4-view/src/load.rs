@@ -1059,7 +1059,14 @@ pub fn cell<'s>(
         // --skinned-models-own-nodes: every placement refused for its
         // skinned shapes as one more actor, after the ride.
         if args.skinned_models {
-            fo4_scene::timeline::ride::add_skinned(c, &loader, &scene, level, &budget)?;
+            fo4_scene::timeline::ride::add_skinned_with(
+                c,
+                &loader,
+                &scene,
+                level,
+                args.ragdoll_left_out,
+                &budget,
+            )?;
         }
     }
     steps.mark("doors");

@@ -55,6 +55,9 @@ pub struct Args {
     /// `--actor-head-conditions` (`npc_head_part_conditions_run_stages_v1`;
     /// the play window's cast only).
     pub head_conditions: bool,
+    /// `--skinned-models-ragdoll-left-out` (`refr_ragdoll_pose_unread_left_out_v1`;
+    /// with `--skinned-models-own-nodes`).
+    pub ragdoll_left_out: bool,
     /// `--memory-report FILE`: where the frame build's memory goes
     /// (`fo4_render::memory::report`; measurement only).
     pub memory_report: Option<String>,
@@ -468,7 +471,7 @@ fn cast_with(
     // path applies them first).
     if a.skinned_models {
         tl::apply(&mut scene, loader, &prepared.frame, s.level, budget)?;
-        tl::ride::add_skinned(&mut cast, loader, &scene, s.level, budget)?;
+        tl::ride::add_skinned_with(&mut cast, loader, &scene, s.level, a.ragdoll_left_out, budget)?;
     }
     let options = fo4_render::draw::BuildOptions {
         time: s.time,

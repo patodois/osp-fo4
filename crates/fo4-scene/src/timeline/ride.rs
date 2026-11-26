@@ -289,8 +289,34 @@ pub fn add_skinned(
     level: crate::RuleLevel,
     b: &Budget,
 ) -> Result<(), Error> {
+    add_skinned_with(cast, loader, scene, level, false, b)
+}
+
+/// Whether a placed reference stores `XRGD` (xEdit's published name:
+/// ragdoll data; its layout is not established here).
+pub fn stores_ragdoll(inst: &crate::Instance) -> bool {
+    inst.reference
+        .record
+        .subrecords
+        .iter()
+        .any(|s| s.signature == *b"XRGD")
+}
+
+/// [`add_skinned`]; with `ragdoll_left_out`
+/// (`refr_ragdoll_pose_unread_left_out_v1`) a placement whose reference
+/// stores a ragdoll pose ([`stores_ragdoll`]) is not added: the game poses
+/// it by that data, which is not read, and its model's stored pose is not
+/// the pose shown.
+pub fn add_skinned_with(
+    cast: &mut Cast,
+    loader: &Loader<'_>,
+    scene: &Scene,
+    level: crate::RuleLevel,
+    ragdoll_left_out: bool,
+    b: &Budget,
+) -> Result<(), Error> {
     let first = cast.actors.actors.len();
-    let (mut refused, mut other) = (0usize, 0usize);
+    let (mut refused, mut other, mut ragdoll) = (0usize, 0usize, 0usize);
     for inst in &scene.instances {
         if inst.state.ready_at(level)
             || inst.editor_marker
@@ -310,6 +336,10 @@ pub fn add_skinned(
             .iter()
             .any(|a| super::norm(&a.reference) == key)
         {
+            continue;
+        }
+        if ragdoll_left_out && stores_ragdoll(inst) {
+            ragdoll += 1;
             continue;
         }
         let (Some(base), Some(place)) = (&inst.base, inst.reference.data.transform) else {
@@ -375,12 +405,16 @@ pub fn add_skinned(
     if added > 0 {
         cast.rules.insert(hypotheses::MODEL_OWN_NODES_EVERY);
     }
+    if ragdoll > 0 {
+        cast.rules.insert(hypotheses::RAGDOLL_LEFT_OUT);
+    }
     cast.skinned = Some((
         first,
         added,
         format!(
-            "{refused} placed references of the loaded cells refused with a skinned shape among the reasons; {added} added on their models' own nodes ({}), {other} without a model or a placement",
-            hypotheses::MODEL_OWN_NODES_EVERY
+            "{refused} placed references of the loaded cells refused with a skinned shape among the reasons; {added} added on their models' own nodes ({}), {other} without a model or a placement, {ragdoll} left out storing a ragdoll pose ({})",
+            hypotheses::MODEL_OWN_NODES_EVERY,
+            hypotheses::RAGDOLL_LEFT_OUT
         ),
     ));
     Ok(())

@@ -105,6 +105,11 @@
 # subtrees set aside (model_skinned_own_nodes_every_placement_v1): the
 # crib's occupant and the seated remains.
 --skinned-models-own-nodes
+# Of those, a placement whose reference stores a ragdoll pose (XRGD, not
+# read) is left out: its model's stored pose is not the pose shown
+# (refr_ragdoll_pose_unread_left_out_v1): the checkpoint's skeletons and
+# the remains at the vault's exit.
+--skinned-models-ragdoll-left-out
 # Light, sky and exposure.
 --light-cell
 --light-inherits

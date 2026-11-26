@@ -288,6 +288,10 @@ pub const STATIC_PARTS: &str = "static_unmoved_parts_drawn_v1";
 /// static, its reference's `XLRT` set aside (`Loader::set_render_activator_parts`,
 /// with `Loader::set_render_static_parts`; off by default).
 pub const ACTIVATOR_PARTS: &str = "acti_unmoved_parts_drawn_v1";
+/// A skinned placement whose reference stores a ragdoll pose (`XRGD`) is
+/// left out of the skinned own-nodes reading
+/// (`timeline::ride::add_skinned_with`, `--skinned-models-ragdoll-left-out`).
+pub const RAGDOLL_LEFT_OUT: &str = "refr_ragdoll_pose_unread_left_out_v1";
 /// A named platform's skinned shape whose bones go with more than one of
 /// its parts drawn skinned again with each bone moved by its part's motion
 /// (`crate::platform::skin_at_rest`, the play window's
@@ -790,6 +794,7 @@ mod tests {
             ACTIVATOR_FIELDS_RENDER,
             FURNITURE_FIELDS_RENDER,
             ACTIVATOR_PARTS,
+            RAGDOLL_LEFT_OUT,
             WORLD_PERSISTENT_IN_SQUARE,
             STATIC_REFERENCE_FIELDS_COLLISION,
             STATIC_REFERENCE_FIELDS_RENDER,

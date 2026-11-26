@@ -927,6 +927,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
     let mut model_graph_idle = false;
     let mut skinned_models = false;
     let mut head_conditions = false;
+    let mut ragdoll_left_out = false;
     let mut memory_report: Option<String> = None;
     let mut ride_model = None;
     let mut ride_sequence = None;
@@ -1054,6 +1055,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             "--actor-model-graph-idle" => model_graph_idle = true,
             "--skinned-models-own-nodes" => skinned_models = true,
             "--actor-head-conditions" => head_conditions = true,
+            "--skinned-models-ragdoll-left-out" => ragdoll_left_out = true,
             "--memory-report" => memory_report = Some(value()?.to_string()),
             "--actor-leveled-chance-none" => look_readings.chance_none = true,
             "--actor-leveled-use-all" => look_readings.use_all = true,
@@ -1162,9 +1164,13 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
         model_graph_idle,
         skinned_models,
         head_conditions,
+        ragdoll_left_out,
         memory_report: None,
         ride: None,
     });
+    if ragdoll_left_out && !skinned_models {
+        return Err("--skinned-models-ragdoll-left-out narrows --skinned-models-own-nodes: it needs it".into());
+    }
     if head_conditions && play_cast.is_none() {
         return Err("--actor-head-conditions evaluates head part conditions against the play run's stages: it needs the play window's cast (--play-run with --timeline-cast)".into());
     }
@@ -1193,6 +1199,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             model_graph_idle,
             skinned_models,
             head_conditions: false,
+            ragdoll_left_out,
             memory_report: memory_report.clone(),
             ride: ride_model.clone().map(|reference| fo4_scene::timeline::ride::Options {
                 reference,
