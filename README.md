@@ -293,6 +293,16 @@ events 10 and 15 s after your use of the console), not all at once.
 `play_run` with that file, the preset's play options and the same new-game
 switches replays the same run.
 
+The preset turns on pending rules: assumptions that let the opening be
+played, **not measured game behaviour**. [docs/unmeasured.md](docs/unmeasured.md)
+lists each of its switches with its rule; nothing they produce may be
+called faithful before a recorded measurement of the running game. A GIP
+pad plays with the keys when the viewer is built with `--features pad` and
+started with `--play-pad` (close any other program that holds the pad
+first): the left stick walks and runs, the right stick looks, A activates,
+Menu pauses, View or B held a second ends. Its key map is our choice, also
+listed there.
+
 The comparison prints coverage agreement and colour differences; it defines
 no pass threshold.
 

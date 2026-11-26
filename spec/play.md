@@ -646,6 +646,24 @@ window's clock stops, so the run and the walker wait). The walker has no jump, s
 looks where the person looks at once and stands at the walker's eye, which the walker shows the window at each
 wait (each tick while it walks).
 
+**The pad (`--play-pad`).** Viewer policy, no rule; none of it is measured game behaviour (`docs/unmeasured.md`).
+With `--play-pad` (a viewer built with `--features pad`) the window also reads a GIP pad over USB (the `gip-pad`
+crate's reader, on its own thread; `crate::pad`), and turns it into the same held keys, looks and presses the key
+map gives (`crate::person`), so the recording keeps its format and a pad session replays as a keyboard session
+does. The numbers are our choice: the left stick past a radial dead zone of 0.24 (its length rescaled from there to
+0..1) holds forward, back, left and right by its direction in eight sectors of 45 degrees (a key on past 0.383 of
+the unit direction, off below 0.333, so a stick near a sector's edge does not flicker into the record) and run from
+0.90 of full tilt (off below 0.80): a partial tilt walks, a full one runs, at the walker's two speeds; the stick's
+speed between them is not the game's measured behaviour. The right stick past a dead zone of 0.20 turns at up to
+120 degrees a second and looks up or down at up to 75, times the square of its deflection, sent as `face` and
+`pitch` as the arrow keys' are, none while paused. A activates (on its press), Menu pauses and resumes, View or B
+held one second ends the input (B is the thumb's resting button). Keyboard and pad play together: held keys of
+either, looks added, presses of either. A window without the focus, or no pad, reads as nothing held or pressed,
+and a button held through it presses again only after it is let go. The reader opens the pad with a USB reset and
+claims it (`--play-pad-no-reset` opens it without the reset); one program at a time holds it, so any other that
+does is closed first. No pad at the start, or one unplugged: the keyboard plays, the reader keeps looking on its
+own thread, and one line tells each change (`play: pad: connected`, `play: pad: none (why)`).
+
 Commands made while the play clock stands (the run busy building a walking world past the 0.25 s it may be
 owed, a cell loading; not while paused) are kept in order with the window's wall clock and given when the clock
 runs again (`play::Gate::submit`): from that second, each gap between two of them kept up to 0.5 s
@@ -692,7 +710,10 @@ A file of timed events at seconds of the window's play clock (`key W|A|S|D|E|P|E
 `button down|up|tap`, `mouse DX DY`, and four that read the window as a person does: `turn-to DEGREES` and
 `pitch-to DEGREES` move the mouse with the left button held until the view has that heading or pitch,
 `steer X Y` holds W and moves the mouse each frame toward the point from the walker's feet as drawn, letting W go
-near it, and `aim-at X Y Z` lets W go and keeps the view on a point from the walker's eye). Its events are timed
+near it, and `aim-at X Y Z` lets W go and keeps the view on a point from the walker's eye). Its lines `pad LX LY
+RX RY [a] [b] [menu] [view]` (sticks in -1 to 1, x right, y up, the buttons named held) and `pad off` are a scripted
+pad (`pad::FakePad`): each state holds from its second of the play clock, read where the device's state is read,
+so the pad's key map is checked without a pad. Its events are timed
 by the play clock the window stamps commands with, which stands while a busy run is owed its most (timed by the
 window's frames instead, its events came early while the walker's world was built again, and it lost the walk
 at 313 s). The window writes them as the key, button and motion messages a keyboard and a mouse send, before the

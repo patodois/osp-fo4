@@ -1783,6 +1783,61 @@ mod tests {
         }
     }
 
+    /// `docs/unmeasured.md` names every switch of the play preset, its
+    /// table holds every rule a preset comment names, and every rule of the
+    /// table is pending in the registry and on a switch of the preset.
+    #[test]
+    fn the_unmeasured_page_lists_the_presets_rules() {
+        let page = include_str!("../../../docs/unmeasured.md");
+        let preset = include_str!("../presets/play-opening.args");
+        let registry = include_str!("../../../spec/hypotheses.tsv");
+        let status: std::collections::BTreeMap<&str, &str> = registry
+            .lines()
+            .skip(1)
+            .filter_map(|l| {
+                let c: Vec<&str> = l.split('\t').collect();
+                Some((*c.first()?, *c.get(5)?))
+            })
+            .collect();
+        let switches: Vec<&str> = preset.lines().filter(|l| l.starts_with("--")).collect();
+        // The table's rows: | `--switch` | `rule` | status | line |.
+        let rows: Vec<(&str, &str)> = page
+            .lines()
+            .filter_map(|l| {
+                let mut c = l.strip_prefix("| `")?.split('`');
+                let switch = c.next()?;
+                let rule = c.nth(1)?;
+                Some((switch, rule))
+            })
+            .collect();
+        assert!(rows.len() > 40, "{}", rows.len());
+        for s in &switches {
+            assert!(page.contains(&format!("`{s}`")), "{s} is not on the page");
+        }
+        for (s, r) in &rows {
+            assert!(switches.contains(s), "{s}: on the page, not in the preset");
+            assert_eq!(status.get(r), Some(&"pending"), "{r}");
+            assert!(
+                page.lines()
+                    .any(|l| l.starts_with(&format!("| `{s}` | `{r}` | pending |"))),
+                "{s} {r}"
+            );
+        }
+        // Every rule a comment of the preset names has a row.
+        for l in preset.lines().filter(|l| l.starts_with('#')) {
+            for w in l.split(|c: char| !(c.is_ascii_alphanumeric() || c == '_')) {
+                let rule = w.len() > 3
+                    && w.contains('_')
+                    && w.rsplit_once("_v").is_some_and(|(_, n)| {
+                        !n.is_empty() && n.chars().all(|c| c.is_ascii_digit())
+                    });
+                if rule {
+                    assert!(rows.iter().any(|(_, r)| *r == w), "{w} has no row");
+                }
+            }
+        }
+    }
+
     #[cfg(feature = "script-event")]
     #[test]
     fn the_pad_plays_with_the_keys() {

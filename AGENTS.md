@@ -40,6 +40,10 @@ Format layouts, their sources and the rule registry are indexed in
   measurement that could refute it, before code relies on it. Only a recorded
   measurement of the running game changes its status. The code reads the
   registry: see `fo4_scene::RuleLevel` and `fo4_scene::hypotheses`.
+- The play preset turns such rules on; [docs/unmeasured.md](docs/unmeasured.md)
+  lists them, with the pad's key map (viewer policy). Nothing there is
+  measured or may be called faithful; add a row there when the preset gains
+  a switch (a viewer test checks it).
 - Never turn an unsupported assumption into a default. Preserve unknown bytes,
   or return a named error with file, offset, expected and found.
 - Keep a measured convention separate from claims about exact floating-point
