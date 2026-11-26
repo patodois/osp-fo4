@@ -1586,6 +1586,7 @@ pub fn window(
                     source: crate::pad::open(w)?,
                     state: crate::person::PadState::default(),
                     status: crate::pad::Status::default(),
+                    focused: None,
                 });
                 println!(
                     "play: pad: left stick walks (runs near full tilt), right stick looks, A activates, Menu pauses, View or B held {} s ends (viewer policy, not measured game behaviour)",
@@ -2823,6 +2824,9 @@ struct PadInput {
     source: Box<dyn crate::pad::PadSource>,
     state: crate::person::PadState,
     status: crate::pad::Status,
+    /// Whether the window had the focus at the last frame (told at each
+    /// change: without it the pad reads as let go).
+    focused: Option<bool>,
 }
 
 /// `--play-keys`, each frame: the keys held, E, Escape and P, the arrow
@@ -2898,6 +2902,18 @@ fn person_keys(
                 println!("{line} at {:.3} s of the play clock", input.person.clock);
             }
             let focused = windows.iter().next().is_none_or(|w| w.focused);
+            if pad.focused.replace(focused) != Some(focused) {
+                println!(
+                    "play: pad: the window {} the focus at {:.3} s of the play clock{}",
+                    if focused { "has" } else { "lost" },
+                    input.person.clock,
+                    if focused {
+                        ""
+                    } else {
+                        " (the pad reads as let go)"
+                    }
+                );
+            }
             let presses = pad.state.frame(&poll, focused, dt);
             let stick = if focused && poll.connected {
                 poll.right
@@ -4326,6 +4342,7 @@ mod tests {
                 .unwrap(),
                 state: crate::person::PadState::default(),
                 status: crate::pad::Status::default(),
+                focused: None,
             })
             .add_systems(Update, person_keys);
         // One frame at a second of the play clock (the scripted window's
