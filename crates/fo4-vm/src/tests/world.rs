@@ -561,3 +561,58 @@ fn every_rule_of_the_step_is_registered_pending() {
         assert!(rules::ALL.contains(&r), "{r}");
     }
 }
+
+#[test]
+fn a_trigger_whose_asked_stage_was_set_since_is_named_for_another_visit() {
+    use crate::quest::Change;
+    use crate::track::asked_not_done;
+    let e = |native: &str, quest: Option<usize>, arg: &str, result: &str| crate::Effect {
+        depth: 1,
+        caller: "s.f".into(),
+        native: native.into(),
+        receiver: None,
+        receiver_object: quest,
+        args: vec![arg.into()],
+        result: result.into(),
+    };
+    // The handler asked whether stages 30 and 20 of quest object 7 were
+    // done: 30 no, 20 no; 10 yes (not kept); an ask on no quest object is
+    // not kept.
+    let effects = vec![
+        e("quest.isstagedone", Some(7), "30", "false"),
+        e("quest.isstagedone", Some(7), "20", "false"),
+        e("quest.getstagedone", Some(7), "10", "true"),
+        e("quest.isstagedone", None, "40", "false"),
+        e("objectreference.delete", Some(7), "1", "none"),
+    ];
+    let asked = asked_not_done(&effects, 2);
+    assert_eq!(
+        asked
+            .iter()
+            .map(|a| (a.quest, a.stage, a.log_at))
+            .collect::<Vec<_>>(),
+        vec![(7, 30, 2), (7, 20, 2)]
+    );
+    let mut p = Place::default();
+    p.volumes.push(Volume {
+        key: key(0x810),
+        space: key(WRLD),
+        frame: Transform::IDENTITY,
+        shape: track::Shape::Box([1.0; 3]),
+    });
+    p.asked.insert(0, asked);
+    // Nothing set since: no volume. Stage 20 set before the ask (index 1)
+    // does not count; set after it, the volume is named.
+    let mut log = vec![(7, Change::StageSet(5)), (7, Change::StageSet(20))];
+    assert!(p.asking_again(&log).is_empty());
+    log.push((8, Change::StageSet(20)));
+    assert!(p.asking_again(&log).is_empty());
+    log.push((7, Change::StageSet(20)));
+    assert_eq!(p.asking_again(&log), vec![0]);
+    // Held now, or deleted: not named.
+    p.held.insert(0);
+    assert!(p.asking_again(&log).is_empty());
+    p.held.clear();
+    p.deleted.insert(key(0x810));
+    assert!(p.asking_again(&log).is_empty());
+}

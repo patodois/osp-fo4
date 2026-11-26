@@ -945,6 +945,48 @@ pub struct PlayerMove {
     pub zero_offsets: bool,
 }
 
+/// A stage a trigger's enter handlers asked about and found not done:
+/// the quest's object, the stage, and the quest log's length then.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Asked {
+    pub quest: ObjId,
+    pub stage: i32,
+    pub log_at: usize,
+}
+
+/// The stages `effects` show asked about and answered not done
+/// (`IsStageDone` and `GetStageDone` on a quest): the asks a trigger's
+/// handlers made, for [`Place::asking_again`].
+pub fn asked_not_done(effects: &[crate::Effect], log_at: usize) -> Vec<Asked> {
+    let mut out = Vec::new();
+    for e in effects {
+        if !matches!(
+            e.native.as_str(),
+            "quest.isstagedone" | "quest.getstagedone"
+        ) {
+            continue;
+        }
+        let (Some(quest), Some(Ok(stage))) = (
+            e.receiver_object,
+            e.args.first().map(|a| a.trim().parse::<i32>()),
+        ) else {
+            continue;
+        };
+        if e.result.trim() != "false" {
+            continue;
+        }
+        let a = Asked {
+            quest,
+            stage,
+            log_at,
+        };
+        if !out.contains(&a) {
+            out.push(a);
+        }
+    }
+    out
+}
+
 /// The model's state in a run's world; off (`on == false`) unless a caller
 /// gives a track.
 #[derive(Debug, Default)]
@@ -995,6 +1037,10 @@ pub struct Place {
     /// References a native of the run deleted (`Delete`): they hold no
     /// one (`world_trigger_enabled_v1`).
     pub deleted: BTreeSet<FormKey>,
+    /// Presentation only (nothing in the run reads it): per volume, the
+    /// stages its last enter's handlers asked about and found not done
+    /// ([`Place::asking_again`]).
+    pub asked: BTreeMap<usize, Vec<Asked>>,
     /// The track's passages through load doors (`world_load_door_xtel_v1`).
     pub doors: Vec<DoorPassage>,
     /// Counts by text.
@@ -1019,6 +1065,31 @@ pub struct Place {
     grid_cells: BTreeMap<(FormKey, i64, i64), Result<FormKey, &'static str>>,
 }
 impl Place {
+    /// Presentation only: the volumes whose last enter's handlers asked
+    /// about a stage, found it not done, and the run has set it since,
+    /// that are neither deleted nor holding the player now. Entering one
+    /// again asks its handlers again with the stage done.
+    pub fn asking_again(&self, log: &[(ObjId, crate::quest::Change)]) -> Vec<usize> {
+        let mut out = Vec::new();
+        for (v, asks) in &self.asked {
+            let Some(vol) = self.volumes.get(*v) else {
+                continue;
+            };
+            if self.deleted.contains(&vol.key) || self.held.contains(v) {
+                continue;
+            }
+            let set_since = asks.iter().any(|a| {
+                log.get(a.log_at..)
+                    .unwrap_or(&[])
+                    .iter()
+                    .any(|(o, c)| *o == a.quest && *c == crate::quest::Change::StageSet(a.stage))
+            });
+            if set_since {
+                out.push(*v);
+            }
+        }
+        out
+    }
     pub fn count(&mut self, k: impl Into<String>) {
         *self.counts.entry(k.into()).or_default() += 1;
     }
@@ -2697,6 +2768,7 @@ pub fn settle(
                 action.handler()
             ));
             let mut handler_runs = Vec::new();
+            let e0 = vm.effects.len();
             match player::deliver(vm, store, &key, action, b) {
                 Ok((ds, _)) => {
                     for d in ds {
@@ -2707,6 +2779,11 @@ pub fn settle(
                     .world
                     .place
                     .count(format!("trigger events not delivered\t{e}")),
+            }
+            if enter {
+                let log_at = vm.world.quests.log.len();
+                let asked = asked_not_done(vm.effects.get(e0..).unwrap_or(&[]), log_at);
+                vm.world.place.asked.insert(v, asked);
             }
             raised.push(Raised {
                 t: now,
