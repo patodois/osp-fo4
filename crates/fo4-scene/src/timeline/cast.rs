@@ -116,14 +116,16 @@ impl Cast {
 }
 
 /// The distinct codes of `errors`, each with the first part of its first
-/// `found` text, for one overlay line (presentation).
+/// `found` text, for one overlay line (presentation). An animation blocker
+/// keeps its rest tag (`rest=TAG`, `crate::rest`), which names the rule
+/// family that could cover it.
 pub fn summary(errors: &[&Error]) -> String {
     let mut seen: Vec<String> = Vec::new();
     for e in errors {
         if seen.iter().any(|s| s.starts_with(&format!("{} ", e.code))) {
             continue;
         }
-        let found: String = e
+        let mut found: String = e
             .found
             .split(';')
             .next()
@@ -131,6 +133,12 @@ pub fn summary(errors: &[&Error]) -> String {
             .chars()
             .take(48)
             .collect();
+        if e.code == "UnsupportedAnimationRuntime" {
+            if let Some(rest) = e.found.split(';').find(|p| p.starts_with("rest=")) {
+                found.push(' ');
+                found.extend(rest.chars().take(40));
+            }
+        }
         seen.push(format!("{} {found}", e.code));
     }
     seen.join("; ")
@@ -686,5 +694,28 @@ mod tests {
         assert!(state
             .hypotheses()
             .contains(&hypotheses::ACTOR_MODEL_GRAPH_START_IDLE));
+    }
+}
+
+#[cfg(test)]
+mod summary_tests {
+    use super::*;
+
+    /// The animation blocker's rest tag stays in the overlay's summary;
+    /// other codes keep only the first part of their text.
+    #[test]
+    fn the_summary_keeps_an_animation_blockers_rest_tag() {
+        let a = Error::new(
+            "UnsupportedAnimationRuntime",
+            "m.nif",
+            0,
+            "static state",
+            "NiTransformController;target_in_visual=Some(true);rest=transform-varies",
+        );
+        let b = Error::new("MissingModel", "m.nif", 0, "x", "a;b");
+        assert_eq!(
+            summary(&[&a, &b]),
+            "UnsupportedAnimationRuntime NiTransformController rest=transform-varies; MissingModel a"
+        );
     }
 }
