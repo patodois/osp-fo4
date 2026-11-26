@@ -272,6 +272,17 @@ memo (plan 26c item 1, after the parse counts), the refusals census and the cont
 and the dream room's words. The bridge wash is the data's: the walker steps off a rock's edge beside the bridge
 (70 to 80 units) into a wash whose banks are near-vertical steps; nothing is missing from the walking world there.
 
+Nineteenth-session fixes: the keep-clear switch reads each actor's drawn body at the eye's height and eases the
+move round the eye (`play_cast_kept_clear_of_walker_v1`, text updated); the `Go back` cue cuts the walker's loops
+out of the way back; `--actor-effect-stored` (`actor_effect_controller_stored_v1`, pending, in the preset) draws the
+eight glowing creatures at the neighbourhood objective that a manager-run effect-shader float controller refused.
+Measured: the nineteenth's longer holds were not this round's cast switches nor the parse counters (the same
+record replayed with and without the switches gives the same load walls, 3.17 s at the vault exit, as the
+eighteenth's 3.16 s); the sessions' loads ran uniformly slower. Open: the fog edge on the new road (a full-height
+boundary at one standing place, reproduced in a replay; no fog or volume placement near it), the steps of the west
+house, actors give no E prompt (they stand in no pick world), the draw-recipe memo (plan 26c item 1), the robot's
+object template, the device pickup cue, the refusals census, the push-out report, the dream room's words.
+
 The opening run is now visible (`spec/timeline.md`), and since the cast step its people appear as people. `quest_run new-game --timeline FILE` writes what the run
 did, second by second, in a neutral versioned text file (track points with their cells, actor places with the
 rule or assumption behind each, references enabled, disabled and moved, scene lines with speaker, seconds and
