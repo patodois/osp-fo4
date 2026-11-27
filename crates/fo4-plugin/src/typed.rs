@@ -857,6 +857,27 @@ impl Store {
         for (plugin, (_, s)) in sources.iter().enumerate() {
             let mut complete = true;
             let scan_budget = Budget::new(limits.max_memory);
+            // An error of one record or its group (a label, a marker base
+            // that does not reread) is kept as a diagnostic and the scan goes
+            // on with the next record, so the rest of the plugin is indexed;
+            // a budget error ends the open.
+            macro_rules! per_record {
+                ($e:expr) => {
+                    match $e {
+                        Ok(v) => v,
+                        Err(e)
+                            if matches!(e.code.as_str(), "LimitExceeded" | "AllocationFailed") =>
+                        {
+                            return Err(e)
+                        }
+                        Err(e) => {
+                            complete = false;
+                            retain_diagnostic(&mut diagnostics, e, &allocation)?;
+                            return Ok(());
+                        }
+                    }
+                };
+            }
             // The index needs identities, flags and group membership only, so the
             // payloads stay on disk; the few flagged marker bases are reread below.
             let result = crate::scan_envelopes(
@@ -878,13 +899,13 @@ impl Store {
                     if matches!(&r.signature, b"STAT" | b"ACTI" | b"DOOR")
                         && r.flags & 0x0080_0000 != 0
                     {
-                        let full = crate::record_at(
+                        let full = per_record!(crate::record_at(
                             s.as_ref(),
                             r.source.offset,
                             s.len(),
                             &limits,
                             record_budget,
-                        )?;
+                        ));
                         for sub in full.subrecords.iter().filter(|s| s.signature == *b"MODL") {
                             let raw = full.data(sub);
                             if let Some(path) = raw.strip_suffix(&[0]) {
@@ -930,7 +951,7 @@ impl Store {
                             cell_kinds.remove(&key);
                         }
                         let world = match groups.iter().rev().find(|g| g.kind == 1) {
-                            Some(g) => compact_label(&order, plugin, g)?,
+                            Some(g) => per_record!(compact_label(&order, plugin, g)),
                             None => None,
                         };
                         if let Some(world) = world {
@@ -952,7 +973,7 @@ impl Store {
                         }
                     }
                     if let Some(g) = groups.last().filter(|g| g.kind == 7) {
-                        if let Some(topic) = compact_label(&order, plugin, g)? {
+                        if let Some(topic) = per_record!(compact_label(&order, plugin, g)) {
                             allocation.reserve(&mut topics, 1, s.name(), r.source.offset)?;
                             topics.push(Membership {
                                 history,
@@ -962,24 +983,25 @@ impl Store {
                         }
                     }
                     if let Some(g) = groups.iter().rev().find(|g| matches!(g.kind, 8..=10)) {
-                        let cell = compact_label(&order, plugin, g)?.ok_or_else(|| {
-                            Error::new(
-                                "InvalidCellGroupLabel",
-                                &g.source.file,
-                                g.source.offset + 8,
-                                "non-null CELL FormID",
-                                0,
-                            )
-                        })?;
+                        let cell =
+                            per_record!(compact_label(&order, plugin, g)?.ok_or_else(|| {
+                                Error::new(
+                                    "InvalidCellGroupLabel",
+                                    &g.source.file,
+                                    g.source.offset + 8,
+                                    "non-null CELL FormID",
+                                    0,
+                                )
+                            }));
                         if let Some(parent) = groups.iter().rev().find(|p| p.kind == 6) {
-                            if compact_label(&order, plugin, parent)? != Some(cell) {
-                                return Err(Error::new(
+                            if per_record!(compact_label(&order, plugin, parent)) != Some(cell) {
+                                per_record!(Err(Error::new(
                                     "CellGroupLabelMismatch",
                                     &g.source.file,
                                     g.source.offset + 8,
                                     "same CELL as enclosing type 6",
                                     u32::from_le_bytes(g.label),
-                                ));
+                                )));
                             }
                         }
                         {
@@ -1007,10 +1029,10 @@ impl Store {
                     Ok(())
                 },
             );
-            if let Err(e) = result {
-                complete = false;
-                retain_diagnostic(&mut diagnostics, e, &allocation)?;
-            }
+            // The scan itself stopped (the plugin's structure, or a budget):
+            // the rest of the plugin is unread, so the store is not opened
+            // on a part of it.
+            result?;
             if complete {
                 overrides.mark_complete(plugin, &order, &allocation)?;
             }

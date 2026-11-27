@@ -2145,6 +2145,58 @@ fn relocated_winner_belongs_only_to_new_cell_and_bad_label_is_named() {
 }
 
 #[test]
+fn a_bad_group_label_is_named_and_the_rest_of_the_plugin_is_indexed() {
+    use crate::typed::Store;
+    let key = |p: &str, id| FormKey {
+        plugin: p.into(),
+        object_id: id,
+    };
+    let rf = record(b"REFR", 0x802, 0, &sub(b"NAME", &0x801u32.to_le_bytes()));
+    let mut body = record(b"CELL", 0x800, 0, &[]);
+    body.extend(record(b"CELL", 0x810, 0, &[]));
+    let base = plugin(MASTER, &[], 0, &group(2, [0; 4], &body));
+    // The patch's first group names another cell than its parent; a new
+    // static follows it.
+    let mut patch_body = group(
+        6,
+        0x810u32.to_le_bytes(),
+        &group(9, 0x800u32.to_le_bytes(), &rf),
+    );
+    patch_body.extend(group(0, *b"STAT", &record(b"STAT", 0x0100_0900, 0, &[])));
+    let patch = plugin(0, &["base.esm"], 0, &patch_body);
+    let store = Store::from_sources(
+        fo4_core::Game::Fallout4,
+        vec![
+            ("base.esm".into(), Box::new(OwnedSource(base))),
+            ("patch.esp".into(), Box::new(PatchSource(patch))),
+        ],
+        Limits::default(),
+        &Budget::new(8 << 20),
+    )
+    .unwrap();
+    assert!(store
+        .diagnostics
+        .iter()
+        .any(|e| e.code == "CellGroupLabelMismatch"));
+    assert_eq!(store.signature(&key("patch.esp", 0x900)), Some(*b"STAT"));
+    // A plugin whose scan stops part-way (its last group cut short) is not
+    // opened on the part read.
+    let base = plugin(MASTER, &[], 0, &group(2, [0; 4], &body));
+    let mut cut = plugin(0, &["base.esm"], 0, &patch_body);
+    cut.truncate(cut.len() - 4);
+    let e = Store::from_sources(
+        fo4_core::Game::Fallout4,
+        vec![
+            ("base.esm".into(), Box::new(OwnedSource(base))),
+            ("patch.esp".into(), Box::new(PatchSource(cut))),
+        ],
+        Limits::default(),
+        &Budget::new(8 << 20),
+    );
+    assert!(e.is_err());
+}
+
+#[test]
 fn cell_kind_uses_only_winning_group_context() {
     use crate::typed::Store;
     let base = plugin(
