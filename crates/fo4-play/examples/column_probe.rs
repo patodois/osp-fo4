@@ -152,7 +152,8 @@ fn run() -> Result<(), E> {
     };
     // COLUMN_PROBE_WALK=SPEED: a character standing at the line's start
     // (settled from Z) walks the line at SPEED with the probe of the cues
-    // (`Character::walks_to`) and, tick by tick, at the walker's own tick.
+    // (`Character::walks_to`) and, tick by tick, at the walker's own tick,
+    // under the controller settings the play options give.
     if let Some(speed) = std::env::var("COLUMN_PROBE_WALK")
         .ok()
         .and_then(|v| v.parse::<f64>().ok())
@@ -162,7 +163,10 @@ fn run() -> Result<(), E> {
             run_speed: speed,
             ..fo4_walk::Params::PROVISIONAL
         };
-        let mut c = fo4_walk::Character::new(params, fo4_walk::Settings::DEFAULT, [a[0], a[1], z])?;
+        // The controller's settings as the play options give them (the
+        // step-up switch among them).
+        let settings = play.walker_options().settings;
+        let mut c = fo4_walk::Character::new(params, settings, [a[0], a[1], z])?;
         c.settle(world, 600);
         let to = world
             .ray_down(b[0], b[1], c.feet[2] + 100.0)
@@ -189,9 +193,49 @@ fn run() -> Result<(), E> {
         for k in 0..ticks {
             let s = c.tick(world, input);
             println!(
-                "tick {k}: feet [{:.2}, {:.2}, {:.2}] grounded {} blocked {} stepped {}",
-                s.feet[0], s.feet[1], s.feet[2], s.grounded, s.blocked, s.stepped
+                "tick {k}: feet [{:.2}, {:.2}, {:.2}] grounded {} blocked {} stepped {}{}",
+                s.feet[0],
+                s.feet[1],
+                s.feet[2],
+                s.grounded,
+                s.blocked,
+                s.stepped,
+                s.wall
+                    .map(|w| format!(
+                        " wall {} normal {:?}",
+                        label(world, &built.refs, w.source),
+                        w.normal.map(|v| (v * 1000.0).round() / 1000.0)
+                    ))
+                    .unwrap_or_default()
             );
+        }
+    }
+    // COLUMN_PROBE_TRIS=R: every triangle of the walking world whose box
+    // comes within R of the line's start (X, Y, Z), with its source.
+    if let Some(reach) = std::env::var("COLUMN_PROBE_TRIS")
+        .ok()
+        .and_then(|v| v.parse::<f64>().ok())
+    {
+        println!("\n# triangles within {reach} of [{}, {}, {z}]", a[0], a[1]);
+        let p = [a[0], a[1], z];
+        for e in &world.entries {
+            let fo4_walk::world::Prim::Triangle(t) = e.prim else {
+                continue;
+            };
+            let d = (0..3)
+                .map(|n| {
+                    (e.bounds.min[n] - p[n])
+                        .max(p[n] - e.bounds.max[n])
+                        .max(0.0)
+                })
+                .fold(0.0f64, |s, v| s.hypot(v));
+            if d <= reach {
+                println!(
+                    "triangle {} {:?}",
+                    label(world, &built.refs, e.source),
+                    t.map(|q| q.map(|v| (v * 100.0).round() / 100.0))
+                );
+            }
         }
     }
     let steps = 40;
@@ -302,7 +346,7 @@ fn run() -> Result<(), E> {
             .and_then(|b| b.common.model.path.clone())
             .unwrap_or_default();
         println!(
-            "{what} {} base {} {sig} model {model:?} box {:?} {:?}\n    in world {} no collision object {} enable {:?} collision {:?}\n    unplaced {:?}\n    blockers {:?}",
+            "{what} {} base {} {sig} model {model:?} box {:?} {:?}\n    in world {} no collision object {} enable {:?} collision {:?}\n    render {:?} editor marker {}\n    unplaced {:?}\n    blockers {:?}",
             key(k),
             i.base.as_ref().map(|b| key(&b.key)).unwrap_or_default(),
             bx.min.map(|v| v.round()),
@@ -311,6 +355,8 @@ fn run() -> Result<(), E> {
             without.contains(k),
             i.enable.as_ref().map(|p| p.enabled),
             i.collision,
+            i.state,
+            i.editor_marker,
             why.get(k),
             i.blockers
                 .iter()
