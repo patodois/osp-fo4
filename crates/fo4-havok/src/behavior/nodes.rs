@@ -10,7 +10,7 @@
 //! not listed are not read. What a game does with a field (which child of
 //! a blend it shows, when it changes a variable) is not read here.
 use super::{StateInfo, StateMachine, MAX_ENTRIES};
-use crate::view::View;
+use crate::view::{owned_text, View};
 use crate::Container;
 use fo4_core::{Budget, Error, Result};
 use serde::Serialize;
@@ -81,7 +81,7 @@ pub fn bindings(
     for i in 0..a.count as usize {
         let e = a.element_at(i).ok_or_else(|| v.err(16, "element", i))?;
         out.push(VariableBinding {
-            path: String::from_utf8_lossy(v.string(e, "binding member path")?).into_owned(),
+            path: owned_text(v.string(e, "binding member path")?, file, v.abs(e), b)?,
             variable: v.u32(e + 28)? as i32,
             bit: v.u8(e + 32)? as i8,
             kind: v.u8(e + 33)?,
@@ -226,15 +226,14 @@ impl Node {
             BEHAVIOR_REFERENCE => {
                 let v = open("InvalidHavokReference")?;
                 Node::Reference {
-                    behavior: String::from_utf8_lossy(v.string(136, "behaviour file")?)
-                        .into_owned(),
+                    behavior: owned_text(v.string(136, "behaviour file")?, file, v.abs(136), b)?,
                 }
             }
             SWAP_GENERATOR => Node::Swap,
             CLIP_GENERATOR => {
                 let v = open("InvalidHavokClipGenerator")?;
                 Node::Clip(ClipGenerator {
-                    clip: String::from_utf8_lossy(v.string(144, "clip")?).into_owned(),
+                    clip: owned_text(v.string(144, "clip")?, file, v.abs(144), b)?,
                     triggers: v.link(152),
                     crop_start: f32_at(&v, 164)?,
                     crop_end: f32_at(&v, 168)?,
@@ -351,7 +350,12 @@ impl Variables {
         b.reserve(&mut names, n.count as usize, file, sv.abs(48))?;
         for i in 0..n.count as usize {
             let e = n.element_at(i).ok_or_else(|| sv.err(48, "element", i))?;
-            names.push(String::from_utf8_lossy(sv.string(e, "variable name")?).into_owned());
+            names.push(owned_text(
+                sv.string(e, "variable name")?,
+                file,
+                sv.abs(e),
+                b,
+            )?);
         }
         Ok(Self {
             types,

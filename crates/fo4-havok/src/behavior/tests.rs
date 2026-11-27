@@ -308,3 +308,33 @@ fn variable_counts_that_disagree_are_named_errors() {
         e.code
     );
 }
+
+#[test]
+fn every_owned_copy_of_a_shared_text_is_charged() {
+    // A graph whose event list has 1,000 entries all pointing at one text
+    // of 4,000 bytes: 4 MB of owned names from a file of about 12 KB.
+    use crate::fixture::Objects;
+    let n = 1000usize;
+    let text = "e".repeat(4000);
+    let mut o = Objects::new();
+    let graph = o.object(BEHAVIOR_GRAPH, 208);
+    let data = o.object(GRAPH_DATA, 160);
+    let at = 32 + 8 * n;
+    let strings = o.object(GRAPH_STRINGS, at + text.len() + 1);
+    o.link(graph, 192, strings);
+    o.link(graph, 200, data);
+    o.link(data, 104, strings);
+    o.array(strings, 16, n as u32, 32);
+    for i in 0..n {
+        o.text(strings, 32 + 8 * i, at, &text);
+    }
+    let bytes = o.file();
+    let c = read(&bytes).unwrap();
+    // Within a 1 MiB budget the names do not fit: a named limit, not 4 MB
+    // allocated past it.
+    let e = Machine::read(&c, "synthetic.hkx", 0, &Budget::new(1 << 20)).unwrap_err();
+    assert_eq!(e.code, "LimitExceeded");
+    // With room for them the reading goes on to the root's class.
+    let e = Machine::read(&c, "synthetic.hkx", 0, &Budget::new(64 << 20)).unwrap_err();
+    assert_eq!(e.code, "UnsupportedBehaviorRoot");
+}

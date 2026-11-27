@@ -3,7 +3,7 @@
 //! the array slots it owns. Every error carries the file name and the
 //! absolute file offset of the field at fault.
 use crate::{Container, ObjectSpan};
-use fo4_core::{Error, Result};
+use fo4_core::{Budget, Error, Result};
 
 /// Flag set in the u32 after the element count of every measured array slot.
 pub const ARRAY_FLAG: u32 = 0x8000_0000;
@@ -28,6 +28,18 @@ impl Array {
         }
         (self.storage as usize).checked_add(i.checked_mul(self.element as usize)?)
     }
+}
+
+/// An owned copy of a text read from the file, charged to `b`: many
+/// table entries may point at one text, so each copy counts (the lossy
+/// conversion's replacement characters included).
+pub(crate) fn owned_text(t: &[u8], file: &str, offset: u64, b: &Budget) -> Result<String> {
+    b.charge(t.len() as u64, file, offset)?;
+    let s = String::from_utf8_lossy(t).into_owned();
+    if s.len() > t.len() {
+        b.charge((s.len() - t.len()) as u64, file, offset)?;
+    }
+    Ok(s)
 }
 
 pub(crate) struct View<'a, 'c> {

@@ -13,7 +13,7 @@
 //! project's. What the game does with a graph (which transition it takes,
 //! when a sequence's text keys become events) is not read here: those are
 //! pending rules of the consumers.
-use crate::view::View;
+use crate::view::{owned_text, View};
 use crate::Container;
 use fo4_core::{Budget, Result};
 use serde::Serialize;
@@ -370,8 +370,8 @@ impl Machine {
             .ok_or_else(|| missing("a string data link"))?;
         let events = graph_events(c, strings, file, base, b)?
             .into_iter()
-            .map(|e| String::from_utf8_lossy(e).into_owned())
-            .collect();
+            .map(|e| owned_text(e, file, base, b))
+            .collect::<Result<_>>()?;
         let root = g.root.ok_or_else(|| missing("a root generator"))?;
         let class = c.objects.get(root).map_or("none", |x| x.class);
         if class != STATE_MACHINE {
@@ -395,7 +395,7 @@ impl Machine {
                 .to_string();
             let sequence = match si.generator {
                 Some(x) if generator == SEQUENCE_GENERATOR => {
-                    Some(String::from_utf8_lossy(sequence_name(c, x, file, base)?).into_owned())
+                    Some(owned_text(sequence_name(c, x, file, base)?, file, base, b)?)
                 }
                 _ => None,
             };
@@ -405,7 +405,7 @@ impl Machine {
             };
             states.push(MachineState {
                 id: si.id,
-                name: String::from_utf8_lossy(si.name).into_owned(),
+                name: owned_text(si.name, file, base, b)?,
                 generator,
                 sequence,
                 transitions,
