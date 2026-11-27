@@ -644,7 +644,17 @@ pub fn parse(mut a: Vec<String>) -> Result<Command, E> {
         match a[i].as_str() {
             "--track" => track_file = Some(v),
             "--trigger-body" => world_sw.body = Some(v.parse()?),
-            "--load-grid" => then.loads.grid = Some(v.parse()?),
+            "--load-grid" => {
+                let n: u32 = v.parse()?;
+                if n > crate::load::MAX_GRID {
+                    return Err(format!(
+                        "--load-grid N takes at most {} (each load visits (2N+1)^2 squares)",
+                        crate::load::MAX_GRID
+                    )
+                    .into());
+                }
+                then.loads.grid = Some(n);
+            }
             _ => world_sw.assume_los = Some(v.parse()?),
         }
         a.drain(i..i + 2);

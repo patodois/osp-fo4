@@ -125,6 +125,9 @@ pub fn observe(c: &crate::host::NativeCall, w: &mut World) {
     }
 }
 
+/// The largest N `--load-grid N` takes: a load visits (2N+1)^2 squares.
+pub const MAX_GRID: u32 = 64;
+
 fn grid(p: [f64; 3]) -> (i64, i64) {
     (
         (p[0] / CELL_SIZE).floor() as i64,
@@ -154,9 +157,9 @@ fn within(sw: Switches, area: &Area, space: &FormKey, pos: [f64; 3]) -> bool {
     match area {
         Area::Interior(c) => c == space,
         Area::Exterior(wld, i, j) => {
-            let n = i64::from(sw.grid.unwrap_or(0));
+            let n = u64::from(sw.grid.unwrap_or(0));
             let (gi, gj) = grid(pos);
-            wld == space && (gi - i).abs() <= n && (gj - j).abs() <= n
+            wld == space && gi.abs_diff(*i) <= n && gj.abs_diff(*j) <= n
         }
     }
 }
@@ -503,7 +506,12 @@ pub fn settle(
                 let n = i64::from(sw.grid.unwrap_or(0));
                 for di in -n..=n {
                     for dj in -n..=n {
-                        let key = (wld.clone(), Some((i + di, j + dj)));
+                        // A square past the grid's integer range holds no
+                        // cell.
+                        let (Some(si), Some(sj)) = (i.checked_add(di), j.checked_add(dj)) else {
+                            continue;
+                        };
+                        let key = (wld.clone(), Some((si, sj)));
                         for (k, p) in scripted(store, &mut vm.world, key) {
                             candidates.push((k, "the player's grid came within range", Some(p)));
                         }
@@ -622,4 +630,41 @@ pub fn settle(
         }
     }
     (raised, runs)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_far_position_is_out_of_range_without_overflow() {
+        let sw = Switches {
+            grid: Some(2),
+            ..Switches::default()
+        };
+        let w = FormKey {
+            plugin: "test.esm".into(),
+            object_id: 1,
+        };
+        // A finite position far enough that its square saturates.
+        let far = [1e300, -1e300, 0.0];
+        assert!(!within(
+            sw,
+            &Area::Exterior(w.clone(), i64::MIN, 0),
+            &w,
+            far
+        ));
+        assert!(!within(
+            sw,
+            &Area::Exterior(w.clone(), 0, i64::MAX),
+            &w,
+            far
+        ));
+        assert!(within(
+            sw,
+            &Area::Exterior(w.clone(), 1, -1),
+            &w,
+            [4096.0, -1.0, 0.0]
+        ));
+    }
 }

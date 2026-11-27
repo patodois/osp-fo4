@@ -728,6 +728,33 @@ fn a_gate_without_a_written_second_keeps_the_spacing_from_its_earliest_held_acti
 }
 
 #[test]
+fn the_load_grid_takes_at_most_its_ceiling() {
+    let parse = |n: &str| {
+        let a: Vec<String> = [
+            "m",
+            "new-game",
+            "o",
+            "--track",
+            "no-such.track",
+            "--load-grid",
+            n,
+        ]
+        .iter()
+        .map(|x| x.to_string())
+        .collect();
+        crate::run::parse(a)
+            .err()
+            .map(|e| e.to_string())
+            .unwrap_or_default()
+    };
+    // Within the ceiling the switch is taken (the missing track file is
+    // what fails); past it the switch itself is refused.
+    assert!(!parse(&crate::load::MAX_GRID.to_string()).contains("--load-grid"));
+    assert!(parse(&(crate::load::MAX_GRID + 1).to_string()).contains("--load-grid N takes at most"));
+    assert!(parse("100000").contains("--load-grid N takes at most"));
+}
+
+#[test]
 fn the_offset_switch_and_its_input_seconds_are_checked() {
     let parse = |extra: &[&str]| {
         let mut a: Vec<String> = ["m", "new-game", "o", "--scene-clock", "5"]
