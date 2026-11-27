@@ -57,7 +57,8 @@ pub const MAX_SAMPLES: usize = 1 << 16;
 /// than [`MAX_SAMPLES`] is an error naming the sequence.
 fn sample_steps(s: &fo4_scene::sequence::Sequence, span: f64) -> fo4_core::Result<usize> {
     let n = (span * SAMPLES_PER_SECOND).ceil().max(1.0);
-    if !(n <= MAX_SAMPLES as f64) {
+    // `n` is at least 1 (NaN reads as 1 through `max`); infinity is past.
+    if n > MAX_SAMPLES as f64 {
         return Err(fo4_core::Error::new(
             "SequenceSpanTooLong",
             &s.name,
