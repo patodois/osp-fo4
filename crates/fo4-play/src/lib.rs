@@ -225,7 +225,7 @@ pub mod rules {
     /// closes it under the toggle (`--play-door-stored-open`).
     pub const DOOR_STORED_OPEN: &str = "play_door_stored_open_v1";
     /// Every rule above.
-    pub const ALL: [&str; 32] = [
+    pub const ALL: [&str; 33] = [
         PLAYER_FEET,
         RUN_CLOCK,
         ACTIVATE_RAY,
@@ -242,6 +242,7 @@ pub mod rules {
         ELEVATOR_END_LANDING,
         MARKER_BOXES,
         MARKER_BOX_LAYER_PASSED,
+        MARKER_BOX_LAYER_RECORDS,
         PLAYER_MOVETO,
         PLAYER_SIT,
         SIT_PASSABLE,
@@ -460,5 +461,25 @@ mod tests {
             assert_eq!(cols[5], "pending", "{rule}");
             assert!(index.contains(&format!("| `{rule}` | pending |")), "{rule}");
         }
+    }
+
+    #[test]
+    fn every_rule_constant_is_in_all() {
+        // Each `pub const NAME: &str = "..._vN";` of this file is listed.
+        let source = include_str!("lib.rs");
+        let mut n = 0;
+        for l in source.lines() {
+            let Some(v) = l
+                .trim_start()
+                .strip_prefix("pub const ")
+                .and_then(|r| r.split_once(": &str = \""))
+                .and_then(|(_, r)| r.strip_suffix("\";"))
+            else {
+                continue;
+            };
+            n += 1;
+            assert!(super::rules::ALL.contains(&v), "{v} is not in rules::ALL");
+        }
+        assert_eq!(n, super::rules::ALL.len());
     }
 }
