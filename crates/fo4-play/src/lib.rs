@@ -155,6 +155,11 @@ pub mod rules {
     /// their object bounds left out, and no box of a base that names no
     /// model (`--play-pick-first-met`).
     pub const ACTIVATE_FIRST_MET: &str = "play_activate_ray_first_met_v1";
+    /// The activation's ray meets the run's actors in the walker's space,
+    /// each an upright box of [`crate::walker::ACTOR_BOX_HALF_WIDTH`] and
+    /// [`crate::walker::ACTOR_BOX_HEIGHT`] standing where the run last put
+    /// it (`--play-pick-actors`).
+    pub const ACTIVATE_ACTOR_BOX: &str = "play_activate_actor_box_v1";
     /// The walker's open or activation of a reference whose caller's timed
     /// open or activation it replaces (`ACTIVATE_OPENS`, `ACTIVATE_PERSON`)
     /// stands for that action as written: a stage it sets takes the
@@ -208,7 +213,7 @@ pub mod rules {
     /// closes it under the toggle (`--play-door-stored-open`).
     pub const DOOR_STORED_OPEN: &str = "play_door_stored_open_v1";
     /// Every rule above.
-    pub const ALL: [&str; 29] = [
+    pub const ALL: [&str; 30] = [
         PLAYER_FEET,
         RUN_CLOCK,
         ACTIVATE_RAY,
@@ -230,6 +235,7 @@ pub mod rules {
         ACTIVATE_OPENS,
         ACTIVATE_PERSON,
         ACTIVATE_FIRST_MET,
+        ACTIVATE_ACTOR_BOX,
         ACTIVATE_WRITTEN_SECOND,
         HELD_DOORS,
         HELD_DOORS_AT_LOAD,

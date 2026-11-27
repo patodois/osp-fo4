@@ -27,6 +27,63 @@ use std::rc::Rc;
 /// move (a numerical setting).
 pub const STILL: f64 = 1e-6;
 
+/// `play_activate_actor_box_v1`: half the width of an actor's box (world
+/// units; an assumption, no data of this step gives an actor's
+/// activation shape).
+pub const ACTOR_BOX_HALF_WIDTH: i16 = 20;
+/// `play_activate_actor_box_v1`: an actor's box height above its place
+/// (world units; an assumption).
+pub const ACTOR_BOX_HEIGHT: i16 = 120;
+
+/// `play_activate_actor_box_v1`: where the run last put each actor, read
+/// without changing the run: its stored place, then the caller's or a
+/// package's moves applied so far and the places a `MoveTo` with zero
+/// offsets gave an actor, in the order of their seconds (keys as
+/// [`norm`] gives them; the space and the position).
+pub fn actor_places(
+    place: &fo4_vm::track::Place,
+    moved: &[(f64, FormKey, FormKey, [f64; 3])],
+) -> BTreeMap<FormKey, (FormKey, [f64; 3])> {
+    let mut out = BTreeMap::new();
+    for a in &place.actors {
+        out.insert(norm(&a.key), (norm(&a.space), a.pos));
+    }
+    let applied = place.actor_cursor.min(place.actor_moves.len());
+    let mut later: Vec<(f64, FormKey, FormKey, [f64; 3])> = place.actor_moves[..applied]
+        .iter()
+        .map(|m| (m.t, norm(&m.actor), norm(&m.space), m.pos))
+        .collect();
+    later.extend(moved.iter().map(|(t, k, s, p)| (*t, norm(k), norm(s), *p)));
+    later.sort_by(|a, b| a.0.total_cmp(&b.0));
+    for (_, k, space, pos) in later {
+        out.insert(k, (space, pos));
+    }
+    out
+}
+
+/// `play_activate_actor_box_v1`: the boxes of the actors of `places`
+/// standing in `space` that `skip` keeps (a disabled actor is not met).
+pub fn actor_boxes(
+    places: &BTreeMap<FormKey, (FormKey, [f64; 3])>,
+    space: &FormKey,
+    skip: &dyn Fn(&FormKey) -> bool,
+) -> pick::Boxes {
+    let mut boxes = pick::Boxes::default();
+    let (w, h) = (ACTOR_BOX_HALF_WIDTH, ACTOR_BOX_HEIGHT);
+    for (k, (s, pos)) in places {
+        if s != space || skip(k) {
+            continue;
+        }
+        let mut frame = fo4_scene::transform::Transform::IDENTITY;
+        frame.translation = *pos;
+        if boxes.push(k.clone(), frame, [-w, -w, 0, w, w, h]) {
+            boxes.kinds.push(Some(*b"ACHR"));
+            boxes.modelled.push(Some(true));
+        }
+    }
+    boxes
+}
+
 /// The caller's choices for the walker.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Options {
@@ -112,6 +169,9 @@ pub struct Options {
     /// platforms through their collision, not their object bounds
     /// (`play_activate_ray_first_met_v1`, `--play-pick-first-met`).
     pub first_met: bool,
+    /// `--play-pick-actors` (`play_activate_actor_box_v1`): the ray meets
+    /// the run's actors as upright boxes ([`actor_boxes`]).
+    pub pick_actors: bool,
     /// Record each stretch of blocked ticks with what blocked it
     /// ([`Log::walls`]; `--play-report-walls`, a report only).
     pub report_walls: bool,
@@ -137,6 +197,7 @@ impl Default for Options {
             door_stored_open: false,
             stand: None,
             first_met: false,
+            pick_actors: false,
             report_walls: false,
         }
     }
@@ -539,6 +600,12 @@ pub struct Walker {
     /// Where the run last put the player, to go to: (target, place, rule).
     moved: Option<Place>,
     boxes: Option<pick::Boxes>,
+    /// `--play-pick-actors`: the actors' places last read and the boxes
+    /// the ray meets with them ([`Walker::boxes`] and the actors' boxes),
+    /// built again when either changes.
+    actor_pick: Option<(BTreeMap<FormKey, (FormKey, [f64; 3])>, u64, pick::Boxes)>,
+    /// Counts each change of [`Walker::boxes`].
+    boxes_changed: u64,
     /// Boxes of statics left out (`play_activate_bounds_not_static_v1`),
     /// also in the walking worlds built later.
     statics_out: bool,
@@ -630,6 +697,8 @@ impl Walker {
             player_sits: None,
             moved: None,
             boxes: None,
+            actor_pick: None,
+            boxes_changed: 0,
             statics_out: false,
             script,
             arrivals: None,
@@ -679,6 +748,7 @@ impl Walker {
     /// collision (`play_activate_object_bounds_v1`, `--play-pick-bounds`).
     pub fn with_boxes(mut self, boxes: pick::Boxes) -> Walker {
         self.boxes = Some(self.platform_boxes_out(boxes));
+        self.boxes_changed += 1;
         self
     }
 
@@ -853,6 +923,50 @@ impl Walker {
     /// switch: the last of them in the run's order is the place the walker
     /// goes to; a `MoveTo` with an offset or an open target, and a sit in a
     /// furniture with no stored place, are logged as not followed.
+    /// `--play-pick-actors` (`play_activate_actor_box_v1`): the run's
+    /// actors' places read again, and the boxes the ray meets built again
+    /// when they or the walker's boxes changed.
+    fn follow_actor_places(&mut self, run: &View<'_, '_>) {
+        let w = &run.vm.world;
+        let moved: Vec<(f64, FormKey, FormKey, [f64; 3])> = w
+            .place
+            .native_at
+            .iter()
+            .filter_map(|(id, (t, space, pos))| {
+                let k = w
+                    .objects
+                    .get(*id)?
+                    .key
+                    .as_deref()
+                    .and_then(fo4_vm::player::parse_key)?;
+                (run.store.signature(&k) == Some(*b"ACHR")).then(|| (*t, k, space.clone(), *pos))
+            })
+            .collect();
+        let places = actor_places(&w.place, &moved);
+        let fresh = self
+            .actor_pick
+            .as_ref()
+            .is_none_or(|(p, n, _)| *p != places || *n != self.boxes_changed);
+        if !fresh {
+            return;
+        }
+        let vis = &self.visibility;
+        let mut boxes = match &self.space {
+            Some(space) => actor_boxes(&places, space, &|k| vis.disabled(k)),
+            None => pick::Boxes::default(),
+        };
+        if let Some(b) = &self.boxes {
+            let mut all = b.clone();
+            all.kinds.resize(all.items.len(), None);
+            all.modelled.resize(all.items.len(), None);
+            all.items.append(&mut boxes.items);
+            all.kinds.append(&mut boxes.kinds);
+            all.modelled.append(&mut boxes.modelled);
+            boxes = all;
+        }
+        self.actor_pick = Some((places, self.boxes_changed, boxes));
+    }
+
     fn follow_player_places(&mut self, run: &View<'_, '_>) {
         let mut found: Vec<(f64, Result<Place, String>)> = Vec::new();
         if let Some(seen) = self.player_moves {
@@ -1285,9 +1399,13 @@ impl Walker {
         let vis = &self.visibility;
         let live = &self.live;
         let first_met = self.opts.first_met;
+        let boxes = match &self.actor_pick {
+            Some((_, _, b)) => Some(b),
+            None => self.boxes.as_ref(),
+        };
         let hit = if live.follows() {
             live.pick_ranked(
-                self.boxes.as_ref(),
+                boxes,
                 eye,
                 dir,
                 reach,
@@ -1298,7 +1416,7 @@ impl Walker {
             pick::met(
                 live.base()?,
                 live.base_refs(),
-                self.boxes.as_ref(),
+                boxes,
                 eye,
                 dir,
                 reach,
@@ -1330,6 +1448,13 @@ impl Walker {
             log.rules.insert(crate::rules::ACTIVATE_FIRST_MET);
         }
         if let Some(k) = hit.as_ref().and_then(|h| h.reference.as_ref()) {
+            if self
+                .actor_pick
+                .as_ref()
+                .is_some_and(|(places, _, _)| places.contains_key(&norm(k)))
+            {
+                log.rules.insert(crate::rules::ACTIVATE_ACTOR_BOX);
+            }
             if self.persons.contains(&norm(k)) {
                 log.rules.insert(crate::rules::ACTIVATE_PERSON);
                 if self.written {
@@ -1879,6 +2004,7 @@ impl Walker {
                 built.boxes
             };
             self.boxes = Some(self.platform_boxes_out(boxes));
+            self.boxes_changed += 1;
         }
         if let Some(d) = &mut self.doors {
             d.doors = built.doors;
@@ -1907,6 +2033,9 @@ impl Driver for Walker {
         if followed.is_ok() {
             self.follow_elevators(run);
             self.follow_player_places(run);
+            if self.opts.pick_actors {
+                self.follow_actor_places(run);
+            }
         }
         let next = match self.door.take() {
             Some((door, to)) => Some((door, to, crate::rules::LOAD_DOOR)),
@@ -2668,6 +2797,72 @@ mod tests {
         assert_eq!(run(true), (vec![PlayerAction::Activate], false, true));
         // Without it: closed by the person, as before.
         assert_eq!(run(false), (vec![PlayerAction::Activate], true, false));
+    }
+
+    #[test]
+    fn the_actors_boxes_stand_where_the_run_last_put_them_and_the_ray_meets_them() {
+        // `play_activate_actor_box_v1`.
+        let space = k(1);
+        let mut place = fo4_vm::track::Place::default();
+        place.actors.push(fo4_vm::track::PlacedActor {
+            key: k(10),
+            space: space.clone(),
+            pos: [100.0, 0.0, 0.0],
+        });
+        place.actors.push(fo4_vm::track::PlacedActor {
+            key: k(11),
+            space: k(2),
+            pos: [150.0, 0.0, 0.0],
+        });
+        place.actors.push(fo4_vm::track::PlacedActor {
+            key: k(12),
+            space: space.clone(),
+            pos: [150.0, 50.0, 0.0],
+        });
+        // An applied move, then one not yet applied.
+        for (t, x) in [(5.0, 200.0), (9.0, 900.0)] {
+            place.actor_moves.push(fo4_vm::track::ActorMove {
+                t,
+                actor: k(10),
+                space: space.clone(),
+                pos: [x, 0.0, 0.0],
+            });
+        }
+        place.actor_cursor = 1;
+        let places = actor_places(&place, &[]);
+        assert_eq!(places[&k(10)], (space.clone(), [200.0, 0.0, 0.0]));
+        // A later MoveTo wins over an earlier move.
+        let moved = [(7.0, k(10), space.clone(), [180.0, 0.0, 0.0])];
+        assert_eq!(actor_places(&place, &moved)[&k(10)].1, [180.0, 0.0, 0.0]);
+        // Only the walker's space; a disabled actor is not met.
+        let boxes = actor_boxes(&places, &space, &|r| *r == k(12));
+        assert_eq!(boxes.items.len(), 1);
+        assert_eq!(boxes.items[0].0, k(10));
+        assert_eq!(boxes.kinds, vec![Some(*b"ACHR")]);
+        // The eye's ray along x at 60 units up meets the actor's box at its
+        // near face (x 180); without the boxes it meets nothing in reach.
+        let world = floor();
+        let refs: Vec<Option<FormKey>> = vec![None; 8];
+        let ray = |b: Option<&pick::Boxes>| {
+            pick::met(
+                &world,
+                &refs,
+                b,
+                [0.0, 0.0, 60.0],
+                [1.0, 0.0, 0.0],
+                250.0,
+                &|_| true,
+                &|_| false,
+                true,
+            )
+            .map(|(h, _)| h)
+        };
+        let hit = ray(Some(&boxes)).unwrap();
+        assert_eq!(hit.reference, Some(k(10)));
+        assert!((hit.distance - 180.0).abs() < 1e-6, "{}", hit.distance);
+        assert_eq!(ray(None), None);
+        // Off by default.
+        assert!(!Options::default().pick_actors);
     }
 
     #[test]

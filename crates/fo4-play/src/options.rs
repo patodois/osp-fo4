@@ -107,6 +107,8 @@ pub struct Play {
     pub persons: Vec<FormKey>,
     /// `--play-pick-first-met` (`play_activate_ray_first_met_v1`).
     pub first_met: bool,
+    /// `--play-pick-actors` (`play_activate_actor_box_v1`).
+    pub pick_actors: bool,
     /// `--play-report-walls` (a report of the play mode, no rule): each
     /// stretch of ticks the walker was blocked, with what blocked it, in
     /// `play.txt`.
@@ -187,6 +189,7 @@ impl Play {
             "--play-door-toggle-blocked" => &mut self.door_toggle_blocked,
             "--play-door-stored-open" => &mut self.door_stored_open,
             "--play-pick-first-met" => &mut self.first_met,
+            "--play-pick-actors" => &mut self.pick_actors,
             "--play-report-walls" => &mut self.report_walls,
             "--play-action-after-offset" => &mut self.action_offset,
             "--play-around" => {
@@ -529,6 +532,7 @@ impl Play {
         }
         opts.stand = self.stand;
         opts.first_met = self.first_met;
+        opts.pick_actors = self.pick_actors;
         opts.report_walls = self.report_walls;
         opts
     }
@@ -722,6 +726,9 @@ impl Play {
         if self.first_met {
             let _ = writeln!(report, "switch: the activation's ray meets what it enters first, what the eye stands inside only when nothing else, the named platforms by their collision (--play-pick-first-met, {})", crate::rules::ACTIVATE_FIRST_MET);
         }
+        if self.pick_actors {
+            let _ = writeln!(report, "switch: the activation's ray meets the run's actors standing in the walker's space, each an upright box about where the run last put it (--play-pick-actors, {})", crate::rules::ACTIVATE_ACTOR_BOX);
+        }
         if self.pick_bounds {
             let _ = writeln!(report, "switch: the activation's ray meets the object bounds of references with no collision (--play-pick-bounds)");
             let boxes = if self.activatable {
@@ -869,6 +876,14 @@ mod tests {
         assert_eq!(p.persons, [k(2)]);
         assert!(p.first_met && p.walker_options().first_met);
         assert!(!Play::default().walker_options().first_met);
+        // `--play-pick-actors` (`play_activate_actor_box_v1`), off by default.
+        assert!(
+            read("--play-pick-actors")
+                .unwrap()
+                .walker_options()
+                .pick_actors
+        );
+        assert!(!Play::default().walker_options().pick_actors);
         let args: Vec<String> = "m new-game o --assume-activate a.esm:2@870 --action-after a.esm:2@870 Q:6 --assume-open a.esm:2@5 --assume-activate a.esm:3@9 --action-after a.esm:3@9 Q:1 --action-after a.esm:2@99 Q:2"
             .split(' ')
             .map(String::from)
