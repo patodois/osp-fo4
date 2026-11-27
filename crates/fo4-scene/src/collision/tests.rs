@@ -638,6 +638,51 @@ fn cell_places_bodies_only_at_a_level_that_accepts_their_rules() {
     assert!(c.unplaced.iter().any(|u| u.code == "CollisionRuleRefuted"));
 }
 
+/// code-4b F04: a model whose read the build's budget refuses (its
+/// scope limit here) fails the build, as `fill_reads` does, instead of
+/// being kept as an unreadable model.
+#[test]
+fn a_model_read_short_of_budget_is_an_error_not_an_unreadable_model() {
+    let f = fixture(false, false);
+    std::fs::write(f.manifest.root.join("meshes/a.nif"), model_nif(1)).unwrap();
+    let store = Store::open(&f.manifest, &Budget::new(8 << 20)).unwrap();
+    let v = Vfs::mount(&f.manifest, &Budget::new(8 << 20)).unwrap();
+    let b = Budget::new(64 << 20);
+    let limits = Limits::default();
+    let options = Options {
+        level: RuleLevel::Hypotheses,
+        body_placement: None,
+    };
+    let mut refused = 0;
+    let mut scope = 0u64;
+    loop {
+        let mut loader = Loader::new(&store, &v, "english", RuleLevel::Hypotheses, &b);
+        let scene = loader.by_editor_id("SyntheticRoom", &b).unwrap();
+        let root = Budget::new(64 << 20).with_scope_limit(scope);
+        match cell(&scene, &loader, &limits, options, &root) {
+            Ok(c) => {
+                assert!(
+                    c.models.iter().all(|m| m.error.is_none()),
+                    "scope {scope}: {:?}",
+                    c.models.iter().map(|m| &m.error).collect::<Vec<_>>()
+                );
+                assert_eq!(c.instances.len(), 1, "scope {scope}");
+                break;
+            }
+            Err(e) => {
+                assert!(
+                    matches!(e.code.as_str(), "LimitExceeded" | "AllocationFailed"),
+                    "{e}"
+                );
+                refused += 1;
+            }
+        }
+        assert!(scope < 1 << 24, "no scope builds it");
+        scope += 64;
+    }
+    assert!(refused > 0);
+}
+
 #[test]
 fn a_material_swap_folder_label_needs_its_own_rule_for_render_and_not_for_collision() {
     let f = fixture(false, false);
