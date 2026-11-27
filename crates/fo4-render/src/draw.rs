@@ -126,6 +126,20 @@ pub struct BuildOptions {
     /// fades its alpha by the gap to the opaque depth behind it. Off: the
     /// term is left out (`effect_soft_lighting_left_out_v1`), as before.
     pub soft_effects: bool,
+    /// `effect_environment_left_out_v1` for an untextured effect surface
+    /// (`--draw-effect-environment-left-out`): a colour-only effect shader
+    /// whose one feature this frame does not draw is its environment map
+    /// (Shader Flags 1 bit 7, the environment map and mask its only
+    /// textures) is drawn by its colour with that term left out, as the
+    /// effect path draws it. Off: refused, as before.
+    pub effect_environment_left_out: bool,
+    /// `lighting_refraction_surface_left_out_v1`
+    /// (`--draw-refraction-left-out`): a shape whose lighting shader sets
+    /// Shader Flags 1 bit 15 (nifxml: Refraction) is left out
+    /// ([`Build::left_out`], `RefractionSurface`): its texture set's first
+    /// slot is the normal map that displaces the scene behind it, not a
+    /// colour. Off: drawn with that map as its colour, as before.
+    pub refraction_left_out: bool,
 }
 /// Limits of the textures kept as stored blocks ([`BuildOptions::blocks`]).
 /// A texture whose format or chosen level cannot be kept as blocks is
@@ -153,6 +167,8 @@ impl BuildOptions {
             vertex_normals: false,
             chains: false,
             soft_effects: false,
+            effect_environment_left_out: false,
+            refraction_left_out: false,
         }
     }
     /// The reference limits, with block-compressed textures kept as blocks.
@@ -289,6 +305,41 @@ fn settle<S>(
 fn error(code: &str, file: &str, offset: u64, found: impl std::fmt::Display) -> Error {
     Error::new(code, file, offset, "documented unlit draw binding", found)
 }
+/// [`Build::left_out`]'s code for a refraction surface left out
+/// (`lighting_refraction_surface_left_out_v1`).
+pub const REFRACTION_SURFACE: &str = "RefractionSurface";
+
+/// Shader Flags 1's Refraction bit (bit 15, nifxml's
+/// `Fallout4ShaderPropertyFlags1`).
+const REFRACTION_BIT: u32 = 1 << 15;
+
+/// Whether a shape (its fields `shape`) is drawn by a lighting shader
+/// whose Shader Flags 1 sets the Refraction bit.
+pub(crate) fn refraction_surface(n: &Nif<'_>, shape: &[Field]) -> bool {
+    shape.iter().any(|f| {
+        let Value::Ref(i) = f.value else {
+            return false;
+        };
+        let Some(block) = usize::try_from(i).ok().and_then(|i| n.blocks.get(i)) else {
+            return false;
+        };
+        if n.block_types
+            .get(block.type_index as usize)
+            .map(String::as_str)
+            != Some("BSLightingShaderProperty")
+        {
+            return false;
+        }
+        let Some(d) = block.decoded.as_ref() else {
+            return false;
+        };
+        fields(d).iter().any(|f| {
+            f.name == "Shader Flags 1"
+                && matches!(f.value, Value::U32(x) if x & REFRACTION_BIT != 0)
+        })
+    })
+}
+
 fn raw_ref(fields: &[Field], name: &str) -> Option<i32> {
     fields.iter().find_map(|f| {
         if f.name == name {
@@ -1620,12 +1671,23 @@ impl Builder<'_, '_> {
                 | (1 << 15)
                 | (1 << 16)
                 | (1 << 30);
-            if flags & unsupported != 0
-                || f.iter().any(|f| {
-                    f.name.ends_with("Texture")
-                        && matches!(&f.value, Value::Bytes(p) if !p.is_empty())
-                })
-            {
+            // The environment map alone (bit 7 and its map and mask)
+            // under its switch and rules: left out, the rest drawn.
+            let environment = 1 << 7;
+            let textured = |f: &&Field, allowed: &[&str]| {
+                f.name.ends_with("Texture")
+                    && !allowed.contains(&f.name)
+                    && matches!(&f.value, Value::Bytes(p) if !p.is_empty())
+            };
+            let environment_only = flags & unsupported == environment
+                && !f.iter().any(|f| {
+                    textured(&f, &["Environment Map Texture", "Environment Mask Texture"])
+                });
+            let left_out = environment_only
+                && self.options.effect_environment_left_out
+                && self.draw_rule(fo4_scene::hypotheses::EFFECT_ENVIRONMENT_ADDS)?
+                && self.draw_rule(fo4_scene::hypotheses::EFFECT_ENVIRONMENT_LEFT_OUT)?;
+            if !left_out && (flags & unsupported != 0 || f.iter().any(|f| textured(&f, &[]))) {
                 return Err(error(
                     "UnsupportedColorOnlyEffectFeatures",
                     file,
@@ -2083,6 +2145,19 @@ impl Builder<'_, '_> {
                 return Ok(());
             }
             if let Some(mesh) = geometry {
+                // A refraction surface under its rule: left out, the scene
+                // behind it drawn undisplaced.
+                if self.options.refraction_left_out
+                    && refraction_surface(n, f)
+                    && self.draw_rule(fo4_scene::hypotheses::LIGHTING_REFRACTION_LEFT_OUT)?
+                {
+                    append(
+                        &mut self.output.left_out,
+                        (instance, REFRACTION_SURFACE.into()),
+                        self.budget,
+                    )?;
+                    return Ok(());
+                }
                 let surface = self.surface(n, f, swap, file, Some(mesh))?;
                 // A named platform's effect surfaces (glows, light shafts:
                 // fields its controllers drive) are left out.
@@ -2721,6 +2796,17 @@ impl Builder<'_, '_> {
                         &file,
                         self.budget,
                     )?;
+                    if self.options.refraction_left_out
+                        && refraction_surface(n, f)
+                        && self.draw_rule(fo4_scene::hypotheses::LIGHTING_REFRACTION_LEFT_OUT)?
+                    {
+                        append(
+                            &mut self.output.left_out,
+                            (instance, REFRACTION_SURFACE.into()),
+                            self.budget,
+                        )?;
+                        return Ok(());
+                    }
                     let surface = self.surface(n, f, &[], &file, Some(m))?;
                     if self.platform && surface.effect {
                         append(

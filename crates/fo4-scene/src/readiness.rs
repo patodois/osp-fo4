@@ -337,6 +337,22 @@ pub fn activator_field(e: &Error) -> bool {
         && parts.next().is_some_and(|f| ACTIVATOR_FIELDS.contains(&f))
 }
 
+/// An activator base's (`ACTI`) subrecord this project has not read, set
+/// aside for drawing under `acti_receiver_location_render_unchanged_v1`
+/// (xEdit's published name: radio receiver).
+pub const ACTIVATOR_RECEIVER_FIELDS: [&str; 1] = ["RADR"];
+
+/// Whether `e` is the record blocker of an activator's unread
+/// [`ACTIVATOR_RECEIVER_FIELDS`].
+pub fn activator_receiver_field(e: &Error) -> bool {
+    let mut parts = e.found.split('.');
+    e.code == Code::UninterpretedVisualSubrecord.name()
+        && parts.next() == Some("ACTI")
+        && parts
+            .next()
+            .is_some_and(|f| ACTIVATOR_RECEIVER_FIELDS.contains(&f))
+}
+
 /// A furniture base's (`FURN`) subrecords whose layout this project has
 /// not established, set aside for drawing under
 /// `furn_fields_render_unchanged_v1` (xEdit's published names: marker

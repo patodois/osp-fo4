@@ -78,6 +78,8 @@ fn load_scene_with<'s>(
             vertex_normals: s.light.vertex_normals,
             chains: !s.play_platforms.is_empty() || s.drawing.held_doors || s.drawing.static_leaves,
             soft_effects: s.drawing.soft_effects,
+            effect_environment_left_out: s.drawing.effect_environment_left_out,
+            refraction_left_out: s.drawing.refraction_left_out,
             ..load::build_options(s.textures, s.level)
         },
         s.scene_memory,

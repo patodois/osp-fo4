@@ -25,7 +25,8 @@ usage:
            [--draw-child-flag-agrees] [--draw-platforms] [--draw-static-fields]
            [--draw-static-leaves] [--draw-platform-skins] [--draw-platform-nearest-part]
            [--draw-reference-alpha] [--view-near UNITS]
-           [--draw-scripted-as-stored] [--draw-activator-fields]
+           [--draw-scripted-as-stored] [--draw-activator-fields] [--draw-activator-receiver]
+           [--draw-effect-environment-left-out] [--draw-refraction-left-out]
            [--draw-static-parts] [--draw-cast-on-platforms [--draw-cast-keeps-its-part]]
       Window with a free-fly camera: W/A/S/D move, Shift moves faster, hold the
       left mouse button and move the mouse to look, R returns to the start pose.
@@ -239,7 +240,19 @@ usage:
       refr_script_render_as_stored_v1). --draw-activator-fields (off by
       default) draws an activator whose unread PNAM, FNAM or ATTX kept it
       out as its model stores it (pending rule
-      acti_fields_render_unchanged_v1).
+      acti_fields_render_unchanged_v1). --draw-activator-receiver (off by
+      default) draws an activator whose unread RADR or whose reference's
+      XLRT kept it out as its model stores it (pending rule
+      acti_receiver_location_render_unchanged_v1).
+      --draw-effect-environment-left-out (off by default) draws an
+      untextured (colour-only) effect surface whose one feature the frame
+      does not draw is its environment map by its colour, the environment
+      term left out (pending rules effect_environment_adds_to_colour_v1 and
+      effect_environment_left_out_v1, as the effect path draws them).
+      --draw-refraction-left-out (off by default) leaves out a shape whose
+      lighting shader sets Shader Flags 1's Refraction bit: its first
+      texture is the normal map that displaces what lies behind it, not a
+      colour (pending rule lighting_refraction_surface_left_out_v1).
       --draw-static-leaves (off by default; any window or frame) draws a
       static whose model's one controller, free-running and clamped, turns
       a node with no collision under it from its stored pose and back (a
@@ -524,6 +537,11 @@ pub struct Drawing {
     /// loader's render readiness sets an activator's unread `PNAM`, `FNAM`
     /// and `ATTX` aside (`Loader::set_render_activator_fields`).
     pub activator_fields: bool,
+    /// `--draw-activator-receiver`
+    /// (`acti_receiver_location_render_unchanged_v1`): the loader's render
+    /// readiness sets an activator's unread `RADR` and its reference's
+    /// `XLRT` aside (`Loader::set_render_activator_receiver`).
+    pub activator_receiver: bool,
     /// `--draw-furniture-fields` (`furn_fields_render_unchanged_v1`): the
     /// loader's render readiness sets a furniture's unread `PNAM`, `FNAM`,
     /// `MNAM`, `SNAM` and `WBDT` aside (`Loader::set_render_furniture_fields`).
@@ -588,6 +606,15 @@ pub struct Drawing {
     /// (`fo4_render::draw::BuildOptions::soft_effects`; the window copies
     /// the opaque depth after its opaque pass, `gpu::SoftDepthBuffer`).
     pub soft_effects: bool,
+    /// `--draw-effect-environment-left-out` (`effect_environment_left_out_v1`
+    /// for untextured effects; `fo4_render::draw::BuildOptions::effect_environment_left_out`):
+    /// a colour-only effect surface whose one undrawn feature is its
+    /// environment map is drawn by its colour, that term left out.
+    pub effect_environment_left_out: bool,
+    /// `--draw-refraction-left-out` (`lighting_refraction_surface_left_out_v1`;
+    /// `fo4_render::draw::BuildOptions::refraction_left_out`): a shape whose
+    /// lighting shader sets the Refraction flag is left out.
+    pub refraction_left_out: bool,
     /// `--view-near UNITS` (`window_near_clip_assumed_v1`): the window's
     /// camera clips at UNITS (whole game units, 1 to 14) in front of the
     /// eye instead of the reference frame's 15 (`gpu::ViewNear`); the CPU
@@ -1084,6 +1111,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             "--draw-reference-alpha" => drawing.reference_alpha = true,
             "--draw-scripted-as-stored" => drawing.scripted = true,
             "--draw-activator-fields" => drawing.activator_fields = true,
+            "--draw-activator-receiver" => drawing.activator_receiver = true,
             "--draw-furniture-fields" => drawing.furniture_fields = true,
             "--draw-world-persistent" => drawing.world_persistent = true,
             "--draw-activator-parts" => drawing.activator_parts = true,
@@ -1097,6 +1125,8 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             "--draw-cast-keeps-clear" => drawing.cast_keeps_clear = true,
             "--draw-cast-settles" => drawing.cast_settles = true,
             "--draw-soft-effects" => drawing.soft_effects = true,
+            "--draw-effect-environment-left-out" => drawing.effect_environment_left_out = true,
+            "--draw-refraction-left-out" => drawing.refraction_left_out = true,
             "--view-near" => {
                 let v = value()?;
                 drawing.view_near = Some(
@@ -2238,6 +2268,29 @@ mod tests {
             panic!()
         };
         assert!(acti.drawing.activator_fields && !acti.drawing.scripted);
+        // The 25th round's switch: off by default, on alone.
+        assert!(!scene.drawing.activator_receiver && !acti.drawing.activator_receiver);
+        let Command::Window {
+            scene: receiver, ..
+        } = parse(&args(&format!("{base} --draw-activator-receiver"))).unwrap()
+        else {
+            panic!()
+        };
+        assert!(receiver.drawing.activator_receiver && !receiver.drawing.activator_fields);
+        assert!(!scene.drawing.effect_environment_left_out);
+        let Command::Window { scene: env, .. } =
+            parse(&args(&format!("{base} --draw-effect-environment-left-out"))).unwrap()
+        else {
+            panic!()
+        };
+        assert!(env.drawing.effect_environment_left_out && !env.drawing.activator_receiver);
+        assert!(!scene.drawing.refraction_left_out && !env.drawing.refraction_left_out);
+        let Command::Window { scene: refr, .. } =
+            parse(&args(&format!("{base} --draw-refraction-left-out"))).unwrap()
+        else {
+            panic!()
+        };
+        assert!(refr.drawing.refraction_left_out && !refr.drawing.effect_environment_left_out);
         for (flag, fields, leaves) in [
             ("--draw-static-fields", true, false),
             ("--draw-static-leaves", false, true),

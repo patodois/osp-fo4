@@ -548,6 +548,8 @@ fn cast_with(
         vertex_normals: s.light.vertex_normals,
         chains: false,
         soft_effects: s.drawing.soft_effects,
+        effect_environment_left_out: s.drawing.effect_environment_left_out,
+        refraction_left_out: s.drawing.refraction_left_out,
         ..crate::load::build_options(s.textures, s.level)
     };
     let placed = std::mem::take(&mut scene.instances);

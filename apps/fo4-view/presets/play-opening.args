@@ -156,6 +156,21 @@
 # An activator whose unread marker colour, flags or activate text kept it
 # out is drawn as its model stores it (acti_fields_render_unchanged_v1).
 --draw-activator-fields
+# An activator whose unread radio receiver field (RADR) or whose
+# reference's location type (XLRT) alone kept it out is drawn as its model
+# stores it (acti_receiver_location_render_unchanged_v1): the living
+# room's stereo cabinet under the front window, the doilies on its top.
+--draw-activator-receiver
+# An untextured effect surface whose one feature the frame does not draw
+# is its environment map is drawn by its colour, the map's term left out
+# (effect_environment_adds_to_colour_v1, effect_environment_left_out_v1):
+# the stereo cabinet's glass, which kept the whole cabinet out.
+--draw-effect-environment-left-out
+# A shape whose lighting shader sets the Refraction flag is left out: its
+# first texture is the normal map that displaces the scene behind it, not
+# a colour (lighting_refraction_surface_left_out_v1): the exit door's heat
+# shimmer, drawn before as a green and orange oval on its carriage.
+--draw-refraction-left-out
 # A furniture whose unread PNAM, FNAM, MNAM, SNAM or WBDT kept it out is
 # drawn as its model stores it (furn_fields_render_unchanged_v1): the
 # house's beds, chairs and sofa.

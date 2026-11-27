@@ -1100,6 +1100,64 @@ fn a_references_scripts_are_set_aside_for_its_drawing_only_behind_their_switch()
 }
 
 #[test]
+fn an_activators_receiver_and_location_type_are_set_aside_for_its_drawing_only_behind_their_switch()
+{
+    // `acti_receiver_location_render_unchanged_v1`: the fixture's
+    // reference placing an activator whose base stores RADR, the reference
+    // storing XLRT (neither read for this).
+    let f = fixture_with(false, &[], |rf| {
+        let mut rf = rf.to_vec();
+        rf[6..10].copy_from_slice(&0x880u32.to_le_bytes());
+        rf.extend(sub(b"XLRT", &0x801u32.to_le_bytes()));
+        group(9, 0x800, &record(b"REFR", 0x802, 0, &rf))
+    });
+    std::fs::write(f.manifest.root.join("meshes/a.nif"), model_nif(1)).unwrap();
+    let path = f.manifest.root.join("base.esm");
+    let mut bytes = std::fs::read(&path).unwrap();
+    let mut acti = sub(b"MODL", b"a.nif\0");
+    acti.extend(sub(b"RADR", &[0; 12]));
+    bytes.extend(group(
+        0,
+        u32::from_le_bytes(*b"ACTI"),
+        &record(b"ACTI", 0x880, 0, &acti),
+    ));
+    std::fs::write(&path, bytes).unwrap();
+    let store = Store::open(&f.manifest, &Budget::new(8 << 20)).unwrap();
+    let v = Vfs::mount(&f.manifest, &Budget::new(8 << 20)).unwrap();
+    let b = Budget::new(64 << 20);
+    let state = |receiver: bool, fields: bool| {
+        let mut loader = Loader::new(&store, &v, "english", RuleLevel::Hypotheses, &b);
+        assert!(!loader.render_activator_receiver());
+        loader.set_render_activator_receiver(receiver);
+        loader.set_render_activator_fields(fields);
+        let scene = loader.by_editor_id("SyntheticRoom", &b).unwrap();
+        assert_eq!(scene.instances.len(), 1, "{:?}", scene.exclusions);
+        let i = &scene.instances[0];
+        assert!(
+            i.blockers.iter().any(readiness::activator_receiver_field)
+                && i.blockers.iter().any(readiness::reference_location_type),
+            "{:?}",
+            i.blockers
+        );
+        (
+            i.state.ready_at(RuleLevel::Hypotheses),
+            i.state.ready_at(RuleLevel::Measured),
+            i.state.hypotheses().to_vec(),
+            format!("{:?}", i.collision),
+        )
+    };
+    let off = state(false, false);
+    assert!(!off.0, "refused by the fields, as before");
+    // The activator fields' switch does not read RADR or XLRT.
+    assert_eq!(state(false, true), off);
+    let on = state(true, false);
+    assert!(on.0 && !on.1, "drawn under the pending rule only");
+    assert!(on.2.contains(&hypotheses::ACTIVATOR_RECEIVER_RENDER));
+    // Collision readiness is not the render switch's.
+    assert_eq!(on.3, off.3);
+}
+
+#[test]
 fn a_statics_reference_fields_are_set_aside_for_its_drawing_only_behind_their_switch() {
     // The fixture of the collision test above: a static's reference storing
     // the four fields.

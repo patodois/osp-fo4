@@ -204,6 +204,7 @@ pub struct Loader<'a> {
     render_reference_alpha: bool,
     render_scripted: bool,
     render_activator_fields: bool,
+    render_activator_receiver: bool,
     render_furniture_fields: bool,
     render_static_parts: bool,
     render_activator_parts: bool,
@@ -296,6 +297,16 @@ impl<'a> Loader<'a> {
     pub fn render_activator_fields(&self) -> bool {
         self.render_activator_fields
     }
+    /// `acti_receiver_location_render_unchanged_v1`
+    /// ([`hypotheses::ACTIVATOR_RECEIVER_RENDER`]): an activator's unread
+    /// `RADR` and its reference's `XLRT` set aside for its drawing (off by
+    /// default; collision readiness is unchanged).
+    pub fn set_render_activator_receiver(&mut self, on: bool) {
+        self.render_activator_receiver = on;
+    }
+    pub fn render_activator_receiver(&self) -> bool {
+        self.render_activator_receiver
+    }
     /// `furn_fields_render_unchanged_v1`
     /// ([`hypotheses::FURNITURE_FIELDS_RENDER`]): render readiness sets a
     /// furniture's (`FURN`) unread [`readiness::FURNITURE_FIELDS`] aside,
@@ -380,6 +391,7 @@ impl<'a> Loader<'a> {
             render_reference_alpha: false,
             render_scripted: false,
             render_activator_fields: false,
+            render_activator_receiver: false,
             render_furniture_fields: false,
             render_activator_parts: false,
             render_furniture_parts: false,
@@ -796,6 +808,10 @@ impl<'a> Loader<'a> {
             && base
                 .as_ref()
                 .is_some_and(|v| v.record.signature == *b"ACTI");
+        let receiver = self.render_activator_receiver
+            && base
+                .as_ref()
+                .is_some_and(|v| v.record.signature == *b"ACTI");
         let furniture = self.render_furniture_fields
             && base
                 .as_ref()
@@ -815,63 +831,77 @@ impl<'a> Loader<'a> {
                 .enumerate()
                 .any(|(k, e)| parts::aside(e, origin(k)))
             && self.static_parts_kept(base.as_ref(), b)?;
-        let state =
-            if agrees || fields || leaf || alpha || parts || scripted || activator || furniture {
-                hypotheses::classify_aside(
-                    &blockers,
-                    outside,
-                    |k| {
-                        let e = &blockers[k];
-                        if agrees && readiness::own_flag(e) {
-                            Some(hypotheses::ENABLE_CHILD_FLAG_AGREES)
-                        } else if fields
-                            && origin(k) == readiness::Origin::Record
-                            && readiness::static_reference_field(e)
-                        {
-                            Some(hypotheses::STATIC_REFERENCE_FIELDS_RENDER)
-                        } else if leaf && leaf::aside(e, origin(k)) {
-                            Some(hypotheses::STATIC_LEAF_TWO_POSE)
-                        } else if alpha
-                            && origin(k) == readiness::Origin::Record
-                            && readiness::reference_alpha(e)
-                        {
-                            Some(hypotheses::REFERENCE_ALPHA_RENDER)
-                        } else if scripted
-                            && origin(k) == readiness::Origin::Record
-                            && readiness::script_condition(e)
-                        {
-                            Some(hypotheses::REFERENCE_SCRIPT_RENDER)
-                        } else if activator
-                            && origin(k) == readiness::Origin::Record
-                            && readiness::activator_field(e)
-                        {
-                            Some(hypotheses::ACTIVATOR_FIELDS_RENDER)
-                        } else if furniture
-                            && origin(k) == readiness::Origin::Record
-                            && (readiness::furniture_field(e)
-                                || readiness::furniture_reference_field(e))
-                        {
-                            Some(hypotheses::FURNITURE_FIELDS_RENDER)
-                        } else if parts
-                            && on_activator
-                            && (parts::aside(e, origin(k))
-                                || (origin(k) == readiness::Origin::Record
-                                    && readiness::reference_location_type(e)))
-                        {
-                            Some(hypotheses::ACTIVATOR_PARTS)
-                        } else if parts && on_furniture && parts::aside(e, origin(k)) {
-                            Some(hypotheses::FURNITURE_PARTS)
-                        } else if parts && parts::aside(e, origin(k)) {
-                            Some(hypotheses::STATIC_PARTS)
-                        } else {
-                            None
-                        }
-                    },
-                    b,
-                )?
-            } else {
-                hypotheses::classify(&blockers, outside, b)?
-            };
+        let state = if agrees
+            || fields
+            || leaf
+            || alpha
+            || parts
+            || scripted
+            || activator
+            || receiver
+            || furniture
+        {
+            hypotheses::classify_aside(
+                &blockers,
+                outside,
+                |k| {
+                    let e = &blockers[k];
+                    if agrees && readiness::own_flag(e) {
+                        Some(hypotheses::ENABLE_CHILD_FLAG_AGREES)
+                    } else if fields
+                        && origin(k) == readiness::Origin::Record
+                        && readiness::static_reference_field(e)
+                    {
+                        Some(hypotheses::STATIC_REFERENCE_FIELDS_RENDER)
+                    } else if leaf && leaf::aside(e, origin(k)) {
+                        Some(hypotheses::STATIC_LEAF_TWO_POSE)
+                    } else if alpha
+                        && origin(k) == readiness::Origin::Record
+                        && readiness::reference_alpha(e)
+                    {
+                        Some(hypotheses::REFERENCE_ALPHA_RENDER)
+                    } else if scripted
+                        && origin(k) == readiness::Origin::Record
+                        && readiness::script_condition(e)
+                    {
+                        Some(hypotheses::REFERENCE_SCRIPT_RENDER)
+                    } else if activator
+                        && origin(k) == readiness::Origin::Record
+                        && readiness::activator_field(e)
+                    {
+                        Some(hypotheses::ACTIVATOR_FIELDS_RENDER)
+                    } else if receiver
+                        && origin(k) == readiness::Origin::Record
+                        && (readiness::activator_receiver_field(e)
+                            || readiness::reference_location_type(e))
+                    {
+                        Some(hypotheses::ACTIVATOR_RECEIVER_RENDER)
+                    } else if furniture
+                        && origin(k) == readiness::Origin::Record
+                        && (readiness::furniture_field(e)
+                            || readiness::furniture_reference_field(e))
+                    {
+                        Some(hypotheses::FURNITURE_FIELDS_RENDER)
+                    } else if parts
+                        && on_activator
+                        && (parts::aside(e, origin(k))
+                            || (origin(k) == readiness::Origin::Record
+                                && readiness::reference_location_type(e)))
+                    {
+                        Some(hypotheses::ACTIVATOR_PARTS)
+                    } else if parts && on_furniture && parts::aside(e, origin(k)) {
+                        Some(hypotheses::FURNITURE_PARTS)
+                    } else if parts && parts::aside(e, origin(k)) {
+                        Some(hypotheses::STATIC_PARTS)
+                    } else {
+                        None
+                    }
+                },
+                b,
+            )?
+        } else {
+            hypotheses::classify(&blockers, outside, b)?
+        };
         let more = blockers.len().saturating_sub(origins.len());
         b.reserve(&mut origins, more, &src.file, src.offset)?;
         origins.resize(blockers.len(), readiness::Origin::Record);

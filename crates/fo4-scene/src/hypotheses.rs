@@ -260,6 +260,14 @@ pub const REFERENCE_SCRIPT_RENDER: &str = "refr_script_render_as_stored_v1";
 /// drawing as its model stores it (`Loader::set_render_activator_fields`,
 /// off by default).
 pub const ACTIVATOR_FIELDS_RENDER: &str = "acti_fields_render_unchanged_v1";
+/// An activator's (`ACTI`) unread `RADR` and its reference's `XLRT` leave
+/// its drawing as its model stores it
+/// (`Loader::set_render_activator_receiver`, off by default).
+pub const ACTIVATOR_RECEIVER_RENDER: &str = "acti_receiver_location_render_unchanged_v1";
+/// A shape whose lighting shader sets the Refraction flag is left out of
+/// this frame (`fo4_render::draw::BuildOptions::refraction_left_out`, off
+/// by default).
+pub const LIGHTING_REFRACTION_LEFT_OUT: &str = "lighting_refraction_surface_left_out_v1";
 /// A furniture's (`FURN`) unread `PNAM`, `FNAM`, `MNAM`, `SNAM` and `WBDT`
 /// leave its drawing as its model stores it
 /// (`Loader::set_render_furniture_fields`, off by default).
@@ -809,6 +817,8 @@ mod tests {
             REFERENCE_ALPHA_RENDER,
             REFERENCE_SCRIPT_RENDER,
             ACTIVATOR_FIELDS_RENDER,
+            ACTIVATOR_RECEIVER_RENDER,
+            LIGHTING_REFRACTION_LEFT_OUT,
             FURNITURE_FIELDS_RENDER,
             ACTIVATOR_PARTS,
             FURNITURE_PARTS,

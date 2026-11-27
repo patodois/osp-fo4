@@ -861,6 +861,12 @@ pub fn cell<'s>(
     if drawing.activator_fields {
         loader.set_render_activator_fields(true);
     }
+    // `--draw-activator-receiver` (off by default): render readiness sets
+    // an activator's unread RADR and its reference's XLRT aside
+    // (`acti_receiver_location_render_unchanged_v1`).
+    if drawing.activator_receiver {
+        loader.set_render_activator_receiver(true);
+    }
     // `--draw-furniture-fields` (off by default): render readiness sets a
     // furniture's unread PNAM, FNAM, MNAM, SNAM and WBDT aside
     // (`furn_fields_render_unchanged_v1`).
@@ -1739,6 +1745,22 @@ pub(crate) fn blended_lines(scene: &fo4_scene::Scene, build: &fo4_render::draw::
 /// [`blended_lines`] to write it.
 const BLENDED_NEAR: f64 = 1500.0;
 
+/// FO4_VIEW_BLENDED_ALL=1 (measurement only): [`blended_lines`] writes
+/// the opaque draws too.
+fn blended_all() -> bool {
+    std::env::var_os("FO4_VIEW_BLENDED_ALL").is_some()
+}
+
+/// FO4_VIEW_BLENDED_MIN=UNITS (measurement only): the smallest extent
+/// [`blended_lines`] writes in place of [`BLENDED_MIN`].
+fn blended_min() -> f64 {
+    std::env::var("FO4_VIEW_BLENDED_MIN")
+        .ok()
+        .and_then(|v| v.parse::<f64>().ok())
+        .filter(|v| v.is_finite() && *v >= 0.0)
+        .unwrap_or(BLENDED_MIN)
+}
+
 /// FO4_VIEW_BLENDED_AT=X,Y,Z (measurement only).
 fn blended_at() -> Option<[f64; 3]> {
     let v = std::env::var("FO4_VIEW_BLENDED_AT").ok()?;
@@ -1753,7 +1775,7 @@ fn blended_text(scene: &fo4_scene::Scene, build: &fo4_render::draw::Build) -> St
     let mut text = String::new();
     for (i, d) in build.list.draws.iter().enumerate() {
         let effect = effects.contains(&i);
-        if d.alpha.enabled == 0 && !effect {
+        if d.alpha.enabled == 0 && !effect && !blended_all() {
             continue;
         }
         let Some(mesh) = build.list.meshes.get(d.mesh) else {
@@ -1769,7 +1791,7 @@ fn blended_text(scene: &fo4_scene::Scene, build: &fo4_render::draw::Build) -> St
             }
         }
         let span = (0..3).map(|k| hi[k] - lo[k]).fold(0.0, f64::max);
-        if span.is_nan() || span < BLENDED_MIN {
+        if span.is_nan() || span < blended_min() {
             continue;
         }
         let who = build.instances.get(d.instance as usize).map_or_else(

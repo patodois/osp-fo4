@@ -371,6 +371,8 @@ fn scol_hypothesis_draws_two_textured_parts_without_the_generated_alternative() 
             vertex_normals: false,
             chains: false,
             soft_effects: false,
+            effect_environment_left_out: false,
+            refraction_left_out: false,
         },
         &Budget::new(32 << 20),
     )
@@ -391,6 +393,8 @@ fn scol_hypothesis_draws_two_textured_parts_without_the_generated_alternative() 
             vertex_normals: false,
             chains: false,
             soft_effects: false,
+            effect_environment_left_out: false,
+            refraction_left_out: false,
         },
         &b,
     )
@@ -412,6 +416,8 @@ fn scol_hypothesis_draws_two_textured_parts_without_the_generated_alternative() 
             vertex_normals: false,
             chains: true,
             soft_effects: false,
+            effect_environment_left_out: false,
+            refraction_left_out: false,
         },
         &b,
     )
@@ -454,6 +460,8 @@ fn scol_hypothesis_draws_two_textured_parts_without_the_generated_alternative() 
             vertex_normals: false,
             chains: false,
             soft_effects: false,
+            effect_environment_left_out: false,
+            refraction_left_out: false,
         },
         true,
         &Budget::new(32 << 20),
@@ -483,6 +491,8 @@ fn scol_hypothesis_draws_two_textured_parts_without_the_generated_alternative() 
             vertex_normals: false,
             chains: false,
             soft_effects: false,
+            effect_environment_left_out: false,
+            refraction_left_out: false,
         },
         &b,
     )
@@ -515,6 +525,8 @@ fn scol_hypothesis_draws_two_textured_parts_without_the_generated_alternative() 
             vertex_normals: false,
             chains: false,
             soft_effects: false,
+            effect_environment_left_out: false,
+            refraction_left_out: false,
         },
         &Budget::new(32 << 20),
     )
@@ -539,6 +551,8 @@ fn scol_hypothesis_draws_two_textured_parts_without_the_generated_alternative() 
             vertex_normals: false,
             chains: false,
             soft_effects: false,
+            effect_environment_left_out: false,
+            refraction_left_out: false,
         },
         &b,
     )
@@ -552,10 +566,20 @@ fn scol_hypothesis_draws_two_textured_parts_without_the_generated_alternative() 
 
 #[test]
 fn untextured_effect_requires_hypothesis_and_refuses_unhandled_features() {
-    for (flags, expected_error) in [
-        (0, None),
-        (1 << 6, Some("UnsupportedColorOnlyEffectFeatures")),
-        (1 << 3, Some("MissingEnabledEffectVertexColor")),
+    // The environment map flag (bit 7) is refused unless its switch leaves
+    // the term out (`effect_environment_left_out_v1`); another flag beside
+    // it is still refused.
+    for (flags, expected_error, environment) in [
+        (0, None, false),
+        (1 << 6, Some("UnsupportedColorOnlyEffectFeatures"), false),
+        (1 << 3, Some("MissingEnabledEffectVertexColor"), false),
+        (1 << 7, Some("UnsupportedColorOnlyEffectFeatures"), false),
+        (1 << 7, None, true),
+        (
+            (1 << 7) | (1 << 6),
+            Some("UnsupportedColorOnlyEffectFeatures"),
+            true,
+        ),
     ] {
         let temp = TestDir::new("effect-color");
         let root = temp.join("Data");
@@ -629,8 +653,17 @@ fn untextured_effect_requires_hypothesis_and_refuses_unhandled_features() {
             vertex_normals: false,
             chains: false,
             soft_effects: false,
+            effect_environment_left_out: environment,
+            refraction_left_out: false,
         };
         let output = build(&scene, &loader, &m.limits, options, &b).unwrap();
+        assert_eq!(
+            output.instances.first().is_some_and(|i| i
+                .hypotheses
+                .contains(&fo4_scene::hypotheses::EFFECT_ENVIRONMENT_LEFT_OUT)),
+            environment && expected_error.is_none(),
+            "{flags}"
+        );
         if let Some(code) = expected_error {
             assert!(output.list.draws.is_empty());
             assert_eq!(output.omitted[0].causes[0].code, code);
@@ -654,6 +687,52 @@ fn untextured_effect_requires_hypothesis_and_refuses_unhandled_features() {
             );
         }
     }
+}
+
+/// `lighting_refraction_surface_left_out_v1`: a shape is a refraction
+/// surface when its lighting shader's Shader Flags 1 sets bit 15, and only
+/// then; an effect shader's flags are not read for it.
+#[test]
+fn a_lighting_shader_with_the_refraction_flag_marks_its_shape() {
+    fn parse(bytes: &[u8]) -> fo4_nif::Nif<'_> {
+        fo4_nif::Nif::read(
+            bytes,
+            "synthetic refraction",
+            Game::Fallout4,
+            &Limits::default(),
+            &Budget::new(1 << 20),
+        )
+        .unwrap()
+    }
+    let shape_of = |n: &fo4_nif::Nif<'_>| -> Vec<fo4_nif::Field> {
+        fo4_scene::model_policy::fields(n.blocks[0].decoded.as_ref().unwrap()).to_vec()
+    };
+    let plain = nif_kind(b"textures/a.dds", None);
+    let n = parse(&plain);
+    let shader = n
+        .blocks
+        .iter()
+        .position(|b| n.block_types[b.type_index as usize] == "BSLightingShaderProperty")
+        .unwrap();
+    assert!(!crate::draw::refraction_surface(&n, &shape_of(&n)));
+    let at = n.blocks[shader].data.start + 16;
+    let mut refracting = plain.clone();
+    refracting[at..at + 4].copy_from_slice(&(1u32 << 15).to_le_bytes());
+    let r = parse(&refracting);
+    assert!(crate::draw::refraction_surface(&r, &shape_of(&r)));
+    // Another bit alone: not a refraction surface.
+    let mut other = plain.clone();
+    other[at..at + 4].copy_from_slice(&(1u32 << 14).to_le_bytes());
+    let o = parse(&other);
+    assert!(!crate::draw::refraction_surface(&o, &shape_of(&o)));
+    // An effect shader's Refraction bit is the colour-only path's
+    // (refused there), not this rule's.
+    let effect_bytes = nif_kind(b"", Some(1 << 15));
+    let effect = parse(&effect_bytes);
+    assert!(!crate::draw::refraction_surface(
+        &effect,
+        &shape_of(&effect)
+    ));
 }
 
 #[test]
@@ -1250,6 +1329,8 @@ fn effect_surface_build_with(x: EffectFixture) -> crate::draw::Build {
         vertex_normals: false,
         chains: false,
         soft_effects: x.soft,
+        effect_environment_left_out: false,
+        refraction_left_out: false,
     };
     build(&scene, &loader, &m.limits, options, &b).unwrap()
 }
@@ -1503,6 +1584,8 @@ fn a_missing_material_falls_back_to_the_shaders_own_texture_only_under_its_rule(
         vertex_normals: false,
         chains: false,
         soft_effects: false,
+        effect_environment_left_out: false,
+        refraction_left_out: false,
     };
     let part = nif_named(
         b"textures/a.dds",
@@ -1582,6 +1665,8 @@ fn a_surface_with_uv_fields_other_than_identity_needs_the_uv_order_rule() {
         vertex_normals: false,
         chains: false,
         soft_effects: false,
+        effect_environment_left_out: false,
+        refraction_left_out: false,
     };
     let measured = build(&scene, &loader, &m.limits, options(RuleLevel::Measured), &b).unwrap();
     assert!(measured.list.draws.is_empty());
@@ -1678,6 +1763,8 @@ fn a_swap_leaves_a_shape_without_material_to_its_own_texture_under_its_rule() {
         vertex_normals: false,
         chains: false,
         soft_effects: false,
+        effect_environment_left_out: false,
+        refraction_left_out: false,
     };
     let run = |swap: &[u8]| {
         let part = nif_with_helper(b"textures/a.dds", None, b"PlainLabel");
@@ -1752,6 +1839,8 @@ fn a_blended_lighting_surface_takes_its_vertex_alpha_only_under_its_rule() {
         vertex_normals: false,
         chains: false,
         soft_effects: false,
+        effect_environment_left_out: false,
+        refraction_left_out: false,
     };
     // Normal bytes, then RGBA: a vertex alpha of 0, 128 and 255.
     let colours = |a: [u8; 3]| a.map(|a| [128, 128, 255, 0, 200, 100, 50, a]);
@@ -1829,6 +1918,8 @@ fn swap_patterns_match_names_only_under_their_rules() {
         vertex_normals: false,
         chains: false,
         soft_effects: false,
+        effect_environment_left_out: false,
+        refraction_left_out: false,
     };
     let run = |swap: &[u8], policy: RuleLevel| {
         let part = nif_named(
@@ -1923,6 +2014,8 @@ fn triangles_on_a_non_finite_texture_coordinate_are_left_out_only_under_their_ru
         vertex_normals: false,
         chains: false,
         soft_effects: false,
+        effect_environment_left_out: false,
+        refraction_left_out: false,
     };
     let mut part = nif_with_helper(b"textures/a.dds", None, b"PlainLabel");
     // Vertex 0's position (1, 0, 0) then its first UV half: a NaN.
@@ -2101,6 +2194,8 @@ fn free_running_controllers_are_drawn_at_the_build_time_only_under_the_clock_rul
             vertex_normals: false,
             chains: false,
             soft_effects: false,
+            effect_environment_left_out: false,
+            refraction_left_out: false,
         };
         let state = scene.instances[0].state.hypotheses().to_vec();
         (
@@ -2279,6 +2374,8 @@ fn effect_colour_and_multiple_follow_the_clock_behind_their_switches() {
             vertex_normals: false,
             chains: false,
             soft_effects: false,
+            effect_environment_left_out: false,
+            refraction_left_out: false,
         };
         let state = (
             matches!(scene.instances[0].state, fo4_scene::State::Blocked),
@@ -2488,6 +2585,8 @@ fn a_moving_node_is_drawn_at_the_build_time_only_behind_its_switch() {
             vertex_normals: false,
             chains: false,
             soft_effects: false,
+            effect_environment_left_out: false,
+            refraction_left_out: false,
         };
         let state = scene.instances[0].state.hypotheses().to_vec();
         (
@@ -2620,6 +2719,8 @@ fn a_swap_pattern_reaches_the_material_another_scope_put_in_place() {
             vertex_normals: false,
             chains: false,
             soft_effects: false,
+            effect_environment_left_out: false,
+            refraction_left_out: false,
         };
         let out = build(&scene, &loader, &m.limits, options, &b).unwrap();
         drop(temp);
@@ -2712,6 +2813,8 @@ fn a_timeline_frame_leaves_out_what_the_run_disabled_and_moves_what_it_moved() {
         vertex_normals: false,
         chains: false,
         soft_effects: false,
+        effect_environment_left_out: false,
+        refraction_left_out: false,
     };
     // The draws of the frame at second `s`, or the error applying it.
     let draws_at = |t: &Timeline, s: f64, level: RuleLevel| {
@@ -2797,6 +2900,8 @@ fn a_static_refused_for_an_unread_block_is_drawn_by_its_other_parts_behind_the_s
         vertex_normals: false,
         chains: false,
         soft_effects: false,
+        effect_environment_left_out: false,
+        refraction_left_out: false,
     };
     // Off by default: refused whole.
     let mut loader = Loader::new(&store, &vfs, "english", RuleLevel::Facts, &b);
@@ -2881,6 +2986,8 @@ fn a_furniture_refused_for_an_unread_block_is_drawn_by_its_other_parts_behind_it
         vertex_normals: false,
         chains: false,
         soft_effects: false,
+        effect_environment_left_out: false,
+        refraction_left_out: false,
     };
     // The static parts reading alone: a furniture is refused whole.
     let mut loader = Loader::new(&store, &vfs, "english", RuleLevel::Facts, &b);
@@ -2928,6 +3035,8 @@ fn kept_files_answer_a_second_build_alike() {
         vertex_normals: false,
         chains: false,
         soft_effects: false,
+        effect_environment_left_out: false,
+        refraction_left_out: false,
     };
     let mut loader = Loader::new(&store, &vfs, "english", RuleLevel::Facts, &b);
     let scene = loader.by_editor_id("SyntheticScolCell", &b).unwrap();
@@ -2971,6 +3080,8 @@ fn kept_files_hold_what_the_visit_read() {
         vertex_normals: false,
         chains: false,
         soft_effects: false,
+        effect_environment_left_out: false,
+        refraction_left_out: false,
     };
     let mut plain_loader = Loader::new(&store, &vfs, "english", RuleLevel::Facts, &b);
     let scene = plain_loader.by_editor_id("SyntheticScolCell", &b).unwrap();
@@ -3011,6 +3122,8 @@ fn kept_models_answer_a_second_build_alike() {
         vertex_normals: false,
         chains: false,
         soft_effects: false,
+        effect_environment_left_out: false,
+        refraction_left_out: false,
     };
     let frame = |l: &crate::DrawList| {
         let camera = fo4_scene::camera::look_at(
