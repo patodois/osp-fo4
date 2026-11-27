@@ -139,6 +139,45 @@ fn run() -> Result<(), E> {
             src.class
         )
     };
+    // COLUMN_PROBE_WALK=SPEED: a character standing at the line's start
+    // (settled from Z) walks the line at SPEED with the probe of the cues
+    // (`Character::walks_to`) and, tick by tick, at the walker's own tick.
+    if let Some(speed) = std::env::var("COLUMN_PROBE_WALK")
+        .ok()
+        .and_then(|v| v.parse::<f64>().ok())
+    {
+        let params = fo4_walk::Params {
+            walk_speed: speed,
+            run_speed: speed,
+            ..fo4_walk::Params::PROVISIONAL
+        };
+        let mut c = fo4_walk::Character::new(params, fo4_walk::Settings::DEFAULT, [a[0], a[1], z])?;
+        c.settle(world, 600);
+        let to = world
+            .ray_down(b[0], b[1], c.feet[2] + 100.0)
+            .map_or(z, |h| h.z);
+        println!(
+            "\n# walk from {:?} to [{}, {}, {to:.2}]: walks_to {}",
+            c.feet,
+            b[0],
+            b[1],
+            c.walks_to(world, [b[0], b[1], to])
+        );
+        let heading = (b[1] - c.feet[1]).atan2(b[0] - c.feet[0]);
+        let input = fo4_walk::Input {
+            forward: 1.0,
+            right: 0.0,
+            heading,
+            run: true,
+        };
+        for k in 0..12 {
+            let s = c.tick(world, input);
+            println!(
+                "tick {k}: feet [{:.2}, {:.2}, {:.2}] grounded {} blocked {} stepped {}",
+                s.feet[0], s.feet[1], s.feet[2], s.grounded, s.blocked, s.stepped
+            );
+        }
+    }
     let steps = 40;
     println!("\n# columns from {a:?} to {b:?}: every surface (z, source)");
     for k in 0..=steps {
