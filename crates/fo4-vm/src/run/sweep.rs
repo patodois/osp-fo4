@@ -418,6 +418,13 @@ pub(super) fn fragments(
                 );
             }
             let top = quest::run_jobs(&mut vm, store, MAX_JOBS, &bb);
+            if let Some(left) = jobs_left(&vm) {
+                bump(
+                    &mut c,
+                    format!("{prefix}runs that reached the job limit (cascade cut)"),
+                );
+                let _ = writeln!(names, "    job limit reached: {left} jobs left");
+            }
             let runs = all_runs(&mut vm, top);
             count_jobs(&mut c, &runs, &format!("{prefix}job "));
             for r in &runs {
@@ -521,6 +528,20 @@ pub(super) fn scenes(
             advanced += 1;
             top.extend(quest::run_jobs(&mut vm, store, MAX_JOBS, &bb));
         }
+        // Stopped by the job limit: jobs left queued, or advances left
+        // that the limit did not let run.
+        let left = jobs_left(&vm);
+        if left.is_some() || (top.len() >= MAX_JOBS && advanced < steps) {
+            bump(
+                &mut c,
+                "scenes whose runs reached the job limit (cascade cut)",
+            );
+            let _ = writeln!(
+                names,
+                "    job limit reached: {} jobs left, {advanced} of {steps} advances",
+                left.unwrap_or(0)
+            );
+        }
         if steps > 0 {
             bump(
                 &mut c,
@@ -572,6 +593,13 @@ pub(super) fn scenes(
     write(out, &c, &names, "scenes")
 }
 
+/// The jobs [`quest::run_jobs`] left queued when it stopped at its limit
+/// ([`MAX_JOBS`]); `None` when it ran them all.
+fn jobs_left(vm: &Vm<'_>) -> Option<usize> {
+    let n = vm.world.quests.queue.len();
+    (n > 0).then_some(n)
+}
+
 pub(super) fn one(
     m: &Manifest,
     vfs: &Vfs,
@@ -615,8 +643,12 @@ pub(super) fn one(
         vm.world.objects[o].label
     );
     let top = quest::run_jobs(&mut vm, store, MAX_JOBS, &b);
+    let left = jobs_left(&vm);
     for r in all_runs(&mut vm, top) {
         print!("{}", job_text(&vm, &r));
+    }
+    if let Some(left) = left {
+        println!("job limit reached (cascade cut): {left} jobs left");
     }
     let rules: Vec<&str> = vm.rules.iter().copied().collect();
     println!("rules (pending): {}", rules.join(" "));

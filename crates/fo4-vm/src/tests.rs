@@ -21,6 +21,7 @@ mod scev;
 mod sit;
 mod stage;
 mod stepped;
+mod sweep;
 mod talk;
 mod third;
 mod vault;
@@ -49,6 +50,16 @@ use fo4_pex::{
 /// Arguments: integers, floats (with a dot), `true`, `false`, `none`,
 /// `"text"`, anything else a name.
 fn assemble(src: &str) -> Script {
+    assemble_with(src, |p| Script::from_pex(p, 0).unwrap())
+}
+
+/// [`assemble`]'s script as the bytes of a `.pex` file ([`pex_bytes`]).
+fn assemble_bytes(src: &str) -> Vec<u8> {
+    assemble_with(src, pex_bytes)
+}
+
+/// The assembled file handed to `f`.
+fn assemble_with<R>(src: &str, f: impl FnOnce(&Pex<'_>) -> R) -> R {
     let mut strings: Vec<Vec<u8>> = Vec::new();
     let mut s = |t: &str| -> Str {
         if let Some(i) = strings.iter().position(|x| x == t.as_bytes()) {
@@ -254,7 +265,145 @@ fn assemble(src: &str) -> Script {
         user_flags: Vec::new(),
         objects: vec![o],
     };
-    Script::from_pex(&p, 0).unwrap()
+    f(&p)
+}
+
+/// The bytes `fo4_pex::Pex::read` reads back as `p` (test support: the
+/// layout the reader takes, written front to back; no debug block).
+fn pex_bytes(p: &Pex<'_>) -> Vec<u8> {
+    fn u16s(v: &mut Vec<u8>, n: usize) {
+        v.extend(u16::try_from(n).unwrap().to_le_bytes());
+    }
+    fn text(v: &mut Vec<u8>, t: &[u8]) {
+        u16s(v, t.len());
+        v.extend(t);
+    }
+    fn value(v: &mut Vec<u8>, x: &Value) {
+        v.push(x.kind());
+        match x {
+            Value::None => {}
+            Value::Ident(i) | Value::Str(i) => v.extend(i.to_le_bytes()),
+            Value::Int(n) => v.extend(n.to_le_bytes()),
+            Value::Float(f) => v.extend(f.to_bits().to_le_bytes()),
+            Value::Bool(b) => v.push(u8::from(*b)),
+        }
+    }
+    fn pairs(v: &mut Vec<u8>, p: &[(Str, Str)]) {
+        u16s(v, p.len());
+        for (a, b) in p {
+            v.extend(a.to_le_bytes());
+            v.extend(b.to_le_bytes());
+        }
+    }
+    fn function(v: &mut Vec<u8>, f: &Function) {
+        v.extend(f.return_type.to_le_bytes());
+        v.extend(f.doc.to_le_bytes());
+        v.extend(f.user_flags.to_le_bytes());
+        v.push(f.flags);
+        pairs(v, &f.params);
+        pairs(v, &f.locals);
+        u16s(v, f.code.len());
+        for i in &f.code {
+            v.push(i.op);
+            for a in i.args.iter().chain(&i.extra) {
+                value(v, a);
+            }
+        }
+    }
+    let h = &p.header;
+    let mut v = fo4_pex::MAGIC.to_le_bytes().to_vec();
+    v.extend([h.major, h.minor]);
+    v.extend(h.game.to_le_bytes());
+    v.extend(h.compiled.to_le_bytes());
+    for t in [h.source, h.user, h.machine] {
+        text(&mut v, t);
+    }
+    u16s(&mut v, p.strings.len());
+    for t in &p.strings {
+        text(&mut v, t);
+    }
+    assert!(p.debug.is_none() && p.user_flags.is_empty());
+    v.push(0);
+    u16s(&mut v, 0);
+    u16s(&mut v, p.objects.len());
+    for o in &p.objects {
+        v.extend(o.name.to_le_bytes());
+        let at = v.len();
+        v.extend([0; 4]);
+        v.extend(o.parent.to_le_bytes());
+        v.extend(o.doc.to_le_bytes());
+        v.push(o.constant);
+        v.extend(o.user_flags.to_le_bytes());
+        v.extend(o.auto_state.to_le_bytes());
+        u16s(&mut v, o.structs.len());
+        for st in &o.structs {
+            v.extend(st.name.to_le_bytes());
+            u16s(&mut v, st.members.len());
+            for m in &st.members {
+                v.extend(m.name.to_le_bytes());
+                v.extend(m.type_name.to_le_bytes());
+                v.extend(m.user_flags.to_le_bytes());
+                value(&mut v, &m.value);
+                v.push(m.constant);
+                v.extend(m.doc.to_le_bytes());
+            }
+        }
+        u16s(&mut v, o.variables.len());
+        for x in &o.variables {
+            v.extend(x.name.to_le_bytes());
+            v.extend(x.type_name.to_le_bytes());
+            v.extend(x.user_flags.to_le_bytes());
+            value(&mut v, &x.value);
+            v.push(x.constant);
+        }
+        u16s(&mut v, o.properties.len());
+        for x in &o.properties {
+            v.extend(x.name.to_le_bytes());
+            v.extend(x.type_name.to_le_bytes());
+            v.extend(x.doc.to_le_bytes());
+            v.extend(x.user_flags.to_le_bytes());
+            v.push(x.flags);
+            match x.variable {
+                Some(n) => v.extend(n.to_le_bytes()),
+                None => {
+                    for f in [&x.read, &x.write].into_iter().flatten() {
+                        function(&mut v, f);
+                    }
+                }
+            }
+        }
+        u16s(&mut v, o.states.len());
+        for st in &o.states {
+            v.extend(st.name.to_le_bytes());
+            u16s(&mut v, st.functions.len());
+            for f in &st.functions {
+                v.extend(f.name.to_le_bytes());
+                function(&mut v, &f.function);
+            }
+        }
+        let size = u32::try_from(v.len() - at).unwrap();
+        v[at..at + 4].copy_from_slice(&size.to_le_bytes());
+    }
+    v
+}
+
+#[test]
+fn an_assembled_script_written_as_a_file_reads_back_the_same() {
+    let src = "script T extends ScriptObject auto Busy
+         var Int n 3
+         prop Int N n
+         struct P
+         member Float x 1.5
+         state Busy
+         func Go Bool Int a
+         local Bool r
+         23 Go self r 1 a
+         26 r";
+    let bytes = assemble_bytes(src);
+    let b = fo4_core::Budget::new(1 << 20);
+    let p = Pex::read(&bytes, "t.pex", &b).unwrap();
+    let back = Script::from_pex(&p, 0).unwrap();
+    assert_eq!(format!("{back:?}"), format!("{:?}", assemble(src)));
 }
 
 fn tokens(line: &str) -> Vec<&str> {
