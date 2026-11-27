@@ -1850,8 +1850,8 @@ mod enabled {
 
     /// Whether new quest log entries are progress for the cues (viewer
     /// policy: the cues wait for [`CUE_AFTER`] run seconds without
-    /// progress): a stage set, a quest started or stopped, an objective
-    /// whose value changed (`objectives` keeps each one's last value). Not
+    /// progress): a stage set the first time, a quest started or stopped,
+    /// an objective whose value changed (`objectives` keeps each one's last value). Not
     /// a stage set again and refused, nor an objective set to the value it
     /// had (the 22nd session's run logged such entries again and again
     /// from the vault on, and no use cue came). Also the kinds of entries
@@ -1873,6 +1873,16 @@ mod enabled {
                         counts = true;
                     }
                 }
+                // A stage set again (one the quest allows to repeat): not
+                // new; kept under the objective map's key kind 255.
+                Change::StageSet(n) => {
+                    if objectives.insert((*o, 255, *n), Some(true)).is_some() {
+                        skipped.push("a stage set again");
+                    } else {
+                        counts = true;
+                    }
+                }
+                Change::Opened(_) => skipped.push("a quest opened"),
                 _ => counts = true,
             }
         }
@@ -2584,8 +2594,12 @@ mod enabled {
             // that counted as progress), each minute of the run.
             if now - self.counted.0 >= 60.0 {
                 if !self.counted.1.is_empty() {
-                    let all: Vec<String> =
-                        self.counted.1.iter().map(|(k, n)| format!("{k} x{n}")).collect();
+                    let all: Vec<String> = self
+                        .counted
+                        .1
+                        .iter()
+                        .map(|(k, n)| format!("{k} x{n}"))
+                        .collect();
                     println!(
                         "play: quest log progress from {:.0} s to {now:.0} s of the run (last at {:.3} s): {}",
                         self.counted.0,
@@ -2671,7 +2685,11 @@ mod enabled {
                             "not asked ({}{}{}{})",
                             if feet.is_none() { "no feet, " } else { "" },
                             if space.is_none() { "no space, " } else { "" },
-                            if at.is_none() { "targets not read, " } else { "" },
+                            if at.is_none() {
+                                "targets not read, "
+                            } else {
+                                ""
+                            },
                             if s.building { "the window builds" } else { "" }
                         );
                         if why != self.use_why {
@@ -3670,8 +3688,14 @@ mod enabled {
             assert!(quest_progress(&[(3, Change::Objective(0, 10, Some(false)))], &mut obj).0);
             assert!(quest_progress(&[(4, Change::Objective(0, 10, Some(false)))], &mut obj).0);
             // A stage set among refusals: progress.
-            let mixed = [(3, Change::StageRepeatRefused(30)), (3, Change::StageSet(40))];
+            let mixed = [
+                (3, Change::StageRepeatRefused(30)),
+                (3, Change::StageSet(40)),
+            ];
             assert!(quest_progress(&mixed, &mut obj).0);
+            // The same stage set again (a repeatable stage): no progress.
+            let again = quest_progress(&[(3, Change::StageSet(40))], &mut obj);
+            assert!(!again.0 && again.1 == ["a stage set again"]);
             assert!(quest_progress(&[(5, Change::Started)], &mut obj).0);
         }
 
@@ -3996,8 +4020,12 @@ mod enabled {
             // it and the way on from it.
             let mut bent: Vec<[f64; 3]> = (0..=8).map(|i| [0.0, 5.0 * f64::from(i), 0.0]).collect();
             bent.extend((1..=40).map(|i| [-5.0 * f64::from(i), 40.0, 0.0]));
-            let (aim, len, sighted) = cue_sighted([0.0, 0.0, 0.0], [-200.0, 40.0, 0.0], &bent, |_| false);
-            assert!(!sighted && (aim[1] - 40.0).abs() < 1e-9 && aim[0] > -20.0, "{aim:?}");
+            let (aim, len, sighted) =
+                cue_sighted([0.0, 0.0, 0.0], [-200.0, 40.0, 0.0], &bent, |_| false);
+            assert!(
+                !sighted && (aim[1] - 40.0).abs() < 1e-9 && aim[0] > -20.0,
+                "{aim:?}"
+            );
             assert!((len - (15f64.hypot(40.0) + 185.0)).abs() < 1e-6, "{len}");
             assert_eq!(cue_straight_stretch(&bent, 48), 11);
             assert_eq!(cue_straight_stretch(&bent, 5), 5);

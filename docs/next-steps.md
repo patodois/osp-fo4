@@ -319,6 +319,19 @@ one place is the package location's one point (`pack_location_radius_one_point_o
 depth fade of effect surfaces, actors as pick targets, the draw-recipe memo, the shelving's collision, the robot's
 object template, the refusals census, the dream room.
 
+Twenty-second-session fixes (viewer policy, the run unchanged): the cues wait for quest progress, and progress now
+counts only a stage set the first time, a quest started or stopped and an objective whose value changed (the 22nd
+session's run logged stages set again and refusals from early on, so no use cue came in the vault); the window log
+says each stall and why a use cue names a target or none. The house cue's fallback aim (nothing on the way walked
+straight) stops at the end of the way's first straight stretch (`cue_straight_stretch`, the trail within 16 units of
+the line), not 96 units along past the trail's turn at a door. With `--draw-cast-settles` an actor whose ground is not
+answered is not drawn for up to 1.5 s, and the census names the actor dropped most. The person's window gets the named
+platforms at each tick (`fo4_play::walker::Arrivals::platforms`), so riders and parts move with the feet instead of
+the last slice's end (up to 60 units apart on the ride down). Left: the ground is still asked at the actor's origin
+only (heels on slopes; per-foot rays from the posed feet would need a rule); a resting creature sunk in a slab was not
+moved by the settle (its pose draws below its place); the soft fade, the parse memo, the device's refusal, the
+shelving's collision, actors as pick targets and the throat band were not started (janela17 RESULTADO).
+
 The opening run is now visible (`spec/timeline.md`), and since the cast step its people appear as people. `quest_run new-game --timeline FILE` writes what the run
 did, second by second, in a neutral versioned text file (track points with their cells, actor places with the
 rule or assumption behind each, references enabled, disabled and moved, scene lines with speaker, seconds and
