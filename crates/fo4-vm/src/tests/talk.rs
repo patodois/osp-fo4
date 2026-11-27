@@ -419,6 +419,39 @@ fn the_player_greets_the_actor_and_the_lines_begin_half_sets_its_stage() {
 }
 
 #[test]
+fn a_line_of_the_subtype_that_did_not_read_leaves_the_choice_undetermined() {
+    let s = store();
+    let b = Budget::new(1 << 24);
+    let mut l = lib();
+    let mut host = QuestHost::new(&s, 1 << 24);
+    let sw = talk::Switches {
+        greeting: true,
+        stage_fields: true,
+        ..talk::Switches::default()
+    };
+    let mut vm = talk_vm(&s, &mut l, &mut host, sw);
+    // The lines as read, with one greeting line that did not read.
+    let mut lines = talk::Lines::read(&s, &[talk::GREETING, talk::HELLO], &b);
+    assert_eq!(lines.unread, 0);
+    lines.unread_lines.insert(talk::GREETING, 1);
+    vm.world.talk.lines = Some(std::rc::Rc::new(lines));
+    let actor = crate::data::record_object(&mut vm.world, &s, &key(ACTOR), "actor", &b).unwrap();
+    let _ = vm.host.call(&talk::talk_call(actor), &mut vm.world);
+    quest::run_jobs(&mut vm, &s, 256, &b);
+    assert!(!stages(&vm).iter().any(|x| x.0 == 10));
+    assert_eq!(
+        vm.world.talk.counts
+            ["greeting: line undetermined: a line of the subtype or a group it names did not read"],
+        1
+    );
+    assert!(!vm
+        .world
+        .talk
+        .counts
+        .contains_key("greeting: line determined: the only line that holds"));
+}
+
+#[test]
 fn with_the_greeting_switch_off_no_line_plays() {
     let s = store();
     let b = Budget::new(1 << 24);

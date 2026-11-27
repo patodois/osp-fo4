@@ -130,6 +130,12 @@ pub struct Lines {
     pub groups: BTreeMap<String, Group>,
     /// Topics or lines that did not read.
     pub unread: usize,
+    /// Topics that did not read (their subtype unknown, so any subtype's).
+    pub unread_topics: usize,
+    /// Lines of a topic of the subtype that did not read, by subtype.
+    pub unread_lines: BTreeMap<[u8; 4], usize>,
+    /// Groups lines name that did not read (or name no winning record).
+    pub unread_groups: BTreeSet<String>,
 }
 impl Lines {
     /// Reads the topics of the given subtypes and their lines.
@@ -144,6 +150,7 @@ impl Lines {
             let bb = b.child();
             let Ok(Some((r, plugin))) = store.raw_with_plugin(&k, &bb) else {
                 out.unread += 1;
+                out.unread_topics += 1;
                 continue;
             };
             let ctx = Context {
@@ -152,6 +159,7 @@ impl Lines {
             };
             let Ok(t) = Topic::read(&r, ctx, &bb) else {
                 out.unread += 1;
+                out.unread_topics += 1;
                 continue;
             };
             let Some(sub) = t.subtype.filter(|s| subtypes.contains(s)) else {
@@ -175,6 +183,7 @@ impl Lines {
             let bb = b.child();
             let Ok(Some((r, plugin))) = store.raw_with_plugin(&k, &bb) else {
                 out.unread += 1;
+                *out.unread_lines.entry(sub).or_default() += 1;
                 continue;
             };
             let ctx = Context {
@@ -183,6 +192,7 @@ impl Lines {
             };
             let Ok(info) = Info::read(&r, ctx, &bb) else {
                 out.unread += 1;
+                *out.unread_lines.entry(sub).or_default() += 1;
                 continue;
             };
             let group = r
@@ -218,24 +228,33 @@ impl Lines {
             .filter_map(|l| l.group.clone())
             .collect();
         for g in named {
-            let Some(k) = key_record(&g) else { continue };
+            let Some(k) = key_record(&g) else {
+                out.unread_groups.insert(g);
+                continue;
+            };
             let bb = b.child();
             let Ok(Some((r, plugin))) = store.raw_with_plugin(&k, &bb) else {
+                out.unread_groups.insert(g);
                 continue;
             };
             let ctx = Context {
                 order: store.order(),
                 plugin,
             };
-            if let Ok(info) = Info::read(&r, ctx, &bb) {
-                out.groups.insert(
-                    g,
-                    Group {
-                        plugin,
-                        file: r.source.file.clone(),
-                        conditions: info.conditions,
-                    },
-                );
+            match Info::read(&r, ctx, &bb) {
+                Ok(info) => {
+                    out.groups.insert(
+                        g,
+                        Group {
+                            plugin,
+                            file: r.source.file.clone(),
+                            conditions: info.conditions,
+                        },
+                    );
+                }
+                Err(_) => {
+                    out.unread_groups.insert(g);
+                }
             }
         }
         out
@@ -867,7 +886,22 @@ fn speak(h: &mut QuestHost<'_>, w: &mut World, sub: [u8; 4], what: &str, actor: 
     let holds: Vec<&(usize, usize, Tried, u8)> =
         tried.iter().filter(|t| t.2 == Tried::Holds).collect();
     let now = w.now[Clock::Real as usize];
-    let chosen = if w.talk.sw.priority {
+    // A line of the subtype that did not read, or (with the groups'
+    // conditions) a group a candidate names that did not read, could be
+    // the one that holds: no choice is determined then.
+    let unread = lines.unread_topics + lines.unread_lines.get(&sub).copied().unwrap_or(0) > 0
+        || (w.talk.sw.info_groups
+            && cands.iter().any(|l| {
+                l.group
+                    .as_ref()
+                    .is_some_and(|g| lines.unread_groups.contains(g))
+            }));
+    let chosen = if unread {
+        w.talk.count(format!(
+            "{what}: line undetermined: a line of the subtype or a group it names did not read"
+        ));
+        None
+    } else if w.talk.sw.priority {
         h.using(rules::DIALOGUE_LINE_PRIORITY);
         let mut order: Vec<&(usize, usize, Tried, u8)> =
             tried.iter().filter(|t| t.2 != Tried::Fails).collect();
