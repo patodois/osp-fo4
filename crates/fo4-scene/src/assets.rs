@@ -452,6 +452,29 @@ impl<'a> Assets<'a> {
     pub fn memory_used(&self) -> u64 {
         self.allocation.used()
     }
+    /// The node of `kind` whose path is exactly `path`, as a scan of
+    /// [`Assets::nodes`] finds it: through the loader's index when the
+    /// entry it holds for that path is such a node, else by the scan (a
+    /// node pushed without the index, or a path the index normalizes to
+    /// another node's spelling). `None` when no node has it.
+    pub fn find(&self, kind: AssetKind, path: &[u8]) -> Option<usize> {
+        let normalized = path_key_bytes(path);
+        let mut key = Vec::with_capacity(path.len() + 1);
+        key.push(kind as u8);
+        key.extend_from_slice(normalized.as_deref().unwrap_or(path));
+        if let Some(&i) = self.index.get(&key) {
+            if self
+                .nodes
+                .get(i)
+                .is_some_and(|a| a.kind == kind && a.path == path)
+            {
+                return Some(i);
+            }
+        }
+        self.nodes
+            .iter()
+            .position(|a| a.kind == kind && a.path == path)
+    }
     pub fn unavailable(&self) -> bool {
         self.unavailable
     }
@@ -1704,5 +1727,105 @@ mod tests {
         assert!(m.map.contains_key(&1) && !m.map.contains_key(&3));
         assert!(m.used <= m.cap);
         assert!(m.get(3).is_none());
+    }
+    /// `Assets::find` answers as the scan of the nodes in order does (an
+    /// indexed node, one pushed without the index, a spelling the index
+    /// normalizes to another node's, a kind that differs), and a long
+    /// table is looked up without a scan per lookup.
+    #[test]
+    fn find_answers_as_the_scan_and_without_a_scan_per_lookup() {
+        let dir = fo4_core::TestDir::new("assets-find");
+        let manifest = fo4_core::Manifest {
+            game: fo4_core::Game::Fallout4,
+            root: dir.to_path_buf(),
+            language: "english".into(),
+            plugins: vec![fo4_core::PluginSpec {
+                name: "synthetic.esm".into(),
+                path: "synthetic.esm".into(),
+            }],
+            mounts: Vec::new(),
+            required_masters: Vec::new(),
+            excluded: Vec::new(),
+            build: None,
+            limits: fo4_core::Limits::default(),
+            archive_invalidation: None,
+        };
+        let v = Vfs::mount(&manifest, &Budget::new(1 << 20)).unwrap();
+        let b = Budget::new(1 << 20);
+        let mut assets = Assets::new(&v, &b);
+        let node = |kind: AssetKind, path: Vec<u8>| Asset {
+            pending_live_proof: Vec::new(),
+            alpha: None,
+            kind,
+            path,
+            origin: None,
+            dependencies: Vec::new(),
+            dependency_citations: Vec::new(),
+            blockers: Vec::new(),
+            citation_blockers: Vec::new(),
+            uninterpreted: 0,
+            outside_blocks: Default::default(),
+            shapes: 0,
+            cycles: Vec::new(),
+            animations: Vec::new(),
+            suppressed_texture_sets: 0,
+            rejections: Vec::new(),
+            path_resolutions: Vec::new(),
+            texture_audit: Vec::new(),
+            ready: true,
+            loading: false,
+        };
+        let count = 100_000usize;
+        for k in 0..count {
+            let path = format!("meshes\\set{}\\m{k}.nif", k % 7).into_bytes();
+            let mut key = vec![AssetKind::Model as u8];
+            key.extend(path_key_bytes(&path).unwrap());
+            assets.index.insert(key, assets.nodes.len());
+            assets.nodes.push(node(AssetKind::Model, path));
+        }
+        // Pushed without the index; and a spelling whose normal form is an
+        // indexed node's.
+        assets
+            .nodes
+            .push(node(AssetKind::Texture, b"textures\\t.dds".to_vec()));
+        assets
+            .nodes
+            .push(node(AssetKind::Model, b"MESHES/SET0/M0.NIF".to_vec()));
+        let scan = |a: &Assets<'_>, kind: AssetKind, path: &[u8]| {
+            a.nodes
+                .iter()
+                .position(|n| n.kind == kind && n.path == path)
+        };
+        for (kind, path) in [
+            (AssetKind::Model, b"meshes\\set3\\m10.nif".as_slice()),
+            (AssetKind::Texture, b"textures\\t.dds"),
+            (AssetKind::Model, b"MESHES/SET0/M0.NIF"),
+            (AssetKind::Model, b"meshes/set0/m0.nif"),
+            (AssetKind::Material, b"meshes\\set3\\m10.nif"),
+            (AssetKind::Model, b"meshes\\absent.nif"),
+        ] {
+            assert_eq!(
+                assets.find(kind, path),
+                scan(&assets, kind, path),
+                "{}",
+                String::from_utf8_lossy(path)
+            );
+        }
+        assert_eq!(
+            assets.find(AssetKind::Model, b"MESHES/SET0/M0.NIF"),
+            Some(count + 1)
+        );
+        // Every indexed node once: a scan per lookup would compare about
+        // count * count / 2 paths.
+        let started = std::time::Instant::now();
+        for k in (0..count).rev() {
+            let path = format!("meshes\\set{}\\m{k}.nif", k % 7).into_bytes();
+            assert_eq!(assets.find(AssetKind::Model, &path), Some(k));
+        }
+        assert!(
+            started.elapsed() < std::time::Duration::from_secs(5),
+            "{:?}",
+            started.elapsed()
+        );
     }
 }

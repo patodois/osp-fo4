@@ -831,19 +831,14 @@ impl Builder<'_, '_> {
         Ok(r.key)
     }
     fn asset(&self, kind: AssetKind, path: &[u8]) -> Result<usize> {
-        self.loader
-            .assets
-            .nodes
-            .iter()
-            .position(|a| a.kind == kind && a.path == path)
-            .ok_or_else(|| {
-                error(
-                    "RenderAssetNotInScene",
-                    &fo4_core::HexBytes(path).to_string(),
-                    0,
-                    format!("{kind:?}"),
-                )
-            })
+        self.loader.assets.find(kind, path).ok_or_else(|| {
+            error(
+                "RenderAssetNotInScene",
+                &fo4_core::HexBytes(path).to_string(),
+                0,
+                format!("{kind:?}"),
+            )
+        })
     }
     /// The draw-list texture of `path`; `alpha_tested` selects the block
     /// limit when textures are kept as blocks, and is ignored otherwise.
@@ -1313,11 +1308,16 @@ impl Builder<'_, '_> {
         // A target no archive holds changes nothing under
         // `mswp_wildcard_missing_target_inert_v1` (the scene raised
         // `MissingSwapPatternTarget` for it).
-        let absent = self.loader.assets.nodes.iter().any(|a| {
-            a.kind == AssetKind::Material
-                && a.path == target
-                && a.blockers.iter().any(|e| e.code == "MissingMaterial")
-        });
+        let absent = self
+            .loader
+            .assets
+            .find(AssetKind::Material, &target)
+            .is_some_and(|id| {
+                self.loader.assets.nodes[id]
+                    .blockers
+                    .iter()
+                    .any(|e| e.code == "MissingMaterial")
+            });
         if absent {
             return if self.allow_swap_pattern_missing {
                 Ok(path)
