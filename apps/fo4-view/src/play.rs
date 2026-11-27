@@ -338,6 +338,14 @@ mod enabled {
         }
     }
 
+    /// Queues the cast asked with a cell load once the cell is loaded: as
+    /// the newest cast ([`next_ask`] builds the newest and drops the older
+    /// ones), so that a cast of the cell before still queued is the one
+    /// dropped, and the window's ask for the new cell is answered.
+    fn cast_after_load(queue: &mut std::collections::VecDeque<DataAsk>, c: CastAsk) {
+        queue.push_back(DataAsk::Cast(c));
+    }
+
     /// The window's play data thread (viewer policy): it opens the game
     /// data once as the run starts (the plugins and the archives,
     /// `crate::load::Sources`) and keeps it for the cast's builds
@@ -434,7 +442,7 @@ mod enabled {
                     // The new cell's cast next, unless a cell is asked
                     // before it starts.
                     if let (true, Some(c)) = (loaded, cast_after) {
-                        queue.push_front(DataAsk::Cast(c));
+                        cast_after_load(&mut queue, c);
                     }
                 }
                 Some(DataAsk::Prepare(first, live)) => {
@@ -3593,6 +3601,30 @@ mod enabled {
             assert!(queue.is_empty());
             assert_eq!(what(next_ask(&mut queue, &mut prepare)), "prepare true");
             assert_eq!(what(next_ask(&mut queue, &mut prepare)), "none");
+        }
+
+        /// code-6b B01: a cast of the cell before still queued when a cell
+        /// load ends is dropped for the new cell's cast, not the reverse.
+        #[test]
+        fn the_new_cells_cast_is_built_before_an_older_cast_still_queued() {
+            let key = |id: u32| FormKey {
+                plugin: "a.esm".into(),
+                object_id: id,
+            };
+            let cast = |cell: u32, sig: usize| CastAsk {
+                cell: key(cell),
+                timeline: Arc::new(fo4_scene::timeline::Timeline::default()),
+                second: 0.0,
+                sig,
+            };
+            let mut queue: std::collections::VecDeque<DataAsk> = [DataAsk::Cast(cast(1, 4))].into();
+            cast_after_load(&mut queue, cast(2, 5));
+            let mut prepare = None;
+            match next_ask(&mut queue, &mut prepare) {
+                Some(DataAsk::Cast(c)) => assert_eq!((c.cell.object_id, c.sig), (2, 5)),
+                _ => panic!("the new cell's cast"),
+            }
+            assert!(queue.is_empty());
         }
 
         #[test]
