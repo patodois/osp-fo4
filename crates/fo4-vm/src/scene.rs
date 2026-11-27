@@ -404,6 +404,19 @@ pub enum Change {
     LineField(usize, String, Option<i16>),
 }
 
+impl Change {
+    /// Whether the change leaves a scene's wait as it was: an action's
+    /// start or completion and a line's stage field are logged while the
+    /// scene stays where it waits, so the offers made again
+    /// ([`recheck`] and its kin) look past them to the last wait.
+    pub fn keeps_wait(&self) -> bool {
+        matches!(
+            self,
+            Change::ActionStarted(..) | Change::ActionCompleted(..) | Change::LineField(..)
+        )
+    }
+}
+
 /// The scene clock and the caller's assumptions (`quest_run
 /// --scene-clock`, `--assume-line-seconds`, `--assume-player-choice`,
 /// `--assume-packages-complete`). Off by default: phases wait on every
@@ -1815,7 +1828,7 @@ fn start_actions(h: &mut QuestHost<'_>, w: &mut World, o: ObjId, i: &SceneInfo, 
 /// offered again.
 pub fn recheck(w: &mut World) -> usize {
     let mut last: BTreeMap<ObjId, Option<Step>> = BTreeMap::new();
-    for (o, ch) in &w.scenes.log {
+    for (o, ch) in w.scenes.log.iter().filter(|x| !x.1.keeps_wait()) {
         let step = match ch {
             Change::Waiting(p, why) if why.starts_with("completion conditions") => {
                 Some(complete_step(w, *o, *p))
@@ -1861,7 +1874,7 @@ pub fn recheck_variables(
         }
     }
     let mut last: BTreeMap<ObjId, Option<(usize, Step)>> = BTreeMap::new();
-    for (o, ch) in &w.scenes.log {
+    for (o, ch) in w.scenes.log.iter().filter(|x| !x.1.keeps_wait()) {
         let step = match ch {
             Change::Waiting(p, why) if why.starts_with("completion conditions") => {
                 Some((*p, complete_step(w, *o, *p)))
@@ -2232,7 +2245,7 @@ pub fn marks_call(scene: ObjId) -> NativeCall {
 /// left for the caller to take.
 pub fn recheck_distance_marks(host: &mut dyn crate::Host, w: &mut World) -> usize {
     let mut last: BTreeMap<ObjId, Option<usize>> = BTreeMap::new();
-    for (o, ch) in &w.scenes.log {
+    for (o, ch) in w.scenes.log.iter().filter(|x| !x.1.keeps_wait()) {
         let p = match ch {
             Change::Waiting(p, why) if why.starts_with("completion conditions false") => Some(*p),
             _ => None,
@@ -2295,6 +2308,24 @@ pub fn step_call(scene: ObjId, step: &Step) -> NativeCall {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_wait_is_offered_again_past_the_changes_that_keep_it() {
+        let mut w = World::default();
+        let o = w.object("sc", Some("test.esm:00000901".into()), &["scene"]);
+        w.scenes.log.push((
+            o,
+            Change::Waiting(0, "completion conditions false (waits on the world)".into()),
+        ));
+        w.scenes.log.push((o, Change::ActionCompleted(0, 2, 1.0)));
+        w.scenes
+            .log
+            .push((o, Change::LineField(0, "x".into(), None)));
+        assert_eq!(recheck(&mut w), 1);
+        // A change of where it is ends the wait.
+        w.scenes.log.push((o, Change::PhaseCompleted(0)));
+        assert_eq!(recheck(&mut w), 0);
+    }
 
     fn mv(t: f64, actor: u32) -> crate::track::ActorMove {
         let key = |id: u32| FormKey {

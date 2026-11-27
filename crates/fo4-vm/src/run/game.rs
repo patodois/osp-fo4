@@ -2098,7 +2098,7 @@ impl<'r, 'v> NewGame<'r, 'v> {
     fn reoffer_distance_waits(&mut self) -> u64 {
         let vm = &mut *self.vm;
         let mut last: BTreeMap<crate::world::ObjId, Option<usize>> = BTreeMap::new();
-        for (o, ch) in &vm.world.scenes.log {
+        for (o, ch) in vm.world.scenes.log.iter().filter(|x| !x.1.keeps_wait()) {
             let p = match ch {
                 scene::Change::Waiting(p, why)
                     if why.starts_with("completion conditions false") =>
