@@ -385,6 +385,11 @@ fn fill_style_zero_fills_the_left_side() {
 /// never gives a value, a public method `Show(a, b)` that calls
 /// `this.code.Hello(a)`, and a private member `own` it assigns.
 fn tiny_abc() -> Vec<u8> {
+    tiny_abc_edit(|_| {})
+}
+
+/// [`tiny_abc`] with `edit` applied to the block before it is written.
+fn tiny_abc_edit(edit: impl FnOnce(&mut swf::avm2::types::AbcFile)) -> Vec<u8> {
     use swf::avm2::types::*;
     let s = |i: u32| Index::<String>::new(i);
     let mn = |i: u32| Index::<Multiname>::new(i);
@@ -459,7 +464,7 @@ fn tiny_abc() -> Vec<u8> {
             traits: vec![],
         }
     };
-    let abc = AbcFile {
+    let mut abc = AbcFile {
         major_version: 46,
         minor_version: 16,
         constant_pool: pool,
@@ -534,9 +539,34 @@ fn tiny_abc() -> Vec<u8> {
             empty(3),
         ],
     };
+    edit(&mut abc);
     let mut out = Vec::new();
     swf::avm2::write::Writer::new(&mut out).write(abc).unwrap();
     out
+}
+
+#[test]
+fn a_type_name_that_names_itself_ends_without_deep_recursion() {
+    use swf::avm2::types::{Index, Multiname, TraitKind};
+    // Multiname 7 is a type name whose base type is itself; the member
+    // `code` is declared with it.
+    let bytes = tiny_abc_edit(|abc| {
+        abc.constant_pool.multinames.push(Multiname::TypeName {
+            base_type: Index::new(7),
+            parameters: vec![],
+        });
+        if let TraitKind::Slot { type_name, .. } = &mut abc.instances[0].traits[0].kind {
+            *type_name = Index::new(7);
+        }
+    });
+    // A small stack: the old recursion overflows it.
+    let r = std::thread::Builder::new()
+        .stack_size(256 << 10)
+        .spawn(move || abc::read(&bytes, "t", &Default::default()).map(|r| r.classes.len()))
+        .unwrap()
+        .join()
+        .unwrap();
+    assert_eq!(r.unwrap(), 1);
 }
 
 #[test]

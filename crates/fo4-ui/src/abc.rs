@@ -133,20 +133,26 @@ impl Pool<'_> {
             .get(i.0.checked_sub(1)? as usize)
     }
     /// The local name of a multiname; `None` for runtime names.
+    /// A type name gives its base type's name; a chain of type names longer
+    /// than the pool is a cycle and has no name.
     fn name(&self, i: Index<Multiname>) -> Option<String> {
-        if i.0 == 0 {
-            return Some("*".into());
+        let mut i = i;
+        for _ in 0..=self.0.constant_pool.multinames.len() {
+            if i.0 == 0 {
+                return Some("*".into());
+            }
+            match self.multiname(i)? {
+                Multiname::QName { name, .. }
+                | Multiname::QNameA { name, .. }
+                | Multiname::Multiname { name, .. }
+                | Multiname::MultinameA { name, .. }
+                | Multiname::RTQName { name }
+                | Multiname::RTQNameA { name } => return Some(self.string(*name)),
+                Multiname::TypeName { base_type, .. } => i = Index::new(base_type.0),
+                _ => return None,
+            }
         }
-        match self.multiname(i)? {
-            Multiname::QName { name, .. }
-            | Multiname::QNameA { name, .. }
-            | Multiname::Multiname { name, .. }
-            | Multiname::MultinameA { name, .. }
-            | Multiname::RTQName { name }
-            | Multiname::RTQNameA { name } => Some(self.string(*name)),
-            Multiname::TypeName { base_type, .. } => self.name(*base_type),
-            _ => None,
-        }
+        None
     }
     /// Operands a multiname takes from the stack at run time (Adobe's AVM2
     /// overview, multiname kinds: a runtime namespace one, a runtime name
