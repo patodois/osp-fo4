@@ -452,6 +452,9 @@ struct Surface {
     /// [`Draw::soft_depth`].
     soft_depth: Option<f32>,
 }
+/// A skinned shape's posed positions, computed when asked ([`Builder::mesh`]
+/// asks only for a mesh not yet kept).
+type PosedPositions<'p> = &'p dyn Fn() -> Result<Vec<[f64; 3]>>;
 /// The lengths of the build's per-draw lists at one point
 /// ([`Builder::mark`]): what [`Builder::roll_back`] cuts back to when the
 /// draws made since are dropped (an omitted instance or head part).
@@ -1802,7 +1805,7 @@ impl Builder<'_, '_> {
         i: usize,
         m: &fo4_nif::Mesh,
         surface: &Surface,
-        skinned: Option<(usize, &dyn Fn() -> Result<Vec<[f64; 3]>>)>,
+        skinned: Option<(usize, PosedPositions<'_>)>,
     ) -> Result<usize> {
         let model = self.asset(AssetKind::Model, path)?;
         let key = (
