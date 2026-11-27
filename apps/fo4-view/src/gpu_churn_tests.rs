@@ -2264,3 +2264,191 @@ fn cpu_and_gpu_frames_agree_on_a_soft_effect_crossing_the_floor() {
         report.p95_abs
     );
 }
+
+/// A lit, face-lit wall far from the world's origin seen from close by,
+/// as the opening's first room is (some 90,000 units out, the wall a few
+/// tens of units from the eye, a frame of the window's size): the GPU's
+/// face normal is the CPU's, so the light on the wall agrees with the
+/// CPU's and carries no screen-column streaks. With the face normal taken
+/// from the derivatives of the interpolated f32 world position (rounded to
+/// about 0.008 units there, while a pixel spans about 0.02), the light
+/// varied column by column. Needs a GPU.
+#[test]
+#[ignore = "needs a GPU: draws offscreen through Bevy"]
+fn a_close_wall_far_from_the_origin_is_lit_without_column_streaks() {
+    use fo4_render::{Alpha, Draw, DrawList, Mesh, Sidedness, Texture, Vertex};
+    use fo4_scene::light::{Light, Point};
+    const WIDE: [u32; 2] = [1280, 720];
+    // The opening room's magnitude (no game coordinates: round numbers).
+    let o = [-80000., 90000., 8000.];
+    // The room turned 30 degrees about the vertical: no wall lies along a
+    // world axis (along one, the coordinate across it is exact and the
+    // rounding of the others only scales the face normal).
+    let (sin, cos) = 30f64.to_radians().sin_cos();
+    let turn = |p: [f64; 3]| [p[0] * cos - p[1] * sin, p[0] * sin + p[1] * cos, p[2]];
+    let at = |p: [f64; 3]| {
+        let t = turn(p);
+        [t[0] + o[0], t[1] + o[1], t[2] + o[2]]
+    };
+    let h = 400.;
+    let mut world = fo4_scene::transform::Transform::IDENTITY;
+    world.translation = o;
+    let mut list = DrawList {
+        meshes: vec![Mesh {
+            vertex_colors: None,
+            normals: None,
+            vertices: [[-h, 40., -h], [h, 40., -h], [h, 40., h], [-h, 40., h]]
+                .iter()
+                .zip([[0., 0.], [1., 0.], [1., 1.], [0., 1.]])
+                .map(|(p, uv)| Vertex {
+                    position: turn(*p),
+                    uv,
+                })
+                .collect(),
+            triangles: vec![[0, 1, 2], [0, 2, 3]],
+        }],
+        textures: vec![Texture {
+            mips: Vec::new(),
+            width: 1,
+            height: 1,
+            rgba: vec![0.8, 0.8, 0.75, 1.],
+            mip: 0,
+            srgb: false,
+        }],
+        draws: vec![Draw {
+            sidedness: Sidedness {
+                material_two_sided: Some(1),
+                nif_shader_flags_2: None,
+            },
+            instance: 0,
+            mesh: 0,
+            texture: 0,
+            world,
+            alpha: Alpha {
+                enabled: 0,
+                source: 0,
+                destination: 0,
+                test_enabled: 0,
+                test_ref: 0,
+                nif_test_function: Some(4),
+                opacity: 1.,
+                nif_flags: None,
+            },
+            uv_offset: [0.; 2],
+            uv_scale: [1.; 2],
+            raw_tile_flags: None,
+            falloff: None,
+            palette: None,
+            colour: None,
+            soft_depth: None,
+        }],
+        overlays: Vec::new(),
+        blocks: Default::default(),
+        animations: Vec::new(),
+    };
+    let lit = vec![true];
+    let light = Light {
+        ambient: [0.2, 0.2, 0.2],
+        cube: None,
+        directional: Some(([0.4, 0.35, 0.3], fo4_scene::light::toward(60, 120))),
+        points: vec![Point {
+            position: at([10., 20., 15.]),
+            radius: 200.,
+            colour: [1., 0.9, 0.8],
+        }],
+        fog: None,
+        sky: None,
+        lit: true,
+        rules: Default::default(),
+        report: Vec::new(),
+        exposure: Default::default(),
+    };
+    // The eye 25 units in front of the wall, looking at it obliquely.
+    let camera = fo4_scene::camera::look_at(
+        at([0., 15., 0.]),
+        at([25., 40., 3.]),
+        fo4_scene::camera::reference_frustum(WIDE),
+        WIDE,
+    )
+    .unwrap();
+    let options = fo4_render::RenderOptions::REFERENCE;
+    let f = fo4_render::render_lit(
+        &list,
+        &camera,
+        options,
+        Some(fo4_render::Lighting {
+            light: &light,
+            lit: &lit,
+        }),
+        &fo4_core::Limits::default(),
+        &fo4_core::Budget::new(256 << 20),
+    )
+    .unwrap();
+    let cpu: Vec<u8> = f
+        .color
+        .iter()
+        .flat_map(|c| c.map(|v| (v.clamp(0., 1.) * 255.).round() as u8))
+        .collect();
+    let mut gpu_scene =
+        crate::scene::convert_lit(&mut list, &options, Some((&light, &lit))).unwrap();
+    let gpu = headless(&mut gpu_scene, &camera, options.clear, false).unwrap();
+    let report = crate::compare::compare(&crate::compare::Inputs {
+        size: WIDE,
+        cpu: &cpu,
+        gpu: &gpu.color,
+        tags: None,
+        clear: crate::compare::clear_rgb(options.clear),
+    })
+    .unwrap();
+    // Streaks: the mean step between horizontal neighbours on one row,
+    // GPU against CPU (the CPU's light changes smoothly along a row).
+    let step = |frame: &[u8]| -> f64 {
+        let [w, hgt] = WIDE.map(|v| v as usize);
+        let mut sum = 0u64;
+        let mut n = 0u64;
+        for y in (0..hgt).step_by(8) {
+            for x in 1..w {
+                let a = &frame[4 * (y * w + x - 1)..][..3];
+                let b = &frame[4 * (y * w + x)..][..3];
+                sum += a
+                    .iter()
+                    .zip(b)
+                    .map(|(p, q)| u64::from(p.abs_diff(*q)))
+                    .sum::<u64>();
+                n += 3;
+            }
+        }
+        sum as f64 / n as f64
+    };
+    let (cpu_step, gpu_step) = (step(&cpu), step(&gpu.color));
+    // For a look: FO4_VIEW_TEST_FRAMES=DIR writes both frames as PPM.
+    if let Some(dir) = std::env::var_os("FO4_VIEW_TEST_FRAMES") {
+        for (name, frame) in [("far-wall-cpu.ppm", &cpu), ("far-wall-gpu.ppm", &gpu.color)] {
+            let mut ppm = format!("P6\n{} {}\n255\n", WIDE[0], WIDE[1]).into_bytes();
+            ppm.extend(frame.chunks(4).flat_map(|c| [c[0], c[1], c[2]]));
+            std::fs::write(std::path::Path::new(&dir).join(name), ppm).unwrap();
+        }
+    }
+    println!(
+        "far wall: agreement {:.6}, mean {:?}, p95 {:?}, max {:?}; neighbour step cpu {cpu_step:.4} gpu {gpu_step:.4}",
+        report.agreement(),
+        report.mean_abs,
+        report.p95_abs,
+        report.max_abs
+    );
+    assert!(report.agreement() > 0.999, "{}", report.agreement());
+    assert!(
+        report.p95_abs.iter().all(|m| *m <= 2),
+        "{:?}",
+        report.p95_abs
+    );
+    assert!(
+        report.max_abs.iter().all(|m| *m <= 8),
+        "{:?}",
+        report.max_abs
+    );
+    assert!(
+        gpu_step < cpu_step + 0.1,
+        "neighbour step cpu {cpu_step} gpu {gpu_step}"
+    );
+}

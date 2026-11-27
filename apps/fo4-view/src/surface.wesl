@@ -52,13 +52,19 @@ struct SurfaceParams {
 
 const SOFT_DEPTH_HEADER_WORDS: u32 = 64u;
 
-// The camera-axis distance of the point at frame pixel `xy` with depth
-// `depth` (`fo4_render`'s depth: the camera-axis coordinate).
-fn view_distance(xy: vec2<f32>, depth: f32) -> f32 {
+// The camera-relative position of the sample at frame pixel `xy` with
+// depth `depth`, in view axes: the pixel and its depth unprojected.
+fn view_position(xy: vec2<f32>, depth: f32) -> vec3<f32> {
     let uv = (xy - view.viewport.xy) / view.viewport.zw;
     let ndc = vec2<f32>(uv.x * 2.0 - 1.0, 1.0 - uv.y * 2.0);
     let p = view.view_from_clip * vec4<f32>(ndc, depth, 1.0);
-    return -p.z / p.w;
+    return p.xyz / p.w;
+}
+
+// The camera-axis distance of the point at frame pixel `xy` with depth
+// `depth` (`fo4_render`'s depth: the camera-axis coordinate).
+fn view_distance(xy: vec2<f32>, depth: f32) -> f32 {
+    return -view_position(xy, depth).z;
 }
 
 // The soft fade (`Raster::triangle`'s): the gap to the opaque depth behind
@@ -218,9 +224,16 @@ fn sky(in: VertexOutput) -> SkyOutput {
 
 @fragment
 fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
-    // The face normal from the screen derivatives of the world position
-    // (taken here, in uniform control flow).
-    let face = cross(dpdxFine(in.world_position.xyz), dpdyFine(in.world_position.xyz));
+    // The face normal from the screen derivatives of the sample's
+    // camera-relative position, turned to world axes (taken here, in
+    // uniform control flow). Not from the interpolated world position: far
+    // from the world's origin (the opening's rooms lie some 90,000 units
+    // out) an f32 world coordinate steps by about 0.008 units, a close
+    // wall's pixel spans a few hundredths, and the rounding, the same for
+    // every pixel of a screen column on an upright wall, drew the light in
+    // fine vertical streaks.
+    let rel = view_position(in.position.xy, in.position.z);
+    let face = (view.world_from_view * vec4<f32>(cross(dpdxFine(rel), dpdyFine(rel)), 0.0)).xyz;
 
     // The CPU transforms UVs per vertex and interpolates; the transform is
     // affine, so transforming the interpolated UV is the same value.
