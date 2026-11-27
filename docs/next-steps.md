@@ -410,6 +410,22 @@ at its edge, the terrain 300 below (column probe). Left: the undrawn pods and a 
 road walk beyond the second bridge, the holds, the nursery prompt, the ten creatures, the exit device, the
 television, heels, the throat band, the robot, the actor prompt's name (janela21 RESULTADO).
 
+Twenty-seventh-session fixes: the rock drawn inside the shaft is the terrain's own cone (the cell's stored heights
+lower it inside the entrance's opening to about 5,200 under the deck, which rides to about 4,990); every LAND field
+of the cell and its quad bits were read again and nothing holes it, so `--draw-ride-cuts-terrain`
+(`play_ride_terrain_cut_v1`, in the preset) leaves out of the window's drawing the terrain triangles over the moving
+part the walker stands on while it stands there (`PartMotion::carries`, `box_now`); both 25th records' descents now
+show the shaft to the cut and the ground at the top is unchanged (pixel for pixel before the walker steps on). The
+vault's thirteen cryo pods are drawn: `--draw-furniture-template` (`furn_template_text_render_unchanged_v1`) sets
+aside their object template (one entry naming no part) and activate text, `--draw-furniture-parts` (now in the
+preset) with `--draw-furniture-at-rest` (`furn_parts_drawn_at_rest_v1`) draws their parts at rest, the door
+sequences not run. The objective pointing at the player's pod is shown by stage 710's fragment only while the pod is
+unused, and in the 25th second record the quest's chain stopped at stage 410 (the broadcast trigger entered only
+before its prerequisite), which leaves the elevator's neighbours disabled in the vault: no fault found in the run, no
+cue written. Left: a cue for that wait, the nursery prompt (reachable only from about 23 degrees down at the
+reach of 150: the drawn infant lies 42 to 61 units above the floor), the ten creatures, the road walk beyond the
+second bridge, round 25's items 1, 2 and 4 (janela22 RESULTADO).
+
 The opening run is now visible (`spec/timeline.md`), and since the cast step its people appear as people. `quest_run new-game --timeline FILE` writes what the run
 did, second by second, in a neutral versioned text file (track points with their cells, actor places with the
 rule or assumption behind each, references enabled, disabled and moved, scene lines with speaker, seconds and
