@@ -22,7 +22,7 @@ use fo4_render::draw::BuildOptions;
 use fo4_render::RenderOptions;
 use fo4_scene::{grid::WorldGrid, Loader, RuleLevel};
 use std::collections::BTreeMap;
-use std::sync::mpsc::{Receiver, Sender};
+use std::sync::mpsc::{Receiver, SyncSender, TryRecvError};
 use std::time::Instant;
 
 /// What one load produced, for the log.
@@ -463,6 +463,51 @@ impl SharedCredits {
     }
 }
 
+/// Messages the loading thread may have sent that the window has not
+/// taken yet (viewer policy): past them [`worker`] waits, so it loads at
+/// most this far ahead of the window.
+pub const QUEUE: usize = 2;
+/// Cells the window holds received and not yet uploaded at most (viewer
+/// policy): it takes no further cell from the loading thread before one of
+/// them is uploaded ([`take_messages`]).
+pub const WAITING: usize = 2;
+
+/// The channel from [`worker`] to the window, bounded at [`QUEUE`].
+pub fn channel() -> (SyncSender<Message>, Receiver<Message>) {
+    std::sync::mpsc::sync_channel(QUEUE)
+}
+
+/// What the window takes of the loading thread's messages in one frame, in
+/// the order they were sent: every one waiting, but no more than `loads`
+/// cells ([`Message::Load`]); the rest wait in the channel. A loading
+/// thread that stopped without a [`Message::Failed`] (it panicked) is the
+/// error `StreamWorkerStopped`, so that the window does not wait for its
+/// cells for ever.
+pub fn take_messages(rx: &Receiver<Message>, loads: usize) -> Result<Vec<Message>, String> {
+    let mut out = Vec::new();
+    let mut taken = 0;
+    while taken < loads {
+        match rx.try_recv() {
+            Ok(m) => {
+                if matches!(m, Message::Load(_)) {
+                    taken += 1;
+                }
+                out.push(m);
+            }
+            Err(TryRecvError::Empty) => break,
+            Err(TryRecvError::Disconnected) => {
+                if out.iter().any(|m| matches!(m, Message::Failed(_))) {
+                    break;
+                }
+                return Err(
+                    "StreamWorkerStopped: the loading thread ended without saying why".into(),
+                );
+            }
+        }
+    }
+    Ok(out)
+}
+
 /// Arguments of [`worker`].
 pub struct WorkerArgs {
     pub manifest: String,
@@ -476,7 +521,9 @@ pub struct WorkerArgs {
 /// sent on `centres` asks for, nearest first, checking for a newer centre
 /// after every cell. Its loader lives while cells wait and is dropped when
 /// none does. Returns when either channel closes.
-pub fn worker(args: WorkerArgs, centres: Receiver<[i32; 2]>, out: Sender<Message>) {
+/// Its messages go through [`channel`]: it waits while [`QUEUE`] of them
+/// are not taken.
+pub fn worker(args: WorkerArgs, centres: Receiver<[i32; 2]>, out: SyncSender<Message>) {
     let failed = |e: Box<dyn std::error::Error>| Message::Failed(e.to_string());
     let sources = match crate::load::open(&args.manifest, &args.data) {
         Ok(s) => s,
@@ -752,6 +799,119 @@ mod tests {
         let (_t, src) = sources();
         let e = Streamer::new(&src, "Room", options()).err().unwrap();
         assert!(e.to_string().starts_with("NotStreamable"), "{e}");
+    }
+
+    fn empty_piece(grid: [i32; 2]) -> Message {
+        Message::Load(Box::new(CellPiece {
+            grid,
+            collision: None,
+            meshes: Vec::new(),
+            textures: Vec::new(),
+            new_meshes: Vec::new(),
+            new_textures: Vec::new(),
+            surfaces: Vec::new(),
+            instances: Vec::new(),
+            report: LoadReport::default(),
+        }))
+    }
+    fn what(ms: &[Message]) -> Vec<String> {
+        ms.iter()
+            .map(|m| match m {
+                Message::Ready(_) => "ready".to_string(),
+                Message::Load(p) => format!("load {:?}", p.grid),
+                Message::Drop { grid, .. } => format!("drop {grid:?}"),
+                Message::Failed(e) => format!("failed {e}"),
+            })
+            .collect()
+    }
+
+    /// code-6a C3: the loading thread waits once [`QUEUE`] messages are not
+    /// taken, and the window takes no more cells a frame than it has room
+    /// for, the rest left in order.
+    #[test]
+    fn the_loading_thread_waits_on_the_window_and_the_window_takes_what_it_has_room_for() {
+        let (tx, rx) = channel();
+        for _ in 0..QUEUE {
+            tx.try_send(Message::Drop {
+                grid: [0, 0],
+                credits: 0,
+            })
+            .unwrap();
+        }
+        assert!(matches!(
+            tx.try_send(empty_piece([9, 9])),
+            Err(std::sync::mpsc::TrySendError::Full(_))
+        ));
+        assert_eq!(what(&take_messages(&rx, 5).unwrap()).len(), QUEUE);
+        let sender = std::thread::spawn(move || {
+            for m in [
+                empty_piece([1, 0]),
+                Message::Drop {
+                    grid: [2, 0],
+                    credits: 0,
+                },
+                empty_piece([3, 0]),
+                empty_piece([4, 0]),
+            ] {
+                tx.send(m).unwrap();
+            }
+            tx
+        });
+        let mut seen = Vec::new();
+        let started = Instant::now();
+        while seen.len() < 4 && started.elapsed().as_secs() < 30 {
+            let taken = take_messages(&rx, 1).unwrap();
+            assert!(
+                taken
+                    .iter()
+                    .filter(|m| matches!(m, Message::Load(_)))
+                    .count()
+                    <= 1
+            );
+            seen.extend(what(&taken));
+        }
+        assert_eq!(
+            seen,
+            ["load [1, 0]", "drop [2, 0]", "load [3, 0]", "load [4, 0]"]
+        );
+        // No room: nothing taken.
+        let tx = sender.join().unwrap();
+        tx.send(empty_piece([5, 0])).unwrap();
+        assert!(take_messages(&rx, 0).unwrap().is_empty());
+        assert_eq!(what(&take_messages(&rx, 1).unwrap()), ["load [5, 0]"]);
+    }
+
+    /// code-6a G1: a loading thread that ends without a message (it
+    /// panicked) is an error for the window, not a wait for ever; one that
+    /// said why ends with its message.
+    #[test]
+    fn a_loading_thread_that_stops_without_a_message_is_an_error() {
+        let (tx, rx) = channel();
+        let t = std::thread::spawn(move || {
+            tx.send(Message::Drop {
+                grid: [0, 0],
+                credits: 0,
+            })
+            .unwrap();
+            if std::hint::black_box(true) {
+                panic!("synthetic loading thread failure");
+            }
+            drop(tx);
+        });
+        assert!(t.join().is_err());
+        let e = take_messages(&rx, WAITING).err().unwrap();
+        assert!(e.starts_with("StreamWorkerStopped"), "{e}");
+        let (tx, rx) = channel();
+        tx.send(Message::Failed("NamedFailure".into())).unwrap();
+        drop(tx);
+        assert_eq!(
+            what(&take_messages(&rx, WAITING).unwrap()),
+            ["failed NamedFailure"]
+        );
+        // A live thread with nothing to say: nothing taken, no error.
+        let (tx, rx) = channel();
+        assert!(take_messages(&rx, WAITING).unwrap().is_empty());
+        drop(tx);
     }
 
     fn key(n: u8, bytes: u64) -> AssetKey {

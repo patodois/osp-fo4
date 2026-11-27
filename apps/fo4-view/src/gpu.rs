@@ -4237,8 +4237,9 @@ fn play_scripted(
 const STREAM_BATCH_BYTES: u64 = UPLOAD_BATCH_BYTES as u64;
 
 /// The moving grid, each frame: sends the cell under the player (the
-/// walker's feet, or the eye when flying) when it changed, applies every
-/// message of the loading thread in order (a cell's collision becomes
+/// walker's feet, or the eye when flying) when it changed, applies the
+/// messages of the loading thread in order, as many cells as the waiting
+/// list has room for ([`crate::cells::take_messages`]; a cell's collision becomes
 /// walkable at once; a dropped cell is despawned and data no cell uses any
 /// more is freed), then uploads the waiting cells' data, a bounded batch
 /// per frame, and spawns each cell once its data is on the GPU.
@@ -4267,14 +4268,17 @@ fn stream_frame(world: &mut World, stream: &mut Stream) -> Result<(), String> {
         if stream.sent != Some(c) {
             println!("stream: centre {},{}", c[0], c[1]);
             // A closed channel means the loading thread stopped; its
-            // message says why.
+            // message says why, or `take_messages` that it said nothing.
             let _ = stream.centres.send(c);
             stream.sent = Some(c);
         }
     }
+    // No more cells than the waiting list has room for; a loading thread
+    // that stopped without a message is an error.
+    let room = crate::cells::WAITING.saturating_sub(stream.live.waiting.len());
     let messages: Vec<Message> = {
         let rx = stream.messages.lock().map_err(|_| "StreamChannelLock")?;
-        rx.try_iter().collect()
+        crate::cells::take_messages(&rx, room)?
     };
     for m in messages {
         match m {

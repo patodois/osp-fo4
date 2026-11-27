@@ -347,7 +347,7 @@ fn start_stream(s: &cli::Scene) -> AnyResult<Option<gpu::Stream>> {
         options,
     };
     let (centres, centres_rx) = std::sync::mpsc::channel();
-    let (messages_tx, messages) = std::sync::mpsc::channel();
+    let (messages_tx, messages) = cells::channel();
     let started = std::time::Instant::now();
     std::thread::Builder::new()
         .name("fo4-view cells".into())
