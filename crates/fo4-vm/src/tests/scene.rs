@@ -261,3 +261,103 @@ fn scenes_off_change_nothing_and_isolated_scenes_stay_open() {
     assert!(vm.world.quests.queue.is_empty());
     assert!(matches!(vm.world.scenes.log[0].1, scene::Change::Opened(_)));
 }
+
+#[test]
+fn a_stale_scene_step_is_a_counted_no_op() {
+    let store = store();
+    let b = Budget::new(1 << 24);
+    let mut l = lib();
+    let mut host = QuestHost::new(&store, 1 << 24);
+    let mut attach = crate::bind::RecordScripts::new(&store, 1 << 24);
+    let mut runner = quest::Runner::new(&store, 1 << 24, 64);
+    let mut vm = Vm::new(&mut l, &mut host);
+    vm.attach = Some(&mut attach);
+    vm.nested = Some(&mut runner);
+    vm.world.scenes.on = true;
+    quest::start_new_game(&mut vm, &store, &b).unwrap();
+    quest::run_jobs(&mut vm, &store, 64, &b);
+    let sc = crate::data::record_object(&mut vm.world, &store, &key(SC), "scene", &b).unwrap();
+    let log = |vm: &Vm<'_>| -> Vec<scene::Change> {
+        vm.world
+            .scenes
+            .log
+            .iter()
+            .filter(|(o, _)| *o == sc)
+            .map(|x| x.1.clone())
+            .collect()
+    };
+    let stale = |vm: &Vm<'_>, why: &str| {
+        vm.world
+            .scenes
+            .step_counts
+            .get(&format!("stale steps\t{why}"))
+            .copied()
+            .unwrap_or(0)
+    };
+    let complete = |vm: &Vm<'_>| {
+        vm.world
+            .quests
+            .queue
+            .iter()
+            .find(|j| {
+                matches!(j, quest::Job::Scene { scene, step: scene::Step::Complete { .. }, .. } if *scene == sc)
+            })
+            .cloned()
+    };
+    // Start, then run until phase 0's completion is queued; queue it twice.
+    call(&mut vm, sc, "start", "none");
+    let mut twice = None;
+    for _ in 0..8 {
+        if let Some(j) = complete(&vm) {
+            twice = Some(j);
+            break;
+        }
+        quest::run_jobs(&mut vm, &store, 1, &b);
+    }
+    vm.world
+        .quests
+        .queue
+        .push_back(twice.expect("a completion queued"));
+    quest::run_jobs(&mut vm, &store, 64, &b);
+    // Phase 0 completes once; the second completion is stale (phase 1 not
+    // entered): phase 1 is entered, then waits on its action.
+    let got = log(&vm);
+    assert_eq!(
+        got[..4],
+        [
+            scene::Change::Started,
+            scene::Change::PhaseEntered(0),
+            scene::Change::PhaseCompleted(0),
+            scene::Change::PhaseEntered(1),
+        ]
+    );
+    assert_eq!(got.len(), 5, "{got:?}");
+    assert!(matches!(&got[4], scene::Change::Waiting(1, why) if why.contains("kind 0")));
+    assert_eq!(stale(&vm, "a completion of a phase not entered"), 1);
+    assert_eq!(var(&vm, sc, "seen"), Val::Int(3));
+    // A completion queued in this run, the scene then stopped and started
+    // again: it belongs to the earlier run and does nothing.
+    assert!(complete(&vm).is_none());
+    let old = quest::Job::Scene {
+        scene: sc,
+        step: scene::complete_step(&vm.world, sc, 1),
+        depth: 0,
+    };
+    call(&mut vm, sc, "stop", "none");
+    call(&mut vm, sc, "start", "none");
+    vm.world.quests.queue.push_front(old);
+    let before = log(&vm).len();
+    quest::run_jobs(&mut vm, &store, 64, &b);
+    assert_eq!(stale(&vm, "queued in an earlier run of the scene"), 1);
+    let after = log(&vm);
+    assert_eq!(after[before - 2], scene::Change::Stopped);
+    assert_eq!(after[before - 1], scene::Change::Started);
+    assert_eq!(after[before], scene::Change::PhaseEntered(0));
+    assert_eq!(
+        after[before..]
+            .iter()
+            .filter(|c| **c == scene::Change::PhaseEntered(0))
+            .count(),
+        1
+    );
+}

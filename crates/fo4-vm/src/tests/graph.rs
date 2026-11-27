@@ -95,7 +95,7 @@ fn a_write_of_a_variable_a_waiting_scene_reads_offers_it_again_only_under_its_ru
     assert_eq!(scene::recheck_variables(&s, &mut vm.world, &written), 1);
     assert!(matches!(
         vm.world.quests.queue.back(),
-        Some(Job::Scene { scene, step: Step::Complete, .. }) if *scene == sc
+        Some(Job::Scene { scene, step: Step::Complete { .. }, .. }) if *scene == sc
     ));
     assert_eq!(vm.world.quests.queue.len(), before + 1);
     // A write of another variable, or of `n` on another object, does not.

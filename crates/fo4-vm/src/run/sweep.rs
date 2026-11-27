@@ -494,7 +494,7 @@ pub(super) fn scenes(
             bind::record_key(k),
             scene::SceneState {
                 playing: Some(false),
-                next: 0,
+                ..Default::default()
             },
         );
         let call = crate::NativeCall {

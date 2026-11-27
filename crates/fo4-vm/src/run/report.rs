@@ -146,8 +146,8 @@ pub(super) fn job_text(vm: &Vm<'_>, r: &JobRun) -> String {
         Job::Scene { scene, step, depth } => {
             let what = match step {
                 Step::Fragment(f, slot) => format!("fragment {f} ({slot})"),
-                Step::Enter => "step: offer the next phase".into(),
-                Step::Complete => "step: complete the phase".into(),
+                Step::Enter { .. } => "step: offer the next phase".into(),
+                Step::Complete { .. } => "step: complete the phase".into(),
                 Step::LineFields => "step: line stage fields the clock reached".into(),
                 Step::LineFragment {
                     line,

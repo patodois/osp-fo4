@@ -325,6 +325,11 @@ pub struct SceneState {
     pub playing: Option<bool>,
     /// The phase the next step offers.
     pub next: usize,
+    /// How many times the scene was started: a step queued in an earlier
+    /// run is stale.
+    pub run: u32,
+    /// The phase entered and not yet completed, if one is.
+    pub entered: Option<usize>,
 }
 
 /// A step of a playing scene, run as a [`Job::Scene`].
@@ -334,10 +339,15 @@ pub enum Step {
     /// what it is (`begin`, `end`, `phase N begin`, `phase N end`).
     Fragment(String, String),
     /// Offer the next phase: its start conditions decide whether it is
-    /// entered or passed over.
-    Enter,
+    /// entered or passed over. `run` is the scene's run it was queued in
+    /// ([`SceneState::run`]): from an earlier run, or while a phase is
+    /// entered, it is stale and does nothing but count.
+    Enter { run: u32 },
     /// Decide whether the entered phase completes without the world.
-    Complete,
+    /// `run` and `phase` are the run and the entered phase it was queued
+    /// for: when the scene is in another run or has not that phase
+    /// entered, it is stale and does nothing but count.
+    Complete { run: u32, phase: usize },
     /// Set the line stage fields the clock has reached
     /// (`scene_line_stage_fields_v1`).
     LineFields,
@@ -573,6 +583,10 @@ pub struct Scenes {
     /// The lines (record keys) whose end the run delivered to their own
     /// scripts: a later begin of one is told it has been said.
     pub line_scripts_said: BTreeSet<String>,
+    /// Counts of the steps of a scene, by text: the stale ones (queued in
+    /// another run of the scene or for a phase it is not in) that did
+    /// nothing.
+    pub step_counts: BTreeMap<String, u64>,
 }
 
 /// A line's TIQS half due at a second of the real-time clock
@@ -650,7 +664,45 @@ fn state<'w>(w: &'w mut World, i: &SceneInfo) -> &'w mut SceneState {
         // scenario nothing is known (`scene_start_v1`).
         playing: new_game.then_some(false),
         next: 0,
+        run: 0,
+        entered: None,
     })
+}
+
+/// The run a scene is in and the phase it has entered, by its handle
+/// (the identity a step is queued with); a scene with no state yet is in
+/// run 0 with nothing entered.
+fn identity(w: &World, o: ObjId) -> (u32, Option<usize>) {
+    w.objects
+        .get(o)
+        .and_then(|x| x.key.as_ref())
+        .and_then(|k| w.scenes.states.get(k))
+        .map_or((0, None), |s| (s.run, s.entered))
+}
+
+/// The entry step of scene `o` in the run it is in.
+fn enter_step(w: &World, o: ObjId) -> Step {
+    Step::Enter {
+        run: identity(w, o).0,
+    }
+}
+
+/// The completion step of scene `o` for phase `phase` in the run it is in.
+pub(crate) fn complete_step(w: &World, o: ObjId, phase: usize) -> Step {
+    Step::Complete {
+        run: identity(w, o).0,
+        phase,
+    }
+}
+
+/// The completion step of scene `o` for the phase it has entered; with
+/// none entered, a step for no phase (stale when it runs).
+fn complete_entered(w: &World, o: ObjId) -> Step {
+    let (run, entered) = identity(w, o);
+    Step::Complete {
+        run,
+        phase: entered.unwrap_or(usize::MAX),
+    }
 }
 
 /// Queues a step of a scene at the depth of the job running now plus one.
@@ -711,6 +763,9 @@ pub(crate) fn start(
     let s = state(w, i);
     s.playing = Some(true);
     s.next = 0;
+    s.run = s.run.wrapping_add(1);
+    s.entered = None;
+    let run = s.run;
     clear_actions(w, o, false);
     w.scenes.log.push((
         o,
@@ -725,7 +780,7 @@ pub(crate) fn start(
     if let Some(f) = &i.begin {
         queue(w, o, Step::Fragment(f.clone(), "begin".into()));
     }
-    queue(w, o, Step::Enter);
+    queue(w, o, Step::Enter { run });
     Ok(())
 }
 
@@ -804,13 +859,34 @@ fn functions(why: &[cond::Why]) -> String {
 }
 
 /// One step of a playing scene ([`Step::Enter`] or [`Step::Complete`]),
-/// asked by the job through the host.
-fn step(h: &mut QuestHost<'_>, w: &mut World, o: ObjId, i: &Rc<SceneInfo>, complete: bool) {
+/// asked by the job through the host: `complete` with the phase it was
+/// queued for, and the scene's run it was queued in. A step of another run,
+/// an entry while a phase is entered, or a completion of a phase not
+/// entered is stale: counted, nothing else.
+fn step(
+    h: &mut QuestHost<'_>,
+    w: &mut World,
+    o: ObjId,
+    i: &Rc<SceneInfo>,
+    complete: Option<usize>,
+    run: u32,
+) {
     h.using(rules::SCENE_PHASES);
     let s = state(w, i);
     if s.playing != Some(true) {
         return;
     }
+    let stale = match complete {
+        _ if s.run != run => Some("stale steps	queued in an earlier run of the scene"),
+        None if s.entered.is_some() => Some("stale steps	an entry while a phase is entered"),
+        Some(q) if s.entered != Some(q) => Some("stale steps	a completion of a phase not entered"),
+        _ => None,
+    };
+    if let Some(why) = stale {
+        *w.scenes.step_counts.entry(why.into()).or_default() += 1;
+        return;
+    }
+    let complete = complete.is_some();
     let p = s.next;
     let Some(phase) = i.phases.get(p).cloned() else {
         // Past the last phase: the end fragment, then not playing.
@@ -831,7 +907,7 @@ fn step(h: &mut QuestHost<'_>, w: &mut World, o: ObjId, i: &Rc<SceneInfo>, compl
             Truth::False => {
                 state(w, i).next = p + 1;
                 w.scenes.log.push((o, Change::PhaseSkipped(p)));
-                queue(w, o, Step::Enter);
+                queue(w, o, Step::Enter { run });
             }
             Truth::Undetermined(why) => wait(
                 w,
@@ -841,6 +917,7 @@ fn step(h: &mut QuestHost<'_>, w: &mut World, o: ObjId, i: &Rc<SceneInfo>, compl
                 ),
             ),
             Truth::True => {
+                state(w, i).entered = Some(p);
                 w.scenes.log.push((o, Change::PhaseEntered(p)));
                 field_stage(h, w, i, phase.stage_fields[0]);
                 if w.scenes.clock.on {
@@ -849,7 +926,7 @@ fn step(h: &mut QuestHost<'_>, w: &mut World, o: ObjId, i: &Rc<SceneInfo>, compl
                 if let Some(f) = &phase.begin {
                     queue(w, o, Step::Fragment(f.clone(), format!("phase {p} begin")));
                 }
-                queue(w, o, Step::Complete);
+                queue(w, o, Step::Complete { run, phase: p });
             }
         }
         return;
@@ -900,13 +977,15 @@ fn step(h: &mut QuestHost<'_>, w: &mut World, o: ObjId, i: &Rc<SceneInfo>, compl
     }
     match eval(h, w, i, &phase.completion) {
         Truth::True => {
-            state(w, i).next = p + 1;
+            let s = state(w, i);
+            s.next = p + 1;
+            s.entered = None;
             w.scenes.log.push((o, Change::PhaseCompleted(p)));
             field_stage(h, w, i, phase.stage_fields[1]);
             if let Some(f) = &phase.end {
                 queue(w, o, Step::Fragment(f.clone(), format!("phase {p} end")));
             }
-            queue(w, o, Step::Enter);
+            queue(w, o, Step::Enter { run });
         }
         Truth::False => {
             percent_marks(h, w, o, i, &phase.completion);
@@ -1738,10 +1817,12 @@ pub fn recheck(w: &mut World) -> usize {
     let mut last: BTreeMap<ObjId, Option<Step>> = BTreeMap::new();
     for (o, ch) in &w.scenes.log {
         let step = match ch {
-            Change::Waiting(_, why) if why.starts_with("completion conditions") => {
-                Some(Step::Complete)
+            Change::Waiting(p, why) if why.starts_with("completion conditions") => {
+                Some(complete_step(w, *o, *p))
             }
-            Change::Waiting(_, why) if why.starts_with("start conditions") => Some(Step::Enter),
+            Change::Waiting(_, why) if why.starts_with("start conditions") => {
+                Some(enter_step(w, *o))
+            }
             _ => None,
         };
         last.insert(*o, step);
@@ -1783,10 +1864,10 @@ pub fn recheck_variables(
     for (o, ch) in &w.scenes.log {
         let step = match ch {
             Change::Waiting(p, why) if why.starts_with("completion conditions") => {
-                Some((*p, Step::Complete))
+                Some((*p, complete_step(w, *o, *p)))
             }
             Change::Waiting(p, why) if why.starts_with("start conditions") => {
-                Some((*p, Step::Enter))
+                Some((*p, enter_step(w, *o)))
             }
             _ => None,
         };
@@ -1804,7 +1885,7 @@ pub fn recheck_variables(
         let Some(phase) = i.phases.get(p) else {
             continue;
         };
-        let list = if step == Step::Complete {
+        let list = if matches!(step, Step::Complete { .. }) {
             &phase.completion
         } else {
             &phase.start
@@ -1915,7 +1996,8 @@ pub fn advance_clock(w: &mut World, scale: Option<f64>) -> Option<f64> {
         }
     }
     for o in scenes {
-        queue(w, o, Step::Complete);
+        let step = complete_entered(w, o);
+        queue(w, o, step);
     }
     Some(t)
 }
@@ -2020,8 +2102,18 @@ pub(crate) fn call(h: &mut QuestHost<'_>, c: &NativeCall, w: &mut World) -> Repl
                 crate::line::apply_due(h, w);
                 return Reply::Value(Val::None);
             }
-            let complete = matches!(c.args.first(), Some(Val::Bool(true)));
-            step(h, w, o, &i, complete);
+            let int = |k: usize| match c.args.get(k) {
+                Some(Val::Int(n)) => Some(*n),
+                _ => None,
+            };
+            let run = int(1).and_then(|n| u32::try_from(n).ok());
+            let complete = match (c.args.first(), int(2)) {
+                (Some(Val::Bool(true)), Some(p)) => Some(usize::try_from(p).unwrap_or(usize::MAX)),
+                (Some(Val::Bool(true)), None) => Some(usize::MAX),
+                _ => None,
+            };
+            // A run that does not read is no run of the scene: stale.
+            step(h, w, o, &i, complete, run.unwrap_or(u32::MAX));
             Reply::Value(Val::None)
         }
         _ => none(c),
@@ -2174,15 +2266,28 @@ pub fn recheck_distance_marks(host: &mut dyn crate::Host, w: &mut World) -> usiz
     marked
 }
 
-/// The synthetic call of a step job.
-pub fn step_call(scene: ObjId, complete: bool) -> NativeCall {
+/// The synthetic call of a step job: whether it completes a phase, the
+/// scene's run it was queued in and, for a completion, the phase (a value
+/// past the int range is no phase or run: the step is then stale).
+pub fn step_call(scene: ObjId, step: &Step) -> NativeCall {
+    let int = |n: u64| Val::Int(i32::try_from(n).unwrap_or(-1));
+    let args = match step {
+        Step::Complete { run, phase } => vec![
+            Val::Bool(true),
+            int(u64::from(*run)),
+            int(u64::try_from(*phase).unwrap_or(u64::MAX)),
+        ],
+        Step::Enter { run } => vec![Val::Bool(false), int(u64::from(*run))],
+        _ => vec![Val::Bool(false)],
+    };
+    let param_types = vec!["bool".into(), "int".into(), "int".into()][..args.len()].to_vec();
     NativeCall {
         script: "scene".into(),
         name: STEP.into(),
         receiver: Some(Val::Object(scene)),
         instance: None,
-        args: vec![Val::Bool(complete)],
-        param_types: vec!["bool".into()],
+        args,
+        param_types,
         return_type: "none".into(),
     }
 }

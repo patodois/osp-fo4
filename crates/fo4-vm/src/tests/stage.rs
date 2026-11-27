@@ -819,6 +819,9 @@ fn a_long_chain_through_call_receivers_ends_without_deep_recursion() {
         .unwrap();
     assert_eq!(
         got,
-        format!("{:?}", setters::Src::Other("the owning quest of another object"))
+        format!(
+            "{:?}",
+            setters::Src::Other("the owning quest of another object")
+        )
     );
 }

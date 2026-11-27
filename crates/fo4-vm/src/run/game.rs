@@ -910,6 +910,9 @@ pub(super) fn new_game(
     for (k, v) in &vm.world.scenes.line_counts {
         *c.entry(format!("lines\t{k}")).or_default() += v;
     }
+    for (k, v) in &vm.world.scenes.step_counts {
+        *c.entry(format!("scenes\t{k}")).or_default() += v;
+    }
     for (k, v) in &vm.world.anims.counts {
         *c.entry(format!("animation\t{k}")).or_default() += v;
     }
@@ -2126,7 +2129,8 @@ impl<'r, 'v> NewGame<'r, 'v> {
             if !distance {
                 continue;
             }
-            let _ = vm.host.call(&scene::step_call(o, true), &mut vm.world);
+            let step = scene::complete_step(&vm.world, o, p);
+            let _ = vm.host.call(&scene::step_call(o, &step), &mut vm.world);
             for r in vm.host.rules() {
                 vm.rules.insert(r);
             }
