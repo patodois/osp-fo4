@@ -452,6 +452,18 @@ struct Surface {
     /// [`Draw::soft_depth`].
     soft_depth: Option<f32>,
 }
+/// The lengths of the build's per-draw lists at one point
+/// ([`Builder::mark`]): what [`Builder::roll_back`] cuts back to when the
+/// draws made since are dropped (an omitted instance or head part).
+#[derive(Clone, Copy)]
+struct Mark {
+    draws: usize,
+    animations: usize,
+    effect_draws: usize,
+    chains: usize,
+    left_out: usize,
+    recorded: usize,
+}
 struct Builder<'a, 's> {
     loader: &'a Loader<'s>,
     limits: &'a Limits,
@@ -2346,6 +2358,28 @@ impl Builder<'_, '_> {
         }
         Ok(usable)
     }
+    fn mark(&self) -> Mark {
+        Mark {
+            draws: self.output.list.draws.len(),
+            animations: self.output.list.animations.len(),
+            effect_draws: self.output.effect_draws.len(),
+            chains: self.output.chains.len(),
+            left_out: self.output.left_out.len(),
+            recorded: self.recorded.len(),
+        }
+    }
+    /// Drops the draws made since `m` with every entry that names them:
+    /// their animations, effect draw indices, node chains, left-out shapes
+    /// and recorded skinned meshes. The meshes and textures stay (later
+    /// draws may share them).
+    fn roll_back(&mut self, m: Mark) {
+        self.output.list.draws.truncate(m.draws);
+        self.output.list.animations.truncate(m.animations);
+        self.output.effect_draws.truncate(m.effect_draws);
+        self.output.chains.truncate(m.chains);
+        self.output.left_out.truncate(m.left_out);
+        self.recorded.truncate(m.recorded);
+    }
     /// Adds the rules the current instance's draws relied on to its
     /// identity, the last one pushed.
     fn record_draw_rules(&mut self) -> Result<()> {
@@ -3049,9 +3083,9 @@ impl Builder<'_, '_> {
         } else {
             self.allow(head.state.hypotheses());
             for part in &head.parts {
-                let first = self.output.list.draws.len();
+                let mark = self.mark();
                 if let Err(e) = self.actor_model(part.asset, world, index, skeleton) {
-                    self.output.list.draws.truncate(first);
+                    self.roll_back(mark);
                     append(&mut causes, e, self.budget)?;
                 }
             }
@@ -3337,6 +3371,7 @@ fn build_inner(
             .hypotheses()
             .contains(&fo4_scene::hypotheses::FURNITURE_AT_REST);
         let first = builder.output.list.draws.len();
+        let mark = builder.mark();
         builder.draw_rules.clear();
         let src = &i.reference.record.source;
         let attempt = (|| {
@@ -3456,8 +3491,7 @@ fn build_inner(
             builder.record_draw_rules()?;
         }
         if let Err(e) = attempt {
-            builder.output.list.draws.truncate(first);
-            builder.output.list.animations.retain(|a| a.draw < first);
+            builder.roll_back(mark);
             let mut causes = Vec::new();
             for e in std::iter::once(&e).chain(i.blockers.iter()) {
                 b.charge(
@@ -3510,15 +3544,14 @@ fn build_inner(
             b,
         )?;
         append(&mut builder.output.actors, index, b)?;
-        let first = builder.output.list.draws.len();
+        let mark = builder.mark();
         builder.draw_rules.clear();
         let attempt = builder.actor(a, index);
         if attempt.is_ok() {
             builder.record_draw_rules()?;
         }
         if let Err(e) = attempt {
-            builder.output.list.draws.truncate(first);
-            builder.output.list.animations.retain(|a| a.draw < first);
+            builder.roll_back(mark);
             let mut causes = Vec::new();
             for e in std::iter::once(&e).chain(
                 a.blockers

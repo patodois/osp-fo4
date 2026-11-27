@@ -735,6 +735,111 @@ fn a_lighting_shader_with_the_refraction_flag_marks_its_shape() {
     ));
 }
 
+/// code-5a R1: an instance whose first shape is drawn and whose second is
+/// refused is omitted with every entry its drawn shape made (effect draw
+/// index, node chain), so the next instance's draws are not named by them.
+#[test]
+fn an_instance_omitted_after_a_drawn_shape_leaves_no_entry_for_the_next_draws() {
+    let temp = TestDir::new("render-partial-omission");
+    let root = temp.join("Data");
+    std::fs::create_dir_all(root.join("meshes")).unwrap();
+    // Shape 0 a colour-only effect drawn; shape 4 (not a marker here) names
+    // the texture set as its shader and is refused.
+    let mut blocks = model_blocks(b"", Some(0), None, (b"", b""), None);
+    blocks[4].1[92..96].copy_from_slice(&2u32.to_le_bytes());
+    std::fs::write(
+        root.join("meshes/partial.nif"),
+        nif_file(blocks, b"Plain", b""),
+    )
+    .unwrap();
+    std::fs::write(root.join("meshes/effect.nif"), nif_kind(b"", Some(0))).unwrap();
+    let placed = |base: u32| {
+        let mut r = sub(b"NAME", &base.to_le_bytes());
+        r.extend(sub(b"DATA", &[0; 24]));
+        r.extend(sub(b"XSCL", &1f32.to_le_bytes()));
+        r
+    };
+    let mut cell = sub(b"EDID", b"PartialCell\0");
+    cell.extend(sub(b"DATA", &1u16.to_le_bytes()));
+    let mut hedr = 0.95f32.to_le_bytes().to_vec();
+    hedr.extend([0; 8]);
+    let plugin = [
+        rec(b"TES4", 0, 1, &sub(b"HEDR", &hedr)),
+        rec(b"STAT", 0x801, 0, &sub(b"MODL", b"partial.nif\0")),
+        rec(b"STAT", 0x802, 0, &sub(b"MODL", b"effect.nif\0")),
+        group(
+            2,
+            0,
+            &[
+                rec(b"CELL", 0x800, 0, &cell),
+                group(
+                    6,
+                    0x800,
+                    &group(
+                        9,
+                        0x800,
+                        &[
+                            rec(b"REFR", 0x803, 0, &placed(0x801)),
+                            rec(b"REFR", 0x804, 0, &placed(0x802)),
+                        ]
+                        .concat(),
+                    ),
+                ),
+            ]
+            .concat(),
+        ),
+    ]
+    .concat();
+    std::fs::write(root.join("base.esm"), plugin).unwrap();
+    let m = Manifest {
+        root,
+        game: Game::Fallout4,
+        archive_invalidation: None,
+        language: "english".into(),
+        plugins: vec![PluginSpec {
+            name: "base.esm".into(),
+            path: "base.esm".into(),
+        }],
+        mounts: vec![Mount::Loose {
+            plugin: None,
+            base: None,
+            files: vec!["meshes/partial.nif".into(), "meshes/effect.nif".into()],
+        }],
+        required_masters: vec![],
+        excluded: vec![],
+        limits: Limits::default(),
+        build: Some("synthetic".into()),
+    };
+    let b = Budget::new(32 << 20);
+    let store = fo4_plugin::typed::Store::open(&m, &b).unwrap();
+    let vfs = fo4_vfs::Vfs::mount(&m, &b).unwrap();
+    let mut loader = Loader::new(&store, &vfs, "english", RuleLevel::Facts, &b);
+    let scene = loader.by_editor_id("PartialCell", &b).unwrap();
+    let options = BuildOptions {
+        max_texture_dimension: 16,
+        max_texture_bytes: 1024,
+        level: fo4_scene::RuleLevel::Hypotheses,
+        blocks: None,
+        time: None,
+        clock: Default::default(),
+        vertex_normals: false,
+        chains: true,
+        soft_effects: false,
+        effect_environment_left_out: false,
+        refraction_left_out: false,
+    };
+    let output = build(&scene, &loader, &m.limits, options, &b).unwrap();
+    // The first instance is omitted, the second drawn once.
+    assert_eq!(output.omitted.len(), 1, "{:?}", output.omitted);
+    assert_eq!(output.omitted[0].instance, 0);
+    assert_eq!(output.list.draws.len(), 1, "{:?}", output.omitted);
+    assert_eq!(output.list.draws[0].instance, 1);
+    assert_eq!(output.effect_draws, [0]);
+    assert_eq!(output.chains.len(), 1);
+    assert_eq!(output.chains[0].draw, 0);
+    assert!(output.chains[0].model.ends_with(b"effect.nif"));
+}
+
 #[test]
 fn visibility_helper_rule_matches_only_the_literal_mesh_label() {
     for (label, expected) in [
@@ -1137,6 +1242,182 @@ fn a_placed_actor_is_drawn_skinned_in_its_skeleton_rest_pose_after_the_reference
             .code,
         "ActorSkinBoneMissing"
     );
+}
+
+/// A cell with one placed actor whose body is `body` (a skinned model on
+/// [`skinned_files`]' skeleton, rest z 12), `head` written as
+/// `meshes/actors/head.nif` beside it.
+fn actor_cell(name: &str, body: Vec<u8>, head: Vec<u8>) -> (TestDir, Manifest) {
+    let temp = TestDir::new(name);
+    let root = temp.join("Data");
+    std::fs::create_dir_all(root.join("meshes/actors")).unwrap();
+    std::fs::create_dir_all(root.join("textures")).unwrap();
+    let (_, skeleton) = skinned_files(12.);
+    std::fs::write(root.join("meshes/actors/body.nif"), body).unwrap();
+    std::fs::write(root.join("meshes/actors/head.nif"), head).unwrap();
+    std::fs::write(root.join("meshes/actors/skel.nif"), skeleton).unwrap();
+    std::fs::write(root.join("textures/a.dds"), dds()).unwrap();
+    let id = |v: u32| v.to_le_bytes().to_vec();
+    let achr = [sub(b"NAME", &id(0x803)), sub(b"DATA", &[0; 24])].concat();
+    let npc = [
+        sub(b"ACBS", &[0; 20]),
+        sub(b"RNAM", &id(0x810)),
+        sub(b"WNAM", &id(0x820)),
+    ]
+    .concat();
+    let race = [
+        sub(b"MNAM", &[]),
+        sub(b"ANAM", b"actors\\skel.nif\0"),
+        sub(b"FNAM", &[]),
+        sub(b"ANAM", b"actors\\skel.nif\0"),
+    ]
+    .concat();
+    let armo = [
+        sub(b"RNAM", &id(0x810)),
+        sub(b"INDX", &[0, 0]),
+        sub(b"MODL", &id(0x821)),
+    ]
+    .concat();
+    let arma = [
+        sub(b"RNAM", &id(0x810)),
+        sub(b"MOD2", b"actors\\body.nif\0"),
+    ]
+    .concat();
+    let mut cell = sub(b"EDID", b"SyntheticActorCell\0");
+    cell.extend(sub(b"DATA", &1u16.to_le_bytes()));
+    let body = [
+        rec(b"NPC_", 0x803, 0, &npc),
+        rec(b"RACE", 0x810, 0, &race),
+        rec(b"ARMO", 0x820, 0, &armo),
+        rec(b"ARMA", 0x821, 0, &arma),
+        group(
+            2,
+            0,
+            &[
+                rec(b"CELL", 0x800, 0, &cell),
+                group(6, 0x800, &group(9, 0x800, &rec(b"ACHR", 0x804, 0, &achr))),
+            ]
+            .concat(),
+        ),
+    ]
+    .concat();
+    let mut hedr = 0.95f32.to_le_bytes().to_vec();
+    hedr.extend([0; 8]);
+    let plugin = [rec(b"TES4", 0, 1, &sub(b"HEDR", &hedr)), body].concat();
+    std::fs::write(root.join("base.esm"), plugin).unwrap();
+    let m = Manifest {
+        root,
+        game: Game::Fallout4,
+        archive_invalidation: None,
+        language: "english".into(),
+        plugins: vec![PluginSpec {
+            name: "base.esm".into(),
+            path: "base.esm".into(),
+        }],
+        mounts: vec![Mount::Loose {
+            plugin: None,
+            base: None,
+            files: vec![
+                "meshes/actors/body.nif".into(),
+                "meshes/actors/head.nif".into(),
+                "meshes/actors/skel.nif".into(),
+                "textures/a.dds".into(),
+            ],
+        }],
+        required_masters: vec![],
+        excluded: vec![],
+        limits: Limits::default(),
+        build: Some("synthetic".into()),
+    };
+    (temp, m)
+}
+
+/// code-5a R2: a head part drawn in part and then refused is left out with
+/// every entry its drawn shape made: no effect draw index past the list,
+/// no recorded mesh of a draw that is gone; the body stays drawn.
+#[test]
+fn a_head_part_refused_after_a_drawn_shape_leaves_no_entry_behind() {
+    use crate::fixture::{skinned_files_with, Skinned};
+    let (body, _) = skinned_files(12.);
+    let (head, _) = skinned_files_with(
+        12.,
+        Skinned {
+            effect: true,
+            refused_shape: true,
+            ..Skinned::default()
+        },
+    );
+    let (_temp, m) = actor_cell("render-head-part", body, head);
+    let b = Budget::new(64 << 20);
+    let store = fo4_plugin::typed::Store::open(&m, &b).unwrap();
+    let vfs = fo4_vfs::Vfs::mount(&m, &b).unwrap();
+    let mut loader = Loader::new(&store, &vfs, "english", RuleLevel::Hypotheses, &b);
+    let scene = loader.by_editor_id("SyntheticActorCell", &b).unwrap();
+    let mut actors = fo4_scene::actor::resolve(&scene, &mut loader, &b).unwrap();
+    let path = loader
+        .assets
+        .resolve_path(
+            fo4_scene::paths::Citation::RecordModel,
+            b"actors\\head.nif",
+            &b,
+        )
+        .unwrap()
+        .key;
+    let asset = loader
+        .assets
+        .load(fo4_scene::AssetKind::Model, &path, &b)
+        .unwrap();
+    let a = &mut actors.actors[0];
+    let plan = a.plan.as_mut().expect("plan");
+    plan.head = Some(fo4_scene::actor::Head {
+        parts: vec![fo4_scene::actor::HeadPart {
+            part: a.reference.clone(),
+            kind: None,
+            path,
+            asset,
+        }],
+        from_race: false,
+        blockers: Vec::new(),
+        state: fo4_scene::State::ReadyUnderHypotheses {
+            hypotheses: vec![fo4_scene::hypotheses::EFFECT_COLOR],
+        },
+    });
+    // Posed at the rest of its one bone, so that skinned meshes are
+    // recorded.
+    let skeleton = plan.skeleton_asset;
+    let mut pose = fo4_scene::actor::pose::Skeleton::default();
+    let mut bone = fo4_scene::actor::pose::Affine::IDENTITY;
+    bone.translation = [0., 0., 12.];
+    pose.bones.insert(b"Bone".to_vec(), bone);
+    pose.bones
+        .insert(b"Root".to_vec(), fo4_scene::actor::pose::Affine::IDENTITY);
+    let poses = [(skeleton, pose)].into_iter().collect();
+    let (with, recorded) = crate::draw::build_with_posed_actors(
+        &scene,
+        &actors,
+        poses,
+        &loader,
+        &m.limits,
+        BuildOptions::reference(RuleLevel::Hypotheses),
+        &b,
+    )
+    .unwrap();
+    assert!(with.omitted.is_empty(), "{:?}", with.omitted);
+    assert_eq!(with.actor_head_omissions.len(), 1);
+    assert_eq!(
+        with.actor_head_omissions[0].causes[0].code,
+        "ActorSkinnedShapeTransform"
+    );
+    // The body's one draw; the head's drawn effect shape went with its part.
+    assert_eq!(with.list.draws.len(), 1);
+    assert!(
+        with.effect_draws.iter().all(|d| *d < with.list.draws.len()),
+        "{:?}",
+        with.effect_draws
+    );
+    assert!(with.effect_draws.is_empty());
+    assert_eq!(recorded.len(), 1);
+    assert_eq!(recorded[0].mesh, with.list.draws[0].mesh);
 }
 
 /// One placed effect model (`nif_kind` with Shader Flags 1 `flags`, its

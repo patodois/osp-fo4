@@ -52,6 +52,22 @@ pub fn dds() -> Vec<u8> {
 /// A textured skinned model: one bone "Bone" bound at z 10, and a
 /// skeleton whose rest pose puts the bone at `rest_z`.
 pub fn skinned_files(rest_z: f32) -> (Vec<u8>, Vec<u8>) {
+    skinned_files_with(rest_z, Skinned::default())
+}
+/// What [`skinned_files_with`] changes in the skinned model.
+#[derive(Clone, Copy, Default)]
+pub struct Skinned {
+    /// The shape's vertex count: its three vertices repeated (one triangle
+    /// still); 0 for three.
+    pub vertices: u16,
+    /// A colour-only effect shader in place of the textured lighting one.
+    pub effect: bool,
+    /// A second skinned shape after the bone node whose own transform is
+    /// not the identity: the draw refuses it.
+    pub refused_shape: bool,
+}
+/// [`skinned_files`] with the model changed as `x` says.
+pub fn skinned_files_with(rest_z: f32, x: Skinned) -> (Vec<u8>, Vec<u8>) {
     fn av(name: u32, t: [f32; 3]) -> Vec<u8> {
         let mut v = Vec::new();
         for x in [name, 0, u32::MAX, 0] {
@@ -105,15 +121,20 @@ pub fn skinned_files(rest_z: f32) -> (Vec<u8>, Vec<u8>) {
     }
     // Position, UV and skin: stride 24 bytes, UV at 8, skin at 12.
     mesh.extend(((0x43u64 << 44) | (3 << 28) | (2 << 8) | 6).to_le_bytes());
+    let count = if x.vertices == 0 { 3 } else { x.vertices };
     mesh.extend(1u32.to_le_bytes());
-    mesh.extend(3u16.to_le_bytes());
-    mesh.extend((3u32 * 24 + 6).to_le_bytes());
+    mesh.extend(count.to_le_bytes());
+    mesh.extend((u32::from(count) * 24 + 6).to_le_bytes());
     // Positions (1,0,10), (1,1,10), (1,0,11) as binary16, UV zero, one bone.
     for xyz in [
         [0x3c00u16, 0, 0x4900],
         [0x3c00, 0x3c00, 0x4900],
         [0x3c00, 0, 0x4980],
-    ] {
+    ]
+    .into_iter()
+    .cycle()
+    .take(usize::from(count))
+    {
         for n in xyz {
             mesh.extend(n.to_le_bytes());
         }
@@ -137,14 +158,37 @@ pub fn skinned_files(rest_z: f32) -> (Vec<u8>, Vec<u8>) {
     shader.extend(u32::MAX.to_le_bytes());
     shader.extend(0u32.to_le_bytes());
     shader.extend([0; 68]);
+    if x.effect {
+        // No name, no texture: Shader Flags 0, UV offset 0 and scale 1,
+        // falloff 1 1 0 0, base colour (0.2, 0.4, 0.6, 0.8) scale 2.
+        shader.clear();
+        for n in [u32::MAX, 0, u32::MAX, 0, 0] {
+            shader.extend(n.to_le_bytes());
+        }
+        for v in [0f32, 0., 1., 1.] {
+            shader.extend(v.to_le_bytes());
+        }
+        shader.extend(0u32.to_le_bytes());
+        shader.extend([3, 255, 0, 0]);
+        for v in [1f32, 1., 0., 0., 0.2, 0.4, 0.6, 0.8, 2., 100.] {
+            shader.extend(v.to_le_bytes());
+        }
+        for _ in 0..4 {
+            shader.extend(0u32.to_le_bytes());
+        }
+        shader.extend(1f32.to_le_bytes());
+    }
     let diffuse = b"textures/a.dds";
     let mut texture = 1u32.to_le_bytes().to_vec();
     texture.extend((diffuse.len() as u32).to_le_bytes());
     texture.extend(diffuse);
     let mut root = av(1, [0.; 3]);
-    root.extend(2u32.to_le_bytes());
+    root.extend(if x.refused_shape { 3u32 } else { 2 }.to_le_bytes());
     root.extend(0u32.to_le_bytes());
     root.extend(5u32.to_le_bytes());
+    if x.refused_shape {
+        root.extend(7u32.to_le_bytes());
+    }
     let mut instance = Vec::new();
     for n in [3u32, 6, 1, 5, 0] {
         instance.extend(n.to_le_bytes());
@@ -157,19 +201,29 @@ pub fn skinned_files(rest_z: f32) -> (Vec<u8>, Vec<u8>) {
     }
     let mut bone = av(0, [0., 0., 10.]);
     bone.extend(0u32.to_le_bytes());
-    let model = file(
-        &[
-            ("BSTriShape", mesh),
-            ("BSLightingShaderProperty", shader),
-            ("BSShaderTextureSet", texture),
-            ("NiNode", root),
-            ("BSSkin::Instance", instance),
-            ("NiNode", bone),
-            ("BSSkin::BoneData", data),
-        ],
-        &[b"Bone", b"Root"],
-        3,
-    );
+    // The refused shape: the same skinned shape moved one unit along x.
+    let mut moved = mesh.clone();
+    moved[16..20].copy_from_slice(&1f32.to_le_bytes());
+    let mut blocks = vec![
+        ("BSTriShape", mesh),
+        (
+            if x.effect {
+                "BSEffectShaderProperty"
+            } else {
+                "BSLightingShaderProperty"
+            },
+            shader,
+        ),
+        ("BSShaderTextureSet", texture),
+        ("NiNode", root),
+        ("BSSkin::Instance", instance),
+        ("NiNode", bone),
+        ("BSSkin::BoneData", data),
+    ];
+    if x.refused_shape {
+        blocks.push(("BSTriShape", moved));
+    }
+    let model = file(&blocks, &[b"Bone", b"Root"], 3);
     let mut skeleton_root = av(1, [0.; 3]);
     skeleton_root.extend(1u32.to_le_bytes());
     skeleton_root.extend(1u32.to_le_bytes());
