@@ -303,7 +303,10 @@ impl Grid {
             let dims: [u32; 3] = std::array::from_fn(|k| {
                 (((hi[k] - lo[k]) / cell).floor() as u32).saturating_add(1)
             });
-            let cells = dims.iter().map(|d| u64::from(*d)).product::<u64>();
+            // A product past u64 is more than any bound: the cell grows.
+            let cells = dims
+                .iter()
+                .try_fold(1u64, |a, d| a.checked_mul(u64::from(*d)));
             let span = |p: &Point, k: usize| {
                 let a = ((p.position[k] - p.radius - Self::MARGIN - lo[k]) / cell)
                     .floor()
@@ -312,18 +315,21 @@ impl Grid {
                     .min(dims[k] - 1);
                 (a, b)
             };
-            let listed: u64 = points
-                .iter()
-                .filter(|p| usable(p))
-                .map(|p| {
-                    (0..3)
-                        .map(|k| {
-                            let (a, b) = span(p, k);
-                            u64::from(b - a + 1)
-                        })
-                        .product::<u64>()
-                })
-                .sum();
+            let listed: Option<u64> =
+                points
+                    .iter()
+                    .filter(|p| usable(p))
+                    .try_fold(0u64, |sum, p| {
+                        let n = (0..3).try_fold(1u64, |a, k| {
+                            let (lo, hi) = span(p, k);
+                            a.checked_mul(u64::from(hi - lo + 1))
+                        })?;
+                        sum.checked_add(n)
+                    });
+            let (Some(cells), Some(listed)) = (cells, listed) else {
+                cell *= 2.;
+                continue;
+            };
             if cells > Self::MAX_CELLS || listed > Self::MAX_INDICES {
                 cell *= 2.;
                 continue;
@@ -1439,6 +1445,28 @@ mod tests {
         ] {
             assert_eq!(hour_slot(t, h), s, "{h}");
         }
+    }
+
+    #[test]
+    fn a_huge_light_radius_grows_the_grid_cell_instead_of_overflowing() {
+        // At the first cell this radius makes 2.7 million cubes an axis,
+        // whose cube passes u64.
+        let points = [
+            Point {
+                position: [0.; 3],
+                radius: 1.7e8,
+                colour: [1.; 3],
+            },
+            Point {
+                position: [10.; 3],
+                radius: 5.,
+                colour: [1.; 3],
+            },
+        ];
+        let g = Grid::of(&points).unwrap();
+        let cells: u64 = g.dims.iter().map(|d| u64::from(*d)).product();
+        assert!(cells <= Grid::MAX_CELLS);
+        assert_eq!(g.cells.len() as u64, cells);
     }
 
     #[test]
