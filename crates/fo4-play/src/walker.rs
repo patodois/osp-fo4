@@ -64,6 +64,34 @@ pub fn actor_places(
     out
 }
 
+/// What the actor boxes the ray meets are built from
+/// ([`actor_boxes`] with the walker's boxes): the actors' places, the count
+/// of changes of the walker's boxes, the walker's space and the actors of
+/// `places` the run disabled. The boxes are built again when it changes.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ActorPick {
+    pub places: ActorPlaces,
+    pub boxes_changed: u64,
+    pub space: Option<FormKey>,
+    pub disabled: Vec<FormKey>,
+}
+impl ActorPick {
+    pub fn of(
+        places: ActorPlaces,
+        boxes_changed: u64,
+        space: Option<&FormKey>,
+        disabled: &dyn Fn(&FormKey) -> bool,
+    ) -> Self {
+        let disabled = places.keys().filter(|k| disabled(k)).cloned().collect();
+        Self {
+            places,
+            boxes_changed,
+            space: space.cloned(),
+            disabled,
+        }
+    }
+}
+
 /// `play_activate_actor_box_v1`: the boxes of the actors of `places`
 /// standing in `space` that `skip` keeps (a disabled actor is not met).
 pub fn actor_boxes(
@@ -670,10 +698,10 @@ pub struct Walker {
     /// sit puts the walker at the furniture's marker.
     sit_marker: bool,
     boxes: Option<pick::Boxes>,
-    /// `--play-pick-actors`: the actors' places last read and the boxes
-    /// the ray meets with them ([`Walker::boxes`] and the actors' boxes),
-    /// built again when either changes.
-    actor_pick: Option<(ActorPlaces, u64, pick::Boxes)>,
+    /// `--play-pick-actors`: what the actors' boxes were last built from
+    /// and the boxes the ray meets with them ([`Walker::boxes`] and the
+    /// actors' boxes), built again when any of it changes.
+    actor_pick: Option<(ActorPick, pick::Boxes)>,
     /// Counts each change of [`Walker::boxes`].
     boxes_changed: u64,
     /// Boxes of statics left out (`play_activate_bounds_not_static_v1`),
@@ -1032,16 +1060,15 @@ impl Walker {
             })
             .collect();
         let places = actor_places(&w.place, &moved);
-        let fresh = self
-            .actor_pick
-            .as_ref()
-            .is_none_or(|(p, n, _)| *p != places || *n != self.boxes_changed);
-        if !fresh {
+        let vis = &self.visibility;
+        let now = ActorPick::of(places, self.boxes_changed, self.space.as_ref(), &|k| {
+            vis.disabled(k)
+        });
+        if self.actor_pick.as_ref().is_some_and(|(p, _)| *p == now) {
             return;
         }
-        let vis = &self.visibility;
         let mut boxes = match &self.space {
-            Some(space) => actor_boxes(&places, space, &|k| vis.disabled(k)),
+            Some(space) => actor_boxes(&now.places, space, &|k| vis.disabled(k)),
             None => pick::Boxes::default(),
         };
         if let Some(b) = &self.boxes {
@@ -1053,7 +1080,7 @@ impl Walker {
             all.modelled.append(&mut boxes.modelled);
             boxes = all;
         }
-        self.actor_pick = Some((places, self.boxes_changed, boxes));
+        self.actor_pick = Some((now, boxes));
     }
 
     fn follow_player_places(&mut self, run: &View<'_, '_>) {
@@ -1514,7 +1541,7 @@ impl Walker {
         let live = &self.live;
         let first_met = self.opts.first_met;
         let boxes = match &self.actor_pick {
-            Some((_, _, b)) => Some(b),
+            Some((_, b)) => Some(b),
             None => self.boxes.as_ref(),
         };
         let hit = if live.follows() {
@@ -1565,7 +1592,7 @@ impl Walker {
             if self
                 .actor_pick
                 .as_ref()
-                .is_some_and(|(places, _, _)| places.contains_key(&norm(k)))
+                .is_some_and(|(p, _)| p.places.contains_key(&norm(k)))
             {
                 log.rules.insert(crate::rules::ACTIVATE_ACTOR_BOX);
             }
@@ -3043,6 +3070,39 @@ mod tests {
         assert_eq!(ray(None), None);
         // Off by default.
         assert!(!Options::default().pick_actors);
+    }
+
+    /// code-5b P2: the actor boxes are built again when the walker's space
+    /// or an actor's enabled state changes, not only when a place or the
+    /// walker's boxes do.
+    #[test]
+    fn the_actor_boxes_follow_the_walkers_space_and_the_runs_disables() {
+        let mut place = fo4_vm::track::Place::default();
+        for (n, space) in [(10, 1), (11, 2)] {
+            place.actors.push(fo4_vm::track::PlacedActor {
+                key: k(n),
+                space: k(space),
+                pos: [100.0, 0.0, 0.0],
+            });
+        }
+        let places = actor_places(&place, &[]);
+        let none = |_: &FormKey| false;
+        let first = ActorPick::of(places.clone(), 0, Some(&k(1)), &none);
+        assert_eq!(first, ActorPick::of(places.clone(), 0, Some(&k(1)), &none));
+        // Another space: built again.
+        assert_ne!(first, ActorPick::of(places.clone(), 0, Some(&k(2)), &none));
+        assert_ne!(first, ActorPick::of(places.clone(), 0, None, &none));
+        // An actor the run disabled, or enabled again: built again.
+        let off = ActorPick::of(places.clone(), 0, Some(&k(1)), &|r| *r == k(10));
+        assert_ne!(first, off);
+        assert_eq!(off.disabled, [k(10)]);
+        // A reference that is no actor of the places changes nothing.
+        assert_eq!(
+            first,
+            ActorPick::of(places.clone(), 0, Some(&k(1)), &|r| *r == k(99))
+        );
+        // The walker's boxes changed: built again.
+        assert_ne!(first, ActorPick::of(places, 1, Some(&k(1)), &none));
     }
 
     #[test]
