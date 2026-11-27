@@ -158,6 +158,13 @@ pub trait Arrivals {
     /// walker stops. `at` and `feet`: the walker's second and feet as it
     /// waits, for a source that shows them.
     fn wait(&mut self, until: f64, at: f64, feet: Option<[f64; 3]>) -> Option<(Vec<Event>, f64)>;
+
+    /// The named platforms where their collision stands at the second
+    /// [`Arrivals::wait`] gives next, before each wait while the walker has
+    /// any (for a source that shows them with the feet: a window draws
+    /// the moving parts and their riders at the tick the feet stand at,
+    /// not at the last slice's end). Nothing by default; reads only.
+    fn platforms(&mut self, _platforms: Vec<crate::elevator::Platform>) {}
 }
 
 /// Why the walker stopped when its commands' source closed.
@@ -790,7 +797,11 @@ impl Walker {
     fn know(&mut self, until: f64) -> Result<(), String> {
         while self.known < until {
             let feet = self.character.as_ref().map(|c| c.feet);
+            let platforms = (!self.elevators.is_empty()).then(|| self.platforms());
             let source = self.arrivals.as_mut().ok_or("PlayNoSource")?;
+            if let Some(p) = platforms {
+                source.platforms(p);
+            }
             let (events, horizon) = source
                 .wait(until, self.t, feet)
                 .ok_or_else(|| SOURCE_CLOSED.to_string())?;
@@ -2240,6 +2251,8 @@ mod tests {
         clock: f64,
         written: Rc<RefCell<String>>,
         waits: Rc<RefCell<u64>>,
+        /// Platforms handed over before a wait.
+        platforms: Rc<RefCell<u64>>,
     }
 
     impl Arrivals for Window {
@@ -2266,6 +2279,10 @@ mod tests {
                 w.push_str(&format!("{e}\n"));
             }
             Some((out, self.clock))
+        }
+
+        fn platforms(&mut self, _: Vec<crate::elevator::Platform>) {
+            *self.platforms.borrow_mut() += 1;
         }
     }
 
@@ -2332,12 +2349,14 @@ mod tests {
         let refs = vec![None, Some(key(7))];
         let written = Rc::new(RefCell::new(String::new()));
         let waits = Rc::new(RefCell::new(0));
+        let handed = Rc::new(RefCell::new(0));
         let window = Window {
             plan: person_plan(),
             frame: 0,
             clock: 0.0,
             written: written.clone(),
             waits: waits.clone(),
+            platforms: handed.clone(),
         };
         let mut live = Walker::new(floor(), refs.clone(), Script::default(), opts)
             .unwrap()
@@ -2364,6 +2383,8 @@ mod tests {
         // It walked, stood, and the walker waited for the window often.
         assert!(la.points > 20 && la.standing_slices > 5, "{la:?}");
         assert!(*waits.borrow() > 50);
+        // No named platform: none handed to the window.
+        assert_eq!(*handed.borrow(), 0);
         // Standing slices last 0.1 s at most.
         let mut now = 0.0;
         for s in &a {

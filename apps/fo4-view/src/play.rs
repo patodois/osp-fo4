@@ -1519,6 +1519,14 @@ mod enabled {
         /// The quest log's length and the run's second when it last grew
         /// ([`Paced::publish_cue`]).
         progress: (usize, f64),
+        /// Each quest objective's last value the quest log gave
+        /// ([`quest_progress`]), and the kinds of entries already reported
+        /// as not counting.
+        objectives: BTreeMap<(usize, u8, i32), Option<bool>>,
+        not_counted: BTreeSet<&'static str>,
+        /// The entries that counted as progress, by kind and quest, since
+        /// the last report (a report every minute of the run).
+        counted: (f64, BTreeMap<String, u64>),
         /// The person's activation targets (`--play-activate-person`): the
         /// space each stands in, its bounds' centre and its display name,
         /// read once ([`Paced::publish_cue`]).
@@ -1527,6 +1535,11 @@ mod enabled {
         /// activated in them ([`Paced::publish_cue`]: a target a script
         /// activated is used).
         scripted: (usize, BTreeSet<FormKey>),
+        /// The use cue's last account in the window's log (a report: why
+        /// it names a target or none), printed at each change.
+        use_why: String,
+        /// The progress second whose stall was last reported.
+        stall_said: f64,
     }
 
     /// Run seconds with no change of the run's quest log before the
@@ -1647,8 +1660,10 @@ mod enabled {
     /// on the ground. Else the way's point nearest the place's end in sight
     /// (of at most [`CUE_SIGHT_TRIES`] spread along it): aimed at directly,
     /// the length the straight line to it and the way on from it. Else the
-    /// way as [`cue_trail`] gives it. So the way back does not grow while
-    /// the walker walks an open line toward the place.
+    /// way as [`cue_trail`] gives it, its aim brought back to the end of
+    /// the way's first straight stretch ([`cue_straight_stretch`]) when
+    /// the way turns before it. So the way back does
+    /// not grow while the walker walks an open line toward the place.
     pub fn cue_sighted(
         feet: [f64; 3],
         to: [f64; 3],
@@ -1675,7 +1690,47 @@ mod enabled {
             }
         }
         let (aim, len) = way_aim(way, 0);
+        // Not past a turn of the way: the straight line to the aim stays
+        // over the way the walker walked (the 22nd session's cue aimed
+        // past the trail's turn at a door and the line ran into the wall
+        // beside it).
+        let k = way.iter().position(|p| *p == aim).unwrap_or(last);
+        let kept = cue_straight_stretch(way, k);
+        if kept < k {
+            let (_, rest) = way_aim(way, kept);
+            return (way[kept], flat(feet, way[kept]) + rest, false);
+        }
         (aim, len, false)
+    }
+
+    /// Half the width (game units; viewer policy: the walk's placeholder
+    /// capsule radius) of the stretch around the straight line from the
+    /// feet within which the way's points must stay ([`cue_straight_stretch`]).
+    pub const CUE_CORRIDOR: f64 = 16.0;
+
+    /// The farthest of the way's points `1..=to` (index into `way`, whose
+    /// first point is the feet) such that every way point before it lies
+    /// within [`CUE_CORRIDOR`] on the ground of the straight line from the
+    /// feet to it: the line stays over ground the walker walked. At least
+    /// the first point.
+    pub fn cue_straight_stretch(way: &[[f64; 3]], to: usize) -> usize {
+        let to = to.min(way.len().saturating_sub(1));
+        let feet = way[0];
+        let mut best = to.min(1);
+        for k in 2..=to {
+            let (dx, dy) = (way[k][0] - feet[0], way[k][1] - feet[1]);
+            let len = dx.hypot(dy);
+            if len < 1e-9 {
+                continue;
+            }
+            let off = |p: &[f64; 3]| ((p[0] - feet[0]) * dy - (p[1] - feet[1]) * dx).abs() / len;
+            if way[1..k].iter().all(|p| off(p) <= CUE_CORRIDOR) {
+                best = k;
+            } else {
+                break;
+            }
+        }
+        best
     }
 
     /// The way back of [`cue_trail`]: the feet, then the trail's points it
@@ -1791,6 +1846,37 @@ mod enabled {
             .filter(|(k, (sp, c, _))| sp == space && !met.contains(k) && d(c) <= CUE_REACH)
             .min_by(|a, b| d(&a.1 .1).total_cmp(&d(&b.1 .1)))
             .map(|(k, (_, c, n))| (k.clone(), *c, n.clone()))
+    }
+
+    /// Whether new quest log entries are progress for the cues (viewer
+    /// policy: the cues wait for [`CUE_AFTER`] run seconds without
+    /// progress): a stage set, a quest started or stopped, an objective
+    /// whose value changed (`objectives` keeps each one's last value). Not
+    /// a stage set again and refused, nor an objective set to the value it
+    /// had (the 22nd session's run logged such entries again and again
+    /// from the vault on, and no use cue came). Also the kinds of entries
+    /// that did not count.
+    pub fn quest_progress(
+        new: &[(usize, fo4_vm::quest::Change)],
+        objectives: &mut BTreeMap<(usize, u8, i32), Option<bool>>,
+    ) -> (bool, Vec<&'static str>) {
+        use fo4_vm::quest::Change;
+        let mut counts = false;
+        let mut skipped = Vec::new();
+        for (o, c) in new {
+            match c {
+                Change::StageRepeatRefused(_) => skipped.push("a stage set again and refused"),
+                Change::Objective(kind, n, v) => {
+                    if objectives.insert((*o, *kind, *n), *v) == Some(*v) {
+                        skipped.push("an objective set to the value it had");
+                    } else {
+                        counts = true;
+                    }
+                }
+                _ => counts = true,
+            }
+        }
+        (counts, skipped)
     }
 
     /// The person's activation targets the use cue no longer names (viewer
@@ -2438,7 +2524,26 @@ mod enabled {
             let w = &run.vm.world;
             let now = run.now();
             if w.quests.log.len() != self.progress.0 {
-                self.progress = (w.quests.log.len(), now);
+                let new = w.quests.log.get(self.progress.0..).unwrap_or_default();
+                let (counts, skipped) = quest_progress(new, &mut self.objectives);
+                if counts {
+                    for (o, c) in new {
+                        let kind = format!("{c:?}");
+                        let kind = kind.split('(').next().unwrap_or("").to_string();
+                        *self.counted.1.entry(format!("{kind} of {o}")).or_default() += 1;
+                    }
+                }
+                for k in skipped {
+                    if self.not_counted.insert(k) {
+                        println!(
+                            "play: quest log at {now:.3} s of the run: {k} does not count as progress for the cues"
+                        );
+                    }
+                }
+                self.progress = (
+                    w.quests.log.len(),
+                    if counts { now } else { self.progress.1 },
+                );
             }
             // The references a script activated since the last look.
             if let Some(new) = run.vm.effects.get(self.scripted.0..) {
@@ -2475,9 +2580,36 @@ mod enabled {
                 }
                 self.persons_at = Some(at);
             }
+            // A report of the quest log's entries (all kinds, of batches
+            // that counted as progress), each minute of the run.
+            if now - self.counted.0 >= 60.0 {
+                if !self.counted.1.is_empty() {
+                    let all: Vec<String> =
+                        self.counted.1.iter().map(|(k, n)| format!("{k} x{n}")).collect();
+                    println!(
+                        "play: quest log progress from {:.0} s to {now:.0} s of the run (last at {:.3} s): {}",
+                        self.counted.0,
+                        self.progress.1,
+                        all.join(", ")
+                    );
+                }
+                self.counted = (now, BTreeMap::new());
+            }
             let Ok(mut s) = self.seen.lock() else {
                 return;
             };
+            // A report each time the quest log's progress stalls.
+            if now - self.progress.1 >= CUE_AFTER && self.stall_said != self.progress.1 {
+                self.stall_said = self.progress.1;
+                println!(
+                    "play: cues: no quest progress since {:.3} s at {now:.3} s of the run (feet {}, space {}, targets {}, building {})",
+                    self.progress.1,
+                    s.feet.is_some(),
+                    s.space.as_ref().map_or("-".to_string(), fo4_scene::timeline::key_text),
+                    self.persons_at.as_ref().map_or(0, BTreeMap::len),
+                    s.building
+                );
+            }
             // The person's activation targets not yet met by E in the
             // walker's space and reach, nearest first: where to use.
             let use_cue = match (s.feet, s.space.as_ref(), self.persons_at.as_ref()) {
@@ -2491,6 +2623,36 @@ mod enabled {
                     });
                     let walker = &self.walker;
                     let met = used_targets(e_met, &self.scripted.1, |k| walker.made_absent(k), at);
+                    // A report of each target: retired (and why) or how far.
+                    let why: Vec<String> = at
+                        .iter()
+                        .map(|(k, (sp, c, _))| {
+                            let n = fo4_scene::timeline::norm(k);
+                            let state = if self.scripted.1.contains(&n) {
+                                "activated by a script".to_string()
+                            } else if walker.made_absent(k) {
+                                "made absent".to_string()
+                            } else if met.contains(k) {
+                                "met by E".to_string()
+                            } else if *sp != space {
+                                format!(
+                                    "in another space ({}, the walker in {})",
+                                    fo4_scene::timeline::key_text(sp),
+                                    fo4_scene::timeline::key_text(&space)
+                                )
+                            } else if (c[0] - f[0]).hypot(c[1] - f[1]) > CUE_REACH {
+                                "out of reach".to_string()
+                            } else {
+                                "named when nearest".to_string()
+                            };
+                            format!("{} {state}", fo4_scene::timeline::key_text(k))
+                        })
+                        .collect();
+                    let why = why.join(", ");
+                    if why != self.use_why {
+                        println!("play: use cue at {now:.3} s of the run: {why}");
+                        self.use_why = why;
+                    }
                     let eye = self.walker.eye_height().unwrap_or(0.0);
                     use_target(f, &space, at, &met).map(|(k, centre, name)| {
                         cue_use_line(
@@ -2503,7 +2665,22 @@ mod enabled {
                         ) + &cue_tag(&fo4_scene::timeline::key_text(&k))
                     })
                 }
-                _ => None,
+                (feet, space, at) => {
+                    if now - self.progress.1 >= CUE_AFTER {
+                        let why = format!(
+                            "not asked ({}{}{}{})",
+                            if feet.is_none() { "no feet, " } else { "" },
+                            if space.is_none() { "no space, " } else { "" },
+                            if at.is_none() { "targets not read, " } else { "" },
+                            if s.building { "the window builds" } else { "" }
+                        );
+                        if why != self.use_why {
+                            println!("play: use cue at {now:.3} s of the run: {why}");
+                            self.use_why = why;
+                        }
+                    }
+                    None
+                }
             };
             let cue = if now - self.progress.1 < CUE_AFTER {
                 None
@@ -2550,6 +2727,24 @@ mod enabled {
                                             (true, false) => "walked to the way's point",
                                             _ => "along the way",
                                         };
+                                        // The way's first point and
+                                        // whether the body walks to it.
+                                        let first = way.get(1).map_or(String::new(), |p| {
+                                            format!(
+                                                ", first ({:.0}, {:.0}) {}",
+                                                p[0],
+                                                p[1],
+                                                if seen(*p) { "walked" } else { "not walked" }
+                                            )
+                                        });
+                                        let how = format!(
+                                            "{how}, aim ({:.0}, {:.0}), feet ({:.0}, {:.0}), way of {} points{first}",
+                                            aim[0],
+                                            aim[1],
+                                            f[0],
+                                            f[1],
+                                            way.len()
+                                        );
                                         (cue_line_trail(f, s.heading, aim, len), how)
                                     }
                                     // No way back in this space: the
@@ -2559,12 +2754,15 @@ mod enabled {
                                     None => match self.walker.walks_to(to) {
                                         Some(false) => (
                                             cue_line(f, s.heading, to) + CUE_NOT_STRAIGHT,
-                                            "straight, no way back, not walked",
+                                            "straight, no way back, not walked".to_string(),
                                         ),
-                                        _ => (cue_line(f, s.heading, to), "straight, no way back"),
+                                        _ => (
+                                            cue_line(f, s.heading, to),
+                                            "straight, no way back".to_string(),
+                                        ),
                                     },
                                 };
-                                line.0 + &cue_tag(&key) + "\t" + line.1
+                                line.0 + &cue_tag(&key) + "\t" + &line.1
                             })
                     }
                     _ => None,
@@ -2667,6 +2865,17 @@ mod enabled {
             }
             self.received += events.len() as u64;
             Some((events, horizon))
+        }
+
+        /// The named platforms at the tick the feet stand at
+        /// (`fo4_play::walker::Arrivals::platforms`): the window draws the
+        /// moving parts and the actors riding them with the walker's feet
+        /// of the same tick (the 22nd session saw riders 50 units off the
+        /// walker's feet between slices of the ride down).
+        fn platforms(&mut self, platforms: Vec<fo4_play::elevator::Platform>) {
+            if let Ok(mut s) = self.seen.lock() {
+                s.platforms = platforms;
+            }
         }
     }
 
@@ -2780,8 +2989,13 @@ mod enabled {
             confirm_doors: BTreeMap::new(),
             pending: None,
             progress: (0, 0.0),
+            objectives: BTreeMap::new(),
+            not_counted: BTreeSet::new(),
+            counted: (0.0, BTreeMap::new()),
             persons_at: None,
             scripted: (0, BTreeSet::new()),
+            use_why: String::new(),
+            stall_said: -1.0,
             opens: switches
                 .opens
                 .iter()
@@ -3440,6 +3654,28 @@ mod enabled {
         }
 
         #[test]
+        fn only_a_change_of_quest_state_is_progress_for_the_cues() {
+            use fo4_vm::quest::Change;
+            let mut obj = BTreeMap::new();
+            // A stage set again and refused, over and over: no progress.
+            let refused = vec![(3, Change::StageRepeatRefused(30)); 5];
+            let (counts, skipped) = quest_progress(&refused, &mut obj);
+            assert!(!counts && skipped.len() == 5);
+            // An objective shown: progress; shown again: none.
+            let shown = [(3, Change::Objective(0, 10, Some(true)))];
+            assert!(quest_progress(&shown, &mut obj).0);
+            let (counts, skipped) = quest_progress(&shown, &mut obj);
+            assert!(!counts && skipped == ["an objective set to the value it had"]);
+            // Hidden, or another quest's: progress.
+            assert!(quest_progress(&[(3, Change::Objective(0, 10, Some(false)))], &mut obj).0);
+            assert!(quest_progress(&[(4, Change::Objective(0, 10, Some(false)))], &mut obj).0);
+            // A stage set among refusals: progress.
+            let mixed = [(3, Change::StageRepeatRefused(30)), (3, Change::StageSet(40))];
+            assert!(quest_progress(&mixed, &mut obj).0);
+            assert!(quest_progress(&[(5, Change::Started)], &mut obj).0);
+        }
+
+        #[test]
         fn the_cue_names_a_near_place_with_its_key_for_the_watch() {
             let line = cue_line([0.0, 0.0, 0.0], Some(0.0), [186.0, 0.0, 0.0]) + &cue_tag("a:1");
             assert_eq!(line, "Go back: 186 units ahead\ta:1");
@@ -3753,6 +3989,18 @@ mod enabled {
             let (aim, len, sighted) = cue_sighted([300.0, 100.0, 0.0], to, &way, east);
             assert!(sighted && aim[0] >= 100.0 && aim[0] < 130.0, "{aim:?}");
             assert!(len < 330.0, "{len}");
+            // Nothing in sight and the way turns (north to a door at
+            // (0, 40), then west): aimed at the turn, not 96 units along
+            // across the wall's corner (the straight line to it stays
+            // within the corridor of the trail); the length the line to
+            // it and the way on from it.
+            let mut bent: Vec<[f64; 3]> = (0..=8).map(|i| [0.0, 5.0 * f64::from(i), 0.0]).collect();
+            bent.extend((1..=40).map(|i| [-5.0 * f64::from(i), 40.0, 0.0]));
+            let (aim, len, sighted) = cue_sighted([0.0, 0.0, 0.0], [-200.0, 40.0, 0.0], &bent, |_| false);
+            assert!(!sighted && (aim[1] - 40.0).abs() < 1e-9 && aim[0] > -20.0, "{aim:?}");
+            assert!((len - (15f64.hypot(40.0) + 185.0)).abs() < 1e-6, "{len}");
+            assert_eq!(cue_straight_stretch(&bent, 48), 11);
+            assert_eq!(cue_straight_stretch(&bent, 5), 5);
             // Nothing in sight: the way as cue_trail gives it.
             let (aim, len, sighted) = cue_sighted([300.0, 100.0, 0.0], to, &way, |_| false);
             assert_eq!(

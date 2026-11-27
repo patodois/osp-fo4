@@ -1007,7 +1007,19 @@ struct CastEntity {
     body: std::sync::Arc<crate::scene::CastBody>,
     /// The space of the cell the cast was built for.
     space: Option<fo4_plugin::FormKey>,
+    /// Its scale as spawned, and when: with `--draw-cast-settles` an actor
+    /// whose ground the play thread has not answered yet is not drawn for
+    /// up to [`CAST_SETTLE_WAIT`] (no frames at the stored height, then a
+    /// drop).
+    scale: Vec3,
+    born: std::time::Instant,
 }
+
+/// Longest wall-clock seconds a new cast's actor waits undrawn for the play
+/// thread's answer on its ground (`--draw-cast-settles`, viewer policy);
+/// after it the actor is drawn at its place.
+#[cfg(feature = "script-event")]
+const CAST_SETTLE_WAIT: f64 = 1.5;
 
 /// A cast built for the drawn cell, until it is uploaded and replaces the
 /// one drawn.
@@ -1064,9 +1076,16 @@ fn spawn_cast(world: &mut World) {
         .iter()
         .map(|c| (c.tag, (c, std::sync::Arc::new(c.body.clone()))))
         .collect();
+    let born = std::time::Instant::now();
     for (e, i) in entities.iter().zip(&scene.instances) {
         let place = places.get(&i.tag);
+        let scale = world
+            .entity(*e)
+            .get::<Transform>()
+            .map_or(Vec3::ONE, |t| t.scale);
         world.entity_mut(*e).insert(CastEntity {
+            scale,
+            born,
             place: place.map(|(c, _)| (c.reference.clone(), c.place)),
             body: place.map(|(_, b)| b.clone()).unwrap_or_default(),
             base: i.translation,
@@ -1998,7 +2017,8 @@ fn ride_cast<F: bevy::ecs::query::QueryFilter>(
     casts: &mut Query<(Entity, &CastEntity, &mut Transform), F>,
 ) {
     let reach = fo4_walk::Params::PROVISIONAL.height;
-    let mut now: std::collections::BTreeMap<fo4_plugin::FormKey, f64> =
+    // Each actor's height, and whether it waits undrawn for its ground.
+    let mut now: std::collections::BTreeMap<fo4_plugin::FormKey, (f64, bool)> =
         std::collections::BTreeMap::new();
     // `--draw-cast-settles` (`play_cast_settles_on_ground_v1`): an actor
     // no platform's part holds stands on the ground the play thread found
@@ -2015,7 +2035,8 @@ fn ride_cast<F: bevy::ecs::query::QueryFilter>(
         if !c.ride && !c.settle {
             continue;
         }
-        let z = *now.entry(k.clone()).or_insert_with(|| {
+        let (z, waits) = *now.entry(k.clone()).or_insert_with(|| {
+            let answered = seen.ground.get(k).is_some_and(|(q, _)| q == place);
             let ground = || {
                 c.settle
                     .then(|| seen.ground.get(k))
@@ -2039,7 +2060,7 @@ fn ride_cast<F: bevy::ecs::query::QueryFilter>(
                 if c.settle {
                     settled.insert(k.clone(), z - place[2]);
                 }
-                return z;
+                return (z, c.settle && !answered);
             }
             let (was, kept) = match feet.get(k) {
                 Some((p, z, part)) if p == place => (*z, part.clone()),
@@ -2090,19 +2111,29 @@ fn ride_cast<F: bevy::ecs::query::QueryFilter>(
             if !on_part && c.settle {
                 if let Some(g) = ground() {
                     settled.insert(k.clone(), g - place[2]);
-                    return g;
+                    return (g, false);
                 }
                 stays.push(why());
+                return (z, !answered);
             } else if c.settle {
                 stays.push(4);
             }
-            z
+            (z, false)
         });
         let dz = (z - place[2]) as f32;
         // Game +Z is Bevy +Y (`coords`).
         let want = c.base + Vec3::new(0.0, dz, 0.0);
         if t.translation.y != want.y {
             t.translation.y = want.y;
+        }
+        // Not drawn while its ground is not answered yet, for a while.
+        let scale = if waits && c.born.elapsed().as_secs_f64() < CAST_SETTLE_WAIT {
+            Vec3::ZERO
+        } else {
+            c.scale
+        };
+        if t.scale != scale {
+            t.scale = scale;
         }
     }
     // The census, at each change: actors drawn off their place's height,
@@ -2120,8 +2151,14 @@ fn ride_cast<F: bevy::ecs::query::QueryFilter>(
         [count(1), count(2), count(3), count(4)],
     );
     if !(settled.is_empty() && stays.is_empty()) && line != *census {
+        // Which actor dropped most (a report: who the census's drop is).
+        let most = settled
+            .iter()
+            .filter(|(_, d)| **d <= -0.5)
+            .min_by(|a, b| a.1.total_cmp(b.1))
+            .map_or("-".to_string(), |(k, _)| fo4_scene::timeline::key_text(k));
         println!(
-            "play: settled: {} actors, max drop {}, max rise {}; kept at their place: {} not answered yet, {} with nothing under them, {} with ground out of reach or too steep, {} on a platform's part; at {:.3} s of the run (play_cast_settles_on_ground_v1)",
+            "play: settled: {} actors, max drop {} ({most}), max rise {}; kept at their place: {} not answered yet, {} with nothing under them, {} with ground out of reach or too steep, {} on a platform's part; at {:.3} s of the run (play_cast_settles_on_ground_v1)",
             line.0, line.1, line.2, line.3[0], line.3[1], line.3[2], line.3[3], seen.t
         );
         *census = line;
