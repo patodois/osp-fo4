@@ -2349,6 +2349,31 @@ hill is gone.
 **The console's confirmation.** A press that changed a stage or scene waited up to ten seconds for a subtitle while
 the previous confirmation stayed up; it is now shown at once when the target's scripts name what they activated.
 
+### The pods' collision, the seat, and the status line at the end (the twenty-sixth-session step)
+
+**The pods.** Both cryo pod bases' models store collision objects on one physics system; the bodies were refused at
+collision readiness by the furniture's unread record fields (`PNAM`, `FNAM`, `MNAM`, `SNAM`, `WBDT`, the object
+template `OBTE`/`OBTS`, `ATTX`), the reference's `XLRT`, one base's scripts (`VMAD`) and, in the model, animation
+blockers where the doors' sequences can move the bodies' chains (`readiness::Bearing::Moved`). With
+`--play-collision-furniture-fields` (`furn_fields_collision_unchanged_v1`) and `--play-collision-furniture-at-rest`
+(`furn_collision_at_rest_v1`) the bodies stand at their stored transforms, as the drawing at rest shows the doors
+closed. Every other furniture of the loaded cells gains its collision the same way.
+
+**The seat.** The run seats the player in the dream's pod and, on waking, in the vault's pod (a fragment's
+activation read as a sit; `play_player_sit_furniture_v1` follows it into the other space). Their base stores one SNAM
+marker: offset (0, -63.1, 0) with heading -pi in the pod's axes, toward its front window. With
+`--play-player-sit-marker` (`play_player_sit_marker_v1`) the walker stands there, not at the pod's stored position;
+with `--play-sit-passable` (`play_sit_furniture_passable_until_left_v1`) the pod it sits in has no collision until the
+walker's feet leave the pod's object bounds (OBND through the placement, widened by the capsule's radius), then has
+it again. The run's behaviour graph of the vault's pod enters its exit state 11.3 s after the sit and its unoccupied
+state 16.6 s after it; the window does not run the pods' sequences, so the pod stays drawn closed.
+
+**The status line at the end.** After Escape the run goes on to its end and writes its outputs while the play clock
+stands; the line said "loading" (the standing clock) on the last frame. It now says "ending" once the input is over,
+and the window's log prints `play: viewport status at S s of the run: CAUSES` each time the causes change (a cell
+loading, an upload, a cell held for its cast, a scene to spawn, the walker building its walking world, the play clock
+standing, the input ended, paused).
+
 ## What the play mode does not do yet
 
 - The elevators ride only those the caller names (`--play-elevator`), headless and in the scripted window;
@@ -2453,3 +2478,7 @@ the previous confirmation stayed up; it is now shown at once when the target's s
 | `acti_fields_render_unchanged_v1` | `fo4-view --draw-activator-fields` (in the preset since the fourteenth-session step) | that a marker colour, activator flags and an activate text leave the model drawn is prior knowledge | weak |
 | `vm_sit_events_activation_ended_by_other_activation_v1` | `quest_run --sit-end-other-activation` (in the run's arguments since the fifteenth-session step) | a player seated in a furniture activates nothing else (prior knowledge); the walker never sits; the game's own end of the take is not read | weak |
 | `play_platform_shape_nearest_part_v1` | `fo4-view --draw-platform-nearest-part` (in the preset since the fifteenth-session step) | the gear door's hub pieces on nodes the sequences set with no collision under them; that a child node moves with its parent is prior knowledge; the node's own motion is not drawn | weak |
+| `furn_fields_collision_unchanged_v1` | `--play-collision-furniture-fields` (in the preset since round 28) | the published field names; the cryo pods' models store collision objects refused only by these record blockers (one base also by its scripts) and by animation blockers | weak |
+| `furn_collision_at_rest_v1` | `--play-collision-furniture-at-rest` (in the preset since round 28) | the collision side of `furn_parts_drawn_at_rest_v1`: the pods' bodies at the stored transforms, as their doors are drawn | weak |
+| `play_sit_furniture_passable_until_left_v1` | `--play-sit-passable` (with `--play-player-sits`; in the preset since round 28) | the run's sits of the player in the dream's pod and the vault's pod; that the player leaves the pod through its opened front is prior knowledge, the passage through the stored shell this reading's | weak |
+| `play_player_sit_marker_v1` | `--play-player-sit-marker` (with `--play-player-sits`; in the preset since round 28) | the pods' base stores one SNAM marker 63 units toward the front window (read under `furniture_marker_snam_v1`); that a sitter stands at its marker is prior knowledge | weak |

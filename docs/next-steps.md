@@ -426,6 +426,27 @@ cue written. Left: a cue for that wait, the nursery prompt (reachable only from 
 reach of 150: the drawn infant lies 42 to 61 units above the floor), the ten creatures, the road walk beyond the
 second bridge, round 25's items 1, 2 and 4 (janela22 RESULTADO).
 
+Twenty-eighth-session fixes: the stale picture at the second bridge was not reproduced. Replayed in the window with
+the session's own viewer and preset, every frame from the bridge's load (1.65 s, nothing loading after it) to the
+record's end follows the walker; the person's last frame shows the walker standing on the bridge's broken far end,
+not on the earlier deck, and a walk-on past the record's end loads the next square and follows the road. The
+"loading" on that last frame was the status line's standing-clock cause; once the person's input is over the line
+now reads "ending", and the window's log names the status line's causes each time they change. The cryo pods are
+solid: `--play-collision-furniture-fields` (`furn_fields_collision_unchanged_v1`) sets aside a furniture's unread
+fields, template, text, scripts and its reference's location fields for its collision, and
+`--play-collision-furniture-at-rest` (`furn_collision_at_rest_v1`) places its bodies at their stored transforms
+although the doors' sequences can move them (the pods' models store collision on one physics system). The pod the
+run seats the player in no longer traps the walker: `--play-sit-passable`
+(`play_sit_furniture_passable_until_left_v1`) hides its collision until the walker's feet leave its box, and
+`--play-player-sit-marker` (`play_player_sit_marker_v1`) puts the walker at the pod's one SNAM marker, 63 units
+toward the front window, in the dream's pod and on waking (the data gives no open pose for the drawing: the run's
+graph moves the player's pod to its exit and unoccupied states, whose sequences the window does not run). The
+dream's longer load was not reproduced headless: with and without round 27's three furniture drawing switches the
+dream cell loads in the same 1.9 s after the session's earlier loads. Left: a drawn open pod, the nursery prompt from
+the foot end (the infant's box is 138 to 160 units from that eye, past the reach of 150, a caller's number no data
+gives), the exit span, the lower shaft's handoff (the load door's stored teleport, then the lower deck's sequence:
+data both), round 25's items 2 and 4 (janela23 RESULTADO).
+
 The opening run is now visible (`spec/timeline.md`), and since the cast step its people appear as people. `quest_run new-game --timeline FILE` writes what the run
 did, second by second, in a neutral versioned text file (track points with their cells, actor places with the
 rule or assumption behind each, references enabled, disabled and moved, scene lines with speaker, seconds and
