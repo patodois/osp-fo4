@@ -201,6 +201,91 @@ fn steps_onto_a_ledge_lower_than_the_step_height_only() {
     }
 }
 
+/// The 28th session's stop on open road, in synthetic boxes: a slab 8
+/// units high (below the step) with a curb 24 high (above it) beside the
+/// line, met at a slant. The tick's own step-up retry lands back on the
+/// floor a little further along the slab's face and is taken every tick,
+/// so the retry one radius ahead (which would land too high, on the curb)
+/// is never tried and the walker never climbs. Under
+/// `walk_step_lookahead_unless_climbed_v1` the own retry is held back, a
+/// shorter retry ahead climbs within the step height, and the walker goes
+/// on.
+#[test]
+fn a_step_up_that_does_not_climb_tries_shorter_retries_ahead_first() {
+    let b = budget();
+    let mut w = World::new();
+    floor(&mut w, &b);
+    // Each box as a mesh: its top and four sides.
+    let mesh = |lo: V3, hi: V3| {
+        let p = |x: f64, y: f64, z: f64| [x, y, z];
+        [
+            quad(
+                p(lo[0], lo[1], hi[2]),
+                p(hi[0], lo[1], hi[2]),
+                p(hi[0], hi[1], hi[2]),
+                p(lo[0], hi[1], hi[2]),
+            ),
+            quad(
+                p(hi[0], lo[1], lo[2]),
+                p(hi[0], hi[1], lo[2]),
+                p(hi[0], hi[1], hi[2]),
+                p(hi[0], lo[1], hi[2]),
+            ),
+            quad(
+                p(lo[0], lo[1], lo[2]),
+                p(lo[0], lo[1], hi[2]),
+                p(lo[0], hi[1], hi[2]),
+                p(lo[0], hi[1], lo[2]),
+            ),
+            quad(
+                p(lo[0], hi[1], lo[2]),
+                p(lo[0], hi[1], hi[2]),
+                p(hi[0], hi[1], hi[2]),
+                p(hi[0], hi[1], lo[2]),
+            ),
+            quad(
+                p(lo[0], lo[1], lo[2]),
+                p(hi[0], lo[1], lo[2]),
+                p(hi[0], lo[1], hi[2]),
+                p(lo[0], lo[1], hi[2]),
+            ),
+        ]
+        .concat()
+    };
+    w.add_triangles(
+        &mesh([-200.0, -200.0, 0.0], [-10.0, 200.0, 8.0]),
+        "slab",
+        &b,
+    )
+    .unwrap();
+    w.add_triangles(&mesh([-200.0, 6.0, 0.0], [-12.0, 300.0, 24.0]), "curb", &b)
+        .unwrap();
+    let walk = |on: bool| {
+        let p = Params {
+            walk_speed: 300.0,
+            ..P
+        };
+        let s = Settings {
+            step_lookahead_unless_climbed: on,
+            ..Settings::DEFAULT
+        };
+        let mut c = Character::new(p, s, [6.0, 0.0, 0.0]).unwrap();
+        c.settle(&w, 60);
+        let states = run(&mut c, &w, ahead(170f64.to_radians()), 40);
+        (c.feet, states)
+    };
+    // Off (as before): held on the floor before the slab's face.
+    let (feet, states) = walk(false);
+    assert!(feet[0] > -10.0 && near(feet[2], 0.0, 1e-6), "{feet:?}");
+    assert!(states.iter().skip(5).all(|s| s.blocked), "{feet:?}");
+    // On: the first tick climbs, within the step height, and the walker
+    // goes on past the slab's face.
+    let (feet, states) = walk(true);
+    assert!(states[0].stepped, "{:?}", states[0]);
+    assert!(states[0].feet[2] > 1.0 && states[0].feet[2] <= P.step_height + 1e-6);
+    assert!(feet[0] < -100.0, "{feet:?}");
+}
+
 #[test]
 fn stands_on_a_box_and_falls_off_its_edge_to_the_floor() {
     let b = budget();
@@ -598,7 +683,10 @@ fn step_runs_whole_fixed_ticks() {
 
 #[test]
 fn every_controller_rule_is_registered_and_pending() {
-    for r in rules::PARAMS.iter().chain([&rules::TRIANGLE_SIDES]) {
+    for r in rules::PARAMS
+        .iter()
+        .chain([&rules::TRIANGLE_SIDES, &rules::STEP_LOOKAHEAD])
+    {
         assert_eq!(hypotheses::status(r), Some(Status::Pending), "{r}");
     }
     let mut all: Vec<&str> = rules::PARAMS.to_vec();

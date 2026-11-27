@@ -90,6 +90,10 @@ pub struct Play {
     /// `--play-collision-persistent`
     /// (`play_world_persistent_refs_walk_in_square_v1`).
     pub persistent: bool,
+    /// `--play-step-lookahead` (`fo4_walk`'s
+    /// `walk_step_lookahead_unless_climbed_v1`): the walker's step-up tries
+    /// the retries ahead before it takes a retry that does not climb.
+    pub step_lookahead: bool,
     /// `--play-marker-boxes` (`play_collision_marker_boxes_v1`),
     /// `--play-marker-box-layers` (`play_collision_marker_box_layer_passed_v1`),
     /// `--play-marker-box-layer-records`
@@ -203,6 +207,7 @@ impl Play {
             "--play-collision-furniture-fields" => &mut self.furniture_fields,
             "--play-collision-furniture-at-rest" => &mut self.furniture_at_rest,
             "--play-collision-persistent" => &mut self.persistent,
+            "--play-step-lookahead" => &mut self.step_lookahead,
             "--play-marker-boxes" => &mut self.marker_boxes,
             "--play-marker-box-layers" => &mut self.marker_box_layers,
             "--play-marker-box-layer-records" => &mut self.marker_box_layer_records,
@@ -569,6 +574,7 @@ impl Play {
         if let Some(v) = self.tick {
             opts.settings.tick = v;
         }
+        opts.settings.step_lookahead_unless_climbed = self.step_lookahead;
         if let Some(v) = self.slice {
             opts.slice = v;
         }
@@ -653,6 +659,9 @@ impl Play {
         }
         if self.persistent {
             let _ = writeln!(report, "switch: the worldspace's persistent references standing in the loaded grid squares join each walking world's cell build, their collision as any loaded reference's (--play-collision-persistent, {})", crate::rules::WORLD_PERSISTENT_COLLISION);
+        }
+        if self.step_lookahead {
+            let _ = writeln!(report, "switch: the walker's step-up tries the retries one radius, half and a quarter of a radius ahead before it takes a retry with the tick's own move that does not climb (--play-step-lookahead, {})", fo4_walk::rules::STEP_LOOKAHEAD);
         }
         if self.furniture_at_rest {
             let _ = writeln!(report, "switch: a furniture's bodies stand at their stored transforms although its model's controllers or sequences can move them (--play-collision-furniture-at-rest, {})", fo4_scene::hypotheses::FURNITURE_COLLISION_AT_REST);
@@ -878,7 +887,7 @@ mod tests {
 
     #[test]
     fn reads_every_play_option() {
-        let s = read("--play-stand 0.1 --walk-speed 300 --play-reach 150 --play-pick-bounds --play-pick-bounds-activatable --play-load-doors --play-follow-grid --play-slice 0.25 --play-live-world --play-elevator a.esm:0000000A --play-elevator a.esm:B --play-elevator-also-with a.esm:C A.ESM:0000000A --play-elevator-door --play-elevator-held-pose --play-elevator-rigid --play-elevator-door-onward --play-elevator-through-terrain --play-collision-off-chain --play-collision-reference-alpha --play-collision-child-flag-agrees --play-collision-static-fields --play-collision-activator-fields --play-collision-furniture-fields --play-collision-furniture-at-rest --play-collision-persistent --play-player-moveto --play-player-sits --play-sit-passable --play-player-sit-marker --play-around 2 --play-tick 0.02 --run-speed 400 --play-region-walker --play-recheck-marks --play-nowait --play-elevator-also a.esm:D").unwrap();
+        let s = read("--play-stand 0.1 --walk-speed 300 --play-reach 150 --play-pick-bounds --play-pick-bounds-activatable --play-load-doors --play-follow-grid --play-slice 0.25 --play-live-world --play-elevator a.esm:0000000A --play-elevator a.esm:B --play-elevator-also-with a.esm:C A.ESM:0000000A --play-elevator-door --play-elevator-held-pose --play-elevator-rigid --play-elevator-door-onward --play-elevator-through-terrain --play-collision-off-chain --play-collision-reference-alpha --play-collision-child-flag-agrees --play-collision-static-fields --play-collision-activator-fields --play-collision-furniture-fields --play-collision-furniture-at-rest --play-collision-persistent --play-step-lookahead --play-player-moveto --play-player-sits --play-sit-passable --play-player-sit-marker --play-around 2 --play-tick 0.02 --run-speed 400 --play-region-walker --play-recheck-marks --play-nowait --play-elevator-also a.esm:D").unwrap();
         assert_eq!(s.walk_speed, Some(300.0));
         assert_eq!(s.run_speed, Some(400.0));
         assert_eq!(s.tick, Some(0.02));
@@ -899,6 +908,13 @@ mod tests {
         assert!(s.persistent && s.world_options().persistent && s.walker_options().persistent);
         assert!(read("--play-collision-persistent --play-around 0").is_err());
         assert!(!Play::default().world_options().persistent);
+        assert!(s.step_lookahead && s.walker_options().settings.step_lookahead_unless_climbed);
+        assert!(
+            !Play::default()
+                .walker_options()
+                .settings
+                .step_lookahead_unless_climbed
+        );
         assert!(s.sit_passable);
         assert!(read("--play-sit-passable").is_err());
         assert!(s.sit_marker);

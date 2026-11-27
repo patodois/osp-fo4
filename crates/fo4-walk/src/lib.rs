@@ -42,6 +42,11 @@ pub mod rules {
     pub const RUN_SPEED: &str = "walk_speed_run_v1";
     pub const AIR_CONTROL: &str = "walk_no_air_control_v1";
     pub const TRIANGLE_SIDES: &str = "walk_triangles_block_both_sides_v1";
+    /// The step-up's retry with the tick's own move that does not climb
+    /// is held back while retries one radius, half and a quarter of a
+    /// radius ahead are tried (`Settings::step_lookahead_unless_climbed`,
+    /// off by default).
+    pub const STEP_LOOKAHEAD: &str = "walk_step_lookahead_unless_climbed_v1";
     /// Every rule of [`crate::Params`] (the triangle rule belongs to the
     /// world, [`crate::World::rules`]).
     pub const PARAMS: [&str; 9] = [

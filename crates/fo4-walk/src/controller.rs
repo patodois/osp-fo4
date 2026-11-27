@@ -35,6 +35,12 @@ pub struct Settings {
     /// Distance below the feet within which an airborne capsule counts as
     /// landed, world units.
     pub ground_margin: f64,
+    /// Step-up (`walk_step_lookahead_unless_climbed_v1`, off by default):
+    /// a retry with the tick's own move that ends no higher than the start
+    /// and short of the whole move did not climb the edge, so the retry one
+    /// radius ahead is tried before it is taken. Off: any retry that gets
+    /// further than the blocked move is taken.
+    pub step_lookahead_unless_climbed: bool,
 }
 impl Settings {
     pub const DEFAULT: Self = Self {
@@ -42,6 +48,7 @@ impl Settings {
         substep_fraction: 0.25,
         iterations: 12,
         ground_margin: 0.05,
+        step_lookahead_unless_climbed: false,
     };
     pub fn validate(&self) -> Result<()> {
         let ok = self.tick.is_finite()
@@ -357,7 +364,11 @@ impl Character {
     /// ground. First with the tick's own displacement; if that lands no
     /// further than `baseline`, again with the displacement lengthened to
     /// one radius, accepted only when it ends higher than `start` (a tick's
-    /// move is often too short to carry the capsule over an edge).
+    /// move is often too short to carry the capsule over an edge). Under
+    /// [`Settings::step_lookahead_unless_climbed`] a first retry that ends
+    /// no higher and short of the whole move is held back while the one a
+    /// radius ahead, then half and a quarter of a radius ahead, are tried
+    /// (the same acceptance); it is taken only when none of them is.
     fn try_step<W: Space + ?Sized>(
         &mut self,
         world: &W,
@@ -372,12 +383,22 @@ impl Character {
         }
         let progress = |f: V3| (f[0] - start[0]).hypot(f[1] - start[1]);
         let len = g::length(horizontal);
-        let ahead = if len > 0.0 && len < self.params.radius {
-            Some(g::scale(horizontal, self.params.radius / len))
-        } else {
-            None
+        let ahead = |f: f64| {
+            let d = self.params.radius * f;
+            (len > 0.0 && len < d).then(|| g::scale(horizontal, d / len))
         };
-        for (h, lookahead) in [(Some(horizontal), false), (ahead, true)] {
+        // `walk_step_lookahead_unless_climbed_v1`: the tick's own retry is
+        // kept while the ones ahead are tried, one radius ahead, then half
+        // and a quarter of it.
+        let shorter = self.settings.step_lookahead_unless_climbed;
+        let tries = [
+            (Some(horizontal), false),
+            (ahead(1.0), true),
+            (ahead(0.5).filter(|_| shorter), true),
+            (ahead(0.25).filter(|_| shorter), true),
+        ];
+        let mut own = None;
+        for (h, lookahead) in tries {
             let Some(h) = h else { continue };
             let mut flags = Flags::default();
             let moved = self.move_and_slide(world, up, h, &mut flags);
@@ -390,10 +411,18 @@ impl Character {
                 && progress(down) > baseline + 1e-6
                 && (!lookahead || higher)
             {
+                if !lookahead
+                    && self.settings.step_lookahead_unless_climbed
+                    && !higher
+                    && progress(down) < len - 1e-6
+                {
+                    own = Some(down);
+                    continue;
+                }
                 return Some(down);
             }
         }
-        None
+        own
     }
 
     /// Advances one fixed tick.

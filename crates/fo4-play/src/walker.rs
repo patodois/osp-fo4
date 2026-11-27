@@ -533,6 +533,9 @@ fn collision_rules(o: &Options) -> std::collections::BTreeSet<&'static str> {
     if o.persistent {
         out.insert(crate::rules::WORLD_PERSISTENT_COLLISION);
     }
+    if o.settings.step_lookahead_unless_climbed {
+        out.insert(fo4_walk::rules::STEP_LOOKAHEAD);
+    }
     out
 }
 
