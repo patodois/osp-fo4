@@ -354,6 +354,23 @@ visibility at least. The living-room shelving has its collision (shelf boards of
 walking world); the 21st B walker stood about 84 units in front of it with no key held, not inside it. Left: actors as
 pick targets, the throat band, the floating television, the creature in the slab, the robot's object template.
 
+Twenty-fourth-session fixes: the fine vertical streaks a person met on the opening room's lit walls were in every
+window since at least janela9 (the first frame of every session from then on is the same image), not new in round 23.
+The window's face normal came from screen derivatives of the f32 world position, which some 90,000 units from the
+origin steps by 1/128 unit while a close wall's pixel spans a few hundredths; on a wall along no world axis the
+rounding is the same down a screen column. The normal now comes from the pixel's unprojected camera-relative position
+(`surface.wesl`, `view_position`); a GPU test draws a turned wall that far out from 25 units and holds it to the CPU's
+frame, and a plain test keeps world-position derivatives out of the shader. The soft card's tall edge against the sky
+was the window's near plane at 15 units cutting a sheet whose plane passes 14.9 units from the eye (its own border
+fades by vertex alpha): `--view-near UNITS` (`window_near_clip_assumed_v1`, pending, 5 in the play preset) sets the
+window camera's near plane; the CPU reference keeps 15. `--play-pick-actors` (`play_activate_actor_box_v1`, pending,
+off by default and not in the preset) lets the activation's ray meet the run's actors as upright 40 by 120 unit boxes
+where the run last put them. Left: the exit device's four pieces (visibility rest state, the 7-byte blend bool
+interpolator, the graph's start state, the activate-text field), the floating television, heels on slopes, the throat
+band, the pale ground sheet, the robot's object template. Measured, not fixed: the east living room's creature is
+stored 11.5 units above the terrain, the only walking surface under it (the house's collision there lies lower); why it
+looks sunk into the drawn slab is not settled.
+
 The opening run is now visible (`spec/timeline.md`), and since the cast step its people appear as people. `quest_run new-game --timeline FILE` writes what the run
 did, second by second, in a neutral versioned text file (track points with their cells, actor places with the
 rule or assumption behind each, references enabled, disabled and moved, scene lines with speaker, seconds and
