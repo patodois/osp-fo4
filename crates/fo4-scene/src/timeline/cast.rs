@@ -540,8 +540,15 @@ pub fn start_poses(
             section: plan.section,
             keywords: keywords.as_ref().map_err(|s| s.as_str()),
         };
+        // An actor added after the markers' (a ride's model, a skinned
+        // placement) has no marker to say how it stands: not posed.
+        let Some(marker) = cast.markers.get(k) else {
+            cast.poses[k] =
+                "rest pose: added after the cast's markers, no marker to pose it from".into();
+            continue;
+        };
         // A seated actor under --actor-sit-clip: its furniture's clip.
-        let seated = match &cast.markers[k].pose {
+        let seated = match &marker.pose {
             super::Pose::Seated { base, .. } if switches.sit => Some(base.clone()),
             _ => None,
         };

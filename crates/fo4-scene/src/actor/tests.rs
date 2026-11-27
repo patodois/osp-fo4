@@ -940,6 +940,25 @@ fn a_ride_model_is_drawn_on_its_own_nodes_and_a_moved_node_carries_its_children(
         .as_deref()
         .is_some_and(|l| l.contains("1 skinned shapes")));
     assert!(crate::timeline::ride::report(&cast, &[(0, None)]).starts_with("ride\tdrawn\t"));
+    // Start poses asked after the ride was added: the ride's actor has no
+    // marker; it keeps its rest pose, said why, instead of a panic.
+    let switches = crate::char_graph::Switches {
+        start: true,
+        ..Default::default()
+    };
+    let posed = crate::timeline::cast::start_poses(
+        &mut cast,
+        &loader,
+        &v,
+        &switches,
+        0.,
+        crate::RuleLevel::Hypotheses,
+        &limits,
+        &b,
+    )
+    .unwrap();
+    assert!(posed.is_empty());
+    assert!(cast.poses[0].contains("no marker"), "{:?}", cast.poses);
     // Another extra than the ride's says nothing of the ride being drawn.
     let other = crate::timeline::ride::report(&cast, &[(1, None)]);
     assert!(
