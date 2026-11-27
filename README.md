@@ -1,4 +1,4 @@
-# osp-fo4
+<h1 align="center"><img src="docs/title.png" alt="osp-fo4" width="243"></h1>
 
 An open-source, clean-room reimplementation of Fallout 4's engine (Bethesda's
 Creation Engine) in Rust, for people who own the game: readers for its data

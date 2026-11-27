@@ -73,6 +73,10 @@ local artifacts under `build/` or `reports/`, which Git ignores. A test
 (`fo4-unpack/tests/repository_guard.rs`) rejects game file types and machine
 paths in versioned files.
 
+The one image in the tree is `docs/title.png`, the README's title: lettering
+drawn for this project, with no game art in it. Add no other image without the
+owner's decision.
+
 ## Code conventions
 
 - `#![forbid(unsafe_code)]` everywhere.
