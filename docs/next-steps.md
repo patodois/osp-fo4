@@ -448,6 +448,23 @@ the foot end (the infant's box is 138 to 160 units from that eye, past the reach
 gives), the exit span, the lower shaft's handoff (the load door's stored teleport, then the lower deck's sequence:
 data both), round 25's items 2 and 4 (janela23 RESULTADO).
 
+Twenty-ninth-round fixes (the twenty-seventh sessions): the sofa and the crib a person walked across are persistent
+references of the worldspace's persistent cell, which the drawing joined and no walking world read:
+`--play-collision-persistent` (`play_world_persistent_refs_walk_in_square_v1`, in the preset) joins them to each
+walking world's build, and the 27th A record replayed headless gives the same 274 stages while the walker is stopped
+by the sofa and by the crib's side. A census of the house's and the vault's furniture, movable statics, activators
+and containers (`column_probe` with `COLUMN_PROBE_CENSUS`): the vault's benches and tables were refused for one unread
+furniture subrecord, `FNPR`, now among the furniture fields both readings set aside; the containers (dressers,
+changing table, washer, dryer, wet bars, the vault's lockers and desks) store collision but stand in no walking
+world (container fields and drawer sequences not read; the house's are not drawn either); scripted activators and the pod opposite the player's (its reference's
+`ONAM` and `XACT`) stay out. The exit deck's wait is the gear door's own sequence (its deck parts at their stored
+transforms for 36 s of the 43.3 s opening, which starts about 15.7 s after E); the status line now says
+`platform moving - ready in N s`, then `platform ready`. Driven headless at two pods of each row, the pods' fronts and
+sides stop the capsule within 9 units of their bounds (three sides face a stand in the gap, the rears no floor). The dream's hold is the walker's walking world built in the
+window while the window loads the same cell (8.2 s in the sessions, 2.9 s headless on the same build): not cut. Next:
+a memo of parsed collision models across the walker's builds (the dream room shares the vault's models), the
+containers' fields, the player's pod drawn open, the town creatures' close looks, the road past the second bridge.
+
 The opening run is now visible (`spec/timeline.md`), and since the cast step its people appear as people. `quest_run new-game --timeline FILE` writes what the run
 did, second by second, in a neutral versioned text file (track points with their cells, actor places with the
 rule or assumption behind each, references enabled, disabled and moved, scene lines with speaker, seconds and
