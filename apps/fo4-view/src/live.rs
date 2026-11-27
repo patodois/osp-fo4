@@ -318,6 +318,7 @@ mod tests {
                 colour: None,
                 lit: false,
                 smooth: false,
+                soft_depth: None,
             },
             key: SurfaceKey {
                 blend: None,

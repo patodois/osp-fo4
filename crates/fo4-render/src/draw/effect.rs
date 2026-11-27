@@ -88,6 +88,9 @@ struct Terms {
     /// not the NIF's (or has no pairing): the material's value is drawn.
     material_fields: Vec<(bool, u32)>,
     left_out: bool,
+    /// The soft flag's falloff depth as stored, when the flag is on
+    /// (Soft_Effect, or the material's soft flag).
+    soft: Option<f32>,
     color: [f32; 3],
     scale: f32,
     alpha: Alpha,
@@ -318,9 +321,10 @@ impl Builder<'_, '_> {
                         .into_iter()
                         .filter_map(|(on, name)| on.then_some(name))
                         .collect(),
-                        left_out: e.soft_enabled.0 != 0
+                        left_out: (e.soft_enabled.0 != 0 && !self.options.soft_effects)
                             || e.effect_lighting_enabled.0 != 0
                             || e.lighting_influence != 1.,
+                        soft: (e.soft_enabled.0 != 0).then_some(e.soft_depth),
                         color: e.base_color,
                         scale: e.base_color_scale,
                         alpha: Alpha {
@@ -410,9 +414,14 @@ impl Builder<'_, '_> {
                     material_over_controller: false,
                     material_differs: [false; crate::TRACKS],
                     material_fields: Vec::new(),
-                    left_out: flags1 & SOFT != 0
+                    left_out: (flags1 & SOFT != 0 && !self.options.soft_effects)
                         || flags2 & LIGHTING != 0
                         || byte(f, "Lighting Influence") != Some(255),
+                    soft: if flags1 & SOFT != 0 {
+                        Some(floats::<1>(f, "Soft Falloff Depth", file)?[0] as f32)
+                    } else {
+                        None
+                    },
                     color: [base[0] as f32, base[1] as f32, base[2] as f32],
                     scale: scale as f32,
                     alpha_tested: alpha.test_enabled != 0,
@@ -554,11 +563,29 @@ impl Builder<'_, '_> {
         }
         self.opacity_rule(&terms.alpha)?;
         terms.alpha.validate()?;
+        // The soft fade, on a blended surface only: a blended sample reads
+        // the opaque depth every opaque draw left (on the CPU and on the
+        // GPU alike), an opaque one only the draws before it.
+        let soft_depth = terms
+            .soft
+            .filter(|_| self.options.soft_effects && terms.alpha.enabled != 0);
+        if self.options.soft_effects && terms.soft.is_some() && soft_depth.is_none() {
+            // An unblended soft surface keeps the left-out rule.
+            if !self.draw_rule(h::EFFECT_LEFT_OUT)? {
+                return Err(error(
+                    "UnverifiedEffectSurface",
+                    file,
+                    at,
+                    h::EFFECT_LEFT_OUT,
+                ));
+            }
+        }
         for rule in [h::EFFECT_SHADING]
             .into_iter()
             .chain((terms.alpha.enabled != 0).then_some(h::EFFECT_BLEND))
             .chain((terms.alpha.enabled != 0).then_some(h::EFFECT_ORDER))
             .chain(terms.left_out.then_some(h::EFFECT_LEFT_OUT))
+            .chain(soft_depth.is_some().then_some(h::EFFECT_SOFT_FADE))
             .chain(vertex_alpha_rule.then_some(h::EFFECT_VERTEX_ALPHA_COLORS))
             .chain(
                 [
@@ -637,6 +664,7 @@ impl Builder<'_, '_> {
             colour_terms: (terms.color, terms.scale),
             effect: true,
             material_blend: terms.from_material && terms.alpha.enabled != 0,
+            soft_depth,
         };
         self.clock_surface(&mut surface, tracks, file, at)?;
         self.clock_held(n, shader, f, &terms.material_fields, file, at)?;

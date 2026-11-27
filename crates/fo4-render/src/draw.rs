@@ -120,6 +120,12 @@ pub struct BuildOptions {
     /// Keep each model shape draw's node chain ([`Build::chains`]). Off:
     /// none kept, the list as before.
     pub chains: bool,
+    /// `effect_soft_depth_fade_linear_v1` (`--draw-soft-effects`): an
+    /// effect surface whose shader or material sets its soft flag carries
+    /// its soft falloff depth as stored ([`Draw::soft_depth`]); the frame
+    /// fades its alpha by the gap to the opaque depth behind it. Off: the
+    /// term is left out (`effect_soft_lighting_left_out_v1`), as before.
+    pub soft_effects: bool,
 }
 /// Limits of the textures kept as stored blocks ([`BuildOptions::blocks`]).
 /// A texture whose format or chosen level cannot be kept as blocks is
@@ -146,6 +152,7 @@ impl BuildOptions {
             clock: fo4_scene::clock::Switches::OFF,
             vertex_normals: false,
             chains: false,
+            soft_effects: false,
         }
     }
     /// The reference limits, with block-compressed textures kept as blocks.
@@ -391,6 +398,8 @@ struct Surface {
     /// numbering under `bgsm_blend_factors_alpha_function_v1`), not by the
     /// model's own alpha property.
     material_blend: bool,
+    /// [`Draw::soft_depth`].
+    soft_depth: Option<f32>,
 }
 struct Builder<'a, 's> {
     loader: &'a Loader<'s>,
@@ -1487,6 +1496,7 @@ impl Builder<'_, '_> {
                     palette: None,
                     clock: Default::default(),
                     colour: None,
+                    soft_depth: None,
                     material_blend: c.alpha_blend.enabled != 0,
                     colour_terms: ([1.; 3], 1.),
                     effect: !lighting,
@@ -1694,6 +1704,7 @@ impl Builder<'_, '_> {
             colour_terms: ([1.; 3], 1.),
             effect: !lighting,
             material_blend: false,
+            soft_depth: None,
         };
         let tracks = self.shader_clock(n, shader, file)?;
         self.clock_surface(
@@ -2131,6 +2142,7 @@ impl Builder<'_, '_> {
                         falloff: surface.falloff,
                         palette: surface.palette,
                         colour: surface.colour,
+                        soft_depth: surface.soft_depth,
                     },
                     self.budget,
                 )?;
@@ -2781,6 +2793,7 @@ impl Builder<'_, '_> {
                             falloff: surface.falloff,
                             palette: surface.palette,
                             colour: surface.colour,
+                            soft_depth: surface.soft_depth,
                         },
                         self.budget,
                     )?;

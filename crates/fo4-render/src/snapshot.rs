@@ -535,6 +535,7 @@ pub fn read(bytes: &[u8], l: &Limits, b: &Budget) -> Result<DrawList> {
             uv_offset,
             uv_scale,
             raw_tile_flags,
+            soft_depth: None,
         });
     }
     if version2 {

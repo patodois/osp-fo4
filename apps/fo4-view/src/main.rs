@@ -77,6 +77,7 @@ fn load_scene_with<'s>(
             clock: s.clock,
             vertex_normals: s.light.vertex_normals,
             chains: !s.play_platforms.is_empty() || s.drawing.held_doors || s.drawing.static_leaves,
+            soft_effects: s.drawing.soft_effects,
             ..load::build_options(s.textures, s.level)
         },
         s.scene_memory,
@@ -377,6 +378,7 @@ fn window_aids(s: &cli::Scene, debug: cli::WindowDebug) -> AnyResult<gpu::Aids> 
         None => None,
     };
     Ok(gpu::Aids {
+        soft_effects: s.drawing.soft_effects,
         frame_log,
         script: debug.path.map(|p| gpu::Script::new(p, shots)),
     })

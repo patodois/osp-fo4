@@ -458,6 +458,14 @@ pub struct Draw {
     /// vertex colours hold the tint as before.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub colour: Option<[f32; 3]>,
+    /// An effect surface's soft falloff depth as its shader or material
+    /// stores it (game units), set only under
+    /// `draw::BuildOptions::soft_effects` when the soft flag is on: the
+    /// frame multiplies the sample's alpha by the gap between the opaque
+    /// depth behind it and its own depth over this depth, clamped to 0..1
+    /// (`effect_soft_depth_fade_linear_v1`); `None`, no fade, as before.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub soft_depth: Option<f32>,
 }
 /// Slots of [`Animation::tracks`].
 pub const TRACK_U_OFFSET: usize = 0;

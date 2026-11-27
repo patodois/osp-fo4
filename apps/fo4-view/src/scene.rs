@@ -77,9 +77,13 @@ pub struct SurfaceParams {
     /// Lit with the mesh's vertex normals (a lit draw whose mesh keeps
     /// normals: `light_vertex_normals_v1`), as the CPU's raster does.
     pub smooth: bool,
+    /// `fo4_render::Draw::soft_depth` (`effect_soft_depth_fade_linear_v1`):
+    /// the alpha fades by the gap to the opaque depth the window copied
+    /// after its opaque pass over this depth.
+    pub soft_depth: Option<f32>,
 }
 /// Words of [`SurfaceParams::bits`].
-pub const PARAM_WORDS: usize = 19;
+pub const PARAM_WORDS: usize = 20;
 impl SurfaceParams {
     pub fn bits(&self) -> [u32; PARAM_WORDS] {
         let falloff = self.falloff.unwrap_or([0.; 4]);
@@ -104,6 +108,7 @@ impl SurfaceParams {
             colour[1].to_bits(),
             colour[2].to_bits(),
             u32::from(self.lit) | u32::from(self.smooth) << 1,
+            self.soft_depth.unwrap_or(0.).to_bits(),
         ]
     }
 }
@@ -1461,6 +1466,7 @@ fn surface_params(alpha: Alpha, uv_offset: [f64; 2], uv_scale: [f64; 2]) -> Surf
         colour: None,
         lit: false,
         smooth: false,
+        soft_depth: None,
     }
 }
 
@@ -1705,6 +1711,7 @@ pub fn convert_lit(
                 .palette
                 .map_or(0, |p| u32::from(p.colour) | u32::from(p.alpha) << 1),
             colour: draw.colour,
+            soft_depth: draw.soft_depth,
             lit: light.is_some_and(|(l, lit)| (l.lit || l.fog.is_some()) && lit[di]),
             smooth: light.is_some_and(|(l, lit)| (l.lit || l.fog.is_some()) && lit[di])
                 && draw.falloff.is_none()
@@ -2023,6 +2030,7 @@ mod tests {
             falloff: None,
             palette: None,
             colour: None,
+            soft_depth: None,
         }
     }
     fn list() -> DrawList {
@@ -2660,6 +2668,16 @@ mod tests {
         let plain = &scene.surfaces[scene.instances[0].surface];
         assert_eq!((plain.params.falloff, plain.palette), (None, None));
         assert_ne!(scene.instances[0].surface, scene.instances[1].surface);
+        // A soft depth is its surface's last word, 0 without one, and
+        // gives the draw a surface of its own.
+        assert_eq!(plain.params.bits()[PARAM_WORDS - 1], 0);
+        let mut l = list();
+        l.draws[2].soft_depth = Some(2048.);
+        let soft = convert(&mut l, &RenderOptions::REFERENCE).unwrap();
+        let s = &soft.surfaces[soft.instances[2].surface];
+        assert_eq!(s.params.soft_depth, Some(2048.));
+        assert_eq!(s.params.bits()[PARAM_WORDS - 1], 2048f32.to_bits());
+        assert_ne!(soft.instances[2].surface, soft.instances[0].surface);
         // A palette kept as stored blocks is refused: the lookup reads
         // decoded texels.
         let mut l = list();

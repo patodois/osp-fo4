@@ -51,8 +51,145 @@ pub struct ViewerPlugin;
 impl Plugin for ViewerPlugin {
     fn build(&self, app: &mut App) {
         embedded_asset!(app, "surface.wesl");
-        app.add_plugins(MaterialPlugin::<SurfaceMaterial>::default());
+        app.add_plugins(MaterialPlugin::<SurfaceMaterial>::default())
+            .add_plugins((
+                bevy::render::extract_resource::ExtractResourcePlugin::<SoftDepthBuffer>::default(),
+                bevy::render::extract_component::ExtractComponentPlugin::<SoftDepthCamera>::default(
+                ),
+            ));
+        if let Some(render) = app.get_sub_app_mut(RenderApp) {
+            use bevy::core_pipeline::{
+                core_3d::{main_opaque_pass_3d, main_transparent_pass_3d},
+                schedule::Core3d,
+            };
+            render.add_systems(
+                Core3d,
+                copy_soft_depth
+                    .after(main_opaque_pass_3d)
+                    .before(main_transparent_pass_3d),
+            );
+        }
     }
+}
+
+/// Bytes before the copied depth in [`SoftDepthBuffer`]: its header (width,
+/// height, words a row, 1 when the depth below is this frame's) padded to
+/// the copy offset alignment.
+pub const SOFT_DEPTH_HEADER_BYTES: u64 = 256;
+/// The window's soft depth buffer holds a view of up to this size; a larger
+/// view draws its soft surfaces without the fade (`--draw-soft-effects`).
+pub const SOFT_DEPTH_MAX_VIEW: [u32; 2] = [4096, 2880];
+
+/// `--draw-soft-effects` (`effect_soft_depth_fade_linear_v1`): the buffer
+/// every material binds at 5, into which the colour camera's opaque depth
+/// is copied after the opaque pass and before the blended one
+/// ([`copy_soft_depth`]); its header says whether it holds this frame's.
+/// Without the switch a header alone (nothing copied, no fade).
+#[derive(Resource, Clone, bevy::render::extract_resource::ExtractResource)]
+#[extract_app(RenderApp)]
+pub struct SoftDepthBuffer(pub Handle<ShaderBuffer>);
+
+/// The window was started with `--draw-soft-effects` ([`Aids::soft_effects`]).
+#[derive(Resource)]
+struct SoftEffectsOn;
+
+/// The camera whose opaque depth [`copy_soft_depth`] copies.
+#[derive(Component, Clone, Copy, bevy::render::extract_component::ExtractComponent)]
+#[extract_app(RenderApp)]
+pub struct SoftDepthCamera;
+
+/// Bytes of the soft depth buffer for a view of `size` (rows padded to 256
+/// bytes, as a copy from a texture to a buffer asks).
+pub fn soft_depth_bytes(size: [u32; 2]) -> (u32, u64) {
+    let row = (size[0] * 4).div_ceil(256) * 256;
+    (
+        row,
+        SOFT_DEPTH_HEADER_BYTES + u64::from(row) * u64::from(size[1]),
+    )
+}
+
+/// The soft depth buffer every material binds: inserted for a view of
+/// `size` (`Some`: the switch is on), or found, or a header alone.
+fn soft_depth_buffer(world: &mut World, size: Option<[u32; 2]>) -> Handle<ShaderBuffer> {
+    if size.is_none() {
+        if let Some(b) = world.get_resource::<SoftDepthBuffer>() {
+            return b.0.clone();
+        }
+    }
+    let bytes = size.map_or(SOFT_DEPTH_HEADER_BYTES, |s| soft_depth_bytes(s).1);
+    world.init_resource::<Assets<ShaderBuffer>>();
+    let handle = world
+        .resource_mut::<Assets<ShaderBuffer>>()
+        .add(ShaderBuffer::with_size(
+            bytes,
+            RenderAssetUsages::RENDER_WORLD,
+        ));
+    world.insert_resource(SoftDepthBuffer(handle.clone()));
+    handle
+}
+
+/// Copies the soft depth camera's opaque depth into the soft depth buffer
+/// and writes its header (a render system between Bevy's opaque and
+/// blended passes): the blended surfaces then read the depth every opaque
+/// draw left, as the CPU's `opaque_depth` holds it. A view larger than the
+/// buffer, or a depth that cannot be copied, writes a header that says so
+/// and nothing fades.
+fn copy_soft_depth(
+    view: bevy::render::renderer::ViewQuery<
+        &bevy::render::view::ViewDepthStencilTexture,
+        With<SoftDepthCamera>,
+    >,
+    soft: Option<Res<SoftDepthBuffer>>,
+    buffers: Res<bevy::render::render_asset::RenderAssets<bevy::render::storage::GpuShaderBuffer>>,
+    queue: Res<bevy::render::renderer::RenderQueue>,
+    mut ctx: bevy::render::renderer::RenderContext,
+) {
+    use bevy::render::render_resource::{
+        TexelCopyBufferInfo, TexelCopyBufferLayout, TextureUsages,
+    };
+    let Some(soft) = soft else {
+        return;
+    };
+    let Some(gpu) = buffers.get(&soft.0) else {
+        return;
+    };
+    let texture = view.into_inner().texture();
+    let size = texture.size();
+    let (row, bytes) = soft_depth_bytes([size.width, size.height]);
+    let fits = bytes <= gpu.buffer.size() && texture.usage().contains(TextureUsages::COPY_SRC);
+    let header: Vec<u8> = [size.width, size.height, row / 4, u32::from(fits)]
+        .iter()
+        .flat_map(|v| v.to_le_bytes())
+        .collect();
+    queue.write_buffer(&gpu.buffer, 0, &header);
+    if !fits {
+        return;
+    }
+    ctx.command_encoder().copy_texture_to_buffer(
+        texture.as_image_copy(),
+        TexelCopyBufferInfo {
+            buffer: &gpu.buffer,
+            layout: TexelCopyBufferLayout {
+                offset: SOFT_DEPTH_HEADER_BYTES,
+                bytes_per_row: Some(row),
+                rows_per_image: Some(size.height),
+            },
+        },
+        size,
+    );
+}
+
+/// The colour camera's depth usages with the soft depth copy.
+fn soft_depth_camera() -> (Camera3d, SoftDepthCamera) {
+    use bevy::render::render_resource::TextureUsages;
+    (
+        Camera3d {
+            depth_texture_usages: (TextureUsages::RENDER_ATTACHMENT | TextureUsages::COPY_SRC)
+                .into(),
+            ..default()
+        },
+        SoftDepthCamera,
+    )
 }
 
 /// Uniform block of `surface.wesl` (`SurfaceParams`), field for field.
@@ -76,6 +213,8 @@ pub struct SurfaceUniform {
     /// Bit 0: lit by the light buffer (`SurfaceParams::lit`); bit 1: lit
     /// with the vertex normals (`SurfaceParams::smooth`).
     pub mode: u32,
+    /// `SurfaceParams::soft_depth` (0 without one: no fade).
+    pub soft_depth: f32,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -113,6 +252,10 @@ pub struct SurfaceMaterial {
     /// material; a buffer without light when the frame has none.
     #[storage(4, read_only)]
     pub lights: Handle<ShaderBuffer>,
+    /// The opaque depth after the opaque pass ([`SoftDepthBuffer`]), one
+    /// buffer for every material.
+    #[storage(5, read_only)]
+    pub soft_depth: Handle<ShaderBuffer>,
     pub key: MaterialKey,
 }
 
@@ -431,6 +574,7 @@ fn uniform(p: &crate::scene::SurfaceParams) -> SurfaceUniform {
             Vec4::new(c[0], c[1], c[2], 1.)
         },
         mode: u32::from(p.lit) | u32::from(p.smooth) << 1,
+        soft_depth: p.soft_depth.unwrap_or(0.),
     }
 }
 
@@ -441,6 +585,7 @@ fn surface_material(
     image: Handle<Image>,
     palette: Option<Handle<Image>>,
     lights: Handle<ShaderBuffer>,
+    soft_depth: Handle<ShaderBuffer>,
     tag_pass: bool,
     rank: u32,
 ) -> SurfaceMaterial {
@@ -449,6 +594,7 @@ fn surface_material(
         texture: image,
         palette,
         lights,
+        soft_depth,
         key: MaterialKey {
             surface: surface.key,
             tag_pass,
@@ -509,6 +655,7 @@ fn spawn_instances(
         Some(b) => b.0.clone(),
         None => insert_light_buffer(world, None),
     };
+    let soft = soft_depth_buffer(world, None);
     let mut materials = world.resource_mut::<Assets<SurfaceMaterial>>();
     let mut handles = std::collections::BTreeMap::new();
     let mut entities = Vec::with_capacity(instances.len());
@@ -532,6 +679,7 @@ fn spawn_instances(
                     images[surface.texture].clone(),
                     surface.palette.map(|p| images[p].clone()),
                     lights.clone(),
+                    soft.clone(),
                     tag_pass,
                     rank,
                 ))
@@ -604,10 +752,12 @@ fn spawn_sky(
             falloff: Vec4::ZERO,
             tint: Vec4::ONE,
             mode: 0,
+            soft_depth: 0.,
         },
         texture: image,
         palette: None,
         lights,
+        soft_depth: soft_depth_buffer(world, None),
         key: MaterialKey {
             surface: crate::scene::SurfaceKey {
                 blend: None,
@@ -741,6 +891,12 @@ pub fn headless(
     }
     let world = app.world_mut();
     let lights = insert_light_buffer(world, scene.light.as_ref());
+    // `--draw-soft-effects`: a list with a soft surface copies the colour
+    // pass's opaque depth for it.
+    let soft = scene.surfaces.iter().any(|s| s.params.soft_depth.is_some());
+    if soft {
+        soft_depth_buffer(world, Some([width, height]));
+    }
     let sky = scene.light.as_ref().is_some_and(|l| l.sky);
     let mut targets = Vec::new();
     let passes: &[bool] = if want_tags { &[false, true] } else { &[false] };
@@ -758,13 +914,16 @@ pub fn headless(
         if sky && !tag_pass {
             spawn_sky(world, pose.0, k, lights.clone(), &up);
         }
-        world.spawn((
+        let mut c = world.spawn((
             camera_bundle(pose, camera.frustum, false, clear, k as isize, k),
             RenderTarget::Image(target.clone().into()),
             // Indirect drawing orders a batch's draws on the GPU, which
             // changes exact depth ties from run to run.
             bevy::render::view::NoIndirectDrawing,
         ));
+        if soft && !tag_pass {
+            c.insert(soft_depth_camera());
+        }
         targets.push(target);
     }
 
@@ -1316,7 +1475,11 @@ fn spawn_window_scene(world: &mut World) {
     };
     // The window's first resize sets the vertical slopes from its aspect.
     let frustum = fo4_scene::camera::reference_frustum(fo4_scene::camera::REFERENCE_SIZE);
-    world.spawn((camera_bundle(pose, frustum, true, clear, 0, 0), FlyCamera));
+    let soft = world.contains_resource::<SoftEffectsOn>();
+    let mut c = world.spawn((camera_bundle(pose, frustum, true, clear, 0, 0), FlyCamera));
+    if soft {
+        c.insert(soft_depth_camera());
+    }
 }
 
 /// Mouse motion used for looking this frame: the raw device motion when
@@ -3897,9 +4060,12 @@ fn upload_waiting(world: &mut World, live: &mut Live) -> Result<(), String> {
                     Some(b) => b.0.clone(),
                     None => insert_light_buffer(world, None),
                 };
+                let soft = soft_depth_buffer(world, None);
                 let h = world
                     .resource_mut::<Assets<SurfaceMaterial>>()
-                    .add(surface_material(surface, image, palette, lights, false, 0));
+                    .add(surface_material(
+                        surface, image, palette, lights, soft, false, 0,
+                    ));
                 materials.insert(*id, h.clone());
                 h
             };
@@ -3998,11 +4164,18 @@ pub(crate) fn stream_pbr() -> bevy::pbr::PbrPlugin {
 /// `--script-shots`); nothing runs without them.
 #[derive(Default)]
 pub struct Aids {
+    /// `--draw-soft-effects`: the window's soft depth buffer and copy
+    /// ([`SoftDepthBuffer`], [`SOFT_DEPTH_MAX_VIEW`]).
+    pub soft_effects: bool,
     pub frame_log: Option<std::fs::File>,
     pub script: Option<Script>,
 }
 impl Aids {
     fn add_to(self, app: &mut App) {
+        if self.soft_effects {
+            soft_depth_buffer(app.world_mut(), Some(SOFT_DEPTH_MAX_VIEW));
+            app.insert_resource(SoftEffectsOn);
+        }
         if let Some(file) = self.frame_log {
             app.insert_resource(FrameLog::new(file))
                 .add_systems(First, frame_begin)

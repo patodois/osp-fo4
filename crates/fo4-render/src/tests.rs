@@ -63,6 +63,7 @@ fn list() -> DrawList {
             uv_offset: [0.; 2],
             uv_scale: [1.; 2],
             raw_tile_flags: None,
+            soft_depth: None,
         }],
         overlays: Vec::new(),
         blocks: Default::default(),
@@ -1196,4 +1197,48 @@ fn the_visible_points_are_the_nearest_faces_at_the_grid_cells() {
     assert!(back
         .iter()
         .all(|(k, p, _)| *k >= walls.len() && (p[0] - 100.).abs() < 1e-6));
+}
+#[test]
+fn a_soft_blended_draw_fades_by_its_gap_to_the_opaque_depth_behind_it() {
+    // An opaque blue quad at depth 3, a blended red one (alpha 0.5) at
+    // depth 1 in front of it: gap 2.
+    let mut l = list();
+    l.textures[0].rgba = vec![0., 0., 1., 1.];
+    l.textures.push(Texture {
+        mips: Vec::new(),
+        width: 1,
+        height: 1,
+        rgba: vec![1., 0., 0., 0.5],
+        mip: 0,
+        srgb: false,
+    });
+    l.draws[0].world.scale = 3.;
+    l.draws.push(Draw {
+        sidedness: crate::Sidedness::default(),
+        instance: 8,
+        texture: 1,
+        world: Transform::IDENTITY,
+        alpha: Alpha {
+            enabled: 1,
+            source: 6,
+            destination: 7,
+            ..alpha()
+        },
+        ..l.draws[0]
+    });
+    let plain = frame(&l, &camera(), 1).color[0];
+    assert_eq!(plain, [0.5, 0., 0.5, 0.75]);
+    // Soft depth 4: alpha 0.5 * 2 / 4 = 0.25.
+    l.draws[1].soft_depth = Some(4.);
+    let soft = frame(&l, &camera(), 1).color[0];
+    assert_eq!(soft[..3], [0.25, 0., 0.75]);
+    // Soft depth 1: the gap is past it, no fade; 0 or below: no fade.
+    l.draws[1].soft_depth = Some(1.);
+    assert_eq!(frame(&l, &camera(), 1).color[0], plain);
+    l.draws[1].soft_depth = Some(0.);
+    assert_eq!(frame(&l, &camera(), 1).color[0], plain);
+    // Nothing opaque behind it: no fade.
+    l.draws[1].soft_depth = Some(4.);
+    l.draws.remove(0);
+    assert_eq!(frame(&l, &camera(), 1).color[0][..3], [0.5, 0., 0.]);
 }

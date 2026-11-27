@@ -61,6 +61,7 @@ fn surface(texture: usize, blend: Option<(BlendFactor, BlendFactor)>, overlay: b
             colour: None,
             lit: false,
             smooth: false,
+            soft_depth: None,
         },
         key: SurfaceKey {
             blend,
@@ -610,6 +611,7 @@ fn cpu_and_gpu_frames_agree_on_falloff_palette_colour_alpha_clamp_and_vertex_alp
         falloff: None,
         palette: None,
         colour: None,
+        soft_depth: None,
     };
     let tri = vec![[0, 1, 2], [0, 2, 3]];
     let mut list = DrawList {
@@ -889,6 +891,7 @@ fn cpu_and_gpu_frames_agree_on_clock_driven_uv_opacity_colour_and_falloff() {
         falloff: None,
         palette: None,
         colour: None,
+        soft_depth: None,
     };
     let key = |time: f32, value: f32, tangent: f32| Key {
         time,
@@ -1146,6 +1149,7 @@ fn coplanar_placements_disagree_on_tags_only_where_they_overlap() {
         falloff: None,
         palette: None,
         colour: None,
+        soft_depth: None,
     };
     let mut differ = 0;
     for (order, enabled) in [
@@ -1279,6 +1283,7 @@ fn cpu_and_gpu_frames_agree_on_clock_moved_geometry() {
         falloff: None,
         palette: None,
         colour: None,
+        soft_depth: None,
     };
     let tri = vec![[0, 1, 2], [0, 2, 3]];
     let mesh = |vertices: Vec<Vertex>| Mesh {
@@ -1579,6 +1584,7 @@ fn cpu_and_gpu_frames_agree_on_a_timeline_frame() {
         falloff: None,
         palette: None,
         colour: None,
+        soft_depth: None,
     };
     let tri = vec![[0, 1, 2], [0, 2, 3]];
     let mut list = DrawList {
@@ -1928,6 +1934,7 @@ fn lit_frame_agrees(exposed: bool) {
         falloff: None,
         palette: None,
         colour: None,
+        soft_depth: None,
     };
     let tri = vec![[0, 1, 2], [0, 2, 3]];
     let mut list = DrawList {
@@ -2114,5 +2121,146 @@ fn lit_frame_agrees(exposed: bool) {
         report.max_abs.iter().all(|m| *m <= 8),
         "{:?}",
         report.max_abs
+    );
+}
+
+/// `effect_soft_depth_fade_linear_v1`: a blended white card standing
+/// through a grey floor, its soft depth 150, fades toward the floor on the
+/// CPU and on the GPU (the window's opaque depth copied after the opaque
+/// pass) alike; without its soft depth the CPU frame differs there. Needs
+/// a GPU.
+#[test]
+#[ignore = "needs a GPU: draws offscreen through Bevy"]
+fn cpu_and_gpu_frames_agree_on_a_soft_effect_crossing_the_floor() {
+    use fo4_render::{Alpha, Draw, DrawList, Mesh, Sidedness, Texture, Vertex};
+    let vertices = |corners: [[f64; 3]; 4]| -> Vec<Vertex> {
+        corners
+            .iter()
+            .zip([[0., 0.], [1., 0.], [1., 1.], [0., 1.]])
+            .map(|(p, uv)| Vertex { position: *p, uv })
+            .collect()
+    };
+    let mesh = |v: Vec<Vertex>| Mesh {
+        vertex_colors: None,
+        normals: None,
+        vertices: v,
+        triangles: vec![[0, 1, 2], [0, 2, 3]],
+    };
+    let texture = |rgba: [f32; 4]| Texture {
+        mips: Vec::new(),
+        width: 1,
+        height: 1,
+        rgba: rgba.to_vec(),
+        mip: 0,
+        srgb: false,
+    };
+    let draw = |instance: u32, mesh: usize, enabled: u8| Draw {
+        sidedness: Sidedness {
+            material_two_sided: Some(1),
+            nif_shader_flags_2: None,
+        },
+        instance,
+        mesh,
+        texture: mesh,
+        world: fo4_scene::transform::Transform::IDENTITY,
+        alpha: Alpha {
+            enabled,
+            source: 6,
+            destination: 7,
+            test_enabled: 0,
+            test_ref: 0,
+            nif_test_function: Some(4),
+            opacity: 1.,
+            nif_flags: None,
+        },
+        uv_offset: [0.; 2],
+        uv_scale: [1.; 2],
+        raw_tile_flags: None,
+        falloff: None,
+        palette: None,
+        colour: None,
+        soft_depth: None,
+    };
+    let h = 600.;
+    let mut list = DrawList {
+        meshes: vec![
+            mesh(vertices([
+                [-h, -h, 0.],
+                [h, -h, 0.],
+                [h, h, 0.],
+                [-h, h, 0.],
+            ])),
+            mesh(vertices([
+                [-300., 0., -200.],
+                [300., 0., -200.],
+                [300., 0., 300.],
+                [-300., 0., 300.],
+            ])),
+        ],
+        textures: vec![texture([0.3, 0.3, 0.3, 1.]), texture([1., 1., 1., 0.9])],
+        draws: vec![draw(1, 0, 0), draw(2, 1, 1)],
+        overlays: Vec::new(),
+        blocks: Default::default(),
+        animations: Vec::new(),
+    };
+    list.draws[1].soft_depth = Some(150.);
+    let camera = fo4_scene::camera::look_at(
+        [0., -700., 260.],
+        [0., 0., 60.],
+        fo4_scene::camera::reference_frustum(SIZE),
+        SIZE,
+    )
+    .unwrap();
+    let options = fo4_render::RenderOptions::REFERENCE;
+    let cpu_frame = |list: &DrawList| -> Vec<u8> {
+        fo4_render::render(
+            list,
+            &camera,
+            options,
+            &fo4_core::Limits::default(),
+            &fo4_core::Budget::new(256 << 20),
+        )
+        .unwrap()
+        .color
+        .iter()
+        .flat_map(|c| c.map(|v| (v.clamp(0., 1.) * 255.).round() as u8))
+        .collect()
+    };
+    let cpu = cpu_frame(&list);
+    list.draws[1].soft_depth = None;
+    let plain = cpu_frame(&list);
+    list.draws[1].soft_depth = Some(150.);
+    let differ = cpu
+        .chunks(4)
+        .zip(plain.chunks(4))
+        .filter(|(a, b)| a != b)
+        .count();
+    assert!(differ > 100, "the fade changes {differ} pixels");
+    let mut gpu_scene = crate::scene::convert(&mut list, &options).unwrap();
+    let gpu = headless(&mut gpu_scene, &camera, options.clear, false).unwrap();
+    let report = crate::compare::compare(&crate::compare::Inputs {
+        size: SIZE,
+        cpu: &cpu,
+        gpu: &gpu.color,
+        tags: None,
+        clear: crate::compare::clear_rgb(options.clear),
+    })
+    .unwrap();
+    println!(
+        "soft: agreement {:.6}, mean {:?}, p95 {:?}, max {:?}, {differ} pixels faded",
+        report.agreement(),
+        report.mean_abs,
+        report.p95_abs,
+        report.max_abs
+    );
+    assert!(
+        report.mean_abs.iter().all(|m| *m < 1.5),
+        "{:?}",
+        report.mean_abs
+    );
+    assert!(
+        report.p95_abs.iter().all(|m| *m <= 4),
+        "{:?}",
+        report.p95_abs
     );
 }

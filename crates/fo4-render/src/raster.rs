@@ -836,6 +836,14 @@ impl Raster<'_> {
                     }
                     color[3] *= falloff.factor(cosine.clamp(-1., 1.)) as f32;
                 }
+                // The soft fade (`effect_soft_depth_fade_linear_v1`): the
+                // gap from this sample to the opaque depth behind it over
+                // the soft falloff depth, clamped to 0..1 (nothing behind:
+                // no fade); before the alpha test, as the falloff.
+                if let Some(soft) = draw.soft_depth.filter(|d| *d > 0.) {
+                    let gap = f64::from(stored) - f64::from(depth);
+                    color[3] *= (gap / f64::from(soft)).clamp(0., 1.) as f32;
+                }
                 if color.iter().any(|v| !v.is_finite()) {
                     return Err(err("RenderNonFiniteSurfaceColor", at));
                 }

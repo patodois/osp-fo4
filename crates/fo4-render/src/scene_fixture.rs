@@ -370,6 +370,7 @@ fn scol_hypothesis_draws_two_textured_parts_without_the_generated_alternative() 
             clock: Default::default(),
             vertex_normals: false,
             chains: false,
+            soft_effects: false,
         },
         &Budget::new(32 << 20),
     )
@@ -389,6 +390,7 @@ fn scol_hypothesis_draws_two_textured_parts_without_the_generated_alternative() 
             clock: Default::default(),
             vertex_normals: false,
             chains: false,
+            soft_effects: false,
         },
         &b,
     )
@@ -409,6 +411,7 @@ fn scol_hypothesis_draws_two_textured_parts_without_the_generated_alternative() 
             clock: Default::default(),
             vertex_normals: false,
             chains: true,
+            soft_effects: false,
         },
         &b,
     )
@@ -450,6 +453,7 @@ fn scol_hypothesis_draws_two_textured_parts_without_the_generated_alternative() 
             clock: Default::default(),
             vertex_normals: false,
             chains: false,
+            soft_effects: false,
         },
         true,
         &Budget::new(32 << 20),
@@ -478,6 +482,7 @@ fn scol_hypothesis_draws_two_textured_parts_without_the_generated_alternative() 
             clock: Default::default(),
             vertex_normals: false,
             chains: false,
+            soft_effects: false,
         },
         &b,
     )
@@ -509,6 +514,7 @@ fn scol_hypothesis_draws_two_textured_parts_without_the_generated_alternative() 
             clock: Default::default(),
             vertex_normals: false,
             chains: false,
+            soft_effects: false,
         },
         &Budget::new(32 << 20),
     )
@@ -532,6 +538,7 @@ fn scol_hypothesis_draws_two_textured_parts_without_the_generated_alternative() 
             clock: Default::default(),
             vertex_normals: false,
             chains: false,
+            soft_effects: false,
         },
         &b,
     )
@@ -621,6 +628,7 @@ fn untextured_effect_requires_hypothesis_and_refuses_unhandled_features() {
             clock: Default::default(),
             vertex_normals: false,
             chains: false,
+            soft_effects: false,
         };
         let output = build(&scene, &loader, &m.limits, options, &b).unwrap();
         if let Some(code) = expected_error {
@@ -1078,6 +1086,10 @@ struct EffectFixture {
     /// one-row RGBA8 DDS of the given texels when named.
     source: Option<&'static [[u8; 4]]>,
     greyscale: Option<&'static [[u8; 4]]>,
+    /// An NiAlphaProperty with these flags.
+    alpha: Option<u16>,
+    /// `BuildOptions::soft_effects`.
+    soft: bool,
 }
 impl Default for EffectFixture {
     fn default() -> Self {
@@ -1090,6 +1102,8 @@ impl Default for EffectFixture {
             level: RuleLevel::Hypotheses,
             source: None,
             greyscale: None,
+            alpha: None,
+            soft: false,
         }
     }
 }
@@ -1148,7 +1162,7 @@ fn effect_surface_build_with(x: EffectFixture) -> crate::draw::Build {
         b"",
         x.extra,
         names,
-        None,
+        x.alpha.map(|a| (0, a)),
     );
     let patch = |bytes: &mut Vec<u8>, old: &[f32], new: &[f32]| {
         let old: Vec<u8> = old.iter().flat_map(|v| v.to_le_bytes()).collect();
@@ -1235,8 +1249,51 @@ fn effect_surface_build_with(x: EffectFixture) -> crate::draw::Build {
         clock: Default::default(),
         vertex_normals: false,
         chains: false,
+        soft_effects: x.soft,
     };
     build(&scene, &loader, &m.limits, options, &b).unwrap()
+}
+
+#[test]
+fn a_blended_soft_effect_carries_its_stored_depth_only_with_the_switch() {
+    use fo4_scene::hypotheses as h;
+    // Soft_Effect (flags 1 bit 30), Soft Falloff Depth 100 as stored,
+    // blended (alpha flags: enabled, source 6, destination 7).
+    let blended = EffectFixture {
+        flags1: 1 << 30,
+        scale: 1.,
+        alpha: Some(1 | 6 << 1 | 7 << 5),
+        ..EffectFixture::default()
+    };
+    let rules = |o: &crate::draw::Build| o.instances[0].hypotheses.clone();
+    let off = effect_surface_build_with(blended);
+    assert_eq!(off.list.draws.len(), 1, "{:?}", off.omitted);
+    assert_eq!(off.list.draws[0].soft_depth, None);
+    assert!(rules(&off).contains(&h::EFFECT_LEFT_OUT));
+    assert!(!rules(&off).contains(&h::EFFECT_SOFT_FADE));
+    let on = effect_surface_build_with(EffectFixture {
+        soft: true,
+        ..blended
+    });
+    assert_eq!(on.list.draws[0].soft_depth, Some(100.));
+    assert!(rules(&on).contains(&h::EFFECT_SOFT_FADE));
+    assert!(!rules(&on).contains(&h::EFFECT_LEFT_OUT));
+    // Unblended: the left-out rule stays, no depth.
+    let opaque = effect_surface_build_with(EffectFixture {
+        alpha: None,
+        soft: true,
+        ..blended
+    });
+    assert_eq!(opaque.list.draws[0].soft_depth, None);
+    assert!(rules(&opaque).contains(&h::EFFECT_LEFT_OUT));
+    // No soft flag: nothing changes with the switch.
+    let plain = effect_surface_build_with(EffectFixture {
+        flags1: 0,
+        soft: true,
+        ..blended
+    });
+    assert_eq!(plain.list.draws[0].soft_depth, None);
+    assert!(!rules(&plain).contains(&h::EFFECT_SOFT_FADE));
 }
 
 #[test]
@@ -1445,6 +1502,7 @@ fn a_missing_material_falls_back_to_the_shaders_own_texture_only_under_its_rule(
         clock: Default::default(),
         vertex_normals: false,
         chains: false,
+        soft_effects: false,
     };
     let part = nif_named(
         b"textures/a.dds",
@@ -1523,6 +1581,7 @@ fn a_surface_with_uv_fields_other_than_identity_needs_the_uv_order_rule() {
         clock: Default::default(),
         vertex_normals: false,
         chains: false,
+        soft_effects: false,
     };
     let measured = build(&scene, &loader, &m.limits, options(RuleLevel::Measured), &b).unwrap();
     assert!(measured.list.draws.is_empty());
@@ -1618,6 +1677,7 @@ fn a_swap_leaves_a_shape_without_material_to_its_own_texture_under_its_rule() {
         clock: Default::default(),
         vertex_normals: false,
         chains: false,
+        soft_effects: false,
     };
     let run = |swap: &[u8]| {
         let part = nif_with_helper(b"textures/a.dds", None, b"PlainLabel");
@@ -1691,6 +1751,7 @@ fn a_blended_lighting_surface_takes_its_vertex_alpha_only_under_its_rule() {
         clock: Default::default(),
         vertex_normals: false,
         chains: false,
+        soft_effects: false,
     };
     // Normal bytes, then RGBA: a vertex alpha of 0, 128 and 255.
     let colours = |a: [u8; 3]| a.map(|a| [128, 128, 255, 0, 200, 100, 50, a]);
@@ -1767,6 +1828,7 @@ fn swap_patterns_match_names_only_under_their_rules() {
         clock: Default::default(),
         vertex_normals: false,
         chains: false,
+        soft_effects: false,
     };
     let run = |swap: &[u8], policy: RuleLevel| {
         let part = nif_named(
@@ -1860,6 +1922,7 @@ fn triangles_on_a_non_finite_texture_coordinate_are_left_out_only_under_their_ru
         clock: Default::default(),
         vertex_normals: false,
         chains: false,
+        soft_effects: false,
     };
     let mut part = nif_with_helper(b"textures/a.dds", None, b"PlainLabel");
     // Vertex 0's position (1, 0, 0) then its first UV half: a NaN.
@@ -2037,6 +2100,7 @@ fn free_running_controllers_are_drawn_at_the_build_time_only_under_the_clock_rul
             clock: Default::default(),
             vertex_normals: false,
             chains: false,
+            soft_effects: false,
         };
         let state = scene.instances[0].state.hypotheses().to_vec();
         (
@@ -2214,6 +2278,7 @@ fn effect_colour_and_multiple_follow_the_clock_behind_their_switches() {
             clock,
             vertex_normals: false,
             chains: false,
+            soft_effects: false,
         };
         let state = (
             matches!(scene.instances[0].state, fo4_scene::State::Blocked),
@@ -2422,6 +2487,7 @@ fn a_moving_node_is_drawn_at_the_build_time_only_behind_its_switch() {
             clock,
             vertex_normals: false,
             chains: false,
+            soft_effects: false,
         };
         let state = scene.instances[0].state.hypotheses().to_vec();
         (
@@ -2553,6 +2619,7 @@ fn a_swap_pattern_reaches_the_material_another_scope_put_in_place() {
             clock: Default::default(),
             vertex_normals: false,
             chains: false,
+            soft_effects: false,
         };
         let out = build(&scene, &loader, &m.limits, options, &b).unwrap();
         drop(temp);
@@ -2644,6 +2711,7 @@ fn a_timeline_frame_leaves_out_what_the_run_disabled_and_moves_what_it_moved() {
         clock: Default::default(),
         vertex_normals: false,
         chains: false,
+        soft_effects: false,
     };
     // The draws of the frame at second `s`, or the error applying it.
     let draws_at = |t: &Timeline, s: f64, level: RuleLevel| {
@@ -2728,6 +2796,7 @@ fn a_static_refused_for_an_unread_block_is_drawn_by_its_other_parts_behind_the_s
         clock: Default::default(),
         vertex_normals: false,
         chains: false,
+        soft_effects: false,
     };
     // Off by default: refused whole.
     let mut loader = Loader::new(&store, &vfs, "english", RuleLevel::Facts, &b);
@@ -2811,6 +2880,7 @@ fn a_furniture_refused_for_an_unread_block_is_drawn_by_its_other_parts_behind_it
         clock: Default::default(),
         vertex_normals: false,
         chains: false,
+        soft_effects: false,
     };
     // The static parts reading alone: a furniture is refused whole.
     let mut loader = Loader::new(&store, &vfs, "english", RuleLevel::Facts, &b);
@@ -2857,6 +2927,7 @@ fn kept_files_answer_a_second_build_alike() {
         clock: Default::default(),
         vertex_normals: false,
         chains: false,
+        soft_effects: false,
     };
     let mut loader = Loader::new(&store, &vfs, "english", RuleLevel::Facts, &b);
     let scene = loader.by_editor_id("SyntheticScolCell", &b).unwrap();
@@ -2899,6 +2970,7 @@ fn kept_files_hold_what_the_visit_read() {
         clock: Default::default(),
         vertex_normals: false,
         chains: false,
+        soft_effects: false,
     };
     let mut plain_loader = Loader::new(&store, &vfs, "english", RuleLevel::Facts, &b);
     let scene = plain_loader.by_editor_id("SyntheticScolCell", &b).unwrap();

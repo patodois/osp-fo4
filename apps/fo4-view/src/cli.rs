@@ -582,6 +582,12 @@ pub struct Drawing {
     /// above its feet is drawn standing on that ground
     /// (`crate::scene::settle_z`).
     pub cast_settles: bool,
+    /// `--draw-soft-effects` (`effect_soft_depth_fade_linear_v1`): a
+    /// blended effect surface whose soft flag is set fades by its gap to
+    /// the opaque depth behind it over its stored soft falloff depth
+    /// (`fo4_render::draw::BuildOptions::soft_effects`; the window copies
+    /// the opaque depth after its opaque pass, `gpu::SoftDepthBuffer`).
+    pub soft_effects: bool,
     /// The scripted play window with `--exposure-eye`: the exposure
     /// measured per view instead of once per load (`scene::ViewExposure`;
     /// plumbing of the existing switch, set by the parser).
@@ -1085,6 +1091,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             "--draw-cast-keeps-its-part" => drawing.cast_keeps_part = true,
             "--draw-cast-keeps-clear" => drawing.cast_keeps_clear = true,
             "--draw-cast-settles" => drawing.cast_settles = true,
+            "--draw-soft-effects" => drawing.soft_effects = true,
             "--exposure-eye-visible" => drawing.exposure_visible = true,
             "--timeline-dead-lying" | "--timeline-dead-left-out" => {
                 if dead != fo4_scene::timeline::Dead::Standing {

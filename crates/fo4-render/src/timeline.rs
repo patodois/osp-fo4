@@ -147,6 +147,7 @@ pub fn append_markers_posed(
                 falloff: None,
                 palette: None,
                 colour: None,
+                soft_depth: None,
             },
             b,
         )?;

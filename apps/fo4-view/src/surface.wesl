@@ -34,6 +34,9 @@ struct SurfaceParams {
     // Bit 0: lit by `lights`; bit 1: lit with the interpolated vertex
     // normal (`light_vertex_normals_v1`).
     mode: u32,
+    // `fo4_render::Draw::soft_depth` (`effect_soft_depth_fade_linear_v1`);
+    // 0: no fade.
+    soft_depth: f32,
 }
 
 @group(constants::MATERIAL_BIND_GROUP) @binding(0) var<uniform> params: SurfaceParams;
@@ -42,6 +45,40 @@ struct SurfaceParams {
 @group(constants::MATERIAL_BIND_GROUP) @binding(3) var palette: texture_2d<f32>;
 // `scene::light_words`: rows of four values in game axes (Z up).
 @group(constants::MATERIAL_BIND_GROUP) @binding(4) var<storage, read> lights: array<vec4<f32>>;
+// `gpu::SoftDepthBuffer`: words 0..3 the copied view's width, height,
+// words a row and 1 when it holds this frame's opaque depth; from word 64
+// the opaque depth (reverse Z, 0 where nothing opaque was drawn), row by row.
+@group(constants::MATERIAL_BIND_GROUP) @binding(5) var<storage, read> soft_depths: array<u32>;
+
+const SOFT_DEPTH_HEADER_WORDS: u32 = 64u;
+
+// The camera-axis distance of the point at frame pixel `xy` with depth
+// `depth` (`fo4_render`'s depth: the camera-axis coordinate).
+fn view_distance(xy: vec2<f32>, depth: f32) -> f32 {
+    let uv = (xy - view.viewport.xy) / view.viewport.zw;
+    let ndc = vec2<f32>(uv.x * 2.0 - 1.0, 1.0 - uv.y * 2.0);
+    let p = view.view_from_clip * vec4<f32>(ndc, depth, 1.0);
+    return -p.z / p.w;
+}
+
+// The soft fade (`Raster::triangle`'s): the gap to the opaque depth behind
+// the sample over the soft depth, clamped to 0..1; 1 where nothing opaque
+// lies behind it or the buffer does not hold this frame's depth.
+fn soft_fade(position: vec4<f32>) -> f32 {
+    if params.soft_depth <= 0.0 || soft_depths[3] != 1u {
+        return 1.0;
+    }
+    let px = vec2<u32>(position.xy);
+    if px.x >= soft_depths[0] || px.y >= soft_depths[1] {
+        return 1.0;
+    }
+    let stored = bitcast<f32>(soft_depths[SOFT_DEPTH_HEADER_WORDS + px.y * soft_depths[2] + px.x]);
+    if stored <= 0.0 {
+        return 1.0;
+    }
+    let gap = view_distance(position.xy, stored) - view_distance(position.xy, position.z);
+    return clamp(gap / params.soft_depth, 0.0, 1.0);
+}
 
 const LIGHT_HEADER_ROWS: u32 = 17u;
 
@@ -286,6 +323,7 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
         let e = normalize(view.world_position - in.world_position.xyz);
         color.a = color.a * falloff_factor(abs(clamp(dot(n, e), -1.0, 1.0)));
     }
+    color.a = color.a * soft_fade(in.position);
     // The frame holds colour within 0..1 (an 8-bit target clamps the
     // output before blending; the CPU clamps here).
     color = vec4<f32>(clamp(color.rgb, vec3<f32>(0.0), vec3<f32>(1.0)), color.a);

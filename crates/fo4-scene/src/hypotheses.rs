@@ -56,6 +56,9 @@ pub const EFFECT_SHADING: &str = "effect_surface_texture_base_colour_v1";
 pub const EFFECT_BLEND: &str = "effect_blend_factors_add_v1";
 pub const EFFECT_ORDER: &str = "effect_blend_after_opaque_back_to_front_v1";
 pub const EFFECT_LEFT_OUT: &str = "effect_soft_lighting_left_out_v1";
+/// The soft depth fade of a blended effect surface
+/// (`fo4_render::draw::BuildOptions::soft_effects`, `--draw-soft-effects`).
+pub const EFFECT_SOFT_FADE: &str = "effect_soft_depth_fade_linear_v1";
 /// Falloff of effect surfaces (`fo4_render::draw::effect`, the reference
 /// rasterizer, `spec/effect-surfaces.md`, Falloff): the angle it reads,
 /// the cosine's sign, the interpolation and what the factor multiplies.

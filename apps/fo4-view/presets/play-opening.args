@@ -199,6 +199,11 @@
 # (play_cast_settles_on_ground_v1): the checkpoint's woman on the slope
 # stands on the grass. The run is unchanged.
 --draw-cast-settles
+# A blended effect surface whose soft flag is set fades toward the opaque
+# surface behind it over its stored soft falloff depth
+# (effect_soft_depth_fade_linear_v1): the distant cloud card's white edge
+# on the new road.
+--draw-soft-effects
 # The worn armours' slots decide what of a head is hidden
 # (npc_head_hidden_by_head_slot_v1): the checkpoint's helmets keep faces.
 --actor-head-slots
