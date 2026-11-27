@@ -465,6 +465,19 @@ window while the window loads the same cell (8.2 s in the sessions, 2.9 s headle
 a memo of parsed collision models across the walker's builds (the dream room shares the vault's models), the
 containers' fields, the player's pod drawn open, the town creatures' close looks, the road past the second bridge.
 
+Thirtieth-round fixes (the twenty-eighth sessions): the stop on open road before the larger bridge is not round
+29's persistent join (the same with it off) but the road's own collision mesh, a dip of 8 to 10 units with a curb
+beside it, where the step-up took a retry that did not climb every tick: `--play-step-lookahead`
+(`walk_step_lookahead_unless_climbed_v1`, in the preset) tries shorter retries ahead first, and the capsule walks out
+on the person's heading (spec/walk.md, spec/play.md). The stop on the line to the control-room stairs is another
+cause, a vault table's collision in the vault cell whose drawing the window keeps but its frames do not show: not
+settled, not changed. The cafeteria jamb, the sofa's and the crib's fit are the stored collision shapes (nothing
+changed); the recreation desk is a container, neither drawn nor solid. The platform cue speaks only of the platform
+carrying the walker or set moving after its activation. `fo4_core::Budget::refused` is the one test for the budget's
+own refusals (collision build, persistent join: a reference's data limit is that reference's failure). Next: why the
+vault table is not seen; the containers' fields (drawing and collision together); a memo of parsed collision models
+for the dream's hold; the player's pod drawn open.
+
 The opening run is now visible (`spec/timeline.md`), and since the cast step its people appear as people. `quest_run new-game --timeline FILE` writes what the run
 did, second by second, in a neutral versioned text file (track points with their cells, actor places with the
 rule or assumption behind each, references enabled, disabled and moved, scene lines with speaker, seconds and

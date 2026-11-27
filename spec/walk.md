@@ -125,7 +125,15 @@ lowest point; the eye is `eye_height` above the feet. One fixed tick
    the tick's own move does not carry the capsule over the edge, the retry
    looks one radius ahead and is accepted only if it ends higher. A tick that
    climbs a step can therefore advance up to one radius further than its own
-   displacement.
+   displacement. With `Settings::step_lookahead_unless_climbed`
+   (`walk_step_lookahead_unless_climbed_v1`, off by default; the play option
+   `--play-step-lookahead`) a retry with the tick's own move that ends no
+   higher and short of the whole move did not climb: it is held back while the
+   retries one radius, half and a quarter of a radius ahead are tried (each
+   accepted only if it ends higher, within the step height), and taken only
+   when none is. Without it such a retry, a few hundredths of a unit further
+   along the edge, is taken every tick and the walker is held in a dip whose
+   far rim the tick's own move does not reach.
 4. Ground: unless rising, the capsule is lowered by up to the step height (if
    it was on the ground or just stepped) or by 0.05 units (in the air) until a
    walkable contact holds it. This snaps it down stairs and ramps and lands it

@@ -2399,9 +2399,52 @@ unread four-byte furniture subrecord, `FNPR`, alone: it joins the furniture fiel
 (over the 20-unit step), for about 36 s of that sequence, then slide toward the door until its last key at 43.3 s;
 the deck is walkable from then (session B crossed 0.4 s after it). The wait is the data's sequence. The status line
 now says `platform moving - ready in N s` while a named platform near the walker (within 300 units of a moving
-part's box, in its space, not carrying it) moves under a sequence the run started, N the whole seconds to the last
+part's box, in its space; since round 30 only one that carries the walker or that the run set moving after the
+walker's activation) moves under a sequence the run started, N the whole seconds to the last
 key of the started sequences (`fo4_play::elevator::Platform::moves_until`), then `platform ready` for 4 s (viewer
 policy, `hud::platform_status`); the window's log names it among the status line's causes.
+
+### The road's dip, the stairs' table, the platform cue's platform (the twenty-eighth-session step)
+
+**The stop before the larger bridge.** The person stood held on open asphalt on the way back (B, about 2152 to
+2182 s). Replayed with `--play-report-walls` the walker is blocked by the road's own collision mesh, a placed
+reference of the cell (a compressed mesh, drawn, enabled, not persistent); a capsule set at the session's feet
+and heading (`column_probe` with `COLUMN_PROBE_WALK`, `COLUMN_PROBE_TRIS`) is held the same with
+`--play-collision-persistent` off: round 29's join is not the cause. The mesh has a dip there about 8 to 10 units
+deep with a curb beside it. Each tick the step-up's retry with the tick's own move landed back in the dip a few
+hundredths of a unit further along its rim and was taken, so the retry one radius ahead was never tried (it lands
+20.6 units up, on the curb's edge, past the step); half a radius ahead it lands on the rim. With
+`--play-step-lookahead` (`walk_step_lookahead_unless_climbed_v1`, in the preset; spec/walk.md) a retry that does
+not climb waits while the retries one radius, half and a quarter of a radius ahead are tried, and the capsule walks
+out of the dip on the person's heading. Off, every walk is as before.
+
+**The persistent references the walking worlds join.** Over the exterior cells the 28th sessions' walking worlds
+were built about (`column_probe` with `COLUMN_PROBE_PERSISTENT=1`), the join adds 656 persistent references; 70
+stand in the walking world: 60 statics (59 drawn by the loader's reading, one a collision marker's box, which is
+solid without a drawn shape by `play_collision_marker_boxes_v1`), four furniture and two activators whose drawing
+blockers the window's furniture and activator switches set aside (the sofa and the cribs are drawn in the sessions'
+frames; a ruined chair, a couch and an ambush furniture were not checked in a frame), two doors the held doors'
+reading draws, and two water planes near the ruined town (activators whose model the drawing refuses for its water
+shader): solid and not drawn, met by neither session, left as they stand.
+
+**The stop on the line to the control-room stairs.** Not the same cause: the walker meets the collision of a
+vault table placed in the vault cell itself (a static, enabled, not persistent), a 72-unit panel and a low plate
+standing between the walker and the stairs. The window's build keeps the table (it is not among the placements the
+build leaves out) but its frames show the floor where it stands. Why the table is not seen is not settled; nothing
+changed.
+
+**Interior fit.** The cafeteria jamb: the wall piece's collision has a slanted face rising from the floor about 20
+units into the doorway (from floor level to 56 units up), which holds the capsule (a 69-degree contact); the data's
+shape, nothing changed. The recreation desk is a container: neither drawn nor solid (its container fields and
+drawer sequences are not read); what stands under the eye there is the floor mat. The sofa's collision is a coarse
+wedge whose front slopes 16 units in from the floor to the seat and whose top stays below the drawn back, so the
+capsule stops at the collision while the eye, 16 units from it, sees the drawn cushions overhang: the data's
+shapes and the provisional radius, nothing changed.
+
+**The platform cue.** The status line's countdown spoke of any named platform near the walker; it now speaks of a
+platform that carries the walker or whose sequence the run started at or after an activation by the walker in the
+same space (`Platform::after_activation`): the exit deck after the console, not the lower grille after the descent
+nor the surface lift after the ride.
 
 ## What the play mode does not do yet
 
