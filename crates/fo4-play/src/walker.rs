@@ -35,6 +35,9 @@ pub const ACTOR_BOX_HALF_WIDTH: i16 = 20;
 /// (world units; an assumption).
 pub const ACTOR_BOX_HEIGHT: i16 = 120;
 
+/// Each actor's space and position (`play_activate_actor_box_v1`).
+pub type ActorPlaces = BTreeMap<FormKey, (FormKey, [f64; 3])>;
+
 /// `play_activate_actor_box_v1`: where the run last put each actor, read
 /// without changing the run: its stored place, then the caller's or a
 /// package's moves applied so far and the places a `MoveTo` with zero
@@ -43,7 +46,7 @@ pub const ACTOR_BOX_HEIGHT: i16 = 120;
 pub fn actor_places(
     place: &fo4_vm::track::Place,
     moved: &[(f64, FormKey, FormKey, [f64; 3])],
-) -> BTreeMap<FormKey, (FormKey, [f64; 3])> {
+) -> ActorPlaces {
     let mut out = BTreeMap::new();
     for a in &place.actors {
         out.insert(norm(&a.key), (norm(&a.space), a.pos));
@@ -64,7 +67,7 @@ pub fn actor_places(
 /// `play_activate_actor_box_v1`: the boxes of the actors of `places`
 /// standing in `space` that `skip` keeps (a disabled actor is not met).
 pub fn actor_boxes(
-    places: &BTreeMap<FormKey, (FormKey, [f64; 3])>,
+    places: &ActorPlaces,
     space: &FormKey,
     skip: &dyn Fn(&FormKey) -> bool,
 ) -> pick::Boxes {
@@ -603,7 +606,7 @@ pub struct Walker {
     /// `--play-pick-actors`: the actors' places last read and the boxes
     /// the ray meets with them ([`Walker::boxes`] and the actors' boxes),
     /// built again when either changes.
-    actor_pick: Option<(BTreeMap<FormKey, (FormKey, [f64; 3])>, u64, pick::Boxes)>,
+    actor_pick: Option<(ActorPlaces, u64, pick::Boxes)>,
     /// Counts each change of [`Walker::boxes`].
     boxes_changed: u64,
     /// Boxes of statics left out (`play_activate_bounds_not_static_v1`),
