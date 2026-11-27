@@ -179,12 +179,14 @@ fn run() -> Result<(), E> {
             off_chain: true,
             reference_alpha: false,
             static_fields: false,
+            activator_fields: false,
         });
         let chain = collision::cell(&scene, &loader, &m.limits, options, &budget)?;
         loader.set_collision_switches(readiness::Switches {
             off_chain: true,
             reference_alpha: true,
             static_fields: false,
+            activator_fields: false,
         });
         let on = collision::cell(&scene, &loader, &m.limits, options, &budget)?;
         loader.set_collision_switches(readiness::Switches::default());

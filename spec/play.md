@@ -1049,6 +1049,14 @@ play preset's run arguments or play options), and three are the game's own waits
   when the key passed: the end is noted only when the walker stands on the piece at that tick. `play_run
   --play-elevator-door-landing` (`play_elevator_end_landing_v1`): such a ride ends for the walker when it next stands
   on the piece. The person now goes through (276 stages).
+- **The rider pushed into the shaft's rock** (the 25th session, both records, the last 2 s of the descent). A
+  temporary trace of the second record's replay: the walker stood on the deck's rigid part the whole way, no key
+  held, and from 1159.66 s the terrain over the shaft (the deck passes about 300 units below its surface) touched
+  the capsule; its push-out moved the walker 177 units sideways in 1.7 s, the last 0.7 s in jumps of 3 to 30 units
+  a tick between opposite terrain normals, and the eye went with it into the rock. `ride_check` had found the same
+  in its own trace and named `walk_ride_rider_passes_terrain_v1`; the play mode had not read it. `play_run
+  --play-elevator-through-terrain` (in the preset) sets `pass_terrain` on every ride the named platforms put into
+  the walking world: while the walker stands on a piece the terrain is hidden, and shown again when it steps off.
 - **Walking through the checkpoint gate 7.5 s early.** The person crossed the two stage triggers past the gate before
   the guard's talk set their prerequisite, and the default trigger script sets its stage only on an entry made after
   the prerequisite: the escort's later phases wait for them forever. The data says the game would not let the person
@@ -2383,10 +2391,12 @@ the previous confirmation stayed up; it is now shown at once when the target's s
 | `dialogue_hello_owed_v1` | `quest_run --hello-owed` (in the run's arguments) | the hello line's own condition on the checkpoint talk's stage; that an actor greets a player already near it once its line holds is prior knowledge | weak |
 | `pack_destination_outlives_scene_v1` | `quest_run --package-moves-outlive-scene` (in the run's arguments) | the escort's package actions and the boarding trigger's Stop; that an actor on its way goes on when its scene stops is prior knowledge, the arrival second the caller's | weak |
 | `play_elevator_end_landing_v1` | `--play-elevator-door-landing` (in the preset) | the play mode's own trace of the missed ride end; a policy of the ride's end | weak |
+| `walk_ride_rider_passes_terrain_v1` | `--play-elevator-through-terrain` (in the preset since round 26) | `ride_check --trace` on the vault elevator and the 25th session's second record: the terrain over the shaft pushes the riding walker sideways off the deck; no read data holes the terrain there | weak |
 | `play_collision_marker_boxes_v1` | `--play-marker-boxes` (in the preset since the gate-box step) | the gate's and the front door's boxes and the stages that disable them; that the obstacle flag makes a box solid for the player is prior knowledge | weak |
 | `play_collision_marker_box_layer_passed_v1` | `--play-marker-box-layers` (with `--play-marker-boxes`; in the preset) | the boxes' `XTRI` words over the load order: the gate's 35, the front door's 40, the vault exit's 49 with an editor id naming a navigation cutter; 620 of 860 boxes of 49 under enable parents, 131 of 208 boxes of 31 tilted; what each word means and that a character passes the pick and cutter layers is prior knowledge of the engine's layer list | weak |
 | `play_door_closed_blocked_holds_v1` | `--play-held-doors` (in the preset) | the house door's closing, its blocked activation and the evacuation stage that opens it, as the run's scripts call them; the two natives' meaning from the Creation Kit's documentation; that a closed door is solid and its object bounds stand for its solid part is prior knowledge | weak |
 | `refr_static_fields_collision_unchanged_v1` | `--play-collision-static-fields` (in the preset since the gate-frame step) | the published field names of `XACT`, `XLRT`, `XOWN` and `ONAM`; a load-order census of the statics storing them (36 admitted, among them the checkpoint gate's frame); that a static has no door, activation, ownership or location behaviour that moves its collision is prior knowledge | weak |
+| `acti_fields_receiver_collision_unchanged_v1` | `--play-collision-activator-fields` (in the preset since round 26) | the published field names; the cabinet's model stores a collision object refused only by these record blockers | weak |
 | `play_collision_marker_box_layer_records_v1` | `--play-marker-box-layer-records` (with `--play-marker-box-layers`; not in the preset) | the load order's collision layer records read under their published layout, their lists symmetric; that index 30 is a walking character's layer and what a listed pair does to a box are prior knowledge; the records list 39, 40, 41 and 43 with it, against the constant | weak |
 | `play_door_closed_at_load_v1` | `--play-held-doors-at-load` (with `--play-held-doors`; in the preset since the door-shut step) | the front door stores no `ONAM`; the field's published name; prior knowledge that a closed door is solid | weak |
 | `play_door_drawn_as_held_v1` | `fo4-view --draw-held-doors` (in the preset since the door-shut step) | the door model's stored leaf and its sequences named Open and Close | weak |

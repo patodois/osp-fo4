@@ -188,6 +188,15 @@ rules byte for byte):
   build with every switch off keeps its memory accounting byte for byte.
 - `reference_alpha` (`refr_xalp_collision_unchanged_v1`): a reference's
   unread `XALP` (two bytes; xEdit's published name: alpha) is set aside.
+- `activator_fields` (`acti_fields_receiver_collision_unchanged_v1`): on a
+  reference whose base is an activator (`ACTI`), the record blockers of the
+  base's unread `PNAM`, `FNAM`, `ATTX` and `RADR` and of the reference's
+  `XLRT` (xEdit's published names: marker colour, flags, activate text
+  override, radio receiver, location ref type) are set aside
+  (`readiness::activator_field`, `readiness::activator_receiver_field`,
+  `readiness::reference_location_type`): the collision readiness side of
+  `acti_fields_render_unchanged_v1` and
+  `acti_receiver_location_render_unchanged_v1`.
 - `static_fields` (`refr_static_fields_collision_unchanged_v1`): on a
   reference whose base is a static (`STAT`), the record blockers of its
   `XACT` and `XOWN` (bytes not read) and `XLRT` and `ONAM` (read as run-time

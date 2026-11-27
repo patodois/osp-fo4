@@ -199,6 +199,7 @@ fn run() -> Result<(), E> {
         off_chain,
         reference_alpha,
         static_fields: false,
+        activator_fields: false,
     });
     if off_chain {
         let _ = writeln!(

@@ -54,12 +54,14 @@ pub struct Play {
     /// `--play-elevator-held-pose` (`play_elevator_held_pose_v1`),
     /// `--play-elevator-rigid` (`play_elevator_rigid_v1`),
     /// `--play-elevator-door-onward` (`play_elevator_end_door_onward_v1`),
-    /// `--play-elevator-door-landing` (`play_elevator_end_landing_v1`).
+    /// `--play-elevator-door-landing` (`play_elevator_end_landing_v1`),
+    /// `--play-elevator-through-terrain` (`walk_ride_rider_passes_terrain_v1`).
     pub elevator_door: bool,
     pub held_pose: bool,
     pub rigid: bool,
     pub door_onward: bool,
     pub door_landing: bool,
+    pub through_terrain: bool,
     /// `--play-player-moveto` (`play_player_moveto_v1`),
     /// `--play-player-sits` (`play_player_sit_furniture_v1`).
     pub player_moveto: bool,
@@ -68,11 +70,14 @@ pub struct Play {
     /// `--play-collision-reference-alpha` (`refr_xalp_collision_unchanged_v1`),
     /// `--play-collision-child-flag-agrees` (`xesp_child_flag_agrees_chain_v1`),
     /// `--play-collision-static-fields`
-    /// (`refr_static_fields_collision_unchanged_v1`).
+    /// (`refr_static_fields_collision_unchanged_v1`),
+    /// `--play-collision-activator-fields`
+    /// (`acti_fields_receiver_collision_unchanged_v1`).
     pub off_chain: bool,
     pub reference_alpha: bool,
     pub child_flag_agrees: bool,
     pub static_fields: bool,
+    pub activator_fields: bool,
     /// `--play-marker-boxes` (`play_collision_marker_boxes_v1`),
     /// `--play-marker-box-layers` (`play_collision_marker_box_layer_passed_v1`),
     /// `--play-marker-box-layer-records`
@@ -173,12 +178,14 @@ impl Play {
             "--play-elevator-rigid" => &mut self.rigid,
             "--play-elevator-door-onward" => &mut self.door_onward,
             "--play-elevator-door-landing" => &mut self.door_landing,
+            "--play-elevator-through-terrain" => &mut self.through_terrain,
             "--play-player-moveto" => &mut self.player_moveto,
             "--play-player-sits" => &mut self.player_sits,
             "--play-collision-off-chain" => &mut self.off_chain,
             "--play-collision-reference-alpha" => &mut self.reference_alpha,
             "--play-collision-child-flag-agrees" => &mut self.child_flag_agrees,
             "--play-collision-static-fields" => &mut self.static_fields,
+            "--play-collision-activator-fields" => &mut self.activator_fields,
             "--play-marker-boxes" => &mut self.marker_boxes,
             "--play-marker-box-layers" => &mut self.marker_box_layers,
             "--play-marker-box-layer-records" => &mut self.marker_box_layer_records,
@@ -329,6 +336,9 @@ impl Play {
                 "--play-elevator-held-pose and --play-elevator-rigid need --play-elevator".into(),
             );
         }
+        if self.elevators.is_empty() && self.through_terrain {
+            return Err("--play-elevator-through-terrain needs --play-elevator".into());
+        }
         if self.door_onward && !self.elevator_door {
             return Err("--play-elevator-door-onward needs --play-elevator-door".into());
         }
@@ -385,6 +395,7 @@ impl Play {
             off_chain: self.off_chain,
             reference_alpha: self.reference_alpha,
             static_fields: self.static_fields,
+            activator_fields: self.activator_fields,
         }
     }
 
@@ -496,6 +507,7 @@ impl Play {
             rigid: self.rigid,
             door_onward: self.door_onward,
             door_landing: self.door_landing,
+            through_terrain: self.through_terrain,
         }
     }
 
@@ -603,6 +615,9 @@ impl Play {
         if self.static_fields {
             let _ = writeln!(report, "switch: a static's reference fields XACT, XLRT, XOWN and ONAM do not refuse its collision (--play-collision-static-fields, {})", fo4_scene::hypotheses::STATIC_REFERENCE_FIELDS_COLLISION);
         }
+        if self.activator_fields {
+            let _ = writeln!(report, "switch: an activator's unread PNAM, FNAM, ATTX and RADR and its reference's XLRT do not refuse its collision (--play-collision-activator-fields, {})", fo4_scene::hypotheses::ACTIVATOR_FIELDS_COLLISION);
+        }
         if self.child_flag_agrees {
             let _ = writeln!(report, "switch: an enable chain left open only by records' own flags that agree with it decides their collision, at load and after the run's changes (--play-collision-child-flag-agrees, {})", fo4_scene::hypotheses::ENABLE_CHILD_FLAG_AGREES);
         }
@@ -702,6 +717,9 @@ impl Play {
             }
             if elevators.door_landing {
                 let _ = writeln!(report, "switch: a ride that ended with the walker in the air ends for it when it next stands on the ride (--play-elevator-door-landing)");
+            }
+            if elevators.through_terrain {
+                let _ = writeln!(report, "switch: while the walker stands on a moving part, the terrain does not touch it (--play-elevator-through-terrain, {})", fo4_walk::platform::rules::RIDE_PASSES_TERRAIN);
             }
             if elevators.rigid {
                 let _ = writeln!(report, "switch: each part moves by the rigid motion the sequence gives the chain above it, every channel read, in place of the translations (--play-elevator-rigid)");
@@ -813,7 +831,7 @@ mod tests {
 
     #[test]
     fn reads_every_play_option() {
-        let s = read("--play-stand 0.1 --walk-speed 300 --play-reach 150 --play-pick-bounds --play-pick-bounds-activatable --play-load-doors --play-follow-grid --play-slice 0.25 --play-live-world --play-elevator a.esm:0000000A --play-elevator a.esm:B --play-elevator-also-with a.esm:C A.ESM:0000000A --play-elevator-door --play-elevator-held-pose --play-elevator-rigid --play-elevator-door-onward --play-collision-off-chain --play-collision-reference-alpha --play-collision-child-flag-agrees --play-collision-static-fields --play-player-moveto --play-player-sits --play-around 2 --play-tick 0.02 --run-speed 400 --play-region-walker --play-recheck-marks --play-nowait --play-elevator-also a.esm:D").unwrap();
+        let s = read("--play-stand 0.1 --walk-speed 300 --play-reach 150 --play-pick-bounds --play-pick-bounds-activatable --play-load-doors --play-follow-grid --play-slice 0.25 --play-live-world --play-elevator a.esm:0000000A --play-elevator a.esm:B --play-elevator-also-with a.esm:C A.ESM:0000000A --play-elevator-door --play-elevator-held-pose --play-elevator-rigid --play-elevator-door-onward --play-elevator-through-terrain --play-collision-off-chain --play-collision-reference-alpha --play-collision-child-flag-agrees --play-collision-static-fields --play-collision-activator-fields --play-player-moveto --play-player-sits --play-around 2 --play-tick 0.02 --run-speed 400 --play-region-walker --play-recheck-marks --play-nowait --play-elevator-also a.esm:D").unwrap();
         assert_eq!(s.walk_speed, Some(300.0));
         assert_eq!(s.run_speed, Some(400.0));
         assert_eq!(s.tick, Some(0.02));
@@ -828,6 +846,7 @@ mod tests {
         assert!(s.live_world && s.nowait && s.elevator_door && s.held_pose && s.rigid);
         assert!(s.door_onward && s.off_chain && s.reference_alpha && s.child_flag_agrees);
         assert!(s.static_fields && s.collision().static_fields);
+        assert!(s.activator_fields && s.collision().activator_fields);
         assert!(!Play::default().collision().any());
         assert!(s.player_moveto && s.player_sits && s.region && s.recheck_marks);
         assert!(s.walker_only());
@@ -843,7 +862,9 @@ mod tests {
         assert_eq!(Play::default().walker_options().stand, None);
         assert!(o.child_flag_agrees);
         let e = s.elevators();
-        assert!(e.door && e.held_pose && e.rigid && e.door_onward);
+        assert!(e.door && e.held_pose && e.rigid && e.door_onward && e.through_terrain);
+        assert!(!Play::default().elevators().through_terrain);
+        assert!(read("--play-elevator-through-terrain").is_err());
         assert_eq!(e.references.len(), 2);
         // Only what a keyboard's driver reads too.
         let k =

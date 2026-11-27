@@ -905,6 +905,7 @@ fn a_model_blocker_off_the_collision_chain_is_set_aside_only_behind_its_switch()
         off_chain: false,
         reference_alpha: true,
         static_fields: false,
+        activator_fields: false,
     });
     let c = cell(&scene, &loader, &limits, options, &b).unwrap();
     assert!(c.instances.is_empty());
@@ -913,6 +914,7 @@ fn a_model_blocker_off_the_collision_chain_is_set_aside_only_behind_its_switch()
         off_chain: true,
         reference_alpha: false,
         static_fields: false,
+        activator_fields: false,
     });
     let on = cell(&scene, &loader, &limits, options, &b).unwrap();
     assert_eq!(on.instances.len(), 1, "{:?}", on.unplaced);
@@ -970,6 +972,7 @@ fn a_statics_reference_fields_are_set_aside_only_behind_their_switch() {
         off_chain: true,
         reference_alpha: true,
         static_fields: false,
+        activator_fields: false,
     });
     assert!(cell(&scene, &loader, &limits, options, &b)
         .unwrap()
@@ -1155,6 +1158,77 @@ fn an_activators_receiver_and_location_type_are_set_aside_for_its_drawing_only_b
     assert!(on.2.contains(&hypotheses::ACTIVATOR_RECEIVER_RENDER));
     // Collision readiness is not the render switch's.
     assert_eq!(on.3, off.3);
+}
+
+#[test]
+fn an_activators_fields_receiver_and_location_type_leave_its_collision_only_behind_their_switch() {
+    // `acti_fields_receiver_collision_unchanged_v1`: the fixture's reference
+    // placing an activator whose base stores PNAM, FNAM and RADR, the
+    // reference storing XLRT (none of them read for this).
+    let f = fixture_with(false, &[], |rf| {
+        let mut rf = rf.to_vec();
+        rf[6..10].copy_from_slice(&0x880u32.to_le_bytes());
+        rf.extend(sub(b"XLRT", &0x801u32.to_le_bytes()));
+        group(9, 0x800, &record(b"REFR", 0x802, 0, &rf))
+    });
+    std::fs::write(f.manifest.root.join("meshes/a.nif"), model_nif(1)).unwrap();
+    let path = f.manifest.root.join("base.esm");
+    let mut bytes = std::fs::read(&path).unwrap();
+    let mut acti = sub(b"MODL", b"a.nif\0");
+    acti.extend(sub(b"PNAM", &[0; 4]));
+    acti.extend(sub(b"FNAM", &[0; 2]));
+    acti.extend(sub(b"RADR", &[0; 12]));
+    bytes.extend(group(
+        0,
+        u32::from_le_bytes(*b"ACTI"),
+        &record(b"ACTI", 0x880, 0, &acti),
+    ));
+    std::fs::write(&path, bytes).unwrap();
+    let store = Store::open(&f.manifest, &Budget::new(8 << 20)).unwrap();
+    let v = Vfs::mount(&f.manifest, &Budget::new(8 << 20)).unwrap();
+    let b = Budget::new(64 << 20);
+    let mut loader = Loader::new(&store, &v, "english", RuleLevel::Hypotheses, &b);
+    let scene = loader.by_editor_id("SyntheticRoom", &b).unwrap();
+    assert_eq!(scene.instances.len(), 1, "{:?}", scene.exclusions);
+    let i = &scene.instances[0];
+    assert!(!i.collision.ready_at(RuleLevel::Hypotheses));
+    assert!(
+        i.blockers.iter().any(readiness::activator_field)
+            && i.blockers.iter().any(readiness::activator_receiver_field)
+            && i.blockers.iter().any(readiness::reference_location_type),
+        "{:?}",
+        i.blockers
+    );
+    let limits = Limits::default();
+    let options = Options {
+        level: RuleLevel::Hypotheses,
+        body_placement: None,
+    };
+    assert!(cell(&scene, &loader, &limits, options, &b)
+        .unwrap()
+        .instances
+        .is_empty());
+    // The other switches leave the fields refusing (the statics' fields
+    // switch reads a static's reference only).
+    loader.set_collision_switches(readiness::Switches {
+        off_chain: true,
+        reference_alpha: true,
+        static_fields: true,
+        activator_fields: false,
+    });
+    assert!(cell(&scene, &loader, &limits, options, &b)
+        .unwrap()
+        .instances
+        .is_empty());
+    loader.set_collision_switches(readiness::Switches {
+        activator_fields: true,
+        ..readiness::Switches::default()
+    });
+    let on = cell(&scene, &loader, &limits, options, &b).unwrap();
+    assert_eq!(on.instances.len(), 1, "{:?}", on.unplaced);
+    assert!(on.instances[0]
+        .rules
+        .contains(&hypotheses::ACTIVATOR_FIELDS_COLLISION));
 }
 
 #[test]

@@ -409,7 +409,7 @@ Two readings in `fo4_walk::platform`, each behind its own switch of `ride_check`
   present (`presence`: `fo4_scene::timeline::presence`, the run's own Enable or Disable, else its enable chain
   under the enable parent rules with the run's changes, else its flag 0x800); an undecided box is left out. Still
   boxes are looked at again every quarter second of the walk; boxes that ride (`--ride-boxes`) once, at the start.
-- `walk_ride_rider_passes_terrain_v1` (`--ride-through-terrain`, `Ride::pass_terrain`): while the walker stands on
+- `walk_ride_rider_passes_terrain_v1` (`--ride-through-terrain`, in the play mode `--play-elevator-through-terrain`; `Ride::pass_terrain`, `RigidRide::pass_terrain`): while the walker stands on
   a ride's piece, the walking world's terrain sources are hidden; shown again when it steps off.
 
 Why the walker slid at the bottom (`ride_check --trace`, the last steep contact of each tick): from 499.0 s, about

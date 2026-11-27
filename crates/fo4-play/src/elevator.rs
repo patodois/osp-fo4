@@ -148,6 +148,10 @@ pub struct Elevator {
     /// ride that carried the walker and ended while the walker was in the
     /// air ends for the walker when it next stands on the ride's piece.
     pub landing: bool,
+    /// `walk_ride_rider_passes_terrain_v1` (`--play-elevator-through-terrain`):
+    /// while the walker stands on one of the rides' pieces, the walking
+    /// world's terrain sources are hidden ([`Ride::pass_terrain`]).
+    pub pass_terrain: bool,
     /// Under [`Elevator::landing`]: the rides that ended while the walker
     /// was in the air (their end second, their piece's key).
     pending: Vec<(f64, Key)>,
@@ -764,6 +768,7 @@ impl Elevator {
             log: Vec::new(),
             ended: None,
             landing: false,
+            pass_terrain: false,
             pending: Vec::new(),
             held,
             parts,
@@ -864,14 +869,16 @@ impl Elevator {
         for gi in 0..self.groups.len() {
             let track = self.group_track(&self.groups[gi]);
             let base = self.groups[gi].base.clone();
-            let r = Ride::new(set, self.key(1 + gi as u32), base, track, second, &b)?;
+            let mut r = Ride::new(set, self.key(1 + gi as u32), base, track, second, &b)?;
+            r.pass_terrain = self.pass_terrain;
             self.rides.push(r);
         }
         self.rigid_rides.clear();
         let first = 1 + self.groups.len() as u32;
         for (pi, p) in self.parts.iter().enumerate() {
             let key = self.key(first + pi as u32);
-            let r = RigidRide::new(set, key, p.base.clone(), p.track.clone(), second, &b)?;
+            let mut r = RigidRide::new(set, key, p.base.clone(), p.track.clone(), second, &b)?;
+            r.pass_terrain = self.pass_terrain;
             self.rigid_rides.push(r);
         }
         self.last = second;
@@ -1284,6 +1291,7 @@ mod tests {
             log: Vec::new(),
             ended: None,
             landing: false,
+            pass_terrain: false,
             pending: Vec::new(),
             held: 0,
             parts: Vec::new(),
@@ -1291,6 +1299,26 @@ mod tests {
             model: "meshes/a/platform.nif".into(),
             set: vec![3],
         }
+    }
+
+    /// `walk_ride_rider_passes_terrain_v1` (`--play-elevator-through-terrain`):
+    /// the rides put into a walking world pass the terrain only when the
+    /// platform asks for it, and again after a rebuild.
+    #[test]
+    fn the_rides_pass_the_terrain_only_under_the_switch() {
+        for pass in [false, true] {
+            let mut e = elevator();
+            e.pass_terrain = pass;
+            for _ in 0..2 {
+                let mut set: WorldSet<Key> = WorldSet::new();
+                e.insert(&mut set, 0.0).unwrap();
+                assert_eq!(e.rides.len(), 1);
+                assert!(e.rides.iter().all(|r| r.pass_terrain == pass));
+                assert!(e.rigid_rides.iter().all(|r| r.pass_terrain == pass));
+                e.leave();
+            }
+        }
+        assert!(!elevator().pass_terrain);
     }
 
     #[test]

@@ -383,6 +383,11 @@ pub struct Elevators {
     /// sequence, in place of the translations (`--play-elevator-rigid`,
     /// `play_elevator_rigid_v1`).
     pub rigid: bool,
+    /// While the walker stands on a moving part, the walking world's
+    /// terrain does not touch it (`--play-elevator-through-terrain`,
+    /// `walk_ride_rider_passes_terrain_v1`): a deck whose shaft goes below
+    /// the terrain carries its rider through it.
+    pub through_terrain: bool,
 }
 
 /// The longest standing slice while moving platforms are named (seconds):
@@ -480,6 +485,9 @@ fn collision_rules(o: &Options) -> std::collections::BTreeSet<&'static str> {
     }
     if c.static_fields {
         out.insert(fo4_scene::hypotheses::STATIC_REFERENCE_FIELDS_COLLISION);
+    }
+    if c.activator_fields {
+        out.insert(fo4_scene::hypotheses::ACTIVATOR_FIELDS_COLLISION);
     }
     out
 }
@@ -1095,6 +1103,7 @@ impl Walker {
                 crate::elevator::Elevator::build(m, run.store, vfs, k, also, i as u32, readings)
                     .map_err(|e| format!("PlayElevator {}: {e}", fo4_vm::bind::record_key(k)))?;
             e.landing = o.door_landing;
+            e.pass_terrain = o.through_terrain;
             if here.as_ref() == Some(&e.space) {
                 e.insert(self.live.space_mut(), self.t)
                     .map_err(|e| e.to_string())?;
@@ -1108,6 +1117,10 @@ impl Walker {
             log.rules
                 .insert(fo4_scene::hypotheses::ANIMATED_COLLISION_AS_STORED);
             log.rules.insert(fo4_walk::platform::rules::PLATFORM_RIDE);
+            if o.through_terrain {
+                log.rules
+                    .insert(fo4_walk::platform::rules::RIDE_PASSES_TERRAIN);
+            }
             if o.rigid {
                 log.rules.insert(crate::rules::ELEVATOR_RIGID);
                 log.rules.insert(fo4_scene::hypotheses::SEQUENCE_CHAIN_POSE);
@@ -2228,6 +2241,7 @@ mod tests {
                 off_chain: true,
                 reference_alpha: true,
                 static_fields: false,
+                activator_fields: false,
             },
             child_flag_agrees: true,
             ..Options::default()

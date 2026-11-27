@@ -280,6 +280,10 @@ pub const WORLD_PERSISTENT_IN_SQUARE: &str = "world_persistent_refs_drawn_in_squ
 /// collision as stored (`crate::readiness`, behind
 /// `readiness::Switches::static_fields`).
 pub const STATIC_REFERENCE_FIELDS_COLLISION: &str = "refr_static_fields_collision_unchanged_v1";
+/// An activator base's unread `PNAM`, `FNAM`, `ATTX` and `RADR` and its
+/// reference's `XLRT` leave its collision as stored (`crate::readiness`,
+/// behind `readiness::Switches::activator_fields`).
+pub const ACTIVATOR_FIELDS_COLLISION: &str = "acti_fields_receiver_collision_unchanged_v1";
 /// A static's reference fields `XACT`, `XLRT`, `XOWN` and `ONAM` leave its
 /// drawing as stored (`Loader::set_render_static_fields`, off by default).
 pub const STATIC_REFERENCE_FIELDS_RENDER: &str = "refr_static_fields_render_unchanged_v1";
@@ -825,6 +829,7 @@ mod tests {
             RAGDOLL_LEFT_OUT,
             WORLD_PERSISTENT_IN_SQUARE,
             STATIC_REFERENCE_FIELDS_COLLISION,
+            ACTIVATOR_FIELDS_COLLISION,
             STATIC_REFERENCE_FIELDS_RENDER,
             STATIC_LEAF_TWO_POSE,
             PLATFORM_SKIN_FOLLOWS_PARTS,

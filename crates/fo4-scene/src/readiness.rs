@@ -255,11 +255,18 @@ pub struct Switches {
     /// [`hypotheses::STATIC_REFERENCE_FIELDS_COLLISION`]
     /// ([`static_reference_field`]).
     pub static_fields: bool,
+    /// On a reference whose base is an activator (`ACTI`), the record
+    /// blockers of the base's unread [`ACTIVATOR_FIELDS`] and
+    /// [`ACTIVATOR_RECEIVER_FIELDS`] and of the reference's `XLRT` are set
+    /// aside under [`hypotheses::ACTIVATOR_FIELDS_COLLISION`]
+    /// ([`activator_field`], [`activator_receiver_field`],
+    /// [`reference_location_type`]).
+    pub activator_fields: bool,
 }
 
 impl Switches {
     pub fn any(self) -> bool {
-        self.off_chain || self.reference_alpha || self.static_fields
+        self.off_chain || self.reference_alpha || self.static_fields || self.activator_fields
     }
 }
 
