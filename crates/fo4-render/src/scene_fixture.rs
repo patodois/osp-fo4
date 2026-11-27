@@ -3028,6 +3028,65 @@ fn a_furniture_refused_for_an_unread_block_is_drawn_by_its_other_parts_behind_it
     assert_eq!(rest.left_out, on.left_out);
 }
 
+/// `furn_parts_drawn_at_rest_v1` (round 27): a furniture whose base names
+/// its own material swap carries the swap's materials beside its model
+/// among its assets. The static parts reading takes a base of one asset
+/// only and refuses it; the reading at rest takes the base's one model
+/// among them and draws it.
+#[test]
+fn a_furniture_with_its_own_swap_is_read_at_rest_by_its_one_model() {
+    use fo4_scene::hypotheses::{FURNITURE_AT_REST, FURNITURE_PARTS};
+    let mut blocks = model_blocks(b"textures/a.dds", None, None, (b"", b""), None);
+    let helper = blocks[4].1.clone();
+    let mut linked = helper[..4].to_vec();
+    linked.extend(1u32.to_le_bytes());
+    linked.extend(5u32.to_le_bytes());
+    linked.extend(&helper[8..]);
+    blocks[4].1 = linked;
+    blocks.push(("BSPositionData", vec![0; 8]));
+    let part = nif_file(blocks, b"PlainLabel", b"");
+    let mut fields = sub(b"MODL", b"part.nif\0");
+    fields.extend(sub(b"MODS", &0x820u32.to_le_bytes()));
+    let mut swap = sub(b"BNAM", b"other.bgsm\0");
+    swap.extend(sub(b"SNAM", b"replacement.bgsm\0"));
+    let records = [
+        rec(b"MSWP", 0x820, 0, &swap),
+        rec(b"FURN", 0x804, 0, &fields),
+    ]
+    .concat();
+    let (_temp, m) = fixture_records(
+        "render-furniture-own-swap",
+        &dds(),
+        part,
+        0x804,
+        &[],
+        &records,
+    );
+    let b = Budget::new(32 << 20);
+    let store = fo4_plugin::typed::Store::open(&m, &b).unwrap();
+    let vfs = fo4_vfs::Vfs::mount(&m, &b).unwrap();
+    let scene_with = |at_rest: bool| {
+        let mut loader = Loader::new(&store, &vfs, "english", RuleLevel::Facts, &b);
+        loader.set_render_static_parts(true);
+        loader.set_render_furniture_parts(true);
+        loader.set_render_furniture_at_rest(at_rest);
+        let scene = loader.by_editor_id("SyntheticScolCell", &b).unwrap();
+        let i = &scene.instances[0];
+        assert!(
+            i.base.as_ref().unwrap().assets.len() > 1,
+            "the swap's materials stand beside the model"
+        );
+        i.state.hypotheses().to_vec()
+    };
+    // The parts reading alone: the base's assets are not one model.
+    let parts = scene_with(false);
+    assert!(!parts.contains(&FURNITURE_PARTS), "{parts:?}");
+    assert!(!parts.contains(&FURNITURE_AT_REST));
+    // At rest: its one model is read and the unread block set aside.
+    let rest = scene_with(true);
+    assert!(rest.contains(&FURNITURE_AT_REST), "{rest:?}");
+}
+
 /// `furn_template_text_render_unchanged_v1`: a furniture storing an object
 /// template (OBTE, OBTS) and an activate text (ATTX) is refused for them;
 /// behind `Loader::set_render_furniture_template` it is drawn.
