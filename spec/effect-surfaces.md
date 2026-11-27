@@ -135,6 +135,16 @@ that each can be refuted alone:
 - `effect_soft_lighting_left_out_v1` (draw rule, when a shader or material
   sets them): soft depth fade, lighting influence and effect lighting do
   not change this unlit frame.
+- `effect_soft_depth_fade_linear_v1` (draw rule, `BuildOptions::soft_effects`,
+  the viewer's `--draw-soft-effects`; a blended surface whose shader sets
+  Soft_Effect or whose material sets its soft flag): the sample's alpha,
+  after the falloff and before the alpha test, times the gap from the
+  sample to the opaque depth behind it (camera axis) over the stored soft
+  falloff depth, clamped to 0..1 (`Draw::soft_depth`); no fade where
+  nothing opaque lies behind. The CPU reads its `opaque_depth`; the window
+  copies its depth buffer after Bevy's opaque pass into a buffer every
+  material binds (`gpu::SoftDepthBuffer`). An unblended soft surface keeps
+  the left-out rule.
 - `effect_falloff_view_angle_v1` and its companions: see Falloff below.
 
 The draw build applies the effect path only to instances whose state

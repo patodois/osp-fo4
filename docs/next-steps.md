@@ -332,6 +332,24 @@ only (heels on slopes; per-foot rays from the posed feet would need a rule); a r
 moved by the settle (its pose draws below its place); the soft fade, the parse memo, the device's refusal, the
 shelving's collision, actors as pick targets and the throat band were not started (janela17 RESULTADO).
 
+Twenty-third-session fixes: the cues' wait for quest progress is measured on the input's clock (the end of the last
+slice handed to the run, `cue_clock`), not only on the run's second, which is that of its last event and stood still
+after the console from 2225.8 to 2290.6 s (no stall was ever seen, so no use cue came). The walk probe the cues ask
+(`fo4_walk::Character::walks_to`) moves its copy at most half a radius a tick, so it climbs a flight of porch steps
+the walker climbs (at 0.1 s and the run speed a raised tick crossed two risers). `--draw-soft-effects`
+(`effect_soft_depth_fade_linear_v1`, pending, in the play preset) fades a blended soft effect surface by its gap to
+the opaque depth behind it over its stored soft falloff depth, on the CPU from its opaque depth and in the window from
+a copy of the depth buffer taken after Bevy's opaque pass (`gpu::SoftDepthBuffer`; a view above 4096 x 2880 draws
+without the fade). The window's loads keep up to 256 MiB of parsed models (`fo4_scene::Assets::keep_models`,
+`FO4_VIEW_MODEL_MEMO_MIB`; a parse is shared through `fo4_nif::NifBody`). Found, not fixed: the exit device is still
+refused with `--draw-furniture-parts` because its model's manager-run transform controller names the hand node above
+every shape and a manager-run visibility controller (with an undecoded blend bool interpolator) names the device's
+node, so the parts reading keeps no shape, and the whole model also waits on a behaviour graph and two furniture
+fields the furniture reading does not set aside (activate text, MODT); drawing it needs a rest rule for manager-run
+visibility at least. The living-room shelving has its collision (shelf boards of the house's interior model in the
+walking world); the 21st B walker stood about 84 units in front of it with no key held, not inside it. Left: actors as
+pick targets, the throat band, the floating television, the creature in the slab, the robot's object template.
+
 The opening run is now visible (`spec/timeline.md`), and since the cast step its people appear as people. `quest_run new-game --timeline FILE` writes what the run
 did, second by second, in a neutral versioned text file (track points with their cells, actor places with the
 rule or assumption behind each, references enabled, disabled and moved, scene lines with speaker, seconds and
