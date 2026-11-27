@@ -182,6 +182,7 @@ fn writer_tes4_master_order_and_raw_master_data_round_trip() {
         declared_records: 0,
         next_object_id: 0x901,
         masters: &masters,
+        others: &[],
     };
     let bytes = writer::header(&model, &Limits::default(), &Budget::new(1 << 20)).unwrap();
     let parsed = header("Own.esl", &bytes).unwrap();
@@ -2660,12 +2661,115 @@ fn writer_refuses_what_the_reader_would_reject() {
             declared_records: 0,
             next_object_id: 0x800,
             masters: &masters,
+            others: &[],
         };
         assert_eq!(
             writer::header(&model, &limits, &budget).unwrap_err().code,
             "WriterMasterName",
             "{names:?}"
         );
+    }
+}
+
+/// code-3a P3: a header read and written again keeps its other
+/// subrecords where they stood, byte for byte; the writer refuses a version,
+/// a flag and a subrecord the reader would refuse.
+#[test]
+fn a_header_read_then_written_keeps_its_other_subrecords() {
+    use crate::writer::{self, HeaderModel, Master, Subrecord};
+    let mut hedr = 0.95f32.to_le_bytes().to_vec();
+    hedr.extend(4u32.to_le_bytes());
+    hedr.extend(0x900u32.to_le_bytes());
+    let body = [
+        sub(b"HEDR", &hedr),
+        sub(b"CNAM", b"author\0"),
+        sub(b"MAST", b"First.esm\0"),
+        sub(b"DATA", &[0x12; 8]),
+        sub(b"ONAM", &[1, 2, 3, 4]),
+        sub(b"MAST", b"Second.esm\0"),
+        sub(b"DATA", &[0x34; 8]),
+        sub(b"INTV", &7u32.to_le_bytes()),
+        sub(b"INCC", &2u32.to_le_bytes()),
+    ]
+    .concat();
+    let original = record(b"TES4", 0, MASTER, &body);
+    let h = header("Own.esm", &original).unwrap();
+    assert_eq!(h.raw_subrecords.len(), 4);
+    let others = writer::header_others(&h, &original).unwrap();
+    assert_eq!(
+        others.iter().map(|(p, _)| *p).collect::<Vec<_>>(),
+        [1, 2, 3, 3]
+    );
+    let masters: Vec<Master<'_>> = h
+        .masters
+        .iter()
+        .zip(&h.master_data)
+        .map(|(name, data)| Master { name, data: *data })
+        .collect();
+    let model = HeaderModel {
+        flags: h.flags,
+        // The record header's revision word, which `Header` does not keep.
+        revision: 0x0102_0304,
+        version: h.form_version,
+        unknown: 0,
+        hedr_version: h.hedr_version,
+        declared_records: h.declared_records,
+        next_object_id: h.next_object_id,
+        masters: &masters,
+        others: &others,
+    };
+    let limits = Limits::default();
+    let budget = Budget::new(1 << 20);
+    let written = writer::header(&model, &limits, &budget).unwrap();
+    assert_eq!(written, original);
+    // What the reader would refuse is refused.
+    let bad = [(
+        1,
+        Subrecord {
+            signature: *b"MAST",
+            data: b"Third.esm\0",
+            extended: false,
+        },
+    )];
+    for (m, code) in [
+        (
+            HeaderModel {
+                hedr_version: 2.0,
+                ..model
+            },
+            "WriterHeaderVersion",
+        ),
+        (
+            HeaderModel {
+                flags: 0x100000,
+                ..model
+            },
+            "WriterHeaderFlags",
+        ),
+        (
+            HeaderModel {
+                others: &bad,
+                ..model
+            },
+            "WriterHeaderSubrecord",
+        ),
+        (
+            HeaderModel {
+                others: &[(
+                    4,
+                    Subrecord {
+                        signature: *b"INTV",
+                        data: &[0; 4],
+                        extended: false,
+                    },
+                )],
+                ..model
+            },
+            "WriterHeaderSubrecord",
+        ),
+    ] {
+        let e = writer::header(&m, &limits, &budget).unwrap_err();
+        assert_eq!(e.code, code);
     }
 }
 

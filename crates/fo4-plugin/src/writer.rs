@@ -33,6 +33,57 @@ pub struct HeaderModel<'a> {
     pub declared_records: u32,
     pub next_object_id: u32,
     pub masters: &'a [Master<'a>],
+    /// The header's other subrecords, each with its place: how many of
+    /// HEDR and the MAST/DATA pairs, in that order, come before it (0
+    /// before HEDR, 1 after it, 1 + k after the k-th pair). Equal places
+    /// keep their order. [`header_others`] gives them for a header read.
+    pub others: &'a [(usize, Subrecord<'a>)],
+}
+
+/// The subrecords of the header `h` read from `bytes` (the file, or its
+/// start) other than HEDR and the MAST/DATA pairs, with their places as
+/// [`HeaderModel::others`] takes them: what a read-then-write needs to
+/// write the header back as it was.
+pub fn header_others<'a>(
+    h: &crate::Header,
+    bytes: &'a [u8],
+) -> Result<Vec<(usize, Subrecord<'a>)>> {
+    let mut out = Vec::new();
+    for span in &h.raw_subrecords {
+        let at = usize::try_from(span.offset)
+            .map_err(|e| Error::new("Overflow", &span.file, span.offset, "offset", e))?;
+        let end = usize::try_from(span.length)
+            .ok()
+            .and_then(|n| at.checked_add(n))
+            .filter(|e| *e <= bytes.len() && at + 6 <= *e)
+            .ok_or_else(|| {
+                Error::new(
+                    "WriterHeaderSpan",
+                    &span.file,
+                    span.offset,
+                    "a subrecord within the bytes given",
+                    span.length,
+                )
+            })?;
+        let mut signature = [0; 4];
+        signature.copy_from_slice(&bytes[at..at + 4]);
+        let stored = u16::from_le_bytes([bytes[at + 4], bytes[at + 5]]);
+        let data = &bytes[at + 6..end];
+        let place = usize::from(h.hedr_offset < span.offset)
+            + h.master_offsets
+                .iter()
+                .filter(|m| **m < span.offset)
+                .count();
+        out.push((
+            place,
+            Subrecord {
+                signature,
+                data,
+                extended: stored == 0 && !data.is_empty(),
+            },
+        ));
+    }
+    Ok(out)
 }
 pub enum Node<'a> {
     Record(RecordModel<'a>),
@@ -126,7 +177,45 @@ pub fn header(model: &HeaderModel<'_>, l: &Limits, b: &Budget) -> Result<Vec<u8>
         "plugin writer masters",
         0,
     )?;
+    let count = fo4_core::add(count, model.others.len() as u64, "plugin writer header", 0)?;
     limit(count, l.max_subrecords, "plugin writer masters", 0)?;
+    // What the reader refuses: a version no game it reads stores, the
+    // update-plugin flag, a subrecord it would read as HEDR or MAST, a
+    // place past the last pair.
+    if ![0.95f32, 1.0, 1.7, 1.71].contains(&model.hedr_version) {
+        return Err(Error::new(
+            "WriterHeaderVersion",
+            "plugin writer",
+            0,
+            "FO4 0.95/1.0, SSE 1.7/1.71",
+            model.hedr_version,
+        ));
+    }
+    if model.flags & 0x100000 != 0 {
+        return Err(Error::new(
+            "WriterHeaderFlags",
+            "plugin writer",
+            0,
+            "full/light plugin flags",
+            format!("{:#x}", model.flags),
+        ));
+    }
+    if let Some((place, s)) = model
+        .others
+        .iter()
+        .find(|(p, s)| *p > model.masters.len() + 1 || matches!(&s.signature, b"HEDR" | b"MAST"))
+    {
+        return Err(Error::new(
+            "WriterHeaderSubrecord",
+            "plugin writer",
+            0,
+            format!(
+                "a subrecord other than HEDR and MAST, placed at most {}",
+                model.masters.len() + 1
+            ),
+            format!("{:?} at {place}", s.signature),
+        ));
+    }
     if model.flags & COMPRESSED != 0 {
         return Err(Error::new(
             "WriterCompressedHeader",
@@ -138,11 +227,26 @@ pub fn header(model: &HeaderModel<'_>, l: &Limits, b: &Budget) -> Result<Vec<u8>
     }
     let work = b.child();
     let mut raw = sink(&work, l.max_payload);
+    let others = |raw: &mut Sink<'_>, place: usize| -> Result<()> {
+        for (_, field) in model.others.iter().filter(|(p, _)| *p == place) {
+            let extended = field.extended || field.data.len() > u16::MAX as usize;
+            if extended {
+                raw.append(b"XXXX\x04\x00")?;
+                raw.u32(field.data.len())?;
+            }
+            raw.append(&field.signature)?;
+            raw.append(&(if extended { 0 } else { field.data.len() as u16 }).to_le_bytes())?;
+            raw.append(field.data)?;
+        }
+        Ok(())
+    };
+    others(&mut raw, 0)?;
     raw.append(b"HEDR\x0c\0")?;
     raw.append(&model.hedr_version.to_le_bytes())?;
     raw.append(&model.declared_records.to_le_bytes())?;
     raw.append(&model.next_object_id.to_le_bytes())?;
-    for master in model.masters {
+    others(&mut raw, 1)?;
+    for (k, master) in model.masters.iter().enumerate() {
         // Same rules as the reader: an ASCII basename, unique ignoring case.
         if master.name.is_empty()
             || master.name.as_bytes().contains(&0)
@@ -184,6 +288,7 @@ pub fn header(model: &HeaderModel<'_>, l: &Limits, b: &Budget) -> Result<Vec<u8>
         raw.append(&[0])?;
         raw.append(b"DATA\x08\0")?;
         raw.append(&master.data)?;
+        others(&mut raw, k + 2)?;
     }
     record(
         *b"TES4",
