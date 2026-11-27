@@ -3,8 +3,8 @@
 //! centre, under it one line naming what E would activate when a target is
 //! in reach (a short action and a plain name) or, for a moment, what an
 //! activation did, the subtitle being spoken (wrapped to three lines), the
-//! objective the run shows in the top left corner, and "paused" or
-//! "loading". Viewer policy, no rule: presentation only, nothing here
+//! objective the run shows in the top left corner, and "paused",
+//! "loading" or, once the person's input is over, "ending". Viewer policy, no rule: presentation only, nothing here
 //! reaches the run.
 //!
 //! The text is drawn with the viewer's own 5 by 7 ASCII font
@@ -228,6 +228,10 @@ pub struct Shown {
     pub objective: Option<String>,
     pub paused: bool,
     pub loading: bool,
+    /// The person's input is over (Escape): the run goes on to its end and
+    /// writes its outputs while the play clock stands; the status line
+    /// says so instead of "loading".
+    pub ending: bool,
 }
 
 impl Shown {
@@ -253,6 +257,7 @@ impl Shown {
                 return (!l.is_empty()).then_some(l);
             }
             Slot::Objective => self.objective.clone()?,
+            Slot::Status if self.ending => "ending".into(),
             Slot::Status => match (self.paused, self.loading) {
                 (true, true) => "paused - loading".into(),
                 (true, false) => "paused".into(),
@@ -354,6 +359,13 @@ mod tests {
             ..Shown::default()
         };
         assert_eq!(loading.text(Slot::Status, 80).unwrap(), "loading");
+        // After the input's end the standing clock is the run finishing,
+        // not a load.
+        let ending = Shown {
+            ending: true,
+            ..loading
+        };
+        assert_eq!(ending.text(Slot::Status, 80).unwrap(), "ending");
     }
 
     #[test]

@@ -1998,16 +1998,29 @@ fn hud_spawn(
     }
 }
 
+/// The names of the causes that are on, joined (`hud_update`'s log).
+#[cfg(feature = "script-event")]
+fn status_causes(causes: &[(&str, bool)]) -> String {
+    causes
+        .iter()
+        .filter(|c| c.1)
+        .map(|c| c.0)
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
 /// `--play-hud`, each frame: what the HUD shows (what E would activate
-/// when it is a thing E uses, the line being spoken, paused, loading),
-/// each slot's image made again only when its text or the window's size
-/// changed.
+/// when it is a thing E uses, the line being spoken, paused, loading,
+/// ending), each slot's image made again only when its text or the
+/// window's size changed; the log names the status line's causes each
+/// time they change.
 #[cfg(feature = "script-event")]
 #[allow(clippy::too_many_arguments)]
 fn hud_update(
     playing: Res<Playing>,
     person: Option<Res<PersonInput>>,
     mut confirmed: Local<(u64, Option<std::time::Instant>)>,
+    mut status: Local<String>,
     pending: Option<Res<PendingScene>>,
     windows: Query<&Window, With<PrimaryWindow>>,
     mut quads: Query<(&mut HudQuad, &mut Transform, &mut Visibility)>,
@@ -2061,7 +2074,32 @@ fn hud_update(
             || pending.is_some()
             || seen.building
             || stood,
+        ending: person.as_ref().is_some_and(|x| x.person.ended),
     };
+    // The log names what holds the status line each time it changes
+    // (measurement only: what a person saw as "loading").
+    let causes = status_causes(&[
+        ("a cell loading", p.loading()),
+        ("an upload", drawn.uploading.is_some()),
+        ("a cell held for its cast", drawn.held.is_some()),
+        ("a scene to spawn", pending.is_some()),
+        ("the walker building its walking world", seen.building),
+        ("the play clock standing", stood),
+        ("the input ended", shown.ending),
+        ("paused", shown.paused),
+    ]);
+    if *status != causes {
+        println!(
+            "play: viewport status at {:.3} s of the run: {}",
+            seen.t,
+            if causes.is_empty() {
+                "none"
+            } else {
+                causes.as_str()
+            }
+        );
+        *status = causes;
+    }
     let k = crate::hud::scale(size[1]);
     let columns = crate::hud::columns(size[0], k);
     let key = [size[0] as u32, size[1] as u32];
@@ -4807,6 +4845,18 @@ mod tests {
         assert!(!leaving_done(None, &k(2), 0.1));
         assert!(leaving_done(Some(&k(2)), &k(2), 0.0));
         assert!(leaving_done(Some(&k(1)), &k(2), LEAVING_MAX));
+    }
+
+    /// The status line's causes are named in the log as they change (the
+    /// 26th session's B: its last frame said loading with nothing loading).
+    #[cfg(feature = "script-event")]
+    #[test]
+    fn the_status_lines_causes_are_named_in_order() {
+        assert_eq!(status_causes(&[("a", false), ("b", false)]), "");
+        assert_eq!(
+            status_causes(&[("a", true), ("b", false), ("c", true)]),
+            "a, c"
+        );
     }
 
     #[test]
