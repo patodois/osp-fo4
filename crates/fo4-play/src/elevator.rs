@@ -48,6 +48,26 @@ pub const KIND: u8 = 3;
 pub const SAMPLES_PER_SECOND: f64 = 60.0;
 /// Pieces one named reference may use in the key space.
 const STRIDE: u32 = 10_000;
+/// The most samples one sequence's track is read with (about 18 minutes
+/// at [`SAMPLES_PER_SECOND`]); a longer or infinite span is a named error.
+pub const MAX_SAMPLES: usize = 1 << 16;
+
+/// The steps a span of `span` seconds is sampled in, as many as
+/// [`SAMPLES_PER_SECOND`] gives (at least one); a span that needs more
+/// than [`MAX_SAMPLES`] is an error naming the sequence.
+fn sample_steps(s: &fo4_scene::sequence::Sequence, span: f64) -> fo4_core::Result<usize> {
+    let n = (span * SAMPLES_PER_SECOND).ceil().max(1.0);
+    if !(n <= MAX_SAMPLES as f64) {
+        return Err(fo4_core::Error::new(
+            "SequenceSpanTooLong",
+            &s.name,
+            0,
+            format!("a span of at most {MAX_SAMPLES} samples"),
+            format!("{span} s"),
+        ));
+    }
+    Ok(n as usize)
+}
 
 type E = Box<dyn std::error::Error>;
 /// (second, translation) points.
@@ -210,7 +230,8 @@ impl Source {
     /// span (seconds), sampled [`SAMPLES_PER_SECOND`] times a second, in
     /// world axes (turned and scaled by the placement `frame`, whose
     /// `origin` is taken off): (seconds from the sequence's start, offset).
-    /// Empty when a sample has no value.
+    /// Empty when a sample has no value; an error when the span needs more
+    /// than [`MAX_SAMPLES`].
     pub fn track(
         &self,
         s: &fo4_scene::sequence::Sequence,
@@ -218,20 +239,20 @@ impl Source {
         stored: [f32; 3],
         frame: fo4_scene::transform::Transform,
         origin: [f64; 3],
-    ) -> Track {
-        let steps = (span * SAMPLES_PER_SECOND).ceil().max(1.0) as usize;
+    ) -> fo4_core::Result<Track> {
+        let steps = sample_steps(s, span)?;
         let mut track = Vec::new();
         for k in 0..=steps {
             let dt = (k as f64 / SAMPLES_PER_SECOND).min(span);
             let st = f64::from(s.start) + dt * f64::from(s.frequency);
             let Some(v) = self.sample(st) else {
-                return Vec::new();
+                return Ok(Vec::new());
             };
             let local: [f64; 3] = std::array::from_fn(|i| f64::from(v[i] - stored[i]));
             let w = frame.apply(local);
             track.push((dt, std::array::from_fn(|i| w[i] - origin[i])));
         }
-        track
+        Ok(track)
     }
 }
 
@@ -306,7 +327,7 @@ fn rigid_parts(
             return Ok(Vec::new());
         }
         let span = f64::from(s.stop - s.start) / f64::from(s.frequency);
-        let steps = (span * SAMPLES_PER_SECOND).ceil().max(1.0) as usize;
+        let steps = sample_steps(s, span)?;
         let mut track = Vec::new();
         for k in 0..=steps {
             let dt = (k as f64 / SAMPLES_PER_SECOND).min(span);
@@ -643,7 +664,7 @@ impl Elevator {
                     let Some(source) = Source::of(keys, held) else {
                         continue;
                     };
-                    let track = source.track(s, span, stored, frame, origin);
+                    let track = source.track(s, span, stored, frame, origin)?;
                     if !track.is_empty() && matches!(source, Source::Held(_)) {
                         held_tracks += 1;
                     }
@@ -1573,7 +1594,10 @@ mod tests {
         assert_eq!(before, Source::Keys(empty.translation.clone()));
         let frame = fo4_scene::transform::Transform::euler([0.0; 6], 1.0).unwrap();
         let s = sequence("Open", 1.0);
-        assert!(before.track(&s, 1.0, [0.0; 3], frame, [0.0; 3]).is_empty());
+        assert!(before
+            .track(&s, 1.0, [0.0; 3], frame, [0.0; 3])
+            .unwrap()
+            .is_empty());
         assert_eq!(Source::of(None, None), None);
     }
 
@@ -1587,7 +1611,9 @@ mod tests {
         let origin = frame.apply([0.0; 3]);
         let s = sequence("Open", 0.5);
         let stored = [1.0, 2.0, 3.0];
-        let tr = Source::Held([4.0, 2.0, 3.0]).track(&s, 0.5, stored, frame, origin);
+        let tr = Source::Held([4.0, 2.0, 3.0])
+            .track(&s, 0.5, stored, frame, origin)
+            .unwrap();
         assert_eq!(tr.len(), 31);
         assert_eq!(tr.first().unwrap().0, 0.0);
         assert_eq!(tr.last().unwrap().0, 0.5);
@@ -1605,20 +1631,33 @@ mod tests {
             None,
         )
         .unwrap()
-        .track(&sequence("Up", 1.0), 1.0, [0.0; 3], frame, origin);
+        .track(&sequence("Up", 1.0), 1.0, [0.0; 3], frame, origin)
+        .unwrap();
         assert!((k[30].1[2] - 10.0).abs() < 1e-9, "{:?}", k[30]);
+    }
+
+    #[test]
+    fn a_sequence_span_past_the_sample_ceiling_is_a_named_error() {
+        let frame = fo4_scene::transform::Transform::euler([0.0; 6], 1.0).unwrap();
+        let s = sequence("Open", 1.0);
+        let held = Source::Held([0.0, 0.0, 1.0]);
+        // At the ceiling it is read; one sample past it, or an infinite
+        // span, is refused before any sample is taken.
+        let at = (MAX_SAMPLES as f64) / SAMPLES_PER_SECOND;
+        let tr = held.track(&s, at, [0.0; 3], frame, [0.0; 3]).unwrap();
+        assert_eq!(tr.len(), MAX_SAMPLES + 1);
+        for span in [at + 1.0, 1e9, f64::INFINITY] {
+            let e = held.track(&s, span, [0.0; 3], frame, [0.0; 3]).unwrap_err();
+            assert_eq!(e.code, "SequenceSpanTooLong");
+        }
     }
 
     #[test]
     fn a_held_part_moves_when_the_run_starts_its_sequence_and_stays() {
         let frame = fo4_scene::transform::Transform::euler([0.0; 6], 1.0).unwrap();
-        let open = Source::Held([0.0, 0.0, 40.0]).track(
-            &sequence("Open", 1.0),
-            1.0,
-            [0.0; 3],
-            frame,
-            [0.0; 3],
-        );
+        let open = Source::Held([0.0, 0.0, 40.0])
+            .track(&sequence("Open", 1.0), 1.0, [0.0; 3], frame, [0.0; 3])
+            .unwrap();
         let mut e = elevator();
         e.nodes[0].tracks = BTreeMap::from([("Open".to_string(), open)]);
         let mut lib = fo4_vm::MapLibrary::default();
