@@ -9,10 +9,12 @@
 //! compares as bytes, as every other path does, and matches no material.
 use fo4_core::{Budget, Error, Result};
 
-/// The most `*` a pattern may hold, and the most ways one path may be
-/// split by a pattern, before the match is refused (bounded work).
+/// The most `*` a pattern may hold, the most ways one path may be split
+/// by a pattern, and the most runs tried for one match, before the match
+/// is refused (bounded work).
 pub const MAX_STARS: usize = 8;
 pub const MAX_SPLITS: usize = 64;
+pub const MAX_TRIES: usize = 1 << 16;
 
 /// Whether a resolved swap path is a pattern.
 pub fn is_pattern(key: &[u8]) -> bool {
@@ -43,8 +45,17 @@ pub fn captures(pattern: &[u8], path: &[u8], b: &Budget) -> Result<Vec<Vec<Vec<u
     let mut out = Vec::new();
     let mut runs = Vec::new();
     b.reserve(&mut runs, n, "material swap", 0)?;
-    walk(pattern, path, &mut runs, &mut out, b)?;
+    walk(pattern, path, &mut runs, &mut out, &mut 0, b)?;
     Ok(out)
+}
+
+/// Whether `pattern`, from its start up to its first `*` (or whole, with
+/// none), can begin `path`: the test [`walk`] makes first.
+fn can_begin(pattern: &[u8], path: &[u8]) -> bool {
+    match pattern.iter().position(|c| *c == b'*') {
+        Some(k) => path.starts_with(&pattern[..k]),
+        None => pattern == path,
+    }
 }
 
 fn walk(
@@ -52,6 +63,7 @@ fn walk(
     path: &[u8],
     runs: &mut Vec<Vec<u8>>,
     out: &mut Vec<Vec<Vec<u8>>>,
+    tries: &mut usize,
     b: &Budget,
 ) -> Result<()> {
     let Some(k) = pattern.iter().position(|c| *c == b'*') else {
@@ -76,12 +88,25 @@ fn walk(
         return Ok(());
     }
     let rest = &path[k..];
+    let next = &pattern[k + 1..];
     for n in 0..=rest.len() {
+        // A run after which the rest of the pattern cannot begin gives no
+        // split: it is not tried.
+        if !can_begin(next, &rest[n..]) {
+            continue;
+        }
+        *tries += 1;
+        if *tries > MAX_TRIES {
+            return Err(refused(format!("more than {MAX_TRIES} runs tried")));
+        }
+        // The run is held only while it is tried: its charge goes back
+        // when the scope drops.
+        let scope = b.child();
         let mut run = Vec::new();
-        b.reserve(&mut run, n, "material swap", 0)?;
+        scope.reserve(&mut run, n, "material swap", 0)?;
         run.extend_from_slice(&rest[..n]);
         runs.push(run);
-        walk(&pattern[k + 1..], &rest[n..], runs, out, b)?;
+        walk(next, &rest[n..], runs, out, tries, b)?;
         runs.pop();
     }
     Ok(())
@@ -197,5 +222,22 @@ mod tests {
             "UnsupportedSwapPattern"
         );
         assert!(is_pattern(b"m/a*.bgsm") && !is_pattern(b"m/a.bgsm"));
+    }
+
+    #[test]
+    fn runs_tried_are_bounded_and_their_charges_go_back() {
+        // Eight stars over a long run of one byte: about 10^12 ways to try,
+        // refused after MAX_TRIES runs instead.
+        let b = Budget::new(1 << 20);
+        let path = [b'a'; 200];
+        let e = captures(b"********b", &path, &b).unwrap_err();
+        assert_eq!(e.code, "UnsupportedSwapPattern");
+        assert!(e.found.contains("runs tried"), "{}", e.found);
+        // A pattern that does not match keeps no charge for the runs it
+        // tried (they used to add up past the budget).
+        let b = Budget::new(1 << 20);
+        let path = [b'a'; 300];
+        assert!(captures(b"*a*b", &path, &b).unwrap().is_empty());
+        assert!(b.used() < 4096, "{}", b.used());
     }
 }
