@@ -741,7 +741,21 @@ pub fn settle(
         vm.world.anims.count("text keys raised");
         let out = deliver(vm, d.sender, &d.text);
         runs.extend(quest::run_jobs(vm, store, max_jobs, b));
-        graph_event(&mut vm.world, d.sender, &d.text, d.t);
+        // A handler or a job may have moved the graph on: the key belongs
+        // to the state it was raised in and is not sent to another.
+        let still = vm
+            .world
+            .anims
+            .runs
+            .get(&d.sender)
+            .is_some_and(|r| r.generation == d.generation && r.open.is_none());
+        if still {
+            graph_event(&mut vm.world, d.sender, &d.text, d.t);
+        } else {
+            vm.world
+                .anims
+                .count("text keys not sent to the graph\tits handlers left the state first");
+        }
         for r in std::mem::take(&mut vm.world.anims.used) {
             vm.rules.insert(r);
         }

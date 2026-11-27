@@ -289,3 +289,54 @@ fn the_callers_graph_event_takes_the_transition_a_play_animation_would() {
     assert!(anim::caller_event(&mut vm, o, "Ping").is_empty());
     assert_eq!(vm.world.anims.runs[&o].state, 1);
 }
+
+#[test]
+fn a_text_key_whose_handler_moves_the_graph_is_not_sent_to_the_new_state() {
+    let store = store();
+    let mut lib = lib();
+    lib.add(assemble(
+        "script ObjectReference extends Form
+         func PlayAnimation Bool native String asAnimation",
+    ));
+    lib.add(assemble(
+        "script Mover extends ObjectReference
+         func Reg none String asName
+         local Bool ::b
+         local ObjectReference ::me
+         14 ::me self
+         23 RegisterForAnimationEvent self ::b 2 ::me asName
+         func OnAnimationEvent none ObjectReference akSource String asEventName
+         local Bool ::b
+         23 PlayAnimation self ::b 1 \"Back\"",
+    ));
+    let mut host = QuestHost::new(&store, 1 << 20);
+    host.graphs = Some(Box::new(NoGraphs));
+    let mut vm = Vm::new(&mut lib, &mut host);
+    vm.world.anims.on = true;
+    vm.world.anims.graphs = true;
+    vm.world.anims.keys = true;
+    let o = vm.world.object(
+        "ref",
+        Some("test.esm:00000801".into()),
+        &["objectreference"],
+    );
+    let i = vm.instantiate(Some(o), "mover").unwrap();
+    vm.deliver(i, "reg", vec![Val::Str("Go".into())]);
+    // B's sequence raises `Go` at 0.5 s; its handler plays `Back` (to A).
+    let mut g = (*graph()).clone();
+    g.sequences[1].keys = vec![(0.5, "Go".into())];
+    anim::begin(&mut vm.world, o, Rc::new(g), 0.0);
+    anim::graph_event(&mut vm.world, o, "Go", 0.0);
+    assert_eq!(vm.world.anims.runs[&o].state, 1);
+    vm.world.now[crate::world::Clock::Real as usize] = 0.5;
+    let b = Budget::new(1 << 20);
+    let (raised, _) = anim::settle(&mut vm, &store, 16, &b);
+    assert_eq!(raised.len(), 1);
+    // The handler took the graph to A; the key of B is not then taken by A
+    // (whose wildcard would have gone back to B).
+    assert_eq!(vm.world.anims.runs[&o].state, 0);
+    assert_eq!(
+        vm.world.anims.counts["text keys not sent to the graph\tits handlers left the state first"],
+        1
+    );
+}
