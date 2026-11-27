@@ -287,6 +287,20 @@ impl Budget {
     pub fn scope_max(&self) -> u64 {
         self.scope_max
     }
+    /// Whether `e` is a refusal a later charge with more room could pass:
+    /// a charge past this budget's ceiling (the bound it states, as
+    /// [`Budget::charge`] words it) or an allocation that failed; not a
+    /// limit of the data read, nor of one scope's work.
+    pub fn refused_at_ceiling(&self, e: &Error) -> bool {
+        match e.code.as_str() {
+            "AllocationFailed" => true,
+            "LimitExceeded" => {
+                let ceiling = format!("<= {}", self.max);
+                e.expected == ceiling || e.expected.starts_with(&format!("{ceiling} ("))
+            }
+            _ => false,
+        }
+    }
     /// Optional telemetry of conservative credits; this is not resident memory.
     pub fn metered(max: u64) -> Self {
         let mut b = Self::new(max);

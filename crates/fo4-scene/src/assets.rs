@@ -663,6 +663,11 @@ impl<'a> Assets<'a> {
             ready: false,
             loading: true,
         });
+        // The key kept to take the node out of the index again when its
+        // read was refused for want of room ([`Budget::refused_at_ceiling`]).
+        let mut indexed = Vec::new();
+        lookup.reserve(&mut indexed, cache_key.len(), "asset graph", 0)?;
+        indexed.extend_from_slice(&cache_key);
         // Hash capacity was reserved above; publish only after all owned node
         // allocations succeeded, so a failed reserve cannot leave an invalid ID.
         self.index.insert(cache_key, i);
@@ -1256,6 +1261,17 @@ impl<'a> Assets<'a> {
                 .dependencies
                 .iter()
                 .all(|d| self.nodes[*d].ready);
+        // A read refused for want of room (this load's budget, or the
+        // graph's) says nothing about the file: this load sees the node
+        // blocked as it is, and a later load of the path reads it again.
+        // A dependency's such refusal is the citing node's blocker too.
+        if self.nodes[i]
+            .blockers
+            .iter()
+            .any(|e| work.refused_at_ceiling(e) || self.allocation.refused_at_ceiling(e))
+        {
+            self.index.remove(&indexed);
+        }
         Ok(i)
     }
     fn block(&mut self, i: usize, e: Error) -> Result<()> {
@@ -1737,6 +1753,102 @@ mod tests {
         assert!(m.map.contains_key(&1) && !m.map.contains_key(&3));
         assert!(m.used <= m.cap);
         assert!(m.get(3).is_none());
+    }
+    /// code-4a F01: a read refused for want of room is not kept as the
+    /// file's blocker: the load that met it sees the node blocked, a later
+    /// load of the path with room reads it again. A file's own refusal is
+    /// kept.
+    #[test]
+    fn a_read_refused_for_want_of_room_is_read_again_by_a_later_load() {
+        let dir = fo4_core::TestDir::new("assets-refused-room");
+        let root = dir.join("Data");
+        std::fs::create_dir_all(root.join("textures")).unwrap();
+        // A one-texel RGBA8 DDS (legacy header, byte masks).
+        let mut h = [0u32; 31];
+        h[0] = 124;
+        h[1] = 0x100f;
+        h[2] = 1;
+        h[3] = 1;
+        h[4] = 4;
+        h[6] = 1;
+        h[18] = 32;
+        h[19] = 0x41;
+        h[21] = 32;
+        h[22] = 0xff;
+        h[23] = 0xff00;
+        h[24] = 0xff0000;
+        h[25] = 0xff00_0000;
+        h[26] = 0x1000;
+        let mut dds = b"DDS ".to_vec();
+        for n in h {
+            dds.extend(n.to_le_bytes());
+        }
+        dds.extend([1, 2, 3, 255]);
+        std::fs::write(root.join("textures/t.dds"), &dds).unwrap();
+        std::fs::write(root.join("textures/bad.dds"), b"not a texture").unwrap();
+        let manifest = fo4_core::Manifest {
+            game: fo4_core::Game::Fallout4,
+            root,
+            language: "english".into(),
+            plugins: vec![fo4_core::PluginSpec {
+                name: "synthetic.esm".into(),
+                path: "synthetic.esm".into(),
+            }],
+            mounts: vec![fo4_core::Mount::Loose {
+                plugin: None,
+                base: None,
+                files: vec!["textures/t.dds".into(), "textures/bad.dds".into()],
+            }],
+            required_masters: Vec::new(),
+            excluded: Vec::new(),
+            build: None,
+            limits: fo4_core::Limits::default(),
+            archive_invalidation: None,
+        };
+        let v = Vfs::mount(&manifest, &Budget::new(1 << 20)).unwrap();
+        let b = Budget::new(1 << 20);
+        let mut assets = Assets::new(&v, &b);
+        let refused = assets
+            .load(AssetKind::Texture, b"textures\\t.dds", &Budget::new(100))
+            .unwrap();
+        let n = &assets.nodes[refused];
+        assert!(!n.ready);
+        assert_eq!(n.blockers[0].code, "LimitExceeded", "{:?}", n.blockers);
+        let read = assets
+            .load(
+                AssetKind::Texture,
+                b"textures\\t.dds",
+                &Budget::new(1 << 20),
+            )
+            .unwrap();
+        assert_ne!(read, refused);
+        assert!(
+            assets.nodes[read].ready,
+            "{:?}",
+            assets.nodes[read].blockers
+        );
+        // Read once with room: kept.
+        let again = assets
+            .load(AssetKind::Texture, b"textures\\t.dds", &Budget::new(100))
+            .unwrap();
+        assert_eq!(again, read);
+        // The file's own refusal stays the node's.
+        let bad = assets
+            .load(
+                AssetKind::Texture,
+                b"textures\\bad.dds",
+                &Budget::new(1 << 20),
+            )
+            .unwrap();
+        assert!(!assets.nodes[bad].blockers.is_empty());
+        let bad_again = assets
+            .load(
+                AssetKind::Texture,
+                b"textures\\bad.dds",
+                &Budget::new(1 << 20),
+            )
+            .unwrap();
+        assert_eq!(bad_again, bad);
     }
     /// `Assets::account_to` moves the graph's credits to the new budget
     /// and refuses one without room for them.
