@@ -1445,7 +1445,30 @@ impl Store {
         let mut found = None;
         for key in self.cells() {
             let work = b.child();
-            if let Some(c) = self.get::<Cell>(&key, &work)? {
+            let cell = match self.get::<Cell>(&key, &work) {
+                Ok(c) => c,
+                // A CELL that does not decode is passed over when its stored
+                // EDID (read raw) is not the one asked for; when it is, or
+                // when the record does not read either, the error stands.
+                Err(e) => {
+                    let other = self.raw(&key, &b.child()).ok().flatten().is_some_and(|r| {
+                        r.subrecords
+                            .iter()
+                            .find(|x| x.signature == *b"EDID")
+                            .is_none_or(|x| {
+                                let d = r.data(x);
+                                !d.strip_suffix(&[0])
+                                    .unwrap_or(d)
+                                    .eq_ignore_ascii_case(editor_id.as_bytes())
+                            })
+                    });
+                    if other {
+                        continue;
+                    }
+                    return Err(e);
+                }
+            };
+            if let Some(c) = cell {
                 if !c.record.deleted()
                     && c.data
                         .common

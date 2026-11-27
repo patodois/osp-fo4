@@ -1896,6 +1896,34 @@ fn typed_winners_cell_membership_and_raw_ranges() {
     assert_eq!(store.find_cell("TestRoom", &work).unwrap(), Some(key));
 }
 
+#[test]
+fn a_cell_that_does_not_decode_fails_only_its_own_lookup() {
+    use crate::typed::Store;
+    let mut body = record(b"CELL", 0x800, 0, &sub(b"EDID", b"Good\0"));
+    // Two EDID: the typed reading refuses it.
+    body.extend(record(
+        b"CELL",
+        0x810,
+        0,
+        &[sub(b"EDID", b"Bad\0"), sub(b"EDID", b"Bad\0")].concat(),
+    ));
+    let base = plugin(MASTER, &[], 0, &group(0, *b"CELL", &body));
+    let store = Store::from_sources(
+        fo4_core::Game::Fallout4,
+        vec![("base.esm".into(), Box::new(OwnedSource(base)))],
+        Limits::default(),
+        &Budget::new(8 << 20),
+    )
+    .unwrap();
+    let b = Budget::new(1 << 20);
+    assert_eq!(
+        store.find_cell("good", &b).unwrap().map(|k| k.object_id),
+        Some(0x800)
+    );
+    assert!(store.find_cell("Bad", &b).is_err());
+    assert_eq!(store.find_cell("Other", &b).unwrap(), None);
+}
+
 struct OwnedSource(Vec<u8>);
 impl ReadAt for OwnedSource {
     fn name(&self) -> &str {
