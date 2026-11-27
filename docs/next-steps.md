@@ -430,8 +430,9 @@ Twenty-eighth-session fixes: the stale picture at the second bridge was not repr
 the session's own viewer and preset, every frame from the bridge's load (1.65 s, nothing loading after it) to the
 record's end follows the walker; the person's last frame shows the walker standing on the bridge's broken far end,
 not on the earlier deck, and a walk-on past the record's end loads the next square and follows the road. The
-"loading" on that last frame was the status line's standing-clock cause; once the person's input is over the line
-now reads "ending", and the window's log names the status line's causes each time they change. The cryo pods are
+"loading" on that last frame is, read from the code, the status line's standing clock while the run finishes after
+Escape (not observed); once the person's input is over the line now reads "ending", and the window's log names the
+status line's causes each time they change. The cryo pods are
 solid: `--play-collision-furniture-fields` (`furn_fields_collision_unchanged_v1`) sets aside a furniture's unread
 fields, template, text, scripts and its reference's location fields for its collision, and
 `--play-collision-furniture-at-rest` (`furn_collision_at_rest_v1`) places its bodies at their stored transforms
