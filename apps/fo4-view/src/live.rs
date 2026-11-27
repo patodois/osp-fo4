@@ -17,6 +17,23 @@ use fo4_walk::WorldSet;
 use std::collections::{BTreeMap, VecDeque};
 use std::time::Instant;
 
+/// Where the received cells' collision goes: the walker's [`WorldSet`]
+/// (or a test's).
+pub trait CellWorlds {
+    fn insert_world(&mut self, grid: [i32; 2], world: fo4_walk::World) -> Result<(), String>;
+    fn remove_world(&mut self, grid: &[i32; 2]);
+}
+impl CellWorlds for WorldSet<[i32; 2]> {
+    fn insert_world(&mut self, grid: [i32; 2], world: fo4_walk::World) -> Result<(), String> {
+        self.insert(grid, world)
+            .map(|_| ())
+            .map_err(|e| e.to_string())
+    }
+    fn remove_world(&mut self, grid: &[i32; 2]) {
+        self.remove(grid);
+    }
+}
+
 /// A mesh or texture: its data until it is uploaded, then its GPU handle.
 pub enum Slot<D, H> {
     Waiting(D),
@@ -99,7 +116,7 @@ impl Live {
     pub fn receive(
         &mut self,
         piece: CellPiece,
-        space: &mut WorldSet<[i32; 2]>,
+        space: &mut impl CellWorlds,
     ) -> Result<Vec<Entity>, String> {
         let CellPiece {
             grid,
@@ -144,7 +161,12 @@ impl Live {
             keys.push(*k);
         }
         if let Some(world) = collision {
-            space.insert(grid, world).map_err(|e| e.to_string())?;
+            if let Err(e) = space.insert_world(grid, world) {
+                for k in &keys {
+                    self.release(k);
+                }
+                return Err(e);
+            }
         }
         let mut surface_ids = Vec::with_capacity(surfaces.len());
         for s in &surfaces {
@@ -154,7 +176,7 @@ impl Live {
                 for k in &keys {
                     self.release(k);
                 }
-                space.remove(&grid);
+                space.remove_world(&grid);
                 return Err(format!(
                     "StreamSurfaceTexture: cell {grid:?} names texture {} (palette {:?})",
                     s.texture, s.palette
@@ -192,11 +214,11 @@ impl Live {
     /// Drops the cell at `grid`: its collision leaves `space`, its keys
     /// are released (data no other cell uses is freed) and its entities
     /// are returned for despawning.
-    pub fn drop_cell(&mut self, grid: [i32; 2], space: &mut WorldSet<[i32; 2]>) -> Vec<Entity> {
+    pub fn drop_cell(&mut self, grid: [i32; 2], space: &mut impl CellWorlds) -> Vec<Entity> {
         let Some(cell) = self.cells.remove(&grid) else {
             return Vec::new();
         };
-        space.remove(&grid);
+        space.remove_world(&grid);
         self.waiting.retain(|g| *g != grid);
         for k in &cell.keys {
             self.release(k);
@@ -426,5 +448,39 @@ mod tests {
             1
         );
         assert!(!live.arrived([1, 0]) && space.len() == 1);
+    }
+
+    /// code-6b B02: a cell whose collision the walker's set refuses is
+    /// refused with nothing of it held: the data it brought and the data
+    /// it shares are released as on the other refusals.
+    #[test]
+    fn a_cell_whose_collision_is_refused_holds_nothing() {
+        /// A set that refuses every world (as one past its entry count).
+        struct Refusing;
+        impl CellWorlds for Refusing {
+            fn insert_world(&mut self, _: [i32; 2], _: fo4_walk::World) -> Result<(), String> {
+                Err("LimitExceeded: walk world set".into())
+            }
+            fn remove_world(&mut self, _: &[i32; 2]) {}
+        }
+        let mut live = Live::default();
+        let mut space = WorldSet::new();
+        live.receive(piece([0, 0], &[1.], &[7], true), &mut space)
+            .unwrap();
+        // Shares mesh 1 and texture 7, brings mesh 4.
+        let mut second = piece([1, 0], &[1., 4.], &[7], false);
+        let new = crate::stream::mesh_key(&mesh(4.));
+        second.new_meshes = vec![(new, mesh(4.))];
+        let e = live.receive(second, &mut Refusing).unwrap_err();
+        assert!(e.starts_with("LimitExceeded"), "{e}");
+        assert_eq!(live.meshes.users(&crate::stream::mesh_key(&mesh(1.))), 1);
+        assert_eq!(live.meshes.users(&new), 0);
+        assert_eq!(
+            live.textures
+                .users(&crate::stream::texture_key(&texture(7))),
+            1
+        );
+        assert_eq!((live.meshes.len(), live.textures.len()), (1, 1));
+        assert!(!live.arrived([1, 0]));
     }
 }
