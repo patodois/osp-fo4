@@ -140,6 +140,9 @@ pub fn parse(mut a: Vec<String>) -> Result<Command, E> {
             .insert(f.parse()?, x.parse()?);
         a.drain(i..i + 3);
     }
+    // The words the new-game switches and assumptions take (counted, so
+    // that another mode given one of them refuses it instead of ignoring it).
+    let before_new_game = a.len();
     let mut then = Then {
         next_blockers: flag(&mut a, "--next-blockers"),
         recheck: flag(&mut a, "--scene-recheck").then(|| std::cell::Cell::new(0)),
@@ -674,6 +677,7 @@ pub fn parse(mut a: Vec<String>) -> Result<Command, E> {
             "--trigger-point and --trigger-body are two readings of one thing: give one".into(),
         );
     }
+    let mut new_game_words = before_new_game - a.len();
     // The scene clock and the caller's assumptions about scene actions.
     let mut clock = scene::Clock {
         timers: !flag(&mut a, "--no-timer-actions"),
@@ -804,6 +808,7 @@ pub fn parse(mut a: Vec<String>) -> Result<Command, E> {
     }
     // A gate also names the assumed actor moves of its actor at its
     // second (`--action-after-actor-moves`, `caller_actor_move_after_v1`).
+    let before_gates = a.len();
     then.actor_move_gates = flag(&mut a, "--action-after-actor-moves");
     // The caller's gates: --action-after TARGET@SECONDS EDITOR_ID:STAGE.
     while let Some(i) = a.iter().position(|x| x == "--action-after") {
@@ -881,6 +886,7 @@ pub fn parse(mut a: Vec<String>) -> Result<Command, E> {
             .push((action, crate::bind::record_key(&k), at));
         a.drain(i..i + 3);
     }
+    new_game_words += before_gates - a.len();
     if then.action_offset && then.scene_clock == 0 {
         return Err("--action-after-offset needs --scene-clock N".into());
     }
@@ -998,6 +1004,12 @@ pub fn parse(mut a: Vec<String>) -> Result<Command, E> {
     let (Some(manifest), Some(mode), Some(arg)) = (a.next(), a.next(), a.next()) else {
         return Err(usage.into());
     };
+    if new_game_words > 0 && mode != "new-game" {
+        return Err(format!(
+            "{mode}: the new-game switches and assumptions given ({new_game_words} words) are new-game's; this mode would ignore them"
+        )
+        .into());
+    }
     Ok(Command {
         manifest: PathBuf::from(manifest),
         mode,

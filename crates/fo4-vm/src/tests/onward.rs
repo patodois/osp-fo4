@@ -767,6 +767,45 @@ fn the_load_grid_takes_at_most_its_ceiling() {
     assert!(parse("100000").contains("--load-grid N takes at most"));
 }
 
+/// code-2c F01: a mode other than new-game refuses the new-game switches
+/// and assumptions instead of reading and ignoring them; the switches
+/// every mode takes, and the scene clock of the scene sweep, stay taken.
+#[test]
+fn the_new_game_switches_are_refused_by_the_other_modes() {
+    let parse = |mode: &str, out: &str, extra: &[&str]| {
+        let mut a: Vec<String> = ["m", mode, out].iter().map(|x| x.to_string()).collect();
+        a.extend(extra.iter().map(|x| x.to_string()));
+        crate::run::parse(a).err().map(|e| e.to_string())
+    };
+    for (mode, out) in [
+        ("stages", "o"),
+        ("fragments", "o"),
+        ("scenes", "o"),
+        ("QS", "10"),
+    ] {
+        for extra in [
+            &["--timers", "5"][..],
+            &["--then", "QS:10"],
+            &["--assume-activate", "a.esm:1"],
+            &["--global-values"],
+            &["--scene-clock", "5", "--action-after-offset"],
+        ] {
+            let e = parse(mode, out, extra).unwrap_or_default();
+            assert!(e.contains("are new-game's"), "{mode} {extra:?}: {e}");
+        }
+        assert_eq!(
+            parse(mode, out, &["--queued", "--no-conditions"]),
+            None,
+            "{mode}"
+        );
+    }
+    assert_eq!(parse("scenes", "o", &["--scene-clock", "5"]), None);
+    assert_eq!(
+        parse("new-game", "o", &["--timers", "5", "--then", "QS:10"]),
+        None
+    );
+}
+
 #[test]
 fn the_offset_switch_and_its_input_seconds_are_checked() {
     let parse = |extra: &[&str]| {
