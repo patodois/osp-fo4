@@ -1532,8 +1532,24 @@ impl<'r, 'v> NewGame<'r, 'v> {
         // comes due again (`vm_timer_budget_per_timer_v1`).
         let mut next_key = None;
         if self.then.timers_per_timer && self.timers > 0 {
-            let (dropped, key) = drop_spent_timers(self.vm, scale, &self.timer_uses, self.timers);
+            let (dropped, key, full) =
+                drop_spent_timers(self.vm, scale, &self.timer_uses, self.timers);
             next_key = key;
+            if full {
+                // The per-timer budget has no total of its own: past
+                // MAX_TIMER_KEYS distinct timers no more fire.
+                self.timers = 0;
+                bump(
+                    self.c,
+                    "timers stopped: the distinct timers that may fire used up (--timers-per-timer)",
+                );
+                let _ = writeln!(
+                    self.names,
+                    "## timers stopped at {} s: {} distinct timers fired",
+                    self.now(),
+                    super::MAX_TIMER_KEYS
+                );
+            }
             for _ in 0..dropped {
                 bump(
                     self.c,
@@ -2158,23 +2174,27 @@ pub(crate) fn timer_key(t: &crate::world::Timer) -> String {
 
 /// Under `vm_timer_budget_per_timer_v1`: drops from the queue each timer
 /// due next that has fired `budget` times (`uses`, by [`timer_key`]),
-/// until the one due next has budget left. Returns how many were dropped
-/// and the key of the timer due next.
+/// until the one due next has budget left. Returns how many were dropped,
+/// the key of the timer due next, and whether that timer is refused
+/// because [`super::MAX_TIMER_KEYS`] distinct timers have already fired
+/// (then the key is `None`).
 pub(crate) fn drop_spent_timers(
     vm: &mut Vm<'_>,
     scale: Option<f64>,
     uses: &BTreeMap<String, usize>,
     budget: usize,
-) -> (usize, Option<String>) {
+) -> (usize, Option<String>, bool) {
     let mut dropped = 0;
     while let Some(i) = vm.next_timer_index(scale) {
         let key = timer_key(&vm.world.timers[i]);
-        if uses.get(&key).copied().unwrap_or(0) < budget {
-            return (dropped, Some(key));
+        match uses.get(&key).copied() {
+            None if uses.len() >= super::MAX_TIMER_KEYS => return (dropped, None, true),
+            Some(n) if n >= budget => {}
+            _ => return (dropped, Some(key), false),
         }
         vm.world.timers.remove(i);
         vm.rules.insert(crate::rules::TIMER_BUDGET_PER_TIMER);
         dropped += 1;
     }
-    (dropped, None)
+    (dropped, None, false)
 }

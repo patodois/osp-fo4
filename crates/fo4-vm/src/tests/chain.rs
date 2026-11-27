@@ -486,17 +486,58 @@ fn a_timer_that_used_up_its_own_budget_is_dropped_and_the_others_go_on() {
     let first = crate::run::timer_key(&vm.world.timers[0]);
     assert_eq!(
         crate::run::drop_spent_timers(&mut vm, None, &uses, 2),
-        (0, Some(first.clone()))
+        (0, Some(first.clone()), false)
     );
     // The first used up its budget: it is dropped, the second comes next.
     uses.insert(first, 2);
     let second = crate::run::timer_key(&vm.world.timers[1]);
     assert_eq!(
         crate::run::drop_spent_timers(&mut vm, None, &uses, 2),
-        (1, Some(second))
+        (1, Some(second.clone()), false)
     );
     assert_eq!(vm.world.timers.len(), 1);
     assert!(vm.rules.contains(rules::TIMER_BUDGET_PER_TIMER));
+}
+
+#[test]
+fn a_timer_re_armed_with_a_fresh_id_each_time_stops_at_the_distinct_timer_ceiling() {
+    let s = store();
+    let mut l = lib();
+    let mut host = QuestHost::new(&s, 1 << 24);
+    let mut vm = Vm::new(&mut l, &mut host);
+    let o = vm.world.object("q", None, &[]);
+    let i = vm.world.instances.len();
+    vm.world.instances.push(crate::world::Instance {
+        object: Some(o),
+        script: "quest".into(),
+        state: String::new(),
+        vars: Vec::new(),
+    });
+    // The clock loop's bookkeeping: each firing re-arms with a new id, so
+    // no key ever uses up its own budget of 2.
+    let mut uses = std::collections::BTreeMap::new();
+    let mut fired = 0;
+    let stopped = loop {
+        vm.world.timers.push(Timer {
+            clock: Clock::Real,
+            due: Some(fired as f64),
+            seq: fired,
+            instance: i,
+            id: Val::Int(fired as i32),
+        });
+        let (_, key, full) = crate::run::drop_spent_timers(&mut vm, None, &uses, 2);
+        if full {
+            break true;
+        }
+        if fired > 2 * crate::run::MAX_TIMER_KEYS as u64 {
+            break false;
+        }
+        *uses.entry(key.unwrap()).or_insert(0) += 1;
+        vm.world.timers.clear();
+        fired += 1;
+    };
+    assert!(stopped);
+    assert_eq!(fired, crate::run::MAX_TIMER_KEYS as u64);
 }
 
 #[test]

@@ -89,6 +89,11 @@ fn bump(m: &mut Counts, k: impl Into<String>) {
 pub const MAX_JOBS: usize = 256;
 /// Jobs run after a new game starts.
 pub const MAX_GAME_JOBS: usize = 100_000;
+/// Under `--timers-per-timer`, the distinct timers (by instance, clock and
+/// id) that may fire: past it the clock loop fires no more timers and
+/// counts why, so a script that re-arms with a fresh id each time still
+/// ends.
+pub const MAX_TIMER_KEYS: usize = 1_000;
 /// The next stages `--next-blockers` lists for a quest the caller set a
 /// stage on.
 pub const NEXT_STAGES: usize = 3;
