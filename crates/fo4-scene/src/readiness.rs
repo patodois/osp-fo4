@@ -262,12 +262,44 @@ pub struct Switches {
     /// ([`activator_field`], [`activator_receiver_field`],
     /// [`reference_location_type`]).
     pub activator_fields: bool,
+    /// On a reference whose base is a furniture (`FURN`), the record
+    /// blockers of the base's unread [`FURNITURE_FIELDS`] and
+    /// [`FURNITURE_TEMPLATE_FIELDS`], of the reference's `XLRT` and `XIS2`
+    /// and the one its scripts raise (`VMAD`, [`script_condition`]) are set
+    /// aside under
+    /// [`hypotheses::FURNITURE_FIELDS_COLLISION`] ([`furniture_field`],
+    /// [`furniture_template_field`], [`furniture_reference_field`]).
+    pub furniture_fields: bool,
+    /// On a reference whose base is a furniture (`FURN`), an animation
+    /// blocker of its model that lies where a controller or a controller
+    /// sequence can move a block its placed bodies read
+    /// ([`Bearing::Moved`]) is set aside under
+    /// [`hypotheses::FURNITURE_COLLISION_AT_REST`]: the bodies stand at
+    /// the stored transforms of their chains, no controller or sequence
+    /// run ([`furniture_at_rest`]).
+    pub furniture_at_rest: bool,
 }
 
 impl Switches {
     pub fn any(self) -> bool {
-        self.off_chain || self.reference_alpha || self.static_fields || self.activator_fields
+        self.off_chain
+            || self.reference_alpha
+            || self.static_fields
+            || self.activator_fields
+            || self.furniture_fields
+            || self.furniture_at_rest
     }
+}
+
+/// Whether a model blocker of a furniture reference, lying as `bearing`
+/// says against the model's placed bodies, is one
+/// [`Switches::furniture_at_rest`] sets aside: an animation blocker
+/// (`UnsupportedAnimationRuntime`) in a model where a controller or a
+/// controller sequence can move a block a body reads ([`Bearing::Moved`]).
+/// A blocker on a block a body reads itself ([`Bearing::OnChain`]), and any
+/// other code, are not.
+pub fn furniture_at_rest(e: &Error, bearing: Bearing) -> bool {
+    bearing == Bearing::Moved && Code::of(&e.code) == Code::UnsupportedAnimationRuntime
 }
 
 /// The reference subrecords [`Switches::static_fields`] sets aside on a

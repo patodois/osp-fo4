@@ -147,3 +147,66 @@ pub fn seat_near(
         base,
     }))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tests::{fixture_with, group, record, sub};
+
+    /// The fixture's reference placing a furniture (0x880) whose SNAM holds
+    /// `entries` (offset, heading), 24 bytes each.
+    fn seat_of(entries: &[([f32; 3], f32)]) -> std::result::Result<Seat, String> {
+        let f = fixture_with(false, &[], |rf| {
+            let mut rf = rf.to_vec();
+            rf[6..10].copy_from_slice(&0x880u32.to_le_bytes());
+            group(9, 0x800, &record(b"REFR", 0x802, 0, &rf))
+        });
+        let path = f.manifest.root.join("base.esm");
+        let mut bytes = std::fs::read(&path).unwrap();
+        let mut snam = Vec::new();
+        for (o, h) in entries {
+            for v in o.iter().chain([h]) {
+                snam.extend(v.to_le_bytes());
+            }
+            snam.extend(0u32.to_le_bytes());
+            snam.extend(u32::MAX.to_le_bytes());
+        }
+        let mut furn = sub(b"MODL", b"a.nif\0");
+        if !entries.is_empty() {
+            furn.extend(sub(b"SNAM", &snam));
+        }
+        bytes.extend(group(
+            0,
+            u32::from_le_bytes(*b"FURN"),
+            &record(b"FURN", 0x880, 0, &furn),
+        ));
+        std::fs::write(&path, bytes).unwrap();
+        let b = Budget::new(8 << 20);
+        let store = Store::open(&f.manifest, &b).unwrap();
+        let k = FormKey {
+            plugin: "base.esm".into(),
+            object_id: 0x802,
+        };
+        seat_near(&store, &k, [12.5, -2.0, 3.0], &b).unwrap()
+    }
+
+    #[test]
+    fn a_seat_is_the_nearest_marker_through_the_placements_transform() {
+        // The fixture's placement: (12.5, -2, 3), rotated (0.1, 0.2, 0.3),
+        // scale 0.7.
+        let world = Transform::euler([12.5, -2.0, 3.0, 0.1, 0.2, 0.3], 0.7).unwrap();
+        let one = seat_of(&[([0.0, -63.0, 0.0], -std::f32::consts::PI)]).unwrap();
+        let want = world.apply([0.0, -63.0, 0.0]);
+        assert!(
+            (0..3).all(|i| (one.pos[i] - want[i]).abs() < 1e-4),
+            "{one:?}"
+        );
+        assert_eq!((one.index, one.of), (0, 1));
+        assert!((one.heading - (0.3 - std::f32::consts::PI)).abs() < 1e-6);
+        // Of two markers the one nearer the point asked about.
+        let two = seat_of(&[([0.0, -200.0, 0.0], 0.0), ([5.0, 0.0, 0.0], 0.0)]).unwrap();
+        assert_eq!((two.index, two.of), (1, 2));
+        // No SNAM: no seat, and why.
+        assert_eq!(seat_of(&[]).unwrap_err(), "no SNAM");
+    }
+}

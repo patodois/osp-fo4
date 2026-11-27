@@ -180,6 +180,8 @@ fn run() -> Result<(), E> {
             reference_alpha: false,
             static_fields: false,
             activator_fields: false,
+            furniture_fields: false,
+            furniture_at_rest: false,
         });
         let chain = collision::cell(&scene, &loader, &m.limits, options, &budget)?;
         loader.set_collision_switches(readiness::Switches {
@@ -187,6 +189,8 @@ fn run() -> Result<(), E> {
             reference_alpha: true,
             static_fields: false,
             activator_fields: false,
+            furniture_fields: false,
+            furniture_at_rest: false,
         });
         let on = collision::cell(&scene, &loader, &m.limits, options, &budget)?;
         loader.set_collision_switches(readiness::Switches::default());

@@ -1073,7 +1073,10 @@ impl Builder<'_, '_> {
     /// (`xesp_child_flag_agrees_chain_v1`), four unread fields of a
     /// static's reference (`refr_static_fields_collision_unchanged_v1`), an
     /// activator's unread fields and its reference's location type
-    /// (`acti_fields_receiver_collision_unchanged_v1`).
+    /// (`acti_fields_receiver_collision_unchanged_v1`), a furniture's unread
+    /// fields (`furn_fields_collision_unchanged_v1`) and its model's
+    /// animation blockers that can move its bodies
+    /// (`furn_collision_at_rest_v1`).
     fn switched_state(&mut self, i: &Instance) -> Result<State> {
         let switches = self.loader.collision_switches();
         let agrees = self.loader.collision_child_flag_agrees()
@@ -1086,7 +1089,13 @@ impl Builder<'_, '_> {
             && i.base
                 .as_ref()
                 .is_some_and(|v| v.record.signature == *b"ACTI");
-        let bearings = if switches.off_chain {
+        let furniture = i
+            .base
+            .as_ref()
+            .is_some_and(|v| v.record.signature == *b"FURN");
+        let furniture_fields = switches.furniture_fields && furniture;
+        let furniture_at_rest = switches.furniture_at_rest && furniture;
+        let bearings = if switches.off_chain || furniture_at_rest {
             self.bearings(i)?
         } else {
             Vec::new()
@@ -1104,8 +1113,18 @@ impl Builder<'_, '_> {
             || i.base.as_ref().is_some_and(crate::base_cites_swap);
         let aside = |k: usize| {
             let origin = i.blocker_origins.get(k).copied();
-            if bearings.get(k).and_then(|b| b.1) == Some(readiness::Bearing::OffChain) {
+            let bearing = bearings.get(k).and_then(|b| b.1);
+            if switches.off_chain && bearing == Some(readiness::Bearing::OffChain) {
                 Some(hypotheses::COLLISION_OFF_CHAIN)
+            } else if furniture_at_rest
+                && origin == Some(readiness::Origin::Model)
+                && bearing.is_some_and(|b| {
+                    i.blockers
+                        .get(k)
+                        .is_some_and(|e| readiness::furniture_at_rest(e, b))
+                })
+            {
+                Some(hypotheses::FURNITURE_COLLISION_AT_REST)
             } else if switches.reference_alpha
                 && origin.unwrap_or(readiness::Origin::Record) == readiness::Origin::Record
                 && i.blockers.get(k).is_some_and(readiness::reference_alpha)
@@ -1132,6 +1151,16 @@ impl Builder<'_, '_> {
                 })
             {
                 Some(hypotheses::ACTIVATOR_FIELDS_COLLISION)
+            } else if furniture_fields
+                && origin.unwrap_or(readiness::Origin::Record) == readiness::Origin::Record
+                && i.blockers.get(k).is_some_and(|e| {
+                    readiness::furniture_field(e)
+                        || readiness::furniture_template_field(e)
+                        || readiness::furniture_reference_field(e)
+                        || readiness::script_condition(e)
+                })
+            {
+                Some(hypotheses::FURNITURE_FIELDS_COLLISION)
             } else {
                 None
             }

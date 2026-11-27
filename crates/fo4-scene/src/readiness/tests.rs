@@ -521,3 +521,24 @@ fn an_activators_fields_and_a_references_scripts_are_named_exactly() {
     assert!(script_condition(&e("RuntimeCondition", "VMAD")));
     assert!(!script_condition(&e("RuntimeCondition", "CTDA")));
 }
+
+#[test]
+fn the_furniture_rest_reading_sets_aside_only_animation_blockers_that_move_a_chain() {
+    let e = |code: &str| Error::new(code, "test", 0, "known", "found");
+    assert!(furniture_at_rest(
+        &e("UnsupportedAnimationRuntime"),
+        Bearing::Moved
+    ));
+    for b in [
+        Bearing::OnChain,
+        Bearing::OffChain,
+        Bearing::NoBody,
+        Bearing::Unlocated,
+    ] {
+        assert!(!furniture_at_rest(&e("UnsupportedAnimationRuntime"), b));
+    }
+    assert!(!furniture_at_rest(
+        &e("UnsupportedNifBlock"),
+        Bearing::Moved
+    ));
+}

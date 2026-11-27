@@ -360,6 +360,64 @@ pub fn bounds_centre(store: &Store, k: &FormKey, b: &Budget) -> Option<[f64; 3]>
     }
 }
 
+/// A placed reference's object bounds (its base's OBND, six i16: the low
+/// and high corner in model units) and the reference's stored transform
+/// and scale that place them.
+#[derive(Debug, Clone, PartialEq)]
+pub struct BoundsBox {
+    pub frame: fo4_scene::transform::Transform,
+    pub lo: [f64; 3],
+    pub hi: [f64; 3],
+}
+
+impl BoundsBox {
+    /// Whether the horizontal place of `p` (world units) stands inside the
+    /// box widened by `margin` world units on every side, read in the
+    /// box's own axes (heights not read: the feet may stand below the
+    /// box's floor).
+    pub fn holds(&self, p: [f64; 3], margin: f64) -> bool {
+        let f = &self.frame;
+        if !(f.scale.is_finite() && f.scale > 0.0) {
+            return false;
+        }
+        let d = [
+            p[0] - f.translation[0],
+            p[1] - f.translation[1],
+            p[2] - f.translation[2],
+        ];
+        // `Transform::apply` gives world = t + s R^T p: the local point is
+        // R d / s.
+        let local: [f64; 3] =
+            std::array::from_fn(|j| (0..3).map(|i| f.rotation[j][i] * d[i]).sum::<f64>() / f.scale);
+        let m = margin / f.scale;
+        (0..2).all(|k| local[k] >= self.lo[k] - m && local[k] <= self.hi[k] + m)
+    }
+}
+
+/// A placed reference's [`BoundsBox`]; `None` when it has no placement or
+/// its base no usable bounds.
+pub fn bounds_box(store: &Store, k: &FormKey, b: &Budget) -> Option<BoundsBox> {
+    let r = store.get::<fo4_plugin::typed::Refr>(k, b).ok()??;
+    let t = r.data.transform?;
+    let scale = r.data.scale.unwrap_or(1.0);
+    let base = r.data.base.as_ref().and_then(|f| f.key.clone())?;
+    let rec = store.raw(&base, b).ok().flatten()?;
+    let s = rec.subrecords.iter().find(|s| s.signature == *b"OBND")?;
+    let d = rec.data(s);
+    if d.len() != 12 {
+        return None;
+    }
+    let v: Vec<f64> = (0..6)
+        .map(|i| f64::from(i16::from_le_bytes([d[2 * i], d[2 * i + 1]])))
+        .collect();
+    let (lo, hi) = ([v[0], v[1], v[2]], [v[3], v[4], v[5]]);
+    if (0..3).any(|i| hi[i] < lo[i]) {
+        return None;
+    }
+    let frame = fo4_scene::transform::Transform::euler(t, scale).ok()?;
+    Some(BoundsBox { frame, lo, hi })
+}
+
 fn bump(counts: &mut BTreeMap<String, u64>, k: &str) {
     *counts.entry(k.to_string()).or_default() += 1;
 }
@@ -961,6 +1019,33 @@ pub fn dormant(
 mod tests {
     use super::*;
     use fo4_walk::platform::{add_boxes, MarkerBox};
+
+    #[test]
+    fn a_bounds_box_holds_a_place_read_in_its_own_axes_widened_by_the_margin() {
+        // A box 20 wide (x -10..10) and 100 deep (y -50..50), placed at
+        // (100, 200, 5) turned a quarter about z and scaled by 2.
+        let frame = fo4_scene::transform::Transform::euler(
+            [100.0, 200.0, 5.0, 0.0, 0.0, std::f32::consts::FRAC_PI_2],
+            2.0,
+        )
+        .unwrap();
+        let b = BoundsBox {
+            frame,
+            lo: [-10.0, -50.0, 0.0],
+            hi: [10.0, 50.0, 40.0],
+        };
+        let at = |x: f64, y: f64, z: f64| frame.apply([x, y, z]);
+        assert!(b.holds(at(9.0, 49.0, 0.0), 0.0));
+        assert!(b.holds(at(0.0, 0.0, -500.0), 0.0), "heights not read");
+        // The long side lies across the world's y after the turn.
+        let far = at(0.0, 45.0, 0.0);
+        assert!((far[0] - 100.0).abs() > 80.0 || (far[1] - 200.0).abs() > 80.0);
+        assert!(!b.holds(at(13.0, 0.0, 0.0), 0.0));
+        // Widened by 6 world units, 3 model units at scale 2.
+        assert!(b.holds(at(12.9, 0.0, 0.0), 6.0));
+        assert!(!b.holds(at(13.1, 0.0, 0.0), 6.0));
+        assert!(!b.holds(at(0.0, -53.5, 0.0), 6.0));
+    }
 
     fn marker(layer: Option<u32>) -> MarkerBox {
         MarkerBox {

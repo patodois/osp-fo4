@@ -906,6 +906,8 @@ fn a_model_blocker_off_the_collision_chain_is_set_aside_only_behind_its_switch()
         reference_alpha: true,
         static_fields: false,
         activator_fields: false,
+        furniture_fields: false,
+        furniture_at_rest: false,
     });
     let c = cell(&scene, &loader, &limits, options, &b).unwrap();
     assert!(c.instances.is_empty());
@@ -915,6 +917,8 @@ fn a_model_blocker_off_the_collision_chain_is_set_aside_only_behind_its_switch()
         reference_alpha: false,
         static_fields: false,
         activator_fields: false,
+        furniture_fields: false,
+        furniture_at_rest: false,
     });
     let on = cell(&scene, &loader, &limits, options, &b).unwrap();
     assert_eq!(on.instances.len(), 1, "{:?}", on.unplaced);
@@ -973,6 +977,8 @@ fn a_statics_reference_fields_are_set_aside_only_behind_their_switch() {
         reference_alpha: true,
         static_fields: false,
         activator_fields: false,
+        furniture_fields: false,
+        furniture_at_rest: false,
     });
     assert!(cell(&scene, &loader, &limits, options, &b)
         .unwrap()
@@ -1215,6 +1221,8 @@ fn an_activators_fields_receiver_and_location_type_leave_its_collision_only_behi
         reference_alpha: true,
         static_fields: true,
         activator_fields: false,
+        furniture_fields: false,
+        furniture_at_rest: false,
     });
     assert!(cell(&scene, &loader, &limits, options, &b)
         .unwrap()
@@ -1283,4 +1291,158 @@ fn a_statics_reference_fields_are_set_aside_for_its_drawing_only_behind_their_sw
         // Collision readiness is not the render switch's.
         assert_eq!(on.3, off.3);
     }
+}
+
+/// The fixture's reference placing a furniture (`FURN`, 0x880) whose base
+/// stores the unread PNAM, FNAM, MNAM, SNAM, WBDT and ATTX and scripts
+/// (VMAD) with `nif` as its model, the reference storing XLRT.
+fn furniture_scene(nif: Vec<u8>) -> crate::tests::Fixture {
+    let f = fixture_with(false, &[], |rf| {
+        let mut rf = rf.to_vec();
+        rf[6..10].copy_from_slice(&0x880u32.to_le_bytes());
+        rf.extend(sub(b"XLRT", &0x801u32.to_le_bytes()));
+        group(9, 0x800, &record(b"REFR", 0x802, 0, &rf))
+    });
+    std::fs::write(f.manifest.root.join("meshes/a.nif"), nif).unwrap();
+    let path = f.manifest.root.join("base.esm");
+    let mut bytes = std::fs::read(&path).unwrap();
+    let mut furn = sub(b"VMAD", &[6, 0, 2, 0, 0, 0]);
+    furn.extend(sub(b"MODL", b"a.nif\0"));
+    furn.extend(sub(b"PNAM", &[0; 4]));
+    furn.extend(sub(b"ATTX", &[0; 4]));
+    furn.extend(sub(b"FNAM", &[0; 2]));
+    furn.extend(sub(b"MNAM", &[0; 4]));
+    furn.extend(sub(b"WBDT", &[0; 1]));
+    furn.extend(sub(b"SNAM", &[0; 24]));
+    bytes.extend(group(
+        0,
+        u32::from_le_bytes(*b"FURN"),
+        &record(b"FURN", 0x880, 0, &furn),
+    ));
+    std::fs::write(&path, bytes).unwrap();
+    f
+}
+
+#[test]
+fn a_furnitures_fields_and_location_type_leave_its_collision_only_behind_their_switch() {
+    // `furn_fields_collision_unchanged_v1`, with a model no controller
+    // reaches.
+    let f = furniture_scene(model_nif(1));
+    let store = Store::open(&f.manifest, &Budget::new(8 << 20)).unwrap();
+    let v = Vfs::mount(&f.manifest, &Budget::new(8 << 20)).unwrap();
+    let b = Budget::new(64 << 20);
+    let mut loader = Loader::new(&store, &v, "english", RuleLevel::Hypotheses, &b);
+    let scene = loader.by_editor_id("SyntheticRoom", &b).unwrap();
+    assert_eq!(scene.instances.len(), 1, "{:?}", scene.exclusions);
+    let i = &scene.instances[0];
+    assert!(!i.collision.ready_at(RuleLevel::Hypotheses));
+    assert!(
+        i.blockers.iter().any(readiness::furniture_field)
+            && i.blockers.iter().any(readiness::furniture_template_field)
+            && i.blockers.iter().any(readiness::furniture_reference_field)
+            && i.blockers.iter().any(readiness::script_condition),
+        "{:?}",
+        i.blockers
+    );
+    let limits = Limits::default();
+    let options = Options {
+        level: RuleLevel::Hypotheses,
+        body_placement: None,
+    };
+    assert!(cell(&scene, &loader, &limits, options, &b)
+        .unwrap()
+        .instances
+        .is_empty());
+    // The other switches, the activators' fields among them and the
+    // furniture's own model switch, leave the fields refusing.
+    loader.set_collision_switches(readiness::Switches {
+        off_chain: true,
+        reference_alpha: true,
+        static_fields: true,
+        activator_fields: true,
+        furniture_fields: false,
+        furniture_at_rest: true,
+    });
+    assert!(cell(&scene, &loader, &limits, options, &b)
+        .unwrap()
+        .instances
+        .is_empty());
+    loader.set_collision_switches(readiness::Switches {
+        furniture_fields: true,
+        ..readiness::Switches::default()
+    });
+    let on = cell(&scene, &loader, &limits, options, &b).unwrap();
+    assert_eq!(
+        on.instances.len(),
+        1,
+        "{:?}",
+        i.blockers
+            .iter()
+            .map(|e| (e.code.clone(), e.found.clone()))
+            .collect::<Vec<_>>()
+    );
+    assert!(on.instances[0]
+        .rules
+        .contains(&hypotheses::FURNITURE_FIELDS_COLLISION));
+    assert!(!on.instances[0]
+        .rules
+        .contains(&hypotheses::FURNITURE_COLLISION_AT_REST));
+    // Not at Measured while the rule is pending.
+    let measured = Options {
+        level: RuleLevel::Measured,
+        body_placement: Some(BodyPlacement::Ignored),
+    };
+    assert!(cell(&scene, &loader, &limits, measured, &b)
+        .unwrap()
+        .instances
+        .is_empty());
+}
+
+#[test]
+fn a_furnitures_bodies_a_controller_can_move_stand_at_rest_only_behind_their_switch() {
+    // `furn_collision_at_rest_v1`: a transform controller on the body's
+    // node moves the collision chain.
+    let tc = controller(1, &(-1i32).to_le_bytes());
+    let f = furniture_scene(model_nif_with("NiTransformController", tc));
+    let store = Store::open(&f.manifest, &Budget::new(8 << 20)).unwrap();
+    let v = Vfs::mount(&f.manifest, &Budget::new(8 << 20)).unwrap();
+    let b = Budget::new(64 << 20);
+    let mut loader = Loader::new(&store, &v, "english", RuleLevel::Hypotheses, &b);
+    let scene = loader.by_editor_id("SyntheticRoom", &b).unwrap();
+    let i = &scene.instances[0];
+    let limits = Limits::default();
+    let options = Options {
+        level: RuleLevel::Hypotheses,
+        body_placement: None,
+    };
+    let bearings = super::bearings(i, &loader, &limits, options, &b).unwrap();
+    let moved: Vec<usize> = (0..i.blockers.len())
+        .filter(|k| bearings.of[*k] == Some(readiness::Bearing::Moved))
+        .collect();
+    assert!(!moved.is_empty(), "{:?} {:?}", i.blockers, bearings.of);
+    assert!(moved
+        .iter()
+        .all(|k| readiness::furniture_at_rest(&i.blockers[*k], readiness::Bearing::Moved)));
+    // The fields and the off-chain reading leave the moved chain refusing.
+    loader.set_collision_switches(readiness::Switches {
+        off_chain: true,
+        furniture_fields: true,
+        ..readiness::Switches::default()
+    });
+    assert!(cell(&scene, &loader, &limits, options, &b)
+        .unwrap()
+        .instances
+        .is_empty());
+    // With both furniture switches: placed, its body as stored.
+    loader.set_collision_switches(readiness::Switches {
+        off_chain: true,
+        furniture_fields: true,
+        furniture_at_rest: true,
+        ..readiness::Switches::default()
+    });
+    let on = cell(&scene, &loader, &limits, options, &b).unwrap();
+    assert_eq!(on.instances.len(), 1, "{:?}", on.unplaced);
+    let rules = &on.instances[0].rules;
+    assert!(rules.contains(&hypotheses::FURNITURE_COLLISION_AT_REST));
+    assert!(rules.contains(&hypotheses::FURNITURE_FIELDS_COLLISION));
 }

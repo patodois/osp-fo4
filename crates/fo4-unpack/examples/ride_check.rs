@@ -200,6 +200,8 @@ fn run() -> Result<(), E> {
         reference_alpha,
         static_fields: false,
         activator_fields: false,
+        furniture_fields: false,
+        furniture_at_rest: false,
     });
     if off_chain {
         let _ = writeln!(

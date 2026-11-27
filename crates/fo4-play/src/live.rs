@@ -445,6 +445,26 @@ impl Live {
         })
     }
 
+    /// Hides (or shows again) every source of the world as loaded that was
+    /// built from placed reference `k` (`crate::rules::SIT_PASSABLE`);
+    /// returns how many.
+    pub fn set_reference_hidden(&mut self, k: &FormKey, hidden: bool) -> usize {
+        let k = norm(k);
+        let Some(refs) = self.refs.get(&BASE) else {
+            return 0;
+        };
+        let sources: Vec<u32> = refs
+            .iter()
+            .enumerate()
+            .filter(|(_, r)| r.as_ref().map(norm).as_ref() == Some(&k))
+            .filter_map(|(i, _)| u32::try_from(i).ok())
+            .collect();
+        for s in &sources {
+            self.set.set_hidden(&BASE, *s, hidden);
+        }
+        sources.len()
+    }
+
     /// The sources of the world as loaded that the activation's ray passes
     /// through (the collision markers' boxes).
     pub fn with_unpicked(mut self, sources: &[u32]) -> Live {
@@ -1107,6 +1127,23 @@ mod tests {
             },
         );
         s
+    }
+
+    #[test]
+    fn a_references_sources_hide_and_show_again_by_its_key() {
+        // `play_sit_furniture_passable_until_left_v1`: the wall at x = 100
+        // is reference 1's.
+        let mut l = live();
+        assert_eq!(touches_at(l.space(), 100.0), 1);
+        assert_eq!(l.set_reference_hidden(&key(1), true), 1);
+        assert_eq!(touches_at(l.space(), 100.0), 0);
+        assert_eq!(ray(&l), None);
+        // Another key, or one only the dormant piece holds, hides nothing.
+        assert_eq!(l.set_reference_hidden(&key(9), true), 0);
+        assert_eq!(l.set_reference_hidden(&key(2), true), 0);
+        assert_eq!(l.set_reference_hidden(&key(1), false), 1);
+        assert_eq!(touches_at(l.space(), 100.0), 1);
+        assert_eq!(ray(&l), Some((100.0, Some(key(1)))));
     }
 
     #[test]

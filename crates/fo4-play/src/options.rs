@@ -66,18 +66,27 @@ pub struct Play {
     /// `--play-player-sits` (`play_player_sit_furniture_v1`).
     pub player_moveto: bool,
     pub player_sits: bool,
+    /// `--play-sit-passable` (`play_sit_furniture_passable_until_left_v1`),
+    /// `--play-player-sit-marker` (`play_player_sit_marker_v1`).
+    pub sit_passable: bool,
+    pub sit_marker: bool,
     /// `--play-collision-off-chain` (`collision_model_blockers_off_chain_v1`),
     /// `--play-collision-reference-alpha` (`refr_xalp_collision_unchanged_v1`),
     /// `--play-collision-child-flag-agrees` (`xesp_child_flag_agrees_chain_v1`),
     /// `--play-collision-static-fields`
     /// (`refr_static_fields_collision_unchanged_v1`),
     /// `--play-collision-activator-fields`
-    /// (`acti_fields_receiver_collision_unchanged_v1`).
+    /// (`acti_fields_receiver_collision_unchanged_v1`),
+    /// `--play-collision-furniture-fields`
+    /// (`furn_fields_collision_unchanged_v1`),
+    /// `--play-collision-furniture-at-rest` (`furn_collision_at_rest_v1`).
     pub off_chain: bool,
     pub reference_alpha: bool,
     pub child_flag_agrees: bool,
     pub static_fields: bool,
     pub activator_fields: bool,
+    pub furniture_fields: bool,
+    pub furniture_at_rest: bool,
     /// `--play-marker-boxes` (`play_collision_marker_boxes_v1`),
     /// `--play-marker-box-layers` (`play_collision_marker_box_layer_passed_v1`),
     /// `--play-marker-box-layer-records`
@@ -181,11 +190,15 @@ impl Play {
             "--play-elevator-through-terrain" => &mut self.through_terrain,
             "--play-player-moveto" => &mut self.player_moveto,
             "--play-player-sits" => &mut self.player_sits,
+            "--play-sit-passable" => &mut self.sit_passable,
+            "--play-player-sit-marker" => &mut self.sit_marker,
             "--play-collision-off-chain" => &mut self.off_chain,
             "--play-collision-reference-alpha" => &mut self.reference_alpha,
             "--play-collision-child-flag-agrees" => &mut self.child_flag_agrees,
             "--play-collision-static-fields" => &mut self.static_fields,
             "--play-collision-activator-fields" => &mut self.activator_fields,
+            "--play-collision-furniture-fields" => &mut self.furniture_fields,
+            "--play-collision-furniture-at-rest" => &mut self.furniture_at_rest,
             "--play-marker-boxes" => &mut self.marker_boxes,
             "--play-marker-box-layers" => &mut self.marker_box_layers,
             "--play-marker-box-layer-records" => &mut self.marker_box_layer_records,
@@ -342,6 +355,12 @@ impl Play {
         if self.door_onward && !self.elevator_door {
             return Err("--play-elevator-door-onward needs --play-elevator-door".into());
         }
+        if self.sit_passable && !self.player_sits {
+            return Err("--play-sit-passable needs --play-player-sits".into());
+        }
+        if self.sit_marker && !self.player_sits {
+            return Err("--play-player-sit-marker needs --play-player-sits".into());
+        }
         if self.marker_boxes && !self.live_world {
             return Err("--play-marker-boxes needs --play-live-world".into());
         }
@@ -396,6 +415,8 @@ impl Play {
             reference_alpha: self.reference_alpha,
             static_fields: self.static_fields,
             activator_fields: self.activator_fields,
+            furniture_fields: self.furniture_fields,
+            furniture_at_rest: self.furniture_at_rest,
         }
     }
 
@@ -618,6 +639,12 @@ impl Play {
         if self.activator_fields {
             let _ = writeln!(report, "switch: an activator's unread PNAM, FNAM, ATTX and RADR and its reference's XLRT do not refuse its collision (--play-collision-activator-fields, {})", fo4_scene::hypotheses::ACTIVATOR_FIELDS_COLLISION);
         }
+        if self.furniture_fields {
+            let _ = writeln!(report, "switch: a furniture's unread PNAM, FNAM, MNAM, SNAM, WBDT, its OBTE, OBTS and ATTX, its reference's XLRT and XIS2 and its scripts do not refuse its collision (--play-collision-furniture-fields, {})", fo4_scene::hypotheses::FURNITURE_FIELDS_COLLISION);
+        }
+        if self.furniture_at_rest {
+            let _ = writeln!(report, "switch: a furniture's bodies stand at their stored transforms although its model's controllers or sequences can move them (--play-collision-furniture-at-rest, {})", fo4_scene::hypotheses::FURNITURE_COLLISION_AT_REST);
+        }
         if self.child_flag_agrees {
             let _ = writeln!(report, "switch: an enable chain left open only by records' own flags that agree with it decides their collision, at load and after the run's changes (--play-collision-child-flag-agrees, {})", fo4_scene::hypotheses::ENABLE_CHILD_FLAG_AGREES);
         }
@@ -698,6 +725,14 @@ impl Play {
         if self.player_sits {
             let _ = writeln!(report, "switch: the walker goes to the furniture the run seats the player in (--play-player-sits)");
             w = w.with_player_sits();
+        }
+        if self.sit_passable {
+            let _ = writeln!(report, "switch: the furniture a followed sit puts the walker in has no collision until the walker's feet leave its object bounds (--play-sit-passable, {})", crate::rules::SIT_PASSABLE);
+            w = w.with_sit_passable();
+        }
+        if self.sit_marker {
+            let _ = writeln!(report, "switch: a followed sit puts the walker at the furniture's marker (--play-player-sit-marker, {})", crate::rules::PLAYER_SIT_MARKER);
+            w = w.with_sit_marker();
         }
         if self.follow_grid {
             let _ = writeln!(report, "policy: the walking world is built again about the walker's grid square when it leaves it (--play-follow-grid, {around} cells about it)");
@@ -831,7 +866,7 @@ mod tests {
 
     #[test]
     fn reads_every_play_option() {
-        let s = read("--play-stand 0.1 --walk-speed 300 --play-reach 150 --play-pick-bounds --play-pick-bounds-activatable --play-load-doors --play-follow-grid --play-slice 0.25 --play-live-world --play-elevator a.esm:0000000A --play-elevator a.esm:B --play-elevator-also-with a.esm:C A.ESM:0000000A --play-elevator-door --play-elevator-held-pose --play-elevator-rigid --play-elevator-door-onward --play-elevator-through-terrain --play-collision-off-chain --play-collision-reference-alpha --play-collision-child-flag-agrees --play-collision-static-fields --play-collision-activator-fields --play-player-moveto --play-player-sits --play-around 2 --play-tick 0.02 --run-speed 400 --play-region-walker --play-recheck-marks --play-nowait --play-elevator-also a.esm:D").unwrap();
+        let s = read("--play-stand 0.1 --walk-speed 300 --play-reach 150 --play-pick-bounds --play-pick-bounds-activatable --play-load-doors --play-follow-grid --play-slice 0.25 --play-live-world --play-elevator a.esm:0000000A --play-elevator a.esm:B --play-elevator-also-with a.esm:C A.ESM:0000000A --play-elevator-door --play-elevator-held-pose --play-elevator-rigid --play-elevator-door-onward --play-elevator-through-terrain --play-collision-off-chain --play-collision-reference-alpha --play-collision-child-flag-agrees --play-collision-static-fields --play-collision-activator-fields --play-collision-furniture-fields --play-collision-furniture-at-rest --play-player-moveto --play-player-sits --play-sit-passable --play-player-sit-marker --play-around 2 --play-tick 0.02 --run-speed 400 --play-region-walker --play-recheck-marks --play-nowait --play-elevator-also a.esm:D").unwrap();
         assert_eq!(s.walk_speed, Some(300.0));
         assert_eq!(s.run_speed, Some(400.0));
         assert_eq!(s.tick, Some(0.02));
@@ -847,6 +882,12 @@ mod tests {
         assert!(s.door_onward && s.off_chain && s.reference_alpha && s.child_flag_agrees);
         assert!(s.static_fields && s.collision().static_fields);
         assert!(s.activator_fields && s.collision().activator_fields);
+        assert!(s.furniture_fields && s.collision().furniture_fields);
+        assert!(s.furniture_at_rest && s.collision().furniture_at_rest);
+        assert!(s.sit_passable);
+        assert!(read("--play-sit-passable").is_err());
+        assert!(s.sit_marker);
+        assert!(read("--play-player-sit-marker").is_err());
         assert!(!Play::default().collision().any());
         assert!(s.player_moveto && s.player_sits && s.region && s.recheck_marks);
         assert!(s.walker_only());

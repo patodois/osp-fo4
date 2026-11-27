@@ -288,6 +288,16 @@ pub const STATIC_REFERENCE_FIELDS_COLLISION: &str = "refr_static_fields_collisio
 /// reference's `XLRT` leave its collision as stored (`crate::readiness`,
 /// behind `readiness::Switches::activator_fields`).
 pub const ACTIVATOR_FIELDS_COLLISION: &str = "acti_fields_receiver_collision_unchanged_v1";
+/// A furniture base's unread fields, its object template and activate
+/// text, and its reference's `XLRT` and `XIS2` leave its collision as
+/// stored (`crate::readiness`, behind
+/// `readiness::Switches::furniture_fields`).
+pub const FURNITURE_FIELDS_COLLISION: &str = "furn_fields_collision_unchanged_v1";
+/// A furniture's placed bodies stand at their chains' stored transforms
+/// although a controller or a controller sequence of its model can move
+/// them (`crate::readiness`, behind
+/// `readiness::Switches::furniture_at_rest`).
+pub const FURNITURE_COLLISION_AT_REST: &str = "furn_collision_at_rest_v1";
 /// A static's reference fields `XACT`, `XLRT`, `XOWN` and `ONAM` leave its
 /// drawing as stored (`Loader::set_render_static_fields`, off by default).
 pub const STATIC_REFERENCE_FIELDS_RENDER: &str = "refr_static_fields_render_unchanged_v1";
@@ -842,6 +852,8 @@ mod tests {
             WORLD_PERSISTENT_IN_SQUARE,
             STATIC_REFERENCE_FIELDS_COLLISION,
             ACTIVATOR_FIELDS_COLLISION,
+            FURNITURE_FIELDS_COLLISION,
+            FURNITURE_COLLISION_AT_REST,
             STATIC_REFERENCE_FIELDS_RENDER,
             STATIC_LEAF_TWO_POSE,
             PLATFORM_SKIN_FOLLOWS_PARTS,

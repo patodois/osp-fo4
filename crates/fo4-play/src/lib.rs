@@ -137,6 +137,18 @@ pub mod rules {
     /// it at a target; in the walker's own space it is not followed (the
     /// walk stands for the way there) (`--play-player-sits`).
     pub const PLAYER_SIT: &str = "play_player_sit_furniture_v1";
+    /// The furniture a followed sit puts the walker in has no collision in
+    /// the walking world while the walker's feet stand inside its object
+    /// bounds (OBND through the reference's stored transform, widened by
+    /// the walker's radius); once they stand outside, its collision is
+    /// back (`--play-sit-passable`, with `--play-player-sits`).
+    pub const SIT_PASSABLE: &str = "play_sit_furniture_passable_until_left_v1";
+    /// A followed sit (`PLAYER_SIT`) puts the walker at the furniture's
+    /// marker nearest the furniture's stored position (its SNAM entry read
+    /// under `furniture_marker_snam_v1`, through the placement's stored
+    /// transform) instead of the stored position itself
+    /// (`--play-player-sit-marker`, with `--play-player-sits`).
+    pub const PLAYER_SIT_MARKER: &str = "play_player_sit_marker_v1";
     /// The caller's timed open of a reference it names (`--assume-open
     /// REF@SECONDS`, with its `--action-after` gate) is the walker's
     /// activation of that reference: the run gets the open with the
@@ -213,7 +225,7 @@ pub mod rules {
     /// closes it under the toggle (`--play-door-stored-open`).
     pub const DOOR_STORED_OPEN: &str = "play_door_stored_open_v1";
     /// Every rule above.
-    pub const ALL: [&str; 30] = [
+    pub const ALL: [&str; 32] = [
         PLAYER_FEET,
         RUN_CLOCK,
         ACTIVATE_RAY,
@@ -232,6 +244,8 @@ pub mod rules {
         MARKER_BOX_LAYER_PASSED,
         PLAYER_MOVETO,
         PLAYER_SIT,
+        SIT_PASSABLE,
+        PLAYER_SIT_MARKER,
         ACTIVATE_OPENS,
         ACTIVATE_PERSON,
         ACTIVATE_FIRST_MET,

@@ -489,6 +489,12 @@ fn collision_rules(o: &Options) -> std::collections::BTreeSet<&'static str> {
     if c.activator_fields {
         out.insert(fo4_scene::hypotheses::ACTIVATOR_FIELDS_COLLISION);
     }
+    if c.furniture_fields {
+        out.insert(fo4_scene::hypotheses::FURNITURE_FIELDS_COLLISION);
+    }
+    if c.furniture_at_rest {
+        out.insert(fo4_scene::hypotheses::FURNITURE_COLLISION_AT_REST);
+    }
     out
 }
 
@@ -554,6 +560,41 @@ pub fn sit_place(
     ))
 }
 
+/// The furniture a followed sit put the walker in, under
+/// `play_sit_furniture_passable_until_left_v1`: its key and its placed
+/// object bounds.
+#[derive(Debug, Clone)]
+struct SatIn {
+    furniture: FormKey,
+    frame: crate::world::BoundsBox,
+}
+
+/// `play_player_sit_marker_v1`: moves `pos` (the furniture's stored
+/// position) to the furniture's marker nearest it
+/// (`fo4_scene::furniture::seat_near`, the markers read under
+/// `furniture_marker_snam_v1`); a note for the log, saying where or why
+/// `pos` is left as it is.
+pub fn sit_marker(store: &fo4_plugin::typed::Store, k: &FormKey, pos: &mut [f64; 3]) -> String {
+    let b = Budget::new(store.limits.max_memory);
+    let what = match fo4_scene::furniture::seat_near(store, k, *pos, &b) {
+        Ok(Ok(seat)) => {
+            let from = *pos;
+            *pos = seat.pos;
+            format!(
+                "at its marker {} of {}, {:?} (stored position {:?})",
+                seat.index, seat.of, seat.pos, from
+            )
+        }
+        Ok(Err(why)) => format!("at its stored position: {why}"),
+        Err(e) => format!("at its stored position: {e}"),
+    };
+    format!(
+        "a sit of the player in {}: the walker goes {what} ({})",
+        fo4_vm::bind::record_key(k),
+        crate::rules::PLAYER_SIT_MARKER
+    )
+}
+
 /// Notes for the log: (second, text).
 pub type Notes = Vec<(f64, String)>;
 
@@ -610,6 +651,14 @@ pub struct Walker {
     player_sits: Option<usize>,
     /// Where the run last put the player, to go to: (target, place, rule).
     moved: Option<Place>,
+    /// `--play-sit-passable` (`play_sit_furniture_passable_until_left_v1`):
+    /// on, and the furniture a followed sit put the walker in whose
+    /// collision stands hidden until the walker's feet leave its box.
+    sit_passable: bool,
+    sat_in: Option<SatIn>,
+    /// `--play-player-sit-marker` (`play_player_sit_marker_v1`): a followed
+    /// sit puts the walker at the furniture's marker.
+    sit_marker: bool,
     boxes: Option<pick::Boxes>,
     /// `--play-pick-actors`: the actors' places last read and the boxes
     /// the ray meets with them ([`Walker::boxes`] and the actors' boxes),
@@ -706,6 +755,9 @@ impl Walker {
             door: None,
             player_moves: None,
             player_sits: None,
+            sit_passable: false,
+            sat_in: None,
+            sit_marker: false,
             moved: None,
             boxes: None,
             actor_pick: None,
@@ -856,6 +908,22 @@ impl Walker {
         self
     }
 
+    /// Leaves the furniture a followed sit puts the walker in without
+    /// collision until the walker's feet leave its object bounds
+    /// (`--play-sit-passable`, `play_sit_furniture_passable_until_left_v1`).
+    pub fn with_sit_passable(mut self) -> Walker {
+        self.sit_passable = true;
+        self
+    }
+
+    /// Puts the walker a followed sit takes to another space at the
+    /// furniture's marker (`--play-player-sit-marker`,
+    /// `play_player_sit_marker_v1`) instead of its stored position.
+    pub fn with_sit_marker(mut self) -> Walker {
+        self.sit_marker = true;
+        self
+    }
+
     /// Takes its commands from a source as they arrive (a person at a
     /// window) instead of the script, which must hold none. Needs the
     /// longest standing slice ([`Options::stand`]); the input is over at
@@ -1001,13 +1069,24 @@ impl Walker {
                     .and_then(fo4_vm::player::parse_key);
                 let r = match key {
                     Some(k) => {
-                        let at = fo4_vm::track::stored_position(
+                        let mut at = fo4_vm::track::stored_position(
                             run.store,
                             run.store.limits.max_memory,
                             &k,
                         )
                         .map_err(|e| e.to_string());
-                        sit_place(k, at, self.space.as_ref())
+                        let mut note = None;
+                        if self.sit_marker {
+                            if let Ok((_, pos)) = &mut at {
+                                note = Some(sit_marker(run.store, &k, pos));
+                            }
+                        }
+                        let place = sit_place(k, at, self.space.as_ref());
+                        // Only a followed sit's place is the marker's.
+                        if let (Ok(_), Some(note)) = (&place, note) {
+                            self.log.borrow_mut().player_moves.push((*t, note));
+                        }
+                        place
                     }
                     None => Err(
                         "a sit of the player not followed: the furniture is not a placed reference"
@@ -1625,6 +1704,7 @@ impl Walker {
     /// `now` and `first`: the run's present second and its track's first
     /// point (read once, at the first slice).
     pub fn step(&mut self, now: f64, first: Option<&Point>) -> Result<Next, String> {
+        self.leave_furniture();
         let from = self.t;
         let mut out = match self.step_one(now, first)? {
             Next::Slice(s) => s,
@@ -1649,6 +1729,29 @@ impl Walker {
             }
         }
         Ok(Next::Slice(out))
+    }
+
+    /// `--play-sit-passable`: once the walker's feet stand outside the
+    /// box of the furniture it was put in, the furniture's collision is
+    /// back.
+    fn leave_furniture(&mut self) {
+        let (Some(s), Some(c)) = (&self.sat_in, &self.character) else {
+            return;
+        };
+        if s.frame.holds(c.feet, self.opts.params.radius) {
+            return;
+        }
+        let k = s.furniture.clone();
+        self.sat_in = None;
+        let n = self.live.set_reference_hidden(&k, false);
+        self.log.borrow_mut().player_moves.push((
+            self.t,
+            format!(
+                "the walker's feet left {}'s object bounds: its {n} source(s) shown again ({})",
+                fo4_vm::bind::record_key(&k),
+                crate::rules::SIT_PASSABLE
+            ),
+        ));
     }
 
     fn step_one(&mut self, now: f64, first: Option<&Point>) -> Result<Next, String> {
@@ -1870,6 +1973,36 @@ impl Walker {
             g.centre = (run.store.signature(&to.space) == Some(*b"WRLD"))
                 .then(|| (to.space.clone(), crate::world::square(to.pos)));
         }
+        self.sat_in = None;
+        let mut passable = None;
+        if self.sit_passable && rule == crate::rules::PLAYER_SIT {
+            let hidden = self.live.set_reference_hidden(&door, true);
+            let b = Budget::new(m.limits.max_memory);
+            match crate::world::bounds_box(run.store, &door, &b) {
+                Some(frame) if hidden > 0 => {
+                    self.sat_in = Some(SatIn {
+                        furniture: door.clone(),
+                        frame,
+                    });
+                    passable = Some(format!(
+                        "{} source(s) of {} hidden until the walker's feet leave its object bounds ({})",
+                        hidden,
+                        fo4_vm::bind::record_key(&door),
+                        crate::rules::SIT_PASSABLE
+                    ));
+                }
+                _ => {
+                    self.live.set_reference_hidden(&door, false);
+                    passable = Some(format!(
+                        "{}: {} source(s) in the walking world, object bounds {}; nothing hidden ({})",
+                        fo4_vm::bind::record_key(&door),
+                        hidden,
+                        if hidden > 0 { "unread" } else { "not needed" },
+                        crate::rules::SIT_PASSABLE
+                    ));
+                }
+            }
+        }
         let mut c = Character::new(self.opts.params, self.opts.settings, to.pos)
             .map_err(|e| e.to_string())?;
         c.settle(self.live.space(), self.opts.settle_ticks);
@@ -1885,6 +2018,12 @@ impl Walker {
         self.still = false;
         let mut log = self.log.borrow_mut();
         log.rules.insert(rule);
+        if let Some(note) = passable {
+            if self.sat_in.is_some() {
+                log.rules.insert(crate::rules::SIT_PASSABLE);
+            }
+            log.player_moves.push((self.t, note));
+        }
         log.doors.push(Crossed {
             rule,
             t: self.t,
@@ -1974,6 +2113,8 @@ impl Walker {
         if let Some(f) = self.on_load.as_mut() {
             f(Some(cell));
         }
+        // A walking world built again shows every source.
+        self.sat_in = None;
         let same = |k: &Option<(FormKey, crate::world::Options, crate::world::Built)>| {
             k.as_ref()
                 .is_some_and(|(c, o, _)| c == cell && *o == options)
@@ -2251,6 +2392,8 @@ mod tests {
                 reference_alpha: true,
                 static_fields: false,
                 activator_fields: false,
+                furniture_fields: false,
+                furniture_at_rest: false,
             },
             child_flag_agrees: true,
             ..Options::default()
