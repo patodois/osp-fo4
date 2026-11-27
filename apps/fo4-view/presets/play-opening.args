@@ -222,6 +222,11 @@
 # (play_cast_settles_on_ground_v1): the checkpoint's woman on the slope
 # stands on the grass. The run is unchanged.
 --draw-cast-settles
+# While the walker stands on a moving part, the terrain triangles over the
+# part's box are not drawn (play_ride_terrain_cut_v1): the ride down the
+# shaft shows the shaft, not the terrain's cone inside it. The run is
+# unchanged.
+--draw-ride-cuts-terrain
 # A blended effect surface whose soft flag is set fades toward the opaque
 # surface behind it over its stored soft falloff depth
 # (effect_soft_depth_fade_linear_v1): the distant cloud card's white edge

@@ -525,6 +525,7 @@ fn exact_depth_ties_resolve_by_list_order_in_every_run() {
             platforms: Vec::new(),
             doors: Vec::new(),
             leaves: Vec::new(),
+            terrain: Vec::new(),
             skins: Vec::new(),
             light: None,
             view_exposure: None,

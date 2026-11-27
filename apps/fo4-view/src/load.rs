@@ -47,6 +47,10 @@ pub struct Loaded {
     /// `--draw-platform-skins`: each skinned draw of a named platform with
     /// its skin read at rest ([`skin_draws`]).
     pub skins: Vec<SkinDraw>,
+    /// `--draw-ride-cuts-terrain` (`play_ride_terrain_cut_v1`): the
+    /// terrain's draws (indices into the build's draw list); empty
+    /// otherwise.
+    pub terrain: Vec<usize>,
 }
 
 /// One skinned draw of a named platform's model, with its skin and each
@@ -1359,6 +1363,7 @@ pub fn cell<'s>(
     steps.mark("doors and leaves");
     // The terrain of the cell and, for walking, of its neighbours. Without
     // --terrain and --walk nothing is loaded and the draw list is unchanged.
+    let terrain_from = build.list.draws.len();
     let ground = match (&grid, walk || terrain) {
         (Some(a), true) => Some(fo4_walk::terrain::load_with(store, a, level, &budget)?),
         (None, true) => Some(fo4_walk::terrain::load_around(
@@ -1457,6 +1462,13 @@ pub fn cell<'s>(
     // the light switches, but for effect shader surfaces; the markers after
     // it are not (as the CPU render).
     let lit_until = build.list.draws.len();
+    // `--draw-ride-cuts-terrain`: the terrain's draws, for the play window
+    // to cut over a ride (`play_ride_terrain_cut_v1`).
+    let terrain_draws: Vec<usize> = if drawing.ride_cuts_terrain {
+        (terrain_from..lit_until).collect()
+    } else {
+        Vec::new()
+    };
     steps.mark("terrain");
     // --timeline: the actors' markers after every other draw, the camera
     // and the overlay.
@@ -1653,6 +1665,7 @@ pub fn cell<'s>(
         doors,
         leaves,
         skins,
+        terrain: terrain_draws,
     })
 }
 

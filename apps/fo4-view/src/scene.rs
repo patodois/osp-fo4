@@ -549,6 +549,87 @@ pub fn leaf_instances(
         .collect()
 }
 
+/// The instances of `gpu` converted from the draws `draws` lists
+/// (`crate::load::Loaded::terrain`), in instance order.
+pub fn terrain_instances(gpu: &GpuScene, draws: &[usize]) -> Vec<usize> {
+    let wanted: std::collections::BTreeSet<usize> = draws.iter().copied().collect();
+    gpu.draws
+        .iter()
+        .enumerate()
+        .filter(|(_, d)| wanted.contains(d))
+        .map(|(k, _)| k)
+        .collect()
+}
+
+/// `play_ride_terrain_cut_v1` (`--draw-ride-cuts-terrain`): the horizontal
+/// box (`[x0, y0, x1, y1]`, world axes) of the named platforms' moving parts
+/// the walker stands on now ([`fo4_play::elevator::PartMotion::carries`]),
+/// each part's collision box where it stands
+/// ([`fo4_play::elevator::PartMotion::box_now`]); `None` when it stands on
+/// none (or the part holds no collision).
+#[cfg(feature = "script-event")]
+pub fn ride_cut(platforms: &[fo4_play::elevator::Platform]) -> Option<[f64; 4]> {
+    let mut out: Option<[f64; 4]> = None;
+    for part in platforms.iter().flat_map(|p| &p.parts) {
+        if !part.carries {
+            continue;
+        }
+        let Some((lo, hi)) = part.box_now() else {
+            continue;
+        };
+        out = Some(match out {
+            None => [lo[0], lo[1], hi[0], hi[1]],
+            Some(b) => [
+                b[0].min(lo[0]),
+                b[1].min(lo[1]),
+                b[2].max(hi[0]),
+                b[3].max(hi[1]),
+            ],
+        });
+    }
+    out
+}
+
+/// `play_ride_terrain_cut_v1`: the triangles of `indices` (over
+/// `positions`, world axes: the terrain's draws are not moved) kept in the
+/// drawing under the cut box `cut` (`[x0, y0, x1, y1]`, [`ride_cut`]): those
+/// whose horizontal extent (the box of their three corners' x and y) does
+/// not meet it, a shared edge or corner counting as meeting. Every triangle
+/// with `None`; a trailing part short of a triangle is dropped.
+#[cfg_attr(not(feature = "script-event"), allow(dead_code))]
+pub fn terrain_kept(positions: &[[f32; 3]], indices: &[u16], cut: Option<[f64; 4]>) -> Vec<u16> {
+    let triangles = indices.as_chunks::<3>().0;
+    let Some(c) = cut else {
+        return triangles.iter().flatten().copied().collect();
+    };
+    triangles
+        .iter()
+        .filter(|t| {
+            let corners: Vec<[f64; 3]> = t
+                .iter()
+                .filter_map(|i| positions.get(usize::from(*i)))
+                .map(|p| p.map(f64::from))
+                .collect();
+            if corners.len() < 3 {
+                // A triangle naming a vertex the mesh lacks is not drawn
+                // by the GPU either; keep it as it was.
+                return true;
+            }
+            let lo = |k: usize| corners.iter().map(|p| p[k]).fold(f64::INFINITY, f64::min);
+            let hi = |k: usize| {
+                corners
+                    .iter()
+                    .map(|p| p[k])
+                    .fold(f64::NEG_INFINITY, f64::max)
+            };
+            let meets = lo(0) <= c[2] && hi(0) >= c[0] && lo(1) <= c[3] && hi(1) >= c[1];
+            !meets
+        })
+        .flatten()
+        .copied()
+        .collect()
+}
+
 #[derive(Default)]
 pub struct GpuScene {
     pub meshes: Vec<GpuMesh>,
@@ -577,6 +658,10 @@ pub struct GpuScene {
     /// the instances their leaves turn ([`leaf_instances`]; empty
     /// otherwise).
     pub leaves: Vec<LeafInstance>,
+    /// The scripted play window's terrain with `--draw-ride-cuts-terrain`
+    /// (`play_ride_terrain_cut_v1`): the instances of the terrain's draws
+    /// ([`terrain_instances`]; empty otherwise).
+    pub terrain: Vec<usize>,
     /// The scripted play window's named platforms' skinned draws whose
     /// bones go with several parts (`--draw-platform-skins`;
     /// [`skin_instances`]; empty otherwise).
@@ -1938,11 +2023,13 @@ mod tests {
                     members: Members::Deepest(5),
                     motion: fo4_walk::motion::Motion::translation([10.0, 0.0, 0.0]),
                     stored: None,
+                    carries: false,
                 },
                 PartMotion {
                     members: Members::Deepest(7),
                     motion: fo4_walk::motion::Motion::translation([0.0, 10.0, 0.0]),
                     stored: None,
+                    carries: false,
                 },
             ],
         };
@@ -2305,6 +2392,94 @@ mod tests {
 
     #[cfg(feature = "script-event")]
     #[test]
+    fn the_terrain_over_a_ride_is_cut_while_the_walker_rides() {
+        use fo4_play::elevator::{Members, PartMotion, Platform};
+        use fo4_walk::motion::Motion;
+        let platform = |carries: [bool; 2]| Platform {
+            reference: fo4_plugin::FormKey {
+                plugin: "a.esm".into(),
+                object_id: 1,
+            },
+            space: fo4_plugin::FormKey {
+                plugin: "a.esm".into(),
+                object_id: 2,
+            },
+            model: "meshes/a/lift.nif".into(),
+            set: vec![1, 2],
+            second: 0.0,
+            parts: vec![
+                // A deck 200 wide stored at z 0, ridden 3,000 units down.
+                PartMotion {
+                    members: Members::Deepest(1),
+                    motion: Motion::translation([0.0, 0.0, -3000.0]),
+                    stored: Some(([-100.0, -100.0, -10.0], [100.0, 100.0, 0.0])),
+                    carries: carries[0],
+                },
+                // A cover slid 500 east.
+                PartMotion {
+                    members: Members::Deepest(2),
+                    motion: Motion::translation([500.0, 0.0, 0.0]),
+                    stored: Some(([-100.0, -100.0, 50.0], [100.0, 100.0, 60.0])),
+                    carries: carries[1],
+                },
+            ],
+        };
+        // Standing on nothing, or not riding: no cut.
+        assert_eq!(ride_cut(&[]), None);
+        assert_eq!(ride_cut(&[platform([false, false])]), None);
+        // On the deck: its box where it stands, horizontally.
+        assert_eq!(
+            ride_cut(&[platform([true, false])]),
+            Some([-100.0, -100.0, 100.0, 100.0])
+        );
+        // On the cover: its box moved east.
+        assert_eq!(
+            ride_cut(&[platform([false, true])]),
+            Some([400.0, -100.0, 600.0, 100.0])
+        );
+        // A part with no collision cuts nothing.
+        let mut bare = platform([true, false]);
+        bare.parts[0].stored = None;
+        assert_eq!(ride_cut(&[bare]), None);
+        // Four triangles of a terrain strip, 128 apart: the first lies
+        // inside the box, the second crosses its west side, the third
+        // touches it at x 128 only by a corner beyond (kept: x from 128),
+        // the fourth lies far east. Heights do not count.
+        let positions: Vec<[f32; 3]> = vec![
+            [-50.0, -50.0, 5000.0],
+            [50.0, -50.0, 9000.0],
+            [0.0, 50.0, 100.0],
+            [-228.0, 0.0, 0.0],
+            [-90.0, 0.0, 0.0],
+            [-228.0, 128.0, 0.0],
+            [128.0, 0.0, 0.0],
+            [256.0, 0.0, 0.0],
+            [128.0, 128.0, 0.0],
+            [1000.0, 0.0, 0.0],
+            [1128.0, 0.0, 0.0],
+            [1000.0, 128.0, 0.0],
+        ];
+        let indices: Vec<u16> = (0..12).collect();
+        let cut = Some([-100.0, -100.0, 100.0, 100.0]);
+        assert_eq!(terrain_kept(&positions, &indices, None), indices);
+        assert_eq!(
+            terrain_kept(&positions, &indices, cut),
+            vec![6, 7, 8, 9, 10, 11]
+        );
+        // A shared side counts as meeting: a triangle from x 100 is cut.
+        let edge: Vec<[f32; 3]> = vec![[100.0, 0.0, 0.0], [200.0, 0.0, 0.0], [100.0, 50.0, 0.0]];
+        assert!(terrain_kept(&edge, &[0, 1, 2], cut).is_empty());
+        // A short trailing part is dropped; an index past the mesh keeps its
+        // triangle as it was.
+        assert_eq!(
+            terrain_kept(&positions, &[9, 10, 11, 0], cut),
+            vec![9, 10, 11]
+        );
+        assert_eq!(terrain_kept(&positions, &[0, 1, 40], cut), vec![0, 1, 40]);
+    }
+
+    #[cfg(feature = "script-event")]
+    #[test]
     fn an_actor_stands_on_the_platform_part_under_it() {
         use fo4_play::elevator::{Members, PartMotion, Platform};
         use fo4_walk::motion::Motion;
@@ -2318,11 +2493,13 @@ mod tests {
             members: Members::Deepest(1),
             motion: Motion::translation([0.0, 0.0, z]),
             stored: Some(([-100.0, -100.0, 3890.0], [100.0, 100.0, 3971.0])),
+            carries: false,
         };
         let cover = PartMotion {
             members: Members::Deepest(2),
             motion: Motion::translation([300.0, 0.0, 0.0]),
             stored: Some(([-100.0, -100.0, 8909.0], [100.0, 100.0, 8925.0])),
+            carries: false,
         };
         let at = |z: f64| {
             vec![Platform {
@@ -2368,11 +2545,13 @@ mod tests {
             members: Members::Deepest(1),
             motion: Motion::translation([0.0, 0.0, z]),
             stored: Some(([-100.0, -100.0, 3890.0], [100.0, 100.0, 3971.0])),
+            carries: false,
         };
         let cover = PartMotion {
             members: Members::Deepest(2),
             motion: Motion::translation([0.0, 0.0, 0.0]),
             stored: Some(([-100.0, -100.0, 8909.0], [100.0, 100.0, 8925.0])),
+            carries: false,
         };
         let at = |z: f64| {
             vec![Platform {
@@ -2565,11 +2744,13 @@ mod tests {
                     members: Members::Deepest(3),
                     motion: fo4_walk::Motion::IDENTITY,
                     stored: None,
+                    carries: false,
                 },
                 PartMotion {
                     members: Members::Deepest(4),
                     motion: fo4_walk::Motion::IDENTITY,
                     stored: None,
+                    carries: false,
                 },
             ],
         };

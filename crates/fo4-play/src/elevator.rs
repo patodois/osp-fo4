@@ -1073,6 +1073,34 @@ pub struct PartMotion {
     /// The box of the part's collision as stored (world axes), `None` when
     /// it holds none: where it stands now is this box moved by `motion`.
     pub stored: Option<([f64; 3], [f64; 3])>,
+    /// Whether the walker stands on the part's piece now (grounded on one
+    /// of its sources, as a ride carries it): the window's terrain cut
+    /// (`play_ride_terrain_cut_v1`) reads it. False when the caller gave
+    /// no ground ([`Elevator::platform`]).
+    pub carries: bool,
+}
+
+impl PartMotion {
+    /// The world box of the part's collision where it stands now: the
+    /// stored box's eight corners moved by [`PartMotion::motion`], boxed
+    /// again in world axes. `None` when the part holds no collision.
+    pub fn box_now(&self) -> Option<([f64; 3], [f64; 3])> {
+        let (lo, hi) = self.stored?;
+        let mut out: Option<([f64; 3], [f64; 3])> = None;
+        for k in 0..8 {
+            let c: [f64; 3] =
+                std::array::from_fn(|i| if k & (1 << i) != 0 { hi[i] } else { lo[i] });
+            let p = self.motion.apply(c);
+            out = Some(match out {
+                None => (p, p),
+                Some((a, b)) => (
+                    std::array::from_fn(|i| a[i].min(p[i])),
+                    std::array::from_fn(|i| b[i].max(p[i])),
+                ),
+            });
+        }
+        out
+    }
 }
 
 /// A named reference's moving parts where its collision stands, for a
@@ -1133,18 +1161,29 @@ pub fn transform(m: &Motion) -> fo4_scene::transform::Transform {
 impl Elevator {
     /// The moving parts where the collision stands now: the motion of each
     /// part (rigid) or group (translation) at the second the rides were
-    /// last advanced to.
+    /// last advanced to. No part carries the walker
+    /// ([`Elevator::platform_carrying`] says which does).
     pub fn platform(&self) -> Platform {
+        self.platform_carrying(None)
+    }
+
+    /// As [`Elevator::platform`], each part marked with whether `ground`,
+    /// the key of the walking world's piece the walker stands on (`None`
+    /// when it stands on nothing), is the part's ride piece
+    /// ([`PartMotion::carries`]).
+    pub fn platform_carrying(&self, ground: Option<Key>) -> Platform {
         let t = self.last;
         let mut parts = Vec::new();
-        for p in &self.parts {
+        let first = 1 + self.groups.len() as u32;
+        for (pi, p) in self.parts.iter().enumerate() {
             parts.push(PartMotion {
                 members: Members::Deepest(p.block),
                 motion: motion_at(&p.track, t),
                 stored: p.base.bounds.map(|b| (b.min, b.max)),
+                carries: ground == Some(self.key(first + pi as u32)),
             });
         }
-        for g in &self.groups {
+        for (gi, g) in self.groups.iter().enumerate() {
             let mut blocks: Vec<usize> = g.nodes.iter().map(|n| self.nodes[*n].block).collect();
             blocks.sort_unstable();
             blocks.dedup();
@@ -1152,6 +1191,7 @@ impl Elevator {
                 members: Members::Nodes(blocks),
                 motion: Motion::translation(sample(&self.group_track(g), t)),
                 stored: g.base.bounds.map(|b| (b.min, b.max)),
+                carries: ground == Some(self.key(1 + gi as u32)),
             });
         }
         Platform {
@@ -1376,6 +1416,22 @@ mod tests {
         assert_eq!(p.part_of(&[0, 3, 4]), Some(0));
         assert_eq!(p.part_of(&[0, 4]), None);
         assert_eq!((p.model.as_str(), p.second), ("meshes/a/platform.nif", t));
+        // The walker stands on the part's piece: given its ground, the part
+        // says it carries it (the window's terrain cut), and its box stands
+        // where the ride left it.
+        assert!(!p.parts[0].carries);
+        let ground = c
+            .ground
+            .filter(|_| c.grounded)
+            .and_then(|g| set.source(g.source))
+            .map(|(k, _)| *k);
+        let q = e.platform_carrying(ground);
+        assert!(q.parts[0].carries);
+        let (lo, hi) = q.parts[0].box_now().unwrap();
+        let (slo, shi) = q.parts[0].stored.unwrap();
+        assert!((hi[2] - (shi[2] - 100.0)).abs() < 1e-9, "{hi:?} {shi:?}");
+        assert!((lo[0] - slo[0]).abs() < 1e-9 && (hi[1] - shi[1]).abs() < 1e-9);
+        assert!(!e.platform_carrying(Some((KIND, 9))).parts[0].carries);
         // Built again (another walking world of the same space): the part
         // stands where the ride left it.
         let mut again: WorldSet<Key> = WorldSet::new();
@@ -1787,6 +1843,17 @@ mod tests {
         assert_eq!(p.part_of(&[0, 7, 9, 10]), Some(1));
         assert_eq!(p.part_of(&[0, 2]), None);
         assert!((p.parts[0].motion.translation[2] - 100.0).abs() < 1e-9);
+        // The walker stands on part 0 (raised), not on part 1.
+        let ground = c
+            .ground
+            .filter(|_| c.grounded)
+            .and_then(|g| set.source(g.source))
+            .map(|(k, _)| *k);
+        let q = e.platform_carrying(ground);
+        assert_eq!(
+            q.parts.iter().map(|x| x.carries).collect::<Vec<_>>(),
+            [true, false]
+        );
         let corner = p.parts[1].motion.apply([540.0, 0.0, -500.0]);
         assert!(
             (corner[0] - 500.0).abs() < 1e-6 && (corner[1] - 40.0).abs() < 1e-6,

@@ -210,6 +210,15 @@ fn load_scene_with<'s>(
             gpu.leaves.len()
         );
     }
+    // --draw-ride-cuts-terrain: the terrain's drawn instances, cut over a
+    // ride the walker stands on (`play_ride_terrain_cut_v1`).
+    if !loaded.terrain.is_empty() {
+        gpu.terrain = scene::terrain_instances(&gpu, &loaded.terrain);
+        println!(
+            "play: {} drawn instances of the terrain kept to cut over a ride (play_ride_terrain_cut_v1)",
+            gpu.terrain.len()
+        );
+    }
     // Only with --light-vertex-normals: how many lit surfaces take them.
     if s.light.vertex_normals {
         let n = gpu.surfaces.iter().filter(|x| x.params.smooth).count();

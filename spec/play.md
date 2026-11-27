@@ -1057,6 +1057,17 @@ play preset's run arguments or play options), and three are the game's own waits
   in its own trace and named `walk_ride_rider_passes_terrain_v1`; the play mode had not read it. `play_run
   --play-elevator-through-terrain` (in the preset) sets `pass_terrain` on every ride the named platforms put into
   the walking world: while the walker stands on a piece the terrain is hidden, and shown again when it steps off.
+- **The rock drawn inside the shaft** (the 25th session, both records, the descent's last 5 s; round 27). The
+  drawn terrain itself: the cell's stored heights lower the terrain inside the entrance's opening into a cone about
+  3,700 units deep whose bottom lies about 5,200 units high under the deck, and the deck rides down to about 4,990;
+  the cone's walls stand inside the shaft model's walls. No read field holes it: the cell's quad bits are clear, the
+  LAND holds no uninterpreted subrecord, its unknown bytes are the usual ones, and the quadrant's five landscape
+  textures are plain ground. `fo4-view --draw-ride-cuts-terrain` (`play_ride_terrain_cut_v1`, in the preset): while
+  the walker stands on a named platform's moving part (the ground its feet stand on is the part's ride piece:
+  `fo4_play::elevator::PartMotion::carries`), every terrain triangle whose horizontal extent meets that part's
+  collision box where it stands is left out of the window's drawing (`fo4-view`'s `scene::ride_cut` and
+  `scene::terrain_kept`); the terrain is whole again once the walker stands on no moving part. The run, the walking
+  world and the headless frames are unchanged.
 - **Walking through the checkpoint gate 7.5 s early.** The person crossed the two stage triggers past the gate before
   the guard's talk set their prerequisite, and the default trigger script sets its stage only on an entry made after
   the prerequisite: the escort's later phases wait for them forever. The data says the game would not let the person
@@ -2392,6 +2403,7 @@ the previous confirmation stayed up; it is now shown at once when the target's s
 | `pack_destination_outlives_scene_v1` | `quest_run --package-moves-outlive-scene` (in the run's arguments) | the escort's package actions and the boarding trigger's Stop; that an actor on its way goes on when its scene stops is prior knowledge, the arrival second the caller's | weak |
 | `play_elevator_end_landing_v1` | `--play-elevator-door-landing` (in the preset) | the play mode's own trace of the missed ride end; a policy of the ride's end | weak |
 | `walk_ride_rider_passes_terrain_v1` | `--play-elevator-through-terrain` (in the preset since round 26) | `ride_check --trace` on the vault elevator and the 25th session's second record: the terrain over the shaft pushes the riding walker sideways off the deck; no read data holes the terrain there | weak |
+| `play_ride_terrain_cut_v1` | `fo4-view --draw-ride-cuts-terrain` (in the preset since round 27) | every LAND field of the shaft's cell read and the cell's quad bits clear: no data holes the terrain cone inside the shaft; the cut's box and condition are this reading's | weak |
 | `play_collision_marker_boxes_v1` | `--play-marker-boxes` (in the preset since the gate-box step) | the gate's and the front door's boxes and the stages that disable them; that the obstacle flag makes a box solid for the player is prior knowledge | weak |
 | `play_collision_marker_box_layer_passed_v1` | `--play-marker-box-layers` (with `--play-marker-boxes`; in the preset) | the boxes' `XTRI` words over the load order: the gate's 35, the front door's 40, the vault exit's 49 with an editor id naming a navigation cutter; 620 of 860 boxes of 49 under enable parents, 131 of 208 boxes of 31 tilted; what each word means and that a character passes the pick and cutter layers is prior knowledge of the engine's layer list | weak |
 | `play_door_closed_blocked_holds_v1` | `--play-held-doors` (in the preset) | the house door's closing, its blocked activation and the evacuation stage that opens it, as the run's scripts call them; the two natives' meaning from the Creation Kit's documentation; that a closed door is solid and its object bounds stand for its solid part is prior knowledge | weak |

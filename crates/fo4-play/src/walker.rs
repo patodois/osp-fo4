@@ -1293,8 +1293,17 @@ impl Walker {
     /// window to draw them there: per named reference, its model, the
     /// nodes the parts are read by and each part's rigid motion
     /// ([`crate::elevator::Platform`]). Reading them changes nothing.
+    /// Each part says whether the walker stands on it now
+    /// ([`crate::elevator::PartMotion::carries`]).
     pub fn platforms(&self) -> Vec<crate::elevator::Platform> {
-        self.elevators.iter().map(|e| e.platform()).collect()
+        let ground = self.character.as_ref().and_then(|c| {
+            let g = c.ground.filter(|_| c.grounded)?;
+            self.live.space().source(g.source).map(|(k, _)| *k)
+        });
+        self.elevators
+            .iter()
+            .map(|e| e.platform_carrying(ground))
+            .collect()
     }
 
     /// Places the walker at the run's first point, settled on the ground.

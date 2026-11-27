@@ -1439,6 +1439,32 @@ fn spawn_window_scene(world: &mut World) {
                 shown: std::collections::BTreeMap::new(),
             });
         }
+        world.remove_resource::<PlayTerrain>();
+        let terrain: Vec<TerrainTarget> = std::mem::take(&mut scene.terrain)
+            .into_iter()
+            .filter_map(|k| {
+                let i = scene.instances.get(k)?;
+                let m = scene.meshes.get(i.mesh)?;
+                Some(TerrainTarget {
+                    entity: *entities.get(k)?,
+                    handle: up.meshes.get(i.mesh)?.clone(),
+                    mesh: GpuMesh {
+                        positions: m.positions.clone(),
+                        uvs: m.uvs.clone(),
+                        colors: m.colors.clone(),
+                        normals: m.normals.clone(),
+                        indices: m.indices.clone(),
+                    },
+                    cut: false,
+                })
+            })
+            .collect();
+        if !terrain.is_empty() {
+            world.insert_resource(PlayTerrain {
+                drawn: terrain,
+                cut: None,
+            });
+        }
         world.remove_resource::<PlayDoors>();
         let doors: Vec<(Entity, crate::scene::DoorInstance)> = std::mem::take(&mut scene.doors)
             .into_iter()
@@ -2760,15 +2786,109 @@ struct PlayDoors {
     shown: std::collections::BTreeMap<fo4_plugin::FormKey, Option<bool>>,
 }
 
-/// What the scripted play window's drawn doors, leaves and skins read and
-/// write, for [`play_scripted`].
+/// What the scripted play window's drawn doors, leaves, skins and terrain
+/// read and write, for [`play_scripted`].
 #[cfg(feature = "script-event")]
 type FollowParams<'w> = (
     Option<ResMut<'w, PlayDoors>>,
     Option<ResMut<'w, PlayLeaves>>,
     Option<ResMut<'w, PlaySkins>>,
     ResMut<'w, Assets<Mesh>>,
+    Option<ResMut<'w, PlayTerrain>>,
 );
+
+/// A terrain draw of the scripted play window with
+/// `--draw-ride-cuts-terrain` (`play_ride_terrain_cut_v1`): its entity, its
+/// mesh and that mesh's data as converted, and whether it is drawn cut now.
+#[cfg(feature = "script-event")]
+struct TerrainTarget {
+    entity: Entity,
+    handle: Handle<Mesh>,
+    mesh: GpuMesh,
+    cut: bool,
+}
+
+/// The scripted play window's terrain draws (`--draw-ride-cuts-terrain`)
+/// and the cut box they were last drawn under.
+#[cfg(feature = "script-event")]
+#[derive(Resource)]
+struct PlayTerrain {
+    drawn: Vec<TerrainTarget>,
+    cut: Option<[f64; 4]>,
+}
+
+/// A cut box moved less than this (units, each side) is not applied again:
+/// a ride's turn rounds its box's sides each tick.
+#[cfg(feature = "script-event")]
+const TERRAIN_CUT_STEP: f64 = 1.0;
+
+/// Each frame of the scripted play window with `--draw-ride-cuts-terrain`
+/// (`play_ride_terrain_cut_v1`): while the walker stands on a named
+/// platform's moving part, each terrain draw is drawn without its
+/// triangles whose horizontal extent meets the part's box
+/// ([`crate::scene::ride_cut`], [`crate::scene::terrain_kept`]), hidden when
+/// none is left; whole again once it stands on none.
+#[cfg(feature = "script-event")]
+fn follow_terrain<F: bevy::ecs::query::QueryFilter>(
+    seen: &crate::play::Seen,
+    terrain: &mut PlayTerrain,
+    meshes: &mut Assets<Mesh>,
+    instances: &mut Query<CellInstance, F>,
+) {
+    let want = crate::scene::ride_cut(&seen.platforms);
+    let same = match (want, terrain.cut) {
+        (None, None) => true,
+        (Some(a), Some(b)) => (0..4).all(|i| (a[i] - b[i]).abs() < TERRAIN_CUT_STEP),
+        _ => false,
+    };
+    if same {
+        return;
+    }
+    let (mut cut, mut hidden, mut whole) = (0usize, 0usize, 0usize);
+    for d in &mut terrain.drawn {
+        let kept = crate::scene::terrain_kept(&d.mesh.positions, &d.mesh.indices, want);
+        let all = d.mesh.indices.len() - d.mesh.indices.len() % 3;
+        let full = kept.len() == all;
+        if full && !d.cut {
+            continue;
+        }
+        d.cut = !full;
+        let Ok((_, _, mut vis, _)) = instances.get_mut(d.entity) else {
+            continue;
+        };
+        if kept.is_empty() {
+            *vis = Visibility::Hidden;
+            hidden += 1;
+            continue;
+        }
+        *vis = Visibility::Inherited;
+        let mesh = bevy_mesh(GpuMesh {
+            positions: d.mesh.positions.clone(),
+            uvs: d.mesh.uvs.clone(),
+            colors: d.mesh.colors.clone(),
+            normals: d.mesh.normals.clone(),
+            indices: kept,
+        });
+        if let Err(e) = meshes.insert(d.handle.id(), mesh) {
+            eprintln!("TerrainCutMesh: {e}");
+            continue;
+        }
+        if full {
+            whole += 1;
+        } else {
+            cut += 1;
+        }
+    }
+    println!(
+        "play: terrain cut at {:.3} s of the run: box {} ({cut} draws cut, {hidden} hidden, {whole} whole again; play_ride_terrain_cut_v1)",
+        seen.t,
+        want.map_or("none".to_string(), |b| format!(
+            "({:.0}, {:.0}) to ({:.0}, {:.0})",
+            b[0], b[1], b[2], b[3]
+        )),
+    );
+    terrain.cut = want;
+}
 
 /// A named platform's skinned draw the scripted play window skins again
 /// (`--draw-platform-skins`): its platform instance, its skin and the mesh
@@ -3634,7 +3754,7 @@ fn play_scripted(
     mut instances: Query<CellInstance, PlayCellFilter>,
     mut casts: Query<CastInstance, PlayCastFilter>,
     mut platforms: Option<ResMut<PlayPlatforms>>,
-    (mut doors, mut leaves, mut skins, mut meshes): FollowParams,
+    (mut doors, mut leaves, mut skins, mut meshes, mut terrain): FollowParams,
     (mut exposure, lights, mut buffers): ExposureParams,
     mut exit: MessageWriter<AppExit>,
     mut person: Option<ResMut<PersonInput>>,
@@ -3874,6 +3994,9 @@ fn play_scripted(
         }
         if let Some(ps) = skins.as_deref_mut() {
             follow_skins(&seen, ps, &mut meshes);
+        }
+        if let Some(pt) = terrain.as_deref_mut() {
+            follow_terrain(&seen, pt, &mut meshes, &mut instances);
         }
         if let (Some(x), Some(l)) = (exposure.as_deref_mut(), lights.as_deref()) {
             expose_view(&seen, x, skins.as_deref(), &instances, l, &mut buffers);

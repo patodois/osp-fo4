@@ -294,6 +294,12 @@ usage:
       that comes within a character's height above it (a cover closing
       over the shaft) not taken instead (pending rule
       play_cast_keeps_its_part_v1).
+      --draw-ride-cuts-terrain (off by default; with --terrain and
+      --play-elevator) leaves out of the drawing, while the walker stands
+      on a named platform's moving part, every terrain triangle whose
+      horizontal extent meets that part's box where it stands (pending
+      rule play_ride_terrain_cut_v1): the ride down the shaft is not drawn
+      through the terrain over it.
   fo4-view MANIFEST DATA_DIRECTORY CELL_EDITOR_ID [level] --headless
            --eye X,Y,Z --look X,Y,Z --out build/FRAME.png [--tags build/TAGS.bin]
            [--size WxH] [--backface-cull] [--terrain] [--around N] [--walk]
@@ -600,6 +606,13 @@ pub struct Drawing {
     /// above its feet is drawn standing on that ground
     /// (`crate::scene::settle_z`).
     pub cast_settles: bool,
+    /// `--draw-ride-cuts-terrain` (`play_ride_terrain_cut_v1`; the
+    /// scripted play window with `--terrain` and `--play-elevator`): while
+    /// the walker stands on a named platform's moving part, the terrain
+    /// triangles whose horizontal extent meets the part's box where it
+    /// stands are left out of the drawing
+    /// (`crate::scene::ride_cut`, `crate::scene::terrain_kept`).
+    pub ride_cuts_terrain: bool,
     /// `--draw-soft-effects` (`effect_soft_depth_fade_linear_v1`): a
     /// blended effect surface whose soft flag is set fades by its gap to
     /// the opaque depth behind it over its stored soft falloff depth
@@ -1124,6 +1137,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             "--draw-cast-keeps-its-part" => drawing.cast_keeps_part = true,
             "--draw-cast-keeps-clear" => drawing.cast_keeps_clear = true,
             "--draw-cast-settles" => drawing.cast_settles = true,
+            "--draw-ride-cuts-terrain" => drawing.ride_cuts_terrain = true,
             "--draw-soft-effects" => drawing.soft_effects = true,
             "--draw-effect-environment-left-out" => drawing.effect_environment_left_out = true,
             "--draw-refraction-left-out" => drawing.refraction_left_out = true,
@@ -1543,6 +1557,9 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
     }
     if scene.drawing.platform_skins && !scene.drawing.platforms {
         return Err("--draw-platform-skins moves the skinned shapes --draw-platforms draws: it needs --draw-platforms".into());
+    }
+    if scene.drawing.ride_cuts_terrain && (scene.play_platforms.is_empty() || !scene.terrain) {
+        return Err("--draw-ride-cuts-terrain leaves the terrain over a ride out of the scripted play window's drawing: it needs --terrain, --play-input or --play-keys, and --play-elevator".into());
     }
     if scene.drawing.platforms && scene.play_platforms.is_empty() {
         return Err("--draw-platforms draws the named platforms of the scripted play window: it needs --play-input and --play-elevator".into());
