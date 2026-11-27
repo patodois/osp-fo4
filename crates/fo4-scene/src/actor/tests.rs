@@ -265,7 +265,11 @@ fn fixture() -> Fixture {
             record(b"CELL", 0x800, 0, &cell),
             group(6, 0x800, &group(9, 0x800, &references)),
             record(b"CELL", 0x801, 0, &other),
-            group(6, 0x801, &group(9, 0x801, &achr(0x90a, 0x80e))),
+            group(
+                6,
+                0x801,
+                &group(9, 0x801, &[achr(0x90a, 0x80e), achr(0x90b, 0x80f)].concat()),
+            ),
         ]
         .concat(),
     );
@@ -351,6 +355,19 @@ fn fixture() -> Fixture {
         let mut one = sub(b"LLCT", &[1]);
         one.extend(lvlo(1, armour));
         body.extend(record(b"LVLI", list, 0, &one));
+    }
+    // An outfit of a list giving every entry (LVLF 4) whose 20 entries are
+    // one such list of 20 entries, each the one-armour list 0x845: 421
+    // lists read for one outfit entry.
+    body.extend(npc(0x80f, 0x820, &sub(b"DOFT", &id(0x848)), 0));
+    body.extend(record(b"OTFT", 0x848, 0, &sub(b"INAM", &id(0x849))));
+    for (list, entry) in [(0x849, 0x84a), (0x84a, 0x845)] {
+        let mut wide = sub(b"LVLF", &[4]);
+        wide.extend(sub(b"LLCT", &[20]));
+        for _ in 0..20 {
+            wide.extend(lvlo(1, entry));
+        }
+        body.extend(record(b"LVLI", list, 0, &wide));
     }
     let mut none = sub(b"LVLD", &[100]);
     none.extend(sub(b"LLCT", &[1]));
@@ -854,6 +871,18 @@ fn template_bits_and_the_seeded_pick_settle_looks_the_candidates_leave_open() {
         .look
         .as_deref()
         .is_some_and(|l| l.contains("gave nothing")));
+    // Lists giving every entry, 20 by 20: the walk stops at the visit
+    // ceiling instead of reading every list.
+    let itself = go(0x90b, with(false, Some(1), true));
+    assert!(itself.plan.is_none(), "{:?}", itself.notes);
+    assert!(
+        itself
+            .notes
+            .iter()
+            .any(|n| n.contains("leveled item lists too large or deep")),
+        "{:?}",
+        itself.notes
+    );
 }
 
 #[test]

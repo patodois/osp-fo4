@@ -621,7 +621,8 @@ fn outfit_armors(
         match loader.plugins.signature(&k) {
             Some(s) if s == *b"ARMO" => out.push(k),
             Some(s) if s == *b"LVLI" && walk.readings.leveled_seed.is_some() => {
-                match picked_item(loader, &k, 0, walk, picks, b)? {
+                let mut visits = 0;
+                match picked_item(loader, &k, 0, walk, picks, &mut visits, b)? {
                     Ok(a) => out.extend(a),
                     Err(reason) => return Ok(Err(reason)),
                 }
@@ -716,17 +717,24 @@ fn leveled_items(
 /// none when it leads to an item other than an armour. A list whose LVLM
 /// is not zero stays refused, and one whose LVLD is not zero unless
 /// [`Readings::chance_none`] rolls it; with [`Readings::use_all`] a list
-/// whose LVLF has bit 2 set gives every entry.
+/// whose LVLF has bit 2 set gives every entry. At most [`MAX_CANDIDATES`]
+/// lists are read for one outfit entry (`visits`), as [`leveled_items`]
+/// reads them.
 fn picked_item(
     loader: &Loader<'_>,
     key: &FormKey,
     depth: u32,
     walk: Walk<'_>,
     picks: &mut Picks,
+    visits: &mut u64,
     b: &Budget,
 ) -> Result<std::result::Result<Vec<FormKey>, String>> {
     if depth > MAX_CHAIN {
         return Ok(Err("outfit: leveled item lists too deep".into()));
+    }
+    *visits += 1;
+    if *visits > MAX_CANDIDATES {
+        return Ok(Err("outfit: leveled item lists too large or deep".into()));
     }
     let work = b.child();
     let Some((r, plugin)) = read(loader, key, &work)? else {
@@ -776,16 +784,18 @@ fn picked_item(
                     out.push(k);
                 }
             }
-            Some(s) if s == *b"LVLI" => match picked_item(loader, &k, depth + 1, walk, picks, b)? {
-                Ok(v) => {
-                    for a in v {
-                        if !out.contains(&a) {
-                            out.push(a);
+            Some(s) if s == *b"LVLI" => {
+                match picked_item(loader, &k, depth + 1, walk, picks, visits, b)? {
+                    Ok(v) => {
+                        for a in v {
+                            if !out.contains(&a) {
+                                out.push(a);
+                            }
                         }
                     }
+                    Err(reason) => return Ok(Err(reason)),
                 }
-                Err(reason) => return Ok(Err(reason)),
-            },
+            }
             _ => {}
         }
     }
