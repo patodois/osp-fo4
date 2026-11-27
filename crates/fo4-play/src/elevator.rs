@@ -1142,6 +1142,10 @@ pub struct Platform {
     /// The second the collision stands at (the rides' last advance).
     pub second: f64,
     pub parts: Vec<PartMotion>,
+    /// The second the last motion a started sequence keys ends, when it is
+    /// still to come (after [`Platform::second`]): the parts move until
+    /// then and stand from then on. `None`: nothing moves after `second`.
+    pub moves_until: Option<f64>,
 }
 
 impl Platform {
@@ -1216,6 +1220,21 @@ impl Elevator {
                 carries: ground == Some(self.key(1 + gi as u32)),
             });
         }
+        // The last key of every part's and group's track: still to come,
+        // the platform moves until then.
+        let ends = self
+            .parts
+            .iter()
+            .filter(|p| p.track.len() > 1)
+            .filter_map(|p| p.track.last().map(|k| k.0))
+            .chain(
+                self.groups
+                    .iter()
+                    .map(|g| self.group_track(g))
+                    .filter(|tr| tr.len() > 1)
+                    .filter_map(|tr| tr.last().map(|k| k.0)),
+            );
+        let moves_until = ends.fold(None, |m: Option<f64>, e| Some(m.map_or(e, |m| m.max(e))));
         Platform {
             reference: self.reference.clone(),
             space: self.space.clone(),
@@ -1223,6 +1242,7 @@ impl Elevator {
             set: self.set.clone(),
             second: t,
             parts,
+            moves_until: moves_until.filter(|e| *e > t),
         }
     }
 }
@@ -1413,6 +1433,9 @@ mod tests {
         vm.world.anims.started.push((2.0, o, "Down".into()));
         assert!(e.follow(&vm));
         assert!(e.moving(1.5, 2.5) && !e.moving(3.5, 9.0));
+        // Before the walker ticks through them, the started sequences'
+        // last motion (the raise's end at 3 s) is still to come.
+        assert_eq!(e.platform().moves_until, Some(3.0));
         let tick = Settings::DEFAULT.tick;
         let mut t = 1.0;
         while t < 2.5 {
@@ -1868,6 +1891,8 @@ mod tests {
         }
         assert!((c.feet[2] - 100.0).abs() < 1e-3, "{:?}", c.feet);
         assert_eq!(e.ended, Some(3.0));
+        // Past it nothing moves any more.
+        assert_eq!(e.platform().moves_until, None);
         assert!((e.rigid_rides[1].motion.angle_degrees() - 90.0).abs() < 1e-6);
         // For the drawing: each part's motion where its collision stands;
         // a shape goes with the deepest set node of its chain.

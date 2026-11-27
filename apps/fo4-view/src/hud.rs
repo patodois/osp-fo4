@@ -232,6 +232,68 @@ pub struct Shown {
     /// writes its outputs while the play clock stands; the status line
     /// says so instead of "loading".
     pub ending: bool,
+    /// A named platform near the walker is moving under a sequence the
+    /// run started, or has just stopped ([`platform_status`]): the status
+    /// line says so when nothing else holds it.
+    pub platform: Option<String>,
+}
+
+/// A named platform as the status line reads it: the boxes of its moving
+/// parts' collision where they stand now, whether one carries the walker,
+/// and the second its started sequences' last motion ends, when still to
+/// come (`fo4_play::elevator::Platform::moves_until`).
+#[derive(Debug, Clone, PartialEq)]
+pub struct PlatformNear {
+    pub boxes: Vec<([f64; 3], [f64; 3])>,
+    pub carries: bool,
+    pub moves_until: Option<f64>,
+}
+
+/// How near (units, horizontally from the walker's feet to a moving
+/// part's box, and vertically within the same reach) a platform must be
+/// for the status line to speak of it. Viewer policy.
+pub const PLATFORM_NEAR: f64 = 300.0;
+/// How long "platform ready" shows after the motion ended. Viewer policy.
+pub const PLATFORM_READY_SECONDS: f64 = 4.0;
+
+/// The status line's platform cue at second `t` for a walker whose feet
+/// stand at `feet`: "platform moving - ready in N s" while a platform
+/// near the walker that does not carry it moves under a sequence the run
+/// started (N: whole seconds to the last motion's end, rounded up), then
+/// "platform ready" for [`PLATFORM_READY_SECONDS`] after `ended` (the end
+/// second the cue last counted down to, kept by the caller); `None`
+/// otherwise. Returns the cue and the end second to keep. Viewer policy:
+/// the end is the sequences' own last key, nothing about the game.
+pub fn platform_status(
+    near: &[PlatformNear],
+    feet: [f64; 3],
+    t: f64,
+    ended: Option<f64>,
+) -> (Option<String>, Option<f64>) {
+    let close = |b: &([f64; 3], [f64; 3])| {
+        let d = |i: usize| (b.0[i] - feet[i]).max(feet[i] - b.1[i]).max(0.0);
+        d(0).hypot(d(1)) <= PLATFORM_NEAR && d(2) <= PLATFORM_NEAR
+    };
+    let moving = near
+        .iter()
+        .filter(|p| !p.carries && p.boxes.iter().any(close))
+        .filter_map(|p| p.moves_until.filter(|e| *e > t))
+        .fold(None, |m: Option<f64>, e| Some(m.map_or(e, |m| m.max(e))));
+    if let Some(e) = moving {
+        let n = (e - t).ceil().max(1.0);
+        return (
+            Some(format!("platform moving - ready in {n:.0} s")),
+            Some(e),
+        );
+    }
+    match ended {
+        Some(e) if t >= e && t - e < PLATFORM_READY_SECONDS => {
+            let still_near = near.iter().any(|p| !p.carries && p.boxes.iter().any(close));
+            (still_near.then(|| "platform ready".to_string()), Some(e))
+        }
+        Some(e) if t < e => (None, Some(e)),
+        _ => (None, None),
+    }
 }
 
 impl Shown {
@@ -262,7 +324,7 @@ impl Shown {
                 (true, true) => "paused - loading".into(),
                 (true, false) => "paused".into(),
                 (false, true) => "loading".into(),
-                (false, false) => return None,
+                (false, false) => self.platform.clone()?,
             },
         };
         let t = fit(&ascii(&t), columns);
@@ -366,6 +428,50 @@ mod tests {
             ..loading
         };
         assert_eq!(ending.text(Slot::Status, 80).unwrap(), "ending");
+        // A platform cue shows only when nothing else holds the line.
+        let platform = Shown {
+            platform: Some("platform ready".into()),
+            ..Shown::default()
+        };
+        assert_eq!(platform.text(Slot::Status, 80).unwrap(), "platform ready");
+        let held = Shown {
+            loading: true,
+            ..platform
+        };
+        assert_eq!(held.text(Slot::Status, 80).unwrap(), "loading");
+    }
+
+    #[test]
+    fn a_moving_platform_near_the_walker_counts_down_to_its_last_motion() {
+        let p = |moves_until: Option<f64>, carries: bool| PlatformNear {
+            boxes: vec![([0.0, 0.0, 50.0], [100.0, 100.0, 140.0])],
+            carries,
+            moves_until,
+        };
+        let feet = [150.0, 50.0, 0.0];
+        // Moving, near, not carrying: the seconds to the end, rounded up.
+        let (cue, kept) = platform_status(&[p(Some(43.3), false)], feet, 10.0, None);
+        assert_eq!(cue.as_deref(), Some("platform moving - ready in 34 s"));
+        assert_eq!(kept, Some(43.3));
+        // Far away, or carrying the walker: nothing.
+        let far = [150.0 + PLATFORM_NEAR + 1.0, 50.0, 0.0];
+        assert_eq!(
+            platform_status(&[p(Some(43.3), false)], far, 10.0, None),
+            (None, None)
+        );
+        assert_eq!(
+            platform_status(&[p(Some(43.3), true)], feet, 10.0, None),
+            (None, None)
+        );
+        // Stopped: "platform ready" for a few seconds after the kept end.
+        let (cue, kept) = platform_status(&[p(None, false)], feet, 44.0, Some(43.3));
+        assert_eq!(cue.as_deref(), Some("platform ready"));
+        assert_eq!(kept, Some(43.3));
+        let late = 43.3 + PLATFORM_READY_SECONDS + 0.1;
+        assert_eq!(
+            platform_status(&[p(None, false)], feet, late, Some(43.3)),
+            (None, None)
+        );
     }
 
     #[test]

@@ -2374,6 +2374,35 @@ and the window's log prints `play: viewport status at S s of the run: CAUSES` ea
 loading, an upload, a cell held for its cast, a scene to spawn, the walker building its walking world, the play clock
 standing, the input ended, paused).
 
+### Persistent references, furniture census and the platform cue (the twenty-seventh-session step)
+
+**The sofa and the crib.** The person walked across the living room's sofa and the nursery's crib. Neither is in the
+house cell's own groups: the sofa is a persistent furniture and the crib a persistent activator of the worldspace's
+persistent cell, which the drawing joins (`world_persistent_refs_drawn_in_square_v1`) and no walking world read. With
+`--play-collision-persistent` (`play_world_persistent_refs_walk_in_square_v1`) each walking world's build joins the
+persistent references standing in its loaded grid squares before its collision is read
+(`fo4_scene::grid::absorb_persistent`, the same join as the drawing's), and their collision stands as any loaded
+reference's; `play.txt` counts them (`persistent references of the loaded squares`). A capsule walked along the
+person's two lines (`column_probe` with `COLUMN_PROBE_WALK`) now stops at both.
+
+**The census.** `column_probe` with `COLUMN_PROBE_CENSUS=FURN,MSTT,ACTI,CONT` lists every placement of those bases
+whose bounds meet a rectangle: whether its model stores collision (the bodies `collision::instance_as_stored`
+places), whether that collision is in the walking world, and the blockers when it is not. In the house every large
+furniture stands; the containers (dressers, changing table, washer, dryer, wet bars) store collision but are refused
+for their unread container fields and drawer sequences, and are not drawn either; scripted activators (sink, tool
+box, tricycle, broom, hamper) are refused for their scripts. In the vault the benches and tables were refused for one
+unread four-byte furniture subrecord, `FNPR`, alone: it joins the furniture fields both readings set aside
+(`furn_fields_render_unchanged_v1`, `furn_fields_collision_unchanged_v1`), so they are drawn and solid.
+
+**The exit deck's wait.** After E at the exit's console the run's graph starts the gear door's opening sequence about
+15.7 s later; the deck's two parts stay at their stored transforms, their near edge 53 to 55 units above the floor
+(over the 20-unit step), for about 36 s of that sequence, then slide toward the door until its last key at 43.3 s;
+the deck is walkable from then (session B crossed 0.4 s after it). The wait is the data's sequence. The status line
+now says `platform moving - ready in N s` while a named platform near the walker (within 300 units of a moving
+part's box, in its space, not carrying it) moves under a sequence the run started, N the whole seconds to the last
+key of the started sequences (`fo4_play::elevator::Platform::moves_until`), then `platform ready` for 4 s (viewer
+policy, `hud::platform_status`); the window's log names it among the status line's causes.
+
 ## What the play mode does not do yet
 
 - The elevators ride only those the caller names (`--play-elevator`), headless and in the scripted window;
@@ -2482,3 +2511,4 @@ standing, the input ended, paused).
 | `furn_collision_at_rest_v1` | `--play-collision-furniture-at-rest` (in the preset since round 28) | the collision side of `furn_parts_drawn_at_rest_v1`: the pods' bodies at the stored transforms, as their doors are drawn | weak |
 | `play_sit_furniture_passable_until_left_v1` | `--play-sit-passable` (with `--play-player-sits`; in the preset since round 28) | the run's sits of the player in the dream's pod and the vault's pod; that the player leaves the pod through its opened front is prior knowledge, the passage through the stored shell this reading's | weak |
 | `play_player_sit_marker_v1` | `--play-player-sit-marker` (with `--play-player-sits`; in the preset since round 28) | the pods' base stores one SNAM marker 63 units toward the front window (read under `furniture_marker_snam_v1`); that a sitter stands at its marker is prior knowledge | weak |
+| `play_world_persistent_refs_walk_in_square_v1` | `--play-collision-persistent` (in the preset since round 29) | the drawing's join of the same references (`world_persistent_refs_drawn_in_square_v1`); the sofa's and the crib's models store collision and stood in no walking world | weak |

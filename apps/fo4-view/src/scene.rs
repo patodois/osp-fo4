@@ -2032,6 +2032,7 @@ mod tests {
                     carries: false,
                 },
             ],
+            moves_until: None,
         };
         let d = PlatformInstance {
             instance: 0,
@@ -2423,6 +2424,7 @@ mod tests {
                     carries: carries[1],
                 },
             ],
+            moves_until: None,
         };
         // Standing on nothing, or not riding: no cut.
         assert_eq!(ride_cut(&[]), None);
@@ -2509,6 +2511,7 @@ mod tests {
                 set: vec![1, 2],
                 second: 0.0,
                 parts: vec![deck(z), cover.clone()],
+                moves_until: None,
             }]
         };
         let place = [10.0, 20.0, 8925.06];
@@ -2561,6 +2564,7 @@ mod tests {
                 set: vec![1, 2],
                 second: 0.0,
                 parts: vec![deck(z), cover.clone()],
+                moves_until: None,
             }]
         };
         let place = [10.0, 20.0, 8925.06];
@@ -2739,6 +2743,7 @@ mod tests {
             model: "meshes/a/lift.nif".into(),
             set: vec![3, 4],
             second: 0.,
+            moves_until: None,
             parts: vec![
                 PartMotion {
                     members: Members::Deepest(3),

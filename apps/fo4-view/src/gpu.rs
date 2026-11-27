@@ -2021,6 +2021,7 @@ fn hud_update(
     person: Option<Res<PersonInput>>,
     mut confirmed: Local<(u64, Option<std::time::Instant>)>,
     mut status: Local<String>,
+    mut platform_end: Local<Option<f64>>,
     pending: Option<Res<PendingScene>>,
     windows: Query<&Window, With<PrimaryWindow>>,
     mut quads: Query<(&mut HudQuad, &mut Transform, &mut Visibility)>,
@@ -2051,6 +2052,28 @@ fn hud_update(
         .1
         .is_some_and(|at| at.elapsed().as_secs_f64() > HUD_STOOD_SECONDS);
     let texts = p.spoken_texts();
+    // A named platform near the walker, in its space, moving under a
+    // sequence the run started (viewer policy, `crate::hud::platform_status`).
+    let same_space = |k: &fo4_plugin::FormKey| {
+        seen.space
+            .as_ref()
+            .is_some_and(|s| s.object_id == k.object_id && s.plugin.eq_ignore_ascii_case(&k.plugin))
+    };
+    let near: Vec<crate::hud::PlatformNear> = seen
+        .platforms
+        .iter()
+        .filter(|pl| same_space(&pl.space))
+        .map(|pl| crate::hud::PlatformNear {
+            boxes: pl.parts.iter().filter_map(|m| m.box_now()).collect(),
+            carries: pl.parts.iter().any(|m| m.carries),
+            moves_until: pl.moves_until,
+        })
+        .collect();
+    let (platform, kept) = match seen.feet {
+        Some(feet) => crate::hud::platform_status(&near, feet, seen.t, *platform_end),
+        None => (None, None),
+    };
+    *platform_end = kept;
     let shown = crate::hud::Shown {
         prompt: seen.prompt.clone().filter(|_| seen.aim_usable),
         confirm,
@@ -2075,6 +2098,7 @@ fn hud_update(
             || seen.building
             || stood,
         ending: person.as_ref().is_some_and(|x| x.person.ended),
+        platform,
     };
     // The log names what holds the status line each time it changes
     // (measurement only: what a person saw as "loading").
@@ -2087,6 +2111,17 @@ fn hud_update(
         ("the play clock standing", stood),
         ("the input ended", shown.ending),
         ("paused", shown.paused),
+        (
+            "a platform moving near the walker",
+            shown
+                .platform
+                .as_deref()
+                .is_some_and(|t| t.starts_with("platform moving")),
+        ),
+        (
+            "a platform near the walker ready",
+            shown.platform.as_deref() == Some("platform ready"),
+        ),
     ]);
     if *status != causes {
         println!(
