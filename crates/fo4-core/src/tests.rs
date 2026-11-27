@@ -517,3 +517,30 @@ fn an_account_is_bounded_by_its_enclosing_scope_not_a_new_one() {
     inner.charge(300, "inner", 0).unwrap();
     assert!(read.charge(1, "read", 0).is_err());
 }
+
+/// `Budget::refused`: the budget's own refusals (its ceiling, named or not,
+/// its scope limit, a failed allocation) and not a limit of the data read.
+#[test]
+fn the_budgets_own_refusals_are_told_from_data_limits() {
+    let root = Budget::new(1000)
+        .with_scope_limit(300)
+        .named("scene option");
+    let read = root.child();
+    let scope = read.charge(301, "one read", 0).unwrap_err();
+    assert!(read.refused(&scope) && root.refused(&scope));
+    assert!(!root.refused_at_ceiling(&scope));
+    read.charge(300, "one read", 0).unwrap();
+    read.commit(&root).unwrap();
+    let other = root.child();
+    other.charge(300, "two", 0).unwrap();
+    other.commit(&root).unwrap();
+    let ceiling = root.charge(500, "three", 0).unwrap_err();
+    assert!(ceiling.expected.contains("scene option"), "{ceiling}");
+    assert!(root.refused(&ceiling), "{ceiling}");
+    let failed = Error::new("AllocationFailed", "x", 0, "room", 1);
+    assert!(root.refused(&failed));
+    let data = crate::limit(301, 299, "record", 24).unwrap_err();
+    assert!(!root.refused(&data));
+    let truncated = Error::new("Truncated", "record", 24, "range end <= 8", 12);
+    assert!(!root.refused(&truncated));
+}

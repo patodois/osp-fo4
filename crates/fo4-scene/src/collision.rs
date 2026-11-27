@@ -695,22 +695,6 @@ fn append<T>(v: &mut Vec<T>, item: T, b: &Budget) -> Result<()> {
     Ok(())
 }
 
-/// Whether `e` is `b`'s own refusal: an allocation that failed, or a charge
-/// past its ceiling or its scope limit (the bound `b` states), not a limit
-/// of the file read.
-fn budget_refusal(e: &Error, b: &Budget) -> bool {
-    match e.code.as_str() {
-        "AllocationFailed" => true,
-        "LimitExceeded" => {
-            let ceiling = format!("<= {}", b.max());
-            e.expected == ceiling
-                || e.expected.starts_with(&format!("{ceiling} ("))
-                || e.expected == format!("<= {}", b.scope_max())
-        }
-        _ => false,
-    }
-}
-
 impl Builder<'_, '_> {
     fn skip(
         &mut self,
@@ -761,7 +745,7 @@ impl Builder<'_, '_> {
             // The budget's refusal is the build's, not the model's (as
             // `fill_reads` has it).
             Err(e)
-                if budget_refusal(&e, self.budget)
+                if self.budget.refused(&e)
                     || (e.code == "LimitExceeded" && self.budget.remaining() == 0) =>
             {
                 return Err(e)

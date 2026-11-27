@@ -301,6 +301,15 @@ impl Budget {
             _ => false,
         }
     }
+    /// Whether `e` is this budget's own refusal: an allocation that failed,
+    /// or a charge past its ceiling or its scope limit (the bound it
+    /// states, as [`Budget::charge`] words it); not a limit of the data
+    /// read. A load that meets it stops; a limit of one record or file is
+    /// that record's or file's.
+    pub fn refused(&self, e: &Error) -> bool {
+        self.refused_at_ceiling(e)
+            || (e.code == "LimitExceeded" && e.expected == format!("<= {}", self.scope_max))
+    }
     /// Optional telemetry of conservative credits; this is not resident memory.
     pub fn metered(max: u64) -> Self {
         let mut b = Self::new(max);

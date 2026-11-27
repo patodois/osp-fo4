@@ -449,12 +449,10 @@ pub fn absorb_persistent(
                 scene.instances.push(instance);
                 out.added += 1;
             }
-            // A budget or allocation failure is the load's, not the
-            // reference's.
-            Err(e) if matches!(e.code.as_str(), "AllocationFailed" | "LimitExceeded") => {
-                return Err(e)
+            Err(e) => {
+                reference_error(e, &scope)?;
+                out.failed += 1;
             }
-            Err(_) => out.failed += 1,
         }
     }
     for kid in disabled {
@@ -469,6 +467,19 @@ pub fn absorb_persistent(
     scene.assets.sort_unstable();
     scene.assets.dedup();
     Ok(out)
+}
+
+/// One persistent reference's instance error in [`absorb_persistent`]: the
+/// budget's own refusal (an allocation that failed, a charge past its
+/// ceiling or its scope limit; [`Budget::refused`]) is the load's and is
+/// returned; any other error, a limit of the data read among them, is the
+/// reference's: `Ok`, and the join counts it as failed and goes on.
+fn reference_error(e: Error, b: &Budget) -> Result<()> {
+    if b.refused(&e) {
+        Err(e)
+    } else {
+        Ok(())
+    }
 }
 
 fn append<T>(to: &mut Vec<T>, from: Vec<T>, b: &Budget) -> Result<()> {

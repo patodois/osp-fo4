@@ -335,6 +335,27 @@ fn a_persistent_reference_short_of_budget_is_an_error_not_a_failed_reference() {
     assert!(refused > 0);
 }
 
+/// Review follow-up: of a persistent reference's instance errors only the
+/// budget's own refusals end the join; a limit of the data read (or any
+/// other error) is the reference's, counted as failed.
+#[test]
+fn only_the_budgets_own_refusal_ends_the_persistent_join() {
+    let root = Budget::new(1 << 20).with_scope_limit(256);
+    let scope = root.child();
+    // The scope's own limit and the root's ceiling: the load's.
+    let past_scope = scope.charge(512, "test", 0).unwrap_err();
+    assert_eq!(past_scope.code, "LimitExceeded");
+    assert!(reference_error(past_scope, &scope).is_err());
+    let past_ceiling = Budget::new(64).charge(128, "test", 0).unwrap_err();
+    assert!(reference_error(past_ceiling, &Budget::new(64)).is_err());
+    // A limit of the data (a count above its stated bound): the reference's.
+    let data = fo4_core::limit(300, 299, "record", 24).unwrap_err();
+    assert_eq!(data.code, "LimitExceeded");
+    assert!(reference_error(data, &scope).is_ok());
+    let other = Error::new("Truncated", "record", 24, "range end <= 8", 12);
+    assert!(reference_error(other, &scope).is_ok());
+}
+
 /// Loads the centre and its ring with every account under `root`; returns
 /// the root's credits after absorbing, or the error.
 fn absorb_with(f: &Fixture, root: &Budget) -> fo4_core::Result<u64> {
