@@ -335,13 +335,17 @@ shelving's collision, actors as pick targets and the throat band were not starte
 Twenty-third-session fixes: the cues' wait for quest progress is measured on the input's clock (the end of the last
 slice handed to the run, `cue_clock`), not only on the run's second, which is that of its last event and stood still
 after the console from 2225.8 to 2290.6 s (no stall was ever seen, so no use cue came). The walk probe the cues ask
-(`fo4_walk::Character::walks_to`) moves its copy at most half a radius a tick, so it climbs a flight of porch steps
-the walker climbs (at 0.1 s and the run speed a raised tick crossed two risers). `--draw-soft-effects`
+(`fo4_walk::Character::walks_to`) moves its copy at most half a radius a tick, so it climbs a flight of steps the
+walker climbs (at 0.1 s and the run speed a raised tick crossed two risers). The 22nd A house cue at 475 s is not that
+case: its first trail point lies on top of a 25-unit sidewalk ledge the walker had dropped down, above the
+provisional step height of 20, so the probe rightly refuses it and the cue still says `ahead` for one second there. `--draw-soft-effects`
 (`effect_soft_depth_fade_linear_v1`, pending, in the play preset) fades a blended soft effect surface by its gap to
 the opaque depth behind it over its stored soft falloff depth, on the CPU from its opaque depth and in the window from
 a copy of the depth buffer taken after Bevy's opaque pass (`gpu::SoftDepthBuffer`; a view above 4096 x 2880 draws
 without the fade). The window's loads keep up to 256 MiB of parsed models (`fo4_scene::Assets::keep_models`,
-`FO4_VIEW_MODEL_MEMO_MIB`; a parse is shared through `fo4_nif::NifBody`). Found, not fixed: the exit device is still
+`FO4_VIEW_MODEL_MEMO_MIB`; a parse is shared through `fo4_nif::NifBody`): on the 21st A record's three loads from 437 to
+553 s the walls were 0.65, 0.87 and 0.77 s with it and 0.98, 1.11 and 1.14 s without (17 models parsed at the bridge
+load in place of 2,091). The soft fade showed no frame-time cost under the window's 60 Hz cap. Found, not fixed: the exit device is still
 refused with `--draw-furniture-parts` because its model's manager-run transform controller names the hand node above
 every shape and a manager-run visibility controller (with an undecoded blend bool interpolator) names the device's
 node, so the parts reading keeps no shape, and the whole model also waits on a behaviour graph and two furniture
