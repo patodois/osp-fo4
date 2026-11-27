@@ -1332,3 +1332,13 @@ fn a_walk_probe_climbs_porch_steps_the_walker_climbs() {
         }
     }
 }
+
+#[test]
+fn a_huge_finite_extent_grows_the_grid_cell_instead_of_overflowing() {
+    let b = Budget::new(1 << 24);
+    let mut w = World::new();
+    w.add_sphere([0.0, 0.0, 0.0], 1.0, "near", &b).unwrap();
+    // Far enough that extent / cell saturates a u64.
+    w.add_sphere([1e30, 1e30, 0.0], 1.0, "far", &b).unwrap();
+    assert!(w.add_sphere([2.0, 0.0, 0.0], 1.0, "next", &b).is_ok());
+}

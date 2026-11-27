@@ -403,7 +403,11 @@ impl World {
         };
         let mut cell = cell;
         let columns = |cell: f64| -> [u64; 2] {
-            std::array::from_fn(|k| ((bx.max[k] - bx.min[k]) / cell).floor() as u64 + 1)
+            // A large finite extent saturates the cast; the loop below
+            // then grows the cell until the columns fit.
+            std::array::from_fn(|k| {
+                (((bx.max[k] - bx.min[k]) / cell).floor() as u64).saturating_add(1)
+            })
         };
         while columns(cell)[0].saturating_mul(columns(cell)[1]) > MAX_GRID_COLUMNS {
             cell *= 2.0;
