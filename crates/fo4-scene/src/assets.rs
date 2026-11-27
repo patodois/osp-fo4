@@ -452,6 +452,16 @@ impl<'a> Assets<'a> {
     pub fn memory_used(&self) -> u64 {
         self.allocation.used()
     }
+    /// Moves the asset graph's credits to an account of `b`: charged there
+    /// with what the graph holds (and with what it grows by from now on),
+    /// released from the budget it was read under. Refused, the graph
+    /// unchanged, when `b` has no room for them.
+    pub fn account_to(&mut self, b: &Budget) -> Result<()> {
+        let next = b.account();
+        next.charge(self.allocation.used(), "asset graph", 0)?;
+        self.allocation = next;
+        Ok(())
+    }
     /// The node of `kind` whose path is exactly `path`, as a scan of
     /// [`Assets::nodes`] finds it: through the loader's index when the
     /// entry it holds for that path is such a node, else by the scan (a
@@ -1727,6 +1737,42 @@ mod tests {
         assert!(m.map.contains_key(&1) && !m.map.contains_key(&3));
         assert!(m.used <= m.cap);
         assert!(m.get(3).is_none());
+    }
+    /// `Assets::account_to` moves the graph's credits to the new budget
+    /// and refuses one without room for them.
+    #[test]
+    fn the_asset_graph_moves_its_credits_to_another_budget() {
+        let dir = fo4_core::TestDir::new("assets-account");
+        let manifest = fo4_core::Manifest {
+            game: fo4_core::Game::Fallout4,
+            root: dir.to_path_buf(),
+            language: "english".into(),
+            plugins: vec![fo4_core::PluginSpec {
+                name: "synthetic.esm".into(),
+                path: "synthetic.esm".into(),
+            }],
+            mounts: Vec::new(),
+            required_masters: Vec::new(),
+            excluded: Vec::new(),
+            build: None,
+            limits: fo4_core::Limits::default(),
+            archive_invalidation: None,
+        };
+        let v = Vfs::mount(&manifest, &Budget::new(1 << 20)).unwrap();
+        let first = Budget::new(1 << 20);
+        let mut assets = Assets::new(&v, &first);
+        assets.allocation.charge(1000, "synthetic", 0).unwrap();
+        assert_eq!(first.used(), 1000);
+        let small = Budget::new(999);
+        assert!(assets.account_to(&small).is_err());
+        assert_eq!((first.used(), small.used()), (1000, 0));
+        let next = Budget::new(1 << 20);
+        assets.account_to(&next).unwrap();
+        assert_eq!((first.used(), next.used()), (0, 1000));
+        assert_eq!(assets.memory_used(), 1000);
+        // What it grows by is the new budget's.
+        assets.allocation.charge(24, "synthetic", 0).unwrap();
+        assert_eq!((first.used(), next.used()), (0, 1024));
     }
     /// `Assets::find` answers as the scan of the nodes in order does (an
     /// indexed node, one pushed without the index, a spelling the index

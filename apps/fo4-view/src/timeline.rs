@@ -321,7 +321,7 @@ pub fn cast_scene<'s>(
     }
     let mut kept = kept;
     if let Some(slot) = kept.as_deref_mut() {
-        crate::load::take_kept(slot, &mut loader);
+        crate::load::take_kept(slot, &mut loader, &budget);
     }
     let built = cast_with(
         sources,

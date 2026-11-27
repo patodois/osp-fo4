@@ -737,15 +737,17 @@ pub fn parses_line(before: [(u64, f64); 3], after: [(u64, f64); 3]) -> String {
 }
 
 /// `loader` starts from the assets `slot` keeps when they were read the
-/// same way (path policy, clock switches) and hold at most
-/// [`KEPT_ASSETS_MAX`]; else from empty ones. Either way they keep the
-/// files they read, up to [`KEPT_FILES_MAX`].
-pub fn take_kept<'s>(slot: &mut KeptAssets<'s>, loader: &mut Loader<'s>) {
-    if let Some(a) = slot.assets.take() {
+/// same way (path policy, clock switches), hold at most
+/// [`KEPT_ASSETS_MAX`] and fit in `budget`, the load's (`--scene-memory`),
+/// which they are then charged to; else from empty ones. Either way they
+/// keep the files they read, up to [`KEPT_FILES_MAX`].
+pub fn take_kept<'s>(slot: &mut KeptAssets<'s>, loader: &mut Loader<'s>, budget: &Budget) {
+    if let Some(mut a) = slot.assets.take() {
         if a.clock == loader.assets.clock
             && a.path_policy == loader.assets.path_policy
             && !a.unavailable()
             && a.memory_used() <= KEPT_ASSETS_MAX
+            && a.account_to(budget).is_ok()
         {
             loader.assets = a;
         }
@@ -907,7 +909,7 @@ pub fn cell<'s>(
     // The assets the previous load left, when they were read the same way.
     let mut kept = kept;
     if let Some(slot) = kept.as_deref_mut() {
-        take_kept(slot, &mut loader);
+        take_kept(slot, &mut loader, &budget);
     }
     // The parses the load makes (`play: load parses`, measurement only).
     #[cfg(feature = "script-event")]
@@ -2104,6 +2106,80 @@ mod tests {
         assert!(l.starts_with("[0, 0] grid [-20, 22] cell "), "{l}");
         assert!(l.contains("; [1, 0] grid [-19, 22] cell "), "{l}");
         assert!(l.ends_with("; [-1, 0] grid [-21, 22] cell -"), "{l}");
+    }
+
+    /// code-6a L1: the assets kept from the load before are charged to the
+    /// new load's budget (`--scene-memory`), and a load whose budget has no
+    /// room for them starts from empty ones.
+    #[test]
+    fn kept_assets_count_against_the_next_loads_budget() {
+        let temp = fo4_core::TestDir::new("view-kept-budget");
+        let root = temp.join("Data");
+        std::fs::create_dir_all(&root).unwrap();
+        let mut tes4 = b"TES4".to_vec();
+        let hedr = [
+            b"HEDR".as_slice(),
+            &12u16.to_le_bytes(),
+            &0.95f32.to_le_bytes(),
+            &[0; 8],
+        ]
+        .concat();
+        for n in [hedr.len() as u32, 1, 0, 0] {
+            tes4.extend(n.to_le_bytes());
+        }
+        tes4.extend(131u16.to_le_bytes());
+        tes4.extend(0u16.to_le_bytes());
+        tes4.extend(hedr);
+        std::fs::write(root.join("base.esm"), tes4).unwrap();
+        let manifest = Manifest {
+            game: fo4_core::Game::Fallout4,
+            archive_invalidation: None,
+            root,
+            language: "english".into(),
+            plugins: vec![fo4_core::PluginSpec {
+                name: "base.esm".into(),
+                path: "base.esm".into(),
+            }],
+            mounts: vec![],
+            required_masters: vec![],
+            excluded: vec![],
+            build: Some("synthetic".into()),
+            limits: fo4_core::Limits::default(),
+        };
+        let open = Budget::new(64 << 20);
+        let store = fo4_plugin::typed::Store::open(&manifest, &open).unwrap();
+        let vfs = fo4_vfs::Vfs::mount(&manifest, &open).unwrap();
+        let level = RuleLevel::Hypotheses;
+        let first = Budget::new(64 << 20);
+        let mut loader = Loader::new(&store, &vfs, "english", level, &first);
+        // A model no archive holds: a node of the graph, with its blocker.
+        let _ = loader
+            .assets
+            .load(fo4_scene::AssetKind::Model, b"meshes\\absent.nif", &first);
+        let held = loader.assets.memory_used();
+        assert!(held > 0);
+        let mut slot = KeptAssets {
+            assets: Some(loader.assets),
+            ..KeptAssets::default()
+        };
+        // No room for them: the next load starts empty.
+        let tight = Budget::new(held - 1);
+        let mut next = Loader::new(&store, &vfs, "english", level, &tight);
+        take_kept(&mut slot, &mut next, &tight);
+        assert_eq!(next.assets.memory_used(), 0);
+        assert!(next.assets.nodes.is_empty() && slot.assets.is_none());
+        // Room: they are the next load's, charged to its budget.
+        let mut loader = Loader::new(&store, &vfs, "english", level, &first);
+        let _ = loader
+            .assets
+            .load(fo4_scene::AssetKind::Model, b"meshes\\absent.nif", &first);
+        slot.assets = Some(loader.assets);
+        let roomy = Budget::new(64 << 20);
+        let mut next = Loader::new(&store, &vfs, "english", level, &roomy);
+        take_kept(&mut slot, &mut next, &roomy);
+        assert_eq!(next.assets.nodes.len(), 1);
+        assert_eq!(next.assets.memory_used(), held);
+        assert!(roomy.used() >= held, "{} of {held}", roomy.used());
     }
 
     #[test]
