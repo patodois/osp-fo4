@@ -348,6 +348,25 @@ fn a_global_a_lock_and_an_item_count_answer_the_run_only_under_their_switches() 
         runstate::native(&s, 1 << 24, &locked(d), w),
         Some(Reply::Value(Val::Bool(false)))
     ));
+    // A lock with an undetermined argument leaves the lock undetermined
+    // (not the stored one) until a determined lock.
+    let open = call(
+        "objectreference",
+        "lock",
+        Val::Object(d),
+        vec![
+            w.unknown(crate::world::Origin::Native("test.lock".into())),
+            Val::Bool(false),
+        ],
+        "none",
+    );
+    assert!(runstate::native(&s, 1 << 24, &open, w).is_none());
+    assert!(runstate::native(&s, 1 << 24, &locked(d), w).is_none());
+    assert!(runstate::native(&s, 1 << 24, &unlock, w).is_some());
+    assert!(matches!(
+        runstate::native(&s, 1 << 24, &locked(d), w),
+        Some(Reply::Value(Val::Bool(false)))
+    ));
     // The caller's item count, for that holder and item only.
     let ik = w.objects[item].key.clone().unwrap();
     w.runstate.item_counts.insert(("player".into(), ik), 0);

@@ -427,6 +427,19 @@ fn perks_factions_and_actor_values_answer_from_the_base_and_the_caller_only_unde
     );
     runstate::native(&s, 1 << 24, &join, w);
     assert!(yes(runstate::native(&s, 1 << 24, &member(a, f2), w)));
+    // An undetermined rank: not the earlier join's answer, but none.
+    let rank = w.unknown(crate::world::Origin::Native("test.rank".into()));
+    let open = call(
+        "actor",
+        "setfactionrank",
+        Val::Object(a),
+        vec![Val::Object(f2), rank],
+        "none",
+    );
+    runstate::native(&s, 1 << 24, &open, w);
+    assert!(runstate::native(&s, 1 << 24, &member(a, f2), w).is_none());
+    runstate::native(&s, 1 << 24, &join, w);
+    assert!(yes(runstate::native(&s, 1 << 24, &member(a, f2), w)));
     let leave = call(
         "actor",
         "removefromallfactions",

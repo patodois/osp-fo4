@@ -213,6 +213,9 @@ pub fn native(store: &Store, max: u64, c: &NativeCall, w: &mut World) -> Option<
                 w.keywords.count(format!("changes kept\t{what}"));
             }
             None => {
+                // Any keyword of the receiver may be the one changed: the
+                // run's earlier changes on it no longer answer.
+                w.keywords.changes.remove(&o);
                 w.keywords.open.insert(o);
                 w.keywords
                     .count(format!("changes kept\t{what}\tthe keyword is undetermined"));

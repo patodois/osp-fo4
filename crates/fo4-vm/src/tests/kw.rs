@@ -296,6 +296,15 @@ fn keywords_come_from_the_records_and_the_runs_changes_only_under_their_rules() 
     vm.world.keywords.records = false;
     assert_eq!(has(&mut vm, a1, &k2), None);
     assert_eq!(has(&mut vm, a1, &k3), Some(true));
+    // A change with an undetermined keyword may be any of them: the
+    // earlier change no longer answers; a later determined one does.
+    let open = vm
+        .world
+        .unknown(crate::world::Origin::Native("test.keyword".into()));
+    assert!(change(&mut vm, "removekeyword", a1, &open).is_none());
+    assert_eq!(has(&mut vm, a1, &k3), None);
+    assert!(change(&mut vm, "addkeyword", a1, &k3).is_none());
+    assert_eq!(has(&mut vm, a1, &k3), Some(true));
 }
 
 #[test]

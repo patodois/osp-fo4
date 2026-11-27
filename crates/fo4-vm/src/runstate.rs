@@ -63,6 +63,12 @@ pub struct RunState {
     pub values: BTreeMap<String, f32>,
     /// Locks the run's `Lock` gave, by the reference's record key.
     pub locked: BTreeMap<String, bool>,
+    /// References whose last `Lock` had an undetermined argument: their
+    /// lock is undetermined until a determined one.
+    pub open_locks: std::collections::BTreeSet<String>,
+    /// (actor, faction) whose last `SetFactionRank` had an undetermined
+    /// rank: membership undetermined until a determined change.
+    pub open_factions: std::collections::BTreeSet<(String, String)>,
     /// The caller's item counts: (holder key or `player`, item key) to the
     /// count (`quest_run --assume-item-count`).
     pub item_counts: BTreeMap<(String, String), i32>,
@@ -220,9 +226,11 @@ pub fn native(store: &Store, max: u64, c: &NativeCall, w: &mut World) -> Option<
             };
             let Some(Val::Bool(lock)) = c.args.first() else {
                 w.runstate.locked.remove(&k);
+                w.runstate.open_locks.insert(k);
                 w.runstate.count("locks\tan undetermined lock");
                 return None;
             };
+            w.runstate.open_locks.remove(&k);
             if w.runstate.lock_events_script {
                 let before = match w.runstate.locked.get(&k) {
                     Some(v) => Some(*v),
@@ -250,6 +258,11 @@ pub fn native(store: &Store, max: u64, c: &NativeCall, w: &mut World) -> Option<
         }
         "objectreference.islocked" if w.runstate.locks => {
             let k = receiver_key(c, w)?;
+            if w.runstate.open_locks.contains(&k) {
+                w.runstate
+                    .count("locks\tIsLocked not answered: the last lock was undetermined");
+                return None;
+            }
             let v = match w.runstate.locked.get(&k) {
                 Some(v) => *v,
                 None => stores_lock(store, max, &k)?,
@@ -306,6 +319,14 @@ pub fn native(store: &Store, max: u64, c: &NativeCall, w: &mut World) -> Option<
         "actor.isinfaction" if w.runstate.factions => {
             let actor = receiver_key(c, w)?;
             let faction = arg_key(c.args.first(), w)?;
+            if w.runstate
+                .open_factions
+                .contains(&(actor.clone(), faction.clone()))
+            {
+                w.runstate
+                    .count("factions\tIsInFaction not answered: an undetermined rank");
+                return None;
+            }
             if let Some(v) = w
                 .runstate
                 .faction_changes
@@ -347,9 +368,21 @@ pub fn native(store: &Store, max: u64, c: &NativeCall, w: &mut World) -> Option<
                 "actor.removefromfaction" => false,
                 _ => match c.args.get(1) {
                     Some(Val::Int(r)) => *r >= 0,
-                    _ => return None,
+                    _ => {
+                        // An undetermined rank: membership is undetermined
+                        // from here, not the earlier change's.
+                        let pair = (actor, faction);
+                        w.runstate.faction_changes.remove(&pair);
+                        w.runstate.open_factions.insert(pair);
+                        w.runstate
+                            .count("factions\tan undetermined rank: membership undetermined");
+                        return None;
+                    }
                 },
             };
+            w.runstate
+                .open_factions
+                .remove(&(actor.clone(), faction.clone()));
             w.runstate.using(rules::FACTION_BASE_LIST);
             w.runstate
                 .faction_changes
@@ -371,6 +404,7 @@ pub fn native(store: &Store, max: u64, c: &NativeCall, w: &mut World) -> Option<
             let actor = receiver_key(c, w)?;
             w.runstate.using(rules::FACTION_BASE_LIST);
             w.runstate.faction_changes.retain(|(a, _), _| *a != actor);
+            w.runstate.open_factions.retain(|(a, _)| *a != actor);
             w.runstate.factions_emptied.insert(actor);
             w.runstate.count("factions\tall left by the run");
             Some(Reply::Value(Val::None))
@@ -479,6 +513,7 @@ pub fn unlock(
     let t = vm.world.now[crate::world::Clock::Real as usize];
     let what = format!("{} is unlocked", vm.world.objects[reference].label);
     if let Some(k) = vm.world.objects[reference].key.clone() {
+        vm.world.runstate.open_locks.remove(&k);
         vm.world.runstate.locked.insert(k, false);
     }
     vm.world.runstate.log.push((t, what.clone()));
