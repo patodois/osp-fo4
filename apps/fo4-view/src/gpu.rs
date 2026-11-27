@@ -4489,6 +4489,22 @@ mod churn_tests;
 mod tests {
     use super::*;
 
+    /// The surface shader takes no screen derivative of the f32 world
+    /// position: far from the origin its rounding is a few hundredths of a
+    /// pixel's span and drew the light in screen-column streaks (the GPU
+    /// test `a_close_wall_far_from_the_origin_is_lit_without_column_streaks`
+    /// draws it).
+    #[test]
+    fn the_surface_shader_takes_no_derivative_of_the_world_position() {
+        let shader = include_str!("surface.wesl");
+        for d in ["dpdx", "dpdy", "fwidth"] {
+            for (i, _) in shader.match_indices(d) {
+                let call = &shader[i..shader[i..].find(')').map_or(shader.len(), |e| i + e)];
+                assert!(!call.contains("world_position"), "{call}");
+            }
+        }
+    }
+
     #[test]
     fn projection_update_follows_reference_slopes_only_when_asked() {
         let frustum = fo4_scene::camera::reference_frustum([1280, 720]);
