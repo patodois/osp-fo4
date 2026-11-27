@@ -736,6 +736,70 @@ fn timers_queue_and_fire_in_due_order() {
 }
 
 #[test]
+fn a_negative_or_not_finite_timer_interval_is_undetermined_and_the_clock_never_goes_back() {
+    let mut lib = base();
+    lib.add(assemble(
+        "script Clocked3 extends ObjectReference
+         var Int last 0
+         func OnLoad none
+         local none ::nonevar
+         23 StartTimer self ::nonevar 2 -5.0 1
+         func OnTimer none Int aiTimerID
+         13 last aiTimerID",
+    ));
+    let mut host = RecordingHost::default();
+    let mut vm = Vm::new(&mut lib, &mut host);
+    let i = new_ref(&mut vm, "clocked3");
+    vm.world.now[crate::world::Clock::Real as usize] = 10.0;
+    assert_eq!(
+        vm.deliver(i, "onload", vec![]),
+        Outcome::Completed(Val::None)
+    );
+    assert_eq!(vm.world.timers.len(), 1);
+    assert_eq!(vm.world.timers[0].due, None);
+    let fired = vm.fire_timers(10);
+    assert!(matches!(fired[0].2, Outcome::Failed(VmError::Timers(_))));
+    assert_eq!(vm.world.now[crate::world::Clock::Real as usize], 10.0);
+    // NaN and infinity read the same way.
+    for f in [f32::NAN, f32::INFINITY] {
+        let mut h = RecordingHost::default();
+        let mut w = World::default();
+        let c = NativeCall {
+            script: "scriptobject".into(),
+            name: "starttimer".into(),
+            receiver: None,
+            instance: Some(0),
+            args: vec![Val::Float(f), Val::Int(2)],
+            param_types: vec!["float".into(), "int".into()],
+            return_type: "none".into(),
+        };
+        h.call(&c, &mut w);
+        assert_eq!(w.timers[0].due, None);
+    }
+    // A timer due before its clock (the clock moved on since it was
+    // queued) fires without moving the clock back.
+    vm.world.timers.clear();
+    vm.world.timers.push(crate::world::Timer {
+        clock: crate::world::Clock::Real,
+        due: Some(4.0),
+        seq: 1,
+        instance: i,
+        id: Val::Int(3),
+    });
+    vm.fire_timers(1);
+    assert_eq!(vm.world.now[crate::world::Clock::Real as usize], 10.0);
+    vm.world.timers.push(crate::world::Timer {
+        clock: crate::world::Clock::Real,
+        due: Some(4.0),
+        seq: 2,
+        instance: i,
+        id: Val::Int(4),
+    });
+    vm.fire_timer_scaled(None);
+    assert_eq!(vm.world.now[crate::world::Clock::Real as usize], 10.0);
+}
+
+#[test]
 fn the_time_scale_orders_game_time_timers_against_real_time_ones() {
     let mut lib = base();
     lib.add(assemble(

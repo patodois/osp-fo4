@@ -110,8 +110,11 @@ impl Host for RecordingHost {
                     } else {
                         Clock::GameTime
                     };
+                    // An interval that is negative or not finite has no
+                    // reading here: the timer is queued undetermined, which
+                    // stops the queue with a named error when it is due.
                     let interval = match c.args.first() {
-                        Some(Val::Float(f)) => Some(f64::from(*f)),
+                        Some(Val::Float(f)) if f.is_finite() && *f >= 0.0 => Some(f64::from(*f)),
                         _ => None,
                     };
                     let id = c.args.get(1).cloned().unwrap_or(Val::Int(0));

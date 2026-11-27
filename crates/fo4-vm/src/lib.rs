@@ -747,7 +747,9 @@ impl<'a> Vm<'a> {
                 .unwrap_or(0);
             let timer = self.world.timers.remove(i);
             self.rules.insert(rules::TIMERS);
-            self.world.now[timer.clock as usize] = timer.due.unwrap_or(0.0);
+            // A fired timer never moves its clock back.
+            let c = timer.clock as usize;
+            self.world.now[c] = timer.due.unwrap_or(0.0).max(self.world.now[c]);
             let event = match timer.clock {
                 world::Clock::Real => "ontimer",
                 world::Clock::GameTime => "ontimergametime",
@@ -782,7 +784,12 @@ impl<'a> Vm<'a> {
             self.world.now[Clock::Real as usize] = now_real + dt;
             self.world.now[Clock::GameTime as usize] = now_game + dt * scale / 3600.0;
         }
-        self.world.now[timer.clock as usize] = timer.due.unwrap_or(0.0);
+        // A fired timer never moves its clock back past where it stood.
+        let before = match timer.clock {
+            Clock::Real => now_real,
+            Clock::GameTime => now_game,
+        };
+        self.world.now[timer.clock as usize] = timer.due.unwrap_or(0.0).max(before);
         let event = match timer.clock {
             Clock::Real => "ontimer",
             Clock::GameTime => "ontimergametime",
