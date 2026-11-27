@@ -449,6 +449,11 @@ pub fn absorb_persistent(
                 scene.instances.push(instance);
                 out.added += 1;
             }
+            // A budget or allocation failure is the load's, not the
+            // reference's.
+            Err(e) if matches!(e.code.as_str(), "AllocationFailed" | "LimitExceeded") => {
+                return Err(e)
+            }
             Err(_) => out.failed += 1,
         }
     }

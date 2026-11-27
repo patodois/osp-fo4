@@ -231,10 +231,9 @@ fn reference_at(id: u32, pos: [f32; 3]) -> Vec<u8> {
     record(b"REFR", id, 0, &r)
 }
 
-#[test]
-fn the_persistent_references_of_the_loaded_squares_join_the_scene_once() {
-    // The world's persistent cell holds two persistent references: one in
-    // the centre's square (0, 0), one far away in square (12, 12).
+/// The world's persistent cell holds two persistent references: one in
+/// the centre's square (0, 0), one far away in square (12, 12).
+fn persistent_fixture() -> (TestDir, fo4_core::Manifest) {
     let mut persistent = record(b"CELL", 0x8b0, 0, &sub(b"EDID", b"Persistent\0"));
     let kids = [
         reference_at(0x8b1, [100.0, 200.0, 0.0]),
@@ -267,6 +266,12 @@ fn the_persistent_references_of_the_loaded_squares_join_the_scene_once() {
     std::fs::write(root.join("base.esm"), plugin).unwrap();
     let mut manifest = fixture().manifest;
     manifest.root = root;
+    (temp, manifest)
+}
+
+#[test]
+fn the_persistent_references_of_the_loaded_squares_join_the_scene_once() {
+    let (_temp, manifest) = persistent_fixture();
     let b = budget();
     let store = Store::open(&manifest, &b).unwrap();
     let vfs = fo4_vfs::Vfs::mount(&manifest, &b).unwrap();
@@ -296,6 +301,38 @@ fn the_persistent_references_of_the_loaded_squares_join_the_scene_once() {
     let j = absorb_persistent(&mut loader, &mut scene, &a, &b).unwrap();
     assert_eq!((j.added, j.already), (0, 1));
     assert_eq!(scene.instances.len(), 4);
+}
+
+/// code-4b F03: a persistent reference whose instance runs out of budget
+/// is the budget's error, not a reference counted as failed.
+#[test]
+fn a_persistent_reference_short_of_budget_is_an_error_not_a_failed_reference() {
+    let (_temp, manifest) = persistent_fixture();
+    let b = budget();
+    let store = Store::open(&manifest, &b).unwrap();
+    let vfs = fo4_vfs::Vfs::mount(&manifest, &b).unwrap();
+    let mut refused = 0;
+    let mut scope = 0u64;
+    loop {
+        let mut loader = Loader::new(&store, &vfs, "english", RuleLevel::Measured, &b);
+        let mut scene = loader.cell(&key(0x810), &b).unwrap();
+        let a = around(&store, &key(0x810), 1, &b).unwrap();
+        absorb_around(&mut loader, &mut scene, &a, &b).unwrap();
+        let root = Budget::new(256 << 20).with_scope_limit(scope);
+        match absorb_persistent(&mut loader, &mut scene, &a, &root) {
+            Ok(j) => {
+                assert_eq!((j.added, j.failed), (1, 0), "scope {scope}");
+                break;
+            }
+            Err(e) => {
+                assert_eq!(e.code, "LimitExceeded");
+                refused += 1;
+            }
+        }
+        assert!(scope < 1 << 24, "no scope loads it");
+        scope += 64;
+    }
+    assert!(refused > 0);
 }
 
 /// Loads the centre and its ring with every account under `root`; returns
